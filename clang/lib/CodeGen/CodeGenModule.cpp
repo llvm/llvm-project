@@ -1571,6 +1571,13 @@ void CodeGenModule::DecorateInstructionWithTBAA(llvm::Instruction *Inst,
     Inst->setMetadata(llvm::LLVMContext::MD_tbaa, Tag);
 }
 
+void CodeGenModule::DecorateInstructionWithErrnoTBAA(llvm::Instruction *Inst) {
+  if (TBAA) {
+    llvm::MDNode *IntegerNode = TBAA->getTypeInfo(Context.IntTy);
+    Inst->setMetadata(llvm::LLVMContext::MD_errno_tbaa, IntegerNode);
+  }
+}
+
 void CodeGenModule::DecorateInstructionWithInvariantGroup(
     llvm::Instruction *I, const CXXRecordDecl *RD) {
   I->setMetadata(llvm::LLVMContext::MD_invariant_group,

@@ -903,6 +903,9 @@ public:
   void DecorateInstructionWithInvariantGroup(llvm::Instruction *I,
                                              const CXXRecordDecl *RD);
 
+  /// Adorn the instruction with a !llvm.errno.tbaa tag.
+  void DecorateInstructionWithErrnoTBAA(llvm::Instruction *Inst);
+
   /// Emit the given number of characters as a value of type size_t.
   llvm::ConstantInt *getSize(CharUnits numChars);
 

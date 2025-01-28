@@ -4270,15 +4270,17 @@ public:
   llvm::Value *EmitLoadOfScalar(Address Addr, bool Volatile, QualType Ty,
                                 SourceLocation Loc,
                                 AlignmentSource Source = AlignmentSource::Type,
-                                bool isNontemporal = false) {
+                                bool isNontemporal = false,
+                                bool IsErrno = false) {
     return EmitLoadOfScalar(Addr, Volatile, Ty, Loc, LValueBaseInfo(Source),
-                            CGM.getTBAAAccessInfo(Ty), isNontemporal);
+                            CGM.getTBAAAccessInfo(Ty), isNontemporal, IsErrno);
   }
 
   llvm::Value *EmitLoadOfScalar(Address Addr, bool Volatile, QualType Ty,
                                 SourceLocation Loc, LValueBaseInfo BaseInfo,
                                 TBAAAccessInfo TBAAInfo,
-                                bool isNontemporal = false);
+                                bool isNontemporal = false,
+                                bool IsErrno = false);
 
   /// EmitLoadOfScalar - Load a scalar value from an address, taking
   /// care to appropriately convert from the memory representation to
@@ -4289,18 +4291,20 @@ public:
   /// EmitStoreOfScalar - Store a scalar value to an address, taking
   /// care to appropriately convert from the memory representation to
   /// the LLVM value representation.
-  void EmitStoreOfScalar(llvm::Value *Value, Address Addr,
-                         bool Volatile, QualType Ty,
+  void EmitStoreOfScalar(llvm::Value *Value, Address Addr, bool Volatile,
+                         QualType Ty,
                          AlignmentSource Source = AlignmentSource::Type,
-                         bool isInit = false, bool isNontemporal = false) {
+                         bool isInit = false, bool isNontemporal = false,
+                         bool isErrno = false) {
     EmitStoreOfScalar(Value, Addr, Volatile, Ty, LValueBaseInfo(Source),
-                      CGM.getTBAAAccessInfo(Ty), isInit, isNontemporal);
+                      CGM.getTBAAAccessInfo(Ty), isInit, isNontemporal,
+                      isErrno);
   }
 
-  void EmitStoreOfScalar(llvm::Value *Value, Address Addr,
-                         bool Volatile, QualType Ty,
-                         LValueBaseInfo BaseInfo, TBAAAccessInfo TBAAInfo,
-                         bool isInit = false, bool isNontemporal = false);
+  void EmitStoreOfScalar(llvm::Value *Value, Address Addr, bool Volatile,
+                         QualType Ty, LValueBaseInfo BaseInfo,
+                         TBAAAccessInfo TBAAInfo, bool isInit = false,
+                         bool isNontemporal = false, bool isErrno = false);
 
   /// EmitStoreOfScalar - Store a scalar value to an address, taking
   /// care to appropriately convert from the memory representation to

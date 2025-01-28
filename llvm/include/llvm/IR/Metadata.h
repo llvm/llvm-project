@@ -763,18 +763,18 @@ public:
 /// memory access used by the alias-analysis infrastructure.
 struct AAMDNodes {
   explicit AAMDNodes() = default;
-  explicit AAMDNodes(MDNode *T, MDNode *TS, MDNode *S, MDNode *N)
-      : TBAA(T), TBAAStruct(TS), Scope(S), NoAlias(N) {}
+  explicit AAMDNodes(MDNode *T, MDNode *TS, MDNode *S, MDNode *N, MDNode *ET)
+      : TBAA(T), TBAAStruct(TS), Scope(S), NoAlias(N), ErrnoTBAA(ET) {}
 
   bool operator==(const AAMDNodes &A) const {
     return TBAA == A.TBAA && TBAAStruct == A.TBAAStruct && Scope == A.Scope &&
-           NoAlias == A.NoAlias;
+           NoAlias == A.NoAlias && ErrnoTBAA == A.ErrnoTBAA;
   }
 
   bool operator!=(const AAMDNodes &A) const { return !(*this == A); }
 
   explicit operator bool() const {
-    return TBAA || TBAAStruct || Scope || NoAlias;
+    return TBAA || TBAAStruct || Scope || NoAlias || ErrnoTBAA;
   }
 
   /// The tag for type-based alias analysis.
@@ -788,6 +788,8 @@ struct AAMDNodes {
 
   /// The tag specifying the noalias scope.
   MDNode *NoAlias = nullptr;
+ 
+  MDNode *ErrnoTBAA = nullptr;
 
   // Shift tbaa Metadata node to start off bytes later
   static MDNode *shiftTBAA(MDNode *M, size_t off);
@@ -810,6 +812,7 @@ struct AAMDNodes {
     Result.TBAAStruct = Other.TBAAStruct == TBAAStruct ? TBAAStruct : nullptr;
     Result.Scope = Other.Scope == Scope ? Scope : nullptr;
     Result.NoAlias = Other.NoAlias == NoAlias ? NoAlias : nullptr;
+    Result.ErrnoTBAA = Other.ErrnoTBAA == ErrnoTBAA ? ErrnoTBAA : nullptr;
     return Result;
   }
 
@@ -822,6 +825,7 @@ struct AAMDNodes {
         TBAAStruct ? shiftTBAAStruct(TBAAStruct, Offset) : nullptr;
     Result.Scope = Scope;
     Result.NoAlias = NoAlias;
+    Result.ErrnoTBAA = nullptr;
     return Result;
   }
 
@@ -837,6 +841,7 @@ struct AAMDNodes {
     Result.TBAAStruct = TBAAStruct;
     Result.Scope = Scope;
     Result.NoAlias = NoAlias;
+    Result.ErrnoTBAA = nullptr;
     return Result;
   }
 
@@ -865,19 +870,20 @@ template<>
 struct DenseMapInfo<AAMDNodes> {
   static inline AAMDNodes getEmptyKey() {
     return AAMDNodes(DenseMapInfo<MDNode *>::getEmptyKey(),
-                     nullptr, nullptr, nullptr);
+                     nullptr, nullptr, nullptr, nullptr);
   }
 
   static inline AAMDNodes getTombstoneKey() {
     return AAMDNodes(DenseMapInfo<MDNode *>::getTombstoneKey(),
-                     nullptr, nullptr, nullptr);
+                     nullptr, nullptr, nullptr, nullptr);
   }
 
   static unsigned getHashValue(const AAMDNodes &Val) {
     return DenseMapInfo<MDNode *>::getHashValue(Val.TBAA) ^
            DenseMapInfo<MDNode *>::getHashValue(Val.TBAAStruct) ^
            DenseMapInfo<MDNode *>::getHashValue(Val.Scope) ^
-           DenseMapInfo<MDNode *>::getHashValue(Val.NoAlias);
+           DenseMapInfo<MDNode *>::getHashValue(Val.NoAlias) ^
+           DenseMapInfo<MDNode *>::getHashValue(Val.ErrnoTBAA);
   }
 
   static bool isEqual(const AAMDNodes &LHS, const AAMDNodes &RHS) {

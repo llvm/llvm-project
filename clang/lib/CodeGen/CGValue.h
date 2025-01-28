@@ -234,6 +234,9 @@ class LValue {
   // this lvalue.
   bool Nontemporal : 1;
 
+  // Lvalue is a reference to errno.
+  bool Errno : 1;
+
   LValueBaseInfo BaseInfo;
   TBAAAccessInfo TBAAInfo;
 
@@ -261,6 +264,7 @@ private:
     this->ImpreciseLifetime = false;
     this->Nontemporal = false;
     this->ThreadLocalRef = false;
+    this->Errno = false;
     this->BaseIvarExp = nullptr;
   }
 
@@ -317,6 +321,9 @@ public:
   }
   bool isNontemporal() const { return Nontemporal; }
   void setNontemporal(bool Value) { Nontemporal = Value; }
+
+  bool isErrno() const { return Errno; }
+  void setErrno(bool Value) { Errno = Value; }
 
   bool isObjCWeak() const {
     return Quals.getObjCGCAttr() == Qualifiers::Weak;

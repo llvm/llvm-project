@@ -1875,7 +1875,8 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(LValue lvalue,
                                                SourceLocation Loc) {
   return EmitLoadOfScalar(lvalue.getAddress(), lvalue.isVolatile(),
                           lvalue.getType(), Loc, lvalue.getBaseInfo(),
-                          lvalue.getTBAAInfo(), lvalue.isNontemporal());
+                          lvalue.getTBAAInfo(), lvalue.isNontemporal(),
+                          lvalue.isErrno());
 }
 
 static bool hasBooleanRepresentation(QualType Ty) {
@@ -1908,6 +1909,16 @@ static bool getRangeForType(CodeGenFunction &CGF, QualType Ty,
     ED->getValueRange(End, Min);
   }
   return true;
+}
+
+static bool maybeDereferencingErrno(const Expr *E) {
+  if (auto *CE = dyn_cast<CallExpr>(E))
+    if (auto *ICE = dyn_cast<ImplicitCastExpr>(CE->getCallee());
+        ICE && ICE->getCastKind() == CK_FunctionToPointerDecay)
+      if (auto *DRE = dyn_cast<DeclRefExpr>(ICE->getSubExpr()))
+        if (auto *FD = dyn_cast<FunctionDecl>(DRE->getDecl()))
+          return FD->getName() == "__errno_location";
+  return false;
 }
 
 llvm::MDNode *CodeGenFunction::getRangeForLoadFromType(QualType Ty) {
@@ -1972,11 +1983,11 @@ bool CodeGenFunction::EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
 }
 
 llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
-                                               QualType Ty,
-                                               SourceLocation Loc,
+                                               QualType Ty, SourceLocation Loc,
                                                LValueBaseInfo BaseInfo,
                                                TBAAAccessInfo TBAAInfo,
-                                               bool isNontemporal) {
+                                               bool isNontemporal,
+                                               bool IsErrno) {
   if (auto *GV = dyn_cast<llvm::GlobalValue>(Addr.getBasePointer()))
     if (GV->isThreadLocal())
       Addr = Addr.withPointer(Builder.CreateThreadLocalAddress(GV),
@@ -2038,6 +2049,8 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
   }
 
   CGM.DecorateInstructionWithTBAA(Load, TBAAInfo);
+  if (IsErrno)
+    CGM.DecorateInstructionWithErrnoTBAA(Load);
 
   if (EmitScalarRangeCheck(Load, Ty, Loc)) {
     // In order to prevent the optimizer from throwing away the check, don't
@@ -2132,14 +2145,14 @@ static void EmitStoreOfMatrixScalar(llvm::Value *value, LValue lvalue,
                                            value->getType()->isVectorTy());
   CGF.EmitStoreOfScalar(value, Addr, lvalue.isVolatile(), lvalue.getType(),
                         lvalue.getBaseInfo(), lvalue.getTBAAInfo(), isInit,
-                        lvalue.isNontemporal());
+                        lvalue.isNontemporal(), lvalue.isErrno());
 }
 
 void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
                                         bool Volatile, QualType Ty,
                                         LValueBaseInfo BaseInfo,
-                                        TBAAAccessInfo TBAAInfo,
-                                        bool isInit, bool isNontemporal) {
+                                        TBAAAccessInfo TBAAInfo, bool isInit,
+                                        bool isNontemporal, bool IsErrno) {
   if (auto *GV = dyn_cast<llvm::GlobalValue>(Addr.getBasePointer()))
     if (GV->isThreadLocal())
       Addr = Addr.withPointer(Builder.CreateThreadLocalAddress(GV),
@@ -2182,6 +2195,8 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
   }
 
   CGM.DecorateInstructionWithTBAA(Store, TBAAInfo);
+  if (IsErrno)
+    CGM.DecorateInstructionWithErrnoTBAA(Store);
 }
 
 void CodeGenFunction::EmitStoreOfScalar(llvm::Value *value, LValue lvalue,
@@ -2193,7 +2208,8 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *value, LValue lvalue,
 
   EmitStoreOfScalar(value, lvalue.getAddress(), lvalue.isVolatile(),
                     lvalue.getType(), lvalue.getBaseInfo(),
-                    lvalue.getTBAAInfo(), isInit, lvalue.isNontemporal());
+                    lvalue.getTBAAInfo(), isInit, lvalue.isNontemporal(),
+                    lvalue.isErrno());
 }
 
 // Emit a load of a LValue of matrix type. This may require casting the pointer
@@ -3245,6 +3261,8 @@ LValue CodeGenFunction::EmitUnaryOpLValue(const UnaryOperator *E) {
                                             &TBAAInfo);
     LValue LV = MakeAddrLValue(Addr, T, BaseInfo, TBAAInfo);
     LV.getQuals().setAddressSpace(ExprTy.getAddressSpace());
+    if (bool IsErrno = maybeDereferencingErrno(E->getSubExpr()))
+      LV.setErrno(IsErrno);
 
     // We should not generate __weak write barrier on indirect reference
     // of a pointer to object; as in void foo (__weak id *param); *param = 0;
