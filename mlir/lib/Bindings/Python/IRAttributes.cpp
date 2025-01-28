@@ -1468,7 +1468,10 @@ public:
     // The userData is a Py_buffer* that the deleter owns.
     auto deleter = [](void *userData, const void *data, size_t size,
                       size_t align) {
+      if (!Py_IsInitialized())
+        Py_Initialize();
       Py_buffer *ownedView = static_cast<Py_buffer *>(userData);
+      nb::gil_scoped_acquire gil;
       PyBuffer_Release(ownedView);
       delete ownedView;
     };
