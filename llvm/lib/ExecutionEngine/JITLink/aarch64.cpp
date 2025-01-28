@@ -334,10 +334,8 @@ Error lowerPointer64AuthEdgesToSigningFunction(LinkGraph &G) {
               formatv("{0:x}", B->getFixupAddress(E).getValue()) +
               " has invalid encoded addend  " + formatv("{0:x}", EncodedInfo));
 
-#ifndef NDEBUG
-        const char *const KeyNames[] = {"IA", "IB", "DA", "DB"};
-#endif // NDEBUG
         LLVM_DEBUG({
+          const char *const KeyNames[] = {"IA", "IB", "DA", "DB"};
           dbgs() << "  " << B->getFixupAddress(E) << " <- " << ValueToSign
                  << " : key = " << KeyNames[Key] << ", discriminator = "
                  << formatv("{0:x4}", InitialDiscriminator)
