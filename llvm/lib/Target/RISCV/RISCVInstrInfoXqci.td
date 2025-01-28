@@ -34,6 +34,21 @@ def uimm11 : RISCVUImmLeafOp<11>;
 
 def simm26 : RISCVSImmLeafOp<26>;
 
+// 32-bit Immediate, used by RV32 Instructions in 32-bit operations, so no
+// sign-/zero-extension. This is represented internally as a signed 32-bit value.
+def imm32 : RISCVOp<XLenVT> {
+  let ParserMatchClass = ImmAsmOperand<"", 32, "">;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeSImmOperand<32>";
+  let OperandType = "OPERAND_IMM32";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return (isInt<32>(Imm) || isUint<32>(Imm));
+    return MCOp.isBareSymbolRef();
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Instruction Formats
 //===----------------------------------------------------------------------===//
