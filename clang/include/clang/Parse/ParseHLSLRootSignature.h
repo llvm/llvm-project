@@ -132,6 +132,8 @@ private:
   // Common parsing helpers
   bool ParseRegister(llvm::hlsl::rootsig::Register *Reg);
   bool ParseUInt(uint32_t *X);
+  bool
+  ParseDescriptorRangeOffset(llvm::hlsl::rootsig::DescriptorRangeOffset *X);
 
   /// Invoke the lexer to consume a token and update CurToken with the result
   ///
