@@ -4692,14 +4692,18 @@ public:
                             SmallVectorImpl<llvm::Value*> &O,
                             const char *name,
                             unsigned shift = 0, bool rightshift = false);
-  llvm::Value *EmitFP8NeonCall(llvm::Function *F,
+  llvm::Value *EmitFP8NeonCall(unsigned IID, ArrayRef<llvm::Type *> Tys,
                                SmallVectorImpl<llvm::Value *> &O,
-                               llvm::Value *FPM, const char *name);
+                               const CallExpr *E, const char *name);
   llvm::Value *EmitFP8NeonCvtCall(unsigned IID, llvm::Type *Ty0,
                                   llvm::Type *Ty1, bool Extract,
                                   SmallVectorImpl<llvm::Value *> &Ops,
                                   const CallExpr *E, const char *name);
-  llvm::Value *EmitFP8NeonFDOTCall(unsigned IID, bool ExtendLane,
+  llvm::Value *EmitFP8NeonFDOTCall(unsigned IID, bool ExtendLaneArg,
+                                   llvm::Type *RetTy,
+                                   SmallVectorImpl<llvm::Value *> &Ops,
+                                   const CallExpr *E, const char *name);
+  llvm::Value *EmitFP8NeonFMLACall(unsigned IID, bool ExtendLaneArg,
                                    llvm::Type *RetTy,
                                    SmallVectorImpl<llvm::Value *> &Ops,
                                    const CallExpr *E, const char *name);
