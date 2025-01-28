@@ -1728,8 +1728,9 @@ void llvm::SplitBlockAndInsertIfThenElse(
   }
 }
 
-std::pair<Instruction*, Value*>
-llvm::SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore) {
+std::pair<Instruction *, Value *>
+llvm::SplitBlockAndInsertSimpleForLoop(Value *End,
+                                       BasicBlock::iterator SplitBefore) {
   BasicBlock *LoopPred = SplitBefore->getParent();
   BasicBlock *LoopBody = SplitBlock(SplitBefore->getParent(), SplitBefore);
   BasicBlock *LoopExit = SplitBlock(SplitBefore->getParent(), SplitBefore);
@@ -1752,14 +1753,14 @@ llvm::SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore) {
   IV->addIncoming(ConstantInt::get(Ty, 0), LoopPred);
   IV->addIncoming(IVNext, LoopBody);
 
-  return std::make_pair(LoopBody->getFirstNonPHI(), IV);
+  return std::make_pair(&*LoopBody->getFirstNonPHIIt(), IV);
 }
 
-void llvm::SplitBlockAndInsertForEachLane(ElementCount EC,
-     Type *IndexTy, Instruction *InsertBefore,
-     std::function<void(IRBuilderBase&, Value*)> Func) {
+void llvm::SplitBlockAndInsertForEachLane(
+    ElementCount EC, Type *IndexTy, BasicBlock::iterator InsertBefore,
+    std::function<void(IRBuilderBase &, Value *)> Func) {
 
-  IRBuilder<> IRB(InsertBefore);
+  IRBuilder<> IRB(InsertBefore->getParent(), InsertBefore);
 
   if (EC.isScalable()) {
     Value *NumElements = IRB.CreateElementCount(IndexTy, EC);
@@ -1780,10 +1781,10 @@ void llvm::SplitBlockAndInsertForEachLane(ElementCount EC,
 }
 
 void llvm::SplitBlockAndInsertForEachLane(
-    Value *EVL, Instruction *InsertBefore,
+    Value *EVL, BasicBlock::iterator InsertBefore,
     std::function<void(IRBuilderBase &, Value *)> Func) {
 
-  IRBuilder<> IRB(InsertBefore);
+  IRBuilder<> IRB(InsertBefore->getParent(), InsertBefore);
   Type *Ty = EVL->getType();
 
   if (!isa<ConstantInt>(EVL)) {
