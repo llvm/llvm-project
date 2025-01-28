@@ -858,6 +858,11 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses the use of attribute names reserved by the C++ standard (#GH92196).
 
+- Improve the diagnostics for deleted default constructor errors for C++ class
+  initializer lists that don't explicitly list a class member and thus attempt
+  to implicitly default construct that member.
+
+
 Improvements to Clang's time-trace
 ----------------------------------
 
