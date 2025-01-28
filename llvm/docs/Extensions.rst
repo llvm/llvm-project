@@ -550,10 +550,11 @@ following format:
 Example:
 
 .. code-block:: gas
+
   .section  ".llvm_func_map","",@llvm_func_map
   .byte     1                             # version number
   .quad     .Lfunc_begin1                 # function address
-  .uleb128  333                           # dynamic instruction count
+  .uleb128  1000                          # dynamic instruction count
 
 ``SHT_LLVM_OFFLOADING`` Section (offloading data)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
