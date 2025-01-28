@@ -308,7 +308,7 @@ The `parallel_unsequenced_policy <https://en.cppreference.com/w/cpp/algorithm/ex
 maps relatively well to the execution model of AMD GPUs. This, coupled with the
 the availability and maturity of GPU accelerated algorithm libraries that
 implement most / all corresponding algorithms in the standard library
-(e.g. `rocThrust <https://github.com/ROCmSoftwarePlatform/rocThrust>`_), makes
+(e.g. `rocThrust <https://github.com/ROCmSoftwarePlatform/rocThrust>`__), makes
 it feasible to provide seamless accelerator offload for supported algorithms,
 when an accelerated version exists. Thus, it becomes possible to easily access
 the computational resources of an AMD accelerator, via a well specified,
@@ -463,7 +463,7 @@ such as GPUs, work.
      allocation / deallocation functions with accelerator-aware equivalents,
      based on a pre-established table; the list of functions that can be
      interposed is available
-     `here <https://github.com/ROCmSoftwarePlatform/roc-stdpar#allocation--deallocation-interposition-status>`_;
+     `here <https://github.com/ROCmSoftwarePlatform/roc-stdpar#allocation--deallocation-interposition-status>`__;
    - This is only run when compiling for the host.
 
 The second pass is optional.
