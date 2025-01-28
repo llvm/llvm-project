@@ -143,6 +143,17 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
     }
   }
 
+  if (auto *x{std::getenv("CUDA_STACKLIMIT")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n < std::numeric_limits<int>::max() && *end == '\0') {
+      cudaStackLimit = n;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: CUDA_STACKLIMIT=%s is invalid; ignored\n", x);
+    }
+  }
+
   // TODO: Set RP/ROUND='PROCESSOR_DEFINED' from environment
 }
 
