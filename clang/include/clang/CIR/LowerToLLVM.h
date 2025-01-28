@@ -12,7 +12,9 @@
 #ifndef CLANG_CIR_LOWERTOLLVM_H
 #define CLANG_CIR_LOWERTOLLVM_H
 
-#include "mlir/Pass/Pass.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Transforms/DialectConversion.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 #include <memory>
 
@@ -31,6 +33,24 @@ namespace direct {
 std::unique_ptr<llvm::Module>
 lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule,
                              llvm::LLVMContext &llvmCtx);
+
+class CIRToLLVMGlobalOpLowering
+    : public mlir::OpConversionPattern<cir::GlobalOp> {
+  mlir::DataLayout const &dataLayout;
+
+public:
+  CIRToLLVMGlobalOpLowering(const mlir::TypeConverter &typeConverter,
+                            mlir::MLIRContext *context,
+                            mlir::DataLayout const &dataLayout)
+      : OpConversionPattern(typeConverter, context), dataLayout(dataLayout) {
+    setHasBoundedRewriteRecursion();
+  }
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::GlobalOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override;
+};
+
 } // namespace direct
 } // namespace cir
 
