@@ -519,10 +519,12 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setTargetDAGCombine({ISD::SDIVREM, ISD::UDIVREM, ISD::SELECT, ISD::AND,
                        ISD::OR, ISD::ADD, ISD::SUB, ISD::AssertZext, ISD::SHL});
 
-  if (Subtarget.isGP64bit())
+  if (ABI.IsN32() || ABI.IsN64())
     setMaxAtomicSizeInBitsSupported(64);
-  else
+  else if (Subtarget.hasMips2())
     setMaxAtomicSizeInBitsSupported(32);
+  else
+    setMaxAtomicSizeInBitsSupported(0);
 
   setMinFunctionAlignment(Subtarget.isGP64bit() ? Align(8) : Align(4));
 
