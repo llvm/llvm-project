@@ -10388,6 +10388,16 @@ public:
                                          bool Complain = false,
                                          SourceLocation Loc = SourceLocation());
 
+  /// @brief Checks that each default argument needed to make the call
+  /// is defined only once, implementing [over.match.best]/4 rule.
+  ///
+  /// @param FDecl Function declaration selected for the call
+  /// @param NumArgs Number of argument explicitly specified in the call
+  /// expression
+  /// @param CallLoc Source location of the call expression
+  void checkDefaultArgumentsAcrossScopes(FunctionDecl *FDecl, int NumArgs,
+                                         SourceLocation CallLoc);
+
   // [PossiblyAFunctionType]  -->   [Return]
   // NonFunctionType --> NonFunctionType
   // R (A) --> R(A)

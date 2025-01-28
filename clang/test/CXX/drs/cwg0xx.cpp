@@ -43,20 +43,25 @@ namespace cwg1 { // cwg1: 20
     //   expected-note@#cwg1-z {{previous definition is here}}
   }
 
-  void i(int = 1);
+  void i(int = 1); // #cwg1-i
   void j() {
-    void i(int = 1);
+    void i(int = 1); // #cwg1-i-redecl
     using cwg1::i;
     i(0);
-    // FIXME: This should be rejected, due to the ambiguous default argument.
     i();
+    // expected-error@-1 {{function call relies on ambiguous default argument}}
+    //   expected-note@#cwg1-i-redecl {{default argument declared here}}
+    //   expected-note@#cwg1-i {{default argument declared here}}
   }
   void k() {
     using cwg1::i;
-    void i(int = 1);
+    void i(int = 1); // #cwg1-i-redecl2
     i(0);
-    // FIXME: This should be rejected, due to the ambiguous default argument.
     i();
+    // expected-error@-1 {{function call relies on ambiguous default argument}}
+    //   expected-note@#cwg1-i-redecl2 {{default argument declared here}}
+    //   expected-note@#cwg1-i-redecl {{default argument declared here}}
+    //   expected-note@#cwg1-i {{default argument declared here}}
   }
 } // namespace cwg1
 

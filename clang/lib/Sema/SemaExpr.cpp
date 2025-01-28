@@ -5883,6 +5883,14 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
     // the call expression, before calling ConvertArgumentsForCall.
     assert((Call->getNumArgs() == NumParams) &&
            "We should have reserved space for the default arguments before!");
+
+    if (FDecl->isExternC() ||
+        std::any_of(
+            FDecl->redecls_begin(), FDecl->redecls_end(),
+            [](FunctionDecl *Redecl) { return Redecl->isLocalExternDecl(); })) {
+      checkDefaultArgumentsAcrossScopes(FDecl, Args.size(),
+                                        Call->getBeginLoc());
+    }
   }
 
   // If too many are passed and not variadic, error on the extras and drop
