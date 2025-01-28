@@ -1143,6 +1143,16 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   if (MI.getNumDefs() != 1)
     return false;
 
+  unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
+  const MachineOperand &VLOp = MI.getOperand(VLOpNum);
+
+  // If the VL is 1, then there is no need to reduce it. This is an
+  // optimization, not needed to preserve correctness.
+  if (VLOp.isImm() && VLOp.getImm() == 1) {
+    LLVM_DEBUG(dbgs() << "  Not a candidate because VL is already 1\n");
+    return false;
+  }
+
   if (MI.mayRaiseFPException()) {
     LLVM_DEBUG(dbgs() << "Not a candidate because may raise FP exception\n");
     return false;
@@ -1342,8 +1352,6 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
         continue;
 
       MachineInstr *DefMI = MRI->getVRegDef(Op.getReg());
-      if (!isCandidate(*DefMI))
-        continue;
 
       if (IgnoreSameBlock && DefMI->getParent() == MI.getParent())
         continue;
@@ -1375,7 +1383,8 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
   while (!Worklist.empty()) {
     assert(MadeChange);
     MachineInstr &MI = *Worklist.pop_back_val();
-    assert(isCandidate(MI));
+    if (!isCandidate(MI))
+      continue;
     if (!tryReduceVL(MI))
       continue;
     PushOperands(MI, /*IgnoreSameBlock*/ false);
