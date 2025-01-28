@@ -175,6 +175,14 @@ func.func @extract(%arg0 : vector<2xf32>) -> (vector<1xf32>, f32) {
 
 // -----
 
+func.func @extract_poison_idx(%arg0 : vector<4xf32>) -> f32 {
+  // expected-error@+1 {{index -1 out of bounds for 'vector<4xf32>'}}
+  %0 = vector.extract %arg0[-1] : f32 from vector<4xf32>
+  return %0: f32
+}
+
+// -----
+
 // CHECK-LABEL: @extract_size1_vector
 //  CHECK-SAME: %[[ARG0:.+]]: vector<1xf32>
 //       CHECK:   %[[R:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
@@ -251,6 +259,14 @@ func.func @from_elements_3x(%arg0 : f32, %arg1 : f32, %arg2 : f32) -> vector<3xf
 //       CHECK:   spirv.CompositeInsert %[[S]], %[[V]][2 : i32] : f32 into vector<4xf32>
 func.func @insert(%arg0 : vector<4xf32>, %arg1: f32) -> vector<4xf32> {
   %1 = vector.insert %arg1, %arg0[2] : f32 into vector<4xf32>
+  return %1: vector<4xf32>
+}
+
+// -----
+
+func.func @insert_poison_idx(%arg0 : vector<4xf32>, %arg1: f32) -> vector<4xf32> {
+  // expected-error@+1 {{index -1 out of bounds for 'vector<4xf32>'}}
+  %1 = vector.insert %arg1, %arg0[-1] : f32 into vector<4xf32>
   return %1: vector<4xf32>
 }
 
