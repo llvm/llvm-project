@@ -410,11 +410,16 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
             Builder.getInt64(
                 DL.getTypeSizeInBits(Memset->getValue()->getType()) / 8),
             Memset->getLength());
-        // TODO: Consider attempting to preserve call site attributes. See
-        // e.g. mergeAttributesAndFlags in SimplifyLibCalls.
         CallInst *MemsetPattern16Call = Builder.CreateCall(
             MSP, {Memset->getRawDest(), PatternPtr, NumBytes});
         MemsetPattern16Call->setAAMetadata(Memset->getAAMetadata());
+        // Preserve any call site attributes on the destination pointer
+        // argument (e.g. alignment).
+        AttrBuilder ArgAttrs(Memset->getContext(),
+                             Memset->getAttributes().getParamAttrs(0));
+        MemsetPattern16Call->setAttributes(
+            MemsetPattern16Call->getAttributes().addParamAttributes(
+                Memset->getContext(), 0, ArgAttrs));
       } else {
         expandMemSetPatternAsLoop(Memset);
       }

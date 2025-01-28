@@ -59,7 +59,7 @@ define void @memset_pattern_i128_1_nz_as(ptr addrspace(1) %a, i128 %value) nounw
 define void @memset_pattern_i128_1_align_attr(ptr align(16) %a, i128 %value) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i128_1_align_attr(
 ; CHECK-SAME: ptr align 16 [[A:%.*]], i128 [[VALUE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.4, i64 16)
+; CHECK-NEXT:    call void @memset_pattern16(ptr align 16 [[A]], ptr @.memset_pattern.4, i64 16)
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.experimental.memset.pattern(ptr align(16) %a, i128 u0xaaaaaaaabbbbbbbbccccccccdddddddd, i64 1, i1 false)
