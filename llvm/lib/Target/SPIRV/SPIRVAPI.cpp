@@ -32,6 +32,7 @@
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
+#include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -47,25 +48,25 @@ static cl::opt<char> SpirvOptLevel("spirv-O", cl::Hidden, cl::Prefix,
 static cl::opt<std::string> SpirvTargetTriple("spirv-mtriple", cl::Hidden,
                                               cl::init(""));
 
-std::once_flag InitOnceOpts;
+std::mutex MParseOpts;
 // Utility to accept options in a command line style.
 void parseSPIRVCommandLineOptions(const std::vector<std::string> &Options,
                                   raw_ostream *Errs) {
   static constexpr const char *Origin = "SPIRVTranslateModule";
-  // Initialize command line parser dependencies just once and in a
-  // thread-safe manner.
-  std::call_once(InitOnceOpts, []() {
-    std::vector<const char *> Argv(1, Origin);
-    cl::ParseCommandLineOptions(Argv.size(), Argv.data(), Origin,
-                                &llvm::nulls());
-  });
-  cl::ResetAllOptionOccurrences();
   if (!Options.empty()) {
     std::vector<const char *> Argv(1, Origin);
-    // Parse options.
     for (const auto &Arg : Options)
       Argv.push_back(Arg.c_str());
-    cl::ParseCommandLineOptions(Argv.size(), Argv.data(), Origin, Errs);
+    {
+      const std::lock_guard<std::mutex> LParseOpts(MParseOpts);
+      // Reset previous run and parse in a thread-safe manner.
+      cl::ResetAllOptionOccurrences();
+      cl::ParseCommandLineOptions(Argv.size(), Argv.data(), Origin, Errs);
+    }
+  } else {
+    const std::lock_guard<std::mutex> LParseOpts(MParseOpts);
+    // Reset previous run.
+    cl::ResetAllOptionOccurrences();
   }
 }
 
