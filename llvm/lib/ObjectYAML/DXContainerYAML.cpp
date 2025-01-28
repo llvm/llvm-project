@@ -32,10 +32,11 @@ DXContainerYAML::ShaderFeatureFlags::ShaderFeatureFlags(uint64_t FlagData) {
 
 DXContainerYAML::RootSignatureDesc::RootSignatureDesc(
     const object::DirectX::RootSignature &Data)
-    : Size(Data.getSize()) {
-    : Size(Data.getSize()), Version(Data.getVersion()),
-      NumParameters(Data.getNParameters()) {
+    : Size(Data.getSize()), NumParameters(Data.getNParameters()) {
   uint32_t Flags = Data.getFlags();
+  for (const auto &Param : Data.getParameters())
+    Parameters.push_back(Param);
+
 #define ROOT_ELEMENT_FLAG(Num, Val, Str)                                       \
   Val = (Flags & (uint32_t)dxbc::RootElementFlag::Val) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
@@ -209,10 +210,48 @@ void MappingTraits<DXContainerYAML::Signature>::mapping(
   IO.mapRequired("Parameters", S.Parameters);
 }
 
+void MappingTraits<dxbc::RootParameter>::mapping(IO &IO,
+                                                 dxbc::RootParameter &S) {
+
+  IO.mapRequired("Type", S.ParameterType);
+  IO.mapRequired("ShaderVisibility", S.ShaderVisibility);
+
+  switch (S.ParameterType) {
+
+  case dxbc::RootParameterType::Constants32Bit:
+    IO.mapRequired("Constants", S.Constants);
+    break;
+  case dxbc::RootParameterType::DescriptorTable:
+  case dxbc::RootParameterType::CBV:
+  case dxbc::RootParameterType::SRV:
+  case dxbc::RootParameterType::UAV:
+    break;
+  }
+}
+
+void ScalarEnumerationTraits<dxbc::RootParameterType>::enumeration(
+    IO &IO, dxbc::RootParameterType &Value) {
+  for (const auto &E : dxbc::getRootParameterTypes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::ShaderVisibilityFlag>::enumeration(
+    IO &IO, dxbc::ShaderVisibilityFlag &Value) {
+  for (const auto &E : dxbc::getShaderVisibilityFlags())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void MappingTraits<dxbc::RootConstants>::mapping(IO &IO,
+                                                 dxbc::RootConstants &S) {
+
+  IO.mapRequired("Num32BitValues", S.Num32BitValues);
+  IO.mapRequired("ShaderRegister", S.ShaderRegister);
+  IO.mapRequired("RegisterSpace", S.RegisterSpace);
+}
+
 void MappingTraits<DXContainerYAML::RootSignatureDesc>::mapping(
     IO &IO, DXContainerYAML::RootSignatureDesc &S) {
   IO.mapRequired("Size", S.Size);
-  IO.mapRequired("Version", S.Version);
   IO.mapRequired("NumParameters", S.NumParameters);
   IO.mapRequired("Parameters", S.Parameters);
 #define ROOT_ELEMENT_FLAG(Num, Val, Str) IO.mapOptional(#Val, S.Val, false);

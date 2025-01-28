@@ -3,7 +3,7 @@
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
-; CHECK: @dx.rts0 = private constant [8 x i8]  c"{{.*}}", section "RTS0", align 4
+; CHECK: @dx.rts0 = private constant [12 x i8]  c"{{.*}}", section "RTS0", align 4
 
 
 define void @main() #0 {
@@ -24,7 +24,9 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 
 
 ; DXC:    - Name: RTS0
-; DXC-NEXT: Size: 8
+; DXC-NEXT: Size: 12
 ; DXC-NEXT: RootSignature:
-; DXC-NEXT:   Size: 8
+; DXC-NEXT:   Size: 64
+; DXC-NEXT:   NumParameters: 0 
+; DXC-NEXT:   Parameters: [] 
 ; DXC-NEXT:   AllowInputAssemblerInputLayout: true
