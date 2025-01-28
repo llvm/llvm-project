@@ -29,7 +29,7 @@
 ;; Check that all WPD fails with --export-dynamic.
 
 ; RUN: echo '.globl foo; foo:' > %ta.s
-; RUN: llvm-mc -filetype=obj %ta.s -o %ta.o
+; RUN: llvm-mc -filetype=obj -triple=x86_64 %ta.s -o %ta.o
 ; RUN: ld.lld -shared -soname=ta %ta.o -o %ta.so
 
 ;; Index based WPD
