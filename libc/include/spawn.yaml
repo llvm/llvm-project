@@ -18,8 +18,8 @@ functions:
       - type: const char *__restrict
       - type: posix_spawn_file_actions_t *
       - type: posix_spawnattr_t *__restrict
-      - type: const char *__restrict *
-      - type: const char *__restrict *
+      - type: char * const * __restrict
+      - type: char * const * __restrict
   - name: posix_spawn_file_actions_addclose
     standards:
       - POSIX
