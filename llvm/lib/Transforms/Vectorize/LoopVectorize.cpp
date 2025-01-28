@@ -8684,12 +8684,12 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(Instruction *I,
 /// are valid so recipes can be formed later.
 void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
   // Find all possible partial reductions.
-  SmallVector<std::pair<PartialReductionChain, unsigned>, 1>
+  SmallVector<std::pair<PartialReductionChain, unsigned>>
       PartialReductionChains;
-  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars())
-    if (std::optional<std::pair<PartialReductionChain, unsigned>> Pair =
-            getScaledReduction(Phi, RdxDesc, Range))
-      PartialReductionChains.push_back(*Pair);
+  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars()) {
+    getScaledReductions(Phi, RdxDesc.getLoopExitInstr(), Range,
+                        PartialReductionChains);
+  }
 
   // A partial reduction is invalid if any of its extends are used by
   // something that isn't another partial reduction. This is because the
@@ -8717,39 +8717,54 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
   }
 }
 
-std::optional<std::pair<PartialReductionChain, unsigned>>
-VPRecipeBuilder::getScaledReduction(PHINode *PHI,
-                                    const RecurrenceDescriptor &Rdx,
-                                    VFRange &Range) {
+bool VPRecipeBuilder::getScaledReductions(
+    Instruction *PHI, Instruction *RdxExitInstr, VFRange &Range,
+    SmallVectorImpl<std::pair<PartialReductionChain, unsigned>> &Chains) {
+
+  if (!CM.TheLoop->contains(RdxExitInstr))
+    return false;
+
   // TODO: Allow scaling reductions when predicating. The select at
   // the end of the loop chooses between the phi value and most recent
   // reduction result, both of which have different VFs to the active lane
   // mask when scaling.
-  if (CM.blockNeedsPredicationForAnyReason(Rdx.getLoopExitInstr()->getParent()))
-    return std::nullopt;
+  if (CM.blockNeedsPredicationForAnyReason(RdxExitInstr->getParent()))
+    return false;
 
-  auto *Update = dyn_cast<BinaryOperator>(Rdx.getLoopExitInstr());
+  auto *Update = dyn_cast<BinaryOperator>(RdxExitInstr);
   if (!Update)
-    return std::nullopt;
+    return false;
 
   Value *Op = Update->getOperand(0);
   Value *PhiOp = Update->getOperand(1);
-  if (Op == PHI) {
-    Op = Update->getOperand(1);
-    PhiOp = Update->getOperand(0);
+  if (Op == PHI)
+    std::swap(Op, PhiOp);
+
+  // Try and get a scaled reduction from the first non-phi operand.
+  // If one is found, we use the discovered reduction instruction in
+  // place of the accumulator for costing.
+  if (auto *OpInst = dyn_cast<Instruction>(Op)) {
+    if (getScaledReductions(PHI, OpInst, Range, Chains)) {
+      PHI = Chains.rbegin()->first.Reduction;
+
+      Op = Update->getOperand(0);
+      PhiOp = Update->getOperand(1);
+      if (Op == PHI)
+        std::swap(Op, PhiOp);
+    }
   }
   if (PhiOp != PHI)
-    return std::nullopt;
+    return false;
 
   auto *BinOp = dyn_cast<BinaryOperator>(Op);
   if (!BinOp || !BinOp->hasOneUse())
-    return std::nullopt;
+    return false;
 
   using namespace llvm::PatternMatch;
   Value *A, *B;
   if (!match(BinOp->getOperand(0), m_ZExtOrSExt(m_Value(A))) ||
       !match(BinOp->getOperand(1), m_ZExtOrSExt(m_Value(B))))
-    return std::nullopt;
+    return false;
 
   Instruction *ExtA = cast<Instruction>(BinOp->getOperand(0));
   Instruction *ExtB = cast<Instruction>(BinOp->getOperand(1));
@@ -8759,7 +8774,7 @@ VPRecipeBuilder::getScaledReduction(PHINode *PHI,
   TTI::PartialReductionExtendKind OpBExtend =
       TargetTransformInfo::getPartialReductionExtendKind(ExtB);
 
-  PartialReductionChain Chain(Rdx.getLoopExitInstr(), ExtA, ExtB, BinOp);
+  PartialReductionChain Chain(RdxExitInstr, ExtA, ExtB, BinOp);
 
   unsigned TargetScaleFactor =
       PHI->getType()->getPrimitiveSizeInBits().getKnownScalarFactor(
@@ -8773,10 +8788,12 @@ VPRecipeBuilder::getScaledReduction(PHINode *PHI,
                 std::make_optional(BinOp->getOpcode()));
             return Cost.isValid();
           },
-          Range))
-    return std::make_pair(Chain, TargetScaleFactor);
+          Range)) {
+    Chains.push_back(std::make_pair(Chain, TargetScaleFactor));
+    return true;
+  }
 
-  return std::nullopt;
+  return false;
 }
 
 VPRecipeBase *
@@ -8871,12 +8888,14 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
          "Unexpected number of operands for partial reduction");
 
   VPValue *BinOp = Operands[0];
-  VPValue *Phi = Operands[1];
-  if (isa<VPReductionPHIRecipe>(BinOp->getDefiningRecipe()))
-    std::swap(BinOp, Phi);
+  VPValue *Accumulator = Operands[1];
+  VPRecipeBase *BinOpRecipe = BinOp->getDefiningRecipe();
+  if (isa<VPReductionPHIRecipe>(BinOpRecipe) ||
+      isa<VPPartialReductionRecipe>(BinOpRecipe))
+    std::swap(BinOp, Accumulator);
 
-  return new VPPartialReductionRecipe(Reduction->getOpcode(), BinOp, Phi,
-                                      Reduction);
+  return new VPPartialReductionRecipe(Reduction->getOpcode(), BinOp,
+                                      Accumulator, Reduction);
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
@@ -9072,7 +9091,6 @@ addUsersInExitBlocks(VPlan &Plan,
 
   auto *MiddleVPBB = Plan.getMiddleBlock();
   VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
-  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
 
   // Introduce extract for exiting values and update the VPIRInstructions
   // modeling the corresponding LCSSA phis.
@@ -10283,8 +10301,8 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
         // value. This ensures correctness when the start value might not be
         // less than the minimum value of a monotonically increasing induction
         // variable.
-        IRBuilder<> Builder(
-            cast<Instruction>(ResumeV)->getParent()->getFirstNonPHI());
+        BasicBlock *ResumeBB = cast<Instruction>(ResumeV)->getParent();
+        IRBuilder<> Builder(ResumeBB, ResumeBB->getFirstNonPHIIt());
         Value *Cmp =
             Builder.CreateICmpEQ(ResumeV, RdxDesc.getRecurrenceStartValue());
         ResumeV =
