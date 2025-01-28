@@ -270,7 +270,7 @@ StringRef Triple::getVendorTypeName(VendorType Kind) {
   case PC: return "pc";
   case SCEI: return "scei";
   case SUSE: return "suse";
-  case PLUMBEAR: return "plumbear";
+  case Plumbear: return "plumbear";
   }
 
   llvm_unreachable("Invalid VendorType!");
@@ -668,6 +668,7 @@ static Triple::VendorType parseVendor(StringRef VendorName) {
       .Case("suse", Triple::SUSE)
       .Case("oe", Triple::OpenEmbedded)
       .Case("intel", Triple::Intel)
+      .Case("plumbear", Triple::Plumbear)
       .Default(Triple::UnknownVendor);
 }
 
