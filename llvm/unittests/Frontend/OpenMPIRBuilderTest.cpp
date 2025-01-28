@@ -4643,9 +4643,11 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithThreadLimit) {
       dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNonDebugInstruction());
   ASSERT_NE(BrInst, nullptr);
   ASSERT_EQ(BrInst->getNumSuccessors(), 1U);
-  Instruction *NextInstruction =
+  BasicBlock::iterator NextInstruction =
       BrInst->getSuccessor(0)->getFirstNonPHIOrDbgOrLifetime();
-  CallInst *ForkTeamsCI = dyn_cast_if_present<CallInst>(NextInstruction);
+  CallInst *ForkTeamsCI = nullptr;
+  if (NextInstruction != BrInst->getSuccessor(0)->end())
+    ForkTeamsCI = dyn_cast_if_present<CallInst>(NextInstruction);
   ASSERT_NE(ForkTeamsCI, nullptr);
   EXPECT_EQ(ForkTeamsCI->getCalledFunction(),
             OMPBuilder.getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_fork_teams));
@@ -4698,9 +4700,11 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsUpper) {
       dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNonDebugInstruction());
   ASSERT_NE(BrInst, nullptr);
   ASSERT_EQ(BrInst->getNumSuccessors(), 1U);
-  Instruction *NextInstruction =
+  BasicBlock::iterator NextInstruction =
       BrInst->getSuccessor(0)->getFirstNonPHIOrDbgOrLifetime();
-  CallInst *ForkTeamsCI = dyn_cast_if_present<CallInst>(NextInstruction);
+  CallInst *ForkTeamsCI = nullptr;
+  if (NextInstruction != BrInst->getSuccessor(0)->end())
+    ForkTeamsCI = dyn_cast_if_present<CallInst>(NextInstruction);
   ASSERT_NE(ForkTeamsCI, nullptr);
   EXPECT_EQ(ForkTeamsCI->getCalledFunction(),
             OMPBuilder.getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_fork_teams));
@@ -4756,9 +4760,11 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsBoth) {
       dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNonDebugInstruction());
   ASSERT_NE(BrInst, nullptr);
   ASSERT_EQ(BrInst->getNumSuccessors(), 1U);
-  Instruction *NextInstruction =
+  BasicBlock::iterator NextInstruction =
       BrInst->getSuccessor(0)->getFirstNonPHIOrDbgOrLifetime();
-  CallInst *ForkTeamsCI = dyn_cast_if_present<CallInst>(NextInstruction);
+  CallInst *ForkTeamsCI = nullptr;
+  if (NextInstruction != BrInst->getSuccessor(0)->end())
+    ForkTeamsCI = dyn_cast_if_present<CallInst>(NextInstruction);
   ASSERT_NE(ForkTeamsCI, nullptr);
   EXPECT_EQ(ForkTeamsCI->getCalledFunction(),
             OMPBuilder.getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_fork_teams));
@@ -4820,9 +4826,11 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsAndThreadLimit) {
       dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNonDebugInstruction());
   ASSERT_NE(BrInst, nullptr);
   ASSERT_EQ(BrInst->getNumSuccessors(), 1U);
-  Instruction *NextInstruction =
+  BasicBlock::iterator NextInstruction =
       BrInst->getSuccessor(0)->getFirstNonPHIOrDbgOrLifetime();
-  CallInst *ForkTeamsCI = dyn_cast_if_present<CallInst>(NextInstruction);
+  CallInst *ForkTeamsCI = nullptr;
+  if (NextInstruction != BrInst->getSuccessor(0)->end())
+    ForkTeamsCI = dyn_cast_if_present<CallInst>(NextInstruction);
   ASSERT_NE(ForkTeamsCI, nullptr);
   EXPECT_EQ(ForkTeamsCI->getCalledFunction(),
             OMPBuilder.getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_fork_teams));
@@ -7621,26 +7629,6 @@ TEST_F(OpenMPIRBuilderTest, createGPUOffloadEntry) {
   OMPBuilder.createOffloadEntry(/* ID = */ nullptr, Fn,
                                 /* Size = */ 0,
                                 /* Flags = */ 0, GlobalValue::WeakAnyLinkage);
-
-  // Check nvvm.annotations only created for GPU kernels
-  NamedMDNode *MD = M->getNamedMetadata("nvvm.annotations");
-  EXPECT_NE(MD, nullptr);
-  EXPECT_EQ(MD->getNumOperands(), 1u);
-
-  MDNode *Annotations = MD->getOperand(0);
-  EXPECT_EQ(Annotations->getNumOperands(), 3u);
-
-  Constant *ConstVal =
-      dyn_cast<ConstantAsMetadata>(Annotations->getOperand(0))->getValue();
-  EXPECT_TRUE(isa<Function>(Fn));
-  EXPECT_EQ(ConstVal, cast<Function>(Fn));
-
-  EXPECT_TRUE(Annotations->getOperand(1).equalsStr("kernel"));
-
-  EXPECT_TRUE(mdconst::hasa<ConstantInt>(Annotations->getOperand(2)));
-  APInt IntVal =
-      mdconst::extract<ConstantInt>(Annotations->getOperand(2))->getValue();
-  EXPECT_EQ(IntVal, 1);
 
   // Check kernel attributes
   EXPECT_TRUE(Fn->hasFnAttribute("kernel"));

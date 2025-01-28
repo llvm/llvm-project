@@ -4301,6 +4301,11 @@ def fwrapv : Flag<["-"], "fwrapv">, Group<f_Group>,
   HelpText<"Treat signed integer overflow as two's complement">;
 def fno_wrapv : Flag<["-"], "fno-wrapv">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, FlangOption]>;
+def fwrapv_pointer : Flag<["-"], "fwrapv-pointer">, Group<f_Group>,
+  Visibility<[ClangOption, CLOption, CC1Option, FlangOption, FC1Option]>,
+  HelpText<"Treat pointer overflow as two's complement">;
+def fno_wrapv_pointer : Flag<["-"], "fno-wrapv-pointer">, Group<f_Group>,
+  Visibility<[ClangOption, CLOption, FlangOption]>;
 def fwritable_strings : Flag<["-"], "fwritable-strings">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Store string literals as writable data">,
@@ -4344,6 +4349,18 @@ def stack_usage_file : Separate<["-"], "stack-usage-file">,
   Visibility<[CC1Option]>,
   HelpText<"Filename (or -) to write stack usage output to">,
   MarshallingInfoString<CodeGenOpts<"StackUsageOutput">>;
+def fextend_variable_liveness_EQ : Joined<["-"], "fextend-variable-liveness=">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Extend the liveness of user variables through optimizations to "
+           "prevent stale or optimized-out variable values when debugging.">,
+  Values<"all,this,none">,
+  NormalizedValues<["All", "This", "None"]>,
+  NormalizedValuesScope<"CodeGenOptions::ExtendVariableLivenessKind">,
+  MarshallingInfoEnum<CodeGenOpts<"ExtendVariableLiveness">, "None">;
+def fextend_variable_liveness : Flag<["-"], "fextend-variable-liveness">,
+  Visibility<[ClangOption, CC1Option]>,
+  Alias<fextend_variable_liveness_EQ>, AliasArgs<["all"]>,
+  HelpText<"Alias for -fextend-variable-liveness=all.">;
 
 defm unique_basic_block_section_names : BoolFOption<"unique-basic-block-section-names",
   CodeGenOpts<"UniqueBasicBlockSectionNames">, DefaultFalse,
@@ -6970,8 +6987,11 @@ defm unsigned : OptInFC1FFlag<"unsigned", "Enables UNSIGNED type">;
 def fno_automatic : Flag<["-"], "fno-automatic">, Group<f_Group>,
   HelpText<"Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE">;
 
-def fsave_main_program : Flag<["-"], "fsave-main-program">, Group<f_Group>,
-  HelpText<"Place all variables from the main program in static memory (otherwise scalars may be placed on the stack)">;
+defm save_main_program : BoolOptionWithoutMarshalling<"f", "save-main-program",
+  PosFlag<SetTrue, [], [],
+    "Place all main program variables in static memory (otherwise scalars may be placed on the stack)">,
+  NegFlag<SetFalse, [], [],
+    "Allow placing main program variables on the stack (default)">>;
 
 defm stack_arrays : BoolOptionWithoutMarshalling<"f", "stack-arrays",
   PosFlag<SetTrue, [], [ClangOption], "Attempt to allocate array temporaries on the stack, no matter their size">,
