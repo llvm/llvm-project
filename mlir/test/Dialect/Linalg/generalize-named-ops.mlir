@@ -1016,13 +1016,13 @@ func.func @matmul_transpose_a_b_explicit(%arg0: memref<5x3xf32>, %arg1: memref<7
 // CHECK-NEXT:      arith.addf
 // CHECK-NEXT:      linalg.yield
 
-func.func @contract_matmul(%arg0: memref<3x5xf32>, %arg1: memref<5x7xf32>, %arg2: memref<3x7xf32>) {
+func.func @contract_matmul(%A: memref<3x5xf32>, %B: memref<5x7xf32>, %C: memref<3x7xf32>) {
   linalg.contract
       indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>,
                        affine_map<(d0, d1, d2) -> (d2, d1)>,
                        affine_map<(d0, d1, d2) -> (d0, d1)>]
-      ins(%arg0, %arg1 : memref<3x5xf32>, memref<5x7xf32>)
-      outs(%arg2: memref<3x7xf32>)
+      ins(%A, %B : memref<3x5xf32>, memref<5x7xf32>)
+      outs(%C: memref<3x7xf32>)
 
   return
 }
@@ -1046,13 +1046,13 @@ func.func @contract_matmul(%arg0: memref<3x5xf32>, %arg1: memref<5x7xf32>, %arg2
 // CHECK-NEXT:      arith.addf
 // CHECK-NEXT:      linalg.yield
 
-func.func @contract_matmul_transpose_a_b(%arg0: memref<5x3xf32>, %arg1: memref<7x5xf32>, %arg2: memref<3x7xf32>) {
+func.func @contract_matmul_transpose_a_b(%A: memref<5x3xf32>, %B: memref<7x5xf32>, %C: memref<3x7xf32>) {
   linalg.contract
       indexing_maps = [affine_map<(d0, d1, d2) -> (d2, d0)>,
                        affine_map<(d0, d1, d2) -> (d1, d2)>,
                        affine_map<(d0, d1, d2) -> (d0, d1)>]
-      ins(%arg0, %arg1 : memref<5x3xf32>, memref<7x5xf32>)
-      outs(%arg2: memref<3x7xf32>)
+      ins(%A, %B : memref<5x3xf32>, memref<7x5xf32>)
+      outs(%C: memref<3x7xf32>)
   return
 }
 
@@ -1075,13 +1075,13 @@ func.func @contract_matmul_transpose_a_b(%arg0: memref<5x3xf32>, %arg1: memref<7
 // CHECK-NEXT:      arith.addf
 // CHECK-NEXT:      linalg.yield
 
-func.func @contract_batch_matmul(%arg0: memref<9x3x5xf32>, %arg1: memref<9x5x7xf32>, %arg2: memref<9x3x7xf32>) {
+func.func @contract_batch_matmul(%A: memref<9x3x5xf32>, %B: memref<9x5x7xf32>, %C: memref<9x3x7xf32>) {
   linalg.contract
       indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>,
                        affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>,
                        affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>]
-      ins(%arg0, %arg1 : memref<9x3x5xf32>, memref<9x5x7xf32>)
-      outs(%arg2: memref<9x3x7xf32>)
+      ins(%A, %B : memref<9x3x5xf32>, memref<9x5x7xf32>)
+      outs(%C: memref<9x3x7xf32>)
   return
 }
 

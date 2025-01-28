@@ -1568,7 +1568,6 @@ func.func @contract_matmul_bcast_b(%A: memref<3x5xf32>, %B: memref<5xf32>, %C: m
 
 // -----
 
-
 // CHECK: #[[$ACCESS_A:.+]] = affine_map<(d0, d1, d2) -> (d2)>
 // CHECK: #[[$ACCESS_B:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 // CHECK-LABEL: func.func @contract_matmul_bcast_a_b
@@ -1608,7 +1607,6 @@ func.func @contract_matmul_bcast_a_transpose_b(
   return
 }
 
-
 // -----
 
 // CHECK: #[[$ACCESS_A:.+]] = affine_map<(d0, d1, d2) -> (d2, d0)>
@@ -1628,7 +1626,6 @@ func.func @contract_matmul_bcast_b_transpose_a(%A: memref<5x3xf32>, %B: memref<5
       outs(%C: memref<3x7xf32>)
   return
 }
-
 
 // -----
 

@@ -3693,10 +3693,18 @@ void ContractOp::print(OpAsmPrinter &p) {
 
 LogicalResult ContractOp::verify() {
   int iterationSpaceDims = -1;
-  // Maps iter space dim (as index) to num of occurrences in inputs and output.
+  // Map iter space dims to #occurrences in inputs' and output's affine_maps:
+  // e.g., inOccurrences[0] will hold #times that dim (with index) 0 is used to
+  // access an input operand (so occurrence count can be at most 2) and
+  // outOccurrences[1] will indicate whether dim 1 occurred in the output, etc.
   SmallVector<size_t> inOccurrences;
   SmallVector<size_t> outOccurrences;
 
+  // For each operand's affine_map and type, check that the rank of the
+  // affine_map's domain is the same as those seen prior, check that the
+  // affine_map's co-domain rank is the same as that of the corresponding type,
+  // check that the affine_map is a projected permutation, and, finally, update
+  // inputs and output occurrence counts for dims in the co-domains.
   auto checkAffineMapAndType = [&](AffineMap affineMap, Type operandType,
                                    bool isInput) -> LogicalResult {
     if (iterationSpaceDims == -1) {
@@ -3737,7 +3745,7 @@ LogicalResult ContractOp::verify() {
        llvm::zip(getIndexingMapsArray(), getOperandTypes(),
                  SmallVector<bool>{true, true, false})) {
     if (failed(checkAffineMapAndType(affineMap, operandType, isInput)))
-      return failure(); // NOTE: checking lambda will emit error.
+      return failure(); // NB: checkAffineMapAndType will emit relevant error.
   }
 
   bool hasContractingDim = false;
@@ -3745,6 +3753,7 @@ LogicalResult ContractOp::verify() {
     size_t inOccCount = inOccurrences[dimIndex];
     size_t outOccCount = outOccurrences[dimIndex];
 
+    // We have a contracting dim if and only if ...
     hasContractingDim |= inOccCount == 2 && outOccCount == 0;
 
     if (inOccCount == 0 && outOccCount == 0)

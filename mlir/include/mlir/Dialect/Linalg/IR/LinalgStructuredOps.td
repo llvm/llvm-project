@@ -698,9 +698,9 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
 
     where `I`, `J`, and `H` are multi-indices, i.e. sequences/ordered sets of
     dimension identifiers (meant to range over valid indices), corresponding to
-    the co-domains of the (projected permutation) `indexing_maps` of `A`, `B`
-    and `C`, respectively. `SUM_{dims}` means reduce over all valid indices for
-    the dimensions in the set `dims`.
+    the co-domains of the mandatory (projected permutation) `indexing_maps` of
+    `A`, `B` and `C`, respectively. `SUM_{dims}` means reduce over all valid
+    indices for the dimensions in the set `dims`.
 
     The iteration space consists of all dimensions in `I`, `J` and `H`, i.e. the
     domain of each of the `affine_map`s. Like for einsums, the iteration type of
@@ -719,21 +719,24 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
     `n` and `b` are of parallel iteration-type) and gets represented as:
 
     ```
-    %0 = linalg.contract
+    %D = linalg.contract
         indexing_maps = [affine_map<(batch, m, n, k) -> (batch, m, k)>,
                          affine_map<(batch, m, n, k) -> (batch, k, n)>,
                          affine_map<(batch, m, n, k) -> (batch, m, n)>]
-        ins(%arg0, %arg1: tensor<?x?x?xf32>, tensor<?x?x?xf32>)
-        outs(%arg2: tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+        ins(%A, %B: tensor<?x?x?xf32>, tensor<?x?x?xf32>)
+        outs(%C: tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
     ```
 
     Note that by permuting the dims in the co-domains of the `affine_map`s, we
     can apply arbitrary transposes to the inputs and output. Similarly,
     arbitrary broadcasts can be achieved through leaving out dims on either
-    input operand.
+    input operand - these dims' inferred iter type will be parallel.
 
     Numeric casting is performed on the operands to the inner multiplication,
     promoting them to the same data type as the accumulator/output.
+
+    TODO: Allow control over the combining/accumulating op and possibly the
+          multiplication op.
   }];
 
   let arguments = (ins

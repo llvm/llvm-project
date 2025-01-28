@@ -549,7 +549,8 @@ func.func @invalid_indexing_maps_placement_matmul(%lhs: tensor<4x1xf32>, %rhs: t
 
 func.func @invalid_indexing_maps_placement_contraction(
     %lhs: tensor<4x1xf32>, %rhs: tensor<1x64xf32>, %init: tensor<4x64xf32>) {
-  // expected-error @+2 {{custom op 'linalg.contract' expected 'indexing_maps' attribute}}
+  // expected-error @+3 {{custom op 'linalg.contract' expected 'indexing_maps' attribute}}
+  // NB: indexing_maps should be provided before ins and outs
   linalg.contract
       ins(%lhs, %rhs : tensor<4x1xf32>, tensor<1x64xf32>)
       outs(%init : tensor<4x64xf32>)

@@ -121,7 +121,7 @@ func.func @generalize_matmul_unsigned_tensor_f16f64i32(%A : tensor<16x8xf16>, %B
 // -----
 
 func.func @generalize_matmul_as_contraction_tensor_f16f64f32(
-    %A : tensor<16x8xf16>,
+    %A: tensor<16x8xf16>,
     %B: tensor<8x32xf64>,
     %C: tensor<16x32xf32>) -> tensor<16x32xf32> {
   %0 = linalg.contract
