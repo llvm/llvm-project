@@ -4049,7 +4049,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //   consider this an acceptable tradeoff for performance.
     // To make shadow propagation precise, we want the equivalent of
     // "horizontal OR", but this is not available.
-    return handleIntrinsicByApplyingToShadow(I, /* trailingVerbatimArgs */ 0);
+    return handleIntrinsicByApplyingToShadow(
+        I, /*trailingVerbatimArgs*/ 0, /*shadowIntrinsicID=*/std::nullopt);
   }
 
   /// Handle Arm NEON vector store intrinsics (vst{2,3,4}, vst1x_{2,3,4},
@@ -4156,6 +4157,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///     shadow[out] =
   ///         intrinsic(shadow[var1], shadow[var2], opType) | shadow[opType]
   ///
+  /// Optionally, the intrinsic for the shadow can be replaced with another
+  /// intrinsic of the same type.
+  ///
   /// CAUTION: this assumes that the intrinsic will handle arbitrary
   ///          bit-patterns (for example, if the intrinsic accepts floats for
   ///          var1, we require that it doesn't care if inputs are NaNs).
@@ -4164,8 +4168,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// (tbl{1,2,3,4}).
   ///
   /// The origin is approximated using setOriginForNaryOp.
-  void handleIntrinsicByApplyingToShadow(IntrinsicInst &I,
-                                         unsigned int trailingVerbatimArgs) {
+  void handleIntrinsicByApplyingToShadow(
+      IntrinsicInst &I, unsigned int trailingVerbatimArgs,
+      std::optional<Intrinsic::ID> shadowIntrinsicID) {
     IRBuilder<> IRB(&I);
 
     assert(trailingVerbatimArgs < I.arg_size());
@@ -4187,8 +4192,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       ShadowArgs.push_back(Arg);
     }
 
-    CallInst *CI =
-        IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(), ShadowArgs);
+    CallInst *CI = IRB.CreateIntrinsic(
+        I.getType(), shadowIntrinsicID.value_or(I.getIntrinsicID()),
+        ShadowArgs);
     Value *CombinedShadow = CI;
 
     // Combine the computed shadow with the shadow of trailing args
@@ -4664,7 +4670,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_tbx3:
     case Intrinsic::aarch64_neon_tbx4: {
       // The last trailing argument (index register) should be handled verbatim
-      handleIntrinsicByApplyingToShadow(I, 1);
+      handleIntrinsicByApplyingToShadow(I, /*trailingVerbatimArgs*/ 1,
+                                        /*shadowIntrinsicID=*/std::nullopt);
       break;
     }
 
