@@ -212,3 +212,17 @@ func.func @reshape_char(%arg0: !fir.box<!fir.array<?x!fir.char<2,?>>>, %arg1: !f
 // CHECK:           }
 // CHECK:           return %[[VAL_10]] : !hlfir.expr<?x!fir.char<2,?>>
 // CHECK:         }
+
+func.func @reshape_negative_result_array_have_different_types(%arg0: !fir.box<!fir.array<?x!fir.char<2,1>>>, %arg1: !fir.ref<!fir.array<1xi32>>) -> !hlfir.expr<?x!fir.char<2,2>> {
+  %res = hlfir.reshape %arg0 %arg1 : (!fir.box<!fir.array<?x!fir.char<2,1>>>, !fir.ref<!fir.array<1xi32>>) -> !hlfir.expr<?x!fir.char<2,2>>
+  return %res : !hlfir.expr<?x!fir.char<2,2>>
+}
+// CHECK-LABEL:   func.func @reshape_negative_result_array_have_different_types(
+// CHECK:           hlfir.reshape %{{.*}} %{{.*}} : (!fir.box<!fir.array<?x!fir.char<2>>>, !fir.ref<!fir.array<1xi32>>) -> !hlfir.expr<?x!fir.char<2,2>>
+
+func.func @reshape_negative_array_pad_have_different_types(%arg0: !fir.box<!fir.array<?x!fir.char<2,2>>>, %arg1: !fir.ref<!fir.array<1xi32>>, %arg2: !fir.box<!fir.array<?x!fir.char<2,1>>>) -> !hlfir.expr<?x!fir.char<2,2>> {
+  %res = hlfir.reshape %arg0 %arg1 pad %arg2 : (!fir.box<!fir.array<?x!fir.char<2,2>>>, !fir.ref<!fir.array<1xi32>>, !fir.box<!fir.array<?x!fir.char<2,1>>>) -> !hlfir.expr<?x!fir.char<2,2>>
+  return %res : !hlfir.expr<?x!fir.char<2,2>>
+}
+// CHECK-LABEL:   func.func @reshape_negative_array_pad_have_different_types(
+// CHECK:           hlfir.reshape %{{.*}} %{{.*}} pad %{{.*}} : (!fir.box<!fir.array<?x!fir.char<2,2>>>, !fir.ref<!fir.array<1xi32>>, !fir.box<!fir.array<?x!fir.char<2>>>) -> !hlfir.expr<?x!fir.char<2,2>>

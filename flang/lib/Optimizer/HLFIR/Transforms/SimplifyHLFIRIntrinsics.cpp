@@ -969,7 +969,10 @@ public:
                                          "RESHAPE with ORDER argument");
 
     // Verify that the element types of ARRAY, PAD and the result
-    // match before doing any transformations.
+    // match before doing any transformations. For example,
+    // the character types of different lengths may appear in the dead
+    // code, and it just does not make sense to inline hlfir.reshape
+    // in this case (a runtime call might have less code size footprint).
     hlfir::Entity result = hlfir::Entity{reshape};
     hlfir::Entity array = hlfir::Entity{reshape.getArray()};
     mlir::Type elementType = array.getFortranElementType();
