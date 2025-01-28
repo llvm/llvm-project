@@ -290,6 +290,9 @@ std::optional<Constant<T>> Folder<T>::ApplyComponent(
             auto *typedExpr{UnwrapExpr<Expr<T>>(expr.value())};
             CHECK(typedExpr);
             array = std::make_unique<ArrayConstructor<T>>(*typedExpr);
+            if constexpr (T::category == TypeCategory::Character) {
+              array->set_LEN(Expr<SubscriptInteger>{value->LEN()});
+            }
           }
           if (subscripts) {
             if (auto element{ApplySubscripts(*value, *subscripts)}) {
@@ -407,6 +410,7 @@ template <typename T> Expr<T> Folder<T>::Folding(Designator<T> &&designator) {
 template <typename T>
 Constant<T> *Folder<T>::Folding(std::optional<ActualArgument> &arg) {
   if (auto *expr{UnwrapExpr<Expr<SomeType>>(arg)}) {
+    *expr = Fold(context_, std::move(*expr));
     if constexpr (T::category != TypeCategory::Derived) {
       if (!UnwrapExpr<Expr<T>>(*expr)) {
         if (const Symbol *
