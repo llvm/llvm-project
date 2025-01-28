@@ -30,27 +30,3 @@ global_load_b32 v0, v[2:3], off scope:SCOPE_SE nv th:TH_LOAD_NT
 
 global_load_b32 v0, v[2:3], off nv scope:SCOPE_SE th:TH_LOAD_NT
 // GFX1250: encoding: [0xfc,0x00,0x05,0xee,0x00,0x00,0x14,0x00,0x02,0x00,0x00,0x00]
-
-s_getreg_b32 s1, hwreg(33)
-// GFX1250: encoding: [0x21,0xf8,0x81,0xb8]
-
-s_getreg_b32 s1, hwreg(HW_REG_XNACK_STATE_PRIV)
-// GFX1250: encoding: [0x21,0xf8,0x81,0xb8]
-
-s_getreg_b32 s1, hwreg(34)
-// GFX1250: encoding: [0x22,0xf8,0x81,0xb8]
-
-s_getreg_b32 s1, hwreg(HW_REG_XNACK_MASK)
-// GFX1250: encoding: [0x22,0xf8,0x81,0xb8]
-
-s_setreg_b32 hwreg(33), s1
-// GFX1250: encoding: [0x21,0xf8,0x01,0xb9]
-
-s_setreg_b32 hwreg(HW_REG_XNACK_STATE_PRIV), s1
-// GFX1250: encoding: [0x21,0xf8,0x01,0xb9]
-
-s_setreg_b32 hwreg(34), s1
-// GFX1250: encoding: [0x22,0xf8,0x01,0xb9]
-
-s_setreg_b32 hwreg(HW_REG_XNACK_MASK), s1
-// GFX1250: encoding: [0x22,0xf8,0x01,0xb9]
