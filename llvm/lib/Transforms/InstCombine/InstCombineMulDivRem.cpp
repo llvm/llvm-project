@@ -2044,7 +2044,7 @@ convertFSqrtDivIntoFMul(CallInst *CI, Instruction *X,
   // instructions in R2 and get the most common fpmath metadata and fast-math
   // flags on it.
   auto *FSqrt = cast<CallInst>(CI->clone());
-  FSqrt->insertBefore(CI);
+  FSqrt->insertBefore(CI->getIterator());
   auto *R2FPMathMDNode = (*R2.begin())->getMetadata(LLVMContext::MD_fpmath);
   FastMathFlags R2FMF = (*R2.begin())->getFastMathFlags(); // Common FMF
   for (Instruction *I : R2) {
