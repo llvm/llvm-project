@@ -1023,7 +1023,7 @@ std::string Intrinsic::getInstTypeCode(Type T, ClassKind CK) const {
     return "bf16";
 
   if (T.isMFloat8())
-    return "mfp8";
+    return "mf8";
 
   if (T.isPoly())
     typeCode = 'p';
