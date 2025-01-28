@@ -20,10 +20,10 @@
  * THE SOFTWARE.
  */
 
-#include <clc/math/clc_subnormal_config.h>
-#include <clc/math/math.h>
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
+#include <clc/math/clc_subnormal_config.h>
+#include <clc/math/math.h>
 #include <clc/relational/clc_isinf.h>
 #include <clc/relational/clc_isnan.h>
 #include <clc/shared/clc_clamp.h>
