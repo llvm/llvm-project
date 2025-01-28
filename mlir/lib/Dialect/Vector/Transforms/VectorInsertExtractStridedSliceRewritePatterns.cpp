@@ -96,11 +96,15 @@ public:
                                 PatternRewriter &rewriter) const override {
     auto srcType = op.getSourceVectorType();
     auto dstType = op.getDestVectorType();
+    int64_t srcRank = srcType.getRank();
+
+    // Scalable vectors are not supported by vector shuffle.
+    if ((srcType.isScalable() || dstType.isScalable()) && srcRank == 1)
+      return failure();
 
     if (op.getOffsets().getValue().empty())
       return failure();
 
-    int64_t srcRank = srcType.getRank();
     int64_t dstRank = dstType.getRank();
     assert(dstRank >= srcRank);
     if (dstRank != srcRank)
@@ -184,6 +188,11 @@ public:
   LogicalResult matchAndRewrite(ExtractStridedSliceOp op,
                                 PatternRewriter &rewriter) const override {
     auto dstType = op.getType();
+    auto srcType = op.getSourceVectorType();
+
+    // Scalable vectors are not supported by vector shuffle.
+    if (dstType.isScalable() || srcType.isScalable())
+      return failure();
 
     assert(!op.getOffsets().getValue().empty() && "Unexpected empty offsets");
 
@@ -331,4 +340,14 @@ void vector::populateVectorInsertExtractStridedSliceTransforms(
   patterns.add<ConvertSameRankInsertStridedSliceIntoShuffle,
                Convert1DExtractStridedSliceIntoShuffle>(patterns.getContext(),
                                                         benefit);
+  // Generate chains of extract/insert ops for scalable vectors only as they
+  // can't be lowered to vector shuffles.
+  populateVectorExtractStridedSliceToExtractInsertChainPatterns(
+      patterns,
+      /*controlFn=*/
+      [](ExtractStridedSliceOp op) {
+        return op.getType().isScalable() ||
+               op.getSourceVectorType().isScalable();
+      },
+      benefit);
 }
