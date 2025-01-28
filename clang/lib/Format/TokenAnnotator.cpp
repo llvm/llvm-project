@@ -4313,8 +4313,9 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
     //
     //   aaaaaaa
     //       .aaaaaaaaa.bbbbbbbb(cccccccc);
+    const auto *NextOperator = Right.NextOperator;
     const auto Penalty = Style.PenaltyBreakBeforeMemberAccess;
-    return Right.NextOperator && Right.NextOperator->Previous->closesScope()
+    return NextOperator && NextOperator->Previous->closesScope()
                ? std::min(Penalty, 35u)
                : Penalty;
   }
