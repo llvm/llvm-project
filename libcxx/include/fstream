@@ -362,8 +362,8 @@ private:
   bool __read_mode();
   void __write_mode();
 
-  static int __fseek(FILE* __file, pos_type __offset, int __whence);
-  static pos_type __ftell(FILE* __file);
+  _LIBCPP_HIDE_FROM_ABI static int __fseek(FILE* __file, pos_type __offset, int __whence);
+  _LIBCPP_HIDE_FROM_ABI static pos_type __ftell(FILE* __file);
 
   _LIBCPP_EXPORTED_FROM_ABI friend FILE* __get_ostream_file(ostream&);
 
