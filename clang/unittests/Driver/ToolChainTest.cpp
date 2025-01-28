@@ -608,7 +608,8 @@ TEST(ToolChainTest, UEFIDefaultDebugFormatTest) {
   CCDriver.setCheckInputsExist(false);
   std::unique_ptr<Compilation> CC(
       CCDriver.BuildCompilation({"/home/test/bin/clang", "foo.cpp"}));
-  EXPECT_EQ(CC->getDefaultToolChain().getDefaultDebugFormat(), llvm::codegenoptions::DIF_CodeView);
+  EXPECT_EQ(CC->getDefaultToolChain().getDefaultDebugFormat(),
+            llvm::codegenoptions::DIF_CodeView);
 }
 
 TEST(GetDriverMode, PrefersLastDriverMode) {
