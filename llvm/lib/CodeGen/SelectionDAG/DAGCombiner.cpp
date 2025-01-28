@@ -2627,11 +2627,11 @@ SDValue DAGCombiner::visitPTRADD(SDNode *N) {
   EVT IntVT = N1.getValueType();
   SDLoc DL(N);
 
-  // fold (ptradd undef, y) -> undef
+  // fold (ptradd und*f, y) -> und*f
   if (N0.isUndef())
     return N0;
 
-  // fold (ptradd x, undef) -> undef
+  // fold (ptradd x, und*f) -> und*f
   if (N1.isUndef())
     return DAG.getUNDEF(PtrVT);
 
