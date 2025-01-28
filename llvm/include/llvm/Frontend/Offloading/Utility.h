@@ -24,11 +24,24 @@ namespace offloading {
 /// This is the record of an object that just be registered with the offloading
 /// runtime.
 struct EntryTy {
+  /// Reserved bytes used to detect an older version of the struct, always zero.
+  uint64_t Reserved = 0x0;
+  /// The current version of the struct for runtime forward compatibility.
+  uint16_t Version = 0x1;
+  /// The expected consumer of this entry, e.g. CUDA or OpenMP.
+  uint16_t Kind;
+  /// Flags associated with the global.
+  uint32_t Flags;
+  /// The address of the global to be registered by the runtime.
   void *Address;
+  /// The name of the symbol in the device image.
   char *SymbolName;
-  size_t Size;
-  int32_t Flags;
-  int32_t Data;
+  /// The number of bytes the symbol takes.
+  uint64_t Size;
+  /// Extra generic data used to register this entry.
+  uint64_t Data;
+  /// An extra pointer, usually null.
+  void *AuxAddr;
 };
 
 /// Offloading entry flags for CUDA / HIP. The first three bits indicate the
@@ -55,29 +68,30 @@ enum OffloadEntryKindFlag : uint32_t {
 /// globals that will be registered with the offloading runtime.
 StructType *getEntryTy(Module &M);
 
-/// Returns the struct type we store the two pointers for CUDA / HIP managed
-/// variables in. Necessary until we widen the offload entry struct.
-StructType *getManagedTy(Module &M);
-
 /// Create an offloading section struct used to register this global at
 /// runtime.
 ///
 /// \param M The module to be used
 /// \param Addr The pointer to the global being registered.
+/// \param Kind The offloading language expected to consume this.
 /// \param Name The symbol name associated with the global.
 /// \param Size The size in bytes of the global (0 for functions).
 /// \param Flags Flags associated with the entry.
 /// \param Data Extra data storage associated with the entry.
 /// \param SectionName The section this entry will be placed at.
-void emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
-                         uint64_t Size, int32_t Flags, int32_t Data,
-                         StringRef SectionName);
+/// \param AuxAddr An extra pointer if needed.
+void emitOffloadingEntry(Module &M, object::OffloadKind Kind, Constant *Addr,
+                         StringRef Name, uint64_t Size, uint32_t Flags,
+                         uint64_t Data, StringRef SectionName,
+                         Constant *AuxAddr = nullptr);
+
 /// Create a constant struct initializer used to register this global at
 /// runtime.
 /// \return the constant struct and the global variable holding the symbol name.
 std::pair<Constant *, GlobalVariable *>
-getOffloadingEntryInitializer(Module &M, Constant *Addr, StringRef Name,
-                              uint64_t Size, int32_t Flags, int32_t Data);
+getOffloadingEntryInitializer(Module &M, object::OffloadKind Kind,
+                              Constant *Addr, StringRef Name, uint64_t Size,
+                              uint32_t Flags, uint64_t Data, Constant *AuxAddr);
 
 /// Creates a pair of globals used to iterate the array of offloading entries by
 /// accessing the section variables provided by the linker.

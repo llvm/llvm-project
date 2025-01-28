@@ -124,8 +124,64 @@ void PluginManager::initializeAllDevices() {
   }
 }
 
+// Returns a pointer to the binary descriptor, upgrading from a legacy format if
+// necessary.
+__tgt_bin_desc *PluginManager::upgradeLegacyEntries(__tgt_bin_desc *Desc) {
+  struct LegacyEntryTy {
+    void *Address;
+    char *SymbolName;
+    size_t Size;
+    int32_t Flags;
+    int32_t Data;
+  };
+
+  if (UpgradedDescriptors.contains(Desc))
+    return &UpgradedDescriptors[Desc];
+
+  if (Desc->HostEntriesBegin == Desc->HostEntriesEnd ||
+      Desc->HostEntriesBegin->Reserved == 0)
+    return Desc;
+
+  // The new format mandates that each entry starts with eight bytes of zeroes.
+  // This allows us to detect the old format as this is a null pointer.
+  llvm::SmallVector<llvm::offloading::EntryTy, 0> &NewEntries =
+      LegacyEntries.emplace_back();
+  for (LegacyEntryTy &Entry : llvm::make_range(
+           reinterpret_cast<LegacyEntryTy *>(Desc->HostEntriesBegin),
+           reinterpret_cast<LegacyEntryTy *>(Desc->HostEntriesEnd))) {
+    llvm::offloading::EntryTy &NewEntry = NewEntries.emplace_back();
+
+    NewEntry.Address = Entry.Address;
+    NewEntry.Flags = Entry.Flags;
+    NewEntry.Data = Entry.Data;
+    NewEntry.Size = Entry.Size;
+    NewEntry.SymbolName = Entry.SymbolName;
+  }
+
+  // Create a new image struct so we can update the entries list.
+  llvm::SmallVector<__tgt_device_image, 0> &NewImages =
+      LegacyImages.emplace_back();
+  for (int32_t Image = 0; Image < Desc->NumDeviceImages; ++Image)
+    NewImages.emplace_back(
+        __tgt_device_image{Desc->DeviceImages[Image].ImageStart,
+                           Desc->DeviceImages[Image].ImageEnd,
+                           NewEntries.begin(), NewEntries.end()});
+
+  // Create the new binary descriptor containing the newly created memory.
+  __tgt_bin_desc &NewDesc = UpgradedDescriptors[Desc];
+  NewDesc.DeviceImages = NewImages.begin();
+  NewDesc.NumDeviceImages = Desc->NumDeviceImages;
+  NewDesc.HostEntriesBegin = NewEntries.begin();
+  NewDesc.HostEntriesEnd = NewEntries.end();
+
+  return &NewDesc;
+}
+
 void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   PM->RTLsMtx.lock();
+
+  // Upgrade the entries from the legacy implementation if necessary.
+  Desc = upgradeLegacyEntries(Desc);
 
   // Add in all the OpenMP requirements associated with this binary.
   for (llvm::offloading::EntryTy &Entry :
@@ -231,6 +287,8 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 
 void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
   DP("Unloading target library!\n");
+
+  Desc = upgradeLegacyEntries(Desc);
 
   PM->RTLsMtx.lock();
   // Find which RTL understands each image, if any.

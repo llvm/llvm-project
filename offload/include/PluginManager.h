@@ -170,6 +170,12 @@ private:
 
   /// Devices associated with plugins, accesses to the container are exclusive.
   ProtectedObj<DeviceContainerTy> Devices;
+
+  /// References to upgraded legacy offloading entires.
+  std::list<llvm::SmallVector<llvm::offloading::EntryTy, 0>> LegacyEntries;
+  std::list<llvm::SmallVector<__tgt_device_image, 0>> LegacyImages;
+  llvm::DenseMap<__tgt_bin_desc *, __tgt_bin_desc> UpgradedDescriptors;
+  __tgt_bin_desc *upgradeLegacyEntries(__tgt_bin_desc *Desc);
 };
 
 /// Initialize the plugin manager and OpenMP runtime.

@@ -93,7 +93,8 @@ int main(int argc, char **argv) {
   void *BAllocStart = reinterpret_cast<void *>(
       JsonKernelInfo->getAsObject()->getInteger("BumpAllocVAStart").value());
 
-  llvm::offloading::EntryTy KernelEntry = {nullptr, nullptr, 0, 0, 0};
+  llvm::offloading::EntryTy KernelEntry = {~0U,     0, 0, 0,      nullptr,
+                                           nullptr, 0, 0, nullptr};
   std::string KernelEntryName = KernelFunc.value().str();
   KernelEntry.SymbolName = const_cast<char *>(KernelEntryName.c_str());
   // Anything non-zero works to uniquely identify the kernel.
