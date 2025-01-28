@@ -206,7 +206,7 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
       }
 
       for (const VPUser *U : V->users()) {
-        auto *UI = dyn_cast<VPRecipeBase>(U);
+        auto *UI = cast<VPRecipeBase>(U);
         // TODO: check dominance of incoming values for phis properly.
         if (!UI ||
             isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe>(UI))
