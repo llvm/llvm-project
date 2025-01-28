@@ -10703,6 +10703,7 @@ bool LLParser::parseOptionalCallsites(std::vector<CallsiteInfo> &Callsites) {
       return true;
 
     SmallVector<unsigned> StackIdIndices;
+    // Synthesized callsite records will not have a stack id list.
     if (Lex.getKind() != lltok::rparen) {
       do {
         uint64_t StackId = 0;
