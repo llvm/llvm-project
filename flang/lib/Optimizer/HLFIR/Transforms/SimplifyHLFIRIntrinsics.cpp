@@ -1002,18 +1002,10 @@ public:
     llvm::SmallVector<mlir::Value, Fortran::common::maxRank> arrayExtents =
         hlfir::genExtentsVector(loc, builder, array);
 
-    mlir::Value arraySize, padSize;
-    llvm::SmallVector<mlir::Value, Fortran::common::maxRank> padExtents;
-    if (pad) {
-      // If PAD is present, we have to use array size to start taking
-      // elements from the PAD array.
-      arraySize = computeArraySize(loc, builder, arrayExtents);
-
-      padExtents = hlfir::genExtentsVector(loc, builder, hlfir::Entity{pad});
-      // PAD size is needed to wrap around the linear index addressing
-      // the PAD array.
-      padSize = computeArraySize(loc, builder, padExtents);
-    }
+    // If PAD is present, we have to use array size to start taking
+    // elements from the PAD array.
+    mlir::Value arraySize =
+        pad ? computeArraySize(loc, builder, arrayExtents) : nullptr;
     hlfir::Entity shape = hlfir::Entity{reshape.getShape()};
     llvm::SmallVector<mlir::Value, Fortran::common::maxRank> resultExtents;
     mlir::Type indexType = builder.getIndexType();
@@ -1037,15 +1029,18 @@ public:
 
         // In the 'else' block, return an element from the PAD.
         builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+        // PAD is dynamically optional, but we can unconditionally access it
+        // in the 'else' block. If we have to start taking elements from it,
+        // then it must be present in a valid program.
+        llvm::SmallVector<mlir::Value, Fortran::common::maxRank> padExtents =
+            hlfir::genExtentsVector(loc, builder, hlfir::Entity{pad});
         // Subtract the ARRAY size from the zero-based linear index
         // to get the zero-based linear index into PAD.
         mlir::Value padLinearIndex =
             builder.create<mlir::arith::SubIOp>(loc, linearIndex, arraySize);
-        // PAD wraps around, when additional elements are needed.
-        padLinearIndex =
-            builder.create<mlir::arith::RemUIOp>(loc, padLinearIndex, padSize);
         llvm::SmallVector<mlir::Value, Fortran::common::maxRank> padIndices =
-            delinearizeIndex(loc, builder, padExtents, padLinearIndex);
+            delinearizeIndex(loc, builder, padExtents, padLinearIndex,
+                             /*wrapAround=*/true);
         mlir::Value padElement =
             hlfir::loadElementAt(loc, builder, hlfir::Entity{pad}, padIndices);
         builder.create<fir::ResultOp>(loc, padElement);
@@ -1055,7 +1050,8 @@ public:
       }
 
       llvm::SmallVector<mlir::Value, Fortran::common::maxRank> arrayIndices =
-          delinearizeIndex(loc, builder, arrayExtents, linearIndex);
+          delinearizeIndex(loc, builder, arrayExtents, linearIndex,
+                           /*wrapAround=*/false);
       mlir::Value arrayElement =
           hlfir::loadElementAt(loc, builder, array, arrayIndices);
 
@@ -1119,33 +1115,39 @@ private:
   ///   ...
   ///   i(n-1) := linearIndex % e(n-1) + 1
   ///   linearIndex := linearIndex / e(n-1)
-  ///   in := linearIndex + 1
+  ///   if (wrapAround) {
+  ///     // If the index is allowed to wrap around, then
+  ///     // we need to modulo it by the last dimension's extent.
+  ///     in := linearIndex % en + 1
+  ///   } else {
+  ///     in := linearIndex + 1
+  ///   }
   static llvm::SmallVector<mlir::Value, Fortran::common::maxRank>
   delinearizeIndex(mlir::Location loc, fir::FirOpBuilder &builder,
-                   mlir::ValueRange extents, mlir::Value linearIndex) {
+                   mlir::ValueRange extents, mlir::Value linearIndex,
+                   bool wrapAround) {
     llvm::SmallVector<mlir::Value, Fortran::common::maxRank> indices;
     mlir::Type indexType = builder.getIndexType();
     mlir::Value one = builder.createIntegerConstant(loc, indexType, 1);
     linearIndex = builder.createConvert(loc, indexType, linearIndex);
 
     for (std::size_t dim = 0; dim < extents.size(); ++dim) {
-      mlir::Value currentIndex;
-      if (dim == extents.size() - 1) {
-        currentIndex = linearIndex;
-      } else {
-        mlir::Value extent =
-            builder.createConvert(loc, indexType, extents[dim]);
+      mlir::Value extent = builder.createConvert(loc, indexType, extents[dim]);
+      // Avoid the modulo for the last index, unless wrap around is allowed.
+      mlir::Value currentIndex = linearIndex;
+      if (dim != extents.size() - 1 || wrapAround)
         currentIndex =
             builder.create<mlir::arith::RemUIOp>(loc, linearIndex, extent);
-        linearIndex =
-            builder.create<mlir::arith::DivUIOp>(loc, linearIndex, extent);
-      }
+      // The result of the last division is unused, so it will be DCEd.
+      linearIndex =
+          builder.create<mlir::arith::DivUIOp>(loc, linearIndex, extent);
       indices.push_back(
           builder.create<mlir::arith::AddIOp>(loc, currentIndex, one));
     }
     return indices;
   }
 
+  /// Return size of an array given its extents.
   static mlir::Value computeArraySize(mlir::Location loc,
                                       fir::FirOpBuilder &builder,
                                       mlir::ValueRange extents) {

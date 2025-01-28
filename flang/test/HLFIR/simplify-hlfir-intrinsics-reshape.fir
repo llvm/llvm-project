@@ -41,11 +41,6 @@ func.func @reshape_with_pad(%arg0: !fir.box<!fir.array<?x?x?xf32>>, %arg1: !fir.
 // CHECK:           %[[ARRAY_DIM2:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_3]] : (!fir.box<!fir.array<?x?x?xf32>>, index) -> (index, index, index)
 // CHECK:           %[[VAL_9:.*]] = arith.muli %[[ARRAY_DIM0]]#1, %[[ARRAY_DIM1]]#1 overflow<nuw> : index
 // CHECK:           %[[ARRAY_SIZE:.*]] = arith.muli %[[VAL_9]], %[[ARRAY_DIM2]]#1 overflow<nuw> : index
-// CHECK:           %[[PAD_DIM0:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_5]] : (!fir.box<!fir.array<?x?x?xf32>>, index) -> (index, index, index)
-// CHECK:           %[[PAD_DIM1:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_4]] : (!fir.box<!fir.array<?x?x?xf32>>, index) -> (index, index, index)
-// CHECK:           %[[PAD_DIM2:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_3]] : (!fir.box<!fir.array<?x?x?xf32>>, index) -> (index, index, index)
-// CHECK:           %[[VAL_14:.*]] = arith.muli %[[PAD_DIM0]]#1, %[[PAD_DIM1]]#1 overflow<nuw> : index
-// CHECK:           %[[PAD_SIZE:.*]] = arith.muli %[[VAL_14]], %[[PAD_DIM2]]#1 overflow<nuw> : index
 // CHECK:           %[[VAL_16:.*]] = hlfir.designate %[[VAL_1]] (%[[VAL_4]])  : (!fir.ref<!fir.array<2xi32>>, index) -> !fir.ref<i32>
 // CHECK:           %[[VAL_17:.*]] = fir.load %[[VAL_16]] : !fir.ref<i32>
 // CHECK:           %[[VAL_18:.*]] = hlfir.designate %[[VAL_1]] (%[[VAL_3]])  : (!fir.ref<!fir.array<2xi32>>, index) -> !fir.ref<i32>
@@ -80,15 +75,18 @@ func.func @reshape_with_pad(%arg0: !fir.box<!fir.array<?x?x?xf32>>, %arg1: !fir.
 // CHECK:               %[[VAL_48:.*]] = fir.load %[[VAL_47]] : !fir.ref<f32>
 // CHECK:               fir.result %[[VAL_48]] : f32
 // CHECK:             } else {
+// CHECK:               %[[PAD_DIM0:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_5]] : (!fir.box<!fir.array<?x?x?xf32>>, index) -> (index, index, index)
+// CHECK:               %[[PAD_DIM1:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_4]] : (!fir.box<!fir.array<?x?x?xf32>>, index) -> (index, index, index)
+// CHECK:               %[[PAD_DIM2:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_3]] : (!fir.box<!fir.array<?x?x?xf32>>, index) -> (index, index, index)
 // CHECK:               %[[PAD_LINEAR_INDEX:.*]] = arith.subi %[[LINEAR_INDEX]], %[[ARRAY_SIZE]] overflow<nuw> : index
-// CHECK:               %[[PAD_LINEAR_INDEX_MOD:.*]] = arith.remui %[[PAD_LINEAR_INDEX]], %[[PAD_SIZE]] : index
-// CHECK:               %[[VAL_51:.*]] = arith.remui %[[PAD_LINEAR_INDEX_MOD]], %[[PAD_DIM0]]#1 : index
-// CHECK:               %[[VAL_52:.*]] = arith.divui %[[PAD_LINEAR_INDEX_MOD]], %[[PAD_DIM0]]#1 : index
+// CHECK:               %[[VAL_51:.*]] = arith.remui %[[PAD_LINEAR_INDEX]], %[[PAD_DIM0]]#1 : index
+// CHECK:               %[[VAL_52:.*]] = arith.divui %[[PAD_LINEAR_INDEX]], %[[PAD_DIM0]]#1 : index
 // CHECK:               %[[PAD_IDX0:.*]] = arith.addi %[[VAL_51]], %[[VAL_4]] overflow<nuw> : index
 // CHECK:               %[[VAL_54:.*]] = arith.remui %[[VAL_52]], %[[PAD_DIM1]]#1 : index
 // CHECK:               %[[VAL_55:.*]] = arith.divui %[[VAL_52]], %[[PAD_DIM1]]#1 : index
 // CHECK:               %[[PAD_IDX1:.*]] = arith.addi %[[VAL_54]], %[[VAL_4]] overflow<nuw> : index
-// CHECK:               %[[PAD_IDX2:.*]] = arith.addi %[[VAL_55]], %[[VAL_4]] overflow<nuw> : index
+// CHECK:               %[[VAL_56:.*]] = arith.remui %[[VAL_55]], %[[PAD_DIM2]]#1 : index
+// CHECK:               %[[PAD_IDX2:.*]] = arith.addi %[[VAL_56]], %[[VAL_4]] overflow<nuw> : index
 // CHECK:               %[[VAL_58:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_5]] : (!fir.box<!fir.array<?x?x?xf32>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_59:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_4]] : (!fir.box<!fir.array<?x?x?xf32>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_60:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_3]] : (!fir.box<!fir.array<?x?x?xf32>>, index) -> (index, index, index)
