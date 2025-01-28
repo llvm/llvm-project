@@ -2084,7 +2084,6 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                Style);
 
   Style.PointerAlignment = FormatStyle::PAS_Left;
-  Style.ReferenceAlignment = FormatStyle::RAS_Pointer;
   verifyFormat("int* f1(int* a, int& b, int&& c);", Style);
   verifyFormat("int& f2(int&& c, int* a, int& b);", Style);
   verifyFormat("int&& f3(int& b, int&& c, int* a);", Style);
@@ -2118,6 +2117,7 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
       "function<int(int&)> res1 = [](int& a) { return 0000000000000; },\n"
       "                    res2 = [](int& a) { return 0000000000000; };",
       Style);
+  verifyFormat("[](decltype(foo)& Bar) {}", Style);
 
   Style.AlignConsecutiveDeclarations.Enabled = true;
   Style.AlignConsecutiveDeclarations.AlignFunctionPointers = true;
@@ -9059,9 +9059,9 @@ TEST_F(FormatTest, AdaptiveOnePerLineFormatting) {
                Style);
 }
 
-TEST_F(FormatTest, ExportBlockIndentation) {
+TEST_F(FormatTest, IndentExportBlock) {
   FormatStyle Style = getLLVMStyleWithColumns(80);
-  Style.ExportBlockIndentation = true;
+  Style.IndentExportBlock = true;
   verifyFormat("export {\n"
                "  int x;\n"
                "  int y;\n"
@@ -9072,7 +9072,7 @@ TEST_F(FormatTest, ExportBlockIndentation) {
                "}",
                Style);
 
-  Style.ExportBlockIndentation = false;
+  Style.IndentExportBlock = false;
   verifyFormat("export {\n"
                "int x;\n"
                "int y;\n"
@@ -9086,7 +9086,7 @@ TEST_F(FormatTest, ExportBlockIndentation) {
 
 TEST_F(FormatTest, ShortExportBlocks) {
   FormatStyle Style = getLLVMStyleWithColumns(80);
-  Style.ExportBlockIndentation = false;
+  Style.IndentExportBlock = false;
 
   Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Never;
   verifyFormat("export {\n"

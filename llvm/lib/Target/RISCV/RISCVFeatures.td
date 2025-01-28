@@ -1279,7 +1279,7 @@ def HasVendorXqcilsm
                          "'Xqcilsm' (Qualcomm uC Load Store Multiple Extension)">;
 
 def FeatureVendorXqciac
-    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Load-Store Address Calculation Extension",
+    : RISCVExperimentalExtension<0, 3, "Qualcomm uC Load-Store Address Calculation Extension",
                                  [FeatureStdExtZca]>;
 def HasVendorXqciac
     : Predicate<"Subtarget->hasVendorXqciac()">,
@@ -1309,6 +1309,14 @@ def HasVendorXqciint
     : Predicate<"Subtarget->hasVendorXqciint()">,
       AssemblerPredicate<(all_of FeatureVendorXqciint),
                          "'Xqciint' (Qualcomm uC Interrupts Extension)">;
+
+def FeatureVendorXqcilo
+    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Large Offset Load Store Extension",
+                                 [FeatureStdExtZca]>;
+def HasVendorXqcilo
+    : Predicate<"Subtarget->hasVendorXqcilo()">,
+      AssemblerPredicate<(all_of FeatureVendorXqcilo),
+                         "'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)">;
 
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
