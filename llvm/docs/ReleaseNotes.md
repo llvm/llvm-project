@@ -120,6 +120,12 @@ Changes to building LLVM
 ------------------------
 
 * Raised the minimum MSVC version to Visual Studio 2019 16.8.
+* Deprecated support for building compiler-rt with `LLVM_ENABLE_PROJECTS`.
+  Users should instead use `LLVM_ENABLE_RUNTIMES`, either through the
+  runtimes or the bootstrapping build.
+* Deprecated support for building libc with `LLVM_ENABLE_PROJECTS`.
+  Users should instead use `LLVM_ENABLE_RUNTIMES`, either through the
+  runtimes or the bootstrapping build.
 
 Changes to TableGen
 -------------------
