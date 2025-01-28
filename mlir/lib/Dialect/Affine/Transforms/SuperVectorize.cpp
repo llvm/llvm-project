@@ -1314,7 +1314,7 @@ static Operation *vectorizeAffineForOp(AffineForOp forOp,
   // If we are vectorizing a vector dimension, compute a new step for the new
   // vectorized loop using the vectorization factor for the vector dimension.
   // Otherwise, propagate the step of the scalar loop.
-  unsigned newStep;
+  int64_t newStep;
   if (isLoopVecDim) {
     unsigned vectorDim = loopToVecDimIt->second;
     assert(vectorDim < strategy.vectorSizes.size() && "vector dim overflow");
