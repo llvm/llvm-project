@@ -10301,8 +10301,8 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
         // value. This ensures correctness when the start value might not be
         // less than the minimum value of a monotonically increasing induction
         // variable.
-        IRBuilder<> Builder(
-            cast<Instruction>(ResumeV)->getParent()->getFirstNonPHI());
+        BasicBlock *ResumeBB = cast<Instruction>(ResumeV)->getParent();
+        IRBuilder<> Builder(ResumeBB, ResumeBB->getFirstNonPHIIt());
         Value *Cmp =
             Builder.CreateICmpEQ(ResumeV, RdxDesc.getRecurrenceStartValue());
         ResumeV =
