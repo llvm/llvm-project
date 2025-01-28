@@ -424,7 +424,7 @@ void ForOp::moveOutOfLoopWithGuard(Operation *op) {
         builder.create<scf::YieldOp>(loc, poisonResults);
       });
   for (auto [opResult, ifOpResult] :
-       llvm::zip(op->getResults(), ifOp->getResults()))
+       llvm::zip_equal(op->getResults(), ifOp->getResults()))
     rewriter.replaceAllUsesExcept(opResult, ifOpResult, thenYield);
   // Move the op into the then block.
   rewriter.moveOpBefore(op, thenYield);

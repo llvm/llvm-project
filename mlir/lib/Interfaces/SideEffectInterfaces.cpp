@@ -9,6 +9,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "mlir/IR/SymbolTable.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
@@ -368,9 +369,10 @@ bool mlir::isMemoryEffectFreeOrOnlyRead(Operation *op) {
       getEffectsRecursively(op);
   if (!effects)
     return false;
-  return std::all_of(effects->begin(), effects->end(), [](auto &effect) {
-    return isa<MemoryEffects::Read>(effect.getEffect());
-  });
+  return llvm::all_of(*effects,
+                      [&](const MemoryEffects::EffectInstance &effect) {
+                        return isa<MemoryEffects::Read>(effect.getEffect());
+                      });
 }
 
 bool mlir::isSpeculatable(Operation *op) {
