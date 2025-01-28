@@ -15,6 +15,7 @@
 
 #include "clang/AST/APValue.h"
 #include "clang/Basic/DiagnosticLex.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/Preprocessor.h"
 

@@ -357,6 +357,68 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   // Test generated DescriptorTable start has correct default values
   ASSERT_TRUE(std::holds_alternative<DescriptorTable>(Elem));
   ASSERT_EQ(std::get<DescriptorTable>(Elem).NumClauses, (uint32_t)0);
+  ASSERT_TRUE(Consumer->IsSatisfied());
+}
+
+// Invalid Parser Tests
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedTokenTest) {
+  const llvm::StringLiteral Source = R"cc(
+    DescriptorTable()
+    space
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, Diags);
+
+  // Test correct diagnostic produced
+  Consumer->SetExpected(diag::err_hlsl_rootsig_unexpected_token_kind);
+  ASSERT_TRUE(Parser.Parse());
+
+  ASSERT_TRUE(Consumer->IsSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidParseInvalidTokenTest) {
+  const llvm::StringLiteral Source = R"cc(
+    notAnIdentifier
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, Diags);
+
+  // Test correct diagnostic produced - invalid token
+  Consumer->SetExpected(diag::err_hlsl_rootsig_unexpected_token_kind);
+  ASSERT_TRUE(Parser.Parse());
+
+  ASSERT_TRUE(Consumer->IsSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedEndOfStreamTest) {
+  const llvm::StringLiteral Source = R"cc(
+    DescriptorTable(
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, Diags);
+
+  // Test correct diagnostic produced - end of stream
+  Consumer->SetExpected(diag::err_hlsl_rootsig_unexpected_token_kind);
+  ASSERT_TRUE(Parser.Parse());
 
   ASSERT_TRUE(Consumer->IsSatisfied());
 }
