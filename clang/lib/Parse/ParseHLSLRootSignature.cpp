@@ -323,6 +323,7 @@ bool RootSignatureParser::ParseDescriptorTableClause() {
   // Parse optional paramaters
   llvm::SmallDenseMap<TokenKind, ParamType> RefMap = {
       {TokenKind::kw_numDescriptors, &Clause.NumDescriptors},
+      {TokenKind::kw_space, &Clause.Space},
   };
   if (ParseOptionalParams({RefMap}))
     return true;
