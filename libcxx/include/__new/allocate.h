@@ -50,7 +50,8 @@ _LIBCPP_HIDE_FROM_ABI void __libcpp_operator_delete(_Args... __args) _NOEXCEPT {
 }
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _Tp* __libcpp_allocate(__element_count __n, size_t __align = _LIBCPP_ALIGNOF(_Tp)) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI _Tp*
+__libcpp_allocate(__element_count __n, size_t __align = _LIBCPP_ALIGNOF(_Tp)) {
   size_t __size = static_cast<size_t>(__n) * sizeof(_Tp);
 #if _LIBCPP_HAS_ALIGNED_ALLOCATION
   if (__is_overaligned_for_new(__align)) {
