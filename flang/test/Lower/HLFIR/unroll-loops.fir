@@ -1,10 +1,14 @@
-// RUN: %flang_fc1 -emit-llvm -O1 -funroll-loops -mllvm -force-vector-width=2 -o- %s | FileCheck %s --check-prefixes=CHECK,UNROLL
-// RUN: %flang_fc1 -emit-llvm -O2 -mllvm -force-vector-width=2 -o- %s | FileCheck %s --check-prefixes=CHECK,UNROLL
-// RUN: %flang_fc1 -emit-llvm -O1 -fno-unroll-loops -mllvm -force-vector-width=2 -o- %s | FileCheck %s --check-prefixes=CHECK,NO-UNROLL
-// RUN: %flang_fc1 -emit-llvm -O1 -mllvm -force-vector-width=2 -o- %s | FileCheck %s --check-prefixes=CHECK,NO-UNROLL
+// DEFINE: %{triple} =
+// DEFINE: %{check-unroll} = %flang_fc1 -emit-llvm -O1 -funroll-loops -mllvm -force-vector-width=2 -triple %{triple} -o- %s | FileCheck %s --check-prefixes=CHECK,UNROLL
+// DEFINE: %{check-nounroll} = %flang_fc1 -emit-llvm -O1 -mllvm -force-vector-width=2 -triple %{triple} -o- %s | FileCheck %s --check-prefixes=CHECK,NO-UNROLL
 
-// FIXME: https://github.com/llvm/llvm-project/issues/123668
-// XFAIL: target=powerpc64{{.*}}
+// REDEFINE: %{triple} = aarch64-unknown-linux-gnu
+// RUN: %if aarch64-registered-target %{ %{check-unroll} %}
+// RUN: %if aarch64-registered-target %{ %{check-nounroll} %}
+
+// REDEFINE: %{triple} = x86_64-unknown-linux-gnu
+// RUN: %if x86-registered-target %{ %{check-unroll} %}
+// RUN: %if x86-registered-target %{ %{check-nounroll} %}
 
 // CHECK-LABEL: @unroll
 // CHECK-SAME: (ptr nocapture writeonly %[[ARG0:.*]])
