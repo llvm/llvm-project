@@ -2869,10 +2869,8 @@ void AsmPrinter::emitJumpTableInfo() {
       F);
 
   if (!TM.Options.EnableStaticDataPartitioning) {
-    SmallVector<unsigned> JumpTableIndices;
-    for (unsigned JTI = 0, JTSize = JT.size(); JTI < JTSize; ++JTI)
-      JumpTableIndices.push_back(JTI);
-    emitJumpTableImpl(*MJTI, JumpTableIndices, JTInDiffSection);
+    emitJumpTableImpl(*MJTI, llvm::to_vector(llvm::seq<unsigned>(JT.size())),
+                      JTInDiffSection);
     return;
   }
 
@@ -2904,7 +2902,7 @@ void AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
   MCSection *JumpTableSection = nullptr;
   if (TM.Options.EnableStaticDataPartitioning) {
     JumpTableSection =
-        TLOF.getSectionForJumpTable(F, TM, &JT[*JumpTableIndices.begin()]);
+        TLOF.getSectionForJumpTable(F, TM, &JT[JumpTableIndices.front()]);
   } else {
     JumpTableSection = TLOF.getSectionForJumpTable(F, TM);
   }
