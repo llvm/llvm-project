@@ -226,6 +226,8 @@ public:
 
   const char *getBFloat16Mangling() const override { return "u6__bf16"; };
 
+  bool treatBFloat16AsVendorType() const override { return true; }
+
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
     return std::make_pair(getTriple().isArch64Bit() ? 256 : 64, 64);
   }

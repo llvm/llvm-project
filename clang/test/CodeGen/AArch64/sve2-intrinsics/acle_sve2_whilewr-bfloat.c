@@ -21,7 +21,7 @@
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-// CPP-CHECK-LABEL: @_Z19test_svwhilewr_bf16PKu6__bf16S0_(
+// CPP-CHECK-LABEL: @_Z19test_svwhilewr_bf16PKu6__bf16S1_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.whilewr.h.nxv8i1.p0(ptr [[OP1:%.*]], ptr [[OP2:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])

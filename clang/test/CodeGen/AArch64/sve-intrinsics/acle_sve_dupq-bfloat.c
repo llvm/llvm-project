@@ -51,7 +51,7 @@ svbfloat16_t test_svdupq_lane_bf16(svbfloat16_t data, uint64_t index) MODE_ATTR 
 // CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> [[TMP8]], i64 0)
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP9]]
 //
-// CPP-CHECK-LABEL: @_Z18test_svdupq_n_bf16u6__bf16u6__bf16u6__bf16u6__bf16u6__bf16u6__bf16u6__bf16u6__bf16(
+// CPP-CHECK-LABEL: @_Z18test_svdupq_n_bf16u6__bf16S_S_S_S_S_S_S_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x bfloat> poison, bfloat [[X0:%.*]], i64 0
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x bfloat> [[TMP0]], bfloat [[X1:%.*]], i64 1
