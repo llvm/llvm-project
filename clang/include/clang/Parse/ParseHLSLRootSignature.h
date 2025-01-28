@@ -135,6 +135,12 @@ private:
   bool
   ParseDescriptorRangeOffset(llvm::hlsl::rootsig::DescriptorRangeOffset *X);
 
+  // Various flags/enum parsing helpers
+  template <bool AllowZero = false, typename EnumType>
+  bool ParseEnum(llvm::SmallDenseMap<TokenKind, EnumType> &EnumMap,
+                 EnumType *Enum);
+  bool ParseShaderVisibility(llvm::hlsl::rootsig::ShaderVisibility *Enum);
+
   /// Invoke the lexer to consume a token and update CurToken with the result
   ///
   /// Return value denotes if we were already at the last token.
