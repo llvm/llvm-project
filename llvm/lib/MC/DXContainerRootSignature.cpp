@@ -7,16 +7,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/DXContainerRootSignature.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/SwapByteOrder.h"
-#include <iterator>
+#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::mcdxbc;
 
 void RootSignatureHeader::write(raw_ostream &OS) {
 
-  uint32_t SizeInfo = sizeof(this);
+  uint32_t SizeInfo = sizeof(RootSignatureHeader);
+  uint32_t ParamsSize = Parameters.size();
   support::endian::write(OS, SizeInfo, llvm::endianness::little);
   support::endian::write(OS, Flags, llvm::endianness::little);
+  support::endian::write(OS, ParamsSize, llvm::endianness::little);
+
+  if (Parameters.size() > 0) {
+    uint32_t BindingSize = sizeof(dxbc::RootParameter);
+
+    support::endian::write(OS, BindingSize, llvm::endianness::little);
+
+    for (const auto &Param : Parameters)
+      OS.write(reinterpret_cast<const char *>(&Param), BindingSize);
+  }
 }

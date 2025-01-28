@@ -10,13 +10,29 @@ Header:
   PartOffsets:     [ 60 ]
 Parts:
   - Name:            RTS0
-    Size:            4
+    Size:            40
     RootSignature:
-      Size: 8
+      Size: 64
+      NumParameters:       1
+      Parameters:
+        - Type:            Constants32Bit
+          ShaderVisibility: All
+          Constants:
+            Num32BitValues: 3
+            ShaderRegister: 1
+            RegisterSpace: 2
       AllowInputAssemblerInputLayout: true
-  
-#CHECK:    - Name: RTS0
-#CHECK-NEXT: Size: 4
-#CHECK-NEXT: RootSignature:
-#CHECK-NEXT:   Size: 8
-#CHECK-NEXT:   AllowInputAssemblerInputLayout: true
+
+#CHECK: - Name:            RTS0
+#CHECK-NEXT:   Size:            40
+#CHECK-NEXT:   RootSignature:
+#CHECK-NEXT:     Size:            64
+#CHECK-NEXT:     NumParameters:   1
+#CHECK-NEXT:     Parameters:
+#CHECK-NEXT:       - Type:            Constants32Bit
+#CHECK-NEXT:         ShaderVisibility: All
+#CHECK-NEXT:         Constants:
+#CHECK-NEXT:           Num32BitValues:  3
+#CHECK-NEXT:           ShaderRegister:  1
+#CHECK-NEXT:           RegisterSpace:   2
+#CHECK-NEXT:     AllowInputAssemblerInputLayout: true

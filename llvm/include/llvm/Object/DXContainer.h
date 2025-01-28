@@ -22,6 +22,7 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
 #include <array>
+#include <cstdint>
 #include <variant>
 
 namespace llvm {
@@ -118,10 +119,15 @@ template <typename T> struct ViewArray {
 namespace DirectX {
 
 class RootSignature {
+
+  using ParametersArray = ViewArray<dxbc::RootParameter>;
+
 private:
   StringRef Data;
   uint32_t Size;
   uint32_t Flags;
+  uint32_t NParameters;
+  ParametersArray Parameters;
 
 public:
   RootSignature(StringRef Data) : Data(Data) {}
@@ -131,6 +137,10 @@ public:
   uint32_t getSize() const { return Size; }
 
   uint32_t getFlags() const { return Flags; }
+
+  uint32_t getNParameters() const { return NParameters; }
+
+  ParametersArray getParameters() const { return Parameters; }
 };
 
 class PSVRuntimeInfo {

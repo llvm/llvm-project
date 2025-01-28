@@ -187,6 +187,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::ResourceBindInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureElement)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::PSVInfo::MaskVector)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureParameter)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::dxbc::RootParameter)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::SemanticKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::InterpolationMode)
@@ -195,6 +196,8 @@ LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ResourceKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::D3DSystemValue)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigMinPrecision)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::RootParameterType)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::ShaderVisibilityFlag)
 
 namespace llvm {
 
@@ -257,6 +260,14 @@ template <> struct MappingTraits<DXContainerYAML::Signature> {
 template <> struct MappingTraits<DXContainerYAML::RootSignatureDesc> {
   static void mapping(IO &IO,
                       DXContainerYAML::RootSignatureDesc &RootSignature);
+};
+
+template <> struct MappingTraits<dxbc::RootParameter> {
+  static void mapping(IO &IO, dxbc::RootParameter &RootParameter);
+};
+
+template <> struct MappingTraits<dxbc::RootConstants> {
+  static void mapping(IO &IO, dxbc::RootConstants &RootConstants);
 };
 
 } // namespace yaml
