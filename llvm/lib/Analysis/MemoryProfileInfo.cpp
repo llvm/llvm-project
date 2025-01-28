@@ -263,7 +263,7 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
   if (hasSingleAllocType(Node->AllocTypes)) {
     // Because we only clone cold contexts (we don't clone for exposing NotCold
     // contexts as that is the default allocation behavior), we create MIB
-    // metadata for this context iff:
+    // metadata for this context if any of the following are true:
     // 1) It is cold.
     // 2) The immediate callee is the deepest point where we have an ambiguous
     //    allocation type (i.e. the other callers that are cold need to know
@@ -371,11 +371,15 @@ bool CallStackTrie::buildAndAttachMIBMetadata(CallBase *CI) {
   MIBCallStack.push_back(AllocStackId);
   std::vector<Metadata *> MIBNodes;
   assert(!Alloc->Callers.empty() && "addCallStack has not been called yet");
-  // The last parameter is meant to say whether the callee of the given node
-  // has is the deepest point where we have ambiguous alloc types. Here the
-  // node being passed in is the alloc and it has no callees. So it's false.
+  // The CalleeHasAmbiguousCallerContext flag is meant to say whether the
+  // callee of the given node has more than one caller. Here the node being
+  // passed in is the alloc and it has no callees. So it's false.
+  // Similarly, the last parameter is meant to say whether the callee of the
+  // given node is the deepest point where we have ambiguous alloc types, which
+  // is also false as the alloc has no callees.
   bool DeepestAmbiguousAllocType = true;
-  if (buildMIBNodes(Alloc, Ctx, MIBCallStack, MIBNodes, false,
+  if (buildMIBNodes(Alloc, Ctx, MIBCallStack, MIBNodes,
+                    /*CalleeHasAmbiguousCallerContext=*/false,
                     DeepestAmbiguousAllocType)) {
     assert(MIBCallStack.size() == 1 &&
            "Should only be left with Alloc's location in stack");
