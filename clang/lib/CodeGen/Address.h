@@ -19,6 +19,7 @@
 #include "clang/AST/Type.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/MathExtras.h"
 
 namespace clang {
@@ -197,10 +198,9 @@ public:
 
   /// Return the type of the pointer value.
   llvm::PointerType *getType() const {
-    return llvm::PointerType::get(
-        ElementType,
-        llvm::cast<llvm::PointerType>(Pointer.getPointer()->getType())
-            ->getAddressSpace());
+    auto AS = llvm::cast<llvm::PointerType>(Pointer.getPointer()->getType())
+                  ->getAddressSpace();
+    return llvm::PointerType::get(ElementType->getContext(), AS);
   }
 
   /// Return the type of the values stored in this address.
