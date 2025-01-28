@@ -79,7 +79,15 @@ code bases.
   Undefined behavior due to pointer addition overflow can be reliably detected
   using ``-fsanitize=pointer-overflow``. It is also possible to use
   ``-fno-strict-overflow`` to opt-in to a language dialect where signed integer
-  and pointer overflow are well-defined.
+  and pointer overflow are well-defined. Since Clang 20, it is also possible
+  to use ``-fwrapv-pointer`` to only make pointer overflow well-defined, while
+  not affecting the behavior of signed integer overflow.
+
+- The ``-fwrapv`` flag now only makes signed integer overflow well-defined,
+  without affecting pointer overflow, which is controlled by a new
+  ``-fwrapv-pointer`` flag. The ``-fno-strict-overflow`` flag now implies
+  both ``-fwrapv`` and ``-fwrapv-pointer`` and as such retains its old meaning.
+  The new behavior matches GCC.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -511,6 +519,20 @@ New Compiler Flags
   only for thread-local variables, and none (which corresponds to the
   existing ``-fno-c++-static-destructors`` flag) skips all static
   destructors registration.
+- The ``-fextend-variable-liveness`` flag has been added to allow for improved
+  debugging of optimized code. Using ``-fextend-variable-liveness`` will cause
+  Clang to generate code that tries to preserve the liveness of source variables
+  through optimizations, meaning that variables will typically be visible in a
+  debugger more often. The flag has two levels: ``-fextend-variable-liveness``,
+  or ``-fextend-variable-liveness=all``, extendes the liveness of all user
+  variables and the ``this`` pointer. Alternatively ``-fextend-this-ptr``, or
+  ``-fextend-variable-liveness=this``, has the same behaviour but applies only
+  to the ``this`` variable in C++ class member functions, meaning its effect is
+  a strict subset of ``-fextend-variable-liveness``. Note that this flag
+  modifies the results of optimizations that Clang performs, which will result
+  in reduced performance in generated code; however, this feature will not
+  extend the liveness of some variables in cases where doing so would likely
+  have a severe impact on generated code performance.
 
 - The ``-Warray-compare`` warning has been added to warn about array comparison
   on versions older than C++20.
@@ -520,6 +542,11 @@ New Compiler Flags
 
 - clang-cl and clang-dxc now support ``-fdiagnostics-color=[auto|never|always]``
   in addition to ``-f[no-]color-diagnostics``.
+
+- The new ``-fwrapv-pointer`` flag opts-in to a language dialect where pointer
+  overflow is well-defined. The ``-fwrapv`` flag previously implied
+  ``-fwrapv-pointer`` as well, but no longer does. ``-fno-strict-overflow``
+  implies ``-fwrapv -fwrapv-pointer``. The flags now match GCC.
 
 Deprecated Compiler Flags
 -------------------------
@@ -1009,6 +1036,7 @@ Bug Fixes to C++ Support
 - Fix type of expression when calling a template which returns an ``__array_rank`` querying a type depending on a
   template parameter. Now, such expression can be used with ``static_assert`` and ``constexpr``. (#GH123498)
 - Correctly determine the implicit constexprness of lambdas in dependent contexts. (#GH97958) (#GH114234)
+- Fix that some dependent immediate expressions did not cause immediate escalation (#GH119046)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1294,6 +1322,7 @@ clang-format
 - Adds support for bash globstar in ``.clang-format-ignore``.
 - Adds ``WrapNamespaceBodyWithEmptyLines`` option.
 - Adds the ``IndentExportBlock`` option.
+- Adds ``PenaltyBreakBeforeMemberAccess`` option.
 
 libclang
 --------
