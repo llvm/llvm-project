@@ -1307,8 +1307,7 @@ void Writer::appendImportThunks() {
   }
 
   if (!delayIdata.empty()) {
-    Defined *helper = cast<Defined>(ctx.config.delayLoadHelper);
-    delayIdata.create(helper);
+    delayIdata.create();
     for (Chunk *c : delayIdata.getChunks())
       didatSec->addChunk(c);
     for (Chunk *c : delayIdata.getDataChunks())

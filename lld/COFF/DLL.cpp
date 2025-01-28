@@ -911,11 +911,8 @@ uint64_t DelayLoadContents::getDirSize() {
   return dirs.size() * sizeof(delay_import_directory_table_entry);
 }
 
-void DelayLoadContents::create(Defined *h) {
-  helper = h;
+void DelayLoadContents::create() {
   std::vector<std::vector<DefinedImportData *>> v = binImports(ctx, imports);
-
-  Chunk *unwind = newTailMergeUnwindInfoChunk();
 
   // Create .didat contents for each DLL.
   for (std::vector<DefinedImportData *> &syms : v) {
@@ -924,8 +921,8 @@ void DelayLoadContents::create(Defined *h) {
     auto *dir = make<DelayDirectoryChunk>(dllNames.back());
 
     size_t base = addresses.size();
-    Chunk *tm = newTailMergeChunk(dir);
-    Chunk *pdataChunk = unwind ? newTailMergePDataChunk(tm, unwind) : nullptr;
+    Chunk *tm = newTailMergeChunk(ctx.symtab, dir);
+    Chunk *pdataChunk = newTailMergePDataChunk(ctx.symtab, tm);
     for (DefinedImportData *s : syms) {
       Chunk *t = newThunkChunk(s, tm);
       auto *a = make<DelayAddressChunk>(ctx, t);
@@ -982,15 +979,18 @@ void DelayLoadContents::create(Defined *h) {
     dirs.push_back(dir);
   }
 
-  if (unwind)
-    unwindinfo.push_back(unwind);
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    if (symtab.tailMergeUnwindInfoChunk)
+      unwindinfo.push_back(symtab.tailMergeUnwindInfoChunk);
+  });
   // Add null terminator.
   dirs.push_back(
       make<NullChunk>(sizeof(delay_import_directory_table_entry), 4));
 }
 
-Chunk *DelayLoadContents::newTailMergeChunk(Chunk *dir) {
-  switch (ctx.config.machine) {
+Chunk *DelayLoadContents::newTailMergeChunk(SymbolTable &symtab, Chunk *dir) {
+  auto helper = cast<Defined>(symtab.delayLoadHelper);
+  switch (symtab.machine) {
   case AMD64:
   case ARM64EC:
     return make<TailMergeChunkX64>(dir, helper);
@@ -1005,21 +1005,14 @@ Chunk *DelayLoadContents::newTailMergeChunk(Chunk *dir) {
   }
 }
 
-Chunk *DelayLoadContents::newTailMergeUnwindInfoChunk() {
-  switch (ctx.config.machine) {
+Chunk *DelayLoadContents::newTailMergePDataChunk(SymbolTable &symtab,
+                                                 Chunk *tm) {
+  switch (symtab.machine) {
   case AMD64:
   case ARM64EC:
-    return make<TailMergeUnwindInfoX64>();
-    // FIXME: Add support for other architectures.
-  default:
-    return nullptr; // Just don't generate unwind info.
-  }
-}
-Chunk *DelayLoadContents::newTailMergePDataChunk(Chunk *tm, Chunk *unwind) {
-  switch (ctx.config.machine) {
-  case AMD64:
-  case ARM64EC:
-    return make<TailMergePDataChunkX64>(tm, unwind);
+    if (!symtab.tailMergeUnwindInfoChunk)
+      symtab.tailMergeUnwindInfoChunk = make<TailMergeUnwindInfoX64>();
+    return make<TailMergePDataChunkX64>(tm, symtab.tailMergeUnwindInfoChunk);
     // FIXME: Add support for other architectures.
   default:
     return nullptr; // Just don't generate unwind info.
@@ -1028,7 +1021,7 @@ Chunk *DelayLoadContents::newTailMergePDataChunk(Chunk *tm, Chunk *unwind) {
 
 Chunk *DelayLoadContents::newThunkChunk(DefinedImportData *s,
                                         Chunk *tailMerge) {
-  switch (ctx.config.machine) {
+  switch (s->file->getMachineType()) {
   case AMD64:
   case ARM64EC:
     return make<ThunkChunkX64>(s, tailMerge);
