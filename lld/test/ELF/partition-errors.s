@@ -12,8 +12,10 @@
 // RUN: not ld.lld --export-dynamic %ts.so %t.o -Tdata=0 2>&1 | FileCheck %s
 // RUN: not ld.lld --export-dynamic %ts.so %t.o -Tbss=0 2>&1 | FileCheck %s
 
+// RUN: llvm-mc %S/Inputs/shared.s -o %ts.o -filetype=obj --triple=mipsel-unknown-linux
+// RUN: ld.lld -shared -soname=ts %ts.o -o %ts.so
 // RUN: llvm-mc -triple=mipsel-unknown-linux -filetype=obj -o %t2.o %s
-// RUN: not ld.lld --export-dynamic %t2.o 2>&1 | FileCheck %s
+// RUN: not ld.lld --export-dynamic %t2.o %ts.so 2>&1 | FileCheck %s
 
 // CHECK: error: {{.*}}.o: partitions cannot be used
 

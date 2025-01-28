@@ -272,11 +272,7 @@ bool Symbol::includeInDynsym(Ctx &ctx) const {
   if (computeBinding(ctx) == STB_LOCAL)
     return false;
   if (!isDefined() && !isCommon())
-    // This should unconditionally return true, unfortunately glibc -static-pie
-    // expects undefined weak symbols not to exist in .dynsym, e.g.
-    // __pthread_mutex_lock reference in _dl_add_to_namespace_list,
-    // __pthread_initialize_minimal reference in csu/libc-start.c.
-    return !(isUndefWeak() && ctx.arg.noDynamicLinker);
+    return true;
 
   return exportDynamic ||
          (ctx.arg.exportDynamic && (isUsedInRegularObj || !ltoCanOmit));
@@ -374,13 +370,14 @@ void elf::parseVersionAndComputeIsPreemptible(Ctx &ctx) {
   // Symbol themselves might know their versions because symbols
   // can contain versions in the form of <name>@<version>.
   // Let them parse and update their names to exclude version suffix.
-  bool hasDynSymTab = ctx.arg.hasDynSymTab;
+  bool hasDynsym = ctx.hasDynsym;
   for (Symbol *sym : ctx.symtab->getSymbols()) {
     if (sym->hasVersionSuffix)
       sym->parseSymbolVersion(ctx);
-    sym->isExported = sym->includeInDynsym(ctx);
-    if (hasDynSymTab)
+    if (hasDynsym) {
+      sym->isExported = sym->includeInDynsym(ctx);
       sym->isPreemptible = sym->isExported && computeIsPreemptible(ctx, *sym);
+    }
   }
 }
 
