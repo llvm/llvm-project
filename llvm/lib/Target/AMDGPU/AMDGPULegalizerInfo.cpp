@@ -2727,6 +2727,9 @@ bool AMDGPULegalizerInfo::legalizeMinNumMaxNum(LegalizerHelper &Helper,
 static auto buildExtractSubvector(MachineIRBuilder &B, SrcOp Src,
                                   LLT DstTy, unsigned Start) {
   SmallVector<Register, 8> Subvectors;
+  if (!DstTy.isVector()) {
+    return B.buildExtractVectorElementConstant(DstTy, Src, Start);
+  }
   for (unsigned i = Start, e = Start + DstTy.getNumElements(); i != e; ++i) {
     Subvectors.push_back(
         B.buildExtractVectorElementConstant(DstTy.getElementType(), Src, i)
@@ -2754,16 +2757,16 @@ bool AMDGPULegalizerInfo::legalizeExtractSubvector(
   // Split vector size into legal sub vectors, and use build_vector
   // to merge the result.
   if (EltTy.getScalarSizeInBits() == 16 && Start % 2 == 0) {
-    bool UseScalar = Count == 2;
     // Extract 32-bit registers at a time.
-    LLT NewSrcTy =
-        UseScalar ? S32 : LLT::fixed_vector(SrcTy.getNumElements() / 2, S32);
-    LLT NewDstTy = LLT::fixed_vector(DstTy.getNumElements() / 2, S32);
+    LLT NewSrcTy = SrcTy.getNumElements() == 2
+                       ? S32
+                       : LLT::fixed_vector(SrcTy.getNumElements() / 2, S32);
     auto Bitcasted = B.buildBitcast(NewSrcTy, Src);
 
-    auto BuildVec =
-        UseScalar ? Bitcasted
-                  : buildExtractSubvector(B, Bitcasted, NewDstTy, Start / 2);
+    LLT NewDstTy = DstTy.getNumElements() == 2
+                       ? S32
+                       : LLT::fixed_vector(DstTy.getNumElements() / 2, S32);
+    auto BuildVec = buildExtractSubvector(B, Bitcasted, NewDstTy, Start / 2);
     B.buildBitcast(Dst, BuildVec.getReg(0));
     MI.eraseFromParent();
     return true;
