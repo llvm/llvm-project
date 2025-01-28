@@ -269,8 +269,11 @@ static bool isZeroSizedArray(const ConstantArrayType *CAT) {
   return CAT != nullptr;
 }
 
-// Returns true if the record type is an HLSL resource class
-static bool isResourceRecordType(const Type *Ty) {
+// Returns true if the record type is an HLSL resource class or an array of
+// HLSL resource classes
+static bool isResourceRecordTypeOrArrayOf(const Type *Ty) {
+  while (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(Ty))
+    Ty = CAT->getArrayElementTypeNoTypeQual();
   return HLSLAttributedResourceType::findHandleTypeOnResource(Ty) != nullptr;
 }
 
@@ -279,11 +282,10 @@ static bool isResourceRecordType(const Type *Ty) {
 // array, or a builtin intangible type. Returns false it is a valid leaf element
 // type or if it is a record type that needs to be inspected further.
 static bool isInvalidConstantBufferLeafElementType(const Type *Ty) {
-  if (Ty->isRecordType()) {
-    if (isResourceRecordType(Ty) || Ty->getAsCXXRecordDecl()->isEmpty())
-      return true;
-    return false;
-  }
+  if (isResourceRecordTypeOrArrayOf(Ty))
+    return true;
+  if (Ty->isRecordType())
+    return Ty->getAsCXXRecordDecl()->isEmpty();
   if (Ty->isConstantArrayType() &&
       isZeroSizedArray(cast<ConstantArrayType>(Ty)))
     return true;
@@ -339,7 +341,7 @@ static IdentifierInfo *getHostLayoutStructName(Sema &S, NamedDecl *BaseDecl,
   ASTContext &AST = S.getASTContext();
 
   IdentifierInfo *NameBaseII = BaseDecl->getIdentifier();
-  llvm::SmallString<64> Name("__layout_");
+  llvm::SmallString<64> Name("__cblayout_");
   if (NameBaseII) {
     Name.append(NameBaseII->getName());
   } else {
@@ -393,7 +395,7 @@ static FieldDecl *createFieldForHostLayoutStruct(Sema &S, const Type *Ty,
   auto *Field = FieldDecl::Create(AST, LayoutStruct, SourceLocation(),
                                   SourceLocation(), II, QT, TSI, nullptr, false,
                                   InClassInitStyle::ICIS_NoInit);
-  Field->setAccess(AccessSpecifier::AS_private);
+  Field->setAccess(AccessSpecifier::AS_public);
   return Field;
 }
 
@@ -417,9 +419,11 @@ static CXXRecordDecl *createHostLayoutStruct(Sema &S,
   if (CXXRecordDecl *RD = findRecordDeclInContext(II, DC))
     return RD;
 
-  CXXRecordDecl *LS = CXXRecordDecl::Create(
-      AST, TagDecl::TagKind::Class, DC, SourceLocation(), SourceLocation(), II);
+  CXXRecordDecl *LS =
+      CXXRecordDecl::Create(AST, TagDecl::TagKind::Struct, DC, SourceLocation(),
+                            SourceLocation(), II);
   LS->setImplicit(true);
+  LS->addAttr(PackedAttr::CreateImplicit(AST));
   LS->startDefinition();
 
   // copy base struct, create HLSL Buffer compatible version if needed
@@ -472,8 +476,9 @@ void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
   IdentifierInfo *II = getHostLayoutStructName(S, BufDecl, true);
 
   CXXRecordDecl *LS =
-      CXXRecordDecl::Create(AST, TagDecl::TagKind::Class, BufDecl,
+      CXXRecordDecl::Create(AST, TagDecl::TagKind::Struct, BufDecl,
                             SourceLocation(), SourceLocation(), II);
+  LS->addAttr(PackedAttr::CreateImplicit(AST));
   LS->setImplicit(true);
   LS->startDefinition();
 
