@@ -223,3 +223,23 @@ body: |
     %c:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
     BEQ $x1, $x0, %bb.1
     PseudoBR %bb.2
+...
+---
+name: unreachable
+body: |
+  ; CHECK-LABEL: name: unreachable
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+  ; CHECK-NEXT:   $v8 = COPY %x
+  ; CHECK-NEXT:   PseudoRET
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+  ; CHECK-NEXT:   PseudoRET
+  bb.0:
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    $v8 = COPY %x
+    PseudoRET
+  bb.1:
+    %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    PseudoRET

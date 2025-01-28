@@ -18,7 +18,7 @@
 
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
-#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
@@ -1350,21 +1350,22 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
 
   TII = ST.getInstrInfo();
 
-  bool MadeChange = false;
-  for (MachineBasicBlock &MBB : MF) {
-    // Avoid unreachable blocks as they have degenerate dominance
-    if (!MDT->isReachableFromEntry(&MBB))
-      continue;
 
-    // For each instruction that defines a vector, compute what VL its
-    // downstream users demand.
-    for (MachineInstr &MI : reverse(MBB)) {
+  // For each instruction that defines a vector, compute what VL its
+  // downstream users demand.
+  for (MachineBasicBlock *MBB : post_order(&MF)) {
+    // Avoid unreachable blocks as they have degenerate dominance
+    assert(MDT->isReachableFromEntry(MBB));
+    for (MachineInstr &MI : reverse(*MBB)) {
       if (!isCandidate(MI))
         continue;
       if (auto DemandedVL = checkUsers(MI))
 	DemandedVLs.insert({&MI, *DemandedVL});
     }
+  }
 
+  bool MadeChange = false;
+  for (MachineBasicBlock &MBB : MF) {
     // Then go through and see if we can reduce the VL of any instructions to
     // only what's demanded.
     for (auto &MI : MBB) {
@@ -1374,8 +1375,6 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
         continue;
       MadeChange = true;
     }
-
-    DemandedVLs.clear();
   }
 
   return MadeChange;
