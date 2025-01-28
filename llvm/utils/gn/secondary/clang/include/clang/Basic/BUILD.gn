@@ -112,6 +112,10 @@ clang_tablegen("BuiltinsBPF") {
   args = [ "-gen-clang-builtins" ]
 }
 
+clang_tablegen("BuiltinsNVPTX") {
+  args = [ "-gen-clang-builtins" ]
+}
+
 clang_tablegen("BuiltinsRISCV") {
   args = [ "-gen-clang-builtins" ]
 }
