@@ -2999,7 +2999,10 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
       if (auto gvExprAttr = mlir::dyn_cast_if_present<mlir::ArrayAttr>(
               fusedLoc.getMetadata())) {
         for (auto attr : gvExprAttr.getAsRange<mlir::Attribute>())
-          dbgExprs.push_back(attr);
+          if (auto dbgAttr =
+                  mlir::dyn_cast<mlir::LLVM::DIGlobalVariableExpressionAttr>(
+                      attr))
+            dbgExprs.push_back(dbgAttr);
       }
     }
 
