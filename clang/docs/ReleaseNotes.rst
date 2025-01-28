@@ -1356,30 +1356,62 @@ Static Analyzer
 New features
 ^^^^^^^^^^^^
 
-- Now CSA models `__builtin_*_overflow` functions. (#GH102602)
+- The ``__builtin_*_overflow`` functions are now properly modeled. (#GH102602)
 
-- MallocChecker now checks for ``ownership_returns(class, idx)`` and ``ownership_takes(class, idx)``
-  attributes with class names different from "malloc". Clang static analyzer now reports an error
-  if class of allocation and deallocation function mismatches.
+- ``unix.Malloc`` now checks for ``ownership_returns(class, idx)`` and ``ownership_takes(class, idx)``
+  attributes with class names different from "malloc". It now reports an error
+  if the class of allocation and deallocation function mismatches.
   `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-mismatcheddeallocator-c-c>`__.
 
 - Function effects, e.g. the ``nonblocking`` and ``nonallocating`` "performance constraint"
   attributes, are now verified. For example, for functions declared with the ``nonblocking``
-  attribute, the compiler can generate warnings about the use of any language features, or calls to
+  attribute, the compiler can generate warnings about the use of any language features or calls to
   other functions, which may block.
 
 - Introduced ``-warning-suppression-mappings`` flag to control diagnostic
-  suppressions per file. See `documentation <https://clang.llvm.org/docs/WarningSuppressionMappings.html>_` for details.
+  suppressions per file. See `documentation <https://clang.llvm.org/docs/WarningSuppressionMappings.html>`__ for details.
+
+- Started to model GCC asm statements in some basic way. (#GH103714, #GH109838)
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
 
 - In loops where the loop condition is opaque (i.e. the analyzer cannot
   determine whether it's true or false), the analyzer will no longer assume
-  execution paths that perform more that two iterations. These unjustified
+  execution paths that perform more than two iterations. These unjustified
   assumptions caused false positive reports (e.g. 100+ out-of-bounds reports in
   the FFMPEG codebase) in loops where the programmer intended only two or three
   steps but the analyzer wasn't able to understand that the loop is limited.
+  Read the `RFC <https://discourse.llvm.org/t/loop-handling-improvement-plans/80417/17>`_
+  for details. (#GH119388)
+
+- In clang-19, the ``crosscheck-with-z3-timeout-threshold`` was set to 300ms,
+  but it is now reset back to 15000, aka. 15 seconds. This is to reduce the
+  number of flaky diagnostics due to Z3 query timeouts.
+  If you are affected, read the details at #GH118291 carefully.
+
+- Same as the previous point, but for ``crosscheck-with-z3-rlimit-threshold``
+  and ``crosscheck-with-z3-eqclass-timeout-threshold``.
+  This option is now set to zero, aka. disabled by default. (#GH118291)
+
+- Fixed a crash in the ``unix.Stream`` checker when modeling ``fread``. (#GH108393)
+
+- Fixed a crash in the ``core.StackAddressEscape`` checker related to ``alloca``.
+  Fixes (#GH107852).
+
+- Fixed a crash when invoking a function pointer cast from some non-function pointer. (#GH111390)
+
+- Fixed a crash when modeling some ``ArrayInitLoopExpr``. Fixes (#GH112813).
+
+- Fixed a crash in loop unrolling. Fixes (#GH121201).
+
+- The iteration orders of some internal representations of symbols were changed
+  to make their internal ordering more stable. This should improve determinism.
+  This also reduces the number of flaky reports exposed by the Z3 query timeouts.
+  (#GH121749)
+
+- The ``unix.BlockInCriticalSection`` now recognizes the ``lock()`` member function
+  as expected, even if it's inherited from a base class. Fixes (#GH104241).
 
 Improvements
 ^^^^^^^^^^^^
@@ -1387,6 +1419,40 @@ Improvements
 - Improved the handling of the ``ownership_returns`` attribute. Now, Clang reports an
   error if the attribute is attached to a function that returns a non-pointer value.
   Fixes (#GH99501)
+
+- Improved the escape heuristics of member variables of non-trivial std types. (#GH100405)
+  Also when invoking an opaque member function. (#GH111138)
+
+- Improved the ``nullability.NullReturnedFromNonnull`` checker by reporting
+  more violations of the ``returns_nonnull`` attribute.
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#nullability-nullreturnedfromnonnull-c-c-objc>`_.
+  (#GH106048)
+
+- The ``unix.Stream`` checker now notes the last ``fclose`` call in the diagnostics. (#GH109112)
+
+- The ``core.StackAddressEscape`` checker now detects more leak issues through output
+  parameters and global variables. (#GH105653, #GH105648, #GH107003) Fixes (#GH106834).
+
+- The ``unix.Malloc`` checker was made more consistent with the
+  `ownership attributes <https://clang.llvm.org/docs/AttributeReference.html#analyzer-ownership-attrs>`_.
+  (#GH104599, #GH110115) This also fixed #GH104229.
+
+- The number of false-positive reports of ``alpha.core.FixedAddr`` checker was slightly reduced.
+  (#GH108993, #GH110458)
+
+- Improved the default (range-based) solver by reasoning about more commutative
+  operations, and better deducing some concrete values from their known ranges.
+  (#GH112583, #GH112887, #GH115579)
+
+- A new option ``crosscheck-with-z3-max-attempts-per-query`` should help
+  reducing the number of flaky reports if Z3 query timeouts are used.
+  By default, Z3 queries are attempted at most 3 times, giving it more chances,
+  thus reducing number of flaky issues on timeouts. Read the details in this
+  `RFC <https://discourse.llvm.org/t/analyzer-rfc-retry-z3-crosscheck-queries-on-timeout/83711>`__.
+  (#GH120239)
+
+- The resulting pointer of ``fread`` is now known to never alias with the
+  pointers of ``stdin``, ``stdout`` or ``stderr``. (#GH100085)
 
 Moved checkers
 ^^^^^^^^^^^^^^
@@ -1400,21 +1466,35 @@ Moved checkers
   To detect too large arguments passed to malloc, consider using the checker
   ``alpha.taint.TaintedAlloc``.
 
-- The checkers ``alpha.nondeterministic.PointerSorting`` and
+- Both ``alpha.nondeterministic.PointerSorting`` and
   ``alpha.nondeterministic.PointerIteration`` were moved to a new bugprone
   checker named ``bugprone-nondeterministic-pointer-iteration-order``. The
   original checkers were implemented only using AST matching and make more
   sense as a single clang-tidy check.
 
-- The checker ``alpha.unix.Chroot`` was modernized, improved and moved to
-  ``unix.Chroot``. Testing was done on open source projects that use chroot(),
-  and false issues addressed in the improvements based on real use cases. Open
-  source projects used for testing include nsjail, lxroot, dive and ruri.
+- The checker ``alpha.unix.Chroot`` was modernized, improved, and moved to
+  ``unix.Chroot``. Testing was done on open-source projects that use chroot(),
+  and false issues addressed in the improvements based on real use cases.
+  Open-source projects used for testing include ``nsjail``, ``lxroot``, ``dive`` and ``ruri``.
   This checker conforms to SEI Cert C recommendation `POS05-C. Limit access to
   files by creating a jail
   <https://wiki.sei.cmu.edu/confluence/display/c/POS05-C.+Limit+access+to+files+by+creating+a+jail>`_.
   Fixes (#GH34697).
-  (#GH117791) [Documentation](https://clang.llvm.org/docs/analyzer/checkers.html#unix-chroot-c).
+  (#GH117791) `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-chroot-c>`__.
+
+- The checker ``alpha.core.PointerSub`` was moved to ``security.PointerSub``
+  after it was significantly improved in #GH96501, #GH102580, #GH111846.
+
+- The checker ``alpha.security.MmapWriteExec`` was moved to ``security.MmapWriteExec``.
+
+- The checker ``alpha.unix.cstring.NotNullTerminated`` was moved to ``unix.cstring.NotNullTerminated``.
+
+- The division by tainted value diagnostic was split from the checker ``core.DivideZero``
+  into a separate checker ``optin.taint.TaintedDiv``. (#GH106389)
+
+- Both ``alpha.security.taint.TaintPropagation`` and ``alpha.security.taint.GenericTaint``
+  were moved to ``optin.taint.TaintPropagation`` and ``optin.taint.GenericTaint`` respectively.
+  (#GH67352)
 
 .. _release-notes-sanitizers:
 
