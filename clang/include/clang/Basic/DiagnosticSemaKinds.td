@@ -2463,6 +2463,10 @@ def note_explicit_ctor_deduction_guide_here : Note<
   "explicit %select{constructor|deduction guide}0 declared here">;
 def note_implicit_deduction_guide : Note<"implicit deduction guide declared as '%0'">;
 
+def ext_ms_lvalue_reference_binding : ExtWarn<
+  "binding a user-defined type temporary to a non-const lvalue is a "
+  "Microsoft extension">, InGroup<MicrosoftReferenceBinding>;
+
 // C++11 auto
 def warn_cxx98_compat_auto_type_specifier : Warning<
   "'auto' type specifier is incompatible with C++98">,

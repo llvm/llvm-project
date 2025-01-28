@@ -312,6 +312,7 @@ LANGOPT(HIPStdParInterposeAlloc, 1, 0, "Replace allocations / deallocations with
 LANGOPT(OpenACC           , 1, 0, "OpenACC Enabled")
 
 LANGOPT(MSVCEnableStdcMacro , 1, 0, "Define __STDC__ with '-fms-compatibility'")
+LANGOPT(MSVCReferenceBinding , 1, 0, "Accept expressions that bind a non-const lvalue reference to a user-defined type temporary")
 LANGOPT(SizedDeallocation , 1, 0, "sized deallocation")
 LANGOPT(AlignedAllocation , 1, 0, "aligned allocation")
 LANGOPT(AlignedAllocationUnavailable, 1, 0, "aligned allocation functions are unavailable")

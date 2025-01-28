@@ -1306,6 +1306,7 @@ def MicrosoftStaticAssert : DiagGroup<"microsoft-static-assert">;
 def MicrosoftInitFromPredefined : DiagGroup<"microsoft-init-from-predefined">;
 def MicrosoftStringLiteralFromPredefined : DiagGroup<
     "microsoft-string-literal-from-predefined">;
+def MicrosoftReferenceBinding : DiagGroup<"microsoft-reference-binding">;
 
 // Aliases.
 def : DiagGroup<"msvc-include", [MicrosoftInclude]>;

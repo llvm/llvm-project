@@ -551,6 +551,10 @@ New Compiler Flags
   ``-fwrapv-pointer`` as well, but no longer does. ``-fno-strict-overflow``
   implies ``-fwrapv -fwrapv-pointer``. The flags now match GCC.
 
+- ``-fms-reference-binding`` and its clang-cl counterpart ``/Zc:referenceBinding``.
+  Implements the MSVC extension where expressions that bind a user-defined type temporary
+  to a non-const lvalue reference are allowed.
+
 Deprecated Compiler Flags
 -------------------------
 

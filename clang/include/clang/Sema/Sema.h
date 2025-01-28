@@ -10153,6 +10153,8 @@ public:
   CompareReferenceRelationship(SourceLocation Loc, QualType T1, QualType T2,
                                ReferenceConversions *Conv = nullptr);
 
+  bool AllowMSLValueReferenceBinding(Qualifiers Quals, QualType QT);
+
   /// AddOverloadCandidate - Adds the given function to the set of
   /// candidate functions, using the given function call arguments.  If
   /// @p SuppressUserConversions, then don't allow user-defined

@@ -6116,3 +6116,35 @@ qualifications.
 Note, Clang does not allow an ``_Atomic`` function type because
 of explicit constraints against atomically qualified (arrays and) function
 types.
+
+
+MSVC Extensions
+===============
+
+Clang supports a number of extensions in order to imitate MSVC.
+Some of these extensions are behind ``-fms-compatibility`` and ``-fms-extensions`` which
+are further described in :doc:`MSVCCompatibility`.
+
+MSVC Reference Binding
+----------------------
+
+.. code-block:: c++
+
+  struct A {};
+
+  A& a = A();
+
+Please see the `MSDN doc
+<https://learn.microsoft.com/en-us/cpp/build/reference/zc-referencebinding-enforce-reference-binding-rules>`_
+for more information on this non-conforming C++ extension.
+
+MSVC allows user-defined type temporaries to be bound to non-const lvalue references when ``/permissive``
+or ``/Zc:referenceBinding-`` are given on the command line.
+
+The current default behavior as of MSVC 1942 is ``/permissive``.
+As of Visual Studio 2017, ``/permissive-`` is the default for newly generated projects in Visual Studio meaning C++
+conformance is enforced when building with MSVC in Visual Studio.
+
+This MSVC extension can be enabled with ``-fms-reference-binding`` with the clang or clang-cl driver.
+This MSVC extension can be enabled with ``/Zc:referenceBinding-`` with the clang-cl driver.
+>>>>>>> 43d9c2ac844e (PR Feedback on ext warning)
