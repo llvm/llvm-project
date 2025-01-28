@@ -96,7 +96,7 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
     return cutoff;
   };
 
-  auto ShouldRemoveHot = [&](const BasicBlock &BB, unsigned int &cutoff) {
+  auto ShouldRemoveHot = [&](const BasicBlock &BB, unsigned int cutoff) {
     return PSI && PSI->isHotCountNthPercentile(
                       cutoff, BFI.getBlockProfileCount(&BB).value_or(0));
   };
