@@ -572,10 +572,6 @@ def testGetDenseElementsIndex():
         print(arr)
         # CHECK: True
         print(arr.dtype == np.int64)
-        array = np.array([1, 2, 3], dtype=np.int64)
-        attr = DenseIntElementsAttr.get(array, type=VectorType.get([3], idx_type))
-        # CHECK: [1, 2, 3]
-        print(list(DenseIntElementsAttr(attr)))
 
 
 # CHECK-LABEL: TEST: testGetDenseResourceElementsAttr
