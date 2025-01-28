@@ -4241,8 +4241,6 @@ unsigned RISCV::getDestLog2EEW(const MCInstrDesc &Desc, unsigned Log2SEW) {
 
 /// Given two VL operands, do we know that LHS <= RHS?
 bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
-  if (LHS.isImm() && LHS.getImm() == 0)
-    return true;
   if (LHS.isReg() && RHS.isReg() && LHS.getReg().isVirtual() &&
       LHS.getReg() == RHS.getReg())
     return true;
