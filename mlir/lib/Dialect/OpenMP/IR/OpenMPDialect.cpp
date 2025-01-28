@@ -1632,6 +1632,12 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
 
         to ? updateToVars.insert(updateVar) : updateFromVars.insert(updateVar);
       }
+
+      if (mapInfoOp.getMapperId() &&
+          !SymbolTable::lookupNearestSymbolFrom<omp::DeclareMapperOp>(
+              mapInfoOp, mapInfoOp.getMapperIdAttr())) {
+        return emitError(op->getLoc(), "invalid mapper id");
+      }
     } else if (!isa<DeclareMapperInfoOp>(op)) {
       emitError(op->getLoc(), "map argument is not a map entry operation");
     }
