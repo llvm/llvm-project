@@ -2996,11 +2996,13 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
     llvm::SmallVector<mlir::Attribute> dbgExprs;
 
     if (auto fusedLoc = mlir::dyn_cast<mlir::FusedLoc>(global.getLoc())) {
-      if (auto gvAttr =
-              mlir::dyn_cast_or_null<mlir::LLVM::DIGlobalVariableAttr>(
-                  fusedLoc.getMetadata())) {
-        dbgExprs.push_back(mlir::LLVM::DIGlobalVariableExpressionAttr::get(
-            global.getContext(), gvAttr, mlir::LLVM::DIExpressionAttr()));
+      if (auto gvExprAttr = mlir::dyn_cast_if_present<mlir::ArrayAttr>(
+              fusedLoc.getMetadata())) {
+        for (auto attr : gvExprAttr.getAsRange<mlir::Attribute>())
+          if (auto dbgAttr =
+                  mlir::dyn_cast<mlir::LLVM::DIGlobalVariableExpressionAttr>(
+                      attr))
+            dbgExprs.push_back(dbgAttr);
       }
     }
 
