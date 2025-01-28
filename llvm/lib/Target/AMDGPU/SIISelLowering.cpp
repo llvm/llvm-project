@@ -10001,75 +10001,16 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_swmmac_f32_16x16x32_fp8_fp8:
   case Intrinsic::amdgcn_swmmac_f32_16x16x32_fp8_bf8:
   case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_fp8:
-  case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_bf8:
-  case Intrinsic::amdgcn_swmmac_f32_16x16x32_f16_clamp:
-  case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf16_clamp:
-  case Intrinsic::amdgcn_swmmac_f16_16x16x32_f16_clamp:
-  case Intrinsic::amdgcn_swmmac_bf16_16x16x32_bf16_clamp:
-
-  case Intrinsic::amdgcn_swmmac_f32_16x16x64_fp8_fp8_clamp:
-  case Intrinsic::amdgcn_swmmac_f32_16x16x64_fp8_bf8_clamp:
-  case Intrinsic::amdgcn_swmmac_f32_16x16x64_bf8_fp8_clamp:
-  case Intrinsic::amdgcn_swmmac_f32_16x16x64_bf8_bf8_clamp:
-  case Intrinsic::amdgcn_swmmac_f16_16x16x64_fp8_fp8_clamp:
-  case Intrinsic::amdgcn_swmmac_f16_16x16x64_fp8_bf8_clamp:
-  case Intrinsic::amdgcn_swmmac_f16_16x16x64_bf8_fp8_clamp:
-  case Intrinsic::amdgcn_swmmac_f16_16x16x64_bf8_bf8_clamp:
-
-  case Intrinsic::amdgcn_swmmac_f32_16x16x32_fp8_fp8_clamp:
-  case Intrinsic::amdgcn_swmmac_f32_16x16x32_fp8_bf8_clamp:
-  case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_fp8_clamp:
-  case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_bf8_clamp:
-  case Intrinsic::amdgcn_swmmac_f16_16x16x32_fp8_fp8_clamp:
-  case Intrinsic::amdgcn_swmmac_f16_16x16x32_fp8_bf8_clamp:
-  case Intrinsic::amdgcn_swmmac_f16_16x16x32_bf8_fp8_clamp:
-  case Intrinsic::amdgcn_swmmac_f16_16x16x32_bf8_bf8_clamp: {
+  case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_bf8: {
     if (Op.getOperand(4).getValueType() == MVT::i32)
       return SDValue();
 
     SDLoc SL(Op);
     auto IndexKeyi32 = DAG.getAnyExtOrTrunc(Op.getOperand(4), SL, MVT::i32);
 
-    bool HasClamp;
-    switch (IntrinsicID) {
-    default:
-      HasClamp = false;
-      break;
-    case Intrinsic::amdgcn_swmmac_f32_16x16x32_f16_clamp:
-    case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf16_clamp:
-    case Intrinsic::amdgcn_swmmac_f16_16x16x32_f16_clamp:
-    case Intrinsic::amdgcn_swmmac_bf16_16x16x32_bf16_clamp:
-    case Intrinsic::amdgcn_swmmac_f32_16x16x64_fp8_fp8_clamp:
-    case Intrinsic::amdgcn_swmmac_f32_16x16x64_fp8_bf8_clamp:
-    case Intrinsic::amdgcn_swmmac_f32_16x16x64_bf8_fp8_clamp:
-    case Intrinsic::amdgcn_swmmac_f32_16x16x64_bf8_bf8_clamp:
-    case Intrinsic::amdgcn_swmmac_f16_16x16x64_fp8_fp8_clamp:
-    case Intrinsic::amdgcn_swmmac_f16_16x16x64_fp8_bf8_clamp:
-    case Intrinsic::amdgcn_swmmac_f16_16x16x64_bf8_fp8_clamp:
-    case Intrinsic::amdgcn_swmmac_f16_16x16x64_bf8_bf8_clamp:
-
-    case Intrinsic::amdgcn_swmmac_f32_16x16x32_fp8_fp8_clamp:
-    case Intrinsic::amdgcn_swmmac_f32_16x16x32_fp8_bf8_clamp:
-    case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_fp8_clamp:
-    case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_bf8_clamp:
-    case Intrinsic::amdgcn_swmmac_f16_16x16x32_fp8_fp8_clamp:
-    case Intrinsic::amdgcn_swmmac_f16_16x16x32_fp8_bf8_clamp:
-    case Intrinsic::amdgcn_swmmac_f16_16x16x32_bf8_fp8_clamp:
-    case Intrinsic::amdgcn_swmmac_f16_16x16x32_bf8_bf8_clamp:
-
-      HasClamp = true;
-      break;
-    }
-    if (HasClamp) {
-      return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, Op.getValueType(),
-                         {Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
-                          Op.getOperand(3), IndexKeyi32, Op.getOperand(5)});
-
-    } else {
-      return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, Op.getValueType(),
-                         Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
-                         Op.getOperand(3), IndexKeyi32);
-    }
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, Op.getValueType(),
+                       Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
+                       Op.getOperand(3), IndexKeyi32);
   }
   case Intrinsic::amdgcn_swmmac_f16_16x16x64_f16:
   case Intrinsic::amdgcn_swmmac_bf16_16x16x64_bf16:
