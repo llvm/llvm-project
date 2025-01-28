@@ -1759,16 +1759,16 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
   // Ensure minimum depth of the loop nest to do the interchange.
   if (!hasSupportedLoopDepth(LoopList, ORE))
     return PreservedAnalyses::all();
-  
   // Ensure computable loop nest.
   if (!isComputableLoopNest(&AR.SE, LoopList)) {
-      LLVM_DEBUG(dbgs() << "Not valid loop candidate for interchange\n");
-      return PreservedAnalyses::all();
+    LLVM_DEBUG(dbgs() << "Not valid loop candidate for interchange\n");
+    return PreservedAnalyses::all();
   }
 
   ORE.emit([&]() {
     return OptimizationRemark(DEBUG_TYPE, "Dependence",
-                              LN.getOutermostLoop().getStartLoc(), LN.getOutermostLoop().getHeader())
+                              LN.getOutermostLoop().getStartLoc(),
+                              LN.getOutermostLoop().getHeader())
            << "Computed dependence info, invoking the transform.";
   });
 
