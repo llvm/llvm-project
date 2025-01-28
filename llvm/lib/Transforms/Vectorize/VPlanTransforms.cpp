@@ -888,6 +888,17 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  // VPScalarIVSteps can only be simplified after unrolling. VPScalarIVSteps for
+  // part 0 can be replaced by their start value, if only the first lane is
+  // demanded.
+  if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(&R)) {
+    if (Steps->getParent()->getPlan()->isUnrolled() && Steps->isPart0() &&
+        vputils::onlyFirstLaneUsed(Steps)) {
+      Steps->replaceAllUsesWith(Steps->getOperand(0));
+      return;
+    }
+  }
+
   VPValue *A;
   if (match(&R, m_Trunc(m_ZExtOrSExt(m_VPValue(A))))) {
     VPValue *Trunc = R.getVPSingleValue();
@@ -964,7 +975,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
 
 /// Try to simplify the recipes in \p Plan. Use \p CanonicalIVTy as type for all
 /// un-typed live-ins in VPTypeAnalysis.
-static void simplifyRecipes(VPlan &Plan, Type *CanonicalIVTy) {
+void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type *CanonicalIVTy) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
   VPTypeAnalysis TypeInfo(CanonicalIVTy);
@@ -1041,7 +1052,6 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   }
 
   Term->eraseFromParent();
-  VPlanTransforms::removeDeadRecipes(Plan);
 
   Plan.setVF(BestVF);
   Plan.setUF(BestUF);

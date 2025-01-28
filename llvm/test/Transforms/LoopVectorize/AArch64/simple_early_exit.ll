@@ -293,11 +293,10 @@ define i32 @diff_exit_block_needs_scev_check(i32 %end) {
 ; CHECK-NEXT:    br label [[FOR_BODY1:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[FOR_BODY1]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[P1]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[P1]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP10]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[P2]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[P2]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP11]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i32>, ptr [[TMP12]], align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD3]]

@@ -35,8 +35,7 @@ define void @lshift_significand(i32 %n, ptr nocapture writeonly %dst) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP0]], [[EVL_BASED_IV]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[TMP10]], i32 2, i1 true)
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[SPEC_SELECT]], [[EVL_BASED_IV]]
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP13:%.*]] = sub nuw nsw i64 1, [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = sub nuw nsw i64 1, [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP11]] to i64
 ; CHECK-NEXT:    [[TMP17:%.*]] = mul i64 0, [[TMP15]]
