@@ -4653,9 +4653,11 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithThreadLimit) {
       dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNonDebugInstruction());
   ASSERT_NE(BrInst, nullptr);
   ASSERT_EQ(BrInst->getNumSuccessors(), 1U);
-  Instruction *NextInstruction =
+  BasicBlock::iterator NextInstruction =
       BrInst->getSuccessor(0)->getFirstNonPHIOrDbgOrLifetime();
-  CallInst *ForkTeamsCI = dyn_cast_if_present<CallInst>(NextInstruction);
+  CallInst *ForkTeamsCI = nullptr;
+  if (NextInstruction != BrInst->getSuccessor(0)->end())
+    ForkTeamsCI = dyn_cast_if_present<CallInst>(NextInstruction);
   ASSERT_NE(ForkTeamsCI, nullptr);
   EXPECT_EQ(ForkTeamsCI->getCalledFunction(),
             OMPBuilder.getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_fork_teams));
@@ -4709,9 +4711,11 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsUpper) {
       dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNonDebugInstruction());
   ASSERT_NE(BrInst, nullptr);
   ASSERT_EQ(BrInst->getNumSuccessors(), 1U);
-  Instruction *NextInstruction =
+  BasicBlock::iterator NextInstruction =
       BrInst->getSuccessor(0)->getFirstNonPHIOrDbgOrLifetime();
-  CallInst *ForkTeamsCI = dyn_cast_if_present<CallInst>(NextInstruction);
+  CallInst *ForkTeamsCI = nullptr;
+  if (NextInstruction != BrInst->getSuccessor(0)->end())
+    ForkTeamsCI = dyn_cast_if_present<CallInst>(NextInstruction);
   ASSERT_NE(ForkTeamsCI, nullptr);
   EXPECT_EQ(ForkTeamsCI->getCalledFunction(),
             OMPBuilder.getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_fork_teams));
@@ -4768,9 +4772,11 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsBoth) {
       dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNonDebugInstruction());
   ASSERT_NE(BrInst, nullptr);
   ASSERT_EQ(BrInst->getNumSuccessors(), 1U);
-  Instruction *NextInstruction =
+  BasicBlock::iterator NextInstruction =
       BrInst->getSuccessor(0)->getFirstNonPHIOrDbgOrLifetime();
-  CallInst *ForkTeamsCI = dyn_cast_if_present<CallInst>(NextInstruction);
+  CallInst *ForkTeamsCI = nullptr;
+  if (NextInstruction != BrInst->getSuccessor(0)->end())
+    ForkTeamsCI = dyn_cast_if_present<CallInst>(NextInstruction);
   ASSERT_NE(ForkTeamsCI, nullptr);
   EXPECT_EQ(ForkTeamsCI->getCalledFunction(),
             OMPBuilder.getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_fork_teams));
@@ -4833,9 +4839,11 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsAndThreadLimit) {
       dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNonDebugInstruction());
   ASSERT_NE(BrInst, nullptr);
   ASSERT_EQ(BrInst->getNumSuccessors(), 1U);
-  Instruction *NextInstruction =
+  BasicBlock::iterator NextInstruction =
       BrInst->getSuccessor(0)->getFirstNonPHIOrDbgOrLifetime();
-  CallInst *ForkTeamsCI = dyn_cast_if_present<CallInst>(NextInstruction);
+  CallInst *ForkTeamsCI = nullptr;
+  if (NextInstruction != BrInst->getSuccessor(0)->end())
+    ForkTeamsCI = dyn_cast_if_present<CallInst>(NextInstruction);
   ASSERT_NE(ForkTeamsCI, nullptr);
   EXPECT_EQ(ForkTeamsCI->getCalledFunction(),
             OMPBuilder.getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_fork_teams));

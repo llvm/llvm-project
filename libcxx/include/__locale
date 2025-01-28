@@ -60,8 +60,9 @@ public:
 
   static const category // values assigned here are for exposition only
       none    = 0,
-      collate = LC_COLLATE_MASK, ctype = LC_CTYPE_MASK, monetary = LC_MONETARY_MASK, numeric = LC_NUMERIC_MASK,
-      time = LC_TIME_MASK, messages = LC_MESSAGES_MASK, all = collate | ctype | monetary | numeric | time | messages;
+      collate = _LIBCPP_COLLATE_MASK, ctype = _LIBCPP_CTYPE_MASK, monetary = _LIBCPP_MONETARY_MASK,
+      numeric = _LIBCPP_NUMERIC_MASK, time = _LIBCPP_TIME_MASK, messages = _LIBCPP_MESSAGES_MASK,
+      all = collate | ctype | monetary | numeric | time | messages;
 
   // construct/copy/destroy:
   locale() _NOEXCEPT;
