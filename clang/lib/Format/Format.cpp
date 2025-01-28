@@ -1499,7 +1499,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   FormatStyle LLVMStyle;
   LLVMStyle.AccessModifierOffset = -2;
   LLVMStyle.AlignAfterOpenBracket = FormatStyle::BAS_Align;
-  LLVMStyle.AlignAfterOpenBracketBreak = {};
+  LLVMStyle.AlignAfterOpenBracketBreak = {false, false, false};
   LLVMStyle.AlignArrayOfStructures = FormatStyle::AIAS_None;
   LLVMStyle.AlignConsecutiveAssignments = {};
   LLVMStyle.AlignConsecutiveAssignments.PadOperators = true;
