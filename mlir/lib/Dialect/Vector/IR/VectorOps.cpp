@@ -1648,10 +1648,6 @@ static bool hasZeroDimVectors(Operation *op) {
 
 /// Fold extractOp with scalar result coming from BroadcastOp or SplatOp.
 static Value foldExtractFromBroadcast(ExtractOp extractOp) {
-  // TODO: Canonicalization for dynamic position not implemented yet.
-  if (extractOp.hasDynamicPosition())
-    return Value();
-
   Operation *defOp = extractOp.getVector().getDefiningOp();
   if (!defOp || !isa<vector::BroadcastOp, SplatOp>(defOp))
     return Value();
@@ -1678,6 +1674,16 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
   if (extractVecType && broadcastVecType &&
       extractVecType.getShape() !=
           broadcastVecType.getShape().take_back(extractResultRank))
+    return Value();
+
+  // The dim-1 broadcast -> ExtractOp folder requires in place operation
+  // modifications. For dynamic position, this means we have to change the
+  // number of operands. This cannot be done in place since it changes the
+  // operation storage. For dynamic dimensions, the dim-1 broadcasting should
+  // be implemented as a canonicalization pattern.
+  // TODO: Implement canonicalization pattern for dim-1 broadcasting +
+  // extractop.
+  if (extractOp.hasDynamicPosition())
     return Value();
 
   auto broadcastOp = cast<vector::BroadcastOp>(defOp);

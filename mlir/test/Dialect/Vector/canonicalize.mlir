@@ -652,24 +652,44 @@ func.func @fold_extract_transpose(
 
 // -----
 
-// CHECK-LABEL: fold_extract_broadcast
+// CHECK-LABEL: fold_extract_broadcast_same_type
 //  CHECK-SAME:   %[[A:.*]]: f32
 //       CHECK:   return %[[A]] : f32
-func.func @fold_extract_broadcast(%a : f32) -> f32 {
+func.func @fold_extract_broadcast_same_type(%a : f32, 
+                                            %idx0 : index, 
+                                            %idx1 : index) -> f32 {
   %b = vector.broadcast %a : f32 to vector<1x2x4xf32>
-  %r = vector.extract %b[0, 1, 2] : f32 from vector<1x2x4xf32>
+  // The indices don't batter for this folder, so we use mixed indices.
+  %r = vector.extract %b[%idx0, %idx1, 2] : f32 from vector<1x2x4xf32>
   return %r : f32
 }
 
 // -----
 
-// CHECK-LABEL: fold_extract_broadcast_0dvec
+// CHECK-LABEL: fold_extract_broadcast_same_type_vec
+//  CHECK-SAME:   %[[A:.*]]: vector<4xf32>
+//       CHECK:   return %[[A]] : vector<4xf32>
+func.func @fold_extract_broadcast_same_type_vec(%a : vector<4xf32>, 
+                                                %idx0 : index) 
+                                                -> vector<4xf32> {
+  %b = vector.broadcast %a : vector<4xf32> to vector<1x2x4xf32>
+  // The indices don't batter for this folder, so we use mixed indices.
+  %r = vector.extract %b[0, %idx0] : vector<4xf32> from vector<1x2x4xf32>
+  return %r : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: fold_extract_broadcast_0dvec_and_scalar
 //  CHECK-SAME:   %[[A:.*]]: vector<f32>
 //       CHECK:   %[[B:.+]] = vector.extractelement %[[A]][] : vector<f32>
 //       CHECK:   return %[[B]] : f32
-func.func @fold_extract_broadcast_0dvec(%a : vector<f32>) -> f32 {
+func.func @fold_extract_broadcast_0dvec_and_scalar(%a : vector<f32>, 
+                                                   %idx0 : index, 
+                                                   %idx1 : index) -> f32 {
   %b = vector.broadcast %a : vector<f32> to vector<1x2x4xf32>
-  %r = vector.extract %b[0, 1, 2] : f32 from vector<1x2x4xf32>
+  // The indices don't batter for this folder, so we use mixed indices.
+  %r = vector.extract %b[%idx0, %idx1, 2] : f32 from vector<1x2x4xf32>
   return %r : f32
 }
 
@@ -689,30 +709,20 @@ func.func @fold_extract_broadcast_negative(%a : vector<1x1xf32>) -> vector<4xf32
 // CHECK-LABEL: fold_extract_splat
 //  CHECK-SAME:   %[[A:.*]]: f32
 //       CHECK:   return %[[A]] : f32
-func.func @fold_extract_splat(%a : f32) -> f32 {
+func.func @fold_extract_splat(%a : f32, %idx0 : index, %idx1 : index) -> f32 {
   %b = vector.splat %a : vector<1x2x4xf32>
-  %r = vector.extract %b[0, 1, 2] : f32 from vector<1x2x4xf32>
+  // The indices don't batter for this folder, so we use mixed indices.
+  %r = vector.extract %b[%idx0, %idx1, 2] : f32 from vector<1x2x4xf32>
   return %r : f32
 }
 
 // -----
 
-// CHECK-LABEL: fold_extract_broadcast_vector
-//  CHECK-SAME:   %[[A:.*]]: vector<4xf32>
-//       CHECK:   return %[[A]] : vector<4xf32>
-func.func @fold_extract_broadcast_vector(%a : vector<4xf32>) -> vector<4xf32> {
-  %b = vector.broadcast %a : vector<4xf32> to vector<1x2x4xf32>
-  %r = vector.extract %b[0, 1] : vector<4xf32> from vector<1x2x4xf32>
-  return %r : vector<4xf32>
-}
-
-// -----
-
-// CHECK-LABEL: fold_extract_broadcast
+// CHECK-LABEL: fold_extract_broadcast_dim1_broadcasting
 //  CHECK-SAME:   %[[A:.*]]: vector<4xf32>
 //       CHECK:   %[[R:.*]] = vector.extract %[[A]][2] : f32 from vector<4xf32>
 //       CHECK:   return %[[R]] : f32
-func.func @fold_extract_broadcast(%a : vector<4xf32>) -> f32 {
+func.func @fold_extract_broadcast_dim1_broadcasting(%a : vector<4xf32>) -> f32 {
   %b = vector.broadcast %a : vector<4xf32> to vector<1x2x4xf32>
   %r = vector.extract %b[0, 1, 2] : f32 from vector<1x2x4xf32>
   return %r : f32
@@ -720,26 +730,50 @@ func.func @fold_extract_broadcast(%a : vector<4xf32>) -> f32 {
 
 // -----
 
-// CHECK-LABEL: fold_extract_broadcast
+// CHECK-LABEL: fold_extract_broadcast_dim1_broadcasting_dynamic_nyi
+//  CHECK-SAME:   %[[A:.*]]: vector<4xf32>
+//  CHECK-SAME:   %[[IDX:.*]]: index
+//       CHECK:   %[[B:.*]] = vector.broadcast %[[A]] : vector<4xf32> to vector<1x2x4xf32>
+//       CHECK:   %[[R:.*]] = vector.extract %[[B]][%[[IDX]], 1, 2]
+//       CHECK:   return %[[R]] : f32
+// This folder is not yet implemented. Check that this does not fold.
+func.func @fold_extract_broadcast_dim1_broadcasting_dynamic_nyi(
+                                                            %a : vector<4xf32>, 
+                                                            %idx : index) -> f32 {
+  %b = vector.broadcast %a : vector<4xf32> to vector<1x2x4xf32>
+  %r = vector.extract %b[%idx, 1, 2] : f32 from vector<1x2x4xf32>
+  return %r : f32
+}
+
+// -----
+
+// CHECK-LABEL: canonicalize_extract_broadcast_to_higher_rank
 //       CHECK:   %[[B:.*]] = vector.broadcast %{{.*}} : f32 to vector<4xf32>
 //       CHECK:   return %[[B]] : vector<4xf32>
-func.func @fold_extract_broadcast(%a : f32) -> vector<4xf32> {
+func.func @canonicalize_extract_broadcast_to_higher_rank(%a : f32, 
+                                                         %idx0 : index) 
+                                                         -> vector<4xf32> {
   %b = vector.broadcast %a : f32 to vector<1x2x4xf32>
-  %r = vector.extract %b[0, 1] : vector<4xf32> from vector<1x2x4xf32>
+  // The indices don't batter for this canonicalizer, so we use mixed indices.
+  %r = vector.extract %b[0, %idx0] : vector<4xf32> from vector<1x2x4xf32>
   return %r : vector<4xf32>
 }
 
 // -----
 
-// CHECK-LABEL: fold_extract_broadcast
+// CHECK-LABEL: canonicalize_extract_broadcast_to_equal_rank
 //  CHECK-SAME:   %[[A:.*]]: vector<1xf32>
 //       CHECK:   %[[R:.*]] = vector.broadcast %[[A]] : vector<1xf32> to vector<8xf32>
 //       CHECK:   return %[[R]] : vector<8xf32>
-func.func @fold_extract_broadcast(%a : vector<1xf32>) -> vector<8xf32> {
+func.func @canonicalize_extract_broadcast_to_equal_rank(%a : vector<1xf32>,
+                                                         %idx0 : index) 
+                                                         -> vector<8xf32> {
   %b = vector.broadcast %a : vector<1xf32> to vector<1x8xf32>
-  %r = vector.extract %b[0] : vector<8xf32> from vector<1x8xf32>
+  // The indices don't batter for this canonicalizer, so we use mixed indices.
+  %r = vector.extract %b[%idx0] : vector<8xf32> from vector<1x8xf32>
   return %r : vector<8xf32>
 }
+
 // -----
 
 // CHECK-LABEL: @fold_extract_shuffle
