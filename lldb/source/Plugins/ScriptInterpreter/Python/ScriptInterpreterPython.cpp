@@ -70,8 +70,7 @@ extern "C" PyObject *PyInit__lldb(void);
 // Don't mess with the signal handlers on Windows.
 #define LLDB_USE_PYTHON_SET_INTERRUPT 0
 #else
-// PyErr_SetInterrupt was introduced in 3.2.
-#define LLDB_USE_PYTHON_SET_INTERRUPT PY_VERSION_HEX >= 0x03020000
+#define LLDB_USE_PYTHON_SET_INTERRUPT 1
 #endif
 
 static ScriptInterpreterPythonImpl *GetPythonInterpreter(Debugger &debugger) {
@@ -91,10 +90,8 @@ namespace {
 struct InitializePythonRAII {
 public:
   InitializePythonRAII() {
-#if PY_VERSION_HEX >= 0x03080000
     PyConfig config;
     PyConfig_InitPythonConfig(&config);
-#endif
 
 #if LLDB_EMBED_PYTHON_HOME
     static std::string g_python_home = []() -> std::string {
@@ -108,14 +105,7 @@ public:
       return spec.GetPath();
     }();
     if (!g_python_home.empty()) {
-#if PY_VERSION_HEX >= 0x03080000
       PyConfig_SetBytesString(&config, &config.home, g_python_home.c_str());
-#else
-      size_t size = 0;
-      wchar_t *python_home_w = Py_DecodeLocale(g_python_home.c_str(), &size);
-      Py_SetPythonHome(python_home_w);
-      PyMem_RawFree(python_home_w);
-#endif
     }
 #endif
 
@@ -142,23 +132,10 @@ public:
       PyImport_AppendInittab("_lldb", LLDBSwigPyInit);
     }
 
-#if PY_VERSION_HEX >= 0x03080000
     config.install_signal_handlers = 0;
     Py_InitializeFromConfig(&config);
     PyConfig_Clear(&config);
     InitializeThreadsPrivate();
-#else
-// Python < 3.2 and Python >= 3.2 reversed the ordering requirements for
-// calling `Py_Initialize` and `PyEval_InitThreads`.  < 3.2 requires that you
-// call `PyEval_InitThreads` first, and >= 3.2 requires that you call it last.
-#if PY_VERSION_HEX >= 0x03020000
-    Py_InitializeEx(0);
-    InitializeThreadsPrivate();
-#else
-    InitializeThreadsPrivate();
-    Py_InitializeEx(0);
-#endif
-#endif
   }
 
   ~InitializePythonRAII() {
@@ -181,11 +158,9 @@ private:
 // would always return `true` and `PyGILState_Ensure/Release` flow would be
 // executed instead of unlocking GIL with `PyEval_SaveThread`. When
 // an another thread calls `PyGILState_Ensure` it would get stuck in deadlock.
-#if PY_VERSION_HEX >= 0x03070000
     // The only case we should go further and acquire the GIL: it is unlocked.
     if (PyGILState_Check())
       return;
-#endif
 
 // `PyEval_ThreadsInitialized` was deprecated in Python 3.9 and removed in
 // Python 3.13. It has been returning `true` always since Python 3.7.
