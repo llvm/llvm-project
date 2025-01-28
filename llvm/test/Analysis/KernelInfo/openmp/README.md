@@ -8,8 +8,8 @@ more exhaustively check KernelInfoPrinter features using reduced LLVM IR.
 The LLVM IR in each test file `$TEST` can be regenerated as follows in the case
 that Clang OpenMP codegen changes or it becomes desirable to adjust the source
 OpenMP program below.  First, remove the existing LLVM IR from `$TEST`.  Then,
-where `$TARGET` (e.g., `nvptx64-nvidia-cuda` or `amdgcn-amd-amdhsa`) depends on
-`$TEST`:
+where `$TARGET` (e.g., `nvptx64-nvidia-cuda-sm_70` or `amdgcn-amd-amdhsa-gfx906`)
+depends on `$TEST`:
 
 ```
 $ cd /tmp
@@ -34,7 +34,7 @@ void h(int i) {
   }
 }
 
-$ clang -g -fopenmp -fopenmp-targets=$TARGET -save-temps -c test.c
+$ clang -g -fopenmp --offload-arch=native -save-temps -c test.c
 $ llvm-dis test-openmp-$TARGET.bc
 $ cat test-openmp-$TARGET.ll >> $TEST
 ```

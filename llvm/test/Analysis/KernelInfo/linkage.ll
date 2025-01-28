@@ -7,31 +7,47 @@
 target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
 
-; CHECK: remark: test.c:3:0: in function 'f', ExternalNotKernel = 1
-define external void @f() !dbg !10 {
+; CHECK: remark: test.c:13:0: in artificial function 'extNotKer', ExternalNotKernel = 1
+define external void @extNotKer() !dbg !10 {
 entry:
   ret void
 }
 
-; CHECK: remark: test.c:13:0: in artificial function 'g', ExternalNotKernel = 1
-define void @g() !dbg !20 {
+; CHECK: remark: test.c:23:0: in function 'impNotKer', ExternalNotKernel = 1
+define void @impNotKer() !dbg !20 {
 entry:
   ret void
 }
 
-; CHECK: remark: test.c:23:0: in function 'h', ExternalNotKernel = 0
-define external void @h() #0 !dbg !30 {
+; CHECK: remark: test.c:33:0: in artificial function 'weakNotKer', ExternalNotKernel = 0
+define weak void @weakNotKer() !dbg !30 {
 entry:
   ret void
 }
 
-; CHECK: remark: test.c:33:0: in artificial function 'i', ExternalNotKernel = 0
-define weak void @i() !dbg !40 {
+; CHECK: remark: test.c:43:0: in function 'extPtxKer', ExternalNotKernel = 0
+define external ptx_kernel void @extPtxKer() !dbg !40 {
 entry:
   ret void
 }
 
-attributes #0 = { "kernel" }
+; CHECK: remark: test.c:53:0: in artificial function 'extAmdgpuKer', ExternalNotKernel = 0
+define external amdgpu_kernel void @extAmdgpuKer() !dbg !50 {
+entry:
+  ret void
+}
+
+; CHECK: remark: test.c:63:0: in function 'extSpirKer', ExternalNotKernel = 0
+define external spir_kernel void @extSpirKer() !dbg !60 {
+entry:
+  ret void
+}
+
+; CHECK: remark: test.c:73:0: in artificial function 'weakKer', ExternalNotKernel = 0
+define weak ptx_kernel void @weakKer() !dbg !70 {
+entry:
+  ret void
+}
 
 !llvm.module.flags = !{!0}
 !llvm.dbg.cu = !{!1}
@@ -41,11 +57,12 @@ attributes #0 = { "kernel" }
 !2 = !DIFile(filename: "test.c", directory: "/tmp")
 !3 = !{null}
 !4 = !{}
-!10 = distinct !DISubprogram(name: "f", scope: !2, file: !2, line: 3, type: !11, scopeLine: 3, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !4)
-!11 = !DISubroutineType(types: !3)
-!20 = distinct !DISubprogram(name: "g", scope: !2, file: !2, line: 13, type: !21, scopeLine: 13, flags: DIFlagArtificial | DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !4)
-!21 = distinct !DISubroutineType(types: !3)
-!30 = distinct !DISubprogram(name: "h", scope: !2, file: !2, line: 23, type: !31, scopeLine: 23, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !4)
-!31 = distinct !DISubroutineType(types: !3)
-!40 = distinct !DISubprogram(name: "i", scope: !2, file: !2, line: 33, type: !41, scopeLine: 33, flags: DIFlagArtificial | DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1, retainedNodes: !4)
-!41 = distinct !DISubroutineType(types: !3)
+!5 = !DISubroutineType(types: !3)
+
+!10 = distinct !DISubprogram(name: "extNotKer", scope: !2, file: !2, line: 13, type: !5, scopeLine: 13, flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !4)
+!20 = distinct !DISubprogram(name: "impNotKer", scope: !2, file: !2, line: 23, type: !5, scopeLine: 23, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !4)
+!30 = distinct !DISubprogram(name: "weakNotKer", scope: !2, file: !2, line: 33, type: !5, scopeLine: 33, flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !4)
+!40 = distinct !DISubprogram(name: "extPtxKer", scope: !2, file: !2, line: 43, type: !5, scopeLine: 43, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !4)
+!50 = distinct !DISubprogram(name: "extAmdgpuKer", scope: !2, file: !2, line: 53, type: !5, scopeLine: 53, flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !4)
+!60 = distinct !DISubprogram(name: "extSpirKer", scope: !2, file: !2, line: 63, type: !5, scopeLine: 63, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !4)
+!70 = distinct !DISubprogram(name: "weakKer", scope: !2, file: !2, line: 73, type: !5, scopeLine: 73, flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !4)

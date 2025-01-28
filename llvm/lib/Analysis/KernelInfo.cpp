@@ -78,11 +78,6 @@ public:
 
 } // end anonymous namespace
 
-static bool isKernelFunction(Function &F) {
-  // TODO: Is this general enough?  Consider languages beyond OpenMP.
-  return F.hasFnAttribute("kernel");
-}
-
 static void identifyCallee(OptimizationRemark &R, const Module *M,
                            const Value *V, StringRef Kind = "") {
   SmallString<100> Name; // might be function name or asm expression
@@ -292,7 +287,7 @@ void KernelInfo::emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
   KI.FlatAddrspace = TheTTI.getFlatAddressSpace();
 
   // Record function properties.
-  KI.ExternalNotKernel = F.hasExternalLinkage() && !isKernelFunction(F);
+  KI.ExternalNotKernel = F.hasExternalLinkage() && !F.hasKernelCallingConv();
   for (StringRef Name : {"omp_target_num_teams", "omp_target_thread_limit"}) {
     if (auto Val = parseFnAttrAsInteger(F, Name))
       KI.LaunchBounds.push_back({Name, *Val});
