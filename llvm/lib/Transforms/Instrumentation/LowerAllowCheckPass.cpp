@@ -172,14 +172,23 @@ void LowerAllowCheckPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<LowerAllowCheckPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
-  OS << "<cutoffs=";
+  OS << "<";
 
-  bool first = true;
+  // Format is <cutoffs[0,1,2]=70000;cutoffs[5,6,8]=90000>
+  // but it's equally valid to specify
+  //   cutoffs[0]=70000;cutoffs[1]=70000;cutoffs[2]=70000;cutoffs[5]=90000;...
+  // and that's what we do here. It is verbose but valid and easy to verify
+  // correctness.
+  // TODO: print shorter output by combining adjacent runs, etc.
+  int i = 0;
   for (unsigned int cutoff : Opts.cutoffs) {
-    if (!first)
-      OS << "|";
-    OS << cutoff;
-    first = false;
+    if (cutoff > 0) {
+      if (i > 0)
+        OS << ";";
+      OS << "cutoffs[" << i << "]=" << cutoff;
+    }
+
+    i++;
   }
   OS << '>';
 }
