@@ -5139,6 +5139,12 @@ static constexpr StringRef getOpenMPVariantManglingSeparatorStr() {
 bool IsArmStreamingFunction(const FunctionDecl *FD,
                             bool IncludeLocallyStreaming);
 
+/// Returns whether the given FunctionDecl has Arm ZA state.
+bool hasArmZAState(const FunctionDecl *FD);
+
+/// Returns whether the given FunctionDecl has Arm ZT0 state.
+bool hasArmZT0State(const FunctionDecl *FD);
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_DECL_H
