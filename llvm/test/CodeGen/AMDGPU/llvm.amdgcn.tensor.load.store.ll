@@ -10,7 +10,7 @@ declare void @llvm.amdgcn.tensor.store.from.lds.d2(<4 x i32> %D0, <8 x i32> %D1,
 define amdgpu_ps void @tensor_load_to_lds(<4 x i32> inreg %D0, <8 x i32> inreg %D1, <4 x i32> inreg %D2, <4 x i32> inreg %D3) {
 ; GFX1250-LABEL: tensor_load_to_lds:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    tensor_load_to_lds s[0:3], s[4:11], s[12:15], s[16:19] r128
+; GFX1250-NEXT:    tensor_load_to_lds s[0:3], s[4:11], s[12:15], s[16:19]
 ; GFX1250-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %D0, <8 x i32> %D1, <4 x i32> %D2, <4 x i32> %D3, i32 0)
@@ -41,7 +41,7 @@ define amdgpu_ps void @tensor_load_to_lds_vector(<4 x i32> %D0, <8 x i32> %D1, <
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s18, v18
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s19, v19
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    tensor_load_to_lds s[8:11], s[0:7], s[12:15], s[16:19] r128
+; GFX1250-SDAG-NEXT:    tensor_load_to_lds s[8:11], s[0:7], s[12:15], s[16:19]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: tensor_load_to_lds_vector:
@@ -67,7 +67,7 @@ define amdgpu_ps void @tensor_load_to_lds_vector(<4 x i32> %D0, <8 x i32> %D1, <
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s18, v18
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s19, v19
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    tensor_load_to_lds s[8:11], s[0:7], s[12:15], s[16:19] r128
+; GFX1250-GISEL-NEXT:    tensor_load_to_lds s[8:11], s[0:7], s[12:15], s[16:19]
 ; GFX1250-GISEL-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %D0, <8 x i32> %D1, <4 x i32> %D2, <4 x i32> %D3, i32 0)
@@ -78,7 +78,7 @@ entry:
 define amdgpu_ps void @tensor_load_to_lds_d2(<4 x i32> inreg %D0, <8 x i32> inreg %D1) {
 ; GFX1250-LABEL: tensor_load_to_lds_d2:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    tensor_load_to_lds s[0:3], s[4:11] r128 th:TH_LOAD_BYPASS scope:SCOPE_SYS
+; GFX1250-NEXT:    tensor_load_to_lds s[0:3], s[4:11] th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.tensor.load.to.lds.d2(<4 x i32> %D0, <8 x i32> %D1, i32 27)
@@ -101,7 +101,7 @@ define amdgpu_ps void @tensor_load_to_lds_d2_vector(<4 x i32> %D0, <8 x i32> %D1
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s6, v10
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s7, v11
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    tensor_load_to_lds s[8:11], s[0:7] r128 th:TH_LOAD_BYPASS scope:SCOPE_SYS
+; GFX1250-SDAG-NEXT:    tensor_load_to_lds s[8:11], s[0:7] th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: tensor_load_to_lds_d2_vector:
@@ -119,7 +119,7 @@ define amdgpu_ps void @tensor_load_to_lds_d2_vector(<4 x i32> %D0, <8 x i32> %D1
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s6, v10
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s7, v11
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    tensor_load_to_lds s[8:11], s[0:7] r128 th:TH_LOAD_BYPASS scope:SCOPE_SYS
+; GFX1250-GISEL-NEXT:    tensor_load_to_lds s[8:11], s[0:7] th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.tensor.load.to.lds.d2(<4 x i32> %D0, <8 x i32> %D1, i32 27)
@@ -129,7 +129,7 @@ entry:
 define amdgpu_ps void @tensor_store_from_lds(<4 x i32> inreg %D0, <8 x i32> inreg %D1, <4 x i32> inreg %D2, <4 x i32> inreg %D3) {
 ; GFX1250-LABEL: tensor_store_from_lds:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    tensor_store_from_lds s[0:3], s[4:11], s[12:15], s[16:19] r128 th:TH_STORE_NT_HT scope:SCOPE_DEV
+; GFX1250-NEXT:    tensor_store_from_lds s[0:3], s[4:11], s[12:15], s[16:19] th:TH_STORE_NT_HT scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.tensor.store.from.lds(<4 x i32> %D0, <8 x i32> %D1, <4 x i32> %D2, <4 x i32> %D3, i32 22)
@@ -160,7 +160,7 @@ define amdgpu_ps void @tensor_store_from_lds_vector(<4 x i32> %D0, <8 x i32> %D1
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s18, v18
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s19, v19
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    tensor_store_from_lds s[8:11], s[0:7], s[12:15], s[16:19] r128 th:TH_STORE_NT_HT scope:SCOPE_DEV
+; GFX1250-SDAG-NEXT:    tensor_store_from_lds s[8:11], s[0:7], s[12:15], s[16:19] th:TH_STORE_NT_HT scope:SCOPE_DEV
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: tensor_store_from_lds_vector:
@@ -186,7 +186,7 @@ define amdgpu_ps void @tensor_store_from_lds_vector(<4 x i32> %D0, <8 x i32> %D1
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s18, v18
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s19, v19
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    tensor_store_from_lds s[8:11], s[0:7], s[12:15], s[16:19] r128 th:TH_STORE_NT_HT scope:SCOPE_DEV
+; GFX1250-GISEL-NEXT:    tensor_store_from_lds s[8:11], s[0:7], s[12:15], s[16:19] th:TH_STORE_NT_HT scope:SCOPE_DEV
 ; GFX1250-GISEL-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.tensor.store.from.lds(<4 x i32> %D0, <8 x i32> %D1, <4 x i32> %D2, <4 x i32> %D3, i32 22)
@@ -196,7 +196,7 @@ entry:
 define amdgpu_ps void @tensor_store_from_lds_d2(<4 x i32> inreg %D0, <8 x i32> inreg %D1) {
 ; GFX1250-LABEL: tensor_store_from_lds_d2:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    tensor_store_from_lds s[0:3], s[4:11] r128
+; GFX1250-NEXT:    tensor_store_from_lds s[0:3], s[4:11]
 ; GFX1250-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.tensor.store.from.lds.d2(<4 x i32> %D0, <8 x i32> %D1, i32 0)
@@ -219,7 +219,7 @@ define amdgpu_ps void @tensor_store_from_lds_d2_vector(<4 x i32> %D0, <8 x i32> 
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s6, v10
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s7, v11
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    tensor_store_from_lds s[8:11], s[0:7] r128
+; GFX1250-SDAG-NEXT:    tensor_store_from_lds s[8:11], s[0:7]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: tensor_store_from_lds_d2_vector:
@@ -237,7 +237,7 @@ define amdgpu_ps void @tensor_store_from_lds_d2_vector(<4 x i32> %D0, <8 x i32> 
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s6, v10
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s7, v11
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    tensor_store_from_lds s[8:11], s[0:7] r128
+; GFX1250-GISEL-NEXT:    tensor_store_from_lds s[8:11], s[0:7]
 ; GFX1250-GISEL-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.tensor.store.from.lds.d2(<4 x i32> %D0, <8 x i32> %D1, i32 0)

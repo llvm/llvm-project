@@ -4565,7 +4565,7 @@ bool AMDGPUAsmParser::validateTensorR128(const MCInst &Inst) {
     return true;
 
   int R128Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::r128);
-  if (R128Idx >= 0 && !Inst.getOperand(R128Idx).getImm())
+  if (R128Idx >= 0 && Inst.getOperand(R128Idx).getImm())
     return false;
 
   return true;
@@ -5504,7 +5504,7 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   }
   if (!validateTensorR128(Inst)) {
     Error(getImmLoc(AMDGPUOperand::ImmTyD16, Operands),
-      "instruction must set modifier r128=1");
+      "instruction must set modifier r128=0");
     return false;
   }
   if (!validateMIMGMSAA(Inst)) {
