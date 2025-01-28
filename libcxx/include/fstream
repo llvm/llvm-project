@@ -362,6 +362,9 @@ private:
   bool __read_mode();
   void __write_mode();
 
+  static int __fseek(FILE* __file, pos_type __offset, int __whence);
+  static pos_type __ftell(FILE* __file);
+
   _LIBCPP_EXPORTED_FROM_ABI friend FILE* __get_ostream_file(ostream&);
 
   // There are multiple (__)open function, they use different C-API open
@@ -936,21 +939,35 @@ basic_filebuf<_CharT, _Traits>::seekoff(off_type __off, ios_base::seekdir __way,
   default:
     return pos_type(off_type(-1));
   }
-#    if defined(_LIBCPP_MSVCRT_LIKE)
-  if (_fseeki64(__file_, __width > 0 ? __width * __off : 0, __whence))
+  if (__fseek(__file_, __width > 0 ? __width * __off : 0, __whence))
     return pos_type(off_type(-1));
-  pos_type __r = _ftelli64(__file_);
-#    elif !_LIBCPP_HAS_OFF_T_FUNCTIONS
-  if (fseek(__file_, __width > 0 ? __width * __off : 0, __whence))
-    return pos_type(off_type(-1));
-  pos_type __r = ftell(__file_);
-#    else
-  if (::fseeko(__file_, __width > 0 ? __width * __off : 0, __whence))
-    return pos_type(off_type(-1));
-  pos_type __r = ftello(__file_);
-#    endif
+  pos_type __r = __ftell(__file_);
   __r.state(__st_);
   return __r;
+}
+
+template <class _CharT, class _Traits>
+int
+basic_filebuf<_CharT, _Traits>::__fseek(FILE* __file, pos_type __offset, int __whence) {
+#    if defined(_LIBCPP_MSVCRT_LIKE)
+  return _fseeki64(__file, __offset, __whence);
+#    elif !_LIBCPP_HAS_OFF_T_FUNCTIONS
+  return fseek(__file, __offset, __whence);
+#    else
+  return ::fseeko(__file, __offset, __whence);
+#    endif
+}
+
+template <class _CharT, class _Traits>
+typename basic_filebuf<_CharT, _Traits>::pos_type
+basic_filebuf<_CharT, _Traits>::__ftell(FILE* __file) {
+#    if defined(_LIBCPP_MSVCRT_LIKE)
+  return _ftelli64(__file);
+#    elif !_LIBCPP_HAS_OFF_T_FUNCTIONS
+  return ftell(__file);
+#    else
+  return ftello(__file);
+#    endif
 }
 
 template <class _CharT, class _Traits>
@@ -958,16 +975,8 @@ typename basic_filebuf<_CharT, _Traits>::pos_type
 basic_filebuf<_CharT, _Traits>::seekpos(pos_type __sp, ios_base::openmode) {
   if (__file_ == nullptr || sync())
     return pos_type(off_type(-1));
-#    if defined(_LIBCPP_MSVCRT_LIKE)
-  if (_fseeki64(__file_, __sp, SEEK_SET))
+  if (__fseek(__file_, __sp, SEEK_SET))
     return pos_type(off_type(-1));
-#    elif !_LIBCPP_HAS_OFF_T_FUNCTIONS
-  if (fseek(__file_, __sp, SEEK_SET))
-    return pos_type(off_type(-1));
-#    else
-  if (::fseeko(__file_, __sp, SEEK_SET))
-    return pos_type(off_type(-1));
-#    endif
   __st_ = __sp.state();
   return __sp;
 }
@@ -1014,13 +1023,8 @@ int basic_filebuf<_CharT, _Traits>::sync() {
         }
       }
     }
-#    if !_LIBCPP_HAS_OFF_T_FUNCTIONS
-    if (fseek(__file_, -__c, SEEK_CUR))
+    if (__fseek(__file_, -__c, SEEK_CUR))
       return -1;
-#    else
-    if (::fseeko(__file_, -__c, SEEK_CUR))
-      return -1;
-#    endif
     if (__update_st)
       __st_ = __state;
     __extbufnext_ = __extbufend_ = __extbuf_;
