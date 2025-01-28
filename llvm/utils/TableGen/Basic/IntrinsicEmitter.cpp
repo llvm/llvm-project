@@ -252,8 +252,7 @@ void IntrinsicEmitter::EmitIntrinsicToNameTable(
 
 )";
 
-  Table.EmitStringLiteralDef(OS, "static constexpr char IntrinsicNameTable[]",
-                             /*Indent=*/"");
+  Table.EmitStringTableDef(OS, "IntrinsicNameTable", /*Indent=*/"");
 
   OS << R"(
 static constexpr unsigned IntrinsicNameOffsetTable[] = {
@@ -759,13 +758,13 @@ Intrinsic::getIntrinsicFor{}Builtin(StringRef TargetPrefix,
   }
 
   if (!Table.empty()) {
-    Table.EmitStringLiteralDef(OS, "static constexpr char BuiltinNames[]");
+    Table.EmitStringTableDef(OS, "BuiltinNames");
 
     OS << R"(
   struct BuiltinEntry {
     ID IntrinsicID;
     unsigned StrTabOffset;
-    const char *getName() const { return &BuiltinNames[StrTabOffset]; }
+    const char *getName() const { return BuiltinNames[StrTabOffset].data(); }
     bool operator<(StringRef RHS) const {
       return strncmp(getName(), RHS.data(), RHS.size()) < 0;
     }

@@ -78,14 +78,11 @@ public:
     // support `constexpr`.
     assert(!Table.empty() && "Requires at least a valid empty string.");
     assert(Table.data()[0] == '\0' && "Offset zero must be the empty string.");
-    // Ensure that `strlen` from any offset cannot overflow the end of the table
-    // by insisting on a null byte at the end. We also insist on the last string
-    // within the table being *separately* null terminated. This structure is
-    // used to enable predictable iteration over all the strings when needed.
+    // Regardless of how many strings are in the table, the last one should also
+    // be null terminated. This also ensures that computing `strlen` on the
+    // strings can't accidentally run past the end of the table.
     assert(Table.data()[Table.size() - 1] == '\0' &&
            "Last byte must be a null byte.");
-    assert(Table.data()[Table.size() - 2] == '\0' &&
-           "Next-to-last byte must be a null byte.");
   }
 
   // Get a string from the table starting with the provided offset. The returned
