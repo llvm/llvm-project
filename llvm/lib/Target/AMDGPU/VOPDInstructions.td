@@ -268,13 +268,15 @@ foreach Gen = [GFX11GenD, GFX12GenD, GFX1250GenD, GFX13GenD] in {
   }
 }
 
-defvar VOPD3XPseudosExtra = ["V_ADD_U32_e32", "V_LSHLREV_B32_e32", "V_FMA_F32_e64", "V_SUB_U32_e32",
-                             "V_LSHRREV_B32_e32", "V_ASHRREV_I32_e32", "V_FMA_F64_e64", "V_ADD_F64_pseudo_e32",
-                             "V_MUL_F64_pseudo_e32", "V_MAX_NUM_F64_e32", "V_MIN_NUM_F64_e32"];
-defvar VOPD3XPseudosGFX1250 = !listconcat(
-                                !filter(x, VOPDXPseudosGFX12, !and(!eq(!find(x, "FMAAK"), -1),
-                                                                   !eq(!find(x, "FMAMK"), -1))),
-                                VOPD3XPseudosExtra);
+defvar VOPD3XPseudosExtraGFX13 = ["V_ADD_U32_e32", "V_LSHLREV_B32_e32", "V_FMA_F32_e64", "V_SUB_U32_e32",
+                                  "V_LSHRREV_B32_e32", "V_ASHRREV_I32_e32"];
+defvar VOPD3XPseudosExtraGFX1250 = ["V_FMA_F64_e64", "V_ADD_F64_pseudo_e32",
+                                    "V_MUL_F64_pseudo_e32", "V_MAX_NUM_F64_e32", "V_MIN_NUM_F64_e32"];
+defvar VOPD3XPseudosGFX13 = !listconcat(
+                              !filter(x, VOPDXPseudosGFX12, !and(!eq(!find(x, "FMAAK"), -1),
+                                                                 !eq(!find(x, "FMAMK"), -1))),
+                              VOPD3XPseudosExtraGFX13);
+defvar VOPD3XPseudosGFX1250 = !listconcat(VOPD3XPseudosGFX13, VOPD3XPseudosExtraGFX1250);
 defvar VOPD3YPseudosExtra = ["V_BITOP3_B32_e64", "V_FMA_F32_e64"];
 defvar VOPD3YPseudosGFX1250 = !listconcat(
                                 !filter(x, VOPDYPseudosGFX1250, !and(!eq(!find(x, "FMAAK"), -1),
@@ -283,7 +285,7 @@ defvar VOPD3YPseudosGFX1250 = !listconcat(
 
 def GFX1250GenD3 : GFXGenD<GFX1250Gen, VOPD3XPseudosGFX1250, VOPD3YPseudosGFX1250>;
 
-def GFX13GenD3 : GFXGenD<GFX13Gen, VOPD3XPseudosGFX1250, VOPD3YPseudosGFX1250>;
+def GFX13GenD3 : GFXGenD<GFX13Gen, VOPD3XPseudosGFX13, VOPD3YPseudosGFX1250>;
 
 class getOpcMap<string OPName> {
   defvar BaseName = !substr(OPName,2);
