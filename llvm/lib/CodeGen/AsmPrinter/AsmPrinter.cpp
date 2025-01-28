@@ -2878,7 +2878,6 @@ void AsmPrinter::emitConstantPool() {
 // Print assembly representations of the jump tables used by the current
 // function.
 void AsmPrinter::emitJumpTableInfo() {
-  const DataLayout &DL = MF->getDataLayout();
   const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
   if (!MJTI) return;
   if (MJTI->getEntryKind() == MachineJumpTableInfo::EK_Inline) return;
