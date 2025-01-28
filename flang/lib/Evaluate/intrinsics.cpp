@@ -2357,7 +2357,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       if (kindArg) {
         if (auto *expr{kindArg->UnwrapExpr()}) {
           CHECK(expr->Rank() == 0);
-          if (auto code{ToInt64(*expr)}) {
+          if (auto code{ToInt64(Fold(context, common::Clone(*expr)))}) {
             if (context.targetCharacteristics().IsTypeEnabled(
                     *category, *code)) {
               if (*category == TypeCategory::Character) { // ACHAR & CHAR
@@ -2369,9 +2369,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             }
           }
         }
-        messages.Say("'kind=' argument must be a constant scalar integer "
-                     "whose value is a supported kind for the "
-                     "intrinsic result type"_err_en_US);
+        messages.Say(
+            "'kind=' argument must be a constant scalar integer whose value is a supported kind for the intrinsic result type"_err_en_US);
         // use default kind below for error recovery
       } else if (kindDummyArg->flags.test(ArgFlag::defaultsToSameKind)) {
         CHECK(sameArg);
