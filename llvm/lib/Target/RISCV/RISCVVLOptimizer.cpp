@@ -1365,7 +1365,7 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
     if (!MDT->isReachableFromEntry(&MBB))
       continue;
 
-    for (auto &MI : make_range(MBB.rbegin(), MBB.rend())) {
+    for (auto &MI : reverse(MBB)) {
       if (!isCandidate(MI))
         continue;
       if (!tryReduceVL(MI))

@@ -196,6 +196,7 @@ public:
     ImmTyByteSel,
     ImmTySignedA,
     ImmTySignedB,
+    ImmTySparseIndexOdd,
     ImmTyGlobalSReg32,
     ImmTyGlobalSReg64,
   };
@@ -1259,6 +1260,7 @@ public:
     case ImmTyByteSel: OS << "ByteSel" ; break;
     case ImmTySignedA: OS << "SignedA"; break;
     case ImmTySignedB: OS << "SignedB"; break;
+    case ImmTySparseIndexOdd: OS << "SparseIndexOdd"; break;
     case ImmTyGlobalSReg32: OS << "GlobalSReg32"; break;
     case ImmTyGlobalSReg64: OS << "GlobalSReg64"; break;
     }

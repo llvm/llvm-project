@@ -111,10 +111,10 @@ bb:
 }
 
 ;--- err-10.ll
-; ERR-10: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.swmmac.f32.16x16x32.fp8.fp8.clamp
-define amdgpu_ps void @test_swmmac_f32_16x16x32_fp8_fp8_clamp(<2 x i32> %A, <4 x i32> %B, <8 x float> %C, i16 %Index, ptr addrspace(1) %out) {
+; ERR-10: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.swmma.f32.16x16x32.fp8.fp8.clamp
+define amdgpu_ps void @test_swmma_f32_16x16x32_fp8_fp8_clamp(<2 x i32> %A, <4 x i32> %B, <8 x float> %C, i32 %Index, ptr addrspace(1) %out) {
 bb:
-  %res = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.fp8.fp8.clamp(<2 x i32> %A, <4 x i32> %B, <8 x float> %C, i16 %Index, i1 1)
+  %res = call <8 x float> @llvm.amdgcn.swmma.f32.16x16x32.fp8.fp8.clamp(<2 x i32> %A, <4 x i32> %B, <8 x float> %C, i32 %Index, i1 1, i1 1)
   store <8 x float> %res, ptr addrspace(1) %out
   ret void
 }

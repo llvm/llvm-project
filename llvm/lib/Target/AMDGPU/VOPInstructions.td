@@ -2092,10 +2092,6 @@ multiclass VOP3Only_Real_Base_gfx12_gfx13<bits<10> gfx12Op, bits<10> op = gfx12O
   VOP3_Real_Base<GFX12Gen, gfx12Op, NAME, 1/*IsSingle*/>,
   VOP3_Real_Base<GFX13Gen, op, NAME, 1/*IsSingle*/>;
 
-multiclass VOP3Only_Realtriple_t16_gfx12_gfx13<bits<10> gfx12Op, bits<10> op = gfx12Op> :
-  VOP3Only_Realtriple<GFX12Gen, gfx12Op>,
-  VOP3Only_Realtriple<GFX13Gen, op>;
-
 multiclass VOP3Only_Real_Base_gfx1250<bits<10> op> :
   VOP3_Real_Base<GFX1250Gen, op, NAME, 1/*IsSingle*/>;
 
@@ -2165,6 +2161,26 @@ multiclass VOP3_Realtriple_with_name_gfx12_gfx13<
     bits<10> gfx12Op, bits<10> op, string opName, string asmName, string pseudo_mnemonic = "", bit isSingle = 0> :
   VOP3_Realtriple_with_name<GFX12Gen, gfx12Op, opName, asmName, pseudo_mnemonic, isSingle>,
   VOP3_Realtriple_with_name<GFX13Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
+
+multiclass VOP3Only_Realtriple_t16_gfx12_gfx13<bits<10> preGFX13Op, bits<10> op, string asmName,
+                                     string opName = NAME, string pseudo_mnemonic = "">
+  : VOP3_Realtriple_t16_gfx12_gfx13<preGFX13Op, op, asmName, opName, pseudo_mnemonic, 1>;
+
+multiclass VOP3Only_Realtriple_t16_and_fake16_gfx12_gfx13<bits<10> preGFX13Op, bits<10> op,
+                                     string asmName, string opName = NAME, string pseudo_mnemonic = ""> {
+  defm _t16 : VOP3Only_Realtriple_t16_gfx12_gfx13<preGFX13Op, op, asmName, opName#"_t16", pseudo_mnemonic>;
+  defm _fake16 : VOP3Only_Realtriple_t16_gfx12_gfx13<preGFX13Op, op, asmName, opName#"_fake16", pseudo_mnemonic>;
+}
+
+multiclass VOP3be_Real_with_name_gfx12<bits<10> op, string opName,
+                                       string asmName, bit isSingle = 0> {
+  defvar ps = !cast<VOP3_Pseudo>(opName#"_e64");
+  defm NAME : VOP3be_Realtriple<GFX12Gen, op, !or(isSingle, ps.Pfl.IsSingle),
+                                opName, asmName>;
+  def : AMDGPUMnemonicAlias<ps.Mnemonic, asmName> {
+    let AssemblerPredicate = GFX12Gen.AssemblerPredicate;
+  }
+}
 
 multiclass VOP3Only_Realtriple_with_name_gfx11_gfx12_gfx13<
     bits<10> preGFX13Op, bits<10> op, string opName, string asmName> :
