@@ -327,7 +327,7 @@ defvar SiFiveP500TuneFeatures = [TuneNoDefaultUnroll,
                                  TuneAUIPCADDIFusion,
                                  TunePostRAScheduler];
 
-def SIFIVE_P550 : RISCVProcessorModel<"sifive-p550", NoSchedModel,
+def SIFIVE_P550 : RISCVProcessorModel<"sifive-p550", SiFiveP500Model,
                                       [Feature64Bit,
                                        FeatureStdExtI,
                                        FeatureStdExtZifencei,
