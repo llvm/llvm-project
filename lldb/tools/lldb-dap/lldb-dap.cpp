@@ -14,45 +14,55 @@
 #include "Watchpoint.h"
 #include "lldb/API/SBDeclaration.h"
 #include "lldb/API/SBEvent.h"
+#include "lldb/API/SBFile.h"
 #include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/Host/Config.h"
+#include "lldb/Host/Socket.h"
+#include "lldb/Utility/Status.h"
+#include "lldb/Utility/UriParser.h"
+#include "lldb/lldb-forward.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Base64.h"
-#include "llvm/Support/Errno.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
+#include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <array>
-#include <cassert>
-#include <climits>
-#include <cstdarg>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
+#include <fstream>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <optional>
+#include <ostream>
 #include <set>
+#include <string>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #if defined(_WIN32)
@@ -68,6 +78,7 @@
 #else
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <unistd.h>
 #endif
 
@@ -83,6 +94,9 @@ typedef int socklen_t;
 #endif
 
 using namespace lldb_dap;
+using lldb_private::NativeSocket;
+using lldb_private::Socket;
+using lldb_private::Status;
 
 namespace {
 using namespace llvm::opt;
@@ -140,43 +154,6 @@ lldb::SBValueList *GetTopLevelScope(DAP &dap, int64_t variablesReference) {
   default:
     return nullptr;
   }
-}
-
-SOCKET AcceptConnection(std::ofstream *log, int portno) {
-  // Accept a socket connection from any host on "portno".
-  SOCKET newsockfd = -1;
-  struct sockaddr_in serv_addr, cli_addr;
-  SOCKET sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd < 0) {
-    if (log)
-      *log << "error: opening socket (" << strerror(errno) << ")" << std::endl;
-  } else {
-    memset((char *)&serv_addr, 0, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    // serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    serv_addr.sin_port = htons(portno);
-    if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-      if (log)
-        *log << "error: binding socket (" << strerror(errno) << ")"
-             << std::endl;
-    } else {
-      listen(sockfd, 5);
-      socklen_t clilen = sizeof(cli_addr);
-      newsockfd =
-          llvm::sys::RetryAfterSignal(static_cast<SOCKET>(-1), accept, sockfd,
-                                      (struct sockaddr *)&cli_addr, &clilen);
-      if (newsockfd < 0)
-        if (log)
-          *log << "error: accept (" << strerror(errno) << ")" << std::endl;
-    }
-#if defined(_WIN32)
-    closesocket(sockfd);
-#else
-    close(sockfd);
-#endif
-  }
-  return newsockfd;
 }
 
 std::vector<const char *> MakeArgv(const llvm::ArrayRef<std::string> &strs) {
@@ -5052,10 +5029,10 @@ EXAMPLES:
   The debug adapter can be started in two modes.
 
   Running lldb-dap without any arguments will start communicating with the
-  parent over stdio. Passing a port number causes lldb-dap to start listening
-  for connections on that port.
+  parent over stdio. Passing a --connection URI will cause lldb-dap to listen 
+  for a connection in the specified mode.
 
-    lldb-dap -p <port>
+    lldb-dap --connection connection://localhost:<port>
 
   Passing --wait-for-debugger will pause the process at startup and wait for a
   debugger to attach to the process.
@@ -5147,6 +5124,29 @@ static int DuplicateFileDescriptor(int fd) {
 #endif
 }
 
+static llvm::Expected<std::pair<Socket::SocketProtocol, std::string>>
+validateConnection(llvm::StringRef conn) {
+  auto uri = lldb_private::URI::Parse(conn);
+
+  if (uri && (uri->scheme == "tcp" || uri->scheme == "connect" ||
+              !uri->hostname.empty() || uri->port)) {
+    return std::make_pair(
+        Socket::ProtocolTcp,
+        formatv("[{0}]:{1}", uri->hostname.empty() ? "0.0.0.0" : uri->hostname,
+                uri->port.value_or(0)));
+  }
+
+  if (uri && (uri->scheme == "unix" || uri->scheme == "unix-connect" ||
+              uri->path != "/")) {
+    return std::make_pair(Socket::ProtocolUnixDomain, uri->path.str());
+  }
+
+  return llvm::createStringError(
+      "Unsupported connection specifier, expected 'unix-connect:///path' or "
+      "'connect://[host]:port', got '%s'.",
+      conn.str().c_str());
+}
+
 int main(int argc, char *argv[]) {
   llvm::InitLLVM IL(argc, argv, /*InstallPipeSignalExitHandler=*/false);
 #if !defined(__APPLE__)
@@ -5182,9 +5182,9 @@ int main(int argc, char *argv[]) {
     } else if (repl_mode_value == "command") {
       default_repl_mode = ReplMode::Command;
     } else {
-      llvm::errs()
-          << "'" << repl_mode_value
-          << "' is not a valid option, use 'variable', 'command' or 'auto'.\n";
+      llvm::errs() << "'" << repl_mode_value
+                   << "' is not a valid option, use 'variable', 'command' or "
+                      "'auto'.\n";
       return EXIT_FAILURE;
     }
   }
@@ -5217,15 +5217,10 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  int portno = -1;
-  if (auto *arg = input_args.getLastArg(OPT_port)) {
-    const auto *optarg = arg->getValue();
-    char *remainder;
-    portno = strtol(optarg, &remainder, 0);
-    if (remainder == optarg || *remainder != '\0') {
-      fprintf(stderr, "'%s' is not a valid port number.\n", optarg);
-      return EXIT_FAILURE;
-    }
+  std::string connection;
+  if (auto *arg = input_args.getLastArg(OPT_connection)) {
+    const auto *path = arg->getValue();
+    connection.assign(path);
   }
 
 #if !defined(_WIN32)
@@ -5253,72 +5248,144 @@ int main(int argc, char *argv[]) {
   auto terminate_debugger =
       llvm::make_scope_exit([] { lldb::SBDebugger::Terminate(); });
 
-  StreamDescriptor input;
-  StreamDescriptor output;
-  std::FILE *redirectOut = nullptr;
-  std::FILE *redirectErr = nullptr;
-  if (portno != -1) {
-    printf("Listening on port %i...\n", portno);
-    SOCKET socket_fd = AcceptConnection(log.get(), portno);
-    if (socket_fd < 0)
-      return EXIT_FAILURE;
+  std::vector<std::string> pre_init_commands;
+  for (const std::string &arg :
+       input_args.getAllArgValues(OPT_pre_init_command)) {
+    pre_init_commands.push_back(arg);
+  }
 
-    input = StreamDescriptor::from_socket(socket_fd, true);
-    output = StreamDescriptor::from_socket(socket_fd, false);
-  } else {
-#if defined(_WIN32)
-    // Windows opens stdout and stdin in text mode which converts \n to 13,10
-    // while the value is just 10 on Darwin/Linux. Setting the file mode to
-    // binary fixes this.
-    int result = _setmode(fileno(stdout), _O_BINARY);
-    assert(result);
-    result = _setmode(fileno(stdin), _O_BINARY);
-    UNUSED_IF_ASSERT_DISABLED(result);
-    assert(result);
-#endif
+  auto RunDAP = [](llvm::StringRef program_path, ReplMode repl_mode,
+                   std::vector<std::string> pre_init_commands,
+                   std::ofstream *log, std::string name, StreamDescriptor input,
+                   StreamDescriptor output, std::FILE *redirectOut = nullptr,
+                   std::FILE *redirectErr = nullptr) -> bool {
+    DAP dap = DAP(name, program_path, log, std::move(input), std::move(output),
+                  repl_mode, pre_init_commands);
 
-    int stdout_fd = DuplicateFileDescriptor(fileno(stdout));
-    if (stdout_fd == -1) {
+    // stdout/stderr redirection to the IDE's console
+    if (auto Err = dap.ConfigureIO(redirectOut, redirectErr)) {
       llvm::logAllUnhandledErrors(
-          llvm::errorCodeToError(llvm::errnoAsErrorCode()), llvm::errs(),
-          "Failed to configure stdout redirect: ");
+          std::move(Err), llvm::errs(),
+          "Failed to configure lldb-dap IO operations: ");
+      return false;
+    }
+
+    RegisterRequestCallbacks(dap);
+
+    // used only by TestVSCode_redirection_to_console.py
+    if (getenv("LLDB_DAP_TEST_STDOUT_STDERR_REDIRECTION") != nullptr)
+      redirection_test();
+
+    if (auto Err = dap.Loop()) {
+      std::string errorMessage = llvm::toString(std::move(Err));
+      if (log)
+        *log << "Transport Error: " << errorMessage << "\n";
+      return false;
+    }
+    return true;
+  };
+
+  if (!connection.empty()) {
+    auto maybeProtoclAndName = validateConnection(connection);
+    if (auto Err = maybeProtoclAndName.takeError()) {
+      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                  "Invalid connection: ");
       return EXIT_FAILURE;
     }
 
-    redirectOut = stdout;
-    redirectErr = stderr;
+    Socket::SocketProtocol protocol;
+    std::string name;
+    std::tie(protocol, name) = *maybeProtoclAndName;
 
-    input = StreamDescriptor::from_file(fileno(stdin), false);
-    output = StreamDescriptor::from_file(stdout_fd, false);
+    Status error;
+    std::unique_ptr<Socket> listener = Socket::Create(protocol, error);
+    if (error.Fail()) {
+      llvm::logAllUnhandledErrors(error.takeError(), llvm::errs(),
+                                  "Failed to create socket listener: ");
+      return EXIT_FAILURE;
+    }
+
+    error = listener->Listen(name, /* backlog */ 5);
+    if (error.Fail()) {
+      llvm::logAllUnhandledErrors(error.takeError(), llvm::errs(),
+                                  "Failed to listen for connections: ");
+      return EXIT_FAILURE;
+    }
+
+    std::string address =
+        llvm::join(listener->GetListeningConnectionURI(), ", ");
+    if (log)
+      *log << "started with connection listeners " << address << "\n";
+
+    llvm::outs() << "Listening for: " << address << "\n";
+    // Ensure listening address are flushed for calles to retrieve the resolve
+    // address.
+    llvm::outs().flush();
+
+    llvm::DefaultThreadPool pool(llvm::optimal_concurrency());
+    unsigned int clientCount = 0;
+
+    while (true) {
+      Socket *accepted_socket;
+      error = listener->Accept(/*timeout=*/std::nullopt, accepted_socket);
+      if (error.Fail()) {
+        llvm::logAllUnhandledErrors(error.takeError(), llvm::errs(),
+                                    "accept failed: ");
+        return EXIT_FAILURE;
+      }
+
+      std::string name = llvm::formatv("client_{0}", clientCount++).str();
+      if (log) {
+        auto now = std::chrono::duration<double>(
+            std::chrono::system_clock::now().time_since_epoch());
+        *log << llvm::formatv("{0:f9}", now.count()).str()
+             << " client connected: " << name << "\n";
+      }
+
+      // Move the client into the connection pool to unblock accepting the next
+      // client.
+      pool.async(
+          [=](Socket *accepted_socket, std::ofstream *log) {
+            StreamDescriptor input = StreamDescriptor::from_socket(
+                accepted_socket->GetNativeSocket(), false);
+            // Close the output last for the best chance at error reporting.
+            StreamDescriptor output = StreamDescriptor::from_socket(
+                accepted_socket->GetNativeSocket(), true);
+            RunDAP(program_path, default_repl_mode, pre_init_commands, log,
+                   name, std::move(input), std::move(output));
+          },
+          accepted_socket, log.get());
+    }
+
+    pool.wait();
+
+    return EXIT_SUCCESS;
   }
 
-  DAP dap = DAP(program_path.str(), log.get(), default_repl_mode,
-                std::move(input), std::move(output));
+#if defined(_WIN32)
+  // Windows opens stdout and stdin in text mode which converts \n to 13,10
+  // while the value is just 10 on Darwin/Linux. Setting the file mode to
+  // binary fixes this.
+  int result = _setmode(fileno(stdout), _O_BINARY);
+  assert(result);
+  result = _setmode(fileno(stdin), _O_BINARY);
+  UNUSED_IF_ASSERT_DISABLED(result);
+  assert(result);
+#endif
 
-  // stdout/stderr redirection to the IDE's console
-  if (auto Err = dap.ConfigureIO(redirectOut, redirectErr)) {
-    llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
-                                "Failed to configure lldb-dap IO operations: ");
+  int stdout_fd = DuplicateFileDescriptor(fileno(stdout));
+  if (stdout_fd == -1) {
+    llvm::logAllUnhandledErrors(
+        llvm::errorCodeToError(llvm::errnoAsErrorCode()), llvm::errs(),
+        "Failed to configure stdout redirect: ");
     return EXIT_FAILURE;
   }
 
-  RegisterRequestCallbacks(dap);
+  StreamDescriptor input = StreamDescriptor::from_file(fileno(stdin), false);
+  StreamDescriptor output = StreamDescriptor::from_file(stdout_fd, false);
 
-  for (const std::string &arg :
-       input_args.getAllArgValues(OPT_pre_init_command)) {
-    dap.pre_init_commands.push_back(arg);
-  }
-
-  // used only by TestVSCode_redirection_to_console.py
-  if (getenv("LLDB_DAP_TEST_STDOUT_STDERR_REDIRECTION") != nullptr)
-    redirection_test();
-
-  bool CleanExit = true;
-  if (auto Err = dap.Loop()) {
-    if (log)
-      *log << "Transport Error: " << llvm::toString(std::move(Err)) << "\n";
-    CleanExit = false;
-  }
-
-  return CleanExit ? EXIT_SUCCESS : EXIT_FAILURE;
+  bool status = RunDAP(program_path, default_repl_mode, pre_init_commands,
+                       log.get(), "stdin/stdout", std::move(input),
+                       std::move(output), stdout, stderr);
+  return status ? EXIT_SUCCESS : EXIT_FAILURE;
 }

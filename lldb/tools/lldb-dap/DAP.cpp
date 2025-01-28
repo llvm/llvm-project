@@ -17,7 +17,6 @@
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
-#include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
@@ -58,12 +57,13 @@ const char DEV_NULL[] = "/dev/null";
 
 namespace lldb_dap {
 
-DAP::DAP(llvm::StringRef path, std::ofstream *log, ReplMode repl_mode,
-         StreamDescriptor input, StreamDescriptor output)
-    : debug_adaptor_path(path), log(log), input(std::move(input)),
+DAP::DAP(std::string name, llvm::StringRef path, std::ofstream *log,
+         StreamDescriptor input, StreamDescriptor output, ReplMode repl_mode,
+         std::vector<std::string> pre_init_commands)
+    : name(name), debug_adaptor_path(path), log(log), input(std::move(input)),
       output(std::move(output)), broadcaster("lldb-dap"),
-      exception_breakpoints(), focus_tid(LLDB_INVALID_THREAD_ID),
-      stop_at_entry(false), is_attach(false),
+      exception_breakpoints(), pre_init_commands(pre_init_commands),
+      focus_tid(LLDB_INVALID_THREAD_ID), stop_at_entry(false), is_attach(false),
       enable_auto_variable_summaries(false),
       enable_synthetic_child_debugging(false),
       display_extended_backtrace(false),
@@ -249,7 +249,8 @@ void DAP::SendJSON(const llvm::json::Value &json) {
   if (log) {
     auto now = std::chrono::duration<double>(
         std::chrono::system_clock::now().time_since_epoch());
-    *log << llvm::formatv("{0:f9} <-- ", now.count()).str() << std::endl
+    *log << llvm::formatv("{0:f9} {1} <-- ", now.count(), name).str()
+         << std::endl
          << "Content-Length: " << json_str.size() << "\r\n\r\n"
          << llvm::formatv("{0:2}", json).str() << std::endl;
   }
@@ -279,7 +280,8 @@ std::string DAP::ReadJSON() {
   if (log) {
     auto now = std::chrono::duration<double>(
         std::chrono::system_clock::now().time_since_epoch());
-    *log << llvm::formatv("{0:f9} --> ", now.count()).str() << std::endl
+    *log << llvm::formatv("{0:f9} {1} --> ", now.count(), name).str()
+         << std::endl
          << "Content-Length: " << length << "\r\n\r\n";
   }
   return json_str;

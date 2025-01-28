@@ -140,6 +140,7 @@ struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
 };
 
 struct DAP {
+  std::string name;
   llvm::StringRef debug_adaptor_path;
   std::ofstream *log;
   InputStream input;
@@ -204,8 +205,9 @@ struct DAP {
   // will contain that expression.
   std::string last_nonempty_var_expression;
 
-  DAP(llvm::StringRef path, std::ofstream *log, ReplMode repl_mode,
-      StreamDescriptor input, StreamDescriptor output);
+  DAP(std::string name, llvm::StringRef path, std::ofstream *log,
+      StreamDescriptor input, StreamDescriptor output, ReplMode repl_mode,
+      std::vector<std::string> pre_init_commands);
   ~DAP();
   DAP(const DAP &rhs) = delete;
   void operator=(const DAP &rhs) = delete;
