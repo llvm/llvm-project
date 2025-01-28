@@ -374,3 +374,35 @@ class AArch64LinuxGCSTestCase(TestBase):
         # consistent with the disabled -> enabled behaviour.
         enabled |= 1
         self.check_gcs_registers(enabled, locked, spr_el0)
+
+    @skipIfLLVMTargetMissing("AArch64")
+    def test_gcs_core_file(self):
+        # To re-generate the core file, build the test file and run it on a
+        # machine with GCS enabled. Note that because the kernel decides where
+        # the GCS is stored, the value of gcspr_el0 and which memory region it
+        # points to may change between runs.
+
+        self.runCmd("target create --core corefile")
+
+        self.expect(
+            "bt",
+            substrs=["stop reason = SIGSEGV: control protection fault"],
+        )
+
+        self.expect(
+            "register read --all",
+            substrs=[
+                "Guarded Control Stack Registers:",
+                "gcs_features_enabled = 0x0000000000000001",
+                "gcs_features_locked = 0x0000000000000000",
+                "gcspr_el0 = 0x0000ffffa83ffff0",
+            ],
+        )
+
+        # Core files do not include /proc/pid/smaps, so we cannot see the
+        # shadow stack "ss" flag. gcspr_el0 should at least point to some mapped
+        # region.
+        self.expect(
+            "memory region $gcspr_el0",
+            substrs=["[0x0000ffffa8000000-0x0000ffffa8400000) rw-"],
+        )
