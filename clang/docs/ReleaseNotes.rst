@@ -825,6 +825,7 @@ Improvements to Clang's diagnostics
     }
 
 - Fix -Wdangling false positives on conditional operators (#120206).
+- Clang now diagnoses unused private fields with the ``[[warn_unused]]`` attribute (#GH62472).
 
 - Fixed a bug where Clang hung on an unsupported optional scope specifier ``::`` when parsing
   Objective-C. Clang now emits a diagnostic message instead of hanging.
