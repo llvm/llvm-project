@@ -627,7 +627,10 @@ enum class TemplateSubstitutionKind : char {
 #define EMPTY(DERIVED, BASE)
 #define LIFETIMEEXTENDEDTEMPORARY(DERIVED, BASE)
 
-    // Decls which use special-case instantiation code.
+// Decls which never appear inside a template.
+#define OUTLINEDFUNCTION(DERIVED, BASE)
+
+// Decls which use special-case instantiation code.
 #define BLOCK(DERIVED, BASE)
 #define CAPTURED(DERIVED, BASE)
 #define IMPLICITPARAM(DERIVED, BASE)

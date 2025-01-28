@@ -47,6 +47,12 @@ for adding a new subsection. -->
   same semantics. The normalizer makes it easier to spot semantic differences
   when diffing two modules which have undergone different passes.
 
+* The SPIR-V backend is now an official LLVM target, providing OpenCL and SYCL
+  conformance and establishing a foundation for broader applicability to other
+  APIs, including Vulkan, GLSL, and HLSL. This backend aims to offer a unified
+  approach for diverse compute and graphics workloads, providing a robust
+  alternative to the Khronos SPIR-V LLVM Translator.
+
 * ...
 
 <!-- If you would like to document a larger change, then you can add a
@@ -114,6 +120,12 @@ Changes to building LLVM
 ------------------------
 
 * Raised the minimum MSVC version to Visual Studio 2019 16.8.
+* Deprecated support for building compiler-rt with `LLVM_ENABLE_PROJECTS`.
+  Users should instead use `LLVM_ENABLE_RUNTIMES`, either through the
+  runtimes or the bootstrapping build.
+* Deprecated support for building libc with `LLVM_ENABLE_PROJECTS`.
+  Users should instead use `LLVM_ENABLE_RUNTIMES`, either through the
+  runtimes or the bootstrapping build.
 
 Changes to TableGen
 -------------------
@@ -171,6 +183,57 @@ Changes to the Hexagon Backend
 Changes to the LoongArch Backend
 --------------------------------
 
+* [Incorrect GOT usage](https://github.com/llvm/llvm-project/pull/117099) for `non-dso_local` function calls in large code model is fixed.
+
+* A [gprof support issue](https://github.com/llvm/llvm-project/issues/121103) is fixed.
+
+* A [SDAG hang issue](https://github.com/llvm/llvm-project/issues/107355) caused by `ISD::CONCAT_VECTORS` is fixed.
+
+* A [compiler crash issue](https://github.com/llvm/llvm-project/issues/118301) when converting `half` to `i32` is fixed.
+
+* Almost all of `la64v1.1` instructions can now be generated. The full list is
+  `frecipe.s`, `frecipe.d`, `frsqrte.s`, `frsqrte.d`, `vfrecipe.s`, `vfrecipe.d`,
+  `vfrsqrte.s`, `vfrsqrte.d`, `xvfrecipe.s`, `xvfrecipe.d`, `xvfrsqrte.s`,
+  `xvfrsqrte.d`, `sc.q`, `amcas.b`, `amcas.h`, `amcas.w`, `amcas.d`, `amcas_db.b`,
+  `amcas_db.h`, `amcas_db.w`, `amcas_db.d`, `amswap.b`, `amswap.h`, `amswap_db.b`,
+  `amswap_db.h`, `amadd.b`, `amadd.h`, `amadd_db.b`, `amadd_db.h`. Optionally
+  generate instructions `dbar 0x700`, `div.w`, `div.wu`, `mod.w` and `mod.wu`
+  when related target features are enabled. `llacq.w`, `screl.w`, `llacq.d` and
+  `screl.d` cannot be generated yet.
+
+* An llc option called `-loongarch-annotate-tablejump` is added to annotate
+  table jump instruction in the `.discard.tablejump_annotate` section. A typical
+  user of these annotations is the `objtool` in Linux kernel.
+
+* The default cpu in `MCSubtargetInfo` is changed from `la464` to `generic-la64`.
+  In addition, the `lsx` feature is added to `generic-la64`.
+
+* CFI instructions now allow register names and aliases, previously only numbers
+  were allowed.
+
+* `RuntimeDyld` now supports LoongArch, which means that programs relying on
+  `MCJIT` can now work.
+
+* `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
+  the required alignment space with a sequence of `0x0` bytes (the requested
+  fill value) rather than NOPs.
+
+* `%ld_pcrel_20`, `%gd_pcrel_20` and `%desc_pcrel_20` operand modifiers are
+   supported by assembler.
+
+* A machine function pass called `LoongArch Merge Base Offset` is added to merge
+  the offset of address calculation into the offset field of instructions in a
+  global address lowering sequence.
+
+* The `LoopDataPrefetch` pass can now work on LoongArch, but it is disabled by
+  default due to the bad effect on Fortran benchmarks.
+
+* Enable alias analysis by default.
+
+* Avoid indirect branch jumps using the `$ra` register.
+
+* Other optimizations.
+
 Changes to the MIPS Backend
 ---------------------------
 
@@ -215,6 +278,9 @@ Changes to the RISC-V Backend
   * `cf` constraint meaning an RVC-encoding compatible FPR (`f8`-`f15`)
   * `R` constraint meaning an even-odd GPR pair (prints as the even register,
     but both registers in the pair are considered live).
+  * `cR` constraint meaning an RVC-encoding compatible even-odd GPR Pair (prints
+    as an even register between `x8` and `x14`, but both registers in the pair
+    are considered live).
   * `N` modifer meaning print the register encoding (0-31) rather than the name.
 * `f` and `cf` inline assembly constraints, when using F-/D-/H-in-X extensions,
   will use the relevant GPR rather than FPR. This makes inline assembly portable
@@ -236,6 +302,8 @@ Changes to the RISC-V Backend
 * Adds experimental assembler support for the Qualcomm uC 'Xqcicm` (Conditonal Move)
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqciint` (Interrupts)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcilo` (Large Offset Load Store)
   extension.
 * Added ``Sdext`` and ``Sdtrig`` extensions.
 
@@ -405,8 +473,6 @@ Changes to LLDB
            ╰─ error: use of undeclared identifier 'a'
   ```
 
-* LLDB can now read the `fpmr` register from AArch64 Linux processes and core
-  files.
 
 * Program stdout/stderr redirection will now open the file with O_TRUNC flag, make sure to truncate the file if path already exists.
   * eg. `settings set target.output-path/target.error-path <path/to/file>`
@@ -449,8 +515,27 @@ Changes to LLDB
           _regexp-bt        -- Show backtrace of the current thread's call ...
           _regexp-display   -- Evaluate an expression at every stop (see 'h...
   ```
-* DWARF indexing speed (for binaries not using the debug_names index) increased
+
+* DWARF indexing speed (for binaries not using the `debug_names` index) increased
   by [30-60%](https://github.com/llvm/llvm-project/pull/118657).
+
+* The `frame diagnose` now works on ELF-based systems. After a crash, LLDB will
+  try to determine the likely cause of the signal, matching Darwin behavior.
+  This feature requires using a new `lldb-server` version and (like Darwin) only
+  works on x86 binaries.
+
+  ```
+  * thread #1, name = 'a.out', stop reason = signal SIGSEGV: address not mapped to object (fault address=0x4)
+      frame #0: 0x00005555555551aa a.out`GetSum(f=0x0000555555558018) at main.c:21:37
+     18   }
+     19
+     20   int GetSum(struct Foo *f) {
+  -> 21     return SumTwoIntegers(f->a, f->b->d ? 0 : 1);
+     22   }
+     23
+     24   int main() {
+  Likely cause: f->b->d accessed 0x4
+  ```
 
 * Minidumps generated by LLDB now support:
   * 64 bit memory (due to 64b support, Minidumps are now paged to disk while being written).
@@ -473,7 +558,7 @@ Changes to LLDB
 
   New:
   ```
-  * thread #1: tid = 329384, 0x0000000000401262, name = 'a.out', stop reason = SIGSEGV: address not mapped to object (fault address: 0x0)
+  * thread #1: tid = 329384, 0x0000000000401262, name = 'a.out', stop reason = SIGSEGV: address not mapped to object (fault address=0x0)
 
   0x7f1e3193e0a7 <+23>:  ja     0x7f1e3193e100 ; <+112>
   ```
@@ -482,6 +567,26 @@ Changes to LLDB
   that port to the connection handler processes. This means that only 2 ports need
   to be opened in the firewall (one for the `lldb-server` platform, one for gdbserver connections).
   In addition, due to this work, `lldb-server` now works on Windows in the server mode.
+
+* LLDB can now read the `fpmr` register from AArch64 Linux processes and core
+  files.
+
+* Support was added for debugging AArch64 Linux programs that use the
+  Guarded Control Stack extension (GCS). This includes live processes and core
+  files.
+
+* LLDB now supports execution of user expressions for non-trivial cases for LoongArch and RISC-V targets, like function calls, when some code needs to be executed on the target.
+
+* LLDB now supports optionally enabled/disabled register sets (particularly floating point registers) for RISC-V 64. This happens for targets like `RV64IMAC` or `RV64IMACV`,
+  that have no floating point registers. The change is applied to native debugging and core-file usage.
+
+* LLDB now supports [core-file for LoongArch](https://github.com/llvm/llvm-project/pull/112296).
+
+* LLDB now supports [hardware breakpoint and watchpoint for LoongArch](https://github.com/llvm/llvm-project/pull/118770).
+
+* LLDB now supports [vector registers for LoongArch](https://github.com/llvm/llvm-project/pull/120664) when debugging a live process.
+
+* Incorrect floating-point register DWARF numbers for LoongArch were [fixed](https://github.com/llvm/llvm-project/pull/120391).
 
 Changes to BOLT
 ---------------------------------

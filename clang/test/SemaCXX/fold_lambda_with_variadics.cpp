@@ -7,6 +7,8 @@ struct identity {
   using type = T;
 };
 
+template <class> using ElementType = int;
+
 template <class = void> void f() {
 
   static_assert([]<class... Is>(Is... x) {
@@ -46,6 +48,10 @@ template <class = void> void f() {
       using T = identity<Is>::type;
     }(), ...);
   }(1, 2);
+
+  []<class... Is>(Is...) {
+    ([] { using T = ElementType<Is>; }(), ...);
+  }(1);
 
   [](auto ...y) {
     ([y] { }(), ...);

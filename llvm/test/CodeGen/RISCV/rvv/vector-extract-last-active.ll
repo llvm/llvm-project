@@ -189,79 +189,43 @@ define i8 @extract_last_i8_scalable(<vscale x 16 x i8> %data, <vscale x 16 x i1>
 }
 
 define i16 @extract_last_i16_scalable(<vscale x 8 x i16> %data, <vscale x 8 x i1> %mask, i16 %passthru) {
-; RV32-LABEL: extract_last_i16_scalable:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
-; RV32-NEXT:    vmv.v.i v10, 0
-; RV32-NEXT:    vcpop.m a1, v0
-; RV32-NEXT:    vid.v v10, v0.t
-; RV32-NEXT:    beqz a1, .LBB7_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    vredmaxu.vs v10, v10, v10
-; RV32-NEXT:    vmv.x.s a0, v10
-; RV32-NEXT:    slli a0, a0, 16
-; RV32-NEXT:    srli a0, a0, 16
-; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV32-NEXT:    vslidedown.vx v8, v8, a0
-; RV32-NEXT:    vmv.x.s a0, v8
-; RV32-NEXT:  .LBB7_2:
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: extract_last_i16_scalable:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
-; RV64-NEXT:    vmv.v.i v10, 0
-; RV64-NEXT:    vcpop.m a1, v0
-; RV64-NEXT:    vid.v v10, v0.t
-; RV64-NEXT:    beqz a1, .LBB7_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    vredmaxu.vs v10, v10, v10
-; RV64-NEXT:    vmv.x.s a0, v10
-; RV64-NEXT:    slli a0, a0, 48
-; RV64-NEXT:    srli a0, a0, 48
-; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV64-NEXT:    vslidedown.vx v8, v8, a0
-; RV64-NEXT:    vmv.x.s a0, v8
-; RV64-NEXT:  .LBB7_2:
-; RV64-NEXT:    ret
+; CHECK-LABEL: extract_last_i16_scalable:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    vid.v v10, v0.t
+; CHECK-NEXT:    beqz a1, .LBB7_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    vredmaxu.vs v10, v10, v10
+; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v8, a0
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:  .LBB7_2:
+; CHECK-NEXT:    ret
   %res = call i16 @llvm.experimental.vector.extract.last.active.nxv8i16(<vscale x 8 x i16> %data, <vscale x 8 x i1> %mask, i16 %passthru)
   ret i16 %res
 }
 
 define i32 @extract_last_i32_scalable(<vscale x 4 x i32> %data, <vscale x 4 x i1> %mask, i32 %passthru) {
-; RV32-LABEL: extract_last_i32_scalable:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a1, zero, e32, m2, ta, mu
-; RV32-NEXT:    vmv.v.i v10, 0
-; RV32-NEXT:    vcpop.m a1, v0
-; RV32-NEXT:    vid.v v10, v0.t
-; RV32-NEXT:    beqz a1, .LBB8_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    vredmaxu.vs v10, v10, v10
-; RV32-NEXT:    vmv.x.s a0, v10
-; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-NEXT:    vslidedown.vx v8, v8, a0
-; RV32-NEXT:    vmv.x.s a0, v8
-; RV32-NEXT:  .LBB8_2:
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: extract_last_i32_scalable:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a1, zero, e32, m2, ta, mu
-; RV64-NEXT:    vmv.v.i v10, 0
-; RV64-NEXT:    vcpop.m a1, v0
-; RV64-NEXT:    vid.v v10, v0.t
-; RV64-NEXT:    beqz a1, .LBB8_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    vredmaxu.vs v10, v10, v10
-; RV64-NEXT:    vmv.x.s a0, v10
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srli a0, a0, 32
-; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64-NEXT:    vslidedown.vx v8, v8, a0
-; RV64-NEXT:    vmv.x.s a0, v8
-; RV64-NEXT:  .LBB8_2:
-; RV64-NEXT:    ret
+; CHECK-LABEL: extract_last_i32_scalable:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    vid.v v10, v0.t
+; CHECK-NEXT:    beqz a1, .LBB8_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    vredmaxu.vs v10, v10, v10
+; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v8, a0
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:  .LBB8_2:
+; CHECK-NEXT:    ret
   %res = call i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32> %data, <vscale x 4 x i1> %mask, i32 %passthru)
   ret i32 %res
 }
@@ -269,7 +233,7 @@ define i32 @extract_last_i32_scalable(<vscale x 4 x i32> %data, <vscale x 4 x i1
 define i64 @extract_last_i64_scalable(<vscale x 2 x i64> %data, <vscale x 2 x i1> %mask, i64 %passthru) {
 ; RV32-LABEL: extract_last_i64_scalable:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a2, zero, e64, m2, ta, mu
+; RV32-NEXT:    vsetvli a2, zero, e8, mf4, ta, mu
 ; RV32-NEXT:    vmv.v.i v10, 0
 ; RV32-NEXT:    vcpop.m a2, v0
 ; RV32-NEXT:    vid.v v10, v0.t
@@ -278,6 +242,7 @@ define i64 @extract_last_i64_scalable(<vscale x 2 x i64> %data, <vscale x 2 x i1
 ; RV32-NEXT:    vredmaxu.vs v10, v10, v10
 ; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    andi a0, a0, 255
 ; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV32-NEXT:    vslidedown.vx v8, v8, a0
 ; RV32-NEXT:    vmv.x.s a0, v8
@@ -289,7 +254,7 @@ define i64 @extract_last_i64_scalable(<vscale x 2 x i64> %data, <vscale x 2 x i1
 ;
 ; RV64-LABEL: extract_last_i64_scalable:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
+; RV64-NEXT:    vsetvli a1, zero, e8, mf4, ta, mu
 ; RV64-NEXT:    vmv.v.i v10, 0
 ; RV64-NEXT:    vcpop.m a1, v0
 ; RV64-NEXT:    vid.v v10, v0.t
@@ -297,6 +262,7 @@ define i64 @extract_last_i64_scalable(<vscale x 2 x i64> %data, <vscale x 2 x i1
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    vredmaxu.vs v10, v10, v10
 ; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    andi a0, a0, 255
 ; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV64-NEXT:    vslidedown.vx v8, v8, a0
 ; RV64-NEXT:    vmv.x.s a0, v8
@@ -307,39 +273,22 @@ define i64 @extract_last_i64_scalable(<vscale x 2 x i64> %data, <vscale x 2 x i1
 }
 
 define float @extract_last_float_scalable(<vscale x 4 x float> %data, <vscale x 4 x i1> %mask, float %passthru) {
-; RV32-LABEL: extract_last_float_scalable:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
-; RV32-NEXT:    vmv.v.i v10, 0
-; RV32-NEXT:    vcpop.m a0, v0
-; RV32-NEXT:    vid.v v10, v0.t
-; RV32-NEXT:    beqz a0, .LBB10_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    vredmaxu.vs v10, v10, v10
-; RV32-NEXT:    vmv.x.s a0, v10
-; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-NEXT:    vslidedown.vx v8, v8, a0
-; RV32-NEXT:    vfmv.f.s fa0, v8
-; RV32-NEXT:  .LBB10_2:
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: extract_last_float_scalable:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
-; RV64-NEXT:    vmv.v.i v10, 0
-; RV64-NEXT:    vcpop.m a0, v0
-; RV64-NEXT:    vid.v v10, v0.t
-; RV64-NEXT:    beqz a0, .LBB10_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    vredmaxu.vs v10, v10, v10
-; RV64-NEXT:    vmv.x.s a0, v10
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srli a0, a0, 32
-; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64-NEXT:    vslidedown.vx v8, v8, a0
-; RV64-NEXT:    vfmv.f.s fa0, v8
-; RV64-NEXT:  .LBB10_2:
-; RV64-NEXT:    ret
+; CHECK-LABEL: extract_last_float_scalable:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vcpop.m a0, v0
+; CHECK-NEXT:    vid.v v10, v0.t
+; CHECK-NEXT:    beqz a0, .LBB10_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    vredmaxu.vs v10, v10, v10
+; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v8, a0
+; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:  .LBB10_2:
+; CHECK-NEXT:    ret
   %res = call float @llvm.experimental.vector.extract.last.active.nxv4f32(<vscale x 4 x float> %data, <vscale x 4 x i1> %mask, float %passthru)
   ret float %res
 }
@@ -347,7 +296,7 @@ define float @extract_last_float_scalable(<vscale x 4 x float> %data, <vscale x 
 define double @extract_last_double_scalable(<vscale x 2 x double> %data, <vscale x 2 x i1> %mask, double %passthru) {
 ; CHECK-LABEL: extract_last_double_scalable:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
 ; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    vid.v v10, v0.t
@@ -355,6 +304,7 @@ define double @extract_last_double_scalable(<vscale x 2 x double> %data, <vscale
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    vredmaxu.vs v10, v10, v10
 ; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    andi a0, a0, 255
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vfmv.f.s fa0, v8

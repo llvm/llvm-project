@@ -36,6 +36,7 @@ using namespace mlir;
 using namespace mlir::tosa;
 
 #include "mlir/Dialect/Tosa/IR/TosaOpsDialect.cpp.inc"
+#include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 
 //===----------------------------------------------------------------------===//
 // Tosa dialect interface includes.
@@ -306,8 +307,7 @@ static LogicalResult verifyConvOpModes(T op) {
   if (inputEType.isInteger(16) && !accType.isInteger(48))
     return op.emitOpError("accumulator type for i16 tensor is not i48");
 
-  if ((inputEType.isFloat8E5M2() || inputEType.isFloat8E4M3()) &&
-      !accType.isF16())
+  if (isa<Float8E5M2Type, Float8E4M3Type>(inputEType) && !accType.isF16())
     return op.emitOpError("accumulator type for f8 tensor is not f16");
 
   if (inputEType.isF16() && !(accType.isF16() || accType.isF32()))
@@ -823,40 +823,25 @@ LogicalResult tosa::PadOp::inferReturnTypeComponents(
     PadOp::Adaptor adaptor,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ShapeAdaptor inputShape(adaptor.getInput1().getType());
-  ShapeAdaptor paddingShape(adaptor.getPadding().getType());
+  auto paddingRank =
+      cast<tosa::shapeType>(adaptor.getPadding().getType()).getRank();
   SmallVector<int64_t> outputShape;
 
-  // If both inputs have unknown shape, we cannot determine the shape of the
-  // output.
-  if (!inputShape.hasRank() && !paddingShape.hasRank()) {
-    inferredReturnShapes.push_back(ShapedTypeComponents());
-    return success();
-  }
-
-  // If the input rank is unknown we can info the output rank using the
-  // padding shape's first dim.
+  // If the input rank is unknown, we can infer the output rank using the
+  // padding shape's rank divided by 2.
   if (!inputShape.hasRank()) {
-    if (paddingShape.isDynamicDim(0)) {
-      inferredReturnShapes.push_back(ShapedTypeComponents());
-      return success();
-    }
-
-    outputShape.resize(paddingShape.getDimSize(0) / 2, ShapedType::kDynamic);
-    inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
-    return success();
-  }
-
-  DenseIntElementsAttr paddings;
-  // If the paddings value is not a constant, all dimensions must be dynamic.
-  if (!matchPattern(adaptor.getPadding(), m_Constant(&paddings))) {
-    outputShape.resize(inputShape.getRank(), ShapedType::kDynamic);
+    outputShape.resize(paddingRank / 2, ShapedType::kDynamic);
     inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
     return success();
   }
 
   SmallVector<int64_t> paddingValues;
-  for (auto val : paddings) {
-    paddingValues.push_back(val.getSExtValue());
+  // If the paddings value is not a constant, all dimensions must be dynamic.
+  if (!tosa::getConstShapeValue(adaptor.getPadding().getDefiningOp(),
+                                paddingValues)) {
+    outputShape.resize(inputShape.getRank(), ShapedType::kDynamic);
+    inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+    return success();
   }
 
   outputShape.reserve(inputShape.getRank());
@@ -865,9 +850,15 @@ LogicalResult tosa::PadOp::inferReturnTypeComponents(
       outputShape.push_back(ShapedType::kDynamic);
       continue;
     }
+    auto padFront = paddingValues[i * 2];
+    auto padBack = paddingValues[i * 2 + 1];
+    if (padFront < 0 || padBack < 0) {
+      // if either padding for dim i is -1, output dim is unknown
+      outputShape.push_back(ShapedType::kDynamic);
+      continue;
+    }
 
-    outputShape.push_back(inputShape.getDimSize(i) + paddingValues[i * 2] +
-                          paddingValues[i * 2 + 1]);
+    outputShape.push_back(inputShape.getDimSize(i) + padFront + padBack);
   }
 
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
@@ -877,17 +868,15 @@ LogicalResult tosa::PadOp::inferReturnTypeComponents(
 LogicalResult tosa::PadOp::verify() {
   RankedTensorType inputType = getInput1().getType();
   RankedTensorType outputType = getOutput().getType();
-  RankedTensorType paddingType = getPadding().getType();
+  auto paddingRank = cast<tosa::shapeType>(getPadding().getType()).getRank();
 
   if (inputType.getRank() != outputType.getRank())
     return emitOpError() << "expect same input and output tensor rank.";
 
-  if (!paddingType.isDynamicDim(0) &&
-      paddingType.getDimSize(0) != inputType.getRank() * 2)
+  if (paddingRank != inputType.getRank() * 2)
     return emitOpError() << "expected padding tensor dim 0 to have size "
                          << inputType.getRank() * 2
-                         << " (2*rank(shape1)) but got size "
-                         << paddingType.getDimSize(0);
+                         << " (2*rank(shape1)) but got size " << paddingRank;
 
   return success();
 }
@@ -902,8 +891,40 @@ LogicalResult tosa::SliceOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     SliceOp::Adaptor adaptor,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  inferredReturnShapes.push_back(
-      ShapedTypeComponents(convertToMlirShape(adaptor.getSize())));
+  auto start = adaptor.getStart();
+  auto size = adaptor.getSize();
+
+  // if size[i] is -1, all remaining elements in dimension i are included
+  // in the slice, similar to TF.
+  ShapeAdaptor inputShape(adaptor.getInput1().getType());
+  // initialize outputShape to all unknown
+  SmallVector<int64_t> outputShape(size.size(), ShapedType::kDynamic);
+  if (inputShape.hasRank()) {
+    for (size_t i = 0; i < size.size(); i++) {
+      if (size[i] != 0 && size[i] >= -1 && start[i] >= 0 &&
+          (ShapedType::isDynamic(inputShape.getDimSize(i)) ||
+           start[i] < inputShape.getDimSize(i))) {
+        // size[i] is not 0 and not < -1, and start[i] is in valid range
+        if (ShapedType::isDynamic(inputShape.getDimSize(i))) {
+          // input shape has unknown dim[i] - only valid if size[i] > 0
+          if (size[i] > 0) {
+            outputShape[i] = size[i];
+          }
+        } else {
+          // input shape has known dim[i]
+          if (size[i] == -1) {
+            outputShape[i] = inputShape.getDimSize(i) - start[i];
+          } else if (start[i] + size[i] <= inputShape.getDimSize(i)) {
+            // start[i] + size[i] is within bound of input shape's dim[i]
+            outputShape[i] = size[i];
+          }
+        }
+      }
+    }
+  } else {
+    outputShape = convertToMlirShape(size);
+  }
+  inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
   return success();
 }
 
@@ -924,9 +945,76 @@ LogicalResult tosa::SliceOp::verify() {
 }
 
 LogicalResult tosa::MulOp::verify() {
-  Type elementTy = getInput1().getType().getElementType();
-  if (isa<FloatType>(elementTy) && getShift() != 0)
-    return emitOpError() << "require shift to be 0 for float type";
+  auto resElemType = getElementTypeOrSelf(getOutput());
+
+  // Verify if the element type among operands and result match tosa
+  // specification.
+  if (auto resIntType = dyn_cast<IntegerType>(resElemType)) {
+    IntegerType lhsIntType =
+        cast<IntegerType>(getElementTypeOrSelf(getInput1()));
+    IntegerType rhsIntType =
+        cast<IntegerType>(getElementTypeOrSelf(getInput2()));
+    if (lhsIntType != rhsIntType)
+      return emitOpError("requires the same element type for all operands");
+
+    // Though the spec requires the element type of result to be i32, a more
+    // relaxed way is provided at dialect level for easier cooperating with
+    // other dialects.
+    if (lhsIntType.getWidth() > resIntType.getWidth())
+      return emitOpError("invalid data type size for operands or result");
+
+  } else {
+    // For other supported type, the spec requires requires the same element
+    // type for all operands (excludes `shift` operand) and results.
+    for (int i = 0; i < 2; ++i) {
+      if (getElementTypeOrSelf(getOperand(i)) != resElemType)
+        return emitOpError(
+            "requires the same element type for all operands and results");
+    }
+  }
+
+  // Verify the op has same ranks for all main operands (excludes extra operands
+  // such as shift of mul op, so this is the only difference with the built-in
+  // `SameOperandsAndResultRank` trait) and results types, if known.
+
+  // delegate function that returns true if type is a shaped type with known
+  // rank
+  auto hasRank = [](const Type type) {
+    if (auto shaped_type = dyn_cast<ShapedType>(type))
+      return shaped_type.hasRank();
+
+    return false;
+  };
+
+  auto rankedOperandTypes =
+      llvm::to_vector(llvm::make_filter_range(getOperandTypes(), hasRank));
+
+  auto rankedResultTypes =
+      llvm::make_filter_range(getOperation()->getResultTypes(), hasRank);
+
+  // If all operands and results are unranked, then no further verification.
+  if (rankedOperandTypes.empty() && rankedResultTypes.empty())
+    return success();
+
+  // delegate function that returns rank of shaped type with known rank
+  auto getRank = [](const Type type) {
+    return cast<ShapedType>(type).getRank();
+  };
+
+  auto rank = !rankedOperandTypes.empty() ? getRank(*rankedOperandTypes.begin())
+                                          : getRank(*rankedResultTypes.begin());
+
+  for (size_t i = 0; i < 2; ++i) {
+    if (rank != getRank(rankedOperandTypes[i])) {
+      return emitOpError("operands don't have matching ranks");
+    }
+  }
+
+  for (const auto type : rankedResultTypes) {
+    if (rank != getRank(type)) {
+      return emitOpError("result type has different rank than operands");
+    }
+  }
 
   return success();
 }
