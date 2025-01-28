@@ -7,6 +7,14 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; REMARKS: --- !Passed
 ; REMARKS-NEXT: Pass:            loop-interchange
+; REMARKS-NEXT: Name:            Dependence
+; REMARKS-NEXT: Function:        test1
+; REMARKS-NEXT: Args:
+; REMARKS-NEXT:   - String:          Computed dependence info, invoking the transform.
+; REMARKS-NEXT: ...
+
+; REMARKS: --- !Passed
+; REMARKS-NEXT: Pass:            loop-interchange
 ; REMARKS-NEXT: Name:            Interchanged
 ; REMARKS-NEXT: Function:        test1
 
@@ -77,6 +85,14 @@ for1.loopexit:                                 ; preds = %for1.inc
 
 ; In this test case, the inner reduction PHI %inner does not involve the outer
 ; reduction PHI %sum.outer, do not interchange.
+; REMARKS: --- !Passed
+; REMARKS-NEXT: Pass:            loop-interchange
+; REMARKS-NEXT: Name:            Dependence
+; REMARKS-NEXT: Function:        test2
+; REMARKS-NEXT: Args:
+; REMARKS-NEXT:   - String:          Computed dependence info, invoking the transform.
+; REMARKS-NEXT: ...
+
 ; REMARKS: --- !Missed
 ; REMARKS-NEXT: Pass:            loop-interchange
 ; REMARKS-NEXT: Name:            UnsupportedPHIOuter
@@ -114,6 +130,14 @@ for1.loopexit:                                 ; preds = %for1.inc
 
 ; Check that we do not interchange if there is an additional instruction
 ; between the outer and inner reduction PHIs.
+; REMARKS: --- !Passed
+; REMARKS-NEXT: Pass:            loop-interchange
+; REMARKS-NEXT: Name:            Dependence
+; REMARKS-NEXT: Function:        test3
+; REMARKS-NEXT: Args:
+; REMARKS-NEXT:   - String:          Computed dependence info, invoking the transform.
+; REMARKS-NEXT: ...
+
 ; REMARKS: --- !Missed
 ; REMARKS-NEXT: Pass:            loop-interchange
 ; REMARKS-NEXT: Name:            UnsupportedPHIOuter
@@ -151,6 +175,14 @@ for1.loopexit:                                 ; preds = %for1.inc
 }
 
 ; Check that we do not interchange if reduction is stored in an invariant address inside inner loop
+; REMARKS: --- !Passed
+; REMARKS-NEXT: Pass:            loop-interchange
+; REMARKS-NEXT: Name:            Dependence
+; REMARKS-NEXT: Function:        test4
+; REMARKS-NEXT: Args:
+; REMARKS-NEXT:   - String:          Computed dependence info, invoking the transform.
+; REMARKS-NEXT: ...
+
 ; REMARKS: --- !Missed
 ; REMARKS-NEXT: Pass:            loop-interchange
 ; REMARKS-NEXT: Name:            Dependence
@@ -190,6 +222,14 @@ for1.loopexit:                                 ; preds = %for1.inc
 
 ; Check that we do not interchange or crash if the PHI in the outer loop gets a
 ; constant from the inner loop.
+; REMARKS: --- !Passed
+; REMARKS-NEXT: Pass:            loop-interchange
+; REMARKS-NEXT: Name:            Dependence
+; REMARKS-NEXT: Function:        test_constant_inner_loop_res
+; REMARKS-NEXT: Args:
+; REMARKS-NEXT:   - String:          Computed dependence info, invoking the transform.
+; REMARKS-NEXT: ...
+
 ; REMARKS: --- !Missed
 ; REMARKS-NEXT: Pass:            loop-interchange
 ; REMARKS-NEXT: Name:            UnsupportedPHIOuter
@@ -231,6 +271,14 @@ for1.loopexit:                                 ; preds = %for1.inc
 ; involved allow reassociation.
 ; REMARKS: --- !Passed
 ; REMARKS-NEXT: Pass:            loop-interchange
+; REMARKS-NEXT: Name:            Dependence
+; REMARKS-NEXT: Function:        test5
+; REMARKS-NEXT: Args:
+; REMARKS-NEXT:   - String:          Computed dependence info, invoking the transform.
+; REMARKS-NEXT: ...
+
+; REMARKS: --- !Passed
+; REMARKS-NEXT: Pass:            loop-interchange
 ; REMARKS-NEXT: Name:            Interchanged
 ; REMARKS-NEXT: Function:        test5
 
@@ -269,6 +317,14 @@ for.exit:                                         ; preds = %outer.inc
 
 ; Floating point reductions are not interchanged if not all the fp instructions
 ; involved allow reassociation.
+; REMARKS: --- !Passed
+; REMARKS-NEXT: Pass:            loop-interchange
+; REMARKS-NEXT: Name:            Dependence
+; REMARKS-NEXT: Function:        test6
+; REMARKS-NEXT: Args:
+; REMARKS-NEXT:   - String:          Computed dependence info, invoking the transform.
+; REMARKS-NEXT: ...
+
 ; REMARKS: --- !Missed
 ; REMARKS-NEXT: Pass:            loop-interchange
 ; REMARKS-NEXT: Name:            UnsupportedPHIOuter

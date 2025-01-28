@@ -16,6 +16,14 @@
 
 ; REMARKS: --- !Passed
 ; REMARKS-NEXT: Pass:            loop-interchange
+; REMARKS-NEXT: Name:            Dependence
+; REMARKS-NEXT: Function:        pr43326-triply-nested
+; REMARKS-NEXT: Args:
+; REMARKS-NEXT:   - String:          Computed dependence info, invoking the transform.
+; REMARKS-NEXT: ...
+
+; REMARKS: --- !Passed
+; REMARKS-NEXT: Pass:            loop-interchange
 ; REMARKS-NEXT: Name:            Interchanged
 ; REMARKS-NEXT: Function:        pr43326-triply-nested
 ; REMARKS: --- !Passed

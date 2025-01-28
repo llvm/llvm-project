@@ -4,6 +4,14 @@
 
 ; REMARKS: --- !Passed
 ; REMARKS-NEXT: Pass:            loop-interchange
+; REMARKS-NEXT: Name:            Dependence
+; REMARKS-NEXT: Function:        pr48212
+; REMARKS-NEXT: Args:
+; REMARKS-NEXT:   - String:          Computed dependence info, invoking the transform.
+; REMARKS-NEXT: ...
+
+; REMARKS: --- !Passed
+; REMARKS-NEXT: Pass:            loop-interchange
 ; REMARKS-NEXT: Name:            Interchanged
 ; REMARKS-NEXT: Function:        pr48212
 

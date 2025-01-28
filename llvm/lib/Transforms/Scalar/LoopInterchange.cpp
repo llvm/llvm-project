@@ -277,7 +277,8 @@ static bool hasSupportedLoopDepth(SmallVectorImpl<Loop *> &LoopList,
   return true;
 }
 
-static bool isComputableLoopNest(ScalarEvolution *SE, ArrayRef<Loop *> LoopList) {
+static bool isComputableLoopNest(ScalarEvolution *SE,
+                                 ArrayRef<Loop *> LoopList) {
   for (Loop *L : LoopList) {
     const SCEV *ExitCountOuter = SE->getBackedgeTakenCount(L);
     if (isa<SCEVCouldNotCompute>(ExitCountOuter)) {
@@ -1764,6 +1765,12 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
       LLVM_DEBUG(dbgs() << "Not valid loop candidate for interchange\n");
       return PreservedAnalyses::all();
   }
+
+  ORE.emit([&]() {
+    return OptimizationRemark(DEBUG_TYPE, "Dependence",
+                              LN.getOutermostLoop().getStartLoc(), LN.getOutermostLoop().getHeader())
+           << "Computed dependence info, invoking the transform.";
+  });
 
   DependenceInfo DI(&F, &AR.AA, &AR.SE, &AR.LI);
   std::unique_ptr<CacheCost> CC =
