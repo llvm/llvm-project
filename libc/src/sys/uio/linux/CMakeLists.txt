@@ -12,3 +12,18 @@ add_entrypoint_object(
     libc.hdr.types.ssize_t
     libc.hdr.types.struct_iovec
 )
+
+add_entrypoint_object(
+  readv
+  SRCS
+    readv.cpp
+  HDRS
+    ../readv.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.errno.errno
+    libc.hdr.types.ssize_t
+    libc.hdr.types.struct_iovec
+)
