@@ -4313,9 +4313,11 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
     //
     //   aaaaaaa
     //       .aaaaaaaaa.bbbbbbbb(cccccccc);
-    return !Right.NextOperator || !Right.NextOperator->Previous->closesScope()
-               ? 150
-               : 35;
+    const auto *NextOperator = Right.NextOperator;
+    const auto Penalty = Style.PenaltyBreakBeforeMemberAccess;
+    return NextOperator && NextOperator->Previous->closesScope()
+               ? std::min(Penalty, 35u)
+               : Penalty;
   }
 
   if (Right.is(TT_TrailingAnnotation) &&
