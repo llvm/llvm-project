@@ -2979,3 +2979,47 @@ func.func @contiguous_scatter_step(%base: memref<?xf32>,
     memref<?xf32>, vector<16xindex>, vector<16xi1>, vector<16xf32>
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @extract_arith_constnt
+
+func.func @extract_arith_constnt() -> i32 {
+  %c1_i32 = arith.constant 1 : i32
+  return %c1_i32 : i32
+}
+
+// CHECK: %[[VAL_0:.*]] = arith.constant 1 : i32
+// CHECK: return %[[VAL_0]] : i32
+
+// -----
+
+// CHECK-LABEL: func @insert_arith_constnt
+
+func.func @insert_arith_constnt() -> vector<4x1xi32> {
+  %v = arith.constant dense<0> : vector<4x1xi32>
+  %c_0 = arith.constant 0 : index
+  %c_1 = arith.constant 1 : i32
+  %v_1 = vector.insert %c_1, %v[%c_0, %c_0] : i32 into vector<4x1xi32>
+  return %v_1 : vector<4x1xi32>
+}
+
+// CHECK: %[[VAL_0:.*]] = arith.constant dense<{{\[\[}}1], [0], [0], [0]]> : vector<4x1xi32>
+// CHECK: return %[[VAL_0]] : vector<4x1xi32>
+
+// -----
+
+// CHECK-LABEL: func @insert_extract_arith_constnt
+
+func.func @insert_extract_arith_constnt() -> i32 {
+  %v = arith.constant dense<0> : vector<32x1xi32>
+  %c_0 = arith.constant 0 : index
+  %c_1 = arith.constant 1 : index
+  %c_2 = arith.constant 2 : i32
+  %v_1 = vector.insert %c_2, %v[%c_1, %c_1] : i32 into vector<32x1xi32>
+  %ret = vector.extract %v_1[%c_1, %c_1] : i32 from vector<32x1xi32>
+  return %ret : i32
+}
+
+// CHECK: %[[VAL_0:.*]] = arith.constant 2 : i32
+// CHECK: return %[[VAL_0]] : i32

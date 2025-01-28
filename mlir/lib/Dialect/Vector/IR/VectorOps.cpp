@@ -1979,33 +1979,27 @@ static Value foldScalarExtractFromFromElements(ExtractOp extractOp) {
 
 // If the dynamic operands of `extractOp` or `insertOp` is result of
 // `constantOp`, then fold it.
-template <typename T>
-static LogicalResult foldConstantOp(T op, SmallVectorImpl<Value> &operands) {
+template <typename OpType, typename AdaptorType>
+static Value extractInsertFoldConstantOp(OpType op, AdaptorType adaptor,
+                                         SmallVectorImpl<Value> &operands) {
   auto staticPosition = op.getStaticPosition().vec();
   OperandRange dynamicPosition = op.getDynamicPosition();
-
+  ArrayRef<Attribute> dynamicPositionAttr = adaptor.getDynamicPosition();
   // If the dynamic operands is empty, it is returned directly.
   if (!dynamicPosition.size())
-    return failure();
+    return {};
   unsigned index = 0;
 
-  // `opChange` is a flog. If it is true, it means to update `op` in place.
+  // `opChange` is a flag. If it is true, it means to update `op` in place.
   bool opChange = false;
   for (unsigned i = 0, e = staticPosition.size(); i < e; ++i) {
     if (!ShapedType::isDynamic(staticPosition[i]))
       continue;
+    Attribute positionAttr = dynamicPositionAttr[index];
     Value position = dynamicPosition[index++];
-
-    // If it is a block parameter, proceed to the next iteration.
-    if (!position.getDefiningOp()) {
-      operands.push_back(position);
-      continue;
-    }
-
-    APInt pos;
-    if (matchPattern(position, m_ConstantInt(&pos))) {
+    if (auto attr = mlir::dyn_cast_if_present<IntegerAttr>(positionAttr)) {
+      staticPosition[i] = attr.getInt();
       opChange = true;
-      staticPosition[i] = pos.getSExtValue();
       continue;
     }
     operands.push_back(position);
@@ -2014,12 +2008,12 @@ static LogicalResult foldConstantOp(T op, SmallVectorImpl<Value> &operands) {
   if (opChange) {
     op.setStaticPosition(staticPosition);
     op.getOperation()->setOperands(operands);
-    return success();
+    return op.getResult();
   }
-  return failure();
+  return {};
 }
 
-OpFoldResult ExtractOp::fold(FoldAdaptor) {
+OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
   // Fold "vector.extract %v[] : vector<2x2xf32> from vector<2x2xf32>" to %v.
   // Note: Do not fold "vector.extract %v[] : f32 from vector<f32>" (type
   // mismatch).
@@ -2042,8 +2036,8 @@ OpFoldResult ExtractOp::fold(FoldAdaptor) {
   if (auto val = foldScalarExtractFromFromElements(*this))
     return val;
   SmallVector<Value> operands = {getVector()};
-  if (succeeded(foldConstantOp(*this, operands)))
-    return getResult();
+  if (auto val = extractInsertFoldConstantOp(*this, adaptor, operands))
+    return val;
   return OpFoldResult();
 }
 
@@ -3074,8 +3068,8 @@ OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
   if (getNumIndices() == 0 && getSourceType() == getType())
     return getSource();
   SmallVector<Value> operands = {getSource(), getDest()};
-  if (succeeded(foldConstantOp(*this, operands)))
-    return getResult();
+  if (auto val = extractInsertFoldConstantOp(*this, adaptor, operands))
+    return val;
   return {};
 }
 
