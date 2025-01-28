@@ -16,7 +16,7 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor2_v2(ptr %ptr, i32 %
 ; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; RV64-NEXT:    vlseg2e32.v v8, (a0)
 ; RV64-NEXT:    ret
-  %wide.masked.load = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %ptr, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i32 %rvl)
+  %wide.masked.load = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %ptr, <vscale x 4 x i1> splat (i1 true), i32 %rvl)
   %deinterleaved.results = call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave2.nxv4i32(<vscale x 4 x i32> %wide.masked.load)
   %t0 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 0
   %t1 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 1
@@ -39,7 +39,7 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 
 ; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; RV64-NEXT:    vlseg4e32.v v8, (a0)
 ; RV64-NEXT:    ret
-  %wide.masked.load = call <vscale x 8 x i32> @llvm.vp.load.nxv8i32.p0(ptr %ptr, <vscale x 8 x i1> shufflevector (<vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i32 0), <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer), i32 %rvl)
+  %wide.masked.load = call <vscale x 8 x i32> @llvm.vp.load.nxv8i32.p0(ptr %ptr, <vscale x 8 x i1> splat (i1 true), i32 %rvl)
   %d0 = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %wide.masked.load)
   %d0.0 = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } %d0, 0
   %d0.1 = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } %d0, 1
@@ -71,7 +71,7 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 
 ; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; RV64-NEXT:    vlseg8e32.v v8, (a0)
 ; RV64-NEXT:    ret
-  %wide.masked.load = call <vscale x 16 x i32> @llvm.vp.load.nxv16i32.p0(ptr %ptr, <vscale x 16 x i1> shufflevector (<vscale x 16 x i1> insertelement (<vscale x 16 x i1> poison, i1 true, i32 0), <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer), i32 %rvl)
+  %wide.masked.load = call <vscale x 16 x i32> @llvm.vp.load.nxv16i32.p0(ptr %ptr, <vscale x 16 x i1> splat (i1 true), i32 %rvl)
   %d0 = call { <vscale x 8 x i32>, <vscale x 8 x i32> } @llvm.vector.deinterleave2.nxv16i32(<vscale x 16 x i32> %wide.masked.load)
   %d0.0 = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } %d0, 0
   %d0.1 = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } %d0, 1
@@ -121,7 +121,7 @@ define void @store_factor2_v2(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, pt
 ; RV64-NEXT:    vsseg2e32.v v8, (a0)
 ; RV64-NEXT:    ret
   %interleaved.vec = call <vscale x 2 x i32> @llvm.vector.interleave2.nxv2i32(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1)
-  call void @llvm.vp.store.nxv2i32.p0(<vscale x 2 x i32> %interleaved.vec, ptr %ptr, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i32 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 %rvl)
+  call void @llvm.vp.store.nxv2i32.p0(<vscale x 2 x i32> %interleaved.vec, ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %rvl)
   ret void
 }
 
@@ -156,13 +156,8 @@ define void @store_factor2_const_splat(ptr %dst) {
 ; RV64-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; RV64-NEXT:    vse32.v v8, (a0)
 ; RV64-NEXT:    ret
-  %interleave2 = call <vscale x 16 x i32> @llvm.vector.interleave2.nxv16i32(
-    <vscale x 8 x i32> shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 666, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer),
-    <vscale x 8 x i32> shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 777, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
-  )
-  call void @llvm.vp.store.nxv16i32.p0(<vscale x 16 x i32> %interleave2, ptr %dst,
-    <vscale x 16 x i1> shufflevector (<vscale x 16 x i1> insertelement (<vscale x 16 x i1> poison, i1 1, i64 0), <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer),
-    i32 87)
+  %interleave2 = call <vscale x 16 x i32> @llvm.vector.interleave2.nxv16i32(<vscale x 8 x i32> splat (i32 666), <vscale x 8 x i32> splat (i32 777))
+  call void @llvm.vp.store.nxv16i32.p0(<vscale x 16 x i32> %interleave2, ptr %dst, <vscale x 16 x i1> splat (i1 true), i32 87)
   ret void
 }
 
@@ -187,7 +182,7 @@ define void @store_factor4_v2(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, pt
   %interleaved.vec0 = call <vscale x 2 x i32> @llvm.vector.interleave2.nxv2i32(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v0)
   %interleaved.vec1 = call <vscale x 2 x i32> @llvm.vector.interleave2.nxv2i32(<vscale x 1 x i32> %v1, <vscale x 1 x i32> %v1)
   %interleaved.vec2 = call <vscale x 4 x i32> @llvm.vector.interleave2.nxv4i32(<vscale x 2 x i32> %interleaved.vec0, <vscale x 2 x i32> %interleaved.vec1)
-  call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> %interleaved.vec2, ptr %ptr, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i32 %rvl)
+  call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> %interleaved.vec2, ptr %ptr, <vscale x 4 x i1> splat (i1 true), i32 %rvl)
   ret void
 }
 
@@ -224,7 +219,7 @@ define void @store_factor8_v2(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, pt
   %interleaved.vec4 = call <vscale x 2 x i32> @llvm.vector.interleave2.nxv2i32(<vscale x 1 x i32> %v1, <vscale x 1 x i32> %v1)
   %interleaved.vec5 = call <vscale x 4 x i32> @llvm.vector.interleave2.nxv4i32(<vscale x 2 x i32> %interleaved.vec3, <vscale x 2 x i32> %interleaved.vec4)
   %interleaved.vec6 = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %interleaved.vec2, <vscale x 4 x i32> %interleaved.vec5)
-  call void @llvm.vp.store.nxv8i32.p0(<vscale x 8 x i32> %interleaved.vec6, ptr %ptr, <vscale x 8 x i1> shufflevector (<vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i32 0), <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer), i32 %rvl)
+  call void @llvm.vp.store.nxv8i32.p0(<vscale x 8 x i32> %interleaved.vec6, ptr %ptr, <vscale x 8 x i1> splat (i1 true), i32 %rvl)
   ret void
 }
 
@@ -489,7 +484,7 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 
 ; RV64-NEXT:    vmv.v.v v10, v9
 ; RV64-NEXT:    vmv.v.v v11, v9
 ; RV64-NEXT:    ret
-  %wide.masked.load = call <vscale x 8 x i32> @llvm.vp.load.nxv8i32.p0(ptr %ptr, <vscale x 8 x i1> shufflevector (<vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i32 0), <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer), i32 %rvl)
+  %wide.masked.load = call <vscale x 8 x i32> @llvm.vp.load.nxv8i32.p0(ptr %ptr, <vscale x 8 x i1> splat (i1 true), i32 %rvl)
   %d0 = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %wide.masked.load)
   %d0.0 = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } %d0, 0
   %d0.1 = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } %d0, 0
@@ -542,7 +537,7 @@ define {<vscale x 4 x i32>, <vscale x 2 x i32>, <vscale x 1 x i32>, <vscale x 1 
 ; RV64-NEXT:    vnsrl.wx v12, v11, a0
 ; RV64-NEXT:    vnsrl.wi v11, v11, 0
 ; RV64-NEXT:    ret
-  %wide.masked.load = call <vscale x 8 x i32> @llvm.vp.load.nxv8i32.p0(ptr %ptr, <vscale x 8 x i1> shufflevector (<vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i32 0), <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer), i32 %rvl)
+  %wide.masked.load = call <vscale x 8 x i32> @llvm.vp.load.nxv8i32.p0(ptr %ptr, <vscale x 8 x i1> splat (i1 true), i32 %rvl)
   %d0 = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %wide.masked.load)
   %d0.0 = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } %d0, 0
   %t0 = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } %d0, 1
@@ -611,7 +606,7 @@ define void @not_balanced_store_tree(<vscale x 1 x i32> %v0, <vscale x 2 x i32> 
   %interleaved.vec0 = call <vscale x 2 x i32> @llvm.vector.interleave2.nxv2i32(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v0)
   %interleaved.vec1 = call <vscale x 4 x i32> @llvm.vector.interleave2.nxv2i32(<vscale x 2 x i32> %interleaved.vec0, <vscale x 2 x i32> %v1)
   %interleaved.vec2 = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv4i32(<vscale x 4 x i32> %interleaved.vec1, <vscale x 4 x i32> %v2)
-  call void @llvm.vp.store.nxv8i32.p0(<vscale x 8 x i32> %interleaved.vec2, ptr %ptr, <vscale x 8 x i1> shufflevector (<vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i32 0), <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer), i32 %rvl)
+  call void @llvm.vp.store.nxv8i32.p0(<vscale x 8 x i32> %interleaved.vec2, ptr %ptr, <vscale x 8 x i1> splat (i1 true), i32 %rvl)
   ret void
 }
 

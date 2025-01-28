@@ -22607,8 +22607,7 @@ bool RISCVTargetLowering::lowerDeinterleavedIntrinsicToVPLoad(
       Factor);
 
   Value *PoisonVal = PoisonValue::get(VecTupTy);
-  SmallVector<Value *> Operands;
-  Operands.append({PoisonVal, Load->getArgOperand(0)});
+  SmallVector<Value *> Operands{PoisonVal, Load->getArgOperand(0)};
 
   Function *VlsegNFunc = Intrinsic::getOrInsertDeclaration(
       Load->getModule(), IntrMaskIds[Factor - 2],
@@ -22618,8 +22617,8 @@ bool RISCVTargetLowering::lowerDeinterleavedIntrinsicToVPLoad(
 
   Operands.push_back(EVL);
 
-  // Tail-policy
-  Operands.push_back(ConstantInt::get(XLenTy, RISCVII::TAIL_AGNOSTIC));
+  Operands.push_back(ConstantInt::get(XLenTy, RISCVII::TAIL_AGNOSTIC |
+                                                  RISCVII::MASK_AGNOSTIC));
 
   Operands.push_back(ConstantInt::get(XLenTy, Log2_64(SEW)));
 

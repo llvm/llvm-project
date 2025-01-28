@@ -630,13 +630,8 @@ getVectorDeinterleaveFactor(IntrinsicInst *II,
   return true;
 }
 
-/// Check the interleaved mask
-///
-/// - if a value within the optional is non-nullptr, the value corresponds to
-///   deinterleaved mask
-/// - if a value within the option is nullptr, the value corresponds to all-true
-///   mask
-/// - return nullopt if mask cannot be deinterleaved
+// Return nullptr if the value corresponds to a all-true mask. Otherwise,
+// return the value that is corresponded to a deinterleaved mask.
 static Value *getMask(Value *WideMask, unsigned Factor) {
   using namespace llvm::PatternMatch;
   if (auto *IMI = dyn_cast<IntrinsicInst>(WideMask)) {
