@@ -4572,15 +4572,14 @@ static std::optional<int>
 isOpenMPCapturedRegionInArmSMEFunction(Sema const &S, CapturedRegionKind Kind) {
   if (!S.getLangOpts().OpenMP || Kind != CR_OpenMP)
     return {};
-  FunctionDecl *FD = S.getCurFunctionDecl(/*AllowLambda=*/true);
-  if (!FD)
-    return {};
-  if (IsArmStreamingFunction(FD, /*IncludeLocallyStreaming=*/true))
-    return /* in streaming functions */ 0;
-  if (hasArmZAState(FD))
-    return /* in functions with ZA state */ 1;
-  if (hasArmZT0State(FD))
-    return /* in fuctions with ZT0 state */ 2;
+  if (const FunctionDecl *FD = S.getCurFunctionDecl(/*AllowLambda=*/true)) {
+    if (IsArmStreamingFunction(FD, /*IncludeLocallyStreaming=*/true))
+      return /* in streaming functions */ 0;
+    if (hasArmZAState(FD))
+      return /* in functions with ZA state */ 1;
+    if (hasArmZT0State(FD))
+      return /* in fuctions with ZT0 state */ 2;
+  }
   return {};
 }
 
