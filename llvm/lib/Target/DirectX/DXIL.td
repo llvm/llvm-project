@@ -1009,6 +1009,7 @@ def WaveActiveOp : DXILOp<119, waveActiveOp> {
   ];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let properties = [IsWave];
 }
 
 def WaveAllBitCount : DXILOp<135, waveAllOp> {
