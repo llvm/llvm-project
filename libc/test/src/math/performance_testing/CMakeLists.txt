@@ -500,3 +500,14 @@ add_perf_binary(
   COMPILE_OPTIONS
     -fno-builtin
 )
+
+add_perf_binary(
+  sqrtf128_perf
+  SRCS
+    sqrtf128_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.sqrtf128
+  COMPILE_OPTIONS
+  -fno-builtin
+)
