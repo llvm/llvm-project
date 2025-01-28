@@ -20,19 +20,11 @@
 using namespace clang;
 using namespace clang::targets;
 
-static constexpr int NumBuiltins =
-    clang::NVPTX::LastTSBuiltin - Builtin::FirstTSBuiltin;
-
-static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsNVPTX.def"
-    , {
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsNVPTX.def"
-      });
+static constexpr Builtin::Info BuiltinInfo[] = {
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#include "clang/Basic/BuiltinsNVPTX.inc"
+};
 
 const char *const NVPTXTargetInfo::GCCRegNames[] = {"r0"};
 
@@ -289,6 +281,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::SM_90a:
         return "900";
       case OffloadArch::SM_100:
+      case OffloadArch::SM_100a:
         return "1000";
       }
       llvm_unreachable("unhandled OffloadArch");
@@ -296,10 +289,12 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__CUDA_ARCH__", CUDAArchCode);
     if (GPU == OffloadArch::SM_90a)
       Builder.defineMacro("__CUDA_ARCH_FEAT_SM90_ALL", "1");
+    if (GPU == OffloadArch::SM_100a)
+      Builder.defineMacro("__CUDA_ARCH_FEAT_SM100_ALL", "1");
   }
 }
 
-std::pair<const char *, ArrayRef<Builtin::Info>>
-NVPTXTargetInfo::getTargetBuiltinStorage() const {
-  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
+ArrayRef<Builtin::Info> NVPTXTargetInfo::getTargetBuiltins() const {
+  return llvm::ArrayRef(BuiltinInfo,
+                        clang::NVPTX::LastTSBuiltin - Builtin::FirstTSBuiltin);
 }

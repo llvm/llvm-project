@@ -15,7 +15,7 @@
 
         .text
 
-        // Saves GPRs, calls __orc_rt_sysv_resolve
+        // Saves GPRs, calls __orc_rt_resolve
         .globl __orc_rt_sysv_reenter
 __orc_rt_sysv_reenter:
         // Save register state, set up new stack frome.
@@ -49,14 +49,14 @@ __orc_rt_sysv_reenter:
         stp   q2,  q3, [sp, #-32]!
         stp   q0,  q1, [sp, #-32]!
 
-        // Look up the return address and subtract 8 from it (on the
-        // assumption that it's a standard arm64 reentry trampoline) to get
-        // back the trampoline's address.
+        // Look up the return address and subtract 8 from it (on the assumption
+        // that it's a standard arm64 reentry trampoline) to get back the
+	// trampoline's address.
         sub   x0, x30, #8
 
-        // Call __orc_rt_sysv_resolve to look up the implementation
-        // corresponding to the calling stub, then store this in x17 (which
-        // we'll return to below.
+        // Call __orc_rt_resolve to look up the implementation corresponding to
+        // the calling stub, then store this in x17 (which we'll return to
+	// below).
 #if !defined(__APPLE__)
         bl    __orc_rt_resolve
 #else

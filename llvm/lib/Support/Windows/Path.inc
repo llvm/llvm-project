@@ -25,7 +25,6 @@
 // These two headers must be included last, and make sure shlobj is required
 // after Windows.h to make sure it picks up our definition of _WIN32_WINNT
 #include "llvm/Support/Windows/WindowsSupport.h"
-#include <atlbase.h>
 #include <shellapi.h>
 #include <shlobj.h>
 
@@ -1374,9 +1373,11 @@ std::error_code closeFile(file_t &F) {
 }
 
 std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
+  SmallString<128> NativePath;
+  llvm::sys::path::native(path, NativePath, path::Style::windows_backslash);
   // Convert to utf-16.
   SmallVector<wchar_t, 128> Path16;
-  std::error_code EC = widenPath(path, Path16);
+  std::error_code EC = widenPath(NativePath, Path16);
   if (EC && !IgnoreErrors)
     return EC;
 
@@ -1395,19 +1396,22 @@ std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
     if (FAILED(HR))
       break;
     auto Uninitialize = make_scope_exit([] { CoUninitialize(); });
-    CComPtr<IFileOperation> FileOp;
-    HR = FileOp.CoCreateInstance(CLSID_FileOperation);
+    IFileOperation *FileOp = NULL;
+    HR = CoCreateInstance(CLSID_FileOperation, NULL, CLSCTX_ALL,
+                          IID_PPV_ARGS(&FileOp));
     if (FAILED(HR))
       break;
+    auto FileOpRelease = make_scope_exit([&FileOp] { FileOp->Release(); });
     HR = FileOp->SetOperationFlags(FOF_NO_UI | FOFX_NOCOPYHOOKS);
     if (FAILED(HR))
       break;
     PIDLIST_ABSOLUTE PIDL = ILCreateFromPathW(Path16.data());
     auto FreePIDL = make_scope_exit([&PIDL] { ILFree(PIDL); });
-    CComPtr<IShellItem> ShItem;
+    IShellItem *ShItem = NULL;
     HR = SHCreateItemFromIDList(PIDL, IID_PPV_ARGS(&ShItem));
     if (FAILED(HR))
       break;
+    auto ShItemRelease = make_scope_exit([&ShItem] { ShItem->Release(); });
     HR = FileOp->DeleteItem(ShItem, NULL);
     if (FAILED(HR))
       break;

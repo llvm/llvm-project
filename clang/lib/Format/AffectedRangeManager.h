@@ -47,8 +47,8 @@ private:
   bool affectsLeadingEmptyLines(const FormatToken &Tok);
 
   // Marks all lines between I and E as well as all their children as affected.
-  void markAllAsAffected(SmallVectorImpl<AnnotatedLine *>::iterator I,
-                         SmallVectorImpl<AnnotatedLine *>::iterator E);
+  void markAllAsAffected(ArrayRef<AnnotatedLine *>::iterator I,
+                         ArrayRef<AnnotatedLine *>::iterator E);
 
   // Determines whether 'Line' is affected by the SourceRanges given as input.
   // Returns \c true if line or one if its children is affected.

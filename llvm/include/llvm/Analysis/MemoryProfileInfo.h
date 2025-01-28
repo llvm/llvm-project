@@ -65,6 +65,15 @@ private:
     std::map<uint64_t, CallStackTrieNode *> Callers;
     CallStackTrieNode(AllocationType Type)
         : AllocTypes(static_cast<uint8_t>(Type)) {}
+    void addAllocType(AllocationType AllocType) {
+      AllocTypes |= static_cast<uint8_t>(AllocType);
+    }
+    void removeAllocType(AllocationType AllocType) {
+      AllocTypes &= ~static_cast<uint8_t>(AllocType);
+    }
+    bool hasAllocType(AllocationType AllocType) const {
+      return AllocTypes & static_cast<uint8_t>(AllocType);
+    }
   };
 
   // The node for the allocation at the root.
@@ -84,6 +93,11 @@ private:
   // trie nodes reached form the given Node, for hint size reporting.
   void collectContextSizeInfo(CallStackTrieNode *Node,
                               std::vector<ContextTotalSize> &ContextSizeInfo);
+
+  // Recursively convert hot allocation types to notcold, since we don't
+  // actually do any cloning for hot contexts, to facilitate more aggressive
+  // pruning of contexts.
+  void convertHotToNotCold(CallStackTrieNode *Node);
 
   // Recursive helper to trim contexts and create metadata nodes.
   bool buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
@@ -117,6 +131,12 @@ public:
   /// which is lower overhead and more direct than maintaining this metadata.
   /// Returns true if memprof metadata attached, false if not (attribute added).
   bool buildAndAttachMIBMetadata(CallBase *CI);
+
+  /// Add an attribute for the given allocation type to the call instruction.
+  /// If hinted by reporting is enabled, a message is emitted with the given
+  /// descriptor used to identify the category of single allocation type.
+  void addSingleAllocTypeAttribute(CallBase *CI, AllocationType AT,
+                                   StringRef Descriptor);
 };
 
 /// Helper class to iterate through stack ids in both metadata (memprof MIB and

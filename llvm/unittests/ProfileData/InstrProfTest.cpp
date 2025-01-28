@@ -457,17 +457,14 @@ TEST_F(InstrProfTest, test_memprof_v2_full_schema) {
   ASSERT_THAT_ERROR(RecordOr.takeError(), Succeeded());
   const memprof::MemProfRecord &Record = RecordOr.get();
 
-  memprof::FrameIdConverter<decltype(MemProfData.Frames)> FrameIdConv(
-      MemProfData.Frames);
-  memprof::CallStackIdConverter<decltype(MemProfData.CallStacks)> CSIdConv(
-      MemProfData.CallStacks, FrameIdConv);
+  memprof::IndexedCallstackIdConveter CSIdConv(MemProfData);
 
   const ::llvm::memprof::MemProfRecord WantRecord =
       IndexedMR.toMemProfRecord(CSIdConv);
-  ASSERT_EQ(FrameIdConv.LastUnmappedId, std::nullopt)
-      << "could not map frame id: " << *FrameIdConv.LastUnmappedId;
-  ASSERT_EQ(CSIdConv.LastUnmappedId, std::nullopt)
-      << "could not map call stack id: " << *CSIdConv.LastUnmappedId;
+  ASSERT_EQ(CSIdConv.FrameIdConv.LastUnmappedId, std::nullopt)
+      << "could not map frame id: " << *CSIdConv.FrameIdConv.LastUnmappedId;
+  ASSERT_EQ(CSIdConv.CSIdConv.LastUnmappedId, std::nullopt)
+      << "could not map call stack id: " << *CSIdConv.CSIdConv.LastUnmappedId;
   EXPECT_THAT(WantRecord, EqualsRecord(Record));
 }
 
@@ -494,17 +491,14 @@ TEST_F(InstrProfTest, test_memprof_v2_partial_schema) {
   ASSERT_THAT_ERROR(RecordOr.takeError(), Succeeded());
   const memprof::MemProfRecord &Record = RecordOr.get();
 
-  memprof::FrameIdConverter<decltype(MemProfData.Frames)> FrameIdConv(
-      MemProfData.Frames);
-  memprof::CallStackIdConverter<decltype(MemProfData.CallStacks)> CSIdConv(
-      MemProfData.CallStacks, FrameIdConv);
+  memprof::IndexedCallstackIdConveter CSIdConv(MemProfData);
 
   const ::llvm::memprof::MemProfRecord WantRecord =
       IndexedMR.toMemProfRecord(CSIdConv);
-  ASSERT_EQ(FrameIdConv.LastUnmappedId, std::nullopt)
-      << "could not map frame id: " << *FrameIdConv.LastUnmappedId;
-  ASSERT_EQ(CSIdConv.LastUnmappedId, std::nullopt)
-      << "could not map call stack id: " << *CSIdConv.LastUnmappedId;
+  ASSERT_EQ(CSIdConv.FrameIdConv.LastUnmappedId, std::nullopt)
+      << "could not map frame id: " << *CSIdConv.FrameIdConv.LastUnmappedId;
+  ASSERT_EQ(CSIdConv.CSIdConv.LastUnmappedId, std::nullopt)
+      << "could not map call stack id: " << *CSIdConv.CSIdConv.LastUnmappedId;
   EXPECT_THAT(WantRecord, EqualsRecord(Record));
 }
 
@@ -615,10 +609,7 @@ TEST_F(InstrProfTest, test_memprof_merge) {
 
   std::optional<memprof::FrameId> LastUnmappedFrameId;
 
-  memprof::FrameIdConverter<decltype(MemProfData.Frames)> FrameIdConv(
-      MemProfData.Frames);
-  memprof::CallStackIdConverter<decltype(MemProfData.CallStacks)> CSIdConv(
-      MemProfData.CallStacks, FrameIdConv);
+  memprof::IndexedCallstackIdConveter CSIdConv(MemProfData);
 
   const ::llvm::memprof::MemProfRecord WantRecord =
       IndexedMR.toMemProfRecord(CSIdConv);

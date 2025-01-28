@@ -155,12 +155,14 @@ BuiltinFunctionChecker::checkOverflow(CheckerContext &C, SVal RetVal,
   unsigned BitWidth = C.getASTContext().getIntWidth(Res);
   bool IsUnsigned = Res->isUnsignedIntegerType();
 
+  SValBuilder &SVB = C.getSValBuilder();
+  BasicValueFactory &VF = SVB.getBasicValueFactory();
+
   auto MinValType = llvm::APSInt::getMinValue(BitWidth, IsUnsigned);
   auto MaxValType = llvm::APSInt::getMaxValue(BitWidth, IsUnsigned);
-  nonloc::ConcreteInt MinVal{MinValType};
-  nonloc::ConcreteInt MaxVal{MaxValType};
+  nonloc::ConcreteInt MinVal{VF.getValue(MinValType)};
+  nonloc::ConcreteInt MaxVal{VF.getValue(MaxValType)};
 
-  SValBuilder &SVB = C.getSValBuilder();
   ProgramStateRef State = C.getState();
   SVal IsLeMax = SVB.evalBinOp(State, BO_LE, RetVal, MaxVal, Res);
   SVal IsGeMin = SVB.evalBinOp(State, BO_GE, RetVal, MinVal, Res);

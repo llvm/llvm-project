@@ -127,7 +127,8 @@ void BPFInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                        Register SrcReg, bool IsKill, int FI,
                                        const TargetRegisterClass *RC,
                                        const TargetRegisterInfo *TRI,
-                                       Register VReg) const {
+                                       Register VReg,
+                                       MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end())
     DL = I->getDebugLoc();
@@ -146,12 +147,10 @@ void BPFInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     llvm_unreachable("Can't store this register to stack slot");
 }
 
-void BPFInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                        MachineBasicBlock::iterator I,
-                                        Register DestReg, int FI,
-                                        const TargetRegisterClass *RC,
-                                        const TargetRegisterInfo *TRI,
-                                        Register VReg) const {
+void BPFInstrInfo::loadRegFromStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DestReg,
+    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+    Register VReg, MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end())
     DL = I->getDebugLoc();

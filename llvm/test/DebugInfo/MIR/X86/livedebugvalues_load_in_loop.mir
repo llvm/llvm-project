@@ -1,5 +1,5 @@
 --- |
-  ; RUN: llc %s -march=x86-64 -run-pass=livedebugvalues -o - -experimental-debug-variable-locations -emulate-old-livedebugvalues=0 | FileCheck %s -implicit-check-not=DBG_VALUE
+ ; RUN: llc %s -mtriple=x86_64 -run-pass=livedebugvalues -o - -experimental-debug-variable-locations -emulate-old-livedebugvalues=0 | FileCheck %s -implicit-check-not=DBG_VALUE
 
   ; Sometimes, variables can have multiple locations, and when control flow
   ; merges LiveDebugValues has a hard time picking which one the variable lives

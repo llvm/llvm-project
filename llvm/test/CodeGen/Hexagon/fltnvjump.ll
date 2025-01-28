@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 ; We do not want to see a new value compare after the convert
 ; CHECK: r{{[0-9]+}} = convert_df2w
 ; CHECK-NOT: if (!cmp.eq(r{{[0-9]+}}.new,r{{[0-9]+}})jump

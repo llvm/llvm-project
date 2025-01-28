@@ -480,7 +480,7 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     // noted as slightly offset (in code) from the store. In practice this
     // should have little effect on the debugging experience due to the fact
     // that all the split stores should get the same line number.
-    NewAssign->moveBefore(DbgAssign);
+    NewAssign->moveBefore(DbgAssign->getIterator());
 
     NewAssign->setDebugLoc(DbgAssign->getDebugLoc());
     LLVM_DEBUG(dbgs() << "Created new assign: " << *NewAssign << "\n");
@@ -1399,7 +1399,8 @@ private:
   void visitCallBase(CallBase &CB) {
     // If the call operand is NoCapture ReadOnly, then we mark it as
     // EscapedReadOnly.
-    if (CB.doesNotCapture(U->getOperandNo()) &&
+    if (CB.isDataOperand(U) &&
+        CB.doesNotCapture(U->getOperandNo()) &&
         CB.onlyReadsMemory(U->getOperandNo())) {
       PI.setEscapedReadOnly(&CB);
       return;
@@ -1842,7 +1843,7 @@ static void rewriteMemOpOfSelect(SelectInst &SI, T &I,
       CondMemOp.dropUBImplyingAttrsAndMetadata();
       ++NumLoadsSpeculated;
     }
-    CondMemOp.insertBefore(NewMemOpBB->getTerminator());
+    CondMemOp.insertBefore(NewMemOpBB->getTerminator()->getIterator());
     Value *Ptr = SI.getOperand(1 + SuccIdx);
     CondMemOp.setOperand(I.getPointerOperandIndex(), Ptr);
     if (isa<LoadInst>(I)) {
@@ -5549,6 +5550,8 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
 
     // Step on to the next partition.
     PartitionBegin = PartitionEnd;
+    if (PartitionBegin == AS.end())
+      break;
     BeginOffset = PartitionBegin->beginOffset();
     EndOffset = PartitionBegin->endOffset();
   }

@@ -1,10 +1,10 @@
-# RUN: llvm-mc %s -triple=riscv32 -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-INST,CHECK-ENC %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
 # RUN:     | llvm-objdump -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST-ALIAS %s
 #
-# RUN: llvm-mc %s -triple=riscv64 -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-INST,CHECK-ENC %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
 # RUN:     | llvm-objdump -d - \
@@ -1419,6 +1419,34 @@ csrrs t1, tdata3, zero
 # uimm12
 csrrs t2, 0x7A3, zero
 
+# tinfo
+# name
+# CHECK-INST: csrrs t1, tinfo, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x40,0x7a]
+# CHECK-INST-ALIAS: csrr t1, tinfo
+# uimm12
+# CHECK-INST: csrrs t2, tinfo, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x40,0x7a]
+# CHECK-INST-ALIAS: csrr t2, tinfo
+# name
+csrrs t1, tinfo, zero
+# uimm12
+csrrs t2, 0x7A4, zero
+
+# tcontrol
+# name
+# CHECK-INST: csrrs t1, tcontrol, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x50,0x7a]
+# CHECK-INST-ALIAS: csrr t1, tcontrol
+# uimm12
+# CHECK-INST: csrrs t2, tcontrol, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x50,0x7a]
+# CHECK-INST-ALIAS: csrr t2, tcontrol
+# name
+csrrs t1, tcontrol, zero
+# uimm12
+csrrs t2, 0x7A5, zero
+
 # mcontext
 # name
 # CHECK-INST: csrrs t1, mcontext, zero
@@ -1432,6 +1460,20 @@ csrrs t2, 0x7A3, zero
 csrrs t1, mcontext, zero
 # uimm12
 csrrs t2, 0x7A8, zero
+
+# mscontext
+# name
+# CHECK-INST: csrrs t1, mscontext, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xa0,0x7a]
+# CHECK-INST-ALIAS: csrr t1, mscontext
+# uimm12
+# CHECK-INST: csrrs t2, mscontext, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xa0,0x7a]
+# CHECK-INST-ALIAS: csrr t2, mscontext
+# name
+csrrs t1, mscontext, zero
+# uimm12
+csrrs t2, 0x7AA, zero
 
 #######################
 # Debug Mode Registers

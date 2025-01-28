@@ -150,7 +150,7 @@ define i64 @test_no_simplify1() {
 define i64 @test_no_simplify2(i16 %x) {
 ; CHECK-LABEL: @test_no_simplify2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[X:%.*]] to i64
-; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds nuw [7 x i16], ptr @null_hello, i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds [7 x i16], ptr @null_hello, i64 0, i64 [[TMP1]]
 ; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(ptr nonnull [[HELLO_P]])
 ; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;

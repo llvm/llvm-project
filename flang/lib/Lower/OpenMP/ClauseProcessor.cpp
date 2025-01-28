@@ -153,10 +153,13 @@ genDependKindAttr(lower::AbstractConverter &converter,
     pbKind = mlir::omp::ClauseTaskDepend::taskdependinout;
     break;
   case omp::clause::DependenceType::Mutexinoutset:
+    pbKind = mlir::omp::ClauseTaskDepend::taskdependmutexinoutset;
+    break;
   case omp::clause::DependenceType::Inoutset:
+    pbKind = mlir::omp::ClauseTaskDepend::taskdependinoutset;
+    break;
   case omp::clause::DependenceType::Depobj:
-    TODO(currentLocation,
-         "INOUTSET, MUTEXINOUTSET and DEPOBJ dependence-types");
+    TODO(currentLocation, "DEPOBJ dependence-type");
     break;
   case omp::clause::DependenceType::Sink:
   case omp::clause::DependenceType::Source:
@@ -219,6 +222,10 @@ static void convertLoopBounds(lower::AbstractConverter &converter,
 //===----------------------------------------------------------------------===//
 // ClauseProcessor unique clauses
 //===----------------------------------------------------------------------===//
+
+bool ClauseProcessor::processBare(mlir::omp::BareClauseOps &result) const {
+  return markClauseOccurrence<omp::clause::OmpxBare>(result.bare);
+}
 
 bool ClauseProcessor::processBind(mlir::omp::BindClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Bind>()) {
@@ -606,6 +613,8 @@ addAlignedClause(lower::AbstractConverter &converter,
   // Do not generate alignment assumption if alignment is less than or equal to
   // 0.
   if (alignment > 0) {
+    // alignment value must be power of 2
+    assert((alignment & (alignment - 1)) == 0 && "alignment is not power of 2");
     auto &objects = std::get<omp::ObjectList>(clause.t);
     if (!objects.empty())
       genObjectList(objects, converter, alignedVars);
@@ -940,7 +949,7 @@ void ClauseProcessor::processMapObjects(
     std::stringstream asFortran;
     std::optional<omp::Object> parentObj;
 
-    lower::AddrAndBoundsInfo info =
+    fir::factory::AddrAndBoundsInfo info =
         lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
                                               mlir::omp::MapBoundsType>(
             converter, firOpBuilder, semaCtx, stmtCtx, *object.sym(),

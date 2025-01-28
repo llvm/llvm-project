@@ -51,3 +51,14 @@ MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
   DwarfRegNumForCFI = true;
   HasMipsExpressions = true;
 }
+
+void MipsCOFFMCAsmInfo::anchor() {}
+
+MipsCOFFMCAsmInfo::MipsCOFFMCAsmInfo() {
+  HasSingleParameterDotFile = true;
+  WinEHEncodingType = WinEH::EncodingType::Itanium;
+
+  ExceptionsType = ExceptionHandling::WinEH;
+
+  AllowAtInName = true;
+}

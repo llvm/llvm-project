@@ -8,3 +8,4 @@
 #include "../cpu_model/AArch64CPUFeatures.inc"
 _Static_assert(FEAT_SVE == 30, "sme-abi.S assumes FEAT_SVE = 30");
 _Static_assert(FEAT_SME == 42, "sme-abi.S assumes FEAT_SME = 42");
+_Static_assert(FEAT_SME2 == 57, "sme-abi.S assumes FEAT_SME2 = 57");

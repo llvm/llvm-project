@@ -254,8 +254,7 @@ std::string SymbolInfoMap::SymbolInfo::getVarTypeStr(StringRef name) const {
   switch (kind) {
   case Kind::Attr: {
     if (op)
-      return op->getArg(getArgIndex())
-          .get<NamedAttribute *>()
+      return cast<NamedAttribute *>(op->getArg(getArgIndex()))
           ->attr.getStorageType()
           .str();
     // TODO(suderman): Use a more exact type when available.
@@ -305,7 +304,7 @@ std::string SymbolInfoMap::SymbolInfo::getValueAndRangeUse(
   }
   case Kind::Operand: {
     assert(index < 0);
-    auto *operand = op->getArg(getArgIndex()).get<NamedTypeConstraint *>();
+    auto *operand = cast<NamedTypeConstraint *>(op->getArg(getArgIndex()));
     // If this operand is variadic and this SymbolInfo doesn't have a range
     // index, then return the full variadic operand_range. Otherwise, return
     // the value itself.
@@ -447,7 +446,7 @@ bool SymbolInfoMap::bindOpArgument(DagNode node, StringRef symbol,
   }
 
   auto symInfo =
-      op.getArg(argIndex).is<NamedAttribute *>()
+      isa<NamedAttribute *>(op.getArg(argIndex))
           ? SymbolInfo::getAttr(&op, argIndex)
           : SymbolInfo::getOperand(node, &op, argIndex, variadicSubIndex);
 

@@ -27,7 +27,6 @@
 ; CHECK:        .short  0                               * Length/4 of Parms
 ; CHECK:        .long   L#func_end0-L#EPM_void_test_0   * Length of Code
 ; CHECK:        .long   L#EPM_void_test_0-L#PPA1_void_test_0
-; CHECK:        .section        ".text"
 ; CHECK:                                        * -- End function
 define void @void_test() {
 entry:

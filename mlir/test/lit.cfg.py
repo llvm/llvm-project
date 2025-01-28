@@ -106,7 +106,7 @@ def find_real_python_interpreter():
     if sys.prefix != sys.base_prefix:
         copied_python = os.path.join(sys.prefix, "bin", "copied-python")
     else:
-        copied_python = os.path.join(config.lldb_build_directory, "copied-python")
+        copied_python = os.path.join(config.mlir_obj_root, "copied-python")
 
     # Avoid doing any work if we already copied the binary.
     if os.path.isfile(copied_python):
@@ -185,7 +185,7 @@ tools = [
     "mlir-capi-transform-test",
     "mlir-capi-transform-interpreter-test",
     "mlir-capi-translation-test",
-    "mlir-cpu-runner",
+    "mlir-runner",
     add_runtime("mlir_runner_utils"),
     add_runtime("mlir_c_runner_utils"),
     add_runtime("mlir_async_runtime"),
@@ -197,7 +197,7 @@ tools = [
 ]
 
 if config.enable_vulkan_runner:
-    tools.extend([add_runtime("vulkan-runtime-wrappers")])
+    tools.extend([add_runtime("mlir_vulkan_runtime")])
 
 if config.enable_rocm_runner:
     tools.extend([add_runtime("mlir_rocm_runtime")])
@@ -316,24 +316,24 @@ else:
 
 
 def have_host_jit_feature_support(feature_name):
-    mlir_cpu_runner_exe = lit.util.which("mlir-cpu-runner", config.mlir_tools_dir)
+    mlir_runner_exe = lit.util.which("mlir-runner", config.mlir_tools_dir)
 
-    if not mlir_cpu_runner_exe:
+    if not mlir_runner_exe:
         return False
 
     try:
-        mlir_cpu_runner_cmd = subprocess.Popen(
-            [mlir_cpu_runner_exe, "--host-supports-" + feature_name],
+        mlir_runner_cmd = subprocess.Popen(
+            [mlir_runner_exe, "--host-supports-" + feature_name],
             stdout=subprocess.PIPE,
         )
     except OSError:
-        print("could not exec mlir-cpu-runner")
+        print("could not exec mlir-runner")
         return False
 
-    mlir_cpu_runner_out = mlir_cpu_runner_cmd.stdout.read().decode("ascii")
-    mlir_cpu_runner_cmd.wait()
+    mlir_runner_out = mlir_runner_cmd.stdout.read().decode("ascii")
+    mlir_runner_cmd.wait()
 
-    return "true" in mlir_cpu_runner_out
+    return "true" in mlir_runner_out
 
 
 if have_host_jit_feature_support("jit"):

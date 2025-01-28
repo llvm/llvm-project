@@ -17,8 +17,8 @@ template __device__ void func<int>();
 // RDC:       define weak_odr void @_Z4funcIiEvv()
 
 template __global__ void kernel<int>();
-// NORDC:     define void @_Z6kernelIiEvv()
-// RDC:       define weak_odr void @_Z6kernelIiEvv()
+// NORDC:     define ptx_kernel void @_Z6kernelIiEvv()
+// RDC:       define weak_odr ptx_kernel void @_Z6kernelIiEvv()
 
 // Ensure that unused static device function is eliminated
 static __device__ void static_func() {}
@@ -28,5 +28,5 @@ static __device__ void static_func() {}
 // Ensure that kernel function has external or weak_odr
 // linkage regardless static specifier
 static __global__ void static_kernel() {}
-// NORDC:     define void @_ZL13static_kernelv()
-// RDC:       define weak_odr void @_ZL13static_kernelv[[FILEID:.*]]()
+// NORDC:     define ptx_kernel void @_ZL13static_kernelv()
+// RDC:       define weak_odr ptx_kernel void @_ZL13static_kernelv[[FILEID:.*]]()

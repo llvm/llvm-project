@@ -53,6 +53,7 @@ if (APPLE)
     macho_tlv.x86-64.S
     macho_tlv.arm64.S
     sysv_reenter.arm64.S
+    sysv_reenter.x86-64.S
     )
 
   set(ORC_IMPL_HEADERS
@@ -119,6 +120,7 @@ else() # not Apple
       elfnix_tls.aarch64.S
       elfnix_tls.ppc64.S
       sysv_reenter.arm64.S
+      sysv_reenter.x86-64.S
       )
   endif()
 

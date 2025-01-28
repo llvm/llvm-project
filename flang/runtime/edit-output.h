@@ -30,8 +30,8 @@ namespace Fortran::runtime::io {
 // one edit descriptor with a repeat factor may safely serve to edit
 // multiple elements of an array.
 template <int KIND>
-RT_API_ATTRS bool EditIntegerOutput(
-    IoStatementState &, const DataEdit &, common::HostSignedIntType<8 * KIND>);
+RT_API_ATTRS bool EditIntegerOutput(IoStatementState &, const DataEdit &,
+    common::HostSignedIntType<8 * KIND>, bool isSigned);
 
 // Encapsulates the state of a REAL output conversion.
 class RealOutputEditingBase {
@@ -119,15 +119,15 @@ extern template RT_API_ATTRS bool EditCharacterOutput(
     IoStatementState &, const DataEdit &, const char32_t *, std::size_t chars);
 
 extern template RT_API_ATTRS bool EditIntegerOutput<1>(
-    IoStatementState &, const DataEdit &, std::int8_t);
+    IoStatementState &, const DataEdit &, std::int8_t, bool);
 extern template RT_API_ATTRS bool EditIntegerOutput<2>(
-    IoStatementState &, const DataEdit &, std::int16_t);
+    IoStatementState &, const DataEdit &, std::int16_t, bool);
 extern template RT_API_ATTRS bool EditIntegerOutput<4>(
-    IoStatementState &, const DataEdit &, std::int32_t);
+    IoStatementState &, const DataEdit &, std::int32_t, bool);
 extern template RT_API_ATTRS bool EditIntegerOutput<8>(
-    IoStatementState &, const DataEdit &, std::int64_t);
+    IoStatementState &, const DataEdit &, std::int64_t, bool);
 extern template RT_API_ATTRS bool EditIntegerOutput<16>(
-    IoStatementState &, const DataEdit &, common::int128_t);
+    IoStatementState &, const DataEdit &, common::int128_t, bool);
 
 extern template class RealOutputEditing<2>;
 extern template class RealOutputEditing<3>;

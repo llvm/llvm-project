@@ -284,7 +284,8 @@ static void instantiateDependentDiagnoseIfAttr(
   if (Cond)
     New->addAttr(new (S.getASTContext()) DiagnoseIfAttr(
         S.getASTContext(), *DIA, Cond, DIA->getMessage(),
-        DIA->getDiagnosticType(), DIA->getArgDependent(), New));
+        DIA->getDefaultSeverity(), DIA->getWarningGroup(),
+        DIA->getArgDependent(), New));
 }
 
 // Constructs and adds to New a new instance of CUDALaunchBoundsAttr using
@@ -1571,6 +1572,19 @@ Decl *TemplateDeclInstantiator::VisitEnumDecl(EnumDecl *D) {
         Enum->setIntegerType(SemaRef.Context.IntTy);
       else
         Enum->setIntegerTypeSourceInfo(NewTI);
+
+      // C++23 [conv.prom]p4
+      // if integral promotion can be applied to its underlying type, a prvalue
+      // of an unscoped enumeration type whose underlying type is fixed can also
+      // be converted to a prvalue of the promoted underlying type.
+      //
+      // FIXME: that logic is already implemented in ActOnEnumBody, factor out
+      // into (Re)BuildEnumBody.
+      QualType UnderlyingType = Enum->getIntegerType();
+      Enum->setPromotionType(
+          SemaRef.Context.isPromotableIntegerType(UnderlyingType)
+              ? SemaRef.Context.getPromotedIntegerType(UnderlyingType)
+              : UnderlyingType);
     } else {
       assert(!D->getIntegerType()->isDependentType()
              && "Dependent type without type source info");
@@ -1614,12 +1628,17 @@ Decl *TemplateDeclInstantiator::VisitEnumDecl(EnumDecl *D) {
   // specialization causes the implicit instantiation of the declarations, but
   // not the definitions of scoped member enumerations.
   //
-  // DR1484 clarifies that enumeration definitions inside of a template
+  // DR1484 clarifies that enumeration definitions inside a template
   // declaration aren't considered entities that can be separately instantiated
-  // from the rest of the entity they are declared inside of.
+  // from the rest of the entity they are declared inside.
   if (isDeclWithinFunction(D) ? D == Def : Def && !Enum->isScoped()) {
-    SemaRef.CurrentInstantiationScope->InstantiatedLocal(D, Enum);
-    InstantiateEnumDefinition(Enum, Def);
+    // Prevent redundant instantiation of the enumerator-definition if the
+    // definition has already been instantiated due to a prior
+    // opaque-enum-declaration.
+    if (PrevDecl == nullptr) {
+      SemaRef.CurrentInstantiationScope->InstantiatedLocal(D, Enum);
+      InstantiateEnumDefinition(Enum, Def);
+    }
   }
 
   return Enum;
@@ -2146,6 +2165,23 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
   // Check whether there is already a function template specialization for
   // this declaration.
   FunctionTemplateDecl *FunctionTemplate = D->getDescribedFunctionTemplate();
+  bool isFriend;
+  if (FunctionTemplate)
+    isFriend = (FunctionTemplate->getFriendObjectKind() != Decl::FOK_None);
+  else
+    isFriend = (D->getFriendObjectKind() != Decl::FOK_None);
+
+  // Friend function defined withing class template may stop being function
+  // definition during AST merges from different modules, in this case decl
+  // with function body should be used for instantiation.
+  if (isFriend) {
+    const FunctionDecl *Defn = nullptr;
+    if (D->hasBody(Defn)) {
+      D = const_cast<FunctionDecl *>(Defn);
+      FunctionTemplate = Defn->getDescribedFunctionTemplate();
+    }
+  }
+
   if (FunctionTemplate && !TemplateParams) {
     ArrayRef<TemplateArgument> Innermost = TemplateArgs.getInnermost();
 
@@ -2157,12 +2193,6 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     if (SpecFunc)
       return SpecFunc;
   }
-
-  bool isFriend;
-  if (FunctionTemplate)
-    isFriend = (FunctionTemplate->getFriendObjectKind() != Decl::FOK_None);
-  else
-    isFriend = (D->getFriendObjectKind() != Decl::FOK_None);
 
   bool MergeWithParentScope = (TemplateParams != nullptr) ||
     Owner->isFunctionOrMethod() ||
@@ -2240,7 +2270,9 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
         SemaRef.Context, DC, D->getInnerLocStart(),
         InstantiatedExplicitSpecifier, NameInfo, T, TInfo,
         D->getSourceRange().getEnd(), DGuide->getCorrespondingConstructor(),
-        DGuide->getDeductionCandidateKind(), TrailingRequiresClause);
+        DGuide->getDeductionCandidateKind(), TrailingRequiresClause,
+        DGuide->getSourceDeductionGuide(),
+        DGuide->getSourceDeductionGuideKind());
     Function->setAccess(D->getAccess());
   } else {
     Function = FunctionDecl::Create(
@@ -2582,8 +2614,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   // conditionally populate the TSI without breaking non-template related use
   // cases. Populate TSIs prior to calling SubstFunctionType to make sure we get
   // a proper transformation.
-  if (cast<CXXRecordDecl>(D->getParent())->isLambda() &&
-      !D->getTypeSourceInfo() &&
+  if (isLambdaMethod(D) && !D->getTypeSourceInfo() &&
       isa<CXXConstructorDecl, CXXDestructorDecl>(D)) {
     TypeSourceInfo *TSI =
         SemaRef.Context.getTrivialTypeSourceInfo(D->getType());
@@ -4691,6 +4722,17 @@ bool Sema::addInstantiatedParametersToScope(
 bool Sema::InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
                                       ParmVarDecl *Param) {
   assert(Param->hasUninstantiatedDefaultArg());
+
+  // FIXME: We don't track member specialization info for non-defining
+  // friend declarations, so we will not be able to later find the function
+  // pattern. As a workaround, don't instantiate the default argument in this
+  // case. This is correct per the standard and only an issue for recovery
+  // purposes. [dcl.fct.default]p4:
+  //   if a friend declaration D specifies a default argument expression,
+  //   that declaration shall be a definition.
+  if (FD->getFriendObjectKind() != Decl::FOK_None &&
+      !FD->getTemplateInstantiationPattern())
+    return true;
 
   // Instantiate the expression.
   //

@@ -82,8 +82,8 @@ define i32 @inv_val_store_to_inv_address_with_reduction(ptr %a, i64 %n, ptr %b) 
 ; CHECK-NEXT:    [[CMP_N18:%.*]] = icmp eq i64 [[SMAX2]], [[N_VEC13]]
 ; CHECK-NEXT:    br i1 [[CMP_N18]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC13]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX19:%.*]] = phi i32 [ [[TMP15]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP10]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC13]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ITER_CHECK:%.*]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX19:%.*]] = phi i32 [ [[TMP15]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ITER_CHECK]] ], [ [[TMP10]], [[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ]
@@ -210,7 +210,7 @@ define void @inv_val_store_to_inv_address_conditional(ptr %a, i64 %n, ptr %b, i3
 ; CHECK-NEXT:    [[CMP_N23:%.*]] = icmp eq i64 [[SMAX2]], [[N_VEC9]]
 ; CHECK-NEXT:    br i1 [[CMP_N23]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC9]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC9]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ITER_CHECK:%.*]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[LATCH:%.*]] ], [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ]
@@ -335,7 +335,7 @@ define void @variant_val_store_to_inv_address_conditional(ptr %a, i64 %n, ptr %b
 ; CHECK-NEXT:    [[CMP_N28:%.*]] = icmp eq i64 [[SMAX10]], [[N_VEC17]]
 ; CHECK-NEXT:    br i1 [[CMP_N28]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC17]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC17]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ITER_CHECK:%.*]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[LATCH:%.*]] ], [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ]

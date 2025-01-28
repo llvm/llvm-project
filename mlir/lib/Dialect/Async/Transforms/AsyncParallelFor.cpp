@@ -931,7 +931,7 @@ void AsyncParallelForPass::runOnOperation() {
       [&](ImplicitLocOpBuilder builder, scf::ParallelOp op) {
         return builder.create<arith::ConstantIndexOp>(minTaskSize);
       });
-  if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+  if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
     signalPassFailure();
 }
 

@@ -119,8 +119,7 @@ bool ConnectionFileDescriptor::IsConnected() const {
 
 ConnectionStatus ConnectionFileDescriptor::Connect(llvm::StringRef path,
                                                    Status *error_ptr) {
-  return Connect(
-      path, [](llvm::StringRef) {}, error_ptr);
+  return Connect(path, [](llvm::StringRef) {}, error_ptr);
 }
 
 ConnectionStatus
@@ -731,9 +730,19 @@ ConnectionStatus ConnectionFileDescriptor::ConnectFile(
     struct termios options;
     ::tcgetattr(fd, &options);
 
-    // Set port speed to maximum
+    // Set port speed to the available maximum
+#ifdef B115200
     ::cfsetospeed(&options, B115200);
     ::cfsetispeed(&options, B115200);
+#elif B57600
+    ::cfsetospeed(&options, B57600);
+    ::cfsetispeed(&options, B57600);
+#elif B38400
+    ::cfsetospeed(&options, B38400);
+    ::cfsetispeed(&options, B38400);
+#else
+#error "Maximum Baud rate is Unknown"
+#endif
 
     // Raw input, disable echo and signals
     options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);

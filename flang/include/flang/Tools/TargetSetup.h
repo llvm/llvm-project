@@ -34,6 +34,13 @@ namespace Fortran::tools {
     targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/4);
     targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/8);
   }
+  if (targetTriple.isARM() || targetTriple.isAArch64()) {
+    targetCharacteristics.set_haltingSupportIsUnknownAtCompileTime();
+    targetCharacteristics.set_ieeeFeature(
+        evaluate::IeeeFeature::Halting, false);
+  } else {
+    targetCharacteristics.set_ieeeFeature(evaluate::IeeeFeature::Halting);
+  }
 
   // Figure out if we can support F128: see
   // flang/runtime/Float128Math/math-entries.h
@@ -63,6 +70,9 @@ namespace Fortran::tools {
 
   if (targetTriple.isPPC())
     targetCharacteristics.set_isPPC(true);
+
+  if (targetTriple.isSPARC())
+    targetCharacteristics.set_isSPARC(true);
 
   if (targetTriple.isOSWindows())
     targetCharacteristics.set_isOSWindows(true);

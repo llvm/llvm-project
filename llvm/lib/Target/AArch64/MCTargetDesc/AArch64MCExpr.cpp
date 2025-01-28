@@ -68,6 +68,7 @@ StringRef AArch64MCExpr::getVariantKindName() const {
   case VK_TPREL_LO12:          return ":tprel_lo12:";
   case VK_TPREL_LO12_NC:       return ":tprel_lo12_nc:";
   case VK_TLSDESC_LO12:        return ":tlsdesc_lo12:";
+  case VK_TLSDESC_AUTH_LO12:   return ":tlsdesc_auth_lo12:";
   case VK_ABS_PAGE:            return "";
   case VK_ABS_PAGE_NC:         return ":pg_hi21_nc:";
   case VK_GOT:                 return ":got:";
@@ -81,6 +82,8 @@ StringRef AArch64MCExpr::getVariantKindName() const {
   case VK_GOTTPREL_G0_NC:      return ":gottprel_g0_nc:";
   case VK_TLSDESC:             return "";
   case VK_TLSDESC_PAGE:        return ":tlsdesc:";
+  case VK_TLSDESC_AUTH:        return "";
+  case VK_TLSDESC_AUTH_PAGE:   return ":tlsdesc_auth:";
   case VK_SECREL_LO12:         return ":secrel_lo12:";
   case VK_SECREL_HI12:         return ":secrel_hi12:";
   case VK_GOT_AUTH:            return ":got_auth:";
@@ -154,6 +157,7 @@ void AArch64MCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
   case VK_GOTTPREL:
   case VK_TPREL:
   case VK_TLSDESC:
+  case VK_TLSDESC_AUTH:
     break;
   }
 

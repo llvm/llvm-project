@@ -556,6 +556,31 @@ public:
   /// Construct a data layout on demand and return it
   mlir::DataLayout &getDataLayout();
 
+  /// Convert operands &/or result from/to unsigned so that the operation
+  /// only receives/produces signless operands.
+  template <typename OpTy>
+  mlir::Value createUnsigned(mlir::Location loc, mlir::Type resultType,
+                             mlir::Value left, mlir::Value right) {
+    if (!resultType.isIntOrFloat())
+      return create<OpTy>(loc, resultType, left, right);
+    mlir::Type signlessType = mlir::IntegerType::get(
+        getContext(), resultType.getIntOrFloatBitWidth(),
+        mlir::IntegerType::SignednessSemantics::Signless);
+    mlir::Type opResType = resultType;
+    if (left.getType().isUnsignedInteger()) {
+      left = createConvert(loc, signlessType, left);
+      opResType = signlessType;
+    }
+    if (right.getType().isUnsignedInteger()) {
+      right = createConvert(loc, signlessType, right);
+      opResType = signlessType;
+    }
+    mlir::Value result = create<OpTy>(loc, opResType, left, right);
+    if (resultType.isUnsignedInteger())
+      result = createConvert(loc, resultType, result);
+    return result;
+  }
+
 private:
   /// Set attributes (e.g. FastMathAttr) to \p op operation
   /// based on the current attributes setting.
@@ -744,6 +769,11 @@ mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value genCPtrOrCFunptrAddr(fir::FirOpBuilder &builder, mlir::Location loc,
                                  mlir::Value cPtr, mlir::Type ty);
 
+/// The type(C_DEVPTR) is defined as the derived type with only one
+/// component of C_PTR type. Get the C address from the C_PTR component.
+mlir::Value genCDevPtrAddr(fir::FirOpBuilder &builder, mlir::Location loc,
+                           mlir::Value cDevPtr, mlir::Type ty);
+
 /// Get the C address value.
 mlir::Value genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
                                   mlir::Location loc, mlir::Value cPtr);
@@ -773,6 +803,15 @@ elideLengthsAlreadyInType(mlir::Type type, mlir::ValueRange lenParams);
 
 /// Get the address space which should be used for allocas
 uint64_t getAllocaAddressSpace(mlir::DataLayout *dataLayout);
+
+/// The two vectors of MLIR values have the following property:
+///   \p extents1[i] must have the same value as \p extents2[i]
+/// The function returns a new vector of MLIR values that preserves
+/// the same property vs \p extents1 and \p extents2, but allows
+/// more optimizations. For example, if extents1[j] is a known constant,
+/// and extents2[j] is not, then result[j] is the MLIR value extents1[j].
+llvm::SmallVector<mlir::Value> deduceOptimalExtents(mlir::ValueRange extents1,
+                                                    mlir::ValueRange extents2);
 
 } // namespace fir::factory
 

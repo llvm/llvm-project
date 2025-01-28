@@ -128,7 +128,7 @@ static cl::opt<bool, true>
 
 static cl::opt<bool> UseLIRCodeSizeHeurs(
     "use-lir-code-size-heurs",
-    cl::desc("Use loop idiom recognition code size heuristics when compiling"
+    cl::desc("Use loop idiom recognition code size heuristics when compiling "
              "with -Os/-Oz"),
     cl::init(true), cl::Hidden);
 
@@ -1641,8 +1641,8 @@ static bool detectShiftUntilLessThanIdiom(Loop *CurLoop, const DataLayout &DL,
   //       plus "cnt0". Currently it is not optimized.
   //       This step could be used to detect POPCNT instruction:
   //       cnt.next = cnt + (x.next & 1)
-  for (Instruction &Inst : llvm::make_range(
-           LoopEntry->getFirstNonPHI()->getIterator(), LoopEntry->end())) {
+  for (Instruction &Inst :
+       llvm::make_range(LoopEntry->getFirstNonPHIIt(), LoopEntry->end())) {
     if (Inst.getOpcode() != Instruction::Add)
       continue;
 
@@ -1745,8 +1745,8 @@ static bool detectPopcountIdiom(Loop *CurLoop, BasicBlock *PreCondBB,
   // step 4: Find the instruction which count the population: cnt2 = cnt1 + 1
   {
     CountInst = nullptr;
-    for (Instruction &Inst : llvm::make_range(
-             LoopEntry->getFirstNonPHI()->getIterator(), LoopEntry->end())) {
+    for (Instruction &Inst :
+         llvm::make_range(LoopEntry->getFirstNonPHIIt(), LoopEntry->end())) {
       if (Inst.getOpcode() != Instruction::Add)
         continue;
 
@@ -1869,8 +1869,8 @@ static bool detectShiftUntilZeroIdiom(Loop *CurLoop, const DataLayout &DL,
   //       plus "cnt0". Currently it is not optimized.
   //       This step could be used to detect POPCNT instruction:
   //       cnt.next = cnt + (x.next & 1)
-  for (Instruction &Inst : llvm::make_range(
-           LoopEntry->getFirstNonPHI()->getIterator(), LoopEntry->end())) {
+  for (Instruction &Inst :
+       llvm::make_range(LoopEntry->getFirstNonPHIIt(), LoopEntry->end())) {
     if (Inst.getOpcode() != Instruction::Add)
       continue;
 
@@ -2432,7 +2432,7 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
 
   // Step 1: Check if the loop backedge is in desirable form.
 
-  ICmpInst::Predicate Pred;
+  CmpPredicate Pred;
   Value *CmpLHS, *CmpRHS;
   BasicBlock *TrueBB, *FalseBB;
   if (!match(LoopHeaderBB->getTerminator(),
@@ -2797,7 +2797,7 @@ static bool detectShiftUntilZeroIdiom(Loop *CurLoop, ScalarEvolution *SE,
 
   // Step 1: Check if the loop backedge, condition is in desirable form.
 
-  ICmpInst::Predicate Pred;
+  CmpPredicate Pred;
   BasicBlock *TrueBB, *FalseBB;
   if (!match(LoopHeaderBB->getTerminator(),
              m_Br(m_Instruction(ValShiftedIsZero), m_BasicBlock(TrueBB),

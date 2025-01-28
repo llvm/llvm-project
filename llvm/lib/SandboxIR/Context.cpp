@@ -628,11 +628,14 @@ Module *Context::getOrCreateModule(llvm::Module *LLVMM) {
 }
 
 Function *Context::createFunction(llvm::Function *F) {
-  assert(getValue(F) == nullptr && "Already exists!");
   // Create the module if needed before we create the new sandboxir::Function.
   // Note: this won't fully populate the module. The only globals that will be
   // available will be the ones being used within the function.
   getOrCreateModule(F->getParent());
+
+  // There may be a function declaration already defined. Regardless destroy it.
+  if (Function *ExistingF = cast_or_null<Function>(getValue(F)))
+    detach(ExistingF);
 
   auto NewFPtr = std::unique_ptr<Function>(new Function(F, *this));
   auto *SBF = cast<Function>(registerValue(std::move(NewFPtr)));
@@ -686,7 +689,7 @@ void Context::runMoveInstrCallbacks(Instruction *I, const BBIterator &WhereIt) {
 Context::CallbackID Context::registerEraseInstrCallback(EraseInstrCallback CB) {
   assert(EraseInstrCallbacks.size() <= MaxRegisteredCallbacks &&
          "EraseInstrCallbacks size limit exceeded");
-  CallbackID ID = NextCallbackID++;
+  CallbackID ID{NextCallbackID++};
   EraseInstrCallbacks[ID] = CB;
   return ID;
 }
@@ -700,7 +703,7 @@ Context::CallbackID
 Context::registerCreateInstrCallback(CreateInstrCallback CB) {
   assert(CreateInstrCallbacks.size() <= MaxRegisteredCallbacks &&
          "CreateInstrCallbacks size limit exceeded");
-  CallbackID ID = NextCallbackID++;
+  CallbackID ID{NextCallbackID++};
   CreateInstrCallbacks[ID] = CB;
   return ID;
 }
@@ -713,7 +716,7 @@ void Context::unregisterCreateInstrCallback(CallbackID ID) {
 Context::CallbackID Context::registerMoveInstrCallback(MoveInstrCallback CB) {
   assert(MoveInstrCallbacks.size() <= MaxRegisteredCallbacks &&
          "MoveInstrCallbacks size limit exceeded");
-  CallbackID ID = NextCallbackID++;
+  CallbackID ID{NextCallbackID++};
   MoveInstrCallbacks[ID] = CB;
   return ID;
 }

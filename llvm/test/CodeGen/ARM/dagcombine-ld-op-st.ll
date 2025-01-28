@@ -32,10 +32,10 @@ define i16 @test(ptr %p1) {
 ;
 ; CHECK-LE-NARROW-LABEL: test:
 ; CHECK-LE-NARROW:       @ %bb.0: @ %entry
-; CHECK-LE-NARROW-NEXT:    ldrh r1, [r0, #8]
-; CHECK-LE-NARROW-NEXT:    movw r2, #65534
-; CHECK-LE-NARROW-NEXT:    orr r1, r1, r2
-; CHECK-LE-NARROW-NEXT:    strh r1, [r0, #8]
+; CHECK-LE-NARROW-NEXT:    ldr r1, [r0, #6]
+; CHECK-LE-NARROW-NEXT:    orr r1, r1, #16646144
+; CHECK-LE-NARROW-NEXT:    orr r1, r1, #-16777216
+; CHECK-LE-NARROW-NEXT:    str r1, [r0, #6]
 ; CHECK-LE-NARROW-NEXT:    mov r0, #0
 ; CHECK-LE-NARROW-NEXT:    bx lr
 ;
@@ -50,10 +50,10 @@ define i16 @test(ptr %p1) {
 ;
 ; CHECK-BE-NARROW-LABEL: test:
 ; CHECK-BE-NARROW:       @ %bb.0: @ %entry
-; CHECK-BE-NARROW-NEXT:    ldrh r1, [r0]
-; CHECK-BE-NARROW-NEXT:    movw r2, #65534
-; CHECK-BE-NARROW-NEXT:    orr r1, r1, r2
-; CHECK-BE-NARROW-NEXT:    strh r1, [r0]
+; CHECK-BE-NARROW-NEXT:    ldr r1, [r0]
+; CHECK-BE-NARROW-NEXT:    orr r1, r1, #16646144
+; CHECK-BE-NARROW-NEXT:    orr r1, r1, #-16777216
+; CHECK-BE-NARROW-NEXT:    str r1, [r0]
 ; CHECK-BE-NARROW-NEXT:    mov r0, #0
 ; CHECK-BE-NARROW-NEXT:    bx lr
 entry:

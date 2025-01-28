@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -1572,9 +1573,9 @@ void generateCollapsedIndexingRegion(Location loc, Block *block,
         rewriter.create<linalg::IndexOp>(loc, foldedDims.index());
     for (auto dim : llvm::reverse(foldedDimsRef.drop_front())) {
       indexReplacementVals[dim] =
-          rewriter.create<arith::RemUIOp>(loc, newIndexVal, loopRange[dim]);
+          rewriter.create<arith::RemSIOp>(loc, newIndexVal, loopRange[dim]);
       newIndexVal =
-          rewriter.create<arith::DivUIOp>(loc, newIndexVal, loopRange[dim]);
+          rewriter.create<arith::DivSIOp>(loc, newIndexVal, loopRange[dim]);
     }
     indexReplacementVals[foldedDims.value().front()] = newIndexVal;
   }
@@ -1707,7 +1708,7 @@ FailureOr<CollapseResult> mlir::linalg::collapseOpIterationDims(
     if (auto attr = llvm::dyn_cast_if_present<Attribute>(ofr))
       return cast<IntegerAttr>(attr).getInt() == value;
     llvm::APInt actual;
-    return matchPattern(ofr.get<Value>(), m_ConstantInt(&actual)) &&
+    return matchPattern(cast<Value>(ofr), m_ConstantInt(&actual)) &&
            actual.getSExtValue() == value;
   };
   if (!llvm::all_of(loopRanges, [&](Range range) {
@@ -2206,7 +2207,7 @@ struct LinalgElementwiseOpFusionPass
     // Use TopDownTraversal for compile time reasons
     GreedyRewriteConfig grc;
     grc.useTopDownTraversal = true;
-    (void)applyPatternsAndFoldGreedily(op, std::move(patterns), grc);
+    (void)applyPatternsGreedily(op, std::move(patterns), grc);
   }
 };
 

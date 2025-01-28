@@ -617,7 +617,8 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   case 6:
     if (ArchProfile == llvm::ARM::ProfileKind::M)
       LDREX = 0;
-    else if (ArchKind == llvm::ARM::ArchKind::ARMV6K)
+    else if (ArchKind == llvm::ARM::ArchKind::ARMV6K ||
+             ArchKind == llvm::ARM::ArchKind::ARMV6KZ)
       LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
     else
       LDREX = LDREX_W;
@@ -1071,34 +1072,31 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 }
 
-static constexpr int NumBuiltins =
-    clang::ARM::LastTSBuiltin - Builtin::FirstTSBuiltin;
-
-static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+static constexpr Builtin::Info BuiltinInfo[] = {
+#define BUILTIN(ID, TYPE, ATTRS)                                               \
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::HEADER, ALL_LANGUAGES},
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #include "clang/Basic/BuiltinsNEON.def"
 
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_STR_TABLE
+#define BUILTIN(ID, TYPE, ATTRS)                                               \
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#define LANGBUILTIN(ID, TYPE, ATTRS, LANG)                                     \
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, LANG},
+#define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::HEADER, ALL_LANGUAGES},
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
 #include "clang/Basic/BuiltinsARM.def"
-    , {
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsNEON.def"
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define LANGBUILTIN CLANG_LANGBUILTIN_ENTRY
-#define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsARM.def"
-      });
+};
 
-std::pair<const char *, ArrayRef<Builtin::Info>>
-ARMTargetInfo::getTargetBuiltinStorage() const {
-  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
+ArrayRef<Builtin::Info> ARMTargetInfo::getTargetBuiltins() const {
+  return llvm::ArrayRef(BuiltinInfo,
+                        clang::ARM::LastTSBuiltin - Builtin::FirstTSBuiltin);
 }
 
 bool ARMTargetInfo::isCLZForZeroUndef() const { return false; }
@@ -1480,6 +1478,16 @@ void CygwinARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   DefineStd(Builder, "unix", Opts);
   if (Opts.CPlusPlus)
     Builder.defineMacro("_GNU_SOURCE");
+}
+
+AppleMachOARMTargetInfo::AppleMachOARMTargetInfo(const llvm::Triple &Triple,
+                                                 const TargetOptions &Opts)
+    : AppleMachOTargetInfo<ARMleTargetInfo>(Triple, Opts) {}
+
+void AppleMachOARMTargetInfo::getOSDefines(const LangOptions &Opts,
+                                           const llvm::Triple &Triple,
+                                           MacroBuilder &Builder) const {
+  getAppleMachODefines(Builder, Opts, Triple);
 }
 
 DarwinARMTargetInfo::DarwinARMTargetInfo(const llvm::Triple &Triple,

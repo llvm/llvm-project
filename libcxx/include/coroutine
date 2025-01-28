@@ -38,8 +38,9 @@ struct suspend_always;
 
  */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/coroutine>
+#else
 #  include <__config>
 
 #  if _LIBCPP_STD_VER >= 20
@@ -66,6 +67,6 @@ struct suspend_always;
 #    include <limits>
 #    include <type_traits>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_COROUTINE

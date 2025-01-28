@@ -15,6 +15,7 @@ add_llvm_component_library(LLVMOrcJIT
   Core.cpp
   DebugObjectManagerPlugin.cpp
   DebugUtils.cpp
+  EHFrameRegistrationPlugin.cpp
   EPCDynamicLibrarySearchGenerator.cpp
   EPCDebugObjectRegistrar.cpp
   EPCEHFrameRegistrar.cpp
@@ -33,6 +34,8 @@ add_llvm_component_library(LLVMOrcJIT
   LazyObjectLinkingLayer.cpp
   LazyReexports.cpp
   Layer.cpp
+  LinkGraphLayer.cpp
+  LinkGraphLinkingLayer.cpp
   LoadLinkableFile.cpp
   LookupAndRecordAddrs.cpp
   LLJIT.cpp

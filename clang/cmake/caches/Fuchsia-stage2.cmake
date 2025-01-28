@@ -190,6 +190,10 @@ foreach(target aarch64-unknown-linux-gnu;armv7-unknown-linux-gnueabihf;i386-unkn
     set(RUNTIMES_${target}_LLVM_TOOLS_DIR "${CMAKE_BINARY_DIR}/bin" CACHE BOOL "")
     set(RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
 
+    # Enable FatLTO for Linux and baremetal runtimes
+    set(RUNTIMES_${target}_LLVM_ENABLE_LTO ON CACHE BOOL "")
+    set(RUNTIMES_${target}_LLVM_ENABLE_FATLTO ON CACHE BOOL "")
+
     # Use .build-id link.
     list(APPEND RUNTIME_BUILD_ID_LINK "${target}")
   endif()
@@ -272,6 +276,10 @@ if(FUCHSIA_SDK)
     set(RUNTIMES_${target}+asan+noexcept_LIBCXXABI_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
     set(RUNTIMES_${target}+asan+noexcept_LIBCXX_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
 
+    # Enable FatLTO for Fuchsia runtimes
+    set(RUNTIMES_${target}_LLVM_ENABLE_LTO ON CACHE BOOL "")
+    set(RUNTIMES_${target}_LLVM_ENABLE_FATLTO ON CACHE BOOL "")
+
     # Use .build-id link.
     list(APPEND RUNTIME_BUILD_ID_LINK "${target}")
   endforeach()
@@ -300,7 +308,7 @@ if(FUCHSIA_SDK)
   set(LLVM_RUNTIME_MULTILIB_hwasan+noexcept_TARGETS "aarch64-unknown-fuchsia;riscv64-unknown-fuchsia" CACHE STRING "")
 endif()
 
-foreach(target armv6m-none-eabi;armv7m-none-eabi;armv8m.main-none-eabi;armv8.1m.main-none-eabi;aarch64-none-elf)
+foreach(target armv6m-none-eabi;armv7m-none-eabi;armv7em-none-eabi;armv8m.main-none-eabi;armv8.1m.main-none-eabi;aarch64-none-elf)
   list(APPEND BUILTIN_TARGETS "${target}")
   set(BUILTINS_${target}_CMAKE_SYSTEM_NAME Generic CACHE STRING "")
   set(BUILTINS_${target}_CMAKE_SYSTEM_PROCESSOR arm CACHE STRING "")
@@ -333,7 +341,7 @@ foreach(target armv6m-none-eabi;armv7m-none-eabi;armv8m.main-none-eabi;armv8.1m.
   foreach(lang C;CXX;ASM)
     # TODO: The preprocessor defines workaround various issues in libc and libc++ integration.
     # These should be addressed and removed over time.
-    set(RUNTIMES_${target}_CMAKE_${lang}_local_flags "--target=${target} -Wno-atomic-alignment \"-Dvfprintf(stream, format, vlist)=vprintf(format, vlist)\" \"-Dfprintf(stream, format, ...)=printf(format)\" \"-Dgettimeofday(tv, tz)\" -D_LIBCPP_PRINT=1")
+    set(RUNTIMES_${target}_CMAKE_${lang}_local_flags "--target=${target} -Wno-atomic-alignment \"-Dvfprintf(stream, format, vlist)=vprintf(format, vlist)\" \"-Dfprintf(stream, format, ...)=printf(format)\" -D_LIBCPP_PRINT=1")
     if(NOT ${target} STREQUAL "aarch64-none-elf")
       set(RUNTIMES_${target}_CMAKE_${lang}_local_flags "${RUNTIMES_${target}_CMAKE_${lang}_local_flags} -mthumb")
     endif()
@@ -369,6 +377,10 @@ foreach(target armv6m-none-eabi;armv7m-none-eabi;armv8m.main-none-eabi;armv8.1m.
   set(RUNTIMES_${target}_LLVM_INCLUDE_TESTS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_ASSERTIONS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES "libc;libcxx" CACHE STRING "")
+
+  # Enable FatLTO for baremetal runtimes
+  set(RUNTIMES_${target}_LLVM_ENABLE_LTO ON CACHE BOOL "")
+  set(RUNTIMES_${target}_LLVM_ENABLE_FATLTO ON CACHE BOOL "")
 endforeach()
 
 foreach(target riscv32-unknown-elf)
@@ -394,7 +406,7 @@ foreach(target riscv32-unknown-elf)
   foreach(lang C;CXX;ASM)
     # TODO: The preprocessor defines workaround various issues in libc and libc++ integration.
     # These should be addressed and removed over time.
-    set(RUNTIMES_${target}_CMAKE_${lang}_FLAGS "--target=${target} -march=rv32imafc -mabi=ilp32f -Wno-atomic-alignment \"-Dvfprintf(stream, format, vlist)=vprintf(format, vlist)\" \"-Dfprintf(stream, format, ...)=printf(format)\" \"-Dgettimeofday(tv, tz)\" -D_LIBCPP_PRINT=1" CACHE STRING "")
+    set(RUNTIMES_${target}_CMAKE_${lang}_FLAGS "--target=${target} -march=rv32imafc -mabi=ilp32f -Wno-atomic-alignment \"-Dvfprintf(stream, format, vlist)=vprintf(format, vlist)\" \"-Dfprintf(stream, format, ...)=printf(format)\" -D_LIBCPP_PRINT=1" CACHE STRING "")
   endforeach()
   foreach(type SHARED;MODULE;EXE)
     set(RUNTIMES_${target}_CMAKE_${type}_LINKER_FLAGS "-fuse-ld=lld" CACHE STRING "")
@@ -420,6 +432,10 @@ foreach(target riscv32-unknown-elf)
   set(RUNTIMES_${target}_LLVM_INCLUDE_TESTS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_ASSERTIONS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES "libc;libcxx" CACHE STRING "")
+
+  # Enable FatLTO for baremetal runtimes
+  set(RUNTIMES_${target}_LLVM_ENABLE_LTO ON CACHE BOOL "")
+  set(RUNTIMES_${target}_LLVM_ENABLE_FATLTO ON CACHE BOOL "")
 endforeach()
 
 set(LLVM_BUILTIN_TARGETS "${BUILTIN_TARGETS}" CACHE STRING "")

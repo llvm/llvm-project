@@ -81,7 +81,7 @@ define i64 @strtol_not_const_str(ptr %s) #0 {
 
 define i32 @atoi_not_const_str(ptr %s) #0 {
 ; CHECK-LABEL: @atoi_not_const_str(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @atoi(ptr nocapture [[S:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @atoi(ptr [[S:%.*]])
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = call i32 @atoi(ptr %s) #4

@@ -73,6 +73,9 @@ public:
 
   void Enter(const parser::OpenMPConstruct &);
   void Leave(const parser::OpenMPConstruct &);
+  void Enter(const parser::OpenMPDeclarativeConstruct &);
+  void Leave(const parser::OpenMPDeclarativeConstruct &);
+
   void Enter(const parser::OpenMPLoopConstruct &);
   void Leave(const parser::OpenMPLoopConstruct &);
   void Enter(const parser::OmpEndLoopDirective &);
@@ -102,6 +105,10 @@ public:
   void Enter(const parser::OmpDeclareTargetWithList &);
   void Enter(const parser::OmpDeclareTargetWithClause &);
   void Leave(const parser::OmpDeclareTargetWithClause &);
+  void Enter(const parser::OpenMPDispatchConstruct &);
+  void Leave(const parser::OpenMPDispatchConstruct &);
+  void Enter(const parser::OmpErrorDirective &);
+  void Leave(const parser::OmpErrorDirective &);
   void Enter(const parser::OpenMPExecutableAllocate &);
   void Leave(const parser::OpenMPExecutableAllocate &);
   void Enter(const parser::OpenMPAllocatorsConstruct &);
@@ -192,6 +199,8 @@ private:
       const parser::CharBlock &source, const parser::OmpObjectList &objList);
   void CheckIntentInPointer(SymbolSourceMap &, const llvm::omp::Clause);
   void CheckProcedurePointer(SymbolSourceMap &, const llvm::omp::Clause);
+  void CheckCrayPointee(const parser::OmpObjectList &objectList,
+      llvm::StringRef clause, bool suggestToUseCrayPointer = true);
   void GetSymbolsInObjectList(const parser::OmpObjectList &, SymbolSourceMap &);
   void CheckDefinableObjects(SymbolSourceMap &, const llvm::omp::Clause);
   void CheckCopyingPolymorphicAllocatable(
@@ -230,10 +239,10 @@ private:
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
   void CheckReductionObjects(
       const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
-  bool CheckReductionOperators(const parser::OmpClause::Reduction &);
-  bool CheckIntrinsicOperator(
-      const parser::DefinedOperator::IntrinsicOperator &);
-  void CheckReductionTypeList(const parser::OmpClause::Reduction &);
+  bool CheckReductionOperator(const parser::OmpReductionIdentifier &ident,
+      parser::CharBlock source, llvm::omp::Clause clauseId);
+  void CheckReductionObjectTypes(const parser::OmpObjectList &objects,
+      const parser::OmpReductionIdentifier &ident);
   void CheckReductionModifier(const parser::OmpReductionModifier &);
   void CheckMasterNesting(const parser::OpenMPBlockConstruct &x);
   void ChecksOnOrderedAsBlock();
@@ -241,7 +250,8 @@ private:
   void CheckScan(const parser::OpenMPSimpleStandaloneConstruct &x);
   void ChecksOnOrderedAsStandalone();
   void CheckOrderedDependClause(std::optional<std::int64_t> orderedValue);
-  void CheckReductionArraySection(const parser::OmpObjectList &ompObjectList);
+  void CheckReductionArraySection(
+      const parser::OmpObjectList &ompObjectList, llvm::omp::Clause clauseId);
   void CheckArraySection(const parser::ArrayElement &arrayElement,
       const parser::Name &name, const llvm::omp::Clause clause);
   void CheckSharedBindingInOuterContext(
@@ -258,6 +268,8 @@ private:
   void CheckAllowedRequiresClause(llvmOmpClause clause);
   bool deviceConstructFound_{false};
 
+  void CheckAlignValue(const parser::OmpClause &);
+
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }
   int GetDirectiveNest(const int index) { return directiveNest_[index]; }
@@ -267,11 +279,12 @@ private:
       const parser::Variable &, const parser::Expr &);
   inline void ErrIfNonScalarAssignmentStmt(
       const parser::Variable &, const parser::Expr &);
-  enum directiveNestType {
+  enum directiveNestType : int {
     SIMDNest,
     TargetBlockOnlyTeams,
     TargetNest,
-    LastType
+    DeclarativeNest,
+    LastType = DeclarativeNest,
   };
   int directiveNest_[LastType + 1] = {0};
 

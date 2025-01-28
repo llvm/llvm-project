@@ -410,8 +410,8 @@ CodeExtractor::findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock) {
   assert(!getFirstPHI(CommonExitBlock) && "Phi not expected");
 #endif
 
-  BasicBlock *NewExitBlock = CommonExitBlock->splitBasicBlock(
-      CommonExitBlock->getFirstNonPHI()->getIterator());
+  BasicBlock *NewExitBlock =
+      CommonExitBlock->splitBasicBlock(CommonExitBlock->getFirstNonPHIIt());
 
   for (BasicBlock *Pred :
        llvm::make_early_inc_range(predecessors(CommonExitBlock))) {
@@ -627,6 +627,24 @@ bool CodeExtractor::isEligible() const {
         return false;
     }
   }
+  // stacksave as input implies stackrestore in the outlined function.
+  // This can confuse prolog epilog insertion phase.
+  // stacksave's uses must not cross outlined function.
+  for (BasicBlock *BB : Blocks) {
+    for (Instruction &I : *BB) {
+      IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
+      if (!II)
+        continue;
+      bool IsSave = II->getIntrinsicID() == Intrinsic::stacksave;
+      bool IsRestore = II->getIntrinsicID() == Intrinsic::stackrestore;
+      if (IsSave && any_of(II->users(), [&Blks = this->Blocks](User *U) {
+            return !definedInRegion(Blks, U);
+          }))
+        return false;
+      if (IsRestore && !definedInRegion(Blocks, II->getArgOperand(0)))
+        return false;
+    }
+  }
   return true;
 }
 
@@ -683,7 +701,7 @@ void CodeExtractor::severSplitPHINodesOfEntry(BasicBlock *&Header) {
   // containing PHI nodes merging values from outside of the region, and a
   // second that contains all of the code for the block and merges back any
   // incoming values from inside of the region.
-  BasicBlock *NewBB = SplitBlock(Header, Header->getFirstNonPHI(), DT);
+  BasicBlock *NewBB = SplitBlock(Header, Header->getFirstNonPHIIt(), DT);
 
   // We only want to code extract the second block now, and it becomes the new
   // header of the region.
@@ -831,7 +849,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       StructValues.insert(output);
     } else
       ParamTy.push_back(
-          PointerType::get(output->getType(), DL.getAllocaAddrSpace()));
+          PointerType::get(output->getContext(), DL.getAllocaAddrSpace()));
   }
 
   assert(
@@ -845,7 +863,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
   if (!AggParamTy.empty()) {
     StructTy = StructType::get(M->getContext(), AggParamTy);
     ParamTy.push_back(PointerType::get(
-        StructTy, ArgsInZeroAddressSpace ? 0 : DL.getAllocaAddrSpace()));
+        M->getContext(), ArgsInZeroAddressSpace ? 0 : DL.getAllocaAddrSpace()));
   }
 
   Type *RetTy = getSwitchType();
@@ -935,6 +953,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::SanitizeMemory:
       case Attribute::SanitizeNumericalStability:
       case Attribute::SanitizeThread:
+      case Attribute::SanitizeType:
       case Attribute::SanitizeHWAddress:
       case Attribute::SanitizeMemTag:
       case Attribute::SanitizeRealtime:
@@ -956,6 +975,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::AllocatedPointer:
       case Attribute::AllocAlign:
       case Attribute::ByVal:
+      case Attribute::Captures:
       case Attribute::Dereferenceable:
       case Attribute::DereferenceableOrNull:
       case Attribute::ElementType:
@@ -1104,9 +1124,9 @@ static void insertLifetimeMarkersSurroundingCall(
           Intrinsic::getOrInsertDeclaration(M, MarkerFunc, Mem->getType());
       auto Marker = CallInst::Create(Func, {NegativeOne, Mem});
       if (InsertBefore)
-        Marker->insertBefore(TheCall);
+        Marker->insertBefore(TheCall->getIterator());
       else
-        Marker->insertBefore(Term);
+        Marker->insertBefore(Term->getIterator());
     }
   };
 
@@ -1421,7 +1441,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     auto *HoistToBlock = findOrCreateBlockForHoisting(CommonExit);
     Instruction *TI = HoistToBlock->getTerminator();
     for (auto *II : HoistingCands)
-      cast<Instruction>(II)->moveBefore(TI);
+      cast<Instruction>(II)->moveBefore(TI->getIterator());
     computeExtractedFuncRetVals();
   }
 
@@ -1795,7 +1815,7 @@ CallInst *CodeExtractor::emitReplacerCall(
     if (ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
       auto *StructSpaceCast = new AddrSpaceCastInst(
           Struct, PointerType ::get(Context, 0), "structArg.ascast");
-      StructSpaceCast->insertAfter(Struct);
+      StructSpaceCast->insertAfter(Struct->getIterator());
       params.push_back(StructSpaceCast);
     } else {
       params.push_back(Struct);

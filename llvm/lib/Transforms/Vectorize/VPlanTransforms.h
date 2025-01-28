@@ -130,13 +130,20 @@ struct VPlanTransforms {
   ///    exit conditions
   ///  * splitting the original middle block to branch to the early exit block
   ///    if taken.
-  static void handleUncountableEarlyExit(VPlan &Plan, ScalarEvolution &SE,
+  static bool handleUncountableEarlyExit(VPlan &Plan, ScalarEvolution &SE,
                                          Loop *OrigLoop,
                                          BasicBlock *UncountableExitingBlock,
                                          VPRecipeBuilder &RecipeBuilder);
 
   /// Lower abstract recipes to concrete ones, that can be codegen'd.
   static void convertToConcreteRecipes(VPlan &Plan);
+
+  /// If there's a single exit block, optimize its phi recipes that use exiting
+  /// IV values by feeding them precomputed end values instead, possibly taken
+  /// one step backwards.
+  static void
+  optimizeInductionExitUsers(VPlan &Plan,
+                             DenseMap<VPValue *, VPValue *> &EndValues);
 };
 
 } // namespace llvm

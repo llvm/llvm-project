@@ -276,7 +276,7 @@ private:
   // Assign index for each instruction to quickly determine dominance.
   InstrPosIndexes PosIndexes;
 
-  void setPhysRegState(MCPhysReg PhysReg, unsigned NewState);
+  void setPhysRegState(MCRegister PhysReg, unsigned NewState);
   bool isPhysRegFree(MCPhysReg PhysReg) const;
 
   /// Mark a physreg as used in this instruction.
@@ -368,6 +368,9 @@ private:
                      bool LookAtPhysRegUses = false);
   bool useVirtReg(MachineInstr &MI, MachineOperand &MO, Register VirtReg);
 
+  MCPhysReg getErrorAssignment(const LiveReg &LR, MachineInstr &MI,
+                               const TargetRegisterClass &RC);
+
   MachineBasicBlock::iterator
   getMBBBeginInsertionPoint(MachineBasicBlock &MBB,
                             SmallSet<Register, 2> &PrologLiveIns) const;
@@ -446,7 +449,7 @@ bool RegAllocFastImpl::shouldAllocateRegister(const Register Reg) const {
   return ShouldAllocateRegisterImpl(*TRI, *MRI, Reg);
 }
 
-void RegAllocFastImpl::setPhysRegState(MCPhysReg PhysReg, unsigned NewState) {
+void RegAllocFastImpl::setPhysRegState(MCRegister PhysReg, unsigned NewState) {
   for (MCRegUnit Unit : TRI->regunits(PhysReg))
     RegUnitStates[Unit] = NewState;
 }
@@ -668,7 +671,7 @@ void RegAllocFastImpl::reloadAtBegin(MachineBasicBlock &MBB) {
     return;
 
   for (MachineBasicBlock::RegisterMaskPair P : MBB.liveins()) {
-    MCPhysReg Reg = P.PhysReg;
+    MCRegister Reg = P.PhysReg;
     // Set state to live-in. This possibly overrides mappings to virtual
     // registers but we don't care anymore at this point.
     setPhysRegState(Reg, regLiveIn);
@@ -682,10 +685,10 @@ void RegAllocFastImpl::reloadAtBegin(MachineBasicBlock &MBB) {
       getMBBBeginInsertionPoint(MBB, PrologLiveIns);
   for (const LiveReg &LR : LiveVirtRegs) {
     MCPhysReg PhysReg = LR.PhysReg;
-    if (PhysReg == 0)
+    if (PhysReg == 0 || LR.Error)
       continue;
 
-    MCRegister FirstUnit = *TRI->regunits(PhysReg).begin();
+    MCRegUnit FirstUnit = *TRI->regunits(PhysReg).begin();
     if (RegUnitStates[FirstUnit] == regLiveIn)
       continue;
 
@@ -755,7 +758,7 @@ bool RegAllocFastImpl::displacePhysReg(MachineInstr &MI, MCPhysReg PhysReg) {
 void RegAllocFastImpl::freePhysReg(MCPhysReg PhysReg) {
   LLVM_DEBUG(dbgs() << "Freeing " << printReg(PhysReg, TRI) << ':');
 
-  MCRegister FirstUnit = *TRI->regunits(PhysReg).begin();
+  MCRegUnit FirstUnit = *TRI->regunits(PhysReg).begin();
   switch (unsigned VirtReg = RegUnitStates[FirstUnit]) {
   case regFree:
     LLVM_DEBUG(dbgs() << '\n');
@@ -963,14 +966,8 @@ void RegAllocFastImpl::allocVirtReg(MachineInstr &MI, LiveReg &LR,
   if (!BestReg) {
     // Nothing we can do: Report an error and keep going with an invalid
     // allocation.
-    if (MI.isInlineAsm())
-      MI.emitInlineAsmError(
-          "inline assembly requires more registers than available");
-    else
-      MI.emitInlineAsmError("ran out of registers during register allocation");
-
+    LR.PhysReg = getErrorAssignment(LR, MI, RC);
     LR.Error = true;
-    LR.PhysReg = 0;
     return;
   }
 
@@ -985,15 +982,23 @@ void RegAllocFastImpl::allocVirtRegUndef(MachineOperand &MO) {
   if (!shouldAllocateRegister(VirtReg))
     return;
 
-  LiveRegMap::const_iterator LRI = findLiveVirtReg(VirtReg);
+  LiveRegMap::iterator LRI = findLiveVirtReg(VirtReg);
   MCPhysReg PhysReg;
   if (LRI != LiveVirtRegs.end() && LRI->PhysReg) {
     PhysReg = LRI->PhysReg;
   } else {
     const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
     ArrayRef<MCPhysReg> AllocationOrder = RegClassInfo.getOrder(&RC);
-    assert(!AllocationOrder.empty() && "Allocation order must not be empty");
-    PhysReg = AllocationOrder[0];
+    if (AllocationOrder.empty()) {
+      // All registers in the class were reserved.
+      //
+      // It might be OK to take any entry from the class as this is an undef
+      // use, but accepting this would give different behavior than greedy and
+      // basic.
+      PhysReg = getErrorAssignment(*LRI, *MO.getParent(), RC);
+      LRI->Error = true;
+    } else
+      PhysReg = AllocationOrder.front();
   }
 
   unsigned SubRegIdx = MO.getSubReg();
@@ -1066,17 +1071,8 @@ bool RegAllocFastImpl::defineVirtReg(MachineInstr &MI, unsigned OpNum,
   }
   if (LRI->PhysReg == 0) {
     allocVirtReg(MI, *LRI, 0, LookAtPhysRegUses);
-    // If no physical register is available for LRI, we assign one at random
-    // and bail out of this function immediately.
-    if (LRI->Error) {
-      const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
-      ArrayRef<MCPhysReg> AllocationOrder = RegClassInfo.getOrder(&RC);
-      if (AllocationOrder.empty())
-        return setPhysReg(MI, MO, MCRegister::NoRegister);
-      return setPhysReg(MI, MO, *AllocationOrder.begin());
-    }
   } else {
-    assert(!isRegUsedInInstr(LRI->PhysReg, LookAtPhysRegUses) &&
+    assert((!isRegUsedInInstr(LRI->PhysReg, LookAtPhysRegUses) || LRI->Error) &&
            "TODO: preassign mismatch");
     LLVM_DEBUG(dbgs() << "In def of " << printReg(VirtReg, TRI)
                       << " use existing assignment to "
@@ -1159,13 +1155,6 @@ bool RegAllocFastImpl::useVirtReg(MachineInstr &MI, MachineOperand &MO,
       }
     }
     allocVirtReg(MI, *LRI, Hint, false);
-    if (LRI->Error) {
-      const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
-      ArrayRef<MCPhysReg> AllocationOrder = RegClassInfo.getOrder(&RC);
-      if (AllocationOrder.empty())
-        return setPhysReg(MI, MO, MCRegister::NoRegister);
-      return setPhysReg(MI, MO, *AllocationOrder.begin());
-    }
   }
 
   LRI->LastUse = &MI;
@@ -1175,6 +1164,54 @@ bool RegAllocFastImpl::useVirtReg(MachineInstr &MI, MachineOperand &MO,
   }
   markRegUsedInInstr(LRI->PhysReg);
   return setPhysReg(MI, MO, LRI->PhysReg);
+}
+
+/// Query a physical register to use as a filler in contexts where the
+/// allocation has failed. This will raise an error, but not abort the
+/// compilation.
+MCPhysReg RegAllocFastImpl::getErrorAssignment(const LiveReg &LR,
+                                               MachineInstr &MI,
+                                               const TargetRegisterClass &RC) {
+  MachineFunction &MF = *MI.getMF();
+
+  // Avoid repeating the error every time a register is used.
+  bool EmitError = !MF.getProperties().hasProperty(
+      MachineFunctionProperties::Property::FailedRegAlloc);
+  if (EmitError)
+    MF.getProperties().set(MachineFunctionProperties::Property::FailedRegAlloc);
+
+  // If the allocation order was empty, all registers in the class were
+  // probably reserved. Fall back to taking the first register in the class,
+  // even if it's reserved.
+  ArrayRef<MCPhysReg> AllocationOrder = RegClassInfo.getOrder(&RC);
+  if (AllocationOrder.empty()) {
+    const Function &Fn = MF.getFunction();
+    if (EmitError) {
+      Fn.getContext().diagnose(DiagnosticInfoRegAllocFailure(
+          "no registers from class available to allocate", Fn,
+          MI.getDebugLoc()));
+    }
+
+    ArrayRef<MCPhysReg> RawRegs = RC.getRegisters();
+    assert(!RawRegs.empty() && "register classes cannot have no registers");
+    return RawRegs.front();
+  }
+
+  if (!LR.Error && EmitError) {
+    // Nothing we can do: Report an error and keep going with an invalid
+    // allocation.
+    if (MI.isInlineAsm()) {
+      MI.emitInlineAsmError(
+          "inline assembly requires more registers than available");
+    } else {
+      const Function &Fn = MBB->getParent()->getFunction();
+      Fn.getContext().diagnose(DiagnosticInfoRegAllocFailure(
+          "ran out of registers during register allocation", Fn,
+          MI.getDebugLoc()));
+    }
+  }
+
+  return AllocationOrder.front();
 }
 
 /// Changes operand OpNum in MI the refer the PhysReg, considering subregs.

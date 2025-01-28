@@ -20,18 +20,13 @@
 using namespace clang;
 using namespace clang::targets;
 
-static constexpr int NumBuiltins =
-    clang::SystemZ::LastTSBuiltin - Builtin::FirstTSBuiltin;
-
-static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+static constexpr Builtin::Info BuiltinInfo[] = {
+#define BUILTIN(ID, TYPE, ATTRS)                                               \
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #include "clang/Basic/BuiltinsSystemZ.def"
-    , {
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsSystemZ.def"
-      });
+};
 
 const char *const SystemZTargetInfo::GCCRegNames[] = {
     "r0",  "r1",  "r2",  "r3",  "r4",  "r5",  "r6",  "r7",
@@ -110,6 +105,7 @@ static constexpr ISANameRevision ISARevisions[] = {
   {{"arch12"}, 12}, {{"z14"}, 12},
   {{"arch13"}, 13}, {{"z15"}, 13},
   {{"arch14"}, 14}, {{"z16"}, 14},
+  {{"arch15"}, 15},
 };
 
 int SystemZTargetInfo::getISARevision(StringRef Name) const {
@@ -138,6 +134,7 @@ bool SystemZTargetInfo::hasFeature(StringRef Feature) const {
       .Case("arch12", ISARevision >= 12)
       .Case("arch13", ISARevision >= 13)
       .Case("arch14", ISARevision >= 14)
+      .Case("arch15", ISARevision >= 15)
       .Case("htm", HasTransactionalExecution)
       .Case("vx", HasVector)
       .Default(false);
@@ -172,10 +169,10 @@ void SystemZTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasVector)
     Builder.defineMacro("__VX__");
   if (Opts.ZVector)
-    Builder.defineMacro("__VEC__", "10304");
+    Builder.defineMacro("__VEC__", "10305");
 }
 
-std::pair<const char *, ArrayRef<Builtin::Info>>
-SystemZTargetInfo::getTargetBuiltinStorage() const {
-  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
+ArrayRef<Builtin::Info> SystemZTargetInfo::getTargetBuiltins() const {
+  return llvm::ArrayRef(BuiltinInfo, clang::SystemZ::LastTSBuiltin -
+                                         Builtin::FirstTSBuiltin);
 }

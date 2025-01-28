@@ -1001,7 +1001,7 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
   GetReturnInfo(CLI.CallConv, CLI.RetTy, getReturnAttrs(CLI), Outs, TLI, DL);
 
   bool CanLowerReturn = TLI.CanLowerReturn(
-      CLI.CallConv, *FuncInfo.MF, CLI.IsVarArg, Outs, CLI.RetTy->getContext());
+      CLI.CallConv, *FuncInfo.MF, CLI.IsVarArg, Outs, CLI.RetTy->getContext(), CLI.RetTy);
 
   // FIXME: sret demotion isn't supported yet - bail out.
   if (!CanLowerReturn)
@@ -1229,7 +1229,7 @@ void FastISel::handleDbgInfo(const Instruction *II) {
     }
 
     if (!Res)
-      LLVM_DEBUG(dbgs() << "Dropping debug-info for " << DVR << "\n";);
+      LLVM_DEBUG(dbgs() << "Dropping debug-info for " << DVR << "\n");
   }
 }
 

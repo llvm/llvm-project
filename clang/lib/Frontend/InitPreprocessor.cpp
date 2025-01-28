@@ -253,6 +253,8 @@ static void DefineExactWidthIntType(const LangOptions &LangOpts,
 
   StringRef ConstSuffix(TI.getTypeConstantSuffix(Ty));
   Builder.defineMacro(Prefix + Twine(TypeWidth) + "_C_SUFFIX__", ConstSuffix);
+  Builder.defineMacro(Prefix + Twine(TypeWidth) + "_C(c)",
+                      ConstSuffix.size() ? Twine("c##") + ConstSuffix : "c");
 }
 
 static void DefineExactWidthIntTypeSize(TargetInfo::IntType Ty,
@@ -752,6 +754,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_if_consteval", "202106L");
     Builder.defineMacro("__cpp_multidimensional_subscript", "202211L");
     Builder.defineMacro("__cpp_auto_cast", "202110L");
+    Builder.defineMacro("__cpp_explicit_this_parameter", "202110L");
   }
 
   // We provide those C++23 features as extensions in earlier language modes, so
@@ -1163,12 +1166,16 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 
   DefineType("__INTMAX_TYPE__", TI.getIntMaxType(), Builder);
   DefineFmt(LangOpts, "__INTMAX", TI.getIntMaxType(), TI, Builder);
-  Builder.defineMacro("__INTMAX_C_SUFFIX__",
-                      TI.getTypeConstantSuffix(TI.getIntMaxType()));
+  StringRef ConstSuffix(TI.getTypeConstantSuffix(TI.getIntMaxType()));
+  Builder.defineMacro("__INTMAX_C_SUFFIX__", ConstSuffix);
+  Builder.defineMacro("__INTMAX_C(c)",
+                      ConstSuffix.size() ? Twine("c##") + ConstSuffix : "c");
   DefineType("__UINTMAX_TYPE__", TI.getUIntMaxType(), Builder);
   DefineFmt(LangOpts, "__UINTMAX", TI.getUIntMaxType(), TI, Builder);
-  Builder.defineMacro("__UINTMAX_C_SUFFIX__",
-                      TI.getTypeConstantSuffix(TI.getUIntMaxType()));
+  ConstSuffix = TI.getTypeConstantSuffix(TI.getUIntMaxType());
+  Builder.defineMacro("__UINTMAX_C_SUFFIX__", ConstSuffix);
+  Builder.defineMacro("__UINTMAX_C(c)",
+                      ConstSuffix.size() ? Twine("c##") + ConstSuffix : "c");
   DefineType("__PTRDIFF_TYPE__", TI.getPtrDiffType(LangAS::Default), Builder);
   DefineFmt(LangOpts, "__PTRDIFF", TI.getPtrDiffType(LangAS::Default), TI,
             Builder);

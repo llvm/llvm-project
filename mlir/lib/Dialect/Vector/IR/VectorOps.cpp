@@ -327,8 +327,8 @@ SmallVector<int64_t> vector::getAsIntegers(ArrayRef<OpFoldResult> foldResults) {
   SmallVector<int64_t> ints;
   llvm::transform(
       foldResults, std::back_inserter(ints), [](OpFoldResult foldResult) {
-        assert(foldResult.is<Attribute>() && "Unexpected non-constant index");
-        return cast<IntegerAttr>(foldResult.get<Attribute>()).getInt();
+        assert(isa<Attribute>(foldResult) && "Unexpected non-constant index");
+        return cast<IntegerAttr>(cast<Attribute>(foldResult)).getInt();
       });
   return ints;
 }
@@ -346,7 +346,7 @@ SmallVector<Value> vector::getAsValues(OpBuilder &builder, Location loc,
                               loc, cast<IntegerAttr>(attr).getInt())
                           .getResult();
 
-                    return foldResult.get<Value>();
+                    return cast<Value>(foldResult);
                   });
   return values;
 }
@@ -1353,8 +1353,8 @@ LogicalResult vector::ExtractOp::verify() {
     return emitOpError(
         "expected position attribute of rank no greater than vector rank");
   for (auto [idx, pos] : llvm::enumerate(position)) {
-    if (pos.is<Attribute>()) {
-      int64_t constIdx = cast<IntegerAttr>(pos.get<Attribute>()).getInt();
+    if (auto attr = dyn_cast<Attribute>(pos)) {
+      int64_t constIdx = cast<IntegerAttr>(attr).getInt();
       if (constIdx < 0 || constIdx >= getSourceVectorType().getDimSize(idx)) {
         return emitOpError("expected position attribute #")
                << (idx + 1)
@@ -2523,8 +2523,16 @@ OpFoldResult BroadcastOp::fold(FoldAdaptor adaptor) {
   if (!adaptor.getSource())
     return {};
   auto vectorType = getResultVectorType();
-  if (llvm::isa<IntegerAttr, FloatAttr>(adaptor.getSource()))
-    return DenseElementsAttr::get(vectorType, adaptor.getSource());
+  if (auto attr = llvm::dyn_cast<IntegerAttr>(adaptor.getSource())) {
+    if (vectorType.getElementType() != attr.getType())
+      return {};
+    return DenseElementsAttr::get(vectorType, attr);
+  }
+  if (auto attr = llvm::dyn_cast<FloatAttr>(adaptor.getSource())) {
+    if (vectorType.getElementType() != attr.getType())
+      return {};
+    return DenseElementsAttr::get(vectorType, attr);
+  }
   if (auto attr = llvm::dyn_cast<SplatElementsAttr>(adaptor.getSource()))
     return DenseElementsAttr::get(vectorType, attr.getSplatValue<Attribute>());
   return {};
@@ -2592,7 +2600,7 @@ LogicalResult ShuffleOp::verify() {
   int64_t indexSize = (v1Type.getRank() == 0 ? 1 : v1Type.getDimSize(0)) +
                       (v2Type.getRank() == 0 ? 1 : v2Type.getDimSize(0));
   for (auto [idx, maskPos] : llvm::enumerate(mask)) {
-    if (maskPos < 0 || maskPos >= indexSize)
+    if (maskPos != kMaskPoisonValue && (maskPos < 0 || maskPos >= indexSize))
       return emitOpError("mask index #") << (idx + 1) << " out of range";
   }
   return success();
@@ -4966,7 +4974,7 @@ static LogicalResult verifyLoadStoreMemRefLayout(Operation *op,
       (vecTy.getRank() == 0 || vecTy.getNumElements() == 1))
     return success();
 
-  if (!isLastMemrefDimUnitStride(memRefTy))
+  if (!memRefTy.isLastDimUnitStride())
     return op->emitOpError("most minor memref dim must have unit stride");
   return success();
 }
@@ -5176,6 +5184,23 @@ std::optional<SmallVector<int64_t, 4>> GatherOp::getShapeForUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
 
+/// Cheeck if `indexVec` is constant 1D vec of consecutive values [0, 1, 2, ...]
+static LogicalResult isZeroBasedContiguousSeq(Value indexVec) {
+  auto vecType = dyn_cast<VectorType>(indexVec.getType());
+  if (!vecType || vecType.getRank() != 1 || vecType.isScalable())
+    return failure();
+
+  if (indexVec.getDefiningOp<StepOp>())
+    return success();
+
+  DenseIntElementsAttr elements;
+  if (!matchPattern(indexVec, m_Constant(&elements)))
+    return failure();
+
+  return success(
+      llvm::equal(elements, llvm::seq<int64_t>(0, vecType.getNumElements())));
+}
+
 namespace {
 class GatherFolder final : public OpRewritePattern<GatherOp> {
 public:
@@ -5194,11 +5219,28 @@ public:
     llvm_unreachable("Unexpected 1DMaskFormat on GatherFolder");
   }
 };
+
+/// Fold gathers with consecutive offsets [0, 1, 2, ...] into contiguous
+/// maskedload. Only 1D fixed vectors are supported for now.
+class FoldContiguousGather final : public OpRewritePattern<GatherOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(GatherOp op,
+                                PatternRewriter &rewriter) const override {
+    if (failed(isZeroBasedContiguousSeq(op.getIndexVec())))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<MaskedLoadOp>(op, op.getType(), op.getBase(),
+                                              op.getIndices(), op.getMask(),
+                                              op.getPassThru());
+    return success();
+  }
+};
 } // namespace
 
 void GatherOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.add<GatherFolder>(context);
+  results.add<GatherFolder, FoldContiguousGather>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -5240,11 +5282,27 @@ public:
     llvm_unreachable("Unexpected 1DMaskFormat on ScatterFolder");
   }
 };
+
+/// Fold scatters with consecutive offsets [0, 1, 2, ...] into contiguous
+/// maskedstore. Only 1D fixed vectors are supported for now.
+class FoldContiguousScatter final : public OpRewritePattern<ScatterOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(ScatterOp op,
+                                PatternRewriter &rewriter) const override {
+    if (failed(isZeroBasedContiguousSeq(op.getIndexVec())))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<MaskedStoreOp>(
+        op, op.getBase(), op.getIndices(), op.getMask(), op.getValueToStore());
+    return success();
+  }
+};
 } // namespace
 
 void ScatterOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ScatterFolder>(context);
+  results.add<ScatterFolder, FoldContiguousScatter>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -5781,7 +5839,7 @@ void TypeCastOp::build(OpBuilder &builder, OperationState &result,
 }
 
 LogicalResult TypeCastOp::verify() {
-  MemRefType canonicalType = canonicalizeStridedLayout(getMemRefType());
+  MemRefType canonicalType = getMemRefType().canonicalizeStridedLayout();
   if (!canonicalType.getLayout().isIdentity())
     return emitOpError("expects operand to be a memref with identity layout");
   if (!getResultMemRefType().getLayout().isIdentity())

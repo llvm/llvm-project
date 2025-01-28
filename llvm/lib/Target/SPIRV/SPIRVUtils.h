@@ -17,10 +17,12 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/TypedPointerType.h"
 #include <queue>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 
 namespace llvm {
@@ -150,6 +152,10 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
 // i.e., at the beginning of the first block of the function.
 MachineBasicBlock::iterator getOpVariableMBBIt(MachineInstr &I);
 
+// Return a valid position for the instruction at the end of the block before
+// terminators and debug instructions.
+MachineBasicBlock::iterator getInsertPtValidEnd(MachineBasicBlock *MBB);
+
 // Convert a SPIR-V storage class to the corresponding LLVM IR address space.
 // TODO: maybe the following two functions should be handled in the subtarget
 // to allow for different OpenCL vs Vulkan handling.
@@ -231,6 +237,10 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx);
 // dominators. This should match both the SPIR-V and the MIR requirements.
 // Returns true if the function was changed.
 bool sortBlocks(Function &F);
+
+inline bool hasInitializer(const GlobalVariable *GV) {
+  return GV->hasInitializer() && !isa<UndefValue>(GV->getInitializer());
+}
 
 // True if this is an instance of TypedPointerType.
 inline bool isTypedPointerTy(const Type *T) {
@@ -395,6 +405,19 @@ Register createVirtualRegister(const Type *Ty, SPIRVGlobalRegistry *GR,
 
 // Return true if there is an opaque pointer type nested in the argument.
 bool isNestedPointer(const Type *Ty);
+
+enum FPDecorationId { NONE, RTE, RTZ, RTP, RTN, SAT };
+
+inline FPDecorationId demangledPostfixToDecorationId(const std::string &S) {
+  static std::unordered_map<std::string, FPDecorationId> Mapping = {
+      {"rte", FPDecorationId::RTE},
+      {"rtz", FPDecorationId::RTZ},
+      {"rtp", FPDecorationId::RTP},
+      {"rtn", FPDecorationId::RTN},
+      {"sat", FPDecorationId::SAT}};
+  auto It = Mapping.find(S);
+  return It == Mapping.end() ? FPDecorationId::NONE : It->second;
+}
 
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H
