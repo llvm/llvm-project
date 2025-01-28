@@ -62,6 +62,7 @@ class WMMA_REGS<string Geom, string Frag, string PtxEltType> {
   string frag = Frag;
   string ptx_elt_type = PtxEltType;
   string gft = Geom#":"#Frag#":"#ptx_elt_type;
+  string gf = Geom#":"#Frag;
   string ft = frag#":"#ptx_elt_type;
   list<LLVMType> regs = !cond(
     // mma fp ops use smaller fragments than wmma fp ops
@@ -204,9 +205,19 @@ class WMMA_REGS<string Geom, string Frag, string PtxEltType> {
     !eq(gft,"m16n8k256:d:s32") : !listsplat(llvm_i32_ty, 4),
 
     // ldmatrix b16 -> s32 @ m8n8
-    !eq(gft,"m8n8:x1:b16") : !listsplat(llvm_i32_ty, 1),
-    !eq(gft,"m8n8:x2:b16") : !listsplat(llvm_i32_ty, 2),
-    !eq(gft,"m8n8:x4:b16") : !listsplat(llvm_i32_ty, 4),
+    !eq(gf,"m8n8:x1") : !listsplat(llvm_i32_ty, 1),
+    !eq(gf,"m8n8:x2") : !listsplat(llvm_i32_ty, 2),
+    !eq(gf,"m8n8:x4") : !listsplat(llvm_i32_ty, 4),
+
+    // ldmatrix b8, b8x16.b6x16_p32, b8x16.b4x16_p64 -> s32 @ m16n16
+    !eq(gf,"m16n16:x1") : !listsplat(llvm_i32_ty, 2),
+    !eq(gf,"m16n16:x2") : !listsplat(llvm_i32_ty, 4),
+
+    // ldmatrix b8x16.b6x16_p32, b8x16.b4x16_p64 -> s32 @ m8n16
+    !eq(gf,"m8n16:x1") : !listsplat(llvm_i32_ty, 1),
+    !eq(gf,"m8n16:x2") : !listsplat(llvm_i32_ty, 2),
+    !eq(gf,"m8n16:x4") : !listsplat(llvm_i32_ty, 4),
+
   );
 }
 
@@ -411,7 +422,16 @@ class NVVM_MMA_OPS {
 
   list<WMMA_REGS> ldmatrix_b16_ops = LDMATRIX_OPS<
     ["m8n8"], ["x1", "x2", "x4"], ["b16"]>.ret;
-  list<WMMA_REGS> all_ldmatrix_ops = ldmatrix_b16_ops;
+
+  list<WMMA_REGS> ldmatrix_geom_m16n16_ops = LDMATRIX_OPS<
+    ["m16n16"], ["x1", "x2"], ["b8", "b8x16.b6x16_p32", "b8x16.b4x16_p64"]>.ret;
+
+  list<WMMA_REGS> ldmatrix_geom_m8n16_ops = LDMATRIX_OPS<
+    ["m8n16"], ["x1", "x2", "x4"], ["b8x16.b6x16_p32", "b8x16.b4x16_p64"]>.ret;
+
+  list<WMMA_REGS> all_ldmatrix_ops = !listconcat(ldmatrix_b16_ops,
+                                                 ldmatrix_geom_m16n16_ops,
+                                                 ldmatrix_geom_m8n16_ops);
 }
 
 def NVVM_MMA_OPS : NVVM_MMA_OPS;
@@ -536,13 +556,18 @@ class NVVM_MMA_SUPPORTED<list<WMMA_REGS> frags, string layout_a, string layout_b
 // if NVVM_LDMATRIX_SUPPORTED<...>.ret then
 //   def : FOO<>; // The record will only be defined for supported ops.
 //
-class NVVM_LDMATRIX_SUPPORTED<WMMA_REGS frag> {
+class NVVM_LDMATRIX_SUPPORTED<WMMA_REGS frag, bit trans> {
   string g = frag.geom;
   string t = frag.ptx_elt_type;
 
   bit ret = !cond(
-    // Only currently support m8n8 and b16
     !and(!eq(g, "m8n8"), !eq(t, "b16")): true,
+    !and(!eq(g, "m16n16"), !eq(t, "b8"), !eq(trans, 1)): true,
+    !and(!eq(g, "m16n16"), !eq(t, "b8x16.b6x16_p32")): true,
+    !and(!eq(g, "m16n16"), !eq(t, "b8x16.b4x16_p64")): true,
+    !and(!eq(g, "m8n16"), !eq(t, "b8"), !eq(trans, 0)): true,
+    !and(!eq(g, "m8n16"), !eq(t, "b8x16.b6x16_p32"), !eq(trans, 0)): true,
+    !and(!eq(g, "m8n16"), !eq(t, "b8x16.b4x16_p64"), !eq(trans, 0)): true,
     true: false
   );
 }
@@ -4932,7 +4957,7 @@ class NVVM_LDMATRIX<WMMA_REGS Frag, int Transposed>
 
 foreach transposed = [0, 1] in {
   foreach frag = NVVM_MMA_OPS.all_ldmatrix_ops in {
-    if NVVM_LDMATRIX_SUPPORTED<frag>.ret then {
+    if NVVM_LDMATRIX_SUPPORTED<frag, transposed>.ret then {
       def LDMATRIX_NAME<frag, transposed>.record
         : NVVM_LDMATRIX<frag, transposed>;
     }

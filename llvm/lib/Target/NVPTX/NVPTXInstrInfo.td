@@ -170,6 +170,7 @@ def False : Predicate<"false">;
 class hasPTX<int version>: Predicate<"Subtarget->getPTXVersion() >= " # version>;
 class hasSM<int version>: Predicate<"Subtarget->getSmVersion() >= " # version>;
 
+def hasAAFeatures : Predicate<"Subtarget->hasAAFeatures()">;
 // Explicit records for arch-accelerated SM versions
 def hasSM90a : Predicate<"Subtarget->getFullSmVersion() == 901">;
 def hasSM100a : Predicate<"Subtarget->getFullSmVersion() == 1001">;
