@@ -849,9 +849,10 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
   }
 }
 
-DIE *DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {
+std::optional<unsigned>
+DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {
   // Args[0] is the return type.
-  DIE *ObjectPointer = nullptr;
+  std::optional<unsigned> ObjectPointerIndex;
   for (unsigned i = 1, N = Args.size(); i < N; ++i) {
     const DIType *Ty = Args[i];
     if (!Ty) {
@@ -863,13 +864,14 @@ DIE *DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {
       if (Ty->isArtificial())
         addFlag(Arg, dwarf::DW_AT_artificial);
       if (Ty->isObjectPointer()) {
-        assert(!ObjectPointer && "Can't have more than one object pointer");
-        ObjectPointer = &Arg;
+        assert(!ObjectPointerIndex &&
+               "Can't have more than one object pointer");
+        ObjectPointerIndex = i;
       }
     }
   }
 
-  return ObjectPointer;
+  return ObjectPointerIndex;
 }
 
 void DwarfUnit::constructTypeDIE(DIE &Buffer, const DISubroutineType *CTy) {
@@ -1366,8 +1368,20 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
 
     // Add arguments. Do not add arguments for subprogram definition. They will
     // be handled while processing variables.
-    if (auto *ObjectPointer = constructSubprogramArguments(SPDie, Args))
-      addDIEEntry(SPDie, dwarf::DW_AT_object_pointer, *ObjectPointer);
+    //
+    // Encode the object pointer as an index instead of a DIE reference in order
+    // to minimize the affect on the .debug_info size.
+    if (std::optional<unsigned> ObjectPointerIndex =
+            constructSubprogramArguments(SPDie, Args)) {
+      if (getDwarfDebug().tuneForLLDB() &&
+          getDwarfDebug().getDwarfVersion() >= 5) {
+        // 0th index in Args is the return type, hence adjust by 1. In DWARF
+        // we want the first parameter to be at index 0.
+        assert(*ObjectPointerIndex > 0);
+        addSInt(SPDie, dwarf::DW_AT_object_pointer,
+                dwarf::DW_FORM_implicit_const, *ObjectPointerIndex - 1);
+      }
+    }
   }
 
   addThrownTypes(SPDie, SP->getThrownTypes());
