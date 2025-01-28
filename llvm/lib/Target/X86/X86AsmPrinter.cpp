@@ -985,7 +985,7 @@ static void emitNonLazyStubs(MachineModuleInfo *MMI, MCStreamer &OutStreamer) {
 /// selected floating-point instructions.
 static bool usesMSVCFloatingPoint(const Triple &TT, const Module &M) {
   // Only needed for MSVC
-  if (!TT.isWindowsMSVCEnvironment() || !TT.isUEFI())
+  if (!TT.isWindowsMSVCEnvironment())
     return false;
 
   for (const Function &F : M) {

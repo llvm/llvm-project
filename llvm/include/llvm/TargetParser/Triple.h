@@ -656,9 +656,8 @@ public:
     return getOS() == Triple::Win32;
   }
 
-  bool isOSWindowsOrUEFI() const {
-    return isOSWindows() || isUEFI();
-  }
+  /// Tests whether the OS is Windows or UEFI.
+  bool isOSWindowsOrUEFI() const { return isOSWindows() || isUEFI(); }
 
   /// Checks if the environment is MSVC.
   bool isKnownWindowsMSVCEnvironment() const {
