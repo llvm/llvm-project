@@ -318,48 +318,49 @@ Error lowerPointer64AuthEdgesToSigningFunction(LinkGraph &G) {
 
   for (auto *B : G.blocks()) {
     for (auto &E : B->edges()) {
-      if (E.getKind() == aarch64::Pointer64Authenticated) {
-        uint64_t EncodedInfo = E.getAddend();
-        int32_t RealAddend = (uint32_t)(EncodedInfo & 0xffffffff);
-        uint32_t InitialDiscriminator = (EncodedInfo >> 32) & 0xffff;
-        bool AddressDiversify = (EncodedInfo >> 48) & 0x1;
-        uint32_t Key = (EncodedInfo >> 49) & 0x3;
-        uint32_t HighBits = EncodedInfo >> 51;
-        auto ValueToSign = E.getTarget().getAddress() + RealAddend;
+      // We're only concerned with Pointer64Authenticated edges here.
+      if (E.getKind() != aarch64::Pointer64Authenticated)
+        continue;
 
-        if (HighBits != 0x1000)
-          return make_error<JITLinkError>(
-              "Pointer64Auth edge at " +
-              formatv("{0:x}", B->getFixupAddress(E).getValue()) +
-              " has invalid encoded addend  " + formatv("{0:x}", EncodedInfo));
+      uint64_t EncodedInfo = E.getAddend();
+      int32_t RealAddend = (uint32_t)(EncodedInfo & 0xffffffff);
+      uint32_t InitialDiscriminator = (EncodedInfo >> 32) & 0xffff;
+      bool AddressDiversify = (EncodedInfo >> 48) & 0x1;
+      uint32_t Key = (EncodedInfo >> 49) & 0x3;
+      uint32_t HighBits = EncodedInfo >> 51;
+      auto ValueToSign = E.getTarget().getAddress() + RealAddend;
 
-        LLVM_DEBUG({
-          const char *const KeyNames[] = {"IA", "IB", "DA", "DB"};
-          dbgs() << "  " << B->getFixupAddress(E) << " <- " << ValueToSign
-                 << " : key = " << KeyNames[Key] << ", discriminator = "
-                 << formatv("{0:x4}", InitialDiscriminator)
-                 << ", address diversified = "
-                 << (AddressDiversify ? "yes" : "no") << "\n";
-        });
+      if (HighBits != 0x1000)
+        return make_error<JITLinkError>(
+            "Pointer64Auth edge at " +
+            formatv("{0:x}", B->getFixupAddress(E).getValue()) +
+            " has invalid encoded addend  " + formatv("{0:x}", EncodedInfo));
 
-        // Materialize pointer value.
-        cantFail(
-            writeMovRegImm64Seq(AppendInstr, Reg1, ValueToSign.getValue()));
+      LLVM_DEBUG({
+        const char *const KeyNames[] = {"IA", "IB", "DA", "DB"};
+        dbgs() << "  " << B->getFixupAddress(E) << " <- " << ValueToSign
+               << " : key = " << KeyNames[Key] << ", discriminator = "
+               << formatv("{0:x4}", InitialDiscriminator)
+               << ", address diversified = "
+               << (AddressDiversify ? "yes" : "no") << "\n";
+      });
 
-        // Materialize fixup pointer.
-        cantFail(writeMovRegImm64Seq(AppendInstr, Reg2,
-                                     B->getFixupAddress(E).getValue()));
+      // Materialize pointer value.
+      cantFail(writeMovRegImm64Seq(AppendInstr, Reg1, ValueToSign.getValue()));
 
-        // Write signing instruction(s).
-        cantFail(writePACSignSeq(AppendInstr, Reg1, ValueToSign, Reg2, Reg3,
-                                 Key, InitialDiscriminator, AddressDiversify));
+      // Materialize fixup pointer.
+      cantFail(writeMovRegImm64Seq(AppendInstr, Reg2,
+                                   B->getFixupAddress(E).getValue()));
 
-        // Store signed pointer.
-        cantFail(writeStoreRegSeq(AppendInstr, Reg2, Reg1));
+      // Write signing instruction(s).
+      cantFail(writePACSignSeq(AppendInstr, Reg1, ValueToSign, Reg2, Reg3, Key,
+                               InitialDiscriminator, AddressDiversify));
 
-        // Replace edge with a keep-alive to preserve dependence info.
-        E.setKind(Edge::KeepAlive);
-      }
+      // Store signed pointer.
+      cantFail(writeStoreRegSeq(AppendInstr, Reg2, Reg1));
+
+      // Replace edge with a keep-alive to preserve dependence info.
+      E.setKind(Edge::KeepAlive);
     }
   }
 
