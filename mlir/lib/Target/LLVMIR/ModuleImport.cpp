@@ -2128,7 +2128,7 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
       iface.isConvertibleIntrinsic(func->getIntrinsicID()))
     return success();
 
-  bool dsoLocal = func->hasLocalLinkage();
+  bool dsoLocal = func->isDSOLocal();
   CConv cconv = convertCConvFromLLVM(func->getCallingConv());
 
   // Insert the function at the end of the module.
