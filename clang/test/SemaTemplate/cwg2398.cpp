@@ -697,15 +697,11 @@ namespace nttp_partial_order {
     template void f<B>(B<&A::m>);
   } // namespace t5
   namespace t6 {
-    // FIXME: This should pick the second overload.
     struct A {};
     using nullptr_t = decltype(nullptr);
     template<template<nullptr_t> class TT2> void f(TT2<nullptr>);
-    // new-note@-1 {{here}}
     template<template<A*>        class TT1> void f(TT1<nullptr>) {}
-    // new-note@-1 {{here}}
     template<A*> struct B {};
     template void f<B>(B<nullptr>);
-    // new-error@-1 {{ambiguous}}
   } // namespace t6
 } // namespace nttp_partial_order
