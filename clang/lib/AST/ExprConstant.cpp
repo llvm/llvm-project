@@ -3600,7 +3600,7 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
        VD->mightBeUsableInConstantExpressions(Info.Ctx)) ||
       ((Info.getLangOpts().CPlusPlus || Info.getLangOpts().OpenCL) &&
        !Info.getLangOpts().CPlusPlus11 && !VD->hasICEInitializer(Info.Ctx))) {
-    if (VD->getAnyInitializer()) {
+    if (Init) {
       Info.CCEDiag(E, diag::note_constexpr_var_init_non_constant, 1) << VD;
       NoteLValueLocation(Info, Base);
     } else {
