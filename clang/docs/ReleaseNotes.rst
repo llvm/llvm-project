@@ -337,6 +337,9 @@ C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - The implementation of the relaxed template template argument matching rules is
   more complete and reliable, and should provide more accurate diagnostics.
+  This implements:
+  - `P3310R5: Solving issues introduced by relaxed template template parameter matching <https://wg21.link/p3310r5>`_.
+  - `P3579R0: Fix matching of non-type template parameters when matching template template parameters <https://wg21.link/p3579r0>`_.
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -524,15 +527,15 @@ New Compiler Flags
   Clang to generate code that tries to preserve the liveness of source variables
   through optimizations, meaning that variables will typically be visible in a
   debugger more often. The flag has two levels: ``-fextend-variable-liveness``,
-  or ``-fextend-variable-liveness=all``, extendes the liveness of all user
-  variables and the ``this`` pointer. Alternatively ``-fextend-this-ptr``, or
-  ``-fextend-variable-liveness=this``, has the same behaviour but applies only
-  to the ``this`` variable in C++ class member functions, meaning its effect is
-  a strict subset of ``-fextend-variable-liveness``. Note that this flag
-  modifies the results of optimizations that Clang performs, which will result
-  in reduced performance in generated code; however, this feature will not
-  extend the liveness of some variables in cases where doing so would likely
-  have a severe impact on generated code performance.
+  or ``-fextend-variable-liveness=all``, extends the liveness of all user
+  variables and the ``this`` pointer. Alternatively
+  ``-fextend-variable-liveness=this`` has the same behaviour but applies only to
+  the ``this`` variable in C++ class member functions, meaning its effect is a
+  strict subset of ``-fextend-variable-liveness``. Note that this flag modifies
+  the results of optimizations that Clang performs, which will result in reduced
+  performance in generated code; however, this feature will not extend the
+  liveness of some variables in cases where doing so would likely have a severe
+  impact on generated code performance.
 
 - The ``-Warray-compare`` warning has been added to warn about array comparison
   on versions older than C++20.

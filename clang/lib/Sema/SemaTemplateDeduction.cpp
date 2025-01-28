@@ -2979,7 +2979,8 @@ static bool ConvertDeducedTemplateArgument(
             ? (Arg.wasDeducedFromArrayBound() ? Sema::CTAK_DeducedFromArrayBound
                                               : Sema::CTAK_Deduced)
             : Sema::CTAK_Specified,
-        PartialOrdering, &MatchedPackOnParmToNonPackOnArg);
+        PartialOrdering, /*PartialOrderingTTP=*/false,
+        &MatchedPackOnParmToNonPackOnArg);
     if (MatchedPackOnParmToNonPackOnArg)
       Info.setMatchedPackOnParmToNonPackOnArg();
     return Res;
@@ -3179,6 +3180,7 @@ static TemplateDeductionResult ConvertDeducedTemplateArguments(
             Param, DefArg, TD, TD->getLocation(), TD->getSourceRange().getEnd(),
             /*ArgumentPackIndex=*/0, SugaredBuilder, CanonicalBuilder,
             Sema::CTAK_Specified, /*PartialOrdering=*/false,
+            /*PartialOrderingTTP=*/false,
             /*MatchedPackOnParmToNonPackOnArg=*/nullptr)) {
       Info.Param = makeTemplateParameter(
                          const_cast<NamedDecl *>(TemplateParams->getParam(I)));
