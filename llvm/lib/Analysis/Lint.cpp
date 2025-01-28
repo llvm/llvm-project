@@ -747,10 +747,13 @@ PreservedAnalyses LintPass::run(Function &F, FunctionAnalysisManager &AM) {
   Lint L(Mod, DL, AA, AC, DT, TLI);
   L.visit(F);
   dbgs() << L.MessagesStr.str();
-  if (LintAbortOnError && !L.MessagesStr.str().empty())
-    report_fatal_error(Twine("Linter found errors, aborting. (enabled by --") +
+  if (!L.MessagesStr.str().empty()) {
+    F.getParent()->IsValid = false;
+    if (LintAbortOnError)
+      report_fatal_error(Twine("Linter found errors, aborting. (enabled by --") +
                            LintAbortOnErrorArgName + ")",
-                       false);
+                         false);
+  }
   return PreservedAnalyses::all();
 }
 
