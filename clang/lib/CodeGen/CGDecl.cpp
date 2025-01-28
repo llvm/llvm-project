@@ -2587,9 +2587,10 @@ llvm::Function *CodeGenModule::getLLVMLifetimeEndFn() {
 
 /// Lazily declare the @llvm.fake.use intrinsic.
 llvm::Function *CodeGenModule::getLLVMFakeUseFn() {
-  if (!FakeUseFn)
-    FakeUseFn = llvm::Intrinsic::getDeclaration(&getModule(),
-                                                llvm::Intrinsic::fake_use);
+  if (FakeUseFn)
+    return FakeUseFn;
+  FakeUseFn = llvm::Intrinsic::getOrInsertDeclaration(
+      &getModule(), llvm::Intrinsic::fake_use);
   return FakeUseFn;
 }
 
