@@ -361,7 +361,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   } else
     return false;
 
-  Instruction *HeaderFirstNonPHI = L->getHeader()->getFirstNonPHI();
+  Instruction *HeaderFirstNonPHI = &*L->getHeader()->getFirstNonPHIIt();
   return isDereferenceableAndAlignedPointer(Base, Alignment, AccessSize, DL,
                                             HeaderFirstNonPHI, AC, &DT);
 }

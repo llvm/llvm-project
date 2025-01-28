@@ -370,17 +370,9 @@ def KMult {
   int X4 = 3;
 }
 
-class WMMA_SWMMAC_Profile<list<ValueType> ArgTy, int K>
-    : VOPMProfile<ArgTy, 0, 1, 0, 1> {
+class WMMA_SWMMA_Profile<list<ValueType> ArgTy, int K, bit HasSrc4>
+    : VOPMProfile<ArgTy, 0, 1, 0, HasSrc4> {
   int KMultiplier = K;
-}
-
-class VOPM_WMMA_Profile<list<ValueType> ArgTy, int K> : WMMA_SWMMAC_Profile<ArgTy, K> {
-  dag WmmaInPat;
-  dag WmmaOutPat;
-  dag WmmaInlineInPat;
-  dag WmmaInlineOutPat;
-  bit isInt;
 
   let Src0RC64 = getGSrcVGPRForVT<ArgVT[1]>.ret; // srcA
   let Src1RC64 = getGVGPRforVT<ArgVT[2]>.ret; // srcB
@@ -388,7 +380,15 @@ class VOPM_WMMA_Profile<list<ValueType> ArgTy, int K> : WMMA_SWMMAC_Profile<ArgT
   let Src2RC64 = getGSrcVGPROrZeroForVT<ArgVT[3]>.ret; // srcC
 }
 
-class VOPM_WMMA_Profile_Float<list<ValueType> ArgTy, int K> : VOPM_WMMA_Profile<ArgTy, K> {
+class VOPM_WMMA_Profile<list<ValueType> ArgTy, int K, bit HasSrc4> : WMMA_SWMMA_Profile<ArgTy, K, HasSrc4> {
+  dag WmmaInPat;
+  dag WmmaOutPat;
+  dag WmmaInlineInPat;
+  dag WmmaInlineOutPat;
+  bit isInt;
+}
+
+class VOPM_WMMA_Profile_Float<list<ValueType> ArgTy, int K> : VOPM_WMMA_Profile<ArgTy, K, 0> {
   let IsWMMA = 1;
   let isInt = 0;
 
@@ -403,7 +403,7 @@ class VOPM_WMMA_Profile_Float<list<ValueType> ArgTy, int K> : VOPM_WMMA_Profile<
   let Asm64 = "$vdst, $srcA, $srcB, $srcC$clamp$idxs";
 }
 
-class VOPM_WMMA_Profile_Int<list<ValueType> ArgTy, int K> : VOPM_WMMA_Profile<ArgTy, K> {
+class VOPM_WMMA_Profile_Int<list<ValueType> ArgTy, int K> : VOPM_WMMA_Profile<ArgTy, K, 0> {
   let IsWMMA = 1;
   let isInt = 1;
 
@@ -418,7 +418,7 @@ class VOPM_WMMA_Profile_Int<list<ValueType> ArgTy, int K> : VOPM_WMMA_Profile<Ar
   let Asm64 = "$vdst, $srcA, $srcB, $srcC$signed_a$signed_b$clamp$idxs";
 }
 
-class VOPM_WMMA_Profile_BlockScale<list<ValueType> ArgTy, int K> : VOPM_WMMA_Profile<ArgTy, K> {
+class VOPM_WMMA_Profile_BlockScale<list<ValueType> ArgTy, int K> : VOPM_WMMA_Profile<ArgTy, K, 1> {
   let IsWMMA = 1;
   let isInt = 0;
 
@@ -461,64 +461,60 @@ def VOPM_WMMA_F32I32_IU4_X64 : VOPM_WMMA_Profile_Int<[v8f32, v4i32, v4i32, v8i32
 
 def VOPM_WMMA_F32_F8F6F4_X64 : VOPM_WMMA_Profile_BlockScale<[v8f32, v8i32, v8i32, v8f32], KMult.X1>;
 
-class VOPM_SWMMAC_Profile<list<ValueType> ArgTy, int K> : WMMA_SWMMAC_Profile<ArgTy, K> {
+class VOPM_SWMMA_Profile<list<ValueType> ArgTy, int K> : WMMA_SWMMA_Profile<ArgTy, K, 0> {
   let IsSWMMAC = 1;
-  dag IndexKey = (ins IndexKey16bit:$index_key_16bit);
 
-  dag IndexInPat = (ins (i16 (SWMMACIndex16 i32:$src2, i32:$index_key_16bit)));
-  dag IndexOutPat = (ins i32:$src2, i32:$index_key_16bit);
-
-  dag SwmmacInPat;
-  dag SwmmacOutPat;
+  dag SwmmaInPat;
+  dag SwmmaOutPat;
 
   dag WmmaInlineOutPat;
   bit isInt;
 }
 
-class VOPM_SWMMAC_Profile_Float<list<ValueType> ArgTy, int K> : VOPM_SWMMAC_Profile<ArgTy, K> {
+class VOPM_SWMMA_Profile_Float<list<ValueType> ArgTy, int K> : VOPM_SWMMA_Profile<ArgTy, K> {
   let isInt = 0;
-  let Ins64 = !con((ins Src0RC64:$src0, Src1RC64:$src1, DstRC:$srcTiedDef, Src2RC64:$src2), IndexKey, (ins Clamp0:$clamp, Idxs0:$idxs));
+  let Ins64 = (ins Src0RC64:$srcA, Src1RC64:$srcB, Src2RC64:$srcC, Src3RC64:$src3, SparseIndexOdd:$sparse_index_odd, Clamp0:$clamp, Idxs0:$idxs);
 
-  let SwmmacInPat  = !con((ins Src0VT:$src0, Src1VT:$src1, Src3VT:$srcTiedDef), IndexInPat, (ins i1:$clamp));
-  let SwmmacOutPat = !con((ins Src0VT:$src0, Src1VT:$src1, Src3VT:$srcTiedDef), IndexOutPat, (ins i1:$clamp));
+  let SwmmaInPat  = (ins Src0VT:$srcA, Src1VT:$srcB, Src2VT:$srcC, Src3VT:$src3, i1:$sparse_index_odd, i1:$clamp);
+  let SwmmaOutPat = (ins Src0VT:$srcA, Src1VT:$srcB, Src2VT:$srcC, Src3VT:$src3, i1:$sparse_index_odd, i1:$clamp);
 
-  let Asm64 = "$vdst, $src0, $src1, $src2$index_key_16bit$clamp$idxs";
+  let Asm64 = "$vdst, $srcA, $srcB, $srcC, $src3$sparse_index_odd$clamp$idxs";
 }
 
-class VOPM_SWMMAC_Profile_Int<list<ValueType> ArgTy, int K> : VOPM_SWMMAC_Profile<ArgTy, K> {
+class VOPM_SWMMA_Profile_Int<list<ValueType> ArgTy, int K> : VOPM_SWMMA_Profile<ArgTy, K> {
   let isInt = 1;
-  let Ins64 = !con((ins SignedA:$signed_a, Src0RC64:$src0, SignedB:$signed_b, Src1RC64:$src1, DstRC:$srcTiedDef, Src2RC64:$src2), IndexKey, (ins Clamp0:$clamp, Idxs0:$idxs));
+  let Ins64 = (ins SignedA:$signed_a, Src0RC64:$srcA, SignedB:$signed_b, Src1RC64:$srcB, Src2RC64:$srcC, Src3RC64:$src3, SparseIndexOdd:$sparse_index_odd, Clamp0:$clamp, Idxs0:$idxs);
 
-  let SwmmacInPat  = !con((ins i1:$signed_a, Src0VT:$src0, i1:$signed_b, Src1VT:$src1, Src3VT:$srcTiedDef), IndexInPat, (ins i1:$clamp));
-  let SwmmacOutPat = !con((ins i1:$signed_a, Src0VT:$src0, i1:$signed_b, Src1VT:$src1, Src3VT:$srcTiedDef), IndexOutPat, (ins i1:$clamp));
+  let SwmmaInPat  = (ins i1:$signed_a, Src0VT:$srcA, i1:$signed_b, Src1VT:$srcB, Src2VT:$srcC, Src3VT:$src3, i1:$sparse_index_odd, i1:$clamp);
+  let SwmmaOutPat = (ins i1:$signed_a, Src0VT:$srcA, i1:$signed_b, Src1VT:$srcB, Src2VT:$srcC, Src3VT:$src3, i1:$sparse_index_odd, i1:$clamp);
 
-  let Asm64 = "$vdst, $src0, $src1, $src2$signed_a$signed_b$index_key_16bit$clamp$idxs";
+  let Asm64 = "$vdst, $srcA, $srcB, $srcC, $src3$signed_a$signed_b$sparse_index_odd$clamp$idxs";
 }
 
-def VOPM_SWMMAC_F16_F16_X32   : VOPM_SWMMAC_Profile_Float<[v8f16, v8f16, v16f16, i32, v8f16], 1>;
-def VOPM_SWMMAC_F32_F16_X32   : VOPM_SWMMAC_Profile_Float<[v8f32, v8f16, v16f16, i32, v8f32], 1>;
-def VOPM_SWMMAC_F32_BF16_X32  : VOPM_SWMMAC_Profile_Float<[v8f32, v8bf16, v16bf16, i32, v8f32], 1>;
-def VOPM_SWMMAC_BF16_BF16_X32 : VOPM_SWMMAC_Profile_Float<[v8bf16, v8bf16, v16bf16, i32, v8bf16], 1>;
-def VOPM_SWMMAC_F32_F8_X32    : VOPM_SWMMAC_Profile_Float<[v8f32, v2i32,  v4i32, i32, v8f32], 1>;
-def VOPM_SWMMAC_F16_F8_X32    : VOPM_SWMMAC_Profile_Float<[v8f16, v2i32,  v4i32, i32, v8f16], 1>;
-def VOPM_SWMMAC_F32_F8_X64    : VOPM_SWMMAC_Profile_Float<[v8f32, v4i32,  v8i32, i32, v8f32], 2>;
-def VOPM_SWMMAC_F16_F8_X64    : VOPM_SWMMAC_Profile_Float<[v8f16, v4i32,  v8i32, i32, v8f16], 2>;
+def VOPM_SWMMA_F16_F16_X32   : VOPM_SWMMA_Profile_Float<[v8f16, v8f16, v16f16, v8f16, i32], KMult.X1>;
+def VOPM_SWMMA_F32_F16_X32   : VOPM_SWMMA_Profile_Float<[v8f32, v8f16, v16f16, v8f32, i32], KMult.X1>;
+def VOPM_SWMMA_F32_BF16_X32  : VOPM_SWMMA_Profile_Float<[v8f32, v8bf16, v16bf16, v8f32, i32], KMult.X1>;
+def VOPM_SWMMA_BF16_BF16_X32 : VOPM_SWMMA_Profile_Float<[v8bf16, v8bf16, v16bf16, v8bf16, i32], KMult.X1>;
+def VOPM_SWMMA_F32_F8_X32    : VOPM_SWMMA_Profile_Float<[v8f32, v2i32,  v4i32, v8f32, i32], KMult.X1>;
+def VOPM_SWMMA_F16_F8_X32    : VOPM_SWMMA_Profile_Float<[v8f16, v2i32,  v4i32, v8f16, i32], KMult.X1>;
+def VOPM_SWMMA_F32_F8_X64    : VOPM_SWMMA_Profile_Float<[v8f32, v4i32,  v8i32, v8f32, i32], KMult.X2>;
+def VOPM_SWMMA_F16_F8_X64    : VOPM_SWMMA_Profile_Float<[v8f16, v4i32,  v8i32, v8f16, i32], KMult.X2>;
 
-def VOPM_SWMMAC_I32_IU8_X32     : VOPM_SWMMAC_Profile_Int<[v8i32, v2i32, v4i32, i32, v8i32], 1>;
-def VOPM_SWMMAC_F32_IU8_X32     : VOPM_SWMMAC_Profile_Int<[v8f32, v2i32, v4i32, i32, v8f32], 1>;
-def VOPM_SWMMAC_F32I32_IU8_X32  : VOPM_SWMMAC_Profile_Int<[v8f32, v2i32, v4i32, i32, v8i32], 1>;
-def VOPM_SWMMAC_I32_IU8_X64     : VOPM_SWMMAC_Profile_Int<[v8i32, v4i32, v8i32, i32, v8i32], 2>;
-def VOPM_SWMMAC_F32_IU8_X64     : VOPM_SWMMAC_Profile_Int<[v8f32, v4i32, v8i32, i32, v8f32], 2>;
-def VOPM_SWMMAC_F32I32_IU8_X64  : VOPM_SWMMAC_Profile_Int<[v8f32, v4i32, v8i32, i32, v8i32], 2>;
-def VOPM_SWMMAC_I32_IU4_X32     : VOPM_SWMMAC_Profile_Int<[v8i32, i32, v2i32, i32, v8i32], 1>;
-def VOPM_SWMMAC_F32_IU4_X32     : VOPM_SWMMAC_Profile_Int<[v8f32, i32, v2i32, i32, v8f32], 1>;
-def VOPM_SWMMAC_F32I32_IU4_X32  : VOPM_SWMMAC_Profile_Int<[v8f32, i32, v2i32, i32, v8i32], 1>;
-def VOPM_SWMMAC_I32_IU4_X64     : VOPM_SWMMAC_Profile_Int<[v8i32, v2i32, v4i32, i32, v8i32], 2>;
-def VOPM_SWMMAC_F32_IU4_X64     : VOPM_SWMMAC_Profile_Int<[v8f32, v2i32, v4i32, i32, v8f32], 2>;
-def VOPM_SWMMAC_F32I32_IU4_X64  : VOPM_SWMMAC_Profile_Int<[v8f32, v2i32, v4i32, i32, v8i32], 2>;
-def VOPM_SWMMAC_I32_IU4_X128    : VOPM_SWMMAC_Profile_Int<[v8i32, v4i32, v8i32, i32, v8i32], 4>;
-def VOPM_SWMMAC_F32_IU4_X128    : VOPM_SWMMAC_Profile_Int<[v8f32, v4i32, v8i32, i32, v8f32], 4>;
-def VOPM_SWMMAC_F32I32_IU4_X128 : VOPM_SWMMAC_Profile_Int<[v8f32, v4i32, v8i32, i32, v8i32], 4>;
+def VOPM_SWMMA_I32_IU8_X32     : VOPM_SWMMA_Profile_Int<[v8i32, v2i32, v4i32, v8i32, i32], KMult.X1>;
+def VOPM_SWMMA_F32_IU8_X32     : VOPM_SWMMA_Profile_Int<[v8f32, v2i32, v4i32, v8f32, i32], KMult.X1>;
+def VOPM_SWMMA_F32I32_IU8_X32  : VOPM_SWMMA_Profile_Int<[v8f32, v2i32, v4i32, v8i32, i32], KMult.X1>;
+def VOPM_SWMMA_I32_IU8_X64     : VOPM_SWMMA_Profile_Int<[v8i32, v4i32, v8i32, v8i32, i32], KMult.X2>;
+def VOPM_SWMMA_F32_IU8_X64     : VOPM_SWMMA_Profile_Int<[v8f32, v4i32, v8i32, v8f32, i32], KMult.X2>;
+def VOPM_SWMMA_F32I32_IU8_X64  : VOPM_SWMMA_Profile_Int<[v8f32, v4i32, v8i32, v8i32, i32], KMult.X2>;
+def VOPM_SWMMA_I32_IU4_X32     : VOPM_SWMMA_Profile_Int<[v8i32, i32, v2i32, v8i32, i32], KMult.X1>;
+def VOPM_SWMMA_F32_IU4_X32     : VOPM_SWMMA_Profile_Int<[v8f32, i32, v2i32, v8f32, i32], KMult.X1>;
+def VOPM_SWMMA_F32I32_IU4_X32  : VOPM_SWMMA_Profile_Int<[v8f32, i32, v2i32, v8i32, i32], KMult.X1>;
+def VOPM_SWMMA_I32_IU4_X64     : VOPM_SWMMA_Profile_Int<[v8i32, v2i32, v4i32, v8i32, i32], KMult.X2>;
+def VOPM_SWMMA_F32_IU4_X64     : VOPM_SWMMA_Profile_Int<[v8f32, v2i32, v4i32, v8f32, i32], KMult.X2>;
+def VOPM_SWMMA_F32I32_IU4_X64  : VOPM_SWMMA_Profile_Int<[v8f32, v2i32, v4i32, v8i32, i32], KMult.X2>;
+def VOPM_SWMMA_I32_IU4_X128    : VOPM_SWMMA_Profile_Int<[v8i32, v4i32, v8i32, v8i32, v2i32], KMult.X4>;
+def VOPM_SWMMA_F32_IU4_X128    : VOPM_SWMMA_Profile_Int<[v8f32, v4i32, v8i32, v8f32, v2i32], KMult.X4>;
+def VOPM_SWMMA_F32I32_IU4_X128 : VOPM_SWMMA_Profile_Int<[v8f32, v4i32, v8i32, v8i32, v2i32], KMult.X4>;
 
 class Cvt_To_Tensor_Profile<list<ValueType> ArgTy, int PixelShape, int Scatter> : VOPMProfile<ArgTy, 1, 1, 1, 1> {
   let Outs64 = !cond(!eq(Scatter, 1) : (outs DstRC64:$vdst),
@@ -748,12 +744,24 @@ defm V_WMMA_F16_16X16X16_BF8_FP8 : VOPM_WMMA_Pseudo <VOPM_WMMA_F16_F8_X16>;
 defm V_WMMA_F16_16X16X16_FP8_FP8 : VOPM_WMMA_Pseudo <VOPM_WMMA_F16_F8_X16>;
 defm V_WMMA_F16_16X16X16_FP8_BF8 : VOPM_WMMA_Pseudo <VOPM_WMMA_F16_F8_X16>;
 
-multiclass VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_Profile P> {
+multiclass VOPM_SWMMA_Pseudo<VOPM_SWMMA_Profile P> {
   defvar Instr = !tolower(NAME);
-  def _twoaddr : VOPM_Pseudo<P, [], Instr> {
-    let PseudoInstr = Instr;
-    let Constraints = "@earlyclobber $vdst,$vdst = $srcTiedDef";
+  defvar WMMAConstraints2Addr = "@earlyclobber $vdst,$vdst = $srcC";
+  defvar WMMAConstraints3Addr = "@earlyclobber $vdst";
+
+  let Mnemonic = Instr in {
+    let Constraints = WMMAConstraints2Addr, isConvertibleToThreeAddress = 1 in
+      def _twoaddr : VOPM_Pseudo<P, [], Instr>{
+        let PseudoInstr = Instr;
+      }
+
+    let Constraints = WMMAConstraints3Addr in
+      def _threeaddr : VOPM_Pseudo<!cast<VOPProfile>(P), [], Instr>{
+        let PseudoInstr = Instr;
+      }
   }
+  def : WMMAOpcodeMapping<!cast<Instruction>(NAME # _twoaddr),
+                          !cast<Instruction>(NAME # _threeaddr)>;
 }
 
 defm V_WMMA_F16_16X16X32_BF8_BF8 : VOPM_WMMA_Pseudo <VOPM_WMMA_F16_F8_X32>;
@@ -783,44 +791,44 @@ defm V_WMMA_F32I32_16X16X64_IU4  : VOPM_WMMA_Pseudo <VOPM_WMMA_F32I32_IU4_X64>;
 
 defm V_WMMA_F32_16X16X64_F8F6F4  : VOPM_WMMA_Pseudo <VOPM_WMMA_F32_F8F6F4_X64>;
 
-defm V_SWMMAC_F16_16X16X32_F16     : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F16_F16_X32>;
-defm V_SWMMAC_F32_16X16X32_F16     : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F32_F16_X32>;
-defm V_SWMMAC_F32_16X16X32_BF16    : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F32_BF16_X32>;
-defm V_SWMMAC_BF16_16X16X32_BF16   : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_BF16_BF16_X32>;
+defm V_SWMMA_F16_16X16X32_F16     : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F16_F16_X32>;
+defm V_SWMMA_F32_16X16X32_F16     : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F32_F16_X32>;
+defm V_SWMMA_F32_16X16X32_BF16    : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F32_BF16_X32>;
+defm V_SWMMA_BF16_16X16X32_BF16   : VOPM_SWMMA_Pseudo<VOPM_SWMMA_BF16_BF16_X32>;
 
-defm V_SWMMAC_F32_16X16X32_FP8_FP8 : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F32_F8_X32>;
-defm V_SWMMAC_F32_16X16X32_FP8_BF8 : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F32_F8_X32>;
-defm V_SWMMAC_F32_16X16X32_BF8_FP8 : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F32_F8_X32>;
-defm V_SWMMAC_F32_16X16X32_BF8_BF8 : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F32_F8_X32>;
-defm V_SWMMAC_F16_16X16X32_FP8_FP8 : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F16_F8_X32>;
-defm V_SWMMAC_F16_16X16X32_FP8_BF8 : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F16_F8_X32>;
-defm V_SWMMAC_F16_16X16X32_BF8_FP8 : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F16_F8_X32>;
-defm V_SWMMAC_F16_16X16X32_BF8_BF8 : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F16_F8_X32>;
+defm V_SWMMA_F32_16X16X32_FP8_FP8 : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F32_F8_X32>;
+defm V_SWMMA_F32_16X16X32_FP8_BF8 : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F32_F8_X32>;
+defm V_SWMMA_F32_16X16X32_BF8_FP8 : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F32_F8_X32>;
+defm V_SWMMA_F32_16X16X32_BF8_BF8 : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F32_F8_X32>;
+defm V_SWMMA_F16_16X16X32_FP8_FP8 : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F16_F8_X32>;
+defm V_SWMMA_F16_16X16X32_FP8_BF8 : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F16_F8_X32>;
+defm V_SWMMA_F16_16X16X32_BF8_FP8 : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F16_F8_X32>;
+defm V_SWMMA_F16_16X16X32_BF8_BF8 : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F16_F8_X32>;
 
-defm V_SWMMAC_F32_16X16X64_FP8_FP8 : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F32_F8_X64>;
-defm V_SWMMAC_F32_16X16X64_FP8_BF8 : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F32_F8_X64>;
-defm V_SWMMAC_F32_16X16X64_BF8_FP8 : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F32_F8_X64>;
-defm V_SWMMAC_F32_16X16X64_BF8_BF8 : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F32_F8_X64>;
-defm V_SWMMAC_F16_16X16X64_FP8_FP8 : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F16_F8_X64>;
-defm V_SWMMAC_F16_16X16X64_FP8_BF8 : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F16_F8_X64>;
-defm V_SWMMAC_F16_16X16X64_BF8_FP8 : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F16_F8_X64>;
-defm V_SWMMAC_F16_16X16X64_BF8_BF8 : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F16_F8_X64>;
+defm V_SWMMA_F32_16X16X64_FP8_FP8 : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F32_F8_X64>;
+defm V_SWMMA_F32_16X16X64_FP8_BF8 : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F32_F8_X64>;
+defm V_SWMMA_F32_16X16X64_BF8_FP8 : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F32_F8_X64>;
+defm V_SWMMA_F32_16X16X64_BF8_BF8 : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F32_F8_X64>;
+defm V_SWMMA_F16_16X16X64_FP8_FP8 : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F16_F8_X64>;
+defm V_SWMMA_F16_16X16X64_FP8_BF8 : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F16_F8_X64>;
+defm V_SWMMA_F16_16X16X64_BF8_FP8 : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F16_F8_X64>;
+defm V_SWMMA_F16_16X16X64_BF8_BF8 : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F16_F8_X64>;
 
-defm V_SWMMAC_I32_16X16X32_IU8     : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_I32_IU8_X32>;
-defm V_SWMMAC_F32_16X16X32_IU8     : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F32_IU8_X32>;
-defm V_SWMMAC_F32I32_16X16X32_IU8  : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F32I32_IU8_X32>;
-defm V_SWMMAC_I32_16X16X64_IU8     : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_I32_IU8_X64>;
-defm V_SWMMAC_F32_16X16X64_IU8     : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F32_IU8_X64>;
-defm V_SWMMAC_F32I32_16X16X64_IU8  : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F32I32_IU8_X64>;
-defm V_SWMMAC_I32_16X16X32_IU4     : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_I32_IU4_X32>;
-defm V_SWMMAC_F32_16X16X32_IU4     : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F32_IU4_X32>;
-defm V_SWMMAC_F32I32_16X16X32_IU4  : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F32I32_IU4_X32>;
-defm V_SWMMAC_I32_16X16X64_IU4     : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_I32_IU4_X64>;
-defm V_SWMMAC_F32_16X16X64_IU4     : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F32_IU4_X64>;
-defm V_SWMMAC_F32I32_16X16X64_IU4  : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F32I32_IU4_X64>;
-defm V_SWMMAC_I32_16X16X128_IU4    : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_I32_IU4_X128>;
-defm V_SWMMAC_F32_16X16X128_IU4    : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F32_IU4_X128>;
-defm V_SWMMAC_F32I32_16X16X128_IU4 : VOPM_SWMMAC_Pseudo<VOPM_SWMMAC_F32I32_IU4_X128>;
+defm V_SWMMA_I32_16X16X32_IU8     : VOPM_SWMMA_Pseudo<VOPM_SWMMA_I32_IU8_X32>;
+defm V_SWMMA_F32_16X16X32_IU8     : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F32_IU8_X32>;
+defm V_SWMMA_F32I32_16X16X32_IU8  : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F32I32_IU8_X32>;
+defm V_SWMMA_I32_16X16X64_IU8     : VOPM_SWMMA_Pseudo<VOPM_SWMMA_I32_IU8_X64>;
+defm V_SWMMA_F32_16X16X64_IU8     : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F32_IU8_X64>;
+defm V_SWMMA_F32I32_16X16X64_IU8  : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F32I32_IU8_X64>;
+defm V_SWMMA_I32_16X16X32_IU4     : VOPM_SWMMA_Pseudo<VOPM_SWMMA_I32_IU4_X32>;
+defm V_SWMMA_F32_16X16X32_IU4     : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F32_IU4_X32>;
+defm V_SWMMA_F32I32_16X16X32_IU4  : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F32I32_IU4_X32>;
+defm V_SWMMA_I32_16X16X64_IU4     : VOPM_SWMMA_Pseudo<VOPM_SWMMA_I32_IU4_X64>;
+defm V_SWMMA_F32_16X16X64_IU4     : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F32_IU4_X64>;
+defm V_SWMMA_F32I32_16X16X64_IU4  : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F32I32_IU4_X64>;
+defm V_SWMMA_I32_16X16X128_IU4    : VOPM_SWMMA_Pseudo<VOPM_SWMMA_I32_IU4_X128>;
+defm V_SWMMA_F32_16X16X128_IU4    : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F32_IU4_X128>;
+defm V_SWMMA_F32I32_16X16X128_IU4 : VOPM_SWMMA_Pseudo<VOPM_SWMMA_F32I32_IU4_X128>;
 
 def FmaFromTensorLayout {
   int CONV_8X4 = 0;
@@ -1140,9 +1148,7 @@ multiclass VOP3M_WMMA_Real_Base<GFXGen Gen, bits<8> op,
       bits<10> srcB;
 
       let Inst{42-32} = srcC;
-
       let Inst{55-45} = srcA;
-
       let Inst{73-64} = srcB;
 
       bit signed_a;
@@ -1179,9 +1185,7 @@ multiclass VOP5M_WMMA_Real_Base<GFXGen Gen, bits<8> op,
       bits<10> srcB;
 
       let Inst{42-32} = srcC;
-
       let Inst{55-45} = srcA;
-
       let Inst{73-64} = srcB;
 
       let AsmString = asmName # ps.Pfl.Asm64;
@@ -1199,32 +1203,41 @@ multiclass VOP5M_WMMA_Real_gfx13 <bits<8> op, string asmName = !cast<VOPM_Pseudo
 }
 
 
-multiclass VOP3M_Real_SWMMAC<GFXGen Gen, bits<8> op,
+multiclass VOP5M_Real_SWMMA<GFXGen Gen, bits<8> op,
                                 string backing_ps_name = NAME,
                                 string asmName = !cast<VOPM_Pseudo>(NAME).Mnemonic> {
   defvar ps = !cast<VOPM_Pseudo>(backing_ps_name);
 
   def Gen.Suffix :
     VOPM_Real_Gen<ps, Gen, asmName>,
-    VOP3Me<op, !cast<VOPMProfile>(ps.Pfl)> {
+    VOP5Me<op, !cast<VOPMProfile>(ps.Pfl)> {
       let AsmString = asmName # ps.Pfl.Asm64;
 
+      bits<11> srcC;
+      bits<11> srcA;
+      bits<10> srcB;
+
+      let Inst{42-32} = srcC;
+      let Inst{55-45} = srcA;
+      let Inst{73-64} = srcB;
+
+      bit sparse_index_odd;
       bit signed_a;
       bit signed_b;
 
-      bits<1> index_key_16bit;
-      let Inst{77} = index_key_16bit{0};
+      let Inst{120} = sparse_index_odd;
 
-      defvar WMMAPfl = !cast<VOPM_SWMMAC_Profile>(ps.Pfl);
+      defvar WMMAPfl = !cast<VOPM_SWMMA_Profile>(ps.Pfl);
       let Inst{60-58} = WMMAPfl.KMultiplier;
-
-      let Inst{61} = !if(WMMAPfl.isInt, signed_a, ?);
-      let Inst{62} = !if(WMMAPfl.isInt, signed_b, ?);
+      let Inst{76} = !if(WMMAPfl.isInt, signed_a, ?);
+      let Inst{79} = !if(WMMAPfl.isInt, signed_b, ?);
   }
 }
 
-multiclass VOP3M_SWMMAC_Real_gfx13 <bits<8> op, string asmName = !cast<VOPM_Pseudo>(NAME # "_twoaddr").Mnemonic> {
-  defm _twoaddr : VOP3M_Real_SWMMAC <GFX13Gen, op, NAME # "_twoaddr", asmName>;
+multiclass VOP5M_SWMMA_Real_gfx13 <bits<8> op, string asmName = !cast<VOPM_Pseudo>(NAME # "_twoaddr").Mnemonic> {
+  // Do not copy constraints from pseudo.
+  let Constraints = "" in
+    defm _twoaddr : VOP5M_Real_SWMMA <GFX13Gen, op, NAME # "_twoaddr", asmName>;
 }
 
 multiclass VOP5M_Fma_From_Tensor_Real_Base<GFXGen Gen, bits<8> op,
@@ -1385,35 +1398,35 @@ defm V_WMMA_F32I32_16X16_IU4     : VOP3M_WMMA_K1_K2_K4_Real <0x81>;
 
 defm V_WMMA_F32_16X16X64_F8F6F4  : VOP5M_WMMA_Real_gfx13 <0x82, "v_wmma_f32_16x16_f8f6f4">;
 
-multiclass VOP3M_SWMMAC_K1_K2_Real<bits<8> op> {
-  defm !subst("_16X16_", "_16X16X32_", NAME) : VOP3M_SWMMAC_Real_gfx13<op, !tolower(NAME)>;
-  defm !subst("_16X16_", "_16X16X64_", NAME) : VOP3M_SWMMAC_Real_gfx13<op, !tolower(NAME)>;
+multiclass VOP5M_SWMMA_K1_K2_Real<bits<8> op> {
+  defm !subst("_16X16_", "_16X16X32_", NAME) : VOP5M_SWMMA_Real_gfx13<op, !tolower(NAME)>;
+  defm !subst("_16X16_", "_16X16X64_", NAME) : VOP5M_SWMMA_Real_gfx13<op, !tolower(NAME)>;
 }
 
-multiclass VOP3M_SWMMAC_K1_K2_K4_Real<bits<8> op> {
-  defm !subst("_16X16_", "_16X16X32_", NAME) : VOP3M_SWMMAC_Real_gfx13<op, !tolower(NAME)>;
-  defm !subst("_16X16_", "_16X16X64_", NAME) : VOP3M_SWMMAC_Real_gfx13<op, !tolower(NAME)>;
-  defm !subst("_16X16_", "_16X16X128_", NAME) : VOP3M_SWMMAC_Real_gfx13<op, !tolower(NAME)>;
+multiclass VOP5M_SWMMA_K1_K2_K4_Real<bits<8> op> {
+  defm !subst("_16X16_", "_16X16X32_", NAME) : VOP5M_SWMMA_Real_gfx13<op, !tolower(NAME)>;
+  defm !subst("_16X16_", "_16X16X64_", NAME) : VOP5M_SWMMA_Real_gfx13<op, !tolower(NAME)>;
+  defm !subst("_16X16_", "_16X16X128_", NAME) : VOP5M_SWMMA_Real_gfx13<op, !tolower(NAME)>;
 }
 
-defm V_SWMMAC_F32_16X16X32_F16   : VOP3M_SWMMAC_Real_gfx13 <0xb0>;
-defm V_SWMMAC_F16_16X16X32_F16   : VOP3M_SWMMAC_Real_gfx13 <0xb1>;
-defm V_SWMMAC_F32_16X16X32_BF16  : VOP3M_SWMMAC_Real_gfx13 <0xb2>;
-defm V_SWMMAC_BF16_16X16X32_BF16 : VOP3M_SWMMAC_Real_gfx13 <0xb3>;
-defm V_SWMMAC_F32_16X16_FP8_FP8  : VOP3M_SWMMAC_K1_K2_Real <0xb4>;
-defm V_SWMMAC_F32_16X16_FP8_BF8  : VOP3M_SWMMAC_K1_K2_Real <0xb5>;
-defm V_SWMMAC_F32_16X16_BF8_FP8  : VOP3M_SWMMAC_K1_K2_Real <0xb6>;
-defm V_SWMMAC_F32_16X16_BF8_BF8  : VOP3M_SWMMAC_K1_K2_Real <0xb7>;
-defm V_SWMMAC_F16_16X16_FP8_FP8  : VOP3M_SWMMAC_K1_K2_Real <0xb8>;
-defm V_SWMMAC_F16_16X16_FP8_BF8  : VOP3M_SWMMAC_K1_K2_Real <0xb9>;
-defm V_SWMMAC_F16_16X16_BF8_FP8  : VOP3M_SWMMAC_K1_K2_Real <0xba>;
-defm V_SWMMAC_F16_16X16_BF8_BF8  : VOP3M_SWMMAC_K1_K2_Real <0xbb>;
-defm V_SWMMAC_I32_16X16_IU8      : VOP3M_SWMMAC_K1_K2_Real <0xbc>;
-defm V_SWMMAC_F32_16X16_IU8      : VOP3M_SWMMAC_K1_K2_Real <0xbd>;
-defm V_SWMMAC_I32_16X16_IU4      : VOP3M_SWMMAC_K1_K2_K4_Real <0xbe>;
-defm V_SWMMAC_F32_16X16_IU4      : VOP3M_SWMMAC_K1_K2_K4_Real <0xbf>;
-defm V_SWMMAC_F32I32_16X16_IU8   : VOP3M_SWMMAC_K1_K2_Real <0xc0>;
-defm V_SWMMAC_F32I32_16X16_IU4   : VOP3M_SWMMAC_K1_K2_K4_Real <0xc1>;
+defm V_SWMMA_F32_16X16X32_F16   : VOP5M_SWMMA_Real_gfx13 <0xb0>;
+defm V_SWMMA_F16_16X16X32_F16   : VOP5M_SWMMA_Real_gfx13 <0xb1>;
+defm V_SWMMA_F32_16X16X32_BF16  : VOP5M_SWMMA_Real_gfx13 <0xb2>;
+defm V_SWMMA_BF16_16X16X32_BF16 : VOP5M_SWMMA_Real_gfx13 <0xb3>;
+defm V_SWMMA_F32_16X16_FP8_FP8  : VOP5M_SWMMA_K1_K2_Real <0xb4>;
+defm V_SWMMA_F32_16X16_FP8_BF8  : VOP5M_SWMMA_K1_K2_Real <0xb5>;
+defm V_SWMMA_F32_16X16_BF8_FP8  : VOP5M_SWMMA_K1_K2_Real <0xb6>;
+defm V_SWMMA_F32_16X16_BF8_BF8  : VOP5M_SWMMA_K1_K2_Real <0xb7>;
+defm V_SWMMA_F16_16X16_FP8_FP8  : VOP5M_SWMMA_K1_K2_Real <0xb8>;
+defm V_SWMMA_F16_16X16_FP8_BF8  : VOP5M_SWMMA_K1_K2_Real <0xb9>;
+defm V_SWMMA_F16_16X16_BF8_FP8  : VOP5M_SWMMA_K1_K2_Real <0xba>;
+defm V_SWMMA_F16_16X16_BF8_BF8  : VOP5M_SWMMA_K1_K2_Real <0xbb>;
+defm V_SWMMA_I32_16X16_IU8      : VOP5M_SWMMA_K1_K2_Real <0xbc>;
+defm V_SWMMA_F32_16X16_IU8      : VOP5M_SWMMA_K1_K2_Real <0xbd>;
+defm V_SWMMA_I32_16X16_IU4      : VOP5M_SWMMA_K1_K2_K4_Real <0xbe>;
+defm V_SWMMA_F32_16X16_IU4      : VOP5M_SWMMA_K1_K2_K4_Real <0xbf>;
+defm V_SWMMA_F32I32_16X16_IU8   : VOP5M_SWMMA_K1_K2_Real <0xc0>;
+defm V_SWMMA_F32I32_16X16_IU4   : VOP5M_SWMMA_K1_K2_K4_Real <0xc1>;
 
 // TODO-GFX13: Add support for VOP3 encoding.
 multiclass FMA_Tensor_Real_Shape<bits<8> op, string psName, string mnemo> {
@@ -1531,9 +1544,9 @@ multiclass WMMAPat_VOPM<string Inst, SDPatternOperator node, VOPM_WMMA_Profile P
                 (P.DstVT !setdagop(P.WmmaInlineOutPat, !cast<Instruction>(Inst#"_threeaddr")))>;
 }
 
-class SWMMACPat_VOPM<Instruction Inst, SDPatternOperator node, VOPM_SWMMAC_Profile P> :
-  GCNPat <(P.DstVT !setdagop(P.SwmmacInPat, node)),
-          (P.DstVT !setdagop(P.SwmmacOutPat, Inst))>;
+class SWMMAPat_VOPM<Instruction Inst, SDPatternOperator node, VOPM_SWMMA_Profile P> :
+  GCNPat <(P.DstVT !setdagop(P.SwmmaInPat, node)),
+          (P.DstVT !setdagop(P.SwmmaOutPat, Inst))>;
 
 let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
   defm : WMMAPat_VOPM<"V_WMMA_BF16_16X16X16_BF16",   int_amdgcn_wmma_bf16_16x16x16_bf16_clamp,   VOPM_WMMA_BF16_BF16_X16>;
@@ -1577,43 +1590,43 @@ let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
 
   defm : WMMAPat_VOPM<"V_WMMA_F32_16X16X64_F8F6F4", int_amdgcn_wmma_f32_16x16x64_f8f6f4_clamp,    VOPM_WMMA_F32_F8F6F4_X64>;
 
-  def : SWMMACPat_VOPM<V_SWMMAC_BF16_16X16X32_BF16_twoaddr, int_amdgcn_swmmac_bf16_16x16x32_bf16_clamp,     VOPM_SWMMAC_BF16_BF16_X32>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F16_16X16X32_F16_twoaddr,   int_amdgcn_swmmac_f16_16x16x32_f16_clamp,       VOPM_SWMMAC_F16_F16_X32>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F32_16X16X32_BF16_twoaddr,  int_amdgcn_swmmac_f32_16x16x32_bf16_clamp,      VOPM_SWMMAC_F32_BF16_X32>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F32_16X16X32_F16_twoaddr,   int_amdgcn_swmmac_f32_16x16x32_f16_clamp,       VOPM_SWMMAC_F32_F16_X32>;
+  def : SWMMAPat_VOPM<V_SWMMA_BF16_16X16X32_BF16_twoaddr, int_amdgcn_swmma_bf16_16x16x32_bf16_clamp,     VOPM_SWMMA_BF16_BF16_X32>;
+  def : SWMMAPat_VOPM<V_SWMMA_F16_16X16X32_F16_twoaddr,   int_amdgcn_swmma_f16_16x16x32_f16_clamp,       VOPM_SWMMA_F16_F16_X32>;
+  def : SWMMAPat_VOPM<V_SWMMA_F32_16X16X32_BF16_twoaddr,  int_amdgcn_swmma_f32_16x16x32_bf16_clamp,      VOPM_SWMMA_F32_BF16_X32>;
+  def : SWMMAPat_VOPM<V_SWMMA_F32_16X16X32_F16_twoaddr,   int_amdgcn_swmma_f32_16x16x32_f16_clamp,       VOPM_SWMMA_F32_F16_X32>;
 
-  def : SWMMACPat_VOPM<V_SWMMAC_F16_16X16X32_BF8_BF8_twoaddr, int_amdgcn_swmmac_f16_16x16x32_bf8_bf8_clamp, VOPM_SWMMAC_F16_F8_X32>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F16_16X16X32_BF8_FP8_twoaddr, int_amdgcn_swmmac_f16_16x16x32_bf8_fp8_clamp, VOPM_SWMMAC_F16_F8_X32>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F16_16X16X32_FP8_BF8_twoaddr, int_amdgcn_swmmac_f16_16x16x32_fp8_bf8_clamp, VOPM_SWMMAC_F16_F8_X32>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F16_16X16X32_FP8_FP8_twoaddr, int_amdgcn_swmmac_f16_16x16x32_fp8_fp8_clamp, VOPM_SWMMAC_F16_F8_X32>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F16_16X16X64_BF8_BF8_twoaddr, int_amdgcn_swmmac_f16_16x16x64_bf8_bf8_clamp, VOPM_SWMMAC_F16_F8_X64>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F16_16X16X64_BF8_FP8_twoaddr, int_amdgcn_swmmac_f16_16x16x64_bf8_fp8_clamp, VOPM_SWMMAC_F16_F8_X64>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F16_16X16X64_FP8_BF8_twoaddr, int_amdgcn_swmmac_f16_16x16x64_fp8_bf8_clamp, VOPM_SWMMAC_F16_F8_X64>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F16_16X16X64_FP8_FP8_twoaddr, int_amdgcn_swmmac_f16_16x16x64_fp8_fp8_clamp, VOPM_SWMMAC_F16_F8_X64>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F32_16X16X32_BF8_BF8_twoaddr, int_amdgcn_swmmac_f32_16x16x32_bf8_bf8_clamp, VOPM_SWMMAC_F32_F8_X32>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F32_16X16X32_BF8_FP8_twoaddr, int_amdgcn_swmmac_f32_16x16x32_bf8_fp8_clamp, VOPM_SWMMAC_F32_F8_X32>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F32_16X16X32_FP8_BF8_twoaddr, int_amdgcn_swmmac_f32_16x16x32_fp8_bf8_clamp, VOPM_SWMMAC_F32_F8_X32>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F32_16X16X32_FP8_FP8_twoaddr, int_amdgcn_swmmac_f32_16x16x32_fp8_fp8_clamp, VOPM_SWMMAC_F32_F8_X32>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F32_16X16X64_BF8_BF8_twoaddr, int_amdgcn_swmmac_f32_16x16x64_bf8_bf8_clamp, VOPM_SWMMAC_F32_F8_X64>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F32_16X16X64_BF8_FP8_twoaddr, int_amdgcn_swmmac_f32_16x16x64_bf8_fp8_clamp, VOPM_SWMMAC_F32_F8_X64>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F32_16X16X64_FP8_BF8_twoaddr, int_amdgcn_swmmac_f32_16x16x64_fp8_bf8_clamp, VOPM_SWMMAC_F32_F8_X64>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F32_16X16X64_FP8_FP8_twoaddr, int_amdgcn_swmmac_f32_16x16x64_fp8_fp8_clamp, VOPM_SWMMAC_F32_F8_X64>;
+  def : SWMMAPat_VOPM<V_SWMMA_F16_16X16X32_BF8_BF8_twoaddr, int_amdgcn_swmma_f16_16x16x32_bf8_bf8_clamp, VOPM_SWMMA_F16_F8_X32>;
+  def : SWMMAPat_VOPM<V_SWMMA_F16_16X16X32_BF8_FP8_twoaddr, int_amdgcn_swmma_f16_16x16x32_bf8_fp8_clamp, VOPM_SWMMA_F16_F8_X32>;
+  def : SWMMAPat_VOPM<V_SWMMA_F16_16X16X32_FP8_BF8_twoaddr, int_amdgcn_swmma_f16_16x16x32_fp8_bf8_clamp, VOPM_SWMMA_F16_F8_X32>;
+  def : SWMMAPat_VOPM<V_SWMMA_F16_16X16X32_FP8_FP8_twoaddr, int_amdgcn_swmma_f16_16x16x32_fp8_fp8_clamp, VOPM_SWMMA_F16_F8_X32>;
+  def : SWMMAPat_VOPM<V_SWMMA_F16_16X16X64_BF8_BF8_twoaddr, int_amdgcn_swmma_f16_16x16x64_bf8_bf8_clamp, VOPM_SWMMA_F16_F8_X64>;
+  def : SWMMAPat_VOPM<V_SWMMA_F16_16X16X64_BF8_FP8_twoaddr, int_amdgcn_swmma_f16_16x16x64_bf8_fp8_clamp, VOPM_SWMMA_F16_F8_X64>;
+  def : SWMMAPat_VOPM<V_SWMMA_F16_16X16X64_FP8_BF8_twoaddr, int_amdgcn_swmma_f16_16x16x64_fp8_bf8_clamp, VOPM_SWMMA_F16_F8_X64>;
+  def : SWMMAPat_VOPM<V_SWMMA_F16_16X16X64_FP8_FP8_twoaddr, int_amdgcn_swmma_f16_16x16x64_fp8_fp8_clamp, VOPM_SWMMA_F16_F8_X64>;
+  def : SWMMAPat_VOPM<V_SWMMA_F32_16X16X32_BF8_BF8_twoaddr, int_amdgcn_swmma_f32_16x16x32_bf8_bf8_clamp, VOPM_SWMMA_F32_F8_X32>;
+  def : SWMMAPat_VOPM<V_SWMMA_F32_16X16X32_BF8_FP8_twoaddr, int_amdgcn_swmma_f32_16x16x32_bf8_fp8_clamp, VOPM_SWMMA_F32_F8_X32>;
+  def : SWMMAPat_VOPM<V_SWMMA_F32_16X16X32_FP8_BF8_twoaddr, int_amdgcn_swmma_f32_16x16x32_fp8_bf8_clamp, VOPM_SWMMA_F32_F8_X32>;
+  def : SWMMAPat_VOPM<V_SWMMA_F32_16X16X32_FP8_FP8_twoaddr, int_amdgcn_swmma_f32_16x16x32_fp8_fp8_clamp, VOPM_SWMMA_F32_F8_X32>;
+  def : SWMMAPat_VOPM<V_SWMMA_F32_16X16X64_BF8_BF8_twoaddr, int_amdgcn_swmma_f32_16x16x64_bf8_bf8_clamp, VOPM_SWMMA_F32_F8_X64>;
+  def : SWMMAPat_VOPM<V_SWMMA_F32_16X16X64_BF8_FP8_twoaddr, int_amdgcn_swmma_f32_16x16x64_bf8_fp8_clamp, VOPM_SWMMA_F32_F8_X64>;
+  def : SWMMAPat_VOPM<V_SWMMA_F32_16X16X64_FP8_BF8_twoaddr, int_amdgcn_swmma_f32_16x16x64_fp8_bf8_clamp, VOPM_SWMMA_F32_F8_X64>;
+  def : SWMMAPat_VOPM<V_SWMMA_F32_16X16X64_FP8_FP8_twoaddr, int_amdgcn_swmma_f32_16x16x64_fp8_fp8_clamp, VOPM_SWMMA_F32_F8_X64>;
 
-  def : SWMMACPat_VOPM<V_SWMMAC_F32_16X16X32_IU4_twoaddr, int_amdgcn_swmmac_f32_16x16x32_iu4_clamp,         VOPM_SWMMAC_F32_IU4_X32>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F32_16X16X32_IU8_twoaddr, int_amdgcn_swmmac_f32_16x16x32_iu8_clamp,         VOPM_SWMMAC_F32_IU8_X32>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F32_16X16X64_IU4_twoaddr, int_amdgcn_swmmac_f32_16x16x64_iu4_clamp,         VOPM_SWMMAC_F32_IU4_X64>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F32_16X16X64_IU8_twoaddr, int_amdgcn_swmmac_f32_16x16x64_iu8_clamp,         VOPM_SWMMAC_F32_IU8_X64>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F32_16X16X128_IU4_twoaddr, int_amdgcn_swmmac_f32_16x16x128_iu4_clamp,       VOPM_SWMMAC_F32_IU4_X128>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F32I32_16X16X32_IU4_twoaddr, int_amdgcn_swmmac_f32i32_16x16x32_iu4_clamp,   VOPM_SWMMAC_F32I32_IU4_X32>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F32I32_16X16X32_IU8_twoaddr, int_amdgcn_swmmac_f32i32_16x16x32_iu8_clamp,   VOPM_SWMMAC_F32I32_IU8_X32>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F32I32_16X16X64_IU4_twoaddr, int_amdgcn_swmmac_f32i32_16x16x64_iu4_clamp,   VOPM_SWMMAC_F32I32_IU4_X64>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F32I32_16X16X64_IU8_twoaddr, int_amdgcn_swmmac_f32i32_16x16x64_iu8_clamp,   VOPM_SWMMAC_F32I32_IU8_X64>;
-  def : SWMMACPat_VOPM<V_SWMMAC_F32I32_16X16X128_IU4_twoaddr, int_amdgcn_swmmac_f32i32_16x16x128_iu4_clamp, VOPM_SWMMAC_F32I32_IU4_X128>;
-  def : SWMMACPat_VOPM<V_SWMMAC_I32_16X16X32_IU4_twoaddr, int_amdgcn_swmmac_i32_16x16x32_iu4_clamp,         VOPM_SWMMAC_I32_IU4_X32>;
-  def : SWMMACPat_VOPM<V_SWMMAC_I32_16X16X32_IU8_twoaddr, int_amdgcn_swmmac_i32_16x16x32_iu8_clamp,         VOPM_SWMMAC_I32_IU8_X32>;
-  def : SWMMACPat_VOPM<V_SWMMAC_I32_16X16X64_IU4_twoaddr, int_amdgcn_swmmac_i32_16x16x64_iu4_clamp,         VOPM_SWMMAC_I32_IU4_X64>;
-  def : SWMMACPat_VOPM<V_SWMMAC_I32_16X16X64_IU8_twoaddr, int_amdgcn_swmmac_i32_16x16x64_iu8_clamp,         VOPM_SWMMAC_I32_IU8_X64>;
-  def : SWMMACPat_VOPM<V_SWMMAC_I32_16X16X128_IU4_twoaddr, int_amdgcn_swmmac_i32_16x16x128_iu4_clamp,       VOPM_SWMMAC_I32_IU4_X128>;
+  def : SWMMAPat_VOPM<V_SWMMA_F32_16X16X32_IU4_twoaddr, int_amdgcn_swmma_f32_16x16x32_iu4_clamp,         VOPM_SWMMA_F32_IU4_X32>;
+  def : SWMMAPat_VOPM<V_SWMMA_F32_16X16X32_IU8_twoaddr, int_amdgcn_swmma_f32_16x16x32_iu8_clamp,         VOPM_SWMMA_F32_IU8_X32>;
+  def : SWMMAPat_VOPM<V_SWMMA_F32_16X16X64_IU4_twoaddr, int_amdgcn_swmma_f32_16x16x64_iu4_clamp,         VOPM_SWMMA_F32_IU4_X64>;
+  def : SWMMAPat_VOPM<V_SWMMA_F32_16X16X64_IU8_twoaddr, int_amdgcn_swmma_f32_16x16x64_iu8_clamp,         VOPM_SWMMA_F32_IU8_X64>;
+  def : SWMMAPat_VOPM<V_SWMMA_F32_16X16X128_IU4_twoaddr, int_amdgcn_swmma_f32_16x16x128_iu4_clamp,       VOPM_SWMMA_F32_IU4_X128>;
+  def : SWMMAPat_VOPM<V_SWMMA_F32I32_16X16X32_IU4_twoaddr, int_amdgcn_swmma_f32i32_16x16x32_iu4_clamp,   VOPM_SWMMA_F32I32_IU4_X32>;
+  def : SWMMAPat_VOPM<V_SWMMA_F32I32_16X16X32_IU8_twoaddr, int_amdgcn_swmma_f32i32_16x16x32_iu8_clamp,   VOPM_SWMMA_F32I32_IU8_X32>;
+  def : SWMMAPat_VOPM<V_SWMMA_F32I32_16X16X64_IU4_twoaddr, int_amdgcn_swmma_f32i32_16x16x64_iu4_clamp,   VOPM_SWMMA_F32I32_IU4_X64>;
+  def : SWMMAPat_VOPM<V_SWMMA_F32I32_16X16X64_IU8_twoaddr, int_amdgcn_swmma_f32i32_16x16x64_iu8_clamp,   VOPM_SWMMA_F32I32_IU8_X64>;
+  def : SWMMAPat_VOPM<V_SWMMA_F32I32_16X16X128_IU4_twoaddr, int_amdgcn_swmma_f32i32_16x16x128_iu4_clamp, VOPM_SWMMA_F32I32_IU4_X128>;
+  def : SWMMAPat_VOPM<V_SWMMA_I32_16X16X32_IU4_twoaddr, int_amdgcn_swmma_i32_16x16x32_iu4_clamp,         VOPM_SWMMA_I32_IU4_X32>;
+  def : SWMMAPat_VOPM<V_SWMMA_I32_16X16X32_IU8_twoaddr, int_amdgcn_swmma_i32_16x16x32_iu8_clamp,         VOPM_SWMMA_I32_IU8_X32>;
+  def : SWMMAPat_VOPM<V_SWMMA_I32_16X16X64_IU4_twoaddr, int_amdgcn_swmma_i32_16x16x64_iu4_clamp,         VOPM_SWMMA_I32_IU4_X64>;
+  def : SWMMAPat_VOPM<V_SWMMA_I32_16X16X64_IU8_twoaddr, int_amdgcn_swmma_i32_16x16x64_iu8_clamp,         VOPM_SWMMA_I32_IU8_X64>;
+  def : SWMMAPat_VOPM<V_SWMMA_I32_16X16X128_IU4_twoaddr, int_amdgcn_swmma_i32_16x16x128_iu4_clamp,       VOPM_SWMMA_I32_IU4_X128>;
 } // let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus
 
 class REGULAR_8x4 <SDPatternOperator node, Fma_From_Tensor_Profile P> : PatFrag<P.FmaFromTensorFrag, !setdagop(P.FmaFromTensorFrag, node),

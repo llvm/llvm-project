@@ -2953,9 +2953,15 @@ def ext_constexpr_function_never_constant_expr : ExtWarn<
   "constant expression">, InGroup<DiagGroup<"invalid-constexpr">>, DefaultError;
 def err_attr_cond_never_constant_expr : Error<
   "%0 attribute expression never produces a constant expression">;
+def err_diagnose_if_unknown_warning : Error<"unknown warning group '%0'">;
 def err_diagnose_if_invalid_diagnostic_type : Error<
   "invalid diagnostic type for 'diagnose_if'; use \"error\" or \"warning\" "
   "instead">;
+def err_diagnose_if_unknown_option : Error<"unknown diagnostic option">;
+def err_diagnose_if_expected_equals : Error<
+  "expected '=' after diagnostic option">;
+def err_diagnose_if_unexpected_value : Error<
+  "unexpected value; use 'true' or 'false'">;
 def err_constexpr_body_no_return : Error<
   "no return statement in %select{constexpr|consteval}0 function">;
 def err_constexpr_return_missing_expr : Error<
@@ -3864,6 +3870,9 @@ def err_sme_definition_using_za_in_non_sme_target : Error<
   "function using ZA state requires 'sme'">;
 def err_sme_definition_using_zt0_in_non_sme2_target : Error<
   "function using ZT0 state requires 'sme2'">;
+def err_sme_openmp_captured_region : Error<
+  "OpenMP captured regions are not yet supported in "
+  "%select{streaming functions|functions with ZA state|functions with ZT0 state}0">;
 def warn_sme_streaming_pass_return_vl_to_non_streaming : Warning<
   "%select{returning|passing}0 a VL-dependent argument %select{from|to}0 a function with a different"
   " streaming-mode is undefined behaviour when the streaming and non-streaming vector lengths are different at runtime">,

@@ -69,16 +69,17 @@ def node_5b : SDNode<"MyTargetISD::NODE_5", SDTypeProfile<0, 0, []>, [SDNPHasCha
 // CHECK-NEXT:    COMPAT = ISD::BUILTIN_OP_END,
 // CHECK-NEXT:  };
 
-// CHECK:       static const char MyTargetSDNodeNames[] =
+// CHECK:       static constexpr char MyTargetSDNodeNamesStorage[] =
+// CHECK-NEXT:    "\0"
 // CHECK-NEXT:    "MyTargetISD::COMPAT\0"
-// CHECK-NEXT:    "\0";
+// CHECK-NEXT:    ;
 
 // CHECK:       static const SDTypeConstraint MyTargetSDTypeConstraints[] = {
 // CHECK-NEXT:    /* dummy */ {SDTCisVT, 0, 0, MVT::INVALID_SIMPLE_VALUE_TYPE}
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static const SDNodeDesc MyTargetSDNodeDescs[] = {
-// CHECK-NEXT:      {1, -1, 0, 0, 0, 0, 0, 0}, // COMPAT
+// CHECK-NEXT:      {1, -1, 0, 0, 0, 1, 0, 0}, // COMPAT
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static const SDNodeInfo MyTargetGenSDNodeInfo(

@@ -1290,6 +1290,7 @@ def exp_vm : NamedBitOperand<"vm", "ExpVM">;
 #ifdef LLPC_BUILD_NPI
 def SignedA : NamedBitOperand<"signed_a">;
 def SignedB : NamedBitOperand<"signed_b">;
+def SparseIndexOdd : NamedBitOperand<"sparse_index_odd">;
 
 #endif /* LLPC_BUILD_NPI */
 def FORMAT : CustomOperand<i8>;

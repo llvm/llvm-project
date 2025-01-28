@@ -348,6 +348,34 @@ gentbl(
 )
 
 gentbl(
+    name = "basic_builtins_hexagon_gen",
+    tbl_outs = [(
+        "-gen-clang-builtins",
+        "include/clang/Basic/BuiltinsHexagon.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsHexagon.td",
+    td_srcs = [
+        "include/clang/Basic/BuiltinsHexagon.td",
+        "include/clang/Basic/BuiltinsBase.td",
+    ],
+)
+
+gentbl(
+    name = "basic_builtins_nvptx_gen",
+    tbl_outs = [(
+        "-gen-clang-builtins",
+        "include/clang/Basic/BuiltinsNVPTX.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsNVPTX.td",
+    td_srcs = [
+        "include/clang/Basic/BuiltinsNVPTX.td",
+        "include/clang/Basic/BuiltinsBase.td",
+    ],
+)
+
+gentbl(
     name = "basic_builtins_spirv_gen",
     tbl_outs = [(
         "-gen-clang-builtins",
@@ -743,6 +771,8 @@ cc_library(
         ":basic_attr_gen",
         ":basic_builtins_bpf_gen",
         ":basic_builtins_gen",
+        ":basic_builtins_hexagon_gen",
+        ":basic_builtins_nvptx_gen",
         ":basic_builtins_riscv_gen",
         ":basic_builtins_spirv_gen",
         ":basic_builtins_x86_64_gen",

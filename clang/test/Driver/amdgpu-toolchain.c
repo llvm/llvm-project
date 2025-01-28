@@ -36,6 +36,3 @@
 // RUN: %clang -target amdgcn-amd-amdhsa -march=gfx90a -stdlib -startfiles \
 // RUN:   -nogpulib -nogpuinc -### %s 2>&1 | FileCheck -check-prefix=STARTUP %s
 // STARTUP: ld.lld{{.*}}"-lc" "-lm" "{{.*}}crt1.o"
-//
-// RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx906 %s 2>&1 | FileCheck -check-prefix=ROCM %s
-// ROCM-NOT: -mlink-builtin-bitcode
