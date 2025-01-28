@@ -116,7 +116,22 @@ private:
   bool ParseDescriptorTableClause();
 
   // Helper dispatch method
+  //
+  // These will switch on the Variant kind to dispatch to the respective Parse
+  // method and store the parsed value back into Ref.
+  //
+  // It is helpful to have a generalized dispatch method so that when we need
+  // to parse multiple optional parameters in any order, we can invoke this
+  // method
+  bool ParseParam(llvm::hlsl::rootsig::ParamType Ref);
+
+  // Parse as many optional parameters as possible in any order
+  bool ParseOptionalParams(
+      llvm::SmallDenseMap<TokenKind, llvm::hlsl::rootsig::ParamType> &RefMap);
+
+  // Common parsing helpers
   bool ParseRegister(llvm::hlsl::rootsig::Register *Reg);
+  bool ParseUInt(uint32_t *X);
 
   /// Invoke the lexer to consume a token and update CurToken with the result
   ///

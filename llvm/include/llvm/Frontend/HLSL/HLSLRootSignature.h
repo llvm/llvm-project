@@ -40,10 +40,15 @@ using ClauseType = llvm::dxil::ResourceClass;
 struct DescriptorTableClause {
   ClauseType Type;
   Register Register;
+  uint32_t NumDescriptors = 1;
 };
 
 // Models RootElement : DescriptorTable | DescriptorTableClause
 using RootElement = std::variant<DescriptorTable, DescriptorTableClause>;
+
+// Models a reference to all assignment parameter types that any RootElement
+// may have. Things of the form: Keyword = Param
+using ParamType = std::variant<uint32_t *>;
 
 } // namespace rootsig
 } // namespace hlsl
