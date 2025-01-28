@@ -1,5 +1,7 @@
 #include "clang/Parse/ParseHLSLRootSignature.h"
 
+using namespace llvm::hlsl::rootsig;
+
 namespace clang {
 namespace hlsl {
 
@@ -166,6 +168,21 @@ std::optional<RootSignatureToken> RootSignatureLexer::PeekNextToken() {
   }
   NextToken = Result;
   return Result;
+}
+
+// Parser Definitions
+
+RootSignatureParser::RootSignatureParser(SmallVector<RootElement> &Elements,
+                                         RootSignatureLexer &Lexer,
+                                         DiagnosticsEngine &Diags)
+    : Elements(Elements), Lexer(Lexer), Diags(Diags) {}
+
+bool RootSignatureParser::Parse() {
+  // Handle edge-case of empty RootSignature()
+  if (Lexer.EndOfBuffer())
+    return false;
+
+  return true;
 }
 
 } // namespace hlsl

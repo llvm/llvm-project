@@ -22,6 +22,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 
+#include "llvm/Frontend/HLSL/HLSLRootSignature.h"
+
 namespace clang {
 namespace hlsl {
 
@@ -91,6 +93,27 @@ private:
     Buffer = Buffer.drop_front(NumCharacters);
     SourceLoc = SourceLoc.getLocWithOffset(NumCharacters);
   }
+};
+
+class RootSignatureParser {
+public:
+  RootSignatureParser(SmallVector<llvm::hlsl::rootsig::RootElement> &Elements,
+                      RootSignatureLexer &Lexer, DiagnosticsEngine &Diags);
+
+  /// Iterates over the provided tokens and constructs the in-memory
+  /// representations of the RootElements.
+  ///
+  /// The return value denotes if there was a failure and the method will
+  /// return on the first encountered failure, or, return false if it
+  /// can sucessfully reach the end of the tokens.
+  bool Parse();
+
+private:
+  SmallVector<llvm::hlsl::rootsig::RootElement> &Elements;
+  RootSignatureLexer &Lexer;
+  DiagnosticsEngine &Diags;
+
+  RootSignatureToken CurToken;
 };
 
 } // namespace hlsl

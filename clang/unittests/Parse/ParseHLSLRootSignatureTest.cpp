@@ -24,6 +24,7 @@
 #include "gtest/gtest.h"
 
 using namespace clang;
+using namespace llvm::hlsl::rootsig;
 
 namespace {
 
@@ -310,6 +311,28 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexRegNumberTest) {
   ASSERT_TRUE(Lexer.ConsumeToken());
   // FIXME(#126565): This should be TRUE once we can lex a float
   ASSERT_FALSE(Consumer->IsSatisfied());
+}
+
+// Valid Parser Tests
+
+TEST_F(ParseHLSLRootSignatureTest, ValidParseEmptyTest) {
+  const llvm::StringLiteral Source = R"cc()cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, Diags);
+
+  // Test no diagnostics produced
+  Consumer->SetNoDiag();
+
+  ASSERT_FALSE(Parser.Parse());
+  ASSERT_EQ((int)Elements.size(), 0);
+
+  ASSERT_TRUE(Consumer->IsSatisfied());
 }
 
 } // anonymous namespace
