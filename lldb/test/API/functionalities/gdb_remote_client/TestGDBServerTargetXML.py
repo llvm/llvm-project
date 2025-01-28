@@ -654,6 +654,155 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
 
     @skipIfXmlSupportMissing
     @skipIfRemote
+    @skipIfLLVMTargetMissing("RISCV")
+    def test_riscv64_regs(self):
+        """Test grabbing various riscv64 registers from gdbserver."""
+
+        class MyResponder(MockGDBServerResponder):
+            reg_data = (
+                (
+                    "0102030405060708"  # zero
+                    "0102030405060708"  # ra
+                    "0102030405060708"  # sp
+                    "0102030405060708"  # gp
+                    "0102030405060708"  # tp
+                    "0102030405060708"  # t0 
+                    "0102030405060708"  # t1
+                    "0102030405060708"  # t2
+                    "0102030405060708"  # fp 
+                    "0102030405060708"  # s1
+                    "0102030405060708"  # a0
+                    "0102030405060708"  # a1
+                    "0102030405060708"  # a2
+                    "0102030405060708"  # a3
+                    "0102030405060708"  # a4
+                    "0102030405060708"  # a5
+                    "0102030405060708"  # a6
+                    "0102030405060708"  # a7
+                    "0102030405060708"  # s2
+                    "0102030405060708"  # s3
+                    "0102030405060708"  # s4
+                    "0102030405060708"  # s5
+                    "0102030405060708"  # s6
+                    "0102030405060708"  # s7
+                    "0102030405060708"  # s8
+                    "0102030405060708"  # s9
+                    "0102030405060708"  # s10
+                    "0102030405060708"  # s11
+                    "0102030405060708"  # t3
+                    "0102030405060708"  # t4
+                    "0102030405060708"  # t5
+                    "0102030405060708"  # t6
+                )
+            )
+
+            def qXferRead(self, obj, annex, offset, length):
+                if annex == "target.xml":
+                    return (
+                        """<?xml version="1.0"?>
+                        <!DOCTYPE feature SYSTEM "gdb-target.dtd">
+                        <target>
+                            <architecture>riscv</architecture>
+                            <feature name="org.gnu.gdb.riscv.cpu">
+                                <reg name="zero" bitsize="64" type="int"/>
+                                <reg name="ra" bitsize="64" type="code_ptr"/>
+                                <reg name="sp" bitsize="64" type="data_ptr"/>
+                                <reg name="gp" bitsize="64" type="data_ptr"/>
+                                <reg name="tp" bitsize="64" type="data_ptr"/>
+                                <reg name="t0" bitsize="64" type="int"/>
+                                <reg name="t1" bitsize="64" type="int"/>
+                                <reg name="t2" bitsize="64" type="int"/>
+                                <reg name="fp" bitsize="64" type="data_ptr"/>
+                                <reg name="s1" bitsize="64" type="int"/>
+                                <reg name="a0" bitsize="64" type="int"/>
+                                <reg name="a1" bitsize="64" type="int"/>
+                                <reg name="a2" bitsize="64" type="int"/>
+                                <reg name="a3" bitsize="64" type="int"/>
+                                <reg name="a4" bitsize="64" type="int"/>
+                                <reg name="a5" bitsize="64" type="int"/>
+                                <reg name="a6" bitsize="64" type="int"/>
+                                <reg name="a7" bitsize="64" type="int"/>
+                                <reg name="s2" bitsize="64" type="int"/>
+                                <reg name="s3" bitsize="64" type="int"/>
+                                <reg name="s4" bitsize="64" type="int"/>
+                                <reg name="s5" bitsize="64" type="int"/>
+                                <reg name="s6" bitsize="64" type="int"/>
+                                <reg name="s7" bitsize="64" type="int"/>
+                                <reg name="s8" bitsize="64" type="int"/>
+                                <reg name="s9" bitsize="64" type="int"/>
+                                <reg name="s10" bitsize="64" type="int"/>
+                                <reg name="s11" bitsize="64" type="int"/>
+                                <reg name="t3" bitsize="64" type="int"/>
+                                <reg name="t4" bitsize="64" type="int"/>
+                                <reg name="t5" bitsize="64" type="int"/>
+                                <reg name="t6" bitsize="64" type="int"/>
+                                <reg name="pc" bitsize="64" type="code_ptr"/>
+                            </feature>
+                        </target>""",
+                        False,
+                    )
+                else:
+                    return None, False
+
+            def readRegister(self, regnum):
+                return ""
+
+            def readRegisters(self):
+                return self.reg_data
+
+            def writeRegisters(self, reg_hex):
+                self.reg_data = reg_hex
+                return "OK"
+
+            def haltReason(self):
+                return "T02thread:1ff0d;threads:1ff0d;thread-pcs:000000010001bc00;07:0102030405060708;10:1112131415161718;"
+
+        self.server.responder = MyResponder()
+
+        target = self.createTarget("basic_eh_frame-riscv64.yaml")
+        process = self.connect(target)
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateStopped]
+        )
+
+        # test generic aliases
+        self.match("register read x0", ["zero = 0x0807060504030201"])
+        self.match("register read x1", ["ra = 0x0807060504030201"])
+        self.match("register read x2", ["sp = 0x0807060504030201"])
+        self.match("register read x3", ["gp = 0x0807060504030201"])
+        self.match("register read x4", ["tp = 0x0807060504030201"])
+        self.match("register read x5", ["t0 = 0x0807060504030201"])
+        self.match("register read x6", ["t1 = 0x0807060504030201"])
+        self.match("register read x7", ["t2 = 0x0807060504030201"])
+        # Register x8 is probably not working because it has two aliases fp, s0
+        # self.match("register read x8", ["fp = 0x0807060504030201"])
+        self.match("register read x9", ["s1 = 0x0807060504030201"])
+        self.match("register read x10", ["a0 = 0x0807060504030201"])
+        self.match("register read x11", ["a1 = 0x0807060504030201"])
+        self.match("register read x12", ["a2 = 0x0807060504030201"])
+        self.match("register read x13", ["a3 = 0x0807060504030201"])
+        self.match("register read x14", ["a4 = 0x0807060504030201"])
+        self.match("register read x15", ["a5 = 0x0807060504030201"])
+        self.match("register read x16", ["a6 = 0x0807060504030201"])
+        self.match("register read x17", ["a7 = 0x0807060504030201"])
+        self.match("register read x18", ["s2 = 0x0807060504030201"])
+        self.match("register read x19", ["s3 = 0x0807060504030201"])
+        self.match("register read x20", ["s4 = 0x0807060504030201"])
+        self.match("register read x21", ["s5 = 0x0807060504030201"])
+        self.match("register read x22", ["s6 = 0x0807060504030201"])
+        self.match("register read x23", ["s7 = 0x0807060504030201"])
+        self.match("register read x24", ["s8 = 0x0807060504030201"])
+        self.match("register read x25", ["s9 = 0x0807060504030201"])
+        self.match("register read x26", ["s10 = 0x0807060504030201"])
+        self.match("register read x27", ["s11 = 0x0807060504030201"])
+        self.match("register read x28", ["t3 = 0x0807060504030201"])
+        self.match("register read x29", ["t4 = 0x0807060504030201"])
+        self.match("register read x30", ["t5 = 0x0807060504030201"])
+        self.match("register read x31", ["t6 = 0x0807060504030201"])
+
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
     @skipIfLLVMTargetMissing("X86")
     def test_x86_64_no_duplicate_subregs(self):
         """Test that duplicate subregisters are not added (on x86_64)."""
