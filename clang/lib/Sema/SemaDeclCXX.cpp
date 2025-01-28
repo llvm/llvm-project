@@ -479,11 +479,6 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
       // Ignore default arguments of old decl if they are not in
       // the same scope and this is not an out-of-line definition of
       // a member function.
-      //
-      // extern "C" functions can have default arguments across different
-      // scopes, but diagnosing that early would reject well-formed code
-      // (_N5001_.[over.match.best]/4.) Instead, they are checked
-      // in BestViableFunction after the best viable function has been selected.
       continue;
     }
 
@@ -501,6 +496,12 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
       // If previous declaration is lexically in a different scope,
       // we don't inherit its default arguments, except for out-of-line
       // declarations of member functions.
+      //
+      // extern "C" and local functions can have default arguments across
+      // different scopes, but diagnosing that early would reject well-formed
+      // code (_N5001_.[over.match.best]/4.) Instead, they are checked
+      // in ConvertArgumentsForCall, after the best viable function has been
+      // selected.
       continue;
     }
 
