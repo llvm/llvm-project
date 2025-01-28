@@ -121,3 +121,117 @@ entry:
   store <4 x i32> %1, ptr %3, align 4
   ret void
 }
+
+define void @test6(ptr %in0, ptr %in1, ptr %in2) {
+; CHECK-LABEL: @test6(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds nuw i8, ptr [[IN0:%.*]], i64 32
+; CHECK-NEXT:    [[LOAD2:%.*]] = load <4 x float>, ptr [[GEP1]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr [[IN0]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <32 x i8>, ptr [[IN1:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = uitofp <32 x i8> [[TMP1]] to <32 x float>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <4 x float> [[LOAD2]], <4 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <16 x float> [[TMP14]], <16 x float> [[TMP15]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <16 x float> [[TMP16]], <16 x float> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <32 x float> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    store <32 x float> [[TMP4]], ptr [[IN2:%.*]], align 16
+; CHECK-NEXT:    [[GEP10:%.*]] = getelementptr inbounds nuw i8, ptr [[IN1]], i64 32
+; CHECK-NEXT:    [[LOAD5:%.*]] = load <16 x i8>, ptr [[GEP10]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[GEP11:%.*]] = getelementptr inbounds nuw i8, ptr [[IN2]], i64 128
+; CHECK-NEXT:    [[TMP6:%.*]] = uitofp <16 x i8> [[LOAD5]] to <16 x float>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[LOAD2]], <4 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <16 x float> [[TMP7]], <16 x float> [[TMP8]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 16, i32 17, i32 18, i32 19, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <16 x float> [[TMP9]], <16 x float> [[TMP10]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <16 x float> [[TMP11]], <16 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP13:%.*]] = fmul <16 x float> [[TMP12]], [[TMP6]]
+; CHECK-NEXT:    store <16 x float> [[TMP13]], ptr [[GEP11]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %gep0 = getelementptr inbounds i8, ptr %in0, i64 16
+  %gep1 = getelementptr inbounds i8, ptr %in0, i64 32
+  %load0 = load <4 x float>, ptr %in0, align 16
+  %load1 = load <4 x float>, ptr %gep0, align 16
+  %load2 = load <4 x float>, ptr %gep1, align 16
+  %gep2 = getelementptr inbounds i8, ptr %in1, i64 16
+  %load3 = load <16 x i8>, ptr %in1, align 1
+  %load4 = load <16 x i8>, ptr %gep2, align 1
+  %shufflevector0 = shufflevector <16 x i8> %load3, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %shufflevector1 = shufflevector <16 x i8> %load3, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %shufflevector2 = shufflevector <16 x i8> %load4, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %shufflevector3 = shufflevector <16 x i8> %load4, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %zext0 = zext <8 x i8> %shufflevector0 to <8 x i16>
+  %zext1 = zext <8 x i8> %shufflevector1 to <8 x i16>
+  %zext2 = zext <8 x i8> %shufflevector2 to <8 x i16>
+  %zext3 = zext <8 x i8> %shufflevector3 to <8 x i16>
+  %shufflevector4 = shufflevector <8 x i16> %zext0, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %shufflevector5 = shufflevector <8 x i16> %zext0, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %shufflevector6 = shufflevector <8 x i16> %zext1, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %shufflevector7 = shufflevector <8 x i16> %zext1, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %shufflevector8 = shufflevector <8 x i16> %zext2, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %shufflevector9 = shufflevector <8 x i16> %zext2, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %shufflevector10 = shufflevector <8 x i16> %zext3, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %shufflevector11 = shufflevector <8 x i16> %zext3, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %uitofp0 = uitofp nneg <4 x i16> %shufflevector4 to <4 x float>
+  %uitofp1 = uitofp nneg <4 x i16> %shufflevector5 to <4 x float>
+  %uitofp2 = uitofp nneg <4 x i16> %shufflevector6 to <4 x float>
+  %uitofp3 = uitofp nneg <4 x i16> %shufflevector7 to <4 x float>
+  %uitofp4 = uitofp nneg <4 x i16> %shufflevector8 to <4 x float>
+  %uitofp5 = uitofp nneg <4 x i16> %shufflevector9 to <4 x float>
+  %uitofp6 = uitofp nneg <4 x i16> %shufflevector10 to <4 x float>
+  %uitofp7 = uitofp nneg <4 x i16> %shufflevector11 to <4 x float>
+  %fmul0 = fmul <4 x float> %load0, %uitofp0
+  %fmul1 = fmul <4 x float> %load1, %uitofp1
+  %fmul2 = fmul <4 x float> %load2, %uitofp2
+  %fmul3 = fmul <4 x float> %load0, %uitofp3
+  %fmul4 = fmul <4 x float> %load1, %uitofp4
+  %fmul5 = fmul <4 x float> %load2, %uitofp5
+  %fmul6 = fmul <4 x float> %load0, %uitofp6
+  %fmul7 = fmul <4 x float> %load1, %uitofp7
+  %gep3 = getelementptr inbounds i8, ptr %in2, i64 16
+  %gep4 = getelementptr inbounds i8, ptr %in2, i64 32
+  %gep5 = getelementptr inbounds i8, ptr %in2, i64 48
+  %gep6 = getelementptr inbounds i8, ptr %in2, i64 64
+  %gep7 = getelementptr inbounds i8, ptr %in2, i64 80
+  %gep8 = getelementptr inbounds i8, ptr %in2, i64 96
+  %gep9 = getelementptr inbounds i8, ptr %in2, i64 112
+  store <4 x float> %fmul0, ptr %in2, align 16
+  store <4 x float> %fmul1, ptr %gep3, align 16
+  store <4 x float> %fmul2, ptr %gep4, align 16
+  store <4 x float> %fmul3, ptr %gep5, align 16
+  store <4 x float> %fmul4, ptr %gep6, align 16
+  store <4 x float> %fmul5, ptr %gep7, align 16
+  store <4 x float> %fmul6, ptr %gep8, align 16
+  store <4 x float> %fmul7, ptr %gep9, align 16
+  %gep10 = getelementptr inbounds i8, ptr %in1, i64 32
+  %load5 = load <16 x i8>, ptr %gep10, align 1
+  %shufflevector12 = shufflevector <16 x i8> %load5, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %shufflevector13 = shufflevector <16 x i8> %load5, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %zext4 = zext <8 x i8> %shufflevector12 to <8 x i16>
+  %zext5 = zext <8 x i8> %shufflevector13 to <8 x i16>
+  %shufflevector14 = shufflevector <8 x i16> %zext4, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %shufflevector15 = shufflevector <8 x i16> %zext4, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %shufflevector16 = shufflevector <8 x i16> %zext5, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %shufflevector17 = shufflevector <8 x i16> %zext5, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %uitofp8 = uitofp nneg <4 x i16> %shufflevector14 to <4 x float>
+  %uitofp9 = uitofp nneg <4 x i16> %shufflevector15 to <4 x float>
+  %uitofp10 = uitofp nneg <4 x i16> %shufflevector16 to <4 x float>
+  %uitofp11 = uitofp nneg <4 x i16> %shufflevector17 to <4 x float>
+  %fmul8 = fmul <4 x float> %load2, %uitofp8
+  %fmul9 = fmul <4 x float> %load0, %uitofp9
+  %fmul10 = fmul <4 x float> %load1, %uitofp10
+  %fmul11 = fmul <4 x float> %load2, %uitofp11
+  %gep11 = getelementptr inbounds i8, ptr %in2, i64 128
+  %gep12 = getelementptr inbounds i8, ptr %in2, i64 144
+  %gep13 = getelementptr inbounds i8, ptr %in2, i64 160
+  %gep14 = getelementptr inbounds i8, ptr %in2, i64 176
+  store <4 x float> %fmul8, ptr %gep11, align 16
+  store <4 x float> %fmul9, ptr %gep12, align 16
+  store <4 x float> %fmul10, ptr %gep13, align 16
+  store <4 x float> %fmul11, ptr %gep14, align 16
+  ret void
+}
