@@ -149,7 +149,6 @@ static Defined *addOptionalRegular(Ctx &ctx, StringRef name, SectionBase *sec,
   if (!s || s->isDefined() || s->isCommon())
     return nullptr;
 
-  ctx.synthesizedSymbols.push_back(s);
   s->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
                           stOther, STT_NOTYPE, val,
                           /*size=*/0, sec});
@@ -283,7 +282,7 @@ static void demoteDefined(Defined &sym, DenseMap<SectionBase *, size_t> &map) {
 static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("Demote symbols");
   DenseMap<InputFile *, DenseMap<SectionBase *, size_t>> sectionIndexMap;
-  bool hasDynSymTab = ctx.arg.hasDynSymTab;
+  bool hasDynsym = ctx.hasDynsym;
   for (Symbol *sym : ctx.symtab->getSymbols()) {
     if (auto *d = dyn_cast<Defined>(sym)) {
       if (d->section && !d->section->isLive())
@@ -296,13 +295,13 @@ static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
                   sym->type)
             .overwrite(*sym);
         sym->versionId = VER_NDX_GLOBAL;
-        if (sym->includeInDynsym(ctx))
-          sym->isExported = true;
       }
     }
 
-    if (hasDynSymTab)
+    if (hasDynsym) {
+      sym->isExported = sym->includeInDynsym(ctx);
       sym->isPreemptible = sym->isExported && computeIsPreemptible(ctx, *sym);
+    }
   }
 }
 
@@ -1838,11 +1837,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
         finalizeSynthetic(ctx, part.ehFrame.get());
     }
   }
-
-  // If the previous code block defines any non-hidden symbols (e.g.
-  // __global_pointer$), they may be exported.
-  for (Symbol *sym : ctx.synthesizedSymbols)
-    sym->isExported = sym->includeInDynsym(ctx);
 
   demoteSymbolsAndComputeIsPreemptible(ctx);
 
