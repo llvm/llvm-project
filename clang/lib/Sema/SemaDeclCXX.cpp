@@ -492,7 +492,7 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
 
     if (PrevForDefaultArgs->getLexicalDeclContext()->getPrimaryContext() !=
             ScopeDC->getPrimaryContext() &&
-        !New->isCXXClassMember()) {
+        !New->isCXXClassMember())
       // If previous declaration is lexically in a different scope,
       // we don't inherit its default arguments, except for out-of-line
       // declarations of member functions.
@@ -503,7 +503,6 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
       // in ConvertArgumentsForCall, after the best viable function has been
       // selected.
       continue;
-    }
 
     // We found the right previous declaration.
     break;

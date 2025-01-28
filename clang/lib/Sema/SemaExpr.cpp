@@ -5943,10 +5943,9 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
     if (FDecl->isExternC() ||
         std::any_of(
             FDecl->redecls_begin(), FDecl->redecls_end(),
-            [](FunctionDecl *Redecl) { return Redecl->isLocalExternDecl(); })) {
+            [](FunctionDecl *Redecl) { return Redecl->isLocalExternDecl(); }))
       checkDefaultArgumentsAcrossScopes(*this, FDecl, Args.size(),
                                         Call->getBeginLoc());
-    }
   }
 
   // If too many are passed and not variadic, error on the extras and drop
