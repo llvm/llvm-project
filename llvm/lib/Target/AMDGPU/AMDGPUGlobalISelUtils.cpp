@@ -56,7 +56,7 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
 
   Register Base;
   if (KnownBits && mi_match(Reg, MRI, m_GOr(m_Reg(Base), m_ICst(Offset))) &&
-      KnownBits->maskedValueIsZero(Base, APInt(32, Offset)))
+      KnownBits->maskedValueIsZero(Base, APInt(32, Offset, /*isSigned=*/true)))
     return std::pair(Base, Offset);
 
   // Handle G_PTRTOINT (G_PTR_ADD base, const) case
