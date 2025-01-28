@@ -6677,6 +6677,8 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       TC = std::make_unique<toolchains::AMDGPUToolChain>(*this, Target, Args);
       break;
     case llvm::Triple::UEFI:
+      if(Target.getArch() != llvm::Triple::x86_64)        
+        llvm::report_fatal_error("Currently the only architecture supported by *-uefi triples are x86_64.");
       TC = std::make_unique<toolchains::UEFI>(*this, Target, Args);
       break;
     case llvm::Triple::Win32:
