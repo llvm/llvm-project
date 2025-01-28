@@ -271,6 +271,33 @@ def Vp2IntersectQIntrOp : AVX512_IntrOp<"vp2intersect.q.512", 2, [
                    VectorOfLengthAndType<[8], [I64]>:$b);
 }
 
+//----------------------------------------------------------------------------//
+// AVX512 Dot
+//----------------------------------------------------------------------------//
+
+def AVX512DotOp : AVX512_Op<"dot", [Pure,
+  AllTypesMatch<["a", "b"]>,
+  AllTypesMatch<["src", "dst"]>]> {
+  let summary = "Dot op";
+  let description = [{
+    The `dot` op is an AVX512 specific op that can lower to the
+    `llvm.dpbf16ps.512` instruction.
+
+    #### From the Intel Intrinsics Guide:
+
+    Compute dot-product of BF16 (16-bit) floating-point pairs in `a` and `b`,
+    accumulating the intermediate single-precision (32-bit) floating-point
+    elements with elements in `src`, and store the results in `dst`.
+  }];
+  let arguments = (ins VectorOfLengthAndType<[16], [F32]>:$src,
+                   VectorOfLengthAndType<[32], [BF16]>:$a,
+                   VectorOfLengthAndType<[32], [BF16]>:$b
+                   );
+  let results = (outs VectorOfLengthAndType<[16], [F32]>:$dst);
+  let assemblyFormat =
+    "$src `,` $a `,` $b attr-dict `:` type($a) `->` type($src)";
+}
+
 //===----------------------------------------------------------------------===//
 // AVX op definitions
 //===----------------------------------------------------------------------===//
