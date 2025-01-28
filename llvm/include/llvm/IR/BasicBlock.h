@@ -287,10 +287,7 @@ public:
   const Instruction *getFirstNonPHI() const;
   LLVM_DEPRECATED("Use iterators as instruction positions instead",
                   "getFirstNonPHIIt")
-  Instruction *getFirstNonPHI() {
-    return const_cast<Instruction *>(
-        static_cast<const BasicBlock *>(this)->getFirstNonPHI());
-  }
+  Instruction *getFirstNonPHI();
 
   /// Returns an iterator to the first instruction in this block that is not a
   /// PHINode instruction.
