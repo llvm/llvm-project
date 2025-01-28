@@ -5205,7 +5205,7 @@ bool Sema::CheckTemplateArgument(
     SmallVectorImpl<TemplateArgument> &SugaredConverted,
     SmallVectorImpl<TemplateArgument> &CanonicalConverted,
     CheckTemplateArgumentKind CTAK, bool PartialOrdering,
-    bool *MatchedPackOnParmToNonPackOnArg) {
+    bool PartialOrderingTTP, bool *MatchedPackOnParmToNonPackOnArg) {
   // Check template type parameters.
   if (TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(Param))
     return CheckTemplateTypeArgument(TTP, Arg, SugaredConverted,
@@ -5260,8 +5260,9 @@ bool Sema::CheckTemplateArgument(
       Expr *E = Arg.getArgument().getAsExpr();
       TemplateArgument SugaredResult, CanonicalResult;
       unsigned CurSFINAEErrors = NumSFINAEErrors;
-      ExprResult Res = CheckTemplateArgument(NTTP, NTTPType, E, SugaredResult,
-                                             CanonicalResult, CTAK);
+      ExprResult Res =
+          CheckTemplateArgument(NTTP, NTTPType, E, SugaredResult,
+                                CanonicalResult, PartialOrderingTTP, CTAK);
       if (Res.isInvalid())
         return true;
       // If the current template argument causes an error, give up now.
@@ -5326,7 +5327,8 @@ bool Sema::CheckTemplateArgument(
 
         TemplateArgument SugaredResult, CanonicalResult;
         E = CheckTemplateArgument(NTTP, NTTPType, E.get(), SugaredResult,
-                                  CanonicalResult, CTAK_Specified);
+                                  CanonicalResult, /*PartialOrderingTTP=*/false,
+                                  CTAK_Specified);
         if (E.isInvalid())
           return true;
 
@@ -5585,11 +5587,11 @@ bool Sema::CheckTemplateArgumentList(
               getExpandedPackSize(*Param))
             Arg = Arg.getPackExpansionPattern();
           TemplateArgumentLoc NewArgLoc(Arg, ArgLoc.getLocInfo());
-          if (CheckTemplateArgument(*Param, NewArgLoc, Template, TemplateLoc,
-                                    RAngleLoc, SugaredArgumentPack.size(),
-                                    SugaredConverted, CanonicalConverted,
-                                    CTAK_Specified, /*PartialOrdering=*/false,
-                                    MatchedPackOnParmToNonPackOnArg))
+          if (CheckTemplateArgument(
+                  *Param, NewArgLoc, Template, TemplateLoc, RAngleLoc,
+                  SugaredArgumentPack.size(), SugaredConverted,
+                  CanonicalConverted, CTAK_Specified, /*PartialOrdering=*/false,
+                  /*PartialOrderingTTP=*/true, MatchedPackOnParmToNonPackOnArg))
             return true;
           Arg = NewArgLoc.getArgument();
           CanonicalConverted.back().setIsDefaulted(
@@ -5601,11 +5603,11 @@ bool Sema::CheckTemplateArgumentList(
             TemplateArgumentLoc(TemplateArgument::CreatePackCopy(Context, Args),
                                 ArgLoc.getLocInfo());
       } else {
-        if (CheckTemplateArgument(*Param, ArgLoc, Template, TemplateLoc,
-                                  RAngleLoc, SugaredArgumentPack.size(),
-                                  SugaredConverted, CanonicalConverted,
-                                  CTAK_Specified, /*PartialOrdering=*/false,
-                                  MatchedPackOnParmToNonPackOnArg))
+        if (CheckTemplateArgument(
+                *Param, ArgLoc, Template, TemplateLoc, RAngleLoc,
+                SugaredArgumentPack.size(), SugaredConverted,
+                CanonicalConverted, CTAK_Specified, /*PartialOrdering=*/false,
+                PartialOrderingTTP, MatchedPackOnParmToNonPackOnArg))
           return true;
         CanonicalConverted.back().setIsDefaulted(
             clang::isSubstitutedDefaultArgument(Context, ArgLoc.getArgument(),
@@ -5753,6 +5755,7 @@ bool Sema::CheckTemplateArgumentList(
     if (CheckTemplateArgument(*Param, Arg, Template, TemplateLoc, RAngleLoc, 0,
                               SugaredConverted, CanonicalConverted,
                               CTAK_Specified, /*PartialOrdering=*/false,
+                              /*PartialOrderingTTP=*/false,
                               /*MatchedPackOnParmToNonPackOnArg=*/nullptr))
       return true;
 
@@ -6740,6 +6743,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
                                        QualType ParamType, Expr *Arg,
                                        TemplateArgument &SugaredConverted,
                                        TemplateArgument &CanonicalConverted,
+                                       bool PartialOrderingTTP,
                                        CheckTemplateArgumentKind CTAK) {
   SourceLocation StartLoc = Arg->getBeginLoc();
 
@@ -6930,17 +6934,21 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     IsConvertedConstantExpression = false;
   }
 
-  if (getLangOpts().CPlusPlus17) {
+  if (getLangOpts().CPlusPlus17 || PartialOrderingTTP) {
     // C++17 [temp.arg.nontype]p1:
     //   A template-argument for a non-type template parameter shall be
     //   a converted constant expression of the type of the template-parameter.
     APValue Value;
     ExprResult ArgResult;
     if (IsConvertedConstantExpression) {
-      ArgResult = BuildConvertedConstantExpression(Arg, ParamType,
-                                                   CCEK_TemplateArg, Param);
-      if (ArgResult.isInvalid())
+      ArgResult = BuildConvertedConstantExpression(
+          Arg, ParamType,
+          PartialOrderingTTP ? CCEK_InjectedTTP : CCEK_TemplateArg, Param);
+      assert(!ArgResult.isUnset());
+      if (ArgResult.isInvalid()) {
+        NoteTemplateParameterLocation(*Param);
         return ExprError();
+      }
     } else {
       ArgResult = Arg;
     }
