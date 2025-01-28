@@ -2873,7 +2873,7 @@ InstructionCost RISCVTargetLowering::getLMULCost(MVT VT) const {
 /// operand (index and possibly mask) are handled separately.
 InstructionCost RISCVTargetLowering::getVRGatherVVCost(MVT VT) const {
   auto LMULCost = getLMULCost(VT);
-  if (true && Subtarget.hasFastVRGather() && LMULCost.isValid()) {
+  if (Subtarget.hasFastVRGather() && LMULCost.isValid()) {
     unsigned Log = Log2_64(*LMULCost.getValue());
     return LMULCost * Log;
   }
