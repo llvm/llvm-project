@@ -480,7 +480,7 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
       //
       // extern "C" functions can have default arguments across different
       // scopes, but diagnosing that early would reject well-formed code
-      // (_N5001_.[over.best.match]/4.) Instead, they are checked
+      // (_N5001_.[over.match.best]/4.) Instead, they are checked
       // in BestViableFunction after the best viable function has been selected.
       continue;
     }
