@@ -175,6 +175,11 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
   });
 }
 
+/// Return true if \p R is a VPIRInstruction wrapping a phi.
+static bool isVPIRInstructionPhi(const VPRecipeBase &R) {
+  auto *VPIRI = dyn_cast<VPIRInstruction>(&R);
+  return VPIRI && isa<PHINode>(VPIRI->getInstruction());
+}
 bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
   if (!verifyPhiRecipes(VPBB))
     return false;
@@ -207,14 +212,57 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
 
       for (const VPUser *U : V->users()) {
         auto *UI = cast<VPRecipeBase>(U);
-        // TODO: check dominance of incoming values for phis properly.
-        if (!UI ||
-            isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe>(UI))
+        const VPBlockBase *UserVPBB = UI->getParent();
+
+        // Verify incoming values of VPIRInstructions wrapping phis. V most
+        // dominate the end of the incoming block. The operand index of the
+        // incoming value matches the predecessor block index of the
+        // corresponding incoming block.
+        if (isVPIRInstructionPhi(*UI)) {
+          for (const auto &[Idx, Op] : enumerate(UI->operands())) {
+            if (V != Op)
+              continue;
+            const VPBlockBase *Incoming = UserVPBB->getPredecessors()[Idx];
+            if (Incoming != VPBB && !VPDT.dominates(VPBB, Incoming)) {
+              errs() << "Use before def!\n";
+              return false;
+            }
+          }
           continue;
+        }
+        // Verify incoming value of various phi-like recipes.
+        if (isa<VPWidenPHIRecipe, VPHeaderPHIRecipe, VPPredInstPHIRecipe>(UI)) {
+          const VPBlockBase *Incoming = nullptr;
+          // Get the incoming block based on the number of predecessors.
+          if (UserVPBB->getNumPredecessors() == 0) {
+            assert((isa<VPWidenPHIRecipe>(UI) || isa<VPHeaderPHIRecipe>(UI)) &&
+                   "Unexpected recipe with 0 predecessors");
+            const VPRegionBlock *UserRegion = UserVPBB->getParent();
+            Incoming = V == UI->getOperand(0)
+                           ? UserRegion->getSinglePredecessor()
+                           : UserRegion->getExiting();
+          } else if (UserVPBB->getNumPredecessors() == 1) {
+            assert(isa<VPWidenPHIRecipe>(UI) &&
+                   "Unexpected recipe with 1 predecessors");
+            Incoming = UserVPBB->getSinglePredecessor();
+          } else {
+            assert(UserVPBB->getNumPredecessors() == 2 &&
+                   isa<VPPredInstPHIRecipe>(UI) &&
+                   "Unexpected recipe with 2 or more predecessors");
+            Incoming = UserVPBB->getPredecessors()[1];
+          }
+          if (auto *R = dyn_cast<VPRegionBlock>(Incoming))
+            Incoming = R->getExiting();
+          if (Incoming != VPBB && !VPDT.dominates(VPBB, Incoming)) {
+            errs() << "Use before def!\n";
+            return false;
+          }
+          continue;
+        }
 
         // If the user is in the same block, check it comes after R in the
         // block.
-        if (UI->getParent() == VPBB) {
+        if (UserVPBB == VPBB) {
           if (RecipeNumbering[UI] < RecipeNumbering[&R]) {
             errs() << "Use before def!\n";
             return false;
@@ -222,7 +270,7 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
           continue;
         }
 
-        if (!VPDT.dominates(VPBB, UI->getParent())) {
+        if (!VPDT.dominates(VPBB, UserVPBB)) {
           errs() << "Use before def!\n";
           return false;
         }
