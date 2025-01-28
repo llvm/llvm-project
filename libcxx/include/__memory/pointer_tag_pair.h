@@ -60,7 +60,7 @@ using _underlying_type_or_identity_t = _underlying_type_or_identity<T>::type;
 } // namespace __impl
 
 template <typename PointeeT, typename TagT, unsigned Bits = std::countr_zero(alignof(PointeeT))>
-  requires(std::is_object_v<PointeeT> && std::is_unsigned_v<__impl::_underlying_type_or_identity_t<TagT>> &&
+  requires((std::is_void_v<PointeeT> || std::is_object_v<PointeeT>) && std::is_unsigned_v<__impl::_underlying_type_or_identity_t<TagT>> &&
            std::is_same_v<TagT, std::remove_cvref_t<TagT>>)
 struct pointer_tag_pair {
 public:
