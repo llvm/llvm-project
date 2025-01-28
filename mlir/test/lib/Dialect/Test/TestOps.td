@@ -194,7 +194,7 @@ def TypeArrayAttrWithDefaultOp : TEST_Op<"type_array_attr_with_default"> {
 }
 
 def TypeStringAttrWithTypeOp : TEST_Op<"string_attr_with_type"> {
-  let arguments = (ins TypedStrAttr<AnyType>:$attr);
+  let arguments = (ins TypedStrAttr<AnyInteger>:$attr);
   let assemblyFormat = "$attr attr-dict";
 }
 

@@ -343,8 +343,10 @@ def SymbolNameAttr : StringBasedAttr<CPred<"::llvm::isa<::mlir::StringAttr>($_se
 
 // String attribute that has a specific value type.
 class TypedStrAttr<Type ty>
-    : StringBasedAttr<CPred<"::llvm::isa<::mlir::StringAttr>($_self)">,
-                            "string attribute"> {
+    : StringBasedAttr<
+        SubstLeaves<"$_self", "::mlir::cast<StringAttr>($_self).getType()",
+                    ty.predicate>,
+        "string attribute of " # ty.summary> {
   let valueType = ty;
 }
 
