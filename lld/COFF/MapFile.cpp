@@ -326,7 +326,7 @@ void lld::coff::writeMapFile(COFFLinkerContext &ctx) {
     os << " Exports\n";
     os << "\n";
     os << "  ordinal    name\n\n";
-    for (Export &e : ctx.config.exports) {
+    for (Export &e : ctx.symtab.exports) {
       os << format("  %7d", e.ordinal) << "    " << e.name << "\n";
       if (!e.extName.empty() && e.extName != e.name)
         os << "               exported name: " << e.extName << "\n";

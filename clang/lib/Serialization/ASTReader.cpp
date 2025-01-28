@@ -6864,7 +6864,7 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
       // command line (-w, -Weverything, -Werror, ...) along with any explicit
       // -Wblah flags.
       unsigned Flags = Record[Idx++];
-      DiagState Initial;
+      DiagState Initial(*Diag.getDiagnosticIDs());
       Initial.SuppressSystemWarnings = Flags & 1; Flags >>= 1;
       Initial.ErrorsAsFatal = Flags & 1; Flags >>= 1;
       Initial.WarningsAsErrors = Flags & 1; Flags >>= 1;
@@ -10238,11 +10238,6 @@ void ASTReader::finishPendingActions() {
       VD->setType(GetType(PendingDeducedVarTypes[I].second));
     }
     PendingDeducedVarTypes.clear();
-
-    // Load the delayed preferred name attributes.
-    for (unsigned I = 0; I != PendingDeferredAttributes.size(); ++I)
-      loadDeferredAttribute(PendingDeferredAttributes[I]);
-    PendingDeferredAttributes.clear();
 
     // For each decl chain that we wanted to complete while deserializing, mark
     // it as "still needs to be completed".
