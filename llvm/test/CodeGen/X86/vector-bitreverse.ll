@@ -4,8 +4,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=ALL,AVX,AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=ALL,AVX,AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefixes=ALL,AVX,AVX512,AVX512F
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=ALL,AVX,AVX512,AVX512BW
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+avx512bw | FileCheck %s --check-prefixes=ALL,AVX,AVX512,AVX512BW
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=ALL,AVX,AVX512,AVX512BW,AVX512BWNOVL
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+avx512bw | FileCheck %s --check-prefixes=ALL,AVX,AVX512,AVX512BW,AVX512BWVL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+xop,+avx | FileCheck %s --check-prefixes=ALL,XOP,XOPAVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+xop,+avx2 | FileCheck %s --check-prefixes=ALL,XOP,XOPAVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+ssse3,+gfni | FileCheck %s --check-prefixes=ALL,GFNISSE
@@ -18,39 +18,89 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+xop,+avx512bw
 
 define i8 @test_bitreverse_i8(i8 %a) nounwind {
-; SSE-LABEL: test_bitreverse_i8:
-; SSE:       # %bb.0:
-; SSE-NEXT:    rolb $4, %dil
-; SSE-NEXT:    movl %edi, %eax
-; SSE-NEXT:    andb $51, %al
-; SSE-NEXT:    shlb $2, %al
-; SSE-NEXT:    shrb $2, %dil
-; SSE-NEXT:    andb $51, %dil
-; SSE-NEXT:    orb %dil, %al
-; SSE-NEXT:    movl %eax, %ecx
-; SSE-NEXT:    andb $85, %cl
-; SSE-NEXT:    addb %cl, %cl
-; SSE-NEXT:    shrb %al
-; SSE-NEXT:    andb $85, %al
-; SSE-NEXT:    orb %cl, %al
-; SSE-NEXT:    retq
+; SSE2-LABEL: test_bitreverse_i8:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    rolb $4, %dil
+; SSE2-NEXT:    movl %edi, %eax
+; SSE2-NEXT:    andb $51, %al
+; SSE2-NEXT:    shlb $2, %al
+; SSE2-NEXT:    shrb $2, %dil
+; SSE2-NEXT:    andb $51, %dil
+; SSE2-NEXT:    orb %dil, %al
+; SSE2-NEXT:    movl %eax, %ecx
+; SSE2-NEXT:    andb $85, %cl
+; SSE2-NEXT:    addb %cl, %cl
+; SSE2-NEXT:    shrb %al
+; SSE2-NEXT:    andb $85, %al
+; SSE2-NEXT:    orb %cl, %al
+; SSE2-NEXT:    retq
 ;
-; AVX-LABEL: test_bitreverse_i8:
-; AVX:       # %bb.0:
-; AVX-NEXT:    rolb $4, %dil
-; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    andb $51, %al
-; AVX-NEXT:    shlb $2, %al
-; AVX-NEXT:    shrb $2, %dil
-; AVX-NEXT:    andb $51, %dil
-; AVX-NEXT:    orb %dil, %al
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    andb $85, %cl
-; AVX-NEXT:    addb %cl, %cl
-; AVX-NEXT:    shrb %al
-; AVX-NEXT:    andb $85, %al
-; AVX-NEXT:    orb %cl, %al
-; AVX-NEXT:    retq
+; SSSE3-LABEL: test_bitreverse_i8:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movd %edi, %xmm0
+; SSSE3-NEXT:    pxor %xmm1, %xmm1
+; SSSE3-NEXT:    pshufb %xmm1, %xmm0
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [72624976668147840,72624976668147840]
+; SSSE3-NEXT:    pand %xmm1, %xmm0
+; SSSE3-NEXT:    pcmpeqb %xmm1, %xmm0
+; SSSE3-NEXT:    pmovmskb %xmm0, %eax
+; SSSE3-NEXT:    # kill: def $al killed $al killed $eax
+; SSSE3-NEXT:    retq
+;
+; AVX1-LABEL: test_bitreverse_i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovd %edi, %xmm0
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = [72624976668147840,72624976668147840]
+; AVX1-NEXT:    # xmm1 = mem[0,0]
+; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %eax
+; AVX1-NEXT:    # kill: def $al killed $al killed $eax
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_bitreverse_i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovd %edi, %xmm0
+; AVX2-NEXT:    vpbroadcastb %xmm0, %xmm0
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [72624976668147840,72624976668147840]
+; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpmovmskb %xmm0, %eax
+; AVX2-NEXT:    # kill: def $al killed $al killed $eax
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: test_bitreverse_i8:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovd %edi, %xmm0
+; AVX512F-NEXT:    vpbroadcastb %xmm0, %xmm0
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [72624976668147840,72624976668147840]
+; AVX512F-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpmovmskb %xmm0, %eax
+; AVX512F-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512F-NEXT:    retq
+;
+; AVX512BWNOVL-LABEL: test_bitreverse_i8:
+; AVX512BWNOVL:       # %bb.0:
+; AVX512BWNOVL-NEXT:    vmovd %edi, %xmm0
+; AVX512BWNOVL-NEXT:    vpbroadcastb %xmm0, %xmm0
+; AVX512BWNOVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [72624976668147840,72624976668147840]
+; AVX512BWNOVL-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512BWNOVL-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX512BWNOVL-NEXT:    vpmovmskb %xmm0, %eax
+; AVX512BWNOVL-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512BWNOVL-NEXT:    retq
+;
+; AVX512BWVL-LABEL: test_bitreverse_i8:
+; AVX512BWVL:       # %bb.0:
+; AVX512BWVL-NEXT:    vpbroadcastb %edi, %xmm0
+; AVX512BWVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [72624976668147840,72624976668147840]
+; AVX512BWVL-NEXT:    vptestmb %xmm1, %xmm0, %k0
+; AVX512BWVL-NEXT:    kmovd %k0, %eax
+; AVX512BWVL-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512BWVL-NEXT:    retq
 ;
 ; XOP-LABEL: test_bitreverse_i8:
 ; XOP:       # %bb.0:
@@ -80,51 +130,94 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 }
 
 define i16 @test_bitreverse_i16(i16 %a) nounwind {
-; SSE-LABEL: test_bitreverse_i16:
-; SSE:       # %bb.0:
-; SSE-NEXT:    # kill: def $edi killed $edi def $rdi
-; SSE-NEXT:    rolw $8, %di
-; SSE-NEXT:    movl %edi, %eax
-; SSE-NEXT:    andl $3855, %eax # imm = 0xF0F
-; SSE-NEXT:    shll $4, %eax
-; SSE-NEXT:    shrl $4, %edi
-; SSE-NEXT:    andl $3855, %edi # imm = 0xF0F
-; SSE-NEXT:    orl %eax, %edi
-; SSE-NEXT:    movl %edi, %eax
-; SSE-NEXT:    andl $13107, %eax # imm = 0x3333
-; SSE-NEXT:    shrl $2, %edi
-; SSE-NEXT:    andl $13107, %edi # imm = 0x3333
-; SSE-NEXT:    leal (%rdi,%rax,4), %eax
-; SSE-NEXT:    movl %eax, %ecx
-; SSE-NEXT:    andl $21845, %ecx # imm = 0x5555
-; SSE-NEXT:    shrl %eax
-; SSE-NEXT:    andl $21845, %eax # imm = 0x5555
-; SSE-NEXT:    leal (%rax,%rcx,2), %eax
-; SSE-NEXT:    # kill: def $ax killed $ax killed $eax
-; SSE-NEXT:    retq
+; SSE2-LABEL: test_bitreverse_i16:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    # kill: def $edi killed $edi def $rdi
+; SSE2-NEXT:    rolw $8, %di
+; SSE2-NEXT:    movl %edi, %eax
+; SSE2-NEXT:    andl $3855, %eax # imm = 0xF0F
+; SSE2-NEXT:    shll $4, %eax
+; SSE2-NEXT:    shrl $4, %edi
+; SSE2-NEXT:    andl $3855, %edi # imm = 0xF0F
+; SSE2-NEXT:    orl %eax, %edi
+; SSE2-NEXT:    movl %edi, %eax
+; SSE2-NEXT:    andl $13107, %eax # imm = 0x3333
+; SSE2-NEXT:    shrl $2, %edi
+; SSE2-NEXT:    andl $13107, %edi # imm = 0x3333
+; SSE2-NEXT:    leal (%rdi,%rax,4), %eax
+; SSE2-NEXT:    movl %eax, %ecx
+; SSE2-NEXT:    andl $21845, %ecx # imm = 0x5555
+; SSE2-NEXT:    shrl %eax
+; SSE2-NEXT:    andl $21845, %eax # imm = 0x5555
+; SSE2-NEXT:    leal (%rax,%rcx,2), %eax
+; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
+; SSE2-NEXT:    retq
 ;
-; AVX-LABEL: test_bitreverse_i16:
-; AVX:       # %bb.0:
-; AVX-NEXT:    # kill: def $edi killed $edi def $rdi
-; AVX-NEXT:    rolw $8, %di
-; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    andl $3855, %eax # imm = 0xF0F
-; AVX-NEXT:    shll $4, %eax
-; AVX-NEXT:    shrl $4, %edi
-; AVX-NEXT:    andl $3855, %edi # imm = 0xF0F
-; AVX-NEXT:    orl %eax, %edi
-; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    andl $13107, %eax # imm = 0x3333
-; AVX-NEXT:    shrl $2, %edi
-; AVX-NEXT:    andl $13107, %edi # imm = 0x3333
-; AVX-NEXT:    leal (%rdi,%rax,4), %eax
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    andl $21845, %ecx # imm = 0x5555
-; AVX-NEXT:    shrl %eax
-; AVX-NEXT:    andl $21845, %eax # imm = 0x5555
-; AVX-NEXT:    leal (%rax,%rcx,2), %eax
-; AVX-NEXT:    # kill: def $ax killed $ax killed $eax
-; AVX-NEXT:    retq
+; SSSE3-LABEL: test_bitreverse_i16:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movd %edi, %xmm0
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0]
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [72624976668147840,72624976668147840]
+; SSSE3-NEXT:    pand %xmm1, %xmm0
+; SSSE3-NEXT:    pcmpeqb %xmm1, %xmm0
+; SSSE3-NEXT:    pmovmskb %xmm0, %eax
+; SSSE3-NEXT:    # kill: def $ax killed $ax killed $eax
+; SSSE3-NEXT:    retq
+;
+; AVX1-LABEL: test_bitreverse_i16:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovd %edi, %xmm0
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = [72624976668147840,72624976668147840]
+; AVX1-NEXT:    # xmm1 = mem[0,0]
+; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %eax
+; AVX1-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_bitreverse_i16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovd %edi, %xmm0
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [72624976668147840,72624976668147840]
+; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpmovmskb %xmm0, %eax
+; AVX2-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: test_bitreverse_i16:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovd %edi, %xmm0
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0]
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [72624976668147840,72624976668147840]
+; AVX512F-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpmovmskb %xmm0, %eax
+; AVX512F-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512F-NEXT:    retq
+;
+; AVX512BWNOVL-LABEL: test_bitreverse_i16:
+; AVX512BWNOVL:       # %bb.0:
+; AVX512BWNOVL-NEXT:    vmovd %edi, %xmm0
+; AVX512BWNOVL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0]
+; AVX512BWNOVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [72624976668147840,72624976668147840]
+; AVX512BWNOVL-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512BWNOVL-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX512BWNOVL-NEXT:    vpmovmskb %xmm0, %eax
+; AVX512BWNOVL-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512BWNOVL-NEXT:    retq
+;
+; AVX512BWVL-LABEL: test_bitreverse_i16:
+; AVX512BWVL:       # %bb.0:
+; AVX512BWVL-NEXT:    vmovd %edi, %xmm0
+; AVX512BWVL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0]
+; AVX512BWVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [72624976668147840,72624976668147840]
+; AVX512BWVL-NEXT:    vptestmb %xmm1, %xmm0, %k0
+; AVX512BWVL-NEXT:    kmovd %k0, %eax
+; AVX512BWVL-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512BWVL-NEXT:    retq
 ;
 ; XOP-LABEL: test_bitreverse_i16:
 ; XOP:       # %bb.0:
@@ -178,27 +271,73 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; SSE-NEXT:    leal (%rax,%rcx,2), %eax
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test_bitreverse_i32:
-; AVX:       # %bb.0:
-; AVX-NEXT:    # kill: def $edi killed $edi def $rdi
-; AVX-NEXT:    bswapl %edi
-; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
-; AVX-NEXT:    shll $4, %eax
-; AVX-NEXT:    shrl $4, %edi
-; AVX-NEXT:    andl $252645135, %edi # imm = 0xF0F0F0F
-; AVX-NEXT:    orl %eax, %edi
-; AVX-NEXT:    movl %edi, %eax
-; AVX-NEXT:    andl $858993459, %eax # imm = 0x33333333
-; AVX-NEXT:    shrl $2, %edi
-; AVX-NEXT:    andl $858993459, %edi # imm = 0x33333333
-; AVX-NEXT:    leal (%rdi,%rax,4), %eax
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
-; AVX-NEXT:    shrl %eax
-; AVX-NEXT:    andl $1431655765, %eax # imm = 0x55555555
-; AVX-NEXT:    leal (%rax,%rcx,2), %eax
-; AVX-NEXT:    retq
+; AVX1-LABEL: test_bitreverse_i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    # kill: def $edi killed $edi def $rdi
+; AVX1-NEXT:    bswapl %edi
+; AVX1-NEXT:    movl %edi, %eax
+; AVX1-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
+; AVX1-NEXT:    shll $4, %eax
+; AVX1-NEXT:    shrl $4, %edi
+; AVX1-NEXT:    andl $252645135, %edi # imm = 0xF0F0F0F
+; AVX1-NEXT:    orl %eax, %edi
+; AVX1-NEXT:    movl %edi, %eax
+; AVX1-NEXT:    andl $858993459, %eax # imm = 0x33333333
+; AVX1-NEXT:    shrl $2, %edi
+; AVX1-NEXT:    andl $858993459, %edi # imm = 0x33333333
+; AVX1-NEXT:    leal (%rdi,%rax,4), %eax
+; AVX1-NEXT:    movl %eax, %ecx
+; AVX1-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
+; AVX1-NEXT:    shrl %eax
+; AVX1-NEXT:    andl $1431655765, %eax # imm = 0x55555555
+; AVX1-NEXT:    leal (%rax,%rcx,2), %eax
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_bitreverse_i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovd %edi, %xmm0
+; AVX2-NEXT:    vpbroadcastd %xmm0, %ymm0
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[3,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,17,17,17,17,17,17,17,17,16,16,16,16,16,16,16,16]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [72624976668147840,72624976668147840,72624976668147840,72624976668147840]
+; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpmovmskb %ymm0, %eax
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: test_bitreverse_i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovd %edi, %xmm0
+; AVX512F-NEXT:    vpbroadcastd %xmm0, %ymm0
+; AVX512F-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[3,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,17,17,17,17,17,17,17,17,16,16,16,16,16,16,16,16]
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [72624976668147840,72624976668147840,72624976668147840,72624976668147840]
+; AVX512F-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpmovmskb %ymm0, %eax
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512BWNOVL-LABEL: test_bitreverse_i32:
+; AVX512BWNOVL:       # %bb.0:
+; AVX512BWNOVL-NEXT:    vmovd %edi, %xmm0
+; AVX512BWNOVL-NEXT:    vpbroadcastd %xmm0, %ymm0
+; AVX512BWNOVL-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[3,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,17,17,17,17,17,17,17,17,16,16,16,16,16,16,16,16]
+; AVX512BWNOVL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [72624976668147840,72624976668147840,72624976668147840,72624976668147840]
+; AVX512BWNOVL-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512BWNOVL-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
+; AVX512BWNOVL-NEXT:    vpmovmskb %ymm0, %eax
+; AVX512BWNOVL-NEXT:    vzeroupper
+; AVX512BWNOVL-NEXT:    retq
+;
+; AVX512BWVL-LABEL: test_bitreverse_i32:
+; AVX512BWVL:       # %bb.0:
+; AVX512BWVL-NEXT:    vpbroadcastd %edi, %ymm0
+; AVX512BWVL-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[3,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,17,17,17,17,17,17,17,17,16,16,16,16,16,16,16,16]
+; AVX512BWVL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [72624976668147840,72624976668147840,72624976668147840,72624976668147840]
+; AVX512BWVL-NEXT:    vptestmb %ymm1, %ymm0, %k0
+; AVX512BWVL-NEXT:    kmovd %k0, %eax
+; AVX512BWVL-NEXT:    vzeroupper
+; AVX512BWVL-NEXT:    retq
 ;
 ; XOP-LABEL: test_bitreverse_i32:
 ; XOP:       # %bb.0:
@@ -251,29 +390,75 @@ define i64 @test_bitreverse_i64(i64 %a) nounwind {
 ; SSE-NEXT:    leaq (%rax,%rdx,2), %rax
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test_bitreverse_i64:
-; AVX:       # %bb.0:
-; AVX-NEXT:    bswapq %rdi
-; AVX-NEXT:    movq %rdi, %rax
-; AVX-NEXT:    shrq $4, %rax
-; AVX-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
-; AVX-NEXT:    andq %rcx, %rax
-; AVX-NEXT:    andq %rcx, %rdi
-; AVX-NEXT:    shlq $4, %rdi
-; AVX-NEXT:    orq %rax, %rdi
-; AVX-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
-; AVX-NEXT:    movq %rdi, %rcx
-; AVX-NEXT:    andq %rax, %rcx
-; AVX-NEXT:    shrq $2, %rdi
-; AVX-NEXT:    andq %rax, %rdi
-; AVX-NEXT:    leaq (%rdi,%rcx,4), %rax
-; AVX-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
-; AVX-NEXT:    movq %rax, %rdx
-; AVX-NEXT:    andq %rcx, %rdx
-; AVX-NEXT:    shrq %rax
-; AVX-NEXT:    andq %rcx, %rax
-; AVX-NEXT:    leaq (%rax,%rdx,2), %rax
-; AVX-NEXT:    retq
+; AVX1-LABEL: test_bitreverse_i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    bswapq %rdi
+; AVX1-NEXT:    movq %rdi, %rax
+; AVX1-NEXT:    shrq $4, %rax
+; AVX1-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
+; AVX1-NEXT:    andq %rcx, %rax
+; AVX1-NEXT:    andq %rcx, %rdi
+; AVX1-NEXT:    shlq $4, %rdi
+; AVX1-NEXT:    orq %rax, %rdi
+; AVX1-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
+; AVX1-NEXT:    movq %rdi, %rcx
+; AVX1-NEXT:    andq %rax, %rcx
+; AVX1-NEXT:    shrq $2, %rdi
+; AVX1-NEXT:    andq %rax, %rdi
+; AVX1-NEXT:    leaq (%rdi,%rcx,4), %rax
+; AVX1-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; AVX1-NEXT:    movq %rax, %rdx
+; AVX1-NEXT:    andq %rcx, %rdx
+; AVX1-NEXT:    shrq %rax
+; AVX1-NEXT:    andq %rcx, %rax
+; AVX1-NEXT:    leaq (%rax,%rdx,2), %rax
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_bitreverse_i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovq %rdi, %xmm0
+; AVX2-NEXT:    vpbroadcastq %xmm0, %ymm0
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm1 = ymm0[7,7,7,7,7,7,7,7,6,6,6,6,6,6,6,6,21,21,21,21,21,21,21,21,20,20,20,20,20,20,20,20]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [72624976668147840,72624976668147840,72624976668147840,72624976668147840]
+; AVX2-NEXT:    vpand %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vpcmpeqb %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vpmovmskb %ymm1, %ecx
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[3,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,17,17,17,17,17,17,17,17,16,16,16,16,16,16,16,16]
+; AVX2-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpmovmskb %ymm0, %eax
+; AVX2-NEXT:    shlq $32, %rax
+; AVX2-NEXT:    orq %rcx, %rax
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: test_bitreverse_i64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovq %rdi, %xmm0
+; AVX512F-NEXT:    vpbroadcastq %xmm0, %ymm0
+; AVX512F-NEXT:    vpshufb {{.*#+}} ymm1 = ymm0[7,7,7,7,7,7,7,7,6,6,6,6,6,6,6,6,21,21,21,21,21,21,21,21,20,20,20,20,20,20,20,20]
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [72624976668147840,72624976668147840,72624976668147840,72624976668147840]
+; AVX512F-NEXT:    vpand %ymm2, %ymm1, %ymm1
+; AVX512F-NEXT:    vpcmpeqb %ymm2, %ymm1, %ymm1
+; AVX512F-NEXT:    vpmovmskb %ymm1, %ecx
+; AVX512F-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[3,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,17,17,17,17,17,17,17,17,16,16,16,16,16,16,16,16]
+; AVX512F-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vpmovmskb %ymm0, %eax
+; AVX512F-NEXT:    shlq $32, %rax
+; AVX512F-NEXT:    orq %rcx, %rax
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: test_bitreverse_i64:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpbroadcastq %rdi, %zmm0
+; AVX512BW-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[7,7,7,7,7,7,7,7,6,6,6,6,6,6,6,6,21,21,21,21,21,21,21,21,20,20,20,20,20,20,20,20,35,35,35,35,35,35,35,35,34,34,34,34,34,34,34,34,49,49,49,49,49,49,49,49,48,48,48,48,48,48,48,48]
+; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [72624976668147840,72624976668147840,72624976668147840,72624976668147840,72624976668147840,72624976668147840,72624976668147840,72624976668147840]
+; AVX512BW-NEXT:    vptestmb %zmm1, %zmm0, %k0
+; AVX512BW-NEXT:    kmovq %k0, %rax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
 ;
 ; XOP-LABEL: test_bitreverse_i64:
 ; XOP:       # %bb.0:

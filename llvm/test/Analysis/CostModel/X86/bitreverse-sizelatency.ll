@@ -101,13 +101,25 @@ define i32 @var_bitreverse_i32(i32 %a) {
 }
 
 define i16 @var_bitreverse_i16(i16 %a) {
-; X86-LABEL: 'var_bitreverse_i16'
-; X86-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %bitreverse = call i16 @llvm.bitreverse.i16(i16 %a)
-; X86-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i16 %bitreverse
+; SSE2-LABEL: 'var_bitreverse_i16'
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %bitreverse = call i16 @llvm.bitreverse.i16(i16 %a)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i16 %bitreverse
 ;
-; X64-LABEL: 'var_bitreverse_i16'
-; X64-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %bitreverse = call i16 @llvm.bitreverse.i16(i16 %a)
-; X64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i16 %bitreverse
+; SSE42-LABEL: 'var_bitreverse_i16'
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %bitreverse = call i16 @llvm.bitreverse.i16(i16 %a)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i16 %bitreverse
+;
+; AVX1-LABEL: 'var_bitreverse_i16'
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %bitreverse = call i16 @llvm.bitreverse.i16(i16 %a)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i16 %bitreverse
+;
+; AVX2-LABEL: 'var_bitreverse_i16'
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %bitreverse = call i16 @llvm.bitreverse.i16(i16 %a)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i16 %bitreverse
+;
+; AVX512-LABEL: 'var_bitreverse_i16'
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %bitreverse = call i16 @llvm.bitreverse.i16(i16 %a)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i16 %bitreverse
 ;
 ; XOP-LABEL: 'var_bitreverse_i16'
 ; XOP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call i16 @llvm.bitreverse.i16(i16 %a)
@@ -138,13 +150,25 @@ define i16 @var_bitreverse_i16(i16 %a) {
 }
 
 define i8 @var_bitreverse_i8(i8 %a) {
-; X86-LABEL: 'var_bitreverse_i8'
-; X86-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
-; X86-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i8 %bitreverse
+; SSE2-LABEL: 'var_bitreverse_i8'
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i8 %bitreverse
 ;
-; X64-LABEL: 'var_bitreverse_i8'
-; X64-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
-; X64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i8 %bitreverse
+; SSE42-LABEL: 'var_bitreverse_i8'
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i8 %bitreverse
+;
+; AVX1-LABEL: 'var_bitreverse_i8'
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i8 %bitreverse
+;
+; AVX2-LABEL: 'var_bitreverse_i8'
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i8 %bitreverse
+;
+; AVX512-LABEL: 'var_bitreverse_i8'
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i8 %bitreverse
 ;
 ; XOP-LABEL: 'var_bitreverse_i8'
 ; XOP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
