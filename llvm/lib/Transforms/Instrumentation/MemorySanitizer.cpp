@@ -2993,7 +2993,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// equal to the return type, plus a specified number of trailing flags of
   /// any type.
   ///
-  /// [*} The type should be simple (no aggregates or pointers; vectors are
+  /// [*] The type should be simple (no aggregates or pointers; vectors are
   /// fine).
   ///
   /// Caller guarantees that this intrinsic does not access memory.
