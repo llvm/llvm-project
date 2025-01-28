@@ -6080,3 +6080,23 @@ TEST_F(SandboxIRTest, InstructionCallbacks) {
   EXPECT_THAT(Removed, testing::IsEmpty());
   EXPECT_THAT(Moved, testing::IsEmpty());
 }
+
+TEST_F(SandboxIRTest, FunctionObjectAlreadyExists) {
+  parseIR(C, R"IR(
+define void @foo() {
+  call void @bar()
+  ret void
+}
+define void @bar() {
+  ret void
+}
+)IR");
+  Function &LLVMFoo = *M->getFunction("foo");
+  Function &LLVMBar = *M->getFunction("bar");
+  sandboxir::Context Ctx(C);
+  // This will create a Function object for @bar().
+  Ctx.createFunction(&LLVMFoo);
+  EXPECT_NE(Ctx.getValue(&LLVMBar), nullptr);
+  // This should not crash, even though there is already a value for LLVMBar.
+  Ctx.createFunction(&LLVMBar);
+}

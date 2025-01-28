@@ -5845,3 +5845,17 @@ bool clang::IsArmStreamingFunction(const FunctionDecl *FD,
 
   return false;
 }
+
+bool clang::hasArmZAState(const FunctionDecl *FD) {
+  const auto *T = FD->getType()->getAs<FunctionProtoType>();
+  return (T && FunctionType::getArmZAState(T->getAArch64SMEAttributes()) !=
+                   FunctionType::ARM_None) ||
+         (FD->hasAttr<ArmNewAttr>() && FD->getAttr<ArmNewAttr>()->isNewZA());
+}
+
+bool clang::hasArmZT0State(const FunctionDecl *FD) {
+  const auto *T = FD->getType()->getAs<FunctionProtoType>();
+  return (T && FunctionType::getArmZT0State(T->getAArch64SMEAttributes()) !=
+                   FunctionType::ARM_None) ||
+         (FD->hasAttr<ArmNewAttr>() && FD->getAttr<ArmNewAttr>()->isNewZT0());
+}

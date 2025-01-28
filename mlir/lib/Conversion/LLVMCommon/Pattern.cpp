@@ -276,11 +276,17 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
 
   // Find the malloc and free, or declare them if necessary.
   auto module = builder.getInsertionPoint()->getParentOfType<ModuleOp>();
-  LLVM::LLVMFuncOp freeFunc, mallocFunc;
-  if (toDynamic)
+  FailureOr<LLVM::LLVMFuncOp> freeFunc, mallocFunc;
+  if (toDynamic) {
     mallocFunc = LLVM::lookupOrCreateMallocFn(module, indexType);
-  if (!toDynamic)
+    if (failed(mallocFunc))
+      return failure();
+  }
+  if (!toDynamic) {
     freeFunc = LLVM::lookupOrCreateFreeFn(module);
+    if (failed(freeFunc))
+      return failure();
+  }
 
   unsigned unrankedMemrefPos = 0;
   for (unsigned i = 0, e = operands.size(); i < e; ++i) {
@@ -293,7 +299,8 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
     // Allocate memory, copy, and free the source if necessary.
     Value memory =
         toDynamic
-            ? builder.create<LLVM::CallOp>(loc, mallocFunc, allocationSize)
+            ? builder
+                  .create<LLVM::CallOp>(loc, mallocFunc.value(), allocationSize)
                   .getResult()
             : builder.create<LLVM::AllocaOp>(loc, getVoidPtrType(),
                                              IntegerType::get(getContext(), 8),
@@ -302,7 +309,7 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
     Value source = desc.memRefDescPtr(builder, loc);
     builder.create<LLVM::MemcpyOp>(loc, memory, source, allocationSize, false);
     if (!toDynamic)
-      builder.create<LLVM::CallOp>(loc, freeFunc, source);
+      builder.create<LLVM::CallOp>(loc, freeFunc.value(), source);
 
     // Create a new descriptor. The same descriptor can be returned multiple
     // times, attempting to modify its pointer can lead to memory leaks
