@@ -7511,7 +7511,7 @@ static bool breakDownVectorType(QualType type, uint64_t &len,
   if (const VectorType *vecType = type->getAs<VectorType>()) {
     len = vecType->getNumElements();
     eltType = vecType->getElementType();
-    assert(eltType->isScalarType());
+    assert(eltType->isScalarType() || eltType->isMFloat8Type());
     return true;
   }
 
@@ -10182,6 +10182,11 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
     return HLSL().handleVectorBinOpConversion(LHS, RHS, LHSType, RHSType,
                                               IsCompAssign);
 
+  // Any operation with MFloat8 type is only possible with C intrinsics
+  if ((LHSVecType && LHSVecType->getElementType()->isMFloat8Type()) ||
+      (RHSVecType && RHSVecType->getElementType()->isMFloat8Type()))
+    return InvalidOperands(Loc, LHS, RHS);
+
   // AltiVec-style "vector bool op vector bool" combinations are allowed
   // for some operators but not others.
   if (!AllowBothBool && LHSVecType &&
@@ -11801,7 +11806,7 @@ static std::optional<bool> isTautologicalBoundsCheck(Sema &S, const Expr *LHS,
                                                      const Expr *RHS,
                                                      BinaryOperatorKind Opc) {
   if (!LHS->getType()->isPointerType() ||
-      S.getLangOpts().isSignedOverflowDefined())
+      S.getLangOpts().PointerOverflowDefined)
     return std::nullopt;
 
   // Canonicalize to >= or < predicate.
