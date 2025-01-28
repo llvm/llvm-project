@@ -9407,7 +9407,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
 
   if (auto *UncountableExitingBlock =
           Legal->getUncountableEarlyExitingBlock()) {
-    if (!VPlanTransforms::runPass(VPlanTransforms::handleUncountableEarlyExit,
+    if (!VPlanTransforms::handleUncountableEarlyExit(
             *Plan, *PSE.getSE(), OrigLoop, UncountableExitingBlock,
             RecipeBuilder)) {
       reportVectorizationFailure(
