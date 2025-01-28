@@ -24,6 +24,7 @@
 #include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/NSAPI.h"
@@ -46,6 +47,7 @@
 #include "llvm/Support/xxhash.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
 
+#include <numeric>
 #include <optional>
 #include <string>
 
@@ -1808,8 +1810,7 @@ CodeGenFunction::tryEmitAsConstant(DeclRefExpr *refExpr) {
   if (CGM.getLangOpts().CUDAIsDevice && result.Val.isLValue() &&
       refExpr->refersToEnclosingVariableOrCapture()) {
     auto *MD = dyn_cast_or_null<CXXMethodDecl>(CurCodeDecl);
-    if (MD && MD->getParent()->isLambda() &&
-        MD->getOverloadedOperator() == OO_Call) {
+    if (isLambdaMethod(MD) && MD->getOverloadedOperator() == OO_Call) {
       const APValue::LValueBase &base = result.Val.getLValueBase();
       if (const ValueDecl *D = base.dyn_cast<const ValueDecl *>()) {
         if (const VarDecl *VD = dyn_cast<const VarDecl>(D)) {
@@ -2002,20 +2003,19 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
       return EmitFromMemory(V, Ty);
     }
 
-    // Handle vectors of size 3 like size 4 for better performance.
-    const llvm::Type *EltTy = Addr.getElementType();
-    const auto *VTy = cast<llvm::FixedVectorType>(EltTy);
+    // Handles vectors of sizes that are likely to be expanded to a larger size
+    // to optimize performance.
+    auto *VTy = cast<llvm::FixedVectorType>(Addr.getElementType());
+    auto *NewVecTy =
+        CGM.getABIInfo().getOptimalVectorMemoryType(VTy, getLangOpts());
 
-    if (!CGM.getCodeGenOpts().PreserveVec3Type && VTy->getNumElements() == 3) {
-
-      llvm::VectorType *vec4Ty =
-          llvm::FixedVectorType::get(VTy->getElementType(), 4);
-      Address Cast = Addr.withElementType(vec4Ty);
-      // Now load value.
-      llvm::Value *V = Builder.CreateLoad(Cast, Volatile, "loadVec4");
-
-      // Shuffle vector to get vec3.
-      V = Builder.CreateShuffleVector(V, ArrayRef<int>{0, 1, 2}, "extractVec");
+    if (VTy != NewVecTy) {
+      Address Cast = Addr.withElementType(NewVecTy);
+      llvm::Value *V = Builder.CreateLoad(Cast, Volatile, "loadVecN");
+      unsigned OldNumElements = VTy->getNumElements();
+      SmallVector<int, 16> Mask(OldNumElements);
+      std::iota(Mask.begin(), Mask.end(), 0);
+      V = Builder.CreateShuffleVector(V, Mask, "extractVec");
       return EmitFromMemory(V, Ty);
     }
   }
@@ -2145,21 +2145,21 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
       Addr = Addr.withPointer(Builder.CreateThreadLocalAddress(GV),
                               NotKnownNonNull);
 
+  // Handles vectors of sizes that are likely to be expanded to a larger size
+  // to optimize performance.
   llvm::Type *SrcTy = Value->getType();
   if (const auto *ClangVecTy = Ty->getAs<VectorType>()) {
-    auto *VecTy = dyn_cast<llvm::FixedVectorType>(SrcTy);
-    if (!CGM.getCodeGenOpts().PreserveVec3Type) {
-      // Handle vec3 special.
-      if (VecTy && !ClangVecTy->isExtVectorBoolType() &&
-          cast<llvm::FixedVectorType>(VecTy)->getNumElements() == 3) {
-        // Our source is a vec3, do a shuffle vector to make it a vec4.
-        Value = Builder.CreateShuffleVector(Value, ArrayRef<int>{0, 1, 2, -1},
-                                            "extractVec");
-        SrcTy = llvm::FixedVectorType::get(VecTy->getElementType(), 4);
+    if (auto *VecTy = dyn_cast<llvm::FixedVectorType>(SrcTy)) {
+      auto *NewVecTy =
+          CGM.getABIInfo().getOptimalVectorMemoryType(VecTy, getLangOpts());
+      if (!ClangVecTy->isExtVectorBoolType() && VecTy != NewVecTy) {
+        SmallVector<int, 16> Mask(NewVecTy->getNumElements(), -1);
+        std::iota(Mask.begin(), Mask.begin() + VecTy->getNumElements(), 0);
+        Value = Builder.CreateShuffleVector(Value, Mask, "extractVec");
+        SrcTy = NewVecTy;
       }
-      if (Addr.getElementType() != SrcTy) {
+      if (Addr.getElementType() != SrcTy)
         Addr = Addr.withElementType(SrcTy);
-      }
     }
   }
 
@@ -2414,8 +2414,15 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
         Vec = Builder.CreateBitCast(Vec, IRVecTy);
         // iN --> <N x i1>.
       }
-      Vec = Builder.CreateInsertElement(Vec, Src.getScalarVal(),
-                                        Dst.getVectorIdx(), "vecins");
+      llvm::Value *SrcVal = Src.getScalarVal();
+      // Allow inserting `<1 x T>` into an `<N x T>`. It can happen with scalar
+      // types which are mapped to vector LLVM IR types (e.g. for implementing
+      // an ABI).
+      if (auto *EltTy = dyn_cast<llvm::FixedVectorType>(SrcVal->getType());
+          EltTy && EltTy->getNumElements() == 1)
+        SrcVal = Builder.CreateBitCast(SrcVal, EltTy->getElementType());
+      Vec = Builder.CreateInsertElement(Vec, SrcVal, Dst.getVectorIdx(),
+                                        "vecins");
       if (IRStoreTy) {
         // <N x i1> --> <iN>.
         Vec = Builder.CreateBitCast(Vec, IRStoreTy);
@@ -4311,14 +4318,14 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     // GEP indexes are signed, and scaling an index isn't permitted to
     // signed-overflow, so we use the same semantics for our explicit
     // multiply.  We suppress this if overflow is not undefined behavior.
-    if (getLangOpts().isSignedOverflowDefined()) {
+    if (getLangOpts().PointerOverflowDefined) {
       Idx = Builder.CreateMul(Idx, numElements);
     } else {
       Idx = Builder.CreateNSWMul(Idx, numElements);
     }
 
     Addr = emitArraySubscriptGEP(*this, Addr, Idx, vla->getElementType(),
-                                 !getLangOpts().isSignedOverflowDefined(),
+                                 !getLangOpts().PointerOverflowDefined,
                                  SignedIndices, E->getExprLoc());
 
   } else if (const ObjCObjectType *OIT = E->getType()->getAs<ObjCObjectType>()){
@@ -4408,7 +4415,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     QualType arrayType = Array->getType();
     Addr = emitArraySubscriptGEP(
         *this, ArrayLV.getAddress(), {CGM.getSize(CharUnits::Zero()), Idx},
-        E->getType(), !getLangOpts().isSignedOverflowDefined(), SignedIndices,
+        E->getType(), !getLangOpts().PointerOverflowDefined, SignedIndices,
         E->getExprLoc(), &arrayType, E->getBase());
     EltBaseInfo = ArrayLV.getBaseInfo();
     EltTBAAInfo = CGM.getTBAAInfoForSubobject(ArrayLV, E->getType());
@@ -4417,10 +4424,9 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     Addr = EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
     QualType ptrType = E->getBase()->getType();
-    Addr = emitArraySubscriptGEP(*this, Addr, Idx, E->getType(),
-                                 !getLangOpts().isSignedOverflowDefined(),
-                                 SignedIndices, E->getExprLoc(), &ptrType,
-                                 E->getBase());
+    Addr = emitArraySubscriptGEP(
+        *this, Addr, Idx, E->getType(), !getLangOpts().PointerOverflowDefined,
+        SignedIndices, E->getExprLoc(), &ptrType, E->getBase());
   }
 
   LValue LV = MakeAddrLValue(Addr, E->getType(), EltBaseInfo, EltTBAAInfo);
@@ -4565,11 +4571,11 @@ LValue CodeGenFunction::EmitArraySectionExpr(const ArraySectionExpr *E,
                 : llvm::ConstantInt::get(IntPtrTy, ConstLength);
         Idx = Builder.CreateAdd(LowerBoundVal, LengthVal, "lb_add_len",
                                 /*HasNUW=*/false,
-                                !getLangOpts().isSignedOverflowDefined());
+                                !getLangOpts().PointerOverflowDefined);
         if (Length && LowerBound) {
           Idx = Builder.CreateSub(
               Idx, llvm::ConstantInt::get(IntPtrTy, /*V=*/1), "idx_sub_1",
-              /*HasNUW=*/false, !getLangOpts().isSignedOverflowDefined());
+              /*HasNUW=*/false, !getLangOpts().PointerOverflowDefined);
         }
       } else
         Idx = llvm::ConstantInt::get(IntPtrTy, ConstLength + ConstLowerBound);
@@ -4595,7 +4601,7 @@ LValue CodeGenFunction::EmitArraySectionExpr(const ArraySectionExpr *E,
             Length->getType()->hasSignedIntegerRepresentation());
         Idx = Builder.CreateSub(
             LengthVal, llvm::ConstantInt::get(IntPtrTy, /*V=*/1), "len_sub_1",
-            /*HasNUW=*/false, !getLangOpts().isSignedOverflowDefined());
+            /*HasNUW=*/false, !getLangOpts().PointerOverflowDefined);
       } else {
         ConstLength = ConstLength.zextOrTrunc(PointerWidthInBits);
         --ConstLength;
@@ -4622,12 +4628,12 @@ LValue CodeGenFunction::EmitArraySectionExpr(const ArraySectionExpr *E,
     // GEP indexes are signed, and scaling an index isn't permitted to
     // signed-overflow, so we use the same semantics for our explicit
     // multiply.  We suppress this if overflow is not undefined behavior.
-    if (getLangOpts().isSignedOverflowDefined())
+    if (getLangOpts().PointerOverflowDefined)
       Idx = Builder.CreateMul(Idx, NumElements);
     else
       Idx = Builder.CreateNSWMul(Idx, NumElements);
     EltPtr = emitArraySubscriptGEP(*this, Base, Idx, VLA->getElementType(),
-                                   !getLangOpts().isSignedOverflowDefined(),
+                                   !getLangOpts().PointerOverflowDefined,
                                    /*signedIndices=*/false, E->getExprLoc());
   } else if (const Expr *Array = isSimpleArrayDecayOperand(E->getBase())) {
     // If this is A[i] where A is an array, the frontend will have decayed the
@@ -4647,7 +4653,7 @@ LValue CodeGenFunction::EmitArraySectionExpr(const ArraySectionExpr *E,
     // Propagate the alignment from the array itself to the result.
     EltPtr = emitArraySubscriptGEP(
         *this, ArrayLV.getAddress(), {CGM.getSize(CharUnits::Zero()), Idx},
-        ResultExprTy, !getLangOpts().isSignedOverflowDefined(),
+        ResultExprTy, !getLangOpts().PointerOverflowDefined,
         /*signedIndices=*/false, E->getExprLoc());
     BaseInfo = ArrayLV.getBaseInfo();
     TBAAInfo = CGM.getTBAAInfoForSubobject(ArrayLV, ResultExprTy);
@@ -4656,7 +4662,7 @@ LValue CodeGenFunction::EmitArraySectionExpr(const ArraySectionExpr *E,
         emitOMPArraySectionBase(*this, E->getBase(), BaseInfo, TBAAInfo, BaseTy,
                                 ResultExprTy, IsLowerBound);
     EltPtr = emitArraySubscriptGEP(*this, Base, Idx, ResultExprTy,
-                                   !getLangOpts().isSignedOverflowDefined(),
+                                   !getLangOpts().PointerOverflowDefined,
                                    /*signedIndices=*/false, E->getExprLoc());
   }
 

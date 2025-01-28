@@ -2606,8 +2606,7 @@ TYPED_TEST(MutableConstTest, FCmp) {
 }
 
 TEST_F(PatternMatchTest, ConstExpr) {
-  Constant *G =
-      M->getOrInsertGlobal("dummy", PointerType::getUnqual(IRB.getInt32Ty()));
+  Constant *G = M->getOrInsertGlobal("dummy", PointerType::getUnqual(Ctx));
   Constant *S = ConstantExpr::getPtrToInt(G, IRB.getInt32Ty());
   Type *VecTy = FixedVectorType::get(IRB.getInt32Ty(), 2);
   PoisonValue *P = PoisonValue::get(VecTy);

@@ -514,9 +514,7 @@ available in all language modes.
 __nullptr
 ---------
 
-``__nullptr`` is an alternate spelling for ``nullptr``, but is also available in
-C++ modes prior to C++11. Note that it's currently not availbale in C despite
-C23 having support for ``nullptr``.
+``__nullptr`` is an alternate spelling for ``nullptr``. It is available in all C and C++ language modes.
 
 __signed, __signed__
 --------------------
@@ -5656,7 +5654,7 @@ The ``#pragma clang section`` directive obeys the following rules:
 
 * The pragma clang section is enabled automatically, without need of any flags.
 
-* This feature is only defined to work sensibly for ELF and Mach-O targets.
+* This feature is only defined to work sensibly for ELF, Mach-O and COFF targets.
 
 * If section name is specified through _attribute_((section("myname"))), then
   the attribute name gains precedence.
