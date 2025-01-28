@@ -35,6 +35,7 @@ add_llvm_target(RISCVCodeGen
   RISCVConstantPoolValue.cpp
   RISCVDeadRegisterDefinitions.cpp
   RISCVMakeCompressible.cpp
+  RISCVLatePeephole.cpp
   RISCVExpandAtomicPseudoInsts.cpp
   RISCVExpandPseudoInsts.cpp
   RISCVFrameLowering.cpp
