@@ -2141,6 +2141,26 @@ let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8,neon" in {
   def VCVTN_F8_F16      : VInst<"vcvt_mf8_f16_fpm",      ".(>F)(>F)V",      "mQm">;
 }
 
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8dot2,neon" in {
+  def VDOT_F16_MF8 : VInst<"vdot_f16_mf8_fpm", "(>F)(>F)..V", "mQm">;
+
+  def VDOT_LANE_F16_MF8  : VInst<"vdot_lane_f16_mf8_fpm",  "(>F)(>F)..IV", "m", [ImmCheck<3, ImmCheck0_3, 0>]>;
+  def VDOT_LANEQ_F16_MF8 : VInst<"vdot_laneq_f16_mf8_fpm", "(>F)(>F).QIV", "m", [ImmCheck<3, ImmCheck0_7, 0>]>;
+
+  def VDOTQ_LANE_F16_MF8  : VInst<"vdot_lane_f16_mf8_fpm",  "(>F)(>F).qIV", "Qm", [ImmCheck<3, ImmCheck0_3, 0>]>;
+  def VDOTQ_LANEQ_F16_MF8 : VInst<"vdot_laneq_f16_mf8_fpm", "(>F)(>F)..IV", "Qm", [ImmCheck<3, ImmCheck0_7, 0>]>;
+}
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8dot4,neon" in {
+  def VDOT_F32_MF8 : VInst<"vdot_f32_mf8_fpm", "(>>F)(>>F)..V", "mQm">;
+
+  def VDOT_LANE_F32_MF8  : VInst<"vdot_lane_f32_mf8_fpm",  "(>>F)(>>F)..IV", "m", [ImmCheck<3, ImmCheck0_1, 0>]>;
+  def VDOT_LANEQ_F32_MF8 : VInst<"vdot_laneq_f32_mf8_fpm", "(>>F)(>>F).QIV", "m", [ImmCheck<3, ImmCheck0_3, 0>]>;
+
+  def VDOTQ_LANE_F32_MF8  : VInst<"vdot_lane_f32_mf8_fpm",  "(>>F)(>>F).qIV", "Qm", [ImmCheck<3, ImmCheck0_1, 0>]>;
+  def VDOTQ_LANEQ_F32_MF8 : VInst<"vdot_laneq_f32_mf8_fpm", "(>>F)(>>F)..IV", "Qm", [ImmCheck<3, ImmCheck0_3, 0>]>;
+}
+
 let ArchGuard = "defined(__aarch64__)", TargetGuard = "neon,faminmax" in {
   def FAMIN : WInst<"vamin", "...", "fhQdQfQh">;
   def FAMAX : WInst<"vamax", "...", "fhQdQfQh">;
