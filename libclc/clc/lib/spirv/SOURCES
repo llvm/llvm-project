@@ -3,6 +3,7 @@
 ../generic/common/clc_smoothstep.cl
 ../generic/geometric/clc_dot.cl
 ../generic/math/clc_ceil.cl
+../generic/math/clc_copysign.cl
 ../generic/math/clc_fabs.cl
 ../generic/math/clc_floor.cl
 ../generic/math/clc_mad.cl
