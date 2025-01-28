@@ -22,8 +22,8 @@
 
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
+#include <clc/math/math.h>
 
-#include "math.h"
 #include "sincospiF_piby4.h"
 #ifdef cl_khr_fp64
 #include "sincosD_piby4.h"
