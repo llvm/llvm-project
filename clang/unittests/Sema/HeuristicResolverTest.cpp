@@ -295,6 +295,25 @@ TEST(HeuristicResolver, MemberExpr_Metafunction) {
       cxxMethodDecl(hasName("find")).bind("output"));
 }
 
+TEST(HeuristicResolver, MemberExpr_Metafunction_Enumerator) {
+  std::string Code = R"cpp(
+    enum class State { Hidden };
+    template <typename T>
+    struct Meta {
+      using Type = State;
+    };
+    template <typename T>
+    void foo(typename Meta<T>::Type t) {
+      t.Hidden;
+    }
+  )cpp";
+  // Test resolution of "Hidden" in "t.Hidden".
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("Hidden")).bind("input"),
+      enumConstantDecl(hasName("Hidden")).bind("output"));
+}
+
 TEST(HeuristicResolver, MemberExpr_DeducedNonTypeTemplateParameter) {
   std::string Code = R"cpp(
     template <int N>
