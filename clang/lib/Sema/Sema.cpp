@@ -709,6 +709,8 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
     case CK_ToVoid:
     case CK_NonAtomicToAtomic:
     case CK_HLSLArrayRValue:
+    case CK_HLSLAggregateCast:
+    case CK_HLSLSplatCast:
       break;
     }
   }

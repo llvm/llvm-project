@@ -522,6 +522,8 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       case CK_ToUnion:
       case CK_MatrixCast:
       case CK_VectorSplat:
+      case CK_HLSLAggregateCast:
+      case CK_HLSLSplatCast:
       case CK_HLSLVectorTruncation: {
         QualType resultType = CastE->getType();
         if (CastE->isGLValue())
