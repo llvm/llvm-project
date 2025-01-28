@@ -13,11 +13,18 @@ program p
 
    type(t1) :: a, b
    !CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) mapper(@_QQFxx) map_clauses(tofrom) capture(ByRef) -> {{.*}} {name = "a"}
-   !CHECK: %[[MAP_B:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) mapper(@_QQFt1.default) map_clauses(tofrom) capture(ByRef) -> {{.*}} {name = "b"}
-   !CHECK: omp.target map_entries(%[[MAP_A]] -> %{{.*}}, %[[MAP_B]] -> %{{.*}}, %{{.*}} -> %{{.*}}, %{{.*}} -> %{{.*}} : {{.*}}, {{.*}}, {{.*}}, {{.*}}) {
-   !$omp target map(mapper(xx) : a) map(mapper(default) : b)
+   !CHECK: omp.target map_entries(%[[MAP_A]] -> %{{.*}}, %{{.*}} -> %{{.*}} : {{.*}}, {{.*}}) {
+   !$omp target map(mapper(xx) : a)
    do i = 1, n
-      b%x(i) = a%x(i)
+      a%x(i) = i
+   end do
+   !$omp end target
+
+   !CHECK: %[[MAP_B:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) mapper(@_QQFt1.default) map_clauses(tofrom) capture(ByRef) -> {{.*}} {name = "b"}
+   !CHECK: omp.target map_entries(%[[MAP_B]] -> %{{.*}}, %{{.*}} -> %{{.*}} : {{.*}}, {{.*}}) {
+   !$omp target map(mapper(default) : b)
+   do i = 1, n
+      b%x(i) = i
    end do
    !$omp end target
 end program p
