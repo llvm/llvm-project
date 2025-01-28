@@ -33,7 +33,6 @@ namespace {
 class RISCVVLOptimizer : public MachineFunctionPass {
   const MachineRegisterInfo *MRI;
   const MachineDominatorTree *MDT;
-  const TargetInstrInfo *TII;
 
 public:
   static char ID;
@@ -60,7 +59,7 @@ private:
 
   /// For a given instruction, records what elements of it are demanded by
   /// downstream users.
-  DenseMap<const MachineInstr *, MachineOperand> DemandedVLs;
+  DenseMap<const MachineInstr *, std::optional<MachineOperand>> DemandedVLs;
 };
 
 } // end anonymous namespace
@@ -1209,15 +1208,10 @@ RISCVVLOptimizer::getMinimumVLForUser(MachineOperand &UserOp) {
 
   // If we know the demanded VL of UserMI, then we can reduce the VL it
   // requires.
-  if (DemandedVLs.contains(&UserMI)) {
-    // We can only shrink the VL used if the elementwise result doesn't depend
-    // on VL (i.e. not vredsum/viota etc.)
-    if (!RISCVII::elementsDependOnVL(
-            TII->get(RISCV::getRVVMCOpcode(UserMI.getOpcode())).TSFlags)) {
-      const MachineOperand &DemandedVL = DemandedVLs.at(&UserMI);
-      if (RISCV::isVLKnownLE(DemandedVL, VLOp))
-        return DemandedVL;
-    }
+  if (auto DemandedVL = DemandedVLs[&UserMI]) {
+    assert(isCandidate(UserMI));
+    if (RISCV::isVLKnownLE(*DemandedVL, VLOp))
+      return DemandedVL;
   }
 
   return VLOp;
@@ -1347,8 +1341,6 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
   if (!ST.hasVInstructions())
     return false;
-
-  TII = ST.getInstrInfo();
 
   // For each instruction that defines a vector, compute what VL its
   // downstream users demand.
