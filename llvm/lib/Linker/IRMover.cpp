@@ -1244,6 +1244,7 @@ Error IRLinker::linkModuleFlagsMetadata() {
 
   // Check for module flag for updates before do anything.
   UpgradeModuleFlags(*SrcM);
+  UpgradeNVVMAnnotations(*SrcM);
 
   // If the destination module doesn't have module flags yet, then just copy
   // over the source module's flags.
