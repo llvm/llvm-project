@@ -1350,7 +1350,6 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
 
   TII = ST.getInstrInfo();
 
-
   // For each instruction that defines a vector, compute what VL its
   // downstream users demand.
   for (MachineBasicBlock *MBB : post_order(&MF)) {
@@ -1360,7 +1359,7 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
       if (!isCandidate(MI))
         continue;
       if (auto DemandedVL = checkUsers(MI))
-	DemandedVLs.insert({&MI, *DemandedVL});
+        DemandedVLs.insert({&MI, *DemandedVL});
     }
   }
 
