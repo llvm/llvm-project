@@ -73,7 +73,7 @@ def CallOpInterface : OpInterface<"CallOpInterface"> {
   }];
   let cppNamespace = "::mlir";
 
-  let methods = !listconcat(ArgumentAttributesMethods.methods, [
+  let methods = [
     InterfaceMethod<[{
         Returns the callee of this call-like operation. A `callee` is either a
         reference to a symbol, via SymbolRefAttr, or a reference to a defined
@@ -123,7 +123,7 @@ def CallOpInterface : OpInterface<"CallOpInterface"> {
         return ::mlir::call_interface_impl::resolveCallable($_op);
       }]
     >
-  ]);
+  ] # ArgumentAttributesMethods.methods;
 }
 
 /// Interface for callable operations.
@@ -138,7 +138,7 @@ def CallableOpInterface : OpInterface<"CallableOpInterface"> {
   }];
   let cppNamespace = "::mlir";
 
-  let methods = !listconcat(ArgumentAttributesMethods.methods, [
+  let methods = [
     InterfaceMethod<[{
         Returns the region on the current operation that is callable. This may
         return null in the case of an external callable object, e.g. an external
@@ -155,7 +155,7 @@ def CallableOpInterface : OpInterface<"CallableOpInterface"> {
       allow for this method may be called on function declarations).
     }],
     "::llvm::ArrayRef<::mlir::Type>", "getResultTypes">,
-  ]);
+  ] # ArgumentAttributesMethods.methods;
 }
 
 #endif // MLIR_INTERFACES_CALLINTERFACES
