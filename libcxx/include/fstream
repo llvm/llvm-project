@@ -947,8 +947,7 @@ basic_filebuf<_CharT, _Traits>::seekoff(off_type __off, ios_base::seekdir __way,
 }
 
 template <class _CharT, class _Traits>
-int
-basic_filebuf<_CharT, _Traits>::__fseek(FILE* __file, pos_type __offset, int __whence) {
+int basic_filebuf<_CharT, _Traits>::__fseek(FILE* __file, pos_type __offset, int __whence) {
 #    if defined(_LIBCPP_MSVCRT_LIKE)
   return _fseeki64(__file, __offset, __whence);
 #    elif !_LIBCPP_HAS_OFF_T_FUNCTIONS
@@ -959,8 +958,7 @@ basic_filebuf<_CharT, _Traits>::__fseek(FILE* __file, pos_type __offset, int __w
 }
 
 template <class _CharT, class _Traits>
-typename basic_filebuf<_CharT, _Traits>::pos_type
-basic_filebuf<_CharT, _Traits>::__ftell(FILE* __file) {
+typename basic_filebuf<_CharT, _Traits>::pos_type basic_filebuf<_CharT, _Traits>::__ftell(FILE* __file) {
 #    if defined(_LIBCPP_MSVCRT_LIKE)
   return _ftelli64(__file);
 #    elif !_LIBCPP_HAS_OFF_T_FUNCTIONS
