@@ -27,6 +27,13 @@ static cl::opt<bool>
     AllowNonPow2("sbvec-allow-non-pow2", cl::init(false), cl::Hidden,
                  cl::desc("Allow non-power-of-2 vectorization."));
 
+#ifndef NDEBUG
+static cl::opt<bool>
+    AlwaysVerify("sbvec-always-verify", cl::init(false), cl::Hidden,
+                 cl::desc("Helps find bugs by verifying the IR whenever we "
+                          "emit new instructions (*very* expensive)."));
+#endif // NDEBUG
+
 namespace sandboxir {
 
 BottomUpVec::BottomUpVec(StringRef Pipeline)
@@ -47,11 +54,13 @@ static SmallVector<Value *, 4> getOperand(ArrayRef<Value *> Bndl,
 /// of BB if no instruction found in \p Vals.
 static BasicBlock::iterator getInsertPointAfterInstrs(ArrayRef<Value *> Vals,
                                                       BasicBlock *BB) {
-  auto *BotI = VecUtils::getLowest(Vals);
+  auto *BotI = VecUtils::getLastPHIOrSelf(VecUtils::getLowest(Vals, BB));
   if (BotI == nullptr)
-    // We are using BB->begin() as the fallback insert point if `ToPack` did
-    // not contain instructions.
-    return BB->begin();
+    // We are using BB->begin() (or after PHIs) as the fallback insert point.
+    return BB->empty()
+               ? BB->begin()
+               : std::next(
+                     VecUtils::getLastPHIOrSelf(&*BB->begin())->getIterator());
   return std::next(BotI->getIterator());
 }
 
@@ -169,14 +178,19 @@ Value *BottomUpVec::createVectorInstr(ArrayRef<Value *> Bndl,
 }
 
 void BottomUpVec::tryEraseDeadInstrs() {
-  // Visiting the dead instructions bottom-to-top.
-  SmallVector<Instruction *> SortedDeadInstrCandidates(
-      DeadInstrCandidates.begin(), DeadInstrCandidates.end());
-  sort(SortedDeadInstrCandidates,
-       [](Instruction *I1, Instruction *I2) { return I1->comesBefore(I2); });
-  for (Instruction *I : reverse(SortedDeadInstrCandidates)) {
-    if (I->hasNUses(0))
-      I->eraseFromParent();
+  DenseMap<BasicBlock *, SmallVector<Instruction *>> SortedDeadInstrCandidates;
+  // The dead instrs could span BBs, so we need to collect and sort them per BB.
+  for (auto *DeadI : DeadInstrCandidates)
+    SortedDeadInstrCandidates[DeadI->getParent()].push_back(DeadI);
+  for (auto &Pair : SortedDeadInstrCandidates)
+    sort(Pair.second,
+         [](Instruction *I1, Instruction *I2) { return I1->comesBefore(I2); });
+  for (const auto &Pair : SortedDeadInstrCandidates) {
+    for (Instruction *I : reverse(Pair.second)) {
+      if (I->hasNUses(0))
+        // Erase the dead instructions bottom-to-top.
+        I->eraseFromParent();
+    }
   }
   DeadInstrCandidates.clear();
 }
@@ -358,6 +372,17 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
     break;
   }
   }
+#ifndef NDEBUG
+  if (AlwaysVerify) {
+    // This helps find broken IR by constantly verifying the function. Note that
+    // this is very expensive and should only be used for debugging.
+    Instruction *I0 = isa<Instruction>(Bndl[0])
+                          ? cast<Instruction>(Bndl[0])
+                          : cast<Instruction>(UserBndl[0]);
+    assert(!Utils::verifyFunction(I0->getParent()->getParent(), dbgs()) &&
+           "Broken function!");
+  }
+#endif
   return NewVec;
 }
 

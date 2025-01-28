@@ -1272,7 +1272,7 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
     return_clang_type = m_ast.GetBasicType(eBasicTypeVoid);
 
   std::vector<CompilerType> function_param_types;
-  std::vector<clang::ParmVarDecl *> function_param_decls;
+  llvm::SmallVector<llvm::StringRef> function_param_names;
 
   // Parse the function children for the parameters
 
@@ -1284,7 +1284,7 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
   if (die.HasChildren()) {
     ParseChildParameters(containing_decl_ctx, die, is_variadic,
                          has_template_params, function_param_types,
-                         function_param_decls);
+                         function_param_names);
   }
 
   bool is_cxx_method = DeclKindIsCXXClass(containing_decl_ctx->getDeclKind());
@@ -1414,12 +1414,14 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
 
           LinkDeclContextToDIE(function_decl, die);
 
-          if (!function_param_decls.empty()) {
-            m_ast.SetFunctionParameters(function_decl, function_param_decls);
-            if (template_function_decl)
-              m_ast.SetFunctionParameters(template_function_decl,
-                                          function_param_decls);
-          }
+          const clang::FunctionProtoType *function_prototype(
+              llvm::cast<clang::FunctionProtoType>(
+                  ClangUtil::GetQualType(clang_type).getTypePtr()));
+          const auto params = m_ast.CreateParameterDeclarations(
+              function_decl, *function_prototype, function_param_names);
+          function_decl->setParams(params);
+          if (template_function_decl)
+            template_function_decl->setParams(params);
 
           ClangASTMetadata metadata;
           metadata.SetUserID(die.GetID());
@@ -2380,7 +2382,7 @@ DWARFASTParserClang::ConstructDemangledNameFromDWARF(const DWARFDIE &die) {
   bool is_variadic = false;
   bool has_template_params = false;
   std::vector<CompilerType> param_types;
-  std::vector<clang::ParmVarDecl *> param_decls;
+  llvm::SmallVector<llvm::StringRef> param_names;
   StreamString sstr;
 
   DWARFDeclContext decl_ctx = die.GetDWARFDeclContext();
@@ -2394,7 +2396,7 @@ DWARFASTParserClang::ConstructDemangledNameFromDWARF(const DWARFDIE &die) {
       die, GetCXXObjectParameter(die, *containing_decl_ctx));
 
   ParseChildParameters(containing_decl_ctx, die, is_variadic,
-                       has_template_params, param_types, param_decls);
+                       has_template_params, param_types, param_names);
   sstr << "(";
   for (size_t i = 0; i < param_types.size(); i++) {
     if (i > 0)
@@ -2462,10 +2464,29 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(
     assert(func_type == nullptr || func_type != DIE_IS_BEING_PARSED);
 
     const user_id_t func_user_id = die.GetID();
+
+    // The base address of the scope for any of the debugging information
+    // entries listed above is given by either the DW_AT_low_pc attribute or the
+    // first address in the first range entry in the list of ranges given by the
+    // DW_AT_ranges attribute.
+    //   -- DWARFv5, Section 2.17 Code Addresses, Ranges and Base Addresses
+    //
+    // If no DW_AT_entry_pc attribute is present, then the entry address is
+    // assumed to be the same as the base address of the containing scope.
+    //   -- DWARFv5, Section 2.18 Entry Address
+    //
+    // We currently don't support Debug Info Entries with
+    // DW_AT_low_pc/DW_AT_entry_pc and DW_AT_ranges attributes (the latter
+    // attributes are ignored even though they should be used for the address of
+    // the function), but compilers also don't emit that kind of information. If
+    // this becomes a problem we need to plumb these attributes separately.
+    Address func_addr = func_ranges[0].GetBaseAddress();
+
     func_sp = std::make_shared<Function>(
         &comp_unit,
         func_user_id, // UserID is the DIE offset
-        func_user_id, func_name, func_type, std::move(func_ranges));
+        func_user_id, func_name, func_type, std::move(func_addr),
+        std::move(func_ranges));
 
     if (func_sp.get() != nullptr) {
       if (frame_base.IsValid())
@@ -3138,7 +3159,7 @@ void DWARFASTParserClang::ParseChildParameters(
     clang::DeclContext *containing_decl_ctx, const DWARFDIE &parent_die,
     bool &is_variadic, bool &has_template_params,
     std::vector<CompilerType> &function_param_types,
-    std::vector<clang::ParmVarDecl *> &function_param_decls) {
+    llvm::SmallVectorImpl<llvm::StringRef> &function_param_names) {
   if (!parent_die)
     return;
 
@@ -3149,22 +3170,14 @@ void DWARFASTParserClang::ParseChildParameters(
       if (die.GetAttributeValueAsUnsigned(DW_AT_artificial, 0))
         continue;
 
-      const char *name = die.GetName();
       DWARFDIE param_type_die = die.GetAttributeValueAsReferenceDIE(DW_AT_type);
 
       Type *type = die.ResolveTypeUID(param_type_die);
       if (!type)
         break;
 
+      function_param_names.emplace_back(die.GetName());
       function_param_types.push_back(type->GetForwardCompilerType());
-
-      clang::ParmVarDecl *param_var_decl = m_ast.CreateParameterDeclaration(
-          containing_decl_ctx, GetOwningClangModule(die), name,
-          type->GetForwardCompilerType(), clang::StorageClass::SC_None);
-      assert(param_var_decl);
-      function_param_decls.push_back(param_var_decl);
-
-      m_ast.SetMetadataAsUserID(param_var_decl, die.GetID());
     } break;
 
     case DW_TAG_unspecified_parameters:
@@ -3186,6 +3199,8 @@ void DWARFASTParserClang::ParseChildParameters(
       break;
     }
   }
+
+  assert(function_param_names.size() == function_param_names.size());
 }
 
 clang::Decl *DWARFASTParserClang::GetClangDeclForDIE(const DWARFDIE &die) {
