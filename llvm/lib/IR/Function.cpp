@@ -287,7 +287,7 @@ bool Argument::hasNoAliasAttr() const {
 
 bool Argument::hasNoCaptureAttr() const {
   if (!getType()->isPointerTy()) return false;
-  return hasAttribute(Attribute::NoCapture);
+  return capturesNothing(getAttributes().getCaptureInfo());
 }
 
 bool Argument::hasNoFreeAttr() const {
