@@ -788,12 +788,6 @@ bool SIMachineFunctionInfo::usesAGPRs(const MachineFunction &MF) const {
   if (UsesAGPRs)
     return *UsesAGPRs;
 
-  // Assume we cannot get any useful information about an empty function, but do
-  // not cache the result as we may not have useful information yet (for example
-  // after a Global-ISel fallback).
-  if (MF.empty())
-    return false;
-
   if (!mayNeedAGPRs()) {
     UsesAGPRs = false;
     return false;
