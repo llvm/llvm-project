@@ -2877,7 +2877,7 @@ InstructionCost RISCVTargetLowering::getVRGatherVVCost(MVT VT) const {
     unsigned Log = Log2_64(*LMULCost.getValue());
     return LMULCost * Log;
   }
-  return getLMULCost(VT) * getLMULCost(VT);
+  return LMULCost * LMULCost;
 }
 
 /// Return the cost of a vrgather.vi (or vx) instruction for the type VT.
