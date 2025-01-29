@@ -82,7 +82,7 @@ declare i32 @__kmpc_target_init(ptr, ptr) local_unnamed_addr
 ; Function Attrs: alwaysinline mustprogress nofree norecurse nosync nounwind readnone willreturn
 define internal void @__omp_outlined__(ptr noalias nocapture %.global_tid., ptr noalias nocapture %.bound_tid.) #1 {
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__
-; CHECK-SAME: (ptr noalias nocapture [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (ptr noalias captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias captures(none) [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret void
 ;
