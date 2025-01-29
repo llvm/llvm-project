@@ -89,7 +89,7 @@ bool CIRGenCXXABI::isZeroInitializable(const MemberPointerType *MPT) {
 CharUnits CIRGenCXXABI::getArrayCookieSize(const CXXNewExpr *E) {
   if (!requiresArrayCookie(E))
     return CharUnits::Zero();
-  llvm_unreachable("NYI");
+  return getArrayCookieSizeImpl(E->getAllocatedType());
 }
 
 bool CIRGenCXXABI::requiresArrayCookie(const CXXNewExpr *E) {

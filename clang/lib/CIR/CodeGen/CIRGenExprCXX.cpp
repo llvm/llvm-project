@@ -623,6 +623,7 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &CGF, const CXXNewExpr *e,
         mlir::cast<cir::IntAttr>(constNumElements).getValue();
 
     unsigned numElementsWidth = count.getBitWidth();
+    bool hasAnyOverflow = false;
 
     // The equivalent code in CodeGen/CGExprCXX.cpp handles these cases as
     // overflow, but they should never happen. The size argument is implicitly
@@ -653,10 +654,22 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &CGF, const CXXNewExpr *e,
 
     // Add in the cookie, and check whether it's overflowed.
     if (cookieSize != 0) {
-      llvm_unreachable("NYI");
+      // Save the current size without a cookie.  This shouldn't be
+      // used if there was overflow.
+      sizeWithoutCookie = CGF.getBuilder().getConstInt(
+          Loc, allocationSize.zextOrTrunc(sizeWidth));
+
+      allocationSize = allocationSize.uadd_ov(cookieSize, overflow);
+      hasAnyOverflow |= overflow;
     }
 
-    size = CGF.getBuilder().getConstInt(Loc, allocationSize);
+    // On overflow, produce a -1 so operator new will fail.
+    if (hasAnyOverflow) {
+      size =
+          CGF.getBuilder().getConstInt(Loc, llvm::APInt::getAllOnes(sizeWidth));
+    } else {
+      size = CGF.getBuilder().getConstInt(Loc, allocationSize);
+    }
   } else {
     // TODO: Handle the variable size case
     llvm_unreachable("NYI");
@@ -857,6 +870,46 @@ void CIRGenFunction::emitNewArrayInitializer(
   // there's nothing to do.
   if (!E->hasInitializer())
     return;
+
+  Address CurPtr = BeginPtr;
+
+  unsigned InitListElements = 0;
+
+  const Expr *Init = E->getInitializer();
+  CleanupDeactivationScope deactivation(*this);
+
+  const InitListExpr *ILE = dyn_cast<InitListExpr>(Init);
+  if (ILE) {
+    llvm_unreachable("NYI");
+  }
+
+  // If all elements have already been initialized, skip any further
+  // initialization.
+  auto ConstOp = dyn_cast<cir::ConstantOp>(NumElements.getDefiningOp());
+  if (ConstOp) {
+    auto ConstIntAttr = mlir::dyn_cast<cir::IntAttr>(ConstOp.getValue());
+    // Just skip out if the constant count is zero.
+    if (ConstIntAttr && ConstIntAttr.getUInt() <= InitListElements)
+      return;
+  }
+
+  assert(Init && "have trailing elements to initialize but no initializer");
+
+  // If this is a constructor call, try to optimize it out, and failing that
+  // emit a single loop to initialize all remaining elements.
+  if (const CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(Init)) {
+    CXXConstructorDecl *Ctor = CCE->getConstructor();
+    if (Ctor->isTrivial()) {
+      // If new expression did not specify value-initialization, then there
+      // is no initialization.
+      if (!CCE->requiresZeroInitialization() || Ctor->getParent()->isEmpty())
+        return;
+
+      llvm_unreachable("NYI");
+    }
+
+    llvm_unreachable("NYI");
+  }
 
   llvm_unreachable("NYI");
 }
@@ -1088,7 +1141,8 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *E) {
     ++ParamsToSkip;
 
     if (allocSize != allocSizeWithoutCookie) {
-      llvm_unreachable("NYI");
+      CharUnits cookieAlign = getSizeAlign(); // FIXME: Ask the ABI.
+      allocAlign = std::max(allocAlign, cookieAlign);
     }
 
     // The allocation alignment may be passed as the second argument.
@@ -1186,7 +1240,9 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *E) {
   assert((allocSize == allocSizeWithoutCookie) ==
          CalculateCookiePadding(*this, E).isZero());
   if (allocSize != allocSizeWithoutCookie) {
-    llvm_unreachable("NYI");
+    assert(E->isArray());
+    allocation = CGM.getCXXABI().initializeArrayCookie(
+        *this, allocation, numElements, E, allocType);
   }
 
   mlir::Type elementTy;

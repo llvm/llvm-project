@@ -145,7 +145,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
           .toCharUnitsFromBits(
               astContext.getTargetInfo().getPointerAlign(LangAS::Default))
           .getQuantity();
-  // TODO: SizeSizeInBytes
+  SizeSizeInBytes =
+      astContext
+          .toCharUnitsFromBits(astContext.getTargetInfo().getMaxPointerWidth())
+          .getQuantity();
   // TODO: IntAlignInBytes
   UCharTy = cir::IntType::get(&getMLIRContext(),
                               astContext.getTargetInfo().getCharWidth(),

@@ -105,19 +105,19 @@ struct CIRGenTypeCache {
   };
 
   /// The size and alignment of size_t.
-  //   union {
-  //     unsigned char SizeSizeInBytes; // sizeof(size_t)
-  //     unsigned char SizeAlignInBytes;
-  //   };
+  union {
+    unsigned char SizeSizeInBytes; // sizeof(size_t)
+    unsigned char SizeAlignInBytes;
+  };
 
   cir::AddressSpaceAttr CIRAllocaAddressSpace;
 
-  //   clang::CharUnits getSizeSize() const {
-  //     return clang::CharUnits::fromQuantity(SizeSizeInBytes);
-  //   }
-  //   clang::CharUnits getSizeAlign() const {
-  //     return clang::CharUnits::fromQuantity(SizeAlignInBytes);
-  //   }
+  clang::CharUnits getSizeSize() const {
+    return clang::CharUnits::fromQuantity(SizeSizeInBytes);
+  }
+  clang::CharUnits getSizeAlign() const {
+    return clang::CharUnits::fromQuantity(SizeAlignInBytes);
+  }
   clang::CharUnits getPointerSize() const {
     return clang::CharUnits::fromQuantity(PointerSizeInBytes);
   }

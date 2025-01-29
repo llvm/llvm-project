@@ -362,6 +362,26 @@ public:
   ///
   /// \param E - the new-expression being allocated.
   virtual CharUnits getArrayCookieSize(const CXXNewExpr *E);
+
+  /// Initialize the array cookie for the given allocation.
+  ///
+  /// \param NewPtr - a char* which is the presumed-non-null
+  ///   return value of the allocation function
+  /// \param NumElements - the computed number of elements,
+  ///   potentially collapsed from the multidimensional array case;
+  ///   always a size_t
+  /// \param ElementType - the base element allocated type,
+  ///   i.e. the allocated type after stripping all array types
+  virtual Address initializeArrayCookie(CIRGenFunction &CGF, Address NewPtr,
+                                        mlir::Value NumElements,
+                                        const CXXNewExpr *E,
+                                        QualType ElementType) = 0;
+
+protected:
+  /// Returns the extra size required in order to store the array
+  /// cookie for the given type.  Assumes that an array cookie is
+  /// required.
+  virtual CharUnits getArrayCookieSizeImpl(QualType ElementType) = 0;
 };
 
 /// Creates and Itanium-family ABI

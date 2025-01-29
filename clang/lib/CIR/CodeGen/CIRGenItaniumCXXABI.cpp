@@ -324,6 +324,13 @@ public:
   cir::MethodAttr buildVirtualMethodAttr(cir::MethodType MethodTy,
                                          const CXXMethodDecl *MD) override;
 
+  Address initializeArrayCookie(CIRGenFunction &CGF, Address NewPtr,
+                                mlir::Value NumElements, const CXXNewExpr *E,
+                                QualType ElementType) override;
+
+protected:
+  CharUnits getArrayCookieSizeImpl(QualType ElementType) override;
+
   /**************************** RTTI Uniqueness ******************************/
 protected:
   /// Returns true if the ABI requires RTTI type_info objects to be unique
@@ -2636,4 +2643,61 @@ CIRGenItaniumCXXABI::buildVirtualMethodAttr(cir::MethodType MethodTy,
 /// member pointers, for which '0' is a valid offset.
 bool CIRGenItaniumCXXABI::isZeroInitializable(const MemberPointerType *MPT) {
   return MPT->isMemberFunctionPointer();
+}
+
+/************************** Array allocation cookies **************************/
+
+CharUnits CIRGenItaniumCXXABI::getArrayCookieSizeImpl(QualType ElementType) {
+  // The array cookie is a size_t; pad that up to the element alignment.
+  // The cookie is actually right-justified in that space.
+  return std::max(
+      CharUnits::fromQuantity(CGM.SizeSizeInBytes),
+      CGM.getASTContext().getPreferredTypeAlignInChars(ElementType));
+}
+
+Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &CGF,
+                                                   Address NewPtr,
+                                                   mlir::Value NumElements,
+                                                   const CXXNewExpr *E,
+                                                   QualType ElementType) {
+  assert(requiresArrayCookie(E));
+
+  // TODO: Get the address space when sanitizer support is implemented
+
+  ASTContext &Ctx = getContext();
+  CharUnits SizeSize = CGF.getSizeSize();
+  mlir::Location Loc = CGF.getLoc(E->getSourceRange());
+
+  // The size of the cookie.
+  CharUnits CookieSize =
+      std::max(SizeSize, Ctx.getPreferredTypeAlignInChars(ElementType));
+  assert(CookieSize == getArrayCookieSizeImpl(ElementType));
+
+  // Compute an offset to the cookie.
+  Address CookiePtr = NewPtr;
+  CharUnits CookieOffset = CookieSize - SizeSize;
+  if (!CookieOffset.isZero()) {
+    auto CastOp = CGF.getBuilder().createPtrBitcast(
+        CookiePtr.getPointer(), CGF.getBuilder().getUIntNTy(8));
+    auto OffsetOp = CGF.getBuilder().getSignedInt(
+        Loc, CookieOffset.getQuantity(), /*width=*/32);
+    auto DataPtr = CGF.getBuilder().createPtrStride(Loc, CastOp, OffsetOp);
+    CookiePtr = Address(DataPtr, NewPtr.getType(), NewPtr.getAlignment());
+  }
+
+  // Write the number of elements into the appropriate slot.
+  Address NumElementsPtr = CookiePtr.withElementType(CGF.SizeTy);
+  CGF.getBuilder().createStore(Loc, NumElements, NumElementsPtr);
+
+  if (CGF.SanOpts.has(SanitizerKind::Address))
+    llvm_unreachable("NYI");
+
+  // Finally, compute a pointer to the actual data buffer by skipping
+  // over the cookie completely.
+  int64_t Offset = (CookieSize.getQuantity());
+  auto CastOp = CGF.getBuilder().createPtrBitcast(
+      NewPtr.getPointer(), CGF.getBuilder().getUIntNTy(8));
+  auto OffsetOp = CGF.getBuilder().getSignedInt(Loc, Offset, /*width=*/32);
+  auto DataPtr = CGF.getBuilder().createPtrStride(Loc, CastOp, OffsetOp);
+  return Address(DataPtr, NewPtr.getType(), NewPtr.getAlignment());
 }
