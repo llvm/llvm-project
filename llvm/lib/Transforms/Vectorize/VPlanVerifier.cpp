@@ -180,6 +180,7 @@ static bool isVPIRInstructionPhi(const VPRecipeBase &R) {
   auto *VPIRI = dyn_cast<VPIRInstruction>(&R);
   return VPIRI && isa<PHINode>(VPIRI->getInstruction());
 }
+
 bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
   if (!verifyPhiRecipes(VPBB))
     return false;
@@ -251,8 +252,12 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
                    "Unexpected recipe with 2 or more predecessors");
             Incoming = UserVPBB->getPredecessors()[1];
           }
-          if (auto *R = dyn_cast<VPRegionBlock>(Incoming))
+          if (auto *R = dyn_cast<VPRegionBlock>(Incoming)) {
+            assert(isa<VPWidenPHIRecipe>(UI) &&
+                   "Should only have a region as predecessor for "
+                   "VPWidenPHIRecipe");
             Incoming = R->getExiting();
+          }
           if (Incoming != VPBB && !VPDT.dominates(VPBB, Incoming)) {
             errs() << "Use before def!\n";
             return false;
