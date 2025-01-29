@@ -958,7 +958,8 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 
 bool VPlan::isExitBlock(VPBlockBase *VPBB) {
   if (isa<VPIRBasicBlock>(VPBB) && VPBB->getNumSuccessors() == 0) {
-    assert(is_contained(getExitBlocks(), VPBB) &&
+    [[maybe_unused]] auto ExitBlocks = getExitBlocks();
+    assert(is_contained(ExitBlocks, VPBB) &&
            "Expected to find VPlan block in list of exit blocks!");
     return true;
   }
