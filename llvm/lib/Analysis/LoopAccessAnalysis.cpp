@@ -25,6 +25,7 @@
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -1024,7 +1025,8 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
   if (AR->getNoWrapFlags(SCEV::NoWrapMask))
     return true;
 
-  if (Ptr && PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
+  if (Ptr && isa<SCEVAddRecExpr>(PSE.getSCEV(Ptr)) &&
+      PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
     return true;
 
   // An nusw getelementptr that is an AddRec cannot wrap. If it would wrap,
@@ -1256,6 +1258,20 @@ static void findForkedSCEVs(
   }
 }
 
+// Conservatively replace SCEV of Ptr value if it can't be computed directly,
+// e.g. for monotonic values (they can be treated as affine AddRecs that are
+// updated under some predicate).
+static const SCEV *
+replacePtrSCEV(PredicatedScalarEvolution &PSE, Value *Ptr,
+               const DenseMap<Value *, const SCEV *> &StridesMap,
+               const Loop *L) {
+  ScalarEvolution *SE = PSE.getSE();
+  if (MonotonicDescriptor MD;
+      MonotonicDescriptor::isMonotonicVal(Ptr, L, MD, *SE))
+    return MD.getExpr();
+  return replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr);
+}
+
 bool AccessAnalysis::createCheckForAccess(
     RuntimePointerChecking &RtCheck, MemAccessInfo Access, Type *AccessTy,
     const DenseMap<Value *, const SCEV *> &StridesMap,
@@ -1282,7 +1298,7 @@ bool AccessAnalysis::createCheckForAccess(
                for (const auto &[Idx, Q] : enumerate(RTCheckPtrs)) dbgs()
                << "\t(" << Idx << ") " << *Q.getPointer() << "\n");
   } else {
-    RTCheckPtrs = {{replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr), false}};
+    RTCheckPtrs = {{replacePtrSCEV(PSE, Ptr, StridesMap, TheLoop), false}};
   }
 
   /// Check whether all pointers can participate in a runtime bounds check. They
@@ -1301,8 +1317,7 @@ bool AccessAnalysis::createCheckForAccess(
     // If there's only one option for Ptr, look it up after bounds and wrap
     // checking, because assumptions might have been added to PSE.
     if (RTCheckPtrs.size() == 1) {
-      AR =
-          cast<SCEVAddRecExpr>(replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr));
+      AR = cast<SCEVAddRecExpr>(replacePtrSCEV(PSE, Ptr, StridesMap, TheLoop));
       P.setPointer(AR);
     }
 

@@ -6,10 +6,21 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 define void @monotonic_ptr_simple(ptr writeonly %dst, ptr readonly %src, i32 %c, i32 %n) {
 ; CHECK-LABEL: 'monotonic_ptr_simple'
 ; CHECK-NEXT:    for.body:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %dst.addr.09 = phi ptr [ %dst, %entry ], [ %dst.addr.1, %for.inc ]
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %src, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %dst High: ((4 * (zext i32 %n to i64))<nuw><nsw> + %dst))
+; CHECK-NEXT:            Member: {%dst,+,4}<nsw><%for.body>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %src High: ((4 * (zext i32 %n to i64))<nuw><nsw> + %src))
+; CHECK-NEXT:            Member: {%src,+,4}<nuw><%for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -46,10 +57,21 @@ exit:
 define void @monotonic_ptr_indexed(ptr writeonly %dst, ptr readonly %src, i32 %c, i32 %n) {
 ; CHECK-LABEL: 'monotonic_ptr_indexed'
 ; CHECK-NEXT:    for.body:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %arrayidx5 = getelementptr inbounds i32, ptr %dst, i64 %idxprom4
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %src, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %dst High: ((4 * (zext i32 %n to i64))<nuw><nsw> + %dst))
+; CHECK-NEXT:            Member: {%dst,+,4}<%for.body>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %src High: ((4 * (zext i32 %n to i64))<nuw><nsw> + %src))
+; CHECK-NEXT:            Member: {%src,+,4}<nuw><%for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
