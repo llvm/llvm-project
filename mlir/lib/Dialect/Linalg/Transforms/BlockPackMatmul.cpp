@@ -138,6 +138,16 @@ transposePackedMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
 FailureOr<PackResult>
 linalg::blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
                         const ControlBlockPackMatmulFn &controlPackMatmul) {
+  // Check to not let go the batch_matmul with extended semantic, through this
+  // transform.
+  if (auto *batchMatmulOp = dyn_cast<linalg::BatchMatmulOp>(&linalgOp)) {
+    if (batchMatmulOp->hasUserDefinedMaps()) {
+      return rewriter.notifyMatchFailure(
+          *batchMatmulOp,
+          "only batch_matmul ops with non-extended semantics are supported");
+    }
+  }
+
   if (linalgOp.hasPureBufferSemantics())
     return rewriter.notifyMatchFailure(linalgOp, "require tensor semantics");
 
