@@ -184,7 +184,8 @@ public:
   ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
   std::optional<std::pair<unsigned, unsigned>>
-  getVScaleRange(const LangOptions &LangOpts) const override;
+  getVScaleRange(const LangOptions &LangOpts,
+                 bool IsArmStreamingFunction) const override;
   bool doesFeatureAffectCodeGen(StringRef Name) const override;
   bool validateCpuSupports(StringRef FeatureStr) const override;
   bool hasFeature(StringRef Feature) const override;

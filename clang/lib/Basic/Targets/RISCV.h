@@ -99,7 +99,8 @@ public:
                  const std::vector<std::string> &FeaturesVec) const override;
 
   std::optional<std::pair<unsigned, unsigned>>
-  getVScaleRange(const LangOptions &LangOpts) const override;
+  getVScaleRange(const LangOptions &LangOpts,
+                 bool IsArmStreamingFunction) const override;
 
   bool hasFeature(StringRef Feature) const override;
 

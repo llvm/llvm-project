@@ -367,8 +367,8 @@ ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty) const {
   const auto *VT = Ty->castAs<VectorType>();
   assert(VT->getElementType()->isBuiltinType() && "expected builtin type!");
 
-  auto VScale =
-      getContext().getTargetInfo().getVScaleRange(getContext().getLangOpts());
+  auto VScale = getContext().getTargetInfo().getVScaleRange(
+      getContext().getLangOpts(), false);
 
   unsigned NumElts = VT->getNumElements();
   llvm::Type *EltType = llvm::Type::getInt1Ty(getVMContext());
