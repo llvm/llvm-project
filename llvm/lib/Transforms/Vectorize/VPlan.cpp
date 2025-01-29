@@ -957,14 +957,7 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 }
 
 bool VPlan::isExitBlock(VPBlockBase *VPBB) {
-  if (isa<VPIRBasicBlock>(VPBB) && VPBB->getNumSuccessors() == 0) {
-    [[maybe_unused]] auto ExitBlocks = getExitBlocks();
-    assert(is_contained(ExitBlocks, VPBB) &&
-           "Expected to find VPlan block in list of exit blocks!");
-    return true;
-  }
-
-  return false;
+  return isa<VPIRBasicBlock>(VPBB) && VPBB->getNumSuccessors() == 0;
 }
 
 /// Generate the code inside the preheader and body of the vectorized loop.
