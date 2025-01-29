@@ -1226,8 +1226,6 @@ namespace llvm {
     bool canReuseLoadAddress(SDValue Op, EVT MemVT, ReuseLoadInfo &RLI,
                              SelectionDAG &DAG,
                              ISD::LoadExtType ET = ISD::NON_EXTLOAD) const;
-    void spliceIntoChain(SDValue ResChain, SDValue NewResChain,
-                         SelectionDAG &DAG) const;
 
     void LowerFP_TO_INTForReuse(SDValue Op, ReuseLoadInfo &RLI,
                                 SelectionDAG &DAG, const SDLoc &dl) const;

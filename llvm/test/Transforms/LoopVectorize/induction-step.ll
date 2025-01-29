@@ -19,7 +19,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @induction_with_global(i32 %init, ptr noalias nocapture %A, i32 %N) {
 ; CHECK-LABEL: define void @induction_with_global(
-; CHECK-SAME: i32 [[INIT:%.*]], ptr noalias nocapture [[A:%.*]], i32 [[N:%.*]]) {
+; CHECK-SAME: i32 [[INIT:%.*]], ptr noalias captures(none) [[A:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @int_inc, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[N]], -1
@@ -106,7 +106,7 @@ exit:
 
 define i32 @induction_with_loop_inv(i32 %init, ptr noalias nocapture %A, i32 %N, i32 %M) {
 ; CHECK-LABEL: define i32 @induction_with_loop_inv(
-; CHECK-SAME: i32 [[INIT:%.*]], ptr noalias nocapture [[A:%.*]], i32 [[N:%.*]], i32 [[M:%.*]]) {
+; CHECK-SAME: i32 [[INIT:%.*]], ptr noalias captures(none) [[A:%.*]], i32 [[N:%.*]], i32 [[M:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[N]], -1
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP3]] to i64

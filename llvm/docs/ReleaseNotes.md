@@ -56,6 +56,8 @@ Makes programs 10x faster by doing Special New Thing.
 Changes to the LLVM IR
 ----------------------
 
+* The `nocapture` attribute has been replaced by `captures(none)`.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -130,6 +132,9 @@ Changes to the LLVM tools
 
 Changes to LLDB
 ---------------------------------
+
+* When building LLDB with Python support, the minimum version of Python is now
+  3.8.
 
 Changes to BOLT
 ---------------------------------
