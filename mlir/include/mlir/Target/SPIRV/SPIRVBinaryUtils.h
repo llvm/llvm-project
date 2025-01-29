@@ -30,6 +30,12 @@ constexpr uint32_t kMagicNumber = 0x07230203;
 /// The serializer tool ID registered to the Khronos Group
 constexpr uint32_t kGeneratorNumber = 22;
 
+// Max number of words
+constexpr uint32_t kMaxWordCount = 65535;
+
+// Max number of words for literal
+constexpr uint32_t kMaxLiteralWordCount = kMaxWordCount - 3;
+
 /// Appends a SPRI-V module header to `header` with the given `version` and
 /// `idBound`.
 void appendModuleHeader(SmallVectorImpl<uint32_t> &header,
