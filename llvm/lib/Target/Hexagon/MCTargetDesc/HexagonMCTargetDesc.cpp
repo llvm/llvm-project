@@ -764,7 +764,7 @@ public:
       uint32_t Address = (getValueFromMask(ImmExt, 0xfff3fff) << 6) +
                          getValueFromMask(LoadGotPlt, 0x1f80) + PltSectionVA +
                          Byte;
-      Result.push_back(std::make_pair(PltSectionVA + Byte, Address));
+      Result.emplace_back(PltSectionVA + Byte, Address);
     }
     return Result;
   }
