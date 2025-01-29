@@ -144,3 +144,22 @@ template <typename>
 void L::l6(int = 6) {}
 // expected-error@-1 {{redefinition of default argument}}
 //   expected-note@#l6 {{previous definition is here}}
+
+template <typename>
+struct M {
+  void m1(int);
+  void m2(int = 2);
+  void m3(int = 3); // #m3
+};
+
+template <typename T>
+void M<T>::m1(int = 1) {}
+// expected-error@-1 {{default arguments cannot be added to an out-of-line definition of a member of a class template}}
+
+template <typename T>
+void M<T>::m2(int) {}
+
+template <typename T>
+void M<T>::m3(int = 3) {}
+// expected-error@-1 {{redefinition of default argument}}
+//   expected-note@#m3 {{previous definition is here}}
