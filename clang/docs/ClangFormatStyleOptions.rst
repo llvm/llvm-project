@@ -248,7 +248,7 @@ the configuration (without a prefix: ``Auto``).
 
 .. _AlignAfterOpenBracketBreak:
 
-**AlignAfterOpenBracketBreak** (``AlignAfterOpenBracketCustom``) :versionbadge:`clang-format 20` :ref:`¶ <AlignAfterOpenBracketBreak>`
+**AlignAfterOpenBracketBreak** (``AlignAfterOpenBracketCustom``) :versionbadge:`clang-format 21` :ref:`¶ <AlignAfterOpenBracketBreak>`
   Control of when ``AlignAfterOpenBracket`` breaks an opening bracket.
 
   If ``AlignAfterOpenBracket`` is set to ``AlwaysBreak`` or ``BlockIndent``,
