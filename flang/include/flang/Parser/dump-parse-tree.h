@@ -15,8 +15,8 @@
 #include "tools.h"
 #include "unparse.h"
 #include "flang/Common/idioms.h"
+#include "flang/Common/indirection.h"
 #include "flang/Support/Fortran.h"
-#include "flang/Support/indirection.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <type_traits>
