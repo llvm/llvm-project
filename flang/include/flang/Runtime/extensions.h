@@ -72,5 +72,8 @@ std::int64_t FORTRAN_PROCEDURE_NAME(access)(const char *name,
 // GNU extension subroutine CHDIR(NAME, [STATUS])
 int RTNAME(Chdir)(const char *name);
 
+// GNU extension function IERRNO()
+int FORTRAN_PROCEDURE_NAME(ierrno)();
+
 } // extern "C"
 #endif // FORTRAN_RUNTIME_EXTENSIONS_H_
