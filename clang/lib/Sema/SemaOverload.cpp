@@ -11723,24 +11723,25 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
 
       if (auto *TTPD = dyn_cast<TemplateTypeParmDecl>(ParamD)) {
         S.Diag(Templated->getLocation(),
-               diag::note_ovl_candidate_explicit_arg_mismatch_named_ttpd)
-            << ParamD->getDeclName() << FirstArg << SecondArg;
+               diag::note_ovl_candidate_explicit_arg_mismatch_named)
+            << 1 << ParamD->getDeclName() << FirstArg << SecondArg;
+
       } else if (auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(ParamD)) {
         if (SecondArg.isNull()) {
           S.Diag(Templated->getLocation(),
-                 diag::note_ovl_candidate_explicit_arg_mismatch_named_nttpd_a)
-              << ParamD->getDeclName() << FirstArg << NTTPD->getType();
+                 diag::note_ovl_candidate_explicit_arg_mismatch_named)
+              << 3 << ParamD->getDeclName() << NTTPD->getType() << FirstArg;
         } else {
           S.Diag(Templated->getLocation(),
-                 diag::note_ovl_candidate_explicit_arg_mismatch_named_nttpd_b)
-              << ParamD->getDeclName() << FirstArg << SecondArg
+                 diag::note_ovl_candidate_explicit_arg_mismatch_named)
+              << 2 << ParamD->getDeclName() << FirstArg << SecondArg
               << NTTPD->getType();
         }
       } else if (auto *TTempPD = dyn_cast<TemplateTemplateParmDecl>(ParamD)) {
         // FIXME: Emit a better message here
         S.Diag(Templated->getLocation(),
-               diag::note_ovl_candidate_explicit_arg_mismatch_named_temptemppd)
-            << ParamD->getDeclName();
+               diag::note_ovl_candidate_explicit_arg_mismatch_named)
+            << 4 << ParamD->getDeclName();
       } else
         llvm_unreachable("unexpected case");
     } else {

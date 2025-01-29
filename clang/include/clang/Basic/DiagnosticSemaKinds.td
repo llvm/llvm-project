@@ -4870,21 +4870,13 @@ def note_ovl_candidate_inconsistent_deduction_types : Note<
     "candidate template ignored: deduced values %diff{"
     "of conflicting types for parameter %0 (%1 of type $ vs. %3 of type $)|"
     "%1 and %3 of conflicting types for parameter %0}2,4">;
-def note_ovl_candidate_explicit_arg_mismatch_named_temptemppd : Note<
+def note_ovl_candidate_explicit_arg_mismatch_named : Note<
     "candidate template ignored: invalid explicitly-specified argument "
-    "for template parameter %0">;
-def note_ovl_candidate_explicit_arg_mismatch_named_ttpd : Note<
-    "candidate template ignored: invalid explicitly-specified argument "
-    "for template parameter %0: "
-    "expected a type, but got value '%1' (of type %2)">;
-def note_ovl_candidate_explicit_arg_mismatch_named_nttpd_b : Note<
-    "candidate template ignored: invalid explicitly-specified argument "
-    "for template parameter %0: "
-    "could not convert '%1' from %2 to %3">;
-def note_ovl_candidate_explicit_arg_mismatch_named_nttpd_a : Note<
-    "candidate template ignored: invalid explicitly-specified argument "
-    "for template parameter %0: "
-    "expected constant of type %1 got type %2">;
+    "for template parameter %1%select{"
+    "|: expected a type, but got value '%2' (of type %3)"
+    "|: could not convert '%2' from %3 to %4"
+    "|: expected constant of type %2 but got type %3"
+    "|}0">;
 def note_ovl_candidate_unsatisfied_constraints : Note<
     "candidate template ignored: constraints not satisfied%0">;
 def note_ovl_candidate_explicit_arg_mismatch_unnamed : Note<
