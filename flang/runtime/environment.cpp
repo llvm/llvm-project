@@ -143,14 +143,15 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
     }
   }
 
-  if (auto *x{std::getenv("CUDA_STACKLIMIT")}) {
+  if (auto *x{std::getenv("ACC_OFFLOAD_STACK_SIZE")}) {
     char *end;
     auto n{std::strtoul(x, &end, 10)};
     if (n > 0 && n < std::numeric_limits<std::size_t>::max() && *end == '\0') {
       cudaStackLimit = n;
     } else {
       std::fprintf(stderr,
-          "Fortran runtime: CUDA_STACKLIMIT=%s is invalid; ignored\n", x);
+          "Fortran runtime: ACC_OFFLOAD_STACK_SIZE=%s is invalid; ignored\n",
+          x);
     }
   }
 

@@ -57,8 +57,8 @@ struct ExecutionEnvironment {
   bool defaultUTF8{false}; // DEFAULT_UTF8
   bool checkPointerDeallocation{true}; // FORT_CHECK_POINTER_DEALLOCATION
 
-  // CUDA Fortran related variables
-  std::size_t cudaStackLimit{0}; // CUDA_STACKLIMIT
+  // CUDA related variables
+  std::size_t cudaStackLimit{0}; // ACC_OFFLOAD_STACK_SIZE
 };
 
 RT_OFFLOAD_VAR_GROUP_BEGIN
