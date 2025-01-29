@@ -23,7 +23,7 @@ class FuncOp;
 
 namespace bufferization {
 /// Helper function that returns all func.return ops in the given function.
-SmallVector<func::ReturnOp> getReturnOps(func::FuncOp funcOp);
+SmallVector<Operation *> getReturnOps(func::FuncOp funcOp);
 
 namespace func_ext {
 /// The state of analysis of a FuncOp.
