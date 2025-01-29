@@ -2074,6 +2074,10 @@ public:
   void Unparse(const llvm::omp::Directive &x) {
     Word(llvm::omp::getOpenMPDirectiveName(x).str());
   }
+  void Unparse(const OmpDirectiveSpecification &x) {
+    Walk(std::get<llvm::omp::Directive>(x.t));
+    Walk(std::get<std::optional<common::Indirection<OmpClauseList>>>(x.t));
+  }
   void Unparse(const OmpTraitScore &x) {
     Word("SCORE(");
     Walk(x.v);
@@ -2294,6 +2298,11 @@ public:
     using Modifier = OmpToClause::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<OmpObjectList>(x.t));
+  }
+  void Unparse(const OmpWhenClause &x) {
+    using Modifier = OmpWhenClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
+    Walk(std::get<std::optional<OmpDirectiveSpecification>>(x.t));
   }
 #define GEN_FLANG_CLAUSE_UNPARSE
 #include "llvm/Frontend/OpenMP/OMP.inc"
@@ -2812,6 +2821,13 @@ public:
                       [&](const OmpClause &z) { Walk(z); },
                   },
         x.u);
+  }
+  void Unparse(const OmpMetadirectiveDirective &x) {
+    BeginOpenMP();
+    Word("!$OMP METADIRECTIVE ");
+    Walk(std::get<OmpClauseList>(x.t));
+    Put("\n");
+    EndOpenMP();
   }
   void Unparse(const OpenMPDepobjConstruct &x) {
     BeginOpenMP();

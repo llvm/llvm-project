@@ -416,6 +416,9 @@ extractOmpDirective(const parser::OpenMPConstruct &ompConstruct) {
                     [](const parser::OpenMPCancellationPointConstruct &c) {
                       return llvm::omp::OMPD_cancellation_point;
                     },
+                    [](const parser::OmpMetadirectiveDirective &c) {
+                      return llvm::omp::OMPD_metadirective;
+                    },
                     [](const parser::OpenMPDepobjConstruct &c) {
                       return llvm::omp::OMPD_depobj;
                     }},
@@ -3230,6 +3233,11 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   TODO(converter.getCurrentLocation(), "OpenMPDepobjConstruct");
 }
+
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OmpMetadirectiveDirective &construct) {}
 
 static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

@@ -146,6 +146,15 @@ public:
   void Enter(const parser::DoConstruct &);
   void Leave(const parser::DoConstruct &);
 
+  void Enter(const parser::OmpDirectiveSpecification &);
+  void Leave(const parser::OmpDirectiveSpecification &);
+
+  void Enter(const parser::OmpMetadirectiveDirective &);
+  void Leave(const parser::OmpMetadirectiveDirective &);
+
+  void Enter(const parser::OmpContextSelector &);
+  void Leave(const parser::OmpContextSelector &);
+
 #define GEN_FLANG_CLAUSE_CHECK_ENTER
 #include "llvm/Frontend/OpenMP/OMP.inc"
 
@@ -284,7 +293,8 @@ private:
     TargetBlockOnlyTeams,
     TargetNest,
     DeclarativeNest,
-    LastType = DeclarativeNest,
+    ContextSelectorNest,
+    LastType = ContextSelectorNest,
   };
   int directiveNest_[LastType + 1] = {0};
 
