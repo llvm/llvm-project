@@ -3620,12 +3620,10 @@ void CodeGenFunction::EmitCheck(
   // specified cutoffs.
   // This expression looks expensive but will be simplified after
   // LowerAllowCheckPass.
-  static const double SanitizerMaskCutoffsEps = 0.000000001f;
   for (auto &[Check, Ord] : Checked) {
     llvm::Value *GuardedCheck = Check;
     if (ClSanitizeGuardChecks ||
-        (CGM.getCodeGenOpts().SanitizeSkipHotCutoffs[Ord] >
-         SanitizerMaskCutoffsEps)) {
+        (CGM.getCodeGenOpts().SanitizeSkipHotCutoffs[Ord] > 0)) {
       llvm::Value *Allow = Builder.CreateCall(
           CGM.getIntrinsic(llvm::Intrinsic::allow_ubsan_check),
           llvm::ConstantInt::get(CGM.Int8Ty, Ord));
