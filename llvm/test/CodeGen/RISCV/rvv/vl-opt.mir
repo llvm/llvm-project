@@ -149,3 +149,49 @@ body: |
     ; CHECK-NEXT: early-clobber %y:vrm2 = PseudoVWADD_WV_M1_TIED $noreg, %x, 1, 3 /* e8 */, 0 /* tu, mu */
     %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
     %y:vrm2 = PseudoVWADD_WV_M1_TIED $noreg, %x, 1, 3 /* e8 */, 0 /* tu, mu */
+...
+---
+name: crossbb
+body: |
+  ; CHECK-LABEL: name: crossbb
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   PseudoBR %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   %a1:vr = PseudoVADD_VV_M1 $noreg, %c, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+  ; CHECK-NEXT:   %a2:vr = PseudoVADD_VV_M1 $noreg, %a1, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+  ; CHECK-NEXT:   $v8 = COPY %a2
+  ; CHECK-NEXT:   PseudoRET
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   %b1:vr = PseudoVADD_VV_M1 $noreg, %c, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+  ; CHECK-NEXT:   %b2:vr = PseudoVADD_VV_M1 $noreg, %b1, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+  ; CHECK-NEXT:   $v8 = COPY %b2
+  ; CHECK-NEXT:   PseudoRET
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $x1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %c:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+  ; CHECK-NEXT:   BEQ $x1, $x0, %bb.1
+  ; CHECK-NEXT:   PseudoBR %bb.2
+  bb.0:
+    PseudoBR %bb.3
+  bb.1:
+    %a1:vr = PseudoVADD_VV_M1 $noreg, %c, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    %a2:vr = PseudoVADD_VV_M1 $noreg, %a1, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    $v8 = COPY %a2
+    PseudoRET
+  bb.2:
+    %b1:vr = PseudoVADD_VV_M1 $noreg, %c, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    %b2:vr = PseudoVADD_VV_M1 $noreg, %b1, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    $v8 = COPY %b2
+    PseudoRET
+  bb.3:
+    liveins: $x1
+    %c:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    BEQ $x1, $x0, %bb.1
+    PseudoBR %bb.2
