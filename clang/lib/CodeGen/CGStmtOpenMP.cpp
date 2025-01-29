@@ -394,7 +394,7 @@ void CodeGenFunction::GenerateOpenMPCapturedVars(
 
       // If the field is not a pointer, we need to save the actual value
       // and load it as a void pointer.
-      if (!CurField->getType()->isAnyPointerType()) {
+      if (!CurField->getType()->isPointerOrObjCObjectPointerType()) {
         ASTContext &Ctx = getContext();
         Address DstAddr = CreateMemTemp(
             Ctx.getUIntPtrType(),
@@ -520,7 +520,8 @@ static llvm::Function *emitOutlinedFunctionPrologue(
     // deal with pointers. We can pass in the same way the VLA type sizes to the
     // outlined function.
     if (FO.UIntPtrCastRequired &&
-        ((I->capturesVariableByCopy() && !ArgType->isAnyPointerType()) ||
+        ((I->capturesVariableByCopy() &&
+          !ArgType->isPointerOrObjCObjectPointerType()) ||
          I->capturesVariableArrayType()))
       ArgType = Ctx.getUIntPtrType();
 
@@ -601,7 +602,8 @@ static llvm::Function *emitOutlinedFunctionPrologue(
     }
     // If we are capturing a pointer by copy we don't need to do anything, just
     // use the value that we get from the arguments.
-    if (I->capturesVariableByCopy() && FD->getType()->isAnyPointerType()) {
+    if (I->capturesVariableByCopy() &&
+        FD->getType()->isPointerOrObjCObjectPointerType()) {
       const VarDecl *CurVD = I->getCapturedVar();
       if (!FO.RegisterCastedArgsOnly)
         LocalAddrs.insert({Args[Cnt], {CurVD, LocalAddr}});
@@ -638,7 +640,7 @@ static llvm::Function *emitOutlinedFunctionPrologue(
             {Args[Cnt], {Var, ArgAddr.withAlignment(Ctx.getDeclAlign(Var))}});
       }
     } else if (I->capturesVariableByCopy()) {
-      assert(!FD->getType()->isAnyPointerType() &&
+      assert(!FD->getType()->isPointerOrObjCObjectPointerType() &&
              "Not expecting a captured pointer.");
       const VarDecl *Var = I->getCapturedVar();
       LocalAddrs.insert({Args[Cnt],

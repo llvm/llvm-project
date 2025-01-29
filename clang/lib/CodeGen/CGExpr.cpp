@@ -993,7 +993,8 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
 
   CodeGenFunction::SanitizerScope SanScope(&CGF);
 
-  QualType EltTy{Base->getType()->getPointeeOrArrayElementType(), 0};
+  QualType EltTy{Base->getType()->getPointerOrObjCPointerOrArrayElementType(),
+                 0};
   if (llvm::Value *POS = CGF.LoadPassedObjectSize(Base, EltTy)) {
     IndexedType = Base->getType();
     return POS;

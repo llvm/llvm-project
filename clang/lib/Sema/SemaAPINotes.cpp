@@ -48,8 +48,8 @@ static bool isIndirectPointerType(QualType Type) {
   if (Pointee.isNull())
     return false;
 
-  return Pointee->isAnyPointerType() || Pointee->isObjCObjectPointerType() ||
-         Pointee->isMemberPointerType();
+  return Pointee->isPointerOrObjCObjectPointerType() ||
+         Pointee->isObjCObjectPointerType() || Pointee->isMemberPointerType();
 }
 
 /// Apply nullability to the given declaration.

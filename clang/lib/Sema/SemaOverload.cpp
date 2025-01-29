@@ -301,7 +301,8 @@ isPointerConversionToVoidPointer(ASTContext& Context) const {
   if (First == ICK_Array_To_Pointer)
     FromType = Context.getArrayDecayedType(FromType);
 
-  if (Second == ICK_Pointer_Conversion && FromType->isAnyPointerType())
+  if (Second == ICK_Pointer_Conversion &&
+      FromType->isPointerOrObjCObjectPointerType())
     if (const PointerType* ToPtrType = ToType->getAs<PointerType>())
       return ToPtrType->getPointeeType()->isVoidType();
 
@@ -2371,7 +2372,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     FromType = ToType.getUnqualifiedType();
   } else if (ToType->isBooleanType() &&
              (FromType->isArithmeticType() ||
-              FromType->isAnyPointerType() ||
+              FromType->isPointerOrObjCObjectPointerType() ||
               FromType->isBlockPointerType() ||
               FromType->isMemberPointerType())) {
     // Boolean conversions (C++ 4.12).
@@ -3439,7 +3440,8 @@ bool Sema::CheckPointerConversion(Expr *From, QualType ToType,
 
   Kind = CK_BitCast;
 
-  if (Diagnose && !IsCStyleOrFunctionalCast && !FromType->isAnyPointerType() &&
+  if (Diagnose && !IsCStyleOrFunctionalCast &&
+      !FromType->isPointerOrObjCObjectPointerType() &&
       From->isNullPointerConstant(Context, Expr::NPC_ValueDependentIsNotNull) ==
           Expr::NPCK_ZeroExpression) {
     if (Context.hasSameUnqualifiedType(From->getType(), Context.BoolTy))
@@ -8673,8 +8675,8 @@ BuiltinCandidateTypeSet::AddPointerWithMoreQualifiedTypeVariants(QualType Ty,
     // Skip over restrict if no restrict found anywhere in the types, or if
     // the type cannot be restrict-qualified.
     if ((CVR & Qualifiers::Restrict) &&
-        (!hasRestrict ||
-         (!(PointeeTy->isAnyPointerType() || PointeeTy->isReferenceType()))))
+        (!hasRestrict || (!(PointeeTy->isPointerOrObjCObjectPointerType() ||
+                            PointeeTy->isReferenceType()))))
       continue;
 
     // Build qualified pointee type.
@@ -9076,7 +9078,7 @@ class BuiltinOperatorOverloadBuilder {
 
     // Add restrict version only if there are conversions to a restrict type
     // and our candidate type is a non-restrict-qualified pointer.
-    if (HasRestrict && CandidateTy->isAnyPointerType() &&
+    if (HasRestrict && CandidateTy->isPointerOrObjCObjectPointerType() &&
         !CandidateTy.isRestrictQualified()) {
       ParamTypes[0]
         = S.Context.getLValueReferenceType(
@@ -9092,7 +9094,6 @@ class BuiltinOperatorOverloadBuilder {
         S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet);
       }
     }
-
   }
 
   /// Helper to add an overload candidate for a binary builtin with types \p L

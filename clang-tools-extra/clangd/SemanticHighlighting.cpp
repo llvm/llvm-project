@@ -296,7 +296,7 @@ bool isDefaultLibrary(const Decl *D) {
 bool isDefaultLibrary(const Type *T) {
   if (!T)
     return false;
-  const Type *Underlying = T->getPointeeOrArrayElementType();
+  const Type *Underlying = T->getPointerOrObjCPointerOrArrayElementType();
   if (Underlying->isBuiltinType())
     return true;
   if (auto *TD = dyn_cast<TemplateTypeParmType>(Underlying))

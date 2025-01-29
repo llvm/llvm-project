@@ -417,7 +417,8 @@ void ClassifyRefs::VisitOMPExecutableDirective(OMPExecutableDirective *ED) {
 }
 
 static bool isPointerToConst(const QualType &QT) {
-  return QT->isAnyPointerType() && QT->getPointeeType().isConstQualified();
+  return QT->isPointerOrObjCObjectPointerType() &&
+         QT->getPointeeType().isConstQualified();
 }
 
 static bool hasTrivialBody(CallExpr *CE) {

@@ -87,7 +87,7 @@ static bool isCallback(QualType T) {
   // Check if a callback is passed inside a struct (for both, struct passed by
   // reference and by value). Dig just one level into the struct for now.
 
-  if (T->isAnyPointerType() || T->isReferenceType())
+  if (T->isPointerOrObjCObjectPointerType() || T->isReferenceType())
     T = T->getPointeeType();
 
   if (const RecordType *RT = T->getAsStructureType()) {
@@ -212,7 +212,7 @@ static bool isPointerToConst(QualType Ty) {
     return false;
   if (!PointeeTy.isConstQualified())
     return false;
-  if (PointeeTy->isAnyPointerType())
+  if (PointeeTy->isPointerOrObjCObjectPointerType())
     return false;
   return true;
 }

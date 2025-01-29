@@ -1179,7 +1179,7 @@ SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
       // hierarchy to provide typed regions for all non-void pointers would be
       // better. For instance, we cannot extend this towards LocAsInteger
       // operations, where result type of the expression is integer.
-      if (resultTy->isAnyPointerType())
+      if (resultTy->isPointerOrObjCObjectPointerType())
         elementType = resultTy->getPointeeType();
     }
 

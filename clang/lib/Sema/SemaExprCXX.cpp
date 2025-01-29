@@ -5293,7 +5293,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
       return false;
     return T->isIncompleteArrayType();
   case UTT_IsPointer:
-    return T->isAnyPointerType();
+    return T->isPointerOrObjCObjectPointerType();
   case UTT_IsLvalueReference:
     return T->isLValueReferenceType();
   case UTT_IsRvalueReference:
@@ -7276,10 +7276,10 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
 
   //   where at least one is a pointer or pointer to member type or
   //   std::nullptr_t is:
-  bool T1IsPointerLike = T1->isAnyPointerType() || T1->isMemberPointerType() ||
-                         T1->isNullPtrType();
-  bool T2IsPointerLike = T2->isAnyPointerType() || T2->isMemberPointerType() ||
-                         T2->isNullPtrType();
+  bool T1IsPointerLike = T1->isPointerOrObjCObjectPointerType() ||
+                         T1->isMemberPointerType() || T1->isNullPtrType();
+  bool T2IsPointerLike = T2->isPointerOrObjCObjectPointerType() ||
+                         T2->isMemberPointerType() || T2->isNullPtrType();
   if (!T1IsPointerLike && !T2IsPointerLike)
     return QualType();
 

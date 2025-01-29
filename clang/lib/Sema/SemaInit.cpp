@@ -7936,8 +7936,10 @@ ExprResult InitializationSequence::Perform(Sema &S,
       if (MTETy->isIncompleteArrayType() &&
           !CurInit.get()->getType()->isIncompleteArrayType() &&
           S.Context.hasSameType(
-              MTETy->getPointeeOrArrayElementType(),
-              CurInit.get()->getType()->getPointeeOrArrayElementType()))
+              MTETy->getPointerOrObjCPointerOrArrayElementType(),
+              CurInit.get()
+                  ->getType()
+                  ->getPointerOrObjCPointerOrArrayElementType()))
         MTETy = CurInit.get()->getType();
 
       // Materialize the temporary into memory.

@@ -503,7 +503,7 @@ bool SystemZTargetCodeGenInfo::isVectorTypeBased(const Type *Ty,
 
   // Assume pointers are dereferenced.
   while (Ty->isPointerType() || Ty->isArrayType())
-    Ty = Ty->getPointeeOrArrayElementType();
+    Ty = Ty->getPointerOrObjCPointerOrArrayElementType();
 
   // Vectors >= 16 bytes expose the ABI through alignment requirements.
   if (Ty->isVectorType() && Ctx.getTypeSize(Ty) / 8 >= 16)

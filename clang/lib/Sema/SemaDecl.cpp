@@ -9569,7 +9569,7 @@ static OpenCLParamType getOpenCLKernelParameterType(Sema &S, QualType PT) {
 
   // Look into an array argument to check if it has a forbidden type.
   if (PT->isArrayType()) {
-    const Type *UnderlyingTy = PT->getPointeeOrArrayElementType();
+    const Type *UnderlyingTy = PT->getPointerOrObjCPointerOrArrayElementType();
     // Call ourself to check an underlying type of an array. Since the
     // getPointeeOrArrayElementType returns an innermost type which is not an
     // array, this recursive call only happens once.
@@ -9672,7 +9672,7 @@ static void checkIsValidOpenCLKernelParameter(
   // an ArrayType of a RecordType.
   assert((PT->isArrayType() || PT->isRecordType()) && "Unexpected type.");
   const RecordType *RecTy =
-      PT->getPointeeOrArrayElementType()->getAs<RecordType>();
+      PT->getPointerOrObjCPointerOrArrayElementType()->getAs<RecordType>();
   const RecordDecl *OrigRecDecl = RecTy->getDecl();
 
   VisitStack.push_back(RecTy->getDecl());
@@ -9700,7 +9700,8 @@ static void checkIsValidOpenCLKernelParameter(
       // walk around RecordDecl::fields().
       assert((FieldTy->isArrayType() || FieldTy->isRecordType()) &&
              "Unexpected type.");
-      const Type *FieldRecTy = FieldTy->getPointeeOrArrayElementType();
+      const Type *FieldRecTy =
+          FieldTy->getPointerOrObjCPointerOrArrayElementType();
 
       RD = FieldRecTy->castAs<RecordType>()->getDecl();
     } else {
@@ -12297,7 +12298,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
         // restricted prior to C++17.
         if (auto *RT = T->getAs<ReferenceType>())
           T = RT->getPointeeType();
-        else if (T->isAnyPointerType())
+        else if (T->isPointerOrObjCObjectPointerType())
           T = T->getPointeeType();
         else if (auto *MPT = T->getAs<MemberPointerType>())
           T = MPT->getPointeeType();
@@ -12531,7 +12532,7 @@ void Sema::CheckMSVCRTEntryPoint(FunctionDecl *FD) {
   // Set an implicit return of 'zero' if the function can return some integral,
   // enumeration, pointer or nullptr type.
   if (FT->getReturnType()->isIntegralOrEnumerationType() ||
-      FT->getReturnType()->isAnyPointerType() ||
+      FT->getReturnType()->isPointerOrObjCObjectPointerType() ||
       FT->getReturnType()->isNullPtrType())
     // DllMain is exempt because a return value of zero means it failed.
     if (FD->getName() != "DllMain")
@@ -16143,7 +16144,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
           auto findBeginLoc = [&]() {
             // If the return type has `const` qualifier, we want to insert
             // `static` before `const` (and not before the typename).
-            if ((FD->getReturnType()->isAnyPointerType() &&
+            if ((FD->getReturnType()->isPointerOrObjCObjectPointerType() &&
                  FD->getReturnType()->getPointeeType().isConstQualified()) ||
                 FD->getReturnType().isConstQualified()) {
               // But only do this if we can determine where the `const` is.

@@ -45,7 +45,8 @@ void SuspiciousMemoryComparisonCheck::check(
   for (unsigned int ArgIndex = 0; ArgIndex < 2; ++ArgIndex) {
     const Expr *ArgExpr = CE->getArg(ArgIndex);
     QualType ArgType = ArgExpr->IgnoreImplicit()->getType();
-    const Type *PointeeType = ArgType->getPointeeOrArrayElementType();
+    const Type *PointeeType =
+        ArgType->getPointerOrObjCPointerOrArrayElementType();
     assert(PointeeType != nullptr && "PointeeType should always be available.");
     QualType PointeeQualifiedType(PointeeType, 0);
 

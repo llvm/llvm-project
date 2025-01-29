@@ -1101,7 +1101,7 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
     SVal RHS;
     SVal Result;
 
-    if (U->getType()->isAnyPointerType())
+    if (U->getType()->isPointerOrObjCObjectPointerType())
       RHS = svalBuilder.makeArrayIndex(1);
     else if (U->getType()->isIntegralOrEnumerationType())
       RHS = svalBuilder.makeIntVal(1, U->getType());

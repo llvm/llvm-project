@@ -30,7 +30,8 @@ static bool AreTypesCompatible(QualType Derived, QualType Ancestor,
 
   // Right now don't compare the compatibility of pointers.  That involves
   // looking at subtyping relationships.  FIXME: Future patch.
-  if (Derived->isAnyPointerType() &&  Ancestor->isAnyPointerType())
+  if (Derived->isPointerOrObjCObjectPointerType() &&
+      Ancestor->isPointerOrObjCObjectPointerType())
     return true;
 
   return C.typesAreCompatible(Derived, Ancestor);

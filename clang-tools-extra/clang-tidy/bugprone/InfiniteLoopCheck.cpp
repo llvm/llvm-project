@@ -93,7 +93,7 @@ static bool isVarThatIsPossiblyChanged(const Decl *Func, const Stmt *LoopStmt,
       if (T.isVolatileQualified())
         return true;
 
-      if (!T->isAnyPointerType() && !T->isReferenceType())
+      if (!T->isPointerOrObjCObjectPointerType() && !T->isReferenceType())
         break;
 
       T = T->getPointeeType();

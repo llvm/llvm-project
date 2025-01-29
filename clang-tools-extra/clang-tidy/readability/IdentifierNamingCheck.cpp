@@ -1218,7 +1218,7 @@ StyleKind IdentifierNamingCheck::findStyleKind(
       return SK_ConstexprVariable;
 
     if (!Type.isNull() && Type.isConstQualified()) {
-      if (Type.getTypePtr()->isAnyPointerType() &&
+      if (Type.getTypePtr()->isPointerOrObjCObjectPointerType() &&
           NamingStyles[SK_ConstantPointerParameter])
         return SK_ConstantPointerParameter;
 
@@ -1232,7 +1232,8 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     if (Decl->isParameterPack() && NamingStyles[SK_ParameterPack])
       return SK_ParameterPack;
 
-    if (!Type.isNull() && Type.getTypePtr()->isAnyPointerType() &&
+    if (!Type.isNull() &&
+        Type.getTypePtr()->isPointerOrObjCObjectPointerType() &&
         NamingStyles[SK_PointerParameter])
       return SK_PointerParameter;
 
@@ -1508,7 +1509,8 @@ StyleKind IdentifierNamingCheck::findStyleKindForVar(
     if (Var->isStaticDataMember() && NamingStyles[SK_ClassConstant])
       return SK_ClassConstant;
 
-    if (Var->isFileVarDecl() && Type.getTypePtr()->isAnyPointerType() &&
+    if (Var->isFileVarDecl() &&
+        Type.getTypePtr()->isPointerOrObjCObjectPointerType() &&
         NamingStyles[SK_GlobalConstantPointer])
       return SK_GlobalConstantPointer;
 
@@ -1518,7 +1520,8 @@ StyleKind IdentifierNamingCheck::findStyleKindForVar(
     if (Var->isStaticLocal() && NamingStyles[SK_StaticConstant])
       return SK_StaticConstant;
 
-    if (Var->isLocalVarDecl() && Type.getTypePtr()->isAnyPointerType() &&
+    if (Var->isLocalVarDecl() &&
+        Type.getTypePtr()->isPointerOrObjCObjectPointerType() &&
         NamingStyles[SK_LocalConstantPointer])
       return SK_LocalConstantPointer;
 
@@ -1535,7 +1538,8 @@ StyleKind IdentifierNamingCheck::findStyleKindForVar(
   if (Var->isStaticDataMember() && NamingStyles[SK_ClassMember])
     return SK_ClassMember;
 
-  if (Var->isFileVarDecl() && Type.getTypePtr()->isAnyPointerType() &&
+  if (Var->isFileVarDecl() &&
+      Type.getTypePtr()->isPointerOrObjCObjectPointerType() &&
       NamingStyles[SK_GlobalPointer])
     return SK_GlobalPointer;
 
@@ -1545,7 +1549,8 @@ StyleKind IdentifierNamingCheck::findStyleKindForVar(
   if (Var->isStaticLocal() && NamingStyles[SK_StaticVariable])
     return SK_StaticVariable;
 
-  if (Var->isLocalVarDecl() && Type.getTypePtr()->isAnyPointerType() &&
+  if (Var->isLocalVarDecl() &&
+      Type.getTypePtr()->isPointerOrObjCObjectPointerType() &&
       NamingStyles[SK_LocalPointer])
     return SK_LocalPointer;
 

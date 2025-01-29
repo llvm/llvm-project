@@ -5538,7 +5538,8 @@ bool FunctionCallFilterCCC::ValidateCandidate(const TypoCorrection &candidate) {
         QualType ValType = cast<ValueDecl>(ND)->getType();
         if (ValType.isNull())
           continue;
-        if (ValType->isAnyPointerType() || ValType->isReferenceType())
+        if (ValType->isPointerOrObjCObjectPointerType() ||
+            ValType->isReferenceType())
           ValType = ValType->getPointeeType();
         if (const FunctionProtoType *FPT = ValType->getAs<FunctionProtoType>())
           if (FPT->getNumParams() == NumArgs)

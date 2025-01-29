@@ -472,7 +472,8 @@ static bool areTypesCompatible(QualType ArgType, QualType ParamType,
 
   // Unless argument and param are both multilevel pointers, the types are not
   // convertible.
-  if (!(ParamType->isAnyPointerType() && ArgType->isAnyPointerType()))
+  if (!(ParamType->isPointerOrObjCObjectPointerType() &&
+        ArgType->isPointerOrObjCObjectPointerType()))
     return false;
 
   return arePointerTypesCompatible(ArgType, ParamType, IsParamContinuouslyConst,

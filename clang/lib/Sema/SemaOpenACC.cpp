@@ -578,7 +578,7 @@ ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
   QualType OriginalBaseTy = ArraySectionExpr::getBaseOriginalType(Base);
   QualType ResultTy;
   if (!Base->isTypeDependent()) {
-    if (OriginalBaseTy->isAnyPointerType()) {
+    if (OriginalBaseTy->isPointerOrObjCObjectPointerType()) {
       ResultTy = OriginalBaseTy->getPointeeType();
     } else if (OriginalBaseTy->isArrayType()) {
       ResultTy = OriginalBaseTy->getAsArrayTypeUnsafe()->getElementType();

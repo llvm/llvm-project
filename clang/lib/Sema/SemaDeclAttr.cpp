@@ -206,7 +206,7 @@ static bool threadSafetyCheckIsPointer(Sema &S, const Decl *D,
                                        const ParsedAttr &AL) {
   const auto *VD = cast<ValueDecl>(D);
   QualType QT = VD->getType();
-  if (QT->isAnyPointerType())
+  if (QT->isPointerOrObjCObjectPointerType())
     return true;
 
   if (const auto *RT = QT->getAs<RecordType>()) {
@@ -1283,13 +1283,13 @@ bool Sema::isValidPointerAttrType(QualType T, bool RefOkay) {
       RecordDecl *UD = UT->getDecl();
       for (const auto *I : UD->fields()) {
         QualType QT = I->getType();
-        if (QT->isAnyPointerType() || QT->isBlockPointerType())
+        if (QT->isPointerOrObjCObjectPointerType() || QT->isBlockPointerType())
           return true;
       }
     }
   }
 
-  return T->isAnyPointerType() || T->isBlockPointerType();
+  return T->isPointerOrObjCObjectPointerType() || T->isBlockPointerType();
 }
 
 static bool attrNonNullArgCheck(Sema &S, QualType T, const ParsedAttr &AL,
@@ -1561,7 +1561,7 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     switch (K) {
       case OwnershipAttr::Takes:
       case OwnershipAttr::Holds:
-        if (!T->isAnyPointerType() && !T->isBlockPointerType())
+        if (!T->isPointerOrObjCObjectPointerType() && !T->isBlockPointerType())
           Err = 0;
         break;
       case OwnershipAttr::Returns:
@@ -1779,7 +1779,8 @@ static void handleTLSModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleRestrictAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   QualType ResultType = getFunctionOrMethodResultType(D);
-  if (ResultType->isAnyPointerType() || ResultType->isBlockPointerType()) {
+  if (ResultType->isPointerOrObjCObjectPointerType() ||
+      ResultType->isBlockPointerType()) {
     D->addAttr(::new (S.Context) RestrictAttr(S.Context, AL));
     return;
   }
@@ -4146,7 +4147,7 @@ void Sema::AddAlignValueAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E) {
   else
     llvm_unreachable("Unknown decl type for align_value");
 
-  if (!T->isDependentType() && !T->isAnyPointerType() &&
+  if (!T->isDependentType() && !T->isPointerOrObjCObjectPointerType() &&
       !T->isReferenceType() && !T->isMemberPointerType()) {
     Diag(AttrLoc, diag::warn_attribute_pointer_or_reference_only)
       << &TmpAttr << T << D->getSourceRange();

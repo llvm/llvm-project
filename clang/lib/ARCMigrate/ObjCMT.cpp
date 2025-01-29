@@ -1042,7 +1042,7 @@ void ObjCMigrateASTConsumer::migrateMethodInstanceType(ASTContext &Ctx,
 }
 
 static bool TypeIsInnerPointer(QualType T) {
-  if (!T->isAnyPointerType())
+  if (!T->isPointerOrObjCObjectPointerType())
     return false;
   if (T->isObjCObjectPointerType() || T->isObjCBuiltinType() ||
       T->isBlockPointerType() || T->isFunctionPointerType() ||
@@ -1366,7 +1366,7 @@ static bool IsVoidStarType(QualType Ty) {
 /// CF object types or of the "void *" variety. It returns true if we don't care about the type
 /// such as a non-pointer or pointers which have no ownership issues (such as "int *").
 static bool AuditedType (QualType AT) {
-  if (!AT->isAnyPointerType() && !AT->isBlockPointerType())
+  if (!AT->isPointerOrObjCObjectPointerType() && !AT->isBlockPointerType())
     return true;
   // FIXME. There isn't much we can say about CF pointer type; or is there?
   if (ento::coreFoundation::isCFObjectRef(AT) ||

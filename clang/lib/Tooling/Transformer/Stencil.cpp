@@ -166,7 +166,7 @@ public:
       Source = tooling::buildDereference(*E, *Match.Context);
       break;
     case UnaryNodeOperator::MaybeDeref:
-      if (E->getType()->isAnyPointerType() ||
+      if (E->getType()->isPointerOrObjCObjectPointerType() ||
           tooling::isKnownPointerLikeType(E->getType(), *Match.Context)) {
         // Strip off any operator->. This can only occur inside an actual arrow
         // member access, so we treat it as equivalent to an actual object
@@ -186,7 +186,7 @@ public:
       Source = tooling::buildAddressOf(*E, *Match.Context);
       break;
     case UnaryNodeOperator::MaybeAddressOf:
-      if (E->getType()->isAnyPointerType() ||
+      if (E->getType()->isPointerOrObjCObjectPointerType() ||
           tooling::isKnownPointerLikeType(E->getType(), *Match.Context)) {
         // Strip off any operator->. This can only occur inside an actual arrow
         // member access, so we treat it as equivalent to an actual object

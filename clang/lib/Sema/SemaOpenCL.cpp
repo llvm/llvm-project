@@ -324,7 +324,9 @@ bool SemaOpenCL::checkBuiltinEnqueueKernel(CallExpr *TheCall) {
     // Fifth argument is always passed as a pointer to clk_event_t.
     if (!Arg4->isNullPointerConstant(Context,
                                      Expr::NPC_ValueDependentIsNotNull) &&
-        !Arg4->getType()->getPointeeOrArrayElementType()->isClkEventT()) {
+        !Arg4->getType()
+             ->getPointerOrObjCPointerOrArrayElementType()
+             ->isClkEventT()) {
       Diag(TheCall->getArg(4)->getBeginLoc(),
            diag::err_opencl_builtin_expected_type)
           << TheCall->getDirectCallee()

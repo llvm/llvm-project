@@ -2649,7 +2649,7 @@ void CStringChecker::evalSprintfCommon(CheckerContext &C, const CallEvent &Call,
   for (const auto &[ArgIdx, ArgExpr] : VariadicArguments) {
     // We consider only string buffers
     if (const QualType type = ArgExpr->getType();
-        !type->isAnyPointerType() ||
+        !type->isPointerOrObjCObjectPointerType() ||
         !type->getPointeeType()->isAnyCharacterType())
       continue;
     SourceArgExpr Source = {{ArgExpr, unsigned(ArgIdx)}};

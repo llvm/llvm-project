@@ -513,7 +513,7 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
   // ^----------------     ^
   //  pointer to const int
   // ```
-  if (SQT.Ty->isAnyPointerType())
+  if (SQT.Ty->isPointerOrObjCObjectPointerType())
     return TypeFragments.appendSpace().append(std::move(QualsFragments));
 
   return QualsFragments.appendSpace().append(std::move(TypeFragments));

@@ -787,7 +787,7 @@ class SymbolicRegion : public SubRegion {
     // Because pointer arithmetic is represented by ElementRegion layers,
     // the base symbol here should not contain any arithmetic.
     assert(isa_and_nonnull<SymbolData>(s));
-    assert(s->getType()->isAnyPointerType() ||
+    assert(s->getType()->isPointerOrObjCObjectPointerType() ||
            s->getType()->isReferenceType() ||
            s->getType()->isBlockPointerType());
     assert(isa<UnknownSpaceRegion>(sreg) || isa<HeapSpaceRegion>(sreg) ||

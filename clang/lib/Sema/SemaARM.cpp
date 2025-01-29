@@ -37,7 +37,7 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID,
     if (FirstArg.isInvalid())
       return true;
     QualType FirstArgType = FirstArg.get()->getType();
-    if (!FirstArgType->isAnyPointerType())
+    if (!FirstArgType->isPointerOrObjCObjectPointerType())
       return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_pointer)
              << "first" << FirstArgType << Arg0->getSourceRange();
     TheCall->setArg(0, FirstArg.get());
@@ -64,7 +64,7 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID,
     if (FirstArg.isInvalid())
       return true;
     QualType FirstArgType = FirstArg.get()->getType();
-    if (!FirstArgType->isAnyPointerType())
+    if (!FirstArgType->isPointerOrObjCObjectPointerType())
       return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_pointer)
              << "first" << FirstArgType << Arg0->getSourceRange();
     TheCall->setArg(0, FirstArg.get());
@@ -86,7 +86,7 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID,
     if (FirstArg.isInvalid())
       return true;
     QualType FirstArgType = FirstArg.get()->getType();
-    if (!FirstArgType->isAnyPointerType())
+    if (!FirstArgType->isPointerOrObjCObjectPointerType())
       return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_pointer)
              << "first" << FirstArgType << Arg0->getSourceRange();
 
@@ -108,7 +108,7 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID,
       return true;
 
     QualType FirstArgType = FirstArg.get()->getType();
-    if (!FirstArgType->isAnyPointerType())
+    if (!FirstArgType->isPointerOrObjCObjectPointerType())
       return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_pointer)
              << "first" << FirstArgType << Arg0->getSourceRange();
     TheCall->setArg(0, FirstArg.get());
@@ -138,17 +138,17 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID,
     };
 
     // argument should be either a pointer or null
-    if (!ArgTypeA->isAnyPointerType() && !isNull(ArgA))
+    if (!ArgTypeA->isPointerOrObjCObjectPointerType() && !isNull(ArgA))
       return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_null_or_pointer)
              << "first" << ArgTypeA << ArgA->getSourceRange();
 
-    if (!ArgTypeB->isAnyPointerType() && !isNull(ArgB))
+    if (!ArgTypeB->isPointerOrObjCObjectPointerType() && !isNull(ArgB))
       return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_null_or_pointer)
              << "second" << ArgTypeB << ArgB->getSourceRange();
 
     // Ensure Pointee types are compatible
-    if (ArgTypeA->isAnyPointerType() && !isNull(ArgA) &&
-        ArgTypeB->isAnyPointerType() && !isNull(ArgB)) {
+    if (ArgTypeA->isPointerOrObjCObjectPointerType() && !isNull(ArgA) &&
+        ArgTypeB->isPointerOrObjCObjectPointerType() && !isNull(ArgB)) {
       QualType pointeeA = ArgTypeA->getPointeeType();
       QualType pointeeB = ArgTypeB->getPointeeType();
       if (!Context.typesAreCompatible(
@@ -162,7 +162,8 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID,
     }
 
     // at least one argument should be pointer type
-    if (!ArgTypeA->isAnyPointerType() && !ArgTypeB->isAnyPointerType())
+    if (!ArgTypeA->isPointerOrObjCObjectPointerType() &&
+        !ArgTypeB->isPointerOrObjCObjectPointerType())
       return Diag(TheCall->getBeginLoc(), diag::err_memtag_any2arg_pointer)
              << ArgTypeA << ArgTypeB << ArgA->getSourceRange();
 
@@ -912,7 +913,8 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(unsigned BuiltinID,
   TheCall->setArg(IsLdrex ? 0 : 1, PointerArg);
 
   // In general, we allow ints, floats and pointers to be loaded and stored.
-  if (!ValType->isIntegerType() && !ValType->isAnyPointerType() &&
+  if (!ValType->isIntegerType() &&
+      !ValType->isPointerOrObjCObjectPointerType() &&
       !ValType->isBlockPointerType() && !ValType->isFloatingType()) {
     Diag(DRE->getBeginLoc(), diag::err_atomic_builtin_must_be_pointer_intfltptr)
         << PointerArg->getType() << 0 << PointerArg->getSourceRange();

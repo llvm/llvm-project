@@ -2570,8 +2570,9 @@ void MicrosoftCXXNameMangler::mangleType(QualType T, SourceRange Range,
     return;
   }
 
-  bool IsPointer = T->isAnyPointerType() || T->isMemberPointerType() ||
-                   T->isReferenceType() || T->isBlockPointerType();
+  bool IsPointer = T->isPointerOrObjCObjectPointerType() ||
+                   T->isMemberPointerType() || T->isReferenceType() ||
+                   T->isBlockPointerType();
 
   switch (QMM) {
   case QMM_Drop:

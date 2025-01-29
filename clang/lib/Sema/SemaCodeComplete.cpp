@@ -5012,9 +5012,10 @@ void SemaCodeCompletion::CodeCompleteExpression(
 
   bool PreferredTypeIsPointer = false;
   if (!Data.PreferredType.isNull()) {
-    PreferredTypeIsPointer = Data.PreferredType->isAnyPointerType() ||
-                             Data.PreferredType->isMemberPointerType() ||
-                             Data.PreferredType->isBlockPointerType();
+    PreferredTypeIsPointer =
+        Data.PreferredType->isPointerOrObjCObjectPointerType() ||
+        Data.PreferredType->isMemberPointerType() ||
+        Data.PreferredType->isBlockPointerType();
     if (Data.PreferredType->isEnumeralType()) {
       EnumDecl *Enum = Data.PreferredType->castAs<EnumType>()->getDecl();
       if (auto *Def = Enum->getDefinition())

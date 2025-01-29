@@ -2929,7 +2929,8 @@ static const NonNullAttr *getNonNullAttr(const Decl *FD, const ParmVarDecl *PVD,
   // In the former case, LLVM IR cannot represent the constraint. In
   // the latter case, we have no guarantee that the transparent union
   // is in fact passed as a pointer.
-  if (!ArgType->isAnyPointerType() && !ArgType->isBlockPointerType())
+  if (!ArgType->isPointerOrObjCObjectPointerType() &&
+      !ArgType->isBlockPointerType())
     return nullptr;
   // First, check attribute on parameter itself.
   if (PVD) {

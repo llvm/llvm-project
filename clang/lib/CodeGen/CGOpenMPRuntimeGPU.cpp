@@ -217,7 +217,7 @@ class CheckVarsEscapingDeclContext final
           if (((Attr->getCaptureKind() != OMPC_map) &&
                !isOpenMPPrivate(Attr->getCaptureKind())) ||
               ((Attr->getCaptureKind() == OMPC_map) &&
-               !FD->getType()->isAnyPointerType()))
+               !FD->getType()->isPointerOrObjCObjectPointerType()))
             return;
         }
         if (!FD->getType()->isReferenceType()) {
@@ -1963,7 +1963,9 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
                                               CGFContext.getPointerType(ElemTy),
                                               CI->getLocation());
       if (CI->capturesVariableByCopy() &&
-          !CI->getCapturedVar()->getType()->isAnyPointerType()) {
+          !CI->getCapturedVar()
+               ->getType()
+               ->isPointerOrObjCObjectPointerType()) {
         Arg = castValueToType(CGF, Arg, ElemTy, CGFContext.getUIntPtrType(),
                               CI->getLocation());
       }

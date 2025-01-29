@@ -229,7 +229,7 @@ static bool isTypedefTypeMatching(const TypedefType *const Typedef,
 /// \returns type of the argument
 static const Type *argumentType(const CallExpr *const CE, const size_t Idx) {
   const QualType QT = CE->getArg(Idx)->IgnoreImpCasts()->getType();
-  return QT.getTypePtr()->getPointeeOrArrayElementType();
+  return QT.getTypePtr()->getPointerOrObjCPointerOrArrayElementType();
 }
 
 void TypeMismatchCheck::registerMatchers(MatchFinder *Finder) {

@@ -767,7 +767,7 @@ bool NoStoreFuncVisitor::prettyPrintRegionName(const RegionVector &FieldChain,
       return false;
 
     const auto *DR = cast<DeclRegion>(R);
-    Sep = DR->getValueType()->isAnyPointerType() ? "->" : ".";
+    Sep = DR->getValueType()->isPointerOrObjCObjectPointerType() ? "->" : ".";
     DR->getDecl()->getDeclName().print(os, PP);
   }
 
@@ -3337,7 +3337,7 @@ UndefOrNullArgVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
     assert(ParamDecl && "Formal parameter has no decl?");
     QualType T = ParamDecl->getType();
 
-    if (!(T->isAnyPointerType() || T->isReferenceType())) {
+    if (!(T->isPointerOrObjCObjectPointerType() || T->isReferenceType())) {
       // Function can only change the value passed in by address.
       continue;
     }

@@ -84,7 +84,7 @@ inline bool isPointerOrPointerToMember(const Type *T) {
 }
 
 std::optional<QualType> getPointeeOrArrayElementQualType(QualType T) {
-  if (T->isAnyPointerType() || T->isMemberPointerType())
+  if (T->isPointerOrObjCObjectPointerType() || T->isMemberPointerType())
     return T->getPointeeType();
 
   if (T->isArrayType())

@@ -2135,9 +2135,9 @@ void AugmentedCodeCompleteConsumer::ProcessCodeCompleteResults(Sema &S,
     CodeCompletionString *Completion = C->Completion;
     if (!Context.getPreferredType().isNull()) {
       if (C->Kind == CXCursor_MacroDefinition) {
-        Priority = getMacroUsagePriority(C->Completion->getTypedText(),
-                                         S.getLangOpts(),
-                               Context.getPreferredType()->isAnyPointerType());
+        Priority = getMacroUsagePriority(
+            C->Completion->getTypedText(), S.getLangOpts(),
+            Context.getPreferredType()->isPointerOrObjCObjectPointerType());
       } else if (C->Type) {
         CanQualType Expected
           = S.Context.getCanonicalType(

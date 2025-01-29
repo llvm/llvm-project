@@ -220,7 +220,7 @@ std::optional<std::string> tooling::buildAccess(const Expr &RawExpression,
 
   const Expr *E = RawExpression.IgnoreImplicitAsWritten();
 
-  if (E->getType()->isAnyPointerType() ||
+  if (E->getType()->isPointerOrObjCObjectPointerType() ||
       treatLikePointer(E->getType(), Classification, Context)) {
     // Strip off operator-> calls. They can only occur inside an actual arrow
     // member access, so we treat them as equivalent to an actual object

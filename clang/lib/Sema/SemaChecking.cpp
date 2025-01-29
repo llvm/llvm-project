@@ -2571,7 +2571,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     bool ReturnsPointer = BuiltinID == Builtin::BIaddressof ||
                           BuiltinID == Builtin::BI__addressof;
     if (!(Param->isReferenceType() &&
-          (ReturnsPointer ? Result->isAnyPointerType()
+          (ReturnsPointer ? Result->isPointerOrObjCObjectPointerType()
                           : Result->isReferenceType()) &&
           Context.hasSameUnqualifiedType(Param->getPointeeType(),
                                          Result->getPointeeType()))) {
@@ -4316,7 +4316,8 @@ ExprResult Sema::BuiltinAtomicOverloaded(ExprResult TheCallResult) {
   }
 
   QualType ValType = pointerType->getPointeeType();
-  if (!ValType->isIntegerType() && !ValType->isAnyPointerType() &&
+  if (!ValType->isIntegerType() &&
+      !ValType->isPointerOrObjCObjectPointerType() &&
       !ValType->isBlockPointerType()) {
     Diag(DRE->getBeginLoc(), diag::err_atomic_builtin_must_be_pointer_intptr)
         << FirstArg->getType() << 0 << FirstArg->getSourceRange();
@@ -4693,7 +4694,8 @@ ExprResult Sema::BuiltinNontemporalOverloaded(ExprResult TheCallResult) {
 
   // Strip any qualifiers off ValType.
   ValType = ValType.getUnqualifiedType();
-  if (!ValType->isIntegerType() && !ValType->isAnyPointerType() &&
+  if (!ValType->isIntegerType() &&
+      !ValType->isPointerOrObjCObjectPointerType() &&
       !ValType->isBlockPointerType() && !ValType->isFloatingType() &&
       !ValType->isVectorType()) {
     Diag(DRE->getBeginLoc(),
@@ -11002,7 +11004,7 @@ static void DiagnoseNullConversion(Sema &S, Expr *E, QualType T,
     return;
 
   // Return if target type is a safe conversion.
-  if (T->isAnyPointerType() || T->isBlockPointerType() ||
+  if (T->isPointerOrObjCObjectPointerType() || T->isBlockPointerType() ||
       T->isMemberPointerType() || !T->isScalarType() || T->isNullPtrType())
     return;
 
@@ -13474,7 +13476,7 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
     return;
 
   const Type *EffectiveType =
-      BaseExpr->getType()->getPointeeOrArrayElementType();
+      BaseExpr->getType()->getPointerOrObjCPointerOrArrayElementType();
   BaseExpr = BaseExpr->IgnoreParenCasts();
   const ConstantArrayType *ArrayTy =
       Context.getAsConstantArrayType(BaseExpr->getType());
