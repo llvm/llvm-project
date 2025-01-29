@@ -222,7 +222,11 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
           continue;
         }
 
-        if (!VPDT.dominates(VPBB, UI->getParent())) {
+        // Now that we support vectorising loops with uncountable early exits
+        // we can end up in situations where VPBB does not dominate the exit
+        // block. Only do the check if the user is not in a VPIRBasicBlock.
+        if (!isa<VPIRBasicBlock>(UI->getParent()) &&
+            !VPDT.dominates(VPBB, UI->getParent())) {
           errs() << "Use before def!\n";
           return false;
         }

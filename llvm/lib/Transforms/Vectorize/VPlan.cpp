@@ -500,8 +500,15 @@ void VPBasicBlock::execute(VPTransformState *State) {
     UnreachableInst *Terminator = State->Builder.CreateUnreachable();
     // Register NewBB in its loop. In innermost loops its the same for all
     // BB's.
-    if (State->CurrentParentLoop)
-      State->CurrentParentLoop->addBasicBlockToLoop(NewBB, *State->LI);
+    Loop *ParentLoop = State->CurrentParentLoop;
+    // If this block has a sole successor that is an exit block then it needs
+    // adding to the same parent loop as the exit block.
+    VPBlockBase *SuccVPBB = getSingleSuccessor();
+    if (SuccVPBB && State->Plan->isExitBlock(SuccVPBB))
+      ParentLoop = State->LI->getLoopFor(
+          cast<VPIRBasicBlock>(SuccVPBB)->getIRBasicBlock());
+    if (ParentLoop)
+      ParentLoop->addBasicBlockToLoop(NewBB, *State->LI);
     State->Builder.SetInsertPoint(Terminator);
 
     State->CFG.PrevBB = NewBB;
@@ -947,6 +954,16 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   } else {
     VFxUF.setUnderlyingValue(createStepForVF(Builder, TCTy, State.VF, UF));
   }
+}
+
+bool VPlan::isExitBlock(VPBlockBase *VPBB) {
+  if (isa<VPIRBasicBlock>(VPBB) && VPBB->getNumSuccessors() == 0) {
+    assert(is_contained(getExitBlocks(), VPBB) &&
+           "Expected to find VPlan block in list of exit blocks!");
+    return true;
+  }
+
+  return false;
 }
 
 /// Generate the code inside the preheader and body of the vectorized loop.

@@ -130,7 +130,7 @@ struct VPlanTransforms {
   ///    exit conditions
   ///  * splitting the original middle block to branch to the early exit block
   ///    if taken.
-  static bool handleUncountableEarlyExit(VPlan &Plan, ScalarEvolution &SE,
+  static void handleUncountableEarlyExit(VPlan &Plan, ScalarEvolution &SE,
                                          Loop *OrigLoop,
                                          BasicBlock *UncountableExitingBlock,
                                          VPRecipeBuilder &RecipeBuilder);
