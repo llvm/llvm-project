@@ -22,6 +22,7 @@
 
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
+#include <clc/integer/clc_clz.h>
 #include <clc/math/clc_floor.h>
 #include <clc/math/clc_subnormal_config.h>
 #include <clc/math/clc_trunc.h>
@@ -95,14 +96,14 @@ _CLC_DEF _CLC_OVERLOAD double __clc_remainder(double x, double y)
     ulong xsgn = ux ^ ax;
     double dx = as_double(ax);
     int xexp = convert_int(ax >> EXPSHIFTBITS_DP64);
-    int xexp1 = 11 - (int) clz(ax & MANTBITS_DP64);
+    int xexp1 = 11 - (int) __clc_clz(ax & MANTBITS_DP64);
     xexp1 = xexp < 1 ? xexp1 : xexp;
 
     ulong uy = as_ulong(y);
     ulong ay = uy & ~SIGNBIT_DP64;
     double dy = as_double(ay);
     int yexp = convert_int(ay >> EXPSHIFTBITS_DP64);
-    int yexp1 = 11 - (int) clz(ay & MANTBITS_DP64);
+    int yexp1 = 11 - (int) __clc_clz(ay & MANTBITS_DP64);
     yexp1 = yexp < 1 ? yexp1 : yexp;
 
     int qsgn = ((ux ^ uy) & SIGNBIT_DP64) == 0UL ? 1 : -1;
