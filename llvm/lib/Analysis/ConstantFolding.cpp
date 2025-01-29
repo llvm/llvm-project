@@ -1258,11 +1258,12 @@ Constant *llvm::ConstantFoldCompareInstOperands(
     if (Ops0->getType()->isPointerTy() && !ICmpInst::isSigned(Predicate)) {
       unsigned IndexWidth = DL.getIndexTypeSizeInBits(Ops0->getType());
       APInt Offset0(IndexWidth, 0);
-      Value *Stripped0 =
-          Ops0->stripAndAccumulateInBoundsConstantOffsets(DL, Offset0);
+      bool AllowNonInbounds = ICmpInst::isEquality(Predicate);
+      Value *Stripped0 = Ops0->stripAndAccumulateConstantOffsets(
+          DL, Offset0, AllowNonInbounds);
       APInt Offset1(IndexWidth, 0);
-      Value *Stripped1 =
-          Ops1->stripAndAccumulateInBoundsConstantOffsets(DL, Offset1);
+      Value *Stripped1 = Ops1->stripAndAccumulateConstantOffsets(
+          DL, Offset1, AllowNonInbounds);
       if (Stripped0 == Stripped1)
         return ConstantInt::getBool(
             Ops0->getContext(),
