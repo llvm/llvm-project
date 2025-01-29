@@ -16,8 +16,6 @@
 
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
-#include "mlir/CAPI/Wrap.h"
-#include "mlir/Target/LLVMIR/TypeFromLLVM.h"
 #include "llvm-c/Support.h"
 
 #ifdef __cplusplus
@@ -39,9 +37,6 @@ struct MlirTypeFromLLVMIRTranslator {
 };
 
 typedef struct MlirTypeFromLLVMIRTranslator MlirTypeFromLLVMIRTranslator;
-
-DEFINE_C_API_PTR_METHODS(MlirTypeFromLLVMIRTranslator,
-                         mlir::LLVM::TypeFromLLVMIRTranslator);
 
 MLIR_CAPI_EXPORTED MlirTypeFromLLVMIRTranslator
 mlirTypeFromLLVMIRTranslatorCreate(MlirContext ctx);
