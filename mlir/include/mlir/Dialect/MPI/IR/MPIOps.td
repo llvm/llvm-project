@@ -73,7 +73,7 @@ def MPI_CommRankOp : MPI_Op<"comm_rank", []> {
     I32 : $rank
   );
 
-  let assemblyFormat = "(`(` $comm `)`)? attr-dict `:` type(results)";
+  let assemblyFormat = "(`(` $comm ^ `)`)? attr-dict `:` type(results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -97,7 +97,7 @@ def MPI_CommSizeOp : MPI_Op<"comm_size", []> {
     I32 : $size
   );
 
-  let assemblyFormat = "(`(` $comm `)`)? attr-dict `:` type(results)";
+  let assemblyFormat = "(`(` $comm ^ `)`)? attr-dict `:` type(results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -342,7 +342,7 @@ def MPI_Wait : MPI_Op<"wait", []> {
 
   let results = (outs Optional<MPI_Retval>:$retval);
 
-  let assemblyFormat = "`(` $req `)` attr-dict `:` type($req) `->` type($retval)^";
+  let assemblyFormat = "`(` $req `)` attr-dict `:` type($req) (`->` type($retval) ^)?";
 }
 
 //===----------------------------------------------------------------------===//
