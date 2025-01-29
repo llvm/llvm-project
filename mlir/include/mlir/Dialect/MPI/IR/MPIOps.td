@@ -52,8 +52,8 @@ def MPI_CommRankOp : MPI_Op<"comm_rank", []> {
   }];
 
   let results = (
-    outs I32 : $rank,
-    Optional<MPI_Retval> : $retval
+    outs Optional<MPI_Retval> : $retval,
+    I32 : $rank
   );
 
   let assemblyFormat = "attr-dict `:` type(results)";
