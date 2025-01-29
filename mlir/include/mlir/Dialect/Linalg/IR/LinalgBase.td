@@ -81,4 +81,43 @@ def IteratorTypeEnum : EnumAttr<Linalg_Dialect, IteratorType, "iterator_type"> {
 def IteratorTypeArrayAttr : TypedArrayAttrBase<IteratorTypeEnum,
   "Iterator type should be an enum.">;
 
+
+def ConvolutionDimArray : ArrayRefParameter<"ConvDimEnum"> {
+  let printer = [{
+    $_printer << '{';
+    llvm::interleaveComma($_self, $_printer, [&](ConvDimEnum en) {
+        $_printer.printStrippedAttrOrType(en);
+    });
+    $_printer << '}';
+  }];
+
+  let parser = [{
+    [&]() -> FailureOr<SmallVector<ConvDimEnum>> {
+        using Result = SmallVector<ConvDimEnum>;
+        if ($_parser.parseLBrace())
+            return failure();
+        FailureOr<Result> result = FieldParser<Result>::parse($_parser);
+        if (failed(result))
+            return failure();
+        if ($_parser.parseRBrace())
+            return failure();
+        return result;
+    }()
+  }];
+}
+
+/// Attribute that represents an ordered set of tensor dimensions involved in
+/// convolution.
+def ConvDimsAttr : AttrDef<Linalg_Dialect, "ConvDims", [], "::mlir::Attribute"> {
+  let mnemonic = "conv_dims";
+
+  let parameters = (ins
+    ConvolutionDimArray:$dims
+  );
+
+  let assemblyFormat = "$dims";
+
+  let returnType = "mlir::linalg::ConvDims";
+  let convertFromStorage = "mlir::linalg::ConvDims($_self.getDims())";
+}
 #endif // LINALG_BASE

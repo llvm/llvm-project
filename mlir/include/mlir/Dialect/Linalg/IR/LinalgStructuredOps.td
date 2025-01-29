@@ -681,6 +681,122 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
 }
 
 //===----------------------------------------------------------------------===//
+// Op definition for ConvOp
+//===----------------------------------------------------------------------===//
+
+def ConvOp : LinalgStructuredBase_Op<"conv", [AttrSizedOperandSegments]> {
+
+  let summary = [{
+    Configurable convolution operation with configurable tensor layouts.
+  }];
+  let description = [{
+    Numeric casting is performed on the operands to the inner multiply,
+    promoting them to the same data type as the accumulator/output.
+
+    The subtype of convolution is defined by the tensor layouts of `input`,
+    `filter`, and `output`. For example, a standard batched 2D convolution:
+
+    ```
+      %0 = linalg.conv {
+          input_dims = #linalg<conv_dims {N, C, "1", "0"}>,
+          filter_dims = #linalg<conv_dims {F, C, "1", "0"}>,
+          output_dims = #linalg<conv_dims {N, F, "1", "0"}>
+        }
+        ins(%input, %filter : tensor<8x4x16x16xf32>, tensor<16x4x3x3xf32>)
+        outs(%output : tensor<8x16x14x14xf32>) -> tensor<8x16x14x14xf32>
+    ```
+
+    This op could be turned into a depthwise convolution as follows:
+    ```
+      %0 = linalg.conv {
+          input_dims = #linalg<conv_dims {N, G, "1", "0"}>,
+          filter_dims = #linalg<conv_dims {G, "1", "0"}>,
+          output_dims = #linalg<conv_dims {N, G, "1", "0"}>
+        }
+        ins(%input, %filter : tensor<8x4x16x16xf32>, tensor<4x3x3xf32>)
+        outs(%output : tensor<8x4x14x14xf32>) -> tensor<8x4x14x14xf32>
+    ```
+
+    For the detailed semantics of the available tensor dimensions, refer to
+    `mlir::linalg::ConvDimsEnum`.
+
+    Strides and dilations can be supplied as optional attributes, where
+    `strides[0]` is the stride for the `SPATIAL_0` dimension, etc.
+  }];
+
+  let arguments = (ins
+    Variadic<AnyType>:$inputs, Variadic<AnyShaped>:$outputs,
+    ConvDimsAttr:$input_dims, ConvDimsAttr:$filter_dims, ConvDimsAttr:$output_dims,
+    OptionalAttr<I64ElementsAttr>:$strides, OptionalAttr<I64ElementsAttr>:$dilations
+  );
+  let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
+  let regions = (region AnyRegion:$region);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<
+      (ins "TypeRange":$resTys, "Value":$input, "Value":$filter, "Value":$output, "ConvDims":$input_dims,
+            "ConvDims":$filter_dims, "ConvDims":$output_dims, "ArrayRef<int64_t>":$strides,
+            "ArrayRef<int64_t>":$dilations, CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        buildConvOp($_builder, $_state, resTys, input, filter, output,
+            input_dims, filter_dims, output_dims, strides, dilations,
+            attributes, ConvOp::getRegionBuilder());
+      }]>,
+    OpBuilder<
+      (ins "ValueRange":$inputs, "ValueRange":$outputs, "ConvDimsAttr":$input_dims,
+            "ConvDimsAttr":$filter_dims, "ConvDimsAttr":$output_dims,
+            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        buildConvOp($_builder, $_state, std::nullopt, inputs, outputs,
+            input_dims, filter_dims, output_dims, nullptr, nullptr,
+            attributes, ConvOp::getRegionBuilder());
+      }]>,
+    OpBuilder<
+      (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
+            "ValueRange":$outputs, "ConvDimsAttr":$input_dims,
+            "ConvDimsAttr":$filter_dims, "ConvDimsAttr":$output_dims,
+            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        buildConvOp($_builder, $_state, resultTensorTypes,
+            inputs, outputs, input_dims, filter_dims, output_dims, nullptr, nullptr,
+            attributes, ConvOp::getRegionBuilder());
+      }]>
+  ];
+  let hasCustomAssemblyFormat = 1;
+  let hasFolder = 1;
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = structuredOpsBaseDecls # [{
+    SmallVector<utils::IteratorType> getIteratorTypesArray();
+    ArrayAttr getIndexingMaps();
+
+    /// Implements the block region builder.
+    static void regionBuilder(ImplicitLocOpBuilder &b,
+                              Block &block, ArrayRef<NamedAttribute> attrs);
+
+    /// Returns a list of AffineMap with the typical matmul indexing charactristic.
+    static SmallVector<AffineMap> getDefaultIndexingMaps(MLIRContext *context);
+
+    static std::function<void(ImplicitLocOpBuilder &,
+                              Block &, ArrayRef<NamedAttribute>)>
+    getRegionBuilder() { return regionBuilder; }
+
+    ::mlir::MutableOperandRange getDpsInitsMutable() { return getOutputsMutable(); }
+
+    bool hasDynamicIndexingMaps() { return true; }
+
+    /// Returns the number of spatial dimensions, i.e. 1 for 1D convolution,
+    /// 2 for 2D convolution, etc.
+    int64_t getNumSpatialDims();
+
+    bool isDepthwise();
+    bool isGrouped();
+    bool isBatched();
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Named Linalg ops, implemented as a declarative configurations of generic ops.
 //===----------------------------------------------------------------------===//
 

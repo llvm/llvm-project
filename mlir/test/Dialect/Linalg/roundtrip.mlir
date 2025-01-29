@@ -694,3 +694,60 @@ func.func @conv2d_channel_first_q_promote(%img: tensor<100x3x224x224xi8>, %filt:
 // CHECK-LABEL: func @conv2d_channel_first_q_promote(
 // CHECK:   %[[arg0:[a-zA-z0-9]*]]: tensor<100x3x224x224xi8>, %[[arg1:[a-zA-z0-9]*]]: tensor<64x3x5x5xi8>, %[[arg2:[a-zA-z0-9]*]]: i8, %[[arg3:[a-zA-z0-9]*]]: i8)
 // CHECK:         linalg.conv_2d_nchw_fchw_q {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>} ins(%[[arg0]], %[[arg1]], %[[arg2]], %[[arg3]] : tensor<100x3x224x224xi8>, tensor<64x3x5x5xi8>, i8, i8) outs(%{{.*}} : tensor<100x64x220x220xi32>) -> tensor<100x64x220x220xi32>
+
+// -----
+
+func.func @newconv_1d(%arg0: tensor<?x?x?xf32>, %arg1: tensor<?x?x?xf32>, %arg2: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
+  %0 = linalg.conv {
+    filter_dims = #linalg<conv_dims {F, C, "0"}>,
+    input_dims = #linalg<conv_dims {N, C, "0"}>,
+    output_dims = #linalg<conv_dims {N, F, "0"}>
+    }
+    ins(%arg0, %arg1 : tensor<?x?x?xf32>, tensor<?x?x?xf32>)
+    outs(%arg2 : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+  return %0 : tensor<?x?x?xf32>
+}
+
+// CHECK-LABEL: func @newconv_1d(
+// CHECK:   %[[arg0:[a-zA-z0-9]*]]: tensor<?x?x?xf32>, %[[arg1:[a-zA-z0-9]*]]: tensor<?x?x?xf32>, %[[arg2:[a-zA-z0-9]*]]: tensor<?x?x?xf32>
+// CHECK:   linalg.conv {filter_dims = #linalg<conv_dims {F, C, "0"}>, input_dims = #linalg<conv_dims {N, C, "0"}>, output_dims = #linalg<conv_dims {N, F, "0"}>} ins(%[[arg0]], %[[arg1]] : tensor<?x?x?xf32>, tensor<?x?x?xf32>) outs(%[[arg2]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+
+// -----
+
+func.func @newconv_depthwise_2d(%input: tensor<8x4x16x16xf32>, %filter: tensor<4x3x3xf32>) -> tensor<8x4x14x14xf32> {
+  %init = tensor.empty() : tensor<8x4x14x14xf32>
+
+  %0 = linalg.conv {
+      input_dims = #linalg<conv_dims {N, G, "1", "0"}>,
+      filter_dims = #linalg<conv_dims {G, "1", "0"}>,
+      output_dims = #linalg<conv_dims {N, G, "1", "0"}>
+    }
+    ins(%input, %filter : tensor<8x4x16x16xf32>, tensor<4x3x3xf32>)
+    outs(%init : tensor<8x4x14x14xf32>) -> tensor<8x4x14x14xf32>
+
+  return %0: tensor<8x4x14x14xf32>
+}
+
+// CHECK-LABEL: func @newconv_depthwise_2d(
+// CHECK:   %[[arg0:[a-zA-z0-9]*]]: tensor<8x4x16x16xf32>, %[[arg1:[a-zA-z0-9]*]]: tensor<4x3x3xf32>
+// CHECK:   %[[arg2:[a-zA-z0-9]*]] = tensor.empty() : tensor<8x4x14x14xf32>
+// CHECK:   linalg.conv {filter_dims = #linalg<conv_dims {G, "1", "0"}>, input_dims = #linalg<conv_dims {N, G, "1", "0"}>, output_dims = #linalg<conv_dims {N, G, "1", "0"}>} ins(%[[arg0]], %[[arg1]] : tensor<8x4x16x16xf32>, tensor<4x3x3xf32>) outs(%[[arg2]] : tensor<8x4x14x14xf32>) -> tensor<8x4x14x14xf32>
+
+// -----
+
+func.func @newconv_2d(%input: tensor<8x4x16x16xf32>, %filter: tensor<16x4x3x3xf32>) -> tensor<8x16x14x14xf32> {
+  %init = tensor.empty() : tensor<8x16x14x14xf32>  
+  %0 = linalg.conv {
+      input_dims = #linalg<conv_dims {N, C, "1", "0"}>,
+      filter_dims = #linalg<conv_dims {F, C, "1", "0"}>,
+      output_dims = #linalg<conv_dims {N, F, "1", "0"}>
+    }
+    ins(%input, %filter : tensor<8x4x16x16xf32>, tensor<16x4x3x3xf32>)
+    outs(%init : tensor<8x16x14x14xf32>) -> tensor<8x16x14x14xf32>
+  return %0 : tensor<8x16x14x14xf32>
+}
+
+// CHECK-LABEL: func @newconv_2d(
+// CHECK:   %[[arg0:[a-zA-z0-9]*]]: tensor<8x4x16x16xf32>, %[[arg1:[a-zA-z0-9]*]]: tensor<16x4x3x3xf32>
+// CHECK:   %[[arg2:[a-zA-z0-9]*]] = tensor.empty() : tensor<8x16x14x14xf32>
+// CHECK:   linalg.conv {filter_dims = #linalg<conv_dims {F, C, "1", "0"}>, input_dims = #linalg<conv_dims {N, C, "1", "0"}>, output_dims = #linalg<conv_dims {N, F, "1", "0"}>} ins(%[[arg0]], %[[arg1]] : tensor<8x4x16x16xf32>, tensor<16x4x3x3xf32>) outs(%[[arg2]] : tensor<8x16x14x14xf32>) -> tensor<8x16x14x14xf32>
