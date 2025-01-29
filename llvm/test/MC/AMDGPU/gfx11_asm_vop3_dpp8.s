@@ -424,44 +424,71 @@ v_bfm_b32_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
 v_bfm_b32_e64_dpp v255, v255, v255 dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX11: v_bfm_b32_e64_dpp v255, v255, v255 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x00,0x1d,0xd7,0xe9,0xfe,0x03,0x00,0xff,0x00,0x00,0x00]
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s3 dpp8:[7,6,5,4,3,2,1,0]
-// W32: v_cndmask_b16_e64_dpp v5, v1, v2, s3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x04,0x0e,0x00,0x01,0x77,0x39,0x05]
-// W64-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s3 dpp8:[7,6,5,4,3,2,1,0]
+// W32: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x04,0x0e,0x00,0x01,0x77,0x39,0x05]
+// W64-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s105 dpp8:[7,6,5,4,3,2,1,0]
-// W32: v_cndmask_b16_e64_dpp v5, v1, v2, s105 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x04,0xa6,0x01,0x01,0x77,0x39,0x05]
-// W64-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s105 dpp8:[7,6,5,4,3,2,1,0]
+// W32: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s105 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x04,0xa6,0x01,0x01,0x77,0x39,0x05]
+// W64-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, vcc_hi dpp8:[7,6,5,4,3,2,1,0]
-// W32: v_cndmask_b16_e64_dpp v5, v1, v2, vcc_hi dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x04,0xae,0x01,0x01,0x77,0x39,0x05]
-// W64-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, vcc_hi dpp8:[7,6,5,4,3,2,1,0]
+// W32: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, vcc_hi dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x04,0xae,0x01,0x01,0x77,0x39,0x05]
+// W64-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, |v1|, -v2, vcc_lo dpp8:[7,6,5,4,3,2,1,0]
-// W32: v_cndmask_b16_e64_dpp v5, |v1|, -v2, vcc_lo dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x01,0x5d,0xd6,0xe9,0x04,0xaa,0x41,0x01,0x77,0x39,0x05]
-// W64-ERR: :[[@LINE-2]]:38: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, |v1.l|, -v2.l, vcc_lo dpp8:[7,6,5,4,3,2,1,0]
+// W32: v_cndmask_b16_e64_dpp v5.l, |v1.l|, -v2.l, vcc_lo dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x01,0x5d,0xd6,0xe9,0x04,0xaa,0x41,0x01,0x77,0x39,0x05]
+// W64-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, -v1, |v2|, ttmp15 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// W32: v_cndmask_b16_e64_dpp v5, -v1, |v2|, ttmp15 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x02,0x5d,0xd6,0xea,0x04,0xee,0x21,0x01,0x77,0x39,0x05]
-// W64-ERR: :[[@LINE-2]]:38: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.l|, ttmp15 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// W32: v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.l|, ttmp15 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x02,0x5d,0xd6,0xea,0x04,0xee,0x21,0x01,0x77,0x39,0x05]
+// W64-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] dpp8:[7,6,5,4,3,2,1,0]
-// W64: v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x04,0x1a,0x00,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] dpp8:[7,6,5,4,3,2,1,0]
+// W64: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x04,0x1a,0x00,0x01,0x77,0x39,0x05]
+// W32-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s[104:105] dpp8:[7,6,5,4,3,2,1,0]
-// W64: v_cndmask_b16_e64_dpp v5, v1, v2, s[104:105] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x04,0xa2,0x01,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[104:105] dpp8:[7,6,5,4,3,2,1,0]
+// W64: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[104:105] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x04,0xa2,0x01,0x01,0x77,0x39,0x05]
+// W32-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, |v1|, -v2, vcc dpp8:[7,6,5,4,3,2,1,0]
-// W64: v_cndmask_b16_e64_dpp v5, |v1|, -v2, vcc dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x01,0x5d,0xd6,0xe9,0x04,0xaa,0x41,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:38: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, |v1.l|, -v2.l, vcc dpp8:[7,6,5,4,3,2,1,0]
+// W64: v_cndmask_b16_e64_dpp v5.l, |v1.l|, -v2.l, vcc dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x01,0x5d,0xd6,0xe9,0x04,0xaa,0x41,0x01,0x77,0x39,0x05]
+// W32-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, -v1, |v2|, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1
-// W64: v_cndmask_b16_e64_dpp v5, -v1, |v2|, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x02,0x5d,0xd6,0xea,0x04,0xea,0x21,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:38: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.l|, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1
+// W64: v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.l|, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x02,0x5d,0xd6,0xea,0x04,0xea,0x21,0x01,0x77,0x39,0x05]
+// W32-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v255, -|v255|, -|v255|, null dpp8:[0,0,0,0,0,0,0,0] fi:0
-// GFX11: v_cndmask_b16_e64_dpp v255, -|v255|, -|v255|, null dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x03,0x5d,0xd6,0xe9,0xfe,0xf3,0x61,0xff,0x00,0x00,0x00]
+v_cndmask_b16_e64_dpp v255.l, -|v255.l|, -|v255.l|, null dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX11: v_cndmask_b16_e64_dpp v255.l, -|v255.l|, -|v255.l|, null dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x03,0x5d,0xd6,0xe9,0xfe,0xf3,0x61,0xff,0x00,0x00,0x00]
+
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, vcc_lo dpp8:[7,6,5,4,3,2,1,0]
+// W32: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, vcc_lo dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x04,0xaa,0x01,0x01,0x77,0x39,0x05]
+// W64-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
+
+v_cndmask_b16_e64_dpp v5.l, |v1.l|, -v2.l, vcc_hi dpp8:[7,6,5,4,3,2,1,0]
+// W32: v_cndmask_b16_e64_dpp v5.l, |v1.l|, -v2.l, vcc_hi dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x01,0x5d,0xd6,0xe9,0x04,0xae,0x41,0x01,0x77,0x39,0x05]
+// W64-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
+
+v_cndmask_b16_e64_dpp v5.l, |v1.h|, -v2.l, vcc_hi dpp8:[7,6,5,4,3,2,1,0]
+// W32: v_cndmask_b16_e64_dpp v5.l, |v1.h|, -v2.l, vcc_hi dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x09,0x5d,0xd6,0xe9,0x04,0xae,0x41,0x01,0x77,0x39,0x05]
+// W64-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
+
+v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.h|, ttmp15 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// W32: v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.h|, ttmp15 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x12,0x5d,0xd6,0xea,0x04,0xee,0x21,0x01,0x77,0x39,0x05]
+// W64-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
+
+v_cndmask_b16_e64_dpp v5.l, |v1.h|, -v2.l, vcc dpp8:[7,6,5,4,3,2,1,0]
+// W64: v_cndmask_b16_e64_dpp v5.l, |v1.h|, -v2.l, vcc dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x09,0x5d,0xd6,0xe9,0x04,0xaa,0x41,0x01,0x77,0x39,0x05]
+// W32-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
+
+v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.h|, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1
+// W64: v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.h|, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x12,0x5d,0xd6,0xea,0x04,0xea,0x21,0x01,0x77,0x39,0x05]
+// W32-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
+
+v_cndmask_b16_e64_dpp v255.h, -|v255.l|, -|v255.l|, null dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX11: v_cndmask_b16_e64_dpp v255.h, -|v255.l|, -|v255.l|, null dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x43,0x5d,0xd6,0xe9,0xfe,0xf3,0x61,0xff,0x00,0x00,0x00]
 
 v_cubeid_f32_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: v_cubeid_f32_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x0c,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x77,0x39,0x05]

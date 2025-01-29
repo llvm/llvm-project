@@ -127,6 +127,36 @@ TEST(LinkGraphTest, BlockAndSymbolIteration) {
   EXPECT_TRUE(llvm::count(G.defined_symbols(), &S4));
 }
 
+TEST(LinkGraphTest, EdgeIteration) {
+  // Check that we can iterate over blocks within Sections and across sections.
+  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
+              Triple("x86_64-apple-darwin"), SubtargetFeatures(),
+              getGenericEdgeKindName);
+  auto &Sec1 =
+      G.createSection("__data.1", orc::MemProt::Read | orc::MemProt::Write);
+  auto &B =
+      G.createContentBlock(Sec1, BlockContent, orc::ExecutorAddr(0x1000), 8, 0);
+  auto &S = G.addExternalSymbol("S1", 0, false);
+
+  constexpr size_t NumEdges = 6;
+  Edge::OffsetT Offsets[NumEdges] = {0, 1, 2, 2, 3, 7};
+
+  for (auto O : Offsets)
+    B.addEdge(Edge::KeepAlive, O, S, 0);
+
+  EXPECT_EQ(llvm::range_size(B.edges()), NumEdges);
+  EXPECT_EQ(llvm::range_size(B.edges_at(0)), 1U);
+  EXPECT_EQ(llvm::range_size(B.edges_at(2)), 2U);
+  EXPECT_EQ(llvm::range_size(B.edges_at(4)), 0U);
+
+  {
+    // Check that offsets and iteration order are as expected.
+    size_t Idx = 0;
+    for (auto &E : B.edges())
+      EXPECT_EQ(E.getOffset(), Offsets[Idx++]);
+  }
+}
+
 TEST(LinkGraphTest, ContentAccessAndUpdate) {
   // Check that we can make a defined symbol external.
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),

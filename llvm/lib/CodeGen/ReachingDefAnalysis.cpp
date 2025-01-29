@@ -30,7 +30,7 @@ static bool isValidRegUse(const MachineOperand &MO) {
   return isValidReg(MO) && MO.isUse();
 }
 
-static bool isValidRegUseOf(const MachineOperand &MO, MCRegister Reg,
+static bool isValidRegUseOf(const MachineOperand &MO, Register Reg,
                             const TargetRegisterInfo *TRI) {
   if (!isValidRegUse(MO))
     return false;
@@ -41,7 +41,7 @@ static bool isValidRegDef(const MachineOperand &MO) {
   return isValidReg(MO) && MO.isDef();
 }
 
-static bool isValidRegDefOf(const MachineOperand &MO, MCRegister Reg,
+static bool isValidRegDefOf(const MachineOperand &MO, Register Reg,
                             const TargetRegisterInfo *TRI) {
   if (!isValidRegDef(MO))
     return false;
@@ -260,8 +260,7 @@ void ReachingDefAnalysis::traverse() {
 #endif
 }
 
-int ReachingDefAnalysis::getReachingDef(MachineInstr *MI,
-                                        MCRegister Reg) const {
+int ReachingDefAnalysis::getReachingDef(MachineInstr *MI, Register Reg) const {
   assert(InstIds.count(MI) && "Unexpected machine instuction.");
   int InstId = InstIds.lookup(MI);
   int DefRes = ReachingDefDefaultVal;
@@ -281,14 +280,14 @@ int ReachingDefAnalysis::getReachingDef(MachineInstr *MI,
 }
 
 MachineInstr *ReachingDefAnalysis::getReachingLocalMIDef(MachineInstr *MI,
-                                                         MCRegister Reg) const {
+                                                         Register Reg) const {
   return hasLocalDefBefore(MI, Reg)
              ? getInstFromId(MI->getParent(), getReachingDef(MI, Reg))
              : nullptr;
 }
 
 bool ReachingDefAnalysis::hasSameReachingDef(MachineInstr *A, MachineInstr *B,
-                                             MCRegister Reg) const {
+                                             Register Reg) const {
   MachineBasicBlock *ParentA = A->getParent();
   MachineBasicBlock *ParentB = B->getParent();
   if (ParentA != ParentB)
@@ -317,18 +316,17 @@ MachineInstr *ReachingDefAnalysis::getInstFromId(MachineBasicBlock *MBB,
   return nullptr;
 }
 
-int ReachingDefAnalysis::getClearance(MachineInstr *MI, MCRegister Reg) const {
+int ReachingDefAnalysis::getClearance(MachineInstr *MI, Register Reg) const {
   assert(InstIds.count(MI) && "Unexpected machine instuction.");
   return InstIds.lookup(MI) - getReachingDef(MI, Reg);
 }
 
 bool ReachingDefAnalysis::hasLocalDefBefore(MachineInstr *MI,
-                                            MCRegister Reg) const {
+                                            Register Reg) const {
   return getReachingDef(MI, Reg) >= 0;
 }
 
-void ReachingDefAnalysis::getReachingLocalUses(MachineInstr *Def,
-                                               MCRegister Reg,
+void ReachingDefAnalysis::getReachingLocalUses(MachineInstr *Def, Register Reg,
                                                InstSet &Uses) const {
   MachineBasicBlock *MBB = Def->getParent();
   MachineBasicBlock::iterator MI = MachineBasicBlock::iterator(Def);
@@ -352,7 +350,7 @@ void ReachingDefAnalysis::getReachingLocalUses(MachineInstr *Def,
   }
 }
 
-bool ReachingDefAnalysis::getLiveInUses(MachineBasicBlock *MBB, MCRegister Reg,
+bool ReachingDefAnalysis::getLiveInUses(MachineBasicBlock *MBB, Register Reg,
                                         InstSet &Uses) const {
   for (MachineInstr &MI :
        instructionsWithoutDebug(MBB->instr_begin(), MBB->instr_end())) {
@@ -370,7 +368,7 @@ bool ReachingDefAnalysis::getLiveInUses(MachineBasicBlock *MBB, MCRegister Reg,
   return isReachingDefLiveOut(&*Last, Reg);
 }
 
-void ReachingDefAnalysis::getGlobalUses(MachineInstr *MI, MCRegister Reg,
+void ReachingDefAnalysis::getGlobalUses(MachineInstr *MI, Register Reg,
                                         InstSet &Uses) const {
   MachineBasicBlock *MBB = MI->getParent();
 
@@ -395,8 +393,7 @@ void ReachingDefAnalysis::getGlobalUses(MachineInstr *MI, MCRegister Reg,
   }
 }
 
-void ReachingDefAnalysis::getGlobalReachingDefs(MachineInstr *MI,
-                                                MCRegister Reg,
+void ReachingDefAnalysis::getGlobalReachingDefs(MachineInstr *MI, Register Reg,
                                                 InstSet &Defs) const {
   if (auto *Def = getUniqueReachingMIDef(MI, Reg)) {
     Defs.insert(Def);
@@ -407,13 +404,13 @@ void ReachingDefAnalysis::getGlobalReachingDefs(MachineInstr *MI,
     getLiveOuts(MBB, Reg, Defs);
 }
 
-void ReachingDefAnalysis::getLiveOuts(MachineBasicBlock *MBB, MCRegister Reg,
+void ReachingDefAnalysis::getLiveOuts(MachineBasicBlock *MBB, Register Reg,
                                       InstSet &Defs) const {
   SmallPtrSet<MachineBasicBlock*, 2> VisitedBBs;
   getLiveOuts(MBB, Reg, Defs, VisitedBBs);
 }
 
-void ReachingDefAnalysis::getLiveOuts(MachineBasicBlock *MBB, MCRegister Reg,
+void ReachingDefAnalysis::getLiveOuts(MachineBasicBlock *MBB, Register Reg,
                                       InstSet &Defs,
                                       BlockSet &VisitedBBs) const {
   if (VisitedBBs.count(MBB))
@@ -432,9 +429,8 @@ void ReachingDefAnalysis::getLiveOuts(MachineBasicBlock *MBB, MCRegister Reg,
       getLiveOuts(Pred, Reg, Defs, VisitedBBs);
 }
 
-MachineInstr *
-ReachingDefAnalysis::getUniqueReachingMIDef(MachineInstr *MI,
-                                            MCRegister Reg) const {
+MachineInstr *ReachingDefAnalysis::getUniqueReachingMIDef(MachineInstr *MI,
+                                                          Register Reg) const {
   // If there's a local def before MI, return it.
   MachineInstr *LocalDef = getReachingLocalMIDef(MI, Reg);
   if (LocalDef && InstIds.lookup(LocalDef) < InstIds.lookup(MI))
@@ -465,8 +461,7 @@ MachineInstr *ReachingDefAnalysis::getMIOperand(MachineInstr *MI,
   return getUniqueReachingMIDef(MI, MO.getReg());
 }
 
-bool ReachingDefAnalysis::isRegUsedAfter(MachineInstr *MI,
-                                         MCRegister Reg) const {
+bool ReachingDefAnalysis::isRegUsedAfter(MachineInstr *MI, Register Reg) const {
   MachineBasicBlock *MBB = MI->getParent();
   LiveRegUnits LiveRegs(*TRI);
   LiveRegs.addLiveOuts(*MBB);
@@ -487,7 +482,7 @@ bool ReachingDefAnalysis::isRegUsedAfter(MachineInstr *MI,
 }
 
 bool ReachingDefAnalysis::isRegDefinedAfter(MachineInstr *MI,
-                                            MCRegister Reg) const {
+                                            Register Reg) const {
   MachineBasicBlock *MBB = MI->getParent();
   auto Last = MBB->getLastNonDebugInstr();
   if (Last != MBB->end() &&
@@ -501,7 +496,7 @@ bool ReachingDefAnalysis::isRegDefinedAfter(MachineInstr *MI,
 }
 
 bool ReachingDefAnalysis::isReachingDefLiveOut(MachineInstr *MI,
-                                               MCRegister Reg) const {
+                                               Register Reg) const {
   MachineBasicBlock *MBB = MI->getParent();
   LiveRegUnits LiveRegs(*TRI);
   LiveRegs.addLiveOuts(*MBB);
@@ -522,7 +517,7 @@ bool ReachingDefAnalysis::isReachingDefLiveOut(MachineInstr *MI,
 }
 
 MachineInstr *ReachingDefAnalysis::getLocalLiveOutMIDef(MachineBasicBlock *MBB,
-                                                        MCRegister Reg) const {
+                                                        Register Reg) const {
   LiveRegUnits LiveRegs(*TRI);
   LiveRegs.addLiveOuts(*MBB);
   if (LiveRegs.available(Reg))
@@ -646,7 +641,7 @@ ReachingDefAnalysis::isSafeToRemove(MachineInstr *MI, InstSet &Visited,
 void ReachingDefAnalysis::collectKilledOperands(MachineInstr *MI,
                                                 InstSet &Dead) const {
   Dead.insert(MI);
-  auto IsDead = [this, &Dead](MachineInstr *Def, MCRegister Reg) {
+  auto IsDead = [this, &Dead](MachineInstr *Def, Register Reg) {
     if (mayHaveSideEffects(*Def))
       return false;
 
@@ -676,12 +671,12 @@ void ReachingDefAnalysis::collectKilledOperands(MachineInstr *MI,
 }
 
 bool ReachingDefAnalysis::isSafeToDefRegAt(MachineInstr *MI,
-                                           MCRegister Reg) const {
+                                           Register Reg) const {
   SmallPtrSet<MachineInstr*, 1> Ignore;
   return isSafeToDefRegAt(MI, Reg, Ignore);
 }
 
-bool ReachingDefAnalysis::isSafeToDefRegAt(MachineInstr *MI, MCRegister Reg,
+bool ReachingDefAnalysis::isSafeToDefRegAt(MachineInstr *MI, Register Reg,
                                            InstSet &Ignore) const {
   // Check for any uses of the register after MI.
   if (isRegUsedAfter(MI, Reg)) {
