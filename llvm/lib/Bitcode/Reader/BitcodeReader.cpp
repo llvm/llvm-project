@@ -1910,6 +1910,10 @@ static uint64_t getRawAttributeMask(Attribute::AttrKind Val) {
     return 1ULL << 62;
   case Attribute::NoFree:
     return 1ULL << 63;
+  // 7ULL << 36 is ErrnoMemOnly, which is upgraded separately.
+  // 7ULL << 37 is InaccessibleMemOrErrnoMemOnly, which is upgraded separately.
+  // 7ULL << 38 is InaccessibleMemOrArgOrErrnoMemOnly, which is upgraded
+  // separately.
   default:
     // Other attributes are not supported in the raw format,
     // as we ran out of space.
@@ -1981,6 +1985,21 @@ static void decodeLLVMAttributesForBitcode(AttrBuilder &B,
       // WriteOnly
       Attrs &= ~(1ULL << 53);
       ME &= MemoryEffects::writeOnly();
+    }
+    if (Attrs & (7ULL << 36)) {
+      // ErrnoMemOnly
+      Attrs &= ~(7ULL << 36);
+      ME &= MemoryEffects::errnoMemOnly();
+    }
+    if (Attrs & (7ULL << 37)) {
+      // InaccessibleMemOrErrnoMemOnly
+      Attrs &= ~(7ULL << 37);
+      ME &= MemoryEffects::inaccessibleOrErrnoMemOnly();
+    }
+    if (Attrs & (7ULL << 38)) {
+      // InaccessibleMemOrArgOrErrnoMemOnly
+      Attrs &= ~(7ULL << 38);
+      ME &= MemoryEffects::inaccessibleOrArgOrErrnoMemOnly();
     }
     if (ME != MemoryEffects::unknown())
       B.addMemoryAttr(ME);
@@ -2289,8 +2308,17 @@ static bool upgradeOldMemoryAttribute(MemoryEffects &ME, uint64_t EncodedKind) {
   case bitc::ATTR_KIND_INACCESSIBLEMEM_ONLY:
     ME &= MemoryEffects::inaccessibleMemOnly();
     return true;
+  case bitc::ATTR_KIND_ERRNOMEMONLY:
+    ME &= MemoryEffects::errnoMemOnly();
+    return true;
   case bitc::ATTR_KIND_INACCESSIBLEMEM_OR_ARGMEMONLY:
     ME &= MemoryEffects::inaccessibleOrArgMemOnly();
+    return true;
+  case bitc::ATTR_KIND_INACCESSIBLEMEM_OR_ERRNOMEMONLY:
+    ME &= MemoryEffects::inaccessibleOrErrnoMemOnly();
+    return true;
+  case bitc::ATTR_KIND_INACCESSIBLEMEM_OR_ARGMEM_OR_ERRNOMEMONLY:
+    ME &= MemoryEffects::inaccessibleOrArgOrErrnoMemOnly();
     return true;
   default:
     return false;

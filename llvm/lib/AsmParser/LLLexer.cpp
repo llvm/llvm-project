@@ -701,9 +701,13 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(readwrite);
   KEYWORD(argmem);
   KEYWORD(inaccessiblemem);
+  KEYWORD(errnomem);
   KEYWORD(argmemonly);
   KEYWORD(inaccessiblememonly);
+  KEYWORD(errnomemonly);
   KEYWORD(inaccessiblemem_or_argmemonly);
+  KEYWORD(inaccessiblemem_or_errnomemonly);
+  KEYWORD(inaccessiblemem_or_argmem_or_errnomemonly);
   KEYWORD(address_is_null);
   KEYWORD(address);
   KEYWORD(provenance);

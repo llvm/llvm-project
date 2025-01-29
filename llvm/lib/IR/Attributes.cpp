@@ -643,6 +643,9 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
       case IRMemLocation::InaccessibleMem:
         OS << "inaccessiblemem: ";
         break;
+      case IRMemLocation::ErrnoMem:
+        OS << "errnomem: ";
+        break;
       case IRMemLocation::Other:
         llvm_unreachable("This is represented as the default access kind");
       }

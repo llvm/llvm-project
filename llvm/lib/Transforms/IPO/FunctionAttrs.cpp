@@ -128,6 +128,15 @@ static void addLocAccess(MemoryEffects &ME, const MemoryLocation &Loc,
     ME |= MemoryEffects::argMemOnly(MR);
     return;
   }
+  // TODO: This should be refined to use upcoming Loc.TBAAErrno for errno
+  // memory, rather than manually inspecting the underlying object.
+  if (isa<CallInst>(UO)) {
+    auto *Callee = cast<CallInst>(UO)->getCalledFunction();
+    if (Callee && Callee->getName() == "__errno_location") {
+      ME |= MemoryEffects::errnoMemOnly(MR);
+      return;
+    }
+  }
 
   // If it's not an identified object, it might be an argument.
   if (!isIdentifiedObject(UO))
@@ -210,6 +219,9 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
       if (isa<PseudoProbeInst>(I))
         continue;
 
+      // Merge callee's memory effects into caller's ones, including
+      // inaccessible and errno memory, but excluding argument memory, which is
+      // handled separately.
       ME |= CallME.getWithoutLoc(IRMemLocation::ArgMem);
 
       // If the call accesses captured memory (currently part of "other") and
