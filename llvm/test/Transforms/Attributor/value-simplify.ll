@@ -973,11 +973,11 @@ define i1 @icmp() {
 define void @test_callee_is_undef(ptr %fn) {
 ; TUNIT-LABEL: define {{[^@]+}}@test_callee_is_undef
 ; TUNIT-SAME: (ptr nofree captures(none) [[FN:%.*]]) {
-; TUNIT-NEXT:    call void @unknown_calle_arg_is_undef(ptr nofree noundef captures(none) [[FN]])
-; TUNIT-NEXT:    ret void
+; TUNIT-NEXT:    unreachable
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@test_callee_is_undef
-; CGSCC-SAME: (ptr nofree noundef nonnull captures(none) [[FN:%.*]]) {
+; CGSCC-SAME: (ptr nofree captures(none) [[FN:%.*]]) {
+; CGSCC-NEXT:    call void @callee_is_undef()
 ; CGSCC-NEXT:    call void @unknown_calle_arg_is_undef(ptr nofree noundef nonnull captures(none) [[FN]])
 ; CGSCC-NEXT:    ret void
 ;
@@ -997,10 +997,10 @@ define internal void @callee_is_undef(ptr %fn) {
 }
 define internal void @unknown_calle_arg_is_undef(ptr %fn, i32 %arg) {
 ;
-; CHECK-LABEL: define {{[^@]+}}@unknown_calle_arg_is_undef
-; CHECK-SAME: (ptr nofree noundef nonnull captures(none) [[FN:%.*]]) {
-; CHECK-NEXT:    call void [[FN]](i32 undef)
-; CHECK-NEXT:    ret void
+; CGSCC-LABEL: define {{[^@]+}}@unknown_calle_arg_is_undef
+; CGSCC-SAME: (ptr nofree noundef nonnull captures(none) [[FN:%.*]]) {
+; CGSCC-NEXT:    call void [[FN]](i32 undef)
+; CGSCC-NEXT:    ret void
 ;
   call void %fn(i32 %arg)
   ret void
