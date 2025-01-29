@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_BINARY_SEARCH_H
-#define _LIBCPP___ALGORITHM_BINARY_SEARCH_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_BINARY_SEARCH_H
+#define _LIBCPP___CXX03___ALGORITHM_BINARY_SEARCH_H
 
-#include <__algorithm/comp.h>
-#include <__algorithm/comp_ref_type.h>
-#include <__algorithm/lower_bound.h>
-#include <__config>
-#include <__iterator/iterator_traits.h>
+#include <__cxx03/__algorithm/comp.h>
+#include <__cxx03/__algorithm/comp_ref_type.h>
+#include <__cxx03/__algorithm/lower_bound.h>
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/iterator_traits.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -36,4 +36,4 @@ binary_search(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __va
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_BINARY_SEARCH_H
+#endif // _LIBCPP___CXX03___ALGORITHM_BINARY_SEARCH_H

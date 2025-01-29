@@ -431,6 +431,7 @@ public:
   bool usesThreadWrapperFunction(const VarDecl *VD) const override {
     return getContext().getLangOpts().isCompatibleWithMSVC(
                LangOptions::MSVC2019_5) &&
+           CGM.getCodeGenOpts().TlsGuards &&
            (!isEmittedWithConstantInitializer(VD) || mayNeedDestruction(VD));
   }
   LValue EmitThreadLocalVarDeclLValue(CodeGenFunction &CGF, const VarDecl *VD,
@@ -917,7 +918,7 @@ void MicrosoftCXXABI::emitBeginCatch(CodeGenFunction &CGF,
   VarDecl *CatchParam = S->getExceptionDecl();
   llvm::BasicBlock *CatchPadBB = CGF.Builder.GetInsertBlock();
   llvm::CatchPadInst *CPI =
-      cast<llvm::CatchPadInst>(CatchPadBB->getFirstNonPHI());
+      cast<llvm::CatchPadInst>(CatchPadBB->getFirstNonPHIIt());
   CGF.CurrentFuncletPad = CPI;
 
   // If this is a catch-all or the catch parameter is unnamed, we don't need to
@@ -3453,7 +3454,7 @@ llvm::Value *MicrosoftCXXABI::EmitNonNullMemberPointerConversion(
   if (inheritanceModelHasOnlyOneField(IsFunc, DstInheritance)) {
     Dst = FirstField;
   } else {
-    Dst = llvm::UndefValue::get(ConvertMemberPointerType(DstTy));
+    Dst = llvm::PoisonValue::get(ConvertMemberPointerType(DstTy));
     unsigned Idx = 0;
     Dst = Builder.CreateInsertValue(Dst, FirstField, Idx++);
     if (inheritanceModelHasNVOffsetField(IsFunc, DstInheritance))

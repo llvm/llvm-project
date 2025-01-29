@@ -7,18 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_BIND_H
-#define _LIBCPP___FUNCTIONAL_BIND_H
+#ifndef _LIBCPP___CXX03___FUNCTIONAL_BIND_H
+#define _LIBCPP___CXX03___FUNCTIONAL_BIND_H
 
-#include <__config>
-#include <__functional/invoke.h>
-#include <__functional/weak_result_type.h>
-#include <__fwd/functional.h>
-#include <__type_traits/decay.h>
-#include <__type_traits/is_reference_wrapper.h>
-#include <__type_traits/is_void.h>
-#include <cstddef>
-#include <tuple>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/invoke.h>
+#include <__cxx03/__functional/weak_result_type.h>
+#include <__cxx03/__fwd/functional.h>
+#include <__cxx03/__type_traits/decay.h>
+#include <__cxx03/__type_traits/is_reference_wrapper.h>
+#include <__cxx03/__type_traits/is_void.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/tuple>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -293,4 +293,4 @@ bind(_Fp&& __f, _BoundArgs&&... __bound_args) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_BIND_H
+#endif // _LIBCPP___CXX03___FUNCTIONAL_BIND_H

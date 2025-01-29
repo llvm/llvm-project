@@ -690,7 +690,7 @@ let Defs = [RAX, RDX, RSI], Uses = [RAX, RSI] in
 let SchedRW = [WriteSystem] in {
 let Defs = [EAX, EDX], Uses = [ECX] in
   def RDPKRUr : I<0x01, MRM_EE, (outs), (ins), "rdpkru",
-                  [(set EAX, (X86rdpkru ECX)), (implicit EDX)]>, TB;
+                  [(set EAX, EDX, (X86rdpkru ECX))]>, TB;
 let Uses = [EAX, ECX, EDX] in
   def WRPKRUr : I<0x01, MRM_EF, (outs), (ins), "wrpkru",
                   [(X86wrpkru EAX, EDX, ECX)]>, TB;

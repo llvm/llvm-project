@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_ALIGNMENT_OF_H
-#define _LIBCPP___TYPE_TRAITS_ALIGNMENT_OF_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_ALIGNMENT_OF_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_ALIGNMENT_OF_H
 
-#include <__config>
-#include <__type_traits/integral_constant.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -29,4 +29,4 @@ inline constexpr size_t alignment_of_v = _LIBCPP_ALIGNOF(_Tp);
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_ALIGNMENT_OF_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_ALIGNMENT_OF_H

@@ -6,11 +6,11 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_COMPLEX_H
-#define _LIBCPP___FWD_COMPLEX_H
+#ifndef _LIBCPP___CXX03___FWD_COMPLEX_H
+#define _LIBCPP___CXX03___FWD_COMPLEX_H
 
-#include <__config>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -39,4 +39,4 @@ _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& get(const complex<_Tp>&&) noexcept;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_COMPLEX_H
+#endif // _LIBCPP___CXX03___FWD_COMPLEX_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STDBOOL_H
-#define _LIBCPP_STDBOOL_H
+#ifndef _LIBCPP___CXX03_STDBOOL_H
+#define _LIBCPP___CXX03_STDBOOL_H
 
 /*
     stdbool.h synopsis
@@ -19,7 +19,7 @@ Macros:
 
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -37,4 +37,4 @@ Macros:
 #  define __bool_true_false_are_defined 1
 #endif
 
-#endif // _LIBCPP_STDBOOL_H
+#endif // _LIBCPP___CXX03_STDBOOL_H

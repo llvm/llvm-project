@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FILESYSTEM_SPACE_INFO_H
-#define _LIBCPP___FILESYSTEM_SPACE_INFO_H
+#ifndef _LIBCPP___CXX03___FILESYSTEM_SPACE_INFO_H
+#define _LIBCPP___CXX03___FILESYSTEM_SPACE_INFO_H
 
-#include <__config>
-#include <cstdint>
+#include <__cxx03/__config>
+#include <__cxx03/cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -35,4 +35,4 @@ _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 #endif // _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___FILESYSTEM_SPACE_INFO_H
+#endif // _LIBCPP___CXX03___FILESYSTEM_SPACE_INFO_H

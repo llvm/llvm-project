@@ -6,24 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TUPLE_SFINAE_HELPERS_H
-#define _LIBCPP___TUPLE_SFINAE_HELPERS_H
+#ifndef _LIBCPP___CXX03___TUPLE_SFINAE_HELPERS_H
+#define _LIBCPP___CXX03___TUPLE_SFINAE_HELPERS_H
 
-#include <__config>
-#include <__fwd/tuple.h>
-#include <__tuple/make_tuple_types.h>
-#include <__tuple/tuple_element.h>
-#include <__tuple/tuple_like_ext.h>
-#include <__tuple/tuple_size.h>
-#include <__tuple/tuple_types.h>
-#include <__type_traits/conjunction.h>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_constructible.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/remove_cvref.h>
-#include <__type_traits/remove_reference.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/tuple.h>
+#include <__cxx03/__tuple/make_tuple_types.h>
+#include <__cxx03/__tuple/tuple_element.h>
+#include <__cxx03/__tuple/tuple_like_ext.h>
+#include <__cxx03/__tuple/tuple_size.h>
+#include <__cxx03/__tuple/tuple_types.h>
+#include <__cxx03/__type_traits/conjunction.h>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/is_constructible.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/remove_cvref.h>
+#include <__cxx03/__type_traits/remove_reference.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -139,4 +139,4 @@ struct __sfinae_assign_base<false, true> {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TUPLE_SFINAE_HELPERS_H
+#endif // _LIBCPP___CXX03___TUPLE_SFINAE_HELPERS_H

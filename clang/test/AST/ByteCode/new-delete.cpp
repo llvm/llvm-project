@@ -274,6 +274,15 @@ namespace NowThrowNew {
   static_assert(erroneous_array_bound_nothrow2(-1) == 0);// expected-error {{not an integral constant expression}}
   static_assert(!erroneous_array_bound_nothrow2(1LL << 62));// expected-error {{not an integral constant expression}}
 
+  constexpr bool erroneous_array_bound(long long n) {
+    delete[] new int[n]; // both-note {{array bound -1 is negative}} both-note {{array bound 4611686018427387904 is too large}}
+    return true;
+  }
+  static_assert(erroneous_array_bound(3));
+  static_assert(erroneous_array_bound(0));
+  static_assert(erroneous_array_bound(-1)); // both-error {{constant expression}} both-note {{in call}}
+  static_assert(erroneous_array_bound(1LL << 62)); // both-error {{constant expression}} both-note {{in call}}
+
   constexpr bool evaluate_nothrow_arg() {
     bool ok = false;
     delete new ((ok = true, std::nothrow)) int;
@@ -569,6 +578,16 @@ namespace CastedDelete {
     return a;
   }
   static_assert(vdtor_1() == 1);
+
+  constexpr int foo() { // both-error {{never produces a constant expression}}
+      struct S {};
+      struct T : S {};
+      S *p = new T();
+      delete p; // both-note 2{{delete of object with dynamic type 'T' through pointer to base class type 'S' with non-virtual destructor}}
+      return 1;
+  }
+  static_assert(foo() == 1); // both-error {{not an integral constant expression}} \
+                             // both-note {{in call to}}
 }
 
 constexpr void use_after_free_2() { // both-error {{never produces a constant expression}}
@@ -583,8 +602,7 @@ namespace std {
   using size_t = decltype(sizeof(0));
   template<typename T> struct allocator {
     constexpr T *allocate(size_t N) {
-      return (T*)__builtin_operator_new(sizeof(T) * N); // both-note 2{{allocation performed here}} \
-                                                        // #alloc
+      return (T*)__builtin_operator_new(sizeof(T) * N); // #alloc
     }
     constexpr void deallocate(void *p) {
       __builtin_operator_delete(p); // both-note 2{{std::allocator<...>::deallocate' used to delete pointer to object allocated with 'new'}} \
@@ -622,7 +640,7 @@ namespace OperatorNewDelete {
       p = new int[1]; // both-note {{heap allocation performed here}}
       break;
     case 2:
-      p = std::allocator<int>().allocate(1);
+      p = std::allocator<int>().allocate(1); // both-note 2{{heap allocation performed here}}
       break;
     }
     switch (dealloc_kind) {
@@ -818,6 +836,26 @@ namespace ToplevelScopeInTemplateArg {
       static_assert(string().size() == 4);
   }
 }
+
+template <typename T>
+struct SS {
+    constexpr SS(unsigned long long N)
+    : data(nullptr){
+        data = alloc.allocate(N);  // #call
+        for(std::size_t i = 0; i < N; i ++)
+            std::construct_at<T>(data + i, i); // #construct_call
+    }
+    constexpr T operator[](std::size_t i) const {
+      return data[i];
+    }
+
+    constexpr ~SS() {
+        alloc.deallocate(data);
+    }
+    std::allocator<T> alloc;
+    T* data;
+};
+constexpr unsigned short ssmall = SS<unsigned short>(100)[42];
 
 #else
 /// Make sure we reject this prior to C++20

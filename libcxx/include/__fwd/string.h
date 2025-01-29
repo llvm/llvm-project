@@ -34,7 +34,7 @@ struct char_traits<char16_t>;
 template <>
 struct char_traits<char32_t>;
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 struct char_traits<wchar_t>;
 #endif
@@ -44,7 +44,7 @@ class _LIBCPP_TEMPLATE_VIS basic_string;
 
 using string = basic_string<char>;
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 using wstring = basic_string<wchar_t>;
 #endif
 
@@ -63,7 +63,7 @@ using basic_string _LIBCPP_AVAILABILITY_PMR = std::basic_string<_CharT, _Traits,
 
 using string _LIBCPP_AVAILABILITY_PMR = basic_string<char>;
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 using wstring _LIBCPP_AVAILABILITY_PMR = basic_string<wchar_t>;
 #  endif
 
@@ -80,7 +80,7 @@ using u32string _LIBCPP_AVAILABILITY_PMR = basic_string<char32_t>;
 // clang-format off
 template <class _CharT, class _Traits, class _Allocator>
 class _LIBCPP_PREFERRED_NAME(string)
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
       _LIBCPP_PREFERRED_NAME(wstring)
 #endif
 #if _LIBCPP_HAS_CHAR8_T
@@ -90,7 +90,7 @@ class _LIBCPP_PREFERRED_NAME(string)
       _LIBCPP_PREFERRED_NAME(u32string)
 #if _LIBCPP_STD_VER >= 17
       _LIBCPP_PREFERRED_NAME(pmr::string)
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
       _LIBCPP_PREFERRED_NAME(pmr::wstring)
 #  endif
 #  if _LIBCPP_HAS_CHAR8_T

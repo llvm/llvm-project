@@ -14,7 +14,6 @@
 #include "HexagonTargetMachine.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
-#include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;

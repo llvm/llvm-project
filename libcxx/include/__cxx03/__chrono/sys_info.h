@@ -9,18 +9,18 @@
 
 // For information see https://libcxx.llvm.org/DesignDocs/TimeZone.html
 
-#ifndef _LIBCPP___CHRONO_SYS_INFO_H
-#define _LIBCPP___CHRONO_SYS_INFO_H
+#ifndef _LIBCPP___CXX03___CHRONO_SYS_INFO_H
+#define _LIBCPP___CXX03___CHRONO_SYS_INFO_H
 
-#include <version>
+#include <__cxx03/version>
 // Enable the contents of the header only when libc++ was built with experimental features enabled.
 #if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
-#  include <__chrono/duration.h>
-#  include <__chrono/system_clock.h>
-#  include <__chrono/time_point.h>
-#  include <__config>
-#  include <string>
+#  include <__cxx03/__chrono/duration.h>
+#  include <__cxx03/__chrono/system_clock.h>
+#  include <__cxx03/__chrono/time_point.h>
+#  include <__cxx03/__config>
+#  include <__cxx03/string>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -48,4 +48,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
-#endif // _LIBCPP___CHRONO_SYS_INFO_H
+#endif // _LIBCPP___CXX03___CHRONO_SYS_INFO_H

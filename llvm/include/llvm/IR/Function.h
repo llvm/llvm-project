@@ -284,6 +284,18 @@ public:
     setValueSubclassData((getSubclassDataFromValue() & 0xc00f) | (ID << 4));
   }
 
+  /// Does it have a kernel calling convention?
+  bool hasKernelCallingConv() const {
+    switch (getCallingConv()) {
+    default:
+      return false;
+    case CallingConv::PTX_Kernel:
+    case CallingConv::AMDGPU_KERNEL:
+    case CallingConv::SPIR_KERNEL:
+      return true;
+    }
+  }
+
   enum ProfileCountType { PCT_Real, PCT_Synthetic };
 
   /// Class to represent profile counts.
@@ -942,9 +954,14 @@ public:
   ///
   void viewCFG() const;
 
+  /// viewCFG - This function is meant for use from the debugger. It works just
+  /// like viewCFG(), but generates the dot file with the given file name.
+  void viewCFG(const char *OutputFileName) const;
+
   /// Extended form to print edge weights.
   void viewCFG(bool ViewCFGOnly, const BlockFrequencyInfo *BFI,
-               const BranchProbabilityInfo *BPI) const;
+               const BranchProbabilityInfo *BPI,
+               const char *OutputFileName = nullptr) const;
 
   /// viewCFGOnly - This function is meant for use from the debugger.  It works
   /// just like viewCFG, but it does not include the contents of basic blocks
@@ -952,6 +969,10 @@ public:
   /// this can make the graph smaller.
   ///
   void viewCFGOnly() const;
+
+  /// viewCFG - This function is meant for use from the debugger. It works just
+  /// like viewCFGOnly(), but generates the dot file with the given file name.
+  void viewCFGOnly(const char *OutputFileName) const;
 
   /// Extended form to print edge weights.
   void viewCFGOnly(const BlockFrequencyInfo *BFI,

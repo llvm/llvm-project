@@ -49,6 +49,7 @@ class InstCombinePass : public PassInfoMixin<InstCombinePass> {
 private:
   InstructionWorklist Worklist;
   InstCombineOptions Options;
+  static char ID;
 
 public:
   explicit InstCombinePass(InstCombineOptions Opts = {});

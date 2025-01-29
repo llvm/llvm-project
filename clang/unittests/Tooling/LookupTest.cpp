@@ -13,31 +13,31 @@
 using namespace clang;
 
 namespace {
-struct GetDeclsVisitor : TestVisitor<GetDeclsVisitor> {
+struct GetDeclsVisitor : TestVisitor {
   std::function<void(CallExpr *)> OnCall;
   std::function<void(RecordTypeLoc)> OnRecordTypeLoc;
   std::function<void(UsingTypeLoc)> OnUsingTypeLoc;
   SmallVector<Decl *, 4> DeclStack;
 
-  bool VisitCallExpr(CallExpr *Expr) {
+  bool VisitCallExpr(CallExpr *Expr) override {
     if (OnCall)
       OnCall(Expr);
     return true;
   }
 
-  bool VisitRecordTypeLoc(RecordTypeLoc Loc) {
+  bool VisitRecordTypeLoc(RecordTypeLoc Loc) override {
     if (OnRecordTypeLoc)
       OnRecordTypeLoc(Loc);
     return true;
   }
 
-  bool VisitUsingTypeLoc(UsingTypeLoc Loc) {
+  bool VisitUsingTypeLoc(UsingTypeLoc Loc) override {
     if (OnUsingTypeLoc)
       OnUsingTypeLoc(Loc);
     return true;
   }
 
-  bool TraverseDecl(Decl *D) {
+  bool TraverseDecl(Decl *D) override {
     DeclStack.push_back(D);
     bool Ret = TestVisitor::TraverseDecl(D);
     DeclStack.pop_back();

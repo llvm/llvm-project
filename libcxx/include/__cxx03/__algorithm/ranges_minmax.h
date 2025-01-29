@@ -6,31 +6,31 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_MINMAX_H
-#define _LIBCPP___ALGORITHM_RANGES_MINMAX_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_RANGES_MINMAX_H
+#define _LIBCPP___CXX03___ALGORITHM_RANGES_MINMAX_H
 
-#include <__algorithm/min_max_result.h>
-#include <__algorithm/minmax_element.h>
-#include <__assert>
-#include <__concepts/copyable.h>
-#include <__concepts/same_as.h>
-#include <__config>
-#include <__functional/identity.h>
-#include <__functional/invoke.h>
-#include <__functional/ranges_operations.h>
-#include <__iterator/concepts.h>
-#include <__iterator/next.h>
-#include <__iterator/projected.h>
-#include <__ranges/access.h>
-#include <__ranges/concepts.h>
-#include <__type_traits/desugars_to.h>
-#include <__type_traits/is_reference.h>
-#include <__type_traits/is_trivially_copyable.h>
-#include <__type_traits/remove_cvref.h>
-#include <__utility/forward.h>
-#include <__utility/move.h>
-#include <__utility/pair.h>
-#include <initializer_list>
+#include <__cxx03/__algorithm/min_max_result.h>
+#include <__cxx03/__algorithm/minmax_element.h>
+#include <__cxx03/__assert>
+#include <__cxx03/__concepts/copyable.h>
+#include <__cxx03/__concepts/same_as.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/identity.h>
+#include <__cxx03/__functional/invoke.h>
+#include <__cxx03/__functional/ranges_operations.h>
+#include <__cxx03/__iterator/concepts.h>
+#include <__cxx03/__iterator/next.h>
+#include <__cxx03/__iterator/projected.h>
+#include <__cxx03/__ranges/access.h>
+#include <__cxx03/__ranges/concepts.h>
+#include <__cxx03/__type_traits/desugars_to.h>
+#include <__cxx03/__type_traits/is_reference.h>
+#include <__cxx03/__type_traits/is_trivially_copyable.h>
+#include <__cxx03/__type_traits/remove_cvref.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/__utility/pair.h>
+#include <__cxx03/initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -39,7 +39,7 @@
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_PUSH_MACROS
-#  include <__undef_macros>
+#  include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -172,4 +172,4 @@ _LIBCPP_POP_MACROS
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP___ALGORITHM_RANGES_MINMAX_H
+#endif // _LIBCPP___CXX03___ALGORITHM_RANGES_MINMAX_H

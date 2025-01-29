@@ -7,23 +7,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_LOCALE_BASE_API_IBM_H
-#define _LIBCPP___LOCALE_LOCALE_BASE_API_IBM_H
+#ifndef _LIBCPP___CXX03___LOCALE_LOCALE_BASE_API_IBM_H
+#define _LIBCPP___CXX03___LOCALE_LOCALE_BASE_API_IBM_H
 
 #if defined(__MVS__)
-#  include <__support/ibm/locale_mgmt_zos.h>
+#  include <__cxx03/__support/ibm/locale_mgmt_zos.h>
 #endif // defined(__MVS__)
 
-#include <locale.h>
-#include <stdarg.h>
-#include <stdio.h>
+#include <__cxx03/locale.h>
+#include <__cxx03/stdarg.h>
+#include <__cxx03/stdio.h>
 
 #include "cstdlib"
 
 #if defined(__MVS__)
-#  include <wctype.h>
+#  include <__cxx03/wctype.h>
 // POSIX routines
-#  include <__support/xlocale/__posix_l_fallback.h>
+#  include <__cxx03/__support/xlocale/__posix_l_fallback.h>
 #endif // defined(__MVS__)
 
 namespace {
@@ -105,4 +105,4 @@ _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 2, 0) int vasprintf(char** strp, const char
   return str_size;
 }
 
-#endif // _LIBCPP___LOCALE_LOCALE_BASE_API_IBM_H
+#endif // _LIBCPP___CXX03___LOCALE_LOCALE_BASE_API_IBM_H

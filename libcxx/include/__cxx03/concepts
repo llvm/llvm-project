@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CONCEPTS
-#define _LIBCPP_CONCEPTS
+#ifndef _LIBCPP___CXX03_CONCEPTS
+#define _LIBCPP___CXX03_CONCEPTS
 
 /*
     concepts synopsis
@@ -129,45 +129,45 @@ namespace std {
 
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if _LIBCPP_STD_VER >= 20
-#  include <__concepts/arithmetic.h>
-#  include <__concepts/assignable.h>
-#  include <__concepts/boolean_testable.h>
-#  include <__concepts/class_or_enum.h>
-#  include <__concepts/common_reference_with.h>
-#  include <__concepts/common_with.h>
-#  include <__concepts/constructible.h>
-#  include <__concepts/convertible_to.h>
-#  include <__concepts/copyable.h>
-#  include <__concepts/derived_from.h>
-#  include <__concepts/destructible.h>
-#  include <__concepts/different_from.h>
-#  include <__concepts/equality_comparable.h>
-#  include <__concepts/invocable.h>
-#  include <__concepts/movable.h>
-#  include <__concepts/predicate.h>
-#  include <__concepts/regular.h>
-#  include <__concepts/relation.h>
-#  include <__concepts/same_as.h>
-#  include <__concepts/semiregular.h>
-#  include <__concepts/swappable.h>
-#  include <__concepts/totally_ordered.h>
+#  include <__cxx03/__concepts/arithmetic.h>
+#  include <__cxx03/__concepts/assignable.h>
+#  include <__cxx03/__concepts/boolean_testable.h>
+#  include <__cxx03/__concepts/class_or_enum.h>
+#  include <__cxx03/__concepts/common_reference_with.h>
+#  include <__cxx03/__concepts/common_with.h>
+#  include <__cxx03/__concepts/constructible.h>
+#  include <__cxx03/__concepts/convertible_to.h>
+#  include <__cxx03/__concepts/copyable.h>
+#  include <__cxx03/__concepts/derived_from.h>
+#  include <__cxx03/__concepts/destructible.h>
+#  include <__cxx03/__concepts/different_from.h>
+#  include <__cxx03/__concepts/equality_comparable.h>
+#  include <__cxx03/__concepts/invocable.h>
+#  include <__cxx03/__concepts/movable.h>
+#  include <__cxx03/__concepts/predicate.h>
+#  include <__cxx03/__concepts/regular.h>
+#  include <__cxx03/__concepts/relation.h>
+#  include <__cxx03/__concepts/same_as.h>
+#  include <__cxx03/__concepts/semiregular.h>
+#  include <__cxx03/__concepts/swappable.h>
+#  include <__cxx03/__concepts/totally_ordered.h>
 #endif // _LIBCPP_STD_VER >= 20
 
-#include <version>
+#include <__cxx03/version>
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
-#  include <cstddef>
+#  include <__cxx03/cstddef>
 #endif
 
 #if _LIBCPP_STD_VER <= 20 && !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
-#  include <type_traits>
+#  include <__cxx03/type_traits>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-#endif // _LIBCPP_CONCEPTS
+#endif // _LIBCPP___CXX03_CONCEPTS

@@ -60,9 +60,6 @@ public:
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
-  bool areInlineCompatible(const Function *Caller,
-                           const Function *Callee) const;
-
   /// Return the cost of materializing an immediate for a value operand of
   /// a store instruction.
   InstructionCost getStoreImmCost(Type *VecTy, TTI::OperandValueInfo OpInfo,
@@ -152,7 +149,8 @@ public:
   InstructionCost getScalarizationOverhead(VectorType *Ty,
                                            const APInt &DemandedElts,
                                            bool Insert, bool Extract,
-                                           TTI::TargetCostKind CostKind);
+                                           TTI::TargetCostKind CostKind,
+                                           ArrayRef<Value *> VL = {});
 
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         TTI::TargetCostKind CostKind);
@@ -240,7 +238,6 @@ public:
       return false;
 
     return TLI->isLegalElementTypeForRVV(ElemType);
-
   }
 
   bool isLegalMaskedLoad(Type *DataType, Align Alignment) {
@@ -301,6 +298,8 @@ public:
                                              DL);
   }
 
+  bool isLegalMaskedExpandLoad(Type *DataType, Align Alignment);
+
   bool isLegalMaskedCompressStore(Type *DataTy, Align Alignment);
 
   bool isVScaleKnownToBeAPowerOfTwo() const {
@@ -328,6 +327,12 @@ public:
 
     Type *Ty = RdxDesc.getRecurrenceType();
     if (!TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, Ty)))
+      return false;
+
+    // We can't promote f16/bf16 fadd reductions and scalable vectors can't be
+    // expanded.
+    // TODO: Promote f16/bf16 fmin/fmax reductions
+    if (Ty->isBFloatTy() || (Ty->isHalfTy() && !ST->hasVInstructionsF16()))
       return false;
 
     switch (RdxDesc.getRecurrenceKind()) {
@@ -383,6 +388,9 @@ public:
     llvm_unreachable("unknown register class");
   }
 
+  TTI::AddressingModeKind getPreferredAddressingMode(const Loop *L,
+                                                     ScalarEvolution *SE) const;
+
   unsigned getRegisterClassForType(bool Vector, Type *Ty = nullptr) const {
     if (Vector)
       return RISCVRegisterClass::VRRC;
@@ -427,6 +435,9 @@ public:
 
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const;
+
+  TTI::MemCmpExpansionOptions enableMemCmpExpansion(bool OptSize,
+                                                    bool IsZeroCmp) const;
 };
 
 } // end namespace llvm

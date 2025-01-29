@@ -19,13 +19,11 @@
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/XRayArgs.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -198,6 +196,15 @@ bool ToolChain::defaultToIEEELongDouble() const {
   return PPC_LINUX_DEFAULT_IEEELONGDOUBLE && getTriple().isOSLinux();
 }
 
+static void processMultilibCustomFlags(Multilib::flags_list &List,
+                                       const llvm::opt::ArgList &Args) {
+  for (const Arg *MultilibFlagArg :
+       Args.filtered(options::OPT_fmultilib_flag)) {
+    List.push_back(MultilibFlagArg->getAsString(Args));
+    MultilibFlagArg->claim();
+  }
+}
+
 static void getAArch64MultilibFlags(const Driver &D,
                                           const llvm::Triple &Triple,
                                           const llvm::opt::ArgList &Args,
@@ -230,10 +237,26 @@ static void getAArch64MultilibFlags(const Driver &D,
     Result.push_back(BranchProtectionArg->getAsString(Args));
   }
 
+  if (Arg *AlignArg = Args.getLastArg(
+          options::OPT_mstrict_align, options::OPT_mno_strict_align,
+          options::OPT_mno_unaligned_access, options::OPT_munaligned_access)) {
+    if (AlignArg->getOption().matches(options::OPT_mstrict_align) ||
+        AlignArg->getOption().matches(options::OPT_mno_unaligned_access))
+      Result.push_back(AlignArg->getAsString(Args));
+  }
+
+  if (Arg *Endian = Args.getLastArg(options::OPT_mbig_endian,
+                                    options::OPT_mlittle_endian)) {
+    if (Endian->getOption().matches(options::OPT_mbig_endian))
+      Result.push_back(Endian->getAsString(Args));
+  }
+
   const Arg *ABIArg = Args.getLastArgNoClaim(options::OPT_mabi_EQ);
   if (ABIArg) {
     Result.push_back(ABIArg->getAsString(Args));
   }
+
+  processMultilibCustomFlags(Result, Args);
 }
 
 static void getARMMultilibFlags(const Driver &D,
@@ -287,6 +310,21 @@ static void getARMMultilibFlags(const Driver &D,
   if (BranchProtectionArg) {
     Result.push_back(BranchProtectionArg->getAsString(Args));
   }
+
+  if (Arg *AlignArg = Args.getLastArg(
+          options::OPT_mstrict_align, options::OPT_mno_strict_align,
+          options::OPT_mno_unaligned_access, options::OPT_munaligned_access)) {
+    if (AlignArg->getOption().matches(options::OPT_mstrict_align) ||
+        AlignArg->getOption().matches(options::OPT_mno_unaligned_access))
+      Result.push_back(AlignArg->getAsString(Args));
+  }
+
+  if (Arg *Endian = Args.getLastArg(options::OPT_mbig_endian,
+                                    options::OPT_mlittle_endian)) {
+    if (Endian->getOption().matches(options::OPT_mbig_endian))
+      Result.push_back(Endian->getAsString(Args));
+  }
+  processMultilibCustomFlags(Result, Args);
 }
 
 static void getRISCVMultilibFlags(const Driver &D, const llvm::Triple &Triple,
@@ -1099,6 +1137,12 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
   }
   case llvm::Triple::aarch64_32:
     return getTripleString();
+  case llvm::Triple::amdgcn: {
+    llvm::Triple Triple = getTriple();
+    if (Args.getLastArgValue(options::OPT_mcpu_EQ) == "amdgcnspirv")
+      Triple.setArch(llvm::Triple::ArchType::spirv64);
+    return Triple.getTriple();
+  }
   case llvm::Triple::arm:
   case llvm::Triple::armeb:
   case llvm::Triple::thumb:
@@ -1453,6 +1497,9 @@ void ToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
 void ToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                   ArgStringList &CC1Args) const {}
 
+void ToolChain::addSYCLIncludeArgs(const ArgList &DriverArgs,
+                                   ArgStringList &CC1Args) const {}
+
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 ToolChain::getDeviceLibs(const ArgList &DriverArgs) const {
   return {};
@@ -1564,8 +1611,10 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
     Prev = Index;
     std::unique_ptr<Arg> XOpenMPTargetArg(Opts.ParseOneArg(Args, Index));
     if (!XOpenMPTargetArg || Index > Prev + 1) {
-      getDriver().Diag(diag::err_drv_invalid_Xopenmp_target_with_args)
-          << A->getAsString(Args);
+      if (!A->isClaimed()) {
+        getDriver().Diag(diag::err_drv_invalid_Xopenmp_target_with_args)
+            << A->getAsString(Args);
+      }
       continue;
     }
     if (XOpenMPTargetNoTriple && XOpenMPTargetArg &&

@@ -7,28 +7,28 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_TGMATH_H
-#define _LIBCPP_TGMATH_H
+#ifndef _LIBCPP___CXX03_TGMATH_H
+#define _LIBCPP___CXX03_TGMATH_H
 
 /*
     tgmath.h synopsis
 
-#include <ctgmath>
+#include <__cxx03/ctgmath>
 
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 #ifdef __cplusplus
-#  include <ctgmath>
+#  include <__cxx03/ctgmath>
 #else
 #  if __has_include_next(<tgmath.h>)
 #    include_next <tgmath.h>
 #  endif
 #endif
 
-#endif // _LIBCPP_TGMATH_H
+#endif // _LIBCPP___CXX03_TGMATH_H

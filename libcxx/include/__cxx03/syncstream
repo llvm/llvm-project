@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_SYNCSTREAM
-#define _LIBCPP_SYNCSTREAM
+#ifndef _LIBCPP___CXX03_SYNCSTREAM
+#define _LIBCPP___CXX03_SYNCSTREAM
 
 /*
     syncstream synopsis
 
-#include <ostream>  // see [ostream.syn]
+#include <__cxx03/ostream>  // see [ostream.syn]
 
 namespace std {
     template<class charT, class traits, class Allocator>
@@ -115,30 +115,30 @@ namespace std {
 
 */
 
-#include <__config>
-#include <__utility/move.h>
-#include <ios>
-#include <iosfwd> // required for declaration of default arguments
-#include <streambuf>
-#include <string>
+#include <__cxx03/__config>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/ios>
+#include <__cxx03/iosfwd> // required for declaration of default arguments
+#include <__cxx03/streambuf>
+#include <__cxx03/string>
 
 #ifndef _LIBCPP_HAS_NO_THREADS
-#  include <map>
-#  include <mutex>
-#  include <shared_mutex>
+#  include <__cxx03/map>
+#  include <__cxx03/mutex>
+#  include <__cxx03/shared_mutex>
 #endif
 
 // standard-mandated includes
 
 // [syncstream.syn]
-#include <ostream>
+#include <__cxx03/ostream>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -509,4 +509,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_SYNCSTREAM
+#endif // _LIBCPP___CXX03_SYNCSTREAM

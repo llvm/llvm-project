@@ -21,7 +21,7 @@ id IhaveSideEffect(void);
 
 @synthesize bar;
 
--(id)something {}
+-(id)something { return (id)0; }
 
 -(id)test:(id)obj {
   id x = self.bar;

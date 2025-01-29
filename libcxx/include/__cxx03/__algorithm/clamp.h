@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_CLAMP_H
-#define _LIBCPP___ALGORITHM_CLAMP_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_CLAMP_H
+#define _LIBCPP___CXX03___ALGORITHM_CLAMP_H
 
-#include <__algorithm/comp.h>
-#include <__assert>
-#include <__config>
+#include <__cxx03/__algorithm/comp.h>
+#include <__cxx03/__assert>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -41,4 +41,4 @@ clamp(_LIBCPP_LIFETIMEBOUND const _Tp& __v,
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_CLAMP_H
+#endif // _LIBCPP___CXX03___ALGORITHM_CLAMP_H

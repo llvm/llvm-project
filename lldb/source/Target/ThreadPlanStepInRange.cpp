@@ -250,7 +250,7 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
                                                         eSymbolContextSymbol);
 
         if (sc.function) {
-          func_start_address = sc.function->GetAddressRange().GetBaseAddress();
+          func_start_address = sc.function->GetAddress();
           if (curr_addr == func_start_address.GetLoadAddress(&GetTarget()))
             bytes_to_skip = sc.function->GetPrologueByteSize();
         } else if (sc.symbol) {
@@ -263,8 +263,7 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
           const Architecture *arch = GetTarget().GetArchitecturePlugin();
           if (arch) {
             Address curr_sec_addr;
-            GetTarget().GetSectionLoadList().ResolveLoadAddress(curr_addr,
-                                                                curr_sec_addr);
+            GetTarget().ResolveLoadAddress(curr_addr, curr_sec_addr);
             bytes_to_skip = arch->GetBytesToSkip(*sc.symbol, curr_sec_addr);
           }
         }
@@ -489,7 +488,8 @@ bool ThreadPlanStepInRange::DoWillResume(lldb::StateType resume_state,
 bool ThreadPlanStepInRange::IsVirtualStep() {
   if (m_virtual_step == eLazyBoolCalculate) {
     Thread &thread = GetThread();
-    if (thread.GetCurrentInlinedDepth() == UINT32_MAX)
+    uint32_t cur_inline_depth = thread.GetCurrentInlinedDepth();
+    if (cur_inline_depth == UINT32_MAX || cur_inline_depth == 0)
       m_virtual_step = eLazyBoolNo;
     else
       m_virtual_step = eLazyBoolYes;

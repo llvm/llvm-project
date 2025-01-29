@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_ADD_LVALUE_REFERENCE_H
-#define _LIBCPP___TYPE_TRAITS_ADD_LVALUE_REFERENCE_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_ADD_LVALUE_REFERENCE_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_ADD_LVALUE_REFERENCE_H
 
-#include <__config>
-#include <__type_traits/is_referenceable.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/is_referenceable.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -51,4 +51,4 @@ using add_lvalue_reference_t = __add_lvalue_reference_t<_Tp>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_ADD_LVALUE_REFERENCE_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_ADD_LVALUE_REFERENCE_H

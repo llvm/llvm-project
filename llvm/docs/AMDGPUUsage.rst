@@ -399,6 +399,13 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item
                                                                         IDs
 
+     ``gfx950``                  ``amdgcn``   dGPU  - sramecc         - Architected                   *TBA*
+                                                    - tgsplit           flat
+                                                    - xnack             scratch                       .. TODO::
+                                                    - kernarg preload - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
      **GCN GFX10.1 (RDNA 1)** [AMD-GCN-GFX10-RDNA1]_
      -----------------------------------------------------------------------------------------------------------------------
      ``gfx1010``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 5700
@@ -574,6 +581,12 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                   - ``v_dot4_u32_u8``
                                                                                                   - ``v_dot8_u32_u4``
                                                                                                   - ``v_dot2_f32_f16``
+
+
+     ``gfx9-4-generic``   ``amdgcn``     - ``gfx940``      - xnack            - Absolute flat   FP8 and BF8 instructions,
+                                         - ``gfx941``      - sramecc            scratch         FP8 and BF8 conversion instructions,
+                                         - ``gfx942``                                           as well as instructions with XF32 format support
+                                         - ``gfx950``                                           are not available.
 
 
      ``gfx10-1-generic``  ``amdgcn``     - ``gfx1010``     - xnack            - Absolute flat   - The following instructions are
@@ -1314,7 +1327,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    with the fifth i32 operand. The i1 sixth operand is used to clamp
                                                    the output. The i1s preceding the vector operands decide the signedness.
 
-  llvm.amdgcn.sched_barrier                        Controls the types of instructions that may be allowed to cross the intrinsic
+  llvm.amdgcn.sched.barrier                        Controls the types of instructions that may be allowed to cross the intrinsic
                                                    during instruction scheduling. The parameter is a mask for the instruction types
                                                    that can cross the intrinsic.
 
@@ -1332,7 +1345,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    - 0x0200: All DS write instructions may be scheduled across sched_barrier.
                                                    - 0x0400: All Transcendental (e.g. V_EXP) instructions may be scheduled across sched_barrier.
 
-  llvm.amdgcn.sched_group_barrier                  Creates schedule groups with specific properties to create custom scheduling
+  llvm.amdgcn.sched.group.barrier                  Creates schedule groups with specific properties to create custom scheduling
                                                    pipelines. The ordering between groups is enforced by the instruction scheduler.
                                                    The intrinsic applies to the code that preceeds the intrinsic. The intrinsic
                                                    takes three values that control the behavior of the schedule groups.
@@ -1356,13 +1369,15 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    |  ``// 5 MFMA``
                                                    |  ``__builtin_amdgcn_sched_group_barrier(8, 5, 0)``
 
-  llvm.amdgcn.iglp_opt                             An **experimental** intrinsic for instruction group level parallelism. The intrinsic
+  llvm.amdgcn.iglp.opt                             An **experimental** intrinsic for instruction group level parallelism. The intrinsic
                                                    implements predefined intruction scheduling orderings. The intrinsic applies to the
                                                    surrounding scheduling region. The intrinsic takes a value that specifies the
                                                    strategy.  The compiler implements two strategies.
 
                                                    0. Interleave DS and MFMA instructions for small GEMM kernels.
                                                    1. Interleave DS and MFMA instructions for single wave small GEMM kernels.
+                                                   2. Interleave TRANS and MFMA instructions, as well as their VALU and DS predecessors, for attention kernels.
+                                                   3. Interleave TRANS and MFMA instructions, with no predecessor interleaving, for attention kernels.
 
                                                    Only one iglp_opt intrinsic may be used in a scheduling region. The iglp_opt intrinsic
                                                    cannot be combined with sched_barrier or sched_group_barrier.
@@ -1383,6 +1398,42 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    Provides a way to convert i1 in LLVM IR to i32 or i64 lane mask - bitfield
                                                    used by hardware to control active lanes when used in EXEC register.
                                                    For example, ballot(i1 true) return EXEC mask.
+
+  llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4      Emit `v_mfma_scale_f32_16x16x128_f8f6f4` to set the scale factor. The
+                                                   last 4 operands correspond to the scale inputs.
+
+                                                   - 2-bit byte index to use for each lane for matrix A
+                                                   - Matrix A scale values
+                                                   - 2-bit byte index to use for each lane for matrix B
+                                                   - Matrix B scale values
+
+  llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4       Emit `v_mfma_scale_f32_32x32x64_f8f6f4`
+
+  llvm.amdgcn.permlane16.swap                      Provide direct access to `v_permlane16_swap_b32` instruction on supported targets.
+                                                   Swaps the values across lanes of first 2 operands. Odd rows of the first operand are
+                                                   swapped with even rows of the second operand (one row is 16 lanes).
+                                                   Returns a pair for the swapped registers. The first element of the return corresponds
+                                                   to the swapped element of the first argument.
+
+
+  llvm.amdgcn.permlane32.swap                      Provide direct access to `v_permlane32_swap_b32` instruction on supported targets.
+                                                   Swaps the values across lanes of first 2 operands. Rows 2 and 3 of the first operand are
+                                                   swapped with rows 0 and 1 of the second operand (one row is 16 lanes).
+                                                   Returns a pair for the swapped registers. The first element of the return
+                                                   corresponds to the swapped element of the first argument.
+
+  llvm.amdgcn.mov.dpp                              The llvm.amdgcn.mov.dpp.`<type>` intrinsic represents the mov.dpp operation in AMDGPU.
+                                                   This operation is being deprecated and can be replaced with llvm.amdgcn.update.dpp.
+
+  llvm.amdgcn.update.dpp                           The llvm.amdgcn.update.dpp.`<type>` intrinsic represents the update.dpp operation in AMDGPU.
+                                                   It takes an old value, a source operand, a DPP control operand, a row mask, a bank mask, and a bound control.
+                                                   Various data types are supported, including, bf16, f16, f32, f64, i16, i32, i64, p0, p3, p5, v2f16, v2f32, v2i16, v2i32, v2p0, v3i32, v4i32, v8f16.
+                                                   This operation is equivalent to a sequence of v_mov_b32 operations.
+                                                   It is preferred over llvm.amdgcn.mov.dpp.`<type>` for future use.
+                                                   `llvm.amdgcn.update.dpp.<type> <old> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>`
+                                                   Should be equivalent to:
+                                                   - `v_mov_b32 <dest> <old>`
+                                                   - `v_mov_b32 <dest> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>`
 
   ==============================================   ==========================================================
 
@@ -1645,9 +1696,9 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                              reduced by heuristics.
 
      "amdgpu-max-num-workgroups"="x,y,z"     Specify the maximum number of work groups for the kernel dispatch in the
-                                             X, Y, and Z dimensions. Generated by the ``amdgpu_max_num_work_groups``
-                                             CLANG attribute [CLANG-ATTR]_. Clang only emits this attribute when all
-                                             the three numbers are >= 1.
+                                             X, Y, and Z dimensions. Each number must be >= 1. Generated by the
+                                             ``amdgpu_max_num_work_groups`` CLANG attribute [CLANG-ATTR]_. Clang only
+                                             emits this attribute when all the three numbers are >= 1.
 
      "amdgpu-no-agpr"                        Indicates the function will not require allocating AGPRs. This is only
                                              relevant on subtargets with AGPRs. The behavior is undefined if a
@@ -1701,7 +1752,10 @@ The AMDGPU backend supports the following calling conventions:
 
                                      Values in scalar registers as well as v0-v7 are not preserved. Values in
                                      VGPRs starting at v8 are not preserved for the active lanes, but must be
-                                     saved by the callee for inactive lanes when using WWM.
+                                     saved by the callee for inactive lanes when using WWM (a notable exception is
+                                     when the llvm.amdgcn.init.whole.wave intrinsic is used in the function - in this
+                                     case the backend assumes that there are no inactive lanes upon entry; any inactive
+                                     lanes that need to be preserved must be explicitly present in the IR).
 
                                      Wave scratch is "empty" at function boundaries. There is no stack pointer input
                                      or output value, but functions are free to use scratch starting from an initial
@@ -2169,7 +2223,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX942``           0x04c      ``gfx942``
      *reserved*                                 0x04d      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1201``          0x04e      ``gfx1201``
-     *reserved*                                 0x04f      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX950``           0x04f      ``gfx950``
      *reserved*                                 0x050      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC``     0x051      ``gfx9-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC``  0x052      ``gfx10-1-generic``
@@ -2180,6 +2234,7 @@ The AMDGPU backend uses the following ELF header:
      *reserved*                                 0x057      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1153``          0x058      ``gfx1153``.
      ``EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC``    0x059      ``gfx12-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC``   0x05f      ``gfx9-4-generic``
      ========================================== ========== =============================
 
 Sections
@@ -5458,6 +5513,8 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        roundup(lds-size / (64 * 4))
                                                      GFX7-GFX11
                                                        roundup(lds-size / (128 * 4))
+                                                     GFX950
+                                                       roundup(lds-size / (320 * 4))
 
      24      1 bit   ENABLE_EXCEPTION_IEEE_754_FP    Wavefront starts execution
                      _INVALID_OPERATION              with specified exceptions
@@ -5712,9 +5769,6 @@ SGPR register initial state is defined in
      then       Flat Scratch Init          2      See
                 (enable_sgpr_flat_scratch         :ref:`amdgpu-amdhsa-kernel-prolog-flat-scratch`.
                 _init)
-     then       Preloaded Kernargs         N/A    See
-                (kernarg_preload_spec             :ref:`amdgpu-amdhsa-kernarg-preload`.
-                _length)
      then       Private Segment Size       1      The 32-bit byte size of a
                 (enable_sgpr_private              single work-item's memory
                 _segment_size)                    allocation. This is the
@@ -5735,6 +5789,9 @@ SGPR register initial state is defined in
                                                   may be needed for GFX9-GFX11 which
                                                   changes the meaning of the
                                                   Flat Scratch Init value.
+     then       Preloaded Kernargs         N/A    See
+                (kernarg_preload_spec             :ref:`amdgpu-amdhsa-kernarg-preload`.
+                _length)
      then       Work-Group Id X            1      32-bit work-group id in X
                 (enable_sgpr_workgroup_id         dimension of grid for
                 _X)                               wavefront.
@@ -5870,10 +5927,7 @@ additional 256 bytes to the kernel_code_entry_byte_offset. This addition
 facilitates the incorporation of a prologue to the kernel entry to handle cases
 where code designed for kernarg preloading is executed on hardware equipped with
 incompatible firmware. If hardware has compatible firmware the 256 bytes at the
-start of the kernel entry will be skipped. Additionally, the compiler backend
-may insert a trap instruction at the start of the kernel prologue to manage
-situations where kernarg preloading is attempted on hardware with incompatible
-firmware.
+start of the kernel entry will be skipped.
 
 With code object V5 and later, hidden kernel arguments that are normally
 accessed through the Implicit Argument Ptr, may be preloaded into User SGPRs.

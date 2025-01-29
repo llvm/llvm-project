@@ -840,9 +840,8 @@ Error RuleMatcher::defineComplexSubOperand(StringRef SymbolicName,
     return Error::success();
   }
 
-  ComplexSubOperands[SymbolicName] =
-      std::tuple(ComplexPattern, RendererID, SubOperandID);
-  ComplexSubOperandsParentName[SymbolicName] = ParentName;
+  ComplexSubOperands[SymbolicName] = {ComplexPattern, RendererID, SubOperandID};
+  ComplexSubOperandsParentName[SymbolicName] = std::move(ParentName);
 
   return Error::success();
 }
@@ -875,10 +874,8 @@ unsigned RuleMatcher::getInsnVarID(InstructionMatcher &InsnMatcher) const {
 }
 
 void RuleMatcher::defineOperand(StringRef SymbolicName, OperandMatcher &OM) {
-  if (!DefinedOperands.contains(SymbolicName)) {
-    DefinedOperands[SymbolicName] = &OM;
+  if (DefinedOperands.try_emplace(SymbolicName, &OM).second)
     return;
-  }
 
   // If the operand is already defined, then we must ensure both references in
   // the matcher have the exact same node.
@@ -889,8 +886,7 @@ void RuleMatcher::defineOperand(StringRef SymbolicName, OperandMatcher &OM) {
 }
 
 void RuleMatcher::definePhysRegOperand(const Record *Reg, OperandMatcher &OM) {
-  if (!PhysRegOperands.contains(Reg))
-    PhysRegOperands[Reg] = &OM;
+  PhysRegOperands.try_emplace(Reg, &OM);
 }
 
 InstructionMatcher &
@@ -1723,7 +1719,6 @@ OperandMatcher &InstructionMatcher::addPhysRegInput(const Record *Reg,
   OperandMatcher *OM = new OperandMatcher(*this, OpIdx, "", TempOpIdx);
   Operands.emplace_back(OM);
   Rule.definePhysRegOperand(Reg, *OM);
-  PhysRegInputs.emplace_back(Reg, OpIdx);
   return *OM;
 }
 
@@ -1993,10 +1988,13 @@ void AddRegisterRenderer::emitRenderOpcodes(MatchTable &Table,
   // TODO: This is encoded as a 64-bit element, but only 16 or 32-bits are
   // really needed for a physical register reference. We can pack the
   // register and flags in a single field.
-  if (IsDef)
-    Table << MatchTable::NamedValue(2, "RegState::Define");
-  else
+  if (IsDef) {
+    Table << MatchTable::NamedValue(
+        2, IsDead ? "RegState::Define | RegState::Dead" : "RegState::Define");
+  } else {
+    assert(!IsDead && "A use cannot be dead");
     Table << MatchTable::IntValue(2, 0);
+  }
   Table << MatchTable::LineBreak;
 }
 

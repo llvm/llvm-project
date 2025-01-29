@@ -49,8 +49,8 @@ module {
 // DISABLE-LABEL: ; ModuleID =
 // DISABLE-NOT: @_extruded
 // DISABLE:  define void @sub1(
-// DISABLE-SAME: ptr [[ARG0:%.*]],
-// DISABLE-SAME: ptr [[ARG1:%.*]])
+// DISABLE-SAME: ptr captures(none) [[ARG0:%.*]],
+// DISABLE-SAME: ptr captures(none) [[ARG1:%.*]])
 // DISABLE-SAME: {
 // DISABLE: [[CONST_R0:%.*]] = alloca double
 // DISABLE: [[CONST_R1:%.*]] = alloca double

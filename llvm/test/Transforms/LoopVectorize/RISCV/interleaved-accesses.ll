@@ -27,8 +27,8 @@ define void @load_store_factor2_i32(ptr %p) {
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[WIDE_VEC]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 1
-; CHECK-NEXT:    [[TMP12:%.*]] = add <vscale x 4 x i32> [[TMP10]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP15:%.*]] = add <vscale x 4 x i32> [[TMP11]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 2, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP12:%.*]] = add <vscale x 4 x i32> [[TMP10]], splat (i32 1)
+; CHECK-NEXT:    [[TMP15:%.*]] = add <vscale x 4 x i32> [[TMP11]], splat (i32 2)
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> [[TMP12]], <vscale x 4 x i32> [[TMP15]])
 ; CHECK-NEXT:    store <vscale x 8 x i32> [[INTERLEAVED_VEC]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
@@ -71,8 +71,8 @@ define void @load_store_factor2_i32(ptr %p) {
 ; FIXED-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i32>, ptr [[TMP2]], align 4
 ; FIXED-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
 ; FIXED-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-; FIXED-NEXT:    [[TMP4:%.*]] = add <8 x i32> [[STRIDED_VEC]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; FIXED-NEXT:    [[TMP7:%.*]] = add <8 x i32> [[STRIDED_VEC1]], <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+; FIXED-NEXT:    [[TMP4:%.*]] = add <8 x i32> [[STRIDED_VEC]], splat (i32 1)
+; FIXED-NEXT:    [[TMP7:%.*]] = add <8 x i32> [[STRIDED_VEC1]], splat (i32 2)
 ; FIXED-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> [[TMP7]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; FIXED-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <16 x i32> [[TMP9]], <16 x i32> poison, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
 ; FIXED-NEXT:    store <16 x i32> [[INTERLEAVED_VEC]], ptr [[TMP2]], align 4
@@ -125,8 +125,8 @@ define void @load_store_factor2_i32(ptr %p) {
 ; SCALABLE-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[WIDE_VEC]])
 ; SCALABLE-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 0
 ; SCALABLE-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 1
-; SCALABLE-NEXT:    [[TMP12:%.*]] = add <vscale x 4 x i32> [[TMP10]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
-; SCALABLE-NEXT:    [[TMP15:%.*]] = add <vscale x 4 x i32> [[TMP11]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 2, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+; SCALABLE-NEXT:    [[TMP12:%.*]] = add <vscale x 4 x i32> [[TMP10]], splat (i32 1)
+; SCALABLE-NEXT:    [[TMP15:%.*]] = add <vscale x 4 x i32> [[TMP11]], splat (i32 2)
 ; SCALABLE-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> [[TMP12]], <vscale x 4 x i32> [[TMP15]])
 ; SCALABLE-NEXT:    store <vscale x 8 x i32> [[INTERLEAVED_VEC]], ptr [[TMP8]], align 4
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
@@ -204,8 +204,8 @@ define void @load_store_factor2_i64(ptr %p) {
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.vector.deinterleave2.nxv4i64(<vscale x 4 x i64> [[WIDE_VEC]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[STRIDED_VEC]], 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[STRIDED_VEC]], 1
-; CHECK-NEXT:    [[TMP12:%.*]] = add <vscale x 2 x i64> [[TMP10]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP15:%.*]] = add <vscale x 2 x i64> [[TMP11]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 2, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP12:%.*]] = add <vscale x 2 x i64> [[TMP10]], splat (i64 1)
+; CHECK-NEXT:    [[TMP15:%.*]] = add <vscale x 2 x i64> [[TMP11]], splat (i64 2)
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 4 x i64> @llvm.vector.interleave2.nxv4i64(<vscale x 2 x i64> [[TMP12]], <vscale x 2 x i64> [[TMP15]])
 ; CHECK-NEXT:    store <vscale x 4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
@@ -248,8 +248,8 @@ define void @load_store_factor2_i64(ptr %p) {
 ; FIXED-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[TMP2]], align 8
 ; FIXED-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; FIXED-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; FIXED-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[STRIDED_VEC]], <i64 1, i64 1, i64 1, i64 1>
-; FIXED-NEXT:    [[TMP7:%.*]] = add <4 x i64> [[STRIDED_VEC1]], <i64 2, i64 2, i64 2, i64 2>
+; FIXED-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[STRIDED_VEC]], splat (i64 1)
+; FIXED-NEXT:    [[TMP7:%.*]] = add <4 x i64> [[STRIDED_VEC1]], splat (i64 2)
 ; FIXED-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; FIXED-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i64> [[TMP9]], <8 x i64> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
 ; FIXED-NEXT:    store <8 x i64> [[INTERLEAVED_VEC]], ptr [[TMP2]], align 8
@@ -302,8 +302,8 @@ define void @load_store_factor2_i64(ptr %p) {
 ; SCALABLE-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.vector.deinterleave2.nxv4i64(<vscale x 4 x i64> [[WIDE_VEC]])
 ; SCALABLE-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[STRIDED_VEC]], 0
 ; SCALABLE-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[STRIDED_VEC]], 1
-; SCALABLE-NEXT:    [[TMP12:%.*]] = add <vscale x 2 x i64> [[TMP10]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
-; SCALABLE-NEXT:    [[TMP15:%.*]] = add <vscale x 2 x i64> [[TMP11]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 2, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+; SCALABLE-NEXT:    [[TMP12:%.*]] = add <vscale x 2 x i64> [[TMP10]], splat (i64 1)
+; SCALABLE-NEXT:    [[TMP15:%.*]] = add <vscale x 2 x i64> [[TMP11]], splat (i64 2)
 ; SCALABLE-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 4 x i64> @llvm.vector.interleave2.nxv4i64(<vscale x 2 x i64> [[TMP12]], <vscale x 2 x i64> [[TMP15]])
 ; SCALABLE-NEXT:    store <vscale x 4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP8]], align 8
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
@@ -372,9 +372,9 @@ define void @load_store_factor3_i32(ptr %p) {
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <24 x i32> [[WIDE_VEC]], <24 x i32> poison, <8 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21>
 ; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <24 x i32> [[WIDE_VEC]], <24 x i32> poison, <8 x i32> <i32 1, i32 4, i32 7, i32 10, i32 13, i32 16, i32 19, i32 22>
 ; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <24 x i32> [[WIDE_VEC]], <24 x i32> poison, <8 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23>
-; CHECK-NEXT:    [[TMP4:%.*]] = add <8 x i32> [[STRIDED_VEC]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = add <8 x i32> [[STRIDED_VEC1]], <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
-; CHECK-NEXT:    [[TMP9:%.*]] = add <8 x i32> [[STRIDED_VEC2]], <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = add <8 x i32> [[STRIDED_VEC]], splat (i32 1)
+; CHECK-NEXT:    [[TMP6:%.*]] = add <8 x i32> [[STRIDED_VEC1]], splat (i32 2)
+; CHECK-NEXT:    [[TMP9:%.*]] = add <8 x i32> [[STRIDED_VEC2]], splat (i32 3)
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> [[TMP6]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <8 x i32> [[TMP9]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <16 x i32> [[TMP11]], <16 x i32> [[TMP12]], <24 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
@@ -425,9 +425,9 @@ define void @load_store_factor3_i32(ptr %p) {
 ; FIXED-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <24 x i32> [[WIDE_VEC]], <24 x i32> poison, <8 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21>
 ; FIXED-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <24 x i32> [[WIDE_VEC]], <24 x i32> poison, <8 x i32> <i32 1, i32 4, i32 7, i32 10, i32 13, i32 16, i32 19, i32 22>
 ; FIXED-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <24 x i32> [[WIDE_VEC]], <24 x i32> poison, <8 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23>
-; FIXED-NEXT:    [[TMP4:%.*]] = add <8 x i32> [[STRIDED_VEC]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; FIXED-NEXT:    [[TMP6:%.*]] = add <8 x i32> [[STRIDED_VEC1]], <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
-; FIXED-NEXT:    [[TMP9:%.*]] = add <8 x i32> [[STRIDED_VEC2]], <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+; FIXED-NEXT:    [[TMP4:%.*]] = add <8 x i32> [[STRIDED_VEC]], splat (i32 1)
+; FIXED-NEXT:    [[TMP6:%.*]] = add <8 x i32> [[STRIDED_VEC1]], splat (i32 2)
+; FIXED-NEXT:    [[TMP9:%.*]] = add <8 x i32> [[STRIDED_VEC2]], splat (i32 3)
 ; FIXED-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> [[TMP6]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; FIXED-NEXT:    [[TMP12:%.*]] = shufflevector <8 x i32> [[TMP9]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; FIXED-NEXT:    [[TMP13:%.*]] = shufflevector <16 x i32> [[TMP11]], <16 x i32> [[TMP12]], <24 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
@@ -478,9 +478,9 @@ define void @load_store_factor3_i32(ptr %p) {
 ; SCALABLE-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <24 x i32> [[WIDE_VEC]], <24 x i32> poison, <8 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21>
 ; SCALABLE-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <24 x i32> [[WIDE_VEC]], <24 x i32> poison, <8 x i32> <i32 1, i32 4, i32 7, i32 10, i32 13, i32 16, i32 19, i32 22>
 ; SCALABLE-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <24 x i32> [[WIDE_VEC]], <24 x i32> poison, <8 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23>
-; SCALABLE-NEXT:    [[TMP4:%.*]] = add <8 x i32> [[STRIDED_VEC]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; SCALABLE-NEXT:    [[TMP6:%.*]] = add <8 x i32> [[STRIDED_VEC1]], <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
-; SCALABLE-NEXT:    [[TMP9:%.*]] = add <8 x i32> [[STRIDED_VEC2]], <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+; SCALABLE-NEXT:    [[TMP4:%.*]] = add <8 x i32> [[STRIDED_VEC]], splat (i32 1)
+; SCALABLE-NEXT:    [[TMP6:%.*]] = add <8 x i32> [[STRIDED_VEC1]], splat (i32 2)
+; SCALABLE-NEXT:    [[TMP9:%.*]] = add <8 x i32> [[STRIDED_VEC2]], splat (i32 3)
 ; SCALABLE-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> [[TMP6]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; SCALABLE-NEXT:    [[TMP12:%.*]] = shufflevector <8 x i32> [[TMP9]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SCALABLE-NEXT:    [[TMP13:%.*]] = shufflevector <16 x i32> [[TMP11]], <16 x i32> [[TMP12]], <24 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
@@ -562,9 +562,9 @@ define void @load_store_factor3_i64(ptr %p) {
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <12 x i64> [[WIDE_VEC]], <12 x i64> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <12 x i64> [[WIDE_VEC]], <12 x i64> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
 ; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <12 x i64> [[WIDE_VEC]], <12 x i64> poison, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
-; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[STRIDED_VEC]], <i64 1, i64 1, i64 1, i64 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[STRIDED_VEC1]], <i64 2, i64 2, i64 2, i64 2>
-; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i64> [[STRIDED_VEC2]], <i64 3, i64 3, i64 3, i64 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[STRIDED_VEC]], splat (i64 1)
+; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[STRIDED_VEC1]], splat (i64 2)
+; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i64> [[STRIDED_VEC2]], splat (i64 3)
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i64> [[TMP9]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <8 x i64> [[TMP11]], <8 x i64> [[TMP12]], <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
@@ -615,9 +615,9 @@ define void @load_store_factor3_i64(ptr %p) {
 ; FIXED-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <12 x i64> [[WIDE_VEC]], <12 x i64> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; FIXED-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <12 x i64> [[WIDE_VEC]], <12 x i64> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
 ; FIXED-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <12 x i64> [[WIDE_VEC]], <12 x i64> poison, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
-; FIXED-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[STRIDED_VEC]], <i64 1, i64 1, i64 1, i64 1>
-; FIXED-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[STRIDED_VEC1]], <i64 2, i64 2, i64 2, i64 2>
-; FIXED-NEXT:    [[TMP9:%.*]] = add <4 x i64> [[STRIDED_VEC2]], <i64 3, i64 3, i64 3, i64 3>
+; FIXED-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[STRIDED_VEC]], splat (i64 1)
+; FIXED-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[STRIDED_VEC1]], splat (i64 2)
+; FIXED-NEXT:    [[TMP9:%.*]] = add <4 x i64> [[STRIDED_VEC2]], splat (i64 3)
 ; FIXED-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; FIXED-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i64> [[TMP9]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; FIXED-NEXT:    [[TMP13:%.*]] = shufflevector <8 x i64> [[TMP11]], <8 x i64> [[TMP12]], <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
@@ -668,9 +668,9 @@ define void @load_store_factor3_i64(ptr %p) {
 ; SCALABLE-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <12 x i64> [[WIDE_VEC]], <12 x i64> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; SCALABLE-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <12 x i64> [[WIDE_VEC]], <12 x i64> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
 ; SCALABLE-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <12 x i64> [[WIDE_VEC]], <12 x i64> poison, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
-; SCALABLE-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[STRIDED_VEC]], <i64 1, i64 1, i64 1, i64 1>
-; SCALABLE-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[STRIDED_VEC1]], <i64 2, i64 2, i64 2, i64 2>
-; SCALABLE-NEXT:    [[TMP9:%.*]] = add <4 x i64> [[STRIDED_VEC2]], <i64 3, i64 3, i64 3, i64 3>
+; SCALABLE-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[STRIDED_VEC]], splat (i64 1)
+; SCALABLE-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[STRIDED_VEC1]], splat (i64 2)
+; SCALABLE-NEXT:    [[TMP9:%.*]] = add <4 x i64> [[STRIDED_VEC2]], splat (i64 3)
 ; SCALABLE-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; SCALABLE-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i64> [[TMP9]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SCALABLE-NEXT:    [[TMP13:%.*]] = shufflevector <8 x i64> [[TMP11]], <8 x i64> [[TMP12]], <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
@@ -757,14 +757,14 @@ define void @load_store_factor8(ptr %p) {
 ; CHECK-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <16 x i64> [[WIDE_VEC]], <16 x i64> poison, <2 x i32> <i32 5, i32 13>
 ; CHECK-NEXT:    [[STRIDED_VEC6:%.*]] = shufflevector <16 x i64> [[WIDE_VEC]], <16 x i64> poison, <2 x i32> <i32 6, i32 14>
 ; CHECK-NEXT:    [[STRIDED_VEC7:%.*]] = shufflevector <16 x i64> [[WIDE_VEC]], <16 x i64> poison, <2 x i32> <i32 7, i32 15>
-; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i64> [[STRIDED_VEC]], <i64 1, i64 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i64> [[STRIDED_VEC1]], <i64 2, i64 2>
-; CHECK-NEXT:    [[TMP8:%.*]] = add <2 x i64> [[STRIDED_VEC2]], <i64 3, i64 3>
-; CHECK-NEXT:    [[TMP10:%.*]] = add <2 x i64> [[STRIDED_VEC3]], <i64 4, i64 4>
-; CHECK-NEXT:    [[TMP12:%.*]] = add <2 x i64> [[STRIDED_VEC4]], <i64 5, i64 5>
-; CHECK-NEXT:    [[TMP14:%.*]] = add <2 x i64> [[STRIDED_VEC5]], <i64 6, i64 6>
-; CHECK-NEXT:    [[TMP16:%.*]] = add <2 x i64> [[STRIDED_VEC6]], <i64 7, i64 7>
-; CHECK-NEXT:    [[TMP19:%.*]] = add <2 x i64> [[STRIDED_VEC7]], <i64 8, i64 8>
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i64> [[STRIDED_VEC]], splat (i64 1)
+; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i64> [[STRIDED_VEC1]], splat (i64 2)
+; CHECK-NEXT:    [[TMP8:%.*]] = add <2 x i64> [[STRIDED_VEC2]], splat (i64 3)
+; CHECK-NEXT:    [[TMP10:%.*]] = add <2 x i64> [[STRIDED_VEC3]], splat (i64 4)
+; CHECK-NEXT:    [[TMP12:%.*]] = add <2 x i64> [[STRIDED_VEC4]], splat (i64 5)
+; CHECK-NEXT:    [[TMP14:%.*]] = add <2 x i64> [[STRIDED_VEC5]], splat (i64 6)
+; CHECK-NEXT:    [[TMP16:%.*]] = add <2 x i64> [[STRIDED_VEC6]], splat (i64 7)
+; CHECK-NEXT:    [[TMP19:%.*]] = add <2 x i64> [[STRIDED_VEC7]], splat (i64 8)
 ; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <2 x i64> [[TMP4]], <2 x i64> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <2 x i64> [[TMP8]], <2 x i64> [[TMP10]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <2 x i64> [[TMP12]], <2 x i64> [[TMP14]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -849,14 +849,14 @@ define void @load_store_factor8(ptr %p) {
 ; FIXED-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <16 x i64> [[WIDE_VEC]], <16 x i64> poison, <2 x i32> <i32 5, i32 13>
 ; FIXED-NEXT:    [[STRIDED_VEC6:%.*]] = shufflevector <16 x i64> [[WIDE_VEC]], <16 x i64> poison, <2 x i32> <i32 6, i32 14>
 ; FIXED-NEXT:    [[STRIDED_VEC7:%.*]] = shufflevector <16 x i64> [[WIDE_VEC]], <16 x i64> poison, <2 x i32> <i32 7, i32 15>
-; FIXED-NEXT:    [[TMP4:%.*]] = add <2 x i64> [[STRIDED_VEC]], <i64 1, i64 1>
-; FIXED-NEXT:    [[TMP6:%.*]] = add <2 x i64> [[STRIDED_VEC1]], <i64 2, i64 2>
-; FIXED-NEXT:    [[TMP8:%.*]] = add <2 x i64> [[STRIDED_VEC2]], <i64 3, i64 3>
-; FIXED-NEXT:    [[TMP10:%.*]] = add <2 x i64> [[STRIDED_VEC3]], <i64 4, i64 4>
-; FIXED-NEXT:    [[TMP12:%.*]] = add <2 x i64> [[STRIDED_VEC4]], <i64 5, i64 5>
-; FIXED-NEXT:    [[TMP14:%.*]] = add <2 x i64> [[STRIDED_VEC5]], <i64 6, i64 6>
-; FIXED-NEXT:    [[TMP16:%.*]] = add <2 x i64> [[STRIDED_VEC6]], <i64 7, i64 7>
-; FIXED-NEXT:    [[TMP19:%.*]] = add <2 x i64> [[STRIDED_VEC7]], <i64 8, i64 8>
+; FIXED-NEXT:    [[TMP4:%.*]] = add <2 x i64> [[STRIDED_VEC]], splat (i64 1)
+; FIXED-NEXT:    [[TMP6:%.*]] = add <2 x i64> [[STRIDED_VEC1]], splat (i64 2)
+; FIXED-NEXT:    [[TMP8:%.*]] = add <2 x i64> [[STRIDED_VEC2]], splat (i64 3)
+; FIXED-NEXT:    [[TMP10:%.*]] = add <2 x i64> [[STRIDED_VEC3]], splat (i64 4)
+; FIXED-NEXT:    [[TMP12:%.*]] = add <2 x i64> [[STRIDED_VEC4]], splat (i64 5)
+; FIXED-NEXT:    [[TMP14:%.*]] = add <2 x i64> [[STRIDED_VEC5]], splat (i64 6)
+; FIXED-NEXT:    [[TMP16:%.*]] = add <2 x i64> [[STRIDED_VEC6]], splat (i64 7)
+; FIXED-NEXT:    [[TMP19:%.*]] = add <2 x i64> [[STRIDED_VEC7]], splat (i64 8)
 ; FIXED-NEXT:    [[TMP21:%.*]] = shufflevector <2 x i64> [[TMP4]], <2 x i64> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; FIXED-NEXT:    [[TMP22:%.*]] = shufflevector <2 x i64> [[TMP8]], <2 x i64> [[TMP10]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; FIXED-NEXT:    [[TMP23:%.*]] = shufflevector <2 x i64> [[TMP12]], <2 x i64> [[TMP14]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -941,14 +941,14 @@ define void @load_store_factor8(ptr %p) {
 ; SCALABLE-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <16 x i64> [[WIDE_VEC]], <16 x i64> poison, <2 x i32> <i32 5, i32 13>
 ; SCALABLE-NEXT:    [[STRIDED_VEC6:%.*]] = shufflevector <16 x i64> [[WIDE_VEC]], <16 x i64> poison, <2 x i32> <i32 6, i32 14>
 ; SCALABLE-NEXT:    [[STRIDED_VEC7:%.*]] = shufflevector <16 x i64> [[WIDE_VEC]], <16 x i64> poison, <2 x i32> <i32 7, i32 15>
-; SCALABLE-NEXT:    [[TMP4:%.*]] = add <2 x i64> [[STRIDED_VEC]], <i64 1, i64 1>
-; SCALABLE-NEXT:    [[TMP6:%.*]] = add <2 x i64> [[STRIDED_VEC1]], <i64 2, i64 2>
-; SCALABLE-NEXT:    [[TMP8:%.*]] = add <2 x i64> [[STRIDED_VEC2]], <i64 3, i64 3>
-; SCALABLE-NEXT:    [[TMP10:%.*]] = add <2 x i64> [[STRIDED_VEC3]], <i64 4, i64 4>
-; SCALABLE-NEXT:    [[TMP12:%.*]] = add <2 x i64> [[STRIDED_VEC4]], <i64 5, i64 5>
-; SCALABLE-NEXT:    [[TMP14:%.*]] = add <2 x i64> [[STRIDED_VEC5]], <i64 6, i64 6>
-; SCALABLE-NEXT:    [[TMP16:%.*]] = add <2 x i64> [[STRIDED_VEC6]], <i64 7, i64 7>
-; SCALABLE-NEXT:    [[TMP19:%.*]] = add <2 x i64> [[STRIDED_VEC7]], <i64 8, i64 8>
+; SCALABLE-NEXT:    [[TMP4:%.*]] = add <2 x i64> [[STRIDED_VEC]], splat (i64 1)
+; SCALABLE-NEXT:    [[TMP6:%.*]] = add <2 x i64> [[STRIDED_VEC1]], splat (i64 2)
+; SCALABLE-NEXT:    [[TMP8:%.*]] = add <2 x i64> [[STRIDED_VEC2]], splat (i64 3)
+; SCALABLE-NEXT:    [[TMP10:%.*]] = add <2 x i64> [[STRIDED_VEC3]], splat (i64 4)
+; SCALABLE-NEXT:    [[TMP12:%.*]] = add <2 x i64> [[STRIDED_VEC4]], splat (i64 5)
+; SCALABLE-NEXT:    [[TMP14:%.*]] = add <2 x i64> [[STRIDED_VEC5]], splat (i64 6)
+; SCALABLE-NEXT:    [[TMP16:%.*]] = add <2 x i64> [[STRIDED_VEC6]], splat (i64 7)
+; SCALABLE-NEXT:    [[TMP19:%.*]] = add <2 x i64> [[STRIDED_VEC7]], splat (i64 8)
 ; SCALABLE-NEXT:    [[TMP21:%.*]] = shufflevector <2 x i64> [[TMP4]], <2 x i64> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; SCALABLE-NEXT:    [[TMP22:%.*]] = shufflevector <2 x i64> [[TMP8]], <2 x i64> [[TMP10]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; SCALABLE-NEXT:    [[TMP23:%.*]] = shufflevector <2 x i64> [[TMP12]], <2 x i64> [[TMP14]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>

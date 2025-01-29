@@ -245,7 +245,7 @@ Thread::~Thread() {
   LLDB_LOGF(log, "%p Thread::~Thread(tid = 0x%4.4" PRIx64 ")",
             static_cast<void *>(this), GetID());
   /// If you hit this assert, it means your derived class forgot to call
-  /// DoDestroy in its destructor.
+  /// DestroyThread in its destructor.
   assert(m_destroy_called);
 }
 
@@ -620,7 +620,7 @@ void Thread::WillStop() {
   current_plan->WillStop();
 }
 
-void Thread::SetupForResume() {
+bool Thread::SetupForResume() {
   if (GetResumeState() != eStateSuspended) {
     // First check whether this thread is going to "actually" resume at all.
     // For instance, if we're stepping from one level to the next of an
@@ -628,7 +628,7 @@ void Thread::SetupForResume() {
     // without actually running this thread.  In that case, for this thread we
     // shouldn't push a step over breakpoint plan or do that work.
     if (GetCurrentPlan()->IsVirtualStep())
-      return;
+      return false;
 
     // If we're at a breakpoint push the step-over breakpoint plan.  Do this
     // before telling the current plan it will resume, since we might change
@@ -674,11 +674,13 @@ void Thread::SetupForResume() {
               step_bp_plan->SetAutoContinue(true);
             }
             QueueThreadPlan(step_bp_plan_sp, false);
+            return true;
           }
         }
       }
     }
   }
+  return false;
 }
 
 bool Thread::ShouldResume(StateType resume_state) {
@@ -1461,7 +1463,7 @@ void Thread::ClearStackFrames() {
   // frames:
   // FIXME: At some point we can try to splice in the frames we have fetched
   // into the new frame as we make it, but let's not try that now.
-  if (m_curr_frames_sp && m_curr_frames_sp->GetAllFramesFetched())
+  if (m_curr_frames_sp && m_curr_frames_sp->WereAllFramesFetched())
     m_prev_frames_sp.swap(m_curr_frames_sp);
   m_curr_frames_sp.reset();
 

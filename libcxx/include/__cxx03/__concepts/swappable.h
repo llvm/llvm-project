@@ -6,30 +6,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_SWAPPABLE_H
-#define _LIBCPP___CONCEPTS_SWAPPABLE_H
+#ifndef _LIBCPP___CXX03___CONCEPTS_SWAPPABLE_H
+#define _LIBCPP___CXX03___CONCEPTS_SWAPPABLE_H
 
-#include <__concepts/assignable.h>
-#include <__concepts/class_or_enum.h>
-#include <__concepts/common_reference_with.h>
-#include <__concepts/constructible.h>
-#include <__config>
-#include <__type_traits/extent.h>
-#include <__type_traits/is_nothrow_assignable.h>
-#include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/remove_cvref.h>
-#include <__utility/exchange.h>
-#include <__utility/forward.h>
-#include <__utility/move.h>
-#include <__utility/swap.h>
-#include <cstddef>
+#include <__cxx03/__concepts/assignable.h>
+#include <__cxx03/__concepts/class_or_enum.h>
+#include <__cxx03/__concepts/common_reference_with.h>
+#include <__cxx03/__concepts/constructible.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/extent.h>
+#include <__cxx03/__type_traits/is_nothrow_assignable.h>
+#include <__cxx03/__type_traits/is_nothrow_constructible.h>
+#include <__cxx03/__type_traits/remove_cvref.h>
+#include <__cxx03/__utility/exchange.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/__utility/swap.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -120,4 +120,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CONCEPTS_SWAPPABLE_H
+#endif // _LIBCPP___CXX03___CONCEPTS_SWAPPABLE_H

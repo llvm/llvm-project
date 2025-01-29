@@ -62,7 +62,9 @@ define void @vid_passthru(ptr %p, <vscale x 8 x i64> %v) {
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %vid = call <vscale x 8 x i64> @llvm.riscv.vid.nxv8i64(<vscale x 8 x i64> %v, i64 1)
   store volatile <vscale x 8 x i64> %vid, ptr %p
@@ -140,7 +142,9 @@ define void @vmv.v.x_needs_extended(ptr %p, i64 %x) {
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %vmv.v.x = call <vscale x 8 x i64> @llvm.riscv.vmv.v.x.nxv8i64(<vscale x 8 x i64> poison, i64 %x, i64 -1)
   store volatile <vscale x 8 x i64> %vmv.v.x, ptr %p

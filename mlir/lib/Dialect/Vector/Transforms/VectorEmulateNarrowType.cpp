@@ -1,10 +1,19 @@
-//===- VectorEmulateNarrowType.cpp - Narrow type emulation ----*- C++
-//-*-===//
+//===- VectorEmulateNarrowType.cpp - Narrow type emulation ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+//
+// This file implements target-independent rewrites and utilities to emulate
+// narrow types that are not supported by the target hardware, e.g. i4, using
+// wider types, e.g. i8.
+//
+/// Currently, only power-of-two integer types are supported. These are
+/// converted to wider integers that are either 8 bits wide or wider.
+///
+/// TODO: Support for non-powers-of-two.
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -18,6 +27,7 @@
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -35,118 +45,355 @@ using namespace mlir;
 #define DBGSNL() (llvm::dbgs() << "\n")
 #define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
-/// Returns a compressed mask. The mask value is set only if any mask is present
-/// in the scale range. E.g., if `scale` equals to 2, and `intraDataOffset`
-/// equals to 2, the following mask:
+using VectorValue = TypedValue<VectorType>;
+using MemRefValue = TypedValue<MemRefType>;
+
+/// Returns a compressed mask for the emulated vector. For example, when
+/// emulating an eight-element `i8` vector with `i32` (i.e. when the source
+/// elements span two dest elements), this method compresses `vector<8xi1>`
+/// into `vector<2xi1>`.
 ///
-///   %mask = [1, 1, 1, 0, 0, 0]
+/// The compressed/output mask value is set iff any mask in the corresponding
+/// `numSrcElemsPerDest` range of uncompressed/input masks is set. E.g., if
+/// `numSrcElemsPerDest` equals to 2, and `numFrontPadElems` equals to 1, the
+/// following mask:
 ///
-/// will first be padded with number of `intraDataOffset` zeros:
-///   %mask = [0, 0, 1, 1, 1, 0, 0, 0]
+///   %mask = [1, 1, 0, 0, 0, 0]
+///
+/// will first be padded in the front with `numFrontPadElems` zeros, and zeros
+/// will be added in the back to make the number of elements a multiple of
+/// `numSrcElemsPerDest` (for easier computation). The resulting mask will be:
+///
+///   %mask = [0, 1, 1, 0, 0, 0, 0, 0]
 ///
 /// then it will return the following new compressed mask:
 ///
-///   %mask = [0, 1, 1, 0]
+///   %mask = [1, 1, 0, 0]
+///
+/// NOTE: `numFrontPadElems` is assumed to be strictly smaller than
+/// `numSrcElemsPerDest`.
 static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
                                                   Location loc, Value mask,
-                                                  int origElements, int scale,
-                                                  int intraDataOffset = 0) {
-  auto numElements = (intraDataOffset + origElements + scale - 1) / scale;
+                                                  int numSrcElems,
+                                                  int numSrcElemsPerDest,
+                                                  int numFrontPadElems = 0) {
+
+  assert(numFrontPadElems < numSrcElemsPerDest &&
+         "numFrontPadElems must be less than numSrcElemsPerDest");
+
+  auto numDestElems =
+      (numFrontPadElems + numSrcElems + numSrcElemsPerDest - 1) /
+      numSrcElemsPerDest;
 
   Operation *maskOp = mask.getDefiningOp();
   SmallVector<vector::ExtractOp, 2> extractOps;
+  // TODO: add support to `vector.splat`.
   // Finding the mask creation operation.
-  while (maskOp && !isa<vector::CreateMaskOp, vector::ConstantMaskOp>(maskOp)) {
+  while (maskOp &&
+         !isa<arith::ConstantOp, vector::CreateMaskOp, vector::ConstantMaskOp>(
+             maskOp)) {
     if (auto extractOp = dyn_cast<vector::ExtractOp>(maskOp)) {
       maskOp = extractOp.getVector().getDefiningOp();
       extractOps.push_back(extractOp);
     }
   }
-  auto createMaskOp = dyn_cast_or_null<vector::CreateMaskOp>(maskOp);
-  auto constantMaskOp = dyn_cast_or_null<vector::ConstantMaskOp>(maskOp);
-  if (!createMaskOp && !constantMaskOp)
+
+  if (!isa<arith::ConstantOp, vector::CreateMaskOp, vector::ConstantMaskOp>(
+          maskOp))
     return failure();
 
   // Computing the "compressed" mask. All the emulation logic (i.e. computing
   // new mask index) only happens on the last dimension of the vectors.
-  Operation *newMask = nullptr;
-  SmallVector<int64_t> shape(
+  SmallVector<int64_t> maskShape(
       cast<VectorType>(maskOp->getResultTypes()[0]).getShape());
-  shape.back() = numElements;
-  auto newMaskType = VectorType::get(shape, rewriter.getI1Type());
-  if (createMaskOp) {
-    // TODO: handle the case with non-zero intraDataOffset for CreateMaskOp.
-    if (intraDataOffset != 0)
-      return failure();
-    OperandRange maskOperands = createMaskOp.getOperands();
-    size_t numMaskOperands = maskOperands.size();
-    AffineExpr s0;
-    bindSymbols(rewriter.getContext(), s0);
-    s0 = s0 + scale - 1;
-    s0 = s0.floorDiv(scale);
-    OpFoldResult origIndex =
-        getAsOpFoldResult(maskOperands[numMaskOperands - 1]);
-    OpFoldResult maskIndex =
-        affine::makeComposedFoldedAffineApply(rewriter, loc, s0, origIndex);
-    SmallVector<Value> newMaskOperands(maskOperands.drop_back());
-    newMaskOperands.push_back(
-        getValueOrCreateConstantIndexOp(rewriter, loc, maskIndex));
-    newMask = rewriter.create<vector::CreateMaskOp>(loc, newMaskType,
-                                                    newMaskOperands);
-  } else if (constantMaskOp) {
-    ArrayRef<int64_t> maskDimSizes = constantMaskOp.getMaskDimSizes();
-    size_t numMaskOperands = maskDimSizes.size();
-    int64_t origIndex = maskDimSizes[numMaskOperands - 1];
-    int64_t startIndex = intraDataOffset / scale;
-    int64_t maskIndex = llvm::divideCeil(intraDataOffset + origIndex, scale);
+  maskShape.back() = numDestElems;
+  auto newMaskType = VectorType::get(maskShape, rewriter.getI1Type());
+  std::optional<Operation *> newMask =
+      TypeSwitch<Operation *, std::optional<Operation *>>(maskOp)
+          .Case<vector::CreateMaskOp>(
+              [&](auto createMaskOp) -> std::optional<Operation *> {
+                OperandRange maskOperands = createMaskOp.getOperands();
+                // The `vector.create_mask` op creates a mask arrangement
+                // without any zeros at the front. Also, because
+                // `numFrontPadElems` is strictly smaller than
+                // `numSrcElemsPerDest`, the compressed mask generated by
+                // padding the original mask by `numFrontPadElems` will not
+                // have any zeros at the front as well.
+                AffineExpr s0;
+                bindSymbols(rewriter.getContext(), s0);
+                s0 = (s0 + numFrontPadElems).ceilDiv(numSrcElemsPerDest);
+                OpFoldResult origIndex = getAsOpFoldResult(maskOperands.back());
+                OpFoldResult maskIndex = affine::makeComposedFoldedAffineApply(
+                    rewriter, loc, s0, origIndex);
+                SmallVector<Value> newMaskOperands(maskOperands.drop_back());
+                newMaskOperands.push_back(
+                    getValueOrCreateConstantIndexOp(rewriter, loc, maskIndex));
+                return rewriter.create<vector::CreateMaskOp>(loc, newMaskType,
+                                                             newMaskOperands);
+              })
+          .Case<vector::ConstantMaskOp>(
+              [&](auto constantMaskOp) -> std::optional<Operation *> {
+                // Take the shape of mask, compress its trailing dimension:
+                SmallVector<int64_t> maskDimSizes(
+                    constantMaskOp.getMaskDimSizes());
+                int64_t &maskIndex = maskDimSizes.back();
+                maskIndex = llvm::divideCeil(numFrontPadElems + maskIndex,
+                                             numSrcElemsPerDest);
+                return rewriter.create<vector::ConstantMaskOp>(loc, newMaskType,
+                                                               maskDimSizes);
+              })
+          .Case<arith::ConstantOp>([&](auto constantOp)
+                                       -> std::optional<Operation *> {
+            // TODO: Support multiple dimensions.
+            if (maskShape.size() != 1)
+              return std::nullopt;
+            // Rearrange the original mask values to cover the whole potential
+            // loading region. For example, in the case of using byte-size for
+            // emulation, given the following mask:
+            //
+            // %mask = [0, 1, 0, 1, 0, 0]
+            //
+            // With front offset of 1, the mask will be padded 0s in the front
+            // and back so that:
+            // 1. It is aligned with the effective loading bits
+            // 2. Its length is multiple of `numSrcElemPerDest` (and the total
+            // coverage size is mulitiple of bytes). The new mask will be like
+            // this before compressing:
+            //
+            // %new_mask = [0, 0, 1, 0, 1, 0, 0, 0]
+            auto originalMask =
+                cast<DenseIntElementsAttr>(constantOp.getValue());
+            SmallVector<bool> paddedMaskValues(numFrontPadElems, false);
+            paddedMaskValues.append(originalMask.template value_begin<bool>(),
+                                    originalMask.template value_end<bool>());
+            paddedMaskValues.resize(numDestElems * numSrcElemsPerDest, false);
 
-    // TODO: we only want the mask between [startIndex, maskIndex] to be true,
-    // the rest are false.
-    if (intraDataOffset != 0 && maskDimSizes.size() > 1)
-      return failure();
+            // Compressing by combining every `numSrcElemsPerDest` elements:
+            SmallVector<bool> compressedMaskValues;
+            for (size_t i = 0; i < paddedMaskValues.size();
+                 i += numSrcElemsPerDest) {
+              bool combinedValue = false;
+              for (int j = 0; j < numSrcElemsPerDest; ++j) {
+                combinedValue |= paddedMaskValues[i + j];
+              }
+              compressedMaskValues.push_back(combinedValue);
+            }
+            return rewriter.create<arith::ConstantOp>(
+                loc, DenseElementsAttr::get(newMaskType, compressedMaskValues));
+          });
 
-    SmallVector<int64_t> newMaskDimSizes(maskDimSizes.drop_back());
-    newMaskDimSizes.push_back(maskIndex);
-
-    if (intraDataOffset == 0) {
-      newMask = rewriter.create<vector::ConstantMaskOp>(loc, newMaskType,
-                                                        newMaskDimSizes);
-    } else {
-      SmallVector<bool> newMaskValues;
-      for (int64_t i = 0; i < numElements; ++i)
-        newMaskValues.push_back(i >= startIndex && i < maskIndex);
-      auto denseAttr = DenseElementsAttr::get(newMaskType, newMaskValues);
-      newMask = rewriter.create<arith::ConstantOp>(loc, newMaskType, denseAttr);
-    }
-  }
+  if (!newMask)
+    return failure();
 
   while (!extractOps.empty()) {
     newMask = rewriter.create<vector::ExtractOp>(
-        loc, newMask->getResults()[0], extractOps.back().getMixedPosition());
+        loc, (*newMask)->getResults()[0], extractOps.back().getMixedPosition());
     extractOps.pop_back();
   }
 
-  return newMask;
+  return *newMask;
 }
 
-static Value extractSubvectorFrom(RewriterBase &rewriter, Location loc,
-                                  VectorType extractType, Value vector,
-                                  int64_t frontOffset, int64_t subvecSize) {
+/// Extracts 1-D subvector from a 1-D vector. It is a wrapper function for
+/// emitting `vector.extract_strided_slice`.
+static Value staticallyExtractSubvector(OpBuilder &rewriter, Location loc,
+                                        Value source, int64_t frontOffset,
+                                        int64_t subvecSize) {
+  auto vectorType = cast<VectorType>(source.getType());
+  assert(vectorType.getRank() == 1 && "expected 1-D source types");
+  assert(frontOffset + subvecSize <= vectorType.getNumElements() &&
+         "subvector out of bounds");
+
+  // do not need extraction if the subvector size is the same as the source
+  if (vectorType.getNumElements() == subvecSize)
+    return source;
+
   auto offsets = rewriter.getI64ArrayAttr({frontOffset});
   auto sizes = rewriter.getI64ArrayAttr({subvecSize});
   auto strides = rewriter.getI64ArrayAttr({1});
+
+  auto resultVectorType =
+      VectorType::get({subvecSize}, vectorType.getElementType());
   return rewriter
-      .create<vector::ExtractStridedSliceOp>(loc, extractType, vector, offsets,
-                                             sizes, strides)
+      .create<vector::ExtractStridedSliceOp>(loc, resultVectorType, source,
+                                             offsets, sizes, strides)
       ->getResult(0);
 }
 
-static Value insertSubvectorInto(RewriterBase &rewriter, Location loc,
-                                 Value src, Value dest, int64_t offset) {
+/// Inserts 1-D subvector into a 1-D vector by overwriting the elements starting
+/// at `offset`. it is a wrapper function for emitting
+/// `vector.insert_strided_slice`.
+static Value staticallyInsertSubvector(OpBuilder &rewriter, Location loc,
+                                       Value src, Value dest, int64_t offset) {
+  [[maybe_unused]] auto srcType = cast<VectorType>(src.getType());
+  [[maybe_unused]] auto destType = cast<VectorType>(dest.getType());
+  assert(srcType.getRank() == 1 && destType.getRank() == 1 &&
+         "expected source and dest to be vector type");
   auto offsets = rewriter.getI64ArrayAttr({offset});
   auto strides = rewriter.getI64ArrayAttr({1});
   return rewriter.create<vector::InsertStridedSliceOp>(loc, dest.getType(), src,
                                                        dest, offsets, strides);
+}
+
+/// Extracts a 1-D subvector from a 1-D `source` vector, with index at `offset`
+/// and size `numElementsToExtract`, and inserts into the `dest` vector. This
+/// function emits multiple `vector.extract` and `vector.insert` ops, so only
+/// use it when `offset` cannot be folded into a constant value.
+static Value dynamicallyExtractSubVector(OpBuilder &rewriter, Location loc,
+                                         Value source, Value dest,
+                                         OpFoldResult offset,
+                                         int64_t numElementsToExtract) {
+  assert(isa<VectorValue>(source) && "expected `source` to be a vector type");
+  for (int i = 0; i < numElementsToExtract; ++i) {
+    Value extractLoc =
+        (i == 0) ? offset.dyn_cast<Value>()
+                 : rewriter.create<arith::AddIOp>(
+                       loc, rewriter.getIndexType(), offset.dyn_cast<Value>(),
+                       rewriter.create<arith::ConstantIndexOp>(loc, i));
+    auto extractOp =
+        rewriter.create<vector::ExtractOp>(loc, source, extractLoc);
+    dest = rewriter.create<vector::InsertOp>(loc, extractOp, dest, i);
+  }
+  return dest;
+}
+
+/// Inserts a 1-D subvector into a 1-D `dest` vector at index `destOffsetVar`.
+static Value dynamicallyInsertSubVector(RewriterBase &rewriter, Location loc,
+                                        Value source, Value dest,
+                                        OpFoldResult destOffsetVar,
+                                        size_t length) {
+  assert(isa<VectorValue>(source) && "expected `source` to be a vector type");
+  assert(length > 0 && "length must be greater than 0");
+  Value destOffsetVal =
+      getValueOrCreateConstantIndexOp(rewriter, loc, destOffsetVar);
+  for (size_t i = 0; i < length; ++i) {
+    auto insertLoc = i == 0
+                         ? destOffsetVal
+                         : rewriter.create<arith::AddIOp>(
+                               loc, rewriter.getIndexType(), destOffsetVal,
+                               rewriter.create<arith::ConstantIndexOp>(loc, i));
+    auto extractOp = rewriter.create<vector::ExtractOp>(loc, source, i);
+    dest = rewriter.create<vector::InsertOp>(loc, extractOp, dest, insertLoc);
+  }
+  return dest;
+}
+
+/// Returns the op sequence for an emulated sub-byte data type vector load.
+/// specifically, use `emulatedElemType` for loading a vector of `origElemType`.
+/// The load location is given by `base` and `linearizedIndices`, and the
+/// load size is given by `numEmulatedElementsToLoad`.
+static VectorValue emulatedVectorLoad(OpBuilder &rewriter, Location loc,
+                                      Value base,
+                                      OpFoldResult linearizedIndices,
+                                      int64_t numEmultedElementsToLoad,
+                                      Type origElemType,
+                                      Type emulatedElemType) {
+  auto scale = emulatedElemType.getIntOrFloatBitWidth() /
+               origElemType.getIntOrFloatBitWidth();
+  auto newLoad = rewriter.create<vector::LoadOp>(
+      loc, VectorType::get(numEmultedElementsToLoad, emulatedElemType), base,
+      getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices));
+  return rewriter.create<vector::BitCastOp>(
+      loc, VectorType::get(numEmultedElementsToLoad * scale, origElemType),
+      newLoad);
+}
+
+/// Downcast two values to `downcastType`, then select values
+/// based on `mask`, and casts the result to `upcastType`.
+static Value downcastSelectAndUpcast(OpBuilder &builder, Location loc,
+                                     VectorType downcastType,
+                                     VectorType upcastType, Value mask,
+                                     Value trueValue, Value falseValue) {
+  assert(
+      downcastType.getNumElements() * downcastType.getElementTypeBitWidth() ==
+          upcastType.getNumElements() * upcastType.getElementTypeBitWidth() &&
+      "expected input and output number of bits to match");
+  if (trueValue.getType() != downcastType) {
+    trueValue = builder.create<vector::BitCastOp>(loc, downcastType, trueValue);
+  }
+  if (falseValue.getType() != downcastType) {
+    falseValue =
+        builder.create<vector::BitCastOp>(loc, downcastType, falseValue);
+  }
+  Value selectedType =
+      builder.create<arith::SelectOp>(loc, mask, trueValue, falseValue);
+  // Upcast the selected value to the new type.
+  return builder.create<vector::BitCastOp>(loc, upcastType, selectedType);
+}
+
+/// Emits `memref.generic_atomic_rmw` op to store a subbyte-sized value to a
+/// byte in `linearizedMemref`, with a mask. The `valueToStore` is a vector of
+/// subbyte-sized elements, with size of 8 bits, and the mask is used to select
+/// which elements to store.
+///
+/// Inputs:
+///   linearizedMemref = |2|2|2|2| : <4xi2> (<1xi8>)
+///   storeIdx = 2
+///   valueToStore = |3|3|3|3| : vector<4xi2>
+///   mask = |0|0|1|1| : vector<4xi1>
+///
+/// Result:
+///   linearizedMemref = |2|2|3|3| : <4xi2> (<1xi8>)
+static void atomicStore(OpBuilder &builder, Location loc,
+                        MemRefValue linearizedMemref, Value storeIdx,
+                        VectorValue valueToStore, Value mask) {
+  assert(valueToStore.getType().getRank() == 1 && "expected 1-D vector");
+
+  // Create an atomic load-modify-write region using
+  // `memref.generic_atomic_rmw`.
+  auto atomicOp = builder.create<memref::GenericAtomicRMWOp>(
+      loc, linearizedMemref, ValueRange{storeIdx});
+  Value origValue = atomicOp.getCurrentValue();
+
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(atomicOp.getBody());
+
+  // Load the original value from memory, and cast it to the original element
+  // type.
+  auto oneElemVecType = VectorType::get({1}, origValue.getType());
+  Value origVecValue = builder.create<vector::FromElementsOp>(
+      loc, oneElemVecType, ValueRange{origValue});
+
+  // Construct the final masked value and yield it.
+  Value maskedValue =
+      downcastSelectAndUpcast(builder, loc, valueToStore.getType(),
+                              oneElemVecType, mask, valueToStore, origVecValue);
+  auto scalarMaskedValue =
+      builder.create<vector::ExtractOp>(loc, maskedValue, 0);
+  builder.create<memref::AtomicYieldOp>(loc, scalarMaskedValue);
+}
+
+/// Extract `sliceNumElements` from source `vector` at `extractOffset`,
+/// and insert it into an empty vector at `insertOffset`.
+/// Inputs:
+///   vec_in  = |0|1|2|3| : vector<4xi2>
+///   extractOffset = 1
+///   sliceNumElements = 2
+///   insertOffset = 2
+/// Output:
+///   vec_out = |0|0|1|2| : vector<4xi2>
+static Value extractSliceIntoByte(ConversionPatternRewriter &rewriter,
+                                  Location loc, VectorValue vector,
+                                  int64_t extractOffset,
+                                  int64_t sliceNumElements,
+                                  int64_t insertOffset) {
+  assert(vector.getType().getRank() == 1 && "expected 1-D vector");
+  auto vectorElementType = vector.getType().getElementType();
+  // TODO: update and use `alignedConversionPrecondition` in the place of
+  // these asserts.
+  assert(
+      sliceNumElements * vectorElementType.getIntOrFloatBitWidth() <= 8 &&
+      "sliceNumElements * vector element size must be less than or equal to 8");
+  assert(8 % vectorElementType.getIntOrFloatBitWidth() == 0 &&
+         "vector element must be a valid sub-byte type");
+  auto scale = 8 / vectorElementType.getIntOrFloatBitWidth();
+  auto emptyByteVector = rewriter.create<arith::ConstantOp>(
+      loc, VectorType::get({scale}, vectorElementType),
+      rewriter.getZeroAttr(VectorType::get({scale}, vectorElementType)));
+  auto extracted = staticallyExtractSubvector(rewriter, loc, vector,
+                                              extractOffset, sliceNumElements);
+  return staticallyInsertSubvector(rewriter, loc, extracted, emptyByteVector,
+                                   insertOffset);
 }
 
 namespace {
@@ -162,10 +409,16 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
   matchAndRewrite(vector::StoreOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
+    // See #115653
+    if (op.getValueToStore().getType().getRank() != 1)
+      return rewriter.notifyMatchFailure(op,
+                                         "only 1-D vectors are supported ATM");
+
     auto loc = op.getLoc();
-    auto convertedType = cast<MemRefType>(adaptor.getBase().getType());
-    Type oldElementType = op.getValueToStore().getType().getElementType();
-    Type newElementType = convertedType.getElementType();
+    auto valueToStore = cast<VectorValue>(op.getValueToStore());
+    auto oldElementType = valueToStore.getType().getElementType();
+    auto newElementType =
+        cast<MemRefType>(adaptor.getBase().getType()).getElementType();
     int srcBits = oldElementType.getIntOrFloatBitWidth();
     int dstBits = newElementType.getIntOrFloatBitWidth();
 
@@ -173,7 +426,7 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
       return rewriter.notifyMatchFailure(
           op, "only dstBits % srcBits == 0 supported");
     }
-    int scale = dstBits / srcBits;
+    int numSrcElemsPerDest = dstBits / srcBits;
 
     // Adjust the number of elements to store when emulating narrow types.
     // Here only the 1-D vector store is considered, and the N-D memref types
@@ -188,15 +441,15 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
     // vector.store %bitcast, %alloc[%linear_index] : memref<16xi8>,
     // vector<4xi8>
 
-    auto origElements = op.getValueToStore().getType().getNumElements();
-    if (origElements % scale != 0)
-      return failure();
+    auto origElements = valueToStore.getType().getNumElements();
+    bool isAlignedEmulation = origElements % numSrcElemsPerDest == 0;
 
     auto stridedMetadata =
         rewriter.create<memref::ExtractStridedMetadataOp>(loc, op.getBase());
 
     OpFoldResult linearizedIndices;
-    std::tie(std::ignore, linearizedIndices) =
+    memref::LinearizedMemRefInfo linearizedInfo;
+    std::tie(linearizedInfo, linearizedIndices) =
         memref::getLinearizedMemRefOffsetAndSize(
             rewriter, loc, srcBits, dstBits,
             stridedMetadata.getConstifiedMixedOffset(),
@@ -204,14 +457,165 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
             stridedMetadata.getConstifiedMixedStrides(),
             getAsOpFoldResult(adaptor.getIndices()));
 
-    auto numElements = origElements / scale;
-    auto bitCast = rewriter.create<vector::BitCastOp>(
-        loc, VectorType::get(numElements, newElementType),
-        op.getValueToStore());
+    std::optional<int64_t> foldedNumFrontPadElems =
+        isAlignedEmulation
+            ? 0
+            : getConstantIntValue(linearizedInfo.intraDataOffset);
 
-    rewriter.replaceOpWithNewOp<vector::StoreOp>(
-        op, bitCast.getResult(), adaptor.getBase(),
-        getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices));
+    if (!foldedNumFrontPadElems) {
+      return rewriter.notifyMatchFailure(
+          op, "subbyte store emulation: dynamic front padding size is "
+              "not yet implemented");
+    }
+
+    auto memrefBase = cast<MemRefValue>(adaptor.getBase());
+
+    // Conditions when atomic RMWs are not needed:
+    // 1. The source vector size (in bits) is a multiple of byte size.
+    // 2. The address of the store is aligned to the emulated width boundary.
+    //
+    // For example, to store a vector<4xi2> to <13xi2> at offset 4, does not
+    // need unaligned emulation because the store address is aligned and the
+    // source is a whole byte.
+    bool emulationRequiresPartialStores =
+        !isAlignedEmulation || *foldedNumFrontPadElems != 0;
+    if (!emulationRequiresPartialStores) {
+      // Basic case: storing full bytes.
+      auto numElements = origElements / numSrcElemsPerDest;
+      auto bitCast = rewriter.create<vector::BitCastOp>(
+          loc, VectorType::get(numElements, newElementType),
+          op.getValueToStore());
+      rewriter.replaceOpWithNewOp<vector::StoreOp>(
+          op, bitCast.getResult(), memrefBase,
+          getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices));
+      return success();
+    }
+
+    // Next, handle the case when sub-byte read-modify-write
+    // sequences are needed to emulate a vector store.
+    // Here is an example:
+    //
+    // Vector to store: vector<7xi2>
+    // Value to store: 11 11 11 11 11 11 11 (all ones)
+    //
+    // Destination: memref<12xi2>
+    // Store offset: 2 (i.e. 4 bits into the 1st emulated byte).
+    //
+    // Input MLIR: vector.store %val, %dest[%c2] : memref<12xi2>, vector<7xi2>
+    //
+    // Destination memref before:
+    //
+    //    Byte 0     Byte 1     Byte 2
+    // +----------+----------+----------+
+    // | 00000000 | 00000000 | 00000000 |
+    // +----------+----------+----------+
+    //
+    // Destination memref after:
+    //
+    //    Byte 0     Byte 1     Byte 2
+    // +----------+----------+----------+
+    // | 00001111 | 11111111 | 11000000 |
+    // +----------+----------+----------+
+    //
+    // Note, stores to Byte 1 are "full-width" and hence don't require RMW (no
+    // need for atomicity). Stores to Bytes 0 and Byte 2 are "partial", hence
+    // requiring RMW access (atomicity is required).
+
+    // The index into the target memref we are storing to.
+    Value currentDestIndex =
+        getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices);
+    // The index into the source vector we are currently processing.
+    auto currentSourceIndex = 0;
+
+    // Build a mask used for rmw.
+    auto subWidthStoreMaskType =
+        VectorType::get({numSrcElemsPerDest}, rewriter.getI1Type());
+
+    // 1. Partial width store for the leading byte.
+    // When the store address is not aligned to emulated width boundary, deal
+    // with the unaligned part so that the rest elements are aligned to width
+    // boundary.
+    auto frontSubWidthStoreElem =
+        (numSrcElemsPerDest - *foldedNumFrontPadElems) % numSrcElemsPerDest;
+    if (frontSubWidthStoreElem > 0) {
+      SmallVector<bool> frontMaskValues(numSrcElemsPerDest, false);
+      if (*foldedNumFrontPadElems + origElements < numSrcElemsPerDest) {
+        std::fill_n(frontMaskValues.begin() + *foldedNumFrontPadElems,
+                    origElements, true);
+        frontSubWidthStoreElem = origElements;
+      } else {
+        std::fill_n(frontMaskValues.end() - frontSubWidthStoreElem,
+                    *foldedNumFrontPadElems, true);
+      }
+      auto frontMask = rewriter.create<arith::ConstantOp>(
+          loc, DenseElementsAttr::get(subWidthStoreMaskType, frontMaskValues));
+
+      currentSourceIndex = numSrcElemsPerDest - (*foldedNumFrontPadElems);
+      auto value =
+          extractSliceIntoByte(rewriter, loc, valueToStore, 0,
+                               frontSubWidthStoreElem, *foldedNumFrontPadElems);
+
+      atomicStore(rewriter, loc, memrefBase, currentDestIndex,
+                  cast<VectorValue>(value), frontMask.getResult());
+    }
+
+    if (currentSourceIndex >= origElements) {
+      rewriter.eraseOp(op);
+      return success();
+    }
+
+    // Increment the destination index by 1 to align to the emulated width
+    // boundary.
+    auto constantOne = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    currentDestIndex = rewriter.create<arith::AddIOp>(
+        loc, rewriter.getIndexType(), currentDestIndex, constantOne);
+
+    // 2. Full width store for the inner output bytes.
+    // After the previous step, the store address is aligned to the emulated
+    // width boundary.
+    int64_t fullWidthStoreSize =
+        (origElements - currentSourceIndex) / numSrcElemsPerDest;
+    int64_t numNonFullWidthElements = fullWidthStoreSize * numSrcElemsPerDest;
+    if (fullWidthStoreSize > 0) {
+      auto fullWidthStorePart = staticallyExtractSubvector(
+          rewriter, loc, valueToStore, currentSourceIndex,
+          numNonFullWidthElements);
+
+      auto originType = cast<VectorType>(fullWidthStorePart.getType());
+      auto memrefElemType = getElementTypeOrSelf(memrefBase.getType());
+      auto storeType = VectorType::get(
+          {originType.getNumElements() / numSrcElemsPerDest}, memrefElemType);
+      auto bitCast = rewriter.create<vector::BitCastOp>(loc, storeType,
+                                                        fullWidthStorePart);
+      rewriter.create<vector::StoreOp>(loc, bitCast.getResult(), memrefBase,
+                                       currentDestIndex);
+
+      currentSourceIndex += numNonFullWidthElements;
+      currentDestIndex = rewriter.create<arith::AddIOp>(
+          loc, rewriter.getIndexType(), currentDestIndex,
+          rewriter.create<arith::ConstantIndexOp>(loc, fullWidthStoreSize));
+    }
+
+    // 3. Partial width store for the trailing output byte.
+    // It is needed when the residual length is smaller than the emulated width,
+    // which is not covered in step 2 above.
+    auto remainingElements = origElements - currentSourceIndex;
+    if (remainingElements != 0) {
+      auto subWidthStorePart =
+          extractSliceIntoByte(rewriter, loc, cast<VectorValue>(valueToStore),
+                               currentSourceIndex, remainingElements, 0);
+
+      // Generate back mask.
+      auto maskValues = SmallVector<bool>(numSrcElemsPerDest, 0);
+      std::fill_n(maskValues.begin(), remainingElements, 1);
+      auto backMask = rewriter.create<arith::ConstantOp>(
+          loc, DenseElementsAttr::get(subWidthStoreMaskType, maskValues));
+
+      atomicStore(rewriter, loc, memrefBase, currentDestIndex,
+                  cast<VectorValue>(subWidthStorePart), backMask.getResult());
+    }
+
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -227,6 +631,11 @@ struct ConvertVectorMaskedStore final
   LogicalResult
   matchAndRewrite(vector::MaskedStoreOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+
+    // See #115653
+    if (op.getValueToStore().getType().getRank() != 1)
+      return rewriter.notifyMatchFailure(op,
+                                         "only 1-D vectors are supported ATM");
 
     auto loc = op.getLoc();
     auto convertedType = cast<MemRefType>(adaptor.getBase().getType());
@@ -260,23 +669,37 @@ struct ConvertVectorMaskedStore final
         getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndicesOfr);
 
     // Load the whole data and use arith.select to handle the corner cases.
-    // E.g., given these input values:
     //
-    //   %mask = [0, 1, 1, 1, 1, 1, 0, 0]
-    //   %0[%c0, %c0] contains [0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8]
-    //   %value_to_store = [0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF, 0x0]
+    // As an example, for this masked store of i4 values:
     //
-    // we'll have
+    //   vector.maskedstore %0[%c0, %c0], %mask, %val_to_store
     //
-    //    expected output: [0x1, 0xA, 0xB, 0xC, 0xD, 0xE, 0x7, 0x8]
+    // and given these input values:
     //
-    //    %new_mask = [1, 1, 1, 0]
-    //    %maskedload = [0x12, 0x34, 0x56, 0x00]
-    //    %bitcast = [0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x0, 0x0]
-    //    %select_using_shifted_mask = [0x1, 0xA, 0xB, 0xC, 0xD, 0xE, 0x0, 0x0]
-    //    %packed_data = [0x1A, 0xBC, 0xDE, 0x00]
+    //   %mask = [0, 1, 1, 1, 1, 0, 0, 0]                     (8 * i1)
+    //   %0[%c0, %c0] =
+    //      [0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8]          (8 * i4)
+    //   %val_to_store =
+    //      [0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF, 0x0]          (8 * i4)
     //
-    // Using the new mask to store %packed_data results in expected output.
+    // we'll have the following i4 output:
+    //
+    //    expected output: [0x1, 0xA, 0xB, 0xC, 0xD, 0x6, 0x7, 0x8]
+    //
+    // Emulating the above using i8 will give:
+    //
+    //    %compressed_mask = [1, 1, 1, 0]                     (4 * i1)
+    //    %maskedload = [0x12, 0x34, 0x56, 0x00]              (4 * i8)
+    //    %bitcast = [0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x0, 0x0] (8 * i4)
+    //    %select_using_shifted_mask =
+    //      [0x1, 0xA, 0xB, 0xC, 0xD, 0x6, 0x0, 0x0]          (8 * i4)
+    //    %packed_data = [0x1A, 0xBC, 0xD6, 0x00]             (4 * i8)
+    //
+    // Using the compressed mask to store %packed_data results in expected
+    // output.
+    //
+    // FIXME: Make an example based on the comment above work (see #115460 for
+    // reproducer).
     FailureOr<Operation *> newMask =
         getCompressedMaskOp(rewriter, loc, op.getMask(), origElements, scale);
     if (failed(newMask))
@@ -316,6 +739,11 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
   LogicalResult
   matchAndRewrite(vector::LoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+
+    // See #115653
+    if (op.getVectorType().getRank() != 1)
+      return rewriter.notifyMatchFailure(op,
+                                         "only 1-D vectors are supported ATM");
 
     auto loc = op.getLoc();
     auto convertedType = cast<MemRefType>(adaptor.getBase().getType());
@@ -360,7 +788,7 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
     // compile time as they must be constants.
 
     auto origElements = op.getVectorType().getNumElements();
-    bool isUnalignedEmulation = origElements % scale != 0;
+    bool isAlignedEmulation = origElements % scale == 0;
 
     auto stridedMetadata =
         rewriter.create<memref::ExtractStridedMetadataOp>(loc, op.getBase());
@@ -376,29 +804,28 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
             getAsOpFoldResult(adaptor.getIndices()));
 
     std::optional<int64_t> foldedIntraVectorOffset =
-        isUnalignedEmulation
-            ? getConstantIntValue(linearizedInfo.intraDataOffset)
-            : 0;
+        isAlignedEmulation
+            ? 0
+            : getConstantIntValue(linearizedInfo.intraDataOffset);
+
+    // Always load enough elements which can cover the original elements.
+    int64_t maxintraDataOffset = foldedIntraVectorOffset.value_or(scale - 1);
+    auto numElements =
+        llvm::divideCeil(maxintraDataOffset + origElements, scale);
+    Value result =
+        emulatedVectorLoad(rewriter, loc, adaptor.getBase(), linearizedIndices,
+                           numElements, oldElementType, newElementType);
 
     if (!foldedIntraVectorOffset) {
-      // unimplemented case for dynamic intra vector offset
-      return failure();
+      auto resultVector = rewriter.create<arith::ConstantOp>(
+          loc, op.getType(), rewriter.getZeroAttr(op.getType()));
+      result = dynamicallyExtractSubVector(rewriter, loc, result, resultVector,
+                                           linearizedInfo.intraDataOffset,
+                                           origElements);
+    } else if (!isAlignedEmulation) {
+      result = staticallyExtractSubvector(
+          rewriter, loc, result, *foldedIntraVectorOffset, origElements);
     }
-
-    auto numElements =
-        llvm::divideCeil(*foldedIntraVectorOffset + origElements, scale);
-    auto newLoad = rewriter.create<vector::LoadOp>(
-        loc, VectorType::get(numElements, newElementType), adaptor.getBase(),
-        getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices));
-
-    Value result = rewriter.create<vector::BitCastOp>(
-        loc, VectorType::get(numElements * scale, oldElementType), newLoad);
-
-    if (isUnalignedEmulation) {
-      result = extractSubvectorFrom(rewriter, loc, op.getType(), result,
-                                    *foldedIntraVectorOffset, origElements);
-    }
-
     rewriter.replaceOp(op, result);
     return success();
   }
@@ -415,6 +842,10 @@ struct ConvertVectorMaskedLoad final
   LogicalResult
   matchAndRewrite(vector::MaskedLoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    // See #115653
+    if (op.getVectorType().getRank() != 1)
+      return rewriter.notifyMatchFailure(op,
+                                         "only 1-D vectors are supported ATM");
 
     auto loc = op.getLoc();
     auto convertedType = cast<MemRefType>(adaptor.getBase().getType());
@@ -473,7 +904,7 @@ struct ConvertVectorMaskedLoad final
     // subvector at the proper offset after bit-casting.
     auto origType = op.getVectorType();
     auto origElements = origType.getNumElements();
-    bool isUnalignedEmulation = origElements % scale != 0;
+    bool isAlignedEmulation = origElements % scale == 0;
 
     auto stridedMetadata =
         rewriter.create<memref::ExtractStridedMetadataOp>(loc, op.getBase());
@@ -488,33 +919,32 @@ struct ConvertVectorMaskedLoad final
             getAsOpFoldResult(adaptor.getIndices()));
 
     std::optional<int64_t> foldedIntraVectorOffset =
-        isUnalignedEmulation
-            ? getConstantIntValue(linearizedInfo.intraDataOffset)
-            : 0;
+        isAlignedEmulation
+            ? 0
+            : getConstantIntValue(linearizedInfo.intraDataOffset);
 
-    if (!foldedIntraVectorOffset) {
-      // unimplemented case for dynamic intra vector offset
-      return failure();
-    }
-
-    FailureOr<Operation *> newMask =
-        getCompressedMaskOp(rewriter, loc, op.getMask(), origElements, scale,
-                            *foldedIntraVectorOffset);
+    int64_t maxIntraDataOffset = foldedIntraVectorOffset.value_or(scale - 1);
+    FailureOr<Operation *> newMask = getCompressedMaskOp(
+        rewriter, loc, op.getMask(), origElements, scale, maxIntraDataOffset);
     if (failed(newMask))
       return failure();
 
+    Value passthru = op.getPassThru();
+
     auto numElements =
-        llvm::divideCeil(*foldedIntraVectorOffset + origElements, scale);
+        llvm::divideCeil(maxIntraDataOffset + origElements, scale);
     auto loadType = VectorType::get(numElements, newElementType);
     auto newBitcastType = VectorType::get(numElements * scale, oldElementType);
 
-    Value passthru = op.getPassThru();
-    if (isUnalignedEmulation) {
-      // create an empty vector of the new type
-      auto emptyVector = rewriter.create<arith::ConstantOp>(
-          loc, newBitcastType, rewriter.getZeroAttr(newBitcastType));
-      passthru = insertSubvectorInto(rewriter, loc, passthru, emptyVector,
-                                     *foldedIntraVectorOffset);
+    auto emptyVector = rewriter.create<arith::ConstantOp>(
+        loc, newBitcastType, rewriter.getZeroAttr(newBitcastType));
+    if (!foldedIntraVectorOffset) {
+      passthru = dynamicallyInsertSubVector(
+          rewriter, loc, passthru, emptyVector, linearizedInfo.intraDataOffset,
+          origElements);
+    } else if (!isAlignedEmulation) {
+      passthru = staticallyInsertSubvector(rewriter, loc, passthru, emptyVector,
+                                           *foldedIntraVectorOffset);
     }
     auto newPassThru =
         rewriter.create<vector::BitCastOp>(loc, loadType, passthru);
@@ -531,22 +961,29 @@ struct ConvertVectorMaskedLoad final
         rewriter.create<vector::BitCastOp>(loc, newBitcastType, newLoad);
 
     Value mask = op.getMask();
-    if (isUnalignedEmulation) {
-      auto newSelectMaskType =
-          VectorType::get(numElements * scale, rewriter.getI1Type());
-      // TODO: can fold if op's mask is constant
-      auto emptyVector = rewriter.create<arith::ConstantOp>(
-          loc, newSelectMaskType, rewriter.getZeroAttr(newSelectMaskType));
-      mask = insertSubvectorInto(rewriter, loc, op.getMask(), emptyVector,
-                                 *foldedIntraVectorOffset);
+    auto newSelectMaskType =
+        VectorType::get(numElements * scale, rewriter.getI1Type());
+    // TODO: try to fold if op's mask is constant
+    auto emptyMask = rewriter.create<arith::ConstantOp>(
+        loc, newSelectMaskType, rewriter.getZeroAttr(newSelectMaskType));
+    if (!foldedIntraVectorOffset) {
+      mask = dynamicallyInsertSubVector(rewriter, loc, mask, emptyMask,
+                                        linearizedInfo.intraDataOffset,
+                                        origElements);
+    } else if (!isAlignedEmulation) {
+      mask = staticallyInsertSubvector(rewriter, loc, op.getMask(), emptyMask,
+                                       *foldedIntraVectorOffset);
     }
 
     Value result =
         rewriter.create<arith::SelectOp>(loc, mask, bitCast, passthru);
-
-    if (isUnalignedEmulation) {
-      result = extractSubvectorFrom(rewriter, loc, op.getType(), result,
-                                    *foldedIntraVectorOffset, origElements);
+    if (!foldedIntraVectorOffset) {
+      result = dynamicallyExtractSubVector(
+          rewriter, loc, result, op.getPassThru(),
+          linearizedInfo.intraDataOffset, origElements);
+    } else if (!isAlignedEmulation) {
+      result = staticallyExtractSubvector(
+          rewriter, loc, result, *foldedIntraVectorOffset, origElements);
     }
     rewriter.replaceOp(op, result);
 
@@ -566,6 +1003,11 @@ struct ConvertVectorTransferRead final
   matchAndRewrite(vector::TransferReadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
+    // See #115653
+    if (op.getVectorType().getRank() != 1)
+      return rewriter.notifyMatchFailure(op,
+                                         "only 1-D vectors are supported ATM");
+
     auto loc = op.getLoc();
     auto convertedType = cast<MemRefType>(adaptor.getSource().getType());
     Type oldElementType = op.getType().getElementType();
@@ -581,7 +1023,7 @@ struct ConvertVectorTransferRead final
 
     auto origElements = op.getVectorType().getNumElements();
 
-    bool isUnalignedEmulation = origElements % scale != 0;
+    bool isAlignedEmulation = origElements % scale == 0;
 
     auto newPadding = rewriter.create<arith::ExtUIOp>(loc, newElementType,
                                                       adaptor.getPadding());
@@ -600,17 +1042,13 @@ struct ConvertVectorTransferRead final
             getAsOpFoldResult(adaptor.getIndices()));
 
     std::optional<int64_t> foldedIntraVectorOffset =
-        isUnalignedEmulation
-            ? getConstantIntValue(linearizedInfo.intraDataOffset)
-            : 0;
+        isAlignedEmulation
+            ? 0
+            : getConstantIntValue(linearizedInfo.intraDataOffset);
 
-    if (!foldedIntraVectorOffset) {
-      // unimplemented case for dynamic inra-vector offset
-      return failure();
-    }
-
+    int64_t maxIntraDataOffset = foldedIntraVectorOffset.value_or(scale - 1);
     auto numElements =
-        llvm::divideCeil(*foldedIntraVectorOffset + origElements, scale);
+        llvm::divideCeil(maxIntraDataOffset + origElements, scale);
 
     auto newRead = rewriter.create<vector::TransferReadOp>(
         loc, VectorType::get(numElements, newElementType), adaptor.getSource(),
@@ -621,9 +1059,15 @@ struct ConvertVectorTransferRead final
         loc, VectorType::get(numElements * scale, oldElementType), newRead);
 
     Value result = bitCast->getResult(0);
-    if (isUnalignedEmulation) {
-      result = extractSubvectorFrom(rewriter, loc, op.getType(), result,
-                                    *foldedIntraVectorOffset, origElements);
+    if (!foldedIntraVectorOffset) {
+      auto zeros = rewriter.create<arith::ConstantOp>(
+          loc, op.getType(), rewriter.getZeroAttr(op.getType()));
+      result = dynamicallyExtractSubVector(rewriter, loc, bitCast, zeros,
+                                           linearizedInfo.intraDataOffset,
+                                           origElements);
+    } else if (!isAlignedEmulation) {
+      result = staticallyExtractSubvector(
+          rewriter, loc, result, *foldedIntraVectorOffset, origElements);
     }
     rewriter.replaceOp(op, result);
 
@@ -878,29 +1322,41 @@ LogicalResult BitCastRewriter::commonPrecondition(PatternRewriter &rewriter,
   return commonConversionPrecondition(rewriter, preconditionType, op);
 }
 
-/// Verify that source and destination element types meet the precondition for
-/// the supported aligned conversion cases. Alignment means that the either the
-/// source element type is multiple of the destination element type or the other
-/// way around.
+/// Verify that `subByteVecType` and `dstType` are aligned. Alignment
+/// means that:
+///   1. The `dstType` element type is a multiple of the
+///   `srcVectorOfSubByteType` element type (e.g. i4 vs i8 is OK, but i3 vs i8
+///   is not supported). Let this multiple be `N`.
+///   2. The number of the (trailing) elements in `srcVectorOfSubByteType` is a
+///   multiple of `N` from 1. (e.g., when targetting i8, 2xi4 is OK, but 3xi4 is
+///   not supported).
 ///
-/// NOTE: This method assumes that common conversion preconditions are met.
+/// NOTE: This method assumes that common conversion preconditions are met. In
+/// particular, the element type of `dstType` is assumed to be a multi-byte
+/// type (e.g. i8, i16, i32).
 static LogicalResult alignedConversionPrecondition(PatternRewriter &rewriter,
-                                                   VectorType srcType,
+                                                   VectorType subByteVecType,
                                                    VectorType dstType,
                                                    Operation *op) {
-  if (!srcType || !dstType)
+  if (!subByteVecType || !dstType)
     return rewriter.notifyMatchFailure(op, "Not a supported aligned case");
-  unsigned srcElemBitwidth = srcType.getElementTypeBitWidth();
+  unsigned srcElemBitwidth = subByteVecType.getElementTypeBitWidth();
   unsigned dstElemBitwidth = dstType.getElementTypeBitWidth();
 
-  // Only {s}i4 -> (size_of({{s}i/f}) >= 8) are supported for now.
-  if (srcElemBitwidth != 4 || dstElemBitwidth < 8 ||
-      (dstElemBitwidth % srcElemBitwidth) != 0)
-    return rewriter.notifyMatchFailure(op, "Not a supported aligned case");
-
-  if ((srcType.getShape().back() % 2) != 0)
+  if (dstElemBitwidth < 8)
     return rewriter.notifyMatchFailure(
-        op, "Not an even number of i4 elements in trailing dim");
+        op, "the bitwidth of dstType must be greater than or equal to 8");
+  if (dstElemBitwidth % srcElemBitwidth != 0)
+    return rewriter.notifyMatchFailure(op, "unaligned cases are not supported");
+  if (srcElemBitwidth != 2 && srcElemBitwidth != 4)
+    return rewriter.notifyMatchFailure(
+        op, "only src bitwidth of 2 or 4 is supported at this moment");
+
+  const int numSrcElemsPerByte = 8 / srcElemBitwidth;
+  if ((subByteVecType.getShape().back() % numSrcElemsPerByte) != 0)
+    return rewriter.notifyMatchFailure(
+        op, "the trailing dimension of the input vector of sub-bytes must be a "
+            "multiple of 8 / <sub-byte-width>");
 
   return success();
 }
@@ -981,70 +1437,166 @@ Value BitCastRewriter::genericRewriteStep(
   return runningResult;
 }
 
-/// Rewrite the i4 -> i8 signed extension into a sequence of shuffles and
-/// bitwise ops that take advantage of high-level information to avoid leaving
-/// LLVM to scramble with peephole optimizations.
-static Value rewriteI4ToI8SignedExt(PatternRewriter &rewriter, Location loc,
-                                    Value srcValue) {
-  VectorType srcVecType = cast<VectorType>(srcValue.getType());
+/// Bitcasts the aligned `subByteVec` vector to a vector of i8.
+/// Where aligned means it satisfies the alignedConversionPreconditions.
+///
+/// Example:
+/// vector<16x16xi2> -> vector<16x4xi8>
+/// vector<16x16xi4> -> vector<16x8xi8>
+static Value bitcastSubByteVectorToI8(PatternRewriter &rewriter, Location loc,
+                                      Value subByteVec) {
+  auto srcVecType = cast<VectorType>(subByteVec.getType());
+  int64_t srcBitwidth = srcVecType.getElementType().getIntOrFloatBitWidth();
+  assert(8 % srcBitwidth == 0 &&
+         "Unsupported sub-byte type (not a divisor of i8)");
+  int64_t numSrcElemsPerByte = 8 / srcBitwidth;
+  SmallVector<int64_t> vecShape(srcVecType.getShape());
+  // Adjust last dimension of the vector, so the total size remains the same.
+  vecShape.back() = vecShape.back() / numSrcElemsPerByte;
+  auto i8VecType = VectorType::get(vecShape, rewriter.getI8Type());
+  return rewriter.create<vector::BitCastOp>(loc, i8VecType, subByteVec);
+}
+
+/// Extracts a signed N-bit sequence from each element of a vector of bytes,
+/// starting at the specified bit index.
+/// The `bitIdx` starts at 0 from the LSB and moves to the left.
+///
+/// Example for a single element:
+/// Extract numBits=2 starting at bitIdx=2
+/// src     = [0 | 1 | 0 | 1 | 1 | 1 | 1 | 0]
+/// indices = [7 | 6 | 5 | 4 | 3 | 2 | 1 | 0]
+/// target  = [.   .   .   .   ^   ^   .   .]
+///
+/// The target sequence is [11](decimal=-1) as signed 2-bit integer.
+/// So the result should be [11 11 11 11](decimal=-1) as signed 8-bit integer.
+///
+/// src     =                         [01 01 11 10]
+/// shl     = arith.shl(src, 4)    -> [11 10 00 00]
+/// result  = arith.shrsi(shl, 6)  -> [11 11 11 11]
+static Value extractNBitsPerByteAndSignExtendToI8(PatternRewriter &rewriter,
+                                                  Location loc, Value src,
+                                                  int bitIdx, int numBits) {
+  auto srcType = cast<VectorType>(src.getType());
+  Value shl = src;
+  int8_t bitsToShiftLeft = 8 - numBits - bitIdx;
+  assert(bitIdx >= 0 && bitsToShiftLeft >= 0 && numBits > 0 && numBits <= 8 &&
+         "Invalid bitIdx range");
+  if (bitsToShiftLeft != 0) {
+    Value shiftLeftValues = rewriter.create<arith::ConstantOp>(
+        loc, DenseElementsAttr::get(srcType, bitsToShiftLeft));
+    shl = rewriter.create<arith::ShLIOp>(loc, src, shiftLeftValues);
+  }
+
+  int8_t bitsToShiftRight = 8 - numBits;
+  Value shiftRightValues = rewriter.create<arith::ConstantOp>(
+      loc, DenseElementsAttr::get(srcType, bitsToShiftRight));
+  Value shr = rewriter.create<arith::ShRSIOp>(loc, shl, shiftRightValues);
+  return shr;
+}
+
+/// Extracts an unsigned N-bit sequence from each element of a vector of bytes,
+/// starting at the specified bit index.
+/// The `bitIdx` starts at 0 from the LSB and moves to the left.
+///
+/// Example for a single element:
+/// Extract numBits=2 starting at bitIdx=2
+/// src     = [0 | 1 | 0 | 1 | 1 | 0 | 1 | 0]
+/// indices = [7 | 6 | 5 | 4 | 3 | 2 | 1 | 0]
+/// target  = [.   .   .   .   ^   ^   .   .]
+///
+/// The target sequence is [10](decimal=2) as unsigned 2-bit integer.
+/// So the result should be [00 00 00 10](decimal=2) as unsigned 8-bit integer.
+///
+/// src                            = [01 01 10 10]
+/// mask                           = [00 00 00 11]
+/// shr    = arith.shrui(src, 2)   = [00 01 01 10]
+/// result = arith.andi(shr, mask) = [00 00 00 10]
+/// NOTE: Similarly to extractNBitsPerByteAndSignExtendToI8, this could be
+/// achieved by using arith::ShLIOp + arith::ShRUIOp instead of the masking.
+/// However, by using arith::ShRUIOp + arith::AndIOp, we are eliminating shift
+/// left when the index is 0.
+static Value extractNBitsPerByteAndExtendToI8(PatternRewriter &rewriter,
+                                              Location loc, Value src,
+                                              int bitIdx, int numBits) {
+  assert(bitIdx >= 0 && bitIdx <= 8 - numBits && numBits > 0 && numBits <= 8 &&
+         "Invalid bitIdx range");
+  auto srcType = cast<VectorType>(src.getType());
+  int8_t bitsToShiftRight = bitIdx;
+  Value shr = src;
+  if (bitsToShiftRight != 0) {
+    Value shiftRightValues = rewriter.create<arith::ConstantOp>(
+        loc, DenseElementsAttr::get(srcType, bitsToShiftRight));
+    shr = rewriter.create<arith::ShRUIOp>(loc, src, shiftRightValues);
+  }
+  if (bitIdx + numBits == 8) {
+    return shr;
+  }
+  uint8_t lowBitsMask = (1 << numBits) - 1;
+  Value lowBitsMaskValues = rewriter.create<arith::ConstantOp>(
+      loc, DenseElementsAttr::get(srcType, lowBitsMask));
+  return rewriter.create<arith::AndIOp>(loc, shr, lowBitsMaskValues);
+}
+
+using ExtractNBitsFn =
+    std::function<Value(PatternRewriter &, Location, Value, int, int)>;
+
+/// Rewrite the i4 -> i8  extension into a sequence of shuffles and
+/// bitwise ops to avoid leaving LLVM to scramble with peephole optimizations.
+static Value rewriteI4ToI8Ext(PatternRewriter &rewriter, Location loc,
+                              Value srcValue, const ExtractNBitsFn &extFn) {
+  [[maybe_unused]] auto srcVecType = cast<VectorType>(srcValue.getType());
   assert(srcVecType.getElementType().isSignlessInteger(4) &&
          "Expected i4 type");
 
   // 1. Generate a bitcast vector<Xxi4> -> vector<X/2xi8>.
-  SmallVector<int64_t> i8VecShape = llvm::to_vector(srcVecType.getShape());
-  constexpr int64_t i4Toi8BitwidthFactor = 2;
-  i8VecShape.back() = i8VecShape.back() / i4Toi8BitwidthFactor;
-  auto i8VecType = VectorType::get(i8VecShape, rewriter.getI8Type());
-  Value i8Vector = rewriter.create<vector::BitCastOp>(loc, i8VecType, srcValue);
+  Value i8Vector = bitcastSubByteVectorToI8(rewriter, loc, srcValue);
 
-  // 2. Extend i4 elements to i8 elements using shifts. Low i4 elemens of each
+  // 2. Extend i4 elements to i8 elements. Low i4 elemens of each
   // byte are place in one vector and the high i4 elements in another vector.
-  constexpr int8_t bitsToShift = 4;
-  auto shiftValues = rewriter.create<arith::ConstantOp>(
-      loc, DenseElementsAttr::get(i8VecType, bitsToShift));
-  Value shl = rewriter.create<arith::ShLIOp>(loc, i8Vector, shiftValues);
-  Value low = rewriter.create<arith::ShRSIOp>(loc, shl, shiftValues);
-  Value high = rewriter.create<arith::ShRSIOp>(loc, i8Vector, shiftValues);
+  Value low = extFn(rewriter, loc, i8Vector, 0, 4);
+  Value high = extFn(rewriter, loc, i8Vector, 4, 4);
 
   // 3. Interleave low and high i8 elements.
   return rewriter.create<vector::InterleaveOp>(loc, low, high);
 }
 
-/// Rewrite the i4 -> i8 unsigned extension into a sequence of shuffles and
-/// bitwise ops that take advantage of high-level information to avoid leaving
-/// LLVM to scramble with peephole optimizations.
-static Value rewriteI4ToI8UnsignedExt(PatternRewriter &rewriter, Location loc,
-                                      Value srcValue) {
-  VectorType srcVecType = cast<VectorType>(srcValue.getType());
-  assert(srcVecType.getElementType().isSignlessInteger(4) &&
-         "Expected i4 type");
+/// Rewrite the i2 -> i8  extension into a sequence of shuffles and
+/// bitwise ops to avoid leaving LLVM to scramble with peephole optimizations.
+static Value rewriteI2ToI8Ext(PatternRewriter &rewriter, Location loc,
+                              Value srcValue, const ExtractNBitsFn &extFn) {
+  [[maybe_unused]] VectorType srcVecType = cast<VectorType>(srcValue.getType());
+  assert(srcVecType.getElementType().isSignlessInteger(2) &&
+         "Expected i2 type");
 
-  // 1. Generate a bitcast vector<Xxi4> -> vector<X/2xi8>.
-  SmallVector<int64_t> i8VecShape = llvm::to_vector(srcVecType.getShape());
-  constexpr int64_t i4Toi8BitwidthFactor = 2;
-  i8VecShape.back() = i8VecShape.back() / i4Toi8BitwidthFactor;
-  auto i8VecType = VectorType::get(i8VecShape, rewriter.getI8Type());
-  Value i8Vector = rewriter.create<vector::BitCastOp>(loc, i8VecType, srcValue);
+  // 1. Generate a bitcast vector<Xxi2> -> vector<X/2xi8>.
+  Value i8Vector = bitcastSubByteVectorToI8(rewriter, loc, srcValue);
 
-  // 2 Extend the i4 elements using shifts & masking. Low i4 elements of each
-  //  byte are placed in one vector and the high i4 elements in another vector.
-  constexpr uint8_t lowBitsMask = 15; // Equivalent to [00001111] bit mask
-  auto lowBitsMaskValues = rewriter.create<arith::ConstantOp>(
-      loc, DenseElementsAttr::get(i8VecType, lowBitsMask));
-  Value low = rewriter.create<arith::AndIOp>(loc, i8VecType, i8Vector,
-                                             lowBitsMaskValues);
-  constexpr int8_t highBitsToShift = 4;
-  auto highShiftValues = rewriter.create<arith::ConstantOp>(
-      loc, DenseElementsAttr::get(i8VecType, highBitsToShift));
-  Value high = rewriter.create<arith::ShRUIOp>(loc, i8Vector, highShiftValues);
+  // 2. Extract each i2 element
+  // Positon 0 (bits 0-1)
+  Value vec0 = extFn(rewriter, loc, i8Vector, 0, 2);
+  // Position 1 (bits 2-3)
+  Value vec1 = extFn(rewriter, loc, i8Vector, 2, 2);
+  // Position 2 (bits 4-5)
+  Value vec2 = extFn(rewriter, loc, i8Vector, 4, 2);
+  // Position 3 (bits 6-7)
+  Value vec3 = extFn(rewriter, loc, i8Vector, 6, 2);
 
-  // 3. Interleave low and high i8 elements.
-  return rewriter.create<vector::InterleaveOp>(loc, low, high);
+  // 3. Interleave all 4 elements by first interleaving
+  // even elements and then odd
+  // vec0  = [0,0,0,0],...
+  // vec1  = [1,1,1,1],...
+  // vec2  = [2,2,2,2],...
+  // vec3  = [3,3,3,3],...
+  // 02    = [0,2,0,2,0,2,0,2],...
+  // 13    = [1,3,1,3,1,3,1,3],...
+  // 0213  = [0,1,2,3,...],...
+  Value interleave02 = rewriter.create<vector::InterleaveOp>(loc, vec0, vec2);
+  Value interleave13 = rewriter.create<vector::InterleaveOp>(loc, vec1, vec3);
+  return rewriter.create<vector::InterleaveOp>(loc, interleave02, interleave13);
 }
 
 /// Rewrite the i8 -> i4 truncation into a deinterleave and series of bitwise
-/// ops that take advantage of high-level information to avoid leaving LLVM to
-/// scramble with peephole optimizations.
+/// ops to avoid leaving LLVM to scramble with peephole optimizations.
 static Value rewriteI8ToI4Trunc(PatternRewriter &rewriter, Location loc,
                                 Value srcValue) {
   VectorType srcVecType = cast<VectorType>(srcValue.getType());
@@ -1245,13 +1797,19 @@ struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
       return failure();
 
     // Perform the rewrite.
+    Location loc = conversionOp.getLoc();
+    const auto &extFn = isSigned ? extractNBitsPerByteAndSignExtendToI8
+                                 : extractNBitsPerByteAndExtendToI8;
     Value subByteExt;
-    if (isSigned) {
-      subByteExt =
-          rewriteI4ToI8SignedExt(rewriter, conversionOp.getLoc(), srcValue);
-    } else {
-      subByteExt =
-          rewriteI4ToI8UnsignedExt(rewriter, conversionOp.getLoc(), srcValue);
+    switch (srcVecType.getElementType().getIntOrFloatBitWidth()) {
+    case 2:
+      subByteExt = rewriteI2ToI8Ext(rewriter, loc, srcValue, extFn);
+      break;
+    case 4:
+      subByteExt = rewriteI4ToI8Ext(rewriter, loc, srcValue, extFn);
+      break;
+    default:
+      return failure();
     }
 
     // Finalize the rewrite.
@@ -1290,6 +1848,10 @@ struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
       return failure();
 
     if (failed(commonConversionPrecondition(rewriter, srcVecType, truncOp)))
+      return failure();
+
+    // TODO: Add support for truncating to i2.
+    if (dstVecType.getElementType().getIntOrFloatBitWidth() == 2)
       return failure();
 
     // Check general alignment preconditions. We invert the src/dst type order
@@ -1388,8 +1950,10 @@ void vector::populateVectorNarrowTypeRewritePatterns(
                RewriteAlignedSubByteIntExt<arith::SIToFPOp, /*isSigned=*/true>,
                RewriteAlignedSubByteIntTrunc>(patterns.getContext(),
                                               benefit.getBenefit() + 1);
-  patterns.add<RewriteAlignedSubByteIntExt<arith::ExtUIOp, /*isSigned=*/false>>(
-      patterns.getContext(), benefit.getBenefit() + 1);
+  patterns
+      .add<RewriteAlignedSubByteIntExt<arith::ExtUIOp, /*isSigned=*/false>,
+           RewriteAlignedSubByteIntExt<arith::UIToFPOp, /*isSigned=*/false>>(
+          patterns.getContext(), benefit.getBenefit() + 1);
 }
 
 void vector::populateVectorTransposeNarrowTypeRewritePatterns(

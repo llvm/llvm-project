@@ -105,7 +105,7 @@ void InstrEmitter::EmitCopyFromReg(SDNode *Node, unsigned ResNo, bool IsClone,
   if (TLI->isTypeLegal(VT))
     UseRC = TLI->getRegClassFor(VT, Node->isDivergent());
 
-  for (SDNode *User : Node->uses()) {
+  for (SDNode *User : Node->users()) {
     bool Match = true;
     if (User->getOpcode() == ISD::CopyToReg &&
         User->getOperand(2).getNode() == Node &&
@@ -225,7 +225,7 @@ void InstrEmitter::CreateVirtualRegisters(SDNode *Node,
     }
 
     if (!VRBase && !IsClone && !IsCloned)
-      for (SDNode *User : Node->uses()) {
+      for (SDNode *User : Node->users()) {
         if (User->getOpcode() == ISD::CopyToReg &&
             User->getOperand(2).getNode() == Node &&
             User->getOperand(2).getResNo() == i) {
@@ -351,8 +351,9 @@ InstrEmitter::AddRegisterOperand(MachineInstrBuilder &MIB,
         OpRC = TRI->getAllocatableClass(OpRC);
         assert(OpRC && "Constraints cannot be fulfilled for allocation");
         Register NewVReg = MRI->createVirtualRegister(OpRC);
-        BuildMI(*MBB, InsertPos, Op.getNode()->getDebugLoc(),
-                TII->get(TargetOpcode::COPY), NewVReg).addReg(VReg);
+        BuildMI(*MBB, InsertPos, MIB->getDebugLoc(),
+                TII->get(TargetOpcode::COPY), NewVReg)
+            .addReg(VReg);
         VReg = NewVReg;
       } else {
         assert(ConstrainedRC->isAllocatable() &&
@@ -502,7 +503,7 @@ void InstrEmitter::EmitSubregNode(SDNode *Node, VRBaseMapType &VRBaseMap,
 
   // If the node is only used by a CopyToReg and the dest reg is a vreg, use
   // the CopyToReg'd destination register instead of creating a new vreg.
-  for (SDNode *User : Node->uses()) {
+  for (SDNode *User : Node->users()) {
     if (User->getOpcode() == ISD::CopyToReg &&
         User->getOperand(2).getNode() == Node) {
       Register DestReg = cast<RegisterSDNode>(User->getOperand(1))->getReg();
@@ -1105,6 +1106,9 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
 
     if (Flags.hasDisjoint())
       MI->setFlag(MachineInstr::MIFlag::Disjoint);
+
+    if (Flags.hasSameSign())
+      MI->setFlag(MachineInstr::MIFlag::SameSign);
   }
 
   // Emit all of the actual operands of this instruction, adding them to the

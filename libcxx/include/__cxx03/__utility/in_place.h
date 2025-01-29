@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_IN_PLACE_H
-#define _LIBCPP___UTILITY_IN_PLACE_H
+#ifndef _LIBCPP___CXX03___UTILITY_IN_PLACE_H
+#define _LIBCPP___CXX03___UTILITY_IN_PLACE_H
 
-#include <__config>
-#include <__type_traits/remove_cvref.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/remove_cvref.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -60,4 +60,4 @@ using __is_inplace_index = __is_inplace_index_imp<__remove_cvref_t<_Tp>>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_IN_PLACE_H
+#endif // _LIBCPP___CXX03___UTILITY_IN_PLACE_H

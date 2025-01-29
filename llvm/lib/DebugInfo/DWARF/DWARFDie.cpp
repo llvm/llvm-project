@@ -24,7 +24,6 @@
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -412,6 +411,15 @@ bool DWARFDie::addressRangeContainsAddress(const uint64_t Address) const {
     if (R.LowPC <= Address && Address < R.HighPC)
       return true;
   return false;
+}
+
+std::optional<uint64_t> DWARFDie::getLanguage() const {
+  if (isValid()) {
+    if (std::optional<DWARFFormValue> LV =
+            U->getUnitDIE().find(dwarf::DW_AT_language))
+      return LV->getAsUnsignedConstant();
+  }
+  return std::nullopt;
 }
 
 Expected<DWARFLocationExpressionsVector>

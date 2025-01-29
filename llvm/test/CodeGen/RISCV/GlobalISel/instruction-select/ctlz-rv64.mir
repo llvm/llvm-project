@@ -15,10 +15,8 @@ body:             |
     ; RV64I-NEXT: $x10 = COPY [[CLZW]]
     ; RV64I-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = COPY $x10
-    %1:gprb(s32) = G_TRUNC %0
-    %2:gprb(s32) = G_CTLZ %1
-    %3:gprb(s64) = G_ANYEXT %2
-    $x10 = COPY %3(s64)
+    %1:gprb(s64) = G_CLZW %0
+    $x10 = COPY %1(s64)
     PseudoRET implicit $x10
 
 ...

@@ -29,15 +29,15 @@ FloatType mlir::LLVM::detail::getFloatType(MLIRContext *context,
                                            unsigned width) {
   switch (width) {
   case 16:
-    return FloatType::getF16(context);
+    return Float16Type::get(context);
   case 32:
-    return FloatType::getF32(context);
+    return Float32Type::get(context);
   case 64:
-    return FloatType::getF64(context);
+    return Float64Type::get(context);
   case 80:
-    return FloatType::getF80(context);
+    return Float80Type::get(context);
   case 128:
-    return FloatType::getF128(context);
+    return Float128Type::get(context);
   default:
     return {};
   }

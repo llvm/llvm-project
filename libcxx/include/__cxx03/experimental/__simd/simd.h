@@ -7,18 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXPERIMENTAL___SIMD_SIMD_H
-#define _LIBCPP_EXPERIMENTAL___SIMD_SIMD_H
+#ifndef _LIBCPP___CXX03_EXPERIMENTAL___SIMD_SIMD_H
+#define _LIBCPP___CXX03_EXPERIMENTAL___SIMD_SIMD_H
 
-#include <__type_traits/is_same.h>
-#include <__type_traits/remove_cvref.h>
-#include <__utility/forward.h>
-#include <cstddef>
-#include <experimental/__config>
-#include <experimental/__simd/declaration.h>
-#include <experimental/__simd/reference.h>
-#include <experimental/__simd/traits.h>
-#include <experimental/__simd/utility.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/remove_cvref.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/experimental/__config>
+#include <__cxx03/experimental/__simd/declaration.h>
+#include <__cxx03/experimental/__simd/reference.h>
+#include <__cxx03/experimental/__simd/traits.h>
+#include <__cxx03/experimental/__simd/utility.h>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
 
@@ -99,4 +99,4 @@ using fixed_size_simd = simd<_Tp, simd_abi::fixed_size<_Np>>;
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL
 
 #endif // _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
-#endif // _LIBCPP_EXPERIMENTAL___SIMD_SIMD_H
+#endif // _LIBCPP___CXX03_EXPERIMENTAL___SIMD_SIMD_H

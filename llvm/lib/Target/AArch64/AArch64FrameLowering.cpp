@@ -209,7 +209,6 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
-#include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64SMEAttributes.h"
@@ -1011,7 +1010,7 @@ void AArch64FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
 
   BitVector GPRsToZero(TRI.getNumRegs());
   BitVector FPRsToZero(TRI.getNumRegs());
-  bool HasSVE = STI.hasSVE();
+  bool HasSVE = STI.isSVEorStreamingSVEAvailable();
   for (MCRegister Reg : RegsToZero.set_bits()) {
     if (TRI.isGeneralPurposeRegister(MF, Reg)) {
       // For GPRs, we only care to clear out the 64-bit register.
@@ -1196,10 +1195,9 @@ bool AArch64FrameLowering::shouldCombineCSRLocalStackBump(
 }
 
 bool AArch64FrameLowering::shouldCombineCSRLocalStackBumpInEpilogue(
-    MachineBasicBlock &MBB, unsigned StackBumpBytes) const {
+    MachineBasicBlock &MBB, uint64_t StackBumpBytes) const {
   if (!shouldCombineCSRLocalStackBump(*MBB.getParent(), StackBumpBytes))
     return false;
-
   if (MBB.empty())
     return true;
 
@@ -1493,13 +1491,6 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
     NewOpc = AArch64::LDRQpost;
     break;
   }
-  // Get rid of the SEH code associated with the old instruction.
-  if (NeedsWinCFI) {
-    auto SEH = std::next(MBBI);
-    if (AArch64InstrInfo::isSEHInstruction(*SEH))
-      SEH->eraseFromParent();
-  }
-
   TypeSize Scale = TypeSize::getFixed(1), Width = TypeSize::getFixed(0);
   int64_t MinOffset, MaxOffset;
   bool Success = static_cast<const AArch64InstrInfo *>(TII)->getMemOpInfo(
@@ -1514,14 +1505,25 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
       CSStackSizeInc > MaxOffset * (int64_t)Scale.getFixedValue()) {
     // If we are destroying the frame, make sure we add the increment after the
     // last frame operation.
-    if (FrameFlag == MachineInstr::FrameDestroy)
+    if (FrameFlag == MachineInstr::FrameDestroy) {
       ++MBBI;
+      // Also skip the SEH instruction, if needed
+      if (NeedsWinCFI && AArch64InstrInfo::isSEHInstruction(*MBBI))
+        ++MBBI;
+    }
     emitFrameOffset(MBB, MBBI, DL, AArch64::SP, AArch64::SP,
                     StackOffset::getFixed(CSStackSizeInc), TII, FrameFlag,
-                    false, false, nullptr, EmitCFI,
+                    false, NeedsWinCFI, HasWinCFI, EmitCFI,
                     StackOffset::getFixed(CFAOffset));
 
     return std::prev(MBBI);
+  }
+
+  // Get rid of the SEH code associated with the old instruction.
+  if (NeedsWinCFI) {
+    auto SEH = std::next(MBBI);
+    if (AArch64InstrInfo::isSEHInstruction(*SEH))
+      SEH->eraseFromParent();
   }
 
   MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(NewOpc));
@@ -2364,7 +2366,6 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   }
   bool CombineSPBump = shouldCombineCSRLocalStackBumpInEpilogue(MBB, NumBytes);
   // Assume we can't combine the last pop with the sp restore.
-
   bool CombineAfterCSRBump = false;
   if (!CombineSPBump && PrologueSaveSize != 0) {
     MachineBasicBlock::iterator Pop = std::prev(MBB.getFirstTerminator());
@@ -2927,25 +2928,11 @@ struct RegPairInfo {
   int FrameIdx;
   int Offset;
   enum RegType { GPR, FPR64, FPR128, PPR, ZPR, VG } Type;
+  const TargetRegisterClass *RC;
 
   RegPairInfo() = default;
 
   bool isPaired() const { return Reg2 != AArch64::NoRegister; }
-
-  unsigned getScale() const {
-    switch (Type) {
-    case PPR:
-      return 2;
-    case GPR:
-    case FPR64:
-    case VG:
-      return 8;
-    case ZPR:
-    case FPR128:
-      return 16;
-    }
-    llvm_unreachable("Unsupported type");
-  }
 
   bool isScalable() const { return Type == PPR || Type == ZPR; }
 };
@@ -3024,20 +3011,27 @@ static void computeCalleeSaveRegisterPairs(
     RegPairInfo RPI;
     RPI.Reg1 = CSI[i].getReg();
 
-    if (AArch64::GPR64RegClass.contains(RPI.Reg1))
+    if (AArch64::GPR64RegClass.contains(RPI.Reg1)) {
       RPI.Type = RegPairInfo::GPR;
-    else if (AArch64::FPR64RegClass.contains(RPI.Reg1))
+      RPI.RC = &AArch64::GPR64RegClass;
+    } else if (AArch64::FPR64RegClass.contains(RPI.Reg1)) {
       RPI.Type = RegPairInfo::FPR64;
-    else if (AArch64::FPR128RegClass.contains(RPI.Reg1))
+      RPI.RC = &AArch64::FPR64RegClass;
+    } else if (AArch64::FPR128RegClass.contains(RPI.Reg1)) {
       RPI.Type = RegPairInfo::FPR128;
-    else if (AArch64::ZPRRegClass.contains(RPI.Reg1))
+      RPI.RC = &AArch64::FPR128RegClass;
+    } else if (AArch64::ZPRRegClass.contains(RPI.Reg1)) {
       RPI.Type = RegPairInfo::ZPR;
-    else if (AArch64::PPRRegClass.contains(RPI.Reg1))
+      RPI.RC = &AArch64::ZPRRegClass;
+    } else if (AArch64::PPRRegClass.contains(RPI.Reg1)) {
       RPI.Type = RegPairInfo::PPR;
-    else if (RPI.Reg1 == AArch64::VG)
+      RPI.RC = &AArch64::PPRRegClass;
+    } else if (RPI.Reg1 == AArch64::VG) {
       RPI.Type = RegPairInfo::VG;
-    else
+      RPI.RC = &AArch64::FIXED_REGSRegClass;
+    } else {
       llvm_unreachable("Unsupported register class.");
+    }
 
     // Add the stack hazard size as we transition from GPR->FPR CSRs.
     if (AFI->hasStackHazardSlotIndex() &&
@@ -3046,7 +3040,7 @@ static void computeCalleeSaveRegisterPairs(
       ByteOffset += StackFillDir * StackHazardSize;
     LastReg = RPI.Reg1;
 
-    int Scale = RPI.getScale();
+    int Scale = TRI->getSpillSize(*RPI.RC);
     // Add the next reg to the pair if it is in the same register class.
     if (unsigned(i + RegInc) < Count && !AFI->hasStackHazardSlotIndex()) {
       Register NextReg = CSI[i + RegInc].getReg();
@@ -3168,11 +3162,24 @@ static void computeCalleeSaveRegisterPairs(
             (RPI.isScalable() && RPI.Offset >= -256 && RPI.Offset <= 255)) &&
            "Offset out of bounds for LDP/STP immediate");
 
+    auto isFrameRecord = [&] {
+      if (RPI.isPaired())
+        return IsWindows ? RPI.Reg1 == AArch64::FP && RPI.Reg2 == AArch64::LR
+                         : RPI.Reg1 == AArch64::LR && RPI.Reg2 == AArch64::FP;
+      // Otherwise, look for the frame record as two unpaired registers. This is
+      // needed for -aarch64-stack-hazard-size=<val>, which disables register
+      // pairing (as the padding may be too large for the LDP/STP offset). Note:
+      // On Windows, this check works out as current reg == FP, next reg == LR,
+      // and on other platforms current reg == FP, previous reg == LR. This
+      // works out as the correct pre-increment or post-increment offsets
+      // respectively.
+      return i > 0 && RPI.Reg1 == AArch64::FP &&
+             CSI[i - 1].getReg() == AArch64::LR;
+    };
+
     // Save the offset to frame record so that the FP register can point to the
     // innermost frame record (spilled FP and LR registers).
-    if (NeedsFrameRecord &&
-        ((!IsWindows && RPI.Reg1 == AArch64::LR && RPI.Reg2 == AArch64::FP) ||
-         (IsWindows && RPI.Reg1 == AArch64::FP && RPI.Reg2 == AArch64::LR)))
+    if (NeedsFrameRecord && isFrameRecord())
       AFI->setCalleeSaveBaseToFrameRecordOffset(Offset);
 
     RegPairs.push_back(RPI);
@@ -3242,38 +3249,26 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     // Rationale: This sequence saves uop updates compared to a sequence of
     // pre-increment spills like stp xi,xj,[sp,#-16]!
     // Note: Similar rationale and sequence for restores in epilog.
-    unsigned Size;
-    Align Alignment;
+    unsigned Size = TRI->getSpillSize(*RPI.RC);
+    Align Alignment = TRI->getSpillAlign(*RPI.RC);
     switch (RPI.Type) {
     case RegPairInfo::GPR:
       StrOpc = RPI.isPaired() ? AArch64::STPXi : AArch64::STRXui;
-      Size = 8;
-      Alignment = Align(8);
       break;
     case RegPairInfo::FPR64:
       StrOpc = RPI.isPaired() ? AArch64::STPDi : AArch64::STRDui;
-      Size = 8;
-      Alignment = Align(8);
       break;
     case RegPairInfo::FPR128:
       StrOpc = RPI.isPaired() ? AArch64::STPQi : AArch64::STRQui;
-      Size = 16;
-      Alignment = Align(16);
       break;
     case RegPairInfo::ZPR:
       StrOpc = RPI.isPaired() ? AArch64::ST1B_2Z_IMM : AArch64::STR_ZXI;
-      Size = 16;
-      Alignment = Align(16);
       break;
     case RegPairInfo::PPR:
       StrOpc = AArch64::STR_PXI;
-      Size = 2;
-      Alignment = Align(2);
       break;
     case RegPairInfo::VG:
       StrOpc = AArch64::STRXui;
-      Size = 8;
-      Alignment = Align(8);
       break;
     }
 
@@ -3483,33 +3478,23 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     //    ldp     x22, x21, [sp, #0]      // addImm(+0)
     // Note: see comment in spillCalleeSavedRegisters()
     unsigned LdrOpc;
-    unsigned Size;
-    Align Alignment;
+    unsigned Size = TRI->getSpillSize(*RPI.RC);
+    Align Alignment = TRI->getSpillAlign(*RPI.RC);
     switch (RPI.Type) {
     case RegPairInfo::GPR:
       LdrOpc = RPI.isPaired() ? AArch64::LDPXi : AArch64::LDRXui;
-      Size = 8;
-      Alignment = Align(8);
       break;
     case RegPairInfo::FPR64:
       LdrOpc = RPI.isPaired() ? AArch64::LDPDi : AArch64::LDRDui;
-      Size = 8;
-      Alignment = Align(8);
       break;
     case RegPairInfo::FPR128:
       LdrOpc = RPI.isPaired() ? AArch64::LDPQi : AArch64::LDRQui;
-      Size = 16;
-      Alignment = Align(16);
       break;
     case RegPairInfo::ZPR:
       LdrOpc = RPI.isPaired() ? AArch64::LD1B_2Z_IMM : AArch64::LDR_ZXI;
-      Size = 16;
-      Alignment = Align(16);
       break;
     case RegPairInfo::PPR:
       LdrOpc = AArch64::LDR_PXI;
-      Size = 2;
-      Alignment = Align(2);
       break;
     case RegPairInfo::VG:
       continue;
@@ -3783,14 +3768,15 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   unsigned CSStackSize = 0;
   unsigned SVECSStackSize = 0;
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
   for (unsigned Reg : SavedRegs.set_bits()) {
-    auto RegSize = TRI->getRegSizeInBits(Reg, MRI) / 8;
+    auto *RC = TRI->getMinimalPhysRegClass(Reg);
+    assert(RC && "expected register class!");
+    auto SpillSize = TRI->getSpillSize(*RC);
     if (AArch64::PPRRegClass.contains(Reg) ||
         AArch64::ZPRRegClass.contains(Reg))
-      SVECSStackSize += RegSize;
+      SVECSStackSize += SpillSize;
     else
-      CSStackSize += RegSize;
+      CSStackSize += SpillSize;
   }
 
   // Increase the callee-saved stack size if the function has streaming mode
@@ -3890,7 +3876,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
       const TargetRegisterClass &RC = AArch64::GPR64RegClass;
       unsigned Size = TRI->getSpillSize(RC);
       Align Alignment = TRI->getSpillAlign(RC);
-      int FI = MFI.CreateStackObject(Size, Alignment, false);
+      int FI = MFI.CreateSpillStackObject(Size, Alignment);
       RS->addScavengingFrameIndex(FI);
       LLVM_DEBUG(dbgs() << "No available CS registers, allocated fi#" << FI
                         << " as the emergency spill slot.\n");
@@ -4356,26 +4342,37 @@ void TagStoreEdit::emitLoop(MachineBasicBlock::iterator InsertI) {
 
   int64_t ExtraBaseRegUpdate =
       FrameRegUpdate ? (*FrameRegUpdate - FrameRegOffset.getFixed() - Size) : 0;
+  LLVM_DEBUG(dbgs() << "TagStoreEdit::emitLoop: LoopSize=" << LoopSize
+                    << ", Size=" << Size
+                    << ", ExtraBaseRegUpdate=" << ExtraBaseRegUpdate
+                    << ", FrameRegUpdate=" << FrameRegUpdate
+                    << ", FrameRegOffset.getFixed()="
+                    << FrameRegOffset.getFixed() << "\n");
   if (LoopSize < Size) {
     assert(FrameRegUpdate);
     assert(Size - LoopSize == 16);
     // Tag 16 more bytes at BaseReg and update BaseReg.
+    int64_t STGOffset = ExtraBaseRegUpdate + 16;
+    assert(STGOffset % 16 == 0 && STGOffset >= -4096 && STGOffset <= 4080 &&
+           "STG immediate out of range");
     BuildMI(*MBB, InsertI, DL,
             TII->get(ZeroData ? AArch64::STZGPostIndex : AArch64::STGPostIndex))
         .addDef(BaseReg)
         .addReg(BaseReg)
         .addReg(BaseReg)
-        .addImm(1 + ExtraBaseRegUpdate / 16)
+        .addImm(STGOffset / 16)
         .setMemRefs(CombinedMemRefs)
         .setMIFlags(FrameRegUpdateFlags);
   } else if (ExtraBaseRegUpdate) {
     // Update BaseReg.
+    int64_t AddSubOffset = std::abs(ExtraBaseRegUpdate);
+    assert(AddSubOffset <= 4095 && "ADD/SUB immediate out of range");
     BuildMI(
         *MBB, InsertI, DL,
         TII->get(ExtraBaseRegUpdate > 0 ? AArch64::ADDXri : AArch64::SUBXri))
         .addDef(BaseReg)
         .addReg(BaseReg)
-        .addImm(std::abs(ExtraBaseRegUpdate))
+        .addImm(AddSubOffset)
         .addImm(0)
         .setMIFlags(FrameRegUpdateFlags);
   }
@@ -4394,10 +4391,20 @@ bool canMergeRegUpdate(MachineBasicBlock::iterator II, unsigned Reg,
     int64_t Offset = MI.getOperand(2).getImm() << Shift;
     if (MI.getOpcode() == AArch64::SUBXri)
       Offset = -Offset;
-    int64_t AbsPostOffset = std::abs(Offset - Size);
-    const int64_t kMaxOffset =
-        0xFFF; // Max encoding for unshifted ADDXri / SUBXri
-    if (AbsPostOffset <= kMaxOffset && AbsPostOffset % 16 == 0) {
+    int64_t PostOffset = Offset - Size;
+    // TagStoreEdit::emitLoop might emit either an ADD/SUB after the loop, or
+    // an STGPostIndex which does the last 16 bytes of tag write. Which one is
+    // chosen depends on the alignment of the loop size, but the difference
+    // between the valid ranges for the two instructions is small, so we
+    // conservatively assume that it could be either case here.
+    //
+    // Max offset of STGPostIndex, minus the 16 byte tag write folded into that
+    // instruction.
+    const int64_t kMaxOffset = 4080 - 16;
+    // Max offset of SUBXri.
+    const int64_t kMinOffset = -4095;
+    if (PostOffset <= kMaxOffset && PostOffset >= kMinOffset &&
+        PostOffset % 16 == 0) {
       *TotalOffset = Offset;
       return true;
     }
@@ -4573,7 +4580,7 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
       break;
 
     // Reject anything that may alias the collected instructions.
-    if (MI.mayLoadOrStore() || MI.hasUnmodeledSideEffects())
+    if (MI.mayLoadOrStore() || MI.hasUnmodeledSideEffects() || MI.isCall())
       break;
   }
 

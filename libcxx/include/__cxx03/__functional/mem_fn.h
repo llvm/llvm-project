@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_MEM_FN_H
-#define _LIBCPP___FUNCTIONAL_MEM_FN_H
+#ifndef _LIBCPP___CXX03___FUNCTIONAL_MEM_FN_H
+#define _LIBCPP___CXX03___FUNCTIONAL_MEM_FN_H
 
-#include <__config>
-#include <__functional/binary_function.h>
-#include <__functional/invoke.h>
-#include <__functional/weak_result_type.h>
-#include <__utility/forward.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/binary_function.h>
+#include <__cxx03/__functional/invoke.h>
+#include <__cxx03/__functional/weak_result_type.h>
+#include <__cxx03/__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -51,4 +51,4 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __mem_fn<_Rp _Tp::*> 
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_MEM_FN_H
+#endif // _LIBCPP___CXX03___FUNCTIONAL_MEM_FN_H

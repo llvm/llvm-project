@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COMPARE_ORDERING_H
-#define _LIBCPP___COMPARE_ORDERING_H
+#ifndef _LIBCPP___CXX03___COMPARE_ORDERING_H
+#define _LIBCPP___CXX03___COMPARE_ORDERING_H
 
-#include <__config>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/is_same.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/is_same.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -275,4 +275,4 @@ concept __comparison_category = __one_of_v<_Tp, partial_ordering, weak_ordering,
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___COMPARE_ORDERING_H
+#endif // _LIBCPP___CXX03___COMPARE_ORDERING_H

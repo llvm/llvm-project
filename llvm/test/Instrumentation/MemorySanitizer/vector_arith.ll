@@ -65,7 +65,7 @@ define <2 x i64> @Test_x86_sse2_psad_bw(<16 x i8> %a, <16 x i8> %b) sanitize_mem
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <16 x i8> [[TMP3]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <2 x i64> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext <2 x i1> [[TMP5]] to <2 x i64>
-; CHECK-NEXT:    [[TMP7:%.*]] = lshr <2 x i64> [[TMP6]], <i64 48, i64 48>
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr <2 x i64> [[TMP6]], splat (i64 48)
 ; CHECK-NEXT:    [[C:%.*]] = tail call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> [[A]], <16 x i8> [[B]])
 ; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[C]]

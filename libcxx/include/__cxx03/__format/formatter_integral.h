@@ -7,32 +7,32 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMATTER_INTEGRAL_H
-#define _LIBCPP___FORMAT_FORMATTER_INTEGRAL_H
+#ifndef _LIBCPP___CXX03___FORMAT_FORMATTER_INTEGRAL_H
+#define _LIBCPP___CXX03___FORMAT_FORMATTER_INTEGRAL_H
 
-#include <__charconv/to_chars_integral.h>
-#include <__charconv/to_chars_result.h>
-#include <__charconv/traits.h>
-#include <__concepts/arithmetic.h>
-#include <__concepts/same_as.h>
-#include <__config>
-#include <__format/concepts.h>
-#include <__format/format_error.h>
-#include <__format/formatter_output.h>
-#include <__format/parser_std_format_spec.h>
-#include <__iterator/concepts.h>
-#include <__iterator/iterator_traits.h>
-#include <__memory/pointer_traits.h>
-#include <__system_error/errc.h>
-#include <__type_traits/make_unsigned.h>
-#include <__utility/unreachable.h>
-#include <array>
-#include <limits>
-#include <string>
-#include <string_view>
+#include <__cxx03/__charconv/to_chars_integral.h>
+#include <__cxx03/__charconv/to_chars_result.h>
+#include <__cxx03/__charconv/traits.h>
+#include <__cxx03/__concepts/arithmetic.h>
+#include <__cxx03/__concepts/same_as.h>
+#include <__cxx03/__config>
+#include <__cxx03/__format/concepts.h>
+#include <__cxx03/__format/format_error.h>
+#include <__cxx03/__format/formatter_output.h>
+#include <__cxx03/__format/parser_std_format_spec.h>
+#include <__cxx03/__iterator/concepts.h>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__memory/pointer_traits.h>
+#include <__cxx03/__system_error/errc.h>
+#include <__cxx03/__type_traits/make_unsigned.h>
+#include <__cxx03/__utility/unreachable.h>
+#include <__cxx03/array>
+#include <__cxx03/limits>
+#include <__cxx03/string>
+#include <__cxx03/string_view>
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
-#  include <__locale>
+#  include <__cxx03/__locale>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -40,7 +40,7 @@
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -442,4 +442,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FORMAT_FORMATTER_INTEGRAL_H
+#endif // _LIBCPP___CXX03___FORMAT_FORMATTER_INTEGRAL_H

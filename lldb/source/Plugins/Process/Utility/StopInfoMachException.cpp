@@ -48,10 +48,13 @@ GetPtrauthInstructionInfo(Target &target, const ArchSpec &arch,
                           const Address &at_addr) {
   const char *plugin_name = nullptr;
   const char *flavor = nullptr;
+  const char *cpu = nullptr;
+  const char *features = nullptr;
   AddressRange range_bounds(at_addr, 4);
   const bool prefer_file_cache = true;
-  DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
-      arch, plugin_name, flavor, target, range_bounds, prefer_file_cache);
+  DisassemblerSP disassembler_sp =
+      Disassembler::DisassembleRange(arch, plugin_name, flavor, cpu, features,
+                                     target, range_bounds, prefer_file_cache);
   if (!disassembler_sp)
     return std::nullopt;
 
@@ -731,17 +734,13 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
         // or not.  Clear this in the Tread object so we step past it on resume.
         thread.SetThreadHitBreakpointSite();
 
-        // If we have an operating system plug-in, we might have set a thread
-        // specific breakpoint using the operating system thread ID, so we
-        // can't make any assumptions about the thread ID so we must always
-        // report the breakpoint regardless of the thread.
-        if (bp_site_sp->ValidForThisThread(thread) ||
-            thread.GetProcess()->GetOperatingSystem() != nullptr) {
+        if (bp_site_sp->ValidForThisThread(thread) {
           // Update the PC if we were asked to do so, but only do so if we find
-          // a breakpoint that we know about cause this could be a trap
-          // instruction in the code
+          // a breakpoint that we know about because this could be a trap
+          // instruction in the code.
           if (pc_decrement > 0 && adjust_pc_if_needed && reg_ctx_sp)
             reg_ctx_sp->SetPC(pc);
+
           return StopInfo::CreateStopReasonWithBreakpointSiteID(
               thread, bp_site_sp->GetID());
         } else {

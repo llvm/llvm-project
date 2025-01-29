@@ -1,4 +1,4 @@
-//===- MveEmitter.cpp - Generate arm_mve.h for use with clang -*- C++ -*-=====//
+//===-- MveEmitter.cpp - Generate arm_mve.h for use with clang ------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -471,7 +471,7 @@ private:
 
 public:
   virtual ~Result() = default;
-  using Scope = std::map<std::string, Ptr>;
+  using Scope = std::map<std::string, Ptr, std::less<>>;
   virtual void genCode(raw_ostream &OS, CodeGenParamAllocator &) const = 0;
   virtual bool hasIntegerConstantValue() const { return false; }
   virtual uint32_t integerConstantValue() const { return 0; }
@@ -1278,7 +1278,7 @@ Result::Ptr EmitterBase::getCodeForDagArg(const DagInit *D, unsigned ArgNum,
     if (!isa<UnsetInit>(Arg))
       PrintFatalError(
           "dag operator argument should not have both a value and a name");
-    auto it = Scope.find(std::string(Name));
+    auto it = Scope.find(Name);
     if (it == Scope.end())
       PrintFatalError("unrecognized variable name '" + Name + "'");
     return it->second;
@@ -1955,18 +1955,17 @@ void MveEmitter::EmitBuiltinDef(raw_ostream &OS) {
        << ", \"\", \"n\")\n";
   }
 
-  std::set<std::string> ShortNamesSeen;
+  DenseSet<StringRef> ShortNamesSeen;
 
   for (const auto &kv : ACLEIntrinsics) {
     const ACLEIntrinsic &Int = *kv.second;
     if (Int.polymorphic()) {
       StringRef Name = Int.shortName();
-      if (ShortNamesSeen.find(std::string(Name)) == ShortNamesSeen.end()) {
+      if (ShortNamesSeen.insert(Name).second) {
         OS << "BUILTIN(__builtin_arm_mve_" << Name << ", \"vi.\", \"nt";
         if (Int.nonEvaluating())
           OS << "u"; // indicate that this builtin doesn't evaluate its args
         OS << "\")\n";
-        ShortNamesSeen.insert(std::string(Name));
       }
     }
   }

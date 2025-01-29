@@ -7,27 +7,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FILESYSTEM_PATH_H
-#define _LIBCPP___FILESYSTEM_PATH_H
+#ifndef _LIBCPP___CXX03___FILESYSTEM_PATH_H
+#define _LIBCPP___CXX03___FILESYSTEM_PATH_H
 
-#include <__algorithm/replace.h>
-#include <__algorithm/replace_copy.h>
-#include <__config>
-#include <__functional/unary_function.h>
-#include <__fwd/functional.h>
-#include <__iterator/back_insert_iterator.h>
-#include <__iterator/iterator_traits.h>
-#include <__type_traits/decay.h>
-#include <__type_traits/is_pointer.h>
-#include <__type_traits/remove_const.h>
-#include <__type_traits/remove_pointer.h>
-#include <cstddef>
-#include <string>
-#include <string_view>
+#include <__cxx03/__algorithm/replace.h>
+#include <__cxx03/__algorithm/replace_copy.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/unary_function.h>
+#include <__cxx03/__fwd/functional.h>
+#include <__cxx03/__iterator/back_insert_iterator.h>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__type_traits/decay.h>
+#include <__cxx03/__type_traits/is_pointer.h>
+#include <__cxx03/__type_traits/remove_const.h>
+#include <__cxx03/__type_traits/remove_pointer.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/string>
+#include <__cxx03/string_view>
 
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
-#  include <iomanip> // for quoted
-#  include <locale>
+#  include <__cxx03/iomanip> // for quoted
+#  include <__cxx03/locale>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -35,7 +35,7 @@
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 #if _LIBCPP_STD_VER >= 17
 
@@ -928,4 +928,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FILESYSTEM_PATH_H
+#endif // _LIBCPP___CXX03___FILESYSTEM_PATH_H

@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_NOTHROW_CONVERTIBLE_H
-#define _LIBCPP___TYPE_TRAITS_IS_NOTHROW_CONVERTIBLE_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_NOTHROW_CONVERTIBLE_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_IS_NOTHROW_CONVERTIBLE_H
 
-#include <__config>
-#include <__type_traits/conjunction.h>
-#include <__type_traits/disjunction.h>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_convertible.h>
-#include <__type_traits/is_void.h>
-#include <__type_traits/lazy.h>
-#include <__utility/declval.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/conjunction.h>
+#include <__cxx03/__type_traits/disjunction.h>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/is_convertible.h>
+#include <__cxx03/__type_traits/is_void.h>
+#include <__cxx03/__type_traits/lazy.h>
+#include <__cxx03/__utility/declval.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -59,4 +59,4 @@ inline constexpr bool is_nothrow_convertible_v = is_nothrow_convertible<_Fm, _To
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_NOTHROW_CONVERTIBLE_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_NOTHROW_CONVERTIBLE_H

@@ -17,7 +17,7 @@ define <16 x i8> @combineXorAeseNonZeroARM(<16 x i8> %data, <16 x i8> %key) {
 ; CHECK-LABEL: define <16 x i8> @combineXorAeseNonZeroARM(
 ; CHECK-SAME: <16 x i8> [[DATA:%.*]], <16 x i8> [[KEY:%.*]]) {
 ; CHECK-NEXT:    [[DATA_XOR:%.*]] = xor <16 x i8> [[DATA]], [[KEY]]
-; CHECK-NEXT:    [[DATA_AES:%.*]] = tail call <16 x i8> @llvm.arm.neon.aese(<16 x i8> [[DATA_XOR]], <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
+; CHECK-NEXT:    [[DATA_AES:%.*]] = tail call <16 x i8> @llvm.arm.neon.aese(<16 x i8> [[DATA_XOR]], <16 x i8> splat (i8 -1))
 ; CHECK-NEXT:    ret <16 x i8> [[DATA_AES]]
 ;
   %data.xor = xor <16 x i8> %data, %key
@@ -40,7 +40,7 @@ define <16 x i8> @combineXorAesdNonZeroARM(<16 x i8> %data, <16 x i8> %key) {
 ; CHECK-LABEL: define <16 x i8> @combineXorAesdNonZeroARM(
 ; CHECK-SAME: <16 x i8> [[DATA:%.*]], <16 x i8> [[KEY:%.*]]) {
 ; CHECK-NEXT:    [[DATA_XOR:%.*]] = xor <16 x i8> [[DATA]], [[KEY]]
-; CHECK-NEXT:    [[DATA_AES:%.*]] = tail call <16 x i8> @llvm.arm.neon.aesd(<16 x i8> [[DATA_XOR]], <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
+; CHECK-NEXT:    [[DATA_AES:%.*]] = tail call <16 x i8> @llvm.arm.neon.aesd(<16 x i8> [[DATA_XOR]], <16 x i8> splat (i8 -1))
 ; CHECK-NEXT:    ret <16 x i8> [[DATA_AES]]
 ;
   %data.xor = xor <16 x i8> %data, %key

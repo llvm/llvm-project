@@ -7,7 +7,7 @@
 
 ; Check that the pattern matching detects the matrix multiplication pattern
 ; after a full run of -polly-optree and -polly-delicm, where the write access
-; is not through the original memory access, but trough a PHI node that was
+; is not through the original memory access, but through a PHI node that was
 ; delicmed. This test covers the polybench 2mm and 3mm cases.
 ;
 ; This test case generates the following schedule, which contains filters:

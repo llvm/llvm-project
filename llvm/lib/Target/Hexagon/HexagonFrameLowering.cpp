@@ -413,7 +413,7 @@ void HexagonFrameLowering::findShrunkPrologEpilog(MachineFunction &MF,
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
 
   MachineDominatorTree MDT;
-  MDT.calculate(MF);
+  MDT.recalculate(MF);
   MachinePostDominatorTree MPT;
   MPT.recalculate(MF);
 

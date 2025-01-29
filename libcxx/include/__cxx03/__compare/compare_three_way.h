@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COMPARE_COMPARE_THREE_WAY_H
-#define _LIBCPP___COMPARE_COMPARE_THREE_WAY_H
+#ifndef _LIBCPP___CXX03___COMPARE_COMPARE_THREE_WAY_H
+#define _LIBCPP___CXX03___COMPARE_COMPARE_THREE_WAY_H
 
-#include <__compare/three_way_comparable.h>
-#include <__config>
-#include <__utility/forward.h>
+#include <__cxx03/__compare/three_way_comparable.h>
+#include <__cxx03/__config>
+#include <__cxx03/__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -37,4 +37,4 @@ struct _LIBCPP_TEMPLATE_VIS compare_three_way {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___COMPARE_COMPARE_THREE_WAY_H
+#endif // _LIBCPP___CXX03___COMPARE_COMPARE_THREE_WAY_H

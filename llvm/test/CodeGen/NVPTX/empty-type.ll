@@ -1,4 +1,4 @@
-; RUN: not --crash llc < %s -march=nvptx -mcpu=sm_20 2>&1 | FileCheck %s
+; RUN: not --crash llc < %s -mtriple=nvptx -mcpu=sm_20 2>&1 | FileCheck %s
 
 %struct.A = type { [0 x float] }
 %struct.B = type { i32, i32 }

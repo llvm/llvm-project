@@ -1148,6 +1148,12 @@ public:
     SourceLocation OmpAllMemoryLoc;
     SourceLocation
         StepModifierLoc; /// 'step' modifier location for linear clause
+    SmallVector<OpenMPAllocateClauseModifier,
+                NumberOfOMPAllocateClauseModifiers>
+        AllocClauseModifiers;
+    SmallVector<SourceLocation, NumberOfOMPAllocateClauseModifiers>
+        AllocClauseModifiersLoc;
+    Expr *AllocateAlignment = nullptr;
   };
 
   OMPClause *ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
@@ -1166,9 +1172,14 @@ public:
                                         SourceLocation EndLoc);
   /// Called on well-formed 'allocate' clause.
   OMPClause *
-  ActOnOpenMPAllocateClause(Expr *Allocator, ArrayRef<Expr *> VarList,
-                            SourceLocation StartLoc, SourceLocation ColonLoc,
-                            SourceLocation LParenLoc, SourceLocation EndLoc);
+  ActOnOpenMPAllocateClause(Expr *Allocator, Expr *Alignment,
+                            OpenMPAllocateClauseModifier FirstModifier,
+                            SourceLocation FirstModifierLoc,
+                            OpenMPAllocateClauseModifier SecondModifier,
+                            SourceLocation SecondModifierLoc,
+                            ArrayRef<Expr *> VarList, SourceLocation StartLoc,
+                            SourceLocation ColonLoc, SourceLocation LParenLoc,
+                            SourceLocation EndLoc);
   /// Called on well-formed 'private' clause.
   OMPClause *ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
                                       SourceLocation StartLoc,

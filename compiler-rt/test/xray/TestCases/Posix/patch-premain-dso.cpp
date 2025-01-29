@@ -6,7 +6,7 @@
 
 // RUN: XRAY_OPTIONS="patch_premain=true,verbosity=1" %run %t/main.o 2>&1 | FileCheck %s
 
-// REQUIRES: target=x86_64{{.*}}
+// REQUIRES: target={{(aarch64|x86_64)-.*}}
 
 //--- main.cpp
 

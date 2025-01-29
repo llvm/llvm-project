@@ -33,6 +33,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Scalar/LowerConstantIntrinsics.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
+#include "llvm/Transforms/Utils/LowerVectorIntrinsics.h"
 
 using namespace llvm;
 
@@ -320,6 +321,13 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       Memset->eraseFromParent();
       break;
     }
+    case Intrinsic::experimental_memset_pattern: {
+      auto *Memset = cast<MemSetPatternInst>(Inst);
+      expandMemSetPatternAsLoop(Memset);
+      Changed = true;
+      Memset->eraseFromParent();
+      break;
+    }
     default:
       llvm_unreachable("unhandled intrinsic");
     }
@@ -339,6 +347,7 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
     case Intrinsic::memmove:
     case Intrinsic::memset:
     case Intrinsic::memset_inline:
+    case Intrinsic::experimental_memset_pattern:
       Changed |= expandMemIntrinsicUses(F);
       break;
     case Intrinsic::load_relative:
@@ -444,6 +453,19 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
       break;
     case Intrinsic::objc_sync_exit:
       Changed |= lowerObjCCall(F, "objc_sync_exit");
+      break;
+    case Intrinsic::exp:
+    case Intrinsic::exp2:
+      Changed |= forEachCall(F, [&](CallInst *CI) {
+        Type *Ty = CI->getArgOperand(0)->getType();
+        if (!isa<ScalableVectorType>(Ty))
+          return false;
+        const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
+        unsigned Op = TL->IntrinsicIDToISD(F.getIntrinsicID());
+        if (!TL->isOperationExpand(Op, EVT::getEVT(Ty)))
+          return false;
+        return lowerUnaryVectorIntrinsicAsLoop(M, CI);
+      });
       break;
     }
   }

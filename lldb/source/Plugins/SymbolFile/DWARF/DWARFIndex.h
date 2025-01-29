@@ -91,6 +91,8 @@ public:
 
   StatsDuration::Duration GetIndexTime() { return m_index_time; }
 
+  void ResetStatistics() { m_index_time.reset(); }
+
 protected:
   Module &m_module;
   StatsDuration m_index_time;

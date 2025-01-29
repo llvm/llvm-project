@@ -29,7 +29,7 @@ add_libc_unittest(
     libc.src.errno.errno
     libc.src.unistd.chdir
     libc.src.unistd.close
-    libc.src.fcntl.open 
+    libc.src.fcntl.open
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -214,6 +214,20 @@ add_libc_unittest(
     libc.src.errno.errno
     libc.src.unistd.close
     libc.src.unistd.pipe
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  pipe2_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    pipe2_test.cpp
+  DEPENDS
+    libc.include.unistd
+    libc.src.errno.errno
+    libc.src.unistd.close
+    libc.src.unistd.pipe2
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -413,7 +427,7 @@ add_libc_unittest(
     libc.include.unistd
     libc.hdr.fcntl_macros
     libc.include.sys_syscall
-    libc.src.errno.errno 
+    libc.src.errno.errno
     libc.src.unistd.__llvm_libc_syscall
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -472,6 +486,18 @@ add_libc_test(
     libc.src.__support.CPP.array
     libc.src.stdio.fopencookie
     libc.src.stdio.fflush
+)
+
+add_libc_test(
+  getentropy_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    getentropy_test.cpp
+  DEPENDS
+    libc.src.unistd.getentropy
+    libc.src.errno.errno
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 if(LLVM_LIBC_FULL_BUILD)
