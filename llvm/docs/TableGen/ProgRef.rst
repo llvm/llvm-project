@@ -161,14 +161,19 @@ Literals
 Numeric literals take one of the following forms:
 
 .. productionlist::
-   TokInteger: `DecimalInteger` | `HexInteger` | `BinInteger`
+   TokInteger: `DecimalInteger` | `HexInteger`
    DecimalInteger: ["+" | "-"] ("0"..."9")+
    HexInteger: "0x" ("0"..."9" | "a"..."f" | "A"..."F")+
-   BinInteger: "0b" ("0" | "1")+
 
 Observe that the :token:`DecimalInteger` token includes the optional ``+``
 or ``-`` sign, unlike most languages where the sign would be treated as a
 unary operator.
+
+A bits literal is written as a binary integer where the number of digits is
+significant and forms part of its type:
+
+.. productionlist::
+   TokBits: "0b" ("0" | "1")+
 
 TableGen has two kinds of string literals:
 
@@ -363,9 +368,10 @@ Simple values
 The :token:`SimpleValue` has a number of forms.
 
 .. productionlist::
-   SimpleValue: `TokInteger` | `TokString`+ | `TokCode`
+   SimpleValue: `TokInteger` | `TokBits` | `TokString`+ | `TokCode`
 
-A value can be an integer literal, a string literal, or a code literal.
+A value can be an integer literal, a bits literal, a string literal, or a code
+literal.
 Multiple adjacent string literals are concatenated as in C/C++; the simple
 value is the concatenation of the strings. Code literals become strings and
 are then indistinguishable from them.
