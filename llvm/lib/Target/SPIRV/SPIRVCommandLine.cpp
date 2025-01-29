@@ -133,6 +133,11 @@ llvm::StringRef SPIRVExtensionsParser::checkExtensions(
     const std::vector<std::string> &ExtNames,
     std::set<SPIRV::Extension::Extension> &AllowedExtensions) {
   for (const auto &Ext : ExtNames) {
+    if (Ext == "all") {
+      for (const auto &[ExtensionName, ExtensionEnum] : SPIRVExtensionMap)
+        AllowedExtensions.insert(ExtensionEnum);
+      break;
+    }
     auto It = SPIRVExtensionMap.find(Ext);
     if (It == SPIRVExtensionMap.end())
       return Ext;
