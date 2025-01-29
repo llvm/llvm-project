@@ -190,7 +190,7 @@ def MPI_ISendOp : MPI_Op<"isend", []> {
 
   let assemblyFormat = "`(` $ref `,` $tag `,` $rank (`,` $comm ^)?`)` attr-dict "
                        "`:` type($ref) `,` type($tag) `,` type($rank) "
-                       "(`,` type($comm) ^)? `->` (type($retval) `,` ^)? type($req)";
+                       "(`,` type($comm) ^)? `->` (type($retval) ^ `,`)? type($req)";
   let hasCanonicalizer = 1;
 }
 
@@ -259,7 +259,7 @@ def MPI_IRecvOp : MPI_Op<"irecv", []> {
 
   let assemblyFormat = "`(` $ref `,` $tag `,` $rank (`,` $comm ^)?`)` attr-dict "
                        "`:` type($ref) `,` type($tag) `,` type($rank)"
-                       "(`,` type($comm) ^)? `->` (type($retval) `,` ^)? type($req)";
+                       "(`,` type($comm) ^)? `->` (type($retval) ^ `,`)? type($req)";
   let hasCanonicalizer = 1;
 }
 
