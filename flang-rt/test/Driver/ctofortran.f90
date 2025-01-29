@@ -1,8 +1,10 @@
 ! UNSUPPORTED: system-windows
-! REQUIRES: flang-rt
+! UNSUPPORTED: offload-cuda
+
 ! RUN: split-file %s %t
-! RUN: chmod +x %t/runtest.sh
-! RUN: %t/runtest.sh %t %t/ffile.f90 %t/cfile.c %flang | FileCheck %s
+! RUN: %clang -I"%include/flang" -c %t/cfile.c -o %t/cfile.o
+! RUN: %flang -L"%libdir" %t/ffile.f90 %t/cfile.o -o %t/ctofortran
+! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" %t/ctofortran | FileCheck %s
 
 !--- ffile.f90
 program fmain
@@ -66,24 +68,3 @@ void csub() {
   foo(desc);
   return;
 }
-!--- runtest.sh
-#!/bin/bash
-TMPDIR=$1
-FFILE=$2
-CFILE=$3
-FLANG=$4
-shift 4
-FLAGS="$*"
-BINDIR=`dirname $FLANG`
-LIBDIR=$BINDIR/../lib
-CCOMP=$BINDIR/clang
-if [ -x $CCOMP ]
-then
-  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LIBDIR
-  $CCOMP $FLAGS -c $CFILE -o $TMPDIR/cfile.o
-  $FLANG $FLAGS $FFILE $TMPDIR/cfile.o -o $TMPDIR/ctofortran
-  $TMPDIR/ctofortran # should print "PASS"
-else
-  # No clang compiler, just pass by default
-  echo "PASS"
-fi
