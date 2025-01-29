@@ -2923,6 +2923,12 @@ def int_amdgcn_s_prefetch_data :
     "", [SDNPMemOperand]
   >;
 
+// llvm.amdgcn.ds.bpermute.fi.b32 <index> <src>
+def int_amdgcn_ds_bpermute_fi_b32 :
+  ClangBuiltin<"__builtin_amdgcn_ds_bpermute_fi_b32">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//
