@@ -4285,7 +4285,7 @@ static void expandSpillPPRToZPRSlotPseudo(MachineBasicBlock &MBB,
                                           MachineInstr &MI,
                                           const TargetRegisterInfo &TRI,
                                           LiveRegUnits const &UsedRegs,
-                                          ScavengeableRegs const &Regs,
+                                          ScavengeableRegs const &SR,
                                           EmergencyStackSlots &SpillSlots) {
   MachineFunction &MF = *MBB.getParent();
   auto *TII =
@@ -4294,7 +4294,7 @@ static void expandSpillPPRToZPRSlotPseudo(MachineBasicBlock &MBB,
   Register ZPredReg = AArch64::NoRegister;
   ScopedScavengeOrSpill FindZPRReg(
       MF, MBB, MachineBasicBlock::iterator(MI), ZPredReg, AArch64::Z0,
-      AArch64::ZPRRegClass, UsedRegs, Regs.ZPRRegs,
+      AArch64::ZPRRegClass, UsedRegs, SR.ZPRRegs,
       isInPrologueOrEpilogue(MI) ? nullptr : &SpillSlots.ZPRSpillFI);
 
   SmallVector<MachineInstr *, 2> MachineInstrs;
@@ -4332,7 +4332,7 @@ static bool expandFillPPRFromZPRSlotPseudo(MachineBasicBlock &MBB,
                                            MachineInstr &MI,
                                            const TargetRegisterInfo &TRI,
                                            LiveRegUnits const &UsedRegs,
-                                           ScavengeableRegs const &Regs,
+                                           ScavengeableRegs const &SR,
                                            EmergencyStackSlots &SpillSlots) {
   MachineFunction &MF = *MBB.getParent();
   auto *TII =
@@ -4341,13 +4341,13 @@ static bool expandFillPPRFromZPRSlotPseudo(MachineBasicBlock &MBB,
   Register ZPredReg = AArch64::NoRegister;
   ScopedScavengeOrSpill FindZPRReg(
       MF, MBB, MachineBasicBlock::iterator(MI), ZPredReg, AArch64::Z0,
-      AArch64::ZPRRegClass, UsedRegs, Regs.ZPRRegs,
+      AArch64::ZPRRegClass, UsedRegs, SR.ZPRRegs,
       isInPrologueOrEpilogue(MI) ? nullptr : &SpillSlots.ZPRSpillFI);
 
   Register PredReg = AArch64::NoRegister;
   ScopedScavengeOrSpill FindPPR3bReg(
       MF, MBB, MachineBasicBlock::iterator(MI), PredReg, AArch64::P0,
-      AArch64::PPR_3bRegClass, UsedRegs, Regs.PPR3bRegs,
+      AArch64::PPR_3bRegClass, UsedRegs, SR.PPR3bRegs,
       isInPrologueOrEpilogue(MI) ? nullptr : &SpillSlots.PPRSpillFI);
 
   // Elide NZCV spills if we know it is not used.
@@ -4357,7 +4357,7 @@ static bool expandFillPPRFromZPRSlotPseudo(MachineBasicBlock &MBB,
   if (IsNZCVUsed)
     FindGPRReg.emplace(
         MF, MBB, MachineBasicBlock::iterator(MI), NZCVSaveReg, AArch64::X0,
-        AArch64::GPR64RegClass, UsedRegs, Regs.GPRRegs,
+        AArch64::GPR64RegClass, UsedRegs, SR.GPRRegs,
         isInPrologueOrEpilogue(MI) ? nullptr : &SpillSlots.GPRSpillFI);
   SmallVector<MachineInstr *, 4> MachineInstrs;
   const DebugLoc &DL = MI.getDebugLoc();
@@ -4397,27 +4397,23 @@ static bool expandFillPPRFromZPRSlotPseudo(MachineBasicBlock &MBB,
 
 /// Expands all FILL_PPR_FROM_ZPR_SLOT_PSEUDO and SPILL_PPR_TO_ZPR_SLOT_PSEUDO
 /// operations within the MachineBasicBlock \p MBB.
-static bool expandSMEPPRToZPRSpillPseudos(
-    MachineBasicBlock &MBB, const TargetRegisterInfo &TRI,
-    ScavengeableRegs const &ScavengeableRegsBody,
-    ScavengeableRegs const &ScavengeableRegsFrameSetup,
-    EmergencyStackSlots &SpillSlots) {
+static bool expandSMEPPRToZPRSpillPseudos(MachineBasicBlock &MBB,
+                                          const TargetRegisterInfo &TRI,
+                                          ScavengeableRegs const &SR,
+                                          EmergencyStackSlots &SpillSlots) {
   LiveRegUnits UsedRegs(TRI);
   UsedRegs.addLiveOuts(MBB);
   bool HasPPRSpills = false;
   for (MachineInstr &MI : make_early_inc_range(reverse(MBB))) {
     UsedRegs.stepBackward(MI);
-    ScavengeableRegs const &Regs = isInPrologueOrEpilogue(MI)
-                                       ? ScavengeableRegsFrameSetup
-                                       : ScavengeableRegsBody;
     switch (MI.getOpcode()) {
     case AArch64::FILL_PPR_FROM_ZPR_SLOT_PSEUDO:
-      HasPPRSpills |= expandFillPPRFromZPRSlotPseudo(MBB, MI, TRI, UsedRegs,
-                                                     Regs, SpillSlots);
+      HasPPRSpills |= expandFillPPRFromZPRSlotPseudo(MBB, MI, TRI, UsedRegs, SR,
+                                                     SpillSlots);
       MI.eraseFromParent();
       break;
     case AArch64::SPILL_PPR_TO_ZPR_SLOT_PSEUDO:
-      expandSpillPPRToZPRSlotPseudo(MBB, MI, TRI, UsedRegs, Regs, SpillSlots);
+      expandSpillPPRToZPRSlotPseudo(MBB, MI, TRI, UsedRegs, SR, SpillSlots);
       MI.eraseFromParent();
       break;
     default:
@@ -4434,56 +4430,21 @@ void AArch64FrameLowering::processFunctionBeforeFrameFinalized(
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   const TargetSubtargetInfo &TSI = MF.getSubtarget();
   const TargetRegisterInfo &TRI = *TSI.getRegisterInfo();
+
+  // If predicates spills are 16-bytes we may need to expand
+  // SPILL_PPR_TO_ZPR_SLOT_PSEUDO/FILL_PPR_FROM_ZPR_SLOT_PSEUDO.
   if (AFI->hasStackFrame() && TRI.getSpillSize(AArch64::PPRRegClass) == 16) {
-    // If predicates spills are 16-bytes we may need to expand
-    // SPILL_PPR_TO_ZPR_SLOT_PSEUDO/FILL_PPR_FROM_ZPR_SLOT_PSEUDO.
-
-    const uint32_t *CSRMask =
-        TRI.getCallPreservedMask(MF, MF.getFunction().getCallingConv());
-
     auto ComputeScavengeableRegisters = [&](unsigned RegClassID) {
       BitVector Regs = TRI.getAllocatableSet(MF, TRI.getRegClass(RegClassID));
-      if (CSRMask)
-        Regs.clearBitsInMask(CSRMask);
       assert(Regs.count() > 0 && "Expected scavengeable registers");
       return Regs;
     };
 
-    // Registers free to scavenge in the prologue/epilogue.
-    ScavengeableRegs ScavengeableRegsFrameSetup;
-    ScavengeableRegsFrameSetup.ZPRRegs =
-        ComputeScavengeableRegisters(AArch64::ZPRRegClassID);
+    ScavengeableRegs SR{};
+    SR.ZPRRegs = ComputeScavengeableRegisters(AArch64::ZPRRegClassID);
     // Only p0-7 are possible as the second operand of cmpne (needed for fills).
-    ScavengeableRegsFrameSetup.PPR3bRegs =
-        ComputeScavengeableRegisters(AArch64::PPR_3bRegClassID);
-    ScavengeableRegsFrameSetup.GPRRegs =
-        ComputeScavengeableRegisters(AArch64::GPR64RegClassID);
-
-    const MachineFrameInfo &MFI = MF.getFrameInfo();
-    assert(MFI.isCalleeSavedInfoValid());
-    const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
-    auto MarkSavedRegistersAsAvailable =
-        [&, &Reserved = MF.getRegInfo().getReservedRegs()](
-            BitVector &Regs, unsigned RegClassID) {
-          for (const CalleeSavedInfo &I : CSI)
-            if (!Reserved[I.getReg()] &&
-                TRI.getRegClass(RegClassID)->contains(I.getReg()))
-              Regs.set(I.getReg());
-        };
-
-    // Registers free to scavenge in the function body.
-    ScavengeableRegs ScavengeableRegsBody = ScavengeableRegsFrameSetup;
-    MarkSavedRegistersAsAvailable(ScavengeableRegsBody.ZPRRegs,
-                                  AArch64::ZPRRegClassID);
-    MarkSavedRegistersAsAvailable(ScavengeableRegsBody.PPR3bRegs,
-                                  AArch64::PPR_3bRegClassID);
-    MarkSavedRegistersAsAvailable(ScavengeableRegsBody.GPRRegs,
-                                  AArch64::GPR64RegClassID);
-
-    // p4 (CSR) is reloaded last in the epilogue, so if it is saved, it can be
-    // used to reload other predicates.
-    if (ScavengeableRegsBody.PPR3bRegs[AArch64::P4])
-      ScavengeableRegsFrameSetup.PPR3bRegs.set(AArch64::P4);
+    SR.PPR3bRegs = ComputeScavengeableRegisters(AArch64::PPR_3bRegClassID);
+    SR.GPRRegs = ComputeScavengeableRegisters(AArch64::GPR64RegClassID);
 
     EmergencyStackSlots SpillSlots;
     for (MachineBasicBlock &MBB : MF) {
@@ -4493,9 +4454,8 @@ void AArch64FrameLowering::processFunctionBeforeFrameFinalized(
       // most two expansion passes, as spilling/filling a predicate in the range
       // p0-p7 never requires spilling another predicate.
       for (int Pass = 0; Pass < 2; Pass++) {
-        bool HasPPRSpills = expandSMEPPRToZPRSpillPseudos(
-            MBB, TRI, ScavengeableRegsBody, ScavengeableRegsFrameSetup,
-            SpillSlots);
+        bool HasPPRSpills =
+            expandSMEPPRToZPRSpillPseudos(MBB, TRI, SR, SpillSlots);
         assert((Pass == 0 || !HasPPRSpills) && "Did not expect PPR spills");
         if (!HasPPRSpills)
           break;
