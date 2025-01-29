@@ -2553,7 +2553,7 @@ ExpectedDecl ASTNodeImporter::VisitBindingDecl(BindingDecl *D) {
 
   BindingDecl *ToD;
   if (GetImportedOrCreateDecl(ToD, D, Importer.getToContext(), DC, Loc,
-                              Name.getAsIdentifierInfo()))
+                              Name.getAsIdentifierInfo(), D->getType()))
     return ToD;
 
   Error Err = Error::success();
