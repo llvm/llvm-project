@@ -11651,6 +11651,33 @@ public:
     CTAK_DeducedFromArrayBound
   };
 
+  struct CheckTemplateArgumentInfo {
+    explicit CheckTemplateArgumentInfo(bool PartialOrdering = false,
+                                       bool MatchingTTP = false)
+        : PartialOrdering(PartialOrdering), MatchingTTP(MatchingTTP) {}
+    CheckTemplateArgumentInfo(const CheckTemplateArgumentInfo &) = delete;
+    CheckTemplateArgumentInfo &
+    operator=(const CheckTemplateArgumentInfo &) = delete;
+
+    /// The checked, converted argument will be added to the
+    /// end of these vectors.
+    SmallVector<TemplateArgument, 4> SugaredConverted, CanonicalConverted;
+
+    /// The check is being performed in the context of partial ordering.
+    bool PartialOrdering;
+
+    /// If true, assume these template arguments are
+    /// the injected template arguments for a template template parameter.
+    /// This will relax the requirement that all its possible uses are valid:
+    /// TTP checking is loose, and assumes that invalid uses will be diagnosed
+    /// during instantiation.
+    bool MatchingTTP;
+
+    /// Is set to true when, in the context of TTP matching, a pack parameter
+    /// matches non-pack arguments.
+    bool MatchedPackOnParmToNonPackOnArg = false;
+  };
+
   /// Check that the given template argument corresponds to the given
   /// template parameter.
   ///
@@ -11670,22 +11697,16 @@ public:
   /// \param ArgumentPackIndex The index into the argument pack where this
   /// argument will be placed. Only valid if the parameter is a parameter pack.
   ///
-  /// \param Converted The checked, converted argument will be added to the
-  /// end of this small vector.
-  ///
   /// \param CTAK Describes how we arrived at this particular template argument:
   /// explicitly written, deduced, etc.
   ///
   /// \returns true on error, false otherwise.
-  bool
-  CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &Arg,
-                        NamedDecl *Template, SourceLocation TemplateLoc,
-                        SourceLocation RAngleLoc, unsigned ArgumentPackIndex,
-                        SmallVectorImpl<TemplateArgument> &SugaredConverted,
-                        SmallVectorImpl<TemplateArgument> &CanonicalConverted,
-                        CheckTemplateArgumentKind CTAK, bool PartialOrdering,
-                        bool PartialOrderingTTP,
-                        bool *MatchedPackOnParmToNonPackOnArg);
+  bool CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &Arg,
+                             NamedDecl *Template, SourceLocation TemplateLoc,
+                             SourceLocation RAngleLoc,
+                             unsigned ArgumentPackIndex,
+                             CheckTemplateArgumentInfo &CTAI,
+                             CheckTemplateArgumentKind CTAK);
 
   /// Check that the given template arguments can be provided to
   /// the given template, converting the arguments along the way.
@@ -11718,22 +11739,15 @@ public:
   /// \param DefaultArgs any default arguments from template specialization
   /// deduction.
   ///
-  /// \param PartialOrderingTTP If true, assume these template arguments are
-  /// the injected template arguments for a template template parameter.
-  /// This will relax the requirement that all its possible uses are valid:
-  /// TTP checking is loose, and assumes that invalid uses will be diagnosed
-  /// during instantiation.
-  ///
   /// \returns true if an error occurred, false otherwise.
-  bool CheckTemplateArgumentList(
-      TemplateDecl *Template, SourceLocation TemplateLoc,
-      TemplateArgumentListInfo &TemplateArgs,
-      const DefaultArguments &DefaultArgs, bool PartialTemplateArgs,
-      SmallVectorImpl<TemplateArgument> &SugaredConverted,
-      SmallVectorImpl<TemplateArgument> &CanonicalConverted,
-      bool UpdateArgsWithConversions = true,
-      bool *ConstraintsNotSatisfied = nullptr, bool PartialOrderingTTP = false,
-      bool *MatchedPackOnParmToNonPackOnArg = nullptr);
+  bool CheckTemplateArgumentList(TemplateDecl *Template,
+                                 SourceLocation TemplateLoc,
+                                 TemplateArgumentListInfo &TemplateArgs,
+                                 const DefaultArguments &DefaultArgs,
+                                 bool PartialTemplateArgs,
+                                 CheckTemplateArgumentInfo &CTAI,
+                                 bool UpdateArgsWithConversions = true,
+                                 bool *ConstraintsNotSatisfied = nullptr);
 
   bool CheckTemplateTypeArgument(
       TemplateTypeParmDecl *Param, TemplateArgumentLoc &Arg,
@@ -11758,7 +11772,7 @@ public:
                                    QualType InstantiatedParamType, Expr *Arg,
                                    TemplateArgument &SugaredConverted,
                                    TemplateArgument &CanonicalConverted,
-                                   bool PartialOrderingTTP,
+                                   bool MatchingTTP,
                                    CheckTemplateArgumentKind CTAK);
 
   /// Check a template argument against its corresponding
