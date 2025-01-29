@@ -294,8 +294,8 @@ def MPI_AllReduceOp : MPI_Op<"allreduce", []> {
   let results = (outs Optional<MPI_Retval>:$retval);
 
   let assemblyFormat = "`(` $sendbuf `,` $recvbuf `,` $op (`,` $comm)?`)` "
-                       "attr-dict `:` type($sendbuf) `,` type($recvbuf) `,` "
-                       "type($op) (`,` type($comm))? (`->` type($retval)^)?";
+                       "attr-dict `:` type($sendbuf) `,` type($recvbuf) "
+                       "(`,` type($comm))? (`->` type($retval)^)?";
   let hasCanonicalizer = 1;
 }
 
