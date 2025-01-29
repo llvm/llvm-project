@@ -765,6 +765,20 @@ def ROCDL_CvtScaleF32PkBf8F32:
   }];
 }
 
+def ROCDL_CvtScaleF32SrFp8F32:
+    ROCDL_IntrOp<"cvt.scalef32.sr.fp8.f32", [], [], [Pure], 1>,
+    Arguments<(ins I32:$old, F32:$src, I32:$seed, F32: $scale, I32:$byteSel)> {
+    let summary = "Scale and convert two f32's to fp8 using stochastic rounding";
+    let description = [{
+       Scale `src` by the exponent in `scale` then convert to fp8 with stochastic rounding
+       using seed data in `seed`. store into the `byteSel`th byte of `old`, preserving the others.
+    }];
+  let assemblyFormat = [{
+    attr-dict $src `,` $seed `,` $scale `->` $old `[` $byteSel `]` `:` type($res)
+  }];
+}
+
+
 //===---------------------------------------------------------------------===//
 // 8-bit float intrinsics
 //===---------------------------------------------------------------------===//
