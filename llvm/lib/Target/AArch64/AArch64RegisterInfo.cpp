@@ -1125,8 +1125,9 @@ bool AArch64RegisterInfo::getRegAllocationHints(
 
       unsigned LdOps = Use.getNumOperands() - 1;
       const TargetRegisterClass *StridedRC =
-          LdOps == 2 ? &AArch64::ZPR2StridedRegClass
-                     : &AArch64::ZPR4StridedRegClass;
+          RegID == AArch64::ZPR2StridedOrContiguousRegClassID
+              ? &AArch64::ZPR2StridedRegClass
+              : &AArch64::ZPR4StridedRegClass;
 
       SmallVector<MCPhysReg, 4> StridedOrder;
       for (MCPhysReg Reg : Order)
