@@ -1789,6 +1789,42 @@
 // CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0{{/|\\\\}}crtend.o"
 // CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0/../../../lib64{{/|\\\\}}crtn.o"
 
+// Check whether the OpenEmbedded ARM multilib lib32 libs are added correctly.
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=arm-oemllib32-linux-gnueabi -rtlib=libgcc --unwindlib=platform \
+// RUN:     --sysroot=%S/Inputs/openembedded_arm_multilib_lib32_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-OE-ARM-MULTILIB-LIB32 %s
+
+// CHECK-OE-ARM-MULTILIB-LIB32: "-cc1" "-triple" "armv4t-oemllib32-linux-gnueabi"
+// CHECK-OE-ARM-MULTILIB-LIB32: ld{{.*}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-OE-ARM-MULTILIB-LIB32: "-m" "armelf_linux_eabi" "-dynamic-linker"
+// CHECK-OE-ARM-MULTILIB-LIB32: "[[SYSROOT]]/usr/lib/arm-oemllib32-linux-gnueabi/9.5.0/../../../lib{{/|\\\\}}crt1.o"
+// CHECK-OE-ARM-MULTILIB-LIB32: "[[SYSROOT]]/usr/lib/arm-oemllib32-linux-gnueabi/9.5.0/../../../lib{{/|\\\\}}crti.o"
+// CHECK-OE-ARM-MULTILIB-LIB32: "[[SYSROOT]]/usr/lib/arm-oemllib32-linux-gnueabi/9.5.0{{/|\\\\}}crtbegin.o"
+// CHECK-OE-ARM-MULTILIB-LIB32: "-L[[SYSROOT]]/usr/lib/arm-oemllib32-linux-gnueabi/9.5.0"
+// CHECK-OE-ARM-MULTILIB-LIB32: "-L[[SYSROOT]]/usr/lib"
+// CHECK-OE-ARM-MULTILIB-LIB32: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-OE-ARM-MULTILIB-LIB32: "[[SYSROOT]]/usr/lib/arm-oemllib32-linux-gnueabi/9.5.0{{/|\\\\}}crtend.o"
+// CHECK-OE-ARM-MULTILIB-LIB32: "[[SYSROOT]]/usr/lib/arm-oemllib32-linux-gnueabi/9.5.0/../../../lib{{/|\\\\}}crtn.o"
+
+// Check whether the OpenEmbedded x86_64 multilib libx32 libs are added correctly.
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=x86_64-oemllibx32-linux-gnux32 -rtlib=libgcc --unwindlib=platform \
+// RUN:     --sysroot=%S/Inputs/openembedded_x86_64_multilib_libx32_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-OE-X86_64-MULTILIB-LIBX32 %s
+
+// CHECK-OE-X86_64-MULTILIB-LIBX32: "-cc1" "-triple" "x86_64-oemllibx32-linux-gnux32"
+// CHECK-OE-X86_64-MULTILIB-LIBX32: ld{{.*}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-OE-X86_64-MULTILIB-LIBX32: "-m" "elf32_x86_64" "-dynamic-linker"
+// CHECK-OE-X86_64-MULTILIB-LIBX32: "[[SYSROOT]]/usr/libx32/x86_64-oemllibx32-linux-gnux32/14.2.0/../../../libx32{{/|\\\\}}crt1.o"
+// CHECK-OE-X86_64-MULTILIB-LIBX32: "[[SYSROOT]]/usr/libx32/x86_64-oemllibx32-linux-gnux32/14.2.0/../../../libx32{{/|\\\\}}crti.o"
+// CHECK-OE-X86_64-MULTILIB-LIBX32: "[[SYSROOT]]/usr/libx32/x86_64-oemllibx32-linux-gnux32/14.2.0{{/|\\\\}}crtbegin.o"
+// CHECK-OE-X86_64-MULTILIB-LIBX32: "-L[[SYSROOT]]/usr/libx32/x86_64-oemllibx32-linux-gnux32/14.2.0"
+// CHECK-OE-X86_64-MULTILIB-LIBX32: "-L[[SYSROOT]]/usr/libx32"
+// CHECK-OE-X86_64-MULTILIB-LIBX32: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-OE-X86_64-MULTILIB-LIBX32: "[[SYSROOT]]/usr/libx32/x86_64-oemllibx32-linux-gnux32/14.2.0{{/|\\\\}}crtend.o"
+// CHECK-OE-X86_64-MULTILIB-LIBX32: "[[SYSROOT]]/usr/libx32/x86_64-oemllibx32-linux-gnux32/14.2.0/../../../libx32{{/|\\\\}}crtn.o"
+
 /// -nopie is OpenBSD-specific.
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu %s -nopie 2>&1 | FileCheck %s --check-prefix=CHECK-NOPIE
 // CHECK-NOPIE: error: unsupported option '-nopie' for target 'x86_64-unknown-linux-gnu'
