@@ -1148,6 +1148,12 @@ def FeatureTensorCvtLutInsts : SubtargetFeature<"tensor-cvt-lut-insts",
   "Has v_perm_pk16* instructions"
 >;
 
+def FeatureTransposeLoadF4F6Insts : SubtargetFeature<"transpose-load-f4f6-insts",
+  "HasTransposeLoadF4F6Insts",
+  "true",
+  "Has ds_load_tr4/tr6 and global_load_tr4/tr6 instructions"
+>;
+
 def FeaturePrngInst : SubtargetFeature<"prng-inst",
   "HasPrngInst",
   "true",
@@ -2012,6 +2018,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureBitOp3Insts,
    FeatureTanhInsts,
    FeatureTensorCvtLutInsts,
+   FeatureTransposeLoadF4F6Insts,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
    FeatureBF16PackedInsts,
@@ -2772,6 +2779,9 @@ def HasTanhInsts : Predicate<"Subtarget->hasTanhInsts()">,
 
 def HasTensorCvtLutInsts : Predicate<"Subtarget->hasTensorCvtLutInsts()">,
   AssemblerPredicate<(all_of FeatureTensorCvtLutInsts)>;
+
+def HasTransposeLoadF4F6Insts : Predicate<"Subtarget->hasTransposeLoadF4F6Insts()">,
+  AssemblerPredicate<(all_of FeatureTransposeLoadF4F6Insts)>;
 
 def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
   AssemblerPredicate<(all_of FeaturePrngInst)>;
