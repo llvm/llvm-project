@@ -1015,6 +1015,24 @@ public:
   setProperties(Operation *op,
                 function_ref<InFlightDiagnostic()> emitError) const;
 
+  // Make `newProperties` the source of the properties that will be copied into
+  // the operation. The memory referenced by `newProperties` must remain live
+  // until after the `Operation` is created, at which time it may be
+  // deallocated. Calls to `getOrAddProperties<>() will return references to
+  // this memory.
+  template <typename T>
+  void useProperties(T &newProperties) {
+    assert(!properties &&
+           "Can't provide a properties struct when one has been allocated");
+    properties = &newProperties;
+    propertiesDeleter = [](OpaqueProperties) {};
+    propertiesSetter = [](OpaqueProperties newProp,
+                          const OpaqueProperties prop) {
+      *newProp.as<T *>() = *prop.as<const T *>();
+    };
+    propertiesId = TypeID::get<T>();
+  }
+
   void addOperands(ValueRange newOperands);
 
   void addTypes(ArrayRef<Type> newTypes) {

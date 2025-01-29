@@ -465,7 +465,18 @@ def MyOp : ... {
 The following builders are generated:
 
 ```c++
+// All result-types/operands/properties/discardable attributes have one
+// aggregate parameter. `Properties` is the properties structure of
+// `MyOp`.
+static void build(OpBuilder &odsBuilder, OperationState &odsState,
+                  TypeRange resultTypes,
+                  ValueRange operands,
+                  Properties properties,
+                  ArrayRef<NamedAttribute> discardableAttributes = {});
+
 // All result-types/operands/attributes have one aggregate parameter.
+// Inherent properties and discardable attributes are mixed together in the
+//  `attributes` dictionary.
 static void build(OpBuilder &odsBuilder, OperationState &odsState,
                   TypeRange resultTypes,
                   ValueRange operands,
@@ -499,19 +510,27 @@ static void build(OpBuilder &odsBuilder, OperationState &odsState,
 // All operands/attributes have aggregate parameters.
 // Generated if return type can be inferred.
 static void build(OpBuilder &odsBuilder, OperationState &odsState,
+                  ValueRange operands,
+                  Properties properties,
+                  ArrayRef<NamedAttribute> discardableAttributes);
+
+// All operands/attributes have aggregate parameters.
+// Generated if return type can be inferred. Uses the legacy merged attribute
+// dictionary.
+static void build(OpBuilder &odsBuilder, OperationState &odsState,
                   ValueRange operands, ArrayRef<NamedAttribute> attributes);
 
 // (And manually specified builders depending on the specific op.)
 ```
 
-The first form provides basic uniformity so that we can create ops using the
-same form regardless of the exact op. This is particularly useful for
+The first two forms provide basic uniformity so that we can create ops using
+the same form regardless of the exact op. This is particularly useful for
 implementing declarative pattern rewrites.
 
-The second and third forms are good for use in manually written code, given that
+The third and fourth forms are good for use in manually written code, given that
 they provide better guarantee via signatures.
 
-The third form will be generated if any of the op's attribute has different
+The fourth form will be generated if any of the op's attribute has different
 `Attr.returnType` from `Attr.storageType` and we know how to build an attribute
 from an unwrapped value (i.e., `Attr.constBuilderCall` is defined.)
 Additionally, for the third form, if an attribute appearing later in the

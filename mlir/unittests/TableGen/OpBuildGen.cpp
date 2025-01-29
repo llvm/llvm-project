@@ -291,4 +291,20 @@ TEST_F(OpBuildGenTest, BuildMethodsVariadicProperties) {
   verifyOp(std::move(op), {f32Ty}, {*cstI32}, {*cstI32}, attrs);
 }
 
+TEST_F(OpBuildGenTest, BuildMethodsInherentDiscardableAttrs) {
+  test::TableGenBuildOp7::Properties props;
+  props.attr0 = cast<BoolAttr>(attrs[0].getValue());
+  ArrayRef<NamedAttribute> discardableAttrs = attrs.drop_front();
+  auto op7 = builder.create<test::TableGenBuildOp7>(
+      loc, TypeRange{}, ValueRange{}, props, discardableAttrs);
+  verifyOp(op7, {}, {}, attrs);
+
+  // Check that the old-style builder where all the attributes go in the same
+  // place works.
+  auto op7b = builder.create<test::TableGenBuildOp7>(loc, TypeRange{},
+                                                     ValueRange{}, attrs);
+  verifyOp(op7b, {}, {}, attrs);
+  ASSERT_EQ(op7b.getProperties().getAttr0(), attrs[0].getValue());
+}
+
 } // namespace mlir
