@@ -154,6 +154,11 @@ s_wait_samplecnt 0x1234
 s_wait_bvhcnt 0x1234
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+;; S_WAITCNT instruction.
+
+s_waitcnt 0
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 ;; All "TBUFFER" ops, and BUFFER_LOAD/STORE_FORMAT ops.
 
 tbuffer_load_d16_format_x v4, off, s[8:11], s3 format:[BUF_FMT_8_UNORM] offset:8388607
