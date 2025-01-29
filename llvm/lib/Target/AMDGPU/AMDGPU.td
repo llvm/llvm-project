@@ -1417,6 +1417,12 @@ def FeatureSGPRVMEM : SubtargetFeature< "sgpr-vmem",
   "Shader Load/Store/Atomics of SGPRs through VMEM"
 >;
 
+def FeatureParallelBitInsts : SubtargetFeature< "parallel-bit-insts",
+  "HasParallelBitInsts",
+  "true",
+  "Has v_pdep_b32 and v_pext_b32 instructions"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -1581,7 +1587,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
-   FeatureExclusiveScanInsts, FeatureSWC
+   FeatureExclusiveScanInsts, FeatureSWC, FeatureParallelBitInsts,
   ]
 >;
 
@@ -3008,6 +3014,9 @@ def HasIndexedResources : Predicate<"Subtarget->hasIndexedResources()">,
 
 def HasSGPRVMEM : Predicate<"Subtarget->hasSGPRVMEM()">,
   AssemblerPredicate<(all_of FeatureSGPRVMEM)>;
+
+def HasParallelBitInsts : Predicate<"Subtarget->hasParallelBitInsts()">,
+  AssemblerPredicate<(all_of FeatureParallelBitInsts)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"

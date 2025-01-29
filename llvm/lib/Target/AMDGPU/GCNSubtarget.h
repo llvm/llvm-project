@@ -276,6 +276,7 @@ protected:
   bool HasSWC = false;
   bool HasIndexedResources = false;
   bool HasSGPRVMEM = false;
+  bool HasParallelBitInsts = false;
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -1456,6 +1457,8 @@ public:
   bool hasIndexedResources() const { return HasIndexedResources; }
 
   bool hasSGPRVMEM() const { return HasSGPRVMEM; }
+
+  bool hasParallelBitInsts() const { return HasParallelBitInsts; }
 
   /// \returns true if the target supports using software to avoid hazards
   /// between VMEM and VALU instructions in some instances.

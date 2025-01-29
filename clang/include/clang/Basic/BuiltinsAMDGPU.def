@@ -1119,8 +1119,8 @@ TARGET_BUILTIN(__builtin_amdgcn_exclusive_scan_max_i16, "ssi", "nc", "gfx13-inst
 TARGET_BUILTIN(__builtin_amdgcn_exclusive_scan_max_u16, "ssi", "nc", "gfx13-insts")
 TARGET_BUILTIN(__builtin_amdgcn_exclusive_scan_max_i32, "iii", "nc", "gfx13-insts")
 TARGET_BUILTIN(__builtin_amdgcn_exclusive_scan_max_u32, "iii", "nc", "gfx13-insts")
-TARGET_BUILTIN(__builtin_amdgcn_pdep_b32, "UiUiUi", "nc", "gfx13-insts")
-TARGET_BUILTIN(__builtin_amdgcn_pext_b32, "UiUiUi", "nc", "gfx13-insts")
+TARGET_BUILTIN(__builtin_amdgcn_pdep_b32, "UiUiUi", "nc", "parallel-bit-insts")
+TARGET_BUILTIN(__builtin_amdgcn_pext_b32, "UiUiUi", "nc", "parallel-bit-insts")
 
 #undef BUILTIN
 #undef TARGET_BUILTIN
