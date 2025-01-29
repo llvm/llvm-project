@@ -1382,8 +1382,7 @@ Crash and bug fixes
   assumptions caused false positive reports (e.g. 100+ out-of-bounds reports in
   the FFMPEG codebase) in loops where the programmer intended only two or three
   steps but the analyzer wasn't able to understand that the loop is limited.
-  Read the `RFC <https://discourse.llvm.org/t/loop-handling-improvement-plans/80417/17>`_
-  for details. (#GH119388)
+  (#GH119388)
 
 - In clang-19, the ``crosscheck-with-z3-timeout-threshold`` was set to 300ms,
   but it is now reset back to 15000, aka. 15 seconds. This is to reduce the
