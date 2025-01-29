@@ -62,6 +62,12 @@ static cl::opt<bool>
                           cl::desc("Writes always set the type"), cl::Hidden,
                           cl::init(false));
 
+static cl::opt<bool> ClOutlineInstrumentation(
+    "tysan-outline-instrumentation",
+    cl::desc("Uses function calls for all TySan instrumentation, reducing "
+             "ELF size"),
+    cl::Hidden, cl::init(false));
+
 STATISTIC(NumInstrumentedAccesses, "Number of instrumented accesses");
 
 namespace {
@@ -109,11 +115,15 @@ private:
   Regex AnonNameRegex;
   Type *IntptrTy;
   uint64_t PtrShift;
-  IntegerType *OrdTy;
+  IntegerType *OrdTy, *U64Ty;
 
   /// Callbacks to run-time library are computed in initializeCallbacks.
   FunctionCallee TysanCheck;
   FunctionCallee TysanCtorFunction;
+
+  FunctionCallee TysanIntrumentMemInst;
+  FunctionCallee TysanInstrumentWithShadowUpdate;
+  FunctionCallee TysanSetShadowType;
 
   /// Callback to set types for gloabls.
   Function *TysanGlobalsSetTypeFunction;
@@ -134,6 +144,8 @@ TypeSanitizer::TypeSanitizer(Module &M)
 void TypeSanitizer::initializeCallbacks(Module &M) {
   IRBuilder<> IRB(M.getContext());
   OrdTy = IRB.getInt32Ty();
+  U64Ty = IRB.getInt64Ty();
+  Type *BoolType = IRB.getInt1Ty();
 
   AttributeList Attr;
   Attr = Attr.addFnAttribute(M.getContext(), Attribute::NoUnwind);
@@ -148,6 +160,30 @@ void TypeSanitizer::initializeCallbacks(Module &M) {
 
   TysanCtorFunction =
       M.getOrInsertFunction(kTysanModuleCtorName, Attr, IRB.getVoidTy());
+
+  TysanIntrumentMemInst = M.getOrInsertFunction(
+      "__tysan_instrument_mem_inst", Attr, IRB.getVoidTy(),
+      IRB.getPtrTy(), // Pointer of data to be written to
+      IRB.getPtrTy(), // Pointer of data to write
+      U64Ty,          // Size of the data in bytes
+      BoolType        // Do we need to call memmove
+  );
+
+  TysanInstrumentWithShadowUpdate = M.getOrInsertFunction(
+      "__tysan_instrument_with_shadow_update", Attr, IRB.getVoidTy(),
+      IRB.getPtrTy(), // Pointer to data to be read
+      IRB.getPtrTy(), // Pointer to type descriptor
+      BoolType,       // Do we need to type check this
+      U64Ty,          // Size of data we access in bytes
+      OrdTy           // Flags
+  );
+
+  TysanSetShadowType = M.getOrInsertFunction(
+      "__tysan_set_shadow_type", Attr, IRB.getVoidTy(),
+      IRB.getPtrTy(), // Pointer of data to be written to
+      IRB.getPtrTy(), // Pointer to the new type descriptor
+      U64Ty           // Size of data we access in bytes
+  );
 }
 
 void TypeSanitizer::instrumentGlobals(Module &M) {
@@ -596,6 +632,29 @@ bool TypeSanitizer::instrumentWithShadowUpdate(
 
   Value *TD = IRB.CreateBitCast(TDGV, IRB.getPtrTy());
 
+  if (ClOutlineInstrumentation) {
+    if (!ForceSetType && (!ClWritesAlwaysSetType || IsRead)) {
+      // We need to check the type here. If the type is unknown, then the read
+      // sets the type. If the type is known, then it is checked. If the type
+      // doesn't match, then we call the runtime (which may yet determine that
+      // the mismatch is okay).
+
+      Constant *Flags =
+          ConstantInt::get(OrdTy, (int)IsRead | (((int)IsWrite) << 1));
+
+      IRB.CreateCall(TysanInstrumentWithShadowUpdate,
+                     {Ptr, TD,
+                      SanitizeFunction ? IRB.getTrue() : IRB.getFalse(),
+                      IRB.getInt64(AccessSize), Flags});
+    } else if (ForceSetType || IsWrite) {
+      // In the mode where writes always set the type, for a write (which does
+      // not also read), we just set the type.
+      IRB.CreateCall(TysanSetShadowType, {Ptr, TD, IRB.getInt64(AccessSize)});
+    }
+
+    return true;
+  }
+
   Value *ShadowDataInt = convertToShadowDataInt(IRB, Ptr, IntptrTy, PtrShift,
                                                 ShadowBase, AppMemMask);
   Type *Int8PtrPtrTy = PointerType::get(IRB.getContext(), 0);
@@ -843,37 +902,46 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
     }
   }
 
-  if (!ShadowBase)
-    ShadowBase = getShadowBase(*F);
-  if (!AppMemMask)
-    AppMemMask = getAppMemMask(*F);
-
-  Value *ShadowDataInt = IRB.CreateAdd(
-      IRB.CreateShl(
-          IRB.CreateAnd(IRB.CreatePtrToInt(Dest, IntptrTy), AppMemMask),
-          PtrShift),
-      ShadowBase);
-  Value *ShadowData = IRB.CreateIntToPtr(ShadowDataInt, IRB.getPtrTy());
-
-  if (!Src) {
-    IRB.CreateMemSet(ShadowData, IRB.getInt8(0), IRB.CreateShl(Size, PtrShift),
-                     Align(1ull << PtrShift));
-    return true;
-  }
-
-  Value *SrcShadowDataInt = IRB.CreateAdd(
-      IRB.CreateShl(
-          IRB.CreateAnd(IRB.CreatePtrToInt(Src, IntptrTy), AppMemMask),
-          PtrShift),
-      ShadowBase);
-  Value *SrcShadowData = IRB.CreateIntToPtr(SrcShadowDataInt, IRB.getPtrTy());
-
-  if (NeedsMemMove) {
-    IRB.CreateMemMove(ShadowData, Align(1ull << PtrShift), SrcShadowData,
-                      Align(1ull << PtrShift), IRB.CreateShl(Size, PtrShift));
+  if (ClOutlineInstrumentation) {
+    if (!Src) {
+      Src = ConstantPointerNull::get(IRB.getPtrTy());
+    }
+    IRB.CreateCall(
+        TysanIntrumentMemInst,
+        {Dest, Src, Size, NeedsMemMove ? IRB.getTrue() : IRB.getFalse()});
   } else {
-    IRB.CreateMemCpy(ShadowData, Align(1ull << PtrShift), SrcShadowData,
-                     Align(1ull << PtrShift), IRB.CreateShl(Size, PtrShift));
+    if (!ShadowBase)
+      ShadowBase = getShadowBase(*F);
+    if (!AppMemMask)
+      AppMemMask = getAppMemMask(*F);
+
+    Value *ShadowDataInt = IRB.CreateAdd(
+        IRB.CreateShl(
+            IRB.CreateAnd(IRB.CreatePtrToInt(Dest, IntptrTy), AppMemMask),
+            PtrShift),
+        ShadowBase);
+    Value *ShadowData = IRB.CreateIntToPtr(ShadowDataInt, IRB.getPtrTy());
+
+    if (!Src) {
+      IRB.CreateMemSet(ShadowData, IRB.getInt8(0),
+                       IRB.CreateShl(Size, PtrShift), Align(1ull << PtrShift));
+      return true;
+    }
+
+    Value *SrcShadowDataInt = IRB.CreateAdd(
+        IRB.CreateShl(
+            IRB.CreateAnd(IRB.CreatePtrToInt(Src, IntptrTy), AppMemMask),
+            PtrShift),
+        ShadowBase);
+    Value *SrcShadowData = IRB.CreateIntToPtr(SrcShadowDataInt, IRB.getPtrTy());
+
+    if (NeedsMemMove) {
+      IRB.CreateMemMove(ShadowData, Align(1ull << PtrShift), SrcShadowData,
+                        Align(1ull << PtrShift), IRB.CreateShl(Size, PtrShift));
+    } else {
+      IRB.CreateMemCpy(ShadowData, Align(1ull << PtrShift), SrcShadowData,
+                       Align(1ull << PtrShift), IRB.CreateShl(Size, PtrShift));
+    }
   }
 
   return true;
