@@ -22,7 +22,7 @@ subroutine aint_test_real8(a, b)
 end subroutine
 
 ! CHECK-KIND10-LABEL: func.func @_QPaint_test_real10(
-! CHECK-KIND10:   fir.call @llvm.trunc.f64({{.*}}) {{.*}}: (f80) -> f80
+! CHECK-KIND10:   fir.call @llvm.trunc.f80({{.*}}) {{.*}}: (f80) -> f80
 subroutine aint_test_real10(a, b)
   integer, parameter :: kind10 = merge(10, 4, selected_real_kind(p=18).eq.10)
   real(kind10) :: a, b
