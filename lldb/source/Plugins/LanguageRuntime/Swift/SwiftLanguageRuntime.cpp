@@ -2657,19 +2657,19 @@ std::optional<lldb::addr_t> SwiftLanguageRuntime::TrySkipVirtualParentProlog(
   return pc_value + prologue_size;
 }
 
-std::optional<lldb::addr_t> GetTaskAddrFromThreadLocalStorage(Thread &thread) {
+llvm::Expected<lldb::addr_t> GetTaskAddrFromThreadLocalStorage(Thread &thread) {
+#if SWIFT_THREADING_USE_DIRECT_TSD
+  return llvm::createStringError(
+      "getting the current task from a thread is not supported");
+#else
   // Compute the thread local storage address for this thread.
-  StructuredData::ObjectSP info_root_sp = thread.GetExtendedInfo();
-  if (!info_root_sp)
-    return {};
-  StructuredData::ObjectSP node =
-      info_root_sp->GetObjectForDotSeparatedPath("tsd_address");
-  if (!node)
-    return {};
-  StructuredData::UnsignedInteger *raw_tsd_addr = node->GetAsUnsignedInteger();
-  if (!raw_tsd_addr)
-    return {};
-  addr_t tsd_addr = raw_tsd_addr->GetUnsignedIntegerValue();
+  addr_t tsd_addr = LLDB_INVALID_ADDRESS;
+  if (auto info_sp = thread.GetExtendedInfo())
+    if (auto *info_dict = info_sp->GetAsDictionary())
+      info_dict->GetValueForKeyAsInteger("tsd_address", tsd_addr);
+
+  if (tsd_addr == LLDB_INVALID_ADDRESS)
+    return llvm::createStringError("could not read current task from thread");
 
   // Offset of the Task pointer in a Thread's local storage.
   Process &process = *thread.GetProcess();
@@ -2677,10 +2677,12 @@ std::optional<lldb::addr_t> GetTaskAddrFromThreadLocalStorage(Thread &thread) {
   uint64_t task_ptr_offset_in_tls =
       swift::tls_get_key(swift::tls_key::concurrency_task) * ptr_size;
   addr_t task_addr_location = tsd_addr + task_ptr_offset_in_tls;
-  Status error;
-  addr_t task_addr = process.ReadPointerFromMemory(task_addr_location, error);
-  if (error.Fail())
-    return {};
+  Status status;
+  addr_t task_addr = process.ReadPointerFromMemory(task_addr_location, status);
+  if (status.Fail())
+    return llvm::createStringError("could not get current task from thread: %s",
+                                   status.AsCString());
   return task_addr;
+#endif
 }
 } // namespace lldb_private
