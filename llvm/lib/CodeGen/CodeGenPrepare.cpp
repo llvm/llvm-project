@@ -3078,12 +3078,8 @@ struct ExtAddrMode : public TargetLowering::AddrMode {
   // E.g., SExt insts may be promoted and deleted. We should replace them with
   // the promoted values.
   void replaceWith(Value *From, Value *To) {
-    if (BaseReg == From)
-      BaseReg = To;
     if (ScaledReg == From)
       ScaledReg = To;
-    if (OriginalValue == From)
-      OriginalValue = To;
   }
 
   FieldName compare(const ExtAddrMode &other) {
