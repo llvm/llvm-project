@@ -1,0 +1,40 @@
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (c) 2025.
+
+[project]
+name = "mlir-python-bindings"
+version = "0.0.1"
+requires-python = ">=3.8,<=3.13"
+[project.urls]
+Homepage = "https://github.com/llvm/llvm-project"
+
+[build-system]
+requires = [
+    "scikit-build-core==0.10.7",
+    "typing_extensions==4.12.2",
+    "nanobind>=2.4, <3.0",
+    "numpy>=1.19.5, <=2.1.2",
+    "pybind11>=2.10.0, <=2.13.6",
+    "PyYAML>=5.4.0, <=6.0.1",
+    'ml_dtypes>=0.1.0, <=0.6.0; python_version<"3.13"',
+    'ml_dtypes>=0.5.0, <=0.6.0; python_version>="3.13"'
+]
+build-backend = "scikit_build_core.build"
+
+[tool.scikit-build]
+minimum-version = "0.10"
+build-dir = "../../build"
+cmake.source-dir = "../../llvm"
+wheel.exclude = ["bin", "include", "lib", "src", "share"]
+build.targets = ["MLIRPythonModules"]
+
+[tool.scikit-build.cmake.define]
+CMAKE_C_COMPILER_LAUNCHER = { env = "CMAKE_C_COMPILER_LAUNCHER", default = "" }
+CMAKE_CXX_COMPILER_LAUNCHER = { env = "CMAKE_CXX_COMPILER_LAUNCHER", default = "" }
+CMAKE_CXX_VISIBILITY_PRESET = "hidden"
+CMAKE_VERBOSE_MAKEFILE = "ON"
+LLVM_ENABLE_PROJECTS = "mlir"
+MLIR_ENABLE_BINDINGS_PYTHON = "ON"
+MLIR_BINDINGS_PYTHON_INSTALL_PREFIX = "mlir"
