@@ -808,12 +808,12 @@ static void addSanitizers(const Triple &TargetTriple,
                                             ThinOrFullLTOPhase Phase) {
       LowerAllowCheckPass::Options Opts;
 
+      // TODO: after removing IsRequested(), the if case will be unconditional
       if (scaledCutoffs.has_value()) {
         // Copy from std::vector<int> to std::vector<unsigned int>
         Opts.cutoffs = {scaledCutoffs.value().begin(),
                         scaledCutoffs.value().end()};
       } else {
-        // TODO: remove this after we remove IsRequested()
         for (unsigned int i = 0; i < SanitizerKind::SO_Count; ++i) {
           Opts.cutoffs.push_back(0);
         }
