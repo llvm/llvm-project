@@ -3508,37 +3508,22 @@ struct OmpTraitScore {
 };
 
 // trait-property-extension ->
-//    trait-property-name (trait-property-value, ...)
-// trait-property-value ->
 //    trait-property-name |
-//    scalar-integer-expression |
-//    trait-property-extension
-//
-// The grammar in OpenMP 5.2+ spec is ambiguous, the above is a different
-// version (but equivalent) that doesn't have ambiguities.
-// The ambiguity is in
-//   trait-property:
-//      trait-property-name          <- (a)
-//      trait-property-clause
-//      trait-property-expression    <- (b)
-//      trait-property-extension     <- this conflicts with (a) and (b)
-//   trait-property-extension:
-//      trait-property-name          <- conflict with (a)
-//      identifier(trait-property-extension[, trait-property-extension[, ...]])
-//      constant integer expression  <- conflict with (b)
+//    scalar-expr |
+//    trait-property-name (trait-property-extension, ...)
 //
 struct OmpTraitPropertyExtension {
   CharBlock source;
-  TUPLE_CLASS_BOILERPLATE(OmpTraitPropertyExtension);
-  struct ExtensionValue {
+  UNION_CLASS_BOILERPLATE(OmpTraitPropertyExtension);
+  struct Complex { // name (prop-ext, prop-ext, ...)
     CharBlock source;
-    UNION_CLASS_BOILERPLATE(ExtensionValue);
-    std::variant<OmpTraitPropertyName, ScalarExpr,
-        common::Indirection<OmpTraitPropertyExtension>>
-        u;
+    TUPLE_CLASS_BOILERPLATE(Complex);
+    std::tuple<OmpTraitPropertyName,
+        std::list<common::Indirection<OmpTraitPropertyExtension>>>
+        t;
   };
-  using ExtensionList = std::list<ExtensionValue>;
-  std::tuple<OmpTraitPropertyName, ExtensionList> t;
+
+  std::variant<OmpTraitPropertyName, ScalarExpr, Complex> u;
 };
 
 // trait-property ->
@@ -3571,9 +3556,10 @@ struct OmpTraitProperty {
 //    UID |               T        // unique-string-id /impl-defined
 //    VENDOR |            I        // name-list (vendor-id /add-def-doc)
 //    EXTENSION |         I        // name-list (ext_name /impl-defined)
-//    ATOMIC_DEFAULT_MEM_ORDER I | // value of admo
+//    ATOMIC_DEFAULT_MEM_ORDER I | // clause-list (value of admo)
 //    REQUIRES |          I        // clause-list (from requires)
 //    CONDITION           U        // logical-expr
+//    <other name>        I        // treated as extension
 //
 // Trait-set-selectors:
 //    [D]evice, [T]arget_device, [C]onstruct, [I]mplementation, [U]ser.
@@ -3582,7 +3568,7 @@ struct OmpTraitSelectorName {
   UNION_CLASS_BOILERPLATE(OmpTraitSelectorName);
   ENUM_CLASS(Value, Arch, Atomic_Default_Mem_Order, Condition, Device_Num,
       Extension, Isa, Kind, Requires, Simd, Uid, Vendor)
-  std::variant<Value, llvm::omp::Directive> u;
+  std::variant<Value, llvm::omp::Directive, std::string> u;
 };
 
 // trait-selector ->
