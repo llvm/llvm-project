@@ -16376,7 +16376,7 @@ static SDValue performVP_STORECombine(SDNode *N, SelectionDAG &DAG,
 //   %2 = zext <N x i8> %b to <N x i32>
 //   %3 = add nuw nsw <N x i32> %1, splat (i32 1)
 //   %4 = add nuw nsw <N x i32> %3, %2
-//   %5 = lshr <N x i32> %N, <i32 1 x N>
+//   %5 = lshr <N x i32> %4, splat (i32 1)
 //   %6 = trunc <N x i32> %5 to <N x i8>
 static SDValue performVP_TRUNCATECombine(SDNode *N, SelectionDAG &DAG,
                                          const RISCVSubtarget &Subtarget) {
@@ -16407,28 +16407,24 @@ static SDValue performVP_TRUNCATECombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   SDValue Operands[3];
-  Operands[0] = LHS.getOperand(0);
-  Operands[1] = LHS.getOperand(1);
 
   // Matches another VP_ADD with same VL and Mask.
-  auto FindAdd = [&](SDValue V, SDValue &Op0, SDValue &Op1) {
+  auto FindAdd = [&](SDValue V, SDValue Other) {
     if (V.getOpcode() != ISD::VP_ADD || V.getOperand(2) != Mask ||
         V.getOperand(3) != VL)
       return false;
 
-    Op0 = V.getOperand(0);
-    Op1 = V.getOperand(1);
+    Operands[0] = Other;
+    Operands[1] = V.getOperand(1);
+    Operands[2] = V.getOperand(0);
     return true;
   };
 
   // We need to find another VP_ADD in one of the operands.
-  SDValue Op0, Op1;
-  if (FindAdd(Operands[0], Op0, Op1))
-    Operands[0] = Operands[1];
-  else if (!FindAdd(Operands[1], Op0, Op1))
+  SDValue LHS0 = LHS.getOperand(0);
+  SDValue LHS1 = LHS.getOperand(1);
+  if (!FindAdd(LHS0, LHS1) && !FindAdd(LHS1, LHS0))
     return SDValue();
-  Operands[2] = Op0;
-  Operands[1] = Op1;
 
   // Now we have three operands of two additions. Check that one of them is a
   // constant vector with ones.
@@ -16437,33 +16433,28 @@ static SDValue performVP_TRUNCATECombine(SDNode *N, SelectionDAG &DAG,
   if (I == std::end(Operands))
     return SDValue();
   // We found a vector with ones, move if it to the end of the Operands array.
-  std::swap(Operands[I - std::begin(Operands)], Operands[2]);
+  std::swap(*I, Operands[2]);
 
   // Make sure the other 2 operands can be promoted from the result type.
-  for (int i = 0; i < 2; ++i) {
-    if (Operands[i].getOpcode() != ISD::VP_ZERO_EXTEND ||
-        Operands[i].getOperand(1) != Mask || Operands[i].getOperand(2) != VL)
+  for (SDValue Op : drop_end(Operands)) {
+    if (Op.getOpcode() != ISD::VP_ZERO_EXTEND || Op.getOperand(1) != Mask ||
+        Op.getOperand(2) != VL)
       return SDValue();
     // Input must be smaller than our result.
-    if (Operands[i].getOperand(0).getScalarValueSizeInBits() >
-        VT.getScalarSizeInBits())
+    if (Op.getOperand(0).getScalarValueSizeInBits() > VT.getScalarSizeInBits())
       return SDValue();
   }
 
   // Pattern is detected.
-  Op0 = Operands[0].getOperand(0);
-  Op1 = Operands[1].getOperand(0);
-  // Rebuild the zero extends if the inputs are smaller than our result.
-  if (Op0.getValueType() != VT)
-    Op0 =
-        DAG.getNode(ISD::VP_ZERO_EXTEND, SDLoc(Operands[0]), VT, Op0, Mask, VL);
-  if (Op1.getValueType() != VT)
-    Op1 =
-        DAG.getNode(ISD::VP_ZERO_EXTEND, SDLoc(Operands[1]), VT, Op1, Mask, VL);
+  // Rebuild the zero extends in case the inputs are smaller than our result.
+  SDValue NewOp0 = DAG.getNode(ISD::VP_ZERO_EXTEND, SDLoc(Operands[0]), VT,
+                               Operands[0].getOperand(0), Mask, VL);
+  SDValue NewOp1 = DAG.getNode(ISD::VP_ZERO_EXTEND, SDLoc(Operands[1]), VT,
+                               Operands[1].getOperand(0), Mask, VL);
   // Build a VAADDU with RNU rounding mode.
   SDLoc DL(N);
   return DAG.getNode(RISCVISD::AVGCEILU_VL, DL, VT,
-                     {Op0, Op1, DAG.getUNDEF(VT), Mask, VL});
+                     {NewOp0, NewOp1, DAG.getUNDEF(VT), Mask, VL});
 }
 
 // Convert from one FMA opcode to another based on whether we are negating the
