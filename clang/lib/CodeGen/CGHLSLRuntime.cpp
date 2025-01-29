@@ -119,11 +119,18 @@ GlobalVariable *replaceBuffer(CGHLSLRuntime::Buffer &Buf) {
   return CBGV;
 }
 
-void addRootSignature(llvm::Function *Fn, llvm::Module &M) {
+void addRootSignature(
+    ArrayRef<llvm::hlsl::root_signature::RootElement> Elements,
+    llvm::Function *Fn, llvm::Module &M) {
   auto &Ctx = M.getContext();
-  IRBuilder<> B(M.getContext());
 
-  MDNode *ExampleRootSignature = MDNode::get(Ctx, {});
+  SmallVector<Metadata *> GeneratedMetadata;
+  for (auto Element : Elements) {
+    MDNode *ExampleRootElement = MDNode::get(Ctx, {});
+    GeneratedMetadata.push_back(ExampleRootElement);
+  }
+
+  MDNode *ExampleRootSignature = MDNode::get(Ctx, GeneratedMetadata);
 
   MDNode *ExamplePairing = MDNode::get(Ctx, {ValueAsMetadata::get(Fn),
                                              ExampleRootSignature});
@@ -471,8 +478,8 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   // Add and identify root signature to function, if applicable
   const AttrVec &Attrs = FD->getAttrs();
   for (const Attr *Attr : Attrs) {
-    if (isa<HLSLRootSignatureAttr>(Attr))
-      addRootSignature(EntryFn, M);
+    if (const auto *RSAttr = dyn_cast<HLSLRootSignatureAttr>(Attr))
+      addRootSignature(RSAttr->getElements(), EntryFn, M);
   }
 }
 
