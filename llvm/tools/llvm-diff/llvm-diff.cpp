@@ -68,6 +68,9 @@ static cl::list<std::string> GlobalsToCompare(cl::Positional,
                                               cl::desc("<globals to compare>"),
                                               cl::cat(DiffCategory));
 
+cl::opt<bool> EnableCommutativeInstructions(
+    "commutative", cl::desc("Commutative instructions"), cl::cat(DiffCategory));
+
 int main(int argc, char **argv) {
   cl::HideUnrelatedOptions({&DiffCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv);

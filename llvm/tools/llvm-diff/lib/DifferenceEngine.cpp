@@ -23,12 +23,15 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/type_traits.h"
 #include <utility>
 
 using namespace llvm;
+
+extern cl::opt<bool> EnableCommutativeInstructions;
 
 namespace {
 
@@ -533,6 +536,21 @@ class FunctionDifferenceEngine {
 
     if (L->getNumOperands() != R->getNumOperands()) {
       if (Complain) Engine.log("instructions have different operand counts");
+      return true;
+    }
+
+    if (EnableCommutativeInstructions && L->getNumOperands() == 2 &&
+        Instruction::isCommutative(L->getOpcode())) {
+      Value *LO1 = L->getOperand(0), *RO1 = R->getOperand(0),
+            *LO2 = L->getOperand(1), *RO2 = R->getOperand(1);
+      if ((equivalentAsOperands(LO1, RO1, AC) &&
+           equivalentAsOperands(LO2, RO2, AC)) ||
+          (equivalentAsOperands(LO1, RO2, AC) &&
+           equivalentAsOperands(LO2, RO1, AC)))
+        return false;
+      if (Complain)
+        Engine.logf("operands <%l, %l> and <%r, %r> differ")
+            << LO1 << LO2 << RO1 << RO2;
       return true;
     }
 
