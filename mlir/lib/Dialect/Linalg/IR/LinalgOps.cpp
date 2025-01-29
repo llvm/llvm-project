@@ -3700,13 +3700,24 @@ LogicalResult ContractOp::verify() {
   SmallVector<size_t> inOccurrences;
   SmallVector<size_t> outOccurrences;
 
-  // For each operand's affine_map and type, check that the rank of the
-  // affine_map's domain is the same as those seen prior, check that the
-  // affine_map's co-domain rank is the same as that of the corresponding type,
-  // check that the affine_map is a projected permutation, and, finally, update
-  // inputs and output occurrence counts for dims in the co-domains.
+  // A helper so that for each operand's affine_map and type we check that ...
   auto checkAffineMapAndType = [&](AffineMap affineMap, Type operandType,
                                    bool isInput) -> LogicalResult {
+    // ... the affine_map is a projected permutation;
+    if (!affineMap.isProjectedPermutation())
+      return emitError("provided affine_map is not a projected permutation");
+
+    // ... the rank of the affine_map's results and corresponding type match;
+    if (auto shapedType = dyn_cast<ShapedType>(operandType)) {
+      if (affineMap.getNumResults() != shapedType.getRank())
+        return emitError("ranks of shaped operand and results of corresponding "
+                         "affine_map differ");
+    } else if (affineMap.getNumResults() != 0) {
+      return emitError("affine_map specifies shaped access while operand has "
+                       "non-shaped type");
+    }
+
+    // ... the rank of the affine_map's domain is the same as those seen prior;
     if (iterationSpaceDims == -1) {
       iterationSpaceDims = affineMap.getNumDims();
       inOccurrences = SmallVector<size_t>(iterationSpaceDims, 0);
@@ -3715,18 +3726,7 @@ LogicalResult ContractOp::verify() {
       return emitError("iteration spaces of provided affine_maps differ");
     }
 
-    if (auto shapedType = dyn_cast<ShapedType>(operandType)) {
-      if (affineMap.getNumResults() != shapedType.getRank())
-        return emitError("ranks of shaped operand and co-domain of "
-                         "corresponding affine_map differ");
-    } else if (affineMap.getNumResults() != 0) {
-      return emitError("affine_map specifies shaped access while operand has "
-                       "non-shaped type");
-    }
-
-    if (!affineMap.isProjectedPermutation())
-      return emitError("provided affine_map is not a projected permutation");
-
+    // ... update counts of dims used to access either an input or the output.
     for (AffineExpr affineExpr : affineMap.getResults()) {
       auto affineDimExpr = dyn_cast<AffineDimExpr>(affineExpr);
       if (!affineDimExpr)

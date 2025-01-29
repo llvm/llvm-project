@@ -592,7 +592,7 @@ func.func @differing_iteration_space_of_affine_maps_contraction(
 
 func.func @mismatched_ranks_affine_map_and_operand_contraction(
     %lhs: tensor<4x1x2xf32>, %rhs: tensor<1x64xf32>, %init: tensor<4x64xf32>) {
-  // expected-error @+1 {{ranks of shaped operand and co-domain of corresponding affine_map differ}}
+  // expected-error @+1 {{ranks of shaped operand and results of corresponding affine_map differ}}
   linalg.contract
       indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>,
                        affine_map<(d0, d1, d2) -> (d2, d1)>,
