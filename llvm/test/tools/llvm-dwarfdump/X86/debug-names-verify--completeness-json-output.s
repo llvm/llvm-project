@@ -1,15 +1,8 @@
-# RUN: llvm-mc -triple x86_64-pc-linux %s -filetype=obj -o - | not llvm-dwarfdump -verify - | FileCheck %s
+# RUN: llvm-mc -triple x86_64-pc-linux %s -filetype=obj -o - | not llvm-dwarfdump -verify --verify-json=%t.json -
+# RUN: FileCheck %s --input-file %t.json
 
-# CHECK: error: Name Index @ 0x0: Entry for DIE @ {{.*}} (DW_TAG_namespace) with name namesp missing.
-# CHECK: error: Name Index @ 0x0: Entry for DIE @ {{.*}} (DW_TAG_variable) with name var_block_addr missing.
-# CHECK: error: Name Index @ 0x0: Entry for DIE @ {{.*}} (DW_TAG_namespace) with name (anonymous namespace) missing.
-# CHECK: error: Name Index @ 0x0: Entry for DIE @ {{.*}} (DW_TAG_variable) with name var_loc_addr missing.
-# CHECK: error: Name Index @ 0x0: Entry for DIE @ {{.*}} (DW_TAG_variable) with name var_loc_tls missing.
-# CHECK: error: Name Index @ 0x0: Entry for DIE @ {{.*}} (DW_TAG_variable) with name var_loc_gnu_tls missing.
-# CHECK: error: Name Index @ 0x0: Entry for DIE @ {{.*}} (DW_TAG_subprogram) with name fun_name missing.
-# CHECK: error: Name Index @ 0x0: Entry for DIE @ {{.*}} (DW_TAG_subprogram) with name _Z8fun_name missing.
-# CHECK: error: Name Index @ 0x0: Entry for DIE @ {{.*}} (DW_TAG_inlined_subroutine) with name fun_inline missing.
-# CHECK: error: Name Index @ 0x0: Entry for DIE @ {{.*}} (DW_TAG_label) with name label missing.
+# CHECK: {"error-categories":{"Name Index DIE entry missing name":{"count":10}},"error-count":10}
+# CHECK-NOT: error: Name Index @ 0x0: Entry for DIE @ {{.*}} (DW_TAG_variable) with name var_block_addr missing.
 
         .section        .debug_loc,"",@progbits
 .Ldebug_loc0:
