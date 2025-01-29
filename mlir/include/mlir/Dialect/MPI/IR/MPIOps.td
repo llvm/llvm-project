@@ -70,7 +70,7 @@ def MPI_CommRankOp : MPI_Op<"comm_rank", []> {
 
   let results = (
     outs I32 : $rank,
-    Optional<MPI_Retval> : $retval,
+    Optional<MPI_Retval> : $retval
   );
 
   let assemblyFormat = "(`(` $comm ^ `)`)? attr-dict `:` type(results)";
@@ -94,7 +94,7 @@ def MPI_CommSizeOp : MPI_Op<"comm_size", []> {
 
   let results = (
     outs I32 : $size,
-    Optional<MPI_Retval> : $retval,
+    Optional<MPI_Retval> : $retval
   );
 
   let assemblyFormat = "(`(` $comm ^ `)`)? attr-dict `:` type(results)";
@@ -121,7 +121,7 @@ def MPI_CommSplit : MPI_Op<"comm_split", []> {
 
   let results = (
     outs MPI_Comm : $newcomm,
-    Optional<MPI_Retval> : $retval,
+    Optional<MPI_Retval> : $retval
   );
 
   let assemblyFormat = "`(` $comm `,` $color `,` $key `)` attr-dict `:` "
