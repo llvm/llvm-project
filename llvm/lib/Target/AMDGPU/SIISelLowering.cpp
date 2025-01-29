@@ -827,7 +827,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     // True 16 instruction is current not supported
     // FIXME: Add support for true 16 when supported
-    if (!(Subtarget->hasTrue16BitInsts() && Subtarget->useRealTrue16Insts())) {
+    if (!Subtarget->hasTrue16BitInsts() || !Subtarget->useRealTrue16Insts()) {
       // MVT::vNi16 for src type check in foldToSaturated
       // MVT::vNi8 for dst type check in CustomLowerNode
       // FIXME: Handle N = 2, 4, 8 first, should change verification logic from
@@ -6654,8 +6654,7 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
     assert(EleNo == DstVT.getVectorNumElements());
 
     if (EleNo == 2) {
-      SDValue Op =
-          DAG.getNode(AMDGPUISD::SAT_PK_CAST, SL, MVT::i16, Src);
+      SDValue Op = DAG.getNode(AMDGPUISD::SAT_PK_CAST, SL, MVT::i16, Src);
       Op = DAG.getNode(ISD::BITCAST, SL, N->getValueType(0), Op);
       Results.push_back(Op);
     } else {
