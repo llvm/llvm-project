@@ -51,8 +51,8 @@ func.func @avx512_mask_compress(%k1: vector<16xi1>, %a1: vector<16xf32>,
 func.func @avx512bf16_dot_128(%src: vector<4xf32>, %a: vector<8xbf16>,
   %b: vector<8xbf16>) -> (vector<4xf32>)
 {
-  // CHECK: x86vector.avx512bf16.dot {{.*}} : vector<8xbf16> -> vector<4xf32>
-  %0 = x86vector.avx512bf16.dot %src, %a, %b : vector<8xbf16> -> vector<4xf32>
+  // CHECK: x86vector.avx512.dot {{.*}} : vector<8xbf16> -> vector<4xf32>
+  %0 = x86vector.avx512.dot %src, %a, %b : vector<8xbf16> -> vector<4xf32>
   return %0 : vector<4xf32>
 }
 
@@ -60,8 +60,8 @@ func.func @avx512bf16_dot_128(%src: vector<4xf32>, %a: vector<8xbf16>,
 func.func @avx512bf16_dot_256(%src: vector<8xf32>, %a: vector<16xbf16>,
   %b: vector<16xbf16>) -> (vector<8xf32>)
 {
-  // CHECK: x86vector.avx512bf16.dot {{.*}} : vector<16xbf16> -> vector<8xf32>
-  %0 = x86vector.avx512bf16.dot %src, %a, %b : vector<16xbf16> -> vector<8xf32>
+  // CHECK: x86vector.avx512.dot {{.*}} : vector<16xbf16> -> vector<8xf32>
+  %0 = x86vector.avx512.dot %src, %a, %b : vector<16xbf16> -> vector<8xf32>
   return %0 : vector<8xf32>
 }
 
@@ -69,8 +69,8 @@ func.func @avx512bf16_dot_256(%src: vector<8xf32>, %a: vector<16xbf16>,
 func.func @avx512bf16_dot_512(%src: vector<16xf32>, %a: vector<32xbf16>,
   %b: vector<32xbf16>) -> (vector<16xf32>)
 {
-  // CHECK: x86vector.avx512bf16.dot {{.*}} : vector<32xbf16> -> vector<16xf32>
-  %0 = x86vector.avx512bf16.dot %src, %a, %b : vector<32xbf16> -> vector<16xf32>
+  // CHECK: x86vector.avx512.dot {{.*}} : vector<32xbf16> -> vector<16xf32>
+  %0 = x86vector.avx512.dot %src, %a, %b : vector<32xbf16> -> vector<16xf32>
   return %0 : vector<16xf32>
 }
 
