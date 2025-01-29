@@ -166,9 +166,10 @@ private:
                                    BufferResBinding &Binding);
   void emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
                                     llvm::GlobalVariable *BufGV);
-  void addLayoutInfoForBufferElement(
-      size_t &EndOffset, SmallVector<llvm::Metadata *> &LayoutItems,
-      llvm::Type *LayoutTy, HLSLPackOffsetAttr *PackoffsetAttr = nullptr);
+
+  size_t
+  calculateBufferElementOffset(llvm::Type *LayoutTy, size_t *LayoutEndOffset,
+                               HLSLPackOffsetAttr *PackoffsetAttr = nullptr);
 
   size_t getOrCalculateStructSizeForBuffer(llvm::StructType *StructTy);
 

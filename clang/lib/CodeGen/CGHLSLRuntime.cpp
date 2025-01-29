@@ -130,8 +130,11 @@ CGHLSLRuntime::getOrCalculateStructSizeForBuffer(llvm::StructType *StructTy) {
   size_t StructSize = 0;
   LayoutItems.push_back(nullptr); // reserve one slot for the buffer size
 
-  for (llvm::Type *ElTy : StructTy->elements())
-    addLayoutInfoForBufferElement(StructSize, LayoutItems, ElTy);
+  for (llvm::Type *ElTy : StructTy->elements()) {
+    size_t Offset = calculateBufferElementOffset(ElTy, &StructSize);
+    // create metadata constant with the element start offset
+    LayoutItems.push_back(getConstIntMetadata(CGM.getLLVMContext(), Offset));
+  }
 
   // set the size of the buffer
   LayoutItems[1] = getConstIntMetadata(Ctx, StructSize);
@@ -147,16 +150,16 @@ CGHLSLRuntime::getOrCalculateStructSizeForBuffer(llvm::StructType *StructTy) {
   return StructSize;
 }
 
-void CGHLSLRuntime::addLayoutInfoForBufferElement(
-    size_t &EndOffset, SmallVector<llvm::Metadata *> &LayoutItems,
-    llvm::Type *LayoutTy, HLSLPackOffsetAttr *PackoffsetAttr) {
+size_t CGHLSLRuntime::calculateBufferElementOffset(
+    llvm::Type *LayoutTy, size_t *LayoutEndOffset,
+    HLSLPackOffsetAttr *PackoffsetAttr) {
 
-  // calculate element offset and size; for arrays also calculate array
-  // element count and stride
+  // calculate element offset and size
   size_t ElemOffset = 0;
   size_t ElemSize = 0;
   size_t ArrayCount = 1;
   size_t ArrayStride = 0;
+  size_t EndOffset = *LayoutEndOffset;
   size_t NextRowOffset = llvm::alignTo(EndOffset, 16U);
 
   if (LayoutTy->isArrayTy()) {
@@ -205,13 +208,9 @@ void CGHLSLRuntime::addLayoutInfoForBufferElement(
   // with packoffset annotations)
   unsigned NewEndOffset =
       ElemOffset + (ArrayCount - 1) * ArrayStride + ElemSize;
-  EndOffset = std::max<size_t>(EndOffset, NewEndOffset);
+  *LayoutEndOffset = std::max<size_t>(EndOffset, NewEndOffset);
 
-  // create metadata constan with the offset and stride and add to list
-  LayoutItems.push_back(getConstIntMetadata(CGM.getLLVMContext(), ElemOffset));
-  if (ArrayStride)
-    LayoutItems.push_back(
-        getConstIntMetadata(CGM.getLLVMContext(), ArrayStride));
+  return ElemOffset;
 }
 
 void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
@@ -284,9 +283,12 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
               !UsePackoffset) &&
              "expected packoffset attribute on every declaration");
 
-      addLayoutInfoForBufferElement(
-          BufferSize, LayoutItems, LayoutType,
+      size_t Offset = calculateBufferElementOffset(
+          LayoutType, &BufferSize,
           UsePackoffset ? VD->getAttr<HLSLPackOffsetAttr>() : nullptr);
+
+      // create metadata constant with the element start offset
+      LayoutItems.push_back(getConstIntMetadata(CGM.getLLVMContext(), Offset));
     }
   }
   assert(ElemIt == LayoutStruct->element_end() &&

@@ -186,15 +186,14 @@ void main() {
 // CHECK: ![[CBSCALARS_LAYOUT]] = !{!"struct.__cblayout_CBScalars", i32 56, i32 0, i32 8, i32 16, i32 24, i32 32, i32 36, i32 40, i32 48}
 // CHECK: ![[CBVECTORS_LAYOUT]] = !{!"struct.__cblayout_CBVectors", i32 136, i32 0, i32 16, i32 40, i32 48, i32 80, i32 96, i32 112}
                                   
-// CHECK: ![[CBARRAYS_LAYOUT]] = !{!"struct.__cblayout_CBArrays", i32 708, i32 0, i32 16, i32 48, i32 32, i32 112, i32 16, i32 176, i32 16,
-// CHECK-SAME: i32 224, i32 16, i32 608, i32 16, i32 624, i32 16, i32 656, i32 16}
+// CHECK: ![[CBARRAYS_LAYOUT]] = !{!"struct.__cblayout_CBArrays", i32 708, i32 0, i32 48, i32 112, i32 176, i32 224, i32 608, i32 624, i32 656}
 
 // CHECK: ![[A_LAYOUT]] = !{!"struct.A", i32 8, i32 0}
 // CHECK: ![[B_LAYOUT]] = !{!"struct.B", i32 14, i32 0, i32 8}
 // CHECK: ![[C_LAYOUT]] = !{!"struct.C", i32 24, i32 0, i32 16}
-// CHECK: ![[D_LAYOUT]] = !{!"struct.__cblayout_D", i32 94, i32 0, i32 16}
-// CHECK: ![[CBSTRUCTS_LAYOUT]] = !{!"struct.__cblayout_CBStructs", i32 262, i32 0, i32 16, i32 32, i32 64, i32 16, i32 144, i32 238, i32 240, i32 256}
+// CHECK: ![[D_LAYOUT]] = !{!"struct.__cblayout_D", i32 94, i32 0}
+// CHECK: ![[CBSTRUCTS_LAYOUT]] = !{!"struct.__cblayout_CBStructs", i32 262, i32 0, i32 16, i32 32, i32 64, i32 144, i32 238, i32 240, i32 256}
 
 // CHECK: ![[TEST_LAYOUT]] = !{!"struct.Test", i32 8, i32 0, i32 4}
 // CHECK: ![[ANON_LAYOUT]] = !{!"struct.anon", i32 4, i32 0}
-// CHECK: ![[CBMIX_LAYOUT]] = !{!"struct.__cblayout_CBMix", i32 162, i32 0, i32 16, i32 24, i32 32, i32 16, i32 120, i32 128, i32 136, i32 144, i32 152, i32 160}
+// CHECK: ![[CBMIX_LAYOUT]] = !{!"struct.__cblayout_CBMix", i32 162, i32 0, i32 24, i32 32, i32 120, i32 128, i32 136, i32 144, i32 152, i32 160}
