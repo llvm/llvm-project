@@ -727,7 +727,7 @@ lldb_private::python::SWIGBridge::LLDBSwigPythonHandleOptionArgumentCompletionFo
     dict_sp->AddBooleanItem("no-completion", true);
     return dict_sp;
   }
-    
+
 
   // Convert the return dictionary to a DictionarySP.
   StructuredData::ObjectSP result_obj_sp = result.CreateStructuredObject();
@@ -753,7 +753,7 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
   auto pfunc = self.ResolveName<PythonCallable>("__call__");
 
   if (!pfunc.IsAllocated()) {
-    cmd_retobj.AppendError("Could not find '__call__' method in implementation class"); 
+    cmd_retobj.AppendError("Could not find '__call__' method in implementation class");
     return false;
   }
 
@@ -1010,6 +1010,26 @@ static void LLDBSwigPythonCallPythonLogOutputCallback(const char *str,
     Py_XDECREF(result);
     SWIG_PYTHON_THREAD_END_BLOCK;
   }
+}
+
+// For DebuggerTerminateCallback functions
+static CommandReturnObjectCallbackResult LLDBSwigPythonCallPythonCommandPrintCallback(SBCommandReturnObject& result, void *callback_baton) {
+  SWIG_Python_Thread_Block swig_thread_block;
+
+  PyErr_Cleaner py_err_cleaner(true);
+
+  PythonObject result_arg = SWIGBridge::ToSWIGWrapper(
+      std::make_unique<SBCommandReturnObject>(result));
+  PythonCallable callable =
+      Retain<PythonCallable>(reinterpret_cast<PyObject *>(callback_baton));
+
+  if (!callable.IsValid())
+    return eCommandReturnObjectPrintCallbackSkipped;
+
+  PythonObject callback_result = callable(result_arg);
+
+  long long ret_val = unwrapOrSetPythonException(As<long long>(callback_result));
+  return (CommandReturnObjectCallbackResult)ret_val;
 }
 
 // For DebuggerTerminateCallback functions

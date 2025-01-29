@@ -16,6 +16,7 @@
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/Baton.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/Event.h"
@@ -252,6 +253,9 @@ public:
     eCommandTypesHidden = 0x0010,  //< commands prefixed with an underscore
     eCommandTypesAllThem = 0xFFFF  //< all commands
   };
+
+  typedef lldb::CommandReturnObjectCallbackResult (
+      *CommandReturnObjectCallback)(CommandReturnObject &, void *);
 
   // The CommandAlias and CommandInterpreter both have a hand in
   // substituting for alias commands.  They work by writing special tokens
@@ -664,6 +668,9 @@ public:
     ++m_command_usages[cmd_obj.GetCommandName()];
   }
 
+  void SetPrintCallback(CommandReturnObjectCallback callback,
+                        lldb::BatonSP baton_sp);
+
   llvm::json::Value GetStatistics();
   const StructuredData::Array &GetTranscript() const;
 
@@ -773,6 +780,12 @@ private:
   std::vector<FileSpec> m_command_source_dirs;
   std::vector<uint32_t> m_command_source_flags;
   CommandInterpreterRunResult m_result;
+
+  /// An optional callback to handle printing the CommandReturnObject.
+  /// @{
+  CommandReturnObjectCallback m_print_callback = nullptr;
+  lldb::BatonSP m_print_callback_baton_sp;
+  /// @}
 
   // The exit code the user has requested when calling the 'quit' command.
   // No value means the user hasn't set a custom exit code so far.
