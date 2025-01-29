@@ -239,7 +239,7 @@ static bool canEmitLibcall(const TargetMachine *TM, Function *F,
 // LoopIdiomRecognize).
 static Constant *getMemSetPattern16Value(MemSetPatternInst *Inst,
                                          const TargetLibraryInfo &TLI) {
-  // FIXME: This could check for UndefValue because it can be merged into any
+  // TODO: This could check for UndefValue because it can be merged into any
   // other valid pattern.
 
   // Don't emit libcalls if a non-default address space is being used.
