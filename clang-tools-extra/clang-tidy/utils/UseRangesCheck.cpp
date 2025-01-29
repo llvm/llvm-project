@@ -165,20 +165,20 @@ void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
 static void removeFunctionArgs(DiagnosticBuilder &Diag, const CallExpr &Call,
                                ArrayRef<unsigned> Indexes,
                                const ASTContext &Ctx) {
-  auto GetCommaLoc = [&](SourceLocation BeginLoc,
+  const auto GetCommaLoc = [&](SourceLocation BeginLoc,
                          SourceLocation EndLoc) -> CharSourceRange {
-    SourceLocation CommaLoc =
+    const SourceLocation CommaLoc =
         lexer::findNextAnyTokenKind(BeginLoc, Ctx.getSourceManager(),
                                     Ctx.getLangOpts(), tok::comma, tok::comma);
 
-    std::optional<Token> NextTok = lexer::findNextTokenIncludingComments(
+    const std::optional<Token> NextTok = lexer::findNextTokenIncludingComments(
         CommaLoc, Ctx.getSourceManager(), Ctx.getLangOpts());
 
     if (!NextTok) {
       return {};
     }
 
-    SourceLocation CommaEndLoc = NextTok->getLocation();
+    const SourceLocation CommaEndLoc = NextTok->getLocation();
 
     return CharSourceRange::getCharRange(CommaLoc, CommaEndLoc);
   };
@@ -195,7 +195,7 @@ static void removeFunctionArgs(DiagnosticBuilder &Diag, const CallExpr &Call,
       if (Index + 1 < Call.getNumArgs()) {
         // Remove the next comma
         const Expr *NextArg = Call.getArg(Index + 1);
-        CharSourceRange CommaLoc =
+        const CharSourceRange CommaLoc =
             GetCommaLoc(Arg->getEndLoc(), NextArg->getBeginLoc());
         if (CommaLoc.isValid()) {
           Commas[Index + 1] = true;
@@ -205,7 +205,7 @@ static void removeFunctionArgs(DiagnosticBuilder &Diag, const CallExpr &Call,
     } else {
       // At this point we know Index > 0 because `Commas[0] = true` earlier
       const Expr *PrevArg = Call.getArg(Index - 1);
-      CharSourceRange CommaLoc =
+      const CharSourceRange CommaLoc =
           GetCommaLoc(PrevArg->getEndLoc(), Arg->getBeginLoc());
       if (CommaLoc.isValid()) {
         Commas[Index] = true;
