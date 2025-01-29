@@ -326,14 +326,18 @@ private:
                                            SmallVectorImpl<Type> &types,
                                            SmallVectorImpl<Value> &operands,
                                            bool allowInlineAsm = false);
-  /// Converts the parameter attributes attached to `func` and adds them to the
-  /// `funcOp`.
+  /// Converts the parameter and result attributes attached to `func` and adds
+  /// them to the `funcOp`.
   void convertParameterAttributes(llvm::Function *func, LLVMFuncOp funcOp,
                                   OpBuilder &builder);
   /// Converts the AttributeSet of one parameter in LLVM IR to a corresponding
   /// DictionaryAttr for the LLVM dialect.
   DictionaryAttr convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
                                            OpBuilder &builder);
+  /// Converts the parameter and result attributes attached to `call` and adds
+  /// them to the `callOp`.
+  void convertParameterAttributes(llvm::CallBase *call, CallOpInterface callOp,
+                                  OpBuilder &builder);
   /// Returns the builtin type equivalent to the given LLVM dialect type or
   /// nullptr if there is no equivalent. The returned type can be used to create
   /// an attribute for a GlobalOp or a ConstantOp.

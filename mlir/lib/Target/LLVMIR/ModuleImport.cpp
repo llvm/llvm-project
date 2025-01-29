@@ -1641,6 +1641,9 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
       if (callInst->hasFnAttr(llvm::Attribute::WillReturn))
         callOp.setWillReturn(true);
 
+      // Handle parameter and result attributes.
+      convertParameterAttributes(callInst, callOp, builder);
+
       llvm::MemoryEffects memEffects = callInst->getMemoryEffects();
       ModRefInfo othermem = convertModRefInfoFromLLVM(
           memEffects.getModRef(llvm::MemoryEffects::Location::Other));
@@ -2082,6 +2085,38 @@ void ModuleImport::convertParameterAttributes(llvm::Function *func,
     return;
   funcOp.setResAttrsAttr(
       builder.getArrayAttr(convertParameterAttribute(llvmResAttr, builder)));
+}
+
+void ModuleImport::convertParameterAttributes(llvm::CallBase *call,
+                                              CallOpInterface callOp,
+                                              OpBuilder &builder) {
+  auto llvmAttrs = call->getAttributes();
+  SmallVector<llvm::AttributeSet> llvmArgAttrsSet;
+  bool anyArgAttrs = false;
+  for (size_t i = 0, e = call->arg_size(); i < e; ++i) {
+    llvmArgAttrsSet.emplace_back(llvmAttrs.getParamAttrs(i));
+    if (llvmArgAttrsSet.back().hasAttributes())
+      anyArgAttrs = true;
+  }
+  auto getArrayAttr = [&](ArrayRef<DictionaryAttr> dictAttrs) {
+    SmallVector<Attribute> attrs;
+    for (auto &dict : dictAttrs)
+      attrs.push_back(dict ? dict : builder.getDictionaryAttr({}));
+    return builder.getArrayAttr(attrs);
+  };
+  if (anyArgAttrs) {
+    SmallVector<DictionaryAttr> argAttrs;
+    for (auto &llvmArgAttrs : llvmArgAttrsSet)
+      argAttrs.emplace_back(convertParameterAttribute(llvmArgAttrs, builder));
+    callOp.setArgAttrsAttr(getArrayAttr(argAttrs));
+  }
+
+  llvm::AttributeSet llvmResAttr = llvmAttrs.getRetAttrs();
+  if (!llvmResAttr.hasAttributes())
+    return;
+  SmallVector<DictionaryAttr, 1> resAttrs;
+  resAttrs.emplace_back(convertParameterAttribute(llvmResAttr, builder));
+  callOp.setResAttrsAttr(getArrayAttr(resAttrs));
 }
 
 LogicalResult ModuleImport::processFunction(llvm::Function *func) {
