@@ -73,6 +73,11 @@ C++17 Feature Support
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- The flag `-frelaxed-template-template-args`
+  and its negation have been removed, having been deprecated since the previous
+  two releases. The improvements to template template parameter matching implemented
+  in the previous release, as described in P3310 and P3579, made this flag unnecessary.
+
 C Language Changes
 ------------------
 
