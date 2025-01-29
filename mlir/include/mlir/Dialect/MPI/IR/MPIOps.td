@@ -69,8 +69,8 @@ def MPI_CommRankOp : MPI_Op<"comm_rank", []> {
   let arguments = (ins Optional<MPI_Comm> : $comm);
 
   let results = (
-    outs Optional<MPI_Retval> : $retval,
-    I32 : $rank
+    outs I32 : $rank,
+    Optional<MPI_Retval> : $retval,
   );
 
   let assemblyFormat = "(`(` $comm ^ `)`)? attr-dict `:` type(results)";
@@ -93,8 +93,8 @@ def MPI_CommSizeOp : MPI_Op<"comm_size", []> {
   let arguments = (ins Optional<MPI_Comm> : $comm);
 
   let results = (
-    outs Optional<MPI_Retval> : $retval,
-    I32 : $size
+    outs I32 : $size,
+    Optional<MPI_Retval> : $retval,
   );
 
   let assemblyFormat = "(`(` $comm ^ `)`)? attr-dict `:` type(results)";
@@ -120,11 +120,12 @@ def MPI_CommSplit : MPI_Op<"comm_split", []> {
   let arguments = (ins MPI_Comm : $comm, I32 : $color, I32 : $key);
 
   let results = (
-    outs Optional<MPI_Retval> : $retval,
-    MPI_Comm : $newcomm
+    outs MPI_Comm : $newcomm,
+    Optional<MPI_Retval> : $retval,
   );
 
-  let assemblyFormat = "`(` $comm `,` $color `,` $key `)` attr-dict `:` type(results)";
+  let assemblyFormat = "`(` $comm `,` $color `,` $key `)` attr-dict `:` "
+                       "type(results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -190,7 +191,8 @@ def MPI_ISendOp : MPI_Op<"isend", []> {
 
   let assemblyFormat = "`(` $ref `,` $tag `,` $rank (`,` $comm ^)?`)` attr-dict "
                        "`:` type($ref) `,` type($tag) `,` type($rank) "
-                       "(`,` type($comm) ^)? `->` type($req) (`,` type($retval) ^)?";
+                       "(`,` type($comm) ^)? `->` type($req)"
+                       "(`,` type($retval) ^)?";
   let hasCanonicalizer = 1;
 }
 
