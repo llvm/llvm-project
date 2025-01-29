@@ -4801,7 +4801,8 @@ void X86InstrInfo::storeRegToStackSlot(
     loadStoreTileReg(MBB, MI, Opc, SrcReg, FrameIdx, isKill);
   else
     addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc)), FrameIdx)
-        .addReg(SrcReg, getKillRegState(isKill));
+        .addReg(SrcReg, getKillRegState(isKill))
+        .setMIFlag(Flags);
 }
 
 void X86InstrInfo::loadRegFromStackSlot(
@@ -4821,8 +4822,8 @@ void X86InstrInfo::loadRegFromStackSlot(
   if (isAMXOpcode(Opc))
     loadStoreTileReg(MBB, MI, Opc, DestReg, FrameIdx);
   else
-    addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc), DestReg),
-                      FrameIdx);
+    addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc), DestReg), FrameIdx)
+        .setMIFlag(Flags);
 }
 
 bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
