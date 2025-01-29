@@ -3079,8 +3079,8 @@ static void emitUsed(CodeGenModule &CGM, StringRef Name,
 
   if (UsedArray.empty())
     return;
-  llvm::ArrayType *ATy = llvm::ArrayType::get(
-      llvm::PointerType::getUnqual(CGM.getLLVMContext()), UsedArray.size());
+  llvm::ArrayType *ATy = llvm::ArrayType::get(UsedArray.front()->getType(),
+                                              UsedArray.size());
 
   auto *GV = new llvm::GlobalVariable(
       CGM.getModule(), ATy, false, llvm::GlobalValue::AppendingLinkage,
