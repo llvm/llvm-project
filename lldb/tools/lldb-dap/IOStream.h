@@ -52,6 +52,9 @@ struct StreamDescriptor {
 struct InputStream {
   StreamDescriptor descriptor;
 
+  explicit InputStream(StreamDescriptor descriptor)
+      : descriptor(std::move(descriptor)) {}
+
   bool read_full(std::ofstream *log, size_t length, std::string &text);
 
   bool read_line(std::ofstream *log, std::string &line);
@@ -61,6 +64,9 @@ struct InputStream {
 
 struct OutputStream {
   StreamDescriptor descriptor;
+
+  explicit OutputStream(StreamDescriptor descriptor)
+      : descriptor(std::move(descriptor)) {}
 
   bool write_full(llvm::StringRef str);
 };
