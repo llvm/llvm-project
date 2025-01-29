@@ -1618,10 +1618,6 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Known.Zero.setLowBits(std::min(Known2.countMinTrailingZeros(),
                                        Known3.countMinTrailingZeros()));
 
-        // Don't apply logic below for GEPs.
-        if (isa<GetElementPtrInst>(BO))
-          break;
-
         auto *OverflowOp = dyn_cast<OverflowingBinaryOperator>(BO);
         if (!OverflowOp || !Q.IIQ.hasNoSignedWrap(OverflowOp))
           break;
@@ -9229,8 +9225,7 @@ bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
   Instruction *I;
   if (matchSimpleRecurrence(P, I, Start, Step)) {
     BO = dyn_cast<BinaryOperator>(I);
-    if (BO)
-      return true;
+    return BO;
   }
   return false;
 }
@@ -9279,13 +9274,8 @@ bool llvm::matchSimpleRecurrence(const PHINode *P, Instruction *&BO,
       break; // Match!
     }
     case Instruction::GetElementPtr: {
-      Value *LL;
       Value *LR;
-      if (!match(L, m_PtrAdd(m_Value(LL), m_Value(LR))))
-        continue;
-
-      // Find a recurrence.
-      if (LL == P) {
+      if (match(L, m_PtrAdd(m_Specific(P), m_Value(LR)))) {
         // Found a match
         L = LR;
         break;
