@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -triple powerpc64 -verify=expected,unsupported -fsyntax-only %s
 // RUN: %clang_cc1 -triple riscv64 -verify=expected,unsupported -fsyntax-only %s
 // RUN: %clang_cc1 -triple x86_64 -verify=expected,x86_64 -fsyntax-only %s
-// RUN: %clang_cc1 -triple nvptx64 -fcuda-is-device -verify=expected,unsupported -fsyntax-only %s
+// RUN: %clang_cc1 -triple nvptx64-unknown-cuda -fcuda-is-device -x cuda -verify=expected,unsupported -fsyntax-only %s
 
 #if (defined(__loongarch__) || defined(__x86_64__)) && !__has_attribute(model)
 #error "Should support model attribute"
