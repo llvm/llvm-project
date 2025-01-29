@@ -2318,63 +2318,6 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
   return nullptr;
 }
 
-static Intrinsic::ID getReductionForBinop(Instruction::BinaryOps Opc) {
-  switch (Opc) {
-  default:
-    break;
-  case Instruction::Add:
-    return Intrinsic::vector_reduce_add;
-  case Instruction::Mul:
-    return Intrinsic::vector_reduce_mul;
-  case Instruction::And:
-    return Intrinsic::vector_reduce_and;
-  case Instruction::Or:
-    return Intrinsic::vector_reduce_or;
-  case Instruction::Xor:
-    return Intrinsic::vector_reduce_xor;
-  }
-  return Intrinsic::not_intrinsic;
-}
-
-Instruction *InstCombinerImpl::foldBinopOfReductions(BinaryOperator &Inst) {
-  Instruction::BinaryOps BinOpOpc = Inst.getOpcode();
-  Intrinsic::ID ReductionIID = getReductionForBinop(BinOpOpc);
-  if (BinOpOpc == Instruction::Sub)
-    ReductionIID = Intrinsic::vector_reduce_add;
-  if (ReductionIID == Intrinsic::not_intrinsic)
-    return nullptr;
-
-  auto checkIntrinsicAndGetItsArgument = [](Value *V,
-                                            Intrinsic::ID IID) -> Value * {
-    IntrinsicInst *II = dyn_cast<IntrinsicInst>(V);
-    if (!II)
-      return nullptr;
-    if (II->getIntrinsicID() == IID && II->hasOneUse())
-      return II->getArgOperand(0);
-    return nullptr;
-  };
-
-  Value *V0 = checkIntrinsicAndGetItsArgument(Inst.getOperand(0), ReductionIID);
-  if (!V0)
-    return nullptr;
-  Value *V1 = checkIntrinsicAndGetItsArgument(Inst.getOperand(1), ReductionIID);
-  if (!V1)
-    return nullptr;
-
-  Type *VTy = V0->getType();
-  if (V1->getType() != VTy)
-    return nullptr;
-
-  Value *VectorBO = Builder.CreateBinOp(BinOpOpc, V0, V1);
-
-  if (PossiblyDisjointInst *PDInst = dyn_cast<PossiblyDisjointInst>(&Inst))
-    if (auto *PDVectorBO = dyn_cast<PossiblyDisjointInst>(VectorBO))
-      PDVectorBO->setIsDisjoint(PDInst->isDisjoint());
-
-  Instruction *Rdx = Builder.CreateIntrinsic(ReductionIID, {VTy}, {VectorBO});
-  return Rdx;
-}
-
 /// Try to narrow the width of a binop if at least 1 operand is an extend of
 /// of a value. This requires a potentially expensive known bits check to make
 /// sure the narrow op does not overflow.
