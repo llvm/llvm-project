@@ -11,7 +11,7 @@
 
 // Describes a contiguous block of characters; does not own their storage.
 
-#include "flang/Support/interval.h"
+#include "flang/Common/interval.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstring>
