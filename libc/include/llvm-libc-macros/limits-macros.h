@@ -235,4 +235,8 @@
 #define _POSIX_PATH_MAX 256
 #endif
 
+#ifndef IOV_MAX
+#define IOV_MAX 1024
+#endif // IOV_MAX
+
 #endif // LLVM_LIBC_MACROS_LIMITS_MACROS_H
