@@ -212,11 +212,9 @@ private:
                       MachineBasicBlock::iterator Before, Register SavedOrig,
                       char NonStrictState, char CurrentStrictState);
 
-  MachineBasicBlock *splitBlock(MachineBasicBlock *BB, MachineInstr *TermMI);
-
-  MachineInstr *lowerKillI1(MachineBasicBlock &MBB, MachineInstr &MI,
-                            bool IsWQM);
-  MachineInstr *lowerKillF32(MachineBasicBlock &MBB, MachineInstr &MI);
+  void splitBlock(MachineInstr *TermMI);
+  MachineInstr *lowerKillI1(MachineInstr &MI, bool IsWQM);
+  MachineInstr *lowerKillF32(MachineInstr &MI);
 
   void lowerBlock(MachineBasicBlock &MBB, BlockInfo &BI);
   void processBlock(MachineBasicBlock &MBB, BlockInfo &BI, bool IsEntry);
@@ -746,8 +744,8 @@ SIWholeQuadMode::saveSCC(MachineBasicBlock &MBB,
   return Restore;
 }
 
-MachineBasicBlock *SIWholeQuadMode::splitBlock(MachineBasicBlock *BB,
-                                               MachineInstr *TermMI) {
+void SIWholeQuadMode::splitBlock(MachineInstr *TermMI) {
+  MachineBasicBlock *BB = TermMI->getParent();
   LLVM_DEBUG(dbgs() << "Split block " << printMBBReference(*BB) << " @ "
                     << *TermMI << "\n");
 
@@ -796,12 +794,9 @@ MachineBasicBlock *SIWholeQuadMode::splitBlock(MachineBasicBlock *BB,
             .addMBB(SplitBB);
     LIS->InsertMachineInstrInMaps(*MI);
   }
-
-  return SplitBB;
 }
 
-MachineInstr *SIWholeQuadMode::lowerKillF32(MachineBasicBlock &MBB,
-                                            MachineInstr &MI) {
+MachineInstr *SIWholeQuadMode::lowerKillF32(MachineInstr &MI) {
   assert(LiveMaskReg.isVirtual());
 
   const DebugLoc &DL = MI.getDebugLoc();
@@ -869,6 +864,8 @@ MachineInstr *SIWholeQuadMode::lowerKillF32(MachineBasicBlock &MBB,
     llvm_unreachable("invalid ISD:SET cond code");
   }
 
+  MachineBasicBlock &MBB = *MI.getParent();
+
   // Pick opcode based on comparison type.
   MachineInstr *VcmpMI;
   const MachineOperand &Op0 = MI.getOperand(0);
@@ -919,9 +916,10 @@ MachineInstr *SIWholeQuadMode::lowerKillF32(MachineBasicBlock &MBB,
   return NewTerm;
 }
 
-MachineInstr *SIWholeQuadMode::lowerKillI1(MachineBasicBlock &MBB,
-                                           MachineInstr &MI, bool IsWQM) {
+MachineInstr *SIWholeQuadMode::lowerKillI1(MachineInstr &MI, bool IsWQM) {
   assert(LiveMaskReg.isVirtual());
+
+  MachineBasicBlock &MBB = *MI.getParent();
 
   const DebugLoc &DL = MI.getDebugLoc();
   MachineInstr *MaskUpdateMI = nullptr;
@@ -1055,10 +1053,10 @@ void SIWholeQuadMode::lowerBlock(MachineBasicBlock &MBB, BlockInfo &BI) {
     switch (MI.getOpcode()) {
     case AMDGPU::SI_DEMOTE_I1:
     case AMDGPU::SI_KILL_I1_TERMINATOR:
-      SplitPoint = lowerKillI1(MBB, MI, State == StateWQM);
+      SplitPoint = lowerKillI1(MI, State == StateWQM);
       break;
     case AMDGPU::SI_KILL_F32_COND_IMM_TERMINATOR:
-      SplitPoint = lowerKillF32(MBB, MI);
+      SplitPoint = lowerKillF32(MI);
       break;
     case AMDGPU::ENTER_STRICT_WWM:
       ActiveLanesReg = MI.getOperand(0).getReg();
@@ -1084,12 +1082,8 @@ void SIWholeQuadMode::lowerBlock(MachineBasicBlock &MBB, BlockInfo &BI) {
   }
 
   // Perform splitting after instruction scan to simplify iteration.
-  if (!SplitPoints.empty()) {
-    MachineBasicBlock *BB = &MBB;
-    for (MachineInstr *MI : SplitPoints) {
-      BB = splitBlock(BB, MI);
-    }
-  }
+  for (MachineInstr *MI : SplitPoints)
+    splitBlock(MI);
 }
 
 // Return an iterator in the (inclusive) range [First, Last] at which
@@ -1546,19 +1540,18 @@ bool SIWholeQuadMode::lowerCopyInstrs() {
 
 bool SIWholeQuadMode::lowerKillInstrs(bool IsWQM) {
   for (MachineInstr *MI : KillInstrs) {
-    MachineBasicBlock *MBB = MI->getParent();
     MachineInstr *SplitPoint = nullptr;
     switch (MI->getOpcode()) {
     case AMDGPU::SI_DEMOTE_I1:
     case AMDGPU::SI_KILL_I1_TERMINATOR:
-      SplitPoint = lowerKillI1(*MBB, *MI, IsWQM);
+      SplitPoint = lowerKillI1(*MI, IsWQM);
       break;
     case AMDGPU::SI_KILL_F32_COND_IMM_TERMINATOR:
-      SplitPoint = lowerKillF32(*MBB, *MI);
+      SplitPoint = lowerKillF32(*MI);
       break;
     }
     if (SplitPoint)
-      splitBlock(MBB, SplitPoint);
+      splitBlock(SplitPoint);
   }
   return !KillInstrs.empty();
 }
