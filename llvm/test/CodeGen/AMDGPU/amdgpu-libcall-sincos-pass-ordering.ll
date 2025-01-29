@@ -10,10 +10,10 @@
 ; Should have call to sincos declarations, not calls to the asm pseudo-libcalls
 define protected amdgpu_kernel void @swdev456865(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %out2, float noundef %x) #0 {
 ; CHECK-LABEL: define protected amdgpu_kernel void @swdev456865(
-; CHECK-SAME: ptr addrspace(1) nocapture writeonly initializes((0, 8)) [[OUT0:%.*]], ptr addrspace(1) nocapture writeonly initializes((0, 8)) [[OUT1:%.*]], ptr addrspace(1) nocapture writeonly initializes((0, 8)) [[OUT2:%.*]], float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 8)) [[OUT0:%.*]], ptr addrspace(1) writeonly captures(none) initializes((0, 8)) [[OUT1:%.*]], ptr addrspace(1) writeonly captures(none) initializes((0, 8)) [[OUT2:%.*]], float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
-; CHECK-NEXT:    [[I_I:%.*]] = call float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[I_I:%.*]] = call float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[I_I2:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[I_I]], [[I_I2]]
 ; CHECK-NEXT:    [[CONV:%.*]] = fpext float [[X]] to double
