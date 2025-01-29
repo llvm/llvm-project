@@ -3557,11 +3557,6 @@ defm application_extension : BoolFOption<"application-extension",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Restrict code to those available for App Extensions">,
   NegFlag<SetFalse>>;
-defm relaxed_template_template_args : BoolFOption<"relaxed-template-template-args",
-  LangOpts<"RelaxedTemplateTemplateArgs">, DefaultTrue,
-  PosFlag<SetTrue, [], [], "Enable">,
-  NegFlag<SetFalse, [], [CC1Option], "Disable">,
-  BothFlags<[], [ClangOption], " C++17 relaxed template template argument matching">>;
 defm retain_subst_template_type_parm_type_ast_nodes : BoolFOption<"retain-subst-template-type-parm-type-ast-nodes",
   LangOpts<"RetainSubstTemplateTypeParmTypeAstNodes">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
