@@ -110,39 +110,30 @@ r2
 const char s1[] = "hello world";
 const char s2[] = "i am a string";
 const char s3[] = "this is s3";
-const char* r1 = s1;
-const char** r2 = &r1;
-const char*** r3 = &r2;
-const char* r4 = s2;
-void A() {
-    return;
-}
+const char *r1 = s1;
+const char **r2 = &r1;
+const char ***r3 = &r2;
+const char *r4 = s2;
+void A() { return; }
 
 int B(int a) {
-    A();
-    return a + 1;
+  A();
+  return a + 1;
 }
 
 int C(int a) {
-    A();
-    return a + 2;
+  A();
+  return a + 2;
 }
 
-int D(int a) {
-    return B(a + 2);
-}
+int D(int a) { return B(a + 2); }
 
-int E(int a) {
-    return C(a + 2);
-}
+int E(int a) { return C(a + 2); }
 
-int F(int a) {
-    return C(a + 3);
-}
+int F(int a) { return C(a + 3); }
 
-int _start() {
-    return 0;
-}
+int _start() { return 0; }
+
 #--- gen
 clang --target=aarch64-linux-gnu -O0 -ffunction-sections -fdata-sections -fno-exceptions -fno-rtti -fno-asynchronous-unwind-tables -S a.c -o -
 ;--- a.s

@@ -42,7 +42,7 @@ struct BPOrdererELF : lld::BPOrderer<BPOrdererELF> {
   }
 
   std::optional<StringRef> static getResolvedLinkageName(llvm::StringRef name) {
-    return name;
+    return {};
   }
 
   static void

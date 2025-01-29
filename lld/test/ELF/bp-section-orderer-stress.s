@@ -7,9 +7,9 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %t.s -o %t.o
 # RUN: llvm-profdata merge %t.proftext -o %t.profdata
 
-# RUN: ld.lld --icf=all -o - %t.o --irpgo-profile=%t.profdata --bp-startup-sort=function --bp-compression-sort-startup-functions --bp-compression-sort=both | llvm-nm --numeric-sort --format=just-symbols - > %t.order1.txt
-# RUN: ld.lld --icf=all -o - %t.o --irpgo-profile=%t.profdata --bp-startup-sort=function --bp-compression-sort-startup-functions --bp-compression-sort=both | llvm-nm --numeric-sort --format=just-symbols - > %t.order2.txt
-# RUN: diff %t.order1.txt %t.order2.txt
+# RUN: ld.lld --icf=all -o %t1.o %t.o --irpgo-profile=%t.profdata --bp-startup-sort=function --bp-compression-sort-startup-functions --bp-compression-sort=both
+# RUN: ld.lld --icf=all -o %t2.o %t.o --irpgo-profile=%t.profdata --bp-startup-sort=function --bp-compression-sort-startup-functions --bp-compression-sort=both
+# RUN: cmp %t1.o %t2.o
 
 import random
 import sys

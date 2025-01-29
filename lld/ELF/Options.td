@@ -141,7 +141,7 @@ def call_graph_profile_sort: JJ<"call-graph-profile-sort=">,
 def : FF<"no-call-graph-profile-sort">, Alias<call_graph_profile_sort>, AliasArgs<["none"]>,
   Flags<[HelpHidden]>;
 
-defm irpgo_profile: Eq<"irpgo-profile",
+defm irpgo_profile: EEq<"irpgo-profile",
     "Read the IRPGO profile for use with -bp-startup-sort and other profile-guided optimizations">;
 
 def bp_startup_sort: JJ<"bp-startup-sort=">,
