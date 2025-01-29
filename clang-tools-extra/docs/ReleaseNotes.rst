@@ -88,9 +88,6 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
-.. csv-table::
-  :header: "Check", "Options removed from global option"
-
 New checks
 ^^^^^^^^^^
 
