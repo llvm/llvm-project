@@ -9608,6 +9608,10 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
       "    \"a aaaaaaa aaaaaaaaaaaaaaaaa aaaaaaaaaaaaaaa aaaaaaaaaaaaa\"\n"
       ");",
       Style);
+  verifyFormat("aaaaaaaaaaaaaaaaaaaaaaa(\n"
+               "    &bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n"
+               ");",
+               Style);
   Style.ColumnLimit = 60;
   verifyFormat("auto lambda =\n"
                "    [&b](\n"
