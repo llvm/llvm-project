@@ -1467,7 +1467,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     bool ShouldUseAlignedAlloc =
         !ForceNonAligned && S.getLangOpts().CoroAlignedAllocation;
     IAP = ImplicitAllocationParameters(
-      alignedAllocationModeFromBool(ShouldUseAlignedAlloc));
+        alignedAllocationModeFromBool(ShouldUseAlignedAlloc));
 
     FunctionDecl *UnusedResult = nullptr;
     S.FindAllocationFunctions(Loc, SourceRange(), NewScope,
