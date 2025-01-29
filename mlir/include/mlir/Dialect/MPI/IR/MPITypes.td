@@ -73,20 +73,4 @@ def MPI_Status : MPI_Type<"Status", "status"> {
   }];
 }
 
-//===----------------------------------------------------------------------===//
-// mpi::OpType
-//===----------------------------------------------------------------------===//
-
-// def MPI_Operation : MPI_Type<"Op", "op"> {
-//   let summary = "MPI operation handler";
-//   let description = [{
-//     This type represents a handle to a operation that can be used in MPI reduce
-//     and scan routines.
-
-//     The TableGen definition is named `MPI_Operation` instead of the `MPI_Op`
-//     name of the MPI standard to avoid conflict with the `MPI_Op` definition to
-//     define MLIR ops.
-//   }];
-// }
-
 #endif // MLIR_DIALECT_MPI_IR_MPITYPES_TD
