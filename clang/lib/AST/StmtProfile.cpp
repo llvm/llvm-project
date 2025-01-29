@@ -392,6 +392,10 @@ void StmtProfiler::VisitCapturedStmt(const CapturedStmt *S) {
   VisitStmt(S);
 }
 
+void StmtProfiler::VisitSYCLKernelCallStmt(const SYCLKernelCallStmt *S) {
+  VisitStmt(S);
+}
+
 void StmtProfiler::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S) {
   VisitStmt(S);
 }
@@ -2270,13 +2274,13 @@ void StmtProfiler::VisitPackExpansionExpr(const PackExpansionExpr *S) {
 
 void StmtProfiler::VisitSizeOfPackExpr(const SizeOfPackExpr *S) {
   VisitExpr(S);
-  VisitDecl(S->getPack());
   if (S->isPartiallySubstituted()) {
     auto Args = S->getPartialArguments();
     ID.AddInteger(Args.size());
     for (const auto &TA : Args)
       VisitTemplateArgument(TA);
   } else {
+    VisitDecl(S->getPack());
     ID.AddInteger(0);
   }
 }

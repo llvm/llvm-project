@@ -88,8 +88,8 @@ const uint8_t TLSInfoTableManager_ELF_x86_64::TLSInfoEntryContent[16] = {
 Error buildTables_ELF_x86_64(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Visiting edges in graph:\n");
 
-  x86_64::GOTTableManager GOT;
-  x86_64::PLTTableManager PLT(GOT);
+  x86_64::GOTTableManager GOT(G);
+  x86_64::PLTTableManager PLT(G, GOT);
   TLSInfoTableManager_ELF_x86_64 TLSInfo;
   visitExistingEdges(G, GOT, PLT, TLSInfo);
   return Error::success();

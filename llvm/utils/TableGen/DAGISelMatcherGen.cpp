@@ -252,7 +252,7 @@ void MatcherGen::EmitLeafMatchCode(const TreePatternNode &N) {
   if (LeafRec->isSubClassOf("Register")) {
     AddMatcher(new RecordMatcher("physreg input " + LeafRec->getName().str(),
                                  NextRecordedOperandNo));
-    PhysRegInputs.push_back(std::pair(LeafRec, NextRecordedOperandNo++));
+    PhysRegInputs.emplace_back(LeafRec, NextRecordedOperandNo++);
     return;
   }
 
@@ -272,7 +272,7 @@ void MatcherGen::EmitLeafMatchCode(const TreePatternNode &N) {
     // Remember this ComplexPattern so that we can emit it after all the other
     // structural matches are done.
     unsigned InputOperand = VariableMap[N.getName()] - 1;
-    MatchedComplexPatterns.push_back(std::pair(&N, InputOperand));
+    MatchedComplexPatterns.emplace_back(&N, InputOperand);
     return;
   }
 

@@ -136,6 +136,8 @@ template <size_t N> struct hash<std::bitset<N>>;
 #  include <__assert>
 #  include <__bit_reference>
 #  include <__config>
+#  include <__cstddef/ptrdiff_t.h>
+#  include <__cstddef/size_t.h>
 #  include <__functional/hash.h>
 #  include <__functional/unary_function.h>
 #  include <__type_traits/is_char_like_type.h>
@@ -170,9 +172,7 @@ struct __has_storage_type<__bitset<_N_words, _Size> > {
 template <size_t _N_words, size_t _Size>
 class __bitset {
 public:
-  typedef ptrdiff_t difference_type;
-  typedef size_t size_type;
-  typedef size_type __storage_type;
+  typedef size_t __storage_type;
 
 protected:
   typedef __bitset __self;
@@ -301,28 +301,28 @@ inline _LIBCPP_CONSTEXPR __bitset<_N_words, _Size>::__bitset(unsigned long long 
 template <size_t _N_words, size_t _Size>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void
 __bitset<_N_words, _Size>::operator&=(const __bitset& __v) _NOEXCEPT {
-  for (size_type __i = 0; __i < _N_words; ++__i)
+  for (size_t __i = 0; __i < _N_words; ++__i)
     __first_[__i] &= __v.__first_[__i];
 }
 
 template <size_t _N_words, size_t _Size>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void
 __bitset<_N_words, _Size>::operator|=(const __bitset& __v) _NOEXCEPT {
-  for (size_type __i = 0; __i < _N_words; ++__i)
+  for (size_t __i = 0; __i < _N_words; ++__i)
     __first_[__i] |= __v.__first_[__i];
 }
 
 template <size_t _N_words, size_t _Size>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void
 __bitset<_N_words, _Size>::operator^=(const __bitset& __v) _NOEXCEPT {
-  for (size_type __i = 0; __i < _N_words; ++__i)
+  for (size_t __i = 0; __i < _N_words; ++__i)
     __first_[__i] ^= __v.__first_[__i];
 }
 
 template <size_t _N_words, size_t _Size>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void __bitset<_N_words, _Size>::flip() _NOEXCEPT {
   // do middle whole words
-  size_type __n         = _Size;
+  size_t __n            = _Size;
   __storage_pointer __p = __first_;
   for (; __n >= __bits_per_word; ++__p, __n -= __bits_per_word)
     *__p = ~*__p;
@@ -390,7 +390,7 @@ __bitset<_N_words, _Size>::to_ullong(true_type, true_type) const {
 template <size_t _N_words, size_t _Size>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool __bitset<_N_words, _Size>::all() const _NOEXCEPT {
   // do middle whole words
-  size_type __n               = _Size;
+  size_t __n                  = _Size;
   __const_storage_pointer __p = __first_;
   for (; __n >= __bits_per_word; ++__p, __n -= __bits_per_word)
     if (~*__p)
@@ -407,7 +407,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool __bitset<_N_words, _Siz
 template <size_t _N_words, size_t _Size>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool __bitset<_N_words, _Size>::any() const _NOEXCEPT {
   // do middle whole words
-  size_type __n               = _Size;
+  size_t __n                  = _Size;
   __const_storage_pointer __p = __first_;
   for (; __n >= __bits_per_word; ++__p, __n -= __bits_per_word)
     if (*__p)
@@ -424,7 +424,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool __bitset<_N_words, _Siz
 template <size_t _N_words, size_t _Size>
 inline size_t __bitset<_N_words, _Size>::__hash_code() const _NOEXCEPT {
   size_t __h = 0;
-  for (size_type __i = 0; __i < _N_words; ++__i)
+  for (size_t __i = 0; __i < _N_words; ++__i)
     __h ^= __first_[__i];
   return __h;
 }
@@ -432,9 +432,7 @@ inline size_t __bitset<_N_words, _Size>::__hash_code() const _NOEXCEPT {
 template <size_t _Size>
 class __bitset<1, _Size> {
 public:
-  typedef ptrdiff_t difference_type;
-  typedef size_t size_type;
-  typedef size_type __storage_type;
+  typedef size_t __storage_type;
 
 protected:
   typedef __bitset __self;
@@ -549,9 +547,7 @@ inline size_t __bitset<1, _Size>::__hash_code() const _NOEXCEPT {
 template <>
 class __bitset<0, 0> {
 public:
-  typedef ptrdiff_t difference_type;
-  typedef size_t size_type;
-  typedef size_type __storage_type;
+  typedef size_t __storage_type;
 
 protected:
   typedef __bitset __self;

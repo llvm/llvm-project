@@ -121,11 +121,12 @@ def InitPriorityDocs : Documentation {
 In C++, the order in which global variables are initialized across translation
 units is unspecified, unlike the ordering within a single translation unit. The
 ``init_priority`` attribute allows you to specify a relative ordering for the
-initialization of objects declared at namespace scope in C++. The priority is
-given as an integer constant expression between 101 and 65535 (inclusive).
-Priorities outside of that range are reserved for use by the implementation. A
-lower value indicates a higher priority of initialization. Note that only the
-relative ordering of values is important. For example:
+initialization of objects declared at namespace scope in C++ within a single
+linked image on supported platforms. The priority is given as an integer constant
+expression between 101 and 65535 (inclusive). Priorities outside of that range are
+reserved for use by the implementation. A lower value indicates a higher priority
+of initialization. Note that only the relative ordering of values is important.
+For example:
 
 .. code-block:: c++
 
@@ -136,9 +137,15 @@ relative ordering of values is important. For example:
 ``Obj2`` will be initialized *before* ``Obj1`` despite the usual order of
 initialization being the opposite.
 
+Note that this attribute does not control the initialization order of objects
+across final linked image boundaries like shared objects and executables.
+
 On Windows, ``init_seg(compiler)`` is represented with a priority of 200 and
 ``init_seg(library)`` is represented with a priority of 400. ``init_seg(user)``
 uses the default 65535 priority.
+
+On MachO platforms, this attribute also does not control the order of initialization
+across translation units, where it only affects the order within a single TU.
 
 This attribute is only supported for C++ and Objective-C++ and is ignored in
 other language modes. Currently, this attribute is not implemented on z/OS.
@@ -480,6 +487,7 @@ following requirements.
 * Is not a C variadic function.
 * Is not a coroutine.
 * Is not defined as deleted or as defaulted.
+* Is not defined with a function try block.
 * Is not declared with the ``constexpr`` or ``consteval`` specifiers.
 * Is not declared with the ``[[noreturn]]`` attribute.
 
@@ -1681,6 +1689,55 @@ def NoSplitStackDocs : Documentation {
 The ``no_split_stack`` attribute disables the emission of the split stack
 preamble for a particular function. It has no effect if ``-fsplit-stack``
 is not specified.
+  }];
+}
+
+def ExplicitInitDocs : Documentation {
+  let Category = DocCatField;
+  let Content = [{
+The ``clang::require_explicit_initialization`` attribute indicates that a
+field of an aggregate must be initialized explicitly by the user when an object
+of the aggregate type is constructed. The attribute supports both C and C++,
+but its usage is invalid on non-aggregates.
+
+Note that this attribute is *not* a memory safety feature, and is *not* intended
+to guard against use of uninitialized memory.
+
+Rather, it is intended for use in "parameter-objects", used to simulate,
+for example, the passing of named parameters.
+The attribute generates a warning when explicit initializers for such
+variables are not provided (this occurs regardless of whether any in-class field
+initializers exist):
+
+.. code-block:: c++
+
+  struct Buffer {
+    void *address [[clang::require_explicit_initialization]];
+    size_t length [[clang::require_explicit_initialization]] = 0;
+  };
+
+  struct ArrayIOParams {
+    size_t count [[clang::require_explicit_initialization]];
+    size_t element_size [[clang::require_explicit_initialization]];
+    int flags = 0;
+  };
+
+  size_t ReadArray(FILE *file, struct Buffer buffer,
+                   struct ArrayIOParams params);
+
+  int main() {
+    unsigned int buf[512];
+    ReadArray(stdin, {
+      buf
+      // warning: field 'length' is not explicitly initialized
+    }, {
+      .count = sizeof(buf) / sizeof(*buf),
+      // warning: field 'element_size' is not explicitly initialized
+      // (Note that a missing initializer for 'flags' is not diagnosed, because
+      // the field is not marked as requiring explicit initialization.)
+    });
+  }
+
   }];
 }
 

@@ -34,6 +34,7 @@ struct EntryBlockArgsEntry {
 /// Structure holding the information needed to create and bind entry block
 /// arguments associated to all clauses that can define them.
 struct EntryBlockArgs {
+  llvm::ArrayRef<mlir::Value> hostEvalVars;
   EntryBlockArgsEntry inReduction;
   EntryBlockArgsEntry map;
   EntryBlockArgsEntry priv;
@@ -49,18 +50,25 @@ struct EntryBlockArgs {
   }
 
   auto getSyms() const {
-    return llvm::concat<const Fortran::semantics::Symbol *const>(
-        inReduction.syms, map.syms, priv.syms, reduction.syms,
-        taskReduction.syms, useDeviceAddr.syms, useDevicePtr.syms);
+    return llvm::concat<const semantics::Symbol *const>(inReduction.syms,
+        map.syms, priv.syms, reduction.syms, taskReduction.syms,
+        useDeviceAddr.syms, useDevicePtr.syms);
   }
 
   auto getVars() const {
-    return llvm::concat<const mlir::Value>(inReduction.vars, map.vars,
-        priv.vars, reduction.vars, taskReduction.vars, useDeviceAddr.vars,
-        useDevicePtr.vars);
+    return llvm::concat<const mlir::Value>(hostEvalVars, inReduction.vars,
+        map.vars, priv.vars, reduction.vars, taskReduction.vars,
+        useDeviceAddr.vars, useDevicePtr.vars);
   }
 };
 
+/// Create an entry block for the given region, including the clause-defined
+/// arguments specified.
+///
+/// \param [in] builder - MLIR operation builder.
+/// \param [in]    args - entry block arguments information for the given
+///                       operation.
+/// \param [in]  region - Empty region in which to create the entry block.
 mlir::Block *genEntryBlock(
     mlir::OpBuilder &builder, const EntryBlockArgs &args, mlir::Region &region);
 } // namespace Fortran::common::openmp

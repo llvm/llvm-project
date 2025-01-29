@@ -96,9 +96,12 @@ end subroutine
 
 ! CHECK:       omp.region.cont13:                                ; preds = %omp.private.copy16
 ! CHECK-NEXT:    %{{.*}} = phi ptr
+! CHECK-NEXT:    br label %omp.region.after_alloca
+
+! CHECK:       omp.region.after_alloca:
 ! CHECK-NEXT:    br label %omp.par.region
 
-! CHECK:       omp.par.region:                                   ; preds = %omp.region.cont13
+! CHECK:       omp.par.region:                                   ; preds = %omp.region.after_alloca
 ! CHECK-NEXT:    br label %omp.reduction.init
 
 ! CHECK:       omp.reduction.init:                               ; preds = %omp.par.region
@@ -232,7 +235,7 @@ end subroutine
 ! CHECK-NEXT:    br label %omp.reduction.cleanup42
 
 ! CHECK:       omp.par.region28:                                 ; preds = %omp.par.region27
-! CHECK-NEXT:    call {} @_FortranAStopStatement
+! CHECK-NEXT:    call void @_FortranAStopStatement
 
 ! CHECK:       omp.reduction.neutral23:                          ; preds = %omp.reduction.neutral22
 !                [source length was zero: finish initializing array]

@@ -752,6 +752,9 @@ bool Sema::SetupConstraintScope(
     FunctionDecl *FD, std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
     const MultiLevelTemplateArgumentList &MLTAL,
     LocalInstantiationScope &Scope) {
+  assert(!isLambdaCallOperator(FD) &&
+         "Use LambdaScopeForCallOperatorInstantiationRAII to handle lambda "
+         "instantiations");
   if (FD->isTemplateInstantiation() && FD->getPrimaryTemplate()) {
     FunctionTemplateDecl *PrimaryTemplate = FD->getPrimaryTemplate();
     InstantiatingTemplate Inst(
@@ -777,14 +780,8 @@ bool Sema::SetupConstraintScope(
 
     // If this is a member function, make sure we get the parameters that
     // reference the original primary template.
-    // We walk up the instantiated template chain so that nested lambdas get
-    // handled properly.
-    // We should only collect instantiated parameters from the primary template.
-    // Otherwise, we may have mismatched template parameter depth!
     if (FunctionTemplateDecl *FromMemTempl =
             PrimaryTemplate->getInstantiatedFromMemberTemplate()) {
-      while (FromMemTempl->getInstantiatedFromMemberTemplate())
-        FromMemTempl = FromMemTempl->getInstantiatedFromMemberTemplate();
       if (addInstantiatedParametersToScope(FD, FromMemTempl->getTemplatedDecl(),
                                            Scope, MLTAL))
         return true;
@@ -834,6 +831,9 @@ Sema::SetupConstraintCheckingTemplateArgumentsAndScope(
                                    /*RelativeToPrimary=*/true,
                                    /*Pattern=*/nullptr,
                                    /*ForConstraintInstantiation=*/true);
+  // Lambdas are handled by LambdaScopeForCallOperatorInstantiationRAII.
+  if (isLambdaCallOperator(FD))
+    return MLTAL;
   if (SetupConstraintScope(FD, TemplateArgs, MLTAL, Scope))
     return std::nullopt;
 
@@ -1027,6 +1027,9 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
     ContextScope.emplace(S, const_cast<DeclContext *>(cast<DeclContext>(RD)),
                          /*NewThisContext=*/false);
   }
+  EnterExpressionEvaluationContext UnevaluatedContext(
+      S, Sema::ExpressionEvaluationContext::Unevaluated,
+      Sema::ReuseLambdaContextDecl);
   ExprResult SubstConstr = S.SubstConstraintExprWithoutSatisfaction(
       const_cast<clang::Expr *>(ConstrExpr), MLTAL);
   if (SFINAE.hasErrorOccurred() || !SubstConstr.isUsable())

@@ -121,14 +121,11 @@ using RegionBuilderFn = llvm::function_ref<void(ImplicitLocOpBuilder &, Block &,
 /// `regionBuilder`. The method is used by both named structured ops created by
 /// ods-gen and by manually defined C++ ops. It is called by both builders and
 /// parsers and creates a block with arguments corresponding to the elemental
-/// types of `inputTypes` and `outputTypes`. All output types are asserted to be
-/// ShapedType.
+/// types of `inputTypes` and `outputTypes`.
 static void fillStructuredOpRegion(OpBuilder &opBuilder, Region &region,
                                    TypeRange inputTypes, TypeRange outputTypes,
                                    ArrayRef<NamedAttribute> attrs,
                                    RegionBuilderFn regionBuilder) {
-  assert(llvm::all_of(outputTypes, llvm::IsaPred<ShapedType>));
-
   SmallVector<Type, 8> argTypes;
   SmallVector<Location, 8> argLocs;
   for (auto containers : {inputTypes, outputTypes}) {
@@ -3063,8 +3060,11 @@ LogicalResult WinogradInputTransformOp::verify() {
   int m = getM();
   int r = getR();
   int64_t tileSize = m + r - 1;
-  bool leftTransform = inputH != 1;
-  bool rightTransform = inputW != 1;
+
+  auto outputType = cast<ShapedType>(getOutput().getType());
+  ArrayRef<int64_t> outputShape = outputType.getShape();
+  bool leftTransform = outputShape[getOutputAlphaHDim()] != 1;
+  bool rightTransform = outputShape[getOutputAlphaWDim()] != 1;
 
   SmallVector<int64_t> expectedOutputShape(6, inputH);
   if (ShapedType::isDynamic(inputH)) {
@@ -3073,7 +3073,7 @@ LogicalResult WinogradInputTransformOp::verify() {
   } else {
     expectedOutputShape[getOutputAlphaHDim()] = leftTransform ? tileSize : 1;
     expectedOutputShape[getOutputTileHDim()] =
-        leftTransform ? (inputH - (r - 1)) / m : 1;
+        leftTransform ? (inputH - (r - 1)) / m : inputH;
   }
   if (ShapedType::isDynamic(inputW)) {
     expectedOutputShape[getOutputAlphaWDim()] = tileSize;
@@ -3081,13 +3081,11 @@ LogicalResult WinogradInputTransformOp::verify() {
   } else {
     expectedOutputShape[getOutputAlphaWDim()] = rightTransform ? tileSize : 1;
     expectedOutputShape[getOutputTileWDim()] =
-        rightTransform ? (inputW - (r - 1)) / m : 1;
+        rightTransform ? (inputW - (r - 1)) / m : inputW;
   }
   expectedOutputShape[getOutputNDim()] = inputShape[getInputNDim()];
   expectedOutputShape[getOutputCDim()] = inputShape[getInputCDim()];
 
-  auto outputType = cast<ShapedType>(getOutput().getType());
-  ArrayRef<int64_t> outputShape = outputType.getShape();
   if (failed(verifyCompatibleShape(expectedOutputShape, outputShape))) {
     return emitOpError("the output shape is not expected");
   }
@@ -3124,15 +3122,17 @@ LogicalResult WinogradInputTransformOp::getResultTilePosition(
     ArrayRef<OpFoldResult> sizes, SmallVector<OpFoldResult> &resultOffsets,
     SmallVector<OpFoldResult> &resultSizes) {
   IntegerAttr zeroAttr = builder.getI64IntegerAttr(0);
-  ShapedType inputType = getInputOperandType();
-  ArrayRef<int64_t> inputShape = inputType.getShape();
-  int64_t inputH = inputShape[getInputHDim()];
-  int64_t inputW = inputShape[getInputWDim()];
+  ShapedType outputType = getOutputOperandType();
+  ArrayRef<int64_t> outputShape = outputType.getShape();
+  int64_t outputAlphaH = outputShape[getOutputAlphaHDim()];
+  int64_t outputAlphaW = outputShape[getOutputAlphaWDim()];
+
   int64_t m = getM();
   int64_t r = getR();
   int64_t alpha = m + r - 1;
-  int64_t alphaH = inputH != 1 ? alpha : 1;
-  int64_t alphaW = inputW != 1 ? alpha : 1;
+  int64_t alphaH = outputAlphaH != 1 ? alpha : 1;
+  int64_t alphaW = outputAlphaW != 1 ? alpha : 1;
+
   IntegerAttr alphaHAttr = builder.getI64IntegerAttr(alphaH);
   IntegerAttr alphaWAttr = builder.getI64IntegerAttr(alphaW);
 
@@ -3157,22 +3157,26 @@ WinogradInputTransformOp::getTiledImplementation(OpBuilder &builder,
                                                  ArrayRef<OpFoldResult> offsets,
                                                  ArrayRef<OpFoldResult> sizes) {
   IntegerAttr oneAttr = builder.getI64IntegerAttr(1);
-  IntegerAttr zeroAttr = builder.getI64IntegerAttr(0);
-  ShapedType inputType = getInputOperandType();
-  ArrayRef<int64_t> inputShape = inputType.getShape();
-  int64_t inputH = inputShape[getInputHDim()];
-  int64_t inputW = inputShape[getInputWDim()];
   int64_t m = getM();
   int64_t r = getR();
 
+  ShapedType outputType = getOutputOperandType();
+  ArrayRef<int64_t> outputShape = outputType.getShape();
+  int64_t alphaH = outputShape[getOutputAlphaHDim()];
+  int64_t alphaW = outputShape[getOutputAlphaWDim()];
+
   Location loc = getLoc();
   MLIRContext *context = builder.getContext();
+  auto identityAffineMap =
+      AffineMap::get(1, 0, {builder.getAffineDimExpr(0)}, context);
   auto offsetAffineMap =
       AffineMap::get(1, 0, {builder.getAffineDimExpr(0) * m}, context);
   Value mappedOffsetH = affine::makeComposedAffineApply(
-      builder, loc, offsetAffineMap, offsets[getOutputTileHDim()]);
+      builder, loc, (alphaH != 1 ? offsetAffineMap : identityAffineMap),
+      offsets[getOutputTileHDim()]);
   Value mappedOffsetW = affine::makeComposedAffineApply(
-      builder, loc, offsetAffineMap, offsets[getOutputTileWDim()]);
+      builder, loc, (alphaW != 1 ? offsetAffineMap : identityAffineMap),
+      offsets[getOutputTileWDim()]);
   auto sizeAffineMap = AffineMap::get(
       1, 0, {builder.getAffineDimExpr(0) * m + (r - 1)}, context);
   Value mappedSizeH = affine::makeComposedAffineApply(
@@ -3183,16 +3187,14 @@ WinogradInputTransformOp::getTiledImplementation(OpBuilder &builder,
   SmallVector<Value> tiledOperands;
   SmallVector<OpFoldResult> sliceOffsets, sliceSizes;
 
-  OpFoldResult offsetH =
-      inputH != 1 ? OpFoldResult(mappedOffsetH) : OpFoldResult(zeroAttr);
-  OpFoldResult offsetW =
-      inputW != 1 ? OpFoldResult(mappedOffsetW) : OpFoldResult(zeroAttr);
+  OpFoldResult offsetH = OpFoldResult(mappedOffsetH);
+  OpFoldResult offsetW = OpFoldResult(mappedOffsetW);
   sliceOffsets.append(
       {offsets[getOutputNDim()], offsetH, offsetW, offsets[getOutputCDim()]});
   OpFoldResult sizeH =
-      inputH != 1 ? OpFoldResult(mappedSizeH) : OpFoldResult(oneAttr);
+      alphaH != 1 ? OpFoldResult(mappedSizeH) : OpFoldResult(oneAttr);
   OpFoldResult sizeW =
-      inputW != 1 ? OpFoldResult(mappedSizeW) : OpFoldResult(oneAttr);
+      alphaW != 1 ? OpFoldResult(mappedSizeW) : OpFoldResult(oneAttr);
   sliceSizes.append(
       {sizes[getOutputNDim()], sizeH, sizeW, sizes[getOutputCDim()]});
   int64_t inputRank = getInputOperandRank();
@@ -3300,28 +3302,29 @@ LogicalResult WinogradOutputTransformOp::getResultTilePosition(
 
   Location loc = getLoc();
   MLIRContext *context = builder.getContext();
+  auto identityAffineMap =
+      AffineMap::get(1, 0, {builder.getAffineDimExpr(0)}, context);
   auto affineMap =
       AffineMap::get(1, 0, {builder.getAffineDimExpr(0) * m}, context);
-
-  Value mappedOffsetH = affine::makeComposedAffineApply(
-      builder, loc, affineMap, offsets[getValueTileHDim()]);
-  Value mappedOffsetW = affine::makeComposedAffineApply(
-      builder, loc, affineMap, offsets[getValueTileWDim()]);
-  Value mappedSizeH = affine::makeComposedAffineApply(
-      builder, loc, affineMap, sizes[getValueTileHDim()]);
-  Value mappedSizeW = affine::makeComposedAffineApply(
-      builder, loc, affineMap, sizes[getValueTileWDim()]);
 
   ShapedType valueType = getValueOperandType();
   ArrayRef<int64_t> valueShape = valueType.getShape();
   int64_t valueH = valueShape[0];
   int64_t valueW = valueShape[1];
+  Value mappedOffsetH = affine::makeComposedAffineApply(
+      builder, loc, (valueH != 1 ? affineMap : identityAffineMap),
+      offsets[getValueTileHDim()]);
+  Value mappedOffsetW = affine::makeComposedAffineApply(
+      builder, loc, (valueW != 1 ? affineMap : identityAffineMap),
+      offsets[getValueTileWDim()]);
+  Value mappedSizeH = affine::makeComposedAffineApply(
+      builder, loc, affineMap, sizes[getValueTileHDim()]);
+  Value mappedSizeW = affine::makeComposedAffineApply(
+      builder, loc, affineMap, sizes[getValueTileWDim()]);
+
   IntegerAttr oneAttr = builder.getI64IntegerAttr(1);
-  IntegerAttr zeroAttr = builder.getI64IntegerAttr(0);
-  OpFoldResult offsetH =
-      valueH != 1 ? OpFoldResult(mappedOffsetH) : OpFoldResult(zeroAttr);
-  OpFoldResult offsetW =
-      valueW != 1 ? OpFoldResult(mappedOffsetW) : OpFoldResult(zeroAttr);
+  OpFoldResult offsetH = OpFoldResult(mappedOffsetH);
+  OpFoldResult offsetW = OpFoldResult(mappedOffsetW);
   OpFoldResult sizeH =
       valueH != 1 ? OpFoldResult(mappedSizeH) : OpFoldResult(oneAttr);
   OpFoldResult sizeW =

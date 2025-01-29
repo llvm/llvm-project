@@ -2094,6 +2094,10 @@ void Sema::CheckCompatibleReinterpretCast(QualType SrcType, QualType DestType,
     }
   }
 
+  if (SrcTy->isDependentType() || DestTy->isDependentType()) {
+    return;
+  }
+
   Diag(Range.getBegin(), DiagID) << SrcType << DestType << Range;
 }
 

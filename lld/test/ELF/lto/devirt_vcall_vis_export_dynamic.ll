@@ -28,6 +28,10 @@
 
 ;; Check that all WPD fails with --export-dynamic.
 
+; RUN: echo '.globl foo; foo:' > %ta.s
+; RUN: llvm-mc -filetype=obj -triple=x86_64 %ta.s -o %ta.o
+; RUN: ld.lld -shared -soname=ta %ta.o -o %ta.so
+
 ;; Index based WPD
 ; RUN: ld.lld %t2.o -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. \
@@ -49,19 +53,19 @@
 ;; Check that WPD fails for target _ZN1D1mEi with --export-dynamic-symbol=_ZTV1D.
 
 ;; Index based WPD
-; RUN: ld.lld %t2.o -o %t3 -save-temps --lto-whole-program-visibility \
+; RUN: ld.lld %t2.o %ta.so -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. \
 ; RUN:   --export-dynamic-symbol=_ZTV1D 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
 ; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
 
 ;; Hybrid WPD
-; RUN: ld.lld %t.o -o %t3 -save-temps --lto-whole-program-visibility \
+; RUN: ld.lld %t.o %ta.so -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. \
 ; RUN:   --export-dynamic-symbol=_ZTV1D 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
 
 ;; Regular LTO WPD
-; RUN: ld.lld %t4.o -o %t3 -save-temps --lto-whole-program-visibility \
+; RUN: ld.lld %t4.o %ta.so -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. \
 ; RUN:   --export-dynamic-symbol=_ZTV1D 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
 ; RUN: llvm-dis %t3.0.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
@@ -74,19 +78,19 @@
 ; RUN: echo "{ _ZTV1D; };" > %t.list
 
 ;; Index based WPD
-; RUN: ld.lld %t2.o -o %t3 -save-temps --lto-whole-program-visibility \
+; RUN: ld.lld %t2.o %ta.so -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. \
 ; RUN:   --dynamic-list=%t.list 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
 ; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
 
 ;; Hybrid WPD
-; RUN: ld.lld %t.o -o %t3 -save-temps --lto-whole-program-visibility \
+; RUN: ld.lld %t.o %ta.so -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. \
 ; RUN:   --dynamic-list=%t.list 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
 
 ;; Regular LTO WPD
-; RUN: ld.lld %t4.o -o %t3 -save-temps --lto-whole-program-visibility \
+; RUN: ld.lld %t4.o %ta.so -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. \
 ; RUN:   --dynamic-list=%t.list 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
 ; RUN: llvm-dis %t3.0.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR

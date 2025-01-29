@@ -445,7 +445,10 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
     }
     /// Return true if the op has the async attribute for the given device_type.
     bool hasAsyncOnly(mlir::acc::DeviceType deviceType) {
-      for (auto attr : getAsyncOnlyAttr()) {
+      mlir::ArrayAttr asyncOnly = getAsyncOnlyAttr();
+      if (!asyncOnly)
+        return false;
+      for (auto attr : asyncOnly) {
         auto deviceTypeAttr = mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr);
         if (deviceTypeAttr.getValue() == deviceType)
           return true;
@@ -817,7 +820,10 @@ class OpenACC_DataExitOp<string mnemonic, string clause, string extraDescription
     }
     /// Return true if the op has the async attribute for the given device_type.
     bool hasAsyncOnly(mlir::acc::DeviceType deviceType) {
-      for (auto attr : getAsyncOnlyAttr()) {
+      mlir::ArrayAttr asyncOnly = getAsyncOnlyAttr();
+      if (!asyncOnly)
+        return false;
+      for (auto attr : asyncOnly) {
         auto deviceTypeAttr = mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr);
         if (deviceTypeAttr.getValue() == deviceType)
           return true;
@@ -1002,8 +1008,9 @@ def OpenACC_UpdateHostOp : OpenACC_DataExitOpWithVarPtr<"update_host",
 // 2.5.13 private clause
 //===----------------------------------------------------------------------===//
 
-def OpenACC_PrivateRecipeOp : OpenACC_Op<"private.recipe",
-    [IsolatedFromAbove, Symbol, RecipeInterface]> {
+def OpenACC_PrivateRecipeOp
+    : OpenACC_Op<"private.recipe", [IsolatedFromAbove, Symbol, RecipeInterface,
+                                    AutomaticAllocationScope]> {
   let summary = "privatization recipe";
 
   let description = [{
@@ -1059,8 +1066,10 @@ def OpenACC_PrivateRecipeOp : OpenACC_Op<"private.recipe",
 // 2.5.14 firstprivate clause
 //===----------------------------------------------------------------------===//
 
-def OpenACC_FirstprivateRecipeOp : OpenACC_Op<"firstprivate.recipe",
-    [IsolatedFromAbove, Symbol, RecipeInterface]> {
+def OpenACC_FirstprivateRecipeOp
+    : OpenACC_Op<"firstprivate.recipe", [IsolatedFromAbove, Symbol,
+                                         RecipeInterface,
+                                         AutomaticAllocationScope]> {
   let summary = "privatization recipe";
 
   let description = [{
@@ -1125,8 +1134,10 @@ def OpenACC_FirstprivateRecipeOp : OpenACC_Op<"firstprivate.recipe",
 // 2.5.15 reduction clause
 //===----------------------------------------------------------------------===//
 
-def OpenACC_ReductionRecipeOp : OpenACC_Op<"reduction.recipe",
-    [IsolatedFromAbove, Symbol, RecipeInterface]> {
+def OpenACC_ReductionRecipeOp
+    : OpenACC_Op<"reduction.recipe", [IsolatedFromAbove, Symbol,
+                                      RecipeInterface,
+                                      AutomaticAllocationScope]> {
   let summary = "reduction recipe";
 
   let description = [{
