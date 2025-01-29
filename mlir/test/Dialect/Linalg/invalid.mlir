@@ -547,6 +547,104 @@ func.func @invalid_indexing_maps_placement_matmul(%lhs: tensor<4x1xf32>, %rhs: t
 
 // -----
 
+func.func @invalid_indexing_maps_placement_contraction(
+    %lhs: tensor<4x1xf32>, %rhs: tensor<1x64xf32>, %init: tensor<4x64xf32>) {
+  // expected-error @+3 {{custom op 'linalg.contract' expected 'indexing_maps' attribute}}
+  // NB: indexing_maps should be provided before ins and outs
+  linalg.contract
+      ins(%lhs, %rhs : tensor<4x1xf32>, tensor<1x64xf32>)
+      outs(%init : tensor<4x64xf32>)
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>,
+                       affine_map<(d0, d1, d2) -> (d2, d1)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1)>]
+  return
+}
+
+// -----
+
+func.func @invalid_affine_map_in_indexing_maps_contraction(
+    %lhs: tensor<4x1xf32>, %rhs: tensor<1x64xf32>, %init: tensor<4x64xf32>) {
+  // expected-error @+1 {{provided affine_map is not a projected permutation}}
+  linalg.contract
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d0 + d2, d2)>,
+                       affine_map<(d0, d1, d2) -> (d2, d1)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1)>]
+      ins(%lhs, %rhs : tensor<4x1xf32>, tensor<1x64xf32>)
+      outs(%init : tensor<4x64xf32>) -> tensor<4x64xf32>
+  return
+}
+
+// -----
+
+func.func @differing_iteration_space_of_affine_maps_contraction(
+    %lhs: tensor<4x1xf32>, %rhs: tensor<1x64xf32>, %init: tensor<4x64xf32>) {
+  // expected-error @+1 {{iteration spaces of provided affine_maps differ}}
+  linalg.contract
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>,
+                       affine_map<(d0, d1, d2, d3) -> (d2, d1)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1)>]
+      ins(%lhs, %rhs : tensor<4x1xf32>, tensor<1x64xf32>)
+      outs(%init : tensor<4x64xf32>) -> tensor<4x64xf32>
+  return
+}
+
+// -----
+
+func.func @mismatched_ranks_affine_map_and_operand_contraction(
+    %lhs: tensor<4x1x2xf32>, %rhs: tensor<1x64xf32>, %init: tensor<4x64xf32>) {
+  // expected-error @+1 {{ranks of shaped operand and results of corresponding affine_map differ}}
+  linalg.contract
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>,
+                       affine_map<(d0, d1, d2) -> (d2, d1)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1)>]
+      ins(%lhs, %rhs : tensor<4x1x2xf32>, tensor<1x64xf32>)
+      outs(%init : tensor<4x64xf32>) -> tensor<4x64xf32>
+  return
+}
+// -----
+
+func.func @mismatch_type_affine_map_and_operand_contraction(
+    %lhs: f32, %rhs: tensor<4x64xf32>, %init: tensor<4x64xf32>) {
+  // expected-error @+1 {{affine_map specifies shaped access while operand has non-shaped type}}
+  linalg.contract
+      indexing_maps = [affine_map<(d0, d1) -> (d0)>,
+                       affine_map<(d0, d1) -> (d0, d1)>,
+                       affine_map<(d0, d1) -> (d0, d1)>]
+      ins(%lhs, %rhs : f32, tensor<4x64xf32>)
+      outs(%init : tensor<4x64xf32>) -> tensor<4x64xf32>
+  return
+}
+
+// -----
+
+func.func @unused_iteration_space_dim_contraction(
+    %lhs: tensor<4x1xf32>, %rhs: tensor<1x64xf32>, %init: tensor<4x64xf32>) {
+  // expected-error @+1 {{iteration space dim at index 3 not used to access any operand}}
+  linalg.contract
+      indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d2)>,
+                       affine_map<(d0, d1, d2, d3) -> (d2, d1)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d1)>]
+      ins(%lhs, %rhs : tensor<4x1xf32>, tensor<1x64xf32>)
+      outs(%init : tensor<4x64xf32>) -> tensor<4x64xf32>
+  return
+}
+
+// -----
+
+func.func @unused_iteration_space_dim_contraction(
+    %lhs: tensor<8x4x1xf32>, %rhs: tensor<1x64xf32>, %init: tensor<4x64xf32>) {
+  // expected-error @+1 {{iteration space dim at index 3 is neither a contracting dim nor of parallel iteration type}}
+  linalg.contract
+      indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>,
+                       affine_map<(d0, d1, d2, d3) -> (d2, d1)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d1)>]
+      ins(%lhs, %rhs : tensor<8x4x1xf32>, tensor<1x64xf32>)
+      outs(%init : tensor<4x64xf32>) -> tensor<4x64xf32>
+  return
+}
+
+// -----
+
 func.func @invalid_static_2d_conv(%input : memref<1x3x4x2xf32>, %filter: memref<3x2x2x1xf32>, %output: memref<1x2x3x1xf32>) {
   // expected-error @+1 {{inferred input/output operand #0 has shape's dimension #1 to be greater than or equal to 4, but found 3}}
   linalg.conv_2d_nhwc_hwcf
