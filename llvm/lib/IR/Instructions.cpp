@@ -432,6 +432,24 @@ bool CallBase::paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
   }
 }
 
+bool CallBase::paramHasNonNullAttr(unsigned ArgNo,
+                                   bool AllowUndefOrPoison) const {
+  assert(getArgOperand(ArgNo)->getType()->isPointerTy() &&
+         "Argument must be a pointer");
+  if (paramHasAttr(ArgNo, Attribute::NonNull) &&
+      (AllowUndefOrPoison || paramHasAttr(ArgNo, Attribute::NoUndef)))
+    return true;
+
+  Attribute Attr = getParamAttr(ArgNo, Attribute::Dereferenceable);
+  if (Attr.isValid() && Attr.getDereferenceableBytes() > 0 &&
+      !NullPointerIsDefined(
+          getCaller(),
+          getArgOperand(ArgNo)->getType()->getPointerAddressSpace()))
+    return true;
+
+  return false;
+}
+
 bool CallBase::hasFnAttrOnCalledFunction(Attribute::AttrKind Kind) const {
   if (auto *F = dyn_cast<Function>(getCalledOperand()))
     return F->getAttributes().hasFnAttr(Kind);

@@ -2660,13 +2660,16 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
 
     // If the value is used as an argument to a call or invoke, then argument
     // attributes may provide an answer about null-ness.
-    if (const auto *CB = dyn_cast<CallBase>(U))
-      if (auto *CalledFunc = CB->getCalledFunction())
-        for (const Argument &Arg : CalledFunc->args())
-          if (CB->getArgOperand(Arg.getArgNo()) == V &&
-              Arg.hasNonNullAttr(/* AllowUndefOrPoison */ false) &&
-              DT->dominates(CB, CtxI))
-            return true;
+    if (V->getType()->isPointerTy()) {
+      if (const auto *CB = dyn_cast<CallBase>(U))
+        if (auto *CalledFunc = CB->getCalledFunction())
+          for (const Argument &Arg : CalledFunc->args())
+            if (CB->getArgOperand(Arg.getArgNo()) == V &&
+                CB->paramHasNonNullAttr(Arg.getArgNo(),
+                                        /*AllowUndefOrPoison=*/false) &&
+                DT->dominates(CB, CtxI))
+              return true;
+    }
 
     // If the value is used as a load/store, then the pointer must be non null.
     if (V == getLoadStorePointerOperand(U)) {
