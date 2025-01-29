@@ -901,7 +901,41 @@ void TextNodeDumper::dumpBareDeclRef(const Decl *D) {
 
   if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
     ColorScope Color(OS, ShowColors, DeclNameColor);
-    OS << " '" << ND->getDeclName() << '\'';
+    if (DeclarationName Name = ND->getDeclName())
+      OS << " '" << Name << '\'';
+    else
+      switch (ND->getKind()) {
+      case Decl::Decomposition: {
+        auto *DD = cast<DecompositionDecl>(ND);
+        OS << " first_binding '" << DD->bindings()[0]->getDeclName() << '\'';
+        break;
+      }
+      case Decl::Field: {
+        auto *FD = cast<FieldDecl>(ND);
+        OS << " field_index " << FD->getFieldIndex();
+        break;
+      }
+      case Decl::ParmVar: {
+        auto *PD = cast<ParmVarDecl>(ND);
+        OS << " depth " << PD->getFunctionScopeDepth() << " index "
+           << PD->getFunctionScopeIndex();
+        break;
+      }
+      case Decl::TemplateTypeParm: {
+        auto *TD = cast<TemplateTypeParmDecl>(ND);
+        OS << " depth " << TD->getDepth() << " index " << TD->getIndex();
+        break;
+      }
+      case Decl::NonTypeTemplateParm: {
+        auto *TD = cast<NonTypeTemplateParmDecl>(ND);
+        OS << " depth " << TD->getDepth() << " index " << TD->getIndex();
+        break;
+      }
+      default:
+        // Var, Namespace, (CXX)Record: Nothing else besides source location.
+        dumpSourceRange(ND->getSourceRange());
+        break;
+      }
   }
 
   if (const ValueDecl *VD = dyn_cast<ValueDecl>(D))
