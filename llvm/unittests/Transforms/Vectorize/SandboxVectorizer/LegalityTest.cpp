@@ -225,6 +225,22 @@ bb:
         Legality.canVectorize({Ld0, Ld1}, /*SkipScheduling=*/true);
     EXPECT_TRUE(isa<sandboxir::Widen>(Result));
   }
+  {
+    // Check Repeated instructions (splat)
+    const auto &Result =
+        Legality.canVectorize({Ld0, Ld0}, /*SkipScheduling=*/true);
+    EXPECT_TRUE(isa<sandboxir::Pack>(Result));
+    EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
+              sandboxir::ResultReason::RepeatedInstrs);
+  }
+  {
+    // Check Repeated instructions (not splat)
+    const auto &Result =
+        Legality.canVectorize({Ld0, Ld1, Ld0}, /*SkipScheduling=*/true);
+    EXPECT_TRUE(isa<sandboxir::Pack>(Result));
+    EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
+              sandboxir::ResultReason::RepeatedInstrs);
+  }
 }
 
 TEST_F(LegalityTest, LegalitySchedule) {
