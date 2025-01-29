@@ -57,6 +57,31 @@ void Region::add(Instruction *I) {
   Scoreboard.add(I);
 }
 
+void Region::setAux(ArrayRef<Instruction *> Aux) {
+  this->Aux = SmallVector<Instruction *>(Aux);
+  auto &LLVMCtx = Ctx.LLVMCtx;
+  for (auto [Idx, I] : enumerate(Aux)) {
+    llvm::ConstantInt *IdxC =
+        llvm::ConstantInt::get(LLVMCtx, llvm::APInt(32, Idx, false));
+    assert(cast<llvm::Instruction>(I->Val)->getMetadata(AuxMDKind) == nullptr &&
+           "Instruction already in Aux!");
+    cast<llvm::Instruction>(I->Val)->setMetadata(
+        AuxMDKind, MDNode::get(LLVMCtx, ConstantAsMetadata::get(IdxC)));
+  }
+}
+
+void Region::setAux(uint32_t Idx, Instruction *I) {
+  uint32_t ExpectedSz = Idx + 1;
+  if (Aux.size() < ExpectedSz) {
+    auto SzBefore = Aux.size();
+    Aux.resize(ExpectedSz);
+    // Initialize the gap with nullptr.
+    for (unsigned Idx = SzBefore; Idx + 1 < ExpectedSz; ++Idx)
+      Aux[Idx] = nullptr;
+  }
+  Aux[Idx] = I;
+}
+
 void Region::remove(Instruction *I) {
   // Keep track of the instruction cost. This need to be done *before* we remove
   // `I` from the region.
@@ -78,6 +103,15 @@ bool Region::operator==(const Region &Other) const {
 void Region::dump(raw_ostream &OS) const {
   for (auto *I : Insts)
     OS << *I << "\n";
+  if (!Aux.empty()) {
+    OS << "\nAux:\n";
+    for (auto *I : Aux) {
+      if (I == nullptr)
+        OS << "NULL\n";
+      else
+        OS << *I << "\n";
+    }
+  }
 }
 
 void Region::dump() const {
@@ -93,16 +127,34 @@ Region::createRegionsFromMD(Function &F, TargetTransformInfo &TTI) {
   auto &Ctx = F.getContext();
   for (BasicBlock &BB : F) {
     for (Instruction &Inst : BB) {
-      if (auto *MDN = cast<llvm::Instruction>(Inst.Val)->getMetadata(MDKind)) {
+      auto *LLVMI = cast<llvm::Instruction>(Inst.Val);
+      if (auto *MDN = LLVMI->getMetadata(MDKind)) {
+        Region *R = nullptr;
         auto [It, Inserted] = MDNToRegion.try_emplace(MDN);
         if (Inserted) {
           Regions.push_back(std::make_unique<Region>(Ctx, TTI));
-          It->second = Regions.back().get();
+          R = Regions.back().get();
+          It->second = R;
+        } else {
+          R = It->second;
         }
-        It->second->add(&Inst);
+        R->add(&Inst);
+
+        if (auto *AuxMDN = LLVMI->getMetadata(AuxMDKind)) {
+          llvm::Constant *IdxC =
+              dyn_cast<ConstantAsMetadata>(AuxMDN->getOperand(0))->getValue();
+          auto Idx = cast<llvm::ConstantInt>(IdxC)->getSExtValue();
+          R->setAux(Idx, &Inst);
+        }
       }
     }
   }
+#ifndef NDEBUG
+  // Check that there are no gaps in the Aux vector.
+  for (auto &RPtr : Regions)
+    for (auto *I : RPtr->getAux())
+      assert(I != nullptr && "Gap in Aux!");
+#endif
   return Regions;
 }
 
