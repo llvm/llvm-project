@@ -408,7 +408,7 @@ _mm256_maskz_cvtx2ps_ph(__mmask16 __U, __m256 __A, __m256 __B) {
 ///
 /// \code{.operation}
 /// FOR i := 0 to 7
-/// 	dst.fp8[i] := add_convert_fp16_to_fp8_bias(__A.fp16[i], __B.int8[2i])
+/// 	dst.bf8[i] := add_convert_fp16_to_bf8_bias(__A.fp16[i], __B.int8[2i])
 /// ENDFOR
 ///
 /// dst[MAX:64] := 0
@@ -423,7 +423,7 @@ _mm256_maskz_cvtx2ps_ph(__mmask16 __U, __m256 __A, __m256 __B) {
 /// \param __B
 ///    A 128-bit vector of [8 x int16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower elements correspond to the
+///    A 128-bit vector of [16 x bf8]. Lower elements correspond to the
 ///    sum of elements from \a __A and \a __B; higher order elements are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_cvtbiasph_bf8(__m128i __A, __m128h __B) {
@@ -440,9 +440,9 @@ _mm_cvtbiasph_bf8(__m128i __A, __m128h __B) {
 /// \code{.operation}
 /// FOR i := 0 to 7
 /// 	IF __U[i]
-/// 		dst.fp8[i] := add_convert_fp16_to_fp8_bias(__A.fp16[i], __B.int8[2i])
+/// 		dst.bf8[i] := add_convert_fp16_to_bf8_bias(__A.fp16[i], __B.int8[2i])
 /// 	ELSE
-/// 		dst.fp8[i] := _W[i]
+/// 		dst.bf8[i] := _W[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -454,7 +454,7 @@ _mm_cvtbiasph_bf8(__m128i __A, __m128h __B) {
 /// This intrinsic corresponds to the \c VCVTBIASPH2BF8 instruction.
 ///
 /// \param __W
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x bf8].
 /// \param __U
 ///    A 8-bit merging mask.
 /// \param __A
@@ -462,7 +462,7 @@ _mm_cvtbiasph_bf8(__m128i __A, __m128h __B) {
 /// \param __B
 ///    A 128-bit vector of [8 x int16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower elements correspond to the sum of
+///    A 128-bit vector of [16 x bf8]. Lower elements correspond to the sum of
 ///    elements from \a __A and \a __B; higher order elements are zeroed. If
 ///    corresponding mask bit is not set, then element from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -480,9 +480,9 @@ _mm_mask_cvtbiasph_bf8(__m128i __W, __mmask8 __U, __m128i __A, __m128h __B) {
 /// \code{.operation}
 /// FOR i := 0 to 7
 /// 	IF __U[i]
-///	 	dst.fp8[i] := add_convert_fp16_to_fp8_bias(__A.fp16[i], __B.int8[2i])
+///	 	dst.bf8[i] := add_convert_fp16_to_bf8_bias(__A.fp16[i], __B.int8[2i])
 ///	 ELSE
-///	 	dst.fp8[i] := 0
+///	 	dst.bf8[i] := 0
 ///	 FI
 /// ENDFOR
 ///
@@ -516,7 +516,7 @@ _mm_maskz_cvtbiasph_bf8(__mmask8 __U, __m128i __A, __m128h __B) {
 ///
 /// \code{.operation}
 /// FOR i := 0 to 15
-/// 	dst.fp8[i] := add_convert_fp16_to_fp8_bias(__A.fp16[i], __B.int8[2i])
+/// 	dst.bf8[i] := add_convert_fp16_to_bf8_bias(__A.fp16[i], __B.int8[2i])
 /// ENDFOR
 ///
 /// dst[MAX:128] := 0
@@ -549,9 +549,9 @@ _mm256_cvtbiasph_bf8(__m256i __A, __m256h __B) {
 /// \code{.operation}
 /// FOR i := 0 to 15
 /// 	IF __U[i]
-/// 		dst.fp8[i] := add_convert_fp16_to_fp8_bias(__A.fp16[i], __B.int8[2i])
+/// 		dst.bf8[i] := add_convert_fp16_to_bf8_bias(__A.fp16[i], __B.int8[2i])
 /// 	ELSE
-/// 		dst.fp8[i] := _W[i]
+/// 		dst.bf8[i] := _W[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -563,7 +563,7 @@ _mm256_cvtbiasph_bf8(__m256i __A, __m256h __B) {
 /// This intrinsic corresponds to the \c VCVTBIASPH2BF8 instruction.
 ///
 /// \param __W
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x bf8].
 /// \param __U
 ///    A 16-bit merging mask.
 /// \param __A
@@ -571,7 +571,7 @@ _mm256_cvtbiasph_bf8(__m256i __A, __m256h __B) {
 /// \param __B
 ///    A 256-bit vector of [16 x int16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Elements correspond to the sum of
+///    A 128-bit vector of [16 x bf8]. Elements correspond to the sum of
 ///    elements from \a __A and \a __B. If corresponding mask bit is not set, then
 ///    element from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvtbiasph_bf8(
@@ -589,9 +589,9 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvtbiasph_bf8(
 /// \code{.operation}
 /// FOR i := 0 to 15
 /// 	IF __U[i]
-///	 	dst.fp8[i] := add_convert_fp16_to_fp8_bias(__A.fp16[i], __B.int8[2i])
+///	 	dst.bf8[i] := add_convert_fp16_to_bf8_bias(__A.fp16[i], __B.int8[2i])
 ///	 ELSE
-///	 	dst.fp8[i] := 0
+///	 	dst.bf8[i] := 0
 ///	 FI
 /// ENDFOR
 ///
@@ -626,7 +626,7 @@ _mm256_maskz_cvtbiasph_bf8(__mmask16 __U, __m256i __A, __m256h __B) {
 ///
 /// \code{.operation}
 /// FOR i := 0 to 7
-/// 	dst.fp8[i] := add_convert_fp16_to_fp8_bias(__A.fp16[i], __B.int8[2i])
+/// 	dst.bf8[i] := add_convert_fp16_to_bf8_bias(__A.fp16[i], __B.int8[2i])
 /// ENDFOR
 ///
 /// dst[MAX:64] := 0
@@ -658,9 +658,9 @@ _mm_cvtbiassph_bf8(__m128i __A, __m128h __B) {
 /// \code{.operation}
 /// FOR i := 0 to 7
 /// 	IF __U[i]
-/// 		dst.fp8[i] := add_convert_fp16_to_fp8_bias(__A.fp16[i], __B.int8[2i])
+/// 		dst.bf8[i] := add_convert_fp16_to_bf8_bias(__A.fp16[i], __B.int8[2i])
 /// 	ELSE
-/// 		dst.fp8[i] := _W[i]
+/// 		dst.bf8[i] := _W[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -672,7 +672,7 @@ _mm_cvtbiassph_bf8(__m128i __A, __m128h __B) {
 /// This intrinsic corresponds to the \c VCVTBIASPH2BF8S instruction.
 ///
 /// \param __W
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x bf8].
 /// \param __U
 ///    A 8-bit merging mask.
 /// \param __A
@@ -680,7 +680,7 @@ _mm_cvtbiassph_bf8(__m128i __A, __m128h __B) {
 /// \param __B
 ///    A 128-bit vector of [8 x int16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower elements correspond to the sum of
+///    A 128-bit vector of [16 x bf8]. Lower elements correspond to the sum of
 ///    elements from \a __A and \a __B; higher order elements are zeroed. If
 ///    corresponding mask bit is not set, then element from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -698,9 +698,9 @@ _mm_mask_cvtbiassph_bf8(__m128i __W, __mmask8 __U, __m128i __A, __m128h __B) {
 /// \code{.operation}
 /// FOR i := 0 to 7
 /// 	IF __U[i]
-///	 	dst.fp8[i] := add_convert_fp16_to_fp8_bias(__A.fp16[i], __B.int8[2i])
+///	 	dst.bf8[i] := add_convert_fp16_to_bf8_bias(__A.fp16[i], __B.int8[2i])
 ///	 ELSE
-///	 	dst.fp8[i] := 0
+///	 	dst.bf8[i] := 0
 ///	 FI
 /// ENDFOR
 ///
@@ -735,7 +735,7 @@ _mm_maskz_cvtbiassph_bf8(__mmask8 __U, __m128i __A, __m128h __B) {
 ///
 /// \code{.operation}
 /// FOR i := 0 to 15
-/// 	dst.fp8[i] := add_convert_fp16_to_fp8_bias(__A.fp16[i], __B.int8[2i])
+/// 	dst.bf8[i] := add_convert_fp16_to_bf8_bias(__A.fp16[i], __B.int8[2i])
 /// ENDFOR
 ///
 /// dst[MAX:128] := 0
@@ -768,9 +768,9 @@ _mm256_cvtbiassph_bf8(__m256i __A, __m256h __B) {
 /// \code{.operation}
 /// FOR i := 0 to 15
 /// 	IF __U[i]
-/// 		dst.fp8[i] := add_convert_fp16_to_fp8_bias(__A.fp16[i], __B.int8[2i])
+/// 		dst.bf8[i] := add_convert_fp16_to_bf8_bias(__A.fp16[i], __B.int8[2i])
 /// 	ELSE
-/// 		dst.fp8[i] := _W[i]
+/// 		dst.bf8[i] := _W[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -782,7 +782,7 @@ _mm256_cvtbiassph_bf8(__m256i __A, __m256h __B) {
 /// This intrinsic corresponds to the \c VCVTBIASPH2BF8S instruction.
 ///
 /// \param __W
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x bf8].
 /// \param __U
 ///    A 16-bit merging mask.
 /// \param __A
@@ -790,7 +790,7 @@ _mm256_cvtbiassph_bf8(__m256i __A, __m256h __B) {
 /// \param __B
 ///    A 256-bit vector of [16 x int16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Elements correspond to the sum of
+///    A 128-bit vector of [16 x bf8]. Elements correspond to the sum of
 ///    elements from \a __A and \a __B. If corresponding mask bit is not set, then
 ///    element from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvtbiassph_bf8(
@@ -808,9 +808,9 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvtbiassph_bf8(
 /// \code{.operation}
 /// FOR i := 0 to 15
 /// 	IF __U[i]
-///	 	dst.fp8[i] := add_convert_fp16_to_fp8_bias(__A.fp16[i], __B.int8[2i])
+///	 	dst.bf8[i] := add_convert_fp16_to_bf8_bias(__A.fp16[i], __B.int8[2i])
 ///	 ELSE
-///	 	dst.fp8[i] := 0
+///	 	dst.bf8[i] := 0
 ///	 FI
 /// ENDFOR
 ///
@@ -844,7 +844,7 @@ _mm256_maskz_cvtbiassph_bf8(__mmask16 __U, __m256i __A, __m256h __B) {
 ///
 /// \code{.operation}
 /// FOR i := 0 to 7
-/// 	dst.fp8[i] := add_convert_fp16_to_fp8_bias(__A.fp16[i], __B.int8[2i])
+/// 	dst.hf8[i] := add_convert_fp16_to_hf8_bias(__A.fp16[i], __B.int8[2i])
 /// ENDFOR
 ///
 /// dst[MAX:64] := 0
@@ -876,9 +876,9 @@ _mm_cvtbiasph_hf8(__m128i __A, __m128h __B) {
 /// \code{.operation}
 /// FOR i := 0 to 7
 /// 	IF __U[i]
-/// 		dst.fp8[i] := add_convert_fp16_to_fp8_bias(__A.fp16[i], __B.int8[2i])
+/// 		dst.hf8[i] := add_convert_fp16_to_hf8_bias(__A.fp16[i], __B.int8[2i])
 /// 	ELSE
-/// 		dst.fp8[i] := _W[i]
+/// 		dst.hf8[i] := _W[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -890,7 +890,7 @@ _mm_cvtbiasph_hf8(__m128i __A, __m128h __B) {
 /// This intrinsic corresponds to the \c VCVTBIASPH2HF8 instruction.
 ///
 /// \param __W
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x hf8].
 /// \param __U
 ///    A 8-bit merging mask.
 /// \param __A
@@ -898,7 +898,7 @@ _mm_cvtbiasph_hf8(__m128i __A, __m128h __B) {
 /// \param __B
 ///    A 128-bit vector of [8 x int16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower elements correspond to the sum of
+///    A 128-bit vector of [16 x hf8]. Lower elements correspond to the sum of
 ///    elements from \a __A and \a __B; higher order elements are zeroed. If
 ///    corresponding mask bit is not set, then element from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -916,9 +916,9 @@ _mm_mask_cvtbiasph_hf8(__m128i __W, __mmask8 __U, __m128i __A, __m128h __B) {
 /// \code{.operation}
 /// FOR i := 0 to 7
 /// 	IF __U[i]
-///	 	dst.fp8[i] := add_convert_fp16_to_fp8_bias(__A.fp16[i], __B.int8[2i])
+///	 	dst.hf8[i] := add_convert_fp16_to_hf8_bias(__A.fp16[i], __B.int8[2i])
 ///	 ELSE
-///	 	dst.fp8[i] := 0
+///	 	dst.hf8[i] := 0
 ///	 FI
 /// ENDFOR
 ///
@@ -952,7 +952,7 @@ _mm_maskz_cvtbiasph_hf8(__mmask8 __U, __m128i __A, __m128h __B) {
 ///
 /// \code{.operation}
 /// FOR i := 0 to 15
-/// 	dst.fp8[i] := add_fp16_int8_convert_to_hf8(__A.fp16[i], __B.int8[2 * i])
+/// 	dst.hf8[i] := add_fp16_int8_convert_to_hf8(__A.fp16[i], __B.int8[2 * i])
 /// ENDFOR
 ///
 /// dst[MAX:128] := 0
@@ -985,9 +985,9 @@ _mm256_cvtbiasph_hf8(__m256i __A, __m256h __B) {
 /// \code{.operation}
 /// FOR i := 0 to 15
 /// 	IF __U[i]
-/// 		dst.fp8[i] := add_convert_fp16_to_fp8_bias(__A.fp16[i], __B.int8[2i])
+/// 		dst.hf8[i] := add_convert_fp16_to_hf8_bias(__A.fp16[i], __B.int8[2i])
 /// 	ELSE
-/// 		dst.fp8[i] := _W[i]
+/// 		dst.hf8[i] := _W[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -999,7 +999,7 @@ _mm256_cvtbiasph_hf8(__m256i __A, __m256h __B) {
 /// This intrinsic corresponds to the \c VCVTBIASPH2HF8 instruction.
 ///
 /// \param __W
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x hf8].
 /// \param __U
 ///    A 16-bit merging mask.
 /// \param __A
@@ -1007,7 +1007,7 @@ _mm256_cvtbiasph_hf8(__m256i __A, __m256h __B) {
 /// \param __B
 ///    A 256-bit vector of [16 x int16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Elements correspond to the sum of
+///    A 128-bit vector of [16 x hf8]. Elements correspond to the sum of
 ///    elements from \a __A and \a __B. If corresponding mask bit is not set, then
 ///    element from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvtbiasph_hf8(
@@ -1025,9 +1025,9 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvtbiasph_hf8(
 /// \code{.operation}
 /// FOR i := 0 to 15
 /// 	IF __U[i]
-///	 	dst.fp8[i] := add_fp16_int8_convert_to_hf8(__A.fp16[i], __B.int8[2 * i])
+///	 	dst.hf8[i] := add_fp16_int8_convert_to_hf8(__A.fp16[i], __B.int8[2 * i])
 ///	 ELSE
-///	 	dst.fp8[i] := 0
+///	 	dst.hf8[i] := 0
 ///	 FI
 /// ENDFOR
 ///
@@ -1062,7 +1062,7 @@ _mm256_maskz_cvtbiasph_hf8(__mmask16 __U, __m256i __A, __m256h __B) {
 ///
 /// \code{.operation}
 /// FOR i := 0 to 7
-/// 	dst.fp8[i] := add_convert_fp16_to_fp8_bias(__A.fp16[i], __B.int8[2i])
+/// 	dst.hf8[i] := add_convert_fp16_to_hf8_bias(__A.fp16[i], __B.int8[2i])
 /// ENDFOR
 ///
 /// dst[MAX:64] := 0
@@ -1094,9 +1094,9 @@ _mm_cvtbiassph_hf8(__m128i __A, __m128h __B) {
 /// \code{.operation}
 /// FOR i := 0 to 7
 /// 	IF __U[i]
-/// 		dst.fp8[i] := add_convert_fp16_to_fp8_bias(__A.fp16[i], __B.int8[2i])
+/// 		dst.hf8[i] := add_convert_fp16_to_hf8_bias(__A.fp16[i], __B.int8[2i])
 /// 	ELSE
-/// 		dst.fp8[i] := _W[i]
+/// 		dst.hf8[i] := _W[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -1108,7 +1108,7 @@ _mm_cvtbiassph_hf8(__m128i __A, __m128h __B) {
 /// This intrinsic corresponds to the \c VCVTBIASPH2HF8S instruction.
 ///
 /// \param __W
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x hf8].
 /// \param __U
 ///    A 8-bit merging mask.
 /// \param __A
@@ -1116,7 +1116,7 @@ _mm_cvtbiassph_hf8(__m128i __A, __m128h __B) {
 /// \param __B
 ///    A 128-bit vector of [8 x int16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower elements correspond to the sum of
+///    A 128-bit vector of [16 x hf8]. Lower elements correspond to the sum of
 ///    elements from \a __A and \a __B; higher order elements are zeroed. If
 ///    corresponding mask bit is not set, then element from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -1134,9 +1134,9 @@ _mm_mask_cvtbiassph_hf8(__m128i __W, __mmask8 __U, __m128i __A, __m128h __B) {
 /// \code{.operation}
 /// FOR i := 0 to 7
 /// 	IF __U[i]
-///	 	dst.fp8[i] := add_convert_fp16_to_fp8_bias(__A.fp16[i], __B.int8[2i])
+///	 	dst.hf8[i] := add_convert_fp16_to_hf8_bias(__A.fp16[i], __B.int8[2i])
 ///	 ELSE
-///	 	dst.fp8[i] := 0
+///	 	dst.hf8[i] := 0
 ///	 FI
 /// ENDFOR
 ///
@@ -1171,7 +1171,7 @@ _mm_maskz_cvtbiassph_hf8(__mmask8 __U, __m128i __A, __m128h __B) {
 ///
 /// \code{.operation}
 /// FOR i := 0 to 15
-/// 	dst.fp8[i] := add_convert_fp16_to_fp8_bias(__A.fp16[i], __B.int8[2i])
+/// 	dst.hf8[i] := add_convert_fp16_to_hf8_bias(__A.fp16[i], __B.int8[2i])
 /// ENDFOR
 ///
 /// dst[MAX:128] := 0
@@ -1204,9 +1204,9 @@ _mm256_cvtbiassph_hf8(__m256i __A, __m256h __B) {
 /// \code{.operation}
 /// FOR i := 0 to 15
 /// 	IF __U[i]
-/// 		dst.fp8[i] := add_convert_fp16_to_fp8_bias(__A.fp16[i], __B.int8[2i])
+/// 		dst.hf8[i] := add_convert_fp16_to_hf8_bias(__A.fp16[i], __B.int8[2i])
 /// 	ELSE
-/// 		dst.fp8[i] := _W[i]
+/// 		dst.hf8[i] := _W[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -1218,7 +1218,7 @@ _mm256_cvtbiassph_hf8(__m256i __A, __m256h __B) {
 /// This intrinsic corresponds to the \c VCVTBIASPH2HF8S instruction.
 ///
 /// \param __W
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x hf8].
 /// \param __U
 ///    A 16-bit merging mask.
 /// \param __A
@@ -1226,7 +1226,7 @@ _mm256_cvtbiassph_hf8(__m256i __A, __m256h __B) {
 /// \param __B
 ///    A 256-bit vector of [16 x int16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Elements correspond to the sum of
+///    A 128-bit vector of [16 x hf8]. Elements correspond to the sum of
 ///    elements from \a __A and \a __B. If corresponding mask bit is not set, then
 ///    element from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvtbiassph_hf8(
@@ -1244,9 +1244,9 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvtbiassph_hf8(
 /// \code{.operation}
 /// FOR i := 0 to 15
 /// 	IF __U[i]
-///	 	dst.fp8[i] := add_convert_fp16_to_fp8_bias(__A.fp16[i], __B.int8[2i])
+///	 	dst.hf8[i] := add_convert_fp16_to_hf8_bias(__A.fp16[i], __B.int8[2i])
 ///	 ELSE
-///	 	dst.fp8[i] := 0
+///	 	dst.hf8[i] := 0
 ///	 FI
 /// ENDFOR
 ///
@@ -1280,9 +1280,9 @@ _mm256_maskz_cvtbiassph_hf8(__mmask16 __U, __m256i __A, __m256h __B) {
 /// \code{.operation}
 /// FOR i := 0 to 15 
 /// 	IF i < 8
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 		dst.bf8[i] := convert_fp16_to_bf8(__B.fp16[i])
 /// 	ELSE
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 8])
+/// 		dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i - 8])
 /// 	FI
 /// ENDFOR
 ///
@@ -1298,7 +1298,7 @@ _mm256_maskz_cvtbiassph_hf8(__mmask16 __U, __m256i __A, __m256h __B) {
 /// \param __B
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower 8 elements correspond to the
+///    A 128-bit vector of [16 x bf8]. Lower 8 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvt2ph_bf8(__m128h __A,
@@ -1316,12 +1316,12 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvt2ph_bf8(__m128h __A,
 /// FOR i := 0 to 15
 /// 	IF __U[i]
 /// 		IF i < 8
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 			dst.bf8[i] := convert_fp16_to_bf8(__B.fp16[i])
 /// 		ELSE
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 8])
+/// 			dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i - 8])
 /// 		FI
 /// 	ELSE
-/// 		dst.fp8 := __W.fp8[i]
+/// 		dst.bf8 := __W.bf8[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -1333,7 +1333,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvt2ph_bf8(__m128h __A,
 /// This intrinsic corresponds to the \c VCVT2PH2BF8 instruction.
 ///
 /// \param __W
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x bf8].
 /// \param __U
 ///    A 16-bit merging mask.
 /// \param __A
@@ -1341,7 +1341,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvt2ph_bf8(__m128h __A,
 /// \param __B
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower 8 elements correspond to the
+///    A 128-bit vector of [16 x bf8]. Lower 8 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
 ///    element from \a __W is taken instead.
@@ -1360,12 +1360,12 @@ _mm_mask_cvt2ph_bf8(__m128i __W, __mmask16 __U, __m128h __A, __m128h __B) {
 /// FOR i := 0 to 15 
 /// 	IF __U[i]
 /// 		IF i < 8
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 			dst.bf8[i] := convert_fp16_to_bf8(__B.fp16[i])
 /// 		ELSE
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 8])
+/// 			dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i - 8])
 /// 		FI
 /// 	ELSE
-/// 		dst.fp8[i] := 0
+/// 		dst.bf8[i] := 0
 /// 	FI
 /// ENDFOR
 ///
@@ -1383,7 +1383,7 @@ _mm_mask_cvt2ph_bf8(__m128i __W, __mmask16 __U, __m128h __A, __m128h __B) {
 /// \param __B
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower 8 elements correspond to the
+///    A 128-bit vector of [16 x bf8]. Lower 8 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
 ///    zero is taken instead.
@@ -1400,9 +1400,9 @@ _mm_maskz_cvt2ph_bf8(__mmask16 __U, __m128h __A, __m128h __B) {
 /// \code{.operation]
 /// FOR i := 0 to 32 
 /// 	IF i < 16 
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 		dst.bf8[i] := convert_fp16_to_bf8(__B.fp16[i])
 /// 	ELSE
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 16])
+/// 		dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i - 16])
 /// 	FI
 /// ENDFOR
 ///
@@ -1418,7 +1418,7 @@ _mm_maskz_cvt2ph_bf8(__mmask16 __U, __m128h __A, __m128h __B) {
 /// \param __B
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
-///    A 256-bit vector of [32 x fp8]. Lower 16 elements correspond to the
+///    A 256-bit vector of [32 x bf8]. Lower 16 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
@@ -1436,12 +1436,12 @@ _mm256_cvt2ph_bf8(__m256h __A, __m256h __B) {
 /// FOR i := 0 to 32 
 /// 	IF __U[i]
 /// 		IF i < 16 
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 			dst.bf8[i] := convert_fp16_to_bf8(__B.fp16[i])
 /// 		ELSE
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 16])
+/// 			dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i - 16])
 /// 		FI
 /// 	ELSE
-/// 		dst.fp8[i] := __W.fp8[i]
+/// 		dst.bf8[i] := __W.bf8[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -1453,7 +1453,7 @@ _mm256_cvt2ph_bf8(__m256h __A, __m256h __B) {
 /// This intrinsic corresponds to the \c VCVT2PH2BF8 instruction.
 ///
 /// \param __W
-///    A 256-bit vector of [32 x fp8].
+///    A 256-bit vector of [32 x bf8].
 /// \param __U
 ///    A 32-bit merging mask.
 /// \param __A
@@ -1461,7 +1461,7 @@ _mm256_cvt2ph_bf8(__m256h __A, __m256h __B) {
 /// \param __B
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
-///    A 256-bit vector of [32 x fp8]. Lower 16 elements correspond to the
+///    A 256-bit vector of [32 x bf8]. Lower 16 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
 ///    element from \a __W is taken instead.
@@ -1479,12 +1479,12 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_mask_cvt2ph_bf8(
 /// \code{.operation]
 /// FOR i := 0 to 32 
 /// 	IF __U[i]
-/// 		dst.fp8[i] := 0
+/// 		dst.bf8[i] := 0
 /// 	ELSE
 /// 		IF i < 16 
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 			dst.bf8[i] := convert_fp16_to_bf8(__B.fp16[i])
 /// 		ELSE
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 16])
+/// 			dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i - 16])
 /// 		FI
 /// 	FI
 /// ENDFOR
@@ -1503,7 +1503,7 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_mask_cvt2ph_bf8(
 /// \param __B
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
-///    A 256-bit vector of [32 x fp8]. Lower 16 elements correspond to the
+///    A 256-bit vector of [32 x bf8]. Lower 16 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set,
 ///    zero is taken instead.
@@ -1521,9 +1521,9 @@ _mm256_maskz_cvt2ph_bf8(__mmask32 __U, __m256h __A, __m256h __B) {
 /// \code{.operation}
 /// FOR i := 0 to 15 
 /// 	IF i < 8
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 		dst.bf8[i] := convert_fp16_to_bf8(__B.fp16[i])
 /// 	ELSE
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 8])
+/// 		dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i - 8])
 /// 	FI
 /// ENDFOR
 ///
@@ -1539,7 +1539,7 @@ _mm256_maskz_cvt2ph_bf8(__mmask32 __U, __m256h __A, __m256h __B) {
 /// \param __B
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower 8 elements correspond to the
+///    A 128-bit vector of [16 x bf8]. Lower 8 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -1557,12 +1557,12 @@ _mm_cvts2ph_bf8(__m128h __A, __m128h __B) {
 /// FOR i := 0 to 15 
 /// 	IF __U[i]
 /// 		IF i < 8
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 			dst.bf8[i] := convert_fp16_to_bf8(__B.fp16[i])
 /// 		ELSE
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 8])
+/// 			dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i - 8])
 /// 		FI
 /// 	ELSE
-/// 		dst.fp8 := __W.fp8[i]
+/// 		dst.bf8 := __W.bf8[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -1574,7 +1574,7 @@ _mm_cvts2ph_bf8(__m128h __A, __m128h __B) {
 /// This intrinsic corresponds to the \c VCVT2PH2BF8S instruction.
 ///
 /// \param __W
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x bf8].
 /// \param __U
 ///    A 16-bit merging mask.
 /// \param __A
@@ -1582,7 +1582,7 @@ _mm_cvts2ph_bf8(__m128h __A, __m128h __B) {
 /// \param __B
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower 8 elements correspond to the
+///    A 128-bit vector of [16 x bf8]. Lower 8 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
 ///    element from \a __W is taken instead.
@@ -1601,12 +1601,12 @@ _mm_mask_cvts2ph_bf8(__m128i __W, __mmask16 __U, __m128h __A, __m128h __B) {
 /// FOR i := 0 to 16 
 /// 	IF __U[i]
 /// 		IF i < 8
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 			dst.bf8[i] := convert_fp16_to_bf8(__B.fp16[i])
 /// 		ELSE
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 8])
+/// 			dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i - 8])
 /// 		FI
 /// 	ELSE
-/// 		dst.fp8[i] := 0
+/// 		dst.bf8[i] := 0
 /// 	FI
 /// ENDFOR
 ///
@@ -1624,7 +1624,7 @@ _mm_mask_cvts2ph_bf8(__m128i __W, __mmask16 __U, __m128h __A, __m128h __B) {
 /// \param __B
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower 8 elements correspond to the
+///    A 128-bit vector of [16 x bf8]. Lower 8 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
 ///    zero is taken instead.
@@ -1642,9 +1642,9 @@ _mm_maskz_cvts2ph_bf8(__mmask16 __U, __m128h __A, __m128h __B) {
 /// \code{.operation]
 /// FOR i := 0 to 32 
 /// 	IF i < 16 
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 		dst.bf8[i] := convert_fp16_to_bf8(__B.fp16[i])
 /// 	ELSE
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 16])
+/// 		dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i - 16])
 /// 	FI
 /// ENDFOR
 ///
@@ -1660,7 +1660,7 @@ _mm_maskz_cvts2ph_bf8(__mmask16 __U, __m128h __A, __m128h __B) {
 /// \param __B
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
-///    A 256-bit vector of [32 x fp8]. Lower 16 elements correspond to the
+///    A 256-bit vector of [32 x bf8]. Lower 16 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
@@ -1678,12 +1678,12 @@ _mm256_cvts2ph_bf8(__m256h __A, __m256h __B) {
 /// FOR i := 0 to 32 
 /// 	IF __U[i]
 /// 		IF i < 16 
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 			dst.bf8[i] := convert_fp16_to_bf8(__B.fp16[i])
 /// 		ELSE
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 16])
+/// 			dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i - 16])
 /// 		FI
 /// 	ELSE
-/// 		dst.fp8[i] := __W.fp8[i]
+/// 		dst.bf8[i] := __W.bf8[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -1695,7 +1695,7 @@ _mm256_cvts2ph_bf8(__m256h __A, __m256h __B) {
 /// This intrinsic corresponds to the \c VCVT2PH2BF8S instruction.
 ///
 /// \param __W
-///    A 256-bit vector of [32 x fp8].
+///    A 256-bit vector of [32 x bf8].
 /// \param __U
 ///    A 32-bit merging mask.
 /// \param __A
@@ -1703,7 +1703,7 @@ _mm256_cvts2ph_bf8(__m256h __A, __m256h __B) {
 /// \param __B
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
-///    A 256-bit vector of [32 x fp8]. Lower 16 elements correspond to the
+///    A 256-bit vector of [32 x bf8]. Lower 16 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
 ///    element from \a __W is taken instead.
@@ -1721,12 +1721,12 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts2ph_bf8(
 /// \code{.operation]
 /// FOR i := 0 to 32 
 /// 	IF __U[i]
-/// 		dst.fp8[i] := 0
+/// 		dst.bf8[i] := 0
 /// 	ELSE
 /// 		IF i < 16 
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 			dst.bf8[i] := convert_fp16_to_bf8(__B.fp16[i])
 /// 		ELSE
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 16])
+/// 			dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i - 16])
 /// 		FI
 /// 	FI
 /// ENDFOR
@@ -1745,7 +1745,7 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts2ph_bf8(
 /// \param __B
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
-///    A 256-bit vector of [32 x fp8]. Lower 16 elements correspond to the
+///    A 256-bit vector of [32 x bf8]. Lower 16 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set,
 ///    zero is taken instead.
@@ -1762,9 +1762,9 @@ _mm256_maskz_cvts2ph_bf8(__mmask32 __U, __m256h __A, __m256h __B) {
 /// \code{.operation]
 /// FOR i := 0 to 16 
 /// 	IF i < 8
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 		dst.hf8[i] := convert_fp16_to_hf8(__B.fp16[i])
 /// 	ELSE
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 8])
+/// 		dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i - 8])
 /// 	FI
 /// ENDFOR
 ///
@@ -1780,7 +1780,7 @@ _mm256_maskz_cvts2ph_bf8(__mmask32 __U, __m256h __A, __m256h __B) {
 /// \param __B
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower 8 elements correspond to the
+///    A 128-bit vector of [16 x hf8]. Lower 8 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvt2ph_hf8(__m128h __A,
@@ -1798,12 +1798,12 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvt2ph_hf8(__m128h __A,
 /// FOR i := 0 to 16 
 /// 	IF __U[i]
 /// 		IF i < 8
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 			dst.hf8[i] := convert_fp16_to_hf8(__B.fp16[i])
 /// 		ELSE
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 8])
+/// 			dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i - 8])
 /// 		FI
 /// 	ELSE
-/// 		dst.fp8 := __W.fp8[i]
+/// 		dst.hf8 := __W.hf8[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -1815,7 +1815,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvt2ph_hf8(__m128h __A,
 /// This intrinsic corresponds to the \c VCVT2PH2HF8 instruction.
 ///
 /// \param __W
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x hf8].
 /// \param __U
 ///    A 16-bit merging mask.
 /// \param __A
@@ -1823,7 +1823,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvt2ph_hf8(__m128h __A,
 /// \param __B
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower 8 elements correspond to the
+///    A 128-bit vector of [16 x hf8]. Lower 8 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
 ///    element from \a __W is taken instead.
@@ -1842,12 +1842,12 @@ _mm_mask_cvt2ph_hf8(__m128i __W, __mmask16 __U, __m128h __A, __m128h __B) {
 /// FOR i := 0 to 16 
 /// 	IF __U[i]
 /// 		IF i < 8
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 			dst.hf8[i] := convert_fp16_to_hf8(__B.fp16[i])
 /// 		ELSE
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 8])
+/// 			dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i - 8])
 /// 		FI
 /// 	ELSE
-/// 		dst.fp8[i] := 0
+/// 		dst.hf8[i] := 0
 /// 	FI
 /// ENDFOR
 ///
@@ -1865,7 +1865,7 @@ _mm_mask_cvt2ph_hf8(__m128i __W, __mmask16 __U, __m128h __A, __m128h __B) {
 /// \param __B
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower 8 elements correspond to the
+///    A 128-bit vector of [16 x hf8]. Lower 8 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
 ///    zero is taken instead.
@@ -1882,9 +1882,9 @@ _mm_maskz_cvt2ph_hf8(__mmask16 __U, __m128h __A, __m128h __B) {
 /// \code{.operation]
 /// FOR i := 0 to 32 
 /// 	IF i < 16 
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 		dst.hf8[i] := convert_fp16_to_hf8(__B.fp16[i])
 /// 	ELSE
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 16])
+/// 		dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i - 16])
 /// 	FI
 /// ENDFOR
 ///
@@ -1900,7 +1900,7 @@ _mm_maskz_cvt2ph_hf8(__mmask16 __U, __m128h __A, __m128h __B) {
 /// \param __B
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
-///    A 256-bit vector of [32 x fp8]. Lower 16 elements correspond to the
+///    A 256-bit vector of [32 x hf8]. Lower 16 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
@@ -1918,12 +1918,12 @@ _mm256_cvt2ph_hf8(__m256h __A, __m256h __B) {
 /// FOR i := 0 to 32 
 /// 	IF __U[i]
 /// 		IF i < 16 
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 			dst.hf8[i] := convert_fp16_to_hf8(__B.fp16[i])
 /// 		ELSE
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 16])
+/// 			dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i - 16])
 /// 		FI
 /// 	ELSE
-/// 		dst.fp8[i] := __W.fp8[i]
+/// 		dst.hf8[i] := __W.hf8[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -1935,7 +1935,7 @@ _mm256_cvt2ph_hf8(__m256h __A, __m256h __B) {
 /// This intrinsic corresponds to the \c VCVT2PH2HF8 instruction.
 ///
 /// \param __W
-///    A 256-bit vector of [32 x fp8].
+///    A 256-bit vector of [32 x hf8].
 /// \param __U
 ///    A 32-bit merging mask.
 /// \param __A
@@ -1943,7 +1943,7 @@ _mm256_cvt2ph_hf8(__m256h __A, __m256h __B) {
 /// \param __B
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
-///    A 256-bit vector of [32 x fp8]. Lower 16 elements correspond to the
+///    A 256-bit vector of [32 x hf8]. Lower 16 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
 ///    element from \a __W is taken instead.
@@ -1961,12 +1961,12 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_mask_cvt2ph_hf8(
 /// \code{.operation]
 /// FOR i := 0 to 32 
 /// 	IF __U[i]
-/// 		dst.fp8[i] := 0
+/// 		dst.hf8[i] := 0
 /// 	ELSE
 /// 		IF i < 16 
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 			dst.hf8[i] := convert_fp16_to_hf8(__B.fp16[i])
 /// 		ELSE
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 16])
+/// 			dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i - 16])
 /// 		FI
 /// 	FI
 /// ENDFOR
@@ -1985,7 +1985,7 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_mask_cvt2ph_hf8(
 /// \param __B
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
-///    A 256-bit vector of [32 x fp8]. Lower 16 elements correspond to the
+///    A 256-bit vector of [32 x hf8]. Lower 16 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set,
 ///    zero is taken instead.
@@ -2003,9 +2003,9 @@ _mm256_maskz_cvt2ph_hf8(__mmask32 __U, __m256h __A, __m256h __B) {
 /// \code{.operation]
 /// FOR i := 0 to 16 
 /// 	IF i < 8
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 		dst.hf8[i] := convert_fp16_to_hf8(__B.fp16[i])
 /// 	ELSE
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 8])
+/// 		dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i - 8])
 /// 	FI
 /// ENDFOR
 ///
@@ -2021,7 +2021,7 @@ _mm256_maskz_cvt2ph_hf8(__mmask32 __U, __m256h __A, __m256h __B) {
 /// \param __B
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower 8 elements correspond to the
+///    A 128-bit vector of [16 x hf8]. Lower 8 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -2039,12 +2039,12 @@ _mm_cvts2ph_hf8(__m128h __A, __m128h __B) {
 /// FOR i := 0 to 16 
 /// 	IF __U[i]
 /// 		IF i < 8
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 			dst.hf8[i] := convert_fp16_to_hf8(__B.fp16[i])
 /// 		ELSE
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 8])
+/// 			dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i - 8])
 /// 		FI
 /// 	ELSE
-/// 		dst.fp8 := __W.fp8[i]
+/// 		dst.hf8 := __W.hf8[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -2056,7 +2056,7 @@ _mm_cvts2ph_hf8(__m128h __A, __m128h __B) {
 /// This intrinsic corresponds to the \c VCVT2PH2HF8S instruction.
 ///
 /// \param __W
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x hf8].
 /// \param __U
 ///    A 16-bit merging mask.
 /// \param __A
@@ -2064,7 +2064,7 @@ _mm_cvts2ph_hf8(__m128h __A, __m128h __B) {
 /// \param __B
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower 8 elements correspond to the
+///    A 128-bit vector of [16 x hf8]. Lower 8 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
 ///    element from \a __W is taken instead.
@@ -2083,12 +2083,12 @@ _mm_mask_cvts2ph_hf8(__m128i __W, __mmask16 __U, __m128h __A, __m128h __B) {
 /// FOR i := 0 to 16 
 /// 	IF __U[i]
 /// 		IF i < 8
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 			dst.hf8[i] := convert_fp16_to_hf8(__B.fp16[i])
 /// 		ELSE
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 8])
+/// 			dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i - 8])
 /// 		FI
 /// 	ELSE
-/// 		dst.fp8[i] := 0
+/// 		dst.hf8[i] := 0
 /// 	FI
 /// ENDFOR
 ///
@@ -2106,7 +2106,7 @@ _mm_mask_cvts2ph_hf8(__m128i __W, __mmask16 __U, __m128h __A, __m128h __B) {
 /// \param __B
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower 8 elements correspond to the
+///    A 128-bit vector of [16 x hf8]. Lower 8 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
 ///    zero is taken instead.
@@ -2124,9 +2124,9 @@ _mm_maskz_cvts2ph_hf8(__mmask16 __U, __m128h __A, __m128h __B) {
 /// \code{.operation]
 /// FOR i := 0 to 32 
 /// 	IF i < 16 
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 		dst.hf8[i] := convert_fp16_to_hf8(__B.fp16[i])
 /// 	ELSE
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 16])
+/// 		dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i - 16])
 /// 	FI
 /// ENDFOR
 ///
@@ -2142,7 +2142,7 @@ _mm_maskz_cvts2ph_hf8(__mmask16 __U, __m128h __A, __m128h __B) {
 /// \param __B
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
-///    A 256-bit vector of [32 x fp8]. Lower 16 elements correspond to the
+///    A 256-bit vector of [32 x hf8]. Lower 16 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
@@ -2160,12 +2160,12 @@ _mm256_cvts2ph_hf8(__m256h __A, __m256h __B) {
 /// FOR i := 0 to 32 
 /// 	IF __U[i]
 /// 		IF i < 16 
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 			dst.hf8[i] := convert_fp16_to_hf8(__B.fp16[i])
 /// 		ELSE
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 16])
+/// 			dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i - 16])
 /// 		FI
 /// 	ELSE
-/// 		dst.fp8[i] := __W.fp8[i]
+/// 		dst.hf8[i] := __W.hf8[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -2177,7 +2177,7 @@ _mm256_cvts2ph_hf8(__m256h __A, __m256h __B) {
 /// This intrinsic corresponds to the \c VCVT2PH2HF8S instruction.
 ///
 /// \param __W
-///    A 256-bit vector of [32 x fp8].
+///    A 256-bit vector of [32 x hf8].
 /// \param __U
 ///    A 32-bit merging mask.
 /// \param __A
@@ -2185,7 +2185,7 @@ _mm256_cvts2ph_hf8(__m256h __A, __m256h __B) {
 /// \param __B
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
-///    A 256-bit vector of [32 x fp8]. Lower 16 elements correspond to the
+///    A 256-bit vector of [32 x hf8]. Lower 16 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
 ///    element from \a __W is taken instead.
@@ -2203,12 +2203,12 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts2ph_hf8(
 /// \code{.operation]
 /// FOR i := 0 to 32 
 /// 	IF __U[i]
-/// 		dst.fp8[i] := 0
+/// 		dst.hf8[i] := 0
 /// 	ELSE
 /// 		IF i < 16 
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__B.fp16[i])
+/// 			dst.hf8[i] := convert_fp16_to_hf8(__B.fp16[i])
 /// 		ELSE
-/// 			dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i - 16])
+/// 			dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i - 16])
 /// 		FI
 /// 	FI
 /// ENDFOR
@@ -2227,7 +2227,7 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts2ph_hf8(
 /// \param __B
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
-///    A 256-bit vector of [32 x fp8]. Lower 16 elements correspond to the
+///    A 256-bit vector of [32 x hf8]. Lower 16 elements correspond to the
 ///    (converted) elements from \a __B; higher order elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set,
 ///    zero is taken instead.
@@ -2243,7 +2243,7 @@ _mm256_maskz_cvts2ph_hf8(__mmask32 __U, __m256h __A, __m256h __B) {
 ///
 /// \code{.operation]
 /// FOR i := 0 to 7
-/// 	dst.fp16[i] := convert_fp8_to_fp16(__B.fp8[i])
+/// 	dst.fp16[i] := convert_hf8_to_fp16(__B.hf8[i])
 /// ENDFOR
 ///
 /// dst[MAX:128] := 0
@@ -2254,7 +2254,7 @@ _mm256_maskz_cvts2ph_hf8(__mmask32 __U, __m256h __A, __m256h __B) {
 /// This intrinsic corresponds to the \c VCVTHF82PH instruction.
 ///
 /// \param __A
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x hf8].
 /// \returns
 ///    A 128-bit vector of [8 x fp16]. Resulting elements correspond to the
 ///    (converted) elements from \a __A.
@@ -2271,7 +2271,7 @@ static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_cvthf8(__m128i __A) {
 /// \code{.operation]
 /// FOR i := 0 to 7
 /// 	IF __U[i]
-/// 		dst.fp16[i] := convert_fp8_to_fp16(__A.fp8[i])
+/// 		dst.fp16[i] := convert_hf8_to_fp16(__A.hf8[i])
 /// 	ELSE
 /// 		dst.fp16[i] := __W.fp16[i]
 /// 	FI
@@ -2289,7 +2289,7 @@ static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_cvthf8(__m128i __A) {
 /// \param __U
 ///    A 8-bit merging mask.
 /// \param __A
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x hf8].
 /// \returns
 ///    A 128-bit vector of [8 x fp16]. Resulting elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
@@ -2308,7 +2308,7 @@ _mm_mask_cvthf8(__m128h __W, __mmask8 __U, __m128i __A) {
 /// \code{.operation]
 /// FOR i := 0 to 7
 /// 	IF __U[i]
-/// 		dst.fp16[i] := convert_fp8_to_fp16(__B.fp8[i])
+/// 		dst.fp16[i] := convert_hf8_to_fp16(__B.hf8[i])
 /// 	ELSE
 /// 		dst.fp16[i] := 0
 /// 	FI
@@ -2324,7 +2324,7 @@ _mm_mask_cvthf8(__m128h __W, __mmask8 __U, __m128i __A) {
 /// \param __U
 ///    A 8-bit zeroing mask.
 /// \param __A
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x hf8].
 /// \returns
 ///    A 128-bit vector of [8 x fp16]. Resulting elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
@@ -2340,7 +2340,7 @@ _mm_maskz_cvthf8(__mmask8 __U, __m128i __A) {
 ///
 /// \code{.operation]
 /// FOR i := 0 to 15
-/// 	dst.fp16[i] := convert_fp8_to_fp16(__B.fp8[i])
+/// 	dst.fp16[i] := convert_hf8_to_fp16(__B.hf8[i])
 /// ENDFOR
 ///
 /// dst[MAX:256] := 0
@@ -2351,7 +2351,7 @@ _mm_maskz_cvthf8(__mmask8 __U, __m128i __A) {
 /// This intrinsic corresponds to the \c VCVTHF82PH instruction.
 ///
 /// \param __A
-///    A 256-bit vector of [32 x fp8].
+///    A 256-bit vector of [32 x hf8].
 /// \returns
 ///    A 256-bit vector of [16 x fp16]. Resulting elements correspond to the
 ///    (converted) elements from \a __A.
@@ -2369,7 +2369,7 @@ _mm256_cvthf8(__m128i __A) {
 /// \code{.operation]
 /// FOR i := 0 to 15 
 /// 	IF __U[i]
-/// 		dst.fp16[i] := convert_fp8_to_fp16(__A.fp8[i])
+/// 		dst.fp16[i] := convert_hf8_to_fp16(__A.hf8[i])
 /// 	ELSE
 /// 		dst.fp16[i] := __W.fp16[i]
 /// 	FI
@@ -2387,7 +2387,7 @@ _mm256_cvthf8(__m128i __A) {
 /// \param __U
 ///    A 16-bit merging mask.
 /// \param __A
-///    A 256-bit vector of [32 x fp8].
+///    A 256-bit vector of [32 x hf8].
 /// \returns
 ///    A 256-bit vector of [16 x fp16]. Resulting elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
@@ -2406,7 +2406,7 @@ _mm256_mask_cvthf8(__m256h __W, __mmask16 __U, __m128i __A) {
 /// \code{.operation]
 /// FOR i := 0 to 15 
 /// 	IF __U[i]
-/// 		dst.fp16[i] := convert_fp8_to_fp16(__B.fp8[i])
+/// 		dst.fp16[i] := convert_hf8_to_fp16(__B.hf8[i])
 /// 	ELSE
 /// 		dst.fp16[i] := 0
 /// 	FI
@@ -2422,7 +2422,7 @@ _mm256_mask_cvthf8(__m256h __W, __mmask16 __U, __m128i __A) {
 /// \param __U
 ///    A 16-bit merging mask.
 /// \param __A
-///    A 256-bit vector of [32 x fp8].
+///    A 256-bit vector of [32 x hf8].
 /// \returns
 ///    A 256-bit vector of [16 x fp16]. Resulting elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
@@ -2439,7 +2439,7 @@ _mm256_maskz_cvthf8(__mmask16 __U, __m128i __A) {
 ///
 /// \code{.operation]
 /// FOR i := 0 to 7
-/// 	dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 	dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i])
 /// ENDFOR
 ///
 /// dst[MAX:64] := 0
@@ -2452,7 +2452,7 @@ _mm256_maskz_cvthf8(__mmask16 __U, __m128i __A) {
 /// \param __A
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower elements correspond to the (converted)
+///    A 128-bit vector of [16 x bf8]. Lower elements correspond to the (converted)
 ///    elements from \a __A; upper elements are zeroed. 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtph_bf8(__m128h __A) {
   return (__m128i)__builtin_ia32_vcvtph2bf8_128_mask(
@@ -2467,9 +2467,9 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtph_bf8(__m128h __A) {
 /// \code{.operation]
 /// FOR i := 0 to 7
 /// 	IF __U[i]
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 		dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i])
 /// 	ELSE
-/// 		dst.fp8 := __W.fp8[i]
+/// 		dst.bf8 := __W.bf8[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -2481,14 +2481,14 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtph_bf8(__m128h __A) {
 /// This intrinsic corresponds to the \c VCVTPH2BF8 instruction.
 ///
 /// \param __W
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x bf8].
 /// \param __U
 ///    A 8-bit merging mask.
 /// \param __A
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
 ///
-///    A 128-bit vector of [16 x fp8]. Lower elements correspond to the
+///    A 128-bit vector of [16 x bf8]. Lower elements correspond to the
 ///    (converted) elements from \a __A; upper elements are zeroed. If
 ///    corresponding mask bit is not set, then element from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -2505,9 +2505,9 @@ _mm_mask_cvtph_bf8(__m128i __W, __mmask8 __U, __m128h __A) {
 /// \code{.operation]
 /// FOR i := 0 to 7
 /// 	IF __U[i]
-/// 		dst.fp8[i] := 0
+/// 		dst.bf8[i] := 0
 /// 	ELSE
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 		dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i])
 /// 	FI
 /// ENDFOR
 ///
@@ -2524,7 +2524,7 @@ _mm_mask_cvtph_bf8(__m128i __W, __mmask8 __U, __m128h __A) {
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
 ///
-///    A 128-bit vector of [16 x fp8]. Lower elements correspond to the
+///    A 128-bit vector of [16 x bf8]. Lower elements correspond to the
 ///    (converted) elements from \a __A; upper elements are zeroed. If
 ///    corresponding mask bit is not set, then element is zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -2538,7 +2538,7 @@ _mm_maskz_cvtph_bf8(__mmask8 __U, __m128h __A) {
 ///
 /// \code{.operation]
 /// FOR i := 0 to 15
-/// 	dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 	dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i])
 /// ENDFOR
 ///
 /// dst[MAX:128] := 0
@@ -2551,7 +2551,7 @@ _mm_maskz_cvtph_bf8(__mmask8 __U, __m128h __A) {
 /// \param __A
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Resulting elements correspond to the (converted)
+///    A 128-bit vector of [16 x bf8]. Resulting elements correspond to the (converted)
 ///    elements from \a __A.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_cvtph_bf8(__m256h __A) {
@@ -2566,9 +2566,9 @@ _mm256_cvtph_bf8(__m256h __A) {
 /// \code{.operation]
 /// FOR i := 0 to 15
 /// 	IF __U[i]
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 		dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i])
 /// 	ELSE
-/// 		dst.fp8 := __W.fp8[i]
+/// 		dst.bf8 := __W.bf8[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -2580,13 +2580,13 @@ _mm256_cvtph_bf8(__m256h __A) {
 /// This intrinsic corresponds to the \c VCVTPH2BF8 instruction.
 ///
 /// \param __W
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x bf8].
 /// \param __U
 ///    A 16-bit merging mask.
 /// \param __A
 ///    A 256-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Resulting elements correspond to the
+///    A 128-bit vector of [16 x bf8]. Resulting elements correspond to the
 ///    (converted) elements from \a __A. If
 ///    corresponding mask bit is not set, then element from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
@@ -2602,9 +2602,9 @@ _mm256_mask_cvtph_bf8(__m128i __W, __mmask16 __U, __m256h __A) {
 /// \code{.operation]
 /// FOR i := 0 to 15
 /// 	IF __U[i]
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 		dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i])
 /// 	ELSE
-/// 		dst.fp8[i] := 0
+/// 		dst.bf8[i] := 0
 /// 	FI
 /// ENDFOR
 ///
@@ -2620,7 +2620,7 @@ _mm256_mask_cvtph_bf8(__m128i __W, __mmask16 __U, __m256h __A) {
 /// \param __A
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Resulting elements correspond to the
+///    A 128-bit vector of [16 x bf8]. Resulting elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set,
 ///    then element is zeroed instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
@@ -2635,7 +2635,7 @@ _mm256_maskz_cvtph_bf8(__mmask16 __U, __m256h __A) {
 ///
 /// \code{.operation]
 /// FOR i := 0 to 7
-/// 	dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 	dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i])
 /// ENDFOR
 ///
 /// dst[MAX:64] := 0
@@ -2648,7 +2648,7 @@ _mm256_maskz_cvtph_bf8(__mmask16 __U, __m256h __A) {
 /// \param __A
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower elements correspond to the (converted)
+///    A 128-bit vector of [16 x bf8]. Lower elements correspond to the (converted)
 ///    elements from \a __A; upper elements are zeroed. 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtsph_bf8(__m128h __A) {
   return (__m128i)__builtin_ia32_vcvtph2bf8s_128_mask(
@@ -2663,9 +2663,9 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtsph_bf8(__m128h __A) {
 /// \code{.operation]
 /// FOR i := 0 to 7
 /// 	IF __U[i]
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 		dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i])
 /// 	ELSE
-/// 		dst.fp8 := __W.fp8[i]
+/// 		dst.bf8 := __W.bf8[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -2677,13 +2677,13 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtsph_bf8(__m128h __A) {
 /// This intrinsic corresponds to the \c VCVTPH2BF8S instruction.
 ///
 /// \param __W
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x bf8].
 /// \param __U
 ///    A 8-bit merging mask.
 /// \param __A
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower elements correspond to the
+///    A 128-bit vector of [16 x bf8]. Lower elements correspond to the
 ///    (converted) elements from \a __A; upper elements are zeroed. If
 ///    corresponding mask bit is not set, then element from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -2700,9 +2700,9 @@ _mm_mask_cvtsph_bf8(__m128i __W, __mmask8 __U, __m128h __A) {
 /// \code{.operation]
 /// FOR i := 0 to 7
 /// 	IF __U[i]
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 		dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i])
 /// 	ELSE
-/// 		dst.fp8[i] := 0
+/// 		dst.bf8[i] := 0
 /// 	FI
 /// ENDFOR
 ///
@@ -2718,7 +2718,7 @@ _mm_mask_cvtsph_bf8(__m128i __W, __mmask8 __U, __m128h __A) {
 /// \param __A
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower elements correspond to the
+///    A 128-bit vector of [16 x bf8]. Lower elements correspond to the
 ///    (converted) elements from \a __A; upper elements are zeroed. If
 ///    corresponding mask bit is not set, then element is zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -2732,7 +2732,7 @@ _mm_maskz_cvtsph_bf8(__mmask8 __U, __m128h __A) {
 ///
 /// \code{.operation]
 /// FOR i := 0 to 15
-/// 	dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 	dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i])
 /// ENDFOR
 ///
 /// dst[MAX:128] := 0
@@ -2745,7 +2745,7 @@ _mm_maskz_cvtsph_bf8(__mmask8 __U, __m128h __A) {
 /// \param __A
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Resulting elements correspond to the (converted)
+///    A 128-bit vector of [16 x bf8]. Resulting elements correspond to the (converted)
 ///    elements from \a __A.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_cvtsph_bf8(__m256h __A) {
@@ -2761,9 +2761,9 @@ _mm256_cvtsph_bf8(__m256h __A) {
 /// \code{.operation]
 /// FOR i := 0 to 15
 /// 	IF __U[i]
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 		dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i])
 /// 	ELSE
-/// 		dst.fp8 := __W.fp8[i]
+/// 		dst.bf8 := __W.bf8[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -2775,13 +2775,13 @@ _mm256_cvtsph_bf8(__m256h __A) {
 /// This intrinsic corresponds to the \c VCVTPH2BF8S instruction.
 ///
 /// \param __W
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x bf8].
 /// \param __U
 ///    A 16-bit merging mask.
 /// \param __A
 ///    A 256-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Resulting elements correspond to the
+///    A 128-bit vector of [16 x bf8]. Resulting elements correspond to the
 ///    (converted) elements from \a __A. If
 ///    corresponding mask bit is not set, then element from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
@@ -2798,9 +2798,9 @@ _mm256_mask_cvtsph_bf8(__m128i __W, __mmask16 __U, __m256h __A) {
 /// \code{.operation]
 /// FOR i := 0 to 15 
 /// 	IF __U[i]
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 		dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i])
 /// 	ELSE
-/// 		dst.fp8[i] := 0
+/// 		dst.bf8[i] := 0
 /// 	FI
 /// ENDFOR
 ///
@@ -2816,7 +2816,7 @@ _mm256_mask_cvtsph_bf8(__m128i __W, __mmask16 __U, __m256h __A) {
 /// \param __A
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Resulting elements correspond to the
+///    A 128-bit vector of [16 x bf8]. Resulting elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set,
 ///    then element is zeroed instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
@@ -2831,7 +2831,7 @@ _mm256_maskz_cvtsph_bf8(__mmask16 __U, __m256h __A) {
 ///
 /// \code{.operation]
 /// FOR i := 0 to 7
-/// 	dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 	dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i])
 /// ENDFOR
 ///
 /// dst[MAX:64] := 0
@@ -2844,7 +2844,7 @@ _mm256_maskz_cvtsph_bf8(__mmask16 __U, __m256h __A) {
 /// \param __A
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower elements correspond to the (converted)
+///    A 128-bit vector of [16 x hf8]. Lower elements correspond to the (converted)
 ///    elements from \a __A; upper elements are zeroed. 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtph_hf8(__m128h __A) {
   return (__m128i)__builtin_ia32_vcvtph2hf8_128_mask(
@@ -2859,9 +2859,9 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtph_hf8(__m128h __A) {
 /// \code{.operation]
 /// FOR i := 0 to 7
 /// 	IF __U[i]
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 		dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i])
 /// 	ELSE
-/// 		dst.fp8 := __W.fp8[i]
+/// 		dst.hf8 := __W.hf8[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -2873,14 +2873,14 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtph_hf8(__m128h __A) {
 /// This intrinsic corresponds to the \c VCVTPH2HF8 instruction.
 ///
 /// \param __W
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x hf8].
 /// \param __U
 ///    A 8-bit merging mask.
 /// \param __A
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
 ///
-///    A 128-bit vector of [16 x fp8]. Lower elements correspond to the
+///    A 128-bit vector of [16 x hf8]. Lower elements correspond to the
 ///    (converted) elements from \a __A; upper elements are zeroed. If
 ///    corresponding mask bit is not set, then element from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -2897,9 +2897,9 @@ _mm_mask_cvtph_hf8(__m128i __W, __mmask8 __U, __m128h __A) {
 /// \code{.operation]
 /// FOR i := 0 to 7
 /// 	IF __U[i]
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 		dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i])
 /// 	ELSE
-/// 		dst.fp8[i] := 0
+/// 		dst.hf8[i] := 0
 /// 	FI
 /// ENDFOR
 ///
@@ -2916,7 +2916,7 @@ _mm_mask_cvtph_hf8(__m128i __W, __mmask8 __U, __m128h __A) {
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
 ///
-///    A 128-bit vector of [16 x fp8]. Lower elements correspond to the
+///    A 128-bit vector of [16 x hf8]. Lower elements correspond to the
 ///    (converted) elements from \a __A; upper elements are zeroed. If
 ///    corresponding mask bit is not set, then element is zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -2930,7 +2930,7 @@ _mm_maskz_cvtph_hf8(__mmask8 __U, __m128h __A) {
 ///
 /// \code{.operation]
 /// FOR i := 0 to 15
-/// 	dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 	dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i])
 /// ENDFOR
 ///
 /// dst[MAX:128] := 0
@@ -2943,7 +2943,7 @@ _mm_maskz_cvtph_hf8(__mmask8 __U, __m128h __A) {
 /// \param __A
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Resulting elements correspond to the (converted)
+///    A 128-bit vector of [16 x hf8]. Resulting elements correspond to the (converted)
 ///    elements from \a __A.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_cvtph_hf8(__m256h __A) {
@@ -2958,9 +2958,9 @@ _mm256_cvtph_hf8(__m256h __A) {
 /// \code{.operation]
 /// FOR i := 0 to 15
 /// 	IF __U[i]
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 		dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i])
 /// 	ELSE
-/// 		dst.fp8 := __W.fp8[i]
+/// 		dst.hf8 := __W.hf8[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -2972,13 +2972,13 @@ _mm256_cvtph_hf8(__m256h __A) {
 /// This intrinsic corresponds to the \c VCVTPH2HF8 instruction.
 ///
 /// \param __W
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x hf8].
 /// \param __U
 ///    A 16-bit merging mask.
 /// \param __A
 ///    A 256-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Resulting elements correspond to the
+///    A 128-bit vector of [16 x hf8]. Resulting elements correspond to the
 ///    (converted) elements from \a __A. If
 ///    corresponding mask bit is not set, then element from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
@@ -2994,9 +2994,9 @@ _mm256_mask_cvtph_hf8(__m128i __W, __mmask16 __U, __m256h __A) {
 /// \code{.operation]
 /// FOR i := 0 to 15
 /// 	IF __U[i]
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 		dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i])
 /// 	ELSE
-/// 		dst.fp8[i] := 0
+/// 		dst.hf8[i] := 0
 /// 	FI
 /// ENDFOR
 ///
@@ -3012,7 +3012,7 @@ _mm256_mask_cvtph_hf8(__m128i __W, __mmask16 __U, __m256h __A) {
 /// \param __A
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Resulting elements correspond to the
+///    A 128-bit vector of [16 x hf8]. Resulting elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set,
 ///    then element is zeroed instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
@@ -3027,7 +3027,7 @@ _mm256_maskz_cvtph_hf8(__mmask16 __U, __m256h __A) {
 ///
 /// \code{.operation]
 /// FOR i := 0 to 7
-/// 	dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 	dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i])
 /// ENDFOR
 ///
 /// dst[MAX:64] := 0
@@ -3040,7 +3040,7 @@ _mm256_maskz_cvtph_hf8(__mmask16 __U, __m256h __A) {
 /// \param __A
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower elements correspond to the (converted)
+///    A 128-bit vector of [16 x hf8]. Lower elements correspond to the (converted)
 ///    elements from \a __A; upper elements are zeroed. 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtsph_hf8(__m128h __A) {
   return (__m128i)__builtin_ia32_vcvtph2hf8s_128_mask(
@@ -3055,9 +3055,9 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtsph_hf8(__m128h __A) {
 /// \code{.operation]
 /// FOR i := 0 to 7
 /// 	IF __U[i]
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 		dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i])
 /// 	ELSE
-/// 		dst.fp8 := __W.fp8[i]
+/// 		dst.hf8 := __W.hf8[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -3069,13 +3069,13 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtsph_hf8(__m128h __A) {
 /// This intrinsic corresponds to the \c VCVTPH2HF8S instruction.
 ///
 /// \param __W
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x hf8].
 /// \param __U
 ///    A 8-bit merging mask.
 /// \param __A
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower elements correspond to the
+///    A 128-bit vector of [16 x hf8]. Lower elements correspond to the
 ///    (converted) elements from \a __A; upper elements are zeroed. If
 ///    corresponding mask bit is not set, then element from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -3092,9 +3092,9 @@ _mm_mask_cvtsph_hf8(__m128i __W, __mmask8 __U, __m128h __A) {
 /// \code{.operation]
 /// FOR i := 0 to 7
 /// 	IF __U[i]
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 		dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i])
 /// 	ELSE
-/// 		dst.fp8[i] := 0
+/// 		dst.hf8[i] := 0
 /// 	FI
 /// ENDFOR
 ///
@@ -3110,7 +3110,7 @@ _mm_mask_cvtsph_hf8(__m128i __W, __mmask8 __U, __m128h __A) {
 /// \param __A
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Lower elements correspond to the
+///    A 128-bit vector of [16 x hf8]. Lower elements correspond to the
 ///    (converted) elements from \a __A; upper elements are zeroed. If
 ///    corresponding mask bit is not set, then element is zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -3124,7 +3124,7 @@ _mm_maskz_cvtsph_hf8(__mmask8 __U, __m128h __A) {
 ///
 /// \code{.operation]
 /// FOR i := 0 to 15
-/// 	dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 	dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i])
 /// ENDFOR
 ///
 /// dst[MAX:128] := 0
@@ -3137,7 +3137,7 @@ _mm_maskz_cvtsph_hf8(__mmask8 __U, __m128h __A) {
 /// \param __A
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Resulting elements correspond to the (converted)
+///    A 128-bit vector of [16 x hf8]. Resulting elements correspond to the (converted)
 ///    elements from \a __A.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_cvtsph_hf8(__m256h __A) {
@@ -3153,9 +3153,9 @@ _mm256_cvtsph_hf8(__m256h __A) {
 /// \code{.operation]
 /// FOR i := 0 to 15
 /// 	IF __U[i]
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 		dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i])
 /// 	ELSE
-/// 		dst.fp8 := __W.fp8[i]
+/// 		dst.hf8 := __W.hf8[i]
 /// 	FI
 /// ENDFOR
 ///
@@ -3167,13 +3167,13 @@ _mm256_cvtsph_hf8(__m256h __A) {
 /// This intrinsic corresponds to the \c VCVTPH2HF8S instruction.
 ///
 /// \param __W
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x hf8].
 /// \param __U
 ///    A 16-bit merging mask.
 /// \param __A
 ///    A 256-bit vector of [8 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Resulting elements correspond to the
+///    A 128-bit vector of [16 x hf8]. Resulting elements correspond to the
 ///    (converted) elements from \a __A. If
 ///    corresponding mask bit is not set, then element from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
@@ -3190,9 +3190,9 @@ _mm256_mask_cvtsph_hf8(__m128i __W, __mmask16 __U, __m256h __A) {
 /// \code{.operation]
 /// FOR i := 0 to 15 
 /// 	IF __U[i]
-/// 		dst.fp8[i] := convert_fp16_to_fp8(__A.fp16[i])
+/// 		dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i])
 /// 	ELSE
-/// 		dst.fp8[i] := 0
+/// 		dst.hf8[i] := 0
 /// 	FI
 /// ENDFOR
 ///
@@ -3208,7 +3208,7 @@ _mm256_mask_cvtsph_hf8(__m128i __W, __mmask16 __U, __m256h __A) {
 /// \param __A
 ///    A 256-bit vector of [16 x fp16].
 /// \returns
-///    A 128-bit vector of [16 x fp8]. Resulting elements correspond to the
+///    A 128-bit vector of [16 x hf8]. Resulting elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set,
 ///    then element is zeroed instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
@@ -3222,7 +3222,7 @@ _mm256_maskz_cvtsph_hf8(__mmask16 __U, __m256h __A) {
 ///
 /// \code{.operation]
 /// FOR i := 0 to 7
-/// 	dst.fp16[i] := convert_fp8_to_fp16(__B.fp8[i])
+/// 	dst.fp16[i] := convert_bf8_to_fp16(__B.bf8[i])
 /// ENDFOR
 /// \endcode
 ///
@@ -3231,7 +3231,7 @@ _mm256_maskz_cvtsph_hf8(__mmask16 __U, __m256h __A) {
 /// This intrinsic does not correspond to a single instruction.
 ///
 /// \param __A
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x bf8].
 /// \returns
 ///    A 128-bit vector of [8 x fp16]. Resulting elements correspond to the
 ///    (converted) elements from \a __A.
@@ -3247,7 +3247,7 @@ static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_cvtbf8_ph(__m128i __A) {
 /// \code{.operation]
 /// FOR i := 0 to 7
 /// 	IF __U[i]
-/// 		dst.fp16[i] := convert_fp8_to_fp16(__B.fp8[i])
+/// 		dst.fp16[i] := convert_bf8_to_fp16(__B.bf8[i])
 /// 	ELSE
 /// 		dst.fp16[i] := __W.fp16[i]
 /// 	FI
@@ -3263,7 +3263,7 @@ static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_cvtbf8_ph(__m128i __A) {
 /// \param __U
 ///    A 8-bit merging mask.
 /// \param __A
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x bf8].
 /// \returns
 ///    A 128-bit vector of [8 x fp16]. Resulting elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
@@ -3282,7 +3282,7 @@ _mm_mask_cvtbf8_ph(__m128h __W, __mmask8 __U, __m128i __A) {
 /// \code{.operation]
 /// FOR i := 0 to 7
 /// 	IF __U[i]
-/// 		dst.fp16[i] := convert_fp8_to_fp16(__B.fp8[i])
+/// 		dst.fp16[i] := convert_bf8_to_fp16(__B.bf8[i])
 /// 	ELSE
 /// 		dst.fp16[i] := 0
 /// 	FI
@@ -3296,7 +3296,7 @@ _mm_mask_cvtbf8_ph(__m128h __W, __mmask8 __U, __m128i __A) {
 /// \param __U
 ///    A 8-bit zeroing mask.
 /// \param __A
-///    A 128-bit vector of [16 x fp8].
+///    A 128-bit vector of [16 x bf8].
 /// \returns
 ///    A 128-bit vector of [8 x fp16]. Resulting elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
@@ -3311,7 +3311,7 @@ _mm_maskz_cvtbf8_ph(__mmask8 __U, __m128i __A) {
 ///
 /// \code{.operation]
 /// FOR i := 0 to 15
-/// 	dst.fp16[i] := convert_fp8_to_fp16(__B.fp8[i])
+/// 	dst.fp16[i] := convert_bf8_to_fp16(__B.bf8[i])
 /// ENDFOR
 /// \endcode
 ///
@@ -3320,7 +3320,7 @@ _mm_maskz_cvtbf8_ph(__mmask8 __U, __m128i __A) {
 /// This intrinsic does not correspond to a single instruction.
 ///
 /// \param __A
-///    A 256-bit vector of [32 x fp8].
+///    A 256-bit vector of [32 x bf8].
 /// \returns
 ///    A 256-bit vector of [16 x fp16]. Resulting elements correspond to the
 ///    (converted) elements from \a __A.
@@ -3336,7 +3336,7 @@ static __inline__ __m256h __DEFAULT_FN_ATTRS256 _mm256_cvtbf8_ph(__m128i __A) {
 /// \code{.operation]
 /// FOR i := 0 to 15 
 /// 	IF __U[i]
-/// 		dst.fp16[i] := convert_fp8_to_fp16(__B.fp8[i])
+/// 		dst.fp16[i] := convert_bf8_to_fp16(__B.bf8[i])
 /// 	ELSE
 /// 		dst.fp16[i] := __W.fp16[i]
 /// 	FI
@@ -3352,7 +3352,7 @@ static __inline__ __m256h __DEFAULT_FN_ATTRS256 _mm256_cvtbf8_ph(__m128i __A) {
 /// \param __U
 ///    A 16-bit merging mask.
 /// \param __A
-///    A 256-bit vector of [32 x fp8].
+///    A 256-bit vector of [32 x bf8].
 /// \returns
 ///    A 256-bit vector of [16 x fp16]. Resulting elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
@@ -3371,7 +3371,7 @@ _mm256_mask_cvtbf8_ph(__m256h __W, __mmask16 __U, __m128i __A) {
 /// \code{.operation]
 /// FOR i := 0 to 15 
 /// 	IF __U[i]
-/// 		dst.fp16[i] := convert_fp8_to_fp16(__B.fp8[i])
+/// 		dst.fp16[i] := convert_bf8_to_fp16(__B.bf8[i])
 /// 	ELSE
 /// 		dst.fp16[i] := 0
 /// 	FI
@@ -3385,7 +3385,7 @@ _mm256_mask_cvtbf8_ph(__m256h __W, __mmask16 __U, __m128i __A) {
 /// \param __U
 ///    A 16-bit merging mask.
 /// \param __A
-///    A 256-bit vector of [32 x fp8].
+///    A 256-bit vector of [32 x bf8].
 /// \returns
 ///    A 256-bit vector of [16 x fp16]. Resulting elements correspond to the
 ///    (converted) elements from \a __A. If corresponding mask bit is not set, then
