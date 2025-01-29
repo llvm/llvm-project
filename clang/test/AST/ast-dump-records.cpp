@@ -90,10 +90,10 @@ struct C {
   };
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-14]]:3> col:3 implicit 'C::(anonymous union at {{.*}}:[[@LINE-14]]:3)'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <line:[[@LINE-6]]:9> col:9 implicit c 'int'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'C::(anonymous union at {{.*}}:[[@LINE-16]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 1 'C::(anonymous union at {{.*}}:[[@LINE-16]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'c' 'int'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <line:[[@LINE-7]]:11> col:11 implicit d 'float'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'C::(anonymous union at {{.*}}:[[@LINE-19]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 1 'C::(anonymous union at {{.*}}:[[@LINE-19]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'd' 'float'
 
   struct {
@@ -111,10 +111,10 @@ struct C {
   };
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-13]]:3> col:3 implicit 'C::(anonymous struct at {{.*}}:[[@LINE-13]]:3)'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <line:[[@LINE-5]]:9> col:9 implicit e 'int'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'C::(anonymous struct at {{.*}}:[[@LINE-15]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 2 'C::(anonymous struct at {{.*}}:[[@LINE-15]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'e' 'int'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <col:12> col:12 implicit f 'int'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'C::(anonymous struct at {{.*}}:[[@LINE-18]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 2 'C::(anonymous struct at {{.*}}:[[@LINE-18]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'f' 'int'
 };
 
@@ -223,10 +223,10 @@ union G {
   };
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-15]]:3> col:3 implicit 'G::(anonymous union at {{.*}}:[[@LINE-15]]:3)'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <line:[[@LINE-6]]:9> col:9 implicit c 'int'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'G::(anonymous union at {{.*}}:[[@LINE-17]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 1 'G::(anonymous union at {{.*}}:[[@LINE-17]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'c' 'int'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <line:[[@LINE-7]]:11> col:11 implicit d 'float'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'G::(anonymous union at {{.*}}:[[@LINE-20]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 1 'G::(anonymous union at {{.*}}:[[@LINE-20]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'd' 'float'
 
   struct {
@@ -245,10 +245,10 @@ union G {
   };
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-14]]:3> col:3 implicit 'G::(anonymous struct at {{.*}}:[[@LINE-14]]:3)'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <line:[[@LINE-5]]:9> col:9 implicit e 'int'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'G::(anonymous struct at {{.*}}:[[@LINE-16]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 2 'G::(anonymous struct at {{.*}}:[[@LINE-16]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'e' 'int'
   // CHECK-NEXT: IndirectFieldDecl 0x{{[^ ]*}} <col:12> col:12 implicit f 'int'
-  // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'G::(anonymous struct at {{.*}}:[[@LINE-19]]:3)'
+  // CHECK-NEXT: Field 0x{{[^ ]*}} field_index 2 'G::(anonymous struct at {{.*}}:[[@LINE-19]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'f' 'int'
 };
 
