@@ -854,3 +854,9 @@ def BitCast : Opcode;
 def GetTypeid : Opcode { let Args = [ArgTypePtr, ArgTypePtr]; }
 def GetTypeidPtr : Opcode { let Args = [ArgTypePtr]; }
 def DiagTypeid : Opcode;
+
+def BCP : Opcode {
+  let Types = [IntegerTypeClass];
+  let Args = [ArgExpr];
+  let HasGroup = 1;
+}
