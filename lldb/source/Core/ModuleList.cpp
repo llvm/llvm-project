@@ -200,6 +200,12 @@ bool ModuleListProperties::GetSwiftValidateTypeSystem() const {
       idx, g_modulelist_properties[idx].default_uint_value != 0);
 }
 
+bool ModuleListProperties::GetSwiftLoadConformances() const {
+  const uint32_t idx = ePropertySwiftLoadConformances;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
+
 SwiftModuleLoadingMode ModuleListProperties::GetSwiftModuleLoadingMode() const {
   const uint32_t idx = ePropertySwiftModuleLoadingMode;
   return GetPropertyAtIndexAs<SwiftModuleLoadingMode>(

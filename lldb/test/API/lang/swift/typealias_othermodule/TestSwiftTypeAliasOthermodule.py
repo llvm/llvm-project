@@ -11,6 +11,7 @@ class TestSwiftTypeAliasOtherModule(TestBase):
         """Test that type aliases can be imported from reflection metadata"""
         arch = self.getArchitecture()
         self.build()
+        self.expect('settings set symbols.swift-load-conformances true')
         log = self.getBuildArtifact("types.log")
         self.runCmd('log enable lldb expr types -f "%s"' % log)
         lldbutil.run_to_source_breakpoint(

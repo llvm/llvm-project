@@ -3145,13 +3145,11 @@ SwiftLanguageRuntime::ResolveTypeAlias(CompilerType alias) {
     return llvm::createStringError("no reflection context");
 
   // FIXME: The current implementation that loads all conformances
-  // up-front creates too much small memory traffic. As a stop-gap,
-  // disable the feature on remote devices.
-  auto &triple = GetProcess().GetTarget().GetArchitecture().GetTriple();
-  if (triple.isOSDarwin() && !triple.isTargetMachineMac())
-    return llvm::createStringError("conformance loading disabled on remote "
-                                   "devices for performance reasons");
-  
+  // up-front creates too much small memory traffic during the
+  // LookupTypeWitness step.
+  if (!ModuleList::GetGlobalModuleListProperties().GetSwiftLoadConformances())
+    return llvm::createStringError("conformance loading disabled in settings");
+
   for (const std::string &protocol : GetConformances(in_type)) {
     auto *type_ref =
         reflection_ctx->LookupTypeWitness(in_type, member, protocol);
