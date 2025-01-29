@@ -64,6 +64,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -2949,6 +2950,13 @@ static void handleSectionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 }
 
+static bool isValidCodeModelAttr(Sema &S, StringRef Str) {
+  bool IsX8664Target =
+      S.Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86_64;
+  bool IsX8664Spelling = Str == "small" || Str == "large";
+  return IsX8664Target == IsX8664Spelling;
+}
+
 static void handleCodeModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   StringRef Str;
   SourceLocation LiteralLoc;
@@ -2957,7 +2965,8 @@ static void handleCodeModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
 
   llvm::CodeModel::Model CM;
-  if (!CodeModelAttr::ConvertStrToModel(Str, CM)) {
+  if (!CodeModelAttr::ConvertStrToModel(Str, CM) ||
+      !isValidCodeModelAttr(S, Str)) {
     S.Diag(LiteralLoc, diag::err_attr_codemodel_arg) << Str;
     return;
   }
