@@ -26,17 +26,14 @@ static bool reportError(Twine Message) {
   return true;
 }
 
-
 static bool isValidShaderVisibility(uint32_t V) {
-    return V < static_cast<uint32_t>(ShaderVisibility::MAX_VALUE);
+  return V < static_cast<uint32_t>(ShaderVisibility::MAX_VALUE);
 }
-
 
 static uint64_t extractInt(MDNode *Node, unsigned int I) {
   assert(I > 0 && I < Node->getNumOperands() && "Invalid operand Index");
   return mdconst::extract<ConstantInt>(Node->getOperand(I))->getZExtValue();
 }
-
 
 static bool parseRootFlags(ModuleRootSignature *MRS, MDNode *RootFlagNode) {
 
@@ -56,27 +53,21 @@ static bool parseRootFlags(ModuleRootSignature *MRS, MDNode *RootFlagNode) {
 static bool parseRootConstants(ModuleRootSignature *MRS, MDNode *RootFlagNode) {
   assert(RootFlagNode->getNumOperands() == 5 &&
          "Invalid format for RootFlag Element");
-  
-  uint32_t MaybeShaderVisibility  = extractInt(RootFlagNode, 1);
-  assert(isValidShaderVisibility(MaybeShaderVisibility) && "Invalid shader visibility value");
 
-  ShaderVisibility Visibility = static_cast<ShaderVisibility>(MaybeShaderVisibility);
-  
-  uint32_t ShaderRegistry  = extractInt(RootFlagNode, 2);
-  uint32_t RegisterSpace  = extractInt(RootFlagNode, 3);
-  uint32_t Num32BitsValue  = extractInt(RootFlagNode, 4);
+  uint32_t MaybeShaderVisibility = extractInt(RootFlagNode, 1);
+  assert(isValidShaderVisibility(MaybeShaderVisibility) &&
+         "Invalid shader visibility value");
 
-  RootConstants Constant {
-    ShaderRegistry,
-    RegisterSpace,
-    Num32BitsValue
-  };
+  ShaderVisibility Visibility =
+      static_cast<ShaderVisibility>(MaybeShaderVisibility);
 
-  RootSignaturePart Part {
-    PartType::Constants,
-    {Constant},
-    Visibility
-  };
+  uint32_t ShaderRegistry = extractInt(RootFlagNode, 2);
+  uint32_t RegisterSpace = extractInt(RootFlagNode, 3);
+  uint32_t Num32BitsValue = extractInt(RootFlagNode, 4);
+
+  RootConstants Constant{ShaderRegistry, RegisterSpace, Num32BitsValue};
+
+  RootSignaturePart Part{PartType::Constants, {Constant}, Visibility};
 
   MRS->pushPart(Part);
 
@@ -108,7 +99,7 @@ static bool parseRootSignatureElement(ModuleRootSignature *MRS,
     break;
   }
 
-  case RootSignatureElementKind::RootConstants:{
+  case RootSignatureElementKind::RootConstants: {
     return parseRootConstants(MRS, Element);
     break;
   }

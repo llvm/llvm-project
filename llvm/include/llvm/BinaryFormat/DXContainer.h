@@ -97,7 +97,7 @@ struct RootParameter {
     Constants = RootConstant;
     ShaderVisibility = Visibility;
   }
-  
+
   RootParameterType ParameterType;
   union {
     RootConstants Constants;

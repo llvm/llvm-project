@@ -31,16 +31,14 @@ enum class RootSignatureElementKind {
   StaticSampler = 5
 };
 
-enum class PartType {
-  Constants = 0
-};
+enum class PartType { Constants = 0 };
 
 enum class ShaderVisibility : uint32_t {
   SHADER_VISIBILITY_ALL = 0,
   SHADER_VISIBILITY_VERTEX = 1,
   SHADER_VISIBILITY_HULL = 2,
   SHADER_VISIBILITY_DOMAIN = 3,
-  SHADER_VISIBILITY_GEOMETRY =4 ,
+  SHADER_VISIBILITY_GEOMETRY = 4,
   SHADER_VISIBILITY_PIXEL = 5,
   SHADER_VISIBILITY_AMPLIFICATION = 6,
   SHADER_VISIBILITY_MESH = 7,
@@ -55,11 +53,11 @@ struct RootConstants {
 };
 
 struct RootSignaturePart {
-    PartType Type;
-    union {
-      RootConstants Constants;
-    };
-    ShaderVisibility Visibility;
+  PartType Type;
+  union {
+    RootConstants Constants;
+  };
+  ShaderVisibility Visibility;
 };
 
 struct ModuleRootSignature {
@@ -72,9 +70,7 @@ struct ModuleRootSignature {
 
   static ModuleRootSignature analyzeModule(Module &M);
 
-  void pushPart(RootSignaturePart Part) {
-    Parts.push_back(Part);
-  }
+  void pushPart(RootSignaturePart Part) { Parts.push_back(Part); }
 };
 
 class RootSignatureAnalysis : public AnalysisInfoMixin<RootSignatureAnalysis> {

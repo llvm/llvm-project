@@ -73,18 +73,19 @@ public:
 } // namespace
 
 static dxbc::RootParameter constructHeaderPart(const RootSignaturePart &Part) {
-  
-  dxbc::ShaderVisibilityFlag Visibility = static_cast<dxbc::ShaderVisibilityFlag>(Part.Visibility);
 
-  switch(Part.Type){
+  dxbc::ShaderVisibilityFlag Visibility =
+      static_cast<dxbc::ShaderVisibilityFlag>(Part.Visibility);
 
-  case PartType::Constants:{
+  switch (Part.Type) {
 
-    return dxbc::RootParameter(dxbc::RootConstants {
-      Part.Constants.ShaderRegistry,
-      Part.Constants.RegistrySpace,
-      Part.Constants.Number32BitValues
-    }, Visibility);
+  case PartType::Constants: {
+
+    return dxbc::RootParameter(
+        dxbc::RootConstants{Part.Constants.ShaderRegistry,
+                            Part.Constants.RegistrySpace,
+                            Part.Constants.Number32BitValues},
+        Visibility);
   } break;
   }
 }
