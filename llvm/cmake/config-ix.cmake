@@ -146,7 +146,7 @@ if( NOT PURE_WINDOWS )
     endif()
   endif()
   check_library_exists(dl dlopen "" HAVE_LIBDL)
-  check_library_exists(rt clock_gettime "" HAVE_LIBRT)
+  check_library_exists(rt shm_open "" HAVE_LIBRT)
 endif()
 
 # Check for libpfm.
