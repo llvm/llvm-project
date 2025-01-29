@@ -1060,7 +1060,7 @@ let SVETargetGuard = "sve,bf16", SMETargetGuard = "sme,bf16" in {
 def SVEXT        : SInst<"svext[_{d}]",       "dddi", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ext", [VerifyRuntimeMode], [ImmCheck<2, ImmCheckExtract, 1>]>;
 defm SVLASTA     : SVEPerm<"svlasta[_{d}]",   "sPd",  "aarch64_sve_lasta">;
 defm SVLASTB     : SVEPerm<"svlastb[_{d}]",   "sPd",  "aarch64_sve_lastb">;
-def SVREV        : SInst<"svrev[_{d}]",       "dd",   "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_rev", [VerifyRuntimeMode]>;
+def SVREV        : SInst<"svrev[_{d}]",       "dd",   "csilUcUsUiUlhfd", MergeNone, "vector_reverse", [VerifyRuntimeMode]>;
 def SVSEL        : SInst<"svsel[_{d}]",       "dPdd", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_sel", [VerifyRuntimeMode]>;
 def SVSPLICE     : SInst<"svsplice[_{d}]",    "dPdd", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_splice", [VerifyRuntimeMode]>;
 def SVTBL        : SInst<"svtbl[_{d}]",       "ddu",  "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_tbl", [VerifyRuntimeMode]>;
