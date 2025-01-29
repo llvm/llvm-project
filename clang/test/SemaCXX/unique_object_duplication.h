@@ -1,26 +1,6 @@
 /**
- * When building shared libraries, hidden objects which are defined in header
- * files will be duplicated, with one copy in each shared library. If the object
- * was meant to be globally unique (one copy per program), this can cause very
- * subtle bugs. This file contains tests for the -Wunique-object-duplication
- * warning, which is meant to detect this.
- * 
- * Roughly, an object might be incorrectly duplicated if:
- * - Is defined in a header (so it might appear in multiple TUs), and
- * - Has external linkage (otherwise it's supposed to be duplicated), and
- * - Has hidden visibility (or else the dynamic linker will handle it)
- * 
- * Duplication becomes an issue only if one of the following is true:
- * - The object is mutable (the copies won't be in sync), or
- * - Its initialization may has side effects (it may now run more than once), or
- * - The value of its address is used.
- * 
- * Currently, we only detect the first two, and only warn on effectful
- * initialization if we're certain there are side effects. Warning if the
- * address is taken is prone to false positives, so we don't warn for now.
- * 
- * The check is also disabled on Windows for now, since it uses 
- * dllimport/dllexport instead of visibility.
+ * This file contains tests for the -Wunique_object_duplication warning.
+ * See the warning's documentation for more information.
  */
 
 #define HIDDEN __attribute__((visibility("hidden")))
@@ -37,9 +17,9 @@ namespace StaticLocalTest {
 
 inline void has_static_locals_external() {
   // Mutable
-  static int disallowedStatic1 = 0; // hidden-warning {{'disallowedStatic1' is mutable, has hidden visibility, and external linkage; it may be duplicated when built into a shared library}}
+  static int disallowedStatic1 = 0; // hidden-warning {{'disallowedStatic1' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
   // Initialization might run more than once
-  static const double disallowedStatic2 = disallowedStatic1++; // hidden-warning {{'disallowedStatic2' has hidden visibility, and external linkage; its initialization may run more than once when built into a shared library}}
+  static const double disallowedStatic2 = disallowedStatic1++; // hidden-warning {{initializeation of 'disallowedStatic2' may run twice when built into a shared library: it has hidden visibility and external linkage}}
   
   // OK, because immutable and compile-time-initialized
   static constexpr int allowedStatic1 = 0;
@@ -62,11 +42,7 @@ static void has_static_locals_internal() {
   static int allowedStatic1 = 0;
   static double allowedStatic2 = init_dynamic(2);
   static char allowedStatic3 = []() { return allowedStatic1++; }();
-
   static constexpr int allowedStatic4 = 0;
-  static const float allowedStatic5 = 1;
-  static constexpr int allowedStatic6 = init_constexpr(2);
-  static const int allowedStatic7 = init_constexpr(3);
 }
 
 namespace {
@@ -76,26 +52,22 @@ void has_static_locals_anon() {
   static int allowedStatic1 = 0;
   static double allowedStatic2 = init_dynamic(2);
   static char allowedStatic3 = []() { return allowedStatic1++; }();
-
-  static constexpr int allowedStatic4 = 0;
-  static const float allowedStatic5 = 1;
-  static constexpr int allowedStatic6 = init_constexpr(2);
-  static const int allowedStatic7 = init_constexpr(3);
+  static constexpr int allowedStatic4 = init_constexpr(3);
 } 
 
 } // Anonymous namespace
 
 HIDDEN inline void static_local_always_hidden() {
-    static int disallowedStatic1 = 3; // hidden-warning {{'disallowedStatic1' is mutable, has hidden visibility, and external linkage; it may be duplicated when built into a shared library}}
-                                      // expected-warning@-1 {{'disallowedStatic1' is mutable, has hidden visibility, and external linkage; it may be duplicated when built into a shared library}}
+    static int disallowedStatic1 = 3; // hidden-warning {{'disallowedStatic1' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
+                                      // expected-warning@-1 {{'disallowedStatic1' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
     {
-      static int disallowedStatic2 = 3; // hidden-warning {{'disallowedStatic2' is mutable, has hidden visibility, and external linkage; it may be duplicated when built into a shared library}}
-                                        // expected-warning@-1 {{'disallowedStatic2' is mutable, has hidden visibility, and external linkage; it may be duplicated when built into a shared library}}
+      static int disallowedStatic2 = 3; // hidden-warning {{'disallowedStatic2' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
+                                        // expected-warning@-1 {{'disallowedStatic2' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
     }
 
     auto lmb = []() {
-      static int disallowedStatic3 = 3; // hidden-warning {{'disallowedStatic3' is mutable, has hidden visibility, and external linkage; it may be duplicated when built into a shared library}}
-                                        // expected-warning@-1 {{'disallowedStatic3' is mutable, has hidden visibility, and external linkage; it may be duplicated when built into a shared library}}
+      static int disallowedStatic3 = 3; // hidden-warning {{'disallowedStatic3' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
+                                        // expected-warning@-1 {{'disallowedStatic3' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
     };
 }
 
@@ -124,7 +96,7 @@ inline void has_regular_local() {
 
 inline void has_thread_local() {
   // thread_local variables are static by default
-  thread_local int disallowedThreadLocal = 0; // hidden-warning {{'disallowedThreadLocal' is mutable, has hidden visibility, and external linkage; it may be duplicated when built into a shared library}}
+  thread_local int disallowedThreadLocal = 0; // hidden-warning {{'disallowedThreadLocal' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
 }
 
 } // namespace StaticLocalTest
@@ -134,12 +106,10 @@ inline void has_thread_local() {
  ******************************************************************************/
 namespace GlobalTest {
   // Mutable
-  inline float disallowedGlobal1 = 3.14; // hidden-warning {{'disallowedGlobal1' is mutable, has hidden visibility, and external linkage; it may be duplicated when built into a shared library}}
-  // Same as above, but explicitly marked inline
-  inline float disallowedGlobal4 = 3.14; // hidden-warning {{'disallowedGlobal4' is mutable, has hidden visibility, and external linkage; it may be duplicated when built into a shared library}}
+  inline float disallowedGlobal1 = 3.14; // hidden-warning {{'disallowedGlobal1' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
   
   // Initialization might run more than once
-  inline const double disallowedGlobal5 = disallowedGlobal1++; // hidden-warning {{'disallowedGlobal5' has hidden visibility, and external linkage; its initialization may run more than once when built into a shared library}}
+  inline const double disallowedGlobal5 = disallowedGlobal1++; // hidden-warning {{initializeation of 'disallowedGlobal5' may run twice when built into a shared library: it has hidden visibility and external linkage}}
 
   // OK because internal linkage, so duplication is intended
   static float allowedGlobal1 = 3.14;
@@ -158,21 +128,21 @@ namespace GlobalTest {
   float allowedGlobal9 = 3.14;
   
   // Pointers need to be double-const-qualified
-  inline float& nonConstReference = disallowedGlobal1; // hidden-warning {{'nonConstReference' is mutable, has hidden visibility, and external linkage; it may be duplicated when built into a shared library}}
+  inline float& nonConstReference = disallowedGlobal1; // hidden-warning {{'nonConstReference' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
   const inline int& constReference = allowedGlobal5;
 
-  inline int* nonConstPointerToNonConst = nullptr; // hidden-warning {{'nonConstPointerToNonConst' is mutable, has hidden visibility, and external linkage; it may be duplicated when built into a shared library}}
-  inline int const* nonConstPointerToConst = nullptr; // hidden-warning {{'nonConstPointerToConst' is mutable, has hidden visibility, and external linkage; it may be duplicated when built into a shared library}}
-  inline int* const constPointerToNonConst = nullptr; // hidden-warning {{'constPointerToNonConst' is mutable, has hidden visibility, and external linkage; it may be duplicated when built into a shared library}}
+  inline int* nonConstPointerToNonConst = nullptr; // hidden-warning {{'nonConstPointerToNonConst' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
+  inline int const* nonConstPointerToConst = nullptr; // hidden-warning {{'nonConstPointerToConst' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
+  inline int* const constPointerToNonConst = nullptr; // hidden-warning {{'constPointerToNonConst' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
   inline int const* const constPointerToConst = nullptr;
   // Don't warn on new because it tends to generate false positives
   inline int const* const constPointerToConstNew = new int(7);
 
   inline int const * const * const * const nestedConstPointer = nullptr;
-  inline int const * const ** const * const nestedNonConstPointer = nullptr; // hidden-warning {{'nestedNonConstPointer' is mutable, has hidden visibility, and external linkage; it may be duplicated when built into a shared library}}
+  inline int const * const ** const * const nestedNonConstPointer = nullptr; // hidden-warning {{'nestedNonConstPointer' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
 
   struct Test {
-    static inline float disallowedStaticMember1; // hidden-warning {{'disallowedStaticMember1' is mutable, has hidden visibility, and external linkage; it may be duplicated when built into a shared library}}       
+    static inline float disallowedStaticMember1; // hidden-warning {{'disallowedStaticMember1' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}       
     // Defined below, in the header file
     static float disallowedStaticMember2;                                       
     // Defined in the cpp file, so won't get duplicated
@@ -183,5 +153,5 @@ namespace GlobalTest {
     // may still cause problems if their address is taken.
   };
 
-  inline float Test::disallowedStaticMember2 = 2.3; // hidden-warning {{'disallowedStaticMember2' is mutable, has hidden visibility, and external linkage; it may be duplicated when built into a shared library}}
+  inline float Test::disallowedStaticMember2 = 2.3; // hidden-warning {{'disallowedStaticMember2' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
 } // namespace GlobalTest

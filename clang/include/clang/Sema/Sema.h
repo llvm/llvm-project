@@ -3667,7 +3667,7 @@ public:
   /// built into multiple shared libraries with hidden visibility. This can
   /// cause problems if the variable is mutable, its initialization is
   /// effectful, or its address is taken.
-  bool GloballyUniqueObjectMightBeAccidentallyDuplicated(const VarDecl *dcl);
+  bool GloballyUniqueObjectMightBeAccidentallyDuplicated(const VarDecl *Dcl);
 
   /// AddInitializerToDecl - Adds the initializer Init to the
   /// declaration dcl. If DirectInit is true, this is C++ direct

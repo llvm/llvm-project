@@ -6163,12 +6163,12 @@ def note_convert_inline_to_static : Note<
   "use 'static' to give inline function %0 internal linkage">;
 
 def warn_possible_object_duplication_mutable : Warning<
-  "%0 is mutable, has hidden visibility, and external linkage; it may be "
-  "duplicated when built into a shared library">,
+  "%0 may be duplicated when built into a shared library: "
+  "it is mutable, has hidden visibility, and external linkage">,
   InGroup<UniqueObjectDuplication>, DefaultIgnore;
 def warn_possible_object_duplication_init : Warning<
-  "%0 has hidden visibility, and external linkage; its initialization may run "
-  "more than once when built into a shared library">,
+  "initializeation of %0 may run twice when built into a shared library: "
+  "it has hidden visibility and external linkage">,
   InGroup<UniqueObjectDuplication>, DefaultIgnore;
 
 def ext_redefinition_of_typedef : ExtWarn<
