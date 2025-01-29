@@ -24,8 +24,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Callable>
 struct _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_NO_SPECIALIZATIONS result_of;
 
+_LIBCPP_DIAGNOSTIC_PUSH
+#if __has_warning("-Winvalid-specialization")
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Winvalid-specialization")
+#endif
 template <class _Fp, class... _Args>
 struct _LIBCPP_TEMPLATE_VIS result_of<_Fp(_Args...)> : __invoke_result<_Fp, _Args...> {};
+_LIBCPP_DIAGNOSTIC_POP
 
 #  if _LIBCPP_STD_VER >= 14
 template <class _Tp>

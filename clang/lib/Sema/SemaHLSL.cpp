@@ -425,6 +425,7 @@ static CXXRecordDecl *createHostLayoutStruct(Sema &S,
   // copy base struct, create HLSL Buffer compatible version if needed
   if (unsigned NumBases = StructDecl->getNumBases()) {
     assert(NumBases == 1 && "HLSL supports only one base type");
+    (void)NumBases;
     CXXBaseSpecifier Base = *StructDecl->bases_begin();
     CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
     if (requiresImplicitBufferLayoutStructure(BaseDecl)) {
@@ -2429,6 +2430,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyA);
     break;
   }
+  case Builtin::BI__builtin_hlsl_wave_active_max:
   case Builtin::BI__builtin_hlsl_wave_active_sum: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;

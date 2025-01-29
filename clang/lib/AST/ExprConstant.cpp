@@ -1961,7 +1961,7 @@ APValue &
 CallStackFrame::createConstexprUnknownAPValues(const VarDecl *Key,
                                                APValue::LValueBase Base) {
   APValue &Result = ConstexprUnknownAPValues[MapKeyTy(Key, Base.getVersion())];
-  Result = APValue(Base, CharUnits::One(), APValue::ConstexprUnknown{});
+  Result = APValue(Base, CharUnits::Zero(), APValue::ConstexprUnknown{});
 
   return Result;
 }
@@ -3600,8 +3600,12 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
        VD->mightBeUsableInConstantExpressions(Info.Ctx)) ||
       ((Info.getLangOpts().CPlusPlus || Info.getLangOpts().OpenCL) &&
        !Info.getLangOpts().CPlusPlus11 && !VD->hasICEInitializer(Info.Ctx))) {
-    Info.CCEDiag(E, diag::note_constexpr_var_init_non_constant, 1) << VD;
-    NoteLValueLocation(Info, Base);
+    if (Init) {
+      Info.CCEDiag(E, diag::note_constexpr_var_init_non_constant, 1) << VD;
+      NoteLValueLocation(Info, Base);
+    } else {
+      Info.CCEDiag(E);
+    }
   }
 
   // Never use the initializer of a weak variable, not even for constant
