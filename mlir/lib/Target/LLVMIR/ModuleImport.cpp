@@ -139,8 +139,8 @@ static LogicalResult convertInstructionImpl(OpBuilder &odsBuilder,
   if (iface.isConvertibleInstruction(inst->getOpcode()))
     return iface.convertInstruction(odsBuilder, inst, llvmOperands,
                                     moduleImport);
-    // TODO: Implement the `convertInstruction` hooks in the
-    // `LLVMDialectLLVMIRImportInterface` and move the following include there.
+  // TODO: Implement the `convertInstruction` hooks in the
+  // `LLVMDialectLLVMIRImportInterface` and move the following include there.
 #include "mlir/Dialect/LLVMIR/LLVMOpFromLLVMIRConversions.inc"
   return failure();
 }
@@ -1489,15 +1489,14 @@ ModuleImport::convertBranchArgs(llvm::Instruction *branch,
   return success();
 }
 
-LogicalResult ModuleImport::convertCallTypeAndOperands(
-    llvm::CallBase *callInst, SmallVectorImpl<Type> &types,
-    SmallVectorImpl<Value> &operands, bool allowInlineAsm) {
-  if (!callInst->getType()->isVoidTy())
-    types.push_back(convertType(callInst->getType()));
-
+FailureOr<SmallVector<Value>>
+ModuleImport::convertCallOperands(llvm::CallBase *callInst,
+                                  bool allowInlineAsm) {
   bool isInlineAsm = callInst->isInlineAsm();
   if (isInlineAsm && !allowInlineAsm)
     return failure();
+
+  SmallVector<Value> operands;
 
   // Cannot use isIndirectCall() here because we need to handle Constant callees
   // that are not considered indirect calls by LLVM. However, in MLIR, they are
@@ -1515,8 +1514,29 @@ LogicalResult ModuleImport::convertCallTypeAndOperands(
   FailureOr<SmallVector<Value>> arguments = convertValues(args);
   if (failed(arguments))
     return failure();
+
   llvm::append_range(operands, *arguments);
-  return success();
+  return operands;
+}
+
+LLVMFunctionType ModuleImport::convertFunctionType(llvm::CallBase *callInst) {
+  llvm::Value *calledOperand = callInst->getCalledOperand();
+  Type converted = [&] {
+    if (auto callee = dyn_cast<llvm::Function>(calledOperand))
+      return convertType(callee->getFunctionType());
+    return convertType(callInst->getFunctionType());
+  }();
+
+  if (auto funcTy = dyn_cast_or_null<LLVMFunctionType>(converted))
+    return funcTy;
+  return {};
+}
+
+FlatSymbolRefAttr ModuleImport::convertCalleeName(llvm::CallBase *callInst) {
+  llvm::Value *calledOperand = callInst->getCalledOperand();
+  if (auto callee = dyn_cast<llvm::Function>(calledOperand))
+    return SymbolRefAttr::get(context, callee->getName());
+  return {};
 }
 
 LogicalResult ModuleImport::convertIntrinsic(llvm::CallInst *inst) {
@@ -1603,75 +1623,45 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     auto callInst = cast<llvm::CallInst>(inst);
     llvm::Value *calledOperand = callInst->getCalledOperand();
 
-    SmallVector<Type> types;
-    SmallVector<Value> operands;
-    if (failed(convertCallTypeAndOperands(callInst, types, operands,
-                                          /*allowInlineAsm=*/true)))
+    FailureOr<SmallVector<Value>> operands =
+        convertCallOperands(callInst, /*allowInlineAsm=*/true);
+    if (failed(operands))
       return failure();
 
-    if (auto asmI = dyn_cast<llvm::InlineAsm>(calledOperand)) {
-      Type resultTy = convertType(callInst->getType());
-      if (!resultTy)
-        return failure();
-      auto callOp = builder.create<InlineAsmOp>(
-          loc, resultTy, operands, builder.getStringAttr(asmI->getAsmString()),
-          builder.getStringAttr(asmI->getConstraintString()),
-          /*has_side_effects=*/true,
-          /*is_align_stack=*/false, /*asm_dialect=*/nullptr,
-          /*operand_attrs=*/nullptr);
-      if (!callInst->getType()->isVoidTy())
-        mapValue(inst, callOp.getResult(0));
-      else
-        mapNoResultOp(inst, callOp);
-    } else {
-      auto funcTy = dyn_cast<LLVMFunctionType>([&]() -> Type {
-        // Retrieve the real function type. For direct calls, use the callee's
-        // function type, as it may differ from the operand type in the case of
-        // variadic functions. For indirect calls, use the call function type.
-        if (auto callee = dyn_cast<llvm::Function>(calledOperand))
-          return convertType(callee->getFunctionType());
-        return convertType(callInst->getFunctionType());
-      }());
+    auto callOp = [&]() -> FailureOr<Operation *> {
+      if (auto asmI = dyn_cast<llvm::InlineAsm>(calledOperand)) {
+        Type resultTy = convertType(callInst->getType());
+        if (!resultTy)
+          return failure();
+        return builder
+            .create<InlineAsmOp>(
+                loc, resultTy, *operands,
+                builder.getStringAttr(asmI->getAsmString()),
+                builder.getStringAttr(asmI->getConstraintString()),
+                /*has_side_effects=*/true,
+                /*is_align_stack=*/false, /*asm_dialect=*/nullptr,
+                /*operand_attrs=*/nullptr)
+            .getOperation();
+      } else {
+        LLVMFunctionType funcTy = convertFunctionType(callInst);
+        if (!funcTy)
+          return failure();
 
-      if (!funcTy)
-        return failure();
+        FlatSymbolRefAttr callee = convertCalleeName(callInst);
+        auto callOp = builder.create<CallOp>(loc, funcTy, callee, *operands);
+        if (failed(convertCallAttributes(callInst, callOp)))
+          return failure();
+        return callOp.getOperation();
+      }
+    }();
 
-      auto callOp = [&]() -> CallOp {
-        if (auto callee = dyn_cast<llvm::Function>(calledOperand)) {
-          auto name = SymbolRefAttr::get(context, callee->getName());
-          return builder.create<CallOp>(loc, funcTy, name, operands);
-        }
-        return builder.create<CallOp>(loc, funcTy, operands);
-      }();
+    if (failed(callOp))
+      return failure();
 
-      // Handle function attributes.
-      callOp.setCConv(convertCConvFromLLVM(callInst->getCallingConv()));
-      callOp.setTailCallKind(
-          convertTailCallKindFromLLVM(callInst->getTailCallKind()));
-      setFastmathFlagsAttr(inst, callOp);
-
-      callOp.setConvergent(callInst->isConvergent());
-      callOp.setNoUnwind(callInst->doesNotThrow());
-      callOp.setWillReturn(callInst->hasFnAttr(llvm::Attribute::WillReturn));
-
-      llvm::MemoryEffects memEffects = callInst->getMemoryEffects();
-      ModRefInfo othermem = convertModRefInfoFromLLVM(
-          memEffects.getModRef(llvm::MemoryEffects::Location::Other));
-      ModRefInfo argMem = convertModRefInfoFromLLVM(
-          memEffects.getModRef(llvm::MemoryEffects::Location::ArgMem));
-      ModRefInfo inaccessibleMem = convertModRefInfoFromLLVM(
-          memEffects.getModRef(llvm::MemoryEffects::Location::InaccessibleMem));
-      auto memAttr = MemoryEffectsAttr::get(callOp.getContext(), othermem,
-                                            argMem, inaccessibleMem);
-      // Only set the attribute when it does not match the default value.
-      if (!memAttr.isReadWrite())
-        callOp.setMemoryEffectsAttr(memAttr);
-
-      if (!callInst->getType()->isVoidTy())
-        mapValue(inst, callOp.getResult());
-      else
-        mapNoResultOp(inst, callOp);
-    }
+    if (!callInst->getType()->isVoidTy())
+      mapValue(inst, (*callOp)->getResult(0));
+    else
+      mapNoResultOp(inst, *callOp);
     return success();
   }
   if (inst->getOpcode() == llvm::Instruction::LandingPad) {
@@ -1695,9 +1685,11 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
   if (inst->getOpcode() == llvm::Instruction::Invoke) {
     auto *invokeInst = cast<llvm::InvokeInst>(inst);
 
-    SmallVector<Type> types;
-    SmallVector<Value> operands;
-    if (failed(convertCallTypeAndOperands(invokeInst, types, operands)))
+    if (invokeInst->isInlineAsm())
+      return emitError(loc) << "invoke of inline assembly is not supported";
+
+    FailureOr<SmallVector<Value>> operands = convertCallOperands(invokeInst);
+    if (failed(operands))
       return failure();
 
     // Check whether the invoke result is an argument to the normal destination
@@ -1724,27 +1716,22 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                                  unwindArgs)))
       return failure();
 
-    auto funcTy =
-        dyn_cast<LLVMFunctionType>(convertType(invokeInst->getFunctionType()));
+    auto funcTy = convertFunctionType(invokeInst);
     if (!funcTy)
       return failure();
+
+    FlatSymbolRefAttr calleeName = convertCalleeName(invokeInst);
 
     // Create the invoke operation. Normal destination block arguments will be
     // added later on to handle the case in which the operation result is
     // included in this list.
-    InvokeOp invokeOp;
-    if (llvm::Function *callee = invokeInst->getCalledFunction()) {
-      invokeOp = builder.create<InvokeOp>(
-          loc, funcTy,
-          SymbolRefAttr::get(builder.getContext(), callee->getName()), operands,
-          directNormalDest, ValueRange(),
-          lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
-    } else {
-      invokeOp = builder.create<InvokeOp>(
-          loc, funcTy, /*callee=*/nullptr, operands, directNormalDest,
-          ValueRange(), lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
-    }
-    invokeOp.setCConv(convertCConvFromLLVM(invokeInst->getCallingConv()));
+    auto invokeOp = builder.create<InvokeOp>(
+        loc, funcTy, calleeName, *operands, directNormalDest, ValueRange(),
+        lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
+
+    if (failed(convertInvokeAttributes(invokeInst, invokeOp)))
+      return failure();
+
     if (!invokeInst->getType()->isVoidTy())
       mapValue(inst, invokeOp.getResults().front());
     else
@@ -2095,6 +2082,41 @@ void ModuleImport::convertParameterAttributes(llvm::Function *func,
     return;
   funcOp.setResAttrsAttr(
       builder.getArrayAttr(convertParameterAttribute(llvmResAttr, builder)));
+}
+
+template <typename Op>
+static LogicalResult convertCallBaseAttributes(llvm::CallBase *inst, Op op) {
+  op.setCConv(convertCConvFromLLVM(inst->getCallingConv()));
+  return success();
+}
+
+LogicalResult ModuleImport::convertInvokeAttributes(llvm::InvokeInst *inst,
+                                                    InvokeOp op) {
+  return convertCallBaseAttributes(inst, op);
+}
+
+LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
+                                                  CallOp op) {
+  setFastmathFlagsAttr(inst, op.getOperation());
+  op.setTailCallKind(convertTailCallKindFromLLVM(inst->getTailCallKind()));
+  op.setConvergent(inst->isConvergent());
+  op.setNoUnwind(inst->doesNotThrow());
+  op.setWillReturn(inst->hasFnAttr(llvm::Attribute::WillReturn));
+
+  llvm::MemoryEffects memEffects = inst->getMemoryEffects();
+  ModRefInfo othermem = convertModRefInfoFromLLVM(
+      memEffects.getModRef(llvm::MemoryEffects::Location::Other));
+  ModRefInfo argMem = convertModRefInfoFromLLVM(
+      memEffects.getModRef(llvm::MemoryEffects::Location::ArgMem));
+  ModRefInfo inaccessibleMem = convertModRefInfoFromLLVM(
+      memEffects.getModRef(llvm::MemoryEffects::Location::InaccessibleMem));
+  auto memAttr = MemoryEffectsAttr::get(op.getContext(), othermem, argMem,
+                                        inaccessibleMem);
+  // Only set the attribute when it does not match the default value.
+  if (!memAttr.isReadWrite())
+    op.setMemoryEffectsAttr(memAttr);
+
+  return convertCallBaseAttributes(inst, op);
 }
 
 LogicalResult ModuleImport::processFunction(llvm::Function *func) {
