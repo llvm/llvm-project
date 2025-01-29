@@ -1,3 +1,14 @@
+/*
+{0}: namespace open
+{1}: namespace close
+
+{2}: Dialect Cpp Name
+{3}: Namespace path
+
+{4}: Op list
+{5}: Type list
+*/
+
 R"(
 MLIR_DEFINE_EXPLICIT_TYPE_ID({3}::{2})
 {0}
@@ -8,5 +19,15 @@ MLIR_DEFINE_EXPLICIT_TYPE_ID({3}::{2})
 }
 
 {2}::~{2}() = default;
+
+
+void {2}::initialize() {{
+    addOperations<
+      {4}
+    >();
+    addTypes<
+      {5}
+    >();
+}
 {1}
 )"

@@ -279,11 +279,6 @@ static LogicalResult generateLib(irdl::DialectOp dialect, raw_ostream &output,
   output << "#ifdef " << definitionMacroFlag << "\n#undef "
          << definitionMacroFlag << "\n";
 
-  output << llvm::formatv(dialectDefTemplateText, dialectStrings.namespaceOpen,
-                          dialectStrings.namespaceClose,
-                          dialectStrings.dialectCppName,
-                          dialectStrings.namespacePath);
-
   // type header
   output << llvm::formatv(
       typeHeaderDefTemplateText, dialectStrings.dialectBaseTypeName,
@@ -431,6 +426,14 @@ static void {0}::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &od
 
   output << llvm::formatv(opDefTemplateText, commaSeparatedOpList,
                           perOpDefinitions);
+
+  output << llvm::formatv(dialectDefTemplateText, dialectStrings.namespaceOpen,
+                          dialectStrings.namespaceClose,
+                          dialectStrings.dialectCppName,
+                          dialectStrings.namespacePath,
+                          commaSeparatedOpList,
+                          commaSeparatedTypeList
+                          );
 
   output << "#endif // " << definitionMacroFlag << "\n";
   return success();

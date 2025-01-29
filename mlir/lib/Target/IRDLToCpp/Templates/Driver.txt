@@ -1,0 +1,15 @@
+/*
+{0}: Dialect CppName
+
+{1}: Namespace path
+
+{2}: Includes
+*/
+
+R"(
+
+
+
+
+
+)"
