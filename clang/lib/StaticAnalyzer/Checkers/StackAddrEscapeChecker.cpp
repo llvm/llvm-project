@@ -22,6 +22,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValVisitor.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
 using namespace ento;
@@ -210,6 +211,7 @@ void StackAddrEscapeChecker::checkAsyncExecutedBlockCaptures(
   }
 }
 
+
 void StackAddrEscapeChecker::checkReturnedBlockCaptures(
     const BlockDataRegion &B, CheckerContext &C) const {
   for (const MemRegion *Region : getCapturedStackRegions(B, C)) {
@@ -234,43 +236,6 @@ void StackAddrEscapeChecker::checkReturnedBlockCaptures(
   }
 }
 
-class FindEscapingStackAddrsVisitor : public FullSValVisitor<FindEscapingStackAddrsVisitor, bool>
-{
-  const StackFrameContext *Ctxt;
-
-  SmallVector<const MemRegion *> Escaped;
-
-  bool IsTopFrame;
-
-public:
-  explicit FindEscapingStackAddrsVisitor(CheckerContext &CC, bool IsTopFrame) : 
-    Ctxt(CC.getStackFrame()), IsTopFrame(IsTopFrame) {}
-
-  bool CheckForEscapes(SVal V) { return Visit(V); }
-
-  bool VisitSymbolVal(nonloc::SymbolVal SymV) {
-    return Visit(SymV.getSymbol());
-  }
-
-  bool VisitLocAsInteger(nonloc::LocAsInteger LAI) {
-    return Visit(LAI.getAsRegion());
-  }
-
-  bool VisitMemRegionVal(loc::MemRegionVal MRVal) {
-    return Visit(MRVal.getRegion());
-  }
-
-  bool VisitMemRegion(const MemRegion *R) {
-    const MemSpaceRegion *MS = R->getMemorySpace();
-    const StackSpaceRegion *SSR = dyn_cast<StackSpaceRegion>(MS);
-    if (SSR && Ctxt == SSR->getStackFrame()) {
-      Escaped.push_back(R);
-      return true;
-    }
-    return false;
-  }
-};
-
 void StackAddrEscapeChecker::checkPreCall(const CallEvent &Call,
                                           CheckerContext &C) const {
   if (!ChecksEnabled[CK_StackAddrAsyncEscapeChecker])
@@ -285,6 +250,33 @@ void StackAddrEscapeChecker::checkPreCall(const CallEvent &Call,
   }
 }
 
+class FindStackRegionsSymbolVisitor final : public SymbolVisitor {
+  const StackFrameContext *StackFrameContext;
+  SmallVector<const MemRegion *> &EscapingStackRegions;
+public:
+  explicit FindStackRegionsSymbolVisitor(CheckerContext &Ctxt, SmallVector<const MemRegion *> &StorageForStackRegions)
+    : StackFrameContext(Ctxt.getStackFrame()), EscapingStackRegions(StorageForStackRegions) {}
+
+  bool VisitSymbol(SymbolRef sym) override { return true; }
+
+  bool VisitMemRegion(const MemRegion *MR) override {
+    llvm::dbgs() << "Visiting region: ";
+    MR->dumpToStream(llvm::dbgs());
+    llvm::dbgs() << '\n';
+
+    const StackSpaceRegion *SSR = dyn_cast<StackSpaceRegion>(MR->getMemorySpace());
+    if (SSR && SSR->getStackFrame() == StackFrameContext)
+      EscapingStackRegions.push_back(MR);
+    return true; 
+  }
+};
+
+static void FindEscapingStackRegions(CheckerContext &C, SmallVector<const MemRegion *> &EscapedRegionsStorage, SVal SVal) {
+  FindStackRegionsSymbolVisitor Finder(C, EscapedRegionsStorage);
+  ScanReachableSymbols Scanner(C.getState(), Finder);
+  Scanner.scan(SVal);
+}
+
 void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS,
                                           CheckerContext &C) const {
   if (!ChecksEnabled[CK_StackAddrEscapeChecker])
@@ -295,40 +287,67 @@ void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS,
     return;
   RetE = RetE->IgnoreParens();
 
-  FindEscapingStackAddrsVisitor EscapeFinder(C, C.getPredecessor()->getLocationContext()->inTopFrame());
-
   SVal V = C.getSVal(RetE);
 
-  bool AnyEscapes = EscapeFinder.CheckForEscapes(V);
+  SmallVector<const MemRegion *> EscapedRegions;
+  FindEscapingStackRegions(C, EscapedRegions, V);
 
-  const MemRegion *R = V.getAsRegion();
-  if (!R)
-    return;
+  for (const MemRegion *ER : EscapedRegions) {
+    llvm::dbgs() << "Escaped region: ";
+    ER->dumpToStream(llvm::dbgs());
+    llvm::dbgs() << '\n';
 
-  if (const BlockDataRegion *B = dyn_cast<BlockDataRegion>(R))
-    checkReturnedBlockCaptures(*B, C);
+    const MemRegion *R = ER;
+    while (true) {
+      switch (R->getKind()) {
+        case MemRegion::ElementRegionKind:
+        case MemRegion::FieldRegionKind:
+        case MemRegion::ObjCIvarRegionKind:
+        case MemRegion::CXXBaseObjectRegionKind:
+        case MemRegion::CXXDerivedObjectRegionKind: {
+          const SubRegion *SR = cast<SubRegion>(R);
+          R = SR->getSuperRegion();
+          llvm::dbgs() << "SuperRegion: ";
+          R->dumpToStream(llvm::dbgs());
+          llvm::dbgs() << '\n';
+          continue;
+        }
+        default:
+          break;
+      }
+      break;
+    }
 
-  if (!isa<StackSpaceRegion>(R->getMemorySpace()) || isNotInCurrentFrame(R, C))
-    return;
+    const VarRegion *Base = dyn_cast<VarRegion>(ER->getBaseRegion());
+    if (Base) {
+      Base->getDecl()->getBeginLoc().dump(C.getSourceManager());
+    }
+
+    EmitStackError(C, ER, RetE);
+  }
+
+  // if (const BlockDataRegion *B = dyn_cast<BlockDataRegion>(R))
+    // checkReturnedBlockCaptures(*B, C);
 
   // Returning a record by value is fine. (In this case, the returned
   // expression will be a copy-constructor, possibly wrapped in an
   // ExprWithCleanups node.)
-  if (const ExprWithCleanups *Cleanup = dyn_cast<ExprWithCleanups>(RetE))
-    RetE = Cleanup->getSubExpr();
-  if (isa<CXXConstructExpr>(RetE) && RetE->getType()->isRecordType())
-    return;
+  // if (const ExprWithCleanups *Cleanup = dyn_cast<ExprWithCleanups>(RetE))
+  //   RetE = Cleanup->getSubExpr();
+  // if (isa<CXXConstructExpr>(RetE) && RetE->getType()->isRecordType())
+  //   return;
 
-  // The CK_CopyAndAutoreleaseBlockObject cast causes the block to be copied
-  // so the stack address is not escaping here.
-  if (const auto *ICE = dyn_cast<ImplicitCastExpr>(RetE)) {
-    if (isa<BlockDataRegion>(R) &&
-        ICE->getCastKind() == CK_CopyAndAutoreleaseBlockObject) {
-      return;
-    }
-  }
+  // // The CK_CopyAndAutoreleaseBlockObject cast causes the block to be copied
+  // // so the stack address is not escaping here.
+  // if (const auto *ICE = dyn_cast<ImplicitCastExpr>(RetE)) {
+  //   const MemRegion *R = V.getAsRegion();
+  //   if (R && isa<BlockDataRegion>(R) &&
+  //       ICE->getCastKind() == CK_CopyAndAutoreleaseBlockObject) {
+  //     return;
+  //   }
+  // }
 
-  EmitStackError(C, R, RetE);
+  // EmitStackError(C, R, RetE);
 }
 
 static const MemSpaceRegion *getStackOrGlobalSpaceRegion(const MemRegion *R) {

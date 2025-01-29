@@ -410,16 +410,16 @@ void** returned_arr_of_ptr_top() {
   int* p = &local;
   void** arr = new void*[2];
   arr[1] = p;
-  return arr;
-} // no-warning False Negative
+  return arr; // expected-warning{{Address of stack memory associated with local variable 'local' returned to caller}}
+}
 
 void** returned_arr_of_ptr_callee() {
   int local = 42;
   int* p = &local;
   void** arr = new void*[2];
   arr[1] = p;
-  return arr;
-} // no-warning False Negative
+  return arr; // expected-warning{{Address of stack memory associated with local variable 'local' returned to caller}}
+}
 
 void returned_arr_of_ptr_caller() {
   void** arr = returned_arr_of_ptr_callee();
@@ -466,16 +466,16 @@ void** returned_arr_of_ptr_top(int idx) {
   int* p = &local;
   void** arr = new void*[2];
   arr[idx] = p;
-  return arr;
-} // no-warning False Negative
+  return arr; // expected-warning{{Address of stack memory associated with local variable 'local' returned to caller}}
+}
 
 void** returned_arr_of_ptr_callee(int idx) {
   int local = 42;
   int* p = &local;
   void** arr = new void*[2];
   arr[idx] = p;
-  return arr;
-} // no-warning False Negative
+  return arr; // expected-warning{{Address of stack memory associated with local variable 'local' returned to caller}}
+}
 
 void returned_arr_of_ptr_caller(int idx) {
   void** arr = returned_arr_of_ptr_callee(idx);
@@ -525,14 +525,25 @@ S returned_struct_with_ptr_top() {
   int local = 42;
   S s;
   s.p = &local;
-  return s;
-} // no-warning False Negative, requires traversing returned LazyCompoundVals
+  return s; // expected-warning{{Address of stack memory associated with local variable 'local' returned to caller}}
+}
 
 S returned_struct_with_ptr_callee() {
   int local = 42;
   S s;
   s.p = &local;
-  return s; // expected-warning{{'local' is still referred to by the caller variable 's'}}
+  return s; // expected-warning {{Address of stack memory associated with local variable 'local' returned to caller}}
+}
+
+S leak_through_field_of_returned_object() {
+  int local = 14;
+  S s{&local};
+  return s; // expected-warning {{Address of stack memory associated with local variable 'local' returned to caller}}
+}
+
+S leak_through_compound_literal() {
+  int local = 0;
+  return (S) { &local }; // expected-warning {{Address of stack memory associated with local variable 'local' returned to caller}}
 }
 
 void returned_struct_with_ptr_caller() {
@@ -554,6 +565,30 @@ void static_struct_with_ptr() {
   (void)s.p; // expected-warning{{'local' is still referred to by the static variable 's'}}
 }
 } // namespace leaking_via_struct_with_ptr
+
+namespace leaking_via_nested_structs_with_ptr {
+struct Inner {
+  int *ptr;
+};
+
+struct Outer {
+  Inner I;
+};
+
+struct Deriving : public Outer {};
+
+Outer leaks_through_nested_objects() {
+  int local = 0;
+  Outer O{&local};
+  return O; // expected-warning {{Address of stack memory associated with local variable 'local' returned to caller}}
+}
+
+Deriving leaks_through_base_objects() {
+  int local = 0;
+  Deriving D{&local};
+  return D; // expected-warning {{Address of stack memory associated with local variable 'local' returned to caller}}
+}
+} // namespace leaking_via_nested_structs_with_ptr
 
 namespace leaking_via_ref_to_struct_with_ptr {
 struct S {
@@ -613,15 +648,15 @@ S* returned_ptr_to_struct_with_ptr_top() {
   int local = 42;
   S* s = new S;
   s->p = &local;
-  return s;
-} // no-warning False Negative
+  return s; // expected-warning {{Address of stack memory associated with local variable 'local' returned to caller}}
+}
 
 S* returned_ptr_to_struct_with_ptr_callee() {
   int local = 42;
   S* s = new S;
   s->p = &local;
-  return s;
-} // no-warning False Negative
+  return s; // expected-warning {{Address of stack memory associated with local variable 'local' returned to caller}}
+}
 
 void returned_ptr_to_struct_with_ptr_caller() {
   S* s = returned_ptr_to_struct_with_ptr_callee();
@@ -676,15 +711,15 @@ S* returned_ptr_to_struct_with_ptr_top() {
   int local = 42;
   S* s = new S[2];
   s[1].p = &local;
-  return s;
-} // no-warning False Negative
+  return s; // expected-warning {{Address of stack memory associated with local variable 'local' returned to caller}}
+}
 
 S* returned_ptr_to_struct_with_ptr_callee() {
   int local = 42;
   S* s = new S[2];
   s[1].p = &local;
-  return s;
-} // no-warning  False Negative
+  return s; // expected-warning {{Address of stack memory associated with local variable 'local' returned to caller}}
+}
 
 void returned_ptr_to_struct_with_ptr_caller() {
   S* s = returned_ptr_to_struct_with_ptr_callee();
