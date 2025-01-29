@@ -7986,7 +7986,7 @@ void Parser::ParseParameterDeclarationClause(
     if (getLangOpts().HLSL)
       MaybeParseHLSLAnnotations(DS.getAttributes());
 
-    if (ParmDeclarator.getDeclarationAttributes().size() &&
+    if (!ParmDeclarator.getDeclarationAttributes().empty() &&
         ParmDeclarator.getDeclSpec().getTypeSpecType() == DeclSpec::TST_void) {
       SourceRange AttrRange = ParmDeclarator.getDeclarationAttributes().Range;
       Diag(AttrRange.getBegin(), diag::err_attributes_not_allowed) << AttrRange;
