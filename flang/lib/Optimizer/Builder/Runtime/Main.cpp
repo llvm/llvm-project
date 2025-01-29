@@ -14,11 +14,9 @@
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Runtime/CUDA/init.h"
 #include "flang/Runtime/main.h"
 #include "flang/Runtime/stop.h"
-#ifdef FLANG_CUDA_SUPPORT
-#include "flang/Runtime/CUDA/init.h"
-#endif
 
 using namespace Fortran::runtime;
 
@@ -66,13 +64,11 @@ void fir::runtime::genMain(
 
   builder.create<fir::CallOp>(loc, startFn, args);
 
-#ifdef FLANG_CUDA_SUPPORT
   if (initCuda) {
     auto initFn = builder.createFunction(
         loc, RTNAME_STRING(CUFInit), mlir::FunctionType::get(context, {}, {}));
     builder.create<fir::CallOp>(loc, initFn);
   }
-#endif
 
   builder.create<fir::CallOp>(loc, qqMainFn);
   builder.create<fir::CallOp>(loc, stopFn);
