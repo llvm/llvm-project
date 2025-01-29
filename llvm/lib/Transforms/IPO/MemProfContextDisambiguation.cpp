@@ -4246,6 +4246,18 @@ static ValueInfo findValueInfoForFunc(const Function &F, const Module &M,
   std::string OrigId = GlobalValue::getGlobalIdentifier(
       OrigName, GlobalValue::InternalLinkage, SrcFile);
   TheFnVI = ImportSummary->getValueInfo(GlobalValue::getGUID(OrigId));
+  // Internal func in original module may have gotten a numbered suffix if we
+  // imported an external function with the same name. This happens
+  // automatically during IR linking for naming conflicts. It would have to
+  // still be internal in that case (otherwise it would have been renamed on
+  // promotion in which case we wouldn't have a naming conflict).
+  if (!TheFnVI && OrigName == F.getName() && F.hasLocalLinkage() &&
+      F.getName().contains('.')) {
+    OrigName = F.getName().rsplit('.').first;
+    OrigId = GlobalValue::getGlobalIdentifier(
+        OrigName, GlobalValue::InternalLinkage, SrcFile);
+    TheFnVI = ImportSummary->getValueInfo(GlobalValue::getGUID(OrigId));
+  }
   // The only way we may not have a VI is if this is a declaration created for
   // an imported reference. For distributed ThinLTO we may not have a VI for
   // such declarations in the distributed summary.
