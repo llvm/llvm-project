@@ -1380,11 +1380,10 @@ Currently, only the following parameter attributes are defined:
     memory locations that are *modified*, by any means, during the execution of
     the function. If there are other accesses not based on the argument or
     return value, the behavior is undefined. The attribute on a return value
-    also has additional semantics described below. The caller shares the
-    responsibility with the callee for described below. The caller shares the
-    responsibility with the callee for ensuring that these requirements are met.
-    For further details, please see the discussion of the NoAlias response in
-    :ref:`alias analysis <Must, May,  or No>`.
+    also has additional semantics, as described below. Both the caller and the
+    callee share the responsibility of ensuring that these requirements are
+    met. For further details, please see the discussion of the NoAlias response
+    in :ref:`alias analysis <Must, May,  or No>`.
 
     Note that this definition of ``noalias`` is intentionally similar
     to the definition of ``restrict`` in C99 for function arguments.
