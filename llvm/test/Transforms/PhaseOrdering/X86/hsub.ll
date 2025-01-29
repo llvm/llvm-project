@@ -59,15 +59,12 @@ define <8 x i16> @sub_v8i16_01234567(<8 x i16> %a, <8 x i16> %b) {
 
 define <8 x i16> @sub_v8i16_u1234567(<8 x i16> %a, <8 x i16> %b) {
 ; SSE2-LABEL: @sub_v8i16_u1234567(
-; SSE2-NEXT:    [[SHIFT2:%.*]] = shufflevector <8 x i16> [[A:%.*]], <8 x i16> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 5, i32 poison, i32 poison, i32 poison>
-; SSE2-NEXT:    [[TMP5:%.*]] = sub <8 x i16> [[A]], [[SHIFT2]]
-; SSE2-NEXT:    [[SHIFT3:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 7, i32 poison>
+; SSE2-NEXT:    [[SHIFT3:%.*]] = shufflevector <8 x i16> [[A:%.*]], <8 x i16> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 7, i32 poison>
 ; SSE2-NEXT:    [[TMP6:%.*]] = sub <8 x i16> [[A]], [[SHIFT3]]
-; SSE2-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> poison, <8 x i32> <i32 poison, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSE2-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> poison, <8 x i32> <i32 poison, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE2-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> poison, <8 x i32> <i32 poison, i32 2, i32 4, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE2-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> poison, <8 x i32> <i32 poison, i32 3, i32 5, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE2-NEXT:    [[HSUB1:%.*]] = sub <8 x i16> [[TMP7]], [[TMP4]]
-; SSE2-NEXT:    [[HSUB2:%.*]] = shufflevector <8 x i16> [[HSUB1]], <8 x i16> [[TMP5]], <8 x i32> <i32 poison, i32 1, i32 12, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSE2-NEXT:    [[HSUB3:%.*]] = shufflevector <8 x i16> [[HSUB2]], <8 x i16> [[TMP6]], <8 x i32> <i32 poison, i32 1, i32 2, i32 14, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE2-NEXT:    [[HSUB3:%.*]] = shufflevector <8 x i16> [[HSUB1]], <8 x i16> [[TMP6]], <8 x i32> <i32 poison, i32 1, i32 2, i32 14, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[B:%.*]], <8 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE2-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE2-NEXT:    [[TMP3:%.*]] = sub <8 x i16> [[TMP1]], [[TMP2]]
