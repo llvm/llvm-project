@@ -46,7 +46,7 @@ def MPI_CommRankOp : MPI_Op<"comm_rank", []> {
                 "`MPI_Comm_rank(MPI_COMM_WORLD, &rank)`";
   let description = [{
     Communicators other than `MPI_COMM_WORLD` are not supported for now.
-  
+
     This operation can optionally return an `!mpi.retval` value that can be used
     to check for errors.
   }];
