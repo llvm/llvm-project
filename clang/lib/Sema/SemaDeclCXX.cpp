@@ -454,11 +454,13 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
   bool Invalid = false;
 
   // The declaration context corresponding to the scope is the semantic
-  // parent, unless this is a local function declaration, in which case
-  // it is that surrounding function.
-  DeclContext *ScopeDC = New->isLocalExternDecl()
-                             ? New->getLexicalDeclContext()
-                             : New->getDeclContext();
+  // parent, unless this is a local function declaration
+  // or a friend declaration, in which case it is that surrounding function.
+  DeclContext *ScopeDC =
+      New->isLocalExternDecl() ||
+              New->isInIdentifierNamespace(Decl::IDNS_OrdinaryFriend)
+          ? New->getLexicalDeclContext()
+          : New->getDeclContext();
 
   // Find the previous declaration for the purpose of default arguments.
   FunctionDecl *PrevForDefaultArgs = Old;
@@ -487,6 +489,20 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
       // sufficient, and if neither is local, then they are in the same scope.)
       continue;
     }
+
+    if (PrevForDefaultArgs->getLexicalDeclContext()->getPrimaryContext() !=
+            ScopeDC->getPrimaryContext() &&
+        !New->isCXXClassMember())
+      // If previous declaration is lexically in a different scope,
+      // we don't inherit its default arguments, except for out-of-line
+      // declarations of member functions.
+      //
+      // extern "C" and local functions can have default arguments across
+      // different scopes, but diagnosing that early would reject well-formed
+      // code (_N5001_.[over.match.best]/4.) Instead, they are checked
+      // in ConvertArgumentsForCall, after the best viable function has been
+      // selected.
+      continue;
 
     // We found the right previous declaration.
     break;
