@@ -1285,6 +1285,12 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
       OS << "value-parameter-" << TD->getDepth() << '-' << TD->getIndex() << "";
       break;
     }
+    case Decl::ParmVar: {
+      auto *PD = cast<ParmVarDecl>(VD);
+      OS << "function-parameter-" << PD->getFunctionScopeDepth() << '-'
+         << PD->getFunctionScopeIndex();
+      break;
+    }
     default:
       llvm_unreachable("Unhandled anonymous declaration kind");
     }
