@@ -6,8 +6,7 @@
 #
 #===------------------------------------------------------------------------===#
 
-
-add_flangrt_library(CufRuntime STATIC
+add_flangrt_library(CufRuntime STATIC SHARED
   allocatable.cpp
   allocator.cpp
   descriptor.cpp
@@ -16,18 +15,23 @@ add_flangrt_library(CufRuntime STATIC
   memory.cpp
   registration.cpp
 
-  # libCufRuntime depends on a certain version of CUDA. To be able to have
-  # multiple build of this library with different CUDA version, the version is
-  # added to the library name.
   TARGET_PROPERTIES
     OUTPUT_NAME "CufRuntime_cuda_${CUDAToolkit_VERSION_MAJOR}"
-
   INCLUDE_DIRECTORIES
     PRIVATE ${CUDAToolkit_INCLUDE_DIRS}
 )
 
-target_link_libraries(CufRuntime
-  PUBLIC
-  flang_rt
-  CUDA::cudart_static
-)
+# For the static library, link-in the static dependencies as well.
+if (TARGET CufRuntime.static)
+  target_link_libraries(CufRuntime.static PUBLIC
+    flang_rt.static
+    CUDA::cudart_static
+  )
+endif ()
+
+if (TARGET CufRuntime.shared)
+  target_link_libraries(CufRuntime.shared PUBLIC
+    flang_rt.shared
+    CUDA::cudart
+  )
+endif ()

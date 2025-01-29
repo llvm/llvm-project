@@ -115,6 +115,15 @@ endif ()
 extend_path(FLANG_RT_INSTALL_RESOURCE_LIB_PATH "${FLANG_RT_INSTALL_RESOURCE_PATH}" "${toolchain_lib_subdir}")
 cmake_path(NORMAL_PATH FLANG_RT_OUTPUT_RESOURCE_DIR)
 cmake_path(NORMAL_PATH FLANG_RT_INSTALL_RESOURCE_PATH)
+# FIXME: For the libflang_rt.so, the toolchain resource lib dir is not a good
+#        destination because it is not a ld.so default search path.
+#        The machine where the executable is eventually executed may not be the
+#        machine where the Flang compiler and its resource dir is installed, so
+#        setting RPath by the driver is not an solution. It should belong into
+#        /usr/lib/<triple>/libflang_rt.so, like e.g. libgcc_s.so.
+#        But the linker as invoked by the Flang driver also requires
+#        libflang_rt.so to be found when linking and the resource lib dir is
+#        the only reliable location.
 cmake_path(NORMAL_PATH FLANG_RT_OUTPUT_RESOURCE_LIB_DIR)
 cmake_path(NORMAL_PATH FLANG_RT_INSTALL_RESOURCE_LIB_PATH)
 
@@ -127,6 +136,27 @@ cmake_path(NORMAL_PATH FLANG_RT_INSTALL_RESOURCE_LIB_PATH)
 # with this prefix will be forwarded in bootstrap builds.
 
 option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${LLVM_INCLUDE_TESTS}")
+
+
+option(FLANG_RT_ENABLE_STATIC "Build Flang-RT as a static library." ON)
+if (WIN32)
+  # Windows DLL currently not implemented.
+  set(FLANG_RT_ENABLE_SHARED OFF)
+else ()
+  # TODO: Enable by default to increase test coverage, and which version of the
+  #       library should be the user's choice anyway.
+  #       Currently, the Flang driver adds `-L"libdir" -lflang_rt` as linker
+  #       argument, which leaves the choice which library to use to the linker.
+  #       Since most linkers prefer the shared library, this would constitute a
+  #       breaking change unless the driver is changed.
+  option(FLANG_RT_ENABLE_SHARED "Build Flang-RT as a shared library." OFF)
+endif ()
+if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
+  message(FATAL_ERROR "
+      Must build at least one type of library
+      (FLANG_RT_ENABLE_STATIC=ON, FLANG_RT_ENABLE_SHARED=ON, or both)
+    ")
+endif ()
 
 
 set(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT "" CACHE STRING "Compile Flang-RT with GPU support (CUDA or OpenMP)")

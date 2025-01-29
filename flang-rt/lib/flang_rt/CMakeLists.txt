@@ -128,7 +128,7 @@ endif ()
 set(sources ${supported_sources} ${host_sources} ${f128_sources})
 
 if (NOT WIN32)
-  add_flangrt_library(flang_rt STATIC
+  add_flangrt_library(flang_rt STATIC SHARED
     ${sources}
     INSTALL_WITH_TOOLCHAIN
     ADDITIONAL_HEADERS ${public_headers} ${private_headers}
@@ -137,10 +137,9 @@ if (NOT WIN32)
   enable_cuda_compilation(flang_rt "${supported_sources}")
   enable_omp_offload_compilation(flang_rt "${supported_sources}")
 
-  # For unittests that depend on flang_rt. Should link to the static version
-  # of the library.
-  add_library(flang_rt.static ALIAS flang_rt)
-  add_library(flang_rt.unittest ALIAS flang_rt)
+  # Select a default runtime, which is used for unit and regression tests.
+  get_target_property(default_target flang_rt.default ALIASED_TARGET)
+  add_library(flang_rt.unittest ALIAS "${default_target}")
 else()
   # Target for building all versions of the runtime
   add_custom_target(flang_rt)

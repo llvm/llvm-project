@@ -94,7 +94,7 @@ llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
 # Include path for C headers that define Flang's Fortran ABI.
 config.substitutions.append(("%include", os.path.join(config.flang_source_dir, "include")))
 
-# Library path of libflang_rt.a (for lib search path when using non-Flang driver for linking)
+# Library path of libflang_rt.a/.so (for lib search path when using non-Flang driver for linking and LD_LIBRARY_PATH)
 config.substitutions.append(("%libdir", config.flang_rt_output_resource_lib_dir))
 
 # For CUDA offloading, additional steps (device linking) and libraries (cudart) are needed.
