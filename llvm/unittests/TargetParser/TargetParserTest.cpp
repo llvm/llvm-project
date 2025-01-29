@@ -10,6 +10,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -2084,5 +2085,30 @@ INSTANTIATE_TEST_SUITE_P(
     AArch64ExtensionDependenciesBaseCPU,
     AArch64ExtensionDependenciesBaseCPUTestFixture,
     ::testing::ValuesIn(AArch64ExtensionDependenciesCPUData));
+
+struct CheckFindSinglePrecisionFpuTest {
+  StringRef Cpu;
+  ARM::ArchKind Arch;
+  StringRef Archext;
+  std::vector<StringRef> Features;
+  ARM::FPUKind Fpu;
+  ARM::FPUKind Output;
+};
+
+TEST(TargetParserTest, checkFindSinglePrecisionFPU) {
+  CheckFindSinglePrecisionFpuTest tests[] = {
+    {"cortex-r4f", ARM::ArchKind::ARMV7R, "nofp.dp", {}, ARM::FK_INVALID, ARM::FK_VFPV3XD},
+    {"cortex-r7", ARM::ArchKind::ARMV7R, "nofp.dp", {}, ARM::FK_INVALID, ARM::FK_VFPV3XD_FP16},
+    {"cortex-a7", ARM::ArchKind::ARMV7A, "nofp.dp", {}, ARM::FK_INVALID, ARM::FK_FPV4_SP_D16},
+    {"cortex-r52", ARM::ArchKind::ARMV8R, "nofp.dp", {}, ARM::FK_INVALID, ARM::FK_FPV5_SP_D16},
+    {"cortex-m55", ARM::ArchKind::ARMV8_1MMainline, "nofp.dp", {}, ARM::FK_INVALID, ARM::FK_FP_ARMV8_FULLFP16_SP_D16}
+  };
+
+  for (auto X : tests) {
+    ARM::FPUKind FPU = X.Fpu;
+    EXPECT_TRUE(ARM::appendArchExtFeatures(X.Cpu, X.Arch, X.Archext, X.Features, FPU));
+    EXPECT_EQ(FPU, X.Output);
+  }
+}
 
 } // namespace

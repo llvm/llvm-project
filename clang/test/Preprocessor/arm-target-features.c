@@ -1013,3 +1013,19 @@
 // CHECK-MVE1_2: #define __ARM_FEATURE_MVE 1
 // RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve.fp -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-MVE3 %s
 // CHECK-MVE3: #define __ARM_FEATURE_MVE 3
+
+// Cortex-R52 and Cortex-R52Plus correctly enable the `fpv5-sp-d16` FPU when compiling for the SP only version of the CPU.
+// RUN: %clang -target arm-none-eabi -mcpu=cortex-r52+nosimd+nofp.dp -mfloat-abi=hard -x c -E -dM -o - %s | FileCheck -check-prefix=CHECK-R52 %s
+// CHECK-R52: #define __ARM_FEATURE_FMA 1
+// CHECK-R52: #define __ARM_FP 0x6
+// CHECK-R52: #define __ARM_FPV5__ 1
+// CHECK-R52: #define __ARM_VFPV2__ 1
+// CHECK-R52-NEXT: #define __ARM_VFPV3__ 1
+// CHECK-R52-NEXT: #define __ARM_VFPV4__ 1
+// RUN: %clang -target arm-none-eabi -mcpu=cortex-r52plus+nosimd+nofp.dp -mfloat-abi=hard -x c -E -dM -o - %s | FileCheck -check-prefix=CHECK-R52PLUS %s
+// CHECK-R52PLUS: #define __ARM_FEATURE_FMA 1
+// CHECK-R52PLUS: #define __ARM_FP 0x6
+// CHECK-R52PLUS: #define __ARM_FPV5__ 1
+// CHECK-R52PLUS: #define __ARM_VFPV2__ 1
+// CHECK-R52PLUS-NEXT: #define __ARM_VFPV3__ 1
+// CHECK-R52PLUS-NEXT: #define __ARM_VFPV4__ 1
