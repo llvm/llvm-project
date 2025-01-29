@@ -302,8 +302,8 @@ public:
 
     auto slice = CreateOpAndInferShape<tosa::SliceOp>(
                      rewriter, loc, UnrankedTensorType::get(resultETy), conv2d,
-                     rewriter.getDenseI64ArrayAttr(sliceBegin),
-                     rewriter.getDenseI64ArrayAttr(sliceSize))
+                     getTosaConstShape(rewriter, loc, sliceBegin),
+                     getTosaConstShape(rewriter, loc, sliceSize))
                      .getResult();
 
     llvm::SmallVector<int64_t, 8> resultPadding = {0, 0, 0, 0, 0, 0, 0, 0};
