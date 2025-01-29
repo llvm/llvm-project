@@ -21,6 +21,7 @@ REGION_PASS("null", ::llvm::sandboxir::NullPass)
 REGION_PASS("print-instruction-count", ::llvm::sandboxir::PrintInstructionCount)
 REGION_PASS("tr-accept", ::llvm::sandboxir::TransactionAlwaysAccept)
 REGION_PASS("tr-accept-or-revert", ::llvm::sandboxir::TransactionAcceptOrRevert)
+REGION_PASS("bottom-up-vec", ::llvm::sandboxir::BottomUpVec)
 
 #undef REGION_PASS
 
@@ -28,7 +29,7 @@ REGION_PASS("tr-accept-or-revert", ::llvm::sandboxir::TransactionAcceptOrRevert)
 #define FUNCTION_PASS_WITH_PARAMS(NAME, CLASS_NAME)
 #endif
 
-FUNCTION_PASS_WITH_PARAMS("bottom-up-vec", ::llvm::sandboxir::BottomUpVec)
+FUNCTION_PASS_WITH_PARAMS("seed-selection", ::llvm::sandboxir::SeedSelection)
 FUNCTION_PASS_WITH_PARAMS("regions-from-metadata", ::llvm::sandboxir::RegionsFromMetadata)
 
 #undef FUNCTION_PASS_WITH_PARAMS
