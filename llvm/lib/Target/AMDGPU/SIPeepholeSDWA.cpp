@@ -111,34 +111,36 @@ public:
   MachineOperand *getReplacedOperand() const { return Replaced; }
   MachineInstr *getParentInst() const { return Target->getParent(); }
 
-  /// Fold a \p FoldedOp SDWA selection into an \p ExistingOp existing SDWA
-  /// selection. If the selections are compatible, return the combined
-  /// selection, otherwise return a nullopt. For example, if we have existing
-  /// BYTE_0 Sel and are attempting to fold WORD_1 Sel:
+  /// Combine an SDWA instruction's existing SDWA selection \p
+  /// ExistingSel with the SDWA selection \p OpSel of its operand. If
+  /// the selections are compatible, return the combined selection,
+  /// otherwise return a nullopt. For example, if we have ExistingSel
+  /// = BYTE_0 Sel and FoldedSel WORD_1 Sel:
   ///     BYTE_0 Sel (WORD_1 Sel (%X)) -> BYTE_2 Sel (%X)
-  std::optional<SdwaSel> combineSdwaSel(SdwaSel ExistingOp, SdwaSel FoldedOp) {
-    if (ExistingOp == SdwaSel::DWORD)
-      return FoldedOp;
+  std::optional<SdwaSel> combineSdwaSel(SdwaSel ExistingSel,
+                                        SdwaSel OperandSel) {
+    if (ExistingSel == SdwaSel::DWORD)
+      return OperandSel;
 
-    if (FoldedOp == SdwaSel::DWORD)
-      return ExistingOp;
+    if (OperandSel == SdwaSel::DWORD)
+      return ExistingSel;
 
-    if (ExistingOp == SdwaSel::WORD_1 || ExistingOp == SdwaSel::BYTE_2 ||
-        ExistingOp == SdwaSel::BYTE_3)
+    if (ExistingSel == SdwaSel::WORD_1 || ExistingSel == SdwaSel::BYTE_2 ||
+        ExistingSel == SdwaSel::BYTE_3)
       return {};
 
-    if (ExistingOp == FoldedOp)
-      return ExistingOp;
+    if (ExistingSel == OperandSel)
+      return ExistingSel;
 
-    if (FoldedOp == SdwaSel::WORD_0)
-      return ExistingOp;
+    if (OperandSel == SdwaSel::WORD_0)
+      return ExistingSel;
 
-    if (FoldedOp == SdwaSel::WORD_1) {
-      if (ExistingOp == SdwaSel::BYTE_0)
+    if (OperandSel == SdwaSel::WORD_1) {
+      if (ExistingSel == SdwaSel::BYTE_0)
         return SdwaSel::BYTE_2;
-      if (ExistingOp == SdwaSel::BYTE_1)
+      if (ExistingSel == SdwaSel::BYTE_1)
         return SdwaSel::BYTE_3;
-      if (ExistingOp == SdwaSel::WORD_0)
+      if (ExistingSel == SdwaSel::WORD_0)
         return SdwaSel::WORD_1;
     }
 
@@ -1216,13 +1218,9 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
 
   MachineInstr *SDWAInst;
   if (TII->isSDWA(MI.getOpcode())) {
-    // No conversion necessary, since MI is an SDWA instruction.  But
-    // tell convertToSDWA below to combine selections of this instruction
-    // and its SDWA operands.
     SDWAInst = MI.getParent()->getParent()->CloneMachineInstr(&MI);
     MI.getParent()->insert(MI.getIterator(), SDWAInst);
   } else {
-    // Convert to sdwa
     SDWAInst = createSDWAVersion(MI);
   }
 
