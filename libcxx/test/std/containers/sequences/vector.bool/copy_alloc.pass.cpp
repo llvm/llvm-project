@@ -11,6 +11,7 @@
 
 // vector(const vector& v, const allocator_type& a);
 
+#include <array>
 #include <cassert>
 #include <vector>
 
@@ -28,46 +29,46 @@ TEST_CONSTEXPR_CXX20 void test(const std::vector<bool, A>& x, const A& a) {
 }
 
 TEST_CONSTEXPR_CXX20 bool tests() {
-  bool a05[5]  = {1, 0, 1, 0, 1};
-  bool a17[17] = {0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1};
-  bool a33[33] = {1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1};
-  bool a65[65] = {0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0};
+  std::array<int, 5> a1  = {1, 0, 1, 0, 1};
+  std::array<int, 17> a2 = {0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1};
+  std::array<int, 33> a3 = {1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1};
+  std::array<int, 65> a4 = {0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0};
 
   { // Test with the default allocator
-    test(std::vector<bool>(a05, a05 + sizeof(a05) / sizeof(a05[0])), std::allocator<bool>());
-    test(std::vector<bool>(a17, a17 + sizeof(a17) / sizeof(a17[0])), std::allocator<bool>());
-    test(std::vector<bool>(a33, a33 + sizeof(a33) / sizeof(a33[0])), std::allocator<bool>());
-    test(std::vector<bool>(a65, a65 + sizeof(a65) / sizeof(a65[0])), std::allocator<bool>());
+    test(std::vector<bool>(a1.begin(), a1.end()), std::allocator<bool>());
+    test(std::vector<bool>(a2.begin(), a2.end()), std::allocator<bool>());
+    test(std::vector<bool>(a3.begin(), a3.end()), std::allocator<bool>());
+    test(std::vector<bool>(a4.begin(), a4.end()), std::allocator<bool>());
     test(std::vector<bool>(257, true), std::allocator<bool>());
   }
 
   { // Test with test_allocator
     using A = test_allocator<bool>;
     using C = std::vector<bool, A>;
-    test(C(a05, a05 + sizeof(a05) / sizeof(a05[0]), A(5)), A(3));
-    test(C(a17, a17 + sizeof(a17) / sizeof(a17[0]), A(5)), A(3));
-    test(C(a33, a33 + sizeof(a33) / sizeof(a33[0]), A(5)), A(3));
-    test(C(a65, a65 + sizeof(a65) / sizeof(a65[0]), A(5)), A(3));
+    test(C(a1.begin(), a1.end(), A(5)), A(3));
+    test(C(a2.begin(), a2.end(), A(5)), A(3));
+    test(C(a3.begin(), a3.end(), A(5)), A(3));
+    test(C(a4.begin(), a4.end(), A(5)), A(3));
     test(C(257, true, A(5)), A(3));
   }
 
   { // Test with other_allocator
     using A = other_allocator<bool>;
     using C = std::vector<bool, A>;
-    test(C(a05, a05 + sizeof(a05) / sizeof(a05[0]), A(5)), A(3));
-    test(C(a17, a17 + sizeof(a17) / sizeof(a17[0]), A(5)), A(3));
-    test(C(a33, a33 + sizeof(a33) / sizeof(a33[0]), A(5)), A(3));
-    test(C(a65, a65 + sizeof(a65) / sizeof(a65[0]), A(5)), A(3));
+    test(C(a1.begin(), a1.end(), A(5)), A(3));
+    test(C(a2.begin(), a2.end(), A(5)), A(3));
+    test(C(a3.begin(), a3.end(), A(5)), A(3));
+    test(C(a4.begin(), a4.end(), A(5)), A(3));
     test(C(257, true, A(5)), A(3));
   }
 
   { // Test with min_allocator
     using A = min_allocator<bool>;
     using C = std::vector<bool, A>;
-    test(C(a05, a05 + sizeof(a05) / sizeof(a05[0]), A()), A());
-    test(C(a17, a17 + sizeof(a17) / sizeof(a17[0]), A()), A());
-    test(C(a33, a33 + sizeof(a33) / sizeof(a33[0]), A()), A());
-    test(C(a65, a65 + sizeof(a65) / sizeof(a65[0]), A()), A());
+    test(C(a1.begin(), a1.end(), A()), A());
+    test(C(a2.begin(), a2.end(), A()), A());
+    test(C(a3.begin(), a3.end(), A()), A());
+    test(C(a4.begin(), a4.end(), A()), A());
     test(C(257, true, A()), A());
   }
 

@@ -44,7 +44,7 @@ void BM_CopyConstruct_Alloc(benchmark::State& st, Container, Allocator a) {
   auto size = st.range(0);
   Container c(size);
   for (auto _ : st) {
-    Container v(c, a);
+    Container v(c, a); // we assume the destructor doesn't dominate the benchmark
     DoNotOptimizeData(v);
   }
 }

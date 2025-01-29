@@ -11,6 +11,7 @@
 
 // vector(const vector& v);
 
+#include <array>
 #include <cassert>
 #include <memory>
 #include <vector>
@@ -31,46 +32,46 @@ TEST_CONSTEXPR_CXX20 void test(const std::vector<bool, A>& x) {
 }
 
 TEST_CONSTEXPR_CXX20 bool tests() {
-  bool a05[5]  = {1, 0, 1, 0, 1};
-  bool a17[17] = {0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1};
-  bool a33[33] = {1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1};
-  bool a65[65] = {0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0};
+  std::array<int, 5> a1  = {1, 0, 1, 0, 1};
+  std::array<int, 17> a2 = {0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1};
+  std::array<int, 33> a3 = {1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1};
+  std::array<int, 65> a4 = {0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0};
 
   { // Test the copy constructor with the default allocator
-    test(std::vector<bool>(a05, a05 + sizeof(a05) / sizeof(a05[0])));
-    test(std::vector<bool>(a17, a17 + sizeof(a17) / sizeof(a17[0])));
-    test(std::vector<bool>(a33, a33 + sizeof(a33) / sizeof(a33[0])));
-    test(std::vector<bool>(a65, a65 + sizeof(a65) / sizeof(a65[0])));
+    test(std::vector<bool>(a1.begin(), a1.end()));
+    test(std::vector<bool>(a2.begin(), a2.end()));
+    test(std::vector<bool>(a3.begin(), a3.end()));
+    test(std::vector<bool>(a4.begin(), a4.end()));
     test(std::vector<bool>(257, true));
   }
 
   { // Test the copy constructor with test_allocator
     using A = test_allocator<bool>;
     using C = std::vector<bool, A>;
-    test(C(a05, a05 + sizeof(a05) / sizeof(a05[0]), A(5)));
-    test(C(a17, a17 + sizeof(a17) / sizeof(a17[0]), A(5)));
-    test(C(a33, a33 + sizeof(a33) / sizeof(a33[0]), A(5)));
-    test(C(a65, a65 + sizeof(a65) / sizeof(a65[0]), A(5)));
+    test(C(a1.begin(), a1.end()));
+    test(C(a2.begin(), a2.end()));
+    test(C(a3.begin(), a3.end()));
+    test(C(a4.begin(), a4.end()));
     test(C(257, true, A(5)));
   }
 
   { // Test the copy constructor with other_allocator
     using A = other_allocator<bool>;
     using C = std::vector<bool, A>;
-    test(C(a05, a05 + sizeof(a05) / sizeof(a05[0]), A(5)));
-    test(C(a17, a17 + sizeof(a17) / sizeof(a17[0]), A(5)));
-    test(C(a33, a33 + sizeof(a33) / sizeof(a33[0]), A(5)));
-    test(C(a65, a65 + sizeof(a65) / sizeof(a65[0]), A(5)));
+    test(C(a1.begin(), a1.end()));
+    test(C(a2.begin(), a2.end()));
+    test(C(a3.begin(), a3.end()));
+    test(C(a4.begin(), a4.end()));
     test(C(257, true, A(5)));
   }
 
   { // Test the copy constructor with min_allocator
     using A = min_allocator<bool>;
     using C = std::vector<bool, A>;
-    test(C(a05, a05 + sizeof(a05) / sizeof(a05[0]), A()));
-    test(C(a17, a17 + sizeof(a17) / sizeof(a17[0]), A()));
-    test(C(a33, a33 + sizeof(a33) / sizeof(a33[0]), A()));
-    test(C(a65, a65 + sizeof(a65) / sizeof(a65[0]), A()));
+    test(C(a1.begin(), a1.end()));
+    test(C(a2.begin(), a2.end()));
+    test(C(a3.begin(), a3.end()));
+    test(C(a4.begin(), a4.end()));
     test(C(257, true, A()));
   }
 
