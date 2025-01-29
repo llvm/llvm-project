@@ -28,6 +28,7 @@ class Loop;
 class PredicatedScalarEvolution;
 class ScalarEvolution;
 class SCEV;
+class SCEVAddRecExpr;
 class StoreInst;
 
 /// These are the kinds of recurrences that we support.
@@ -475,6 +476,44 @@ private:
   // Instructions used for type-casts of the induction variable,
   // that are redundant when guarded with a runtime SCEV overflow check.
   SmallVector<Instruction *, 2> RedundantCasts;
+};
+
+/// A struct for saving information about monotonic variables.
+/// Monotonic variable can be considered as a "conditional" induction variable:
+/// its update happens only on loop iterations for which a certain predicate is
+/// satisfied. In this implementation the predicate is represented as an edge in
+/// loop CFG: variable is updated if this edge is executed on current loop
+/// iteration.
+class MonotonicDescriptor {
+public:
+  using Edge = std::pair<BasicBlock *, BasicBlock *>;
+
+  MonotonicDescriptor() = default;
+
+  const SmallPtrSetImpl<PHINode *> &getChain() const { return Chain; }
+  Instruction *getStepInst() const { return StepInst; }
+  Edge getPredicateEdge() const { return PredEdge; }
+  const SCEVAddRecExpr *getExpr() const { return Expr; }
+
+  /// Returns true if \p PN is a monotonic variable in the loop \p L. If \p PN
+  /// is monotonic, the monotonic descriptor \p D will contain the data
+  /// describing this variable.
+  static bool isMonotonicPHI(PHINode *PN, const Loop *L,
+                             MonotonicDescriptor &Desc, ScalarEvolution &SE);
+
+  /// Returns true if \p Val is a monotonic variable in the loop \p L (in this
+  /// case, the value should transitively contain monotonic phi as part of its
+  /// calculation).
+  static bool isMonotonicVal(Value *Val, const Loop *L,
+                             MonotonicDescriptor &Desc, ScalarEvolution &SE);
+
+private:
+  SmallPtrSet<PHINode *, 1> Chain;
+  Instruction *StepInst;
+  Edge PredEdge;
+  const SCEVAddRecExpr *Expr;
+
+  bool setSCEV(const SCEV *NewExpr);
 };
 
 } // end namespace llvm
