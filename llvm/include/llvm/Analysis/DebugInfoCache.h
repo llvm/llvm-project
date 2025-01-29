@@ -27,8 +27,7 @@ namespace llvm {
 /// DICompileUnit-level debug info. See an example usage in CoroSplit.
 class DebugInfoCache {
 public:
-  using DIFinderCache = SmallDenseMap<const DICompileUnit *, DebugInfoFinder>;
-  DIFinderCache Result;
+  SmallDenseMap<const DICompileUnit *, DebugInfoFinder> Result;
 
   DebugInfoCache(const Module &M);
 

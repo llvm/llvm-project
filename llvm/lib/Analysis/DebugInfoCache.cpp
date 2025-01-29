@@ -26,9 +26,9 @@ DebugInfoFinder processCompileUnit(DICompileUnit *CU) {
 } // namespace
 
 DebugInfoCache::DebugInfoCache(const Module &M) {
-  for (const auto CU : M.debug_compile_units()) {
+  for (auto *CU : M.debug_compile_units()) {
     auto DIFinder = processCompileUnit(CU);
-    Result[CU] = std::move(DIFinder);
+    Result.insert_or_assign(CU, std::move(DIFinder));
   }
 }
 

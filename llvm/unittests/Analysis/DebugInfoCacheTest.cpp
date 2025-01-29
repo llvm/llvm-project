@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/DebugInfoCache.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
@@ -17,25 +18,46 @@
 namespace llvm {
 namespace {
 
-// Forward declare the assembly
+// Forward declare the IR string
 extern StringRef MultiCUModule;
 
-const DICompileUnit *findCU(const Module &M, StringRef FileName) {
-  for (const auto CU : M.debug_compile_units()) {
-    if (CU->getFilename() == FileName)
-      return CU;
-  }
+DICompileUnit *findCU(const Module &M, StringRef FileName) {
+  auto CUs = M.debug_compile_units();
+  auto Matching = llvm::find_if(
+      CUs, [&](auto *CU) { return CU->getFilename() == FileName; });
+  return Matching != CUs.end() ? *Matching : nullptr;
+}
 
-  return nullptr;
+void checkEqualDI(const DebugInfoFinder &DIFinder1,
+                  const DebugInfoFinder &DIFinder2) {
+  EXPECT_TRUE(
+      llvm::equal(DIFinder1.compile_units(), DIFinder2.compile_units()));
+  EXPECT_TRUE(llvm::equal(DIFinder1.types(), DIFinder2.types()));
+  EXPECT_TRUE(llvm::equal(DIFinder1.subprograms(), DIFinder2.subprograms()));
+  EXPECT_TRUE(llvm::equal(DIFinder1.scopes(), DIFinder2.scopes()));
+}
+
+void checkCachedDISameAsFromScratch(llvm::Module &M, const DebugInfoCache &DIC,
+                                    StringRef CUName) {
+  auto *CU = findCU(M, CUName);
+  EXPECT_NE(CU, nullptr);
+
+  auto CachedDIFinder = DIC.Result.find(CU);
+  EXPECT_NE(CachedDIFinder, DIC.Result.end());
+
+  DebugInfoFinder ExpectedDIFinder;
+  ExpectedDIFinder.processCompileUnit(CU);
+
+  checkEqualDI(CachedDIFinder->getSecond(), ExpectedDIFinder);
 }
 
 class DebugInfoCacheTest : public testing::Test {
 protected:
   LLVMContext C;
 
-  std::unique_ptr<Module> makeModule(StringRef Assembly) {
+  std::unique_ptr<Module> makeModule(StringRef IR) {
     SMDiagnostic Err;
-    auto M = parseAssemblyString(Assembly, Err, C);
+    auto M = parseAssemblyString(IR, Err, C);
     if (!M)
       Err.print("DebugInfoCacheTest", errs());
 
@@ -55,27 +77,8 @@ TEST_F(DebugInfoCacheTest, TestMultiCU) {
   DebugInfoCache DIC{*M};
   EXPECT_EQ(DIC.Result.size(), 2u);
 
-  auto *File1CU = findCU(*M, "file1.cpp");
-  EXPECT_NE(File1CU, nullptr);
-
-  auto File1DIFinder = DIC.Result.find(File1CU);
-  EXPECT_NE(File1DIFinder, DIC.Result.end());
-
-  EXPECT_EQ(File1DIFinder->getSecond().compile_unit_count(), 1u);
-  EXPECT_EQ(File1DIFinder->getSecond().type_count(), 6u);
-  EXPECT_EQ(File1DIFinder->getSecond().subprogram_count(), 0u);
-  EXPECT_EQ(File1DIFinder->getSecond().scope_count(), 1u);
-
-  auto *File2CU = findCU(*M, "file2.cpp");
-  EXPECT_NE(File1CU, nullptr);
-
-  auto File2DIFinder = DIC.Result.find(File2CU);
-  EXPECT_NE(File2DIFinder, DIC.Result.end());
-
-  EXPECT_EQ(File2DIFinder->getSecond().compile_unit_count(), 1u);
-  EXPECT_EQ(File2DIFinder->getSecond().type_count(), 2u);
-  EXPECT_EQ(File2DIFinder->getSecond().subprogram_count(), 0u);
-  EXPECT_EQ(File2DIFinder->getSecond().scope_count(), 2u);
+  checkCachedDISameAsFromScratch(*M, DIC, "file1.cpp");
+  checkCachedDISameAsFromScratch(*M, DIC, "file2.cpp");
 }
 
 /* Generated roughly by
