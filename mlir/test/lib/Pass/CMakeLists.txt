@@ -1,7 +1,6 @@
 get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
 # Exclude tests from libMLIR.so
 add_mlir_library(MLIRTestPass
-  TestConvertToSPIRVPass.cpp
   TestDynamicPipeline.cpp
   TestPassManager.cpp
   TestSPIRVCPURunnerPipeline.cpp
