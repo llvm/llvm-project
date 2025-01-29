@@ -1,5 +1,7 @@
 // RUN: %clang -### --target=x86_64 -fpartition-static-data-sections %s 2>&1 | FileCheck %s --check-prefixes=OPT
-// RUN: not %clang -### --target=aarch64 -fpartition-static-data-sections %s 2>&1 | FileCheck %s --check-prefixes=ERR
+// RUN: %clang -### --target=aarch64 -fpartition-static-data-sections %s 2>&1 | FileCheck %s --check-prefixes=OPT
+
+// RUN: not %clang -### --target=arm -fpartition-static-data-sections %s 2>&1 | FileCheck %s --check-prefixes=ERR
 
 // RUN: %clang -### --target=x86_64 -fpartition-static-data-sections -fno-partition-static-data-sections %s 2>&1 | FileCheck %s --implicit-check-not="-fpartition-static-data-sections"
 

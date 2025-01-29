@@ -6407,7 +6407,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (!A->getOption().matches(
             options::OPT_fno_partition_static_data_sections)) {
       // This codegen pass is only available on x86 and AArch64 ELF targets.
-      if (Triple.isX86() && Triple.isOSBinFormatELF())
+      if ((Triple.isX86() || Triple.isAArch64()) && Triple.isOSBinFormatELF())
         A->render(Args, CmdArgs);
       else
         D.Diag(diag::err_drv_unsupported_opt_for_target)
