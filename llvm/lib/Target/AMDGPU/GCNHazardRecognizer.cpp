@@ -24,8 +24,8 @@ using namespace llvm;
 
 namespace {
 
-struct MFMAPaddingRatioParser : public cl::parser<unsigned> {
-  MFMAPaddingRatioParser(cl::Option &O) : cl::parser<unsigned>(O) {}
+struct PaddingRatioParser : public cl::parser<unsigned> {
+  PaddingRatioParser(cl::Option &O) : cl::parser<unsigned>(O) {}
 
   bool parse(cl::Option &O, StringRef ArgName, StringRef Arg, unsigned &Value) {
     if (Arg.getAsInteger(0, Value))
@@ -40,14 +40,19 @@ struct MFMAPaddingRatioParser : public cl::parser<unsigned> {
 
 } // end anonymous namespace
 
-static cl::opt<unsigned, false, MFMAPaddingRatioParser>
+static cl::opt<unsigned, false, PaddingRatioParser>
     MFMAPaddingRatio("amdgpu-mfma-padding-ratio", cl::init(0), cl::Hidden,
                      cl::desc("Fill a percentage of the latency between "
-                              "neighboring MFMA with s_nops."));
+                              "neighboring instructions with s_nops."));
 
 static cl::opt<unsigned> MaxExhaustiveHazardSearch(
     "amdgpu-max-exhaustive-hazard-search", cl::init(128), cl::Hidden,
     cl::desc("Maximum function size for exhausive hazard search"));
+
+static cl::opt<unsigned, false, PaddingRatioParser> NopPadding(
+    "amdgpu-snop-padding", cl::Hidden,
+    cl::desc("Insert a s_nop before every instruction for a given "
+             "number of cycles. Does not insert nops into bundles."));
 
 //===----------------------------------------------------------------------===//
 // Hazard Recognizer Implementation
@@ -329,7 +334,9 @@ unsigned GCNHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
   unsigned W = PreEmitNoopsCommon(MI);
   fixHazards(MI);
   CurrCycleInstr = nullptr;
-  return W;
+  unsigned NopPad =
+      NopPadding.getNumOccurrences() && !MI->isTerminator() ? NopPadding : 0;
+  return std::max(W, NopPad);
 }
 
 unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) {
