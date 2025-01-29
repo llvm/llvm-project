@@ -776,20 +776,11 @@ ExprResult Sema::CallExprUnaryConversions(Expr *E) {
   return Res.get();
 }
 
-/// UsualUnaryConversions - Performs various conversions that are common to most
-/// operators (C99 6.3). The conversions of array and function types are
-/// sometimes suppressed. For example, the array->pointer conversion doesn't
-/// apply if the array is an argument to the sizeof or address (&) operators.
-/// In these instances, this routine should *not* be called.
-ExprResult Sema::UsualUnaryConversions(Expr *E) {
-  // First, convert to an r-value.
-  ExprResult Res = DefaultFunctionArrayLvalueConversion(E);
-  if (Res.isInvalid())
-    return ExprError();
-  E = Res.get();
-
+/// UsualUnaryFPConversions - Promotes floating-point types according to the
+/// current language semantics.
+ExprResult Sema::UsualUnaryFPConversions(Expr *E) {
   QualType Ty = E->getType();
-  assert(!Ty.isNull() && "UsualUnaryConversions - missing type");
+  assert(!Ty.isNull() && "UsualUnaryFPConversions - missing type");
 
   LangOptions::FPEvalMethodKind EvalMethod = CurFPFeatures.getFPEvalMethod();
   if (EvalMethod != LangOptions::FEM_Source && Ty->isFloatingType() &&
@@ -827,7 +818,30 @@ ExprResult Sema::UsualUnaryConversions(Expr *E) {
 
   // Half FP have to be promoted to float unless it is natively supported
   if (Ty->isHalfType() && !getLangOpts().NativeHalfType)
-    return ImpCastExprToType(Res.get(), Context.FloatTy, CK_FloatingCast);
+    return ImpCastExprToType(E, Context.FloatTy, CK_FloatingCast);
+
+  return E;
+}
+
+/// UsualUnaryConversions - Performs various conversions that are common to most
+/// operators (C99 6.3). The conversions of array and function types are
+/// sometimes suppressed. For example, the array->pointer conversion doesn't
+/// apply if the array is an argument to the sizeof or address (&) operators.
+/// In these instances, this routine should *not* be called.
+ExprResult Sema::UsualUnaryConversions(Expr *E) {
+  // First, convert to an r-value.
+  ExprResult Res = DefaultFunctionArrayLvalueConversion(E);
+  if (Res.isInvalid())
+    return ExprError();
+
+  // Promote floating-point types.
+  Res = UsualUnaryFPConversions(Res.get());
+  if (Res.isInvalid())
+    return ExprError();
+  E = Res.get();
+
+  QualType Ty = E->getType();
+  assert(!Ty.isNull() && "UsualUnaryConversions - missing type");
 
   // Try to perform integral promotions if the object has a theoretically
   // promotable type.
@@ -1489,9 +1503,9 @@ static QualType handleFixedPointConversion(Sema &S, QualType LHSTy,
 
 /// Check that the usual arithmetic conversions can be performed on this pair of
 /// expressions that might be of enumeration type.
-static void checkEnumArithmeticConversions(Sema &S, Expr *LHS, Expr *RHS,
-                                           SourceLocation Loc,
-                                           Sema::ArithConvKind ACK) {
+void Sema::checkEnumArithmeticConversions(Expr *LHS, Expr *RHS,
+                                          SourceLocation Loc,
+                                          Sema::ArithConvKind ACK) {
   // C++2a [expr.arith.conv]p1:
   //   If one operand is of enumeration type and the other operand is of a
   //   different enumeration type or a floating-point type, this behavior is
@@ -1499,54 +1513,53 @@ static void checkEnumArithmeticConversions(Sema &S, Expr *LHS, Expr *RHS,
   //
   // Warn on this in all language modes. Produce a deprecation warning in C++20.
   // Eventually we will presumably reject these cases (in C++23 onwards?).
-  QualType L = LHS->getEnumCoercedType(S.Context),
-           R = RHS->getEnumCoercedType(S.Context);
+  QualType L = LHS->getEnumCoercedType(Context),
+           R = RHS->getEnumCoercedType(Context);
   bool LEnum = L->isUnscopedEnumerationType(),
        REnum = R->isUnscopedEnumerationType();
   bool IsCompAssign = ACK == Sema::ACK_CompAssign;
   if ((!IsCompAssign && LEnum && R->isFloatingType()) ||
       (REnum && L->isFloatingType())) {
-    S.Diag(Loc, S.getLangOpts().CPlusPlus26
-                    ? diag::err_arith_conv_enum_float_cxx26
-                : S.getLangOpts().CPlusPlus20
-                    ? diag::warn_arith_conv_enum_float_cxx20
-                    : diag::warn_arith_conv_enum_float)
+    Diag(Loc, getLangOpts().CPlusPlus26 ? diag::err_arith_conv_enum_float_cxx26
+              : getLangOpts().CPlusPlus20
+                  ? diag::warn_arith_conv_enum_float_cxx20
+                  : diag::warn_arith_conv_enum_float)
         << LHS->getSourceRange() << RHS->getSourceRange() << (int)ACK << LEnum
         << L << R;
   } else if (!IsCompAssign && LEnum && REnum &&
-             !S.Context.hasSameUnqualifiedType(L, R)) {
+             !Context.hasSameUnqualifiedType(L, R)) {
     unsigned DiagID;
     // In C++ 26, usual arithmetic conversions between 2 different enum types
     // are ill-formed.
-    if (S.getLangOpts().CPlusPlus26)
+    if (getLangOpts().CPlusPlus26)
       DiagID = diag::err_conv_mixed_enum_types_cxx26;
     else if (!L->castAs<EnumType>()->getDecl()->hasNameForLinkage() ||
              !R->castAs<EnumType>()->getDecl()->hasNameForLinkage()) {
       // If either enumeration type is unnamed, it's less likely that the
       // user cares about this, but this situation is still deprecated in
       // C++2a. Use a different warning group.
-      DiagID = S.getLangOpts().CPlusPlus20
-                    ? diag::warn_arith_conv_mixed_anon_enum_types_cxx20
-                    : diag::warn_arith_conv_mixed_anon_enum_types;
+      DiagID = getLangOpts().CPlusPlus20
+                   ? diag::warn_arith_conv_mixed_anon_enum_types_cxx20
+                   : diag::warn_arith_conv_mixed_anon_enum_types;
     } else if (ACK == Sema::ACK_Conditional) {
       // Conditional expressions are separated out because they have
       // historically had a different warning flag.
-      DiagID = S.getLangOpts().CPlusPlus20
+      DiagID = getLangOpts().CPlusPlus20
                    ? diag::warn_conditional_mixed_enum_types_cxx20
                    : diag::warn_conditional_mixed_enum_types;
     } else if (ACK == Sema::ACK_Comparison) {
       // Comparison expressions are separated out because they have
       // historically had a different warning flag.
-      DiagID = S.getLangOpts().CPlusPlus20
+      DiagID = getLangOpts().CPlusPlus20
                    ? diag::warn_comparison_mixed_enum_types_cxx20
                    : diag::warn_comparison_mixed_enum_types;
     } else {
-      DiagID = S.getLangOpts().CPlusPlus20
+      DiagID = getLangOpts().CPlusPlus20
                    ? diag::warn_arith_conv_mixed_enum_types_cxx20
                    : diag::warn_arith_conv_mixed_enum_types;
     }
-    S.Diag(Loc, DiagID) << LHS->getSourceRange() << RHS->getSourceRange()
-                        << (int)ACK << L << R;
+    Diag(Loc, DiagID) << LHS->getSourceRange() << RHS->getSourceRange()
+                      << (int)ACK << L << R;
   }
 }
 
@@ -1557,7 +1570,7 @@ static void checkEnumArithmeticConversions(Sema &S, Expr *LHS, Expr *RHS,
 QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
                                           SourceLocation Loc,
                                           ArithConvKind ACK) {
-  checkEnumArithmeticConversions(*this, LHS.get(), RHS.get(), Loc, ACK);
+  checkEnumArithmeticConversions(LHS.get(), RHS.get(), Loc, ACK);
 
   if (ACK != ACK_CompAssign) {
     LHS = UsualUnaryConversions(LHS.get());
