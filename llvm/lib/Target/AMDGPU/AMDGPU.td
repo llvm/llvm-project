@@ -1152,7 +1152,13 @@ def FeatureBitOp3Insts : SubtargetFeature<"bitop3-insts",
 def FeatureTanhInsts : SubtargetFeature<"tanh-insts",
   "HasTanhInsts",
   "true",
-  "Has v_tanh_f32/f16/b16 instructions"
+  "Has v_tanh_f32/f16 instructions"
+>;
+
+def FeatureTensorCvtLutInsts : SubtargetFeature<"tensor-cvt-lut-insts",
+  "HasTensorCvtLutInsts",
+  "true",
+  "Has v_perm_pk16* instructions"
 >;
 
 def FeaturePrngInst : SubtargetFeature<"prng-inst",
@@ -2076,6 +2082,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureDPPSrc1SGPR,
    FeatureBitOp3Insts,
    FeatureTanhInsts,
+   FeatureTensorCvtLutInsts,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
    FeatureBF16PackedInsts,
@@ -2147,6 +2154,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureDPPSrc1SGPR,
    FeatureBitOp3Insts,
    FeatureTanhInsts,
+   FeatureTensorCvtLutInsts,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
    FeatureBF16PackedInsts,
@@ -2913,6 +2921,9 @@ def HasBitOp3Insts : Predicate<"Subtarget->hasBitOp3Insts()">,
 
 def HasTanhInsts : Predicate<"Subtarget->hasTanhInsts()">,
   AssemblerPredicate<(all_of FeatureTanhInsts)>;
+
+def HasTensorCvtLutInsts : Predicate<"Subtarget->hasTensorCvtLutInsts()">,
+  AssemblerPredicate<(all_of FeatureTensorCvtLutInsts)>;
 
 def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
   AssemblerPredicate<(all_of FeaturePrngInst)>;

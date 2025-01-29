@@ -1454,7 +1454,10 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
 def ConvertVectorToSPIRV : Pass<"convert-vector-to-spirv"> {
   let summary = "Convert Vector dialect to SPIR-V dialect";
   let constructor = "mlir::createConvertVectorToSPIRVPass()";
-  let dependentDialects = ["spirv::SPIRVDialect"];
+  let dependentDialects = [
+    "spirv::SPIRVDialect",
+    "ub::UBDialect"
+  ];
 }
 
 //===----------------------------------------------------------------------===//

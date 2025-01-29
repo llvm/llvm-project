@@ -237,6 +237,7 @@ protected:
   bool HasVGPRIndexingRegisters = false;
   bool HasBitOp3Insts = false;
   bool HasTanhInsts = false;
+  bool HasTensorCvtLutInsts = false;
   bool HasPrngInst = false;
   bool HasPermlane16Swap = false;
   bool HasPermlane32Swap = false;
@@ -1429,6 +1430,8 @@ public:
   }
 
   bool hasTanhInsts() const { return HasTanhInsts; }
+
+  bool hasTensorCvtLutInsts() const { return HasTensorCvtLutInsts; }
 
   bool hasAddPC64Inst() const { return GFX1250Insts; }
 
