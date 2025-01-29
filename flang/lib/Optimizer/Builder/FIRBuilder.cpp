@@ -1765,22 +1765,13 @@ llvm::SmallVector<mlir::Value> fir::factory::updateRuntimeExtentsForEmptyArrays(
   if (extents.size() <= 1)
     return extents;
 
-  // Try to reduce the number of new zero constant operations.
-  // This just makes MLIR matching easier, if CSE is not run
-  // after this.
-  llvm::DenseMap<mlir::Type, mlir::Value> zeroesMap;
   mlir::Type i1Type = builder.getI1Type();
   mlir::Value isEmpty = createZeroValue(builder, loc, i1Type);
-  zeroesMap.try_emplace(i1Type, isEmpty);
 
   llvm::SmallVector<mlir::Value, Fortran::common::maxRank> zeroes;
   for (mlir::Value extent : extents) {
     mlir::Type type = extent.getType();
-    mlir::Value zero = zeroesMap.lookup(type);
-    if (!zero) {
-      zero = createZeroValue(builder, loc, type);
-      zeroesMap.try_emplace(type, zero);
-    }
+    mlir::Value zero = createZeroValue(builder, loc, type);
     zeroes.push_back(zero);
     mlir::Value isZero = builder.create<mlir::arith::CmpIOp>(
         loc, mlir::arith::CmpIPredicate::eq, extent, zero);
