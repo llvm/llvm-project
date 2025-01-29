@@ -1168,25 +1168,56 @@ TemplateDeclInstantiator::VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D) {
 
 Decl *TemplateDeclInstantiator::VisitBindingDecl(BindingDecl *D) {
   auto *NewBD = BindingDecl::Create(SemaRef.Context, Owner, D->getLocation(),
-                                    D->getIdentifier());
+                                    D->getIdentifier(), D->getType());
   NewBD->setReferenced(D->isReferenced());
   SemaRef.CurrentInstantiationScope->InstantiatedLocal(D, NewBD);
+
   return NewBD;
 }
 
 Decl *TemplateDeclInstantiator::VisitDecompositionDecl(DecompositionDecl *D) {
   // Transform the bindings first.
+  // The transformed DD will have all of the concrete BindingDecls.
   SmallVector<BindingDecl*, 16> NewBindings;
-  for (auto *OldBD : D->bindings())
+  ResolvedUnexpandedPackExpr *OldResolvedPack = nullptr;
+  for (auto *OldBD : D->bindings()) {
+    Expr *BindingExpr = OldBD->getBinding();
+    if (auto *RP =
+            dyn_cast_if_present<ResolvedUnexpandedPackExpr>(BindingExpr)) {
+      assert(!OldResolvedPack && "no more than one pack is allowed");
+      OldResolvedPack = RP;
+    }
     NewBindings.push_back(cast<BindingDecl>(VisitBindingDecl(OldBD)));
+  }
   ArrayRef<BindingDecl*> NewBindingArray = NewBindings;
 
-  auto *NewDD = cast_or_null<DecompositionDecl>(
+  auto *NewDD = cast_if_present<DecompositionDecl>(
       VisitVarDecl(D, /*InstantiatingVarTemplate=*/false, &NewBindingArray));
 
   if (!NewDD || NewDD->isInvalidDecl())
     for (auto *NewBD : NewBindings)
       NewBD->setInvalidDecl();
+
+  if (OldResolvedPack) {
+    // Mark the holding vars (if any) in the pack as instantiated since
+    // they are created implicitly.
+    auto Bindings = NewDD->bindings();
+    auto BPack = llvm::find_if(
+        Bindings, [](BindingDecl *D) -> bool { return D->isParameterPack(); });
+    auto *NewResolvedPack =
+        cast<ResolvedUnexpandedPackExpr>((*BPack)->getBinding());
+    auto OldExprs = OldResolvedPack->getExprs();
+    auto NewExprs = NewResolvedPack->getExprs();
+    assert(OldExprs.size() == NewExprs.size());
+    for (unsigned I = 0; I < OldResolvedPack->getNumExprs(); I++) {
+      DeclRefExpr *OldDRE = cast<DeclRefExpr>(OldExprs[I]);
+      BindingDecl *OldNestedBD = cast<BindingDecl>(OldDRE->getDecl());
+      DeclRefExpr *NewDRE = cast<DeclRefExpr>(NewExprs[I]);
+      BindingDecl *NewNestedBD = cast<BindingDecl>(NewDRE->getDecl());
+      SemaRef.CurrentInstantiationScope->InstantiatedLocal(OldNestedBD,
+                                                           NewNestedBD);
+    }
+  }
 
   return NewDD;
 }
@@ -6240,8 +6271,16 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
     // declarations to their instantiations.
     if (CurrentInstantiationScope) {
       if (auto Found = CurrentInstantiationScope->findInstantiationOf(D)) {
-        if (Decl *FD = Found->dyn_cast<Decl *>())
+        if (Decl *FD = Found->dyn_cast<Decl *>()) {
+          if (auto *BD = dyn_cast<BindingDecl>(FD);
+              BD && BD->isParameterPack() &&
+              ArgumentPackSubstitutionIndex != -1) {
+            auto *DRE = cast<DeclRefExpr>(
+                BD->getBindingPackExprs()[ArgumentPackSubstitutionIndex]);
+            return cast<NamedDecl>(DRE->getDecl());
+          }
           return cast<NamedDecl>(FD);
+        }
 
         int PackIdx = ArgumentPackSubstitutionIndex;
         assert(PackIdx != -1 &&
