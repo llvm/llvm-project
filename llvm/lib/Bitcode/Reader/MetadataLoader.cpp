@@ -1542,6 +1542,39 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     NextMetadataNo++;
     break;
   }
+  case bitc::METADATA_FIXED_POINT_TYPE: {
+    if (Record.size() < 11)
+      return error("Invalid record");
+
+    IsDistinct = Record[0];
+    DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[6]);
+
+    size_t Offset = 9;
+
+    auto ReadWideInt = [&]() {
+      uint64_t Encoded = Record[Offset++];
+      unsigned NumWords = Encoded >> 32;
+      unsigned BitWidth = Encoded & 0xffffffff;
+      auto Value = readWideAPInt(ArrayRef(&Record[Offset], NumWords), BitWidth);
+      Offset += NumWords;
+      return Value;
+    };
+
+    APInt Numerator = ReadWideInt();
+    APInt Denominator = ReadWideInt();
+
+    if (Offset != Record.size())
+      return error("Invalid record");
+
+    MetadataList.assignValue(
+        GET_OR_DISTINCT(DIFixedPointType,
+                        (Context, Record[1], getMDString(Record[2]), Record[3],
+                         Record[4], Record[5], Flags, Record[7], Record[8],
+                         Numerator, Denominator)),
+        NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
   case bitc::METADATA_STRING_TYPE: {
     if (Record.size() > 9 || Record.size() < 8)
       return error("Invalid record");
