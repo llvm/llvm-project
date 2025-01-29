@@ -9,6 +9,9 @@
 #ifndef FORTRAN_COMMON_ERFC_SCALED_H_
 #define FORTRAN_COMMON_ERFC_SCALED_H_
 
+#include <cmath>
+#include <limits>
+
 namespace Fortran::common {
 template <typename T> inline T ErfcScaled(T arg) {
   // Coefficients for approximation to erfc in the first interval.
