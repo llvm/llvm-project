@@ -51,7 +51,9 @@ inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
 
 #ifndef _WIN32
 // posix-compliant and has getlogin_r and F_OK
-#include <unistd.h> 
+#include <unistd.h>
+#else
+#include <direct.h>
 #endif
 
 extern "C" {
@@ -247,6 +249,16 @@ cleanup:
   return ret;
 }
 #endif
+
+// CHDIR(DIR)
+int RTNAME(Chdir)(const char *name) {
+// chdir alias seems to be deprecated on Windows.
+#ifndef _WIN32
+  return chdir(name);
+#else
+  return _chdir(name);
+#endif
+}
 
 } // namespace Fortran::runtime
 } // extern "C"
