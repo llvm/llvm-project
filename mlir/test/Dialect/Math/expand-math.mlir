@@ -205,21 +205,12 @@ func.func @roundf_func(%a: f32) -> f32 {
 func.func @powf_func(%a: f64, %b: f64) -> f64 {
   // CHECK-DAG: [[CST0:%.+]] = arith.constant 0.000000e+00
   // CHECK-DAG: [[CST1:%.+]] = arith.constant 1.0
-  // CHECK-DAG: [[CSTNEG1:%.+]] = arith.constant -1.000000e+00
-  // CHECK-DAG: [[CSTTWO:%.+]] = arith.constant 2.000000e+00
-  // CHECK: [[ABSA:%.+]] = math.absf [[ARG0]]
-  // CHECK: [[ISNEG:%.+]] = arith.cmpf olt, [[ARG0]], [[CST0]]
-  // CHECK: [[SIGNA:%.+]] = arith.select [[ISNEG]], [[CSTNEG1]], [[CST1]]
-  // CHECK: [[LOGA:%.+]] = math.log [[ABSA]]
+  // CHECK: [[LOGA:%.+]] = math.log [[ARG0]]
   // CHECK: [[MULB:%.+]] = arith.mulf [[ARG1]], [[LOGA]]
   // CHECK: [[EXP:%.+]] = math.exp [[MULB]]
-  // CHECK: [[REM:%.+]] = arith.remf [[ARG1]], [[CSTTWO]]
-  // CHECK: [[CMPF:%.+]] = arith.cmpf one, [[REM]], [[CST0]]
-  // CHECK: [[ABMUL:%.+]] = arith.mulf [[EXP]], [[SIGNA]]
-  // CHECK: [[SEL0:%.+]] = arith.select [[CMPF]], [[ABMUL]], [[EXP]]
-  // CHECK: [[CMPF2:%.+]] = arith.cmpf oeq, [[ARG1]], [[CST0]]
-// CHECK: [[SEL1:%.+]] = arith.select [[CMPF2]], [[CST1]], [[SEL0]]
-  // CHECK: return [[SEL1]]
+  // CHECK: [[CMPF:%.+]] = arith.cmpf oeq, [[ARG1]], [[CST0]]
+  // CHECK: [[SEL:%.+]] = arith.select [[CMPF]], [[CST1]], [[EXP]]
+  // CHECK: return [[SEL]]
   %ret = math.powf %a, %b : f64
   return %ret : f64
 }
@@ -601,24 +592,15 @@ func.func @math_fpowi_to_powf_tensor(%0 : tensor<8xf32>, %1: tensor<8xi32>) -> t
   return %2 : tensor<8xf32>
 }
 // CHECK-SAME: (%[[ARG0:.*]]: tensor<8xf32>, %[[ARG1:.*]]: tensor<8xi32>) -> tensor<8xf32> {
-// CHECK-DAG:    %[[CST2:.*]] = arith.constant dense<2.000000e+00> : tensor<8xf32>
-// CHECK-DAG:    %[[CSTNEG1:.*]] = arith.constant dense<-1.000000e+00> : tensor<8xf32>
 // CHECK-DAG:    %[[CST1:.+]] = arith.constant dense<1.000000e+00> : tensor<8xf32>
 // CHECK-DAG:    %[[CST0:.*]] = arith.constant dense<0.000000e+00> : tensor<8xf32>
 // CHECK: %[[TOFP:.*]] = arith.sitofp %[[ARG1]] : tensor<8xi32> to tensor<8xf32>
-// CHECK: %[[ABSA:.*]] = math.absf %[[ARG0]] : tensor<8xf32>
-// CHECK: %[[ISNEG:.*]] = arith.cmpf olt, %[[ARG0]], %[[CST0]] : tensor<8xf32>
-// CHECK: %[[SIGNA:.*]] = arith.select %[[ISNEG]], %[[CSTNEG1]], %[[CST1]] : tensor<8xi1>, tensor<8xf32>
-// CHECK: %[[LOGA:.*]] = math.log %[[ABSA]] : tensor<8xf32>
-// CHECK: %[[MULA:.*]] = arith.mulf %[[TOFP]], %[[LOGA]] : tensor<8xf32>
-// CHECK: %[[EXPA:.*]] = math.exp %[[MULA]] : tensor<8xf32>
-// CHECK: %[[REM:.*]] = arith.remf %[[TOFP]], %[[CST2]] : tensor<8xf32>
-// CHECK: %[[CMPF:.*]] = arith.cmpf one, %[[REM]], %[[CST0]] : tensor<8xf32>
-// CHECK: %[[ABMUL:.*]] = arith.mulf %[[EXPA]], %[[SIGNA]] : tensor<8xf32>
-// CHECK: %[[SEL0:.*]] = arith.select %[[CMPF]], %[[ABMUL]], %[[EXPA]] : tensor<8xi1>, tensor<8xf32>
-// CHECK: %[[CMPZERO:.*]] = arith.cmpf oeq, %[[TOFP]], %[[CST0]] : tensor<8xf32>
-// CHECK: %[[SEL1:.*]] = arith.select %[[CMPZERO]], %[[CST1]], %[[SEL0]] : tensor<8xi1>, tensor<8xf32>
-// CHECK: return %[[SEL1]]
+// CHECK: %[[LOGA:.*]] = math.log %[[ARG0]] : tensor<8xf32>
+// CHECK: %[[MUL:.*]] = arith.mulf %[[TOFP]], %[[LOGA]] : tensor<8xf32>
+// CHECK: %[[EXP:.*]] = math.exp %[[MUL]] : tensor<8xf32>
+// CHECK: %[[CMP:.*]] = arith.cmpf oeq, %[[TOFP]], %[[CST0]] : tensor<8xf32>
+// CHECK: %[[SEL:.*]] = arith.select %[[CMP]], %[[CST1]], %[[EXP]] : tensor<8xi1>, tensor<8xf32>
+// CHECK: return %[[SEL]]
 // -----
 
 // CHECK-LABEL:   func.func @math_fpowi_to_powf_scalar
@@ -627,24 +609,15 @@ func.func @math_fpowi_to_powf_scalar(%0 : f32, %1: i64) -> f32 {
   return %2 : f32
 }
 // CHECK-SAME: (%[[ARG0:.*]]: f32, %[[ARG1:.*]]: i64) -> f32 {
-// CHECK-DAG:    %[[CSTNEG1:.*]] = arith.constant -1.000000e+00 : f32
-// CHECK-DAG:    %[[CST2:.*]] = arith.constant 2.000000e+00 : f32
 // CHECK-DAG:    %[[CST0:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK-DAG:    %[[CST1:.+]] = arith.constant 1.000000e+00 : f32
 // CHECK:        %[[TOFP:.*]] = arith.sitofp %[[ARG1]] : i64 to f32
-// CHECK:        %[[ABSA:.*]] = math.absf %[[ARG0]] : f32
-// CHECK:        %[[ISNEG:.*]] = arith.cmpf olt, %[[ARG0]], %[[CST0]] : f32
-// CHECK:        %[[SIGNA:.*]] = arith.select %[[ISNEG]], %[[CSTNEG1]], %[[CST1]] : f32
-// CHECK:        %[[LOGA:.*]] = math.log %[[ABSA]] : f32
-// CHECK:        %[[MULA:.*]] = arith.mulf %[[TOFP]], %[[LOGA]] : f32
-// CHECK:        %[[EXPA:.*]] = math.exp %[[MULA]] : f32
-// CHECK:        %[[REM:.*]] = arith.remf %[[TOFP]], %[[CST2]] : f32
-// CHECK:        %[[CMPF:.*]] = arith.cmpf one, %[[REM]], %[[CST0]] : f32
-// CHECK:        %[[ABMUL:.*]] = arith.mulf %[[EXPA]], %[[SIGNA]] : f32
-// CHECK:        %[[SEL0:.*]] = arith.select %[[CMPF]], %[[ABMUL]], %[[EXPA]] : f32
-// CHECK:        %[[CMPZERO:.*]] = arith.cmpf oeq, %[[TOFP]], %[[CST0]] : f32
-// CHECK:        %[[SEL1:.*]] = arith.select %[[CMPZERO]], %[[CST1]], %[[SEL0]] : f32
-// CHECK:       return %[[SEL1]] : f32
+// CHECK:        %[[LOGA:.*]] = math.log %[[ARG0]] : f32
+// CHECK:        %[[MUL:.*]] = arith.mulf %[[TOFP]], %[[LOGA]] : f32
+// CHECK:        %[[EXP:.*]] = math.exp %[[MUL]] : f32
+// CHECK:        %[[CMP:.*]] = arith.cmpf oeq, %[[TOFP]], %[[CST0]] : f32
+// CHECK:        %[[SEL:.*]] = arith.select %[[CMP]], %[[CST1]], %[[EXP]] : f32
+// CHECK:       return %[[SEL]] : f32
 
 // -----
 

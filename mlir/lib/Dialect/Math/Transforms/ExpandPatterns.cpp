@@ -311,8 +311,8 @@ static LogicalResult convertFPowIOp(math::FPowIOp op,
   return success();
 }
 
-// Converts Powf(float a, float b) (meaning a^b) to exp^(b * ln(|a|))
-// * sign(a)^b
+// Converts Powf(float a, float b) (meaning a^b) to exp^(b * ln(a))
+// Restricting a >= 0
 static LogicalResult convertPowfOp(math::PowFOp op, PatternRewriter &rewriter) {
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   Value operandA = op.getOperand(0);
@@ -320,30 +320,19 @@ static LogicalResult convertPowfOp(math::PowFOp op, PatternRewriter &rewriter) {
   Type opType = operandA.getType();
   Value zero = createFloatConst(op->getLoc(), opType, 0.00, rewriter);
   Value one = createFloatConst(op->getLoc(), opType, 1.00, rewriter);
-  Value negOne = createFloatConst(op->getLoc(), opType, -1.00, rewriter);
-  Value two = createFloatConst(op->getLoc(), opType, 2.00, rewriter);
 
-  Value absA = b.create<math::AbsFOp>(opType, operandA);
-  Value isNegative =
-      b.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, operandA, zero);
-  Value signA =
-      b.create<arith::SelectOp>(op->getLoc(), isNegative, negOne, one);
-  Value logA = b.create<math::LogOp>(opType, absA);
+  Value logA = b.create<math::LogOp>(opType, operandA);
   Value mult = b.create<arith::MulFOp>(opType, operandB, logA);
   Value expResult = b.create<math::ExpOp>(opType, mult);
-  Value remainder = b.create<arith::RemFOp>(opType, operandB, two);
-  Value isOdd =
-      b.create<arith::CmpFOp>(arith::CmpFPredicate::ONE, remainder, zero);
-  Value signedExpResult = b.create<arith::SelectOp>(
-      op->getLoc(), isOdd, b.create<arith::MulFOp>(opType, expResult, signA),
-      expResult);
 
+  // First, we select between the exp value and the adjusted value for odd
+  // powers of negatives. Then, we ensure that one is produced if `b` is zero.
   // This corresponds to `libm` behavior, even for `0^0`. Without this check,
   // `exp(0 * ln(0)) = exp(0 *-inf) = exp(-nan) = -nan`.
   Value zeroCheck =
       b.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, operandB, zero);
   Value finalResult =
-      b.create<arith::SelectOp>(op->getLoc(), zeroCheck, one, signedExpResult);
+      b.create<arith::SelectOp>(op->getLoc(), zeroCheck, one, expResult);
   rewriter.replaceOp(op, finalResult);
   return success();
 }
