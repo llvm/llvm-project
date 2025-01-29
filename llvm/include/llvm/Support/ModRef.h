@@ -61,8 +61,10 @@ enum class IRMemLocation {
   ArgMem = 0,
   /// Memory that is inaccessible via LLVM IR.
   InaccessibleMem = 1,
+  /// Errno memory.
+  ErrnoMem = 2,
   /// Any other memory.
-  Other = 2,
+  Other = 3,
 
   /// Helpers to iterate all locations in the MemoryEffectsBase class.
   First = ArgMem,
@@ -139,12 +141,38 @@ public:
     return MemoryEffectsBase(Location::InaccessibleMem, MR);
   }
 
+  /// Create MemoryEffectsBase that can only access errno memory.
+  static MemoryEffectsBase errnoMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
+    return MemoryEffectsBase(Location::ErrnoMem, MR);
+  }
+
   /// Create MemoryEffectsBase that can only access inaccessible or argument
   /// memory.
   static MemoryEffectsBase
   inaccessibleOrArgMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
     MemoryEffectsBase FRMB = none();
     FRMB.setModRef(Location::ArgMem, MR);
+    FRMB.setModRef(Location::InaccessibleMem, MR);
+    return FRMB;
+  }
+
+  /// Create MemoryEffectsBase that can only access inaccessible or errno
+  /// memory.
+  static MemoryEffectsBase
+  inaccessibleOrErrnoMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
+    MemoryEffectsBase FRMB = none();
+    FRMB.setModRef(Location::ErrnoMem, MR);
+    FRMB.setModRef(Location::InaccessibleMem, MR);
+    return FRMB;
+  }
+
+  /// Create MemoryEffectsBase that can only access inaccessible, argument or
+  /// errno memory.
+  static MemoryEffectsBase
+  inaccessibleOrArgOrErrnoMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
+    MemoryEffectsBase FRMB = none();
+    FRMB.setModRef(Location::ArgMem, MR);
+    FRMB.setModRef(Location::ErrnoMem, MR);
     FRMB.setModRef(Location::InaccessibleMem, MR);
     return FRMB;
   }
@@ -212,11 +240,33 @@ public:
     return getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
   }
 
+  /// Whether this function only (at most) accesses errno memory.
+  bool onlyAccessesErrnoMem() const {
+    return getWithoutLoc(Location::ErrnoMem).doesNotAccessMemory();
+  }
+
   /// Whether this function only (at most) accesses argument and inaccessible
   /// memory.
   bool onlyAccessesInaccessibleOrArgMem() const {
     return getWithoutLoc(Location::InaccessibleMem)
         .getWithoutLoc(Location::ArgMem)
+        .doesNotAccessMemory();
+  }
+
+  /// Whether this function only (at most) accesses inaccessible and errno
+  /// memory.
+  bool onlyAccessesInaccessibleOrErrnoMem() const {
+    return getWithoutLoc(Location::InaccessibleMem)
+        .getWithoutLoc(Location::ErrnoMem)
+        .doesNotAccessMemory();
+  }
+
+  /// Whether this function only (at most) accesses inaccessible, argument and
+  /// errno memory.
+  bool onlyAccessesInaccessibleOrArgOrErrnoMem() const {
+    return getWithoutLoc(Location::InaccessibleMem)
+        .getWithoutLoc(Location::ArgMem)
+        .getWithoutLoc(Location::ErrnoMem)
         .doesNotAccessMemory();
   }
 

@@ -20,7 +20,7 @@ define ptr @c1(ptr %q) {
 
 ; It would also be acceptable to mark %q as readnone. Update @c3 too.
 define void @c2(ptr %q) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none, errnomem: none)
 ; FNATTRS-LABEL: define void @c2
 ; FNATTRS-SAME: (ptr [[Q:%.*]]) #[[ATTR1:[0-9]+]] {
 ; FNATTRS-NEXT:    store ptr [[Q]], ptr @g, align 8
@@ -37,7 +37,7 @@ define void @c2(ptr %q) {
 }
 
 define void @c3(ptr %q) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, inaccessiblemem: none, errnomem: none)
 ; FNATTRS-LABEL: define void @c3
 ; FNATTRS-SAME: (ptr [[Q:%.*]]) #[[ATTR2:[0-9]+]] {
 ; FNATTRS-NEXT:    call void @c2(ptr [[Q]])
@@ -127,7 +127,7 @@ l1:
 @lookup_table = global [2 x i1] [ i1 0, i1 1 ]
 
 define i1 @c5(ptr %q, i32 %bitno) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, argmem: none, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, argmem: none, inaccessiblemem: none, errnomem: none)
 ; FNATTRS-LABEL: define i1 @c5
 ; FNATTRS-SAME: (ptr [[Q:%.*]], i32 [[BITNO:%.*]]) #[[ATTR3:[0-9]+]] {
 ; FNATTRS-NEXT:    [[TMP:%.*]] = ptrtoint ptr [[Q]] to i32
@@ -222,7 +222,7 @@ define ptr @lookup_bit(ptr %q, i32 %bitno) readnone nounwind {
 }
 
 define i1 @c7(ptr %q, i32 %bitno) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, inaccessiblemem: none, errnomem: none)
 ; FNATTRS-LABEL: define i1 @c7
 ; FNATTRS-SAME: (ptr readonly [[Q:%.*]], i32 [[BITNO:%.*]]) #[[ATTR6:[0-9]+]] {
 ; FNATTRS-NEXT:    [[PTR:%.*]] = call ptr @lookup_bit(ptr [[Q]], i32 [[BITNO]])
@@ -243,7 +243,7 @@ define i1 @c7(ptr %q, i32 %bitno) {
 
 
 define i32 @nc1(ptr %q, ptr %p, i1 %b) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none, errnomem: none)
 ; FNATTRS-LABEL: define i32 @nc1
 ; FNATTRS-SAME: (ptr [[Q:%.*]], ptr nocapture [[P:%.*]], i1 [[B:%.*]]) #[[ATTR7:[0-9]+]] {
 ; FNATTRS-NEXT:  e:
@@ -284,7 +284,7 @@ l:
 }
 
 define i32 @nc1_addrspace(ptr %q, ptr addrspace(1) %p, i1 %b) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none, errnomem: none)
 ; FNATTRS-LABEL: define i32 @nc1_addrspace
 ; FNATTRS-SAME: (ptr [[Q:%.*]], ptr addrspace(1) nocapture [[P:%.*]], i1 [[B:%.*]]) #[[ATTR7]] {
 ; FNATTRS-NEXT:  e:
@@ -328,7 +328,7 @@ l:
 }
 
 define void @nc2(ptr %p, ptr %q) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none, errnomem: none)
 ; FNATTRS-LABEL: define void @nc2
 ; FNATTRS-SAME: (ptr nocapture [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR7]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = call i32 @nc1(ptr [[Q]], ptr [[P]], i1 false)
@@ -398,7 +398,7 @@ define void @nc5(ptr %f, ptr %p) {
 
 ; It would be acceptable to add readnone to %y1_1 and %y1_2.
 define void @test1_1(ptr %x1_1, ptr %y1_1, i1 %c) {
-; FNATTRS: Function Attrs: nofree nosync nounwind memory(write, argmem: none, inaccessiblemem: none)
+; FNATTRS: Function Attrs: nofree nosync nounwind memory(write, argmem: none, inaccessiblemem: none, errnomem: none)
 ; FNATTRS-LABEL: define void @test1_1
 ; FNATTRS-SAME: (ptr nocapture readnone [[X1_1:%.*]], ptr [[Y1_1:%.*]], i1 [[C:%.*]]) #[[ATTR10:[0-9]+]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = call ptr @test1_2(ptr [[X1_1]], ptr [[Y1_1]], i1 [[C]])
@@ -418,7 +418,7 @@ define void @test1_1(ptr %x1_1, ptr %y1_1, i1 %c) {
 }
 
 define ptr @test1_2(ptr %x1_2, ptr %y1_2, i1 %c) {
-; FNATTRS: Function Attrs: nofree nosync nounwind memory(write, argmem: none, inaccessiblemem: none)
+; FNATTRS: Function Attrs: nofree nosync nounwind memory(write, argmem: none, inaccessiblemem: none, errnomem: none)
 ; FNATTRS-LABEL: define ptr @test1_2
 ; FNATTRS-SAME: (ptr nocapture readnone [[X1_2:%.*]], ptr returned [[Y1_2:%.*]], i1 [[C:%.*]]) #[[ATTR10]] {
 ; FNATTRS-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
@@ -450,7 +450,7 @@ f:
 }
 
 define void @test2(ptr %x2) {
-; FNATTRS: Function Attrs: nofree nosync nounwind memory(write, argmem: none, inaccessiblemem: none)
+; FNATTRS: Function Attrs: nofree nosync nounwind memory(write, argmem: none, inaccessiblemem: none, errnomem: none)
 ; FNATTRS-LABEL: define void @test2
 ; FNATTRS-SAME: (ptr nocapture readnone [[X2:%.*]]) #[[ATTR10]] {
 ; FNATTRS-NEXT:    call void @test2(ptr [[X2]])
@@ -470,7 +470,7 @@ define void @test2(ptr %x2) {
 }
 
 define void @test3(ptr %x3, ptr %y3, ptr %z3) {
-; FNATTRS: Function Attrs: nofree nosync nounwind memory(write, argmem: none, inaccessiblemem: none)
+; FNATTRS: Function Attrs: nofree nosync nounwind memory(write, argmem: none, inaccessiblemem: none, errnomem: none)
 ; FNATTRS-LABEL: define void @test3
 ; FNATTRS-SAME: (ptr nocapture readnone [[X3:%.*]], ptr nocapture readnone [[Y3:%.*]], ptr nocapture readnone [[Z3:%.*]]) #[[ATTR10]] {
 ; FNATTRS-NEXT:    call void @test3(ptr [[Z3]], ptr [[Y3]], ptr [[X3]])
@@ -490,7 +490,7 @@ define void @test3(ptr %x3, ptr %y3, ptr %z3) {
 }
 
 define void @test4_1(ptr %x4_1, i1 %c) {
-; FNATTRS: Function Attrs: nofree nosync nounwind memory(write, argmem: none, inaccessiblemem: none)
+; FNATTRS: Function Attrs: nofree nosync nounwind memory(write, argmem: none, inaccessiblemem: none, errnomem: none)
 ; FNATTRS-LABEL: define void @test4_1
 ; FNATTRS-SAME: (ptr [[X4_1:%.*]], i1 [[C:%.*]]) #[[ATTR10]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = call ptr @test4_2(ptr [[X4_1]], ptr [[X4_1]], ptr [[X4_1]], i1 [[C]])
@@ -510,7 +510,7 @@ define void @test4_1(ptr %x4_1, i1 %c) {
 }
 
 define ptr @test4_2(ptr %x4_2, ptr %y4_2, ptr %z4_2, i1 %c) {
-; FNATTRS: Function Attrs: nofree nosync nounwind memory(write, argmem: none, inaccessiblemem: none)
+; FNATTRS: Function Attrs: nofree nosync nounwind memory(write, argmem: none, inaccessiblemem: none, errnomem: none)
 ; FNATTRS-LABEL: define ptr @test4_2
 ; FNATTRS-SAME: (ptr nocapture readnone [[X4_2:%.*]], ptr readnone returned [[Y4_2:%.*]], ptr nocapture readnone [[Z4_2:%.*]], i1 [[C:%.*]]) #[[ATTR10]] {
 ; FNATTRS-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
@@ -674,7 +674,7 @@ entry:
 
 @g2 = global ptr null
 define void @captureLaunder(ptr %p) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: readwrite)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: readwrite, errnomem: none)
 ; FNATTRS-LABEL: define void @captureLaunder
 ; FNATTRS-SAME: (ptr [[P:%.*]]) #[[ATTR14:[0-9]+]] {
 ; FNATTRS-NEXT:    [[B:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[P]])
@@ -718,7 +718,7 @@ entry:
 
 @g3 = global ptr null
 define void @captureStrip(ptr %p) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none, errnomem: none)
 ; FNATTRS-LABEL: define void @captureStrip
 ; FNATTRS-SAME: (ptr [[P:%.*]]) #[[ATTR1]] {
 ; FNATTRS-NEXT:    [[B:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr [[P]])

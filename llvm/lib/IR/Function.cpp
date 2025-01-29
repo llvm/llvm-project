@@ -922,6 +922,14 @@ void Function::setOnlyAccessesInaccessibleMemory() {
   setMemoryEffects(getMemoryEffects() & MemoryEffects::inaccessibleMemOnly());
 }
 
+/// Determine if the function may only access errno memory.
+bool Function::onlyAccessesErrnoMemory() const {
+  return getMemoryEffects().onlyAccessesErrnoMem();
+}
+void Function::setOnlyAccessesErrnoMemory() {
+  setMemoryEffects(getMemoryEffects() & MemoryEffects::errnoMemOnly());
+}
+
 /// Determine if the function may only access memory that is
 ///  either inaccessible from the IR or pointed to by its arguments.
 bool Function::onlyAccessesInaccessibleMemOrArgMem() const {
@@ -930,6 +938,27 @@ bool Function::onlyAccessesInaccessibleMemOrArgMem() const {
 void Function::setOnlyAccessesInaccessibleMemOrArgMem() {
   setMemoryEffects(getMemoryEffects() &
                    MemoryEffects::inaccessibleOrArgMemOnly());
+}
+
+/// Determine if the function may only access memory that is
+///  either inaccessible from the IR or errno memory.
+bool Function::onlyAccessesInaccessibleMemOrErrnoMem() const {
+  return getMemoryEffects().onlyAccessesInaccessibleOrErrnoMem();
+}
+void Function::setOnlyAccessesInaccessibleMemOrErrnoMem() {
+  setMemoryEffects(getMemoryEffects() &
+                   MemoryEffects::inaccessibleOrErrnoMemOnly());
+}
+
+/// Determine if the function may only access memory that is
+///  either inaccessible from the IR, pointed to by its arguments or errno
+///  memory.
+bool Function::onlyAccessesInaccessibleMemOrArgMemOrErrnoMem() const {
+  return getMemoryEffects().onlyAccessesInaccessibleOrArgOrErrnoMem();
+}
+void Function::setOnlyAccessesInaccessibleMemOrArgMemOrErrnoMem() {
+  setMemoryEffects(getMemoryEffects() &
+                   MemoryEffects::inaccessibleOrArgOrErrnoMemOnly());
 }
 
 bool Function::isTargetIntrinsic() const {

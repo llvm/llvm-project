@@ -2347,7 +2347,7 @@ llvm.func @readonly_function(%arg0: !llvm.ptr {llvm.readonly})
 llvm.func @arg_mem_none_func() attributes {
   memory_effects = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite>}
 
-// CHECK: attributes #[[ATTR]] = { memory(readwrite, argmem: none) }
+// CHECK: attributes #[[ATTR]] = { memory(readwrite, argmem: none, errnomem: none) }
 
 // -----
 
@@ -2355,7 +2355,7 @@ llvm.func @arg_mem_none_func() attributes {
 llvm.func @readwrite_func() attributes {
   memory_effects = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = readwrite>}
 
-// CHECK: attributes #[[ATTR]] = { memory(readwrite) }
+// CHECK: attributes #[[ATTR]] = { memory(readwrite, errnomem: none) }
 
 // -----
 
@@ -2613,11 +2613,11 @@ llvm.func @mem_effects_call() {
 // CHECK: #[[ATTRS_0]]
 // CHECK-SAME: memory(none)
 // CHECK: #[[ATTRS_1]]
-// CHECK-SAME: memory(read, argmem: none, inaccessiblemem: write)
+// CHECK-SAME: memory(read, argmem: none, inaccessiblemem: write, errnomem: none)
 // CHECK: #[[ATTRS_2]]
-// CHECK-SAME: memory(read, inaccessiblemem: write)
+// CHECK-SAME: memory(read, inaccessiblemem: write, errnomem: none)
 // CHECK: #[[ATTRS_3]]
-// CHECK-SAME: memory(readwrite, argmem: read)
+// CHECK-SAME: memory(readwrite, argmem: read, errnomem: none)
 
 // -----
 

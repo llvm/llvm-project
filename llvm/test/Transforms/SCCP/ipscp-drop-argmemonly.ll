@@ -11,10 +11,10 @@
 ; Here the pointer argument %arg will be replaced by a constant. We need to
 ; drop argmemonly.
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0
+; CHECK: @g = internal global i32 0
 ;.
 define internal void @ptrarg.1(ptr %arg, i32 %val) argmemonly nounwind {
-; CHECK: Function Attrs: nounwind memory(readwrite, inaccessiblemem: none)
+; CHECK: Function Attrs: nounwind memory(readwrite, inaccessiblemem: none, errnomem: none)
 ; CHECK-LABEL: @ptrarg.1(
 ; CHECK-NEXT:    store i32 10, ptr @g, align 4
 ; CHECK-NEXT:    ret void
@@ -62,7 +62,7 @@ define void @caller.2(ptr %ptr) {
 ; Here the pointer argument %arg will be replaced by a constant. We need to
 ; drop inaccessiblemem_or_argmemonly.
 define internal void @ptrarg.3(ptr %arg, i32 %val) inaccessiblemem_or_argmemonly nounwind {
-; CHECK: Function Attrs: nounwind memory(readwrite)
+; CHECK: Function Attrs: nounwind memory(readwrite, errnomem: none)
 ; CHECK-LABEL: @ptrarg.3(
 ; CHECK-NEXT:    store i32 10, ptr @g, align 4
 ; CHECK-NEXT:    ret void
@@ -110,7 +110,7 @@ define void @caller.4(ptr %ptr) {
 ; Here the pointer argument %arg will be replaced by a constant. We need to
 ; drop inaccessiblemem_or_argmemonly.
 define internal void @ptrarg.5(ptr %arg, i32 %val) argmemonly inaccessiblemem_or_argmemonly nounwind {
-; CHECK: Function Attrs: nounwind memory(readwrite, inaccessiblemem: none)
+; CHECK: Function Attrs: nounwind memory(readwrite, inaccessiblemem: none, errnomem: none)
 ; CHECK-LABEL: @ptrarg.5(
 ; CHECK-NEXT:    store i32 10, ptr @g, align 4
 ; CHECK-NEXT:    ret void
@@ -163,9 +163,9 @@ define i32 @caller.6.cs.attributes(i32 %n) {
 }
 
 ;.
-; CHECK: attributes #[[ATTR0]] = { nounwind memory(readwrite, inaccessiblemem: none) }
+; CHECK: attributes #[[ATTR0]] = { nounwind memory(readwrite, inaccessiblemem: none, errnomem: none) }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nounwind memory(argmem: readwrite) }
-; CHECK: attributes #[[ATTR2]] = { nounwind memory(readwrite) }
+; CHECK: attributes #[[ATTR2]] = { nounwind memory(readwrite, errnomem: none) }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nounwind memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; CHECK: attributes #[[ATTR4]] = { nounwind }
 ;.

@@ -117,7 +117,7 @@ attributes #6 = { noreturn nounwind }
 ; CHECK-NEXT:    ret i32 [[DOT]]
 ;
 ;
-; CHECK: Function Attrs: minsize mustprogress nofree norecurse nosync nounwind optsize willreturn memory(write, argmem: none, inaccessiblemem: none)
+; CHECK: Function Attrs: minsize mustprogress nofree norecurse nosync nounwind optsize willreturn memory(write, argmem: none, inaccessiblemem: none, errnomem: none)
 ; CHECK-LABEL: define dso_local noundef range(i32 0, 2) i32 @_Z10call_catchi
 ; CHECK-SAME: (i32 noundef [[NUM:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] !type [[META4]] !type [[META5]] !type [[META6]] {
 ; CHECK-NEXT:  entry:

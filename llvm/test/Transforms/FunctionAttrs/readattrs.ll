@@ -33,7 +33,7 @@ define void @test1_2(ptr %x1_2, ptr %y1_2, ptr %z1_2) {
 
 ; TODO: Missing with attributor-light: argmem: none, inaccessiblemem: none
 define ptr @test2(ptr %p) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none, errnomem: none)
 ; FNATTRS-LABEL: define {{[^@]+}}@test2
 ; FNATTRS-SAME: (ptr readnone returned [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FNATTRS-NEXT:    store i32 0, ptr @x, align 4
