@@ -59,6 +59,7 @@ Below is the CMake command to configure the standalone crossbuild of the libc.
   $> cd build
   $> C_COMPILER=<C compiler> # For example "clang"
   $> CXX_COMPILER=<C++ compiler> # For example "clang++"
+  $> KERNEL_HEADERS=<path/to/built/linux/kernel/headers>
   $> cmake ../runtimes  \
      -G Ninja \
      -DLLVM_ENABLE_RUNTIMES=libc  \
@@ -66,6 +67,7 @@ Below is the CMake command to configure the standalone crossbuild of the libc.
      -DCMAKE_CXX_COMPILER=$CXX_COMPILER \
      -DLLVM_LIBC_FULL_BUILD=ON \
      -DLIBC_TARGET_TRIPLE=<Your target triple> \
+     -DLIBC_KERNEL_HEADERS=$KERNEL_HEADERS \
      -DCMAKE_BUILD_TYPE=<Release|Debug>
 
 We will go over the special options passed to the ``cmake`` command above.
@@ -77,6 +79,10 @@ We will go over the special options passed to the ``cmake`` command above.
 * **The target triple** - This is the target triple of the target for which
   we are building the libc. For example, for a Linux 32-bit Arm target,
   one can specify it as ``arm-linux-eabi``.
+* **The path to the kernel headers** - (Optional) Necessary when targeting
+  Linux. The Linux kernel headers are architecture specific and should be built
+  from source. See :ref:`linux_headers` section for how to build the Linux
+  kernel headers from source.
 
 Build step
 ----------
@@ -116,6 +122,7 @@ CMake configure step
      -DLLVM_ENABLE_PROJECTS=clang \
      -DLLVM_ENABLE_RUNTIMES=libc \
      -DLLVM_LIBC_FULL_BUILD=ON \
+     -DLIBC_KERNEL_HEADERS=$KERNEL_HEADERS \
      -DLLVM_RUNTIME_TARGETS=$TARGET_TRIPLE \
      -DCMAKE_BUILD_TYPE=Debug
 

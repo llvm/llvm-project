@@ -40,6 +40,7 @@ building it with the following cmake command:
   $> mkdir build
   $> cd build
   $> cmake ../runtimes -G Ninja -DLLVM_ENABLE_RUNTIMES="libc"  \
+     -LIBC_USE_HOST_KERNEL_HEADERS=ON \
      -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
      -DCMAKE_BUILD_TYPE=<Debug|Release>                    \  # Select build type
      -DCMAKE_INSTALL_PREFIX=<Your prefix of choice>           # Optional
@@ -78,6 +79,7 @@ performance possible.
 
   $> cmake ../llvm -G Ninja -DLLVM_ENABLE_PROJECTS="clang" \
      -DLLVM_ENABLE_RUNTIMES="libc"  \  # libc is listed as runtime and not as a project
+     -DLIBC_USE_HOST_KERNEL_HEADERS=ON \
      -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
      -DCMAKE_BUILD_TYPE=<Debug|Release>                    \  # Select build type
      -DCMAKE_INSTALL_PREFIX=<Your prefix of choice>           # Optional

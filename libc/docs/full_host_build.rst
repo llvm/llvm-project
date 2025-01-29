@@ -28,6 +28,10 @@ development. In this we've set the Ninja generator, set the build type to
 "Debug", and enabled the Scudo allocator. This build also enables generating the
 documentation and verbose cmake logging, which are useful development features.
 
+If targeting Linux, see :ref:`linux_headers` for how to build the Linux kernel
+headers from source, which llvm-libc will depend on. If not targeting Linux,
+the below cmake variable ``LIBC_KERNEL_HEADERS`` should be omitted.
+
 .. note::
    if your build fails with an error saying the compiler can't find
    ``<asm/unistd.h>`` or similar then you're probably missing the symlink from
@@ -50,6 +54,7 @@ documentation and verbose cmake logging, which are useful development features.
       -DLLVM_LIBC_FULL_BUILD=ON \
       -DCMAKE_BUILD_TYPE=Debug \
       -DLLVM_LIBC_INCLUDE_SCUDO=ON \
+      -DLLVM_LIBC_KERNEL_HEADERS=/path/to/kernel/headers/ \
       -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON \
       -DCOMPILER_RT_BUILD_GWP_ASAN=OFF                       \
       -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF        \
@@ -133,6 +138,7 @@ allocator for LLVM-libc.
       -DCMAKE_CXX_COMPILER=clang++ \
       -DLLVM_LIBC_FULL_BUILD=ON \
       -DLLVM_LIBC_INCLUDE_SCUDO=ON \
+      -DLLVM_LIBC_KERNEL_HEADERS=/path/to/kernel/headers/ \
       -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON \
       -DCOMPILER_RT_BUILD_GWP_ASAN=OFF                       \
       -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF        \
@@ -171,6 +177,8 @@ toolchain with which you can build practical/real-world C applications. See
 `<https://github.com/llvm/llvm-project/tree/main/libc/examples>`_ for examples
 of how to start using this new toolchain.
 
+.. _linux_headers:
+
 Linux Headers
 =============
 
@@ -183,7 +191,9 @@ Linux headers in your sysroot.  Let's build them from source.
    $> make LLVM=1 INSTALL_HDR_PATH=/path/to/sysroot -C /tmp/linux headers_install
 
 The headers can be built to target non-host architectures by adding the
-``ARCH={arm|arm64|i386}`` to the above invocation of ``make``.
+``ARCH={arm|arm64|i386}`` to the above invocation of ``make``. Then you should
+set the cmake variable `-DLIBC_KERNEL_HEADERS=/path/to/sysroot` when
+configuring llvm-libc.
 
 Using your newly built libc
 ===========================
