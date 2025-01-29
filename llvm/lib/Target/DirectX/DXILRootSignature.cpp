@@ -14,11 +14,9 @@
 #include "DXILRootSignature.h"
 #include "DirectX.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
-#include <cassert>
 
 using namespace llvm;
 using namespace llvm::dxil;
