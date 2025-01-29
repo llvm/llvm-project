@@ -22,8 +22,8 @@ define <vscale x 2 x i8> @vaaddu_1(<vscale x 2 x i8> %x, <vscale x 2 x i8> %y, <
   %xz = call <vscale x 2 x i16> @llvm.vp.zext.nxv2i16.nxv2i8(<vscale x 2 x i8> %x, <vscale x 2 x i1> %m, i32 %vl)
   %yz = call <vscale x 2 x i16> @llvm.vp.zext.nxv2i16.nxv2i8(<vscale x 2 x i8> %y, <vscale x 2 x i1> %m, i32 %vl)
   %a = call <vscale x 2 x i16> @llvm.vp.add.nxv2i16(<vscale x 2 x i16> %xz, <vscale x 2 x i16> %yz, <vscale x 2 x i1> %m, i32 %vl)
-  %b = call <vscale x 2 x i16> @llvm.vp.add.nxv2i16(<vscale x 2 x i16> %a, <vscale x 2 x i16> shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 1, i32 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> %m, i32 %vl)
-  %c = call <vscale x 2 x i16> @llvm.vp.lshr.nxv2i16(<vscale x 2 x i16> %b, <vscale x 2 x i16> shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 1, i32 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> %m, i32 %vl)
+  %b = call <vscale x 2 x i16> @llvm.vp.add.nxv2i16(<vscale x 2 x i16> %a, <vscale x 2 x i16> splat (i16 1), <vscale x 2 x i1> %m, i32 %vl)
+  %c = call <vscale x 2 x i16> @llvm.vp.lshr.nxv2i16(<vscale x 2 x i16> %b, <vscale x 2 x i16> splat (i16 1), <vscale x 2 x i1> %m, i32 %vl)
   %d = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i16(<vscale x 2 x i16> %c, <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x i8> %d
 }
@@ -38,8 +38,8 @@ define <vscale x 2 x i8> @vaaddu_2(<vscale x 2 x i8> %x, <vscale x 2 x i8> %y, <
   %xz = call <vscale x 2 x i16> @llvm.vp.zext.nxv2i16.nxv2i8(<vscale x 2 x i8> %x, <vscale x 2 x i1> %m, i32 %vl)
   %yz = call <vscale x 2 x i16> @llvm.vp.zext.nxv2i16.nxv2i8(<vscale x 2 x i8> %y, <vscale x 2 x i1> %m, i32 %vl)
   %a = call <vscale x 2 x i16> @llvm.vp.add.nxv2i16(<vscale x 2 x i16> %xz, <vscale x 2 x i16> %yz, <vscale x 2 x i1> %m, i32 %vl)
-  %b = call <vscale x 2 x i16> @llvm.vp.add.nxv2i16(<vscale x 2 x i16> shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 1, i32 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i16> %a, <vscale x 2 x i1> %m, i32 %vl)
-  %c = call <vscale x 2 x i16> @llvm.vp.lshr.nxv2i16(<vscale x 2 x i16> %b, <vscale x 2 x i16> shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 1, i32 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> %m, i32 %vl)
+  %b = call <vscale x 2 x i16> @llvm.vp.add.nxv2i16(<vscale x 2 x i16> splat (i16 1), <vscale x 2 x i16> %a, <vscale x 2 x i1> %m, i32 %vl)
+  %c = call <vscale x 2 x i16> @llvm.vp.lshr.nxv2i16(<vscale x 2 x i16> %b, <vscale x 2 x i16> splat (i16 1), <vscale x 2 x i1> %m, i32 %vl)
   %d = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i16(<vscale x 2 x i16> %c, <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x i8> %d
 }
@@ -53,9 +53,9 @@ define <vscale x 2 x i8> @vaaddu_3(<vscale x 2 x i8> %x, <vscale x 2 x i8> %y, <
 ; CHECK-NEXT:    ret
   %xz = call <vscale x 2 x i16> @llvm.vp.zext.nxv2i16.nxv2i8(<vscale x 2 x i8> %x, <vscale x 2 x i1> %m, i32 %vl)
   %yz = call <vscale x 2 x i16> @llvm.vp.zext.nxv2i16.nxv2i8(<vscale x 2 x i8> %y, <vscale x 2 x i1> %m, i32 %vl)
-  %a = call <vscale x 2 x i16> @llvm.vp.add.nxv2i16(<vscale x 2 x i16> %xz, <vscale x 2 x i16> shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 1, i32 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> %m, i32 %vl)
+  %a = call <vscale x 2 x i16> @llvm.vp.add.nxv2i16(<vscale x 2 x i16> %xz, <vscale x 2 x i16> splat (i16 1), <vscale x 2 x i1> %m, i32 %vl)
   %b = call <vscale x 2 x i16> @llvm.vp.add.nxv2i16(<vscale x 2 x i16> %a, <vscale x 2 x i16> %yz, <vscale x 2 x i1> %m, i32 %vl)
-  %c = call <vscale x 2 x i16> @llvm.vp.lshr.nxv2i16(<vscale x 2 x i16> %b, <vscale x 2 x i16> shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 1, i32 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> %m, i32 %vl)
+  %c = call <vscale x 2 x i16> @llvm.vp.lshr.nxv2i16(<vscale x 2 x i16> %b, <vscale x 2 x i16> splat (i16 1), <vscale x 2 x i1> %m, i32 %vl)
   %d = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i16(<vscale x 2 x i16> %c, <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x i8> %d
 }
@@ -69,9 +69,9 @@ define <vscale x 2 x i8> @vaaddu_4(<vscale x 2 x i8> %x, <vscale x 2 x i8> %y, <
 ; CHECK-NEXT:    ret
   %xz = call <vscale x 2 x i16> @llvm.vp.zext.nxv2i16.nxv2i8(<vscale x 2 x i8> %x, <vscale x 2 x i1> %m, i32 %vl)
   %yz = call <vscale x 2 x i16> @llvm.vp.zext.nxv2i16.nxv2i8(<vscale x 2 x i8> %y, <vscale x 2 x i1> %m, i32 %vl)
-  %a = call <vscale x 2 x i16> @llvm.vp.add.nxv2i16(<vscale x 2 x i16> %xz, <vscale x 2 x i16> shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 1, i32 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> %m, i32 %vl)
+  %a = call <vscale x 2 x i16> @llvm.vp.add.nxv2i16(<vscale x 2 x i16> %xz, <vscale x 2 x i16> splat (i16 1), <vscale x 2 x i1> %m, i32 %vl)
   %b = call <vscale x 2 x i16> @llvm.vp.add.nxv2i16(<vscale x 2 x i16> %yz, <vscale x 2 x i16> %a, <vscale x 2 x i1> %m, i32 %vl)
-  %c = call <vscale x 2 x i16> @llvm.vp.lshr.nxv2i16(<vscale x 2 x i16> %b, <vscale x 2 x i16> shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 1, i32 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> %m, i32 %vl)
+  %c = call <vscale x 2 x i16> @llvm.vp.lshr.nxv2i16(<vscale x 2 x i16> %b, <vscale x 2 x i16> splat (i16 1), <vscale x 2 x i1> %m, i32 %vl)
   %d = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i16(<vscale x 2 x i16> %c, <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x i8> %d
 }
@@ -85,9 +85,9 @@ define <vscale x 2 x i8> @vaaddu_5(<vscale x 2 x i8> %x, <vscale x 2 x i8> %y, <
 ; CHECK-NEXT:    ret
   %xz = call <vscale x 2 x i16> @llvm.vp.zext.nxv2i16.nxv2i8(<vscale x 2 x i8> %x, <vscale x 2 x i1> %m, i32 %vl)
   %yz = call <vscale x 2 x i16> @llvm.vp.zext.nxv2i16.nxv2i8(<vscale x 2 x i8> %y, <vscale x 2 x i1> %m, i32 %vl)
-  %a = call <vscale x 2 x i16> @llvm.vp.add.nxv2i16(<vscale x 2 x i16> shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 1, i32 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i16> %xz, <vscale x 2 x i1> %m, i32 %vl)
+  %a = call <vscale x 2 x i16> @llvm.vp.add.nxv2i16(<vscale x 2 x i16> splat (i16 1), <vscale x 2 x i16> %xz, <vscale x 2 x i1> %m, i32 %vl)
   %b = call <vscale x 2 x i16> @llvm.vp.add.nxv2i16(<vscale x 2 x i16> %a, <vscale x 2 x i16> %yz, <vscale x 2 x i1> %m, i32 %vl)
-  %c = call <vscale x 2 x i16> @llvm.vp.lshr.nxv2i16(<vscale x 2 x i16> %b, <vscale x 2 x i16> shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 1, i32 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> %m, i32 %vl)
+  %c = call <vscale x 2 x i16> @llvm.vp.lshr.nxv2i16(<vscale x 2 x i16> %b, <vscale x 2 x i16> splat (i16 1), <vscale x 2 x i1> %m, i32 %vl)
   %d = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i16(<vscale x 2 x i16> %c, <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x i8> %d
 }
@@ -101,9 +101,9 @@ define <vscale x 2 x i8> @vaaddu_6(<vscale x 2 x i8> %x, <vscale x 2 x i8> %y, <
 ; CHECK-NEXT:    ret
   %xz = call <vscale x 2 x i16> @llvm.vp.zext.nxv2i16.nxv2i8(<vscale x 2 x i8> %x, <vscale x 2 x i1> %m, i32 %vl)
   %yz = call <vscale x 2 x i16> @llvm.vp.zext.nxv2i16.nxv2i8(<vscale x 2 x i8> %y, <vscale x 2 x i1> %m, i32 %vl)
-  %a = call <vscale x 2 x i16> @llvm.vp.add.nxv2i16(<vscale x 2 x i16> shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 1, i32 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i16> %xz, <vscale x 2 x i1> %m, i32 %vl)
+  %a = call <vscale x 2 x i16> @llvm.vp.add.nxv2i16(<vscale x 2 x i16> splat (i16 1), <vscale x 2 x i16> %xz, <vscale x 2 x i1> %m, i32 %vl)
   %b = call <vscale x 2 x i16> @llvm.vp.add.nxv2i16(<vscale x 2 x i16> %yz, <vscale x 2 x i16> %a, <vscale x 2 x i1> %m, i32 %vl)
-  %c = call <vscale x 2 x i16> @llvm.vp.lshr.nxv2i16(<vscale x 2 x i16> %b, <vscale x 2 x i16> shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 1, i32 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> %m, i32 %vl)
+  %c = call <vscale x 2 x i16> @llvm.vp.lshr.nxv2i16(<vscale x 2 x i16> %b, <vscale x 2 x i16> splat (i16 1), <vscale x 2 x i1> %m, i32 %vl)
   %d = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i16(<vscale x 2 x i16> %c, <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x i8> %d
 }
@@ -119,8 +119,8 @@ define <vscale x 2 x i8> @vaaddu_7(<vscale x 2 x i8> %x, <vscale x 2 x i8> %y, <
   %xz = call <vscale x 2 x i32> @llvm.vp.zext.nxv2i32.nxv2i8(<vscale x 2 x i8> %x, <vscale x 2 x i1> %m, i32 %vl)
   %yz = call <vscale x 2 x i32> @llvm.vp.zext.nxv2i32.nxv2i8(<vscale x 2 x i8> %y, <vscale x 2 x i1> %m, i32 %vl)
   %a = call <vscale x 2 x i32> @llvm.vp.add.nxv2i32(<vscale x 2 x i32> %xz, <vscale x 2 x i32> %yz, <vscale x 2 x i1> %m, i32 %vl)
-  %b = call <vscale x 2 x i32> @llvm.vp.add.nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> %m, i32 %vl)
-  %c = call <vscale x 2 x i32> @llvm.vp.lshr.nxv2i32(<vscale x 2 x i32> %b, <vscale x 2 x i32> shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> %m, i32 %vl)
+  %b = call <vscale x 2 x i32> @llvm.vp.add.nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> splat (i32 1), <vscale x 2 x i1> %m, i32 %vl)
+  %c = call <vscale x 2 x i32> @llvm.vp.lshr.nxv2i32(<vscale x 2 x i32> %b, <vscale x 2 x i32> splat (i32 1), <vscale x 2 x i1> %m, i32 %vl)
   %d = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i32(<vscale x 2 x i32> %c, <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x i8> %d
 }
@@ -138,8 +138,8 @@ define <vscale x 2 x i16> @vaaddu_8(<vscale x 2 x i8> %x, <vscale x 2 x i8> %y, 
   %xz = call <vscale x 2 x i32> @llvm.vp.zext.nxv2i32.nxv2i8(<vscale x 2 x i8> %x, <vscale x 2 x i1> %m, i32 %vl)
   %yz = call <vscale x 2 x i32> @llvm.vp.zext.nxv2i32.nxv2i8(<vscale x 2 x i8> %y, <vscale x 2 x i1> %m, i32 %vl)
   %a = call <vscale x 2 x i32> @llvm.vp.add.nxv2i32(<vscale x 2 x i32> %xz, <vscale x 2 x i32> %yz, <vscale x 2 x i1> %m, i32 %vl)
-  %b = call <vscale x 2 x i32> @llvm.vp.add.nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> %m, i32 %vl)
-  %c = call <vscale x 2 x i32> @llvm.vp.lshr.nxv2i32(<vscale x 2 x i32> %b, <vscale x 2 x i32> shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> %m, i32 %vl)
+  %b = call <vscale x 2 x i32> @llvm.vp.add.nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> splat (i32 1), <vscale x 2 x i1> %m, i32 %vl)
+  %c = call <vscale x 2 x i32> @llvm.vp.lshr.nxv2i32(<vscale x 2 x i32> %b, <vscale x 2 x i32> splat (i32 1), <vscale x 2 x i1> %m, i32 %vl)
   %d = call <vscale x 2 x i16> @llvm.vp.trunc.nxv2i16.nxv2i32(<vscale x 2 x i32> %c, <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x i16> %d
 }
@@ -162,8 +162,8 @@ define <vscale x 2 x i8> @vaaddu_9(<vscale x 2 x i16> %x, <vscale x 2 x i16> %y,
   %xz = call <vscale x 2 x i32> @llvm.vp.zext.nxv2i32.nxv2i16(<vscale x 2 x i16> %x, <vscale x 2 x i1> %m, i32 %vl)
   %yz = call <vscale x 2 x i32> @llvm.vp.zext.nxv2i32.nxv2i16(<vscale x 2 x i16> %y, <vscale x 2 x i1> %m, i32 %vl)
   %a = call <vscale x 2 x i32> @llvm.vp.add.nxv2i32(<vscale x 2 x i32> %xz, <vscale x 2 x i32> %yz, <vscale x 2 x i1> %m, i32 %vl)
-  %b = call <vscale x 2 x i32> @llvm.vp.add.nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> %m, i32 %vl)
-  %c = call <vscale x 2 x i32> @llvm.vp.lshr.nxv2i32(<vscale x 2 x i32> %b, <vscale x 2 x i32> shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> %m, i32 %vl)
+  %b = call <vscale x 2 x i32> @llvm.vp.add.nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> splat (i32 1), <vscale x 2 x i1> %m, i32 %vl)
+  %c = call <vscale x 2 x i32> @llvm.vp.lshr.nxv2i32(<vscale x 2 x i32> %b, <vscale x 2 x i32> splat (i32 1), <vscale x 2 x i1> %m, i32 %vl)
   %d = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i32(<vscale x 2 x i32> %c, <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x i8> %d
 }
