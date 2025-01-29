@@ -1425,10 +1425,9 @@ bool ASTReader::ReadLexicalDeclContextStorage(ModuleFile &M,
   return false;
 }
 
-bool ASTReader::ReadVisibleDeclContextStorage(ModuleFile &M,
-                                              BitstreamCursor &Cursor,
-                                              uint64_t Offset, GlobalDeclID ID,
-                                              bool IsModuleLocal) {
+bool ASTReader::ReadVisibleDeclContextStorage(
+    ModuleFile &M, BitstreamCursor &Cursor, uint64_t Offset, GlobalDeclID ID,
+    ASTReader::VisibleDeclContextStorageKind VisibleKind) {
   assert(Offset != 0);
 
   SavedStreamPosition SavedPosition(Cursor);
@@ -1452,22 +1451,42 @@ bool ASTReader::ReadVisibleDeclContextStorage(ModuleFile &M,
     return true;
   }
   unsigned RecCode = MaybeRecCode.get();
-  if (!IsModuleLocal && RecCode != DECL_CONTEXT_VISIBLE) {
-    Error("Expected visible lookup table block");
-    return true;
-  }
-  if (IsModuleLocal && RecCode != DECL_CONTEXT_MODULE_LOCAL_VISIBLE) {
-    Error("Expected module local visible lookup table block");
-    return true;
+  switch (VisibleKind) {
+  case VisibleDeclContextStorageKind::GenerallyVisible:
+    if (RecCode != DECL_CONTEXT_VISIBLE) {
+      Error("Expected visible lookup table block");
+      return true;
+    }
+    break;
+  case VisibleDeclContextStorageKind::ModuleLocalVisible:
+    if (RecCode != DECL_CONTEXT_MODULE_LOCAL_VISIBLE) {
+      Error("Expected module local visible lookup table block");
+      return true;
+    }
+    break;
+  case VisibleDeclContextStorageKind::TULocalVisible:
+    if (RecCode != DECL_CONTEXT_TU_LOCAL_VISIBLE) {
+      Error("Expected TU local lookup table block");
+      return true;
+    }
+    break;
   }
 
   // We can't safely determine the primary context yet, so delay attaching the
   // lookup table until we're done with recursive deserialization.
   auto *Data = (const unsigned char*)Blob.data();
-  if (!IsModuleLocal)
+  switch (VisibleKind) {
+  case VisibleDeclContextStorageKind::GenerallyVisible:
     PendingVisibleUpdates[ID].push_back(UpdateData{&M, Data});
-  else
+    break;
+  case VisibleDeclContextStorageKind::ModuleLocalVisible:
     PendingModuleLocalVisibleUpdates[ID].push_back(UpdateData{&M, Data});
+    break;
+  case VisibleDeclContextStorageKind::TULocalVisible:
+    if (M.Kind == MK_MainFile)
+      TULocalUpdates[ID].push_back(UpdateData{&M, Data});
+    break;
+  }
   return false;
 }
 
@@ -3613,6 +3632,21 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
     }
 
+    case UPDATE_TU_LOCAL_VISIBLE: {
+      if (F.Kind != MK_MainFile)
+        break;
+      unsigned Idx = 0;
+      GlobalDeclID ID = ReadDeclID(F, Record, Idx);
+      auto *Data = (const unsigned char *)Blob.data();
+      TULocalUpdates[ID].push_back(UpdateData{&F, Data});
+      // If we've already loaded the decl, perform the updates when we finish
+      // loading this block.
+      if (Decl *D = GetExistingDecl(ID))
+        PendingUpdateRecords.push_back(
+            PendingUpdateRecord(ID, D, /*JustLoaded=*/false));
+      break;
+    }
+
     case CXX_ADDED_TEMPLATE_SPECIALIZATION: {
       unsigned Idx = 0;
       GlobalDeclID ID = ReadDeclID(F, Record, Idx);
@@ -3717,6 +3751,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       TotalLexicalDeclContexts += Record[2];
       TotalVisibleDeclContexts += Record[3];
       TotalModuleLocalVisibleDeclContexts += Record[4];
+      TotalTULocalVisibleDeclContexts += Record[5];
       break;
 
     case UNUSED_FILESCOPED_DECLS:
@@ -4002,7 +4037,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
 
     case DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD: {
-      if (Record.size() % 4 != 0)
+      if (Record.size() % 5 != 0)
         return llvm::createStringError(
             std::errc::illegal_byte_sequence,
             "invalid DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD block in AST "
@@ -4021,9 +4056,12 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
         uint64_t LocalModuleLocalOffset = Record[I++];
         uint64_t ModuleLocalOffset =
             LocalModuleLocalOffset ? BaseOffset + LocalModuleLocalOffset : 0;
+        uint64_t TULocalLocalOffset = Record[I++];
+        uint64_t TULocalOffset =
+            TULocalLocalOffset ? BaseOffset + TULocalLocalOffset : 0;
 
         DelayedNamespaceOffsetMap[ID] = {LexicalOffset, VisibleOffset,
-                                         ModuleLocalOffset};
+                                         ModuleLocalOffset, TULocalOffset};
 
         assert(!GetExistingDecl(ID) &&
                "We shouldn't load the namespace in the front of delayed "
@@ -6826,7 +6864,7 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
       // command line (-w, -Weverything, -Werror, ...) along with any explicit
       // -Wblah flags.
       unsigned Flags = Record[Idx++];
-      DiagState Initial;
+      DiagState Initial(*Diag.getDiagnosticIDs());
       Initial.SuppressSystemWarnings = Flags & 1; Flags >>= 1;
       Initial.ErrorsAsFatal = Flags & 1; Flags >>= 1;
       Initial.WarningsAsErrors = Flags & 1; Flags >>= 1;
@@ -8437,7 +8475,7 @@ void ASTReader::FindFileRegionDecls(FileID File,
 
 bool ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
                                                DeclarationName Name,
-                                               Module *NamedModule) {
+                                               const DeclContext *OriginalDC) {
   assert(DC->hasExternalVisibleStorage() && DC == DC->getPrimaryContext() &&
          "DeclContext has no visible decls in storage");
   if (!Name)
@@ -8460,7 +8498,9 @@ bool ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
     }
   }
 
-  if (NamedModule) {
+  if (auto *NamedModule =
+          OriginalDC ? cast<Decl>(OriginalDC)->getTopLevelOwningNamedModule()
+                     : nullptr) {
     if (auto It = ModuleLocalLookups.find(DC); It != ModuleLocalLookups.end()) {
       ++NumModuleLocalVisibleDeclContexts;
       for (GlobalDeclID ID : It->second.Table.find({Name, NamedModule})) {
@@ -8468,6 +8508,15 @@ bool ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
         if (ND->getDeclName() == Name && Found.insert(ND).second)
           Decls.push_back(ND);
       }
+    }
+  }
+
+  if (auto It = TULocalLookups.find(DC); It != TULocalLookups.end()) {
+    ++NumTULocalVisibleDeclContexts;
+    for (GlobalDeclID ID : It->second.Table.find(Name)) {
+      NamedDecl *ND = cast<NamedDecl>(GetDecl(ID));
+      if (ND->getDeclName() == Name && Found.insert(ND).second)
+        Decls.push_back(ND);
     }
   }
 
@@ -8498,6 +8547,7 @@ void ASTReader::completeVisibleDeclsMap(const DeclContext *DC) {
 
   findAll(Lookups, NumVisibleDeclContextsRead);
   findAll(ModuleLocalLookups, NumModuleLocalVisibleDeclContexts);
+  findAll(TULocalLookups, NumTULocalVisibleDeclContexts);
 
   for (DeclsMap::iterator I = Decls.begin(), E = Decls.end(); I != E; ++I) {
     SetExternalVisibleDeclsForName(DC, I->first, I->second);
@@ -8515,6 +8565,12 @@ const serialization::reader::ModuleLocalLookupTable *
 ASTReader::getModuleLocalLookupTables(DeclContext *Primary) const {
   auto I = ModuleLocalLookups.find(Primary);
   return I == ModuleLocalLookups.end() ? nullptr : &I->second;
+}
+
+const serialization::reader::DeclContextLookupTable *
+ASTReader::getTULocalLookupTables(DeclContext *Primary) const {
+  auto I = TULocalLookups.find(Primary);
+  return I == TULocalLookups.end() ? nullptr : &I->second;
 }
 
 serialization::reader::LazySpecializationInfoLookupTable *
@@ -8632,6 +8688,11 @@ void ASTReader::PrintStats() {
         NumModuleLocalVisibleDeclContexts, TotalModuleLocalVisibleDeclContexts,
         ((float)NumModuleLocalVisibleDeclContexts /
          TotalModuleLocalVisibleDeclContexts * 100));
+  if (TotalTULocalVisibleDeclContexts)
+    std::fprintf(stderr, "  %u/%u visible declcontexts in GMF read (%f%%)\n",
+                 NumTULocalVisibleDeclContexts, TotalTULocalVisibleDeclContexts,
+                 ((float)NumTULocalVisibleDeclContexts /
+                  TotalTULocalVisibleDeclContexts * 100));
   if (TotalNumMethodPoolEntries)
     std::fprintf(stderr, "  %u/%u method pool entries read (%f%%)\n",
                  NumMethodPoolEntriesRead, TotalNumMethodPoolEntries,

@@ -6141,9 +6141,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fno-direct-access-external-data");
   }
 
-  if (Args.hasFlag(options::OPT_fno_plt, options::OPT_fplt, false)) {
-    CmdArgs.push_back("-fno-plt");
-  }
+  if (Triple.isOSBinFormatELF() && (Triple.isAArch64() || Triple.isX86()))
+    Args.addOptOutFlag(CmdArgs, options::OPT_fplt, options::OPT_fno_plt);
 
   // -fhosted is default.
   // TODO: Audit uses of KernelOrKext and see where it'd be more appropriate to
@@ -7706,6 +7705,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_fretain_comments_from_system_headers))
     CmdArgs.push_back("-fretain-comments-from-system-headers");
+
+  Args.AddLastArg(CmdArgs, options::OPT_fextend_variable_liveness_EQ);
 
   // Forward -fcomment-block-commands to -cc1.
   Args.AddAllArgs(CmdArgs, options::OPT_fcomment_block_commands);

@@ -29,6 +29,7 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Sema/Designator.h"
@@ -7334,8 +7335,10 @@ QualType TreeTransform<Derived>::TransformTemplateSpecializationType(
                                               NewTemplateArgs))
     return QualType();
 
-  // FIXME: maybe don't rebuild if all the template arguments are the same.
-
+  // This needs to be rebuilt if either the arguments changed, or if the
+  // original template changed. If the template changed, and even if the
+  // arguments didn't change, these arguments might not correspond to their
+  // respective parameters, therefore needing conversions.
   QualType Result =
     getDerived().RebuildTemplateSpecializationType(Template,
                                                    TL.getTemplateNameLoc(),
@@ -8499,7 +8502,7 @@ TreeTransform<Derived>::TransformDeclStmt(DeclStmt *S) {
             getSema()
                 .getASTContext()
                 .getTypeDeclType(TD)
-                .getCanonicalType()
+                .getSingleStepDesugaredType(getSema().getASTContext())
                 ->containsUnexpandedParameterPack();
 
       if (auto *VD = dyn_cast<VarDecl>(Transformed))
@@ -14902,7 +14905,7 @@ TreeTransform<Derived>::TransformExprRequirement(concepts::ExprRequirement *Req)
     TransRetReq.emplace(TPL);
   }
   assert(TransRetReq && "All code paths leading here must set TransRetReq");
-  if (Expr *E = TransExpr.dyn_cast<Expr *>())
+  if (Expr *E = dyn_cast<Expr *>(TransExpr))
     return getDerived().RebuildExprRequirement(E, Req->isSimple(),
                                                Req->getNoexceptLoc(),
                                                std::move(*TransRetReq));
@@ -14946,9 +14949,6 @@ TreeTransform<Derived>::TransformArrayTypeTraitExpr(ArrayTypeTraitExpr *E) {
     SubExpr = getDerived().TransformExpr(E->getDimensionExpression());
     if (SubExpr.isInvalid())
       return ExprError();
-
-    if (!getDerived().AlwaysRebuild() && SubExpr.get() == E->getDimensionExpression())
-      return E;
   }
 
   return getDerived().RebuildArrayTypeTrait(E->getTrait(), E->getBeginLoc(), T,
@@ -17057,10 +17057,9 @@ QualType TreeTransform<Derived>::RebuildDependentSizedMatrixType(
                                  AttributeLoc);
 }
 
-template<typename Derived>
+template <typename Derived>
 QualType TreeTransform<Derived>::RebuildFunctionProtoType(
-    QualType T,
-    MutableArrayRef<QualType> ParamTypes,
+    QualType T, MutableArrayRef<QualType> ParamTypes,
     const FunctionProtoType::ExtProtoInfo &EPI) {
   return SemaRef.BuildFunctionType(T, ParamTypes,
                                    getDerived().getBaseLocation(),
@@ -17414,6 +17413,16 @@ TreeTransform<Derived>::TransformCapturedStmt(CapturedStmt *S) {
   }
 
   return getSema().ActOnCapturedRegionEnd(Body.get());
+}
+
+template <typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformSYCLKernelCallStmt(SYCLKernelCallStmt *S) {
+  // SYCLKernelCallStmt nodes are inserted upon completion of a (non-template)
+  // function definition or instantiation of a function template specialization
+  // and will therefore never appear in a dependent context.
+  llvm_unreachable("SYCL kernel call statement cannot appear in dependent "
+                   "context");
 }
 
 template <typename Derived>

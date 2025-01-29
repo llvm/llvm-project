@@ -386,8 +386,8 @@ def EmitC_DivOp : EmitC_BinaryOp<"div", [CExpression]> {
 }
 
 def EmitC_ExpressionOp : EmitC_Op<"expression",
-      [HasOnlyGraphRegion, SingleBlockImplicitTerminator<"emitc::YieldOp">,
-       NoRegionArguments]> {
+      [HasOnlyGraphRegion, OpAsmOpInterface,
+       SingleBlockImplicitTerminator<"emitc::YieldOp">, NoRegionArguments]> {
   let summary = "Expression operation";
   let description = [{
     The `emitc.expression` operation returns a single SSA value which is yielded by
@@ -453,12 +453,21 @@ def EmitC_ExpressionOp : EmitC_Op<"expression",
       return llvm::any_of(getRegion().front().without_terminator(), predicate);
     };
     Operation *getRootOp();
+
+    //===------------------------------------------------------------------===//
+    // OpAsmOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// EmitC ops in the body can omit their 'emitc.' prefix in the assembly.
+    static ::llvm::StringRef getDefaultDialect() {
+      return "emitc";
+    }
   }];
 }
 
 def EmitC_ForOp : EmitC_Op<"for",
       [AllTypesMatch<["lowerBound", "upperBound", "step"]>,
-       SingleBlockImplicitTerminator<"emitc::YieldOp">,
+       OpAsmOpInterface, SingleBlockImplicitTerminator<"emitc::YieldOp">,
        RecursiveMemoryEffects]> {
   let summary = "For operation";
   let description = [{
@@ -510,6 +519,15 @@ def EmitC_ForOp : EmitC_Op<"for",
     void setLowerBound(Value bound) { getOperation()->setOperand(0, bound); }
     void setUpperBound(Value bound) { getOperation()->setOperand(1, bound); }
     void setStep(Value step) { getOperation()->setOperand(2, step); }
+
+    //===------------------------------------------------------------------===//
+    // OpAsmOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// EmitC ops in the body can omit their 'emitc.' prefix in the assembly.
+    static ::llvm::StringRef getDefaultDialect() {
+      return "emitc";
+    }
   }];
 
   let hasCanonicalizer = 1;
@@ -1257,7 +1275,7 @@ def EmitC_YieldOp : EmitC_Op<"yield",
 def EmitC_IfOp : EmitC_Op<"if",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
     "getNumRegionInvocations", "getRegionInvocationBounds",
-    "getEntrySuccessorRegions"]>, SingleBlock,
+    "getEntrySuccessorRegions"]>, OpAsmOpInterface, SingleBlock,
     SingleBlockImplicitTerminator<"emitc::YieldOp">,
     RecursiveMemoryEffects, NoRegionArguments]> {
   let summary = "If-then-else operation";
@@ -1304,6 +1322,15 @@ def EmitC_IfOp : EmitC_Op<"if",
     OpBuilder getElseBodyBuilder(OpBuilder::Listener *listener = nullptr) {
       Block* body = getBody(1);
       return OpBuilder::atBlockEnd(body, listener);
+    }
+
+    //===------------------------------------------------------------------===//
+    // OpAsmOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// EmitC ops in the body can omit their 'emitc.' prefix in the assembly.
+    static ::llvm::StringRef getDefaultDialect() {
+      return "emitc";
     }
   }];
   let hasCustomAssemblyFormat = 1;
@@ -1360,7 +1387,7 @@ def EmitC_SubscriptOp : EmitC_Op<"subscript", []> {
 }
 
 def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
-    SingleBlockImplicitTerminator<"emitc::YieldOp">,
+    OpAsmOpInterface, SingleBlockImplicitTerminator<"emitc::YieldOp">,
     DeclareOpInterfaceMethods<RegionBranchOpInterface,
                               ["getRegionInvocationBounds",
                                "getEntrySuccessorRegions"]>]> {
@@ -1438,6 +1465,15 @@ def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
 
     /// Get the body of a case region.
     Block &getCaseBlock(unsigned idx);
+
+    //===------------------------------------------------------------------===//
+    // OpAsmOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// EmitC ops in the body can omit their 'emitc.' prefix in the assembly.
+    static ::llvm::StringRef getDefaultDialect() {
+      return "emitc";
+    }
   }];
 
   let hasVerifier = 1;
