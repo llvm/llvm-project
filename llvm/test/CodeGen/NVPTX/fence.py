@@ -5,7 +5,7 @@ from string import Template
 from itertools import product
 
 fence_func = Template(
-"""
+    """
 define void @fence_${ordering}_${scope}() {
     fence syncscope(\"${scope}\") ${ordering}
     ret void
@@ -14,7 +14,7 @@ define void @fence_${ordering}_${scope}() {
 )
 
 run_statement = Template(
-"""
+    """
 ; ${run}: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | FileCheck %s --check-prefix=SM${sm}
 ; ${run}: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_${sm} -mattr=+ptx${ptx} | %ptxas-verfy %}
 """
@@ -29,10 +29,17 @@ ORDERINGS = ["acquire", "release", "acq_rel", "seq_cst"]
 
 if __name__ == "__main__":
     for sm, ptx in TESTS:
-        with open ("fence-sm{}.ll".format(sm), "w") as fp:
-            print(run_statement.substitute(run = "RUN", sm = sm, ptx = ptx), file = fp)
+        with open("fence-sm{}.ll".format(sm), "w") as fp:
+            print(run_statement.substitute(run="RUN", sm=sm, ptx=ptx), file=fp)
             for ordering, scope in product(ORDERINGS, SCOPES):
                 if scope == "cluster" and (sm < 90 or ptx < 78):
-                    print("; .cluster scope unsupported on SM = {} PTX = {}".format(sm, ptx), file = fp)
+                    print(
+                        "; .cluster scope unsupported on SM = {} PTX = {}".format(
+                            sm, ptx
+                        ),
+                        file=fp,
+                    )
                 else:
-                    print(fence_func.substitute(scope = scope, ordering = ordering), file = fp)
+                    print(
+                        fence_func.substitute(scope=scope, ordering=ordering), file=fp
+                    )
