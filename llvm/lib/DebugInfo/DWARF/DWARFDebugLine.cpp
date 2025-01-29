@@ -562,16 +562,12 @@ void DWARFDebugLine::LineTable::clear() {
 DWARFDebugLine::ParsingState::ParsingState(
     struct LineTable *LT, uint64_t TableOffset,
     function_ref<void(Error)> ErrorHandler)
-    : LineTable(LT), LineTableOffset(TableOffset), ErrorHandler(ErrorHandler) {
-  resetRowAndSequence();
-}
+    : LineTable(LT), LineTableOffset(TableOffset), ErrorHandler(ErrorHandler) {}
 
 void DWARFDebugLine::ParsingState::resetRowAndSequence(uint64_t Offset) {
   Row.reset(LineTable->Prologue.DefaultIsStmt);
   Sequence.reset();
-  if (Offset != UINT64_MAX) {
-    Sequence.SetSequenceOffset(Offset);
-  }
+  Sequence.SetSequenceOffset(Offset);
 }
 
 void DWARFDebugLine::ParsingState::appendRowToMatrix() {
@@ -854,7 +850,7 @@ Error DWARFDebugLine::LineTable::parse(
   }
   // *OffsetPtr points to the end of the prologue - i.e. the start of the first
   // sequence. So initialize the first sequence offset accordingly.
-  State.Sequence.SetSequenceOffset(*OffsetPtr);
+  State.resetRowAndSequence(*OffsetPtr);
 
   bool TombstonedAddress = false;
   auto EmitRow = [&] {

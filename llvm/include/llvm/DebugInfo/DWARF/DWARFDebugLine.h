@@ -405,7 +405,7 @@ private:
     ParsingState(struct LineTable *LT, uint64_t TableOffset,
                  function_ref<void(Error)> ErrorHandler);
 
-    void resetRowAndSequence(uint64_t Offset = UINT64_MAX);
+    void resetRowAndSequence(uint64_t Offset);
     void appendRowToMatrix();
 
     struct AddrOpIndexDelta {
