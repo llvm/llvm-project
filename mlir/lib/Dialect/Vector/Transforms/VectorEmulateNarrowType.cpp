@@ -429,7 +429,7 @@ namespace {
 struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
   using OpConversionPattern::OpConversionPattern;
 
-   ConvertVectorStore(MLIRContext *context, bool useAtomicWrites)
+  ConvertVectorStore(MLIRContext *context, bool useAtomicWrites)
       : OpConversionPattern<vector::StoreOp>(context),
         useAtomicWrites_(useAtomicWrites) {}
 
@@ -583,8 +583,8 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
           extractSliceIntoByte(rewriter, loc, valueToStore, 0,
                                frontSubWidthStoreElem, *foldedNumFrontPadElems);
 
-      atomicStore(rewriter, loc, memrefBase, currentDestIndex,
-                  cast<VectorValue>(value), frontMask.getResult());
+      subEmulatedWidthStore(rewriter, loc, memrefBase, currentDestIndex,
+                            cast<VectorValue>(value), frontMask.getResult());
     }
 
     if (currentSourceIndex >= origElements) {
