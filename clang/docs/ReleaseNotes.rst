@@ -583,6 +583,10 @@ Modified Compiler Flags
   ``-fexperimental-modules-reduced-bmi`` flag. The ``-fmodules-reduced-bmi`` flag
   is intended to be enabled by default in the future.
 
+- The ``-Og`` optimization flag now sets ``-fextend-variable-liveness``, a new
+  compiler flag which trades a small amount of optimization in exchange for
+  improved variable visibility.
+
 Removed Compiler Flags
 -------------------------
 
