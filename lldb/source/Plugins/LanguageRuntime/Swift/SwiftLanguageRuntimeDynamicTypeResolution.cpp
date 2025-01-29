@@ -873,6 +873,10 @@ SwiftLanguageRuntime::GetNumFields(CompilerType type,
       return rti->getNumFields();
     }
   }
+  case TypeInfoKind::Builtin: {
+    // Clang types without debug info may present themselves like this.
+    return {};
+  }
   case TypeInfoKind::Enum: {
     auto *eti = llvm::cast<EnumTypeInfo>(ti);
     return eti->getNumPayloadCases();

@@ -40,7 +40,7 @@ std::string lldb_private::formatters::swift::SwiftOptionalSummaryProvider::
 
 // if this ValueObject is an Optional<T> with the Some(T) case selected,
 // retrieve the value of the Some case..
-static PointerOrSP
+static ValueObjectSP
 ExtractSomeIfAny(ValueObject *optional,
                  bool synthetic_value = false) {
   if (!optional)
@@ -58,8 +58,8 @@ ExtractSomeIfAny(ValueObject *optional,
   if (!value || value == g_None)
     return nullptr;
 
-  PointerOrSP value_sp(
-      non_synth_valobj->GetChildMemberWithName(g_Some, true).get());
+  ValueObjectSP value_sp(
+      non_synth_valobj->GetChildMemberWithName(g_Some, true));
   if (!value_sp)
     return nullptr;
 
@@ -86,7 +86,7 @@ ExtractSomeIfAny(ValueObject *optional,
           DataExtractor extractor(buffer_sp, process_sp->GetByteOrder(),
                                   process_sp->GetAddressByteSize());
           ExecutionContext exe_ctx(process_sp);
-          value_sp = PointerOrSP(ValueObject::CreateValueObjectFromData(
+          value_sp = ValueObjectSP(ValueObject::CreateValueObjectFromData(
               value_sp->GetName().AsCString(), extractor, exe_ctx, value_type));
           if (!value_sp)
             return nullptr;
@@ -116,12 +116,12 @@ ExtractSomeIfAny(ValueObject *optional,
     value_sp = value_sp->GetSyntheticValue();
 
   return value_sp;
-  }
+}
 
 static bool
 SwiftOptional_SummaryProvider_Impl(ValueObject &valobj, Stream &stream,
                                    const TypeSummaryOptions &options) {
-  PointerOrSP some = ExtractSomeIfAny(&valobj, true);
+  ValueObjectSP some = ExtractSomeIfAny(&valobj, true);
   if (!some) {
     stream.Printf("nil");
     return true;
@@ -145,7 +145,7 @@ SwiftOptional_SummaryProvider_Impl(ValueObject &valobj, Stream &stream,
         .SetSkipReferences(false);
     StringSummaryFormat oneliner(oneliner_flags, "");
     std::string buffer;
-    oneliner.FormatObject(some, buffer, options);
+    oneliner.FormatObject(some.get(), buffer, options);
     stream.Printf("%s", buffer.c_str());
   }
 
@@ -172,7 +172,7 @@ bool lldb_private::formatters::swift::SwiftOptionalSummaryProvider::
   if (!target_valobj)
     return false;
 
-  PointerOrSP some = ExtractSomeIfAny(target_valobj, true);
+  ValueObjectSP some = ExtractSomeIfAny(target_valobj, true);
 
   if (!some)
     return true;
@@ -191,7 +191,7 @@ bool lldb_private::formatters::swift::SwiftOptionalSummaryProvider::
       return false;
     return some->HasChildren();
   }
-  return some->HasChildren() && summary_sp->DoesPrintChildren(some);
+  return some->HasChildren() && summary_sp->DoesPrintChildren(some.get());
 }
 
 bool lldb_private::formatters::swift::SwiftOptionalSummaryProvider::
