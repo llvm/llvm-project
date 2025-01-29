@@ -471,8 +471,8 @@ public:
   /// NOTE: This should only be called for definitions.
   void setCommonAttributes(GlobalDecl GD, mlir::Operation *GV);
 
-  // TODO: this obviously overlaps with
   const TargetCIRGenInfo &getTargetCIRGenInfo();
+  const ABIInfo &getABIInfo();
 
   /// Helpers to convert Clang's SourceLocation to a MLIR Location.
   mlir::Location getLoc(clang::SourceLocation SLoc);

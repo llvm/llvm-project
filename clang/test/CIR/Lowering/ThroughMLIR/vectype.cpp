@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-direct-lowering -emit-mlir %s -o %t.mlir
 // RUN: FileCheck --input-file=%t.mlir %s
-// XFAIL: *
 
 typedef int vi4 __attribute__((vector_size(16)));
 

@@ -27,6 +27,7 @@ class LowerTypes;
 
 /// Target specific hooks for defining how a type should be passed or returned
 /// from functions.
+/// FIXME(cir): this needs to be merged with clang/lib/CIR/CodeGen/ABIInfo.h
 class ABIInfo {
 protected:
   LowerTypes &LT;

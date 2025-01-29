@@ -173,9 +173,9 @@ static Address emitPointerWithAlignment(const Expr *expr,
             llvm_unreachable("NYI");
         }
 
-        auto ElemTy = cgf.convertTypeForMem(expr->getType()->getPointeeType());
+        auto eltTy = cgf.convertTypeForMem(expr->getType()->getPointeeType());
         addr = cgf.getBuilder().createElementBitCast(
-            cgf.getLoc(expr->getSourceRange()), addr, ElemTy);
+            cgf.getLoc(expr->getSourceRange()), addr, eltTy);
         if (CE->getCastKind() == CK_AddressSpaceConversion) {
           assert(!cir::MissingFeatures::addressSpace());
           llvm_unreachable("NYI");
@@ -616,6 +616,25 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
                                        LValueBaseInfo baseInfo,
                                        TBAAAccessInfo tbaaInfo, bool isInit,
                                        bool isNontemporal) {
+  assert(!cir::MissingFeatures::threadLocal() && "NYI");
+
+  auto eltTy = addr.getElementType();
+  if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
+    // Boolean vectors use `iN` as storage type.
+    if (clangVecTy->isExtVectorBoolType()) {
+      llvm_unreachable("isExtVectorBoolType NYI");
+    }
+
+    // Handle vectors of size 3 like size 4 for better performance.
+    const auto vTy = cast<cir::VectorType>(eltTy);
+    auto newVecTy =
+        CGM.getABIInfo().getOptimalVectorMemoryType(vTy, getLangOpts());
+
+    if (vTy != newVecTy) {
+      llvm_unreachable("NYI");
+    }
+  }
+
   value = emitToMemory(value, ty);
 
   LValue atomicLValue =
@@ -624,26 +643,6 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
       (!isInit && LValueIsSuitableForInlineAtomic(atomicLValue))) {
     emitAtomicStore(RValue::get(value), atomicLValue, isInit);
     return;
-  }
-
-  mlir::Type SrcTy = value.getType();
-  if (const auto *ClangVecTy = ty->getAs<clang::VectorType>()) {
-    // TODO(CIR): this has fallen out of date with codegen
-    llvm_unreachable("NYI: Special treatment of 3-element vector store");
-    // auto VecTy = dyn_cast<cir::VectorType>(SrcTy);
-    // if (!CGM.getCodeGenOpts().PreserveVec3Type &&
-    //     ClangVecTy->getNumElements() == 3) {
-    //   // Handle vec3 special.
-    //   if (VecTy && VecTy.getSize() == 3) {
-    //     // Our source is a vec3, do a shuffle vector to make it a vec4.
-    //     value = builder.createVecShuffle(value.getLoc(), value,
-    //                                      ArrayRef<int64_t>{0, 1, 2, -1});
-    //     SrcTy = cir::VectorType::get(VecTy.getContext(), VecTy.getEltType(), 4);
-    //   }
-    //   if (addr.getElementType() != SrcTy) {
-    //     addr = addr.withElementType(SrcTy);
-    //   }
-    // }
   }
 
   // Update the alloca with more info on initialization.
@@ -2917,40 +2916,36 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
                                              LValueBaseInfo baseInfo,
                                              TBAAAccessInfo tbaaInfo,
                                              bool isNontemporal) {
-  // TODO(CIR): this has fallen out of sync with codegen
-  // Atomic operations have to be done on integral types
+  assert(!cir::MissingFeatures::threadLocal() && "NYI");
+  auto eltTy = addr.getElementType();
+
+  if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
+    // Boolean vectors use `iN` as storage type.
+    if (clangVecTy->isExtVectorBoolType()) {
+      llvm_unreachable("NYI");
+    }
+
+    // Handle vectors of size 3 like size 4 for better performance.
+    const auto vTy = cast<cir::VectorType>(eltTy);
+    auto newVecTy =
+        CGM.getABIInfo().getOptimalVectorMemoryType(vTy, getLangOpts());
+
+    if (vTy != newVecTy) {
+      llvm_unreachable("NYI");
+    }
+  }
+
   LValue atomicLValue =
       LValue::makeAddr(addr, ty, getContext(), baseInfo, tbaaInfo);
   if (ty->isAtomicType() || LValueIsSuitableForInlineAtomic(atomicLValue)) {
     llvm_unreachable("NYI");
   }
 
-  auto ElemTy = addr.getElementType();
-
-  if (const auto *ClangVecTy = ty->getAs<clang::VectorType>()) {
-    // Handle vectors of size 3 like size 4 for better performance.
-    const auto VTy = cast<cir::VectorType>(ElemTy);
-
-    // TODO(CIR): this has fallen out of sync with codegen
-    llvm_unreachable("NYI: Special treatment of 3-element vector store");
-    // if (!CGM.getCodeGenOpts().PreserveVec3Type &&
-    //     ClangVecTy->getNumElements() == 3) {
-    //   auto loc = addr.getPointer().getLoc();
-    //   auto vec4Ty = cir::VectorType::get(VTy.getContext(), VTy.getEltType(), 4);
-    //   Address Cast = addr.withElementType(vec4Ty);
-    //   // Now load value.
-    //   mlir::Value V = builder.createLoad(loc, Cast);
-
-      // // Shuffle vector to get vec3.
-      // V = builder.createVecShuffle(loc, V, ArrayRef<int64_t>{0, 1, 2});
-      // return emitFromMemory(V, ty);
-    // }
-  }
-
+  // TODO(cir): modernize this with addr.withElementType(convertTypeForLoadStore
   auto Ptr = addr.getPointer();
-  if (mlir::isa<cir::VoidType>(ElemTy)) {
-    ElemTy = cir::IntType::get(&getMLIRContext(), 8, true);
-    auto ElemPtrTy = cir::PointerType::get(&getMLIRContext(), ElemTy);
+  if (mlir::isa<cir::VoidType>(eltTy)) {
+    eltTy = cir::IntType::get(&getMLIRContext(), 8, true);
+    auto ElemPtrTy = cir::PointerType::get(&getMLIRContext(), eltTy);
     Ptr = builder.create<cir::CastOp>(loc, ElemPtrTy, cir::CastKind::bitcast,
                                       Ptr);
   }
@@ -2962,7 +2957,6 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
   CGM.decorateOperationWithTBAA(loadOp, tbaaInfo);
 
   assert(!cir::MissingFeatures::emitScalarRangeCheck() && "NYI");
-
   return emitFromMemory(loadOp, ty);
 }
 

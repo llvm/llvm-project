@@ -10,6 +10,8 @@
 #define LLVM_CLANG_LIB_CIR_ABIINFO_H
 
 #include "clang/AST/Type.h"
+#include "clang/Basic/LangOptions.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 namespace clang::CIRGen {
 
@@ -39,6 +41,13 @@ public:
   // Implement the Type::IsPromotableIntegerType for ABI specific needs. The
   // only difference is that this consideres bit-precise integer types as well.
   bool isPromotableIntegerTypeForABI(clang::QualType Ty) const;
+
+  /// Returns the optimal vector memory type based on the given vector type. For
+  /// example, on certain targets, a vector with 3 elements might be promoted to
+  /// one with 4 elements to improve performance.
+  virtual cir::VectorType
+  getOptimalVectorMemoryType(cir::VectorType T,
+                             const clang::LangOptions &Opt) const;
 };
 
 } // namespace clang::CIRGen

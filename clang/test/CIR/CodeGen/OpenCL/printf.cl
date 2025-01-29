@@ -14,7 +14,6 @@
 // RUN: FileCheck -input-file=%t.30fp64.ll -check-prefixes=LLVM-FP64,LLVM-ALL %s
 // RUN: %clang_cc1 -fclangir -no-enable-noundef-analysis -cl-std=CL3.0 -cl-ext=-__opencl_c_fp64,-cl_khr_fp64 -triple spirv64-unknown-unknown -disable-llvm-passes -emit-llvm -fno-clangir-call-conv-lowering -o %t.30nofp64.ll %s
 // RUN: FileCheck -input-file=%t.30nofp64.ll -check-prefixes=LLVM-NOFP64,LLVM-ALL %s
-// XFAIL: *
 
 typedef __attribute__((ext_vector_type(2))) float float2;
 typedef __attribute__((ext_vector_type(2))) half half2;

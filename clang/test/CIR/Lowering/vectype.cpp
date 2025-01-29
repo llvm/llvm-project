@@ -2,7 +2,6 @@
 // RUN: cir-opt %t.cir -cir-to-llvm -o %t.mlir
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t.ii
 // RUN: FileCheck --input-file=%t.mlir %s
-// XFAIL: *
 
 typedef int vi4 __attribute__((vector_size(16)));
 typedef double vd2 __attribute__((vector_size(16)));

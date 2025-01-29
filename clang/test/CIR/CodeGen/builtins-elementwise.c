@@ -3,7 +3,6 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-android24  -fclangir \
 // RUN:  -emit-llvm  %s -o %t.ll
 // RUN: FileCheck  --check-prefix=LLVM --input-file=%t.ll %s
-// XFAIL: *
 
 typedef int vint4 __attribute__((ext_vector_type(4)));
 typedef float vfloat4 __attribute__((ext_vector_type(4)));

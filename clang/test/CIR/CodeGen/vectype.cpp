@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o - | FileCheck %s
-// XFAIL: *
 
 typedef int vi4 __attribute__((vector_size(16)));
 typedef double vd2 __attribute__((vector_size(16)));

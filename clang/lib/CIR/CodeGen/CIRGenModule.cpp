@@ -494,6 +494,10 @@ void CIRGenModule::setDSOLocal(CIRGlobalValueInterface GV) const {
   GV.setDSOLocal(shouldAssumeDSOLocal(*this, GV));
 }
 
+const ABIInfo &CIRGenModule::getABIInfo() {
+  return getTargetCIRGenInfo().getABIInfo();
+}
+
 void CIRGenModule::emitGlobal(GlobalDecl GD) {
   llvm::TimeTraceScope scope("build CIR Global", [&]() -> std::string {
     auto *ND = dyn_cast<NamedDecl>(GD.getDecl());

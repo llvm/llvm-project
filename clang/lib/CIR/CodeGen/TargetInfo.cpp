@@ -318,6 +318,15 @@ static bool classifyReturnType(const CIRGenCXXABI &CXXABI,
 
 CIRGenCXXABI &ABIInfo::getCXXABI() const { return CGT.getCXXABI(); }
 
+cir::VectorType
+ABIInfo::getOptimalVectorMemoryType(cir::VectorType T,
+                                    const clang::LangOptions &Opt) const {
+  if (T.getSize() == 3 && !Opt.PreserveVec3Type) {
+    llvm_unreachable("NYI");
+  }
+  return T;
+}
+
 clang::ASTContext &ABIInfo::getContext() const { return CGT.getContext(); }
 
 cir::ABIArgInfo X86_64ABIInfo::getIndirectResult(QualType Ty,
