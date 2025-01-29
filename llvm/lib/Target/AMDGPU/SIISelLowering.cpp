@@ -6647,13 +6647,15 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
     EVT DstVT = N->getValueType(0);
 
     assert(SrcVT.isVector() && DstVT.isVector());
+    assert(DstVT.getVectorElementType() == MVT::i8);
+    assert(SrcVT.getVectorElementType() == MVT::i16);
 
     unsigned EleNo = SrcVT.getVectorNumElements();
     assert(EleNo == DstVT.getVectorNumElements());
 
     if (EleNo == 2) {
       SDValue Op =
-          DAG.getNode(AMDGPUISD::SAT_PK_CAST, SL, MVT::i16, N->getOperand(0));
+          DAG.getNode(AMDGPUISD::SAT_PK_CAST, SL, MVT::i16, Src);
       Op = DAG.getNode(ISD::BITCAST, SL, N->getValueType(0), Op);
       Results.push_back(Op);
     } else {
@@ -6664,7 +6666,7 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
       EVT DstEleVT = DstVT.getVectorElementType();
       EVT SrcPairVT = EVT::getVectorVT(*DAG.getContext(), SrcEleVT, 2);
       EVT DstPairVT = EVT::getVectorVT(*DAG.getContext(), DstEleVT, 2);
-      for (unsigned i = 0; i + 1 < EleNo; i = i + 2) {
+      for (unsigned i = 0; i != EleNo; i += 2) {
         SDValue SrcPair = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, SrcPairVT,
                                       Src, DAG.getConstant(i, SL, MVT::i32));
         SDValue SatPk =
