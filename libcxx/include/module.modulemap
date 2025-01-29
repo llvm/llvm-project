@@ -1244,16 +1244,30 @@ module std [system] {
   }
 
   module flat_map {
-    module flat_map                       { header "__flat_map/flat_map.h" }
+    module flat_map                       {
+      header "__flat_map/flat_map.h"
+      export std.vector.vector
+      export std.vector.fwd
+    }
+    module flat_multimap                  {
+      header "__flat_map/flat_multimap.h"
+      export std.vector.vector
+      export std.vector.fwd
+    }
     module key_value_iterator             { header "__flat_map/key_value_iterator.h" }
+    module sorted_equivalent              { header "__flat_map/sorted_equivalent.h" }
     module sorted_unique                  { header "__flat_map/sorted_unique.h" }
+    module utils                          { header "__flat_map/utils.h" }
 
     header "flat_map"
     export *
   }
 
   module format {
-    module buffer                             { header "__format/buffer.h" }
+    module buffer                             {
+      header "__format/buffer.h"
+      export std.iterator.back_insert_iterator
+    }
     module concepts                           { header "__format/concepts.h" }
     module container_adaptor                  { header "__format/container_adaptor.h" }
     module enable_insertable                  { header "__format/enable_insertable.h" }

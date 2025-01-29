@@ -79,7 +79,15 @@ code bases.
   Undefined behavior due to pointer addition overflow can be reliably detected
   using ``-fsanitize=pointer-overflow``. It is also possible to use
   ``-fno-strict-overflow`` to opt-in to a language dialect where signed integer
-  and pointer overflow are well-defined.
+  and pointer overflow are well-defined. Since Clang 20, it is also possible
+  to use ``-fwrapv-pointer`` to only make pointer overflow well-defined, while
+  not affecting the behavior of signed integer overflow.
+
+- The ``-fwrapv`` flag now only makes signed integer overflow well-defined,
+  without affecting pointer overflow, which is controlled by a new
+  ``-fwrapv-pointer`` flag. The ``-fno-strict-overflow`` flag now implies
+  both ``-fwrapv`` and ``-fwrapv-pointer`` and as such retains its old meaning.
+  The new behavior matches GCC.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -329,6 +337,9 @@ C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - The implementation of the relaxed template template argument matching rules is
   more complete and reliable, and should provide more accurate diagnostics.
+  This implements:
+  - `P3310R5: Solving issues introduced by relaxed template template parameter matching <https://wg21.link/p3310r5>`_.
+  - `P3579R0: Fix matching of non-type template parameters when matching template template parameters <https://wg21.link/p3579r0>`_.
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -387,6 +398,8 @@ C Language Changes
 ------------------
 
 - Extend clang's ``<limits.h>`` to define ``LONG_LONG_*`` macros for Android's bionic.
+- Macro ``__STDC_NO_THREADS__`` is no longer necessary for MSVC 2022 1939 and later.
+- Exposed the the ``__nullptr`` keyword as an alias for ``nullptr`` in all C language modes.
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -479,6 +492,17 @@ Non-comprehensive list of changes in this release
   ``__builtin_elementwise_sub_sat``, ``__builtin_reduce_min`` (For integral element type),
   ``__builtin_reduce_max`` (For integral element type).
 
+- The builtin macros ``__INT8_C``, ``__INT16_C``, ``__INT32_C``, ``__INT64_C``,
+  ``__INTMAX_C``, ``__UINT8_C``, ``__UINT16_C``, ``__UINT32_C``, ``__UINT64_C``
+  and ``__UINTMAX_C`` have been introduced to ease the implementaton of section
+  7.18.4 of ISO/IEC 9899:1999. These macros are also defined by GCC and should
+  be used instead of others that expand and paste the suffixes provided by
+  ``__INT8_C_SUFFIX__``, ``__INT16_C_SUFFIX__``, ``__INT32_C_SUFFIX__``,
+  ``__INT64_C_SUFFIX__``, ``__INTMAX_C_SUFFIX__``, ``__UINT8_C_SUFFIX__``,
+  ``__UINT16_C_SUFFIX__``, ``__UINT32_C_SUFFIX__``, ``__UINT64_C_SUFFIX__`` and
+  ``__UINTMAX_C_SUFFIX__``. Pasting suffixes after the expansion of their
+  respective macros is unsafe, as users can define the suffixes as macros.
+
 - Clang now rejects ``_BitInt`` matrix element types if the bit width is less than ``CHAR_WIDTH`` or
   not a power of two, matching preexisting behaviour for vector types.
 
@@ -498,6 +522,20 @@ New Compiler Flags
   only for thread-local variables, and none (which corresponds to the
   existing ``-fno-c++-static-destructors`` flag) skips all static
   destructors registration.
+- The ``-fextend-variable-liveness`` flag has been added to allow for improved
+  debugging of optimized code. Using ``-fextend-variable-liveness`` will cause
+  Clang to generate code that tries to preserve the liveness of source variables
+  through optimizations, meaning that variables will typically be visible in a
+  debugger more often. The flag has two levels: ``-fextend-variable-liveness``,
+  or ``-fextend-variable-liveness=all``, extends the liveness of all user
+  variables and the ``this`` pointer. Alternatively
+  ``-fextend-variable-liveness=this`` has the same behaviour but applies only to
+  the ``this`` variable in C++ class member functions, meaning its effect is a
+  strict subset of ``-fextend-variable-liveness``. Note that this flag modifies
+  the results of optimizations that Clang performs, which will result in reduced
+  performance in generated code; however, this feature will not extend the
+  liveness of some variables in cases where doing so would likely have a severe
+  impact on generated code performance.
 
 - The ``-Warray-compare`` warning has been added to warn about array comparison
   on versions older than C++20.
@@ -507,6 +545,11 @@ New Compiler Flags
 
 - clang-cl and clang-dxc now support ``-fdiagnostics-color=[auto|never|always]``
   in addition to ``-f[no-]color-diagnostics``.
+
+- The new ``-fwrapv-pointer`` flag opts-in to a language dialect where pointer
+  overflow is well-defined. The ``-fwrapv`` flag previously implied
+  ``-fwrapv-pointer`` as well, but no longer does. ``-fno-strict-overflow``
+  implies ``-fwrapv -fwrapv-pointer``. The flags now match GCC.
 
 Deprecated Compiler Flags
 -------------------------
@@ -782,6 +825,7 @@ Improvements to Clang's diagnostics
     }
 
 - Fix -Wdangling false positives on conditional operators (#120206).
+- Clang now diagnoses unused private fields with the ``[[warn_unused]]`` attribute (#GH62472).
 
 - Fixed a bug where Clang hung on an unsupported optional scope specifier ``::`` when parsing
   Objective-C. Clang now emits a diagnostic message instead of hanging.
@@ -990,6 +1034,17 @@ Bug Fixes to C++ Support
 - Fix immediate escalation not propagating through inherited constructors.  (#GH112677)
 - Fixed assertions or false compiler diagnostics in the case of C++ modules for
   lambda functions or inline friend functions defined inside templates (#GH122493).
+- Fix template argument checking so that converted template arguments are
+  converted again. This fixes some issues with partial ordering involving
+  template template parameters with non-type template parameters.
+- Fix nondeduced mismatch with nullptr template arguments.
+- Clang now rejects declaring an alias template with the same name as its template parameter. (#GH123423)
+- Fixed the rejection of valid code when referencing an enumerator of an unscoped enum member with a prior declaration. (#GH124405)
+- Fixed immediate escalation of non-dependent expressions. (#GH123405)
+- Fix type of expression when calling a template which returns an ``__array_rank`` querying a type depending on a
+  template parameter. Now, such expression can be used with ``static_assert`` and ``constexpr``. (#GH123498)
+- Correctly determine the implicit constexprness of lambdas in dependent contexts. (#GH97958) (#GH114234)
+- Fix that some dependent immediate expressions did not cause immediate escalation (#GH119046)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1275,6 +1330,7 @@ clang-format
 - Adds support for bash globstar in ``.clang-format-ignore``.
 - Adds ``WrapNamespaceBodyWithEmptyLines`` option.
 - Adds the ``IndentExportBlock`` option.
+- Adds ``PenaltyBreakBeforeMemberAccess`` option.
 
 libclang
 --------
