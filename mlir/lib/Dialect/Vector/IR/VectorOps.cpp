@@ -1488,7 +1488,7 @@ private:
 
   /// Try to fold in place to extract(source, extractPosition) and return the
   /// folded result. Return null if folding is not possible (e.g. due to an
-  /// internal tranposition in the result).
+  /// internal transposition in the result).
   Value tryToFoldExtractOpInPlace(Value source);
 
   ExtractOp extractOp;
@@ -1582,7 +1582,7 @@ ExtractFromInsertTransposeChainState::handleInsertOpWithPrefixPos(Value &res) {
 
 /// Try to fold in place to extract(source, extractPosition) and return the
 /// folded result. Return null if folding is not possible (e.g. due to an
-/// internal tranposition in the result).
+/// internal transposition in the result).
 Value ExtractFromInsertTransposeChainState::tryToFoldExtractOpInPlace(
     Value source) {
   // TODO: Canonicalization for dynamic position not implemented yet.

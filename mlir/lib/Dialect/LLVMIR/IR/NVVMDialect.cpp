@@ -935,7 +935,7 @@ LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
   // Check transpose (only available for f16/bf16)
   // Matrices A should be stored in row-major and B in column-major.
   // Only f16/bf16 matrices can be stored in either column-major or row-major
-  // by setting the tranpose value(imm-trans-a,imm-trans-b) in PTX code.
+  // by setting the transpose value(imm-trans-a,imm-trans-b) in PTX code.
   if ((typeA != WGMMATypes::f16 && typeA != WGMMATypes::bf16) &&
       (getLayoutA() == mlir::NVVM::MMALayout::col ||
        getLayoutB() == mlir::NVVM::MMALayout::row)) {
