@@ -274,10 +274,10 @@ namespace TrailingPack {
   // CHECK: |-TemplateArgument pack
   // CHECK: | |-TemplateArgument type 'TrailingPack::(lambda at {{.*}})'
   // CHECK: | | `-RecordType {{.*}} 'TrailingPack::(lambda at {{.*}})'
-  // CHECK: | |   `-CXXRecord {{.*}} <line:262:5>
+  // CHECK: | |   `-CXXRecord {{.*}} ''
   // CHECK: | `-TemplateArgument type 'TrailingPack::(lambda at {{.*}})'
   // CHECK: |   `-RecordType {{.*}} 'TrailingPack::(lambda at {{.*}})'
-  // CHECK: |     `-CXXRecord {{.*}} <line:263:5>
+  // CHECK: |     `-CXXRecord {{.*}} ''
   // CHECK: |-ParmVarDecl {{.*}} 'TrailingPack::(lambda at {{.*}})'
   // CHECK: `-ParmVarDecl {{.*}} 'TrailingPack::(lambda at {{.*}})'
   // CHECK: FunctionProtoType {{.*}} 'auto (T...) -> A<T...>' dependent trailing_return cdecl
