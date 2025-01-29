@@ -58,7 +58,7 @@ define ptr @func_arg_attrs(
     ptr dereferenceable(12) %arg10,
     ptr dereferenceable_or_null(42) %arg11,
     double inreg %arg12,
-    ptr nocapture %arg13,
+    ptr captures(none) %arg13,
     ptr nofree %arg14,
     ptr nonnull %arg15,
     ptr preallocated(double) %arg16,

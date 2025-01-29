@@ -26,7 +26,7 @@ declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #2
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @read_only(ptr nocapture noundef writeonly %out, ptr nocapture noundef readonly byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
 ; SM_60-LABEL: define dso_local ptx_kernel void @read_only(
-; SM_60-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr nocapture noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; SM_60-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; SM_60-NEXT:  [[ENTRY:.*:]]
 ; SM_60-NEXT:    [[S3:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
 ; SM_60-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
@@ -36,7 +36,7 @@ define dso_local ptx_kernel void @read_only(ptr nocapture noundef writeonly %out
 ; SM_60-NEXT:    ret void
 ;
 ; SM_70-LABEL: define dso_local ptx_kernel void @read_only(
-; SM_70-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr nocapture noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; SM_70-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; SM_70-NEXT:  [[ENTRY:.*:]]
 ; SM_70-NEXT:    [[S3:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
 ; SM_70-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
@@ -46,7 +46,7 @@ define dso_local ptx_kernel void @read_only(ptr nocapture noundef writeonly %out
 ; SM_70-NEXT:    ret void
 ;
 ; COPY-LABEL: define dso_local ptx_kernel void @read_only(
-; COPY-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr nocapture noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; COPY-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; COPY-NEXT:  [[ENTRY:.*:]]
 ; COPY-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
 ; COPY-NEXT:    [[S2:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -64,7 +64,7 @@ entry:
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @read_only_gep(ptr nocapture noundef writeonly %out, ptr nocapture noundef readonly byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
 ; SM_60-LABEL: define dso_local ptx_kernel void @read_only_gep(
-; SM_60-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr nocapture noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_60-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_60-NEXT:  [[ENTRY:.*:]]
 ; SM_60-NEXT:    [[S3:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
 ; SM_60-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
@@ -75,7 +75,7 @@ define dso_local ptx_kernel void @read_only_gep(ptr nocapture noundef writeonly 
 ; SM_60-NEXT:    ret void
 ;
 ; SM_70-LABEL: define dso_local ptx_kernel void @read_only_gep(
-; SM_70-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr nocapture noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_70-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_70-NEXT:  [[ENTRY:.*:]]
 ; SM_70-NEXT:    [[S3:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
 ; SM_70-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
@@ -86,7 +86,7 @@ define dso_local ptx_kernel void @read_only_gep(ptr nocapture noundef writeonly 
 ; SM_70-NEXT:    ret void
 ;
 ; COPY-LABEL: define dso_local ptx_kernel void @read_only_gep(
-; COPY-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr nocapture noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; COPY-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; COPY-NEXT:  [[ENTRY:.*:]]
 ; COPY-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
 ; COPY-NEXT:    [[S2:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -106,7 +106,7 @@ entry:
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @read_only_gep_asc(ptr nocapture noundef writeonly %out, ptr nocapture noundef readonly byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
 ; SM_60-LABEL: define dso_local ptx_kernel void @read_only_gep_asc(
-; SM_60-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr nocapture noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_60-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_60-NEXT:  [[ENTRY:.*:]]
 ; SM_60-NEXT:    [[S3:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
 ; SM_60-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
@@ -117,7 +117,7 @@ define dso_local ptx_kernel void @read_only_gep_asc(ptr nocapture noundef writeo
 ; SM_60-NEXT:    ret void
 ;
 ; SM_70-LABEL: define dso_local ptx_kernel void @read_only_gep_asc(
-; SM_70-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr nocapture noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_70-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_70-NEXT:  [[ENTRY:.*:]]
 ; SM_70-NEXT:    [[S3:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
 ; SM_70-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
@@ -128,7 +128,7 @@ define dso_local ptx_kernel void @read_only_gep_asc(ptr nocapture noundef writeo
 ; SM_70-NEXT:    ret void
 ;
 ; COPY-LABEL: define dso_local ptx_kernel void @read_only_gep_asc(
-; COPY-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr nocapture noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; COPY-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; COPY-NEXT:  [[ENTRY:.*:]]
 ; COPY-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
 ; COPY-NEXT:    [[S2:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -150,7 +150,7 @@ entry:
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @read_only_gep_asc0(ptr nocapture noundef writeonly %out, ptr nocapture noundef readonly byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
 ; SM_60-LABEL: define dso_local ptx_kernel void @read_only_gep_asc0(
-; SM_60-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr nocapture noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_60-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_60-NEXT:  [[ENTRY:.*:]]
 ; SM_60-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; SM_60-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -165,7 +165,7 @@ define dso_local ptx_kernel void @read_only_gep_asc0(ptr nocapture noundef write
 ; SM_60-NEXT:    ret void
 ;
 ; SM_70-LABEL: define dso_local ptx_kernel void @read_only_gep_asc0(
-; SM_70-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr nocapture noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_70-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_70-NEXT:  [[ENTRY:.*:]]
 ; SM_70-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; SM_70-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -180,7 +180,7 @@ define dso_local ptx_kernel void @read_only_gep_asc0(ptr nocapture noundef write
 ; SM_70-NEXT:    ret void
 ;
 ; COPY-LABEL: define dso_local ptx_kernel void @read_only_gep_asc0(
-; COPY-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr nocapture noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; COPY-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; COPY-NEXT:  [[ENTRY:.*:]]
 ; COPY-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
 ; COPY-NEXT:    [[S2:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -204,7 +204,7 @@ entry:
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @escape_ptr(ptr nocapture noundef readnone %out, ptr noundef byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
 ; SM_60-LABEL: define dso_local ptx_kernel void @escape_ptr(
-; SM_60-SAME: ptr nocapture noundef readnone [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_60-SAME: ptr noundef readnone captures(none) [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_60-NEXT:  [[ENTRY:.*:]]
 ; SM_60-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; SM_60-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -215,7 +215,7 @@ define dso_local ptx_kernel void @escape_ptr(ptr nocapture noundef readnone %out
 ; SM_60-NEXT:    ret void
 ;
 ; SM_70-LABEL: define dso_local ptx_kernel void @escape_ptr(
-; SM_70-SAME: ptr nocapture noundef readnone [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_70-SAME: ptr noundef readnone captures(none) [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_70-NEXT:  [[ENTRY:.*:]]
 ; SM_70-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; SM_70-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -226,7 +226,7 @@ define dso_local ptx_kernel void @escape_ptr(ptr nocapture noundef readnone %out
 ; SM_70-NEXT:    ret void
 ;
 ; COPY-LABEL: define dso_local ptx_kernel void @escape_ptr(
-; COPY-SAME: ptr nocapture noundef readnone [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; COPY-SAME: ptr noundef readnone captures(none) [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; COPY-NEXT:  [[ENTRY:.*:]]
 ; COPY-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
 ; COPY-NEXT:    [[S2:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -242,7 +242,7 @@ entry:
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @escape_ptr_gep(ptr nocapture noundef readnone %out, ptr noundef byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
 ; SM_60-LABEL: define dso_local ptx_kernel void @escape_ptr_gep(
-; SM_60-SAME: ptr nocapture noundef readnone [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_60-SAME: ptr noundef readnone captures(none) [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_60-NEXT:  [[ENTRY:.*:]]
 ; SM_60-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; SM_60-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -254,7 +254,7 @@ define dso_local ptx_kernel void @escape_ptr_gep(ptr nocapture noundef readnone 
 ; SM_60-NEXT:    ret void
 ;
 ; SM_70-LABEL: define dso_local ptx_kernel void @escape_ptr_gep(
-; SM_70-SAME: ptr nocapture noundef readnone [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_70-SAME: ptr noundef readnone captures(none) [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_70-NEXT:  [[ENTRY:.*:]]
 ; SM_70-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; SM_70-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -266,7 +266,7 @@ define dso_local ptx_kernel void @escape_ptr_gep(ptr nocapture noundef readnone 
 ; SM_70-NEXT:    ret void
 ;
 ; COPY-LABEL: define dso_local ptx_kernel void @escape_ptr_gep(
-; COPY-SAME: ptr nocapture noundef readnone [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; COPY-SAME: ptr noundef readnone captures(none) [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; COPY-NEXT:  [[ENTRY:.*:]]
 ; COPY-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
 ; COPY-NEXT:    [[S2:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -284,7 +284,7 @@ entry:
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @escape_ptr_store(ptr nocapture noundef writeonly %out, ptr noundef byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
 ; SM_60-LABEL: define dso_local ptx_kernel void @escape_ptr_store(
-; SM_60-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_60-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_60-NEXT:  [[ENTRY:.*:]]
 ; SM_60-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; SM_60-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -295,7 +295,7 @@ define dso_local ptx_kernel void @escape_ptr_store(ptr nocapture noundef writeon
 ; SM_60-NEXT:    ret void
 ;
 ; SM_70-LABEL: define dso_local ptx_kernel void @escape_ptr_store(
-; SM_70-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_70-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_70-NEXT:  [[ENTRY:.*:]]
 ; SM_70-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; SM_70-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -306,7 +306,7 @@ define dso_local ptx_kernel void @escape_ptr_store(ptr nocapture noundef writeon
 ; SM_70-NEXT:    ret void
 ;
 ; COPY-LABEL: define dso_local ptx_kernel void @escape_ptr_store(
-; COPY-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; COPY-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; COPY-NEXT:  [[ENTRY:.*:]]
 ; COPY-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
 ; COPY-NEXT:    [[S2:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -322,7 +322,7 @@ entry:
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @escape_ptr_gep_store(ptr nocapture noundef writeonly %out, ptr noundef byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
 ; SM_60-LABEL: define dso_local ptx_kernel void @escape_ptr_gep_store(
-; SM_60-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_60-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_60-NEXT:  [[ENTRY:.*:]]
 ; SM_60-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; SM_60-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -334,7 +334,7 @@ define dso_local ptx_kernel void @escape_ptr_gep_store(ptr nocapture noundef wri
 ; SM_60-NEXT:    ret void
 ;
 ; SM_70-LABEL: define dso_local ptx_kernel void @escape_ptr_gep_store(
-; SM_70-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_70-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_70-NEXT:  [[ENTRY:.*:]]
 ; SM_70-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; SM_70-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -346,7 +346,7 @@ define dso_local ptx_kernel void @escape_ptr_gep_store(ptr nocapture noundef wri
 ; SM_70-NEXT:    ret void
 ;
 ; COPY-LABEL: define dso_local ptx_kernel void @escape_ptr_gep_store(
-; COPY-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; COPY-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; COPY-NEXT:  [[ENTRY:.*:]]
 ; COPY-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
 ; COPY-NEXT:    [[S2:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -364,7 +364,7 @@ entry:
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @escape_ptrtoint(ptr nocapture noundef writeonly %out, ptr noundef byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
 ; SM_60-LABEL: define dso_local ptx_kernel void @escape_ptrtoint(
-; SM_60-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_60-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_60-NEXT:  [[ENTRY:.*:]]
 ; SM_60-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; SM_60-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -376,7 +376,7 @@ define dso_local ptx_kernel void @escape_ptrtoint(ptr nocapture noundef writeonl
 ; SM_60-NEXT:    ret void
 ;
 ; SM_70-LABEL: define dso_local ptx_kernel void @escape_ptrtoint(
-; SM_70-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_70-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_70-NEXT:  [[ENTRY:.*:]]
 ; SM_70-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; SM_70-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -388,7 +388,7 @@ define dso_local ptx_kernel void @escape_ptrtoint(ptr nocapture noundef writeonl
 ; SM_70-NEXT:    ret void
 ;
 ; COPY-LABEL: define dso_local ptx_kernel void @escape_ptrtoint(
-; COPY-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; COPY-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; COPY-NEXT:  [[ENTRY:.*:]]
 ; COPY-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
 ; COPY-NEXT:    [[S2:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -406,7 +406,7 @@ entry:
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @memcpy_from_param(ptr nocapture noundef writeonly %out, ptr nocapture noundef readonly byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
 ; SM_60-LABEL: define dso_local ptx_kernel void @memcpy_from_param(
-; SM_60-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr nocapture noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_60-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_60-NEXT:  [[ENTRY:.*:]]
 ; SM_60-NEXT:    [[S3:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
 ; SM_60-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
@@ -415,7 +415,7 @@ define dso_local ptx_kernel void @memcpy_from_param(ptr nocapture noundef writeo
 ; SM_60-NEXT:    ret void
 ;
 ; SM_70-LABEL: define dso_local ptx_kernel void @memcpy_from_param(
-; SM_70-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr nocapture noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_70-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_70-NEXT:  [[ENTRY:.*:]]
 ; SM_70-NEXT:    [[S3:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
 ; SM_70-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
@@ -424,7 +424,7 @@ define dso_local ptx_kernel void @memcpy_from_param(ptr nocapture noundef writeo
 ; SM_70-NEXT:    ret void
 ;
 ; COPY-LABEL: define dso_local ptx_kernel void @memcpy_from_param(
-; COPY-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr nocapture noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; COPY-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; COPY-NEXT:  [[ENTRY:.*:]]
 ; COPY-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
 ; COPY-NEXT:    [[S2:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -440,7 +440,7 @@ entry:
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @memcpy_from_param_noalign (ptr nocapture noundef writeonly %out, ptr nocapture noundef readonly byval(%struct.S) %s) local_unnamed_addr #0 {
 ; SM_60-LABEL: define dso_local ptx_kernel void @memcpy_from_param_noalign(
-; SM_60-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr nocapture noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_60-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_60-NEXT:  [[ENTRY:.*:]]
 ; SM_60-NEXT:    [[S3:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
 ; SM_60-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
@@ -449,7 +449,7 @@ define dso_local ptx_kernel void @memcpy_from_param_noalign (ptr nocapture nound
 ; SM_60-NEXT:    ret void
 ;
 ; SM_70-LABEL: define dso_local ptx_kernel void @memcpy_from_param_noalign(
-; SM_70-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr nocapture noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_70-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_70-NEXT:  [[ENTRY:.*:]]
 ; SM_70-NEXT:    [[S3:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
 ; SM_70-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
@@ -458,7 +458,7 @@ define dso_local ptx_kernel void @memcpy_from_param_noalign (ptr nocapture nound
 ; SM_70-NEXT:    ret void
 ;
 ; COPY-LABEL: define dso_local ptx_kernel void @memcpy_from_param_noalign(
-; COPY-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr nocapture noundef readonly byval([[STRUCT_S:%.*]]) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; COPY-SAME: ptr noundef writeonly captures(none) [[OUT:%.*]], ptr noundef readonly byval([[STRUCT_S:%.*]]) captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; COPY-NEXT:  [[ENTRY:.*:]]
 ; COPY-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 8
 ; COPY-NEXT:    [[S2:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -474,7 +474,7 @@ entry:
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @memcpy_to_param(ptr nocapture noundef readonly %in, ptr nocapture noundef readnone byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
 ; SM_60-LABEL: define dso_local ptx_kernel void @memcpy_to_param(
-; SM_60-SAME: ptr nocapture noundef readonly [[IN:%.*]], ptr nocapture noundef readnone byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_60-SAME: ptr noundef readonly captures(none) [[IN:%.*]], ptr noundef readnone byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_60-NEXT:  [[ENTRY:.*:]]
 ; SM_60-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; SM_60-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -485,7 +485,7 @@ define dso_local ptx_kernel void @memcpy_to_param(ptr nocapture noundef readonly
 ; SM_60-NEXT:    ret void
 ;
 ; SM_70-LABEL: define dso_local ptx_kernel void @memcpy_to_param(
-; SM_70-SAME: ptr nocapture noundef readonly [[IN:%.*]], ptr nocapture noundef readnone byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_70-SAME: ptr noundef readonly captures(none) [[IN:%.*]], ptr noundef readnone byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_70-NEXT:  [[ENTRY:.*:]]
 ; SM_70-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; SM_70-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -496,7 +496,7 @@ define dso_local ptx_kernel void @memcpy_to_param(ptr nocapture noundef readonly
 ; SM_70-NEXT:    ret void
 ;
 ; COPY-LABEL: define dso_local ptx_kernel void @memcpy_to_param(
-; COPY-SAME: ptr nocapture noundef readonly [[IN:%.*]], ptr nocapture noundef readnone byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; COPY-SAME: ptr noundef readonly captures(none) [[IN:%.*]], ptr noundef readnone byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; COPY-NEXT:  [[ENTRY:.*:]]
 ; COPY-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
 ; COPY-NEXT:    [[S2:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -512,7 +512,7 @@ entry:
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local ptx_kernel void @copy_on_store(ptr nocapture noundef readonly %in, ptr nocapture noundef byval(%struct.S) align 4 %s, i1 noundef zeroext %b) local_unnamed_addr #0 {
 ; SM_60-LABEL: define dso_local ptx_kernel void @copy_on_store(
-; SM_60-SAME: ptr nocapture noundef readonly [[IN:%.*]], ptr nocapture noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]], i1 noundef zeroext [[B:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_60-SAME: ptr noundef readonly captures(none) [[IN:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]], i1 noundef zeroext [[B:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_60-NEXT:  [[BB:.*:]]
 ; SM_60-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; SM_60-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -524,7 +524,7 @@ define dso_local ptx_kernel void @copy_on_store(ptr nocapture noundef readonly %
 ; SM_60-NEXT:    ret void
 ;
 ; SM_70-LABEL: define dso_local ptx_kernel void @copy_on_store(
-; SM_70-SAME: ptr nocapture noundef readonly [[IN:%.*]], ptr nocapture noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]], i1 noundef zeroext [[B:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; SM_70-SAME: ptr noundef readonly captures(none) [[IN:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]], i1 noundef zeroext [[B:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; SM_70-NEXT:  [[BB:.*:]]
 ; SM_70-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; SM_70-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
@@ -536,7 +536,7 @@ define dso_local ptx_kernel void @copy_on_store(ptr nocapture noundef readonly %
 ; SM_70-NEXT:    ret void
 ;
 ; COPY-LABEL: define dso_local ptx_kernel void @copy_on_store(
-; COPY-SAME: ptr nocapture noundef readonly [[IN:%.*]], ptr nocapture noundef byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]], i1 noundef zeroext [[B:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; COPY-SAME: ptr noundef readonly captures(none) [[IN:%.*]], ptr noundef byval([[STRUCT_S:%.*]]) align 4 captures(none) [[S:%.*]], i1 noundef zeroext [[B:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; COPY-NEXT:  [[BB:.*:]]
 ; COPY-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
 ; COPY-NEXT:    [[S2:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)

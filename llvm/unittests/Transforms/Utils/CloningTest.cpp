@@ -173,7 +173,8 @@ TEST_F(CloneInstruction, Attributes) {
   Function *F2 = Function::Create(FT1, Function::ExternalLinkage);
 
   Argument *A = &*F1->arg_begin();
-  A->addAttr(Attribute::NoCapture);
+  A->addAttr(
+      Attribute::getWithCaptureInfo(A->getContext(), CaptureInfo::none()));
 
   SmallVector<ReturnInst*, 4> Returns;
   ValueToValueMapTy VMap;
