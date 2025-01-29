@@ -175,7 +175,7 @@ struct FormatStyle {
   ///     InOtherConditionalStatements: false
   ///     Other: true
   /// \endcode
-  /// \version 20
+  /// \version 21
   AlignAfterOpenBracketCustom AlignAfterOpenBracketBreak;
 
   /// Different style for aligning array initializers.
