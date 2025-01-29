@@ -6,8 +6,8 @@ from itertools import product
 
 fence_func = Template(
     """
-define void @fence_${ordering}_${scope}() {
-    fence syncscope(\"${scope}\") ${ordering}
+define void @fence_${ordering}_${ptx_scope}() {
+    fence syncscope(\"${llvm_scope}\") ${ordering}
     ret void
 }
 """
@@ -15,15 +15,17 @@ define void @fence_${ordering}_${scope}() {
 
 run_statement = Template(
     """
-; ${run}: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | FileCheck %s --check-prefix=SM${sm}
-; ${run}: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_${sm} -mattr=+ptx${ptx} | %ptxas-verfy %}
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | FileCheck %s --check-prefix=SM${sm}
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_${sm} -mattr=+ptx${ptx} | %ptxas-verify %}
 """
 )
 
 # (sm, ptx)
 TESTS = [(30, 50), (70, 60), (90, 87)]
 
-SCOPES = ["", "block", "cluster", "device"]
+LLVM_SCOPES = ["", "block", "cluster", "device"]
+
+SCOPE_LLVM_TO_PTX = {"": "sys", "block": "cta", "cluster": "cluster", "device": "gpu"}
 
 ORDERINGS = ["acquire", "release", "acq_rel", "seq_cst"]
 
@@ -31,8 +33,9 @@ if __name__ == "__main__":
     for sm, ptx in TESTS:
         with open("fence-sm{}.ll".format(sm), "w") as fp:
             print(run_statement.substitute(run="RUN", sm=sm, ptx=ptx), file=fp)
-            for ordering, scope in product(ORDERINGS, SCOPES):
-                if scope == "cluster" and (sm < 90 or ptx < 78):
+            for ordering, llvm_scope in product(ORDERINGS, LLVM_SCOPES):
+                ptx_scope = SCOPE_LLVM_TO_PTX[llvm_scope]
+                if llvm_scope == "cluster" and (sm < 90 or ptx < 78):
                     print(
                         "; .cluster scope unsupported on SM = {} PTX = {}".format(
                             sm, ptx
@@ -41,5 +44,10 @@ if __name__ == "__main__":
                     )
                 else:
                     print(
-                        fence_func.substitute(scope=scope, ordering=ordering), file=fp
+                        fence_func.substitute(
+                            llvm_scope=llvm_scope,
+                            ptx_scope=ptx_scope,
+                            ordering=ordering,
+                        ),
+                        file=fp,
                     )
