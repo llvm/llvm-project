@@ -4683,6 +4683,8 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   InstructionCost Invalid = InstructionCost::getInvalid();
   InstructionCost Cost(TTI::TCC_Basic);
 
+  // Sub opcodes currently only occur in chained cases.
+  // Independent partial reduction subtractions are still costed as an add
   if (Opcode != Instruction::Add && Opcode != Instruction::Sub)
     return Invalid;
 
