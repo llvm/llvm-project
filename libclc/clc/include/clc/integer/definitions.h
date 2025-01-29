@@ -1,7 +1,7 @@
 #define CHAR_BIT 8
 #define INT_MAX 2147483647
 #define INT_MIN (-2147483647 - 1)
-#define LONG_MAX  0x7fffffffffffffffL
+#define LONG_MAX 0x7fffffffffffffffL
 #define LONG_MIN (-0x7fffffffffffffffL - 1)
 #define CHAR_MAX SCHAR_MAX
 #define CHAR_MIN SCHAR_MIN
