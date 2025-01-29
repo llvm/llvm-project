@@ -137,7 +137,7 @@ private:
 
     ~ShadowMapEntry() {
       if (DeclIndexPairVector *Vec =
-              DeclOrVector.dyn_cast<DeclIndexPairVector *>()) {
+              dyn_cast_if_present<DeclIndexPairVector *>(DeclOrVector)) {
         delete Vec;
         DeclOrVector = ((NamedDecl *)nullptr);
       }
