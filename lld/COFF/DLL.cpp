@@ -132,7 +132,6 @@ public:
 class NullChunk : public NonSectionChunk {
 public:
   explicit NullChunk(size_t n, uint32_t align) : size(n) {
-    hasData = false;
     setAlignment(align);
   }
   explicit NullChunk(COFFLinkerContext &ctx)
@@ -639,22 +638,22 @@ public:
 
 class AddressTableChunk : public NonSectionChunk {
 public:
-  explicit AddressTableChunk(COFFLinkerContext &ctx, size_t baseOrdinal,
+  explicit AddressTableChunk(SymbolTable &symtab, size_t baseOrdinal,
                              size_t maxOrdinal)
       : baseOrdinal(baseOrdinal), size((maxOrdinal - baseOrdinal) + 1),
-        ctx(ctx) {}
+        symtab(symtab) {}
   size_t getSize() const override { return size * 4; }
 
   void writeTo(uint8_t *buf) const override {
     memset(buf, 0, getSize());
 
-    for (const Export &e : ctx.config.exports) {
+    for (const Export &e : symtab.exports) {
       assert(e.ordinal >= baseOrdinal && "Export symbol has invalid ordinal");
       // Subtract the OrdinalBase to get the index.
       uint8_t *p = buf + (e.ordinal - baseOrdinal) * 4;
       uint32_t bit = 0;
       // Pointer to thumb code must have the LSB set, so adjust it.
-      if (ctx.config.machine == ARMNT && !e.data)
+      if (symtab.machine == ARMNT && !e.data)
         bit = 1;
       if (e.forwardChunk) {
         write32le(p, e.forwardChunk->getRVA() | bit);
@@ -669,7 +668,7 @@ public:
 private:
   size_t baseOrdinal;
   size_t size;
-  const COFFLinkerContext &ctx;
+  const SymbolTable &symtab;
 };
 
 class NamePointersChunk : public NonSectionChunk {
@@ -690,13 +689,13 @@ private:
 
 class ExportOrdinalChunk : public NonSectionChunk {
 public:
-  explicit ExportOrdinalChunk(const COFFLinkerContext &ctx, size_t baseOrdinal,
+  explicit ExportOrdinalChunk(const SymbolTable &symtab, size_t baseOrdinal,
                               size_t tableSize)
-      : baseOrdinal(baseOrdinal), size(tableSize), ctx(ctx) {}
+      : baseOrdinal(baseOrdinal), size(tableSize), symtab(symtab) {}
   size_t getSize() const override { return size * 2; }
 
   void writeTo(uint8_t *buf) const override {
-    for (const Export &e : ctx.config.exports) {
+    for (const Export &e : symtab.exports) {
       if (e.noname)
         continue;
       assert(e.ordinal >= baseOrdinal && "Export symbol has invalid ordinal");
@@ -709,13 +708,70 @@ public:
 private:
   size_t baseOrdinal;
   size_t size;
-  const COFFLinkerContext &ctx;
+  const SymbolTable &symtab;
 };
 
 } // anonymous namespace
 
 void IdataContents::create(COFFLinkerContext &ctx) {
   std::vector<std::vector<DefinedImportData *>> v = binImports(ctx, imports);
+
+  // In hybrid images, EC and native code are usually very similar,
+  // resulting in a highly similar set of imported symbols. Consequently,
+  // their import tables can be shared, with ARM64X relocations handling any
+  // differences. Identify matching import files used by EC and native code, and
+  // merge them into a single hybrid import entry.
+  if (ctx.hybridSymtab) {
+    for (std::vector<DefinedImportData *> &syms : v) {
+      std::vector<DefinedImportData *> hybridSyms;
+      ImportFile *prev = nullptr;
+      for (DefinedImportData *sym : syms) {
+        ImportFile *file = sym->file;
+        // At this stage, symbols are sorted by base name, ensuring that
+        // compatible import files, if present, are adjacent. Check if the
+        // current symbol's file imports the same symbol as the previously added
+        // one (if any and if it was not already merged). Additionally, verify
+        // that one of them is native while the other is EC. In rare cases,
+        // separate matching import entries may exist within the same namespace,
+        // which cannot be merged.
+        if (!prev || file->isEC() == prev->isEC() ||
+            !file->isSameImport(prev)) {
+          // We can't merge the import file, just add it to hybridSyms
+          // and set prev to its file so that we can try to match the next
+          // symbol.
+          hybridSyms.push_back(sym);
+          prev = file;
+          continue;
+        }
+
+        // A matching symbol may appear in syms in any order. The native variant
+        // exposes a subset of EC symbols and chunks, so always use the EC
+        // variant as the hybrid import file. If the native file was already
+        // added, replace it with the EC symbol in hybridSyms. Otherwise, the EC
+        // variant is already pushed, so we can simply merge it.
+        if (file->isEC()) {
+          hybridSyms.pop_back();
+          hybridSyms.push_back(sym);
+        }
+
+        // Merge import files by storing their hybrid form in the corresponding
+        // file class.
+        prev->hybridFile = file;
+        file->hybridFile = prev;
+        prev = nullptr; // A hybrid import file cannot be merged again.
+      }
+
+      // Sort symbols by type: native-only files first, followed by merged
+      // hybrid files, and then EC-only files.
+      llvm::stable_sort(hybridSyms,
+                        [](DefinedImportData *a, DefinedImportData *b) {
+                          if (a->file->hybridFile)
+                            return !b->file->hybridFile && b->file->isEC();
+                          return !a->file->isEC() && b->file->isEC();
+                        });
+      syms = std::move(hybridSyms);
+    }
+  }
 
   // Create .idata contents for each DLL.
   for (std::vector<DefinedImportData *> &syms : v) {
@@ -724,19 +780,56 @@ void IdataContents::create(COFFLinkerContext &ctx) {
     // If they don't (if they are import-by-ordinals), we store only
     // ordinal values to the table.
     size_t base = lookups.size();
+    Chunk *lookupsTerminator = nullptr, *addressesTerminator = nullptr;
     for (DefinedImportData *s : syms) {
       uint16_t ord = s->getOrdinal();
+      HintNameChunk *hintChunk = nullptr;
+      Chunk *lookupsChunk, *addressesChunk;
+
       if (s->getExternalName().empty()) {
-        lookups.push_back(make<OrdinalOnlyChunk>(ctx, ord));
-        addresses.push_back(make<OrdinalOnlyChunk>(ctx, ord));
+        lookupsChunk = make<OrdinalOnlyChunk>(ctx, ord);
+        addressesChunk = make<OrdinalOnlyChunk>(ctx, ord);
       } else {
-        auto *c = make<HintNameChunk>(s->getExternalName(), ord);
-        lookups.push_back(make<LookupChunk>(ctx, c));
-        addresses.push_back(make<LookupChunk>(ctx, c));
-        hints.push_back(c);
+        hintChunk = make<HintNameChunk>(s->getExternalName(), ord);
+        lookupsChunk = make<LookupChunk>(ctx, hintChunk);
+        addressesChunk = make<LookupChunk>(ctx, hintChunk);
+        hints.push_back(hintChunk);
       }
 
-      if (s->file->impECSym) {
+      // Detect the first EC-only import in the hybrid IAT. Emit null chunk
+      // as a terminator for the native view, and add an ARM64X relocation to
+      // replace it with the correct import for the EC view.
+      //
+      // Additionally, for MSVC compatibility, store the lookup and address
+      // chunks and append them at the end of EC-only imports, where a null
+      // terminator chunk would typically be placed. Since they appear after
+      // the native terminator, they will be ignored in the native view.
+      // In the EC view, they should act as terminators, so emit ZEROFILL
+      // relocations overriding them.
+      if (ctx.hybridSymtab && !lookupsTerminator && s->file->isEC() &&
+          !s->file->hybridFile) {
+        lookupsTerminator = lookupsChunk;
+        addressesTerminator = addressesChunk;
+        lookupsChunk = make<NullChunk>(ctx);
+        addressesChunk = make<NullChunk>(ctx);
+
+        Arm64XRelocVal relocVal = hintChunk;
+        if (!hintChunk)
+          relocVal = (1ULL << 63) | ord;
+        ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE,
+                               sizeof(uint64_t), lookupsChunk, relocVal);
+        ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE,
+                               sizeof(uint64_t), addressesChunk, relocVal);
+        ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL,
+                               sizeof(uint64_t), lookupsTerminator);
+        ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL,
+                               sizeof(uint64_t), addressesTerminator);
+      }
+
+      lookups.push_back(lookupsChunk);
+      addresses.push_back(addressesChunk);
+
+      if (s->file->isEC()) {
         auto chunk = make<AuxImportChunk>(s->file);
         auxIat.push_back(chunk);
         s->file->impECSym->setLocation(chunk);
@@ -744,18 +837,27 @@ void IdataContents::create(COFFLinkerContext &ctx) {
         chunk = make<AuxImportChunk>(s->file);
         auxIatCopy.push_back(chunk);
         s->file->auxImpCopySym->setLocation(chunk);
+      } else if (ctx.hybridSymtab) {
+        // Fill the auxiliary IAT with null chunks for native-only imports.
+        auxIat.push_back(make<NullChunk>(ctx));
+        auxIatCopy.push_back(make<NullChunk>(ctx));
       }
     }
     // Terminate with null values.
-    lookups.push_back(make<NullChunk>(ctx));
-    addresses.push_back(make<NullChunk>(ctx));
-    if (ctx.config.machine == ARM64EC) {
+    lookups.push_back(lookupsTerminator ? lookupsTerminator
+                                        : make<NullChunk>(ctx));
+    addresses.push_back(addressesTerminator ? addressesTerminator
+                                            : make<NullChunk>(ctx));
+    if (ctx.symtabEC) {
       auxIat.push_back(make<NullChunk>(ctx));
       auxIatCopy.push_back(make<NullChunk>(ctx));
     }
 
-    for (int i = 0, e = syms.size(); i < e; ++i)
+    for (int i = 0, e = syms.size(); i < e; ++i) {
       syms[i]->setLocation(addresses[base + i]);
+      if (syms[i]->file->hybridFile)
+        syms[i]->file->hybridFile->impSym->setLocation(addresses[base + i]);
+    }
 
     // Create the import table header.
     dllNames.push_back(make<StringChunk>(syms[0]->getDLLName()));
@@ -763,6 +865,27 @@ void IdataContents::create(COFFLinkerContext &ctx) {
     dir->lookupTab = lookups[base];
     dir->addressTab = addresses[base];
     dirs.push_back(dir);
+
+    if (ctx.hybridSymtab) {
+      // If native-only imports exist, they will appear as a prefix to all
+      // imports. Emit ARM64X relocations to skip them in the EC view.
+      uint32_t nativeOnly =
+          llvm::find_if(syms,
+                        [](DefinedImportData *s) { return s->file->isEC(); }) -
+          syms.begin();
+      if (nativeOnly) {
+        ctx.dynamicRelocs->add(
+            IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA, 0,
+            Arm64XRelocVal(
+                dir, offsetof(ImportDirectoryTableEntry, ImportLookupTableRVA)),
+            nativeOnly * sizeof(uint64_t));
+        ctx.dynamicRelocs->add(
+            IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA, 0,
+            Arm64XRelocVal(dir, offsetof(ImportDirectoryTableEntry,
+                                         ImportAddressTableRVA)),
+            nativeOnly * sizeof(uint64_t));
+      }
+    }
   }
   // Add null terminator.
   dirs.push_back(make<NullChunk>(sizeof(ImportDirectoryTableEntry), 4));
@@ -788,11 +911,8 @@ uint64_t DelayLoadContents::getDirSize() {
   return dirs.size() * sizeof(delay_import_directory_table_entry);
 }
 
-void DelayLoadContents::create(Defined *h) {
-  helper = h;
+void DelayLoadContents::create() {
   std::vector<std::vector<DefinedImportData *>> v = binImports(ctx, imports);
-
-  Chunk *unwind = newTailMergeUnwindInfoChunk();
 
   // Create .didat contents for each DLL.
   for (std::vector<DefinedImportData *> &syms : v) {
@@ -801,54 +921,89 @@ void DelayLoadContents::create(Defined *h) {
     auto *dir = make<DelayDirectoryChunk>(dllNames.back());
 
     size_t base = addresses.size();
-    Chunk *tm = newTailMergeChunk(dir);
-    Chunk *pdataChunk = unwind ? newTailMergePDataChunk(tm, unwind) : nullptr;
-    for (DefinedImportData *s : syms) {
-      Chunk *t = newThunkChunk(s, tm);
-      auto *a = make<DelayAddressChunk>(ctx, t);
-      addresses.push_back(a);
-      thunks.push_back(t);
-      StringRef extName = s->getExternalName();
-      if (extName.empty()) {
-        names.push_back(make<OrdinalOnlyChunk>(ctx, s->getOrdinal()));
-      } else {
-        auto *c = make<HintNameChunk>(extName, 0);
-        names.push_back(make<LookupChunk>(ctx, c));
-        hintNames.push_back(c);
-        // Add a synthetic symbol for this load thunk, using the "__imp___load"
-        // prefix, in case this thunk needs to be added to the list of valid
-        // call targets for Control Flow Guard.
-        StringRef symName = saver().save("__imp___load_" + extName);
-        s->loadThunkSym =
-            cast<DefinedSynthetic>(ctx.symtab.addSynthetic(symName, t));
+    ctx.forEachSymtab([&](SymbolTable &symtab) {
+      if (ctx.hybridSymtab && symtab.isEC()) {
+        // For hybrid images, emit null-terminated native import entries
+        // followed by null-terminated EC entries. If a view is missing imports
+        // for a given module, only terminators are emitted. Emit ARM64X
+        // relocations to skip native entries in the EC view.
+        ctx.dynamicRelocs->add(
+            IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA, 0,
+            Arm64XRelocVal(dir, offsetof(delay_import_directory_table_entry,
+                                         DelayImportAddressTable)),
+            (addresses.size() - base) * sizeof(uint64_t));
+        ctx.dynamicRelocs->add(
+            IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA, 0,
+            Arm64XRelocVal(dir, offsetof(delay_import_directory_table_entry,
+                                         DelayImportNameTable)),
+            (addresses.size() - base) * sizeof(uint64_t));
       }
 
-      if (s->file->impECSym) {
-        auto chunk = make<AuxImportChunk>(s->file);
-        auxIat.push_back(chunk);
-        s->file->impECSym->setLocation(chunk);
+      Chunk *tm = nullptr;
 
-        chunk = make<AuxImportChunk>(s->file);
-        auxIatCopy.push_back(chunk);
-        s->file->auxImpCopySym->setLocation(chunk);
+      for (DefinedImportData *s : syms) {
+        // Process only the symbols belonging to the current symtab.
+        if (symtab.isEC() != s->file->isEC())
+          continue;
+
+        if (!tm) {
+          tm = newTailMergeChunk(symtab, dir);
+          Chunk *pdataChunk = newTailMergePDataChunk(symtab, tm);
+          if (pdataChunk)
+            pdata.push_back(pdataChunk);
+        }
+
+        Chunk *t = newThunkChunk(s, tm);
+        auto *a = make<DelayAddressChunk>(ctx, t);
+        addresses.push_back(a);
+        s->setLocation(a);
+        thunks.push_back(t);
+        StringRef extName = s->getExternalName();
+        if (extName.empty()) {
+          names.push_back(make<OrdinalOnlyChunk>(ctx, s->getOrdinal()));
+        } else {
+          auto *c = make<HintNameChunk>(extName, 0);
+          names.push_back(make<LookupChunk>(ctx, c));
+          hintNames.push_back(c);
+          // Add a synthetic symbol for this load thunk, using the
+          // "__imp___load" prefix, in case this thunk needs to be added to the
+          // list of valid call targets for Control Flow Guard.
+          StringRef symName = saver().save("__imp___load_" + extName);
+          s->loadThunkSym =
+              cast<DefinedSynthetic>(symtab.addSynthetic(symName, t));
+        }
+
+        if (symtab.isEC()) {
+          auto chunk = make<AuxImportChunk>(s->file);
+          auxIat.push_back(chunk);
+          s->file->impECSym->setLocation(chunk);
+
+          chunk = make<AuxImportChunk>(s->file);
+          auxIatCopy.push_back(chunk);
+          s->file->auxImpCopySym->setLocation(chunk);
+        } else if (ctx.hybridSymtab) {
+          // Fill the auxiliary IAT with null chunks for native imports.
+          auxIat.push_back(make<NullChunk>(ctx));
+          auxIatCopy.push_back(make<NullChunk>(ctx));
+        }
       }
-    }
-    thunks.push_back(tm);
-    if (pdataChunk)
-      pdata.push_back(pdataChunk);
-    StringRef tmName =
-        saver().save("__tailMerge_" + syms[0]->getDLLName().lower());
-    ctx.symtab.addSynthetic(tmName, tm);
-    // Terminate with null values.
-    addresses.push_back(make<NullChunk>(ctx, 8));
-    names.push_back(make<NullChunk>(ctx, 8));
-    if (ctx.config.machine == ARM64EC) {
-      auxIat.push_back(make<NullChunk>(ctx, 8));
-      auxIatCopy.push_back(make<NullChunk>(ctx, 8));
-    }
 
-    for (int i = 0, e = syms.size(); i < e; ++i)
-      syms[i]->setLocation(addresses[base + i]);
+      if (tm) {
+        thunks.push_back(tm);
+        StringRef tmName =
+            saver().save("__tailMerge_" + syms[0]->getDLLName().lower());
+        symtab.addSynthetic(tmName, tm);
+      }
+
+      // Terminate with null values.
+      addresses.push_back(make<NullChunk>(ctx, 8));
+      names.push_back(make<NullChunk>(ctx, 8));
+      if (ctx.symtabEC) {
+        auxIat.push_back(make<NullChunk>(ctx, 8));
+        auxIatCopy.push_back(make<NullChunk>(ctx, 8));
+      }
+    });
+
     auto *mh = make<NullChunk>(8, 8);
     moduleHandles.push_back(mh);
 
@@ -859,15 +1014,18 @@ void DelayLoadContents::create(Defined *h) {
     dirs.push_back(dir);
   }
 
-  if (unwind)
-    unwindinfo.push_back(unwind);
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    if (symtab.tailMergeUnwindInfoChunk)
+      unwindinfo.push_back(symtab.tailMergeUnwindInfoChunk);
+  });
   // Add null terminator.
   dirs.push_back(
       make<NullChunk>(sizeof(delay_import_directory_table_entry), 4));
 }
 
-Chunk *DelayLoadContents::newTailMergeChunk(Chunk *dir) {
-  switch (ctx.config.machine) {
+Chunk *DelayLoadContents::newTailMergeChunk(SymbolTable &symtab, Chunk *dir) {
+  auto helper = cast<Defined>(symtab.delayLoadHelper);
+  switch (symtab.machine) {
   case AMD64:
   case ARM64EC:
     return make<TailMergeChunkX64>(dir, helper);
@@ -882,21 +1040,14 @@ Chunk *DelayLoadContents::newTailMergeChunk(Chunk *dir) {
   }
 }
 
-Chunk *DelayLoadContents::newTailMergeUnwindInfoChunk() {
-  switch (ctx.config.machine) {
+Chunk *DelayLoadContents::newTailMergePDataChunk(SymbolTable &symtab,
+                                                 Chunk *tm) {
+  switch (symtab.machine) {
   case AMD64:
   case ARM64EC:
-    return make<TailMergeUnwindInfoX64>();
-    // FIXME: Add support for other architectures.
-  default:
-    return nullptr; // Just don't generate unwind info.
-  }
-}
-Chunk *DelayLoadContents::newTailMergePDataChunk(Chunk *tm, Chunk *unwind) {
-  switch (ctx.config.machine) {
-  case AMD64:
-  case ARM64EC:
-    return make<TailMergePDataChunkX64>(tm, unwind);
+    if (!symtab.tailMergeUnwindInfoChunk)
+      symtab.tailMergeUnwindInfoChunk = make<TailMergeUnwindInfoX64>();
+    return make<TailMergePDataChunkX64>(tm, symtab.tailMergeUnwindInfoChunk);
     // FIXME: Add support for other architectures.
   default:
     return nullptr; // Just don't generate unwind info.
@@ -905,7 +1056,7 @@ Chunk *DelayLoadContents::newTailMergePDataChunk(Chunk *tm, Chunk *unwind) {
 
 Chunk *DelayLoadContents::newThunkChunk(DefinedImportData *s,
                                         Chunk *tailMerge) {
-  switch (ctx.config.machine) {
+  switch (s->file->getMachineType()) {
   case AMD64:
   case ARM64EC:
     return make<ThunkChunkX64>(s, tailMerge);
@@ -920,9 +1071,9 @@ Chunk *DelayLoadContents::newThunkChunk(DefinedImportData *s,
   }
 }
 
-EdataContents::EdataContents(COFFLinkerContext &ctx) : ctx(ctx) {
+void createEdataChunks(SymbolTable &symtab, std::vector<Chunk *> &chunks) {
   unsigned baseOrdinal = 1 << 16, maxOrdinal = 0;
-  for (Export &e : ctx.config.exports) {
+  for (Export &e : symtab.exports) {
     baseOrdinal = std::min(baseOrdinal, (unsigned)e.ordinal);
     maxOrdinal = std::max(maxOrdinal, (unsigned)e.ordinal);
   }
@@ -930,15 +1081,16 @@ EdataContents::EdataContents(COFFLinkerContext &ctx) : ctx(ctx) {
   // https://learn.microsoft.com/en-us/cpp/build/reference/export-exports-a-function?view=msvc-170
   assert(baseOrdinal >= 1);
 
-  auto *dllName = make<StringChunk>(sys::path::filename(ctx.config.outputFile));
-  auto *addressTab = make<AddressTableChunk>(ctx, baseOrdinal, maxOrdinal);
+  auto *dllName =
+      make<StringChunk>(sys::path::filename(symtab.ctx.config.outputFile));
+  auto *addressTab = make<AddressTableChunk>(symtab, baseOrdinal, maxOrdinal);
   std::vector<Chunk *> names;
-  for (Export &e : ctx.config.exports)
+  for (Export &e : symtab.exports)
     if (!e.noname)
       names.push_back(make<StringChunk>(e.exportName));
 
   std::vector<Chunk *> forwards;
-  for (Export &e : ctx.config.exports) {
+  for (Export &e : symtab.exports) {
     if (e.forwardTo.empty())
       continue;
     e.forwardChunk = make<StringChunk>(e.forwardTo);
@@ -946,7 +1098,8 @@ EdataContents::EdataContents(COFFLinkerContext &ctx) : ctx(ctx) {
   }
 
   auto *nameTab = make<NamePointersChunk>(names);
-  auto *ordinalTab = make<ExportOrdinalChunk>(ctx, baseOrdinal, names.size());
+  auto *ordinalTab =
+      make<ExportOrdinalChunk>(symtab, baseOrdinal, names.size());
   auto *dir =
       make<ExportDirectoryChunk>(baseOrdinal, maxOrdinal, names.size(), dllName,
                                  addressTab, nameTab, ordinalTab);

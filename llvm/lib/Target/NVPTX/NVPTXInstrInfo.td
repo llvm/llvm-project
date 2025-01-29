@@ -172,6 +172,9 @@ class hasSM<int version>: Predicate<"Subtarget->getSmVersion() >= " # version>;
 
 // Explicit records for arch-accelerated SM versions
 def hasSM90a : Predicate<"Subtarget->getFullSmVersion() == 901">;
+def hasSM100a : Predicate<"Subtarget->getFullSmVersion() == 1001">;
+def hasSM101a : Predicate<"Subtarget->getFullSmVersion() == 1011">;
+def hasSM120a : Predicate<"Subtarget->getFullSmVersion() == 1201">;
 
 // non-sync shfl instructions are not available on sm_70+ in PTX6.4+
 def hasSHFL : Predicate<"!(Subtarget->getSmVersion() >= 70"
@@ -569,6 +572,18 @@ multiclass F2_Support_Half<string OpcStr, SDNode OpNode> {
 
 }
 
+// Variant where only .ftz.bf16 is supported.
+multiclass F2_Support_Half_BF<string OpcStr, SDNode OpNode> {
+   def bf16_ftz :  NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a),
+                           OpcStr # ".ftz.bf16 \t$dst, $a;",
+                           [(set bf16:$dst, (OpNode bf16:$a))]>,
+                           Requires<[hasSM<90>, hasPTX<78>]>;
+   def bf16x2_ftz: NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a),
+                           OpcStr # ".ftz.bf16x2 \t$dst, $a;",
+                           [(set v2bf16:$dst, (OpNode v2bf16:$a))]>,
+                           Requires<[hasSM<90>, hasPTX<78>]>;
+}
+
 //===----------------------------------------------------------------------===//
 // NVPTX Instructions.
 //===----------------------------------------------------------------------===//
@@ -749,6 +764,11 @@ let hasSideEffects = false in {
   defm CVT_to_tf32_rz_relu  : CVT_TO_TF32<"rz.relu">;
   defm CVT_to_tf32_rna      : CVT_TO_TF32<"rna", [hasPTX<70>, hasSM<80>]>;
   defm CVT_to_tf32_rna_satf : CVT_TO_TF32<"rna.satfinite", [hasPTX<81>, hasSM<89>]>;
+
+  defm CVT_to_tf32_rn_satf : CVT_TO_TF32<"rn.satfinite", [hasPTX<86>, hasSM<100>]>;
+  defm CVT_to_tf32_rz_satf : CVT_TO_TF32<"rz.satfinite", [hasPTX<86>, hasSM<100>]>;
+  defm CVT_to_tf32_rn_relu_satf  : CVT_TO_TF32<"rn.relu.satfinite", [hasPTX<86>, hasSM<100>]>;
+  defm CVT_to_tf32_rz_relu_satf  : CVT_TO_TF32<"rz.relu.satfinite", [hasPTX<86>, hasSM<100>]>;
 }
 
 def fpround_oneuse : PatFrag<(ops node:$a), (fpround node:$a), [{
@@ -1182,6 +1202,8 @@ defm FABS_H: F2_Support_Half<"abs", fabs>;
 defm FNEG_H: F2_Support_Half<"neg", fneg>;
 
 defm FSQRT : F2<"sqrt.rn", fsqrt>;
+
+defm FEXP2_H: F2_Support_Half_BF<"ex2.approx", fexp2>;
 
 //
 // F16 NEG

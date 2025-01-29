@@ -132,6 +132,37 @@ func.func @extract_from_create_mask_dynamic_position(%dim0: index, %index: index
 
 // -----
 
+// CHECK-LABEL: @extract_scalar_poison_idx
+func.func @extract_scalar_poison_idx(%a: vector<4x5xf32>) -> f32 {
+  //  CHECK-NOT: vector.extract
+  // CHECK-NEXT: ub.poison : f32
+  %0 = vector.extract %a[-1, 0] : f32 from vector<4x5xf32>
+  return %0 : f32
+}
+
+// -----
+
+// CHECK-LABEL: @extract_vector_poison_idx
+func.func @extract_vector_poison_idx(%a: vector<4x5xf32>) -> vector<5xf32> {
+  //  CHECK-NOT: vector.extract
+  // CHECK-NEXT: ub.poison : vector<5xf32>
+  %0 = vector.extract %a[-1] : vector<5xf32> from vector<4x5xf32>
+  return %0 : vector<5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @extract_multiple_poison_idx
+func.func @extract_multiple_poison_idx(%a: vector<4x5x8xf32>)
+    -> vector<8xf32> {
+  //  CHECK-NOT: vector.extract
+  // CHECK-NEXT: ub.poison : vector<8xf32>
+  %0 = vector.extract %a[-1, -1] : vector<8xf32> from vector<4x5x8xf32>
+  return %0 : vector<8xf32>
+}
+
+// -----
+
 // CHECK-LABEL: extract_from_create_mask_dynamic_position_all_false
 //  CHECK-SAME: %[[DIM0:.*]]: index, %[[INDEX:.*]]: index
 func.func @extract_from_create_mask_dynamic_position_all_false(%dim0: index, %index: index) -> vector<6xi1> {
@@ -2778,7 +2809,6 @@ func.func @from_elements_to_splat(%a: f32, %b: f32) -> (vector<2x3xf32>, vector<
   return %0, %1, %2 : vector<2x3xf32>, vector<2x3xf32>, vector<f32>
 }
 
-
 // -----
 
 // CHECK-LABEL: func @vector_insert_const_regression(
@@ -2788,6 +2818,39 @@ func.func @vector_insert_const_regression(%arg0: i8) -> vector<4xi8> {
   %0 = llvm.mlir.undef : vector<4xi8>
   %1 = vector.insert %arg0, %0 [0] : i8 into vector<4xi8>
   return %1 : vector<4xi8>
+}
+
+// -----
+
+// CHECK-LABEL: @insert_scalar_poison_idx
+func.func @insert_scalar_poison_idx(%a: vector<4x5xf32>, %b: f32)
+    -> vector<4x5xf32> {
+  //  CHECK-NOT: vector.insert
+  // CHECK-NEXT: ub.poison : vector<4x5xf32>
+  %0 = vector.insert %b, %a[-1, 0] : f32 into vector<4x5xf32>
+  return %0 : vector<4x5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @insert_vector_poison_idx
+func.func @insert_vector_poison_idx(%a: vector<4x5xf32>, %b: vector<5xf32>)
+    -> vector<4x5xf32> {
+  //  CHECK-NOT: vector.insert
+  // CHECK-NEXT: ub.poison : vector<4x5xf32>
+  %0 = vector.insert %b, %a[-1] : vector<5xf32> into vector<4x5xf32>
+  return %0 : vector<4x5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @insert_multiple_poison_idx
+func.func @insert_multiple_poison_idx(%a: vector<4x5x8xf32>, %b: vector<8xf32>)
+    -> vector<4x5x8xf32> {
+  //  CHECK-NOT: vector.insert
+  // CHECK-NEXT: ub.poison : vector<4x5x8xf32>
+  %0 = vector.insert %b, %a[-1, -1] : vector<8xf32> into vector<4x5x8xf32>
+  return %0 : vector<4x5x8xf32>
 }
 
 // -----
@@ -2837,4 +2900,145 @@ func.func @contiguous_extract_strided_slices_to_extract_failure_non_full_size(%a
 func.func @contiguous_extract_strided_slices_to_extract_failure_non_full_inner_size(%arg0 : vector<8x1x2x1x1x4xi32>) -> vector<1x1x2x1x1x1xi32> {
   %1 = vector.extract_strided_slice %arg0 {offsets = [0, 0, 0, 0, 0, 0], sizes = [1, 1, 2, 1, 1, 1], strides = [1, 1, 1, 1, 1, 1]} : vector<8x1x2x1x1x4xi32> to vector<1x1x2x1x1x1xi32>
   return %1 : vector<1x1x2x1x1x1xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @contiguous_gather
+//  CHECK-SAME:   (%[[BASE:.*]]: memref<?xf32>, %[[MASK:.*]]: vector<16xi1>, %[[PASSTHRU:.*]]: vector<16xf32>)
+//       CHECK:   %[[C0:.*]] = arith.constant 0 : index
+//       CHECK:   %[[R:.*]] = vector.maskedload %[[BASE]][%[[C0]]], %[[MASK]], %[[PASSTHRU]] : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+//       CHECK:   return %[[R]]
+func.func @contiguous_gather(%base: memref<?xf32>,
+                             %mask: vector<16xi1>, %passthru: vector<16xf32>) -> vector<16xf32> {
+  %c0 = arith.constant 0 : index
+  %indices = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]> : vector<16xi32>
+  %1 = vector.gather %base[%c0][%indices], %mask, %passthru :
+    memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+  return %1 : vector<16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @contiguous_gather_non_zero_start(
+//  TODO: Non-zero start is not supported yet.
+//       CHECK:   %[[R:.*]] = vector.gather
+//       CHECK:   return %[[R]]
+func.func @contiguous_gather_non_zero_start(%base: memref<?xf32>,
+                                            %mask: vector<16xi1>,
+                                            %passthru: vector<16xf32>) -> vector<16xf32> {
+  %c0 = arith.constant 0 : index
+  %indices = arith.constant dense<[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]> : vector<16xi32>
+  %1 = vector.gather %base[%c0][%indices], %mask, %passthru :
+    memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+  return %1 : vector<16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @contiguous_gather_2d(
+// TODO: Only 1D vectors are supported.
+//       CHECK:   %[[R:.*]] = vector.gather
+//       CHECK:   return %[[R]]
+func.func @contiguous_gather_2d(%base: memref<?x?xf32>,
+                                %mask: vector<4x4xi1>, %passthru: vector<4x4xf32>) -> vector<4x4xf32> {
+  %c0 = arith.constant 0 : index
+  %indices = arith.constant dense<[[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15]]> : vector<4x4xi32>
+  %1 = vector.gather %base[%c0, %c0][%indices], %mask, %passthru :
+    memref<?x?xf32>, vector<4x4xi32>, vector<4x4xi1>, vector<4x4xf32> into vector<4x4xf32>
+  return %1 : vector<4x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @contiguous_gather_const_mask
+//  CHECK-SAME:   (%[[BASE:.*]]: memref<?xf32>, %[[PASSTHRU:.*]]: vector<16xf32>)
+//       CHECK:   %[[C0:.*]] = arith.constant 0 : index
+//       CHECK:   %[[R:.*]] = vector.load %[[BASE]][%[[C0]]] : memref<?xf32>, vector<16xf32>
+//       CHECK:   return %[[R]]
+func.func @contiguous_gather_const_mask(%base: memref<?xf32>,
+                                        %passthru: vector<16xf32>) -> vector<16xf32> {
+  %c0 = arith.constant 0 : index
+  %indices = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]> : vector<16xi32>
+  %mask = arith.constant dense<true> : vector<16xi1>
+  %1 = vector.gather %base[%c0][%indices], %mask, %passthru :
+    memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+  return %1 : vector<16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @contiguous_gather_step
+//  CHECK-SAME:   (%[[BASE:.*]]: memref<?xf32>, %[[MASK:.*]]: vector<16xi1>, %[[PASSTHRU:.*]]: vector<16xf32>)
+//       CHECK:   %[[C0:.*]] = arith.constant 0 : index
+//       CHECK:   %[[R:.*]] = vector.maskedload %[[BASE]][%[[C0]]], %[[MASK]], %[[PASSTHRU]] : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+//       CHECK:   return %[[R]]
+func.func @contiguous_gather_step(%base: memref<?xf32>,
+                                  %mask: vector<16xi1>, %passthru: vector<16xf32>) -> vector<16xf32> {
+  %c0 = arith.constant 0 : index
+  %indices = vector.step : vector<16xindex>
+  %1 = vector.gather %base[%c0][%indices], %mask, %passthru :
+    memref<?xf32>, vector<16xindex>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+  return %1 : vector<16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @gather_broadcast(
+// TODO: Broadcast is not supported yet
+//       CHECK:   %[[R:.*]] = vector.gather
+//       CHECK:   return %[[R]]
+func.func @gather_broadcast(%base: memref<?xf32>,
+                             %mask: vector<16xi1>, %passthru: vector<16xf32>) -> vector<16xf32> {
+  %c0 = arith.constant 0 : index
+  %indices = arith.constant dense<0> : vector<16xi32>
+  %1 = vector.gather %base[%c0][%indices], %mask, %passthru :
+    memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+  return %1 : vector<16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @contiguous_scatter
+//  CHECK-SAME:   (%[[BASE:.*]]: memref<?xf32>, %[[MASK:.*]]: vector<16xi1>, %[[VALUE:.*]]: vector<16xf32>)
+//       CHECK:   %[[C0:.*]] = arith.constant 0 : index
+//       CHECK:   vector.maskedstore %[[BASE]][%[[C0]]], %[[MASK]], %[[VALUE]] : memref<?xf32>, vector<16xi1>, vector<16xf32>
+func.func @contiguous_scatter(%base: memref<?xf32>,
+                              %mask: vector<16xi1>, %value: vector<16xf32>) {
+  %c0 = arith.constant 0 : index
+  %indices = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]> : vector<16xi32>
+  vector.scatter %base[%c0][%indices], %mask, %value :
+    memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @contiguous_scatter_const_mask
+//  CHECK-SAME:   (%[[BASE:.*]]: memref<?xf32>, %[[VALUE:.*]]: vector<16xf32>)
+//       CHECK:   %[[C0:.*]] = arith.constant 0 : index
+//       CHECK:   vector.store %[[VALUE]], %[[BASE]][%[[C0]]] : memref<?xf32>, vector<16xf32>
+func.func @contiguous_scatter_const_mask(%base: memref<?xf32>,
+                                         %value: vector<16xf32>) {
+  %c0 = arith.constant 0 : index
+  %indices = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]> : vector<16xi32>
+  %mask = vector.constant_mask [16] : vector<16xi1>
+  vector.scatter %base[%c0][%indices], %mask, %value :
+    memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @contiguous_scatter_step
+//  CHECK-SAME:   (%[[BASE:.*]]: memref<?xf32>, %[[MASK:.*]]: vector<16xi1>, %[[VALUE:.*]]: vector<16xf32>)
+//       CHECK:   %[[C0:.*]] = arith.constant 0 : index
+//       CHECK:   vector.maskedstore %[[BASE]][%[[C0]]], %[[MASK]], %[[VALUE]] : memref<?xf32>, vector<16xi1>, vector<16xf32>
+func.func @contiguous_scatter_step(%base: memref<?xf32>,
+                                   %mask: vector<16xi1>, %value: vector<16xf32>) {
+  %c0 = arith.constant 0 : index
+  %indices = vector.step : vector<16xindex>
+  vector.scatter %base[%c0][%indices], %mask, %value :
+    memref<?xf32>, vector<16xindex>, vector<16xi1>, vector<16xf32>
+  return
 }
