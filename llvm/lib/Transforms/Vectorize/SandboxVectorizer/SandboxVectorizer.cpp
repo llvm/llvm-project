@@ -36,7 +36,7 @@ SandboxVectorizerPass::SandboxVectorizerPass() : FPM("fpm") {
     //         - Bottom-up Vectorizer pass that starts from a seed
     //         - Accept or revert IR state pass
     FPM.setPassPipeline(
-        "seed-selection<bottom-up-vec,tr-accept-or-revert>",
+        "seed-selection<tr-save,bottom-up-vec,tr-accept-or-revert>",
         sandboxir::SandboxVectorizerPassBuilder::createFunctionPass);
   } else {
     // Create the user-defined pipeline.
