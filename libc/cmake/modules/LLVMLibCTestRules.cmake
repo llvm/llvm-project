@@ -1,11 +1,6 @@
 function(_get_common_test_compile_options output_var c_test flags)
   _get_compile_options_from_flags(compile_flags ${flags})
 
-  # Remove -fno-math-errno if it was added.
-  if(LIBC_ADD_FNO_MATH_ERRNO)
-    list(REMOVE_ITEM compile_options "-fno-math-errno")
-  endif()
-
   set(compile_options
       ${LIBC_COMPILE_OPTIONS_DEFAULT}
       ${LIBC_TEST_COMPILE_OPTIONS_DEFAULT}
@@ -39,9 +34,7 @@ function(_get_common_test_compile_options output_var c_test flags)
     # list(APPEND compile_options "-Wconversion")
     # list(APPEND compile_options "-Wno-sign-conversion")
     list(APPEND compile_options "-Wimplicit-fallthrough")
-    list(APPEND compile_options "-Wstrict-prototypes")
     list(APPEND compile_options "-Wwrite-strings")
-    list(APPEND compile_options "-Wextra-semi")
     # Silence this warning because _Complex is a part of C99.
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       if(NOT c_test)
@@ -53,6 +46,8 @@ function(_get_common_test_compile_options output_var c_test flags)
     endif()
     list(APPEND compile_options "-Wno-pedantic")
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+      list(APPEND compile_options "-Wstrict-prototypes")
+      list(APPEND compile_options "-Wextra-semi")
       list(APPEND compile_options "-Wnewline-eof")
       list(APPEND compile_options "-Wnonportable-system-include-path")
       list(APPEND compile_options "-Wthread-safety")
