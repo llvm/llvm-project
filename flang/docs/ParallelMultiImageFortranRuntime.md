@@ -8,8 +8,10 @@
 
 # Multi-Image Parallel Fortran Runtime
 
-LLVM Flang targets the Parallel Runtime Interface for Fortran (PRIF) for
-runtime support of Fortran's multi-image parallel features.
+
+The Parallel Runtime Interface for Fortran (PRIF) defines an 
+interface designed for LLVM Flang to target implementations of 
+Fortran's multi-image parallel features.
 
 The current revision of the PRIF specification is here:
 <https://doi.org/10.25344/S4CG6G>
