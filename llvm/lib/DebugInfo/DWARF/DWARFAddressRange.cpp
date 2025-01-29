@@ -14,7 +14,7 @@
 using namespace llvm;
 
 void DWARFAddressRange::dump(raw_ostream &OS, uint32_t AddressSize,
-                             DIDumpOptions DumpOpts,
+                             const DIDumpOptions &DumpOpts,
                              const DWARFObject *Obj) const {
 
   OS << (DumpOpts.DisplayRawContents ? " " : "[");

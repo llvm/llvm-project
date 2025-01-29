@@ -103,7 +103,7 @@ class DWARFUnitIndex {
     uint32_t NumUnits;
     uint32_t NumBuckets = 0;
 
-    bool parse(DataExtractor IndexData, uint64_t *OffsetPtr);
+    bool parse(const DataExtractor &IndexData, uint64_t *OffsetPtr);
     void dump(raw_ostream &OS) const;
   };
 
@@ -162,7 +162,7 @@ private:
 
   static StringRef getColumnHeader(DWARFSectionKind DS);
 
-  bool parseImpl(DataExtractor IndexData);
+  bool parseImpl(const DataExtractor &IndexData);
 
 public:
   DWARFUnitIndex(DWARFSectionKind InfoColumnKind)
@@ -170,7 +170,7 @@ public:
 
   explicit operator bool() const { return Header.NumBuckets; }
 
-  bool parse(DataExtractor IndexData);
+  bool parse(const DataExtractor &IndexData);
   void dump(raw_ostream &OS) const;
 
   uint32_t getVersion() const { return Header.Version; }

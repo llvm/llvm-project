@@ -70,7 +70,7 @@ static void dumpRanges(const DWARFObject &Obj, raw_ostream &OS,
 
 static void dumpLocationList(raw_ostream &OS, const DWARFFormValue &FormValue,
                              DWARFUnit *U, unsigned Indent,
-                             DIDumpOptions DumpOpts) {
+                             const DIDumpOptions &DumpOpts) {
   assert(FormValue.isFormClass(DWARFFormValue::FC_SectionOffset) &&
          "bad FORM for location list");
   DWARFContext &Ctx = U->getContext();
@@ -90,7 +90,7 @@ static void dumpLocationList(raw_ostream &OS, const DWARFFormValue &FormValue,
 
 static void dumpLocationExpr(raw_ostream &OS, const DWARFFormValue &FormValue,
                              DWARFUnit *U, unsigned Indent,
-                             DIDumpOptions DumpOpts) {
+                             const DIDumpOptions &DumpOpts) {
   assert((FormValue.isFormClass(DWARFFormValue::FC_Block) ||
           FormValue.isFormClass(DWARFFormValue::FC_Exprloc)) &&
          "bad FORM for location expression");
@@ -102,7 +102,7 @@ static void dumpLocationExpr(raw_ostream &OS, const DWARFFormValue &FormValue,
       .print(OS, DumpOpts, U);
 }
 
-static DWARFDie resolveReferencedType(DWARFDie D, DWARFFormValue F) {
+static DWARFDie resolveReferencedType(DWARFDie D, const DWARFFormValue &F) {
   return D.getAttributeValueAsReferencedDie(F).resolveTypeUnitReference();
 }
 
@@ -581,7 +581,7 @@ std::optional<uint64_t> DWARFDie::getTypeSize(uint64_t PointerSize) {
 
 /// Helper to dump a DIE with all of its parents, but no siblings.
 static unsigned dumpParentChain(DWARFDie Die, raw_ostream &OS, unsigned Indent,
-                                DIDumpOptions DumpOpts, unsigned Depth = 0) {
+                                const DIDumpOptions &DumpOpts, unsigned Depth = 0) {
   if (!Die)
     return Indent;
   if (DumpOpts.ParentRecurseDepth > 0 && Depth >= DumpOpts.ParentRecurseDepth)

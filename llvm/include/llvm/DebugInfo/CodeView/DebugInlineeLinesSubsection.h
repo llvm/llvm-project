@@ -69,7 +69,7 @@ public:
   }
 
   Error initialize(BinaryStreamReader Reader);
-  Error initialize(BinaryStreamRef Section) {
+  Error initialize(const BinaryStreamRef &Section) {
     return initialize(BinaryStreamReader(Section));
   }
 
@@ -101,7 +101,7 @@ public:
   Error commit(BinaryStreamWriter &Writer) const override;
   uint32_t calculateSerializedSize() const override;
 
-  void addInlineSite(TypeIndex FuncId, StringRef FileName, uint32_t SourceLine);
+  void addInlineSite(const TypeIndex &FuncId, StringRef FileName, uint32_t SourceLine);
   void addExtraFile(StringRef FileName);
 
   bool hasExtraFiles() const { return HasExtraFiles; }

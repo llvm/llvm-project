@@ -89,7 +89,7 @@ DWARFSectionKind llvm::deserializeSectionKind(uint32_t Value,
   return DW_SECT_EXT_unknown;
 }
 
-bool DWARFUnitIndex::Header::parse(DataExtractor IndexData,
+bool DWARFUnitIndex::Header::parse(const DataExtractor &IndexData,
                                    uint64_t *OffsetPtr) {
   const uint64_t BeginOffset = *OffsetPtr;
   if (!IndexData.isValidOffsetForDataOfSize(*OffsetPtr, 16))
@@ -116,7 +116,7 @@ void DWARFUnitIndex::Header::dump(raw_ostream &OS) const {
   OS << format("version = %u, units = %u, slots = %u\n\n", Version, NumUnits, NumBuckets);
 }
 
-bool DWARFUnitIndex::parse(DataExtractor IndexData) {
+bool DWARFUnitIndex::parse(const DataExtractor &IndexData) {
   bool b = parseImpl(IndexData);
   if (!b) {
     // Make sure we don't try to dump anything
@@ -128,7 +128,7 @@ bool DWARFUnitIndex::parse(DataExtractor IndexData) {
   return b;
 }
 
-bool DWARFUnitIndex::parseImpl(DataExtractor IndexData) {
+bool DWARFUnitIndex::parseImpl(const DataExtractor &IndexData) {
   uint64_t Offset = 0;
   if (!Header.parse(IndexData, &Offset))
     return false;

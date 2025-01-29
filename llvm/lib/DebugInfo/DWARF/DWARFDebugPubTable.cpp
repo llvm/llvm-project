@@ -20,7 +20,7 @@ using namespace llvm;
 using namespace dwarf;
 
 void DWARFDebugPubTable::extract(
-    DWARFDataExtractor Data, bool GnuStyle,
+    const DWARFDataExtractor &Data, bool GnuStyle,
     function_ref<void(Error)> RecoverableErrorHandler) {
   this->GnuStyle = GnuStyle;
   Sets.clear();

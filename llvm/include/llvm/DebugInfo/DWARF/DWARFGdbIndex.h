@@ -67,11 +67,11 @@ class DWARFGdbIndex {
   void dumpSymbolTable(raw_ostream &OS) const;
   void dumpConstantPool(raw_ostream &OS) const;
 
-  bool parseImpl(DataExtractor Data);
+  bool parseImpl(const DataExtractor &Data);
 
 public:
   void dump(raw_ostream &OS);
-  void parse(DataExtractor Data);
+  void parse(const DataExtractor &Data);
 
   bool HasContent = false;
   bool HasError = false;

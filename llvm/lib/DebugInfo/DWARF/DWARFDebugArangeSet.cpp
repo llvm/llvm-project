@@ -35,7 +35,7 @@ void DWARFDebugArangeSet::clear() {
   ArangeDescriptors.clear();
 }
 
-Error DWARFDebugArangeSet::extract(DWARFDataExtractor data,
+Error DWARFDebugArangeSet::extract(const DWARFDataExtractor &data,
                                    uint64_t *offset_ptr,
                                    function_ref<void(Error)> WarningHandler) {
   assert(data.isValidOffset(*offset_ptr));

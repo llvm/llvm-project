@@ -140,7 +140,7 @@ static Desc getSubOpDesc(unsigned Opcode, unsigned SubOpcode) {
   return getDescImpl(Descriptions, SubOpcode);
 }
 
-bool DWARFExpression::Operation::extract(DataExtractor Data,
+bool DWARFExpression::Operation::extract(const DataExtractor &Data,
                                          uint8_t AddressSize, uint64_t Offset,
                                          std::optional<DwarfFormat> Format) {
   EndOffset = Offset;
@@ -238,7 +238,7 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
 }
 
 static void prettyPrintBaseTypeRef(DWARFUnit *U, raw_ostream &OS,
-                                   DIDumpOptions DumpOpts,
+                                   const DIDumpOptions &DumpOpts,
                                    ArrayRef<uint64_t> Operands,
                                    unsigned Operand) {
   assert(Operand < Operands.size() && "operand out of bounds");
@@ -299,7 +299,7 @@ std::optional<unsigned> DWARFExpression::Operation::getSubCode() const {
   return Operands[0];
 }
 
-bool DWARFExpression::Operation::print(raw_ostream &OS, DIDumpOptions DumpOpts,
+bool DWARFExpression::Operation::print(raw_ostream &OS, const DIDumpOptions &DumpOpts,
                                        const DWARFExpression *Expr,
                                        DWARFUnit *U) const {
   if (Error) {

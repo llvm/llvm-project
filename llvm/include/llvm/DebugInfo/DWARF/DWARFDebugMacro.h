@@ -65,7 +65,7 @@ class DWARFDebugMacro {
     void dumpMacroHeader(raw_ostream &OS) const;
 
     /// Parse the debug_macro header.
-    Error parseMacroHeader(DWARFDataExtractor Data, uint64_t *Offset);
+    Error parseMacroHeader(const DWARFDataExtractor &Data, uint64_t *Offset);
 
     /// Get the DWARF format according to the flags.
     dwarf::DwarfFormat getDwarfFormat() const;
@@ -119,12 +119,12 @@ public:
   void dump(raw_ostream &OS) const;
 
   Error parseMacro(DWARFUnitVector::compile_unit_range Units,
-                   DataExtractor StringExtractor,
-                   DWARFDataExtractor MacroData) {
+                   const DataExtractor &StringExtractor,
+                   const DWARFDataExtractor &MacroData) {
     return parseImpl(Units, StringExtractor, MacroData, /*IsMacro=*/true);
   }
 
-  Error parseMacinfo(DWARFDataExtractor MacroData) {
+  Error parseMacinfo(const DWARFDataExtractor &MacroData) {
     return parseImpl(std::nullopt, std::nullopt, MacroData, /*IsMacro=*/false);
   }
 
@@ -144,7 +144,7 @@ private:
   /// parameter.
   Error parseImpl(std::optional<DWARFUnitVector::compile_unit_range> Units,
                   std::optional<DataExtractor> StringExtractor,
-                  DWARFDataExtractor Data, bool IsMacro);
+                  const DWARFDataExtractor &Data, bool IsMacro);
 };
 
 } // end namespace llvm

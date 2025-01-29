@@ -75,8 +75,8 @@ Error DWARFListTableHeader::extract(DWARFDataExtractor Data,
   return Error::success();
 }
 
-void DWARFListTableHeader::dump(DataExtractor Data, raw_ostream &OS,
-                                DIDumpOptions DumpOpts) const {
+void DWARFListTableHeader::dump(const DataExtractor &Data, raw_ostream &OS,
+                                const DIDumpOptions &DumpOpts) const {
   if (DumpOpts.Verbose)
     OS << format("0x%8.8" PRIx64 ": ", HeaderOffset);
   int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(Format);

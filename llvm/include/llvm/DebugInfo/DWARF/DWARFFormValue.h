@@ -82,14 +82,14 @@ public:
 
   bool isFormClass(FormClass FC) const;
   const DWARFUnit *getUnit() const { return U; }
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts = DIDumpOptions()) const;
-  void dumpSectionedAddress(raw_ostream &OS, DIDumpOptions DumpOpts,
+  void dump(raw_ostream &OS, const DIDumpOptions &DumpOpts = DIDumpOptions()) const;
+  void dumpSectionedAddress(raw_ostream &OS, const DIDumpOptions &DumpOpts,
                             object::SectionedAddress SA) const;
   void dumpAddress(raw_ostream &OS, uint64_t Address) const;
   static void dumpAddress(raw_ostream &OS, uint8_t AddressSize,
                           uint64_t Address);
   static void dumpAddressSection(const DWARFObject &Obj, raw_ostream &OS,
-                                 DIDumpOptions DumpOpts, uint64_t SectionIndex);
+                                 const DIDumpOptions &DumpOpts, uint64_t SectionIndex);
 
   /// Extracts a value in \p Data at offset \p *OffsetPtr. The information
   /// in \p FormParams is needed to interpret some forms. The optional
@@ -143,7 +143,7 @@ public:
   /// \param OffsetPtr A reference to the offset that will be updated.
   /// \param Params DWARF parameters to help interpret forms.
   /// \returns true on success, false if the form was not skipped.
-  bool skipValue(DataExtractor DebugInfoData, uint64_t *OffsetPtr,
+  bool skipValue(const DataExtractor &DebugInfoData, uint64_t *OffsetPtr,
                  const dwarf::FormParams Params) const {
     return DWARFFormValue::skipValue(Form, DebugInfoData, OffsetPtr, Params);
   }
@@ -158,7 +158,7 @@ public:
   /// \param OffsetPtr A reference to the offset that will be updated.
   /// \param FormParams DWARF parameters to help interpret forms.
   /// \returns true on success, false if the form was not skipped.
-  static bool skipValue(dwarf::Form Form, DataExtractor DebugInfoData,
+  static bool skipValue(dwarf::Form Form, const DataExtractor &DebugInfoData,
                         uint64_t *OffsetPtr,
                         const dwarf::FormParams FormParams);
 

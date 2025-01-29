@@ -110,9 +110,9 @@ public:
     llvm_unreachable("Invalid DWARF format (expected DWARF32 or DWARF64");
   }
 
-  void dump(DataExtractor Data, raw_ostream &OS,
-            DIDumpOptions DumpOpts = {}) const;
-  std::optional<uint64_t> getOffsetEntry(DataExtractor Data,
+  void dump(const DataExtractor &Data, raw_ostream &OS,
+            const DIDumpOptions &DumpOpts = {}) const;
+  std::optional<uint64_t> getOffsetEntry(const DataExtractor &Data,
                                          uint32_t Index) const {
     if (Index >= HeaderData.OffsetEntryCount)
       return std::nullopt;
@@ -120,7 +120,7 @@ public:
     return getOffsetEntry(Data, getHeaderOffset() + getHeaderSize(Format), Format, Index);
   }
 
-  static std::optional<uint64_t> getOffsetEntry(DataExtractor Data,
+  static std::optional<uint64_t> getOffsetEntry(const DataExtractor &Data,
                                                 uint64_t OffsetTableOffset,
                                                 dwarf::DwarfFormat Format,
                                                 uint32_t Index) {
