@@ -4941,6 +4941,7 @@ recurse:
   case Expr::SourceLocExprClass:
   case Expr::EmbedExprClass:
   case Expr::BuiltinBitCastExprClass:
+  case Expr::ResolvedUnexpandedPackExprClass:
   case Expr::BoundsSafetyPointerPromotionExprClass:
   case Expr::AssumptionExprClass:
   case Expr::ForgePtrExprClass:
