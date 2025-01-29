@@ -1,5 +1,6 @@
 ../generic/common/clc_degrees.cl
 ../generic/common/clc_radians.cl
+../generic/common/clc_sign.cl
 ../generic/common/clc_smoothstep.cl
 ../generic/geometric/clc_dot.cl
 ../generic/math/clc_ceil.cl
@@ -10,5 +11,6 @@
 ../generic/math/clc_nextafter.cl
 ../generic/math/clc_rint.cl
 ../generic/math/clc_trunc.cl
+../generic/relational/clc_isnan.cl
 ../generic/relational/clc_select.cl
 ../generic/shared/clc_clamp.cl

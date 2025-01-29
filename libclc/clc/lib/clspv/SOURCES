@@ -1,3 +1,4 @@
+../generic/common/clc_sign.cl
 ../generic/math/clc_ceil.cl
 ../generic/math/clc_copysign.cl
 ../generic/math/clc_fabs.cl
