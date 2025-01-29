@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple armv7a-linux-gnueabi -emit-llvm -o - -x c %s | FileCheck %s --check-prefixes=CHECK,C
 // RUN: %clang_cc1 -triple armv7a-linux-gnueabi -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,CXX
-// RUN: %clang_cc1 -triple armv7a-linux-gnueabi -emit-llvm -o - %s -fclang-abi-compat=20 | FileCheck %s --check-prefixes=CHECK,CXXCLANG20
+// RUN: %clang_cc1 -triple armv7a-linux-gnueabi -emit-llvm -o - %s -fclang-abi-compat=19 | FileCheck %s --check-prefixes=CHECK,CXXCLANG19
 // RUN: %clang_cc1 -triple thumbv7k-apple-watchos2.0 -target-abi aapcs16 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,WATCHOS
 
 // Empty structs are ignored for PCS purposes on WatchOS and in C mode
@@ -18,7 +18,7 @@ struct Empty {};
 
 // C: define{{.*}} i32 @empty_arg(i32 noundef %a)
 // CXX: define{{.*}} i32 @empty_arg(i8 %e.coerce, i32 noundef %a)
-// CXXCLANG20: define{{.*}} i32 @empty_arg(i32 noundef %a)
+// CXXCLANG19: define{{.*}} i32 @empty_arg(i32 noundef %a)
 // WATCHOS: define{{.*}} i32 @empty_arg(i32 noundef %a)
 EXTERNC int empty_arg(struct Empty e, int a) {
   return a;
@@ -26,7 +26,7 @@ EXTERNC int empty_arg(struct Empty e, int a) {
 
 // C: define{{.*}} void @empty_ret()
 // CXX: define{{.*}} void @empty_ret()
-// CXXCLANG20: define{{.*}} void @empty_ret()
+// CXXCLANG19: define{{.*}} void @empty_ret()
 // WATCHOS: define{{.*}} void @empty_ret()
 EXTERNC struct Empty empty_ret(void) {
   struct Empty e;
@@ -43,7 +43,7 @@ struct SuperEmpty {
 
 // C: define{{.*}} i32 @super_empty_arg(i32 noundef %a)
 // CXX: define{{.*}} i32 @super_empty_arg(i32 noundef %a)
-// CXXCLANG20: define{{.*}} i32 @super_empty_arg(i32 noundef %a)
+// CXXCLANG19: define{{.*}} i32 @super_empty_arg(i32 noundef %a)
 // WATCHOS: define{{.*}} i32 @super_empty_arg(i32 noundef %a)
 EXTERNC int super_empty_arg(struct SuperEmpty e, int a) {
   return a;
@@ -55,7 +55,7 @@ struct SortOfEmpty {
 
 // C: define{{.*}} i32 @sort_of_empty_arg(i32 noundef %a)
 // CXX: define{{.*}} i32 @sort_of_empty_arg(i8 %e.coerce, i32 noundef %a)
-// CXXCLANG20: define{{.*}} i32 @sort_of_empty_arg(i32 noundef %a)
+// CXXCLANG19: define{{.*}} i32 @sort_of_empty_arg(i32 noundef %a)
 // WATCHOS: define{{.*}} i32 @sort_of_empty_arg(i32 noundef %a)
 EXTERNC int sort_of_empty_arg(struct Empty e, int a) {
   return a;
@@ -63,7 +63,7 @@ EXTERNC int sort_of_empty_arg(struct Empty e, int a) {
 
 // C: define{{.*}} void @sort_of_empty_ret()
 // CXX: define{{.*}} void @sort_of_empty_ret()
-// CXXCLANG20: define{{.*}} void @sort_of_empty_ret()
+// CXXCLANG19: define{{.*}} void @sort_of_empty_ret()
 // WATCHOS: define{{.*}} void @sort_of_empty_ret()
 EXTERNC struct SortOfEmpty sort_of_empty_ret(void) {
   struct SortOfEmpty e;
@@ -82,8 +82,8 @@ EXTERNC int empty_arg_variadic(int a, ...) {
 // C-NOT: {{ getelementptr }}
 // CXX: %argp.next = getelementptr inbounds i8, ptr %argp.cur, i32 4
 // CXX: %argp.next2 = getelementptr inbounds i8, ptr %argp.cur1, i32 4
-// CXXCLANG20: %argp.next = getelementptr inbounds i8, ptr %argp.cur, i32 4
-// CXXCLANG20-NOT: {{ getelementptr }}
+// CXXCLANG19: %argp.next = getelementptr inbounds i8, ptr %argp.cur, i32 4
+// CXXCLANG19-NOT: {{ getelementptr }}
 // WATCHOS: %argp.next = getelementptr inbounds i8, ptr %argp.cur, i32 4
 // WATCHOS-NOT: {{ getelementptr }}
   va_list vl;
@@ -100,8 +100,8 @@ EXTERNC int super_empty_arg_variadic(int a, ...) {
 // C-NOT: {{ getelementptr }}
 // CXX: %argp.next = getelementptr inbounds i8, ptr %argp.cur, i32 4
 // CXX-NOT: {{ getelementptr }}
-// CXXCLANG20: %argp.next = getelementptr inbounds i8, ptr %argp.cur, i32 4
-// CXXCLANG20-NOT: {{ getelementptr }}
+// CXXCLANG19: %argp.next = getelementptr inbounds i8, ptr %argp.cur, i32 4
+// CXXCLANG19-NOT: {{ getelementptr }}
 // WATCHOS: %argp.next = getelementptr inbounds i8, ptr %argp.cur, i32 4
 // WATCHOS-NOT: {{ getelementptr }}
   va_list vl;
@@ -118,8 +118,8 @@ EXTERNC int sort_of_empty_arg_variadic(int a, ...) {
 // C-NOT: {{ getelementptr }}
 // CXX: %argp.next = getelementptr inbounds i8, ptr %argp.cur, i32 4
 // CXX-NOT: {{ getelementptr }}
-// CXXCLANG20: %argp.next = getelementptr inbounds i8, ptr %argp.cur, i32 4
-// CXXCLANG20-NOT: {{ getelementptr }}
+// CXXCLANG19: %argp.next = getelementptr inbounds i8, ptr %argp.cur, i32 4
+// CXXCLANG19-NOT: {{ getelementptr }}
 // WATCHOS: %argp.next = getelementptr inbounds i8, ptr %argp.cur, i32 4
 // WATCHOS-NOT: {{ getelementptr }}
   va_list vl;
