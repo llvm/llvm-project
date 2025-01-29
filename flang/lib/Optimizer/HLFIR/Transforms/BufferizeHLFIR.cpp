@@ -362,6 +362,7 @@ struct GetLengthOpConversion
     if (!length)
       return rewriter.notifyMatchFailure(
           getLength, "could not deduce length from GetLengthOp operand");
+    length = builder.createConvert(loc, builder.getIndexType(), length);
     rewriter.replaceOp(getLength, length);
     return mlir::success();
   }
