@@ -507,10 +507,11 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   // the first in sorted order).
   Trie.addCallStack(AllocationType::NotCold, {1, 2, 3, 8, 9, 15});
 
-  // Neither of these two NotCold contexts are needed as the Cold contexts they
+  // None of these NotCold contexts are needed as the Cold contexts they
   // overlap with are covered by longer overlapping NotCold contexts.
   Trie.addCallStack(AllocationType::NotCold, {1, 2, 3, 12});
   Trie.addCallStack(AllocationType::NotCold, {1, 2, 11});
+  Trie.addCallStack(AllocationType::NotCold, {1, 16});
 
   std::vector<std::pair<AllocationType, std::vector<unsigned>>> ExpectedVals = {
       {AllocationType::Cold, {1, 2, 3, 4}},
@@ -520,6 +521,7 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
       {AllocationType::NotCold, {1, 2, 3, 8, 9, 14}}};
 
   CallBase *Call = findCall(*Func, "call");
+  ASSERT_NE(Call, nullptr);
   Trie.buildAndAttachMIBMetadata(Call);
 
   EXPECT_FALSE(Call->hasFnAttr("memprof"));
