@@ -338,6 +338,10 @@ bool llvm::isRemovableAlloc(const CallBase *CB, const TargetLibraryInfo *TLI) {
   return isAllocLikeFn(CB, TLI);
 }
 
+bool llvm::isNoFreeAllocFunction(const CallBase *CB) {
+  return checkFnAllocKind(CB, AllocFnKind::NoFree);
+}
+
 Value *llvm::getAllocAlignment(const CallBase *V,
                                const TargetLibraryInfo *TLI) {
   const std::optional<AllocFnsTy> FnData = getAllocationData(V, AnyAlloc, TLI);

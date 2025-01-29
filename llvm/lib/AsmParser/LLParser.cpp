@@ -2472,6 +2472,8 @@ bool LLParser::parseAllocKind(AllocFnKind &Kind) {
       Kind |= AllocFnKind::Zeroed;
     } else if (A == "aligned") {
       Kind |= AllocFnKind::Aligned;
+    } else if (A == "nofree") {
+      Kind |= AllocFnKind::NoFree;
     } else {
       return error(KindLoc, Twine("unknown allockind ") + A);
     }

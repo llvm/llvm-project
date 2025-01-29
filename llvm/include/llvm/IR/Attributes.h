@@ -55,6 +55,8 @@ enum class AllocFnKind : uint64_t {
   Zeroed = 1 << 4,        // Allocator function returns zeroed memory
   Aligned = 1 << 5,       // Allocator function aligns allocations per the
                           // `allocalign` argument
+  NoFree = 1 << 6,        // Allocator function returns memory that's never
+                          // freed
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ Aligned)
 };
 

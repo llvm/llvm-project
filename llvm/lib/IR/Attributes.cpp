@@ -606,6 +606,8 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
       parts.push_back("zeroed");
     if ((Kind & AllocFnKind::Aligned) != AllocFnKind::Unknown)
       parts.push_back("aligned");
+    if ((Kind & AllocFnKind::NoFree) != AllocFnKind::Unknown)
+      parts.push_back("nofree");
     return ("allockind(\"" +
             Twine(llvm::join(parts.begin(), parts.end(), ",")) + "\")")
         .str();

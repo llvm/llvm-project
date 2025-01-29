@@ -7060,10 +7060,15 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
         bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::NoCapture>(
             A, this, CBIRP, DepClassTy::OPTIONAL, IsKnownNoCapture);
 
-        // If a call site argument use is nofree, we are fine.
-        bool IsKnownNoFree;
-        bool IsAssumedNoFree = AA::hasAssumedIRAttr<Attribute::NoFree>(
-            A, this, CBIRP, DepClassTy::OPTIONAL, IsKnownNoFree);
+        // Check for potentially calls only when the allocator returns memory
+        // that may be freed explicitly.
+        bool IsAssumedNoFree = true;
+        if (!isNoFreeAllocFunction(AI.CB)) {
+          // If a call site argument use is nofree, we are fine.
+          bool IsKnownNoFree;
+          IsAssumedNoFree = AA::hasAssumedIRAttr<Attribute::NoFree>(
+              A, this, CBIRP, DepClassTy::OPTIONAL, IsKnownNoFree);
+        }
 
         if (!IsAssumedNoCapture ||
             (AI.LibraryFunctionId != LibFunc___kmpc_alloc_shared &&
