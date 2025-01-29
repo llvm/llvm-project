@@ -63,11 +63,6 @@ void mlir::mpi::IRecvOp::getCanonicalizationPatterns(
   results.add<FoldCast<mlir::mpi::IRecvOp>>(context);
 }
 
-void mlir::mpi::SendOp::getCanonicalizationPatterns(
-    mlir::RewritePatternSet &results, mlir::MLIRContext *context) {
-  results.add<FoldCast<mlir::mpi::SendOp>>(context);
-}
-
 void mlir::mpi::AllReduceOp::getCanonicalizationPatterns(
     mlir::RewritePatternSet &results, mlir::MLIRContext *context) {
   results.add<FoldCast<mlir::mpi::AllReduceOp>>(context);
