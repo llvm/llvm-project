@@ -138,4 +138,13 @@ module  {
     cir.return %0 : !cir.ptr<!s32i, addrspace(target<2>)>
   }
 
+  // Should remove scope with only yield
+  cir.func @removeBlockWithScopeYeild(%arg0: !s32i) {
+    cir.scope {
+      cir.yield
+    }
+    cir.return
+  }
+  //      CHECK: cir.func @removeBlockWithScopeYeild
+  // CHECK-NEXT: cir.return
 }
