@@ -11723,24 +11723,26 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
       if (auto *TTPD = dyn_cast<TemplateTypeParmDecl>(ParamD)) {
         S.Diag(Templated->getLocation(),
                diag::note_ovl_candidate_explicit_arg_mismatch_named)
-            << 1 << ParamD->getDeclName() << FirstArg << SecondArg;
+            << 1 << ParamD->getDeclName() << FirstArg << SecondArg
+            << TTPD->getSourceRange();
 
       } else if (auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(ParamD)) {
         if (SecondArg.isNull()) {
           S.Diag(Templated->getLocation(),
                  diag::note_ovl_candidate_explicit_arg_mismatch_named)
-              << 3 << ParamD->getDeclName() << NTTPD->getType() << FirstArg;
+              << 3 << ParamD->getDeclName() << NTTPD->getType() << FirstArg
+              << NTTPD->getSourceRange();
         } else {
           S.Diag(Templated->getLocation(),
                  diag::note_ovl_candidate_explicit_arg_mismatch_named)
               << 2 << ParamD->getDeclName() << FirstArg << SecondArg
-              << NTTPD->getType();
+              << NTTPD->getType() << NTTPD->getSourceRange();
         }
       } else if (auto *TTempPD = dyn_cast<TemplateTemplateParmDecl>(ParamD)) {
         // FIXME: Emit a better message here
         S.Diag(Templated->getLocation(),
                diag::note_ovl_candidate_explicit_arg_mismatch_named)
-            << 4 << ParamD->getDeclName();
+            << 4 << ParamD->getDeclName() << TTempPD->getSourceRange();
       } else
         llvm_unreachable("unexpected param decl kind");
     } else {
