@@ -147,16 +147,9 @@ void ReachingDefAnalysis::processDefs(MachineInstr *MI) {
       assert(FrameIndex >= 0 && "Can't handle negative frame indicies yet!");
       if (!isFIDef(*MI, FrameIndex, TII))
         continue;
-      if (MBBFrameObjsReachingDefs.contains(MBBNumber)) {
-        auto Frame2InstrIdx = MBBFrameObjsReachingDefs[MBBNumber];
-        if (Frame2InstrIdx.count(FrameIndex - ObjectIndexBegin) > 0)
-          Frame2InstrIdx[FrameIndex - ObjectIndexBegin].push_back(CurInstr);
-        else
-          Frame2InstrIdx[FrameIndex - ObjectIndexBegin] = {CurInstr};
-      } else {
-        MBBFrameObjsReachingDefs[MBBNumber] = {
-            {FrameIndex - ObjectIndexBegin, {CurInstr}}};
-      }
+
+      int Key = FrameIndex - ObjectIndexBegin;
+      MBBFrameObjsReachingDefs[MBBNumber][Key].push_back(CurInstr);
     }
     if (!isValidRegDef(MO))
       continue;
@@ -348,8 +341,19 @@ int ReachingDefAnalysis::getReachingDef(MachineInstr *MI, Register Reg) const {
 
   if (Reg.isStack()) {
     int FrameIndex = Reg.stackSlotIndex();
-    for (int Def : MBBFrameObjsReachingDefs.lookup(MBBNumber).lookup(
-             FrameIndex - ObjectIndexBegin)) {
+    int Key = FrameIndex - ObjectIndexBegin;
+
+    // Check that there was a reaching def.
+    auto Lookup1 = MBBFrameObjsReachingDefs.find(MBBNumber);
+    if (Lookup1 == MBBFrameObjsReachingDefs.end())
+      return LatestDef;
+    auto &InnerMap = Lookup1->second;
+    auto Lookup2 = InnerMap.find(Key);
+    if (Lookup2 == InnerMap.end())
+      return LatestDef;
+    auto &Defs = Lookup2->second;
+
+    for (int Def : Defs) {
       if (Def >= InstId)
         break;
       DefRes = Def;

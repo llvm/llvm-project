@@ -174,7 +174,7 @@ body:             |
   ; CHECK-NEXT: 2: SD $x10, %stack.1, 0 :: (store (s64))
   ; CHECK-EMPTY:
   ; CHECK-NEXT: $x11:{ }
-  ; CHECK-NEXT: %stack.1:{ }
+  ; CHECK-NEXT: %stack.1:{ 2 }
   ; CHECK-NEXT: 3: SD $x11, %stack.1, 0 :: (store (s64))
   ; CHECK-EMPTY:
   ; CHECK-NEXT: 4: PseudoRET
