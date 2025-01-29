@@ -1975,22 +1975,22 @@ defm V_CMP_CLASS_F16     : VOPC_Real_t16_and_fake16_gfx11_gfx12<0x07d, "v_cmp_cl
 defm V_CMP_CLASS_F32     : VOPC_Real_gfx11_gfx12<0x07e>;
 defm V_CMP_CLASS_F64     : VOPC_Real_gfx11_gfx12<0x07f>;
 
-defm V_CMPX_F_F16_fake16     : VOPCX_Real_t16_gfx11<0x080, "v_cmpx_f_f16">;
+defm V_CMPX_F_F16            : VOPCX_Real_t16_and_fake16_gfx11<0x080, "v_cmpx_f_f16">;
 defm V_CMPX_LT_F16           : VOPCX_Real_t16_and_fake16_gfx11_gfx12<0x081, "v_cmpx_lt_f16">;
 defm V_CMPX_EQ_F16           : VOPCX_Real_t16_and_fake16_gfx11_gfx12<0x082, "v_cmpx_eq_f16">;
-defm V_CMPX_LE_F16_fake16    : VOPCX_Real_t16_gfx11_gfx12<0x083, "v_cmpx_le_f16">;
-defm V_CMPX_GT_F16_fake16    : VOPCX_Real_t16_gfx11_gfx12<0x084, "v_cmpx_gt_f16">;
-defm V_CMPX_LG_F16_fake16    : VOPCX_Real_t16_gfx11_gfx12<0x085, "v_cmpx_lg_f16">;
-defm V_CMPX_GE_F16_fake16    : VOPCX_Real_t16_gfx11_gfx12<0x086, "v_cmpx_ge_f16">;
-defm V_CMPX_O_F16_fake16     : VOPCX_Real_t16_gfx11_gfx12<0x087, "v_cmpx_o_f16">;
-defm V_CMPX_U_F16_fake16     : VOPCX_Real_t16_gfx11_gfx12<0x088, "v_cmpx_u_f16">;
-defm V_CMPX_NGE_F16_fake16   : VOPCX_Real_t16_gfx11_gfx12<0x089, "v_cmpx_nge_f16">;
-defm V_CMPX_NLG_F16_fake16   : VOPCX_Real_t16_gfx11_gfx12<0x08a, "v_cmpx_nlg_f16">;
-defm V_CMPX_NGT_F16_fake16   : VOPCX_Real_t16_gfx11_gfx12<0x08b, "v_cmpx_ngt_f16">;
-defm V_CMPX_NLE_F16_fake16   : VOPCX_Real_t16_gfx11_gfx12<0x08c, "v_cmpx_nle_f16">;
-defm V_CMPX_NEQ_F16_fake16   : VOPCX_Real_t16_gfx11_gfx12<0x08d, "v_cmpx_neq_f16">;
-defm V_CMPX_NLT_F16_fake16   : VOPCX_Real_t16_gfx11_gfx12<0x08e, "v_cmpx_nlt_f16">;
-defm V_CMPX_T_F16_fake16     : VOPCX_Real_with_name_gfx11<0x08f, "V_CMPX_TRU_F16_fake16", "v_cmpx_t_f16", "v_cmpx_tru_f16">;
+defm V_CMPX_LE_F16           : VOPCX_Real_t16_and_fake16_gfx11_gfx12<0x083, "v_cmpx_le_f16">;
+defm V_CMPX_GT_F16           : VOPCX_Real_t16_and_fake16_gfx11_gfx12<0x084, "v_cmpx_gt_f16">;
+defm V_CMPX_LG_F16           : VOPCX_Real_t16_and_fake16_gfx11_gfx12<0x085, "v_cmpx_lg_f16">;
+defm V_CMPX_GE_F16           : VOPCX_Real_t16_and_fake16_gfx11_gfx12<0x086, "v_cmpx_ge_f16">;
+defm V_CMPX_O_F16            : VOPCX_Real_t16_and_fake16_gfx11_gfx12<0x087, "v_cmpx_o_f16">;
+defm V_CMPX_U_F16            : VOPCX_Real_t16_and_fake16_gfx11_gfx12<0x088, "v_cmpx_u_f16">;
+defm V_CMPX_NGE_F16          : VOPCX_Real_t16_and_fake16_gfx11_gfx12<0x089, "v_cmpx_nge_f16">;
+defm V_CMPX_NLG_F16          : VOPCX_Real_t16_and_fake16_gfx11_gfx12<0x08a, "v_cmpx_nlg_f16">;
+defm V_CMPX_NGT_F16          : VOPCX_Real_t16_and_fake16_gfx11_gfx12<0x08b, "v_cmpx_ngt_f16">;
+defm V_CMPX_NLE_F16          : VOPCX_Real_t16_and_fake16_gfx11_gfx12<0x08c, "v_cmpx_nle_f16">;
+defm V_CMPX_NEQ_F16          : VOPCX_Real_t16_and_fake16_gfx11_gfx12<0x08d, "v_cmpx_neq_f16">;
+defm V_CMPX_NLT_F16          : VOPCX_Real_t16_and_fake16_gfx11_gfx12<0x08e, "v_cmpx_nlt_f16">;
+defm V_CMPX_T_F16            : VOPCX_Real_t16_and_fake16_gfx11<0x08f, "v_cmpx_t_f16", "V_CMPX_TRU_F16", "v_cmpx_tru_f16">;
 
 defm V_CMPX_F_F32     : VOPCX_Real_gfx11<0x090>;
 defm V_CMPX_LT_F32    : VOPCX_Real_gfx11_gfx12<0x091>;
