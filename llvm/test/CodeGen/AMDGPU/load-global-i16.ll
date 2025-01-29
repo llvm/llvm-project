@@ -8733,4 +8733,4 @@ define amdgpu_kernel void @global_sextload_v32i16_to_v32i64(ptr addrspace(1) %ou
 ;   ret void
 ; }
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "amdgpu-flat-work-group-size"="1024,1024" }

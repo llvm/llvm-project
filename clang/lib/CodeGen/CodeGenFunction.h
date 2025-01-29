@@ -28,6 +28,7 @@
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/CapturedStmt.h"
@@ -450,7 +451,7 @@ public:
              "EBB should be entry block of the current code gen function");
       PostAllocaInsertPt = AllocaInsertPt->clone();
       PostAllocaInsertPt->setName("postallocapt");
-      PostAllocaInsertPt->insertAfter(AllocaInsertPt);
+      PostAllocaInsertPt->insertAfter(AllocaInsertPt->getIterator());
     }
 
     return PostAllocaInsertPt;
@@ -719,6 +720,20 @@ public:
 
     void Emit(CodeGenFunction &CGF, Flags flags) override {
       CGF.EmitLifetimeEnd(Size, Addr);
+    }
+  };
+
+  // We are using objects of this 'cleanup' class to emit fake.use calls
+  // for -fextend-variable-liveness. They are placed at the end of a variable's
+  // scope analogous to lifetime markers.
+  class FakeUse final : public EHScopeStack::Cleanup {
+    Address Addr;
+
+  public:
+    FakeUse(Address addr) : Addr(addr) {}
+
+    void Emit(CodeGenFunction &CGF, Flags flags) override {
+      CGF.EmitFakeUse(Addr);
     }
   };
 
@@ -4691,6 +4706,21 @@ public:
                             SmallVectorImpl<llvm::Value*> &O,
                             const char *name,
                             unsigned shift = 0, bool rightshift = false);
+  llvm::Value *EmitFP8NeonCall(unsigned IID, ArrayRef<llvm::Type *> Tys,
+                               SmallVectorImpl<llvm::Value *> &O,
+                               const CallExpr *E, const char *name);
+  llvm::Value *EmitFP8NeonCvtCall(unsigned IID, llvm::Type *Ty0,
+                                  llvm::Type *Ty1, bool Extract,
+                                  SmallVectorImpl<llvm::Value *> &Ops,
+                                  const CallExpr *E, const char *name);
+  llvm::Value *EmitFP8NeonFDOTCall(unsigned IID, bool ExtendLaneArg,
+                                   llvm::Type *RetTy,
+                                   SmallVectorImpl<llvm::Value *> &Ops,
+                                   const CallExpr *E, const char *name);
+  llvm::Value *EmitFP8NeonFMLACall(unsigned IID, bool ExtendLaneArg,
+                                   llvm::Type *RetTy,
+                                   SmallVectorImpl<llvm::Value *> &Ops,
+                                   const CallExpr *E, const char *name);
   llvm::Value *EmitNeonSplat(llvm::Value *V, llvm::Constant *Idx,
                              const llvm::ElementCount &Count);
   llvm::Value *EmitNeonSplat(llvm::Value *V, llvm::Constant *Idx);
@@ -5058,6 +5088,8 @@ public:
   void EmitCXXThrowExpr(const CXXThrowExpr *E, bool KeepInsertionPoint = true);
 
   RValue EmitAtomicExpr(AtomicExpr *E);
+
+  void EmitFakeUse(Address Addr);
 
   //===--------------------------------------------------------------------===//
   //                         Annotations Emission

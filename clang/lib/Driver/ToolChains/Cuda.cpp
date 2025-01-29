@@ -89,6 +89,8 @@ CudaVersion getCudaVersion(uint32_t raw_version) {
     return CudaVersion::CUDA_125;
   if (raw_version < 12070)
     return CudaVersion::CUDA_126;
+  if (raw_version < 12090)
+    return CudaVersion::CUDA_128;
   return CudaVersion::NEW;
 }
 
@@ -637,6 +639,9 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(
       Args.MakeArgString("--plugin-opt=-mattr=" + llvm::join(Features, ",")));
 
+  // Enable ctor / dtor lowering for the direct / freestanding NVPTX target.
+  CmdArgs.append({"-mllvm", "--nvptx-lower-global-ctor-dtor"});
+
   // Add paths for the default clang library path.
   SmallString<256> DefaultLibPath =
       llvm::sys::path::parent_path(TC.getDriver().Dir);
@@ -682,6 +687,7 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   case CudaVersion::CUDA_##CUDA_VER:                                           \
     PtxFeature = "+ptx" #PTX_VER;                                              \
     break;
+    CASE_CUDA_VERSION(128, 87);
     CASE_CUDA_VERSION(126, 85);
     CASE_CUDA_VERSION(125, 85);
     CASE_CUDA_VERSION(124, 84);
@@ -780,7 +786,7 @@ void NVPTXToolChain::addClangTargetOptions(
   // If we are compiling with a standalone NVPTX toolchain we want to try to
   // mimic a standard environment as much as possible. So we enable lowering
   // ctor / dtor functions to global symbols that can be registered.
-  if (Freestanding)
+  if (Freestanding && !getDriver().isUsingLTO())
     CC1Args.append({"-mllvm", "--nvptx-lower-global-ctor-dtor"});
 }
 

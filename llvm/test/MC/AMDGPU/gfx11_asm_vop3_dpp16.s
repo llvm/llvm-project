@@ -765,112 +765,139 @@ v_bfm_b32_e64_dpp v5, v1, v2 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1
 v_bfm_b32_e64_dpp v255, v255, v255 row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
 // GFX11: v_bfm_b32_e64_dpp v255, v255, v255 row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xff,0x00,0x1d,0xd7,0xfa,0xfe,0x03,0x00,0xff,0x6f,0x05,0x30]
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s3 quad_perm:[3,2,1,0]
-// W32: v_cndmask_b16_e64_dpp v5, v1, v2, s3 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x0e,0x00,0x01,0x1b,0x00,0xff]
-// W64-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s3 quad_perm:[3,2,1,0]
+// W32: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s3 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x0e,0x00,0x01,0x1b,0x00,0xff]
+// W64-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s3 quad_perm:[0,1,2,3]
-// W32: v_cndmask_b16_e64_dpp v5, v1, v2, s3 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x0e,0x00,0x01,0xe4,0x00,0xff]
-// W64-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s3 quad_perm:[0,1,2,3]
+// W32: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s3 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x0e,0x00,0x01,0xe4,0x00,0xff]
+// W64-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s3 row_mirror
-// W32: v_cndmask_b16_e64_dpp v5, v1, v2, s3 row_mirror row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x0e,0x00,0x01,0x40,0x01,0xff]
-// W64-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s3 row_mirror
+// W32: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s3 row_mirror row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x0e,0x00,0x01,0x40,0x01,0xff]
+// W64-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s3 row_half_mirror
-// W32: v_cndmask_b16_e64_dpp v5, v1, v2, s3 row_half_mirror row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x0e,0x00,0x01,0x41,0x01,0xff]
-// W64-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s3 row_half_mirror
+// W32: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s3 row_half_mirror row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x0e,0x00,0x01,0x41,0x01,0xff]
+// W64-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s3 row_shl:1
-// W32: v_cndmask_b16_e64_dpp v5, v1, v2, s3 row_shl:1 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x0e,0x00,0x01,0x01,0x01,0xff]
-// W64-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s3 row_shl:1
+// W32: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s3 row_shl:1 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x0e,0x00,0x01,0x01,0x01,0xff]
+// W64-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s3 row_shl:15
-// W32: v_cndmask_b16_e64_dpp v5, v1, v2, s3 row_shl:15 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x0e,0x00,0x01,0x0f,0x01,0xff]
-// W64-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s3 row_shl:15
+// W32: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s3 row_shl:15 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x0e,0x00,0x01,0x0f,0x01,0xff]
+// W64-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s3 row_shr:1
-// W32: v_cndmask_b16_e64_dpp v5, v1, v2, s3 row_shr:1 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x0e,0x00,0x01,0x11,0x01,0xff]
-// W64-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s3 row_shr:1
+// W32: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s3 row_shr:1 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x0e,0x00,0x01,0x11,0x01,0xff]
+// W64-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s3 row_shr:15
-// W32: v_cndmask_b16_e64_dpp v5, v1, v2, s3 row_shr:15 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x0e,0x00,0x01,0x1f,0x01,0xff]
-// W64-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s3 row_shr:15
+// W32: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s3 row_shr:15 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x0e,0x00,0x01,0x1f,0x01,0xff]
+// W64-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s3 row_ror:1
-// W32: v_cndmask_b16_e64_dpp v5, v1, v2, s3 row_ror:1 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x0e,0x00,0x01,0x21,0x01,0xff]
-// W64-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s3 row_ror:1
+// W32: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s3 row_ror:1 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x0e,0x00,0x01,0x21,0x01,0xff]
+// W64-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s105 row_ror:15
-// W32: v_cndmask_b16_e64_dpp v5, v1, v2, s105 row_ror:15 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0xa6,0x01,0x01,0x2f,0x01,0xff]
-// W64-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s105 row_ror:15
+// W32: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s105 row_ror:15 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0xa6,0x01,0x01,0x2f,0x01,0xff]
+// W64-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, vcc_hi row_share:0 row_mask:0xf bank_mask:0xf
-// W32: v_cndmask_b16_e64_dpp v5, v1, v2, vcc_hi row_share:0 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0xae,0x01,0x01,0x50,0x01,0xff]
-// W64-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, vcc_hi row_share:0 row_mask:0xf bank_mask:0xf
+// W32: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, vcc_hi row_share:0 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0xae,0x01,0x01,0x50,0x01,0xff]
+// W64-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, |v1|, -v2, vcc_lo row_share:15 row_mask:0x0 bank_mask:0x1
-// W32: v_cndmask_b16_e64_dpp v5, |v1|, -v2, vcc_lo row_share:15 row_mask:0x0 bank_mask:0x1 ; encoding: [0x05,0x01,0x5d,0xd6,0xfa,0x04,0xaa,0x41,0x01,0x5f,0x01,0x01]
-// W64-ERR: :[[@LINE-2]]:38: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, |v1.l|, -v2.l, vcc_lo row_share:15 row_mask:0x0 bank_mask:0x1
+// W32: v_cndmask_b16_e64_dpp v5.l, |v1.l|, -v2.l, vcc_lo row_share:15 row_mask:0x0 bank_mask:0x1 ; encoding: [0x05,0x01,0x5d,0xd6,0xfa,0x04,0xaa,0x41,0x01,0x5f,0x01,0x01]
+// W64-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, -v1, |v2|, ttmp15 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
-// W32: v_cndmask_b16_e64_dpp v5, -v1, |v2|, ttmp15 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 ; encoding: [0x05,0x02,0x5d,0xd6,0xfa,0x04,0xee,0x21,0x01,0x60,0x09,0x13]
-// W64-ERR: :[[@LINE-2]]:38: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.l|, ttmp15 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
+// W32: v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.l|, ttmp15 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 ; encoding: [0x05,0x02,0x5d,0xd6,0xfa,0x04,0xee,0x21,0x01,0x60,0x09,0x13]
+// W64-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] quad_perm:[3,2,1,0]
-// W64: v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x1a,0x00,0x01,0x1b,0x00,0xff]
-// W32-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] quad_perm:[3,2,1,0]
+// W64: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x1a,0x00,0x01,0x1b,0x00,0xff]
+// W32-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] quad_perm:[0,1,2,3]
-// W64: v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x1a,0x00,0x01,0xe4,0x00,0xff]
-// W32-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] quad_perm:[0,1,2,3]
+// W64: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x1a,0x00,0x01,0xe4,0x00,0xff]
+// W32-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] row_mirror
-// W64: v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] row_mirror row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x1a,0x00,0x01,0x40,0x01,0xff]
-// W32-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] row_mirror
+// W64: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] row_mirror row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x1a,0x00,0x01,0x40,0x01,0xff]
+// W32-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] row_half_mirror
-// W64: v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] row_half_mirror row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x1a,0x00,0x01,0x41,0x01,0xff]
-// W32-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] row_half_mirror
+// W64: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] row_half_mirror row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x1a,0x00,0x01,0x41,0x01,0xff]
+// W32-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] row_shl:1
-// W64: v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] row_shl:1 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x1a,0x00,0x01,0x01,0x01,0xff]
-// W32-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] row_shl:1
+// W64: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] row_shl:1 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x1a,0x00,0x01,0x01,0x01,0xff]
+// W32-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] row_shl:15
-// W64: v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] row_shl:15 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x1a,0x00,0x01,0x0f,0x01,0xff]
-// W32-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] row_shl:15
+// W64: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] row_shl:15 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x1a,0x00,0x01,0x0f,0x01,0xff]
+// W32-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] row_shr:1
-// W64: v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] row_shr:1 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x1a,0x00,0x01,0x11,0x01,0xff]
-// W32-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] row_shr:1
+// W64: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] row_shr:1 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x1a,0x00,0x01,0x11,0x01,0xff]
+// W32-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] row_shr:15
-// W64: v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] row_shr:15 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x1a,0x00,0x01,0x1f,0x01,0xff]
-// W32-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] row_shr:15
+// W64: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] row_shr:15 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x1a,0x00,0x01,0x1f,0x01,0xff]
+// W32-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] row_ror:1
-// W64: v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] row_ror:1 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x1a,0x00,0x01,0x21,0x01,0xff]
-// W32-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] row_ror:1
+// W64: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] row_ror:1 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x1a,0x00,0x01,0x21,0x01,0xff]
+// W32-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] row_ror:15
-// W64: v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] row_ror:15 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x1a,0x00,0x01,0x2f,0x01,0xff]
-// W32-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] row_ror:15
+// W64: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] row_ror:15 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0x1a,0x00,0x01,0x2f,0x01,0xff]
+// W32-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s[104:105] row_share:0 row_mask:0xf bank_mask:0xf
-// W64: v_cndmask_b16_e64_dpp v5, v1, v2, s[104:105] row_share:0 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0xa2,0x01,0x01,0x50,0x01,0xff]
-// W32-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[104:105] row_share:0 row_mask:0xf bank_mask:0xf
+// W64: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[104:105] row_share:0 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0xa2,0x01,0x01,0x50,0x01,0xff]
+// W32-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, |v1|, -v2, vcc row_share:15 row_mask:0x0 bank_mask:0x1
-// W64: v_cndmask_b16_e64_dpp v5, |v1|, -v2, vcc row_share:15 row_mask:0x0 bank_mask:0x1 ; encoding: [0x05,0x01,0x5d,0xd6,0xfa,0x04,0xaa,0x41,0x01,0x5f,0x01,0x01]
-// W32-ERR: :[[@LINE-2]]:38: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, |v1.l|, -v2.l, vcc row_share:15 row_mask:0x0 bank_mask:0x1
+// W64: v_cndmask_b16_e64_dpp v5.l, |v1.l|, -v2.l, vcc row_share:15 row_mask:0x0 bank_mask:0x1 ; encoding: [0x05,0x01,0x5d,0xd6,0xfa,0x04,0xaa,0x41,0x01,0x5f,0x01,0x01]
+// W32-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, -v1, |v2|, ttmp[14:15] row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
-// W64: v_cndmask_b16_e64_dpp v5, -v1, |v2|, ttmp[14:15] row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 ; encoding: [0x05,0x02,0x5d,0xd6,0xfa,0x04,0xea,0x21,0x01,0x60,0x09,0x13]
-// W32-ERR: :[[@LINE-2]]:38: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.l|, ttmp[14:15] row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
+// W64: v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.l|, ttmp[14:15] row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 ; encoding: [0x05,0x02,0x5d,0xd6,0xfa,0x04,0xea,0x21,0x01,0x60,0x09,0x13]
+// W32-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v255, -|v255|, -|v255|, null row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
-// GFX11: v_cndmask_b16_e64_dpp v255, -|v255|, -|v255|, null row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xff,0x03,0x5d,0xd6,0xfa,0xfe,0xf3,0x61,0xff,0x6f,0x05,0x30]
+v_cndmask_b16_e64_dpp v255.l, -|v255.l|, -|v255.l|, null row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
+// GFX11: v_cndmask_b16_e64_dpp v255.l, -|v255.l|, -|v255.l|, null row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xff,0x03,0x5d,0xd6,0xfa,0xfe,0xf3,0x61,0xff,0x6f,0x05,0x30]
+
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, vcc_lo row_share:0 row_mask:0xf bank_mask:0xf
+// W32: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, vcc_lo row_share:0 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x5d,0xd6,0xfa,0x04,0xaa,0x01,0x01,0x50,0x01,0xff]
+// W64-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
+
+v_cndmask_b16_e64_dpp v5.l, |v1.l|, -v2.l, vcc_hi row_share:15 row_mask:0x0 bank_mask:0x1
+// W32: v_cndmask_b16_e64_dpp v5.l, |v1.l|, -v2.l, vcc_hi row_share:15 row_mask:0x0 bank_mask:0x1 ; encoding: [0x05,0x01,0x5d,0xd6,0xfa,0x04,0xae,0x41,0x01,0x5f,0x01,0x01]
+// W64-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
+
+v_cndmask_b16_e64_dpp v5.l, |v1.h|, -v2.l, vcc_hi row_share:15 row_mask:0x0 bank_mask:0x1
+// W32: v_cndmask_b16_e64_dpp v5.l, |v1.h|, -v2.l, vcc_hi row_share:15 row_mask:0x0 bank_mask:0x1 ; encoding: [0x05,0x09,0x5d,0xd6,0xfa,0x04,0xae,0x41,0x01,0x5f,0x01,0x01]
+// W64-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
+
+v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.h|, ttmp15 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
+// W32: v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.h|, ttmp15 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 ; encoding: [0x05,0x12,0x5d,0xd6,0xfa,0x04,0xee,0x21,0x01,0x60,0x09,0x13]
+// W64-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
+
+v_cndmask_b16_e64_dpp v5.l, |v1.h|, -v2.l, vcc row_share:15 row_mask:0x0 bank_mask:0x1
+// W64: v_cndmask_b16_e64_dpp v5.l, |v1.h|, -v2.l, vcc row_share:15 row_mask:0x0 bank_mask:0x1 ; encoding: [0x05,0x09,0x5d,0xd6,0xfa,0x04,0xaa,0x41,0x01,0x5f,0x01,0x01]
+// W32-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
+
+v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.h|, ttmp[14:15] row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
+// W64: v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.h|, ttmp[14:15] row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 ; encoding: [0x05,0x12,0x5d,0xd6,0xfa,0x04,0xea,0x21,0x01,0x60,0x09,0x13]
+// W32-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
+
+v_cndmask_b16_e64_dpp v255.h, -|v255.l|, -|v255.l|, null row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
+// GFX11: v_cndmask_b16_e64_dpp v255.h, -|v255.l|, -|v255.l|, null row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xff,0x43,0x5d,0xd6,0xfa,0xfe,0xf3,0x61,0xff,0x6f,0x05,0x30]
 
 v_cubeid_f32_e64_dpp v5, v1, v2, v3 quad_perm:[3,2,1,0]
 // GFX11: v_cubeid_f32_e64_dpp v5, v1, v2, v3 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x0c,0xd6,0xfa,0x04,0x0e,0x04,0x01,0x1b,0x00,0xff]

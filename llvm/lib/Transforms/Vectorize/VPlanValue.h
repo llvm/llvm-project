@@ -33,9 +33,11 @@ namespace llvm {
 class raw_ostream;
 class Value;
 class VPDef;
+struct VPDoubleValueDef;
 class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
+class VPInterleaveRecipe;
 
 // This is the base class of the VPlan Def/Use graph, used for modeling the data
 // flow into, within and out of the VPlan. VPValues can stand for live-ins
@@ -44,12 +46,15 @@ class VPRecipeBase;
 class VPValue {
   friend class VPBuilder;
   friend class VPDef;
+  friend struct VPDoubleValueDef;
   friend class VPInstruction;
+  friend class VPInterleaveRecipe;
   friend struct VPlanTransforms;
   friend class VPBasicBlock;
   friend class VPInterleavedAccessInfo;
   friend class VPSlotTracker;
   friend class VPRecipeBase;
+  friend class VPlan;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
@@ -64,6 +69,13 @@ protected:
   VPDef *Def;
 
   VPValue(const unsigned char SC, Value *UV = nullptr, VPDef *Def = nullptr);
+
+  /// Create a live-in VPValue.
+  VPValue(Value *UV = nullptr) : VPValue(VPValueSC, UV, nullptr) {}
+  /// Create a VPValue for a \p Def which is a subclass of VPValue.
+  VPValue(VPDef *Def, Value *UV = nullptr) : VPValue(VPVRecipeSC, UV, Def) {}
+  /// Create a VPValue for a \p Def which defines multiple values.
+  VPValue(Value *UV, VPDef *Def) : VPValue(VPValueSC, UV, Def) {}
 
   // DESIGN PRINCIPLE: Access to the underlying IR must be strictly limited to
   // the front-end and back-end of VPlan so that the middle-end is as
@@ -84,12 +96,6 @@ public:
     VPVRecipeSC /// A VPValue sub-class that is a VPRecipeBase.
   };
 
-  /// Create a live-in VPValue.
-  VPValue(Value *UV = nullptr) : VPValue(VPValueSC, UV, nullptr) {}
-  /// Create a VPValue for a \p Def which is a subclass of VPValue.
-  VPValue(VPDef *Def, Value *UV = nullptr) : VPValue(VPVRecipeSC, UV, Def) {}
-  /// Create a VPValue for a \p Def which defines multiple values.
-  VPValue(Value *UV, VPDef *Def) : VPValue(VPValueSC, UV, Def) {}
   VPValue(const VPValue &) = delete;
   VPValue &operator=(const VPValue &) = delete;
 

@@ -2141,9 +2141,8 @@ inline bool CastFP(InterpState &S, CodePtr OpPC, const llvm::fltSemantics *Sem,
 }
 
 inline bool CastFixedPoint(InterpState &S, CodePtr OpPC, uint32_t FPS) {
-  FixedPointSemantics TargetSemantics(0, 0, false, false, false);
-  std::memcpy(&TargetSemantics, &FPS, sizeof(TargetSemantics));
-
+  FixedPointSemantics TargetSemantics =
+      FixedPointSemantics::getFromOpaqueInt(FPS);
   const auto &Source = S.Stk.pop<FixedPoint>();
 
   bool Overflow;
@@ -2271,8 +2270,7 @@ static inline bool CastIntegralFixedPoint(InterpState &S, CodePtr OpPC,
                                           uint32_t FPS) {
   const T &Int = S.Stk.pop<T>();
 
-  FixedPointSemantics Sem(0, 0, false, false, false);
-  std::memcpy(&Sem, &FPS, sizeof(Sem));
+  FixedPointSemantics Sem = FixedPointSemantics::getFromOpaqueInt(FPS);
 
   bool Overflow;
   FixedPoint Result = FixedPoint::from(Int.toAPSInt(), Sem, &Overflow);
@@ -2288,8 +2286,7 @@ static inline bool CastFloatingFixedPoint(InterpState &S, CodePtr OpPC,
                                           uint32_t FPS) {
   const auto &Float = S.Stk.pop<Floating>();
 
-  FixedPointSemantics Sem(0, 0, false, false, false);
-  std::memcpy(&Sem, &FPS, sizeof(Sem));
+  FixedPointSemantics Sem = FixedPointSemantics::getFromOpaqueInt(FPS);
 
   bool Overflow;
   FixedPoint Result = FixedPoint::from(Float.getAPFloat(), Sem, &Overflow);
@@ -2696,6 +2693,10 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   const T &IntVal = S.Stk.pop<T>();
 
+  if (Desc)
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
+        << 2 << S.getLangOpts().CPlusPlus;
+
   S.Stk.push<Pointer>(static_cast<uint64_t>(IntVal), Desc);
   return true;
 }
@@ -3071,6 +3072,13 @@ inline IntegralAP<true> ReadArg<IntegralAP<true>>(InterpState &S,
   IntegralAP<true> I = IntegralAP<true>::deserialize(*OpPC);
   OpPC += align(I.bytesToSerialize());
   return I;
+}
+
+template <>
+inline FixedPoint ReadArg<FixedPoint>(InterpState &S, CodePtr &OpPC) {
+  FixedPoint FP = FixedPoint::deserialize(*OpPC);
+  OpPC += align(FP.bytesToSerialize());
+  return FP;
 }
 
 } // namespace interp

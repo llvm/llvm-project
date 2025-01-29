@@ -231,7 +231,7 @@ def TosaResolvableShapeOperands : NativeOpTrait<"TosaResolvableShapeOperands"> {
 //===----------------------------------------------------------------------===//
 
 class Tosa_Op<string mnemonic, list<Trait> traits = []> :
-    Op<Tosa_Dialect, mnemonic, !listconcat(traits, [TosaOpInterface, 
+    Op<Tosa_Dialect, mnemonic, !listconcat(traits, [TosaOpInterface,
     TosaResolvableShapeOperands])> {
 }
 
@@ -239,7 +239,6 @@ class Tosa_ElementwiseOp<string mnemonic, list<Trait> traits = []> :
     Tosa_Op<mnemonic, !listconcat(traits, [
               DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
                                         ["inferReturnTypeComponents"]>,
-              ResultsBroadcastableShape,
               TosaElementwiseOperator,
               Pure])> {
   let assemblyFormat =
@@ -249,6 +248,8 @@ class Tosa_ElementwiseOp<string mnemonic, list<Trait> traits = []> :
 class Tosa_ElementwiseUnaryOp<string mnemonic, list<Trait> traits = []> :
     Tosa_ElementwiseOp<mnemonic, !listconcat(traits, [
               SameOperandsAndResultShape,
+              ResultsBroadcastableShape,
+              SameOperandsAndResultRank,
               SameOperandsAndResultElementType])> {}
 
 class Tosa_InferTensorTypeOp<string mnemonic, list<Trait> traits = []>
