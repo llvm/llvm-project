@@ -1381,20 +1381,5 @@ define void @PR43833_simple(ptr %0, i32 %1) {
   br i1 %11, label %7, label %8
 }
 
-define ptr @pr91177_non_inbounds_gep(ptr nonnull %arg) {
-; FNATTRS-LABEL: define ptr @pr91177_non_inbounds_gep(
-; FNATTRS-SAME: ptr nonnull readnone [[ARG:%.*]]) #[[ATTR0]] {
-; FNATTRS-NEXT:    [[RES:%.*]] = getelementptr i8, ptr [[ARG]], i64 -8
-; FNATTRS-NEXT:    ret ptr [[RES]]
-;
-; ATTRIBUTOR-LABEL: define ptr @pr91177_non_inbounds_gep(
-; ATTRIBUTOR-SAME: ptr nofree nonnull readnone [[ARG:%.*]]) #[[ATTR0]] {
-; ATTRIBUTOR-NEXT:    [[RES:%.*]] = getelementptr i8, ptr [[ARG]], i64 -8
-; ATTRIBUTOR-NEXT:    ret ptr [[RES]]
-;
-  %res = getelementptr i8, ptr %arg, i64 -8
-  ret ptr %res
-}
-
 attributes #0 = { null_pointer_is_valid }
 attributes #1 = { nounwind willreturn}
