@@ -220,11 +220,11 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
   // Convert the mantissa into a DyadicFloat, making sure it has the right
   // sign, so that directed rounding will go in the right direction, if
   // enabled.
-  //
-  // (The fixed -127 adjustment on the exponent is because input.mantissa is a
-  // UInt128, and the leading 1 bit has been aligned to the top of it.)
-  fputil::DyadicFloat<DF_BITS> flt_mantissa(input.sign, input.exponent - 127,
-                                            input.mantissa);
+  fputil::DyadicFloat<DF_BITS> flt_mantissa(
+      input.sign,
+      input.exponent -
+          (cpp::numeric_limits<decltype(input.mantissa)>::digits - 1),
+      input.mantissa);
 
   // Divide or multiply, depending on whether log10_low_digit was positive
   // or negative.
@@ -362,7 +362,8 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
       // we made it from and doing the decimal conversion all over again.)
       for (size_t i = output.ndigits; i-- > 0;) {
         if (output.digits[i] != '9') {
-          output.digits[i]++;
+          output.digits[i] = internal::int_to_b36_char(
+              internal::b36_char_to_int(output.digits[i]) + 1);
           break;
         } else {
           output.digits[i] = '0';
