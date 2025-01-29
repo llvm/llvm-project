@@ -1759,3 +1759,38 @@ fir::factory::deduceOptimalExtents(mlir::ValueRange extents1,
   }
   return extents;
 }
+
+llvm::SmallVector<mlir::Value> fir::factory::updateRuntimeExtentsForEmptyArrays(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::ValueRange extents) {
+  if (extents.size() <= 1)
+    return extents;
+
+  // Try to reduce the number of new zero constant operations.
+  // This just makes MLIR matching easier, if CSE is not run
+  // after this.
+  llvm::DenseMap<mlir::Type, mlir::Value> zeroesMap;
+  mlir::Type i1Type = builder.getI1Type();
+  mlir::Value isEmpty = createZeroValue(builder, loc, i1Type);
+  zeroesMap.try_emplace(i1Type, isEmpty);
+
+  llvm::SmallVector<mlir::Value, Fortran::common::maxRank> zeroes;
+  for (mlir::Value extent : extents) {
+    mlir::Type type = extent.getType();
+    mlir::Value zero = zeroesMap.lookup(type);
+    if (!zero) {
+      zero = createZeroValue(builder, loc, type);
+      zeroesMap.try_emplace(type, zero);
+    }
+    zeroes.push_back(zero);
+    mlir::Value isZero = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::eq, extent, zero);
+    isEmpty = builder.create<mlir::arith::OrIOp>(loc, isEmpty, isZero);
+  }
+
+  llvm::SmallVector<mlir::Value, Fortran::common::maxRank> newExtents;
+  for (auto [zero, extent] : llvm::zip_equal(zeroes, extents)) {
+    newExtents.push_back(
+        builder.create<mlir::arith::SelectOp>(loc, isEmpty, zero, extent));
+  }
+  return newExtents;
+}
