@@ -16,7 +16,6 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
-#include <cstdint>
 #include <optional>
 
 namespace llvm {
