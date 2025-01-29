@@ -118,6 +118,9 @@
 ; CHECK-O23SZ-NEXT: Running analysis: LoopAccessAnalysis on foo
 ; CHECK-O23SZ-NEXT: Running pass: LoopVectorizePass on foo
 ; CHECK-O23SZ-NEXT: Running analysis: DemandedBitsAnalysis on foo
+; CHECK-O23SZ-NEXT: Running pass: LoopSimplifyPass on foo
+; CHECK-O23SZ-NEXT: Running pass: LCSSAPass on foo
+; CHECK-O23SZ-NEXT: Running pass: EVLIndVarSimplifyPass on loop
 ; CHECK-O23SZ-NEXT: Running pass: InferAlignmentPass on foo
 ; CHECK-O23SZ-NEXT: Running pass: LoopUnrollPass on foo
 ; CHECK-O23SZ-NEXT: WarnMissedTransformationsPass on foo
