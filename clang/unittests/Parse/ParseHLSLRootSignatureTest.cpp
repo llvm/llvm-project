@@ -24,6 +24,7 @@
 #include "gtest/gtest.h"
 
 using namespace clang;
+using namespace llvm::hlsl::root_signature;
 
 namespace {
 
@@ -276,6 +277,263 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexIdentifierTest) {
 
   SmallVector<hlsl::RootSignatureToken> Tokens;
   ASSERT_TRUE(Lexer.Lex(Tokens));
+  ASSERT_TRUE(Consumer->IsSatisfied());
+}
+
+// Valid Parser Tests
+
+TEST_F(ParseHLSLRootSignatureTest, ValidParseEmptyTest) {
+  const llvm::StringLiteral Source = R"cc()cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  // Test no diagnostics produced
+  Consumer->SetNoDiag();
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
+
+  SmallVector<hlsl::RootSignatureToken> Tokens;
+  ASSERT_FALSE(Lexer.Lex(Tokens));
+
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Tokens, Diags);
+
+  ASSERT_FALSE(Parser.Parse());
+  ASSERT_EQ((int)Elements.size(), 0);
+
+  ASSERT_TRUE(Consumer->IsSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
+  const llvm::StringLiteral Source = R"cc(
+    DescriptorTable(
+      visibility = SHADER_VISIBILITY_PIXEL,
+      CBV(b0),
+      SRV(t42, space = 3, offset = 32, numDescriptors = 4, flags = 0),
+      Sampler(s987, space = 2, offset = DESCRIPTOR_RANGE_OFFSET_APPEND),
+      UAV(u987234,
+        flags = Descriptors_Volatile | Data_Volatile
+                      | Data_Static_While_Set_At_Execute | Data_Static
+                      | Descriptors_Static_Keeping_Buffer_Bounds_Checks
+      )
+    ),
+    DescriptorTable()
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
+
+  SmallVector<hlsl::RootSignatureToken> Tokens;
+
+  // Test no diagnostics produced
+  Consumer->SetNoDiag();
+  ASSERT_FALSE(Lexer.Lex(Tokens));
+
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Tokens, Diags);
+
+  ASSERT_FALSE(Parser.Parse());
+  RootElement Elem = Elements[0];
+  ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::CBuffer);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.ViewType,
+            RegisterType::BReg);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.Number, (uint32_t)0);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).NumDescriptors, (uint32_t)1);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, (uint32_t)0);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
+            DescriptorRangeOffset(DescriptorTableOffsetAppend));
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
+            DescriptorRangeFlags::DataStaticWhileSetAtExecute);
+
+  Elem = Elements[1];
+  ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::SRV);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.ViewType,
+            RegisterType::TReg);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.Number,
+            (uint32_t)42);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).NumDescriptors, (uint32_t)4);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, (uint32_t)3);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
+            DescriptorRangeOffset(32));
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
+            DescriptorRangeFlags::None);
+
+  Elem = Elements[2];
+  ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::Sampler);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.ViewType,
+            RegisterType::SReg);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.Number,
+            (uint32_t)987);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).NumDescriptors, (uint32_t)1);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, (uint32_t)2);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
+            DescriptorRangeOffset(DescriptorTableOffsetAppend));
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
+            DescriptorRangeFlags::None);
+
+  Elem = Elements[3];
+  ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::UAV);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.ViewType,
+            RegisterType::UReg);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.Number,
+            (uint32_t)987234);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).NumDescriptors, (uint32_t)1);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, (uint32_t)0);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
+            DescriptorRangeOffset(DescriptorTableOffsetAppend));
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
+            DescriptorRangeFlags::ValidFlags);
+
+  Elem = Elements[4];
+  ASSERT_TRUE(std::holds_alternative<DescriptorTable>(Elem));
+  ASSERT_EQ(std::get<DescriptorTable>(Elem).NumClauses, (uint32_t)4);
+  ASSERT_EQ(std::get<DescriptorTable>(Elem).Visibility,
+            ShaderVisibility::Pixel);
+
+  Elem = Elements[5];
+  // Test generated DescriptorTable start has correct default values
+  ASSERT_TRUE(std::holds_alternative<DescriptorTable>(Elem));
+  ASSERT_EQ(std::get<DescriptorTable>(Elem).NumClauses, (uint32_t)0);
+  ASSERT_EQ(std::get<DescriptorTable>(Elem).Visibility, ShaderVisibility::All);
+
+  ASSERT_TRUE(Consumer->IsSatisfied());
+}
+
+// Invalid Parser Tests
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedEOSTest) {
+  const llvm::StringLiteral Source = R"cc(
+    DescriptorTable
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  // Test correct diagnostic produced
+  Consumer->SetExpected(diag::err_hlsl_rootsig_unexpected_eos);
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
+
+  SmallVector<hlsl::RootSignatureToken> Tokens;
+  ASSERT_FALSE(Lexer.Lex(Tokens));
+
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Tokens, Diags);
+
+  ASSERT_TRUE(Parser.Parse());
+
+  ASSERT_TRUE(Consumer->IsSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedTokenTest) {
+  const llvm::StringLiteral Source = R"cc(
+    DescriptorTable()
+    space
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  // Test correct diagnostic produced
+  Consumer->SetExpected(diag::err_hlsl_rootsig_unexpected_token_kind);
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
+
+  SmallVector<hlsl::RootSignatureToken> Tokens;
+  ASSERT_FALSE(Lexer.Lex(Tokens));
+
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Tokens, Diags);
+
+  ASSERT_TRUE(Parser.Parse());
+
+  ASSERT_TRUE(Consumer->IsSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidParseRepeatedParamTest) {
+  const llvm::StringLiteral Source = R"cc(
+    DescriptorTable(
+      CBV(b0, numDescriptors = 3, numDescriptors = 1)
+    )
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  // Test correct diagnostic produced
+  Consumer->SetExpected(diag::err_hlsl_rootsig_repeat_param);
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
+
+  SmallVector<hlsl::RootSignatureToken> Tokens;
+  ASSERT_FALSE(Lexer.Lex(Tokens));
+
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Tokens, Diags);
+
+  ASSERT_TRUE(Parser.Parse());
+
+  ASSERT_TRUE(Consumer->IsSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidParseRepeatedVisibilityTest) {
+  const llvm::StringLiteral Source = R"cc(
+    DescriptorTable(
+      visibility = SHADER_VISIBILITY_GEOMETRY,
+      visibility = SHADER_VISIBILITY_HULL
+    )
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  // Test correct diagnostic produced
+  Consumer->SetExpected(diag::err_hlsl_rootsig_repeat_param);
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
+
+  SmallVector<hlsl::RootSignatureToken> Tokens;
+  ASSERT_FALSE(Lexer.Lex(Tokens));
+
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Tokens, Diags);
+
+  ASSERT_TRUE(Parser.Parse());
+
+  ASSERT_TRUE(Consumer->IsSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidParseNonZeroFlagTest) {
+  const llvm::StringLiteral Source = R"cc(
+    DescriptorTable(
+      CBV(b0, flags = 3)
+    )
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  // Test correct diagnostic produced
+  Consumer->SetExpected(diag::err_hlsl_rootsig_non_zero_flag);
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
+
+  SmallVector<hlsl::RootSignatureToken> Tokens;
+  ASSERT_FALSE(Lexer.Lex(Tokens));
+
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Tokens, Diags);
+
+  ASSERT_TRUE(Parser.Parse());
+
   ASSERT_TRUE(Consumer->IsSatisfied());
 }
 
