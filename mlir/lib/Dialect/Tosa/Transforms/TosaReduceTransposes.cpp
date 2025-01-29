@@ -187,7 +187,7 @@ TosaReduceTransposes::transposeDenseAttribute(DenseElementsAttr input,
 
   // Asserted by TransposeOp verifier and TOSA disallowing tensor with dimension
   // 0. If not in place, something is very wrong.
-  if (rank <= 0 || oldType.getNumElements() <= 0 || perms.size() != rank) {
+  if (rank <= 0 || oldType.getNumElements() <= 0) {
     signalPassFailure();
     return std::nullopt;
   }

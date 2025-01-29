@@ -1703,10 +1703,8 @@
 {'is_defined': True, 'name': '_ZTINSt3__120__time_get_c_storageIwEE', 'size': 16, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__13pmr15memory_resourceE', 'size': 16, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__13pmr25monotonic_buffer_resourceE', 'size': 24, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTINSt3__13pmr26__null_memory_resource_impE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__13pmr26synchronized_pool_resourceE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__13pmr28unsynchronized_pool_resourceE', 'size': 24, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTINSt3__13pmr32__new_delete_memory_resource_impE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__14__fs10filesystem16filesystem_errorE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__15ctypeIcEE', 'size': 56, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__15ctypeIwEE', 'size': 56, 'type': 'OBJECT'}
@@ -1838,10 +1836,8 @@
 {'is_defined': True, 'name': '_ZTSNSt3__120__time_get_c_storageIwEE', 'size': 34, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__13pmr15memory_resourceE', 'size': 30, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__13pmr25monotonic_buffer_resourceE', 'size': 40, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTSNSt3__13pmr26__null_memory_resource_impE', 'size': 41, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__13pmr26synchronized_pool_resourceE', 'size': 41, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__13pmr28unsynchronized_pool_resourceE', 'size': 43, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTSNSt3__13pmr32__new_delete_memory_resource_impE', 'size': 47, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__14__fs10filesystem16filesystem_errorE', 'size': 44, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__15ctypeIcEE', 'size': 18, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__15ctypeIwEE', 'size': 18, 'type': 'OBJECT'}
@@ -1970,10 +1966,8 @@
 {'is_defined': True, 'name': '_ZTVNSt3__120__codecvt_utf8_utf16IwEE', 'size': 96, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__13pmr15memory_resourceE', 'size': 56, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__13pmr25monotonic_buffer_resourceE', 'size': 56, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTVNSt3__13pmr26__null_memory_resource_impE', 'size': 56, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__13pmr26synchronized_pool_resourceE', 'size': 56, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__13pmr28unsynchronized_pool_resourceE', 'size': 56, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTVNSt3__13pmr32__new_delete_memory_resource_impE', 'size': 56, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__14__fs10filesystem16filesystem_errorE', 'size': 40, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__15ctypeIcEE', 'size': 104, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__15ctypeIwEE', 'size': 136, 'type': 'OBJECT'}

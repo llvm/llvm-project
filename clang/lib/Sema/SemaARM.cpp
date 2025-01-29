@@ -624,20 +624,6 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
   return true;
 }
 
-static bool hasArmZAState(const FunctionDecl *FD) {
-  const auto *T = FD->getType()->getAs<FunctionProtoType>();
-  return (T && FunctionType::getArmZAState(T->getAArch64SMEAttributes()) !=
-                   FunctionType::ARM_None) ||
-         (FD->hasAttr<ArmNewAttr>() && FD->getAttr<ArmNewAttr>()->isNewZA());
-}
-
-static bool hasArmZT0State(const FunctionDecl *FD) {
-  const auto *T = FD->getType()->getAs<FunctionProtoType>();
-  return (T && FunctionType::getArmZT0State(T->getAArch64SMEAttributes()) !=
-                   FunctionType::ARM_None) ||
-         (FD->hasAttr<ArmNewAttr>() && FD->getAttr<ArmNewAttr>()->isNewZT0());
-}
-
 static ArmSMEState getSMEState(unsigned BuiltinID) {
   switch (BuiltinID) {
   default:

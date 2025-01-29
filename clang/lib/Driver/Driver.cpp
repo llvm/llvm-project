@@ -6669,21 +6669,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
     case llvm::Triple::CUDA:
       TC = std::make_unique<toolchains::NVPTXToolChain>(*this, Target, Args);
       break;
-    case llvm::Triple::AMDHSA: {
-      bool CL = llvm::any_of(Args, [&](Arg *A) {
-        return (A->getOption().matches(options::OPT_x) &&
-                types::isOpenCL(
-                    types::lookupTypeForExtension(A->getValue()))) ||
-               (A->getOption().getKind() == Option::InputClass &&
-                StringRef(A->getValue()).rfind('.') != StringRef::npos &&
-                types::isOpenCL(types::lookupTypeForExtension(
-                    &A->getValue()[StringRef(A->getValue()).rfind('.') + 1])));
-      });
-      TC = CL ? std::make_unique<toolchains::ROCMToolChain>(*this, Target, Args)
-              : std::make_unique<toolchains::AMDGPUToolChain>(*this, Target,
-                                                              Args);
+    case llvm::Triple::AMDHSA:
+      TC = std::make_unique<toolchains::ROCMToolChain>(*this, Target, Args);
       break;
-    }
     case llvm::Triple::AMDPAL:
     case llvm::Triple::Mesa3D:
       TC = std::make_unique<toolchains::AMDGPUToolChain>(*this, Target, Args);

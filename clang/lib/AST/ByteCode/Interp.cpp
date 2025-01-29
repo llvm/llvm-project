@@ -68,6 +68,9 @@ static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
   const SourceInfo &E = S.Current->getSource(OpPC);
 
   if (isa<ParmVarDecl>(D)) {
+    if (D->getType()->isReferenceType())
+      return false;
+
     if (S.getLangOpts().CPlusPlus11) {
       S.FFDiag(E, diag::note_constexpr_function_param_value_unknown) << D;
       S.Note(D->getLocation(), diag::note_declared_at) << D->getSourceRange();
@@ -1287,6 +1290,12 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
 
     const Pointer &ThisPtr = S.Stk.peek<Pointer>(ThisOffset);
 
+    // C++23 [expr.const]p5.6
+    // an invocation of a virtual function ([class.virtual]) for an object whose
+    // dynamic type is constexpr-unknown;
+    if (ThisPtr.isDummy() && Func->isVirtual())
+      return false;
+
     // If the current function is a lambda static invoker and
     // the function we're about to call is a lambda call operator,
     // skip the CheckInvoke, since the ThisPtr is a null pointer
@@ -1660,17 +1669,6 @@ bool GetTypeidPtr(InterpState &S, CodePtr OpPC, const Type *TypeInfoType) {
 
   if (!P.isBlockPointer())
     return false;
-
-  if (P.isDummy()) {
-    QualType StarThisType =
-        S.getASTContext().getLValueReferenceType(P.getType());
-    S.FFDiag(S.Current->getSource(OpPC),
-             diag::note_constexpr_polymorphic_unknown_dynamic_type)
-        << AK_TypeId
-        << P.toAPValue(S.getASTContext())
-               .getAsString(S.getASTContext(), StarThisType);
-    return false;
-  }
 
   S.Stk.push<Pointer>(P.getType().getTypePtr(), TypeInfoType);
   return true;

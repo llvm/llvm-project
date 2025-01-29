@@ -1169,7 +1169,7 @@ bool Instruction::mayThrow(bool IncludePhaseOneUnwind) const {
     // Landingpads themselves don't unwind -- however, an invoke of a skipped
     // landingpad may continue unwinding.
     BasicBlock *UnwindDest = cast<InvokeInst>(this)->getUnwindDest();
-    Instruction *Pad = UnwindDest->getFirstNonPHI();
+    BasicBlock::iterator Pad = UnwindDest->getFirstNonPHIIt();
     if (auto *LP = dyn_cast<LandingPadInst>(Pad))
       return canUnwindPastLandingPad(LP, IncludePhaseOneUnwind);
     return false;

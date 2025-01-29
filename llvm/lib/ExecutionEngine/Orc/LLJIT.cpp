@@ -833,14 +833,7 @@ Error LLJITBuilderState::prepareForConstruction() {
       CreateObjectLinkingLayer =
           [](ExecutionSession &ES,
              const Triple &) -> Expected<std::unique_ptr<ObjectLayer>> {
-        auto ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(ES);
-        if (auto EHFrameRegistrar = EPCEHFrameRegistrar::Create(ES))
-          ObjLinkingLayer->addPlugin(
-              std::make_unique<EHFrameRegistrationPlugin>(
-                  ES, std::move(*EHFrameRegistrar)));
-        else
-          return EHFrameRegistrar.takeError();
-        return std::move(ObjLinkingLayer);
+        return std::make_unique<ObjectLinkingLayer>(ES);
       };
     }
   }
@@ -1224,6 +1217,16 @@ Expected<JITDylibSP> setUpGenericLLVMIRPlatform(LLJIT &J) {
 
   auto &PlatformJD = J.getExecutionSession().createBareJITDylib("<Platform>");
   PlatformJD.addToLinkOrder(*ProcessSymbolsJD);
+
+  if (auto *OLL = dyn_cast<ObjectLinkingLayer>(&J.getObjLinkingLayer())) {
+
+    auto &ES = J.getExecutionSession();
+    if (auto EHFrameRegistrar = EPCEHFrameRegistrar::Create(ES))
+      OLL->addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
+          ES, std::move(*EHFrameRegistrar)));
+    else
+      return EHFrameRegistrar.takeError();
+  }
 
   J.setPlatformSupport(
       std::make_unique<GenericLLVMIRPlatformSupport>(J, PlatformJD));

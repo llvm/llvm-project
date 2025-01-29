@@ -14649,11 +14649,23 @@ void Sema::CheckAddressOfPackedMember(Expr *rhs) {
                      _2, _3, _4));
 }
 
+// Performs a similar job to Sema::UsualUnaryConversions, but without any
+// implicit promotion of integral/enumeration types.
+static ExprResult BuiltinVectorMathConversions(Sema &S, Expr *E) {
+  // First, convert to an r-value.
+  ExprResult Res = S.DefaultFunctionArrayLvalueConversion(E);
+  if (Res.isInvalid())
+    return ExprError();
+
+  // Promote floating-point types.
+  return S.UsualUnaryFPConversions(Res.get());
+}
+
 bool Sema::PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall) {
   if (checkArgCount(TheCall, 1))
     return true;
 
-  ExprResult A = UsualUnaryConversions(TheCall->getArg(0));
+  ExprResult A = BuiltinVectorMathConversions(*this, TheCall->getArg(0));
   if (A.isInvalid())
     return true;
 
@@ -14668,57 +14680,77 @@ bool Sema::PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall) {
 }
 
 bool Sema::BuiltinElementwiseMath(CallExpr *TheCall, bool FPOnly) {
-  QualType Res;
-  if (BuiltinVectorMath(TheCall, Res, FPOnly))
-    return true;
-  TheCall->setType(Res);
-  return false;
+  if (auto Res = BuiltinVectorMath(TheCall, FPOnly); Res.has_value()) {
+    TheCall->setType(*Res);
+    return false;
+  }
+  return true;
 }
 
 bool Sema::BuiltinVectorToScalarMath(CallExpr *TheCall) {
-  QualType Res;
-  if (BuiltinVectorMath(TheCall, Res))
+  std::optional<QualType> Res = BuiltinVectorMath(TheCall);
+  if (!Res)
     return true;
 
-  if (auto *VecTy0 = Res->getAs<VectorType>())
+  if (auto *VecTy0 = (*Res)->getAs<VectorType>())
     TheCall->setType(VecTy0->getElementType());
   else
-    TheCall->setType(Res);
+    TheCall->setType(*Res);
 
   return false;
 }
 
-bool Sema::BuiltinVectorMath(CallExpr *TheCall, QualType &Res, bool FPOnly) {
+static bool checkBuiltinVectorMathMixedEnums(Sema &S, Expr *LHS, Expr *RHS,
+                                             SourceLocation Loc) {
+  QualType L = LHS->getEnumCoercedType(S.Context),
+           R = RHS->getEnumCoercedType(S.Context);
+  if (L->isUnscopedEnumerationType() && R->isUnscopedEnumerationType() &&
+      !S.Context.hasSameUnqualifiedType(L, R)) {
+    return S.Diag(Loc, diag::err_conv_mixed_enum_types_cxx26)
+           << LHS->getSourceRange() << RHS->getSourceRange()
+           << /*Arithmetic Between*/ 0 << L << R;
+  }
+  return false;
+}
+
+std::optional<QualType> Sema::BuiltinVectorMath(CallExpr *TheCall,
+                                                bool FPOnly) {
   if (checkArgCount(TheCall, 2))
-    return true;
+    return std::nullopt;
 
-  ExprResult A = TheCall->getArg(0);
-  ExprResult B = TheCall->getArg(1);
-  // Do standard promotions between the two arguments, returning their common
-  // type.
-  Res = UsualArithmeticConversions(A, B, TheCall->getExprLoc(), ACK_Comparison);
-  if (A.isInvalid() || B.isInvalid())
-    return true;
+  if (checkBuiltinVectorMathMixedEnums(
+          *this, TheCall->getArg(0), TheCall->getArg(1), TheCall->getExprLoc()))
+    return std::nullopt;
 
-  QualType TyA = A.get()->getType();
-  QualType TyB = B.get()->getType();
-
-  if (Res.isNull() || TyA.getCanonicalType() != TyB.getCanonicalType())
-    return Diag(A.get()->getBeginLoc(),
-                diag::err_typecheck_call_different_arg_types)
-           << TyA << TyB;
-
-  if (FPOnly) {
-    if (checkFPMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA, 1))
-      return true;
-  } else {
-    if (checkMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA, 1))
-      return true;
+  Expr *Args[2];
+  for (int I = 0; I < 2; ++I) {
+    ExprResult Converted =
+        BuiltinVectorMathConversions(*this, TheCall->getArg(I));
+    if (Converted.isInvalid())
+      return std::nullopt;
+    Args[I] = Converted.get();
   }
 
-  TheCall->setArg(0, A.get());
-  TheCall->setArg(1, B.get());
-  return false;
+  SourceLocation LocA = Args[0]->getBeginLoc();
+  QualType TyA = Args[0]->getType();
+  QualType TyB = Args[1]->getType();
+
+  if (TyA.getCanonicalType() != TyB.getCanonicalType()) {
+    Diag(LocA, diag::err_typecheck_call_different_arg_types) << TyA << TyB;
+    return std::nullopt;
+  }
+
+  if (FPOnly) {
+    if (checkFPMathBuiltinElementType(*this, LocA, TyA, 1))
+      return std::nullopt;
+  } else {
+    if (checkMathBuiltinElementType(*this, LocA, TyA, 1))
+      return std::nullopt;
+  }
+
+  TheCall->setArg(0, Args[0]);
+  TheCall->setArg(1, Args[1]);
+  return TyA;
 }
 
 bool Sema::BuiltinElementwiseTernaryMath(CallExpr *TheCall,
@@ -14726,9 +14758,17 @@ bool Sema::BuiltinElementwiseTernaryMath(CallExpr *TheCall,
   if (checkArgCount(TheCall, 3))
     return true;
 
+  SourceLocation Loc = TheCall->getExprLoc();
+  if (checkBuiltinVectorMathMixedEnums(*this, TheCall->getArg(0),
+                                       TheCall->getArg(1), Loc) ||
+      checkBuiltinVectorMathMixedEnums(*this, TheCall->getArg(1),
+                                       TheCall->getArg(2), Loc))
+    return true;
+
   Expr *Args[3];
   for (int I = 0; I < 3; ++I) {
-    ExprResult Converted = UsualUnaryConversions(TheCall->getArg(I));
+    ExprResult Converted =
+        BuiltinVectorMathConversions(*this, TheCall->getArg(I));
     if (Converted.isInvalid())
       return true;
     Args[I] = Converted.get();

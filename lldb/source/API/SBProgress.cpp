@@ -32,6 +32,9 @@ SBProgress::SBProgress(const char *title, const char *details,
       lldb_private::Progress::Origin::eExternal);
 }
 
+SBProgress::SBProgress(SBProgress &&rhs)
+    : m_opaque_up(std::move(rhs.m_opaque_up)) {}
+
 SBProgress::~SBProgress() = default;
 
 void SBProgress::Increment(uint64_t amount, const char *description) {

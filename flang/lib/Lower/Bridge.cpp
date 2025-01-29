@@ -459,7 +459,9 @@ public:
     if (hasMainProgram)
       createGlobalOutsideOfFunctionLowering([&]() {
         fir::runtime::genMain(*builder, toLocation(),
-                              bridge.getEnvironmentDefaults());
+                              bridge.getEnvironmentDefaults(),
+                              getFoldingContext().languageFeatures().IsEnabled(
+                                  Fortran::common::LanguageFeature::CUDA));
       });
 
     finalizeOpenACCLowering();
@@ -2168,14 +2170,42 @@ private:
     return builder->createIntegerConstant(loc, controlType, 1); // step
   }
 
-  void addLoopAnnotationAttr(IncrementLoopInfo &info) {
+  void addLoopAnnotationAttr(
+      IncrementLoopInfo &info,
+      llvm::SmallVectorImpl<const Fortran::parser::CompilerDirective *> &dirs) {
     mlir::BoolAttr f = mlir::BoolAttr::get(builder->getContext(), false);
-    mlir::LLVM::LoopVectorizeAttr va = mlir::LLVM::LoopVectorizeAttr::get(
-        builder->getContext(), /*disable=*/f, {}, {}, {}, {}, {}, {});
+    mlir::BoolAttr t = mlir::BoolAttr::get(builder->getContext(), true);
+    mlir::LLVM::LoopVectorizeAttr va;
+    mlir::LLVM::LoopUnrollAttr ua;
+    bool has_attrs = false;
+    for (const auto *dir : dirs) {
+      Fortran::common::visit(
+          Fortran::common::visitors{
+              [&](const Fortran::parser::CompilerDirective::VectorAlways &) {
+                va = mlir::LLVM::LoopVectorizeAttr::get(builder->getContext(),
+                                                        /*disable=*/f, {}, {},
+                                                        {}, {}, {}, {});
+                has_attrs = true;
+              },
+              [&](const Fortran::parser::CompilerDirective::Unroll &u) {
+                mlir::IntegerAttr countAttr;
+                if (u.v.has_value()) {
+                  countAttr = builder->getIntegerAttr(builder->getI64Type(),
+                                                      u.v.value());
+                }
+                ua = mlir::LLVM::LoopUnrollAttr::get(
+                    builder->getContext(), /*disable=*/f, /*count*/ countAttr,
+                    {}, /*full*/ u.v.has_value() ? f : t, {}, {}, {});
+                has_attrs = true;
+              },
+              [&](const auto &) {}},
+          dir->u);
+    }
     mlir::LLVM::LoopAnnotationAttr la = mlir::LLVM::LoopAnnotationAttr::get(
-        builder->getContext(), {}, /*vectorize=*/va, {}, {}, {}, {}, {}, {}, {},
-        {}, {}, {}, {}, {}, {});
-    info.doLoop.setLoopAnnotationAttr(la);
+        builder->getContext(), {}, /*vectorize=*/va, {}, /*unroll*/ ua, {}, {},
+        {}, {}, {}, {}, {}, {}, {}, {}, {});
+    if (has_attrs)
+      info.doLoop.setLoopAnnotationAttr(la);
   }
 
   /// Generate FIR to begin a structured or unstructured increment loop nest.
@@ -2274,14 +2304,7 @@ private:
         if (info.hasLocalitySpecs())
           handleLocalitySpecs(info);
 
-        for (const auto *dir : dirs) {
-          Fortran::common::visit(
-              Fortran::common::visitors{
-                  [&](const Fortran::parser::CompilerDirective::VectorAlways
-                          &d) { addLoopAnnotationAttr(info); },
-                  [&](const auto &) {}},
-              dir->u);
-        }
+        addLoopAnnotationAttr(info, dirs);
         continue;
       }
 
@@ -2831,6 +2854,9 @@ private:
     Fortran::common::visit(
         Fortran::common::visitors{
             [&](const Fortran::parser::CompilerDirective::VectorAlways &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::Unroll &) {
               attachDirectiveToLoop(dir, &eval);
             },
             [&](const auto &) {}},

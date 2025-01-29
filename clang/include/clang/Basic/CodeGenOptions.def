@@ -393,6 +393,9 @@ CODEGENOPT(EnableTLSDESC, 1, 0)
 /// Bit size of immediate TLS offsets (0 == use the default).
 VALUE_CODEGENOPT(TLSSize, 8, 0)
 
+/// The types of variables that we will extend the live ranges of.
+ENUM_CODEGENOPT(ExtendVariableLiveness, ExtendVariableLivenessKind, 2, ExtendVariableLivenessKind::None)
+
 /// The default stack protector guard offset to use.
 VALUE_CODEGENOPT(StackProtectorGuardOffset, 32, INT_MAX)
 

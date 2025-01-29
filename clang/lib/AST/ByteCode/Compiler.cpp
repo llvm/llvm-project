@@ -6175,7 +6175,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     }
 
     if (D->getType()->isReferenceType())
-      return false; // FIXME: Do we need to emit InvalidDeclRef?
+      return this->emitDummyPtr(D, E);
   }
 
   // In case we need to re-visit a declaration.

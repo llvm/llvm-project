@@ -16,7 +16,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: nounwind uwtable
 define i32 @main(i32 %argc, ptr nocapture readnone %argv) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@main
-; CHECK-SAME: (i32 [[ARGC:%.*]], ptr nocapture readnone [[ARGV:%.*]]) {
+; CHECK-SAME: (i32 [[ARGC:%.*]], ptr readnone captures(none) [[ARGV:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void (ptr, ptr, ptr, ptr, ptr, ...) @callee_t0f(ptr undef, ptr undef, ptr undef, ptr undef, ptr undef, ptr byval([[STRUCT_TT0:%.*]]) align 8 @t45)
 ; CHECK-NEXT:    ret i32 0
@@ -29,7 +29,7 @@ entry:
 ; Function Attrs: nounwind uwtable
 define internal void @callee_t0f(ptr nocapture readnone %tp13, ptr nocapture readnone %tp14, ptr nocapture readnone %tp15, ptr nocapture readnone %tp16, ptr nocapture readnone %tp17, ...) {
 ; CHECK-LABEL: define {{[^@]+}}@callee_t0f
-; CHECK-SAME: (ptr nocapture readnone [[TP13:%.*]], ptr nocapture readnone [[TP14:%.*]], ptr nocapture readnone [[TP15:%.*]], ptr nocapture readnone [[TP16:%.*]], ptr nocapture readnone [[TP17:%.*]], ...) {
+; CHECK-SAME: (ptr readnone captures(none) [[TP13:%.*]], ptr readnone captures(none) [[TP14:%.*]], ptr readnone captures(none) [[TP15:%.*]], ptr readnone captures(none) [[TP16:%.*]], ptr readnone captures(none) [[TP17:%.*]], ...) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret void
 ;

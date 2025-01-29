@@ -514,9 +514,7 @@ available in all language modes.
 __nullptr
 ---------
 
-``__nullptr`` is an alternate spelling for ``nullptr``, but is also available in
-C++ modes prior to C++11. Note that it's currently not availbale in C despite
-C23 having support for ``nullptr``.
+``__nullptr`` is an alternate spelling for ``nullptr``. It is available in all C and C++ language modes.
 
 __signed, __signed__
 --------------------
@@ -758,6 +756,9 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
 The integer elementwise intrinsics, including ``__builtin_elementwise_popcount``,
 ``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
 ``__builtin_elementwise_sub_sat`` can be called in a ``constexpr`` context.
+
+No implicit promotion of integer types takes place. The mixing of integer types
+of different sizes and signs is forbidden in binary and ternary builtins.
 
 ============================================== ====================================================================== =========================================
          Name                                   Operation                                                             Supported element types

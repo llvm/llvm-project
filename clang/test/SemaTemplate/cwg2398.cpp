@@ -362,15 +362,17 @@ namespace classes {
 
 namespace packs {
   namespace t1 {
-    // FIXME: This should be rejected
     template<template<int, int...> class> struct A {};
-    // old-note@-1 {{previous non-type template parameter with type 'int' is here}}
+    // new-error@-1 {{non-type parameter of template template parameter cannot be narrowed from type 'int' to 'char'}}
+    // new-note@-2 {{previous template template parameter is here}}
+    // old-note@-3 {{previous non-type template parameter with type 'int' is here}}
 
     template<char> struct B;
     // old-note@-1 {{template non-type parameter has a different type 'char' in template argument}}
 
     template struct A<B>;
-    // old-error@-1 {{has different template parameters}}
+    // new-note@-1 {{has different template parameters}}
+    // old-error@-2 {{has different template parameters}}
   } // namespace t1
   namespace t2 {
     template<template<char, int...> class> struct A {};
@@ -383,15 +385,17 @@ namespace packs {
     // old-error@-1 {{has different template parameters}}
   } // namespace t2
   namespace t3 {
-    // FIXME: This should be rejected
     template<template<int...> class> struct A {};
-    // old-note@-1 {{previous non-type template parameter with type 'int' is here}}
+    // new-error@-1 {{non-type parameter of template template parameter cannot be narrowed from type 'int' to 'char'}}
+    // new-note@-2 {{previous template template parameter is here}}
+    // old-note@-3 {{previous non-type template parameter with type 'int' is here}}
 
     template<char> struct B;
     // old-note@-1 {{template non-type parameter has a different type 'char' in template argument}}
 
     template struct A<B>;
-    // old-error@-1 {{has different template parameters}}
+    // new-note@-1 {{has different template parameters}}
+    // old-error@-2 {{has different template parameters}}
   } // namespace t3
   namespace t4 {
     template<template<char...> class> struct A {};
@@ -427,6 +431,14 @@ namespace fun_tmpl_call {
     template <class...> struct A {};
     void test() { f(A<int>()); }
   } // namespace order_func_pack
+  namespace match_enum {
+    enum A {};
+    template<template<A> class TT1> void f(TT1<{}>) {}
+    // old-note@-1 {{invalid explicitly-specified argument}}
+    template<int> struct B {};
+    template void f<B>(B<{}>);
+    // old-error@-1 {{does not refer to a function template}}
+  } // namespace match_enum
   namespace match_method {
     struct A {
       template <template <class> class TT> void f(TT<int>) {};
@@ -435,7 +447,7 @@ namespace fun_tmpl_call {
     template <class...> struct B {};
     void test() { A().f(B<int>()); }
     // old-error@-1 {{no matching member function for call to 'f'}}
-  } // namespace t2
+  } // namespace match_method
   namespace order_method_nonpack {
     struct A {
       template <template <class> class TT> void f(TT<int>) {}
@@ -648,3 +660,48 @@ namespace nttp_auto {
     // new-note@-1 {{different template parameters}}
   } // namespace t3
 } // namespace nttp_auto
+
+namespace nttp_partial_order {
+  namespace t1 {
+    template<template<short> class TT1> void f(TT1<0>);
+    template<template<int>   class TT2> void f(TT2<0>) {}
+    template<int> struct B {};
+    template void f<B>(B<0>);
+  } // namespace t1
+  namespace t2 {
+    struct A {} a;
+    template<template<A&>       class TT1> void f(TT1<a>);
+    template<template<const A&> class TT2> void f(TT2<a>) {}
+    template<const A&> struct B {};
+    template void f<B>(B<a>);
+  } // namespace t2
+  namespace t3 {
+    enum A {};
+    template<template<A>   class TT1> void f(TT1<{}>);
+    template<template<int> class TT2> void f(TT2<{}>) {}
+    template<int> struct B {};
+    template void f<B>(B<{}>);
+  } // namespace t3
+  namespace t4 {
+    struct A {} a;
+    template<template<A*>       class TT1> void f(TT1<&a>);
+    template<template<const A*> class TT2> void f(TT2<&a>) {}
+    template<const A*> struct B {};
+    template void f<B>(B<&a>);
+  } // namespace t4
+  namespace t5 {
+    struct A { int m; };
+    template<template<int A::*>       class TT1> void f(TT1<&A::m>);
+    template<template<const int A::*> class TT2> void f(TT2<&A::m>) {}
+    template<const int A::*> struct B {};
+    template void f<B>(B<&A::m>);
+  } // namespace t5
+  namespace t6 {
+    struct A {};
+    using nullptr_t = decltype(nullptr);
+    template<template<nullptr_t> class TT2> void f(TT2<nullptr>);
+    template<template<A*>        class TT1> void f(TT1<nullptr>) {}
+    template<A*> struct B {};
+    template void f<B>(B<nullptr>);
+  } // namespace t6
+} // namespace nttp_partial_order

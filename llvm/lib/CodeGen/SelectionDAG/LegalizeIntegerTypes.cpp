@@ -4296,8 +4296,7 @@ void DAGTypeLegalizer::ExpandIntRes_MUL(SDNode *N,
   if (LC == RTLIB::UNKNOWN_LIBCALL || !TLI.getLibcallName(LC)) {
     // Perform a wide multiplication where the wide type is the original VT and
     // the 4 parts are the split arguments.
-    TLI.forceExpandWideMUL(DAG, dl, /*Signed=*/true, VT, LL, LH, RL, RH, Lo,
-                           Hi);
+    TLI.forceExpandMultiply(DAG, dl, /*Signed=*/false, Lo, Hi, LL, RL, LH, RH);
     return;
   }
 

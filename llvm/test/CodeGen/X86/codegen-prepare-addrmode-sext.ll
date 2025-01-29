@@ -410,7 +410,7 @@ end:
 ; Use it at the starting point for the matching.
 define signext i16 @fn3(ptr nocapture readonly %P) {
 ; CHECK-LABEL: define signext i16 @fn3(
-; CHECK-SAME: ptr nocapture readonly [[P:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[WHILE_BODY_I_I:.*]]
 ; CHECK:       [[WHILE_BODY_I_I]]:

@@ -4318,14 +4318,14 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     // GEP indexes are signed, and scaling an index isn't permitted to
     // signed-overflow, so we use the same semantics for our explicit
     // multiply.  We suppress this if overflow is not undefined behavior.
-    if (getLangOpts().isSignedOverflowDefined()) {
+    if (getLangOpts().PointerOverflowDefined) {
       Idx = Builder.CreateMul(Idx, numElements);
     } else {
       Idx = Builder.CreateNSWMul(Idx, numElements);
     }
 
     Addr = emitArraySubscriptGEP(*this, Addr, Idx, vla->getElementType(),
-                                 !getLangOpts().isSignedOverflowDefined(),
+                                 !getLangOpts().PointerOverflowDefined,
                                  SignedIndices, E->getExprLoc());
 
   } else if (const ObjCObjectType *OIT = E->getType()->getAs<ObjCObjectType>()){
@@ -4415,7 +4415,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     QualType arrayType = Array->getType();
     Addr = emitArraySubscriptGEP(
         *this, ArrayLV.getAddress(), {CGM.getSize(CharUnits::Zero()), Idx},
-        E->getType(), !getLangOpts().isSignedOverflowDefined(), SignedIndices,
+        E->getType(), !getLangOpts().PointerOverflowDefined, SignedIndices,
         E->getExprLoc(), &arrayType, E->getBase());
     EltBaseInfo = ArrayLV.getBaseInfo();
     EltTBAAInfo = CGM.getTBAAInfoForSubobject(ArrayLV, E->getType());
@@ -4424,10 +4424,9 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     Addr = EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
     QualType ptrType = E->getBase()->getType();
-    Addr = emitArraySubscriptGEP(*this, Addr, Idx, E->getType(),
-                                 !getLangOpts().isSignedOverflowDefined(),
-                                 SignedIndices, E->getExprLoc(), &ptrType,
-                                 E->getBase());
+    Addr = emitArraySubscriptGEP(
+        *this, Addr, Idx, E->getType(), !getLangOpts().PointerOverflowDefined,
+        SignedIndices, E->getExprLoc(), &ptrType, E->getBase());
   }
 
   LValue LV = MakeAddrLValue(Addr, E->getType(), EltBaseInfo, EltTBAAInfo);
@@ -4572,11 +4571,11 @@ LValue CodeGenFunction::EmitArraySectionExpr(const ArraySectionExpr *E,
                 : llvm::ConstantInt::get(IntPtrTy, ConstLength);
         Idx = Builder.CreateAdd(LowerBoundVal, LengthVal, "lb_add_len",
                                 /*HasNUW=*/false,
-                                !getLangOpts().isSignedOverflowDefined());
+                                !getLangOpts().PointerOverflowDefined);
         if (Length && LowerBound) {
           Idx = Builder.CreateSub(
               Idx, llvm::ConstantInt::get(IntPtrTy, /*V=*/1), "idx_sub_1",
-              /*HasNUW=*/false, !getLangOpts().isSignedOverflowDefined());
+              /*HasNUW=*/false, !getLangOpts().PointerOverflowDefined);
         }
       } else
         Idx = llvm::ConstantInt::get(IntPtrTy, ConstLength + ConstLowerBound);
@@ -4602,7 +4601,7 @@ LValue CodeGenFunction::EmitArraySectionExpr(const ArraySectionExpr *E,
             Length->getType()->hasSignedIntegerRepresentation());
         Idx = Builder.CreateSub(
             LengthVal, llvm::ConstantInt::get(IntPtrTy, /*V=*/1), "len_sub_1",
-            /*HasNUW=*/false, !getLangOpts().isSignedOverflowDefined());
+            /*HasNUW=*/false, !getLangOpts().PointerOverflowDefined);
       } else {
         ConstLength = ConstLength.zextOrTrunc(PointerWidthInBits);
         --ConstLength;
@@ -4629,12 +4628,12 @@ LValue CodeGenFunction::EmitArraySectionExpr(const ArraySectionExpr *E,
     // GEP indexes are signed, and scaling an index isn't permitted to
     // signed-overflow, so we use the same semantics for our explicit
     // multiply.  We suppress this if overflow is not undefined behavior.
-    if (getLangOpts().isSignedOverflowDefined())
+    if (getLangOpts().PointerOverflowDefined)
       Idx = Builder.CreateMul(Idx, NumElements);
     else
       Idx = Builder.CreateNSWMul(Idx, NumElements);
     EltPtr = emitArraySubscriptGEP(*this, Base, Idx, VLA->getElementType(),
-                                   !getLangOpts().isSignedOverflowDefined(),
+                                   !getLangOpts().PointerOverflowDefined,
                                    /*signedIndices=*/false, E->getExprLoc());
   } else if (const Expr *Array = isSimpleArrayDecayOperand(E->getBase())) {
     // If this is A[i] where A is an array, the frontend will have decayed the
@@ -4654,7 +4653,7 @@ LValue CodeGenFunction::EmitArraySectionExpr(const ArraySectionExpr *E,
     // Propagate the alignment from the array itself to the result.
     EltPtr = emitArraySubscriptGEP(
         *this, ArrayLV.getAddress(), {CGM.getSize(CharUnits::Zero()), Idx},
-        ResultExprTy, !getLangOpts().isSignedOverflowDefined(),
+        ResultExprTy, !getLangOpts().PointerOverflowDefined,
         /*signedIndices=*/false, E->getExprLoc());
     BaseInfo = ArrayLV.getBaseInfo();
     TBAAInfo = CGM.getTBAAInfoForSubobject(ArrayLV, ResultExprTy);
@@ -4663,7 +4662,7 @@ LValue CodeGenFunction::EmitArraySectionExpr(const ArraySectionExpr *E,
         emitOMPArraySectionBase(*this, E->getBase(), BaseInfo, TBAAInfo, BaseTy,
                                 ResultExprTy, IsLowerBound);
     EltPtr = emitArraySubscriptGEP(*this, Base, Idx, ResultExprTy,
-                                   !getLangOpts().isSignedOverflowDefined(),
+                                   !getLangOpts().PointerOverflowDefined,
                                    /*signedIndices=*/false, E->getExprLoc());
   }
 

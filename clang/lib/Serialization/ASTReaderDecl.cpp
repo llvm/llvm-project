@@ -2295,6 +2295,10 @@ void ASTDeclReader::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
   VisitFunctionDecl(D);
   D->setDeductionCandidateKind(
       static_cast<DeductionCandidate>(Record.readInt()));
+  D->setSourceDeductionGuide(readDeclAs<CXXDeductionGuideDecl>());
+  D->setSourceDeductionGuideKind(
+      static_cast<CXXDeductionGuideDecl::SourceDeductionGuideKind>(
+          Record.readInt()));
 }
 
 void ASTDeclReader::VisitCXXMethodDecl(CXXMethodDecl *D) {
@@ -4678,8 +4682,8 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
         MSInfo->setPointOfInstantiation(POI);
       } else {
         auto *FD = cast<FunctionDecl>(D);
-        if (auto *FTSInfo = FD->TemplateOrSpecialization
-                    .dyn_cast<FunctionTemplateSpecializationInfo *>())
+        if (auto *FTSInfo = dyn_cast<FunctionTemplateSpecializationInfo *>(
+                FD->TemplateOrSpecialization))
           FTSInfo->setPointOfInstantiation(POI);
         else
           cast<MemberSpecializationInfo *>(FD->TemplateOrSpecialization)
