@@ -216,12 +216,6 @@ typedef basic_fstream<wchar_t> wfstream;
 _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
-#  if !defined(_LIBCPP_MSVCRT) && !defined(_NEWLIB_VERSION)
-#    define _LIBCPP_HAS_OFF_T_FUNCTIONS 1
-#  else
-#    define _LIBCPP_HAS_OFF_T_FUNCTIONS 0
-#  endif
-
 #  if _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -950,7 +944,7 @@ template <class _CharT, class _Traits>
 int basic_filebuf<_CharT, _Traits>::__fseek(FILE* __file, pos_type __offset, int __whence) {
 #    if defined(_LIBCPP_MSVCRT_LIKE)
   return _fseeki64(__file, __offset, __whence);
-#    elif !_LIBCPP_HAS_OFF_T_FUNCTIONS
+#    elif defined(_NEWLIB_VERSION)
   return fseek(__file, __offset, __whence);
 #    else
   return ::fseeko(__file, __offset, __whence);
@@ -961,7 +955,7 @@ template <class _CharT, class _Traits>
 typename basic_filebuf<_CharT, _Traits>::pos_type basic_filebuf<_CharT, _Traits>::__ftell(FILE* __file) {
 #    if defined(_LIBCPP_MSVCRT_LIKE)
   return _ftelli64(__file);
-#    elif !_LIBCPP_HAS_OFF_T_FUNCTIONS
+#    elif defined(_NEWLIB_VERSION)
   return ftell(__file);
 #    else
   return ftello(__file);
