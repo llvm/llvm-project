@@ -661,6 +661,7 @@ genrule(
         "echo '#define CLANG_VERSION_MAJOR_STRING \"{major}\"' >> $@\n" +
         "echo '#define CLANG_VERSION_MINOR {minor}' >> $@\n" +
         "echo '#define CLANG_VERSION_PATCHLEVEL {patch}' >> $@\n" +
+        "echo '#define MAX_CLANG_ABI_COMPAT_VERSION {major}' >> $@\n" +
         "echo '#define CLANG_VERSION_STRING \"{vers}\"' >> $@\n"
     ).format(
         major = LLVM_VERSION_MAJOR,
