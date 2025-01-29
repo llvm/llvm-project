@@ -209,7 +209,9 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         auto *UI = cast<VPRecipeBase>(U);
         // TODO: check dominance of incoming values for phis properly.
         if (!UI ||
-            isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe>(UI))
+            isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe>(UI) ||
+            (isa<VPIRInstruction>(UI) &&
+             isa<PHINode>(cast<VPIRInstruction>(UI)->getInstruction())))
           continue;
 
         // If the user is in the same block, check it comes after R in the
@@ -222,11 +224,7 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
           continue;
         }
 
-        // Now that we support vectorising loops with uncountable early exits
-        // we can end up in situations where VPBB does not dominate the exit
-        // block. Only do the check if the user is not in a VPIRBasicBlock.
-        if (!isa<VPIRBasicBlock>(UI->getParent()) &&
-            !VPDT.dominates(VPBB, UI->getParent())) {
+        if (!VPDT.dominates(VPBB, UI->getParent())) {
           errs() << "Use before def!\n";
           return false;
         }

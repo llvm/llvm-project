@@ -700,8 +700,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
   case VPInstruction::ExtractFirstActive: {
     Value *Vec = State.get(getOperand(0));
     Value *Mask = State.get(getOperand(1));
-    Value *Ctz =
-        Builder.CreateCountTrailingZeroElems(Builder.getInt64Ty(), Mask);
+    Value *Ctz = Builder.CreateCountTrailingZeroElems(
+        Builder.getInt64Ty(), Mask, true, "first.active.lane");
     return Builder.CreateExtractElement(Vec, Ctz);
   }
   default:

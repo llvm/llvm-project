@@ -2128,7 +2128,6 @@ void VPlanTransforms::handleUncountableEarlyExit(
       ExitIRI->addOperand(IncomingFromLatch);
       ExitIRI->extractLastLaneOfOperand(MiddleBuilder);
     }
-
     // Add the incoming value from the early exit.
     if (!IncomingFromEarlyExit->isLiveIn())
       IncomingFromEarlyExit =
