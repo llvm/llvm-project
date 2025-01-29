@@ -6,7 +6,7 @@ declare i32 @zed(ptr, ptr)
 %struct.foobar = type { i32 }
 ; CHECK: bar.d
 @bar.d =  unnamed_addr constant %struct.foobar zeroinitializer, align 4
-; CHECK-NOT: foo.d
+; CHECK: foo.d
 @foo.d = internal constant %struct.foobar zeroinitializer, align 4
 define i32 @main() nounwind ssp {
 entry:
