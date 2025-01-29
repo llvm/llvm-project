@@ -68,6 +68,20 @@ void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
   DXILValMD->addOperand(Val);
 }
 
+void addRootSignature(llvm::Function *Fn, llvm::Module &M) {
+  auto &Ctx = M.getContext();
+  IRBuilder<> B(M.getContext());
+
+  MDNode *ExampleRootSignature = MDNode::get(Ctx, {});
+
+  MDNode *ExamplePairing = MDNode::get(Ctx, {ValueAsMetadata::get(Fn),
+                                             ExampleRootSignature});
+
+  StringRef RootSignatureValKey = "dx.rootsignatures";
+  auto *RootSignatureValMD = M.getOrInsertNamedMetadata(RootSignatureValKey);
+  RootSignatureValMD->addOperand(ExamplePairing);
+}
+
 } // namespace
 
 llvm::Type *
@@ -423,6 +437,13 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   // FIXME: Handle codegen for return type semantics.
   // See: https://github.com/llvm/llvm-project/issues/57875
   B.CreateRetVoid();
+
+  // Add and identify root signature to function, if applicable
+  const AttrVec &Attrs = FD->getAttrs();
+  for (const Attr *Attr : Attrs) {
+    if (isa<RootSignatureAttr>(Attr))
+      addRootSignature(EntryFn, M);
+  }
 }
 
 void CGHLSLRuntime::setHLSLFunctionAttributes(const FunctionDecl *FD,
