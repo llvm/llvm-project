@@ -1,3 +1,5 @@
+../generic/integer/clc_add_sat.cl
+../generic/integer/clc_sub_sat.cl
 ../generic/math/clc_ceil.cl
 ../generic/math/clc_copysign.cl
 ../generic/math/clc_fabs.cl
