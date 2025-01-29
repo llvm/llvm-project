@@ -5905,17 +5905,6 @@ bool llvm::omp::isOpenMPKernel(Function &Fn) {
   return Fn.hasFnAttribute("kernel");
 }
 
-static bool isKernelCC(Function &F) {
-  switch (F.getCallingConv()) {
-  default:
-    return false;
-  case CallingConv::PTX_Kernel:
-  case CallingConv::AMDGPU_KERNEL:
-  case CallingConv::SPIR_KERNEL:
-    return true;
-  }
-}
-
 KernelSet llvm::omp::getDeviceKernels(Module &M) {
   // TODO: Create a more cross-platform way of determining device kernels.
   KernelSet Kernels;
@@ -5948,7 +5937,7 @@ KernelSet llvm::omp::getDeviceKernels(Module &M) {
     }
 
   for (Function &F : M)
-    if (isKernelCC(F))
+    if (F.hasKernelCallingConv())
       ProcessKernel(F);
 
   return Kernels;
