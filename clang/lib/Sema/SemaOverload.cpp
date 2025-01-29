@@ -11718,7 +11718,6 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     assert(ParamD && "no parameter found for invalid explicit arguments");
     if (ParamD->getDeclName()) {
       TemplateArgument FirstArg = *DeductionFailure.getFirstArg();
-      std::string ParamName = ParamD->getNameAsString();
       TemplateArgument SecondArg = *DeductionFailure.getSecondArg();
 
       if (auto *TTPD = dyn_cast<TemplateTypeParmDecl>(ParamD)) {
@@ -11743,7 +11742,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
                diag::note_ovl_candidate_explicit_arg_mismatch_named)
             << 4 << ParamD->getDeclName();
       } else
-        llvm_unreachable("unexpected case");
+        llvm_unreachable("unexpected param decl kind");
     } else {
       int index = 0;
       if (TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(ParamD))
