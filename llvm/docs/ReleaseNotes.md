@@ -131,6 +131,9 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
+* When building LLDB with Python support, the minimum version of Python is now
+  3.8.
+
 Changes to BOLT
 ---------------------------------
 

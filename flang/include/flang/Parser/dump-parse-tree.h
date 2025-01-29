@@ -208,6 +208,7 @@ public:
   NODE(CompilerDirective, NameValue)
   NODE(CompilerDirective, Unrecognized)
   NODE(CompilerDirective, VectorAlways)
+  NODE(CompilerDirective, Unroll)
   NODE(parser, ComplexLiteralConstant)
   NODE(parser, ComplexPart)
   NODE(parser, ComponentArraySpec)

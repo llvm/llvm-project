@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/ConvertToSPIRV/ConvertToSPIRVPass.h"
 #include "mlir/Conversion/ArithToSPIRV/ArithToSPIRV.h"
 #include "mlir/Conversion/FuncToSPIRV/FuncToSPIRV.h"
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRV.h"
@@ -24,16 +23,12 @@
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassOptions.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include <memory>
 
-#define DEBUG_TYPE "convert-to-spirv"
-
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTTOSPIRVPASS
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
+#define DEBUG_TYPE "test-convert-to-spirv"
 
 using namespace mlir;
 
@@ -69,9 +64,44 @@ void populateConvertToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
 }
 
 /// A pass to perform the SPIR-V conversion.
-struct ConvertToSPIRVPass final
-    : impl::ConvertToSPIRVPassBase<ConvertToSPIRVPass> {
-  using ConvertToSPIRVPassBase::ConvertToSPIRVPassBase;
+struct TestConvertToSPIRVPass final
+    : PassWrapper<TestConvertToSPIRVPass, OperationPass<>> {
+  Option<bool> runSignatureConversion{
+      *this, "run-signature-conversion",
+      llvm::cl::desc(
+          "Run function signature conversion to convert vector types"),
+      llvm::cl::init(true)};
+  Option<bool> runVectorUnrolling{
+      *this, "run-vector-unrolling",
+      llvm::cl::desc(
+          "Run vector unrolling to convert vector types in function bodies"),
+      llvm::cl::init(true)};
+  Option<bool> convertGPUModules{
+      *this, "convert-gpu-modules",
+      llvm::cl::desc("Clone and convert GPU modules"), llvm::cl::init(false)};
+  Option<bool> nestInGPUModule{
+      *this, "nest-in-gpu-module",
+      llvm::cl::desc("Put converted SPIR-V module inside the gpu.module "
+                     "instead of alongside it."),
+      llvm::cl::init(false)};
+
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestConvertToSPIRVPass)
+
+  StringRef getArgument() const final { return "test-convert-to-spirv"; }
+  StringRef getDescription() const final {
+    return "Conversion to SPIR-V pass only used for internal tests.";
+  }
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<spirv::SPIRVDialect>();
+    registry.insert<vector::VectorDialect>();
+  }
+
+  TestConvertToSPIRVPass() = default;
+  TestConvertToSPIRVPass(bool convertGPUModules, bool nestInGPUModule) {
+    this->convertGPUModules = convertGPUModules;
+    this->nestInGPUModule = nestInGPUModule;
+  };
+  TestConvertToSPIRVPass(const TestConvertToSPIRVPass &) {}
 
   void runOnOperation() override {
     Operation *op = getOperation();
@@ -132,3 +162,14 @@ struct ConvertToSPIRVPass final
 };
 
 } // namespace
+
+namespace mlir::test {
+void registerTestConvertToSPIRVPass() {
+  PassRegistration<TestConvertToSPIRVPass>();
+}
+std::unique_ptr<Pass> createTestConvertToSPIRVPass(bool convertGPUModules,
+                                                   bool nestInGPUModule) {
+  return std::make_unique<TestConvertToSPIRVPass>(convertGPUModules,
+                                                  nestInGPUModule);
+}
+} // namespace mlir::test
