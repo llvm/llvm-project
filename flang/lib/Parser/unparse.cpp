@@ -11,12 +11,12 @@
 
 #include "flang/Parser/unparse.h"
 #include "flang/Common/idioms.h"
+#include "flang/Common/indirection.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
 #include "flang/Support/Fortran.h"
-#include "flang/Support/indirection.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cinttypes>

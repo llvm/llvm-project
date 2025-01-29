@@ -11,6 +11,7 @@
 
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
+#include "flang/Common/indirection.h"
 #include "flang/Common/restorer.h"
 #include "flang/Common/target-rounding.h"
 #include "flang/Parser/char-block.h"
@@ -18,7 +19,6 @@
 #include "flang/Support/Fortran-features.h"
 #include "flang/Support/Fortran.h"
 #include "flang/Support/default-kinds.h"
-#include "flang/Support/indirection.h"
 #include <cinttypes>
 #include <map>
 #include <set>

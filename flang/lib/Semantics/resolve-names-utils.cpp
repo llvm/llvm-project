@@ -8,6 +8,7 @@
 
 #include "resolve-names-utils.h"
 #include "flang/Common/idioms.h"
+#include "flang/Common/indirection.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/traverse.h"
@@ -19,7 +20,6 @@
 #include "flang/Semantics/tools.h"
 #include "flang/Support/Fortran-features.h"
 #include "flang/Support/Fortran.h"
-#include "flang/Support/indirection.h"
 #include <initializer_list>
 #include <variant>
 

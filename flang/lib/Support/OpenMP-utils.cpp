@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Common/OpenMP-utils.h"
+#include "flang/Support/OpenMP-utils.h"
 
 #include "mlir/IR/OpDefinition.h"
 
