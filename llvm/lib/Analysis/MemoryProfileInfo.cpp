@@ -273,7 +273,7 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
     //    reporting hinted sizes, and want to get information from the indexing
     //    step for all contexts, or have specified a value less than 100% for
     //    -memprof-cloning-cold-threshold.
-    if ((AllocationType)Node->AllocTypes == AllocationType::Cold ||
+    if (Node->hasAllocType(AllocationType::Cold) ||
         CalleeDeepestAmbiguousAllocType || MemProfKeepAllNotColdContexts) {
       std::vector<ContextTotalSize> ContextSizeInfo;
       collectContextSizeInfo(Node, ContextSizeInfo);
@@ -282,7 +282,7 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
                                        ContextSizeInfo));
       // If we just emitted an MIB for a not cold caller, don't need to emit
       // another one for the callee to correctly disambiguate its cold callers.
-      if ((AllocationType)Node->AllocTypes != AllocationType::Cold)
+      if (!Node->hasAllocType(AllocationType::Cold))
         CalleeDeepestAmbiguousAllocType = false;
     }
     return true;
