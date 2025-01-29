@@ -295,10 +295,10 @@ define void @v_shuffle_v2i64_v8i64__7_u(ptr addrspace(1) inreg %ptr) {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def v[0:15]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_mov_b32_e32 v16, 0
 ; GFX900-NEXT:    v_mov_b32_e32 v0, v14
 ; GFX900-NEXT:    v_mov_b32_e32 v1, v15
-; GFX900-NEXT:    global_store_dwordx4 v16, v[0:3], s[16:17]
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0
+; GFX900-NEXT:    global_store_dwordx4 v2, v[0:3], s[16:17]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -591,10 +591,10 @@ define void @v_shuffle_v2i64_v8i64__15_u(ptr addrspace(1) inreg %ptr) {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def v[0:15]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_mov_b32_e32 v16, 0
 ; GFX900-NEXT:    v_mov_b32_e32 v0, v14
 ; GFX900-NEXT:    v_mov_b32_e32 v1, v15
-; GFX900-NEXT:    global_store_dwordx4 v16, v[0:3], s[16:17]
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0
+; GFX900-NEXT:    global_store_dwordx4 v2, v[0:3], s[16:17]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -637,7 +637,6 @@ define void @v_shuffle_v2i64_v8i64__15_0(ptr addrspace(1) inreg %ptr) {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def v[0:15]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_mov_b32_e32 v20, 0
 ; GFX900-NEXT:    v_mov_b32_e32 v16, v14
 ; GFX900-NEXT:    v_mov_b32_e32 v17, v15
 ; GFX900-NEXT:    ;;#ASMSTART
@@ -645,7 +644,8 @@ define void @v_shuffle_v2i64_v8i64__15_0(ptr addrspace(1) inreg %ptr) {
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    v_mov_b32_e32 v18, v0
 ; GFX900-NEXT:    v_mov_b32_e32 v19, v1
-; GFX900-NEXT:    global_store_dwordx4 v20, v[16:19], s[16:17]
+; GFX900-NEXT:    v_mov_b32_e32 v0, 0
+; GFX900-NEXT:    global_store_dwordx4 v0, v[16:19], s[16:17]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1091,12 +1091,12 @@ define void @v_shuffle_v2i64_v8i64__15_8(ptr addrspace(1) inreg %ptr) {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def v[0:15]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_mov_b32_e32 v16, 0
 ; GFX900-NEXT:    v_mov_b32_e32 v2, v14
 ; GFX900-NEXT:    v_mov_b32_e32 v3, v15
 ; GFX900-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX900-NEXT:    v_mov_b32_e32 v5, v1
-; GFX900-NEXT:    global_store_dwordx4 v16, v[2:5], s[16:17]
+; GFX900-NEXT:    v_mov_b32_e32 v0, 0
+; GFX900-NEXT:    global_store_dwordx4 v0, v[2:5], s[16:17]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1465,10 +1465,10 @@ define void @v_shuffle_v2i64_v8i64__u_0(ptr addrspace(1) inreg %ptr) {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def v[0:15]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_mov_b32_e32 v16, 0
 ; GFX900-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX900-NEXT:    v_mov_b32_e32 v3, v1
-; GFX900-NEXT:    global_store_dwordx4 v16, v[0:3], s[16:17]
+; GFX900-NEXT:    v_mov_b32_e32 v0, 0
+; GFX900-NEXT:    global_store_dwordx4 v0, v[0:3], s[16:17]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1825,12 +1825,12 @@ define void @v_shuffle_v2i64_v8i64__7_0(ptr addrspace(1) inreg %ptr) {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def v[0:15]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_mov_b32_e32 v16, 0
 ; GFX900-NEXT:    v_mov_b32_e32 v2, v14
 ; GFX900-NEXT:    v_mov_b32_e32 v3, v15
 ; GFX900-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX900-NEXT:    v_mov_b32_e32 v5, v1
-; GFX900-NEXT:    global_store_dwordx4 v16, v[2:5], s[16:17]
+; GFX900-NEXT:    v_mov_b32_e32 v0, 0
+; GFX900-NEXT:    global_store_dwordx4 v0, v[2:5], s[16:17]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1876,10 +1876,10 @@ define void @v_shuffle_v2i64_v8i64__8_0(ptr addrspace(1) inreg %ptr) {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def v[0:15]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_mov_b32_e32 v16, 0
 ; GFX900-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX900-NEXT:    v_mov_b32_e32 v3, v1
-; GFX900-NEXT:    global_store_dwordx4 v16, v[0:3], s[16:17]
+; GFX900-NEXT:    v_mov_b32_e32 v0, 0
+; GFX900-NEXT:    global_store_dwordx4 v0, v[0:3], s[16:17]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -7917,10 +7917,10 @@ define void @v_shuffle_v2i64_v8i64__7_8(ptr addrspace(1) inreg %ptr) {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def v[0:15]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_mov_b32_e32 v16, 0
 ; GFX900-NEXT:    v_mov_b32_e32 v0, v14
 ; GFX900-NEXT:    v_mov_b32_e32 v1, v15
-; GFX900-NEXT:    global_store_dwordx4 v16, v[0:3], s[16:17]
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0
+; GFX900-NEXT:    global_store_dwordx4 v2, v[0:3], s[16:17]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;

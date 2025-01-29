@@ -18,7 +18,7 @@
 
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
-#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
@@ -56,6 +56,10 @@ private:
   std::optional<MachineOperand> checkUsers(MachineInstr &MI);
   bool tryReduceVL(MachineInstr &MI);
   bool isCandidate(const MachineInstr &MI) const;
+
+  /// For a given instruction, records what elements of it are demanded by
+  /// downstream users.
+  DenseMap<const MachineInstr *, std::optional<MachineOperand>> DemandedVLs;
 };
 
 } // end anonymous namespace
@@ -1017,6 +1021,18 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   // Vector Widening Floating-Point Multiply
   case RISCV::VFWMUL_VF:
   case RISCV::VFWMUL_VV:
+  // Vector Floating-Point MIN/MAX Instructions
+  case RISCV::VFMIN_VF:
+  case RISCV::VFMIN_VV:
+  case RISCV::VFMAX_VF:
+  case RISCV::VFMAX_VV:
+  // Vector Floating-Point Sign-Injection Instructions
+  case RISCV::VFSGNJ_VF:
+  case RISCV::VFSGNJ_VV:
+  case RISCV::VFSGNJN_VV:
+  case RISCV::VFSGNJN_VF:
+  case RISCV::VFSGNJX_VF:
+  case RISCV::VFSGNJX_VV:
   // Vector Floating-Point Compare Instructions
   case RISCV::VMFEQ_VF:
   case RISCV::VMFEQ_VV:
@@ -1131,35 +1147,6 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   if (MI.getNumDefs() != 1)
     return false;
 
-  // If we're not using VLMAX, then we need to be careful whether we are using
-  // TA/TU when there is a non-undef Passthru. But when we are using VLMAX, it
-  // does not matter whether we are using TA/TU with a non-undef Passthru, since
-  // there are no tail elements to be preserved.
-  unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
-  const MachineOperand &VLOp = MI.getOperand(VLOpNum);
-  if (VLOp.isReg() || VLOp.getImm() != RISCV::VLMaxSentinel) {
-    // If MI has a non-undef passthru, we will not try to optimize it since
-    // that requires us to preserve tail elements according to TA/TU.
-    // Otherwise, The MI has an undef Passthru, so it doesn't matter whether we
-    // are using TA/TU.
-    bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(Desc);
-    unsigned PassthruOpIdx = MI.getNumExplicitDefs();
-    if (HasPassthru &&
-        MI.getOperand(PassthruOpIdx).getReg() != RISCV::NoRegister) {
-      LLVM_DEBUG(
-          dbgs() << "  Not a candidate because it uses non-undef passthru"
-                    " with non-VLMAX VL\n");
-      return false;
-    }
-  }
-
-  // If the VL is 1, then there is no need to reduce it. This is an
-  // optimization, not needed to preserve correctness.
-  if (VLOp.isImm() && VLOp.getImm() == 1) {
-    LLVM_DEBUG(dbgs() << "  Not a candidate because VL is already 1\n");
-    return false;
-  }
-
   if (MI.mayRaiseFPException()) {
     LLVM_DEBUG(dbgs() << "Not a candidate because may raise FP exception\n");
     return false;
@@ -1218,14 +1205,19 @@ RISCVVLOptimizer::getMinimumVLForUser(MachineOperand &UserOp) {
   // Looking for an immediate or a register VL that isn't X0.
   assert((!VLOp.isReg() || VLOp.getReg() != RISCV::X0) &&
          "Did not expect X0 VL");
+
+  // If we know the demanded VL of UserMI, then we can reduce the VL it
+  // requires.
+  if (auto DemandedVL = DemandedVLs[&UserMI]) {
+    assert(isCandidate(UserMI));
+    if (RISCV::isVLKnownLE(*DemandedVL, VLOp))
+      return DemandedVL;
+  }
+
   return VLOp;
 }
 
 std::optional<MachineOperand> RISCVVLOptimizer::checkUsers(MachineInstr &MI) {
-  // FIXME: Avoid visiting each user for each time we visit something on the
-  // worklist, combined with an extra visit from the outer loop. Restructure
-  // along lines of an instcombine style worklist which integrates the outer
-  // pass.
   std::optional<MachineOperand> CommonVL;
   for (auto &UserOp : MRI->use_operands(MI.getOperand(0).getReg())) {
     const MachineInstr &UserMI = *UserOp.getParent();
@@ -1235,7 +1227,7 @@ std::optional<MachineOperand> RISCVVLOptimizer::checkUsers(MachineInstr &MI) {
       return std::nullopt;
     }
 
-    // Tied operands might pass through.
+    // If used as a passthru, elements past VL will be read.
     if (UserOp.isTied()) {
       LLVM_DEBUG(dbgs() << "    Abort because user used as tied operand\n");
       return std::nullopt;
@@ -1292,15 +1284,22 @@ std::optional<MachineOperand> RISCVVLOptimizer::checkUsers(MachineInstr &MI) {
 bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) {
   LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI << "\n");
 
-  auto CommonVL = checkUsers(MI);
+  unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
+  MachineOperand &VLOp = MI.getOperand(VLOpNum);
+
+  // If the VL is 1, then there is no need to reduce it. This is an
+  // optimization, not needed to preserve correctness.
+  if (VLOp.isImm() && VLOp.getImm() == 1) {
+    LLVM_DEBUG(dbgs() << "  Abort due to VL == 1, no point in reducing.\n");
+    return false;
+  }
+
+  auto CommonVL = DemandedVLs[&MI];
   if (!CommonVL)
     return false;
 
   assert((CommonVL->isImm() || CommonVL->getReg().isVirtual()) &&
          "Expected VL to be an Imm or virtual Reg");
-
-  unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
-  MachineOperand &VLOp = MI.getOperand(VLOpNum);
 
   if (!RISCV::isVLKnownLE(*CommonVL, VLOp)) {
     LLVM_DEBUG(dbgs() << "    Abort due to CommonVL not <= VLOp.\n");
@@ -1343,52 +1342,32 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
   if (!ST.hasVInstructions())
     return false;
 
-  SetVector<MachineInstr *> Worklist;
-  auto PushOperands = [this, &Worklist](MachineInstr &MI,
-                                        bool IgnoreSameBlock) {
-    for (auto &Op : MI.operands()) {
-      if (!Op.isReg() || !Op.isUse() || !Op.getReg().isVirtual() ||
-          !isVectorRegClass(Op.getReg(), MRI))
+  // For each instruction that defines a vector, compute what VL its
+  // downstream users demand.
+  for (MachineBasicBlock *MBB : post_order(&MF)) {
+    assert(MDT->isReachableFromEntry(MBB));
+    for (MachineInstr &MI : reverse(*MBB)) {
+      if (!isCandidate(MI))
         continue;
-
-      MachineInstr *DefMI = MRI->getVRegDef(Op.getReg());
-      if (!isCandidate(*DefMI))
-        continue;
-
-      if (IgnoreSameBlock && DefMI->getParent() == MI.getParent())
-        continue;
-
-      Worklist.insert(DefMI);
+      DemandedVLs.insert({&MI, checkUsers(MI)});
     }
-  };
+  }
 
-  // Do a first pass eagerly rewriting in roughly reverse instruction
-  // order, populate the worklist with any instructions we might need to
-  // revisit.  We avoid adding definitions to the worklist if they're
-  // in the same block - we're about to visit them anyways.
+  // Then go through and see if we can reduce the VL of any instructions to
+  // only what's demanded.
   bool MadeChange = false;
   for (MachineBasicBlock &MBB : MF) {
     // Avoid unreachable blocks as they have degenerate dominance
     if (!MDT->isReachableFromEntry(&MBB))
       continue;
 
-    for (auto &MI : make_range(MBB.rbegin(), MBB.rend())) {
+    for (auto &MI : reverse(MBB)) {
       if (!isCandidate(MI))
         continue;
       if (!tryReduceVL(MI))
         continue;
       MadeChange = true;
-      PushOperands(MI, /*IgnoreSameBlock*/ true);
     }
-  }
-
-  while (!Worklist.empty()) {
-    assert(MadeChange);
-    MachineInstr &MI = *Worklist.pop_back_val();
-    assert(isCandidate(MI));
-    if (!tryReduceVL(MI))
-      continue;
-    PushOperands(MI, /*IgnoreSameBlock*/ false);
   }
 
   return MadeChange;

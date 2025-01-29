@@ -348,6 +348,34 @@ gentbl(
 )
 
 gentbl(
+    name = "basic_builtins_hexagon_gen",
+    tbl_outs = [(
+        "-gen-clang-builtins",
+        "include/clang/Basic/BuiltinsHexagon.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsHexagon.td",
+    td_srcs = [
+        "include/clang/Basic/BuiltinsHexagon.td",
+        "include/clang/Basic/BuiltinsBase.td",
+    ],
+)
+
+gentbl(
+    name = "basic_builtins_nvptx_gen",
+    tbl_outs = [(
+        "-gen-clang-builtins",
+        "include/clang/Basic/BuiltinsNVPTX.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsNVPTX.td",
+    td_srcs = [
+        "include/clang/Basic/BuiltinsNVPTX.td",
+        "include/clang/Basic/BuiltinsBase.td",
+    ],
+)
+
+gentbl(
     name = "basic_builtins_spirv_gen",
     tbl_outs = [(
         "-gen-clang-builtins",
@@ -573,12 +601,20 @@ gentbl(
             "include/clang/Basic/AttrList.inc",
         ),
         (
+            "-gen-clang-attr-parsed-attr-list",
+            "include/clang/Basic/AttrParsedAttrList.inc",
+        ),
+        (
             "-gen-clang-attr-subject-match-rule-list",
             "include/clang/Basic/AttrSubMatchRulesList.inc",
         ),
         (
             "-gen-clang-regular-keyword-attr-info",
             "include/clang/Basic/RegularKeywordAttrInfo.inc",
+        ),
+        (
+            "-gen-cxx11-attribute-info",
+            "include/clang/Basic/CXX11AttributeInfo.inc",
         ),
     ],
     tblgen = ":clang-tblgen",
@@ -625,6 +661,7 @@ genrule(
         "echo '#define CLANG_VERSION_MAJOR_STRING \"{major}\"' >> $@\n" +
         "echo '#define CLANG_VERSION_MINOR {minor}' >> $@\n" +
         "echo '#define CLANG_VERSION_PATCHLEVEL {patch}' >> $@\n" +
+        "echo '#define MAX_CLANG_ABI_COMPAT_VERSION {major}' >> $@\n" +
         "echo '#define CLANG_VERSION_STRING \"{vers}\"' >> $@\n"
     ).format(
         major = LLVM_VERSION_MAJOR,
@@ -735,6 +772,8 @@ cc_library(
         ":basic_attr_gen",
         ":basic_builtins_bpf_gen",
         ":basic_builtins_gen",
+        ":basic_builtins_hexagon_gen",
+        ":basic_builtins_nvptx_gen",
         ":basic_builtins_riscv_gen",
         ":basic_builtins_spirv_gen",
         ":basic_builtins_x86_64_gen",
@@ -1136,10 +1175,6 @@ gentbl(
             "include/clang/Sema/AttrParsedAttrKinds.inc",
         ),
         (
-            "-gen-clang-attr-parsed-attr-list",
-            "include/clang/Sema/AttrParsedAttrList.inc",
-        ),
-        (
             "-gen-clang-attr-spelling-index",
             "include/clang/Sema/AttrSpellingListIndex.inc",
         ),
@@ -1174,7 +1209,6 @@ cc_library(
     textual_hdrs = [
         "include/clang/Sema/AttrParsedAttrImpl.inc",
         "include/clang/Sema/AttrParsedAttrKinds.inc",
-        "include/clang/Sema/AttrParsedAttrList.inc",
         "include/clang/Sema/AttrSpellingListIndex.inc",
         "include/clang/Sema/AttrTemplateInstantiate.inc",
         "lib/Sema/OpenCLBuiltins.inc",
