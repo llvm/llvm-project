@@ -1014,34 +1014,54 @@ define i32 @extract_sext_v4i32() nounwind {
 ; O32:       # %bb.0:
 ; O32-NEXT:    lui $2, %hi(_gp_disp)
 ; O32-NEXT:    addiu $2, $2, %lo(_gp_disp)
+; O32-NEXT:    addiu $sp, $sp, -32
+; O32-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
+; O32-NEXT:    sw $fp, 24($sp) # 4-byte Folded Spill
+; O32-NEXT:    move $fp, $sp
+; O32-NEXT:    addiu $1, $zero, -16
+; O32-NEXT:    and $sp, $sp, $1
 ; O32-NEXT:    addu $1, $2, $25
 ; O32-NEXT:    lw $1, %got(v4i32)($1)
-; O32-NEXT:    ld.w $w0, 0($1)
+; O32-NEXT:    lw $1, 4($1)
+; O32-NEXT:    sw $1, 4($sp)
+; O32-NEXT:    ld.w $w0, 0($sp)
 ; O32-NEXT:    addv.w $w0, $w0, $w0
-; O32-NEXT:    jr $ra
 ; O32-NEXT:    copy_s.w $2, $w0[1]
+; O32-NEXT:    move $sp, $fp
+; O32-NEXT:    lw $fp, 24($sp) # 4-byte Folded Reload
+; O32-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload
+; O32-NEXT:    jr $ra
+; O32-NEXT:    addiu $sp, $sp, 32
 ;
 ; N32-LABEL: extract_sext_v4i32:
 ; N32:       # %bb.0:
+; N32-NEXT:    addiu $sp, $sp, -16
 ; N32-NEXT:    lui $1, %hi(%neg(%gp_rel(extract_sext_v4i32)))
 ; N32-NEXT:    addu $1, $1, $25
 ; N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(extract_sext_v4i32)))
 ; N32-NEXT:    lw $1, %got_disp(v4i32)($1)
-; N32-NEXT:    ld.w $w0, 0($1)
+; N32-NEXT:    lw $1, 4($1)
+; N32-NEXT:    sw $1, 4($sp)
+; N32-NEXT:    ld.w $w0, 0($sp)
 ; N32-NEXT:    addv.w $w0, $w0, $w0
-; N32-NEXT:    jr $ra
 ; N32-NEXT:    copy_s.w $2, $w0[1]
+; N32-NEXT:    jr $ra
+; N32-NEXT:    addiu $sp, $sp, 16
 ;
 ; N64-LABEL: extract_sext_v4i32:
 ; N64:       # %bb.0:
+; N64-NEXT:    daddiu $sp, $sp, -16
 ; N64-NEXT:    lui $1, %hi(%neg(%gp_rel(extract_sext_v4i32)))
 ; N64-NEXT:    daddu $1, $1, $25
 ; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(extract_sext_v4i32)))
 ; N64-NEXT:    ld $1, %got_disp(v4i32)($1)
-; N64-NEXT:    ld.w $w0, 0($1)
+; N64-NEXT:    lw $1, 4($1)
+; N64-NEXT:    sw $1, 4($sp)
+; N64-NEXT:    ld.w $w0, 0($sp)
 ; N64-NEXT:    addv.w $w0, $w0, $w0
-; N64-NEXT:    jr $ra
 ; N64-NEXT:    copy_s.w $2, $w0[1]
+; N64-NEXT:    jr $ra
+; N64-NEXT:    daddiu $sp, $sp, 16
   %1 = load <4 x i32>, ptr @v4i32
   %2 = add <4 x i32> %1, %1
   %3 = extractelement <4 x i32> %2, i32 1
@@ -1076,25 +1096,33 @@ define i64 @extract_sext_v2i64() nounwind {
 ;
 ; N32-LABEL: extract_sext_v2i64:
 ; N32:       # %bb.0:
+; N32-NEXT:    addiu $sp, $sp, -16
 ; N32-NEXT:    lui $1, %hi(%neg(%gp_rel(extract_sext_v2i64)))
 ; N32-NEXT:    addu $1, $1, $25
 ; N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(extract_sext_v2i64)))
 ; N32-NEXT:    lw $1, %got_disp(v2i64)($1)
-; N32-NEXT:    ld.d $w0, 0($1)
+; N32-NEXT:    ld $1, 8($1)
+; N32-NEXT:    sd $1, 8($sp)
+; N32-NEXT:    ld.d $w0, 0($sp)
 ; N32-NEXT:    addv.d $w0, $w0, $w0
-; N32-NEXT:    jr $ra
 ; N32-NEXT:    copy_s.d $2, $w0[1]
+; N32-NEXT:    jr $ra
+; N32-NEXT:    addiu $sp, $sp, 16
 ;
 ; N64-LABEL: extract_sext_v2i64:
 ; N64:       # %bb.0:
+; N64-NEXT:    daddiu $sp, $sp, -16
 ; N64-NEXT:    lui $1, %hi(%neg(%gp_rel(extract_sext_v2i64)))
 ; N64-NEXT:    daddu $1, $1, $25
 ; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(extract_sext_v2i64)))
 ; N64-NEXT:    ld $1, %got_disp(v2i64)($1)
-; N64-NEXT:    ld.d $w0, 0($1)
+; N64-NEXT:    ld $1, 8($1)
+; N64-NEXT:    sd $1, 8($sp)
+; N64-NEXT:    ld.d $w0, 0($sp)
 ; N64-NEXT:    addv.d $w0, $w0, $w0
-; N64-NEXT:    jr $ra
 ; N64-NEXT:    copy_s.d $2, $w0[1]
+; N64-NEXT:    jr $ra
+; N64-NEXT:    daddiu $sp, $sp, 16
   %1 = load <2 x i64>, ptr @v2i64
   %2 = add <2 x i64> %1, %1
   %3 = extractelement <2 x i64> %2, i32 1
@@ -1186,34 +1214,54 @@ define i32 @extract_zext_v4i32() nounwind {
 ; O32:       # %bb.0:
 ; O32-NEXT:    lui $2, %hi(_gp_disp)
 ; O32-NEXT:    addiu $2, $2, %lo(_gp_disp)
+; O32-NEXT:    addiu $sp, $sp, -32
+; O32-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
+; O32-NEXT:    sw $fp, 24($sp) # 4-byte Folded Spill
+; O32-NEXT:    move $fp, $sp
+; O32-NEXT:    addiu $1, $zero, -16
+; O32-NEXT:    and $sp, $sp, $1
 ; O32-NEXT:    addu $1, $2, $25
 ; O32-NEXT:    lw $1, %got(v4i32)($1)
-; O32-NEXT:    ld.w $w0, 0($1)
+; O32-NEXT:    lw $1, 4($1)
+; O32-NEXT:    sw $1, 4($sp)
+; O32-NEXT:    ld.w $w0, 0($sp)
 ; O32-NEXT:    addv.w $w0, $w0, $w0
-; O32-NEXT:    jr $ra
 ; O32-NEXT:    copy_s.w $2, $w0[1]
+; O32-NEXT:    move $sp, $fp
+; O32-NEXT:    lw $fp, 24($sp) # 4-byte Folded Reload
+; O32-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload
+; O32-NEXT:    jr $ra
+; O32-NEXT:    addiu $sp, $sp, 32
 ;
 ; N32-LABEL: extract_zext_v4i32:
 ; N32:       # %bb.0:
+; N32-NEXT:    addiu $sp, $sp, -16
 ; N32-NEXT:    lui $1, %hi(%neg(%gp_rel(extract_zext_v4i32)))
 ; N32-NEXT:    addu $1, $1, $25
 ; N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(extract_zext_v4i32)))
 ; N32-NEXT:    lw $1, %got_disp(v4i32)($1)
-; N32-NEXT:    ld.w $w0, 0($1)
+; N32-NEXT:    lw $1, 4($1)
+; N32-NEXT:    sw $1, 4($sp)
+; N32-NEXT:    ld.w $w0, 0($sp)
 ; N32-NEXT:    addv.w $w0, $w0, $w0
-; N32-NEXT:    jr $ra
 ; N32-NEXT:    copy_s.w $2, $w0[1]
+; N32-NEXT:    jr $ra
+; N32-NEXT:    addiu $sp, $sp, 16
 ;
 ; N64-LABEL: extract_zext_v4i32:
 ; N64:       # %bb.0:
+; N64-NEXT:    daddiu $sp, $sp, -16
 ; N64-NEXT:    lui $1, %hi(%neg(%gp_rel(extract_zext_v4i32)))
 ; N64-NEXT:    daddu $1, $1, $25
 ; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(extract_zext_v4i32)))
 ; N64-NEXT:    ld $1, %got_disp(v4i32)($1)
-; N64-NEXT:    ld.w $w0, 0($1)
+; N64-NEXT:    lw $1, 4($1)
+; N64-NEXT:    sw $1, 4($sp)
+; N64-NEXT:    ld.w $w0, 0($sp)
 ; N64-NEXT:    addv.w $w0, $w0, $w0
-; N64-NEXT:    jr $ra
 ; N64-NEXT:    copy_s.w $2, $w0[1]
+; N64-NEXT:    jr $ra
+; N64-NEXT:    daddiu $sp, $sp, 16
   %1 = load <4 x i32>, ptr @v4i32
   %2 = add <4 x i32> %1, %1
   %3 = extractelement <4 x i32> %2, i32 1
@@ -1248,25 +1296,33 @@ define i64 @extract_zext_v2i64() nounwind {
 ;
 ; N32-LABEL: extract_zext_v2i64:
 ; N32:       # %bb.0:
+; N32-NEXT:    addiu $sp, $sp, -16
 ; N32-NEXT:    lui $1, %hi(%neg(%gp_rel(extract_zext_v2i64)))
 ; N32-NEXT:    addu $1, $1, $25
 ; N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(extract_zext_v2i64)))
 ; N32-NEXT:    lw $1, %got_disp(v2i64)($1)
-; N32-NEXT:    ld.d $w0, 0($1)
+; N32-NEXT:    ld $1, 8($1)
+; N32-NEXT:    sd $1, 8($sp)
+; N32-NEXT:    ld.d $w0, 0($sp)
 ; N32-NEXT:    addv.d $w0, $w0, $w0
-; N32-NEXT:    jr $ra
 ; N32-NEXT:    copy_s.d $2, $w0[1]
+; N32-NEXT:    jr $ra
+; N32-NEXT:    addiu $sp, $sp, 16
 ;
 ; N64-LABEL: extract_zext_v2i64:
 ; N64:       # %bb.0:
+; N64-NEXT:    daddiu $sp, $sp, -16
 ; N64-NEXT:    lui $1, %hi(%neg(%gp_rel(extract_zext_v2i64)))
 ; N64-NEXT:    daddu $1, $1, $25
 ; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(extract_zext_v2i64)))
 ; N64-NEXT:    ld $1, %got_disp(v2i64)($1)
-; N64-NEXT:    ld.d $w0, 0($1)
+; N64-NEXT:    ld $1, 8($1)
+; N64-NEXT:    sd $1, 8($sp)
+; N64-NEXT:    ld.d $w0, 0($sp)
 ; N64-NEXT:    addv.d $w0, $w0, $w0
-; N64-NEXT:    jr $ra
 ; N64-NEXT:    copy_s.d $2, $w0[1]
+; N64-NEXT:    jr $ra
+; N64-NEXT:    daddiu $sp, $sp, 16
   %1 = load <2 x i64>, ptr @v2i64
   %2 = add <2 x i64> %1, %1
   %3 = extractelement <2 x i64> %2, i32 1

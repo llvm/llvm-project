@@ -415,13 +415,13 @@ define void @masked_scatter_v32i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define void @masked_scatter_v1i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    ldr x8, [x0]
 ; CHECK-NEXT:    cbnz x8, .LBB15_2
 ; CHECK-NEXT:  // %bb.1: // %cond.store
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    fmov x8, d1
-; CHECK-NEXT:    str d0, [x8]
+; CHECK-NEXT:    ldr d0, [x1]
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    str d0, [x9]
 ; CHECK-NEXT:  .LBB15_2: // %else
 ; CHECK-NEXT:    ret
   %vals = load <1 x i64>, ptr %a

@@ -19,31 +19,30 @@ define <4 x half> @shuffle_v4f16_234u(ptr addrspace(1) %arg0, ptr addrspace(1) %
 ; FORWARDXNACK-LABEL: shuffle_v4f16_234u:
 ; FORWARDXNACK:       ; %bb.0:
 ; FORWARDXNACK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FORWARDXNACK-NEXT:    global_load_dword v6, v[0:1], off offset:4
-; FORWARDXNACK-NEXT:    global_load_dwordx2 v[4:5], v[2:3], off
+; FORWARDXNACK-NEXT:    global_load_dword v4, v[0:1], off offset:4
+; FORWARDXNACK-NEXT:    global_load_dword v5, v[2:3], off
 ; FORWARDXNACK-NEXT:    s_waitcnt vmcnt(1)
-; FORWARDXNACK-NEXT:    v_mov_b32_e32 v0, v6
+; FORWARDXNACK-NEXT:    v_mov_b32_e32 v0, v4
 ; FORWARDXNACK-NEXT:    s_waitcnt vmcnt(0)
-; FORWARDXNACK-NEXT:    v_mov_b32_e32 v1, v4
+; FORWARDXNACK-NEXT:    v_mov_b32_e32 v1, v5
 ; FORWARDXNACK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; REVERSEXNACK-LABEL: shuffle_v4f16_234u:
 ; REVERSEXNACK:       ; %bb.0:
 ; REVERSEXNACK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; REVERSEXNACK-NEXT:    v_mov_b32_e32 v6, v1
-; REVERSEXNACK-NEXT:    v_mov_b32_e32 v5, v0
-; REVERSEXNACK-NEXT:    v_mov_b32_e32 v4, v3
-; REVERSEXNACK-NEXT:    v_mov_b32_e32 v3, v2
-; REVERSEXNACK-NEXT:    global_load_dword v0, v[5:6], off offset:4
-; REVERSEXNACK-NEXT:    global_load_dwordx2 v[1:2], v[3:4], off
+; REVERSEXNACK-NEXT:    global_load_dword v5, v[0:1], off offset:4
+; REVERSEXNACK-NEXT:    global_load_dword v4, v[2:3], off
+; REVERSEXNACK-NEXT:    s_waitcnt vmcnt(1)
+; REVERSEXNACK-NEXT:    v_mov_b32_e32 v0, v5
 ; REVERSEXNACK-NEXT:    s_waitcnt vmcnt(0)
+; REVERSEXNACK-NEXT:    v_mov_b32_e32 v1, v4
 ; REVERSEXNACK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; NOXNACK-LABEL: shuffle_v4f16_234u:
 ; NOXNACK:       ; %bb.0:
 ; NOXNACK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; NOXNACK-NEXT:    global_load_dword v0, v[0:1], off offset:4
-; NOXNACK-NEXT:    global_load_dwordx2 v[1:2], v[2:3], off
+; NOXNACK-NEXT:    global_load_dword v1, v[2:3], off
 ; NOXNACK-NEXT:    s_waitcnt vmcnt(0)
 ; NOXNACK-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, ptr addrspace(1) %arg0

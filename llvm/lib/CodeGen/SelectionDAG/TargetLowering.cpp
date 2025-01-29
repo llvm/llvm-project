@@ -3479,6 +3479,37 @@ bool TargetLowering::SimplifyDemandedVectorElts(
 
     break;
   }
+  case ISD::LOAD: {
+    auto *Ld = cast<LoadSDNode>(Op);
+    if (!ISD::isNormalLoad(Ld) || !Ld->isSimple())
+      break;
+
+    // TODO: Handle arbitrary vector extract for isMask
+    if (DemandedElts.popcount() != 1)
+      break;
+
+    EVT VT = Ld->getValueType(0);
+    if (TLO.LegalOperations() &&
+        !isOperationLegalOrCustom(ISD::INSERT_VECTOR_ELT, VT))
+      break;
+
+    EVT EltVT = VT.getVectorElementType();
+    SDLoc DL(Ld);
+
+    unsigned Idx = DemandedElts.countTrailingZeros();
+
+    SDValue IdxVal = TLO.DAG.getVectorIdxConstant(Idx, DL);
+    SDValue Scalarized =
+        scalarizeExtractedVectorLoad(EltVT, DL, VT, IdxVal, Ld, TLO.DAG);
+    if (!Scalarized)
+      break;
+
+    TLO.DAG.ReplaceAllUsesOfValueWith(SDValue(Ld, 1), Scalarized.getValue(1));
+
+    SDValue Insert = TLO.DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT,
+                                     TLO.DAG.getUNDEF(VT), Scalarized, IdxVal);
+    return TLO.CombineTo(Op, Insert);
+  }
   case ISD::VECTOR_SHUFFLE: {
     SDValue LHS = Op.getOperand(0);
     SDValue RHS = Op.getOperand(1);

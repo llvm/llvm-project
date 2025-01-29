@@ -52,24 +52,24 @@ define <16 x i64> @pluto(<16 x i64> %arg, <16 x i64> %arg1, <16 x i64> %arg2, <1
 ; CHECK-O3-NEXT:    movq %rsp, %rbp
 ; CHECK-O3-NEXT:    andq $-32, %rsp
 ; CHECK-O3-NEXT:    subq $32, %rsp
-; CHECK-O3-NEXT:    vmovdqa 208(%rbp), %ymm3
-; CHECK-O3-NEXT:    vmovdqa 144(%rbp), %ymm0
-; CHECK-O3-NEXT:    vpblendd {{.*#+}} ymm1 = ymm6[0,1,2,3,4,5],ymm2[6,7]
-; CHECK-O3-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm3[0],ymm0[2],ymm3[2]
-; CHECK-O3-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
-; CHECK-O3-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[3,1,2,1]
-; CHECK-O3-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5],ymm1[6,7]
-; CHECK-O3-NEXT:    vperm2i128 {{.*#+}} ymm1 = ymm7[2,3],ymm6[0,1]
-; CHECK-O3-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-O3-NEXT:    vpblendd {{.*#+}} ymm2 = ymm1[0,1],ymm2[2,3],ymm1[4,5,6,7]
-; CHECK-O3-NEXT:    vpunpcklqdq {{.*#+}} ymm1 = ymm7[0],ymm5[0],ymm7[2],ymm5[2]
-; CHECK-O3-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,1,2,3]
-; CHECK-O3-NEXT:    vpbroadcastq 248(%rbp), %ymm4
-; CHECK-O3-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1],ymm4[2,3,4,5],ymm1[6,7]
-; CHECK-O3-NEXT:    vpblendd {{.*#+}} xmm3 = xmm7[0,1],xmm3[2,3]
-; CHECK-O3-NEXT:    vpermq {{.*#+}} ymm3 = ymm3[0,0,1,3]
-; CHECK-O3-NEXT:    vpslldq {{.*#+}} ymm4 = zero,zero,zero,zero,zero,zero,zero,zero,ymm5[0,1,2,3,4,5,6,7],zero,zero,zero,zero,zero,zero,zero,zero,ymm5[16,17,18,19,20,21,22,23]
-; CHECK-O3-NEXT:    vpblendd {{.*#+}} ymm3 = ymm4[0,1],ymm3[2,3,4,5],ymm4[6,7]
+; CHECK-O3-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-O3-NEXT:    vblendps {{.*#+}} ymm1 = ymm6[0,1,2,3],ymm2[4,5,6,7]
+; CHECK-O3-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-O3-NEXT:    vbroadcastsd 160(%rbp), %ymm3
+; CHECK-O3-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm3[0],ymm0[0],ymm3[2],ymm0[2]
+; CHECK-O3-NEXT:    vblendps {{.*#+}} ymm3 = ymm7[0,1,2,3],ymm5[4,5,6,7]
+; CHECK-O3-NEXT:    vbroadcastsd 216(%rbp), %ymm4
+; CHECK-O3-NEXT:    vblendps {{.*#+}} ymm4 = ymm2[0,1,2,3],ymm4[4,5,6,7]
+; CHECK-O3-NEXT:    vunpcklpd {{.*#+}} ymm3 = ymm4[0],ymm3[0],ymm4[2],ymm3[2]
+; CHECK-O3-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[3,1,2,1]
+; CHECK-O3-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; CHECK-O3-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5],ymm1[6,7]
+; CHECK-O3-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm7[2,3],ymm6[0,1]
+; CHECK-O3-NEXT:    vblendps {{.*#+}} ymm2 = ymm1[0,1],ymm2[2,3],ymm1[4,5,6,7]
+; CHECK-O3-NEXT:    vunpcklpd {{.*#+}} ymm1 = ymm7[0],ymm5[0],ymm7[2],ymm5[2]
+; CHECK-O3-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,1,2,3]
+; CHECK-O3-NEXT:    vbroadcastsd 248(%rbp), %ymm4
+; CHECK-O3-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1],ymm4[2,3,4,5],ymm1[6,7]
 ; CHECK-O3-NEXT:    movq %rbp, %rsp
 ; CHECK-O3-NEXT:    popq %rbp
 ; CHECK-O3-NEXT:    retq

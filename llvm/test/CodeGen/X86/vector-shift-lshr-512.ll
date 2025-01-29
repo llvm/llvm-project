@@ -188,7 +188,8 @@ define <64 x i8> @splatvar_shift_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 define <8 x i64> @splatvar_modulo_shift_v8i64(<8 x i64> %a, <8 x i64> %b) nounwind {
 ; ALL-LABEL: splatvar_modulo_shift_v8i64:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; ALL-NEXT:    vmovq {{.*#+}} xmm2 = [63,0]
+; ALL-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; ALL-NEXT:    vpsrlq %xmm1, %zmm0, %zmm0
 ; ALL-NEXT:    retq
   %mod = and <8 x i64> %b, <i64 63, i64 63, i64 63, i64 63, i64 63, i64 63, i64 63, i64 63>

@@ -384,22 +384,26 @@ define <32 x i8> @trunc_shuffle_v32i16_v32i8_ofs1(<32 x i16> %a0) {
 define <4 x double> @PR34175(ptr %p) {
 ; AVX512F-LABEL: PR34175:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX512F-NEXT:    vmovdqu 32(%rdi), %xmm1
-; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1],xmm1[2],mem[2],xmm1[3],mem[3]
-; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; AVX512F-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; AVX512F-NEXT:    vpinsrw $0, 48(%rdi), %xmm0, %xmm0
+; AVX512F-NEXT:    vpinsrw $0, 32(%rdi), %xmm0, %xmm1
+; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; AVX512F-NEXT:    vpinsrw $0, 16(%rdi), %xmm0, %xmm1
+; AVX512F-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm2
+; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
+; AVX512F-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; AVX512F-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; AVX512F-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: PR34175:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX512VL-NEXT:    vmovdqu 32(%rdi), %xmm1
-; AVX512VL-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1],xmm1[2],mem[2],xmm1[3],mem[3]
-; AVX512VL-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; AVX512VL-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; AVX512VL-NEXT:    vpinsrw $0, 48(%rdi), %xmm0, %xmm0
+; AVX512VL-NEXT:    vpinsrw $0, 32(%rdi), %xmm0, %xmm1
+; AVX512VL-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; AVX512VL-NEXT:    vpinsrw $0, 16(%rdi), %xmm0, %xmm1
+; AVX512VL-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm2
+; AVX512VL-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
+; AVX512VL-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; AVX512VL-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; AVX512VL-NEXT:    retq

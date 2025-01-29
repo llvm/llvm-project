@@ -7,12 +7,14 @@
 define <4 x float> @fold_from_constantpool(<4 x float> %a) {
 ; X86-LABEL: fold_from_constantpool:
 ; X86:       # %bb.0:
-; X86-NEXT:    insertps $0, {{\.?LCPI[0-9]+_[0-9]+}}+4, %xmm0 # xmm0 = mem[0],xmm0[1,2,3]
+; X86-NEXT:    movss {{\.?LCPI[0-9]+_[0-9]+}}+4, %xmm1 # xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fold_from_constantpool:
 ; X64:       # %bb.0:
-; X64-NEXT:    insertps $0, {{\.?LCPI[0-9]+_[0-9]+}}+4(%rip), %xmm0 # xmm0 = mem[0],xmm0[1,2,3]
+; X64-NEXT:    movss {{\.?LCPI[0-9]+_[0-9]+}}+4(%rip), %xmm1 # xmm1 = mem[0],zero,zero,zero
+; X64-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; X64-NEXT:    retq
   %1 = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a, <4 x float> <float 0.0, float 1.0, float 0.0, float 0.0>, i8 64)
   ret <4 x float> %1

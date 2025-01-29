@@ -285,13 +285,13 @@ entry:
 define <4 x i32> @vuzp_lower_shufflemask_zeroed(ptr %A, ptr %B) {
 ; CHECK-LABEL: vuzp_lower_shufflemask_zeroed:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldr d18, [r0]
-; CHECK-NEXT:    vorr d19, d18, d18
-; CHECK-NEXT:    vldr d17, [r1]
-; CHECK-NEXT:    vtrn.32 d19, d17
-; CHECK-NEXT:    vdup.32 d16, d18[0]
-; CHECK-NEXT:    vmov r2, r3, d17
-; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vldr d16, [r0]
+; CHECK-NEXT:    add r0, r1, #4
+; CHECK-NEXT:    vld1.32 {d19[1]}, [r0:32]
+; CHECK-NEXT:    vdup.32 d18, d16[0]
+; CHECK-NEXT:    vtrn.32 d16, d19
+; CHECK-NEXT:    vmov r0, r1, d18
+; CHECK-NEXT:    vmov r2, r3, d19
 ; CHECK-NEXT:    mov pc, lr
 entry:
   %tmp1 = load <2 x i32>, ptr %A

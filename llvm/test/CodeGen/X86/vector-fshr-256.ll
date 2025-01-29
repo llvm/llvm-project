@@ -1034,6 +1034,8 @@ define <16 x i16> @splatvar_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i
 ; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm4
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
 ; AVX1-NEXT:    vpsrlw %xmm4, %xmm5, %xmm5
+; AVX1-NEXT:    vpinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm6
+; AVX1-NEXT:    vpand %xmm6, %xmm2, %xmm2
 ; AVX1-NEXT:    vpandn %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpaddw %xmm3, %xmm3, %xmm3
@@ -1123,6 +1125,8 @@ define <16 x i16> @splatvar_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i
 ; XOPAVX1-NEXT:    vpand %xmm3, %xmm2, %xmm4
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
 ; XOPAVX1-NEXT:    vpsrlw %xmm4, %xmm5, %xmm5
+; XOPAVX1-NEXT:    vpinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm6
+; XOPAVX1-NEXT:    vpand %xmm6, %xmm2, %xmm2
 ; XOPAVX1-NEXT:    vpandn %xmm3, %xmm2, %xmm2
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; XOPAVX1-NEXT:    vpaddw %xmm3, %xmm3, %xmm3
