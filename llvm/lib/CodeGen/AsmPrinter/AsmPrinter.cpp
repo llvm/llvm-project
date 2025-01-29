@@ -3508,7 +3508,7 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *C,
                                    AsmPrinter::AliasMapTy *AliasList = nullptr);
 
 static void emitGlobalConstantFP(const ConstantFP *CFP, AsmPrinter &AP);
-static void emitGlobalConstantFP(APFloat APF, Type *ET, AsmPrinter &AP);
+static void emitGlobalConstantFP(const APFloat &APF, Type *ET, AsmPrinter &AP);
 
 /// isRepeatedByteSequence - Determine whether the given value is
 /// composed of a repeated sequence of identical bytes and return the
@@ -3705,9 +3705,9 @@ static void emitGlobalConstantStruct(const DataLayout &DL,
          "Layout of constant struct may be incorrect!");
 }
 
-static void emitGlobalConstantFP(APFloat APF, Type *ET, AsmPrinter &AP) {
+static void emitGlobalConstantFP(const APFloat &APF, Type *ET, AsmPrinter &AP) {
   assert(ET && "Unknown float type");
-  APInt API = APF.bitcastToAPInt();
+  const APInt &API = APF.bitcastToAPInt();
 
   // First print a comment with what we think the original floating-point value
   // should have been.
@@ -4118,7 +4118,7 @@ MCSymbol *AsmPrinter::getSymbolWithGlobalValueBase(const GlobalValue *GV,
 }
 
 /// Return the MCSymbol for the specified ExternalSymbol.
-MCSymbol *AsmPrinter::GetExternalSymbolSymbol(Twine Sym) const {
+MCSymbol *AsmPrinter::GetExternalSymbolSymbol(const Twine &Sym) const {
   SmallString<60> NameStr;
   Mangler::getNameWithPrefix(NameStr, Sym, getDataLayout());
   return OutContext.getOrCreateSymbol(NameStr);

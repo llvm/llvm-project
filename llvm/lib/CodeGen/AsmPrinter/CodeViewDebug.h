@@ -433,7 +433,7 @@ private:
 
   void addToUDTs(const DIType *Ty);
 
-  void addUDTSrcLine(const DIType *Ty, codeview::TypeIndex TI);
+  void addUDTSrcLine(const DIType *Ty, const codeview::TypeIndex &TI);
 
   codeview::TypeIndex lowerType(const DIType *Ty, const DIType *ClassTy);
   codeview::TypeIndex lowerTypeAlias(const DIDerivedType *Ty);
@@ -482,7 +482,7 @@ private:
 
   /// Inserts {{Node, ClassTy}, TI} into TypeIndices and checks for duplicates.
   codeview::TypeIndex recordTypeIndexForDINode(const DINode *Node,
-                                               codeview::TypeIndex TI,
+                                               const codeview::TypeIndex &TI,
                                                const DIType *ClassTy = nullptr);
 
   /// Collect the names of parent scopes, innermost to outermost. Return the

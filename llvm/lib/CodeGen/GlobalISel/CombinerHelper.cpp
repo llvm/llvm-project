@@ -6593,7 +6593,7 @@ bool CombinerHelper::matchRedundantBinOpInEquality(MachineInstr &MI,
 /// Return the minimum useless shift amount that results in complete loss of the
 /// source value. Return std::nullopt when it cannot determine a value.
 static std::optional<unsigned>
-getMinUselessShift(KnownBits ValueKB, unsigned Opcode,
+getMinUselessShift(const KnownBits &ValueKB, unsigned Opcode,
                    std::optional<int64_t> &Result) {
   assert(Opcode == TargetOpcode::G_SHL || Opcode == TargetOpcode::G_LSHR ||
          Opcode == TargetOpcode::G_ASHR && "Expect G_SHL, G_LSHR or G_ASHR.");
