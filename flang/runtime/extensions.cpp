@@ -260,5 +260,7 @@ int RTNAME(Chdir)(const char *name) {
 #endif
 }
 
+int FORTRAN_PROCEDURE_NAME(ierrno)() { return errno; }
+
 } // namespace Fortran::runtime
 } // extern "C"
