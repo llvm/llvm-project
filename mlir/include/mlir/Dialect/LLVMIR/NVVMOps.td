@@ -2512,6 +2512,33 @@ def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async",
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// NVVM Griddepcontrol Ops
+//===----------------------------------------------------------------------===//
+
+def NVVM_GriddepcontrolWaitOp : NVVM_IntrOp<"griddepcontrol.wait", [], 0> {
+  let assemblyFormat = "attr-dict";
+
+  let description = [{
+    Causes the executing thread to wait until all prerequisite grids in flight 
+    have completed and all the memory operations from the prerequisite grids 
+    are performed and made visible to the current grid.
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-griddepcontrol)
+  }];
+}
+
+def NVVM_GriddepcontrolLaunchDependentsOp
+    : NVVM_IntrOp<"griddepcontrol.launch.dependents", [], 0> {
+  let assemblyFormat = "attr-dict";
+
+  let description = [{
+    Signals that specific dependents the runtime system designated to react to 
+    this instruction can be scheduled as soon as all other CTAs in the grid 
+    issue the same instruction or have completed.
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-griddepcontrol)
+  }];
+}
+
 def NVVM_Exit : NVVM_Op<"exit"> {
   let summary = "Exit Op";
   let description = [{
