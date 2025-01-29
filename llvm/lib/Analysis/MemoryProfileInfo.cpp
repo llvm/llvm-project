@@ -56,7 +56,7 @@ cl::opt<bool> MemProfReportHintedSizes(
 // or have specified a value less than 100% for -memprof-cloning-cold-threshold.
 cl::opt<bool> MemProfKeepAllNotColdContexts(
     "memprof-keep-all-not-cold-contexts", cl::init(false), cl::Hidden,
-    cl::desc("Disable pruning of non-cold contexts unneeded for cold cloning"));
+    cl::desc("Keep all non-cold contexts (increases cloning overheads)"));
 
 AllocationType llvm::memprof::getAllocType(uint64_t TotalLifetimeAccessDensity,
                                            uint64_t AllocCount,
