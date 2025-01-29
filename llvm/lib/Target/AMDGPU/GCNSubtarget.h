@@ -250,6 +250,7 @@ protected:
   bool HasBitOp3Insts = false;
 #if LLPC_BUILD_NPI
   bool HasTanhInsts = false;
+  bool HasTensorCvtLutInsts = false;
 #endif /* LLPC_BUILD_NPI */
   bool HasPrngInst = false;
   bool HasPermlane16Swap = false;
@@ -1510,6 +1511,8 @@ public:
   }
 
   bool hasTanhInsts() const { return HasTanhInsts; }
+
+  bool hasTensorCvtLutInsts() const { return HasTensorCvtLutInsts; }
 
   bool hasAddPC64Inst() const { return GFX1250Insts; }
 

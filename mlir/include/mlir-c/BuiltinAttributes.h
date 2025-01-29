@@ -556,6 +556,8 @@ MLIR_CAPI_EXPORTED int64_t
 mlirDenseElementsAttrGetInt64Value(MlirAttribute attr, intptr_t pos);
 MLIR_CAPI_EXPORTED uint64_t
 mlirDenseElementsAttrGetUInt64Value(MlirAttribute attr, intptr_t pos);
+MLIR_CAPI_EXPORTED uint64_t
+mlirDenseElementsAttrGetIndexValue(MlirAttribute attr, intptr_t pos);
 MLIR_CAPI_EXPORTED float mlirDenseElementsAttrGetFloatValue(MlirAttribute attr,
                                                             intptr_t pos);
 MLIR_CAPI_EXPORTED double
