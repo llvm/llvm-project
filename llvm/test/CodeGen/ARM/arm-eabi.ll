@@ -1,31 +1,31 @@
 ; RUN: llc < %s -mtriple=arm-none-eabi -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
-; RUN: llc < %s -mtriple=arm-none-eabihf -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
+; RUN: llc < %s -mtriple=arm-none-eabihf -mattr=+fpregs -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
 ; RUN: llc < %s -mtriple=arm-none-androideabi -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
 ; RUN: llc < %s -mtriple=arm-none-gnueabi -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI
-; RUN: llc < %s -mtriple=arm-none-gnueabihf -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI
+; RUN: llc < %s -mtriple=arm-none-gnueabihf -mattr=+fpregs -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI
 ; RUN: llc < %s -mtriple=arm-none-musleabi -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI
-; RUN: llc < %s -mtriple=arm-none-musleabihf -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI
+; RUN: llc < %s -mtriple=arm-none-musleabihf -mattr=+fpregs -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI
 ; RUN: llc < %s -mtriple=arm-none-eabi -meabi=gnu -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI
-; RUN: llc < %s -mtriple=arm-none-eabihf -meabi=gnu -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI
+; RUN: llc < %s -mtriple=arm-none-eabihf -mattr=+fpregs -meabi=gnu -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI
 ; RUN: llc < %s -mtriple=arm-none-androideabi -meabi=gnu -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI
 ; RUN: llc < %s -mtriple=arm-none-gnueabi -meabi=gnu -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI
-; RUN: llc < %s -mtriple=arm-none-gnueabihf -meabi=gnu -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI
+; RUN: llc < %s -mtriple=arm-none-gnueabihf -mattr=+fpregs -meabi=gnu -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI
 ; RUN: llc < %s -mtriple=arm-none-musleabi -meabi=gnu -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI
-; RUN: llc < %s -mtriple=arm-none-musleabihf -meabi=gnu -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI
+; RUN: llc < %s -mtriple=arm-none-musleabihf -mattr=+fpregs -meabi=gnu -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI
 ; RUN: llc < %s -mtriple=arm-none-eabi -meabi=4 -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
-; RUN: llc < %s -mtriple=arm-none-eabihf -meabi=4 -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
+; RUN: llc < %s -mtriple=arm-none-eabihf -mattr=+fpregs -meabi=4 -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
 ; RUN: llc < %s -mtriple=arm-none-androideabi -meabi=4 -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
 ; RUN: llc < %s -mtriple=arm-none-gnueabi -meabi=4 -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
-; RUN: llc < %s -mtriple=arm-none-gnueabihf -meabi=4 -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
+; RUN: llc < %s -mtriple=arm-none-gnueabihf -mattr=+fpregs -meabi=4 -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
 ; RUN: llc < %s -mtriple=arm-none-musleabi -meabi=4 -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
-; RUN: llc < %s -mtriple=arm-none-musleabihf -meabi=4 -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
+; RUN: llc < %s -mtriple=arm-none-musleabihf -mattr=+fpregs -meabi=4 -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
 ; RUN: llc < %s -mtriple=arm-none-eabi -meabi=5 -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
-; RUN: llc < %s -mtriple=arm-none-eabihf -meabi=5 -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
+; RUN: llc < %s -mtriple=arm-none-eabihf -mattr=+fpregs -meabi=5 -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
 ; RUN: llc < %s -mtriple=arm-none-androideabi -meabi=5 -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
 ; RUN: llc < %s -mtriple=arm-none-gnueabi -meabi=5 -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
-; RUN: llc < %s -mtriple=arm-none-gnueabihf -meabi=5 -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
+; RUN: llc < %s -mtriple=arm-none-gnueabihf -mattr=+fpregs -meabi=5 -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
 ; RUN: llc < %s -mtriple=arm-none-musleabi -meabi=5 -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
-; RUN: llc < %s -mtriple=arm-none-musleabihf -meabi=5 -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
+; RUN: llc < %s -mtriple=arm-none-musleabihf -mattr=+fpregs -meabi=5 -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI
 
 %struct.my_s = type { [18 x i32] }
 

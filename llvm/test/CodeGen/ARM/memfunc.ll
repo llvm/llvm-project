@@ -1,12 +1,12 @@
 ; RUN: llc < %s -mtriple=armv7-apple-ios -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-IOS --check-prefix=CHECK
 ; RUN: llc < %s -mtriple=thumbv7m-none-macho -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-DARWIN --check-prefix=CHECK
 ; RUN: llc < %s -mtriple=arm-none-eabi -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI --check-prefix=CHECK
-; RUN: llc < %s -mtriple=arm-none-eabihf -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI --check-prefix=CHECK
+; RUN: llc < %s -mtriple=arm-none-eabihf -mattr=+vfp3 -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI --check-prefix=CHECK
 ; RUN: llc < %s -mtriple=arm-none-androideabi -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-EABI --check-prefix=CHECK
 ; RUN: llc < %s -mtriple=arm-none-gnueabi -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI --check-prefix=CHECK
-; RUN: llc < %s -mtriple=arm-none-gnueabihf -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI --check-prefix=CHECK
+; RUN: llc < %s -mtriple=arm-none-gnueabihf -mattr=+vfp3 -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI --check-prefix=CHECK
 ; RUN: llc < %s -mtriple=arm-none-musleabi -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI --check-prefix=CHECK
-; RUN: llc < %s -mtriple=arm-none-musleabihf -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI --check-prefix=CHECK
+; RUN: llc < %s -mtriple=arm-none-musleabihf -mattr=+vfp3 -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-GNUEABI --check-prefix=CHECK
 
 define void @f1(ptr %dest, ptr %src) "frame-pointer"="all" {
 entry:

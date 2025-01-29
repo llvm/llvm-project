@@ -1,4 +1,4 @@
-# RUN: llc -emit-call-site-info -debug-entry-values -mtriple=armebv6k-unknown-linux-gnueabihf -filetype=obj -start-after=machineverifier %s -o -| llvm-dwarfdump - | FileCheck %s --implicit-check-not=DW_TAG_GNU_call_site_parameter
+# RUN: llc -emit-call-site-info -debug-entry-values -mtriple=armebv6k-unknown-linux-gnueabi -filetype=obj -start-after=machineverifier %s -o -| llvm-dwarfdump - | FileCheck %s --implicit-check-not=DW_TAG_GNU_call_site_parameter
 
 ## The test was handmade.
 
@@ -6,7 +6,7 @@
   ; ModuleID = 'test.c'
   source_filename = "test.c"
   target datalayout = "E-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-  target triple = "armebv6k-unknown-linux-gnueabihf"
+  target triple = "armebv6k-unknown-linux-gnueabi"
 
   ; Function Attrs: nounwind
   define dso_local arm_aapcscc i32 @func1(i32 %arg1) local_unnamed_addr !dbg !14 {

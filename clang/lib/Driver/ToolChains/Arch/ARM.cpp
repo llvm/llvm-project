@@ -178,22 +178,6 @@ static void checkARMCPUName(const Driver &D, const Arg *A, const ArgList &Args,
         << A->getSpelling() << A->getValue();
 }
 
-// If -mfloat-abi=hard or -mhard-float are specified explicitly then check that
-// floating point registers are available on the target CPU.
-static void checkARMFloatABI(const Driver &D, const ArgList &Args,
-                             bool HasFPRegs) {
-  if (HasFPRegs)
-    return;
-  const Arg *A =
-      Args.getLastArg(options::OPT_msoft_float, options::OPT_mhard_float,
-                      options::OPT_mfloat_abi_EQ);
-  if (A && (A->getOption().matches(options::OPT_mhard_float) ||
-            (A->getOption().matches(options::OPT_mfloat_abi_EQ) &&
-             A->getValue() == StringRef("hard"))))
-    D.Diag(clang::diag::warn_drv_no_floating_point_registers)
-        << A->getAsString(Args);
-}
-
 bool arm::useAAPCSForMachO(const llvm::Triple &T) {
   // The backend is hardwired to assume AAPCS for M-class processors, ensure
   // the frontend matches that.
@@ -1024,8 +1008,6 @@ fp16_fml_fallthrough:
 
   if (Args.getLastArg(options::OPT_mno_bti_at_return_twice))
     Features.push_back("+no-bti-at-return-twice");
-
-  checkARMFloatABI(D, Args, HasFPRegs);
 
   return FPUKind;
 }

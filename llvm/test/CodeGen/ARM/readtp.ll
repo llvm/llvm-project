@@ -1,11 +1,11 @@
-; RUN: llc -mtriple=armeb-linux-gnueabihf -O2 -mattr=+read-tp-tpidrurw %s -o - | FileCheck %s -check-prefix=CHECK-TPIDRURW
-; RUN: llc -mtriple=armeb-linux-gnueabihf -O2 -mattr=+read-tp-tpidruro %s -o - | FileCheck %s -check-prefix=CHECK-TPIDRURO
-; RUN: llc -mtriple=armeb-linux-gnueabihf -O2 -mattr=+read-tp-tpidrprw %s -o - | FileCheck %s -check-prefix=CHECK-TPIDRPRW
-; RUN: llc -mtriple=armeb-linux-gnueabihf -O2 %s -o - | FileCheck %s -check-prefix=CHECK-SOFT
-; RUN: llc -mtriple=thumbv7-linux-gnueabihf -O2 -mattr=+read-tp-tpidrurw %s -o - | FileCheck %s -check-prefix=CHECK-TPIDRURW
-; RUN: llc -mtriple=thumbv7-linux-gnueabihf -O2 -mattr=+read-tp-tpidruro %s -o - | FileCheck %s -check-prefix=CHECK-TPIDRURO
-; RUN: llc -mtriple=thumbv7-linux-gnueabihf -O2 -mattr=+read-tp-tpidrprw %s -o - | FileCheck %s -check-prefix=CHECK-TPIDRPRW
-; RUN: llc -mtriple=thumbv7-linux-gnueabihf -O2 %s -o - | FileCheck %s -check-prefix=CHECK-SOFT
+; RUN: llc -mtriple=armeb-linux-gnueabi -O2 -mattr=+read-tp-tpidrurw %s -o - | FileCheck %s -check-prefix=CHECK-TPIDRURW
+; RUN: llc -mtriple=armeb-linux-gnueabi -O2 -mattr=+read-tp-tpidruro %s -o - | FileCheck %s -check-prefix=CHECK-TPIDRURO
+; RUN: llc -mtriple=armeb-linux-gnueabi -O2 -mattr=+read-tp-tpidrprw %s -o - | FileCheck %s -check-prefix=CHECK-TPIDRPRW
+; RUN: llc -mtriple=armeb-linux-gnueabi -O2 %s -o - | FileCheck %s -check-prefix=CHECK-SOFT
+; RUN: llc -mtriple=thumbv7-linux-gnueabi -O2 -mattr=+read-tp-tpidrurw %s -o - | FileCheck %s -check-prefix=CHECK-TPIDRURW
+; RUN: llc -mtriple=thumbv7-linux-gnueabi -O2 -mattr=+read-tp-tpidruro %s -o - | FileCheck %s -check-prefix=CHECK-TPIDRURO
+; RUN: llc -mtriple=thumbv7-linux-gnueabi -O2 -mattr=+read-tp-tpidrprw %s -o - | FileCheck %s -check-prefix=CHECK-TPIDRPRW
+; RUN: llc -mtriple=thumbv7-linux-gnueabi -O2 %s -o - | FileCheck %s -check-prefix=CHECK-SOFT
 
 
 ; __thread int counter;

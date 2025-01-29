@@ -1,9 +1,8 @@
-; RUN: llc -asm-verbose=false < %s -mattr=+vfp3,+fp16 | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=CHECK-FP16  --check-prefix=CHECK-VFP -check-prefix=CHECK-ALL
-; RUN: llc -asm-verbose=false < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=CHECK-LIBCALL --check-prefix=CHECK-VFP -check-prefix=CHECK-ALL --check-prefix=CHECK-LIBCALL-VFP
-; RUN: llc -asm-verbose=false < %s -mattr=-fpregs | FileCheck -allow-deprecated-dag-overlap %s --check-prefix=CHECK-LIBCALL -check-prefix=CHECK-NOVFP -check-prefix=CHECK-ALL
+; RUN: llc -asm-verbose=false < %s --mtriple=armv7-none-eabihf --mattr=+vfp3,+fp16 | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=CHECK-FP16  --check-prefix=CHECK-VFP -check-prefix=CHECK-ALL
+; RUN: llc -asm-verbose=false < %s --mtriple=armv7-none-eabihf | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=CHECK-LIBCALL --check-prefix=CHECK-VFP -check-prefix=CHECK-ALL --check-prefix=CHECK-LIBCALL-VFP
+; RUN: llc -asm-verbose=false < %s --mtriple=armv7-none-eabi --mattr=-fpregs | FileCheck -allow-deprecated-dag-overlap %s --check-prefix=CHECK-LIBCALL -check-prefix=CHECK-NOVFP -check-prefix=CHECK-ALL
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-n32"
-target triple = "armv7---eabihf"
 
 ; CHECK-ALL-LABEL: test_fadd:
 ; CHECK-FP16: vcvtb.f32.f16

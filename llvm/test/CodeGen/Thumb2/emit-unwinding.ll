@@ -1,4 +1,4 @@
-; RUN: llc -mtriple thumbv7em-apple-unknown-eabi-macho %s -o - -O0 | FileCheck %s
+; RUN: llc -mtriple thumbv7-apple-unknown-eabi-macho %s -o - -O0 | FileCheck %s
 
 ; CHECK: add r7, sp, #{{[1-9]+}}
 
