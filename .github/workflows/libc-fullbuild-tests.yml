@@ -73,8 +73,8 @@ jobs:
         -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache-variant }}
         -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }}
         -DLLVM_ENABLE_RUNTIMES="libc;compiler-rt"
+        -DLIBC_USE_HOST_KERNEL_HEADERS=ON
         -DLLVM_LIBC_FULL_BUILD=ON
-        -DLLVM_LIBC_USE_HOST_KERNEL_HEADERS=ON
         -DLLVM_LIBC_INCLUDE_SCUDO=ON
         -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON
         -DCOMPILER_RT_BUILD_GWP_ASAN=OFF

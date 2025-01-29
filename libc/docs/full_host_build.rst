@@ -48,13 +48,13 @@ the below cmake variable ``LIBC_KERNEL_HEADERS`` should be omitted.
    $> cd build
    $> cmake ../runtimes \
       -G Ninja \
-      -DCMAKE_C_COMPILER=clang \
-      -DCMAKE_CXX_COMPILER=clang++ \
-      -DLLVM_ENABLE_RUNTIMES="libc;compiler-rt" \
-      -DLLVM_LIBC_FULL_BUILD=ON \
       -DCMAKE_BUILD_TYPE=Debug \
+      -DCMAKE_CXX_COMPILER=clang++ \
+      -DCMAKE_C_COMPILER=clang \
+      -DLLVM_ENABLE_RUNTIMES="libc;compiler-rt" \
+      -DLIBC_KERNEL_HEADERS=/path/to/sysroot/ \
+      -DLLVM_LIBC_FULL_BUILD=ON \
       -DLLVM_LIBC_INCLUDE_SCUDO=ON \
-      -DLLVM_LIBC_KERNEL_HEADERS=/path/to/kernel/headers/ \
       -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON \
       -DCOMPILER_RT_BUILD_GWP_ASAN=OFF                       \
       -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF        \
@@ -136,9 +136,9 @@ allocator for LLVM-libc.
       -DCMAKE_BUILD_TYPE=Release  \
       -DCMAKE_C_COMPILER=clang \
       -DCMAKE_CXX_COMPILER=clang++ \
+      -DLIBC_KERNEL_HEADERS=/path/to/sysroot/ \
       -DLLVM_LIBC_FULL_BUILD=ON \
       -DLLVM_LIBC_INCLUDE_SCUDO=ON \
-      -DLLVM_LIBC_KERNEL_HEADERS=/path/to/kernel/headers/ \
       -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON \
       -DCOMPILER_RT_BUILD_GWP_ASAN=OFF                       \
       -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF        \
