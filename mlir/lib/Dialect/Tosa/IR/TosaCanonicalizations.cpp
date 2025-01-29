@@ -444,8 +444,21 @@ struct ConcatSliceOptimization : public OpRewritePattern<tosa::SliceOp> {
           sliceOp, "slice input must be a static ranked tensor");
     int32_t axis = concatOp.getAxis();
 
-    llvm::SmallVector<int64_t> sliceStart(sliceOp.getStart());
-    llvm::ArrayRef<int64_t> sliceSize = sliceOp.getSize();
+    DenseElementsAttr startElems;
+    DenseElementsAttr sizeElems;
+
+    if (!matchPattern(sliceOp.getStart(), m_Constant(&startElems)))
+      return rewriter.notifyMatchFailure(
+          sliceOp, "start of slice must be a static ranked shape");
+
+    if (!matchPattern(sliceOp.getSize(), m_Constant(&sizeElems)))
+      return rewriter.notifyMatchFailure(
+          sliceOp, "size of slice must be a static ranked shape");
+
+    llvm::SmallVector<int64_t> sliceStarts =
+        llvm::to_vector(startElems.getValues<int64_t>());
+    llvm::SmallVector<int64_t> sliceSizes =
+        llvm::to_vector(sizeElems.getValues<int64_t>());
 
     // Validate slice on the concatenated axis. Slicing along this
     // axis should span only one of the inputs to the concatenate
@@ -457,17 +470,20 @@ struct ConcatSliceOptimization : public OpRewritePattern<tosa::SliceOp> {
         return rewriter.notifyMatchFailure(
             sliceOp, "concat input must be a static ranked tensor");
 
-      if (sliceStart[axis] >= 0 &&
-          (sliceStart[axis] + sliceSize[axis]) <= inputType.getDimSize(axis)) {
-        replaceWithSlice = rewriter
-                               .create<tosa::SliceOp>(
-                                   sliceOp.getLoc(), sliceOp.getType(), input,
-                                   rewriter.getDenseI64ArrayAttr(sliceStart),
-                                   rewriter.getDenseI64ArrayAttr(sliceSize))
-                               .getResult();
+      if (sliceStarts[axis] >= 0 && (sliceStarts[axis] + sliceSizes[axis]) <=
+                                        inputType.getDimSize(axis)) {
+        auto start_op =
+            getTosaConstShape(rewriter, sliceOp.getLoc(), sliceStarts);
+        auto size_op =
+            getTosaConstShape(rewriter, sliceOp.getLoc(), sliceSizes);
+        replaceWithSlice =
+            rewriter
+                .create<tosa::SliceOp>(sliceOp.getLoc(), sliceOp.getType(),
+                                       input, start_op, size_op)
+                .getResult();
         break;
       }
-      sliceStart[axis] -= inputType.getDimSize(axis);
+      sliceStarts[axis] -= inputType.getDimSize(axis);
     }
 
     if (!replaceWithSlice)
@@ -1025,7 +1041,12 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
 
   if (inputTy.hasStaticShape() && outputTy.hasStaticShape() &&
       outputTy.getNumElements() == 1) {
-    llvm::SmallVector<uint64_t> indices(getStart());
+    DenseElementsAttr startElems;
+    if (!matchPattern(getStart(), m_Constant(&startElems)))
+      return {};
+
+    llvm::SmallVector<uint64_t> indices =
+        llvm::to_vector(startElems.getValues<uint64_t>());
     auto value = operand.getValues<Attribute>()[indices];
     return SplatElementsAttr::get(outputTy, value);
   }
