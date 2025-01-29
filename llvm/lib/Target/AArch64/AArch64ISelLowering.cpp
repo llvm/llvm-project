@@ -19747,7 +19747,6 @@ static SDValue getPTest(SelectionDAG &DAG, EVT VT, SDValue Pg, SDValue Op,
 
 static bool isPredicateCCSettingOp(SDValue N) {
   if ((N.getOpcode() == ISD::SETCC ||
-       N.getOpcode() == ISD::EXPERIMENTAL_ALIAS_LANE_MASK) ||
       (N.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
        (N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilege ||
         N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilegt ||
