@@ -608,6 +608,8 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasBTI = 1;
     } else if (Feature == "+fullbf16") {
       HasFullBFloat16 = true;
+    } else if (Feature == "+execute-only") {
+      TLSSupported = false;
     }
   }
 
