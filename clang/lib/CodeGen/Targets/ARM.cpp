@@ -345,6 +345,11 @@ bool ARMABIInfo::shouldIgnoreEmptyArg(QualType Ty) const {
   if (Size == 0)
     return true;
 
+  // Clang 20.0 and earlier always ignored empty struct arguments in C++ mode.
+  if (getContext().getLangOpts().getClangABICompat() <=
+      LangOptions::ClangABI::Ver20)
+    return true;
+
   // Otherwise, they are passed as if they have a size of 1 byte.
   return false;
 }
