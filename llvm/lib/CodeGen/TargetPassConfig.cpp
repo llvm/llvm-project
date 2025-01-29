@@ -1255,7 +1255,7 @@ void TargetPassConfig::addMachinePasses() {
       }
     }
     addPass(createMachineFunctionSplitterPass());
-    if (SplitStaticData)
+    if (SplitStaticData || TM->Options.EnableStaticDataPartitioning)
       addPass(createStaticDataSplitterPass());
   }
   // We run the BasicBlockSections pass if either we need BB sections or BB
