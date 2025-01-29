@@ -1144,6 +1144,12 @@ Arm and AArch64 Support
 
   * FUJITSU-MONAKA (fujitsu-monaka)
 
+- The AArch64 calling convention for empty structs in C++ mode was changed to
+  pass them as if they have a size of 1 byte, matching the AAPCS64
+  specification and GCC's implementation. The previous behaviour of ignoring
+  the argument can be restored using the -fclang-abi-compat=20 (or earlier)
+  option.
+
 Android Support
 ^^^^^^^^^^^^^^^
 
