@@ -164,11 +164,8 @@ bool isKnownNegative(const Value *V, const SimplifyQuery &SQ,
 
 /// Return true if the given values are known to be non-equal when defined.
 /// Supports scalar integer types only.
-bool isKnownNonEqual(const Value *V1, const Value *V2, const DataLayout &DL,
-                     AssumptionCache *AC = nullptr,
-                     const Instruction *CxtI = nullptr,
-                     const DominatorTree *DT = nullptr,
-                     bool UseInstrInfo = true);
+bool isKnownNonEqual(const Value *V1, const Value *V2, const SimplifyQuery &SQ,
+                     unsigned Depth = 0);
 
 /// Return true if 'V & Mask' is known to be zero. We use this predicate to
 /// simplify operations downstream. Mask is known to be zero for bits that V
