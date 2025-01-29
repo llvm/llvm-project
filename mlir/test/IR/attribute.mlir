@@ -433,6 +433,17 @@ func.func @string_attr_custom_type_invalid() {
 
 // -----
 
+// CHECK-LABEL: func @string_attr_custom_mixed_type
+func.func @string_attr_custom_mixed_type() {
+  // CHECK: "string_data" : i64
+  test.string_attr_with_mixed_type "string_data" : i64
+  // CHECK: 42 : i64
+  test.string_attr_with_mixed_type 42 : i64
+  return
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // Test I32EnumAttr
 //===----------------------------------------------------------------------===//
