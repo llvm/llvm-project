@@ -128,6 +128,8 @@ public:
   //  set of equivalent memory operations with a scalar data-type, executed in
   //  an unspecified order on the elements in the vector.
   unsigned getMaxRequiredAlignment() const { return 8; }
+  // Emulated loops with 32-bit/64-bit CAS generate better SASS than 16-bit CAS
+  unsigned getMinCmpXchgSizeInBits() const { return 32; }
 
   unsigned getPTXVersion() const { return PTXVersion; }
 

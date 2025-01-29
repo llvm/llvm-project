@@ -24,7 +24,7 @@
 /// indirectly via a parent object.
 //===----------------------------------------------------------------------===//
 
-#include "flang/Lower/DirectivesCommon.h"
+#include "flang/Optimizer/Builder/DirectivesCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -598,12 +598,12 @@ class MapInfoFinalizationPass
           auto fieldCoord = builder.create<fir::CoordinateOp>(
               op.getLoc(), builder.getRefType(memTy), op.getVarPtr(),
               fieldIdxVal);
-          Fortran::lower::AddrAndBoundsInfo info =
-              Fortran::lower::getDataOperandBaseAddr(
+          fir::factory::AddrAndBoundsInfo info =
+              fir::factory::getDataOperandBaseAddr(
                   builder, fieldCoord, /*isOptional=*/false, op.getLoc());
           llvm::SmallVector<mlir::Value> bounds =
-              Fortran::lower::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
-                                                   mlir::omp::MapBoundsType>(
+              fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
+                                                 mlir::omp::MapBoundsType>(
                   builder, info,
                   hlfir::translateToExtendedValue(op.getLoc(), builder,
                                                   hlfir::Entity{fieldCoord})

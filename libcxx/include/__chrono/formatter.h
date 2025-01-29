@@ -32,6 +32,7 @@
 #  include <__chrono/sys_info.h>
 #  include <__chrono/system_clock.h>
 #  include <__chrono/time_point.h>
+#  include <__chrono/utc_clock.h>
 #  include <__chrono/weekday.h>
 #  include <__chrono/year.h>
 #  include <__chrono/year_month.h>
@@ -143,7 +144,7 @@ __format_sub_seconds(basic_stringstream<_CharT>& __sstr, const chrono::hh_mm_ss<
                    __value.fractional_width);
 }
 
-#    if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB) && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
+#    if _LIBCPP_HAS_EXPERIMENTAL_TZDB && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
 template <class _CharT, class _Duration, class _TimeZonePtr>
 _LIBCPP_HIDE_FROM_ABI void
 __format_sub_seconds(basic_stringstream<_CharT>& __sstr, const chrono::zoned_time<_Duration, _TimeZonePtr>& __value) {
@@ -155,7 +156,7 @@ template <class _Tp>
 consteval bool __use_fraction() {
   if constexpr (__is_time_point<_Tp>)
     return chrono::hh_mm_ss<typename _Tp::duration>::fractional_width;
-#    if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB) && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
+#    if _LIBCPP_HAS_EXPERIMENTAL_TZDB && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
   else if constexpr (__is_specialization_v<_Tp, chrono::zoned_time>)
     return chrono::hh_mm_ss<typename _Tp::duration>::fractional_width;
 #    endif
@@ -227,7 +228,7 @@ struct _LIBCPP_HIDE_FROM_ABI __time_zone {
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI __time_zone __convert_to_time_zone([[maybe_unused]] const _Tp& __value) {
-#    if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#    if _LIBCPP_HAS_EXPERIMENTAL_TZDB
   if constexpr (same_as<_Tp, chrono::sys_info>)
     return {__value.abbrev, __value.offset};
 #      if _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
@@ -235,7 +236,7 @@ _LIBCPP_HIDE_FROM_ABI __time_zone __convert_to_time_zone([[maybe_unused]] const 
     return __formatter::__convert_to_time_zone(__value.get_info());
 #      endif
   else
-#    endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#    endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
     return {"UTC", chrono::seconds{0}};
 }
 
@@ -443,7 +444,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __weekday_ok(const _Tp& __value) {
     return __value.weekday().ok();
   else if constexpr (__is_hh_mm_ss<_Tp>)
     return true;
-#    if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#    if _LIBCPP_HAS_EXPERIMENTAL_TZDB
   else if constexpr (same_as<_Tp, chrono::sys_info>)
     return true;
   else if constexpr (same_as<_Tp, chrono::local_info>)
@@ -452,7 +453,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __weekday_ok(const _Tp& __value) {
   else if constexpr (__is_specialization_v<_Tp, chrono::zoned_time>)
     return true;
 #      endif
-#    endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#    endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
   else
     static_assert(sizeof(_Tp) == 0, "Add the missing type specialization");
 }
@@ -493,7 +494,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __weekday_name_ok(const _Tp& __value) {
     return __value.weekday().ok();
   else if constexpr (__is_hh_mm_ss<_Tp>)
     return true;
-#    if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#    if _LIBCPP_HAS_EXPERIMENTAL_TZDB
   else if constexpr (same_as<_Tp, chrono::sys_info>)
     return true;
   else if constexpr (same_as<_Tp, chrono::local_info>)
@@ -502,7 +503,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __weekday_name_ok(const _Tp& __value) {
   else if constexpr (__is_specialization_v<_Tp, chrono::zoned_time>)
     return true;
 #      endif
-#    endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#    endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
   else
     static_assert(sizeof(_Tp) == 0, "Add the missing type specialization");
 }
@@ -543,7 +544,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __date_ok(const _Tp& __value) {
     return __value.ok();
   else if constexpr (__is_hh_mm_ss<_Tp>)
     return true;
-#    if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#    if _LIBCPP_HAS_EXPERIMENTAL_TZDB
   else if constexpr (same_as<_Tp, chrono::sys_info>)
     return true;
   else if constexpr (same_as<_Tp, chrono::local_info>)
@@ -552,7 +553,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __date_ok(const _Tp& __value) {
   else if constexpr (__is_specialization_v<_Tp, chrono::zoned_time>)
     return true;
 #      endif
-#    endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#    endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
   else
     static_assert(sizeof(_Tp) == 0, "Add the missing type specialization");
 }
@@ -593,7 +594,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __month_name_ok(const _Tp& __value) {
     return __value.month().ok();
   else if constexpr (__is_hh_mm_ss<_Tp>)
     return true;
-#    if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#    if _LIBCPP_HAS_EXPERIMENTAL_TZDB
   else if constexpr (same_as<_Tp, chrono::sys_info>)
     return true;
   else if constexpr (same_as<_Tp, chrono::local_info>)
@@ -602,7 +603,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __month_name_ok(const _Tp& __value) {
   else if constexpr (__is_specialization_v<_Tp, chrono::zoned_time>)
     return true;
 #      endif
-#    endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#    endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
   else
     static_assert(sizeof(_Tp) == 0, "Add the missing type specialization");
 }
@@ -718,6 +719,23 @@ public:
     return _Base::__parse(__ctx, __format_spec::__fields_chrono, __format_spec::__flags::__clock);
   }
 };
+
+#    if _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
+#      if _LIBCPP_HAS_EXPERIMENTAL_TZDB
+
+template <class _Duration, __fmt_char_type _CharT>
+struct _LIBCPP_TEMPLATE_VIS formatter<chrono::utc_time<_Duration>, _CharT> : public __formatter_chrono<_CharT> {
+public:
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
+
+  template <class _ParseContext>
+  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+    return _Base::__parse(__ctx, __format_spec::__fields_chrono, __format_spec::__flags::__clock);
+  }
+};
+
+#      endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
+#    endif   // _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
 
 template <class _Duration, __fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<chrono::file_time<_Duration>, _CharT> : public __formatter_chrono<_CharT> {
@@ -940,7 +958,7 @@ public:
   }
 };
 
-#    if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#    if _LIBCPP_HAS_EXPERIMENTAL_TZDB
 template <__fmt_char_type _CharT>
 struct formatter<chrono::sys_info, _CharT> : public __formatter_chrono<_CharT> {
 public:
@@ -976,7 +994,7 @@ public:
   }
 };
 #      endif // _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
-#    endif   // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#    endif   // _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 #  endif // if _LIBCPP_STD_VER >= 20
 

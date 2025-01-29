@@ -20,6 +20,7 @@
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/CUDA/descriptor.h"
 #include "flang/Runtime/CUDA/memory.h"
+#include "flang/Runtime/CUDA/pointer.h"
 #include "flang/Runtime/allocatable.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -161,28 +162,51 @@ struct CUFAllocateOpConversion
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
+    bool isPointer = false;
+
+    if (auto declareOp =
+            mlir::dyn_cast_or_null<fir::DeclareOp>(op.getBox().getDefiningOp()))
+      if (declareOp.getFortranAttrs() &&
+          bitEnumContainsAny(*declareOp.getFortranAttrs(),
+                             fir::FortranVariableFlagsEnum::pointer))
+        isPointer = true;
+
     if (hasDoubleDescriptors(op)) {
       // Allocation for module variable are done with custom runtime entry point
       // so the descriptors can be synchronized.
       mlir::func::FuncOp func;
-      if (op.getSource())
-        func = fir::runtime::getRuntimeFunc<mkRTKey(
-            CUFAllocatableAllocateSourceSync)>(loc, builder);
-      else
+      if (op.getSource()) {
+        func = isPointer ? fir::runtime::getRuntimeFunc<mkRTKey(
+                               CUFPointerAllocateSourceSync)>(loc, builder)
+                         : fir::runtime::getRuntimeFunc<mkRTKey(
+                               CUFAllocatableAllocateSourceSync)>(loc, builder);
+      } else {
         func =
-            fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableAllocateSync)>(
-                loc, builder);
+            isPointer
+                ? fir::runtime::getRuntimeFunc<mkRTKey(CUFPointerAllocateSync)>(
+                      loc, builder)
+                : fir::runtime::getRuntimeFunc<mkRTKey(
+                      CUFAllocatableAllocateSync)>(loc, builder);
+      }
       return convertOpToCall<cuf::AllocateOp>(op, rewriter, func);
     }
 
     mlir::func::FuncOp func;
-    if (op.getSource())
+    if (op.getSource()) {
       func =
-          fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableAllocateSource)>(
-              loc, builder);
-    else
-      func = fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableAllocate)>(
-          loc, builder);
+          isPointer
+              ? fir::runtime::getRuntimeFunc<mkRTKey(CUFPointerAllocateSource)>(
+                    loc, builder)
+              : fir::runtime::getRuntimeFunc<mkRTKey(
+                    CUFAllocatableAllocateSource)>(loc, builder);
+    } else {
+      func =
+          isPointer
+              ? fir::runtime::getRuntimeFunc<mkRTKey(CUFPointerAllocate)>(
+                    loc, builder)
+              : fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableAllocate)>(
+                    loc, builder);
+    }
 
     return convertOpToCall<cuf::AllocateOp>(op, rewriter, func);
   }
@@ -270,19 +294,22 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
   matchAndRewrite(cuf::AllocOp op,
                   mlir::PatternRewriter &rewriter) const override {
 
+    mlir::Location loc = op.getLoc();
+
     if (inDeviceContext(op.getOperation())) {
       // In device context just replace the cuf.alloc operation with a fir.alloc
       // the cuf.free will be removed.
-      rewriter.replaceOpWithNewOp<fir::AllocaOp>(
-          op, op.getInType(), op.getUniqName() ? *op.getUniqName() : "",
+      auto allocaOp = rewriter.create<fir::AllocaOp>(
+          loc, op.getInType(), op.getUniqName() ? *op.getUniqName() : "",
           op.getBindcName() ? *op.getBindcName() : "", op.getTypeparams(),
           op.getShape());
+      allocaOp->setAttr(cuf::getDataAttrName(), op.getDataAttrAttr());
+      rewriter.replaceOp(op, allocaOp);
       return mlir::success();
     }
 
     auto mod = op->getParentOfType<mlir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
     mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
 
     if (!mlir::dyn_cast_or_null<fir::BaseBoxType>(op.getInType())) {
@@ -335,6 +362,7 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
       llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
           builder, loc, fTy, bytes, memTy, sourceFile, sourceLine)};
       auto callOp = builder.create<fir::CallOp>(loc, func, args);
+      callOp->setAttr(cuf::getDataAttrName(), op.getDataAttrAttr());
       auto convOp = builder.createConvert(loc, op.getResult().getType(),
                                           callOp.getResult(0));
       rewriter.replaceOp(op, convOp);
@@ -357,6 +385,7 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
     llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
         builder, loc, fTy, sizeInBytes, sourceFile, sourceLine)};
     auto callOp = builder.create<fir::CallOp>(loc, func, args);
+    callOp->setAttr(cuf::getDataAttrName(), op.getDataAttrAttr());
     auto convOp = builder.createConvert(loc, op.getResult().getType(),
                                         callOp.getResult(0));
     rewriter.replaceOp(op, convOp);
@@ -484,7 +513,8 @@ struct CUFFreeOpConversion : public mlir::OpRewritePattern<cuf::FreeOp> {
         fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
     llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
         builder, loc, fTy, op.getDevptr(), sourceFile, sourceLine)};
-    builder.create<fir::CallOp>(loc, func, args);
+    auto callOp = builder.create<fir::CallOp>(loc, func, args);
+    callOp->setAttr(cuf::getDataAttrName(), op.getDataAttrAttr());
     rewriter.eraseOp(op);
     return mlir::success();
   }
@@ -786,6 +816,7 @@ public:
             rewriter.getContext(),
             op.getCallee().getLeafReference().getValue())});
     mlir::Value clusterDimX, clusterDimY, clusterDimZ;
+    cuf::ProcAttributeAttr procAttr;
     if (auto funcOp = symTab.lookup<mlir::func::FuncOp>(
             op.getCallee().getLeafReference())) {
       if (auto clusterDimsAttr = funcOp->getAttrOfType<cuf::ClusterDimsAttr>(
@@ -797,6 +828,8 @@ public:
         clusterDimZ = rewriter.create<mlir::arith::ConstantIndexOp>(
             loc, clusterDimsAttr.getZ().getInt());
       }
+      procAttr =
+          funcOp->getAttrOfType<cuf::ProcAttributeAttr>(cuf::getProcAttrName());
     }
     llvm::SmallVector<mlir::Value> args;
     for (mlir::Value arg : op.getArgs()) {
@@ -831,6 +864,8 @@ public:
       gpuLaunchOp.getClusterSizeYMutable().assign(clusterDimY);
       gpuLaunchOp.getClusterSizeZMutable().assign(clusterDimZ);
     }
+    if (procAttr)
+      gpuLaunchOp->setAttr(cuf::getProcAttrName(), procAttr);
     rewriter.replaceOp(op, gpuLaunchOp);
     return mlir::success();
   }
