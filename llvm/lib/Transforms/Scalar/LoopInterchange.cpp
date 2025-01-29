@@ -208,7 +208,7 @@ static void interChangeDependencies(CharMatrix &DepMatrix, unsigned FromIndx,
     std::swap(DepMatrix[I][ToIndx], DepMatrix[I][FromIndx]);
 }
 
-// Clasify the direction vector into the four patterns. The target vector is
+// Classify the direction vector into the four patterns. The target vector is
 // [DV[Left], DV[Left+1], ..., DV[Right-1]], not the whole of \p DV.
 static DirectionVectorPattern
 classifyDirectionVector(const std::vector<char> &DV, unsigned Left,
