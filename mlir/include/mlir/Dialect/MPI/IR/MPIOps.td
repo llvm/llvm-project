@@ -38,6 +38,21 @@ def MPI_InitOp : MPI_Op<"init", []> {
 }
 
 //===----------------------------------------------------------------------===//
+// CommWorldOp
+//===----------------------------------------------------------------------===//
+
+def MPI_CommWorldOp : MPI_Op<"comm_world", []> {
+  let summary = "Get the World communicator, equivalent to `MPI_COMM_WORLD`";
+  let description = [{
+    This operation returns the predefined MPI_COMM_WORLD communicator.
+  }];
+
+  let results = (outs MPI_Comm : $comm);
+
+  let assemblyFormat = "attr-dict `:` type(results)";
+}
+
+//===----------------------------------------------------------------------===//
 // CommRankOp
 //===----------------------------------------------------------------------===//
 
