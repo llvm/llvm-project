@@ -552,6 +552,122 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
 }
 
 //===----------------------------------------------------------------------===//
+// Op definition for ElementwiseOp
+//===----------------------------------------------------------------------===//
+def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
+                   AttrSizedOperandSegments]> {
+  let summary = [{ Performs element-wise operation }];
+  let description = [{
+    Linalg op form which performs element-wise computation.
+
+    The attribute `kind` describes the operation (e.g. add, exp). The operation
+    kind can be any elementwise nary (e.g. unary, binary) operation.
+
+    Affine-maps for operands and result are reuired to be provided by the user
+    when transpose and/or broadcast is needed on any operand. When a map is not
+    provided, default identity maps are inferred for each operand. The number
+    of dims in each of the identity maps is equal to the rank of the output type.
+    In the case of default indexing map, all input and output shapes must match.
+    User-defined Affine-map for operands and result must only be projected
+    permutations with no zero constants.
+
+    For elementwise, iterator-types are always 'all parallel’.
+    Iterator-types are needed for constructing the underlying structured op.
+    The number of dims of the iterator-types are inferred from the rank of
+    the result type.
+
+    Example:
+
+    Defining a unary linalg.elemwise with default indexing-map:
+      ```mlir
+      %exp = linalg.elemwise
+             kind=#linalg.elemwise_fn<exp>
+             ins(%x : tensor<4x16x8xf32>)
+             outs(%y: tensor<4x16x8xf32>) -> tensor<4x16x8xf32>
+      ```
+
+    Defining a binary linalg.elemwise with user-defined indexing-map:
+    ```mlir
+    %add = linalg.elemwise
+            kind=#linalg.elemwise_fn<add>
+            indexing_maps = [#transpose, #broadcast, #identity]
+            ins(%exp, %arg1 : tensor<4x16x8xf32>, tensor<4x16xf32>)
+            outs(%arg2: tensor<4x8x16xf32>) -> tensor<4x8x16xf32>
+    ```
+  }];
+
+  let arguments = (ins
+      Variadic<AnyType>:$inputs,
+      Variadic<AnyShaped>:$outputs,
+      ElementwiseFnAttr:$kind,
+      DefaultValuedOptionalAttr<AffineMapArrayAttr, "{}">:$indexing_maps
+    );
+
+  let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
+  let regions = (region AnyRegion:$region);
+  let skipDefaultBuilders = 1;
+
+  let builders = [
+      OpBuilder<
+      (ins "ValueRange":$inputs, "ValueRange":$outputs,
+            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        buildElementwiseOp($_builder, $_state, std::nullopt, inputs, outputs,
+          attributes, ElementwiseOp::getRegionBuilder());
+      }]>
+    ];
+
+  let hasCustomAssemblyFormat = 1;
+  let hasFolder = 1;
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = structuredOpsBaseDecls # [{
+      /// Get the nary category enum, e.g. `ElementwiseNAryCategory::Unary`,
+      /// corresponding to the given fn, e.g. `ElementwiseFn::exp`
+      static ElementwiseNAryCategory getNAryCategory(ElementwiseFn fn);
+
+      /// Both user-specified and default indexing map will always depend on
+      ///  the current Op instance.
+      static bool hasDynamicIndexingMaps() { return true; }
+
+      /// Implements the block region builder for the elementwiseOp. This is
+      /// called by the 'fillStructuredOpRegion'.
+      static void regionBuilder(ImplicitLocOpBuilder &b,
+                                Block &block, ArrayRef<NamedAttribute> attrs);
+
+      static std::function<void(ImplicitLocOpBuilder &,
+                                Block &, ArrayRef<NamedAttribute>)>
+      getRegionBuilder() {
+        return regionBuilder;
+      }
+
+      /// Returns rank of the result tensor/memref. Useful for knowing
+      /// the dimensionality of the iteration space when others means
+      /// are not possible e.g. absence of user-provided indexing map.
+      unsigned getResultRank();
+
+      /// Returns N 'parallel' iterator types where N is rank of result.
+      SmallVector<utils::IteratorType> getIteratorTypesArray();
+
+      /// The default indexing maps are identities.
+      /// There will be N such maps, where N is the arity of the Op.
+      static SmallVector<AffineMap>
+      getDefaultIndexingMaps(unsigned N, unsigned numDims,
+                             MLIRContext *context);
+
+      /// Destination passing style interface method.
+      ::mlir::MutableOperandRange getDpsInitsMutable() {
+        return getOutputsMutable();
+      }
+
+      // Generic methods.
+      std::string getLibraryCallName() {
+        return generateLibraryCallName(getOperation());
+      }
+    }];
+}
+
+//===----------------------------------------------------------------------===//
 // Op definition for MatmulOp
 //===----------------------------------------------------------------------===//
 
