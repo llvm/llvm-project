@@ -27,16 +27,16 @@ public:
     Name = static_cast<unsigned>(Value); \
     return *this; \
   }
-#include "flang/Support/MathOptionsBase.def"
+#include "MathOptionsBase.def"
 
   MathOptionsBase() {
 #define ENUM_MATHOPT(Name, Type, Bits, Default) set##Name(Default);
-#include "flang/Support/MathOptionsBase.def"
+#include "MathOptionsBase.def"
   }
 
 private:
 #define ENUM_MATHOPT(Name, Type, Bits, Default) unsigned Name : Bits;
-#include "flang/Support/MathOptionsBase.def"
+#include "MathOptionsBase.def"
 };
 
 } // namespace Fortran::common

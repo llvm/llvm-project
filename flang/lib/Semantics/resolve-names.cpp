@@ -13,6 +13,7 @@
 #include "resolve-directives.h"
 #include "resolve-names-utils.h"
 #include "rewrite-parse-tree.h"
+#include "flang/Common/indirection.h"
 #include "flang/Common/restorer.h"
 #include "flang/Common/visit.h"
 #include "flang/Evaluate/characteristics.h"
@@ -37,7 +38,6 @@
 #include "flang/Semantics/type.h"
 #include "flang/Support/Fortran.h"
 #include "flang/Support/default-kinds.h"
-#include "flang/Support/indirection.h"
 #include "llvm/Support/raw_ostream.h"
 #include <list>
 #include <map>
