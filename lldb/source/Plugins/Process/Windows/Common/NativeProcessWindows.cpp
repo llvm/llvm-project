@@ -292,7 +292,8 @@ NativeProcessWindows::GetAuxvData() const {
 
 llvm::Expected<llvm::ArrayRef<uint8_t>>
 NativeProcessWindows::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
-  static const uint8_t g_aarch64_opcode[] = {0x00, 0x00, 0x3e, 0xd4}; // brk #0xf000
+  static const uint8_t g_aarch64_opcode[] = {0x00, 0x00, 0x3e,
+                                             0xd4};     // brk #0xf000
   static const uint8_t g_thumb_opcode[] = {0xfe, 0xde}; // udf #0xfe
 
   switch (GetArchitecture().GetMachine()) {
@@ -309,9 +310,9 @@ NativeProcessWindows::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
 }
 
 size_t NativeProcessWindows::GetSoftwareBreakpointPCOffset() {
-    // Windows always reports an incremented PC after a breakpoint is hit,
-    // even on ARM.
-    return cantFail(GetSoftwareBreakpointTrapOpcode(0)).size();
+  // Windows always reports an incremented PC after a breakpoint is hit,
+  // even on ARM.
+  return cantFail(GetSoftwareBreakpointTrapOpcode(0)).size();
 }
 
 bool NativeProcessWindows::FindSoftwareBreakpoint(lldb::addr_t addr) {
@@ -463,6 +464,7 @@ NativeProcessWindows::OnDebugException(bool first_chance,
   switch (record.GetExceptionCode()) {
   case DWORD(STATUS_SINGLE_STEP):
   case STATUS_WX86_SINGLE_STEP: {
+#ifndef __aarch64__
     uint32_t wp_id = LLDB_INVALID_INDEX32;
     if (NativeThreadWindows *thread = GetThreadByID(record.GetThreadID())) {
       NativeRegisterContextWindows &reg_ctx = thread->GetRegisterContext();
@@ -483,6 +485,7 @@ NativeProcessWindows::OnDebugException(bool first_chance,
       }
     }
     if (wp_id == LLDB_INVALID_INDEX32)
+#endif
       StopThread(record.GetThreadID(), StopReason::eStopReasonTrace);
 
     SetState(eStateStopped, true);
@@ -508,6 +511,9 @@ NativeProcessWindows::OnDebugException(bool first_chance,
         SetState(eStateStopped, true);
         return ExceptionResult::MaskException;
       } else {
+        // This block of code will only be entered in case of a hardware
+        // watchpoint or breakpoint hit on AArch64. However, we only handle
+        // hardware watchpoints below as breakpoints are not yet supported.
         const std::vector<ULONG_PTR> &args = record.GetExceptionArguments();
         // Check that the ExceptionInformation array of EXCEPTION_RECORD
         // contains at least two elements: the first is a read-write flag
@@ -515,11 +521,18 @@ NativeProcessWindows::OnDebugException(bool first_chance,
         // the second contains the virtual address of the accessed data.
         if (args.size() >= 2) {
           uint32_t hw_id = LLDB_INVALID_INDEX32;
-          reg_ctx.GetWatchpointHitIndex(hw_id, args[1]);
+          Status error = reg_ctx.GetWatchpointHitIndex(hw_id, args[1]);
+          if (error.Fail())
+            LLDB_LOG(log,
+                     "received error while checking for watchpoint hits, pid = "
+                     "{0}, error = {1}",
+                     thread_id, error);
 
           if (hw_id != LLDB_INVALID_INDEX32) {
             std::string desc =
-                formatv("{0} {1} {2}", args[1], hw_id, exception_addr).str();
+                formatv("{0} {1} {2}", reg_ctx.GetWatchpointAddress(hw_id),
+                        hw_id, exception_addr)
+                    .str();
             StopThread(thread_id, StopReason::eStopReasonWatchpoint, desc);
             SetState(eStateStopped, true);
             return ExceptionResult::MaskException;
