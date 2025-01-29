@@ -52,6 +52,7 @@ using namespace llvm::VPlanPatternMatch;
 namespace llvm {
 extern cl::opt<bool> EnableVPlanNativePath;
 }
+
 extern cl::opt<unsigned> ForceTargetInstructionCost;
 
 static cl::opt<bool> PrintVPlansInDotFormat(

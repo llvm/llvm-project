@@ -355,6 +355,16 @@ cl::opt<bool> EnableVPlanNativePath(
     "enable-vplan-native-path", cl::Hidden,
     cl::desc("Enable VPlan-native vectorization path with "
              "support for outer loop vectorization."));
+
+cl::opt<bool>
+    VerifyEachVPlan("vplan-verify-each",
+#ifdef EXPENSIVE_CHECKS
+                    cl::init(true),
+#else
+                    cl::init(false),
+#endif
+                    cl::Hidden,
+                    cl::desc("Verfiy VPlans after VPlan transforms."));
 } // namespace llvm
 
 // This flag enables the stress testing of the VPlan H-CFG construction in the
@@ -7651,8 +7661,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
-  VPlanTransforms::unrollByUF(BestVPlan, BestUF,
-                              OrigLoop->getHeader()->getContext());
+  VPlanTransforms::runPass(VPlanTransforms::unrollByUF, BestVPlan, BestUF,
+                           OrigLoop->getHeader()->getContext());
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
   VPlanTransforms::convertToConcreteRecipes(BestVPlan);
 
@@ -8908,13 +8918,14 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
     if (auto Plan = tryToBuildVPlanWithVPRecipes(SubRange)) {
       // Now optimize the initial VPlan.
       if (!Plan->hasVF(ElementCount::getFixed(1)))
-        VPlanTransforms::truncateToMinimalBitwidths(*Plan,
-                                                    CM.getMinimalBitwidths());
+        VPlanTransforms::runPass(VPlanTransforms::truncateToMinimalBitwidths,
+                                 *Plan, CM.getMinimalBitwidths());
       VPlanTransforms::optimize(*Plan);
       // TODO: try to put it close to addActiveLaneMask().
       // Discard the plan if it is not EVL-compatible
-      if (CM.foldTailWithEVL() && !VPlanTransforms::tryAddExplicitVectorLength(
-                                      *Plan, CM.getMaxSafeElements()))
+      if (CM.foldTailWithEVL() &&
+          !VPlanTransforms::runPass(VPlanTransforms::tryAddExplicitVectorLength,
+                                    *Plan, CM.getMaxSafeElements()))
         break;
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
@@ -9423,8 +9434,9 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
   // single VPInterleaveRecipe at its insertion point.
-  VPlanTransforms::createInterleaveGroups(
-      *Plan, InterleaveGroups, RecipeBuilder, CM.isScalarEpilogueAllowed());
+  VPlanTransforms::runPass(VPlanTransforms::createInterleaveGroups, *Plan,
+                           InterleaveGroups, RecipeBuilder,
+                           CM.isScalarEpilogueAllowed());
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);
@@ -9466,13 +9478,16 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
     }
   }
 
-  VPlanTransforms::dropPoisonGeneratingRecipes(*Plan, [this](BasicBlock *BB) {
+  auto BlockNeedsPredication = [this](BasicBlock *BB) {
     return Legal->blockNeedsPredication(BB);
-  });
+  };
+  VPlanTransforms::runPass(VPlanTransforms::dropPoisonGeneratingRecipes, *Plan,
+                           BlockNeedsPredication);
 
   // Sink users of fixed-order recurrence past the recipe defining the previous
   // value and introduce FirstOrderRecurrenceSplice VPInstructions.
-  if (!VPlanTransforms::adjustFixedOrderRecurrences(*Plan, Builder))
+  if (!VPlanTransforms::runPass(VPlanTransforms::adjustFixedOrderRecurrences,
+                                *Plan, Builder))
     return nullptr;
 
   if (useActiveLaneMask(Style)) {
@@ -9815,10 +9830,10 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       PhiR->setOperand(0, Plan->getOrAddLiveIn(RdxDesc.getSentinelValue()));
     }
   }
-
-  VPlanTransforms::clearReductionWrapFlags(*Plan);
   for (VPRecipeBase *R : ToDelete)
     R->eraseFromParent();
+
+  VPlanTransforms::runPass(VPlanTransforms::clearReductionWrapFlags, *Plan);
 }
 
 void VPDerivedIVRecipe::execute(VPTransformState &State) {
@@ -10182,7 +10197,7 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
     VPIRInst->eraseFromParent();
     ResumePhi->eraseFromParent();
   }
-  VPlanTransforms::removeDeadRecipes(MainPlan);
+  VPlanTransforms::runPass(VPlanTransforms::removeDeadRecipes, MainPlan);
 
   using namespace VPlanPatternMatch;
   VPBasicBlock *MainScalarPH = MainPlan.getScalarPreheader();
