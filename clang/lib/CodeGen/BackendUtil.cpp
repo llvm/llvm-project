@@ -797,7 +797,8 @@ static void addSanitizers(const Triple &TargetTriple,
 
   // SanitizeSkipHotCutoffs: doubles with range [0, 1]
   // Opts.cutoffs: ints with range [0, 1000000]
-  std::optional<std::vector<int>> scaledCutoffs = CodeGenOpts.SanitizeSkipHotCutoffs.getAllScaled(1000000);
+  std::optional<std::vector<int>> scaledCutoffs =
+      CodeGenOpts.SanitizeSkipHotCutoffs.getAllScaled(1000000);
 
   // TODO: remove IsRequested()
   if (LowerAllowCheckPass::IsRequested() || scaledCutoffs.has_value()) {
@@ -809,7 +810,8 @@ static void addSanitizers(const Triple &TargetTriple,
 
       if (scaledCutoffs.has_value()) {
         // Copy from std::vector<int> to std::vector<unsigned int>
-        Opts.cutoffs = {scaledCutoffs.value().begin(), scaledCutoffs.value().end()};
+        Opts.cutoffs = {scaledCutoffs.value().begin(),
+                        scaledCutoffs.value().end()};
       } else {
         // TODO: remove this after we remove IsRequested()
         for (unsigned int i = 0; i < SanitizerKind::SO_Count; ++i) {
