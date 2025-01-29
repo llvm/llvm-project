@@ -486,22 +486,12 @@ bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   }
   copyRegOperand(*Src, *getTargetOperand());
   if (!IsPreserveSrc) {
-    if (SrcSel->getImm() == AMDGPU::SDWA::DWORD) {
-      // An SDWA instruction with a trivial src_sel, i.e.
-      // it has either not been adjusted before or it has
-      // just been created at the call site of this function.
-      // Use the operand's src_sel.
-      SrcSel->setImm(getSrcSel());
-    }
-    else {
-      // A preexisting SDWA instruction with a non-trivial src_sel.
-      // Combine with the operand src_sel.
-      std::optional<SdwaSel> NewOp =
-          combineSdwaSel((SdwaSel)SrcSel->getImm(), getSrcSel());
-      if (!NewOp.has_value())
-        return false;
-      SrcSel->setImm(NewOp.value());
-    }
+    SdwaSel ExistingSel = static_cast<SdwaSel>(SrcSel->getImm());
+    std::optional<SdwaSel> NewSel = combineSdwaSel(ExistingSel, getSrcSel());
+    if (!NewSel.has_value())
+      return false;
+    SrcSel->setImm(NewSel.value());
+
     SrcMods->setImm(getSrcMods(TII, Src));
   }
   getTargetOperand()->setIsKill(false);
@@ -548,15 +538,13 @@ bool SDWADstOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   copyRegOperand(*Operand, *getTargetOperand());
   MachineOperand *DstSel= TII->getNamedOperand(MI, AMDGPU::OpName::dst_sel);
   assert(DstSel);
-  if (DstSel->getImm() != AMDGPU::SDWA::DWORD) {
-    std::optional<SdwaSel> NewOp =
-        combineSdwaSel((SdwaSel)DstSel->getImm(), getDstSel());
-    if (!NewOp.has_value())
-      return false;
-    DstSel->setImm(NewOp.value());
-  } else {
-    DstSel->setImm(getDstSel());
-  }
+
+  SdwaSel ExistingSel = static_cast<SdwaSel>(DstSel->getImm());
+  std::optional<SdwaSel> NewSel = combineSdwaSel(ExistingSel, getDstSel());
+  if (!NewSel.has_value())
+    return false;
+  DstSel->setImm(NewSel.value());
+
   MachineOperand *DstUnused= TII->getNamedOperand(MI, AMDGPU::OpName::dst_unused);
   assert(DstUnused);
   DstUnused->setImm(getDstUnused());
