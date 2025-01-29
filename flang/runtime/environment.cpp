@@ -145,8 +145,8 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
 
   if (auto *x{std::getenv("CUDA_STACKLIMIT")}) {
     char *end;
-    auto n{std::strtol(x, &end, 10)};
-    if (n >= 0 && n < std::numeric_limits<int>::max() && *end == '\0') {
+    auto n{std::strtoul(x, &end, 10)};
+    if (n > 0 && n < std::numeric_limits<std::size_t>::max() && *end == '\0') {
       cudaStackLimit = n;
     } else {
       std::fprintf(stderr,
