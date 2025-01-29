@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -fextend-this-ptr-liveness -o - | FileCheck %s --implicit-check-not=fake.use
+// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -fextend-variable-liveness=this -o - | FileCheck %s --implicit-check-not=fake.use
 // Check that we generate a fake_use call with the 'this' pointer as argument,
 // and no other fake uses.
 // The call should appear after the call to bar().
