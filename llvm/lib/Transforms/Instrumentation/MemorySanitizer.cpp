@@ -4702,7 +4702,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // These AVX512 variants contain the rounding mode as a trailing flag.
       // Earlier variants do not have a trailing flag and are already handled
       // by maybeHandleSimpleNomemIntrinsic(I, 0) via handleUnknownIntrinsic.
-      bool Success = maybeHandleSimpleNomemIntrinsic(I, /*trailingFlags=*/1);
+      [[maybe_unused]] bool Success =
+          maybeHandleSimpleNomemIntrinsic(I, /*trailingFlags=*/1);
       assert(Success);
       break;
     }
