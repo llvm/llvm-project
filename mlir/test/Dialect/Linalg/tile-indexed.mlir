@@ -19,13 +19,13 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-// TILE-10n25-DAG: [[$MAP:#[a-zA-Z0-9_]*]] = affine_map<(d0, d1) -> (d0 + d1)>
+// TILE-10n25-DAG: [[$MAP:#[a-zA-Z0-9_]*]] = affine_map<(d0)[s0] -> (d0 + s0)> 
 // TILE-10n25-LABEL: func @indexed_vector
 // TILE-10n25: %[[C10:.*]] = arith.constant 10 : index
 // TILE-10n25: scf.for %[[J:.*]] = {{.*}} step %[[C10]]
 // TILE-10n25:   linalg.generic
 // TILE-10n25:     %[[I:.*]] = linalg.index 0 : index
-// TILE-10n25:     %[[NEW_I:.*]] = affine.apply [[$MAP]](%[[I]], %[[J]])
+// TILE-10n25:     %[[NEW_I:.*]] = affine.apply [[$MAP]](%[[J]])[%[[I]]]
 // TILE-10n25:     linalg.yield %[[NEW_I]] : index
 
 // -----
@@ -51,7 +51,7 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-// TILE-10n25-DAG: [[$MAP:#[a-zA-Z0-9_]*]] = affine_map<(d0, d1) -> (d0 + d1)>
+// TILE-10n25-DAG: [[$MAP:#[a-zA-Z0-9_]*]] = affine_map<(d0)[s0] -> (d0 + s0)>
 // TILE-10n25-LABEL: func @indexed_matrix
 // TILE-10n25-DAG: %[[C25:.*]] = arith.constant 25 : index
 // TILE-10n25-DAG: %[[C10:.*]] = arith.constant 10 : index
@@ -59,8 +59,8 @@ module attributes {transform.with_named_sequence} {
 // TILE-10n25:   scf.for %[[L:.*]] = {{.*}} step %[[C25]]
 // TILE-10n25:     linalg.generic
 // TILE-10n25:       %[[I:.*]] = linalg.index 0 : index
-// TILE-10n25:       %[[NEW_I:.*]] = affine.apply [[$MAP]](%[[I]], %[[K]])
+// TILE-10n25:       %[[NEW_I:.*]] = affine.apply [[$MAP]](%[[K]])[%[[I]]]
 // TILE-10n25:       %[[J:.*]] = linalg.index 1 : index
-// TILE-10n25:       %[[NEW_J:.*]] = affine.apply [[$MAP]](%[[J]], %[[L]])
+// TILE-10n25:       %[[NEW_J:.*]] = affine.apply [[$MAP]](%[[L]])[%[[J]]]
 // TILE-10n25:       %[[SUM:.*]] = arith.addi %[[NEW_I]], %[[NEW_J]] : index
 // TILE-10n25:       linalg.yield %[[SUM]] : index

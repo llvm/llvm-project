@@ -1,5 +1,5 @@
 add_header_library(
-  performance_counter 
+  performance_counter
   HDRS
     performance_counter.h
   DEPENDS

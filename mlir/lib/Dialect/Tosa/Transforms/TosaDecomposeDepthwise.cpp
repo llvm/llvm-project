@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
@@ -108,11 +109,7 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
         }
       }
 
-      auto padSizeTy = RankedTensorType::get({5, 2}, rewriter.getI64Type());
-      auto padSize =
-          DenseIntElementsAttr::get(padSizeTy, ArrayRef<int64_t>(pad));
-      Value padSizeVal =
-          rewriter.create<tosa::ConstOp>(op->getLoc(), padSizeTy, padSize);
+      Value padSizeVal = getTosaConstShape(rewriter, op->getLoc(), pad);
 
       auto padTy = RankedTensorType::get({}, inputETy);
       auto padAttr = DenseElementsAttr::get(padTy, zeroAttr);
@@ -135,9 +132,15 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
       return failure();
     }
 
+    auto shiftElementType = IntegerType::get(rewriter.getContext(), 8);
+    auto shiftType = RankedTensorType::get({1}, shiftElementType);
+    auto shiftZeroAttr = DenseElementsAttr::get(
+        shiftType, rewriter.getIntegerAttr(shiftElementType, 0));
+    Value constZero =
+        rewriter.create<tosa::ConstOp>(op.getLoc(), shiftType, shiftZeroAttr);
     Value mulValue = rewriter
                          .create<tosa::MulOp>(op.getLoc(), mulShapeType, input,
-                                              weight, /*shift=*/0)
+                                              weight, constZero)
                          .getResult();
 
     // Reshape output to [N, H, W, C * M].

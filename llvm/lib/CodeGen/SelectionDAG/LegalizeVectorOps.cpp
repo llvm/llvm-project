@@ -503,6 +503,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMINIMUM:
+  case ISD::VECTOR_FIND_LAST_ACTIVE:
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
     break;
@@ -737,7 +738,17 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
               .getVectorElementType()
               .isFloatingPoint() &&
           NVT.isVector() && NVT.getVectorElementType().isFloatingPoint())
-        Operands[j] = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(j));
+        if (ISD::isVPOpcode(Node->getOpcode())) {
+          unsigned EVLIdx =
+              *ISD::getVPExplicitVectorLengthIdx(Node->getOpcode());
+          unsigned MaskIdx = *ISD::getVPMaskIdx(Node->getOpcode());
+          Operands[j] =
+              DAG.getNode(ISD::VP_FP_EXTEND, dl, NVT, Node->getOperand(j),
+                          Node->getOperand(MaskIdx), Node->getOperand(EVLIdx));
+        } else {
+          Operands[j] =
+              DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(j));
+        }
       else
         Operands[j] = DAG.getNode(ISD::BITCAST, dl, NVT, Node->getOperand(j));
     else
@@ -750,8 +761,15 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   if ((VT.isFloatingPoint() && NVT.isFloatingPoint()) ||
       (VT.isVector() && VT.getVectorElementType().isFloatingPoint() &&
        NVT.isVector() && NVT.getVectorElementType().isFloatingPoint()))
-    Res = DAG.getNode(ISD::FP_ROUND, dl, VT, Res,
-                      DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
+    if (ISD::isVPOpcode(Node->getOpcode())) {
+      unsigned EVLIdx = *ISD::getVPExplicitVectorLengthIdx(Node->getOpcode());
+      unsigned MaskIdx = *ISD::getVPMaskIdx(Node->getOpcode());
+      Res = DAG.getNode(ISD::VP_FP_ROUND, dl, VT, Res,
+                        Node->getOperand(MaskIdx), Node->getOperand(EVLIdx));
+    } else {
+      Res = DAG.getNode(ISD::FP_ROUND, dl, VT, Res,
+                        DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
+    }
   else
     Res = DAG.getNode(ISD::BITCAST, dl, VT, Res);
 
@@ -1207,6 +1225,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   }
   case ISD::VECTOR_COMPRESS:
     Results.push_back(TLI.expandVECTOR_COMPRESS(Node, DAG));
+    return;
+  case ISD::VECTOR_FIND_LAST_ACTIVE:
+    Results.push_back(TLI.expandVectorFindLastActive(Node, DAG));
     return;
   case ISD::SCMP:
   case ISD::UCMP:
@@ -1744,7 +1765,8 @@ void VectorLegalizer::ExpandUINT_TO_FLOAT(SDNode *Node,
   bool IsStrict = Node->isStrictFPOpcode();
   unsigned OpNo = IsStrict ? 1 : 0;
   SDValue Src = Node->getOperand(OpNo);
-  EVT VT = Src.getValueType();
+  EVT SrcVT = Src.getValueType();
+  EVT DstVT = Node->getValueType(0);
   SDLoc DL(Node);
 
   // Attempt to expand using TargetLowering.
@@ -1758,11 +1780,11 @@ void VectorLegalizer::ExpandUINT_TO_FLOAT(SDNode *Node,
   }
 
   // Make sure that the SINT_TO_FP and SRL instructions are available.
-  if (((!IsStrict && TLI.getOperationAction(ISD::SINT_TO_FP, VT) ==
+  if (((!IsStrict && TLI.getOperationAction(ISD::SINT_TO_FP, SrcVT) ==
                          TargetLowering::Expand) ||
-       (IsStrict && TLI.getOperationAction(ISD::STRICT_SINT_TO_FP, VT) ==
+       (IsStrict && TLI.getOperationAction(ISD::STRICT_SINT_TO_FP, SrcVT) ==
                         TargetLowering::Expand)) ||
-      TLI.getOperationAction(ISD::SRL, VT) == TargetLowering::Expand) {
+      TLI.getOperationAction(ISD::SRL, SrcVT) == TargetLowering::Expand) {
     if (IsStrict) {
       UnrollStrictFPOp(Node, Results);
       return;
@@ -1772,37 +1794,59 @@ void VectorLegalizer::ExpandUINT_TO_FLOAT(SDNode *Node,
     return;
   }
 
-  unsigned BW = VT.getScalarSizeInBits();
+  unsigned BW = SrcVT.getScalarSizeInBits();
   assert((BW == 64 || BW == 32) &&
          "Elements in vector-UINT_TO_FP must be 32 or 64 bits wide");
 
-  SDValue HalfWord = DAG.getConstant(BW / 2, DL, VT);
+  // If STRICT_/FMUL is not supported by the target (in case of f16) replace the
+  // UINT_TO_FP with a larger float and round to the smaller type
+  if ((!IsStrict && !TLI.isOperationLegalOrCustom(ISD::FMUL, DstVT)) ||
+      (IsStrict && !TLI.isOperationLegalOrCustom(ISD::STRICT_FMUL, DstVT))) {
+    EVT FPVT = BW == 32 ? MVT::f32 : MVT::f64;
+    SDValue UIToFP;
+    SDValue Result;
+    SDValue TargetZero = DAG.getIntPtrConstant(0, DL, /*isTarget=*/true);
+    EVT FloatVecVT = SrcVT.changeVectorElementType(FPVT);
+    if (IsStrict) {
+      UIToFP = DAG.getNode(ISD::STRICT_UINT_TO_FP, DL, {FloatVecVT, MVT::Other},
+                           {Node->getOperand(0), Src});
+      Result = DAG.getNode(ISD::STRICT_FP_ROUND, DL, {DstVT, MVT::Other},
+                           {Node->getOperand(0), UIToFP, TargetZero});
+      Results.push_back(Result);
+      Results.push_back(Result.getValue(1));
+    } else {
+      UIToFP = DAG.getNode(ISD::UINT_TO_FP, DL, FloatVecVT, Src);
+      Result = DAG.getNode(ISD::FP_ROUND, DL, DstVT, UIToFP, TargetZero);
+      Results.push_back(Result);
+    }
+
+    return;
+  }
+
+  SDValue HalfWord = DAG.getConstant(BW / 2, DL, SrcVT);
 
   // Constants to clear the upper part of the word.
   // Notice that we can also use SHL+SHR, but using a constant is slightly
   // faster on x86.
   uint64_t HWMask = (BW == 64) ? 0x00000000FFFFFFFF : 0x0000FFFF;
-  SDValue HalfWordMask = DAG.getConstant(HWMask, DL, VT);
+  SDValue HalfWordMask = DAG.getConstant(HWMask, DL, SrcVT);
 
   // Two to the power of half-word-size.
-  SDValue TWOHW =
-      DAG.getConstantFP(1ULL << (BW / 2), DL, Node->getValueType(0));
+  SDValue TWOHW = DAG.getConstantFP(1ULL << (BW / 2), DL, DstVT);
 
   // Clear upper part of LO, lower HI
-  SDValue HI = DAG.getNode(ISD::SRL, DL, VT, Src, HalfWord);
-  SDValue LO = DAG.getNode(ISD::AND, DL, VT, Src, HalfWordMask);
+  SDValue HI = DAG.getNode(ISD::SRL, DL, SrcVT, Src, HalfWord);
+  SDValue LO = DAG.getNode(ISD::AND, DL, SrcVT, Src, HalfWordMask);
 
   if (IsStrict) {
     // Convert hi and lo to floats
     // Convert the hi part back to the upper values
     // TODO: Can any fast-math-flags be set on these nodes?
-    SDValue fHI = DAG.getNode(ISD::STRICT_SINT_TO_FP, DL,
-                              {Node->getValueType(0), MVT::Other},
+    SDValue fHI = DAG.getNode(ISD::STRICT_SINT_TO_FP, DL, {DstVT, MVT::Other},
                               {Node->getOperand(0), HI});
-    fHI = DAG.getNode(ISD::STRICT_FMUL, DL, {Node->getValueType(0), MVT::Other},
+    fHI = DAG.getNode(ISD::STRICT_FMUL, DL, {DstVT, MVT::Other},
                       {fHI.getValue(1), fHI, TWOHW});
-    SDValue fLO = DAG.getNode(ISD::STRICT_SINT_TO_FP, DL,
-                              {Node->getValueType(0), MVT::Other},
+    SDValue fLO = DAG.getNode(ISD::STRICT_SINT_TO_FP, DL, {DstVT, MVT::Other},
                               {Node->getOperand(0), LO});
 
     SDValue TF = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, fHI.getValue(1),
@@ -1810,8 +1854,7 @@ void VectorLegalizer::ExpandUINT_TO_FLOAT(SDNode *Node,
 
     // Add the two halves
     SDValue Result =
-        DAG.getNode(ISD::STRICT_FADD, DL, {Node->getValueType(0), MVT::Other},
-                    {TF, fHI, fLO});
+        DAG.getNode(ISD::STRICT_FADD, DL, {DstVT, MVT::Other}, {TF, fHI, fLO});
 
     Results.push_back(Result);
     Results.push_back(Result.getValue(1));
@@ -1821,13 +1864,12 @@ void VectorLegalizer::ExpandUINT_TO_FLOAT(SDNode *Node,
   // Convert hi and lo to floats
   // Convert the hi part back to the upper values
   // TODO: Can any fast-math-flags be set on these nodes?
-  SDValue fHI = DAG.getNode(ISD::SINT_TO_FP, DL, Node->getValueType(0), HI);
-  fHI = DAG.getNode(ISD::FMUL, DL, Node->getValueType(0), fHI, TWOHW);
-  SDValue fLO = DAG.getNode(ISD::SINT_TO_FP, DL, Node->getValueType(0), LO);
+  SDValue fHI = DAG.getNode(ISD::SINT_TO_FP, DL, DstVT, HI);
+  fHI = DAG.getNode(ISD::FMUL, DL, DstVT, fHI, TWOHW);
+  SDValue fLO = DAG.getNode(ISD::SINT_TO_FP, DL, DstVT, LO);
 
   // Add the two halves
-  Results.push_back(
-      DAG.getNode(ISD::FADD, DL, Node->getValueType(0), fHI, fLO));
+  Results.push_back(DAG.getNode(ISD::FADD, DL, DstVT, fHI, fLO));
 }
 
 SDValue VectorLegalizer::ExpandFNEG(SDNode *Node) {

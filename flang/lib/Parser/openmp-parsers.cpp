@@ -153,6 +153,161 @@ static TypeDeclarationStmt makeIterSpecDecl(std::list<ObjectName> &&names) {
       makeEntityList(std::move(names)));
 }
 
+// --- Parsers for context traits -------------------------------------
+
+static std::string nameToString(Name &&name) { return name.ToString(); }
+
+TYPE_PARSER(sourced(construct<OmpTraitPropertyName>( //
+    construct<OmpTraitPropertyName>(space >> charLiteralConstantWithoutKind) ||
+    construct<OmpTraitPropertyName>(
+        applyFunction(nameToString, Parser<Name>{})))))
+
+TYPE_PARSER(sourced(construct<OmpTraitScore>( //
+    "SCORE"_id >> parenthesized(scalarIntExpr))))
+
+TYPE_PARSER(sourced(construct<OmpTraitPropertyExtension::Complex>(
+    Parser<OmpTraitPropertyName>{},
+    parenthesized(nonemptySeparated(
+        indirect(Parser<OmpTraitPropertyExtension>{}), ",")))))
+
+TYPE_PARSER(sourced(construct<OmpTraitPropertyExtension>(
+    construct<OmpTraitPropertyExtension>(
+        Parser<OmpTraitPropertyExtension::Complex>{}) ||
+    construct<OmpTraitPropertyExtension>(Parser<OmpTraitPropertyName>{}) ||
+    construct<OmpTraitPropertyExtension>(scalarExpr))))
+
+TYPE_PARSER(construct<OmpTraitSelectorName::Value>(
+    "ARCH"_id >> pure(OmpTraitSelectorName::Value::Arch) ||
+    "ATOMIC_DEFAULT_MEM_ORDER"_id >>
+        pure(OmpTraitSelectorName::Value::Atomic_Default_Mem_Order) ||
+    "CONDITION"_id >> pure(OmpTraitSelectorName::Value::Condition) ||
+    "DEVICE_NUM"_id >> pure(OmpTraitSelectorName::Value::Device_Num) ||
+    "EXTENSION"_id >> pure(OmpTraitSelectorName::Value::Extension) ||
+    "ISA"_id >> pure(OmpTraitSelectorName::Value::Isa) ||
+    "KIND"_id >> pure(OmpTraitSelectorName::Value::Kind) ||
+    "REQUIRES"_id >> pure(OmpTraitSelectorName::Value::Requires) ||
+    "SIMD"_id >> pure(OmpTraitSelectorName::Value::Simd) ||
+    "UID"_id >> pure(OmpTraitSelectorName::Value::Uid) ||
+    "VENDOR"_id >> pure(OmpTraitSelectorName::Value::Vendor)))
+
+TYPE_PARSER(sourced(construct<OmpTraitSelectorName>(
+    // Parse predefined names first (because of SIMD).
+    construct<OmpTraitSelectorName>(Parser<OmpTraitSelectorName::Value>{}) ||
+    construct<OmpTraitSelectorName>(OmpDirectiveNameParser{}) ||
+    // identifier-or-string for extensions
+    construct<OmpTraitSelectorName>(
+        applyFunction(nameToString, Parser<Name>{})) ||
+    construct<OmpTraitSelectorName>(space >> charLiteralConstantWithoutKind))))
+
+// Parser for OmpTraitSelector::Properties
+template <typename... PropParser>
+static constexpr auto propertyListParser(PropParser... pp) {
+  // Parse the property list "(score(expr): item1...)" in three steps:
+  // 1. Parse the "("
+  // 2. Parse the optional "score(expr):"
+  // 3. Parse the "item1, ...)", together with the ")".
+  // The reason for including the ")" in the 3rd step is to force parsing
+  // the entire list in each of the alternative property parsers. Otherwise,
+  // the name parser could stop after "foo" in "(foo, bar(1))", without
+  // allowing the next parser to give the list a try.
+  auto listOf{[](auto parser) { //
+    return nonemptySeparated(parser, ",");
+  }};
+
+  using P = OmpTraitProperty;
+  return maybe("(" >> //
+      construct<OmpTraitSelector::Properties>(
+          maybe(Parser<OmpTraitScore>{} / ":"),
+          (attempt(listOf(sourced(construct<P>(pp))) / ")") || ...)));
+}
+
+// Parser for OmpTraitSelector
+struct TraitSelectorParser {
+  using resultType = OmpTraitSelector;
+
+  constexpr TraitSelectorParser(Parser<OmpTraitSelectorName> p) : np(p) {}
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    auto name{attempt(np).Parse(state)};
+    if (!name.has_value()) {
+      return std::nullopt;
+    }
+
+    // Default fallback parser for lists that cannot be parser using the
+    // primary property parser.
+    auto extParser{Parser<OmpTraitPropertyExtension>{}};
+
+    if (auto *v{std::get_if<OmpTraitSelectorName::Value>(&name->u)}) {
+      // (*) The comments below show the sections of the OpenMP spec that
+      // describe given trait. The cases marked with a (*) are those where
+      // the spec doesn't assign any list-type to these traits, but for
+      // convenience they can be treated as if they were.
+      switch (*v) {
+      // name-list properties
+      case OmpTraitSelectorName::Value::Arch: // [6.0:319:18]
+      case OmpTraitSelectorName::Value::Extension: // [6.0:319:30]
+      case OmpTraitSelectorName::Value::Isa: // [6.0:319:15]
+      case OmpTraitSelectorName::Value::Kind: // [6.0:319:10]
+      case OmpTraitSelectorName::Value::Uid: // [6.0:319:23](*)
+      case OmpTraitSelectorName::Value::Vendor: { // [6.0:319:27]
+        auto pp{propertyListParser(Parser<OmpTraitPropertyName>{}, extParser)};
+        return OmpTraitSelector(std::move(*name), std::move(*pp.Parse(state)));
+      }
+      // clause-list
+      case OmpTraitSelectorName::Value::Atomic_Default_Mem_Order:
+        // [6.0:321:26-29](*)
+      case OmpTraitSelectorName::Value::Requires: // [6.0:319:33]
+      case OmpTraitSelectorName::Value::Simd: { // [6.0:318:31]
+        auto pp{propertyListParser(indirect(Parser<OmpClause>{}), extParser)};
+        return OmpTraitSelector(std::move(*name), std::move(*pp.Parse(state)));
+      }
+      // expr-list
+      case OmpTraitSelectorName::Value::Condition: // [6.0:321:33](*)
+      case OmpTraitSelectorName::Value::Device_Num: { // [6.0:321:23-24](*)
+        auto pp{propertyListParser(scalarExpr, extParser)};
+        return OmpTraitSelector(std::move(*name), std::move(*pp.Parse(state)));
+      }
+      } // switch
+    } else {
+      // The other alternatives are `llvm::omp::Directive`, and `std::string`.
+      // The former doesn't take any properties[1], the latter is a name of an
+      // extension[2].
+      // [1] [6.0:319:1-2]
+      // [2] [6.0:319:36-37]
+      auto pp{propertyListParser(extParser)};
+      return OmpTraitSelector(std::move(*name), std::move(*pp.Parse(state)));
+    }
+
+    llvm_unreachable("Unhandled trait name?");
+  }
+
+private:
+  const Parser<OmpTraitSelectorName> np;
+};
+
+TYPE_PARSER(sourced(construct<OmpTraitSelector>(
+    sourced(TraitSelectorParser(Parser<OmpTraitSelectorName>{})))))
+
+TYPE_PARSER(construct<OmpTraitSetSelectorName::Value>(
+    "CONSTRUCT"_id >> pure(OmpTraitSetSelectorName::Value::Construct) ||
+    "DEVICE"_id >> pure(OmpTraitSetSelectorName::Value::Device) ||
+    "IMPLEMENTATION"_id >>
+        pure(OmpTraitSetSelectorName::Value::Implementation) ||
+    "TARGET_DEVICE"_id >> pure(OmpTraitSetSelectorName::Value::Target_Device) ||
+    "USER"_id >> pure(OmpTraitSetSelectorName::Value::User)))
+
+TYPE_PARSER(sourced(construct<OmpTraitSetSelectorName>(
+    Parser<OmpTraitSetSelectorName::Value>{})))
+
+TYPE_PARSER(sourced(construct<OmpTraitSetSelector>( //
+    Parser<OmpTraitSetSelectorName>{},
+    "=" >> braced(nonemptySeparated(Parser<OmpTraitSelector>{}, ",")))))
+
+TYPE_PARSER(sourced(construct<OmpContextSelectorSpecification>(
+    nonemptySeparated(Parser<OmpTraitSetSelector>{}, ","))))
+
+// Parser<OmpContextSelector> == Parser<traits::OmpContextSelectorSpecification>
+
 // --- Parsers for clause modifiers -----------------------------------
 
 TYPE_PARSER(construct<OmpAlignment>(scalarIntExpr))
@@ -663,11 +818,15 @@ TYPE_PARSER(
     "MERGEABLE" >> construct<OmpClause>(construct<OmpClause::Mergeable>()) ||
     "MESSAGE" >> construct<OmpClause>(construct<OmpClause::Message>(
                      parenthesized(Parser<OmpMessageClause>{}))) ||
+    "NOCONTEXT" >> construct<OmpClause>(construct<OmpClause::Nocontext>(
+                       parenthesized(scalarLogicalExpr))) ||
     "NOGROUP" >> construct<OmpClause>(construct<OmpClause::Nogroup>()) ||
     "NONTEMPORAL" >> construct<OmpClause>(construct<OmpClause::Nontemporal>(
                          parenthesized(nonemptyList(name)))) ||
     "NOTINBRANCH" >>
         construct<OmpClause>(construct<OmpClause::Notinbranch>()) ||
+    "NOVARIANTS" >> construct<OmpClause>(construct<OmpClause::Novariants>(
+                        parenthesized(scalarLogicalExpr))) ||
     "NOWAIT" >> construct<OmpClause>(construct<OmpClause::Nowait>()) ||
     "NUM_TASKS" >> construct<OmpClause>(construct<OmpClause::NumTasks>(
                        parenthesized(Parser<OmpNumTasksClause>{}))) ||
@@ -1042,6 +1201,16 @@ TYPE_PARSER(sourced(construct<OmpCriticalDirective>(verbatim("CRITICAL"_tok),
 TYPE_PARSER(construct<OpenMPCriticalConstruct>(
     Parser<OmpCriticalDirective>{}, block, Parser<OmpEndCriticalDirective>{}))
 
+TYPE_PARSER(sourced(construct<OmpDispatchDirective>(
+    verbatim("DISPATCH"_tok), Parser<OmpClauseList>{})))
+
+TYPE_PARSER(
+    construct<OmpEndDispatchDirective>(startOmpLine >> "END DISPATCH"_tok))
+
+TYPE_PARSER(sourced(construct<OpenMPDispatchConstruct>(
+    Parser<OmpDispatchDirective>{} / endOmpLine, block,
+    maybe(Parser<OmpEndDispatchDirective>{} / endOmpLine))))
+
 // 2.11.3 Executable Allocate directive
 TYPE_PARSER(
     sourced(construct<OpenMPExecutableAllocate>(verbatim("ALLOCATE"_tok),
@@ -1142,6 +1311,7 @@ TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
                 construct<OpenMPConstruct>(Parser<OpenMPStandaloneConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPAtomicConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPUtilityConstruct>{}),
+                construct<OpenMPConstruct>(Parser<OpenMPDispatchConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPExecutableAllocate>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPAllocatorsConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPDeclarativeAllocate>{}),

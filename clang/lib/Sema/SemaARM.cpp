@@ -352,6 +352,8 @@ static QualType getNeonEltType(NeonTypeFlags Flags, ASTContext &Context,
     return Context.DoubleTy;
   case NeonTypeFlags::BFloat16:
     return Context.BFloat16Ty;
+  case NeonTypeFlags::MFloat8:
+    return Context.MFloat8Ty;
   }
   llvm_unreachable("Invalid NeonTypeFlag!");
 }
@@ -620,20 +622,6 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
     return false;
 
   return true;
-}
-
-static bool hasArmZAState(const FunctionDecl *FD) {
-  const auto *T = FD->getType()->getAs<FunctionProtoType>();
-  return (T && FunctionType::getArmZAState(T->getAArch64SMEAttributes()) !=
-                   FunctionType::ARM_None) ||
-         (FD->hasAttr<ArmNewAttr>() && FD->getAttr<ArmNewAttr>()->isNewZA());
-}
-
-static bool hasArmZT0State(const FunctionDecl *FD) {
-  const auto *T = FD->getType()->getAs<FunctionProtoType>();
-  return (T && FunctionType::getArmZT0State(T->getAArch64SMEAttributes()) !=
-                   FunctionType::ARM_None) ||
-         (FD->hasAttr<ArmNewAttr>() && FD->getAttr<ArmNewAttr>()->isNewZT0());
 }
 
 static ArmSMEState getSMEState(unsigned BuiltinID) {
@@ -1326,6 +1314,67 @@ void SemaARM::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
 
   D->addAttr(::new (getASTContext())
                  ARMInterruptAttr(getASTContext(), AL, Kind));
+}
+
+// Check if the function definition uses any AArch64 SME features without
+// having the '+sme' feature enabled and warn user if sme locally streaming
+// function returns or uses arguments with VL-based types.
+void SemaARM::CheckSMEFunctionDefAttributes(const FunctionDecl *FD) {
+  const auto *Attr = FD->getAttr<ArmNewAttr>();
+  bool UsesSM = FD->hasAttr<ArmLocallyStreamingAttr>();
+  bool UsesZA = Attr && Attr->isNewZA();
+  bool UsesZT0 = Attr && Attr->isNewZT0();
+
+  if (UsesZA || UsesZT0) {
+    if (const auto *FPT = FD->getType()->getAs<FunctionProtoType>()) {
+      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+      if (EPI.AArch64SMEAttributes & FunctionType::SME_AgnosticZAStateMask)
+        Diag(FD->getLocation(), diag::err_sme_unsupported_agnostic_new);
+    }
+  }
+
+  if (FD->hasAttr<ArmLocallyStreamingAttr>()) {
+    if (FD->getReturnType()->isSizelessVectorType())
+      Diag(FD->getLocation(),
+           diag::warn_sme_locally_streaming_has_vl_args_returns)
+          << /*IsArg=*/false;
+    if (llvm::any_of(FD->parameters(), [](ParmVarDecl *P) {
+          return P->getOriginalType()->isSizelessVectorType();
+        }))
+      Diag(FD->getLocation(),
+           diag::warn_sme_locally_streaming_has_vl_args_returns)
+          << /*IsArg=*/true;
+  }
+  if (const auto *FPT = FD->getType()->getAs<FunctionProtoType>()) {
+    FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+    UsesSM |= EPI.AArch64SMEAttributes & FunctionType::SME_PStateSMEnabledMask;
+    UsesZA |= FunctionType::getArmZAState(EPI.AArch64SMEAttributes) !=
+              FunctionType::ARM_None;
+    UsesZT0 |= FunctionType::getArmZT0State(EPI.AArch64SMEAttributes) !=
+               FunctionType::ARM_None;
+  }
+
+  ASTContext &Context = getASTContext();
+  if (UsesSM || UsesZA) {
+    llvm::StringMap<bool> FeatureMap;
+    Context.getFunctionFeatureMap(FeatureMap, FD);
+    if (!FeatureMap.contains("sme")) {
+      if (UsesSM)
+        Diag(FD->getLocation(),
+             diag::err_sme_definition_using_sm_in_non_sme_target);
+      else
+        Diag(FD->getLocation(),
+             diag::err_sme_definition_using_za_in_non_sme_target);
+    }
+  }
+  if (UsesZT0) {
+    llvm::StringMap<bool> FeatureMap;
+    Context.getFunctionFeatureMap(FeatureMap, FD);
+    if (!FeatureMap.contains("sme2")) {
+      Diag(FD->getLocation(),
+           diag::err_sme_definition_using_zt0_in_non_sme2_target);
+    }
+  }
 }
 
 } // namespace clang
