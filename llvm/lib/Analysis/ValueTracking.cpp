@@ -592,6 +592,41 @@ static bool cmpExcludesZero(CmpInst::Predicate Pred, const Value *RHS) {
   return true;
 }
 
+static void breakSelfRecursivePHI(const Use *U, const PHINode *PHI,
+                                  Value *&ValOut, Instruction *&CtxIOut,
+                                  const PHINode **PhiOut = nullptr) {
+  ValOut = U->get();
+  if (ValOut == PHI)
+    return;
+  CtxIOut = PHI->getIncomingBlock(*U)->getTerminator();
+  if (PhiOut)
+    *PhiOut = PHI;
+  Value *V;
+  // If the Use is a select of this phi, compute analysis on other arm to break
+  // recursion.
+  // TODO: Min/Max
+  if (match(ValOut, m_Select(m_Value(), m_Specific(PHI), m_Value(V))) ||
+      match(ValOut, m_Select(m_Value(), m_Value(V), m_Specific(PHI))))
+    ValOut = V;
+
+  // Same for select, if this phi is 2-operand phi, compute analysis on other
+  // incoming value to break recursion.
+  // TODO: We could handle any number of incoming edges as long as we only have
+  // two unique values.
+  if (auto *IncPhi = dyn_cast<PHINode>(ValOut);
+      IncPhi && IncPhi->getNumIncomingValues() == 2) {
+    for (int Idx = 0; Idx < 2; ++Idx) {
+      if (IncPhi->getIncomingValue(Idx) == PHI) {
+        ValOut = IncPhi->getIncomingValue(1 - Idx);
+        if (PhiOut)
+          *PhiOut = IncPhi;
+        CtxIOut = IncPhi->getIncomingBlock(1 - Idx)->getTerminator();
+        break;
+      }
+    }
+  }
+}
+
 static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
   // Use of assumptions is context-sensitive. If we don't have a context, we
   // cannot use them!
@@ -1641,25 +1676,20 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
       Known.Zero.setAllBits();
       Known.One.setAllBits();
-      for (unsigned u = 0, e = P->getNumIncomingValues(); u < e; ++u) {
-        Value *IncValue = P->getIncomingValue(u);
+      for (const Use &U : P->operands()) {
+        Value *IncValue;
+        const PHINode *CxtPhi;
+        Instruction *CxtI;
+        breakSelfRecursivePHI(&U, P, IncValue, CxtI, &CxtPhi);
         // Skip direct self references.
-        if (IncValue == P) continue;
-
-        // If the Use is a select of this phi, use the knownbit of the other
-        // operand to break the recursion.
-        if (auto *SI = dyn_cast<SelectInst>(IncValue)) {
-          if (SI->getTrueValue() == P || SI->getFalseValue() == P)
-            IncValue = SI->getTrueValue() == P ? SI->getFalseValue()
-                                               : SI->getTrueValue();
-        }
+        if (IncValue == P)
+          continue;
 
         // Change the context instruction to the "edge" that flows into the
         // phi. This is important because that is where the value is actually
         // "evaluated" even though it is used later somewhere else. (see also
         // D69571).
-        SimplifyQuery RecQ = Q.getWithoutCondContext();
-        RecQ.CxtI = P->getIncomingBlock(u)->getTerminator();
+        SimplifyQuery RecQ = Q.getWithoutCondContext().getWithInstruction(CxtI);
 
         Known2 = KnownBits(BitWidth);
 
@@ -1681,9 +1711,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
                     m_Br(m_c_ICmp(Pred, m_Specific(IncValue), m_APInt(RHSC)),
                          m_BasicBlock(TrueSucc), m_BasicBlock(FalseSucc)))) {
             // Check for cases of duplicate successors.
-            if ((TrueSucc == P->getParent()) != (FalseSucc == P->getParent())) {
+            if ((TrueSucc == CxtPhi->getParent()) !=
+                (FalseSucc == CxtPhi->getParent())) {
               // If we're using the false successor, invert the predicate.
-              if (FalseSucc == P->getParent())
+              if (FalseSucc == CxtPhi->getParent())
                 Pred = CmpInst::getInversePredicate(Pred);
               // Get the knownbits implied by the incoming phi condition.
               auto CR = ConstantRange::makeExactICmpRegion(Pred, *RHSC);
@@ -6053,29 +6084,12 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       bool First = true;
 
       for (const Use &U : P->operands()) {
-        Value *IncValue = U.get();
+        Value *IncValue;
+        Instruction *CxtI;
+        breakSelfRecursivePHI(&U, P, IncValue, CxtI);
         // Skip direct self references.
         if (IncValue == P)
           continue;
-
-        Instruction *CxtI = P->getIncomingBlock(U)->getTerminator();
-
-        // If the Use is a select of this phi, use the fp class of the other
-        // operand to break the recursion. Same around 2-operand phi nodes
-        Value *V;
-        if (match(IncValue, m_Select(m_Value(), m_Specific(P), m_Value(V))) ||
-            match(IncValue, m_Select(m_Value(), m_Value(V), m_Specific(P)))) {
-          IncValue = V;
-        } else if (auto *IncPhi = dyn_cast<PHINode>(IncValue);
-                   IncPhi && IncPhi->getNumIncomingValues() == 2) {
-          for (int Idx = 0; Idx < 2; ++Idx) {
-            if (IncPhi->getIncomingValue(Idx) == P) {
-              IncValue = IncPhi->getIncomingValue(1 - Idx);
-              CxtI = IncPhi->getIncomingBlock(1 - Idx)->getTerminator();
-              break;
-            }
-          }
-        }
 
         KnownFPClass KnownSrc;
         // Recurse, but cap the recursion to two levels, because we don't want
@@ -6192,9 +6206,9 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
   if (isa<UndefValue>(V))
     return UndefInt8;
 
-  // Return Undef for zero-sized type.
+  // Return poison for zero-sized type.
   if (DL.getTypeStoreSize(V->getType()).isZero())
-    return UndefInt8;
+    return PoisonValue::get(Type::getInt8Ty(Ctx));
 
   Constant *C = dyn_cast<Constant>(V);
   if (!C) {
@@ -6886,7 +6900,7 @@ const Value *llvm::getUnderlyingObjectAggressive(const Value *V) {
       return FirstObject;
   } while (!Worklist.empty());
 
-  return Object;
+  return Object ? Object : FirstObject;
 }
 
 /// This is the function that does the work of looking through basic
@@ -8239,7 +8253,7 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
     if (!BB || !Visited.insert(BB).second)
       break;
 
-    Begin = BB->getFirstNonPHI()->getIterator();
+    Begin = BB->getFirstNonPHIIt();
     End = BB->end();
   }
   return false;
@@ -9384,19 +9398,6 @@ isImpliedCondOperands(CmpInst::Predicate Pred, const Value *ALHS,
   }
 }
 
-/// Return true if "icmp1 LPred X, Y" implies "icmp2 RPred X, Y" is true.
-/// Return false if "icmp1 LPred X, Y" implies "icmp2 RPred X, Y" is false.
-/// Otherwise, return std::nullopt if we can't infer anything.
-static std::optional<bool> isImpliedCondMatchingOperands(CmpPredicate LPred,
-                                                         CmpPredicate RPred) {
-  if (ICmpInst::isImpliedTrueByMatchingCmp(LPred, RPred))
-    return true;
-  if (ICmpInst::isImpliedFalseByMatchingCmp(LPred, RPred))
-    return false;
-
-  return std::nullopt;
-}
-
 /// Return true if "icmp LPred X, LCR" implies "icmp RPred X, RCR" is true.
 /// Return false if "icmp LPred X, LCR" implies "icmp RPred X, RCR" is false.
 /// Otherwise, return std::nullopt if we can't infer anything.
@@ -9489,27 +9490,28 @@ isImpliedCondICmps(const ICmpInst *LHS, CmpPredicate RPred, const Value *R0,
 
   // Can we infer anything when the two compares have matching operands?
   if (L0 == R0 && L1 == R1)
-    return isImpliedCondMatchingOperands(LPred, RPred);
+    return ICmpInst::isImpliedByMatchingCmp(LPred, RPred);
 
   // It only really makes sense in the context of signed comparison for "X - Y
   // must be positive if X >= Y and no overflow".
   // Take SGT as an example:  L0:x > L1:y and C >= 0
   //                      ==> R0:(x -nsw y) < R1:(-C) is false
-  if ((CmpPredicate::getMatching(LPred, ICmpInst::ICMP_SGT) ||
-       CmpPredicate::getMatching(LPred, ICmpInst::ICMP_SGE)) &&
+  CmpInst::Predicate SignedLPred = LPred.getPreferredSignedPredicate();
+  if ((SignedLPred == ICmpInst::ICMP_SGT ||
+       SignedLPred == ICmpInst::ICMP_SGE) &&
       match(R0, m_NSWSub(m_Specific(L0), m_Specific(L1)))) {
     if (match(R1, m_NonPositive()) &&
-        isImpliedCondMatchingOperands(LPred, RPred) == false)
+        ICmpInst::isImpliedByMatchingCmp(SignedLPred, RPred) == false)
       return false;
   }
 
   // Take SLT as an example:  L0:x < L1:y and C <= 0
   //                      ==> R0:(x -nsw y) < R1:(-C) is true
-  if ((CmpPredicate::getMatching(LPred, ICmpInst::ICMP_SLT) ||
-       CmpPredicate::getMatching(LPred, ICmpInst::ICMP_SLE)) &&
+  if ((SignedLPred == ICmpInst::ICMP_SLT ||
+       SignedLPred == ICmpInst::ICMP_SLE) &&
       match(R0, m_NSWSub(m_Specific(L0), m_Specific(L1)))) {
     if (match(R1, m_NonNegative()) &&
-        isImpliedCondMatchingOperands(LPred, RPred) == true)
+        ICmpInst::isImpliedByMatchingCmp(SignedLPred, RPred) == true)
       return true;
   }
 

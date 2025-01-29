@@ -95,8 +95,9 @@ func.func @test_slice(%arg0: tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1x4x11
 // -----
 // CHECK-LABEL: tile
 func.func @test_tile(%arg0: tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1x39x21x6xf32> {
+  %cst = tosa.const_shape { value = dense<[1, 1, 1, 1, 3, 1, 2]> : tensor<7xindex> } : () -> !tosa.shape<7>
   // expected-error@+1 {{'tosa.tile' op failed level check: operand rank(shape) <= MAX_RANK}}
-  %0 = "tosa.tile"(%arg0) {multiples = array<i64: 1, 1, 1, 1, 3, 1, 2>} : (tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1x39x21x6xf32>
+  %0 = tosa.tile %arg0, %cst : (tensor<1x1x1x1x13x21x3xf32>, !tosa.shape<7>) -> tensor<1x1x1x1x39x21x6xf32>
   return %0 : tensor<1x1x1x1x39x21x6xf32>
 }
 
@@ -740,4 +741,3 @@ func.func @test_unranked_tensor(%arg0: tensor<*xf32>) {
           (tensor<*xf32>) -> tensor<*xf32>
   return
 }
-

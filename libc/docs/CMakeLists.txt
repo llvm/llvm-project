@@ -37,6 +37,7 @@ if (SPHINX_FOUND)
       aio
       arpa/inet
       assert
+      cpio
       ctype
       errno
       fenv
@@ -45,6 +46,8 @@ if (SPHINX_FOUND)
       locale
       net/if
       netinet/in
+      # TODO: https://github.com/llvm/llvm-project/issues/123821
+      # pthread
       setjmp
       signal
       stdbit
@@ -53,8 +56,14 @@ if (SPHINX_FOUND)
       string
       strings
       sys/mman
+      sys/resource
+      sys/stat
+      sys/time
+      sys/wait
+      termios
       threads
       uchar
+      unistd
       wchar
       wctype
     )

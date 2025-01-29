@@ -418,9 +418,9 @@ func.func @succeed_to_eliminate_one_empty_tensor() -> tensor<5x6x128xf32> {
 // empty with the new injected `SubsetExtraction`, i.e. the specific use
 // which has been tracked.
 
-// CHECK-ELIM-LABEL:   func.func @mutli_use_of_the_same_tensor_empty
-// CHECK-LABEL:   func.func @mutli_use_of_the_same_tensor_empty
-func.func @mutli_use_of_the_same_tensor_empty() -> tensor<5x6x128xf32> {
+// CHECK-ELIM-LABEL:   func.func @multi_use_of_the_same_tensor_empty
+// CHECK-LABEL:   func.func @multi_use_of_the_same_tensor_empty
+func.func @multi_use_of_the_same_tensor_empty() -> tensor<5x6x128xf32> {
   %cst_1 = arith.constant 1.0 : f32
   %cst_2 = arith.constant 2.0 : f32
   %cancatenated_empty = tensor.empty() : tensor<5x6x128xf32>
@@ -441,9 +441,9 @@ func.func @mutli_use_of_the_same_tensor_empty() -> tensor<5x6x128xf32> {
 
 // -----
 
-// CHECK-LABEL:   func.func @mutli_use_of_the_same_tensor_empty_creates_non_existent_read
-// CHECK-ELIM-LABEL:   func.func @mutli_use_of_the_same_tensor_empty_creates_non_existent_read
-func.func @mutli_use_of_the_same_tensor_empty_creates_non_existent_read(%arg1: tensor<5x6x128xf32> , %arg2: tensor<5x6x64xf32>)
+// CHECK-LABEL:   func.func @multi_use_of_the_same_tensor_empty_creates_non_existent_read
+// CHECK-ELIM-LABEL:   func.func @multi_use_of_the_same_tensor_empty_creates_non_existent_read
+func.func @multi_use_of_the_same_tensor_empty_creates_non_existent_read(%arg1: tensor<5x6x128xf32> , %arg2: tensor<5x6x64xf32>)
     -> (tensor<5x6x128xf32>, tensor<5x6x64xf32>) {
   %cst_1 = arith.constant 1.0 : f32
   %empty_1 = tensor.empty() : tensor<5x6x64xf32>

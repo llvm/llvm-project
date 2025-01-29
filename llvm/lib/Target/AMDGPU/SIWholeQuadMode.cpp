@@ -218,8 +218,8 @@ private:
                             bool IsWQM);
   MachineInstr *lowerKillF32(MachineBasicBlock &MBB, MachineInstr &MI);
 
-  void lowerBlock(MachineBasicBlock &MBB);
-  void processBlock(MachineBasicBlock &MBB, bool IsEntry);
+  void lowerBlock(MachineBasicBlock &MBB, BlockInfo &BI);
+  void processBlock(MachineBasicBlock &MBB, BlockInfo &BI, bool IsEntry);
 
   bool lowerLiveMaskQueries();
   bool lowerCopyInstrs();
@@ -960,7 +960,7 @@ MachineInstr *SIWholeQuadMode::lowerKillI1(MachineBasicBlock &MBB,
       // so exec mask needs to be factored in.
       TmpReg = MRI->createVirtualRegister(TRI->getBoolRC());
       ComputeKilledMaskMI =
-          BuildMI(MBB, MI, DL, TII->get(XorOpc), TmpReg).add(Op).addReg(Exec);
+          BuildMI(MBB, MI, DL, TII->get(AndN2Opc), TmpReg).addReg(Exec).add(Op);
       MaskUpdateMI = BuildMI(MBB, MI, DL, TII->get(AndN2Opc), LiveMaskReg)
                          .addReg(LiveMaskReg)
                          .addReg(TmpReg);
@@ -1035,12 +1035,7 @@ MachineInstr *SIWholeQuadMode::lowerKillI1(MachineBasicBlock &MBB,
 // Replace (or supplement) instructions accessing live mask.
 // This can only happen once all the live mask registers have been created
 // and the execute state (WQM/StrictWWM/Exact) of instructions is known.
-void SIWholeQuadMode::lowerBlock(MachineBasicBlock &MBB) {
-  auto *BII = Blocks.find(&MBB);
-  if (BII == Blocks.end())
-    return;
-
-  const BlockInfo &BI = BII->second;
+void SIWholeQuadMode::lowerBlock(MachineBasicBlock &MBB, BlockInfo &BI) {
   if (!BI.NeedsLowering)
     return;
 
@@ -1052,8 +1047,9 @@ void SIWholeQuadMode::lowerBlock(MachineBasicBlock &MBB) {
 
   for (MachineInstr &MI : llvm::make_early_inc_range(
            llvm::make_range(MBB.getFirstNonPHI(), MBB.end()))) {
-    if (StateTransition.count(&MI))
-      State = StateTransition[&MI];
+    auto MIState = StateTransition.find(&MI);
+    if (MIState != StateTransition.end())
+      State = MIState->second;
 
     MachineInstr *SplitPoint = nullptr;
     switch (MI.getOpcode()) {
@@ -1260,13 +1256,8 @@ void SIWholeQuadMode::fromStrictMode(MachineBasicBlock &MBB,
   StateTransition[MI] = NonStrictState;
 }
 
-void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
-  auto *BII = Blocks.find(&MBB);
-  if (BII == Blocks.end())
-    return;
-
-  BlockInfo &BI = BII->second;
-
+void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, BlockInfo &BI,
+                                   bool IsEntry) {
   // This is a non-entry block that is WQM throughout, so no need to do
   // anything.
   if (!IsEntry && BI.Needs == StateWQM && BI.OutNeeds != StateExact) {
@@ -1305,7 +1296,7 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
   // Record initial state is block information.
   BI.InitialState = State;
 
-  for (;;) {
+  for (unsigned Idx = 0;; ++Idx) {
     MachineBasicBlock::iterator Next = II;
     char Needs = StateExact | StateWQM; // Strict mode is disabled by default.
     char OutNeeds = 0;
@@ -1315,6 +1306,10 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
 
     if (FirstStrict == IE)
       FirstStrict = II;
+
+    // Adjust needs if this is first instruction of WQM requiring shader.
+    if (IsEntry && Idx == 0 && (BI.InNeeds & StateWQM))
+      Needs = StateWQM;
 
     // First, figure out the allowed states (Needs) based on the propagated
     // flags.
@@ -1801,12 +1796,15 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
     lowerKillInstrs(true);
     Changed = true;
   } else {
+    // Mark entry for WQM if required.
+    if (GlobalFlags & StateWQM)
+      Blocks[&Entry].InNeeds |= StateWQM;
     // Wave mode switching requires full lowering pass.
-    for (auto BII : Blocks)
-      processBlock(*BII.first, BII.first == &Entry);
+    for (auto &BII : Blocks)
+      processBlock(*BII.first, BII.second, BII.first == &Entry);
     // Lowering blocks causes block splitting so perform as a second pass.
-    for (auto BII : Blocks)
-      lowerBlock(*BII.first);
+    for (auto &BII : Blocks)
+      lowerBlock(*BII.first, BII.second);
     Changed = true;
   }
 

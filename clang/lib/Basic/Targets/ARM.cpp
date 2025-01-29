@@ -608,6 +608,8 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasBTI = 1;
     } else if (Feature == "+fullbf16") {
       HasFullBFloat16 = true;
+    } else if (Feature == "+execute-only") {
+      TLSSupported = false;
     }
   }
 
@@ -617,7 +619,8 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   case 6:
     if (ArchProfile == llvm::ARM::ProfileKind::M)
       LDREX = 0;
-    else if (ArchKind == llvm::ARM::ArchKind::ARMV6K)
+    else if (ArchKind == llvm::ARM::ArchKind::ARMV6K ||
+             ArchKind == llvm::ARM::ArchKind::ARMV6KZ)
       LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
     else
       LDREX = LDREX_W;

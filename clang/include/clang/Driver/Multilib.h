@@ -103,18 +103,23 @@ raw_ostream &operator<<(raw_ostream &OS, const Multilib &M);
 
 namespace custom_flag {
 struct Declaration;
-using DeclarationPtr = std::shared_ptr<Declaration>;
 
 struct ValueDetail {
   std::string Name;
   std::optional<SmallVector<std::string>> MacroDefines;
-  DeclarationPtr Decl;
+  Declaration *Decl;
 };
 
 struct Declaration {
   std::string Name;
   SmallVector<ValueDetail> ValueList;
   std::optional<size_t> DefaultValueIdx;
+
+  Declaration() = default;
+  Declaration(const Declaration &);
+  Declaration(Declaration &&);
+  Declaration &operator=(const Declaration &);
+  Declaration &operator=(Declaration &&);
 };
 
 static constexpr StringRef Prefix = "-fmultilib-flag=";
@@ -140,7 +145,7 @@ public:
 private:
   multilib_list Multilibs;
   SmallVector<FlagMatcher> FlagMatchers;
-  SmallVector<custom_flag::DeclarationPtr> CustomFlagDecls;
+  SmallVector<custom_flag::Declaration> CustomFlagDecls;
   IncludeDirsFunc IncludeCallback;
   IncludeDirsFunc FilePathsCallback;
 
@@ -148,7 +153,7 @@ public:
   MultilibSet() = default;
   MultilibSet(multilib_list &&Multilibs,
               SmallVector<FlagMatcher> &&FlagMatchers = {},
-              SmallVector<custom_flag::DeclarationPtr> &&CustomFlagDecls = {})
+              SmallVector<custom_flag::Declaration> &&CustomFlagDecls = {})
       : Multilibs(std::move(Multilibs)), FlagMatchers(std::move(FlagMatchers)),
         CustomFlagDecls(std::move(CustomFlagDecls)) {}
 
@@ -163,9 +168,18 @@ public:
   const_iterator begin() const { return Multilibs.begin(); }
   const_iterator end() const { return Multilibs.end(); }
 
+  /// Process custom flags from \p Flags and returns an expanded flags list and
+  /// a list of macro defines.
+  /// Returns a pair where:
+  ///  - first: the new flags list including custom flags after processing.
+  ///  - second: the extra macro defines to be fed to the driver.
+  std::pair<Multilib::flags_list, SmallVector<StringRef>>
+  processCustomFlags(const Driver &D, const Multilib::flags_list &Flags) const;
+
   /// Select compatible variants, \returns false if none are compatible
   bool select(const Driver &D, const Multilib::flags_list &Flags,
-              llvm::SmallVectorImpl<Multilib> &) const;
+              llvm::SmallVectorImpl<Multilib> &,
+              llvm::SmallVector<StringRef> * = nullptr) const;
 
   unsigned size() const { return Multilibs.size(); }
 

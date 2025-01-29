@@ -762,8 +762,7 @@ bool ObjectFileELF::SetLoadAddress(Target &target, lldb::addr_t value,
           if (GetAddressByteSize() == 4)
             load_addr &= 0xFFFFFFFF;
 
-          if (target.GetSectionLoadList().SetSectionLoadAddress(section_sp,
-                                                                load_addr))
+          if (target.SetSectionLoadAddress(section_sp, load_addr))
             ++num_loaded_sections;
         }
       }
