@@ -552,9 +552,9 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
   // (AliasAnalysis::Source::SourceOrigin::isData) and debug output
   // (AliasAnalysis::Source::print) for isData as the current wording implies
   // !isData requires a box.
-  //if (mlir::isa_and_nonnull<fir::AllocaOp, fir::AllocMemOp>(defOp) &&
-  //    isPointerReference(v.getType()))
-  //  followingData = false;
+  if (mlir::isa_and_nonnull<fir::AllocaOp, fir::AllocMemOp>(defOp) &&
+      isPointerReference(v.getType()))
+    followingData = false;
   mlir::SymbolRefAttr global;
   Source::Attributes attributes;
   mlir::Operation *instantiationPoint{nullptr};
@@ -573,8 +573,8 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           // from the type.  TODO: That case occurs in our test suite
           // (alias-analysis-2.fir), but does flang currently generate such
           // code?
-          //if (isPointerReference(ty))
-          //  attributes.set(Attribute::Pointer);
+          if (isPointerReference(ty))
+            attributes.set(Attribute::Pointer);
           breakFromLoop = true;
         })
         .Case<fir::ConvertOp>([&](auto op) {
@@ -586,8 +586,8 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           v = op->getOperand(0);
           defOp = v.getDefiningOp();
           // C3
-          if (fir::isPointerType(v.getType()))
-            attributes.set(Attribute::Pointer);
+          //if (fir::isPointerType(v.getType()))
+          //  attributes.set(Attribute::Pointer);
           if (mlir::isa<fir::BaseBoxType>(v.getType()))
             followBoxData = true;
         })

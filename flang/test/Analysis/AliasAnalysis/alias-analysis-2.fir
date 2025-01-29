@@ -1,6 +1,6 @@
 // Use --mlir-disable-threading so that the AA queries are serialized
 // as well as its diagnostic output.
-// RUN: fir-opt -debug %s -o /dev/null -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' -split-input-file --mlir-disable-threading 2>&1 | FileCheck %s
+// RUN: fir-opt %s -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' -split-input-file --mlir-disable-threading 2>&1 | FileCheck %s
 
 // CHECK-LABEL: Testing : "_QFPtest"
 
