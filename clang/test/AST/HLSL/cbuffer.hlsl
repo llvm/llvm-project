@@ -71,6 +71,8 @@ cbuffer CB {
   float d2[0];
   // CHECK: VarDecl {{.*}} f2 'RWBuffer<float>[2]'
   RWBuffer<float> f2[2];
+  // CHECK: VarDecl {{.*}} g2 'groupshared float'
+  groupshared float g2;
   // CHECK: VarDecl {{.*}} e2 'hlsl_constant float'
   float e2;
   // CHECK: CXXRecordDecl {{.*}} implicit referenced struct __cblayout_CB_1 definition

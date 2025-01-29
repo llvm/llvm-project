@@ -484,7 +484,8 @@ void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
 
   for (Decl *D : BufDecl->decls()) {
     VarDecl *VD = dyn_cast<VarDecl>(D);
-    if (!VD || VD->getStorageClass() == SC_Static)
+    if (!VD || VD->getStorageClass() == SC_Static ||
+        VD->getType().getAddressSpace() == LangAS::hlsl_groupshared)
       continue;
     const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
     if (FieldDecl *FD =
