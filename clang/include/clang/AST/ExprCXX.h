@@ -5319,6 +5319,59 @@ public:
   }
 };
 
+// Represents an unexpanded pack where the list of expressions are
+// known. These are used when structured bindings introduce a pack.
+class ResolvedUnexpandedPackExpr final
+    : public Expr,
+      private llvm::TrailingObjects<ResolvedUnexpandedPackExpr, Expr *> {
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
+  friend TrailingObjects;
+
+  SourceLocation BeginLoc;
+  unsigned NumExprs;
+
+  ResolvedUnexpandedPackExpr(SourceLocation BL, QualType QT, unsigned NumExprs);
+
+public:
+  static ResolvedUnexpandedPackExpr *CreateDeserialized(ASTContext &C,
+                                                        unsigned NumExprs);
+  static ResolvedUnexpandedPackExpr *
+  Create(ASTContext &C, SourceLocation BeginLoc, QualType T, unsigned NumExprs);
+  static ResolvedUnexpandedPackExpr *Create(ASTContext &C,
+                                            SourceLocation BeginLoc, QualType T,
+                                            llvm::ArrayRef<Expr *> Exprs);
+
+  unsigned getNumExprs() const { return NumExprs; }
+
+  llvm::MutableArrayRef<Expr *> getExprs() {
+    return {getTrailingObjects<Expr *>(), NumExprs};
+  }
+
+  llvm::ArrayRef<Expr *> getExprs() const {
+    return {getTrailingObjects<Expr *>(), NumExprs};
+  }
+
+  Expr *getExpansion(unsigned Idx) { return getExprs()[Idx]; }
+  Expr *getExpansion(unsigned Idx) const { return getExprs()[Idx]; }
+
+  // Iterators
+  child_range children() {
+    return child_range((Stmt **)getTrailingObjects<Expr *>(),
+                       (Stmt **)getTrailingObjects<Expr *>() + getNumExprs());
+  }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY { return BeginLoc; }
+  SourceLocation getEndLoc() const LLVM_READONLY { return BeginLoc; }
+
+  // Returns the resolved pack of a decl or nullptr
+  static ResolvedUnexpandedPackExpr *getFromDecl(Decl *);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == ResolvedUnexpandedPackExprClass;
+  }
+};
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_EXPRCXX_H
