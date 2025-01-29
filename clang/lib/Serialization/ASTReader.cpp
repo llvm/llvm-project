@@ -10479,9 +10479,8 @@ void ASTReader::finishPendingActions() {
 
   // For each decl chain that we wanted to complete while deserializing, mark
   // it as "still needs to be completed".
-  for (unsigned I = 0; I != PendingIncompleteDeclChains.size(); ++I) {
-    markIncompleteDeclChain(PendingIncompleteDeclChains[I]);
-  }
+  for (Decl *D : PendingIncompleteDeclChains)
+    markIncompleteDeclChain(D);
   PendingIncompleteDeclChains.clear();
 }
 
