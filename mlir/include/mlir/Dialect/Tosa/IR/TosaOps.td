@@ -482,7 +482,9 @@ def Tosa_ErfOp : Tosa_ElementwiseUnaryOp<"erf"> {
 //===----------------------------------------------------------------------===//
 def Tosa_AddOp : Tosa_ElementwiseOp<"add", [
     Commutative,
-    SameOperandsAndResultElementType]> {
+    ResultsBroadcastableShape,
+    SameOperandsAndResultElementType,
+    SameOperandsAndResultRank]> {
   let summary = "Elementwise addition operator";
 
   let description = [{
@@ -515,8 +517,10 @@ def Tosa_AddOp : Tosa_ElementwiseOp<"add", [
 //===----------------------------------------------------------------------===//
 // Operator: arithmetic_right_shift
 //===----------------------------------------------------------------------===//
-def Tosa_ArithmeticRightShiftOp : Tosa_ElementwiseOp<"arithmetic_right_shift",
-    [SameOperandsAndResultElementType]> {
+def Tosa_ArithmeticRightShiftOp : Tosa_ElementwiseOp<"arithmetic_right_shift", [
+    ResultsBroadcastableShape,
+    SameOperandsAndResultElementType,
+    SameOperandsAndResultRank]> {
   let summary = "Elementwise Arithmetic Right Shift";
 
   let description = [{
@@ -540,7 +544,9 @@ def Tosa_ArithmeticRightShiftOp : Tosa_ElementwiseOp<"arithmetic_right_shift",
 //===----------------------------------------------------------------------===//
 def Tosa_BitwiseAndOp : Tosa_ElementwiseOp<"bitwise_and", [
     Commutative,
-    SameOperandsAndResultElementType]> {
+    ResultsBroadcastableShape,
+    SameOperandsAndResultElementType,
+    SameOperandsAndResultRank]> {
   let summary = "Bitwise AND operator";
 
   let description = [{
@@ -563,7 +569,9 @@ def Tosa_BitwiseAndOp : Tosa_ElementwiseOp<"bitwise_and", [
 //===----------------------------------------------------------------------===//
 def Tosa_BitwiseOrOp : Tosa_ElementwiseOp<"bitwise_or", [
     Commutative,
-    SameOperandsAndResultElementType]> {
+    ResultsBroadcastableShape,
+    SameOperandsAndResultElementType,
+    SameOperandsAndResultRank]> {
   let summary = "Bitwise OR operator";
 
   let description = [{
@@ -586,7 +594,9 @@ def Tosa_BitwiseOrOp : Tosa_ElementwiseOp<"bitwise_or", [
 //===----------------------------------------------------------------------===//
 def Tosa_BitwiseXorOp : Tosa_ElementwiseOp<"bitwise_xor", [
     Commutative,
-    SameOperandsAndResultElementType]> {
+    ResultsBroadcastableShape,
+    SameOperandsAndResultElementType,
+    SameOperandsAndResultRank]> {
   let summary = "Bitwise XOR operator";
 
   let description = [{
@@ -607,7 +617,10 @@ def Tosa_BitwiseXorOp : Tosa_ElementwiseOp<"bitwise_xor", [
 //===----------------------------------------------------------------------===//
 // Operator: int_div
 //===----------------------------------------------------------------------===//
-def Tosa_IntDivOp : Tosa_ElementwiseOp<"int_div", [SameOperandsAndResultElementType]> {
+def Tosa_IntDivOp : Tosa_ElementwiseOp<"int_div", [
+    ResultsBroadcastableShape,
+    SameOperandsAndResultRank,
+    SameOperandsAndResultElementType]> {
   let summary = "Integer divide operator";
 
   let description = [{
@@ -632,7 +645,9 @@ def Tosa_IntDivOp : Tosa_ElementwiseOp<"int_div", [SameOperandsAndResultElementT
 //===----------------------------------------------------------------------===//
 def Tosa_LogicalAndOp : Tosa_ElementwiseOp<"logical_and", [
     Commutative,
-    SameOperandsAndResultElementType]> {
+    ResultsBroadcastableShape,
+    SameOperandsAndResultElementType,
+    SameOperandsAndResultRank]> {
   let summary = "Returns the truth value of x AND y element-wise.";
 
   let description = [{
@@ -653,8 +668,10 @@ def Tosa_LogicalAndOp : Tosa_ElementwiseOp<"logical_and", [
 //===----------------------------------------------------------------------===//
 // Operator: logical_left_shift
 //===----------------------------------------------------------------------===//
-def Tosa_LogicalLeftShiftOp : Tosa_ElementwiseOp<"logical_left_shift",
-    [SameOperandsAndResultElementType]> {
+def Tosa_LogicalLeftShiftOp : Tosa_ElementwiseOp<"logical_left_shift", [
+    ResultsBroadcastableShape,
+    SameOperandsAndResultElementType,
+    SameOperandsAndResultRank]> {
   let summary = "Elementwise Logical Left Shift";
 
   let description = [{
@@ -675,8 +692,10 @@ def Tosa_LogicalLeftShiftOp : Tosa_ElementwiseOp<"logical_left_shift",
 //===----------------------------------------------------------------------===//
 // Operator: logical_right_shift
 //===----------------------------------------------------------------------===//
-def Tosa_LogicalRightShiftOp : Tosa_ElementwiseOp<"logical_right_shift",
-    [SameOperandsAndResultElementType]> {
+def Tosa_LogicalRightShiftOp : Tosa_ElementwiseOp<"logical_right_shift", [
+    ResultsBroadcastableShape,
+    SameOperandsAndResultElementType,
+    SameOperandsAndResultRank]> {
   let summary = "Elementwise Logical Right Shift";
 
   let description = [{
@@ -699,7 +718,9 @@ def Tosa_LogicalRightShiftOp : Tosa_ElementwiseOp<"logical_right_shift",
 //===----------------------------------------------------------------------===//
 def Tosa_LogicalOrOp : Tosa_ElementwiseOp<"logical_or", [
     Commutative,
-    SameOperandsAndResultElementType]> {
+    ResultsBroadcastableShape,
+    SameOperandsAndResultElementType,
+    SameOperandsAndResultRank]> {
   let summary = "Returns the truth value of x OR y element-wise.";
 
   let description = [{
@@ -722,7 +743,9 @@ def Tosa_LogicalOrOp : Tosa_ElementwiseOp<"logical_or", [
 //===----------------------------------------------------------------------===//
 def Tosa_LogicalXorOp : Tosa_ElementwiseOp<"logical_xor", [
     Commutative,
-    SameOperandsAndResultElementType]> {
+    ResultsBroadcastableShape,
+    SameOperandsAndResultElementType,
+    SameOperandsAndResultRank]> {
   let summary = "Returns the truth value of x XOR y element-wise.";
 
   let description = [{
@@ -745,7 +768,9 @@ def Tosa_LogicalXorOp : Tosa_ElementwiseOp<"logical_xor", [
 //===----------------------------------------------------------------------===//
 def Tosa_MaximumOp : Tosa_ElementwiseOp<"maximum", [
     Commutative,
-    SameOperandsAndResultElementType]> {
+    ResultsBroadcastableShape,
+    SameOperandsAndResultElementType,
+    SameOperandsAndResultRank]> {
   let summary = "Elementwise Maximum";
 
   let description = [{
@@ -769,7 +794,9 @@ def Tosa_MaximumOp : Tosa_ElementwiseOp<"maximum", [
 //===----------------------------------------------------------------------===//
 def Tosa_MinimumOp : Tosa_ElementwiseOp<"minimum", [
     Commutative,
-    SameOperandsAndResultElementType]> {
+    ResultsBroadcastableShape,
+    SameOperandsAndResultElementType,
+    SameOperandsAndResultRank]> {
   let summary = "Elementwise Minimum";
 
   let description = [{
@@ -810,7 +837,7 @@ def Tosa_MulOp : Tosa_ElementwiseOp<"mul", [
   let arguments = (ins
     Tosa_Tensor:$input1,
     Tosa_Tensor:$input2,
-    I8Attr:$shift
+    Optional<TosaTensorRankOf<[Tosa_Int8], [1]>>:$shift
   );
 
   let results = (outs
@@ -824,7 +851,10 @@ def Tosa_MulOp : Tosa_ElementwiseOp<"mul", [
 //===----------------------------------------------------------------------===//
 // Operator: pow
 //===----------------------------------------------------------------------===//
-def Tosa_PowOp : Tosa_ElementwiseOp<"pow", [SameOperandsAndResultElementType]> {
+def Tosa_PowOp : Tosa_ElementwiseOp<"pow", [
+    ResultsBroadcastableShape,
+    SameOperandsAndResultElementType,
+    SameOperandsAndResultRank]> {
   let summary = "Computes the power of one value to another.";
 
   let description = [{
@@ -845,7 +875,10 @@ def Tosa_PowOp : Tosa_ElementwiseOp<"pow", [SameOperandsAndResultElementType]> {
 //===----------------------------------------------------------------------===//
 // Operator: sub
 //===----------------------------------------------------------------------===//
-def Tosa_SubOp : Tosa_ElementwiseOp<"sub", [SameOperandsAndResultElementType]> {
+def Tosa_SubOp : Tosa_ElementwiseOp<"sub", [
+    ResultsBroadcastableShape,
+    SameOperandsAndResultElementType,
+    SameOperandsAndResultRank]> {
   let summary = "Elementwise subtraction operator";
 
   let description = [{
@@ -1196,7 +1229,9 @@ def Tosa_SinOp : Tosa_ElementwiseUnaryOp<"sin"> {
 //===----------------------------------------------------------------------===//
 // Operator: select
 //===----------------------------------------------------------------------===//
-def Tosa_SelectOp : Tosa_ElementwiseOp<"select"> {
+def Tosa_SelectOp : Tosa_ElementwiseOp<"select", [
+  ResultsBroadcastableShape,
+  SameOperandsAndResultRank]> {
   let summary = "Elementwise select operator";
 
   let description = [{
@@ -1232,7 +1267,9 @@ def Tosa_SelectOp : Tosa_ElementwiseOp<"select"> {
 def Tosa_EqualOp : Tosa_ElementwiseOp<"equal", [
     InferTensorType,
     Commutative,
-    SameOperandsElementType]> {
+    ResultsBroadcastableShape,
+    SameOperandsElementType,
+    SameOperandsAndResultRank]> {
   let summary = "Returns the truth value of (x == y) element-wise.";
 
   let description = [{
@@ -1260,7 +1297,10 @@ def Tosa_EqualOp : Tosa_ElementwiseOp<"equal", [
 //===----------------------------------------------------------------------===//
 // Operator: greater
 //===----------------------------------------------------------------------===//
-def Tosa_GreaterOp : Tosa_ElementwiseOp<"greater", [SameOperandsElementType]> {
+def Tosa_GreaterOp : Tosa_ElementwiseOp<"greater", [
+    ResultsBroadcastableShape,
+    SameOperandsElementType,
+    SameOperandsAndResultRank]> {
   let summary = "Returns the truth value of (x > y) element-wise.";
 
   let description = [{
@@ -1282,8 +1322,11 @@ def Tosa_GreaterOp : Tosa_ElementwiseOp<"greater", [SameOperandsElementType]> {
 //===----------------------------------------------------------------------===//
 // Operator: greater_equal
 //===----------------------------------------------------------------------===//
-def Tosa_GreaterEqualOp : Tosa_ElementwiseOp<"greater_equal",
-    [SameOperandsElementType]> {
+def Tosa_GreaterEqualOp : Tosa_ElementwiseOp<"greater_equal", [
+    ResultsBroadcastableShape,
+     SameOperandsElementType,
+     SameOperandsAndResultRank
+    ]> {
   let summary = "Returns the truth value of (x >= y) element-wise.";
 
   let description = [{
