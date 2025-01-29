@@ -186,7 +186,8 @@ void KernelInfo::updateForBB(const BasicBlock &BB,
       TypeSize::ScalarTy StaticSize = 0;
       if (std::optional<TypeSize> Size = Alloca->getAllocationSize(DL)) {
         StaticSize = Size->getFixedValue();
-        assert(StaticSize <= std::numeric_limits<int64_t>::max());
+        assert(StaticSize <=
+               (TypeSize::ScalarTy)std::numeric_limits<int64_t>::max());
         AllocasStaticSizeSum += StaticSize;
       } else {
         ++AllocasDyn;
