@@ -16,14 +16,13 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/SandboxIR/Constant.h"
 #include "llvm/SandboxIR/Pass.h"
-#include "llvm/SandboxIR/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/InstrMaps.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
 
 namespace llvm::sandboxir {
 
-class BottomUpVec final : public FunctionPass {
+class BottomUpVec final : public RegionPass {
   bool Change = false;
   std::unique_ptr<LegalityAnalysis> Legality;
   /// The original instructions that are potentially dead after vectorization.
@@ -55,16 +54,9 @@ class BottomUpVec final : public FunctionPass {
   /// Entry point for vectorization starting from \p Seeds.
   bool tryVectorize(ArrayRef<Value *> Seeds);
 
-  /// The PM containing the pipeline of region passes.
-  RegionPassManager RPM;
-
 public:
-  BottomUpVec(StringRef Pipeline);
-  bool runOnFunction(Function &F, const Analyses &A) final;
-  void printPipeline(raw_ostream &OS) const final {
-    OS << getName() << "\n";
-    RPM.printPipeline(OS);
-  }
+  BottomUpVec() : RegionPass("bottom-up-vec") {}
+  bool runOnRegion(Region &Rgn, const Analyses &A) final;
 };
 
 } // namespace llvm::sandboxir
