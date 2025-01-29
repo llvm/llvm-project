@@ -164,6 +164,7 @@ void main() {
 // CHECK-NEXT: call void @_init_resource_CBArrays.cb()
 
 // CHECK: !hlsl.cbs = !{![[CBSCALARS:[0-9]+]], ![[CBVECTORS:[0-9]+]], ![[CBARRAYS:[0-9]+]], ![[CBSTRUCTS:[0-9]+]], ![[CBMIX:[0-9]+]]}
+
 // CHECK: !hlsl.cblayouts = !{![[CBSCALARS_LAYOUT:[0-9]+]], ![[CBVECTORS_LAYOUT:[0-9]+]], ![[CBARRAYS_LAYOUT:[0-9]+]], ![[A_LAYOUT:[0-9]+]],
 // CHECK-SAME: ![[B_LAYOUT:[0-9]+]], ![[C_LAYOUT:[0-9]+]], ![[D_LAYOUT:[0-9]+]], ![[CBSTRUCTS_LAYOUT:[0-9]+]], ![[TEST_LAYOUT:[0-9]+]],
 // CHECK-SAME: ![[ANON_LAYOUT:[0-9]+]], ![[CBMIX_LAYOUT:[0-9]+]]}
@@ -193,7 +194,6 @@ void main() {
 // CHECK: ![[C_LAYOUT]] = !{!"struct.C", i32 24, i32 0, i32 16}
 // CHECK: ![[D_LAYOUT]] = !{!"struct.__cblayout_D", i32 94, i32 0}
 // CHECK: ![[CBSTRUCTS_LAYOUT]] = !{!"struct.__cblayout_CBStructs", i32 262, i32 0, i32 16, i32 32, i32 64, i32 144, i32 238, i32 240, i32 256}
-
 // CHECK: ![[TEST_LAYOUT]] = !{!"struct.Test", i32 8, i32 0, i32 4}
 // CHECK: ![[ANON_LAYOUT]] = !{!"struct.anon", i32 4, i32 0}
 // CHECK: ![[CBMIX_LAYOUT]] = !{!"struct.__cblayout_CBMix", i32 162, i32 0, i32 24, i32 32, i32 120, i32 128, i32 136, i32 144, i32 152, i32 160}

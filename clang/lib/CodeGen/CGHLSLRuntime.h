@@ -71,7 +71,6 @@ class FunctionDecl;
 namespace CodeGen {
 
 class CodeGenModule;
-class CGBuilderTy;
 
 class CGHLSLRuntime {
 public:
@@ -175,7 +174,8 @@ private:
 
   llvm::Triple::ArchType getArch();
 
-  // sizes of structs that in constant buffer layout
+  // Sizes of structs in constant buffer layout. Structs in the map
+  // had their layout calculated and added to the module as metadata.
   llvm::DenseMap<llvm::StructType *, size_t> StructSizesForBuffer;
 };
 
