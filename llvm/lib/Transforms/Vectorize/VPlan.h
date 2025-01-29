@@ -2111,11 +2111,10 @@ class VPPartialReductionRecipe : public VPSingleDefRecipe {
 
 public:
   VPPartialReductionRecipe(Instruction *ReductionInst, VPValue *Op0,
-                           VPValue *Op1, VPValue *Mask = nullptr)
-      : VPPartialReductionRecipe(ReductionInst->getOpcode(), Op0, Op1, Mask,
+                           VPValue *Op1)
+      : VPPartialReductionRecipe(ReductionInst->getOpcode(), Op0, Op1,
                                  ReductionInst) {}
   VPPartialReductionRecipe(unsigned Opcode, VPValue *Op0, VPValue *Op1,
-                           VPValue *Mask = nullptr,
                            Instruction *ReductionInst = nullptr)
       : VPSingleDefRecipe(VPDef::VPPartialReductionSC,
                           ArrayRef<VPValue *>({Op0, Op1}), ReductionInst),
@@ -2125,18 +2124,12 @@ public:
     assert((isa<VPReductionPHIRecipe>(AccumulatorRecipe) ||
             isa<VPPartialReductionRecipe>(AccumulatorRecipe)) &&
            "Unexpected operand order for partial reduction recipe");
-    if (Mask)
-      addOperand(Mask);
   }
   ~VPPartialReductionRecipe() override = default;
 
   VPPartialReductionRecipe *clone() override {
     return new VPPartialReductionRecipe(Opcode, getOperand(0), getOperand(1),
-                                        getMask(), getUnderlyingInstr());
-  }
-
-  VPValue *getMask() const {
-    return getNumOperands() == 3 ? getOperand(2) : nullptr;
+                                        getUnderlyingInstr());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPPartialReductionSC)

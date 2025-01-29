@@ -8919,8 +8919,13 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
     std::swap(BinOp, Accumulator);
 
   VPValue *Mask = getBlockInMask(Reduction->getParent());
-
-  return new VPPartialReductionRecipe(Reduction->getOpcode(), BinOp, Accumulator, Mask, Reduction);
+  if (Mask) {
+    VPValue *Zero =
+        Plan.getOrAddLiveIn(ConstantInt::get(Reduction->getType(), 0));
+    BinOp = Builder.createSelect(Mask, BinOp, Zero, Reduction->getDebugLoc());
+  }
+  return new VPPartialReductionRecipe(Reduction->getOpcode(), BinOp,
+                                      Accumulator, Reduction);
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
@@ -9728,11 +9733,9 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // beginning of the dedicated latch block.
     auto *OrigExitingVPV = PhiR->getBackedgeValue();
     auto *NewExitingVPV = PhiR->getBackedgeValue();
-    // Don't add selects here for partial reductions because the phi and partial
-    // reduction values have less vector elements than Cond. But, each operand
-    // in a select instruction needs to have the same number of vector elements,
-    // so the compiler would crash. Instead, a select, with the active lane
-    // mask, is applied to the inputs to the partial reduction.
+    // Don't output selects for partial reductions because they have an output
+    // with fewer lanes than the VF. So the operands of the select would have
+    // different numbers of lanes. Partial reductions mask the input instead.
     if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
         !isa<VPPartialReductionRecipe>(OrigExitingVPV->getDefiningRecipe())) {
       VPValue *Cond = RecipeBuilder.getBlockInMask(OrigLoop->getHeader());
