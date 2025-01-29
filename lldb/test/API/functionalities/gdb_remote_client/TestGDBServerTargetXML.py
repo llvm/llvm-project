@@ -798,7 +798,6 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
         self.match("register read x30", ["t5 = 0x0807060504030201"])
         self.match("register read x31", ["t6 = 0x0807060504030201"])
 
-
     @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("X86")
