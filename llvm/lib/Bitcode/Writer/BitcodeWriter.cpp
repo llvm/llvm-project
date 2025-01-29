@@ -254,7 +254,7 @@ private:
   }
 
   // Helper to get the valueId for the type of value recorded in VI.
-  unsigned getValueId(ValueInfo VI) {
+  unsigned getValueId(const ValueInfo &VI) {
     if (!VI.haveGVs() || !VI.getValue())
       return getValueId(VI.getGUID());
     return VE.getValueID(VI.getValue());
@@ -5644,7 +5644,7 @@ static const char *getSectionNameForCommandline(const Triple &T) {
   llvm_unreachable("Unimplemented ObjectFormatType");
 }
 
-void llvm::embedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
+void llvm::embedBitcodeInModule(llvm::Module &M, const llvm::MemoryBufferRef &Buf,
                                 bool EmbedBitcode, bool EmbedCmdline,
                                 const std::vector<uint8_t> &CmdArgs) {
   // Save llvm.compiler.used and remove it.

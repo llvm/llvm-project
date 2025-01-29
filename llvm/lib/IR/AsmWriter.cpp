@@ -1502,7 +1502,7 @@ static void WriteAPFloatInternal(raw_ostream &Out, const APFloat &APF) {
   // These appear as a magic letter identifying the type, then a
   // fixed number of hex digits.
   Out << "0x";
-  APInt API = APF.bitcastToAPInt();
+  const APInt &API = APF.bitcastToAPInt();
   if (&APF.getSemantics() == &APFloat::x87DoubleExtended()) {
     Out << 'K';
     Out << format_hex_no_prefix(API.getHiBits(16).getZExtValue(), 4,

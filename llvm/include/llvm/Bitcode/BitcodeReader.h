@@ -119,12 +119,12 @@ struct ParserCallbacks {
 
     // Calls the ctor.
     friend Expected<BitcodeFileContents>
-    getBitcodeFileContents(MemoryBufferRef Buffer);
+    getBitcodeFileContents(const MemoryBufferRef &Buffer);
 
     Expected<std::unique_ptr<Module>>
     getModuleImpl(LLVMContext &Context, bool MaterializeAll,
                   bool ShouldLazyLoadMetadata, bool IsImporting,
-                  ParserCallbacks Callbacks = {});
+                  const ParserCallbacks &Callbacks = {});
 
   public:
     StringRef getBuffer() const {
@@ -141,11 +141,11 @@ struct ParserCallbacks {
     /// importing into another module.
     Expected<std::unique_ptr<Module>>
     getLazyModule(LLVMContext &Context, bool ShouldLazyLoadMetadata,
-                  bool IsImporting, ParserCallbacks Callbacks = {});
+                  bool IsImporting, const ParserCallbacks &Callbacks = {});
 
     /// Read the entire bitcode module and return it.
     Expected<std::unique_ptr<Module>>
-    parseModule(LLVMContext &Context, ParserCallbacks Callbacks = {});
+    parseModule(LLVMContext &Context, const ParserCallbacks &Callbacks = {});
 
     /// Returns information about the module to be used for LTO: whether to
     /// compile with ThinLTO, and whether it has a summary.
@@ -171,21 +171,21 @@ struct ParserCallbacks {
   /// symbol table should prefer to use irsymtab::read instead of this function
   /// because it creates a reader for the irsymtab and handles upgrading bitcode
   /// files without a symbol table or with an old symbol table.
-  Expected<BitcodeFileContents> getBitcodeFileContents(MemoryBufferRef Buffer);
+  Expected<BitcodeFileContents> getBitcodeFileContents(const MemoryBufferRef &Buffer);
 
   /// Returns a list of modules in the specified bitcode buffer.
   Expected<std::vector<BitcodeModule>>
-  getBitcodeModuleList(MemoryBufferRef Buffer);
+  getBitcodeModuleList(const MemoryBufferRef &Buffer);
 
   /// Read the header of the specified bitcode buffer and prepare for lazy
   /// deserialization of function bodies. If ShouldLazyLoadMetadata is true,
   /// lazily load metadata as well. If IsImporting is true, this module is
   /// being parsed for ThinLTO importing into another module.
   Expected<std::unique_ptr<Module>>
-  getLazyBitcodeModule(MemoryBufferRef Buffer, LLVMContext &Context,
+  getLazyBitcodeModule(const MemoryBufferRef &Buffer, LLVMContext &Context,
                        bool ShouldLazyLoadMetadata = false,
                        bool IsImporting = false,
-                       ParserCallbacks Callbacks = {});
+                       const ParserCallbacks &Callbacks = {});
 
   /// Like getLazyBitcodeModule, except that the module takes ownership of
   /// the memory buffer if successful. If successful, this moves Buffer. On
@@ -194,36 +194,36 @@ struct ParserCallbacks {
   Expected<std::unique_ptr<Module>> getOwningLazyBitcodeModule(
       std::unique_ptr<MemoryBuffer> &&Buffer, LLVMContext &Context,
       bool ShouldLazyLoadMetadata = false, bool IsImporting = false,
-      ParserCallbacks Callbacks = {});
+      const ParserCallbacks &Callbacks = {});
 
   /// Read the header of the specified bitcode buffer and extract just the
   /// triple information. If successful, this returns a string. On error, this
   /// returns "".
-  Expected<std::string> getBitcodeTargetTriple(MemoryBufferRef Buffer);
+  Expected<std::string> getBitcodeTargetTriple(const MemoryBufferRef &Buffer);
 
   /// Return true if \p Buffer contains a bitcode file with ObjC code (category
   /// or class) in it.
-  Expected<bool> isBitcodeContainingObjCCategory(MemoryBufferRef Buffer);
+  Expected<bool> isBitcodeContainingObjCCategory(const MemoryBufferRef &Buffer);
 
   /// Read the header of the specified bitcode buffer and extract just the
   /// producer string information. If successful, this returns a string. On
   /// error, this returns "".
-  Expected<std::string> getBitcodeProducerString(MemoryBufferRef Buffer);
+  Expected<std::string> getBitcodeProducerString(const MemoryBufferRef &Buffer);
 
   /// Read the specified bitcode file, returning the module.
   Expected<std::unique_ptr<Module>>
-  parseBitcodeFile(MemoryBufferRef Buffer, LLVMContext &Context,
-                   ParserCallbacks Callbacks = {});
+  parseBitcodeFile(const MemoryBufferRef &Buffer, LLVMContext &Context,
+                   const ParserCallbacks &Callbacks = {});
 
   /// Returns LTO information for the specified bitcode file.
-  Expected<BitcodeLTOInfo> getBitcodeLTOInfo(MemoryBufferRef Buffer);
+  Expected<BitcodeLTOInfo> getBitcodeLTOInfo(const MemoryBufferRef &Buffer);
 
   /// Parse the specified bitcode buffer, returning the module summary index.
   Expected<std::unique_ptr<ModuleSummaryIndex>>
-  getModuleSummaryIndex(MemoryBufferRef Buffer);
+  getModuleSummaryIndex(const MemoryBufferRef &Buffer);
 
   /// Parse the specified bitcode buffer and merge the index into CombinedIndex.
-  Error readModuleSummaryIndex(MemoryBufferRef Buffer,
+  Error readModuleSummaryIndex(const MemoryBufferRef &Buffer,
                                ModuleSummaryIndex &CombinedIndex);
 
   /// Parse the module summary index out of an IR file and return the module

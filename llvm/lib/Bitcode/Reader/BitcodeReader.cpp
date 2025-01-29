@@ -149,7 +149,7 @@ static Error hasInvalidBitcodeHeader(BitstreamCursor &Stream) {
   return Error::success();
 }
 
-static Expected<BitstreamCursor> initStream(MemoryBufferRef Buffer) {
+static Expected<BitstreamCursor> initStream(const MemoryBufferRef &Buffer) {
   const unsigned char *BufPtr = (const unsigned char *)Buffer.getBufferStart();
   const unsigned char *BufEnd = BufPtr + Buffer.getBufferSize();
 
@@ -716,7 +716,7 @@ public:
   /// Main interface to parsing a bitcode buffer.
   /// \returns true if an error occurred.
   Error parseBitcodeInto(Module *M, bool ShouldLazyLoadMetadata,
-                         bool IsImporting, ParserCallbacks Callbacks = {});
+                         bool IsImporting, const ParserCallbacks &Callbacks = {});
 
   static uint64_t decodeSignRotatedValue(uint64_t V);
 
@@ -4781,7 +4781,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
 
 Error BitcodeReader::parseBitcodeInto(Module *M, bool ShouldLazyLoadMetadata,
                                       bool IsImporting,
-                                      ParserCallbacks Callbacks) {
+                                      const ParserCallbacks &Callbacks) {
   TheModule = M;
   MetadataLoaderCallbacks MDCallbacks;
   MDCallbacks.GetTypeByID = [&](unsigned ID) { return getTypeByID(ID); };
@@ -8361,7 +8361,7 @@ static Expected<StringRef> readBlobInRecord(BitstreamCursor &Stream,
 //===----------------------------------------------------------------------===//
 
 Expected<std::vector<BitcodeModule>>
-llvm::getBitcodeModuleList(MemoryBufferRef Buffer) {
+llvm::getBitcodeModuleList(const MemoryBufferRef &Buffer) {
   auto FOrErr = getBitcodeFileContents(Buffer);
   if (!FOrErr)
     return FOrErr.takeError();
@@ -8369,7 +8369,7 @@ llvm::getBitcodeModuleList(MemoryBufferRef Buffer) {
 }
 
 Expected<BitcodeFileContents>
-llvm::getBitcodeFileContents(MemoryBufferRef Buffer) {
+llvm::getBitcodeFileContents(const MemoryBufferRef &Buffer) {
   Expected<BitstreamCursor> StreamOrErr = initStream(Buffer);
   if (!StreamOrErr)
     return StreamOrErr.takeError();
@@ -8488,7 +8488,7 @@ llvm::getBitcodeFileContents(MemoryBufferRef Buffer) {
 Expected<std::unique_ptr<Module>>
 BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
                              bool ShouldLazyLoadMetadata, bool IsImporting,
-                             ParserCallbacks Callbacks) {
+                             const ParserCallbacks &Callbacks) {
   BitstreamCursor Stream(Buffer);
 
   std::string ProducerIdentification;
@@ -8529,7 +8529,7 @@ BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
 
 Expected<std::unique_ptr<Module>>
 BitcodeModule::getLazyModule(LLVMContext &Context, bool ShouldLazyLoadMetadata,
-                             bool IsImporting, ParserCallbacks Callbacks) {
+                             bool IsImporting, const ParserCallbacks &Callbacks) {
   return getModuleImpl(Context, false, ShouldLazyLoadMetadata, IsImporting,
                        Callbacks);
 }
@@ -8677,7 +8677,7 @@ Expected<BitcodeLTOInfo> BitcodeModule::getLTOInfo() {
   }
 }
 
-static Expected<BitcodeModule> getSingleModule(MemoryBufferRef Buffer) {
+static Expected<BitcodeModule> getSingleModule(const MemoryBufferRef &Buffer) {
   Expected<std::vector<BitcodeModule>> MsOrErr = getBitcodeModuleList(Buffer);
   if (!MsOrErr)
     return MsOrErr.takeError();
@@ -8689,9 +8689,9 @@ static Expected<BitcodeModule> getSingleModule(MemoryBufferRef Buffer) {
 }
 
 Expected<std::unique_ptr<Module>>
-llvm::getLazyBitcodeModule(MemoryBufferRef Buffer, LLVMContext &Context,
+llvm::getLazyBitcodeModule(const MemoryBufferRef &Buffer, LLVMContext &Context,
                            bool ShouldLazyLoadMetadata, bool IsImporting,
-                           ParserCallbacks Callbacks) {
+                           const ParserCallbacks &Callbacks) {
   Expected<BitcodeModule> BM = getSingleModule(Buffer);
   if (!BM)
     return BM.takeError();
@@ -8702,7 +8702,7 @@ llvm::getLazyBitcodeModule(MemoryBufferRef Buffer, LLVMContext &Context,
 
 Expected<std::unique_ptr<Module>> llvm::getOwningLazyBitcodeModule(
     std::unique_ptr<MemoryBuffer> &&Buffer, LLVMContext &Context,
-    bool ShouldLazyLoadMetadata, bool IsImporting, ParserCallbacks Callbacks) {
+    bool ShouldLazyLoadMetadata, bool IsImporting, const ParserCallbacks &Callbacks) {
   auto MOrErr = getLazyBitcodeModule(*Buffer, Context, ShouldLazyLoadMetadata,
                                      IsImporting, Callbacks);
   if (MOrErr)
@@ -8711,15 +8711,15 @@ Expected<std::unique_ptr<Module>> llvm::getOwningLazyBitcodeModule(
 }
 
 Expected<std::unique_ptr<Module>>
-BitcodeModule::parseModule(LLVMContext &Context, ParserCallbacks Callbacks) {
+BitcodeModule::parseModule(LLVMContext &Context, const ParserCallbacks &Callbacks) {
   return getModuleImpl(Context, true, false, false, Callbacks);
   // TODO: Restore the use-lists to the in-memory state when the bitcode was
   // written.  We must defer until the Module has been fully materialized.
 }
 
 Expected<std::unique_ptr<Module>>
-llvm::parseBitcodeFile(MemoryBufferRef Buffer, LLVMContext &Context,
-                       ParserCallbacks Callbacks) {
+llvm::parseBitcodeFile(const MemoryBufferRef &Buffer, LLVMContext &Context,
+                       const ParserCallbacks &Callbacks) {
   Expected<BitcodeModule> BM = getSingleModule(Buffer);
   if (!BM)
     return BM.takeError();
@@ -8727,7 +8727,7 @@ llvm::parseBitcodeFile(MemoryBufferRef Buffer, LLVMContext &Context,
   return BM->parseModule(Context, Callbacks);
 }
 
-Expected<std::string> llvm::getBitcodeTargetTriple(MemoryBufferRef Buffer) {
+Expected<std::string> llvm::getBitcodeTargetTriple(const MemoryBufferRef &Buffer) {
   Expected<BitstreamCursor> StreamOrErr = initStream(Buffer);
   if (!StreamOrErr)
     return StreamOrErr.takeError();
@@ -8735,7 +8735,7 @@ Expected<std::string> llvm::getBitcodeTargetTriple(MemoryBufferRef Buffer) {
   return readTriple(*StreamOrErr);
 }
 
-Expected<bool> llvm::isBitcodeContainingObjCCategory(MemoryBufferRef Buffer) {
+Expected<bool> llvm::isBitcodeContainingObjCCategory(const MemoryBufferRef &Buffer) {
   Expected<BitstreamCursor> StreamOrErr = initStream(Buffer);
   if (!StreamOrErr)
     return StreamOrErr.takeError();
@@ -8743,7 +8743,7 @@ Expected<bool> llvm::isBitcodeContainingObjCCategory(MemoryBufferRef Buffer) {
   return hasObjCCategory(*StreamOrErr);
 }
 
-Expected<std::string> llvm::getBitcodeProducerString(MemoryBufferRef Buffer) {
+Expected<std::string> llvm::getBitcodeProducerString(const MemoryBufferRef &Buffer) {
   Expected<BitstreamCursor> StreamOrErr = initStream(Buffer);
   if (!StreamOrErr)
     return StreamOrErr.takeError();
@@ -8751,7 +8751,7 @@ Expected<std::string> llvm::getBitcodeProducerString(MemoryBufferRef Buffer) {
   return readIdentificationCode(*StreamOrErr);
 }
 
-Error llvm::readModuleSummaryIndex(MemoryBufferRef Buffer,
+Error llvm::readModuleSummaryIndex(const MemoryBufferRef &Buffer,
                                    ModuleSummaryIndex &CombinedIndex) {
   Expected<BitcodeModule> BM = getSingleModule(Buffer);
   if (!BM)
@@ -8761,7 +8761,7 @@ Error llvm::readModuleSummaryIndex(MemoryBufferRef Buffer,
 }
 
 Expected<std::unique_ptr<ModuleSummaryIndex>>
-llvm::getModuleSummaryIndex(MemoryBufferRef Buffer) {
+llvm::getModuleSummaryIndex(const MemoryBufferRef &Buffer) {
   Expected<BitcodeModule> BM = getSingleModule(Buffer);
   if (!BM)
     return BM.takeError();
@@ -8769,7 +8769,7 @@ llvm::getModuleSummaryIndex(MemoryBufferRef Buffer) {
   return BM->getSummary();
 }
 
-Expected<BitcodeLTOInfo> llvm::getBitcodeLTOInfo(MemoryBufferRef Buffer) {
+Expected<BitcodeLTOInfo> llvm::getBitcodeLTOInfo(const MemoryBufferRef &Buffer) {
   Expected<BitcodeModule> BM = getSingleModule(Buffer);
   if (!BM)
     return BM.takeError();
