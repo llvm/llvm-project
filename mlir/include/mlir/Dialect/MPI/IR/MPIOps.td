@@ -175,7 +175,7 @@ def MPI_RecvOp : MPI_Op<"recv", []> {
   let results = (outs Optional<MPI_Retval>:$retval);
 
   let assemblyFormat = "`(` $ref `,` $tag `,` $rank `)` attr-dict `:`"
-                       "type($ref) `,` type($tag) `,` type($rank) "
+                       "type($ref) `,` type($tag) `,` type($rank)"
                        "(`->` type($retval)^)?";
   let hasCanonicalizer = 1;
 }
