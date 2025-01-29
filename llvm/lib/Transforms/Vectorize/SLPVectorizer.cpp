@@ -2963,7 +2963,6 @@ public:
     return ScalarToTreeEntries.contains(V);
   }
 
-
   ~BoUpSLP();
 
 private:
