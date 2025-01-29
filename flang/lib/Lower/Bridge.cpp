@@ -459,7 +459,9 @@ public:
     if (hasMainProgram)
       createGlobalOutsideOfFunctionLowering([&]() {
         fir::runtime::genMain(*builder, toLocation(),
-                              bridge.getEnvironmentDefaults());
+                              bridge.getEnvironmentDefaults(),
+                              getFoldingContext().languageFeatures().IsEnabled(
+                                  Fortran::common::LanguageFeature::CUDA));
       });
 
     finalizeOpenACCLowering();
