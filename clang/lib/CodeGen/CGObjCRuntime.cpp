@@ -89,7 +89,7 @@ LValue CGObjCRuntime::EmitValueForIvarAtOffset(CodeGen::CodeGenFunction &CGF,
       CGF.CGM.getContext().lookupFieldBitOffset(OID, nullptr, Ivar);
   uint64_t BitOffset = FieldBitOffset % CGF.CGM.getContext().getCharWidth();
   uint64_t AlignmentBits = CGF.CGM.getTarget().getCharAlign();
-  uint64_t BitFieldSize = Ivar->getBitWidthValue(CGF.getContext());
+  uint64_t BitFieldSize = Ivar->getBitWidthValue();
   CharUnits StorageSize = CGF.CGM.getContext().toCharUnitsFromBits(
       llvm::alignTo(BitOffset + BitFieldSize, AlignmentBits));
   CharUnits Alignment = CGF.CGM.getContext().toCharUnitsFromBits(AlignmentBits);
@@ -230,11 +230,14 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
     CodeGenFunction::LexicalScope Cleanups(CGF, Handler.Body->getSourceRange());
     SaveAndRestore RevertAfterScope(CGF.CurrentFuncletPad);
     if (useFunclets) {
-      llvm::Instruction *CPICandidate = Handler.Block->getFirstNonPHI();
-      if (auto *CPI = dyn_cast_or_null<llvm::CatchPadInst>(CPICandidate)) {
-        CGF.CurrentFuncletPad = CPI;
-        CPI->setOperand(2, CGF.getExceptionSlot().emitRawPointer(CGF));
-        CGF.EHStack.pushCleanup<CatchRetScope>(NormalCleanup, CPI);
+      llvm::BasicBlock::iterator CPICandidate =
+          Handler.Block->getFirstNonPHIIt();
+      if (CPICandidate != Handler.Block->end()) {
+        if (auto *CPI = dyn_cast_or_null<llvm::CatchPadInst>(CPICandidate)) {
+          CGF.CurrentFuncletPad = CPI;
+          CPI->setOperand(2, CGF.getExceptionSlot().emitRawPointer(CGF));
+          CGF.EHStack.pushCleanup<CatchRetScope>(NormalCleanup, CPI);
+        }
       }
     }
 

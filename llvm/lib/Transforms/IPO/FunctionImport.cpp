@@ -1950,9 +1950,8 @@ Expected<bool> FunctionImporter::importFunctions(
     SrcModule->setPartialSampleProfileRatio(Index);
 
     // Link in the specified functions.
-    if (renameModuleForThinLTO(*SrcModule, Index, ClearDSOLocalOnDeclarations,
-                               &GlobalsToImport))
-      return true;
+    renameModuleForThinLTO(*SrcModule, Index, ClearDSOLocalOnDeclarations,
+                           &GlobalsToImport);
 
     if (PrintImports) {
       for (const auto *GV : GlobalsToImport)
@@ -2026,11 +2025,8 @@ static bool doImportingForModuleForTest(
 
   // Next we need to promote to global scope and rename any local values that
   // are potentially exported to other modules.
-  if (renameModuleForThinLTO(M, *Index, /*ClearDSOLocalOnDeclarations=*/false,
-                             /*GlobalsToImport=*/nullptr)) {
-    errs() << "Error renaming module\n";
-    return true;
-  }
+  renameModuleForThinLTO(M, *Index, /*ClearDSOLocalOnDeclarations=*/false,
+                         /*GlobalsToImport=*/nullptr);
 
   // Perform the import now.
   auto ModuleLoader = [&M](StringRef Identifier) {

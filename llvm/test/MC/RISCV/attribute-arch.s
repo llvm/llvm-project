@@ -467,3 +467,9 @@
 
 .attribute arch, "rv32i_ssctr1p0"
 # CHECK: attribute      5, "rv32i2p1_sscsrind1p0_ssctr1p0"
+
+.attribute arch, "rv32i_sdext1p0"
+# CHECK: attribute      5, "rv32i2p1_sdext1p0"
+
+.attribute arch, "rv32i_sdtrig1p0"
+# CHECK: attribute      5, "rv32i2p1_sdtrig1p0"

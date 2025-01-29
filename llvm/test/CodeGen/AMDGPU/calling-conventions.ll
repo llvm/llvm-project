@@ -2487,10 +2487,10 @@ define amdgpu_cs void @amdgpu_cs_v32i1(<32 x i1> %arg0) {
 ; SI-NEXT:    v_or_b32_e32 v1, v31, v1
 ; SI-NEXT:    v_or_b32_e32 v5, v27, v5
 ; SI-NEXT:    v_or_b32_e32 v9, v23, v9
+; SI-NEXT:    v_or_b32_e32 v13, v19, v13
 ; SI-NEXT:    v_and_b32_e32 v17, 3, v28
 ; SI-NEXT:    v_and_b32_e32 v18, 3, v24
-; SI-NEXT:    v_and_b32_e32 v20, 3, v20
-; SI-NEXT:    v_or_b32_e32 v13, v19, v13
+; SI-NEXT:    v_and_b32_e32 v19, 3, v20
 ; SI-NEXT:    v_and_b32_e32 v16, 3, v16
 ; SI-NEXT:    v_or_b32_e32 v14, v15, v14
 ; SI-NEXT:    v_and_b32_e32 v12, 3, v12
@@ -2502,7 +2502,7 @@ define amdgpu_cs void @amdgpu_cs_v32i1(<32 x i1> %arg0) {
 ; SI-NEXT:    v_and_b32_e32 v0, 3, v0
 ; SI-NEXT:    v_or_b32_e32 v1, v17, v1
 ; SI-NEXT:    v_or_b32_e32 v3, v18, v5
-; SI-NEXT:    v_or_b32_e32 v5, v20, v9
+; SI-NEXT:    v_or_b32_e32 v5, v19, v9
 ; SI-NEXT:    v_or_b32_e32 v7, v16, v13
 ; SI-NEXT:    v_or_b32_e32 v9, v12, v14
 ; SI-NEXT:    v_or_b32_e32 v8, v8, v10

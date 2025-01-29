@@ -75,6 +75,11 @@ void f9(__builtin_va_list args)
     (void)__builtin_va_arg(args, enum E); // Don't warn here in C
     (void)__builtin_va_arg(args, short); // expected-warning {{second argument to 'va_arg' is of promotable type 'short'}}
     (void)__builtin_va_arg(args, char); // expected-warning {{second argument to 'va_arg' is of promotable type 'char'}}
+    // Don't crash on some undefined behaviors.
+    int n;
+    (void)__builtin_va_arg(args, int[10]); // expected-warning{{second argument to 'va_arg' is of array type 'int[10]'}}
+    (void)__builtin_va_arg(args, int[++n]); // expected-warning{{second argument to 'va_arg' is of array type 'int[++n]'}}
+    (void)__builtin_va_arg(args, int[n][n]); // expected-warning{{second argument to 'va_arg' is of array type 'int[n][n]'}}
 }
 
 void f10(int a, ...) {

@@ -35,6 +35,7 @@ define_opcode(6, "rot", "rot")
 define_opcode(0x10, "{", "begin")
 define_opcode(0x11, "if", "if")
 define_opcode(0x12, "ifelse", "ifelse")
+define_opcode(0x13, "return", "return")
 
 define_opcode(0x20, None, "lit_uint")
 define_opcode(0x21, None, "lit_int")
@@ -342,6 +343,9 @@ def interpret(bytecode: bytearray, control: list, data: list, tracing: bool = Fa
             else:
                 frame.append(control.pop())
                 control.pop()
+        elif b == op_return:
+            control.clear()
+            return data[-1]
 
         # Literals.
         elif b == op_lit_uint:

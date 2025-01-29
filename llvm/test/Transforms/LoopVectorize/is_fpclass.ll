@@ -4,7 +4,7 @@
 define void @d() {
 ; CHECK-LABEL: define void @d() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -19,12 +19,12 @@ define void @d() {
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr float, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    store <2 x float> [[TMP3]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 128, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I7:%.*]], [[LOOP]] ]
@@ -34,7 +34,7 @@ define void @d() {
 ; CHECK-NEXT:    [[I6:%.*]] = select i1 [[I5]], float 0.000000e+00, float 0.000000e+00
 ; CHECK-NEXT:    store float [[I6]], ptr [[I4]], align 4
 ; CHECK-NEXT:    [[I7]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[I8:%.*]] = icmp eq i64 [[I7]], 0
+; CHECK-NEXT:    [[I8:%.*]] = icmp eq i64 [[I7]], 128
 ; CHECK-NEXT:    br i1 [[I8]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -50,7 +50,7 @@ loop:
   %i6 = select i1 %i5, float 0.0, float 0.0
   store float %i6, ptr %i4, align 4
   %i7 = add i64 %i, 1
-  %i8 = icmp eq i64 %i7, 0
+  %i8 = icmp eq i64 %i7, 128
   br i1 %i8, label %exit, label %loop
 
 exit:

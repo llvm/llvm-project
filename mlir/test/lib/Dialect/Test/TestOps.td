@@ -193,8 +193,15 @@ def TypeArrayAttrWithDefaultOp : TEST_Op<"type_array_attr_with_default"> {
   let arguments = (ins DefaultValuedAttr<TypeArrayAttr, "{}">:$attr);
 }
 
-def TypeStringAttrWithTypeOp : TEST_Op<"string_attr_with_type"> {
-  let arguments = (ins TypedStrAttr<AnyType>:$attr);
+def TypedStringAttrWithTypeOp : TEST_Op<"string_attr_with_type"> {
+  let arguments = (ins TypedStrAttr<AnyInteger>:$attr);
+  let assemblyFormat = "$attr attr-dict";
+}
+
+def TypedStringAttrWithMixedTypeOp : TEST_Op<"string_attr_with_mixed_type"> {
+  let arguments = (ins
+    AnyAttrOf<[TypedStrAttr<AnyInteger>, I64Attr]>:$attr
+  );
   let assemblyFormat = "$attr attr-dict";
 }
 
@@ -566,7 +573,7 @@ def ConversionCallOp : TEST_Op<"conversion_call_op",
     }
 
     void $cppClass::setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
-      (*this)->setAttr("callee", callee.get<SymbolRefAttr>());
+      (*this)->setAttr("callee", cast<SymbolRefAttr>(callee));
     }
   }];
 }
@@ -922,6 +929,21 @@ def CustomResultsNameOp
     StrArrayAttr:$names
   );
   let results = (outs Variadic<AnyInteger>:$r);
+}
+
+// This is used to test OpAsmTypeInterface::getAsmName for op result name,
+def ResultNameFromTypeOp
+ : TEST_Op<"result_name_from_type",
+           [DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]> {
+  let results = (outs AnyType:$r);
+}
+
+// This is used to test OpAsmTypeInterface::getAsmName for block argument,
+def BlockArgumentNameFromTypeOp
+  : TEST_Op<"block_argument_name_from_type",
+      [DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmBlockArgumentNames"]>]> {
+  let regions = (region AnyRegion:$body);
+  let assemblyFormat = "regions attr-dict-with-keyword";
 }
 
 // This is used to test the OpAsmOpInterface::getDefaultDialect() feature:

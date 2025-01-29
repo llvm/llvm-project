@@ -96,34 +96,34 @@ struct alloc_stats {
 };
 alloc_stats stats;
 
-void operator delete(void* p)TEST_NOEXCEPT {
+void operator delete(void* p) TEST_NOEXCEPT {
   ::free(p);
   stats.plain_called++;
   stats.last_size = stats.last_align = -1;
 }
 
 #ifndef NO_SIZE
-void operator delete(void* p, std::size_t n)TEST_NOEXCEPT {
+void operator delete(void* p, std::size_t n) TEST_NOEXCEPT {
   ::free(p);
   stats.sized_called++;
-  stats.last_size = n;
+  stats.last_size  = n;
   stats.last_align = -1;
 }
 #endif
 
 #ifndef NO_ALIGN
-void operator delete(void* p, std::align_val_t a)TEST_NOEXCEPT {
+void operator delete(void* p, std::align_val_t a) TEST_NOEXCEPT {
   std::__libcpp_aligned_free(p);
   stats.aligned_called++;
   stats.last_align = static_cast<int>(a);
-  stats.last_size = -1;
+  stats.last_size  = -1;
 }
 
-void operator delete(void* p, std::size_t n, std::align_val_t a)TEST_NOEXCEPT {
+void operator delete(void* p, std::size_t n, std::align_val_t a) TEST_NOEXCEPT {
   std::__libcpp_aligned_free(p);
   stats.aligned_sized_called++;
   stats.last_align = static_cast<int>(a);
-  stats.last_size = n;
+  stats.last_size  = n;
 }
 #endif
 
@@ -135,45 +135,45 @@ void test_libcpp_dealloc() {
   std::size_t over_align_val = TEST_ALIGNOF(std::max_align_t) * 2;
 #endif
   std::size_t under_align_val = TEST_ALIGNOF(int);
-  std::size_t with_size_val = 2;
+  std::size_t with_size_val   = 2;
 
   {
-    std::__libcpp_deallocate_unsized(p, under_align_val);
+    std::__libcpp_deallocate_unsized<char>(static_cast<char*>(p), under_align_val);
     assert(stats.expect_plain());
   }
   stats.reset();
 
 #if defined(NO_SIZE) && defined(NO_ALIGN)
   {
-    std::__libcpp_deallocate(p, with_size_val, over_align_val);
+    std::__libcpp_deallocate<char>(static_cast<char*>(p), std::__element_count(with_size_val), over_align_val);
     assert(stats.expect_plain());
   }
   stats.reset();
 #elif defined(NO_SIZE)
   {
-    std::__libcpp_deallocate(p, with_size_val, over_align_val);
+    std::__libcpp_deallocate<char>(static_cast<char*>(p), std::__element_count(with_size_val), over_align_val);
     assert(stats.expect_align(over_align_val));
   }
   stats.reset();
 #elif defined(NO_ALIGN)
   {
-    std::__libcpp_deallocate(p, with_size_val, over_align_val);
+    std::__libcpp_deallocate<char>(static_cast<char*>(p), std::__element_count(with_size_val), over_align_val);
     assert(stats.expect_size(with_size_val));
   }
   stats.reset();
 #else
   {
-    std::__libcpp_deallocate(p, with_size_val, over_align_val);
+    std::__libcpp_deallocate<char>(static_cast<char*>(p), std::__element_count(with_size_val), over_align_val);
     assert(stats.expect_size_align(with_size_val, over_align_val));
   }
   stats.reset();
   {
-    std::__libcpp_deallocate_unsized(p, over_align_val);
+    std::__libcpp_deallocate_unsized<char>(static_cast<char*>(p), over_align_val);
     assert(stats.expect_align(over_align_val));
   }
   stats.reset();
   {
-    std::__libcpp_deallocate(p, with_size_val, under_align_val);
+    std::__libcpp_deallocate<char>(static_cast<char*>(p), std::__element_count(with_size_val), under_align_val);
     assert(stats.expect_size(with_size_val));
   }
   stats.reset();
@@ -202,13 +202,13 @@ void test_allocator_and_new_match() {
   stats.reset();
 #elif defined(NO_SIZE)
   stats.reset();
-#if TEST_STD_VER >= 11
+#  if TEST_STD_VER >= 11
   {
     int* x = DoNotOptimize(new int(42));
     delete x;
     assert(stats.expect_plain());
   }
-#endif
+#  endif
   stats.reset();
   {
     AlignedType* a = DoNotOptimize(new AlignedType());
@@ -241,8 +241,7 @@ void test_allocator_and_new_match() {
   {
     AlignedType* a = DoNotOptimize(new AlignedType());
     delete a;
-    assert(stats.expect_size_align(sizeof(AlignedType),
-                                   TEST_ALIGNOF(AlignedType)));
+    assert(stats.expect_size_align(sizeof(AlignedType), TEST_ALIGNOF(AlignedType)));
   }
   stats.reset();
 #endif

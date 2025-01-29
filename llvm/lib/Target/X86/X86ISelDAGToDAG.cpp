@@ -1800,10 +1800,10 @@ void X86DAGToDAGISel::emitFunctionEntryCode() {
     emitSpecialCodeForMain();
 }
 
-static bool isDispSafeForFrameIndex(int64_t Val) {
-  // On 64-bit platforms, we can run into an issue where a frame index
+static bool isDispSafeForFrameIndexOrRegBase(int64_t Val) {
+  // We can run into an issue where a frame index or a register base
   // includes a displacement that, when added to the explicit displacement,
-  // will overflow the displacement field. Assuming that the frame index
+  // will overflow the displacement field. Assuming that the
   // displacement fits into a 31-bit integer  (which is only slightly more
   // aggressive than the current fundamental assumption that it fits into
   // a 32-bit integer), a 31-bit disp should always be safe.
@@ -1831,7 +1831,7 @@ bool X86DAGToDAGISel::foldOffsetIntoAddress(uint64_t Offset,
     // In addition to the checks required for a register base, check that
     // we do not try to use an unsafe Disp with a frame index.
     if (AM.BaseType == X86ISelAddressMode::FrameIndexBase &&
-        !isDispSafeForFrameIndex(Val))
+        !isDispSafeForFrameIndexOrRegBase(Val))
       return true;
     // In ILP32 (x32) mode, pointers are 32 bits and need to be zero-extended to
     // 64 bits. Instructions with 32-bit register addresses perform this zero
@@ -1849,10 +1849,14 @@ bool X86DAGToDAGISel::foldOffsetIntoAddress(uint64_t Offset,
     // to get an address size override to be emitted. However, this
     // pseudo-register is not part of any register class and therefore causes
     // MIR verification to fail.
-    if (Subtarget->isTarget64BitILP32() && !isUInt<31>(Val) &&
+    if (Subtarget->isTarget64BitILP32() &&
+        !isDispSafeForFrameIndexOrRegBase((uint32_t)Val) &&
         !AM.hasBaseOrIndexReg())
       return true;
-  }
+  } else if (AM.hasBaseOrIndexReg() && !isDispSafeForFrameIndexOrRegBase(Val))
+    // For 32-bit X86, make sure the displacement still isn't close to the
+    // expressible limit.
+    return true;
   AM.Disp = Val;
   return false;
 }
@@ -2553,7 +2557,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
   case ISD::FrameIndex:
     if (AM.BaseType == X86ISelAddressMode::RegBase &&
         AM.Base_Reg.getNode() == nullptr &&
-        (!Subtarget->is64Bit() || isDispSafeForFrameIndex(AM.Disp))) {
+        (!Subtarget->is64Bit() || isDispSafeForFrameIndexOrRegBase(AM.Disp))) {
       AM.BaseType = X86ISelAddressMode::FrameIndexBase;
       AM.Base_FrameIndex = cast<FrameIndexSDNode>(N)->getIndex();
       return false;

@@ -28,6 +28,7 @@ def Canonicalizer : Pass<"canonicalize"> {
     details.
   }];
   let constructor = "mlir::createCanonicalizerPass()";
+  let dependentDialects = ["ub::UBDialect"];
   let options = [
     Option<"topDownProcessingEnabled", "top-down", "bool",
            /*default=*/"true",
@@ -331,13 +332,21 @@ def LocationSnapshot : Pass<"snapshot-op-locations"> {
     ... loc(fused["original_source.cpp":1:1, "snapshot"("snapshot_source.mlir":10:10)])
     ```
   }];
-  let constructor = "mlir::createLocationSnapshotPass()";
   let options = [
     Option<"fileName", "filename", "std::string", /*default=*/"",
            "The filename to print the generated IR">,
     Option<"tag", "tag", "std::string", /*default=*/"",
            "A tag to use when fusing the new locations with the "
            "original. If unset, the locations are replaced.">,
+    Option<"enableDebugInfo", "print-debuginfo", "bool", /*default=*/"false",
+           "Print debug info in MLIR output">,
+    Option<"printGenericOpForm", "print-op-generic", "bool", /*default=*/"false",
+           "Print the generic op form">,
+    Option<"useLocalScope", "print-local-scope", "bool", /*default=*/"false",
+           "Print with local scope and inline information (eliding "
+           "aliases for attributes, types, and locations">,
+    Option<"printPrettyDebugInfo", "pretty-debuginfo", "bool", /*default=*/"false",
+           "Print pretty debug info in MLIR output">,
   ];
 }
 

@@ -920,6 +920,36 @@ TEST_F(AArch64GISelMITest, MatchSpecificReg) {
   EXPECT_TRUE(mi_match(Add.getReg(0), *MRI, m_GAdd(m_SpecificReg(Reg), m_Reg())));
 }
 
+TEST_F(AArch64GISelMITest, DeferredMatching) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+  auto s64 = LLT::scalar(64);
+  auto s32 = LLT::scalar(32);
+
+  auto Cst1 = B.buildConstant(s64, 42);
+  auto Cst2 = B.buildConstant(s64, 314);
+  auto Add = B.buildAdd(s64, Cst1, Cst2);
+  auto Sub = B.buildSub(s64, Add, Cst1);
+
+  auto TruncAdd = B.buildTrunc(s32, Add);
+  auto TruncSub = B.buildTrunc(s32, Sub);
+  auto NarrowAdd = B.buildAdd(s32, TruncAdd, TruncSub);
+
+  Register X;
+  EXPECT_TRUE(mi_match(Sub.getReg(0), *MRI,
+                       m_GSub(m_GAdd(m_Reg(X), m_Reg()), m_DeferredReg(X))));
+  LLT Ty;
+  EXPECT_TRUE(
+      mi_match(NarrowAdd.getReg(0), *MRI,
+               m_GAdd(m_GTrunc(m_Type(Ty)), m_GTrunc(m_DeferredType(Ty)))));
+
+  // Test commutative.
+  auto Add2 = B.buildAdd(s64, Sub, Cst1);
+  EXPECT_TRUE(mi_match(Add2.getReg(0), *MRI,
+                       m_GAdd(m_Reg(X), m_GSub(m_Reg(), m_DeferredReg(X)))));
+}
+
 } // namespace
 
 int main(int argc, char **argv) {

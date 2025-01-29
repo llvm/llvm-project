@@ -15,14 +15,13 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Passes/PassBuilder.h"
-#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -83,11 +82,6 @@ public:
 };
 
 } // end anonymous namespace
-
-static bool isKernelFunction(Function &F) {
-  // TODO: Is this general enough?  Consider languages beyond OpenMP.
-  return F.hasFnAttribute("kernel");
-}
 
 // For the purposes of KernelInfo::FloatingPointOpProfileCount, should this be
 // considered a floating point operation?  If so, return the floating point
@@ -247,7 +241,8 @@ void KernelInfo::updateForBB(const BasicBlock &BB, BlockFrequencyInfo &BFI,
       TypeSize::ScalarTy StaticSize = 0;
       if (std::optional<TypeSize> Size = Alloca->getAllocationSize(DL)) {
         StaticSize = Size->getFixedValue();
-        assert(StaticSize <= std::numeric_limits<int64_t>::max());
+        assert(StaticSize <=
+               (TypeSize::ScalarTy)std::numeric_limits<int64_t>::max());
         AllocasStaticSizeSum += StaticSize;
       } else {
         ++AllocasDyn;
@@ -358,7 +353,7 @@ void KernelInfo::emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
   KI.FlatAddrspace = TheTTI.getFlatAddressSpace();
 
   // Record function properties.
-  KI.ExternalNotKernel = F.hasExternalLinkage() && !isKernelFunction(F);
+  KI.ExternalNotKernel = F.hasExternalLinkage() && !F.hasKernelCallingConv();
   for (StringRef Name : {"omp_target_num_teams", "omp_target_thread_limit"}) {
     if (auto Val = parseFnAttrAsInteger(F, Name))
       KI.LaunchBounds.push_back({Name, *Val});

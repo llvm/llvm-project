@@ -276,6 +276,21 @@ void llvm::reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
   reportGISelFailure(MF, TPC, MORE, R);
 }
 
+unsigned llvm::getInverseGMinMaxOpcode(unsigned MinMaxOpc) {
+  switch (MinMaxOpc) {
+  case TargetOpcode::G_SMIN:
+    return TargetOpcode::G_SMAX;
+  case TargetOpcode::G_SMAX:
+    return TargetOpcode::G_SMIN;
+  case TargetOpcode::G_UMIN:
+    return TargetOpcode::G_UMAX;
+  case TargetOpcode::G_UMAX:
+    return TargetOpcode::G_UMIN;
+  default:
+    llvm_unreachable("unrecognized opcode");
+  }
+}
+
 std::optional<APInt> llvm::getIConstantVRegVal(Register VReg,
                                                const MachineRegisterInfo &MRI) {
   std::optional<ValueAndVReg> ValAndVReg = getIConstantVRegValWithLookThrough(

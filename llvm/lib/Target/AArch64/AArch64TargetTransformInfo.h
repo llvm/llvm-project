@@ -89,6 +89,10 @@ public:
   unsigned getInlineCallPenalty(const Function *F, const CallBase &Call,
                                 unsigned DefaultCallPenalty) const;
 
+  uint64_t getFeatureMask(const Function &F) const;
+
+  bool isMultiversionedFunction(const Function &F) const;
+
   /// \name Scalar TTI Implementations
   /// @{
 
@@ -359,59 +363,11 @@ public:
   }
 
   InstructionCost
-  getPartialReductionCost(unsigned Opcode, Type *InputType, Type *AccumType,
-                          ElementCount VF,
+  getPartialReductionCost(unsigned Opcode, Type *InputTypeA, Type *InputTypeB,
+                          Type *AccumType, ElementCount VF,
                           TTI::PartialReductionExtendKind OpAExtend,
                           TTI::PartialReductionExtendKind OpBExtend,
-                          std::optional<unsigned> BinOp) const {
-
-    InstructionCost Invalid = InstructionCost::getInvalid();
-    InstructionCost Cost(TTI::TCC_Basic);
-
-    if (Opcode != Instruction::Add)
-      return Invalid;
-
-    EVT InputEVT = EVT::getEVT(InputType);
-    EVT AccumEVT = EVT::getEVT(AccumType);
-
-    if (VF.isScalable() && !ST->isSVEorStreamingSVEAvailable())
-      return Invalid;
-    if (VF.isFixed() && (!ST->isNeonAvailable() || !ST->hasDotProd()))
-      return Invalid;
-
-    if (InputEVT == MVT::i8) {
-      switch (VF.getKnownMinValue()) {
-      default:
-        return Invalid;
-      case 8:
-        if (AccumEVT == MVT::i32)
-          Cost *= 2;
-        else if (AccumEVT != MVT::i64)
-          return Invalid;
-        break;
-      case 16:
-        if (AccumEVT == MVT::i64)
-          Cost *= 2;
-        else if (AccumEVT != MVT::i32)
-          return Invalid;
-        break;
-      }
-    } else if (InputEVT == MVT::i16) {
-      // FIXME: Allow i32 accumulator but increase cost, as we would extend
-      //        it to i64.
-      if (VF.getKnownMinValue() != 8 || AccumEVT != MVT::i64)
-        return Invalid;
-    } else
-      return Invalid;
-
-    if (OpAExtend == TTI::PR_None || OpBExtend == TTI::PR_None)
-      return Invalid;
-
-    if (!BinOp || (*BinOp) != Instruction::Mul)
-      return Invalid;
-
-    return Cost;
-  }
+                          std::optional<unsigned> BinOp) const;
 
   bool enableOrderedReductions() const { return true; }
 
@@ -443,9 +399,7 @@ public:
     return TailFoldingStyle::DataWithoutLaneMask;
   }
 
-  bool preferFixedOverScalableIfEqualCost() const {
-    return ST->useFixedOverScalableIfEqualCost();
-  }
+  bool preferFixedOverScalableIfEqualCost() const;
 
   unsigned getEpilogueVectorizationMinVF() const;
 

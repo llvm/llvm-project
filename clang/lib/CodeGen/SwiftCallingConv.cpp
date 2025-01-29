@@ -186,7 +186,7 @@ void SwiftAggLowering::addBitFieldData(const FieldDecl *bitfield,
                                        uint64_t bitfieldBitBegin) {
   assert(bitfield->isBitField());
   auto &ctx = CGM.getContext();
-  auto width = bitfield->getBitWidthValue(ctx);
+  auto width = bitfield->getBitWidthValue();
 
   // We can ignore zero-width bit-fields.
   if (width == 0) return;

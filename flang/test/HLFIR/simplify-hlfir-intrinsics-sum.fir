@@ -1,4 +1,4 @@
-// RUN: fir-opt --simplify-hlfir-intrinsics -flang-simplify-hlfir-sum %s | FileCheck %s
+// RUN: fir-opt --simplify-hlfir-intrinsics %s | FileCheck %s
 
 // box with known extents
 func.func @sum_box_known_extents(%arg0: !fir.box<!fir.array<2x3xi32>>) -> !hlfir.expr<2xi32> {

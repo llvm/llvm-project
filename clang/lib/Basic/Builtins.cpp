@@ -163,6 +163,10 @@ void Builtin::Context::initializeBuiltins(IdentifierTable &Table,
   }
 }
 
+std::string Builtin::Context::getQuotedName(unsigned ID) const {
+  return (llvm::Twine("'") + getName(ID) + "'").str();
+}
+
 unsigned Builtin::Context::getRequiredVectorWidth(unsigned ID) const {
   const char *WidthPos = ::strchr(getRecord(ID).Attributes, 'V');
   if (!WidthPos)

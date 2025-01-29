@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC_MATH_GENERIC_RANGE_REDUCTION_DOUBLE_COMMON_H
 #define LLVM_LIBC_SRC_MATH_GENERIC_RANGE_REDUCTION_DOUBLE_COMMON_H
 
-#include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/multiply_add.h"

@@ -68,7 +68,7 @@ The entrypoints.txt file
 One of the important pieces of config information is listed in a file named
 ``entrypoints.txt``. This file lists the targets for the entrypoints (see
 :ref:`entrypoints`) you want to include in the static archive of the libc (for
-the :ref:`overlay_mode` and/or the :ref:`fullbuild_mode`.) If you are doing an
+the :ref:`overlay_mode` and/or the :ref:`full_host_build`.) If you are doing an
 architecture specific bring up, then an ``entrypoints.txt`` file should be
 created in the architecture subdirectory for each architecture. Else, having a
 single ``entrypoints.txt`` in the operating system directory is sufficient.
@@ -95,7 +95,7 @@ The headers.txt file
 Another important piece of config information is listed in a file named
 ``headers.txt``. It lists the targets for the set of public headers that are
 provided by the libc. This is relevant only if the libc is to be used in the
-:ref:`fullbuild_mode` on the target operating system and architecture. As with
+:ref:`full_host_build` on the target operating system and architecture. As with
 the ``entrypoints.txt`` file, one ``headers.txt`` file should be listed for
 each individual target architecture if you are doing an architecture specific
 bring up. The Linux config has ``headers.txt`` file listed separately for the

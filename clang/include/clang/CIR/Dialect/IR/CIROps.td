@@ -16,6 +16,7 @@
 
 include "clang/CIR/Dialect/IR/CIRDialect.td"
 include "clang/CIR/Dialect/IR/CIRTypes.td"
+include "clang/CIR/Dialect/IR/CIRAttrs.td"
 
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
@@ -76,6 +77,45 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
     Op<CIR_Dialect, mnemonic, traits>, LLVMLoweringInfo;
 
 //===----------------------------------------------------------------------===//
+// ConstantOp
+//===----------------------------------------------------------------------===//
+
+def ConstantOp : CIR_Op<"const",
+                        [ConstantLike, Pure, AllTypesMatch<["value", "res"]>]> {
+  let summary = "Defines a CIR constant";
+  let description = [{
+    The `cir.const` operation turns a literal into an SSA value. The data is
+    attached to the operation as an attribute.
+
+    ```mlir
+      %0 = cir.const 42 : i32
+      %1 = cir.const 4.2 : f32
+      %2 = cir.const nullptr : !cir.ptr<i32>
+    ```
+  }];
+
+  // The constant operation takes an attribute as the only input.
+  let arguments = (ins TypedAttrInterface:$value);
+
+  // The constant operation returns a single value of CIR_AnyType.
+  let results = (outs CIR_AnyType:$res);
+
+  let assemblyFormat = "attr-dict $value";
+
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool isNullPtr() {
+      if (const auto ptrAttr = mlir::dyn_cast<cir::ConstPtrAttr>(getValue()))
+        return ptrAttr.isNullValue();
+      return false;
+    }
+  }];
+
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalOp
 //===----------------------------------------------------------------------===//
 
@@ -92,9 +132,19 @@ def GlobalOp : CIR_Op<"global"> {
     described by the type of the variable.
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name, TypeAttr:$sym_type);
+  let arguments = (ins SymbolNameAttr:$sym_name, TypeAttr:$sym_type,
+                       OptionalAttr<AnyAttr>:$initial_value);
 
-  let assemblyFormat = [{ $sym_name `:` $sym_type attr-dict }];
+  let assemblyFormat = [{
+    $sym_name
+    custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value)
+    attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    bool isDeclaration() { return !getInitialValue(); }
+    bool hasInitializer() { return !isDeclaration(); }
+  }];
 
   let skipDefaultBuilders = 1;
 
