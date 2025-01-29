@@ -2792,6 +2792,10 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     mangleArtificialTagType(TagTypeKind::Struct, "__bf16", {"__clang"});
     break;
 
+  case BuiltinType::MFloat8:
+    mangleArtificialTagType(TagTypeKind::Struct, "__mfp8", {"__clang"});
+    break;
+
 #define WASM_REF_TYPE(InternalName, MangledName, Id, SingletonId, AS)          \
   case BuiltinType::Id:                                                        \
     mangleArtificialTagType(TagTypeKind::Struct, MangledName);                 \
@@ -2808,6 +2812,7 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
 
 #define SVE_TYPE(Name, Id, SingletonId) \
   case BuiltinType::Id:
+#define SVE_SCALAR_TYPE(Name, MangledName, Id, SingletonId, Bits)
 #include "clang/Basic/AArch64SVEACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
   case BuiltinType::Id:
