@@ -677,18 +677,18 @@ private:
 
   /// Computes the alloc type corresponding to the given context ids, by
   /// unioning their recorded alloc types.
-  uint8_t computeAllocType(DenseSet<uint32_t> &ContextIds);
+  uint8_t computeAllocType(DenseSet<uint32_t> &ContextIds) const;
 
   /// Returns the allocation type of the intersection of the contexts of two
   /// nodes (based on their provided context id sets), optimized for the case
   /// when Node1Ids is smaller than Node2Ids.
   uint8_t intersectAllocTypesImpl(const DenseSet<uint32_t> &Node1Ids,
-                                  const DenseSet<uint32_t> &Node2Ids);
+                                  const DenseSet<uint32_t> &Node2Ids) const;
 
   /// Returns the allocation type of the intersection of the contexts of two
   /// nodes (based on their provided context id sets).
   uint8_t intersectAllocTypes(const DenseSet<uint32_t> &Node1Ids,
-                              const DenseSet<uint32_t> &Node2Ids);
+                              const DenseSet<uint32_t> &Node2Ids) const;
 
   /// Create a clone of Edge's callee and move Edge to that new callee node,
   /// performing the necessary context id and allocation type updates.
@@ -1152,12 +1152,12 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 uint8_t CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::computeAllocType(
-    DenseSet<uint32_t> &ContextIds) {
+    DenseSet<uint32_t> &ContextIds) const {
   uint8_t BothTypes =
       (uint8_t)AllocationType::Cold | (uint8_t)AllocationType::NotCold;
   uint8_t AllocType = (uint8_t)AllocationType::None;
   for (auto Id : ContextIds) {
-    AllocType |= (uint8_t)ContextIdToAllocationType[Id];
+    AllocType |= (uint8_t)ContextIdToAllocationType.at(Id);
     // Bail early if alloc type reached both, no further refinement.
     if (AllocType == BothTypes)
       return AllocType;
@@ -1168,14 +1168,15 @@ uint8_t CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::computeAllocType(
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 uint8_t
 CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::intersectAllocTypesImpl(
-    const DenseSet<uint32_t> &Node1Ids, const DenseSet<uint32_t> &Node2Ids) {
+    const DenseSet<uint32_t> &Node1Ids,
+    const DenseSet<uint32_t> &Node2Ids) const {
   uint8_t BothTypes =
       (uint8_t)AllocationType::Cold | (uint8_t)AllocationType::NotCold;
   uint8_t AllocType = (uint8_t)AllocationType::None;
   for (auto Id : Node1Ids) {
     if (!Node2Ids.count(Id))
       continue;
-    AllocType |= (uint8_t)ContextIdToAllocationType[Id];
+    AllocType |= (uint8_t)ContextIdToAllocationType.at(Id);
     // Bail early if alloc type reached both, no further refinement.
     if (AllocType == BothTypes)
       return AllocType;
@@ -1185,7 +1186,8 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::intersectAllocTypesImpl(
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 uint8_t CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::intersectAllocTypes(
-    const DenseSet<uint32_t> &Node1Ids, const DenseSet<uint32_t> &Node2Ids) {
+    const DenseSet<uint32_t> &Node1Ids,
+    const DenseSet<uint32_t> &Node2Ids) const {
   if (Node1Ids.size() < Node2Ids.size())
     return intersectAllocTypesImpl(Node1Ids, Node2Ids);
   else
