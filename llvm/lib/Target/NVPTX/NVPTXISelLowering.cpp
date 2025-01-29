@@ -94,6 +94,13 @@ static cl::opt<bool> UsePrecSqrtF32(
     cl::desc("NVPTX Specific: 0 use sqrt.approx, 1 use sqrt.rn."),
     cl::init(true));
 
+/// Whereas CUDA's implementation (see libdevice) uses ex2.approx for exp2(), it
+/// does NOT use lg2.approx for log2, so this is disabled by default.
+static cl::opt<bool> UseApproxLog2F32(
+    "nvptx-approx-log2f32",
+    cl::desc("NVPTX Specific: whether to use lg2.approx for log2"),
+    cl::init(false));
+
 static cl::opt<bool> ForceMinByValParamAlign(
     "nvptx-force-min-byval-param-align", cl::Hidden,
     cl::desc("NVPTX Specific: force 4-byte minimal alignment for byval"
@@ -529,6 +536,9 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     case ISD::FMINIMUM:
       IsOpSupported &= STI.getSmVersion() >= 80 && STI.getPTXVersion() >= 70;
       break;
+    case ISD::FEXP2:
+      IsOpSupported &= STI.getSmVersion() >= 75 && STI.getPTXVersion() >= 70;
+      break;
     }
     setOperationAction(Op, VT, IsOpSupported ? Action : NoF16Action);
   };
@@ -959,14 +969,33 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::CopyToReg, MVT::i128, Custom);
   setOperationAction(ISD::CopyFromReg, MVT::i128, Custom);
 
-  // No FEXP2, FLOG2.  The PTX ex2 and log2 functions are always approximate.
+  // FEXP2 support:
+  // - f32
+  // - f16/f16x2 (sm_70+, PTX 7.0+)
+  // - bf16/bf16x2 (sm_90+, PTX 7.8+)
+  // When f16/bf16 types aren't supported, they are promoted/expanded to f32.
+  setOperationAction(ISD::FEXP2, MVT::f32, Legal);
+  setFP16OperationAction(ISD::FEXP2, MVT::f16, Legal, Promote);
+  setFP16OperationAction(ISD::FEXP2, MVT::v2f16, Legal, Expand);
+  setBF16OperationAction(ISD::FEXP2, MVT::bf16, Legal, Promote);
+  setBF16OperationAction(ISD::FEXP2, MVT::v2bf16, Legal, Expand);
+
+  // FLOG2 supports f32 only
+  // f16/bf16 types aren't supported, but they are promoted/expanded to f32.
+  if (UseApproxLog2F32) {
+    setOperationAction(ISD::FLOG2, MVT::f32, Legal);
+    setOperationPromotedToType(ISD::FLOG2, MVT::f16, MVT::f32);
+    setOperationPromotedToType(ISD::FLOG2, MVT::bf16, MVT::f32);
+    setOperationAction(ISD::FLOG2, {MVT::v2f16, MVT::v2bf16}, Expand);
+  }
+
   // No FPOW or FREM in PTX.
 
   // Now deduce the information based on the above mentioned
   // actions
   computeRegisterProperties(STI.getRegisterInfo());
 
-  setMinCmpXchgSizeInBits(STI.hasAtomCas16() ? 16 : 32);
+  setMinCmpXchgSizeInBits(STI.getMinCmpXchgSizeInBits());
   setMaxAtomicSizeInBitsSupported(64);
   setMaxDivRemBitWidthSupported(64);
 }
@@ -2775,8 +2804,8 @@ SDValue NVPTXTargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
   Tmp1 = DAG.getStore(VAListLoad.getValue(1), DL, Tmp1, Tmp2,
                       MachinePointerInfo(V));
 
-  const Value *SrcV =
-      Constant::getNullValue(PointerType::get(Ty, ADDRESS_SPACE_LOCAL));
+  const Value *SrcV = Constant::getNullValue(
+      PointerType::get(*DAG.getContext(), ADDRESS_SPACE_LOCAL));
 
   // Load the actual argument out of the pointer VAList
   return DAG.getLoad(VT, DL, Tmp1, VAList, MachinePointerInfo(SrcV));
@@ -3165,8 +3194,8 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
           SDValue VecAddr =
               DAG.getNode(ISD::ADD, dl, PtrVT, Arg,
                           DAG.getConstant(Offsets[VecIdx], dl, PtrVT));
-          Value *srcValue = Constant::getNullValue(PointerType::get(
-              EltVT.getTypeForEVT(F->getContext()), ADDRESS_SPACE_PARAM));
+          Value *srcValue = Constant::getNullValue(
+              PointerType::get(F->getContext(), ADDRESS_SPACE_PARAM));
 
           const MaybeAlign PartAlign = [&]() -> MaybeAlign {
             if (aggregateIsPacked)

@@ -206,8 +206,7 @@ static const TargetRegisterClass *
 getMinimalPhysRegClass(const TargetRegisterInfo *TRI, MCRegister Reg,
                        TypeT Ty) {
   static_assert(std::is_same_v<TypeT, MVT> || std::is_same_v<TypeT, LLT>);
-  assert(Register::isPhysicalRegister(Reg) &&
-         "reg must be a physical register");
+  assert(Reg.isPhysical() && "reg must be a physical register");
 
   bool IsDefault = [&]() {
     if constexpr (std::is_same_v<TypeT, MVT>)
@@ -235,8 +234,7 @@ static const TargetRegisterClass *
 getCommonMinimalPhysRegClass(const TargetRegisterInfo *TRI, MCRegister Reg1,
                              MCRegister Reg2, TypeT Ty) {
   static_assert(std::is_same_v<TypeT, MVT> || std::is_same_v<TypeT, LLT>);
-  assert(Register::isPhysicalRegister(Reg1) &&
-         Register::isPhysicalRegister(Reg2) &&
+  assert(Reg1.isPhysical() && Reg2.isPhysical() &&
          "Reg1/Reg2 must be a physical register");
 
   bool IsDefault = [&]() {
@@ -504,14 +502,13 @@ bool TargetRegisterInfo::getRegAllocationHints(
 
 bool TargetRegisterInfo::isCalleeSavedPhysReg(
     MCRegister PhysReg, const MachineFunction &MF) const {
-  if (PhysReg == 0)
+  if (!PhysReg)
     return false;
   const uint32_t *callerPreservedRegs =
       getCallPreservedMask(MF, MF.getFunction().getCallingConv());
   if (callerPreservedRegs) {
-    assert(Register::isPhysicalRegister(PhysReg) &&
-           "Expected physical register");
-    return (callerPreservedRegs[PhysReg / 32] >> PhysReg % 32) & 1;
+    assert(PhysReg.isPhysical() && "Expected physical register");
+    return (callerPreservedRegs[PhysReg.id() / 32] >> PhysReg.id() % 32) & 1;
   }
   return false;
 }

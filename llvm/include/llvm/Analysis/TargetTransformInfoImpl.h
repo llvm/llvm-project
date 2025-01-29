@@ -1039,6 +1039,10 @@ public:
 
   bool hasArmWideBranch(bool) const { return false; }
 
+  uint64_t getFeatureMask(const Function &F) const { return 0; }
+
+  bool isMultiversionedFunction(const Function &F) const { return false; }
+
   unsigned getMaxNumArgs() const { return UINT_MAX; }
 
   unsigned getNumBytesToPadGlobalArray(unsigned Size, Type *ArrayType) const {
