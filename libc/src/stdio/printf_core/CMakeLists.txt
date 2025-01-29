@@ -59,10 +59,8 @@ add_header_library(
     libc.src.__support.common
 )
 
-add_object_library(
+add_header_library(
   writer
-  SRCS
-    writer.cpp
   HDRS
     writer.h
   DEPENDS
@@ -73,10 +71,8 @@ add_object_library(
     libc.src.string.memory_utils.inline_memset
 )
 
-add_object_library(
+add_header_library(
   converter
-  SRCS
-    converter.cpp
   HDRS
     converter.h
     converter_atlas.h
@@ -110,10 +106,8 @@ add_object_library(
     libc.src.__support.StringUtil.error_to_string
 )
 
-add_object_library(
+add_header_library(
   printf_main
-  SRCS
-    printf_main.cpp
   HDRS
     printf_main.h
   DEPENDS
