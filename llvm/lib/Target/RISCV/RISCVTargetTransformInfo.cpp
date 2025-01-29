@@ -376,6 +376,104 @@ static VectorType *getVRGatherIndexType(MVT DataVT, const RISCVSubtarget &ST,
   return cast<VectorType>(EVT(IndexVT).getTypeForEVT(C));
 }
 
+/// Try to perform better estimation of the permutation.
+/// 1. Split the source/destination vectors into real registers.
+/// 2. Do the mask analysis to identify which real registers are
+/// permuted. If more than 1 source registers are used for the
+/// destination register building, the cost for this destination register
+/// is (Number_of_source_register - 1) * Cost_PermuteTwoSrc. If only one
+/// source register is used, build mask and calculate the cost as a cost
+/// of PermuteSingleSrc.
+/// Also, for the single register permute we try to identify if the
+/// destination register is just a copy of the source register or the
+/// copy of the previous destination register (the cost is
+/// TTI::TCC_Basic). If the source register is just reused, the cost for
+/// this operation is 0.
+static InstructionCost
+costShuffleViaVRegSplitting(RISCVTTIImpl &TTI, MVT LegalVT,
+                            std::optional<unsigned> VLen, VectorType *Tp,
+                            ArrayRef<int> Mask, TTI::TargetCostKind CostKind) {
+  InstructionCost NumOfDests = InstructionCost::getInvalid();
+  if (VLen && LegalVT.isFixedLengthVector() && !Mask.empty()) {
+    MVT ElemVT = LegalVT.getVectorElementType();
+    unsigned ElemsPerVReg = *VLen / ElemVT.getFixedSizeInBits();
+    LegalVT = TTI.getTypeLegalizationCost(
+                     FixedVectorType::get(Tp->getElementType(), ElemsPerVReg))
+                  .second;
+    // Number of destination vectors after legalization:
+    NumOfDests = divideCeil(Mask.size(), LegalVT.getVectorNumElements());
+  }
+  if (!NumOfDests.isValid() || NumOfDests <= 1 ||
+      !LegalVT.isFixedLengthVector() ||
+      LegalVT.getVectorElementType().getSizeInBits() !=
+          Tp->getElementType()->getPrimitiveSizeInBits() ||
+      LegalVT.getVectorNumElements() >= Tp->getElementCount().getFixedValue())
+    return InstructionCost::getInvalid();
+
+  unsigned VecTySize = TTI.getDataLayout().getTypeStoreSize(Tp);
+  unsigned LegalVTSize = LegalVT.getStoreSize();
+  // Number of source vectors after legalization:
+  unsigned NumOfSrcs = divideCeil(VecTySize, LegalVTSize);
+
+  auto *SingleOpTy = FixedVectorType::get(Tp->getElementType(),
+                                          LegalVT.getVectorNumElements());
+
+  unsigned E = *NumOfDests.getValue();
+  unsigned NormalizedVF =
+      LegalVT.getVectorNumElements() * std::max(NumOfSrcs, E);
+  unsigned NumOfSrcRegs = NormalizedVF / LegalVT.getVectorNumElements();
+  unsigned NumOfDestRegs = NormalizedVF / LegalVT.getVectorNumElements();
+  SmallVector<int> NormalizedMask(NormalizedVF, PoisonMaskElem);
+  assert(NormalizedVF >= Mask.size() &&
+         "Normalized mask expected to be not shorter than original mask.");
+  copy(Mask, NormalizedMask.begin());
+  InstructionCost Cost = 0;
+  SmallBitVector ExtractedRegs(2 * NumOfSrcRegs);
+  int NumShuffles = 0;
+  processShuffleMasks(
+      NormalizedMask, NumOfSrcRegs, NumOfDestRegs, NumOfDestRegs, []() {},
+      [&](ArrayRef<int> RegMask, unsigned SrcReg, unsigned DestReg) {
+        if (ExtractedRegs.test(SrcReg)) {
+          Cost += TTI.getShuffleCost(TTI::SK_ExtractSubvector, Tp, {}, CostKind,
+                                     (SrcReg % NumOfSrcRegs) *
+                                         SingleOpTy->getNumElements(),
+                                     SingleOpTy);
+          ExtractedRegs.set(SrcReg);
+        }
+        if (!ShuffleVectorInst::isIdentityMask(RegMask, RegMask.size())) {
+          ++NumShuffles;
+          Cost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, SingleOpTy,
+                                     RegMask, CostKind, 0, nullptr);
+          return;
+        }
+      },
+      [&](ArrayRef<int> RegMask, unsigned Idx1, unsigned Idx2, bool NewReg) {
+        if (ExtractedRegs.test(Idx1)) {
+          Cost += TTI.getShuffleCost(
+              TTI::SK_ExtractSubvector, Tp, {}, CostKind,
+              (Idx1 % NumOfSrcRegs) * SingleOpTy->getNumElements(), SingleOpTy);
+          ExtractedRegs.set(Idx1);
+        }
+        if (ExtractedRegs.test(Idx2)) {
+          Cost += TTI.getShuffleCost(
+              TTI::SK_ExtractSubvector, Tp, {}, CostKind,
+              (Idx2 % NumOfSrcRegs) * SingleOpTy->getNumElements(), SingleOpTy);
+          ExtractedRegs.set(Idx2);
+        }
+        Cost += TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy, RegMask,
+                                   CostKind, 0, nullptr);
+        NumShuffles += 2;
+      });
+  // Note: check that we do not emit too many shuffles here to prevent code
+  // size explosion.
+  // TODO: investigate, if it can be improved by extra analysis of the masks
+  // to check if the code is more profitable.
+  if ((NumOfDestRegs > 2 && NumShuffles <= static_cast<int>(NumOfDestRegs)) ||
+      (NumOfDestRegs <= 2 && NumShuffles < 4))
+    return Cost;
+  return InstructionCost::getInvalid();
+}
+
 InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                              VectorType *Tp, ArrayRef<int> Mask,
                                              TTI::TargetCostKind CostKind,
@@ -389,7 +487,11 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   // First, handle cases where having a fixed length vector enables us to
   // give a more accurate cost than falling back to generic scalable codegen.
   // TODO: Each of these cases hints at a modeling gap around scalable vectors.
-  if (isa<FixedVectorType>(Tp)) {
+  if (ST->hasVInstructions() && isa<FixedVectorType>(Tp)) {
+    InstructionCost VRegSplittingCost = costShuffleViaVRegSplitting(
+        *this, LT.second, ST->getRealVLen(), Tp, Mask, CostKind);
+    if (VRegSplittingCost.isValid())
+      return VRegSplittingCost;
     switch (Kind) {
     default:
       break;
