@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -22529,6 +22530,22 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
   return true;
 }
 
+static bool isMultipleOfN(const Value *V, const DataLayout &DL, unsigned N) {
+  assert(N);
+  if (N == 1)
+    return true;
+
+  if (isPowerOf2_32(N)) {
+    KnownBits KB = llvm::computeKnownBits(V, DL);
+    return KB.countMinTrailingZeros() >= Log2_32(N);
+  } else {
+    using namespace PatternMatch;
+    // Right now we're only recognizing the simplest pattern.
+    uint64_t C;
+    return match(V, m_c_Mul(m_Value(), m_ConstantInt(C))) && C && C % N == 0;
+  }
+}
+
 /// Lower an interleaved vp.load into a vlsegN intrinsic.
 ///
 /// E.g. Lower an interleaved vp.load (Factor = 2):
@@ -22586,6 +22603,9 @@ bool RISCVTargetLowering::lowerDeinterleavedIntrinsicToVPLoad(
 
   IRBuilder<> Builder(Load);
   Value *WideEVL = Load->getArgOperand(2);
+  if (!isMultipleOfN(WideEVL, Load->getDataLayout(), Factor))
+    return false;
+
   auto *XLenTy = Type::getIntNTy(Load->getContext(), Subtarget.getXLen());
   Value *EVL = Builder.CreateZExtOrTrunc(
       Builder.CreateUDiv(WideEVL, ConstantInt::get(WideEVL->getType(), Factor)),
@@ -22740,6 +22760,9 @@ bool RISCVTargetLowering::lowerInterleavedIntrinsicToVPStore(
 
   IRBuilder<> Builder(Store);
   Value *WideEVL = Store->getArgOperand(3);
+  if (!isMultipleOfN(WideEVL, Store->getDataLayout(), Factor))
+    return false;
+
   auto *XLenTy = Type::getIntNTy(Store->getContext(), Subtarget.getXLen());
   Value *EVL = Builder.CreateZExtOrTrunc(
       Builder.CreateUDiv(WideEVL, ConstantInt::get(WideEVL->getType(), Factor)),

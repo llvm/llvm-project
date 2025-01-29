@@ -630,9 +630,12 @@ getVectorDeinterleaveFactor(IntrinsicInst *II,
   return true;
 }
 
-// Return nullptr if the value corresponds to a all-true mask. Otherwise,
-// return the value that is corresponded to a deinterleaved mask.
-static Value *getMask(Value *WideMask, unsigned Factor) {
+// Return the corresponded deinterleaved mask, or nullptr if there is no valid
+// mask.
+static Value *getMask(Value *WideMask, unsigned Factor,
+                      VectorType *LeafValueTy) {
+  Value *MaskVal = nullptr;
+
   using namespace llvm::PatternMatch;
   if (auto *IMI = dyn_cast<IntrinsicInst>(WideMask)) {
     SmallVector<Value *, 8> Operands;
@@ -640,13 +643,28 @@ static Value *getMask(Value *WideMask, unsigned Factor) {
     if (getVectorInterleaveFactor(IMI, Operands, DeadInsts)) {
       assert(!Operands.empty());
       if (Operands.size() == Factor && llvm::all_equal(Operands))
-        return Operands[0];
+        MaskVal = Operands[0];
     }
   }
-  if (match(WideMask, m_AllOnes()))
-    return WideMask;
 
-  return nullptr;
+  if (match(WideMask, m_AllOnes())) {
+    // Scale the vector length.
+    ElementCount OrigEC =
+        cast<VectorType>(WideMask->getType())->getElementCount();
+    MaskVal =
+        ConstantVector::getSplat(OrigEC.divideCoefficientBy(Factor),
+                                 cast<Constant>(WideMask)->getSplatValue());
+  }
+
+  if (MaskVal) {
+    // Check if the vector length of mask matches that of the leaf values.
+    auto *MaskTy = cast<VectorType>(MaskVal->getType());
+    if (!MaskTy->getElementType()->isIntegerTy(/*Bitwidth=*/1) ||
+        MaskTy->getElementCount() != LeafValueTy->getElementCount())
+      return nullptr;
+  }
+
+  return MaskVal;
 }
 
 bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
@@ -668,7 +686,8 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
       return false;
     // Check mask operand. Handle both all-true and interleaved mask.
     Value *WideMask = VPLoad->getOperand(1);
-    Value *Mask = getMask(WideMask, Factor);
+    Value *Mask = getMask(WideMask, Factor,
+                          cast<VectorType>(DeinterleaveValues[0]->getType()));
     if (!Mask)
       return false;
 
@@ -720,7 +739,8 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
       return false;
 
     Value *WideMask = VPStore->getOperand(2);
-    Value *Mask = getMask(WideMask, Factor);
+    Value *Mask = getMask(WideMask, Factor,
+                          cast<VectorType>(InterleaveValues[0]->getType()));
     if (!Mask)
       return false;
 
