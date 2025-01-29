@@ -1729,10 +1729,8 @@
 {'is_defined': True, 'name': '_ZTINSt6__ndk120__time_get_c_storageIwEE', 'size': 16, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt6__ndk13pmr15memory_resourceE', 'size': 16, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt6__ndk13pmr25monotonic_buffer_resourceE', 'size': 24, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTINSt6__ndk13pmr26__null_memory_resource_impE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt6__ndk13pmr26synchronized_pool_resourceE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt6__ndk13pmr28unsynchronized_pool_resourceE', 'size': 24, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTINSt6__ndk13pmr32__new_delete_memory_resource_impE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt6__ndk14__fs10filesystem16filesystem_errorE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt6__ndk15ctypeIcEE', 'size': 56, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt6__ndk15ctypeIwEE', 'size': 56, 'type': 'OBJECT'}
@@ -1963,10 +1961,8 @@
 {'is_defined': True, 'name': '_ZTSNSt6__ndk120__time_get_c_storageIwEE', 'size': 37, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt6__ndk13pmr15memory_resourceE', 'size': 33, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt6__ndk13pmr25monotonic_buffer_resourceE', 'size': 43, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTSNSt6__ndk13pmr26__null_memory_resource_impE', 'size': 44, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt6__ndk13pmr26synchronized_pool_resourceE', 'size': 44, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt6__ndk13pmr28unsynchronized_pool_resourceE', 'size': 46, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTSNSt6__ndk13pmr32__new_delete_memory_resource_impE', 'size': 50, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt6__ndk14__fs10filesystem16filesystem_errorE', 'size': 47, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt6__ndk15ctypeIcEE', 'size': 21, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt6__ndk15ctypeIwEE', 'size': 21, 'type': 'OBJECT'}
@@ -2189,10 +2185,8 @@
 {'is_defined': True, 'name': '_ZTVNSt6__ndk120__codecvt_utf8_utf16IwEE', 'size': 96, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt6__ndk13pmr15memory_resourceE', 'size': 56, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt6__ndk13pmr25monotonic_buffer_resourceE', 'size': 56, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTVNSt6__ndk13pmr26__null_memory_resource_impE', 'size': 56, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt6__ndk13pmr26synchronized_pool_resourceE', 'size': 56, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt6__ndk13pmr28unsynchronized_pool_resourceE', 'size': 56, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTVNSt6__ndk13pmr32__new_delete_memory_resource_impE', 'size': 56, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt6__ndk14__fs10filesystem16filesystem_errorE', 'size': 40, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt6__ndk15ctypeIcEE', 'size': 104, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt6__ndk15ctypeIwEE', 'size': 136, 'type': 'OBJECT'}
