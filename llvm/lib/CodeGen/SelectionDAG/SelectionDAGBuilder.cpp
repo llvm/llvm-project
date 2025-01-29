@@ -12602,8 +12602,8 @@ void SelectionDAGBuilder::visitVectorDeinterleave(const CallInst &I,
                              DAG.getVectorIdxConstant(OutNumElts * i, DL));
   }
 
-  // Use VECTOR_SHUFFLE for fixed-length vectors to benefit from existing
-  // legalisation and combines.
+  // Use VECTOR_SHUFFLE for fixed-length vectors with factor of 2 to benefit
+  // from existing legalisation and combines.
   if (OutVT.isFixedLengthVector() && Factor == 2) {
     SDValue Even = DAG.getVectorShuffle(OutVT, DL, SubVecs[0], SubVecs[1],
                                         createStrideMask(0, 2, OutNumElts));
@@ -12633,8 +12633,8 @@ void SelectionDAGBuilder::visitVectorInterleave(const CallInst &I,
            "Expected VTs to be the same");
   }
 
-  // Use VECTOR_SHUFFLE for fixed-length vectors to benefit from existing
-  // legalisation and combines.
+  // Use VECTOR_SHUFFLE for fixed-length vectors with factor of 2 to benefit
+  // from existing legalisation and combines.
   if (OutVT.isFixedLengthVector() && Factor == 2) {
     unsigned NumElts = InVT.getVectorMinNumElements();
     SDValue V = DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, InVecs);
