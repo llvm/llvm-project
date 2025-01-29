@@ -216,7 +216,8 @@ void DependenceAnalysisWrapperPass::print(raw_ostream &OS,
 
 PreservedAnalyses
 DependenceAnalysisPrinterPass::run(Function &F, FunctionAnalysisManager &FAM) {
-  OS << "'Dependence Analysis' for function '" << F.getName() << "':\n";
+  OS << "Printing analysis 'Dependence Analysis' for function '" << F.getName()
+     << "':\n";
   dumpExampleDependence(OS, &FAM.getResult<DependenceAnalysis>(F),
                         FAM.getResult<ScalarEvolutionAnalysis>(F),
                         NormalizeResults);
@@ -3601,14 +3602,10 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     return std::make_unique<Dependence>(Src, Dst);
   }
 
-  assert(isLoadOrStore(Src) && "instruction is not load or store");
-  assert(isLoadOrStore(Dst) && "instruction is not load or store");
-  Value *SrcPtr = getLoadStorePointerOperand(Src);
-  Value *DstPtr = getLoadStorePointerOperand(Dst);
+  const MemoryLocation &DstLoc = MemoryLocation::get(Dst);
+  const MemoryLocation &SrcLoc = MemoryLocation::get(Src);
 
-  switch (underlyingObjectsAlias(AA, F->getDataLayout(),
-                                 MemoryLocation::get(Dst),
-                                 MemoryLocation::get(Src))) {
+  switch (underlyingObjectsAlias(AA, F->getDataLayout(), DstLoc, SrcLoc)) {
   case AliasResult::MayAlias:
   case AliasResult::PartialAlias:
     // cannot analyse objects if we don't understand their aliasing.
@@ -3622,6 +3619,83 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     break; // The underlying objects alias; test accesses for dependence.
   }
 
+  if (DstLoc.Size != SrcLoc.Size) {
+    // The dependence test gets confused if the size of the memory accesses
+    // differ.
+    LLVM_DEBUG(dbgs() << "can't analyze must alias with different sizes\n");
+    return std::make_unique<Dependence>(Src, Dst);
+  }
+
+  Value *SrcPtr = getLoadStorePointerOperand(Src);
+  Value *DstPtr = getLoadStorePointerOperand(Dst);
+  const SCEV *SrcSCEV = SE->getSCEV(SrcPtr);
+  const SCEV *DstSCEV = SE->getSCEV(DstPtr);
+  LLVM_DEBUG(dbgs() << "    SrcSCEV = " << *SrcSCEV << "\n");
+  LLVM_DEBUG(dbgs() << "    DstSCEV = " << *DstSCEV << "\n");
+  const SCEV *SrcBase = SE->getPointerBase(SrcSCEV);
+  const SCEV *DstBase = SE->getPointerBase(DstSCEV);
+  if (SrcBase != DstBase) {
+    // If two pointers have different bases, trying to analyze indexes won't
+    // work; we can't compare them to each other. This can happen, for example,
+    // if one is produced by an LCSSA PHI node.
+    //
+    // We check this upfront so we don't crash in cases where getMinusSCEV()
+    // returns a SCEVCouldNotCompute.
+    LLVM_DEBUG(dbgs() << "can't analyze SCEV with different pointer base\n");
+    return std::make_unique<Dependence>(Src, Dst);
+  }
+
+  std::function<bool(ScalarEvolution *, const SCEV *, uint64_t)>
+      checkOffsetsAndStrides =
+          [&](ScalarEvolution *SE, const SCEV *V, uint64_t Size) -> bool {
+    if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(V)) {
+      if (!checkOffsetsAndStrides(SE, AddRec->getStart(), Size))
+        return false;
+      return checkOffsetsAndStrides(SE, AddRec->getStepRecurrence(*SE), Size);
+    }
+    if (auto *Cst = dyn_cast<SCEVConstant>(V)) {
+      APInt C = Cst->getAPInt();
+      return C.srem(Size) == 0;
+    }
+    if (auto *Add = dyn_cast<SCEVAddExpr>(V)) {
+      // FIXME: DA cannot reason about expressions containing SSA names.
+      return true;
+      // If the expression contains variable names, i.e., "n + 1", then we
+      // cannot reason about the coefficients of V being multiples of Size.
+      if (SCEVExprContains(V, [](const SCEV *S) { return isa<SCEVUnknown>(S); }))
+        return false;
+      for (const SCEV *AddOp : Add->operands()) {
+        if (!checkOffsetsAndStrides(SE, AddOp, Size))
+          return false;
+      }
+      return true;
+    }
+    if (auto *Mul = dyn_cast<SCEVMulExpr>(V)) {
+      // FIXME: DA cannot reason about expressions containing SSA names.
+      return true;
+      // If the expression contains variable names, i.e., "n * 3", then we
+      // cannot reason about the coefficients of V being multiples of Size.
+      if (SCEVExprContains(V, [](const SCEV *S) { return isa<SCEVUnknown>(S); }))
+        return false;
+      for (const SCEV *MulOp : Mul->operands()) {
+        if (!checkOffsetsAndStrides(SE, MulOp, Size))
+          return false;
+      }
+      return true;
+    }
+    // SCEV node not handled yet.
+    return false;
+  };
+
+  // Check that memory access offsets are multiples of element sizes.
+  const SCEV *SrcEv = SE->getMinusSCEV(SrcSCEV, SrcBase);
+  const SCEV *DstEv = SE->getMinusSCEV(DstSCEV, DstBase);
+  if (!checkOffsetsAndStrides(SE, SrcEv, SrcLoc.Size.toRaw()) ||
+      !checkOffsetsAndStrides(SE, DstEv, DstLoc.Size.toRaw())) {
+    LLVM_DEBUG(dbgs() << "can't analyze SCEV with different offsets\n");
+    return std::make_unique<Dependence>(Src, Dst);
+  }
+
   // establish loop nesting levels
   establishNestingLevels(Src, Dst);
   LLVM_DEBUG(dbgs() << "    common nesting levels = " << CommonLevels << "\n");
@@ -3632,20 +3706,6 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
 
   unsigned Pairs = 1;
   SmallVector<Subscript, 2> Pair(Pairs);
-  const SCEV *SrcSCEV = SE->getSCEV(SrcPtr);
-  const SCEV *DstSCEV = SE->getSCEV(DstPtr);
-  LLVM_DEBUG(dbgs() << "    SrcSCEV = " << *SrcSCEV << "\n");
-  LLVM_DEBUG(dbgs() << "    DstSCEV = " << *DstSCEV << "\n");
-  if (SE->getPointerBase(SrcSCEV) != SE->getPointerBase(DstSCEV)) {
-    // If two pointers have different bases, trying to analyze indexes won't
-    // work; we can't compare them to each other. This can happen, for example,
-    // if one is produced by an LCSSA PHI node.
-    //
-    // We check this upfront so we don't crash in cases where getMinusSCEV()
-    // returns a SCEVCouldNotCompute.
-    LLVM_DEBUG(dbgs() << "can't analyze SCEV with different pointer base\n");
-    return std::make_unique<Dependence>(Src, Dst);
-  }
   Pair[0].Src = SrcSCEV;
   Pair[0].Dst = DstSCEV;
 
