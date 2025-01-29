@@ -2951,10 +2951,14 @@ static void handleSectionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static bool isValidCodeModelAttr(Sema &S, StringRef Str) {
-  bool IsX8664Target =
-      S.Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86_64;
-  bool IsX8664Spelling = Str == "small" || Str == "large";
-  return IsX8664Target == IsX8664Spelling;
+  if (S.Context.getTargetInfo().getTriple().isLoongArch()) {
+    return Str == "normal" || Str == "medium" || Str == "extreme";
+  } else {
+    assert(S.Context.getTargetInfo().getTriple().getArch() ==
+               llvm::Triple::x86_64 &&
+           "only loongarch/x86-64 supported");
+    return Str == "small" || Str == "large";
+  }
 }
 
 static void handleCodeModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
