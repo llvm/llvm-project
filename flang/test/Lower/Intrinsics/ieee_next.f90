@@ -1,14 +1,14 @@
-! RUN: bbc -emit-fir -o - %s | FileCheck %s
+! RUN: bbc -emit-fir %s -o - | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-supports-f128-math %{,CHECK-KIND16%}
 
 ! CHECK-LABEL: c.func @_QQmain
 program p
   use ieee_arithmetic, only: ieee_value, ieee_negative_inf, ieee_positive_inf
   use ieee_arithmetic, only: ieee_next_after, ieee_next_down, ieee_next_up
   implicit none
-  ! CHECK-DAG: %[[V_4:[0-9]+]] = fir.alloca f80 {bindc_name = "r10", uniq_name = "_QFEr10"}
-  ! CHECK-DAG: %[[V_5:[0-9]+]] = fir.declare %[[V_4]] {uniq_name = "_QFEr10"} : (!fir.ref<f80>) -> !fir.ref<f80>
-  ! CHECK-DAG: %[[V_6:[0-9]+]] = fir.alloca f128 {bindc_name = "r16", uniq_name = "_QFEr16"}
-  ! CHECK-DAG: %[[V_7:[0-9]+]] = fir.declare %[[V_6]] {uniq_name = "_QFEr16"} : (!fir.ref<f128>) -> !fir.ref<f128>
+  ! CHECK-KIND10-DAG: %[[V_4:[0-9]+]] = fir.alloca f80 {bindc_name = "r10", uniq_name = "_QFEr10"}
+  ! CHECK-KIND10-DAG: %[[V_5:[0-9]+]] = fir.declare %[[V_4]] {uniq_name = "_QFEr10"} : (!fir.ref<f80>) -> !fir.ref<f80>
+  ! CHECK-KIND16-DAG: %[[V_6:[0-9]+]] = fir.alloca f128 {bindc_name = "r16", uniq_name = "_QFEr16"}
+  ! CHECK-KIND16-DAG: %[[V_7:[0-9]+]] = fir.declare %[[V_6]] {uniq_name = "_QFEr16"} : (!fir.ref<f128>) -> !fir.ref<f128>
   ! CHECK-DAG: %[[V_8:[0-9]+]] = fir.alloca f16 {bindc_name = "r2", uniq_name = "_QFEr2"}
   ! CHECK-DAG: %[[V_9:[0-9]+]] = fir.declare %[[V_8]] {uniq_name = "_QFEr2"} : (!fir.ref<f16>) -> !fir.ref<f16>
   ! CHECK-DAG: %[[V_10:[0-9]+]] = fir.alloca bf16 {bindc_name = "r3", uniq_name = "_QFEr3"}
@@ -17,10 +17,10 @@ program p
   ! CHECK-DAG: %[[V_13:[0-9]+]] = fir.declare %[[V_12]] {uniq_name = "_QFEr4"} : (!fir.ref<f32>) -> !fir.ref<f32>
   ! CHECK-DAG: %[[V_14:[0-9]+]] = fir.alloca f64 {bindc_name = "r8", uniq_name = "_QFEr8"}
   ! CHECK-DAG: %[[V_15:[0-9]+]] = fir.declare %[[V_14]] {uniq_name = "_QFEr8"} : (!fir.ref<f64>) -> !fir.ref<f64>
-  ! CHECK-DAG: %[[V_16:[0-9]+]] = fir.address_of(@_QFEx10) : !fir.ref<f80>
-  ! CHECK-DAG: %[[V_17:[0-9]+]] = fir.declare %[[V_16]] {uniq_name = "_QFEx10"} : (!fir.ref<f80>) -> !fir.ref<f80>
-  ! CHECK-DAG: %[[V_18:[0-9]+]] = fir.alloca f128 {bindc_name = "x16", uniq_name = "_QFEx16"}
-  ! CHECK-DAG: %[[V_19:[0-9]+]] = fir.declare %[[V_18]] {uniq_name = "_QFEx16"} : (!fir.ref<f128>) -> !fir.ref<f128>
+  ! CHECK-KIND10-DAG: %[[V_16:[0-9]+]] = fir.address_of(@_QFEx10) : !fir.ref<f80>
+  ! CHECK-KIND10-DAG: %[[V_17:[0-9]+]] = fir.declare %[[V_16]] {uniq_name = "_QFEx10"} : (!fir.ref<f80>) -> !fir.ref<f80>
+  ! CHECK-KIND16-DAG: %[[V_18:[0-9]+]] = fir.alloca f128 {bindc_name = "x16", uniq_name = "_QFEx16"}
+  ! CHECK-KIND16-DAG: %[[V_19:[0-9]+]] = fir.declare %[[V_18]] {uniq_name = "_QFEx16"} : (!fir.ref<f128>) -> !fir.ref<f128>
   ! CHECK-DAG: %[[V_20:[0-9]+]] = fir.alloca f16 {bindc_name = "x2", uniq_name = "_QFEx2"}
   ! CHECK-DAG: %[[V_21:[0-9]+]] = fir.declare %[[V_20]] {uniq_name = "_QFEx2"} : (!fir.ref<f16>) -> !fir.ref<f16>
   ! CHECK-DAG: %[[V_22:[0-9]+]] = fir.address_of(@_QFEx3) : !fir.ref<bf16>
@@ -29,12 +29,14 @@ program p
   ! CHECK-DAG: %[[V_25:[0-9]+]] = fir.declare %[[V_24]] {uniq_name = "_QFEx4"} : (!fir.ref<f32>) -> !fir.ref<f32>
   ! CHECK-DAG: %[[V_26:[0-9]+]] = fir.address_of(@_QFEx8) : !fir.ref<f64>
   ! CHECK-DAG: %[[V_27:[0-9]+]] = fir.declare %[[V_26]] {uniq_name = "_QFEx8"} : (!fir.ref<f64>) -> !fir.ref<f64>
+  integer, parameter :: kind10 = merge(10, 4, selected_real_kind(p=18).eq.10)
+  integer, parameter :: kind16 = merge(16, 4, selected_real_kind(p=33).eq.16)
   real(2)  ::  r2,  x2
   real(3)  ::  r3,  x3 = -huge(x3)
   real(4)  ::  r4,  x4 = -0.
   real(8)  ::  r8,  x8 =  0.
-  real(10) :: r10, x10 =  huge(x10)
-  real(16) :: r16, x16
+  real(kind10) :: r10, x10 =  huge(x10)
+  real(kind16) :: r16, x16
 
   x2  = ieee_value(x2, ieee_negative_inf)
   x16 = ieee_value(x2, ieee_positive_inf)
@@ -211,71 +213,71 @@ program p
   r8 = ieee_next_after(x8, x2)
   print "('after:  ', z16.16, ' -> ', z16.16, ' = ', g0)", x8, r8, r8
 
-  ! CHECK:     %[[V_158:[0-9]+]] = fir.load %[[V_17]] : !fir.ref<f80>
-  ! CHECK:     %[[V_159:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_158]]) <{bit = 3 : i32}> : (f80) -> i1
-  ! CHECK:     %[[V_160:[0-9]+]] = arith.bitcast %[[V_158]] : f80 to i80
-  ! CHECK:     %[[V_161:[0-9]+]] = arith.shrui %[[V_160]], %c79{{.*}} : i80
-  ! CHECK:     %[[V_162:[0-9]+]] = fir.convert %[[V_161]] : (i80) -> i1
-  ! CHECK:     %[[V_163:[0-9]+]] = arith.cmpi ne, %[[V_162]], %true{{[_0-9]*}} : i1
-  ! CHECK:     %[[V_164:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_158]]) <{bit = 516 : i32}> : (f80) -> i1
-  ! CHECK:     %[[V_165:[0-9]+]] = arith.andi %[[V_164]], %[[V_163]] : i1
-  ! CHECK:     %[[V_166:[0-9]+]] = arith.ori %[[V_159]], %[[V_165]] : i1
-  ! CHECK:     %[[V_167:[0-9]+]] = fir.if %[[V_166]] -> (f80) {
-  ! CHECK:       %[[V_202:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_158]]) <{bit = 1 : i32}> : (f80) -> i1
-  ! CHECK:       fir.if %[[V_202]] {
-  ! CHECK:         %[[V_203:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:                             fir.call @feraiseexcept(%[[V_203]]) fastmath<contract> : (i32) -> i32
-  ! CHECK:       }
-  ! CHECK:       fir.result %[[V_158]] : f80
-  ! CHECK:     } else {
-  ! CHECK:       %[[V_202:[0-9]+]] = arith.cmpf oeq, %[[V_158]], %cst{{[_0-9]*}} fastmath<contract> : f80
-  ! CHECK:       %[[V_203:[0-9]+]] = fir.if %[[V_202]] -> (f80) {
-  ! CHECK:         fir.result %cst{{[_0-9]*}} : f80
-  ! CHECK:       } else {
-  ! CHECK:         %[[V_204:[0-9]+]] = fir.call @_FortranAMapException(%c63{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:         %[[V_205:[0-9]+]] = fir.call @fetestexcept(%[[V_204]]) fastmath<contract> : (i32) -> i32
-  ! CHECK:         %[[V_206:[0-9]+]] = fir.call @fedisableexcept(%[[V_204]]) fastmath<contract> : (i32) -> i32
-  ! CHECK:         %[[V_207:[0-9]+]] = fir.call @_FortranANearest10(%[[V_158]], %true{{[_0-9]*}}) fastmath<contract> : (f80, i1) -> f80
-  ! CHECK:         %[[V_208:[0-9]+]] = fir.call @feclearexcept(%[[V_204]]) fastmath<contract> : (i32) -> i32
-  ! CHECK:         %[[V_209:[0-9]+]] = fir.call @feraiseexcept(%[[V_205]]) fastmath<contract> : (i32) -> i32
-  ! CHECK:         %[[V_210:[0-9]+]] = fir.call @feenableexcept(%[[V_206]]) fastmath<contract> : (i32) -> i32
-  ! CHECK:         fir.result %[[V_207]] : f80
-  ! CHECK:       }
-  ! CHECK:       fir.result %[[V_203]] : f80
-  ! CHECK:     }
-  ! CHECK:     fir.store %[[V_167]] to %[[V_5]] : !fir.ref<f80>
+  ! CHECK-KIND10:     %[[V_158:[0-9]+]] = fir.load %[[V_17]] : !fir.ref<f80>
+  ! CHECK-KIND10:     %[[V_159:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_158]]) <{bit = 3 : i32}> : (f80) -> i1
+  ! CHECK-KIND10:     %[[V_160:[0-9]+]] = arith.bitcast %[[V_158]] : f80 to i80
+  ! CHECK-KIND10:     %[[V_161:[0-9]+]] = arith.shrui %[[V_160]], %c79{{.*}} : i80
+  ! CHECK-KIND10:     %[[V_162:[0-9]+]] = fir.convert %[[V_161]] : (i80) -> i1
+  ! CHECK-KIND10:     %[[V_163:[0-9]+]] = arith.cmpi ne, %[[V_162]], %true{{[_0-9]*}} : i1
+  ! CHECK-KIND10:     %[[V_164:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_158]]) <{bit = 516 : i32}> : (f80) -> i1
+  ! CHECK-KIND10:     %[[V_165:[0-9]+]] = arith.andi %[[V_164]], %[[V_163]] : i1
+  ! CHECK-KIND10:     %[[V_166:[0-9]+]] = arith.ori %[[V_159]], %[[V_165]] : i1
+  ! CHECK-KIND10:     %[[V_167:[0-9]+]] = fir.if %[[V_166]] -> (f80) {
+  ! CHECK-KIND10:       %[[V_202:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_158]]) <{bit = 1 : i32}> : (f80) -> i1
+  ! CHECK-KIND10:       fir.if %[[V_202]] {
+  ! CHECK-KIND10:         %[[V_203:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
+  ! CHECK-KIND10:                             fir.call @feraiseexcept(%[[V_203]]) fastmath<contract> : (i32) -> i32
+  ! CHECK-KIND10:       }
+  ! CHECK-KIND10:       fir.result %[[V_158]] : f80
+  ! CHECK-KIND10:     } else {
+  ! CHECK-KIND10:       %[[V_202:[0-9]+]] = arith.cmpf oeq, %[[V_158]], %cst{{[_0-9]*}} fastmath<contract> : f80
+  ! CHECK-KIND10:       %[[V_203:[0-9]+]] = fir.if %[[V_202]] -> (f80) {
+  ! CHECK-KIND10:         fir.result %cst{{[_0-9]*}} : f80
+  ! CHECK-KIND10:       } else {
+  ! CHECK-KIND10:         %[[V_204:[0-9]+]] = fir.call @_FortranAMapException(%c63{{.*}}) fastmath<contract> : (i32) -> i32
+  ! CHECK-KIND10:         %[[V_205:[0-9]+]] = fir.call @fetestexcept(%[[V_204]]) fastmath<contract> : (i32) -> i32
+  ! CHECK-KIND10:         %[[V_206:[0-9]+]] = fir.call @fedisableexcept(%[[V_204]]) fastmath<contract> : (i32) -> i32
+  ! CHECK-KIND10:         %[[V_207:[0-9]+]] = fir.call @_FortranANearest10(%[[V_158]], %true{{[_0-9]*}}) fastmath<contract> : (f80, i1) -> f80
+  ! CHECK-KIND10:         %[[V_208:[0-9]+]] = fir.call @feclearexcept(%[[V_204]]) fastmath<contract> : (i32) -> i32
+  ! CHECK-KIND10:         %[[V_209:[0-9]+]] = fir.call @feraiseexcept(%[[V_205]]) fastmath<contract> : (i32) -> i32
+  ! CHECK-KIND10:         %[[V_210:[0-9]+]] = fir.call @feenableexcept(%[[V_206]]) fastmath<contract> : (i32) -> i32
+  ! CHECK-KIND10:         fir.result %[[V_207]] : f80
+  ! CHECK-KIND10:       }
+  ! CHECK-KIND10:       fir.result %[[V_203]] : f80
+  ! CHECK-KIND10:     }
+  ! CHECK-KIND10:     fir.store %[[V_167]] to %[[V_5]] : !fir.ref<f80>
   r10 = ieee_next_up(x10)
   print "('up:     ', z20.20, ' -> ', z20.20, ' = ', g0)", x10, r10, r10
 
-  ! CHECK:     %[[V_180:[0-9]+]] = fir.load %[[V_19]] : !fir.ref<f128>
-  ! CHECK:     %[[V_181:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_180]]) <{bit = 3 : i32}> : (f128) -> i1
-  ! CHECK:     %[[V_182:[0-9]+]] = arith.bitcast %[[V_180]] : f128 to i128
-  ! CHECK:     %[[V_183:[0-9]+]] = arith.shrui %[[V_182]], %c127{{.*}} : i128
-  ! CHECK:     %[[V_184:[0-9]+]] = fir.convert %[[V_183]] : (i128) -> i1
-  ! CHECK:     %[[V_186:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_180]]) <{bit = 516 : i32}> : (f128) -> i1
-  ! CHECK:     %[[V_187:[0-9]+]] = arith.andi %[[V_186]], %[[V_184]] : i1
-  ! CHECK:     %[[V_188:[0-9]+]] = arith.ori %[[V_181]], %[[V_187]] : i1
-  ! CHECK:     %[[V_189:[0-9]+]] = fir.if %[[V_188]] -> (f128) {
-  ! CHECK:       %[[V_202:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_180]]) <{bit = 1 : i32}> : (f128) -> i1
-  ! CHECK:       fir.if %[[V_202]] {
-  ! CHECK:         %[[V_203:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:                             fir.call @feraiseexcept(%[[V_203]]) fastmath<contract> : (i32) -> i32
-  ! CHECK:       }
-  ! CHECK:       fir.result %[[V_180]] : f128
-  ! CHECK:     } else {
-  ! CHECK:       %[[V_202:[0-9]+]] = arith.cmpf oeq, %[[V_180]], %cst{{[_0-9]*}} fastmath<contract> : f128
-  ! CHECK:       %[[V_203:[0-9]+]] = fir.if %[[V_202]] -> (f128) {
-  ! CHECK:         fir.result %cst{{[_0-9]*}} : f128
-  ! CHECK:       } else {
-  ! CHECK-DAG:     %[[V_204:[0-9]+]] = arith.subi %[[V_182]], %c1{{.*}} : i128
-  ! CHECK-DAG:     %[[V_205:[0-9]+]] = arith.addi %[[V_182]], %c1{{.*}} : i128
-  ! CHECK:         %[[V_206:[0-9]+]] = arith.select %[[V_184]], %[[V_205]], %[[V_204]] : i128
-  ! CHECK:         %[[V_207:[0-9]+]] = arith.bitcast %[[V_206]] : i128 to f128
-  ! CHECK:         fir.result %[[V_207]] : f128
-  ! CHECK:       }
-  ! CHECK:       fir.result %[[V_203]] : f128
-  ! CHECK:     }
-  ! CHECK:     fir.store %[[V_189]] to %[[V_7]] : !fir.ref<f128>
+  ! CHECK-KIND16:     %[[V_180:[0-9]+]] = fir.load %[[V_19]] : !fir.ref<f128>
+  ! CHECK-KIND16:     %[[V_181:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_180]]) <{bit = 3 : i32}> : (f128) -> i1
+  ! CHECK-KIND16:     %[[V_182:[0-9]+]] = arith.bitcast %[[V_180]] : f128 to i128
+  ! CHECK-KIND16:     %[[V_183:[0-9]+]] = arith.shrui %[[V_182]], %c127{{.*}} : i128
+  ! CHECK-KIND16:     %[[V_184:[0-9]+]] = fir.convert %[[V_183]] : (i128) -> i1
+  ! CHECK-KIND16:     %[[V_186:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_180]]) <{bit = 516 : i32}> : (f128) -> i1
+  ! CHECK-KIND16:     %[[V_187:[0-9]+]] = arith.andi %[[V_186]], %[[V_184]] : i1
+  ! CHECK-KIND16:     %[[V_188:[0-9]+]] = arith.ori %[[V_181]], %[[V_187]] : i1
+  ! CHECK-KIND16:     %[[V_189:[0-9]+]] = fir.if %[[V_188]] -> (f128) {
+  ! CHECK-KIND16:       %[[V_202:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_180]]) <{bit = 1 : i32}> : (f128) -> i1
+  ! CHECK-KIND16:       fir.if %[[V_202]] {
+  ! CHECK-KIND16:         %[[V_203:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
+  ! CHECK-KIND16:                             fir.call @feraiseexcept(%[[V_203]]) fastmath<contract> : (i32) -> i32
+  ! CHECK-KIND16:       }
+  ! CHECK-KIND16:       fir.result %[[V_180]] : f128
+  ! CHECK-KIND16:     } else {
+  ! CHECK-KIND16:       %[[V_202:[0-9]+]] = arith.cmpf oeq, %[[V_180]], %cst{{[_0-9]*}} fastmath<contract> : f128
+  ! CHECK-KIND16:       %[[V_203:[0-9]+]] = fir.if %[[V_202]] -> (f128) {
+  ! CHECK-KIND16:         fir.result %cst{{[_0-9]*}} : f128
+  ! CHECK-KIND16:       } else {
+  ! CHECK-KIND16-DAG:     %[[V_204:[0-9]+]] = arith.subi %[[V_182]], %c1{{.*}} : i128
+  ! CHECK-KIND16-DAG:     %[[V_205:[0-9]+]] = arith.addi %[[V_182]], %c1{{.*}} : i128
+  ! CHECK-KIND16:         %[[V_206:[0-9]+]] = arith.select %[[V_184]], %[[V_205]], %[[V_204]] : i128
+  ! CHECK-KIND16:         %[[V_207:[0-9]+]] = arith.bitcast %[[V_206]] : i128 to f128
+  ! CHECK-KIND16:         fir.result %[[V_207]] : f128
+  ! CHECK-KIND16:       }
+  ! CHECK-KIND16:       fir.result %[[V_203]] : f128
+  ! CHECK-KIND16:     }
+  ! CHECK-KIND16:     fir.store %[[V_189]] to %[[V_7]] : !fir.ref<f128>
 
   r16 = ieee_next_down(x16)
   print "('down:   ', z32.32, ' -> ', z32.32, ' = ', g0)", x16, r16, r16
