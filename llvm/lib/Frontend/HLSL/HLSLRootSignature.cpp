@@ -10,8 +10,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/ADT/bit.h"
+#include "llvm/Frontend/HLSL/HLSLRootSignature.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 
 namespace llvm {
 namespace hlsl {
@@ -158,6 +161,46 @@ void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
       Table->dump(OS);
   }
   OS << "}";
+}
+
+static MDString *ClauseTypeToName(LLVMContext &Ctx, ClauseType Type) {
+  StringRef Name;
+  switch (Type) {
+  case ClauseType::CBuffer:
+    Name = "CBV";
+    break;
+  case ClauseType::SRV:
+    Name = "SRV";
+    break;
+  case ClauseType::UAV:
+    Name = "UAV";
+    break;
+  case ClauseType::Sampler:
+    Name = "Sampler";
+    break;
+  }
+  return MDString::get(Ctx, Name);
+}
+
+MDNode *MetadataBuilder::BuildRootSignature() {
+  for (const RootElement &Element : Elements) {
+    MDNode *ElementMD = nullptr;
+    if (const auto &Clause = std::get_if<DescriptorTableClause>(&Element))
+      ElementMD = BuildDescriptorTableClause(*Clause);
+    if (const auto &Table = std::get_if<DescriptorTable>(&Element))
+      ElementMD = BuildDescriptorTable(*Table);
+    GeneratedMetadata.push_back(ElementMD);
+  }
+
+  return MDNode::get(Ctx, GeneratedMetadata);
+}
+
+MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {
+  return MDNode::get(Ctx, {MDString::get(Ctx, "DescriptorTable")});
+}
+
+MDNode *MetadataBuilder::BuildDescriptorTableClause(const DescriptorTableClause &Clause) {
+  return MDNode::get(Ctx, {ClauseTypeToName(Ctx, Clause.Type)});
 }
 
 } // namespace rootsig

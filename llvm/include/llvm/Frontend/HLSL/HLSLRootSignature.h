@@ -15,11 +15,16 @@
 #define LLVM_FRONTEND_HLSL_HLSLROOTSIGNATURE_H
 
 #include "llvm/ADT/ArrayRef.h"
+// #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/raw_ostream.h"
 #include <variant>
 
 namespace llvm {
+class LLVMContext;
+class MDNode;
+class Metadata;
+
 namespace hlsl {
 namespace rootsig {
 
@@ -124,6 +129,24 @@ using RootElement = std::variant<RootFlags, RootConstants, DescriptorTable,
                                  DescriptorTableClause>;
 
 void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements);
+
+class MetadataBuilder {
+ public:
+  MetadataBuilder(llvm::LLVMContext &Ctx, ArrayRef<RootElement> Elements)
+   : Ctx(Ctx), Elements(Elements) {}
+
+  // Iterates through the elements and builds the respective nodes
+  MDNode *BuildRootSignature();
+
+ private:
+  // Define the various builders for the different metadata types
+  MDNode *BuildDescriptorTable(const DescriptorTable &Table);
+  MDNode *BuildDescriptorTableClause(const DescriptorTableClause &Clause);
+
+  llvm::LLVMContext &Ctx;
+  ArrayRef<RootElement> Elements;
+  SmallVector<Metadata *> GeneratedMetadata;
+};
 
 } // namespace rootsig
 } // namespace hlsl

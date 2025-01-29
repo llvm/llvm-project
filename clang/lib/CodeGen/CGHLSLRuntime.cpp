@@ -73,20 +73,14 @@ void addRootSignature(
     llvm::Function *Fn, llvm::Module &M) {
   auto &Ctx = M.getContext();
 
-  SmallVector<Metadata *> GeneratedMetadata;
-  for (auto Element : Elements) {
-    MDNode *ExampleRootElement = MDNode::get(Ctx, {});
-    GeneratedMetadata.push_back(ExampleRootElement);
-  }
-
-  MDNode *ExampleRootSignature = MDNode::get(Ctx, GeneratedMetadata);
-
-  MDNode *ExamplePairing = MDNode::get(Ctx, {ValueAsMetadata::get(Fn),
-                                             ExampleRootSignature});
+  llvm::hlsl::rootsig::MetadataBuilder Builder(Ctx, Elements);
+  MDNode *RootSignature = Builder.BuildRootSignature();
+  MDNode *FnPairing = MDNode::get(Ctx, {ValueAsMetadata::get(Fn),
+                                        RootSignature});
 
   StringRef RootSignatureValKey = "dx.rootsignatures";
   auto *RootSignatureValMD = M.getOrInsertNamedMetadata(RootSignatureValKey);
-  RootSignatureValMD->addOperand(ExamplePairing);
+  RootSignatureValMD->addOperand(FnPairing);
 }
 
 } // namespace
