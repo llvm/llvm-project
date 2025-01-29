@@ -6551,29 +6551,29 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
   case Intrinsic::experimental_get_alias_lane_mask: {
     unsigned IntrinsicID = 0;
-      uint64_t EltSize = Op.getOperand(3)->getAsZExtVal();
-      bool IsWriteAfterRead = Op.getOperand(4)->getAsZExtVal() == 1;
-      switch (EltSize) {
-      case 1:
-        IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_b
-                                       : Intrinsic::aarch64_sve_whilerw_b;
-        break;
-      case 2:
-        IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_h
-                                       : Intrinsic::aarch64_sve_whilerw_h;
-        break;
-      case 4:
-        IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_s
-                                       : Intrinsic::aarch64_sve_whilerw_s;
-        break;
-      case 8:
-        IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_d
-                                       : Intrinsic::aarch64_sve_whilerw_d;
-        break;
-      default:
-        llvm_unreachable("Unexpected element size for get.alias.lane.mask");
-        break;
-      }
+    uint64_t EltSize = Op.getOperand(3)->getAsZExtVal();
+    bool IsWriteAfterRead = Op.getOperand(4)->getAsZExtVal() == 1;
+    switch (EltSize) {
+    case 1:
+      IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_b
+                                     : Intrinsic::aarch64_sve_whilerw_b;
+      break;
+    case 2:
+      IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_h
+                                     : Intrinsic::aarch64_sve_whilerw_h;
+      break;
+    case 4:
+      IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_s
+                                     : Intrinsic::aarch64_sve_whilerw_s;
+      break;
+    case 8:
+      IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_d
+                                     : Intrinsic::aarch64_sve_whilerw_d;
+      break;
+    default:
+      llvm_unreachable("Unexpected element size for get.alias.lane.mask");
+      break;
+    }
     SDValue ID = DAG.getTargetConstant(IntrinsicID, dl, MVT::i64);
 
     EVT VT = Op.getValueType();
@@ -20087,9 +20087,8 @@ static SDValue getPTest(SelectionDAG &DAG, EVT VT, SDValue Pg, SDValue Op,
 
 static bool isPredicateCCSettingOp(SDValue N) {
   if ((N.getOpcode() == ISD::SETCC ||
-      // get_active_lane_mask is lowered to a whilelo instruction.
-       N.getOpcode() == ISD::GET_ACTIVE_LANE_MASK ||
-       N.getOpcode() == ISD::EXPERIMENTAL_ALIAS_LANE_MASK) ||
+       // get_active_lane_mask is lowered to a whilelo instruction.
+       N.getOpcode() == ISD::GET_ACTIVE_LANE_MASK) ||
       (N.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
        (N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilege ||
         N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilegt ||
