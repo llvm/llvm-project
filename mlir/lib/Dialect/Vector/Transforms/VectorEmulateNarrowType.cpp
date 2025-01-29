@@ -364,14 +364,12 @@ static void atomicStore(OpBuilder &builder, Location loc,
 }
 
 /// Generate a non-atomic read-modify-write sequence for subbyte storing.
-/// It has similar logic to `atomicStore`, but without the atomicity.
+/// It has similar logic to `atomicStore`, but without atomicity.
 static void rmwStore(OpBuilder &builder, Location loc,
                      MemRefValue linearizedMemref, Value linearizedIndex,
                      VectorValue valueToStore, Value mask) {
   assert(valueToStore.getType().getRank() == 1 && "expected 1-D vector");
 
-  // Load the original value from memory, and cast it to the original element
-  // type.
   auto oneElemVecType =
       VectorType::get({1}, linearizedMemref.getType().getElementType());
   Value origVecValue = builder.create<vector::LoadOp>(
@@ -379,7 +377,6 @@ static void rmwStore(OpBuilder &builder, Location loc,
   origVecValue = builder.create<vector::BitCastOp>(loc, valueToStore.getType(),
                                                    origVecValue);
 
-  // Construct the final masked value and yield it.
   Value maskedValue =
       downcastSelectAndUpcast(builder, loc, valueToStore.getType(),
                               oneElemVecType, mask, valueToStore, origVecValue);

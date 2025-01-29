@@ -4,16 +4,18 @@
 // memref.alloc exists here because sub-byte vector data types such as i2
 // are currently not supported as input arguments.
 
-func.func @vector_store_i2_const_index_two_rmw(%arg0: vector<3xi2>) {
+func.func @vector_store_i2_const_index_two_partial_stores(%arg0: vector<3xi2>) {
     %0 = memref.alloc() : memref<3x3xi2>
     %c0 = arith.constant 0 : index
     %c2 = arith.constant 2 : index
     vector.store %arg0, %0[%c2, %c0] :memref<3x3xi2>, vector<3xi2>
     return
 }
-// Load from bit [12:18), byte [1:2] of total 3 bytes, both bytes needs rmw.
+// In this example, emit two RMW stores without full-width store.
+// Store bit [12:18), byte [1:2] to a 3-byte vector, both bytes are
+// accessed partially.
 
-// CHECK: func @vector_store_i2_const_index_two_rmw(
+// CHECK: func @vector_store_i2_const_index_two_partial_stores(
 // CHECK-SAME: %[[ARG0:.+]]: vector<3xi2>)
 // CHECK: %[[ALLOC:.+]] = memref.alloc() : memref<3xi8>
 // CHECK: %[[C1:.+]] = arith.constant 1 : index
@@ -47,7 +49,7 @@ func.func @vector_store_i2_const_index_two_rmw(%arg0: vector<3xi2>) {
 
 // -----
 
-func.func @vector_store_i2_rmw(%arg0: vector<7xi2>) {
+func.func @vector_store_i2_two_partial_one_full_stores(%arg0: vector<7xi2>) {
     %0 = memref.alloc() : memref<3x7xi2>
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
@@ -55,7 +57,9 @@ func.func @vector_store_i2_rmw(%arg0: vector<7xi2>) {
     return
 }
 
-// CHECK: func @vector_store_i2_rmw(
+// In this example, emit two RMW stores and one full-width store.
+
+// CHECK: func @vector_store_i2_two_partial_one_full_stores(
 // CHECK-SAME: %[[ARG0:.+]]:
 // CHECK: %[[ALLOC:.+]] = memref.alloc() : memref<6xi8>
 // CHECK: %[[C1:.+]] = arith.constant 1 : index
@@ -94,7 +98,7 @@ func.func @vector_store_i2_rmw(%arg0: vector<7xi2>) {
 
 // -----
 
-func.func @vector_store_i2_single_rmw(%arg0: vector<1xi2>) {
+func.func @vector_store_i2_one_partial_store(%arg0: vector<1xi2>) {
     %0 = memref.alloc() : memref<4x1xi2>
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
@@ -102,8 +106,9 @@ func.func @vector_store_i2_single_rmw(%arg0: vector<1xi2>) {
     return
 }
 
-// in this test, only emit 1 rmw store
-// CHECK: func @vector_store_i2_single_rmw(
+// in this test, only emit partial RMW store as the store is within one byte.
+
+// CHECK: func @vector_store_i2_one_partial_store(
 // CHECK-SAME: %[[ARG0:.+]]: vector<1xi2>)
 // CHECK: %[[ALLOC:.+]] = memref.alloc() : memref<1xi8>
 // CHECK: %[[C0:.+]] = arith.constant 0 : index
@@ -116,4 +121,3 @@ func.func @vector_store_i2_single_rmw(%arg0: vector<1xi2>) {
 // CHECK: %[[SELECT:.+]] = arith.select %[[CST]], %[[INSERT]], %[[UPCAST]]
 // CHECK: %[[DOWNCAST:.+]] = vector.bitcast %[[SELECT]]
 // CHECK: vector.store %[[DOWNCAST]], %[[ALLOC]][%[[C0]]]
-
