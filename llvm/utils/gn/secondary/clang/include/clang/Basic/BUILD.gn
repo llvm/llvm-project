@@ -12,6 +12,7 @@ write_cmake_config("version") {
     "CLANG_VERSION_MAJOR=$llvm_version_major",
     "CLANG_VERSION_MINOR=$llvm_version_minor",
     "CLANG_VERSION_PATCHLEVEL=$llvm_version_patch",
+    "MAX_CLANG_ABI_COMPAT_VERSION=$llvm_version_major",
   ]
 }
 
