@@ -199,6 +199,8 @@ CODEGENOPT(DisableBlockSignatureString, 1, 0) ///< Set when -fdisable-block-sign
 CODEGENOPT(HIPSaveKernelArgName, 1, 0) ///< Set when -fhip-kernel-arg-name is enabled.
 CODEGENOPT(UniqueInternalLinkageNames, 1, 0) ///< Internal Linkage symbols get unique names.
 CODEGENOPT(SplitMachineFunctions, 1, 0) ///< Split machine functions using profile information.
+CODEGENOPT(PartitionStaticDataSections, 1,
+           0) /// < Partition static data sections using profile information.
 CODEGENOPT(PPCUseFullRegisterNames, 1, 0) ///< Print full register names in assembly
 CODEGENOPT(X86RelaxRelocations, 1, 1) ///< -Wa,-mrelax-relocations={yes,no}
 CODEGENOPT(X86Sse2Avx        , 1, 0)   ///< -Wa,-msse2avx
