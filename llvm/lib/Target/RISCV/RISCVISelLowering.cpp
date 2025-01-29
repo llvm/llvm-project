@@ -22603,6 +22603,8 @@ bool RISCVTargetLowering::lowerDeinterleavedIntrinsicToVPLoad(
 
   IRBuilder<> Builder(Load);
   Value *WideEVL = Load->getArgOperand(2);
+  // Conservatively check if EVL is a multiple of factor, otherwise some
+  // (trailing) elements might be lost after the transformation.
   if (!isMultipleOfN(WideEVL, Load->getDataLayout(), Factor))
     return false;
 
@@ -22760,6 +22762,8 @@ bool RISCVTargetLowering::lowerInterleavedIntrinsicToVPStore(
 
   IRBuilder<> Builder(Store);
   Value *WideEVL = Store->getArgOperand(3);
+  // Conservatively check if EVL is a multiple of factor, otherwise some
+  // (trailing) elements might be lost after the transformation.
   if (!isMultipleOfN(WideEVL, Store->getDataLayout(), Factor))
     return false;
 
