@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Conversion/ConvertToSPIRV/ConvertToSPIRVPass.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRVPass.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
@@ -24,12 +25,6 @@
 #include "mlir/Pass/PassOptions.h"
 
 using namespace mlir;
-
-// Defined in the test directory, no public header.
-namespace mlir::test {
-std::unique_ptr<Pass> createTestConvertToSPIRVPass(bool convertGPUModules,
-                                                   bool nestInGPUModule);
-}
 
 namespace {
 
@@ -52,8 +47,10 @@ void buildTestVulkanRunnerPipeline(OpPassManager &passManager,
       "SPV_KHR_storage_buffer_storage_class");
   passManager.addPass(createGpuSPIRVAttachTarget(attachTargetOptions));
 
-  passManager.addPass(test::createTestConvertToSPIRVPass(
-      /*convertGPUModules=*/true, /*nestInGPUModule=*/true));
+  ConvertToSPIRVPassOptions convertToSPIRVOptions{};
+  convertToSPIRVOptions.convertGPUModules = true;
+  convertToSPIRVOptions.nestInGPUModule = true;
+  passManager.addPass(createConvertToSPIRVPass(convertToSPIRVOptions));
 
   OpPassManager &spirvModulePM =
       passManager.nest<gpu::GPUModuleOp>().nest<spirv::ModuleOp>();
