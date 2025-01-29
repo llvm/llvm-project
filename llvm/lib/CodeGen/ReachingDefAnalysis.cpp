@@ -348,8 +348,8 @@ int ReachingDefAnalysis::getReachingDef(MachineInstr *MI, Register Reg) const {
 
   if (Register::isStackSlot(Reg)) {
     int FrameIndex = Register::stackSlot2Index(Reg);
-    for (int Def : MBBFrameObjsReachingDefs.lookup(MBBNumber).lookup(
-             FrameIndex - ObjectIndexBegin)) {
+    int Key = FrameIndex - ObjectIndexBegin;
+    for (int Def : MBBFrameObjsReachingDefs.at(MBBNumber).at(Key)) {
       if (Def >= InstId)
         break;
       DefRes = Def;
