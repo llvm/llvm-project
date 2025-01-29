@@ -178,6 +178,14 @@ def LinalgConvolutionOpInterface : OpInterface<"ConvolutionOpInterface"> {
   ];
 }
 
+// TODO:
+def LinalgRelayoutOpInterface : OpInterface<"RelayoutOpInterface"> {
+  let description = [{
+    TODO
+  }];
+  let cppNamespace = "::mlir::linalg";
+}
+
 def LinalgFillOpInterface : OpInterface<"FillOpInterface"> {
   let description = [{
     A fill operation is defined in general terms:

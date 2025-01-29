@@ -1468,11 +1468,11 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
   return success();
 }
 
-/// Given a tensor::PackOp, return the `dest` shape before any packing
+/// Given a linalg::PackOp, return the `dest` shape before any packing
 /// permutations.
-static SmallVector<int64_t> getTiledPackShape(tensor::PackOp packOp,
+static SmallVector<int64_t> getTiledPackShape(linalg::PackOp packOp,
                                               ArrayRef<int64_t> destShape) {
-  return applyPermutation(destShape, tensor::getPackInverseDestPerm(packOp));
+  return applyPermutation(destShape, linalg::getPackInverseDestPerm(packOp));
 }
 
 /// Given an input, the mixed destSizes, and the vector sizes for vectorization,
@@ -1527,7 +1527,7 @@ static Operation *createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
   return write;
 }
 
-/// Vectorize tensor::PackOp with (1) static innerTiles (2) constant
+/// Vectorize linalg::PackOp with (1) static innerTiles (2) constant
 /// padding value and (3) input vector sizes into:
 /// masked_transfer_read->shape_cast->transpose->transfer_write_in_bounds
 /// As in the following example:
@@ -1554,7 +1554,7 @@ static Operation *createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
 /// determined by the result tensor shape. Also, we update the inBounds
 /// attribute instead of masking.
 static LogicalResult
-vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
+vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
                         ArrayRef<int64_t> inputVectorSizes,
                         SmallVectorImpl<Value> &newResults) {
   OpBuilder::InsertionGuard g(rewriter);
@@ -1607,7 +1607,7 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
 
   // Create TransposeOp.
   auto destPermutation =
-      invertPermutationVector(tensor::getPackInverseDestPerm(packOp));
+      invertPermutationVector(getPackInverseDestPerm(packOp));
   auto transposeOp = rewriter.create<vector::TransposeOp>(
       loc, shapeCastOp.getResult(), destPermutation);
 
@@ -1619,7 +1619,7 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
   return success();
 }
 
-/// Vectorize a `tensor::UnPackOp` to these 4 Ops:
+/// Vectorize a `linalg::UnPackOp` to these 4 Ops:
 ///   Vector::TransferReadOp - Reads a vector from the source tensor
 ///   vector::TransposeOp - Transpose the Source tensor
 ///   ShapeCastOp - Reshape the data based on the target.
@@ -1629,7 +1629,7 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
 ///   * the vector sizes are determined by the input operand and attributes,
 ///   * update the inBounds attribute instead of masking.
 static LogicalResult
-vectorizeAsTensorUnpackOp(RewriterBase &rewriter, tensor::UnPackOp unpackOp,
+vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
                           ArrayRef<int64_t> inputVectorSizes,
                           SmallVectorImpl<Value> &newResults) {
 
@@ -1721,7 +1721,7 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, tensor::UnPackOp unpackOp,
 
   PackingMetadata packMetadata;
   SmallVector<int64_t> lastDimToInsertPosPerm =
-      tensor::getUnPackInverseSrcPerm(unpackOp, packMetadata);
+      getUnPackInverseSrcPerm(unpackOp, packMetadata);
   ShapedType maskedOpShapedType = cast<ShapedType>(readResult.getType());
   SmallVector<int64_t> stripMineShape(maskedOpShapedType.getShape());
   mlir::Type stripMineElemType = maskedOpShapedType.getElementType();
@@ -1854,7 +1854,7 @@ vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
 
 /// Need to check if the inner-tiles are static/constant.
 static LogicalResult
-vectorizeUnPackOpPrecondition(tensor::UnPackOp unpackOp,
+vectorizeUnPackOpPrecondition(linalg::UnPackOp unpackOp,
                               ArrayRef<int64_t> inputVectorSizes) {
 
   if (llvm::any_of(unpackOp.getInnerTiles(), [](OpFoldResult res) {
@@ -1942,7 +1942,7 @@ static LogicalResult vectorizeLinalgOpPrecondition(
 }
 
 static LogicalResult
-vectorizePackOpPrecondition(tensor::PackOp packOp,
+vectorizePackOpPrecondition(linalg::PackOp packOp,
                             ArrayRef<int64_t> inputVectorSizes) {
   auto padValue = packOp.getPaddingValue();
   Attribute cstAttr;
@@ -2138,10 +2138,10 @@ LogicalResult mlir::linalg::vectorizeOpPrecondition(
       .Case<tensor::PadOp>([&](auto padOp) {
         return vectorizePadOpPrecondition(padOp, inputVectorSizes);
       })
-      .Case<tensor::PackOp>([&](auto packOp) {
+      .Case<linalg::PackOp>([&](auto packOp) {
         return vectorizePackOpPrecondition(packOp, inputVectorSizes);
       })
-      .Case<tensor::UnPackOp>([&](auto unpackOp) {
+      .Case<linalg::UnPackOp>([&](auto unpackOp) {
         return vectorizeUnPackOpPrecondition(unpackOp, inputVectorSizes);
       })
       .Default([](auto) { return failure(); });
@@ -2163,7 +2163,7 @@ static void convertAffineApply(RewriterBase &rewriter, LinalgOp linalgOp) {
 }
 
 bool mlir::linalg::hasVectorizationImpl(Operation *op) {
-  return isa<linalg::LinalgOp, tensor::PadOp, tensor::PackOp, tensor::UnPackOp>(
+  return isa<linalg::LinalgOp, tensor::PadOp, linalg::PackOp, linalg::UnPackOp>(
       op);
 }
 
@@ -2240,11 +2240,11 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
             return vectorizeAsTensorPadOp(rewriter, padOp, inputVectorSizes,
                                           results);
           })
-          .Case<tensor::PackOp>([&](auto packOp) {
+          .Case<linalg::PackOp>([&](auto packOp) {
             return vectorizeAsTensorPackOp(rewriter, packOp, inputVectorSizes,
                                            results);
           })
-          .Case<tensor::UnPackOp>([&](auto unpackOp) {
+          .Case<linalg::UnPackOp>([&](auto unpackOp) {
             return vectorizeAsTensorUnpackOp(rewriter, unpackOp,
                                              inputVectorSizes, results);
           })

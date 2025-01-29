@@ -568,6 +568,13 @@ struct PackingMetadata {
 // repeated N^2 counts).
 PackingMetadata computePackingMetadata(int64_t packedRank,
                                        ArrayRef<int64_t> innerDimPos);
+
+/// Try to remove a tensor operation if it would only reshape a constant.
+/// Removes the op and replaces the constant with a new constant of the result
+/// shape. When an optional cst attribute is passed, it is reshaped only if the
+/// splat value matches the value in the attribute.
+OpFoldResult reshapeConstantSource(DenseElementsAttr source, TensorType result,
+                                   std::optional<Attribute> cst = std::nullopt);
 } // namespace mlir
 
 #endif // MLIR_DIALECT_UTILS_RESHAPEOPSUTILS_H

@@ -13,7 +13,7 @@
 #include "mlir/IR/PatternMatch.h"
 
 namespace mlir {
-namespace tensor {
+namespace linalg {
 namespace {
 
 /// Returns the number of shape sizes that is either dynamic or greater than 1.
@@ -201,7 +201,7 @@ struct FoldPadWithPackOp : public OpRewritePattern<PackOp> {
 
   LogicalResult matchAndRewrite(PackOp packOp,
                                 PatternRewriter &rewriter) const override {
-    auto padOp = packOp.getSource().getDefiningOp<PadOp>();
+    auto padOp = packOp.getSource().getDefiningOp<tensor::PadOp>();
 
     if (!padOp || padOp.getNofold() || !padOp.hasZeroLowPad())
       return failure();
@@ -224,10 +224,11 @@ struct FoldPadWithPackOp : public OpRewritePattern<PackOp> {
 
 /// Fold a `unpack` -> `extract_slice` into the `unpack` since it already
 /// has extract_slice semantics.
-struct FoldUnpackWithExtractSliceOp : public OpRewritePattern<ExtractSliceOp> {
-  using OpRewritePattern<ExtractSliceOp>::OpRewritePattern;
+struct FoldUnpackWithExtractSliceOp
+    : public OpRewritePattern<tensor::ExtractSliceOp> {
+  using OpRewritePattern<tensor::ExtractSliceOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(ExtractSliceOp sliceOp,
+  LogicalResult matchAndRewrite(tensor::ExtractSliceOp sliceOp,
                                 PatternRewriter &rewriter) const override {
     auto unpackOp = sliceOp.getSource().getDefiningOp<UnPackOp>();
     if (!unpackOp)
@@ -247,7 +248,7 @@ struct FoldUnpackWithExtractSliceOp : public OpRewritePattern<ExtractSliceOp> {
 
     // Create a new empty output tensor.
     Type elementType = unpackOp.getDestType().getElementType();
-    Value output = rewriter.create<EmptyOp>(
+    Value output = rewriter.create<tensor::EmptyOp>(
         sliceOp.getLoc(), sliceOp.getMixedSizes(), elementType);
     rewriter.replaceOpWithNewOp<UnPackOp>(
         sliceOp, unpackOp.getSource(), output, unpackOp.getInnerDimsPos(),
@@ -474,6 +475,50 @@ struct FoldConsumerUnPackWithProducerLinalgTransposeOp
     return success();
   }
 };
+
+/// tensor.empty does not define any tensor contents, so an unpadded pack
+/// can be folded away.
+struct FoldEmptyTensorWithPackOp : public OpRewritePattern<PackOp> {
+  using OpRewritePattern<PackOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(PackOp packOp,
+                                PatternRewriter &rewriter) const override {
+    // Check for tensor.empty source.
+    auto emptyOp = packOp.getSource().getDefiningOp<tensor::EmptyOp>();
+    if (!emptyOp)
+      return failure();
+
+    // Check for padding.
+    // Packing with padding cannot be simply removed.
+    if (packOp.getPaddingValue())
+      return rewriter.notifyMatchFailure(packOp, "expects no padding value");
+
+    // Replace the pack directly with its destination.
+    rewriter.replaceOp(packOp, packOp.getDest());
+
+    return success();
+  }
+};
+
+/// tensor.empty does not define any tensor contents, so an unpack
+/// can be folded away.
+struct FoldEmptyTensorWithUnPackOp : public OpRewritePattern<UnPackOp> {
+  using OpRewritePattern<UnPackOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(UnPackOp unPackOp,
+                                PatternRewriter &rewriter) const override {
+    // Check for tensor.empty source.
+    auto emptyOp = unPackOp.getSource().getDefiningOp<tensor::EmptyOp>();
+    if (!emptyOp)
+      return failure();
+
+    // Replace the unpack directly with its destination.
+    rewriter.replaceOp(unPackOp, unPackOp.getDest());
+
+    return success();
+  }
+};
+
 } // namespace
 
 void populateFoldIntoPackAndUnpackPatterns(RewritePatternSet &patterns) {
@@ -490,5 +535,11 @@ void populateSimplifyPackAndUnpackPatterns(RewritePatternSet &patterns) {
       patterns.getContext());
 }
 
-} // namespace tensor
+void populateFoldPackUnpackIntoTensorEmptyPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<FoldEmptyTensorWithPackOp, FoldEmptyTensorWithUnPackOp>(
+      patterns.getContext());
+}
+
+} // namespace linalg
 } // namespace mlir
