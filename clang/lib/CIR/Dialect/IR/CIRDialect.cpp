@@ -171,6 +171,7 @@ template <typename Ty> struct EnumTraits {};
   }
 
 REGISTER_ENUM_TYPE(GlobalLinkageKind);
+REGISTER_ENUM_TYPE(VisibilityKind);
 REGISTER_ENUM_TYPE(CallingConv);
 REGISTER_ENUM_TYPE(SideEffect);
 REGISTER_ENUM_TYPE_WITH_NS(cir::sob, SignedOverflowBehavior);
@@ -179,7 +180,6 @@ REGISTER_ENUM_TYPE_WITH_NS(cir::sob, SignedOverflowBehavior);
 /// Parse an enum from the keyword, or default to the provided default value.
 /// The return type is the enum type by default, unless overriden with the
 /// second template argument.
-/// TODO: teach other places in this file to use this function.
 template <typename EnumTy, typename RetTy = EnumTy>
 static RetTy parseOptionalCIRKeyword(AsmParser &parser, EnumTy defaultValue) {
   llvm::SmallVector<llvm::StringRef, 10> names;
@@ -259,16 +259,8 @@ void printVisibilityAttr(OpAsmPrinter &printer,
 }
 
 void parseVisibilityAttr(OpAsmParser &parser, cir::VisibilityAttr &visibility) {
-  cir::VisibilityKind visibilityKind;
-
-  if (parser.parseOptionalKeyword("hidden").succeeded()) {
-    visibilityKind = cir::VisibilityKind::Hidden;
-  } else if (parser.parseOptionalKeyword("protected").succeeded()) {
-    visibilityKind = cir::VisibilityKind::Protected;
-  } else {
-    visibilityKind = cir::VisibilityKind::Default;
-  }
-
+  cir::VisibilityKind visibilityKind =
+      parseOptionalCIRKeyword(parser, cir::VisibilityKind::Default);
   visibility = cir::VisibilityAttr::get(parser.getContext(), visibilityKind);
 }
 
