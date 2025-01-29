@@ -2,6 +2,24 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
+; For the below test, backedge count cannot be computed. 
+; Computing backedge count requires only SCEV and should
+; not require dependence info. 
+;
+; void foo(int *a, int *neg, int *pos) {
+; int p = 0, q = 0;
+; for (unsigned int i = 0; i < 32; ++i) {
+;    for (unsigned int j = 0; j < 32; ++j) {
+;      if (a[i] < 0){
+;        neg[p++] = a[i];
+;      }
+;      else {
+;        pos[q++] = a[i];
+;      }
+;    }
+;  }
+;}
+
 ; CHECK-NOT: Computed dependence info, invoking the transform.
 
 define dso_local void @_foo(ptr noundef %a, ptr noundef %neg, ptr noundef %pos) {
