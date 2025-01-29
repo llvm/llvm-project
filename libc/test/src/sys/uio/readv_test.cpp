@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/types/struct_iovec.h"
 #include "src/fcntl/open.h"
 #include "src/sys/uio/readv.h"
 #include "src/unistd/close.h"

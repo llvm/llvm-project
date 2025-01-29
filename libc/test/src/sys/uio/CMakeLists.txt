@@ -7,11 +7,12 @@ add_libc_unittest(
   SRCS
     writev_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.types.struct_iovec
     libc.src.__support.common
+    libc.src.errno.errno
+    libc.src.fcntl.open
     libc.src.sys.uio.writev
     libc.src.unistd.close
-    libc.src.fcntl.open
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -22,10 +23,11 @@ add_libc_unittest(
   SRCS
     readv_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.types.struct_iovec
     libc.src.__support.common
+    libc.src.errno.errno
+    libc.src.fcntl.open
     libc.src.sys.uio.readv
     libc.src.unistd.close
-    libc.src.fcntl.open
     libc.test.UnitTest.ErrnoSetterMatcher
 )
