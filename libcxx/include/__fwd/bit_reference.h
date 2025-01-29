@@ -26,8 +26,7 @@ class __bit_iterator;
 template <class, class = void>
 struct __size_difference_type_traits;
 
-template <class _StoragePointer,
-          __enable_if_t<is_unsigned<typename pointer_traits<_StoragePointer>::element_type>::value, int> = 0>
+template <class _StoragePointer>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
 __fill_masked_range(_StoragePointer __word, unsigned __ctz, unsigned __clz, bool __fill_val);
 

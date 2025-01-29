@@ -63,10 +63,11 @@ struct __size_difference_type_traits<_Cp, __void_t<typename _Cp::difference_type
 // or `unsigned short`. Casting back to _StorageType is crucial to prevent undefined behavior that can arise
 // from integral promotions.
 // See https://github.com/llvm/llvm-project/pull/122410.
-template <class _StoragePointer,
-          __enable_if_t<is_unsigned<typename pointer_traits<_StoragePointer>::element_type>::value, int> >
+template <class _StoragePointer>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
 __fill_masked_range(_StoragePointer __word, unsigned __clz, unsigned __ctz, bool __fill_val) {
+  static_assert(is_unsigned<typename pointer_traits<_StoragePointer>::element_type>::value,
+                "__fill_masked_range must be called with unsigned type");
   using _StorageType = typename pointer_traits<_StoragePointer>::element_type;
   _LIBCPP_ASSERT_VALID_INPUT_RANGE(
       __ctz + __clz < sizeof(_StorageType) * CHAR_BIT, "__fill_masked_range called with invalid range");

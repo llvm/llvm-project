@@ -129,6 +129,8 @@ void test6() {
   std::fill_n(&foo[0], UDI(5), Storage());
 }
 
+// Make sure std::fill_n behaves properly with std::vector<bool> iterators with custom size types.
+// See https://github.com/llvm/llvm-project/pull/122410.
 TEST_CONSTEXPR_CXX20 void test_bititer_with_custom_sized_types() {
   {
     using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;

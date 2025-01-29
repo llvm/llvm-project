@@ -78,8 +78,8 @@ constexpr void test_iterators() {
   }
 }
 
-// Make sure we behave properly with std::vector<bool> iterators with custom size types, see
-// https://github.com/llvm/llvm-project/pull/122410.
+// Make sure std::ranges::fill behaves properly with std::vector<bool> iterators with custom
+// size types. See https://github.com/llvm/llvm-project/pull/122410.
 //
 // The `ranges::{fill, fill_n}` algorithms require `vector<bool, Alloc>::iterator` to satisfy
 // the `std::indirectly_writable` concept when used with `vector<bool, Alloc>`, which is only
