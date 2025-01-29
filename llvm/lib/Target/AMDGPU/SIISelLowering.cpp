@@ -857,7 +857,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasMad64_32())
     setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, MVT::i32, Custom);
 
-  if (Subtarget->hasSafeSmemPrefetch() || Subtarget->hasVectorPrefetch())
+  if (Subtarget->hasSafeSmemPrefetch() || Subtarget->hasVmemPrefInsts())
     setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
   if (Subtarget->hasIEEEMinMax()) {
@@ -4532,7 +4532,7 @@ SDValue SITargetLowering::lowerSET_ROUNDING(SDValue Op,
 
 SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
   if (Op->isDivergent() &&
-      (!Subtarget->hasVectorPrefetch() || !Op.getConstantOperandVal(4)))
+      (!Subtarget->hasVmemPrefInsts() || !Op.getConstantOperandVal(4)))
     // Cannot do I$ prefetch with divergent pointer.
     return SDValue();
 

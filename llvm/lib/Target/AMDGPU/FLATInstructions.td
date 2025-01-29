@@ -1213,7 +1213,7 @@ let OtherPredicates = [HasAtomicBufferGlobalPkAddF16Insts] in
     "global_atomic_pk_add_f16", VGPR_32, v2f16
   >;
 
-let SubtargetPredicate = HasVectorPrefetch in {
+let SubtargetPredicate = HasVmemPrefInsts in {
   defm FLAT_PREFETCH_B8   : FLAT_Flat_Prefetch_Pseudo<"flat_prefetch_b8">;
   defm GLOBAL_PREFETCH_B8 : FLAT_Global_Prefetch_Pseudo<"global_prefetch_b8">;
 }
@@ -2166,7 +2166,7 @@ multiclass FlatIntrPrefetchPats<string inst, SDPatternOperator intr> {
     }
 }
 
-let SubtargetPredicate = HasVectorPrefetch in {
+let SubtargetPredicate = HasVmemPrefInsts in {
   defm : FlatPrefetchPats<"FLAT_PREFETCH_B8", prefetch_flat, i32imm_zero>;
   defm : FlatPrefetchPats<"GLOBAL_PREFETCH_B8", prefetch_global, i32imm_zero>;
 
@@ -2177,7 +2177,7 @@ let SubtargetPredicate = HasVectorPrefetch in {
   // Patterns for target intrinsics
   defm : FlatIntrPrefetchPats<"FLAT_PREFETCH_B8", int_amdgcn_flat_prefetch>;
   defm : FlatIntrPrefetchPats<"GLOBAL_PREFETCH_B8", int_amdgcn_global_prefetch>;
-} // End SubtargetPredicate = HasVectorPrefetch
+} // End SubtargetPredicate = HasVmemPrefInsts
 
 //===----------------------------------------------------------------------===//
 // Target

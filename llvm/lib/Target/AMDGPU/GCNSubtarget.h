@@ -244,6 +244,7 @@ protected:
   bool HasVMEMtoScalarWriteHazard = false;
   bool HasSMEMtoVectorWriteHazard = false;
   bool HasInstFwdPrefetchBug = false;
+  bool HasVmemPrefInsts = false;
   bool HasSafeSmemPrefetch = false;
   bool HasSafeCUPrefetch = false;
   bool HasVcmpxExecWARHazard = false;
@@ -993,7 +994,7 @@ public:
 
   bool hasPrefetch() const { return GFX12Insts; }
 
-  bool hasVectorPrefetch() const { return GFX1250Insts; }
+  bool hasVmemPrefInsts() const { return HasVmemPrefInsts; }
 
   bool hasSafeSmemPrefetch() const { return HasSafeSmemPrefetch; }
 

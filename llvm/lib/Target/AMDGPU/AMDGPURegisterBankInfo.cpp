@@ -3511,14 +3511,14 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     applyMappingMAD_64_32(B, OpdMapper);
     return;
   case AMDGPU::G_PREFETCH: {
-    if (!Subtarget.hasSafeSmemPrefetch() && !Subtarget.hasVectorPrefetch()) {
+    if (!Subtarget.hasSafeSmemPrefetch() && !Subtarget.hasVmemPrefInsts()) {
       MI.eraseFromParent();
       return;
     }
     Register PtrReg = MI.getOperand(0).getReg();
     unsigned PtrBank = getRegBankID(PtrReg, MRI, AMDGPU::SGPRRegBankID);
     if (PtrBank == AMDGPU::VGPRRegBankID &&
-        (!Subtarget.hasVectorPrefetch() || !MI.getOperand(3).getImm())) {
+        (!Subtarget.hasVmemPrefInsts() || !MI.getOperand(3).getImm())) {
       // Cannot do I$ prefetch with divergent pointer.
       MI.eraseFromParent();
       return;
