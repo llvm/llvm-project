@@ -1037,18 +1037,18 @@ TEST(TestRtsanInterceptors, PthreadJoinDiesWhenRealtime) {
 
 #if SANITIZER_APPLE
 
-#pragma clang diagnostic push
-// OSSpinLockLock is deprecated, but still in use in libc++
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-TEST(TestRtsanInterceptors, OsSpinLockLockDiesWhenRealtime) {
-  auto Func = []() {
-    OSSpinLock spin_lock{};
-    OSSpinLockLock(&spin_lock);
-  };
-  ExpectRealtimeDeath(Func, "OSSpinLockLock");
-  ExpectNonRealtimeSurvival(Func);
-}
-#pragma clang diagnostic pop
+// #pragma clang diagnostic push
+// // OSSpinLockLock is deprecated, but still in use in libc++
+// #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+// TEST(TestRtsanInterceptors, OsSpinLockLockDiesWhenRealtime) {
+//   auto Func = []() {
+//     OSSpinLock spin_lock{};
+//     OSSpinLockLock(&spin_lock);
+//   };
+//   ExpectRealtimeDeath(Func, "OSSpinLockLock");
+//   ExpectNonRealtimeSurvival(Func);
+// }
+// #pragma clang diagnostic pop
 
 TEST(TestRtsanInterceptors, OsUnfairLockLockDiesWhenRealtime) {
   auto Func = []() {

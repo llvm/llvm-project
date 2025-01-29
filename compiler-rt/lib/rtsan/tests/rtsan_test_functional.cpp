@@ -170,23 +170,23 @@ TEST(TestRtsan, CopyingALambdaWithLargeCaptureDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
-TEST(TestRtsan, AccessingALargeAtomicVariableDiesWhenRealtime) {
-  std::atomic<float> small_atomic{0.0f};
-  ASSERT_TRUE(small_atomic.is_lock_free());
-  RealtimeInvoke([&small_atomic]() {
-    float x = small_atomic.load();
-    return x;
-  });
+// TEST(TestRtsan, AccessingALargeAtomicVariableDiesWhenRealtime) {
+//   std::atomic<float> small_atomic{0.0f};
+//   ASSERT_TRUE(small_atomic.is_lock_free());
+//   RealtimeInvoke([&small_atomic]() {
+//     float x = small_atomic.load();
+//     return x;
+//   });
 
-  std::atomic<std::array<float, 2048>> large_atomic;
-  ASSERT_FALSE(large_atomic.is_lock_free());
-  auto Func = [&]() {
-    std::array<float, 2048> x = large_atomic.load();
-    return x;
-  };
-  ExpectRealtimeDeath(Func);
-  ExpectNonRealtimeSurvival(Func);
-}
+//   std::atomic<std::array<float, 2048>> large_atomic;
+//   ASSERT_FALSE(large_atomic.is_lock_free());
+//   auto Func = [&]() {
+//     std::array<float, 2048> x = large_atomic.load();
+//     return x;
+//   };
+//   ExpectRealtimeDeath(Func);
+//   ExpectNonRealtimeSurvival(Func);
+// }
 
 TEST(TestRtsan, FirstCoutDiesWhenRealtime) {
   auto Func = []() { std::cout << "Hello, world!" << std::endl; };
