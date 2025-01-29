@@ -453,3 +453,12 @@ namespace P2361 {
 }
 
 alignas(int) struct AlignAsAttribute {}; // expected-error {{misplaced attributes; expected attributes here}}
+
+namespace GH108819 {
+void a([[maybe_unused]] void) {}                 // expected-error {{an attribute list cannot appear here}} \
+                                                 // expected-warning {{use of the 'maybe_unused' attribute is a C++17 extension}}
+void b([[deprecated]] void) {}                   // expected-error {{an attribute list cannot appear here}} \
+                                                 // expected-warning {{use of the 'deprecated' attribute is a C++14 extension}}
+void c([[clang::lifetimebound]] void) {}         // expected-error {{an attribute list cannot appear here}}
+void d([[clang::annotate("a", "b", 1)]] void) {} // expected-error {{an attribute list cannot appear here}}
+}

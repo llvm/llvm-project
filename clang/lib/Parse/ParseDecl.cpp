@@ -7986,6 +7986,13 @@ void Parser::ParseParameterDeclarationClause(
     if (getLangOpts().HLSL)
       MaybeParseHLSLAnnotations(DS.getAttributes());
 
+    if (ParmDeclarator.getIdentifier() == nullptr &&
+        ParmDeclarator.getDeclarationAttributes().size() &&
+        ParmDeclarator.getDeclSpec().getTypeSpecType() == DeclSpec::TST_void) {
+      SourceRange AttrRange = ParmDeclarator.getDeclarationAttributes().Range;
+      Diag(AttrRange.getBegin(), diag::err_attributes_not_allowed) << AttrRange;
+    }
+
     if (Tok.is(tok::kw_requires)) {
       // User tried to define a requires clause in a parameter declaration,
       // which is surely not a function declaration.
