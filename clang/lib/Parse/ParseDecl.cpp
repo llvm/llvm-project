@@ -7347,8 +7347,8 @@ void Parser::ParseDecompositionDeclarator(Declarator &D) {
     SourceLocation EllipsisLoc;
 
     if (Tok.is(tok::ellipsis)) {
-      if (!getLangOpts().CPlusPlus26)
-        Diag(Tok, diag::ext_cxx_binding_pack);
+      Diag(Tok, getLangOpts().CPlusPlus26 ? diag::warn_cxx23_compat_binding_pack
+                                          : diag::ext_cxx_binding_pack);
       if (PrevEllipsisLoc.isValid()) {
         Diag(Tok, diag::err_binding_multiple_ellipses);
         Diag(PrevEllipsisLoc, diag::note_previous_ellipsis);
