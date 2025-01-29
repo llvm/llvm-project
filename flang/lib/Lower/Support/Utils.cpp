@@ -388,7 +388,8 @@ bool IsEqualEvaluateExpr::isEqual(const Fortran::evaluate::Negate<A> &x,
                                   const Fortran::evaluate::Negate<A> &y) {
   return IsEqualEvaluateExpr::isEqual(x.left(), y.left());
 }
-template <typename A> bool isBinaryEqual(const A &x, const A &y) {
+template <typename A>
+bool IsEqualEvaluateExpr::isBinaryEqual(const A &x, const A &y) {
   return IsEqualEvaluateExpr::isEqual(x.left(), y.left()) &&
          IsEqualEvaluateExpr::isEqual(x.right(), y.right());
 }
@@ -594,8 +595,7 @@ bool IsEqualEvaluateExpr::isEqual(const Fortran::evaluate::NullPointer &x,
                                   const Fortran::evaluate::NullPointer &y) {
   return true;
 }
-template <typename A, typename B,
-          std::enable_if_t<!std::is_same_v<A, B>, bool> = true>
+template <typename A, typename B, std::enable_if_t<!std::is_same_v<A, B>, bool>>
 bool IsEqualEvaluateExpr::isEqual(const A &, const B &) {
   return false;
 }
