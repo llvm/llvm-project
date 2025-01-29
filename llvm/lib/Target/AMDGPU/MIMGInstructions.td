@@ -2285,12 +2285,12 @@ def TENSOR_STORE_FROM_LDS_D2 : VIMAGE_TENSOR_Pseudo<"tensor_store_from_lds", 1>;
 
 class TensorPat <VIMAGE_TENSOR_Pseudo inst, SDPatternOperator node> : GCNPat <
   (node v4i32:$vaddr0, v8i32:$vaddr1, v4i32:$vaddr2, v4i32:$vaddr3, (i32 timm:$cpol)),
-  (inst $vaddr0, $vaddr1, $vaddr2, $vaddr3, 1, $cpol)
+  (inst $vaddr0, $vaddr1, $vaddr2, $vaddr3, 0, $cpol)
 >;
 
 class TensorD2Pat <VIMAGE_TENSOR_Pseudo inst, SDPatternOperator node> : GCNPat <
   (node v4i32:$vaddr0, v8i32:$vaddr1, (i32 timm:$cpol)),
-  (inst $vaddr0, $vaddr1, 1, $cpol)
+  (inst $vaddr0, $vaddr1, 0, $cpol)
 >;
 
 let SubtargetPredicate = isGFX1250Plus in {
