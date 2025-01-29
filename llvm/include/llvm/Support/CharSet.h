@@ -30,12 +30,8 @@ template <typename T> class SmallVectorImpl;
 
 namespace details {
 class CharSetConverterImplBase {
-public:
-  virtual ~CharSetConverterImplBase() = default;
 
-  /// Resets the converter to the initial state.
-  virtual void reset() = 0;
-
+private:
   /// Converts a string.
   /// \param[in] Source source string
   /// \param[out] Result container for converted string
@@ -55,12 +51,21 @@ public:
   /// In case of an error, the result string contains the successfully converted
   /// part of the input string.
   ///
-
-  std::error_code convert(StringRef Source,
-                          SmallVectorImpl<char> &Result) const;
-
   virtual std::error_code convertString(StringRef Source,
                                         SmallVectorImpl<char> &Result) = 0;
+
+  /// Resets the converter to the initial state.
+  virtual void reset() = 0;
+
+public:
+  virtual ~CharSetConverterImplBase() = default;
+
+  /// Converts a string and resets the converter to the initial state.
+  std::error_code convert(StringRef Source, SmallVectorImpl<char> &Result) {
+    auto EC = convertString(Source, Result);
+    reset();
+    return EC;
+  }
 };
 } // namespace details
 
@@ -118,15 +123,12 @@ public:
   /// \return error code in case something went wrong
   std::error_code convert(StringRef Source,
                           SmallVectorImpl<char> &Result) const {
-    auto EC = Converter->convertString(Source, Result);
-    Converter->reset();
-    return EC;
+    return Converter->convert(Source, Result);
   }
 
   ErrorOr<std::string> convert(StringRef Source) const {
     SmallString<100> Result;
-    auto EC = Converter->convertString(Source, Result);
-    Converter->reset();
+    auto EC = Converter->convert(Source, Result);
     if (!EC)
       return std::string(Result);
     return EC;
