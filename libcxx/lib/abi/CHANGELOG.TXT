@@ -13,8 +13,195 @@ To generate a summary, re-generate the new ABI list using the
 New entries should be added directly below the "Version" header.
 
 ------------
+Version 20.0
+------------
+
+* [libc++][PMR] Remove duplicate implementation of __try_allocate_from_chunk
+
+  This patch removes member functions __try_allocate_from_chunk from __chunk_footer and __initial_descriptor.
+  The two implementations were almost identical and can be easily moved to be implementation details of the built library.
+  Since they were only used from within the built library, the removal of these symbols should not be an ABI break.
+
+  All platforms
+  -------------
+  Symbol removed: _ZNSt3__13pmr25monotonic_buffer_resource14__chunk_footer25__try_allocate_from_chunkEmm
+  Symbol removed: _ZNSt3__13pmr25monotonic_buffer_resource20__initial_descriptor25__try_allocate_from_chunkEmm
+
+* [libc++] Remove the pointer safety functions from the dylib
+
+  The pointer safety functions were never implemented by anyone in a non-trivial
+  way, which lead us to removing them entirely from the headers when they were
+  removed in C++23. This also means that just about nobody ever called these
+  functions, especially not in production code. Because of that, we expect there
+  to be no references in the wild to the functions in the dylib.
+
+  Symbol removed: _ZNSt3__117declare_reachableEPv
+  Symbol removed: _ZNSt3__119declare_no_pointersEPcm
+  Symbol removed: _ZNSt3__121__undeclare_reachableEPv
+  Symbol removed: _ZNSt3__121undeclare_no_pointersEPcm
+
+* [libcxx][libc] Implements from_chars floating-point
+
+  All platforms
+  -------------
+  Symbol added: _ZNSt3__127__from_chars_floating_pointIdEENS_19__from_chars_resultIT_EEPKcS5_NS_12chars_formatE
+  Symbol added: _ZNSt3__127__from_chars_floating_pointIfEENS_19__from_chars_resultIT_EEPKcS5_NS_12chars_formatE
+
+* [libc++] Stop trying to avoid exporting some typeinfo names
+
+  This patch removes the explicit list of symbols to avoid exporting
+  from the library, which at this point doesn't cover much anyways.
+  That makes us export some new symbols on Appl platforms, namely the
+  typeinfo names for some implementation-detail types. While we
+  technically wouldn't have to export those (I don't think any user
+  can get their hands on those typeinfo names), that makes the library
+  more consistent on all platforms.
+
+  <arch>-apple-darwin
+  -------------------
+  Symbol added: __ZTSNSt3__114__codecvt_utf8IDsEE
+  Symbol added: __ZTSNSt3__114__codecvt_utf8IwEE
+  Symbol added: __ZTSNSt3__114__shared_countE
+  Symbol added: __ZTSNSt3__114codecvt_bynameIDiDu11__mbstate_tEE
+  Symbol added: __ZTSNSt3__114codecvt_bynameIDic11__mbstate_tEE
+  Symbol added: __ZTSNSt3__114codecvt_bynameIDsDu11__mbstate_tEE
+  Symbol added: __ZTSNSt3__114codecvt_bynameIDsc11__mbstate_tEE
+  Symbol added: __ZTSNSt3__114codecvt_bynameIcc11__mbstate_tEE
+  Symbol added: __ZTSNSt3__114codecvt_bynameIwc11__mbstate_tEE
+  Symbol added: __ZTSNSt3__115__codecvt_utf16IDiLb0EEE
+  Symbol added: __ZTSNSt3__115__codecvt_utf16IDiLb1EEE
+  Symbol added: __ZTSNSt3__115__codecvt_utf16IDsLb0EEE
+  Symbol added: __ZTSNSt3__115__codecvt_utf16IDsLb1EEE
+  Symbol added: __ZTSNSt3__115__codecvt_utf16IwLb0EEE
+  Symbol added: __ZTSNSt3__115__codecvt_utf16IwLb1EEE
+  Symbol added: __ZTSNSt3__116__narrow_to_utf8ILm16EEE
+  Symbol added: __ZTSNSt3__116__narrow_to_utf8ILm32EEE
+  Symbol added: __ZTSNSt3__117__assoc_sub_stateE
+  Symbol added: __ZTSNSt3__117__widen_from_utf8ILm16EEE
+  Symbol added: __ZTSNSt3__117__widen_from_utf8ILm32EEE
+  Symbol added: __ZTSNSt3__119__shared_weak_countE
+  Symbol added: __ZTSNSt3__120__codecvt_utf8_utf16IDiEE
+  Symbol added: __ZTSNSt3__120__codecvt_utf8_utf16IDsEE
+  Symbol added: __ZTSNSt3__120__codecvt_utf8_utf16IwEE
+
+------------
+Version 19.0
+------------
+
+* [libc++] Avoid re-exporting a few specific symbols from libc++abi
+
+  In 6a884a9aef39, I synchronized the export list of libc++abi to the
+  export list of libc++. From the linker's perspective, this caused
+  these symbols to be taken from libc++.dylib instead of libc++abi.dylib.
+
+  However, that can be problematic when back-deploying. Indeed, this means
+  that the linker will encode an undefined reference to be fullfilled by
+  libc++.dylib, but when backdeploying against an older system, that symbol
+  might only be available in libc++abi.dylib.
+
+  Most of the symbols that started being re-exported after 6a884a9aef39
+  turn out to be implementation details of libc++abi, so nobody really
+  depends on them and this back-deployment issue is inconsequential.
+
+  However, we ran into issues with a few of these symbols while testing
+  LLVM 19, which led to this patch.
+
+  In the future, a follow-up cleanup would be to stop exporting most of
+  the _cxxabiv1_foo_type_infoE symbols from both libc++abi and libc++
+  since they are implementation details that nobody should be relying
+  on.
+
+  <arch>-apple-darwin
+  -------------------
+  Symbol not reexported anymore: ___cxa_rethrow_primary_exception
+  Symbol not reexported anymore: __ZTIN10__cxxabiv117__class_type_infoE
+  Symbol not reexported anymore: __ZTIN10__cxxabiv120__si_class_type_infoE
+  Symbol not reexported anymore: __ZTIN10__cxxabiv121__vmi_class_type_infoE
+
+* [libc++] Always keep libc++abi re-exports up-to-date
+
+  This patch makes sure that the set of libc++abi symbols re-exported from libc++
+  is up-to-date with the symbols that libc++abi re-exports. As such, it adds several
+  symbols that were left out of the libc++ re-exports list. Exporting new symbols
+  is not an ABI break.
+
+  <arch>-apple-darwin
+  -------------------
+  Symbol reexported: ___cxa_current_primary_exception
+  Symbol reexported: ___cxa_decrement_exception_refcount
+  Symbol reexported: ___cxa_increment_exception_refcount
+  Symbol reexported: ___cxa_new_handler
+  Symbol reexported: ___cxa_rethrow_primary_exception
+  Symbol reexported: ___cxa_terminate_handler
+  Symbol reexported: ___cxa_uncaught_exception
+  Symbol reexported: ___cxa_unexpected_handler
+  Symbol reexported: __ZTIDh
+  Symbol reexported: __ZTIDu
+  Symbol reexported: __ZTIg
+  Symbol reexported: __ZTIn
+  Symbol reexported: __ZTIN10__cxxabiv116__enum_type_infoE
+  Symbol reexported: __ZTIN10__cxxabiv116__shim_type_infoE
+  Symbol reexported: __ZTIN10__cxxabiv117__array_type_infoE
+  Symbol reexported: __ZTIN10__cxxabiv117__class_type_infoE
+  Symbol reexported: __ZTIN10__cxxabiv117__pbase_type_infoE
+  Symbol reexported: __ZTIN10__cxxabiv119__pointer_type_infoE
+  Symbol reexported: __ZTIN10__cxxabiv120__function_type_infoE
+  Symbol reexported: __ZTIN10__cxxabiv120__si_class_type_infoE
+  Symbol reexported: __ZTIN10__cxxabiv121__vmi_class_type_infoE
+  Symbol reexported: __ZTIN10__cxxabiv123__fundamental_type_infoE
+  Symbol reexported: __ZTIN10__cxxabiv129__pointer_to_member_type_infoE
+  Symbol reexported: __ZTIo
+  Symbol reexported: __ZTIPDh
+  Symbol reexported: __ZTIPDu
+  Symbol reexported: __ZTIPg
+  Symbol reexported: __ZTIPKDh
+  Symbol reexported: __ZTIPKDu
+  Symbol reexported: __ZTIPKg
+  Symbol reexported: __ZTIPKn
+  Symbol reexported: __ZTIPKo
+  Symbol reexported: __ZTIPn
+  Symbol reexported: __ZTIPo
+  Symbol reexported: __ZTSDh
+  Symbol reexported: __ZTSDu
+  Symbol reexported: __ZTSg
+  Symbol reexported: __ZTSn
+  Symbol reexported: __ZTSN10__cxxabiv116__shim_type_infoE
+  Symbol reexported: __ZTSo
+  Symbol reexported: __ZTSPDh
+  Symbol reexported: __ZTSPDu
+  Symbol reexported: __ZTSPg
+  Symbol reexported: __ZTSPKDh
+  Symbol reexported: __ZTSPKDu
+  Symbol reexported: __ZTSPKg
+  Symbol reexported: __ZTSPKn
+  Symbol reexported: __ZTSPKo
+  Symbol reexported: __ZTSPn
+  Symbol reexported: __ZTSPo
+  Symbol reexported: __ZTVN10__cxxabiv116__shim_type_infoE
+
+------------
 Version 18.0
 ------------
+
+* [libc++] Moves is_terminal to the dylib
+
+  The patch moves the POSIX implementation of is_terminal to the dylib. This is
+  needed to avoid using <unistd.h> in public headers.
+
+  All platforms
+  Symbol added: _ZNSt6__ndk119__is_posix_terminalEP7__sFILE
+
+* [libc++abi] Implement __cxa_init_primary_exception and use it to optimize std::make_exception_ptr (#65534)
+
+  This patch implements __cxa_init_primary_exception, an extension to the Itanium C++ ABI.
+  This extension is already present in both libsupc++ and libcxxrt. This patch also starts
+  making use of this function in std::make_exception_ptr: instead of going through a full
+  throw/catch cycle, we are now able to initialize an exception directly, thus making
+  std::make_exception_ptr around 30x faster. Adding a new symbol is not an ABI break.
+
+  All platforms
+  -------------
+  Symbol added: __cxa_init_primary_exception
 
 * [libc++] Simplify the implementation of locale::id
 
@@ -492,7 +679,7 @@ Version 12.0
   Symbol added: ___cxa_free_dependent_exception
 
 ------------
-Version 10.0
+Version 11.0
 ------------
 
 * 54fa9ecd3088 - [libc++] Implementation of C++20's P1135R6 for libcxx

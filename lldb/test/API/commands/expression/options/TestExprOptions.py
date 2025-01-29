@@ -59,7 +59,6 @@ class ExprOptionsTestCase(TestBase):
         self.assertTrue(val.IsValid())
         self.assertFalse(val.GetError().Success())
 
-    @skipIfDarwin
     def test_expr_options_lang(self):
         """These expression language options should work as expected."""
         self.build()

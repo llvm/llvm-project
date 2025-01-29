@@ -13,14 +13,16 @@
 #ifndef LLVM_CLANG_AST_STMTVISITOR_H
 #define LLVM_CLANG_AST_STMTVISITOR_H
 
-#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
+#include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"

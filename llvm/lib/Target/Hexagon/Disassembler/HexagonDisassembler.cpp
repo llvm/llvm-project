@@ -12,7 +12,6 @@
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "TargetInfo/HexagonTargetInfo.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -499,19 +498,22 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(MCInst &MI, MCInst &MCB,
     bool SubregBit = (Register & 0x1) != 0;
     if (HexagonMCInstrInfo::hasNewValue2(*MCII, Inst)) {
       // If subreg bit is set we're selecting the second produced newvalue
-      unsigned Producer = SubregBit ?
-          HexagonMCInstrInfo::getNewValueOperand(*MCII, Inst).getReg() :
-          HexagonMCInstrInfo::getNewValueOperand2(*MCII, Inst).getReg();
+      MCRegister Producer =
+          SubregBit
+              ? HexagonMCInstrInfo::getNewValueOperand(*MCII, Inst).getReg()
+              : HexagonMCInstrInfo::getNewValueOperand2(*MCII, Inst).getReg();
       assert(Producer != Hexagon::NoRegister);
       MCO.setReg(Producer);
     } else if (HexagonMCInstrInfo::hasNewValue(*MCII, Inst)) {
-      unsigned Producer =
+      MCRegister Producer =
           HexagonMCInstrInfo::getNewValueOperand(*MCII, Inst).getReg();
 
       if (HexagonMCInstrInfo::IsVecRegPair(Producer)) {
         const bool Rev = HexagonMCInstrInfo::IsReverseVecRegPair(Producer);
         const unsigned ProdPairIndex =
             Rev ? Producer - Hexagon::WR0 : Producer - Hexagon::W0;
+        if (Rev)
+          SubregBit = !SubregBit;
         Producer = (ProdPairIndex << 1) + SubregBit + Hexagon::V0;
       } else if (SubregBit)
         // Hexagon PRM 10.11 New-value operands

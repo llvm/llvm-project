@@ -6,7 +6,7 @@ define i2 @f(i32 %arg) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    leal (%rdi,%rdi), %eax
-; CHECK-NEXT:    orb $1, %al
+; CHECK-NEXT:    incb %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %trunc = trunc i32 %arg to i1

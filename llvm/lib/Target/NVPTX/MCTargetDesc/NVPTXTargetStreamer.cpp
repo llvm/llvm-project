@@ -11,9 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXTargetStreamer.h"
+#include "NVPTXUtilities.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectFileInfo.h"
+#include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Casting.h"
 
 using namespace llvm;
 
@@ -46,8 +50,7 @@ static bool isDwarfSection(const MCObjectFileInfo *FI,
                            const MCSection *Section) {
   // FIXME: the checks for the DWARF sections are very fragile and should be
   // fixed up in a followup patch.
-  if (!Section || Section->getKind().isText() ||
-      Section->getKind().isWriteable())
+  if (!Section || Section->isText())
     return false;
   return Section == FI->getDwarfAbbrevSection() ||
          Section == FI->getDwarfInfoSection() ||
@@ -84,8 +87,7 @@ static bool isDwarfSection(const MCObjectFileInfo *FI,
 }
 
 void NVPTXTargetStreamer::changeSection(const MCSection *CurSection,
-                                        MCSection *Section,
-                                        const MCExpr *SubSection,
+                                        MCSection *Section, uint32_t SubSection,
                                         raw_ostream &OS) {
   assert(!SubSection && "SubSection is not null!");
   const MCObjectFileInfo *FI = getStreamer().getContext().getObjectFileInfo();
@@ -137,3 +139,16 @@ void NVPTXTargetStreamer::emitRawBytes(StringRef Data) {
 #endif
 }
 
+void NVPTXTargetStreamer::emitValue(const MCExpr *Value) {
+  if (Value->getKind() == MCExpr::SymbolRef) {
+    const MCSymbolRefExpr &SRE = cast<MCSymbolRefExpr>(*Value);
+    StringRef SymName = SRE.getSymbol().getName();
+    if (!SymName.starts_with(".debug")) {
+      Streamer.emitRawText(NVPTX::getValidPTXIdentifier(SymName));
+      return;
+    }
+    // Fall through to the normal printing.
+  }
+  // Otherwise, print the Value normally.
+  MCTargetStreamer::emitValue(Value);
+}

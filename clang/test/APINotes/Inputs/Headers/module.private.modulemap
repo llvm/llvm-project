@@ -1,0 +1,5 @@
+module PrivateLib {
+  header "PrivateLib.h"
+}
+
+module ModuleWithWrongCasePrivate.Inner {}

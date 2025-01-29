@@ -12,7 +12,7 @@ define void @test1(ptr %arg) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[M:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[C:%.*]], ptr [[ARG]], i64 1, i32 0, i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 16
 ; CHECK-NEXT:    [[N:%.*]] = load ptr, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP5_NOT:%.*]] = icmp eq ptr [[M]], [[N]]
 ; CHECK-NEXT:    br i1 [[TMP5_NOT]], label [[BB8:%.*]], label [[BB10:%.*]]
@@ -22,7 +22,7 @@ define void @test1(ptr %arg) {
 ; CHECK-NEXT:    tail call void @bar(ptr nonnull [[ARG]])
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[M]], i64 9
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[M]], i64 72
 ; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP11:%.*]] = tail call i64 [[TMP4]](ptr nonnull [[ARG]])
 ; CHECK-NEXT:    br label [[BB]]
@@ -54,7 +54,7 @@ define void @test2(ptr %arg) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[M:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[C:%.*]], ptr [[ARG]], i64 1, i32 0, i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 16
 ; CHECK-NEXT:    [[N:%.*]] = load ptr, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq ptr [[M]], [[N]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[BB10:%.*]], label [[BB8:%.*]]
@@ -64,7 +64,7 @@ define void @test2(ptr %arg) {
 ; CHECK-NEXT:    tail call void @bar(ptr nonnull [[ARG]])
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[M]], i64 9
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[M]], i64 72
 ; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP11:%.*]] = tail call i64 [[TMP4]](ptr nonnull [[ARG]])
 ; CHECK-NEXT:    br label [[BB]]
@@ -96,7 +96,7 @@ define void @test3(ptr %arg) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[M:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[C:%.*]], ptr [[ARG]], i64 1, i32 0, i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 16
 ; CHECK-NEXT:    [[N:%.*]] = load ptr, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq ptr [[M]], [[N]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[BB8:%.*]], label [[BB10:%.*]]
@@ -106,7 +106,7 @@ define void @test3(ptr %arg) {
 ; CHECK-NEXT:    tail call void @bar(ptr nonnull [[ARG]])
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[M]], i64 9
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[M]], i64 72
 ; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP11:%.*]] = tail call i64 [[TMP4]](ptr nonnull [[ARG]])
 ; CHECK-NEXT:    br label [[BB]]
@@ -138,7 +138,7 @@ define void @test4(ptr %arg) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[M:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[C:%.*]], ptr [[ARG]], i64 1, i32 0, i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG]], i64 16
 ; CHECK-NEXT:    [[N:%.*]] = load ptr, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq ptr [[M]], [[N]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[BB10:%.*]], label [[BB8:%.*]]
@@ -148,7 +148,7 @@ define void @test4(ptr %arg) {
 ; CHECK-NEXT:    tail call void @bar(ptr nonnull [[ARG]])
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[M]], i64 9
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[M]], i64 72
 ; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP11:%.*]] = tail call i64 [[TMP4]](ptr nonnull [[ARG]])
 ; CHECK-NEXT:    br label [[BB]]

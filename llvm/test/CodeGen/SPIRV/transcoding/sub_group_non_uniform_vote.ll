@@ -5,7 +5,7 @@
 ;; }
 ;;
 ;; kernel void testSubGroupNonUniformAll(global int* dst) {
-;; 	dst[0] = sub_group_non_uniform_all(0); 
+;; 	dst[0] = sub_group_non_uniform_all(0);
 ;; }
 ;;
 ;; kernel void testSubGroupNonUniformAny(global int* dst) {
@@ -75,8 +75,10 @@
 ; CHECK-SPIRV-DAG: %[[#double:]] = OpTypeFloat 64
 
 ; CHECK-SPIRV-DAG: %[[#false:]] = OpConstantFalse %[[#bool]]
+; CHECK-SPIRV-DAG: %[[#true:]] = OpConstantTrue %[[#bool]]
 ; CHECK-SPIRV-DAG: %[[#ScopeSubgroup:]] = OpConstant %[[#int]] 3
 ; CHECK-SPIRV-DAG: %[[#char_0:]] = OpConstant %[[#char]] 0
+; CHECK-SPIRV-DAG: %[[#char_10:]] = OpConstant %[[#char]] 10
 ; CHECK-SPIRV-DAG: %[[#short_0:]] = OpConstant %[[#short]] 0
 ; CHECK-SPIRV-DAG: %[[#int_0:]] = OpConstant %[[#int]] 0
 ; CHECK-SPIRV-DAG: %[[#long_0:]] = OpConstantNull %[[#long]]
@@ -86,42 +88,52 @@
 
 ; CHECK-SPIRV: OpFunction
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformElect %[[#bool]] %[[#ScopeSubgroup]]
+; CHECK-SPIRV: %[[#]] = OpGroupNonUniformElect %[[#bool]] %[[#ScopeSubgroup]]
 ; CHECK-SPIRV: OpFunctionEnd
 
 define dso_local spir_kernel void @testSubGroupElect(i32 addrspace(1)* nocapture) local_unnamed_addr {
   %2 = tail call spir_func i32 @_Z15sub_group_electv()
+  %r2 = tail call spir_func i1 @__spirv_GroupNonUniformElect(i32 3)
   store i32 %2, i32 addrspace(1)* %0, align 4
   ret void
 }
 
 declare dso_local spir_func i32 @_Z15sub_group_electv() local_unnamed_addr
+declare dso_local spir_func i1 @__spirv_GroupNonUniformElect(i32)
 
 ; CHECK-SPIRV: OpFunction
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformAll %[[#bool]] %[[#ScopeSubgroup]] %[[#false]]
+; CHECK-SPIRV: %[[#]] = OpGroupNonUniformAll %[[#bool]] %[[#ScopeSubgroup]] %[[#true]]
 ; CHECK-SPIRV: OpFunctionEnd
 
 define dso_local spir_kernel void @testSubGroupNonUniformAll(i32 addrspace(1)* nocapture) local_unnamed_addr {
   %2 = tail call spir_func i32 @_Z25sub_group_non_uniform_alli(i32 0)
+  %r2 = tail call spir_func i1 @__spirv_GroupNonUniformAll(i32 3, i1 true)
   store i32 %2, i32 addrspace(1)* %0, align 4
   ret void
 }
 
 declare dso_local spir_func i32 @_Z25sub_group_non_uniform_alli(i32) local_unnamed_addr
+declare dso_local spir_func i1 @__spirv_GroupNonUniformAll(i32, i1)
 
 ; CHECK-SPIRV: OpFunction
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformAny %[[#bool]] %[[#ScopeSubgroup]] %[[#false]]
+; CHECK-SPIRV: %[[#]] = OpGroupNonUniformAny %[[#bool]] %[[#ScopeSubgroup]] %[[#true]]
 ; CHECK-SPIRV: OpFunctionEnd
 
 define dso_local spir_kernel void @testSubGroupNonUniformAny(i32 addrspace(1)* nocapture) local_unnamed_addr {
   %2 = tail call spir_func i32 @_Z25sub_group_non_uniform_anyi(i32 0)
+  %r2 = tail call spir_func i1 @__spirv_GroupNonUniformAny(i32 3, i1 true)
   store i32 %2, i32 addrspace(1)* %0, align 4
   ret void
 }
 
 declare dso_local spir_func i32 @_Z25sub_group_non_uniform_anyi(i32) local_unnamed_addr
+declare dso_local spir_func i1 @__spirv_GroupNonUniformAny(i32, i1)
 
 ; CHECK-SPIRV: OpFunction
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformAllEqual %[[#bool]] %[[#ScopeSubgroup]] %[[#char_0]]
+; CHECK-SPIRV: %[[#]] = OpGroupNonUniformAllEqual %[[#bool]] %[[#ScopeSubgroup]] %[[#char_10]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformAllEqual %[[#bool]] %[[#ScopeSubgroup]] %[[#char_0]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformAllEqual %[[#bool]] %[[#ScopeSubgroup]] %[[#short_0]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformAllEqual %[[#bool]] %[[#ScopeSubgroup]] %[[#short_0]]
@@ -136,6 +148,7 @@ declare dso_local spir_func i32 @_Z25sub_group_non_uniform_anyi(i32) local_unnam
 
 define dso_local spir_kernel void @testSubGroupNonUniformAllEqual(i32 addrspace(1)* nocapture) local_unnamed_addr {
   %2 = tail call spir_func i32 @_Z31sub_group_non_uniform_all_equalc(i8 signext 0)
+  %r2 = tail call spir_func i1 @__spirv_GroupNonUniformAllEqual(i32 3, i8 signext 10)
   store i32 %2, i32 addrspace(1)* %0, align 4
   %3 = tail call spir_func i32 @_Z31sub_group_non_uniform_all_equalh(i8 zeroext 0)
   store i32 %3, i32 addrspace(1)* %0, align 4
@@ -161,6 +174,7 @@ define dso_local spir_kernel void @testSubGroupNonUniformAllEqual(i32 addrspace(
 }
 
 declare dso_local spir_func i32 @_Z31sub_group_non_uniform_all_equalc(i8 signext) local_unnamed_addr
+declare dso_local spir_func i1 @__spirv_GroupNonUniformAllEqual(i32, i8 signext)
 
 declare dso_local spir_func i32 @_Z31sub_group_non_uniform_all_equalh(i8 zeroext) local_unnamed_addr
 

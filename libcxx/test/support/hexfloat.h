@@ -14,8 +14,9 @@
 #ifndef HEXFLOAT_H
 #define HEXFLOAT_H
 
-#include <cmath>
 #include <climits>
+#include <cmath>
+#include <cstddef>
 
 template <class T>
 class hexfloat

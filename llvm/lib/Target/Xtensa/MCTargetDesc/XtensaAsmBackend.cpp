@@ -43,9 +43,6 @@ public:
                   const MCSubtargetInfo *STI) const override;
   bool mayNeedRelaxation(const MCInst &Inst,
                          const MCSubtargetInfo &STI) const override;
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *Fragment,
-                            const MCAsmLayout &Layout) const override;
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
   bool writeNopData(raw_ostream &OS, uint64_t Count,
@@ -91,8 +88,10 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case FK_Data_8:
     return Value;
   case Xtensa::fixup_xtensa_branch_6: {
+    if (!Value)
+      return 0;
     Value -= 4;
-    if (!isInt<6>(Value))
+    if (!isUInt<6>(Value))
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
     unsigned Hi2 = (Value >> 4) & 0x3;
     unsigned Lo4 = Value & 0xf;
@@ -169,12 +168,6 @@ void XtensaMCAsmBackend::applyFixup(const MCAssembler &Asm,
 
 bool XtensaMCAsmBackend::mayNeedRelaxation(const MCInst &Inst,
                                            const MCSubtargetInfo &STI) const {
-  return false;
-}
-
-bool XtensaMCAsmBackend::fixupNeedsRelaxation(
-    const MCFixup &Fixup, uint64_t Value, const MCRelaxableFragment *Fragment,
-    const MCAsmLayout &Layout) const {
   return false;
 }
 

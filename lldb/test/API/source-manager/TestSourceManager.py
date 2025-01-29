@@ -259,7 +259,7 @@ class SourceManagerTestCase(TestBase):
         m = re.search("^\[(\d+)\].*// Set break point at this line.", output)
         if not m:
             self.fail("Fail to display source level breakpoints")
-        self.assertTrue(int(m.group(1)) > 0)
+        self.assertGreater(int(m.group(1)), 0)
 
         # Modify content
         self.modify_content()
@@ -314,22 +314,30 @@ class SourceManagerTestCase(TestBase):
         )
 
     def test_artificial_source_location(self):
-        src_file = "artificial_location.c"
-        d = {"C_SOURCES": src_file}
+        src_file = "artificial_location.cpp"
+        d = {"C_SOURCES": "", "CXX_SOURCES": src_file}
         self.build(dictionary=d)
 
-        lldbutil.run_to_source_breakpoint(
-            self, "main", lldb.SBFileSpec(src_file, False)
-        )
+        target = lldbutil.run_to_breakpoint_make_target(self)
+
+        # Find the instruction with line=0 and put a breakpoint there.
+        sc_list = target.FindFunctions("A::foo")
+        self.assertEqual(len(sc_list), 1)
+        insns = sc_list[0].function.GetInstructions(target)
+        insn0 = next(filter(lambda insn: insn.addr.line_entry.line == 0, insns))
+        bkpt = target.BreakpointCreateBySBAddress(insn0.addr)
+        self.assertGreater(bkpt.GetNumLocations(), 0)
+
+        lldbutil.run_to_breakpoint_do_run(self, target, bkpt)
 
         self.expect(
-            "run",
-            RUN_SUCCEEDED,
+            "process status",
             substrs=[
                 "stop reason = breakpoint",
-                "%s:%d" % (src_file, 0),
-                "Note: this address is compiler-generated code in " "function",
-                "that has no source code associated " "with it.",
+                f"{src_file}:0",
+                "static int foo();",
+                "note: This address is not associated with a specific line "
+                "of code. This may be due to compiler optimizations.",
             ],
         )
 

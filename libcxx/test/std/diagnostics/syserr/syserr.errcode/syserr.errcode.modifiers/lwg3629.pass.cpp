@@ -26,10 +26,8 @@ namespace User {
   std::error_code make_error_code(Err) { return std::error_code(42, std::generic_category()); }
 }
 
-namespace std {
-  template <>
-  struct is_error_code_enum<User::Err> : true_type {};
-}
+template <>
+struct std::is_error_code_enum<User::Err> : true_type {};
 
 int main(int, char**) {
   std::error_code e;

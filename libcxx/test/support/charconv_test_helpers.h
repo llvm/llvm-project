@@ -317,6 +317,8 @@ auto all_unsigned = type_list<
     >();
 auto integrals = concat(all_signed, all_unsigned);
 
+auto all_floats = type_list< float, double >(); //TODO: Add long double
+
 template <template <typename> class Fn, typename... Ts>
 TEST_CONSTEXPR_CXX23 void
 run(type_list<Ts...>)

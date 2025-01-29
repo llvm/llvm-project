@@ -1,0 +1,224 @@
+// RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding %s | FileCheck %s
+
+// CHECK:      vsm4key4 %zmm24, %zmm23, %zmm22
+// CHECK: encoding: [0x62,0x82,0x46,0x40,0xda,0xf0]
+               vsm4key4 %zmm24, %zmm23, %zmm22
+
+// CHECK:      vsm4key4  268435456(%rbp,%r14,8), %zmm23, %zmm22
+// CHECK: encoding: [0x62,0xa2,0x46,0x40,0xda,0xb4,0xf5,0x00,0x00,0x00,0x10]
+               vsm4key4  268435456(%rbp,%r14,8), %zmm23, %zmm22
+
+// CHECK:      vsm4key4  291(%r8,%rax,4), %zmm23, %zmm22
+// CHECK: encoding: [0x62,0xc2,0x46,0x40,0xda,0xb4,0x80,0x23,0x01,0x00,0x00]
+               vsm4key4  291(%r8,%rax,4), %zmm23, %zmm22
+
+// CHECK:      vsm4key4  (%rip), %zmm23, %zmm22
+// CHECK: encoding: [0x62,0xe2,0x46,0x40,0xda,0x35,0x00,0x00,0x00,0x00]
+               vsm4key4  (%rip), %zmm23, %zmm22
+
+// CHECK:      vsm4key4  -2048(,%rbp,2), %zmm23, %zmm22
+// CHECK: encoding: [0x62,0xe2,0x46,0x40,0xda,0x34,0x6d,0x00,0xf8,0xff,0xff]
+               vsm4key4  -2048(,%rbp,2), %zmm23, %zmm22
+
+// CHECK:      vsm4key4  8128(%rcx), %zmm23, %zmm22
+// CHECK: encoding: [0x62,0xe2,0x46,0x40,0xda,0x71,0x7f]
+               vsm4key4  8128(%rcx), %zmm23, %zmm22
+
+// CHECK:      vsm4key4  -8192(%rdx), %zmm23, %zmm22
+// CHECK: encoding: [0x62,0xe2,0x46,0x40,0xda,0x72,0x80]
+               vsm4key4  -8192(%rdx), %zmm23, %zmm22
+
+// CHECK:      vsm4rnds4 %zmm24, %zmm23, %zmm22
+// CHECK: encoding: [0x62,0x82,0x47,0x40,0xda,0xf0]
+               vsm4rnds4 %zmm24, %zmm23, %zmm22
+
+// CHECK:      vsm4rnds4  268435456(%rbp,%r14,8), %zmm23, %zmm22
+// CHECK: encoding: [0x62,0xa2,0x47,0x40,0xda,0xb4,0xf5,0x00,0x00,0x00,0x10]
+               vsm4rnds4  268435456(%rbp,%r14,8), %zmm23, %zmm22
+
+// CHECK:      vsm4rnds4  291(%r8,%rax,4), %zmm23, %zmm22
+// CHECK: encoding: [0x62,0xc2,0x47,0x40,0xda,0xb4,0x80,0x23,0x01,0x00,0x00]
+               vsm4rnds4  291(%r8,%rax,4), %zmm23, %zmm22
+
+// CHECK:      vsm4rnds4  (%rip), %zmm23, %zmm22
+// CHECK: encoding: [0x62,0xe2,0x47,0x40,0xda,0x35,0x00,0x00,0x00,0x00]
+               vsm4rnds4  (%rip), %zmm23, %zmm22
+
+// CHECK:      vsm4rnds4  -2048(,%rbp,2), %zmm23, %zmm22
+// CHECK: encoding: [0x62,0xe2,0x47,0x40,0xda,0x34,0x6d,0x00,0xf8,0xff,0xff]
+               vsm4rnds4  -2048(,%rbp,2), %zmm23, %zmm22
+
+// CHECK:      vsm4rnds4  8128(%rcx), %zmm23, %zmm22
+// CHECK: encoding: [0x62,0xe2,0x47,0x40,0xda,0x71,0x7f]
+               vsm4rnds4  8128(%rcx), %zmm23, %zmm22
+
+// CHECK:      vsm4rnds4  -8192(%rdx), %zmm23, %zmm22
+// CHECK: encoding: [0x62,0xe2,0x47,0x40,0xda,0x72,0x80]
+               vsm4rnds4  -8192(%rdx), %zmm23, %zmm22
+
+// CHECK:      vsm4key4 %ymm24, %ymm23, %ymm22
+// CHECK: encoding: [0x62,0x82,0x46,0x20,0xda,0xf0]
+               vsm4key4 %ymm24, %ymm23, %ymm22
+
+// CHECK:      vsm4key4 %xmm24, %xmm23, %xmm22
+// CHECK: encoding: [0x62,0x82,0x46,0x00,0xda,0xf0]
+               vsm4key4 %xmm24, %xmm23, %xmm22
+
+// CHECK:      vsm4key4  268435456(%rbp,%r14,8), %ymm23, %ymm22
+// CHECK: encoding: [0x62,0xa2,0x46,0x20,0xda,0xb4,0xf5,0x00,0x00,0x00,0x10]
+               vsm4key4  268435456(%rbp,%r14,8), %ymm23, %ymm22
+
+// CHECK:      vsm4key4  291(%r8,%rax,4), %ymm23, %ymm22
+// CHECK: encoding: [0x62,0xc2,0x46,0x20,0xda,0xb4,0x80,0x23,0x01,0x00,0x00]
+               vsm4key4  291(%r8,%rax,4), %ymm23, %ymm22
+
+// CHECK:      vsm4key4  (%rip), %ymm23, %ymm22
+// CHECK: encoding: [0x62,0xe2,0x46,0x20,0xda,0x35,0x00,0x00,0x00,0x00]
+               vsm4key4  (%rip), %ymm23, %ymm22
+
+// CHECK:      vsm4key4  -1024(,%rbp,2), %ymm23, %ymm22
+// CHECK: encoding: [0x62,0xe2,0x46,0x20,0xda,0x34,0x6d,0x00,0xfc,0xff,0xff]
+               vsm4key4  -1024(,%rbp,2), %ymm23, %ymm22
+
+// CHECK:      vsm4key4  4064(%rcx), %ymm23, %ymm22
+// CHECK: encoding: [0x62,0xe2,0x46,0x20,0xda,0x71,0x7f]
+               vsm4key4  4064(%rcx), %ymm23, %ymm22
+
+// CHECK:      vsm4key4  -4096(%rdx), %ymm23, %ymm22
+// CHECK: encoding: [0x62,0xe2,0x46,0x20,0xda,0x72,0x80]
+               vsm4key4  -4096(%rdx), %ymm23, %ymm22
+
+// CHECK:      vsm4key4  268435456(%rbp,%r14,8), %xmm23, %xmm22
+// CHECK: encoding: [0x62,0xa2,0x46,0x00,0xda,0xb4,0xf5,0x00,0x00,0x00,0x10]
+               vsm4key4  268435456(%rbp,%r14,8), %xmm23, %xmm22
+
+// CHECK:      vsm4key4  291(%r8,%rax,4), %xmm23, %xmm22
+// CHECK: encoding: [0x62,0xc2,0x46,0x00,0xda,0xb4,0x80,0x23,0x01,0x00,0x00]
+               vsm4key4  291(%r8,%rax,4), %xmm23, %xmm22
+
+// CHECK:      vsm4key4  (%rip), %xmm23, %xmm22
+// CHECK: encoding: [0x62,0xe2,0x46,0x00,0xda,0x35,0x00,0x00,0x00,0x00]
+               vsm4key4  (%rip), %xmm23, %xmm22
+
+// CHECK:      vsm4key4  -512(,%rbp,2), %xmm23, %xmm22
+// CHECK: encoding: [0x62,0xe2,0x46,0x00,0xda,0x34,0x6d,0x00,0xfe,0xff,0xff]
+               vsm4key4  -512(,%rbp,2), %xmm23, %xmm22
+
+// CHECK:      vsm4key4  2032(%rcx), %xmm23, %xmm22
+// CHECK: encoding: [0x62,0xe2,0x46,0x00,0xda,0x71,0x7f]
+               vsm4key4  2032(%rcx), %xmm23, %xmm22
+
+// CHECK:      vsm4key4  -2048(%rdx), %xmm23, %xmm22
+// CHECK: encoding: [0x62,0xe2,0x46,0x00,0xda,0x72,0x80]
+               vsm4key4  -2048(%rdx), %xmm23, %xmm22
+// CHECK:      vsm4key4 %ymm24, %ymm23, %ymm22
+// CHECK: encoding: [0x62,0x82,0x46,0x20,0xda,0xf0]
+               vsm4key4 %ymm24, %ymm23, %ymm22
+
+// CHECK:      vsm4key4 %xmm24, %xmm23, %xmm22
+// CHECK: encoding: [0x62,0x82,0x46,0x00,0xda,0xf0]
+               vsm4key4 %xmm24, %xmm23, %xmm22
+
+// CHECK:      vsm4key4  268435456(%rbp,%r14,8), %ymm23, %ymm22
+// CHECK: encoding: [0x62,0xa2,0x46,0x20,0xda,0xb4,0xf5,0x00,0x00,0x00,0x10]
+               vsm4key4  268435456(%rbp,%r14,8), %ymm23, %ymm22
+
+// CHECK:      vsm4key4  291(%r8,%rax,4), %ymm23, %ymm22
+// CHECK: encoding: [0x62,0xc2,0x46,0x20,0xda,0xb4,0x80,0x23,0x01,0x00,0x00]
+               vsm4key4  291(%r8,%rax,4), %ymm23, %ymm22
+
+// CHECK:      vsm4key4  (%rip), %ymm23, %ymm22
+// CHECK: encoding: [0x62,0xe2,0x46,0x20,0xda,0x35,0x00,0x00,0x00,0x00]
+               vsm4key4  (%rip), %ymm23, %ymm22
+
+// CHECK:      vsm4key4  -1024(,%rbp,2), %ymm23, %ymm22
+// CHECK: encoding: [0x62,0xe2,0x46,0x20,0xda,0x34,0x6d,0x00,0xfc,0xff,0xff]
+               vsm4key4  -1024(,%rbp,2), %ymm23, %ymm22
+
+// CHECK:      vsm4key4  4064(%rcx), %ymm23, %ymm22
+// CHECK: encoding: [0x62,0xe2,0x46,0x20,0xda,0x71,0x7f]
+               vsm4key4  4064(%rcx), %ymm23, %ymm22
+
+// CHECK:      vsm4key4  -4096(%rdx), %ymm23, %ymm22
+// CHECK: encoding: [0x62,0xe2,0x46,0x20,0xda,0x72,0x80]
+               vsm4key4  -4096(%rdx), %ymm23, %ymm22
+
+// CHECK:      vsm4key4  268435456(%rbp,%r14,8), %xmm23, %xmm22
+// CHECK: encoding: [0x62,0xa2,0x46,0x00,0xda,0xb4,0xf5,0x00,0x00,0x00,0x10]
+               vsm4key4  268435456(%rbp,%r14,8), %xmm23, %xmm22
+
+// CHECK:      vsm4key4  291(%r8,%rax,4), %xmm23, %xmm22
+// CHECK: encoding: [0x62,0xc2,0x46,0x00,0xda,0xb4,0x80,0x23,0x01,0x00,0x00]
+               vsm4key4  291(%r8,%rax,4), %xmm23, %xmm22
+
+// CHECK:      vsm4key4  (%rip), %xmm23, %xmm22
+// CHECK: encoding: [0x62,0xe2,0x46,0x00,0xda,0x35,0x00,0x00,0x00,0x00]
+               vsm4key4  (%rip), %xmm23, %xmm22
+
+// CHECK:      vsm4key4  -512(,%rbp,2), %xmm23, %xmm22
+// CHECK: encoding: [0x62,0xe2,0x46,0x00,0xda,0x34,0x6d,0x00,0xfe,0xff,0xff]
+               vsm4key4  -512(,%rbp,2), %xmm23, %xmm22
+
+// CHECK:      vsm4key4  2032(%rcx), %xmm23, %xmm22
+// CHECK: encoding: [0x62,0xe2,0x46,0x00,0xda,0x71,0x7f]
+               vsm4key4  2032(%rcx), %xmm23, %xmm22
+
+// CHECK:      vsm4key4  -2048(%rdx), %xmm23, %xmm22
+// CHECK: encoding: [0x62,0xe2,0x46,0x00,0xda,0x72,0x80]
+               vsm4key4  -2048(%rdx), %xmm23, %xmm22
+
+// CHECK:      vsm4rnds4 %ymm24, %ymm23, %ymm22
+// CHECK: encoding: [0x62,0x82,0x47,0x20,0xda,0xf0]
+               vsm4rnds4 %ymm24, %ymm23, %ymm22
+
+// CHECK:      vsm4rnds4 %xmm24, %xmm23, %xmm22
+// CHECK: encoding: [0x62,0x82,0x47,0x00,0xda,0xf0]
+               vsm4rnds4 %xmm24, %xmm23, %xmm22
+
+// CHECK:      vsm4rnds4  268435456(%rbp,%r14,8), %ymm23, %ymm22
+// CHECK: encoding: [0x62,0xa2,0x47,0x20,0xda,0xb4,0xf5,0x00,0x00,0x00,0x10]
+               vsm4rnds4  268435456(%rbp,%r14,8), %ymm23, %ymm22
+
+// CHECK:      vsm4rnds4  291(%r8,%rax,4), %ymm23, %ymm22
+// CHECK: encoding: [0x62,0xc2,0x47,0x20,0xda,0xb4,0x80,0x23,0x01,0x00,0x00]
+               vsm4rnds4  291(%r8,%rax,4), %ymm23, %ymm22
+
+// CHECK:      vsm4rnds4  (%rip), %ymm23, %ymm22
+// CHECK: encoding: [0x62,0xe2,0x47,0x20,0xda,0x35,0x00,0x00,0x00,0x00]
+               vsm4rnds4  (%rip), %ymm23, %ymm22
+
+// CHECK:      vsm4rnds4  -1024(,%rbp,2), %ymm23, %ymm22
+// CHECK: encoding: [0x62,0xe2,0x47,0x20,0xda,0x34,0x6d,0x00,0xfc,0xff,0xff]
+               vsm4rnds4  -1024(,%rbp,2), %ymm23, %ymm22
+
+// CHECK:      vsm4rnds4  4064(%rcx), %ymm23, %ymm22
+// CHECK: encoding: [0x62,0xe2,0x47,0x20,0xda,0x71,0x7f]
+               vsm4rnds4  4064(%rcx), %ymm23, %ymm22
+
+// CHECK:      vsm4rnds4  -4096(%rdx), %ymm23, %ymm22
+// CHECK: encoding: [0x62,0xe2,0x47,0x20,0xda,0x72,0x80]
+               vsm4rnds4  -4096(%rdx), %ymm23, %ymm22
+
+// CHECK:      vsm4rnds4  268435456(%rbp,%r14,8), %xmm23, %xmm22
+// CHECK: encoding: [0x62,0xa2,0x47,0x00,0xda,0xb4,0xf5,0x00,0x00,0x00,0x10]
+               vsm4rnds4  268435456(%rbp,%r14,8), %xmm23, %xmm22
+
+// CHECK:      vsm4rnds4  291(%r8,%rax,4), %xmm23, %xmm22
+// CHECK: encoding: [0x62,0xc2,0x47,0x00,0xda,0xb4,0x80,0x23,0x01,0x00,0x00]
+               vsm4rnds4  291(%r8,%rax,4), %xmm23, %xmm22
+
+// CHECK:      vsm4rnds4  (%rip), %xmm23, %xmm22
+// CHECK: encoding: [0x62,0xe2,0x47,0x00,0xda,0x35,0x00,0x00,0x00,0x00]
+               vsm4rnds4  (%rip), %xmm23, %xmm22
+
+// CHECK:      vsm4rnds4  -512(,%rbp,2), %xmm23, %xmm22
+// CHECK: encoding: [0x62,0xe2,0x47,0x00,0xda,0x34,0x6d,0x00,0xfe,0xff,0xff]
+               vsm4rnds4  -512(,%rbp,2), %xmm23, %xmm22
+
+// CHECK:      vsm4rnds4  2032(%rcx), %xmm23, %xmm22
+// CHECK: encoding: [0x62,0xe2,0x47,0x00,0xda,0x71,0x7f]
+               vsm4rnds4  2032(%rcx), %xmm23, %xmm22
+
+// CHECK:      vsm4rnds4  -2048(%rdx), %xmm23, %xmm22
+// CHECK: encoding: [0x62,0xe2,0x47,0x00,0xda,0x72,0x80]
+               vsm4rnds4  -2048(%rdx), %xmm23, %xmm22

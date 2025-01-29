@@ -88,8 +88,6 @@ def GpuModuleToBinaryPass
     4. `fatbinary`, `fatbin`: produces fatbinaries.
   }];
   let options = [
-    Option<"offloadingHandler", "handler", "Attribute", "nullptr",
-           "Offloading handler to be attached to the resulting binary op.">,
     Option<"toolkitPath", "toolkit", "std::string", [{""}],
            "Toolkit path.">,
     ListOption<"linkFiles", "l", "std::string",
@@ -97,7 +95,9 @@ def GpuModuleToBinaryPass
     Option<"cmdOptions", "opts", "std::string", [{""}],
            "Command line options to pass to the tools.">,
     Option<"compilationTarget", "format", "std::string", [{"fatbin"}],
-           "The target representation of the compilation process.">
+           "The target representation of the compilation process.">,
+    Option<"elfSection", "section", "std::string", [{""}],
+           "ELF section where binary is to be located.">
   ];
 }
 
@@ -178,8 +178,8 @@ def GpuROCDLAttachTarget: Pass<"rocdl-attach-target", ""> {
            /*default=*/"\"\"",
            "Target features.">,
     Option<"abiVersion", "abi", "std::string",
-           /*default=*/"\"400\"",
-           "Optimization level.">,
+           /*default=*/"\"500\"",
+           "ABI version.">,
     Option<"optLevel", "O", "unsigned",
            /*default=*/"2",
            "Optimization level.">,

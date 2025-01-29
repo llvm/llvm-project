@@ -10,7 +10,7 @@ class D : public B {
 
 extern D gd0;
 
-// CHECK: _Z4foo1v(ptr noalias nocapture writeonly sret
+// CHECK: _Z4foo1v(ptr {{.*}} sret
 
 D foo1(void) {
   return gd0;

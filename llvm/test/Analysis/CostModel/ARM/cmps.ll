@@ -2,11 +2,11 @@
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=thumbv8.1m.main-none-eabi -mattr=+mve.fp < %s | FileCheck %s --check-prefix=CHECK-MVE-RECIP
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=thumbv8m.main-none-eabi < %s | FileCheck %s --check-prefix=CHECK-V8M-MAIN-RECIP
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=thumbv8m.base-none-eabi < %s | FileCheck %s --check-prefix=CHECK-V8M-BASE-RECIP
-; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=armv8r-none-eabi < %s | FileCheck %s --check-prefix=CHECK-V8R-RECIP
+; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=armv8r-none-eabi -mattr=+neon,+fp-armv8 < %s | FileCheck %s --check-prefix=CHECK-V8R-RECIP
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=code-size -mtriple=thumbv8.1m.main-none-eabi -mattr=+mve.fp < %s | FileCheck %s --check-prefix=CHECK-MVE-SIZE
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=code-size -mtriple=thumbv8m.main-none-eabi < %s | FileCheck %s --check-prefix=CHECK-V8M-MAIN-SIZE
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=code-size -mtriple=thumbv8m.base-none-eabi < %s | FileCheck %s --check-prefix=CHECK-V8M-BASE-SIZE
-; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=code-size -mtriple=armv8r-none-eabi < %s | FileCheck %s --check-prefix=CHECK-V8R-SIZE
+; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=code-size -mtriple=armv8r-none-eabi -mattr=+neon,+fp-armv8 < %s | FileCheck %s --check-prefix=CHECK-V8R-SIZE
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 
@@ -227,7 +227,7 @@ define void @minmax() {
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c3 = icmp slt i32 undef, undef
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s3 = select i1 %c3, i32 undef, i32 undef
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %c4 = icmp slt <4 x i32> undef, undef
-; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4 = select <4 x i1> %c4, <4 x i32> undef, <4 x i32> undef
+; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4 = select <4 x i1> %c4, <4 x i32> undef, <4 x i32> undef
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c5 = icmp slt ptr undef, undef
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s5 = select i1 %c5, ptr undef, ptr undef
 ; CHECK-V8R-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c6 = icmp slt <4 x ptr> undef, undef
@@ -287,7 +287,7 @@ define void @minmax() {
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c3 = icmp slt i32 undef, undef
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s3 = select i1 %c3, i32 undef, i32 undef
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %c4 = icmp slt <4 x i32> undef, undef
-; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4 = select <4 x i1> %c4, <4 x i32> undef, <4 x i32> undef
+; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4 = select <4 x i1> %c4, <4 x i32> undef, <4 x i32> undef
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c5 = icmp slt ptr undef, undef
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s5 = select i1 %c5, ptr undef, ptr undef
 ; CHECK-V8R-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c6 = icmp slt <4 x ptr> undef, undef

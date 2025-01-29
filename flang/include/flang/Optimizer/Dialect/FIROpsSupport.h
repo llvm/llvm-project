@@ -52,16 +52,19 @@ inline bool pureCall(mlir::Operation *op) {
 /// Get or create a FuncOp in a module.
 ///
 /// If `module` already contains FuncOp `name`, it is returned. Otherwise, a new
-/// FuncOp is created, and that new FuncOp is returned.
-mlir::func::FuncOp
-createFuncOp(mlir::Location loc, mlir::ModuleOp module, llvm::StringRef name,
-             mlir::FunctionType type,
-             llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
+/// FuncOp is created, and that new FuncOp is returned. A symbol table can
+/// be provided to speed-up the lookups.
+mlir::func::FuncOp createFuncOp(mlir::Location loc, mlir::ModuleOp module,
+                                llvm::StringRef name, mlir::FunctionType type,
+                                llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
+                                const mlir::SymbolTable *symbolTable = nullptr);
 
-/// Get or create a GlobalOp in a module.
+/// Get or create a GlobalOp in a module. A symbol table can be provided to
+/// speed-up the lookups.
 fir::GlobalOp createGlobalOp(mlir::Location loc, mlir::ModuleOp module,
                              llvm::StringRef name, mlir::Type type,
-                             llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
+                             llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
+                             const mlir::SymbolTable *symbolTable = nullptr);
 
 /// Attribute to mark Fortran entities with the CONTIGUOUS attribute.
 constexpr llvm::StringRef getContiguousAttrName() { return "fir.contiguous"; }
@@ -71,6 +74,16 @@ constexpr llvm::StringRef getOptionalAttrName() { return "fir.optional"; }
 
 /// Attribute to mark Fortran entities with the TARGET attribute.
 static constexpr llvm::StringRef getTargetAttrName() { return "fir.target"; }
+
+/// Attribute to mark Fortran entities with the ASYNCHRONOUS attribute.
+static constexpr llvm::StringRef getAsynchronousAttrName() {
+  return "fir.asynchronous";
+}
+
+/// Attribute to mark Fortran entities with the VOLATILE attribute.
+static constexpr llvm::StringRef getVolatileAttrName() {
+  return "fir.volatile";
+}
 
 /// Attribute to mark that a function argument is a character dummy procedure.
 /// Character dummy procedure have special ABI constraints.
@@ -88,9 +101,9 @@ static constexpr llvm::StringRef getHostAssocAttrName() {
   return "fir.host_assoc";
 }
 
-/// Attribute to mark an internal procedure.
-static constexpr llvm::StringRef getInternalProcedureAttrName() {
-  return "fir.internal_proc";
+/// Attribute to link an internal procedure to its host procedure symbol.
+static constexpr llvm::StringRef getHostSymbolAttrName() {
+  return "fir.host_symbol";
 }
 
 /// Attribute containing the original name of a function from before the
@@ -106,8 +119,8 @@ bool hasHostAssociationArgument(mlir::func::FuncOp func);
 /// Is the function, \p func an internal procedure ?
 /// Some internal procedures may have access to saved host procedure
 /// variables even when they do not have a tuple argument.
-inline bool isInternalPorcedure(mlir::func::FuncOp func) {
-  return func->hasAttr(fir::getInternalProcedureAttrName());
+inline bool isInternalProcedure(mlir::func::FuncOp func) {
+  return func->hasAttr(fir::getHostSymbolAttrName());
 }
 
 /// Tell if \p value is:
@@ -139,16 +152,26 @@ bool valueMayHaveFirAttributes(mlir::Value value,
 bool anyFuncArgsHaveAttr(mlir::func::FuncOp func, llvm::StringRef attr);
 
 /// Unwrap integer constant from an mlir::Value.
-inline std::optional<std::int64_t> getIntIfConstant(mlir::Value value) {
-  if (auto *definingOp = value.getDefiningOp())
-    if (auto cst = mlir::dyn_cast<mlir::arith::ConstantOp>(definingOp))
-      if (auto intAttr = cst.getValue().dyn_cast<mlir::IntegerAttr>())
-        return intAttr.getInt();
-  return {};
-}
+std::optional<std::int64_t> getIntIfConstant(mlir::Value value);
 
 static constexpr llvm::StringRef getAdaptToByRefAttrName() {
   return "adapt.valuebyref";
+}
+
+static constexpr llvm::StringRef getFuncPureAttrName() {
+  return "fir.func_pure";
+}
+
+static constexpr llvm::StringRef getFuncElementalAttrName() {
+  return "fir.func_elemental";
+}
+
+static constexpr llvm::StringRef getFuncRecursiveAttrName() {
+  return "fir.func_recursive";
+}
+
+static constexpr llvm::StringRef getFortranProcedureFlagsAttrName() {
+  return "fir.proc_attrs";
 }
 
 // Attribute for an alloca that is a trivial adaptor for converting a value to
@@ -161,6 +184,28 @@ inline mlir::NamedAttribute getAdaptToByRefAttr(Builder &builder) {
   return {mlir::StringAttr::get(builder.getContext(),
                                 fir::getAdaptToByRefAttrName()),
           builder.getUnitAttr()};
+}
+
+bool isDummyArgument(mlir::Value v);
+
+template <fir::FortranProcedureFlagsEnum Flag>
+inline bool hasProcedureAttr(fir::FortranProcedureFlagsEnumAttr flags) {
+  return flags && bitEnumContainsAny(flags.getValue(), Flag);
+}
+
+template <fir::FortranProcedureFlagsEnum Flag>
+inline bool hasProcedureAttr(mlir::Operation *op) {
+  if (auto firCallOp = mlir::dyn_cast<fir::CallOp>(op))
+    return hasProcedureAttr<Flag>(firCallOp.getProcedureAttrsAttr());
+  if (auto firCallOp = mlir::dyn_cast<fir::DispatchOp>(op))
+    return hasProcedureAttr<Flag>(firCallOp.getProcedureAttrsAttr());
+  return hasProcedureAttr<Flag>(
+      op->getAttrOfType<fir::FortranProcedureFlagsEnumAttr>(
+          getFortranProcedureFlagsAttrName()));
+}
+
+inline bool hasBindcAttr(mlir::Operation *op) {
+  return hasProcedureAttr<fir::FortranProcedureFlagsEnum::bind_c>(op);
 }
 
 } // namespace fir

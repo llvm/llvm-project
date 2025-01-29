@@ -116,9 +116,9 @@ attributes #8 = {"amdgpu-waves-per-eu"="5,10"}
 
 ; Exactly 10 waves per execution unit.
 ; CHECK-LABEL: {{^}}exactly_10:
-; CHECK: SGPRBlocks: 1
+; CHECK: SGPRBlocks: 2
 ; CHECK: VGPRBlocks: 5
-; CHECK: NumSGPRsForWavesPerEU: 12
+; CHECK: NumSGPRsForWavesPerEU: 20
 ; CHECK: NumVGPRsForWavesPerEU: 24
 define amdgpu_kernel void @exactly_10() #9 {
   %val0 = load volatile float, ptr addrspace(1) @var

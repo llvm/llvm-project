@@ -214,11 +214,11 @@ define void @test4(i1 %b, i32 %x) {
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[SW:%.*]], label [[CASE3:%.*]]
 ; CHECK:       sw:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 0, label [[CASE0:%.*]]
-; CHECK-NEXT:    i32 1, label [[CASE1:%.*]]
-; CHECK-NEXT:    i32 2, label [[CASE0]]
-; CHECK-NEXT:    i32 3, label [[CASE3]]
-; CHECK-NEXT:    i32 4, label [[DEFAULT]]
+; CHECK-NEXT:      i32 0, label [[CASE0:%.*]]
+; CHECK-NEXT:      i32 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i32 2, label [[CASE0]]
+; CHECK-NEXT:      i32 3, label [[CASE3]]
+; CHECK-NEXT:      i32 4, label [[DEFAULT]]
 ; CHECK-NEXT:    ]
 ; CHECK:       default:
 ; CHECK-NEXT:    call void @bar(i32 [[X]])
@@ -521,15 +521,16 @@ define i32 @test13(ptr %ptr1, ptr %ptr2) {
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[PTR2:%.*]], i32 1
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i32, ptr [[PTR2]], i32 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[PTR1:%.*]], [[PTR2]]
-; CHECK-NEXT:    [[VAL2_PRE:%.*]] = load i32, ptr [[GEP2]], align 4
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[VAL1:%.*]] = load i32, ptr [[GEP2]], align 4
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[PHI1:%.*]] = phi ptr [ [[PTR2]], [[IF]] ], [ [[GEP1]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i32 [ [[VAL2_PRE]], [[IF]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[PHI1:%.*]] = phi ptr [ [[PTR1]], [[IF]] ], [ [[GEP1]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i32 [ [[VAL1]], [[IF]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    store i32 0, ptr [[PHI1]], align 4
-; CHECK-NEXT:    [[RET:%.*]] = add i32 [[PHI2]], [[VAL2_PRE]]
+; CHECK-NEXT:    [[VAL2:%.*]] = load i32, ptr [[GEP2]], align 4
+; CHECK-NEXT:    [[RET:%.*]] = add i32 [[PHI2]], [[VAL2]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
 entry:
@@ -552,14 +553,14 @@ end:
   ret i32 %ret
 }
 
-define void @test14(ptr %ptr1, ptr noalias %ptr2) {
+define void @test14(ptr %ptr1, ptr noalias %ptr2, i1 %b1, i1 %b2) {
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[PTR1:%.*]], i32 1
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[PTR1]], i32 2
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    br i1 undef, label [[LOOP_IF1_CRIT_EDGE:%.*]], label [[THEN:%.*]]
+; CHECK-NEXT:    br i1 [[B1:%.*]], label [[LOOP_IF1_CRIT_EDGE:%.*]], label [[THEN:%.*]]
 ; CHECK:       loop.if1_crit_edge:
 ; CHECK-NEXT:    [[VAL2_PRE:%.*]] = load i32, ptr [[GEP2]], align 4
 ; CHECK-NEXT:    br label [[IF1:%.*]]
@@ -574,10 +575,10 @@ define void @test14(ptr %ptr1, ptr noalias %ptr2) {
 ; CHECK:       if2:
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[PHI3:%.*]] = phi ptr [ [[PTR2]], [[THEN]] ], [ [[PTR1]], [[IF2]] ]
+; CHECK-NEXT:    [[PHI3:%.*]] = phi ptr [ [[GEP2]], [[THEN]] ], [ [[PTR1]], [[IF2]] ]
 ; CHECK-NEXT:    [[VAL3]] = load i32, ptr [[GEP2]], align 4
 ; CHECK-NEXT:    store i32 [[VAL3]], ptr [[PHI3]], align 4
-; CHECK-NEXT:    br i1 undef, label [[LOOP]], label [[IF1]]
+; CHECK-NEXT:    br i1 [[B2:%.*]], label [[LOOP]], label [[IF1]]
 ;
 entry:
   %gep1 = getelementptr inbounds i32, ptr %ptr1, i32 1
@@ -586,7 +587,7 @@ entry:
 
 loop:
   %phi1 = phi ptr [ %gep3, %loop.end ], [ %gep1, %entry ]
-  br i1 undef, label %if1, label %then
+  br i1 %b1, label %if1, label %then
 
 
 if1:
@@ -607,5 +608,396 @@ loop.end:
   %val3 = load i32, ptr %gep2, align 4
   store i32 %val3, ptr %phi3, align 4
   %gep3 = getelementptr inbounds i32, ptr %ptr1, i32 1
-  br i1 undef, label %loop, label %if1
+  br i1 %b2, label %loop, label %if1
 }
+
+; Make sure that the call to use_ptr does not have %p1
+define void @single_phi1(ptr %p0, ptr %p1, i8 %s) {
+; CHECK-LABEL: @single_phi1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P0:%.*]], align 8
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[P2]], [[P1:%.*]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[BB4:%.*]], label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    switch i8 [[S:%.*]], label [[BB2:%.*]] [
+; CHECK-NEXT:      i8 0, label [[BB1]]
+; CHECK-NEXT:      i8 1, label [[BB3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb2:
+; CHECK-NEXT:    unreachable
+; CHECK:       bb3:
+; CHECK-NEXT:    br label [[BB4]]
+; CHECK:       bb4:
+; CHECK-NEXT:    call void @use_bool(i1 [[CMP1]])
+; CHECK-NEXT:    call void @use_ptr(ptr [[P2]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p2 = load ptr, ptr %p0, align 8
+  %cmp1 = icmp eq ptr %p2, %p1
+  br i1 %cmp1, label %bb4, label %bb1
+
+bb1:
+  switch i8 %s, label %bb2 [
+  i8 0, label %bb1
+  i8 1, label %bb3
+  ]
+
+bb2:
+  unreachable
+
+bb3:
+  br label %bb4
+
+bb4:
+  %phi1 = phi ptr [ %p2, %entry ], [ %p2, %bb3 ]
+  %cmp2 = icmp eq ptr %phi1, %p1
+  call void @use_bool(i1 %cmp2)
+  call void @use_ptr(ptr %phi1)
+  ret void
+}
+
+define void @single_phi2(ptr %p0, ptr %p1, i8 %s) {
+; CHECK-LABEL: @single_phi2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P0:%.*]], align 8
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[P2]], [[P1:%.*]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[BB4:%.*]], label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    switch i8 [[S:%.*]], label [[BB2:%.*]] [
+; CHECK-NEXT:      i8 0, label [[BB1]]
+; CHECK-NEXT:      i8 1, label [[BB3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[BB4]]
+; CHECK:       bb3:
+; CHECK-NEXT:    br label [[BB4]]
+; CHECK:       bb4:
+; CHECK-NEXT:    call void @use_bool(i1 [[CMP1]])
+; CHECK-NEXT:    call void @use_ptr(ptr [[P2]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p2 = load ptr, ptr %p0, align 8
+  %cmp1 = icmp eq ptr %p2, %p1
+  br i1 %cmp1, label %bb4, label %bb1
+
+bb1:
+  switch i8 %s, label %bb2 [
+  i8 0, label %bb1
+  i8 1, label %bb3
+  ]
+
+bb2:
+  br label %bb4
+
+bb3:
+  br label %bb4
+
+bb4:
+  %phi1 = phi ptr [ %p2, %entry ], [ %p2, %bb2 ], [ %p2, %bb3 ]
+  %cmp2 = icmp eq ptr %phi1, %p1
+  call void @use_bool(i1 %cmp2)
+  call void @use_ptr(ptr %phi1)
+  ret void
+}
+
+define void @multiple_phi1(ptr %p0, ptr %p1, i8 %s) {
+; CHECK-LABEL: @multiple_phi1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P0:%.*]], align 8
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[P2]], [[P1:%.*]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[BB4:%.*]], label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    switch i8 [[S:%.*]], label [[BB2:%.*]] [
+; CHECK-NEXT:      i8 0, label [[BB1]]
+; CHECK-NEXT:      i8 1, label [[BB3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb2:
+; CHECK-NEXT:    unreachable
+; CHECK:       bb3:
+; CHECK-NEXT:    br label [[BB4]]
+; CHECK:       bb4:
+; CHECK-NEXT:    call void @use_bool(i1 [[CMP1]])
+; CHECK-NEXT:    br label [[BB5:%.*]]
+; CHECK:       bb5:
+; CHECK-NEXT:    call void @use_ptr(ptr [[P2]])
+; CHECK-NEXT:    br label [[BB5]]
+;
+entry:
+  %p2 = load ptr, ptr %p0, align 8
+  %cmp1 = icmp eq ptr %p2, %p1
+  br i1 %cmp1, label %bb4, label %bb1
+
+bb1:
+  switch i8 %s, label %bb2 [
+  i8 0, label %bb1
+  i8 1, label %bb3
+  ]
+
+bb2:
+  unreachable
+
+bb3:
+  br label %bb4
+
+bb4:
+  %phi1 = phi ptr [ %p2, %entry ], [ poison, %bb3 ]
+  %cmp2 = icmp eq ptr %phi1, %p1
+  call void @use_bool(i1 %cmp2)
+  br label %bb5
+
+bb5:
+  %phi2 = phi ptr [ poison, %bb5 ], [ %phi1, %bb4 ]
+  call void @use_ptr(ptr %phi2)
+  br label %bb5
+}
+
+define void @multiple_phi2(ptr %p0, ptr %p1, i8 %s) {
+; CHECK-LABEL: @multiple_phi2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P0:%.*]], align 8
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[P2]], [[P1:%.*]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[BB4:%.*]], label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    switch i8 [[S:%.*]], label [[BB2:%.*]] [
+; CHECK-NEXT:      i8 0, label [[BB1]]
+; CHECK-NEXT:      i8 1, label [[BB3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[BB4]]
+; CHECK:       bb3:
+; CHECK-NEXT:    br label [[BB4]]
+; CHECK:       bb4:
+; CHECK-NEXT:    call void @use_bool(i1 [[CMP1]])
+; CHECK-NEXT:    br label [[BB5:%.*]]
+; CHECK:       bb5:
+; CHECK-NEXT:    call void @use_ptr(ptr [[P2]])
+; CHECK-NEXT:    br label [[BB5]]
+;
+entry:
+  %p2 = load ptr, ptr %p0, align 8
+  %cmp1 = icmp eq ptr %p2, %p1
+  br i1 %cmp1, label %bb4, label %bb1
+
+bb1:
+  switch i8 %s, label %bb2 [
+  i8 0, label %bb1
+  i8 1, label %bb3
+  ]
+
+bb2:
+  br label %bb4
+
+bb3:
+  br label %bb4
+
+bb4:
+  %phi1 = phi ptr [ %p2, %entry ], [ %p2, %bb2 ], [ poison, %bb3 ]
+  %cmp2 = icmp eq ptr %phi1, %p1
+  call void @use_bool(i1 %cmp2)
+  br label %bb5
+
+bb5:
+  %phi2 = phi ptr [ poison, %bb5 ], [ %phi1, %bb4 ]
+  call void @use_ptr(ptr %phi2)
+  br label %bb5
+}
+
+define void @select_same_obj(i1 %c, ptr %p, i64 %x) {
+; CHECK-LABEL: @select_same_obj(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[X:%.*]]
+; CHECK-NEXT:    [[P3:%.*]] = select i1 [[C:%.*]], ptr [[P]], ptr [[P2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], [[P3]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[EXIT:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @use_ptr(ptr [[P]])
+; CHECK-NEXT:    call void @use_ptr(ptr [[P]])
+; CHECK-NEXT:    ret void
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p2 = getelementptr i8, ptr %p, i64 %x
+  %p3 = select i1 %c, ptr %p, ptr %p2
+  %cmp = icmp eq ptr %p, %p3
+  br i1 %cmp, label %if, label %exit
+
+if:
+  call void @use_ptr(ptr %p)
+  call void @use_ptr(ptr %p3)
+  ret void
+
+exit:
+  ret void
+}
+
+define void @select_different_obj(i1 %c, ptr %p, ptr %p2) {
+; CHECK-LABEL: @select_different_obj(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P3:%.*]] = select i1 [[C:%.*]], ptr [[P:%.*]], ptr [[P2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], [[P3]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[EXIT:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @use_ptr(ptr [[P]])
+; CHECK-NEXT:    call void @use_ptr(ptr [[P3]])
+; CHECK-NEXT:    ret void
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p3 = select i1 %c, ptr %p, ptr %p2
+  %cmp = icmp eq ptr %p, %p3
+  br i1 %cmp, label %if, label %exit
+
+if:
+  call void @use_ptr(ptr %p)
+  call void @use_ptr(ptr %p3)
+  ret void
+
+exit:
+  ret void
+}
+
+define void @select_same_obj_is_select(i1 %c, ptr %p, ptr %p2, i64 %x) {
+; CHECK-LABEL: @select_same_obj_is_select(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P3:%.*]] = select i1 [[C:%.*]], ptr [[P:%.*]], ptr [[P2:%.*]]
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr i8, ptr [[P3]], i64 [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P3]], [[P4]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[EXIT:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @use_ptr(ptr [[P3]])
+; CHECK-NEXT:    call void @use_ptr(ptr [[P3]])
+; CHECK-NEXT:    ret void
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p3 = select i1 %c, ptr %p, ptr %p2
+  %p4 = getelementptr i8, ptr %p3, i64 %x
+  %cmp = icmp eq ptr %p3, %p4
+  br i1 %cmp, label %if, label %exit
+
+if:
+  call void @use_ptr(ptr %p3)
+  call void @use_ptr(ptr %p4)
+  ret void
+
+exit:
+  ret void
+}
+
+define void @phi_same_obj(i1 %c, ptr %p, i64 %x) {
+; CHECK-LABEL: @phi_same_obj(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[X:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[P3:%.*]] = phi ptr [ [[P]], [[IF]] ], [ [[P2]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], [[P3]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF2:%.*]], label [[EXIT:%.*]]
+; CHECK:       if2:
+; CHECK-NEXT:    call void @use_ptr(ptr [[P]])
+; CHECK-NEXT:    call void @use_ptr(ptr [[P]])
+; CHECK-NEXT:    ret void
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p2 = getelementptr i8, ptr %p, i64 %x
+  br i1 %c, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %p3 = phi ptr [ %p, %if ], [ %p2, %entry ]
+  %cmp = icmp eq ptr %p, %p3
+  br i1 %cmp, label %if2, label %exit
+
+if2:
+  call void @use_ptr(ptr %p)
+  call void @use_ptr(ptr %p3)
+  ret void
+
+exit:
+  ret void
+}
+
+define void @phi_different_obj(i1 %c, ptr %p, ptr %p2) {
+; CHECK-LABEL: @phi_different_obj(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[P3:%.*]] = phi ptr [ [[P:%.*]], [[IF]] ], [ [[P2:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], [[P3]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF2:%.*]], label [[EXIT:%.*]]
+; CHECK:       if2:
+; CHECK-NEXT:    call void @use_ptr(ptr [[P]])
+; CHECK-NEXT:    call void @use_ptr(ptr [[P3]])
+; CHECK-NEXT:    ret void
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %p3 = phi ptr [ %p, %if ], [ %p2, %entry ]
+  %cmp = icmp eq ptr %p, %p3
+  br i1 %cmp, label %if2, label %exit
+
+if2:
+  call void @use_ptr(ptr %p)
+  call void @use_ptr(ptr %p3)
+  ret void
+
+exit:
+  ret void
+}
+
+define void @phi_same_obj_cycle(i1 %c, ptr %p, i64 %x) {
+; CHECK-LABEL: @phi_same_obj_cycle(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[P_IV:%.*]] = phi ptr [ [[P:%.*]], [[ENTRY:%.*]] ], [ [[P_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[P_NEXT]] = getelementptr i8, ptr [[P_IV]], i64 [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P_IV]], [[P]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[LOOP_LATCH]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @use_ptr(ptr [[P]])
+; CHECK-NEXT:    call void @use_ptr(ptr [[P]])
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %p.iv = phi ptr [ %p, %entry ], [ %p.next, %loop.latch ]
+  %p.next = getelementptr i8, ptr %p.iv, i64 %x
+  %cmp = icmp eq ptr %p.iv, %p
+  br i1 %cmp, label %if, label %loop.latch
+
+if:
+  call void @use_ptr(ptr %p.iv)
+  call void @use_ptr(ptr %p)
+  br label %loop.latch
+
+loop.latch:
+  br label %loop
+}
+
+declare void @use_bool(i1)
+declare void @use_ptr(ptr)

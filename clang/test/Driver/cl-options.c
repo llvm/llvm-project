@@ -70,11 +70,15 @@
 // fsanitize_address: -fsanitize=address
 
 // RUN: %clang_cl -### /FA -fprofile-instr-generate -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-INSTR-GENERATE %s
+// RUN: %clang_cl -### /FA -fprofile-instr-generate -fno-rtlib-defaultlib -frtlib-defaultlib -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-INSTR-GENERATE %s
 // RUN: %clang_cl -### /FA -fprofile-instr-generate=/tmp/somefile.profraw -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-INSTR-GENERATE-FILE %s
 // RUN: %clang_cl -### /FAcsu -fprofile-instr-generate -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-INSTR-GENERATE %s
 // RUN: %clang_cl -### /FAcsu -fprofile-instr-generate=/tmp/somefile.profraw -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-INSTR-GENERATE-FILE %s
 // CHECK-PROFILE-INSTR-GENERATE: "-fprofile-instrument=clang" "--dependent-lib=clang_rt.profile{{[^"]*}}.lib"
 // CHECK-PROFILE-INSTR-GENERATE-FILE: "-fprofile-instrument-path=/tmp/somefile.profraw"
+
+// RUN: %clang_cl -### /FA -fprofile-instr-generate -fno-rtlib-defaultlib -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-INSTR-GENERATE-NODEF %s
+// CHECK-PROFILE-INSTR-GENERATE-NODEF-NOT: "--dependent-lib=clang_rt.profile{{[^"]*}}.lib"
 
 // RUN: %clang_cl -### /FA -fprofile-generate -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-GENERATE %s
 // RUN: %clang_cl -### /FAcsu -fprofile-generate -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-GENERATE %s
@@ -159,7 +163,9 @@
 // Ob0: -fno-inline
 
 // RUN: %clang_cl /Ob2 -### -- %s 2>&1 | FileCheck -check-prefix=Ob2 %s
+// RUN: %clang_cl /Ob3 -### -- %s 2>&1 | FileCheck -check-prefix=Ob2 %s
 // RUN: %clang_cl /Odb2 -### -- %s 2>&1 | FileCheck -check-prefix=Ob2 %s
+// RUN: %clang_cl /Odb3 -### -- %s 2>&1 | FileCheck -check-prefix=Ob2 %s
 // RUN: %clang_cl /O2 /Ob2 -### -- %s 2>&1 | FileCheck -check-prefix=Ob2 %s
 // Ob2-NOT: warning: argument unused during compilation: '/O2'
 // Ob2: -finline-functions
@@ -185,12 +191,12 @@
 // RUN: %clang_cl /Ot --target=i686-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Ot %s
 // RUN: %clang_cl /Ot --target=x86_64-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Ot %s
 // Ot: -mframe-pointer=none
-// Ot: -O2
+// Ot: -O3
 
 // RUN: %clang_cl /Ox --target=i686-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Ox %s
 // RUN: %clang_cl /Ox --target=x86_64-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Ox %s
 // Ox: -mframe-pointer=none
-// Ox: -O2
+// Ox: -O3
 
 // RUN: %clang_cl --target=i686-pc-win32 /O2sy- -### -- %s 2>&1 | FileCheck -check-prefix=PR24003 %s
 // PR24003: -mframe-pointer=all
@@ -198,14 +204,14 @@
 
 // RUN: %clang_cl --target=i686-pc-win32 -Werror -Wno-msvc-not-found /Oy- /O2 -### -- %s 2>&1 | FileCheck -check-prefix=Oy_2 %s
 // Oy_2: -mframe-pointer=all
-// Oy_2: -O2
+// Oy_2: -O3
 
 // RUN: %clang_cl --target=aarch64-pc-windows-msvc -Werror -Wno-msvc-not-found /Oy- /O2 -### -- %s 2>&1 | FileCheck -check-prefix=Oy_aarch64 %s
 // Oy_aarch64: -mframe-pointer=non-leaf
-// Oy_aarch64: -O2
+// Oy_aarch64: -O3
 
 // RUN: %clang_cl --target=i686-pc-win32 -Werror -Wno-msvc-not-found /O2 /O2 -### -- %s 2>&1 | FileCheck -check-prefix=O2O2 %s
-// O2O2: "-O2"
+// O2O2: "-O3"
 
 // RUN: %clang_cl /Zs -Werror /Oy -- %s 2>&1
 
@@ -400,9 +406,9 @@
 // RUN:    /Zm \
 // RUN:    /Zo \
 // RUN:    /Zo- \
-// RUN:    -### -- %s 2>&1 | FileCheck -check-prefix=IGNORED %s
+// RUN:    -### -- %s 2>&1 | FileCheck -DMSG=%errc_ENOENT -check-prefix=IGNORED %s
 // IGNORED-NOT: argument unused during compilation
-// IGNORED-NOT: no such file or directory
+// IGNORED-NOT: [[MSG]]
 // Don't confuse /openmp- with the /o flag:
 // IGNORED-NOT: "-o" "penmp-.obj"
 
@@ -545,15 +551,15 @@
 // RTTI-NOT: "-fno-rtti-data"
 // RTTI-NOT: "-fno-rtti"
 
-// RUN: %clang_cl /Zi /c -### -- %s 2>&1 | FileCheck -check-prefix=Zi %s
+// RUN: %clang_cl -target x86_64-windows /Zi /c -### -- %s 2>&1 | FileCheck -check-prefix=Zi %s
 // Zi: "-gcodeview"
 // Zi: "-debug-info-kind=constructor"
 
-// RUN: %clang_cl /Z7 /c -### -- %s 2>&1 | FileCheck -check-prefix=Z7 %s
+// RUN: %clang_cl -target x86_64-windows /Z7 /c -### -- %s 2>&1 | FileCheck -check-prefix=Z7 %s
 // Z7: "-gcodeview"
 // Z7: "-debug-info-kind=constructor"
 
-// RUN: %clang_cl -gline-tables-only /c -### -- %s 2>&1 | FileCheck -check-prefix=ZGMLT %s
+// RUN: %clang_cl -target x86_64-windows -gline-tables-only /c -### -- %s 2>&1 | FileCheck -check-prefix=ZGMLT %s
 // ZGMLT: "-gcodeview"
 // ZGMLT: "-debug-info-kind=line-tables-only"
 
@@ -599,6 +605,9 @@
 // RUN: %clang_cl -fmsc-version=1900 -TP -std:c++20 -### -- %s 2>&1 | FileCheck -check-prefix=STDCXX20 %s
 // STDCXX20: -std=c++20
 
+// RUN: %clang_cl -fmsc-version=1900 -TP -std:c++23preview -### -- %s 2>&1 | FileCheck -check-prefix=STDCXX23PREVIEW %s
+// STDCXX23PREVIEW: -std=c++23
+
 // RUN: %clang_cl -fmsc-version=1900 -TP -std:c++latest -### -- %s 2>&1 | FileCheck -check-prefix=STDCXXLATEST %s
 // STDCXXLATEST: -std=c++26
 
@@ -620,6 +629,8 @@
 // LTO-THIN: -flto=thin
 
 // RUN: not %clang_cl -### -Fe%t.exe -entry:main -flto -- %s 2>&1 | FileCheck -check-prefix=LTO-WITHOUT-LLD %s
+// RUN: not %clang_cl -### -fuse-ld=link -Fe%t.exe -entry:main -flto -- %s 2>&1 | FileCheck -check-prefix=LTO-WITHOUT-LLD %s
+// RUN: not %clang -### --target=x86_64-windows-msvc -fuse-ld=link -Fe%t.exe -entry:main -flto -- %s 2>&1 | FileCheck -check-prefix=LTO-WITHOUT-LLD %s
 // LTO-WITHOUT-LLD: LTO requires -fuse-ld=lld
 
 // RUN: %clang_cl  -### -- %s 2>&1 | FileCheck -check-prefix=NOCFGUARD %s
@@ -669,6 +680,7 @@
 // RUN:     -fcoverage-mapping \
 // RUN:     -fno-coverage-mapping \
 // RUN:     -fdiagnostics-color \
+// RUN:     -fdiagnostics-color=auto \
 // RUN:     -fno-diagnostics-color \
 // RUN:     -fdebug-compilation-dir . \
 // RUN:     -fdebug-compilation-dir=. \
@@ -692,6 +704,8 @@
 // RUN:     -Wunused-variable \
 // RUN:     -fmacro-backtrace-limit=0 \
 // RUN:     -fstandalone-debug \
+// RUN:     -feliminate-unused-debug-types \
+// RUN:     -fno-eliminate-unused-debug-types \
 // RUN:     -flimit-debug-info \
 // RUN:     -flto \
 // RUN:     -fmerge-all-constants \
@@ -700,6 +714,7 @@
 // RUN:     -fbracket-depth=123 \
 // RUN:     -fprofile-generate \
 // RUN:     -fprofile-generate=dir \
+// RUN:     -fprofile-sample-use=%S/Inputs/file.prof \
 // RUN:     -fno-profile-generate \
 // RUN:     -fno-profile-instr-generate \
 // RUN:     -fno-profile-instr-use \
@@ -724,6 +739,8 @@
 // RUN:     -fimplicit-modules \
 // RUN:     -fno-implicit-modules \
 // RUN:     -ftrivial-auto-var-init=zero \
+// RUN:     -fwrapv \
+// RUN:     -fno-wrapv \
 // RUN:     --version \
 // RUN:     -Werror /Zs -- %s 2>&1
 
@@ -736,9 +753,10 @@
 // NOCLANG-SAME: "-vectorize-slp"
 // NOCLANG-NOT: "--dependent-lib=msvcrt"
 
-// RUN: %clang_cl -O2 -MD /clang:-fno-slp-vectorize /clang:-MD /clang:-MF /clang:my_dependency_file.dep -### -- %s 2>&1 | FileCheck -check-prefix=CLANG %s
+// RUN: %clang_cl -O2 -MD /clang:-fno-slp-vectorize /clang:-MD /clang:-MF /clang:my_dependency_file.dep /c /Fo%/t/cl-options.obj -### -- %s 2>&1 | FileCheck -DPREFIX=%/t -check-prefix=CLANG %s
 // CLANG: "--dependent-lib=msvcrt"
 // CLANG-SAME: "-dependency-file" "my_dependency_file.dep"
+// CLANG-SAME: "-MT" "[[PREFIX]]/cl-options.obj"
 // CLANG-NOT: "--dependent-lib=libcmt"
 // CLANG-NOT: "-vectorize-slp"
 
@@ -790,6 +808,7 @@
 // RUN: %clang_cl -vctoolsdir "" /arm64EC /c -### -- %s 2>&1 | FileCheck --check-prefix=ARM64EC %s 
 // ARM64EC-NOT: /arm64EC has been overridden by specified target
 // ARM64EC: "-triple" "arm64ec-pc-windows-msvc19.33.0"
+// ARM64EC-SAME: "--dependent-lib=softintrin"
 
 // RUN: %clang_cl -vctoolsdir "" /arm64EC /c -target x86_64-pc-windows-msvc  -### -- %s 2>&1 | FileCheck --check-prefix=ARM64EC_OVERRIDE %s
 // ARM64EC_OVERRIDE: warning: /arm64EC has been overridden by specified target: x86_64-pc-windows-msvc; option ignored

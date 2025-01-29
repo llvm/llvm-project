@@ -18,7 +18,7 @@
 #include <cfloat>
 #include <cinttypes>
 #include <cmath>
-#include <optional>
+#include <type_traits>
 
 namespace Fortran::runtime {
 
@@ -28,7 +28,9 @@ template <typename T, bool IS_MAX, bool BACK> struct NumericCompare {
   using Type = T;
   explicit RT_API_ATTRS NumericCompare(std::size_t /*elemLen; ignored*/) {}
   RT_API_ATTRS bool operator()(const T &value, const T &previous) const {
-    if (value == previous) {
+    if (std::is_floating_point_v<T> && previous != previous) {
+      return BACK || value == value; // replace NaN
+    } else if (value == previous) {
       return BACK;
     } else if constexpr (IS_MAX) {
       return value > previous;
@@ -76,11 +78,10 @@ public:
   template <typename A>
   RT_API_ATTRS void GetResult(A *p, int zeroBasedDim = -1) {
     if (zeroBasedDim >= 0) {
-      *p = extremumLoc_[zeroBasedDim] -
-          array_.GetDimension(zeroBasedDim).LowerBound() + 1;
+      *p = extremumLoc_[zeroBasedDim];
     } else {
       for (int j{0}; j < argRank_; ++j) {
-        p[j] = extremumLoc_[j] - array_.GetDimension(j).LowerBound() + 1;
+        p[j] = extremumLoc_[j];
       }
     }
   }
@@ -90,7 +91,7 @@ public:
     if (!previous_ || compare_(value, *previous_)) {
       previous_ = &value;
       for (int j{0}; j < argRank_; ++j) {
-        extremumLoc_[j] = at[j];
+        extremumLoc_[j] = at[j] - array_.GetDimension(j).LowerBound() + 1;
       }
     }
     return true;
@@ -135,7 +136,7 @@ template <bool IS_MAX> struct CharacterMaxOrMinLocHelper {
     RT_API_ATTRS void operator()(const char *intrinsic, Descriptor &result,
         const Descriptor &x, int kind, const char *source, int line,
         const Descriptor *mask, bool back) const {
-      DoMaxOrMinLoc<TypeCategory::Character, KIND, IS_MAX, NumericCompare>(
+      DoMaxOrMinLoc<TypeCategory::Character, KIND, IS_MAX, CharacterCompare>(
           intrinsic, result, x, kind, source, line, mask, back);
     }
   };
@@ -225,6 +226,33 @@ void RTDEF(MaxlocInteger16)(Descriptor &result, const Descriptor &x, int kind,
       "MAXLOC", result, x, kind, source, line, mask, back);
 }
 #endif
+void RTDEF(MaxlocUnsigned1)(Descriptor &result, const Descriptor &x, int kind,
+    const char *source, int line, const Descriptor *mask, bool back) {
+  TotalNumericMaxOrMinLoc<TypeCategory::Unsigned, 1, true>(
+      "MAXLOC", result, x, kind, source, line, mask, back);
+}
+void RTDEF(MaxlocUnsigned2)(Descriptor &result, const Descriptor &x, int kind,
+    const char *source, int line, const Descriptor *mask, bool back) {
+  TotalNumericMaxOrMinLoc<TypeCategory::Unsigned, 2, true>(
+      "MAXLOC", result, x, kind, source, line, mask, back);
+}
+void RTDEF(MaxlocUnsigned4)(Descriptor &result, const Descriptor &x, int kind,
+    const char *source, int line, const Descriptor *mask, bool back) {
+  TotalNumericMaxOrMinLoc<TypeCategory::Unsigned, 4, true>(
+      "MAXLOC", result, x, kind, source, line, mask, back);
+}
+void RTDEF(MaxlocUnsigned8)(Descriptor &result, const Descriptor &x, int kind,
+    const char *source, int line, const Descriptor *mask, bool back) {
+  TotalNumericMaxOrMinLoc<TypeCategory::Unsigned, 8, true>(
+      "MAXLOC", result, x, kind, source, line, mask, back);
+}
+#ifdef __SIZEOF_INT128__
+void RTDEF(MaxlocUnsigned16)(Descriptor &result, const Descriptor &x, int kind,
+    const char *source, int line, const Descriptor *mask, bool back) {
+  TotalNumericMaxOrMinLoc<TypeCategory::Unsigned, 16, true>(
+      "MAXLOC", result, x, kind, source, line, mask, back);
+}
+#endif
 void RTDEF(MaxlocReal4)(Descriptor &result, const Descriptor &x, int kind,
     const char *source, int line, const Descriptor *mask, bool back) {
   TotalNumericMaxOrMinLoc<TypeCategory::Real, 4, true>(
@@ -235,14 +263,14 @@ void RTDEF(MaxlocReal8)(Descriptor &result, const Descriptor &x, int kind,
   TotalNumericMaxOrMinLoc<TypeCategory::Real, 8, true>(
       "MAXLOC", result, x, kind, source, line, mask, back);
 }
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 void RTDEF(MaxlocReal10)(Descriptor &result, const Descriptor &x, int kind,
     const char *source, int line, const Descriptor *mask, bool back) {
   TotalNumericMaxOrMinLoc<TypeCategory::Real, 10, true>(
       "MAXLOC", result, x, kind, source, line, mask, back);
 }
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 void RTDEF(MaxlocReal16)(Descriptor &result, const Descriptor &x, int kind,
     const char *source, int line, const Descriptor *mask, bool back) {
   TotalNumericMaxOrMinLoc<TypeCategory::Real, 16, true>(
@@ -281,6 +309,33 @@ void RTDEF(MinlocInteger16)(Descriptor &result, const Descriptor &x, int kind,
       "MINLOC", result, x, kind, source, line, mask, back);
 }
 #endif
+void RTDEF(MinlocUnsigned1)(Descriptor &result, const Descriptor &x, int kind,
+    const char *source, int line, const Descriptor *mask, bool back) {
+  TotalNumericMaxOrMinLoc<TypeCategory::Unsigned, 1, false>(
+      "MINLOC", result, x, kind, source, line, mask, back);
+}
+void RTDEF(MinlocUnsigned2)(Descriptor &result, const Descriptor &x, int kind,
+    const char *source, int line, const Descriptor *mask, bool back) {
+  TotalNumericMaxOrMinLoc<TypeCategory::Unsigned, 2, false>(
+      "MINLOC", result, x, kind, source, line, mask, back);
+}
+void RTDEF(MinlocUnsigned4)(Descriptor &result, const Descriptor &x, int kind,
+    const char *source, int line, const Descriptor *mask, bool back) {
+  TotalNumericMaxOrMinLoc<TypeCategory::Unsigned, 4, false>(
+      "MINLOC", result, x, kind, source, line, mask, back);
+}
+void RTDEF(MinlocUnsigned8)(Descriptor &result, const Descriptor &x, int kind,
+    const char *source, int line, const Descriptor *mask, bool back) {
+  TotalNumericMaxOrMinLoc<TypeCategory::Unsigned, 8, false>(
+      "MINLOC", result, x, kind, source, line, mask, back);
+}
+#ifdef __SIZEOF_INT128__
+void RTDEF(MinlocUnsigned16)(Descriptor &result, const Descriptor &x, int kind,
+    const char *source, int line, const Descriptor *mask, bool back) {
+  TotalNumericMaxOrMinLoc<TypeCategory::Unsigned, 16, false>(
+      "MINLOC", result, x, kind, source, line, mask, back);
+}
+#endif
 void RTDEF(MinlocReal4)(Descriptor &result, const Descriptor &x, int kind,
     const char *source, int line, const Descriptor *mask, bool back) {
   TotalNumericMaxOrMinLoc<TypeCategory::Real, 4, false>(
@@ -291,14 +346,14 @@ void RTDEF(MinlocReal8)(Descriptor &result, const Descriptor &x, int kind,
   TotalNumericMaxOrMinLoc<TypeCategory::Real, 8, false>(
       "MINLOC", result, x, kind, source, line, mask, back);
 }
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 void RTDEF(MinlocReal10)(Descriptor &result, const Descriptor &x, int kind,
     const char *source, int line, const Descriptor *mask, bool back) {
   TotalNumericMaxOrMinLoc<TypeCategory::Real, 10, false>(
       "MINLOC", result, x, kind, source, line, mask, back);
 }
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 void RTDEF(MinlocReal16)(Descriptor &result, const Descriptor &x, int kind,
     const char *source, int line, const Descriptor *mask, bool back) {
   TotalNumericMaxOrMinLoc<TypeCategory::Real, 16, false>(
@@ -385,6 +440,12 @@ inline RT_API_ATTRS void TypedPartialMaxOrMinLoc(const char *intrinsic,
         void>(catKind->second, terminator, intrinsic, result, x, kind, dim,
         maskToUse, back, terminator);
     break;
+  case TypeCategory::Unsigned:
+    ApplyIntegerKind<DoPartialMaxOrMinLocHelper<TypeCategory::Unsigned, IS_MAX,
+                         NumericCompare>::template Functor,
+        void>(catKind->second, terminator, intrinsic, result, x, kind, dim,
+        maskToUse, back, terminator);
+    break;
   case TypeCategory::Real:
     ApplyFloatingPointKind<DoPartialMaxOrMinLocHelper<TypeCategory::Real,
                                IS_MAX, NumericCompare>::template Functor,
@@ -422,62 +483,6 @@ RT_EXT_API_GROUP_END
 
 // MAXVAL and MINVAL
 
-template <TypeCategory CAT, int KIND, bool IS_MAXVAL, typename Enable = void>
-struct MaxOrMinIdentity {
-  using Type = CppTypeFor<CAT, KIND>;
-  static constexpr RT_API_ATTRS Type Value() {
-    return IS_MAXVAL ? std::numeric_limits<Type>::lowest()
-                     : std::numeric_limits<Type>::max();
-  }
-};
-
-// std::numeric_limits<> may not know int128_t
-template <bool IS_MAXVAL>
-struct MaxOrMinIdentity<TypeCategory::Integer, 16, IS_MAXVAL> {
-  using Type = CppTypeFor<TypeCategory::Integer, 16>;
-  static constexpr RT_API_ATTRS Type Value() {
-    return IS_MAXVAL ? Type{1} << 127 : ~Type{0} >> 1;
-  }
-};
-
-#if HAS_FLOAT128
-// std::numeric_limits<> may not support __float128.
-//
-// Usage of GCC quadmath.h's FLT128_MAX is complicated by the fact that
-// even GCC complains about 'Q' literal suffix under -Wpedantic.
-// We just recreate FLT128_MAX ourselves.
-//
-// This specialization must engage only when
-// CppTypeFor<TypeCategory::Real, 16> is __float128.
-template <bool IS_MAXVAL>
-struct MaxOrMinIdentity<TypeCategory::Real, 16, IS_MAXVAL,
-    typename std::enable_if_t<
-        std::is_same_v<CppTypeFor<TypeCategory::Real, 16>, __float128>>> {
-  using Type = __float128;
-  static RT_API_ATTRS Type Value() {
-    // Create a buffer to store binary representation of __float128 constant.
-    constexpr std::size_t alignment =
-        std::max(alignof(Type), alignof(std::uint64_t));
-    alignas(alignment) char data[sizeof(Type)];
-
-    // First, verify that our interpretation of __float128 format is correct,
-    // e.g. by checking at least one known constant.
-    *reinterpret_cast<Type *>(data) = Type(1.0);
-    if (*reinterpret_cast<std::uint64_t *>(data) != 0 ||
-        *(reinterpret_cast<std::uint64_t *>(data) + 1) != 0x3FFF000000000000) {
-      Terminator terminator{__FILE__, __LINE__};
-      terminator.Crash("not yet implemented: no full support for __float128");
-    }
-
-    // Recreate FLT128_MAX.
-    *reinterpret_cast<std::uint64_t *>(data) = 0xFFFFFFFFFFFFFFFF;
-    *(reinterpret_cast<std::uint64_t *>(data) + 1) = 0x7FFEFFFFFFFFFFFF;
-    Type max = *reinterpret_cast<Type *>(data);
-    return IS_MAXVAL ? -max : max;
-  }
-};
-#endif // HAS_FLOAT128
-
 template <TypeCategory CAT, int KIND, bool IS_MAXVAL>
 class NumericExtremumAccumulator {
 public:
@@ -485,6 +490,7 @@ public:
   explicit RT_API_ATTRS NumericExtremumAccumulator(const Descriptor &array)
       : array_{array} {}
   RT_API_ATTRS void Reinitialize() {
+    any_ = false;
     extremum_ = MaxOrMinIdentity<CAT, KIND, IS_MAXVAL>::Value();
   }
   template <typename A>
@@ -492,7 +498,12 @@ public:
     *p = extremum_;
   }
   RT_API_ATTRS bool Accumulate(Type x) {
-    if constexpr (IS_MAXVAL) {
+    if (!any_) {
+      extremum_ = x;
+      any_ = true;
+    } else if (CAT == TypeCategory::Real && extremum_ != extremum_) {
+      extremum_ = x; // replace NaN
+    } else if constexpr (IS_MAXVAL) {
       if (x > extremum_) {
         extremum_ = x;
       }
@@ -508,6 +519,7 @@ public:
 
 private:
   const Descriptor &array_;
+  bool any_{false};
   Type extremum_{MaxOrMinIdentity<CAT, KIND, IS_MAXVAL>::Value()};
 };
 
@@ -517,35 +529,6 @@ inline RT_API_ATTRS CppTypeFor<CAT, KIND> TotalNumericMaxOrMin(
     const Descriptor *mask, const char *intrinsic) {
   return GetTotalReduction<CAT, KIND>(x, source, line, dim, mask,
       NumericExtremumAccumulator<CAT, KIND, IS_MAXVAL>{x}, intrinsic);
-}
-
-template <TypeCategory CAT, int KIND, typename ACCUMULATOR>
-static RT_API_ATTRS void DoMaxMinNorm2(Descriptor &result, const Descriptor &x,
-    int dim, const Descriptor *mask, const char *intrinsic,
-    Terminator &terminator) {
-  using Type = CppTypeFor<CAT, KIND>;
-  ACCUMULATOR accumulator{x};
-  if (dim == 0 || x.rank() == 1) {
-    // Total reduction
-
-    // Element size of the destination descriptor is the same
-    // as the element size of the source.
-    result.Establish(x.type(), x.ElementBytes(), nullptr, 0, nullptr,
-        CFI_attribute_allocatable);
-    if (int stat{result.Allocate()}) {
-      terminator.Crash(
-          "%s: could not allocate memory for result; STAT=%d", intrinsic, stat);
-    }
-    DoTotalReduction<Type>(x, dim, mask, accumulator, intrinsic, terminator);
-    accumulator.GetResult(result.OffsetElement<Type>());
-  } else {
-    // Partial reduction
-
-    // Element size of the destination descriptor is the same
-    // as the element size of the source.
-    PartialReduction<ACCUMULATOR, CAT, KIND>(result, x, x.ElementBytes(), dim,
-        mask, terminator, intrinsic, accumulator);
-  }
 }
 
 template <TypeCategory CAT, bool IS_MAXVAL> struct MaxOrMinHelper {
@@ -574,6 +557,12 @@ inline RT_API_ATTRS void NumericMaxOrMin(Descriptor &result,
         void>(
         type->second, terminator, result, x, dim, mask, intrinsic, terminator);
     break;
+  case TypeCategory::Unsigned:
+    ApplyIntegerKind<
+        MaxOrMinHelper<TypeCategory::Unsigned, IS_MAXVAL>::template Functor,
+        void>(
+        type->second, terminator, result, x, dim, mask, intrinsic, terminator);
+    break;
   case TypeCategory::Real:
     ApplyFloatingPointKind<
         MaxOrMinHelper<TypeCategory::Real, IS_MAXVAL>::template Functor, void>(
@@ -598,9 +587,8 @@ public:
       std::memcpy(p, extremum_, byteSize);
     } else {
       // Empty array; fill with character 0 for MAXVAL.
-      // For MINVAL, fill with 127 if ASCII as required
-      // by the standard, otherwise set all of the bits.
-      std::memset(p, IS_MAXVAL ? 0 : KIND == 1 ? 127 : 255, byteSize);
+      // For MINVAL, set all of the bits.
+      std::memset(p, IS_MAXVAL ? 0 : 255, byteSize);
     }
   }
   RT_API_ATTRS bool Accumulate(const Type *x) {
@@ -681,6 +669,39 @@ CppTypeFor<TypeCategory::Integer, 16> RTDEF(MaxvalInteger16)(
 }
 #endif
 
+CppTypeFor<TypeCategory::Unsigned, 1> RTDEF(MaxvalUnsigned1)(
+    const Descriptor &x, const char *source, int line, int dim,
+    const Descriptor *mask) {
+  return TotalNumericMaxOrMin<TypeCategory::Unsigned, 1, true>(
+      x, source, line, dim, mask, "MAXVAL");
+}
+CppTypeFor<TypeCategory::Unsigned, 2> RTDEF(MaxvalUnsigned2)(
+    const Descriptor &x, const char *source, int line, int dim,
+    const Descriptor *mask) {
+  return TotalNumericMaxOrMin<TypeCategory::Unsigned, 2, true>(
+      x, source, line, dim, mask, "MAXVAL");
+}
+CppTypeFor<TypeCategory::Unsigned, 4> RTDEF(MaxvalUnsigned4)(
+    const Descriptor &x, const char *source, int line, int dim,
+    const Descriptor *mask) {
+  return TotalNumericMaxOrMin<TypeCategory::Unsigned, 4, true>(
+      x, source, line, dim, mask, "MAXVAL");
+}
+CppTypeFor<TypeCategory::Unsigned, 8> RTDEF(MaxvalUnsigned8)(
+    const Descriptor &x, const char *source, int line, int dim,
+    const Descriptor *mask) {
+  return TotalNumericMaxOrMin<TypeCategory::Unsigned, 8, true>(
+      x, source, line, dim, mask, "MAXVAL");
+}
+#ifdef __SIZEOF_INT128__
+CppTypeFor<TypeCategory::Unsigned, 16> RTDEF(MaxvalUnsigned16)(
+    const Descriptor &x, const char *source, int line, int dim,
+    const Descriptor *mask) {
+  return TotalNumericMaxOrMin<TypeCategory::Unsigned, 16, true>(
+      x, source, line, dim, mask, "MAXVAL");
+}
+#endif
+
 // TODO: REAL(2 & 3)
 CppTypeFor<TypeCategory::Real, 4> RTDEF(MaxvalReal4)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
@@ -692,14 +713,14 @@ CppTypeFor<TypeCategory::Real, 8> RTDEF(MaxvalReal8)(const Descriptor &x,
   return TotalNumericMaxOrMin<TypeCategory::Real, 8, true>(
       x, source, line, dim, mask, "MAXVAL");
 }
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 CppTypeFor<TypeCategory::Real, 10> RTDEF(MaxvalReal10)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Real, 10, true>(
       x, source, line, dim, mask, "MAXVAL");
 }
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDEF(MaxvalReal16)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Real, 16, true>(
@@ -741,6 +762,39 @@ CppTypeFor<TypeCategory::Integer, 16> RTDEF(MinvalInteger16)(
 }
 #endif
 
+CppTypeFor<TypeCategory::Unsigned, 1> RTDEF(MinvalUnsigned1)(
+    const Descriptor &x, const char *source, int line, int dim,
+    const Descriptor *mask) {
+  return TotalNumericMaxOrMin<TypeCategory::Unsigned, 1, false>(
+      x, source, line, dim, mask, "MINVAL");
+}
+CppTypeFor<TypeCategory::Unsigned, 2> RTDEF(MinvalUnsigned2)(
+    const Descriptor &x, const char *source, int line, int dim,
+    const Descriptor *mask) {
+  return TotalNumericMaxOrMin<TypeCategory::Unsigned, 2, false>(
+      x, source, line, dim, mask, "MINVAL");
+}
+CppTypeFor<TypeCategory::Unsigned, 4> RTDEF(MinvalUnsigned4)(
+    const Descriptor &x, const char *source, int line, int dim,
+    const Descriptor *mask) {
+  return TotalNumericMaxOrMin<TypeCategory::Unsigned, 4, false>(
+      x, source, line, dim, mask, "MINVAL");
+}
+CppTypeFor<TypeCategory::Unsigned, 8> RTDEF(MinvalUnsigned8)(
+    const Descriptor &x, const char *source, int line, int dim,
+    const Descriptor *mask) {
+  return TotalNumericMaxOrMin<TypeCategory::Unsigned, 8, false>(
+      x, source, line, dim, mask, "MINVAL");
+}
+#ifdef __SIZEOF_INT128__
+CppTypeFor<TypeCategory::Unsigned, 16> RTDEF(MinvalUnsigned16)(
+    const Descriptor &x, const char *source, int line, int dim,
+    const Descriptor *mask) {
+  return TotalNumericMaxOrMin<TypeCategory::Unsigned, 16, false>(
+      x, source, line, dim, mask, "MINVAL");
+}
+#endif
+
 // TODO: REAL(2 & 3)
 CppTypeFor<TypeCategory::Real, 4> RTDEF(MinvalReal4)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
@@ -752,14 +806,14 @@ CppTypeFor<TypeCategory::Real, 8> RTDEF(MinvalReal8)(const Descriptor &x,
   return TotalNumericMaxOrMin<TypeCategory::Real, 8, false>(
       x, source, line, dim, mask, "MINVAL");
 }
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 CppTypeFor<TypeCategory::Real, 10> RTDEF(MinvalReal10)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Real, 10, false>(
       x, source, line, dim, mask, "MINVAL");
 }
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDEF(MinvalReal16)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Real, 16, false>(
@@ -794,70 +848,6 @@ RT_EXT_API_GROUP_END
 
 // NORM2
 
-RT_VAR_GROUP_BEGIN
-
-// Use at least double precision for accumulators.
-// Don't use __float128, it doesn't work with abs() or sqrt() yet.
-static constexpr RT_CONST_VAR_ATTRS int largestLDKind {
-#if LDBL_MANT_DIG == 113
-  16
-#elif LDBL_MANT_DIG == 64
-  10
-#else
-  8
-#endif
-};
-
-RT_VAR_GROUP_END
-
-template <int KIND> class Norm2Accumulator {
-public:
-  using Type = CppTypeFor<TypeCategory::Real, KIND>;
-  using AccumType =
-      CppTypeFor<TypeCategory::Real, std::clamp(KIND, 8, largestLDKind)>;
-  explicit RT_API_ATTRS Norm2Accumulator(const Descriptor &array)
-      : array_{array} {}
-  RT_API_ATTRS void Reinitialize() { max_ = sum_ = 0; }
-  template <typename A>
-  RT_API_ATTRS void GetResult(A *p, int /*zeroBasedDim*/ = -1) const {
-    // m * sqrt(1 + sum((others(:)/m)**2))
-    *p = static_cast<Type>(max_ * std::sqrt(1 + sum_));
-  }
-  RT_API_ATTRS bool Accumulate(Type x) {
-    auto absX{std::abs(static_cast<AccumType>(x))};
-    if (!max_) {
-      max_ = absX;
-    } else if (absX > max_) {
-      auto t{max_ / absX}; // < 1.0
-      auto tsq{t * t};
-      sum_ *= tsq; // scale sum to reflect change to the max
-      sum_ += tsq; // include a term for the previous max
-      max_ = absX;
-    } else { // absX <= max_
-      auto t{absX / max_};
-      sum_ += t * t;
-    }
-    return true;
-  }
-  template <typename A>
-  RT_API_ATTRS bool AccumulateAt(const SubscriptValue at[]) {
-    return Accumulate(*array_.Element<A>(at));
-  }
-
-private:
-  const Descriptor &array_;
-  AccumType max_{0}; // value (m) with largest magnitude
-  AccumType sum_{0}; // sum((others(:)/m)**2)
-};
-
-template <int KIND> struct Norm2Helper {
-  RT_API_ATTRS void operator()(Descriptor &result, const Descriptor &x, int dim,
-      const Descriptor *mask, Terminator &terminator) const {
-    DoMaxMinNorm2<TypeCategory::Real, KIND, Norm2Accumulator<KIND>>(
-        result, x, dim, mask, "NORM2", terminator);
-  }
-};
-
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
@@ -872,18 +862,11 @@ CppTypeFor<TypeCategory::Real, 8> RTDEF(Norm2_8)(
   return GetTotalReduction<TypeCategory::Real, 8>(
       x, source, line, dim, nullptr, Norm2Accumulator<8>{x}, "NORM2");
 }
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 CppTypeFor<TypeCategory::Real, 10> RTDEF(Norm2_10)(
     const Descriptor &x, const char *source, int line, int dim) {
   return GetTotalReduction<TypeCategory::Real, 10>(
       x, source, line, dim, nullptr, Norm2Accumulator<10>{x}, "NORM2");
-}
-#endif
-#if LDBL_MANT_DIG == 113
-CppTypeFor<TypeCategory::Real, 16> RTDEF(Norm2_16)(
-    const Descriptor &x, const char *source, int line, int dim) {
-  return GetTotalReduction<TypeCategory::Real, 16>(
-      x, source, line, dim, nullptr, Norm2Accumulator<16>{x}, "NORM2");
 }
 #endif
 
@@ -893,7 +876,7 @@ void RTDEF(Norm2Dim)(Descriptor &result, const Descriptor &x, int dim,
   auto type{x.type().GetCategoryAndKind()};
   RUNTIME_CHECK(terminator, type);
   if (type->first == TypeCategory::Real) {
-    ApplyFloatingPointKind<Norm2Helper, void>(
+    ApplyFloatingPointKind<Norm2Helper, void, true>(
         type->second, terminator, result, x, dim, nullptr, terminator);
   } else {
     terminator.Crash("NORM2: bad type code %d", x.type().raw());

@@ -73,14 +73,14 @@ protected:
   Module M;
   int Counter;
 
-  MDNode *getNode() { return MDNode::get(Context, std::nullopt); }
+  MDNode *getNode() { return MDNode::get(Context, {}); }
   MDNode *getNode(Metadata *MD) { return MDNode::get(Context, MD); }
   MDNode *getNode(Metadata *MD1, Metadata *MD2) {
     Metadata *MDs[] = {MD1, MD2};
     return MDNode::get(Context, MDs);
   }
 
-  MDTuple *getTuple() { return MDTuple::getDistinct(Context, std::nullopt); }
+  MDTuple *getTuple() { return MDTuple::getDistinct(Context, {}); }
   DISubroutineType *getSubroutineType() {
     return DISubroutineType::getDistinct(Context, DINode::FlagZero, 0,
                                          getNode(nullptr));
@@ -106,7 +106,7 @@ protected:
   DIType *getDerivedType() {
     return DIDerivedType::getDistinct(
         Context, dwarf::DW_TAG_pointer_type, "", nullptr, 0, nullptr,
-        getBasicType("basictype"), 1, 2, 0, std::nullopt, DINode::FlagZero);
+        getBasicType("basictype"), 1, 2, 0, std::nullopt, {}, DINode::FlagZero);
   }
   Constant *getConstant() {
     return ConstantInt::get(Type::getInt32Ty(Context), Counter++);
@@ -121,7 +121,7 @@ protected:
   }
   Function *getFunction(StringRef Name) {
     return Function::Create(
-        FunctionType::get(Type::getVoidTy(Context), std::nullopt, false),
+        FunctionType::get(Type::getVoidTy(Context), {}, false),
         Function::ExternalLinkage, Name, M);
   }
 };
@@ -157,7 +157,7 @@ TEST_F(MDStringTest, PrintingSimple) {
   std::string Str;
   raw_string_ostream oss(Str);
   s->print(oss);
-  EXPECT_STREQ("!\"testing 1 2 3\"", oss.str().c_str());
+  EXPECT_STREQ("!\"testing 1 2 3\"", Str.c_str());
 }
 
 // Test printing of MDString with non-printable characters.
@@ -167,7 +167,7 @@ TEST_F(MDStringTest, PrintingComplex) {
   std::string Str;
   raw_string_ostream oss(Str);
   s->print(oss);
-  EXPECT_STREQ("!\"\\00\\0A\\22\\\\\\FF\"", oss.str().c_str());
+  EXPECT_STREQ("!\"\\00\\0A\\22\\\\\\FF\"", Str.c_str());
 }
 
 typedef MetadataTest MDNodeTest;
@@ -227,7 +227,7 @@ TEST_F(MDNodeTest, SelfReference) {
   // !0 = !{!0}
   // !1 = !{!0}
   {
-    auto Temp = MDNode::getTemporary(Context, std::nullopt);
+    auto Temp = MDNode::getTemporary(Context, {});
     Metadata *Args[] = {Temp.get()};
     MDNode *Self = MDNode::get(Context, Args);
     Self->replaceOperandWith(0, Self);
@@ -245,8 +245,8 @@ TEST_F(MDNodeTest, SelfReference) {
   // !0 = !{!0, !{}}
   // !1 = !{!0, !{}}
   {
-    auto Temp = MDNode::getTemporary(Context, std::nullopt);
-    Metadata *Args[] = {Temp.get(), MDNode::get(Context, std::nullopt)};
+    auto Temp = MDNode::getTemporary(Context, {});
+    Metadata *Args[] = {Temp.get(), MDNode::get(Context, {})};
     MDNode *Self = MDNode::get(Context, Args);
     Self->replaceOperandWith(0, Self);
     ASSERT_EQ(Self, Self->getOperand(0));
@@ -299,7 +299,6 @@ TEST_F(MDNodeTest, Print) {
     std::string Actual_;                                                       \
     raw_string_ostream OS(Actual_);                                            \
     PRINT;                                                                     \
-    OS.flush();                                                                \
     std::string Expected_(EXPECTED);                                           \
     EXPECT_EQ(Expected_, Actual_);                                             \
   } while (false)
@@ -355,8 +354,8 @@ TEST_F(MDNodeTest, PrintFromFunction) {
   auto *BB1 = BasicBlock::Create(Context, "entry", F1);
   auto *R0 = ReturnInst::Create(Context, BB0);
   auto *R1 = ReturnInst::Create(Context, BB1);
-  auto *N0 = MDNode::getDistinct(Context, std::nullopt);
-  auto *N1 = MDNode::getDistinct(Context, std::nullopt);
+  auto *N0 = MDNode::getDistinct(Context, {});
+  auto *N1 = MDNode::getDistinct(Context, {});
   R0->setMetadata("md", N0);
   R1->setMetadata("md", N1);
 
@@ -381,8 +380,8 @@ TEST_F(MDNodeTest, PrintFromMetadataAsValue) {
   auto *F1 = Function::Create(FTy, GlobalValue::ExternalLinkage, "F1", &M);
   auto *BB0 = BasicBlock::Create(Context, "entry", F0);
   auto *BB1 = BasicBlock::Create(Context, "entry", F1);
-  auto *N0 = MDNode::getDistinct(Context, std::nullopt);
-  auto *N1 = MDNode::getDistinct(Context, std::nullopt);
+  auto *N0 = MDNode::getDistinct(Context, {});
+  auto *N1 = MDNode::getDistinct(Context, {});
   auto *MAV0 = MetadataAsValue::get(Context, N0);
   auto *MAV1 = MetadataAsValue::get(Context, N1);
   CallInst::Create(Intrinsic, MAV0, "", BB0);
@@ -416,7 +415,7 @@ TEST_F(MDNodeTest, PrintWithDroppedCallOperand) {
   CI0->dropAllReferences();
 
   auto *R0 = ReturnInst::Create(Context, BB0);
-  auto *N0 = MDNode::getDistinct(Context, std::nullopt);
+  auto *N0 = MDNode::getDistinct(Context, {});
   R0->setMetadata("md", N0);
 
   // Printing the metadata node would previously result in a failed assertion
@@ -461,7 +460,7 @@ TEST_F(MDNodeTest, PrintTree) {
     auto *StructTy = cast<DICompositeType>(getCompositeType());
     DIType *PointerTy = DIDerivedType::getDistinct(
         Context, dwarf::DW_TAG_pointer_type, "", nullptr, 0, nullptr, StructTy,
-        1, 2, 0, std::nullopt, DINode::FlagZero);
+        1, 2, 0, std::nullopt, {}, DINode::FlagZero);
     StructTy->replaceElements(MDTuple::get(Context, PointerTy));
 
     auto *Var = DILocalVariable::get(Context, Scope, "foo", File,
@@ -489,7 +488,7 @@ TEST_F(MDNodeTest, PrintTree) {
 
 TEST_F(MDNodeTest, NullOperand) {
   // metadata !{}
-  MDNode *Empty = MDNode::get(Context, std::nullopt);
+  MDNode *Empty = MDNode::get(Context, {});
 
   // metadata !{metadata !{}}
   Metadata *Ops[] = {Empty};
@@ -509,7 +508,7 @@ TEST_F(MDNodeTest, NullOperand) {
 
 TEST_F(MDNodeTest, DistinctOnUniquingCollision) {
   // !{}
-  MDNode *Empty = MDNode::get(Context, std::nullopt);
+  MDNode *Empty = MDNode::get(Context, {});
   ASSERT_TRUE(Empty->isResolved());
   EXPECT_FALSE(Empty->isDistinct());
 
@@ -536,7 +535,7 @@ TEST_F(MDNodeTest, DistinctOnUniquingCollision) {
 
 TEST_F(MDNodeTest, UniquedOnDeletedOperand) {
   // temp !{}
-  TempMDTuple T = MDTuple::getTemporary(Context, std::nullopt);
+  TempMDTuple T = MDTuple::getTemporary(Context, {});
 
   // !{temp !{}}
   Metadata *Ops[] = {T.get()};
@@ -570,14 +569,14 @@ TEST_F(MDNodeTest, DistinctOnDeletedValueOperand) {
 
 TEST_F(MDNodeTest, getDistinct) {
   // !{}
-  MDNode *Empty = MDNode::get(Context, std::nullopt);
+  MDNode *Empty = MDNode::get(Context, {});
   ASSERT_TRUE(Empty->isResolved());
   ASSERT_FALSE(Empty->isDistinct());
-  ASSERT_EQ(Empty, MDNode::get(Context, std::nullopt));
+  ASSERT_EQ(Empty, MDNode::get(Context, {}));
 
   // distinct !{}
-  MDNode *Distinct1 = MDNode::getDistinct(Context, std::nullopt);
-  MDNode *Distinct2 = MDNode::getDistinct(Context, std::nullopt);
+  MDNode *Distinct1 = MDNode::getDistinct(Context, {});
+  MDNode *Distinct2 = MDNode::getDistinct(Context, {});
   EXPECT_TRUE(Distinct1->isResolved());
   EXPECT_TRUE(Distinct2->isDistinct());
   EXPECT_NE(Empty, Distinct1);
@@ -585,31 +584,31 @@ TEST_F(MDNodeTest, getDistinct) {
   EXPECT_NE(Distinct1, Distinct2);
 
   // !{}
-  ASSERT_EQ(Empty, MDNode::get(Context, std::nullopt));
+  ASSERT_EQ(Empty, MDNode::get(Context, {}));
 }
 
 TEST_F(MDNodeTest, isUniqued) {
-  MDNode *U = MDTuple::get(Context, std::nullopt);
-  MDNode *D = MDTuple::getDistinct(Context, std::nullopt);
-  auto T = MDTuple::getTemporary(Context, std::nullopt);
+  MDNode *U = MDTuple::get(Context, {});
+  MDNode *D = MDTuple::getDistinct(Context, {});
+  auto T = MDTuple::getTemporary(Context, {});
   EXPECT_TRUE(U->isUniqued());
   EXPECT_FALSE(D->isUniqued());
   EXPECT_FALSE(T->isUniqued());
 }
 
 TEST_F(MDNodeTest, isDistinct) {
-  MDNode *U = MDTuple::get(Context, std::nullopt);
-  MDNode *D = MDTuple::getDistinct(Context, std::nullopt);
-  auto T = MDTuple::getTemporary(Context, std::nullopt);
+  MDNode *U = MDTuple::get(Context, {});
+  MDNode *D = MDTuple::getDistinct(Context, {});
+  auto T = MDTuple::getTemporary(Context, {});
   EXPECT_FALSE(U->isDistinct());
   EXPECT_TRUE(D->isDistinct());
   EXPECT_FALSE(T->isDistinct());
 }
 
 TEST_F(MDNodeTest, isTemporary) {
-  MDNode *U = MDTuple::get(Context, std::nullopt);
-  MDNode *D = MDTuple::getDistinct(Context, std::nullopt);
-  auto T = MDTuple::getTemporary(Context, std::nullopt);
+  MDNode *U = MDTuple::get(Context, {});
+  MDNode *D = MDTuple::getDistinct(Context, {});
+  auto T = MDTuple::getTemporary(Context, {});
   EXPECT_FALSE(U->isTemporary());
   EXPECT_FALSE(D->isTemporary());
   EXPECT_TRUE(T->isTemporary());
@@ -617,7 +616,7 @@ TEST_F(MDNodeTest, isTemporary) {
 
 TEST_F(MDNodeTest, getDistinctWithUnresolvedOperands) {
   // temporary !{}
-  auto Temp = MDTuple::getTemporary(Context, std::nullopt);
+  auto Temp = MDTuple::getTemporary(Context, {});
   ASSERT_FALSE(Temp->isResolved());
 
   // distinct !{temporary !{}}
@@ -627,17 +626,17 @@ TEST_F(MDNodeTest, getDistinctWithUnresolvedOperands) {
   EXPECT_EQ(Temp.get(), Distinct->getOperand(0));
 
   // temporary !{} => !{}
-  MDNode *Empty = MDNode::get(Context, std::nullopt);
+  MDNode *Empty = MDNode::get(Context, {});
   Temp->replaceAllUsesWith(Empty);
   EXPECT_EQ(Empty, Distinct->getOperand(0));
 }
 
 TEST_F(MDNodeTest, handleChangedOperandRecursion) {
   // !0 = !{}
-  MDNode *N0 = MDNode::get(Context, std::nullopt);
+  MDNode *N0 = MDNode::get(Context, {});
 
   // !1 = !{!3, null}
-  auto Temp3 = MDTuple::getTemporary(Context, std::nullopt);
+  auto Temp3 = MDTuple::getTemporary(Context, {});
   Metadata *Ops1[] = {Temp3.get(), nullptr};
   MDNode *N1 = MDNode::get(Context, Ops1);
 
@@ -701,7 +700,7 @@ TEST_F(MDNodeTest, replaceResolvedOperand) {
   // a global value that gets RAUW'ed.
   //
   // Use a temporary node to keep N from being resolved.
-  auto Temp = MDTuple::getTemporary(Context, std::nullopt);
+  auto Temp = MDTuple::getTemporary(Context, {});
   Metadata *Ops[] = {nullptr, Temp.get()};
 
   MDNode *Empty = MDTuple::get(Context, ArrayRef<Metadata *>());
@@ -722,7 +721,7 @@ TEST_F(MDNodeTest, replaceResolvedOperand) {
 }
 
 TEST_F(MDNodeTest, replaceWithUniqued) {
-  auto *Empty = MDTuple::get(Context, std::nullopt);
+  auto *Empty = MDTuple::get(Context, {});
   MDTuple *FirstUniqued;
   {
     Metadata *Ops[] = {Empty};
@@ -748,7 +747,7 @@ TEST_F(MDNodeTest, replaceWithUniqued) {
     EXPECT_EQ(FirstUniqued, Uniqued);
   }
   {
-    auto Unresolved = MDTuple::getTemporary(Context, std::nullopt);
+    auto Unresolved = MDTuple::getTemporary(Context, {});
     Metadata *Ops[] = {Unresolved.get()};
     auto Temp = MDTuple::getTemporary(Context, Ops);
     EXPECT_TRUE(Temp->isTemporary());
@@ -770,7 +769,7 @@ TEST_F(MDNodeTest, replaceWithUniqued) {
 
 TEST_F(MDNodeTest, replaceWithUniquedResolvingOperand) {
   // temp !{}
-  MDTuple *Op = MDTuple::getTemporary(Context, std::nullopt).release();
+  MDTuple *Op = MDTuple::getTemporary(Context, {}).release();
   EXPECT_FALSE(Op->isResolved());
 
   // temp !{temp !{}}
@@ -837,7 +836,7 @@ TEST_F(MDNodeTest, replaceWithUniquedChangedOperand) {
 
 TEST_F(MDNodeTest, replaceWithDistinct) {
   {
-    auto *Empty = MDTuple::get(Context, std::nullopt);
+    auto *Empty = MDTuple::get(Context, {});
     Metadata *Ops[] = {Empty};
     auto Temp = MDTuple::getTemporary(Context, Ops);
     EXPECT_TRUE(Temp->isTemporary());
@@ -850,7 +849,7 @@ TEST_F(MDNodeTest, replaceWithDistinct) {
     EXPECT_EQ(Current, Distinct);
   }
   {
-    auto Unresolved = MDTuple::getTemporary(Context, std::nullopt);
+    auto Unresolved = MDTuple::getTemporary(Context, {});
     Metadata *Ops[] = {Unresolved.get()};
     auto Temp = MDTuple::getTemporary(Context, Ops);
     EXPECT_TRUE(Temp->isTemporary());
@@ -909,7 +908,7 @@ TEST_F(MDNodeTest, deleteTemporaryWithTrackingRef) {
   TrackingMDRef Ref;
   EXPECT_EQ(nullptr, Ref.get());
   {
-    auto Temp = MDTuple::getTemporary(Context, std::nullopt);
+    auto Temp = MDTuple::getTemporary(Context, {});
     Ref.reset(Temp.get());
     EXPECT_EQ(Temp.get(), Ref.get());
   }
@@ -1254,14 +1253,14 @@ TEST_F(DILocationTest, getDistinct) {
 }
 
 TEST_F(DILocationTest, getTemporary) {
-  MDNode *N = MDNode::get(Context, std::nullopt);
+  MDNode *N = MDNode::get(Context, {});
   auto L = DILocation::getTemporary(Context, 2, 7, N);
   EXPECT_TRUE(L->isTemporary());
   EXPECT_FALSE(L->isResolved());
 }
 
 TEST_F(DILocationTest, cloneTemporary) {
-  MDNode *N = MDNode::get(Context, std::nullopt);
+  MDNode *N = MDNode::get(Context, {});
   auto L = DILocation::getTemporary(Context, 2, 7, N);
   EXPECT_TRUE(L->isTemporary());
   auto L2 = L->clone();
@@ -1371,7 +1370,7 @@ typedef MetadataTest GenericDINodeTest;
 
 TEST_F(GenericDINodeTest, get) {
   StringRef Header = "header";
-  auto *Empty = MDNode::get(Context, std::nullopt);
+  auto *Empty = MDNode::get(Context, {});
   Metadata *Ops1[] = {Empty};
   auto *N = GenericDINode::get(Context, 15, Header, Ops1);
   EXPECT_EQ(15u, N->getTag());
@@ -1407,7 +1406,7 @@ TEST_F(GenericDINodeTest, get) {
 
 TEST_F(GenericDINodeTest, getEmptyHeader) {
   // Canonicalize !"" to null.
-  auto *N = GenericDINode::get(Context, 15, StringRef(), std::nullopt);
+  auto *N = GenericDINode::get(Context, 15, StringRef(), {});
   EXPECT_EQ(StringRef(), N->getHeader());
   EXPECT_EQ(nullptr, N->getOperand(0));
 }
@@ -1773,44 +1772,48 @@ TEST_F(DIEnumeratorTest, getWithLargeValues) {
 typedef MetadataTest DIBasicTypeTest;
 
 TEST_F(DIBasicTypeTest, get) {
-  auto *N =
-      DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33, 26, 7,
-                        DINode::FlagZero);
+  auto *N = DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
+                             26, 7, 100, DINode::FlagZero);
   EXPECT_EQ(dwarf::DW_TAG_base_type, N->getTag());
   EXPECT_EQ("special", N->getName());
   EXPECT_EQ(33u, N->getSizeInBits());
   EXPECT_EQ(26u, N->getAlignInBits());
   EXPECT_EQ(7u, N->getEncoding());
   EXPECT_EQ(0u, N->getLine());
+  EXPECT_EQ(100u, N->getNumExtraInhabitants());
   EXPECT_EQ(DINode::FlagZero, N->getFlags());
   EXPECT_EQ(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
-                                26, 7, DINode::FlagZero));
+                                26, 7, 100, DINode::FlagZero));
 
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_unspecified_type,
-                                "special", 33, 26, 7, DINode::FlagZero));
-  EXPECT_NE(N,
-            DIBasicType::get(Context, dwarf::DW_TAG_base_type, "s", 33, 26, 7,
-                              DINode::FlagZero));
+                                "special", 33, 26, 7, 100, DINode::FlagZero));
+  EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "s", 33, 26,
+                                7, 100, DINode::FlagZero));
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 32,
-                                26, 7, DINode::FlagZero));
+                                26, 7, 100, DINode::FlagZero));
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
-                                25, 7, DINode::FlagZero));
+                                25, 7, 100, DINode::FlagZero));
+
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
-                                26, 6, DINode::FlagZero));
+                                26, 7, 99, DINode::FlagZero));
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
-                                26, 7, DINode::FlagBigEndian));
+                                26, 6, 100, DINode::FlagZero));
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
-                                26, 7, DINode::FlagLittleEndian));
+                                26, 7, 100, DINode::FlagBigEndian));
+  EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
+                                26, 7, 100, DINode::FlagLittleEndian));
 
   TempDIBasicType Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
 }
 
 TEST_F(DIBasicTypeTest, getWithLargeValues) {
-  auto *N = DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special",
-                             UINT64_MAX, UINT32_MAX - 1, 7, DINode::FlagZero);
+  auto *N =
+      DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", UINT64_MAX,
+                       UINT32_MAX - 1, 7, UINT32_MAX, DINode::FlagZero);
   EXPECT_EQ(UINT64_MAX, N->getSizeInBits());
   EXPECT_EQ(UINT32_MAX - 1, N->getAlignInBits());
+  EXPECT_EQ(UINT32_MAX, N->getNumExtraInhabitants());
 }
 
 TEST_F(DIBasicTypeTest, getUnspecified) {
@@ -1830,7 +1833,7 @@ typedef MetadataTest DITypeTest;
 TEST_F(DITypeTest, clone) {
   // Check that DIType has a specialized clone that returns TempDIType.
   DIType *N = DIBasicType::get(Context, dwarf::DW_TAG_base_type, "int", 32, 32,
-                               dwarf::DW_ATE_signed, DINode::FlagZero);
+                               0, dwarf::DW_ATE_signed, DINode::FlagZero);
 
   TempDIType Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
@@ -1864,13 +1867,17 @@ TEST_F(DIDerivedTypeTest, get) {
   DIType *BaseType = getBasicType("basic");
   MDTuple *ExtraData = getTuple();
   unsigned DWARFAddressSpace = 8;
+  DIDerivedType::PtrAuthData PtrAuthData(1, false, 1234, true, true);
+  DIDerivedType::PtrAuthData PtrAuthData2(1, false, 1234, true, false);
   DINode::DIFlags Flags5 = static_cast<DINode::DIFlags>(5);
   DINode::DIFlags Flags4 = static_cast<DINode::DIFlags>(4);
 
-  auto *N =
-      DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type, "something", File,
-                         1, Scope, BaseType, 2, 3, 4, DWARFAddressSpace, Flags5,
-                         ExtraData);
+  auto *N = DIDerivedType::get(
+      Context, dwarf::DW_TAG_pointer_type, "something", File, 1, Scope,
+      BaseType, 2, 3, 4, DWARFAddressSpace, std::nullopt, Flags5, ExtraData);
+  auto *N1 = DIDerivedType::get(Context, dwarf::DW_TAG_LLVM_ptrauth_type, "",
+                                File, 1, Scope, N, 2, 3, 4, DWARFAddressSpace,
+                                PtrAuthData, Flags5, ExtraData);
   EXPECT_EQ(dwarf::DW_TAG_pointer_type, N->getTag());
   EXPECT_EQ("something", N->getName());
   EXPECT_EQ(File, N->getFile());
@@ -1881,53 +1888,73 @@ TEST_F(DIDerivedTypeTest, get) {
   EXPECT_EQ(3u, N->getAlignInBits());
   EXPECT_EQ(4u, N->getOffsetInBits());
   EXPECT_EQ(DWARFAddressSpace, *N->getDWARFAddressSpace());
+  EXPECT_EQ(std::nullopt, N->getPtrAuthData());
+  EXPECT_EQ(PtrAuthData, N1->getPtrAuthData());
+  EXPECT_NE(PtrAuthData2, N1->getPtrAuthData());
   EXPECT_EQ(5u, N->getFlags());
   EXPECT_EQ(ExtraData, N->getExtraData());
   EXPECT_EQ(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, Scope, BaseType, 2, 3,
-                                  4, DWARFAddressSpace, Flags5, ExtraData));
+                                  4, DWARFAddressSpace, std::nullopt, Flags5,
+                                  ExtraData));
 
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_reference_type,
                                   "something", File, 1, Scope, BaseType, 2, 3,
-                                  4, DWARFAddressSpace, Flags5, ExtraData));
+                                  4, DWARFAddressSpace, std::nullopt, Flags5,
+                                  ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type, "else",
-                                  File, 1, Scope, BaseType, 2, 3,
-                                  4, DWARFAddressSpace, Flags5, ExtraData));
+                                  File, 1, Scope, BaseType, 2, 3, 4,
+                                  DWARFAddressSpace, std::nullopt, Flags5,
+                                  ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", getFile(), 1, Scope, BaseType, 2,
-                                  3, 4, DWARFAddressSpace, Flags5, ExtraData));
+                                  3, 4, DWARFAddressSpace, std::nullopt, Flags5,
+                                  ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 2, Scope, BaseType, 2, 3,
-                                  4, DWARFAddressSpace, Flags5, ExtraData));
+                                  4, DWARFAddressSpace, std::nullopt, Flags5,
+                                  ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, getSubprogram(),
-                                  BaseType, 2, 3, 4, DWARFAddressSpace, Flags5,
-                                  ExtraData));
+                                  BaseType, 2, 3, 4, DWARFAddressSpace,
+                                  std::nullopt, Flags5, ExtraData));
   EXPECT_NE(N, DIDerivedType::get(
                    Context, dwarf::DW_TAG_pointer_type, "something", File, 1,
                    Scope, getBasicType("basic2"), 2, 3, 4, DWARFAddressSpace,
-                   Flags5, ExtraData));
+                   std::nullopt, Flags5, ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, Scope, BaseType, 3, 3,
-                                  4, DWARFAddressSpace, Flags5, ExtraData));
+                                  4, DWARFAddressSpace, std::nullopt, Flags5,
+                                  ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, Scope, BaseType, 2, 2,
-                                  4, DWARFAddressSpace, Flags5, ExtraData));
+                                  4, DWARFAddressSpace, std::nullopt, Flags5,
+                                  ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, Scope, BaseType, 2, 3,
-                                  5, DWARFAddressSpace, Flags5, ExtraData));
+                                  5, DWARFAddressSpace, std::nullopt, Flags5,
+                                  ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, Scope, BaseType, 2, 3,
-                                  4, DWARFAddressSpace + 1, Flags5, ExtraData));
+                                  4, DWARFAddressSpace + 1, std::nullopt,
+                                  Flags5, ExtraData));
+  EXPECT_NE(N1,
+            DIDerivedType::get(Context, dwarf::DW_TAG_LLVM_ptrauth_type, "",
+                               File, 1, Scope, N, 2, 3, 4, DWARFAddressSpace,
+                               std::nullopt, Flags5, ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, Scope, BaseType, 2, 3,
-                                  4, DWARFAddressSpace, Flags4, ExtraData));
+                                  4, DWARFAddressSpace, std::nullopt, Flags4,
+                                  ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, Scope, BaseType, 2, 3,
-                                  4, DWARFAddressSpace, Flags5, getTuple()));
+                                  4, DWARFAddressSpace, std::nullopt, Flags5,
+                                  getTuple()));
 
   TempDIDerivedType Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
+  TempDIDerivedType Temp1 = N1->clone();
+  EXPECT_EQ(N1, MDNode::replaceWithUniqued(std::move(Temp1)));
 }
 
 TEST_F(DIDerivedTypeTest, getWithLargeValues) {
@@ -1937,14 +1964,23 @@ TEST_F(DIDerivedTypeTest, getWithLargeValues) {
   MDTuple *ExtraData = getTuple();
   DINode::DIFlags Flags = static_cast<DINode::DIFlags>(5);
 
-  auto *N = DIDerivedType::get(
-      Context, dwarf::DW_TAG_pointer_type, "something", File, 1, Scope,
-      BaseType, UINT64_MAX, UINT32_MAX - 1, UINT64_MAX - 2, UINT32_MAX - 3,
-      Flags, ExtraData);
+  auto *N = DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type, "something",
+                               File, 1, Scope, BaseType, UINT64_MAX,
+                               UINT32_MAX - 1, UINT64_MAX - 2, UINT32_MAX - 3,
+                               std::nullopt, Flags, ExtraData);
   EXPECT_EQ(UINT64_MAX, N->getSizeInBits());
   EXPECT_EQ(UINT32_MAX - 1, N->getAlignInBits());
   EXPECT_EQ(UINT64_MAX - 2, N->getOffsetInBits());
   EXPECT_EQ(UINT32_MAX - 3, *N->getDWARFAddressSpace());
+
+  auto *N1 = DIDerivedType::get(
+      Context, dwarf::DW_TAG_LLVM_ptrauth_type, "", File, 1, Scope, N,
+      UINT64_MAX, UINT32_MAX - 1, UINT64_MAX - 2, UINT32_MAX - 3,
+      DIDerivedType::PtrAuthData(7, true, 0xffff, true, false), Flags,
+      ExtraData);
+  EXPECT_EQ(7U, N1->getPtrAuthData()->key());
+  EXPECT_EQ(true, N1->getPtrAuthData()->isAddressDiscriminated());
+  EXPECT_EQ(0xffffU, N1->getPtrAuthData()->extraDiscriminator());
 }
 
 typedef MetadataTest DICompositeTypeTest;
@@ -2113,7 +2149,7 @@ TEST_F(DICompositeTypeTest, replaceOperands) {
       Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
       OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier);
 
-  auto *Elements = MDTuple::getDistinct(Context, std::nullopt);
+  auto *Elements = MDTuple::getDistinct(Context, {});
   EXPECT_EQ(nullptr, N->getElements().get());
   N->replaceElements(Elements);
   EXPECT_EQ(Elements, N->getElements().get());
@@ -2132,7 +2168,7 @@ TEST_F(DICompositeTypeTest, replaceOperands) {
   N->replaceVTableHolder(nullptr);
   EXPECT_EQ(nullptr, N->getVTableHolder());
 
-  auto *TemplateParams = MDTuple::getDistinct(Context, std::nullopt);
+  auto *TemplateParams = MDTuple::getDistinct(Context, {});
   EXPECT_EQ(nullptr, N->getTemplateParams().get());
   N->replaceTemplateParams(TemplateParams);
   EXPECT_EQ(TemplateParams, N->getTemplateParams().get());
@@ -2464,9 +2500,9 @@ TEST_F(DICompileUnitTest, replaceArrays) {
   unsigned RuntimeVersion = 2;
   StringRef SplitDebugFilename = "another/file";
   auto EmissionKind = DICompileUnit::FullDebug;
-  MDTuple *EnumTypes = MDTuple::getDistinct(Context, std::nullopt);
-  MDTuple *RetainedTypes = MDTuple::getDistinct(Context, std::nullopt);
-  MDTuple *ImportedEntities = MDTuple::getDistinct(Context, std::nullopt);
+  MDTuple *EnumTypes = MDTuple::getDistinct(Context, {});
+  MDTuple *RetainedTypes = MDTuple::getDistinct(Context, {});
+  MDTuple *ImportedEntities = MDTuple::getDistinct(Context, {});
   uint64_t DWOId = 0xc0ffee;
   StringRef SysRoot = "/";
   StringRef SDK = "MacOSX.sdk";
@@ -2476,14 +2512,14 @@ TEST_F(DICompileUnitTest, replaceArrays) {
       RetainedTypes, nullptr, ImportedEntities, nullptr, DWOId, true, false,
       DICompileUnit::DebugNameTableKind::Default, false, SysRoot, SDK);
 
-  auto *GlobalVariables = MDTuple::getDistinct(Context, std::nullopt);
+  auto *GlobalVariables = MDTuple::getDistinct(Context, {});
   EXPECT_EQ(nullptr, N->getGlobalVariables().get());
   N->replaceGlobalVariables(GlobalVariables);
   EXPECT_EQ(GlobalVariables, N->getGlobalVariables().get());
   N->replaceGlobalVariables(nullptr);
   EXPECT_EQ(nullptr, N->getGlobalVariables().get());
 
-  auto *Macros = MDTuple::getDistinct(Context, std::nullopt);
+  auto *Macros = MDTuple::getDistinct(Context, {});
   EXPECT_EQ(nullptr, N->getMacros().get());
   N->replaceMacros(Macros);
   EXPECT_EQ(Macros, N->getMacros().get());
@@ -3120,6 +3156,601 @@ TEST_F(DIExpressionTest, get) {
   EXPECT_EQ(N0WithPrependedOps, N2);
 }
 
+TEST_F(DIExpressionTest, Fold) {
+
+  // Remove a No-op DW_OP_plus_uconst from an expression.
+  SmallVector<uint64_t, 8> Ops = {dwarf::DW_OP_plus_uconst, 0};
+  auto *Expr = DIExpression::get(Context, Ops);
+  auto *E = Expr->foldConstantMath();
+  SmallVector<uint64_t, 8> ResOps;
+  auto *EmptyExpr = DIExpression::get(Context, ResOps);
+  EXPECT_EQ(E, EmptyExpr);
+
+  // Remove a No-op add from an expression.
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(0);
+  Ops.push_back(dwarf::DW_OP_plus);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  EXPECT_EQ(E, EmptyExpr);
+
+  // Remove a No-op subtract from an expression.
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(0);
+  Ops.push_back(dwarf::DW_OP_minus);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  EXPECT_EQ(E, EmptyExpr);
+
+  // Remove a No-op shift left from an expression.
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(0);
+  Ops.push_back(dwarf::DW_OP_shl);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  EXPECT_EQ(E, EmptyExpr);
+
+  // Remove a No-op shift right from an expression.
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(0);
+  Ops.push_back(dwarf::DW_OP_shr);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  EXPECT_EQ(E, EmptyExpr);
+
+  // Remove a No-op multiply from an expression.
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(1);
+  Ops.push_back(dwarf::DW_OP_mul);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  EXPECT_EQ(E, EmptyExpr);
+
+  // Remove a No-op divide from an expression.
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(1);
+  Ops.push_back(dwarf::DW_OP_div);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  EXPECT_EQ(E, EmptyExpr);
+
+  // Test fold {DW_OP_plus_uconst, Const1, DW_OP_plus_uconst, Const2} ->
+  // {DW_OP_plus_uconst, Const1 + Const2}
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_plus_uconst);
+  Ops.push_back(2);
+  Ops.push_back(dwarf::DW_OP_plus_uconst);
+  Ops.push_back(3);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  ResOps.push_back(dwarf::DW_OP_plus_uconst);
+  ResOps.push_back(5);
+  auto *ResExpr = DIExpression::get(Context, ResOps);
+  EXPECT_EQ(E, ResExpr);
+
+  // Test {DW_OP_constu, Const1, DW_OP_plus_uconst, Const2} -> {DW_OP_constu,
+  // Const1 + Const2}
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(2);
+  Ops.push_back(dwarf::DW_OP_plus_uconst);
+  Ops.push_back(3);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  ResOps.clear();
+  ResOps.push_back(dwarf::DW_OP_constu);
+  ResOps.push_back(5);
+  ResExpr = DIExpression::get(Context, ResOps);
+  EXPECT_EQ(E, ResExpr);
+
+  // Test {DW_OP_constu, Const1, DW_OP_constu, Const2, DW_OP_plus} ->
+  // {DW_OP_constu, Const1 + Const2}
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(8);
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(2);
+  Ops.push_back(dwarf::DW_OP_plus);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  ResOps.clear();
+  ResOps.push_back(dwarf::DW_OP_constu);
+  ResOps.push_back(10);
+  ResExpr = DIExpression::get(Context, ResOps);
+  EXPECT_EQ(E, ResExpr);
+
+  // Test {DW_OP_constu, Const1, DW_OP_constu, Const2, DW_OP_minus} ->
+  // {DW_OP_constu, Const1 - Const2}
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(8);
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(2);
+  Ops.push_back(dwarf::DW_OP_minus);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  ResOps.clear();
+  ResOps.push_back(dwarf::DW_OP_constu);
+  ResOps.push_back(6);
+  ResExpr = DIExpression::get(Context, ResOps);
+  EXPECT_EQ(E, ResExpr);
+
+  // Test {DW_OP_constu, Const1, DW_OP_constu, Const2, DW_OP_mul} ->
+  // {DW_OP_constu, Const1 * Const2}
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(8);
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(2);
+  Ops.push_back(dwarf::DW_OP_mul);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  ResOps.clear();
+  ResOps.push_back(dwarf::DW_OP_constu);
+  ResOps.push_back(16);
+  ResExpr = DIExpression::get(Context, ResOps);
+  EXPECT_EQ(E, ResExpr);
+
+  // Test {DW_OP_constu, Const1, DW_OP_constu, Const2, DW_OP_div} ->
+  // {DW_OP_constu, Const1 / Const2}
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(8);
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(2);
+  Ops.push_back(dwarf::DW_OP_div);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  ResOps.clear();
+  ResOps.push_back(dwarf::DW_OP_constu);
+  ResOps.push_back(4);
+  ResExpr = DIExpression::get(Context, ResOps);
+  EXPECT_EQ(E, ResExpr);
+
+  // Test {DW_OP_constu, Const1, DW_OP_constu, Const2, DW_OP_shl} ->
+  // {DW_OP_constu, Const1 << Const2}
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(8);
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(2);
+  Ops.push_back(dwarf::DW_OP_shl);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  ResOps.clear();
+  ResOps.push_back(dwarf::DW_OP_constu);
+  ResOps.push_back(32);
+  ResExpr = DIExpression::get(Context, ResOps);
+  EXPECT_EQ(E, ResExpr);
+
+  // Test {DW_OP_constu, Const1, DW_OP_constu, Const2, DW_OP_shr} ->
+  // {DW_OP_constu, Const1 >> Const2}
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(8);
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(2);
+  Ops.push_back(dwarf::DW_OP_shr);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  ResOps.clear();
+  ResOps.push_back(dwarf::DW_OP_constu);
+  ResOps.push_back(2);
+  ResExpr = DIExpression::get(Context, ResOps);
+  EXPECT_EQ(E, ResExpr);
+
+  // Test {DW_OP_plus_uconst, Const1, DW_OP_constu, Const2, DW_OP_plus} ->
+  // {DW_OP_plus_uconst, Const1 + Const2}
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_plus_uconst);
+  Ops.push_back(8);
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(2);
+  Ops.push_back(dwarf::DW_OP_plus);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  ResOps.clear();
+  ResOps.push_back(dwarf::DW_OP_plus_uconst);
+  ResOps.push_back(10);
+  ResExpr = DIExpression::get(Context, ResOps);
+  EXPECT_EQ(E, ResExpr);
+
+  // Test {DW_OP_constu, Const1, DW_OP_plus, DW_OP_plus_uconst, Const2} ->
+  // {DW_OP_plus_uconst, Const1 + Const2}
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(8);
+  Ops.push_back(dwarf::DW_OP_plus);
+  Ops.push_back(dwarf::DW_OP_plus_uconst);
+  Ops.push_back(2);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  ResOps.clear();
+  ResOps.push_back(dwarf::DW_OP_plus_uconst);
+  ResOps.push_back(10);
+  ResExpr = DIExpression::get(Context, ResOps);
+  EXPECT_EQ(E, ResExpr);
+
+  // Test {DW_OP_constu, Const1, DW_OP_plus, DW_OP_constu, Const2, DW_OP_plus}
+  // -> {DW_OP_plus_uconst, Const1 + Const2}
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(8);
+  Ops.push_back(dwarf::DW_OP_plus);
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(2);
+  Ops.push_back(dwarf::DW_OP_plus);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  ResOps.clear();
+  ResOps.push_back(dwarf::DW_OP_plus_uconst);
+  ResOps.push_back(10);
+  ResExpr = DIExpression::get(Context, ResOps);
+  EXPECT_EQ(E, ResExpr);
+
+  // Test {DW_OP_constu, Const1, DW_OP_mul, DW_OP_constu, Const2, DW_OP_mul} ->
+  // {DW_OP_constu, Const1 * Const2, DW_OP_mul}
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(8);
+  Ops.push_back(dwarf::DW_OP_mul);
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(2);
+  Ops.push_back(dwarf::DW_OP_mul);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  ResOps.clear();
+  ResOps.push_back(dwarf::DW_OP_constu);
+  ResOps.push_back(16);
+  ResOps.push_back(dwarf::DW_OP_mul);
+  ResExpr = DIExpression::get(Context, ResOps);
+  EXPECT_EQ(E, ResExpr);
+
+  // Test {DW_OP_plus_uconst, Const1, DW_OP_plus, DW_OP_LLVM_arg, Arg,
+  // DW_OP_plus, DW_OP_constu, Const2, DW_OP_plus} -> {DW_OP_plus_uconst, Const1
+  // + Const2, DW_OP_LLVM_arg, Arg, DW_OP_plus}
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_plus_uconst);
+  Ops.push_back(8);
+  Ops.push_back(dwarf::DW_OP_LLVM_arg);
+  Ops.push_back(0);
+  Ops.push_back(dwarf::DW_OP_plus);
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(2);
+  Ops.push_back(dwarf::DW_OP_plus);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  ResOps.clear();
+  ResOps.push_back(dwarf::DW_OP_plus_uconst);
+  ResOps.push_back(10);
+  ResOps.push_back(dwarf::DW_OP_LLVM_arg);
+  ResOps.push_back(0);
+  ResOps.push_back(dwarf::DW_OP_plus);
+  ResExpr = DIExpression::get(Context, ResOps);
+  EXPECT_EQ(E, ResExpr);
+
+  // Test {DW_OP_constu, Const1, DW_OP_plus, DW_OP_LLVM_arg, Arg, DW_OP_plus,
+  // DW_OP_plus_uconst, Const2} -> {DW_OP_constu, Const1 + Const2, DW_OP_plus,
+  // DW_OP_LLVM_arg, Arg, DW_OP_plus}
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(8);
+  Ops.push_back(dwarf::DW_OP_plus);
+  Ops.push_back(dwarf::DW_OP_LLVM_arg);
+  Ops.push_back(0);
+  Ops.push_back(dwarf::DW_OP_plus);
+  Ops.push_back(dwarf::DW_OP_plus_uconst);
+  Ops.push_back(2);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  ResOps.clear();
+  ResOps.push_back(dwarf::DW_OP_plus_uconst);
+  ResOps.push_back(10);
+  ResOps.push_back(dwarf::DW_OP_LLVM_arg);
+  ResOps.push_back(0);
+  ResOps.push_back(dwarf::DW_OP_plus);
+  ResExpr = DIExpression::get(Context, ResOps);
+  EXPECT_EQ(E, ResExpr);
+
+  // Test {DW_OP_constu, Const1, DW_OP_plus, DW_OP_LLVM_arg, Arg, DW_OP_plus,
+  // DW_OP_constu, Const2, DW_OP_plus} -> {DW_OP_constu, Const1 + Const2,
+  // DW_OP_plus, DW_OP_LLVM_arg, Arg, DW_OP_plus}
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(8);
+  Ops.push_back(dwarf::DW_OP_plus);
+  Ops.push_back(dwarf::DW_OP_LLVM_arg);
+  Ops.push_back(0);
+  Ops.push_back(dwarf::DW_OP_plus);
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(2);
+  Ops.push_back(dwarf::DW_OP_plus);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  ResOps.clear();
+  ResOps.push_back(dwarf::DW_OP_plus_uconst);
+  ResOps.push_back(10);
+  ResOps.push_back(dwarf::DW_OP_LLVM_arg);
+  ResOps.push_back(0);
+  ResOps.push_back(dwarf::DW_OP_plus);
+  ResExpr = DIExpression::get(Context, ResOps);
+  EXPECT_EQ(E, ResExpr);
+
+  // Test {DW_OP_constu, Const1, DW_OP_mul, DW_OP_LLVM_arg, Arg, DW_OP_mul,
+  // DW_OP_constu, Const2, DW_OP_mul} -> {DW_OP_constu, Const1 * Const2,
+  // DW_OP_mul, DW_OP_LLVM_arg, Arg, DW_OP_mul}
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(8);
+  Ops.push_back(dwarf::DW_OP_mul);
+  Ops.push_back(dwarf::DW_OP_LLVM_arg);
+  Ops.push_back(0);
+  Ops.push_back(dwarf::DW_OP_mul);
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(2);
+  Ops.push_back(dwarf::DW_OP_mul);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  ResOps.clear();
+  ResOps.push_back(dwarf::DW_OP_constu);
+  ResOps.push_back(16);
+  ResOps.push_back(dwarf::DW_OP_mul);
+  ResOps.push_back(dwarf::DW_OP_LLVM_arg);
+  ResOps.push_back(0);
+  ResOps.push_back(dwarf::DW_OP_mul);
+  ResExpr = DIExpression::get(Context, ResOps);
+  EXPECT_EQ(E, ResExpr);
+
+  // Test an overflow addition.
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_plus_uconst);
+  Ops.push_back(UINT64_MAX);
+  Ops.push_back(dwarf::DW_OP_plus_uconst);
+  Ops.push_back(2);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  ResOps.clear();
+  ResOps.push_back(dwarf::DW_OP_plus_uconst);
+  ResOps.push_back(UINT64_MAX);
+  ResOps.push_back(dwarf::DW_OP_plus_uconst);
+  ResOps.push_back(2);
+  ResExpr = DIExpression::get(Context, ResOps);
+  EXPECT_EQ(E, ResExpr);
+
+  // Test an underflow subtraction.
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(1);
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(2);
+  Ops.push_back(dwarf::DW_OP_minus);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  ResOps.clear();
+  ResOps.push_back(dwarf::DW_OP_constu);
+  ResOps.push_back(1);
+  ResOps.push_back(dwarf::DW_OP_constu);
+  ResOps.push_back(2);
+  ResOps.push_back(dwarf::DW_OP_minus);
+  ResExpr = DIExpression::get(Context, ResOps);
+  EXPECT_EQ(E, ResExpr);
+
+  // Test a left shift greater than 63.
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(1);
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(64);
+  Ops.push_back(dwarf::DW_OP_shl);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  ResOps.clear();
+  ResOps.push_back(dwarf::DW_OP_constu);
+  ResOps.push_back(1);
+  ResOps.push_back(dwarf::DW_OP_constu);
+  ResOps.push_back(64);
+  ResOps.push_back(dwarf::DW_OP_shl);
+  ResExpr = DIExpression::get(Context, ResOps);
+  EXPECT_EQ(E, ResExpr);
+
+  // Test a right shift greater than 63.
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(1);
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(64);
+  Ops.push_back(dwarf::DW_OP_shr);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  ResOps.clear();
+  ResOps.push_back(dwarf::DW_OP_constu);
+  ResOps.push_back(1);
+  ResOps.push_back(dwarf::DW_OP_constu);
+  ResOps.push_back(64);
+  ResOps.push_back(dwarf::DW_OP_shr);
+  ResExpr = DIExpression::get(Context, ResOps);
+  EXPECT_EQ(E, ResExpr);
+
+  // Test an overflow multiplication.
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(UINT64_MAX);
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(2);
+  Ops.push_back(dwarf::DW_OP_mul);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  ResOps.clear();
+  ResOps.push_back(dwarf::DW_OP_constu);
+  ResOps.push_back(UINT64_MAX);
+  ResOps.push_back(dwarf::DW_OP_constu);
+  ResOps.push_back(2);
+  ResOps.push_back(dwarf::DW_OP_mul);
+  ResExpr = DIExpression::get(Context, ResOps);
+  EXPECT_EQ(E, ResExpr);
+
+  // Test a divide by 0.
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(2);
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(0);
+  Ops.push_back(dwarf::DW_OP_div);
+  Expr = DIExpression::get(Context, Ops);
+  E = Expr->foldConstantMath();
+  ResOps.clear();
+  ResOps.push_back(dwarf::DW_OP_constu);
+  ResOps.push_back(2);
+  ResOps.push_back(dwarf::DW_OP_lit0);
+  ResOps.push_back(dwarf::DW_OP_div);
+  ResExpr = DIExpression::get(Context, ResOps);
+  EXPECT_EQ(E, ResExpr);
+}
+
+TEST_F(DIExpressionTest, Append) {
+  // Test appending a {dwarf::DW_OP_constu, <const>, DW_OP_plus} to a DW_OP_plus
+  // expression
+  SmallVector<uint64_t, 8> Ops = {dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_constu,
+                                  2, dwarf::DW_OP_plus};
+  auto *Expr = DIExpression::get(Context, Ops);
+  SmallVector<uint64_t, 8> AppendOps = {dwarf::DW_OP_constu, 3,
+                                        dwarf::DW_OP_plus};
+  auto *AppendExpr = DIExpression::append(Expr, AppendOps);
+  SmallVector<uint64_t, 8> OpsRes = {dwarf::DW_OP_LLVM_arg, 0,
+                                     dwarf::DW_OP_plus_uconst, 5};
+  auto *ResExpr = DIExpression::get(Context, OpsRes);
+  EXPECT_EQ(ResExpr, AppendExpr);
+
+  // Test appending a {dwarf::DW_OP_plus_uconst, <const>} to a DW_OP_plus
+  // expression uint64_t PlusUConstOps[] = {dwarf::DW_OP_plus_uconst, 3};
+  AppendOps.clear();
+  AppendOps.push_back(dwarf::DW_OP_plus_uconst);
+  AppendOps.push_back(3);
+  AppendExpr = DIExpression::append(Expr, AppendOps);
+  OpsRes.clear();
+  OpsRes.push_back(dwarf::DW_OP_LLVM_arg);
+  OpsRes.push_back(0);
+  OpsRes.push_back(dwarf::DW_OP_plus_uconst);
+  OpsRes.push_back(5);
+  ResExpr = DIExpression::get(Context, OpsRes);
+  EXPECT_EQ(ResExpr, AppendExpr);
+
+  // Test appending a {dwarf::DW_OP_constu, 0, DW_OP_plus} to an expression
+  AppendOps.clear();
+  AppendOps.push_back(dwarf::DW_OP_constu);
+  AppendOps.push_back(0);
+  AppendOps.push_back(dwarf::DW_OP_plus);
+  AppendExpr = DIExpression::append(Expr, AppendOps);
+  OpsRes.clear();
+  OpsRes.push_back(dwarf::DW_OP_LLVM_arg);
+  OpsRes.push_back(0);
+  OpsRes.push_back(dwarf::DW_OP_plus_uconst);
+  OpsRes.push_back(2);
+  ResExpr = DIExpression::get(Context, OpsRes);
+  EXPECT_EQ(ResExpr, AppendExpr);
+
+  // Test appending a {dwarf::DW_OP_constu, 0, DW_OP_minus} to an expression
+  AppendOps.clear();
+  AppendOps.push_back(dwarf::DW_OP_constu);
+  AppendOps.push_back(0);
+  AppendOps.push_back(dwarf::DW_OP_minus);
+  AppendExpr = DIExpression::append(Expr, AppendOps);
+  OpsRes.clear();
+  OpsRes.push_back(dwarf::DW_OP_LLVM_arg);
+  OpsRes.push_back(0);
+  OpsRes.push_back(dwarf::DW_OP_plus_uconst);
+  OpsRes.push_back(2);
+  ResExpr = DIExpression::get(Context, OpsRes);
+  EXPECT_EQ(ResExpr, AppendExpr);
+
+  // Test appending a {dwarf::DW_OP_constu, 0, DW_OP_shl} to an expression
+  AppendOps.clear();
+  AppendOps.push_back(dwarf::DW_OP_constu);
+  AppendOps.push_back(0);
+  AppendOps.push_back(dwarf::DW_OP_shl);
+  AppendExpr = DIExpression::append(Expr, AppendOps);
+  OpsRes.clear();
+  OpsRes.push_back(dwarf::DW_OP_LLVM_arg);
+  OpsRes.push_back(0);
+  OpsRes.push_back(dwarf::DW_OP_plus_uconst);
+  OpsRes.push_back(2);
+  ResExpr = DIExpression::get(Context, OpsRes);
+  EXPECT_EQ(ResExpr, AppendExpr);
+
+  // Test appending a {dwarf::DW_OP_constu, 0, DW_OP_shr} to an expression
+  AppendOps.clear();
+  AppendOps.push_back(dwarf::DW_OP_constu);
+  AppendOps.push_back(0);
+  AppendOps.push_back(dwarf::DW_OP_shr);
+  AppendExpr = DIExpression::append(Expr, AppendOps);
+  OpsRes.clear();
+  OpsRes.push_back(dwarf::DW_OP_LLVM_arg);
+  OpsRes.push_back(0);
+  OpsRes.push_back(dwarf::DW_OP_plus_uconst);
+  OpsRes.push_back(2);
+  ResExpr = DIExpression::get(Context, OpsRes);
+  EXPECT_EQ(ResExpr, AppendExpr);
+
+  // Test appending a {dwarf::DW_OP_constu, <const>, DW_OP_mul} to a DW_OP_mul
+  // expression
+  Ops.clear();
+  Ops.push_back(dwarf::DW_OP_LLVM_arg);
+  Ops.push_back(0);
+  Ops.push_back(dwarf::DW_OP_constu);
+  Ops.push_back(2);
+  Ops.push_back(dwarf::DW_OP_mul);
+  Expr = DIExpression::get(Context, Ops);
+  AppendOps.clear();
+  AppendOps.push_back(dwarf::DW_OP_constu);
+  AppendOps.push_back(3);
+  AppendOps.push_back(dwarf::DW_OP_mul);
+  AppendExpr = DIExpression::append(Expr, AppendOps);
+  OpsRes.clear();
+  OpsRes.push_back(dwarf::DW_OP_LLVM_arg);
+  OpsRes.push_back(0);
+  OpsRes.push_back(dwarf::DW_OP_constu);
+  OpsRes.push_back(6);
+  OpsRes.push_back(dwarf::DW_OP_mul);
+  ResExpr = DIExpression::get(Context, OpsRes);
+  EXPECT_EQ(ResExpr, AppendExpr);
+
+  // Test appending a {dwarf::DW_OP_constu, 1, DW_OP_mul} to an expression
+  AppendOps.clear();
+  AppendOps.push_back(dwarf::DW_OP_constu);
+  AppendOps.push_back(1);
+  AppendOps.push_back(dwarf::DW_OP_mul);
+  AppendExpr = DIExpression::append(Expr, AppendOps);
+  OpsRes.clear();
+  OpsRes.push_back(dwarf::DW_OP_LLVM_arg);
+  OpsRes.push_back(0);
+  OpsRes.push_back(dwarf::DW_OP_constu);
+  OpsRes.push_back(2);
+  OpsRes.push_back(dwarf::DW_OP_mul);
+  ResExpr = DIExpression::get(Context, OpsRes);
+  EXPECT_EQ(ResExpr, AppendExpr);
+
+  // Test appending a {dwarf::DW_OP_constu, 1, DW_OP_div} to an expression
+  AppendOps.clear();
+  AppendOps.push_back(dwarf::DW_OP_constu);
+  AppendOps.push_back(1);
+  AppendOps.push_back(dwarf::DW_OP_div);
+  AppendExpr = DIExpression::append(Expr, AppendOps);
+  OpsRes.clear();
+  OpsRes.push_back(dwarf::DW_OP_LLVM_arg);
+  OpsRes.push_back(0);
+  OpsRes.push_back(dwarf::DW_OP_constu);
+  OpsRes.push_back(2);
+  OpsRes.push_back(dwarf::DW_OP_mul);
+  ResExpr = DIExpression::get(Context, OpsRes);
+  EXPECT_EQ(ResExpr, AppendExpr);
+}
+
 TEST_F(DIExpressionTest, isValid) {
 #define EXPECT_VALID(...)                                                      \
   do {                                                                         \
@@ -3133,7 +3764,7 @@ TEST_F(DIExpressionTest, isValid) {
   } while (false)
 
   // Empty expression should be valid.
-  EXPECT_TRUE(DIExpression::get(Context, std::nullopt)->isValid());
+  EXPECT_TRUE(DIExpression::get(Context, {})->isValid());
 
   // Valid constructions.
   EXPECT_VALID(dwarf::DW_OP_plus_uconst, 6);
@@ -3240,6 +3871,85 @@ TEST_F(DIExpressionTest, createFragmentExpression) {
 
 #undef EXPECT_VALID_FRAGMENT
 #undef EXPECT_INVALID_FRAGMENT
+}
+
+TEST_F(DIExpressionTest, extractLeadingOffset) {
+  int64_t Offset;
+  SmallVector<uint64_t> Remaining;
+  using namespace dwarf;
+#define OPS(...) SmallVector<uint64_t>(ArrayRef<uint64_t>{__VA_ARGS__})
+#define EXTRACT_FROM(...)                                                      \
+  DIExpression::get(Context, {__VA_ARGS__})                                    \
+      ->extractLeadingOffset(Offset, Remaining)
+  // Test the number of expression inputs
+  // ------------------------------------
+  //
+  // Single location expressions are permitted.
+  EXPECT_TRUE(EXTRACT_FROM(DW_OP_plus_uconst, 2));
+  EXPECT_EQ(Offset, 2);
+  EXPECT_EQ(Remaining.size(), 0u);
+  // This is also a single-location.
+  EXPECT_TRUE(EXTRACT_FROM(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 2));
+  EXPECT_EQ(Offset, 2);
+  EXPECT_EQ(Remaining.size(), 0u);
+  // Variadic locations are not permitted. A non-zero arg is assumed to
+  // indicate multiple inputs.
+  EXPECT_FALSE(EXTRACT_FROM(DW_OP_LLVM_arg, 1));
+  EXPECT_FALSE(EXTRACT_FROM(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus));
+
+  // Test offsets expressions
+  // ------------------------
+  EXPECT_TRUE(EXTRACT_FROM());
+  EXPECT_EQ(Offset, 0);
+  EXPECT_EQ(Remaining.size(), 0u);
+
+  EXPECT_TRUE(EXTRACT_FROM(DW_OP_constu, 4, DW_OP_plus));
+  EXPECT_EQ(Offset, 4);
+  EXPECT_EQ(Remaining.size(), 0u);
+
+  EXPECT_TRUE(EXTRACT_FROM(DW_OP_constu, 2, DW_OP_minus));
+  EXPECT_EQ(Offset, -2);
+  EXPECT_EQ(Remaining.size(), 0u);
+
+  EXPECT_TRUE(EXTRACT_FROM(DW_OP_plus_uconst, 8));
+  EXPECT_EQ(Offset, 8);
+  EXPECT_EQ(Remaining.size(), 0u);
+
+  EXPECT_TRUE(EXTRACT_FROM(DW_OP_plus_uconst, 4, DW_OP_constu, 2, DW_OP_minus));
+  EXPECT_EQ(Offset, 2);
+  EXPECT_EQ(Remaining.size(), 0u);
+
+  // Not all operations are permitted for simplicity. Can be added
+  // if needed in future.
+  EXPECT_FALSE(EXTRACT_FROM(DW_OP_constu, 2, DW_OP_mul));
+
+  // Test "remaining ops"
+  // --------------------
+  EXPECT_TRUE(EXTRACT_FROM(DW_OP_plus_uconst, 4, DW_OP_constu, 8, DW_OP_minus,
+                           DW_OP_LLVM_fragment, 0, 32));
+  EXPECT_EQ(Remaining, OPS(DW_OP_LLVM_fragment, 0, 32));
+  EXPECT_EQ(Offset, -4);
+
+  EXPECT_TRUE(EXTRACT_FROM(DW_OP_deref));
+  EXPECT_EQ(Remaining, OPS(DW_OP_deref));
+  EXPECT_EQ(Offset, 0);
+
+  // Check things after the non-offset ops are added too.
+  EXPECT_TRUE(EXTRACT_FROM(DW_OP_plus_uconst, 2, DW_OP_deref_size, 4,
+                           DW_OP_stack_value));
+  EXPECT_EQ(Remaining, OPS(DW_OP_deref_size, 4, DW_OP_stack_value));
+  EXPECT_EQ(Offset, 2);
+
+  // DW_OP_deref_type isn't supported in LLVM so this currently fails.
+  EXPECT_FALSE(EXTRACT_FROM(DW_OP_deref_type, 0));
+
+  EXPECT_TRUE(EXTRACT_FROM(DW_OP_LLVM_extract_bits_zext, 0, 8));
+  EXPECT_EQ(Remaining, OPS(DW_OP_LLVM_extract_bits_zext, 0, 8));
+
+  EXPECT_TRUE(EXTRACT_FROM(DW_OP_LLVM_extract_bits_sext, 4, 4));
+  EXPECT_EQ(Remaining, OPS(DW_OP_LLVM_extract_bits_sext, 4, 4));
+#undef EXTRACT_FROM
+#undef OPS
 }
 
 TEST_F(DIExpressionTest, convertToUndefExpression) {
@@ -3517,16 +4227,18 @@ TEST_F(DIExpressionTest, foldConstant) {
   DIExpression *Expr;
   DIExpression *NewExpr;
 
-#define EXPECT_FOLD_CONST(StartWidth, StartValue, EndWidth, EndValue, NumElts)  \
-  Int = ConstantInt::get(Context, APInt(StartWidth, StartValue));               \
-  std::tie(NewExpr, NewInt) = Expr->constantFold(Int);                          \
-  ASSERT_EQ(NewInt->getBitWidth(), EndWidth##u);                                \
-  EXPECT_EQ(NewInt->getValue(), APInt(EndWidth, EndValue));                     \
+#define EXPECT_FOLD_CONST(StartWidth, StartValue, StartIsSigned, EndWidth,     \
+                          EndValue, EndIsSigned, NumElts)                      \
+  Int =                                                                        \
+      ConstantInt::get(Context, APInt(StartWidth, StartValue, StartIsSigned)); \
+  std::tie(NewExpr, NewInt) = Expr->constantFold(Int);                         \
+  ASSERT_EQ(NewInt->getBitWidth(), EndWidth##u);                               \
+  EXPECT_EQ(NewInt->getValue(), APInt(EndWidth, EndValue, EndIsSigned));       \
   EXPECT_EQ(NewExpr->getNumElements(), NumElts##u)
 
   // Unfoldable expression should return the original unmodified Int/Expr.
   Expr = DIExpression::get(Context, {dwarf::DW_OP_deref});
-  EXPECT_FOLD_CONST(32, 117, 32, 117, 1);
+  EXPECT_FOLD_CONST(32, 117, false, 32, 117, false, 1);
   EXPECT_EQ(NewExpr, Expr);
   EXPECT_EQ(NewInt, Int);
   EXPECT_TRUE(NewExpr->startsWithDeref());
@@ -3534,18 +4246,18 @@ TEST_F(DIExpressionTest, foldConstant) {
   // One unsigned bit-width conversion.
   Expr = DIExpression::get(
       Context, {dwarf::DW_OP_LLVM_convert, 72, dwarf::DW_ATE_unsigned});
-  EXPECT_FOLD_CONST(8, 12, 72, 12, 0);
+  EXPECT_FOLD_CONST(8, 12, false, 72, 12, false, 0);
 
   // Two unsigned bit-width conversions (mask truncation).
   Expr = DIExpression::get(
       Context, {dwarf::DW_OP_LLVM_convert, 8, dwarf::DW_ATE_unsigned,
                 dwarf::DW_OP_LLVM_convert, 16, dwarf::DW_ATE_unsigned});
-  EXPECT_FOLD_CONST(32, -1, 16, 0xff, 0);
+  EXPECT_FOLD_CONST(32, -1, true, 16, 0xff, false, 0);
 
   // Sign extension.
   Expr = DIExpression::get(
       Context, {dwarf::DW_OP_LLVM_convert, 32, dwarf::DW_ATE_signed});
-  EXPECT_FOLD_CONST(16, -1, 32, -1, 0);
+  EXPECT_FOLD_CONST(16, -1, true, 32, -1, true, 0);
 
   // Get non-foldable operations back in the new Expr.
   uint64_t Elements[] = {dwarf::DW_OP_deref, dwarf::DW_OP_stack_value};
@@ -3554,10 +4266,31 @@ TEST_F(DIExpressionTest, foldConstant) {
       Context, {dwarf::DW_OP_LLVM_convert, 32, dwarf::DW_ATE_signed});
   Expr = DIExpression::append(Expr, Expected);
   ASSERT_EQ(Expr->getNumElements(), 5u);
-  EXPECT_FOLD_CONST(16, -1, 32, -1, 2);
+  EXPECT_FOLD_CONST(16, -1, true, 32, -1, true, 2);
   EXPECT_EQ(NewExpr->getElements(), Expected);
 
 #undef EXPECT_FOLD_CONST
+}
+
+TEST_F(DIExpressionTest, appendToStackAssert) {
+  DIExpression *Expr = DIExpression::get(Context, {});
+
+  // Verify that the DW_OP_LLVM_convert operands, which have the same values as
+  // DW_OP_stack_value and DW_OP_LLVM_fragment, do not get interpreted as such
+  // operations. This previously triggered an assert.
+  uint64_t FromSize = dwarf::DW_OP_stack_value;
+  uint64_t ToSize = dwarf::DW_OP_LLVM_fragment;
+  uint64_t Ops[] = {
+      dwarf::DW_OP_LLVM_convert, FromSize, dwarf::DW_ATE_signed,
+      dwarf::DW_OP_LLVM_convert, ToSize,   dwarf::DW_ATE_signed,
+  };
+  Expr = DIExpression::appendToStack(Expr, Ops);
+
+  uint64_t Expected[] = {
+      dwarf::DW_OP_LLVM_convert, FromSize, dwarf::DW_ATE_signed,
+      dwarf::DW_OP_LLVM_convert, ToSize,   dwarf::DW_ATE_signed,
+      dwarf::DW_OP_stack_value};
+  EXPECT_EQ(Expr->getElements(), ArrayRef<uint64_t>(Expected));
 }
 
 typedef MetadataTest DIObjCPropertyTest;
@@ -3667,7 +4400,7 @@ TEST_F(DIImportedEntityTest, get) {
 typedef MetadataTest MetadataAsValueTest;
 
 TEST_F(MetadataAsValueTest, MDNode) {
-  MDNode *N = MDNode::get(Context, std::nullopt);
+  MDNode *N = MDNode::get(Context, {});
   auto *V = MetadataAsValue::get(Context, N);
   EXPECT_TRUE(V->getType()->isMetadataTy());
   EXPECT_EQ(N, V->getMetadata());
@@ -3677,7 +4410,7 @@ TEST_F(MetadataAsValueTest, MDNode) {
 }
 
 TEST_F(MetadataAsValueTest, MDNodeMDNode) {
-  MDNode *N = MDNode::get(Context, std::nullopt);
+  MDNode *N = MDNode::get(Context, {});
   Metadata *Ops[] = {N};
   MDNode *N2 = MDNode::get(Context, Ops);
   auto *V = MetadataAsValue::get(Context, N2);
@@ -3724,12 +4457,31 @@ TEST_F(ValueAsMetadataTest, UpdatesOnRAUW) {
   EXPECT_TRUE(MD->getValue() == GV1.get());
 }
 
+TEST_F(ValueAsMetadataTest, handleRAUWWithTypeChange) {
+  // Test that handleRAUW supports type changes.
+  // This is helpful in cases where poison values are used to encode
+  // types in metadata, e.g. in type annotations.
+  // Changing the type stored in metadata requires to change the type of
+  // the stored poison value.
+  auto *I32Poison = PoisonValue::get(Type::getInt32Ty(Context));
+  auto *I64Poison = PoisonValue::get(Type::getInt64Ty(Context));
+  auto *MD = ConstantAsMetadata::get(I32Poison);
+
+  EXPECT_EQ(MD->getValue(), I32Poison);
+  EXPECT_NE(MD->getValue(), I64Poison);
+
+  ValueAsMetadata::handleRAUW(I32Poison, I64Poison);
+
+  EXPECT_NE(MD->getValue(), I32Poison);
+  EXPECT_EQ(MD->getValue(), I64Poison);
+}
+
 TEST_F(ValueAsMetadataTest, TempTempReplacement) {
   // Create a constant.
   ConstantAsMetadata *CI =
       ConstantAsMetadata::get(ConstantInt::get(Context, APInt(8, 0)));
 
-  auto Temp1 = MDTuple::getTemporary(Context, std::nullopt);
+  auto Temp1 = MDTuple::getTemporary(Context, {});
   auto Temp2 = MDTuple::getTemporary(Context, {CI});
   auto *N = MDTuple::get(Context, {Temp1.get()});
 
@@ -3747,7 +4499,7 @@ TEST_F(ValueAsMetadataTest, CollidingDoubleUpdates) {
       ConstantAsMetadata::get(ConstantInt::get(Context, APInt(8, 0)));
 
   // Create a temporary to prevent nodes from resolving.
-  auto Temp = MDTuple::getTemporary(Context, std::nullopt);
+  auto Temp = MDTuple::getTemporary(Context, {});
 
   // When the first operand of N1 gets reset to nullptr, it'll collide with N2.
   Metadata *Ops1[] = {CI, CI, Temp.get()};
@@ -3857,8 +4609,7 @@ TEST(NamedMDNodeTest, Search) {
   std::string Str;
   raw_string_ostream oss(Str);
   NMD->print(oss);
-  EXPECT_STREQ("!llvm.NMD1 = !{!0, !1}\n",
-               oss.str().c_str());
+  EXPECT_STREQ("!llvm.NMD1 = !{!0, !1}\n", Str.c_str());
 }
 
 typedef MetadataTest FunctionAttachmentTest;
@@ -4013,7 +4764,7 @@ TEST_F(DistinctMDOperandPlaceholderTest, replaceUseWith) {
   ASSERT_EQ(&PH2, D->getOperand(2));
 
   // Replace them.
-  auto *N0 = MDTuple::get(Context, std::nullopt);
+  auto *N0 = MDTuple::get(Context, {});
   auto *N1 = MDTuple::get(Context, N0);
   PH0.replaceUseWith(N0);
   PH1.replaceUseWith(N1);
@@ -4025,8 +4776,7 @@ TEST_F(DistinctMDOperandPlaceholderTest, replaceUseWith) {
 
 TEST_F(DistinctMDOperandPlaceholderTest, replaceUseWithNoUser) {
   // There is no user, but we can still call replace.
-  DistinctMDOperandPlaceholder(7).replaceUseWith(
-      MDTuple::get(Context, std::nullopt));
+  DistinctMDOperandPlaceholder(7).replaceUseWith(MDTuple::get(Context, {}));
 }
 
 // Test various assertions in metadata tracking. Don't run these tests if gtest
@@ -4192,7 +4942,7 @@ TEST_F(MDTupleAllocationTest, Resize) {
   EXPECT_EQ(B->getOperand(3), Value5);
 
   // Check that we can resize temporary nodes as well.
-  auto Temp1 = MDTuple::getTemporary(Context, std::nullopt);
+  auto Temp1 = MDTuple::getTemporary(Context, {});
   EXPECT_EQ(Temp1->getNumOperands(), 0u);
 
   Temp1->push_back(Value1);
@@ -4249,7 +4999,7 @@ TEST_F(MDTupleAllocationTest, Tracking2) {
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG) && !defined(GTEST_HAS_SEH)
 typedef MetadataTest MDTupleAllocationDeathTest;
 TEST_F(MDTupleAllocationDeathTest, ResizeRejected) {
-  MDTuple *A = MDTuple::get(Context, None);
+  MDTuple *A = MDTuple::get(Context, std::nullopt);
   auto *Value1 = getConstantAsMetadata();
   EXPECT_DEATH(A->push_back(Value1),
                "Resizing is not supported for uniqued nodes");

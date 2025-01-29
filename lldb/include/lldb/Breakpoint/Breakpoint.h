@@ -588,6 +588,8 @@ public:
   /// Get statistics associated with this breakpoint in JSON format.
   llvm::json::Value GetStatistics();
 
+  void ResetStatistics();
+
   /// Get the time it took to resolve all locations in this breakpoint.
   StatsDuration::Duration GetResolveTime() const { return m_resolve_time; }
 
@@ -637,7 +639,6 @@ private:
   Breakpoint(Target &new_target, const Breakpoint &bp_to_copy_from);
 
   // For Breakpoint only
-  bool m_being_created;
   bool
       m_hardware; // If this breakpoint is required to use a hardware breakpoint
   Target &m_target; // The target that holds this breakpoint.
@@ -672,7 +673,7 @@ private:
 
   void SendBreakpointChangedEvent(lldb::BreakpointEventType eventKind);
 
-  void SendBreakpointChangedEvent(BreakpointEventData *data);
+  void SendBreakpointChangedEvent(const lldb::EventDataSP &breakpoint_data_sp);
 
   Breakpoint(const Breakpoint &) = delete;
   const Breakpoint &operator=(const Breakpoint &) = delete;

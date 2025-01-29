@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -hlfir=false -polymorphic-type %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 module storage_size_test
   type :: p1
@@ -29,7 +29,7 @@ contains
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i64
 ! CHECK: %[[IS_NULL_ADDR:.*]] = arith.cmpi eq, %[[P_ADDR_I64]], %[[C0]] : i64
 ! CHECK: fir.if %[[IS_NULL_ADDR]] {
-! CHECK:   %{{.*}} = fir.call @_FortranAReportFatalUserError(%{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<i8>, !fir.ref<i8>, i32) -> none
+! CHECK:   fir.call @_FortranAReportFatalUserError(%{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<i8>, !fir.ref<i8>, i32) -> ()
 ! CHECK: }
 ! CHECK: %[[LOAD_P:.*]] = fir.load %[[P]] : !fir.ref<!fir.class<!fir.ptr<none>>>
 ! CHECK: %[[ELE_SIZE:.*]] = fir.box_elesize %[[LOAD_P]] : (!fir.class<!fir.ptr<none>>) -> i32
@@ -53,7 +53,7 @@ contains
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i64
 ! CHECK: %[[IS_NULL_ADDR:.*]] = arith.cmpi eq, %[[P_ADDR_I64]], %[[C0]] : i64
 ! CHECK: fir.if %[[IS_NULL_ADDR]] {
-! CHECK:   %{{.*}} = fir.call @_FortranAReportFatalUserError(%{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<i8>, !fir.ref<i8>, i32) -> none
+! CHECK:   fir.call @_FortranAReportFatalUserError(%{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<i8>, !fir.ref<i8>, i32) -> ()
 ! CHECK: }
 ! CHECK: %[[LOAD_P:.*]] = fir.load %[[P]] : !fir.ref<!fir.class<!fir.heap<none>>>
 ! CHECK: %[[ELE_SIZE:.*]] = fir.box_elesize %[[LOAD_P]] : (!fir.class<!fir.heap<none>>) -> i32

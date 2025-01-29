@@ -15,24 +15,40 @@ llvm.func @vector_with_non_vector_type() -> f32 {
 
 // -----
 
-llvm.func @no_non_complex_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>> {
-  // expected-error @below{{expected struct type to be a complex number}}
+llvm.func @non_array_attr_for_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>> {
+  // expected-error @below{{expected an array attribute for a struct constant}}
   %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
   llvm.return %0 : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
 }
 
 // -----
 
-llvm.func @no_non_complex_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>> {
-  // expected-error @below{{expected struct type to be a complex number}}
+llvm.func @non_array_attr_for_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>> {
+  // expected-error @below{{expected an array attribute for a struct constant}}
   %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>>
   llvm.return %0 : !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>>
 }
 
 // -----
 
+llvm.func @invalid_struct_element_type() -> !llvm.struct<(f64, array<2 x i32>)> {
+  // expected-error @below{{expected struct element types to be floating point type or integer type}}
+  %0 = llvm.mlir.constant([1.0 : f64, dense<[1, 2]> : tensor<2xi32>]) : !llvm.struct<(f64, array<2 x i32>)>
+  llvm.return %0 : !llvm.struct<(f64, array<2 x i32>)>
+}
+
+// -----
+
+llvm.func @wrong_struct_element_attr_type() -> !llvm.struct<(f64, f64)> {
+  // expected-error @below{{expected struct element attribute types to be floating point type or integer type}}
+  %0 = llvm.mlir.constant([dense<[1, 2]> : tensor<2xi32>, 2.0 : f64]) : !llvm.struct<(f64, f64)>
+  llvm.return %0 : !llvm.struct<(f64, f64)>
+}
+
+// -----
+
 llvm.func @struct_wrong_attribute_element_type() -> !llvm.struct<(f64, f64)> {
-  // expected-error @below{{FloatAttr does not match expected type of the constant}}
+  // expected-error @below{{struct element at index 0 is of wrong type}}
   %0 = llvm.mlir.constant([1.0 : f32, 1.0 : f32]) : !llvm.struct<(f64, f64)>
   llvm.return %0 : !llvm.struct<(f64, f64)>
 }
@@ -68,8 +84,8 @@ llvm.mlir.global internal constant @test([2.5, 7.4]) : !llvm.array<2 x f64>
 
 // -----
 
-// expected-error @below{{LLVM attribute 'noinline' does not expect a value}}
-llvm.func @passthrough_unexpected_value() attributes {passthrough = [["noinline", "42"]]}
+// expected-error @below{{LLVM attribute 'readonly' does not expect a value}}
+llvm.func @passthrough_unexpected_value() attributes {passthrough = [["readonly", "42"]]}
 
 // -----
 
@@ -172,7 +188,7 @@ llvm.func @sadd_overflow_intr_wrong_type(%arg0 : i32, %arg1 : f32) -> !llvm.stru
 
 llvm.func @assume_intr_wrong_type(%cond : i16) {
   // expected-error @below{{op operand #0 must be 1-bit signless integer, but got 'i16'}}
-  "llvm.intr.assume"(%cond) : (i16) -> ()
+  llvm.intr.assume %cond : i16
   llvm.return
 }
 
@@ -261,6 +277,14 @@ llvm.func @masked_gather_intr_wrong_type(%ptrs : vector<7xf32>, %mask : vector<7
 
 // -----
 
+llvm.func @masked_gather_intr_wrong_type_scalable(%ptrs : !llvm.vec<7 x ptr>, %mask : vector<[7]xi1>) -> vector<[7]xf32> {
+  // expected-error @below{{expected operand #1 type to be '!llvm.vec<? x 7 x  ptr>'}}
+  %0 = llvm.intr.masked.gather %ptrs, %mask { alignment = 1: i32} : (!llvm.vec<7 x ptr>, vector<[7]xi1>) -> vector<[7]xf32>
+  llvm.return %0 : vector<[7]xf32>
+}
+
+// -----
+
 llvm.func @masked_scatter_intr_wrong_type(%vec : f32, %ptrs : !llvm.vec<7xptr>, %mask : vector<7xi1>) {
   // expected-error @below{{op operand #0 must be LLVM dialect-compatible vector type, but got 'f32'}}
   llvm.intr.masked.scatter %vec, %ptrs, %mask { alignment = 1: i32} : f32, vector<7xi1> into !llvm.vec<7xptr>
@@ -269,9 +293,17 @@ llvm.func @masked_scatter_intr_wrong_type(%vec : f32, %ptrs : !llvm.vec<7xptr>, 
 
 // -----
 
+llvm.func @masked_scatter_intr_wrong_type_scalable(%vec : vector<[7]xf32>, %ptrs : !llvm.vec<7xptr>, %mask : vector<[7]xi1>) {
+  // expected-error @below{{expected operand #2 type to be '!llvm.vec<? x 7 x  ptr>'}}
+  llvm.intr.masked.scatter %vec, %ptrs, %mask { alignment = 1: i32} : vector<[7]xf32>, vector<[7]xi1> into !llvm.vec<7xptr>
+  llvm.return
+}
+
+// -----
+
 llvm.func @stepvector_intr_wrong_type() -> vector<7xf32> {
   // expected-error @below{{op result #0 must be LLVM dialect-compatible vector of signless integer, but got 'vector<7xf32>'}}
-  %0 = llvm.intr.experimental.stepvector : vector<7xf32>
+  %0 = llvm.intr.stepvector : vector<7xf32>
   llvm.return %0 : vector<7xf32>
 }
 
@@ -313,3 +345,55 @@ llvm.func @foo() {
   // expected-error @below{{must appear at the module level}}
   llvm.linker_options ["test"]
 }
+
+// -----
+
+module @does_not_exist {
+  // expected-error @below{{resource does not exist}}
+  llvm.mlir.global internal constant @constant(dense_resource<test0> : tensor<4xf32>) : !llvm.array<4 x f32>
+}
+
+// -----
+
+module @raw_data_does_not_match_element_type_size {
+  // expected-error @below{{raw data size does not match element type size}}
+  llvm.mlir.global internal constant @constant(dense_resource<test1> : tensor<5xf32>) : !llvm.array<4 x f32>
+}
+
+{-#
+  dialect_resources: {
+    builtin: {
+      test1: "0x0800000054A3B53ED6C0B33E55D1A2BDE5D2BB3E"
+    }
+  }
+#-}
+
+// -----
+
+module @does_not_exist {
+  // expected-error @below{{unsupported dense_resource type}}
+  llvm.mlir.global internal constant @constant(dense_resource<test1> : memref<4xf32>) : !llvm.array<4 x f32>
+}
+
+{-#
+  dialect_resources: {
+    builtin: {
+      test1: "0x0800000054A3B53ED6C0B33E55D1A2BDE5D2BB3E"
+    }
+  }
+#-}
+
+// -----
+
+module @no_known_conversion_innermost_eltype {
+  // expected-error @below{{no known conversion for innermost element type}}
+  llvm.mlir.global internal constant @constant(dense_resource<test0> : tensor<4xi4>) : !llvm.array<4 x i4>
+}
+
+{-#
+  dialect_resources: {
+    builtin: {
+      test1: "0x0800000054A3B53ED6C0B33E55D1A2BDE5D2BB3E"
+    }
+  }
+#-}

@@ -29,6 +29,8 @@ class LinalgStructuredBase_Op<string mnemonic, list<Trait> props>
   : Op<Linalg_Dialect, mnemonic, !listconcat([
        SingleBlockImplicitTerminator<"YieldOp">,
        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+       DeclareOpInterfaceMethods<ConditionallySpeculatable>,
+       RecursiveMemoryEffects,
        DestinationStyleOpInterface,
        LinalgStructuredInterface,
        ReifyRankedShapedTypeOpInterface], props)> {
@@ -209,6 +211,24 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
     }
 
     MutableOperandRange getDpsInitsMutable() { return getOutputsMutable(); }
+
+    // Return true only if GenericOp has a single input and single
+    // output, and the body is a single yieldOp that yields the input.
+    // This check is useful when trying to determine if the op is
+    // essentially a transpose, broadcast, copy or something like that.
+    bool isSingleYieldOp() {
+      if (!isSingleInputOutput())
+        return false;
+     Block *body = getBody();
+     if (body->getOperations().size() != 1)
+       return false;
+
+     auto yieldOp = dyn_cast<linalg::YieldOp>(body->back());
+       if (!yieldOp || yieldOp.getNumOperands() != 1 ||
+           yieldOp->getOperand(0) != body->getArgument(0))
+         return false;
+     return true;
+   }
   }];
 
   let hasCanonicalizer = 1;
@@ -245,7 +265,7 @@ def MapOp : LinalgStructuredBase_Op<"map", [
           }
     ```
 
-    Shortened print form is available. Applies to simple maps with one 
+    Shortened print form is available. Applies to simple maps with one
     non-yield operation inside the body.
 
     The example above will be printed as:
@@ -391,7 +411,6 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
 
 def TransposeOp : LinalgStructuredBase_Op<"transpose", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    SameVariadicOperandSize,
     SingleBlockImplicitTerminator<"YieldOp">]> {
   let summary = "Transpose operator";
   let description = [{
@@ -453,11 +472,10 @@ def TransposeOp : LinalgStructuredBase_Op<"transpose", [
       getRegionBuilder() {
       return regionBuilder;
     }
-
-    static void createRegion(::mlir::OpBuilder &opBuilder,
-                             ::mlir::OperationState & odsState);
   }];
 
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
@@ -469,7 +487,6 @@ def TransposeOp : LinalgStructuredBase_Op<"transpose", [
 
 def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    SameVariadicOperandSize,
     SingleBlockImplicitTerminator<"YieldOp">]> {
   let summary = "Static broadcast operator";
   let description = [{
@@ -479,7 +496,7 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
     ```
       %bcast = linalg.broadcast
           ins(%input:tensor<16xf32>)
-          inits(%init:tensor<16x64xf32>)
+          outs(%init:tensor<16x64xf32>)
           dimensions = [1]
     ```
   }];
@@ -531,6 +548,136 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Op definition for MatmulOp
+//===----------------------------------------------------------------------===//
+
+def MatmulOp : LinalgStructuredBase_Op<"matmul", [
+               AttrSizedOperandSegments,
+               LinalgContractionOpInterface]> {
+
+  let summary = [{
+    Performs a matrix multiplication of two 2D inputs without broadcast or transpose.
+    }];
+  let description = [{
+    Numeric casting is performed on the operands to the inner multiply,
+    promoting them to the same data type as the accumulator/output.
+
+    Broadcast and Transpose semantics can be appiled by specifying the explicit attribute
+    'indexing_maps' as shown below.This is a list attribute, so the list must include all
+    the maps if specified.
+
+    Example Transpose:
+    ```
+    linalg.matmul indexing_maps = [
+                   affine_map<(d0, d1, d2) -> (d2, d0)>, // transpose
+                   affine_map<(d0, d1, d2) -> (d2, d1)>,
+                   affine_map<(d0, d1, d2) -> (d0, d1)>
+                   ]
+                   ins(%arg0, %arg1 : memref<5x3xf32>,memref<5x7xf32>)
+                   outs(%arg2: memref<3x7xf32>)
+     ```
+
+    Example Broadcast:
+     ```
+    linalg.matmul indexing_maps = [
+                   affine_map<(d0, d1, d2) -> (d2)>,     // broadcast
+                   affine_map<(d0, d1, d2) -> (d2, d1)>,
+                   affine_map<(d0, d1, d2) -> (d0, d1)>
+                  ]
+                  ins(%arg0, %arg1 : memref<3xf32>, memref<5x7xf32>)
+                  outs(%arg2: memref<3x7xf32>)
+    ```
+
+    Example Broadcast and transpose:
+    ```
+    linalg.matmul indexing_maps = [
+                      affine_map<(d0, d1, d2) -> (d2, d0)>, // transpose
+                      affine_map<(d0, d1, d2) -> (d2)>,     // broadcast
+                      affine_map<(d0, d1, d2) -> (d0, d1)>
+                    ]
+                    ins(%arg0, %arg1 : memref<5x3xf32>, memref<7xf32>) outs(%arg2: memref<3x7xf32>)
+    ```
+    }];
+
+    let arguments = (ins
+      Variadic<AnyType>:$inputs,
+      Variadic<AnyShaped>:$outputs,
+      DefaultValuedOptionalAttr<AffineMapArrayAttr, "{}">:$indexing_maps,
+      DefaultValuedOptionalAttr<TypeFnAttr, "TypeFn::cast_signed">:$cast
+    );
+    let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
+    let regions = (region AnyRegion:$region);
+
+    let skipDefaultBuilders = 1;
+    let builders = [
+      OpBuilder<
+      (ins "ValueRange":$inputs, "ValueRange":$outputs,
+            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        buildMatmulOp($_builder, $_state, std::nullopt, inputs, outputs,
+          attributes, MatmulOp::getRegionBuilder(),
+          MatmulOp::getDefaultIndexingMaps($_builder.getContext()));
+      }]>,
+      OpBuilder<
+      (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
+            "ValueRange":$outputs,
+            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        buildMatmulOp($_builder, $_state, resultTensorTypes,
+          inputs, outputs, attributes, MatmulOp::getRegionBuilder(),
+          MatmulOp::getDefaultIndexingMaps($_builder.getContext()));
+      }]>,
+      OpBuilder<
+      (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
+       "ValueRange":$outputs,
+       "Attribute":$cast, CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        $_state.addAttribute("cast", cast);
+        buildMatmulOp($_builder, $_state, resultTensorTypes, inputs, outputs,
+          attributes, MatmulOp::getRegionBuilder(),
+          MatmulOp::getDefaultIndexingMaps($_builder.getContext()));
+      }]>
+
+    ];
+    let hasCustomAssemblyFormat = 1;
+    let hasFolder = 1;
+    let hasVerifier = 1;
+
+    let extraClassDeclaration = structuredOpsBaseDecls # [{
+      SmallVector<utils::IteratorType> getIteratorTypesArray();
+
+      /// Implements the block region builder.
+      static void regionBuilder(ImplicitLocOpBuilder &b,
+                                Block &block, ArrayRef<NamedAttribute> attrs);
+
+      /// Returns a list of AffineMap with the typical matmul indexing charactristic.
+      static SmallVector<AffineMap> getDefaultIndexingMaps(MLIRContext *context);
+
+      /// Returns true if the given broadcast map \p bcastMap is valid for this op.
+      bool isValidLhsRhsBroadcastMap(AffineMap bcastMap);
+
+      static std::function<void(ImplicitLocOpBuilder &,
+                                Block &, ArrayRef<NamedAttribute>)>
+      getRegionBuilder() {
+        return regionBuilder;
+      }
+
+      ::mlir::MutableOperandRange getDpsInitsMutable() {
+        return getOutputsMutable();
+      }
+
+      // Generic methods.
+      static unsigned getNumRegionArgs();
+      std::string getLibraryCallName();
+      bool hasDynamicIndexingMaps();
+      /// Check if the op has broadcast and/or transpose semantic. Returns true if the
+      /// user defined indexing maps are not equal to default map.
+      bool hasUserDefinedMaps();
+    }];
 }
 
 //===----------------------------------------------------------------------===//

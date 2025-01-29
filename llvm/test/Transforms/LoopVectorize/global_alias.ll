@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes='default<O1>,loop-vectorize,dce,instcombine' -force-vector-interleave=1 -force-vector-width=4 -S | FileCheck %s
+; RUN: opt -passes='loop-vectorize,dce,instcombine' -force-vector-interleave=1 -force-vector-width=4 -S %s | FileCheck %s
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:64:128-a0:0:64-n32-S64"
 
@@ -28,39 +28,23 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 define i32 @noAlias01(i32 %a) nounwind {
 entry:
-  %a.addr = alloca i32, align 4
-  %i = alloca i32, align 4
-  store i32 %a, ptr %a.addr, align 4
-  store i32 0, ptr %i, align 4
-  br label %for.cond
+  br label %for.body
 
-for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, ptr %i, align 4
-  %cmp = icmp slt i32 %0, 100
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %1 = load i32, ptr %i, align 4
-  %arrayidx = getelementptr inbounds [100 x i32], ptr getelementptr inbounds (%struct.anon, ptr @Foo, i32 0, i32 2), i32 0, i32 %1
-  %2 = load i32, ptr %arrayidx, align 4
-  %3 = load i32, ptr %a.addr, align 4
-  %add = add nsw i32 %2, %3
-  %4 = load i32, ptr %i, align 4
-  %arrayidx1 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %4
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %arrayidx = getelementptr inbounds %struct.anon, ptr @Foo, i32 0, i32 2, i32 %i.05
+  %0 = load i32, ptr %arrayidx, align 4
+  %add = add nsw i32 %0, %a
+  %arrayidx1 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %i.05
   store i32 %add, ptr %arrayidx1, align 4
-  br label %for.inc
+  %inc = add nuw nsw i32 %i.05, 1
+  %exitcond.not = icmp eq i32 %inc, 100
+  br i1 %exitcond.not, label %for.end, label %for.body
 
-for.inc:                                          ; preds = %for.body
-  %5 = load i32, ptr %i, align 4
-  %inc = add nsw i32 %5, 1
-  store i32 %inc, ptr %i, align 4
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  %6 = load i32, ptr %a.addr, align 4
-  %arrayidx2 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %6
-  %7 = load i32, ptr %arrayidx2, align 4
-  ret i32 %7
+for.end:                                          ; preds = %for.body
+  %arrayidx2 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %a
+  %1 = load i32, ptr %arrayidx2, align 4
+  ret i32 %1
 }
 
 ; /// Different objects, positive induction with widening slide
@@ -76,40 +60,24 @@ for.end:                                          ; preds = %for.cond
 
 define i32 @noAlias02(i32 %a) {
 entry:
-  %a.addr = alloca i32, align 4
-  %i = alloca i32, align 4
-  store i32 %a, ptr %a.addr, align 4
-  store i32 0, ptr %i, align 4
-  br label %for.cond
+  br label %for.body
 
-for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, ptr %i, align 4
-  %cmp = icmp slt i32 %0, 90
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %1 = load i32, ptr %i, align 4
-  %add = add nsw i32 %1, 10
-  %arrayidx = getelementptr inbounds [100 x i32], ptr getelementptr inbounds (%struct.anon, ptr @Foo, i32 0, i32 2), i32 0, i32 %add
-  %2 = load i32, ptr %arrayidx, align 4
-  %3 = load i32, ptr %a.addr, align 4
-  %add1 = add nsw i32 %2, %3
-  %4 = load i32, ptr %i, align 4
-  %arrayidx2 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %4
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %add = add nuw nsw i32 %i.05, 10
+  %arrayidx = getelementptr inbounds %struct.anon, ptr @Foo, i32 0, i32 2, i32 %add
+  %0 = load i32, ptr %arrayidx, align 4
+  %add1 = add nsw i32 %0, %a
+  %arrayidx2 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %i.05
   store i32 %add1, ptr %arrayidx2, align 4
-  br label %for.inc
+  %inc = add nuw nsw i32 %i.05, 1
+  %exitcond.not = icmp eq i32 %inc, 90
+  br i1 %exitcond.not, label %for.end, label %for.body
 
-for.inc:                                          ; preds = %for.body
-  %5 = load i32, ptr %i, align 4
-  %inc = add nsw i32 %5, 1
-  store i32 %inc, ptr %i, align 4
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  %6 = load i32, ptr %a.addr, align 4
-  %arrayidx3 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %6
-  %7 = load i32, ptr %arrayidx3, align 4
-  ret i32 %7
+for.end:                                          ; preds = %for.body
+  %arrayidx3 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %a
+  %1 = load i32, ptr %arrayidx3, align 4
+  ret i32 %1
 }
 
 ; /// Different objects, positive induction with shortening slide
@@ -125,40 +93,24 @@ for.end:                                          ; preds = %for.cond
 
 define i32 @noAlias03(i32 %a) {
 entry:
-  %a.addr = alloca i32, align 4
-  %i = alloca i32, align 4
-  store i32 %a, ptr %a.addr, align 4
-  store i32 0, ptr %i, align 4
-  br label %for.cond
+  br label %for.body
 
-for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, ptr %i, align 4
-  %cmp = icmp slt i32 %0, 100
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %1 = load i32, ptr %i, align 4
-  %arrayidx = getelementptr inbounds [100 x i32], ptr getelementptr inbounds (%struct.anon, ptr @Foo, i32 0, i32 2), i32 0, i32 %1
-  %2 = load i32, ptr %arrayidx, align 4
-  %3 = load i32, ptr %a.addr, align 4
-  %add = add nsw i32 %2, %3
-  %4 = load i32, ptr %i, align 4
-  %add1 = add nsw i32 %4, 10
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %arrayidx = getelementptr inbounds %struct.anon, ptr @Foo, i32 0, i32 2, i32 %i.05
+  %0 = load i32, ptr %arrayidx, align 4
+  %add = add nsw i32 %0, %a
+  %add1 = add nuw nsw i32 %i.05, 10
   %arrayidx2 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %add1
   store i32 %add, ptr %arrayidx2, align 4
-  br label %for.inc
+  %inc = add nuw nsw i32 %i.05, 1
+  %exitcond.not = icmp eq i32 %inc, 100
+  br i1 %exitcond.not, label %for.end, label %for.body
 
-for.inc:                                          ; preds = %for.body
-  %5 = load i32, ptr %i, align 4
-  %inc = add nsw i32 %5, 1
-  store i32 %inc, ptr %i, align 4
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  %6 = load i32, ptr %a.addr, align 4
-  %arrayidx3 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %6
-  %7 = load i32, ptr %arrayidx3, align 4
-  ret i32 %7
+for.end:                                          ; preds = %for.body
+  %arrayidx3 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %a
+  %1 = load i32, ptr %arrayidx3, align 4
+  ret i32 %1
 }
 
 ; /// Pointer access, positive stride, run-time check added
@@ -177,42 +129,26 @@ for.end:                                          ; preds = %for.cond
 
 define i32 @noAlias04(i32 %a) #0 {
 entry:
-  %a.addr = alloca i32, align 4
-  %i = alloca i32, align 4
-  store i32 %a, ptr %a.addr, align 4
-  store i32 0, ptr %i, align 4
-  br label %for.cond
+  br label %for.body
 
-for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, ptr %i, align 4
-  %cmp = icmp slt i32 %0, 100
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %1 = load ptr, ptr @PB, align 4
-  %2 = load i32, ptr %i, align 4
-  %add.ptr = getelementptr inbounds i32, ptr %1, i32 %2
-  %3 = load i32, ptr %add.ptr, align 4
-  %4 = load i32, ptr %a.addr, align 4
-  %add = add nsw i32 %3, %4
-  %5 = load ptr, ptr @PA, align 4
-  %6 = load i32, ptr %i, align 4
-  %add.ptr1 = getelementptr inbounds i32, ptr %5, i32 %6
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %0 = load ptr, ptr @PB, align 4
+  %add.ptr = getelementptr inbounds i32, ptr %0, i32 %i.05
+  %1 = load i32, ptr %add.ptr, align 4
+  %add = add nsw i32 %1, %a
+  %2 = load ptr, ptr @PA, align 4
+  %add.ptr1 = getelementptr inbounds i32, ptr %2, i32 %i.05
   store i32 %add, ptr %add.ptr1, align 4
-  br label %for.inc
+  %inc = add nuw nsw i32 %i.05, 1
+  %exitcond.not = icmp eq i32 %inc, 100
+  br i1 %exitcond.not, label %for.end, label %for.body
 
-for.inc:                                          ; preds = %for.body
-  %7 = load i32, ptr %i, align 4
-  %inc = add nsw i32 %7, 1
-  store i32 %inc, ptr %i, align 4
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  %8 = load ptr, ptr @PA, align 4
-  %9 = load i32, ptr %a.addr, align 4
-  %add.ptr2 = getelementptr inbounds i32, ptr %8, i32 %9
-  %10 = load i32, ptr %add.ptr2, align 4
-  ret i32 %10
+for.end:                                          ; preds = %for.body
+  %3 = load ptr, ptr @PA, align 4
+  %add.ptr2 = getelementptr inbounds i32, ptr %3, i32 %a
+  %4 = load i32, ptr %add.ptr2, align 4
+  ret i32 %4
 }
 
 ; /// Different objects, positive induction, multi-array
@@ -228,47 +164,23 @@ for.end:                                          ; preds = %for.cond
 
 define i32 @noAlias05(i32 %a) #0 {
 entry:
-  %a.addr = alloca i32, align 4
-  %i = alloca i32, align 4
-  %N = alloca i32, align 4
-  store i32 %a, ptr %a.addr, align 4
-  store i32 10, ptr %N, align 4
-  store i32 0, ptr %i, align 4
-  br label %for.cond
+  br label %for.body
 
-for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, ptr %i, align 4
-  %cmp = icmp slt i32 %0, 100
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %1 = load i32, ptr %i, align 4
-  %2 = load i32, ptr %N, align 4
-  %arrayidx = getelementptr inbounds [100 x [100 x i32]], ptr getelementptr inbounds (%struct.anon.0, ptr @Bar, i32 0, i32 2), i32 0, i32 %2
-  %arrayidx1 = getelementptr inbounds [100 x i32], ptr %arrayidx, i32 0, i32 %1
-  %3 = load i32, ptr %arrayidx1, align 4
-  %4 = load i32, ptr %a.addr, align 4
-  %add = add nsw i32 %3, %4
-  %5 = load i32, ptr %i, align 4
-  %6 = load i32, ptr %N, align 4
-  %arrayidx2 = getelementptr inbounds [100 x [100 x i32]], ptr @Bar, i32 0, i32 %6
-  %arrayidx3 = getelementptr inbounds [100 x i32], ptr %arrayidx2, i32 0, i32 %5
+for.body:                                         ; preds = %entry, %for.body
+  %i.07 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %arrayidx1 = getelementptr inbounds %struct.anon.0, ptr @Bar, i32 0, i32 2, i32 10, i32 %i.07
+  %0 = load i32, ptr %arrayidx1, align 4
+  %add = add nsw i32 %0, %a
+  %arrayidx3 = getelementptr inbounds %struct.anon.0, ptr @Bar, i32 0, i32 0, i32 10, i32 %i.07
   store i32 %add, ptr %arrayidx3, align 4
-  br label %for.inc
+  %inc = add nuw nsw i32 %i.07, 1
+  %exitcond.not = icmp eq i32 %inc, 100
+  br i1 %exitcond.not, label %for.end, label %for.body
 
-for.inc:                                          ; preds = %for.body
-  %7 = load i32, ptr %i, align 4
-  %inc = add nsw i32 %7, 1
-  store i32 %inc, ptr %i, align 4
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  %8 = load i32, ptr %a.addr, align 4
-  %9 = load i32, ptr %N, align 4
-  %arrayidx4 = getelementptr inbounds [100 x [100 x i32]], ptr @Bar, i32 0, i32 %9
-  %arrayidx5 = getelementptr inbounds [100 x i32], ptr %arrayidx4, i32 0, i32 %8
-  %10 = load i32, ptr %arrayidx5, align 4
-  ret i32 %10
+for.end:                                          ; preds = %for.body
+  %arrayidx5 = getelementptr inbounds %struct.anon.0, ptr @Bar, i32 0, i32 0, i32 10, i32 %a
+  %1 = load i32, ptr %arrayidx5, align 4
+  ret i32 %1
 }
 
 ; /// Same objects, positive induction, multi-array, different sub-elements
@@ -284,48 +196,23 @@ for.end:                                          ; preds = %for.cond
 
 define i32 @noAlias06(i32 %a) #0 {
 entry:
-  %a.addr = alloca i32, align 4
-  %i = alloca i32, align 4
-  %N = alloca i32, align 4
-  store i32 %a, ptr %a.addr, align 4
-  store i32 10, ptr %N, align 4
-  store i32 0, ptr %i, align 4
-  br label %for.cond
+  br label %for.body
 
-for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, ptr %i, align 4
-  %cmp = icmp slt i32 %0, 100
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %1 = load i32, ptr %i, align 4
-  %2 = load i32, ptr %N, align 4
-  %add = add nsw i32 %2, 1
-  %arrayidx = getelementptr inbounds [100 x [100 x i32]], ptr @Bar, i32 0, i32 %add
-  %arrayidx1 = getelementptr inbounds [100 x i32], ptr %arrayidx, i32 0, i32 %1
-  %3 = load i32, ptr %arrayidx1, align 4
-  %4 = load i32, ptr %a.addr, align 4
-  %add2 = add nsw i32 %3, %4
-  %5 = load i32, ptr %i, align 4
-  %6 = load i32, ptr %N, align 4
-  %arrayidx3 = getelementptr inbounds [100 x [100 x i32]], ptr @Bar, i32 0, i32 %6
-  %arrayidx4 = getelementptr inbounds [100 x i32], ptr %arrayidx3, i32 0, i32 %5
+for.body:                                         ; preds = %entry, %for.body
+  %i.07 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %arrayidx1 = getelementptr inbounds %struct.anon.0, ptr @Bar, i32 0, i32 0, i32 11, i32 %i.07
+  %0 = load i32, ptr %arrayidx1, align 4
+  %add2 = add nsw i32 %0, %a
+  %arrayidx4 = getelementptr inbounds %struct.anon.0, ptr @Bar, i32 0, i32 0, i32 10, i32 %i.07
   store i32 %add2, ptr %arrayidx4, align 4
-  br label %for.inc
+  %inc = add nuw nsw i32 %i.07, 1
+  %exitcond.not = icmp eq i32 %inc, 100
+  br i1 %exitcond.not, label %for.end, label %for.body
 
-for.inc:                                          ; preds = %for.body
-  %7 = load i32, ptr %i, align 4
-  %inc = add nsw i32 %7, 1
-  store i32 %inc, ptr %i, align 4
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  %8 = load i32, ptr %a.addr, align 4
-  %9 = load i32, ptr %N, align 4
-  %arrayidx5 = getelementptr inbounds [100 x [100 x i32]], ptr @Bar, i32 0, i32 %9
-  %arrayidx6 = getelementptr inbounds [100 x i32], ptr %arrayidx5, i32 0, i32 %8
-  %10 = load i32, ptr %arrayidx6, align 4
-  ret i32 %10
+for.end:                                          ; preds = %for.body
+  %arrayidx6 = getelementptr inbounds %struct.anon.0, ptr @Bar, i32 0, i32 0, i32 10, i32 %a
+  %1 = load i32, ptr %arrayidx6, align 4
+  ret i32 %1
 }
 
 ; /// Different objects, negative induction, constant distance
@@ -340,43 +227,24 @@ for.end:                                          ; preds = %for.cond
 ; CHECK: ret
 define i32 @noAlias07(i32 %a) #0 {
 entry:
-  %a.addr = alloca i32, align 4
-  %i = alloca i32, align 4
-  store i32 %a, ptr %a.addr, align 4
-  store i32 0, ptr %i, align 4
-  br label %for.cond
+  br label %for.body
 
-for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, ptr %i, align 4
-  %cmp = icmp slt i32 %0, 100
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %1 = load i32, ptr %i, align 4
-  %sub = sub nsw i32 100, %1
-  %sub1 = sub nsw i32 %sub, 1
-  %arrayidx = getelementptr inbounds [100 x i32], ptr getelementptr inbounds (%struct.anon, ptr @Foo, i32 0, i32 2), i32 0, i32 %sub1
-  %2 = load i32, ptr %arrayidx, align 4
-  %3 = load i32, ptr %a.addr, align 4
-  %add = add nsw i32 %2, %3
-  %4 = load i32, ptr %i, align 4
-  %sub2 = sub nsw i32 100, %4
-  %sub3 = sub nsw i32 %sub2, 1
-  %arrayidx4 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %sub3
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %sub1 = sub nuw nsw i32 99, %i.05
+  %arrayidx = getelementptr inbounds %struct.anon, ptr @Foo, i32 0, i32 2, i32 %sub1
+  %0 = load i32, ptr %arrayidx, align 4
+  %add = add nsw i32 %0, %a
+  %arrayidx4 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %sub1
   store i32 %add, ptr %arrayidx4, align 4
-  br label %for.inc
+  %inc = add nuw nsw i32 %i.05, 1
+  %exitcond.not = icmp eq i32 %inc, 100
+  br i1 %exitcond.not, label %for.end, label %for.body
 
-for.inc:                                          ; preds = %for.body
-  %5 = load i32, ptr %i, align 4
-  %inc = add nsw i32 %5, 1
-  store i32 %inc, ptr %i, align 4
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  %6 = load i32, ptr %a.addr, align 4
-  %arrayidx5 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %6
-  %7 = load i32, ptr %arrayidx5, align 4
-  ret i32 %7
+for.end:                                          ; preds = %for.body
+  %arrayidx5 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %a
+  %1 = load i32, ptr %arrayidx5, align 4
+  ret i32 %1
 }
 
 ; /// Different objects, negative induction, shortening slide
@@ -392,43 +260,25 @@ for.end:                                          ; preds = %for.cond
 
 define i32 @noAlias08(i32 %a) #0 {
 entry:
-  %a.addr = alloca i32, align 4
-  %i = alloca i32, align 4
-  store i32 %a, ptr %a.addr, align 4
-  store i32 0, ptr %i, align 4
-  br label %for.cond
+  br label %for.body
 
-for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, ptr %i, align 4
-  %cmp = icmp slt i32 %0, 90
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %1 = load i32, ptr %i, align 4
-  %sub = sub nsw i32 100, %1
-  %sub1 = sub nsw i32 %sub, 10
-  %arrayidx = getelementptr inbounds [100 x i32], ptr getelementptr inbounds (%struct.anon, ptr @Foo, i32 0, i32 2), i32 0, i32 %sub1
-  %2 = load i32, ptr %arrayidx, align 4
-  %3 = load i32, ptr %a.addr, align 4
-  %add = add nsw i32 %2, %3
-  %4 = load i32, ptr %i, align 4
-  %sub2 = sub nsw i32 100, %4
-  %sub3 = sub nsw i32 %sub2, 1
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %sub1 = sub nuw nsw i32 90, %i.05
+  %arrayidx = getelementptr inbounds %struct.anon, ptr @Foo, i32 0, i32 2, i32 %sub1
+  %0 = load i32, ptr %arrayidx, align 4
+  %add = add nsw i32 %0, %a
+  %sub3 = sub nuw nsw i32 99, %i.05
   %arrayidx4 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %sub3
   store i32 %add, ptr %arrayidx4, align 4
-  br label %for.inc
+  %inc = add nuw nsw i32 %i.05, 1
+  %exitcond.not = icmp eq i32 %inc, 90
+  br i1 %exitcond.not, label %for.end, label %for.body
 
-for.inc:                                          ; preds = %for.body
-  %5 = load i32, ptr %i, align 4
-  %inc = add nsw i32 %5, 1
-  store i32 %inc, ptr %i, align 4
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  %6 = load i32, ptr %a.addr, align 4
-  %arrayidx5 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %6
-  %7 = load i32, ptr %arrayidx5, align 4
-  ret i32 %7
+for.end:                                          ; preds = %for.body
+  %arrayidx5 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %a
+  %1 = load i32, ptr %arrayidx5, align 4
+  ret i32 %1
 }
 
 ; /// Different objects, negative induction, widening slide
@@ -444,43 +294,25 @@ for.end:                                          ; preds = %for.cond
 
 define i32 @noAlias09(i32 %a) #0 {
 entry:
-  %a.addr = alloca i32, align 4
-  %i = alloca i32, align 4
-  store i32 %a, ptr %a.addr, align 4
-  store i32 0, ptr %i, align 4
-  br label %for.cond
+  br label %for.body
 
-for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, ptr %i, align 4
-  %cmp = icmp slt i32 %0, 100
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %1 = load i32, ptr %i, align 4
-  %sub = sub nsw i32 100, %1
-  %sub1 = sub nsw i32 %sub, 1
-  %arrayidx = getelementptr inbounds [100 x i32], ptr getelementptr inbounds (%struct.anon, ptr @Foo, i32 0, i32 2), i32 0, i32 %sub1
-  %2 = load i32, ptr %arrayidx, align 4
-  %3 = load i32, ptr %a.addr, align 4
-  %add = add nsw i32 %2, %3
-  %4 = load i32, ptr %i, align 4
-  %sub2 = sub nsw i32 100, %4
-  %sub3 = sub nsw i32 %sub2, 10
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %sub1 = sub nuw nsw i32 99, %i.05
+  %arrayidx = getelementptr inbounds %struct.anon, ptr @Foo, i32 0, i32 2, i32 %sub1
+  %0 = load i32, ptr %arrayidx, align 4
+  %add = add nsw i32 %0, %a
+  %sub3 = sub nsw i32 90, %i.05
   %arrayidx4 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %sub3
   store i32 %add, ptr %arrayidx4, align 4
-  br label %for.inc
+  %inc = add nuw nsw i32 %i.05, 1
+  %exitcond.not = icmp eq i32 %inc, 100
+  br i1 %exitcond.not, label %for.end, label %for.body
 
-for.inc:                                          ; preds = %for.body
-  %5 = load i32, ptr %i, align 4
-  %inc = add nsw i32 %5, 1
-  store i32 %inc, ptr %i, align 4
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  %6 = load i32, ptr %a.addr, align 4
-  %arrayidx5 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %6
-  %7 = load i32, ptr %arrayidx5, align 4
-  ret i32 %7
+for.end:                                          ; preds = %for.body
+  %arrayidx5 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %a
+  %1 = load i32, ptr %arrayidx5, align 4
+  ret i32 %1
 }
 
 ; /// Pointer access, negative stride, run-time check added
@@ -499,48 +331,31 @@ for.end:                                          ; preds = %for.cond
 
 define i32 @noAlias10(i32 %a) #0 {
 entry:
-  %a.addr = alloca i32, align 4
-  %i = alloca i32, align 4
-  store i32 %a, ptr %a.addr, align 4
-  store i32 0, ptr %i, align 4
-  br label %for.cond
+  br label %for.body
 
-for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, ptr %i, align 4
-  %cmp = icmp slt i32 %0, 100
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %1 = load ptr, ptr @PB, align 4
-  %add.ptr = getelementptr inbounds i32, ptr %1, i32 100
-  %2 = load i32, ptr %i, align 4
-  %idx.neg = sub i32 0, %2
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %0 = load ptr, ptr @PB, align 4
+  %add.ptr = getelementptr inbounds i8, ptr %0, i32 400
+  %idx.neg = sub nsw i32 0, %i.05
   %add.ptr1 = getelementptr inbounds i32, ptr %add.ptr, i32 %idx.neg
-  %add.ptr2 = getelementptr inbounds i32, ptr %add.ptr1, i32 -1
-  %3 = load i32, ptr %add.ptr2, align 4
-  %4 = load i32, ptr %a.addr, align 4
-  %add = add nsw i32 %3, %4
-  %5 = load ptr, ptr @PA, align 4
-  %add.ptr3 = getelementptr inbounds i32, ptr %5, i32 100
-  %6 = load i32, ptr %i, align 4
-  %idx.neg4 = sub i32 0, %6
-  %add.ptr5 = getelementptr inbounds i32, ptr %add.ptr3, i32 %idx.neg4
-  %add.ptr6 = getelementptr inbounds i32, ptr %add.ptr5, i32 -1
+  %add.ptr2 = getelementptr inbounds i8, ptr %add.ptr1, i32 -4
+  %1 = load i32, ptr %add.ptr2, align 4
+  %add = add nsw i32 %1, %a
+  %2 = load ptr, ptr @PA, align 4
+  %add.ptr3 = getelementptr inbounds i8, ptr %2, i32 400
+  %add.ptr5 = getelementptr inbounds i32, ptr %add.ptr3, i32 %idx.neg
+  %add.ptr6 = getelementptr inbounds i8, ptr %add.ptr5, i32 -4
   store i32 %add, ptr %add.ptr6, align 4
-  br label %for.inc
+  %inc = add nuw nsw i32 %i.05, 1
+  %exitcond.not = icmp eq i32 %inc, 100
+  br i1 %exitcond.not, label %for.end, label %for.body
 
-for.inc:                                          ; preds = %for.body
-  %7 = load i32, ptr %i, align 4
-  %inc = add nsw i32 %7, 1
-  store i32 %inc, ptr %i, align 4
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  %8 = load ptr, ptr @PA, align 4
-  %9 = load i32, ptr %a.addr, align 4
-  %add.ptr7 = getelementptr inbounds i32, ptr %8, i32 %9
-  %10 = load i32, ptr %add.ptr7, align 4
-  ret i32 %10
+for.end:                                          ; preds = %for.body
+  %3 = load ptr, ptr @PA, align 4
+  %add.ptr7 = getelementptr inbounds i32, ptr %3, i32 %a
+  %4 = load i32, ptr %add.ptr7, align 4
+  ret i32 %4
 }
 
 ; /// Different objects, negative induction, multi-array
@@ -556,51 +371,24 @@ for.end:                                          ; preds = %for.cond
 
 define i32 @noAlias11(i32 %a) #0 {
 entry:
-  %a.addr = alloca i32, align 4
-  %i = alloca i32, align 4
-  %N = alloca i32, align 4
-  store i32 %a, ptr %a.addr, align 4
-  store i32 10, ptr %N, align 4
-  store i32 0, ptr %i, align 4
-  br label %for.cond
+  br label %for.body
 
-for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, ptr %i, align 4
-  %cmp = icmp slt i32 %0, 100
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %1 = load i32, ptr %i, align 4
-  %sub = sub nsw i32 100, %1
-  %sub1 = sub nsw i32 %sub, 1
-  %2 = load i32, ptr %N, align 4
-  %arrayidx = getelementptr inbounds [100 x [100 x i32]], ptr getelementptr inbounds (%struct.anon.0, ptr @Bar, i32 0, i32 2), i32 0, i32 %2
-  %arrayidx2 = getelementptr inbounds [100 x i32], ptr %arrayidx, i32 0, i32 %sub1
-  %3 = load i32, ptr %arrayidx2, align 4
-  %4 = load i32, ptr %a.addr, align 4
-  %add = add nsw i32 %3, %4
-  %5 = load i32, ptr %i, align 4
-  %sub3 = sub nsw i32 100, %5
-  %sub4 = sub nsw i32 %sub3, 1
-  %6 = load i32, ptr %N, align 4
-  %arrayidx5 = getelementptr inbounds [100 x [100 x i32]], ptr @Bar, i32 0, i32 %6
-  %arrayidx6 = getelementptr inbounds [100 x i32], ptr %arrayidx5, i32 0, i32 %sub4
+for.body:                                         ; preds = %entry, %for.body
+  %i.07 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %sub1 = sub nuw nsw i32 99, %i.07
+  %arrayidx2 = getelementptr inbounds %struct.anon.0, ptr @Bar, i32 0, i32 2, i32 10, i32 %sub1
+  %0 = load i32, ptr %arrayidx2, align 4
+  %add = add nsw i32 %0, %a
+  %arrayidx6 = getelementptr inbounds %struct.anon.0, ptr @Bar, i32 0, i32 0, i32 10, i32 %sub1
   store i32 %add, ptr %arrayidx6, align 4
-  br label %for.inc
+  %inc = add nuw nsw i32 %i.07, 1
+  %exitcond.not = icmp eq i32 %inc, 100
+  br i1 %exitcond.not, label %for.end, label %for.body
 
-for.inc:                                          ; preds = %for.body
-  %7 = load i32, ptr %i, align 4
-  %inc = add nsw i32 %7, 1
-  store i32 %inc, ptr %i, align 4
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  %8 = load i32, ptr %a.addr, align 4
-  %9 = load i32, ptr %N, align 4
-  %arrayidx7 = getelementptr inbounds [100 x [100 x i32]], ptr @Bar, i32 0, i32 %9
-  %arrayidx8 = getelementptr inbounds [100 x i32], ptr %arrayidx7, i32 0, i32 %8
-  %10 = load i32, ptr %arrayidx8, align 4
-  ret i32 %10
+for.end:                                          ; preds = %for.body
+  %arrayidx8 = getelementptr inbounds %struct.anon.0, ptr @Bar, i32 0, i32 0, i32 10, i32 %a
+  %1 = load i32, ptr %arrayidx8, align 4
+  ret i32 %1
 }
 
 ; /// Same objects, negative induction, multi-array, different sub-elements
@@ -616,52 +404,24 @@ for.end:                                          ; preds = %for.cond
 
 define i32 @noAlias12(i32 %a) #0 {
 entry:
-  %a.addr = alloca i32, align 4
-  %i = alloca i32, align 4
-  %N = alloca i32, align 4
-  store i32 %a, ptr %a.addr, align 4
-  store i32 10, ptr %N, align 4
-  store i32 0, ptr %i, align 4
-  br label %for.cond
+  br label %for.body
 
-for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, ptr %i, align 4
-  %cmp = icmp slt i32 %0, 100
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %1 = load i32, ptr %i, align 4
-  %sub = sub nsw i32 100, %1
-  %sub1 = sub nsw i32 %sub, 1
-  %2 = load i32, ptr %N, align 4
-  %add = add nsw i32 %2, 1
-  %arrayidx = getelementptr inbounds [100 x [100 x i32]], ptr @Bar, i32 0, i32 %add
-  %arrayidx2 = getelementptr inbounds [100 x i32], ptr %arrayidx, i32 0, i32 %sub1
-  %3 = load i32, ptr %arrayidx2, align 4
-  %4 = load i32, ptr %a.addr, align 4
-  %add3 = add nsw i32 %3, %4
-  %5 = load i32, ptr %i, align 4
-  %sub4 = sub nsw i32 100, %5
-  %sub5 = sub nsw i32 %sub4, 1
-  %6 = load i32, ptr %N, align 4
-  %arrayidx6 = getelementptr inbounds [100 x [100 x i32]], ptr @Bar, i32 0, i32 %6
-  %arrayidx7 = getelementptr inbounds [100 x i32], ptr %arrayidx6, i32 0, i32 %sub5
+for.body:                                         ; preds = %entry, %for.body
+  %i.07 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %sub1 = sub nuw nsw i32 99, %i.07
+  %arrayidx2 = getelementptr inbounds %struct.anon.0, ptr @Bar, i32 0, i32 0, i32 11, i32 %sub1
+  %0 = load i32, ptr %arrayidx2, align 4
+  %add3 = add nsw i32 %0, %a
+  %arrayidx7 = getelementptr inbounds %struct.anon.0, ptr @Bar, i32 0, i32 0, i32 10, i32 %sub1
   store i32 %add3, ptr %arrayidx7, align 4
-  br label %for.inc
+  %inc = add nuw nsw i32 %i.07, 1
+  %exitcond.not = icmp eq i32 %inc, 100
+  br i1 %exitcond.not, label %for.end, label %for.body
 
-for.inc:                                          ; preds = %for.body
-  %7 = load i32, ptr %i, align 4
-  %inc = add nsw i32 %7, 1
-  store i32 %inc, ptr %i, align 4
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  %8 = load i32, ptr %a.addr, align 4
-  %9 = load i32, ptr %N, align 4
-  %arrayidx8 = getelementptr inbounds [100 x [100 x i32]], ptr @Bar, i32 0, i32 %9
-  %arrayidx9 = getelementptr inbounds [100 x i32], ptr %arrayidx8, i32 0, i32 %8
-  %10 = load i32, ptr %arrayidx9, align 4
-  ret i32 %10
+for.end:                                          ; preds = %for.body
+  %arrayidx9 = getelementptr inbounds %struct.anon.0, ptr @Bar, i32 0, i32 0, i32 10, i32 %a
+  %1 = load i32, ptr %arrayidx9, align 4
+  ret i32 %1
 }
 
 ; /// Same objects, positive induction, constant distance, just enough for vector size
@@ -677,40 +437,24 @@ for.end:                                          ; preds = %for.cond
 
 define i32 @noAlias13(i32 %a) #0 {
 entry:
-  %a.addr = alloca i32, align 4
-  %i = alloca i32, align 4
-  store i32 %a, ptr %a.addr, align 4
-  store i32 0, ptr %i, align 4
-  br label %for.cond
+  br label %for.body
 
-for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, ptr %i, align 4
-  %cmp = icmp slt i32 %0, 100
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %1 = load i32, ptr %i, align 4
-  %add = add nsw i32 %1, 4
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %add = add nuw nsw i32 %i.05, 4
   %arrayidx = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %add
-  %2 = load i32, ptr %arrayidx, align 4
-  %3 = load i32, ptr %a.addr, align 4
-  %add1 = add nsw i32 %2, %3
-  %4 = load i32, ptr %i, align 4
-  %arrayidx2 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %4
+  %0 = load i32, ptr %arrayidx, align 4
+  %add1 = add nsw i32 %0, %a
+  %arrayidx2 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %i.05
   store i32 %add1, ptr %arrayidx2, align 4
-  br label %for.inc
+  %inc = add nuw nsw i32 %i.05, 1
+  %exitcond.not = icmp eq i32 %inc, 100
+  br i1 %exitcond.not, label %for.end, label %for.body
 
-for.inc:                                          ; preds = %for.body
-  %5 = load i32, ptr %i, align 4
-  %inc = add nsw i32 %5, 1
-  store i32 %inc, ptr %i, align 4
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  %6 = load i32, ptr %a.addr, align 4
-  %arrayidx3 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %6
-  %7 = load i32, ptr %arrayidx3, align 4
-  ret i32 %7
+for.end:                                          ; preds = %for.body
+  %arrayidx3 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %a
+  %1 = load i32, ptr %arrayidx3, align 4
+  ret i32 %1
 }
 
 ; /// Same objects, negative induction, constant distance, just enough for vector size
@@ -726,43 +470,25 @@ for.end:                                          ; preds = %for.cond
 
 define i32 @noAlias14(i32 %a) #0 {
 entry:
-  %a.addr = alloca i32, align 4
-  %i = alloca i32, align 4
-  store i32 %a, ptr %a.addr, align 4
-  store i32 0, ptr %i, align 4
-  br label %for.cond
+  br label %for.body
 
-for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, ptr %i, align 4
-  %cmp = icmp slt i32 %0, 100
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %1 = load i32, ptr %i, align 4
-  %sub = sub nsw i32 100, %1
-  %sub1 = sub nsw i32 %sub, 5
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %sub1 = sub nsw i32 95, %i.05
   %arrayidx = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %sub1
-  %2 = load i32, ptr %arrayidx, align 4
-  %3 = load i32, ptr %a.addr, align 4
-  %add = add nsw i32 %2, %3
-  %4 = load i32, ptr %i, align 4
-  %sub2 = sub nsw i32 100, %4
-  %sub3 = sub nsw i32 %sub2, 1
+  %0 = load i32, ptr %arrayidx, align 4
+  %add = add nsw i32 %0, %a
+  %sub3 = sub nuw nsw i32 99, %i.05
   %arrayidx4 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %sub3
   store i32 %add, ptr %arrayidx4, align 4
-  br label %for.inc
+  %inc = add nuw nsw i32 %i.05, 1
+  %exitcond.not = icmp eq i32 %inc, 100
+  br i1 %exitcond.not, label %for.end, label %for.body
 
-for.inc:                                          ; preds = %for.body
-  %5 = load i32, ptr %i, align 4
-  %inc = add nsw i32 %5, 1
-  store i32 %inc, ptr %i, align 4
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  %6 = load i32, ptr %a.addr, align 4
-  %arrayidx5 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %6
-  %7 = load i32, ptr %arrayidx5, align 4
-  ret i32 %7
+for.end:                                          ; preds = %for.body
+  %arrayidx5 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %a
+  %1 = load i32, ptr %arrayidx5, align 4
+  ret i32 %1
 }
 
 
@@ -782,41 +508,24 @@ for.end:                                          ; preds = %for.cond
 
 define i32 @mayAlias01(i32 %a) nounwind {
 entry:
-  %a.addr = alloca i32, align 4
-  %i = alloca i32, align 4
-  store i32 %a, ptr %a.addr, align 4
-  store i32 0, ptr %i, align 4
-  br label %for.cond
+  br label %for.body
 
-for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, ptr %i, align 4
-  %cmp = icmp slt i32 %0, 100
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %1 = load i32, ptr %i, align 4
-  %sub = sub nsw i32 100, %1
-  %sub1 = sub nsw i32 %sub, 1
-  %arrayidx = getelementptr inbounds [100 x i32], ptr getelementptr inbounds (%struct.anon, ptr @Foo, i32 0, i32 2), i32 0, i32 %sub1
-  %2 = load i32, ptr %arrayidx, align 4
-  %3 = load i32, ptr %a.addr, align 4
-  %add = add nsw i32 %2, %3
-  %4 = load i32, ptr %i, align 4
-  %arrayidx2 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %4
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %sub1 = sub nuw nsw i32 99, %i.05
+  %arrayidx = getelementptr inbounds %struct.anon, ptr @Foo, i32 0, i32 2, i32 %sub1
+  %0 = load i32, ptr %arrayidx, align 4
+  %add = add nsw i32 %0, %a
+  %arrayidx2 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %i.05
   store i32 %add, ptr %arrayidx2, align 4
-  br label %for.inc
+  %inc = add nuw nsw i32 %i.05, 1
+  %exitcond.not = icmp eq i32 %inc, 100
+  br i1 %exitcond.not, label %for.end, label %for.body
 
-for.inc:                                          ; preds = %for.body
-  %5 = load i32, ptr %i, align 4
-  %inc = add nsw i32 %5, 1
-  store i32 %inc, ptr %i, align 4
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  %6 = load i32, ptr %a.addr, align 4
-  %arrayidx3 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %6
-  %7 = load i32, ptr %arrayidx3, align 4
-  ret i32 %7
+for.end:                                          ; preds = %for.body
+  %arrayidx3 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %a
+  %1 = load i32, ptr %arrayidx3, align 4
+  ret i32 %1
 }
 
 ; /// Different objects, swapped induction, alias at the beginning
@@ -832,41 +541,24 @@ for.end:                                          ; preds = %for.cond
 
 define i32 @mayAlias02(i32 %a) nounwind {
 entry:
-  %a.addr = alloca i32, align 4
-  %i = alloca i32, align 4
-  store i32 %a, ptr %a.addr, align 4
-  store i32 0, ptr %i, align 4
-  br label %for.cond
+  br label %for.body
 
-for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, ptr %i, align 4
-  %cmp = icmp slt i32 %0, 100
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %1 = load i32, ptr %i, align 4
-  %arrayidx = getelementptr inbounds [100 x i32], ptr getelementptr inbounds (%struct.anon, ptr @Foo, i32 0, i32 2), i32 0, i32 %1
-  %2 = load i32, ptr %arrayidx, align 4
-  %3 = load i32, ptr %a.addr, align 4
-  %add = add nsw i32 %2, %3
-  %4 = load i32, ptr %i, align 4
-  %sub = sub nsw i32 100, %4
-  %sub1 = sub nsw i32 %sub, 1
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %arrayidx = getelementptr inbounds %struct.anon, ptr @Foo, i32 0, i32 2, i32 %i.05
+  %0 = load i32, ptr %arrayidx, align 4
+  %add = add nsw i32 %0, %a
+  %sub1 = sub nuw nsw i32 99, %i.05
   %arrayidx2 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %sub1
   store i32 %add, ptr %arrayidx2, align 4
-  br label %for.inc
+  %inc = add nuw nsw i32 %i.05, 1
+  %exitcond.not = icmp eq i32 %inc, 100
+  br i1 %exitcond.not, label %for.end, label %for.body
 
-for.inc:                                          ; preds = %for.body
-  %5 = load i32, ptr %i, align 4
-  %inc = add nsw i32 %5, 1
-  store i32 %inc, ptr %i, align 4
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  %6 = load i32, ptr %a.addr, align 4
-  %arrayidx3 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %6
-  %7 = load i32, ptr %arrayidx3, align 4
-  ret i32 %7
+for.end:                                          ; preds = %for.body
+  %arrayidx3 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %a
+  %1 = load i32, ptr %arrayidx3, align 4
+  ret i32 %1
 }
 
 ; /// Pointer access, run-time check added
@@ -882,47 +574,30 @@ for.end:                                          ; preds = %for.cond
 
 define i32 @mayAlias03(i32 %a) nounwind {
 entry:
-  %a.addr = alloca i32, align 4
-  %i = alloca i32, align 4
-  store i32 %a, ptr %a.addr, align 4
-  store i32 0, ptr %i, align 4
-  br label %for.cond
+  br label %for.body
 
-for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, ptr %i, align 4
-  %cmp = icmp slt i32 %0, 100
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %1 = load ptr, ptr @PB, align 4
-  %add.ptr = getelementptr inbounds i32, ptr %1, i32 100
-  %2 = load i32, ptr %i, align 4
-  %idx.neg = sub i32 0, %2
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %0 = load ptr, ptr @PB, align 4
+  %add.ptr = getelementptr inbounds i8, ptr %0, i32 400
+  %idx.neg = sub nsw i32 0, %i.05
   %add.ptr1 = getelementptr inbounds i32, ptr %add.ptr, i32 %idx.neg
-  %add.ptr2 = getelementptr inbounds i32, ptr %add.ptr1, i32 -1
-  %3 = load i32, ptr %add.ptr2, align 4
-  %4 = load i32, ptr %a.addr, align 4
-  %add = add nsw i32 %3, %4
-  %5 = load ptr, ptr @PA, align 4
-  %6 = load i32, ptr %i, align 4
-  %add.ptr3 = getelementptr inbounds i32, ptr %5, i32 %6
+  %add.ptr2 = getelementptr inbounds i8, ptr %add.ptr1, i32 -4
+  %1 = load i32, ptr %add.ptr2, align 4
+  %add = add nsw i32 %1, %a
+  %2 = load ptr, ptr @PA, align 4
+  %add.ptr3 = getelementptr inbounds i32, ptr %2, i32 %i.05
   store i32 %add, ptr %add.ptr3, align 4
-  br label %for.inc
+  %inc = add nuw nsw i32 %i.05, 1
+  %exitcond.not = icmp eq i32 %inc, 100
+  br i1 %exitcond.not, label %for.end, label %for.body
 
-for.inc:                                          ; preds = %for.body
-  %7 = load i32, ptr %i, align 4
-  %inc = add nsw i32 %7, 1
-  store i32 %inc, ptr %i, align 4
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  %8 = load ptr, ptr @PA, align 4
-  %9 = load i32, ptr %a.addr, align 4
-  %add.ptr4 = getelementptr inbounds i32, ptr %8, i32 %9
-  %10 = load i32, ptr %add.ptr4, align 4
-  ret i32 %10
+for.end:                                          ; preds = %for.body
+  %3 = load ptr, ptr @PA, align 4
+  %add.ptr4 = getelementptr inbounds i32, ptr %3, i32 %a
+  %4 = load i32, ptr %add.ptr4, align 4
+  ret i32 %4
 }
-
 
 ;; === Finally, the tests that should only vectorize with care (or if we ignore undefined behaviour at all) ===
 
@@ -939,42 +614,25 @@ for.end:                                          ; preds = %for.cond
 
 define i32 @mustAlias01(i32 %a) nounwind {
 entry:
-  %a.addr = alloca i32, align 4
-  %i = alloca i32, align 4
-  store i32 %a, ptr %a.addr, align 4
-  store i32 0, ptr %i, align 4
-  br label %for.cond
+  br label %for.body
 
-for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, ptr %i, align 4
-  %cmp = icmp slt i32 %0, 100
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %1 = load i32, ptr %i, align 4
-  %sub = sub nsw i32 100, %1
-  %sub1 = sub nsw i32 %sub, 1
-  %arrayidx = getelementptr inbounds [100 x i32], ptr getelementptr inbounds (%struct.anon, ptr @Foo, i32 0, i32 2), i32 0, i32 %sub1
-  %2 = load i32, ptr %arrayidx, align 4
-  %3 = load i32, ptr %a.addr, align 4
-  %add = add nsw i32 %2, %3
-  %4 = load i32, ptr %i, align 4
-  %add2 = add nsw i32 %4, 10
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %sub1 = sub nuw nsw i32 99, %i.05
+  %arrayidx = getelementptr inbounds %struct.anon, ptr @Foo, i32 0, i32 2, i32 %sub1
+  %0 = load i32, ptr %arrayidx, align 4
+  %add = add nsw i32 %0, %a
+  %add2 = add nuw nsw i32 %i.05, 10
   %arrayidx3 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %add2
   store i32 %add, ptr %arrayidx3, align 4
-  br label %for.inc
+  %inc = add nuw nsw i32 %i.05, 1
+  %exitcond.not = icmp eq i32 %inc, 100
+  br i1 %exitcond.not, label %for.end, label %for.body
 
-for.inc:                                          ; preds = %for.body
-  %5 = load i32, ptr %i, align 4
-  %inc = add nsw i32 %5, 1
-  store i32 %inc, ptr %i, align 4
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  %6 = load i32, ptr %a.addr, align 4
-  %arrayidx4 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %6
-  %7 = load i32, ptr %arrayidx4, align 4
-  ret i32 %7
+for.end:                                          ; preds = %for.body
+  %arrayidx4 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %a
+  %1 = load i32, ptr %arrayidx4, align 4
+  ret i32 %1
 }
 
 ; int mustAlias02 (int a) {
@@ -989,41 +647,24 @@ for.end:                                          ; preds = %for.cond
 
 define i32 @mustAlias02(i32 %a) nounwind {
 entry:
-  %a.addr = alloca i32, align 4
-  %i = alloca i32, align 4
-  store i32 %a, ptr %a.addr, align 4
-  store i32 0, ptr %i, align 4
-  br label %for.cond
+  br label %for.body
 
-for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, ptr %i, align 4
-  %cmp = icmp slt i32 %0, 100
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %1 = load i32, ptr %i, align 4
-  %sub = sub nsw i32 100, %1
-  %sub1 = sub nsw i32 %sub, 10
-  %arrayidx = getelementptr inbounds [100 x i32], ptr getelementptr inbounds (%struct.anon, ptr @Foo, i32 0, i32 2), i32 0, i32 %sub1
-  %2 = load i32, ptr %arrayidx, align 4
-  %3 = load i32, ptr %a.addr, align 4
-  %add = add nsw i32 %2, %3
-  %4 = load i32, ptr %i, align 4
-  %arrayidx2 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %4
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %sub1 = sub nsw i32 90, %i.05
+  %arrayidx = getelementptr inbounds %struct.anon, ptr @Foo, i32 0, i32 2, i32 %sub1
+  %0 = load i32, ptr %arrayidx, align 4
+  %add = add nsw i32 %0, %a
+  %arrayidx2 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %i.05
   store i32 %add, ptr %arrayidx2, align 4
-  br label %for.inc
+  %inc = add nuw nsw i32 %i.05, 1
+  %exitcond.not = icmp eq i32 %inc, 100
+  br i1 %exitcond.not, label %for.end, label %for.body
 
-for.inc:                                          ; preds = %for.body
-  %5 = load i32, ptr %i, align 4
-  %inc = add nsw i32 %5, 1
-  store i32 %inc, ptr %i, align 4
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  %6 = load i32, ptr %a.addr, align 4
-  %arrayidx3 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %6
-  %7 = load i32, ptr %arrayidx3, align 4
-  ret i32 %7
+for.end:                                          ; preds = %for.body
+  %arrayidx3 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %a
+  %1 = load i32, ptr %arrayidx3, align 4
+  ret i32 %1
 }
 
 ; int mustAlias03 (int a) {
@@ -1038,40 +679,23 @@ for.end:                                          ; preds = %for.cond
 
 define i32 @mustAlias03(i32 %a) nounwind {
 entry:
-  %a.addr = alloca i32, align 4
-  %i = alloca i32, align 4
-  store i32 %a, ptr %a.addr, align 4
-  store i32 0, ptr %i, align 4
-  br label %for.cond
+  br label %for.body
 
-for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, ptr %i, align 4
-  %cmp = icmp slt i32 %0, 100
-  br i1 %cmp, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %1 = load i32, ptr %i, align 4
-  %sub = sub nsw i32 100, %1
-  %sub1 = sub nsw i32 %sub, 10
-  %arrayidx = getelementptr inbounds [100 x i32], ptr getelementptr inbounds (%struct.anon, ptr @Foo, i32 0, i32 2), i32 0, i32 %sub1
-  %2 = load i32, ptr %arrayidx, align 4
-  %3 = load i32, ptr %a.addr, align 4
-  %add = add nsw i32 %2, %3
-  %4 = load i32, ptr %i, align 4
-  %add2 = add nsw i32 %4, 10
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %sub1 = sub nsw i32 90, %i.05
+  %arrayidx = getelementptr inbounds %struct.anon, ptr @Foo, i32 0, i32 2, i32 %sub1
+  %0 = load i32, ptr %arrayidx, align 4
+  %add = add nsw i32 %0, %a
+  %add2 = add nuw nsw i32 %i.05, 10
   %arrayidx3 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %add2
   store i32 %add, ptr %arrayidx3, align 4
-  br label %for.inc
+  %inc = add nuw nsw i32 %i.05, 1
+  %exitcond.not = icmp eq i32 %inc, 100
+  br i1 %exitcond.not, label %for.end, label %for.body
 
-for.inc:                                          ; preds = %for.body
-  %5 = load i32, ptr %i, align 4
-  %inc = add nsw i32 %5, 1
-  store i32 %inc, ptr %i, align 4
-  br label %for.cond
-
-for.end:                                          ; preds = %for.cond
-  %6 = load i32, ptr %a.addr, align 4
-  %arrayidx4 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %6
-  %7 = load i32, ptr %arrayidx4, align 4
-  ret i32 %7
+for.end:                                          ; preds = %for.body
+  %arrayidx4 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %a
+  %1 = load i32, ptr %arrayidx4, align 4
+  ret i32 %1
 }

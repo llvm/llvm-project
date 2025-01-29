@@ -47,6 +47,13 @@ static_assert( std::is_invocable_v<IterSwapT&&, HasIterSwap&, HasIterSwap&>);
 static_assert( std::is_invocable_v<IterSwapT&&, HasIterSwap&, int&>);
 static_assert(!std::is_invocable_v<IterSwapT&&, int&, HasIterSwap&>);
 
+struct StructWithNotMoreSpecializedIterSwap {
+  friend void iter_swap(auto&, auto&);
+};
+
+static_assert(
+    !std::is_invocable_v<IterSwapT, StructWithNotMoreSpecializedIterSwap&, StructWithNotMoreSpecializedIterSwap&>);
+
 struct NodiscardIterSwap {
   [[nodiscard]] friend int iter_swap(NodiscardIterSwap&, NodiscardIterSwap&) { return 0; }
 };

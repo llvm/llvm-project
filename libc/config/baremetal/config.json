@@ -1,4 +1,9 @@
 {
+  "errno": {
+    "LIBC_CONF_ERRNO_MODE": {
+      "value": "LIBC_ERRNO_MODE_EXTERNAL"
+    }
+  },
   "printf": {
     "LIBC_CONF_PRINTF_DISABLE_FLOAT": {
       "value": true
@@ -11,6 +16,19 @@
     },
     "LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE": {
       "value": false
+    },
+    "LIBC_CONF_PRINTF_DISABLE_STRERROR": {
+      "value": true
+    }
+  },
+  "qsort": {
+    "LIBC_CONF_QSORT_IMPL": {
+      "value": "LIBC_QSORT_HEAP_SORT"
+    }
+  },
+  "math": {
+    "LIBC_CONF_MATH_OPTIMIZATIONS": {
+      "value": "(LIBC_MATH_SKIP_ACCURATE_PASS | LIBC_MATH_SMALL_TABLES)"
     }
   }
 }

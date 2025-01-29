@@ -8,7 +8,6 @@
 
 #include "MCTargetDesc/BPFMCFixups.h"
 #include "MCTargetDesc/BPFMCTargetDesc.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -35,13 +34,6 @@ public:
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
-
-  // No instruction requires relaxation
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
-    return false;
-  }
 
   unsigned getNumFixupKinds() const override {
     return BPF::NumTargetFixupKinds;

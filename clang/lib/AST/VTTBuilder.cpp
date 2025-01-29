@@ -20,7 +20,6 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
-#include "llvm/Support/Casting.h"
 #include <cassert>
 #include <cstdint>
 
@@ -189,7 +188,7 @@ void VTTBuilder::LayoutVTT(BaseSubobject Base, bool BaseIsVirtual) {
 
   if (!IsPrimaryVTT) {
     // Remember the sub-VTT index.
-    SubVTTIndicies[Base] = VTTComponents.size();
+    SubVTTIndices[Base] = VTTComponents.size();
   }
 
   uint64_t VTableIndex = VTTVTables.size();

@@ -93,3 +93,29 @@ define internal void @caller_not_avx4() {
 }
 
 declare i64 @caller_unknown_simple(i64)
+
+; This call should get inlined, because the callee only contains
+; inline ASM, not real calls.
+define <8 x i64> @caller_inline_asm(ptr %p0, i64 %k, ptr %p1, ptr %p2) #0 {
+; CHECK-LABEL: define {{[^@]+}}@caller_inline_asm
+; CHECK-SAME: (ptr [[P0:%.*]], i64 [[K:%.*]], ptr [[P1:%.*]], ptr [[P2:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    [[SRC_I:%.*]] = load <8 x i64>, ptr [[P0]], align 64
+; CHECK-NEXT:    [[A_I:%.*]] = load <8 x i64>, ptr [[P1]], align 64
+; CHECK-NEXT:    [[B_I:%.*]] = load <8 x i64>, ptr [[P2]], align 64
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i64> asm "vpaddb\09$($3, $2, $0 {$1}", "=v,^Yk,v,v,0,~{dirflag},~{fpsr},~{flags}"(i64 [[K]], <8 x i64> [[A_I]], <8 x i64> [[B_I]], <8 x i64> [[SRC_I]])
+; CHECK-NEXT:    ret <8 x i64> [[TMP1]]
+;
+  %call = call <8 x i64> @callee_inline_asm(ptr %p0, i64 %k, ptr %p1, ptr %p2)
+  ret <8 x i64> %call
+}
+
+define internal <8 x i64> @callee_inline_asm(ptr %p0, i64 %k, ptr %p1, ptr %p2) #1 {
+  %src = load <8 x i64>, ptr %p0, align 64
+  %a = load <8 x i64>, ptr %p1, align 64
+  %b = load <8 x i64>, ptr %p2, align 64
+  %3 = tail call <8 x i64> asm "vpaddb\09$($3, $2, $0 {$1}", "=v,^Yk,v,v,0,~{dirflag},~{fpsr},~{flags}"(i64 %k, <8 x i64> %a, <8 x i64> %b, <8 x i64> %src) #2
+  ret <8 x i64> %3
+}
+
+attributes #0 = { "min-legal-vector-width"="512" "target-features"="+avx,+avx2,+avx512bw,+avx512dq,+avx512f,+cmov,+crc32,+cx8,+evex512,+f16c,+fma,+fxsr,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave" "tune-cpu"="generic" }
+attributes #1 = { "min-legal-vector-width"="512" "target-features"="+avx,+avx2,+avx512bw,+avx512f,+cmov,+crc32,+cx8,+evex512,+f16c,+fma,+fxsr,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave" "tune-cpu"="generic" }

@@ -1,4 +1,4 @@
-//===- RISCVVEmitter.cpp - Generate riscv_vector.h for use with clang -----===//
+//===-- RISCVVEmitter.cpp - Generate riscv_vector.h for use with clang ----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,15 +16,12 @@
 
 #include "clang/Support/RISCVVIntrinsicUtils.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-#include <numeric>
 #include <optional>
 
 using namespace llvm;
@@ -67,7 +64,9 @@ struct SemaRecord {
   bool HasMaskPolicy : 1;
   bool HasFRMRoundModeOp : 1;
   bool IsTuple : 1;
+  LLVM_PREFERRED_TYPE(PolicyScheme)
   uint8_t UnMaskedPolicyScheme : 2;
+  LLVM_PREFERRED_TYPE(PolicyScheme)
   uint8_t MaskedPolicyScheme : 2;
 };
 
@@ -93,11 +92,11 @@ public:
 
 class RVVEmitter {
 private:
-  RecordKeeper &Records;
+  const RecordKeeper &Records;
   RVVTypeCache TypeCache;
 
 public:
-  RVVEmitter(RecordKeeper &R) : Records(R) {}
+  RVVEmitter(const RecordKeeper &R) : Records(R) {}
 
   /// Emit riscv_vector.h
   void createHeader(raw_ostream &o);
@@ -165,16 +164,102 @@ static VectorTypeModifier getTupleVTM(unsigned NF) {
       static_cast<uint8_t>(VectorTypeModifier::Tuple2) + (NF - 2));
 }
 
+static unsigned getIndexedLoadStorePtrIdx(const RVVIntrinsic *RVVI) {
+  // We need a special rule for segment load/store since the data width is not
+  // encoded in the intrinsic name itself.
+  const StringRef IRName = RVVI->getIRName();
+  constexpr unsigned RVV_VTA = 0x1;
+  constexpr unsigned RVV_VMA = 0x2;
+
+  if (IRName.starts_with("vloxseg") || IRName.starts_with("vluxseg")) {
+    bool NoPassthru =
+        (RVVI->isMasked() && (RVVI->getPolicyAttrsBits() & RVV_VTA) &&
+         (RVVI->getPolicyAttrsBits() & RVV_VMA)) ||
+        (!RVVI->isMasked() && (RVVI->getPolicyAttrsBits() & RVV_VTA));
+    return RVVI->isMasked() ? NoPassthru ? 1 : 2 : NoPassthru ? 0 : 1;
+  }
+  if (IRName.starts_with("vsoxseg") || IRName.starts_with("vsuxseg"))
+    return RVVI->isMasked() ? 1 : 0;
+
+  return (unsigned)-1;
+}
+
+// This function is used to get the log2SEW of each segment load/store, this
+// prevent to add a member to RVVIntrinsic.
+static unsigned getSegInstLog2SEW(StringRef InstName) {
+  // clang-format off
+  // We need a special rule for indexed segment load/store since the data width
+  // is not encoded in the intrinsic name itself.
+  if (InstName.starts_with("vloxseg") || InstName.starts_with("vluxseg") ||
+      InstName.starts_with("vsoxseg") || InstName.starts_with("vsuxseg"))
+    return (unsigned)-1;
+
+#define KEY_VAL(KEY, VAL) {#KEY, VAL}
+#define KEY_VAL_ALL_W_POLICY(KEY, VAL) \
+  KEY_VAL(KEY, VAL),                   \
+  KEY_VAL(KEY ## _tu, VAL),            \
+  KEY_VAL(KEY ## _tum, VAL),           \
+  KEY_VAL(KEY ## _tumu, VAL),          \
+  KEY_VAL(KEY ## _mu, VAL)
+
+#define KEY_VAL_ALL_NF_BASE(MACRO_NAME, NAME, SEW, LOG2SEW, FF) \
+  MACRO_NAME(NAME ## 2e ## SEW ## FF, LOG2SEW), \
+  MACRO_NAME(NAME ## 3e ## SEW ## FF, LOG2SEW), \
+  MACRO_NAME(NAME ## 4e ## SEW ## FF, LOG2SEW), \
+  MACRO_NAME(NAME ## 5e ## SEW ## FF, LOG2SEW), \
+  MACRO_NAME(NAME ## 6e ## SEW ## FF, LOG2SEW), \
+  MACRO_NAME(NAME ## 7e ## SEW ## FF, LOG2SEW), \
+  MACRO_NAME(NAME ## 8e ## SEW ## FF, LOG2SEW)
+
+#define KEY_VAL_ALL_NF(NAME, SEW, LOG2SEW) \
+  KEY_VAL_ALL_NF_BASE(KEY_VAL_ALL_W_POLICY, NAME, SEW, LOG2SEW,)
+
+#define KEY_VAL_FF_ALL_NF(NAME, SEW, LOG2SEW) \
+  KEY_VAL_ALL_NF_BASE(KEY_VAL_ALL_W_POLICY, NAME, SEW, LOG2SEW, ff)
+
+#define KEY_VAL_ALL_NF_SEW_BASE(MACRO_NAME, NAME) \
+  MACRO_NAME(NAME, 8, 3),  \
+  MACRO_NAME(NAME, 16, 4), \
+  MACRO_NAME(NAME, 32, 5), \
+  MACRO_NAME(NAME, 64, 6)
+
+#define KEY_VAL_ALL_NF_SEW(NAME) \
+  KEY_VAL_ALL_NF_SEW_BASE(KEY_VAL_ALL_NF, NAME)
+
+#define KEY_VAL_FF_ALL_NF_SEW(NAME) \
+  KEY_VAL_ALL_NF_SEW_BASE(KEY_VAL_FF_ALL_NF, NAME)
+  // clang-format on
+
+  static StringMap<unsigned> SegInsts = {
+      KEY_VAL_ALL_NF_SEW(vlseg), KEY_VAL_FF_ALL_NF_SEW(vlseg),
+      KEY_VAL_ALL_NF_SEW(vlsseg), KEY_VAL_ALL_NF_SEW(vsseg),
+      KEY_VAL_ALL_NF_SEW(vssseg)};
+
+#undef KEY_VAL_ALL_NF_SEW
+#undef KEY_VAL_ALL_NF
+#undef KEY_VAL
+
+  return SegInsts.lookup(InstName);
+}
+
 void emitCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
   if (!RVVI->getIRName().empty())
     OS << "  ID = Intrinsic::riscv_" + RVVI->getIRName() + ";\n";
-  if (RVVI->getNF() >= 2)
-    OS << "  NF = " + utostr(RVVI->getNF()) + ";\n";
 
   OS << "  PolicyAttrs = " << RVVI->getPolicyAttrsBits() << ";\n";
+  OS << "  SegInstSEW = " << getSegInstLog2SEW(RVVI->getOverloadedName())
+     << ";\n";
 
   if (RVVI->hasManualCodegen()) {
     OS << "IsMasked = " << (RVVI->isMasked() ? "true" : "false") << ";\n";
+
+    // Skip the non-indexed load/store and compatible header load/store.
+    OS << "if (SegInstSEW == (unsigned)-1) {\n";
+    OS << "  auto PointeeType = E->getArg(" << getIndexedLoadStorePtrIdx(RVVI)
+       << "      )->getType()->getPointeeType();\n";
+    OS << "  SegInstSEW = "
+          "      llvm::Log2_64(getContext().getTypeSize(PointeeType));\n}\n";
+
     OS << RVVI->getManualCodegen();
     OS << "break;\n";
     return;
@@ -332,10 +417,6 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
   OS << "#include <stdint.h>\n";
   OS << "#include <stddef.h>\n\n";
 
-  OS << "#ifndef __riscv_vector\n";
-  OS << "#error \"Vector intrinsics require the vector extension.\"\n";
-  OS << "#endif\n\n";
-
   OS << "#ifdef __cplusplus\n";
   OS << "extern \"C\" {\n";
   OS << "#endif\n\n";
@@ -407,8 +488,6 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
     }
   }
 
-  OS << "#define __riscv_v_intrinsic_overloading 1\n";
-
   OS << "\n#ifdef __cplusplus\n";
   OS << "}\n";
   OS << "#endif // __cplusplus\n";
@@ -450,8 +529,8 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
   std::vector<std::unique_ptr<RVVIntrinsic>> Defs;
   createRVVIntrinsics(Defs);
   // IR name could be empty, use the stable sort preserves the relative order.
-  llvm::stable_sort(Defs, [](const std::unique_ptr<RVVIntrinsic> &A,
-                             const std::unique_ptr<RVVIntrinsic> &B) {
+  stable_sort(Defs, [](const std::unique_ptr<RVVIntrinsic> &A,
+                       const std::unique_ptr<RVVIntrinsic> &B) {
     if (A->getIRName() == B->getIRName())
       return (A->getPolicyAttrs() < B->getPolicyAttrs());
     return (A->getIRName() < B->getIRName());
@@ -460,14 +539,16 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
   // Map to keep track of which builtin names have already been emitted.
   StringMap<RVVIntrinsic *> BuiltinMap;
 
-  // Print switch body when the ir name, ManualCodegen or policy changes from
-  // previous iteration.
+  // Print switch body when the ir name, ManualCodegen, policy or log2sew
+  // changes from previous iteration.
   RVVIntrinsic *PrevDef = Defs.begin()->get();
   for (auto &Def : Defs) {
     StringRef CurIRName = Def->getIRName();
     if (CurIRName != PrevDef->getIRName() ||
         (Def->getManualCodegen() != PrevDef->getManualCodegen()) ||
-        (Def->getPolicyAttrs() != PrevDef->getPolicyAttrs())) {
+        (Def->getPolicyAttrs() != PrevDef->getPolicyAttrs()) ||
+        (getSegInstLog2SEW(Def->getOverloadedName()) !=
+         getSegInstLog2SEW(PrevDef->getOverloadedName()))) {
       emitCodeGenSwitchBody(PrevDef, OS);
     }
     PrevDef = Def.get();
@@ -500,8 +581,7 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
 void RVVEmitter::createRVVIntrinsics(
     std::vector<std::unique_ptr<RVVIntrinsic>> &Out,
     std::vector<SemaRecord> *SemaRecords) {
-  std::vector<Record *> RV = Records.getAllDerivedDefinitions("RVVBuiltin");
-  for (auto *R : RV) {
+  for (const Record *R : Records.getAllDerivedDefinitions("RVVBuiltin")) {
     StringRef Name = R->getValueAsString("Name");
     StringRef SuffixProto = R->getValueAsString("Suffix");
     StringRef OverloadedName = R->getValueAsString("OverloadedName");
@@ -511,10 +591,10 @@ void RVVEmitter::createRVVIntrinsics(
     bool HasMasked = R->getValueAsBit("HasMasked");
     bool HasMaskedOffOperand = R->getValueAsBit("HasMaskedOffOperand");
     bool HasVL = R->getValueAsBit("HasVL");
-    Record *MPSRecord = R->getValueAsDef("MaskedPolicyScheme");
+    const Record *MPSRecord = R->getValueAsDef("MaskedPolicyScheme");
     auto MaskedPolicyScheme =
         static_cast<PolicyScheme>(MPSRecord->getValueAsInt("Value"));
-    Record *UMPSRecord = R->getValueAsDef("UnMaskedPolicyScheme");
+    const Record *UMPSRecord = R->getValueAsDef("UnMaskedPolicyScheme");
     auto UnMaskedPolicyScheme =
         static_cast<PolicyScheme>(UMPSRecord->getValueAsInt("Value"));
     std::vector<int64_t> Log2LMULList = R->getValueAsListOfInts("Log2LMUL");
@@ -553,7 +633,7 @@ void RVVEmitter::createRVVIntrinsics(
         BasicPrototype, /*IsMasked=*/false,
         /*HasMaskedOffOperand=*/false, HasVL, NF, UnMaskedPolicyScheme,
         DefaultPolicy, IsTuple);
-    llvm::SmallVector<PrototypeDescriptor> MaskedPrototype;
+    SmallVector<PrototypeDescriptor> MaskedPrototype;
     if (HasMasked)
       MaskedPrototype = RVVIntrinsic::computeBuiltinTypes(
           BasicPrototype, /*IsMasked=*/true, HasMaskedOffOperand, HasVL, NF,
@@ -578,8 +658,8 @@ void RVVEmitter::createRVVIntrinsics(
             Name, SuffixStr, OverloadedName, OverloadedSuffixStr, IRName,
             /*IsMasked=*/false, /*HasMaskedOffOperand=*/false, HasVL,
             UnMaskedPolicyScheme, SupportOverloading, HasBuiltinAlias,
-            ManualCodegen, *Types, IntrinsicTypes, RequiredFeatures, NF,
-            DefaultPolicy, HasFRMRoundModeOp));
+            ManualCodegen, *Types, IntrinsicTypes, NF, DefaultPolicy,
+            HasFRMRoundModeOp));
         if (UnMaskedPolicyScheme != PolicyScheme::SchemeNone)
           for (auto P : SupportedUnMaskedPolicies) {
             SmallVector<PrototypeDescriptor> PolicyPrototype =
@@ -593,8 +673,8 @@ void RVVEmitter::createRVVIntrinsics(
                 Name, SuffixStr, OverloadedName, OverloadedSuffixStr, IRName,
                 /*IsMask=*/false, /*HasMaskedOffOperand=*/false, HasVL,
                 UnMaskedPolicyScheme, SupportOverloading, HasBuiltinAlias,
-                ManualCodegen, *PolicyTypes, IntrinsicTypes, RequiredFeatures,
-                NF, P, HasFRMRoundModeOp));
+                ManualCodegen, *PolicyTypes, IntrinsicTypes, NF, P,
+                HasFRMRoundModeOp));
           }
         if (!HasMasked)
           continue;
@@ -605,8 +685,7 @@ void RVVEmitter::createRVVIntrinsics(
             Name, SuffixStr, OverloadedName, OverloadedSuffixStr, MaskedIRName,
             /*IsMasked=*/true, HasMaskedOffOperand, HasVL, MaskedPolicyScheme,
             SupportOverloading, HasBuiltinAlias, ManualCodegen, *MaskTypes,
-            IntrinsicTypes, RequiredFeatures, NF, DefaultPolicy,
-            HasFRMRoundModeOp));
+            IntrinsicTypes, NF, DefaultPolicy, HasFRMRoundModeOp));
         if (MaskedPolicyScheme == PolicyScheme::SchemeNone)
           continue;
         for (auto P : SupportedMaskedPolicies) {
@@ -620,8 +699,8 @@ void RVVEmitter::createRVVIntrinsics(
               Name, SuffixStr, OverloadedName, OverloadedSuffixStr,
               MaskedIRName, /*IsMasked=*/true, HasMaskedOffOperand, HasVL,
               MaskedPolicyScheme, SupportOverloading, HasBuiltinAlias,
-              ManualCodegen, *PolicyTypes, IntrinsicTypes, RequiredFeatures, NF,
-              P, HasFRMRoundModeOp));
+              ManualCodegen, *PolicyTypes, IntrinsicTypes, NF, P,
+              HasFRMRoundModeOp));
         }
       } // End for Log2LMULList
     }   // End for TypeRange
@@ -656,7 +735,7 @@ void RVVEmitter::createRVVIntrinsics(
       RVVRequire RequireExt =
           StringSwitch<RVVRequire>(RequiredFeature)
               .Case("RV64", RVV_REQ_RV64)
-              .Case("ZvfhminOrZvfh", RVV_REQ_ZvfhminOrZvfh)
+              .Case("Zvfhmin", RVV_REQ_Zvfhmin)
               .Case("Xsfvcp", RVV_REQ_Xsfvcp)
               .Case("Xsfvfnrclipxfqf", RVV_REQ_Xsfvfnrclipxfqf)
               .Case("Xsfvfwmaccqqq", RVV_REQ_Xsfvfwmaccqqq)
@@ -671,6 +750,9 @@ void RVVEmitter::createRVVIntrinsics(
               .Case("Zvknhb", RVV_REQ_Zvknhb)
               .Case("Zvksed", RVV_REQ_Zvksed)
               .Case("Zvksh", RVV_REQ_Zvksh)
+              .Case("Zvfbfwma", RVV_REQ_Zvfbfwma)
+              .Case("Zvfbfmin", RVV_REQ_Zvfbfmin)
+              .Case("Zvfh", RVV_REQ_Zvfh)
               .Case("Experimental", RVV_REQ_Experimental)
               .Default(RVV_REQ_None);
       assert(RequireExt != RVV_REQ_None && "Unrecognized required feature?");
@@ -696,9 +778,7 @@ void RVVEmitter::createRVVIntrinsics(
 }
 
 void RVVEmitter::printHeaderCode(raw_ostream &OS) {
-  std::vector<Record *> RVVHeaders =
-      Records.getAllDerivedDefinitions("RVVHeader");
-  for (auto *R : RVVHeaders) {
+  for (const Record *R : Records.getAllDerivedDefinitions("RVVHeader")) {
     StringRef HeaderCodeStr = R->getValueAsString("HeaderCode");
     OS << HeaderCodeStr.str();
   }
@@ -766,19 +846,19 @@ void RVVEmitter::createSema(raw_ostream &OS) {
 }
 
 namespace clang {
-void EmitRVVHeader(RecordKeeper &Records, raw_ostream &OS) {
+void EmitRVVHeader(const RecordKeeper &Records, raw_ostream &OS) {
   RVVEmitter(Records).createHeader(OS);
 }
 
-void EmitRVVBuiltins(RecordKeeper &Records, raw_ostream &OS) {
+void EmitRVVBuiltins(const RecordKeeper &Records, raw_ostream &OS) {
   RVVEmitter(Records).createBuiltins(OS);
 }
 
-void EmitRVVBuiltinCG(RecordKeeper &Records, raw_ostream &OS) {
+void EmitRVVBuiltinCG(const RecordKeeper &Records, raw_ostream &OS) {
   RVVEmitter(Records).createCodeGen(OS);
 }
 
-void EmitRVVBuiltinSema(RecordKeeper &Records, raw_ostream &OS) {
+void EmitRVVBuiltinSema(const RecordKeeper &Records, raw_ostream &OS) {
   RVVEmitter(Records).createSema(OS);
 }
 

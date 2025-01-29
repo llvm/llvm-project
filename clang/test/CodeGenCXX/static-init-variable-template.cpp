@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++14 -S -emit-llvm -disable-llvm-passes -o - %s -triple x86_64-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -std=c++14 -emit-llvm -disable-llvm-passes -o - %s -triple x86_64-linux-gnu | FileCheck %s
 
 template<int N> int Fib = Fib<N-2> + Fib<N-1>;
 template<> int Fib<0> = 0;

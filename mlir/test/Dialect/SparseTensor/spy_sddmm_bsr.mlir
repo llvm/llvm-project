@@ -35,26 +35,26 @@
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 2 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK:           %[[VAL_7:.*]] = sparse_tensor.reinterpret_map %[[VAL_0]] : tensor<?x?xf32, #[[$BSR]]> to tensor<?x?x2x2xf32, #[[$MAP]]>
-// CHECK:           %[[VAL_8:.*]] = tensor.dim %[[VAL_1]], %[[VAL_3]] : tensor<?x?xf32>
-// CHECK:           %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<?x?xf32>
-// CHECK:           %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_2]] : memref<?x?xf32>
-// CHECK:           %[[VAL_11:.*]] = sparse_tensor.lvl %[[VAL_7]], %[[VAL_4]] : tensor<?x?x2x2xf32, #[[$MAP]]>
-// CHECK:           %[[VAL_12:.*]] = sparse_tensor.positions %[[VAL_7]] {level = 1 : index} : tensor<?x?x2x2xf32, #[[$MAP]]> to memref<?xindex>
-// CHECK:           %[[VAL_13:.*]] = sparse_tensor.coordinates %[[VAL_7]] {level = 1 : index} : tensor<?x?x2x2xf32, #[[$MAP]]> to memref<?xindex>
-// CHECK:           %[[VAL_14:.*]] = sparse_tensor.values %[[VAL_7]] : tensor<?x?x2x2xf32, #[[$MAP]]> to memref<?xf32>
+// CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.reinterpret_map %[[VAL_0]] : tensor<?x?xf32, #[[$BSR]]> to tensor<?x?x2x2xf32, #[[$MAP]]>
+// CHECK-DAG:       %[[VAL_8:.*]] = tensor.dim %[[VAL_1]], %[[VAL_3]] : tensor<?x?xf32>
+// CHECK-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : tensor<?x?xf32> to memref<?x?xf32>
+// CHECK-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_2]] : tensor<?x?xf32> to memref<?x?xf32>
+// CHECK-DAG:       %[[VAL_11:.*]] = sparse_tensor.lvl %[[VAL_7]], %[[VAL_4]] : tensor<?x?x2x2xf32, #[[$MAP]]>
+// CHECK-DAG:       %[[VAL_12:.*]] = sparse_tensor.positions %[[VAL_7]] {level = 1 : index} : tensor<?x?x2x2xf32, #[[$MAP]]> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_13:.*]] = sparse_tensor.coordinates %[[VAL_7]] {level = 1 : index} : tensor<?x?x2x2xf32, #[[$MAP]]> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_14:.*]] = sparse_tensor.values %[[VAL_7]] : tensor<?x?x2x2xf32, #[[$MAP]]> to memref<?xf32>
 // CHECK:           scf.for %[[VAL_15:.*]] = %[[VAL_4]] to %[[VAL_11]] step %[[VAL_3]] {
 // CHECK:             %[[VAL_16:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_15]]] : memref<?xindex>
 // CHECK:             %[[VAL_17:.*]] = arith.addi %[[VAL_15]], %[[VAL_3]] : index
 // CHECK:             %[[VAL_18:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_17]]] : memref<?xindex>
 // CHECK:             scf.for %[[VAL_19:.*]] = %[[VAL_16]] to %[[VAL_18]] step %[[VAL_3]] {
 // CHECK:               %[[VAL_20:.*]] = memref.load %[[VAL_13]]{{\[}}%[[VAL_19]]] : memref<?xindex>
+// CHECK:               %[[VAL_22:.*]] = arith.muli %[[VAL_19]], %[[VAL_5]] : index
 // CHECK:               scf.for %[[VAL_21:.*]] = %[[VAL_4]] to %[[VAL_5]] step %[[VAL_3]] {
-// CHECK:                 %[[VAL_22:.*]] = arith.muli %[[VAL_19]], %[[VAL_5]] : index
-// CHECK:                 %[[VAL_23:.*]] = arith.addi %[[VAL_22]], %[[VAL_21]] : index
+// CHECK:                 %[[VAL_23:.*]] = arith.addi %[[VAL_21]], %[[VAL_22]] : index
+// CHECK:                 %[[VAL_25:.*]] = arith.muli %[[VAL_23]], %[[VAL_5]] : index
 // CHECK:                 scf.for %[[VAL_24:.*]] = %[[VAL_4]] to %[[VAL_5]] step %[[VAL_3]] {
-// CHECK:                   %[[VAL_25:.*]] = arith.muli %[[VAL_23]], %[[VAL_5]] : index
-// CHECK:                   %[[VAL_26:.*]] = arith.addi %[[VAL_25]], %[[VAL_24]] : index
+// CHECK:                   %[[VAL_26:.*]] = arith.addi %[[VAL_24]], %[[VAL_25]] : index
 // CHECK:                   %[[VAL_27:.*]] = scf.for %[[VAL_28:.*]] = %[[VAL_4]] to %[[VAL_8]] step %[[VAL_3]] iter_args(%[[VAL_29:.*]] = %[[VAL_6]]) -> (f32) {
 // CHECK:                     %[[VAL_30:.*]] = arith.muli %[[VAL_15]], %[[VAL_5]] : index
 // CHECK:                     %[[VAL_31:.*]] = arith.addi %[[VAL_30]], %[[VAL_21]] : index

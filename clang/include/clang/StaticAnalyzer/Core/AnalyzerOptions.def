@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ADT_STRINGREF_H
+#ifndef LLVM_CLANG_STATICANALYZER_CORE_ANALYZEROPTIONS_H
 #error This .def file is expected to be included in translation units where \
-"llvm/ADT/StringRef.h" is already included!
+"clang/StaticAnalyzer/Core/AnalyzerOptions.h" is already included!
 #endif
 
 #ifdef ANALYZER_OPTION
@@ -184,6 +184,46 @@ ANALYZER_OPTION(bool, ShouldCrosscheckWithZ3, "crosscheck-with-z3",
                 "constraint manager backend.",
                 false)
 
+ANALYZER_OPTION(
+    unsigned, Z3CrosscheckEQClassTimeoutThreshold,
+    "crosscheck-with-z3-eqclass-timeout-threshold",
+    "Set a timeout for bug report equivalence classes in milliseconds. "
+    "If we exhaust this threshold, we will drop the bug report eqclass "
+    "instead of doing more Z3 queries. Setting this to 700 ms in conjunction "
+    "with \"crosscheck-with-z3-timeout-threshold\" of 300 ms, would nicely "
+    "guarantee that no bug report equivalence class can take longer than "
+    "1 second, effectively mitigating Z3 hangs during refutation. "
+    "If there were Z3 retries, only the minimum query time is considered "
+    "when accumulating query times within a report equivalence class. "
+    "Set 0 for no timeout.", 0)
+
+ANALYZER_OPTION(
+    unsigned, Z3CrosscheckTimeoutThreshold,
+    "crosscheck-with-z3-timeout-threshold",
+    "Set a timeout for individual Z3 queries in milliseconds. "
+    "On fast machines, 300 worked well in some cases. "
+    "The lower it is, the higher the chances of having flaky issues. "
+    "Having no timeout may hang the analyzer indefinitely. "
+    "Set 0 for no timeout.", 15'000)
+
+ANALYZER_OPTION(
+    unsigned, Z3CrosscheckRLimitThreshold,
+    "crosscheck-with-z3-rlimit-threshold",
+    "Set the Z3 resource limit threshold. This sets a supposedly deterministic "
+    "cutoff point for Z3 queries, as longer queries usually consume more "
+    "resources. "
+    "400'000 should on average make Z3 queries run for up to 100ms on modern "
+    "hardware. Set 0 for unlimited.", 0)
+
+ANALYZER_OPTION(
+    PositiveAnalyzerOption, Z3CrosscheckMaxAttemptsPerQuery,
+    "crosscheck-with-z3-max-attempts-per-query",
+    "Set how many times the oracle is allowed to run a Z3 query. "
+    "This must be a positive value. Set 1 to not allow any retry attempts. "
+    "Increasing the number of attempts is often more effective at reducing "
+    "the number of nondeterministic diagnostics than "
+    "\"crosscheck-with-z3-timeout-threshold\" in practice.", 3)
+
 ANALYZER_OPTION(bool, ShouldReportIssuesInMainSourceFile,
                 "report-in-main-source-file",
                 "Whether or not the diagnostic report should be always "
@@ -279,13 +319,12 @@ ANALYZER_OPTION(
 
 ANALYZER_OPTION(
     bool, ShouldEagerlyAssume, "eagerly-assume",
-    "Whether we should eagerly assume evaluations of conditionals, thus, "
-    "bifurcating the path. This indicates how the engine should handle "
-    "expressions such as: 'x = (y != 0)'. When this is true then the "
-    "subexpression 'y != 0' will be eagerly assumed to be true or false, thus "
-    "evaluating it to the integers 0 or 1 respectively. The upside is that "
-    "this can increase analysis precision until we have a better way to lazily "
-    "evaluate such logic. The downside is that it eagerly bifurcates paths.",
+    "If this is enabled (the default behavior), when the analyzer encounters "
+    "a comparison operator or logical negation, it immediately splits the "
+    "state to separate the case when the expression is true and the case when "
+    "it's false. The upside is that this can increase analysis precision until "
+    "we have a better way to lazily evaluate such logic; the downside is that "
+    "it eagerly bifurcates paths.",
     true)
 
 ANALYZER_OPTION(
@@ -387,6 +426,11 @@ ANALYZER_OPTION(
 ANALYZER_OPTION(unsigned, MaxSymbolComplexity, "max-symbol-complexity",
                 "The maximum complexity of symbolic constraint.", 35)
 
+// HACK:https://discourse.llvm.org/t/rfc-make-istainted-and-complex-symbols-friends/79570
+// Ideally, we should get rid of this option soon.
+ANALYZER_OPTION(unsigned, MaxTaintedSymbolComplexity, "max-tainted-symbol-complexity",
+                "[DEPRECATED] The maximum complexity of a symbol to carry taint", 9)
+
 ANALYZER_OPTION(unsigned, MaxTimesInlineLarge, "max-times-inline-large",
                 "The maximum times a large function could be inlined.", 32)
 
@@ -412,22 +456,6 @@ ANALYZER_OPTION(
     "'ctu-max-nodes-pct'. However, if the number of nodes in single-TU "
     "analysis is too low, it is meaningful to provide a minimum value that "
     "serves as an upper bound instead.", 10000)
-
-ANALYZER_OPTION(
-    StringRef, CTUPhase1InliningMode, "ctu-phase1-inlining",
-    "Controls which functions will be inlined during the first phase of the ctu "
-    "analysis. "
-    "If the value is set to 'all' then all foreign functions are inlinied "
-    "immediately during the first phase, thus rendering the second phase a noop. "
-    "The 'ctu-max-nodes-*' budge has no effect in this case. "
-    "If the value is 'small' then only functions with a linear CFG and with a "
-    "limited number of statements would be inlined during the first phase. The "
-    "long and/or nontrivial functions are handled in the second phase and are "
-    "controlled by the 'ctu-max-nodes-*' budge. "
-    "The value 'none' means that all foreign functions are inlined only in the "
-    "second phase, 'ctu-max-nodes-*' budge limits the second phase. "
-    "Value: \"none\", \"small\", \"all\".",
-    "small")
 
 ANALYZER_OPTION(
     unsigned, RegionStoreSmallStructLimit, "region-store-small-struct-limit",
@@ -477,6 +505,22 @@ ANALYZER_OPTION(
     "call site if the called function's body is not available. This is a path "
     "where to look for those alternative implementations (called models).",
     "")
+
+ANALYZER_OPTION(
+    StringRef, CTUPhase1InliningMode, "ctu-phase1-inlining",
+    "Controls which functions will be inlined during the first phase of the ctu "
+    "analysis. "
+    "If the value is set to 'all' then all foreign functions are inlinied "
+    "immediately during the first phase, thus rendering the second phase a noop. "
+    "The 'ctu-max-nodes-*' budge has no effect in this case. "
+    "If the value is 'small' then only functions with a linear CFG and with a "
+    "limited number of statements would be inlined during the first phase. The "
+    "long and/or nontrivial functions are handled in the second phase and are "
+    "controlled by the 'ctu-max-nodes-*' budge. "
+    "The value 'none' means that all foreign functions are inlined only in the "
+    "second phase, 'ctu-max-nodes-*' budge limits the second phase. "
+    "Value: \"none\", \"small\", \"all\".",
+    "small")
 
 ANALYZER_OPTION(
     StringRef, CXXMemberInliningMode, "c++-inlining",

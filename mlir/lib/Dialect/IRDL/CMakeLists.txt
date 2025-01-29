@@ -2,6 +2,7 @@ add_mlir_dialect_library(MLIRIRDL
   IR/IRDL.cpp
   IR/IRDLOps.cpp
   IRDLLoading.cpp
+  IRDLSymbols.cpp
   IRDLVerifiers.cpp
 
   DEPENDS

@@ -1,4 +1,5 @@
 ; RUN: opt -S %s -passes=declare-to-assign -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -S %s -passes=declare-to-assign -o - | FileCheck %s
 
 ;; Check declare-to-assign ignores VLA-backed variables (for now).
 ;; From C++ source:
@@ -7,7 +8,7 @@
 ;;   int x[sz];
 ;; }
 
-; CHECK: llvm.dbg.declare(metadata ptr %vla, metadata ![[#]], metadata !DIExpression())
+; CHECK: #dbg_declare(ptr %vla, ![[#]], !DIExpression(),
 
 @sz = dso_local global i32 0, align 4
 

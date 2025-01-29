@@ -12,6 +12,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Support/CachePruning.h"
 #include <optional>
@@ -23,6 +24,13 @@ enum class CodeGenOptLevel;
 namespace lld::wasm {
 
 class InputFile;
+class StubFile;
+class ObjFile;
+class SharedFile;
+class BitcodeFile;
+class InputTable;
+class InputGlobal;
+class InputFunction;
 class Symbol;
 
 // For --unresolved-symbols.
@@ -35,7 +43,8 @@ enum class BuildIdKind { None, Fast, Sha1, Hexstring, Uuid };
 // Most fields are direct mapping from the command line options
 // and such fields have the same name as the corresponding options.
 // Most fields are initialized by the driver.
-struct Configuration {
+struct Config {
+  bool allowMultipleDefinition;
   bool bsymbolic;
   bool checkFeatures;
   bool compressRelocations;
@@ -57,35 +66,54 @@ struct Configuration {
   bool importUndefined;
   std::optional<bool> is64;
   bool mergeDataSegments;
+  bool noinhibitExec;
   bool pie;
   bool printGcSections;
   bool relocatable;
   bool saveTemps;
   bool shared;
+  bool shlibSigCheck;
   bool stripAll;
   bool stripDebug;
   bool stackFirst;
-  bool isStatic = false;
+  // Because dyamanic linking under Wasm is still experimental we default to
+  // static linking
+  bool isStatic = true;
+  bool thinLTOEmitImportsFiles;
+  bool thinLTOEmitIndexFiles;
+  bool thinLTOIndexOnly;
   bool trace;
   uint64_t globalBase;
   uint64_t initialHeap;
   uint64_t initialMemory;
   uint64_t maxMemory;
+  bool noGrowableMemory;
+  // The table offset at which to place function addresses.  We reserve zero
+  // for the null function pointer.  This gets set to 1 for executables and 0
+  // for shared libraries (since they always added to a dynamic offset at
+  // runtime).
+  uint64_t tableBase;
   uint64_t zStackSize;
   unsigned ltoPartitions;
   unsigned ltoo;
   llvm::CodeGenOptLevel ltoCgo;
   unsigned optimize;
-  llvm::StringRef thinLTOJobs;
   bool ltoDebugPassManager;
   UnresolvedPolicy unresolvedSymbols;
   BuildIdKind buildId = BuildIdKind::None;
 
   llvm::StringRef entry;
+  llvm::StringRef ltoObjPath;
   llvm::StringRef mapFile;
   llvm::StringRef outputFile;
   llvm::StringRef soName;
   llvm::StringRef thinLTOCacheDir;
+  llvm::StringRef thinLTOJobs;
+  llvm::StringRef thinLTOIndexOnlyArg;
+  std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
+  llvm::StringRef thinLTOPrefixReplaceOld;
+  llvm::StringRef thinLTOPrefixReplaceNew;
+  llvm::StringRef thinLTOPrefixReplaceNativeObject;
   llvm::StringRef whyExtract;
 
   llvm::StringSet<> allowUndefinedSymbols;
@@ -96,23 +124,27 @@ struct Configuration {
   std::optional<std::vector<std::string>> features;
   std::optional<std::vector<std::string>> extraFeatures;
   llvm::SmallVector<uint8_t, 0> buildIdVector;
+};
 
-  // The following config options do not directly correspond to any
-  // particular command line options, and should probably be moved to separate
-  // Ctx struct as in ELF/Config.h
+// The Ctx object hold all other (non-configuration) global state.
+struct Ctx {
+  Config arg;
+
+  llvm::SmallVector<ObjFile *, 0> objectFiles;
+  llvm::SmallVector<StubFile *, 0> stubFiles;
+  llvm::SmallVector<SharedFile *, 0> sharedFiles;
+  llvm::SmallVector<BitcodeFile *, 0> bitcodeFiles;
+  llvm::SmallVector<BitcodeFile *, 0> lazyBitcodeFiles;
+  llvm::SmallVector<InputFunction *, 0> syntheticFunctions;
+  llvm::SmallVector<InputGlobal *, 0> syntheticGlobals;
+  llvm::SmallVector<InputTable *, 0> syntheticTables;
 
   // True if we are creating position-independent code.
-  bool isPic;
+  bool isPic = false;
 
   // True if we have an MVP input that uses __indirect_function_table and which
   // requires it to be allocated to table number 0.
   bool legacyFunctionTable = false;
-
-  // The table offset at which to place function addresses.  We reserve zero
-  // for the null function pointer.  This gets set to 1 for executables and 0
-  // for shared libraries (since they always added to a dynamic offset at
-  // runtime).
-  uint32_t tableBase = 0;
 
   // Will be set to true if bss data segments should be emitted. In most cases
   // this is not necessary.
@@ -122,10 +154,14 @@ struct Configuration {
   llvm::SmallVector<std::tuple<std::string, const InputFile *, const Symbol &>,
                     0>
       whyExtractRecords;
+
+  Ctx();
+  void reset();
 };
 
-// The only instance of Configuration struct.
-extern Configuration *config;
+extern Ctx ctx;
+
+void errorOrWarn(const llvm::Twine &msg);
 
 } // namespace lld::wasm
 

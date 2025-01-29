@@ -16,7 +16,7 @@
 
 #include <vector>
 
-using namespace __orc_rt;
+using namespace orc_rt;
 
 extern "C" int64_t __orc_rt_run_program(const char *JITDylibName,
                                         const char *EntrySymbolName, int argc,

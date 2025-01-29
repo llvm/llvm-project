@@ -1,22 +1,22 @@
-; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc < %s -mtriple=avr | FileCheck %s
 
-%"fmt::Formatter" = type { i32, { i8*, void (i8*)** } }
+%"fmt::Formatter" = type { i32, { ptr, ptr } }
 
 @str.1b = external constant [0 x i8]
 
-define void @"TryFromIntError::Debug"(%"fmt::Formatter"* dereferenceable(32)) unnamed_addr #0 personality i32 (...) addrspace(1)* @rust_eh_personality {
+define void @"TryFromIntError::Debug"(ptr dereferenceable(32)) unnamed_addr #0 personality ptr addrspace(1) @rust_eh_personality {
 ; CHECK-LABEL: "TryFromIntError::Debug"
 start:
   %builder = alloca i8, align 8
-  %1 = getelementptr inbounds %"fmt::Formatter", %"fmt::Formatter"* %0, i16 0, i32 1
-  %2 = bitcast { i8*, void (i8*)** }* %1 to {}**
-  %3 = load {}*, {}** %2, align 2
-  %4 = getelementptr inbounds %"fmt::Formatter", %"fmt::Formatter"* %0, i16 0, i32 1, i32 1
-  %5 = load void (i8*)**, void (i8*)*** %4, align 2
-  %6 = getelementptr inbounds void (i8*)*, void (i8*)** %5, i16 3
-  %7 = bitcast void (i8*)** %6 to i8 ({}*, i8*, i16) addrspace(1)**
-  %8 = load i8 ({}*, i8*, i16) addrspace(1)*, i8 ({}*, i8*, i16) addrspace(1)** %7, align 2
-  %9 = tail call i8 %8({}* nonnull %3, i8* noalias nonnull readonly getelementptr inbounds ([0 x i8], [0 x i8]* @str.1b, i16 0, i16 0), i16 15)
+  %1 = getelementptr inbounds %"fmt::Formatter", ptr %0, i16 0, i32 1
+  %2 = bitcast ptr %1 to ptr
+  %3 = load ptr, ptr %2, align 2
+  %4 = getelementptr inbounds %"fmt::Formatter", ptr %0, i16 0, i32 1, i32 1
+  %5 = load ptr, ptr %4, align 2
+  %6 = getelementptr inbounds ptr, ptr %5, i16 3
+  %7 = bitcast ptr %6 to ptr
+  %8 = load ptr addrspace(1), ptr %7, align 2
+  %9 = tail call i8 %8(ptr nonnull %3, ptr noalias nonnull readonly @str.1b, i16 15)
   unreachable
 }
 

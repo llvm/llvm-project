@@ -6,26 +6,26 @@ define void @trunc_through_one_add(ptr noalias %0, ptr noalias readonly %1) {
 ; SSE-LABEL: @trunc_through_one_add(
 ; SSE-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr [[TMP1:%.*]], align 1
 ; SSE-NEXT:    [[TMP4:%.*]] = zext <8 x i8> [[TMP3]] to <8 x i16>
-; SSE-NEXT:    [[TMP5:%.*]] = lshr <8 x i16> [[TMP4]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+; SSE-NEXT:    [[TMP5:%.*]] = lshr <8 x i16> [[TMP4]], splat (i16 1)
 ; SSE-NEXT:    [[TMP6:%.*]] = add nuw nsw <8 x i16> [[TMP5]], [[TMP4]]
-; SSE-NEXT:    [[TMP7:%.*]] = lshr <8 x i16> [[TMP6]], <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; SSE-NEXT:    [[TMP7:%.*]] = lshr <8 x i16> [[TMP6]], splat (i16 2)
 ; SSE-NEXT:    store <8 x i16> [[TMP7]], ptr [[TMP0:%.*]], align 2
-; SSE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 8
-; SSE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i16, ptr [[TMP0]], i64 8
+; SSE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 8
+; SSE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 16
 ; SSE-NEXT:    [[TMP10:%.*]] = load <8 x i8>, ptr [[TMP8]], align 1
 ; SSE-NEXT:    [[TMP11:%.*]] = zext <8 x i8> [[TMP10]] to <8 x i16>
-; SSE-NEXT:    [[TMP12:%.*]] = lshr <8 x i16> [[TMP11]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+; SSE-NEXT:    [[TMP12:%.*]] = lshr <8 x i16> [[TMP11]], splat (i16 1)
 ; SSE-NEXT:    [[TMP13:%.*]] = add nuw nsw <8 x i16> [[TMP12]], [[TMP11]]
-; SSE-NEXT:    [[TMP14:%.*]] = lshr <8 x i16> [[TMP13]], <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; SSE-NEXT:    [[TMP14:%.*]] = lshr <8 x i16> [[TMP13]], splat (i16 2)
 ; SSE-NEXT:    store <8 x i16> [[TMP14]], ptr [[TMP9]], align 2
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @trunc_through_one_add(
 ; AVX-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr [[TMP1:%.*]], align 1
 ; AVX-NEXT:    [[TMP4:%.*]] = zext <16 x i8> [[TMP3]] to <16 x i16>
-; AVX-NEXT:    [[TMP5:%.*]] = lshr <16 x i16> [[TMP4]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+; AVX-NEXT:    [[TMP5:%.*]] = lshr <16 x i16> [[TMP4]], splat (i16 1)
 ; AVX-NEXT:    [[TMP6:%.*]] = add nuw nsw <16 x i16> [[TMP5]], [[TMP4]]
-; AVX-NEXT:    [[TMP7:%.*]] = lshr <16 x i16> [[TMP6]], <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; AVX-NEXT:    [[TMP7:%.*]] = lshr <16 x i16> [[TMP6]], splat (i16 2)
 ; AVX-NEXT:    store <16 x i16> [[TMP7]], ptr [[TMP0:%.*]], align 2
 ; AVX-NEXT:    ret void
 ;
@@ -181,21 +181,21 @@ define void @trunc_through_two_adds(ptr noalias %0, ptr noalias readonly %1, ptr
 ; SSE-NEXT:    [[TMP6:%.*]] = load <8 x i8>, ptr [[TMP2:%.*]], align 1
 ; SSE-NEXT:    [[TMP7:%.*]] = zext <8 x i8> [[TMP6]] to <8 x i16>
 ; SSE-NEXT:    [[TMP8:%.*]] = add nuw nsw <8 x i16> [[TMP7]], [[TMP5]]
-; SSE-NEXT:    [[TMP9:%.*]] = lshr <8 x i16> [[TMP8]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+; SSE-NEXT:    [[TMP9:%.*]] = lshr <8 x i16> [[TMP8]], splat (i16 1)
 ; SSE-NEXT:    [[TMP10:%.*]] = add nuw nsw <8 x i16> [[TMP9]], [[TMP8]]
-; SSE-NEXT:    [[TMP11:%.*]] = lshr <8 x i16> [[TMP10]], <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; SSE-NEXT:    [[TMP11:%.*]] = lshr <8 x i16> [[TMP10]], splat (i16 2)
 ; SSE-NEXT:    store <8 x i16> [[TMP11]], ptr [[TMP0:%.*]], align 2
-; SSE-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 8
-; SSE-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 8
-; SSE-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i16, ptr [[TMP0]], i64 8
+; SSE-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 8
+; SSE-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 8
+; SSE-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 16
 ; SSE-NEXT:    [[TMP15:%.*]] = load <8 x i8>, ptr [[TMP12]], align 1
 ; SSE-NEXT:    [[TMP16:%.*]] = zext <8 x i8> [[TMP15]] to <8 x i16>
 ; SSE-NEXT:    [[TMP17:%.*]] = load <8 x i8>, ptr [[TMP13]], align 1
 ; SSE-NEXT:    [[TMP18:%.*]] = zext <8 x i8> [[TMP17]] to <8 x i16>
 ; SSE-NEXT:    [[TMP19:%.*]] = add nuw nsw <8 x i16> [[TMP18]], [[TMP16]]
-; SSE-NEXT:    [[TMP20:%.*]] = lshr <8 x i16> [[TMP19]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+; SSE-NEXT:    [[TMP20:%.*]] = lshr <8 x i16> [[TMP19]], splat (i16 1)
 ; SSE-NEXT:    [[TMP21:%.*]] = add nuw nsw <8 x i16> [[TMP20]], [[TMP19]]
-; SSE-NEXT:    [[TMP22:%.*]] = lshr <8 x i16> [[TMP21]], <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; SSE-NEXT:    [[TMP22:%.*]] = lshr <8 x i16> [[TMP21]], splat (i16 2)
 ; SSE-NEXT:    store <8 x i16> [[TMP22]], ptr [[TMP14]], align 2
 ; SSE-NEXT:    ret void
 ;
@@ -205,9 +205,9 @@ define void @trunc_through_two_adds(ptr noalias %0, ptr noalias readonly %1, ptr
 ; AVX-NEXT:    [[TMP6:%.*]] = load <16 x i8>, ptr [[TMP2:%.*]], align 1
 ; AVX-NEXT:    [[TMP7:%.*]] = zext <16 x i8> [[TMP6]] to <16 x i16>
 ; AVX-NEXT:    [[TMP8:%.*]] = add nuw nsw <16 x i16> [[TMP7]], [[TMP5]]
-; AVX-NEXT:    [[TMP9:%.*]] = lshr <16 x i16> [[TMP8]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+; AVX-NEXT:    [[TMP9:%.*]] = lshr <16 x i16> [[TMP8]], splat (i16 1)
 ; AVX-NEXT:    [[TMP10:%.*]] = add nuw nsw <16 x i16> [[TMP9]], [[TMP8]]
-; AVX-NEXT:    [[TMP11:%.*]] = lshr <16 x i16> [[TMP10]], <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+; AVX-NEXT:    [[TMP11:%.*]] = lshr <16 x i16> [[TMP10]], splat (i16 2)
 ; AVX-NEXT:    store <16 x i16> [[TMP11]], ptr [[TMP0:%.*]], align 2
 ; AVX-NEXT:    ret void
 ;

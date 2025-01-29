@@ -50,7 +50,7 @@ bb3:
 
 declare void @unknown_func()
 ; Remove redundant store, which is in the same loop as the load.
-define i32 @test33(i1 %c, ptr %p, i32 %i) {
+define i32 @test33(i1 %c, ptr %p, i32 %i, i1 %arg) {
 ; CHECK-LABEL: @test33(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
@@ -59,7 +59,7 @@ define i32 @test33(i1 %c, ptr %p, i32 %i) {
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    call void @unknown_func()
-; CHECK-NEXT:    br i1 undef, label [[BB1]], label [[BB3:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB1]], label [[BB3:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -72,7 +72,7 @@ bb2:
   store i32 %v, ptr %p, align 4
   ; Might read and overwrite value at %p, but doesn't matter.
   call void @unknown_func()
-  br i1 undef, label %bb1, label %bb3
+  br i1 %arg, label %bb1, label %bb3
 bb3:
   ret i32 0
 }

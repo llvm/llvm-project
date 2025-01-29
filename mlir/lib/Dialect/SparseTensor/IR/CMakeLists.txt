@@ -45,10 +45,13 @@ add_mlir_dialect_library(MLIRSparseTensorDialect
 
   LINK_LIBS PUBLIC
   MLIRArithDialect
+  MLIRControlFlowInterfaces
+  MLIRComplexDialect
   MLIRDialect
   MLIRDialectUtils
   MLIRIR
   MLIRInferTypeOpInterface
+  MLIRLoopLikeInterface
   MLIRSupport
   MLIRSparseTensorEnums
   )

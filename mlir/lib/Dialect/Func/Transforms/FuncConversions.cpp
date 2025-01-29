@@ -13,6 +13,14 @@
 using namespace mlir;
 using namespace mlir::func;
 
+/// Flatten the given value ranges into a single vector of values.
+static SmallVector<Value> flattenValues(ArrayRef<ValueRange> values) {
+  SmallVector<Value> result;
+  for (const auto &vals : values)
+    llvm::append_range(result, vals);
+  return result;
+}
+
 namespace {
 /// Converts the operand and result types of the CallOp, used together with the
 /// FuncOpSignatureConversion.
@@ -21,30 +29,43 @@ struct CallOpSignatureConversion : public OpConversionPattern<CallOp> {
 
   /// Hook for derived classes to implement combined matching and rewriting.
   LogicalResult
-  matchAndRewrite(CallOp callOp, OpAdaptor adaptor,
+  matchAndRewrite(CallOp callOp, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Convert the original function results.
+    // Convert the original function results. Keep track of how many result
+    // types an original result type is converted into.
+    SmallVector<size_t> numResultsReplacments;
     SmallVector<Type, 1> convertedResults;
-    if (failed(typeConverter->convertTypes(callOp.getResultTypes(),
-                                           convertedResults)))
-      return failure();
-
-    // If this isn't a one-to-one type mapping, we don't know how to aggregate
-    // the results.
-    if (callOp->getNumResults() != convertedResults.size())
-      return failure();
+    size_t numFlattenedResults = 0;
+    for (auto [idx, type] : llvm::enumerate(callOp.getResultTypes())) {
+      if (failed(typeConverter->convertTypes(type, convertedResults)))
+        return failure();
+      numResultsReplacments.push_back(convertedResults.size() -
+                                      numFlattenedResults);
+      numFlattenedResults = convertedResults.size();
+    }
 
     // Substitute with the new result types from the corresponding FuncType
     // conversion.
-    rewriter.replaceOpWithNewOp<CallOp>(
-        callOp, callOp.getCallee(), convertedResults, adaptor.getOperands());
+    auto newCallOp = rewriter.create<CallOp>(
+        callOp.getLoc(), callOp.getCallee(), convertedResults,
+        flattenValues(adaptor.getOperands()));
+    SmallVector<ValueRange> replacements;
+    size_t offset = 0;
+    for (int i = 0, e = callOp->getNumResults(); i < e; ++i) {
+      replacements.push_back(
+          newCallOp->getResults().slice(offset, numResultsReplacments[i]));
+      offset += numResultsReplacments[i];
+    }
+    assert(offset == convertedResults.size() &&
+           "expected that all converted results are used");
+    rewriter.replaceOpWithMultiple(callOp, replacements);
     return success();
   }
 };
 } // namespace
 
 void mlir::populateCallOpTypeConversionPattern(RewritePatternSet &patterns,
-                                               TypeConverter &converter) {
+                                               const TypeConverter &converter) {
   patterns.add<CallOpSignatureConversion>(converter, patterns.getContext());
 }
 
@@ -59,7 +80,7 @@ public:
       BranchOpInterface>::OpInterfaceConversionPattern;
 
   BranchOpInterfaceTypeConversion(
-      TypeConverter &typeConverter, MLIRContext *ctx,
+      const TypeConverter &typeConverter, MLIRContext *ctx,
       function_ref<bool(BranchOpInterface, int)> shouldConvertBranchOperand)
       : OpInterfaceConversionPattern(typeConverter, ctx, /*benefit=*/1),
         shouldConvertBranchOperand(shouldConvertBranchOperand) {}
@@ -84,7 +105,7 @@ public:
           newOperands[idx] = operands[idx];
       }
     }
-    rewriter.updateRootInPlace(
+    rewriter.modifyOpInPlace(
         op, [newOperands, op]() { op->setOperands(newOperands); });
     return success();
   }
@@ -103,26 +124,24 @@ public:
   using OpConversionPattern<ReturnOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(ReturnOp op, OpAdaptor adaptor,
+  matchAndRewrite(ReturnOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
-    // For a return, all operands go to the results of the parent, so
-    // rewrite them all.
-    rewriter.updateRootInPlace(op,
-                               [&] { op->setOperands(adaptor.getOperands()); });
+    rewriter.replaceOpWithNewOp<ReturnOp>(op,
+                                          flattenValues(adaptor.getOperands()));
     return success();
   }
 };
 } // namespace
 
 void mlir::populateBranchOpInterfaceTypeConversionPattern(
-    RewritePatternSet &patterns, TypeConverter &typeConverter,
+    RewritePatternSet &patterns, const TypeConverter &typeConverter,
     function_ref<bool(BranchOpInterface, int)> shouldConvertBranchOperand) {
   patterns.add<BranchOpInterfaceTypeConversion>(
       typeConverter, patterns.getContext(), shouldConvertBranchOperand);
 }
 
 bool mlir::isLegalForBranchOpInterfaceTypeConversionPattern(
-    Operation *op, TypeConverter &converter) {
+    Operation *op, const TypeConverter &converter) {
   // All successor operands of branch like operations must be rewritten.
   if (auto branchOp = dyn_cast<BranchOpInterface>(op)) {
     for (int p = 0, e = op->getBlock()->getNumSuccessors(); p < e; ++p) {
@@ -137,14 +156,13 @@ bool mlir::isLegalForBranchOpInterfaceTypeConversionPattern(
   return false;
 }
 
-void mlir::populateReturnOpTypeConversionPattern(RewritePatternSet &patterns,
-                                                 TypeConverter &typeConverter) {
+void mlir::populateReturnOpTypeConversionPattern(
+    RewritePatternSet &patterns, const TypeConverter &typeConverter) {
   patterns.add<ReturnOpTypeConversion>(typeConverter, patterns.getContext());
 }
 
-bool mlir::isLegalForReturnOpTypeConversionPattern(Operation *op,
-                                                   TypeConverter &converter,
-                                                   bool returnOpAlwaysLegal) {
+bool mlir::isLegalForReturnOpTypeConversionPattern(
+    Operation *op, const TypeConverter &converter, bool returnOpAlwaysLegal) {
   // If this is a `return` and the user pass wants to convert/transform across
   // function boundaries, then `converter` is invoked to check whether the
   // `return` op is legal.

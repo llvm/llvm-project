@@ -10,12 +10,14 @@
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Initialization/SystemInitializerCommon.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/ProcessTrace.h"
 #include "lldb/Utility/Timer.h"
+#include "lldb/Version/Version.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetSelect.h"
 
@@ -57,6 +59,7 @@ llvm::Error SystemInitializerFull::Initialize() {
   llvm::InitializeAllAsmPrinters();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllDisassemblers();
+
   // Initialize the command line parser in LLVM. This usually isn't necessary
   // as we aren't dealing with command line options here, but otherwise some
   // other code in Clang/LLVM might be tempted to call this function from a
@@ -65,10 +68,13 @@ llvm::Error SystemInitializerFull::Initialize() {
   const char *arg0 = "lldb";
   llvm::cl::ParseCommandLineOptions(1, &arg0);
 
+  // Initialize the progress manager.
+  ProgressManager::Initialize();
+
 #define LLDB_PLUGIN(p) LLDB_PLUGIN_INITIALIZE(p);
 #include "Plugins/Plugins.def"
 
-  // Scan for any system or user LLDB plug-ins
+  // Scan for any system or user LLDB plug-ins.
   PluginManager::Initialize();
 
   // The process settings need to know about installed plug-ins, so the
@@ -78,20 +84,28 @@ llvm::Error SystemInitializerFull::Initialize() {
   // Use the Debugger's LLDBAssert callback.
   SetLLDBAssertCallback(Debugger::AssertCallback);
 
+  // Use the system log to report errors that would otherwise get dropped.
+  SetLLDBErrorLog(GetLog(SystemLog::System));
+
+  LLDB_LOG(GetLog(SystemLog::System), "{0}", GetVersion());
+
   return llvm::Error::success();
 }
 
 void SystemInitializerFull::Terminate() {
   Debugger::SettingsTerminate();
 
-  // Terminate plug-ins in core LLDB
+  // Terminate plug-ins in core LLDB.
   ProcessTrace::Terminate();
 
-  // Terminate and unload and loaded system or user LLDB plug-ins
+  // Terminate and unload and loaded system or user LLDB plug-ins.
   PluginManager::Terminate();
 
 #define LLDB_PLUGIN(p) LLDB_PLUGIN_TERMINATE(p);
 #include "Plugins/Plugins.def"
+
+  // Terminate the progress manager.
+  ProgressManager::Terminate();
 
   // Now shutdown the common parts, in reverse order.
   SystemInitializerCommon::Terminate();

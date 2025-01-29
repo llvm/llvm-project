@@ -1,4 +1,4 @@
-// REQUIRES: zlib, amdgpu-registered-target
+// REQUIRES: zlib
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu \
 // RUN:    --offload-arch=gfx906 %s -nogpulib -nogpuinc \

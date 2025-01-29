@@ -72,7 +72,8 @@ BinarySection::hash(const BinaryData &BD,
 
 void BinarySection::emitAsData(MCStreamer &Streamer,
                                const Twine &SectionName) const {
-  StringRef SectionContents = getContents();
+  StringRef SectionContents =
+      isFinalized() ? getOutputContents() : getContents();
   MCSectionELF *ELFSection =
       BC.Ctx->getELFSection(SectionName, getELFType(), getELFFlags());
 
@@ -141,6 +142,15 @@ void BinarySection::emitAsData(MCStreamer &Streamer,
     Streamer.emitLabel(BC.Ctx->getOrCreateSymbol("__hot_data_end"));
 }
 
+uint64_t BinarySection::write(raw_ostream &OS) const {
+  const uint64_t NumValidContentBytes =
+      std::min<uint64_t>(getOutputContents().size(), getOutputSize());
+  OS.write(getOutputContents().data(), NumValidContentBytes);
+  if (getOutputSize() > NumValidContentBytes)
+    OS.write_zeros(getOutputSize() - NumValidContentBytes);
+  return getOutputSize();
+}
+
 void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
                                             SymbolResolverFuncTy Resolver) {
   if (PendingRelocations.empty() && Patches.empty())
@@ -189,18 +199,7 @@ void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
   clearList(PendingRelocations);
 }
 
-BinarySection::~BinarySection() {
-  if (isReordered()) {
-    delete[] getData();
-    return;
-  }
-
-  if (!isAllocatable() && !hasValidSectionID() &&
-      (!hasSectionRef() ||
-       OutputContents.data() != getContents(Section).data())) {
-    delete[] getOutputData();
-  }
-}
+BinarySection::~BinarySection() { updateContents(nullptr, 0); }
 
 void BinarySection::clearRelocations() { clearList(Relocations); }
 

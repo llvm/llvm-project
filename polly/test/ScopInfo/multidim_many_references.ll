@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-print-scops -polly-ignore-aliasing -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-print-function-scops -polly-ignore-aliasing -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -polly-ignore-aliasing -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -polly-ignore-aliasing -disable-output < %s 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -28,7 +28,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; This test case verifies that the construction of the assumed context finishes
 ; successfully. Depending on how constrained are accumulated in the assumed
 ; context, this test case can take even for a smaller number of arrays over a
-; minute to complete. With the unrolling choosen in this test, an inefficient
+; minute to complete. With the unrolling chosen in this test, an inefficient
 ; formulation of the assumption tracking cause LLVM to crash due to excessive
 ; memory usage due to an overly large number of disjuncts being formed.
 

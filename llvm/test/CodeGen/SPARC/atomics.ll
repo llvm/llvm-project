@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=sparc -mcpu=v9 -verify-machineinstrs | FileCheck %s --check-prefixes=SPARC
-; RUN: llc < %s -march=sparcv9 -verify-machineinstrs | FileCheck %s --check-prefixes=SPARC64
+; RUN: llc < %s -mtriple=sparc -mcpu=v9 -verify-machineinstrs | FileCheck %s --check-prefixes=SPARC
+; RUN: llc < %s -mtriple=sparcv9 -verify-machineinstrs | FileCheck %s --check-prefixes=SPARC64
 
 ; SPARC-LABEL: test_atomic_i8
 ; SPARC:       ldub [%o0]
@@ -15,12 +15,12 @@
 ; SPARC64:       membar
 ; SPARC64:       membar
 ; SPARC64:       stb {{.+}}, [%o2]
-define i8 @test_atomic_i8(i8* %ptr1, i8* %ptr2, i8* %ptr3) {
+define i8 @test_atomic_i8(ptr %ptr1, ptr %ptr2, ptr %ptr3) {
 entry:
-  %0 = load atomic i8, i8* %ptr1 acquire, align 1
-  %1 = load atomic i8, i8* %ptr2 acquire, align 1
+  %0 = load atomic i8, ptr %ptr1 acquire, align 1
+  %1 = load atomic i8, ptr %ptr2 acquire, align 1
   %2 = add i8 %0, %1
-  store atomic i8 %2, i8* %ptr3 release, align 1
+  store atomic i8 %2, ptr %ptr3 release, align 1
   ret i8 %2
 }
 
@@ -38,12 +38,12 @@ entry:
 ; SPARC64:       membar
 ; SPARC64:       membar
 ; SPARC64:       sth {{.+}}, [%o2]
-define i16 @test_atomic_i16(i16* %ptr1, i16* %ptr2, i16* %ptr3) {
+define i16 @test_atomic_i16(ptr %ptr1, ptr %ptr2, ptr %ptr3) {
 entry:
-  %0 = load atomic i16, i16* %ptr1 acquire, align 2
-  %1 = load atomic i16, i16* %ptr2 acquire, align 2
+  %0 = load atomic i16, ptr %ptr1 acquire, align 2
+  %1 = load atomic i16, ptr %ptr2 acquire, align 2
   %2 = add i16 %0, %1
-  store atomic i16 %2, i16* %ptr3 release, align 2
+  store atomic i16 %2, ptr %ptr3 release, align 2
   ret i16 %2
 }
 
@@ -61,12 +61,12 @@ entry:
 ; SPARC64:       membar
 ; SPARC64:       membar
 ; SPARC64:       st {{.+}}, [%o2]
-define i32 @test_atomic_i32(i32* %ptr1, i32* %ptr2, i32* %ptr3) {
+define i32 @test_atomic_i32(ptr %ptr1, ptr %ptr2, ptr %ptr3) {
 entry:
-  %0 = load atomic i32, i32* %ptr1 acquire, align 4
-  %1 = load atomic i32, i32* %ptr2 acquire, align 4
+  %0 = load atomic i32, ptr %ptr1 acquire, align 4
+  %1 = load atomic i32, ptr %ptr2 acquire, align 4
   %2 = add i32 %0, %1
-  store atomic i32 %2, i32* %ptr3 release, align 4
+  store atomic i32 %2, ptr %ptr3 release, align 4
   ret i32 %2
 }
 
@@ -136,9 +136,9 @@ entry:
 ; SPARC64:      [[LABEL2]]:
 ; SPARC64:       retl
 ; SPARC64:       srl %g2, %o1, %o0
-define i8 @test_cmpxchg_i8(i8 %a, i8* %ptr) {
+define i8 @test_cmpxchg_i8(i8 %a, ptr %ptr) {
 entry:
-  %pair = cmpxchg i8* %ptr, i8 %a, i8 123 monotonic monotonic
+  %pair = cmpxchg ptr %ptr, i8 %a, i8 123 monotonic monotonic
   %b = extractvalue { i8, i1 } %pair, 0
   ret i8 %b
 }
@@ -207,9 +207,9 @@ entry:
 ; SPARC64:      [[LABEL2]]:
 ; SPARC64:       retl
 ; SPARC64:       srl %g2, %o1, %o0
-define i16 @test_cmpxchg_i16(i16 %a, i16* %ptr) {
+define i16 @test_cmpxchg_i16(i16 %a, ptr %ptr) {
 entry:
-  %pair = cmpxchg i16* %ptr, i16 %a, i16 123 monotonic monotonic
+  %pair = cmpxchg ptr %ptr, i16 %a, i16 123 monotonic monotonic
   %b = extractvalue { i16, i1 } %pair, 0
   ret i16 %b
 }
@@ -220,9 +220,9 @@ entry:
 ; SPARC64-LABEL: test_cmpxchg_i32
 ; SPARC64:       mov 123, [[R:%[gilo][0-7]]]
 ; SPARC64:       cas [%o1], %o0, [[R]]
-define i32 @test_cmpxchg_i32(i32 %a, i32* %ptr) {
+define i32 @test_cmpxchg_i32(i32 %a, ptr %ptr) {
 entry:
-  %pair = cmpxchg i32* %ptr, i32 %a, i32 123 monotonic monotonic
+  %pair = cmpxchg ptr %ptr, i32 %a, i32 123 monotonic monotonic
   %b = extractvalue { i32, i1 } %pair, 0
   ret i32 %b
 }
@@ -233,9 +233,9 @@ entry:
 ; SPARC64-LABEL: test_swap_i8
 ; SPARC64:       mov 42, [[R:%[gilo][0-7]]]
 ; SPARC64:       cas
-define i8 @test_swap_i8(i8 %a, i8* %ptr) {
+define i8 @test_swap_i8(i8 %a, ptr %ptr) {
 entry:
-  %b = atomicrmw xchg i8* %ptr, i8 42 monotonic
+  %b = atomicrmw xchg ptr %ptr, i8 42 monotonic
   ret i8 %b
 }
 
@@ -245,9 +245,9 @@ entry:
 ; SPARC64-LABEL: test_swap_i16
 ; SPARC64:       mov 42, [[R:%[gilo][0-7]]]
 ; SPARC64:       cas
-define i16 @test_swap_i16(i16 %a, i16* %ptr) {
+define i16 @test_swap_i16(i16 %a, ptr %ptr) {
 entry:
-  %b = atomicrmw xchg i16* %ptr, i16 42 monotonic
+  %b = atomicrmw xchg ptr %ptr, i16 42 monotonic
   ret i16 %b
 }
 
@@ -257,9 +257,9 @@ entry:
 ; SPARC64-LABEL: test_swap_i32
 ; SPARC64:       mov 42, [[R:%[gilo][0-7]]]
 ; SPARC64:       swap [%o1], [[R]]
-define i32 @test_swap_i32(i32 %a, i32* %ptr) {
+define i32 @test_swap_i32(i32 %a, ptr %ptr) {
 entry:
-  %b = atomicrmw xchg i32* %ptr, i32 42 monotonic
+  %b = atomicrmw xchg ptr %ptr, i32 42 monotonic
   ret i32 %b
 }
 
@@ -275,9 +275,9 @@ entry:
 ; SPARC64: sub
 ; SPARC64: cas [{{%[gilo][0-7]}}]
 ; SPARC64: membar
-define zeroext i8 @test_load_sub_i8(i8* %p, i8 zeroext %v) {
+define zeroext i8 @test_load_sub_i8(ptr %p, i8 zeroext %v) {
 entry:
-  %0 = atomicrmw sub i8* %p, i8 %v seq_cst
+  %0 = atomicrmw sub ptr %p, i8 %v seq_cst
   ret i8 %0
 }
 
@@ -293,9 +293,9 @@ entry:
 ; SPARC64: sub
 ; SPARC64: cas [{{%[gilo][0-7]}}]
 ; SPARC64: membar
-define zeroext i16 @test_load_sub_i16(i16* %p, i16 zeroext %v) {
+define zeroext i16 @test_load_sub_i16(ptr %p, i16 zeroext %v) {
 entry:
-  %0 = atomicrmw sub i16* %p, i16 %v seq_cst
+  %0 = atomicrmw sub ptr %p, i16 %v seq_cst
   ret i16 %0
 }
 
@@ -311,9 +311,9 @@ entry:
 ; SPARC64: add [[U:%[gilo][0-7]]], %o1, [[V2:%[gilo][0-7]]]
 ; SPARC64: cas [%o0], [[V]], [[V2]]
 ; SPARC64: membar
-define zeroext i32 @test_load_add_i32(i32* %p, i32 zeroext %v) {
+define zeroext i32 @test_load_add_i32(ptr %p, i32 zeroext %v) {
 entry:
-  %0 = atomicrmw add i32* %p, i32 %v seq_cst
+  %0 = atomicrmw add ptr %p, i32 %v seq_cst
   ret i32 %0
 }
 
@@ -327,9 +327,9 @@ entry:
 ; SPARC64: xor
 ; SPARC64: cas [%o0]
 ; SPARC64: membar
-define zeroext i32 @test_load_xor_32(i32* %p, i32 zeroext %v) {
+define zeroext i32 @test_load_xor_32(ptr %p, i32 zeroext %v) {
 entry:
-  %0 = atomicrmw xor i32* %p, i32 %v seq_cst
+  %0 = atomicrmw xor ptr %p, i32 %v seq_cst
   ret i32 %0
 }
 
@@ -345,9 +345,9 @@ entry:
 ; SPARC64-NOT: xor
 ; SPARC64: cas [%o0]
 ; SPARC64: membar
-define zeroext i32 @test_load_and_32(i32* %p, i32 zeroext %v) {
+define zeroext i32 @test_load_and_32(ptr %p, i32 zeroext %v) {
 entry:
-  %0 = atomicrmw and i32* %p, i32 %v seq_cst
+  %0 = atomicrmw and ptr %p, i32 %v seq_cst
   ret i32 %0
 }
 
@@ -363,9 +363,9 @@ entry:
 ; SPARC64: xor
 ; SPARC64: cas [%o0]
 ; SPARC64: membar
-define zeroext i32 @test_load_nand_32(i32* %p, i32 zeroext %v) {
+define zeroext i32 @test_load_nand_32(ptr %p, i32 zeroext %v) {
 entry:
-  %0 = atomicrmw nand i32* %p, i32 %v seq_cst
+  %0 = atomicrmw nand ptr %p, i32 %v seq_cst
   ret i32 %0
 }
 
@@ -381,8 +381,8 @@ entry:
 ; SPARC64: movleu %icc
 ; SPARC64: cas [%o0]
 ; SPARC64: membar
-define zeroext i32 @test_load_umin_32(i32* %p, i32 zeroext %v) {
+define zeroext i32 @test_load_umin_32(ptr %p, i32 zeroext %v) {
 entry:
-  %0 = atomicrmw umin i32* %p, i32 %v seq_cst
+  %0 = atomicrmw umin ptr %p, i32 %v seq_cst
   ret i32 %0
 }

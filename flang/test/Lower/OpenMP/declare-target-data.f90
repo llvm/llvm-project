@@ -1,5 +1,5 @@
-!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s 
-!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 %s -o - | FileCheck %s 
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -fopenmp-is-target-device %s -o - | FileCheck %s
 
 module test_0
     implicit none
@@ -62,25 +62,25 @@ contains
 end module test_0
 
 PROGRAM commons
-    !CHECK-DAG: fir.global @numbers_ {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} : tuple<f32, f32> {
+    !CHECK-DAG: fir.global @numbers_ {alignment = 4 : i64, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} : tuple<f32, f32> {
     REAL :: one = 1
     REAL :: two = 2
     COMMON /numbers/ one, two
     !$omp declare target(/numbers/)
     
-    !CHECK-DAG: fir.global @numbers_link_ {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} : tuple<f32, f32> {
+    !CHECK-DAG: fir.global @numbers_link_ {alignment = 4 : i64, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} : tuple<f32, f32> {
     REAL :: one_link = 1
     REAL :: two_link = 2
     COMMON /numbers_link/ one_link, two_link
     !$omp declare target link(/numbers_link/)
 
-    !CHECK-DAG: fir.global @numbers_to_ {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} : tuple<f32, f32> {
+    !CHECK-DAG: fir.global @numbers_to_ {alignment = 4 : i64, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} : tuple<f32, f32> {
     REAL :: one_to = 1
     REAL :: two_to = 2
     COMMON /numbers_to/ one_to, two_to
     !$omp declare target to(/numbers_to/)
 
-    !CHECK-DAG: fir.global @numbers_enter_ {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} : tuple<f32, f32> {
+    !CHECK-DAG: fir.global @numbers_enter_ {alignment = 4 : i64, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} : tuple<f32, f32> {
     REAL :: one_enter = 1
     REAL :: two_enter = 2
     COMMON /numbers_enter/ one_enter, two_enter

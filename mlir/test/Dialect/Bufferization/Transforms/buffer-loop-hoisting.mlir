@@ -461,6 +461,38 @@ func.func @partial_hoist_multiple_loop_dependency(
 
 // -----
 
+// CHECK-LABEL: func @no_hoist_parallel
+func.func @no_hoist_parallel(
+    %lb: index,
+    %ub: index,
+    %step: index) {
+  scf.parallel (%i) = (%lb) to (%ub) step (%step) {
+      %0 = memref.alloc() : memref<2xf32>
+      scf.reduce
+  }
+  return
+}
+
+//      CHECK: memref.alloc
+// CHECK-NEXT: scf.reduce
+
+// -----
+
+func.func @no_hoist_forall(
+    %lb: index,
+    %ub: index,
+    %step: index) {
+  scf.forall (%i) = (%lb) to (%ub) step (%step) {
+      %1 = memref.alloc() : memref<2xf32>
+  }
+  return
+}
+
+//      CHECK: scf.forall
+// CHECK-NEXT: memref.alloc
+
+// -----
+
 // Test with allocas to ensure that op is also considered.
 
 // CHECK-LABEL: func @hoist_alloca

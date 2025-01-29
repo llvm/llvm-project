@@ -13,7 +13,6 @@
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "ASTReaderInternals.h"
 #include "clang/Basic/FileManager.h"
-#include "clang/Lex/HeaderSearch.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ModuleFile.h"
 #include "clang/Serialization/PCHContainerOperations.h"
@@ -89,10 +88,8 @@ public:
   static std::pair<unsigned, unsigned>
   ReadKeyDataLength(const unsigned char*& d) {
     using namespace llvm::support;
-    unsigned KeyLen =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(d);
-    unsigned DataLen =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(d);
+    unsigned KeyLen = endian::readNext<uint16_t, llvm::endianness::little>(d);
+    unsigned DataLen = endian::readNext<uint16_t, llvm::endianness::little>(d);
     return std::make_pair(KeyLen, DataLen);
   }
 
@@ -113,8 +110,7 @@ public:
 
     data_type Result;
     while (DataLen > 0) {
-      unsigned ID =
-          endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d);
+      unsigned ID = endian::readNext<uint32_t, llvm::endianness::little>(d);
       Result.push_back(ID);
       DataLen -= 4;
     }
@@ -434,14 +430,13 @@ namespace {
 
     /// Retrieve the module file information for the given file.
     ModuleFileInfo &getModuleFileInfo(FileEntryRef File) {
-      auto Known = ModuleFiles.find(File);
-      if (Known != ModuleFiles.end())
-        return Known->second;
-
-      unsigned NewID = ModuleFiles.size();
-      ModuleFileInfo &Info = ModuleFiles[File];
-      Info.ID = NewID;
-      return Info;
+      auto [It, Inserted] = ModuleFiles.try_emplace(File);
+      if (Inserted) {
+        unsigned NewID = ModuleFiles.size();
+        ModuleFileInfo &Info = It->second;
+        Info.ID = NewID;
+      }
+      return It->second;
     }
 
   public:
@@ -514,8 +509,8 @@ namespace {
       // The first bit indicates whether this identifier is interesting.
       // That's all we care about.
       using namespace llvm::support;
-      unsigned RawID =
-          endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d);
+      IdentifierID RawID =
+          endian::readNext<IdentifierID, llvm::endianness::little>(d);
       bool IsInteresting = RawID & 0x01;
       return std::make_pair(k, IsInteresting);
     }
@@ -619,62 +614,58 @@ llvm::Error GlobalModuleIndexBuilder::loadModuleFile(FileEntryRef File) {
     unsigned Code = MaybeCode.get();
 
     // Handle module dependencies.
-    if (State == ControlBlock && Code == IMPORTS) {
-      // Load each of the imported PCH files.
-      unsigned Idx = 0, N = Record.size();
-      while (Idx < N) {
-        // Read information about the AST file.
+    if (State == ControlBlock && Code == IMPORT) {
+      unsigned Idx = 0;
+      // Read information about the AST file.
 
-        // Skip the imported kind
-        ++Idx;
+      // Skip the imported kind
+      ++Idx;
 
-        // Skip if it is standard C++ module
-        ++Idx;
+      // Skip the import location
+      ++Idx;
 
-        // Skip the import location
-        ++Idx;
+      // Skip the module name (currently this is only used for prebuilt
+      // modules while here we are only dealing with cached).
+      Blob = Blob.substr(Record[Idx++]);
 
-        // Load stored size/modification time.
-        off_t StoredSize = (off_t)Record[Idx++];
-        time_t StoredModTime = (time_t)Record[Idx++];
+      // Skip if it is standard C++ module
+      ++Idx;
 
-        // Skip the stored signature.
-        // FIXME: we could read the signature out of the import and validate it.
-        auto FirstSignatureByte = Record.begin() + Idx;
-        ASTFileSignature StoredSignature = ASTFileSignature::create(
-            FirstSignatureByte, FirstSignatureByte + ASTFileSignature::size);
-        Idx += ASTFileSignature::size;
+      // Load stored size/modification time.
+      off_t StoredSize = (off_t)Record[Idx++];
+      time_t StoredModTime = (time_t)Record[Idx++];
 
-        // Skip the module name (currently this is only used for prebuilt
-        // modules while here we are only dealing with cached).
-        Idx += Record[Idx] + 1;
+      // Skip the stored signature.
+      // FIXME: we could read the signature out of the import and validate it.
+      StringRef SignatureBytes = Blob.substr(0, ASTFileSignature::size);
+      auto StoredSignature = ASTFileSignature::create(SignatureBytes.begin(),
+                                                      SignatureBytes.end());
+      Blob = Blob.substr(ASTFileSignature::size);
 
-        // Retrieve the imported file name.
-        unsigned Length = Record[Idx++];
-        SmallString<128> ImportedFile(Record.begin() + Idx,
-                                      Record.begin() + Idx + Length);
-        Idx += Length;
+      // Retrieve the imported file name.
+      unsigned Length = Record[Idx++];
+      StringRef ImportedFile = Blob.substr(0, Length);
+      Blob = Blob.substr(Length);
 
-        // Find the imported module file.
-        auto DependsOnFile =
-            FileMgr.getOptionalFileRef(ImportedFile, /*OpenFile=*/false,
-                                       /*CacheFailure=*/false);
+      // Find the imported module file.
+      auto DependsOnFile =
+          FileMgr.getOptionalFileRef(ImportedFile, /*OpenFile=*/false,
+                                     /*CacheFailure=*/false);
 
-        if (!DependsOnFile)
-          return llvm::createStringError(std::errc::bad_file_descriptor,
-                                         "imported file \"%s\" not found",
-                                         ImportedFile.c_str());
+      if (!DependsOnFile)
+        return llvm::createStringError(std::errc::bad_file_descriptor,
+                                       "imported file \"%s\" not found",
+                                       std::string(ImportedFile).c_str());
 
-        // Save the information in ImportedModuleFileInfo so we can verify after
-        // loading all pcms.
-        ImportedModuleFiles.insert(std::make_pair(
-            *DependsOnFile, ImportedModuleFileInfo(StoredSize, StoredModTime,
-                                                   StoredSignature)));
+      // Save the information in ImportedModuleFileInfo so we can verify after
+      // loading all pcms.
+      ImportedModuleFiles.insert(std::make_pair(
+          *DependsOnFile, ImportedModuleFileInfo(StoredSize, StoredModTime,
+                                                 StoredSignature)));
 
-        // Record the dependency.
-        unsigned DependsOnID = getModuleFileInfo(*DependsOnFile).ID;
-        getModuleFileInfo(File).Dependencies.push_back(DependsOnID);
-      }
+      // Record the dependency.
+      unsigned DependsOnID = getModuleFileInfo(*DependsOnFile).ID;
+      getModuleFileInfo(File).Dependencies.push_back(DependsOnID);
 
       continue;
     }

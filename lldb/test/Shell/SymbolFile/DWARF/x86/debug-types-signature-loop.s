@@ -4,7 +4,7 @@
 # RUN: ld.lld %t.o -o %t
 # RUN: %lldb %t -o "target variable e" -b | FileCheck %s
 
-# CHECK: Error: 'Unable to determine byte size.'
+# CHECK: error: Unable to determine byte size.
 
         .type   e,@object               # @e
         .section        .rodata,"a",@progbits

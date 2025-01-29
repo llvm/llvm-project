@@ -13,7 +13,7 @@ define void @foo(ptr %a, <4 x i64> %b, i64 %i) {
 ; CHECK-NEXT:    [[N1D:%.*]] = getelementptr i8, ptr [[A]], i64 7
 ; CHECK-NEXT:    [[N1G:%.*]] = getelementptr i32, ptr [[A]], i64 1
 ; CHECK-NEXT:    [[N1H:%.*]] = getelementptr i8, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[V:%.*]] = getelementptr i64, ptr [[A]], <4 x i64> <i64 1, i64 1, i64 1, i64 1>
+; CHECK-NEXT:    [[V:%.*]] = getelementptr i64, ptr [[A]], <4 x i64> splat (i64 1)
 ; CHECK-NEXT:    call void @use_vec(<4 x ptr> [[V]])
 ; CHECK-NEXT:    [[V2:%.*]] = getelementptr i64, ptr [[A]], <4 x i64> <i64 0, i64 2, i64 1, i64 1>
 ; CHECK-NEXT:    call void @use_vec(<4 x ptr> [[V2]])

@@ -13,17 +13,16 @@
 #ifndef MLIR_ANALYSIS_PRESBURGER_UTILS_H
 #define MLIR_ANALYSIS_PRESBURGER_UTILS_H
 
-#include "mlir/Analysis/Presburger/MPInt.h"
-#include "mlir/Support/LLVM.h"
+#include "mlir/Analysis/Presburger/Matrix.h"
+#include "llvm/ADT/DynamicAPInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
-
-#include "mlir/Analysis/Presburger/Matrix.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <string>
 
 namespace mlir {
 namespace presburger {
-
 class IntegerRelation;
 
 /// This class represents the result of operations optimizing something subject
@@ -118,7 +117,7 @@ struct MaybeLocalRepr {
 class DivisionRepr {
 public:
   DivisionRepr(unsigned numVars, unsigned numDivs)
-      : dividends(numDivs, numVars + 1), denoms(numDivs, MPInt(0)) {}
+      : dividends(numDivs, numVars + 1), denoms(numDivs, DynamicAPInt(0)) {}
 
   DivisionRepr(unsigned numVars) : dividends(0, numVars + 1) {}
 
@@ -137,21 +136,27 @@ public:
   void clearRepr(unsigned i) { denoms[i] = 0; }
 
   // Get the dividend of the `i^th` division.
-  MutableArrayRef<MPInt> getDividend(unsigned i) { return dividends.getRow(i); }
-  ArrayRef<MPInt> getDividend(unsigned i) const { return dividends.getRow(i); }
+  MutableArrayRef<DynamicAPInt> getDividend(unsigned i) {
+    return dividends.getRow(i);
+  }
+  ArrayRef<DynamicAPInt> getDividend(unsigned i) const {
+    return dividends.getRow(i);
+  }
 
   // For a given point containing values for each variable other than the
   // division variables, try to find the values for each division variable from
   // their division representation.
-  SmallVector<std::optional<MPInt>, 4> divValuesAt(ArrayRef<MPInt> point) const;
+  SmallVector<std::optional<DynamicAPInt>, 4>
+  divValuesAt(ArrayRef<DynamicAPInt> point) const;
 
   // Get the `i^th` denominator.
-  MPInt &getDenom(unsigned i) { return denoms[i]; }
-  MPInt getDenom(unsigned i) const { return denoms[i]; }
+  DynamicAPInt &getDenom(unsigned i) { return denoms[i]; }
+  DynamicAPInt getDenom(unsigned i) const { return denoms[i]; }
 
-  ArrayRef<MPInt> getDenoms() const { return denoms; }
+  ArrayRef<DynamicAPInt> getDenoms() const { return denoms; }
 
-  void setDiv(unsigned i, ArrayRef<MPInt> dividend, const MPInt &divisor) {
+  void setDiv(unsigned i, ArrayRef<DynamicAPInt> dividend,
+              const DynamicAPInt &divisor) {
     dividends.setRow(i, dividend);
     denoms[i] = divisor;
   }
@@ -161,7 +166,8 @@ public:
   // simplify the expression.
   void normalizeDivs();
 
-  void insertDiv(unsigned pos, ArrayRef<MPInt> dividend, const MPInt &divisor);
+  void insertDiv(unsigned pos, ArrayRef<DynamicAPInt> dividend,
+                 const DynamicAPInt &divisor);
   void insertDiv(unsigned pos, unsigned num = 1);
 
   /// Removes duplicate divisions. On every possible duplicate division found,
@@ -187,7 +193,7 @@ private:
   /// Denominators of each division. If a denominator of a division is `0`, the
   /// division variable is considered to not have a division representation.
   /// Otherwise, the denominator is positive.
-  SmallVector<MPInt, 4> denoms;
+  SmallVector<DynamicAPInt, 4> denoms;
 };
 
 /// If `q` is defined to be equal to `expr floordiv d`, this equivalent to
@@ -205,12 +211,12 @@ private:
 /// The coefficient of `q` in `dividend` must be zero, as it is not allowed for
 /// local variable to be a floor division of an expression involving itself.
 /// The divisor must be positive.
-SmallVector<MPInt, 8> getDivUpperBound(ArrayRef<MPInt> dividend,
-                                       const MPInt &divisor,
-                                       unsigned localVarIdx);
-SmallVector<MPInt, 8> getDivLowerBound(ArrayRef<MPInt> dividend,
-                                       const MPInt &divisor,
-                                       unsigned localVarIdx);
+SmallVector<DynamicAPInt, 8> getDivUpperBound(ArrayRef<DynamicAPInt> dividend,
+                                              const DynamicAPInt &divisor,
+                                              unsigned localVarIdx);
+SmallVector<DynamicAPInt, 8> getDivLowerBound(ArrayRef<DynamicAPInt> dividend,
+                                              const DynamicAPInt &divisor,
+                                              unsigned localVarIdx);
 
 llvm::SmallBitVector getSubrangeBitVector(unsigned len, unsigned setOffset,
                                           unsigned numSet);
@@ -219,10 +225,10 @@ llvm::SmallBitVector getSubrangeBitVector(unsigned len, unsigned setOffset,
 /// function of other variables (where the divisor is a positive constant).
 /// `foundRepr` contains a boolean for each variable indicating if the
 /// explicit representation for that variable has already been computed.
-/// Return the given array as an array of MPInts.
-SmallVector<MPInt, 8> getMPIntVec(ArrayRef<int64_t> range);
+/// Return the given array as an array of DynamicAPInts.
+SmallVector<DynamicAPInt, 8> getDynamicAPIntVec(ArrayRef<int64_t> range);
 /// Return the given array as an array of int64_t.
-SmallVector<int64_t, 8> getInt64Vec(ArrayRef<MPInt> range);
+SmallVector<int64_t, 8> getInt64Vec(ArrayRef<DynamicAPInt> range);
 
 /// Returns the `MaybeLocalRepr` struct which contains the indices of the
 /// constraints that can be expressed as a floordiv of an affine function. If
@@ -231,8 +237,8 @@ SmallVector<int64_t, 8> getInt64Vec(ArrayRef<MPInt> range);
 /// not be computed, the kind attribute in `MaybeLocalRepr` is set to None.
 MaybeLocalRepr computeSingleVarRepr(const IntegerRelation &cst,
                                     ArrayRef<bool> foundRepr, unsigned pos,
-                                    MutableArrayRef<MPInt> dividend,
-                                    MPInt &divisor);
+                                    MutableArrayRef<DynamicAPInt> dividend,
+                                    DynamicAPInt &divisor);
 
 /// The following overload using int64_t is required for a callsite in
 /// AffineStructures.h.
@@ -257,30 +263,85 @@ void mergeLocalVars(IntegerRelation &relA, IntegerRelation &relB,
                     llvm::function_ref<bool(unsigned i, unsigned j)> merge);
 
 /// Compute the gcd of the range.
-MPInt gcdRange(ArrayRef<MPInt> range);
+DynamicAPInt gcdRange(ArrayRef<DynamicAPInt> range);
 
 /// Divide the range by its gcd and return the gcd.
-MPInt normalizeRange(MutableArrayRef<MPInt> range);
+DynamicAPInt normalizeRange(MutableArrayRef<DynamicAPInt> range);
 
 /// Normalize the given (numerator, denominator) pair by dividing out the
 /// common factors between them. The numerator here is an affine expression
 /// with integer coefficients. The denominator must be positive.
-void normalizeDiv(MutableArrayRef<MPInt> num, MPInt &denom);
+void normalizeDiv(MutableArrayRef<DynamicAPInt> num, DynamicAPInt &denom);
 
 /// Return `coeffs` with all the elements negated.
-SmallVector<MPInt, 8> getNegatedCoeffs(ArrayRef<MPInt> coeffs);
+SmallVector<DynamicAPInt, 8> getNegatedCoeffs(ArrayRef<DynamicAPInt> coeffs);
 
 /// Return the complement of the given inequality.
 ///
 /// The complement of a_1 x_1 + ... + a_n x_ + c >= 0 is
 /// a_1 x_1 + ... + a_n x_ + c < 0, i.e., -a_1 x_1 - ... - a_n x_ - c - 1 >= 0,
 /// since all the variables are constrained to be integers.
-SmallVector<MPInt, 8> getComplementIneq(ArrayRef<MPInt> ineq);
+SmallVector<DynamicAPInt, 8> getComplementIneq(ArrayRef<DynamicAPInt> ineq);
 
 /// Compute the dot product of two vectors.
 /// The vectors must have the same sizes.
 Fraction dotProduct(ArrayRef<Fraction> a, ArrayRef<Fraction> b);
 
+/// Find the product of two polynomials, each given by an array of
+/// coefficients.
+std::vector<Fraction> multiplyPolynomials(ArrayRef<Fraction> a,
+                                          ArrayRef<Fraction> b);
+
+bool isRangeZero(ArrayRef<Fraction> arr);
+
+/// Example usage:
+/// Print .12, 3.4, 56.7
+/// preAlign = ".", minSpacing = 1,
+///    .12   .12
+///   3.4   3.4
+///  56.7  56.7
+struct PrintTableMetrics {
+  // If unknown, set to 0 and pass the struct into updatePrintMetrics.
+  unsigned maxPreIndent;
+  unsigned maxPostIndent;
+  std::string preAlign;
+};
+
+/// Iterate over each val in the table and update 'm' where
+/// .maxPreIndent and .maxPostIndent are initialized to 0.
+/// class T is any type that can be handled by llvm::raw_string_ostream.
+template <class T>
+void updatePrintMetrics(T val, PrintTableMetrics &m) {
+  std::string str;
+  llvm::raw_string_ostream(str) << val;
+  if (str.empty())
+    return;
+  unsigned preIndent = str.find(m.preAlign);
+  preIndent = (preIndent != (unsigned)std::string::npos) ? preIndent + 1 : 0;
+  m.maxPreIndent = std::max(m.maxPreIndent, preIndent);
+  m.maxPostIndent =
+      std::max(m.maxPostIndent, (unsigned int)(str.length() - preIndent));
+}
+
+/// Print val in the table with metrics specified in 'm'.
+template <class T>
+void printWithPrintMetrics(raw_ostream &os, T val, unsigned minSpacing,
+                           const PrintTableMetrics &m) {
+  std::string str;
+  llvm::raw_string_ostream(str) << val;
+  unsigned preIndent;
+  if (!str.empty()) {
+    preIndent = str.find(m.preAlign);
+    preIndent = (preIndent != (unsigned)std::string::npos) ? preIndent + 1 : 0;
+  } else {
+    preIndent = 0;
+  }
+  for (unsigned i = 0; i < (minSpacing + m.maxPreIndent - preIndent); ++i)
+    os << " ";
+  os << str;
+  for (unsigned i = 0; i < m.maxPostIndent - (str.length() - preIndent); ++i)
+    os << " ";
+}
 } // namespace presburger
 } // namespace mlir
 

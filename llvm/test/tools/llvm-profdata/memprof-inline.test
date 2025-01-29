@@ -5,7 +5,7 @@ RUN: llvm-profdata show --memory %p/Inputs/inline.memprofraw --profiled-binary %
 
 CHECK:  MemprofProfile:
 CHECK-NEXT:  Summary:
-CHECK-NEXT:    Version: 3
+CHECK-NEXT:    Version: 4
 CHECK-NEXT:    NumSegments: {{[0-9]+}}
 CHECK-NEXT:    NumMibInfo: 2
 CHECK-NEXT:    NumAllocFunctions: 2
@@ -20,25 +20,25 @@ CHECK-NEXT:  -
 
 CHECK:  Records:
 CHECK-NEXT:  -
-CHECK-NEXT:    FunctionGUID: 15505678318020221912
+CHECK-NEXT:    FunctionGUID: 3873612792189045660
 CHECK-NEXT:    AllocSites:
 CHECK-NEXT:    -
 CHECK-NEXT:      Callstack:
 CHECK-NEXT:      -
-CHECK-NEXT:        Function: 15505678318020221912
-CHECK-NEXT:        SymbolName: qux
+CHECK-NEXT:        Function: 3873612792189045660
+CHECK-NEXT:        SymbolName: _Z3quxi
 CHECK-NEXT:        LineOffset: 1
-CHECK-NEXT:        Column: 15
+CHECK-NEXT:        Column: 23
 CHECK-NEXT:        Inline: 1
 CHECK-NEXT:      -
-CHECK-NEXT:        Function: 6699318081062747564
-CHECK-NEXT:        SymbolName: foo
+CHECK-NEXT:        Function: 1228452328526475178
+CHECK-NEXT:        SymbolName: _Z3fooi
 CHECK-NEXT:        LineOffset: 0
 CHECK-NEXT:        Column: 18
 CHECK-NEXT:        Inline: 0
 CHECK-NEXT:      -
-CHECK-NEXT:        Function: 16434608426314478903
-CHECK-NEXT:        SymbolName: bar
+CHECK-NEXT:        Function: 3727899762981752933
+CHECK-NEXT:        SymbolName: _Z3bari
 CHECK-NEXT:        LineOffset: 0
 CHECK-NEXT:        Column: 19
 CHECK-NEXT:        Inline: 0
@@ -74,26 +74,30 @@ CHECK-NEXT:        MaxAccessDensity: 100
 CHECK-NEXT:        TotalLifetimeAccessDensity: 100000
 CHECK-NEXT:        MinLifetimeAccessDensity: 100000
 CHECK-NEXT:        MaxLifetimeAccessDensity: 100000
+CHECK-NEXT:        AccessHistogramSize: 0
+CHECK-NEXT:        AccessHistogram: 0
+
+
 CHECK-NEXT:  -
-CHECK-NEXT:    FunctionGUID: 6699318081062747564
+CHECK-NEXT:    FunctionGUID: 1228452328526475178
 CHECK-NEXT:    AllocSites:
 CHECK-NEXT:    -
 CHECK-NEXT:      Callstack:
 CHECK-NEXT:      -
-CHECK-NEXT:        Function: 15505678318020221912
-CHECK-NEXT:        SymbolName: qux
+CHECK-NEXT:        Function: 3873612792189045660
+CHECK-NEXT:        SymbolName: _Z3quxi
 CHECK-NEXT:        LineOffset: 1
-CHECK-NEXT:        Column: 15
+CHECK-NEXT:        Column: 23
 CHECK-NEXT:        Inline: 1
 CHECK-NEXT:      -
-CHECK-NEXT:        Function: 6699318081062747564
-CHECK-NEXT:        SymbolName: foo
+CHECK-NEXT:        Function: 1228452328526475178
+CHECK-NEXT:        SymbolName: _Z3fooi
 CHECK-NEXT:        LineOffset: 0
 CHECK-NEXT:        Column: 18
 CHECK-NEXT:        Inline: 0
 CHECK-NEXT:      -
-CHECK-NEXT:        Function: 16434608426314478903
-CHECK-NEXT:        SymbolName: bar
+CHECK-NEXT:        Function: 3727899762981752933
+CHECK-NEXT:        SymbolName: _Z3bari
 CHECK-NEXT:        LineOffset: 0
 CHECK-NEXT:        Column: 19
 CHECK-NEXT:        Inline: 0
@@ -129,28 +133,31 @@ CHECK-NEXT:        MaxAccessDensity: 100
 CHECK-NEXT:        TotalLifetimeAccessDensity: 100000
 CHECK-NEXT:        MinLifetimeAccessDensity: 100000
 CHECK-NEXT:        MaxLifetimeAccessDensity: 100000
+CHECK-NEXT:        AccessHistogramSize: 0
+CHECK-NEXT:        AccessHistogram: 0
+
 CHECK-NEXT:    CallSites:
 CHECK-NEXT:    -
 CHECK-NEXT:      -
-CHECK-NEXT:        Function: 15505678318020221912
-CHECK-NEXT:        SymbolName: qux
+CHECK-NEXT:        Function: 3873612792189045660
+CHECK-NEXT:        SymbolName: _Z3quxi
 CHECK-NEXT:        LineOffset: 1
-CHECK-NEXT:        Column: 15
+CHECK-NEXT:        Column: 23
 CHECK-NEXT:        Inline: 1
 CHECK-NEXT:    -
 CHECK-NEXT:      -
-CHECK-NEXT:        Function: 6699318081062747564
-CHECK-NEXT:        SymbolName: foo
+CHECK-NEXT:        Function: 1228452328526475178
+CHECK-NEXT:        SymbolName: _Z3fooi
 CHECK-NEXT:        LineOffset: 0
 CHECK-NEXT:        Column: 18
 CHECK-NEXT:        Inline: 0
 CHECK-NEXT:  -
-CHECK-NEXT:    FunctionGUID: 16434608426314478903
+CHECK-NEXT:    FunctionGUID: 3727899762981752933
 CHECK-NEXT:    CallSites:
 CHECK-NEXT:    -
 CHECK-NEXT:      -
-CHECK-NEXT:        Function: 16434608426314478903
-CHECK-NEXT:        SymbolName: bar
+CHECK-NEXT:        Function: 3727899762981752933
+CHECK-NEXT:        SymbolName: _Z3bari
 CHECK-NEXT:        LineOffset: 0
 CHECK-NEXT:        Column: 19
 CHECK-NEXT:        Inline: 0

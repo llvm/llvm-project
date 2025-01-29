@@ -1,60 +1,60 @@
-# RUN: llc -verify-machineinstrs -run-pass=machine-outliner -run-pass=aarch64-ptrauth %s -o - | FileCheck %s
+# RUN: llc -verify-machineinstrs -run-pass=machine-outliner -run-pass=aarch64-ptrauth -outliner-leaf-descendants=false %s -o - | FileCheck %s
 
 --- |
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64-arm-linux-gnu"
 
-  @v = common dso_local global i32* null, align 8
+  @v = common dso_local global ptr null, align 8
 
   ; Function Attrs: nounwind
   define dso_local void @legal0() #0 {
     %1 = alloca i32, align 4
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
     ret void
   }
 
   ; Function Attrs: nounwind
   define dso_local void @legal1() #0 {
     %1 = alloca i32, align 4
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
     ret void
   }
 
   ; Function Attrs: nounwind
   define dso_local void @illegal0() #0 {
     %1 = alloca i32, align 4
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
     ret void
   }
 
   ; Function Attrs: nounwind
   define dso_local void @illegal1() #0 {
     %1 = alloca i32, align 4
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
-    store volatile i32* %1, i32** @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
+    store volatile ptr %1, ptr @v, align 8
     ret void
   }
 
@@ -86,11 +86,11 @@ body:             |
 # CHECK:          body:             |
 # CHECK-NEXT:         bb.0 (%ir-block.0):
 # CHECK-NEXT:           liveins: $lr
-# CHECK:                frame-setup PACIASP implicit-def $lr, implicit $lr, implicit $sp
-# CHECK-NEXT:           frame-setup CFI_INSTRUCTION negate_ra_sign_state
+# CHECK:                frame-setup CFI_INSTRUCTION negate_ra_sign_state
+# CHECK-NEXT:           frame-setup PACIASP implicit-def $lr, implicit $lr, implicit $sp
 # CHECK:                BL @[[OUTLINED_FUNC:OUTLINED_FUNCTION_[0-9]+]]
-# CHECK:                frame-destroy AUTIASP implicit-def $lr, implicit $lr, implicit $sp
-# CHECK-NEXT:           frame-destroy CFI_INSTRUCTION negate_ra_sign_state
+# CHECK:                frame-destroy CFI_INSTRUCTION negate_ra_sign_state
+# CHECK-NEXT:           frame-destroy AUTIASP implicit-def $lr, implicit $lr, implicit $sp
 # CHECK-NEXT:           RET undef $lr
 
 ...
@@ -119,11 +119,11 @@ body:             |
 # CHECK:          body:             |
 # CHECK-NEXT:         bb.0 (%ir-block.0):
 # CHECK-NEXT:           liveins: $lr
-# CHECK:                frame-setup PACIASP implicit-def $lr, implicit $lr, implicit $sp
-# CHECK-NEXT:           frame-setup CFI_INSTRUCTION negate_ra_sign_state
+# CHECK:                frame-setup CFI_INSTRUCTION negate_ra_sign_state
+# CHECK-NEXT:           frame-setup PACIASP implicit-def $lr, implicit $lr, implicit $sp
 # CHECK:                BL @[[OUTLINED_FUNC]]
-# CHECK:                frame-destroy AUTIASP implicit-def $lr, implicit $lr, implicit $sp
-# CHECK-NEXT:           frame-destroy CFI_INSTRUCTION negate_ra_sign_state
+# CHECK:                frame-destroy CFI_INSTRUCTION negate_ra_sign_state
+# CHECK-NEXT:           frame-destroy AUTIASP implicit-def $lr, implicit $lr, implicit $sp
 # CHECK-NEXT:           RET undef $lr
 
 ...
@@ -174,22 +174,22 @@ body:             |
 # CHECK:          body:             |
 # CHECK-NEXT:         bb.0 (%ir-block.0):
 # CHECK-NEXT:           liveins: $lr
-# CHECK:                frame-setup PACIASP implicit-def $lr, implicit $lr, implicit $sp
-# CHECK-NEXT:           frame-setup CFI_INSTRUCTION negate_ra_sign_state
+# CHECK:                frame-setup CFI_INSTRUCTION negate_ra_sign_state
+# CHECK-NEXT:           frame-setup PACIASP implicit-def $lr, implicit $lr, implicit $sp
 # CHECK-NOT:            BL @OUTLINED_FUNCTION_{{.*}}
-# CHECK:                frame-destroy AUTIASP implicit-def $lr, implicit $lr, implicit $sp
-# CHECK-NEXT:           frame-destroy CFI_INSTRUCTION negate_ra_sign_state
+# CHECK:                frame-destroy CFI_INSTRUCTION negate_ra_sign_state
+# CHECK-NEXT:           frame-destroy AUTIASP implicit-def $lr, implicit $lr, implicit $sp
 # CHECK-NEXT:           RET undef $lr
 
 # CHECK-LABEL:    name:            illegal1
 # CHECK:          body:             |
 # CHECK-NEXT:         bb.0 (%ir-block.0):
 # CHECK-NEXT:           liveins: $lr
-# CHECK:                frame-setup PACIASP implicit-def $lr, implicit $lr, implicit $sp
-# CHECK-NEXT:           frame-setup CFI_INSTRUCTION negate_ra_sign_state
+# CHECK:                frame-setup CFI_INSTRUCTION negate_ra_sign_state
+# CHECK-NEXT:           frame-setup PACIASP implicit-def $lr, implicit $lr, implicit $sp
 # CHECK-NOT:            BL @OUTLINED_FUNCTION_{{.*}}
-# CHECK:                frame-destroy AUTIASP implicit-def $lr, implicit $lr, implicit $sp
-# CHECK-NEXT:           frame-destroy CFI_INSTRUCTION negate_ra_sign_state
+# CHECK:                frame-destroy CFI_INSTRUCTION negate_ra_sign_state
+# CHECK-NEXT:           frame-destroy AUTIASP implicit-def $lr, implicit $lr, implicit $sp
 # CHECK-NEXT:           RET undef $lr
 
 # Outlined function that contains only legal sp modifications
@@ -198,8 +198,8 @@ body:             |
 # CHECK-NEXT:       bb.0:
 # CHECK-NEXT: liveins: $lr
 # CHECK-NEXT: {{^  $}}
-# CHECK-NEXT:         frame-setup PACIASP implicit-def $lr, implicit $lr, implicit $sp
 # CHECK-NEXT:         frame-setup CFI_INSTRUCTION negate_ra_sign_state
+# CHECK-NEXT:         frame-setup PACIASP implicit-def $lr, implicit $lr, implicit $sp
 # CHECK-NEXT:         $sp = frame-setup SUBXri $sp, 16, 0
 # CHECK:              $sp = frame-destroy ADDXri $sp, 16, 0
 # CHECK-NEXT:         frame-destroy AUTIASP implicit-def $lr, implicit $lr, implicit $sp

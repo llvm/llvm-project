@@ -177,7 +177,7 @@ static MatchResult parseInt(unsigned &result, const char *&ptr,
   return mlir::success();
 }
 
-static mlir::LogicalResult matchString(const char *&ptr, const char *endPtr,
+static llvm::LogicalResult matchString(const char *&ptr, const char *endPtr,
                                        llvm::StringRef literal) {
   llvm::StringRef s(ptr, endPtr - ptr);
   if (s.starts_with(literal)) {
@@ -351,7 +351,7 @@ std::string fir::KindMapping::mapToString() const {
   return result;
 }
 
-mlir::LogicalResult
+llvm::LogicalResult
 fir::KindMapping::setDefaultKinds(llvm::ArrayRef<KindTy> defs) {
   if (defs.empty()) {
     // generic front-end defaults

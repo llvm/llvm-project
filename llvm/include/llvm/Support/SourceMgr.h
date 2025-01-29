@@ -317,7 +317,7 @@ public:
   ArrayRef<SMFixIt> getFixIts() const { return FixIts; }
 
   void print(const char *ProgName, raw_ostream &S, bool ShowColors = true,
-             bool ShowKindLabel = true) const;
+             bool ShowKindLabel = true, bool ShowLocation = true) const;
 };
 
 } // end namespace llvm

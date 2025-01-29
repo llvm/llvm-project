@@ -19,7 +19,6 @@
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"

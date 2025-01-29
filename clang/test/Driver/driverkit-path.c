@@ -1,4 +1,3 @@
-// REQUIRES: x86-registered-target
 // UNSUPPORTED: system-windows
 //   Windows is unsupported because we use the Unix path separator `\`.
 
@@ -31,3 +30,4 @@ int main() { return 0; }
 // INC:       [[PATH]]/System/DriverKit/usr/local/include
 // INC:       /lib{{(64)?}}/clang/{{[^/ ]+}}/include
 // INC:       [[PATH]]/System/DriverKit/usr/include
+// INC:       [[PATH]]/System/DriverKit/System/Library/Frameworks (framework directory)

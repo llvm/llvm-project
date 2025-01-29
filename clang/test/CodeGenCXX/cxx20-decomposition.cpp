@@ -23,13 +23,13 @@ int f() {
 // CHECK: %[[LAMBDA:.+]] = alloca %[[LAMBDA_TY]]
 
 // Copy a pointer to the binding, for reference capture.
-// CHECK: %[[LAMBDA_CAP_PTR:.+]] = getelementptr inbounds %[[LAMBDA_TY]], ptr %[[LAMBDA]], i32 0, i32 0
-// CHECK: %[[BINDING_PTR:.+]] = getelementptr inbounds %struct.S, ptr %[[BINDING]], i32 0, i32 0
+// CHECK: %[[LAMBDA_CAP_PTR:.+]] = getelementptr inbounds nuw %[[LAMBDA_TY]], ptr %[[LAMBDA]], i32 0, i32 0
+// CHECK: %[[BINDING_PTR:.+]] = getelementptr inbounds nuw %struct.S, ptr %[[BINDING]], i32 0, i32 0
 // CHECK: store ptr %[[BINDING_PTR]], ptr %[[LAMBDA_CAP_PTR]]
 
 // Copy the integer from the binding, for copy capture.
-// CHECK: %[[LAMBDA_CAP_INT:.+]] = getelementptr inbounds %[[LAMBDA_TY]], ptr %[[LAMBDA]], i32 0, i32 1
-// CHECK: %[[PTR_TO_J:.+]] = getelementptr inbounds %struct.S, ptr %[[BINDING]], i32 0, i32 1
+// CHECK: %[[LAMBDA_CAP_INT:.+]] = getelementptr inbounds nuw %[[LAMBDA_TY]], ptr %[[LAMBDA]], i32 0, i32 1
+// CHECK: %[[PTR_TO_J:.+]] = getelementptr inbounds nuw %struct.S, ptr %[[BINDING]], i32 0, i32 1
 // CHECK: %[[J_COPY:.+]] = load i32, ptr %[[PTR_TO_J]]
 // CHECK: store i32 %[[J_COPY]], ptr %[[LAMBDA_CAP_INT]]
 
@@ -39,10 +39,10 @@ int f() {
 // CHECK: %[[THIS_PTR:.+]] = load ptr, ptr %[[THIS_ADDR]]
 
 // Load 'i', passed by reference.
-// CHECK: %[[LAMBDA_GEP_TO_PTR:.+]] = getelementptr inbounds %[[LAMBDA_TY]], ptr %[[THIS_PTR]], i32 0, i32 0
+// CHECK: %[[LAMBDA_GEP_TO_PTR:.+]] = getelementptr inbounds nuw %[[LAMBDA_TY]], ptr %[[THIS_PTR]], i32 0, i32 0
 // CHECK: %[[I_PTR:.+]] = load ptr, ptr %[[LAMBDA_GEP_TO_PTR]]
 // CHECK: %[[I_VALUE:.+]] = load i32, ptr %[[I_PTR]]
 
 // Load the 'j', passed by value.
-// CHECK: %[[LAMBDA_GEP_TO_INT:.+]] = getelementptr inbounds %[[LAMBDA_TY]], ptr %[[THIS_PTR]], i32 0, i32 1
+// CHECK: %[[LAMBDA_GEP_TO_INT:.+]] = getelementptr inbounds nuw %[[LAMBDA_TY]], ptr %[[THIS_PTR]], i32 0, i32 1
 // CHECK: %[[J_VALUE:.+]] = load i32, ptr %[[LAMBDA_GEP_TO_INT]]

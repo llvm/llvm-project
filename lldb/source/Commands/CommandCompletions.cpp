@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 
 #include "lldb/Breakpoint/Watchpoint.h"
@@ -262,9 +264,25 @@ class ModuleCompleter : public Completer {
 public:
   ModuleCompleter(CommandInterpreter &interpreter, CompletionRequest &request)
       : Completer(interpreter, request) {
-    FileSpec partial_spec(m_request.GetCursorArgumentPrefix());
-    m_file_name = partial_spec.GetFilename().GetCString();
-    m_dir_name = partial_spec.GetDirectory().GetCString();
+    llvm::StringRef request_str = m_request.GetCursorArgumentPrefix();
+    // We can match the full path, or the file name only. The full match will be
+    // attempted always, the file name match only if the request does not
+    // contain a path separator.
+
+    // Preserve both the path as spelled by the user (used for completion) and
+    // the canonical version (used for matching).
+    m_spelled_path = request_str;
+    m_canonical_path = FileSpec(m_spelled_path).GetPath();
+    if (!m_spelled_path.empty() &&
+        llvm::sys::path::is_separator(m_spelled_path.back()) &&
+        !llvm::StringRef(m_canonical_path).ends_with(m_spelled_path.back())) {
+      m_canonical_path += m_spelled_path.back();
+    }
+
+    if (llvm::find_if(request_str, [](char c) {
+          return llvm::sys::path::is_separator(c);
+        }) == request_str.end())
+      m_file_name = request_str;
   }
 
   lldb::SearchDepth GetDepth() override { return lldb::eSearchDepthModule; }
@@ -273,22 +291,18 @@ public:
                                           SymbolContext &context,
                                           Address *addr) override {
     if (context.module_sp) {
-      const char *cur_file_name =
-          context.module_sp->GetFileSpec().GetFilename().GetCString();
-      const char *cur_dir_name =
-          context.module_sp->GetFileSpec().GetDirectory().GetCString();
+      // Attempt a full path match.
+      std::string cur_path = context.module_sp->GetFileSpec().GetPath();
+      llvm::StringRef cur_path_view = cur_path;
+      if (cur_path_view.consume_front(m_canonical_path))
+        m_request.AddCompletion((m_spelled_path + cur_path_view).str());
 
-      bool match = false;
-      if (m_file_name && cur_file_name &&
-          strstr(cur_file_name, m_file_name) == cur_file_name)
-        match = true;
-
-      if (match && m_dir_name && cur_dir_name &&
-          strstr(cur_dir_name, m_dir_name) != cur_dir_name)
-        match = false;
-
-      if (match) {
-        m_request.AddCompletion(cur_file_name);
+      // And a file name match.
+      if (m_file_name) {
+        llvm::StringRef cur_file_name =
+            context.module_sp->GetFileSpec().GetFilename().GetStringRef();
+        if (cur_file_name.starts_with(*m_file_name))
+          m_request.AddCompletion(cur_file_name);
       }
     }
     return Searcher::eCallbackReturnContinue;
@@ -297,8 +311,9 @@ public:
   void DoCompletion(SearchFilter *filter) override { filter->Search(*this); }
 
 private:
-  const char *m_file_name;
-  const char *m_dir_name;
+  std::optional<llvm::StringRef> m_file_name;
+  llvm::StringRef m_spelled_path;
+  std::string m_canonical_path;
 
   ModuleCompleter(const ModuleCompleter &) = delete;
   const ModuleCompleter &operator=(const ModuleCompleter &) = delete;
@@ -776,7 +791,7 @@ void CommandCompletions::ThreadIndexes(CommandInterpreter &interpreter,
   lldb::ThreadSP thread_sp;
   for (uint32_t idx = 0; (thread_sp = threads.GetThreadAtIndex(idx)); ++idx) {
     StreamString strm;
-    thread_sp->GetStatus(strm, 0, 1, 1, true);
+    thread_sp->GetStatus(strm, 0, 1, 1, true, /*show_hidden*/ true);
     request.TryCompleteCurrentArg(std::to_string(thread_sp->GetIndexID()),
                                   strm.GetString());
   }
@@ -820,7 +835,7 @@ void CommandCompletions::ThreadIDs(CommandInterpreter &interpreter,
   lldb::ThreadSP thread_sp;
   for (uint32_t idx = 0; (thread_sp = threads.GetThreadAtIndex(idx)); ++idx) {
     StreamString strm;
-    thread_sp->GetStatus(strm, 0, 1, 1, true);
+    thread_sp->GetStatus(strm, 0, 1, 1, true, /*show_hidden*/ true);
     request.TryCompleteCurrentArg(std::to_string(thread_sp->GetID()),
                                   strm.GetString());
   }

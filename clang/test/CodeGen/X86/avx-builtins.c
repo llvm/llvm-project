@@ -1,13 +1,19 @@
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X86
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X86
-// RUN: %clang_cc1 -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +avx -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +avx -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +avx -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
 
 
 #include <immintrin.h>
+#include "builtin_test_helpers.h"
 
-// NOTE: This should match the tests in llvm/test/CodeGen/X86/sse-intrinsics-fast-isel.ll
+// NOTE: This should match the tests in llvm/test/CodeGen/X86/avx-intrinsics-fast-isel.ll
 
 __m256d test_mm256_add_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_add_pd
@@ -23,13 +29,13 @@ __m256 test_mm256_add_ps(__m256 A, __m256 B) {
 
 __m256d test_mm256_addsub_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_addsub_pd
-  // CHECK: call <4 x double> @llvm.x86.avx.addsub.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
+  // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.addsub.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
   return _mm256_addsub_pd(A, B);
 }
 
 __m256 test_mm256_addsub_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_addsub_ps
-  // CHECK: call <8 x float> @llvm.x86.avx.addsub.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
+  // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.addsub.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
   return _mm256_addsub_ps(A, B);
 }
 
@@ -47,14 +53,14 @@ __m256 test_mm256_and_ps(__m256 A, __m256 B) {
 
 __m256d test_mm256_andnot_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_andnot_pd
-  // CHECK: xor <4 x i64> %{{.*}}, <i64 -1, i64 -1, i64 -1, i64 -1>
+  // CHECK: xor <4 x i64> %{{.*}}, splat (i64 -1)
   // CHECK: and <4 x i64>
   return _mm256_andnot_pd(A, B);
 }
 
 __m256 test_mm256_andnot_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_andnot_ps
-  // CHECK: xor <8 x i32> %{{.*}}, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+  // CHECK: xor <8 x i32> %{{.*}}, splat (i32 -1)
   // CHECK: and <8 x i32>
   return _mm256_andnot_ps(A, B);
 }
@@ -73,13 +79,13 @@ __m256 test_mm256_blend_ps(__m256 A, __m256 B) {
 
 __m256d test_mm256_blendv_pd(__m256d V1, __m256d V2, __m256d V3) {
   // CHECK-LABEL: test_mm256_blendv_pd
-  // CHECK: call <4 x double> @llvm.x86.avx.blendv.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
+  // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.blendv.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
   return _mm256_blendv_pd(V1, V2, V3);
 }
 
 __m256 test_mm256_blendv_ps(__m256 V1, __m256 V2, __m256 V3) {
   // CHECK-LABEL: test_mm256_blendv_ps
-  // CHECK: call <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}})
+  // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}})
   return _mm256_blendv_ps(V1, V2, V3);
 }
 
@@ -202,13 +208,13 @@ __m128i test_mm256_castsi256_si128(__m256i A) {
 
 __m256d test_mm256_ceil_pd(__m256d x) {
   // CHECK-LABEL: test_mm256_ceil_pd
-  // CHECK: call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 2)
+  // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 2)
   return _mm256_ceil_pd(x);
 }
 
 __m256 test_mm_ceil_ps(__m256 x) {
   // CHECK-LABEL: test_mm_ceil_ps
-  // CHECK: call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %{{.*}}, i32 2)
+  // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %{{.*}}, i32 2)
   return _mm256_ceil_ps(x);
 }
 
@@ -596,54 +602,6 @@ __m256 test_mm256_cmp_ps_true_us(__m256 a, __m256 b) {
   return _mm256_cmp_ps(a, b, _CMP_TRUE_US);
 }
 
-__m128d test_mm_cmp_pd_eq_oq(__m128d a, __m128d b) {
-  // CHECK-LABEL: test_mm_cmp_pd_eq_oq
-  // CHECK: fcmp oeq <2 x double> %{{.*}}, %{{.*}}
-  return _mm_cmp_pd(a, b, _CMP_EQ_OQ);
-}
-
-__m128d test_mm_cmp_pd_lt_os(__m128d a, __m128d b) {
-  // CHECK-LABEL: test_mm_cmp_pd_lt_os
-  // CHECK: fcmp olt <2 x double> %{{.*}}, %{{.*}}
-  return _mm_cmp_pd(a, b, _CMP_LT_OS);
-}
-
-__m128d test_mm_cmp_pd_le_os(__m128d a, __m128d b) {
-  // CHECK-LABEL: test_mm_cmp_pd_le_os
-  // CHECK: fcmp ole <2 x double> %{{.*}}, %{{.*}}
-  return _mm_cmp_pd(a, b, _CMP_LE_OS);
-}
-
-__m128d test_mm_cmp_pd_unord_q(__m128d a, __m128d b) {
-  // CHECK-LABEL: test_mm_cmp_pd_unord_q
-  // CHECK: fcmp uno <2 x double> %{{.*}}, %{{.*}}
-  return _mm_cmp_pd(a, b, _CMP_UNORD_Q);
-}
-
-__m128d test_mm_cmp_pd_neq_uq(__m128d a, __m128d b) {
-  // CHECK-LABEL: test_mm_cmp_pd_neq_uq
-  // CHECK: fcmp une <2 x double> %{{.*}}, %{{.*}}
-  return _mm_cmp_pd(a, b, _CMP_NEQ_UQ);
-}
-
-__m128d test_mm_cmp_pd_nlt_us(__m128d a, __m128d b) {
-  // CHECK-LABEL: test_mm_cmp_pd_nlt_us
-  // CHECK: fcmp uge <2 x double> %{{.*}}, %{{.*}}
-  return _mm_cmp_pd(a, b, _CMP_NLT_US);
-}
-
-__m128d test_mm_cmp_pd_nle_us(__m128d a, __m128d b) {
-  // CHECK-LABEL: test_mm_cmp_pd_nle_us
-  // CHECK: fcmp ugt <2 x double> %{{.*}}, %{{.*}}
-  return _mm_cmp_pd(a, b, _CMP_NLE_US);
-}
-
-__m128d test_mm_cmp_pd_ord_q(__m128d a, __m128d b) {
-  // CHECK-LABEL: test_mm_cmp_pd_ord_q
-  // CHECK: fcmp ord <2 x double> %{{.*}}, %{{.*}}
-  return _mm_cmp_pd(a, b, _CMP_ORD_Q);
-}
-
 __m128d test_mm_cmp_pd_eq_uq(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_eq_uq
   // CHECK: fcmp ueq <2 x double> %{{.*}}, %{{.*}}
@@ -786,54 +744,6 @@ __m128d test_mm_cmp_pd_true_us(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_true_us
   // CHECK: fcmp true <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd(a, b, _CMP_TRUE_US);
-}
-
-__m128 test_mm_cmp_ps_eq_oq(__m128 a, __m128 b) {
-  // CHECK-LABEL: test_mm_cmp_ps_eq_oq
-  // CHECK: fcmp oeq <4 x float> %{{.*}}, %{{.*}}
-  return _mm_cmp_ps(a, b, _CMP_EQ_OQ);
-}
-
-__m128 test_mm_cmp_ps_lt_os(__m128 a, __m128 b) {
-  // CHECK-LABEL: test_mm_cmp_ps_lt_os
-  // CHECK: fcmp olt <4 x float> %{{.*}}, %{{.*}}
-  return _mm_cmp_ps(a, b, _CMP_LT_OS);
-}
-
-__m128 test_mm_cmp_ps_le_os(__m128 a, __m128 b) {
-  // CHECK-LABEL: test_mm_cmp_ps_le_os
-  // CHECK: fcmp ole <4 x float> %{{.*}}, %{{.*}}
-  return _mm_cmp_ps(a, b, _CMP_LE_OS);
-}
-
-__m128 test_mm_cmp_ps_unord_q(__m128 a, __m128 b) {
-  // CHECK-LABEL: test_mm_cmp_ps_unord_q
-  // CHECK: fcmp uno <4 x float> %{{.*}}, %{{.*}}
-  return _mm_cmp_ps(a, b, _CMP_UNORD_Q);
-}
-
-__m128 test_mm_cmp_ps_neq_uq(__m128 a, __m128 b) {
-  // CHECK-LABEL: test_mm_cmp_ps_neq_uq
-  // CHECK: fcmp une <4 x float> %{{.*}}, %{{.*}}
-  return _mm_cmp_ps(a, b, _CMP_NEQ_UQ);
-}
-
-__m128 test_mm_cmp_ps_nlt_us(__m128 a, __m128 b) {
-  // CHECK-LABEL: test_mm_cmp_ps_nlt_us
-  // CHECK: fcmp uge <4 x float> %{{.*}}, %{{.*}}
-  return _mm_cmp_ps(a, b, _CMP_NLT_US);
-}
-
-__m128 test_mm_cmp_ps_nle_us(__m128 a, __m128 b) {
-  // CHECK-LABEL: test_mm_cmp_ps_nle_us
-  // CHECK: fcmp ugt <4 x float> %{{.*}}, %{{.*}}
-  return _mm_cmp_ps(a, b, _CMP_NLE_US);
-}
-
-__m128 test_mm_cmp_ps_ord_q(__m128 a, __m128 b) {
-  // CHECK-LABEL: test_mm_cmp_ps_ord_q
-  // CHECK: fcmp ord <4 x float> %{{.*}}, %{{.*}}
-  return _mm_cmp_ps(a, b, _CMP_ORD_Q);
 }
 
 __m128 test_mm_cmp_ps_eq_uq(__m128 a, __m128 b) {
@@ -982,13 +892,13 @@ __m128 test_mm_cmp_ps_true_us(__m128 a, __m128 b) {
 
 __m128d test_mm_cmp_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmp_sd
-  // CHECK: call <2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i8 13)
+  // CHECK: call {{.*}}<2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i8 13)
   return _mm_cmp_sd(A, B, _CMP_GE_OS);
 }
 
 __m128 test_mm_cmp_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_cmp_ss
-  // CHECK: call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 13)
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 13)
   return _mm_cmp_ss(A, B, _CMP_GE_OS);
 }
 
@@ -1012,7 +922,7 @@ __m128i test_mm256_cvtpd_epi32(__m256d A) {
 
 __m128 test_mm256_cvtpd_ps(__m256d A) {
   // CHECK-LABEL: test_mm256_cvtpd_ps
-  // CHECK: call <4 x float> @llvm.x86.avx.cvt.pd2.ps.256(<4 x double> %{{.*}})
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.avx.cvt.pd2.ps.256(<4 x double> %{{.*}})
   return _mm256_cvtpd_ps(A);
 }
 
@@ -1026,6 +936,24 @@ __m256d test_mm256_cvtps_pd(__m128 A) {
   // CHECK-LABEL: test_mm256_cvtps_pd
   // CHECK: fpext <4 x float> %{{.*}} to <4 x double>
   return _mm256_cvtps_pd(A);
+}
+
+double test_mm256_cvtsd_f64(__m256d __a) {
+  // CHECK-LABEL: test_mm256_cvtsd_f64
+  // CHECK: extractelement <4 x double> %{{.*}}, i32 0
+  return _mm256_cvtsd_f64(__a);
+}
+
+int test_mm256_cvtsi256_si32(__m256i __a) {
+  // CHECK-LABEL: test_mm256_cvtsi256_si32
+  // CHECK: extractelement <8 x i32> %{{.*}}, i32 0
+  return _mm256_cvtsi256_si32(__a);
+}
+
+float test_mm256_cvtss_f32(__m256 __a) {
+  // CHECK-LABEL: test_mm256_cvtss_f32
+  // CHECK: extractelement <8 x float> %{{.*}}, i32 0
+  return _mm256_cvtss_f32(__a);
 }
 
 __m128i test_mm256_cvttpd_epi32(__m256d A) {
@@ -1054,7 +982,7 @@ __m256 test_mm256_div_ps(__m256 A, __m256 B) {
 
 __m256 test_mm256_dp_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_dp_ps
-  // CHECK: call <8 x float> @llvm.x86.avx.dp.ps.256(<8 x float> {{.*}}, <8 x float> {{.*}}, i8 7)
+  // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.dp.ps.256(<8 x float> {{.*}}, <8 x float> {{.*}}, i8 7)
   return _mm256_dp_ps(A, B, 7);
 }
 
@@ -1106,37 +1034,37 @@ __m128i test_mm256_extractf128_si256(__m256i A) {
 
 __m256d test_mm256_floor_pd(__m256d x) {
   // CHECK-LABEL: test_mm256_floor_pd
-  // CHECK: call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 1)
+  // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 1)
   return _mm256_floor_pd(x);
 }
 
 __m256 test_mm_floor_ps(__m256 x) {
   // CHECK-LABEL: test_mm_floor_ps
-  // CHECK: call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %{{.*}}, i32 1)
+  // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %{{.*}}, i32 1)
   return _mm256_floor_ps(x);
 }
 
 __m256d test_mm256_hadd_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_hadd_pd
-  // CHECK: call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
+  // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
   return _mm256_hadd_pd(A, B);
 }
 
 __m256 test_mm256_hadd_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_hadd_ps
-  // CHECK: call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
+  // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
   return _mm256_hadd_ps(A, B);
 }
 
 __m256d test_mm256_hsub_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_hsub_pd
-  // CHECK: call <4 x double> @llvm.x86.avx.hsub.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
+  // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.hsub.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
   return _mm256_hsub_pd(A, B);
 }
 
 __m256 test_mm256_hsub_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_hsub_ps
-  // CHECK: call <8 x float> @llvm.x86.avx.hsub.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
+  // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.hsub.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
   return _mm256_hsub_ps(A, B);
 }
 
@@ -1255,25 +1183,25 @@ __m256i test_mm256_loadu2_m128i(__m128i* A, __m128i* B) {
 
 __m128d test_mm_maskload_pd(double* A, __m128i B) {
   // CHECK-LABEL: test_mm_maskload_pd
-  // CHECK: call <2 x double> @llvm.x86.avx.maskload.pd(ptr %{{.*}}, <2 x i64> %{{.*}})
+  // CHECK: call {{.*}}<2 x double> @llvm.x86.avx.maskload.pd(ptr %{{.*}}, <2 x i64> %{{.*}})
   return _mm_maskload_pd(A, B);
 }
 
 __m256d test_mm256_maskload_pd(double* A, __m256i B) {
   // CHECK-LABEL: test_mm256_maskload_pd
-  // CHECK: call <4 x double> @llvm.x86.avx.maskload.pd.256(ptr %{{.*}}, <4 x i64> %{{.*}})
+  // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.maskload.pd.256(ptr %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_maskload_pd(A, B);
 }
 
 __m128 test_mm_maskload_ps(float* A, __m128i B) {
   // CHECK-LABEL: test_mm_maskload_ps
-  // CHECK: call <4 x float> @llvm.x86.avx.maskload.ps(ptr %{{.*}}, <4 x i32> %{{.*}})
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.avx.maskload.ps(ptr %{{.*}}, <4 x i32> %{{.*}})
   return _mm_maskload_ps(A, B);
 }
 
 __m256 test_mm256_maskload_ps(float* A, __m256i B) {
   // CHECK-LABEL: test_mm256_maskload_ps
-  // CHECK: call <8 x float> @llvm.x86.avx.maskload.ps.256(ptr %{{.*}}, <8 x i32> %{{.*}})
+  // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.maskload.ps.256(ptr %{{.*}}, <8 x i32> %{{.*}})
   return _mm256_maskload_ps(A, B);
 }
 
@@ -1303,25 +1231,25 @@ void test_mm256_maskstore_ps(float* A, __m256i B, __m256 C) {
 
 __m256d test_mm256_max_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_max_pd
-  // CHECK: call <4 x double> @llvm.x86.avx.max.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
+  // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.max.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
   return _mm256_max_pd(A, B);
 }
 
 __m256 test_mm256_max_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_max_ps
-  // CHECK: call <8 x float> @llvm.x86.avx.max.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
+  // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.max.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
   return _mm256_max_ps(A, B);
 }
 
 __m256d test_mm256_min_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_min_pd
-  // CHECK: call <4 x double> @llvm.x86.avx.min.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
+  // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.min.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
   return _mm256_min_pd(A, B);
 }
 
 __m256 test_mm256_min_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_min_ps
-  // CHECK: call <8 x float> @llvm.x86.avx.min.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
+  // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.min.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
   return _mm256_min_ps(A, B);
 }
 
@@ -1345,13 +1273,13 @@ __m256 test_mm256_moveldup_ps(__m256 A) {
 
 int test_mm256_movemask_pd(__m256d A) {
   // CHECK-LABEL: test_mm256_movemask_pd
-  // CHECK: call i32 @llvm.x86.avx.movmsk.pd.256(<4 x double> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.avx.movmsk.pd.256(<4 x double> %{{.*}})
   return _mm256_movemask_pd(A);
 }
 
 int test_mm256_movemask_ps(__m256 A) {
   // CHECK-LABEL: test_mm256_movemask_ps
-  // CHECK: call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %{{.*}})
   return _mm256_movemask_ps(A);
 }
 
@@ -1430,49 +1358,49 @@ __m256i test_mm256_permute2f128_si256(__m256i A, __m256i B) {
 
 __m128d test_mm_permutevar_pd(__m128d A, __m128i B) {
   // CHECK-LABEL: test_mm_permutevar_pd
-  // CHECK: call <2 x double> @llvm.x86.avx.vpermilvar.pd(<2 x double> %{{.*}}, <2 x i64> %{{.*}})
+  // CHECK: call {{.*}}<2 x double> @llvm.x86.avx.vpermilvar.pd(<2 x double> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_permutevar_pd(A, B);
 }
 
 __m256d test_mm256_permutevar_pd(__m256d A, __m256i B) {
   // CHECK-LABEL: test_mm256_permutevar_pd
-  // CHECK: call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %{{.*}}, <4 x i64> %{{.*}})
+  // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_permutevar_pd(A, B);
 }
 
 __m128 test_mm_permutevar_ps(__m128 A, __m128i B) {
   // CHECK-LABEL: test_mm_permutevar_ps
-  // CHECK: call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %{{.*}}, <4 x i32> %{{.*}})
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %{{.*}}, <4 x i32> %{{.*}})
   return _mm_permutevar_ps(A, B);
 }
 
 __m256 test_mm256_permutevar_ps(__m256 A, __m256i B) {
   // CHECK-LABEL: test_mm256_permutevar_ps
-  // CHECK: call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %{{.*}}, <8 x i32> %{{.*}})
+  // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %{{.*}}, <8 x i32> %{{.*}})
   return _mm256_permutevar_ps(A, B);
 }
 
 __m256 test_mm256_rcp_ps(__m256 A) {
   // CHECK-LABEL: test_mm256_rcp_ps
-  // CHECK: call <8 x float> @llvm.x86.avx.rcp.ps.256(<8 x float> %{{.*}})
+  // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.rcp.ps.256(<8 x float> %{{.*}})
   return _mm256_rcp_ps(A);
 }
 
 __m256d test_mm256_round_pd(__m256d x) {
   // CHECK-LABEL: test_mm256_round_pd
-  // CHECK: call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 4)
+  // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 4)
   return _mm256_round_pd(x, 4);
 }
 
 __m256 test_mm256_round_ps(__m256 x) {
   // CHECK-LABEL: test_mm256_round_ps
-  // CHECK: call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %{{.*}}, i32 4)
+  // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %{{.*}}, i32 4)
   return _mm256_round_ps(x, 4);
 }
 
 __m256 test_mm256_rsqrt_ps(__m256 A) {
   // CHECK-LABEL: test_mm256_rsqrt_ps
-  // CHECK: call <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float> %{{.*}})
+  // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float> %{{.*}})
   return _mm256_rsqrt_ps(A);
 }
 
@@ -1586,6 +1514,7 @@ __m256d test_mm256_set_pd(double A0, double A1, double A2, double A3) {
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 3
   return _mm256_set_pd(A0, A1, A2, A3);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_set_pd(-100.0, +90.0, -50.0, +1.0), +1.0, -50.0, +90.0, -100.0));
 
 __m256 test_mm256_set_ps(float A0, float A1, float A2, float A3, float A4, float A5, float A6, float A7) {
   // CHECK-LABEL: test_mm256_set_ps
@@ -1599,6 +1528,7 @@ __m256 test_mm256_set_ps(float A0, float A1, float A2, float A3, float A4, float
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 7
   return _mm256_set_ps(A0, A1, A2, A3, A4, A5, A6, A7);
 }
+TEST_CONSTEXPR(match_m256(_mm256_set_ps(-1.0f, +2.0f, -3.0f, +4.0f, -5.0f, +6.0f, -7.0f, +8.0f), +8.0f, -7.0f, +6.0f, -5.0f, +4.0f, -3.0f, +2.0f, -1.0f));
 
 __m256i test_mm256_set1_epi8(char A) {
   // CHECK-LABEL: test_mm256_set1_epi8
@@ -1688,6 +1618,7 @@ __m256d test_mm256_set1_pd(double A) {
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 3
   return _mm256_set1_pd(A);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_set1_pd(+42.0), +42.0, +42.0, +42.0, +42.0));
 
 __m256 test_mm256_set1_ps(float A) {
   // CHECK-LABEL: test_mm256_set1_ps
@@ -1701,6 +1632,7 @@ __m256 test_mm256_set1_ps(float A) {
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 7
   return _mm256_set1_ps(A);
 }
+TEST_CONSTEXPR(match_m256(_mm256_set1_ps(-101.0f), -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f));
 
 __m256i test_mm256_setr_epi8(char A0, char A1, char A2, char A3, char A4, char A5, char A6, char A7,
                              char A8, char A9, char A10, char A11, char A12, char A13, char A14, char A15,
@@ -1812,6 +1744,7 @@ __m256d test_mm256_setr_pd(double A0, double A1, double A2, double A3) {
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 3
   return _mm256_setr_pd(A0, A1, A2, A3);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_setr_pd(-100.0, +90.0, -50.0, +1.0), -100.0, +90.0, -50.0, +1.0));
 
 __m256 test_mm256_setr_ps(float A0, float A1, float A2, float A3, float A4, float A5, float A6, float A7) {
   // CHECK-LABEL: test_mm256_setr_ps
@@ -1825,24 +1758,28 @@ __m256 test_mm256_setr_ps(float A0, float A1, float A2, float A3, float A4, floa
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 7
   return _mm256_setr_ps(A0, A1, A2, A3, A4, A5, A6, A7);
 }
+TEST_CONSTEXPR(match_m256(_mm256_setr_ps(-1.0f, +2.0f, -3.0f, +4.0f, -5.0f, +6.0f, -7.0f, +8.0f), -1.0f, +2.0f, -3.0f, +4.0f, -5.0f, +6.0f, -7.0f, +8.0f));
 
 __m256d test_mm256_setzero_pd(void) {
   // CHECK-LABEL: test_mm256_setzero_pd
   // CHECK: store <4 x double> zeroinitializer
   return _mm256_setzero_pd();
 }
+TEST_CONSTEXPR(match_m256d(_mm256_setzero_pd(), +0.0, +0.0, +0.0, +0.0));
 
 __m256 test_mm256_setzero_ps(void) {
   // CHECK-LABEL: test_mm256_setzero_ps
   // CHECK: store <8 x float> zeroinitializer
   return _mm256_setzero_ps();
 }
+TEST_CONSTEXPR(match_m256(_mm256_setzero_ps(), +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f));
 
 __m256i test_mm256_setzero_si256(void) {
   // CHECK-LABEL: test_mm256_setzero_si256
   // CHECK: store <4 x i64> zeroinitializer
   return _mm256_setzero_si256();
 }
+TEST_CONSTEXPR(match_m256i(_mm256_setzero_si256(), 0, 0, 0, 0));
 
 __m256d test_mm256_shuffle_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_shuffle_pd
@@ -1858,13 +1795,13 @@ __m256 test_mm256_shuffle_ps(__m256 A, __m256 B) {
 
 __m256d test_mm256_sqrt_pd(__m256d A) {
   // CHECK-LABEL: test_mm256_sqrt_pd
-  // CHECK: call <4 x double> @llvm.sqrt.v4f64(<4 x double> %{{.*}})
+  // CHECK: call {{.*}}<4 x double> @llvm.sqrt.v4f64(<4 x double> %{{.*}})
   return _mm256_sqrt_pd(A);
 }
 
 __m256 test_mm256_sqrt_ps(__m256 A) {
   // CHECK-LABEL: test_mm256_sqrt_ps
-  // CHECK: call <8 x float> @llvm.sqrt.v8f32(<8 x float> %{{.*}})
+  // CHECK: call {{.*}}<8 x float> @llvm.sqrt.v8f32(<8 x float> %{{.*}})
   return _mm256_sqrt_ps(A);
 }
 
@@ -1984,91 +1921,91 @@ __m256 test_mm256_sub_ps(__m256 A, __m256 B) {
 
 int test_mm_testc_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_testc_pd
-  // CHECK: call i32 @llvm.x86.avx.vtestc.pd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.avx.vtestc.pd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_testc_pd(A, B);
 }
 
 int test_mm256_testc_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_testc_pd
-  // CHECK: call i32 @llvm.x86.avx.vtestc.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.avx.vtestc.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
   return _mm256_testc_pd(A, B);
 }
 
 int test_mm_testc_ps(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_testc_ps
-  // CHECK: call i32 @llvm.x86.avx.vtestc.ps(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.avx.vtestc.ps(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_testc_ps(A, B);
 }
 
 int test_mm256_testc_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_testc_ps
-  // CHECK: call i32 @llvm.x86.avx.vtestc.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.avx.vtestc.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
   return _mm256_testc_ps(A, B);
 }
 
 int test_mm256_testc_si256(__m256i A, __m256i B) {
   // CHECK-LABEL: test_mm256_testc_si256
-  // CHECK: call i32 @llvm.x86.avx.ptestc.256(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.avx.ptestc.256(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_testc_si256(A, B);
 }
 
 int test_mm_testnzc_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_testnzc_pd
-  // CHECK: call i32 @llvm.x86.avx.vtestnzc.pd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.avx.vtestnzc.pd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_testnzc_pd(A, B);
 }
 
 int test_mm256_testnzc_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_testnzc_pd
-  // CHECK: call i32 @llvm.x86.avx.vtestnzc.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.avx.vtestnzc.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
   return _mm256_testnzc_pd(A, B);
 }
 
 int test_mm_testnzc_ps(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_testnzc_ps
-  // CHECK: call i32 @llvm.x86.avx.vtestnzc.ps(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.avx.vtestnzc.ps(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_testnzc_ps(A, B);
 }
 
 int test_mm256_testnzc_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_testnzc_ps
-  // CHECK: call i32 @llvm.x86.avx.vtestnzc.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.avx.vtestnzc.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
   return _mm256_testnzc_ps(A, B);
 }
 
 int test_mm256_testnzc_si256(__m256i A, __m256i B) {
   // CHECK-LABEL: test_mm256_testnzc_si256
-  // CHECK: call i32 @llvm.x86.avx.ptestnzc.256(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.avx.ptestnzc.256(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_testnzc_si256(A, B);
 }
 
 int test_mm_testz_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_testz_pd
-  // CHECK: call i32 @llvm.x86.avx.vtestz.pd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.avx.vtestz.pd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_testz_pd(A, B);
 }
 
 int test_mm256_testz_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_testz_pd
-  // CHECK: call i32 @llvm.x86.avx.vtestz.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.avx.vtestz.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}})
   return _mm256_testz_pd(A, B);
 }
 
 int test_mm_testz_ps(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_testz_ps
-  // CHECK: call i32 @llvm.x86.avx.vtestz.ps(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.avx.vtestz.ps(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_testz_ps(A, B);
 }
 
 int test_mm256_testz_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_testz_ps
-  // CHECK: call i32 @llvm.x86.avx.vtestz.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.avx.vtestz.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
   return _mm256_testz_ps(A, B);
 }
 
 int test_mm256_testz_si256(__m256i A, __m256i B) {
   // CHECK-LABEL: test_mm256_testz_si256
-  // CHECK: call i32 @llvm.x86.avx.ptestz.256(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.avx.ptestz.256(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_testz_si256(A, B);
 }
 
@@ -2166,25 +2103,4 @@ __m256i test_mm256_zextsi128_si256(__m128i A) {
   // CHECK: store <2 x i64> zeroinitializer
   // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_zextsi128_si256(A);
-}
-
-double test_mm256_cvtsd_f64(__m256d __a)
-{
-  // CHECK-LABEL: test_mm256_cvtsd_f64
-  // CHECK: extractelement <4 x double> %{{.*}}, i32 0
-  return _mm256_cvtsd_f64(__a);
-}
-
-int test_mm256_cvtsi256_si32(__m256i __a)
-{
-  // CHECK-LABEL: test_mm256_cvtsi256_si32
-  // CHECK: extractelement <8 x i32> %{{.*}}, i32 0
-  return _mm256_cvtsi256_si32(__a);
-}
-
-float test_mm256_cvtss_f32(__m256 __a)
-{
-  // CHECK-LABEL: test_mm256_cvtss_f32
-  // CHECK: extractelement <8 x float> %{{.*}}, i32 0
-  return _mm256_cvtss_f32(__a);
 }

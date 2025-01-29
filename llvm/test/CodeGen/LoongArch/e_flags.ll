@@ -1,22 +1,28 @@
-; RUN: llc --mtriple=loongarch32 --filetype=obj %s -o %t-la32
+; RUN: llc --mtriple=loongarch32 --filetype=obj %s -o %t-la32s
+; RUN: llvm-readelf -h %t-la32s | FileCheck %s --check-prefixes=ILP32,ABI-S --match-full-lines
+
+; RUN: llc --mtriple=loongarch32 -mattr=+d --filetype=obj %s -o %t-la32
 ; RUN: llvm-readelf -h %t-la32 | FileCheck %s --check-prefixes=ILP32,ABI-D --match-full-lines
 
 ; RUN: llc --mtriple=loongarch32 --filetype=obj %s --target-abi=ilp32s -o %t-ilp32s
 ; RUN: llvm-readelf -h %t-ilp32s | FileCheck %s --check-prefixes=ILP32,ABI-S --match-full-lines
 
-; RUN: llc --mtriple=loongarch32 --filetype=obj %s --target-abi=ilp32f -o %t-ilp32f
+; RUN: llc --mtriple=loongarch32 -mattr=+f --filetype=obj %s --target-abi=ilp32f -o %t-ilp32f
 ; RUN: llvm-readelf -h %t-ilp32f | FileCheck %s --check-prefixes=ILP32,ABI-F --match-full-lines
 
-; RUN: llc --mtriple=loongarch32 --filetype=obj %s --target-abi=ilp32d -o %t-ilp32d
+; RUN: llc --mtriple=loongarch32 -mattr=+d --filetype=obj %s --target-abi=ilp32d -o %t-ilp32d
 ; RUN: llvm-readelf -h %t-ilp32d | FileCheck %s --check-prefixes=ILP32,ABI-D --match-full-lines
 
-; RUN: llc --mtriple=loongarch64 --filetype=obj %s -o %t-la64
+; RUN: llc --mtriple=loongarch64 --filetype=obj %s -o %t-la64d
+; RUN: llvm-readelf -h %t-la64d | FileCheck %s --check-prefixes=LP64,ABI-D --match-full-lines
+
+; RUN: llc --mtriple=loongarch64 -mattr=+d --filetype=obj %s -o %t-la64
 ; RUN: llvm-readelf -h %t-la64 | FileCheck %s --check-prefixes=LP64,ABI-D --match-full-lines
 
 ; RUN: llc --mtriple=loongarch64 --filetype=obj %s --target-abi=lp64s -o %t-lp64s
 ; RUN: llvm-readelf -h %t-lp64s | FileCheck %s --check-prefixes=LP64,ABI-S --match-full-lines
 
-; RUN: llc --mtriple=loongarch64 --filetype=obj %s --target-abi=lp64f -o %t-lp64f
+; RUN: llc --mtriple=loongarch64 -mattr=+f --filetype=obj %s --target-abi=lp64f -o %t-lp64f
 ; RUN: llvm-readelf -h %t-lp64f | FileCheck %s --check-prefixes=LP64,ABI-F --match-full-lines
 
 ; RUN: llc --mtriple=loongarch64 --filetype=obj %s --mattr=+d --target-abi=lp64d -o %t-lp64d

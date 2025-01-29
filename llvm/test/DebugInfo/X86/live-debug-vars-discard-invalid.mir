@@ -6,14 +6,14 @@
   target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-apple-darwin"
 
-  %struct.S1 = type { float*, i32 }
+  %struct.S1 = type { ptr, i32 }
 
   @p = common global %struct.S1 zeroinitializer, align 8, !dbg !0
 
   ; Function Attrs: nounwind optsize ssp
   define void @foobar() !dbg !15 {
   entry:
-    tail call void @llvm.dbg.value(metadata %struct.S1* @p, metadata !18, metadata !DIExpression()) , !dbg !25
+    tail call void @llvm.dbg.value(metadata ptr @p, metadata !18, metadata !DIExpression()) , !dbg !25
     ret void, !dbg !32
   }
 
@@ -118,15 +118,15 @@ body:             |
 
 # CHECK-LABEL: bb.3:
 # CHECK:        dead renamable $rcx = IMPLICIT_DEF
-# CHECK-NEXT:   DBG_VALUE 0, $noreg, !23, !DIExpression()
 # CHECK-NEXT:   DBG_VALUE $rcx, $noreg, !18, !DIExpression()
+# CHECK-NEXT:   DBG_VALUE 0, $noreg, !23, !DIExpression()
 
 # CHECK-LABEL: bb.4:
 # CHECK:        liveins: $rax
 # CHECK:        DBG_VALUE $rax, $noreg, !18, !DIExpression()
 # CHECK-NEXT:   renamable $rax = BTS64ri8 killed renamable $rax, 0, implicit-def $eflags
-# CHECK-NEXT:   DBG_VALUE 0, $noreg, !23, !DIExpression()
 # CHECK-NEXT:   DBG_VALUE $rax, $noreg, !18, !DIExpression()
+# CHECK-NEXT:   DBG_VALUE 0, $noreg, !23, !DIExpression()
 # CHECK-NEXT:   renamable $rax = BTS64ri8 killed renamable $rax, 0, implicit-def $eflags
 # CHECK-NEXT:   DBG_VALUE $rax, $noreg, !18, !DIExpression()
 # CHECK-NEXT:   dead renamable $rax = BTS64ri8 killed renamable $rax, 0, implicit-def $eflags

@@ -160,9 +160,8 @@ define void @tiny_tree_not_fully_vectorizable2(ptr noalias nocapture %dst, ptr n
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP5]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    store <4 x float> [[TMP6]], ptr [[DST_ADDR_022]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> [[TMP4]], <2 x float> [[TMP2]], i64 2)
+; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr [[DST_ADDR_022]], align 4
 ; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds float, ptr [[SRC_ADDR_021]], i64 [[I_023]]
 ; CHECK-NEXT:    [[ADD_PTR8]] = getelementptr inbounds float, ptr [[DST_ADDR_022]], i64 [[I_023]]
 ; CHECK-NEXT:    [[INC]] = add i64 [[I_023]], 1

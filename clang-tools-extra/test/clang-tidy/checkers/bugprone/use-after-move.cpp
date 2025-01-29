@@ -1,3 +1,4 @@
+// RUN: %check_clang_tidy -std=c++11 -check-suffixes=,CXX11 %s bugprone-use-after-move %t -- -- -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-use-after-move %t -- -- -fno-delayed-template-parsing
 
 typedef decltype(nullptr) nullptr_t;
@@ -30,6 +31,19 @@ template <typename T>
 struct weak_ptr {
   weak_ptr();
   bool expired() const;
+};
+
+template <typename T>
+struct optional {
+  optional();
+  T& operator*();
+  const T& operator*() const;
+  void reset();
+};
+
+struct any {
+  any();
+  void reset();
 };
 
 template <typename T1, typename T2>
@@ -111,6 +125,18 @@ constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) noexcept {
   return static_cast<typename remove_reference<_Tp>::type &&>(__t);
 }
 
+template <class _Tp>
+constexpr _Tp&&
+forward(typename std::remove_reference<_Tp>::type& __t) noexcept {
+  return static_cast<_Tp&&>(__t);
+}
+
+template <class _Tp>
+constexpr _Tp&&
+forward(typename std::remove_reference<_Tp>::type&& __t) noexcept {
+  return static_cast<_Tp&&>(__t);
+}
+
 } // namespace std
 
 class A {
@@ -123,6 +149,7 @@ public:
   A &operator=(A &&);
 
   void foo() const;
+  void bar(int i) const;
   int getInt() const;
 
   operator bool() const;
@@ -242,6 +269,14 @@ void standardSmartPtr() {
     ptr->foo();
     // CHECK-NOTES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
     // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
+  }
+  {
+    std::optional<A> opt;
+    std::move(opt);
+    A val = *opt;
+    (void)val;
+    // CHECK-NOTES: [[@LINE-2]]:14: warning: 'opt' used after it was moved
+    // CHECK-NOTES: [[@LINE-4]]:5: note: move occurred here
   }
   {
     // std::weak_ptr<> cannot be dereferenced directly, so we only check that
@@ -562,6 +597,19 @@ void useAndMoveInLoop() {
       // CHECK-NOTES: [[@LINE+2]]:7: note: move occurred here
       // CHECK-NOTES: [[@LINE-3]]:7: note: the use happens in a later loop
       std::move(a);
+    }
+  }
+  // Same as above, but the use and the move are in different CFG blocks.
+  {
+    A a;
+    for (int i = 0; i < 10; ++i) {
+      if (i < 10)
+        a.foo();
+      // CHECK-NOTES: [[@LINE-1]]:9: warning: 'a' used after it was moved
+      // CHECK-NOTES: [[@LINE+3]]:9: note: move occurred here
+      // CHECK-NOTES: [[@LINE-3]]:9: note: the use happens in a later loop
+      if (i < 10)
+        std::move(a);
     }
   }
   // However, this case shouldn't be flagged -- the scope of the declaration of
@@ -967,10 +1015,10 @@ void standardContainerAssignIsReinit() {
   }
 }
 
-// Resetting the standard smart pointer types using reset() is treated as a
+// Resetting the standard smart owning types using reset() is treated as a
 // re-initialization. (We don't test std::weak_ptr<> because it can't be
 // dereferenced directly.)
-void standardSmartPointerResetIsReinit() {
+void resetIsReinit() {
   {
     std::unique_ptr<A> ptr;
     std::move(ptr);
@@ -982,6 +1030,20 @@ void standardSmartPointerResetIsReinit() {
     std::move(ptr);
     ptr.reset(new A);
     *ptr;
+  }
+  {
+    std::optional<A> opt;
+    std::move(opt);
+    opt.reset();
+    std::optional<A> opt2 = opt;
+    (void)opt2;
+  }
+  {
+    std::any a;
+    std::move(a);
+    a.reset();
+    std::any a2 = a;
+    (void)a2;
   }
 }
 
@@ -1340,6 +1402,40 @@ void ifWhileAndSwitchSequenceInitDeclAndCondition() {
   }
 }
 
+// In a function call, the expression that determines the callee is sequenced
+// before the arguments -- but only in C++17 and later.
+namespace CalleeSequencedBeforeArguments {
+int consumeA(std::unique_ptr<A> a);
+int consumeA(A &&a);
+
+void calleeSequencedBeforeArguments() {
+  {
+    std::unique_ptr<A> a;
+    a->bar(consumeA(std::move(a)));
+    // CHECK-NOTES-CXX11: [[@LINE-1]]:5: warning: 'a' used after it was moved
+    // CHECK-NOTES-CXX11: [[@LINE-2]]:21: note: move occurred here
+    // CHECK-NOTES-CXX11: [[@LINE-3]]:5: note: the use and move are unsequenced
+  }
+  {
+    std::unique_ptr<A> a;
+    std::unique_ptr<A> getArg(std::unique_ptr<A> a);
+    getArg(std::move(a))->bar(a->getInt());
+    // CHECK-NOTES: [[@LINE-1]]:31: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-2]]:12: note: move occurred here
+    // CHECK-NOTES-CXX11: [[@LINE-3]]:31: note: the use and move are unsequenced
+  }
+  {
+    A a;
+    // Nominally, the callee `a.bar` is evaluated before the argument
+    // `consumeA(std::move(a))`, but in effect `a` is only accessed after the
+    // call to `A::bar()` happens, i.e. after the argument has been evaluted.
+    a.bar(consumeA(std::move(a)));
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-2]]:11: note: move occurred here
+  }
+}
+} // namespace CalleeSequencedBeforeArguments
+
 // Some statements in templates (e.g. null, break and continue statements) may
 // be shared between the uninstantiated and instantiated versions of the
 // template and therefore have multiple parents. Make sure the sequencing code
@@ -1457,7 +1553,6 @@ public:
         // CHECK-NOTES: [[@LINE-1]]:11: warning: 'val' used after it was moved
         s{std::move(val)} {} // wrong order
   // CHECK-NOTES: [[@LINE-1]]:9: note: move occurred here
-  // CHECK-NOTES: [[@LINE-4]]:11: note: the use happens in a later loop iteration than the move
 
 private:
   bool a;
@@ -1525,3 +1620,28 @@ public:
 private:
   std::string val_;
 };
+
+namespace issue82023
+{
+
+struct S {
+  S();
+  S(S&&);
+};
+
+void consume(S s);
+
+template <typename T>
+void forward(T&& t) {
+  consume(std::forward<T>(t));
+  consume(std::forward<T>(t));
+  // CHECK-NOTES: [[@LINE-1]]:27: warning: 't' used after it was forwarded
+  // CHECK-NOTES: [[@LINE-3]]:11: note: forward occurred here
+}
+
+void create() {
+  S s;
+  forward(std::move(s));
+}
+
+} // namespace issue82023

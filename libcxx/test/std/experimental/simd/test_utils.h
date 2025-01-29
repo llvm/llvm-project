@@ -9,12 +9,13 @@
 #ifndef LIBCXX_TEST_STD_EXPERIMENTAL_SIMD_TEST_UTILS_H
 #define LIBCXX_TEST_STD_EXPERIMENTAL_SIMD_TEST_UTILS_H
 
-#include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstddef>
+#include <experimental/simd>
 #include <type_traits>
 #include <utility>
-#include <experimental/simd>
+
 #include "type_algorithms.h"
 
 namespace ex = std::experimental::parallelism_v2;
@@ -48,6 +49,19 @@ using arithmetic_no_bool_types = types::concatenate_t<types::integer_types, type
 using arithmetic_no_bool_types = types::concatenate_t<types::integer_types, types::floating_point_types>;
 #endif
 
+// For interfaces with vectorizable type template parameters, we only use some common or boundary types
+// as template parameters for testing to ensure that the compilation time of a single test does not exceed.
+using simd_test_integer_types =
+    types::type_list<char,
+                     unsigned,
+                     int
+#ifndef TEST_HAS_NO_INT128
+                     ,
+                     __int128_t
+#endif
+                     >;
+using simd_test_types = types::concatenate_t<simd_test_integer_types, types::type_list<float, double>>;
+
 template <template <class T, std::size_t N> class Func>
 void test_all_simd_abi() {
   types::for_each(arithmetic_no_bool_types(), TestAllSimdAbiFunctor<Func>());
@@ -76,6 +90,18 @@ template <std::size_t ArraySize, class T, class SimdAbi>
 void assert_simd_mask_values_equal(const ex::simd_mask<T, SimdAbi>& origin_mask,
                                    const std::array<bool, ArraySize>& expected_value) {
   for (std::size_t i = 0; i < origin_mask.size(); ++i)
+    assert(origin_mask[i] == expected_value[i]);
+}
+
+template <class SimdAbi, class T, class U = T>
+void assert_simd_values_equal(const ex::simd<T, SimdAbi>& origin_simd, U* expected_value) {
+  for (size_t i = 0; i < origin_simd.size(); ++i)
+    assert(origin_simd[i] == static_cast<T>(expected_value[i]));
+}
+
+template <class SimdAbi, class T>
+void assert_simd_mask_values_equal(const ex::simd_mask<T, SimdAbi>& origin_mask, bool* expected_value) {
+  for (size_t i = 0; i < origin_mask.size(); ++i)
     assert(origin_mask[i] == expected_value[i]);
 }
 

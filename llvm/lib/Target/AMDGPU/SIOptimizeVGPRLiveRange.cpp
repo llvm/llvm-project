@@ -71,6 +71,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SIOptimizeVGPRLiveRange.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -79,7 +80,6 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 
@@ -87,7 +87,7 @@ using namespace llvm;
 
 namespace {
 
-class SIOptimizeVGPRLiveRange : public MachineFunctionPass {
+class SIOptimizeVGPRLiveRange {
 private:
   const SIRegisterInfo *TRI = nullptr;
   const SIInstrInfo *TII = nullptr;
@@ -97,7 +97,10 @@ private:
   MachineRegisterInfo *MRI = nullptr;
 
 public:
-  static char ID;
+  SIOptimizeVGPRLiveRange(LiveVariables *LV, MachineDominatorTree *MDT,
+                          MachineLoopInfo *Loops)
+      : LV(LV), MDT(MDT), Loops(Loops) {}
+  bool run(MachineFunction &MF);
 
   MachineBasicBlock *getElseTarget(MachineBasicBlock *MBB) const;
 
@@ -137,8 +140,13 @@ public:
       Register Reg, MachineBasicBlock *LoopHeader,
       SmallSetVector<MachineBasicBlock *, 2> &LoopBlocks,
       SmallVectorImpl<MachineInstr *> &Instructions) const;
+};
 
-  SIOptimizeVGPRLiveRange() : MachineFunctionPass(ID) {}
+class SIOptimizeVGPRLiveRangeLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  SIOptimizeVGPRLiveRangeLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -147,12 +155,13 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LiveVariables>();
-    AU.addRequired<MachineDominatorTree>();
-    AU.addRequired<MachineLoopInfo>();
-    AU.addPreserved<LiveVariables>();
-    AU.addPreserved<MachineDominatorTree>();
-    AU.addPreserved<MachineLoopInfo>();
+    AU.setPreservesCFG();
+    AU.addRequired<LiveVariablesWrapperPass>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    AU.addPreserved<LiveVariablesWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -189,7 +198,7 @@ void SIOptimizeVGPRLiveRange::collectElseRegionBlocks(
   unsigned Cur = 0;
   while (MBB) {
     for (auto *Pred : MBB->predecessors()) {
-      if (Pred != Flow && !Blocks.contains(Pred))
+      if (Pred != Flow)
         Blocks.insert(Pred);
     }
 
@@ -407,10 +416,8 @@ void SIOptimizeVGPRLiveRange::updateLiveRangeInThenRegion(
   while (!WorkList.empty()) {
     auto *MBB = WorkList.pop_back_val();
     for (auto *Succ : MBB->successors()) {
-      if (Succ != Flow && !Blocks.contains(Succ)) {
+      if (Succ != Flow && Blocks.insert(Succ))
         WorkList.push_back(Succ);
-        Blocks.insert(Succ);
-      }
     }
   }
 
@@ -614,34 +621,58 @@ void SIOptimizeVGPRLiveRange::optimizeWaterfallLiveRange(
   }
 }
 
-char SIOptimizeVGPRLiveRange::ID = 0;
+char SIOptimizeVGPRLiveRangeLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(SIOptimizeVGPRLiveRange, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(SIOptimizeVGPRLiveRangeLegacy, DEBUG_TYPE,
                       "SI Optimize VGPR LiveRange", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-INITIALIZE_PASS_DEPENDENCY(LiveVariables)
-INITIALIZE_PASS_END(SIOptimizeVGPRLiveRange, DEBUG_TYPE,
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LiveVariablesWrapperPass)
+INITIALIZE_PASS_END(SIOptimizeVGPRLiveRangeLegacy, DEBUG_TYPE,
                     "SI Optimize VGPR LiveRange", false, false)
 
-char &llvm::SIOptimizeVGPRLiveRangeID = SIOptimizeVGPRLiveRange::ID;
+char &llvm::SIOptimizeVGPRLiveRangeLegacyID = SIOptimizeVGPRLiveRangeLegacy::ID;
 
-FunctionPass *llvm::createSIOptimizeVGPRLiveRangePass() {
-  return new SIOptimizeVGPRLiveRange();
+FunctionPass *llvm::createSIOptimizeVGPRLiveRangeLegacyPass() {
+  return new SIOptimizeVGPRLiveRangeLegacy();
 }
 
-bool SIOptimizeVGPRLiveRange::runOnMachineFunction(MachineFunction &MF) {
+bool SIOptimizeVGPRLiveRangeLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
 
+  LiveVariables *LV = &getAnalysis<LiveVariablesWrapperPass>().getLV();
+  MachineDominatorTree *MDT =
+      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MachineLoopInfo *Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  return SIOptimizeVGPRLiveRange(LV, MDT, Loops).run(MF);
+}
+
+PreservedAnalyses
+SIOptimizeVGPRLiveRangePass::run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+  LiveVariables *LV = &MFAM.getResult<LiveVariablesAnalysis>(MF);
+  MachineDominatorTree *MDT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  MachineLoopInfo *Loops = &MFAM.getResult<MachineLoopAnalysis>(MF);
+
+  bool Changed = SIOptimizeVGPRLiveRange(LV, MDT, Loops).run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserve<LiveVariablesAnalysis>();
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<MachineLoopAnalysis>();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+bool SIOptimizeVGPRLiveRange::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
-  MDT = &getAnalysis<MachineDominatorTree>();
-  Loops = &getAnalysis<MachineLoopInfo>();
-  LV = &getAnalysis<LiveVariables>();
   MRI = &MF.getRegInfo();
-
-  if (skipFunction(MF.getFunction()))
-    return false;
 
   bool MadeChange = false;
 

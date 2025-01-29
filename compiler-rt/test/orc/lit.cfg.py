@@ -1,6 +1,7 @@
 # -*- Python -*-
 
 import os
+import subprocess
 
 # Setup config name.
 config.name = "ORC" + config.name_suffix
@@ -13,6 +14,13 @@ host_arch_compatible = config.target_arch == config.host_arch
 
 if config.host_arch == "x86_64h" and config.target_arch == "x86_64":
     host_arch_compatible = True
+if host_arch_compatible:
+    config.available_features.add("host-arch-compatible")
+
+# If the target OS hasn't been set then assume host.
+if not config.target_os:
+    config.target_os = config.host_os
+
 config.test_target_is_host_executable = (
     config.target_os == config.host_os and host_arch_compatible
 )
@@ -70,12 +78,24 @@ config.substitutions.append(
         (lli + " -jit-kind=orc -jit-linker=jitlink -orc-runtime=" + orc_rt_path),
     )
 )
+config.substitutions.append(("%ar", "ar"))
 
 # Default test suffixes.
-config.suffixes = [".c", ".cpp", ".S", ".ll", ".test"]
+config.suffixes = [".c", ".cpp", ".m", ".S", ".ll", ".test"]
 
 # Exclude Inputs directories.
 config.excludes = ["Inputs"]
 
 if config.host_os not in ["Darwin", "FreeBSD", "Linux", "Windows"]:
     config.unsupported = True
+
+# Ask llvm-config about assertion mode.
+try:
+    llvm_config_result = subprocess.check_output(
+        [os.path.join(config.llvm_tools_dir, "llvm-config"), "--assertion-mode"],
+        env=config.environment,
+    )
+    if llvm_config_result.startswith(b"ON"):
+        config.available_features.add("asserts")
+except OSError as e:
+    lit_config.warning(f"Could not determine if LLVM was built with assertions: {e}")

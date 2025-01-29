@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-affine-reify-value-bounds -verify-diagnostics \
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(test-affine-reify-value-bounds))' -verify-diagnostics \
 // RUN:     -split-input-file | FileCheck %s
 
 func.func @unknown_op() -> index {
@@ -44,6 +44,17 @@ func.func @dim(%t: tensor<?xf32>) -> index {
 
 // -----
 
+// CHECK-LABEL: func @dim_all_positive(
+func.func @dim_all_positive(%t: tensor<?xf32>, %x: index) {
+  %c0 = arith.constant 0 : index
+  %0 = tensor.dim %t, %x : tensor<?xf32>
+  // expected-remark @below{{true}}
+  "test.compare"(%0, %c0) {cmp = "GE" } : (index, index) -> ()
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @empty(
 //  CHECK-SAME:     %[[sz:.*]]: index
 //       CHECK:   %[[c6:.*]] = arith.constant 6 : index
@@ -83,7 +94,7 @@ func.func @extract_slice_static(%t: tensor<?xf32>) -> index {
 func.func @extract_slice_dynamic_constant(%t: tensor<?xf32>, %sz: index) -> index {
   %0 = tensor.extract_slice %t[2][%sz][1] : tensor<?xf32> to tensor<?xf32>
   // expected-error @below{{could not reify bound}}
-  %1 = "test.reify_constant_bound"(%0) {dim = 0} : (tensor<?xf32>) -> (index)
+  %1 = "test.reify_bound"(%0) {dim = 0, constant} : (tensor<?xf32>) -> (index)
   return %1 : index
 }
 
@@ -95,7 +106,7 @@ func.func @extract_slice_dynamic_constant(%t: tensor<?xf32>, %sz: index) -> inde
 //       CHECK:   return %[[c5]]
 func.func @extract_slice_static_constant(%t: tensor<?xf32>) -> index {
   %0 = tensor.extract_slice %t[2][5][1] : tensor<?xf32> to tensor<5xf32>
-  %1 = "test.reify_constant_bound"(%0) {dim = 0} : (tensor<5xf32>) -> (index)
+  %1 = "test.reify_bound"(%0) {dim = 0, constant} : (tensor<5xf32>) -> (index)
   return %1 : index
 }
 
@@ -163,8 +174,8 @@ func.func @dynamic_dims_are_equal(%t: tensor<?xf32>) {
   %c0 = arith.constant 0 : index
   %dim0 = tensor.dim %t, %c0 : tensor<?xf32>
   %dim1 = tensor.dim %t, %c0 : tensor<?xf32>
-  // expected-remark @below {{equal}}
-  "test.are_equal"(%dim0, %dim1) : (index, index) -> ()
+  // expected-remark @below {{true}}
+  "test.compare"(%dim0, %dim1) : (index, index) -> ()
   return
 }
 
@@ -175,8 +186,8 @@ func.func @dynamic_dims_are_different(%t: tensor<?xf32>) {
   %c1 = arith.constant 1 : index
   %dim0 = tensor.dim %t, %c0 : tensor<?xf32>
   %val = arith.addi %dim0, %c1 : index
-  // expected-remark @below {{different}}
-  "test.are_equal"(%dim0, %val) : (index, index) -> ()
+  // expected-remark @below {{false}}
+  "test.compare"(%dim0, %val) : (index, index) -> ()
   return
 }
 
@@ -186,8 +197,8 @@ func.func @dynamic_dims_are_maybe_equal_1(%t: tensor<?xf32>) {
   %c0 = arith.constant 0 : index
   %c5 = arith.constant 5 : index
   %dim0 = tensor.dim %t, %c0 : tensor<?xf32>
-  // expected-error @below {{could not determine equality}}
-  "test.are_equal"(%dim0, %c5) : (index, index) -> ()
+  // expected-error @below {{unknown}}
+  "test.compare"(%dim0, %c5) : (index, index) -> ()
   return
 }
 
@@ -198,7 +209,7 @@ func.func @dynamic_dims_are_maybe_equal_2(%t: tensor<?x?xf32>) {
   %c1 = arith.constant 1 : index
   %dim0 = tensor.dim %t, %c0 : tensor<?x?xf32>
   %dim1 = tensor.dim %t, %c1 : tensor<?x?xf32>
-  // expected-error @below {{could not determine equality}}
-  "test.are_equal"(%dim0, %dim1) : (index, index) -> ()
+  // expected-error @below {{unknown}}
+  "test.compare"(%dim0, %dim1) : (index, index) -> ()
   return
 }

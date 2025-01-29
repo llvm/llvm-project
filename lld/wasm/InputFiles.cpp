@@ -15,8 +15,10 @@
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Reproduce.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/Wasm.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/raw_ostream.h"
@@ -44,12 +46,19 @@ std::string toString(const wasm::InputFile *file) {
 
 namespace wasm {
 
+std::string replaceThinLTOSuffix(StringRef path) {
+  auto [suffix, repl] = ctx.arg.thinLTOObjectSuffixReplace;
+  if (path.consume_back(suffix))
+    return (path + repl).str();
+  return std::string(path);
+}
+
 void InputFile::checkArch(Triple::ArchType arch) const {
   bool is64 = arch == Triple::wasm64;
-  if (is64 && !config->is64) {
+  if (is64 && !ctx.arg.is64) {
     fatal(toString(this) +
           ": must specify -mwasm64 to process wasm64 object files");
-  } else if (config->is64.value_or(false) != is64) {
+  } else if (ctx.arg.is64.value_or(false) != is64) {
     fatal(toString(this) +
           ": wasm32 object file can't be linked in wasm64 mode");
   }
@@ -75,26 +84,22 @@ std::optional<MemoryBufferRef> readFile(StringRef path) {
 }
 
 InputFile *createObjectFile(MemoryBufferRef mb, StringRef archiveName,
-                            uint64_t offsetInArchive) {
+                            uint64_t offsetInArchive, bool lazy) {
   file_magic magic = identify_magic(mb.getBuffer());
   if (magic == file_magic::wasm_object) {
     std::unique_ptr<Binary> bin =
         CHECK(createBinary(mb), mb.getBufferIdentifier());
     auto *obj = cast<WasmObjectFile>(bin.get());
+    if (obj->hasUnmodeledTypes())
+      fatal(toString(mb.getBufferIdentifier()) +
+            "file has unmodeled reference or GC types");
     if (obj->isSharedObject())
       return make<SharedFile>(mb);
-    return make<ObjFile>(mb, archiveName);
+    return make<ObjFile>(mb, archiveName, lazy);
   }
 
-  if (magic == file_magic::bitcode)
-    return make<BitcodeFile>(mb, archiveName, offsetInArchive);
-
-  std::string name = mb.getBufferIdentifier().str();
-  if (!archiveName.empty()) {
-    name = archiveName.str() + "(" + name + ")";
-  }
-
-  fatal("unknown file type: " + name);
+  assert(magic == file_magic::bitcode);
+  return make<BitcodeFile>(mb, archiveName, offsetInArchive, lazy);
 }
 
 // Relocations contain either symbol or type indices.  This function takes a
@@ -164,7 +169,7 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
     uint32_t index = getFunctionSymbol(reloc.Index)->getTableIndex();
     if (reloc.Type == R_WASM_TABLE_INDEX_REL_SLEB ||
         reloc.Type == R_WASM_TABLE_INDEX_REL_SLEB64)
-      index -= config->tableBase;
+      index -= ctx.arg.tableBase;
     return index;
   }
   case R_WASM_MEMORY_ADDR_LEB:
@@ -178,7 +183,7 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
   case R_WASM_MEMORY_ADDR_TLS_SLEB:
   case R_WASM_MEMORY_ADDR_TLS_SLEB64:
   case R_WASM_MEMORY_ADDR_LOCREL_I32: {
-    if (isa<UndefinedData>(sym) || sym->isUndefWeak())
+    if (isa<UndefinedData>(sym) || sym->isShared() || sym->isUndefWeak())
       return 0;
     auto D = cast<DefinedData>(sym);
     uint64_t value = D->getVA() + reloc.Addend;
@@ -250,13 +255,14 @@ static void setRelocs(const std::vector<T *> &chunks,
   }
 }
 
-// An object file can have two approaches to tables.  With the reference-types
-// feature enabled, input files that define or use tables declare the tables
-// using symbols, and record each use with a relocation.  This way when the
-// linker combines inputs, it can collate the tables used by the inputs,
-// assigning them distinct table numbers, and renumber all the uses as
-// appropriate.  At the same time, the linker has special logic to build the
-// indirect function table if it is needed.
+// An object file can have two approaches to tables.  With the
+// reference-types feature or call-indirect-overlong feature enabled
+// (explicitly, or implied by the reference-types feature), input files that
+// define or use tables declare the tables using symbols, and record each use
+// with a relocation.  This way when the linker combines inputs, it can collate
+// the tables used by the inputs, assigning them distinct table numbers, and
+// renumber all the uses as appropriate.  At the same time, the linker has
+// special logic to build the indirect function table if it is needed.
 //
 // However, MVP object files (those that target WebAssembly 1.0, the "minimum
 // viable product" version of WebAssembly) neither write table symbols nor
@@ -279,9 +285,9 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
     return;
 
   // It's possible for an input to define tables and also use the indirect
-  // function table, but forget to compile with -mattr=+reference-types.
-  // For these newer files, we require symbols for all tables, and
-  // relocations for all of their uses.
+  // function table, but forget to compile with -mattr=+call-indirect-overlong
+  // or -mattr=+reference-types. For these newer files, we require symbols for
+  // all tables, and relocations for all of their uses.
   if (tableSymbolCount != 0) {
     error(toString(this) +
           ": expected one symbol table entry for each of the " +
@@ -320,26 +326,25 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
   // it has an unexpected name or type, assume that it's not actually the
   // indirect function table.
   if (tableImport->Field != functionTableName ||
-      tableImport->Table.ElemType != uint8_t(ValType::FUNCREF)) {
+      tableImport->Table.ElemType != ValType::FUNCREF) {
     error(toString(this) + ": table import " + Twine(tableImport->Field) +
           " is missing a symbol table entry.");
     return;
   }
 
-  auto *info = make<WasmSymbolInfo>();
-  info->Name = tableImport->Field;
-  info->Kind = WASM_SYMBOL_TYPE_TABLE;
-  info->ImportModule = tableImport->Module;
-  info->ImportName = tableImport->Field;
-  info->Flags = WASM_SYMBOL_UNDEFINED;
-  info->Flags |= WASM_SYMBOL_NO_STRIP;
-  info->ElementIndex = 0;
-  LLVM_DEBUG(dbgs() << "Synthesizing symbol for table import: " << info->Name
+  WasmSymbolInfo info;
+  info.Name = tableImport->Field;
+  info.Kind = WASM_SYMBOL_TYPE_TABLE;
+  info.ImportModule = tableImport->Module;
+  info.ImportName = tableImport->Field;
+  info.Flags = WASM_SYMBOL_UNDEFINED | WASM_SYMBOL_NO_STRIP;
+  info.ElementIndex = 0;
+  LLVM_DEBUG(dbgs() << "Synthesizing symbol for table import: " << info.Name
                     << "\n");
   const WasmGlobalType *globalType = nullptr;
   const WasmSignature *signature = nullptr;
   auto *wasmSym =
-      make<WasmSymbol>(*info, globalType, &tableImport->Table, signature);
+      make<WasmSymbol>(info, globalType, &tableImport->Table, signature);
   Symbol *sym = createUndefined(*wasmSym, false);
   // We're only sure it's a TableSymbol if the createUndefined succeeded.
   if (errorCount())
@@ -351,11 +356,11 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
 
   // We assume that this compilation unit has unrelocatable references to
   // this table.
-  config->legacyFunctionTable = true;
+  ctx.legacyFunctionTable = true;
 }
 
 static bool shouldMerge(const WasmSection &sec) {
-  if (config->optimize == 0)
+  if (ctx.arg.optimize == 0)
     return false;
   // Sadly we don't have section attributes yet for custom sections, so we
   // currently go by the name alone.
@@ -378,7 +383,7 @@ static bool shouldMerge(const WasmSegment &seg) {
   // On a regular link we don't merge sections if -O0 (default is -O1). This
   // sometimes makes the linker significantly faster, although the output will
   // be bigger.
-  if (config->optimize == 0)
+  if (ctx.arg.optimize == 0)
     return false;
 
   // A mergeable section with size 0 is useless because they don't have
@@ -391,21 +396,101 @@ static bool shouldMerge(const WasmSegment &seg) {
   return true;
 }
 
-void ObjFile::parse(bool ignoreComdats) {
+void ObjFile::parseLazy() {
+  LLVM_DEBUG(dbgs() << "ObjFile::parseLazy: " << toString(this) << " "
+                    << wasmObj.get() << "\n");
+  for (const SymbolRef &sym : wasmObj->symbols()) {
+    const WasmSymbol &wasmSym = wasmObj->getWasmSymbol(sym.getRawDataRefImpl());
+    if (wasmSym.isUndefined() || wasmSym.isBindingLocal())
+      continue;
+    symtab->addLazy(wasmSym.Info.Name, this);
+    // addLazy() may trigger this->extract() if an existing symbol is an
+    // undefined symbol. If that happens, this function has served its purpose,
+    // and we can exit from the loop early.
+    if (!lazy)
+      break;
+  }
+}
+
+ObjFile::ObjFile(MemoryBufferRef m, StringRef archiveName, bool lazy)
+    : WasmFileBase(ObjectKind, m) {
+  this->lazy = lazy;
+  this->archiveName = std::string(archiveName);
+
+  // Currently we only do this check for regular object file, and not for shared
+  // object files.  This is because architecture detection for shared objects is
+  // currently based on a heuristic, which is fallable:
+  // https://github.com/llvm/llvm-project/issues/98778
+  checkArch(wasmObj->getArch());
+
+  // If this isn't part of an archive, it's eagerly linked, so mark it live.
+  if (archiveName.empty())
+    markLive();
+}
+
+void SharedFile::parse() {
+  assert(wasmObj->isSharedObject());
+
+  for (const SymbolRef &sym : wasmObj->symbols()) {
+    const WasmSymbol &wasmSym = wasmObj->getWasmSymbol(sym.getRawDataRefImpl());
+    if (wasmSym.isDefined()) {
+      StringRef name = wasmSym.Info.Name;
+      // Certain shared library exports are known to be DSO-local so we
+      // don't want to add them to the symbol table.
+      // TODO(sbc): Instead of hardcoding these here perhaps we could add
+      // this as extra metadata in the `dylink` section.
+      if (name == "__wasm_apply_data_relocs" || name == "__wasm_call_ctors" ||
+          name.starts_with("__start_") || name.starts_with("__stop_"))
+        continue;
+      uint32_t flags = wasmSym.Info.Flags;
+      Symbol *s;
+      LLVM_DEBUG(dbgs() << "shared symbol: " << name << "\n");
+      switch (wasmSym.Info.Kind) {
+      case WASM_SYMBOL_TYPE_FUNCTION:
+        s = symtab->addSharedFunction(name, flags, this, wasmSym.Signature);
+        break;
+      case WASM_SYMBOL_TYPE_DATA:
+        s = symtab->addSharedData(name, flags, this);
+        break;
+      default:
+        continue;
+      }
+      symbols.push_back(s);
+    }
+  }
+}
+
+// Returns the alignment for a custom section. This is used to concatenate
+// custom sections with the same name into a single custom section.
+static uint32_t getCustomSectionAlignment(const WasmSection &sec) {
+  // TODO: Add a section attribute for alignment in the linking spec.
+  if (sec.Name == getInstrProfSectionName(IPSK_covfun, Triple::Wasm) ||
+      sec.Name == getInstrProfSectionName(IPSK_covmap, Triple::Wasm)) {
+    // llvm-cov assumes that coverage metadata sections are 8-byte aligned.
+    return 8;
+  }
+  return 1;
+}
+
+WasmFileBase::WasmFileBase(Kind k, MemoryBufferRef m) : InputFile(k, m) {
   // Parse a memory buffer as a wasm file.
-  LLVM_DEBUG(dbgs() << "Parsing object: " << toString(this) << "\n");
+  LLVM_DEBUG(dbgs() << "Reading object: " << toString(this) << "\n");
   std::unique_ptr<Binary> bin = CHECK(createBinary(mb), toString(this));
 
   auto *obj = dyn_cast<WasmObjectFile>(bin.get());
   if (!obj)
     fatal(toString(this) + ": not a wasm file");
-  if (!obj->isRelocatableObject())
-    fatal(toString(this) + ": not a relocatable wasm file");
 
   bin.release();
   wasmObj.reset(obj);
+}
 
-  checkArch(obj->getArch());
+void ObjFile::parse(bool ignoreComdats) {
+  // Parse a memory buffer as a wasm file.
+  LLVM_DEBUG(dbgs() << "ObjFile::parse: " << toString(this) << "\n");
+
+  if (!wasmObj->isRelocatableObject())
+    fatal(toString(this) + ": not a relocatable wasm file");
 
   // Build up a map of function indices to table indices for use when
   // verifying the existing table index relocations
@@ -456,10 +541,11 @@ void ObjFile::parse(bool ignoreComdats) {
       dataSection = &section;
     } else if (section.Type == WASM_SEC_CUSTOM) {
       InputChunk *customSec;
+      uint32_t alignment = getCustomSectionAlignment(section);
       if (shouldMerge(section))
-        customSec = make<MergeInputChunk>(section, this);
+        customSec = make<MergeInputChunk>(section, this, alignment);
       else
-        customSec = make<InputSection>(section, this);
+        customSec = make<InputSection>(section, this, alignment);
       customSec->discarded = isExcludedByComdat(customSec);
       customSections.emplace_back(customSec);
       customSections.back()->setRelocations(section.Relocations);
@@ -680,7 +766,7 @@ Symbol *ObjFile::createUndefined(const WasmSymbol &sym, bool isCalledDirectly) {
   llvm_unreachable("unknown symbol kind");
 }
 
-StringRef strip(StringRef s) { return s.trim(' '); }
+static StringRef strip(StringRef s) { return s.trim(' '); }
 
 void StubFile::parse() {
   bool first = true;
@@ -697,7 +783,7 @@ void StubFile::parse() {
     }
 
     // Lines starting with # are considered comments
-    if (line.starts_with("#"))
+    if (line.starts_with("#") || !line.size())
       continue;
 
     StringRef sym;
@@ -715,43 +801,6 @@ void StubFile::parse() {
       symbolDependencies[sym].push_back(dep);
     }
   }
-}
-
-void ArchiveFile::parse() {
-  // Parse a MemoryBufferRef as an archive file.
-  LLVM_DEBUG(dbgs() << "Parsing library: " << toString(this) << "\n");
-  file = CHECK(Archive::create(mb), toString(this));
-
-  // Read the symbol table to construct Lazy symbols.
-  int count = 0;
-  for (const Archive::Symbol &sym : file->symbols()) {
-    symtab->addLazy(this, &sym);
-    ++count;
-  }
-  LLVM_DEBUG(dbgs() << "Read " << count << " symbols\n");
-  (void) count;
-}
-
-void ArchiveFile::addMember(const Archive::Symbol *sym) {
-  const Archive::Child &c =
-      CHECK(sym->getMember(),
-            "could not get the member for symbol " + sym->getName());
-
-  // Don't try to load the same member twice (this can happen when members
-  // mutually reference each other).
-  if (!seen.insert(c.getChildOffset()).second)
-    return;
-
-  LLVM_DEBUG(dbgs() << "loading lazy: " << sym->getName() << "\n");
-  LLVM_DEBUG(dbgs() << "from archive: " << toString(this) << "\n");
-
-  MemoryBufferRef mb =
-      CHECK(c.getMemoryBufferRef(),
-            "could not get the buffer for the member defining symbol " +
-                sym->getName());
-
-  InputFile *obj = createObjectFile(mb, getName(), c.getChildOffset());
-  symtab->addFile(obj, sym->getName());
 }
 
 static uint8_t mapVisibility(GlobalValue::VisibilityTypes gvVisibility) {
@@ -790,11 +839,14 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &keptComdats,
 }
 
 BitcodeFile::BitcodeFile(MemoryBufferRef m, StringRef archiveName,
-                         uint64_t offsetInArchive)
+                         uint64_t offsetInArchive, bool lazy)
     : InputFile(BitcodeKind, m) {
+  this->lazy = lazy;
   this->archiveName = std::string(archiveName);
 
   std::string path = mb.getBufferIdentifier().str();
+  if (ctx.arg.thinLTOIndexOnly)
+    path = replaceThinLTOSuffix(mb.getBufferIdentifier());
 
   // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
   // name. If two archives define two members with the same name, this
@@ -816,6 +868,20 @@ BitcodeFile::BitcodeFile(MemoryBufferRef m, StringRef archiveName,
 }
 
 bool BitcodeFile::doneLTO = false;
+
+void BitcodeFile::parseLazy() {
+  for (auto [i, irSym] : llvm::enumerate(obj->symbols())) {
+    if (irSym.isUndefined())
+      continue;
+    StringRef name = saver().save(irSym.getName());
+    symtab->addLazy(name, this);
+    // addLazy() may trigger this->extract() if an existing symbol is an
+    // undefined symbol. If that happens, this function has served its purpose,
+    // and we can exit from the loop early.
+    if (!lazy)
+      break;
+  }
+}
 
 void BitcodeFile::parse(StringRef symName) {
   if (doneLTO) {

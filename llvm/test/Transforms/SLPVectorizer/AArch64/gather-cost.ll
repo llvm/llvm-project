@@ -20,9 +20,9 @@ define internal i32 @gather_multiple_use(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[A:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[B:%.*]], i64 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[D:%.*]], i64 3
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr <4 x i32> [[TMP4]], <i32 15, i32 15, i32 15, i32 15>
-; CHECK-NEXT:    [[TMP6:%.*]] = and <4 x i32> [[TMP5]], <i32 65537, i32 65537, i32 65537, i32 65537>
-; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw <4 x i32> [[TMP6]], <i32 65535, i32 65535, i32 65535, i32 65535>
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr <4 x i32> [[TMP4]], splat (i32 15)
+; CHECK-NEXT:    [[TMP6:%.*]] = and <4 x i32> [[TMP5]], splat (i32 65537)
+; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw <4 x i32> [[TMP6]], splat (i32 65535)
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i32> [[TMP7]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor <4 x i32> [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP9]])
@@ -57,20 +57,20 @@ define internal i32 @gather_multiple_use(i32 %a, i32 %b, i32 %c, i32 %d) {
 @data = global [6 x [258 x i8]] zeroinitializer, align 1
 define void @gather_load(ptr noalias %ptr) {
 ; CHECK-LABEL: @gather_load(
-; CHECK-NEXT:    [[ARRAYIDX182:%.*]] = getelementptr inbounds i16, ptr [[PTR:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX183:%.*]] = getelementptr inbounds i16, ptr [[PTR]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX184:%.*]] = getelementptr inbounds i16, ptr [[PTR]], i64 3
-; CHECK-NEXT:    [[ARRAYIDX185:%.*]] = getelementptr inbounds i16, ptr [[PTR]], i64 4
-; CHECK-NEXT:    [[L0:%.*]] = load i8, ptr getelementptr inbounds ([6 x [258 x i8]], ptr @data, i64 0, i64 1, i64 0), align 1
+; CHECK-NEXT:    [[ARRAYIDX182:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR:%.*]], i64 2
+; CHECK-NEXT:    [[ARRAYIDX183:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 4
+; CHECK-NEXT:    [[ARRAYIDX184:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 6
+; CHECK-NEXT:    [[ARRAYIDX185:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
+; CHECK-NEXT:    [[L0:%.*]] = load i8, ptr getelementptr inbounds nuw (i8, ptr @data, i64 258), align 1
 ; CHECK-NEXT:    [[CONV150:%.*]] = zext i8 [[L0]] to i16
 ; CHECK-NEXT:    [[ADD152:%.*]] = add nuw nsw i16 [[CONV150]], 10
-; CHECK-NEXT:    [[L1:%.*]] = load i8, ptr getelementptr inbounds ([6 x [258 x i8]], ptr @data, i64 0, i64 2, i64 1), align 1
+; CHECK-NEXT:    [[L1:%.*]] = load i8, ptr getelementptr inbounds nuw (i8, ptr @data, i64 517), align 1
 ; CHECK-NEXT:    [[CONV156:%.*]] = zext i8 [[L1]] to i16
 ; CHECK-NEXT:    [[ADD158:%.*]] = add nuw nsw i16 [[CONV156]], 20
-; CHECK-NEXT:    [[L2:%.*]] = load i8, ptr getelementptr inbounds ([6 x [258 x i8]], ptr @data, i64 0, i64 3, i64 2), align 1
+; CHECK-NEXT:    [[L2:%.*]] = load i8, ptr getelementptr inbounds nuw (i8, ptr @data, i64 776), align 1
 ; CHECK-NEXT:    [[CONV162:%.*]] = zext i8 [[L2]] to i16
 ; CHECK-NEXT:    [[ADD164:%.*]] = add nuw nsw i16 [[CONV162]], 30
-; CHECK-NEXT:    [[L3:%.*]] = load i8, ptr getelementptr inbounds ([6 x [258 x i8]], ptr @data, i64 0, i64 4, i64 3), align 1
+; CHECK-NEXT:    [[L3:%.*]] = load i8, ptr getelementptr inbounds nuw (i8, ptr @data, i64 1035), align 1
 ; CHECK-NEXT:    [[CONV168:%.*]] = zext i8 [[L3]] to i16
 ; CHECK-NEXT:    [[ADD170:%.*]] = add nuw nsw i16 [[CONV168]], 40
 ; CHECK-NEXT:    store i16 [[ADD152]], ptr [[ARRAYIDX182]], align 2

@@ -17,13 +17,13 @@ define noundef i64 @foo(i64 noundef %0) {
 ; CHECK-NEXT:    ret i64 [[TMP3]]
 ;
 ; SSE-LABEL: @foo(
-; SSE-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP0:%.*]], 44
-; SSE-NEXT:    [[TMP3:%.*]] = sub nuw nsw i64 -17592186044416, [[TMP2]]
+; SSE-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP0:%.*]], -1
+; SSE-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 44
 ; SSE-NEXT:    ret i64 [[TMP3]]
 ;
 ; AVX-LABEL: @foo(
-; AVX-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP0:%.*]], 44
-; AVX-NEXT:    [[TMP3:%.*]] = sub nuw nsw i64 -17592186044416, [[TMP2]]
+; AVX-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP0:%.*]], -1
+; AVX-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 44
 ; AVX-NEXT:    ret i64 [[TMP3]]
 ;
   %2 = sub i64 1048575, %0
@@ -34,35 +34,35 @@ define noundef i64 @foo(i64 noundef %0) {
 define void @bar(ptr noundef %0) {
 ; SSE-LABEL: @bar(
 ; SSE-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr [[TMP0:%.*]], align 8
-; SSE-NEXT:    [[TMP3:%.*]] = shl <2 x i64> [[TMP2]], <i64 44, i64 44>
-; SSE-NEXT:    [[TMP4:%.*]] = sub nuw nsw <2 x i64> <i64 -17592186044416, i64 -17592186044416>, [[TMP3]]
+; SSE-NEXT:    [[TMP3:%.*]] = xor <2 x i64> [[TMP2]], splat (i64 -1)
+; SSE-NEXT:    [[TMP4:%.*]] = shl <2 x i64> [[TMP3]], splat (i64 44)
 ; SSE-NEXT:    store <2 x i64> [[TMP4]], ptr [[TMP0]], align 8
-; SSE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 2
+; SSE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 16
 ; SSE-NEXT:    [[TMP6:%.*]] = load <2 x i64>, ptr [[TMP5]], align 8
-; SSE-NEXT:    [[TMP7:%.*]] = shl <2 x i64> [[TMP6]], <i64 44, i64 44>
-; SSE-NEXT:    [[TMP8:%.*]] = sub nuw nsw <2 x i64> <i64 -17592186044416, i64 -17592186044416>, [[TMP7]]
+; SSE-NEXT:    [[TMP7:%.*]] = xor <2 x i64> [[TMP6]], splat (i64 -1)
+; SSE-NEXT:    [[TMP8:%.*]] = shl <2 x i64> [[TMP7]], splat (i64 44)
 ; SSE-NEXT:    store <2 x i64> [[TMP8]], ptr [[TMP5]], align 8
-; SSE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 4
+; SSE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 32
 ; SSE-NEXT:    [[TMP10:%.*]] = load <2 x i64>, ptr [[TMP9]], align 8
-; SSE-NEXT:    [[TMP11:%.*]] = shl <2 x i64> [[TMP10]], <i64 44, i64 44>
-; SSE-NEXT:    [[TMP12:%.*]] = sub nuw nsw <2 x i64> <i64 -17592186044416, i64 -17592186044416>, [[TMP11]]
+; SSE-NEXT:    [[TMP11:%.*]] = xor <2 x i64> [[TMP10]], splat (i64 -1)
+; SSE-NEXT:    [[TMP12:%.*]] = shl <2 x i64> [[TMP11]], splat (i64 44)
 ; SSE-NEXT:    store <2 x i64> [[TMP12]], ptr [[TMP9]], align 8
-; SSE-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 6
+; SSE-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 48
 ; SSE-NEXT:    [[TMP14:%.*]] = load <2 x i64>, ptr [[TMP13]], align 8
-; SSE-NEXT:    [[TMP15:%.*]] = shl <2 x i64> [[TMP14]], <i64 44, i64 44>
-; SSE-NEXT:    [[TMP16:%.*]] = sub nuw nsw <2 x i64> <i64 -17592186044416, i64 -17592186044416>, [[TMP15]]
+; SSE-NEXT:    [[TMP15:%.*]] = xor <2 x i64> [[TMP14]], splat (i64 -1)
+; SSE-NEXT:    [[TMP16:%.*]] = shl <2 x i64> [[TMP15]], splat (i64 44)
 ; SSE-NEXT:    store <2 x i64> [[TMP16]], ptr [[TMP13]], align 8
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @bar(
 ; AVX-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr [[TMP0:%.*]], align 8
-; AVX-NEXT:    [[TMP3:%.*]] = shl <4 x i64> [[TMP2]], <i64 44, i64 44, i64 44, i64 44>
-; AVX-NEXT:    [[TMP4:%.*]] = sub nuw nsw <4 x i64> <i64 -17592186044416, i64 -17592186044416, i64 -17592186044416, i64 -17592186044416>, [[TMP3]]
+; AVX-NEXT:    [[TMP3:%.*]] = xor <4 x i64> [[TMP2]], splat (i64 -1)
+; AVX-NEXT:    [[TMP4:%.*]] = shl <4 x i64> [[TMP3]], splat (i64 44)
 ; AVX-NEXT:    store <4 x i64> [[TMP4]], ptr [[TMP0]], align 8
-; AVX-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 4
+; AVX-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 32
 ; AVX-NEXT:    [[TMP6:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8
-; AVX-NEXT:    [[TMP7:%.*]] = shl <4 x i64> [[TMP6]], <i64 44, i64 44, i64 44, i64 44>
-; AVX-NEXT:    [[TMP8:%.*]] = sub nuw nsw <4 x i64> <i64 -17592186044416, i64 -17592186044416, i64 -17592186044416, i64 -17592186044416>, [[TMP7]]
+; AVX-NEXT:    [[TMP7:%.*]] = xor <4 x i64> [[TMP6]], splat (i64 -1)
+; AVX-NEXT:    [[TMP8:%.*]] = shl <4 x i64> [[TMP7]], splat (i64 44)
 ; AVX-NEXT:    store <4 x i64> [[TMP8]], ptr [[TMP5]], align 8
 ; AVX-NEXT:    ret void
 ;

@@ -25,8 +25,9 @@ private:
   // ISA might have a wider FLen than the selected ABI (e.g. an RV32IF target
   // with soft float ABI has FLen==0).
   unsigned FLen;
-  static const int NumArgGPRs = 8;
-  static const int NumArgFPRs = 8;
+  const int NumArgGPRs;
+  const int NumArgFPRs;
+  const bool EABI;
   bool detectFPCCEligibleStructHelper(QualType Ty, CharUnits CurOff,
                                       llvm::Type *&Field1Ty,
                                       CharUnits &Field1Off,
@@ -34,8 +35,10 @@ private:
                                       CharUnits &Field2Off) const;
 
 public:
-  RISCVABIInfo(CodeGen::CodeGenTypes &CGT, unsigned XLen, unsigned FLen)
-      : DefaultABIInfo(CGT), XLen(XLen), FLen(FLen) {}
+  RISCVABIInfo(CodeGen::CodeGenTypes &CGT, unsigned XLen, unsigned FLen,
+               bool EABI)
+      : DefaultABIInfo(CGT), XLen(XLen), FLen(FLen), NumArgGPRs(EABI ? 6 : 8),
+        NumArgFPRs(FLen != 0 ? 8 : 0), EABI(EABI) {}
 
   // DefaultABIInfo's classifyReturnType and classifyArgumentType are
   // non-virtual, but computeInfo is virtual, so we overload it.
@@ -45,10 +48,10 @@ public:
                                   int &ArgFPRsLeft) const;
   ABIArgInfo classifyReturnType(QualType RetTy) const;
 
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 
-  ABIArgInfo extendType(QualType Ty) const;
+  ABIArgInfo extendType(QualType Ty, llvm::Type *CoerceTy = nullptr) const;
 
   bool detectFPCCEligibleStruct(QualType Ty, llvm::Type *&Field1Ty,
                                 CharUnits &Field1Off, llvm::Type *&Field2Ty,
@@ -60,8 +63,52 @@ public:
                                                CharUnits Field2Off) const;
 
   ABIArgInfo coerceVLSVector(QualType Ty) const;
+
+  using ABIInfo::appendAttributeMangling;
+  void appendAttributeMangling(TargetClonesAttr *Attr, unsigned Index,
+                               raw_ostream &Out) const override;
+  void appendAttributeMangling(StringRef AttrStr,
+                               raw_ostream &Out) const override;
 };
 } // end anonymous namespace
+
+void RISCVABIInfo::appendAttributeMangling(TargetClonesAttr *Attr,
+                                           unsigned Index,
+                                           raw_ostream &Out) const {
+  appendAttributeMangling(Attr->getFeatureStr(Index), Out);
+}
+
+void RISCVABIInfo::appendAttributeMangling(StringRef AttrStr,
+                                           raw_ostream &Out) const {
+  if (AttrStr == "default") {
+    Out << ".default";
+    return;
+  }
+
+  Out << '.';
+
+  SmallVector<StringRef, 8> Attrs;
+  AttrStr.split(Attrs, ';');
+
+  // Only consider the arch string.
+  StringRef ArchStr;
+  for (auto &Attr : Attrs) {
+    if (Attr.starts_with("arch="))
+      ArchStr = Attr;
+  }
+
+  // Extract features string.
+  SmallVector<StringRef, 8> Features;
+  ArchStr.consume_front("arch=");
+  ArchStr.split(Features, ',');
+
+  llvm::stable_sort(Features);
+
+  for (auto Feat : Features) {
+    Feat.consume_front("+");
+    Out << "_" << Feat;
+  }
+}
 
 void RISCVABIInfo::computeInfo(CGFunctionInfo &FI) const {
   QualType RetTy = FI.getReturnType();
@@ -86,7 +133,7 @@ void RISCVABIInfo::computeInfo(CGFunctionInfo &FI) const {
   }
 
   int ArgGPRsLeft = IsRetIndirect ? NumArgGPRs - 1 : NumArgGPRs;
-  int ArgFPRsLeft = FLen ? NumArgFPRs : 0;
+  int ArgFPRsLeft = NumArgFPRs;
   int NumFixedArgs = FI.getNumRequiredArgs();
 
   int ArgNum = 0;
@@ -149,7 +196,7 @@ bool RISCVABIInfo::detectFPCCEligibleStructHelper(QualType Ty, CharUnits CurOff,
   }
 
   if (const ConstantArrayType *ATy = getContext().getAsConstantArrayType(Ty)) {
-    uint64_t ArraySize = ATy->getSize().getZExtValue();
+    uint64_t ArraySize = ATy->getZExtSize();
     QualType EltTy = ATy->getElementType();
     // Non-zero-length arrays of empty records make the struct ineligible for
     // the FP calling convention in C++.
@@ -199,7 +246,7 @@ bool RISCVABIInfo::detectFPCCEligibleStructHelper(QualType Ty, CharUnits CurOff,
       uint64_t FieldOffInBits = Layout.getFieldOffset(FD->getFieldIndex());
       QualType QTy = FD->getType();
       if (FD->isBitField()) {
-        unsigned BitWidth = FD->getBitWidthValue(getContext());
+        unsigned BitWidth = FD->getBitWidthValue();
         // Allow a bitfield with a type greater than XLen as long as the
         // bitwidth is XLen or less.
         if (getContext().getTypeSize(QTy) > XLen && BitWidth <= XLen)
@@ -318,20 +365,37 @@ ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty) const {
   assert(Ty->isVectorType() && "expected vector type!");
 
   const auto *VT = Ty->castAs<VectorType>();
-  assert(VT->getVectorKind() == VectorKind::RVVFixedLengthData &&
-         "Unexpected vector kind");
-
   assert(VT->getElementType()->isBuiltinType() && "expected builtin type!");
 
   auto VScale =
       getContext().getTargetInfo().getVScaleRange(getContext().getLangOpts());
+
+  unsigned NumElts = VT->getNumElements();
+  llvm::Type *EltType = llvm::Type::getInt1Ty(getVMContext());
+  switch (VT->getVectorKind()) {
+  case VectorKind::RVVFixedLengthMask_1:
+    break;
+  case VectorKind::RVVFixedLengthMask_2:
+    NumElts *= 2;
+    break;
+  case VectorKind::RVVFixedLengthMask_4:
+    NumElts *= 4;
+    break;
+  case VectorKind::RVVFixedLengthMask:
+    NumElts *= 8;
+    break;
+  default:
+    assert(VT->getVectorKind() == VectorKind::RVVFixedLengthData &&
+           "Unexpected vector kind");
+    EltType = CGT.ConvertType(VT->getElementType());
+  }
+
   // The MinNumElts is simplified from equation:
   // NumElts / VScale =
   //  (EltSize * NumElts / (VScale * RVVBitsPerBlock))
   //    * (RVVBitsPerBlock / EltSize)
   llvm::ScalableVectorType *ResType =
-      llvm::ScalableVectorType::get(CGT.ConvertType(VT->getElementType()),
-                                    VT->getNumElements() / VScale->first);
+      llvm::ScalableVectorType::get(EltType, NumElts / VScale->first);
   return ABIArgInfo::getDirect(ResType);
 }
 
@@ -350,11 +414,12 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
                                            CGCXXABI::RAA_DirectInMemory);
   }
 
-  // Ignore empty structs/unions.
-  if (isEmptyRecord(getContext(), Ty, true))
-    return ABIArgInfo::getIgnore();
-
   uint64_t Size = getContext().getTypeSize(Ty);
+
+  // Ignore empty structs/unions whose size is zero. According to the calling
+  // convention empty structs/unions are required to be sized types in C++.
+  if (isEmptyRecord(getContext(), Ty, true) && Size == 0)
+    return ABIArgInfo::getIgnore();
 
   // Pass floating point values via FPRs if possible.
   if (IsFixed && Ty->isFloatingType() && !Ty->isComplexType() &&
@@ -396,9 +461,12 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   // Determine the number of GPRs needed to pass the current argument
   // according to the ABI. 2*XLen-aligned varargs are passed in "aligned"
   // register pairs, so may consume 3 registers.
+  // TODO: To be compatible with GCC's behaviors, we don't align registers
+  // currently if we are using ILP32E calling convention. This behavior may be
+  // changed when RV32E/ILP32E is ratified.
   int NeededArgGPRs = 1;
   if (!IsFixed && NeededAlign == 2 * XLen)
-    NeededArgGPRs = 2 + (ArgGPRsLeft % 2);
+    NeededArgGPRs = 2 + (EABI && XLen == 32 ? 0 : (ArgGPRsLeft % 2));
   else if (Size > XLen && Size <= 2 * XLen)
     NeededArgGPRs = 2;
 
@@ -415,12 +483,12 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
 
     // All integral types are promoted to XLen width
     if (Size < XLen && Ty->isIntegralOrEnumerationType()) {
-      return extendType(Ty);
+      return extendType(Ty, CGT.ConvertType(Ty));
     }
 
     if (const auto *EIT = Ty->getAs<BitIntType>()) {
       if (EIT->getNumBits() < XLen)
-        return extendType(Ty);
+        return extendType(Ty, CGT.ConvertType(Ty));
       if (EIT->getNumBits() > 128 ||
           (!getContext().getTargetInfo().hasInt128Type() &&
            EIT->getNumBits() > 64))
@@ -431,7 +499,11 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   }
 
   if (const VectorType *VT = Ty->getAs<VectorType>())
-    if (VT->getVectorKind() == VectorKind::RVVFixedLengthData)
+    if (VT->getVectorKind() == VectorKind::RVVFixedLengthData ||
+        VT->getVectorKind() == VectorKind::RVVFixedLengthMask ||
+        VT->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
+        VT->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
+        VT->getVectorKind() == VectorKind::RVVFixedLengthMask_4)
       return coerceVLSVector(Ty);
 
   // Aggregates which are <= 2*XLen will be passed in registers if possible,
@@ -468,44 +540,58 @@ ABIArgInfo RISCVABIInfo::classifyReturnType(QualType RetTy) const {
                               ArgFPRsLeft);
 }
 
-Address RISCVABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                QualType Ty) const {
+RValue RISCVABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                               QualType Ty, AggValueSlot Slot) const {
   CharUnits SlotSize = CharUnits::fromQuantity(XLen / 8);
 
   // Empty records are ignored for parameter passing purposes.
-  if (isEmptyRecord(getContext(), Ty, true)) {
-    return Address(CGF.Builder.CreateLoad(VAListAddr),
-                   CGF.ConvertTypeForMem(Ty), SlotSize);
-  }
+  if (isEmptyRecord(getContext(), Ty, true))
+    return Slot.asRValue();
 
   auto TInfo = getContext().getTypeInfoInChars(Ty);
+
+  // TODO: To be compatible with GCC's behaviors, we force arguments with
+  // 2×XLEN-bit alignment and size at most 2×XLEN bits like `long long`,
+  // `unsigned long long` and `double` to have 4-byte alignment. This
+  // behavior may be changed when RV32E/ILP32E is ratified.
+  if (EABI && XLen == 32)
+    TInfo.Align = std::min(TInfo.Align, CharUnits::fromQuantity(4));
 
   // Arguments bigger than 2*Xlen bytes are passed indirectly.
   bool IsIndirect = TInfo.Width > 2 * SlotSize;
 
-  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect, TInfo,
-                          SlotSize, /*AllowHigherAlign=*/true);
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect, TInfo, SlotSize,
+                          /*AllowHigherAlign=*/true, Slot);
 }
 
-ABIArgInfo RISCVABIInfo::extendType(QualType Ty) const {
+ABIArgInfo RISCVABIInfo::extendType(QualType Ty, llvm::Type *CoerceTy) const {
   int TySize = getContext().getTypeSize(Ty);
   // RV64 ABI requires unsigned 32 bit integers to be sign extended.
   if (XLen == 64 && Ty->isUnsignedIntegerOrEnumerationType() && TySize == 32)
-    return ABIArgInfo::getSignExtend(Ty);
-  return ABIArgInfo::getExtend(Ty);
+    return ABIArgInfo::getSignExtend(Ty, CoerceTy);
+  return ABIArgInfo::getExtend(Ty, CoerceTy);
 }
 
 namespace {
 class RISCVTargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   RISCVTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT, unsigned XLen,
-                         unsigned FLen)
-      : TargetCodeGenInfo(std::make_unique<RISCVABIInfo>(CGT, XLen, FLen)) {}
+                         unsigned FLen, bool EABI)
+      : TargetCodeGenInfo(
+            std::make_unique<RISCVABIInfo>(CGT, XLen, FLen, EABI)) {
+    SwiftInfo =
+        std::make_unique<SwiftABIInfo>(CGT, /*SwiftErrorInRegister=*/false);
+  }
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {
     const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
     if (!FD) return;
+
+    auto *Fn = cast<llvm::Function>(GV);
+
+    if (CGM.getCodeGenOpts().CFProtectionReturn)
+      Fn->addFnAttr("hw-shadow-stack");
 
     const auto *Attr = FD->getAttr<RISCVInterruptAttr>();
     if (!Attr)
@@ -517,8 +603,6 @@ public:
     case RISCVInterruptAttr::machine: Kind = "machine"; break;
     }
 
-    auto *Fn = cast<llvm::Function>(GV);
-
     Fn->addFnAttr("interrupt", Kind);
   }
 };
@@ -526,6 +610,7 @@ public:
 
 std::unique_ptr<TargetCodeGenInfo>
 CodeGen::createRISCVTargetCodeGenInfo(CodeGenModule &CGM, unsigned XLen,
-                                      unsigned FLen) {
-  return std::make_unique<RISCVTargetCodeGenInfo>(CGM.getTypes(), XLen, FLen);
+                                      unsigned FLen, bool EABI) {
+  return std::make_unique<RISCVTargetCodeGenInfo>(CGM.getTypes(), XLen, FLen,
+                                                  EABI);
 }

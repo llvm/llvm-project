@@ -129,16 +129,14 @@ void MipsMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   OS << ')';
 }
 
-bool
-MipsMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                      const MCAsmLayout *Layout,
-                                      const MCFixup *Fixup) const {
+bool MipsMCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
+                                           const MCFixup *Fixup) const {
   // Look for the %hi(%neg(%gp_rel(X))) and %lo(%neg(%gp_rel(X))) special cases.
   if (isGpOff()) {
     const MCExpr *SubExpr =
         cast<MipsMCExpr>(cast<MipsMCExpr>(getSubExpr())->getSubExpr())
             ->getSubExpr();
-    if (!SubExpr->evaluateAsRelocatable(Res, Layout, Fixup))
+    if (!SubExpr->evaluateAsRelocatable(Res, Asm, Fixup))
       return false;
 
     Res = MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(),
@@ -146,7 +144,7 @@ MipsMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
     return true;
   }
 
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Layout, Fixup))
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup))
     return false;
 
   if (Res.getRefKind() != MCSymbolRefExpr::VK_None)
@@ -164,7 +162,7 @@ MipsMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
     case MEK_DTPREL:
       // MEK_DTPREL is used for marking TLS DIEExpr only
       // and contains a regular sub-expression.
-      return getSubExpr()->evaluateAsRelocatable(Res, Layout, Fixup);
+      return getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup);
     case MEK_DTPREL_HI:
     case MEK_DTPREL_LO:
     case MEK_GOT:

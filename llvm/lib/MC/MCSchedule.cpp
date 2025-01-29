@@ -69,21 +69,28 @@ int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
 int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
                                       const MCInstrInfo &MCII,
                                       const MCInst &Inst) const {
-  unsigned SchedClass = MCII.get(Inst.getOpcode()).getSchedClass();
-  const MCSchedClassDesc *SCDesc = getSchedClassDesc(SchedClass);
-  if (!SCDesc->isValid())
-    return 0;
+  return MCSchedModel::computeInstrLatency<MCSubtargetInfo, MCInstrInfo,
+                                           InstrItineraryData, MCInst>(
+      STI, MCII, Inst,
+      [&](const MCSchedClassDesc *SCDesc) -> const MCSchedClassDesc * {
+        if (!SCDesc->isValid())
+          return nullptr;
 
-  unsigned CPUID = getProcessorID();
-  while (SCDesc->isVariant()) {
-    SchedClass = STI.resolveVariantSchedClass(SchedClass, &Inst, &MCII, CPUID);
-    SCDesc = getSchedClassDesc(SchedClass);
-  }
+        unsigned CPUID = getProcessorID();
+        unsigned SchedClass = 0;
+        while (SCDesc->isVariant()) {
+          SchedClass =
+              STI.resolveVariantSchedClass(SchedClass, &Inst, &MCII, CPUID);
+          SCDesc = getSchedClassDesc(SchedClass);
+        }
 
-  if (SchedClass)
-    return MCSchedModel::computeInstrLatency(STI, *SCDesc);
+        if (!SchedClass) {
+          assert(false && "unsupported variant scheduling class");
+          return nullptr;
+        }
 
-  llvm_unreachable("unsupported variant scheduling class");
+        return SCDesc;
+      });
 }
 
 double

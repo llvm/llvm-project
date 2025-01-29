@@ -11,8 +11,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define <16 x i8> @masked_load_v16i8(ptr %src, <16 x i1> %mask) {
 ; CHECK-LABEL: masked_load_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    shl v0.16b, v0.16b, #7
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]

@@ -9,8 +9,8 @@
 ; CHECK-NEXT: Machine Module Information
 ; CHECK-NEXT: Target Transform Information
 ; CHECK-NEXT: Create Garbage Collector Module Metadata
-; CHECK-NEXT: Assumption Cache Tracker
 ; CHECK-NEXT: Profile summary info
+; CHECK-NEXT: Assumption Cache Tracker
 ; CHECK-NEXT: Machine Branch Probability Analysis
 ; CHECK-NEXT:   ModulePass Manager
 ; CHECK-NEXT:     Pre-ISel Intrinsic Lowering
@@ -21,13 +21,15 @@
 ; CHECK-NEXT:       Module Verifier
 ; CHECK-NEXT:       Lower Garbage Collection Instructions
 ; CHECK-NEXT:       Shadow Stack GC Lowering
-; CHECK-NEXT:       Lower constant intrinsics
 ; CHECK-NEXT:       Remove unreachable blocks from the CFG
-; CHECK-NEXT:       Expand vector predication intrinsics
+; CHECK-NEXT:       Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; CHECK-NEXT:       Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:       Expand reduction intrinsics
-; CHECK-NEXT:     AArch64 Globals Tagging
-; CHECK-NEXT:     FunctionPass Manager
+; CHECK-NEXT:       Dominator Tree Construction
+; CHECK-NEXT:       Natural Loop Information
+; CHECK-NEXT:       Lazy Branch Probability Analysis
+; CHECK-NEXT:       Lazy Block Frequency Analysis
+; CHECK-NEXT:       Optimization Remark Emitter
 ; CHECK-NEXT:       AArch64 Stack Tagging
 ; CHECK-NEXT:       SME ABI Pass
 ; CHECK-NEXT:       Exception handling preparation
@@ -64,17 +66,17 @@
 ; CHECK-NEXT:       AArch64 pseudo instruction expansion pass
 ; CHECK-NEXT:       Insert KCFI indirect call checks
 ; CHECK-NEXT:       AArch64 speculation hardening pass
-; CHECK-NEXT:       AArch64 Indirect Thunks
-; CHECK-NEXT:       AArch64 sls hardening pass
 ; CHECK-NEXT:       Analyze Machine Code For Garbage Collection
 ; CHECK-NEXT:       Insert fentry calls
 ; CHECK-NEXT:       Insert XRay ops
 ; CHECK-NEXT:       Implement the 'patchable-function' attribute
 ; CHECK-NEXT:       Workaround A53 erratum 835769 pass
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
+; CHECK-NEXT:       Remove Loads Into Fake Uses
 ; CHECK-NEXT:       StackMap Liveness Analysis
 ; CHECK-NEXT:       Live DEBUG_VALUE analysis
 ; CHECK-NEXT:       Machine Sanitizer Binary Metadata
+; CHECK-NEXT:       AArch64 sls hardening pass
 ; CHECK-NEXT:       AArch64 Pointer Authentication
 ; CHECK-NEXT:       AArch64 Branch Targets
 ; CHECK-NEXT:       Branch relaxation pass

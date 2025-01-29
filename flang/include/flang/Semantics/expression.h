@@ -123,6 +123,16 @@ public:
   template <typename... A> parser::Message *Say(A &&...args) {
     return GetContextualMessages().Say(std::forward<A>(args)...);
   }
+  template <typename FeatureOrUsageWarning, typename... A>
+  parser::Message *Warn(
+      FeatureOrUsageWarning warning, parser::CharBlock at, A &&...args) {
+    return context_.Warn(warning, at, std::forward<A>(args)...);
+  }
+  template <typename FeatureOrUsageWarning, typename... A>
+  parser::Message *Warn(FeatureOrUsageWarning warning, A &&...args) {
+    return Warn(
+        warning, GetContextualMessages().at(), std::forward<A>(args)...);
+  }
 
   template <typename T, typename... A>
   parser::Message *SayAt(const T &parsed, A &&...args) {
@@ -264,6 +274,7 @@ private:
   }
 
   MaybeExpr Analyze(const parser::IntLiteralConstant &, bool negated = false);
+  MaybeExpr Analyze(const parser::UnsignedLiteralConstant &);
   MaybeExpr Analyze(const parser::RealLiteralConstant &);
   MaybeExpr Analyze(const parser::ComplexPart &);
   MaybeExpr Analyze(const parser::ComplexLiteralConstant &);
@@ -317,8 +328,8 @@ private:
       const std::optional<parser::KindParam> &, int defaultKind);
   template <typename PARSED>
   MaybeExpr ExprOrVariable(const PARSED &, parser::CharBlock source);
-  template <typename PARSED>
-  MaybeExpr IntLiteralConstant(const PARSED &, bool negated = false);
+  template <typename TYPES, TypeCategory CAT, typename PARSED>
+  MaybeExpr IntLiteralConstant(const PARSED &, bool isNegated = false);
   MaybeExpr AnalyzeString(std::string &&, int kind);
   std::optional<Expr<SubscriptInteger>> AsSubscript(MaybeExpr &&);
   std::optional<Expr<SubscriptInteger>> TripletPart(
@@ -327,11 +338,11 @@ private:
       const parser::SectionSubscript &);
   std::vector<Subscript> AnalyzeSectionSubscripts(
       const std::list<parser::SectionSubscript> &);
-  std::optional<Component> CreateComponent(
-      DataRef &&, const Symbol &, const semantics::Scope &);
+  std::optional<Component> CreateComponent(DataRef &&, const Symbol &,
+      const semantics::Scope &, bool C919bAlreadyEnforced = false);
   MaybeExpr CompleteSubscripts(ArrayRef &&);
   MaybeExpr ApplySubscripts(DataRef &&, std::vector<Subscript> &&);
-  void CheckConstantSubscripts(ArrayRef &);
+  void CheckSubscripts(ArrayRef &);
   bool CheckRanks(const DataRef &); // Return false if error exists.
   bool CheckPolymorphic(const DataRef &); // ditto
   bool CheckDataRef(const DataRef &); // ditto
@@ -354,7 +365,7 @@ private:
       parser::CharBlock, const ProcedureDesignator &, ActualArguments &);
   using AdjustActuals =
       std::optional<std::function<bool(const Symbol &, ActualArguments &)>>;
-  bool ResolveForward(const Symbol &);
+  const Symbol *ResolveForward(const Symbol &);
   std::pair<const Symbol *, bool /* failure due ambiguity */> ResolveGeneric(
       const Symbol &, const ActualArguments &, const AdjustActuals &,
       bool isSubroutine, bool mightBeStructureConstructor = false);
@@ -506,9 +517,18 @@ public:
   }
 
   bool Pre(const parser::ComponentDefStmt &) {
-    // Already analyzed in name resolution and PDT instantiation;
-    // do not attempt to re-analyze now without type parameters.
-    return false;
+    inComponentDefStmt_ = true;
+    return true;
+  }
+  void Post(const parser::ComponentDefStmt &) { inComponentDefStmt_ = false; }
+  bool Pre(const parser::Initialization &x) {
+    // Default component initialization expressions (but not DATA-like ones
+    // as in DEC STRUCTUREs) were already analyzed in name resolution
+    // and PDT instantiation; do not attempt to re-analyze them without
+    // type parameters.
+    return !inComponentDefStmt_ ||
+        std::holds_alternative<
+            std::list<common::Indirection<parser::DataStmtValue>>>(x.u);
   }
 
   template <typename A> bool Pre(const parser::Scalar<A> &x) {
@@ -538,6 +558,7 @@ private:
   SemanticsContext &context_;
   evaluate::ExpressionAnalyzer exprAnalyzer_{context_};
   int whereDepth_{0}; // nesting of WHERE statements & constructs
+  bool inComponentDefStmt_{false};
 };
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_EXPRESSION_H_

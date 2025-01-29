@@ -1452,3 +1452,813 @@ func.func @mod_of_mod(%lb: index, %ub: index, %step: index) -> (index, index) {
   %1 = affine.apply affine_map<()[s0, s1, s2] -> ((s0 - ((s0 - s2) mod s1) - s2) mod s1)> ()[%ub, %step, %lb]
   return %0, %1 : index, index
 }
+
+// -----
+
+// CHECK-LABEL:  func.func @prefetch_canonicalize
+// CHECK-SAME:   ([[PARAM_0_:%.+]]: memref<512xf32>) {
+func.func @prefetch_canonicalize(%arg0: memref<512xf32>) -> () {
+  // CHECK: affine.for [[I_0_:%.+]] = 0 to 8 {
+  affine.for %arg3 = 0 to 8  {
+    %1 = affine.apply affine_map<()[s0] -> (s0 * 64)>()[%arg3]
+    // CHECK: affine.prefetch [[PARAM_0_]][symbol([[I_0_]]) * 64], read, locality<3>, data : memref<512xf32>
+    affine.prefetch %arg0[%1], read, locality<3>, data : memref<512xf32>
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @delinearize_fold_constant
+// CHECK-DAG: %[[C1:.+]] = arith.constant 1 : index
+// CHECK-DAG: %[[C2:.+]] = arith.constant 2 : index
+// CHECK-NOT: affine.delinearize_index
+// CHECK: return %[[C1]], %[[C1]], %[[C2]]
+func.func @delinearize_fold_constant() -> (index, index, index) {
+  %c22 = arith.constant 22 : index
+  %0:3 = affine.delinearize_index %c22 into (2, 3, 5) : index, index, index
+  return %0#0, %0#1, %0#2 : index, index, index
+}
+
+// -----
+
+// CHECK-LABEL: @delinearize_fold_negative_constant
+// CHECK-DAG: %[[C_2:.+]] = arith.constant -2 : index
+// CHECK-DAG: %[[C1:.+]] = arith.constant 1 : index
+// CHECK-DAG: %[[C3:.+]] = arith.constant 3 : index
+// CHECK-NOT: affine.delinearize_index
+// CHECK: return %[[C_2]], %[[C1]], %[[C3]]
+func.func @delinearize_fold_negative_constant() -> (index, index, index) {
+  %c_22 = arith.constant -22 : index
+  %0:3 = affine.delinearize_index %c_22 into (2, 3, 5) : index, index, index
+  return %0#0, %0#1, %0#2 : index, index, index
+}
+
+// -----
+
+// CHECK-LABEL: @delinearize_fold_negative_constant_no_outer_bound
+// CHECK-DAG: %[[C_2:.+]] = arith.constant -2 : index
+// CHECK-DAG: %[[C1:.+]] = arith.constant 1 : index
+// CHECK-DAG: %[[C3:.+]] = arith.constant 3 : index
+// CHECK-NOT: affine.delinearize_index
+// CHECK: return %[[C_2]], %[[C1]], %[[C3]]
+func.func @delinearize_fold_negative_constant_no_outer_bound() -> (index, index, index) {
+  %c_22 = arith.constant -22 : index
+  %0:3 = affine.delinearize_index %c_22 into (3, 5) : index, index, index
+  return %0#0, %0#1, %0#2 : index, index, index
+}
+
+// -----
+
+// CHECK-LABEL: @delinearize_dont_fold_constant_dynamic_basis
+// CHECK-DAG: %[[C22:.+]] = arith.constant 22 : index
+// CHECK: %[[RET:.+]]:3 = affine.delinearize_index %[[C22]]
+// CHECK: return %[[RET]]#0, %[[RET]]#1, %[[RET]]#2
+func.func @delinearize_dont_fold_constant_dynamic_basis(%arg0: index) -> (index, index, index) {
+  %c22 = arith.constant 22 : index
+  %0:3 = affine.delinearize_index %c22 into (2, %arg0, 5) : index, index, index
+  return %0#0, %0#1, %0#2 : index, index, index
+}
+
+// -----
+
+func.func @drop_unit_basis_in_delinearize(%arg0 : index, %arg1 : index, %arg2 : index) ->
+    (index, index, index, index, index, index) {
+  %c1 = arith.constant 1 : index
+  %0:6 = affine.delinearize_index %arg0 into (1, %arg1, 1, 1, %arg2, %c1)
+      : index, index, index, index, index, index
+  return %0#0, %0#1, %0#2, %0#3, %0#4, %0#5 : index, index, index, index, index, index
+}
+// CHECK-LABEL: func @drop_unit_basis_in_delinearize(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index)
+//   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[DELINEARIZE:.+]]:2 = affine.delinearize_index %[[ARG0]] into (%[[ARG1]], %[[ARG2]])
+//       CHECK:   return %[[C0]], %[[DELINEARIZE]]#0, %[[C0]], %[[C0]], %[[DELINEARIZE]]#1, %[[C0]]
+
+// -----
+
+func.func @drop_unit_basis_in_delinearize_no_outer_bound(%arg0 : index, %arg1 : index, %arg2 : index) ->
+    (index, index, index, index, index, index) {
+  %c1 = arith.constant 1 : index
+  %0:6 = affine.delinearize_index %arg0 into (%arg1, 1, 1, %arg2, %c1)
+      : index, index, index, index, index, index
+  return %0#0, %0#1, %0#2, %0#3, %0#4, %0#5 : index, index, index, index, index, index
+}
+// CHECK-LABEL: func @drop_unit_basis_in_delinearize_no_outer_bound(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index)
+//   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[DELINEARIZE:.+]]:3 = affine.delinearize_index %[[ARG0]] into (%[[ARG1]], %[[ARG2]])
+//       CHECK:   return %[[DELINEARIZE]]#0, %[[DELINEARIZE]]#1, %[[C0]], %[[C0]], %[[DELINEARIZE]]#2, %[[C0]]
+
+// -----
+
+func.func @drop_all_unit_bases(%arg0 : index) -> (index, index) {
+  %0:2 = affine.delinearize_index %arg0 into (1, 1) : index, index
+  return %0#0, %0#1 : index, index
+}
+// CHECK-LABEL: func @drop_all_unit_bases(
+//  CHECK-SAME:     %[[ARG0:.+]]: index)
+//   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//   CHECK-NOT:   affine.delinearize_index
+//       CHECK:   return %[[C0]], %[[C0]]
+
+// -----
+
+func.func @drop_all_unit_bases_no_outer_bound(%arg0 : index) -> (index, index, index) {
+  %0:3 = affine.delinearize_index %arg0 into (1, 1) : index, index, index
+  return %0#0, %0#1, %0#2 : index, index, index
+}
+// CHECK-LABEL: func @drop_all_unit_bases_no_outer_bound(
+//  CHECK-SAME:     %[[ARG0:.+]]: index)
+//   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//   CHECK-NOT:   affine.delinearize_index
+//       CHECK:   return %[[ARG0]], %[[C0]], %[[C0]]
+
+// -----
+
+func.func @drop_single_loop_delinearize(%arg0 : index, %arg1 : index) -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %2 = scf.for %iv = %c0 to %arg1 step %c1 iter_args(%arg2 = %c0) -> index {
+    %0 = affine.delinearize_index %iv into (%arg1) : index
+    %1 = "some_use"(%arg2, %0) : (index, index) -> (index)
+    scf.yield %1 : index
+  }
+  return %2 : index
+}
+// CHECK-LABEL: func @drop_single_loop_delinearize(
+//  CHECK-SAME:     %[[ARG0:.+]]: index)
+//       CHECK:   scf.for %[[IV:[a-zA-Z0-9]+]] =
+//   CHECK-NOT:     affine.delinearize_index
+//       CHECK:     "some_use"(%{{.+}}, %[[IV]])
+
+// -----
+
+// CHECK-LABEL: func @delinearize_non_induction_variable
+// CHECK-NOT: affine.delinearize
+func.func @delinearize_non_induction_variable(%arg0: memref<?xi32>, %i : index, %t0 : index, %t1 : index, %t2 : index) -> index {
+  %1 = affine.apply affine_map<(d0)[s0, s1, s2] -> (d0 + s0 + s1 * 64 + s2 * 128)>(%i)[%t0, %t1, %t2]
+  %2 = affine.delinearize_index %1 into (1024) : index
+  return %2 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @delinearize_non_loop_like
+// CHECK-NOT: affine.delinearize
+func.func @delinearize_non_loop_like(%arg0: memref<?xi32>, %i : index) -> index {
+  %2 = affine.delinearize_index %i into (1024) : index
+  return %2 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @delinearize_empty_basis
+// CHECK-SAME: (%[[ARG0:.+]]: index)
+// CHECK-NOT: affine.delinearize
+// CHECK: return %[[ARG0]]
+func.func @delinearize_empty_basis(%arg0: index) -> index {
+  %0 = affine.delinearize_index %arg0 into () : index
+  return %0 : index
+}
+
+// -----
+
+// CHECK-LABEL: @linearize_fold_constants
+// CHECK-DAG: %[[C22:.+]] = arith.constant 22 : index
+// CHECK-NOT: affine.linearize
+// CHECK: return %[[C22]]
+func.func @linearize_fold_constants() -> index {
+  %c2 = arith.constant 2 : index
+  %c1 = arith.constant 1 : index
+
+  %ret = affine.linearize_index [%c1, %c1, %c2] by (2, 3, 5) : index
+  return %ret : index
+}
+
+// -----
+
+// CHECK-LABEL: @linearize_fold_constants_no_outer_bound
+// CHECK-DAG: %[[C22:.+]] = arith.constant 22 : index
+// CHECK-NOT: affine.linearize
+// CHECK: return %[[C22]]
+func.func @linearize_fold_constants_no_outer_bound() -> index {
+  %c2 = arith.constant 2 : index
+  %c1 = arith.constant 1 : index
+
+  %ret = affine.linearize_index [%c1, %c1, %c2] by (3, 5) : index
+  return %ret : index
+}
+
+// -----
+
+// CHECK-LABEL: @linearize_fold_empty_basis
+// CHECK-SAME: (%[[ARG0:.+]]: index)
+// CHECK-NOT: affine.linearize
+// CHECK: return %[[ARG0]]
+func.func @linearize_fold_empty_basis(%arg0: index) -> index {
+  %ret = affine.linearize_index [%arg0] by () : index
+  return %ret : index
+}
+
+// -----
+
+// CHECK-LABEL: @linearize_fold_only_outer_bound
+// CHECK-SAME: (%[[ARG0:.+]]: index)
+// CHECK-NOT: affine.linearize
+// CHECK: return %[[ARG0]]
+func.func @linearize_fold_only_outer_bound(%arg0: index) -> index {
+  %ret = affine.linearize_index [%arg0] by (2) : index
+  return %ret : index
+}
+
+// -----
+
+// CHECK-LABEL: @linearize_dont_fold_dynamic_basis
+// CHECK: %[[RET:.+]] = affine.linearize_index
+// CHECK: return %[[RET]]
+func.func @linearize_dont_fold_dynamic_basis(%arg0: index) -> index {
+  %c2 = arith.constant 2 : index
+  %c1 = arith.constant 1 : index
+
+  %ret = affine.linearize_index [%c1, %c1, %c2] by (2, %arg0, 5) : index
+  return %ret : index
+}
+
+// -----
+
+// CHECK-LABEL: func @cancel_delinearize_linearize_disjoint_exact(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG4:[a-zA-Z0-9]+]]: index)
+//       CHECK:     return %[[ARG0]], %[[ARG1]], %[[ARG2]]
+func.func @cancel_delinearize_linearize_disjoint_exact(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index) -> (index, index, index) {
+  %0 = affine.linearize_index disjoint [%arg0, %arg1, %arg2] by (%arg3, 4, %arg4) : index
+  %1:3 = affine.delinearize_index %0 into (%arg3, 4, %arg4)
+      : index, index, index
+  return %1#0, %1#1, %1#2 : index, index, index
+}
+
+// -----
+
+// CHECK-LABEL: func @cancel_delinearize_linearize_disjoint_linearize_extra_bound(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG4:[a-zA-Z0-9]+]]: index)
+//       CHECK:     return %[[ARG0]], %[[ARG1]], %[[ARG2]]
+func.func @cancel_delinearize_linearize_disjoint_linearize_extra_bound(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index) -> (index, index, index) {
+  %0 = affine.linearize_index disjoint [%arg0, %arg1, %arg2] by (4, %arg4) : index
+  %1:3 = affine.delinearize_index %0 into (4, %arg4)
+      : index, index, index
+  return %1#0, %1#1, %1#2 : index, index, index
+}
+
+// -----
+
+// CHECK-LABEL: func @cancel_delinearize_linearize_disjoint_delinearize_extra_bound(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG4:[a-zA-Z0-9]+]]: index)
+//       CHECK:     return %[[ARG0]], %[[ARG1]], %[[ARG2]]
+func.func @cancel_delinearize_linearize_disjoint_delinearize_extra_bound(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index) -> (index, index, index) {
+  %0 = affine.linearize_index disjoint [%arg0, %arg1, %arg2] by (4, %arg4) : index
+  %1:3 = affine.delinearize_index %0 into (%arg3, 4, %arg4)
+      : index, index, index
+  return %1#0, %1#1, %1#2 : index, index, index
+}
+
+// -----
+
+// CHECK-LABEL: func @cancel_delinearize_linearize_disjoint_partial(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG4:[a-zA-Z0-9]+]]: index)
+//       CHECK:     %[[LIN:.+]] = affine.linearize_index disjoint [%[[ARG0]], %[[ARG1]]] by (%[[ARG3]], 4) : index
+//       CHECK:     %[[DELIN:.+]]:2 = affine.delinearize_index %[[LIN]] into (8) : index, index
+//       CHECK:     return %[[DELIN]]#0, %[[DELIN]]#1, %[[ARG2]]
+func.func @cancel_delinearize_linearize_disjoint_partial(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index) -> (index, index, index) {
+  %0 = affine.linearize_index disjoint [%arg0, %arg1, %arg2] by (%arg3, 4, %arg4) : index
+  %1:3 = affine.delinearize_index %0 into (8, %arg4)
+      : index, index, index
+  return %1#0, %1#1, %1#2 : index, index, index
+}
+
+// -----
+
+// Without `disjoint`, the cancelation isn't guaranteed to be the identity.
+// CHECK-LABEL: func @no_cancel_delinearize_linearize_exact(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG4:[a-zA-Z0-9]+]]: index)
+//       CHECK:     %[[LIN:.+]] = affine.linearize_index [%[[ARG0]], %[[ARG1]], %[[ARG2]]] by (%[[ARG3]], 4, %[[ARG4]])
+//       CHECK:     %[[DELIN:.+]]:3 = affine.delinearize_index %[[LIN]] into (%[[ARG3]], 4, %[[ARG4]])
+//       CHECK:     return %[[DELIN]]#0, %[[DELIN]]#1, %[[DELIN]]#2
+func.func @no_cancel_delinearize_linearize_exact(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index) -> (index, index, index) {
+  %0 = affine.linearize_index [%arg0, %arg1, %arg2] by (%arg3, 4, %arg4) : index
+  %1:3 = affine.delinearize_index %0 into (%arg3, 4, %arg4)
+      : index, index, index
+  return %1#0, %1#1, %1#2 : index, index, index
+}
+
+// -----
+
+// These don't cancel because the delinearize and linearize have a different basis.
+// CHECK-LABEL: func @no_cancel_delinearize_linearize_different_basis(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG4:[a-zA-Z0-9]+]]: index)
+//       CHECK:     %[[LIN:.+]] = affine.linearize_index [%[[ARG0]], %[[ARG1]], %[[ARG2]]] by (%[[ARG3]], 4, %[[ARG4]])
+//       CHECK:     %[[DELIN:.+]]:3 = affine.delinearize_index %[[LIN]] into (%[[ARG3]], 8, %[[ARG4]])
+//       CHECK:     return %[[DELIN]]#0, %[[DELIN]]#1, %[[DELIN]]#2
+func.func @no_cancel_delinearize_linearize_different_basis(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index) -> (index, index, index) {
+  %0 = affine.linearize_index [%arg0, %arg1, %arg2] by (%arg3, 4, %arg4) : index
+  %1:3 = affine.delinearize_index %0 into (%arg3, 8, %arg4)
+      : index, index, index
+  return %1#0, %1#1, %1#2 : index, index, index
+}
+
+// -----
+
+// CHECK-LABEL: func @split_delinearize_spanning_final_part
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index)
+//       CHECK:     %[[LIN:.+]] = affine.linearize_index disjoint [%[[ARG0]], %[[ARG1]]] by (2, 4)
+//       CHECK:     %[[DELIN1:.+]]:2 = affine.delinearize_index %[[LIN]] into (2)
+//       CHECK:     %[[DELIN2:.+]]:2 = affine.delinearize_index %[[ARG2]] into (8, 8)
+//       CHECK:     return %[[DELIN1]]#0, %[[DELIN1]]#1, %[[DELIN2]]#0, %[[DELIN2]]#1
+func.func @split_delinearize_spanning_final_part(%arg0: index, %arg1: index, %arg2: index) -> (index, index, index, index) {
+  %0 = affine.linearize_index disjoint [%arg0, %arg1, %arg2] by (2, 4, 64) : index
+  %1:4 = affine.delinearize_index %0 into (2, 8, 8)
+      : index, index, index, index
+  return %1#0, %1#1, %1#2, %1#3 : index, index, index, index
+}
+
+// -----
+
+// CHECK-LABEL: func @split_delinearize_spanning_final_part_and_cancel
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index)
+//       CHECK:     %[[DELIN:.+]]:2 = affine.delinearize_index %[[ARG2]] into (8, 8)
+//       CHECK:     return %[[ARG0]], %[[ARG1]], %[[DELIN]]#0, %[[DELIN]]#1
+func.func @split_delinearize_spanning_final_part_and_cancel(%arg0: index, %arg1: index, %arg2: index) -> (index, index, index, index) {
+  %0 = affine.linearize_index disjoint [%arg0, %arg1, %arg2] by (2, 4, 64) : index
+  %1:4 = affine.delinearize_index %0 into (2, 4, 8, 8)
+      : index, index, index, index
+  return %1#0, %1#1, %1#2, %1#3 : index, index, index, index
+}
+
+// -----
+
+// The delinearize basis doesn't match the last basis element before
+// overshooting it, don't simplify.
+// CHECK-LABEL: func @dont_split_delinearize_overshooting_target
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index)
+//       CHECK:     %[[LIN:.+]] = affine.linearize_index disjoint [%[[ARG0]], %[[ARG1]], %[[ARG2]]] by (2, 4, 64)
+//       CHECK:     %[[DELIN:.+]]:4 = affine.delinearize_index %[[LIN]] into (2, 16, 8)
+//       CHECK:     return %[[DELIN]]#0, %[[DELIN]]#1, %[[DELIN]]#2, %[[DELIN]]#3
+func.func @dont_split_delinearize_overshooting_target(%arg0: index, %arg1: index, %arg2: index) -> (index, index, index, index) {
+  %0 = affine.linearize_index disjoint [%arg0, %arg1, %arg2] by (2, 4, 64) : index
+  %1:4 = affine.delinearize_index %0 into (2, 16, 8)
+      : index, index, index, index
+  return %1#0, %1#1, %1#2, %1#3 : index, index, index, index
+}
+
+// -----
+
+// The delinearize basis doesn't fully multiply to the final basis element.
+// CHECK-LABEL: func @dont_split_delinearize_undershooting_target
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index)
+//       CHECK:     %[[LIN:.+]] = affine.linearize_index disjoint [%[[ARG0]], %[[ARG1]]] by (2, 64)
+//       CHECK:     %[[DELIN:.+]]:3 = affine.delinearize_index %[[LIN]] into (4, 8)
+//       CHECK:     return %[[DELIN]]#0, %[[DELIN]]#1
+func.func @dont_split_delinearize_undershooting_target(%arg0: index, %arg1: index) -> (index, index, index) {
+  %0 = affine.linearize_index disjoint [%arg0, %arg1] by (2, 64) : index
+  %1:3 = affine.delinearize_index %0 into (4, 8)
+      : index, index, index
+  return %1#0, %1#1, %1#2 : index, index, index
+}
+
+// -----
+
+// CHECK-LABEL: @linearize_unit_basis_disjoint
+// CHECK-SAME: (%[[arg0:.+]]: index, %[[arg1:.+]]: index, %[[arg2:.+]]: index, %[[arg3:.+]]: index)
+// CHECK: %[[ret:.+]] = affine.linearize_index disjoint [%[[arg0]], %[[arg2]]] by (3, %[[arg3]]) : index
+// CHECK: return %[[ret]]
+func.func @linearize_unit_basis_disjoint(%arg0: index, %arg1: index, %arg2: index, %arg3: index) -> index {
+  %ret = affine.linearize_index disjoint [%arg0, %arg1, %arg2] by (3, 1, %arg3) : index
+  return %ret : index
+}
+
+// -----
+
+// CHECK-LABEL: @linearize_unit_basis_disjoint_no_outer_bound
+// CHECK-SAME: (%[[arg0:.+]]: index, %[[arg1:.+]]: index, %[[arg2:.+]]: index, %[[arg3:.+]]: index)
+// CHECK: %[[ret:.+]] = affine.linearize_index disjoint [%[[arg0]], %[[arg2]]] by (%[[arg3]]) : index
+// CHECK: return %[[ret]]
+func.func @linearize_unit_basis_disjoint_no_outer_bound(%arg0: index, %arg1: index, %arg2: index, %arg3: index) -> index {
+  %ret = affine.linearize_index disjoint [%arg0, %arg1, %arg2] by (1, %arg3) : index
+  return %ret : index
+}
+
+// -----
+
+// CHECK-LABEL: @linearize_unit_basis_zero
+// CHECK-SAME: (%[[arg0:.+]]: index, %[[arg1:.+]]: index, %[[arg2:.+]]: index)
+// CHECK: %[[ret:.+]] = affine.linearize_index [%[[arg0]], %[[arg1]]] by (3, %[[arg2]]) : index
+// CHECK: return %[[ret]]
+func.func @linearize_unit_basis_zero(%arg0: index, %arg1: index, %arg2: index) -> index {
+  %c0 = arith.constant 0 : index
+  %ret = affine.linearize_index [%arg0, %c0, %arg1] by (3, 1, %arg2) : index
+  return %ret : index
+}
+
+// -----
+
+// CHECK-LABEL: @linearize_all_zero_unit_basis
+// CHECK: arith.constant 0 : index
+// CHECK-NOT: affine.linearize_index
+func.func @linearize_all_zero_unit_basis() -> index {
+  %c0 = arith.constant 0 : index
+  %ret = affine.linearize_index [%c0, %c0] by (1, 1) : index
+  return %ret : index
+}
+
+// -----
+
+// CHECK-LABEL: @linearize_one_element_basis
+// CHECK-SAME: (%[[arg0:.+]]: index, %[[arg1:.+]]: index)
+// CHECK-NOT: affine.linearize_index
+// CHECK: return %[[arg0]]
+func.func @linearize_one_element_basis(%arg0: index, %arg1: index) -> index {
+  %ret = affine.linearize_index [%arg0] by (%arg1) : index
+  return %ret : index
+}
+
+// -----
+
+// CHECK-LABEL: func @cancel_linearize_delinearize_exact(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index)
+//       CHECK:     return %[[ARG0]]
+func.func @cancel_linearize_delinearize_exact(%arg0: index, %arg1: index, %arg2: index) -> index {
+  %0:3 = affine.delinearize_index %arg0 into (%arg1, 4, %arg2) : index, index, index
+  %1 = affine.linearize_index [%0#0, %0#1, %0#2] by (%arg1, 4, %arg2) : index
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @cancel_linearize_delinearize_linearize_extra_bound(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index)
+//       CHECK:     return %[[ARG0]]
+func.func @cancel_linearize_delinearize_linearize_extra_bound(%arg0: index, %arg1: index, %arg2: index) -> index {
+  %0:3 = affine.delinearize_index %arg0 into (4, %arg2) : index, index, index
+  %1 = affine.linearize_index [%0#0, %0#1, %0#2] by (%arg1, 4, %arg2) : index
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @cancel_linearize_delinearize_delinearize_extra_bound(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index)
+//       CHECK:     return %[[ARG0]]
+func.func @cancel_linearize_delinearize_delinearize_extra_bound(%arg0: index, %arg1: index, %arg2: index) -> index {
+  %0:3 = affine.delinearize_index %arg0 into (%arg1, 4, %arg2) : index, index, index
+  %1 = affine.linearize_index [%0#0, %0#1, %0#2] by (4, %arg2) : index
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @cancel_linearize_delinearize_head(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index)
+//       CHECK:     %[[DELIN:.+]]:2 = affine.delinearize_index %[[ARG0]] into (12, 8)
+//       CHECK:     %[[LIN:.+]] = affine.linearize_index [%[[DELIN]]#0, %[[ARG1]]] by (12, 16)
+//       CHECK:     return %[[LIN]]
+func.func @cancel_linearize_delinearize_head(%arg0: index, %arg1: index) -> index {
+  %0:3 = affine.delinearize_index %arg0 into (3, 4, 8) : index, index, index
+  %1 = affine.linearize_index [%0#0, %0#1, %arg1] by (3, 4, 16) : index
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @cancel_linearize_delinearize_head_delinearize_unbounded(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index)
+//       CHECK:     %[[DELIN:.+]]:2 = affine.delinearize_index %[[ARG0]] into (12, 8)
+//       CHECK:     %[[LIN:.+]] = affine.linearize_index [%[[DELIN]]#0, %[[ARG1]]] by (12, 16)
+//       CHECK:     return %[[LIN]]
+func.func @cancel_linearize_delinearize_head_delinearize_unbounded(%arg0: index, %arg1: index) -> index {
+  %0:3 = affine.delinearize_index %arg0 into (4, 8) : index, index, index
+  %1 = affine.linearize_index [%0#0, %0#1, %arg1] by (3, 4, 16) : index
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @cancel_linearize_delinearize_head_linearize_unbounded(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index)
+//       CHECK:     %[[DELIN:.+]]:2 = affine.delinearize_index %[[ARG0]] into (8)
+//       CHECK:     %[[LIN:.+]] = affine.linearize_index [%[[DELIN]]#0, %[[ARG1]]] by (16)
+//       CHECK:     return %[[LIN]]
+func.func @cancel_linearize_delinearize_head_linearize_unbounded(%arg0: index, %arg1: index) -> index {
+  %0:3 = affine.delinearize_index %arg0 into (3, 4, 8) : index, index, index
+  %1 = affine.linearize_index [%0#0, %0#1, %arg1] by (4, 16) : index
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @cancel_linearize_delinearize_head_both_unbounded(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index)
+//       CHECK:     %[[DELIN:.+]]:2 = affine.delinearize_index %[[ARG0]] into (8)
+//       CHECK:     %[[LIN:.+]] = affine.linearize_index [%[[DELIN]]#0, %[[ARG1]]] by (16)
+//       CHECK:     return %[[LIN]]
+func.func @cancel_linearize_delinearize_head_both_unbounded(%arg0: index, %arg1: index) -> index {
+  %0:3 = affine.delinearize_index %arg0 into (4, 8) : index, index, index
+  %1 = affine.linearize_index [%0#0, %0#1, %arg1] by (4, 16) : index
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @cancel_linearize_delinearize_tail(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index)
+//       CHECK:     %[[DELIN:.+]]:2 = affine.delinearize_index %[[ARG0]] into (3, 32)
+//       CHECK:     %[[LIN:.+]] = affine.linearize_index [%[[ARG1]], %[[DELIN]]#1] by (5, 32)
+//       CHECK:     return %[[LIN]]
+func.func @cancel_linearize_delinearize_tail(%arg0: index, %arg1: index) -> index {
+  %0:3 = affine.delinearize_index %arg0 into (3, 4, 8) : index, index, index
+  %1 = affine.linearize_index [%arg1, %0#1, %0#2] by (5, 4, 8) : index
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @cancel_linearize_delinearize_middle_exact(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-z0-9]+]]: index)
+//       CHECK:     %[[LIN:.+]] = affine.linearize_index [%[[ARG1]], %[[ARG0]], %[[ARG2]]] by (9, 30, 7)
+//       CHECK:     return %[[LIN]]
+func.func @cancel_linearize_delinearize_middle_exact(%arg0: index, %arg1: index, %arg2: index) -> index {
+  %0:3 = affine.delinearize_index %arg0 into (2, 3, 5) : index, index, index
+  %1 = affine.linearize_index [%arg1, %0#0, %0#1, %0#2, %arg2] by (9, 2, 3, 5, 7) : index
+  return %1 : index
+}
+
+// -----
+
+// CHECK: #[[$MAP:.+]] = affine_map<()[s0, s1] -> ((s0 * s1) * 16)>
+
+// CHECK-LABEL: func @cancel_linearize_delinearize_middle_exact_dynamic_basis(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-z0-9]+]]: index)
+//       CHECK:     %[[C1:.+]] = arith.constant 1 : index
+//       CHECK:     %[[SIZEPROD:.+]] = affine.apply #[[$MAP]]()[%[[ARG1]], %[[ARG2]]]
+//       CHECK:     %[[LIN:.+]] = affine.linearize_index [%[[C1]], %[[ARG0]], %[[C1]]] by (3, %[[SIZEPROD]], 4)
+//       CHECK:     return %[[LIN]]
+func.func @cancel_linearize_delinearize_middle_exact_dynamic_basis(%arg0: index, %arg1: index, %arg2: index) -> index {
+  %c1 = arith.constant 1 : index
+  %0:4 = affine.delinearize_index %arg0 into (2, %arg1, %arg2, 8) : index, index, index, index
+  %1 = affine.linearize_index [%c1, %0#0, %0#1, %0#2, %0#3, %c1] by (3, 2, %arg1, %arg2, 8, 4) : index
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @cancel_linearize_delinearize_middle_exact_delinearize_unbounded_disjoint(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-z0-9]+]]: index)
+//       CHECK:     %[[LIN:.+]] = affine.linearize_index disjoint [%[[ARG1]], %[[ARG0]], %[[ARG2]]] by (9, 30, 7)
+//       CHECK:     return %[[LIN]]
+func.func @cancel_linearize_delinearize_middle_exact_delinearize_unbounded_disjoint(%arg0: index, %arg1: index, %arg2: index) -> index {
+  %0:3 = affine.delinearize_index %arg0 into (3, 5) : index, index, index
+  %1 = affine.linearize_index disjoint [%arg1, %0#0, %0#1, %0#2, %arg2] by (9, 2, 3, 5, 7) : index
+  return %1 : index
+}
+
+// -----
+
+// Unlike in the test above, the linerize indices aren't asserted to be disjoint, so
+// we can't know if the `2` from the basis is a correct bound.
+// CHECK-LABEL: func @dont_cancel_linearize_delinearize_middle_exact_delinearize_unbounded(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-z0-9]+]]: index)
+//       CHECK:     %[[DELIN:.+]]:2 = affine.delinearize_index %[[ARG0]] into (3)
+//       CHECK:     %[[LIN:.+]] = affine.linearize_index [%[[ARG1]], %[[DELIN]]#0, %[[DELIN]]#1, %[[ARG2]]] by (9, 2, 3, 7)
+//       CHECK:     return %[[LIN]]
+
+func.func @dont_cancel_linearize_delinearize_middle_exact_delinearize_unbounded(%arg0: index, %arg1: index, %arg2: index) -> index {
+  %0:2 = affine.delinearize_index %arg0 into (3) : index, index
+  %1 = affine.linearize_index [%arg1, %0#0, %0#1, %arg2] by (9, 2, 3, 7) : index
+  return %1 : index
+}
+
+// -----
+
+// The presence of a `disjoint` here tells us that the "unbounded" term on the
+// delinearization can't have been above 2.
+// CHECK-LABEL: func @cancel_linearize_delinearize_middle_delinearize_unbounded_disjoint_implied_bound(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-z0-9]+]]: index)
+//       CHECK:     %[[DELIN:.+]]:2 = affine.delinearize_index %[[ARG0]] into (6, 5)
+//       CHECK:     %[[LIN:.+]] = affine.linearize_index disjoint [%[[ARG1]], %[[DELIN]]#0, %[[ARG2]]] by (9, 6, 7)
+//       CHECK:     return %[[LIN]]
+func.func @cancel_linearize_delinearize_middle_delinearize_unbounded_disjoint_implied_bound(%arg0: index, %arg1: index, %arg2: index) -> index {
+  %0:3 = affine.delinearize_index %arg0 into (3, 5) : index, index, index
+  %1 = affine.linearize_index disjoint [%arg1, %0#0, %0#1, %arg2] by (9, 2, 3, 7) : index
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @cancel_linearize_delinearize_multiple_matches(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index)
+//       CHECK:     %[[C0:.+]] = arith.constant 0
+//       CHECK:     %[[DELIN:.+]]:4 = affine.delinearize_index %[[ARG0]] into (4, 16, 4, 64)
+//       CHECK:     %[[LIN:.+]] = affine.linearize_index [%[[ARG1]], %[[DELIN]]#1, %[[C0]], %[[DELIN]]#3] by (4, 16, 4, 64)
+//       CHECK:     return %[[LIN]]
+func.func @cancel_linearize_delinearize_multiple_matches(%arg0: index, %arg1: index) -> index {
+  %c0 = arith.constant 0 : index
+  %0:7 = affine.delinearize_index %arg0 into (4, 4, 4, 4, 4, 4, 4) : index, index, index, index, index, index, index
+  %1 = affine.linearize_index [%arg1, %0#1, %0#2, %c0, %0#4, %0#5, %0#6] by (4, 4, 4, 4, 4, 4, 4) : index
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @cancel_linearize_delinearize_multiple_delinearizes(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index)
+//       CHECK:     %[[LIN:.+]] = affine.linearize_index [%[[ARG0]], %[[ARG1]]] by (32, 32)
+//       CHECK:     return %[[LIN]]
+func.func @cancel_linearize_delinearize_multiple_delinearizes(%arg0: index, %arg1: index) -> index {
+  %0:2 = affine.delinearize_index %arg0 into (4, 8) : index, index
+  %1:2 = affine.delinearize_index %arg1 into (2, 16) : index, index
+  %2 = affine.linearize_index [%0#0, %0#1, %1#0, %1#1] by (4, 8, 2, 16) : index
+  return %2 : index
+}
+
+// -----
+
+// Don't cancel because the values from the delinearize aren't used in order
+// CHECK-LABEL: func @no_cancel_linearize_delinearize_permuted(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index)
+//       CHECK:     %[[DELIN:.+]]:3 = affine.delinearize_index %[[ARG0]] into (%[[ARG1]], 4, %[[ARG2]])
+//       CHECK:     %[[LIN:.+]] = affine.linearize_index [%[[DELIN]]#0, %[[DELIN]]#2, %[[DELIN]]#1] by (%[[ARG1]], %[[ARG2]], 4)
+//       CHECK:     return %[[LIN]]
+func.func @no_cancel_linearize_delinearize_permuted(%arg0: index, %arg1: index, %arg2: index) -> index {
+  %0:3 = affine.delinearize_index %arg0 into (%arg1, 4, %arg2) : index, index, index
+  %1 = affine.linearize_index [%0#0, %0#2, %0#1] by (%arg1, %arg2, 4) : index
+  return %1 : index
+}
+
+// -----
+
+// CHECK: #[[$MAP:.+]] = affine_map<()[s0] -> (s0 * 3)>
+// But these cancel because they're a contiguous segment
+// CHECK-LABEL: func @partial_cancel_linearize_delinearize_not_fully_permuted(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index)
+//       CHECK:     %[[SIZEPROD:.+]] = affine.apply #[[$MAP]]()[%[[ARG2]]]
+//       CHECK:     %[[DELIN:.+]]:3 = affine.delinearize_index %[[ARG0]] into (%[[ARG1]], 4, %[[SIZEPROD]])
+//       CHECK:     %[[LIN:.+]] = affine.linearize_index [%[[DELIN]]#0, %[[DELIN]]#2, %[[DELIN]]#1] by (%[[ARG1]], %[[SIZEPROD]], 4)
+//       CHECK:     return %[[LIN]]
+func.func @partial_cancel_linearize_delinearize_not_fully_permuted(%arg0: index, %arg1: index, %arg2: index) -> index {
+  %0:4 = affine.delinearize_index %arg0 into (%arg1, 4, %arg2, 3) : index, index, index, index
+  %1 = affine.linearize_index [%0#0, %0#2, %0#3, %0#1] by (%arg1, %arg2, 3, 4) : index
+  return %1 : index
+}
+
+// -----
+
+// Ensure we don't get SSA errors when creating new `affine.delinearize` operations.
+// CHECK-LABEL: func @cancel_linearize_delinearize_placement
+// CHECK-SAME: (%[[ARG0:.+]]: index)
+// CHECK: %[[C0:.+]] = arith.constant 0 : index
+// CHECK: %[[NEW_DELIN:.+]]:2 = affine.delinearize_index %[[ARG0]] into (8, 32) : index, index
+// CHECK-NEXT: %[[DELIN_PART:.+]]:2 = affine.delinearize_index %[[NEW_DELIN]]#1 into (8, 4) : index, index
+// CHECK-NEXT: %[[L1:.+]] = affine.linearize_index disjoint [%[[DELIN_PART]]#1, %[[NEW_DELIN]]#0, %[[C0]], %[[C0]]] by (4, 8, 4, 8)
+// CHECK-NEXT: %[[L2:.+]] = affine.linearize_index disjoint [%[[NEW_DELIN]]#1, %[[C0]], %[[C0]]] by (32, 8, 4)
+// CHECK-NEXT: %[[L3:.+]] = affine.linearize_index disjoint [%[[DELIN_PART]]#0, %[[NEW_DELIN]]#0, %[[C0]], %[[C0]]] by (8, 8, 4, 4)
+// CHECK-NEXT: return %[[L1]], %[[L2]], %[[L3]]
+func.func @cancel_linearize_delinearize_placement(%arg0: index) -> (index, index, index) {
+  %c0 = arith.constant 0 : index
+  %0:3 = affine.delinearize_index %arg0 into (8, 8, 4) : index, index, index
+  %1 = affine.linearize_index disjoint [%0#2, %0#0, %c0, %c0] by (4, 8, 4, 8) : index
+  %2 = affine.linearize_index disjoint [%0#1, %0#2, %c0, %c0] by (8, 4, 8, 4) : index
+  %3 = affine.linearize_index disjoint [%0#1, %0#0, %c0, %c0] by (8, 8, 4, 4) : index
+  return %1, %2, %3 : index, index, index
+}
+
+// -----
+
+// Won't cancel because the linearize and delinearize are using a different basis
+// CHECK-LABEL: func @no_cancel_linearize_delinearize_different_basis(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index)
+//       CHECK:     %[[DELIN:.+]]:3 = affine.delinearize_index %[[ARG0]] into (%[[ARG1]], 4, %[[ARG2]])
+//       CHECK:     %[[LIN:.+]] = affine.linearize_index [%[[DELIN]]#0, %[[DELIN]]#1, %[[DELIN]]#2] by (%[[ARG1]], 8, %[[ARG2]])
+//       CHECK:     return %[[LIN]]
+func.func @no_cancel_linearize_delinearize_different_basis(%arg0: index, %arg1: index, %arg2: index) -> index {
+  %0:3 = affine.delinearize_index %arg0 into (%arg1, 4, %arg2) : index, index, index
+  %1 = affine.linearize_index [%0#0, %0#1, %0#2] by (%arg1, 8, %arg2) : index
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @affine_leading_zero(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index)
+//       CHECK:     %[[RET:.+]] = affine.linearize_index [%[[ARG0]], %[[ARG1]]] by (3, 5)
+//       CHECK:     return %[[RET]]
+func.func @affine_leading_zero(%arg0: index, %arg1: index) -> index {
+  %c0 = arith.constant 0 : index
+  %ret = affine.linearize_index [%c0, %arg0, %arg1] by (2, 3, 5) : index
+  return %ret : index
+}
+
+// -----
+
+// CHECK-LABEL: func @affine_leading_zero_no_outer_bound(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index)
+//       CHECK:     %[[RET:.+]] = affine.linearize_index [%[[ARG0]], %[[ARG1]]] by (3, 5)
+//       CHECK:     return %[[RET]]
+func.func @affine_leading_zero_no_outer_bound(%arg0: index, %arg1: index) -> index {
+  %c0 = arith.constant 0 : index
+  %ret = affine.linearize_index [%c0, %arg0, %arg1] by (3, 5) : index
+  return %ret : index
+}
+
+// -----
+
+// CHECK-LABEL: @cst_value_to_cst_attr_basis_delinearize_index
+// CHECK-SAME:    (%[[ARG0:.*]]: index)
+// CHECK:         %[[RET:.*]]:3 = affine.delinearize_index %[[ARG0]] into (3, 4, 2) : index, index
+// CHECK:         return %[[RET]]#0, %[[RET]]#1, %[[RET]]#2 : index, index, index
+func.func @cst_value_to_cst_attr_basis_delinearize_index(%arg0 : index) ->
+    (index, index, index) {
+  %c4 = arith.constant 4 : index
+  %c3 = arith.constant 3 : index
+  %c2 = arith.constant 2 : index
+  %0:3 = affine.delinearize_index %arg0 into (%c3, %c4, %c2)
+      : index, index, index
+  return %0#0, %0#1, %0#2 : index, index, index
+}
+
+// -----
+
+// CHECK-LABEL: @cst_value_to_cst_attr_basis_linearize_index
+// CHECK-SAME:    (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index)
+// CHECK:         %[[RET:.*]] = affine.linearize_index disjoint [%[[ARG0]], %[[ARG1]], %[[ARG2]]] by (2, 3, 4) : index
+// CHECK:         return %[[RET]] : index
+func.func @cst_value_to_cst_attr_basis_linearize_index(%arg0 : index, %arg1 : index, %arg2 : index) ->
+    (index) {
+  %c4 = arith.constant 4 : index
+  %c2 = arith.constant 2 : index
+  %0 = affine.linearize_index disjoint [%arg0, %arg1, %arg2] by  (%c2, 3, %c4) : index
+  return %0 : index
+}

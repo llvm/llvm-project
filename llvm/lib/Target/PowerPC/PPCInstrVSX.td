@@ -90,11 +90,11 @@ def SDT_PPCxxperm : SDTypeProfile<1, 3, [
 def PPClxvd2x  : SDNode<"PPCISD::LXVD2X", SDT_PPClxvd2x,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def PPCstxvd2x : SDNode<"PPCISD::STXVD2X", SDT_PPCstxvd2x,
-                        [SDNPHasChain, SDNPMayStore]>;
+                        [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def PPCld_vec_be  : SDNode<"PPCISD::LOAD_VEC_BE", SDT_PPCld_vec_be,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def PPCst_vec_be : SDNode<"PPCISD::STORE_VEC_BE", SDT_PPCst_vec_be,
-                        [SDNPHasChain, SDNPMayStore]>;
+                        [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def PPCxxswapd : SDNode<"PPCISD::XXSWAPD", SDT_PPCxxswapd, [SDNPHasChain]>;
 def PPCmfvsr : SDNode<"PPCISD::MFVSR", SDTUnaryOp, []>;
 def PPCmtvsra : SDNode<"PPCISD::MTVSRA", SDTUnaryOp, []>;
@@ -1596,7 +1596,7 @@ let Predicates = [HasVSX, HasP9Vector] in {
   // FIXME: Setting the hasSideEffects flag here to match current behaviour.
   let hasSideEffects = 1 in {
     def XSTSTDCSP : XX2_BF3_DCMX7_RS6<60, 298,
-                                (outs crrc:$BF), (ins u7imm:$DCMX, vsfrc:$XB),
+                                (outs crrc:$BF), (ins u7imm:$DCMX, vssrc:$XB),
                                 "xststdcsp $BF, $XB, $DCMX", IIC_VecFP, []>;
     def XSTSTDCDP : XX2_BF3_DCMX7_RS6<60, 362,
                                 (outs crrc:$BF), (ins u7imm:$DCMX, vsfrc:$XB),
@@ -3606,6 +3606,10 @@ def : Pat<(i64 (lround f64:$S)),
           (i64 (MFVSRD (FCTID (XSRDPI $S))))>;
 def : Pat<(i64 (lround f32:$S)),
           (i64 (MFVSRD (FCTID (XSRDPI (COPY_TO_REGCLASS $S, VSFRC)))))>;
+def : Pat<(i32 (lround f64:$S)),
+          (i32 (MFVSRWZ (FCTIW (XSRDPI $S))))>;
+def : Pat<(i32 (lround f32:$S)),
+          (i32 (MFVSRWZ (FCTIW (XSRDPI (COPY_TO_REGCLASS $S, VSFRC)))))>;
 def : Pat<(i64 (llround f64:$S)),
           (i64 (MFVSRD (FCTID (XSRDPI $S))))>;
 def : Pat<(i64 (llround f32:$S)),

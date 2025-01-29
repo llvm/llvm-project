@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stdio.h> //for EOF
-
+#include "hdr/stdio_macros.h" //for EOF
 #include "src/wchar/wctob.h"
-
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcWctob, DefaultLocale) {

@@ -36,13 +36,13 @@ top:
 
 declare void @use1(ptr %a) readonly
 
-define ptr @test3(ptr %v0) {
+define ptr @test3(ptr %v0, i1 %arg) {
 ; CHECK-LABEL: define ptr @test3
-; CHECK-SAME: (ptr [[V0:%.*]]) {
+; CHECK-SAME: (ptr [[V0:%.*]], i1 [[ARG:%.*]]) {
 ; CHECK-NEXT:  top:
 ; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[V0]], align 8
 ; CHECK-NEXT:    call void @use1(ptr [[V1]])
-; CHECK-NEXT:    br i1 undef, label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    ret ptr [[V1]]
 ; CHECK:       bb2:
@@ -51,7 +51,7 @@ define ptr @test3(ptr %v0) {
 top:
   %v1 = load ptr, ptr %v0
   call void @use1(ptr %v1)
-  br i1 undef, label %bb1, label %bb2
+  br i1 %arg, label %bb1, label %bb2
 
 bb1:
   %v2 = load ptr, ptr %v0, !nonnull !0
@@ -62,13 +62,13 @@ bb2:
   ret ptr %v3
 }
 
-define ptr @test4(ptr %v0) {
+define ptr @test4(ptr %v0, i1 %arg) {
 ; CHECK-LABEL: define ptr @test4
-; CHECK-SAME: (ptr [[V0:%.*]]) {
+; CHECK-SAME: (ptr [[V0:%.*]], i1 [[ARG:%.*]]) {
 ; CHECK-NEXT:  top:
 ; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[V0]], align 8
 ; CHECK-NEXT:    call void @use1(ptr [[V1]])
-; CHECK-NEXT:    br i1 undef, label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    ret ptr [[V1]]
 ; CHECK:       bb2:
@@ -77,7 +77,7 @@ define ptr @test4(ptr %v0) {
 top:
   %v1 = load ptr, ptr %v0
   call void @use1(ptr %v1)
-  br i1 undef, label %bb1, label %bb2
+  br i1 %arg, label %bb1, label %bb2
 
 bb1:
   %v2 = load ptr, ptr %v0
@@ -88,13 +88,13 @@ bb2:
   ret ptr %v3
 }
 
-define ptr @test5(ptr %v0) {
+define ptr @test5(ptr %v0, i1 %arg) {
 ; CHECK-LABEL: define ptr @test5
-; CHECK-SAME: (ptr [[V0:%.*]]) {
+; CHECK-SAME: (ptr [[V0:%.*]], i1 [[ARG:%.*]]) {
 ; CHECK-NEXT:  top:
 ; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[V0]], align 8
 ; CHECK-NEXT:    call void @use1(ptr [[V1]])
-; CHECK-NEXT:    br i1 undef, label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    ret ptr [[V1]]
 ; CHECK:       bb2:
@@ -103,7 +103,7 @@ define ptr @test5(ptr %v0) {
 top:
   %v1 = load ptr, ptr %v0, !nonnull !0
   call void @use1(ptr %v1)
-  br i1 undef, label %bb1, label %bb2
+  br i1 %arg, label %bb1, label %bb2
 
 bb1:
   %v2 = load ptr, ptr %v0
@@ -114,11 +114,11 @@ bb2:
   ret ptr %v3
 }
 
-define ptr @test6(ptr %v0, ptr %v1) {
+define ptr @test6(ptr %v0, ptr %v1, i1 %arg) {
 ; CHECK-LABEL: define ptr @test6
-; CHECK-SAME: (ptr [[V0:%.*]], ptr [[V1:%.*]]) {
+; CHECK-SAME: (ptr [[V0:%.*]], ptr [[V1:%.*]], i1 [[ARG:%.*]]) {
 ; CHECK-NEXT:  top:
-; CHECK-NEXT:    br i1 undef, label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[V2:%.*]] = load ptr, ptr [[V0]], align 8
 ; CHECK-NEXT:    store ptr [[V2]], ptr [[V1]], align 8
@@ -129,7 +129,7 @@ define ptr @test6(ptr %v0, ptr %v1) {
 ; CHECK-NEXT:    ret ptr [[V4]]
 ;
 top:
-  br i1 undef, label %bb1, label %bb2
+  br i1 %arg, label %bb1, label %bb2
 
 bb1:
   %v2 = load ptr, ptr %v0, !nonnull !0
@@ -146,13 +146,13 @@ bb2:
 
 declare void @use2(ptr %a)
 
-define ptr @test7(ptr %v0) {
+define ptr @test7(ptr %v0, i1 %arg) {
 ; CHECK-LABEL: define ptr @test7
-; CHECK-SAME: (ptr [[V0:%.*]]) {
+; CHECK-SAME: (ptr [[V0:%.*]], i1 [[ARG:%.*]]) {
 ; CHECK-NEXT:  top:
-; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[V0]], align 8, !nonnull !0
+; CHECK-NEXT:    [[V1:%.*]] = load ptr, ptr [[V0]], align 8, !nonnull [[META0:![0-9]+]]
 ; CHECK-NEXT:    call void @use2(ptr [[V1]])
-; CHECK-NEXT:    br i1 undef, label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[V2:%.*]] = load ptr, ptr [[V0]], align 8
 ; CHECK-NEXT:    ret ptr [[V2]]
@@ -163,7 +163,7 @@ define ptr @test7(ptr %v0) {
 top:
   %v1 = load ptr, ptr %v0, !nonnull !0
   call void @use2(ptr %v1)
-  br i1 undef, label %bb1, label %bb2
+  br i1 %arg, label %bb1, label %bb2
 
 bb1:
   %v2 = load ptr, ptr %v0

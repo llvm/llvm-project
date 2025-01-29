@@ -34,17 +34,20 @@ public:
   StringRef getPassName() const override { return AARCH64_POINTER_AUTH_NAME; }
 
 private:
-  /// An immediate operand passed to BRK instruction, if it is ever emitted.
-  const unsigned BrkOperand = 0xc471;
-
   const AArch64Subtarget *Subtarget = nullptr;
   const AArch64InstrInfo *TII = nullptr;
-  const AArch64RegisterInfo *TRI = nullptr;
 
   void signLR(MachineFunction &MF, MachineBasicBlock::iterator MBBI) const;
 
   void authenticateLR(MachineFunction &MF,
                       MachineBasicBlock::iterator MBBI) const;
+
+  /// Stores blend(AddrDisc, IntDisc) to the Result register.
+  void emitBlend(MachineBasicBlock::iterator MBBI, Register Result,
+                 Register AddrDisc, unsigned IntDisc) const;
+
+  /// Expands PAUTH_BLEND pseudo instruction.
+  void expandPAuthBlend(MachineBasicBlock::iterator MBBI) const;
 
   bool checkAuthenticatedLR(MachineBasicBlock::iterator TI) const;
 };
@@ -60,6 +63,18 @@ FunctionPass *llvm::createAArch64PointerAuthPass() {
 
 char AArch64PointerAuth::ID = 0;
 
+static void emitPACSymOffsetIntoX16(const TargetInstrInfo &TII,
+                                    MachineBasicBlock &MBB,
+                                    MachineBasicBlock::iterator I, DebugLoc DL,
+                                    MCSymbol *PACSym) {
+  BuildMI(MBB, I, DL, TII.get(AArch64::ADRP), AArch64::X16)
+      .addSym(PACSym, AArch64II::MO_PAGE);
+  BuildMI(MBB, I, DL, TII.get(AArch64::ADDXri), AArch64::X16)
+      .addReg(AArch64::X16)
+      .addSym(PACSym, AArch64II::MO_PAGEOFF | AArch64II::MO_NC)
+      .addImm(0);
+}
+
 // Where PAuthLR support is not known at compile time, it is supported using
 // PACM. PACM is in the hint space so has no effect when PAuthLR is not
 // supported by the hardware, but will alter the behaviour of PACI*SP, AUTI*SP
@@ -70,18 +85,36 @@ static void BuildPACM(const AArch64Subtarget &Subtarget, MachineBasicBlock &MBB,
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   auto &MFnI = *MBB.getParent()->getInfo<AArch64FunctionInfo>();
 
-  // ADR X16,<address_of_PACIASP>
+  // Offset to PAC*SP using ADRP + ADD.
   if (PACSym) {
     assert(Flags == MachineInstr::FrameDestroy);
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADR))
-        .addReg(AArch64::X16, RegState::Define)
-        .addSym(PACSym);
+    emitPACSymOffsetIntoX16(*TII, MBB, MBBI, DL, PACSym);
   }
 
   // Only emit PACM if -mbranch-protection has +pc and the target does not
   // have feature +pauth-lr.
   if (MFnI.branchProtectionPAuthLR() && !Subtarget.hasPAuthLR())
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM)).setMIFlag(Flags);
+}
+
+static void emitPACCFI(const AArch64Subtarget &Subtarget,
+                       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                       DebugLoc DL, MachineInstr::MIFlag Flags, bool EmitCFI) {
+  if (!EmitCFI)
+    return;
+
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  auto &MF = *MBB.getParent();
+  auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
+
+  auto CFIInst = MFnI.branchProtectionPAuthLR()
+                     ? MCCFIInstruction::createNegateRAStateWithPC(nullptr)
+                     : MCCFIInstruction::createNegateRAState(nullptr);
+
+  unsigned CFIIndex = MF.addFrameInst(CFIInst);
+  BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+      .addCFIIndex(CFIIndex)
+      .setMIFlags(Flags);
 }
 
 void AArch64PointerAuth::signLR(MachineFunction &MF,
@@ -104,13 +137,14 @@ void AArch64PointerAuth::signLR(MachineFunction &MF,
   // PAuthLR authentication instructions need to know the value of PC at the
   // point of signing (PACI*).
   if (MFnI.branchProtectionPAuthLR()) {
-    MCSymbol *PACSym = MF.getMMI().getContext().createTempSymbol();
+    MCSymbol *PACSym = MF.getContext().createTempSymbol();
     MFnI.setSigningInstrLabel(PACSym);
   }
 
   // No SEH opcode for this one; it doesn't materialize into an
   // instruction on Windows.
   if (MFnI.branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
+    emitPACCFI(*Subtarget, MBB, MBBI, DL, MachineInstr::FrameSetup, EmitCFI);
     BuildMI(MBB, MBBI, DL,
             TII->get(MFnI.shouldSignWithBKey() ? AArch64::PACIBSPPC
                                                : AArch64::PACIASPPC))
@@ -118,6 +152,7 @@ void AArch64PointerAuth::signLR(MachineFunction &MF,
         ->setPreInstrSymbol(MF, MFnI.getSigningInstrLabel());
   } else {
     BuildPACM(*Subtarget, MBB, MBBI, DL, MachineInstr::FrameSetup);
+    emitPACCFI(*Subtarget, MBB, MBBI, DL, MachineInstr::FrameSetup, EmitCFI);
     BuildMI(MBB, MBBI, DL,
             TII->get(MFnI.shouldSignWithBKey() ? AArch64::PACIBSP
                                                : AArch64::PACIASP))
@@ -125,13 +160,7 @@ void AArch64PointerAuth::signLR(MachineFunction &MF,
         ->setPreInstrSymbol(MF, MFnI.getSigningInstrLabel());
   }
 
-  if (EmitCFI) {
-    unsigned CFIIndex =
-        MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
-    BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex)
-        .setMIFlags(MachineInstr::FrameSetup);
-  } else if (NeedsWinCFI) {
+  if (!EmitCFI && NeedsWinCFI) {
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PACSignLR))
         .setMIFlag(MachineInstr::FrameSetup);
   }
@@ -166,6 +195,7 @@ void AArch64PointerAuth::authenticateLR(
       !MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack)) {
     if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
       assert(PACSym && "No PAC instruction to refer to");
+      emitPACSymOffsetIntoX16(*TII, MBB, MBBI, DL, PACSym);
       BuildMI(MBB, TI, DL,
               TII->get(UseBKey ? AArch64::RETABSPPCi : AArch64::RETAASPPCi))
           .addSym(PACSym)
@@ -181,121 +211,27 @@ void AArch64PointerAuth::authenticateLR(
   } else {
     if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
       assert(PACSym && "No PAC instruction to refer to");
+      emitPACSymOffsetIntoX16(*TII, MBB, MBBI, DL, PACSym);
+      emitPACCFI(*Subtarget, MBB, MBBI, DL, MachineInstr::FrameDestroy,
+                 EmitAsyncCFI);
       BuildMI(MBB, MBBI, DL,
               TII->get(UseBKey ? AArch64::AUTIBSPPCi : AArch64::AUTIASPPCi))
           .addSym(PACSym)
           .setMIFlag(MachineInstr::FrameDestroy);
     } else {
       BuildPACM(*Subtarget, MBB, MBBI, DL, MachineInstr::FrameDestroy, PACSym);
+      emitPACCFI(*Subtarget, MBB, MBBI, DL, MachineInstr::FrameDestroy,
+                 EmitAsyncCFI);
       BuildMI(MBB, MBBI, DL,
               TII->get(UseBKey ? AArch64::AUTIBSP : AArch64::AUTIASP))
           .setMIFlag(MachineInstr::FrameDestroy);
     }
 
-    if (EmitAsyncCFI) {
-      unsigned CFIIndex =
-          MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
-      BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
-          .addCFIIndex(CFIIndex)
-          .setMIFlags(MachineInstr::FrameDestroy);
-    }
     if (NeedsWinCFI) {
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PACSignLR))
           .setMIFlag(MachineInstr::FrameDestroy);
     }
   }
-}
-
-namespace {
-
-// Mark dummy LDR instruction as volatile to prevent removing it as dead code.
-MachineMemOperand *createCheckMemOperand(MachineFunction &MF,
-                                         const AArch64Subtarget &Subtarget) {
-  MachinePointerInfo PointerInfo(Subtarget.getAddressCheckPSV());
-  auto MOVolatileLoad =
-      MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile;
-
-  return MF.getMachineMemOperand(PointerInfo, MOVolatileLoad, 4, Align(4));
-}
-
-} // namespace
-
-MachineBasicBlock &llvm::AArch64PAuth::checkAuthenticatedRegister(
-    MachineBasicBlock::iterator MBBI, AuthCheckMethod Method,
-    Register AuthenticatedReg, Register TmpReg, bool UseIKey, unsigned BrkImm) {
-
-  MachineBasicBlock &MBB = *MBBI->getParent();
-  MachineFunction &MF = *MBB.getParent();
-  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
-  const AArch64InstrInfo *TII = Subtarget.getInstrInfo();
-  DebugLoc DL = MBBI->getDebugLoc();
-
-  // First, handle the methods not requiring creating extra MBBs.
-  switch (Method) {
-  default:
-    break;
-  case AuthCheckMethod::None:
-    return MBB;
-  case AuthCheckMethod::DummyLoad:
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRWui), getWRegFromXReg(TmpReg))
-        .addReg(AArch64::LR)
-        .addImm(0)
-        .addMemOperand(createCheckMemOperand(MF, Subtarget));
-    return MBB;
-  }
-
-  // Control flow has to be changed, so arrange new MBBs.
-
-  // At now, at least an AUT* instruction is expected before MBBI
-  assert(MBBI != MBB.begin() &&
-         "Cannot insert the check at the very beginning of MBB");
-  // The block to insert check into.
-  MachineBasicBlock *CheckBlock = &MBB;
-  // The remaining part of the original MBB that is executed on success.
-  MachineBasicBlock *SuccessBlock = MBB.splitAt(*std::prev(MBBI));
-
-  // The block that explicitly generates a break-point exception on failure.
-  MachineBasicBlock *BreakBlock =
-      MF.CreateMachineBasicBlock(MBB.getBasicBlock());
-  MF.push_back(BreakBlock);
-  MBB.splitSuccessor(SuccessBlock, BreakBlock);
-
-  assert(CheckBlock->getFallThrough() == SuccessBlock);
-  BuildMI(BreakBlock, DL, TII->get(AArch64::BRK)).addImm(BrkImm);
-
-  switch (Method) {
-  case AuthCheckMethod::None:
-  case AuthCheckMethod::DummyLoad:
-    llvm_unreachable("Should be handled above");
-  case AuthCheckMethod::HighBitsNoTBI:
-    BuildMI(CheckBlock, DL, TII->get(AArch64::EORXrs), TmpReg)
-        .addReg(AuthenticatedReg)
-        .addReg(AuthenticatedReg)
-        .addImm(1);
-    BuildMI(CheckBlock, DL, TII->get(AArch64::TBNZX))
-        .addReg(TmpReg)
-        .addImm(62)
-        .addMBB(BreakBlock);
-    return *SuccessBlock;
-  case AuthCheckMethod::XPACHint:
-    assert(AuthenticatedReg == AArch64::LR &&
-           "XPACHint mode is only compatible with checking the LR register");
-    assert(UseIKey && "XPACHint mode is only compatible with I-keys");
-    BuildMI(CheckBlock, DL, TII->get(AArch64::ORRXrs), TmpReg)
-        .addReg(AArch64::XZR)
-        .addReg(AArch64::LR)
-        .addImm(0);
-    BuildMI(CheckBlock, DL, TII->get(AArch64::XPACLRI));
-    BuildMI(CheckBlock, DL, TII->get(AArch64::SUBSXrs), AArch64::XZR)
-        .addReg(TmpReg)
-        .addReg(AArch64::LR)
-        .addImm(0);
-    BuildMI(CheckBlock, DL, TII->get(AArch64::Bcc))
-        .addImm(AArch64CC::NE)
-        .addMBB(BreakBlock);
-    return *SuccessBlock;
-  }
-  llvm_unreachable("Unknown AuthCheckMethod enum");
 }
 
 unsigned llvm::AArch64PAuth::getCheckerSizeInBytes(AuthCheckMethod Method) {
@@ -307,90 +243,54 @@ unsigned llvm::AArch64PAuth::getCheckerSizeInBytes(AuthCheckMethod Method) {
   case AuthCheckMethod::HighBitsNoTBI:
     return 12;
   case AuthCheckMethod::XPACHint:
+  case AuthCheckMethod::XPAC:
     return 20;
   }
   llvm_unreachable("Unknown AuthCheckMethod enum");
 }
 
-bool AArch64PointerAuth::checkAuthenticatedLR(
-    MachineBasicBlock::iterator TI) const {
-  AuthCheckMethod Method = Subtarget->getAuthenticatedLRCheckMethod();
+void AArch64PointerAuth::emitBlend(MachineBasicBlock::iterator MBBI,
+                                   Register Result, Register AddrDisc,
+                                   unsigned IntDisc) const {
+  MachineBasicBlock &MBB = *MBBI->getParent();
+  DebugLoc DL = MBBI->getDebugLoc();
 
-  if (Method == AuthCheckMethod::None)
-    return false;
+  if (Result != AddrDisc)
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), Result)
+        .addReg(AArch64::XZR)
+        .addReg(AddrDisc)
+        .addImm(0);
 
-  // FIXME If FEAT_FPAC is implemented by the CPU, this check can be skipped.
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::MOVKXi), Result)
+      .addReg(Result)
+      .addImm(IntDisc)
+      .addImm(48);
+}
 
-  assert(!TI->getMF()->hasWinCFI() && "WinCFI is not yet supported");
-
-  // The following code may create a signing oracle:
-  //
-  //   <authenticate LR>
-  //   TCRETURN          ; the callee may sign and spill the LR in its prologue
-  //
-  // To avoid generating a signing oracle, check the authenticated value
-  // before possibly re-signing it in the callee, as follows:
-  //
-  //   <authenticate LR>
-  //   <check if LR contains a valid address>
-  //   b.<cond> break_block
-  // ret_block:
-  //   TCRETURN
-  // break_block:
-  //   brk <BrkOperand>
-  //
-  // or just
-  //
-  //   <authenticate LR>
-  //   ldr tmp, [lr]
-  //   TCRETURN
-
-  // TmpReg is chosen assuming X16 and X17 are dead after TI.
-  assert(AArch64InstrInfo::isTailCallReturnInst(*TI) &&
-         "Tail call is expected");
-  Register TmpReg =
-      TI->readsRegister(AArch64::X16, TRI) ? AArch64::X17 : AArch64::X16;
-  assert(!TI->readsRegister(TmpReg, TRI) &&
-         "More than a single register is used by TCRETURN");
-
-  checkAuthenticatedRegister(TI, Method, AArch64::LR, TmpReg, /*UseIKey=*/true,
-                             BrkOperand);
-
-  return true;
+void AArch64PointerAuth::expandPAuthBlend(
+    MachineBasicBlock::iterator MBBI) const {
+  Register ResultReg = MBBI->getOperand(0).getReg();
+  Register AddrDisc = MBBI->getOperand(1).getReg();
+  unsigned IntDisc = MBBI->getOperand(2).getImm();
+  emitBlend(MBBI, ResultReg, AddrDisc, IntDisc);
 }
 
 bool AArch64PointerAuth::runOnMachineFunction(MachineFunction &MF) {
-  const auto *MFnI = MF.getInfo<AArch64FunctionInfo>();
-
   Subtarget = &MF.getSubtarget<AArch64Subtarget>();
   TII = Subtarget->getInstrInfo();
-  TRI = Subtarget->getRegisterInfo();
 
   SmallVector<MachineBasicBlock::instr_iterator> PAuthPseudoInstrs;
-  SmallVector<MachineBasicBlock::instr_iterator> TailCallInstrs;
 
   bool Modified = false;
-  bool HasAuthenticationInstrs = false;
 
   for (auto &MBB : MF) {
-    // Using instr_iterator to catch unsupported bundled TCRETURN* instructions
-    // instead of just skipping them.
-    for (auto &MI : MBB.instrs()) {
+    for (auto &MI : MBB) {
       switch (MI.getOpcode()) {
       default:
-        // Bundled TCRETURN* instructions (such as created by KCFI)
-        // are not supported yet, but no support is required if no
-        // PAUTH_EPILOGUE instructions exist in the same function.
-        // Skip the BUNDLE instruction itself (actual bundled instructions
-        // follow it in the instruction list).
-        if (MI.isBundle())
-          continue;
-        if (AArch64InstrInfo::isTailCallReturnInst(MI))
-          TailCallInstrs.push_back(MI.getIterator());
         break;
       case AArch64::PAUTH_PROLOGUE:
       case AArch64::PAUTH_EPILOGUE:
-        assert(!MI.isBundled());
+      case AArch64::PAUTH_BLEND:
         PAuthPseudoInstrs.push_back(MI.getIterator());
         break;
       }
@@ -404,23 +304,15 @@ bool AArch64PointerAuth::runOnMachineFunction(MachineFunction &MF) {
       break;
     case AArch64::PAUTH_EPILOGUE:
       authenticateLR(MF, It);
-      HasAuthenticationInstrs = true;
+      break;
+    case AArch64::PAUTH_BLEND:
+      expandPAuthBlend(It);
       break;
     default:
       llvm_unreachable("Unhandled opcode");
     }
     It->eraseFromParent();
     Modified = true;
-  }
-
-  // FIXME Do we need to emit any PAuth-related epilogue code at all
-  //       when SCS is enabled?
-  if (HasAuthenticationInstrs &&
-      !MFnI->needsShadowCallStackPrologueEpilogue(MF)) {
-    for (auto TailCall : TailCallInstrs) {
-      assert(!TailCall->isBundled() && "Not yet supported");
-      Modified |= checkAuthenticatedLR(TailCall);
-    }
   }
 
   return Modified;

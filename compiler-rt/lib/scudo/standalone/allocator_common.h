@@ -40,6 +40,7 @@ template <class SizeClassAllocator> struct TransferBatch {
     B->Count = static_cast<u16>(B->Count - N);
   }
   void clear() { Count = 0; }
+  bool empty() { return Count == 0; }
   void add(CompactPtrT P) {
     DCHECK_LT(Count, MaxNumCached);
     Batch[Count++] = P;
@@ -47,6 +48,12 @@ template <class SizeClassAllocator> struct TransferBatch {
   void moveToArray(CompactPtrT *Array) {
     memcpy(Array, Batch, sizeof(Batch[0]) * Count);
     clear();
+  }
+
+  void moveNToArray(CompactPtrT *Array, u16 N) {
+    DCHECK_LE(N, Count);
+    memcpy(Array, Batch + Count - N, sizeof(Batch[0]) * N);
+    Count = static_cast<u16>(Count - N);
   }
   u16 getCount() const { return Count; }
   bool isEmpty() const { return Count == 0U; }
@@ -68,16 +75,13 @@ template <class SizeClassAllocator> struct BatchGroup {
   BatchGroup *Next;
   // The compact base address of each group
   uptr CompactPtrGroupBase;
-  // Cache value of SizeClassAllocatorLocalCache::getMaxCached()
-  u16 MaxCachedPerBatch;
-  // Number of blocks pushed into this group. This is an increment-only
-  // counter.
-  uptr PushedBlocks;
   // This is used to track how many bytes are not in-use since last time we
   // tried to release pages.
   uptr BytesInBGAtLastCheckpoint;
   // Blocks are managed by TransferBatch in a list.
   SinglyLinkedList<TransferBatch<SizeClassAllocator>> Batches;
+  // Cache value of SizeClassAllocatorLocalCache::getMaxCached()
+  u16 MaxCachedPerBatch;
 };
 
 } // namespace scudo

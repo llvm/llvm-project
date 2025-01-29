@@ -98,7 +98,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
         dimension whether it is in-bounds or not. (Broadcast dimensions are
         always in-bounds).
       }],
-      /*retTy=*/"::std::optional<::mlir::ArrayAttr>",
+      /*retTy=*/"::mlir::ArrayAttr",
       /*methodName=*/"getInBounds",
       /*args=*/(ins)
     >,
@@ -234,15 +234,10 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       return constExpr && constExpr.getValue() == 0;
     }
 
-    /// Return "true" if the vector transfer dimension `dim` is in-bounds. Also
-    /// return "true" if the dimension is a broadcast dimension. Return "false"
-    /// otherwise.
+    /// Return "true" if the vector transfer dimension `dim` is in-bounds.
+    /// Return "false" otherwise.
     bool isDimInBounds(unsigned dim) {
-      if ($_op.isBroadcastDim(dim))
-        return true;
-      if (!$_op.getInBounds())
-        return false;
-      auto inBounds = ::llvm::cast<::mlir::ArrayAttr>(*$_op.getInBounds());
+      auto inBounds = $_op.getInBounds();
       return ::llvm::cast<::mlir::BoolAttr>(inBounds[dim]).getValue();
     }
 

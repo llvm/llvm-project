@@ -1052,31 +1052,15 @@ define <4 x float> @PR34724_add_v4f32_0u23(<4 x float> %0, <4 x float> %1) {
 }
 
 define <4 x float> @PR34724_add_v4f32_01u3(<4 x float> %0, <4 x float> %1) {
-; SSE-SLOW-LABEL: PR34724_add_v4f32_01u3:
-; SSE-SLOW:       # %bb.0:
-; SSE-SLOW-NEXT:    haddps %xmm0, %xmm0
-; SSE-SLOW-NEXT:    movsldup {{.*#+}} xmm2 = xmm1[0,0,2,2]
-; SSE-SLOW-NEXT:    addps %xmm1, %xmm2
-; SSE-SLOW-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3]
-; SSE-SLOW-NEXT:    retq
+; SSE-LABEL: PR34724_add_v4f32_01u3:
+; SSE:       # %bb.0:
+; SSE-NEXT:    haddps %xmm1, %xmm0
+; SSE-NEXT:    retq
 ;
-; SSE-FAST-LABEL: PR34724_add_v4f32_01u3:
-; SSE-FAST:       # %bb.0:
-; SSE-FAST-NEXT:    haddps %xmm1, %xmm0
-; SSE-FAST-NEXT:    retq
-;
-; AVX-SLOW-LABEL: PR34724_add_v4f32_01u3:
-; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
-; AVX-SLOW-NEXT:    vmovsldup {{.*#+}} xmm2 = xmm1[0,0,2,2]
-; AVX-SLOW-NEXT:    vaddps %xmm1, %xmm2, %xmm1
-; AVX-SLOW-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
-; AVX-SLOW-NEXT:    retq
-;
-; AVX-FAST-LABEL: PR34724_add_v4f32_01u3:
-; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
-; AVX-FAST-NEXT:    retq
+; AVX-LABEL: PR34724_add_v4f32_01u3:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %3 = shufflevector <4 x float> %0, <4 x float> undef, <2 x i32> <i32 0, i32 2>
   %4 = shufflevector <4 x float> %0, <4 x float> undef, <2 x i32> <i32 1, i32 3>
   %5 = fadd <2 x float> %3, %4
@@ -1088,31 +1072,15 @@ define <4 x float> @PR34724_add_v4f32_01u3(<4 x float> %0, <4 x float> %1) {
 }
 
 define <4 x float> @PR34724_add_v4f32_012u(<4 x float> %0, <4 x float> %1) {
-; SSE-SLOW-LABEL: PR34724_add_v4f32_012u:
-; SSE-SLOW:       # %bb.0:
-; SSE-SLOW-NEXT:    haddps %xmm0, %xmm0
-; SSE-SLOW-NEXT:    movshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; SSE-SLOW-NEXT:    addps %xmm1, %xmm2
-; SSE-SLOW-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; SSE-SLOW-NEXT:    retq
+; SSE-LABEL: PR34724_add_v4f32_012u:
+; SSE:       # %bb.0:
+; SSE-NEXT:    haddps %xmm1, %xmm0
+; SSE-NEXT:    retq
 ;
-; SSE-FAST-LABEL: PR34724_add_v4f32_012u:
-; SSE-FAST:       # %bb.0:
-; SSE-FAST-NEXT:    haddps %xmm1, %xmm0
-; SSE-FAST-NEXT:    retq
-;
-; AVX-SLOW-LABEL: PR34724_add_v4f32_012u:
-; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
-; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; AVX-SLOW-NEXT:    vaddps %xmm1, %xmm2, %xmm1
-; AVX-SLOW-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX-SLOW-NEXT:    retq
-;
-; AVX-FAST-LABEL: PR34724_add_v4f32_012u:
-; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
-; AVX-FAST-NEXT:    retq
+; AVX-LABEL: PR34724_add_v4f32_012u:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %3 = shufflevector <4 x float> %0, <4 x float> undef, <2 x i32> <i32 0, i32 2>
   %4 = shufflevector <4 x float> %0, <4 x float> undef, <2 x i32> <i32 1, i32 3>
   %5 = fadd <2 x float> %3, %4

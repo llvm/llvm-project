@@ -2,6 +2,17 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
+add_header_library(
+  time_constants
+  HDRS
+    time_constants.h
+  DEPENDS
+    libc.include.time
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.string_view
+    libc.hdr.types.time_t
+)
+
 add_object_library(
   time_utils
   SRCS
@@ -10,7 +21,12 @@ add_object_library(
     time_utils.h
   DEPENDS
     libc.include.time
+    libc.src.__support.CPP.limits
     libc.src.errno.errno
+    .time_constants
+    libc.hdr.types.time_t
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_tm
 )
 
 add_entrypoint_object(
@@ -21,7 +37,9 @@ add_entrypoint_object(
     asctime.h
   DEPENDS
     .time_utils
+    .time_constants
     libc.include.time
+    libc.hdr.types.struct_tm
 )
 
 add_entrypoint_object(
@@ -32,6 +50,34 @@ add_entrypoint_object(
     asctime_r.h
   DEPENDS
     .time_utils
+    .time_constants
+    libc.include.time
+    libc.hdr.types.struct_tm
+)
+
+add_entrypoint_object(
+  ctime
+  SRCS
+    ctime.cpp
+  HDRS
+    ctime.h
+  DEPENDS
+    .time_utils
+    .time_constants
+    libc.hdr.types.time_t
+    libc.include.time
+)
+
+add_entrypoint_object(
+  ctime_r
+  SRCS
+    ctime_r.cpp
+  HDRS
+    ctime_r.h
+  DEPENDS
+    .time_utils
+    .time_constants
+    libc.hdr.types.time_t
     libc.include.time
 )
 
@@ -43,6 +89,7 @@ add_entrypoint_object(
     difftime.h
   DEPENDS
     libc.include.time
+    libc.hdr.types.time_t
 )
 
 add_entrypoint_object(
@@ -54,6 +101,8 @@ add_entrypoint_object(
   DEPENDS
     .time_utils
     libc.include.time
+    libc.hdr.types.time_t
+    libc.hdr.types.struct_tm
 )
 
 add_entrypoint_object(
@@ -65,6 +114,8 @@ add_entrypoint_object(
   DEPENDS
     .time_utils
     libc.include.time
+    libc.hdr.types.time_t
+    libc.hdr.types.struct_tm
 )
 
 add_entrypoint_object(
@@ -75,15 +126,32 @@ add_entrypoint_object(
     mktime.h
   DEPENDS
     .time_utils
+    .time_constants
     libc.include.time
     libc.src.errno.errno
+    libc.hdr.types.time_t
+    libc.hdr.types.struct_tm
 )
 
 add_entrypoint_object(
   time
+  SRCS
+    time.cpp
+  HDRS
+    time_func.h
+  DEPENDS
+    libc.hdr.time_macros
+    libc.hdr.types.time_t
+    libc.src.__support.time.clock_gettime
+    libc.src.errno.errno
+    libc.hdr.types.struct_tm
+)
+
+add_entrypoint_object(
+  timespec_get
   ALIAS
   DEPENDS
-    .${LIBC_TARGET_OS}.time
+    .${LIBC_TARGET_OS}.timespec_get
 )
 
 add_entrypoint_object(
@@ -112,4 +180,11 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.gettimeofday
+)
+
+add_entrypoint_object(
+  clock_getres
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.clock_getres
 )

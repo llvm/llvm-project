@@ -29,7 +29,7 @@ class TestAddrableBitsCorefile(TestBase):
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.c")
         )
-        self.assertEqual(process.IsValid(), True)
+        self.assertTrue(process.IsValid())
 
         found_main = False
         for f in thread.frames:

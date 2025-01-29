@@ -8,9 +8,10 @@
 
 #include "src/string/memcpy.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void *, memcpy,
                    (void *__restrict dst, const void *__restrict src,
@@ -19,4 +20,4 @@ LLVM_LIBC_FUNCTION(void *, memcpy,
   return dst;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

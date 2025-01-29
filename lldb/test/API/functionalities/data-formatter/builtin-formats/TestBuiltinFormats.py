@@ -308,5 +308,5 @@ class TestCase(TestBase):
     @no_debug_info_test
     def test_instruction(self):
         self.assertIn(
-            "  addq   0xa(%rdi), %r8\n", self.getFormatted("instruction", "0x0a47034c")
+            "= addq   0xa(%rdi), %r8\n", self.getFormatted("instruction", "0x0a47034c")
         )

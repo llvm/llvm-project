@@ -12,10 +12,8 @@ define i32 @test_1_non_negative(i32 %n) {
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: (1 smax %n) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_1_non_negative
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (1 smax %n))<nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 2147483646
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 2147483646
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (1 smax %n))<nsw>
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (1 smax %n))<nsw>
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -51,10 +49,8 @@ define i32 @test_2_non_positive(i32 %n) {
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: (1 smax %n) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_2_non_positive
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (1 smax %n))<nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 2147483646
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 2147483646
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (1 smax %n))<nsw>
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (1 smax %n))<nsw>
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:

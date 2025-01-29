@@ -38,14 +38,13 @@ Value mlir::tosa::clampFloatHelper(Location loc, Value arg, Value min,
 }
 
 Value mlir::tosa::clampIntHelper(Location loc, Value arg, Value min, Value max,
-                                 OpBuilder &rewriter) {
-  auto smallerThanMin =
-      rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, arg, min);
-  auto minOrArg =
-      rewriter.create<arith::SelectOp>(loc, smallerThanMin, min, arg);
-  auto largerThanMax =
-      rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, max, arg);
-  return rewriter.create<arith::SelectOp>(loc, largerThanMax, max, minOrArg);
+                                 OpBuilder &rewriter, bool isUnsigned) {
+  if (isUnsigned) {
+    auto minOrArg = rewriter.create<arith::MaxUIOp>(loc, min, arg);
+    return rewriter.create<arith::MinUIOp>(loc, max, minOrArg);
+  }
+  auto minOrArg = rewriter.create<arith::MaxSIOp>(loc, min, arg);
+  return rewriter.create<arith::MinSIOp>(loc, max, minOrArg);
 }
 
 bool mlir::tosa::validIntegerRange(IntegerType ty, int64_t value) {
@@ -103,6 +102,12 @@ computeReshapeOutput(ArrayRef<int64_t> higherRankShape,
 
 LogicalResult mlir::tosa::EqualizeRanks(PatternRewriter &rewriter, Location loc,
                                         Value &input1, Value &input2) {
+  ImplicitLocOpBuilder builder(loc, rewriter);
+  return EqualizeRanks(builder, input1, input2);
+}
+
+LogicalResult mlir::tosa::EqualizeRanks(ImplicitLocOpBuilder &builder,
+                                        Value &input1, Value &input2) {
   auto input1Ty = llvm::dyn_cast<RankedTensorType>(input1.getType());
   auto input2Ty = llvm::dyn_cast<RankedTensorType>(input2.getType());
 
@@ -141,9 +146,9 @@ LogicalResult mlir::tosa::EqualizeRanks(PatternRewriter &rewriter, Location loc,
   auto reshapeOutputType = RankedTensorType::get(
       ArrayRef<int64_t>(reshapeOutputShape), reshapeInputType.getElementType());
 
-  auto reshapeLower = rewriter.create<tosa::ReshapeOp>(
-      loc, reshapeOutputType, lowerTensorValue,
-      rewriter.getDenseI64ArrayAttr(reshapeOutputShape));
+  auto reshapeLower = builder.create<tosa::ReshapeOp>(
+      reshapeOutputType, lowerTensorValue,
+      builder.getDenseI64ArrayAttr(reshapeOutputShape));
 
   if (input1Rank > input2Rank) {
     input1 = higherTensorValue;
@@ -154,4 +159,37 @@ LogicalResult mlir::tosa::EqualizeRanks(PatternRewriter &rewriter, Location loc,
   }
 
   return success();
+}
+
+Value mlir::tosa::getTosaConstShape(PatternRewriter &rewriter, Location loc,
+                                    llvm::ArrayRef<int64_t> shape) {
+  auto attr = rewriter.getIndexTensorAttr(shape);
+  auto type = mlir::tosa::shapeType::get(rewriter.getContext(), shape.size());
+  mlir::Operation *mlir_op =
+      rewriter.create<tosa::ConstShapeOp>(loc, type, attr);
+  return mlir_op->getResult(0);
+}
+
+SmallVector<int64_t> mlir::tosa::convertFromMlirShape(ArrayRef<int64_t> shape) {
+  return to_vector(llvm::map_range(shape, [](int64_t dim) {
+    return ShapedType::isDynamic(dim) ? -1 : dim;
+  }));
+}
+
+bool mlir::tosa::getConstShapeValue(Operation *op,
+                                    llvm::SmallVector<int64_t> &result_shape) {
+  if (!op) {
+    return false;
+  }
+  if (auto constOp = mlir::dyn_cast<tosa::ConstShapeOp>(op)) {
+    Attribute constOpAttr = constOp->getAttr("value");
+    DenseElementsAttr elementsAttr = cast<DenseElementsAttr>(constOpAttr);
+    for (int i = 0; i < elementsAttr.size(); i++) {
+      int64_t val = elementsAttr.getValues<int64_t>()[i];
+      result_shape.push_back(val);
+    }
+    return true;
+  }
+  // for undefined op, return false.
+  return false;
 }

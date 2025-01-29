@@ -24,8 +24,8 @@ public:
   using DefaultABIInfo::DefaultABIInfo;
 
 private:
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 
   void updateState(const ABIArgInfo &Info, QualType Ty, CCState &State) const {
     if (!State.FreeRegs)
@@ -81,11 +81,11 @@ ABIArgInfo ARCABIInfo::getIndirectByValue(QualType Ty) const {
                                  TypeAlign > MinABIStackAlignInBytes);
 }
 
-Address ARCABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                              QualType Ty) const {
+RValue ARCABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                             QualType Ty, AggValueSlot Slot) const {
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*indirect*/ false,
                           getContext().getTypeInfoInChars(Ty),
-                          CharUnits::fromQuantity(4), true);
+                          CharUnits::fromQuantity(4), true, Slot);
 }
 
 ABIArgInfo ARCABIInfo::classifyArgumentType(QualType Ty,

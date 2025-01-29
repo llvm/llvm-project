@@ -59,7 +59,7 @@ have installed them, you have to inform CMake that we are linking against the
 full libc as follows:
 
 ```bash
-cmake ../ -G <GEN> -DLIBC_FULLBUILD=ON    \
+cmake ../ -G <GEN> -DLLVM_LIBC_FULL_BUILD=ON    \
   -DCMAKE_SYSROOT=<SYSROOT>               \
   -DCMAKE_C_COMPILER=<SYSROOT>/bin/clang  \
   -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY

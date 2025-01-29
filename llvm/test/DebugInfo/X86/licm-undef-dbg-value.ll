@@ -2,7 +2,7 @@
 ; RUN: opt -passes=licm %s -S --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; CHECK: for.body:
-; CHECK-NEXT: llvm.dbg.value(metadata i8 poison
+; CHECK-NEXT: #dbg_value(i8 poison
 
 ; The load is loop invariant. Check that we leave an undef dbg.value behind
 ; when licm sinks the instruction.

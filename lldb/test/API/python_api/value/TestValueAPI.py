@@ -140,25 +140,75 @@ class ValueAPITestCase(TestBase):
         val_i = target.EvaluateExpression("i")
         val_s = target.EvaluateExpression("s")
         val_a = target.EvaluateExpression("a")
-        self.assertTrue(
-            val_s.GetChildMemberWithName("a").GetAddress().IsValid(), VALID_VARIABLE
-        )
-        self.assertTrue(val_s.GetChildMemberWithName("a").AddressOf(), VALID_VARIABLE)
+        self.assertTrue(val_s.member["a"].GetAddress().IsValid(), VALID_VARIABLE)
+        self.assertTrue(val_s.member["a"].AddressOf(), VALID_VARIABLE)
         self.assertTrue(val_a.Cast(val_i.GetType()).AddressOf(), VALID_VARIABLE)
 
         # Test some other cases of the Cast API.  We allow casts from one struct type
         # to another, which is a little weird, but we don't support casting from a
-        # smaller type to a larger as we often wouldn't know how to get the extra data:
-        val_f = target.EvaluateExpression("f")
-        bad_cast = val_s.Cast(val_f.GetType())
-        self.assertFailure(
-            bad_cast.GetError(),
-            "Can only cast to a type that is equal to or smaller than the orignal type.",
+        # smaller type to a larger when the underlying data is not in the inferior,
+        # since then we have no way to fetch the out-of-bounds values.
+        # For an expression that references a variable, or a FindVariable result,
+        # or an SBValue made from an address and a type, we can get back to the target,
+        # so those will work.  Make sure they do and get the right extra values as well.
+
+        # We're casting everything to the type of "f", so get that first:
+        f_var = frame0.FindVariable("f")
+        self.assertSuccess(f_var.error, "Got f")
+        bigger_type = f_var.GetType()
+
+        # First try a value that we got from FindVariable
+        container = frame0.FindVariable("my_container")
+        self.assertSuccess(container.error, "Found my_container")
+        fv_small = container.GetValueForExpressionPath(".data.small")
+        self.assertSuccess(fv_small.error, "Found small in my_container")
+        fv_cast = fv_small.Cast(bigger_type)
+        self.assertSuccess(fv_cast.error, "Can cast up from FindVariable")
+        child_checks = [
+            ValueCheck(name="a", value="33", type="int"),
+            ValueCheck(name="b", value="44", type="int"),
+            ValueCheck(name="c", value="55", type="int"),
+        ]
+        cast_check = ValueCheck(type=bigger_type.name, children=child_checks)
+
+        # Now try one we made with expr.  This one should fail, because expr
+        # stores the "canonical value" in host memory, and doesn't know how
+        # to augment that from the live address.
+        expr_cont = frame0.EvaluateExpression("my_container")
+        self.assertSuccess(expr_cont.error, "Got my_container by expr")
+        expr_small = expr_cont.GetValueForExpressionPath(".data.small")
+        self.assertSuccess(expr_small.error, "Got small by expr")
+        expr_cast = expr_small.Cast(bigger_type)
+        self.assertFailure(expr_cast.error, msg="Cannot cast expr result")
+
+        # Now try one we made with CreateValueFromAddress.  That will succeed
+        # because this directly tracks the inferior memory.
+        small_addr = fv_small.addr
+        self.assertTrue(small_addr.IsValid())
+        small_type = fv_small.GetType()
+        vfa_small = target.CreateValueFromAddress(
+            "small_from_addr", small_addr, small_type
         )
-        weird_cast = val_f.Cast(val_s.GetType())
+        self.assertSuccess(vfa_small.error, "Made small from address")
+        vfa_cast = vfa_small.Cast(bigger_type)
+        self.assertSuccess(vfa_cast.error, "Made a cast from vfa_small")
+        cast_check.check_value(self, vfa_cast, "Cast of ValueFromAddress succeeds")
+
+        # Next try ValueObject created from data.  They should fail as there's no
+        # way to grow the data:
+        data_small = target.CreateValueFromData(
+            "small_from_data", fv_small.data, fv_small.type
+        )
+        self.assertSuccess(data_small.error, "Made a valid object from data")
+        data_cast = data_small.Cast(bigger_type)
+        self.assertFailure(data_cast.error, msg="Cannot cast data backed SBValue")
+
+        # Now check casting from a larger type to a smaller, we can always do this,
+        # so just test one case:
+        weird_cast = f_var.Cast(val_s.GetType())
         self.assertSuccess(weird_cast.GetError(), "Can cast from a larger to a smaller")
         self.assertEqual(
-            weird_cast.GetChildMemberWithName("a").GetValueAsSigned(0),
+            weird_cast.member["a"].GetValueAsSigned(0),
             33,
             "Got the right value",
         )
@@ -212,7 +262,9 @@ class ValueAPITestCase(TestBase):
             frame0.FindVariable("fixed_int_ptr").GetValue(),
             "0x000000aa" if target.addr_size == 4 else "0x00000000000000aa",
         )
-        self.runCmd("settings set target.show-hex-variable-values-with-leading-zeroes false")
+        self.runCmd(
+            "settings set target.show-hex-variable-values-with-leading-zeroes false"
+        )
         self.assertEqual(
             frame0.FindVariable("another_fixed_int_ptr").GetValue(),
             "0xaa",

@@ -1,4 +1,4 @@
-//===- BufferizationOps.td - Bufferization op definitions ----------*- tablegen -*-===//
+//===- BufferizationOps.td - Bufferization op definitions --*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,6 +10,7 @@
 #define BUFFERIZATION_OPS
 
 include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.td"
+include "mlir/Dialect/Bufferization/IR/BufferViewFlowOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizationBase.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
@@ -216,8 +217,7 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
 
 def Bufferization_MaterializeInDestinationOp
     : Bufferization_Op<"materialize_in_destination",
-        [AllShapesMatch<["source", "dest"]>,
-         AllElementTypesMatch<["source", "dest"]>,
+        [AllElementTypesMatch<["source", "dest"]>,
          BufferizableOpInterface, DestinationStyleOpInterface,
          DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
          DeclareOpInterfaceMethods<SubsetOpInterface,
@@ -238,9 +238,9 @@ def Bufferization_MaterializeInDestinationOp
     memref, `source` materializes in `dest`, which is already a buffer. The op
     has no results in that case.
 
-    `source`, `dest` and `result` (if present) must have the same shape and
-    element type. If the op has a result, the types of `result` and `dest` must
-    match exactly (e.g., including any tensor encodings).
+    `source`, `dest` and `result` (if present) must have the same runtime shape
+    and element type. If the op has a result, the types of `result` and `dest`
+    must match exactly (e.g., including any tensor encodings).
 
     By default, this op bufferizes to a memcpy from the future buffer of the
     `source` tensor to the future buffer of the `dest` tensor or to the `dest`
@@ -387,9 +387,7 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     BufferizableOpInterface,
     SameOperandsAndResultShape,
     SameOperandsAndResultElementType,
-    TypesMatchWith<"result type matches tensor equivalent of 'memref'",
-                   "memref", "result",
-                   "memref::getTensorTypeFromMemRefType($_self)">
+    AllElementTypesMatch<["memref", "result"]>
   ]> {
   let summary = "create a tensor from a `memref`";
   let description = [{
@@ -404,7 +402,7 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
 
     ```mlir
     // Produces a value of tensor<4x?xf32> type.
-    %t = bufferization.to_tensor %m : memref<4x?xf32, #layout, 0>
+    %t = bufferization.to_tensor %m : memref<4x?xf32, #layout, 0> to tensor<4x?xf32>
     ```
 
     If the `writable` unit attribute is set, the produced tensor is considered
@@ -427,7 +425,7 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     Example:
 
     ```
-    %t = bufferization.to_tensor %m restrict writable : memref<4xf32>
+    %t = bufferization.to_tensor %m restrict writable : memref<4xf32> to tensor<4xf32>
 
     // %t is writable, so the tensor.insert may bufferize in-place in the
     // absence of other conflicts.
@@ -476,8 +474,15 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
 
   let assemblyFormat = [{
     $memref (`restrict` $restrict^)? (`writable` $writable^)? attr-dict
-      `:` type($memref)
+      `:` type($memref) `to` type($result)
   }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$memref, CArg<"bool", "false">:$restrict, CArg<"bool", "false">:$writeable), [{
+      auto rtt = memref::getTensorTypeFromMemRefType(memref.getType());
+      build($_builder, $_state, rtt, memref, restrict, writeable);
+    }]>
+  ];
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
@@ -493,9 +498,8 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
     SameOperandsAndResultShape,
     SameOperandsAndResultElementType,
     Pure,
-    TypesMatchWith<"type of 'tensor' is the tensor equivalent of 'memref'",
-                   "memref", "tensor",
-                   "memref::getTensorTypeFromMemRefType($_self)">
+    AllShapesMatch<["memref", "tensor"]>,
+    AllElementTypesMatch<["memref", "tensor"]>
   ]> {
   let summary = "cast a tensor to memref";
   let description = [{
@@ -503,7 +507,7 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
 
     ```mlir
     // Result type is memref<4x?xf32, #layout, 0>
-    %m = bufferization.to_memref %t : memref<4x?xf32, #layout, 0>
+    %m = bufferization.to_memref %t : tensor<4x?xf32> to memref<4x?xf32, #layout, 0>
     ```
 
     This operation is a specialized variant of the built-in
@@ -550,7 +554,7 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
   }];
 
   let assemblyFormat = [{
-    $tensor (`read_only` $read_only^)? attr-dict `:` type($memref)
+    $tensor (`read_only` $read_only^)? attr-dict `:` type($tensor) `to` type($memref)
   }];
 
   let hasFolder = 1;
@@ -602,7 +606,7 @@ def Bufferization_DeallocOp : Bufferization_Op<"dealloc", [
     ```
     Deallocation will be called on `%a0` if `%cond0` is 'true' and neither
     `%r0`, `%r1`, or `%r2` are aliases of `%a0`. `%a1` will be deallocated when
-    `%cond1` is set to 'true' and none of `%r0`, %r1`, `%r2`, and `%a0` are
+    `%cond1` is set to 'true' and none of `%r0`, `%r1`, `%r2`, and `%a0` are
     aliases.
 
     Note that this can be an expensive operation if there are many operands that

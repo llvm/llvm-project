@@ -48,21 +48,21 @@ public:
   StringRef getPassName() const override { return "GCN NSA Reassign"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LiveIntervals>();
-    AU.addRequired<VirtRegMap>();
-    AU.addRequired<LiveRegMatrix>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
+    AU.addRequired<VirtRegMapWrapperLegacy>();
+    AU.addRequired<LiveRegMatrixWrapperLegacy>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
 private:
-  typedef enum {
+  using NSA_Status = enum {
     NOT_NSA,        // Not an NSA instruction
     FIXED,          // NSA which we cannot modify
     NON_CONTIGUOUS, // NSA with non-sequential address which we can try
                     // to optimize.
     CONTIGUOUS      // NSA with all sequential address registers
-  } NSA_Status;
+  };
 
   const GCNSubtarget *ST;
 
@@ -94,9 +94,9 @@ private:
 
 INITIALIZE_PASS_BEGIN(GCNNSAReassign, DEBUG_TYPE, "GCN NSA Reassign",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
-INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
-INITIALIZE_PASS_DEPENDENCY(LiveRegMatrix)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
+INITIALIZE_PASS_DEPENDENCY(LiveRegMatrixWrapperLegacy)
 INITIALIZE_PASS_END(GCNNSAReassign, DEBUG_TYPE, "GCN NSA Reassign",
                     false, false)
 
@@ -237,14 +237,14 @@ GCNNSAReassign::CheckNSA(const MachineInstr &MI, bool Fast) const {
 
 bool GCNNSAReassign::runOnMachineFunction(MachineFunction &MF) {
   ST = &MF.getSubtarget<GCNSubtarget>();
-  if (!ST->hasNSAEncoding())
+  if (!ST->hasNSAEncoding() || !ST->hasNonNSAEncoding())
     return false;
 
   MRI = &MF.getRegInfo();
   TRI = ST->getRegisterInfo();
-  VRM = &getAnalysis<VirtRegMap>();
-  LRM = &getAnalysis<LiveRegMatrix>();
-  LIS = &getAnalysis<LiveIntervals>();
+  VRM = &getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
+  LRM = &getAnalysis<LiveRegMatrixWrapperLegacy>().getLRM();
+  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   MaxNumVGPRs = ST->getMaxNumVGPRs(MF);
@@ -328,12 +328,14 @@ bool GCNNSAReassign::runOnMachineFunction(MachineFunction &MF) {
         continue;
     } else {
       // Check we did not make it worse for other instructions.
-      auto I = std::lower_bound(Candidates.begin(), &C, MinInd,
-                                [this](const Candidate &C, SlotIndex I) {
-                                  return LIS->getInstructionIndex(*C.first) < I;
-                                });
-      for (auto E = Candidates.end(); Success && I != E &&
-              LIS->getInstructionIndex(*I->first) < MaxInd; ++I) {
+      auto *I =
+          std::lower_bound(Candidates.begin(), &C, MinInd,
+                           [this](const Candidate &C, SlotIndex I) {
+                             return LIS->getInstructionIndex(*C.first) < I;
+                           });
+      for (auto *E = Candidates.end();
+           Success && I != E && LIS->getInstructionIndex(*I->first) < MaxInd;
+           ++I) {
         if (I->second && CheckNSA(*I->first, true) < NSA_Status::CONTIGUOUS) {
           Success = false;
           LLVM_DEBUG(dbgs() << "\tNSA conversion conflict with " << *I->first);

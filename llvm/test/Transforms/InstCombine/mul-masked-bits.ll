@@ -86,7 +86,7 @@ define <vscale x 2 x i32> @combine_mul_self_demandedbits_vector2(<vscale x 2 x i
 ;
   %1 = freeze <vscale x 2 x i32> %x
   %2 = mul <vscale x 2 x i32> %1, %1
-  %3 = and <vscale x 2 x i32> %2, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 -3, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+  %3 = and <vscale x 2 x i32> %2, splat (i32 -3)
   ret <vscale x 2 x i32> %3
 }
 
@@ -103,8 +103,8 @@ define i8 @one_demanded_bit(i8 %x) {
 
 define <2 x i8> @one_demanded_bit_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @one_demanded_bit_splat(
-; CHECK-NEXT:    [[M:%.*]] = shl <2 x i8> [[X:%.*]], <i8 5, i8 5>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[M]], <i8 32, i8 32>
+; CHECK-NEXT:    [[M:%.*]] = shl <2 x i8> [[X:%.*]], splat (i8 5)
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[M]], splat (i8 32)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %m = mul <2 x i8> %x, <i8 160, i8 160> ; 0b1010_0000
@@ -134,7 +134,7 @@ define i33 @squared_one_demanded_low_bit(i33 %x) {
 
 define <2 x i8> @squared_one_demanded_low_bit_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @squared_one_demanded_low_bit_splat(
-; CHECK-NEXT:    [[AND:%.*]] = or <2 x i8> [[X:%.*]], <i8 -2, i8 -2>
+; CHECK-NEXT:    [[AND:%.*]] = or <2 x i8> [[X:%.*]], splat (i8 -2)
 ; CHECK-NEXT:    ret <2 x i8> [[AND]]
 ;
   %mul = mul <2 x i8> %x, %x
@@ -154,8 +154,8 @@ define i33 @squared_demanded_2_low_bits(i33 %x) {
 
 define <2 x i8> @squared_demanded_2_low_bits_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @squared_demanded_2_low_bits_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 1, i8 1>
-; CHECK-NEXT:    [[AND:%.*]] = or disjoint <2 x i8> [[TMP1]], <i8 -4, i8 -4>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 1)
+; CHECK-NEXT:    [[AND:%.*]] = or disjoint <2 x i8> [[TMP1]], splat (i8 -4)
 ; CHECK-NEXT:    ret <2 x i8> [[AND]]
 ;
   %mul = mul <2 x i8> %x, %x
@@ -182,7 +182,7 @@ define i33 @squared_demanded_3_low_bits(i33 %x) {
 define i64 @scalar_mul_bit_x0_y0(i64 %x, i64 %y) {
 ; CHECK-LABEL: @scalar_mul_bit_x0_y0(
 ; CHECK-NEXT:    [[AND2:%.*]] = and i64 [[Y:%.*]], 1
-; CHECK-NEXT:    [[MUL:%.*]] = and i64 [[AND2]], [[X:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = and i64 [[X:%.*]], [[AND2]]
 ; CHECK-NEXT:    ret i64 [[MUL]]
 ;
   %and1 = and i64 %x, 1
@@ -199,7 +199,7 @@ define i64 @scalar_mul_bit_x0_y0_uses(i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @use(i64 [[AND1]])
 ; CHECK-NEXT:    [[AND2:%.*]] = and i64 [[Y:%.*]], 1
 ; CHECK-NEXT:    call void @use(i64 [[AND2]])
-; CHECK-NEXT:    [[MUL:%.*]] = and i64 [[AND2]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = and i64 [[X]], [[AND2]]
 ; CHECK-NEXT:    ret i64 [[MUL]]
 ;
   %and1 = and i64 %x, 1
@@ -214,9 +214,8 @@ define i64 @scalar_mul_bit_x0_y0_uses(i64 %x, i64 %y) {
 define i64 @scalar_mul_bit_x0_y1(i64 %x, i64 %y) {
 ; CHECK-LABEL: @scalar_mul_bit_x0_y1(
 ; CHECK-NEXT:    [[AND2:%.*]] = and i64 [[Y:%.*]], 2
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[X:%.*]], 1
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i64 [[TMP1]], 0
-; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[DOTNOT]], i64 0, i64 [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X:%.*]] to i1
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[TMP1]], i64 [[AND2]], i64 0
 ; CHECK-NEXT:    ret i64 [[MUL]]
 ;
   %and1 = and i64 %x, 1
@@ -228,9 +227,8 @@ define i64 @scalar_mul_bit_x0_y1(i64 %x, i64 %y) {
 define i64 @scalar_mul_bit_x0_yC(i64 %x, i64 %y, i64 %c) {
 ; CHECK-LABEL: @scalar_mul_bit_x0_yC(
 ; CHECK-NEXT:    [[AND2:%.*]] = and i64 [[Y:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[X:%.*]], 1
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i64 [[TMP1]], 0
-; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[DOTNOT]], i64 0, i64 [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X:%.*]] to i1
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[TMP1]], i64 [[AND2]], i64 0
 ; CHECK-NEXT:    ret i64 [[MUL]]
 ;
   %and1 = and i64 %x, 1
@@ -242,8 +240,8 @@ define i64 @scalar_mul_bit_x0_yC(i64 %x, i64 %y, i64 %c) {
 ; Vector tests
 define <2 x i64> @vector_mul_bit_x0_y0(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: @vector_mul_bit_x0_y0(
-; CHECK-NEXT:    [[AND2:%.*]] = and <2 x i64> [[Y:%.*]], <i64 1, i64 1>
-; CHECK-NEXT:    [[MUL:%.*]] = and <2 x i64> [[AND2]], [[X:%.*]]
+; CHECK-NEXT:    [[AND2:%.*]] = and <2 x i64> [[Y:%.*]], splat (i64 1)
+; CHECK-NEXT:    [[MUL:%.*]] = and <2 x i64> [[X:%.*]], [[AND2]]
 ; CHECK-NEXT:    ret <2 x i64> [[MUL]]
 ;
   %and1 = and <2 x i64> %x, <i64 1, i64 1>

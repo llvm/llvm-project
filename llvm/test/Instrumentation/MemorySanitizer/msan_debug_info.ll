@@ -542,7 +542,7 @@ define void @VAStart(i32 %x, ...) sanitize_memory {
 ; CHECK-NEXT:    [[TMP29:%.*]] = add i64 [[TMP27]], 17592186044416, !dbg [[DBG11]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = inttoptr i64 [[TMP29]] to ptr, !dbg [[DBG11]]
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP28]], i8 0, i64 24, i1 false), !dbg [[DBG11]]
-; CHECK-NEXT:    call void @llvm.va_start(ptr [[VA]]), !dbg [[DBG11]]
+; CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[VA]]), !dbg [[DBG11]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = ptrtoint ptr [[VA]] to i64, !dbg [[DBG11]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = add i64 [[TMP31]], 16, !dbg [[DBG11]]
 ; CHECK-NEXT:    [[TMP33:%.*]] = inttoptr i64 [[TMP32]] to ptr, !dbg [[DBG11]]

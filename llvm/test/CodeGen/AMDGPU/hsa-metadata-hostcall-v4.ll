@@ -1,5 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck --check-prefix=CHECK %s
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -passes=amdgpu-attributor -o %t.bc %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj < %t.bc | llvm-readelf --notes - | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %t.bc | FileCheck --check-prefix=CHECK %s
 
 declare void @function1()
 
@@ -296,4 +297,4 @@ attributes #3 = { "amdgpu-implicitarg-num-bytes"="48" "amdgpu-no-hostcall-ptr" }
 attributes #4 = { noinline }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

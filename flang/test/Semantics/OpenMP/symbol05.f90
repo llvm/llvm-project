@@ -15,10 +15,10 @@ contains
     !DEF: /mm/foo/a ObjectEntity INTEGER(4)
     integer :: a = 3
     !$omp parallel
-    !REF: /mm/foo/a
+    !DEF: /mm/foo/OtherConstruct1/a HostAssoc INTEGER(4)
     a = 1
     !DEF: /mm/i PUBLIC (Implicit, OmpThreadprivate) ObjectEntity INTEGER(4)
-    !REF: /mm/foo/a
+    !REF: /mm/foo/OtherConstruct1/a
     i = a
     !$omp end parallel
     !REF: /mm/foo/a

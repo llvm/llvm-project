@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner < %s
+; RUN: llc -mtriple=hexagon -enable-pipeliner < %s
 ; REQUIRES: asserts
 
 ; This test check that a dependence is created between a Phi and it's uses.

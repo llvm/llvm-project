@@ -27,7 +27,7 @@ define void @f1() {
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[T0]], i64 2
 ; CHECK-NEXT:    br label [[FOR_BODY_LVER_CHECK:%.*]]
 ; CHECK:       for.body.lver.check:
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[T0]], getelementptr inbounds (i16, ptr @b, i64 1)
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[T0]], getelementptr inbounds nuw (i8, ptr @b, i64 2)
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr @b, [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH:%.*]]
@@ -44,8 +44,8 @@ define void @f1() {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[T1:%.*]] = phi i64 [ 0, [[FOR_BODY_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[T2:%.*]] = load i16, ptr @b, align 1, !tbaa [[TBAA2]], !alias.scope !6
-; CHECK-NEXT:    store i16 [[T2]], ptr [[T0]], align 1, !tbaa [[TBAA2]], !alias.scope !9, !noalias !6
+; CHECK-NEXT:    [[T2:%.*]] = load i16, ptr @b, align 1, !tbaa [[TBAA2]], !alias.scope [[META6:![0-9]+]]
+; CHECK-NEXT:    store i16 [[T2]], ptr [[T0]], align 1, !tbaa [[TBAA2]], !alias.scope [[META9:![0-9]+]], !noalias [[META6]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[T1]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 3
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT1:%.*]]

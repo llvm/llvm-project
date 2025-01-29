@@ -143,6 +143,7 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
       TEMPLATE_ARGUMENT_KIND(Declaration);
       TEMPLATE_ARGUMENT_KIND(Template);
       TEMPLATE_ARGUMENT_KIND(TemplateExpansion);
+      TEMPLATE_ARGUMENT_KIND(StructuralValue);
 #undef TEMPLATE_ARGUMENT_KIND
     }
     llvm_unreachable("Unhandled ArgKind enum");
@@ -186,6 +187,7 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
       TEMPLATE_KIND(SubstTemplateTemplateParm);
       TEMPLATE_KIND(SubstTemplateTemplateParmPack);
       TEMPLATE_KIND(UsingTemplate);
+      TEMPLATE_KIND(DeducedTemplate);
 #undef TEMPLATE_KIND
     }
     llvm_unreachable("Unhandled NameKind enum");

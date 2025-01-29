@@ -9,7 +9,9 @@
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Target/ABI.h"
+#include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -33,6 +35,20 @@ bool OptionArgParser::ToBoolean(llvm::StringRef ref, bool fail_value,
   return fail_value;
 }
 
+llvm::Expected<bool> OptionArgParser::ToBoolean(llvm::StringRef option_name,
+                                                llvm::StringRef option_arg) {
+  bool parse_success;
+  const bool option_value =
+      ToBoolean(option_arg, false /* doesn't matter */, &parse_success);
+  if (parse_success)
+    return option_value;
+  else
+    return llvm::createStringError(
+        "Invalid boolean value for option '%s': '%s'",
+        option_name.str().c_str(),
+        option_arg.empty() ? "<null>" : option_arg.str().c_str());
+}
+
 char OptionArgParser::ToChar(llvm::StringRef s, char fail_value,
                              bool *success_ptr) {
   if (success_ptr)
@@ -50,12 +66,12 @@ int64_t OptionArgParser::ToOptionEnum(llvm::StringRef s,
                                       int32_t fail_value, Status &error) {
   error.Clear();
   if (enum_values.empty()) {
-    error.SetErrorString("invalid enumeration argument");
+    error = Status::FromErrorString("invalid enumeration argument");
     return fail_value;
   }
 
   if (s.empty()) {
-    error.SetErrorString("empty enumeration string");
+    error = Status::FromErrorString("empty enumeration string");
     return fail_value;
   }
 
@@ -72,7 +88,7 @@ int64_t OptionArgParser::ToOptionEnum(llvm::StringRef s,
     strm.Printf("%s\"%s\"",
         is_first ? is_first = false,"" : ", ", enum_value.string_value);
   }
-  error.SetErrorString(strm.GetString());
+  error = Status(strm.GetString().str());
   return fail_value;
 }
 
@@ -93,8 +109,7 @@ Status OptionArgParser::ToFormat(const char *s, lldb::Format &format,
         *byte_size_ptr = 0;
     }
 
-    const bool partial_match_ok = true;
-    if (!FormatManager::GetFormatFromCString(s, partial_match_ok, format)) {
+    if (!FormatManager::GetFormatFromCString(s, format)) {
       StreamString error_strm;
       error_strm.Printf(
           "Invalid format character or name '%s'. Valid values are:\n", s);
@@ -110,13 +125,14 @@ Status OptionArgParser::ToFormat(const char *s, lldb::Format &format,
       if (byte_size_ptr)
         error_strm.PutCString(
             "An optional byte size can precede the format character.\n");
-      error.SetErrorString(error_strm.GetString());
+      error = Status(error_strm.GetString().str());
     }
 
     if (error.Fail())
       return error;
   } else {
-    error.SetErrorStringWithFormat("%s option string", s ? "empty" : "invalid");
+    error = Status::FromErrorStringWithFormat("%s option string",
+                                              s ? "empty" : "invalid");
   }
   return error;
 }
@@ -170,8 +186,8 @@ OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
                              Status *error_ptr) {
   if (s.empty()) {
     if (error_ptr)
-      error_ptr->SetErrorStringWithFormat("invalid address expression \"%s\"",
-                                          s.str().c_str());
+      *error_ptr = Status::FromErrorStringWithFormat(
+          "invalid address expression \"%s\"", s.str().c_str());
     return {};
   }
 
@@ -195,8 +211,8 @@ OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
   Target *target = nullptr;
   if (!exe_ctx || !(target = exe_ctx->GetTargetPtr())) {
     if (error_ptr)
-      error_ptr->SetErrorStringWithFormat("invalid address expression \"%s\"",
-                                          s.str().c_str());
+      *error_ptr = Status::FromErrorStringWithFormat(
+          "invalid address expression \"%s\"", s.str().c_str());
     return {};
   }
 
@@ -224,7 +240,7 @@ OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
       return addr;
     }
     if (error_ptr)
-      error_ptr->SetErrorStringWithFormat(
+      *error_ptr = Status::FromErrorStringWithFormat(
           "address expression \"%s\" resulted in a value whose type "
           "can't be converted to an address: %s",
           s.str().c_str(), valobj_sp->GetTypeName().GetCString());
@@ -234,28 +250,72 @@ OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
   // Since the compiler can't handle things like "main + 12" we should try to
   // do this for now. The compiler doesn't like adding offsets to function
   // pointer types.
+  // Some languages also don't have a natural representation for register
+  // values (e.g. swift) so handle simple uses of them here as well.
+  // We use a regex to parse these forms, the regex handles:
+  // $reg_name
+  // $reg_name+offset
+  // symbol_name+offset
+  //
+  // The important matching elements in the regex below are:
+  // 1: The reg name if there's no +offset
+  // 3: The symbol/reg name if there is an offset
+  // 4: +/-
+  // 5: The offset value.
   static RegularExpression g_symbol_plus_offset_regex(
-      "^(.*)([-\\+])[[:space:]]*(0x[0-9A-Fa-f]+|[0-9]+)[[:space:]]*$");
+      "^(\\$[^ +-]+)|(([^ +-]+)([-\\+])[[:space:]]*(0x[0-9A-Fa-f]+|[0-9]+)[[:space:]]*)$");
 
   llvm::SmallVector<llvm::StringRef, 4> matches;
   if (g_symbol_plus_offset_regex.Execute(sref, &matches)) {
     uint64_t offset = 0;
-    llvm::StringRef name = matches[1];
-    llvm::StringRef sign = matches[2];
-    llvm::StringRef str_offset = matches[3];
-    if (!str_offset.getAsInteger(0, offset)) {
+    llvm::StringRef name;
+    if (!matches[1].empty())
+      name = matches[1];
+    else
+      name = matches[3];
+
+    llvm::StringRef sign = matches[4];
+    llvm::StringRef str_offset = matches[5];
+
+    // Some languages don't have a natural type for register values, but it
+    // is still useful to look them up here:
+    std::optional<lldb::addr_t> register_value;
+    StackFrame *frame = exe_ctx->GetFramePtr();
+    llvm::StringRef reg_name = name;
+    if (frame && reg_name.consume_front("$")) {
+      RegisterContextSP reg_ctx_sp = frame->GetRegisterContext();
+      if (reg_ctx_sp) {
+        const RegisterInfo *reg_info = reg_ctx_sp->GetRegisterInfoByName(reg_name);
+        if (reg_info) {
+          RegisterValue reg_val;
+          bool success = reg_ctx_sp->ReadRegister(reg_info, reg_val);
+          if (success && reg_val.GetType() != RegisterValue::eTypeInvalid) {
+            register_value = reg_val.GetAsUInt64(0, &success);
+            if (!success)
+              register_value.reset();
+          }
+        }
+      } 
+    }
+    if (!str_offset.empty() && !str_offset.getAsInteger(0, offset)) {
       Status error;
-      addr = ToAddress(exe_ctx, name, LLDB_INVALID_ADDRESS, &error);
+      if (register_value)
+        addr = register_value.value();
+      else
+        addr = ToAddress(exe_ctx, name, LLDB_INVALID_ADDRESS, &error);
       if (addr != LLDB_INVALID_ADDRESS) {
         if (sign[0] == '+')
           return addr + offset;
         return addr - offset;
       }
-    }
+    } else if (register_value)
+      // In the case of register values, someone might just want to get the 
+      // value in a language whose expression parser doesn't support registers.
+      return register_value.value();
   }
 
   if (error_ptr)
-    error_ptr->SetErrorStringWithFormat(
+    *error_ptr = Status::FromErrorStringWithFormat(
         "address expression \"%s\" evaluation failed", s.str().c_str());
   return {};
 }

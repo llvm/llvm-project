@@ -1,13 +1,14 @@
-// RUN: %clang_analyze_cc1 -triple i686-unknown-linux -analyzer-checker=alpha.security.MmapWriteExec -analyzer-config alpha.security.MmapWriteExec:MmapProtExec=1 -analyzer-config alpha.security.MmapWriteExec:MmapProtRead=4 -DUSE_ALTERNATIVE_PROT_EXEC_DEFINITION -verify %s
-// RUN: %clang_analyze_cc1 -triple x86_64-unknown-apple-darwin10 -analyzer-checker=alpha.security.MmapWriteExec -verify %s
+// RUN: %clang_analyze_cc1 -triple i686-unknown-linux -analyzer-checker=security.MmapWriteExec -DUSE_ALTERNATIVE_PROT_EXEC_DEFINITION -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-unknown-apple-darwin10 -analyzer-checker=security.MmapWriteExec -verify %s
 
-#define PROT_WRITE  0x02
 #ifndef USE_ALTERNATIVE_PROT_EXEC_DEFINITION
-#define PROT_EXEC   0x04
-#define PROT_READ   0x01
-#else
 #define PROT_EXEC   0x01
+#define PROT_WRITE  0x02
 #define PROT_READ   0x04
+#else
+#define PROT_EXEC   0x08
+#define PROT_WRITE  0x04
+#define PROT_READ   0x02
 #endif
 #define MAP_PRIVATE 0x0002
 #define MAP_ANON    0x1000

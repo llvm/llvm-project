@@ -204,8 +204,9 @@ define void @ctpop_i32() {
 ; CHECK-SDAG-NEXT:    ldr w9, [x8]
 ; CHECK-SDAG-NEXT:    fmov d0, x9
 ; CHECK-SDAG-NEXT:    cnt v0.8b, v0.8b
-; CHECK-SDAG-NEXT:    uaddlv h0, v0.8b
-; CHECK-SDAG-NEXT:    str s0, [x8]
+; CHECK-SDAG-NEXT:    addv b0, v0.8b
+; CHECK-SDAG-NEXT:    fmov w9, s0
+; CHECK-SDAG-NEXT:    str w9, [x8]
 ; CHECK-SDAG-NEXT:    ret
 ;
 ; CHECK-GISEL-LABEL: ctpop_i32:
@@ -224,35 +225,29 @@ define void @ctpop_i32() {
   ret void
 }
 
-define void @ctpop_i64() {
-; CHECK-SDAG-LABEL: ctpop_i64:
+define i64 @popcnt(i64 %a, ptr %p) {
+; CHECK-SDAG-LABEL: popcnt:
 ; CHECK-SDAG:       // %bb.0:
-; CHECK-SDAG-NEXT:    adrp x8, :got:var64
-; CHECK-SDAG-NEXT:    ldr x8, [x8, :got_lo12:var64]
-; CHECK-SDAG-NEXT:    ldr d0, [x8]
+; CHECK-SDAG-NEXT:    fmov d0, x0
+; CHECK-SDAG-NEXT:    mov x0, xzr
 ; CHECK-SDAG-NEXT:    cnt v0.8b, v0.8b
-; CHECK-SDAG-NEXT:    uaddlv h0, v0.8b
-; CHECK-SDAG-NEXT:    fmov w9, s0
-; CHECK-SDAG-NEXT:    str x9, [x8]
+; CHECK-SDAG-NEXT:    addv b0, v0.8b
+; CHECK-SDAG-NEXT:    str d0, [x1]
 ; CHECK-SDAG-NEXT:    ret
 ;
-; CHECK-GISEL-LABEL: ctpop_i64:
+; CHECK-GISEL-LABEL: popcnt:
 ; CHECK-GISEL:       // %bb.0:
-; CHECK-GISEL-NEXT:    adrp x8, :got:var64
-; CHECK-GISEL-NEXT:    ldr x8, [x8, :got_lo12:var64]
-; CHECK-GISEL-NEXT:    ldr x9, [x8]
-; CHECK-GISEL-NEXT:    fmov d0, x9
+; CHECK-GISEL-NEXT:    fmov d0, x0
+; CHECK-GISEL-NEXT:    mov x0, xzr
 ; CHECK-GISEL-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-GISEL-NEXT:    uaddlv h0, v0.8b
-; CHECK-GISEL-NEXT:    fmov w9, s0
-; CHECK-GISEL-NEXT:    str x9, [x8]
+; CHECK-GISEL-NEXT:    mov w8, v0.s[0]
+; CHECK-GISEL-NEXT:    str x8, [x1]
 ; CHECK-GISEL-NEXT:    ret
-  %val0_tmp = load i64, ptr @var64
-  %val4_tmp = call i64 @llvm.ctpop.i64(i64 %val0_tmp)
-  store volatile i64 %val4_tmp, ptr @var64
-  ret void
+  %2 = call i64 @llvm.ctpop(i64 %a)
+  store i64 %2, ptr %p
+  ret i64 0
 }
-
 
 declare i32 @llvm.bswap.i32(i32)
 declare i64 @llvm.bswap.i64(i64)

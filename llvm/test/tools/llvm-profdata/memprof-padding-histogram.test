@@ -1,0 +1,99 @@
+REQUIRES: x86_64-linux
+
+To update the inputs used below run Inputs/update_memprof_inputs.sh /path/to/updated/clang
+RUN: llvm-profdata show --memory %p/Inputs/padding-histogram.memprofraw --profiled-binary %p/Inputs/padding-histogram.memprofexe -o - | FileCheck %s
+
+We expect 2 different MIBs with histogram values. This test is to make sure we properly deal with padding.
+
+CHECK: MemprofProfile:
+CHECK-NEXT:   Summary:
+CHECK-NEXT:     Version: 4
+CHECK-NEXT:     NumSegments: {{[0-9]+}}
+CHECK-NEXT:     NumMibInfo: 2
+CHECK-NEXT:     NumAllocFunctions: 1
+CHECK-NEXT:     NumStackOffsets: 2
+CHECK-NEXT:   Segments:
+CHECK-NEXT:   -
+CHECK-NEXT:     BuildId: {{[[:xdigit:]]+}}
+CHECK-NEXT:     Start: 0x{{[[:xdigit:]]+}}
+CHECK-NEXT:     End: 0x{{[[:xdigit:]]+}}
+CHECK-NEXT:     Offset: 0x{{[[:xdigit:]]+}}
+CHECK-NEXT:   -
+
+CHECK:   Records:
+CHEC-NEXT    FunctionGUID: {{[0-9]+}}
+CHEC-NEXT    AllocSites:
+CHEC-NEXT    -
+CHEC-NEXT      Callstack:
+CHEC-NEXT      -
+CHEC-NEXT        Function: {{[0-9]+}}
+CHEC-NEXT        SymbolName: main
+CHEC-NEXT        LineOffset: 3
+CHEC-NEXT        Column: 10
+CHEC-NEXT        Inline: 0
+CHEC-NEXT      MemInfoBlock:
+CHEC-NEXT        AllocCount: 1
+CHEC-NEXT        TotalAccessCount: 5
+CHEC-NEXT        MinAccessCount: 5
+CHEC-NEXT        MaxAccessCount: 5
+CHEC-NEXT        TotalSize: 24
+CHEC-NEXT        MinSize: 24
+CHEC-NEXT        MaxSize: 24
+CHEC-NEXT        AllocTimestamp: {{[0-9]+}}
+CHEC-NEXT        DeallocTimestamp: {{[0-9]+}}
+CHEC-NEXT        TotalLifetime: 0
+CHEC-NEXT        MinLifetime: 0
+CHEC-NEXT        MaxLifetime: 0
+CHEC-NEXT        AllocCpuId: 11
+CHEC-NEXT        DeallocCpuId: 11
+CHEC-NEXT        NumMigratedCpu: 0
+CHEC-NEXT        NumLifetimeOverlaps: 0
+CHEC-NEXT        NumSameAllocCpu: 0
+CHEC-NEXT        NumSameDeallocCpu: 0
+CHEC-NEXT        DataTypeId: 0
+CHEC-NEXT        TotalAccessDensity: 20
+CHEC-NEXT        MinAccessDensity: 20
+CHEC-NEXT        MaxAccessDensity: 20
+CHEC-NEXT        TotalLifetimeAccessDensity: 20000
+CHEC-NEXT        MinLifetimeAccessDensity: 20000
+CHEC-NEXT        MaxLifetimeAccessDensity: 20000
+CHEC-NEXT        AccessHistogramSize: 3
+CHEC-NEXT        AccessHistogram: {{[0-9]+}}
+CHEC-NEXT        AccessHistogramValues: -2 -1 -2
+CHEC-NEXT    -
+CHEC-NEXT      Callstack:
+CHEC-NEXT      -
+CHEC-NEXT        Function: {{[0-9]+}}
+CHEC-NEXT        SymbolName: main
+CHEC-NEXT        LineOffset: 10
+CHEC-NEXT        Column: 10
+CHEC-NEXT        Inline: 0
+CHEC-NEXT      MemInfoBlock:
+CHEC-NEXT        AllocCount: 1
+CHEC-NEXT        TotalAccessCount: 4
+CHEC-NEXT        MinAccessCount: 4
+CHEC-NEXT        MaxAccessCount: 4
+CHEC-NEXT        TotalSize: 48
+CHEC-NEXT        MinSize: 48
+CHEC-NEXT        MaxSize: 48
+CHEC-NEXT        AllocTimestamp: {{[0-9]+}}
+CHEC-NEXT        DeallocTimestamp: {{[0-9]+}}
+CHEC-NEXT        TotalLifetime: 0
+CHEC-NEXT        MinLifetime: 0
+CHEC-NEXT        MaxLifetime: 0
+CHEC-NEXT        AllocCpuId: 11
+CHEC-NEXT        DeallocCpuId: 11
+CHEC-NEXT        NumMigratedCpu: 0
+CHEC-NEXT        NumLifetimeOverlaps: 0
+CHEC-NEXT        NumSameAllocCpu: 0
+CHEC-NEXT        NumSameDeallocCpu: 0
+CHEC-NEXT        DataTypeId: 0
+CHEC-NEXT        TotalAccessDensity: 8
+CHEC-NEXT        MinAccessDensity: 8
+CHEC-NEXT        MaxAccessDensity: 8
+CHEC-NEXT        TotalLifetimeAccessDensity: 8000
+CHEC-NEXT        MinLifetimeAccessDensity: 8000
+CHEC-NEXT        MaxLifetimeAccessDensity: 8000
+CHEC-NEXT        AccessHistogramSize: 6
+CHEC-NEXT        AccessHistogram: {{[0-9]+}}
+CHEC-NEXT        AccessHistogramValues: -2 -0 -0 -0 -1 -1

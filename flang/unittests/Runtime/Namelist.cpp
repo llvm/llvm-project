@@ -10,7 +10,7 @@
 #include "CrashHandlerFixture.h"
 #include "tools.h"
 #include "flang/Runtime/descriptor.h"
-#include "flang/Runtime/io-api.h"
+#include "flang/Runtime/io-api-consts.h"
 #include <algorithm>
 #include <cinttypes>
 #include <complex>
@@ -88,7 +88,7 @@ TEST(NamelistTests, BasicSanity) {
   ASSERT_EQ(outStatus1, 0) << "Failed namelist output sanity, status "
                            << static_cast<int>(outStatus1);
 
-  static const std::string expect{"&GROUP1 INTS= 1 -2 4 -8 16 -32  "
+  static const std::string expect{" &GROUP1 INTS= 1 -2 4 -8 16 -32 "
                                   " 64 -128 256 -512 1024 -2048    "
                                   " 4096 -8192 16384 -32768 65536  "
                                   " -131072 262144 -524288,REALS=  "
@@ -157,7 +157,7 @@ TEST(NamelistTests, Subscripts) {
       << "Failed namelist output subscripts rewrite, status "
       << static_cast<int>(outStatus);
   std::string got{out, sizeof out};
-  static const std::string expect{"&JUSTA A= 0 2 0 0 0 1/                  "};
+  static const std::string expect{" &JUSTA A= 0 2 0 0 0 1/                 "};
   EXPECT_EQ(got, expect);
 }
 
@@ -213,7 +213,7 @@ TEST(NamelistTests, ScalarSubstring) {
   ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
   ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
   std::string got{out, sizeof out};
-  static const std::string expect{"&JUSTA A= 'aBCDEfgh'/           "};
+  static const std::string expect{" &JUSTA A= 'aBCDEfgh'/          "};
   EXPECT_EQ(got, expect);
 }
 
@@ -242,7 +242,7 @@ TEST(NamelistTests, ArraySubstring) {
   ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
   ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
   std::string got{out, sizeof out};
-  static const std::string expect{"&JUSTA A= 'aBCDEfgh' 'iJKLMnop'/        "};
+  static const std::string expect{" &JUSTA A= 'aBCDEfgh' 'iJKLMnop'/       "};
   EXPECT_EQ(got, expect);
 }
 
@@ -270,7 +270,7 @@ TEST(NamelistTests, Skip) {
   ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
   ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
   std::string got{out, sizeof out};
-  static const std::string expect{"&NML J= 123/        "};
+  static const std::string expect{" &NML J= 123/       "};
   EXPECT_EQ(got, expect);
 }
 
@@ -301,7 +301,36 @@ TEST(NamelistTests, Comma) {
   ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
   ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
   std::string got{out, sizeof out};
-  static const std::string expect{"&NML Z= (-1,;2,) (-3,;,5)/    "};
+  static const std::string expect{" &NML Z= (-1,;2,) (-3,;,5)/   "};
+  EXPECT_EQ(got, expect);
+}
+
+// Tests REAL-looking input to integers
+TEST(NamelistTests, RealValueForInt) {
+  OwningPtr<Descriptor> scDesc{
+      MakeArray<TypeCategory::Integer, static_cast<int>(sizeof(int))>(
+          std::vector<int>{}, std::vector<int>{{}})};
+  const NamelistGroup::Item items[]{{"j", *scDesc}};
+  const NamelistGroup group{"nml", 1, items};
+  static char t1[]{"&nml j=123.456/"};
+  StaticDescriptor<1, true> statDesc;
+  Descriptor &internalDesc{statDesc.descriptor()};
+  internalDesc.Establish(TypeCode{CFI_type_char},
+      /*elementBytes=*/std::strlen(t1), t1, 0, nullptr, CFI_attribute_pointer);
+  auto inCookie{IONAME(BeginInternalArrayListInput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(InputNamelist)(inCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(inCookie), IostatOk)
+      << "namelist real input for integer";
+  char out[16];
+  internalDesc.Establish(TypeCode{CFI_type_char}, /*elementBytes=*/sizeof out,
+      out, 0, nullptr, CFI_attribute_pointer);
+  auto outCookie{IONAME(BeginInternalArrayListOutput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
+  std::string got{out, sizeof out};
+  static const std::string expect{" &NML J= 123/   "};
   EXPECT_EQ(got, expect);
 }
 

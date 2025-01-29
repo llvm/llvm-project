@@ -1,4 +1,5 @@
 # RUN: llvm-mc -triple=amdgcn -mcpu=gfx940 -disassemble -show-encoding %s | FileCheck -strict-whitespace --check-prefix=GFX940 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx950 -disassemble -show-encoding %s | FileCheck -strict-whitespace --check-prefix=GFX940 %s
 
 # GFX940: global_load_dword v2, v[2:3], off sc0   ; encoding: [0x00,0x80,0x51,0xdc,0x02,0x00,0x7f,0x02]
 0x00,0x80,0x51,0xdc,0x02,0x00,0x7f,0x02

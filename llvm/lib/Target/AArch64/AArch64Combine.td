@@ -13,14 +13,14 @@ include "llvm/Target/GlobalISel/Combine.td"
 
 def fconstant_to_constant : GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_FCONSTANT):$root,
+  (match (G_FCONSTANT $dst, $src):$root,
          [{ return matchFConstantToConstant(*${root}, MRI); }]),
   (apply [{ applyFConstantToConstant(*${root}); }])>;
 
 def icmp_redundant_trunc_matchdata : GIDefMatchData<"Register">;
 def icmp_redundant_trunc : GICombineRule<
   (defs root:$root, icmp_redundant_trunc_matchdata:$matchinfo),
-  (match (wip_match_opcode G_ICMP):$root,
+  (match (G_ICMP $dst, $tst, $src1, $src2):$root,
          [{ return matchICmpRedundantTrunc(*${root}, MRI, Helper.getKnownBits(), ${matchinfo}); }]),
   (apply [{ applyICmpRedundantTrunc(*${root}, MRI, B, Observer, ${matchinfo}); }])>;
 
@@ -44,13 +44,39 @@ def ext_addv_to_udot_addv : GICombineRule<
 >;
 }
 
+def ext_uaddv_to_uaddlv_matchinfo : GIDefMatchData<"std::pair<Register, bool>">;
+def ext_uaddv_to_uaddlv : GICombineRule<
+  (defs root:$root, ext_uaddv_to_uaddlv_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_VECREDUCE_ADD):$root,
+         [{ return matchExtUaddvToUaddlv(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyExtUaddvToUaddlv(*${root}, MRI, B, Observer, ${matchinfo}); }])
+>;
+
+class push_opcode_through_ext<Instruction opcode, Instruction extOpcode> : GICombineRule <
+  (defs root:$root),
+  (match (extOpcode $ext1, $src1):$ExtMI,
+         (extOpcode $ext2, $src2),
+         (opcode $dst, $ext1, $ext2):$root,
+         [{ return matchPushAddSubExt(*${root}, MRI, ${dst}.getReg(), ${src1}.getReg(), ${src2}.getReg()); }]),
+  (apply [{ applyPushAddSubExt(*${root}, MRI, B, ${ExtMI}->getOpcode() == TargetOpcode::G_SEXT, ${dst}.getReg(), ${src1}.getReg(), ${src2}.getReg()); }])>;
+
+def push_sub_through_zext : push_opcode_through_ext<G_SUB, G_ZEXT>;
+def push_add_through_zext : push_opcode_through_ext<G_ADD, G_ZEXT>;
+def push_sub_through_sext : push_opcode_through_ext<G_SUB, G_SEXT>;
+def push_add_through_sext : push_opcode_through_ext<G_ADD, G_SEXT>;
+
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
                                       fconstant_to_constant,
                                       icmp_redundant_trunc,
                                       fold_global_offset,
                                       shuffle_to_extract,
-                                      ext_addv_to_udot_addv]> {
+                                      ext_addv_to_udot_addv,
+                                      ext_uaddv_to_uaddlv,
+                                      push_sub_through_zext,
+                                      push_add_through_zext,
+                                      push_sub_through_sext,
+                                      push_add_through_sext]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
@@ -105,6 +131,22 @@ def ext: GICombineRule <
   (apply [{ applyEXT(*${root}, ${matchinfo}); }])
 >;
 
+def fullrev: GICombineRule <
+  (defs root:$root, shuffle_matchdata:$matchinfo),
+  (match (G_IMPLICIT_DEF $src2),
+         (G_SHUFFLE_VECTOR $src, $src1, $src2, $mask):$root,
+         [{ return ShuffleVectorInst::isReverseMask(${mask}.getShuffleMask(),
+                                                    ${mask}.getShuffleMask().size()); }]),
+  (apply [{ applyFullRev(*${root}, MRI); }])
+>;
+
+def insertelt_nonconst: GICombineRule <
+  (defs root:$root, shuffle_matchdata:$matchinfo),
+  (match (wip_match_opcode G_INSERT_VECTOR_ELT):$root,
+         [{ return matchNonConstInsert(*${root}, MRI); }]),
+  (apply [{ applyNonConstInsert(*${root}, MRI, B); }])
+>;
+
 def shuf_to_ins_matchdata : GIDefMatchData<"std::tuple<Register, int, Register, int>">;
 def shuf_to_ins: GICombineRule <
   (defs root:$root, shuf_to_ins_matchdata:$matchinfo),
@@ -130,9 +172,8 @@ def form_duplane : GICombineRule <
   (apply [{ applyDupLane(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
-def shuffle_vector_lowering : GICombineGroup<[dup, rev, ext, zip, uzp, trn,
-                                              form_duplane,
-                                              shuf_to_ins]>;
+def shuffle_vector_lowering : GICombineGroup<[dup, rev, ext, zip, uzp, trn, fullrev,
+                                              form_duplane, shuf_to_ins]>;
 
 // Turn G_UNMERGE_VALUES -> G_EXTRACT_VECTOR_ELT's
 def vector_unmerge_lowering : GICombineRule <
@@ -146,14 +187,14 @@ def adjust_icmp_imm_matchdata :
   GIDefMatchData<"std::pair<uint64_t, CmpInst::Predicate>">;
 def adjust_icmp_imm : GICombineRule <
   (defs root:$root, adjust_icmp_imm_matchdata:$matchinfo),
-  (match (wip_match_opcode G_ICMP):$root,
+  (match (G_ICMP $dst, $tst, $src1, $src2):$root,
           [{ return matchAdjustICmpImmAndPred(*${root}, MRI, ${matchinfo}); }]),
   (apply [{ applyAdjustICmpImmAndPred(*${root}, ${matchinfo}, B, Observer); }])
 >;
 
 def swap_icmp_operands : GICombineRule <
   (defs root:$root),
-  (match (wip_match_opcode G_ICMP):$root,
+  (match (G_ICMP $dst, $tst, $src1, $src2):$root,
           [{ return trySwapICmpOperands(*${root}, MRI); }]),
   (apply [{ applySwapICmpOperands(*${root}, Observer); }])
 >;
@@ -190,18 +231,26 @@ def build_vector_to_dup : GICombineRule<
   (apply [{ applyBuildVectorToDup(*${root}, MRI, B); }])
 >;
 
-def build_vector_lowering : GICombineGroup<[build_vector_to_dup]>;
+def build_vector_to_vector_insert : GICombineRule<
+  (defs root:$root),
+  (match (G_BUILD_VECTOR $dst, GIVariadic<>:$unused):$root,
+          [{ return matchLowerBuildToInsertVecElt(*${root}, MRI); }]),
+  (apply [{ applyLowerBuildToInsertVecElt(*${root}, MRI, B); }])
+>;
+
+def build_vector_lowering : GICombineGroup<[build_vector_to_dup,
+                                            build_vector_to_vector_insert]>;
 
 def lower_vector_fcmp : GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_FCMP):$root,
+  (match (G_FCMP $dst, $tst, $src1, $src2):$root,
     [{ return matchLowerVectorFCMP(*${root}, MRI, B); }]),
   (apply [{ applyLowerVectorFCMP(*${root}, MRI, B); }])>;
 
 def form_truncstore_matchdata : GIDefMatchData<"Register">;
 def form_truncstore : GICombineRule<
   (defs root:$root, form_truncstore_matchdata:$matchinfo),
-  (match (wip_match_opcode G_STORE):$root,
+  (match (G_STORE $src, $addr):$root,
           [{ return matchFormTruncstore(*${root}, MRI, ${matchinfo}); }]),
   (apply [{ applyFormTruncstore(*${root}, MRI, B, Observer, ${matchinfo}); }])
 >;
@@ -222,7 +271,7 @@ def mutate_anyext_to_zext : GICombineRule<
 
 def split_store_zero_128 : GICombineRule<
   (defs root:$d),
-  (match (wip_match_opcode G_STORE):$d,
+  (match (G_STORE $src, $addr):$d,
           [{ return matchSplitStoreZero128(*${d}, MRI); }]),
   (apply [{ applySplitStoreZero128(*${d}, MRI, B, Observer); }])
 >;
@@ -245,9 +294,17 @@ def unmerge_ext_to_unmerge : GICombineRule<
 def regtriple_matchdata : GIDefMatchData<"std::tuple<Register, Register, Register>">;
 def or_to_bsp: GICombineRule <
   (defs root:$root, regtriple_matchdata:$matchinfo),
-  (match (wip_match_opcode G_OR):$root,
+  (match (G_OR $dst, $src1, $src2):$root,
          [{ return matchOrToBSP(*${root}, MRI, ${matchinfo}); }]),
   (apply [{ applyOrToBSP(*${root}, MRI, B, ${matchinfo}); }])
+>;
+
+// Combines Mul(And(Srl(X, 15), 0x10001), 0xffff) into CMLTz
+def combine_mul_cmlt : GICombineRule<
+  (defs root:$root, register_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_MUL):$root,
+        [{ return matchCombineMulCMLT(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyCombineMulCMLT(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
 // Post-legalization combines which should happen at all optimization levels.
@@ -260,24 +317,27 @@ def AArch64PostLegalizerLowering
                         lower_vector_fcmp, form_truncstore,
                         vector_sext_inreg_to_shift,
                         unmerge_ext_to_unmerge, lower_mull,
-                        vector_unmerge_lowering]> {
+                        vector_unmerge_lowering, insertelt_nonconst]> {
 }
 
 // Post-legalization combines which are primarily optimizations.
 def AArch64PostLegalizerCombiner
     : GICombiner<"AArch64PostLegalizerCombinerImpl",
-                       [copy_prop, combines_for_extload,
-                        combine_indexed_load_store,
-                        sext_trunc_sextload, mutate_anyext_to_zext,
+                       [copy_prop, cast_of_cast_combines, buildvector_of_truncate,
+                        integer_of_truncate, mutate_anyext_to_zext,
+                        combines_for_extload, combine_indexed_load_store, sext_trunc_sextload,
                         hoist_logic_op_with_same_opcode_hands,
                         redundant_and, xor_of_and_with_same_reg,
                         extractvecelt_pairwise_add, redundant_or,
                         mul_const, redundant_sext_inreg,
                         form_bitfield_extract, rotate_out_of_range,
-                        icmp_to_true_false_known_bits, merge_unmerge,
-                        select_combines, fold_merge_to_zext,
+                        icmp_to_true_false_known_bits, overflow_combines,
+                        select_combines, fold_merge_to_zext, merge_combines,
                         constant_fold_binops, identity_combines,
                         ptr_add_immed_chain, overlapping_and,
                         split_store_zero_128, undef_combines,
-                        select_to_minmax, or_to_bsp]> {
+                        select_to_minmax, or_to_bsp, combine_concat_vector,
+                        commute_constant_to_rhs,
+                        push_freeze_to_prevent_poison_from_propagating,
+                        combine_mul_cmlt, combine_use_vector_truncate]> {
 }

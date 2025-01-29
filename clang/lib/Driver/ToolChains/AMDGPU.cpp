@@ -14,6 +14,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
+#include "clang/Driver/SanitizerArgs.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Error.h"
@@ -209,7 +210,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
   }
 
   // Try to find relative to the compiler binary.
-  const char *InstallDir = D.getInstalledDir();
+  StringRef InstallDir = D.Dir;
 
   // Check both a normal Unix prefix position of the clang binary, as well as
   // the Windows-esque layout the ROCm packages use with the host architecture
@@ -486,10 +487,16 @@ void RocmInstallationDetector::detectHIPRuntime() {
       return newpath;
     };
     // If HIP version file can be found and parsed, use HIP version from there.
-    for (const auto &VersionFilePath :
-         {Append(SharePath, "hip", "version"),
-          Append(ParentSharePath, "hip", "version"),
-          Append(BinPath, ".hipVersion")}) {
+    std::vector<SmallString<0>> VersionFilePaths = {
+        Append(SharePath, "hip", "version"),
+        InstallPath != D.SysRoot + "/usr/local"
+            ? Append(ParentSharePath, "hip", "version")
+            : SmallString<0>(),
+        Append(BinPath, ".hipVersion")};
+
+    for (const auto &VersionFilePath : VersionFilePaths) {
+      if (VersionFilePath.empty())
+        continue;
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> VersionFile =
           FS.getBufferForFile(VersionFilePath);
       if (!VersionFile)
@@ -545,26 +552,35 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
   }
 
   const auto HandleHipStdPar = [=, &DriverArgs, &CC1Args]() {
-    if (!hasHIPStdParLibrary()) {
-      D.Diag(diag::err_drv_no_hipstdpar_lib);
-      return;
-    }
-    if (!HasRocThrustLibrary &&
-        !D.getVFS().exists(getIncludePath() + "/thrust")) {
+    StringRef Inc = getIncludePath();
+    auto &FS = D.getVFS();
+
+    if (!hasHIPStdParLibrary())
+      if (!HIPStdParPathArg.empty() ||
+          !FS.exists(Inc + "/thrust/system/hip/hipstdpar/hipstdpar_lib.hpp")) {
+        D.Diag(diag::err_drv_no_hipstdpar_lib);
+        return;
+      }
+    if (!HasRocThrustLibrary && !FS.exists(Inc + "/thrust")) {
       D.Diag(diag::err_drv_no_hipstdpar_thrust_lib);
       return;
     }
-    if (!HasRocPrimLibrary &&
-        !D.getVFS().exists(getIncludePath() + "/rocprim")) {
+    if (!HasRocPrimLibrary && !FS.exists(Inc + "/rocprim")) {
       D.Diag(diag::err_drv_no_hipstdpar_prim_lib);
       return;
     }
-
     const char *ThrustPath;
     if (HasRocThrustLibrary)
       ThrustPath = DriverArgs.MakeArgString(HIPRocThrustPathArg);
     else
-      ThrustPath = DriverArgs.MakeArgString(getIncludePath() + "/thrust");
+      ThrustPath = DriverArgs.MakeArgString(Inc + "/thrust");
+
+    const char *HIPStdParPath;
+    if (hasHIPStdParLibrary())
+      HIPStdParPath = DriverArgs.MakeArgString(HIPStdParPathArg);
+    else
+      HIPStdParPath = DriverArgs.MakeArgString(StringRef(ThrustPath) +
+                                               "/system/hip/hipstdpar");
 
     const char *PrimPath;
     if (HasRocPrimLibrary)
@@ -573,8 +589,8 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
       PrimPath = DriverArgs.MakeArgString(getIncludePath() + "/rocprim");
 
     CC1Args.append({"-idirafter", ThrustPath, "-idirafter", PrimPath,
-                    "-idirafter", DriverArgs.MakeArgString(HIPStdParPathArg),
-                    "-include", "hipstdpar_lib.hpp"});
+                    "-idirafter", HIPStdParPath, "-include",
+                    "hipstdpar_lib.hpp"});
   };
 
   if (DriverArgs.hasArg(options::OPT_nogpuinc)) {
@@ -602,21 +618,47 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfoList &Inputs,
                                   const ArgList &Args,
                                   const char *LinkingOutput) const {
-
-  std::string Linker = getToolChain().GetProgramPath(getShortName());
+  std::string Linker = getToolChain().GetLinkerPath();
   ArgStringList CmdArgs;
-  CmdArgs.push_back("--no-undefined");
-  CmdArgs.push_back("-shared");
+  if (!Args.hasArg(options::OPT_r)) {
+    CmdArgs.push_back("--no-undefined");
+    CmdArgs.push_back("-shared");
+  }
 
   addLinkerCompressDebugSectionsOption(getToolChain(), Args, CmdArgs);
   Args.AddAllArgs(CmdArgs, options::OPT_L);
+  getToolChain().AddFilePathLibArgs(Args, CmdArgs);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
-  if (C.getDriver().isUsingLTO())
+  if (C.getDriver().isUsingLTO()) {
     addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
                   C.getDriver().getLTOMode() == LTOK_Thin);
-  else if (Args.hasArg(options::OPT_mcpu_EQ))
+  } else if (Args.hasArg(options::OPT_mcpu_EQ)) {
     CmdArgs.push_back(Args.MakeArgString(
-        "-plugin-opt=mcpu=" + Args.getLastArgValue(options::OPT_mcpu_EQ)));
+        "-plugin-opt=mcpu=" +
+        getProcessorFromTargetID(getToolChain().getTriple(),
+                                 Args.getLastArgValue(options::OPT_mcpu_EQ))));
+  }
+
+  // Always pass the target-id features to the LTO job.
+  std::vector<StringRef> Features;
+  getAMDGPUTargetFeatures(C.getDriver(), getToolChain().getTriple(), Args,
+                          Features);
+  if (!Features.empty()) {
+    CmdArgs.push_back(
+        Args.MakeArgString("-plugin-opt=-mattr=" + llvm::join(Features, ",")));
+  }
+
+  if (Args.hasArg(options::OPT_stdlib))
+    CmdArgs.append({"-lc", "-lm"});
+  if (Args.hasArg(options::OPT_startfiles)) {
+    std::optional<std::string> IncludePath = getToolChain().getStdlibPath();
+    if (!IncludePath)
+      IncludePath = "/lib";
+    SmallString<128> P(*IncludePath);
+    llvm::sys::path::append(P, "crt1.o");
+    CmdArgs.push_back(Args.MakeArgString(P));
+  }
+
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
   C.addCommand(std::make_unique<Command>(
@@ -630,7 +672,11 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
                                      std::vector<StringRef> &Features) {
   // Add target ID features to -target-feature options. No diagnostics should
   // be emitted here since invalid target ID is diagnosed at other places.
-  StringRef TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
+  StringRef TargetID;
+  if (Args.hasArg(options::OPT_mcpu_EQ))
+    TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
+  else if (Args.hasArg(options::OPT_march_EQ))
+    TargetID = Args.getLastArgValue(options::OPT_march_EQ);
   if (!TargetID.empty()) {
     llvm::StringMap<bool> FeatureMap;
     auto OptionalGpuArch = parseTargetID(Triple, TargetID, &FeatureMap);
@@ -653,6 +699,10 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
   if (Args.hasFlag(options::OPT_mwavefrontsize64,
                    options::OPT_mno_wavefrontsize64, false))
     Features.push_back("+wavefrontsize64");
+
+  if (Args.hasFlag(options::OPT_mamdgpu_precise_memory_op,
+                   options::OPT_mno_amdgpu_precise_memory_op, false))
+    Features.push_back("+precise-memory");
 
   handleTargetFeaturesGroup(D, Triple, Args, Features,
                             options::OPT_m_amdgpu_Features_Group);
@@ -713,7 +763,7 @@ AMDGPUToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
 
   checkTargetID(*DAL);
 
-  if (!Args.getLastArgValue(options::OPT_x).equals("cl"))
+  if (Args.getLastArgValue(options::OPT_x) != "cl")
     return DAL;
 
   // Phase 1 (.cl -> .bc)
@@ -812,6 +862,12 @@ void AMDGPUToolChain::addClangTargetOptions(
     CC1Args.push_back("-fvisibility=hidden");
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
+}
+
+void AMDGPUToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
+  // AMDGPU does not support atomic lib call. Treat atomic alignment
+  // warnings as errors.
+  CC1Args.push_back("-Werror=atomic-alignment");
 }
 
 StringRef
@@ -917,6 +973,11 @@ void ROCMToolChain::addClangTargetOptions(
       DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
       FastRelaxedMath, CorrectSqrt, ABIVer, false));
 
+  if (getSanitizerArgs(DriverArgs).needsAsanRt()) {
+    CC1Args.push_back("-mlink-bitcode-file");
+    CC1Args.push_back(
+        DriverArgs.MakeArgString(RocmInstallation->getAsanRTLPath()));
+  }
   for (StringRef BCFile : BCLibs) {
     CC1Args.push_back("-mlink-builtin-bitcode");
     CC1Args.push_back(DriverArgs.MakeArgString(BCFile));
@@ -1001,4 +1062,40 @@ ROCMToolChain::getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
   return RocmInstallation->getCommonBitcodeLibs(
       DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
       FastRelaxedMath, CorrectSqrt, ABIVer, isOpenMP);
+}
+
+bool AMDGPUToolChain::shouldSkipSanitizeOption(
+    const ToolChain &TC, const llvm::opt::ArgList &DriverArgs,
+    StringRef TargetID, const llvm::opt::Arg *A) const {
+  // For actions without targetID, do nothing.
+  if (TargetID.empty())
+    return false;
+  Option O = A->getOption();
+  if (!O.matches(options::OPT_fsanitize_EQ))
+    return false;
+
+  if (!DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
+                          options::OPT_fno_gpu_sanitize, true))
+    return true;
+
+  auto &Diags = TC.getDriver().getDiags();
+
+  // For simplicity, we only allow -fsanitize=address
+  SanitizerMask K = parseSanitizerValue(A->getValue(), /*AllowGroups=*/false);
+  if (K != SanitizerKind::Address)
+    return true;
+
+  llvm::StringMap<bool> FeatureMap;
+  auto OptionalGpuArch = parseTargetID(TC.getTriple(), TargetID, &FeatureMap);
+
+  assert(OptionalGpuArch && "Invalid Target ID");
+  (void)OptionalGpuArch;
+  auto Loc = FeatureMap.find("xnack");
+  if (Loc == FeatureMap.end() || !Loc->second) {
+    Diags.Report(
+        clang::diag::warn_drv_unsupported_option_for_offload_arch_req_feature)
+        << A->getAsString(DriverArgs) << TargetID << "xnack+";
+    return true;
+  }
+  return false;
 }

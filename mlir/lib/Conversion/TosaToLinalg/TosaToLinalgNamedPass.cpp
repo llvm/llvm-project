@@ -47,6 +47,9 @@ public:
   }
 
   void runOnOperation() override {
+    TypeConverter converter;
+    tosa::populateTosaTypeConversion(converter);
+
     RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
     target.addLegalDialect<linalg::LinalgDialect, tosa::TosaDialect,
@@ -60,13 +63,15 @@ public:
     target.addIllegalOp<tosa::AvgPool2dOp>();
     target.addIllegalOp<tosa::MatMulOp>();
     target.addIllegalOp<tosa::FullyConnectedOp>();
+    target.addIllegalOp<tosa::TransposeOp>();
 
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
     FunctionOpInterface func = getOperation();
     TosaToLinalgNamedOptions options;
     options.preferConv2DKernelLayoutHWCF = preferConv2DKernelLayoutHWCF;
-    tosa::populateTosaToLinalgNamedConversionPatterns(&patterns, options);
+    tosa::populateTosaToLinalgNamedConversionPatterns(converter, &patterns,
+                                                      options);
     if (failed(applyFullConversion(func, target, std::move(patterns))))
       signalPassFailure();
   }

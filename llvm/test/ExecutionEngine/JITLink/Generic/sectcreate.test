@@ -1,0 +1,16 @@
+# RUN: llc -filetype=obj -o %t.o %S/Inputs/main-ret-0.ll
+# RUN: llvm-jitlink -noexec \
+# RUN:   -sectcreate __data,%S/Inputs/sect@create/sectcreate-data.txt@foo=0 \
+# RUN:   %t.o
+#
+# Use -sectcreate to create a section from a data file.
+
+# Jitlink does not support ARM64 COFF files.
+# UNSUPPORTED: target=aarch64-pc-windows-{{.*}}
+
+# On MinGW targets, when compiling the main() function, it gets
+# an implicitly generated call to __main(), which is missing in
+# this context.
+# XFAIL: target={{.*}}-windows-gnu
+
+# jitlink-check: *{4}foo = 0x2a2a5a5a

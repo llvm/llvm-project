@@ -25,9 +25,10 @@ class AMDGPU final : public TargetInfo {
 private:
   uint32_t calcEFlagsV3() const;
   uint32_t calcEFlagsV4() const;
+  uint32_t calcEFlagsV6() const;
 
 public:
-  AMDGPU();
+  AMDGPU(Ctx &);
   uint32_t calcEFlags() const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
@@ -38,7 +39,7 @@ public:
 };
 } // namespace
 
-AMDGPU::AMDGPU() {
+AMDGPU::AMDGPU(Ctx &ctx) : TargetInfo(ctx) {
   relativeRel = R_AMDGPU_RELATIVE64;
   gotRel = R_AMDGPU_ABS64;
   symbolicRel = R_AMDGPU_ABS64;
@@ -55,7 +56,7 @@ uint32_t AMDGPU::calcEFlagsV3() const {
   for (InputFile *f : ArrayRef(ctx.objectFiles).slice(1)) {
     if (ret == getEFlags(f))
       continue;
-    error("incompatible e_flags: " + toString(f));
+    ErrAlways(ctx) << "incompatible e_flags: " << f;
     return 0;
   }
   return ret;
@@ -72,7 +73,7 @@ uint32_t AMDGPU::calcEFlagsV4() const {
   // features in the same category are either ANY, ANY and ON, or ANY and OFF).
   for (InputFile *f : ArrayRef(ctx.objectFiles).slice(1)) {
     if (retMach != (getEFlags(f) & EF_AMDGPU_MACH)) {
-      error("incompatible mach: " + toString(f));
+      Err(ctx) << "incompatible mach: " << f;
       return 0;
     }
 
@@ -81,7 +82,7 @@ uint32_t AMDGPU::calcEFlagsV4() const {
             (getEFlags(f) & EF_AMDGPU_FEATURE_XNACK_V4)
                 != EF_AMDGPU_FEATURE_XNACK_ANY_V4)) {
       if (retXnack != (getEFlags(f) & EF_AMDGPU_FEATURE_XNACK_V4)) {
-        error("incompatible xnack: " + toString(f));
+        Err(ctx) << "incompatible xnack: " << f;
         return 0;
       }
     } else {
@@ -94,7 +95,7 @@ uint32_t AMDGPU::calcEFlagsV4() const {
             (getEFlags(f) & EF_AMDGPU_FEATURE_SRAMECC_V4) !=
                 EF_AMDGPU_FEATURE_SRAMECC_ANY_V4)) {
       if (retSramEcc != (getEFlags(f) & EF_AMDGPU_FEATURE_SRAMECC_V4)) {
-        error("incompatible sramecc: " + toString(f));
+        Err(ctx) << "incompatible sramecc: " << f;
         return 0;
       }
     } else {
@@ -104,6 +105,24 @@ uint32_t AMDGPU::calcEFlagsV4() const {
   }
 
   return retMach | retXnack | retSramEcc;
+}
+
+uint32_t AMDGPU::calcEFlagsV6() const {
+  uint32_t flags = calcEFlagsV4();
+
+  uint32_t genericVersion =
+      getEFlags(ctx.objectFiles[0]) & EF_AMDGPU_GENERIC_VERSION;
+
+  // Verify that all input files have compatible generic version.
+  for (InputFile *f : ArrayRef(ctx.objectFiles).slice(1)) {
+    if (genericVersion != (getEFlags(f) & EF_AMDGPU_GENERIC_VERSION)) {
+      ErrAlways(ctx) << "incompatible generic version: " << f;
+      return 0;
+    }
+  }
+
+  flags |= genericVersion;
+  return flags;
 }
 
 uint32_t AMDGPU::calcEFlags() const {
@@ -121,8 +140,10 @@ uint32_t AMDGPU::calcEFlags() const {
   case ELFABIVERSION_AMDGPU_HSA_V4:
   case ELFABIVERSION_AMDGPU_HSA_V5:
     return calcEFlagsV4();
+  case ELFABIVERSION_AMDGPU_HSA_V6:
+    return calcEFlagsV6();
   default:
-    error("unknown abi version: " + Twine(abiVersion));
+    Err(ctx) << "unknown abi version: " << abiVersion;
     return 0;
   }
 }
@@ -146,7 +167,7 @@ void AMDGPU::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   case R_AMDGPU_REL16: {
     int64_t simm = (static_cast<int64_t>(val) - 4) / 4;
-    checkInt(loc, simm, 16, rel);
+    checkInt(ctx, loc, simm, 16, rel);
     write16le(loc, simm);
     break;
   }
@@ -172,8 +193,8 @@ RelExpr AMDGPU::getRelExpr(RelType type, const Symbol &s,
   case R_AMDGPU_GOTPCREL32_HI:
     return R_GOT_PC;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -190,15 +211,11 @@ int64_t AMDGPU::getImplicitAddend(const uint8_t *buf, RelType type) const {
     return 0;
   case R_AMDGPU_ABS64:
   case R_AMDGPU_RELATIVE64:
-    return read64(buf);
+    return read64(ctx, buf);
   default:
-    internalLinkerError(getErrorLocation(buf),
-                        "cannot read addend for relocation " + toString(type));
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   }
 }
 
-TargetInfo *elf::getAMDGPUTargetInfo() {
-  static AMDGPU target;
-  return &target;
-}
+void elf::setAMDGPUTargetInfo(Ctx &ctx) { ctx.target.reset(new AMDGPU(ctx)); }

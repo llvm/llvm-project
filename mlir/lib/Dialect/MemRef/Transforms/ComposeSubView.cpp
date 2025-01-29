@@ -24,8 +24,7 @@ using namespace mlir;
 
 namespace {
 
-// Replaces a subview of a subview with a single subview. Only supports subview
-// ops with static sizes and static strides of 1 (both static and dynamic
+// Replaces a subview of a subview with a single subview(both static and dynamic
 // offsets are supported).
 struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -51,64 +50,78 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
     }
 
     // Offsets, sizes and strides OpFoldResult for the combined 'SubViewOp'.
-    SmallVector<OpFoldResult> offsets, sizes, strides;
+    SmallVector<OpFoldResult> offsets, sizes, strides,
+        opStrides = op.getMixedStrides(),
+        sourceStrides = sourceOp.getMixedStrides();
 
-    // Because we only support input strides of 1, the output stride is also
-    // always 1.
-    if (llvm::all_of(strides, [](OpFoldResult &valueOrAttr) {
-          Attribute attr = llvm::dyn_cast_if_present<Attribute>(valueOrAttr);
-          return attr && cast<IntegerAttr>(attr).getInt() == 1;
-        })) {
-      strides = SmallVector<OpFoldResult>(sourceOp.getMixedStrides().size(),
-                                          rewriter.getI64IntegerAttr(1));
-    } else {
-      return failure();
+    // The output stride in each dimension is equal to the product of the
+    // dimensions corresponding to source and op.
+    int64_t sourceStrideValue;
+    for (auto &&[opStride, sourceStride] :
+         llvm::zip(opStrides, sourceStrides)) {
+      Attribute opStrideAttr = dyn_cast_if_present<Attribute>(opStride);
+      Attribute sourceStrideAttr = dyn_cast_if_present<Attribute>(sourceStride);
+      if (!opStrideAttr || !sourceStrideAttr)
+        return failure();
+      sourceStrideValue = cast<IntegerAttr>(sourceStrideAttr).getInt();
+      strides.push_back(rewriter.getI64IntegerAttr(
+          cast<IntegerAttr>(opStrideAttr).getInt() * sourceStrideValue));
     }
 
     // The rules for calculating the new offsets and sizes are:
     // * Multiple subview offsets for a given dimension compose additively.
-    //   ("Offset by m" followed by "Offset by n" == "Offset by m + n")
+    //   ("Offset by m and Stride by k" followed by "Offset by n" == "Offset by
+    //   m + n * k")
     // * Multiple sizes for a given dimension compose by taking the size of the
     //   final subview and ignoring the rest. ("Take m values" followed by "Take
     //   n values" == "Take n values") This size must also be the smallest one
     //   by definition (a subview needs to be the same size as or smaller than
     //   its source along each dimension; presumably subviews that are larger
     //   than their sources are disallowed by validation).
-    for (auto it : llvm::zip(op.getMixedOffsets(), sourceOp.getMixedOffsets(),
-                             op.getMixedSizes())) {
-      auto opOffset = std::get<0>(it);
-      auto sourceOffset = std::get<1>(it);
-      auto opSize = std::get<2>(it);
-
+    for (auto &&[opOffset, sourceOffset, sourceStride, opSize] :
+         llvm::zip(op.getMixedOffsets(), sourceOp.getMixedOffsets(),
+                   sourceOp.getMixedStrides(), op.getMixedSizes())) {
       // We only support static sizes.
-      if (opSize.is<Value>()) {
+      if (isa<Value>(opSize)) {
         return failure();
       }
-
       sizes.push_back(opSize);
       Attribute opOffsetAttr = llvm::dyn_cast_if_present<Attribute>(opOffset),
                 sourceOffsetAttr =
-                    llvm::dyn_cast_if_present<Attribute>(sourceOffset);
-
+                    llvm::dyn_cast_if_present<Attribute>(sourceOffset),
+                sourceStrideAttr =
+                    llvm::dyn_cast_if_present<Attribute>(sourceStride);
       if (opOffsetAttr && sourceOffsetAttr) {
+
         // If both offsets are static we can simply calculate the combined
         // offset statically.
         offsets.push_back(rewriter.getI64IntegerAttr(
-            cast<IntegerAttr>(opOffsetAttr).getInt() +
+            cast<IntegerAttr>(opOffsetAttr).getInt() *
+                cast<IntegerAttr>(sourceStrideAttr).getInt() +
             cast<IntegerAttr>(sourceOffsetAttr).getInt()));
       } else {
-        // When either offset is dynamic, we must emit an additional affine
-        // transformation to add the two offsets together dynamically.
-        AffineExpr expr = rewriter.getAffineConstantExpr(0);
+        AffineExpr expr;
         SmallVector<Value> affineApplyOperands;
-        for (auto valueOrAttr : {opOffset, sourceOffset}) {
-          if (auto attr = llvm::dyn_cast_if_present<Attribute>(valueOrAttr)) {
-            expr = expr + cast<IntegerAttr>(attr).getInt();
-          } else {
-            expr =
-                expr + rewriter.getAffineSymbolExpr(affineApplyOperands.size());
-            affineApplyOperands.push_back(valueOrAttr.get<Value>());
-          }
+
+        // Make 'expr' add 'sourceOffset'.
+        if (auto attr = llvm::dyn_cast_if_present<Attribute>(sourceOffset)) {
+          expr =
+              rewriter.getAffineConstantExpr(cast<IntegerAttr>(attr).getInt());
+        } else {
+          expr = rewriter.getAffineSymbolExpr(affineApplyOperands.size());
+          affineApplyOperands.push_back(cast<Value>(sourceOffset));
+        }
+
+        // Multiply 'opOffset' by 'sourceStride' and make the 'expr' add the
+        // result.
+        if (auto attr = llvm::dyn_cast_if_present<Attribute>(opOffset)) {
+          expr = expr + cast<IntegerAttr>(attr).getInt() *
+                            cast<IntegerAttr>(sourceStrideAttr).getInt();
+        } else {
+          expr =
+              expr + rewriter.getAffineSymbolExpr(affineApplyOperands.size()) *
+                         cast<IntegerAttr>(sourceStrideAttr).getInt();
+          affineApplyOperands.push_back(cast<Value>(opOffset));
         }
 
         AffineMap map = AffineMap::get(0, affineApplyOperands.size(), expr);
@@ -120,8 +133,8 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
 
     // This replaces 'op' but leaves 'sourceOp' alone; if it no longer has any
     // uses it can be removed by a (separate) dead code elimination pass.
-    rewriter.replaceOpWithNewOp<memref::SubViewOp>(op, sourceOp.getSource(),
-                                                   offsets, sizes, strides);
+    rewriter.replaceOpWithNewOp<memref::SubViewOp>(
+        op, op.getType(), sourceOp.getSource(), offsets, sizes, strides);
     return success();
   }
 };

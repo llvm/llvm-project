@@ -1,4 +1,4 @@
-//===-- SBBreakpointName.h ------------------------------------------*- C++ -*-===//
+//===-- SBBreakpointName.h --------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,10 +17,6 @@ namespace lldb {
 
 class LLDB_API SBBreakpointName {
 public:
-//  typedef bool (*BreakpointHitCallback)(void *baton, SBProcess &process,
-//                                        SBThread &thread,
-//                                        lldb::SBBreakpointLocation &location);
-
   SBBreakpointName();
   
   SBBreakpointName(SBTarget &target, const char *name);

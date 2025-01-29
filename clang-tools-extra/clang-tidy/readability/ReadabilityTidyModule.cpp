@@ -10,6 +10,8 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "AvoidConstParamsInDecls.h"
+#include "AvoidNestedConditionalOperatorCheck.h"
+#include "AvoidReturnWithVoidValueCheck.h"
 #include "AvoidUnconditionalPreprocessorIfCheck.h"
 #include "BracesAroundStatementsCheck.h"
 #include "ConstReturnTypeCheck.h"
@@ -20,6 +22,7 @@
 #include "DeleteNullPointerCheck.h"
 #include "DuplicateIncludeCheck.h"
 #include "ElseAfterReturnCheck.h"
+#include "EnumInitialValueCheck.h"
 #include "FunctionCognitiveComplexityCheck.h"
 #include "FunctionSizeCheck.h"
 #include "IdentifierLengthCheck.h"
@@ -29,6 +32,7 @@
 #include "IsolateDeclarationCheck.h"
 #include "MagicNumbersCheck.h"
 #include "MakeMemberFunctionConstCheck.h"
+#include "MathMissingParenthesesCheck.h"
 #include "MisleadingIndentationCheck.h"
 #include "MisplacedArrayIndexCheck.h"
 #include "NamedParameterCheck.h"
@@ -36,9 +40,11 @@
 #include "OperatorsRepresentationCheck.h"
 #include "QualifiedAutoCheck.h"
 #include "RedundantAccessSpecifiersCheck.h"
+#include "RedundantCastingCheck.h"
 #include "RedundantControlFlowCheck.h"
 #include "RedundantDeclarationCheck.h"
 #include "RedundantFunctionPtrDereferenceCheck.h"
+#include "RedundantInlineSpecifierCheck.h"
 #include "RedundantMemberInitCheck.h"
 #include "RedundantPreprocessorCheck.h"
 #include "RedundantSmartptrGetCheck.h"
@@ -54,6 +60,7 @@
 #include "UniqueptrDeleteReleaseCheck.h"
 #include "UppercaseLiteralSuffixCheck.h"
 #include "UseAnyOfAllOfCheck.h"
+#include "UseStdMinMaxCheck.h"
 
 namespace clang::tidy {
 namespace readability {
@@ -63,6 +70,10 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AvoidConstParamsInDecls>(
         "readability-avoid-const-params-in-decls");
+    CheckFactories.registerCheck<AvoidNestedConditionalOperatorCheck>(
+        "readability-avoid-nested-conditional-operator");
+    CheckFactories.registerCheck<AvoidReturnWithVoidValueCheck>(
+        "readability-avoid-return-with-void-value");
     CheckFactories.registerCheck<AvoidUnconditionalPreprocessorIfCheck>(
         "readability-avoid-unconditional-preprocessor-if");
     CheckFactories.registerCheck<BracesAroundStatementsCheck>(
@@ -83,6 +94,8 @@ public:
         "readability-duplicate-include");
     CheckFactories.registerCheck<ElseAfterReturnCheck>(
         "readability-else-after-return");
+    CheckFactories.registerCheck<EnumInitialValueCheck>(
+        "readability-enum-initial-value");
     CheckFactories.registerCheck<FunctionCognitiveComplexityCheck>(
         "readability-function-cognitive-complexity");
     CheckFactories.registerCheck<FunctionSizeCheck>(
@@ -93,6 +106,10 @@ public:
         "readability-identifier-naming");
     CheckFactories.registerCheck<ImplicitBoolConversionCheck>(
         "readability-implicit-bool-conversion");
+    CheckFactories.registerCheck<MathMissingParenthesesCheck>(
+        "readability-math-missing-parentheses");
+    CheckFactories.registerCheck<RedundantInlineSpecifierCheck>(
+        "readability-redundant-inline-specifier");
     CheckFactories.registerCheck<InconsistentDeclarationParameterNameCheck>(
         "readability-inconsistent-declaration-parameter-name");
     CheckFactories.registerCheck<IsolateDeclarationCheck>(
@@ -111,6 +128,8 @@ public:
         "readability-qualified-auto");
     CheckFactories.registerCheck<RedundantAccessSpecifiersCheck>(
         "readability-redundant-access-specifiers");
+    CheckFactories.registerCheck<RedundantCastingCheck>(
+        "readability-redundant-casting");
     CheckFactories.registerCheck<RedundantFunctionPtrDereferenceCheck>(
         "readability-redundant-function-ptr-dereference");
     CheckFactories.registerCheck<RedundantMemberInitCheck>(
@@ -151,6 +170,8 @@ public:
         "readability-uppercase-literal-suffix");
     CheckFactories.registerCheck<UseAnyOfAllOfCheck>(
         "readability-use-anyofallof");
+    CheckFactories.registerCheck<UseStdMinMaxCheck>(
+        "readability-use-std-min-max");
   }
 };
 

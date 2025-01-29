@@ -9,8 +9,11 @@
 #ifndef LIBCXX_TEST_SUPPORT_TEST_RANGE_H
 #define LIBCXX_TEST_SUPPORT_TEST_RANGE_H
 
+#include <concepts>
+#include <functional>
 #include <iterator>
 #include <ranges>
+#include <type_traits>
 
 #include "test_iterators.h"
 
@@ -81,5 +84,26 @@ static_assert(std::ranges::borrowed_range<BorrowedView>);
 using NonBorrowedView = std::ranges::single_view<int>;
 static_assert(std::ranges::view<NonBorrowedView>);
 static_assert(!std::ranges::borrowed_range<NonBorrowedView>);
+
+template <class Range>
+concept simple_view =
+    std::ranges::view<Range> && std::ranges::range<const Range> &&
+    std::same_as<std::ranges::iterator_t<Range>, std::ranges::iterator_t<const Range>> &&
+    std::same_as<std::ranges::sentinel_t<Range>, std::ranges::sentinel_t<const Range>>;
+
+template <class View, class T>
+concept CanBePiped = requires(View&& view, T&& t) {
+  { std::forward<View>(view) | std::forward<T>(t) };
+};
+
+// See [concept.equalitycomparable]
+template <class T, class U>
+concept weakly_equality_comparable_with =
+    requires(const std::remove_reference_t<T>& t, const std::remove_reference_t<U>& u) {
+      { t == u } -> std::same_as<bool>;
+      { t != u } -> std::same_as<bool>;
+      { u == t } -> std::same_as<bool>;
+      { u != t } -> std::same_as<bool>;
+    };
 
 #endif // LIBCXX_TEST_SUPPORT_TEST_RANGE_H

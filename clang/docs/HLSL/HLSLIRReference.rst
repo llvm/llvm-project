@@ -11,15 +11,6 @@ Introduction
 The goal of this document is to provide a reference for all the special purpose
 IR metadata and attributes used by the HLSL code generation path.
 
-IR Metadata
-===========
-
-``hlsl.uavs``
--------------
-
-The ``hlsl.uavs`` metadata is a list of all the external global variables that
-represent UAV resources.
-
 Function Attributes
 ===================
 

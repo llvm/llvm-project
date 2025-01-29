@@ -19,7 +19,7 @@ define void @PR24199(i32 %a0) {
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = [4.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    jmp .LBB0_3
 ; CHECK-NEXT:  .LBB0_2: # %if.then
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
@@ -30,7 +30,7 @@ define void @PR24199(i32 %a0) {
 ; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 4-byte Reload
 ; CHECK-NEXT:    # xmm2 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    mulss %xmm0, %xmm2
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    addss %xmm1, %xmm0
 ; CHECK-NEXT:    addss %xmm2, %xmm0
 ; CHECK-NEXT:    movss %xmm0, (%rax)
@@ -52,7 +52,7 @@ define void @PR24199(i32 %a0) {
 entry:
   %i = alloca %struct.A, align 8
   %tobool = icmp ne i32 %a0, 0
-  br i1 undef, label %if.end, label %if.then
+  br i1 poison, label %if.end, label %if.then
 
 if.then:
   br label %if.end
@@ -96,5 +96,3 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !4 = !DIExpression()
 !5 = !DILocalVariable(name: "this", arg: 1, scope: !3, flags: DIFlagArtificial | DIFlagObjectPointer)
 !6 = !DILocation(line: 0, scope: !3)
-
-

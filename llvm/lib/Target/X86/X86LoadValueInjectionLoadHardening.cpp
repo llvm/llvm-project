@@ -53,7 +53,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RDFGraph.h"
 #include "llvm/CodeGen/RDFLiveness.h"
 #include "llvm/InitializePasses.h"
@@ -236,8 +235,8 @@ char X86LoadValueInjectionLoadHardeningPass::ID = 0;
 void X86LoadValueInjectionLoadHardeningPass::getAnalysisUsage(
     AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
-  AU.addRequired<MachineLoopInfo>();
-  AU.addRequired<MachineDominatorTree>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineDominanceFrontier>();
   AU.setPreservesCFG();
 }
@@ -269,8 +268,8 @@ bool X86LoadValueInjectionLoadHardeningPass::runOnMachineFunction(
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
   LLVM_DEBUG(dbgs() << "Building gadget graph...\n");
-  const auto &MLI = getAnalysis<MachineLoopInfo>();
-  const auto &MDT = getAnalysis<MachineDominatorTree>();
+  const auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  const auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   const auto &MDF = getAnalysis<MachineDominanceFrontier>();
   std::unique_ptr<MachineGadgetGraph> Graph = getGadgetGraph(MF, MLI, MDT, MDF);
   LLVM_DEBUG(dbgs() << "Building gadget graph... Done\n");
@@ -439,9 +438,8 @@ X86LoadValueInjectionLoadHardeningPass::getGadgetGraph(
 
           // Remove duplicate transmitters
           llvm::sort(DefTransmitters);
-          DefTransmitters.erase(
-              std::unique(DefTransmitters.begin(), DefTransmitters.end()),
-              DefTransmitters.end());
+          DefTransmitters.erase(llvm::unique(DefTransmitters),
+                                DefTransmitters.end());
         };
 
     // Find all of the transmitters
@@ -770,16 +768,13 @@ bool X86LoadValueInjectionLoadHardeningPass::instrUsesRegToAccessMemory(
       MI.getOpcode() == X86::SFENCE || MI.getOpcode() == X86::LFENCE)
     return false;
 
-  // FIXME: This does not handle pseudo loading instruction like TCRETURN*
-  const MCInstrDesc &Desc = MI.getDesc();
-  int MemRefBeginIdx = X86II::getMemoryOperandNo(Desc.TSFlags);
+  const int MemRefBeginIdx = X86::getFirstAddrOperandIdx(MI);
   if (MemRefBeginIdx < 0) {
     LLVM_DEBUG(dbgs() << "Warning: unable to obtain memory operand for loading "
                          "instruction:\n";
                MI.print(dbgs()); dbgs() << '\n';);
     return false;
   }
-  MemRefBeginIdx += X86II::getOperandBias(Desc);
 
   const MachineOperand &BaseMO =
       MI.getOperand(MemRefBeginIdx + X86::AddrBaseReg);
@@ -803,8 +798,8 @@ bool X86LoadValueInjectionLoadHardeningPass::instrUsesRegToBranch(
 
 INITIALIZE_PASS_BEGIN(X86LoadValueInjectionLoadHardeningPass, PASS_KEY,
                       "X86 LVI load hardening", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
 INITIALIZE_PASS_END(X86LoadValueInjectionLoadHardeningPass, PASS_KEY,
                     "X86 LVI load hardening", false, false)

@@ -76,3 +76,37 @@ add_entrypoint_object(
     libc.src.__support.HashTable.table
     libc.include.search
 )
+
+add_entrypoint_object(
+  insque
+  SRCS
+    insque.cpp
+  HDRS
+    insque.h
+  DEPENDS
+    libc.include.search
+    libc.src.__support.intrusive_list
+)
+
+add_entrypoint_object(
+  remque
+  SRCS
+    remque.cpp
+  HDRS
+    remque.h
+  DEPENDS
+    libc.include.search
+    libc.src.__support.intrusive_list
+)
+
+add_entrypoint_object(
+  lfind
+  SRCS
+    lfind.cpp
+  HDRS
+    lfind.h
+  DEPENDS
+    libc.include.search
+    libc.src.__support.CPP.cstddef
+    libc.src.__support.memory_size
+)

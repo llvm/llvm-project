@@ -8,17 +8,8 @@ void foo(void) {
   {}
 }
 
-// CHECK-DAG: [[ENTTY:%.+]] = type { ptr, ptr, i[[SZ:32|64]], i32, i32 }
-
-// Check target registration is registered as a Ctor.
-// CHECK: appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @.omp_offloading.requires_reg, ptr null }]
+// CHECK-DAG: [[ENTTY:%.+]] = type { i64, i16, i16, i32, ptr, ptr, i64, i64, ptr }
 
 // Check presence of foo() and the outlined target region
 // CHECK: define{{.*}} void [[FOO:@.+]]()
 // CHECK: define internal void [[OUTLINEDTARGET:@.+]]()
-
-// Check registration and unregistration code.
-
-// CHECK:     define internal void @.omp_offloading.requires_reg()
-// CHECK:     call void @__tgt_register_requires(i64 1)
-// CHECK:     ret void

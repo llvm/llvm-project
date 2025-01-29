@@ -114,11 +114,17 @@ define <4 x i64> @combine_permq_pshufb_as_vmovdqa(<4 x i64> %a0) {
 }
 
 define <8 x i32> @combine_as_vpermd(<8 x i32> %a0) {
-; CHECK-LABEL: combine_as_vpermd:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = [4,5,4,5,6,7,0,7]
-; CHECK-NEXT:    vpermps %ymm0, %ymm1, %ymm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; AVX2-LABEL: combine_as_vpermd:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm1 = [4,5,4,5,6,7,0,7]
+; AVX2-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: combine_as_vpermd:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [4,5,4,5,6,7,0,7]
+; AVX512-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; AVX512-NEXT:    ret{{[l|q]}}
   %1 = shufflevector <8 x i32> %a0, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
   %2 = tail call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %a0, <8 x i32> <i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 7, i32 6>)
   %3 = shufflevector <8 x i32> %1, <8 x i32> %2, <8 x i32> <i32 0, i32 8, i32 9, i32 1, i32 15, i32 14, i32 4, i32 3>
@@ -126,11 +132,17 @@ define <8 x i32> @combine_as_vpermd(<8 x i32> %a0) {
 }
 
 define <8 x float> @combine_as_vpermps(<8 x float> %a0) {
-; CHECK-LABEL: combine_as_vpermps:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm1 = <6,4,7,5,1,u,4,7>
-; CHECK-NEXT:    vpermps %ymm0, %ymm1, %ymm0
-; CHECK-NEXT:    ret{{[l|q]}}
+; AVX2-LABEL: combine_as_vpermps:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm1 = [6,4,7,5,1,u,4,7]
+; AVX2-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: combine_as_vpermps:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [6,4,7,5,1,0,4,7]
+; AVX512-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; AVX512-NEXT:    ret{{[l|q]}}
   %1 = shufflevector <8 x float> %a0, <8 x float> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
   %2 = tail call <8 x float> @llvm.x86.avx2.permps(<8 x float> %a0, <8 x i32> <i32 1, i32 undef, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>)
   %3 = shufflevector <8 x float> %1, <8 x float> %2, <8 x i32> <i32 15, i32 0, i32 14, i32 1, i32 8, i32 9, i32 4, i32 3>
@@ -764,10 +776,15 @@ define <32 x i8> @combine_pshufb_pshufb_or_pshufb(<32 x i8> %a0) {
 }
 
 define <8 x i32> @constant_fold_permd() {
-; CHECK-LABEL: constant_fold_permd:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm0 = [5,7,3,2,8,2,6,1]
-; CHECK-NEXT:    ret{{[l|q]}}
+; AVX2-LABEL: constant_fold_permd:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [5,7,3,2,8,2,6,1]
+; AVX2-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: constant_fold_permd:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [5,7,3,2,8,2,6,1]
+; AVX512-NEXT:    ret{{[l|q]}}
   %1 = call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>, <8 x i32> <i32 4, i32 6, i32 2, i32 1, i32 7, i32 1, i32 5, i32 0>)
   ret <8 x i32> %1
 }
@@ -784,7 +801,7 @@ define <8 x float> @constant_fold_permps() {
 define <32 x i8> @constant_fold_pshufb_256() {
 ; CHECK-LABEL: constant_fold_pshufb_256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm0 = <14,0,0,0,u,u,0,0,0,0,0,0,0,0,8,9,255,0,0,0,u,u,0,0,241,0,0,0,0,0,249,250>
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm0 = [14,0,0,0,u,u,0,0,0,0,0,0,0,0,8,9,255,0,0,0,u,u,0,0,241,0,0,0,0,0,249,250]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 -1, i8 -2, i8 -3, i8 -4, i8 -5, i8 -6, i8 -7, i8 -8, i8 -9, i8 -10, i8 -11, i8 -12, i8 -13, i8 -14, i8 -15>, <32 x i8> <i8 1, i8 -1, i8 -1, i8 -1, i8 undef, i8 undef, i8 -1, i8 -1, i8 15, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 7, i8 6, i8 1, i8 -1, i8 -1, i8 -1, i8 undef, i8 undef, i8 -1, i8 -1, i8 15, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 7, i8 6>)
   ret <32 x i8> %1
@@ -832,7 +849,7 @@ define internal fastcc <8 x float> @PR34577(<8 x float> %inp0, <8 x float> %inp1
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,1,1,1]
 ; AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
-; AVX2-NEXT:    vmovaps {{.*#+}} ymm2 = <u,u,7,2,u,u,3,2>
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm2 = [u,u,7,2,u,u,3,2]
 ; AVX2-NEXT:    vpermps %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
 ; AVX2-NEXT:    ret{{[l|q]}}
@@ -843,7 +860,7 @@ define internal fastcc <8 x float> @PR34577(<8 x float> %inp0, <8 x float> %inp1
 ; AVX512-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,1,1,1]
 ; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm0[4,5],ymm2[6,7]
-; AVX512-NEXT:    vmovaps {{.*#+}} ymm0 = <23,18,7,2,20,u,3,2>
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [23,18,7,2,20,0,3,2]
 ; AVX512-NEXT:    vpermi2ps %zmm2, %zmm1, %zmm0
 ; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512-NEXT:    ret{{[l|q]}}
@@ -889,7 +906,7 @@ define void @PR63030(ptr %p0) {
 ; X86-AVX512:       # %bb.0:
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovdqa (%eax), %xmm0
-; X86-AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [1,0,8,0,0,0,0,0,0,0,9,0,1,0,1,0]
+; X86-AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [1,8,0,0,0,9,1,1]
 ; X86-AVX512-NEXT:    vpermi2q {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm1
 ; X86-AVX512-NEXT:    vmovdqa64 %zmm1, (%eax)
 ; X86-AVX512-NEXT:    vzeroupper
@@ -913,7 +930,7 @@ define void @PR63030(ptr %p0) {
 ; X64-AVX512-LABEL: PR63030:
 ; X64-AVX512:       # %bb.0:
 ; X64-AVX512-NEXT:    vmovdqa (%rdi), %xmm0
-; X64-AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [1,8,0,0,0,9,1,1]
+; X64-AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [1,8,0,0,0,9,1,1]
 ; X64-AVX512-NEXT:    vpermi2q {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm1
 ; X64-AVX512-NEXT:    vmovdqa64 %zmm1, (%rax)
 ; X64-AVX512-NEXT:    vzeroupper
@@ -922,6 +939,30 @@ define void @PR63030(ptr %p0) {
   %shuffle = shufflevector <2 x i64> <i64 3, i64 2>, <2 x i64> %load, <8 x i32> <i32 3, i32 0, i32 2, i32 2, i32 2, i32 1, i32 3, i32 3>
   store volatile <8 x i64> %shuffle, ptr poison, align 64
   ret void
+}
+
+define <2 x i64> @PR116815(<4 x i64> %v0, <4 x i64> %v1) {
+; CHECK-LABEL: PR116815:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpslld $16, %ymm1, %ymm1
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7],ymm0[8],ymm1[9],ymm0[10],ymm1[11],ymm0[12],ymm1[13],ymm0[14],ymm1[15]
+; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12,2,6,10,14,u,u,u,u,u,u,u,u,16,20,24,28,18,22,26,30,u,u,u,u,u,u,u,u]
+; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    ret{{[l|q]}}
+  %tmp0 = bitcast <4 x i64> %v1 to <8 x i32>
+  %tmp1 = shl <8 x i32> %tmp0, splat (i32 16)
+  %tmp2 = bitcast <8 x i32> %tmp1 to <16 x i16>
+  %tmp3 = bitcast <4 x i64> %v0 to <16 x i16>
+  %blend = shufflevector <16 x i16> %tmp3, <16 x i16> %tmp2, <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
+  %tmp4 = bitcast <16 x i16> %blend to <32 x i8>
+  %tmp5 = shufflevector <32 x i8> %tmp4, <32 x i8> poison, <32 x i32> <i32 0, i32 4, i32 8, i32 12, i32 2, i32 6, i32 10, i32 14, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 16, i32 20, i32 24, i32 28, i32 18, i32 22, i32 26, i32 30, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %tmp6 = bitcast <32 x i8> %tmp5 to <8 x i32>
+  %tmp7 = shufflevector <8 x i32> %tmp6, <8 x i32> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 poison, i32 poison, i32 poison, i32 poison>
+  %tmp8 = bitcast <8 x i32> %tmp7 to <4 x i64>
+  %shuffle.i = shufflevector <4 x i64> %tmp8, <4 x i64> poison, <2 x i32> <i32 0, i32 1>
+  ret <2 x i64> %shuffle.i
 }
 
 define void @packss_zext_v8i1() {

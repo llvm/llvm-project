@@ -1,4 +1,4 @@
-# RUN: not --crash llc -run-pass=none -verify-machineinstrs %s 2>&1 \
+# RUN: not --crash llc -run-pass=none -verify-machineinstrs %s -o /dev/null 2>&1 \
 # RUN:  | FileCheck %s
 # REQUIRES: powerpc-registered-target
 

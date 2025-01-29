@@ -16,8 +16,8 @@
 
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -46,9 +46,10 @@ class WebAssemblyDisassembler final : public MCDisassembler {
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
                               raw_ostream &CStream) const override;
-  std::optional<DecodeStatus>
-  onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size, ArrayRef<uint8_t> Bytes,
-                uint64_t Address, raw_ostream &CStream) const override;
+
+  Expected<bool> onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
+                               ArrayRef<uint8_t> Bytes,
+                               uint64_t Address) const override;
 
 public:
   WebAssemblyDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
@@ -121,31 +122,30 @@ bool parseImmediate(MCInst &MI, uint64_t &Size, ArrayRef<uint8_t> Bytes) {
   return true;
 }
 
-std::optional<MCDisassembler::DecodeStatus>
-WebAssemblyDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
-                                       ArrayRef<uint8_t> Bytes,
-                                       uint64_t Address,
-                                       raw_ostream &CStream) const {
+Expected<bool> WebAssemblyDisassembler::onSymbolStart(SymbolInfoTy &Symbol,
+                                                      uint64_t &Size,
+                                                      ArrayRef<uint8_t> Bytes,
+                                                      uint64_t Address) const {
   Size = 0;
-  if (Address == 0) {
+  if (Symbol.Type == wasm::WASM_SYMBOL_TYPE_SECTION) {
     // Start of a code section: we're parsing only the function count.
     int64_t FunctionCount;
     if (!nextLEB(FunctionCount, Bytes, Size, false))
-      return std::nullopt;
+      return false;
     outs() << "        # " << FunctionCount << " functions in section.";
   } else {
     // Parse the start of a single function.
     int64_t BodySize, LocalEntryCount;
     if (!nextLEB(BodySize, Bytes, Size, false) ||
         !nextLEB(LocalEntryCount, Bytes, Size, false))
-      return std::nullopt;
+      return false;
     if (LocalEntryCount) {
       outs() << "        .local ";
       for (int64_t I = 0; I < LocalEntryCount; I++) {
         int64_t Count, Type;
         if (!nextLEB(Count, Bytes, Size, false) ||
             !nextLEB(Type, Bytes, Size, false))
-          return std::nullopt;
+          return false;
         for (int64_t J = 0; J < Count; J++) {
           if (I || J)
             outs() << ", ";
@@ -155,7 +155,7 @@ WebAssemblyDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
     }
   }
   outs() << "\n";
-  return MCDisassembler::Success;
+  return true;
 }
 
 MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
@@ -286,6 +286,24 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
       // Default case.
       if (!parseLEBImmediate(MI, Size, Bytes, false))
         return MCDisassembler::Fail;
+      break;
+    }
+    case WebAssembly::OPERAND_CATCH_LIST: {
+      if (!parseLEBImmediate(MI, Size, Bytes, false))
+        return MCDisassembler::Fail;
+      int64_t NumCatches = MI.getOperand(MI.getNumOperands() - 1).getImm();
+      for (int64_t I = 0; I < NumCatches; I++) {
+        if (!parseImmediate<uint8_t>(MI, Size, Bytes))
+          return MCDisassembler::Fail;
+        int64_t CatchOpcode = MI.getOperand(MI.getNumOperands() - 1).getImm();
+        if (CatchOpcode == wasm::WASM_OPCODE_CATCH ||
+            CatchOpcode == wasm::WASM_OPCODE_CATCH_REF) {
+          if (!parseLEBImmediate(MI, Size, Bytes, false)) // tag index
+            return MCDisassembler::Fail;
+        }
+        if (!parseLEBImmediate(MI, Size, Bytes, false)) // destination
+          return MCDisassembler::Fail;
+      }
       break;
     }
     case MCOI::OPERAND_REGISTER:

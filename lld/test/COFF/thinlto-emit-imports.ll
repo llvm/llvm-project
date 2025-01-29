@@ -1,4 +1,4 @@
-; REQUIRES: x86
+; REQUIRES: x86, non-root-user
 
 ; Generate summary sections and test lld handling.
 ; RUN: opt -module-summary %s -o %t1.obj
@@ -35,7 +35,7 @@
 ; RUN: not lld-link -entry:main -thinlto-index-only \
 ; RUN:     -thinlto-emit-imports-files %t1.obj %t2.obj %t3.obj \
 ; RUN:     -out:%t4.exe 2>&1 | FileCheck -DMSG=%errc_EACCES %s --check-prefix=ERR
-; ERR: cannot open {{.*}}3.obj.imports: [[MSG]]
+; ERR: 'cannot open {{.*}}3.obj.imports': [[MSG]]
 
 ; Ensure lld doesn't generate import files when thinlto-index-only is not enabled
 ; RUN: rm -f %t1.obj.imports

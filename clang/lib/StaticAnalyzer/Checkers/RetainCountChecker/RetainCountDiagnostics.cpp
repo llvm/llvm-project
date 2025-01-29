@@ -411,11 +411,11 @@ annotateConsumedSummaryMismatch(const ExplodedNode *N,
     }
   }
 
-  if (os.str().empty())
+  if (sbuf.empty())
     return nullptr;
 
   PathDiagnosticLocation L = PathDiagnosticLocation::create(CallExitLoc, SM);
-  return std::make_shared<PathDiagnosticEventPiece>(L, os.str());
+  return std::make_shared<PathDiagnosticEventPiece>(L, sbuf);
 }
 
 /// Annotate the parameter at the analysis entry point.
@@ -446,7 +446,7 @@ annotateStartParameter(const ExplodedNode *N, SymbolRef Sym,
     assert(CurrT->getCount() == 0);
     os << "0";
   }
-  return std::make_shared<PathDiagnosticEventPiece>(L, os.str());
+  return std::make_shared<PathDiagnosticEventPiece>(L, s);
 }
 
 PathDiagnosticPieceRef
@@ -493,7 +493,7 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
   if (PrevT && IsFreeUnowned && CurrV.isNotOwned() && PrevT->isOwned()) {
     os << "Object is now not exclusively owned";
     auto Pos = PathDiagnosticLocation::create(N->getLocation(), SM);
-    return std::make_shared<PathDiagnosticEventPiece>(Pos, os.str());
+    return std::make_shared<PathDiagnosticEventPiece>(Pos, sbuf);
   }
 
   // This is the allocation site since the previous node had no bindings
@@ -535,7 +535,7 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
     }
 
     PathDiagnosticLocation Pos(S, SM, N->getLocationContext());
-    return std::make_shared<PathDiagnosticEventPiece>(Pos, os.str());
+    return std::make_shared<PathDiagnosticEventPiece>(Pos, sbuf);
   }
 
   // Gather up the effects that were performed on the object at this
@@ -582,13 +582,13 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
   if (!shouldGenerateNote(os, PrevT, CurrV, DeallocSent))
     return nullptr;
 
-  if (os.str().empty())
+  if (sbuf.empty())
     return nullptr; // We have nothing to say!
 
   const Stmt *S = N->getLocation().castAs<StmtPoint>().getStmt();
   PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
                                 N->getLocationContext());
-  auto P = std::make_shared<PathDiagnosticEventPiece>(Pos, os.str());
+  auto P = std::make_shared<PathDiagnosticEventPiece>(Pos, sbuf);
 
   // Add the range by scanning the children of the statement for any bindings
   // to Sym.
@@ -635,8 +635,9 @@ public:
 };
 } // namespace
 
-Bindings getAllVarBindingsForSymbol(ProgramStateManager &Manager,
-                                    const ExplodedNode *Node, SymbolRef Sym) {
+static Bindings getAllVarBindingsForSymbol(ProgramStateManager &Manager,
+                                           const ExplodedNode *Node,
+                                           SymbolRef Sym) {
   Bindings Result;
   VarBindingsCollector Collector{Sym, Result};
   while (Result.empty() && Node) {
@@ -831,7 +832,7 @@ RefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
        << RV->getCount();
   }
 
-  return std::make_shared<PathDiagnosticEventPiece>(L, os.str());
+  return std::make_shared<PathDiagnosticEventPiece>(L, sbuf);
 }
 
 RefCountReport::RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
@@ -977,7 +978,7 @@ void RefLeakReport::findBindingToReport(CheckerContext &Ctx,
     //       something like derived regions if we want to construct SVal from
     //       Sym. Instead, we take the value that is definitely stored in that
     //       region, thus guaranteeing that trackStoredValue will work.
-    bugreporter::trackStoredValue(AllVarBindings[0].second.castAs<KnownSVal>(),
+    bugreporter::trackStoredValue(AllVarBindings[0].second,
                                   AllocBindingToReport, *this);
   } else {
     AllocBindingToReport = AllocFirstBinding;

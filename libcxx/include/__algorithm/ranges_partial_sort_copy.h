@@ -30,6 +30,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -39,9 +42,7 @@ namespace ranges {
 template <class _InIter, class _OutIter>
 using partial_sort_copy_result = in_out_result<_InIter, _OutIter>;
 
-namespace __partial_sort_copy {
-
-struct __fn {
+struct __partial_sort_copy {
   template <input_iterator _Iter1,
             sentinel_for<_Iter1> _Sent1,
             random_access_iterator _Iter2,
@@ -95,15 +96,15 @@ struct __fn {
   }
 };
 
-} // namespace __partial_sort_copy
-
 inline namespace __cpo {
-inline constexpr auto partial_sort_copy = __partial_sort_copy::__fn{};
+inline constexpr auto partial_sort_copy = __partial_sort_copy{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_PARTIAL_SORT_COPY_H

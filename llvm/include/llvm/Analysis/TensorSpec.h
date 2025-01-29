@@ -13,13 +13,17 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/Support/JSON.h"
 
 #include <memory>
 #include <optional>
 #include <vector>
 
 namespace llvm {
+namespace json {
+class OStream;
+class Value;
+} // namespace json
+
 /// TensorSpec encapsulates the specification of a tensor: its dimensions, or
 /// "shape" (row-major), its type (see TensorSpec::getDataType specializations
 /// for supported types), its name and port (see "TensorFlow: Large-Scale

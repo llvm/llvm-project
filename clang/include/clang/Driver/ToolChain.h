@@ -120,6 +120,11 @@ public:
     RM_Disabled,
   };
 
+  enum ExceptionsMode {
+    EM_Enabled,
+    EM_Disabled,
+  };
+
   struct BitCodeLibraryInfo {
     std::string Path;
     bool ShouldInternalize;
@@ -140,6 +145,8 @@ private:
   const llvm::opt::Arg *const CachedRTTIArg;
 
   const RTTIMode CachedRTTIMode;
+
+  const ExceptionsMode CachedExceptionsMode;
 
   /// The list of toolchain specific path prefixes to search for libraries.
   path_list LibraryPaths;
@@ -317,6 +324,9 @@ public:
 
   // Returns the RTTIMode for the toolchain with the current arguments.
   RTTIMode getRTTIMode() const { return CachedRTTIMode; }
+
+  // Returns the ExceptionsMode for the toolchain with the current arguments.
+  ExceptionsMode getExceptionsMode() const { return CachedExceptionsMode; }
 
   /// Return any implicit target and/or mode flag for an invocation of
   /// the compiler driver as `ProgName`.
@@ -515,6 +525,9 @@ public:
   // Returns target specific standard library path if it exists.
   std::optional<std::string> getStdlibPath() const;
 
+  // Returns target specific standard library include path if it exists.
+  std::optional<std::string> getStdlibIncludePath() const;
+
   // Returns <ResourceDir>/lib/<OSName>/<arch> or <ResourceDir>/lib/<triple>.
   // This is used by runtimes (such as OpenMP) to find arch-specific libraries.
   virtual path_list getArchSpecificLibPaths() const;
@@ -570,7 +583,7 @@ public:
 
   // Return the DWARF version to emit, in the absence of arguments
   // to the contrary.
-  virtual unsigned GetDefaultDwarfVersion() const;
+  virtual unsigned GetDefaultDwarfVersion() const { return 5; }
 
   // Some toolchains may have different restrictions on the DWARF version and
   // may need to adjust it. E.g. NVPTX may need to enforce DWARF2 even when host
@@ -628,7 +641,7 @@ public:
 
   /// ComputeEffectiveClangTriple - Return the Clang triple to use for this
   /// target, which may take into account the command line arguments. For
-  /// example, on Darwin the -mmacosx-version-min= command line argument (which
+  /// example, on Darwin the -mmacos-version-min= command line argument (which
   /// sets the deployment target) determines the version in the triple passed to
   /// Clang.
   virtual std::string ComputeEffectiveClangTriple(
@@ -672,6 +685,13 @@ public:
 
   /// Add warning options that need to be passed to cc1 for this target.
   virtual void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const;
+
+  // Get the list of extra macro defines requested by the multilib
+  // configuration.
+  virtual SmallVector<std::string>
+  getMultilibMacroDefinesStr(llvm::opt::ArgList &Args) const {
+    return {};
+  };
 
   // GetRuntimeLibType - Determine the runtime library type to use with the
   // given compilation arguments.
@@ -748,6 +768,10 @@ public:
   /// Add arguments to use system-specific HIP includes.
   virtual void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                                  llvm::opt::ArgStringList &CC1Args) const;
+
+  /// Add arguments to use system-specific SYCL includes.
+  virtual void addSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                                  llvm::opt::ArgStringList &CC1Args) const;
 
   /// Add arguments to use MCU GCC toolchain includes.
   virtual void AddIAMCUIncludeArgs(const llvm::opt::ArgList &DriverArgs,

@@ -6,25 +6,28 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/types/fenv_t.h"
 #include "src/fenv/fegetenv.h"
 #include "src/fenv/fegetround.h"
 #include "src/fenv/fesetenv.h"
 #include "src/fenv/fesetround.h"
 
 #include "src/__support/FPUtil/FEnvImpl.h"
+#include "src/__support/macros/properties/os.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/Test.h"
 
-#include <fenv.h>
+#include "excepts.h"
 
-TEST(LlvmLibcFenvTest, GetEnvAndSetEnv) {
+using LlvmLibcFEnvTest = LIBC_NAMESPACE::testing::FEnvSafeTest;
+
+#ifndef LIBC_TARGET_OS_IS_WINDOWS
+TEST_F(LlvmLibcFEnvTest, GetEnvAndSetEnv) {
   // We will disable all exceptions to prevent invocation of the exception
   // handler.
   LIBC_NAMESPACE::fputil::disable_except(FE_ALL_EXCEPT);
 
-  int excepts[] = {FE_DIVBYZERO, FE_INVALID, FE_INEXACT, FE_OVERFLOW,
-                   FE_UNDERFLOW};
-
-  for (int e : excepts) {
+  for (int e : EXCEPTS) {
     LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
 
     // Save the cleared environment.
@@ -40,7 +43,7 @@ TEST(LlvmLibcFenvTest, GetEnvAndSetEnv) {
   }
 }
 
-TEST(LlvmLibcFenvTest, Set_FE_DFL_ENV) {
+TEST_F(LlvmLibcFEnvTest, Set_FE_DFL_ENV) {
   // We will disable all exceptions to prevent invocation of the exception
   // handler.
   LIBC_NAMESPACE::fputil::disable_except(FE_ALL_EXCEPT);
@@ -70,9 +73,10 @@ TEST(LlvmLibcFenvTest, Set_FE_DFL_ENV) {
   int rm = LIBC_NAMESPACE::fegetround();
   EXPECT_EQ(rm, FE_TONEAREST);
 }
+#endif
 
-#ifdef _WIN32
-TEST(LlvmLibcFenvTest, Windows_Set_Get_Test) {
+#ifdef LIBC_TARGET_OS_IS_WINDOWS
+TEST_F(LlvmLibcFEnvTest, Windows_Set_Get_Test) {
   // If a valid fenv_t is written, then reading it back out should be identical.
   fenv_t setEnv = {0x7e00053e, 0x0f00000f};
   fenv_t getEnv;

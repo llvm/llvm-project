@@ -11,6 +11,7 @@
 #include "llvm-c/OrcEE.h"
 #include "llvm-c/TargetMachine.h"
 
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
@@ -148,6 +149,14 @@ static LLVMJITSymbolFlags fromJITSymbolFlags(JITSymbolFlags JSF) {
   F.TargetFlags = JSF.getTargetFlags();
 
   return F;
+}
+
+static SymbolNameSet toSymbolNameSet(LLVMOrcCSymbolsList Symbols) {
+  SymbolNameSet Result;
+  Result.reserve(Symbols.Length);
+  for (size_t I = 0; I != Symbols.Length; ++I)
+    Result.insert(unwrap(Symbols.Symbols[I]).moveToSymbolStringPtr());
+  return Result;
 }
 
 static SymbolMap toSymbolMap(LLVMOrcCSymbolMapPairs Syms, size_t NumPairs) {
@@ -522,14 +531,24 @@ void LLVMOrcDisposeSymbols(LLVMOrcSymbolStringPoolEntryRef *Symbols) {
 
 LLVMErrorRef LLVMOrcMaterializationResponsibilityNotifyResolved(
     LLVMOrcMaterializationResponsibilityRef MR, LLVMOrcCSymbolMapPairs Symbols,
-    size_t NumPairs) {
-  SymbolMap SM = toSymbolMap(Symbols, NumPairs);
+    size_t NumSymbols) {
+  SymbolMap SM = toSymbolMap(Symbols, NumSymbols);
   return wrap(unwrap(MR)->notifyResolved(std::move(SM)));
 }
 
 LLVMErrorRef LLVMOrcMaterializationResponsibilityNotifyEmitted(
-    LLVMOrcMaterializationResponsibilityRef MR) {
-  return wrap(unwrap(MR)->notifyEmitted());
+    LLVMOrcMaterializationResponsibilityRef MR,
+    LLVMOrcCSymbolDependenceGroup *SymbolDepGroups, size_t NumSymbolDepGroups) {
+  std::vector<SymbolDependenceGroup> SDGs;
+  SDGs.reserve(NumSymbolDepGroups);
+  for (size_t I = 0; I != NumSymbolDepGroups; ++I) {
+    SDGs.push_back(SymbolDependenceGroup());
+    auto &SDG = SDGs.back();
+    SDG.Symbols = toSymbolNameSet(SymbolDepGroups[I].Symbols);
+    SDG.Dependencies = toSymbolDependenceMap(
+        SymbolDepGroups[I].Dependencies, SymbolDepGroups[I].NumDependencies);
+  }
+  return wrap(unwrap(MR)->notifyEmitted(SDGs));
 }
 
 LLVMErrorRef LLVMOrcMaterializationResponsibilityDefineMaterializing(
@@ -565,24 +584,6 @@ LLVMErrorRef LLVMOrcMaterializationResponsibilityDelegate(
   }
   *Result = wrap(OtherMR->release());
   return LLVMErrorSuccess;
-}
-
-void LLVMOrcMaterializationResponsibilityAddDependencies(
-    LLVMOrcMaterializationResponsibilityRef MR,
-    LLVMOrcSymbolStringPoolEntryRef Name,
-    LLVMOrcCDependenceMapPairs Dependencies, size_t NumPairs) {
-
-  SymbolDependenceMap SDM = toSymbolDependenceMap(Dependencies, NumPairs);
-  auto Sym = unwrap(Name).moveToSymbolStringPtr();
-  unwrap(MR)->addDependencies(Sym, SDM);
-}
-
-void LLVMOrcMaterializationResponsibilityAddDependenciesForAll(
-    LLVMOrcMaterializationResponsibilityRef MR,
-    LLVMOrcCDependenceMapPairs Dependencies, size_t NumPairs) {
-
-  SymbolDependenceMap SDM = toSymbolDependenceMap(Dependencies, NumPairs);
-  unwrap(MR)->addDependenciesForAll(SDM);
 }
 
 void LLVMOrcMaterializationResponsibilityFailMaterialization(

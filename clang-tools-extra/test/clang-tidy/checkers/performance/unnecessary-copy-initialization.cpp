@@ -28,10 +28,15 @@ struct ExpensiveToCopyType {
   template <typename A>
   const A &templatedAccessor() const;
   operator int() const; // Implicit conversion to int.
+
+  static const ExpensiveToCopyType &instance();
 };
 
 template <typename T>
 struct Container {
+  using reference = T&;
+  using const_reference = const T&;
+
   bool empty() const;
   const T& operator[](int) const;
   const T& operator[](int);
@@ -41,6 +46,10 @@ struct Container {
   ConstIterator<T> end() const;
   void nonConstMethod();
   bool constMethod() const;
+
+  reference at(int) const;
+  const_reference at(int);
+
 };
 
 using ExpensiveToCopyContainerAlias = Container<ExpensiveToCopyType>;
@@ -90,6 +99,28 @@ void PositiveFunctionCall() {
   const ExpensiveToCopyType VarCopyConstructed(ExpensiveTypeReference());
   // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarCopyConstructed'
   // CHECK-FIXES: const ExpensiveToCopyType& VarCopyConstructed(ExpensiveTypeReference());
+  VarCopyConstructed.constMethod();
+}
+
+void PositiveStaticMethodCall() {
+  const auto AutoAssigned = ExpensiveToCopyType::instance();
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoAssigned' is copy-constructed from a const reference; consider making it a const reference [performance-unnecessary-copy-initialization]
+  // CHECK-FIXES: const auto& AutoAssigned = ExpensiveToCopyType::instance();
+  AutoAssigned.constMethod();
+
+  const auto AutoCopyConstructed(ExpensiveToCopyType::instance());
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoCopyConstructed'
+  // CHECK-FIXES: const auto& AutoCopyConstructed(ExpensiveToCopyType::instance());
+  AutoCopyConstructed.constMethod();
+
+  const ExpensiveToCopyType VarAssigned = ExpensiveToCopyType::instance();
+  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarAssigned'
+  // CHECK-FIXES:   const ExpensiveToCopyType& VarAssigned = ExpensiveToCopyType::instance();
+  VarAssigned.constMethod();
+
+  const ExpensiveToCopyType VarCopyConstructed(ExpensiveToCopyType::instance());
+  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarCopyConstructed'
+  // CHECK-FIXES: const ExpensiveToCopyType& VarCopyConstructed(ExpensiveToCopyType::instance());
   VarCopyConstructed.constMethod();
 }
 
@@ -203,6 +234,28 @@ void PositiveOperatorCallConstValueParam(const Container<ExpensiveToCopyType> C)
   VarCopyConstructed.constMethod();
 }
 
+void PositiveOperatorValueParam(Container<ExpensiveToCopyType> C) {
+  const auto AutoAssigned = C[42];
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoAssigned'
+  // CHECK-FIXES: const auto& AutoAssigned = C[42];
+  AutoAssigned.constMethod();
+
+  const auto AutoCopyConstructed(C[42]);
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoCopyConstructed'
+  // CHECK-FIXES: const auto& AutoCopyConstructed(C[42]);
+  AutoCopyConstructed.constMethod();
+
+  const ExpensiveToCopyType VarAssigned = C.at(42);
+  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarAssigned'
+  // CHECK-FIXES: const ExpensiveToCopyType& VarAssigned = C.at(42);
+  VarAssigned.constMethod();
+
+  const ExpensiveToCopyType VarCopyConstructed(C.at(42));
+  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarCopyConstructed'
+  // CHECK-FIXES: const ExpensiveToCopyType& VarCopyConstructed(C.at(42));
+  VarCopyConstructed.constMethod();
+}
+
 void PositiveOperatorCallConstValueParamAlias(const ExpensiveToCopyContainerAlias C) {
   const auto AutoAssigned = C[42];
   // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoAssigned'
@@ -225,25 +278,25 @@ void PositiveOperatorCallConstValueParamAlias(const ExpensiveToCopyContainerAlia
   VarCopyConstructed.constMethod();
 }
 
-void PositiveOperatorCallConstValueParam(const Container<ExpensiveToCopyType>* C) {
+void PositiveOperatorCallConstPtrParam(const Container<ExpensiveToCopyType>* C) {
   const auto AutoAssigned = (*C)[42];
-  // TODO-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoAssigned'
-  // TODO-FIXES: const auto& AutoAssigned = (*C)[42];
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoAssigned'
+  // CHECK-FIXES: const auto& AutoAssigned = (*C)[42];
   AutoAssigned.constMethod();
 
   const auto AutoCopyConstructed((*C)[42]);
-  // TODO-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoCopyConstructed'
-  // TODO-FIXES: const auto& AutoCopyConstructed((*C)[42]);
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoCopyConstructed'
+  // CHECK-FIXES: const auto& AutoCopyConstructed((*C)[42]);
   AutoCopyConstructed.constMethod();
 
-  const ExpensiveToCopyType VarAssigned = C->operator[](42);
-  // TODO-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarAssigned'
-  // TODO-FIXES: const ExpensiveToCopyType& VarAssigned = C->operator[](42);
+  const ExpensiveToCopyType VarAssigned = C->at(42);
+  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarAssigned'
+  // CHECK-FIXES: const ExpensiveToCopyType& VarAssigned = C->at(42);
   VarAssigned.constMethod();
 
-  const ExpensiveToCopyType VarCopyConstructed(C->operator[](42));
-  // TODO-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarCopyConstructed'
-  // TODO-FIXES: const ExpensiveToCopyType& VarCopyConstructed(C->operator[](42));
+  const ExpensiveToCopyType VarCopyConstructed(C->at(42));
+  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarCopyConstructed'
+  // CHECK-FIXES: const ExpensiveToCopyType& VarCopyConstructed(C->at(42));
   VarCopyConstructed.constMethod();
 }
 
@@ -876,3 +929,13 @@ void negativeNonConstMemberExpr() {
     mutate(&Copy.Member);
   }
 }
+
+
+bool operator==(ExpensiveToCopyType, ExpensiveToCopyType);
+
+template<typename T> bool OperatorWithNoDirectCallee(T t) {
+  ExpensiveToCopyType a1;
+  ExpensiveToCopyType a2 = a1;
+  return a1 == t;
+}
+

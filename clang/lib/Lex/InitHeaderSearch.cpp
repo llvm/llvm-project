@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Config/config.h" // C_INCLUDE_DIRS
@@ -18,8 +17,6 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -149,7 +146,7 @@ bool InitHeaderSearch::AddUnmappedPath(const Twine &Path, IncludeDirGroup Group,
 
   // Compute the DirectoryLookup type.
   SrcMgr::CharacteristicKind Type;
-  if (Group == Quoted || Group == Angled || Group == IndexHeaderMap) {
+  if (Group == Quoted || Group == Angled) {
     Type = SrcMgr::C_User;
   } else if (Group == ExternCSystem) {
     Type = SrcMgr::C_ExternCSystem;
@@ -170,9 +167,8 @@ bool InitHeaderSearch::AddUnmappedPath(const Twine &Path, IncludeDirGroup Group,
     if (auto FE = FM.getOptionalFileRef(MappedPathStr)) {
       if (const HeaderMap *HM = Headers.CreateHeaderMap(*FE)) {
         // It is a headermap, add it to the search path.
-        IncludePath.emplace_back(
-            Group, DirectoryLookup(HM, Type, Group == IndexHeaderMap),
-            UserEntryIdx);
+        IncludePath.emplace_back(Group, DirectoryLookup(HM, Type),
+                                 UserEntryIdx);
         return true;
       }
     }
@@ -305,6 +301,7 @@ bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
   case llvm::Triple::PS5:
   case llvm::Triple::RTEMS:
   case llvm::Triple::Solaris:
+  case llvm::Triple::UEFI:
   case llvm::Triple::WASI:
   case llvm::Triple::ZOS:
     return false;
@@ -316,16 +313,13 @@ bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
     break;
 
   case llvm::Triple::UnknownOS:
-    if (triple.isWasm())
+    if (triple.isWasm() || triple.isAppleMachO())
       return false;
     break;
 
   default:
     break;
   }
-
-  if (triple.isOSDarwin())
-    return false;
 
   return true; // Everything else uses AddDefaultIncludePaths().
 }
@@ -340,6 +334,22 @@ void InitHeaderSearch::AddDefaultIncludePaths(
   // delete the entire pile of code.
   if (!ShouldAddDefaultIncludePaths(triple))
     return;
+
+  // NOTE: some additional header search logic is handled in the driver for
+  // Darwin.
+  if (triple.isOSDarwin()) {
+    if (HSOpts.UseStandardSystemIncludes) {
+      // Add the default framework include paths on Darwin.
+      if (triple.isDriverKit()) {
+        AddPath("/System/DriverKit/System/Library/Frameworks", System, true);
+      } else {
+        AddPath("/System/Library/Frameworks", System, true);
+        AddPath("/System/Library/SubFrameworks", System, true);
+        AddPath("/Library/Frameworks", System, true);
+      }
+    }
+    return;
+  }
 
   if (Lang.CPlusPlus && !Lang.AsmPreprocessor &&
       HSOpts.UseStandardCXXIncludes && HSOpts.UseStandardSystemIncludes) {
@@ -476,7 +486,7 @@ void InitHeaderSearch::Realize(const LangOptions &Lang) {
   unsigned NumQuoted = SearchList.size();
 
   for (auto &Include : IncludePath)
-    if (Include.Group == Angled || Include.Group == IndexHeaderMap)
+    if (Include.Group == Angled)
       SearchList.push_back(Include);
 
   RemoveDuplicates(SearchList, NumQuoted, Verbose);

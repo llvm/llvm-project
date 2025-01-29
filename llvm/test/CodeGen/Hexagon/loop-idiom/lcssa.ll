@@ -1,4 +1,4 @@
-; RUN: opt -S -hexagon-loop-idiom < %s | opt -S -passes='loop(loop-deletion),gvn'
+; RUN: opt -mtriple hexagon-- -S -passes='loop(hexagon-loop-idiom,loop-deletion),gvn'
 ; REQUIRES: asserts
 
 ; This tests that the HexagonLoopIdiom pass does not mark LCSSA information

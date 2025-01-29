@@ -141,3 +141,15 @@ namespace r360308_regression {
     return a == b;
   }
 }
+
+namespace GH95598 {
+template<typename _Tp, bool _IsPtr = __is_pointer(_Tp)>
+struct __is_pointer {};
+// expected-warning@-1 {{keyword '__is_pointer' will be made available as an identifier for the remainder of the translation unit}}
+
+template<bool>
+struct ts{};
+
+template<typename _Tp>
+  struct is_pointer : ts<__is_pointer(_Tp)> {};
+}

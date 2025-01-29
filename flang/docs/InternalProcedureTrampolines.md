@@ -239,7 +239,7 @@ automatically deallocated at the end of `host()` invocation.
 Unfortunately, this requires the program stack to be writeable and executable
 at the same time, which might be a security concern.
 
-> NOTE: LLVM's AArch64 backend supports `nest` attribute, but it does not seem to support trampoline intrinsics.
+> NOTE: LLVM's AArch64 backend supports `nest` attribute, but it requires the compiler-rt runtime selected via the `-rtlib=compiler-rt` flag.
 
 ## Alternative implementation(s)
 

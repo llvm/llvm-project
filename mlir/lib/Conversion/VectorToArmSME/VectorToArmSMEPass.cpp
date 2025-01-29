@@ -9,6 +9,7 @@
 #include "mlir/Conversion/VectorToArmSME/VectorToArmSME.h"
 
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
+#include "mlir/Dialect/ArmSVE/IR/ArmSVEDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -32,7 +33,7 @@ void ConvertVectorToArmSMEPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   populateVectorToArmSMEPatterns(patterns, getContext());
 
-  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
 }
 
 std::unique_ptr<Pass> mlir::createConvertVectorToArmSMEPass() {

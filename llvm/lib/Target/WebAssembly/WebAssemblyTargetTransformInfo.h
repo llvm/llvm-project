@@ -38,7 +38,7 @@ class WebAssemblyTTIImpl final : public BasicTTIImplBase<WebAssemblyTTIImpl> {
 
 public:
   WebAssemblyTTIImpl(const WebAssemblyTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
   /// \name Scalar TTI Implementations
@@ -63,19 +63,21 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
-      const Instruction *CxtI = nullptr);
+      ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr);
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
                                      unsigned Index, Value *Op0, Value *Op1);
 
-  /// @}
-
-  bool areInlineCompatible(const Function *Caller,
-                           const Function *Callee) const;
+  TTI::ReductionShuffle
+  getPreferredExpandedReductionShuffle(const IntrinsicInst *II) const;
 
   bool supportsTailCalls() const;
+
+  bool isProfitableToSinkOperands(Instruction *I,
+                                  SmallVectorImpl<Use *> &Ops) const;
+
+  /// @}
 };
 
 } // end namespace llvm

@@ -16,7 +16,10 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/LazyObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/LazyReexports.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/RedirectionManager.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 #include "llvm/ExecutionEngine/RuntimeDyldChecker.h"
 #include "llvm/Support/Error.h"
@@ -29,51 +32,102 @@ namespace llvm {
 
 struct Session {
 
+  struct LazyLinkingSupport {
+    LazyLinkingSupport(
+        std::unique_ptr<orc::RedirectableSymbolManager> RSMgr,
+        std::shared_ptr<orc::SimpleLazyReexportsSpeculator> Speculator,
+        std::unique_ptr<orc::LazyReexportsManager> LRMgr,
+        orc::ObjectLinkingLayer &ObjLinkingLayer)
+        : RSMgr(std::move(RSMgr)), Speculator(std::move(Speculator)),
+          LRMgr(std::move(LRMgr)),
+          LazyObjLinkingLayer(ObjLinkingLayer, *this->LRMgr) {}
+
+    std::unique_ptr<orc::RedirectableSymbolManager> RSMgr;
+    std::shared_ptr<orc::SimpleLazyReexportsSpeculator> Speculator;
+    std::unique_ptr<orc::LazyReexportsManager> LRMgr;
+    orc::LazyObjectLinkingLayer LazyObjLinkingLayer;
+  };
+
   orc::ExecutionSession ES;
   orc::JITDylib *MainJD = nullptr;
   orc::JITDylib *ProcessSymsJD = nullptr;
   orc::JITDylib *PlatformJD = nullptr;
   orc::ObjectLinkingLayer ObjLayer;
+  std::unique_ptr<LazyLinkingSupport> LazyLinking;
   orc::JITDylibSearchOrder JDSearchOrder;
   SubtargetFeatures Features;
+  std::vector<std::pair<std::string, orc::SymbolStringPtr>> LazyFnExecOrder;
 
   ~Session();
 
   static Expected<std::unique_ptr<Session>> Create(Triple TT,
                                                    SubtargetFeatures Features);
   void dumpSessionInfo(raw_ostream &OS);
-  void modifyPassConfig(const Triple &FTT,
+  void modifyPassConfig(jitlink::LinkGraph &G,
                         jitlink::PassConfiguration &PassConfig);
+
+  /// For -check: wait for all files that are referenced (transitively) from
+  /// the entry point *file* to be linked. (ORC's usual dependence tracking is
+  /// to fine-grained here: a lookup of the main symbol will return as soon as
+  /// all reachable symbols have been linked, but testcases may want to
+  /// inspect side-effects in unreachable symbols)..
+  void waitForFilesLinkedFromEntryPointFile() {
+    std::unique_lock<std::mutex> Lock(M);
+    return ActiveLinksCV.wait(Lock, [this]() { return ActiveLinks == 0; });
+  }
 
   using MemoryRegionInfo = RuntimeDyldChecker::MemoryRegionInfo;
 
   struct FileInfo {
     StringMap<MemoryRegionInfo> SectionInfos;
-    StringMap<MemoryRegionInfo> StubInfos;
+    StringMap<SmallVector<MemoryRegionInfo, 1>> StubInfos;
     StringMap<MemoryRegionInfo> GOTEntryInfos;
+
+    using Symbol = jitlink::Symbol;
+    using LinkGraph = jitlink::LinkGraph;
+    using GetSymbolTargetFunction =
+        unique_function<Expected<Symbol &>(LinkGraph &G, jitlink::Block &)>;
+    Error registerGOTEntry(LinkGraph &G, Symbol &Sym,
+                           GetSymbolTargetFunction GetSymbolTarget);
+    Error registerStubEntry(LinkGraph &G, Symbol &Sym,
+                            GetSymbolTargetFunction GetSymbolTarget);
+    Error registerMultiStubEntry(LinkGraph &G, Symbol &Sym,
+                                 GetSymbolTargetFunction GetSymbolTarget);
   };
 
-  using DynLibJDMap = std::map<std::string, orc::JITDylib *>;
-  using SymbolInfoMap = StringMap<MemoryRegionInfo>;
+  using DynLibJDMap = std::map<std::string, orc::JITDylib *, std::less<>>;
+  using SymbolInfoMap = DenseMap<orc::SymbolStringPtr, MemoryRegionInfo>;
   using FileInfoMap = StringMap<FileInfo>;
 
   Expected<orc::JITDylib *> getOrLoadDynamicLibrary(StringRef LibPath);
   Error loadAndLinkDynamicLibrary(orc::JITDylib &JD, StringRef LibPath);
 
+  orc::ObjectLayer &getLinkLayer(bool Lazy) {
+    assert((!Lazy || LazyLinking) &&
+           "Lazy linking requested but not available");
+    return Lazy ? static_cast<orc::ObjectLayer &>(
+                      LazyLinking->LazyObjLinkingLayer)
+                : static_cast<orc::ObjectLayer &>(ObjLayer);
+  }
+
   Expected<FileInfo &> findFileInfo(StringRef FileName);
   Expected<MemoryRegionInfo &> findSectionInfo(StringRef FileName,
                                                StringRef SectionName);
   Expected<MemoryRegionInfo &> findStubInfo(StringRef FileName,
-                                            StringRef TargetName);
+                                            StringRef TargetName,
+                                            StringRef KindNameFilter);
   Expected<MemoryRegionInfo &> findGOTEntryInfo(StringRef FileName,
                                                 StringRef TargetName);
 
-  bool isSymbolRegistered(StringRef Name);
-  Expected<MemoryRegionInfo &> findSymbolInfo(StringRef SymbolName,
+  bool isSymbolRegistered(const orc::SymbolStringPtr &Name);
+  Expected<MemoryRegionInfo &> findSymbolInfo(const orc::SymbolStringPtr &Name,
                                               Twine ErrorMsgStem);
 
   DynLibJDMap DynLibJDs;
 
+  std::mutex M;
+  std::condition_variable ActiveLinksCV;
+  size_t ActiveLinks = 0;
   SymbolInfoMap SymbolInfos;
   FileInfoMap FileInfos;
 

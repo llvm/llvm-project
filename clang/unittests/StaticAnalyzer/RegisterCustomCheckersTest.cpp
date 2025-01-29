@@ -89,8 +89,7 @@ TEST(RegisterCustomCheckers, CheckLocationIncDec) {
 
 class CheckerRegistrationOrderPrinter
     : public Checker<check::PreStmt<DeclStmt>> {
-  std::unique_ptr<BugType> BT =
-      std::make_unique<BugType>(this, "Registration order");
+  const BugType BT{this, "Registration order"};
 
 public:
   void checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
@@ -104,7 +103,7 @@ public:
         .printEnabledCheckerList(OS);
     // Strip a newline off.
     auto R =
-        std::make_unique<PathSensitiveBugReport>(*BT, OS.str().drop_back(1), N);
+        std::make_unique<PathSensitiveBugReport>(BT, OS.str().drop_back(1), N);
     C.emitReport(std::move(R));
   }
 };
@@ -125,8 +124,6 @@ void addCheckerRegistrationOrderPrinter(CheckerRegistry &Registry) {
 
 #define UNITTEST_CHECKER(CHECKER_NAME, DIAG_MSG)                               \
   class CHECKER_NAME : public Checker<check::PreStmt<DeclStmt>> {              \
-    std::unique_ptr<BugType> BT = std::make_unique<BugType>(this, DIAG_MSG);   \
-                                                                               \
   public:                                                                      \
     void checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {}          \
   };                                                                           \

@@ -68,8 +68,13 @@ public:
   StringRef getNameAsRequested() const { return ME->first(); }
 
   const FileEntry &getFileEntry() const {
-    return *getBaseMapEntry().second->V.get<FileEntry *>();
+    return *cast<FileEntry *>(getBaseMapEntry().second->V);
   }
+
+  // This function is used if the buffer size needs to be increased
+  // due to potential z/OS EBCDIC -> UTF-8 conversion
+  inline void updateFileEntryBufferSize(unsigned BufferSize);
+
   DirectoryEntryRef getDir() const { return ME->second->Dir; }
 
   inline off_t getSize() const;
@@ -318,21 +323,13 @@ class FileEntry {
   /// The file content, if it is owned by the \p FileEntry.
   std::unique_ptr<llvm::MemoryBuffer> Content;
 
-  // First access name for this FileEntry.
-  //
-  // This is Optional only to allow delayed construction (FileEntryRef has no
-  // default constructor). It should always have a value in practice.
-  //
-  // TODO: remove this once everyone that needs a name uses FileEntryRef.
-  OptionalFileEntryRef LastRef;
-
 public:
   ~FileEntry();
-  LLVM_DEPRECATED("Use FileEntryRef::getName() instead.", "")
-  StringRef getName() const { return LastRef->getName(); }
 
   StringRef tryGetRealPathName() const { return RealPathName; }
   off_t getSize() const { return Size; }
+  // Size may increase due to potential z/OS EBCDIC -> UTF-8 conversion.
+  void setSize(off_t NewSize) { Size = NewSize; }
   unsigned getUID() const { return UID; }
   const llvm::sys::fs::UniqueID &getUniqueID() const { return UniqueID; }
   time_t getModificationTime() const { return ModTime; }
@@ -362,6 +359,10 @@ time_t FileEntryRef::getModificationTime() const {
 bool FileEntryRef::isNamedPipe() const { return getFileEntry().isNamedPipe(); }
 
 void FileEntryRef::closeFile() const { getFileEntry().closeFile(); }
+
+void FileEntryRef::updateFileEntryBufferSize(unsigned BufferSize) {
+  cast<FileEntry *>(getBaseMapEntry().second->V)->setSize(BufferSize);
+}
 
 } // end namespace clang
 

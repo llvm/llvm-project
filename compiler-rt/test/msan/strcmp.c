@@ -1,6 +1,6 @@
 // RUN: %clang_msan %s -o %t
-// RUN: MSAN_OPTIONS=intercept_strcmp=false %run %t 2>&1
-// RUN: MSAN_OPTIONS=intercept_strcmp=true not %run %t 2>&1 | FileCheck %s
+// RUN: env MSAN_OPTIONS=intercept_strcmp=false %run %t 2>&1
+// RUN: env MSAN_OPTIONS=intercept_strcmp=true not %run %t 2>&1 | FileCheck %s
 // RUN:                                    not %run %t 2>&1 | FileCheck %s
 
 #include <assert.h>

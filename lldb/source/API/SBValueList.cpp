@@ -10,9 +10,9 @@
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBValue.h"
-#include "lldb/Core/ValueObjectList.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObjectList.h"
 #include <vector>
 
 using namespace lldb;
@@ -22,13 +22,14 @@ class ValueListImpl {
 public:
   ValueListImpl() = default;
 
-  ValueListImpl(const ValueListImpl &rhs) = default;
+  ValueListImpl(const ValueListImpl &rhs)
+      : m_values(rhs.m_values), m_error(rhs.m_error.Clone()) {}
 
   ValueListImpl &operator=(const ValueListImpl &rhs) {
     if (this == &rhs)
       return *this;
     m_values = rhs.m_values;
-    m_error = rhs.m_error;
+    m_error = rhs.m_error.Clone();
     return *this;
   }
 
@@ -67,7 +68,7 @@ public:
 
   const Status &GetError() const { return m_error; }
 
-  void SetError(const Status &error) { m_error = error; }
+  void SetError(Status &&error) { m_error = std::move(error); }
 
 private:
   std::vector<lldb::SBValue> m_values;
@@ -205,10 +206,10 @@ lldb::SBError SBValueList::GetError() {
   LLDB_INSTRUMENT_VA(this);
   SBError sb_error;
   if (m_opaque_up)
-    sb_error.SetError(m_opaque_up->GetError());
+    sb_error.SetError(m_opaque_up->GetError().Clone());
   return sb_error;
 }
 
-void SBValueList::SetError(const lldb_private::Status &status) {
-  ref().SetError(status);
+void SBValueList::SetError(lldb_private::Status &&status) {
+  ref().SetError(std::move(status));
 }

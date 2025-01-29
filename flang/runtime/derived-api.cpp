@@ -31,6 +31,16 @@ void RTDEF(Initialize)(
   }
 }
 
+void RTDEF(InitializeClone)(const Descriptor &clone, const Descriptor &orig,
+    const char *sourceFile, int sourceLine) {
+  if (const DescriptorAddendum * addendum{clone.Addendum()}) {
+    if (const auto *derived{addendum->derivedType()}) {
+      Terminator terminator{sourceFile, sourceLine};
+      InitializeClone(clone, orig, *derived, terminator);
+    }
+  }
+}
+
 void RTDEF(Destroy)(const Descriptor &descriptor) {
   if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {
@@ -95,7 +105,7 @@ inline RT_API_ATTRS bool CompareDerivedType(
   return a == b || CompareDerivedTypeNames(a->name(), b->name());
 }
 
-static const RT_API_ATTRS typeInfo::DerivedType *GetDerivedType(
+static RT_API_ATTRS const typeInfo::DerivedType *GetDerivedType(
     const Descriptor &desc) {
   if (const DescriptorAddendum * addendum{desc.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {

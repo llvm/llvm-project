@@ -1,14 +1,6 @@
 # Needed for lit support in standalone builds.
 include(AddLLVM)
 
-option(COMPILER_RT_TEST_STANDALONE_BUILD_LIBS
-  "When set to ON and testing in a standalone build, test the runtime \
-  libraries built by this standalone build rather than the runtime libraries \
-  shipped with the compiler (used for testing). When set to OFF and testing \
-  in a standalone build, test the runtime libraries shipped with the compiler \
-  (used for testing). This option has no effect if the compiler and this \
-  build are configured to use the same runtime library path."
-  ON)
 pythonize_bool(COMPILER_RT_TEST_STANDALONE_BUILD_LIBS)
 
 pythonize_bool(LLVM_ENABLE_EXPENSIVE_CHECKS)
@@ -17,6 +9,10 @@ pythonize_bool(ZLIB_FOUND)
 pythonize_bool(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC)
 
 pythonize_bool(COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
+
+pythonize_bool(COMPILER_RT_HAS_AARCH64_SME)
+
+pythonize_bool(COMPILER_RT_HAS_NO_DEFAULT_CONFIG_FLAG)
 
 configure_compiler_rt_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.common.configured.in
@@ -54,15 +50,14 @@ umbrella_lit_testsuite_begin(check-compiler-rt)
 
 function(compiler_rt_test_runtime runtime)
   string(TOUPPER ${runtime} runtime_uppercase)
-  if(COMPILER_RT_HAS_${runtime_uppercase})
-    if (${runtime} STREQUAL scudo_standalone)
+  if(COMPILER_RT_HAS_${runtime_uppercase} AND COMPILER_RT_INCLUDE_TESTS)
+    if (${runtime} STREQUAL cfi AND NOT COMPILER_RT_HAS_UBSAN)
+      # CFI tests require diagnostic mode, which is implemented in UBSan.
+    elseif (${runtime} STREQUAL scudo_standalone)
       add_subdirectory(scudo/standalone)
     else()
       add_subdirectory(${runtime})
     endif()
-    foreach(directory ${ARGN})
-      add_subdirectory(${directory})
-    endforeach()
   endif()
 endfunction()
 
@@ -76,8 +71,7 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
     compiler_rt_test_runtime(interception)
 
     compiler_rt_test_runtime(lsan)
-    # CFI tests require diagnostic mode, which is implemented in UBSan.
-    compiler_rt_test_runtime(ubsan cfi)
+    compiler_rt_test_runtime(ubsan)
     compiler_rt_test_runtime(sanitizer_common)
 
     # OpenBSD not supporting asan, cannot run the tests
@@ -89,14 +83,14 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
     endif()
 
     foreach(sanitizer ${COMPILER_RT_SANITIZERS_TO_BUILD})
-      # cfi testing is gated on ubsan
-      if(NOT ${sanitizer} STREQUAL cfi)
-        compiler_rt_test_runtime(${sanitizer})
-      endif()
+      compiler_rt_test_runtime(${sanitizer})
     endforeach()
   endif()
   if(COMPILER_RT_BUILD_PROFILE AND COMPILER_RT_HAS_PROFILE)
     compiler_rt_test_runtime(profile)
+  endif()
+  if(COMPILER_RT_BUILD_CTX_PROFILE)
+    compiler_rt_test_runtime(ctx_profile)
   endif()
   if(COMPILER_RT_BUILD_MEMPROF)
     compiler_rt_test_runtime(memprof)
@@ -114,7 +108,12 @@ endif()
 
 # Now that we've traversed all the directories and know all the lit testsuites,
 # introduce a rule to run to run all of them.
-add_custom_target(compiler-rt-test-depends DEPENDS ${LLVM_COMPILER_RT_LIT_DEPENDS})
+get_property(LLVM_COMPILER_RT_LIT_DEPENDS GLOBAL PROPERTY LLVM_COMPILER_RT_LIT_DEPENDS)
+add_custom_target(compiler-rt-test-depends)
+set_target_properties(compiler-rt-test-depends PROPERTIES FOLDER "Compiler-RT/Tests")
+if(LLVM_COMPILER_RT_LIT_DEPENDS)
+  add_dependencies(compiler-rt-test-depends ${LLVM_COMPILER_RT_LIT_DEPENDS})
+endif()
 umbrella_lit_testsuite_end(check-compiler-rt)
 
 if(COMPILER_RT_STANDALONE_BUILD)

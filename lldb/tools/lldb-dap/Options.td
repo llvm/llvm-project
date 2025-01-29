@@ -43,3 +43,11 @@ def debugger_pid: S<"debugger-pid">,
 def repl_mode: S<"repl-mode">,
   MetaVarName<"<mode>">,
   HelpText<"The mode for handling repl evaluation requests, supported modes: variable, command, auto.">;
+
+def pre_init_command: S<"pre-init-command">,
+  MetaVarName<"<command>">,
+  HelpText<"A command to execute before the DAP initialization request and "
+    "right after a Debugger has been created.">;
+def: Separate<["-"], "c">,
+  Alias<pre_init_command>,
+  HelpText<"Alias for --pre-init-command">;

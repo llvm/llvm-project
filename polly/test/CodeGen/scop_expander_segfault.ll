@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S %s | FileCheck %s
 ;
 ; This test was extracted from gcc in SPEC2006 and it crashed our code
 ; generation, or to be more precise, the ScopExpander due to a endless

@@ -66,17 +66,25 @@ void AssignmentContext::Analyze(const parser::AssignmentStmt &stmt) {
     const SomeExpr &rhs{assignment->rhs};
     auto lhsLoc{std::get<parser::Variable>(stmt.t).GetSource()};
     const Scope &scope{context_.FindScope(lhsLoc)};
-    if (auto whyNot{WhyNotDefinable(lhsLoc, scope,
-            DefinabilityFlags{DefinabilityFlag::VectorSubscriptIsOk}, lhs)}) {
-      if (auto *msg{Say(lhsLoc,
-              "Left-hand side of assignment is not definable"_err_en_US)}) {
-        msg->Attach(std::move(*whyNot));
+    DefinabilityFlags flags{DefinabilityFlag::VectorSubscriptIsOk};
+    bool isDefinedAssignment{
+        std::holds_alternative<evaluate::ProcedureRef>(assignment->u)};
+    if (isDefinedAssignment) {
+      flags.set(DefinabilityFlag::AllowEventLockOrNotifyType);
+    }
+    if (auto whyNot{WhyNotDefinable(lhsLoc, scope, flags, lhs)}) {
+      if (whyNot->IsFatal()) {
+        if (auto *msg{Say(lhsLoc,
+                "Left-hand side of assignment is not definable"_err_en_US)}) {
+          msg->Attach(
+              std::move(whyNot->set_severity(parser::Severity::Because)));
+        }
+      } else {
+        context_.Say(std::move(*whyNot));
       }
     }
     auto rhsLoc{std::get<parser::Expr>(stmt.t).source};
-    if (std::holds_alternative<evaluate::ProcedureRef>(assignment->u)) {
-      // it's a defined ASSIGNMENT(=)
-    } else {
+    if (!isDefinedAssignment) {
       CheckForPureContext(rhs, rhsLoc);
     }
     if (whereDepth_ > 0) {

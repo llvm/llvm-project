@@ -9,10 +9,11 @@
 #include "src/stdio/fflush.h"
 #include "src/__support/File/file.h"
 
+#include "hdr/types/FILE.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
-#include <stdio.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fflush, (::FILE * stream)) {
   int result = reinterpret_cast<LIBC_NAMESPACE::File *>(stream)->flush();
@@ -23,4 +24,4 @@ LLVM_LIBC_FUNCTION(int, fflush, (::FILE * stream)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

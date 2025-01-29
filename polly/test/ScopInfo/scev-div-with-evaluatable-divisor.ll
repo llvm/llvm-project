@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
 
 ; Derived from test-suite/SingleSource/UnitTests/Vector/SSE/sse.stepfft.c
 
@@ -17,7 +17,7 @@ for.body.lr.ph:                                   ; preds = %entry
   br label %for.body
 
 for.body:                                         ; preds = %for.inc, %for.body.lr.ph
-  %mj.017 = phi i32 [ 1, %for.body.lr.ph ], [ undef, %for.inc ]
+  %mj.017 = phi i32 [ 1, %for.body.lr.ph ], [ poison, %for.inc ]
   br i1 true, label %if.else, label %if.then
 
 if.then:                                          ; preds = %for.body

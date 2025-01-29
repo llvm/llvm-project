@@ -56,7 +56,7 @@ define void @test_simplify3(ptr %dst) {
 define void @test_simplify4(ptr %dst) {
 ; CHECK-LABEL: @test_simplify4(
 ; CHECK-NEXT:    store i8 104, ptr [[DST:%.*]], align 1
-; CHECK-NEXT:    [[NUL:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 1
+; CHECK-NEXT:    [[NUL:%.*]] = getelementptr inbounds nuw i8, ptr [[DST]], i32 1
 ; CHECK-NEXT:    store i8 0, ptr [[NUL]], align 1
 ; CHECK-NEXT:    ret void
 ;

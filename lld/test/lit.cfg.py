@@ -40,6 +40,7 @@ llvm_config.use_lld()
 tool_patterns = [
     "llc",
     "llvm-as",
+    "llvm-cgdata",
     "llvm-mc",
     "llvm-nm",
     "llvm-objdump",
@@ -83,6 +84,7 @@ llvm_config.feature_config(
                 "PowerPC": "ppc",
                 "RISCV": "riscv",
                 "Sparc": "sparc",
+                "SystemZ": "systemz",
                 "WebAssembly": "wasm",
                 "X86": "x86",
             },
@@ -102,10 +104,8 @@ if not run_lld_main_twice:
     config.environment["LLD_IN_TEST"] = "1"
 else:
     config.environment["LLD_IN_TEST"] = "2"
-    # Many ELF tests fail in this mode.
-    config.excludes.append("ELF")
-    # Some old Mach-O backend tests fail, and it's due for removal anyway.
-    config.excludes.append("mach-o")
+    # Many wasm tests fail.
+    config.excludes.append("wasm")
     # Some new Mach-O backend tests fail; give them a way to mark themselves
     # unsupported in this mode.
     config.available_features.add("main-run-twice")

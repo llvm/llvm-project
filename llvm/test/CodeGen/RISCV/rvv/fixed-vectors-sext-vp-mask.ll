@@ -22,7 +22,7 @@ define <4 x i16> @vsext_v4i16_v4i1_unmasked(<4 x i1> %va, i32 zeroext %evl) {
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
 ; CHECK-NEXT:    ret
-  %v = call <4 x i16> @llvm.vp.sext.v4i16.v4i1(<4 x i1> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
+  %v = call <4 x i16> @llvm.vp.sext.v4i16.v4i1(<4 x i1> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i16> %v
 }
 
@@ -46,7 +46,7 @@ define <4 x i32> @vsext_v4i32_v4i1_unmasked(<4 x i1> %va, i32 zeroext %evl) {
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
 ; CHECK-NEXT:    ret
-  %v = call <4 x i32> @llvm.vp.sext.v4i32.v4i1(<4 x i1> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
+  %v = call <4 x i32> @llvm.vp.sext.v4i32.v4i1(<4 x i1> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i32> %v
 }
 
@@ -70,6 +70,6 @@ define <4 x i64> @vsext_v4i64_v4i1_unmasked(<4 x i1> %va, i32 zeroext %evl) {
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
 ; CHECK-NEXT:    ret
-  %v = call <4 x i64> @llvm.vp.sext.v4i64.v4i1(<4 x i1> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
+  %v = call <4 x i64> @llvm.vp.sext.v4i64.v4i1(<4 x i1> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i64> %v
 }

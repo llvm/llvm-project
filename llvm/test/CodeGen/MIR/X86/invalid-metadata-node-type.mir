@@ -1,4 +1,4 @@
-# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not llc -mtriple=x86_64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
 --- |
   declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
 
@@ -6,12 +6,12 @@
   entry:
     %x.i = alloca i8, align 1
     %y.i = alloca [256 x i8], align 16
-    %0 = bitcast i8* %x.i to i8*
+    %0 = bitcast ptr %x.i to ptr
     br label %for.body
 
   for.body:
-    %1 = bitcast [256 x i8]* %y.i to i8*
-    call void @llvm.dbg.declare(metadata i8* %0, metadata !4, metadata !7) #3, !dbg !8
+    %1 = bitcast ptr %y.i to ptr
+    call void @llvm.dbg.declare(metadata ptr %0, metadata !4, metadata !7) #3, !dbg !8
     br label %for.body
   }
 

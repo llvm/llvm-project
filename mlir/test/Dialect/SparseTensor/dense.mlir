@@ -40,11 +40,11 @@
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x16xf32, #sparse{{[0-9]*}}> to memref<?xf32>
-// CHECK:           %[[VAL_8:.*]] = bufferization.to_memref %[[VAL_1]] : memref<32x16xf32>
+// CHECK:           %[[VAL_8:.*]] = bufferization.to_memref %[[VAL_1]] : tensor<32x16xf32> to memref<32x16xf32>
 // CHECK:           scf.for %[[VAL_9:.*]] = %[[VAL_5]] to %[[VAL_3]] step %[[VAL_6]] {
+// CHECK:             %[[VAL_11:.*]] = arith.muli %[[VAL_9]], %[[VAL_4]] : index
 // CHECK:             scf.for %[[VAL_10:.*]] = %[[VAL_5]] to %[[VAL_4]] step %[[VAL_6]] {
-// CHECK:               %[[VAL_11:.*]] = arith.muli %[[VAL_9]], %[[VAL_4]] : index
-// CHECK:               %[[VAL_12:.*]] = arith.addi %[[VAL_11]], %[[VAL_10]] : index
+// CHECK:               %[[VAL_12:.*]] = arith.addi %[[VAL_10]], %[[VAL_11]] : index
 // CHECK:               %[[VAL_13:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_12]]] : memref<?xf32>
 // CHECK:               %[[VAL_14:.*]] = arith.addf %[[VAL_13]], %[[VAL_2]] : f32
 // CHECK:               memref.store %[[VAL_14]], %[[VAL_8]]{{\[}}%[[VAL_9]], %[[VAL_10]]] : memref<32x16xf32>
@@ -79,12 +79,12 @@ func.func @dense1(%arga: tensor<32x16xf32, #DenseMatrix>,
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 16 : index
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_7:.*]] = bufferization.to_memref %[[VAL_0]] : memref<32x16xf32>
+// CHECK:           %[[VAL_7:.*]] = bufferization.to_memref %[[VAL_0]] : tensor<32x16xf32> to memref<32x16xf32>
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<32x16xf32, #sparse{{[0-9]*}}> to memref<?xf32>
 // CHECK:           scf.for %[[VAL_9:.*]] = %[[VAL_5]] to %[[VAL_3]] step %[[VAL_6]] {
+// CHECK:             %[[VAL_11:.*]] = arith.muli %[[VAL_9]], %[[VAL_4]] : index
 // CHECK:             scf.for %[[VAL_10:.*]] = %[[VAL_5]] to %[[VAL_4]] step %[[VAL_6]] {
-// CHECK:               %[[VAL_11:.*]] = arith.muli %[[VAL_9]], %[[VAL_4]] : index
-// CHECK:               %[[VAL_12:.*]] = arith.addi %[[VAL_11]], %[[VAL_10]] : index
+// CHECK:               %[[VAL_12:.*]] = arith.addi %[[VAL_10]], %[[VAL_11]] : index
 // CHECK:               %[[VAL_13:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_9]], %[[VAL_10]]] : memref<32x16xf32>
 // CHECK:               %[[VAL_14:.*]] = arith.addf %[[VAL_13]], %[[VAL_2]] : f32
 // CHECK:               memref.store %[[VAL_14]], %[[VAL_8]]{{\[}}%[[VAL_12]]] : memref<?xf32>
@@ -122,12 +122,12 @@ func.func @dense2(%arga: tensor<32x16xf32>,
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 16 : index
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_7:.*]] = bufferization.to_memref %[[VAL_0]] : memref<32x16x8xf32>
+// CHECK:           %[[VAL_7:.*]] = bufferization.to_memref %[[VAL_0]] : tensor<32x16x8xf32> to memref<32x16x8xf32>
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<32x16xf32, #sparse{{[0-9]*}}> to memref<?xf32>
 // CHECK:           scf.for %[[VAL_9:.*]] = %[[VAL_5]] to %[[VAL_3]] step %[[VAL_6]] {
+// CHECK:             %[[VAL_11:.*]] = arith.muli %[[VAL_9]], %[[VAL_4]] : index
 // CHECK:             scf.for %[[VAL_10:.*]] = %[[VAL_5]] to %[[VAL_4]] step %[[VAL_6]] {
-// CHECK:               %[[VAL_11:.*]] = arith.muli %[[VAL_9]], %[[VAL_4]] : index
-// CHECK:               %[[VAL_12:.*]] = arith.addi %[[VAL_11]], %[[VAL_10]] : index
+// CHECK:               %[[VAL_12:.*]] = arith.addi %[[VAL_10]], %[[VAL_11]] : index
 // CHECK:               %[[VAL_13:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_12]]] : memref<?xf32>
 // CHECK:               %[[VAL_14:.*]] = scf.for %[[VAL_15:.*]] = %[[VAL_5]] to %[[VAL_2]] step %[[VAL_6]] iter_args(%[[VAL_16:.*]] = %[[VAL_13]]) -> (f32) {
 // CHECK:                 %[[VAL_17:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_9]], %[[VAL_10]], %[[VAL_15]]] : memref<32x16x8xf32>

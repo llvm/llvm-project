@@ -56,9 +56,7 @@ define i8 @masked_merge2(i8 %a0, i8 %a1, i8 %a2) {
 ; NOBMI-LABEL: masked_merge2:
 ; NOBMI:       # %bb.0:
 ; NOBMI-NEXT:    movl %esi, %eax
-; NOBMI-NEXT:    xorb %sil, %al
-; NOBMI-NEXT:    andb %dil, %al
-; NOBMI-NEXT:    xorb %sil, %al
+; NOBMI-NEXT:    # kill: def $al killed $al killed $eax
 ; NOBMI-NEXT:    retq
 ;
 ; BMI-LABEL: masked_merge2:

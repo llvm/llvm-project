@@ -24,3 +24,4 @@
 ## Make fake mnemonics we use to match these in the tablegened asm match table isn't exposed.
 .insn_cr  2, 9, a0, a1 # CHECK: :[[#@LINE]]:1: error: unknown directive
 
+.insn 0xfffffff0 # CHECK: :[[@LINE]]:7: error: encoding value does not fit into instruction

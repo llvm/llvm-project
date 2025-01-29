@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -verify %s \
-// RUN:   -analyzer-checker=core.builtin \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-checker=unix.Malloc \
 // RUN:   -analyzer-config display-checker-name=false
 
 typedef unsigned long size_t;
@@ -99,7 +99,7 @@ public:
 } // end of anonymous namespace
 
 void test_6() {
-  clang_analyzer_explain(conjure_S()); // expected-warning-re{{{{^lazily frozen compound value of 1st parameter of function 'clang_analyzer_explain\(\)'$}}}}
+  clang_analyzer_explain(conjure_S()); // expected-warning-re{{{{^symbol of type 'int' conjured at statement 'conjure_S\(\)'$}}}}
   clang_analyzer_explain(conjure_S().z); // expected-warning-re{{{{^value derived from \(symbol of type 'int' conjured at statement 'conjure_S\(\)'\) for field 'z' of temporary object constructed at statement 'conjure_S\(\)'$}}}}
 }
 

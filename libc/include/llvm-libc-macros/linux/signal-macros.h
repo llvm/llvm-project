@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_LINUX_SIGNUM_MACROS_H
-#define __LLVM_LIBC_MACROS_LINUX_SIGNUM_MACROS_H
+#ifndef LLVM_LIBC_MACROS_LINUX_SIGNAL_MACROS_H
+#define LLVM_LIBC_MACROS_LINUX_SIGNAL_MACROS_H
 
 #define SIGHUP 1
 #define SIGINT 2
@@ -76,15 +76,12 @@
 #define SS_ONSTACK 0x1
 #define SS_DISABLE 0x2
 
-#ifdef __x86_64__
+#if defined(__x86_64__) || defined(__i386__) || defined(__riscv)
 #define MINSIGSTKSZ 2048
 #define SIGSTKSZ 8192
 #elif defined(__aarch64__)
 #define MINSIGSTKSZ 5120
 #define SIGSTKSZ 16384
-#elif defined(__riscv)
-#define MINSIGSTKSZ 2048
-#define SIGSTKSZ 8192
 #else
 #error "Signal stack sizes not defined for your platform."
 #endif
@@ -101,4 +98,4 @@
 #define CLD_STOPPED 5   // child has stopped
 #define CLD_CONTINUED 6 // stopped child has continued
 
-#endif // __LLVM_LIBC_MACROS_LINUX_SIGNUM_MACROS_H
+#endif // LLVM_LIBC_MACROS_LINUX_SIGNAL_MACROS_H

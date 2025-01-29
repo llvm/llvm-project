@@ -13,7 +13,7 @@
 #  define _CRT_RAND_S
 #endif // defined(_LIBCPP_USING_WIN32_RANDOM)
 
-#include <__system_error/system_error.h>
+#include <__system_error/throw_system_error.h>
 #include <limits>
 #include <random>
 
@@ -80,7 +80,7 @@ unsigned random_device::operator()() {
   while (n > 0) {
     ssize_t s = read(__f_, p, n);
     if (s == 0)
-      __throw_system_error(ENODATA, "random_device got EOF");
+      __throw_system_error(ENOMSG, "random_device got EOF");
     if (s == -1) {
       if (errno != EINTR)
         __throw_system_error(errno, "random_device got an unexpected error");

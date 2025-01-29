@@ -6,10 +6,8 @@ define <vscale x 8 x i16> @sext_splat_v8i16_128() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.h, #-128 // =0xffffffffffffff80
 ; CHECK-NEXT:    ret
-  %i = insertelement <vscale x 8 x i16> poison, i16 128, i32 0
-  %s = shufflevector <vscale x 8 x i16> %i, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-  %a = shl <vscale x 8 x i16> %s, shufflevector (<vscale x 8 x i16> insertelement(<vscale x 8 x i16> undef, i16 8, i32 0), <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer)
-  %b = ashr <vscale x 8 x i16> %a, shufflevector (<vscale x 8 x i16> insertelement(<vscale x 8 x i16> undef, i16 8, i32 0), <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer)
+  %a = shl <vscale x 8 x i16> splat(i16 128), splat (i16 8)
+  %b = ashr <vscale x 8 x i16> %a, splat (i16 8)
   ret <vscale x 8 x i16> %b
 }
 
@@ -20,9 +18,7 @@ define <vscale x 8 x i1> @sext_icmp_splat_v8i16_128(<vscale x 8 x i8> %d) {
 ; CHECK-NEXT:    sxtb z0.h, p0/m, z0.h
 ; CHECK-NEXT:    cmpgt p0.h, p0/z, z0.h, #-1
 ; CHECK-NEXT:    ret
-  %i = insertelement <vscale x 8 x i8> poison, i8 128, i32 0
-  %s = shufflevector <vscale x 8 x i8> %i, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
-  %c = icmp ugt <vscale x 8 x i8> %s, %d
+  %c = icmp ugt <vscale x 8 x i8> splat(i8 128), %d
   ret <vscale x 8 x i1> %c
 }
 
@@ -33,8 +29,6 @@ define <vscale x 4 x i1> @sext_icmp_splat_v4i16_128(<vscale x 4 x i8> %d) {
 ; CHECK-NEXT:    sxtb z0.s, p0/m, z0.s
 ; CHECK-NEXT:    cmpgt p0.s, p0/z, z0.s, #-1
 ; CHECK-NEXT:    ret
-  %i = insertelement <vscale x 4 x i8> poison, i8 128, i32 0
-  %s = shufflevector <vscale x 4 x i8> %i, <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
-  %c = icmp ugt <vscale x 4 x i8> %s, %d
+  %c = icmp ugt <vscale x 4 x i8> splat(i8 128), %d
   ret <vscale x 4 x i1> %c
 }

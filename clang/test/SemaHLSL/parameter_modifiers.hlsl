@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library %s -verify
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library %s -verify -Wconversion
 void fn(in out float f); // #fn
 
 // expected-error@#fn2{{duplicate parameter modifier 'in'}}
@@ -35,7 +35,7 @@ void fn(in float f); // #fn-in
 void failOverloadResolution() {
   float f = 1.0;
   fn(f); // expected-error{{call to 'fn' is ambiguous}}
-  // expected-note@#fn-def{{candidate function}}
+  // expected-note@#fn{{candidate function}}
   // expected-note@#fn-in{{candidate function}}
 }
 
@@ -48,11 +48,9 @@ void callFns() {
   // Call with literal arguments.
   implicitFn(1); // Ok.
   inFn(1); // Ok.
-  inoutFn(1); // expected-error{{no matching function for call to 'inoutFn'}}
-  // expected-note@#inoutFn{{candidate function not viable: no known conversion from 'int' to 'float &' for 1st argument}}
-  outFn(1); // expected-error{{no matching function for call to 'outFn}}
-  // expected-note@#outFn{{candidate function not viable: no known conversion from 'int' to 'float &' for 1st argument}}
-  
+  inoutFn(1); // expected-error{{cannot bind non-lvalue argument 1 to inout paramemter}}
+  outFn(1); // expected-error{{cannot bind non-lvalue argument 1 to out paramemter}}
+
   // Call with variables.
   float f;
   implicitFn(f); // Ok.
@@ -91,4 +89,12 @@ void fn12(inout T f);
 void fn13() {
   float f;
   fn12<float>(f);
+}
+
+void fn14(out float f);
+
+void fn15() {
+  float f;
+  int x = 5;
+  fn14(f += x); // expected-warning{{implicit conversion from 'int' to 'float' may lose precision}}
 }

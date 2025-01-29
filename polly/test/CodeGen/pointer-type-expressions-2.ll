@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-print-ast -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s -check-prefix=CODEGEN
+; RUN: opt %loadNPMPolly '-passes=print<polly-ast>' -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s -check-prefix=CODEGEN
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @foo(ptr %start, ptr %end) {

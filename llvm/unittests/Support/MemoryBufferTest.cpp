@@ -11,11 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS, LLVM_ON_UNIX
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -317,13 +318,13 @@ TEST_F(MemoryBufferTest, slice) {
   EXPECT_EQ(0x4000UL, MB.get()->getBufferSize());
  
   StringRef BufData = MB.get()->getBuffer();
-  EXPECT_TRUE(BufData.substr(0x0000,8).equals("12345678"));
-  EXPECT_TRUE(BufData.substr(0x0FF8,8).equals("12345678"));
-  EXPECT_TRUE(BufData.substr(0x1000,8).equals("abcdefgh"));
-  EXPECT_TRUE(BufData.substr(0x2FF8,8).equals("abcdefgh"));
-  EXPECT_TRUE(BufData.substr(0x3000,8).equals("ABCDEFGH"));
-  EXPECT_TRUE(BufData.substr(0x3FF8,8).equals("ABCDEFGH"));
-   
+  EXPECT_TRUE(BufData.substr(0x0000, 8) == "12345678");
+  EXPECT_TRUE(BufData.substr(0x0FF8, 8) == "12345678");
+  EXPECT_TRUE(BufData.substr(0x1000, 8) == "abcdefgh");
+  EXPECT_TRUE(BufData.substr(0x2FF8, 8) == "abcdefgh");
+  EXPECT_TRUE(BufData.substr(0x3000, 8) == "ABCDEFGH");
+  EXPECT_TRUE(BufData.substr(0x3FF8, 8) == "ABCDEFGH");
+
   // Try non-page aligned.
   ErrorOr<OwningBuffer> MB2 = MemoryBuffer::getFileSlice(TestPath.str(),
                                                          0x3000, 0x0800);
@@ -332,10 +333,10 @@ TEST_F(MemoryBufferTest, slice) {
   EXPECT_EQ(0x3000UL, MB2.get()->getBufferSize());
   
   StringRef BufData2 = MB2.get()->getBuffer();
-  EXPECT_TRUE(BufData2.substr(0x0000,8).equals("12345678"));
-  EXPECT_TRUE(BufData2.substr(0x17F8,8).equals("12345678"));
-  EXPECT_TRUE(BufData2.substr(0x1800,8).equals("abcdefgh"));
-  EXPECT_TRUE(BufData2.substr(0x2FF8,8).equals("abcdefgh"));
+  EXPECT_TRUE(BufData2.substr(0x0000, 8) == "12345678");
+  EXPECT_TRUE(BufData2.substr(0x17F8, 8) == "12345678");
+  EXPECT_TRUE(BufData2.substr(0x1800, 8) == "abcdefgh");
+  EXPECT_TRUE(BufData2.substr(0x2FF8, 8) == "abcdefgh");
 }
 
 TEST_F(MemoryBufferTest, writableSlice) {

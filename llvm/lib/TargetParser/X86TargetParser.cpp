@@ -95,9 +95,9 @@ constexpr FeatureBitset FeaturesBroadwell =
 
 // Intel Knights Landing and Knights Mill
 // Knights Landing has feature parity with Broadwell.
-constexpr FeatureBitset FeaturesKNL =
-    FeaturesBroadwell | FeatureAES | FeatureAVX512F | FeatureEVEX512 |
-    FeatureAVX512CD | FeatureAVX512ER | FeatureAVX512PF | FeaturePREFETCHWT1;
+constexpr FeatureBitset FeaturesKNL = FeaturesBroadwell | FeatureAES |
+                                      FeatureAVX512F | FeatureEVEX512 |
+                                      FeatureAVX512CD;
 constexpr FeatureBitset FeaturesKNM = FeaturesKNL | FeatureAVX512VPOPCNTDQ;
 
 // Intel Skylake processors.
@@ -138,6 +138,14 @@ constexpr FeatureBitset FeaturesSapphireRapids =
     FeatureWAITPKG;
 constexpr FeatureBitset FeaturesGraniteRapids =
     FeaturesSapphireRapids | FeatureAMX_FP16 | FeaturePREFETCHI;
+constexpr FeatureBitset FeaturesDiamondRapids =
+    FeaturesGraniteRapids | FeatureAMX_COMPLEX | FeatureAVX10_2_512 |
+    FeatureCMPCCXADD | FeatureAVXIFMA | FeatureAVXNECONVERT |
+    FeatureAVXVNNIINT8 | FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 |
+    FeatureSM4 | FeatureEGPR | FeatureZU | FeatureCCMP | FeaturePush2Pop2 |
+    FeaturePPX | FeatureNDD | FeatureNF | FeatureCF | FeatureMOVRS |
+    FeatureAMX_MOVRS | FeatureAMX_AVX512 | FeatureAMX_FP8 | FeatureAMX_TF32 |
+    FeatureAMX_TRANSPOSE | FeatureUSERMSR;
 
 // Intel Atom processors.
 // Bonnell has feature parity with Core2 and adds MOVBE.
@@ -171,14 +179,14 @@ constexpr FeatureBitset FeaturesClearwaterforest =
 
 // Geode Processor.
 constexpr FeatureBitset FeaturesGeode =
-    FeatureX87 | FeatureCMPXCHG8B | FeatureMMX | Feature3DNOW | Feature3DNOWA;
+    FeatureX87 | FeatureCMPXCHG8B | FeatureMMX | FeaturePRFCHW;
 
 // K6 processor.
 constexpr FeatureBitset FeaturesK6 = FeatureX87 | FeatureCMPXCHG8B | FeatureMMX;
 
 // K7 and K8 architecture processors.
 constexpr FeatureBitset FeaturesAthlon =
-    FeatureX87 | FeatureCMPXCHG8B | FeatureMMX | Feature3DNOW | Feature3DNOWA;
+    FeatureX87 | FeatureCMPXCHG8B | FeatureMMX | FeaturePRFCHW;
 constexpr FeatureBitset FeaturesAthlonXP =
     FeaturesAthlon | FeatureFXSR | FeatureSSE;
 constexpr FeatureBitset FeaturesK8 =
@@ -238,6 +246,10 @@ static constexpr FeatureBitset FeaturesZNVER4 =
     FeatureAVX512BITALG | FeatureAVX512VPOPCNTDQ | FeatureAVX512BF16 |
     FeatureGFNI | FeatureSHSTK;
 
+static constexpr FeatureBitset FeaturesZNVER5 =
+    FeaturesZNVER4 | FeatureAVXVNNI | FeatureMOVDIRI | FeatureMOVDIR64B |
+    FeatureAVX512VP2INTERSECT | FeaturePREFETCHI | FeatureAVXVNNI;
+
 // D151696 tranplanted Mangling and OnlyForCPUDispatchSpecific from
 // X86TargetParser.def to here. They are assigned by following ways:
 // 1. Copy the mangling from the original CPU_SPEICIFC MACROs. If no, assign
@@ -256,8 +268,8 @@ constexpr ProcInfo Processors[] = {
   // i486-generation processors.
   { {"i486"}, CK_i486, ~0U, FeatureX87, '\0', false },
   { {"winchip-c6"}, CK_WinChipC6, ~0U, FeaturesPentiumMMX, '\0', false },
-  { {"winchip2"}, CK_WinChip2, ~0U, FeaturesPentiumMMX | Feature3DNOW, '\0', false },
-  { {"c3"}, CK_C3, ~0U, FeaturesPentiumMMX | Feature3DNOW, '\0', false },
+  { {"winchip2"}, CK_WinChip2, ~0U, FeaturesPentiumMMX | FeaturePRFCHW, '\0', false },
+  { {"c3"}, CK_C3, ~0U, FeaturesPentiumMMX | FeaturePRFCHW, '\0', false },
   // i586-generation processors, P5 microarchitecture based.
   { {"i586"}, CK_i586, ~0U, FeatureX87 | FeatureCMPXCHG8B, '\0', false },
   { {"pentium"}, CK_Pentium, ~0U, FeatureX87 | FeatureCMPXCHG8B, 'B', false },
@@ -347,7 +359,7 @@ constexpr ProcInfo Processors[] = {
   // Tigerlake microarchitecture based processors.
   { {"tigerlake"}, CK_Tigerlake, FEATURE_AVX512VP2INTERSECT, FeaturesTigerlake, 'l', false },
   // Sapphire Rapids microarchitecture based processors.
-  { {"sapphirerapids"}, CK_SapphireRapids, FEATURE_AVX512BF16, FeaturesSapphireRapids, 'n', false },
+  { {"sapphirerapids"}, CK_SapphireRapids, FEATURE_AVX512FP16, FeaturesSapphireRapids, 'n', false },
   // Alderlake microarchitecture based processors.
   { {"alderlake"}, CK_Alderlake, FEATURE_AVX2, FeaturesAlderlake, 'p', false },
   // Raptorlake microarchitecture based processors.
@@ -369,14 +381,16 @@ constexpr ProcInfo Processors[] = {
   // Grandridge microarchitecture based processors.
   { {"grandridge"}, CK_Grandridge, FEATURE_AVX2, FeaturesSierraforest, 'p', false },
   // Granite Rapids microarchitecture based processors.
-  { {"graniterapids"}, CK_Graniterapids, FEATURE_AVX512BF16, FeaturesGraniteRapids, 'n', false },
+  { {"graniterapids"}, CK_Graniterapids, FEATURE_AVX512FP16, FeaturesGraniteRapids, 'n', false },
   // Granite Rapids D microarchitecture based processors.
-  { {"graniterapids-d"}, CK_GraniterapidsD, FEATURE_AVX512BF16, FeaturesGraniteRapids | FeatureAMX_COMPLEX, '\0', false },
-  { {"graniterapids_d"}, CK_GraniterapidsD, FEATURE_AVX512BF16, FeaturesGraniteRapids | FeatureAMX_COMPLEX, 'n', true },
+  { {"graniterapids-d"}, CK_GraniterapidsD, FEATURE_AVX512FP16, FeaturesGraniteRapids | FeatureAMX_COMPLEX, '\0', false },
+  { {"graniterapids_d"}, CK_GraniterapidsD, FEATURE_AVX512FP16, FeaturesGraniteRapids | FeatureAMX_COMPLEX, 'n', true },
   // Emerald Rapids microarchitecture based processors.
-  { {"emeraldrapids"}, CK_Emeraldrapids, FEATURE_AVX512BF16, FeaturesSapphireRapids, 'n', false },
+  { {"emeraldrapids"}, CK_Emeraldrapids, FEATURE_AVX512FP16, FeaturesSapphireRapids, 'n', false },
   // Clearwaterforest microarchitecture based processors.
   { {"clearwaterforest"}, CK_Lunarlake, FEATURE_AVX2, FeaturesClearwaterforest, 'p', false },
+  // Diamond Rapids microarchitecture based processors.
+  { {"diamondrapids"}, CK_Diamondrapids, FEATURE_AVX10_2_512, FeaturesDiamondRapids, 'z', false },
   // Knights Landing processor.
   { {"knl"}, CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', false },
   { {"mic_avx512"}, CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', true },
@@ -386,8 +400,8 @@ constexpr ProcInfo Processors[] = {
   { {"lakemont"}, CK_Lakemont, ~0U, FeatureCMPXCHG8B, '\0', false },
   // K6 architecture processors.
   { {"k6"}, CK_K6, ~0U, FeaturesK6, '\0', false },
-  { {"k6-2"}, CK_K6_2, ~0U, FeaturesK6 | Feature3DNOW, '\0', false },
-  { {"k6-3"}, CK_K6_3, ~0U, FeaturesK6 | Feature3DNOW, '\0', false },
+  { {"k6-2"}, CK_K6_2, ~0U, FeaturesK6 | FeaturePRFCHW, '\0', false },
+  { {"k6-3"}, CK_K6_3, ~0U, FeaturesK6 | FeaturePRFCHW, '\0', false },
   // K7 architecture processors.
   { {"athlon"}, CK_Athlon, ~0U, FeaturesAthlon, '\0', false },
   { {"athlon-tbird"}, CK_Athlon, ~0U, FeaturesAthlon, '\0', false },
@@ -417,6 +431,7 @@ constexpr ProcInfo Processors[] = {
   { {"znver2"}, CK_ZNVER2, FEATURE_AVX2, FeaturesZNVER2, '\0', false },
   { {"znver3"}, CK_ZNVER3, FEATURE_AVX2, FeaturesZNVER3, '\0', false },
   { {"znver4"}, CK_ZNVER4, FEATURE_AVX512VBMI2, FeaturesZNVER4, '\0', false },
+  { {"znver5"}, CK_ZNVER5, FEATURE_AVX512VP2INTERSECT, FeaturesZNVER5, '\0', false },
   // Generic 64-bit processor.
   { {"x86-64"}, CK_x86_64, FEATURE_SSE2 , FeaturesX86_64, '\0', false },
   { {"x86-64-v2"}, CK_x86_64_v2, FEATURE_SSE4_2 , FeaturesX86_64_V2, '\0', false },
@@ -493,6 +508,7 @@ constexpr FeatureBitset ImpliedFeaturesFXSR = {};
 constexpr FeatureBitset ImpliedFeaturesINVPCID = {};
 constexpr FeatureBitset ImpliedFeaturesLWP = {};
 constexpr FeatureBitset ImpliedFeaturesLZCNT = {};
+constexpr FeatureBitset ImpliedFeaturesMMX = {};
 constexpr FeatureBitset ImpliedFeaturesMWAITX = {};
 constexpr FeatureBitset ImpliedFeaturesMOVBE = {};
 constexpr FeatureBitset ImpliedFeaturesMOVDIR64B = {};
@@ -500,7 +516,6 @@ constexpr FeatureBitset ImpliedFeaturesMOVDIRI = {};
 constexpr FeatureBitset ImpliedFeaturesPCONFIG = {};
 constexpr FeatureBitset ImpliedFeaturesPOPCNT = {};
 constexpr FeatureBitset ImpliedFeaturesPKU = {};
-constexpr FeatureBitset ImpliedFeaturesPREFETCHWT1 = {};
 constexpr FeatureBitset ImpliedFeaturesPRFCHW = {};
 constexpr FeatureBitset ImpliedFeaturesPTWRITE = {};
 constexpr FeatureBitset ImpliedFeaturesRDPID = {};
@@ -521,6 +536,8 @@ constexpr FeatureBitset ImpliedFeaturesWBNOINVD = {};
 constexpr FeatureBitset ImpliedFeaturesVZEROUPPER = {};
 constexpr FeatureBitset ImpliedFeaturesX87 = {};
 constexpr FeatureBitset ImpliedFeaturesXSAVE = {};
+constexpr FeatureBitset ImpliedFeaturesDUMMYFEATURE1 = {};
+constexpr FeatureBitset ImpliedFeaturesDUMMYFEATURE2 = {};
 
 // Not really CPU features, but need to be in the table because clang uses
 // target features to communicate them to the backend.
@@ -534,11 +551,6 @@ constexpr FeatureBitset ImpliedFeaturesLVI_LOAD_HARDENING = {};
 constexpr FeatureBitset ImpliedFeaturesXSAVEC = FeatureXSAVE;
 constexpr FeatureBitset ImpliedFeaturesXSAVEOPT = FeatureXSAVE;
 constexpr FeatureBitset ImpliedFeaturesXSAVES = FeatureXSAVE;
-
-// MMX->3DNOW->3DNOWA chain.
-constexpr FeatureBitset ImpliedFeaturesMMX = {};
-constexpr FeatureBitset ImpliedFeatures3DNOW = FeatureMMX;
-constexpr FeatureBitset ImpliedFeatures3DNOWA = Feature3DNOW;
 
 // SSE/AVX/AVX512F chain.
 constexpr FeatureBitset ImpliedFeaturesSSE = {};
@@ -569,8 +581,6 @@ constexpr FeatureBitset ImpliedFeaturesSM4 = FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesAVX512CD = FeatureAVX512F;
 constexpr FeatureBitset ImpliedFeaturesAVX512BW = FeatureAVX512F;
 constexpr FeatureBitset ImpliedFeaturesAVX512DQ = FeatureAVX512F;
-constexpr FeatureBitset ImpliedFeaturesAVX512ER = FeatureAVX512F;
-constexpr FeatureBitset ImpliedFeaturesAVX512PF = FeatureAVX512F;
 constexpr FeatureBitset ImpliedFeaturesAVX512VL = FeatureAVX512F;
 
 constexpr FeatureBitset ImpliedFeaturesAVX512BF16 = FeatureAVX512BW;
@@ -598,6 +608,12 @@ constexpr FeatureBitset ImpliedFeaturesAMX_BF16 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_FP16 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_INT8 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_COMPLEX = FeatureAMX_TILE;
+constexpr FeatureBitset ImpliedFeaturesAMX_FP8 = FeatureAMX_TILE;
+constexpr FeatureBitset ImpliedFeaturesAMX_TRANSPOSE = FeatureAMX_TILE;
+constexpr FeatureBitset ImpliedFeaturesAMX_MOVRS = FeatureAMX_TILE;
+constexpr FeatureBitset ImpliedFeaturesAMX_AVX512 =
+    FeatureAMX_TILE | FeatureAVX10_2_512;
+constexpr FeatureBitset ImpliedFeaturesAMX_TF32 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesHRESET = {};
 
 constexpr FeatureBitset ImpliedFeaturesPREFETCHI = {};
@@ -625,6 +641,9 @@ constexpr FeatureBitset ImpliedFeaturesAVX10_1 =
     FeatureAVX512FP16;
 constexpr FeatureBitset ImpliedFeaturesAVX10_1_512 =
     FeatureAVX10_1 | FeatureEVEX512;
+constexpr FeatureBitset ImpliedFeaturesAVX10_2 = FeatureAVX10_1;
+constexpr FeatureBitset ImpliedFeaturesAVX10_2_512 =
+    FeatureAVX10_2 | FeatureAVX10_1_512;
 
 // APX Features
 constexpr FeatureBitset ImpliedFeaturesEGPR = {};
@@ -632,7 +651,11 @@ constexpr FeatureBitset ImpliedFeaturesPush2Pop2 = {};
 constexpr FeatureBitset ImpliedFeaturesPPX = {};
 constexpr FeatureBitset ImpliedFeaturesNDD = {};
 constexpr FeatureBitset ImpliedFeaturesCCMP = {};
+constexpr FeatureBitset ImpliedFeaturesNF = {};
 constexpr FeatureBitset ImpliedFeaturesCF = {};
+constexpr FeatureBitset ImpliedFeaturesZU = {};
+
+constexpr FeatureBitset ImpliedFeaturesMOVRS = {};
 
 constexpr FeatureInfo FeatureInfos[X86::CPU_FEATURE_MAX] = {
 #define X86_FEATURE(ENUM, STR) {{"+" STR}, ImpliedFeatures##ENUM},
@@ -750,13 +773,16 @@ unsigned llvm::X86::getFeaturePriority(ProcessorFeatures Feat) {
 #ifndef NDEBUG
   // Check that priorities are set properly in the .def file. We expect that
   // "compat" features are assigned non-duplicate consecutive priorities
-  // starting from zero (0, 1, ..., num_features - 1).
+  // starting from one (1, ..., 37) and multiple zeros.
 #define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY) PRIORITY,
   unsigned Priorities[] = {
 #include "llvm/TargetParser/X86TargetParser.def"
   };
   std::array<unsigned, std::size(Priorities)> HelperList;
-  std::iota(HelperList.begin(), HelperList.end(), 0);
+  const size_t MaxPriority = 37;
+  std::iota(HelperList.begin(), HelperList.begin() + MaxPriority + 1, 0);
+  for (size_t i = MaxPriority + 1; i != std::size(Priorities); ++i)
+    HelperList[i] = 0;
   assert(std::is_permutation(HelperList.begin(), HelperList.end(),
                              std::begin(Priorities), std::end(Priorities)) &&
          "Priorities don't form consecutive range!");

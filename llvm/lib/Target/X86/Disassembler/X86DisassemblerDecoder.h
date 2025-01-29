@@ -33,6 +33,8 @@ namespace X86Disassembler {
 #define twoBitsFromOffset6(val) (((val) >> 6) & 0x3)
 #define threeBitsFromOffset0(val) ((val) & 0x7)
 #define threeBitsFromOffset3(val) (((val) >> 3) & 0x7)
+#define fourBitsFromOffset0(val) ((val) & 0xf)
+#define fourBitsFromOffset3(val) (((val) >> 3) & 0xf)
 #define fiveBitsFromOffset0(val) ((val) & 0x1f)
 #define invertedBitFromOffset2(val) (((~(val)) >> 2) & 0x1)
 #define invertedBitFromOffset3(val) (((~(val)) >> 3) & 0x1)
@@ -95,8 +97,9 @@ namespace X86Disassembler {
 #define mmmFromEVEX2of4(evex) threeBitsFromOffset0(evex)
 #define wFromEVEX3of4(evex) bitFromOffset7(evex)
 #define vvvvFromEVEX3of4(evex) invertedFourBitsFromOffset3(evex)
-#define x2FromEVEX3of4(evex) invertedBitFromOffset2(evex)
+#define uFromEVEX3of4(evex) invertedBitFromOffset2(evex)
 #define ppFromEVEX3of4(evex) twoBitsFromOffset0(evex)
+#define oszcFromEVEX3of4(evex) fourBitsFromOffset3(evex)
 #define zFromEVEX4of4(evex) bitFromOffset7(evex)
 #define l2FromEVEX4of4(evex) bitFromOffset6(evex)
 #define lFromEVEX4of4(evex) bitFromOffset5(evex)
@@ -104,6 +107,7 @@ namespace X86Disassembler {
 #define v2FromEVEX4of4(evex) invertedBitFromOffset3(evex)
 #define aaaFromEVEX4of4(evex) threeBitsFromOffset0(evex)
 #define nfFromEVEX4of4(evex) bitFromOffset2(evex)
+#define scFromEVEX4of4(evex) fourBitsFromOffset0(evex)
 
 // These enums represent Intel registers for use by the decoder.
 #define REGS_8BIT                                                              \
@@ -348,213 +352,220 @@ namespace X86Disassembler {
   ENTRY(R30)                                                                   \
   ENTRY(R31)
 
-#define REGS_MMX  \
-  ENTRY(MM0)      \
-  ENTRY(MM1)      \
-  ENTRY(MM2)      \
-  ENTRY(MM3)      \
-  ENTRY(MM4)      \
-  ENTRY(MM5)      \
-  ENTRY(MM6)      \
+#define REGS_MMX                                                               \
+  ENTRY(MM0)                                                                   \
+  ENTRY(MM1)                                                                   \
+  ENTRY(MM2)                                                                   \
+  ENTRY(MM3)                                                                   \
+  ENTRY(MM4)                                                                   \
+  ENTRY(MM5)                                                                   \
+  ENTRY(MM6)                                                                   \
   ENTRY(MM7)
 
-#define REGS_XMM  \
-  ENTRY(XMM0)     \
-  ENTRY(XMM1)     \
-  ENTRY(XMM2)     \
-  ENTRY(XMM3)     \
-  ENTRY(XMM4)     \
-  ENTRY(XMM5)     \
-  ENTRY(XMM6)     \
-  ENTRY(XMM7)     \
-  ENTRY(XMM8)     \
-  ENTRY(XMM9)     \
-  ENTRY(XMM10)    \
-  ENTRY(XMM11)    \
-  ENTRY(XMM12)    \
-  ENTRY(XMM13)    \
-  ENTRY(XMM14)    \
-  ENTRY(XMM15)    \
-  ENTRY(XMM16)    \
-  ENTRY(XMM17)    \
-  ENTRY(XMM18)    \
-  ENTRY(XMM19)    \
-  ENTRY(XMM20)    \
-  ENTRY(XMM21)    \
-  ENTRY(XMM22)    \
-  ENTRY(XMM23)    \
-  ENTRY(XMM24)    \
-  ENTRY(XMM25)    \
-  ENTRY(XMM26)    \
-  ENTRY(XMM27)    \
-  ENTRY(XMM28)    \
-  ENTRY(XMM29)    \
-  ENTRY(XMM30)    \
+#define REGS_XMM                                                               \
+  ENTRY(XMM0)                                                                  \
+  ENTRY(XMM1)                                                                  \
+  ENTRY(XMM2)                                                                  \
+  ENTRY(XMM3)                                                                  \
+  ENTRY(XMM4)                                                                  \
+  ENTRY(XMM5)                                                                  \
+  ENTRY(XMM6)                                                                  \
+  ENTRY(XMM7)                                                                  \
+  ENTRY(XMM8)                                                                  \
+  ENTRY(XMM9)                                                                  \
+  ENTRY(XMM10)                                                                 \
+  ENTRY(XMM11)                                                                 \
+  ENTRY(XMM12)                                                                 \
+  ENTRY(XMM13)                                                                 \
+  ENTRY(XMM14)                                                                 \
+  ENTRY(XMM15)                                                                 \
+  ENTRY(XMM16)                                                                 \
+  ENTRY(XMM17)                                                                 \
+  ENTRY(XMM18)                                                                 \
+  ENTRY(XMM19)                                                                 \
+  ENTRY(XMM20)                                                                 \
+  ENTRY(XMM21)                                                                 \
+  ENTRY(XMM22)                                                                 \
+  ENTRY(XMM23)                                                                 \
+  ENTRY(XMM24)                                                                 \
+  ENTRY(XMM25)                                                                 \
+  ENTRY(XMM26)                                                                 \
+  ENTRY(XMM27)                                                                 \
+  ENTRY(XMM28)                                                                 \
+  ENTRY(XMM29)                                                                 \
+  ENTRY(XMM30)                                                                 \
   ENTRY(XMM31)
 
-#define REGS_YMM  \
-  ENTRY(YMM0)     \
-  ENTRY(YMM1)     \
-  ENTRY(YMM2)     \
-  ENTRY(YMM3)     \
-  ENTRY(YMM4)     \
-  ENTRY(YMM5)     \
-  ENTRY(YMM6)     \
-  ENTRY(YMM7)     \
-  ENTRY(YMM8)     \
-  ENTRY(YMM9)     \
-  ENTRY(YMM10)    \
-  ENTRY(YMM11)    \
-  ENTRY(YMM12)    \
-  ENTRY(YMM13)    \
-  ENTRY(YMM14)    \
-  ENTRY(YMM15)    \
-  ENTRY(YMM16)    \
-  ENTRY(YMM17)    \
-  ENTRY(YMM18)    \
-  ENTRY(YMM19)    \
-  ENTRY(YMM20)    \
-  ENTRY(YMM21)    \
-  ENTRY(YMM22)    \
-  ENTRY(YMM23)    \
-  ENTRY(YMM24)    \
-  ENTRY(YMM25)    \
-  ENTRY(YMM26)    \
-  ENTRY(YMM27)    \
-  ENTRY(YMM28)    \
-  ENTRY(YMM29)    \
-  ENTRY(YMM30)    \
+#define REGS_YMM                                                               \
+  ENTRY(YMM0)                                                                  \
+  ENTRY(YMM1)                                                                  \
+  ENTRY(YMM2)                                                                  \
+  ENTRY(YMM3)                                                                  \
+  ENTRY(YMM4)                                                                  \
+  ENTRY(YMM5)                                                                  \
+  ENTRY(YMM6)                                                                  \
+  ENTRY(YMM7)                                                                  \
+  ENTRY(YMM8)                                                                  \
+  ENTRY(YMM9)                                                                  \
+  ENTRY(YMM10)                                                                 \
+  ENTRY(YMM11)                                                                 \
+  ENTRY(YMM12)                                                                 \
+  ENTRY(YMM13)                                                                 \
+  ENTRY(YMM14)                                                                 \
+  ENTRY(YMM15)                                                                 \
+  ENTRY(YMM16)                                                                 \
+  ENTRY(YMM17)                                                                 \
+  ENTRY(YMM18)                                                                 \
+  ENTRY(YMM19)                                                                 \
+  ENTRY(YMM20)                                                                 \
+  ENTRY(YMM21)                                                                 \
+  ENTRY(YMM22)                                                                 \
+  ENTRY(YMM23)                                                                 \
+  ENTRY(YMM24)                                                                 \
+  ENTRY(YMM25)                                                                 \
+  ENTRY(YMM26)                                                                 \
+  ENTRY(YMM27)                                                                 \
+  ENTRY(YMM28)                                                                 \
+  ENTRY(YMM29)                                                                 \
+  ENTRY(YMM30)                                                                 \
   ENTRY(YMM31)
 
-#define REGS_ZMM  \
-  ENTRY(ZMM0)     \
-  ENTRY(ZMM1)     \
-  ENTRY(ZMM2)     \
-  ENTRY(ZMM3)     \
-  ENTRY(ZMM4)     \
-  ENTRY(ZMM5)     \
-  ENTRY(ZMM6)     \
-  ENTRY(ZMM7)     \
-  ENTRY(ZMM8)     \
-  ENTRY(ZMM9)     \
-  ENTRY(ZMM10)    \
-  ENTRY(ZMM11)    \
-  ENTRY(ZMM12)    \
-  ENTRY(ZMM13)    \
-  ENTRY(ZMM14)    \
-  ENTRY(ZMM15)    \
-  ENTRY(ZMM16)    \
-  ENTRY(ZMM17)    \
-  ENTRY(ZMM18)    \
-  ENTRY(ZMM19)    \
-  ENTRY(ZMM20)    \
-  ENTRY(ZMM21)    \
-  ENTRY(ZMM22)    \
-  ENTRY(ZMM23)    \
-  ENTRY(ZMM24)    \
-  ENTRY(ZMM25)    \
-  ENTRY(ZMM26)    \
-  ENTRY(ZMM27)    \
-  ENTRY(ZMM28)    \
-  ENTRY(ZMM29)    \
-  ENTRY(ZMM30)    \
+#define REGS_ZMM                                                               \
+  ENTRY(ZMM0)                                                                  \
+  ENTRY(ZMM1)                                                                  \
+  ENTRY(ZMM2)                                                                  \
+  ENTRY(ZMM3)                                                                  \
+  ENTRY(ZMM4)                                                                  \
+  ENTRY(ZMM5)                                                                  \
+  ENTRY(ZMM6)                                                                  \
+  ENTRY(ZMM7)                                                                  \
+  ENTRY(ZMM8)                                                                  \
+  ENTRY(ZMM9)                                                                  \
+  ENTRY(ZMM10)                                                                 \
+  ENTRY(ZMM11)                                                                 \
+  ENTRY(ZMM12)                                                                 \
+  ENTRY(ZMM13)                                                                 \
+  ENTRY(ZMM14)                                                                 \
+  ENTRY(ZMM15)                                                                 \
+  ENTRY(ZMM16)                                                                 \
+  ENTRY(ZMM17)                                                                 \
+  ENTRY(ZMM18)                                                                 \
+  ENTRY(ZMM19)                                                                 \
+  ENTRY(ZMM20)                                                                 \
+  ENTRY(ZMM21)                                                                 \
+  ENTRY(ZMM22)                                                                 \
+  ENTRY(ZMM23)                                                                 \
+  ENTRY(ZMM24)                                                                 \
+  ENTRY(ZMM25)                                                                 \
+  ENTRY(ZMM26)                                                                 \
+  ENTRY(ZMM27)                                                                 \
+  ENTRY(ZMM28)                                                                 \
+  ENTRY(ZMM29)                                                                 \
+  ENTRY(ZMM30)                                                                 \
   ENTRY(ZMM31)
 
-#define REGS_MASKS \
-  ENTRY(K0)        \
-  ENTRY(K1)        \
-  ENTRY(K2)        \
-  ENTRY(K3)        \
-  ENTRY(K4)        \
-  ENTRY(K5)        \
-  ENTRY(K6)        \
+#define REGS_MASKS                                                             \
+  ENTRY(K0)                                                                    \
+  ENTRY(K1)                                                                    \
+  ENTRY(K2)                                                                    \
+  ENTRY(K3)                                                                    \
+  ENTRY(K4)                                                                    \
+  ENTRY(K5)                                                                    \
+  ENTRY(K6)                                                                    \
   ENTRY(K7)
 
-#define REGS_MASK_PAIRS \
-  ENTRY(K0_K1)     \
-  ENTRY(K2_K3)     \
-  ENTRY(K4_K5)     \
+#define REGS_MASK_PAIRS                                                        \
+  ENTRY(K0_K1)                                                                 \
+  ENTRY(K2_K3)                                                                 \
+  ENTRY(K4_K5)                                                                 \
   ENTRY(K6_K7)
 
-#define REGS_SEGMENT \
-  ENTRY(ES)          \
-  ENTRY(CS)          \
-  ENTRY(SS)          \
-  ENTRY(DS)          \
-  ENTRY(FS)          \
+#define REGS_SEGMENT                                                           \
+  ENTRY(ES)                                                                    \
+  ENTRY(CS)                                                                    \
+  ENTRY(SS)                                                                    \
+  ENTRY(DS)                                                                    \
+  ENTRY(FS)                                                                    \
   ENTRY(GS)
 
-#define REGS_DEBUG  \
-  ENTRY(DR0)        \
-  ENTRY(DR1)        \
-  ENTRY(DR2)        \
-  ENTRY(DR3)        \
-  ENTRY(DR4)        \
-  ENTRY(DR5)        \
-  ENTRY(DR6)        \
-  ENTRY(DR7)        \
-  ENTRY(DR8)        \
-  ENTRY(DR9)        \
-  ENTRY(DR10)       \
-  ENTRY(DR11)       \
-  ENTRY(DR12)       \
-  ENTRY(DR13)       \
-  ENTRY(DR14)       \
+#define REGS_DEBUG                                                             \
+  ENTRY(DR0)                                                                   \
+  ENTRY(DR1)                                                                   \
+  ENTRY(DR2)                                                                   \
+  ENTRY(DR3)                                                                   \
+  ENTRY(DR4)                                                                   \
+  ENTRY(DR5)                                                                   \
+  ENTRY(DR6)                                                                   \
+  ENTRY(DR7)                                                                   \
+  ENTRY(DR8)                                                                   \
+  ENTRY(DR9)                                                                   \
+  ENTRY(DR10)                                                                  \
+  ENTRY(DR11)                                                                  \
+  ENTRY(DR12)                                                                  \
+  ENTRY(DR13)                                                                  \
+  ENTRY(DR14)                                                                  \
   ENTRY(DR15)
 
-#define REGS_CONTROL  \
-  ENTRY(CR0)          \
-  ENTRY(CR1)          \
-  ENTRY(CR2)          \
-  ENTRY(CR3)          \
-  ENTRY(CR4)          \
-  ENTRY(CR5)          \
-  ENTRY(CR6)          \
-  ENTRY(CR7)          \
-  ENTRY(CR8)          \
-  ENTRY(CR9)          \
-  ENTRY(CR10)         \
-  ENTRY(CR11)         \
-  ENTRY(CR12)         \
-  ENTRY(CR13)         \
-  ENTRY(CR14)         \
+#define REGS_CONTROL                                                           \
+  ENTRY(CR0)                                                                   \
+  ENTRY(CR1)                                                                   \
+  ENTRY(CR2)                                                                   \
+  ENTRY(CR3)                                                                   \
+  ENTRY(CR4)                                                                   \
+  ENTRY(CR5)                                                                   \
+  ENTRY(CR6)                                                                   \
+  ENTRY(CR7)                                                                   \
+  ENTRY(CR8)                                                                   \
+  ENTRY(CR9)                                                                   \
+  ENTRY(CR10)                                                                  \
+  ENTRY(CR11)                                                                  \
+  ENTRY(CR12)                                                                  \
+  ENTRY(CR13)                                                                  \
+  ENTRY(CR14)                                                                  \
   ENTRY(CR15)
 
-#undef  REGS_TMM
-#define REGS_TMM  \
-  ENTRY(TMM0)     \
-  ENTRY(TMM1)     \
-  ENTRY(TMM2)     \
-  ENTRY(TMM3)     \
-  ENTRY(TMM4)     \
-  ENTRY(TMM5)     \
-  ENTRY(TMM6)     \
+#undef REGS_TMM
+#define REGS_TMM                                                               \
+  ENTRY(TMM0)                                                                  \
+  ENTRY(TMM1)                                                                  \
+  ENTRY(TMM2)                                                                  \
+  ENTRY(TMM3)                                                                  \
+  ENTRY(TMM4)                                                                  \
+  ENTRY(TMM5)                                                                  \
+  ENTRY(TMM6)                                                                  \
   ENTRY(TMM7)
 
-#define ALL_EA_BASES  \
-  EA_BASES_16BIT      \
-  EA_BASES_32BIT      \
+#define REGS_TMM_PAIRS                                                         \
+  ENTRY(TMM0_TMM1)                                                             \
+  ENTRY(TMM2_TMM3)                                                             \
+  ENTRY(TMM4_TMM5)                                                             \
+  ENTRY(TMM6_TMM7)
+
+#define ALL_EA_BASES                                                           \
+  EA_BASES_16BIT                                                               \
+  EA_BASES_32BIT                                                               \
   EA_BASES_64BIT
 
-#define ALL_SIB_BASES \
-  REGS_32BIT          \
+#define ALL_SIB_BASES                                                          \
+  REGS_32BIT                                                                   \
   REGS_64BIT
 
-#define ALL_REGS      \
-  REGS_8BIT           \
-  REGS_16BIT          \
-  REGS_32BIT          \
-  REGS_64BIT          \
-  REGS_MMX            \
-  REGS_XMM            \
-  REGS_YMM            \
-  REGS_ZMM            \
-  REGS_MASKS          \
-  REGS_MASK_PAIRS     \
-  REGS_SEGMENT        \
-  REGS_DEBUG          \
-  REGS_CONTROL        \
-  REGS_TMM            \
+#define ALL_REGS                                                               \
+  REGS_8BIT                                                                    \
+  REGS_16BIT                                                                   \
+  REGS_32BIT                                                                   \
+  REGS_64BIT                                                                   \
+  REGS_MMX                                                                     \
+  REGS_XMM                                                                     \
+  REGS_YMM                                                                     \
+  REGS_ZMM                                                                     \
+  REGS_MASKS                                                                   \
+  REGS_MASK_PAIRS                                                              \
+  REGS_SEGMENT                                                                 \
+  REGS_DEBUG                                                                   \
+  REGS_CONTROL                                                                 \
+  REGS_TMM                                                                     \
+  REGS_TMM_PAIRS                                                               \
   ENTRY(RIP)
 
 /// All possible values of the base field for effective-address
@@ -562,6 +573,7 @@ namespace X86Disassembler {
 /// We distinguish between bases (EA_BASE_*) and registers that just happen
 /// to be referred to when Mod == 0b11 (EA_REG_*).
 enum EABase {
+  // clang-format off
   EA_BASE_NONE,
 #define ENTRY(x) EA_BASE_##x,
   ALL_EA_BASES
@@ -570,6 +582,7 @@ enum EABase {
   ALL_REGS
 #undef ENTRY
   EA_max
+  // clang-format on
 };
 
 /// All possible values of the SIB index field.
@@ -577,6 +590,7 @@ enum EABase {
 /// sib is synonymous with NONE.
 /// Vector SIB: index can be XMM or YMM.
 enum SIBIndex {
+  // clang-format off
   SIB_INDEX_NONE,
 #define ENTRY(x) SIB_INDEX_##x,
   ALL_EA_BASES
@@ -585,32 +599,32 @@ enum SIBIndex {
   REGS_ZMM
 #undef ENTRY
   SIB_INDEX_max
+  // clang-format on
 };
 
 /// All possible values of the SIB base field.
 enum SIBBase {
+  // clang-format off
   SIB_BASE_NONE,
 #define ENTRY(x) SIB_BASE_##x,
   ALL_SIB_BASES
 #undef ENTRY
   SIB_BASE_max
+  // clang-format on
 };
 
 /// Possible displacement types for effective-address computations.
-enum EADisplacement {
-  EA_DISP_NONE,
-  EA_DISP_8,
-  EA_DISP_16,
-  EA_DISP_32
-};
+enum EADisplacement { EA_DISP_NONE, EA_DISP_8, EA_DISP_16, EA_DISP_32 };
 
 /// All possible values of the reg field in the ModR/M byte.
+// clang-format off
 enum Reg {
 #define ENTRY(x) MODRM_REG_##x,
   ALL_REGS
 #undef ENTRY
   MODRM_REG_max
 };
+// clang-format on
 
 /// All possible segment overrides.
 enum SegmentOverride {
@@ -650,11 +664,11 @@ enum VEXPrefixCode {
 };
 
 enum VectorExtensionType {
-  TYPE_NO_VEX_XOP   = 0x0,
-  TYPE_VEX_2B       = 0x1,
-  TYPE_VEX_3B       = 0x2,
-  TYPE_EVEX         = 0x3,
-  TYPE_XOP          = 0x4
+  TYPE_NO_VEX_XOP = 0x0,
+  TYPE_VEX_2B = 0x1,
+  TYPE_VEX_3B = 0x2,
+  TYPE_EVEX = 0x3,
+  TYPE_XOP = 0x4
 };
 
 /// The specification for how to extract and interpret a full instruction and
@@ -736,52 +750,52 @@ struct InternalInstruction {
 
   // The VEX.vvvv field, which contains a third register operand for some AVX
   // instructions.
-  Reg                           vvvv;
+  Reg vvvv;
 
   // The writemask for AVX-512 instructions which is contained in EVEX.aaa
-  Reg                           writemask;
+  Reg writemask;
 
   // The ModR/M byte, which contains most register operands and some portion of
   // all memory operands.
-  bool                          consumedModRM;
-  uint8_t                       modRM;
+  bool consumedModRM;
+  uint8_t modRM;
 
   // The SIB byte, used for more complex 32- or 64-bit memory operands
-  uint8_t                       sib;
+  uint8_t sib;
 
   // The displacement, used for memory operands
-  int32_t                       displacement;
+  int32_t displacement;
 
-  // Immediates.  There can be two in some cases
-  uint8_t                       numImmediatesConsumed;
-  uint8_t                       numImmediatesTranslated;
-  uint64_t                      immediates[2];
+  // Immediates.  There can be three in some cases
+  uint8_t numImmediatesConsumed;
+  uint8_t numImmediatesTranslated;
+  uint64_t immediates[3];
 
   // A register or immediate operand encoded into the opcode
-  Reg                           opcodeRegister;
+  Reg opcodeRegister;
 
   // Portions of the ModR/M byte
 
   // These fields determine the allowable values for the ModR/M fields, which
   // depend on operand and address widths.
-  EABase                        eaRegBase;
-  Reg                           regBase;
+  EABase eaRegBase;
+  Reg regBase;
 
   // The Mod and R/M fields can encode a base for an effective address, or a
   // register.  These are separated into two fields here.
-  EABase                        eaBase;
-  EADisplacement                eaDisplacement;
+  EABase eaBase;
+  EADisplacement eaDisplacement;
   // The reg field always encodes a register
-  Reg                           reg;
+  Reg reg;
 
   // SIB state
-  SIBIndex                      sibIndexBase;
-  SIBIndex                      sibIndex;
-  uint8_t                       sibScale;
-  SIBBase                       sibBase;
+  SIBIndex sibIndexBase;
+  SIBIndex sibIndex;
+  uint8_t sibScale;
+  SIBBase sibBase;
 
   // Embedded rounding control.
-  uint8_t                       RC;
+  uint8_t RC;
 
   ArrayRef<OperandSpecifier> operands;
 };

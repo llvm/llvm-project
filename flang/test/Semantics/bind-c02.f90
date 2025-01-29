@@ -15,6 +15,7 @@ module m
   !ERROR: Only variable and named common block can be in BIND statement
   bind(c) :: pc1
 
+  !ERROR: BIND_C attribute was already specified on 'sub'
   !ERROR: Only variable and named common block can be in BIND statement
   bind(c) :: sub
 

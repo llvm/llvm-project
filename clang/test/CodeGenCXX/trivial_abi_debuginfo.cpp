@@ -14,16 +14,16 @@ struct __attribute__((trivial_abi)) Trivial {
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_TRIVIAL:%.*]], align 4
 // CHECK-NEXT:    [[NRVO:%.*]] = alloca i1, align 1
 // CHECK-NEXT:    store i1 false, ptr [[NRVO]], align 1, !dbg [[DBG18:![0-9]+]]
-// CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr [[RETVAL]], metadata [[META19:![0-9]+]], metadata !DIExpression()), !dbg [[DBG20:![0-9]+]]
-// CHECK-NEXT:    call void @_ZN7TrivialC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[RETVAL]]) #[[ATTR3:[0-9]+]], !dbg [[DBG20]]
+// CHECK-NEXT:      #dbg_declare(ptr [[RETVAL]], [[META19:![0-9]+]], !DIExpression(), [[META20:![0-9]+]])
+// CHECK-NEXT:    call void @_ZN7TrivialC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[RETVAL]]) #[[ATTR1:[0-9]+]], !dbg [[META20]]
 // CHECK-NEXT:    store i1 true, ptr [[NRVO]], align 1, !dbg [[DBG21:![0-9]+]]
 // CHECK-NEXT:    [[NRVO_VAL:%.*]] = load i1, ptr [[NRVO]], align 1, !dbg [[DBG22:![0-9]+]]
 // CHECK-NEXT:    br i1 [[NRVO_VAL]], label [[NRVO_SKIPDTOR:%.*]], label [[NRVO_UNUSED:%.*]], !dbg [[DBG22]]
 // CHECK:       nrvo.unused:
-// CHECK-NEXT:    call void @_ZN7TrivialD1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[RETVAL]]) #[[ATTR3]], !dbg [[DBG22]]
+// CHECK-NEXT:    call void @_ZN7TrivialD1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[RETVAL]]) #[[ATTR1]], !dbg [[DBG22]]
 // CHECK-NEXT:    br label [[NRVO_SKIPDTOR]], !dbg [[DBG22]]
 // CHECK:       nrvo.skipdtor:
-// CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds [[STRUCT_TRIVIAL]], ptr [[RETVAL]], i32 0, i32 0, !dbg [[DBG22]]
+// CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_TRIVIAL]], ptr [[RETVAL]], i32 0, i32 0, !dbg [[DBG22]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[COERCE_DIVE]], align 4, !dbg [[DBG22]]
 // CHECK-NEXT:    ret i32 [[TMP0]], !dbg [[DBG22]]
 //

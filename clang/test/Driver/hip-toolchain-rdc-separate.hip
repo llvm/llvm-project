@@ -1,13 +1,10 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // RUN: rm -rf %t && mkdir %t
 // RUN: %clang -c -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   --hip-device-lib=lib1.bc --hip-device-lib=lib2.bc \
 // RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib1 \
 // RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib2 \
-// RUN:   -fuse-ld=lld -B%S/Inputs/lld -fgpu-rdc -nogpuinc \
+// RUN:   --no-offload-new-driver -fuse-ld=lld -B%S/Inputs/lld -fgpu-rdc -nogpuinc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s
@@ -16,7 +13,7 @@
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
-// CHECK-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
+// CHECK-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
 // CHECK-SAME: "-target-cpu" "gfx803"
@@ -51,7 +48,7 @@
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
-// CHECK-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
+// CHECK-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
 // CHECK-SAME: "-target-cpu" "gfx803"
@@ -84,19 +81,19 @@
 
 // RUN: touch %t/a.o %t/b.o
 // RUN: %clang --hip-link -### --target=x86_64-linux-gnu \
-// RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -fuse-ld=lld -B%S/Inputs/lld -fgpu-rdc -nogpuinc \
 // RUN:   %t/a.o %t/b.o \
 // RUN: 2>&1 | FileCheck -check-prefixes=LINK,LINK-HOST-UNBUNDLE,LLD-TMP,LINK-BUNDLE,LINK-EMBED %s
 
 // RUN: %clang --hip-link -### --target=x86_64-linux-gnu \
-// RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -fuse-ld=lld -B%S/Inputs/lld -fgpu-rdc -nogpuinc \
 // RUN:   %t/a.o %t/b.o --cuda-device-only \
 // RUN: 2>&1 | FileCheck -check-prefixes=LINK,LLD-TMP,LINK-BUNDLE,LINK-NOEMBED %s
 
 // RUN: %clang --hip-link -### --target=x86_64-linux-gnu \
-// RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -fuse-ld=lld -B%S/Inputs/lld -fgpu-rdc -nogpuinc \
 // RUN:   %t/a.o %t/b.o --cuda-device-only --no-gpu-bundle-output \
 // RUN: 2>&1 | FileCheck -check-prefixes=LINK,LLD-FIN,LINK-NOBUNDLE,LINK-NOEMBED %s
@@ -148,8 +145,8 @@
 // LINK-BUNDLE-SAME: "-input={{.*}}" "-input=[[IMG_DEV1]]" "-input=[[IMG_DEV2]]" "-output=[[BUNDLE:.*]]"
 // LINK-NOBUNDLE-NOT: {{".*clang-offload-bundler"}} "-type=o"
 
-// LINK-EMBED: {{".*llvm-mc.*"}} "-o" "[[OBJBUNDLE:.*o]]" "{{.*}}.mcin" "--filetype=obj"
-// LINK-NOEMBED-NOT: {{".*llvm-mc.*"}} "-o"
+// LINK-EMBED: {{".*clang.*"}} "-o" "[[OBJBUNDLE:.*o]]" "{{.*}}.mcin"
+// LINK-NOEMBED-NOT: {{".*clang.*"}} "-o"
 
 // LINK-EMBED: [[LD:".*ld.*"]] {{.*}} "-o" "a.out" {{.*}} "[[A_OBJ_HOST]]"
 // LINK-EMBED-SAME: "[[B_OBJ_HOST]]" "[[OBJBUNDLE]]"

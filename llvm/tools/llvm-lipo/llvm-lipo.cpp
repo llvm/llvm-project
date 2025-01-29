@@ -26,7 +26,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
@@ -73,12 +72,13 @@ enum LipoID {
 };
 
 namespace lipo {
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
-  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
-      NAME##_init, std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "LipoOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "LipoOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 using namespace llvm::opt;
 static constexpr opt::OptTable::Info LipoInfoTable[] = {
@@ -90,7 +90,9 @@ static constexpr opt::OptTable::Info LipoInfoTable[] = {
 
 class LipoOptTable : public opt::GenericOptTable {
 public:
-  LipoOptTable() : opt::GenericOptTable(lipo::LipoInfoTable) {}
+  LipoOptTable()
+      : opt::GenericOptTable(lipo::OptionStrTable, lipo::OptionPrefixesTable,
+                             lipo::LipoInfoTable) {}
 };
 
 enum class LipoAction {
@@ -143,7 +145,7 @@ static void validateArchitectureName(StringRef ArchitectureName) {
        << "\nValid architecture names are:";
     for (auto arch : MachOObjectFile::getValidArchs())
       OS << " " << arch;
-    reportError(OS.str());
+    reportError(Buf);
   }
 }
 
@@ -242,7 +244,7 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
     OS << "only one of the following actions can be specified:";
     for (auto *Arg : ActionArgs)
       OS << " " << Arg->getSpelling();
-    reportError(OS.str());
+    reportError(Buf);
   }
 
   switch (ActionArgs[0]->getOption().getID()) {
@@ -724,7 +726,6 @@ replaceSlices(LLVMContext &LLVMCtx,
 }
 
 int llvm_lipo_main(int argc, char **argv, const llvm::ToolContext &) {
-  InitLLVM X(argc, argv);
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmParsers();

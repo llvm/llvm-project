@@ -1,4 +1,4 @@
-# RUN: not --crash llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=x86_64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
 # This test ensures that the address is checked in machine verifier.
 
 ---
@@ -24,7 +24,7 @@ body:             |
     %6:vr256, %7:vr256 = VGATHERQPDYrm %3, %0, 16, killed %8, 0, $noreg, %5 :: (load unknown-size, align 8)
     %9:vr128 = COPY %6.sub_xmm
     ; CHECK: *** Bad machine code: Displacement in address must fit into 32-bit signed integer ***
-    VMOVLPDmr $noreg, 1, $noreg, 1111111111111, $noreg, killed %9 :: (store (s64) into `i64* undef`)
+    VMOVLPDmr $noreg, 1, $noreg, 1111111111111, $noreg, killed %9 :: (store (s64) into `ptr undef`)
     JMP_1 %bb.1
     ; CHECK: LLVM ERROR: Found 2 machine code errors
 

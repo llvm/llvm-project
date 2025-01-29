@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -show-encoding -mcpu=gfx1200 %s | FileCheck --check-prefix=GFX12 %s
+// RUN: llvm-mc -triple=amdgcn -show-encoding -mcpu=gfx1200 %s | FileCheck --check-prefix=GFX12 %s
 
 s_sleep_var 0x1234
 // GFX12: encoding: [0xff,0x58,0x80,0xbe,0x34,0x12,0x00,0x00]
@@ -725,15 +725,6 @@ s_barrier_join -2
 
 s_barrier_join m0
 // GFX12: encoding: [0x7d,0x52,0x80,0xbe]
-
-s_wakeup_barrier 1
-// GFX12: encoding: [0x81,0x57,0x80,0xbe]
-
-s_wakeup_barrier -1
-// GFX12: encoding: [0xc1,0x57,0x80,0xbe]
-
-s_wakeup_barrier m0
-// GFX12: encoding: [0x7d,0x57,0x80,0xbe]
 
 s_get_barrier_state s3, -1
 // GFX12: encoding: [0xc1,0x50,0x83,0xbe]
@@ -3708,8 +3699,11 @@ s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_SAVE_WAVE)
 s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_GET_TBA)
 // GFX12: encoding: [0x85,0x4c,0x80,0xbe]
 
-s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_GET_SE_AID_ID)
+s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_GET_TBA_TO_PC)
 // GFX12: encoding: [0x86,0x4c,0x80,0xbe]
+
+s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_GET_SE_AID_ID)
+// GFX12: encoding: [0x87,0x4c,0x80,0xbe]
 
 s_ctz_i32_b32 s5, s1
 // GFX12: encoding: [0x01,0x08,0x85,0xbe]

@@ -225,14 +225,14 @@ static void gatherMemoryEffects(
 
 /// Return the entity yielded by a region, or a null value if the region
 /// is not terminated by a yield.
-static mlir::Value getYieldedEntity(mlir::Region &region) {
+static mlir::OpOperand *getYieldedEntity(mlir::Region &region) {
   if (region.empty() || region.back().empty())
     return nullptr;
   if (auto yield = mlir::dyn_cast<hlfir::YieldOp>(region.back().back()))
-    return yield.getEntity();
+    return &yield.getEntityMutable();
   if (auto elementalAddr =
           mlir::dyn_cast<hlfir::ElementalAddrOp>(region.back().back()))
-    return elementalAddr.getYieldOp().getEntity();
+    return &elementalAddr.getYieldOp().getEntityMutable();
   return nullptr;
 }
 
@@ -244,7 +244,7 @@ static void gatherAssignEffects(
     hlfir::RegionAssignOp regionAssign,
     bool userDefAssignmentMayOnlyWriteToAssignedVariable,
     llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance> &assignEffects) {
-  mlir::Value assignedVar = getYieldedEntity(regionAssign.getLhsRegion());
+  mlir::OpOperand *assignedVar = getYieldedEntity(regionAssign.getLhsRegion());
   assert(assignedVar && "lhs cannot be an empty region");
   assignEffects.emplace_back(mlir::MemoryEffects::Write::get(), assignedVar);
 
@@ -347,12 +347,23 @@ conflict(llvm::ArrayRef<mlir::MemoryEffects::EffectInstance> effectsA,
          anyRAWorWAW(effectsB, effectsA, aliasAnalysis);
 }
 
-/// Could there be any write effects in "effects"?
+/// Could there be any write effects in "effects" affecting memory storages
+/// that are not local to the current region.
 static bool
-anyWrite(llvm::ArrayRef<mlir::MemoryEffects::EffectInstance> effects) {
+anyNonLocalWrite(llvm::ArrayRef<mlir::MemoryEffects::EffectInstance> effects,
+                 mlir::Region &region) {
   return llvm::any_of(
-      effects, [](const mlir::MemoryEffects::EffectInstance &effect) {
-        return mlir::isa<mlir::MemoryEffects::Write>(effect.getEffect());
+      effects, [&region](const mlir::MemoryEffects::EffectInstance &effect) {
+        if (mlir::isa<mlir::MemoryEffects::Write>(effect.getEffect())) {
+          if (mlir::Value v = effect.getValue()) {
+            v = getStorageSource(v);
+            if (v.getDefiningOp<fir::AllocaOp>() ||
+                v.getDefiningOp<fir::AllocMemOp>())
+              return !region.isAncestor(v.getParentRegion());
+          }
+          return true;
+        }
+        return false;
       });
 }
 
@@ -389,13 +400,17 @@ void Scheduler::saveEvaluationIfConflict(mlir::Region &yieldRegion,
   // with a finalizer, or a user defined assignment where the LHS is
   // intent(inout)).
   if (yieldIsImplicitRead) {
-    mlir::Value entity = getYieldedEntity(yieldRegion);
-    if (entity && hlfir::isFortranVariableType(entity.getType()))
+    mlir::OpOperand *entity = getYieldedEntity(yieldRegion);
+    if (entity && hlfir::isFortranVariableType(entity->get().getType()))
       effects.emplace_back(mlir::MemoryEffects::Read::get(), entity);
   }
-  if (!leafRegionsMayOnlyRead && anyWrite(effects)) {
-    // Region with write effect must be executed only once: save it the first
-    // time it is encountered.
+  if (!leafRegionsMayOnlyRead && anyNonLocalWrite(effects, yieldRegion)) {
+    // Region with write effect must be executed only once (unless all writes
+    // affect storages allocated inside the region): save it the first time it
+    // is encountered.
+    LLVM_DEBUG(llvm::dbgs()
+                   << "saving eval because write effect prevents re-evaluation"
+                   << "\n";);
     saveEvaluation(yieldRegion, effects, /*anyWrite=*/true);
   } else if (conflict(effects, assignEffects)) {
     // Region that conflicts with the current assignments must be fully
@@ -411,7 +426,8 @@ void Scheduler::saveEvaluationIfConflict(mlir::Region &yieldRegion,
     // For example, a WHERE mask might be written by the masked assignment
     // evaluations, and it has to be saved in this case:
     //   where (mask) r = f() ! function f modifies mask
-    saveEvaluation(yieldRegion, effects, anyWrite(effects));
+    saveEvaluation(yieldRegion, effects,
+                   anyNonLocalWrite(effects, yieldRegion));
   } else {
     // Can be executed while doing the assignment.
     independentEvaluationEffects.append(effects.begin(), effects.end());
@@ -600,9 +616,9 @@ hlfir::buildEvaluationSchedule(hlfir::OrderedAssignmentTreeOpInterface root,
 }
 
 mlir::Value hlfir::SaveEntity::getSavedValue() {
-  mlir::Value saved = getYieldedEntity(*yieldRegion);
+  mlir::OpOperand *saved = getYieldedEntity(*yieldRegion);
   assert(saved && "SaveEntity must contain region terminated by YieldOp");
-  return saved;
+  return saved->get();
 }
 
 //===----------------------------------------------------------------------===//

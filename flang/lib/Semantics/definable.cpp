@@ -18,7 +18,7 @@ template <typename... A>
 static parser::Message BlameSymbol(parser::CharBlock at,
     const parser::MessageFixedText &text, const Symbol &original, A &&...x) {
   parser::Message message{at, text, original.name(), std::forward<A>(x)...};
-  message.set_severity(parser::Severity::Because);
+  message.set_severity(parser::Severity::Error);
   evaluate::AttachDeclaration(message, original);
   return message;
 }
@@ -60,37 +60,44 @@ static std::optional<parser::Message> CheckDefinabilityInPureScope(
   return std::nullopt;
 }
 
-// When a DataRef contains pointers, gets the rightmost one (unless it is
-// the entity being defined, in which case the last pointer above it);
-// otherwise, returns the leftmost symbol.  The resulting symbol is the
-// relevant base object for definabiliy checking.  Examples:
-//   ptr1%ptr2        => ...     -> ptr1
-//   nonptr%ptr       => ...     -> nonptr
-//   nonptr%ptr       =  ...     -> ptr
-//   ptr1%ptr2        =  ...     -> ptr2
-//   ptr1%ptr2%nonptr =  ...     -> ptr2
-//   nonptr1%nonptr2  =  ...     -> nonptr1
-static const Symbol &GetRelevantSymbol(const evaluate::DataRef &dataRef,
-    bool isPointerDefinition, bool acceptAllocatable) {
-  if (isPointerDefinition) {
-    if (const auto *component{std::get_if<evaluate::Component>(&dataRef.u)}) {
-      if (IsPointer(component->GetLastSymbol()) ||
-          (acceptAllocatable && IsAllocatable(component->GetLastSymbol()))) {
-        return GetRelevantSymbol(component->base(), false, false);
+// True when the object being defined is not a subobject of the base
+// object, e.g. X%PTR = 1., X%PTR%PTR2 => T (but not X%PTR => T).
+// F'2023 9.4.2p5
+static bool DefinesComponentPointerTarget(
+    const evaluate::DataRef &dataRef, DefinabilityFlags flags) {
+  if (const evaluate::Component *
+      component{common::visit(
+          common::visitors{
+              [](const SymbolRef &) -> const evaluate::Component * {
+                return nullptr;
+              },
+              [](const evaluate::Component &component) { return &component; },
+              [](const evaluate::ArrayRef &aRef) {
+                return aRef.base().UnwrapComponent();
+              },
+              [](const evaluate::CoarrayRef &aRef)
+                  -> const evaluate::Component * { return nullptr; },
+          },
+          dataRef.u)}) {
+    const Symbol &compSym{component->GetLastSymbol()};
+    if (IsPointer(compSym) ||
+        (flags.test(DefinabilityFlag::AcceptAllocatable) &&
+            IsAllocatable(compSym))) {
+      if (!flags.test(DefinabilityFlag::PointerDefinition)) {
+        return true;
       }
     }
-  }
-  if (const Symbol * lastPointer{GetLastPointerSymbol(dataRef)}) {
-    return *lastPointer;
+    flags.reset(DefinabilityFlag::PointerDefinition);
+    return DefinesComponentPointerTarget(component->base(), flags);
   } else {
-    return dataRef.GetFirstSymbol();
+    return false;
   }
 }
 
 // Check the leftmost (or only) symbol from a data-ref or expression.
 static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags, const Symbol &original,
-    bool isWholeSymbol) {
+    bool isWholeSymbol, bool isComponentPointerTarget) {
   const Symbol &ultimate{original.GetUltimate()};
   bool isPointerDefinition{flags.test(DefinabilityFlag::PointerDefinition)};
   bool acceptAllocatable{flags.test(DefinabilityFlag::AcceptAllocatable)};
@@ -104,12 +111,14 @@ static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
           "Construct association '%s' has a vector subscript"_en_US, original);
     } else if (auto dataRef{evaluate::ExtractDataRef(
                    *association->expr(), true, true)}) {
-      return WhyNotDefinableBase(at, scope, flags,
-          GetRelevantSymbol(*dataRef, isPointerDefinition, acceptAllocatable),
-          isWholeSymbol);
+      return WhyNotDefinableBase(at, scope, flags, dataRef->GetFirstSymbol(),
+          isWholeSymbol &&
+              std::holds_alternative<evaluate::SymbolRef>(dataRef->u),
+          isComponentPointerTarget ||
+              DefinesComponentPointerTarget(*dataRef, flags));
     }
   }
-  if (isTargetDefinition) {
+  if (isTargetDefinition || isComponentPointerTarget) {
   } else if (!isPointerDefinition && !IsVariableName(ultimate)) {
     return BlameSymbol(at, "'%s' is not a variable"_en_US, original);
   } else if (IsProtected(ultimate) && IsUseAssociated(original, scope)) {
@@ -118,10 +127,16 @@ static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
       (!IsPointer(ultimate) || (isWholeSymbol && isPointerDefinition))) {
     return BlameSymbol(
         at, "'%s' is an INTENT(IN) dummy argument"_en_US, original);
+  } else if (acceptAllocatable && IsAllocatable(ultimate) &&
+      !flags.test(DefinabilityFlag::SourcedAllocation)) {
+    // allocating a function result doesn't count as a def'n
+    // unless there's SOURCE=
+  } else if (!flags.test(DefinabilityFlag::DoNotNoteDefinition)) {
+    scope.context().NoteDefinedSymbol(ultimate);
   }
   if (const Scope * pure{FindPureProcedureContaining(scope)}) {
     // Additional checking for pure subprograms.
-    if (!isTargetDefinition) {
+    if (!isTargetDefinition || isComponentPointerTarget) {
       if (auto msg{CheckDefinabilityInPureScope(
               at, original, ultimate, scope, *pure)}) {
         return msg;
@@ -151,9 +166,10 @@ static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
             "'%s' is a host-associated allocatable and is not definable in a device subprogram"_err_en_US,
             original);
       } else if (*cudaDataAttr != common::CUDADataAttr::Device &&
-          *cudaDataAttr != common::CUDADataAttr::Managed) {
+          *cudaDataAttr != common::CUDADataAttr::Managed &&
+          *cudaDataAttr != common::CUDADataAttr::Shared) {
         return BlameSymbol(at,
-            "'%s' is not device or managed data and is not definable in a device subprogram"_err_en_US,
+            "'%s' is not device or managed or shared data and is not definable in a device subprogram"_err_en_US,
             original);
       }
     } else if (!isOwnedByDeviceCode) {
@@ -168,7 +184,10 @@ static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
 static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags, const Symbol &original) {
   const Symbol &ultimate{original.GetUltimate()};
-  if (const auto *association{ultimate.detailsIf<AssocEntityDetails>()}) {
+  if (const auto *association{ultimate.detailsIf<AssocEntityDetails>()};
+      association &&
+      (association->rank().has_value() ||
+          !flags.test(DefinabilityFlag::PointerDefinition))) {
     if (auto dataRef{
             evaluate::ExtractDataRef(*association->expr(), true, true)}) {
       return WhyNotDefinableLast(at, scope, flags, dataRef->GetLastSymbol());
@@ -185,7 +204,8 @@ static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
     }
     return std::nullopt; // pointer assignment - skip following checks
   }
-  if (IsOrContainsEventOrLockComponent(ultimate)) {
+  if (!flags.test(DefinabilityFlag::AllowEventLockOrNotifyType) &&
+      IsOrContainsEventOrLockComponent(ultimate)) {
     return BlameSymbol(at,
         "'%s' is an entity with either an EVENT_TYPE or LOCK_TYPE"_en_US,
         original);
@@ -194,21 +214,20 @@ static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
     if (auto dyType{evaluate::DynamicType::From(ultimate)}) {
       if (!flags.test(DefinabilityFlag::PolymorphicOkInPure)) {
         if (dyType->IsPolymorphic()) { // C1596
-          return BlameSymbol(at,
-              "'%s' is polymorphic in a pure subprogram"_because_en_US,
-              original);
+          return BlameSymbol(
+              at, "'%s' is polymorphic in a pure subprogram"_en_US, original);
         }
       }
       if (const Symbol * impure{HasImpureFinal(ultimate)}) {
-        return BlameSymbol(at,
-            "'%s' has an impure FINAL procedure '%s'"_because_en_US, original,
-            impure->name());
+        return BlameSymbol(at, "'%s' has an impure FINAL procedure '%s'"_en_US,
+            original, impure->name());
       }
       if (const DerivedTypeSpec * derived{GetDerivedTypeSpec(dyType)}) {
         if (!flags.test(DefinabilityFlag::PolymorphicOkInPure)) {
-          if (auto bad{FindPolymorphicAllocatableUltimateComponent(*derived)}) {
+          if (auto bad{
+                  FindPolymorphicAllocatablePotentialComponent(*derived)}) {
             return BlameSymbol(at,
-                "'%s' has polymorphic component '%s' in a pure subprogram"_because_en_US,
+                "'%s' has polymorphic component '%s' in a pure subprogram"_en_US,
                 original, bad.BuildResultDesignatorName());
           }
         }
@@ -222,35 +241,33 @@ static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
 static std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags,
     const evaluate::DataRef &dataRef) {
-  const Symbol &base{GetRelevantSymbol(dataRef,
-      flags.test(DefinabilityFlag::PointerDefinition),
-      flags.test(DefinabilityFlag::AcceptAllocatable))};
-  if (auto whyNot{WhyNotDefinableBase(at, scope, flags, base,
-          std::holds_alternative<evaluate::SymbolRef>(dataRef.u))}) {
-    return whyNot;
-  } else {
-    return WhyNotDefinableLast(at, scope, flags, dataRef.GetLastSymbol());
+  auto whyNotBase{
+      WhyNotDefinableBase(at, scope, flags, dataRef.GetFirstSymbol(),
+          std::holds_alternative<evaluate::SymbolRef>(dataRef.u),
+          DefinesComponentPointerTarget(dataRef, flags))};
+  if (!whyNotBase || !whyNotBase->IsFatal()) {
+    if (auto whyNotLast{
+            WhyNotDefinableLast(at, scope, flags, dataRef.GetLastSymbol())}) {
+      if (whyNotLast->IsFatal() || !whyNotBase) {
+        return whyNotLast;
+      }
+    }
   }
-}
-
-// Checks a NOPASS procedure pointer component
-static std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
-    const Scope &scope, DefinabilityFlags flags,
-    const evaluate::Component &component) {
-  const evaluate::DataRef &dataRef{component.base()};
-  const Symbol &base{GetRelevantSymbol(dataRef, false, false)};
-  DefinabilityFlags baseFlags{flags};
-  baseFlags.reset(DefinabilityFlag::PointerDefinition);
-  return WhyNotDefinableBase(at, scope, baseFlags, base,
-      std::holds_alternative<evaluate::SymbolRef>(dataRef.u));
+  return whyNotBase;
 }
 
 std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags, const Symbol &original) {
-  if (auto base{WhyNotDefinableBase(at, scope, flags, original, true)}) {
-    return base;
+  auto whyNotBase{WhyNotDefinableBase(at, scope, flags, original,
+      /*isWholeSymbol=*/true, /*isComponentPointerTarget=*/false)};
+  if (!whyNotBase || !whyNotBase->IsFatal()) {
+    if (auto whyNotLast{WhyNotDefinableLast(at, scope, flags, original)}) {
+      if (whyNotLast->IsFatal() || !whyNotBase) {
+        return whyNotLast;
+      }
+    }
   }
-  return WhyNotDefinableLast(at, scope, flags, original);
+  return whyNotBase;
 }
 
 class DuplicatedSubscriptFinder
@@ -297,6 +314,7 @@ private:
 std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags,
     const evaluate::Expr<evaluate::SomeType> &expr) {
+  std::optional<parser::Message> portabilityWarning;
   if (auto dataRef{evaluate::ExtractDataRef(expr, true, true)}) {
     if (evaluate::HasVectorSubscript(expr)) {
       if (flags.test(DefinabilityFlag::VectorSubscriptIsOk)) {
@@ -329,9 +347,15 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
                 }
               }
               if (anyRankMatch && !anyElemental) {
-                return parser::Message{at,
-                    "Variable '%s' has a vector subscript and cannot be finalized by non-elemental subroutine '%s'"_because_en_US,
-                    expr.AsFortran(), anyRankMatch->name()};
+                if (!portabilityWarning &&
+                    scope.context().languageFeatures().ShouldWarn(
+                        common::UsageWarning::VectorSubscriptFinalization)) {
+                  portabilityWarning = parser::Message{
+                      common::UsageWarning::VectorSubscriptFinalization, at,
+                      "Variable '%s' has a vector subscript and will be finalized by non-elemental subroutine '%s'"_port_en_US,
+                      expr.AsFortran(), anyRankMatch->name()};
+                }
+                break;
               }
               const auto *parent{FindParentTypeSpec(*spec)};
               spec = parent ? parent->AsDerived() : nullptr;
@@ -341,24 +365,25 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
         if (!flags.test(DefinabilityFlag::DuplicatesAreOk) &&
             DuplicatedSubscriptFinder{scope.context().foldingContext()}(expr)) {
           return parser::Message{at,
-              "Variable has a vector subscript with a duplicated element"_because_en_US};
+              "Variable has a vector subscript with a duplicated element"_err_en_US};
         }
       } else {
         return parser::Message{at,
-            "Variable '%s' has a vector subscript"_because_en_US,
-            expr.AsFortran()};
+            "Variable '%s' has a vector subscript"_err_en_US, expr.AsFortran()};
       }
     }
     if (FindPureProcedureContaining(scope) &&
         evaluate::ExtractCoarrayRef(expr)) {
       return parser::Message(at,
-          "A pure subprogram may not define the coindexed object '%s'"_because_en_US,
+          "A pure subprogram may not define the coindexed object '%s'"_err_en_US,
           expr.AsFortran());
     }
-    return WhyNotDefinable(at, scope, flags, *dataRef);
+    if (auto whyNotDataRef{WhyNotDefinable(at, scope, flags, *dataRef)}) {
+      return whyNotDataRef;
+    }
   } else if (evaluate::IsNullPointer(expr)) {
     return parser::Message{
-        at, "'%s' is a null pointer"_because_en_US, expr.AsFortran()};
+        at, "'%s' is a null pointer"_err_en_US, expr.AsFortran()};
   } else if (flags.test(DefinabilityFlag::PointerDefinition)) {
     if (const auto *procDesignator{
             std::get_if<evaluate::ProcedureDesignator>(&expr.u)}) {
@@ -366,24 +391,26 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
       if (const Symbol * procSym{procDesignator->GetSymbol()}) {
         if (evaluate::ExtractCoarrayRef(expr)) { // C1027
           return BlameSymbol(at,
-              "Procedure pointer '%s' may not be a coindexed object"_because_en_US,
+              "Procedure pointer '%s' may not be a coindexed object"_err_en_US,
               *procSym, expr.AsFortran());
         }
         if (const auto *component{procDesignator->GetComponent()}) {
-          return WhyNotDefinable(at, scope, flags, *component);
+          flags.reset(DefinabilityFlag::PointerDefinition);
+          return WhyNotDefinableBase(at, scope, flags,
+              component->base().GetFirstSymbol(), false,
+              DefinesComponentPointerTarget(component->base(), flags));
         } else {
           return WhyNotDefinable(at, scope, flags, *procSym);
         }
       }
     }
     return parser::Message{
-        at, "'%s' is not a definable pointer"_because_en_US, expr.AsFortran()};
+        at, "'%s' is not a definable pointer"_err_en_US, expr.AsFortran()};
   } else if (!evaluate::IsVariable(expr)) {
-    return parser::Message{at,
-        "'%s' is not a variable or pointer"_because_en_US, expr.AsFortran()};
-  } else {
-    return std::nullopt;
+    return parser::Message{
+        at, "'%s' is not a variable or pointer"_err_en_US, expr.AsFortran()};
   }
+  return portabilityWarning;
 }
 
 } // namespace Fortran::semantics

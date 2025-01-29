@@ -11,6 +11,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolTableEntry.h"
 
 namespace llvm {
 
@@ -21,10 +22,12 @@ class MCSymbolXCOFF : public MCSymbol {
   enum XCOFFSymbolFlags : uint16_t { SF_EHInfo = 0x0001 };
 
 public:
-  MCSymbolXCOFF(const StringMapEntry<bool> *Name, bool isTemporary)
+  MCSymbolXCOFF(const MCSymbolTableEntry *Name, bool isTemporary)
       : MCSymbol(SymbolKindXCOFF, Name, isTemporary) {}
 
   static bool classof(const MCSymbol *S) { return S->isXCOFF(); }
+
+  enum CodeModel : uint8_t { CM_Small, CM_Large };
 
   static StringRef getUnqualifiedName(StringRef Name) {
     if (Name.back() == ']') {
@@ -72,8 +75,22 @@ public:
 
   void setEHInfo() const { modifyFlags(SF_EHInfo, SF_EHInfo); }
 
+  bool hasPerSymbolCodeModel() const { return PerSymbolCodeModel.has_value(); }
+
+  CodeModel getPerSymbolCodeModel() const {
+    assert(hasPerSymbolCodeModel() &&
+           "Requested code model for symbol without one");
+    return *PerSymbolCodeModel;
+  }
+
+  void setPerSymbolCodeModel(MCSymbolXCOFF::CodeModel Model) {
+    PerSymbolCodeModel = Model;
+  }
+
 private:
   std::optional<XCOFF::StorageClass> StorageClass;
+  std::optional<CodeModel> PerSymbolCodeModel;
+
   MCSectionXCOFF *RepresentedCsect = nullptr;
   XCOFF::VisibilityType VisibilityType = XCOFF::SYM_V_UNSPECIFIED;
   StringRef SymbolTableName;

@@ -15,6 +15,16 @@ class targetCommandTestCase(TestBase):
     def testTargetVarExpr(self):
         self.build()
         lldbutil.run_to_name_breakpoint(self, "main")
+        self.expect(
+            "help target variable",
+            substrs=[
+                "--no-args",
+                "--no-recognized-args",
+                "--no-locals",
+                "--show-globals",
+            ],
+            matching=False,
+        )
         self.expect("target variable i", substrs=["i", "42"])
         self.expect(
             "target variable var", patterns=["\(incomplete \*\) var = 0[xX](0)*dead"]

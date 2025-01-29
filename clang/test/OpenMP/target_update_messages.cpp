@@ -18,14 +18,14 @@ static int y;
 #pragma omp declare target(y)
 
 void yyy() {
-#pragma omp target update to(y) // expected-error {{the host cannot update a declare target variable that is not externally visible.}}
+#pragma omp target update to(y) // expected-error {{the host cannot update a declare target variable that is not externally visible}}
 }
 
 int __attribute__((visibility("hidden"))) z;
 #pragma omp declare target(z)
 
 void zzz() {
-#pragma omp target update from(z) // expected-error {{the host cannot update a declare target variable that is not externally visible.}}
+#pragma omp target update from(z) // expected-error {{the host cannot update a declare target variable that is not externally visible}}
 }
 
 void foo() {

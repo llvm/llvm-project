@@ -8,16 +8,15 @@ define void @test_01() {
 ; CHECK-LABEL: 'test_01'
 ; CHECK-NEXT:  Classifying expressions for: @test_01
 ; CHECK-NEXT:    %phi_1 = phi i32 [ 10, %entry ], [ %phi_2, %loop ]
-; CHECK-NEXT:    --> %phi_1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %phi_1 U: [0,31) S: [0,31) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %phi_2 = phi i32 [ 20, %entry ], [ %phi_1, %loop ]
-; CHECK-NEXT:    --> %phi_2 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %phi_2 U: [0,31) S: [0,31) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %cond = call i1 @cond()
 ; CHECK-NEXT:    --> %cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_01
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -54,11 +53,9 @@ define void @test_02(ptr %p, ptr %q) {
 ; CHECK-NEXT:  Loop %inner_loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %inner_loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %inner_loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %inner_loop: Unpredictable predicated backedge-taken count.
 ; CHECK-NEXT:  Loop %outer_loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %outer_loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %outer_loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %outer_loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   %start = load i32, ptr %p, !range !0
@@ -107,11 +104,9 @@ define void @test_03(ptr %p, ptr %q) {
 ; CHECK-NEXT:  Loop %inner_loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %inner_loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %inner_loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %inner_loop: Unpredictable predicated backedge-taken count.
 ; CHECK-NEXT:  Loop %outer_loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %outer_loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %outer_loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %outer_loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   %start_1 = load i32, ptr %p, !range !0

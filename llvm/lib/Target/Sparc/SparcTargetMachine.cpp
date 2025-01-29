@@ -28,7 +28,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcTarget() {
   RegisterTargetMachine<SparcelTargetMachine> Z(getTheSparcelTarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
-  initializeSparcDAGToDAGISelPass(PR);
+  initializeSparcDAGToDAGISelLegacyPass(PR);
+  initializeErrataWorkaroundPass(PR);
 }
 
 static cl::opt<bool>
@@ -46,6 +47,10 @@ static std::string computeDataLayout(const Triple &T, bool is64Bit) {
 
   // Alignments for 64 bit integers.
   Ret += "-i64:64";
+
+  // Alignments for 128 bit integers.
+  // This is not specified in the ABI document but is the de facto standard.
+  Ret += "-i128:128";
 
   // On SparcV9 128 floats are aligned to 128 bits, on others only to 64.
   // On SparcV9 registers can hold 64 or 32 bits, on others only 32.
@@ -102,11 +107,12 @@ SparcTargetMachine::SparcTargetMachine(const Target &T, const Triple &TT,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT,
                                        bool is64bit)
-    : LLVMTargetMachine(T, computeDataLayout(TT, is64bit), TT, CPU, FS, Options,
-                        getEffectiveRelocModel(RM),
-                        getEffectiveSparcCodeModel(
-                            CM, getEffectiveRelocModel(RM), is64bit, JIT),
-                        OL),
+    : CodeGenTargetMachineImpl(
+          T, computeDataLayout(TT, is64bit), TT, CPU, FS, Options,
+          getEffectiveRelocModel(RM),
+          getEffectiveSparcCodeModel(CM, getEffectiveRelocModel(RM), is64bit,
+                                     JIT),
+          OL),
       TLOF(std::make_unique<SparcELFTargetObjectFile>()), is64Bit(is64bit) {
   initAsmInfo();
 }
@@ -116,10 +122,13 @@ SparcTargetMachine::~SparcTargetMachine() = default;
 const SparcSubtarget *
 SparcTargetMachine::getSubtargetImpl(const Function &F) const {
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
+  Attribute TuneAttr = F.getFnAttribute("tune-cpu");
   Attribute FSAttr = F.getFnAttribute("target-features");
 
   std::string CPU =
       CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+  std::string TuneCPU =
+      TuneAttr.isValid() ? TuneAttr.getValueAsString().str() : CPU;
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
 
@@ -137,8 +146,8 @@ SparcTargetMachine::getSubtargetImpl(const Function &F) const {
     // creation will depend on the TM and the code generation flags on the
     // function that reside in TargetOptions.
     resetTargetOptions(F);
-    I = std::make_unique<SparcSubtarget>(TargetTriple, CPU, FS, *this,
-                                          this->is64Bit);
+    I = std::make_unique<SparcSubtarget>(CPU, TuneCPU, FS, *this,
+                                         this->is64Bit);
   }
   return I.get();
 }
@@ -172,7 +181,7 @@ TargetPassConfig *SparcTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void SparcPassConfig::addIRPasses() {
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   TargetPassConfig::addIRPasses();
 }
@@ -190,6 +199,7 @@ void SparcPassConfig::addPreEmitPass(){
   addPass(new InsertNOPLoad());
   addPass(new DetectRoundChange());
   addPass(new FixAllFDIVSQRT());
+  addPass(new ErrataWorkaround());
 }
 
 void SparcV8TargetMachine::anchor() { }

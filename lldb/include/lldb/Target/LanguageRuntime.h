@@ -14,11 +14,11 @@
 #include "lldb/Breakpoint/BreakpointResolverName.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/LLVMUserExpression.h"
 #include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/Runtime.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
 #include <optional>
@@ -73,11 +73,12 @@ public:
     return nullptr;
   }
 
-  virtual bool GetObjectDescription(Stream &str, ValueObject &object) = 0;
+  virtual llvm::Error GetObjectDescription(Stream &str,
+                                           ValueObject &object) = 0;
 
-  virtual bool GetObjectDescription(Stream &str, Value &value,
-                                    ExecutionContextScope *exe_scope) = 0;
-
+  virtual llvm::Error
+  GetObjectDescription(Stream &str, Value &value,
+                       ExecutionContextScope *exe_scope) = 0;
 
   struct VTableInfo {
     Address addr; /// Address of the vtable's virtual function table
@@ -169,9 +170,9 @@ public:
     return m_process->GetTarget().GetSearchFilterForModule(nullptr);
   }
 
-  virtual bool GetTypeBitSize(const CompilerType &compiler_type,
-                              uint64_t &size) {
-    return false;
+  virtual std::optional<uint64_t>
+  GetTypeBitSize(const CompilerType &compiler_type) {
+    return {};
   }
 
   virtual void SymbolsDidLoad(const ModuleList &module_list) {}
@@ -239,6 +240,11 @@ public:
   GetRuntimeUnwindPlan(lldb_private::Thread &thread,
                        lldb_private::RegisterContext *regctx,
                        bool &behaves_like_zeroth_frame);
+
+  /// Language runtime plugins can use this API to report
+  /// language-specific runtime information about this compile unit,
+  /// such as additional language version details or feature flags.
+  virtual StructuredData::ObjectSP GetLanguageSpecificData(SymbolContext sc);
 
 protected:
   // The static GetRuntimeUnwindPlan method above is only implemented in the

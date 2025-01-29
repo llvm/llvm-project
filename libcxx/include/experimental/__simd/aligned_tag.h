@@ -10,9 +10,10 @@
 #ifndef _LIBCPP_EXPERIMENTAL___SIMD_ALIGNED_TAG_H
 #define _LIBCPP_EXPERIMENTAL___SIMD_ALIGNED_TAG_H
 
+#include <__config>
+#include <__cstddef/size_t.h>
 #include <__memory/assume_aligned.h>
-#include <cstddef>
-#include <experimental/__config>
+#include <__type_traits/remove_const.h>
 #include <experimental/__simd/traits.h>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
@@ -35,7 +36,7 @@ inline constexpr bool is_simd_flag_type_v<element_aligned_tag> = true;
 
 struct vector_aligned_tag {
   template <class _Tp, class _Up = typename _Tp::value_type>
-  static constexpr size_t __alignment = memory_alignment_v<_Tp, _Up>;
+  static constexpr size_t __alignment = memory_alignment_v<_Tp, remove_const_t<_Up>>;
 
   template <class _Tp, class _Up>
   static _LIBCPP_HIDE_FROM_ABI constexpr _Up* __apply(_Up* __ptr) {

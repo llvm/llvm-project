@@ -1,0 +1,19 @@
+//===-- C standard library header test_small-------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIBC_TEST_SMALL_H
+#define LLVM_LIBC_TEST_SMALL_H
+
+#include "__llvm-libc-common.h"
+#include "llvm-libc-macros/float16-macros.h"
+#include "llvm-libc-macros/test_small-macros.h"
+#include "llvm-libc-types/float128.h"
+
+%%public_api()
+
+#endif // LLVM_LIBC_TEST_SMALL_H

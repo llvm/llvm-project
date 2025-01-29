@@ -31,7 +31,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
-#include "mlir/Support/LogicalResult.h"
 
 #define DEBUG_TYPE "vector-broadcast-lowering"
 
@@ -131,12 +130,12 @@ struct ScanToArithOps : public OpRewritePattern<vector::ScanOp> {
     VectorType initialValueType = scanOp.getInitialValueType();
     int64_t initialValueRank = initialValueType.getRank();
 
-    SmallVector<int64_t> reductionShape(destShape.begin(), destShape.end());
+    SmallVector<int64_t> reductionShape(destShape);
     reductionShape[reductionDim] = 1;
     VectorType reductionType = VectorType::get(reductionShape, elType);
     SmallVector<int64_t> offsets(destRank, 0);
     SmallVector<int64_t> strides(destRank, 1);
-    SmallVector<int64_t> sizes(destShape.begin(), destShape.end());
+    SmallVector<int64_t> sizes(destShape);
     sizes[reductionDim] = 1;
     ArrayAttr scanSizes = rewriter.getI64ArrayAttr(sizes);
     ArrayAttr scanStrides = rewriter.getI64ArrayAttr(strides);

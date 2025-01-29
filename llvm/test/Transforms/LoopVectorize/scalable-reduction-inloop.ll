@@ -13,8 +13,8 @@ define i8 @reduction_add_trunc(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 8 x i32> [ insertelement (<vscale x 8 x i32> zeroinitializer, i32 255, i32 0), %vector.ph ], [ [[TMP34:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 8 x i32> [ zeroinitializer, %vector.ph ], [ [[TMP36:%.*]], %vector.body ]
-; CHECK:         [[TMP14:%.*]] = and <vscale x 8 x i32> [[VEC_PHI]], shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 255, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP15:%.*]] = and <vscale x 8 x i32> [[VEC_PHI1]], shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 255, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
+; CHECK:         [[TMP14:%.*]] = and <vscale x 8 x i32> [[VEC_PHI]], splat (i32 255)
+; CHECK-NEXT:    [[TMP15:%.*]] = and <vscale x 8 x i32> [[VEC_PHI1]], splat (i32 255)
 ; CHECK:         [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr
 ; CHECK:         [[WIDE_LOAD2:%.*]] = load <vscale x 8 x i8>, ptr
 ; CHECK-NEXT:    [[TMP26:%.*]] = zext <vscale x 8 x i8> [[WIDE_LOAD]] to <vscale x 8 x i32>
@@ -33,6 +33,7 @@ define i8 @reduction_add_trunc(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <vscale x 8 x i8> [[TMP38]], [[TMP37]]
 ; CHECK-NEXT:    [[TMP39:%.*]] = call i8 @llvm.vector.reduce.add.nxv8i8(<vscale x 8 x i8> [[BIN_RDX]])
 ; CHECK-NEXT:    [[TMP40:%.*]] = zext i8 [[TMP39]] to i32
+; CHECK-NEXT:    %cmp.n = icmp eq i32 256, %n.vec
 ;
 entry:
   br label %loop

@@ -13,14 +13,16 @@
 #include <__algorithm/comp_ref_type.h>
 #include <__config>
 #include <__functional/identity.h>
-#include <__functional/invoke.h>
-#include <__iterator/iterator_traits.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_callable.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -44,14 +46,14 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __includes(
 }
 
 template <class _InputIterator1, class _InputIterator2, class _Compare>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 includes(_InputIterator1 __first1,
          _InputIterator1 __last1,
          _InputIterator2 __first2,
          _InputIterator2 __last2,
          _Compare __comp) {
   static_assert(
-      __is_callable<_Compare, decltype(*__first1), decltype(*__first2)>::value, "Comparator has to be callable");
+      __is_callable<_Compare&, decltype(*__first1), decltype(*__first2)>::value, "The comparator has to be callable");
 
   return std::__includes(
       std::move(__first1),
@@ -64,11 +66,13 @@ includes(_InputIterator1 __first1,
 }
 
 template <class _InputIterator1, class _InputIterator2>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 includes(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _InputIterator2 __last2) {
   return std::includes(std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), __less<>());
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_INCLUDES_H

@@ -1,4 +1,5 @@
-# RUN: llc -march=amdgcn -run-pass peephole-opt -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -run-pass peephole-opt -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -passes peephole-opt -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
 ...
 # GCN-LABEL: name: no_fold_imm_madak_mac_clamp_f32
 # GCN: %23:vgpr_32 = V_MOV_B32_e32 1090519040, implicit $exec

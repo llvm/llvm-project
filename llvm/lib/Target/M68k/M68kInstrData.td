@@ -19,7 +19,7 @@
 ///
 ///  Pseudo:
 ///
-///     MOVSX [x]     MOVZX [x]     MOVX   [x]
+///     MOVI  [x]     MOVSX [x]     MOVZX [x]     MOVX   [x]
 ///
 ///  Map:
 ///
@@ -165,11 +165,12 @@ foreach AM = MxMoveSupportedAMs in {
 } // foreach AM
 
 // R <- I
+// No pattern, as all immediate -> register moves are matched to the MOVI pseudo
 class MxMove_RI<MxType TYPE, string DST_REG, MxMoveEncoding ENC,
                 MxImmOpBundle SRC = !cast<MxImmOpBundle>("MxOp"#TYPE.Size#"AddrMode_i"),
                 MxOpBundle DST = !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#DST_REG)>
     : MxMove<TYPE.Prefix, (outs DST.Op:$dst), (ins SRC.Op:$src),
-              [(set TYPE.VT:$dst, SRC.ImmPat:$src)], ENC>;
+              [(null_frag)], ENC>;
 
 foreach REG = ["r", "a", "d"] in {
   foreach TYPE = !if(!eq(REG, "d"), [MxType8, MxType16, MxType32], [MxType16, MxType32]) in
@@ -241,6 +242,24 @@ def : Pat<(store   MxType32.BPat :$src, MxType32.BPat :$dst),
 
 def : Pat<(store   MxType32.BPat :$src, MxType32.JPat :$dst),
           (MOV32ji MxType32.JOp  :$dst, MxType32.IOp  :$src)>;
+
+//===----------------------------------------------------------------------===//
+// MOVEQ
+//===----------------------------------------------------------------------===//
+
+/// ------------+---------+---+-----------------------
+///  F  E  D  C | B  A  9 | 8 | 7  6  5  4  3  2  1  0
+/// ------------+---------+---+-----------------------
+///  0  1  1  1 |   REG   | 0 |          DATA
+/// ------------+---------+---+-----------------------
+
+// No pattern, as all immediate -> register moves are matched to the MOVI pseudo
+let Defs = [CCR] in
+def MOVQ : MxInst<(outs MxDRD32:$dst), (ins Mxi8imm:$imm),
+                  "moveq\t$imm, $dst",
+                  [(null_frag)]> {
+  let Inst = (descend 0b0111, (operand "$dst", 3), 0b0, (operand "$imm", 8));
+}
 
 //===----------------------------------------------------------------------===//
 // MOVEM
@@ -346,13 +365,14 @@ def MOVM32mp_P : MxMOVEM_RM_Pseudo<MxType32r, MxType32.POp>;
 // ons that will be resolved sometime after RA pass.
 //===----------------------------------------------------------------------===//
 
+/// Move to CCR
 /// --------------------------------------------------
 ///  F  E  D  C  B  A  9  8  7  6 | 5  4  3 | 2  1  0
 /// --------------------------------------------------
 ///                               | EFFECTIVE ADDRESS
 ///  0  1  0  0  0  1  0  0  1  1 |   MODE  |   REG
 /// --------------------------------------------------
-let Defs = [CCR] in
+let Defs = [CCR] in {
 class MxMoveToCCR<MxOperand MEMOp, MxEncMemOp SRC_ENC>
     : MxInst<(outs CCRC:$dst), (ins MEMOp:$src), "move.w\t$src, $dst", []> {
   let Inst = (ascend
@@ -363,6 +383,7 @@ class MxMoveToCCR<MxOperand MEMOp, MxEncMemOp SRC_ENC>
 
 class MxMoveToCCRPseudo<MxOperand MEMOp>
     : MxPseudo<(outs CCRC:$dst), (ins MEMOp:$src)>;
+} // let Defs = [CCR]
 
 let mayLoad = 1 in
 foreach AM = MxMoveSupportedAMs in {
@@ -400,6 +421,8 @@ class MxMoveFromCCR_M<MxOperand MEMOp, MxEncMemOp DST_ENC>
 
 class MxMoveFromCCRPseudo<MxOperand MEMOp>
     : MxPseudo<(outs), (ins MEMOp:$dst, CCRC:$src)>;
+class MxMoveFromCCR_RPseudo<MxOperand MEMOp>
+    : MxPseudo<(outs MEMOp:$dst), (ins CCRC:$src)>;
 } // let Uses = [CCR]
 
 let mayStore = 1 in
@@ -413,7 +436,65 @@ foreach AM = MxMoveSupportedAMs in {
 
 // Only data register is allowed.
 def MOV16dc : MxMoveFromCCR_R;
-def MOV8dc  : MxMoveFromCCRPseudo<MxOp8AddrMode_d.Op>;
+def MOV8dc  : MxMoveFromCCR_RPseudo<MxOp8AddrMode_d.Op>;
+
+/// Move to SR
+/// --------------------------------------------------
+///  F  E  D  C  B  A  9  8  7  6 | 5  4  3 | 2  1  0
+/// --------------------------------------------------
+///                               | EFFECTIVE ADDRESS
+///  0  1  0  0  0  1  1  0  1  1 |   MODE  |   REG
+/// --------------------------------------------------
+let Defs = [SR] in {
+class MxMoveToSR<MxOperand MEMOp, MxEncMemOp SRC_ENC>
+    : MxInst<(outs SRC:$dst), (ins MEMOp:$src), "move.w\t$src, $dst", []> {
+  let Inst = (ascend
+    (descend 0b0100011011, SRC_ENC.EA),
+    SRC_ENC.Supplement
+  );
+}
+} // let Defs = [SR]
+
+let mayLoad = 1 in
+foreach AM = MxMoveSupportedAMs in {
+  def MOV16s # AM : MxMoveToSR<!cast<MxOpBundle>("MxOp16AddrMode_"#AM).Op,
+                                !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#AM)>;
+} // foreach AM
+
+def MOV16sd : MxMoveToSR<MxOp16AddrMode_d.Op, MxMoveSrcOpEnc_d>;
+
+/// Move from SR
+/// --------------------------------------------------
+///  F  E  D  C  B  A  9  8  7  6 | 5  4  3 | 2  1  0
+/// --------------------------------------------------
+///                               | EFFECTIVE ADDRESS
+///  0  1  0  0  0  0  0  0  1  1 |   MODE  |   REG
+/// --------------------------------------------------
+let Uses = [SR] in {
+class MxMoveFromSR_R
+    : MxInst<(outs MxDRD16:$dst), (ins SRC:$src), "move.w\t$src, $dst", []>,
+      Requires<[ AtLeastM68010 ]> {
+  let Inst = (descend 0b0100000011, MxEncAddrMode_d<"dst">.EA);
+}
+
+class MxMoveFromSR_M<MxOperand MEMOp, MxEncMemOp DST_ENC>
+    : MxInst<(outs), (ins MEMOp:$dst, SRC:$src), "move.w\t$src, $dst", []>,
+      Requires<[ AtLeastM68010 ]> {
+  let Inst = (ascend
+    (descend 0b0100000011, DST_ENC.EA),
+    DST_ENC.Supplement
+  );
+}
+} // let Uses = [SR]
+
+let mayStore = 1 in
+foreach AM = MxMoveSupportedAMs in {
+  def MOV16 # AM # s
+    : MxMoveFromSR_M<!cast<MxOpBundle>("MxOp16AddrMode_"#AM).Op,
+                      !cast<MxEncMemOp>("MxMoveDstOpEnc_"#AM)>;
+} // foreach AM
+
+def MOV16ds : MxMoveFromSR_R;
 
 //===----------------------------------------------------------------------===//
 // LEA
@@ -496,7 +577,23 @@ class MxPseudoMove_RR<MxType DST, MxType SRC, list<dag> PAT = []>
 
 class MxPseudoMove_RM<MxType DST, MxOperand SRCOpd, list<dag> PAT = []>
     : MxPseudo<(outs DST.ROp:$dst), (ins SRCOpd:$src), PAT>;
-}
+
+
+// These Pseudos handle loading immediates to registers.
+// They are expanded post-RA into either move or moveq instructions,
+// depending on size, destination register class, and immediate value.
+// This is done with pseudoinstructions in order to not constrain RA to
+// data registers if moveq matches.
+class MxPseudoMove_DI<MxType TYPE>
+    : MxPseudo<(outs TYPE.ROp:$dst), (ins TYPE.IOp:$src),
+               [(set TYPE.ROp:$dst, imm:$src)]>;
+
+// i8 imm -> reg can always be converted to moveq,
+// but we still emit a pseudo for consistency.
+def MOVI8di  : MxPseudoMove_DI<MxType8d>;
+def MOVI16ri : MxPseudoMove_DI<MxType16r>;
+def MOVI32ri : MxPseudoMove_DI<MxType32r>;
+} // let Defs = [CCR]
 
 /// This group of Pseudos is analogues to the real x86 extending moves, but
 /// since M68k does not have those we need to emulate. These instructions

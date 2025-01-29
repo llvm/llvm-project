@@ -2,55 +2,44 @@
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fno-ident -fcuda-is-device \
 // RUN:    -emit-llvm -o - %s | FileCheck -check-prefix=OPTNONE %s
 
-// RUN: %clang_cc1 -O3 -triple amdgcn-amd-amdhsa -x hip -fno-ident -fcuda-is-device \
-// RUN:    -emit-llvm -o - %s | FileCheck -check-prefix=OPT %s
-
 #define __device__ __attribute__((device))
 #define __global__ __attribute__((global))
+
+//.
+// OPTNONE: @__hip_cuid_ = addrspace(1) global i8 0
+// OPTNONE: @llvm.compiler.used = appending addrspace(1) global [1 x ptr] [ptr addrspacecast (ptr addrspace(1) @__hip_cuid_ to ptr)], section "llvm.metadata"
+// OPTNONE: @__oclc_ABI_version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 500
+//.
+__device__ void extern_func();
 
 // OPTNONE: Function Attrs: convergent mustprogress noinline nounwind optnone
 // OPTNONE-LABEL: define {{[^@]+}}@_Z4funcv
 // OPTNONE-SAME: () #[[ATTR0:[0-9]+]] {
 // OPTNONE-NEXT:  entry:
+// OPTNONE-NEXT:    call void @_Z11extern_funcv() #[[ATTR3:[0-9]+]]
 // OPTNONE-NEXT:    ret void
 //
-// OPT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-// OPT-LABEL: define {{[^@]+}}@_Z4funcv
-// OPT-SAME: () local_unnamed_addr #[[ATTR0:[0-9]+]] {
-// OPT-NEXT:  entry:
-// OPT-NEXT:    ret void
-//
 __device__ void func() {
-
+ extern_func();
 }
 
 // OPTNONE: Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 // OPTNONE-LABEL: define {{[^@]+}}@_Z6kernelv
-// OPTNONE-SAME: () #[[ATTR1:[0-9]+]] {
+// OPTNONE-SAME: () #[[ATTR2:[0-9]+]] {
 // OPTNONE-NEXT:  entry:
+// OPTNONE-NEXT:    call void @_Z11extern_funcv() #[[ATTR3]]
 // OPTNONE-NEXT:    ret void
 //
-// OPT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-// OPT-LABEL: define {{[^@]+}}@_Z6kernelv
-// OPT-SAME: () local_unnamed_addr #[[ATTR1:[0-9]+]] {
-// OPT-NEXT:  entry:
-// OPT-NEXT:    ret void
-//
 __global__ void kernel() {
-
+ extern_func();
 }
 //.
-// OPTNONE: attributes #0 = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// OPTNONE: attributes #1 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,1024" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
+// OPTNONE: attributes #[[ATTR0]] = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// OPTNONE: attributes #[[ATTR1:[0-9]+]] = { convergent nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// OPTNONE: attributes #[[ATTR2]] = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,1024" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
+// OPTNONE: attributes #[[ATTR3]] = { convergent nounwind }
 //.
-// OPT: attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// OPT: attributes #1 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "amdgpu-flat-work-group-size"="1,1024" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
-//.
-// OPTNONE: !0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
-// OPTNONE: !1 = !{i32 1, !"amdgpu_printf_kind", !"hostcall"}
-// OPTNONE: !2 = !{i32 1, !"wchar_size", i32 4}
-//.
-// OPT: !0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
-// OPT: !1 = !{i32 1, !"amdgpu_printf_kind", !"hostcall"}
-// OPT: !2 = !{i32 1, !"wchar_size", i32 4}
+// OPTNONE: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 500}
+// OPTNONE: [[META1:![0-9]+]] = !{i32 1, !"amdgpu_printf_kind", !"hostcall"}
+// OPTNONE: [[META2:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 //.

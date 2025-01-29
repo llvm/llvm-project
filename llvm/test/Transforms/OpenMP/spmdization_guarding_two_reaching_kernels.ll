@@ -42,21 +42,21 @@ target triple = "nvptx64"
 
 ;.
 ; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
-; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; CHECK: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i32, align 4
-; CHECK: @[[__OMP_OFFLOADING_2B_10393B5_SPMD_L12_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; CHECK: @[[__OMP_OFFLOADING_2B_10393B5_GENERIC_L20_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; CHECK: @[[GLOB3:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
+; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
+; CHECK: @[[GLOB2:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
+; CHECK: @G = external global i32, align 4
+; CHECK: @__omp_offloading_2b_10393b5_spmd_l12_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; CHECK: @__omp_offloading_2b_10393b5_generic_l20_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; CHECK: @[[GLOB3:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 ;.
 ; CHECK-DISABLE-SPMDIZATION: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
-; CHECK-DISABLE-SPMDIZATION: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; CHECK-DISABLE-SPMDIZATION: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
-; CHECK-DISABLE-SPMDIZATION: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i32, align 4
-; CHECK-DISABLE-SPMDIZATION: @[[__OMP_OFFLOADING_2B_10393B5_SPMD_L12_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; CHECK-DISABLE-SPMDIZATION: @[[__OMP_OFFLOADING_2B_10393B5_GENERIC_L20_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; CHECK-DISABLE-SPMDIZATION: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
+; CHECK-DISABLE-SPMDIZATION: @[[GLOB2:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
+; CHECK-DISABLE-SPMDIZATION: @G = external global i32, align 4
+; CHECK-DISABLE-SPMDIZATION: @__omp_offloading_2b_10393b5_spmd_l12_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; CHECK-DISABLE-SPMDIZATION: @__omp_offloading_2b_10393b5_generic_l20_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ;.
-define weak void @__omp_offloading_2b_10393b5_spmd_l12(ptr %dyn) "kernel" #0 {
+define weak ptx_kernel void @__omp_offloading_2b_10393b5_spmd_l12(ptr %dyn) "kernel" #0 {
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_2b_10393b5_spmd_l12
 ; CHECK-SAME: (ptr [[DYN:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -113,7 +113,7 @@ define weak i32 @__kmpc_target_init(ptr, ptr) {
 declare void @__kmpc_target_deinit()
 
 ; Function Attrs: convergent noinline norecurse nounwind
-define weak void @__omp_offloading_2b_10393b5_generic_l20(ptr %dyn) #0 {
+define weak ptx_kernel void @__omp_offloading_2b_10393b5_generic_l20(ptr %dyn) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_2b_10393b5_generic_l20
 ; CHECK-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -321,14 +321,12 @@ attributes #4 = { alwaysinline }
 attributes #5 = { convergent }
 
 !omp_offload.info = !{!0, !1}
-!nvvm.annotations = !{!2, !3}
 !llvm.module.flags = !{!4, !5, !6, !7, !8}
 !llvm.ident = !{!9}
 
 !0 = !{i32 0, i32 43, i32 17011637, !"spmd", i32 12, i32 0}
 !1 = !{i32 0, i32 43, i32 17011637, !"generic", i32 20, i32 1}
-!2 = !{ptr @__omp_offloading_2b_10393b5_spmd_l12, !"kernel", i32 1}
-!3 = !{ptr @__omp_offloading_2b_10393b5_generic_l20, !"kernel", i32 1}
+
 !4 = !{i32 1, !"wchar_size", i32 4}
 !5 = !{i32 7, !"openmp", i32 50}
 !6 = !{i32 7, !"openmp-device", i32 50}
@@ -358,23 +356,19 @@ attributes #5 = { convergent }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 0, i32 43, i32 17011637, !"spmd", i32 12, i32 0}
 ; CHECK: [[META1:![0-9]+]] = !{i32 0, i32 43, i32 17011637, !"generic", i32 20, i32 1}
-; CHECK: [[META2:![0-9]+]] = !{ptr @__omp_offloading_2b_10393b5_spmd_l12, !"kernel", i32 1}
-; CHECK: [[META3:![0-9]+]] = !{ptr @__omp_offloading_2b_10393b5_generic_l20, !"kernel", i32 1}
-; CHECK: [[META4:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-; CHECK: [[META5:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-; CHECK: [[META6:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-; CHECK: [[META7:![0-9]+]] = !{i32 8, !"PIC Level", i32 2}
-; CHECK: [[META8:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
-; CHECK: [[META9:![0-9]+]] = !{!"clang version 14.0.0"}
+; CHECK: [[META2:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+; CHECK: [[META3:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+; CHECK: [[META4:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+; CHECK: [[META5:![0-9]+]] = !{i32 8, !"PIC Level", i32 2}
+; CHECK: [[META6:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
+; CHECK: [[META7:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 ;.
 ; CHECK-DISABLE-SPMDIZATION: [[META0:![0-9]+]] = !{i32 0, i32 43, i32 17011637, !"spmd", i32 12, i32 0}
 ; CHECK-DISABLE-SPMDIZATION: [[META1:![0-9]+]] = !{i32 0, i32 43, i32 17011637, !"generic", i32 20, i32 1}
-; CHECK-DISABLE-SPMDIZATION: [[META2:![0-9]+]] = !{ptr @__omp_offloading_2b_10393b5_spmd_l12, !"kernel", i32 1}
-; CHECK-DISABLE-SPMDIZATION: [[META3:![0-9]+]] = !{ptr @__omp_offloading_2b_10393b5_generic_l20, !"kernel", i32 1}
-; CHECK-DISABLE-SPMDIZATION: [[META4:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-; CHECK-DISABLE-SPMDIZATION: [[META5:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-; CHECK-DISABLE-SPMDIZATION: [[META6:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-; CHECK-DISABLE-SPMDIZATION: [[META7:![0-9]+]] = !{i32 8, !"PIC Level", i32 2}
-; CHECK-DISABLE-SPMDIZATION: [[META8:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
-; CHECK-DISABLE-SPMDIZATION: [[META9:![0-9]+]] = !{!"clang version 14.0.0"}
+; CHECK-DISABLE-SPMDIZATION: [[META2:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+; CHECK-DISABLE-SPMDIZATION: [[META3:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+; CHECK-DISABLE-SPMDIZATION: [[META4:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+; CHECK-DISABLE-SPMDIZATION: [[META5:![0-9]+]] = !{i32 8, !"PIC Level", i32 2}
+; CHECK-DISABLE-SPMDIZATION: [[META6:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
+; CHECK-DISABLE-SPMDIZATION: [[META7:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 ;.

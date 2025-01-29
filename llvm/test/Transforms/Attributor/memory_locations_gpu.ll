@@ -12,7 +12,7 @@ declare ptr addrspace(3) @ptr_to_shared() memory(none)
 
 ; Should be memory(none)
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external dso_local addrspace(4) global i32, align 4
+; CHECK: @G = external dso_local addrspace(4) global i32, align 4
 ;.
 define i32 @test_const_as_global1() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
@@ -55,7 +55,8 @@ define i32 @test_const_as_call2() {
 ; CHECK-LABEL: define {{[^@]+}}@test_const_as_call2
 ; CHECK-SAME: () #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    [[P2:%.*]] = call ptr @ptr() #[[ATTR4]]
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[P2]], align 4
+; CHECK-NEXT:    [[C2:%.*]] = addrspacecast ptr [[P2]] to ptr addrspace(4)
+; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr addrspace(4) [[C2]], align 4
 ; CHECK-NEXT:    ret i32 [[L2]]
 ;
   %p2 = call ptr @ptr()
@@ -84,7 +85,8 @@ define i32 @test_shared_as_call2() {
 ; CHECK-LABEL: define {{[^@]+}}@test_shared_as_call2
 ; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:    [[P2:%.*]] = call ptr @ptr() #[[ATTR4]]
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[P2]], align 4
+; CHECK-NEXT:    [[C2:%.*]] = addrspacecast ptr [[P2]] to ptr addrspace(3)
+; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr addrspace(3) [[C2]], align 4
 ; CHECK-NEXT:    ret i32 [[L2]]
 ;
   %p2 = call ptr @ptr()

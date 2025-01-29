@@ -1,0 +1,2 @@
+# RUN: cp -f %S/Inputs/stable_ir_values5.ll %t.ll && %update_test_checks %t.ll
+# RUN: diff -u %t.ll %S/Inputs/stable_ir_values5.ll.expected

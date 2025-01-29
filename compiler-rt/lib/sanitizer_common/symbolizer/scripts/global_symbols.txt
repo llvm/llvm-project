@@ -1,3 +1,6 @@
+# This file is used to control symbols used by internal symbolizer. We want to
+# avoid unexpected dependency on function intercepted by sanitizers.
+
 _GLOBAL_OFFSET_TABLE_ U
 _ZN11__sanitizer13internal_mmapEPvjiiiy U
 _ZN11__sanitizer13internal_mmapEPvmiiiy U
@@ -62,6 +65,8 @@ __sanitizer_symbolize_flush T
 __sanitizer_symbolize_frame T
 __sanitizer_symbolize_set_demangle T
 __sanitizer_symbolize_set_inline_frames T
+__start___lcxx_override U
+__stop___lcxx_override U
 __strdup U
 __udivdi3 U
 __umoddi3 U
@@ -144,6 +149,8 @@ posix_spawn_file_actions_adddup2 U
 posix_spawn_file_actions_addopen U
 posix_spawn_file_actions_destroy U
 posix_spawn_file_actions_init U
+printf U
+putchar U
 qsort U
 raise U
 rand U

@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_STRUCT_HSEARCH_DATA_H__
-#define __LLVM_LIBC_TYPES_STRUCT_HSEARCH_DATA_H__
+#ifndef LLVM_LIBC_TYPES_STRUCT_HSEARCH_DATA_H
+#define LLVM_LIBC_TYPES_STRUCT_HSEARCH_DATA_H
 
 struct hsearch_data {
   void *__opaque;
   unsigned int __unused[2];
 };
 
-#endif // __LLVM_LIBC_TYPES_STRUCT_HSEARCH_DATA_H__
+#endif // LLVM_LIBC_TYPES_STRUCT_HSEARCH_DATA_H

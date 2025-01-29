@@ -24,9 +24,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -66,7 +64,8 @@ void ObjCProtocolList::set(ObjCProtocolDecl* const* InList, unsigned Elts,
 //===----------------------------------------------------------------------===//
 
 ObjCContainerDecl::ObjCContainerDecl(Kind DK, DeclContext *DC,
-                                     IdentifierInfo *Id, SourceLocation nameLoc,
+                                     const IdentifierInfo *Id,
+                                     SourceLocation nameLoc,
                                      SourceLocation atStartLoc)
     : NamedDecl(DK, DC, nameLoc, Id), DeclContext(DK) {
   setAtStartLoc(atStartLoc);
@@ -378,10 +377,8 @@ SourceLocation ObjCInterfaceDecl::getSuperClassLoc() const {
 /// FindPropertyVisibleInPrimaryClass - Finds declaration of the property
 /// with name 'PropertyId' in the primary class; including those in protocols
 /// (direct or indirect) used by the primary class.
-ObjCPropertyDecl *
-ObjCInterfaceDecl::FindPropertyVisibleInPrimaryClass(
-                       IdentifierInfo *PropertyId,
-                       ObjCPropertyQueryKind QueryKind) const {
+ObjCPropertyDecl *ObjCInterfaceDecl::FindPropertyVisibleInPrimaryClass(
+    const IdentifierInfo *PropertyId, ObjCPropertyQueryKind QueryKind) const {
   // FIXME: Should make sure no callers ever do this.
   if (!hasDefinition())
     return nullptr;
@@ -863,7 +860,8 @@ ObjCMethodDecl *ObjCMethodDecl::Create(
       isImplicitlyDeclared, isDefined, impControl, HasRelatedResultType);
 }
 
-ObjCMethodDecl *ObjCMethodDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+ObjCMethodDecl *ObjCMethodDecl::CreateDeserialized(ASTContext &C,
+                                                   GlobalDeclID ID) {
   return new (C, ID) ObjCMethodDecl(SourceLocation(), SourceLocation(),
                                     Selector(), QualType(), nullptr, nullptr);
 }
@@ -947,12 +945,12 @@ void ObjCMethodDecl::setMethodParams(ASTContext &C,
   assert((!SelLocs.empty() || isImplicit()) &&
          "No selector locs for non-implicit method");
   if (isImplicit())
-    return setParamsAndSelLocs(C, Params, std::nullopt);
+    return setParamsAndSelLocs(C, Params, {});
 
   setSelLocsKind(hasStandardSelectorLocs(getSelector(), SelLocs, Params,
                                         DeclEndLoc));
   if (getSelLocsKind() != SelLoc_NonStandard)
-    return setParamsAndSelLocs(C, Params, std::nullopt);
+    return setParamsAndSelLocs(C, Params, {});
 
   setParamsAndSelLocs(C, Params, SelLocs);
 }
@@ -1487,7 +1485,7 @@ ObjCTypeParamDecl *ObjCTypeParamDecl::Create(ASTContext &ctx, DeclContext *dc,
 }
 
 ObjCTypeParamDecl *ObjCTypeParamDecl::CreateDeserialized(ASTContext &ctx,
-                                                         unsigned ID) {
+                                                         GlobalDeclID ID) {
   return new (ctx, ID) ObjCTypeParamDecl(ctx, nullptr,
                                          ObjCTypeParamVariance::Invariant,
                                          SourceLocation(), 0, SourceLocation(),
@@ -1539,14 +1537,10 @@ void ObjCTypeParamList::gatherDefaultTypeArgs(
 // ObjCInterfaceDecl
 //===----------------------------------------------------------------------===//
 
-ObjCInterfaceDecl *ObjCInterfaceDecl::Create(const ASTContext &C,
-                                             DeclContext *DC,
-                                             SourceLocation atLoc,
-                                             IdentifierInfo *Id,
-                                             ObjCTypeParamList *typeParamList,
-                                             ObjCInterfaceDecl *PrevDecl,
-                                             SourceLocation ClassLoc,
-                                             bool isInternal){
+ObjCInterfaceDecl *ObjCInterfaceDecl::Create(
+    const ASTContext &C, DeclContext *DC, SourceLocation atLoc,
+    const IdentifierInfo *Id, ObjCTypeParamList *typeParamList,
+    ObjCInterfaceDecl *PrevDecl, SourceLocation ClassLoc, bool isInternal) {
   auto *Result = new (C, DC)
       ObjCInterfaceDecl(C, DC, atLoc, Id, typeParamList, ClassLoc, PrevDecl,
                         isInternal);
@@ -1556,7 +1550,7 @@ ObjCInterfaceDecl *ObjCInterfaceDecl::Create(const ASTContext &C,
 }
 
 ObjCInterfaceDecl *ObjCInterfaceDecl::CreateDeserialized(const ASTContext &C,
-                                                         unsigned ID) {
+                                                         GlobalDeclID ID) {
   auto *Result = new (C, ID)
       ObjCInterfaceDecl(C, nullptr, SourceLocation(), nullptr, nullptr,
                         SourceLocation(), nullptr, false);
@@ -1564,12 +1558,10 @@ ObjCInterfaceDecl *ObjCInterfaceDecl::CreateDeserialized(const ASTContext &C,
   return Result;
 }
 
-ObjCInterfaceDecl::ObjCInterfaceDecl(const ASTContext &C, DeclContext *DC,
-                                     SourceLocation AtLoc, IdentifierInfo *Id,
-                                     ObjCTypeParamList *typeParamList,
-                                     SourceLocation CLoc,
-                                     ObjCInterfaceDecl *PrevDecl,
-                                     bool IsInternal)
+ObjCInterfaceDecl::ObjCInterfaceDecl(
+    const ASTContext &C, DeclContext *DC, SourceLocation AtLoc,
+    const IdentifierInfo *Id, ObjCTypeParamList *typeParamList,
+    SourceLocation CLoc, ObjCInterfaceDecl *PrevDecl, bool IsInternal)
     : ObjCContainerDecl(ObjCInterface, DC, Id, CLoc, AtLoc),
       redeclarable_base(C) {
   setPreviousDecl(PrevDecl);
@@ -1751,8 +1743,8 @@ ObjCIvarDecl *ObjCInterfaceDecl::all_declared_ivar_begin() {
 /// categories for this class and returns it. Name of the category is passed
 /// in 'CategoryId'. If category not found, return 0;
 ///
-ObjCCategoryDecl *
-ObjCInterfaceDecl::FindCategoryDeclaration(IdentifierInfo *CategoryId) const {
+ObjCCategoryDecl *ObjCInterfaceDecl::FindCategoryDeclaration(
+    const IdentifierInfo *CategoryId) const {
   // FIXME: Should make sure no callers ever do this.
   if (!hasDefinition())
     return nullptr;
@@ -1838,10 +1830,10 @@ void ObjCIvarDecl::anchor() {}
 
 ObjCIvarDecl *ObjCIvarDecl::Create(ASTContext &C, ObjCContainerDecl *DC,
                                    SourceLocation StartLoc,
-                                   SourceLocation IdLoc, IdentifierInfo *Id,
-                                   QualType T, TypeSourceInfo *TInfo,
-                                   AccessControl ac, Expr *BW,
-                                   bool synthesized) {
+                                   SourceLocation IdLoc,
+                                   const IdentifierInfo *Id, QualType T,
+                                   TypeSourceInfo *TInfo, AccessControl ac,
+                                   Expr *BW, bool synthesized) {
   if (DC) {
     // Ivar's can only appear in interfaces, implementations (via synthesized
     // properties), and class extensions (via direct declaration, or synthesized
@@ -1872,7 +1864,7 @@ ObjCIvarDecl *ObjCIvarDecl::Create(ASTContext &C, ObjCContainerDecl *DC,
                                   synthesized);
 }
 
-ObjCIvarDecl *ObjCIvarDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+ObjCIvarDecl *ObjCIvarDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) ObjCIvarDecl(nullptr, SourceLocation(), SourceLocation(),
                                   nullptr, QualType(), nullptr,
                                   ObjCIvarDecl::None, nullptr, false);
@@ -1921,7 +1913,7 @@ ObjCAtDefsFieldDecl
 }
 
 ObjCAtDefsFieldDecl *ObjCAtDefsFieldDecl::CreateDeserialized(ASTContext &C,
-                                                             unsigned ID) {
+                                                             GlobalDeclID ID) {
   return new (C, ID) ObjCAtDefsFieldDecl(nullptr, SourceLocation(),
                                          SourceLocation(), nullptr, QualType(),
                                          nullptr);
@@ -1956,7 +1948,7 @@ ObjCProtocolDecl *ObjCProtocolDecl::Create(ASTContext &C, DeclContext *DC,
 }
 
 ObjCProtocolDecl *ObjCProtocolDecl::CreateDeserialized(ASTContext &C,
-                                                       unsigned ID) {
+                                                       GlobalDeclID ID) {
   ObjCProtocolDecl *Result =
       new (C, ID) ObjCProtocolDecl(C, nullptr, nullptr, SourceLocation(),
                                    SourceLocation(), nullptr);
@@ -2120,28 +2112,23 @@ void ObjCProtocolDecl::setHasODRHash(bool HasHash) {
 
 void ObjCCategoryDecl::anchor() {}
 
-ObjCCategoryDecl::ObjCCategoryDecl(DeclContext *DC, SourceLocation AtLoc,
-                                   SourceLocation ClassNameLoc,
-                                   SourceLocation CategoryNameLoc,
-                                   IdentifierInfo *Id, ObjCInterfaceDecl *IDecl,
-                                   ObjCTypeParamList *typeParamList,
-                                   SourceLocation IvarLBraceLoc,
-                                   SourceLocation IvarRBraceLoc)
+ObjCCategoryDecl::ObjCCategoryDecl(
+    DeclContext *DC, SourceLocation AtLoc, SourceLocation ClassNameLoc,
+    SourceLocation CategoryNameLoc, const IdentifierInfo *Id,
+    ObjCInterfaceDecl *IDecl, ObjCTypeParamList *typeParamList,
+    SourceLocation IvarLBraceLoc, SourceLocation IvarRBraceLoc)
     : ObjCContainerDecl(ObjCCategory, DC, Id, ClassNameLoc, AtLoc),
       ClassInterface(IDecl), CategoryNameLoc(CategoryNameLoc),
       IvarLBraceLoc(IvarLBraceLoc), IvarRBraceLoc(IvarRBraceLoc) {
   setTypeParamList(typeParamList);
 }
 
-ObjCCategoryDecl *ObjCCategoryDecl::Create(ASTContext &C, DeclContext *DC,
-                                           SourceLocation AtLoc,
-                                           SourceLocation ClassNameLoc,
-                                           SourceLocation CategoryNameLoc,
-                                           IdentifierInfo *Id,
-                                           ObjCInterfaceDecl *IDecl,
-                                           ObjCTypeParamList *typeParamList,
-                                           SourceLocation IvarLBraceLoc,
-                                           SourceLocation IvarRBraceLoc) {
+ObjCCategoryDecl *ObjCCategoryDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceLocation AtLoc,
+    SourceLocation ClassNameLoc, SourceLocation CategoryNameLoc,
+    const IdentifierInfo *Id, ObjCInterfaceDecl *IDecl,
+    ObjCTypeParamList *typeParamList, SourceLocation IvarLBraceLoc,
+    SourceLocation IvarRBraceLoc) {
   auto *CatDecl =
       new (C, DC) ObjCCategoryDecl(DC, AtLoc, ClassNameLoc, CategoryNameLoc, Id,
                                    IDecl, typeParamList, IvarLBraceLoc,
@@ -2160,7 +2147,7 @@ ObjCCategoryDecl *ObjCCategoryDecl::Create(ASTContext &C, DeclContext *DC,
 }
 
 ObjCCategoryDecl *ObjCCategoryDecl::CreateDeserialized(ASTContext &C,
-                                                       unsigned ID) {
+                                                       GlobalDeclID ID) {
   return new (C, ID) ObjCCategoryDecl(nullptr, SourceLocation(),
                                       SourceLocation(), SourceLocation(),
                                       nullptr, nullptr, nullptr);
@@ -2190,21 +2177,18 @@ void ObjCCategoryDecl::setTypeParamList(ObjCTypeParamList *TPL) {
 
 void ObjCCategoryImplDecl::anchor() {}
 
-ObjCCategoryImplDecl *
-ObjCCategoryImplDecl::Create(ASTContext &C, DeclContext *DC,
-                             IdentifierInfo *Id,
-                             ObjCInterfaceDecl *ClassInterface,
-                             SourceLocation nameLoc,
-                             SourceLocation atStartLoc,
-                             SourceLocation CategoryNameLoc) {
+ObjCCategoryImplDecl *ObjCCategoryImplDecl::Create(
+    ASTContext &C, DeclContext *DC, const IdentifierInfo *Id,
+    ObjCInterfaceDecl *ClassInterface, SourceLocation nameLoc,
+    SourceLocation atStartLoc, SourceLocation CategoryNameLoc) {
   if (ClassInterface && ClassInterface->hasDefinition())
     ClassInterface = ClassInterface->getDefinition();
   return new (C, DC) ObjCCategoryImplDecl(DC, Id, ClassInterface, nameLoc,
                                           atStartLoc, CategoryNameLoc);
 }
 
-ObjCCategoryImplDecl *ObjCCategoryImplDecl::CreateDeserialized(ASTContext &C,
-                                                               unsigned ID) {
+ObjCCategoryImplDecl *
+ObjCCategoryImplDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) ObjCCategoryImplDecl(nullptr, nullptr, nullptr,
                                           SourceLocation(), SourceLocation(),
                                           SourceLocation());
@@ -2311,7 +2295,7 @@ ObjCImplementationDecl::Create(ASTContext &C, DeclContext *DC,
 }
 
 ObjCImplementationDecl *
-ObjCImplementationDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+ObjCImplementationDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) ObjCImplementationDecl(nullptr, nullptr, nullptr,
                                             SourceLocation(), SourceLocation());
 }
@@ -2354,7 +2338,7 @@ ObjCCompatibleAliasDecl::Create(ASTContext &C, DeclContext *DC,
 }
 
 ObjCCompatibleAliasDecl *
-ObjCCompatibleAliasDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+ObjCCompatibleAliasDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) ObjCCompatibleAliasDecl(nullptr, SourceLocation(),
                                              nullptr, nullptr);
 }
@@ -2365,20 +2349,17 @@ ObjCCompatibleAliasDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
 
 void ObjCPropertyDecl::anchor() {}
 
-ObjCPropertyDecl *ObjCPropertyDecl::Create(ASTContext &C, DeclContext *DC,
-                                           SourceLocation L,
-                                           IdentifierInfo *Id,
-                                           SourceLocation AtLoc,
-                                           SourceLocation LParenLoc,
-                                           QualType T,
-                                           TypeSourceInfo *TSI,
-                                           PropertyControl propControl) {
+ObjCPropertyDecl *
+ObjCPropertyDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L,
+                         const IdentifierInfo *Id, SourceLocation AtLoc,
+                         SourceLocation LParenLoc, QualType T,
+                         TypeSourceInfo *TSI, PropertyControl propControl) {
   return new (C, DC) ObjCPropertyDecl(DC, L, Id, AtLoc, LParenLoc, T, TSI,
                                       propControl);
 }
 
 ObjCPropertyDecl *ObjCPropertyDecl::CreateDeserialized(ASTContext &C,
-                                                       unsigned ID) {
+                                                       GlobalDeclID ID) {
   return new (C, ID) ObjCPropertyDecl(nullptr, SourceLocation(), nullptr,
                                       SourceLocation(), SourceLocation(),
                                       QualType(), nullptr, None);
@@ -2410,8 +2391,8 @@ ObjCPropertyImplDecl *ObjCPropertyImplDecl::Create(ASTContext &C,
                                           ivarLoc);
 }
 
-ObjCPropertyImplDecl *ObjCPropertyImplDecl::CreateDeserialized(ASTContext &C,
-                                                               unsigned ID) {
+ObjCPropertyImplDecl *
+ObjCPropertyImplDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) ObjCPropertyImplDecl(nullptr, SourceLocation(),
                                           SourceLocation(), nullptr, Dynamic,
                                           nullptr, SourceLocation());

@@ -15,7 +15,7 @@
 
 using namespace llvm;
 namespace {
-std::unique_ptr<LLVMTargetMachine> createTargetMachine(const std::string &CPU) {
+std::unique_ptr<TargetMachine> createTargetMachine(const std::string &CPU) {
   auto TT(Triple::normalize("aarch64--"));
 
   LLVMInitializeAArch64TargetInfo();
@@ -25,9 +25,9 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine(const std::string &CPU) {
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
 
-  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+  return std::unique_ptr<TargetMachine>(
       TheTarget->createTargetMachine(TT, CPU, "", TargetOptions(), std::nullopt,
-                                     std::nullopt, CodeGenOptLevel::Default)));
+                                     std::nullopt, CodeGenOptLevel::Default));
 }
 
 std::unique_ptr<AArch64InstrInfo> createInstrInfo(TargetMachine *TM) {
@@ -52,7 +52,7 @@ static bool isInstructionSupportedByCPU(unsigned Opcode,
 
 void runSVEPseudoTestForCPU(const std::string &CPU) {
 
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine(CPU);
+  std::unique_ptr<TargetMachine> TM = createTargetMachine(CPU);
   ASSERT_TRUE(TM);
   std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
   ASSERT_TRUE(II);
@@ -105,6 +105,18 @@ void runSVEPseudoTestForCPU(const std::string &CPU) {
 // TODO : Add more CPUs that support SVE/SVE2
 TEST(AArch64SVESchedPseudoTesta510, IsCorrect) {
   runSVEPseudoTestForCPU("cortex-a510");
+}
+
+TEST(AArch64SVESchedPseudoTestn1, IsCorrect) {
+  runSVEPseudoTestForCPU("neoverse-n2");
+}
+
+TEST(AArch64SVESchedPseudoTestn3, IsCorrect) {
+  runSVEPseudoTestForCPU("neoverse-n3");
+}
+
+TEST(AArch64SVESchedPseudoTestv1, IsCorrect) {
+  runSVEPseudoTestForCPU("neoverse-v1");
 }
 
 TEST(AArch64SVESchedPseudoTestv2, IsCorrect) {

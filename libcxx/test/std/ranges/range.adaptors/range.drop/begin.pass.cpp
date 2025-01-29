@@ -18,6 +18,7 @@
 
 #include "test_macros.h"
 #include "test_iterators.h"
+#include "test_range.h"
 #include "types.h"
 
 template<class T>
@@ -72,12 +73,12 @@ constexpr bool test() {
   std::ranges::drop_view dropView7(MoveOnlyView(), 10);
   assert(dropView7.begin() == globalBuff + 8);
 
-  CountedView view8;
+  IteratorOpCounts opcounts;
+  CountedView view8(&opcounts);
+  ;
   std::ranges::drop_view dropView8(view8, 5);
   assert(base(base(dropView8.begin())) == globalBuff + 5);
-  assert(dropView8.begin().stride_count() == 5);
-  assert(base(base(dropView8.begin())) == globalBuff + 5);
-  assert(dropView8.begin().stride_count() == 5);
+  assert(opcounts.increments == 5);
 
   static_assert(!BeginInvocable<const ForwardView>);
 
@@ -122,7 +123,7 @@ constexpr bool test() {
   {
     static_assert(std::ranges::random_access_range<const SimpleView>);
     static_assert(std::ranges::sized_range<const SimpleView>);
-    LIBCPP_STATIC_ASSERT(std::ranges::__simple_view<SimpleView>);
+    static_assert(simple_view<SimpleView>);
     int non_const_calls = 0;
     int const_calls = 0;
     std::ranges::drop_view dropView(SimpleView{{}, &non_const_calls, &const_calls}, 4);
@@ -137,7 +138,7 @@ constexpr bool test() {
   {
     static_assert(std::ranges::random_access_range<const NonSimpleView>);
     static_assert(std::ranges::sized_range<const NonSimpleView>);
-    LIBCPP_STATIC_ASSERT(!std::ranges::__simple_view<NonSimpleView>);
+    static_assert(!simple_view<NonSimpleView>);
     int non_const_calls = 0;
     int const_calls = 0;
     std::ranges::drop_view dropView(NonSimpleView{{}, &non_const_calls, &const_calls}, 4);

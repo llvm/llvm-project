@@ -15,6 +15,7 @@
 #include "char-block.h"
 #include "char-set.h"
 #include "provenance.h"
+#include "flang/Common/Fortran-features.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/reference-counted.h"
 #include "flang/Common/restorer.h"
@@ -202,6 +203,26 @@ public:
   Message(ProvenanceRange pr, const MessageExpectedText &t)
       : location_{pr}, text_{t} {}
 
+  Message(common::LanguageFeature feature, ProvenanceRange pr,
+      const MessageFixedText &t)
+      : location_{pr}, text_{t}, languageFeature_{feature} {}
+  Message(common::LanguageFeature feature, ProvenanceRange pr,
+      const MessageFormattedText &s)
+      : location_{pr}, text_{s}, languageFeature_{feature} {}
+  Message(common::LanguageFeature feature, ProvenanceRange pr,
+      MessageFormattedText &&s)
+      : location_{pr}, text_{std::move(s)}, languageFeature_{feature} {}
+
+  Message(common::UsageWarning warning, ProvenanceRange pr,
+      const MessageFixedText &t)
+      : location_{pr}, text_{t}, usageWarning_{warning} {}
+  Message(common::UsageWarning warning, ProvenanceRange pr,
+      const MessageFormattedText &s)
+      : location_{pr}, text_{s}, usageWarning_{warning} {}
+  Message(common::UsageWarning warning, ProvenanceRange pr,
+      MessageFormattedText &&s)
+      : location_{pr}, text_{std::move(s)}, usageWarning_{warning} {}
+
   Message(CharBlock csr, const MessageFixedText &t)
       : location_{csr}, text_{t} {}
   Message(CharBlock csr, const MessageFormattedText &s)
@@ -211,10 +232,41 @@ public:
   Message(CharBlock csr, const MessageExpectedText &t)
       : location_{csr}, text_{t} {}
 
+  Message(
+      common::LanguageFeature feature, CharBlock csr, const MessageFixedText &t)
+      : location_{csr}, text_{t}, languageFeature_{feature} {}
+  Message(common::LanguageFeature feature, CharBlock csr,
+      const MessageFormattedText &s)
+      : location_{csr}, text_{s}, languageFeature_{feature} {}
+  Message(
+      common::LanguageFeature feature, CharBlock csr, MessageFormattedText &&s)
+      : location_{csr}, text_{std::move(s)}, languageFeature_{feature} {}
+
+  Message(
+      common::UsageWarning warning, CharBlock csr, const MessageFixedText &t)
+      : location_{csr}, text_{t}, usageWarning_{warning} {}
+  Message(common::UsageWarning warning, CharBlock csr,
+      const MessageFormattedText &s)
+      : location_{csr}, text_{s}, usageWarning_{warning} {}
+  Message(common::UsageWarning warning, CharBlock csr, MessageFormattedText &&s)
+      : location_{csr}, text_{std::move(s)}, usageWarning_{warning} {}
+
   template <typename RANGE, typename A, typename... As>
   Message(RANGE r, const MessageFixedText &t, A &&x, As &&...xs)
       : location_{r}, text_{MessageFormattedText{
                           t, std::forward<A>(x), std::forward<As>(xs)...}} {}
+  template <typename RANGE, typename A, typename... As>
+  Message(common::LanguageFeature feature, RANGE r, const MessageFixedText &t,
+      A &&x, As &&...xs)
+      : location_{r}, text_{MessageFormattedText{
+                          t, std::forward<A>(x), std::forward<As>(xs)...}},
+        languageFeature_{feature} {}
+  template <typename RANGE, typename A, typename... As>
+  Message(common::UsageWarning warning, RANGE r, const MessageFixedText &t,
+      A &&x, As &&...xs)
+      : location_{r}, text_{MessageFormattedText{
+                          t, std::forward<A>(x), std::forward<As>(xs)...}},
+        usageWarning_{warning} {}
 
   Reference attachment() const { return attachment_; }
 
@@ -232,6 +284,10 @@ public:
   bool IsFatal() const;
   Severity severity() const;
   Message &set_severity(Severity);
+  std::optional<common::LanguageFeature> languageFeature() const;
+  Message &set_languageFeature(common::LanguageFeature);
+  std::optional<common::UsageWarning> usageWarning() const;
+  Message &set_usageWarning(common::UsageWarning);
   std::string ToString() const;
   std::optional<ProvenanceRange> GetProvenanceRange(
       const AllCookedSources &) const;
@@ -256,6 +312,8 @@ private:
       text_;
   bool attachmentIsContext_{false};
   Reference attachment_;
+  std::optional<common::LanguageFeature> languageFeature_;
+  std::optional<common::UsageWarning> usageWarning_;
 };
 
 class Messages {
@@ -273,6 +331,16 @@ public:
 
   template <typename... A> Message &Say(A &&...args) {
     return messages_.emplace_back(std::forward<A>(args)...);
+  }
+
+  template <typename... A>
+  Message &Say(common::LanguageFeature feature, A &&...args) {
+    return Say(std::forward<A>(args)...).set_languageFeature(feature);
+  }
+
+  template <typename... A>
+  Message &Say(common::UsageWarning warning, A &&...args) {
+    return Say(std::forward<A>(args)...).set_usageWarning(warning);
   }
 
   void Annex(Messages &&that) {
@@ -330,6 +398,10 @@ public:
     return common::ScopedSet(messages_, nullptr);
   }
 
+  template <typename... A> Message *Say(A &&...args) {
+    return Say(at_, std::forward<A>(args)...);
+  }
+
   template <typename... A> Message *Say(CharBlock at, A &&...args) {
     if (messages_ != nullptr) {
       auto &msg{messages_->Say(at, std::forward<A>(args)...)};
@@ -347,8 +419,22 @@ public:
     return Say(at.value_or(at_), std::forward<A>(args)...);
   }
 
-  template <typename... A> Message *Say(A &&...args) {
-    return Say(at_, std::forward<A>(args)...);
+  template <typename... A>
+  Message *Say(common::LanguageFeature feature, A &&...args) {
+    Message *msg{Say(std::forward<A>(args)...)};
+    if (msg) {
+      msg->set_languageFeature(feature);
+    }
+    return msg;
+  }
+
+  template <typename... A>
+  Message *Say(common::UsageWarning warning, A &&...args) {
+    Message *msg{Say(std::forward<A>(args)...)};
+    if (msg) {
+      msg->set_usageWarning(warning);
+    }
+    return msg;
   }
 
   Message *Say(Message &&msg) {

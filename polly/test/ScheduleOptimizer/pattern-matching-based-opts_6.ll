@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-pattern-matching-based-opts=true \
+; RUN: opt %loadNPMPolly -polly-pattern-matching-based-opts=true \
 ; RUN: -polly-target-throughput-vector-fma=1 \
 ; RUN: -polly-target-latency-vector-fma=8 \
 ; RUN: -polly-target-1st-cache-level-associativity=8 \
@@ -6,12 +6,12 @@
 ; RUN: -polly-target-1st-cache-level-size=32768 \
 ; RUN: -polly-target-vector-register-bitwidth=256 \
 ; RUN: -polly-target-2nd-cache-level-size=262144 \
-; RUN: -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: '-passes=polly-opt-isl,print<polly-ast>' -disable-output < %s | FileCheck %s
 ;
-;  opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true \
+;  opt %loadNPMPolly -passes=polly-opt-isl -polly-pattern-matching-based-opts=true \
 ;  -polly-target-throughput-vector-fma=1 \
 ;  -polly-target-latency-vector-fma=8 \
-;  -polly-codegen -polly-target-1st-cache-level-associativity=8 \
+;  -passes=polly-codegen -polly-target-1st-cache-level-associativity=8 \
 ;  -polly-target-2nd-cache-level-associativity=8 \
 ;  -polly-target-1st-cache-level-size=32768 \
 ;  -polly-target-vector-register-bitwidth=256 \

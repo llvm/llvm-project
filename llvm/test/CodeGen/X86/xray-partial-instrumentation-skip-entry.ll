@@ -5,7 +5,7 @@
 define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" "xray-skip-entry" {
 ; CHECK-NOT: Lxray_sled_0:
   ret i32 0
-; CHECK:       .p2align 1, 0x90
+; CHECK:       .p2align 1
 ; CHECK-LABEL: Lxray_sled_0:
 ; CHECK:       retq
 ; CHECK-NEXT:  nopw %cs:512(%rax,%rax)
@@ -39,13 +39,13 @@ Test:
   br i1 %cond, label %IsEqual, label %NotEqual
 IsEqual:
   ret i32 0
-; CHECK:       .p2align 1, 0x90
+; CHECK:       .p2align 1
 ; CHECK-LABEL: Lxray_sled_1:
 ; CHECK:       retq
 ; CHECK-NEXT:  nopw %cs:512(%rax,%rax)
 NotEqual:
   ret i32 1
-; CHECK:       .p2align 1, 0x90
+; CHECK:       .p2align 1
 ; CHECK-LABEL: Lxray_sled_2:
 ; CHECK:       retq
 ; CHECK-NEXT:  nopw %cs:512(%rax,%rax)

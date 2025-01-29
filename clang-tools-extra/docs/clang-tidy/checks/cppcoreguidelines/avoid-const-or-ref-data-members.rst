@@ -35,7 +35,7 @@ Examples:
     int* x;
     std::unique_ptr<int> x;
     std::shared_ptr<int> x;
-    gsl::not_null<int> x;
+    gsl::not_null<int*> x;
   };
 
   // Bad, rvalue reference member

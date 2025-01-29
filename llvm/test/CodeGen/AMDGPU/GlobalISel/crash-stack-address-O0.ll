@@ -10,12 +10,14 @@ define amdgpu_kernel void @stack_write_fi() {
 ; CHECK-NEXT:    s_add_u32 s0, s0, s17
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    s_mov_b32 s5, 0
+; CHECK-NEXT:    s_mov_b32 s6, 0
 ; CHECK-NEXT:    s_mov_b32 s4, 0
-; CHECK-NEXT:    v_mov_b32_e32 v0, s5
-; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
+; CHECK-NEXT:    v_mov_b32_e32 v0, s6
+; CHECK-NEXT:    v_mov_b32_e32 v1, s5
+; CHECK-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
-; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:8
+; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_endpgm
 entry:
@@ -23,3 +25,6 @@ entry:
   store volatile i64 0, ptr addrspace(5) %alloca, align 4
   ret void
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

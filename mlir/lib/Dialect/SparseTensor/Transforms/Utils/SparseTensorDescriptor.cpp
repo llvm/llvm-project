@@ -54,20 +54,21 @@ convertSparseTensorType(RankedTensorType rtp, SmallVectorImpl<Type> &fields) {
 // The sparse tensor type converter (defined in Passes.h).
 //===----------------------------------------------------------------------===//
 
+static Value materializeTuple(OpBuilder &builder, RankedTensorType tp,
+                              ValueRange inputs, Location loc) {
+  if (!getSparseTensorEncoding(tp))
+    // Not a sparse tensor.
+    return Value();
+  // Sparsifier knows how to cancel out these casts.
+  return genTuple(builder, loc, tp, inputs);
+}
+
 SparseTensorTypeToBufferConverter::SparseTensorTypeToBufferConverter() {
   addConversion([](Type type) { return type; });
   addConversion(convertSparseTensorType);
 
   // Required by scf.for 1:N type conversion.
-  addSourceMaterialization([](OpBuilder &builder, RankedTensorType tp,
-                              ValueRange inputs,
-                              Location loc) -> std::optional<Value> {
-    if (!getSparseTensorEncoding(tp))
-      // Not a sparse tensor.
-      return std::nullopt;
-    // Sparsifier knows how to cancel out these casts.
-    return genTuple(builder, loc, tp, inputs);
-  });
+  addSourceMaterialization(materializeTuple);
 }
 
 //===----------------------------------------------------------------------===//
@@ -103,7 +104,7 @@ void SparseTensorSpecifier::setSpecifierField(OpBuilder &builder, Location loc,
 
 Value sparse_tensor::SparseTensorDescriptor::getCrdMemRefOrView(
     OpBuilder &builder, Location loc, Level lvl) const {
-  const Level cooStart = rType.getCOOStart();
+  const Level cooStart = rType.getAoSCOOStart();
   if (lvl < cooStart)
     return getMemRefField(SparseTensorFieldKind::CrdMemRef, lvl);
 

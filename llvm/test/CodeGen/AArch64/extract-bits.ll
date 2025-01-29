@@ -972,10 +972,9 @@ define void @pr38938(ptr %a0, ptr %a1) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr x8, [x1]
 ; CHECK-NEXT:    ubfx x8, x8, #21, #10
-; CHECK-NEXT:    lsl x8, x8, #2
-; CHECK-NEXT:    ldr w9, [x0, x8]
+; CHECK-NEXT:    ldr w9, [x0, x8, lsl #2]
 ; CHECK-NEXT:    add w9, w9, #1
-; CHECK-NEXT:    str w9, [x0, x8]
+; CHECK-NEXT:    str w9, [x0, x8, lsl #2]
 ; CHECK-NEXT:    ret
   %tmp = load i64, ptr %a1, align 8
   %tmp1 = lshr i64 %tmp, 21
@@ -1014,8 +1013,8 @@ define i32 @c1_i32(i32 %arg) nounwind {
 define i32 @c2_i32(i32 %arg) nounwind {
 ; CHECK-LABEL: c2_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ubfx w8, w0, #19, #10
-; CHECK-NEXT:    lsl w0, w8, #2
+; CHECK-NEXT:    lsr w8, w0, #17
+; CHECK-NEXT:    and w0, w8, #0xffc
 ; CHECK-NEXT:    ret
   %tmp0 = lshr i32 %arg, 19
   %tmp1 = and i32 %tmp0, 1023
@@ -1064,8 +1063,8 @@ define i64 @c1_i64(i64 %arg) nounwind {
 define i64 @c2_i64(i64 %arg) nounwind {
 ; CHECK-LABEL: c2_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ubfx x8, x0, #51, #10
-; CHECK-NEXT:    lsl x0, x8, #2
+; CHECK-NEXT:    lsr x8, x0, #49
+; CHECK-NEXT:    and x0, x8, #0xffc
 ; CHECK-NEXT:    ret
   %tmp0 = lshr i64 %arg, 51
   %tmp1 = and i64 %tmp0, 1023
@@ -1121,8 +1120,8 @@ define void @c6_i32(i32 %arg, ptr %ptr) nounwind {
 define void @c7_i32(i32 %arg, ptr %ptr) nounwind {
 ; CHECK-LABEL: c7_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ubfx w8, w0, #19, #10
-; CHECK-NEXT:    lsl w8, w8, #2
+; CHECK-NEXT:    lsr w8, w0, #17
+; CHECK-NEXT:    and w8, w8, #0xffc
 ; CHECK-NEXT:    str w8, [x1]
 ; CHECK-NEXT:    ret
   %tmp0 = lshr i32 %arg, 19
@@ -1164,8 +1163,8 @@ define void @c6_i64(i64 %arg, ptr %ptr) nounwind {
 define void @c7_i64(i64 %arg, ptr %ptr) nounwind {
 ; CHECK-LABEL: c7_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ubfx x8, x0, #51, #10
-; CHECK-NEXT:    lsl x8, x8, #2
+; CHECK-NEXT:    lsr x8, x0, #49
+; CHECK-NEXT:    and x8, x8, #0xffc
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
   %tmp0 = lshr i64 %arg, 51

@@ -10,6 +10,7 @@
 #define LLDB_API_SBFUNCTION_H
 
 #include "lldb/API/SBAddress.h"
+#include "lldb/API/SBAddressRangeList.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBInstructionList.h"
 
@@ -42,7 +43,11 @@ public:
 
   lldb::SBAddress GetStartAddress();
 
+  LLDB_DEPRECATED_FIXME("Not compatible with discontinuous functions.",
+                        "GetRanges()")
   lldb::SBAddress GetEndAddress();
+
+  lldb::SBAddressRangeList GetRanges();
 
   const char *GetArgumentName(uint32_t arg_idx);
 

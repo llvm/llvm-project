@@ -49,6 +49,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Dominance.h"
@@ -105,26 +106,24 @@ struct ArgsUsageInLoop {
   // Debug dump of the structure members assuming that
   // the information has been collected for the given loop.
   void dump(fir::DoLoopOp loop) const {
-    // clang-format off
-    LLVM_DEBUG(
-        mlir::OpPrintingFlags printFlags;
-        printFlags.skipRegions();
-        llvm::dbgs() << "Arguments usage info for loop:\n";
-        loop.print(llvm::dbgs(), printFlags);
-        llvm::dbgs() << "\nUsed args:\n";
-        for (auto &use : usageInfo) {
-          mlir::Value v = use.first;
-          v.print(llvm::dbgs(), printFlags);
-          llvm::dbgs() << "\n";
-        }
-        llvm::dbgs() << "\nCannot transform args:\n";
-        for (mlir::Value arg : cannotTransform) {
-          arg.print(llvm::dbgs(), printFlags);
-          llvm::dbgs() << "\n";
-        }
-        llvm::dbgs() << "====\n"
-    );
-    // clang-format on
+    LLVM_DEBUG({
+      mlir::OpPrintingFlags printFlags;
+      printFlags.skipRegions();
+      llvm::dbgs() << "Arguments usage info for loop:\n";
+      loop.print(llvm::dbgs(), printFlags);
+      llvm::dbgs() << "\nUsed args:\n";
+      for (auto &use : usageInfo) {
+        mlir::Value v = use.first;
+        v.print(llvm::dbgs(), printFlags);
+        llvm::dbgs() << "\n";
+      }
+      llvm::dbgs() << "\nCannot transform args:\n";
+      for (mlir::Value arg : cannotTransform) {
+        arg.print(llvm::dbgs(), printFlags);
+        llvm::dbgs() << "\n";
+      }
+      llvm::dbgs() << "====\n";
+    });
   }
 
   // Erase usageInfo and cannotTransform entries for a set
@@ -146,19 +145,43 @@ struct ArgsUsageInLoop {
 };
 } // namespace
 
-/// @c replaceOuterUses - replace uses outside of @c op with result of @c
-/// outerOp
-static void replaceOuterUses(mlir::Operation *op, mlir::Operation *outerOp) {
-  const mlir::Operation *outerParent = outerOp->getParentOp();
-  op->replaceUsesWithIf(outerOp, [&](mlir::OpOperand &operand) {
-    mlir::Operation *owner = operand.getOwner();
-    return outerParent == owner->getParentOp();
-  });
+static fir::SequenceType getAsSequenceType(mlir::Value v) {
+  mlir::Type argTy = fir::unwrapPassByRefType(fir::unwrapRefType(v.getType()));
+  return mlir::dyn_cast<fir::SequenceType>(argTy);
 }
 
-static fir::SequenceType getAsSequenceType(mlir::Value *v) {
-  mlir::Type argTy = fir::unwrapPassByRefType(fir::unwrapRefType(v->getType()));
-  return argTy.dyn_cast<fir::SequenceType>();
+/// Return the rank and the element size (in bytes) of the given
+/// value \p v. If it is not an array or the element type is not
+/// supported, then return <0, 0>. Only trivial data types
+/// are currently supported.
+/// When \p isArgument is true, \p v is assumed to be a function
+/// argument. If \p v's type does not look like a type of an assumed
+/// shape array, then the function returns <0, 0>.
+/// When \p isArgument is false, array types with known innermost
+/// dimension are allowed to proceed.
+static std::pair<unsigned, size_t>
+getRankAndElementSize(const fir::KindMapping &kindMap,
+                      const mlir::DataLayout &dl, mlir::Value v,
+                      bool isArgument = false) {
+  if (auto seqTy = getAsSequenceType(v)) {
+    unsigned rank = seqTy.getDimension();
+    if (rank > 0 &&
+        (!isArgument ||
+         seqTy.getShape()[0] == fir::SequenceType::getUnknownExtent())) {
+      size_t typeSize = 0;
+      mlir::Type elementType = fir::unwrapSeqOrBoxedSeqType(v.getType());
+      if (fir::isa_trivial(elementType)) {
+        auto [eleSize, eleAlign] = fir::getTypeSizeAndAlignmentOrCrash(
+            v.getLoc(), elementType, dl, kindMap);
+        typeSize = llvm::alignTo(eleSize, eleAlign);
+      }
+      if (typeSize)
+        return {rank, typeSize};
+    }
+  }
+
+  LLVM_DEBUG(llvm::dbgs() << "Unsupported rank/type: " << v << '\n');
+  return {0, 0};
 }
 
 /// if a value comes from a fir.declare, follow it to the original source,
@@ -171,12 +194,48 @@ static mlir::Value unwrapFirDeclare(mlir::Value val) {
   return val;
 }
 
+/// Return true, if \p rebox operation keeps the input array
+/// continuous in the innermost dimension, if it is initially continuous
+/// in the innermost dimension.
+static bool reboxPreservesContinuity(fir::ReboxOp rebox) {
+  // If slicing is not involved, then the rebox does not affect
+  // the continuity of the array.
+  auto sliceArg = rebox.getSlice();
+  if (!sliceArg)
+    return true;
+
+  // A slice with step=1 in the innermost dimension preserves
+  // the continuity of the array in the innermost dimension.
+  if (auto sliceOp =
+          mlir::dyn_cast_or_null<fir::SliceOp>(sliceArg.getDefiningOp())) {
+    if (sliceOp.getFields().empty() && sliceOp.getSubstr().empty()) {
+      auto triples = sliceOp.getTriples();
+      if (triples.size() > 2)
+        if (auto innermostStep = fir::getIntIfConstant(triples[2]))
+          if (*innermostStep == 1)
+            return true;
+    }
+
+    LLVM_DEBUG(llvm::dbgs()
+               << "REBOX with slicing may produce non-contiguous array: "
+               << sliceOp << '\n'
+               << rebox << '\n');
+    return false;
+  }
+
+  LLVM_DEBUG(llvm::dbgs() << "REBOX with unknown slice" << sliceArg << '\n'
+                          << rebox << '\n');
+  return false;
+}
+
 /// if a value comes from a fir.rebox, follow the rebox to the original source,
 /// of the value, otherwise return the value
 static mlir::Value unwrapReboxOp(mlir::Value val) {
-  // don't support reboxes of reboxes
-  if (fir::ReboxOp rebox = val.getDefiningOp<fir::ReboxOp>())
+  while (fir::ReboxOp rebox = val.getDefiningOp<fir::ReboxOp>()) {
+    if (!reboxPreservesContinuity(rebox))
+      break;
     val = rebox.getBox();
+  }
   return val;
 }
 
@@ -253,6 +312,12 @@ void LoopVersioningPass::runOnOperation() {
   mlir::ModuleOp module = func->getParentOfType<mlir::ModuleOp>();
   fir::KindMapping kindMap = fir::getKindMapping(module);
   mlir::SmallVector<ArgInfo, 4> argsOfInterest;
+  std::optional<mlir::DataLayout> dl =
+      fir::support::getOrSetDataLayout(module, /*allowDefaultLayout=*/false);
+  if (!dl)
+    mlir::emitError(module.getLoc(),
+                    "data layout attribute is required to perform " DEBUG_TYPE
+                    "pass");
   for (auto &arg : args) {
     // Optional arguments must be checked for IsPresent before
     // looking for the bounds. They are unsupported for the time being.
@@ -262,23 +327,10 @@ void LoopVersioningPass::runOnOperation() {
       continue;
     }
 
-    if (auto seqTy = getAsSequenceType(&arg)) {
-      unsigned rank = seqTy.getDimension();
-      if (rank > 0 &&
-          seqTy.getShape()[0] == fir::SequenceType::getUnknownExtent()) {
-        size_t typeSize = 0;
-        mlir::Type elementType = fir::unwrapSeqOrBoxedSeqType(arg.getType());
-        if (elementType.isa<mlir::FloatType>() ||
-            elementType.isa<mlir::IntegerType>())
-          typeSize = elementType.getIntOrFloatBitWidth() / 8;
-        else if (auto cty = elementType.dyn_cast<fir::ComplexType>())
-          typeSize = 2 * cty.getEleType(kindMap).getIntOrFloatBitWidth() / 8;
-        if (typeSize)
-          argsOfInterest.push_back({arg, typeSize, rank, {}});
-        else
-          LLVM_DEBUG(llvm::dbgs() << "Type not supported\n");
-      }
-    }
+    auto [rank, typeSize] =
+        getRankAndElementSize(kindMap, *dl, arg, /*isArgument=*/true);
+    if (rank != 0 && typeSize != 0)
+      argsOfInterest.push_back({arg, typeSize, rank, {}});
   }
 
   if (argsOfInterest.empty()) {
@@ -329,6 +381,13 @@ void LoopVersioningPass::runOnOperation() {
             if (arrayCoor.getSlice())
               argsInLoop.cannotTransform.insert(a.arg);
 
+          // We need to compute the rank and element size
+          // based on the operand, not the original argument,
+          // because array slicing may affect it.
+          std::tie(a.rank, a.size) = getRankAndElementSize(kindMap, *dl, a.arg);
+          if (a.rank == 0 || a.size == 0)
+            argsInLoop.cannotTransform.insert(a.arg);
+
           if (argsInLoop.cannotTransform.contains(a.arg)) {
             // Remove any previously recorded usage, if any.
             argsInLoop.usageInfo.erase(a.arg);
@@ -344,15 +403,13 @@ void LoopVersioningPass::runOnOperation() {
   });
 
   // Dump loops info after initial collection.
-  // clang-format off
-  LLVM_DEBUG(
-      llvm::dbgs() << "Initial usage info:\n";
-      for (fir::DoLoopOp loop : originalLoops) {
-        auto &argsInLoop = argsInLoops[loop];
-        argsInLoop.dump(loop);
-      }
-  );
-  // clang-format on
+  LLVM_DEBUG({
+    llvm::dbgs() << "Initial usage info:\n";
+    for (fir::DoLoopOp loop : originalLoops) {
+      auto &argsInLoop = argsInLoops[loop];
+      argsInLoop.dump(loop);
+    }
+  });
 
   // Clear argument usage for parent loops if an inner loop
   // contains a non-transformable usage.
@@ -382,15 +439,13 @@ void LoopVersioningPass::runOnOperation() {
     });
   }
 
-  // clang-format off
-  LLVM_DEBUG(
-      llvm::dbgs() << "Final usage info:\n";
-      for (fir::DoLoopOp loop : originalLoops) {
-        auto &argsInLoop = argsInLoops[loop];
-        argsInLoop.dump(loop);
-      }
-  );
-  // clang-format on
+  LLVM_DEBUG({
+    llvm::dbgs() << "Final usage info:\n";
+    for (fir::DoLoopOp loop : originalLoops) {
+      auto &argsInLoop = argsInLoops[loop];
+      argsInLoop.dump(loop);
+    }
+  });
 
   // Reduce the collected information to a list of loops
   // with attached arguments usage information.
@@ -423,8 +478,8 @@ void LoopVersioningPass::runOnOperation() {
   mlir::Location loc = builder.getUnknownLoc();
   mlir::IndexType idxTy = builder.getIndexType();
 
-  LLVM_DEBUG(llvm::dbgs() << "Module Before transformation:");
-  LLVM_DEBUG(module->dump());
+  LLVM_DEBUG(llvm::dbgs() << "Func Before transformation:\n");
+  LLVM_DEBUG(func->dump());
 
   LLVM_DEBUG(llvm::dbgs() << "loopsOfInterest: " << loopsOfInterest.size()
                           << "\n");
@@ -544,7 +599,7 @@ void LoopVersioningPass::runOnOperation() {
 
     // Add the original loop in the else-side of the if operation.
     builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-    replaceOuterUses(op.op, ifOp);
+    op.op->replaceAllUsesWith(ifOp);
     op.op->remove();
     builder.insert(op.op);
     // Rely on "cloned loop has results, so original loop also has results".
@@ -558,12 +613,8 @@ void LoopVersioningPass::runOnOperation() {
     }
   }
 
-  LLVM_DEBUG(llvm::dbgs() << "After transform:\n");
-  LLVM_DEBUG(module->dump());
+  LLVM_DEBUG(llvm::dbgs() << "Func After transform:\n");
+  LLVM_DEBUG(func->dump());
 
   LLVM_DEBUG(llvm::dbgs() << "=== End " DEBUG_TYPE " ===\n");
-}
-
-std::unique_ptr<mlir::Pass> fir::createLoopVersioningPass() {
-  return std::make_unique<LoopVersioningPass>();
 }

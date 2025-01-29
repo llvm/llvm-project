@@ -25,8 +25,8 @@
 // CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<32xf32, #sparse{{[0-9]*}}>
 // CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<32xf32, #sparse{{[0-9]*}}>
 // CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xf32, #sparse{{[0-9]*}}>
-// CHECK-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<4xf32>
-// CHECK-DAG:       %[[VAL_11:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32xf32>
+// CHECK-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : tensor<4xf32> to memref<4xf32>
+// CHECK-DAG:       %[[VAL_11:.*]] = bufferization.to_memref %[[VAL_2]] : tensor<32xf32> to memref<32xf32>
 // CHECK:           %[[VAL_12:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_4]]] : memref<4xf32>
 // CHECK:           %[[VAL_13:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_3]]] : memref<?xindex>
 // CHECK:           %[[VAL_14:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_5]]] : memref<?xindex>
@@ -58,10 +58,10 @@ func.func @mul_inv_dense1d(%arga: tensor<32xf32, #SpVec>,
 // CHECK-LABEL:   func.func @mul_inv_enc_dense1d(
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<32xf32, #sparse{{[0-9]*}}>,
 // CHECK-SAME:      %[[VAL_1:.*]]: tensor<4xf32, #sparse{{[0-9]*}}>) -> tensor<32xf32, #sparse{{[0-9]*}}> {
-// CHECK:           %[[VAL_2:.*]] = arith.constant 32 : index
-// CHECK:           %[[VAL_3:.*]] = arith.constant 3 : index
-// CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_5:.*]] = arith.constant 1 : index
+// CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 32 : index
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 3 : index
+// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_6:.*]] = tensor.empty() : tensor<32xf32, #sparse{{[0-9]*}}>
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xf32, #sparse{{[0-9]*}}> to memref<?xf32>
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<4xf32, #sparse{{[0-9]*}}> to memref<?xf32>
@@ -112,9 +112,9 @@ func.func @mul_inv_enc_dense1d(%arga: tensor<32xf32, #EncDenseVec>,
 // CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<32xi32, #sparse{{[0-9]*}}>
 // CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<32xi32, #sparse{{[0-9]*}}>
 // CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xi32, #sparse{{[0-9]*}}>
-// CHECK-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<34xi32>
-// CHECK-DAG:       %[[VAL_11:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32xi32>
-// CHECK:           linalg.fill ins(%[[ZERO]] : i32) outs(%[[VAL_11]] : memref<32xi32>)
+// CHECK-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : tensor<34xi32> to memref<34xi32>
+// CHECK-DAG:       %[[VAL_11:.*]] = bufferization.to_memref %[[VAL_2]] : tensor<32xi32> to memref<32xi32>
+// CHECK-DAG:       linalg.fill ins(%[[ZERO]] : i32) outs(%[[VAL_11]] : memref<32xi32>)
 // CHECK:           %[[VAL_12:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_3]]] : memref<?xindex>
 // CHECK:           %[[VAL_13:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_4]]] : memref<?xindex>
 // CHECK:           scf.for %[[VAL_14:.*]] = %[[VAL_12]] to %[[VAL_13]] step %[[VAL_4]] {
@@ -163,8 +163,8 @@ func.func @and_affine_dense1d(%arga: tensor<32xi32, #SpVec>,
 // CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<32x16xf64, #sparse{{[0-9]*}}>
 // CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<32x16xf64, #sparse{{[0-9]*}}>
 // CHECK-DAG:       %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x16xf64, #sparse{{[0-9]*}}>
-// CHECK-DAG:       %[[VAL_11:.*]] = bufferization.to_memref %[[VAL_1]] : memref<34x19xf64>
-// CHECK-DAG:       %[[VAL_13:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32x16xf64>
+// CHECK-DAG:       %[[VAL_11:.*]] = bufferization.to_memref %[[VAL_1]] : tensor<34x19xf64> to memref<34x19xf64>
+// CHECK-DAG:       %[[VAL_13:.*]] = bufferization.to_memref %[[VAL_2]] : tensor<32x16xf64> to memref<32x16xf64>
 // CHECK:           scf.for %[[VAL_14:.*]] = %[[VAL_5]] to %[[VAL_4]] step %[[VAL_3]] {
 // CHECK:             %[[VAL_15:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_14]]] : memref<?xindex>
 // CHECK:             %[[VAL_16:.*]] = arith.addi %[[VAL_14]], %[[VAL_3]] : index
@@ -217,13 +217,13 @@ func.func @mul_affine_dense2d(%arga: tensor<32x16xf64, #CSR>,
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 2 : index
 // CHECK-DAG:       %[[VAL_7:.*]] = arith.constant 3 : index
-// CHECK:           %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<34x16xf64, #sparse{{[0-9]*}}> to memref<?xindex>
-// CHECK:           %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<34x16xf64, #sparse{{[0-9]*}}> to memref<?xindex>
-// CHECK:           %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<34x16xf64, #sparse{{[0-9]*}}> to memref<?xf64>
-// CHECK:           %[[VAL_11:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<32x19xf64, #sparse{{[0-9]*}}> to memref<?xindex>
-// CHECK:           %[[VAL_12:.*]] = sparse_tensor.coordinates %[[VAL_1]] {level = 0 : index} : tensor<32x19xf64, #sparse{{[0-9]*}}> to memref<?xindex>
-// CHECK:           %[[VAL_13:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<32x19xf64, #sparse{{[0-9]*}}> to memref<?xf64>
-// CHECK:           %[[VAL_14:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32x16xf64>
+// CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<34x16xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<34x16xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<34x16xf64, #sparse{{[0-9]*}}> to memref<?xf64>
+// CHECK-DAG:       %[[VAL_11:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<32x19xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_12:.*]] = sparse_tensor.coordinates %[[VAL_1]] {level = 0 : index} : tensor<32x19xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_13:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<32x19xf64, #sparse{{[0-9]*}}> to memref<?xf64>
+// CHECK-DAG:       %[[VAL_14:.*]] = bufferization.to_memref %[[VAL_2]] : tensor<32x16xf64> to memref<32x16xf64>
 // CHECK:           %[[VAL_15:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_4]]] : memref<?xindex>
 // CHECK:           %[[VAL_16:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_5]]] : memref<?xindex>
 // CHECK:           scf.for %[[VAL_17:.*]] = %[[VAL_15]] to %[[VAL_16]] step %[[VAL_5]] {
@@ -234,9 +234,9 @@ func.func @mul_affine_dense2d(%arga: tensor<32x16xf64, #CSR>,
 // CHECK:             %[[VAL_22:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_21]]] : memref<?xindex>
 // CHECK:             scf.for %[[VAL_23:.*]] = %[[VAL_20]] to %[[VAL_22]] step %[[VAL_5]] {
 // CHECK:               %[[VAL_24:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_23]]] : memref<?xindex>
-// CHECK:               %[[VAL_25:.*]] = arith.addi %[[VAL_24]], %[[VAL_7]] : index
 // CHECK:               %[[VAL_26:.*]] = arith.muli %[[VAL_17]], %[[VAL_3]] : index
-// CHECK:               %[[VAL_27:.*]] = arith.addi %[[VAL_26]], %[[VAL_25]] : index
+// CHECK:               %[[VAL_25:.*]] = arith.addi %[[VAL_24]], %[[VAL_7]] : index
+// CHECK:               %[[VAL_27:.*]] = arith.addi %[[VAL_25]], %[[VAL_26]] : index
 // CHECK:               %[[VAL_28:.*]] = memref.load %[[VAL_14]]{{\[}}%[[VAL_18]], %[[VAL_24]]] : memref<32x16xf64>
 // CHECK:               %[[VAL_29:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_23]]] : memref<?xf64>
 // CHECK:               %[[VAL_30:.*]] = memref.load %[[VAL_13]]{{\[}}%[[VAL_27]]] : memref<?xf64>
@@ -281,13 +281,13 @@ func.func @mul_affine_dense_dim_2d(%arga: tensor<34x16xf64, #CSR>,
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 1 : index
 // CHECK-DAG:       %[[VAL_7:.*]] = arith.constant 3 : index
-// CHECK:           %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<34x16xf64, #sparse{{[0-9]*}}> to memref<?xindex>
-// CHECK:           %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<34x16xf64, #sparse{{[0-9]*}}> to memref<?xindex>
-// CHECK:           %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<34x16xf64, #sparse{{[0-9]*}}> to memref<?xf64>
-// CHECK:           %[[VAL_11:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<32x19xf64, #sparse{{[0-9]*}}> to memref<?xindex>
-// CHECK:           %[[VAL_12:.*]] = sparse_tensor.coordinates %[[VAL_1]] {level = 0 : index} : tensor<32x19xf64, #sparse{{[0-9]*}}> to memref<?xindex>
-// CHECK:           %[[VAL_13:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<32x19xf64, #sparse{{[0-9]*}}> to memref<?xf64>
-// CHECK:           %[[VAL_14:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32x16xf64>
+// CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<34x16xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<34x16xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<34x16xf64, #sparse{{[0-9]*}}> to memref<?xf64>
+// CHECK-DAG:       %[[VAL_11:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 0 : index} : tensor<32x19xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_12:.*]] = sparse_tensor.coordinates %[[VAL_1]] {level = 0 : index} : tensor<32x19xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_13:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<32x19xf64, #sparse{{[0-9]*}}> to memref<?xf64>
+// CHECK-DAG:       %[[VAL_14:.*]] = bufferization.to_memref %[[VAL_2]] : tensor<32x16xf64> to memref<32x16xf64>
 // CHECK:           %[[VAL_15:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_5]]] : memref<?xindex>
 // CHECK:           %[[VAL_16:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_6]]] : memref<?xindex>
 // CHECK:           scf.for %[[VAL_17:.*]] = %[[VAL_15]] to %[[VAL_16]] step %[[VAL_6]] {

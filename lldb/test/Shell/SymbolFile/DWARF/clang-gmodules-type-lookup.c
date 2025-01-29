@@ -6,8 +6,9 @@
 // RUN: %clangxx_host -g -gmodules -fmodules -std=c99 -x c-header %S/Inputs/pch.h -g -c -o %t.pch
 // RUN: %clangxx_host -g -gmodules -fmodules -std=c99 -x c -include-pch %t.pch %s -c -o %t.o
 // RUN: %clangxx_host %t.o -o %t.exe
-// RUN: lldb-test symbols -dump-clang-ast -find type --language=C99 \
-// RUN:   -compiler-context 'AnyModule:*,Struct:TypeFromPCH' %t.exe | FileCheck %s
+// RUN: lldb-test symbols -dump-clang-ast -find type --find-in-any-module \
+// RUN:   --language=C99 -compiler-context 'ClassOrStruct:TypeFromPCH' \
+// RUN:   %t.exe | FileCheck %s
 
 anchor_t anchor;
 

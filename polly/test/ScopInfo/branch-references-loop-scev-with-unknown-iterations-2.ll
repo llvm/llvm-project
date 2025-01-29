@@ -1,7 +1,7 @@
-; RUN: opt %loadPolly -polly-print-detect -disable-output < %s | \
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -disable-output < %s 2>&1 | \
 ; RUN:     FileCheck %s -check-prefix=DETECT
 
-; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | \
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | \
 ; RUN:     FileCheck %s -check-prefix=SCOP
 
 ; DETECT: Valid Region for Scop: loop => barrier

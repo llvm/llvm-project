@@ -82,3 +82,18 @@ namespace GH62224 {
   C<> Val; // No error since fwd is defined already.
   static_assert(Val.get() == 42);
 }
+
+namespace GH80630 {
+
+consteval const char* ce() { return "Hello"; }
+
+auto f2(const char* loc = []( char const* fn )
+    { return fn; }  ( ce() ) ) {
+    return loc;
+}
+
+auto g() {
+    return f2();
+}
+
+}

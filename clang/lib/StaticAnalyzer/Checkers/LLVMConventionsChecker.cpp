@@ -41,7 +41,7 @@ static bool InNamespace(const Decl *D, StringRef NS) {
   if (!ND)
     return false;
   const IdentifierInfo *II = ND->getIdentifier();
-  if (!II || !II->getName().equals(NS))
+  if (!II || II->getName() != NS)
     return false;
   return isa<TranslationUnitDecl>(ND->getDeclContext());
 }

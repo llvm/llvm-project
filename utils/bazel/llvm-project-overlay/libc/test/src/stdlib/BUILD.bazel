@@ -39,27 +39,37 @@ libc_test(
     name = "div_test",
     srcs = ["div_test.cpp"],
     libc_function_deps = ["//libc:div"],
-    deps = [":div_test_helper"],
+    deps = [
+        ":div_test_helper",
+        "//libc:types_div_t",
+    ],
 )
 
 libc_test(
     name = "ldiv_test",
     srcs = ["ldiv_test.cpp"],
     libc_function_deps = ["//libc:ldiv"],
-    deps = [":div_test_helper"],
+    deps = [
+        ":div_test_helper",
+        "//libc:types_ldiv_t",
+    ],
 )
 
 libc_test(
     name = "lldiv_test",
     srcs = ["lldiv_test.cpp"],
     libc_function_deps = ["//libc:lldiv"],
-    deps = [":div_test_helper"],
+    deps = [
+        ":div_test_helper",
+        "//libc:types_lldiv_t",
+    ],
 )
 
 libc_support_library(
     name = "atoi_test_helper",
     hdrs = ["AtoiTest.h"],
     deps = [
+        "//libc:__support_cpp_limits",
         "//libc:__support_cpp_type_traits",
         "//libc/test/UnitTest:LibcUnitTest",
     ],
@@ -97,18 +107,46 @@ libc_test(
     name = "bsearch_test",
     srcs = ["bsearch_test.cpp"],
     libc_function_deps = ["//libc:bsearch"],
+    deps = ["//libc:types_size_t"],
+)
+
+libc_support_library(
+    name = "qsort_test_helper",
+    hdrs = ["SortingTest.h"],
+    deps = [
+        "//libc:__support_macros_config",
+        "//libc:qsort",
+        "//libc/test/UnitTest:LibcUnitTest",
+    ],
 )
 
 libc_test(
-    name = "qsort_test",
-    srcs = ["qsort_test.cpp"],
+    name = "quick_sort_test",
+    srcs = ["quick_sort_test.cpp"],
     libc_function_deps = ["//libc:qsort"],
+    deps = [
+        ":qsort_test_helper",
+        "//libc:qsort_util",
+        "//libc:types_size_t",
+    ],
+)
+
+libc_test(
+    name = "heap_sort_test",
+    srcs = ["heap_sort_test.cpp"],
+    libc_function_deps = ["//libc:qsort"],
+    deps = [
+        ":qsort_test_helper",
+        "//libc:qsort_util",
+        "//libc:types_size_t",
+    ],
 )
 
 libc_test(
     name = "qsort_r_test",
     srcs = ["qsort_r_test.cpp"],
     libc_function_deps = ["//libc:qsort_r"],
+    deps = ["//libc:types_size_t"],
 )
 
 libc_support_library(
@@ -117,6 +155,7 @@ libc_support_library(
     deps = [
         "//libc:__support_cpp_limits",
         "//libc:__support_cpp_type_traits",
+        "//libc:__support_ctype_utils",
         "//libc:__support_macros_properties_architectures",
         "//libc:errno.__internal__",
         "//libc/test/UnitTest:LibcUnitTest",

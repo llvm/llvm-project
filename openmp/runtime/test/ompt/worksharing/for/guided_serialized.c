@@ -2,4 +2,7 @@
 // REQUIRES: ompt
 
 #define SCHEDULE guided
+// The runtime uses static schedule for serialized loop,
+// which is a reason choice
+#define SCHED_OUTPUT "static"
 #include "base_serialized.h"

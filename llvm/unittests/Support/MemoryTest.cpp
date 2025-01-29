@@ -40,7 +40,7 @@ bool IsMPROTECT() {
     err(EXIT_FAILURE, "sysctl");
 
   return !!(paxflags & CTL_PROC_PAXFLAGS_MPROTECT);
-#elif defined(__APPLE__) && defined(__aarch64__)
+#elif (defined(__APPLE__) && defined(__aarch64__)) || defined(__OpenBSD__)
   return true;
 #else
   return false;

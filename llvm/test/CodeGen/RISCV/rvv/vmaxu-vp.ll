@@ -10,11 +10,10 @@ define <vscale x 8 x i7> @vmaxu_vx_nxv8i7(<vscale x 8 x i7> %a, i7 signext %b, <
 ; CHECK-LABEL: vmaxu_vx_nxv8i7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 127
-; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a2
-; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vand.vx v9, v9, a2
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a0
+; CHECK-NEXT:    vand.vx v8, v8, a2, v0.t
+; CHECK-NEXT:    vand.vx v9, v9, a2, v0.t
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i7> poison, i7 %b, i32 0
@@ -41,9 +40,7 @@ define <vscale x 1 x i8> @vmaxu_vv_nxv1i8_unmasked(<vscale x 1 x i8> %va, <vscal
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x i8> @llvm.vp.umax.nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 x i8> %b, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x i8> @llvm.vp.umax.nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 x i8> %b, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x i8> %v
 }
 
@@ -79,9 +76,7 @@ define <vscale x 1 x i8> @vmaxu_vx_nxv1i8_unmasked(<vscale x 1 x i8> %va, i8 %b,
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i8> poison, i8 %b, i32 0
   %vb = shufflevector <vscale x 1 x i8> %elt.head, <vscale x 1 x i8> poison, <vscale x 1 x i32> zeroinitializer
-  %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x i8> @llvm.vp.umax.nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 x i8> %vb, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x i8> @llvm.vp.umax.nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 x i8> %vb, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x i8> %v
 }
 
@@ -103,9 +98,7 @@ define <vscale x 2 x i8> @vmaxu_vv_nxv2i8_unmasked(<vscale x 2 x i8> %va, <vscal
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %v = call <vscale x 2 x i8> @llvm.vp.umax.nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 x i8> %b, <vscale x 2 x i1> %m, i32 %evl)
+  %v = call <vscale x 2 x i8> @llvm.vp.umax.nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 x i8> %b, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i8> %v
 }
 
@@ -129,9 +122,7 @@ define <vscale x 2 x i8> @vmaxu_vx_nxv2i8_unmasked(<vscale x 2 x i8> %va, i8 %b,
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 2 x i8> poison, i8 %b, i32 0
   %vb = shufflevector <vscale x 2 x i8> %elt.head, <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
-  %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %v = call <vscale x 2 x i8> @llvm.vp.umax.nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 x i8> %vb, <vscale x 2 x i1> %m, i32 %evl)
+  %v = call <vscale x 2 x i8> @llvm.vp.umax.nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 x i8> %vb, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i8> %v
 }
 
@@ -153,9 +144,7 @@ define <vscale x 3 x i8> @vmaxu_vv_nxv3i8_unmasked(<vscale x 3 x i8> %va, <vscal
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 3 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 3 x i1> %head, <vscale x 3 x i1> poison, <vscale x 3 x i32> zeroinitializer
-  %v = call <vscale x 3 x i8> @llvm.vp.umax.nxv3i8(<vscale x 3 x i8> %va, <vscale x 3 x i8> %b, <vscale x 3 x i1> %m, i32 %evl)
+  %v = call <vscale x 3 x i8> @llvm.vp.umax.nxv3i8(<vscale x 3 x i8> %va, <vscale x 3 x i8> %b, <vscale x 3 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 3 x i8> %v
 }
 
@@ -179,9 +168,7 @@ define <vscale x 3 x i8> @vmaxu_vx_nxv3i8_unmasked(<vscale x 3 x i8> %va, i8 %b,
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 3 x i8> poison, i8 %b, i32 0
   %vb = shufflevector <vscale x 3 x i8> %elt.head, <vscale x 3 x i8> poison, <vscale x 3 x i32> zeroinitializer
-  %head = insertelement <vscale x 3 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 3 x i1> %head, <vscale x 3 x i1> poison, <vscale x 3 x i32> zeroinitializer
-  %v = call <vscale x 3 x i8> @llvm.vp.umax.nxv3i8(<vscale x 3 x i8> %va, <vscale x 3 x i8> %vb, <vscale x 3 x i1> %m, i32 %evl)
+  %v = call <vscale x 3 x i8> @llvm.vp.umax.nxv3i8(<vscale x 3 x i8> %va, <vscale x 3 x i8> %vb, <vscale x 3 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 3 x i8> %v
 }
 
@@ -203,9 +190,7 @@ define <vscale x 4 x i8> @vmaxu_vv_nxv4i8_unmasked(<vscale x 4 x i8> %va, <vscal
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x i8> @llvm.vp.umax.nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i8> %b, <vscale x 4 x i1> %m, i32 %evl)
+  %v = call <vscale x 4 x i8> @llvm.vp.umax.nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i8> %b, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i8> %v
 }
 
@@ -229,9 +214,7 @@ define <vscale x 4 x i8> @vmaxu_vx_nxv4i8_unmasked(<vscale x 4 x i8> %va, i8 %b,
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 4 x i8> poison, i8 %b, i32 0
   %vb = shufflevector <vscale x 4 x i8> %elt.head, <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
-  %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x i8> @llvm.vp.umax.nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i8> %vb, <vscale x 4 x i1> %m, i32 %evl)
+  %v = call <vscale x 4 x i8> @llvm.vp.umax.nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i8> %vb, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i8> %v
 }
 
@@ -253,9 +236,7 @@ define <vscale x 8 x i8> @vmaxu_vv_nxv8i8_unmasked(<vscale x 8 x i8> %va, <vscal
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %v = call <vscale x 8 x i8> @llvm.vp.umax.nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i8> %b, <vscale x 8 x i1> %m, i32 %evl)
+  %v = call <vscale x 8 x i8> @llvm.vp.umax.nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i8> %b, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x i8> %v
 }
 
@@ -279,9 +260,7 @@ define <vscale x 8 x i8> @vmaxu_vx_nxv8i8_unmasked(<vscale x 8 x i8> %va, i8 %b,
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i8> poison, i8 %b, i32 0
   %vb = shufflevector <vscale x 8 x i8> %elt.head, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
-  %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %v = call <vscale x 8 x i8> @llvm.vp.umax.nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i8> %vb, <vscale x 8 x i1> %m, i32 %evl)
+  %v = call <vscale x 8 x i8> @llvm.vp.umax.nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i8> %vb, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x i8> %v
 }
 
@@ -303,9 +282,7 @@ define <vscale x 16 x i8> @vmaxu_vv_nxv16i8_unmasked(<vscale x 16 x i8> %va, <vs
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v10
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
-  %v = call <vscale x 16 x i8> @llvm.vp.umax.nxv16i8(<vscale x 16 x i8> %va, <vscale x 16 x i8> %b, <vscale x 16 x i1> %m, i32 %evl)
+  %v = call <vscale x 16 x i8> @llvm.vp.umax.nxv16i8(<vscale x 16 x i8> %va, <vscale x 16 x i8> %b, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x i8> %v
 }
 
@@ -329,9 +306,7 @@ define <vscale x 16 x i8> @vmaxu_vx_nxv16i8_unmasked(<vscale x 16 x i8> %va, i8 
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 16 x i8> poison, i8 %b, i32 0
   %vb = shufflevector <vscale x 16 x i8> %elt.head, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-  %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
-  %v = call <vscale x 16 x i8> @llvm.vp.umax.nxv16i8(<vscale x 16 x i8> %va, <vscale x 16 x i8> %vb, <vscale x 16 x i1> %m, i32 %evl)
+  %v = call <vscale x 16 x i8> @llvm.vp.umax.nxv16i8(<vscale x 16 x i8> %va, <vscale x 16 x i8> %vb, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x i8> %v
 }
 
@@ -353,9 +328,7 @@ define <vscale x 32 x i8> @vmaxu_vv_nxv32i8_unmasked(<vscale x 32 x i8> %va, <vs
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v12
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 32 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 32 x i1> %head, <vscale x 32 x i1> poison, <vscale x 32 x i32> zeroinitializer
-  %v = call <vscale x 32 x i8> @llvm.vp.umax.nxv32i8(<vscale x 32 x i8> %va, <vscale x 32 x i8> %b, <vscale x 32 x i1> %m, i32 %evl)
+  %v = call <vscale x 32 x i8> @llvm.vp.umax.nxv32i8(<vscale x 32 x i8> %va, <vscale x 32 x i8> %b, <vscale x 32 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 32 x i8> %v
 }
 
@@ -379,9 +352,7 @@ define <vscale x 32 x i8> @vmaxu_vx_nxv32i8_unmasked(<vscale x 32 x i8> %va, i8 
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 32 x i8> poison, i8 %b, i32 0
   %vb = shufflevector <vscale x 32 x i8> %elt.head, <vscale x 32 x i8> poison, <vscale x 32 x i32> zeroinitializer
-  %head = insertelement <vscale x 32 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 32 x i1> %head, <vscale x 32 x i1> poison, <vscale x 32 x i32> zeroinitializer
-  %v = call <vscale x 32 x i8> @llvm.vp.umax.nxv32i8(<vscale x 32 x i8> %va, <vscale x 32 x i8> %vb, <vscale x 32 x i1> %m, i32 %evl)
+  %v = call <vscale x 32 x i8> @llvm.vp.umax.nxv32i8(<vscale x 32 x i8> %va, <vscale x 32 x i8> %vb, <vscale x 32 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 32 x i8> %v
 }
 
@@ -403,9 +374,7 @@ define <vscale x 64 x i8> @vmaxu_vv_nxv64i8_unmasked(<vscale x 64 x i8> %va, <vs
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v16
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 64 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 64 x i1> %head, <vscale x 64 x i1> poison, <vscale x 64 x i32> zeroinitializer
-  %v = call <vscale x 64 x i8> @llvm.vp.umax.nxv64i8(<vscale x 64 x i8> %va, <vscale x 64 x i8> %b, <vscale x 64 x i1> %m, i32 %evl)
+  %v = call <vscale x 64 x i8> @llvm.vp.umax.nxv64i8(<vscale x 64 x i8> %va, <vscale x 64 x i8> %b, <vscale x 64 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 64 x i8> %v
 }
 
@@ -429,9 +398,7 @@ define <vscale x 64 x i8> @vmaxu_vx_nxv64i8_unmasked(<vscale x 64 x i8> %va, i8 
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 64 x i8> poison, i8 %b, i32 0
   %vb = shufflevector <vscale x 64 x i8> %elt.head, <vscale x 64 x i8> poison, <vscale x 64 x i32> zeroinitializer
-  %head = insertelement <vscale x 64 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 64 x i1> %head, <vscale x 64 x i1> poison, <vscale x 64 x i32> zeroinitializer
-  %v = call <vscale x 64 x i8> @llvm.vp.umax.nxv64i8(<vscale x 64 x i8> %va, <vscale x 64 x i8> %vb, <vscale x 64 x i1> %m, i32 %evl)
+  %v = call <vscale x 64 x i8> @llvm.vp.umax.nxv64i8(<vscale x 64 x i8> %va, <vscale x 64 x i8> %vb, <vscale x 64 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 64 x i8> %v
 }
 
@@ -442,8 +409,8 @@ declare <vscale x 128 x i8> @llvm.vp.umax.nxv128i8(<vscale x 128 x i8>, <vscale 
 define <vscale x 128 x i8> @vmaxu_vx_nxv128i8(<vscale x 128 x i8> %va, i8 %b, <vscale x 128 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmaxu_vx_nxv128i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
@@ -457,8 +424,8 @@ define <vscale x 128 x i8> @vmaxu_vx_nxv128i8(<vscale x 128 x i8> %va, i8 %b, <v
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:  .LBB34_2:
-; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vmaxu.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 128 x i8> poison, i8 %b, i32 0
@@ -487,9 +454,7 @@ define <vscale x 128 x i8> @vmaxu_vx_nxv128i8_unmasked(<vscale x 128 x i8> %va, 
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 128 x i8> poison, i8 %b, i32 0
   %vb = shufflevector <vscale x 128 x i8> %elt.head, <vscale x 128 x i8> poison, <vscale x 128 x i32> zeroinitializer
-  %head = insertelement <vscale x 128 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 128 x i1> %head, <vscale x 128 x i1> poison, <vscale x 128 x i32> zeroinitializer
-  %v = call <vscale x 128 x i8> @llvm.vp.umax.nxv128i8(<vscale x 128 x i8> %va, <vscale x 128 x i8> %vb, <vscale x 128 x i1> %m, i32 %evl)
+  %v = call <vscale x 128 x i8> @llvm.vp.umax.nxv128i8(<vscale x 128 x i8> %va, <vscale x 128 x i8> %vb, <vscale x 128 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 128 x i8> %v
 }
 
@@ -511,9 +476,7 @@ define <vscale x 1 x i16> @vmaxu_vv_nxv1i16_unmasked(<vscale x 1 x i16> %va, <vs
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x i16> @llvm.vp.umax.nxv1i16(<vscale x 1 x i16> %va, <vscale x 1 x i16> %b, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x i16> @llvm.vp.umax.nxv1i16(<vscale x 1 x i16> %va, <vscale x 1 x i16> %b, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x i16> %v
 }
 
@@ -537,9 +500,7 @@ define <vscale x 1 x i16> @vmaxu_vx_nxv1i16_unmasked(<vscale x 1 x i16> %va, i16
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i16> poison, i16 %b, i32 0
   %vb = shufflevector <vscale x 1 x i16> %elt.head, <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer
-  %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x i16> @llvm.vp.umax.nxv1i16(<vscale x 1 x i16> %va, <vscale x 1 x i16> %vb, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x i16> @llvm.vp.umax.nxv1i16(<vscale x 1 x i16> %va, <vscale x 1 x i16> %vb, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x i16> %v
 }
 
@@ -561,9 +522,7 @@ define <vscale x 2 x i16> @vmaxu_vv_nxv2i16_unmasked(<vscale x 2 x i16> %va, <vs
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %v = call <vscale x 2 x i16> @llvm.vp.umax.nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 x i16> %b, <vscale x 2 x i1> %m, i32 %evl)
+  %v = call <vscale x 2 x i16> @llvm.vp.umax.nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 x i16> %b, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i16> %v
 }
 
@@ -587,9 +546,7 @@ define <vscale x 2 x i16> @vmaxu_vx_nxv2i16_unmasked(<vscale x 2 x i16> %va, i16
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 2 x i16> poison, i16 %b, i32 0
   %vb = shufflevector <vscale x 2 x i16> %elt.head, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
-  %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %v = call <vscale x 2 x i16> @llvm.vp.umax.nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 x i16> %vb, <vscale x 2 x i1> %m, i32 %evl)
+  %v = call <vscale x 2 x i16> @llvm.vp.umax.nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 x i16> %vb, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i16> %v
 }
 
@@ -611,9 +568,7 @@ define <vscale x 4 x i16> @vmaxu_vv_nxv4i16_unmasked(<vscale x 4 x i16> %va, <vs
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x i16> @llvm.vp.umax.nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 x i16> %b, <vscale x 4 x i1> %m, i32 %evl)
+  %v = call <vscale x 4 x i16> @llvm.vp.umax.nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 x i16> %b, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i16> %v
 }
 
@@ -637,9 +592,7 @@ define <vscale x 4 x i16> @vmaxu_vx_nxv4i16_unmasked(<vscale x 4 x i16> %va, i16
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 4 x i16> poison, i16 %b, i32 0
   %vb = shufflevector <vscale x 4 x i16> %elt.head, <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
-  %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x i16> @llvm.vp.umax.nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 x i16> %vb, <vscale x 4 x i1> %m, i32 %evl)
+  %v = call <vscale x 4 x i16> @llvm.vp.umax.nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 x i16> %vb, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i16> %v
 }
 
@@ -661,9 +614,7 @@ define <vscale x 8 x i16> @vmaxu_vv_nxv8i16_unmasked(<vscale x 8 x i16> %va, <vs
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v10
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %v = call <vscale x 8 x i16> @llvm.vp.umax.nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x i16> %b, <vscale x 8 x i1> %m, i32 %evl)
+  %v = call <vscale x 8 x i16> @llvm.vp.umax.nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x i16> %b, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x i16> %v
 }
 
@@ -687,9 +638,7 @@ define <vscale x 8 x i16> @vmaxu_vx_nxv8i16_unmasked(<vscale x 8 x i16> %va, i16
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i16> poison, i16 %b, i32 0
   %vb = shufflevector <vscale x 8 x i16> %elt.head, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-  %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %v = call <vscale x 8 x i16> @llvm.vp.umax.nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x i16> %vb, <vscale x 8 x i1> %m, i32 %evl)
+  %v = call <vscale x 8 x i16> @llvm.vp.umax.nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x i16> %vb, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x i16> %v
 }
 
@@ -711,9 +660,7 @@ define <vscale x 16 x i16> @vmaxu_vv_nxv16i16_unmasked(<vscale x 16 x i16> %va, 
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v12
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
-  %v = call <vscale x 16 x i16> @llvm.vp.umax.nxv16i16(<vscale x 16 x i16> %va, <vscale x 16 x i16> %b, <vscale x 16 x i1> %m, i32 %evl)
+  %v = call <vscale x 16 x i16> @llvm.vp.umax.nxv16i16(<vscale x 16 x i16> %va, <vscale x 16 x i16> %b, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x i16> %v
 }
 
@@ -737,9 +684,7 @@ define <vscale x 16 x i16> @vmaxu_vx_nxv16i16_unmasked(<vscale x 16 x i16> %va, 
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 16 x i16> poison, i16 %b, i32 0
   %vb = shufflevector <vscale x 16 x i16> %elt.head, <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer
-  %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
-  %v = call <vscale x 16 x i16> @llvm.vp.umax.nxv16i16(<vscale x 16 x i16> %va, <vscale x 16 x i16> %vb, <vscale x 16 x i1> %m, i32 %evl)
+  %v = call <vscale x 16 x i16> @llvm.vp.umax.nxv16i16(<vscale x 16 x i16> %va, <vscale x 16 x i16> %vb, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x i16> %v
 }
 
@@ -761,9 +706,7 @@ define <vscale x 32 x i16> @vmaxu_vv_nxv32i16_unmasked(<vscale x 32 x i16> %va, 
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v16
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 32 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 32 x i1> %head, <vscale x 32 x i1> poison, <vscale x 32 x i32> zeroinitializer
-  %v = call <vscale x 32 x i16> @llvm.vp.umax.nxv32i16(<vscale x 32 x i16> %va, <vscale x 32 x i16> %b, <vscale x 32 x i1> %m, i32 %evl)
+  %v = call <vscale x 32 x i16> @llvm.vp.umax.nxv32i16(<vscale x 32 x i16> %va, <vscale x 32 x i16> %b, <vscale x 32 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 32 x i16> %v
 }
 
@@ -787,9 +730,7 @@ define <vscale x 32 x i16> @vmaxu_vx_nxv32i16_unmasked(<vscale x 32 x i16> %va, 
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 32 x i16> poison, i16 %b, i32 0
   %vb = shufflevector <vscale x 32 x i16> %elt.head, <vscale x 32 x i16> poison, <vscale x 32 x i32> zeroinitializer
-  %head = insertelement <vscale x 32 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 32 x i1> %head, <vscale x 32 x i1> poison, <vscale x 32 x i32> zeroinitializer
-  %v = call <vscale x 32 x i16> @llvm.vp.umax.nxv32i16(<vscale x 32 x i16> %va, <vscale x 32 x i16> %vb, <vscale x 32 x i1> %m, i32 %evl)
+  %v = call <vscale x 32 x i16> @llvm.vp.umax.nxv32i16(<vscale x 32 x i16> %va, <vscale x 32 x i16> %vb, <vscale x 32 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 32 x i16> %v
 }
 
@@ -811,9 +752,7 @@ define <vscale x 1 x i32> @vmaxu_vv_nxv1i32_unmasked(<vscale x 1 x i32> %va, <vs
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x i32> @llvm.vp.umax.nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i32> %b, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x i32> @llvm.vp.umax.nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i32> %b, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x i32> %v
 }
 
@@ -837,9 +776,7 @@ define <vscale x 1 x i32> @vmaxu_vx_nxv1i32_unmasked(<vscale x 1 x i32> %va, i32
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i32> poison, i32 %b, i32 0
   %vb = shufflevector <vscale x 1 x i32> %elt.head, <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer
-  %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x i32> @llvm.vp.umax.nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i32> %vb, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x i32> @llvm.vp.umax.nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i32> %vb, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x i32> %v
 }
 
@@ -861,9 +798,7 @@ define <vscale x 2 x i32> @vmaxu_vv_nxv2i32_unmasked(<vscale x 2 x i32> %va, <vs
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %v = call <vscale x 2 x i32> @llvm.vp.umax.nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i32> %b, <vscale x 2 x i1> %m, i32 %evl)
+  %v = call <vscale x 2 x i32> @llvm.vp.umax.nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i32> %b, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i32> %v
 }
 
@@ -887,9 +822,7 @@ define <vscale x 2 x i32> @vmaxu_vx_nxv2i32_unmasked(<vscale x 2 x i32> %va, i32
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 2 x i32> poison, i32 %b, i32 0
   %vb = shufflevector <vscale x 2 x i32> %elt.head, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
-  %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %v = call <vscale x 2 x i32> @llvm.vp.umax.nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i32> %vb, <vscale x 2 x i1> %m, i32 %evl)
+  %v = call <vscale x 2 x i32> @llvm.vp.umax.nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i32> %vb, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i32> %v
 }
 
@@ -911,9 +844,7 @@ define <vscale x 4 x i32> @vmaxu_vv_nxv4i32_unmasked(<vscale x 4 x i32> %va, <vs
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v10
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x i32> @llvm.vp.umax.nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i32> %b, <vscale x 4 x i1> %m, i32 %evl)
+  %v = call <vscale x 4 x i32> @llvm.vp.umax.nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i32> %b, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i32> %v
 }
 
@@ -937,9 +868,7 @@ define <vscale x 4 x i32> @vmaxu_vx_nxv4i32_unmasked(<vscale x 4 x i32> %va, i32
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 4 x i32> poison, i32 %b, i32 0
   %vb = shufflevector <vscale x 4 x i32> %elt.head, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-  %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x i32> @llvm.vp.umax.nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i32> %vb, <vscale x 4 x i1> %m, i32 %evl)
+  %v = call <vscale x 4 x i32> @llvm.vp.umax.nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i32> %vb, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i32> %v
 }
 
@@ -961,9 +890,7 @@ define <vscale x 8 x i32> @vmaxu_vv_nxv8i32_unmasked(<vscale x 8 x i32> %va, <vs
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v12
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %v = call <vscale x 8 x i32> @llvm.vp.umax.nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i32> %b, <vscale x 8 x i1> %m, i32 %evl)
+  %v = call <vscale x 8 x i32> @llvm.vp.umax.nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i32> %b, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x i32> %v
 }
 
@@ -987,9 +914,7 @@ define <vscale x 8 x i32> @vmaxu_vx_nxv8i32_unmasked(<vscale x 8 x i32> %va, i32
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i32> poison, i32 %b, i32 0
   %vb = shufflevector <vscale x 8 x i32> %elt.head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
-  %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %v = call <vscale x 8 x i32> @llvm.vp.umax.nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i32> %vb, <vscale x 8 x i1> %m, i32 %evl)
+  %v = call <vscale x 8 x i32> @llvm.vp.umax.nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i32> %vb, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x i32> %v
 }
 
@@ -1011,9 +936,7 @@ define <vscale x 16 x i32> @vmaxu_vv_nxv16i32_unmasked(<vscale x 16 x i32> %va, 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v16
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
-  %v = call <vscale x 16 x i32> @llvm.vp.umax.nxv16i32(<vscale x 16 x i32> %va, <vscale x 16 x i32> %b, <vscale x 16 x i1> %m, i32 %evl)
+  %v = call <vscale x 16 x i32> @llvm.vp.umax.nxv16i32(<vscale x 16 x i32> %va, <vscale x 16 x i32> %b, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x i32> %v
 }
 
@@ -1037,9 +960,7 @@ define <vscale x 16 x i32> @vmaxu_vx_nxv16i32_unmasked(<vscale x 16 x i32> %va, 
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 16 x i32> poison, i32 %b, i32 0
   %vb = shufflevector <vscale x 16 x i32> %elt.head, <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
-  %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
-  %v = call <vscale x 16 x i32> @llvm.vp.umax.nxv16i32(<vscale x 16 x i32> %va, <vscale x 16 x i32> %vb, <vscale x 16 x i1> %m, i32 %evl)
+  %v = call <vscale x 16 x i32> @llvm.vp.umax.nxv16i32(<vscale x 16 x i32> %va, <vscale x 16 x i32> %vb, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x i32> %v
 }
 
@@ -1050,12 +971,12 @@ declare <vscale x 32 x i32> @llvm.vp.umax.nxv32i32(<vscale x 32 x i32>, <vscale 
 define <vscale x 32 x i32> @vmaxu_vx_nxv32i32(<vscale x 32 x i32> %va, i32 %b, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmaxu_vx_nxv32i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    srli a3, a2, 2
-; CHECK-NEXT:    vsetvli a4, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v0, a3
 ; CHECK-NEXT:    slli a2, a2, 1
+; CHECK-NEXT:    vslidedown.vx v0, v0, a3
 ; CHECK-NEXT:    sub a3, a1, a2
 ; CHECK-NEXT:    sltu a4, a1, a3
 ; CHECK-NEXT:    addi a4, a4, -1
@@ -1066,8 +987,8 @@ define <vscale x 32 x i32> @vmaxu_vx_nxv32i32(<vscale x 32 x i32> %va, i32 %b, <
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, a2
 ; CHECK-NEXT:  .LBB80_2:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vmaxu.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 32 x i32> poison, i32 %b, i32 0
@@ -1096,9 +1017,7 @@ define <vscale x 32 x i32> @vmaxu_vx_nxv32i32_unmasked(<vscale x 32 x i32> %va, 
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 32 x i32> poison, i32 %b, i32 0
   %vb = shufflevector <vscale x 32 x i32> %elt.head, <vscale x 32 x i32> poison, <vscale x 32 x i32> zeroinitializer
-  %head = insertelement <vscale x 32 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 32 x i1> %head, <vscale x 32 x i1> poison, <vscale x 32 x i32> zeroinitializer
-  %v = call <vscale x 32 x i32> @llvm.vp.umax.nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i32> %vb, <vscale x 32 x i1> %m, i32 %evl)
+  %v = call <vscale x 32 x i32> @llvm.vp.umax.nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i32> %vb, <vscale x 32 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 32 x i32> %v
 }
 
@@ -1112,12 +1031,12 @@ declare i32 @llvm.vscale.i32()
 define <vscale x 32 x i32> @vmaxu_vx_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, i32 %b, <vscale x 32 x i1> %m) {
 ; CHECK-LABEL: vmaxu_vx_nxv32i32_evl_nx8:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    srli a2, a1, 2
-; CHECK-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v0, a2
+; CHECK-NEXT:    srli a3, a1, 2
 ; CHECK-NEXT:    slli a2, a1, 1
+; CHECK-NEXT:    vslidedown.vx v0, v0, a3
 ; CHECK-NEXT:    sub a3, a1, a2
 ; CHECK-NEXT:    sltu a4, a1, a3
 ; CHECK-NEXT:    addi a4, a4, -1
@@ -1128,8 +1047,8 @@ define <vscale x 32 x i32> @vmaxu_vx_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, i
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, a2
 ; CHECK-NEXT:  .LBB82_2:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vmaxu.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 32 x i32> poison, i32 %b, i32 0
@@ -1140,7 +1059,6 @@ define <vscale x 32 x i32> @vmaxu_vx_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, i
   ret <vscale x 32 x i32> %v
 }
 
-; FIXME: The first vmaxu.vx should be able to infer that its AVL is equivalent to VLMAX.
 ; FIXME: The upper half of the operation is doing nothing but we don't catch
 ; that on RV64; we issue a usubsat(and (vscale x 16), 0xffffffff, vscale x 16)
 ; (the "original" %evl is the "and", due to known-bits issues with legalizing
@@ -1151,23 +1069,20 @@ define <vscale x 32 x i32> @vmaxu_vx_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, i
 define <vscale x 32 x i32> @vmaxu_vx_nxv32i32_evl_nx16(<vscale x 32 x i32> %va, i32 %b, <vscale x 32 x i1> %m) {
 ; RV32-LABEL: vmaxu_vx_nxv32i32_evl_nx16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a1, a1, 1
-; RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; RV32-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
 ; RV32-NEXT:    vmaxu.vx v8, v8, a0, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmaxu_vx_nxv32i32_evl_nx16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    srli a2, a1, 2
-; RV64-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
-; RV64-NEXT:    vslidedown.vx v24, v0, a2
-; RV64-NEXT:    slli a1, a1, 1
-; RV64-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; RV64-NEXT:    srli a1, a1, 2
+; RV64-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
+; RV64-NEXT:    vslidedown.vx v24, v0, a1
+; RV64-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
 ; RV64-NEXT:    vmaxu.vx v8, v8, a0, v0.t
-; RV64-NEXT:    vsetivli zero, 0, e32, m8, ta, ma
 ; RV64-NEXT:    vmv1r.v v0, v24
+; RV64-NEXT:    vsetivli zero, 0, e32, m8, ta, ma
 ; RV64-NEXT:    vmaxu.vx v16, v16, a0, v0.t
 ; RV64-NEXT:    ret
   %elt.head = insertelement <vscale x 32 x i32> poison, i32 %b, i32 0
@@ -1196,9 +1111,7 @@ define <vscale x 1 x i64> @vmaxu_vv_nxv1i64_unmasked(<vscale x 1 x i64> %va, <vs
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x i64> @llvm.vp.umax.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> %b, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x i64> @llvm.vp.umax.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> %b, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x i64> %v
 }
 
@@ -1207,14 +1120,14 @@ define <vscale x 1 x i64> @vmaxu_vx_nxv1i64(<vscale x 1 x i64> %va, i64 %b, <vsc
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
-; RV32-NEXT:    vlse64.v v9, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
+; RV32-NEXT:    vlse64.v v9, (a0), zero
 ; RV32-NEXT:    vmaxu.vv v8, v8, v9, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmaxu_vx_nxv1i64:
@@ -1233,14 +1146,14 @@ define <vscale x 1 x i64> @vmaxu_vx_nxv1i64_unmasked(<vscale x 1 x i64> %va, i64
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
-; RV32-NEXT:    vlse64.v v9, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
+; RV32-NEXT:    vlse64.v v9, (a0), zero
 ; RV32-NEXT:    vmaxu.vv v8, v8, v9
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmaxu_vx_nxv1i64_unmasked:
@@ -1250,9 +1163,7 @@ define <vscale x 1 x i64> @vmaxu_vx_nxv1i64_unmasked(<vscale x 1 x i64> %va, i64
 ; RV64-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i64> poison, i64 %b, i32 0
   %vb = shufflevector <vscale x 1 x i64> %elt.head, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
-  %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x i64> @llvm.vp.umax.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> %vb, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x i64> @llvm.vp.umax.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> %vb, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x i64> %v
 }
 
@@ -1274,9 +1185,7 @@ define <vscale x 2 x i64> @vmaxu_vv_nxv2i64_unmasked(<vscale x 2 x i64> %va, <vs
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v10
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %v = call <vscale x 2 x i64> @llvm.vp.umax.nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x i64> %b, <vscale x 2 x i1> %m, i32 %evl)
+  %v = call <vscale x 2 x i64> @llvm.vp.umax.nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x i64> %b, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i64> %v
 }
 
@@ -1285,14 +1194,14 @@ define <vscale x 2 x i64> @vmaxu_vx_nxv2i64(<vscale x 2 x i64> %va, i64 %b, <vsc
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
-; RV32-NEXT:    vlse64.v v10, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
+; RV32-NEXT:    vlse64.v v10, (a0), zero
 ; RV32-NEXT:    vmaxu.vv v8, v8, v10, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmaxu_vx_nxv2i64:
@@ -1311,14 +1220,14 @@ define <vscale x 2 x i64> @vmaxu_vx_nxv2i64_unmasked(<vscale x 2 x i64> %va, i64
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
-; RV32-NEXT:    vlse64.v v10, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
+; RV32-NEXT:    vlse64.v v10, (a0), zero
 ; RV32-NEXT:    vmaxu.vv v8, v8, v10
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmaxu_vx_nxv2i64_unmasked:
@@ -1328,9 +1237,7 @@ define <vscale x 2 x i64> @vmaxu_vx_nxv2i64_unmasked(<vscale x 2 x i64> %va, i64
 ; RV64-NEXT:    ret
   %elt.head = insertelement <vscale x 2 x i64> poison, i64 %b, i32 0
   %vb = shufflevector <vscale x 2 x i64> %elt.head, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-  %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %v = call <vscale x 2 x i64> @llvm.vp.umax.nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x i64> %vb, <vscale x 2 x i1> %m, i32 %evl)
+  %v = call <vscale x 2 x i64> @llvm.vp.umax.nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x i64> %vb, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i64> %v
 }
 
@@ -1352,9 +1259,7 @@ define <vscale x 4 x i64> @vmaxu_vv_nxv4i64_unmasked(<vscale x 4 x i64> %va, <vs
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v12
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x i64> @llvm.vp.umax.nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i64> %b, <vscale x 4 x i1> %m, i32 %evl)
+  %v = call <vscale x 4 x i64> @llvm.vp.umax.nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i64> %b, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i64> %v
 }
 
@@ -1363,14 +1268,14 @@ define <vscale x 4 x i64> @vmaxu_vx_nxv4i64(<vscale x 4 x i64> %va, i64 %b, <vsc
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
-; RV32-NEXT:    vlse64.v v12, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, ma
+; RV32-NEXT:    vlse64.v v12, (a0), zero
 ; RV32-NEXT:    vmaxu.vv v8, v8, v12, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmaxu_vx_nxv4i64:
@@ -1389,14 +1294,14 @@ define <vscale x 4 x i64> @vmaxu_vx_nxv4i64_unmasked(<vscale x 4 x i64> %va, i64
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
-; RV32-NEXT:    vlse64.v v12, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, ma
+; RV32-NEXT:    vlse64.v v12, (a0), zero
 ; RV32-NEXT:    vmaxu.vv v8, v8, v12
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmaxu_vx_nxv4i64_unmasked:
@@ -1406,9 +1311,7 @@ define <vscale x 4 x i64> @vmaxu_vx_nxv4i64_unmasked(<vscale x 4 x i64> %va, i64
 ; RV64-NEXT:    ret
   %elt.head = insertelement <vscale x 4 x i64> poison, i64 %b, i32 0
   %vb = shufflevector <vscale x 4 x i64> %elt.head, <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-  %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x i64> @llvm.vp.umax.nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i64> %vb, <vscale x 4 x i1> %m, i32 %evl)
+  %v = call <vscale x 4 x i64> @llvm.vp.umax.nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i64> %vb, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i64> %v
 }
 
@@ -1430,9 +1333,7 @@ define <vscale x 8 x i64> @vmaxu_vv_nxv8i64_unmasked(<vscale x 8 x i64> %va, <vs
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v16
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %v = call <vscale x 8 x i64> @llvm.vp.umax.nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i64> %b, <vscale x 8 x i1> %m, i32 %evl)
+  %v = call <vscale x 8 x i64> @llvm.vp.umax.nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i64> %b, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x i64> %v
 }
 
@@ -1441,14 +1342,14 @@ define <vscale x 8 x i64> @vmaxu_vx_nxv8i64(<vscale x 8 x i64> %va, i64 %b, <vsc
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
-; RV32-NEXT:    vlse64.v v16, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; RV32-NEXT:    vlse64.v v16, (a0), zero
 ; RV32-NEXT:    vmaxu.vv v8, v8, v16, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmaxu_vx_nxv8i64:
@@ -1467,14 +1368,14 @@ define <vscale x 8 x i64> @vmaxu_vx_nxv8i64_unmasked(<vscale x 8 x i64> %va, i64
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
-; RV32-NEXT:    vlse64.v v16, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; RV32-NEXT:    vlse64.v v16, (a0), zero
 ; RV32-NEXT:    vmaxu.vv v8, v8, v16
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmaxu_vx_nxv8i64_unmasked:
@@ -1484,8 +1385,6 @@ define <vscale x 8 x i64> @vmaxu_vx_nxv8i64_unmasked(<vscale x 8 x i64> %va, i64
 ; RV64-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i64> poison, i64 %b, i32 0
   %vb = shufflevector <vscale x 8 x i64> %elt.head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-  %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %v = call <vscale x 8 x i64> @llvm.vp.umax.nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i64> %vb, <vscale x 8 x i1> %m, i32 %evl)
+  %v = call <vscale x 8 x i64> @llvm.vp.umax.nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i64> %vb, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x i64> %v
 }

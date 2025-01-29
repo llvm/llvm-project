@@ -1,13 +1,13 @@
 ; This file tests the codegen of mergeable const in AIX assembly.
 ; This file also tests mergeable const in XCOFF object file generation.
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
-; RUN:     -data-sections=false -xcoff-traceback-table=false < %s | \
+; RUN:     -global-merge-all-const=false -data-sections=false -xcoff-traceback-table=false < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK,CHECK32 %s
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc64-ibm-aix-xcoff \
-; RUN:     -xcoff-traceback-table=false -data-sections=false < %s | \
+; RUN:     -global-merge-all-const=false -xcoff-traceback-table=false -data-sections=false < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK,CHECK64 %s
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
-; RUN:     -xcoff-traceback-table=false -data-sections=false -filetype=obj -o %t.o < %s
+; RUN:     -global-merge-all-const=false -xcoff-traceback-table=false -data-sections=false -filetype=obj -o %t.o < %s
 ; RUN: llvm-objdump -D %t.o | FileCheck --check-prefix=CHECKOBJ %s
 ; RUN: llvm-readobj -s %t.o | FileCheck --check-prefix=CHECKSYM %s
 

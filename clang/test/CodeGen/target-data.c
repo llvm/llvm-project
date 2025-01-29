@@ -28,11 +28,11 @@
 
 // RUN: %clang_cc1 -triple sparc-sun-solaris -emit-llvm -o - %s | \
 // RUN:     FileCheck %s --check-prefix=SPARC-V8
-// SPARC-V8: target datalayout = "E-m:e-p:32:32-i64:64-f128:64-n32-S64"
+// SPARC-V8: target datalayout = "E-m:e-p:32:32-i64:64-i128:128-f128:64-n32-S64"
 
 // RUN: %clang_cc1 -triple sparcv9-sun-solaris -emit-llvm -o - %s | \
 // RUN: FileCheck %s --check-prefix=SPARC-V9
-// SPARC-V9: target datalayout = "E-m:e-i64:64-n32:64-S128"
+// SPARC-V9: target datalayout = "E-m:e-i64:64-i128:128-n32:64-S128"
 
 // RUN: %clang_cc1 -triple mipsel-linux-gnu -o - -emit-llvm %s |     \
 // RUN: FileCheck %s -check-prefix=MIPS-32EL
@@ -54,7 +54,7 @@
 // RUN: FileCheck %s -check-prefix=MIPS-64EL
 // RUN: %clang_cc1 -triple mipsisa64r6el-linux-gnuabi64 -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=MIPS-64EL
-// MIPS-64EL: target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-n32:64-S128"
+// MIPS-64EL: target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 // RUN: %clang_cc1 -triple mips64el-linux-gnu -o - -emit-llvm -target-abi n32 \
 // RUN: %s | FileCheck %s -check-prefix=MIPS-64EL-N32
@@ -64,7 +64,7 @@
 // RUN: %s | FileCheck %s -check-prefix=MIPS-64EL-N32
 // RUN: %clang_cc1 -triple mipsisa64r6el-linux-gnuabin32 -o - -emit-llvm \
 // RUN: %s | FileCheck %s -check-prefix=MIPS-64EL-N32
-// MIPS-64EL-N32: target datalayout = "e-m:e-p:32:32-i8:8:32-i16:16:32-i64:64-n32:64-S128"
+// MIPS-64EL-N32: target datalayout = "e-m:e-p:32:32-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 // RUN: %clang_cc1 -triple mips64-linux-gnu -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=MIPS-64EB
@@ -74,7 +74,7 @@
 // RUN: FileCheck %s -check-prefix=MIPS-64EB
 // RUN: %clang_cc1 -triple mipsisa64r6-linux-gnuabi64 -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=MIPS-64EB
-// MIPS-64EB: target datalayout = "E-m:e-i8:8:32-i16:16:32-i64:64-n32:64-S128"
+// MIPS-64EB: target datalayout = "E-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 // RUN: %clang_cc1 -triple mips64-linux-gnu -o - -emit-llvm %s -target-abi n32 \
 // RUN: | FileCheck %s -check-prefix=MIPS-64EB-N32
@@ -84,11 +84,11 @@
 // RUN: | FileCheck %s -check-prefix=MIPS-64EB-N32
 // RUN: %clang_cc1 -triple mipsisa64r6-linux-gnuabin32 -o - -emit-llvm %s \
 // RUN: | FileCheck %s -check-prefix=MIPS-64EB-N32
-// MIPS-64EB-N32: target datalayout = "E-m:e-p:32:32-i8:8:32-i16:16:32-i64:64-n32:64-S128"
+// MIPS-64EB-N32: target datalayout = "E-m:e-p:32:32-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 // RUN: %clang_cc1 -triple powerpc64-lv2 -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=PS3
-// PS3: target datalayout = "E-m:e-p:32:32-Fi64-i64:64-n32:64"
+// PS3: target datalayout = "E-m:e-p:32:32-Fi64-i64:64-i128:128-n32:64"
 
 // RUN: %clang_cc1 -triple i686-nacl -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=I686-NACL
@@ -108,11 +108,11 @@
 
 // RUN: %clang_cc1 -triple wasm32-unknown-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=WEBASSEMBLY32
-// WEBASSEMBLY32: target datalayout = "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-n32:64-S128-ni:1:10:20"
+// WEBASSEMBLY32: target datalayout = "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-i128:128-n32:64-S128-ni:1:10:20"
 
 // RUN: %clang_cc1 -triple wasm64-unknown-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=WEBASSEMBLY64
-// WEBASSEMBLY64: target datalayout = "e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-n32:64-S128-ni:1:10:20"
+// WEBASSEMBLY64: target datalayout = "e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-i128:128-n32:64-S128-ni:1:10:20"
 
 // RUN: %clang_cc1 -triple lanai-unknown-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=LANAI
@@ -128,35 +128,35 @@
 
 // RUN: %clang_cc1 -triple powerpc64-freebsd -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=PPC64-FREEBSD
-// PPC64-FREEBSD: target datalayout = "E-m:e-Fn32-i64:64-n32:64"
+// PPC64-FREEBSD: target datalayout = "E-m:e-Fn32-i64:64-i128:128-n32:64"
 
 // RUN: %clang_cc1 -triple powerpc64le-freebsd -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=PPC64LE-FREEBSD
-// PPC64LE-FREEBSD: target datalayout = "e-m:e-Fn32-i64:64-n32:64"
+// PPC64LE-FREEBSD: target datalayout = "e-m:e-Fn32-i64:64-i128:128-n32:64"
 
 // RUN: %clang_cc1 -triple powerpc64-linux -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=PPC64-LINUX
-// PPC64-LINUX: target datalayout = "E-m:e-Fi64-i64:64-n32:64-S128-v256:256:256-v512:512:512"
+// PPC64-LINUX: target datalayout = "E-m:e-Fi64-i64:64-i128:128-n32:64-S128-v256:256:256-v512:512:512"
 
 // RUN: %clang_cc1 -triple powerpc64-linux -o - -emit-llvm -target-cpu future %s | \
 // RUN: FileCheck %s -check-prefix=PPC64-FUTURE
-// PPC64-FUTURE: target datalayout = "E-m:e-Fi64-i64:64-n32:64-S128-v256:256:256-v512:512:512"
+// PPC64-FUTURE: target datalayout = "E-m:e-Fi64-i64:64-i128:128-n32:64-S128-v256:256:256-v512:512:512"
 
 // RUN: %clang_cc1 -triple powerpc64-linux -o - -emit-llvm -target-cpu pwr10 %s | \
 // RUN: FileCheck %s -check-prefix=PPC64-P10
-// PPC64-P10: target datalayout = "E-m:e-Fi64-i64:64-n32:64-S128-v256:256:256-v512:512:512"
+// PPC64-P10: target datalayout = "E-m:e-Fi64-i64:64-i128:128-n32:64-S128-v256:256:256-v512:512:512"
 
 // RUN: %clang_cc1 -triple powerpc64le-linux -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=PPC64LE-LINUX
-// PPC64LE-LINUX: target datalayout = "e-m:e-Fn32-i64:64-n32:64-S128-v256:256:256-v512:512:512"
+// PPC64LE-LINUX: target datalayout = "e-m:e-Fn32-i64:64-i128:128-n32:64-S128-v256:256:256-v512:512:512"
 
 // RUN: %clang_cc1 -triple powerpc64le-linux -o - -emit-llvm -target-cpu future %s | \
 // RUN: FileCheck %s -check-prefix=PPC64LE-FUTURE
-// PPC64LE-FUTURE: target datalayout = "e-m:e-Fn32-i64:64-n32:64-S128-v256:256:256-v512:512:512"
+// PPC64LE-FUTURE: target datalayout = "e-m:e-Fn32-i64:64-i128:128-n32:64-S128-v256:256:256-v512:512:512"
 
 // RUN: %clang_cc1 -triple powerpc64le-linux -o - -emit-llvm -target-cpu pwr10 %s | \
 // RUN: FileCheck %s -check-prefix=PPC64LE-P10
-// PPC64LE-P10: target datalayout = "e-m:e-Fn32-i64:64-n32:64-S128-v256:256:256-v512:512:512"
+// PPC64LE-P10: target datalayout = "e-m:e-Fn32-i64:64-i128:128-n32:64-S128-v256:256:256-v512:512:512"
 
 // RUN: %clang_cc1 -triple nvptx-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=NVPTX
@@ -185,15 +185,15 @@
 
 // RUN: %clang_cc1 -triple arm64-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=AARCH64
-// AARCH64: target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+// AARCH64: target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
 
 // RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=AARCH64-ILP32
-// AARCH64-ILP32: target datalayout = "e-m:o-p:32:32-i64:64-i128:128-n32:64-S128"
+// AARCH64-ILP32: target datalayout = "e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
 
 // RUN: %clang_cc1 -triple arm64-pc-win32-macho -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=AARCH64-WIN32-MACHO
-// AARCH64-WIN32-MACHO: target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+// AARCH64-WIN32-MACHO: target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
 
 // RUN: %clang_cc1 -triple thumb-unknown-gnueabi -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=THUMB
@@ -235,7 +235,7 @@
 // RUN: FileCheck %s -check-prefix=ZOS
 // RUN: %clang_cc1 -triple s390x-none-zos -target-cpu z13 -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=ZOS
-// ZOS: target datalayout = "E-m:l-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
+// ZOS: target datalayout = "E-m:l-p1:32:32-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 
 // RUN: %clang_cc1 -triple msp430-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=MSP430
@@ -251,11 +251,11 @@
 
 // RUN: %clang_cc1 -triple spir-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=SPIR
-// SPIR: target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024"
+// SPIR: target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-G1"
 
 // RUN: %clang_cc1 -triple spir64-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=SPIR64
-// SPIR64: target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024"
+// SPIR64: target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-G1"
 
 // RUN: %clang_cc1 -triple bpfel -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=BPFEL
@@ -268,3 +268,7 @@
 // RUN: %clang_cc1 -triple ve -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=VE
 // VE: target datalayout = "e-m:e-i64:64-n32:64-S128-v64:64:64-v128:64:64-v256:64:64-v512:64:64-v1024:64:64-v2048:64:64-v4096:64:64-v8192:64:64-v16384:64:64"
+
+// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -o - -emit-llvm %s | \
+// RUN: FileCheck %s -check-prefix=AMDGPUSPIRV64
+// AMDGPUSPIRV64: target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n32:64-S32-G1-P4-A0"

@@ -58,7 +58,14 @@ protected:
   // run' plan, then just single step.
   bool SetNextBranchBreakpoint();
 
+  // Whether the input stop info is caused by the next branch breakpoint.
+  // Note: this does not check if branch breakpoint site is shared by other
+  // breakpoints or not.
+  bool IsNextBranchBreakpointStop(lldb::StopInfoSP stop_info_sp);
+
   void ClearNextBranchBreakpoint();
+
+  void ClearNextBranchBreakpointExplainedStop();
 
   bool NextRangeBreakpointExplainsStop(lldb::StopInfoSP stop_info_sp);
 

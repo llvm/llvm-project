@@ -67,7 +67,7 @@ define <2 x i1> @shl_vec_nsw_slt_1_0_todo_non_splat(<2 x i8> %x, <2 x i8> %C) {
 define <2 x i1> @shl_nsw_sle_n1(<2 x i8> %x, <2 x i8> %C) {
 ; CHECK-LABEL: @shl_nsw_sle_n1(
 ; CHECK-NEXT:    [[Y:%.*]] = shl nsw <2 x i8> [[X:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp slt <2 x i8> [[Y]], <i8 2, i8 2>
+; CHECK-NEXT:    [[Z:%.*]] = icmp slt <2 x i8> [[Y]], splat (i8 2)
 ; CHECK-NEXT:    ret <2 x i1> [[Z]]
 ;
   %y = shl nsw <2 x i8> %x, %C
@@ -150,7 +150,7 @@ define i1 @shl_nuw_ugt_Csle0_fail_missing_flag(i8 %x, i8 %C) {
 
 define <2 x i1> @shl_nsw_nuw_sgt_Csle0(<2 x i8> %x, <2 x i8> %C) {
 ; CHECK-LABEL: @shl_nsw_nuw_sgt_Csle0(
-; CHECK-NEXT:    [[Z:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -10, i8 -10>
+; CHECK-NEXT:    [[Z:%.*]] = icmp sgt <2 x i8> [[X:%.*]], splat (i8 -10)
 ; CHECK-NEXT:    ret <2 x i1> [[Z]]
 ;
   %y = shl nsw nuw <2 x i8> %x, %C
@@ -171,7 +171,7 @@ define <2 x i1> @shl_nsw_nuw_sge_Csle0_todo_non_splat(<2 x i8> %x, <2 x i8> %C) 
 
 define <2 x i1> @shl_nsw_nuw_sle_Csle0(<2 x i8> %x, <2 x i8> %C) {
 ; CHECK-LABEL: @shl_nsw_nuw_sle_Csle0(
-; CHECK-NEXT:    [[Z:%.*]] = icmp slt <2 x i8> [[X:%.*]], <i8 -5, i8 -5>
+; CHECK-NEXT:    [[Z:%.*]] = icmp slt <2 x i8> [[X:%.*]], splat (i8 -5)
 ; CHECK-NEXT:    ret <2 x i1> [[Z]]
 ;
   %y = shl nsw nuw <2 x i8> %x, %C
@@ -182,7 +182,7 @@ define <2 x i1> @shl_nsw_nuw_sle_Csle0(<2 x i8> %x, <2 x i8> %C) {
 define <2 x i1> @shl_nsw_nuw_slt_Csle0_fail_positive(<2 x i8> %x, <2 x i8> %C) {
 ; CHECK-LABEL: @shl_nsw_nuw_slt_Csle0_fail_positive(
 ; CHECK-NEXT:    [[Y:%.*]] = shl nuw nsw <2 x i8> [[X:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp slt <2 x i8> [[Y]], <i8 6, i8 6>
+; CHECK-NEXT:    [[Z:%.*]] = icmp slt <2 x i8> [[Y]], splat (i8 6)
 ; CHECK-NEXT:    ret <2 x i1> [[Z]]
 ;
   %y = shl nsw nuw <2 x i8> %x, %C

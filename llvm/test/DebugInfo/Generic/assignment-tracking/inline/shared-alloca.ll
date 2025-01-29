@@ -1,5 +1,7 @@
 ; RUN: opt -S %s -passes=inline -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt --try-experimental-debuginfo-iterators -S %s -passes=inline -o - \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; The dbg.assign linked to the large alloca describes a variable sitting at
 ;; offset 0, size 64. Check:
@@ -12,15 +14,15 @@
 
 ;; Test A:
 ; CHECK: %0 = alloca %"struct.llvm::detail::DenseMapPair", i32 0, align 8, !DIAssignID ![[ID1:[0-9]+]]
-; CHECK: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[#]], metadata !DIExpression(), metadata ![[ID1]], metadata ptr %0, metadata !DIExpression())
+; CHECK: #dbg_assign(i1 undef, ![[#]], !DIExpression(), ![[ID1]], ptr %0, !DIExpression(),
 
 ;; Test B:
 ;; CHECK: store i64 1, ptr %0, align 4, !DIAssignID ![[ID2:[0-9]+]]
-;; CHECK: call void @llvm.dbg.assign(metadata i64 1, metadata ![[#]], metadata !DIExpression(), metadata ![[ID2]], metadata ptr %0, metadata !DIExpression())
+;; CHECK: #dbg_assign(i64 1, ![[#]], !DIExpression(), ![[ID2]], ptr %0, !DIExpression(),
 
 ;; Test C:
 ;; CHECK: store i32 2, ptr %0, align 4, !DIAssignID ![[ID3:[0-9]+]]
-;; CHECK: call void @llvm.dbg.assign(metadata i32 2, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32), metadata ![[ID3]], metadata ptr %0, metadata !DIExpression())
+;; CHECK: #dbg_assign(i32 2, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 0, 32), ![[ID3]], ptr %0, !DIExpression(),
 
 %"struct.llvm::detail::DenseMapPair" = type { %"struct.std::pair" }
 %"struct.std::pair" = type { ptr, %"class.llvm::SmallVector" }

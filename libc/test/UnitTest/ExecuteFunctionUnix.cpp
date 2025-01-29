@@ -7,17 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "ExecuteFunction.h"
-#include <cassert>
-#include <cstdlib>
-#include <cstring>
-#include <iostream>
-#include <memory>
+#include "src/__support/macros/config.h"
+#include "test/UnitTest/ExecuteFunction.h" // FunctionCaller
+#include <assert.h>
 #include <poll.h>
 #include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testutils {
 
 bool ProcessStatus::exited_normally() { return WIFEXITED(platform_defined); }
@@ -34,21 +35,25 @@ int ProcessStatus::get_fatal_signal() {
 }
 
 ProcessStatus invoke_in_subprocess(FunctionCaller *func, unsigned timeout_ms) {
-  std::unique_ptr<FunctionCaller> X(func);
   int pipe_fds[2];
-  if (::pipe(pipe_fds) == -1)
+  if (::pipe(pipe_fds) == -1) {
+    delete func;
     return ProcessStatus::error("pipe(2) failed");
+  }
 
   // Don't copy the buffers into the child process and print twice.
-  std::cout.flush();
-  std::cerr.flush();
+  ::fflush(stderr);
+  ::fflush(stdout);
   pid_t pid = ::fork();
-  if (pid == -1)
+  if (pid == -1) {
+    delete func;
     return ProcessStatus::error("fork(2) failed");
+  }
 
   if (!pid) {
     (*func)();
-    std::exit(0);
+    delete func;
+    ::exit(0);
   }
   ::close(pipe_fds[1]);
 
@@ -57,11 +62,14 @@ ProcessStatus invoke_in_subprocess(FunctionCaller *func, unsigned timeout_ms) {
   };
   // No events requested so this call will only return after the timeout or if
   // the pipes peer was closed, signaling the process exited.
-  if (::poll(&poll_fd, 1, timeout_ms) == -1)
+  if (::poll(&poll_fd, 1, timeout_ms) == -1) {
+    delete func;
     return ProcessStatus::error("poll(2) failed");
+  }
   // If the pipe wasn't closed by the child yet then timeout has expired.
   if (!(poll_fd.revents & POLLHUP)) {
     ::kill(pid, SIGKILL);
+    delete func;
     return ProcessStatus::timed_out_ps();
   }
 
@@ -69,13 +77,16 @@ ProcessStatus invoke_in_subprocess(FunctionCaller *func, unsigned timeout_ms) {
   // Wait on the pid of the subprocess here so it gets collected by the system
   // and doesn't turn into a zombie.
   pid_t status = ::waitpid(pid, &wstatus, 0);
-  if (status == -1)
+  if (status == -1) {
+    delete func;
     return ProcessStatus::error("waitpid(2) failed");
+  }
   assert(status == pid);
+  delete func;
   return {wstatus};
 }
 
 const char *signal_as_string(int signum) { return ::strsignal(signum); }
 
 } // namespace testutils
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

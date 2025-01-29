@@ -25,6 +25,10 @@ module m
     real :: x2
   end type
   type(t2) :: t2static
+  type list
+    real a
+    type(list), pointer :: prev, next
+  end type
   character(*), parameter :: internal = '0'
  contains
   subroutine test1(dummy)
@@ -97,4 +101,37 @@ module m
     !CHECK: because: 'np' is an INTENT(IN) dummy argument
     nullify(np%ptr)
   end
+  pure function test6(lp)
+    type(list), pointer :: lp
+    !CHECK: error: The left-hand side of a pointer assignment is not definable
+    !CHECK: because: 'lp' may not be defined in pure subprogram 'test6' because it is a POINTER dummy argument of a pure function
+    lp%next%next => null()
+  end
+  pure subroutine test7(lp)
+    type(list), pointer :: lp
+    lp%next%next => null() ! ok
+  end
 end module
+program main
+  use iso_fortran_env, only: lock_type
+  type(lock_type) lock
+  interface
+    subroutine inlock(lock)
+      import lock_type
+      type(lock_type), intent(in) :: lock
+    end
+    subroutine outlock(lock)
+      import lock_type
+      !CHECK: error: An INTENT(OUT) dummy argument may not be, or contain, EVENT_TYPE or LOCK_TYPE
+      type(lock_type), intent(out) :: lock
+    end
+    subroutine inoutlock(lock)
+      import lock_type
+      type(lock_type), intent(in out) :: lock
+    end
+  end interface
+  call inlock(lock) ! ok
+  call inoutlock(lock) ! ok
+  !CHECK: error: Actual argument associated with INTENT(OUT) dummy argument 'lock=' is not definable
+  call outlock(lock)
+end

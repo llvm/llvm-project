@@ -17,35 +17,37 @@ target triple = "x86_64-grtev4-linux-gnu"
 %4 = type { ptr }
 %5 = type { i64, [8 x i8] }
 
-define void @fail(ptr noalias sret(i1) %arg, ptr %arg1, ptr %arg2, ptr %arg3) local_unnamed_addr #0 {
+define void @fail(ptr noalias sret(i1) %arg, ptr %arg1, ptr %arg2, ptr %arg3, i1 %arg4) local_unnamed_addr #0 {
 ; CHECK-LABEL: @fail(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I4:%.*]] = load ptr, ptr [[ARG1:%.*]], align 8, !invariant.group !6
+; CHECK-NEXT:    [[I4:%.*]] = load ptr, ptr [[ARG1:%.*]], align 8, !invariant.group [[META6:![0-9]+]]
 ; CHECK-NEXT:    [[I5:%.*]] = getelementptr inbounds ptr, ptr [[I4]], i64 6
-; CHECK-NEXT:    [[I6:%.*]] = load ptr, ptr [[I5]], align 8, !invariant.load !6
+; CHECK-NEXT:    [[I6:%.*]] = load ptr, ptr [[I5]], align 8, !invariant.load [[META6]]
 ; CHECK-NEXT:    [[I7:%.*]] = tail call i64 [[I6]](ptr [[ARG1]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    [[I9:%.*]] = load ptr, ptr [[ARG2:%.*]], align 8
 ; CHECK-NEXT:    store i8 0, ptr [[I9]], align 1
-; CHECK-NEXT:    br i1 undef, label [[BB10:%.*]], label [[BB29:%.*]]
+; CHECK-NEXT:    br i1 [[ARG4:%.*]], label [[BB10:%.*]], label [[BB29:%.*]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    [[I14_PHI_TRANS_INSERT:%.*]] = getelementptr inbounds ptr, ptr [[I4]], i64 22
-; CHECK-NEXT:    [[I15_PRE:%.*]] = load ptr, ptr [[I14_PHI_TRANS_INSERT]], align 8, !invariant.load !6
+; CHECK-NEXT:    [[I15_PRE:%.*]] = load ptr, ptr [[I14_PHI_TRANS_INSERT]], align 8, !invariant.load [[META6]]
 ; CHECK-NEXT:    br label [[BB12:%.*]]
 ; CHECK:       bb12:
 ; CHECK-NEXT:    [[I16:%.*]] = call i64 [[I15_PRE]](ptr nonnull [[ARG1]], ptr null, i64 0) #[[ATTR1]]
-; CHECK-NEXT:    br i1 undef, label [[BB28:%.*]], label [[BB17:%.*]]
+; CHECK-NEXT:    br i1 true, label [[BB28:%.*]], label [[BB17:%.*]]
 ; CHECK:       bb17:
-; CHECK-NEXT:    br i1 undef, label [[BB18:%.*]], label [[BB21:%.*]]
+; CHECK-NEXT:    br i1 true, label [[BB18:%.*]], label [[BB21:%.*]]
 ; CHECK:       bb18:
 ; CHECK-NEXT:    br label [[BB28]]
 ; CHECK:       bb21:
-; CHECK-NEXT:    br i1 undef, label [[BB25:%.*]], label [[BB26:%.*]]
+; CHECK-NEXT:    br i1 true, label [[BB25:%.*]], label [[BB26:%.*]]
 ; CHECK:       bb25:
 ; CHECK-NEXT:    br label [[BB28]]
 ; CHECK:       bb26:
 ; CHECK-NEXT:    br label [[BB28]]
 ; CHECK:       bb28:
-; CHECK-NEXT:    br i1 undef, label [[BB12]], label [[BB29]]
+; CHECK-NEXT:    br i1 true, label [[BB12]], label [[BB28_BB29_CRIT_EDGE:%.*]]
+; CHECK:       bb28.bb29_crit_edge:
+; CHECK-NEXT:    br label [[BB29]]
 ; CHECK:       bb29:
 ; CHECK-NEXT:    ret void
 ;
@@ -56,7 +58,7 @@ bb:
   %i7 = tail call i64 %i6(ptr %arg1) #1
   %i9 = load ptr, ptr %arg2, align 8
   store i8 0, ptr %i9, align 1
-  br i1 undef, label %bb10, label %bb29
+  br i1 %arg4, label %bb10, label %bb29
 
 bb10:                                             ; preds = %bb
   br label %bb12
@@ -66,10 +68,10 @@ bb12:                                             ; preds = %bb28, %bb10
   %i14 = getelementptr inbounds ptr, ptr %i13, i64 22
   %i15 = load ptr, ptr %i14, align 8, !invariant.load !6
   %i16 = call i64 %i15(ptr nonnull %arg1, ptr null, i64 0) #1
-  br i1 undef, label %bb28, label %bb17
+  br i1 %arg4, label %bb28, label %bb17
 
 bb17:                                             ; preds = %bb12
-  br i1 undef, label %bb18, label %bb21
+  br i1 %arg4, label %bb18, label %bb21
 
 bb18:                                             ; preds = %bb17
   br label %bb19
@@ -90,7 +92,7 @@ bb23:                                             ; preds = %bb22
   br label %bb24
 
 bb24:                                             ; preds = %bb23
-  br i1 undef, label %bb25, label %bb26
+  br i1 %arg4, label %bb25, label %bb26
 
 bb25:                                             ; preds = %bb24
   br label %bb28
@@ -102,7 +104,7 @@ bb27:                                             ; preds = %bb26
   br label %bb28
 
 bb28:                                             ; preds = %bb27, %bb25, %bb20, %bb12
-  br i1 undef, label %bb12, label %bb29
+  br i1 %arg4, label %bb12, label %bb29
 
 bb29:                                             ; preds = %bb28, %bb
   ret void

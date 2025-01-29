@@ -4,8 +4,6 @@
 
 """Helper macros to configure the LLVM overlay project."""
 
-load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
-
 # Directory of overlay files relative to WORKSPACE
 DEFAULT_OVERLAY_PATH = "llvm-project-overlay"
 
@@ -24,6 +22,7 @@ DEFAULT_TARGETS = [
     "PowerPC",
     "RISCV",
     "Sparc",
+    "SPIRV",
     "SystemZ",
     "VE",
     "WebAssembly",
@@ -77,6 +76,7 @@ def _extract_cmake_settings(repository_ctx, llvm_cmake):
         "LLVM_VERSION_MAJOR": None,
         "LLVM_VERSION_MINOR": None,
         "LLVM_VERSION_PATCH": None,
+        "LLVM_VERSION_SUFFIX": None,
     }
 
     # It would be easier to use external commands like sed(1) and python.
@@ -126,6 +126,13 @@ def _extract_cmake_settings(repository_ctx, llvm_cmake):
         c["LLVM_VERSION_PATCH"],
     )
 
+    c["PACKAGE_VERSION"] = "{}.{}.{}{}".format(
+        c["LLVM_VERSION_MAJOR"],
+        c["LLVM_VERSION_MINOR"],
+        c["LLVM_VERSION_PATCH"],
+        c["LLVM_VERSION_SUFFIX"],
+    )
+
     return c
 
 def _write_dict_to_file(repository_ctx, filepath, header, vars):
@@ -148,6 +155,14 @@ def _llvm_configure_impl(repository_ctx):
         repository_ctx,
         llvm_cmake,
     )
+
+    # Grab version info and merge it with the other vars
+    version = _extract_cmake_settings(
+        repository_ctx,
+        "cmake/Modules/LLVMVersion.cmake",
+    )
+    version = {k: v for k, v in version.items() if v != None}
+    vars.update(version)
 
     _write_dict_to_file(
         repository_ctx,

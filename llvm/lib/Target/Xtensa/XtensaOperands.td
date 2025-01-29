@@ -72,6 +72,20 @@ def imm1_16 : Immediate<i32, [{ return Imm >= 1 && Imm <= 16; }], "Imm1_16_AsmOp
   let DecoderMethod = "decodeImm1_16Operand";
 }
 
+// imm1n_15 predicate - Immediate in the range [-1,15], except 0
+def Imm1n_15_AsmOperand: ImmAsmOperand<"Imm1n_15">;
+def imm1n_15: Immediate<i32, [{ return Imm >= -1 && Imm <= 15 && Imm != 0; }], "Imm1n_15_AsmOperand"> {
+  let EncoderMethod = "getImm1n_15OpValue";
+  let DecoderMethod = "decodeImm1n_15Operand";
+}
+
+// imm32n_95 predicate - Immediate in the range [-32,95]
+def Imm32n_95_AsmOperand: ImmAsmOperand<"Imm32n_95">;
+def imm32n_95: Immediate<i32, [{ return Imm >= -32 && Imm <= 95; }], "Imm32n_95_AsmOperand"> {
+  let EncoderMethod = "getImm32n_95OpValue";
+  let DecoderMethod = "decodeImm32n_95Operand";
+}
+
 // shimm1_31 predicate - Immediate in the range [1,31]
 def Shimm1_31_AsmOperand : ImmAsmOperand<"Shimm1_31">;
 def shimm1_31 : Immediate<i32, [{ return Imm >= 1 && Imm <= 31; }], "Shimm1_31_AsmOperand"> {
@@ -195,7 +209,7 @@ def jumptarget : Operand<OtherVT> {
   let ParserMatchClass = XtensaPCRelTargetAsmOperand;
 }
 
-def L32Rtarget : Operand<OtherVT> {
+def L32Rtarget : Operand<i32> {
   let PrintMethod = "printL32RTarget";
   let EncoderMethod = "getL32RTargetEncoding";
   let DecoderMethod = "decodeL32ROperand";

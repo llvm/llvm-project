@@ -90,6 +90,6 @@ TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
 
   // 6. Verify that the reported diagnostic wasn't lost and did end up in the
   // output stream
-  ASSERT_EQ(diagnosticsOS.str(), "error: expected no crash\n");
+  ASSERT_EQ(diagnosticOutput, "error: expected no crash\n");
 }
 } // namespace

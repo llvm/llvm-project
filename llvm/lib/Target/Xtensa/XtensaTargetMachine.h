@@ -15,13 +15,14 @@
 #ifndef LLVM_LIB_TARGET_XTENSA_XTENSATARGETMACHINE_H
 #define LLVM_LIB_TARGET_XTENSA_XTENSATARGETMACHINE_H
 
-#include "llvm/Target/TargetMachine.h"
+#include "XtensaSubtarget.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include <optional>
 
 namespace llvm {
 extern Target TheXtensaTarget;
 
-class XtensaTargetMachine : public LLVMTargetMachine {
+class XtensaTargetMachine : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
 public:
   XtensaTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -36,10 +37,20 @@ public:
                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                       bool JIT);
 
+  const XtensaSubtarget *getSubtargetImpl(const Function &F) const override;
+
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
+
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
+
+  MachineFunctionInfo *
+  createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
+                            const TargetSubtargetInfo *STI) const override;
+
+protected:
+  mutable StringMap<std::unique_ptr<XtensaSubtarget>> SubtargetMap;
 };
 } // end namespace llvm
 

@@ -10,13 +10,14 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
+#include "hdr/unistd_macros.h"
 #include <stdint.h>      // For uint64_t.
 #include <sys/syscall.h> // For syscall numbers.
-#include <unistd.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, truncate, (const char *path, off_t len)) {
 #ifdef SYS_truncate
@@ -36,4 +37,4 @@ LLVM_LIBC_FUNCTION(int, truncate, (const char *path, off_t len)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -19,7 +19,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cinttypes>
 #include <cstdint>
@@ -288,6 +287,7 @@ Error CFIProgram::parse(DWARFDataExtractor Data, uint64_t *Offset,
     case DW_CFA_remember_state:
     case DW_CFA_restore_state:
     case DW_CFA_GNU_window_save:
+    case DW_CFA_AARCH64_negate_ra_state_with_pc:
       // No operands
       addInstruction(Opcode);
       break;
@@ -630,6 +630,8 @@ Error UnwindTable::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
           if (LRLoc->getLocation() == UnwindLocation::Constant) {
             // Toggle the constant value from 0 to 1 or 1 to 0.
             LRLoc->setConstant(LRLoc->getConstant() ^ 1);
+            Row.getRegisterLocations().setRegisterLocation(
+                AArch64DWARFPAuthRaState, *LRLoc);
           } else {
             return createStringError(
                 errc::invalid_argument,
@@ -663,6 +665,28 @@ Error UnwindTable::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
       }
       }
       break;
+
+    case dwarf::DW_CFA_AARCH64_negate_ra_state_with_pc: {
+      constexpr uint32_t AArch64DWARFPAuthRaState = 34;
+      auto LRLoc = Row.getRegisterLocations().getRegisterLocation(
+          AArch64DWARFPAuthRaState);
+      if (LRLoc) {
+        if (LRLoc->getLocation() == UnwindLocation::Constant) {
+          // Toggle the constant value of bits[1:0] from 0 to 1 or 1 to 0.
+          LRLoc->setConstant(LRLoc->getConstant() ^ 0x3);
+        } else {
+          return createStringError(
+              errc::invalid_argument,
+              "%s encountered when existing rule for this register is not "
+              "a constant",
+              CFIP.callFrameString(Inst.Opcode).str().c_str());
+        }
+      } else {
+        Row.getRegisterLocations().setRegisterLocation(
+            AArch64DWARFPAuthRaState, UnwindLocation::createIsConstant(0x3));
+      }
+      break;
+    }
 
     case dwarf::DW_CFA_undefined: {
       llvm::Expected<uint64_t> RegNum = Inst.getOperandAsUnsigned(CFIP, 0);
@@ -845,6 +869,7 @@ CFIProgram::getOperandTypes() {
   DECLARE_OP0(DW_CFA_remember_state);
   DECLARE_OP0(DW_CFA_restore_state);
   DECLARE_OP0(DW_CFA_GNU_window_save);
+  DECLARE_OP0(DW_CFA_AARCH64_negate_ra_state_with_pc);
   DECLARE_OP1(DW_CFA_GNU_args_size, OT_Offset);
   DECLARE_OP0(DW_CFA_nop);
 
@@ -858,7 +883,8 @@ CFIProgram::getOperandTypes() {
 /// Print \p Opcode's operand number \p OperandIdx which has value \p Operand.
 void CFIProgram::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
                               const Instruction &Instr, unsigned OperandIdx,
-                              uint64_t Operand) const {
+                              uint64_t Operand,
+                              std::optional<uint64_t> &Address) const {
   assert(OperandIdx < MaxOperands);
   uint8_t Opcode = Instr.Opcode;
   OperandType Type = getOperandTypes()[Opcode][OperandIdx];
@@ -877,6 +903,7 @@ void CFIProgram::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
     break;
   case OT_Address:
     OS << format(" %" PRIx64, Operand);
+    Address = Operand;
     break;
   case OT_Offset:
     // The offsets are all encoded in a unsigned form, but in practice
@@ -888,7 +915,11 @@ void CFIProgram::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
     if (CodeAlignmentFactor)
       OS << format(" %" PRId64, Operand * CodeAlignmentFactor);
     else
-      OS << format(" %" PRId64 "*code_alignment_factor" , Operand);
+      OS << format(" %" PRId64 "*code_alignment_factor", Operand);
+    if (Address && CodeAlignmentFactor) {
+      *Address += Operand * CodeAlignmentFactor;
+      OS << format(" to 0x%" PRIx64, *Address);
+    }
     break;
   case OT_SignedFactDataOffset:
     if (DataAlignmentFactor)
@@ -918,13 +949,14 @@ void CFIProgram::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
 }
 
 void CFIProgram::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
-                      unsigned IndentLevel) const {
+                      unsigned IndentLevel,
+                      std::optional<uint64_t> Address) const {
   for (const auto &Instr : Instructions) {
     uint8_t Opcode = Instr.Opcode;
     OS.indent(2 * IndentLevel);
     OS << callFrameString(Opcode) << ":";
     for (unsigned i = 0; i < Instr.Ops.size(); ++i)
-      printOperand(OS, DumpOpts, Instr, i, Instr.Ops[i]);
+      printOperand(OS, DumpOpts, Instr, i, Instr.Ops[i], Address);
     OS << '\n';
   }
 }
@@ -975,7 +1007,7 @@ void CIE::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     OS << "\n";
   }
   OS << "\n";
-  CFIs.dump(OS, DumpOpts);
+  CFIs.dump(OS, DumpOpts, /*IndentLevel=*/1, /*InitialLocation=*/{});
   OS << "\n";
 
   if (Expected<UnwindTable> RowsOrErr = UnwindTable::create(this))
@@ -1003,7 +1035,7 @@ void FDE::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   OS << "  Format:       " << FormatString(IsDWARF64) << "\n";
   if (LSDAAddress)
     OS << format("  LSDA Address: %016" PRIx64 "\n", *LSDAAddress);
-  CFIs.dump(OS, DumpOpts);
+  CFIs.dump(OS, DumpOpts, /*IndentLevel=*/1, InitialLocation);
   OS << "\n";
 
   if (Expected<UnwindTable> RowsOrErr = UnwindTable::create(this))

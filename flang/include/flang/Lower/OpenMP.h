@@ -13,17 +13,22 @@
 #ifndef FORTRAN_LOWER_OPENMP_H
 #define FORTRAN_LOWER_OPENMP_H
 
+#include "llvm/ADT/SmallVector.h"
+
 #include <cinttypes>
+#include <utility>
 
 namespace mlir {
-class Value;
 class Operation;
 class Location;
+namespace omp {
+enum class DeclareTargetDeviceType : uint32_t;
+enum class DeclareTargetCaptureClause : uint32_t;
+} // namespace omp
 } // namespace mlir
 
 namespace fir {
 class FirOpBuilder;
-class ConvertOp;
 } // namespace fir
 
 namespace Fortran {
@@ -49,14 +54,23 @@ struct Evaluation;
 struct Variable;
 } // namespace pft
 
+struct OMPDeferredDeclareTargetInfo {
+  mlir::omp::DeclareTargetCaptureClause declareTargetCaptureClause;
+  mlir::omp::DeclareTargetDeviceType declareTargetDeviceType;
+  const Fortran::semantics::Symbol &sym;
+};
+
 // Generate the OpenMP terminator for Operation at Location.
-void genOpenMPTerminator(fir::FirOpBuilder &, mlir::Operation *,
-                         mlir::Location);
+mlir::Operation *genOpenMPTerminator(fir::FirOpBuilder &, mlir::Operation *,
+                                     mlir::Location);
 
 void genOpenMPConstruct(AbstractConverter &, Fortran::lower::SymMap &,
                         semantics::SemanticsContext &, pft::Evaluation &,
                         const parser::OpenMPConstruct &);
-void genOpenMPDeclarativeConstruct(AbstractConverter &, pft::Evaluation &,
+void genOpenMPDeclarativeConstruct(AbstractConverter &,
+                                   Fortran::lower::SymMap &,
+                                   semantics::SemanticsContext &,
+                                   pft::Evaluation &,
                                    const parser::OpenMPDeclarativeConstruct &);
 /// Symbols in OpenMP code can have flags (e.g. threadprivate directive)
 /// that require additional handling when lowering the corresponding
@@ -68,19 +82,19 @@ void genOpenMPSymbolProperties(AbstractConverter &converter,
 int64_t getCollapseValue(const Fortran::parser::OmpClauseList &clauseList);
 void genThreadprivateOp(AbstractConverter &, const pft::Variable &);
 void genDeclareTargetIntGlobal(AbstractConverter &, const pft::Variable &);
-void genOpenMPReduction(AbstractConverter &,
-                        const Fortran::parser::OmpClauseList &clauseList);
-
-mlir::Operation *findReductionChain(mlir::Value, mlir::Value * = nullptr);
-fir::ConvertOp getConvertFromReductionOp(mlir::Operation *, mlir::Value);
-void updateReduction(mlir::Operation *, fir::FirOpBuilder &, mlir::Value,
-                     mlir::Value, fir::ConvertOp * = nullptr);
-void removeStoreOp(mlir::Operation *, mlir::Value);
-
 bool isOpenMPTargetConstruct(const parser::OpenMPConstruct &);
 bool isOpenMPDeviceDeclareTarget(Fortran::lower::AbstractConverter &,
+                                 Fortran::semantics::SemanticsContext &,
                                  Fortran::lower::pft::Evaluation &,
                                  const parser::OpenMPDeclarativeConstruct &);
+void gatherOpenMPDeferredDeclareTargets(
+    Fortran::lower::AbstractConverter &, Fortran::semantics::SemanticsContext &,
+    Fortran::lower::pft::Evaluation &,
+    const parser::OpenMPDeclarativeConstruct &,
+    llvm::SmallVectorImpl<OMPDeferredDeclareTargetInfo> &);
+bool markOpenMPDeferredDeclareTargetFunctions(
+    mlir::Operation *, llvm::SmallVectorImpl<OMPDeferredDeclareTargetInfo> &,
+    AbstractConverter &);
 void genOpenMPRequires(mlir::Operation *, const Fortran::semantics::Symbol *);
 
 } // namespace lower

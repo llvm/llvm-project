@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-namespace LIBC_NAMESPACE {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 // This is initialized to the correct value by the statup code.
 extern "C" {
 char **environ = nullptr;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

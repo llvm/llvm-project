@@ -50,6 +50,10 @@ typedef struct ompt_callbacks_active_s {
        : 0x0) |                                                                \
       ((!(info->td_flags.tiedness)) ? ompt_task_untied : 0x0) |                \
       (info->td_flags.final ? ompt_task_final : 0x0) |                         \
+      (info->td_flags.target                                                   \
+           ? ompt_task_target                                                  \
+           : (info->td_flags.tasktype ? ompt_task_explicit                     \
+                                      : ompt_task_implicit)) |                 \
       (info->td_flags.merged_if0 ? ompt_task_mergeable : 0x0)
 
 typedef struct {

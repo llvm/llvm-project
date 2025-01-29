@@ -21,9 +21,8 @@
  */
 
 #include <clc/clc.h>
-
-#include "math.h"
-#include "../clcmacro.h"
+#include <clc/clcmacro.h>
+#include <clc/math/math.h>
 
 /*
  * ====================================================
@@ -409,5 +408,17 @@ _CLC_OVERLOAD _CLC_DEF double erfc(double x) {
 }
 
 _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, erfc, double);
+
+#ifdef cl_khr_fp16
+
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+_CLC_OVERLOAD _CLC_DEF half erfc(half h) {
+    return (half)erfc((float)h);
+}
+
+_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, erfc, half);
+
+#endif
 
 #endif

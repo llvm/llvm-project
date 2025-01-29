@@ -5,34 +5,8 @@
 define <2 x double> @v2f64(<2 x double> %x, <2 x double> %y) nounwind {
 ; CHECK-LABEL: v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sw a4, 8(sp)
-; CHECK-NEXT:    sw a5, 12(sp)
-; CHECK-NEXT:    lw a4, 8(sp)
-; CHECK-NEXT:    lw a5, 12(sp)
-; CHECK-NEXT:    sw a0, 8(sp)
-; CHECK-NEXT:    sw a1, 12(sp)
-; CHECK-NEXT:    lw a0, 8(sp)
-; CHECK-NEXT:    lw a1, 12(sp)
-; CHECK-NEXT:    sw a6, 8(sp)
-; CHECK-NEXT:    sw a7, 12(sp)
-; CHECK-NEXT:    lw a6, 8(sp)
-; CHECK-NEXT:    lw a7, 12(sp)
-; CHECK-NEXT:    sw a2, 8(sp)
-; CHECK-NEXT:    sw a3, 12(sp)
-; CHECK-NEXT:    lw a2, 8(sp)
-; CHECK-NEXT:    lw a3, 12(sp)
 ; CHECK-NEXT:    fadd.d a2, a2, a6
 ; CHECK-NEXT:    fadd.d a0, a0, a4
-; CHECK-NEXT:    sw a0, 8(sp)
-; CHECK-NEXT:    sw a1, 12(sp)
-; CHECK-NEXT:    lw a0, 8(sp)
-; CHECK-NEXT:    lw a1, 12(sp)
-; CHECK-NEXT:    sw a2, 8(sp)
-; CHECK-NEXT:    sw a3, 12(sp)
-; CHECK-NEXT:    lw a2, 8(sp)
-; CHECK-NEXT:    lw a3, 12(sp)
-; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %1 = fadd <2 x double> %x, %y
   ret <2 x double> %1

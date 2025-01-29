@@ -32,3 +32,11 @@ defm arch: JS<"arch", "specify the <architecture>", "<architecture>">;
 // Stub options
 //
 def delete_input : FF<"delete-input", "delete and replace input file on success">;
+def delete_private_libraries : FF<"delete-private-libraries", "delete private system dynamic libraries and frameworks">;
+def t: FF<"t", "logs each library loaded, useful for debugging problems with search paths where the wrong library is loaded">;
+
+
+//
+// Compare options
+//
+defm ignore_arch : JS<"ignore-arch", "<architecture> slice to ignore for comparison", "<architecture>">;

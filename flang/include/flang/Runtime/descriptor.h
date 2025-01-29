@@ -19,6 +19,7 @@
 // but should never reference this internal header.
 
 #include "flang/ISO_Fortran_binding_wrapper.h"
+#include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/memory.h"
 #include "flang/Runtime/type-code.h"
 #include <algorithm>
@@ -28,14 +29,8 @@
 #include <cstdio>
 #include <cstring>
 
-namespace Fortran::runtime::typeInfo {
-using TypeParameterValue = std::int64_t;
-class DerivedType;
-} // namespace Fortran::runtime::typeInfo
-
 namespace Fortran::runtime {
 
-using SubscriptValue = ISO::CFI_index_t;
 class Terminator;
 
 RT_VAR_GROUP_BEGIN
@@ -92,17 +87,17 @@ private:
 // The storage for this object follows the last used dim[] entry in a
 // Descriptor (CFI_cdesc_t) generic descriptor.  Space matters here, since
 // descriptors serve as POINTER and ALLOCATABLE components of derived type
-// instances.  The presence of this structure is implied by the flag
-// CFI_cdesc_t.f18Addendum, and the number of elements in the len_[]
+// instances.  The presence of this structure is encoded in the
+// CFI_cdesc_t.extra field, and the number of elements in the len_[]
 // array is determined by derivedType_->LenParameters().
 class DescriptorAddendum {
 public:
   explicit RT_API_ATTRS DescriptorAddendum(
       const typeInfo::DerivedType *dt = nullptr)
-      : derivedType_{dt} {}
+      : derivedType_{dt}, len_{0} {}
   RT_API_ATTRS DescriptorAddendum &operator=(const DescriptorAddendum &);
 
-  const RT_API_ATTRS typeInfo::DerivedType *derivedType() const {
+  RT_API_ATTRS const typeInfo::DerivedType *derivedType() const {
     return derivedType_;
   }
   RT_API_ATTRS DescriptorAddendum &set_derivedType(
@@ -204,7 +199,7 @@ public:
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
 
   RT_API_ATTRS ISO::CFI_cdesc_t &raw() { return raw_; }
-  const RT_API_ATTRS ISO::CFI_cdesc_t &raw() const { return raw_; }
+  RT_API_ATTRS const ISO::CFI_cdesc_t &raw() const { return raw_; }
   RT_API_ATTRS std::size_t ElementBytes() const { return raw_.elem_len; }
   RT_API_ATTRS int rank() const { return raw_.rank; }
   RT_API_ATTRS TypeCode type() const { return TypeCode{raw_.type}; }
@@ -225,7 +220,7 @@ public:
   RT_API_ATTRS Dimension &GetDimension(int dim) {
     return *reinterpret_cast<Dimension *>(&raw_.dim[dim]);
   }
-  const RT_API_ATTRS Dimension &GetDimension(int dim) const {
+  RT_API_ATTRS const Dimension &GetDimension(int dim) const {
     return *reinterpret_cast<const Dimension *>(&raw_.dim[dim]);
   }
 
@@ -339,14 +334,14 @@ public:
       const SubscriptValue *, const int *permutation = nullptr) const;
 
   RT_API_ATTRS DescriptorAddendum *Addendum() {
-    if (raw_.f18Addendum != 0) {
+    if (HasAddendum()) {
       return reinterpret_cast<DescriptorAddendum *>(&GetDimension(rank()));
     } else {
       return nullptr;
     }
   }
-  const RT_API_ATTRS DescriptorAddendum *Addendum() const {
-    if (raw_.f18Addendum != 0) {
+  RT_API_ATTRS const DescriptorAddendum *Addendum() const {
+    if (HasAddendum()) {
       return reinterpret_cast<const DescriptorAddendum *>(
           &GetDimension(rank()));
     } else {
@@ -375,6 +370,7 @@ public:
   // allocation.  Does not allocate automatic components or
   // perform default component initialization.
   RT_API_ATTRS int Allocate();
+  RT_API_ATTRS void SetByteStrides();
 
   // Deallocates storage; does not call FINAL subroutines or
   // deallocate allocatable/automatic components.
@@ -419,6 +415,20 @@ public:
 
   void Dump(FILE * = stdout) const;
 
+  RT_API_ATTRS inline bool HasAddendum() const {
+    return raw_.extra & _CFI_ADDENDUM_FLAG;
+  }
+  RT_API_ATTRS inline void SetHasAddendum() {
+    raw_.extra |= _CFI_ADDENDUM_FLAG;
+  }
+  RT_API_ATTRS inline int GetAllocIdx() const {
+    return (raw_.extra & _CFI_ALLOCATOR_IDX_MASK) >> _CFI_ALLOCATOR_IDX_SHIFT;
+  }
+  RT_API_ATTRS inline void SetAllocIdx(int pos) {
+    raw_.extra &= ~_CFI_ALLOCATOR_IDX_MASK; // Clear the allocator index bits.
+    raw_.extra |= pos << _CFI_ALLOCATOR_IDX_SHIFT;
+  }
+
 private:
   ISO::CFI_cdesc_t raw_;
 };
@@ -442,12 +452,14 @@ public:
   static constexpr bool hasAddendum{ADDENDUM || MAX_LEN_PARMS > 0};
   static constexpr std::size_t byteSize{
       Descriptor::SizeInBytes(maxRank, hasAddendum, maxLengthTypeParameters)};
+  static_assert(byteSize <=
+      MaxDescriptorSizeInBytes(maxRank, hasAddendum, maxLengthTypeParameters));
   RT_OFFLOAD_VAR_GROUP_END
 
   RT_API_ATTRS Descriptor &descriptor() {
     return *reinterpret_cast<Descriptor *>(storage_);
   }
-  const RT_API_ATTRS Descriptor &descriptor() const {
+  RT_API_ATTRS const Descriptor &descriptor() const {
     return *reinterpret_cast<const Descriptor *>(storage_);
   }
 
@@ -455,6 +467,7 @@ public:
     assert(descriptor().rank() <= maxRank);
     assert(descriptor().SizeInBytes() <= byteSize);
     if (DescriptorAddendum * addendum{descriptor().Addendum()}) {
+      (void)addendum;
       assert(hasAddendum);
       assert(addendum->LenParameters() <= maxLengthTypeParameters);
     } else {

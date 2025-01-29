@@ -5,13 +5,11 @@
 ;;   vstorea_half4_rtp( data, 0, f );
 ;; }
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; TODO(#60133): Requires updates following opaque pointer migration.
-; XFAIL: *
-
-; CHECK-SPIRV:     OpCapability Float16Buffer
-; CHECK-SPIRV-NOT: OpCapability Float16
+; CHECK-DAG: OpCapability Float16Buffer
+; CHECK-DAG: OpCapability Float16
 
 define spir_kernel void @test(<4 x float> addrspace(1)* %p, half addrspace(1)* %f) {
 entry:

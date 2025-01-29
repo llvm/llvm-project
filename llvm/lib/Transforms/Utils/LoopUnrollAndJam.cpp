@@ -48,6 +48,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <assert.h>
@@ -139,10 +140,8 @@ static bool processHeaderPhiOperands(BasicBlock *Header, BasicBlock *Latch,
   SmallPtrSet<Instruction *, 8> VisitedInstr;
 
   std::function<bool(Instruction * I)> ProcessInstr = [&](Instruction *I) {
-    if (VisitedInstr.count(I))
+    if (!VisitedInstr.insert(I).second)
       return true;
-
-    VisitedInstr.insert(I);
 
     if (AftBlocks.count(I->getParent()))
       for (auto &U : I->operands())
@@ -166,7 +165,7 @@ static bool processHeaderPhiOperands(BasicBlock *Header, BasicBlock *Latch,
 // Move the phi operands of Header from Latch out of AftBlocks to InsertLoc.
 static void moveHeaderPhiOperandsToForeBlocks(BasicBlock *Header,
                                               BasicBlock *Latch,
-                                              Instruction *InsertLoc,
+                                              BasicBlock::iterator InsertLoc,
                                               BasicBlockSet &AftBlocks) {
   // We need to ensure we move the instructions in the correct order,
   // starting with the earliest required instruction and moving forward.
@@ -243,7 +242,8 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
     if (!UnrollRuntimeLoopRemainder(L, Count, /*AllowExpensiveTripCount*/ false,
                                     /*UseEpilogRemainder*/ true,
                                     UnrollRemainder, /*ForgetAllSCEV*/ false,
-                                    LI, SE, DT, AC, TTI, true, EpilogueLoop)) {
+                                    LI, SE, DT, AC, TTI, true,
+                                    SCEVCheapExpansionBudget, EpilogueLoop)) {
       LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; remainder loop could not be "
                            "generated when assuming runtime trip count\n");
       return LoopUnrollResult::Unmodified;
@@ -329,7 +329,8 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
 
   // Move any instructions from fore phi operands from AftBlocks into Fore.
   moveHeaderPhiOperandsToForeBlocks(
-      Header, LatchBlock, ForeBlocksLast[0]->getTerminator(), AftBlocks);
+      Header, LatchBlock, ForeBlocksLast[0]->getTerminator()->getIterator(),
+      AftBlocks);
 
   // The current on-the-fly SSA update requires blocks to be processed in
   // reverse postorder so that LastValueMap contains the correct value at each
@@ -473,9 +474,9 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
   };
   // Move all the phis from Src into Dest
   auto movePHIs = [](BasicBlock *Src, BasicBlock *Dest) {
-    Instruction *insertPoint = Dest->getFirstNonPHI();
+    BasicBlock::iterator insertPoint = Dest->getFirstNonPHIIt();
     while (PHINode *Phi = dyn_cast<PHINode>(Src->begin()))
-      Phi->moveBefore(insertPoint);
+      Phi->moveBefore(*Dest, insertPoint);
   };
 
   // Update the PHI values outside the loop to point to the last block
@@ -522,7 +523,7 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
     // unconditional one to this one
     BranchInst *SubTerm =
         cast<BranchInst>(SubLoopBlocksLast[It - 1]->getTerminator());
-    BranchInst::Create(SubLoopBlocksFirst[It], SubTerm);
+    BranchInst::Create(SubLoopBlocksFirst[It], SubTerm->getIterator());
     SubTerm->eraseFromParent();
 
     SubLoopBlocksFirst[It]->replacePhiUsesWith(ForeBlocksLast[It],
@@ -535,7 +536,7 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
   // Aft blocks successors and phis
   BranchInst *AftTerm = cast<BranchInst>(AftBlocksLast.back()->getTerminator());
   if (CompletelyUnroll) {
-    BranchInst::Create(LoopExit, AftTerm);
+    BranchInst::Create(LoopExit, AftTerm->getIterator());
     AftTerm->eraseFromParent();
   } else {
     AftTerm->setSuccessor(!ContinueOnTrue, ForeBlocksFirst[0]);
@@ -550,7 +551,7 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
     // unconditional one to this one
     BranchInst *AftTerm =
         cast<BranchInst>(AftBlocksLast[It - 1]->getTerminator());
-    BranchInst::Create(AftBlocksFirst[It], AftTerm);
+    BranchInst::Create(AftBlocksFirst[It], AftTerm->getIterator());
     AftTerm->eraseFromParent();
 
     AftBlocksFirst[It]->replacePhiUsesWith(SubLoopBlocksLast[It],

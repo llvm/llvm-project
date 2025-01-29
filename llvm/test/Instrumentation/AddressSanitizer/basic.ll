@@ -218,4 +218,4 @@ define void @test_swifterror_3() sanitize_address {
 ; CHECK: attributes #[[#ATTR]] = { nounwind }
 
 ; PROF
-; CHECK: ![[PROF]] = !{!"branch_weights", i32 1, i32 100000}
+; CHECK: ![[PROF]] = !{!"branch_weights", i32 1, i32 1048575}

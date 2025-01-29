@@ -32,10 +32,12 @@ class SPIRV_Attr<string attrName, string attrMnemonic>
 // points in the generated SPIR-V module:
 // 1) [optional] Requested workgroup size.
 // 2) [optional] Requested subgroup size.
+// 3) [optional] Requested target width.
 def SPIRV_EntryPointABIAttr : SPIRV_Attr<"EntryPointABI", "entry_point_abi"> {
   let parameters = (ins
     OptionalParameter<"DenseI32ArrayAttr">:$workgroup_size,
-    OptionalParameter<"std::optional<int>">:$subgroup_size
+    OptionalParameter<"std::optional<int>">:$subgroup_size,
+    OptionalParameter<"std::optional<int>">:$target_width
   );
   let assemblyFormat = "`<` struct(params) `>`";
 }
@@ -48,7 +50,7 @@ def SPIRV_CapabilityArrayAttr : TypedArrayAttrBase<
 
 def SPIRV_LinkageAttributesAttr : SPIRV_Attr<"LinkageAttributes", "linkage_attributes"> {
   let parameters = (ins
-    "std::string":$linkage_name,
+    "StringAttr":$linkage_name,
     "mlir::spirv::LinkageTypeAttr":$linkage_type
   );
   let assemblyFormat = "`<` struct(params) `>`";
@@ -95,30 +97,23 @@ def SPIRV_CooperativeMatrixPropertiesNVAttr :
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
-def SPIRV_CooperativeMatrixPropertiesNVArrayAttr :
-    TypedArrayAttrBase<SPIRV_CooperativeMatrixPropertiesNVAttr,
-                       "CooperativeMatrixPropertiesNV array attribute">;
-
-// Description of the supported joint matrix operations. See
-// https://github.com/intel/llvm/blob/sycl/sycl/doc/design/spirv-extensions/SPV_INTEL_joint_matrix.asciidoc
-def SPIRV_JointMatrixPropertiesINTELAttr :
-    SPIRV_Attr<"JointMatrixPropertiesINTEL", "joint_matrix_props"> {
-  let parameters = (ins
-    "int":$m_size,
-    "int":$n_size,
-    "int":$k_size,
-    "mlir::Type":$a_type,
-    "mlir::Type":$b_type,
-    "mlir::Type":$c_type,
-    "mlir::Type":$result_type,
-    "mlir::spirv::ScopeAttr":$scope
-  );
+def SPIRV_CacheControlLoadINTELAttr :
+    SPIRV_Attr<"CacheControlLoadINTEL", "cache_control_load_intel"> {
+  let parameters = (ins "unsigned":$cache_level,
+                        "mlir::spirv::LoadCacheControl":$load_cache_control);
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
-def SPIRV_JointMatrixPropertiesINTELArrayAttr :
-    TypedArrayAttrBase<SPIRV_JointMatrixPropertiesINTELAttr,
-                       "JointMatrixPropertiesINTEL array attribute">;
+def SPIRV_CacheControlStoreINTELAttr :
+    SPIRV_Attr<"CacheControlStoreINTEL", "cache_control_store_intel"> {
+  let parameters = (ins "unsigned":$cache_level,
+                        "mlir::spirv::StoreCacheControl":$store_cache_control);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def SPIRV_CooperativeMatrixPropertiesNVArrayAttr :
+    TypedArrayAttrBase<SPIRV_CooperativeMatrixPropertiesNVAttr,
+                       "CooperativeMatrixPropertiesNV array attribute">;
 
 // This attribute specifies the limits for various resources on the target
 // architecture.

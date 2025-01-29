@@ -17,7 +17,7 @@
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/AffineExpr.h"
@@ -42,7 +42,7 @@ using namespace mlir::transform::gpu;
 #define DEBUG_TYPE "gpu-transforms"
 
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
+#define LDBG(X) LLVM_DEBUG(DBGS() << (X) << "\n")
 #define DBGS_ALIAS() (llvm::dbgs() << '[' << DEBUG_TYPE_ALIAS << "] ")
 
 /// Return a flattened thread id for the workgroup with given sizes.
@@ -55,9 +55,9 @@ static Value buildLinearId(RewriterBase &rewriter, Location loc,
              llvm::dbgs() << "\n");
   assert(originalBasisOfr.size() == 3 && "expected 3 sizes");
   IndexType indexType = rewriter.getIndexType();
-  AffineExpr tx, ty, tz, BDX, BDY;
+  AffineExpr tx, ty, tz, bdx, bdy;
   bindDims(rewriter.getContext(), tx, ty, tz);
-  bindSymbols(rewriter.getContext(), BDX, BDY);
+  bindSymbols(rewriter.getContext(), bdx, bdy);
   SmallVector<OpFoldResult> vals{
       rewriter.create<ThreadOrBlockIdOp>(loc, indexType, Dimension::x)
           .getResult(),
@@ -67,7 +67,7 @@ static Value buildLinearId(RewriterBase &rewriter, Location loc,
           .getResult(),
       originalBasisOfr[0], originalBasisOfr[1]};
   OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
-      rewriter, loc, tx + ty * BDX + tz * BDX * BDY, vals);
+      rewriter, loc, tx + ty * bdx + tz * bdx * bdy, vals);
   return getValueOrCreateConstantIndexOp(rewriter, loc, ofr);
 }
 
@@ -113,16 +113,17 @@ static GpuIdBuilderFnType commonLinearIdBuilderFn(int64_t multiplicity = 1) {
     // clang-format on
 
     // Return n-D ids for indexing and 1-D size + id for predicate generation.
-    return IdBuilderResult{
-        /*mappingIdOps=*/ids,
-        /*availableMappingSizes=*/
-        SmallVector<int64_t>{computeProduct(originalBasis)},
-        // `forallMappingSizes` iterate in the scaled basis, they need to be
-        // scaled back into the original basis to provide tight
-        // activeMappingSizes quantities for predication.
-        /*activeMappingSizes=*/
-        SmallVector<int64_t>{computeProduct(forallMappingSizes) * multiplicity},
-        /*activeIdOps=*/SmallVector<Value>{linearId.get<Value>()}};
+      return IdBuilderResult{
+          /*mappingIdOps=*/ids,
+          /*availableMappingSizes=*/
+          SmallVector<int64_t>{computeProduct(originalBasis)},
+          // `forallMappingSizes` iterate in the scaled basis, they need to be
+          // scaled back into the original basis to provide tight
+          // activeMappingSizes quantities for predication.
+          /*activeMappingSizes=*/
+          SmallVector<int64_t>{computeProduct(forallMappingSizes) *
+                               multiplicity},
+          /*activeIdOps=*/SmallVector<Value>{cast<Value>(linearId)}};
   };
 
   return res;
@@ -144,12 +145,10 @@ static GpuIdBuilderFnType common3DIdBuilderFn(int64_t multiplicity = 1) {
     // In the 3-D mapping case, scale the first dimension by the multiplicity.
     SmallVector<Value> scaledIds = ids;
     AffineExpr d0 = getAffineDimExpr(0, rewriter.getContext());
-    scaledIds[0] = affine::makeComposedFoldedAffineApply(
-                       rewriter, loc, d0.floorDiv(multiplicity), {scaledIds[0]})
-                       .get<Value>();
+    scaledIds[0] = cast<Value>(affine::makeComposedFoldedAffineApply(
+        rewriter, loc, d0.floorDiv(multiplicity), {scaledIds[0]}));
     // In the 3-D mapping case, unscale the first dimension by the multiplicity.
-    SmallVector<int64_t> forallMappingSizeInOriginalBasis(
-        forallMappingSizes.begin(), forallMappingSizes.end());
+    SmallVector<int64_t> forallMappingSizeInOriginalBasis(forallMappingSizes);
     forallMappingSizeInOriginalBasis[0] *= multiplicity;
     return IdBuilderResult{
         /*mappingIdOps=*/scaledIds,
@@ -169,7 +168,7 @@ namespace transform {
 namespace gpu {
 
 GpuIdBuilder::GpuIdBuilder(MLIRContext *ctx, bool useLinearMapping,
-                           MappingIdBuilderFnType fn)
+                           const MappingIdBuilderFnType &fn)
     : mappingAttributes(), idBuilder() {
   if (useLinearMapping) {
     for (uint64_t d = static_cast<uint64_t>(MappingId::LinearDim0),

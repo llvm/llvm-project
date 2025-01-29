@@ -1,12 +1,23 @@
+// See https://github.com/llvm/llvm-project/issues/97712.
+UNSUPPORTED: target={{.*}}
+
 RUN: %cpp_compiler %S/SimpleTest.cpp -o %t-SimpleTest
-RUN: %run %t-SimpleTest -seed=1 -runs=77 -print_final_stats=1 2>&1 | FileCheck %s --check-prefix=FINAL_STATS
+
+// Note: `-detect_leaks=0` is required to prevent flakiness in this test.
+// There's some logic in LeakSanitizer and its integration into libFuzzer that
+// will disable LSan and re-run the input. This only happens when more malloc()s
+// are detected than free()s. Under high system load, this appears to be
+// possible as the "more mallocs than frees" is dependent on walltime. In these
+// instances, the number of runs ends up being `n + 1`, which is undesirable.
+
+RUN: %run %t-SimpleTest -seed=1 -runs=77 -print_final_stats=1 -detect_leaks=0 2>&1 | FileCheck %s --check-prefix=FINAL_STATS
 FINAL_STATS: stat::number_of_executed_units: 77
 FINAL_STATS: stat::average_exec_per_sec:     0
 FINAL_STATS: stat::new_units_added:
 FINAL_STATS: stat::slowest_unit_time_sec:    0
 FINAL_STATS: stat::peak_rss_mb:
 
-RUN: %run %t-SimpleTest %S/dict1.txt -runs=33 -print_final_stats=1 2>&1 | FileCheck %s --check-prefix=FINAL_STATS1
+RUN: %run %t-SimpleTest %S/dict1.txt -runs=33 -print_final_stats=1 -detect_leaks=0 2>&1 | FileCheck %s --check-prefix=FINAL_STATS1
 FINAL_STATS1: stat::number_of_executed_units: 33
 FINAL_STATS1: stat::peak_rss_mb:
 

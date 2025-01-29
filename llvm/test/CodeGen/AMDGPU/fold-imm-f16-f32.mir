@@ -1,4 +1,5 @@
 # RUN: llc --mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs -run-pass si-fold-operands,si-shrink-instructions %s -o - | FileCheck %s
+# RUN: llc --mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs -passes si-fold-operands,si-shrink-instructions %s -o - | FileCheck %s
 --- |
   define amdgpu_kernel void @add_f32_1.0_one_f16_use() #0 {
     %f16.val0 = load volatile half, ptr addrspace(1) undef

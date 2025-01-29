@@ -13,6 +13,8 @@ add_libc_unittest(
     20
   DEPENDS
     libc.src.time.asctime
+    libc.hdr.types.struct_tm
+    libc.src.time.time_constants
 )
 
 add_libc_unittest(
@@ -28,16 +30,69 @@ add_libc_unittest(
     20
   DEPENDS
     libc.src.time.asctime_r
+    libc.hdr.types.struct_tm
+    libc.src.time.time_constants
 )
 
 add_libc_unittest(
+  ctime_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    ctime_test.cpp
+  HDRS
+    TmHelper.h
+    TmMatcher.h
+  CXX_STANDARD
+    20
+  DEPENDS
+    libc.include.time
+    libc.hdr.types.time_t
+    libc.src.time.ctime
+    libc.src.time.time_constants
+    libc.hdr.types.struct_tm
+)
+
+add_libc_unittest(
+  ctime_r_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    ctime_r_test.cpp
+  HDRS
+    TmHelper.h
+    TmMatcher.h
+  CXX_STANDARD
+    20
+  DEPENDS
+    libc.include.time
+    libc.hdr.types.time_t
+    libc.src.time.ctime_r
+    libc.src.time.time_constants
+    libc.hdr.types.struct_tm
+)
+
+add_libc_test(
   clock_gettime_test
   SUITE
     libc_time_unittests
   SRCS
-  clock_gettime_test.cpp
+    clock_gettime_test.cpp
   DEPENDS
     libc.src.time.clock_gettime
+    libc.hdr.types.time_t
+    libc.hdr.types.struct_timespec
+    libc.hdr.time_macros
+)
+
+add_libc_test(
+  clock_getres_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    clock_getres_test.cpp
+  DEPENDS
+    libc.src.time.clock_getres
 )
 
 add_libc_unittest(
@@ -48,6 +103,8 @@ add_libc_unittest(
     difftime_test.cpp
   DEPENDS
     libc.src.time.difftime
+    libc.src.time.time_constants
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_libc_unittest(
@@ -59,6 +116,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.time
     libc.src.time.gettimeofday
+    libc.hdr.types.struct_timeval
 )
 
 add_libc_unittest(
@@ -71,6 +129,9 @@ add_libc_unittest(
     TmMatcher.h
   DEPENDS
     libc.src.time.gmtime
+    libc.src.__support.CPP.limits
+    libc.hdr.types.struct_tm
+    libc.src.time.time_constants
 )
 
 add_libc_unittest(
@@ -83,6 +144,8 @@ add_libc_unittest(
     TmMatcher.h
   DEPENDS
     libc.src.time.gmtime_r
+    libc.hdr.types.struct_tm
+    libc.src.time.time_constants
 )
 
 add_libc_unittest(
@@ -98,23 +161,23 @@ add_libc_unittest(
     20
   DEPENDS
     libc.src.time.mktime
+    libc.src.__support.CPP.limits
+    libc.hdr.types.struct_tm
+    libc.src.time.time_constants
 )
 
-# Sleeping is not supported on older NVPTX architectures.
-set(unsupported_architectures "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62")
-if (NOT ("${LIBC_GPU_TARGET_ARCHITECTURE}" IN_LIST unsupported_architectures))
-  add_libc_test(
-    nanosleep_test
-    SUITE
-      libc_time_unittests
-    SRCS
-      nanosleep_test.cpp
-    DEPENDS
-      libc.include.time
-      libc.src.time.nanosleep
-      libc.src.errno.errno
-  )
-endif()
+add_libc_test(
+  nanosleep_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    nanosleep_test.cpp
+  DEPENDS
+    libc.include.time
+    libc.src.time.nanosleep
+    libc.src.errno.errno
+    libc.hdr.types.struct_timespec
+)
 
 add_libc_unittest(
   time_test
@@ -123,9 +186,20 @@ add_libc_unittest(
   SRCS
     time_test.cpp
   DEPENDS
-    libc.include.time
     libc.src.time.time
+    libc.src.__support.time.clock_gettime
     libc.src.errno.errno
+)
+
+add_libc_test(
+  timespec_get_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    timespec_get_test.cpp
+  DEPENDS
+    libc.src.time.timespec_get
+    libc.hdr.types.struct_timespec
 )
 
 add_libc_test(
@@ -138,4 +212,5 @@ add_libc_test(
     libc.include.time
     libc.src.time.clock
     libc.src.errno.errno
+    libc.hdr.types.clock_t
 )

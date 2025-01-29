@@ -2487,7 +2487,7 @@ type.
     .. note::
 
       Could also consider adding ``DW_OP_LLVM_aspace_breg0,
-      DW_OP_LLVM_aspace_breg1, ..., DW_OP_LLVM_aspace_bref31`` which would save
+      DW_OP_LLVM_aspace_breg1, ..., DW_OP_LLVM_aspace_breg31`` which would save
       encoding size.
 
 .. _amdgpu-dwarf-register-location-description-operations:
@@ -3803,6 +3803,12 @@ A.5.1 Base Type Entries
       it better to add an attribute to the existing ``DW_TAG_base_type`` debug
       entry, or allow some forms of ``DW_TAG_array_type`` (those that have the
       ``DW_AT_GNU_vector`` attribute) to be used as stack entry value types?
+
+2. A ``DW_TAG_base_type`` debugger information entry with the encoding
+   ``DW_ATE_address`` may have a ``DW_AT_LLVM_address_space`` attribute whose
+   value is an architecture specific address space (see
+   :ref:`amdgpu-dwarf-address-spaces`). If omitted it defaults to
+   ``DW_ASPACE_LLVM_none``.
 
 .. _amdgpu-dwarf-type-modifier-entries:
 

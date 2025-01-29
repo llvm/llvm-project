@@ -191,7 +191,6 @@ namespace N2 {
 
   // CHECK-LABEL: define{{.*}} void @_ZN2N21fEi
   // CHECK: call void @_ZN2N24getPEv
-  // CHECK: getelementptr inbounds
   // CHECK: store i32 17
   // CHECK: call void @_ZN2N21PD1Ev
   void f(int i) {
@@ -220,8 +219,7 @@ namespace N2 {
 
   // CHECK-LABEL: define{{.*}} void @_ZN2N21gEi
   // CHECK: call void @_ZN2N24getZEv
-  // CHECK: {{getelementptr inbounds.*i32 0, i32 0}}
-  // CHECK: {{getelementptr inbounds.*i32 0, i32 0}}
+  // CHECK: {{getelementptr inbounds.*i64 16}}
   // CHECK: store i32 19
   // CHECK: call void @_ZN2N21ZD1Ev
   // CHECK: ret void

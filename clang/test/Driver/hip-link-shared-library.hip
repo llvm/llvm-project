@@ -1,7 +1,8 @@
 // RUN: touch %t.o
+// RUN: touch %t.so
 // RUN: %clang --hip-link -ccc-print-bindings --target=x86_64-linux-gnu \
-// RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %t.o %S/Inputs/in.so \
-// RUN:   -fgpu-rdc 2>&1 | FileCheck %s
+// RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %t.o %t.so \
+// RUN:   --no-offload-new-driver -fgpu-rdc 2>&1 | FileCheck %s
 
 // CHECK: # "x86_64-unknown-linux-gnu" - "offload bundler", inputs: ["[[IN:.*o]]"], outputs: ["[[HOSTOBJ:.*o]]", "{{.*o}}", "{{.*o}}"]
 // CHECK: # "amdgcn-amd-amdhsa" - "offload bundler", inputs: ["[[IN]]"], outputs: ["{{.*o}}", "[[DOBJ1:.*o]]", "[[DOBJ2:.*o]]"]
@@ -11,5 +12,4 @@
 // CHECK-NOT: offload bundler
 // CHECK: # "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[IMG1]]", "[[IMG2]]"], output: "[[FATBINOBJ:.*o]]"
 // CHECK-NOT: offload bundler
-// CHECK: # "x86_64-unknown-linux-gnu" - "GNU::Linker", inputs: ["[[HOSTOBJ]]", "{{.*}}/Inputs/in.so", "[[FATBINOBJ]]"], output: "a.out"
-
+// CHECK: # "x86_64-unknown-linux-gnu" - "GNU::Linker", inputs: ["[[HOSTOBJ]]", "{{.*}}.so", "[[FATBINOBJ]]"], output: "a.out"

@@ -1,6 +1,6 @@
 ; RUN: llc < %s -debug-entry-values -mtriple=arm64-apple-darwin | FileCheck %s
 
-; Stackmap Header: no constants - 6 callsites
+; Stackmap Header: no constants - 18 callsites
 ; CHECK-LABEL: .section	__LLVM_STACKMAPS,__llvm_stackmaps
 ; CHECK-NEXT:  __LLVM_StackMaps:
 ; Header
@@ -8,11 +8,11 @@
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 0
 ; Num Functions
-; CHECK-NEXT:   .long 8
+; CHECK-NEXT:   .long 22
 ; Num LargeConstants
 ; CHECK-NEXT:   .long 0
 ; Num Callsites
-; CHECK-NEXT:   .long 8
+; CHECK-NEXT:   .long 22
 
 ; Functions and stack size
 ; CHECK-NEXT:   .quad _test
@@ -38,6 +38,48 @@
 ; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _patchpoint_spillargs
 ; CHECK-NEXT:   .quad 128
+; CHECK-NEXT:   .quad 1
+; CHECK-NEXT:   .quad _generic_test_i1
+; CHECK-NEXT:   .quad 16
+; CHECK-NEXT:   .quad 1
+; CHECK-NEXT:   .quad _generic_test_i8
+; CHECK-NEXT:   .quad 16
+; CHECK-NEXT:   .quad 1
+; CHECK-NEXT:   .quad _generic_test_i16
+; CHECK-NEXT:   .quad 16
+; CHECK-NEXT:   .quad 1
+; CHECK-NEXT:   .quad _generic_test_i29
+; CHECK-NEXT:   .quad 16
+; CHECK-NEXT:   .quad 1
+; CHECK-NEXT:   .quad _generic_test_i32
+; CHECK-NEXT:   .quad 16
+; CHECK-NEXT:   .quad 1
+; CHECK-NEXT:   .quad _generic_test_i64
+; CHECK-NEXT:   .quad 16
+; CHECK-NEXT:   .quad 1
+; CHECK-NEXT:   .quad _generic_test_p0
+; CHECK-NEXT:   .quad 16
+; CHECK-NEXT:   .quad 1
+; CHECK-NEXT:   .quad _generic_test_f16
+; CHECK-NEXT:   .quad 16
+; CHECK-NEXT:   .quad 1
+; CHECK-NEXT:   .quad _generic_test_f32
+; CHECK-NEXT:   .quad 16
+; CHECK-NEXT:   .quad 1
+; CHECK-NEXT:   .quad _generic_test_f64
+; CHECK-NEXT:   .quad 16
+; CHECK-NEXT:   .quad 1
+; CHECK-NEXT:   .quad _generic_test_v16i8
+; CHECK-NEXT:   .quad 16
+; CHECK-NEXT:   .quad 1
+; CHECK-NEXT:   .quad _generic_test_v4i32
+; CHECK-NEXT:   .quad 16
+; CHECK-NEXT:   .quad 1
+; CHECK-NEXT:   .quad _generic_test_v4f32
+; CHECK-NEXT:   .quad 16
+; CHECK-NEXT:   .quad 1
+; CHECK-NEXT:   .quad _generic_test_v2f64
+; CHECK-NEXT:   .quad 16
 ; CHECK-NEXT:   .quad 1
 
 
@@ -457,5 +499,266 @@ entry:
   ret i64 %result
 }
 
+; generic_test_i1
+; CHECK-LABEL:  .long   L{{.*}}-_generic_test_i1
+; CHECK-NEXT:   .short  0
+; 1 location
+; CHECK-NEXT:   .short  1
+; Loc 0: Register <-- this is the return register
+; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 0
+; CHECK-NEXT:   .short 4
+; CHECK-NEXT:   .short {{[0-9]+}}
+; CHECK-NEXT:   .short 0
+; CHECK-NEXT:   .long 0
+define i1 @generic_test_i1() nounwind ssp uwtable {
+entry:
+  %ret = call anyregcc i1 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i1(i64 14, i32 20, ptr null, i32 0)
+  ret i1 %ret
+}
+
+; generic_test_i8
+; CHECK-LABEL:  .long   L{{.*}}-_generic_test_i8
+; CHECK-NEXT:   .short  0
+; 1 location
+; CHECK-NEXT:   .short  1
+; Loc 0: Register <-- this is the return register
+; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 0
+; CHECK-NEXT:   .short 4
+; CHECK-NEXT:   .short {{[0-9]+}}
+; CHECK-NEXT:   .short 0
+; CHECK-NEXT:   .long 0
+define i8 @generic_test_i8() nounwind ssp uwtable {
+entry:
+  %ret = call anyregcc i8 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i8(i64 14, i32 20, ptr null, i32 0)
+  ret i8 %ret
+}
+
+; generic_test_i16
+; CHECK-LABEL:  .long   L{{.*}}-_generic_test_i16
+; CHECK-NEXT:   .short  0
+; 1 location
+; CHECK-NEXT:   .short  1
+; Loc 0: Register <-- this is the return register
+; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 0
+; CHECK-NEXT:   .short 4
+; CHECK-NEXT:   .short {{[0-9]+}}
+; CHECK-NEXT:   .short 0
+; CHECK-NEXT:   .long 0
+define i16 @generic_test_i16() nounwind ssp uwtable {
+entry:
+  %ret = call anyregcc i16 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i16(i64 14, i32 20, ptr null, i32 0)
+  ret i16 %ret
+}
+
+; generic_test_i29
+; CHECK-LABEL:  .long   L{{.*}}-_generic_test_i29
+; CHECK-NEXT:   .short  0
+; 1 location
+; CHECK-NEXT:   .short  1
+; Loc 0: Register <-- this is the return register
+; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 0
+; CHECK-NEXT:   .short 4
+; CHECK-NEXT:   .short {{[0-9]+}}
+; CHECK-NEXT:   .short 0
+; CHECK-NEXT:   .long 0
+define i29 @generic_test_i29() nounwind ssp uwtable {
+entry:
+  %ret = call anyregcc i29 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i29(i64 14, i32 20, ptr null, i32 0)
+  ret i29 %ret
+}
+
+; generic_test_i32
+; CHECK-LABEL:  .long   L{{.*}}-_generic_test_i32
+; CHECK-NEXT:   .short  0
+; 1 location
+; CHECK-NEXT:   .short  1
+; Loc 0: Register <-- this is the return register
+; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 0
+; CHECK-NEXT:   .short 4
+; CHECK-NEXT:   .short {{[0-9]+}}
+; CHECK-NEXT:   .short 0
+; CHECK-NEXT:   .long 0
+define i32 @generic_test_i32() nounwind ssp uwtable {
+entry:
+  %ret = call anyregcc i32 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i32(i64 14, i32 20, ptr null, i32 0)
+  ret i32 %ret
+}
+
+; generic_test_i64
+; CHECK-LABEL:  .long   L{{.*}}-_generic_test_i64
+; CHECK-NEXT:   .short  0
+; 1 location
+; CHECK-NEXT:   .short  1
+; Loc 0: Register <-- this is the return register
+; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 0
+; CHECK-NEXT:   .short 8
+; CHECK-NEXT:   .short {{[0-9]+}}
+; CHECK-NEXT:   .short 0
+; CHECK-NEXT:   .long 0
+define i64 @generic_test_i64() nounwind ssp uwtable {
+entry:
+  %ret = call anyregcc i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 14, i32 20, ptr null, i32 0)
+  ret i64 %ret
+}
+
+; generic_test_p0
+; CHECK-LABEL:  .long   L{{.*}}-_generic_test_p0
+; CHECK-NEXT:   .short  0
+; 1 location
+; CHECK-NEXT:   .short  1
+; Loc 0: Register <-- this is the return register
+; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 0
+; CHECK-NEXT:   .short 8
+; CHECK-NEXT:   .short {{[0-9]+}}
+; CHECK-NEXT:   .short 0
+; CHECK-NEXT:   .long 0
+define ptr @generic_test_p0() nounwind ssp uwtable {
+entry:
+  %ret = call anyregcc ptr (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.p0(i64 14, i32 20, ptr null, i32 0)
+  ret ptr %ret
+}
+
+; generic_test_f16
+; CHECK-LABEL:  .long   L{{.*}}-_generic_test_f16
+; CHECK-NEXT:   .short  0
+; 1 location
+; CHECK-NEXT:   .short  1
+; Loc 0: Register <-- this is the return register
+; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 0
+; CHECK-NEXT:   .short 2
+; CHECK-NEXT:   .short {{[0-9]+}}
+; CHECK-NEXT:   .short 0
+; CHECK-NEXT:   .long 0
+define half @generic_test_f16() nounwind ssp uwtable {
+entry:
+  %ret = call anyregcc half (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.f16(i64 14, i32 20, ptr null, i32 0)
+  ret half %ret
+}
+
+; generic_test_f32
+; CHECK-LABEL:  .long   L{{.*}}-_generic_test_f32
+; CHECK-NEXT:   .short  0
+; 1 location
+; CHECK-NEXT:   .short  1
+; Loc 0: Register <-- this is the return register
+; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 0
+; CHECK-NEXT:   .short 4
+; CHECK-NEXT:   .short {{[0-9]+}}
+; CHECK-NEXT:   .short 0
+; CHECK-NEXT:   .long 0
+define float @generic_test_f32() nounwind ssp uwtable {
+entry:
+  %ret = call anyregcc float (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.f32(i64 14, i32 20, ptr null, i32 0)
+  ret float %ret
+}
+
+; generic_test_f64
+; CHECK-LABEL:  .long   L{{.*}}-_generic_test_f64
+; CHECK-NEXT:   .short  0
+; 1 location
+; CHECK-NEXT:   .short  1
+; Loc 0: Register <-- this is the return register
+; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 0
+; CHECK-NEXT:   .short 8
+; CHECK-NEXT:   .short {{[0-9]+}}
+; CHECK-NEXT:   .short 0
+; CHECK-NEXT:   .long 0
+define double @generic_test_f64() nounwind ssp uwtable {
+entry:
+  %ret = call anyregcc double (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.f64(i64 14, i32 20, ptr null, i32 0)
+  ret double %ret
+}
+
+; generic_test_v16i8
+; CHECK-LABEL:  .long   L{{.*}}-_generic_test_v16i8
+; CHECK-NEXT:   .short  0
+; 1 location
+; CHECK-NEXT:   .short  1
+; Loc 0: Register <-- this is the return register
+; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 0
+; CHECK-NEXT:   .short 16
+; CHECK-NEXT:   .short {{[0-9]+}}
+; CHECK-NEXT:   .short 0
+; CHECK-NEXT:   .long 0
+define <16 x i8> @generic_test_v16i8() nounwind ssp uwtable {
+entry:
+  %ret = call anyregcc <16 x i8> (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.v16i8(i64 14, i32 20, ptr null, i32 0)
+  ret <16 x i8> %ret
+}
+
+; generic_test_v4i32
+; CHECK-LABEL:  .long   L{{.*}}-_generic_test_v4i32
+; CHECK-NEXT:   .short  0
+; 1 location
+; CHECK-NEXT:   .short  1
+; Loc 0: Register <-- this is the return register
+; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 0
+; CHECK-NEXT:   .short 16
+; CHECK-NEXT:   .short {{[0-9]+}}
+; CHECK-NEXT:   .short 0
+; CHECK-NEXT:   .long 0
+define <4 x i32> @generic_test_v4i32() nounwind ssp uwtable {
+entry:
+  %ret = call anyregcc <4 x i32> (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.v4i32(i64 14, i32 20, ptr null, i32 0)
+  ret <4 x i32> %ret
+}
+
+; generic_test_v4f32
+; CHECK-LABEL:  .long   L{{.*}}-_generic_test_v4f32
+; CHECK-NEXT:   .short  0
+; 1 location
+; CHECK-NEXT:   .short  1
+; Loc 0: Register <-- this is the return register
+; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 0
+; CHECK-NEXT:   .short 16
+; CHECK-NEXT:   .short {{[0-9]+}}
+; CHECK-NEXT:   .short 0
+; CHECK-NEXT:   .long 0
+define <4 x float> @generic_test_v4f32() nounwind ssp uwtable {
+entry:
+  %ret = call anyregcc <4 x float> (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.v4f32(i64 14, i32 20, ptr null, i32 0)
+  ret <4 x float> %ret
+}
+
+; generic_test_v2f64
+; CHECK-LABEL:  .long   L{{.*}}-_generic_test_v2f64
+; CHECK-NEXT:   .short  0
+; 1 location
+; CHECK-NEXT:   .short  1
+; Loc 0: Register <-- this is the return register
+; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 0
+; CHECK-NEXT:   .short 16
+; CHECK-NEXT:   .short {{[0-9]+}}
+; CHECK-NEXT:   .short 0
+; CHECK-NEXT:   .long 0
+define <2 x double> @generic_test_v2f64() nounwind ssp uwtable {
+entry:
+  %ret = call anyregcc <2 x double> (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.v2f64(i64 14, i32 20, ptr null, i32 0)
+  ret <2 x double> %ret
+}
+
 declare void @llvm.experimental.patchpoint.void(i64, i32, ptr, i32, ...)
+declare i32 @llvm.experimental.patchpoint.i32(i64, i32, ptr, i32, ...)
 declare i64 @llvm.experimental.patchpoint.i64(i64, i32, ptr, i32, ...)
+declare ptr @llvm.experimental.patchpoint.p0(i64, i32, ptr, i32, ...)
+declare half @llvm.experimental.patchpoint.f16(i64, i32, ptr, i32, ...)
+declare float @llvm.experimental.patchpoint.f32(i64, i32, ptr, i32, ...)
+declare double @llvm.experimental.patchpoint.f64(i64, i32, ptr, i32, ...)
+declare <16 x i8> @llvm.experimental.patchpoint.v16i8(i64, i32, ptr, i32, ...)
+declare <4 x i32> @llvm.experimental.patchpoint.v4i32(i64, i32, ptr, i32, ...)
+declare <4 x float> @llvm.experimental.patchpoint.v4f32(i64, i32, ptr, i32, ...)
+declare <2 x double> @llvm.experimental.patchpoint.v2f64(i64, i32, ptr, i32, ...)

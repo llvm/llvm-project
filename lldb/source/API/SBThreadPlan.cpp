@@ -21,12 +21,12 @@
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Queue.h"
+#include "lldb/Target/ScriptedThreadPlan.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
-#include "lldb/Target/ThreadPlanPython.h"
 #include "lldb/Target/ThreadPlanStepInRange.h"
 #include "lldb/Target/ThreadPlanStepInstruction.h"
 #include "lldb/Target/ThreadPlanStepOut.h"
@@ -66,8 +66,8 @@ SBThreadPlan::SBThreadPlan(lldb::SBThread &sb_thread, const char *class_name) {
 
   Thread *thread = sb_thread.get();
   if (thread)
-    m_opaque_wp = std::make_shared<ThreadPlanPython>(*thread, class_name,
-                                                     StructuredDataImpl());
+    m_opaque_wp = std::make_shared<ScriptedThreadPlan>(*thread, class_name,
+                                                       StructuredDataImpl());
 }
 
 SBThreadPlan::SBThreadPlan(lldb::SBThread &sb_thread, const char *class_name,
@@ -76,8 +76,8 @@ SBThreadPlan::SBThreadPlan(lldb::SBThread &sb_thread, const char *class_name,
 
   Thread *thread = sb_thread.get();
   if (thread)
-    m_opaque_wp = std::make_shared<ThreadPlanPython>(*thread, class_name,
-                                                     *args_data.m_impl_up);
+    m_opaque_wp = std::make_shared<ScriptedThreadPlan>(*thread, class_name,
+                                                       *args_data.m_impl_up);
 }
 
 // Assignment operator

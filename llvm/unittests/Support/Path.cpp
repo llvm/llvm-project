@@ -12,6 +12,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Duration.h"
@@ -190,6 +191,7 @@ TEST(Support, Path) {
   paths.push_back("c:\\foo\\");
   paths.push_back("c:\\foo/");
   paths.push_back("c:/foo\\bar");
+  paths.push_back(":");
 
   for (SmallVector<StringRef, 40>::const_iterator i = paths.begin(),
                                                   e = paths.end();
@@ -625,8 +627,8 @@ TEST(SupportDeathTest, TempDirectoryOnWindows) {
   // different values of specific env vars. To prevent corrupting env vars of
   // the current process all checks are done in separated processes.
   EXPECT_TEMP_DIR(_wputenv_s(L"TMP", L"C:\\OtherFolder"), "C:\\OtherFolder");
-  EXPECT_TEMP_DIR(_wputenv_s(L"TMP", L"C:/Unix/Path/Seperators"),
-                  "C:\\Unix\\Path\\Seperators");
+  EXPECT_TEMP_DIR(_wputenv_s(L"TMP", L"C:/Unix/Path/Separators"),
+                  "C:\\Unix\\Path\\Separators");
   EXPECT_TEMP_DIR(_wputenv_s(L"TMP", L"Local Path"), ".+\\Local Path$");
   EXPECT_TEMP_DIR(_wputenv_s(L"TMP", L"F:\\TrailingSep\\"), "F:\\TrailingSep");
   EXPECT_TEMP_DIR(
@@ -1324,6 +1326,9 @@ TEST_F(FileSystemTest, Remove) {
 
   ASSERT_NO_ERROR(fs::remove_directories("D:/footest"));
 
+  ASSERT_NO_ERROR(fs::remove_directories(Twine(BaseDir) + "/foo/bar/baz"));
+  ASSERT_FALSE(fs::exists(Twine(BaseDir) + "/foo/bar/baz"));
+
   ASSERT_NO_ERROR(fs::remove_directories(BaseDir));
   ASSERT_FALSE(fs::exists(BaseDir));
 }
@@ -1754,6 +1759,28 @@ TEST_F(FileSystemTest, OpenFileForRead) {
   // however the expected behaviour will differ depending on the configuration
   // of the Windows file system.
 #endif
+}
+
+TEST_F(FileSystemTest, OpenDirectoryAsFileForRead) {
+  std::string Buf(5, '?');
+  Expected<fs::file_t> FD = fs::openNativeFileForRead(TestDirectory);
+#ifdef _WIN32
+  EXPECT_EQ(errorToErrorCode(FD.takeError()), errc::is_a_directory);
+#else
+  ASSERT_THAT_EXPECTED(FD, Succeeded());
+  auto Close = make_scope_exit([&] { fs::closeFile(*FD); });
+  Expected<size_t> BytesRead =
+      fs::readNativeFile(*FD, MutableArrayRef(&*Buf.begin(), Buf.size()));
+  EXPECT_EQ(errorToErrorCode(BytesRead.takeError()), errc::is_a_directory);
+#endif
+}
+
+TEST_F(FileSystemTest, OpenDirectoryAsFileForWrite) {
+  int FD;
+  std::error_code EC = fs::openFileForWrite(Twine(TestDirectory), FD);
+  if (!EC)
+    ::close(FD);
+  EXPECT_EQ(EC, errc::is_a_directory);
 }
 
 static void createFileWithData(const Twine &Path, bool ShouldExistBefore,

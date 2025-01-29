@@ -22,7 +22,8 @@
 #ifndef FORTRAN_RUNTIME_NON_TBP_DIO_H_
 #define FORTRAN_RUNTIME_NON_TBP_DIO_H_
 
-#include "flang/Common/Fortran.h"
+#include "flang/Common/Fortran-consts.h"
+#include "flang/Common/api-attrs.h"
 #include <cstddef>
 
 namespace Fortran::runtime::typeInfo {
@@ -39,7 +40,7 @@ struct NonTbpDefinedIo {
 };
 
 struct NonTbpDefinedIoTable {
-  const NonTbpDefinedIo *Find(
+  RT_API_ATTRS const NonTbpDefinedIo *Find(
       const typeInfo::DerivedType &, common::DefinedIo) const;
   std::size_t items{0};
   const NonTbpDefinedIo *item{nullptr};

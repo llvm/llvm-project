@@ -30,7 +30,7 @@ define void @eggs(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4, ptr %arg
 ; CHECK-NEXT:    vxorpd %xmm5, %xmm5, %xmm5
 ; CHECK-NEXT:    vxorpd %xmm6, %xmm6, %xmm6
 ; CHECK-NEXT:    vxorpd %xmm7, %xmm7, %xmm7
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_1: ## %bb15
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vbroadcastsd (%r11,%rbx,8), %zmm9

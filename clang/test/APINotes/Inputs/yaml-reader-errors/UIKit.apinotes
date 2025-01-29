@@ -1,0 +1,65 @@
+---
+Name:            UIKit
+Classes:
+  - Name:            UIFont
+    Methods:
+      - Selector:        'fontWithName:size:'
+        MethodKind:      Instance
+        Nullability:     [ N ]
+        NullabilityOfRet: O
+        DesignatedInit:  true
+# CHECK: duplicate definition of method '-[UIFont fontWithName:size:]'
+      - Selector:        'fontWithName:size:'
+        MethodKind:      Instance
+        Nullability:     [ N ]
+        NullabilityOfRet: O
+        DesignatedInit:  true
+    Properties:
+      - Name:            familyName
+        Nullability:     N
+      - Name:            fontName
+        Nullability:     N
+# CHECK: duplicate definition of instance property 'UIFont.familyName'
+      - Name:            familyName
+        Nullability:     N
+# CHECK: multiple definitions of class 'UIFont'
+  - Name:            UIFont
+Protocols:
+  - Name:            MyProto
+    AuditedForNullability: true
+# CHECK: multiple definitions of protocol 'MyProto'
+  - Name:            MyProto
+    AuditedForNullability: true
+Functions:
+  - Name:        'globalFoo'
+    Nullability:     [ N, N, O, S ]
+    NullabilityOfRet: O
+  - Name:        'globalFoo2'
+    Nullability:     [ N, N, O, S ]
+    NullabilityOfRet: O
+Globals:
+  - Name:            globalVar
+    Nullability:     O
+  - Name:            globalVar2
+    Nullability:     O
+Tags:
+# CHECK: cannot mix EnumKind and FlagEnum (for FlagAndEnumKind)
+  - Name: FlagAndEnumKind
+    FlagEnum: true
+    EnumKind: CFOptions
+# CHECK: cannot mix EnumKind and FlagEnum (for FlagAndEnumKind2)
+  - Name: FlagAndEnumKind2
+    EnumKind: CFOptions
+    FlagEnum: false
+# CHECK: cannot mix EnumKind and EnumExtensibility (for ExtensibilityAndEnumKind)
+  - Name: ExtensibilityAndEnumKind
+    EnumExtensibility: open
+    EnumKind: CFOptions
+# CHECK: cannot mix EnumKind and EnumExtensibility (for ExtensibilityAndEnumKind2)
+  - Name: ExtensibilityAndEnumKind2
+    EnumKind: CFOptions
+    EnumExtensibility: closed
+# CHECK: cannot mix EnumKind and EnumExtensibility (for ExtensibilityAndEnumKind3)
+  - Name: ExtensibilityAndEnumKind3
+    EnumKind: none
+    EnumExtensibility: none

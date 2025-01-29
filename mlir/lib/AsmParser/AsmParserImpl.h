@@ -226,6 +226,16 @@ public:
     return success(parser.consumeIf(Token::plus));
   }
 
+  /// Parses a '-' token.
+  ParseResult parseMinus() override {
+    return parser.parseToken(Token::minus, "expected '-'");
+  }
+
+  /// Parses a '-' token if present.
+  ParseResult parseOptionalMinus() override {
+    return success(parser.consumeIf(Token::minus));
+  }
+
   /// Parse a '|' token.
   ParseResult parseVerticalBar() override {
     return parser.parseToken(Token::vertical_bar, "expected '|'");
@@ -269,41 +279,41 @@ public:
     return success();
   }
 
-  /// Parse a floating point value from the stream.
-  ParseResult parseFloat(double &result) override {
+  /// Parse a floating point value with given semantics from the stream. Since
+  /// this implementation parses the string as double precision and only
+  /// afterwards converts the value to the requested semantic, precision may be
+  /// lost.
+  ParseResult parseFloat(const llvm::fltSemantics &semantics,
+                         APFloat &result) override {
     bool isNegative = parser.consumeIf(Token::minus);
     Token curTok = parser.getToken();
-    SMLoc loc = curTok.getLoc();
+    std::optional<APFloat> apResult;
+    if (failed(parser.parseFloatFromLiteral(apResult, curTok, isNegative,
+                                            semantics)))
+      return failure();
+    parser.consumeToken();
+    result = *apResult;
+    return success();
+  }
 
-    // Check for a floating point value.
-    if (curTok.is(Token::floatliteral)) {
-      auto val = curTok.getFloatingPointValue();
-      if (!val)
-        return emitError(loc, "floating point value too large");
-      parser.consumeToken(Token::floatliteral);
-      result = isNegative ? -*val : *val;
-      return success();
-    }
+  /// Parse a floating point value from the stream.
+  ParseResult parseFloat(double &result) override {
+    llvm::APFloat apResult(0.0);
+    if (parseFloat(APFloat::IEEEdouble(), apResult))
+      return failure();
 
-    // Check for a hexadecimal float value.
-    if (curTok.is(Token::integer)) {
-      std::optional<APFloat> apResult;
-      if (failed(parser.parseFloatFromIntegerLiteral(
-              apResult, curTok, isNegative, APFloat::IEEEdouble(),
-              /*typeSizeInBits=*/64)))
-        return failure();
-
-      parser.consumeToken(Token::integer);
-      result = apResult->convertToDouble();
-      return success();
-    }
-
-    return emitError(loc, "expected floating point literal");
+    result = apResult.convertToDouble();
+    return success();
   }
 
   /// Parse an optional integer value from the stream.
   OptionalParseResult parseOptionalInteger(APInt &result) override {
     return parser.parseOptionalInteger(result);
+  }
+
+  /// Parse an optional integer value from the stream.
+  OptionalParseResult parseOptionalDecimalInteger(APInt &result) override {
+    return parser.parseOptionalDecimalInteger(result);
   }
 
   /// Parse a list of comma-separated items with an optional delimiter.  If a

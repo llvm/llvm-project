@@ -142,9 +142,9 @@ public:
   SymbolicLexOpt findSymbolicIntegerLexMax() const;
 
   /// Return true if the set contains the given point, and false otherwise.
-  bool containsPoint(ArrayRef<MPInt> point) const;
+  bool containsPoint(ArrayRef<DynamicAPInt> point) const;
   bool containsPoint(ArrayRef<int64_t> point) const {
-    return containsPoint(getMPIntVec(point));
+    return containsPoint(getDynamicAPIntVec(point));
   }
 
   /// Return the complement of this set. All local variables in the set must
@@ -187,7 +187,7 @@ public:
 
   /// Find an integer sample from the given set. This should not be called if
   /// any of the disjuncts in the union are unbounded.
-  bool findIntegerSample(SmallVectorImpl<MPInt> &sample);
+  bool findIntegerSample(SmallVectorImpl<DynamicAPInt> &sample);
 
   /// Compute an overapproximation of the number of integer points in the
   /// disjunct. Symbol vars are currently not supported. If the computed
@@ -196,7 +196,7 @@ public:
   /// This currently just sums up the overapproximations of the volumes of the
   /// disjuncts, so the approximation might be far from the true volume in the
   /// case when there is a lot of overlap between disjuncts.
-  std::optional<MPInt> computeVolume() const;
+  std::optional<DynamicAPInt> computeVolume() const;
 
   /// Simplifies the representation of a PresburgerRelation.
   ///
@@ -216,6 +216,10 @@ public:
   /// Simplify each disjunct, canonicalizing each disjunct and removing
   /// redundencies.
   PresburgerRelation simplify() const;
+
+  /// Return whether the given PresburgerRelation is full-dimensional. By full-
+  /// dimensional we mean that it is not flat along any dimension.
+  bool isFullDim() const;
 
   /// Print the set's internal state.
   void print(raw_ostream &os) const;

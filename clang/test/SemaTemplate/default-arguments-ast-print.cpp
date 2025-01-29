@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -ast-print %s | FileCheck %s
 
 template <typename T, typename U = double> class Foo;
 

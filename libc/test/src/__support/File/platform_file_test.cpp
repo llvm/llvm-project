@@ -9,7 +9,7 @@
 #include "src/__support/File/file.h"
 #include "test/UnitTest/Test.h"
 
-#include <stdio.h> // For SEEK_* macros
+#include "hdr/stdio_macros.h" // For SEEK_* macros
 
 using File = LIBC_NAMESPACE::File;
 constexpr char TEXT[] = "Hello, File";
@@ -103,7 +103,8 @@ TEST(LlvmLibcPlatformFileTest, CreateAppendSeekAndReadBack) {
   constexpr size_t APPEND_TEXT_SIZE = sizeof(APPEND_TEXT) - 1;
   ASSERT_EQ(file->write(APPEND_TEXT, APPEND_TEXT_SIZE).value, APPEND_TEXT_SIZE);
 
-  ASSERT_EQ(file->seek(-APPEND_TEXT_SIZE, SEEK_END).value(), 0);
+  ASSERT_EQ(file->seek(-static_cast<off_t>(APPEND_TEXT_SIZE), SEEK_END).value(),
+            0);
   char data[APPEND_TEXT_SIZE + 1];
   ASSERT_EQ(file->read(data, APPEND_TEXT_SIZE).value, APPEND_TEXT_SIZE);
   data[APPEND_TEXT_SIZE] = '\0';

@@ -16,11 +16,13 @@
 #include "lld/Common/Arrays.h"
 #include "lld/Common/Memory.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/Config/llvm-config.h" // LLVM_ENABLE_ZLIB
+#include "llvm/Config/llvm-config.h" // LLVM_ENABLE_ZLIB, LLVM_ENABLE_ZSTD
 #include "llvm/Support/Compression.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
+#undef in
 #if LLVM_ENABLE_ZLIB
 // Avoid introducing max as a macro from Windows headers.
 #define NOMINMAX
@@ -38,19 +40,9 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
-uint8_t *Out::bufferStart;
-PhdrEntry *Out::tlsPhdr;
-OutputSection *Out::elfHeader;
-OutputSection *Out::programHeaders;
-OutputSection *Out::preinitArray;
-OutputSection *Out::initArray;
-OutputSection *Out::finiArray;
-
-SmallVector<OutputSection *, 0> elf::outputSections;
-
 uint32_t OutputSection::getPhdrFlags() const {
   uint32_t ret = 0;
-  if (config->emachine != EM_ARM || !(flags & SHF_ARM_PURECODE))
+  if (ctx.arg.emachine != EM_ARM || !(flags & SHF_ARM_PURECODE))
     ret |= PF_R;
   if (flags & SHF_WRITE)
     ret |= PF_W;
@@ -73,9 +65,15 @@ void OutputSection::writeHeaderTo(typename ELFT::Shdr *shdr) {
   shdr->sh_name = shName;
 }
 
-OutputSection::OutputSection(StringRef name, uint32_t type, uint64_t flags)
-    : SectionBase(Output, name, flags, /*Entsize*/ 0, /*Alignment*/ 1, type,
-                  /*Info*/ 0, /*Link*/ 0) {}
+OutputSection::OutputSection(Ctx &ctx, StringRef name, uint32_t type,
+                             uint64_t flags)
+    : SectionBase(Output, ctx.internalFile, name, type, flags, /*link=*/0,
+                  /*info=*/0, /*addralign=*/1, /*entsize=*/0),
+      ctx(ctx) {}
+
+uint64_t OutputSection::getLMA() const {
+  return ptLoad ? addr + ptLoad->lmaOffset : addr;
+}
 
 // We allow sections of types listed below to merged into a
 // single progbits section. This is typically done by linker
@@ -86,11 +84,11 @@ OutputSection::OutputSection(StringRef name, uint32_t type, uint64_t flags)
 //
 // NOTE: clang since rL252300 emits SHT_X86_64_UNWIND .eh_frame sections. Allow
 // them to be merged into SHT_PROGBITS .eh_frame (GNU as .cfi_*).
-static bool canMergeToProgbits(unsigned type) {
+static bool canMergeToProgbits(Ctx &ctx, unsigned type) {
   return type == SHT_NOBITS || type == SHT_PROGBITS || type == SHT_INIT_ARRAY ||
          type == SHT_PREINIT_ARRAY || type == SHT_FINI_ARRAY ||
          type == SHT_NOTE ||
-         (type == SHT_X86_64_UNWIND && config->emachine == EM_X86_64);
+         (type == SHT_X86_64_UNWIND && ctx.arg.emachine == EM_X86_64);
 }
 
 // Record that isec will be placed in the OutputSection. isec does not become
@@ -115,26 +113,36 @@ void OutputSection::recordSection(InputSectionBase *isec) {
 // other InputSections.
 void OutputSection::commitSection(InputSection *isec) {
   if (LLVM_UNLIKELY(type != isec->type)) {
-    if (hasInputSections || typeIsSet) {
-      if (typeIsSet || !canMergeToProgbits(type) ||
-          !canMergeToProgbits(isec->type)) {
+    if (!hasInputSections && !typeIsSet) {
+      type = isec->type;
+    } else if (isStaticRelSecType(type) && isStaticRelSecType(isec->type) &&
+               (type == SHT_CREL) != (isec->type == SHT_CREL)) {
+      // Combine mixed SHT_REL[A] and SHT_CREL to SHT_CREL.
+      type = SHT_CREL;
+      if (type == SHT_REL) {
+        if (name.consume_front(".rel"))
+          name = ctx.saver.save(".crel" + name);
+      } else if (name.consume_front(".rela")) {
+        name = ctx.saver.save(".crel" + name);
+      }
+    } else {
+      if (typeIsSet || !canMergeToProgbits(ctx, type) ||
+          !canMergeToProgbits(ctx, isec->type)) {
         // The (NOLOAD) changes the section type to SHT_NOBITS, the intention is
         // that the contents at that address is provided by some other means.
         // Some projects (e.g.
         // https://github.com/ClangBuiltLinux/linux/issues/1597) rely on the
         // behavior. Other types get an error.
         if (type != SHT_NOBITS) {
-          errorOrWarn("section type mismatch for " + isec->name + "\n>>> " +
-                      toString(isec) + ": " +
-                      getELFSectionTypeName(config->emachine, isec->type) +
-                      "\n>>> output section " + name + ": " +
-                      getELFSectionTypeName(config->emachine, type));
+          Err(ctx) << "section type mismatch for " << isec->name << "\n>>> "
+                   << isec << ": "
+                   << getELFSectionTypeName(ctx.arg.emachine, isec->type)
+                   << "\n>>> output section " << name << ": "
+                   << getELFSectionTypeName(ctx.arg.emachine, type);
         }
       }
       if (!typeIsSet)
         type = SHT_PROGBITS;
-    } else {
-      type = isec->type;
     }
   }
   if (!hasInputSections) {
@@ -146,14 +154,15 @@ void OutputSection::commitSection(InputSection *isec) {
   } else {
     // Otherwise, check if new type or flags are compatible with existing ones.
     if ((flags ^ isec->flags) & SHF_TLS)
-      error("incompatible section flags for " + name + "\n>>> " +
-            toString(isec) + ": 0x" + utohexstr(isec->flags) +
-            "\n>>> output section " + name + ": 0x" + utohexstr(flags));
+      ErrAlways(ctx) << "incompatible section flags for " << name << "\n>>> "
+                     << isec << ": 0x" << utohexstr(isec->flags, true)
+                     << "\n>>> output section " << name << ": 0x"
+                     << utohexstr(flags, true);
   }
 
   isec->parent = this;
   uint64_t andMask =
-      config->emachine == EM_ARM ? (uint64_t)SHF_ARM_PURECODE : 0;
+      ctx.arg.emachine == EM_ARM ? (uint64_t)SHF_ARM_PURECODE : 0;
   uint64_t orMask = ~andMask;
   uint64_t andFlags = (flags & isec->flags) & andMask;
   uint64_t orFlags = (flags | isec->flags) & orMask;
@@ -170,13 +179,13 @@ void OutputSection::commitSection(InputSection *isec) {
     entsize = 0;
 }
 
-static MergeSyntheticSection *createMergeSynthetic(StringRef name,
+static MergeSyntheticSection *createMergeSynthetic(Ctx &ctx, StringRef name,
                                                    uint32_t type,
                                                    uint64_t flags,
                                                    uint32_t addralign) {
-  if ((flags & SHF_STRINGS) && config->optimize >= 2)
-    return make<MergeTailSection>(name, type, flags, addralign);
-  return make<MergeNoTailSection>(name, type, flags, addralign);
+  if ((flags & SHF_STRINGS) && ctx.arg.optimize >= 2)
+    return make<MergeTailSection>(ctx, name, type, flags, addralign);
+  return make<MergeNoTailSection>(ctx, name, type, flags, addralign);
 }
 
 // This function scans over the InputSectionBase list sectionBases to create
@@ -187,6 +196,7 @@ static MergeSyntheticSection *createMergeSynthetic(StringRef name,
 // that it replaces. It then finalizes each synthetic section in order
 // to compute an output offset for each piece of each input section.
 void OutputSection::finalizeInputSections() {
+  auto *script = ctx.script;
   std::vector<MergeSyntheticSection *> mergeSections;
   for (SectionCommand *cmd : commands) {
     auto *isd = dyn_cast<InputSectionDescription>(cmd);
@@ -220,12 +230,17 @@ void OutputSection::finalizeInputSections() {
                (sec->addralign == ms->addralign || !(sec->flags & SHF_STRINGS));
       });
       if (i == mergeSections.end()) {
-        MergeSyntheticSection *syn =
-            createMergeSynthetic(s->name, ms->type, ms->flags, ms->addralign);
+        MergeSyntheticSection *syn = createMergeSynthetic(
+            ctx, s->name, ms->type, ms->flags, ms->addralign);
         mergeSections.push_back(syn);
         i = std::prev(mergeSections.end());
         syn->entsize = ms->entsize;
         isd->sections.push_back(syn);
+        // The merge synthetic section inherits the potential spill locations of
+        // its first contained section.
+        auto it = script->potentialSpillLists.find(ms);
+        if (it != script->potentialSpillLists.end())
+          script->potentialSpillLists.try_emplace(syn, it->second);
       }
       (*i)->addSection(ms);
     }
@@ -238,8 +253,20 @@ void OutputSection::finalizeInputSections() {
     for (InputSection *s : isd->sections)
       commitSection(s);
   }
-  for (auto *ms : mergeSections)
+  for (auto *ms : mergeSections) {
+    // Merging may have increased the alignment of a spillable section. Update
+    // the alignment of potential spill sections and their containing output
+    // sections.
+    if (auto it = script->potentialSpillLists.find(ms);
+        it != script->potentialSpillLists.end()) {
+      for (PotentialSpillSection *s = it->second.head; s; s = s->next) {
+        s->addralign = std::max(s->addralign, ms->addralign);
+        s->parent->addralign = std::max(s->parent->addralign, s->addralign);
+      }
+    }
+
     ms->finalizeContents();
+  }
 }
 
 static void sortByOrder(MutableArrayRef<InputSection *> in,
@@ -253,10 +280,10 @@ static void sortByOrder(MutableArrayRef<InputSection *> in,
     in[i] = v[i].second;
 }
 
-uint64_t elf::getHeaderSize() {
-  if (config->oFormatBinary)
+uint64_t elf::getHeaderSize(Ctx &ctx) {
+  if (ctx.arg.oFormatBinary)
     return 0;
-  return Out::elfHeader->size + Out::programHeaders->size;
+  return ctx.out.elfHeader->size + ctx.out.programHeaders->size;
 }
 
 void OutputSection::sort(llvm::function_ref<int(InputSectionBase *s)> order) {
@@ -266,13 +293,13 @@ void OutputSection::sort(llvm::function_ref<int(InputSectionBase *s)> order) {
       sortByOrder(isd->sections, order);
 }
 
-static void nopInstrFill(uint8_t *buf, size_t size) {
+static void nopInstrFill(Ctx &ctx, uint8_t *buf, size_t size) {
   if (size == 0)
     return;
   unsigned i = 0;
   if (size == 0)
     return;
-  std::vector<std::vector<uint8_t>> nopFiller = *target->nopInstrs;
+  std::vector<std::vector<uint8_t>> nopFiller = *ctx.target->nopInstrs;
   unsigned num = size / nopFiller.back().size();
   for (unsigned c = 0; c < num; ++c) {
     memcpy(buf + i, nopFiller.back().data(), nopFiller.back().size());
@@ -296,12 +323,16 @@ static void fill(uint8_t *buf, size_t size,
 }
 
 #if LLVM_ENABLE_ZLIB
-static SmallVector<uint8_t, 0> deflateShard(ArrayRef<uint8_t> in, int level,
-                                            int flush) {
+static SmallVector<uint8_t, 0> deflateShard(Ctx &ctx, ArrayRef<uint8_t> in,
+                                            int level, int flush) {
   // 15 and 8 are default. windowBits=-15 is negative to generate raw deflate
   // data with no zlib header or trailer.
   z_stream s = {};
-  deflateInit2(&s, level, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
+  auto res = deflateInit2(&s, level, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
+  if (res != 0) {
+    Err(ctx) << "--compress-sections: deflateInit2 returned " << res;
+    return {};
+  }
   s.next_in = const_cast<uint8_t *>(in.data());
   s.avail_in = in.size();
 
@@ -326,183 +357,201 @@ static SmallVector<uint8_t, 0> deflateShard(ArrayRef<uint8_t> in, int level,
 }
 #endif
 
-// Compress section contents if this section contains debug info.
-template <class ELFT> void OutputSection::maybeCompress() {
+// Compress certain non-SHF_ALLOC sections:
+//
+// * (if --compress-debug-sections is specified) non-empty .debug_* sections
+// * (if --compress-sections is specified) matched sections
+template <class ELFT> void OutputSection::maybeCompress(Ctx &ctx) {
   using Elf_Chdr = typename ELFT::Chdr;
   (void)sizeof(Elf_Chdr);
 
-  // Compress only DWARF debug sections.
-  if (config->compressDebugSections == DebugCompressionType::None ||
-      (flags & SHF_ALLOC) || !name.starts_with(".debug_") || size == 0)
+  DebugCompressionType ctype = DebugCompressionType::None;
+  size_t compressedSize = sizeof(Elf_Chdr);
+  unsigned level = 0; // default compression level
+  if (!(flags & SHF_ALLOC) && ctx.arg.compressDebugSections &&
+      name.starts_with(".debug_"))
+    ctype = *ctx.arg.compressDebugSections;
+  for (auto &[glob, t, l] : ctx.arg.compressSections)
+    if (glob.match(name))
+      std::tie(ctype, level) = {t, l};
+  if (ctype == DebugCompressionType::None)
     return;
+  if (flags & SHF_ALLOC) {
+    Err(ctx) << "--compress-sections: section '" << name
+             << "' with the SHF_ALLOC flag cannot be compressed";
+    return;
+  }
 
-  llvm::TimeTraceScope timeScope("Compress debug sections");
-  compressed.uncompressedSize = size;
+  llvm::TimeTraceScope timeScope("Compress sections");
   auto buf = std::make_unique<uint8_t[]>(size);
   // Write uncompressed data to a temporary zero-initialized buffer.
   {
     parallel::TaskGroup tg;
-    writeTo<ELFT>(buf.get(), tg);
+    writeTo<ELFT>(ctx, buf.get(), tg);
   }
+  // The generic ABI specifies "The sh_size and sh_addralign fields of the
+  // section header for a compressed section reflect the requirements of the
+  // compressed section." However, 1-byte alignment has been wildly accepted
+  // and utilized for a long time. Removing alignment padding is particularly
+  // useful when there are many compressed output sections.
+  addralign = 1;
+
+  // Split input into 1-MiB shards.
+  [[maybe_unused]] constexpr size_t shardSize = 1 << 20;
+  auto shardsIn = split(ArrayRef<uint8_t>(buf.get(), size), shardSize);
+  const size_t numShards = shardsIn.size();
+  auto shardsOut = std::make_unique<SmallVector<uint8_t, 0>[]>(numShards);
 
 #if LLVM_ENABLE_ZSTD
-  // Use ZSTD's streaming compression API which permits parallel workers working
-  // on the stream. See http://facebook.github.io/zstd/zstd_manual.html
-  // "Streaming compression - HowTo".
-  if (config->compressDebugSections == DebugCompressionType::Zstd) {
-    // Allocate a buffer of half of the input size, and grow it by 1.5x if
-    // insufficient.
-    compressed.shards = std::make_unique<SmallVector<uint8_t, 0>[]>(1);
-    SmallVector<uint8_t, 0> &out = compressed.shards[0];
-    out.resize_for_overwrite(std::max<size_t>(size / 2, 32));
-    size_t pos = 0;
-
-    ZSTD_CCtx *cctx = ZSTD_createCCtx();
-    // Ignore error if zstd was not built with ZSTD_MULTITHREAD.
-    (void)ZSTD_CCtx_setParameter(cctx, ZSTD_c_nbWorkers,
-                                 parallel::strategy.compute_thread_count());
-    ZSTD_outBuffer zob = {out.data(), out.size(), 0};
-    ZSTD_EndDirective directive = ZSTD_e_continue;
-    const size_t blockSize = ZSTD_CStreamInSize();
-    do {
-      const size_t n = std::min(static_cast<size_t>(size - pos), blockSize);
-      if (n == size - pos)
-        directive = ZSTD_e_end;
-      ZSTD_inBuffer zib = {buf.get() + pos, n, 0};
-      size_t bytesRemaining = 0;
-      while (zib.pos != zib.size ||
-             (directive == ZSTD_e_end && bytesRemaining != 0)) {
+  // Use ZSTD's streaming compression API. See
+  // http://facebook.github.io/zstd/zstd_manual.html "Streaming compression -
+  // HowTo".
+  if (ctype == DebugCompressionType::Zstd) {
+    parallelFor(0, numShards, [&](size_t i) {
+      SmallVector<uint8_t, 0> out;
+      ZSTD_CCtx *cctx = ZSTD_createCCtx();
+      ZSTD_CCtx_setParameter(cctx, ZSTD_c_compressionLevel, level);
+      ZSTD_inBuffer zib = {shardsIn[i].data(), shardsIn[i].size(), 0};
+      ZSTD_outBuffer zob = {nullptr, 0, 0};
+      size_t size;
+      do {
+        // Allocate a buffer of half of the input size, and grow it by 1.5x if
+        // insufficient.
         if (zob.pos == zob.size) {
-          out.resize_for_overwrite(out.size() * 3 / 2);
-          zob.dst = out.data();
-          zob.size = out.size();
+          out.resize_for_overwrite(
+              zob.size ? zob.size * 3 / 2 : std::max<size_t>(zib.size / 4, 64));
+          zob = {out.data(), out.size(), zob.pos};
         }
-        bytesRemaining = ZSTD_compressStream2(cctx, &zob, &zib, directive);
-        assert(!ZSTD_isError(bytesRemaining));
-      }
-      pos += n;
-    } while (directive != ZSTD_e_end);
-    out.resize(zob.pos);
-    ZSTD_freeCCtx(cctx);
-
-    size = sizeof(Elf_Chdr) + out.size();
-    flags |= SHF_COMPRESSED;
-    return;
+        size = ZSTD_compressStream2(cctx, &zob, &zib, ZSTD_e_end);
+        assert(!ZSTD_isError(size));
+      } while (size != 0);
+      out.truncate(zob.pos);
+      ZSTD_freeCCtx(cctx);
+      shardsOut[i] = std::move(out);
+    });
+    compressed.type = ELFCOMPRESS_ZSTD;
+    for (size_t i = 0; i != numShards; ++i)
+      compressedSize += shardsOut[i].size();
   }
 #endif
 
 #if LLVM_ENABLE_ZLIB
   // We chose 1 (Z_BEST_SPEED) as the default compression level because it is
-  // the fastest. If -O2 is given, we use level 6 to compress debug info more by
-  // ~15%. We found that level 7 to 9 doesn't make much difference (~1% more
-  // compression) while they take significant amount of time (~2x), so level 6
-  // seems enough.
-  const int level = config->optimize >= 2 ? 6 : Z_BEST_SPEED;
+  // fast and provides decent compression ratios.
+  if (ctype == DebugCompressionType::Zlib) {
+    if (!level)
+      level = Z_BEST_SPEED;
 
-  // Split input into 1-MiB shards.
-  constexpr size_t shardSize = 1 << 20;
-  auto shardsIn = split(ArrayRef<uint8_t>(buf.get(), size), shardSize);
-  const size_t numShards = shardsIn.size();
+    // Compress shards and compute Alder-32 checksums. Use Z_SYNC_FLUSH for all
+    // shards but the last to flush the output to a byte boundary to be
+    // concatenated with the next shard.
+    auto shardsAdler = std::make_unique<uint32_t[]>(numShards);
+    parallelFor(0, numShards, [&](size_t i) {
+      shardsOut[i] = deflateShard(ctx, shardsIn[i], level,
+                                  i != numShards - 1 ? Z_SYNC_FLUSH : Z_FINISH);
+      shardsAdler[i] = adler32(1, shardsIn[i].data(), shardsIn[i].size());
+    });
 
-  // Compress shards and compute Alder-32 checksums. Use Z_SYNC_FLUSH for all
-  // shards but the last to flush the output to a byte boundary to be
-  // concatenated with the next shard.
-  auto shardsOut = std::make_unique<SmallVector<uint8_t, 0>[]>(numShards);
-  auto shardsAdler = std::make_unique<uint32_t[]>(numShards);
-  parallelFor(0, numShards, [&](size_t i) {
-    shardsOut[i] = deflateShard(shardsIn[i], level,
-                                i != numShards - 1 ? Z_SYNC_FLUSH : Z_FINISH);
-    shardsAdler[i] = adler32(1, shardsIn[i].data(), shardsIn[i].size());
-  });
-
-  // Update section size and combine Alder-32 checksums.
-  uint32_t checksum = 1;       // Initial Adler-32 value
-  size = sizeof(Elf_Chdr) + 2; // Elf_Chdir and zlib header
-  for (size_t i = 0; i != numShards; ++i) {
-    size += shardsOut[i].size();
-    checksum = adler32_combine(checksum, shardsAdler[i], shardsIn[i].size());
+    // Update section size and combine Alder-32 checksums.
+    uint32_t checksum = 1;       // Initial Adler-32 value
+    compressedSize += 2;         // Elf_Chdir and zlib header
+    for (size_t i = 0; i != numShards; ++i) {
+      compressedSize += shardsOut[i].size();
+      checksum = adler32_combine(checksum, shardsAdler[i], shardsIn[i].size());
+    }
+    compressedSize += 4; // checksum
+    compressed.type = ELFCOMPRESS_ZLIB;
+    compressed.checksum = checksum;
   }
-  size += 4; // checksum
+#endif
 
+  if (compressedSize >= size)
+    return;
+  compressed.uncompressedSize = size;
   compressed.shards = std::move(shardsOut);
   compressed.numShards = numShards;
-  compressed.checksum = checksum;
+  size = compressedSize;
   flags |= SHF_COMPRESSED;
-#endif
 }
 
-static void writeInt(uint8_t *buf, uint64_t data, uint64_t size) {
+static void writeInt(Ctx &ctx, uint8_t *buf, uint64_t data, uint64_t size) {
   if (size == 1)
     *buf = data;
   else if (size == 2)
-    write16(buf, data);
+    write16(ctx, buf, data);
   else if (size == 4)
-    write32(buf, data);
+    write32(ctx, buf, data);
   else if (size == 8)
-    write64(buf, data);
+    write64(ctx, buf, data);
   else
     llvm_unreachable("unsupported Size argument");
 }
 
 template <class ELFT>
-void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
+void OutputSection::writeTo(Ctx &ctx, uint8_t *buf, parallel::TaskGroup &tg) {
   llvm::TimeTraceScope timeScope("Write sections", name);
   if (type == SHT_NOBITS)
     return;
+  if (type == SHT_CREL && !(flags & SHF_ALLOC)) {
+    buf += encodeULEB128(crelHeader, buf);
+    memcpy(buf, crelBody.data(), crelBody.size());
+    return;
+  }
 
-  // If --compress-debug-section is specified and if this is a debug section,
-  // we've already compressed section contents. If that's the case,
-  // just write it down.
+  // If the section is compressed due to
+  // --compress-debug-section/--compress-sections, the content is already known.
   if (compressed.shards) {
     auto *chdr = reinterpret_cast<typename ELFT::Chdr *>(buf);
+    chdr->ch_type = compressed.type;
     chdr->ch_size = compressed.uncompressedSize;
     chdr->ch_addralign = addralign;
     buf += sizeof(*chdr);
-    if (config->compressDebugSections == DebugCompressionType::Zstd) {
-      chdr->ch_type = ELFCOMPRESS_ZSTD;
-      memcpy(buf, compressed.shards[0].data(), compressed.shards[0].size());
-      return;
+
+    auto offsets = std::make_unique<size_t[]>(compressed.numShards);
+    if (compressed.type == ELFCOMPRESS_ZLIB) {
+      buf[0] = 0x78;  // CMF
+      buf[1] = 0x01;  // FLG: best speed
+      offsets[0] = 2; // zlib header
+      write32be(buf + (size - sizeof(*chdr) - 4), compressed.checksum);
     }
-    chdr->ch_type = ELFCOMPRESS_ZLIB;
 
     // Compute shard offsets.
-    auto offsets = std::make_unique<size_t[]>(compressed.numShards);
-    offsets[0] = 2; // zlib header
     for (size_t i = 1; i != compressed.numShards; ++i)
       offsets[i] = offsets[i - 1] + compressed.shards[i - 1].size();
-
-    buf[0] = 0x78; // CMF
-    buf[1] = 0x01; // FLG: best speed
     parallelFor(0, compressed.numShards, [&](size_t i) {
       memcpy(buf + offsets[i], compressed.shards[i].data(),
              compressed.shards[i].size());
     });
-
-    write32be(buf + (size - sizeof(*chdr) - 4), compressed.checksum);
     return;
   }
 
   // Write leading padding.
   ArrayRef<InputSection *> sections = getInputSections(*this, storage);
-  std::array<uint8_t, 4> filler = getFiller();
-  bool nonZeroFiller = read32(filler.data()) != 0;
+  std::array<uint8_t, 4> filler = getFiller(ctx);
+  bool nonZeroFiller = read32(ctx, filler.data()) != 0;
   if (nonZeroFiller)
     fill(buf, sections.empty() ? size : sections[0]->outSecOff, filler);
 
-  auto fn = [=](size_t begin, size_t end) {
+  if (type == SHT_CREL && !(flags & SHF_ALLOC)) {
+    buf += encodeULEB128(crelHeader, buf);
+    memcpy(buf, crelBody.data(), crelBody.size());
+    return;
+  }
+
+  auto fn = [=, &ctx](size_t begin, size_t end) {
     size_t numSections = sections.size();
     for (size_t i = begin; i != end; ++i) {
       InputSection *isec = sections[i];
       if (auto *s = dyn_cast<SyntheticSection>(isec))
         s->writeTo(buf + isec->outSecOff);
       else
-        isec->writeTo<ELFT>(buf + isec->outSecOff);
+        isec->writeTo<ELFT>(ctx, buf + isec->outSecOff);
 
       // When in Arm BE8 mode, the linker has to convert the big-endian
       // instructions to little-endian, leaving the data big-endian.
-      if (config->emachine == EM_ARM && !config->isLE && config->armBe8 &&
+      if (ctx.arg.emachine == EM_ARM && !ctx.arg.isLE && ctx.arg.armBe8 &&
           (flags & SHF_EXECINSTR))
-        convertArmInstructionstoBE8(isec, buf + isec->outSecOff);
+        convertArmInstructionstoBE8(ctx, isec, buf + isec->outSecOff);
 
       // Fill gaps between sections.
       if (nonZeroFiller) {
@@ -513,8 +562,8 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
         else
           end = buf + sections[i + 1]->outSecOff;
         if (isec->nopFiller) {
-          assert(target->nopInstrs);
-          nopInstrFill(start, end - start);
+          assert(ctx.target->nopInstrs);
+          nopInstrFill(ctx, start, end - start);
         } else
           fill(start, end - start, filler);
       }
@@ -530,7 +579,8 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
     if (auto *data = dyn_cast<ByteCommand>(cmd)) {
       if (!std::exchange(written, true))
         fn(0, numSections);
-      writeInt(buf + data->offset, data->expression().getValue(), data->size);
+      writeInt(ctx, buf + data->offset, data->expression().getValue(),
+               data->size);
     }
   if (written || !numSections)
     return;
@@ -553,10 +603,11 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
   }
 }
 
-static void finalizeShtGroup(OutputSection *os, InputSection *section) {
+static void finalizeShtGroup(Ctx &ctx, OutputSection *os,
+                             InputSection *section) {
   // sh_link field for SHT_GROUP sections should contain the section index of
   // the symbol table.
-  os->link = in.symTab->getParent()->sectionIndex;
+  os->link = ctx.in.symTab->getParent()->sectionIndex;
 
   if (!section)
     return;
@@ -564,19 +615,120 @@ static void finalizeShtGroup(OutputSection *os, InputSection *section) {
   // sh_info then contain index of an entry in symbol table section which
   // provides signature of the section group.
   ArrayRef<Symbol *> symbols = section->file->getSymbols();
-  os->info = in.symTab->getSymbolIndex(symbols[section->info]);
+  os->info = ctx.in.symTab->getSymbolIndex(*symbols[section->info]);
 
   // Some group members may be combined or discarded, so we need to compute the
   // new size. The content will be rewritten in InputSection::copyShtGroup.
   DenseSet<uint32_t> seen;
   ArrayRef<InputSectionBase *> sections = section->file->getSections();
   for (const uint32_t &idx : section->getDataAs<uint32_t>().slice(1))
-    if (OutputSection *osec = sections[read32(&idx)]->getOutputSection())
+    if (OutputSection *osec = sections[read32(ctx, &idx)]->getOutputSection())
       seen.insert(osec->sectionIndex);
   os->size = (1 + seen.size()) * sizeof(uint32_t);
 }
 
-void OutputSection::finalize() {
+template <class uint>
+LLVM_ATTRIBUTE_ALWAYS_INLINE static void
+encodeOneCrel(Ctx &ctx, raw_svector_ostream &os,
+              Elf_Crel<sizeof(uint) == 8> &out, uint offset, const Symbol &sym,
+              uint32_t type, uint addend) {
+  const auto deltaOffset = static_cast<uint64_t>(offset - out.r_offset);
+  out.r_offset = offset;
+  int64_t symidx = ctx.in.symTab->getSymbolIndex(sym);
+  if (sym.type == STT_SECTION) {
+    auto *d = dyn_cast<Defined>(&sym);
+    if (d) {
+      SectionBase *section = d->section;
+      assert(section->isLive());
+      addend = sym.getVA(ctx, addend) - section->getOutputSection()->addr;
+    } else {
+      // Encode R_*_NONE(symidx=0).
+      symidx = type = addend = 0;
+    }
+  }
+
+  // Similar to llvm::ELF::encodeCrel.
+  uint8_t b = deltaOffset * 8 + (out.r_symidx != symidx) +
+              (out.r_type != type ? 2 : 0) +
+              (uint(out.r_addend) != addend ? 4 : 0);
+  if (deltaOffset < 0x10) {
+    os << char(b);
+  } else {
+    os << char(b | 0x80);
+    encodeULEB128(deltaOffset >> 4, os);
+  }
+  if (b & 1) {
+    encodeSLEB128(static_cast<int32_t>(symidx - out.r_symidx), os);
+    out.r_symidx = symidx;
+  }
+  if (b & 2) {
+    encodeSLEB128(static_cast<int32_t>(type - out.r_type), os);
+    out.r_type = type;
+  }
+  if (b & 4) {
+    encodeSLEB128(std::make_signed_t<uint>(addend - out.r_addend), os);
+    out.r_addend = addend;
+  }
+}
+
+template <class ELFT>
+static size_t relToCrel(Ctx &ctx, raw_svector_ostream &os,
+                        Elf_Crel<ELFT::Is64Bits> &out, InputSection *relSec,
+                        InputSectionBase *sec) {
+  const auto &file = *cast<ELFFileBase>(relSec->file);
+  if (relSec->type == SHT_REL) {
+    // REL conversion is complex and unsupported yet.
+    Err(ctx) << relSec << ": REL cannot be converted to CREL";
+    return 0;
+  }
+  auto rels = relSec->getDataAs<typename ELFT::Rela>();
+  for (auto rel : rels) {
+    encodeOneCrel<typename ELFT::uint>(
+        ctx, os, out, sec->getVA(rel.r_offset), file.getRelocTargetSym(rel),
+        rel.getType(ctx.arg.isMips64EL), getAddend<ELFT>(rel));
+  }
+  return rels.size();
+}
+
+// Compute the content of a non-alloc CREL section due to -r or --emit-relocs.
+// Input CREL sections are decoded while REL[A] need to be converted.
+template <bool is64> void OutputSection::finalizeNonAllocCrel(Ctx &ctx) {
+  using uint = typename Elf_Crel_Impl<is64>::uint;
+  raw_svector_ostream os(crelBody);
+  uint64_t totalCount = 0;
+  Elf_Crel<is64> out{};
+  assert(commands.size() == 1);
+  auto *isd = cast<InputSectionDescription>(commands[0]);
+  for (InputSection *relSec : isd->sections) {
+    const auto &file = *cast<ELFFileBase>(relSec->file);
+    InputSectionBase *sec = relSec->getRelocatedSection();
+    if (relSec->type == SHT_CREL) {
+      RelocsCrel<is64> entries(relSec->content_);
+      totalCount += entries.size();
+      for (Elf_Crel_Impl<is64> r : entries) {
+        encodeOneCrel<uint>(ctx, os, out, uint(sec->getVA(r.r_offset)),
+                            file.getSymbol(r.r_symidx), r.r_type, r.r_addend);
+      }
+      continue;
+    }
+
+    // Convert REL[A] to CREL.
+    if constexpr (is64) {
+      totalCount += ctx.arg.isLE
+                        ? relToCrel<ELF64LE>(ctx, os, out, relSec, sec)
+                        : relToCrel<ELF64BE>(ctx, os, out, relSec, sec);
+    } else {
+      totalCount += ctx.arg.isLE
+                        ? relToCrel<ELF32LE>(ctx, os, out, relSec, sec)
+                        : relToCrel<ELF32BE>(ctx, os, out, relSec, sec);
+    }
+  }
+
+  crelHeader = totalCount * 8 + 4;
+  size = getULEB128Size(crelHeader) + crelBody.size();
+}
+
+void OutputSection::finalize(Ctx &ctx) {
   InputSection *first = getFirstInputSection(this);
 
   if (flags & SHF_LINK_ORDER) {
@@ -592,11 +744,11 @@ void OutputSection::finalize() {
   }
 
   if (type == SHT_GROUP) {
-    finalizeShtGroup(this, first);
+    finalizeShtGroup(ctx, this, first);
     return;
   }
 
-  if (!config->copyRelocs || (type != SHT_RELA && type != SHT_REL))
+  if (!ctx.arg.copyRelocs || !isStaticRelSecType(type))
     return;
 
   // Skip if 'first' is synthetic, i.e. not a section created by --emit-relocs.
@@ -606,12 +758,19 @@ void OutputSection::finalize() {
   if (!first || isa<SyntheticSection>(first))
     return;
 
-  link = in.symTab->getParent()->sectionIndex;
+  link = ctx.in.symTab->getParent()->sectionIndex;
   // sh_info for SHT_REL[A] sections should contain the section header index of
   // the section to which the relocation applies.
   InputSectionBase *s = first->getRelocatedSection();
   info = s->getOutputSection()->sectionIndex;
   flags |= SHF_INFO_LINK;
+  // Finalize the content of non-alloc CREL.
+  if (type == SHT_CREL) {
+    if (ctx.arg.is64)
+      finalizeNonAllocCrel<true>(ctx);
+    else
+      finalizeNonAllocCrel<false>(ctx);
+  }
 }
 
 // Returns true if S is in one of the many forms the compiler driver may pass
@@ -721,17 +880,17 @@ void OutputSection::sortInitFini() {
   sort([](InputSectionBase *s) { return getPriority(s->name); });
 }
 
-std::array<uint8_t, 4> OutputSection::getFiller() {
+std::array<uint8_t, 4> OutputSection::getFiller(Ctx &ctx) {
   if (filler)
     return *filler;
   if (flags & SHF_EXECINSTR)
-    return target->trapInstr;
+    return ctx.target->trapInstr;
   return {0, 0, 0, 0};
 }
 
-void OutputSection::checkDynRelAddends(const uint8_t *bufStart) {
-  assert(config->writeAddends && config->checkDynamicRelocs);
-  assert(type == SHT_REL || type == SHT_RELA);
+void OutputSection::checkDynRelAddends(Ctx &ctx) {
+  assert(ctx.arg.writeAddends && ctx.arg.checkDynamicRelocs);
+  assert(isStaticRelSecType(type));
   SmallVector<InputSection *, 0> storage;
   ArrayRef<InputSection *> sections = getInputSections(*this, storage);
   parallelFor(0, sections.size(), [&](size_t i) {
@@ -739,7 +898,11 @@ void OutputSection::checkDynRelAddends(const uint8_t *bufStart) {
     // for input .rel[a].<sec> sections which we simply pass through to the
     // output. We skip over those and only look at the synthetic relocation
     // sections created during linking.
-    const auto *sec = dyn_cast<RelocationBaseSection>(sections[i]);
+    if (!SyntheticSection::classof(sections[i]) ||
+        !is_contained({ELF::SHT_REL, ELF::SHT_RELA, ELF::SHT_RELR},
+                      sections[i]->type))
+      return;
+    const auto *sec = cast<RelocationBaseSection>(sections[i]);
     if (!sec)
       return;
     for (const DynamicReloc &rel : sec->relocs) {
@@ -748,25 +911,24 @@ void OutputSection::checkDynRelAddends(const uint8_t *bufStart) {
       assert(relOsec != nullptr && "missing output section for relocation");
       // Some targets have NOBITS synthetic sections with dynamic relocations
       // with non-zero addends. Skip such sections.
-      if (is_contained({EM_PPC, EM_PPC64}, config->emachine) &&
-          (rel.inputSec == in.ppc64LongBranchTarget.get() ||
-           rel.inputSec == in.igotPlt.get()))
+      if (is_contained({EM_PPC, EM_PPC64}, ctx.arg.emachine) &&
+          (rel.inputSec == ctx.in.ppc64LongBranchTarget.get() ||
+           rel.inputSec == ctx.in.igotPlt.get()))
         continue;
-      const uint8_t *relocTarget =
-          bufStart + relOsec->offset + rel.inputSec->getOffset(rel.offsetInSec);
+      const uint8_t *relocTarget = ctx.bufferStart + relOsec->offset +
+                                   rel.inputSec->getOffset(rel.offsetInSec);
       // For SHT_NOBITS the written addend is always zero.
       int64_t writtenAddend =
           relOsec->type == SHT_NOBITS
               ? 0
-              : target->getImplicitAddend(relocTarget, rel.type);
+              : ctx.target->getImplicitAddend(relocTarget, rel.type);
       if (addend != writtenAddend)
-        internalLinkerError(
-            getErrorLocation(relocTarget),
-            "wrote incorrect addend value 0x" + utohexstr(writtenAddend) +
-                " instead of 0x" + utohexstr(addend) +
-                " for dynamic relocation " + toString(rel.type) +
-                " at offset 0x" + utohexstr(rel.getOffset()) +
-                (rel.sym ? " against symbol " + toString(*rel.sym) : ""));
+        InternalErr(ctx, relocTarget)
+            << "wrote incorrect addend value 0x" << utohexstr(writtenAddend)
+            << " instead of 0x" << utohexstr(addend)
+            << " for dynamic relocation " << rel.type << " at offset 0x"
+            << utohexstr(rel.getOffset())
+            << (rel.sym ? " against symbol " + rel.sym->getName() : "");
     }
   });
 }
@@ -776,16 +938,16 @@ template void OutputSection::writeHeaderTo<ELF32BE>(ELF32BE::Shdr *Shdr);
 template void OutputSection::writeHeaderTo<ELF64LE>(ELF64LE::Shdr *Shdr);
 template void OutputSection::writeHeaderTo<ELF64BE>(ELF64BE::Shdr *Shdr);
 
-template void OutputSection::writeTo<ELF32LE>(uint8_t *,
+template void OutputSection::writeTo<ELF32LE>(Ctx &, uint8_t *,
                                               llvm::parallel::TaskGroup &);
-template void OutputSection::writeTo<ELF32BE>(uint8_t *,
+template void OutputSection::writeTo<ELF32BE>(Ctx &, uint8_t *,
                                               llvm::parallel::TaskGroup &);
-template void OutputSection::writeTo<ELF64LE>(uint8_t *,
+template void OutputSection::writeTo<ELF64LE>(Ctx &, uint8_t *,
                                               llvm::parallel::TaskGroup &);
-template void OutputSection::writeTo<ELF64BE>(uint8_t *,
+template void OutputSection::writeTo<ELF64BE>(Ctx &, uint8_t *,
                                               llvm::parallel::TaskGroup &);
 
-template void OutputSection::maybeCompress<ELF32LE>();
-template void OutputSection::maybeCompress<ELF32BE>();
-template void OutputSection::maybeCompress<ELF64LE>();
-template void OutputSection::maybeCompress<ELF64BE>();
+template void OutputSection::maybeCompress<ELF32LE>(Ctx &);
+template void OutputSection::maybeCompress<ELF32BE>(Ctx &);
+template void OutputSection::maybeCompress<ELF64LE>(Ctx &);
+template void OutputSection::maybeCompress<ELF64BE>(Ctx &);

@@ -116,8 +116,8 @@ void addInstToMergeableList(
       Value *Arg = II->getArgOperand(I);
       if (I == ImageDimIntr->VAddrEnd - 1) {
         // Check FragId group.
-        auto FragIdList = cast<ConstantInt>(IIList.front()->getArgOperand(I));
-        auto FragId = cast<ConstantInt>(II->getArgOperand(I));
+        auto *FragIdList = cast<ConstantInt>(IIList.front()->getArgOperand(I));
+        auto *FragId = cast<ConstantInt>(II->getArgOperand(I));
         AllEqual = FragIdList->getValue().udiv(4) == FragId->getValue().udiv(4);
       } else {
         // Check all arguments except FragId.
@@ -219,7 +219,8 @@ bool optimizeSection(ArrayRef<SmallVector<IntrinsicInst *, 4>> MergeableInsts) {
       continue;
 
     const uint8_t FragIdIndex = ImageDimIntr->VAddrEnd - 1;
-    auto FragId = cast<ConstantInt>(IIList.front()->getArgOperand(FragIdIndex));
+    auto *FragId =
+        cast<ConstantInt>(IIList.front()->getArgOperand(FragIdIndex));
     const APInt &NewFragIdVal = FragId->getValue().udiv(4) * 4;
 
     // Create the new instructions.
@@ -236,12 +237,10 @@ bool optimizeSection(ArrayRef<SmallVector<IntrinsicInst *, 4>> MergeableInsts) {
       else
         NewIntrinID = Intrinsic::amdgcn_image_msaa_load_2darraymsaa;
 
-      Function *NewIntrin = Intrinsic::getDeclaration(
-          IIList.front()->getModule(), NewIntrinID, OverloadTys);
       Args[ImageDimIntr->DMaskIndex] =
           ConstantInt::get(DMask->getType(), NewMaskVal);
       Args[FragIdIndex] = ConstantInt::get(FragId->getType(), NewFragIdVal);
-      CallInst *NewCall = B.CreateCall(NewIntrin, Args);
+      CallInst *NewCall = B.CreateIntrinsic(NewIntrinID, OverloadTys, Args);
       LLVM_DEBUG(dbgs() << "Optimize: " << *NewCall << "\n");
 
       NewCalls.push_back(NewCall);
@@ -251,7 +250,7 @@ bool optimizeSection(ArrayRef<SmallVector<IntrinsicInst *, 4>> MergeableInsts) {
     // Create the new extractelement instructions.
     for (auto &II : IIList) {
       Value *VecOp = nullptr;
-      auto Idx = cast<ConstantInt>(II->getArgOperand(FragIdIndex));
+      auto *Idx = cast<ConstantInt>(II->getArgOperand(FragIdIndex));
       B.SetCurrentDebugLocation(II->getDebugLoc());
       if (NumElts == 1) {
         VecOp = B.CreateExtractElement(NewCalls[0], Idx->getValue().urem(4));
@@ -275,7 +274,7 @@ bool optimizeSection(ArrayRef<SmallVector<IntrinsicInst *, 4>> MergeableInsts) {
     Modified = true;
   }
 
-  for (auto I : InstrsToErase)
+  for (auto *I : InstrsToErase)
     I->eraseFromParent();
 
   return Modified;
@@ -293,7 +292,7 @@ static bool imageIntrinsicOptimizerImpl(Function &F, const TargetMachine *TM) {
   Module *M = F.getParent();
 
   // Early test to determine if the intrinsics are used.
-  if (std::none_of(M->begin(), M->end(), [](Function &F) {
+  if (llvm::none_of(*M, [](Function &F) {
         return !F.users().empty() &&
                (F.getIntrinsicID() == Intrinsic::amdgcn_image_load_2dmsaa ||
                 F.getIntrinsicID() == Intrinsic::amdgcn_image_load_2darraymsaa);

@@ -31,6 +31,7 @@ struct CGPassBuilderOption {
   bool DisableVerify = false;
   bool EnableImplicitNullChecks = false;
   bool EnableBlockPlacementStats = false;
+  bool EnableGlobalMergeFunc = false;
   bool EnableMachineFunctionSplitter = false;
   bool MISchedPostRA = false;
   bool EarlyLiveIntervals = false;
@@ -38,7 +39,6 @@ struct CGPassBuilderOption {
 
   bool DisableLSR = false;
   bool DisableCGP = false;
-  bool PrintLSR = false;
   bool DisableMergeICmps = false;
   bool DisablePartialLibcallInlining = false;
   bool DisableConstantHoisting = false;
@@ -52,7 +52,7 @@ struct CGPassBuilderOption {
   bool RequiresCodeGenSCCOrder = false;
 
   RunOutliner EnableMachineOutliner = RunOutliner::TargetDefault;
-  RegAllocType RegAlloc = RegAllocType::Default;
+  StringRef RegAlloc = "default";
   std::optional<GlobalISelAbortMode> EnableGlobalISelAbort;
   std::string FSProfileFile;
   std::string FSRemappingFile;

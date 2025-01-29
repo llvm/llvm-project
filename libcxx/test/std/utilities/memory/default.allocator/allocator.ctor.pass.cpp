@@ -37,12 +37,12 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
 int main(int, char**) {
   test<char>();
-  test<char const>();
+  test<int>();
   test<void>();
 
 #if TEST_STD_VER > 17
   static_assert(test<char>());
-  static_assert(test<char const>());
+  static_assert(test<int>());
   static_assert(test<void>());
 #endif
   return 0;

@@ -1,4 +1,5 @@
 ; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 ;
 ; This test verifies global variables are emitted within the correct scope.
 ;

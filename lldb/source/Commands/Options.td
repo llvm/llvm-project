@@ -324,6 +324,10 @@ let Command = "disassemble" in {
     Arg<"DisassemblyFlavor">, Desc<"Name of the disassembly flavor you want to "
     "use. Currently the only valid options are default, and for Intel "
     "architectures, att and intel.">;
+  def disassemble_options_cpu : Option<"cpu", "X">, Arg<"CPUName">,
+    Desc<"Override the CPU for disassembling.">;
+  def disassemble_options_features : Option<"features", "Y">, Arg<"CPUFeatures">,
+    Desc<"Specify additional CPU features for disassembling.">;
   def disassemble_options_arch : Option<"arch", "A">, Arg<"Architecture">,
     Desc<"Specify the architecture to use from cross disassembly.">;
   def disassemble_options_start_address : Option<"start-address", "s">,
@@ -691,7 +695,10 @@ let Command = "process launch" in {
   def process_launch_plugin : Option<"plugin", "P">, Arg<"Plugin">,
     Desc<"Name of the process plugin you want to use.">;
   def process_launch_working_dir : Option<"working-dir", "w">, Arg<"DirectoryName">,
-    Desc<"Set the current working directory to <path> when running the inferior.">;
+    Desc<"Set the current working directory to <path> when running the inferior. This option "
+         "applies only to the current `process launch` invocation. If "
+         "`target.launch-working-dir` is set and this option is given, the value of this "
+         "option will be used instead of the setting.">;
   def process_launch_arch : Option<"arch", "a">, Arg<"Architecture">,
     Desc<"Set the architecture for the process to launch when ambiguous.">;
   def process_launch_environment : Option<"environment", "E">,
@@ -784,7 +791,7 @@ let Command = "process save_core" in {
     EnumArg<"SaveCoreStyle">, Desc<"Request a specific style "
     "of corefile to be saved.">;
   def process_save_core_plugin_name : Option<"plugin-name", "p">,
-    OptionalArg<"Plugin">, Desc<"Specify a plugin name to create the core file."
+    OptionalArg<"Plugin">, Desc<"Specify a plugin name to create the core file. "
     "This allows core files to be saved in different formats.">;
 }
 
@@ -805,19 +812,25 @@ let Command = "script add" in {
   def script_add_function : Option<"function", "f">, Group<1>,
     Arg<"PythonFunction">,
     Desc<"Name of the Python function to bind to this command name.">;
-  def script_add_class : Option<"class", "c">, Group<2>, Arg<"PythonClass">,
-  Desc<"Name of the Python class to bind to this command name.">;
+  def script_add_class : Option<"class", "c">, Groups<[2,3]>,
+    Arg<"PythonClass">,
+    Desc<"Name of the Python class to bind to this command name.">;
   def script_add_help : Option<"help", "h">, Group<1>, Arg<"HelpText">,
-  Desc<"The help text to display for this command.">;
-  def script_add_overwrite : Option<"overwrite", "o">, Groups<[1,2]>,
-  Desc<"Overwrite an existing command at this node.">;
+    Desc<"The help text to display for this command.">;
+    def script_add_overwrite : Option<"overwrite", "o">,
+    Desc<"Overwrite an existing command at this node.">;
   def script_add_synchronicity : Option<"synchronicity", "s">,
     EnumArg<"ScriptedCommandSynchronicity">,
     Desc<"Set the synchronicity of this command's executions with regard to "
     "LLDB event system.">;
-  def completion_type : Option<"completion-type", "C">,
-  EnumArg<"CompletionType">,
-  Desc<"Specify which completion type the command should use - if none is specified, the command won't use auto-completion.">;
+  def script_add_completion_type : Option<"completion-type", "C">,
+    Groups<[1,2]>, EnumArg<"CompletionType">,
+    Desc<"Specify which completion type the command should use - if none is "
+    "specified, the command won't use auto-completion.">;
+  def script_add_parsed_command : Option<"parsed", "p">, Group<3>,
+    Desc<"Make a parsed command. The command class will provide the command "
+    "definition by implementing get_options and get_arguments.">;
+
 }
 
 let Command = "container add" in {
@@ -829,10 +842,16 @@ let Command = "container add" in {
   Desc<"Overwrite an existing command at this node.">;
 }
 
-let Command = "script" in {
+let Command = "scripting run" in {
   def script_language : Option<"language", "l">,
     EnumArg<"ScriptLang">, Desc<"Specify the scripting "
     " language. If none is specific the default scripting language is used.">;
+}
+
+let Command = "scripting extension list" in {
+  def scripting_extension_list_language : Option<"language", "l">,
+    EnumArg<"ScriptLang">, Desc<"Specify the scripting "
+    " language. If none is specified the default scripting language is used.">;
 }
 
 let Command = "source info" in {
@@ -930,8 +949,8 @@ let Command = "target modules list" in {
     OptionalArg<"Width">, Desc<"Display the modification time with optional "
     "width of the module.">;
   def target_modules_list_ref_count : Option<"ref-count", "r">, Group<1>,
-    OptionalArg<"Width">, Desc<"Display the reference count if the module is "
-    "still in the shared module cache.">;
+    OptionalArg<"Width">, Desc<"Display whether the module is still in the "
+    "the shared module cache (Y/N), and its shared pointer use_count.">;
   def target_modules_list_pointer : Option<"pointer", "p">, Group<1>,
     OptionalArg<"None">, Desc<"Display the module pointer.">;
   def target_modules_list_global : Option<"global", "g">, Group<1>,
@@ -1031,11 +1050,13 @@ let Command = "target stop hook add" in {
 
 let Command = "thread backtrace" in {
   def thread_backtrace_count : Option<"count", "c">, Group<1>, Arg<"Count">,
-  Desc<"How many frames to display (-1 for all)">;
+  Desc<"How many frames to display (0 for all)">;
   def thread_backtrace_start : Option<"start", "s">, Group<1>,
   Arg<"FrameIndex">, Desc<"Frame in which to start the backtrace">;
   def thread_backtrace_extended : Option<"extended", "e">, Group<1>,
   Arg<"Boolean">, Desc<"Show the extended backtrace, if available">;
+  def thread_backtrace_unfiltered : Option<"unfiltered", "u">, Group<1>,
+  Desc<"Do not filter out frames according to installed frame recognizers">;
 }
 
 let Command = "thread step scope" in {
@@ -1185,7 +1206,7 @@ let Command = "thread trace dump instructions" in {
   def thread_trace_dump_instruction_only_events : Option<"only-events", "E">,
     Group<1>,
     Desc<"Dump only the events that happened during the execution of the "
-    "target. No instrutions are dumped.">;
+    "target. No instructions are dumped.">;
   def thread_trace_dump_instructions_continue: Option<"continue", "C">,
     Group<1>,
     Desc<"Continue dumping instructions right where the previous invocation of "
@@ -1412,4 +1433,34 @@ let Command = "trace schema" in {
 let Command = "statistics dump" in {
   def statistics_dump_all: Option<"all-targets", "a">, Group<1>,
     Desc<"Include statistics for all targets.">;
+  def statistics_dump_summary: Option<"summary", "s">, Group<1>,
+    Desc<"Dump only high-level summary statistics. "
+         "Exclude targets, modules, breakpoints etc... details.">;
+  def statistics_dump_force: Option<"load-all-debug-info", "f">, Group<1>,
+    Desc<"Dump the total possible debug info statistics. "
+    "Force loading all the debug information if not yet loaded, and collect "
+    "statistics with those.">;
+  def statistics_dump_targets: Option<"targets", "r">, Group<1>,
+    Arg<"Boolean">,
+    Desc<"Dump statistics for the targets, including breakpoints, expression "
+    "evaluations, frame variables, etc. "
+    "Defaults to true in both default mode and summary mode. "
+    "In default mode, if both '--targets' and '--modules' are 'true', a list "
+    "of module identifiers will be added to the 'targets' section.">;
+  def statistics_dump_modules: Option<"modules", "m">, Group<1>,
+    Arg<"Boolean">,
+    Desc<"Dump statistics for the modules, including time and size of various "
+    "aspects of the module and debug information, type system, path, etc. "
+    "Defaults to true, unless the '--summary' mode is enabled, in which case "
+    "this is turned off unless specified. "
+    "In default mode, if both '--targets' and '--modules' are 'true', a list "
+    "of module identifiers will be added to the 'targets' section.">;
+  def statistics_dump_transcript: Option<"transcript", "t">, Group<1>,
+    Arg<"Boolean">,
+    Desc<"If the setting interpreter.save-transcript is enabled and this "
+    "option is 'true', include a JSON array with all commands the user and/or "
+    "scripts executed during a debug session. "
+    "Defaults to true, unless the '--summary' mode is enabled, in which case "
+    "this is turned off unless specified.">;
+
 }

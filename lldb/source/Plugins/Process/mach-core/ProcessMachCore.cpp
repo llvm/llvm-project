@@ -111,8 +111,8 @@ bool ProcessMachCore::CanDebug(lldb::TargetSP target_sp,
 ProcessMachCore::ProcessMachCore(lldb::TargetSP target_sp,
                                  ListenerSP listener_sp,
                                  const FileSpec &core_file)
-    : PostMortemProcess(target_sp, listener_sp), m_core_aranges(),
-      m_core_range_infos(), m_core_module_sp(), m_core_file(core_file),
+    : PostMortemProcess(target_sp, listener_sp, core_file), m_core_aranges(),
+      m_core_range_infos(), m_core_module_sp(),
       m_dyld_addr(LLDB_INVALID_ADDRESS),
       m_mach_kernel_addr(LLDB_INVALID_ADDRESS) {}
 
@@ -550,22 +550,17 @@ void ProcessMachCore::CleanupMemoryRegionPermissions() {
 Status ProcessMachCore::DoLoadCore() {
   Status error;
   if (!m_core_module_sp) {
-    error.SetErrorString("invalid core module");
+    error = Status::FromErrorString("invalid core module");
     return error;
   }
 
   ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
   if (core_objfile == nullptr) {
-    error.SetErrorString("invalid core object file");
+    error = Status::FromErrorString("invalid core object file");
     return error;
   }
 
   SetCanJIT(false);
-
-  // The corefile's architecture is our best starting point.
-  ArchSpec arch(m_core_module_sp->GetArchitecture());
-  if (arch.IsValid())
-    GetTarget().SetArchitecture(arch);
 
   CreateMemoryRegions();
 
@@ -573,8 +568,18 @@ Status ProcessMachCore::DoLoadCore() {
 
   CleanupMemoryRegionPermissions();
 
+  ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
+  if (exe_module_sp && exe_module_sp->GetArchitecture().IsValid()) {
+    GetTarget().SetArchitecture(exe_module_sp->GetArchitecture());
+  } else {
+    // The corefile's architecture is our best starting point.
+    ArchSpec arch(m_core_module_sp->GetArchitecture());
+    if (arch.IsValid())
+      GetTarget().SetArchitecture(arch);
+  }
+
   AddressableBits addressable_bits = core_objfile->GetAddressableBits();
-  addressable_bits.SetProcessMasks(*this);
+  SetAddressableBitMasks(addressable_bits);
 
   return error;
 }
@@ -593,19 +598,19 @@ bool ProcessMachCore::DoUpdateThreadList(ThreadList &old_thread_list,
     ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
 
     if (core_objfile) {
-      std::set<tid_t> used_tids;
+      std::set<lldb::tid_t> used_tids;
       const uint32_t num_threads = core_objfile->GetNumThreadContexts();
-      std::vector<tid_t> tids;
+      std::vector<lldb::tid_t> tids;
       if (core_objfile->GetCorefileThreadExtraInfos(tids)) {
         assert(tids.size() == num_threads);
 
         // Find highest tid value.
-        tid_t highest_tid = 0;
+        lldb::tid_t highest_tid = 0;
         for (uint32_t i = 0; i < num_threads; i++) {
           if (tids[i] != LLDB_INVALID_THREAD_ID && tids[i] > highest_tid)
             highest_tid = tids[i];
         }
-        tid_t current_unused_tid = highest_tid + 1;
+        lldb::tid_t current_unused_tid = highest_tid + 1;
         for (uint32_t i = 0; i < num_threads; i++) {
           if (tids[i] == LLDB_INVALID_THREAD_ID) {
             tids[i] = current_unused_tid++;
@@ -652,7 +657,7 @@ size_t ProcessMachCore::ReadMemory(addr_t addr, void *buf, size_t size,
                                    Status &error) {
   // Don't allow the caching that lldb_private::Process::ReadMemory does since
   // in core files we have it all cached our our core file anyway.
-  return DoReadMemory(addr, buf, size, error);
+  return DoReadMemory(FixAnyAddress(addr), buf, size, error);
 }
 
 size_t ProcessMachCore::DoReadMemory(addr_t addr, void *buf, size_t size,
@@ -696,7 +701,7 @@ size_t ProcessMachCore::DoReadMemory(addr_t addr, void *buf, size_t size,
       } else {
         // Only set the error if we didn't read any bytes
         if (bytes_read == 0)
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "core file does not contain 0x%" PRIx64, curr_addr);
         break;
       }

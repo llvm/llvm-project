@@ -5,7 +5,7 @@
 ; RUN: FileCheck %s -input-file=dom.test1.dot -check-prefix=TEST1
 ; RUN: FileCheck %s -input-file=dom.test2.dot -check-prefix=TEST2
 
-define void @test1() {
+define void @test1(i1 %arg) {
 ; TEST1: digraph "Dominator tree for 'test1' function"
 ; TEST1-NEXT: label="Dominator tree for 'test1' function"
 ; TEST1:      Node0x[[EntryID:.*]] [shape=record,label="{entry:
@@ -21,7 +21,7 @@ define void @test1() {
 ; TEST1-NEXT: Node0x[[B_ID]] [shape=record,label="{b:
 
 entry:
-  br i1 undef, label %a, label %b
+  br i1 %arg, label %a, label %b
 
 a:
   br label %c
@@ -30,7 +30,7 @@ b:
   br label %c
 
 c:
-  br i1 undef, label %d, label %e
+  br i1 %arg, label %d, label %e
 
 d:
   ret void
@@ -39,7 +39,7 @@ e:
   ret void
 }
 
-define void @test2() {
+define void @test2(i1 %arg) {
 ; TEST2: digraph "Dominator tree for 'test2' function"
 ; TEST2-NEXT: label="Dominator tree for 'test2' function"
 ; TEST2: Node0x[[EntryID:.*]] [shape=record,label="{entry:
@@ -61,13 +61,13 @@ a:
   br label %b
 
 b:
-  br i1 undef, label %a, label %c
+  br i1 %arg, label %a, label %c
 
 c:
-  br i1 undef, label %d, label %e
+  br i1 %arg, label %d, label %e
 
 d:
-  br i1 undef, label %a, label %e
+  br i1 %arg, label %a, label %e
 
 e:
   ret void

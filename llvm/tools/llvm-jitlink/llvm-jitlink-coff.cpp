@@ -66,6 +66,8 @@ static Expected<Symbol &> getCOFFStubTarget(LinkGraph &G, Block &B) {
 
 namespace llvm {
 Error registerCOFFGraphInfo(Session &S, LinkGraph &G) {
+  std::lock_guard<std::mutex> Lock(S.M);
+
   auto FileName = sys::path::filename(G.getName());
   if (S.FileInfos.count(FileName)) {
     return make_error<StringError>("When -check is passed, file names must be "
@@ -108,33 +110,16 @@ Error registerCOFFGraphInfo(Session &S, LinkGraph &G) {
       if (Sym->getAddress() > LastSym->getAddress())
         LastSym = Sym;
 
-      if (isGOTSection) {
-        if (Sym->isSymbolZeroFill())
-          return make_error<StringError>("zero-fill atom in GOT section",
-                                         inconvertibleErrorCode());
-
-        // If this is a GOT symbol with size (i.e. not the GOT start symbol)
-        // then add it to the GOT entry info table.
-        if (Sym->getSize() != 0) {
-          if (auto TS = getCOFFGOTTarget(G, Sym->getBlock()))
-            FileInfo.GOTEntryInfos[TS->getName()] = {
-                Sym->getSymbolContent(), Sym->getAddress().getValue(),
-                Sym->getTargetFlags()};
-          else
-            return TS.takeError();
+      if (isGOTSection || isStubsSection) {
+        if (isGOTSection) {
+          // Skip the GOT start symbol
+          if (Sym->getSize() != 0)
+            if (Error E = FileInfo.registerGOTEntry(G, *Sym, getCOFFGOTTarget))
+              return E;
+        } else {
+          if (Error E = FileInfo.registerStubEntry(G, *Sym, getCOFFStubTarget))
+            return E;
         }
-        SectionContainsContent = true;
-      } else if (isStubsSection) {
-        if (Sym->isSymbolZeroFill())
-          return make_error<StringError>("zero-fill atom in Stub section",
-                                         inconvertibleErrorCode());
-
-        if (auto TS = getCOFFStubTarget(G, Sym->getBlock()))
-          FileInfo.StubInfos[TS->getName()] = {Sym->getSymbolContent(),
-                                               Sym->getAddress().getValue(),
-                                               Sym->getTargetFlags()};
-        else
-          return TS.takeError();
         SectionContainsContent = true;
       }
 

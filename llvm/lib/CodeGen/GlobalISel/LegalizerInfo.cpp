@@ -13,11 +13,11 @@
 
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/Debug.h"
@@ -154,7 +154,8 @@ static bool mutationIsSane(const LegalizeRule &Rule,
   case WidenScalar: {
     if (OldTy.isVector()) {
       // Number of elements should not change.
-      if (!NewTy.isVector() || OldTy.getNumElements() != NewTy.getNumElements())
+      if (!NewTy.isVector() ||
+          OldTy.getElementCount() != NewTy.getElementCount())
         return false;
     } else {
       // Both types must be vectors

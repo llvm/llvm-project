@@ -45,7 +45,7 @@ class TestMultipleBinaryCorefile(TestBase):
         if self.TraceOn():
             print("loading corefile %s" % self.corefile)
         process = target.LoadCore(self.corefile)
-        self.assertEqual(process.IsValid(), True)
+        self.assertTrue(process.IsValid())
         if self.TraceOn():
             print("image list after loading corefile:")
             self.runCmd("image list")

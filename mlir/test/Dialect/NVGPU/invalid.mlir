@@ -40,6 +40,14 @@ func.func @ldmatrix_trans_f32_x4(%arg0: memref<128x128xf32, 3>) ->  vector<4x1xf
 }
 // -----
 
+func.func @ldmatrix_trans_f32_x4(%arg0: memref<128x128xf32, 3>) ->  vector<4x1xf32> {
+  %c0  = arith.constant 0 : index
+  // expected-error @+1 {{results must be 2 dimensional vector}}
+  %a = nvgpu.ldmatrix %arg0[%c0, %c0] {transpose = false, numTiles = 4 : i32} : memref<128x128xf32, 3> -> vector<4xf32>
+  return %a : vector<4xf32>
+}
+// -----
+
 func.func @ldmatrix_type_x4(%arg0: memref<128x128xf32, 3>) ->  vector<4x2xf16> {
   %c0  = arith.constant 0 : index
   // expected-error @+1 {{'nvgpu.ldmatrix' op failed to verify that srcMemref and res have same element type}}
@@ -307,4 +315,66 @@ func.func @tma_load_4(%desc: !desc,  %buffer1: memref<128xf32,3>, %buffer2: memr
   // expected-error @+1 {{the shape of tensor map descriptor and memref must have same rank}}
   nvgpu.tma.async.load %desc[%c0, %c0], %mbarrier[%c0] to %buffer1 : !desc, !mbarrier -> memref<128xf32,3>
   return
+}
+
+// -----
+
+!desc = !nvgpu.tensormap.descriptor<tensor = memref<64x128xf16,3>, swizzle=swizzle_32b, l2promo = none, oob = zero, interleave = none>
+func.func @tma_generate_descriptor_incorrect_last_dim(%b0 : index, %b1 : index, %mem : memref<*xf16>) {
+  // expected-error @+1 {{the tensormap descriptor must have last dimension of 128 bytes but it is 256 bytes}}
+  %descA = nvgpu.tma.create.descriptor %mem box[%b0, %b1] : memref<*xf16> -> !desc
+  return
+}
+// -----
+
+
+!desc = !nvgpu.tensormap.descriptor<tensor = memref<64x128xf32,3>, swizzle=swizzle_32b, l2promo = none, oob = zero, interleave = none>
+!mbarrier = !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>>
+func.func @tma_generate_descriptor_incorrect_last_dim(%desc: !desc,  %buffer2: memref<64x128xf32,3>, %mbarrier: !mbarrier) {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{the tensormap descriptor must have last dimension of 128 bytes but it is 512 bytes}}
+  nvgpu.tma.async.load %desc[%c0, %c0], %mbarrier[%c0] to %buffer2 : !desc, !mbarrier -> memref<64x128xf32,3>
+  return
+}
+// -----
+
+func.func @rcp_unsupported_rounding_0(%in : vector<16xf32>) {
+  // expected-error @+1 {{'nvgpu.rcp' op has a limitation. #nvgpu<rcp_rounding_mode rn> or non-ftz is not supported yet.}}
+  %out = nvgpu.rcp %in {rounding = rn, ftz} : vector<16xf32>
+}
+// -----
+
+func.func @rcp_unsupported_rounding_1(%in : vector<16xf32>) {
+  // expected-error @+1 {{'nvgpu.rcp' op has a limitation. #nvgpu<rcp_rounding_mode rz> or non-ftz is not supported yet.}}
+  %out = nvgpu.rcp %in {rounding = rz} : vector<16xf32>
+}
+// -----
+
+func.func @rcp_unsupported_ftz(%in : vector<16xf32>) {
+  // expected-error @+1 {{'nvgpu.rcp' op has a limitation. #nvgpu<rcp_rounding_mode approx> or non-ftz is not supported yet.}}
+  %out = nvgpu.rcp %in {rounding = approx} : vector<16xf32>
+}
+
+// -----
+
+func.func @check_matrixA_dim(%arg0: vector<16xf16>, %arg1: vector<2x2xf16>, %arg2: vector<2x2xf16>) -> vector<2x2xf16> {
+  // expected-error @+1 {{matrixA must be 2 dimensional vector}}
+  %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) {mmaShape = [16, 8, 16]} : (vector<16xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
+  return %d : vector<2x2xf16>
+}
+
+// -----
+
+func.func @check_matrixB_dim(%arg0: vector<4x4xf16>, %arg1: vector<4xf16>, %arg2: vector<2x2xf16>) -> vector<2x2xf16> {
+  // expected-error @+1 {{matrixB must be 2 dimensional vector}}
+  %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) {mmaShape = [16, 8, 16]} : (vector<4x4xf16>, vector<4xf16>, vector<2x2xf16>) -> vector<2x2xf16>
+  return %d : vector<2x2xf16>
+}
+
+// -----
+
+func.func @check_matrixC_dim(%arg0: vector<4x4xf16>, %arg1: vector<2x2xf16>, %arg2: vector<4xf16>) -> vector<2x2xf16> {
+  // expected-error @+1 {{matrixC must be 2 dimensional vector}}
+  %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) {mmaShape = [16, 8, 16]} : (vector<4x4xf16>, vector<2x2xf16>, vector<4xf16>) -> vector<2x2xf16>
+  return %d : vector<2x2xf16>
 }

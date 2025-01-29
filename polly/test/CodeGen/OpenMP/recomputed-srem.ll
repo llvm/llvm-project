@@ -1,9 +1,9 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-codegen -polly-parallel \
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb -passes=polly-codegen -polly-parallel \
 ; RUN: -polly-parallel-force -S < %s | FileCheck %s
 ;
 ; Test to verify that we pass %rem96 to the parallel subfunction.
 ;
-; CHECK:       %[[R:[0-9]*]] = getelementptr inbounds { i32, i32, i64, ptr, ptr, i32 }, ptr %polly.par.userContext, i32 0, i32 5
+; CHECK:       %[[R:[0-9]*]] = getelementptr inbounds nuw { i32, i32, i64, ptr, ptr, i32 }, ptr %polly.par.userContext, i32 0, i32 5
 ; CHECK-NEXT:  %polly.subfunc.arg.rem96 = load i32, ptr %[[R]]
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

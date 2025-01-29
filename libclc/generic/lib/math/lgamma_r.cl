@@ -22,9 +22,8 @@
  */
 
 #include <clc/clc.h>
-
-#include "../clcmacro.h"
-#include "math.h"
+#include <clc/clcmacro.h>
+#include <clc/math/math.h>
 
 /*
  * ====================================================
@@ -486,6 +485,17 @@ _CLC_OVERLOAD _CLC_DEF double lgamma_r(double x, private int *ip) {
 _CLC_V_V_VP_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, lgamma_r, double, private, int)
 #endif
 
+#ifdef cl_khr_fp16
+
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+_CLC_OVERLOAD _CLC_DEF half lgamma_r(half x, private int *iptr) {
+    return (half)lgamma_r((float)x, iptr);
+}
+
+_CLC_V_V_VP_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, lgamma_r, half, private, int);
+
+#endif
 
 #define __CLC_ADDRSPACE global
 #define __CLC_BODY <lgamma_r.inc>

@@ -1,9 +1,9 @@
-; RUN: opt %loadPolly -polly-print-ast -disable-basic-aa -disable-output < %s | FileCheck %s --check-prefix=NOAA
-; RUN: opt %loadPolly -polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=BASI
-; RUN: opt %loadPolly -polly-print-ast -disable-basic-aa -tbaa -disable-output < %s | FileCheck %s --check-prefix=TBAA
-; RUN: opt %loadPolly -polly-print-ast -disable-basic-aa -scev-aa -disable-output < %s | FileCheck %s --check-prefix=SCEV
-; RUN: opt %loadPolly -polly-print-ast -disable-basic-aa -globals-aa -disable-output < %s | FileCheck %s --check-prefix=GLOB
-; RUN: opt %loadPolly -polly-print-ast -disable-basic-aa -globals-aa -polly-allow-nonaffine -disable-output < %s | FileCheck %s --check-prefix=NONAFFINE
+; RUN: opt %loadNPMPolly '-passes=print<polly-ast>'  -aa-pipeline= -disable-output < %s | FileCheck %s --check-prefix=NOAA
+; RUN: opt %loadNPMPolly '-passes=print<polly-ast>'  -aa-pipeline=basic-aa -disable-output < %s | FileCheck %s --check-prefix=BASI
+; RUN: opt %loadNPMPolly '-passes=print<polly-ast>'  -aa-pipeline=tbaa -disable-output < %s | FileCheck %s --check-prefix=TBAA
+; RUN: opt %loadNPMPolly '-passes=print<polly-ast>'  -aa-pipeline=scev-aa -disable-output < %s | FileCheck %s --check-prefix=SCEV
+; RUN: opt %loadNPMPolly '-passes=print<polly-ast>'  -aa-pipeline=globals-aa -disable-output < %s | FileCheck %s --check-prefix=GLOB
+; RUN: opt %loadNPMPolly '-passes=print<polly-ast>'  -aa-pipeline=globals-aa -polly-allow-nonaffine -disable-output < %s | FileCheck %s --check-prefix=NONAFFINE
 ;
 ;    int A[1024], B[1024];
 ;

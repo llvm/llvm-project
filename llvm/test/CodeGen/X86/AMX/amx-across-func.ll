@@ -235,7 +235,7 @@ define dso_local i32 @test_loop(i32 %0) nounwind {
 ; CHECK-NEXT:    movl $32, %r15d
 ; CHECK-NEXT:    movw $8, %r12w
 ; CHECK-NEXT:    movl $buf+2048, %r13d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB2_2: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    tileloadd (%r14,%r15), %tmm0
 ; CHECK-NEXT:    movabsq $64, %rax
@@ -300,7 +300,7 @@ define dso_local i32 @test_loop(i32 %0) nounwind {
 ; IPRA-NEXT:    movl $32, %esi
 ; IPRA-NEXT:    movw $8, %di
 ; IPRA-NEXT:    movl $buf+2048, %r8d
-; IPRA-NEXT:    .p2align 4, 0x90
+; IPRA-NEXT:    .p2align 4
 ; IPRA-NEXT:  .LBB2_2: # =>This Inner Loop Header: Depth=1
 ; IPRA-NEXT:    tileloadd (%rdx,%rsi), %tmm0
 ; IPRA-NEXT:    callq foo
@@ -494,7 +494,7 @@ define dso_local void @test_loop2(i32 %0) nounwind {
 ; CHECK-NEXT:    movl $32, %r15d
 ; CHECK-NEXT:    movw $8, %bp
 ; CHECK-NEXT:    movl $buf+2048, %r12d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
@@ -535,7 +535,7 @@ define dso_local void @test_loop2(i32 %0) nounwind {
 ; IPRA-NEXT:    movl $32, %ecx
 ; IPRA-NEXT:    movw $8, %dx
 ; IPRA-NEXT:    movl $buf+2048, %esi
-; IPRA-NEXT:    .p2align 4, 0x90
+; IPRA-NEXT:    .p2align 4
 ; IPRA-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
 ; IPRA-NEXT:    callq foo
 ; IPRA-NEXT:    testl %edi, %edi

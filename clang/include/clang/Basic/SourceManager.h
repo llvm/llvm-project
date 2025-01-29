@@ -497,6 +497,10 @@ public:
   bool isFile() const { return !isExpansion(); }
 
   const FileInfo &getFile() const {
+    return const_cast<SLocEntry *>(this)->getFile();
+  }
+
+  FileInfo &getFile() {
     assert(isFile() && "Not a file SLocEntry!");
     return File;
   }
@@ -720,7 +724,7 @@ class SourceManager : public RefCountedBase<SourceManager> {
   ///
   /// Negative FileIDs are indexes into this table. To get from ID to an index,
   /// use (-ID - 2).
-  llvm::PagedVector<SrcMgr::SLocEntry> LoadedSLocEntryTable;
+  llvm::PagedVector<SrcMgr::SLocEntry, 32> LoadedSLocEntryTable;
 
   /// For each allocation in LoadedSLocEntryTable, we keep the first FileID.
   /// We assume exactly one allocation per AST file, and use that to determine
@@ -1120,12 +1124,12 @@ public:
   /// Set the number of FileIDs (files and macros) that were created
   /// during preprocessing of \p FID, including it.
   void setNumCreatedFIDsForFileID(FileID FID, unsigned NumFIDs,
-                                  bool Force = false) const {
+                                  bool Force = false) {
     auto *Entry = getSLocEntryForFile(FID);
     if (!Entry)
       return;
     assert((Force || Entry->getFile().NumCreatedFIDs == 0) && "Already set!");
-    const_cast<SrcMgr::FileInfo &>(Entry->getFile()).NumCreatedFIDs = NumFIDs;
+    Entry->getFile().NumCreatedFIDs = NumFIDs;
   }
 
   //===--------------------------------------------------------------------===//
@@ -1504,7 +1508,7 @@ public:
     if (Presumed.isInvalid())
       return false;
     StringRef Filename(Presumed.getFilename());
-    return Filename.equals("<built-in>");
+    return Filename == "<built-in>";
   }
 
   /// Returns whether \p Loc is located in a <command line> file.
@@ -1513,7 +1517,7 @@ public:
     if (Presumed.isInvalid())
       return false;
     StringRef Filename(Presumed.getFilename());
-    return Filename.equals("<command line>");
+    return Filename == "<command line>";
   }
 
   /// Returns whether \p Loc is located in a <scratch space> file.
@@ -1522,7 +1526,7 @@ public:
     if (Presumed.isInvalid())
       return false;
     StringRef Filename(Presumed.getFilename());
-    return Filename.equals("<scratch space>");
+    return Filename == "<scratch space>";
   }
 
   /// Returns if a SourceLocation is in a system header.
@@ -1672,6 +1676,11 @@ public:
   isInTheSameTranslationUnit(std::pair<FileID, unsigned> &LOffs,
                              std::pair<FileID, unsigned> &ROffs) const;
 
+  /// \param Loc a source location in a loaded AST (of a PCH/Module file).
+  /// \returns a FileID uniquely identifies the AST of a loaded
+  /// module/PCH where `Loc` is at.
+  FileID getUniqueLoadedASTFileID(SourceLocation Loc) const;
+
   /// Determines whether the two decomposed source location is in the same TU.
   bool isInTheSameTranslationUnitImpl(
       const std::pair<FileID, unsigned> &LOffs,
@@ -1730,6 +1739,11 @@ public:
 
   /// Get a local SLocEntry. This is exposed for indexing.
   const SrcMgr::SLocEntry &getLocalSLocEntry(unsigned Index) const {
+    return const_cast<SourceManager *>(this)->getLocalSLocEntry(Index);
+  }
+
+  /// Get a local SLocEntry. This is exposed for indexing.
+  SrcMgr::SLocEntry &getLocalSLocEntry(unsigned Index) {
     assert(Index < LocalSLocEntryTable.size() && "Invalid index");
     return LocalSLocEntryTable[Index];
   }
@@ -1740,6 +1754,13 @@ public:
   /// Get a loaded SLocEntry. This is exposed for indexing.
   const SrcMgr::SLocEntry &getLoadedSLocEntry(unsigned Index,
                                               bool *Invalid = nullptr) const {
+    return const_cast<SourceManager *>(this)->getLoadedSLocEntry(Index,
+                                                                 Invalid);
+  }
+
+  /// Get a loaded SLocEntry. This is exposed for indexing.
+  SrcMgr::SLocEntry &getLoadedSLocEntry(unsigned Index,
+                                        bool *Invalid = nullptr) {
     assert(Index < LoadedSLocEntryTable.size() && "Invalid index");
     if (SLocEntryLoaded[Index])
       return LoadedSLocEntryTable[Index];
@@ -1748,6 +1769,10 @@ public:
 
   const SrcMgr::SLocEntry &getSLocEntry(FileID FID,
                                         bool *Invalid = nullptr) const {
+    return const_cast<SourceManager *>(this)->getSLocEntry(FID, Invalid);
+  }
+
+  SrcMgr::SLocEntry &getSLocEntry(FileID FID, bool *Invalid = nullptr) {
     if (FID.ID == 0 || FID.ID == -1) {
       if (Invalid) *Invalid = true;
       return LocalSLocEntryTable[0];
@@ -1821,14 +1846,23 @@ private:
   SrcMgr::ContentCache &getFakeContentCacheForRecovery() const;
 
   const SrcMgr::SLocEntry &loadSLocEntry(unsigned Index, bool *Invalid) const;
+  SrcMgr::SLocEntry &loadSLocEntry(unsigned Index, bool *Invalid);
 
   const SrcMgr::SLocEntry *getSLocEntryOrNull(FileID FID) const {
+    return const_cast<SourceManager *>(this)->getSLocEntryOrNull(FID);
+  }
+
+  SrcMgr::SLocEntry *getSLocEntryOrNull(FileID FID) {
     bool Invalid = false;
-    const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &Invalid);
+    SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &Invalid);
     return Invalid ? nullptr : &Entry;
   }
 
   const SrcMgr::SLocEntry *getSLocEntryForFile(FileID FID) const {
+    return const_cast<SourceManager *>(this)->getSLocEntryForFile(FID);
+  }
+
+  SrcMgr::SLocEntry *getSLocEntryForFile(FileID FID) {
     if (auto *Entry = getSLocEntryOrNull(FID))
       if (Entry->isFile())
         return Entry;
@@ -1839,6 +1873,10 @@ private:
   /// Invalid will not be modified for Local IDs.
   const SrcMgr::SLocEntry &getSLocEntryByID(int ID,
                                             bool *Invalid = nullptr) const {
+    return const_cast<SourceManager *>(this)->getSLocEntryByID(ID, Invalid);
+  }
+
+  SrcMgr::SLocEntry &getSLocEntryByID(int ID, bool *Invalid = nullptr) {
     assert(ID != -1 && "Using FileID sentinel value");
     if (ID < 0)
       return getLoadedSLocEntryByID(ID, Invalid);
@@ -1847,6 +1885,11 @@ private:
 
   const SrcMgr::SLocEntry &
   getLoadedSLocEntryByID(int ID, bool *Invalid = nullptr) const {
+    return const_cast<SourceManager *>(this)->getLoadedSLocEntryByID(ID,
+                                                                     Invalid);
+  }
+
+  SrcMgr::SLocEntry &getLoadedSLocEntryByID(int ID, bool *Invalid = nullptr) {
     return getLoadedSLocEntry(static_cast<unsigned>(-ID - 2), Invalid);
   }
 
@@ -1938,6 +1981,7 @@ private:
                                          SourceLocation SpellLoc,
                                          SourceLocation ExpansionLoc,
                                          unsigned ExpansionLength) const;
+  void updateSlocUsageStats() const;
 };
 
 /// Comparison function object.

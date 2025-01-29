@@ -1,0 +1,49 @@
+name: PR Request Release Note
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    types:
+      - closed
+
+jobs:
+  request-release-note:
+    if: >-
+      github.repository_owner == 'llvm' &&
+      startsWith(github.ref, 'refs/heads/release')
+
+    runs-on: ubuntu-latest
+    steps:
+      # We need to pull the script from the main branch, so that we ensure
+      # we get the latest version of this script.
+      - name: Checkout Scripts
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          sparse-checkout: |
+            llvm/utils/git/requirements.txt
+            llvm/utils/git/github-automation.py
+          sparse-checkout-cone-mode: false
+
+      - name: Install Dependencies
+        run: |
+          pip install --require-hashes -r llvm/utils/git/requirements.txt
+
+      - name: Request Release Note
+        env:
+          # We need to use an llvmbot token here, because we are mentioning a user.
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 llvm/utils/git/github-automation.py \
+            --repo "$GITHUB_REPOSITORY" \
+            --token "$GITHUB_TOKEN" \
+            request-release-note \
+            --pr-number ${{ github.event.pull_request.number}}
+
+      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+        if: always()
+        with:
+          name: workflow-args
+          path: |
+            comments

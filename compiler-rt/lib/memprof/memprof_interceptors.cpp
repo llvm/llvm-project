@@ -49,7 +49,7 @@ int OnExit() {
 // ---------------------- Wrappers ---------------- {{{1
 using namespace __memprof;
 
-DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, uptr)
+DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, usize)
 DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
 
 #define COMMON_INTERCEPT_FUNCTION_VER(name, ver)                               \
@@ -163,10 +163,10 @@ INTERCEPTOR(int, pthread_create, void *thread, void *attr,
 }
 
 INTERCEPTOR(int, pthread_join, void *t, void **arg) {
-  return real_pthread_join(t, arg);
+  return REAL(pthread_join)(t, arg);
 }
 
-DEFINE_REAL_PTHREAD_FUNCTIONS
+DEFINE_INTERNAL_PTHREAD_FUNCTIONS
 
 INTERCEPTOR(char *, index, const char *string, int c)
 ALIAS(WRAP(strchr));
@@ -185,12 +185,12 @@ INTERCEPTOR(char *, strcat, char *to, const char *from) {
   return REAL(strcat)(to, from);
 }
 
-INTERCEPTOR(char *, strncat, char *to, const char *from, uptr size) {
+INTERCEPTOR(char *, strncat, char *to, const char *from, usize size) {
   void *ctx;
   MEMPROF_INTERCEPTOR_ENTER(ctx, strncat);
   ENSURE_MEMPROF_INITED();
   uptr from_length = MaybeRealStrnlen(from, size);
-  uptr copy_length = Min(size, from_length + 1);
+  uptr copy_length = Min<uptr>(size, from_length + 1);
   MEMPROF_READ_RANGE(from, copy_length);
   uptr to_length = internal_strlen(to);
   MEMPROF_READ_STRING(to, to_length);
@@ -239,11 +239,11 @@ INTERCEPTOR(char *, __strdup, const char *s) {
   return reinterpret_cast<char *>(new_mem);
 }
 
-INTERCEPTOR(char *, strncpy, char *to, const char *from, uptr size) {
+INTERCEPTOR(char *, strncpy, char *to, const char *from, usize size) {
   void *ctx;
   MEMPROF_INTERCEPTOR_ENTER(ctx, strncpy);
   ENSURE_MEMPROF_INITED();
-  uptr from_size = Min(size, MaybeRealStrnlen(from, size) + 1);
+  uptr from_size = Min<uptr>(size, MaybeRealStrnlen(from, size) + 1);
   MEMPROF_READ_RANGE(from, from_size);
   MEMPROF_WRITE_RANGE(to, size);
   return REAL(strncpy)(to, from, size);

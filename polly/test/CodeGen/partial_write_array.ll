@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-import-jscop,polly-codegen' -polly-import-jscop-postfix=transformed -S < %s | FileCheck %s
 ;
 ; Partial write of an array access.
 ;
@@ -38,7 +38,7 @@ return:
 
 ; CHECK:      polly.stmt.body.Stmt_body_Write0.partial:
 ; CHECK-NEXT:   %polly.access.A = getelementptr double, ptr %A, i64 0
-; CHECK-NEXT:   store double 4.200000e+01, ptr %polly.access.A, align 8, !alias.scope !0, !noalias !3
+; CHECK-NEXT:   store double 4.200000e+01, ptr %polly.access.A, align 8, !alias.scope !2, !noalias !5
 ; CHECK-NEXT:   br label %polly.stmt.body.cont
 
 ; CHECK:      polly.stmt.body.cont:

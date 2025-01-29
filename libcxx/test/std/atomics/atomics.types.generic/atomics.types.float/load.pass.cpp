@@ -7,15 +7,15 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // XFAIL: !has-64-bit-atomics
-// UNSUPPORTED: !non-lockfree-atomics
 
 //  floating-point-type load(memory_order = memory_order::seq_cst) volatile noexcept;
 //  floating-point-type load(memory_order = memory_order::seq_cst) noexcept;
 
-#include <algorithm>
 #include <atomic>
+#include <algorithm>
 #include <cassert>
 #include <concepts>
+#include <memory>
 #include <ranges>
 #include <type_traits>
 #include <vector>
@@ -77,7 +77,7 @@ void test_impl() {
     }
   }
 
-  // memory_order::comsume
+  // memory_order::consume
   {
     std::unique_ptr<T> p = std::make_unique<T>(T(0.0));
     MaybeVolatile<std::atomic<T>> at(T(0.0));

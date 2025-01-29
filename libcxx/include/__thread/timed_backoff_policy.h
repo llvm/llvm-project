@@ -12,10 +12,10 @@
 
 #include <__config>
 
-#ifndef _LIBCPP_HAS_NO_THREADS
+#if _LIBCPP_HAS_THREADS
 
 #  include <__chrono/duration.h>
-#  include <__threading_support>
+#  include <__thread/support.h>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -39,6 +39,6 @@ struct __libcpp_timed_backoff_policy {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_HAS_NO_THREADS
+#endif // _LIBCPP_HAS_THREADS
 
 #endif // _LIBCPP___THREAD_TIMED_BACKOFF_POLICY_H

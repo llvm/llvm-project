@@ -18,7 +18,7 @@ long t0(int a, int b) {
   // CHECK-NOTES-CXX:                  static_cast<long>( )
   // CHECK-NOTES-ALL: :[[@LINE-5]]:10: note: perform multiplication in a wider type
   // CHECK-NOTES-C:                    (long)
-  // CHECK-NOTES-CXX:                  static_cast<long>()
+  // CHECK-NOTES-CXX:                  static_cast<long>( )
 }
 unsigned long t1(int a, int b) {
   return a * b;
@@ -28,7 +28,7 @@ unsigned long t1(int a, int b) {
   // CHECK-NOTES-CXX:                  static_cast<unsigned long>( )
   // CHECK-NOTES-ALL: :[[@LINE-5]]:10: note: perform multiplication in a wider type
   // CHECK-NOTES-C:                    (long)
-  // CHECK-NOTES-CXX:                  static_cast<long>()
+  // CHECK-NOTES-CXX:                  static_cast<long>( )
 }
 
 long t2(unsigned int a, int b) {
@@ -39,7 +39,7 @@ long t2(unsigned int a, int b) {
   // CHECK-NOTES-CXX:                  static_cast<long>( )
   // CHECK-NOTES-ALL: :[[@LINE-5]]:10: note: perform multiplication in a wider type
   // CHECK-NOTES-C:                    (unsigned long)
-  // CHECK-NOTES-CXX:                  static_cast<unsigned long>()
+  // CHECK-NOTES-CXX:                  static_cast<unsigned long>( )
 }
 unsigned long t3(unsigned int a, int b) {
   return a * b;
@@ -49,7 +49,7 @@ unsigned long t3(unsigned int a, int b) {
   // CHECK-NOTES-CXX:                  static_cast<unsigned long>( )
   // CHECK-NOTES-ALL: :[[@LINE-5]]:10: note: perform multiplication in a wider type
   // CHECK-NOTES-C:                    (unsigned long)
-  // CHECK-NOTES-CXX:                  static_cast<unsigned long>()
+  // CHECK-NOTES-CXX:                  static_cast<unsigned long>( )
 }
 
 long t4(int a, unsigned int b) {

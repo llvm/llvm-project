@@ -5,6 +5,9 @@
 // RUN: %clang_cc1 -std=c++23 -emit-module-interface %t/a.cppm -o %t/a.pcm
 // RUN: %clang_cc1 -std=c++23 %t/b.cpp -fmodule-file=a=%t/a.pcm -fsyntax-only -verify
 
+// RUN: %clang_cc1 -std=c++23 -emit-reduced-module-interface %t/a.cppm -o %t/a.pcm
+// RUN: %clang_cc1 -std=c++23 %t/b.cpp -fmodule-file=a=%t/a.pcm -fsyntax-only -verify
+
 //--- foo.h
 class TypeA {};
 
@@ -69,6 +72,10 @@ module;
 export module a;
 export using ::a;
 export using ::a_view;
+
+// We need to mention the 'operator==' explicitly to make sure it won't be
+// discarded.
+export using ::operator==;
 
 //--- b.cpp
 // expected-no-diagnostics

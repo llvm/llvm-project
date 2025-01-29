@@ -5,8 +5,10 @@ import("//llvm/lib/Target/targets.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/libs/pthread/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
+import("//llvm/utils/gn/build/libs/zstd/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/utils/llvm-lit/lit_path_function.gni")
+import("//llvm/version.gni")
 import("clang_lit_site_cfg_files.gni")
 
 template("write_lit_config") {
@@ -48,6 +50,7 @@ write_lit_config("lit_site_cfg") {
     "CLANG_BUILT_STANDALONE=0",
     "CLANG_DEFAULT_CXX_STDLIB=",  # Empty string means "default value" here.
     "CLANG_DEFAULT_PIE_ON_LINUX=0",
+    "CLANG_ENABLE_CIR=0",
     "CLANG_PLUGIN_SUPPORT=0",  # FIXME: Analysis/plugins need global -fPIC
     "CURRENT_TOOLS_DIR=" + rebase_path("$root_out_dir/bin", dir),
     "CLANG_VENDOR_UTI=org.llvm.clang",
@@ -62,12 +65,12 @@ write_lit_config("lit_site_cfg") {
     "CMAKE_C_COMPILER=cc",
     "ENABLE_BACKTRACES=1",
     "ENABLE_SHARED=0",
-    "LLVM_ENABLE_ZSTD=0",
     "LLVM_EXTERNAL_LIT=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
     "LLVM_TOOL_LLVM_DRIVER_BUILD=0",  # FIXME: Add actual support for this.
     "LLVM_USE_SANITIZER=",
+    "LLVM_VERSION_MAJOR=$llvm_version_major",
     "Python3_EXECUTABLE=$python_path",
     "USE_Z3_SOLVER=",
     "PPC_LINUX_DEFAULT_IEEELONGDOUBLE=0",
@@ -89,6 +92,12 @@ write_lit_config("lit_site_cfg") {
     extra_values += [ "LLVM_ENABLE_ZLIB=1" ]
   } else {
     extra_values += [ "LLVM_ENABLE_ZLIB=0" ]  # Must be 0.
+  }
+
+  if (llvm_enable_zstd) {
+    extra_values += [ "LLVM_ENABLE_ZSTD=1" ]
+  } else {
+    extra_values += [ "LLVM_ENABLE_ZSTD=0" ]  # Must be 0.
   }
 
   if (host_cpu == "x64") {
@@ -115,11 +124,13 @@ write_lit_config("lit_site_cfg") {
       "CMAKE_LIBRARY_OUTPUT_DIRECTORY=" + rebase_path("$root_out_dir/bin", dir),
       "LLVM_LIT_ERRC_MESSAGES=no such file or directory;is a directory;" +
           "invalid argument;permission denied",
+      "PERL_EXECUTABLE=",
     ]
   } else {
     extra_values += [
       "CMAKE_LIBRARY_OUTPUT_DIRECTORY=" + rebase_path("$root_out_dir/lib", dir),
       "LLVM_LIT_ERRC_MESSAGES=",
+      "PERL_EXECUTABLE=/usr/bin/perl",
     ]
   }
 
@@ -157,11 +168,12 @@ group("test") {
     "//clang/tools/clang-format",
     "//clang/tools/clang-fuzzer/dictionary:clang-fuzzer-dictionary",
     "//clang/tools/clang-import-test",
+    "//clang/tools/clang-installapi",
     "//clang/tools/clang-offload-bundler",
     "//clang/tools/clang-refactor",
-    "//clang/tools/clang-rename",
     "//clang/tools/clang-repl",
     "//clang/tools/clang-scan-deps",
+    "//clang/tools/clang-sycl-linker",
     "//clang/tools/diagtool",
     "//clang/tools/driver:symlinks",
     "//clang/unittests",
@@ -187,7 +199,9 @@ group("test") {
     "//llvm/tools/llvm-profdata",
     "//llvm/tools/llvm-rc:symlinks",
     "//llvm/tools/llvm-readobj:symlinks",
+    "//llvm/tools/llvm-readtapi:symlinks",
     "//llvm/tools/llvm-symbolizer:symlinks",
+    "//llvm/tools/obj2yaml",
     "//llvm/tools/opt",
     "//llvm/tools/yaml2obj",
     "//llvm/utils/FileCheck",

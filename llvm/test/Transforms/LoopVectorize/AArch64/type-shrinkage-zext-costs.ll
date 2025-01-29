@@ -8,44 +8,38 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define void @zext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %len) #0 {
 ; CHECK-COST-LABEL: LV: Checking a loop in 'zext_i8_i16'
+; CHECK-COST: Cost of 1 for VF 2: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF 4: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF 8: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
+; CHECK-COST: Cost of 2 for VF 16: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF vscale x 1: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF vscale x 2: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF vscale x 4: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
+; CHECK-COST: Cost of 0 for VF vscale x 8: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
 ; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv = zext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF 2 For instruction:   %conv = zext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF 4 For instruction:   %conv = zext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF 8 For instruction:   %conv = zext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 2 for VF 16 For instruction:   %conv = zext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF vscale x 1 For instruction:   %conv = zext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF vscale x 2 For instruction:   %conv = zext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF vscale x 4 For instruction:   %conv = zext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 0 for VF vscale x 8 For instruction:   %conv = zext i8 %0 to i32
 ; CHECK-LABEL: define void @zext_i8_i16
 ; CHECK-SAME: (ptr noalias nocapture readonly [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i32 [[LEN:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LEN]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 8
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 8
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP6]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 16
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 8
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP9]], align 1
-; CHECK-NEXT:    [[TMP10:%.*]] = zext <vscale x 8 x i8> [[WIDE_LOAD]] to <vscale x 8 x i16>
-; CHECK-NEXT:    [[TMP11:%.*]] = add <vscale x 8 x i16> [[TMP10]], trunc (<vscale x 8 x i32> shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 2, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer) to <vscale x 8 x i16>)
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr [[Q]], i64 [[INDEX]]
-; CHECK-NEXT:    store <vscale x 8 x i16> [[TMP11]], ptr [[TMP12]], align 2
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP8]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i16>
+; CHECK-NEXT:    [[TMP5:%.*]] = add <16 x i16> [[TMP4]], splat (i16 2)
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr [[Q]], i64 [[INDEX]]
+; CHECK-NEXT:    store <16 x i16> [[TMP5]], ptr [[TMP6]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -55,8 +49,8 @@ define void @zext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocaptur
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP14]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP8]] to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[CONV]], 2
 ; CHECK-NEXT:    [[CONV1:%.*]] = trunc i32 [[ADD]] to i16
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, ptr [[Q]], i64 [[INDVARS_IV]]
@@ -91,44 +85,37 @@ exit:                                 ; preds = %for.body
 
 define void @sext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %len) #0 {
 ; CHECK-COST-LABEL: LV: Checking a loop in 'sext_i8_i16'
-; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv = sext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF 2 For instruction:   %conv = sext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF 4 For instruction:   %conv = sext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF 8 For instruction:   %conv = sext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 2 for VF 16 For instruction:   %conv = sext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF vscale x 1 For instruction:   %conv = sext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF vscale x 2 For instruction:   %conv = sext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 1 for VF vscale x 4 For instruction:   %conv = sext i8 %0 to i32
-; CHECK-COST: LV: Found an estimated cost of 0 for VF vscale x 8 For instruction:   %conv = sext i8 %0 to i32
+; CHECK-COST: Cost of 1 for VF 2: WIDEN-CAST ir<%conv> = sext ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF 4: WIDEN-CAST ir<%conv> = sext ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF 8: WIDEN-CAST ir<%conv> = sext ir<%0> to i16
+; CHECK-COST: Cost of 2 for VF 16: WIDEN-CAST ir<%conv> = sext ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF vscale x 1: WIDEN-CAST ir<%conv> = sext ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF vscale x 2: WIDEN-CAST ir<%conv> = sext ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF vscale x 4: WIDEN-CAST ir<%conv> = sext ir<%0> to i16
+; CHECK-COST: Cost of 0 for VF vscale x 8: WIDEN-CAST ir<%conv> = sext ir<%0> to i16
 ; CHECK-LABEL: define void @sext_i8_i16
 ; CHECK-SAME: (ptr noalias nocapture readonly [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i32 [[LEN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LEN]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 8
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 8
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP6]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 16
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 8
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP9]], align 1
-; CHECK-NEXT:    [[TMP10:%.*]] = sext <vscale x 8 x i8> [[WIDE_LOAD]] to <vscale x 8 x i16>
-; CHECK-NEXT:    [[TMP11:%.*]] = add <vscale x 8 x i16> [[TMP10]], trunc (<vscale x 8 x i32> shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 2, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer) to <vscale x 8 x i16>)
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr [[Q]], i64 [[INDEX]]
-; CHECK-NEXT:    store <vscale x 8 x i16> [[TMP11]], ptr [[TMP12]], align 2
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP8]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <16 x i8> [[WIDE_LOAD]] to <16 x i16>
+; CHECK-NEXT:    [[TMP5:%.*]] = add <16 x i16> [[TMP4]], splat (i16 2)
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr [[Q]], i64 [[INDEX]]
+; CHECK-NEXT:    store <16 x i16> [[TMP5]], ptr [[TMP6]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -138,8 +125,8 @@ define void @sext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocaptur
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[TMP14]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[TMP8]] to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[CONV]], 2
 ; CHECK-NEXT:    [[CONV1:%.*]] = trunc i32 [[ADD]] to i16
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i16, ptr [[Q]], i64 [[INDVARS_IV]]

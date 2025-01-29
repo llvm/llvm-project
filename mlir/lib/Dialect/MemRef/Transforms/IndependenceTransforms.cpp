@@ -21,14 +21,13 @@ using namespace mlir::memref;
 static FailureOr<OpFoldResult> makeIndependent(OpBuilder &b, Location loc,
                                                OpFoldResult ofr,
                                                ValueRange independencies) {
-  if (ofr.is<Attribute>())
+  if (isa<Attribute>(ofr))
     return ofr;
-  Value value = ofr.get<Value>();
   AffineMap boundMap;
   ValueDimList mapOperands;
   if (failed(ValueBoundsConstraintSet::computeIndependentBound(
-          boundMap, mapOperands, presburger::BoundType::UB, value,
-          /*dim=*/std::nullopt, independencies, /*closedUB=*/true)))
+          boundMap, mapOperands, presburger::BoundType::UB, ofr, independencies,
+          /*closedUB=*/true)))
     return failure();
   return affine::materializeComputedBound(b, loc, boundMap, mapOperands);
 }
@@ -154,7 +153,7 @@ static void replaceAndPropagateMemRefType(RewriterBase &rewriter,
       for (OpOperand &operand : user->getOpOperands()) {
         if ([[maybe_unused]] auto castOp =
                 operand.get().getDefiningOp<UnrealizedConversionCastOp>()) {
-          rewriter.updateRootInPlace(
+          rewriter.modifyOpInPlace(
               user, [&]() { operand.set(conversion->getOperand(0)); });
         }
       }

@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple riscv32 -riscv-no-aliases < %s -show-encoding \
+# RUN: llvm-mc -triple riscv32 -M no-aliases < %s -show-encoding \
 # RUN:     | FileCheck -check-prefix=INSTR -check-prefix=FIXUP %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+c < %s \
 # RUN:     | llvm-readobj -r - | FileCheck -check-prefix=RELOC %s
@@ -176,3 +176,24 @@ bgeu a0, a1, foo
 # RELOC: R_RISCV_JAL
 # INSTR: bgeu a0, a1, foo
 # FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_branch
+
+.L5:
+auipc a0, %tlsdesc_hi(a_symbol)
+# RELOC: R_RISCV_TLSDESC_HI20
+# INSTR: auipc a0, %tlsdesc_hi(a_symbol)
+# FIXUP: fixup A - offset: 0, value: %tlsdesc_hi(a_symbol), kind: fixup_riscv_tlsdesc_hi20
+
+lw a1, %tlsdesc_load_lo(.L5)(a0)
+# RELOC: R_RISCV_TLSDESC_LOAD_LO12
+# INSTR: lw a1, %tlsdesc_load_lo(.L5)(a0)
+# FIXUP: fixup A - offset: 0, value: %tlsdesc_load_lo(.L5), kind: fixup_riscv_tlsdesc_load_lo12
+
+addi a0, a0, %tlsdesc_add_lo(.L5)
+# RELOC: R_RISCV_TLSDESC_ADD_LO12
+# INSTR: addi a0, a0, %tlsdesc_add_lo(.L5)
+# FIXUP: fixup A - offset: 0, value: %tlsdesc_add_lo(.L5), kind: fixup_riscv_tlsdesc_add_lo12
+
+jalr t0, 0(a1), %tlsdesc_call(.L5)
+# RELOC: R_RISCV_TLSDESC_CALL
+# INSTR: jalr t0, 0(a1), %tlsdesc_call(.L5)
+# FIXUP: fixup A - offset: 0, value: %tlsdesc_call(.L5), kind: fixup_riscv_tlsdesc_call

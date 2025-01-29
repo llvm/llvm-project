@@ -129,12 +129,13 @@ void LogDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
   DE.DiagnosticLevel = Level;
 
   DE.WarningOption =
-      std::string(DiagnosticIDs::getWarningOptionForDiag(DE.DiagnosticID));
+      std::string(Info.getDiags()->getDiagnosticIDs()->getWarningOptionForDiag(
+          DE.DiagnosticID));
 
   // Format the message.
   SmallString<100> MessageStr;
   Info.FormatDiagnostic(MessageStr);
-  DE.Message = std::string(MessageStr.str());
+  DE.Message = std::string(MessageStr);
 
   // Set the location information.
   DE.Filename = "";
@@ -160,4 +161,3 @@ void LogDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
   // Record the diagnostic entry.
   Entries.push_back(DE);
 }
-

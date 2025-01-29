@@ -31,7 +31,7 @@ define double @fabs_copysign_commuted(double %x) {
 
 define <4 x double> @fabs_copysign_vec(<4 x double> %x) {
 ; CHECK-LABEL: @fabs_copysign_vec(
-; CHECK-NEXT:    [[DIV:%.*]] = call nnan ninf <4 x double> @llvm.copysign.v4f64(<4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, <4 x double> [[X:%.*]])
+; CHECK-NEXT:    [[DIV:%.*]] = call nnan ninf <4 x double> @llvm.copysign.v4f64(<4 x double> splat (double 1.000000e+00), <4 x double> [[X:%.*]])
 ; CHECK-NEXT:    ret <4 x double> [[DIV]]
 ;
   %f = call <4 x double> @llvm.fabs.v4f64(<4 x double> %x)
@@ -41,7 +41,7 @@ define <4 x double> @fabs_copysign_vec(<4 x double> %x) {
 
 define <4 x double> @fabs_copysign_vec_commuted(<4 x double> %x) {
 ; CHECK-LABEL: @fabs_copysign_vec_commuted(
-; CHECK-NEXT:    [[DIV:%.*]] = call nnan ninf <4 x double> @llvm.copysign.v4f64(<4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, <4 x double> [[X:%.*]])
+; CHECK-NEXT:    [[DIV:%.*]] = call nnan ninf <4 x double> @llvm.copysign.v4f64(<4 x double> splat (double 1.000000e+00), <4 x double> [[X:%.*]])
 ; CHECK-NEXT:    ret <4 x double> [[DIV]]
 ;
   %f = call <4 x double> @llvm.fabs.v4f64(<4 x double> %x)

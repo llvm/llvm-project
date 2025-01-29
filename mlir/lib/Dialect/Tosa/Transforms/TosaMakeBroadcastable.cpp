@@ -113,7 +113,7 @@ struct ConvertTosaOp<tosa::MulOp> : public OpRewritePattern<tosa::MulOp> {
 
     Value input1 = tosaBinaryOp.getInput1();
     Value input2 = tosaBinaryOp.getInput2();
-    int32_t shift = tosaBinaryOp.getShift();
+    Value shift = tosaBinaryOp.getShift();
     Value output = tosaBinaryOp.getResult();
     auto outputType = dyn_cast<RankedTensorType>(output.getType());
     if (!outputType)
@@ -232,7 +232,7 @@ public:
     patterns.add<ConvertTosaOp<tosa::AddOp>>(ctx);
     patterns.add<ConvertTosaOp<tosa::SubOp>>(ctx);
     patterns.add<ConvertTosaOp<tosa::MulOp>>(ctx);
-    patterns.add<ConvertTosaOp<tosa::DivOp>>(ctx);
+    patterns.add<ConvertTosaOp<tosa::IntDivOp>>(ctx);
     patterns.add<ConvertTosaOp<tosa::MaximumOp>>(ctx);
     patterns.add<ConvertTosaOp<tosa::MinimumOp>>(ctx);
     patterns.add<ConvertTosaOp<tosa::EqualOp>>(ctx);
@@ -246,7 +246,7 @@ public:
     patterns.add<ConvertTosaOp<tosa::LogicalXorOp>>(ctx);
     patterns.add<ConvertTosaOp<tosa::SelectOp>>(ctx);
     patterns.add<ConvertTosaOp<tosa::PowOp>>(ctx);
-    (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
+    (void)applyPatternsGreedily(func, std::move(patterns));
   }
 };
 } // namespace

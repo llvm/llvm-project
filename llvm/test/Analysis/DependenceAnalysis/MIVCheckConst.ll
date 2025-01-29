@@ -29,21 +29,21 @@ target datalayout = "e-m:e-p:32:32-i1:32-i64:64-a:0-v32:32-n16:32"
 %20 = type { [768 x i32] }
 %21 = type { [416 x i32] }
 
-define void @test(ptr %A) #0 align 2 {
+define void @test(ptr %A, i1 %arg) #0 align 2 {
 entry:
   %v1 = load i32, ptr undef, align 4
   br label %bb13
 
 bb13:
   %v2 = phi i32 [ undef, %entry ], [ %v39, %bb38 ]
-  br i1 undef, label %bb15, label %bb38
+  br i1 %arg, label %bb15, label %bb38
 
 bb15:
   %v3 = mul nsw i32 %v2, undef
   br label %bb17
 
 bb17:
-  br i1 undef, label %bb21, label %bb37
+  br i1 %arg, label %bb21, label %bb37
 
 bb21:
   %v22 = add nsw i32 undef, 1
@@ -55,10 +55,10 @@ bb21:
   %v29 = mul nsw i32 %v28, 32
   %v30 = getelementptr inbounds %1, ptr %A, i32 0, i32 7, i32 14, i32 %v29
   %v32 = load <32 x i32>, ptr %v30, align 128
-  br i1 undef, label %bb21, label %bb37
+  br i1 %arg, label %bb21, label %bb37
 
 bb37:
-  br i1 undef, label %bb17, label %bb38
+  br i1 %arg, label %bb17, label %bb38
 
 bb38:
   %v39 = add nsw i32 %v2, 1

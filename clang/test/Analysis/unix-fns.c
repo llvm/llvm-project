@@ -1,5 +1,7 @@
 // RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,unix.API,osx.API,optin.portability %s -analyzer-output=plist -analyzer-config faux-bodies=true  -fblocks -verify -o %t.plist
 // RUN: %normalize_plist <%t.plist | diff -ub %S/Inputs/expected-plists/unix-fns.c.plist -
+// RUN: %clang_analyze_cc1 -triple x86_64-unknown-linux -analyzer-checker=core,unix.API,osx.API,optin.portability %s -analyzer-output=plist -analyzer-config faux-bodies=true  -fblocks -verify -o %t.plist
+// RUN: %normalize_plist <%t.plist | diff -ub %S/Inputs/expected-plists/unix-fns.c.plist -
 // RUN: mkdir -p %t.dir
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.API,osx.API,optin.portability -analyzer-output=html -analyzer-config faux-bodies=true -fblocks -o %t.dir %s
 // RUN: rm -fR %t.dir

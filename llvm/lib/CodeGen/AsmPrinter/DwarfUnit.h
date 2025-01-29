@@ -128,8 +128,10 @@ public:
                              const DIScope *Context) = 0;
 
   /// Add a new global type to the compile unit.
-  virtual void addGlobalType(const DIType *Ty, const DIE &Die,
-                             const DIScope *Context) = 0;
+  virtual void addGlobalTypeImpl(const DIType *Ty, const DIE &Die,
+                                 const DIScope *Context) = 0;
+
+  void addGlobalType(const DIType *Ty, const DIE &Die, const DIScope *Context);
 
   /// Returns the DIE map slot for the specified debug variable.
   ///
@@ -266,7 +268,9 @@ public:
   void constructContainingTypeDIEs();
 
   /// Construct function argument DIEs.
-  void constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args);
+  ///
+  /// \returns DIE of the object pointer if one exists. Nullptr otherwise.
+  DIE *constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args);
 
   /// Create a DIE with the given Tag, add the DIE to its parent, and
   /// call insertDIE if MD is not null.
@@ -313,6 +317,11 @@ public:
   /// Get context owner's DIE.
   DIE *createTypeDIE(const DICompositeType *Ty);
 
+  /// If this is a named finished type then include it in the list of types for
+  /// the accelerator tables.
+  void updateAcceleratorTables(const DIScope *Context, const DIType *Ty,
+                               const DIE &TyDIE);
+
 protected:
   ~DwarfUnit();
 
@@ -355,11 +364,6 @@ private:
 
   virtual void finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) = 0;
 
-  /// If this is a named finished type then include it in the list of types for
-  /// the accelerator tables.
-  void updateAcceleratorTables(const DIScope *Context, const DIType *Ty,
-                               const DIE &TyDIE);
-
   virtual bool isDwoUnit() const = 0;
   const MCSymbol *getCrossSectionRelativeBaseAddress() const override;
 
@@ -397,8 +401,8 @@ public:
   }
   void addGlobalName(StringRef Name, const DIE &Die,
                      const DIScope *Context) override;
-  void addGlobalType(const DIType *Ty, const DIE &Die,
-                     const DIScope *Context) override;
+  void addGlobalTypeImpl(const DIType *Ty, const DIE &Die,
+                         const DIScope *Context) override;
   DwarfCompileUnit &getCU() override { return CU; }
 };
 } // end llvm namespace

@@ -6,6 +6,7 @@ mlir_tablegen(TestTransformDialectExtensionTypes.cpp.inc -gen-typedef-defs -type
 add_public_tablegen_target(MLIRTestTransformDialectExtensionIncGen)
 
 add_mlir_library(MLIRTestTransformDialect
+  TestPassStateExtensionCommunication.cpp
   TestTransformDialectExtension.cpp
   TestTransformDialectInterpreter.cpp
   TestTransformStateExtension.cpp
@@ -14,11 +15,12 @@ add_mlir_library(MLIRTestTransformDialect
 
   DEPENDS
   MLIRTestTransformDialectExtensionIncGen
-
-  LINK_LIBS PUBLIC
+)
+mlir_target_link_libraries(MLIRTestTransformDialect PUBLIC
   MLIRIR
   MLIRPass
   MLIRPDLDialect
+  MLIRTransformDebugExtension
   MLIRTransformDialect
   MLIRTransformDialectTransforms
   MLIRTransformLoopExtension

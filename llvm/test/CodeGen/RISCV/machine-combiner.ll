@@ -10,9 +10,9 @@
 define double @test_reassoc_fadd1(double %a0, double %a1, double %a2, double %a3) {
 ; CHECK-LABEL: test_reassoc_fadd1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fadd.d fa5, fa0, fa1
-; CHECK-NEXT:    fadd.d fa4, fa2, fa3
-; CHECK-NEXT:    fadd.d fa0, fa5, fa4
+; CHECK-NEXT:    fadd.d fa5, fa2, fa3
+; CHECK-NEXT:    fadd.d fa4, fa0, fa1
+; CHECK-NEXT:    fadd.d fa0, fa4, fa5
 ; CHECK-NEXT:    ret
   %t0 = fadd nsz reassoc double %a0, %a1
   %t1 = fadd nsz reassoc double %t0, %a2
@@ -23,9 +23,9 @@ define double @test_reassoc_fadd1(double %a0, double %a1, double %a2, double %a3
 define double @test_reassoc_fadd2(double %a0, double %a1, double %a2, double %a3) {
 ; CHECK-LABEL: test_reassoc_fadd2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fadd.d fa5, fa0, fa1
-; CHECK-NEXT:    fadd.d fa4, fa2, fa3
-; CHECK-NEXT:    fadd.d fa0, fa4, fa5
+; CHECK-NEXT:    fadd.d fa5, fa2, fa3
+; CHECK-NEXT:    fadd.d fa4, fa0, fa1
+; CHECK-NEXT:    fadd.d fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %t0 = fadd nsz reassoc double %a0, %a1
   %t1 = fadd nsz reassoc double %a2, %t0
@@ -36,9 +36,9 @@ define double @test_reassoc_fadd2(double %a0, double %a1, double %a2, double %a3
 define double @test_reassoc_fadd3(double %a0, double %a1, double %a2, double %a3) {
 ; CHECK-LABEL: test_reassoc_fadd3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fadd.d fa5, fa0, fa1
-; CHECK-NEXT:    fadd.d fa4, fa3, fa2
-; CHECK-NEXT:    fadd.d fa0, fa4, fa5
+; CHECK-NEXT:    fadd.d fa5, fa3, fa2
+; CHECK-NEXT:    fadd.d fa4, fa0, fa1
+; CHECK-NEXT:    fadd.d fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %t0 = fadd nsz reassoc double %a0, %a1
   %t1 = fadd nsz reassoc double %t0, %a2
@@ -49,9 +49,9 @@ define double @test_reassoc_fadd3(double %a0, double %a1, double %a2, double %a3
 define double @test_reassoc_fadd4(double %a0, double %a1, double %a2, double %a3) {
 ; CHECK-LABEL: test_reassoc_fadd4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fadd.d fa5, fa0, fa1
-; CHECK-NEXT:    fadd.d fa4, fa3, fa2
-; CHECK-NEXT:    fadd.d fa0, fa4, fa5
+; CHECK-NEXT:    fadd.d fa5, fa3, fa2
+; CHECK-NEXT:    fadd.d fa4, fa0, fa1
+; CHECK-NEXT:    fadd.d fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %t0 = fadd nsz reassoc double %a0, %a1
   %t1 = fadd nsz reassoc double %a2, %t0
@@ -62,9 +62,9 @@ define double @test_reassoc_fadd4(double %a0, double %a1, double %a2, double %a3
 define double @test_reassoc_fmul1(double %a0, double %a1, double %a2, double %a3) {
 ; CHECK-LABEL: test_reassoc_fmul1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fmul.d fa5, fa0, fa1
-; CHECK-NEXT:    fmul.d fa4, fa2, fa3
-; CHECK-NEXT:    fmul.d fa0, fa5, fa4
+; CHECK-NEXT:    fmul.d fa5, fa2, fa3
+; CHECK-NEXT:    fmul.d fa4, fa0, fa1
+; CHECK-NEXT:    fmul.d fa0, fa4, fa5
 ; CHECK-NEXT:    ret
   %t0 = fmul nsz reassoc double %a0, %a1
   %t1 = fmul nsz reassoc double %t0, %a2
@@ -75,9 +75,9 @@ define double @test_reassoc_fmul1(double %a0, double %a1, double %a2, double %a3
 define double @test_reassoc_fmul2(double %a0, double %a1, double %a2, double %a3) {
 ; CHECK-LABEL: test_reassoc_fmul2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fmul.d fa5, fa0, fa1
-; CHECK-NEXT:    fmul.d fa4, fa2, fa3
-; CHECK-NEXT:    fmul.d fa0, fa4, fa5
+; CHECK-NEXT:    fmul.d fa5, fa2, fa3
+; CHECK-NEXT:    fmul.d fa4, fa0, fa1
+; CHECK-NEXT:    fmul.d fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %t0 = fmul nsz reassoc double %a0, %a1
   %t1 = fmul nsz reassoc double %a2, %t0
@@ -88,9 +88,9 @@ define double @test_reassoc_fmul2(double %a0, double %a1, double %a2, double %a3
 define double @test_reassoc_fmul3(double %a0, double %a1, double %a2, double %a3) {
 ; CHECK-LABEL: test_reassoc_fmul3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fmul.d fa5, fa0, fa1
-; CHECK-NEXT:    fmul.d fa4, fa3, fa2
-; CHECK-NEXT:    fmul.d fa0, fa4, fa5
+; CHECK-NEXT:    fmul.d fa5, fa3, fa2
+; CHECK-NEXT:    fmul.d fa4, fa0, fa1
+; CHECK-NEXT:    fmul.d fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %t0 = fmul nsz reassoc double %a0, %a1
   %t1 = fmul nsz reassoc double %t0, %a2
@@ -101,9 +101,9 @@ define double @test_reassoc_fmul3(double %a0, double %a1, double %a2, double %a3
 define double @test_reassoc_fmul4(double %a0, double %a1, double %a2, double %a3) {
 ; CHECK-LABEL: test_reassoc_fmul4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fmul.d fa5, fa0, fa1
-; CHECK-NEXT:    fmul.d fa4, fa3, fa2
-; CHECK-NEXT:    fmul.d fa0, fa4, fa5
+; CHECK-NEXT:    fmul.d fa5, fa3, fa2
+; CHECK-NEXT:    fmul.d fa4, fa0, fa1
+; CHECK-NEXT:    fmul.d fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %t0 = fmul nsz reassoc double %a0, %a1
   %t1 = fmul nsz reassoc double %a2, %t0
@@ -114,11 +114,11 @@ define double @test_reassoc_fmul4(double %a0, double %a1, double %a2, double %a3
 define double @test_reassoc_big1(double %a0, double %a1, double %a2, double %a3, double %a4, double %a5, double %a6) {
 ; CHECK-LABEL: test_reassoc_big1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fadd.d fa1, fa0, fa1
-; CHECK-NEXT:    fadd.d fa3, fa2, fa3
 ; CHECK-NEXT:    fadd.d fa5, fa4, fa5
-; CHECK-NEXT:    fadd.d fa4, fa1, fa3
+; CHECK-NEXT:    fadd.d fa4, fa2, fa3
+; CHECK-NEXT:    fadd.d fa3, fa0, fa1
 ; CHECK-NEXT:    fadd.d fa5, fa5, fa6
+; CHECK-NEXT:    fadd.d fa4, fa3, fa4
 ; CHECK-NEXT:    fadd.d fa0, fa4, fa5
 ; CHECK-NEXT:    ret
   %t0 = fadd nsz reassoc double %a0, %a1
@@ -133,18 +133,18 @@ define double @test_reassoc_big1(double %a0, double %a1, double %a2, double %a3,
 define double @test_reassoc_big2(double %a0, double %a1, i32 %a2, double %a3, i32 %a4, double %a5) {
 ; CHECK-LABEL: test_reassoc_big2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fadd.d fa5, fa0, fa1
 ; CHECK-NEXT:    fsub.d fa4, fa3, fa2
-; CHECK-NEXT:    fadd.d fa3, fa2, fa1
-; CHECK-NEXT:    fcvt.d.w ft0, a0
-; CHECK-NEXT:    fcvt.d.w ft1, a1
-; CHECK-NEXT:    fmul.d fa2, fa2, ft0
-; CHECK-NEXT:    fmul.d fa1, ft1, fa1
-; CHECK-NEXT:    fsub.d fa5, fa4, fa5
-; CHECK-NEXT:    fmul.d fa4, fa0, fa3
-; CHECK-NEXT:    fmul.d fa3, fa1, fa2
-; CHECK-NEXT:    fmul.d fa5, fa5, fa4
-; CHECK-NEXT:    fmul.d fa0, fa5, fa3
+; CHECK-NEXT:    fadd.d fa3, fa0, fa1
+; CHECK-NEXT:    fadd.d ft0, fa2, fa1
+; CHECK-NEXT:    fcvt.d.w fa5, a1
+; CHECK-NEXT:    fcvt.d.w ft1, a0
+; CHECK-NEXT:    fmul.d fa5, fa5, fa1
+; CHECK-NEXT:    fmul.d fa2, fa2, ft1
+; CHECK-NEXT:    fsub.d fa4, fa4, fa3
+; CHECK-NEXT:    fmul.d fa3, fa0, ft0
+; CHECK-NEXT:    fmul.d fa5, fa5, fa2
+; CHECK-NEXT:    fmul.d fa4, fa4, fa3
+; CHECK-NEXT:    fmul.d fa0, fa4, fa5
 ; CHECK-NEXT:    ret
   %cvt1 = sitofp i32 %a2 to double
   %cvt2 = sitofp i32 %a4 to double
@@ -245,9 +245,9 @@ define double @test_fnmsub(double %a0, double %a1, double %a2) {
 define double @test_reassoc_fsub1(double %a0, double %a1, double %a2, double %a3) {
 ; CHECK-LABEL: test_reassoc_fsub1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fadd.d fa5, fa0, fa1
-; CHECK-NEXT:    fsub.d fa4, fa2, fa3
-; CHECK-NEXT:    fadd.d fa0, fa5, fa4
+; CHECK-NEXT:    fsub.d fa5, fa2, fa3
+; CHECK-NEXT:    fadd.d fa4, fa0, fa1
+; CHECK-NEXT:    fadd.d fa0, fa4, fa5
 ; CHECK-NEXT:    ret
   %t0 = fadd nsz reassoc double %a0, %a1
   %t1 = fadd nsz reassoc double %t0, %a2
@@ -258,9 +258,9 @@ define double @test_reassoc_fsub1(double %a0, double %a1, double %a2, double %a3
 define double @test_reassoc_fsub2(double %a0, double %a1, double %a2, double %a3) {
 ; CHECK-LABEL: test_reassoc_fsub2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fadd.d fa5, fa0, fa1
-; CHECK-NEXT:    fsub.d fa4, fa2, fa3
-; CHECK-NEXT:    fsub.d fa0, fa5, fa4
+; CHECK-NEXT:    fsub.d fa5, fa2, fa3
+; CHECK-NEXT:    fadd.d fa4, fa0, fa1
+; CHECK-NEXT:    fsub.d fa0, fa4, fa5
 ; CHECK-NEXT:    ret
   %t0 = fadd nsz reassoc double %a0, %a1
   %t1 = fsub nsz reassoc double %t0, %a2
@@ -271,9 +271,9 @@ define double @test_reassoc_fsub2(double %a0, double %a1, double %a2, double %a3
 define double @test_reassoc_fsub3(double %a0, double %a1, double %a2, double %a3) {
 ; CHECK-LABEL: test_reassoc_fsub3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fadd.d fa5, fa0, fa1
-; CHECK-NEXT:    fadd.d fa4, fa2, fa3
-; CHECK-NEXT:    fsub.d fa0, fa5, fa4
+; CHECK-NEXT:    fadd.d fa5, fa2, fa3
+; CHECK-NEXT:    fadd.d fa4, fa0, fa1
+; CHECK-NEXT:    fsub.d fa0, fa4, fa5
 ; CHECK-NEXT:    ret
   %t0 = fadd nsz reassoc double %a0, %a1
   %t1 = fsub nsz reassoc double %t0, %a2
@@ -284,9 +284,9 @@ define double @test_reassoc_fsub3(double %a0, double %a1, double %a2, double %a3
 define double @test_reassoc_fsub4(double %a0, double %a1, double %a2, double %a3) {
 ; CHECK-LABEL: test_reassoc_fsub4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fadd.d fa5, fa0, fa1
-; CHECK-NEXT:    fsub.d fa4, fa2, fa3
-; CHECK-NEXT:    fadd.d fa0, fa4, fa5
+; CHECK-NEXT:    fsub.d fa5, fa2, fa3
+; CHECK-NEXT:    fadd.d fa4, fa0, fa1
+; CHECK-NEXT:    fadd.d fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %t0 = fadd nsz reassoc double %a0, %a1
   %t1 = fadd nsz reassoc double %a2, %t0
@@ -297,9 +297,9 @@ define double @test_reassoc_fsub4(double %a0, double %a1, double %a2, double %a3
 define double @test_reassoc_fsub5(double %a0, double %a1, double %a2, double %a3) {
 ; CHECK-LABEL: test_reassoc_fsub5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fadd.d fa5, fa0, fa1
-; CHECK-NEXT:    fadd.d fa4, fa2, fa3
-; CHECK-NEXT:    fsub.d fa0, fa4, fa5
+; CHECK-NEXT:    fadd.d fa5, fa2, fa3
+; CHECK-NEXT:    fadd.d fa4, fa0, fa1
+; CHECK-NEXT:    fsub.d fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %t0 = fadd nsz reassoc double %a0, %a1
   %t1 = fsub nsz reassoc double %a2, %t0
@@ -310,9 +310,9 @@ define double @test_reassoc_fsub5(double %a0, double %a1, double %a2, double %a3
 define double @test_reassoc_fsub6(double %a0, double %a1, double %a2, double %a3) {
 ; CHECK-LABEL: test_reassoc_fsub6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fadd.d fa5, fa0, fa1
-; CHECK-NEXT:    fsub.d fa4, fa2, fa3
-; CHECK-NEXT:    fsub.d fa0, fa4, fa5
+; CHECK-NEXT:    fsub.d fa5, fa2, fa3
+; CHECK-NEXT:    fadd.d fa4, fa0, fa1
+; CHECK-NEXT:    fsub.d fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %t0 = fadd nsz reassoc double %a0, %a1
   %t1 = fsub nsz reassoc double %a2, %t0
@@ -323,9 +323,9 @@ define double @test_reassoc_fsub6(double %a0, double %a1, double %a2, double %a3
 define double @test_reassoc_fsub7(double %a0, double %a1, double %a2, double %a3) {
 ; CHECK-LABEL: test_reassoc_fsub7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fadd.d fa5, fa0, fa1
-; CHECK-NEXT:    fsub.d fa4, fa3, fa2
-; CHECK-NEXT:    fsub.d fa0, fa4, fa5
+; CHECK-NEXT:    fsub.d fa5, fa3, fa2
+; CHECK-NEXT:    fadd.d fa4, fa0, fa1
+; CHECK-NEXT:    fsub.d fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %t0 = fadd nsz reassoc double %a0, %a1
   %t1 = fadd nsz reassoc double %t0, %a2
@@ -336,9 +336,9 @@ define double @test_reassoc_fsub7(double %a0, double %a1, double %a2, double %a3
 define double @test_reassoc_fsub8(double %a0, double %a1, double %a2, double %a3) {
 ; CHECK-LABEL: test_reassoc_fsub8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fadd.d fa5, fa0, fa1
-; CHECK-NEXT:    fsub.d fa4, fa3, fa2
-; CHECK-NEXT:    fadd.d fa0, fa4, fa5
+; CHECK-NEXT:    fsub.d fa5, fa3, fa2
+; CHECK-NEXT:    fadd.d fa4, fa0, fa1
+; CHECK-NEXT:    fadd.d fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %t0 = fadd nsz reassoc double %a0, %a1
   %t1 = fsub nsz reassoc double %t0, %a2
@@ -349,9 +349,9 @@ define double @test_reassoc_fsub8(double %a0, double %a1, double %a2, double %a3
 define double @test_reassoc_fsub9(double %a0, double %a1, double %a2, double %a3) {
 ; CHECK-LABEL: test_reassoc_fsub9:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fadd.d fa5, fa0, fa1
-; CHECK-NEXT:    fadd.d fa4, fa3, fa2
-; CHECK-NEXT:    fsub.d fa0, fa4, fa5
+; CHECK-NEXT:    fadd.d fa5, fa3, fa2
+; CHECK-NEXT:    fadd.d fa4, fa0, fa1
+; CHECK-NEXT:    fsub.d fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %t0 = fadd nsz reassoc double %a0, %a1
   %t1 = fsub nsz reassoc double %t0, %a2
@@ -362,9 +362,9 @@ define double @test_reassoc_fsub9(double %a0, double %a1, double %a2, double %a3
 define double @test_reassoc_fsub10(double %a0, double %a1, double %a2, double %a3) {
 ; CHECK-LABEL: test_reassoc_fsub10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fadd.d fa5, fa0, fa1
-; CHECK-NEXT:    fsub.d fa4, fa3, fa2
-; CHECK-NEXT:    fsub.d fa0, fa4, fa5
+; CHECK-NEXT:    fsub.d fa5, fa3, fa2
+; CHECK-NEXT:    fadd.d fa4, fa0, fa1
+; CHECK-NEXT:    fsub.d fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %t0 = fadd nsz reassoc double %a0, %a1
   %t1 = fadd nsz reassoc double %a2, %t0
@@ -375,9 +375,9 @@ define double @test_reassoc_fsub10(double %a0, double %a1, double %a2, double %a
 define double @test_reassoc_fsub11(double %a0, double %a1, double %a2, double %a3) {
 ; CHECK-LABEL: test_reassoc_fsub11:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fadd.d fa5, fa0, fa1
-; CHECK-NEXT:    fadd.d fa4, fa3, fa2
-; CHECK-NEXT:    fsub.d fa0, fa4, fa5
+; CHECK-NEXT:    fadd.d fa5, fa3, fa2
+; CHECK-NEXT:    fadd.d fa4, fa0, fa1
+; CHECK-NEXT:    fsub.d fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %t0 = fadd nsz reassoc double %a0, %a1
   %t1 = fsub nsz reassoc double %a2, %t0
@@ -388,9 +388,9 @@ define double @test_reassoc_fsub11(double %a0, double %a1, double %a2, double %a
 define double @test_reassoc_fsub12(double %a0, double %a1, double %a2, double %a3) {
 ; CHECK-LABEL: test_reassoc_fsub12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fadd.d fa5, fa0, fa1
-; CHECK-NEXT:    fsub.d fa4, fa3, fa2
-; CHECK-NEXT:    fadd.d fa0, fa4, fa5
+; CHECK-NEXT:    fsub.d fa5, fa3, fa2
+; CHECK-NEXT:    fadd.d fa4, fa0, fa1
+; CHECK-NEXT:    fadd.d fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %t0 = fadd nsz reassoc double %a0, %a1
   %t1 = fsub nsz reassoc double %a2, %t0
@@ -687,9 +687,9 @@ define i64 @test_reassoc_xor_i64(i64 %a0, i64 %a1, i64 %a2, i64 %a3) {
 define i8 @test_reassoc_mul_i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3) {
 ; CHECK-LABEL: test_reassoc_mul_i8:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    mul a2, a2, a3
 ; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    mul a1, a2, a3
-; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    mul a0, a0, a2
 ; CHECK-NEXT:    ret
   %t0 = mul i8 %a0, %a1
   %t1 = mul i8 %t0, %a2
@@ -700,9 +700,9 @@ define i8 @test_reassoc_mul_i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3) {
 define i16 @test_reassoc_mul_i16(i16 %a0, i16 %a1, i16 %a2, i16 %a3) {
 ; CHECK-LABEL: test_reassoc_mul_i16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    mul a2, a2, a3
 ; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    mul a1, a2, a3
-; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    mul a0, a0, a2
 ; CHECK-NEXT:    ret
   %t0 = mul i16 %a0, %a1
   %t1 = mul i16 %t0, %a2
@@ -713,9 +713,9 @@ define i16 @test_reassoc_mul_i16(i16 %a0, i16 %a1, i16 %a2, i16 %a3) {
 define i32 @test_reassoc_mul_i32(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: test_reassoc_mul_i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    mul a2, a2, a3
 ; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    mul a1, a2, a3
-; CHECK-NEXT:    mulw a0, a0, a1
+; CHECK-NEXT:    mulw a0, a0, a2
 ; CHECK-NEXT:    ret
   %t0 = mul i32 %a0, %a1
   %t1 = mul i32 %t0, %a2
@@ -726,9 +726,9 @@ define i32 @test_reassoc_mul_i32(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 define i64 @test_reassoc_mul_i64(i64 %a0, i64 %a1, i64 %a2, i64 %a3) {
 ; CHECK-LABEL: test_reassoc_mul_i64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    mul a2, a2, a3
 ; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    mul a1, a2, a3
-; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    mul a0, a0, a2
 ; CHECK-NEXT:    ret
   %t0 = mul i64 %a0, %a1
   %t1 = mul i64 %t0, %a2
@@ -740,9 +740,9 @@ define i8 @test_reassoc_minu_i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3) {
 ; CHECK-LABEL: test_reassoc_minu_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a3, 255
-; CHECK-NEXT:    andi a2, a2, 255
 ; CHECK-NEXT:    andi a1, a1, 255
 ; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    andi a2, a2, 255
 ; CHECK-NEXT:    minu a0, a0, a1
 ; CHECK-NEXT:    minu a1, a2, a3
 ; CHECK-NEXT:    minu a0, a0, a1
@@ -757,9 +757,9 @@ define i16 @test_reassoc_minu_i16(i16 %a0, i16 %a1, i16 %a2, i16 %a3) {
 ; CHECK-LABEL: test_reassoc_minu_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    zext.h a3, a3
-; CHECK-NEXT:    zext.h a2, a2
 ; CHECK-NEXT:    zext.h a1, a1
 ; CHECK-NEXT:    zext.h a0, a0
+; CHECK-NEXT:    zext.h a2, a2
 ; CHECK-NEXT:    minu a0, a0, a1
 ; CHECK-NEXT:    minu a1, a2, a3
 ; CHECK-NEXT:    minu a0, a0, a1
@@ -774,9 +774,9 @@ define i32 @test_reassoc_minu_i32(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: test_reassoc_minu_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sext.w a3, a3
-; CHECK-NEXT:    sext.w a2, a2
 ; CHECK-NEXT:    sext.w a1, a1
 ; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    sext.w a2, a2
 ; CHECK-NEXT:    minu a0, a0, a1
 ; CHECK-NEXT:    minu a1, a2, a3
 ; CHECK-NEXT:    minu a0, a0, a1
@@ -804,9 +804,9 @@ define i8 @test_reassoc_min_i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3) {
 ; CHECK-LABEL: test_reassoc_min_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sext.b a3, a3
-; CHECK-NEXT:    sext.b a2, a2
 ; CHECK-NEXT:    sext.b a1, a1
 ; CHECK-NEXT:    sext.b a0, a0
+; CHECK-NEXT:    sext.b a2, a2
 ; CHECK-NEXT:    min a0, a0, a1
 ; CHECK-NEXT:    min a1, a2, a3
 ; CHECK-NEXT:    min a0, a0, a1
@@ -821,9 +821,9 @@ define i16 @test_reassoc_min_i16(i16 %a0, i16 %a1, i16 %a2, i16 %a3) {
 ; CHECK-LABEL: test_reassoc_min_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sext.h a3, a3
-; CHECK-NEXT:    sext.h a2, a2
 ; CHECK-NEXT:    sext.h a1, a1
 ; CHECK-NEXT:    sext.h a0, a0
+; CHECK-NEXT:    sext.h a2, a2
 ; CHECK-NEXT:    min a0, a0, a1
 ; CHECK-NEXT:    min a1, a2, a3
 ; CHECK-NEXT:    min a0, a0, a1
@@ -838,9 +838,9 @@ define i32 @test_reassoc_min_i32(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: test_reassoc_min_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sext.w a3, a3
-; CHECK-NEXT:    sext.w a2, a2
 ; CHECK-NEXT:    sext.w a1, a1
 ; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    sext.w a2, a2
 ; CHECK-NEXT:    min a0, a0, a1
 ; CHECK-NEXT:    min a1, a2, a3
 ; CHECK-NEXT:    min a0, a0, a1
@@ -868,9 +868,9 @@ define i8 @test_reassoc_maxu_i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3) {
 ; CHECK-LABEL: test_reassoc_maxu_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a3, 255
-; CHECK-NEXT:    andi a2, a2, 255
 ; CHECK-NEXT:    andi a1, a1, 255
 ; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    andi a2, a2, 255
 ; CHECK-NEXT:    maxu a0, a0, a1
 ; CHECK-NEXT:    maxu a1, a2, a3
 ; CHECK-NEXT:    maxu a0, a0, a1
@@ -885,9 +885,9 @@ define i16 @test_reassoc_maxu_i16(i16 %a0, i16 %a1, i16 %a2, i16 %a3) {
 ; CHECK-LABEL: test_reassoc_maxu_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    zext.h a3, a3
-; CHECK-NEXT:    zext.h a2, a2
 ; CHECK-NEXT:    zext.h a1, a1
 ; CHECK-NEXT:    zext.h a0, a0
+; CHECK-NEXT:    zext.h a2, a2
 ; CHECK-NEXT:    maxu a0, a0, a1
 ; CHECK-NEXT:    maxu a1, a2, a3
 ; CHECK-NEXT:    maxu a0, a0, a1
@@ -902,9 +902,9 @@ define i32 @test_reassoc_maxu_i32(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: test_reassoc_maxu_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sext.w a3, a3
-; CHECK-NEXT:    sext.w a2, a2
 ; CHECK-NEXT:    sext.w a1, a1
 ; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    sext.w a2, a2
 ; CHECK-NEXT:    maxu a0, a0, a1
 ; CHECK-NEXT:    maxu a1, a2, a3
 ; CHECK-NEXT:    maxu a0, a0, a1
@@ -932,9 +932,9 @@ define i8 @test_reassoc_max_i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3) {
 ; CHECK-LABEL: test_reassoc_max_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sext.b a3, a3
-; CHECK-NEXT:    sext.b a2, a2
 ; CHECK-NEXT:    sext.b a1, a1
 ; CHECK-NEXT:    sext.b a0, a0
+; CHECK-NEXT:    sext.b a2, a2
 ; CHECK-NEXT:    max a0, a0, a1
 ; CHECK-NEXT:    max a1, a2, a3
 ; CHECK-NEXT:    max a0, a0, a1
@@ -949,9 +949,9 @@ define i16 @test_reassoc_max_i16(i16 %a0, i16 %a1, i16 %a2, i16 %a3) {
 ; CHECK-LABEL: test_reassoc_max_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sext.h a3, a3
-; CHECK-NEXT:    sext.h a2, a2
 ; CHECK-NEXT:    sext.h a1, a1
 ; CHECK-NEXT:    sext.h a0, a0
+; CHECK-NEXT:    sext.h a2, a2
 ; CHECK-NEXT:    max a0, a0, a1
 ; CHECK-NEXT:    max a1, a2, a3
 ; CHECK-NEXT:    max a0, a0, a1
@@ -966,9 +966,9 @@ define i32 @test_reassoc_max_i32(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: test_reassoc_max_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sext.w a3, a3
-; CHECK-NEXT:    sext.w a2, a2
 ; CHECK-NEXT:    sext.w a1, a1
 ; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    sext.w a2, a2
 ; CHECK-NEXT:    max a0, a0, a1
 ; CHECK-NEXT:    max a1, a2, a3
 ; CHECK-NEXT:    max a0, a0, a1
@@ -995,9 +995,9 @@ define i64 @test_reassoc_max_i64(i64 %a0, i64 %a1, i64 %a2, i64 %a3) {
 define half @test_fmin_f16(half %a0, half %a1, half %a2, half %a3) {
 ; CHECK-LABEL: test_fmin_f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fmin.h fa5, fa0, fa1
-; CHECK-NEXT:    fmin.h fa4, fa2, fa3
-; CHECK-NEXT:    fmin.h fa0, fa5, fa4
+; CHECK-NEXT:    fmin.h fa5, fa2, fa3
+; CHECK-NEXT:    fmin.h fa4, fa0, fa1
+; CHECK-NEXT:    fmin.h fa0, fa4, fa5
 ; CHECK-NEXT:    ret
   %t0 = call half @llvm.minnum.f16(half %a0, half %a1)
   %t1 = call half @llvm.minnum.f16(half %t0, half %a2)
@@ -1008,9 +1008,9 @@ define half @test_fmin_f16(half %a0, half %a1, half %a2, half %a3) {
 define float @test_fmin_f32(float %a0, float %a1, float %a2, float %a3) {
 ; CHECK-LABEL: test_fmin_f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fmin.s fa5, fa0, fa1
-; CHECK-NEXT:    fmin.s fa4, fa2, fa3
-; CHECK-NEXT:    fmin.s fa0, fa5, fa4
+; CHECK-NEXT:    fmin.s fa5, fa2, fa3
+; CHECK-NEXT:    fmin.s fa4, fa0, fa1
+; CHECK-NEXT:    fmin.s fa0, fa4, fa5
 ; CHECK-NEXT:    ret
   %t0 = call float @llvm.minnum.f32(float %a0, float %a1)
   %t1 = call float @llvm.minnum.f32(float %t0, float %a2)
@@ -1021,9 +1021,9 @@ define float @test_fmin_f32(float %a0, float %a1, float %a2, float %a3) {
 define double @test_fmin_f64(double %a0, double %a1, double %a2, double %a3) {
 ; CHECK-LABEL: test_fmin_f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fmin.d fa5, fa0, fa1
-; CHECK-NEXT:    fmin.d fa4, fa2, fa3
-; CHECK-NEXT:    fmin.d fa0, fa5, fa4
+; CHECK-NEXT:    fmin.d fa5, fa2, fa3
+; CHECK-NEXT:    fmin.d fa4, fa0, fa1
+; CHECK-NEXT:    fmin.d fa0, fa4, fa5
 ; CHECK-NEXT:    ret
   %t0 = call double @llvm.minnum.f64(double %a0, double %a1)
   %t1 = call double @llvm.minnum.f64(double %t0, double %a2)
@@ -1034,9 +1034,9 @@ define double @test_fmin_f64(double %a0, double %a1, double %a2, double %a3) {
 define half @test_fmax_f16(half %a0, half %a1, half %a2, half %a3) {
 ; CHECK-LABEL: test_fmax_f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fmax.h fa5, fa0, fa1
-; CHECK-NEXT:    fmax.h fa4, fa2, fa3
-; CHECK-NEXT:    fmax.h fa0, fa5, fa4
+; CHECK-NEXT:    fmax.h fa5, fa2, fa3
+; CHECK-NEXT:    fmax.h fa4, fa0, fa1
+; CHECK-NEXT:    fmax.h fa0, fa4, fa5
 ; CHECK-NEXT:    ret
   %t0 = call half @llvm.maxnum.f16(half %a0, half %a1)
   %t1 = call half @llvm.maxnum.f16(half %t0, half %a2)
@@ -1047,9 +1047,9 @@ define half @test_fmax_f16(half %a0, half %a1, half %a2, half %a3) {
 define float @test_fmax_f32(float %a0, float %a1, float %a2, float %a3) {
 ; CHECK-LABEL: test_fmax_f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fmax.s fa5, fa0, fa1
-; CHECK-NEXT:    fmax.s fa4, fa2, fa3
-; CHECK-NEXT:    fmax.s fa0, fa5, fa4
+; CHECK-NEXT:    fmax.s fa5, fa2, fa3
+; CHECK-NEXT:    fmax.s fa4, fa0, fa1
+; CHECK-NEXT:    fmax.s fa0, fa4, fa5
 ; CHECK-NEXT:    ret
   %t0 = call float @llvm.maxnum.f32(float %a0, float %a1)
   %t1 = call float @llvm.maxnum.f32(float %t0, float %a2)
@@ -1060,9 +1060,9 @@ define float @test_fmax_f32(float %a0, float %a1, float %a2, float %a3) {
 define double @test_fmax_f64(double %a0, double %a1, double %a2, double %a3) {
 ; CHECK-LABEL: test_fmax_f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fmax.d fa5, fa0, fa1
-; CHECK-NEXT:    fmax.d fa4, fa2, fa3
-; CHECK-NEXT:    fmax.d fa0, fa5, fa4
+; CHECK-NEXT:    fmax.d fa5, fa2, fa3
+; CHECK-NEXT:    fmax.d fa4, fa0, fa1
+; CHECK-NEXT:    fmax.d fa0, fa4, fa5
 ; CHECK-NEXT:    ret
   %t0 = call double @llvm.maxnum.f64(double %a0, double %a1)
   %t1 = call double @llvm.maxnum.f64(double %t0, double %a2)
@@ -1096,10 +1096,10 @@ declare double @llvm.maxnum.f64(double, double)
 define double @test_fmadd_strategy(double %a0, double %a1, double %a2, double %a3, i64 %flag) {
 ; CHECK_LOCAL-LABEL: test_fmadd_strategy:
 ; CHECK_LOCAL:       # %bb.0: # %entry
-; CHECK_LOCAL-NEXT:    fmv.d fa5, fa0
 ; CHECK_LOCAL-NEXT:    fsub.d fa4, fa0, fa1
-; CHECK_LOCAL-NEXT:    fmul.d fa0, fa4, fa2
 ; CHECK_LOCAL-NEXT:    andi a0, a0, 1
+; CHECK_LOCAL-NEXT:    fmv.d fa5, fa0
+; CHECK_LOCAL-NEXT:    fmul.d fa0, fa4, fa2
 ; CHECK_LOCAL-NEXT:    beqz a0, .LBB76_2
 ; CHECK_LOCAL-NEXT:  # %bb.1: # %entry
 ; CHECK_LOCAL-NEXT:    fmul.d fa4, fa5, fa1
@@ -1110,10 +1110,10 @@ define double @test_fmadd_strategy(double %a0, double %a1, double %a2, double %a
 ;
 ; CHECK_GLOBAL-LABEL: test_fmadd_strategy:
 ; CHECK_GLOBAL:       # %bb.0: # %entry
-; CHECK_GLOBAL-NEXT:    fmv.d fa5, fa0
 ; CHECK_GLOBAL-NEXT:    fsub.d fa4, fa0, fa1
-; CHECK_GLOBAL-NEXT:    fmul.d fa0, fa4, fa2
 ; CHECK_GLOBAL-NEXT:    andi a0, a0, 1
+; CHECK_GLOBAL-NEXT:    fmv.d fa5, fa0
+; CHECK_GLOBAL-NEXT:    fmul.d fa0, fa4, fa2
 ; CHECK_GLOBAL-NEXT:    beqz a0, .LBB76_2
 ; CHECK_GLOBAL-NEXT:  # %bb.1: # %entry
 ; CHECK_GLOBAL-NEXT:    fmul.d fa5, fa5, fa1

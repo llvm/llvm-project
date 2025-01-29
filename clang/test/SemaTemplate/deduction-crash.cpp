@@ -24,16 +24,16 @@ struct state_machine
   {
     ant(0);
   }
-  
+
   template<class>
   struct region_processing_helper
   {
     template<class,int=0>
     struct In;
-    
+
     template<int my>
     struct In<a::int_<aaa::a>,my>; // expected-error +{{}}
-        
+
     template<class Event>
     int process(Event)
     {
@@ -61,18 +61,18 @@ template <class _Tp> struct remove_reference<_Tp&> ;
 
 template <class > struct __tuple_like;
 
-template <class _Tp, class _Up, int = __tuple_like<typename remove_reference<_Tp>::type>::value> 
+template <class _Tp, class _Up, int = __tuple_like<typename remove_reference<_Tp>::type>::value>
 struct __tuple_convertible;
 
 struct pair
 {
-template<class _Tuple, int = enable_if<__tuple_convertible<_Tuple, pair>::value>::type> 
+template<class _Tuple, int = enable_if<__tuple_convertible<_Tuple, pair>::value>::type>
 pair(_Tuple&& );
 };
 
 template <class> struct basic_ostream;
 
-template <int> 
+template <int>
 void endl( ) ;
 
 extern basic_ostream<char> cout;
@@ -166,8 +166,9 @@ namespace PR51872_part1 {
   template<int> class T1 { template <struct U1> T1(); };
   // expected-error@-1 {{non-type template parameter has incomplete type 'struct U1'}}
   // expected-note@-2  {{forward declaration of 'PR51872_part1::U1'}}
+  // expected-note@-3  {{implicit deduction guide declared as 'template <int> T1(T1<value-parameter-0-0>) -> T1<value-parameter-0-0>'}}
 
   T1 t1 = 0;
   // expected-error@-1 {{no viable constructor or deduction guide for deduction of template arguments of 'T1'}}
-  // expected-note@-6  {{candidate template ignored: could not match 'T1<>' against 'int'}}
+  // expected-note@-7  {{candidate template ignored: could not match 'T1<value-parameter-0-0>' against 'int'}}
 }

@@ -19,7 +19,6 @@
 #include "MCTargetDesc/AVRMCExpr.h"
 #include "TargetInfo/AVRTargetInfo.h"
 
-#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -27,6 +26,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -134,8 +134,8 @@ bool AVRAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
     Reg = MI->getOperand(OpNum + RegIdx).getReg();
 
     if (BytesPerReg == 2) {
-      Reg = TRI.getSubReg(Reg,
-                          ByteNumber % BytesPerReg ? AVR::sub_hi : AVR::sub_lo);
+      Reg = TRI.getSubReg(Reg, (ByteNumber % BytesPerReg) ? AVR::sub_hi
+                                                          : AVR::sub_lo);
     }
 
     O << AVRInstPrinter::getPrettyRegisterName(Reg, MRI);

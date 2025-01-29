@@ -95,7 +95,6 @@ static_library("builtins") {
     "absvti2.c",
     "adddf3.c",
     "addsf3.c",
-    "addtf3.c",
     "addvdi3.c",
     "addvsi3.c",
     "addvti3.c",
@@ -125,8 +124,6 @@ static_library("builtins") {
     "divsc3.c",
     "divsf3.c",
     "divsi3.c",
-    "divtc3.c",
-    "divtf3.c",
     "divti3.c",
     "extendhfsf2.c",
     "extendsfdf2.c",
@@ -172,7 +169,6 @@ static_library("builtins") {
     "muloti4.c",
     "mulsc3.c",
     "mulsf3.c",
-    "multf3.c",
     "multi3.c",
     "mulvdi3.c",
     "mulvsi3.c",
@@ -193,10 +189,8 @@ static_library("builtins") {
     "popcountti2.c",
     "powidf2.c",
     "powisf2.c",
-    "powitf2.c",
     "subdf3.c",
     "subsf3.c",
-    "subtf3.c",
     "subvdi3.c",
     "subvsi3.c",
     "subvti3.c",
@@ -248,7 +242,10 @@ static_library("builtins") {
   if ((current_cpu == "x64" && current_os != "win") || current_cpu == "arm64") {
     # GENERIC_TF_SOURCES
     sources += [
+      "addtf3.c",
       "comparetf2.c",
+      "divtc3.c",
+      "divtf3.c",
       "extenddftf2.c",
       "extendhftf2.c",
       "extendsftf2.c",
@@ -265,6 +262,9 @@ static_library("builtins") {
       "floatunsitf.c",
       "floatuntitf.c",
       "multc3.c",
+      "multf3.c",
+      "powitf2.c",
+      "subtf3.c",
       "trunctfdf2.c",
       "trunctfhf2.c",
       "trunctfsf2.c",
@@ -275,13 +275,17 @@ static_library("builtins") {
     sources -= [ "fp_mode.c" ]
     sources += [
       "cpu_model/x86.c",
+      "extendbfsf2.c",
       "i386/fp_mode.c",
       "truncdfbf2.c",
       "truncsfbf2.c",
+      "trunctfbf2.c",
+      "truncxfbf2.c",
     ]
     if (long_double_is_80_bits) {
       sources += [
         "divxc3.c",
+        "extendhfxf2.c",
         "extendxftf2.c",
         "fixunsxfdi.c",
         "fixunsxfsi.c",
@@ -295,6 +299,7 @@ static_library("builtins") {
         "mulxc3.c",
         "powixf2.c",
         "trunctfxf2.c",
+        "truncxfhf2.c",
       ]
     }
   }
@@ -570,6 +575,7 @@ static_library("builtins") {
 
   if (current_cpu == "riscv" || current_cpu == "riscv64") {
     sources += [
+      "cpu_model/riscv.c",
       "riscv/fp_mode.c",
       "riscv/restore.S",
       "riscv/save.S",

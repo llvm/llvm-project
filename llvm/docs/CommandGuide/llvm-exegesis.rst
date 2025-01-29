@@ -33,11 +33,22 @@ snippets.
 SUPPORTED PLATFORMS
 -------------------
 
-:program:`llvm-exegesis` currently only supports X86 (64-bit only), ARM (AArch64
-only), MIPS, and PowerPC (PowerPC64LE only) on Linux for benchmarking. Not all
-benchmarking functionality is guaranteed to work on every platform.
-:program:`llvm-exegesis` also has a separate analysis mode that is supported
-on every platform that LLVM is.
+:program:`llvm-exegesis` currently only supports X86 (64-bit only), ARM
+(AArch64 only, snippet generation is sparse), MIPS, and PowerPC (PowerPC64LE
+only) on Linux for benchmarking. Not all benchmarking functionality is
+guaranteed to work on every platform. :program:`llvm-exegesis` also has a
+separate analysis mode that is supported on every platform that LLVM is.
+
+To enable benchmarking in llvm-exegesis, LLVM must be configured and built with
+`LLVM_ENABLE_LIBPFM` enabled, as :program:`llvm-exegesis` depends on libpfm4
+for accessing performance counters. Benchmarking may fail if the target CPU is
+unsupported by libpfm. This can be verified by setting `LIBPFM_VERBOSE` and
+`LIBPFM_DEBUG` environment variables to enable verbose or debug mode for
+libpfm. If libpfm is installed in a non-standard directory, LLVM can be
+configured to locate the necessary library and header files by setting
+`LIBRARY_PATH`, `C_INCLUDE_PATH`, and `CPLUS_INCLUDE_PATH` environment
+variables. Additionally, `LD_LIBRARY_PATH` should be set so that
+:program:`llvm-exegesis` can locate the libpfm library during execution.
 
 SNIPPET ANNOTATIONS
 -------------------
@@ -89,6 +100,14 @@ properly.
   annotation requires the subprocess execution mode. This is useful in
   cases where the memory accessed by the snippet depends on the location
   of the snippet, like RIP-relative addressing.
+* `LLVM-EXEGESIS-LOOP-REGISTER <register name>` - This annotation specifies
+  the loop register to use for keeping track of the current iteration when
+  using the loop repetition mode. :program:`llvm-exegesis` needs to keep track
+  of the current loop iteration within the loop repetition mode in a performant
+  manner (i.e., no memory accesses), and uses a register to do this. This register
+  has an architecture specific default (e.g., `R8` on X86), but this might conflict
+  with some snippets. This annotation allows changing the register to prevent
+  interference between the loop index register and the snippet.
 
 EXAMPLE 1: benchmarking instructions
 ------------------------------------
@@ -301,25 +320,29 @@ OPTIONS
   enabled can help determine the effects of the frontend and can be used to
   improve latency and throughput estimates.
 
-.. option:: --repetition-mode=[duplicate|loop|min]
+.. option:: --repetition-mode=[duplicate|loop|min|middle-half-duplicate|middle-half-loop]
 
  Specify the repetition mode. `duplicate` will create a large, straight line
- basic block with `num-repetitions` instructions (repeating the snippet
- `num-repetitions`/`snippet size` times). `loop` will, optionally, duplicate the
+ basic block with `min-instructions` instructions (repeating the snippet
+ `min-instructions`/`snippet size` times). `loop` will, optionally, duplicate the
  snippet until the loop body contains at least `loop-body-size` instructions,
- and then wrap the result in a loop which will execute `num-repetitions`
+ and then wrap the result in a loop which will execute `min-instructions`
  instructions (thus, again, repeating the snippet
- `num-repetitions`/`snippet size` times). The `loop` mode, especially with loop
+ `min-instructions`/`snippet size` times). The `loop` mode, especially with loop
  unrolling tends to better hide the effects of the CPU frontend on architectures
  that cache decoded instructions, but consumes a register for counting
  iterations. If performing an analysis over many opcodes, it may be best to
  instead use the `min` mode, which will run each other mode,
- and produce the minimal measured result.
+ and produce the minimal measured result. The middle half repetition modes
+ will either duplicate or run the snippet in a loop depending upon the specific
+ mode. The middle half repetition modes will run two benchmarks, one twice the
+ length of the first one, and then subtract the difference between them to get
+ values without overhead.
 
-.. option:: --num-repetitions=<Number of repetitions>
+.. option:: --min-instructions=<Number of instructions>
 
  Specify the target number of executed instructions. Note that the actual
- repetition count of the snippet will be `num-repetitions`/`snippet size`.
+ repetition count of the snippet will be `min-instructions`/`snippet size`.
  Higher values lead to more accurate measurements but lengthen the benchmark.
 
 .. option:: --loop-body-size=<Preferred loop body size>
@@ -438,6 +461,25 @@ OPTIONS
   This option enables specifying the number of times to repeat the measurement
   when performing latency measurements. By default, llvm-exegesis will repeat
   a latency measurement enough times to balance run-time and noise reduction.
+
+.. option:: --validation-counter=[instructions-retired,l1d-cache-load-misses,
+   l1d-cache-store-misses,l1i-cache-load-misses,data-tlb-load-misses,
+   data-tld-store-misses,instruction-tlb-load-misses]
+
+   This option enables the use of validation counters, which measure additional
+   microarchitectural events like cache misses to validate snippet execution
+   conditions. These events are measured using the perf subsystem in a group
+   with the performance counter used to measure the value of interest. This
+   flag can be specified multiple times to measure multiple events. The maximum
+   number of validation counters is platform dependent.
+
+.. option:: --benchmark-process-cpu=<cpu id>
+
+  This option specifies the number of the CPU that should be used to run the
+  benchmarking subprocess. When starting the subprocess,
+  :program:`llvm-exegesis` will set the affinity of the subprocess to only
+  include the specified CPU. This option only works in the subprocess execution
+  mode.
 
 EXIT STATUS
 -----------

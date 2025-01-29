@@ -132,7 +132,7 @@ unsigned getDuplexCandidateGroup(MCInst const &MI);
 SmallVector<DuplexCandidate, 8>
 getDuplexPossibilties(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
                       MCInst const &MCB);
-unsigned getDuplexRegisterNumbering(unsigned Reg);
+unsigned getDuplexRegisterNumbering(MCRegister Reg);
 
 MCExpr const &getExpr(MCExpr const &Expr);
 
@@ -231,7 +231,7 @@ bool isConstExtended(MCInstrInfo const &MCII, MCInst const &MCI);
 bool isCVINew(MCInstrInfo const &MCII, MCInst const &MCI);
 
 // Is this double register suitable for use in a duplex subinst
-bool isDblRegForSubInst(unsigned Reg);
+bool isDblRegForSubInst(MCRegister Reg);
 
 // Is this a duplex instruction
 bool isDuplex(MCInstrInfo const &MCII, MCInst const &MCI);
@@ -260,10 +260,10 @@ bool isImmext(MCInst const &MCI);
 bool isInnerLoop(MCInst const &MCI);
 
 // Is this an integer register
-bool isIntReg(unsigned Reg);
+bool isIntReg(MCRegister Reg);
 
 // Is this register suitable for use in a duplex subinst
-bool isIntRegForSubInst(unsigned Reg);
+bool isIntRegForSubInst(MCRegister Reg);
 bool isMemReorderDisabled(MCInst const &MCI);
 
 // Return whether the insn is a new-value consumer.
@@ -289,7 +289,7 @@ bool isPredicatedNew(MCInstrInfo const &MCII, MCInst const &MCI);
 bool isPredicatedTrue(MCInstrInfo const &MCII, MCInst const &MCI);
 
 // Return true if this is a scalar predicate register.
-bool isPredReg(MCRegisterInfo const &MRI, unsigned Reg);
+bool isPredReg(MCRegisterInfo const &MRI, MCRegister Reg);
 
 // Returns true if the Ith operand is a predicate register.
 bool isPredRegister(MCInstrInfo const &MCII, MCInst const &Inst, unsigned I);
@@ -333,11 +333,11 @@ unsigned slotsConsumed(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
 void padEndloop(MCInst &MCI, MCContext &Context);
 class PredicateInfo {
 public:
-  PredicateInfo() : Register(0), Operand(0), PredicatedTrue(false) {}
-  PredicateInfo(unsigned Register, unsigned Operand, bool PredicatedTrue)
+  PredicateInfo() : Operand(0), PredicatedTrue(false) {}
+  PredicateInfo(MCRegister Register, unsigned Operand, bool PredicatedTrue)
       : Register(Register), Operand(Operand), PredicatedTrue(PredicatedTrue) {}
   bool isPredicated() const;
-  unsigned Register;
+  MCRegister Register;
   unsigned Operand;
   bool PredicatedTrue;
 };
@@ -360,18 +360,18 @@ void setOuterLoop(MCInst &MCI);
 
 // Would duplexing this instruction create a requirement to extend
 bool subInstWouldBeExtended(MCInst const &potentialDuplex);
-unsigned SubregisterBit(unsigned Consumer, unsigned Producer,
-                        unsigned Producer2);
+unsigned SubregisterBit(MCRegister Consumer, MCRegister Producer,
+                        MCRegister Producer2);
 
-bool IsVecRegSingle(unsigned VecReg);
-bool IsVecRegPair(unsigned VecReg);
-bool IsReverseVecRegPair(unsigned VecReg);
-bool IsSingleConsumerRefPairProducer(unsigned Producer, unsigned Consumer);
+bool IsVecRegSingle(MCRegister VecReg);
+bool IsVecRegPair(MCRegister VecReg);
+bool IsReverseVecRegPair(MCRegister VecReg);
+bool IsSingleConsumerRefPairProducer(MCRegister Producer, MCRegister Consumer);
 
 /// Returns an ordered pair of the constituent register ordinals for
 /// each of the elements of \a VecRegPair.  For example, Hexagon::W0 ("v0:1")
 /// returns { 0, 1 } and Hexagon::W1 ("v3:2") returns { 3, 2 }.
-std::pair<unsigned, unsigned> GetVecRegPairIndices(unsigned VecRegPair);
+std::pair<unsigned, unsigned> GetVecRegPairIndices(MCRegister VecRegPair);
 
 // Attempt to find and replace compound pairs
 void tryCompound(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,

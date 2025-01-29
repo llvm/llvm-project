@@ -26,16 +26,17 @@ end subroutine
 ! CHECK: %[[LB:.*]] = arith.constant 0 : index
 ! CHECK: %[[UB:.*]] = arith.constant 49 : index
 ! CHECK: %[[BOUND_1_50:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[EXT]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
-! CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[DECL]]#1 : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND_1_50]]) -> !fir.ref<!fir.array<100xf32>> {name = "a(1:50)"}
+! CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[DECL]]#0 : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND_1_50]]) -> !fir.ref<!fir.array<100xf32>> {name = "a(1:50)"}
 ! CHECK: %[[ONE:.*]] = arith.constant 1 : index
 ! CHECK: %[[LB:.*]] = arith.constant 50 : index
 ! CHECK: %[[UB:.*]] = arith.constant 99 : index
 ! CHECK: %[[BOUND_51_100:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[EXT]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
-! CHECK: %[[COPYOUT_CREATE:.*]] = acc.create varPtr(%[[DECL]]#1 : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND_51_100]]) -> !fir.ref<!fir.array<100xf32>> {dataClause = #acc<data_clause acc_copyout>, name = "a(51:100)"}
+! CHECK: %[[COPYOUT_CREATE:.*]] = acc.create varPtr(%[[DECL]]#0 : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND_51_100]]) -> !fir.ref<!fir.array<100xf32>> {dataClause = #acc<data_clause acc_copyout>, name = "a(51:100)"}
 ! CHECK: acc.data dataOperands(%[[COPYIN]], %[[COPYOUT_CREATE]] : !fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>) {
 ! CHECK:   acc.terminator
 ! CHECK: }
-! CHECK: acc.copyout accPtr(%[[COPYOUT_CREATE]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND_51_100]]) to varPtr(%[[DECL]]#1 : !fir.ref<!fir.array<100xf32>>) {name = "a(51:100)"}
+! CHECK: acc.delete accPtr(%[[COPYIN]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND_1_50]]) {dataClause = #acc<data_clause acc_copyin>, name = "a(1:50)"}
+! CHECK: acc.copyout accPtr(%[[COPYOUT_CREATE]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND_51_100]]) to varPtr(%[[DECL]]#0 : !fir.ref<!fir.array<100xf32>>) {name = "a(51:100)"}
 
 ! Testing array sections of a derived-type component
 subroutine acc_operand_array_section_component()
@@ -125,7 +126,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QMacc_data_operandPacc_operand_array_section_allocatable() {
 ! CHECK: %[[A:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", uniq_name = "_QMacc_data_operandFacc_operand_array_section_allocatableEa"}
 ! CHECK: %[[DECLA:.*]]:2 = hlfir.declare %[[A]] {fortran_attrs = #fir.var_attrs<allocatable>
-! CHECK: %[[LOAD_BOX_A_0:.*]] = fir.load %[[DECLA]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK: %[[LOAD_BOX_A_0:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: %[[LOAD_BOX_A_1:.*]] = fir.load %[[DECLA]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index
 ! CHECK: %[[DIMS0_0:.*]]:3 = fir.box_dims %[[LOAD_BOX_A_1]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
@@ -138,10 +139,10 @@ end subroutine
 ! CHECK: %[[LOAD_BOX_A_2:.*]] = fir.load %[[DECLA]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index
 ! CHECK: %[[DIMS0_2:.*]]:3 = fir.box_dims %[[LOAD_BOX_A_2]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
-! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[DIMS0_2]]#1 : index) stride(%[[DIMS0_1]]#2 : index) startIdx(%[[DIMS0_0]]#0 : index) {strideInBytes = true}
+! CHECK: %[[BOUND_1_50:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[DIMS0_2]]#1 : index) stride(%[[DIMS0_1]]#2 : index) startIdx(%[[DIMS0_0]]#0 : index) {strideInBytes = true}
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD_BOX_A_0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
-! CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.heap<!fir.array<?xf32>> {name = "a(1:50)"}
-! CHECK: %[[LOAD_BOX_A_0:.*]] = fir.load %[[DECLA]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xf32>>) bounds(%[[BOUND_1_50]]) -> !fir.heap<!fir.array<?xf32>> {name = "a(1:50)"}
+! CHECK: %[[LOAD_BOX_A_0:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: %[[LOAD_BOX_A_1:.*]] = fir.load %[[DECLA]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index
 ! CHECK: %[[DIMS0_0:.*]]:3 = fir.box_dims %[[LOAD_BOX_A_1]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
@@ -154,13 +155,14 @@ end subroutine
 ! CHECK: %[[LOAD_BOX_A_2:.*]] = fir.load %[[DECLA]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index
 ! CHECK: %[[DIMS0_2:.*]]:3 = fir.box_dims %[[LOAD_BOX_A_2]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
-! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[DIMS0_2]]#1 : index) stride(%[[DIMS0_1]]#2 : index) startIdx(%[[DIMS0_0]]#0 : index) {strideInBytes = true}
+! CHECK: %[[BOUND_51_100:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[DIMS0_2]]#1 : index) stride(%[[DIMS0_1]]#2 : index) startIdx(%[[DIMS0_0]]#0 : index) {strideInBytes = true}
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD_BOX_A_0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
-! CHECK: %[[COPYOUT_CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.heap<!fir.array<?xf32>> {dataClause = #acc<data_clause acc_copyout>, name = "a(51:100)"}
+! CHECK: %[[COPYOUT_CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xf32>>) bounds(%[[BOUND_51_100]]) -> !fir.heap<!fir.array<?xf32>> {dataClause = #acc<data_clause acc_copyout>, name = "a(51:100)"}
 ! CHECK: acc.data dataOperands(%[[COPYIN]], %[[COPYOUT_CREATE]] : !fir.heap<!fir.array<?xf32>>, !fir.heap<!fir.array<?xf32>>) {
 ! CHECK:   acc.terminator
 ! CHECK: }
-! CHECK: acc.copyout accPtr(%[[COPYOUT_CREATE]] : !fir.heap<!fir.array<?xf32>>) bounds(%[[BOUND]]) to varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xf32>>) {name = "a(51:100)"}
+! CHECK: acc.delete accPtr(%[[COPYIN]] : !fir.heap<!fir.array<?xf32>>) bounds(%[[BOUND_1_50]]) {dataClause = #acc<data_clause acc_copyin>, name = "a(1:50)"}
+! CHECK: acc.copyout accPtr(%[[COPYOUT_CREATE]] : !fir.heap<!fir.array<?xf32>>) bounds(%[[BOUND_51_100]]) to varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xf32>>) {name = "a(51:100)"}
 
 
 ! Testing array sections on pointer array
@@ -177,7 +179,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QMacc_data_operandPacc_operand_array_section_pointer() {
 ! CHECK: %[[P:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>> {bindc_name = "p", uniq_name = "_QMacc_data_operandFacc_operand_array_section_pointerEp"}
 ! CHECK: %[[DECLP:.*]]:2 = hlfir.declare %[[P]] {fortran_attrs = #fir.var_attrs<pointer>
-! CHECK: %[[LOAD_BOX_P_0:.*]] = fir.load %[[DECLP]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK: %[[LOAD_BOX_P_0:.*]] = fir.load %[[DECLP]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK: %[[LOAD_BOX_P_1:.*]] = fir.load %[[DECLP]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index
 ! CHECK: %[[DIMS0_0:.*]]:3 = fir.box_dims %[[LOAD_BOX_P_1]], %[[C0:.*]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)
@@ -196,6 +198,7 @@ end subroutine
 ! CHECK: acc.data dataOperands(%[[COPYIN]] : !fir.ptr<!fir.array<?xf32>>) {
 ! CHECK:   acc.terminator
 ! CHECK: }
+! CHECK: acc.delete accPtr(%[[COPYIN]] : !fir.ptr<!fir.array<?xf32>>) bounds(%[[BOUND]]) {dataClause = #acc<data_clause acc_copyin>, name = "p(1:50)"}
 
 
 end module

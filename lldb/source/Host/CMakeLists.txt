@@ -13,6 +13,7 @@ macro(add_host_subdirectory group)
 endmacro()
 
 add_host_subdirectory(common
+  common/Alarm.cpp
   common/FileAction.cpp
   common/FileCache.cpp
   common/File.cpp
@@ -112,7 +113,6 @@ else()
     if (CMAKE_SYSTEM_NAME MATCHES "Android")
       add_host_subdirectory(android
         android/HostInfoAndroid.cpp
-        android/LibcGlue.cpp
         )
     endif()
   elseif (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
@@ -132,6 +132,11 @@ else()
       openbsd/Host.cpp
       openbsd/HostInfoOpenBSD.cpp
       )
+
+  elseif (CMAKE_SYSTEM_NAME MATCHES "AIX")
+    add_host_subdirectory(aix
+      aix/HostInfoAIX.cpp
+      )    
   endif()
 endif()
 

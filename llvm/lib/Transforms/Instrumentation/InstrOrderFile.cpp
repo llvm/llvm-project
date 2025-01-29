@@ -19,8 +19,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Instrumentation.h"
-#include <fstream>
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include <mutex>
 #include <sstream>
 

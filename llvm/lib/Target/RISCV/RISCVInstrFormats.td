@@ -109,6 +109,8 @@ def Vrgather     : RISCVVConstraint<!or(VS2Constraint.Value,
                                         VMConstraint.Value)>;
 def Vcompress    : RISCVVConstraint<!or(VS2Constraint.Value,
                                         VS1Constraint.Value)>;
+def Sha2Constraint : RISCVVConstraint<!or(VS2Constraint.Value,
+                                          VS1Constraint.Value)>;
 
 // The following opcode names match those given in Table 19.1 in the
 // RISC-V User-level ISA specification ("RISC-V base opcode map").
@@ -153,8 +155,25 @@ def OPC_BRANCH    : RISCVOpcode<"BRANCH",    0b1100011>;
 def OPC_JALR      : RISCVOpcode<"JALR",      0b1100111>;
 def OPC_JAL       : RISCVOpcode<"JAL",       0b1101111>;
 def OPC_SYSTEM    : RISCVOpcode<"SYSTEM",    0b1110011>;
-def OPC_OP_P      : RISCVOpcode<"OP_P",      0b1110111>;
+def OPC_OP_VE     : RISCVOpcode<"OP_VE",     0b1110111>;
 def OPC_CUSTOM_3  : RISCVOpcode<"CUSTOM_3",  0b1111011>;
+
+class EltDeps<bit vl, bit mask> {
+  bit VL = vl;
+  bit Mask = mask;
+}
+
+def EltDepsNone      : EltDeps<vl=0, mask=0>;
+def EltDepsVL        : EltDeps<vl=1, mask=0>;
+def EltDepsVLMask    : EltDeps<vl=1, mask=1>;
+
+class EEW <bits<2> val> {
+  bits<2> Value = val;
+}
+def EEW1     : EEW<0>;
+def EEWSEWx1 : EEW<1>;
+def EEWSEWx2 : EEW<2>;
+def EEWSEWx4 : EEW<3>;
 
 class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
                    list<dag> pattern, InstFormat format> : Instruction {
@@ -221,6 +240,18 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   // 3 -> widening case
   bits<2> TargetOverlapConstraintType = 0;
   let TSFlags{22-21} = TargetOverlapConstraintType;
+
+  // Most vector instructions are elementwise, but some may depend on the value
+  // of VL (e.g. vslide1down.vx), and others may depend on the VL and mask
+  // (e.g. vredsum.vs, viota.m). Mark these instructions so that peepholes avoid
+  // changing their VL and/or mask.
+  EltDeps ElementsDependOn = EltDepsNone;
+  let TSFlags{23} = ElementsDependOn.VL;
+  let TSFlags{24} = ElementsDependOn.Mask;
+
+  // Indicates the EEW of a vector instruction's destination operand.
+  EEW DestEEW = EEWSEWx1;
+  let TSFlags{26-25} = DestEEW.Value;
 }
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,
@@ -233,6 +264,22 @@ class RVInst<dag outs, dag ins, string opcodestr, string argstr,
   // to build the decode table.
   field bits<32> SoftFail = 0;
   let Size = 4;
+}
+
+class RVInst48<dag outs, dag ins, string opcodestr, string argstr,
+               list<dag> pattern, InstFormat format>
+    : RVInstCommon<outs, ins, opcodestr, argstr, pattern, format> {
+  field bits<48> Inst;
+  field bits<48> SoftFail = 0;
+  let Size = 6;
+}
+
+class RVInst64<dag outs, dag ins, string opcodestr, string argstr,
+               list<dag> pattern, InstFormat format>
+    : RVInstCommon<outs, ins, opcodestr, argstr, pattern, format> {
+  field bits<64> Inst;
+  field bits<64> SoftFail = 0;
+  let Size = 8;
 }
 
 // Pseudo instructions

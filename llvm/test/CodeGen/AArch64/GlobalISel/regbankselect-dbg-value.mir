@@ -31,7 +31,7 @@
 name:            test_dbg_value
 legalized:       true
 # CHECK: registers:
-# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '', flags: [  ] }
 body: |
   bb.0:
     liveins: $w0

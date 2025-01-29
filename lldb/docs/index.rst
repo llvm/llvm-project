@@ -81,6 +81,12 @@ are welcome:
 expected to work, with functionality improving rapidly. ARM and AArch64 support
 is more experimental, with more known issues than the others.
 
+Support for the following architectures is in active development. For their
+current state, follow the links to their respective issues:
+
+* `RISC-V <https://github.com/llvm/llvm-project/issues/55383>`_
+* `LoongArch <https://github.com/llvm/llvm-project/issues/112693>`_
+
 Get Involved
 ------------
 
@@ -125,10 +131,10 @@ interesting areas to contribute to lldb.
    use/symbolication
    use/symbols
    use/remote
-   use/qemu-testing
    use/intel_pt
    use/ondemand
    use/aarch64-linux
+   use/symbolfilejson
    use/troubleshooting
    use/links
    Man Page <man/lldb>
@@ -141,6 +147,7 @@ interesting areas to contribute to lldb.
    use/python
    use/python-reference
    Python API <python_api>
+   Python Extensions <python_extensions>
 
 
 .. toctree::
@@ -152,13 +159,19 @@ interesting areas to contribute to lldb.
    resources/contributing
    resources/build
    resources/test
+   resources/qemu-testing
    resources/debugging
    resources/fuzzing
    resources/sbapi
    resources/dataformatters
+   resources/formatterbytecode
    resources/extensions
+   resources/lldbgdbremote
+   resources/lldbplatformpackets
    resources/caveats
    resources/projects
+   resources/lldbdap
+   resources/addinglanguagesupport
    Public C++ API <https://lldb.llvm.org/cpp_reference/namespacelldb.html>
    Private C++ API <https://lldb.llvm.org/cpp_reference/index.html>
 
@@ -169,6 +182,7 @@ interesting areas to contribute to lldb.
 
    Source Code <https://github.com/llvm/llvm-project>
    Releases <https://github.com/llvm/llvm-project/releases>
+   Discord <https://discord.com/channels/636084430946959380/636732809708306432>
    Discussion Forums <https://discourse.llvm.org/c/subprojects/lldb/8>
    Developer Policy <https://llvm.org/docs/DeveloperPolicy.html>
    Bug Reports <https://github.com/llvm/llvm-project/issues?q=is%3Aissue+label%3Alldb+is%3Aopen>

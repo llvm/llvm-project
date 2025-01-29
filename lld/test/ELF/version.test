@@ -7,4 +7,4 @@
 # RUN: ld.lld -V 2>&1 | FileCheck %s
 # RUN: not ld.lld -V %t/not-exist 2>&1 | FileCheck %s
 
-# CHECK: LLD {{.*}} (compatible with GNU linkers)
+# CHECK: LLD {{.+}} (compatible with GNU linkers)

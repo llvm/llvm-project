@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: no-exceptions
 
-// 1b00fc5d8133 made it in the dylib in macOS 10.11
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10}}
-
 #include <cassert>
 
 struct A

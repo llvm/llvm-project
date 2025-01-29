@@ -13,6 +13,8 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StringLexer.h"
 
 #include "clang/Basic/TargetInfo.h"
@@ -234,12 +236,15 @@ clang::QualType AppleObjCTypeEncodingParser::BuildObjCObjectPointerType(
 
     auto types = decl_vendor->FindTypes(ConstString(name), /*max_matches*/ 1);
 
-    // The user can forward-declare something that has no definition.  The runtime
-    // doesn't prohibit this at all. This is a rare and very weird case.  We keep
-    // this assert in debug builds so we catch other weird cases.
-    lldbassert(!types.empty());
-    if (types.empty())
+    if (types.empty()) {
+      // The user can forward-declare something that has no definition. The
+      // runtime doesn't prohibit this at all. This is a rare and very weird
+      // case. Assert assert in debug builds so we catch other weird cases.
+      assert(false && "forward declaration without definition");
+      LLDB_LOG(GetLog(LLDBLog::Types),
+               "forward declaration without definition: {0}", name);
       return ast_ctx.getObjCIdType();
+    }
 
     return ClangUtil::GetQualType(types.front().GetPointerType());
   } else {

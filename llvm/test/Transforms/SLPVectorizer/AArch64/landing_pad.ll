@@ -28,9 +28,9 @@
 ; YAML-NEXT: Function:        foo
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'SLP vectorized with cost '
-; YAML-NEXT:   - Cost:            '2'
+; YAML-NEXT:   - Cost:            '8'
 ; YAML-NEXT:   - String:          ' and with tree size '
-; YAML-NEXT:   - TreeSize:        '9'
+; YAML-NEXT:   - TreeSize:        '5'
 
 define void @foo() personality ptr @bar {
 ; CHECK-LABEL: @foo(
@@ -44,8 +44,10 @@ define void @foo() personality ptr @bar {
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x i64> [ [[TMP4:%.*]], [[BB6:%.*]] ], [ poison, [[BB1:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = invoke i64 poison(ptr addrspace(1) nonnull poison, i64 0, i64 0, i64 poison) [ "deopt"() ]
-; CHECK-NEXT:    to label [[BB4:%.*]] unwind label [[BB10:%.*]]
+; CHECK-NEXT:            to label [[BB4:%.*]] unwind label [[BB10:%.*]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    br i1 poison, label [[BB11:%.*]], label [[BB5:%.*]]
 ; CHECK:       bb5:
@@ -55,9 +57,8 @@ define void @foo() personality ptr @bar {
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    [[LOCAL_5_84111:%.*]] = phi i64 [ poison, [[BB8]] ], [ poison, [[BB5]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> poison, i64 [[LOCAL_5_84111]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = invoke i64 poison(ptr addrspace(1) nonnull poison, i64 poison, i64 poison, i64 poison) [ "deopt"() ]
-; CHECK-NEXT:    to label [[BB8]] unwind label [[BB12:%.*]]
+; CHECK-NEXT:            to label [[BB8]] unwind label [[BB12:%.*]]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    br i1 poison, label [[BB7]], label [[BB6]]
 ; CHECK:       bb9:
@@ -65,16 +66,22 @@ define void @foo() personality ptr @bar {
 ; CHECK-NEXT:    [[TMP7]] = phi <2 x i64> [ [[TMP8:%.*]], [[BB10]] ], [ [[TMP9:%.*]], [[BB12]] ]
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    [[TMP8]] = phi <2 x i64> [ [[TMP2]], [[BB3]] ]
+; CHECK-NEXT:    [[LOCAL_10_38123_LCSSA:%.*]] = phi i64 [ [[TMP10]], [[BB3]] ]
+; CHECK-NEXT:    [[LOCAL_5_33118_LCSSA:%.*]] = phi i64 [ [[TMP5]], [[BB3]] ]
 ; CHECK-NEXT:    [[LANDING_PAD68:%.*]] = landingpad { ptr, i64 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x i64> poison, i64 [[LOCAL_10_38123_LCSSA]], i32 0
+; CHECK-NEXT:    [[TMP8]] = insertelement <2 x i64> [[TMP12]], i64 [[LOCAL_5_33118_LCSSA]], i32 1
 ; CHECK-NEXT:    br label [[BB9]]
 ; CHECK:       bb11:
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb12:
-; CHECK-NEXT:    [[TMP9]] = phi <2 x i64> [ [[TMP5]], [[BB7]] ]
+; CHECK-NEXT:    [[LOCAL_10_89113_LCSSA:%.*]] = phi i64 [ poison, [[BB7]] ]
+; CHECK-NEXT:    [[LOCAL_5_84111_LCSSA:%.*]] = phi i64 [ [[LOCAL_5_84111]], [[BB7]] ]
 ; CHECK-NEXT:    [[LANDING_PAD149:%.*]] = landingpad { ptr, i64 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i64> poison, i64 [[LOCAL_10_89113_LCSSA]], i32 0
+; CHECK-NEXT:    [[TMP9]] = insertelement <2 x i64> [[TMP11]], i64 [[LOCAL_5_84111_LCSSA]], i32 1
 ; CHECK-NEXT:    br label [[BB9]]
 ;
 bb1:

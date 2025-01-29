@@ -144,7 +144,7 @@ void *MmapOrDie(uptr size, const char *mem_type, bool raw_report) {
   return rv;
 }
 
-void UnmapOrDie(void *addr, uptr size) {
+void UnmapOrDie(void *addr, uptr size, bool raw_report) {
   if (!size || !addr)
     return;
 
@@ -156,10 +156,7 @@ void UnmapOrDie(void *addr, uptr size) {
   // fails try MEM_DECOMMIT.
   if (VirtualFree(addr, 0, MEM_RELEASE) == 0) {
     if (VirtualFree(addr, size, MEM_DECOMMIT) == 0) {
-      Report("ERROR: %s failed to "
-             "deallocate 0x%zx (%zd) bytes at address %p (error code: %d)\n",
-             SanitizerToolName, size, size, addr, GetLastError());
-      CHECK("unable to unmap" && 0);
+      ReportMunmapFailureAndDie(addr, size, GetLastError(), raw_report);
     }
   }
 }
@@ -167,7 +164,24 @@ void UnmapOrDie(void *addr, uptr size) {
 static void *ReturnNullptrOnOOMOrDie(uptr size, const char *mem_type,
                                      const char *mmap_type) {
   error_t last_error = GetLastError();
-  if (last_error == ERROR_NOT_ENOUGH_MEMORY)
+
+  // Assumption: VirtualAlloc is the last system call that was invoked before
+  //   this method.
+  // VirtualAlloc emits one of 3 error codes when running out of memory
+  // 1. ERROR_NOT_ENOUGH_MEMORY:
+  //  There's not enough memory to execute the command
+  // 2. ERROR_INVALID_PARAMETER:
+  //  VirtualAlloc will return this if the request would allocate memory at an
+  //  address exceeding or being very close to the maximum application address
+  //  (the `lpMaximumApplicationAddress` field within the `SystemInfo` struct).
+  //  This does not seem to be officially documented, but is corroborated here:
+  //  https://stackoverflow.com/questions/45833674/why-does-virtualalloc-fail-for-lpaddress-greater-than-0x6ffffffffff
+  // 3. ERROR_COMMITMENT_LIMIT:
+  //  VirtualAlloc will return this if e.g. the pagefile is too small to commit
+  //  the requested amount of memory.
+  if (last_error == ERROR_NOT_ENOUGH_MEMORY ||
+      last_error == ERROR_INVALID_PARAMETER ||
+      last_error == ERROR_COMMITMENT_LIMIT)
     return nullptr;
   ReportMmapFailureAndDie(size, mem_type, mmap_type, last_error);
 }
@@ -279,8 +293,8 @@ void *MmapFixedOrDie(uptr fixed_addr, uptr size, const char *name) {
       MEM_COMMIT, PAGE_READWRITE);
   if (p == 0) {
     char mem_type[30];
-    internal_snprintf(mem_type, sizeof(mem_type), "memory at address 0x%zx",
-                      fixed_addr);
+    internal_snprintf(mem_type, sizeof(mem_type), "memory at address %p",
+                      (void *)fixed_addr);
     ReportMmapFailureAndDie(size, mem_type, "allocate", GetLastError());
   }
   return p;
@@ -311,8 +325,8 @@ void *MmapFixedOrDieOnFatalError(uptr fixed_addr, uptr size, const char *name) {
       MEM_COMMIT, PAGE_READWRITE);
   if (p == 0) {
     char mem_type[30];
-    internal_snprintf(mem_type, sizeof(mem_type), "memory at address 0x%zx",
-                      fixed_addr);
+    internal_snprintf(mem_type, sizeof(mem_type), "memory at address %p",
+                      (void *)fixed_addr);
     return ReturnNullptrOnOOMOrDie(size, mem_type, "allocate");
   }
   return p;
@@ -387,9 +401,8 @@ bool DontDumpShadowMemory(uptr addr, uptr length) {
 }
 
 uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
-                      uptr min_shadow_base_alignment,
-                      UNUSED uptr &high_mem_end) {
-  const uptr granularity = GetMmapGranularity();
+                      uptr min_shadow_base_alignment, UNUSED uptr &high_mem_end,
+                      uptr granularity) {
   const uptr alignment =
       Max<uptr>(granularity << shadow_scale, 1ULL << min_shadow_base_alignment);
   const uptr left_padding =
@@ -877,24 +890,18 @@ uptr GetTlsSize() {
   return 0;
 }
 
-void InitTlsSize() {
-}
-
-void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
-                          uptr *tls_addr, uptr *tls_size) {
-#if SANITIZER_GO
-  *stk_addr = 0;
-  *stk_size = 0;
-  *tls_addr = 0;
-  *tls_size = 0;
-#else
-  uptr stack_top, stack_bottom;
-  GetThreadStackTopAndBottom(main, &stack_top, &stack_bottom);
-  *stk_addr = stack_bottom;
-  *stk_size = stack_top - stack_bottom;
-  *tls_addr = 0;
-  *tls_size = 0;
-#endif
+void GetThreadStackAndTls(bool main, uptr *stk_begin, uptr *stk_end,
+                          uptr *tls_begin, uptr *tls_end) {
+#  if SANITIZER_GO
+  *stk_begin = 0;
+  *stk_end = 0;
+  *tls_begin = 0;
+  *tls_end = 0;
+#  else
+  GetThreadStackTopAndBottom(main, stk_end, stk_begin);
+  *tls_begin = 0;
+  *tls_end = 0;
+#  endif
 }
 
 void ReportFile::Write(const char *buffer, uptr length) {
@@ -978,6 +985,11 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
   return true;
 }
 
+bool TryMemCpy(void *dest, const void *src, uptr n) {
+  // TODO: implement.
+  return false;
+}
+
 bool SignalContext::IsStackOverflow() const {
   return (DWORD)GetType() == EXCEPTION_STACK_OVERFLOW;
 }
@@ -996,8 +1008,13 @@ void SignalContext::InitPcSpBp() {
   sp = (uptr)context_record->Rsp;
 #    endif
 #  else
+#    if SANITIZER_ARM
+  bp = (uptr)context_record->R11;
+  sp = (uptr)context_record->Sp;
+#    else
   bp = (uptr)context_record->Ebp;
   sp = (uptr)context_record->Esp;
+#    endif
 #  endif
 }
 
@@ -1038,7 +1055,52 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
 }
 
 void SignalContext::DumpAllRegisters(void *context) {
-  // FIXME: Implement this.
+  CONTEXT *ctx = (CONTEXT *)context;
+#  if defined(_M_X64)
+  Report("Register values:\n");
+  Printf("rax = %llx  ", ctx->Rax);
+  Printf("rbx = %llx  ", ctx->Rbx);
+  Printf("rcx = %llx  ", ctx->Rcx);
+  Printf("rdx = %llx  ", ctx->Rdx);
+  Printf("\n");
+  Printf("rdi = %llx  ", ctx->Rdi);
+  Printf("rsi = %llx  ", ctx->Rsi);
+  Printf("rbp = %llx  ", ctx->Rbp);
+  Printf("rsp = %llx  ", ctx->Rsp);
+  Printf("\n");
+  Printf("r8  = %llx  ", ctx->R8);
+  Printf("r9  = %llx  ", ctx->R9);
+  Printf("r10 = %llx  ", ctx->R10);
+  Printf("r11 = %llx  ", ctx->R11);
+  Printf("\n");
+  Printf("r12 = %llx  ", ctx->R12);
+  Printf("r13 = %llx  ", ctx->R13);
+  Printf("r14 = %llx  ", ctx->R14);
+  Printf("r15 = %llx  ", ctx->R15);
+  Printf("\n");
+#  elif defined(_M_IX86)
+  Report("Register values:\n");
+  Printf("eax = %lx  ", ctx->Eax);
+  Printf("ebx = %lx  ", ctx->Ebx);
+  Printf("ecx = %lx  ", ctx->Ecx);
+  Printf("edx = %lx  ", ctx->Edx);
+  Printf("\n");
+  Printf("edi = %lx  ", ctx->Edi);
+  Printf("esi = %lx  ", ctx->Esi);
+  Printf("ebp = %lx  ", ctx->Ebp);
+  Printf("esp = %lx  ", ctx->Esp);
+  Printf("\n");
+#  elif defined(_M_ARM64)
+  Report("Register values:\n");
+  for (int i = 0; i <= 30; i++) {
+    Printf("x%d%s = %llx", i < 10 ? " " : "", ctx->X[i]);
+    if (i % 4 == 3)
+      Printf("\n");
+  }
+#  else
+  // TODO
+  (void)ctx;
+#  endif
 }
 
 int SignalContext::GetType() const {

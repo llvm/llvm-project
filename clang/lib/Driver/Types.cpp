@@ -8,12 +8,9 @@
 
 #include "clang/Driver/Types.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Option/Arg.h"
 #include <cassert>
 #include <cstring>
 
@@ -133,7 +130,7 @@ bool types::isAcceptedByClang(ID Id) {
 
   case TY_Asm:
   case TY_C: case TY_PP_C:
-  case TY_CL: case TY_CLCXX:
+  case TY_CL: case TY_PP_CL: case TY_CLCXX: case TY_PP_CLCXX:
   case TY_CUDA: case TY_PP_CUDA:
   case TY_CUDA_DEVICE:
   case TY_HIP:
@@ -170,6 +167,9 @@ bool types::isAcceptedByFlang(ID Id) {
   case TY_LLVM_IR:
   case TY_LLVM_BC:
     return true;
+  case TY_PP_CUDA:
+  case TY_CUDA:
+    return true;
   }
 }
 
@@ -181,7 +181,9 @@ bool types::isDerivedFromC(ID Id) {
   case TY_PP_C:
   case TY_C:
   case TY_CL:
+  case TY_PP_CL:
   case TY_CLCXX:
+  case TY_PP_CLCXX:
   case TY_PP_CUDA:
   case TY_CUDA:
   case TY_CUDA_DEVICE:
@@ -196,7 +198,6 @@ bool types::isDerivedFromC(ID Id) {
   case TY_PP_ObjCXX:
   case TY_PP_ObjCXX_Alias:
   case TY_ObjCXX:
-  case TY_RenderScript:
   case TY_PP_CHeader:
   case TY_CHeader:
   case TY_CLHeader:
@@ -240,7 +241,10 @@ bool types::isCXX(ID Id) {
   case TY_CXXHUHeader:
   case TY_PP_CXXHeaderUnit:
   case TY_ObjCXXHeader: case TY_PP_ObjCXXHeader:
-  case TY_CXXModule: case TY_PP_CXXModule:
+  case TY_CXXModule:
+  case TY_PP_CXXModule:
+  case TY_ModuleFile:
+  case TY_PP_CLCXX:
   case TY_CUDA: case TY_PP_CUDA: case TY_CUDA_DEVICE:
   case TY_HIP:
   case TY_PP_HIP:
@@ -310,7 +314,9 @@ types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
       .Case("cc", TY_CXX)
       .Case("CC", TY_CXX)
       .Case("cl", TY_CL)
+      .Case("cli", TY_PP_CL)
       .Case("clcpp", TY_CLCXX)
+      .Case("clii", TY_PP_CLCXX)
       .Case("cp", TY_CXX)
       .Case("cu", TY_CUDA)
       .Case("hh", TY_CXXHeader)
@@ -318,7 +324,6 @@ types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
       .Case("ll", TY_LLVM_IR)
       .Case("mi", TY_PP_ObjC)
       .Case("mm", TY_ObjCXX)
-      .Case("rs", TY_RenderScript)
       .Case("adb", TY_Ada)
       .Case("ads", TY_Ada)
       .Case("asm", TY_PP_Asm)

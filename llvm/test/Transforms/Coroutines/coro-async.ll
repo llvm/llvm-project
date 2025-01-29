@@ -116,23 +116,23 @@ define void @my_async_function_pa(ptr %ctxt, ptr %task, ptr %actor) {
 ; CHECK: @my_async_function_pa_fp = constant <{ i32, i32 }> <{ {{.*}}, i32 176 }
 ; CHECK: @my_async_function2_fp = constant <{ i32, i32 }> <{ {{.*}}, i32 176 }
 
-; CHECK-LABEL: define swiftcc void @my_async_function(ptr swiftasync %async.ctxt, ptr %task, ptr %actor)
+; CHECK-LABEL: define swiftcc void @my_async_function(ptr swiftasync initializes((152, 160)) %async.ctxt, ptr %task, ptr %actor)
 ; CHECK-O0-LABEL: define swiftcc void @my_async_function(ptr swiftasync %async.ctxt, ptr %task, ptr %actor)
 ; CHECK-SAME: !dbg ![[SP1:[0-9]+]] {
 ; CHECK: coro.return:
-; CHECK:   [[FRAMEPTR:%.*]] = getelementptr inbounds i8, ptr %async.ctxt, i64 128
-; CHECK:   [[ACTOR_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr %async.ctxt, i64 152
+; CHECK:   [[FRAMEPTR:%.*]] = getelementptr inbounds nuw i8, ptr %async.ctxt, i64 128
+; CHECK:   [[ACTOR_SPILL_ADDR:%.*]] = getelementptr inbounds nuw i8, ptr %async.ctxt, i64 152
 ; CHECK:   store ptr %actor, ptr [[ACTOR_SPILL_ADDR]]
-; CHECK:   [[ADDR1:%.*]]  = getelementptr inbounds i8, ptr %async.ctxt, i64 144
+; CHECK:   [[ADDR1:%.*]]  = getelementptr inbounds nuw i8, ptr %async.ctxt, i64 144
 ; CHECK:   store ptr %async.ctxt, ptr [[ADDR1]]
-; CHECK:   [[ALLOCA_PRJ2:%.*]] = getelementptr inbounds i8, ptr %async.ctxt, i64 136
+; CHECK:   [[ALLOCA_PRJ2:%.*]] = getelementptr inbounds nuw i8, ptr %async.ctxt, i64 136
 ; CHECK:   store i64 0, ptr [[FRAMEPTR]]
 ; CHECK:   store i64 1, ptr [[ALLOCA_PRJ2]]
 ; CHECK:   tail call void @some_may_write(ptr nonnull [[FRAMEPTR]])
 ; CHECK:   [[CALLEE_CTXT:%.*]] = tail call ptr @llvm.coro.async.context.alloc(ptr %task, ptr nonnull @my_other_async_function_fp)
-; CHECK:   [[CALLEE_CTXT_SPILL:%.*]] = getelementptr inbounds i8, ptr %async.ctxt, i64 160
+; CHECK:   [[CALLEE_CTXT_SPILL:%.*]] = getelementptr inbounds nuw i8, ptr %async.ctxt, i64 160
 ; CHECK:   store ptr [[CALLEE_CTXT]], ptr [[CALLEE_CTXT_SPILL]]
-; CHECK:   [[TYPED_RETURN_TO_CALLER_ADDR:%.*]] = getelementptr inbounds %async.ctxt, ptr [[CALLEE_CTXT]], i64 0, i32 1
+; CHECK:   [[TYPED_RETURN_TO_CALLER_ADDR:%.*]] = getelementptr inbounds nuw i8, ptr [[CALLEE_CTXT]], i64 8
 ; CHECK:   store ptr @my_async_functionTQ0_, ptr [[TYPED_RETURN_TO_CALLER_ADDR]]
 ; CHECK:   store ptr %async.ctxt, ptr [[CALLEE_CTXT]]
 ; Make sure the spill is underaligned to the max context alignment (16).
@@ -148,16 +148,16 @@ define void @my_async_function_pa(ptr %ctxt, ptr %task, ptr %actor) {
 ; CHECK-SAME: !dbg ![[SP2:[0-9]+]] {
 ; CHECK: entryresume.0:
 ; CHECK:   [[CALLER_CONTEXT:%.*]] = load ptr, ptr %0
-; CHECK:   [[FRAME_PTR:%.*]] = getelementptr inbounds i8, ptr [[CALLER_CONTEXT]], i64 128
+; CHECK:   [[FRAME_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[CALLER_CONTEXT]], i64 128
 ; CHECK-O0:   [[VECTOR_SPILL_ADDR:%.*]] = getelementptr inbounds %my_async_function.Frame, ptr {{.*}}, i32 0, i32 1
 ; CHECK-O0:   load <4 x double>, ptr [[VECTOR_SPILL_ADDR]], align 16
-; CHECK:   [[CALLEE_CTXT_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[CALLER_CONTEXT]], i64 160
+; CHECK:   [[CALLEE_CTXT_SPILL_ADDR:%.*]] = getelementptr inbounds nuw i8, ptr [[CALLER_CONTEXT]], i64 160
 ; CHECK:   [[CALLEE_CTXT_RELOAD:%.*]] = load ptr, ptr [[CALLEE_CTXT_SPILL_ADDR]]
-; CHECK:   [[ACTOR_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[CALLER_CONTEXT]], i64 152
+; CHECK:   [[ACTOR_RELOAD_ADDR:%.*]] = getelementptr inbounds nuw i8, ptr [[CALLER_CONTEXT]], i64 152
 ; CHECK:   [[ACTOR_RELOAD:%.*]] = load ptr, ptr [[ACTOR_RELOAD_ADDR]]
-; CHECK:   [[ADDR1:%.*]] = getelementptr inbounds i8, ptr [[CALLER_CONTEXT]], i64 144
+; CHECK:   [[ADDR1:%.*]] = getelementptr inbounds nuw i8, ptr [[CALLER_CONTEXT]], i64 144
 ; CHECK:   [[ASYNC_CTXT_RELOAD:%.*]] = load ptr, ptr [[ADDR1]]
-; CHECK:   [[ALLOCA_PRJ2:%.*]] = getelementptr inbounds i8, ptr [[CALLER_CONTEXT]], i64 136
+; CHECK:   [[ALLOCA_PRJ2:%.*]] = getelementptr inbounds nuw i8, ptr [[CALLER_CONTEXT]], i64 136
 ; CHECK:   tail call void @llvm.coro.async.context.dealloc(ptr nonnull [[CALLEE_CTXT_RELOAD]])
 ; CHECK:   [[VAL1:%.*]] = load i64, ptr [[FRAME_PTR]]
 ; CHECK:   tail call void @some_user(i64 [[VAL1]])
@@ -232,7 +232,7 @@ entry:
 ; CHECK-SAME: #[[FRAMEPOINTER]]
 ; CHECK-SAME: !dbg ![[SP4:[0-9]+]]
 ; CHECK: [[CALLEE_CTXT:%.*]] = load ptr, ptr %2
-; CHECK: [[CALLEE_CTXT_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[CALLEE_CTXT]], i64 152
+; CHECK: [[CALLEE_CTXT_SPILL_ADDR:%.*]] = getelementptr inbounds nuw i8, ptr [[CALLEE_CTXT]], i64 152
 ; CHECK: store ptr @my_async_function2.resume.1,
 ; CHECK: [[CALLLE_CTXT_RELOAD:%.*]] = load ptr, ptr [[CALLEE_CTXT_SPILL_ADDR]]
 ; CHECK: tail call swiftcc void @asyncSuspend(ptr [[CALLEE_CTXT_RELOAD]]
@@ -249,7 +249,7 @@ define swiftcc void @top_level_caller(ptr %ctxt, ptr %task, ptr %actor) {
   ret void
 }
 
-; CHECK-LABEL: define swiftcc void @top_level_caller(ptr %ctxt, ptr %task, ptr %actor)
+; CHECK-LABEL: define swiftcc void @top_level_caller(ptr initializes((152, 160)) %ctxt, ptr %task, ptr %actor)
 ; CHECK: store ptr @my_async_functionTQ0_
 ; CHECK: store ptr %ctxt
 ; CHECK: tail call swiftcc void @asyncSuspend
@@ -410,7 +410,7 @@ entry:
   unreachable
 }
 
-; CHECK-LABEL: define swiftcc void @polymorphic_suspend_return(ptr swiftasync %async.ctxt, ptr %task, ptr %actor)
+; CHECK-LABEL: define swiftcc void @polymorphic_suspend_return(ptr swiftasync initializes((152, 160)) %async.ctxt, ptr %task, ptr %actor)
 ; CHECK-LABEL: define internal swiftcc void @polymorphic_suspend_return.resume.0(ptr {{.*}}swiftasync{{.*}} %0, ptr {{.*}}swiftself{{.*}} %1, ptr {{.*}}%2, ptr {{.*}}%3)
 ; CHECK: }
 

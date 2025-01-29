@@ -198,11 +198,11 @@ public:
   /// from.  Currently this is only used by _Pragma handling.
   SourceLocation getFileLoc() const { return FileLoc; }
 
-private:
   /// Lex - Return the next token in the file.  If this is the end of file, it
   /// return the tok::eof token.  This implicitly involves the preprocessor.
   bool Lex(Token &Result);
 
+private:
   /// Called when the preprocessor is in 'dependency scanning lexing mode'.
   bool LexDependencyDirectiveToken(Token &Result);
 
@@ -554,7 +554,14 @@ public:
   /// Returns the next token, or std::nullopt if the location is inside a macro.
   static std::optional<Token> findNextToken(SourceLocation Loc,
                                             const SourceManager &SM,
-                                            const LangOptions &LangOpts);
+                                            const LangOptions &LangOpts,
+                                            bool IncludeComments = false);
+
+  /// Finds the token that comes before the given location.
+  static std::optional<Token> findPreviousToken(SourceLocation Loc,
+                                                const SourceManager &SM,
+                                                const LangOptions &LangOpts,
+                                                bool IncludeComments);
 
   /// Checks that the given token is the first token that occurs after
   /// the given location (this excludes comments and whitespace). Returns the

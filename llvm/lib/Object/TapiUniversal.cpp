@@ -12,9 +12,7 @@
 
 #include "llvm/Object/TapiUniversal.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Object/Error.h"
 #include "llvm/Object/TapiFile.h"
-#include "llvm/TextAPI/ArchitectureSet.h"
 #include "llvm/TextAPI/TextAPIReader.h"
 
 using namespace llvm;
@@ -24,7 +22,7 @@ using namespace object;
 TapiUniversal::TapiUniversal(MemoryBufferRef Source, Error &Err)
     : Binary(ID_TapiUniversal, Source) {
   Expected<std::unique_ptr<InterfaceFile>> Result = TextAPIReader::get(Source);
-  ErrorAsOutParameter ErrAsOuParam(&Err);
+  ErrorAsOutParameter ErrAsOuParam(Err);
   if (!Result) {
     Err = Result.takeError();
     return;
@@ -47,9 +45,9 @@ TapiUniversal::~TapiUniversal() = default;
 
 Expected<std::unique_ptr<TapiFile>>
 TapiUniversal::ObjectForArch::getAsObjectFile() const {
-  return std::unique_ptr<TapiFile>(new TapiFile(Parent->getMemoryBufferRef(),
-                                                *Parent->ParsedFile,
-                                                Parent->Libraries[Index].Arch));
+  return std::make_unique<TapiFile>(Parent->getMemoryBufferRef(),
+                                    *Parent->ParsedFile,
+                                    Parent->Libraries[Index].Arch);
 }
 
 Expected<std::unique_ptr<TapiUniversal>>

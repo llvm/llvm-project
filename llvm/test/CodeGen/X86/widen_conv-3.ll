@@ -10,7 +10,7 @@ define void @convert_v2i16_to_v2f32(ptr %dst.addr, <2 x i16> %src) nounwind {
 ; X86-SSE2-LABEL: convert_v2i16_to_v2f32:
 ; X86-SSE2:       # %bb.0: # %entry
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; X86-SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,2,1,4,5,6,7]
 ; X86-SSE2-NEXT:    psrad $16, %xmm0
 ; X86-SSE2-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X86-SSE2-NEXT:    movlps %xmm0, (%eax)
@@ -26,7 +26,7 @@ define void @convert_v2i16_to_v2f32(ptr %dst.addr, <2 x i16> %src) nounwind {
 ;
 ; X64-SSE2-LABEL: convert_v2i16_to_v2f32:
 ; X64-SSE2:       # %bb.0: # %entry
-; X64-SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; X64-SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,2,1,4,5,6,7]
 ; X64-SSE2-NEXT:    psrad $16, %xmm0
 ; X64-SSE2-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X64-SSE2-NEXT:    movlps %xmm0, (%rdi)

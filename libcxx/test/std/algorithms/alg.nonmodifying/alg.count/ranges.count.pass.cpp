@@ -11,7 +11,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=20000000
-// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=70000000
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=80000000
 
 // template<input_iterator I, sentinel_for<I> S, class T, class Proj = identity>
 //   requires indirect_binary_predicate<ranges::equal_to, projected<I, Proj>, const T*>
@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <ranges>
 #include <vector>
 

@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: nvptx-registered-target
-//
 // RUN: %clang -v --target=i386-pc-windows-msvc \
 // RUN:   --sysroot=%S/Inputs/CUDA-windows 2>&1 %s -### | FileCheck %s
 // RUN: %clang -v --target=i386-pc-windows-mingw32 \

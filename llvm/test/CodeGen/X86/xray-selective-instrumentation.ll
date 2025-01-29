@@ -7,12 +7,12 @@ target triple = "x86_64-apple-darwin8"
 define i32 @foo() nounwind uwtable "xray-instruction-threshold"="1" {
 ; CHECK-LABEL: foo:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    .p2align 1, 0x90
+; CHECK-NEXT:    .p2align 1
 ; CHECK-NEXT:  Lxray_sled_0:
 ; CHECK-NEXT:    .ascii "\353\t"
 ; CHECK-NEXT:    nopw 512(%rax,%rax)
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    .p2align 1, 0x90
+; CHECK-NEXT:    .p2align 1
 ; CHECK-NEXT:  Lxray_sled_1:
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:    nopw %cs:512(%rax,%rax)

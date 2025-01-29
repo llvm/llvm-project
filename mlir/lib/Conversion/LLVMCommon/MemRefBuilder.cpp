@@ -12,7 +12,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/Support/MathExtras.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace mlir;
 
@@ -52,7 +52,7 @@ MemRefDescriptor MemRefDescriptor::fromStaticShape(
   assert(type.hasStaticShape() && "unexpected dynamic shape");
 
   // Extract all strides and offsets and verify they are static.
-  auto [strides, offset] = getStridesAndOffset(type);
+  auto [strides, offset] = type.getStridesAndOffset();
   assert(!ShapedType::isDynamic(offset) && "expected static offset");
   assert(!llvm::any_of(strides, ShapedType::isDynamic) &&
          "expected static strides");
@@ -193,7 +193,7 @@ Value MemRefDescriptor::bufferPtr(OpBuilder &builder, Location loc,
                                   MemRefType type) {
   // When we convert to LLVM, the input memref must have been normalized
   // beforehand. Hence, this call is guaranteed to work.
-  auto [strides, offsetCst] = getStridesAndOffset(type);
+  auto [strides, offsetCst] = type.getStridesAndOffset();
 
   Value ptr = alignedPtr(builder, loc);
   // For zero offsets, we already have the base pointer.
@@ -363,9 +363,9 @@ void UnrankedMemRefDescriptor::computeSizes(
   // Initialize shared constants.
   Value one = createIndexAttrConstant(builder, loc, indexType, 1);
   Value two = createIndexAttrConstant(builder, loc, indexType, 2);
-  Value indexSize =
-      createIndexAttrConstant(builder, loc, indexType,
-                              ceilDiv(typeConverter.getIndexTypeBitwidth(), 8));
+  Value indexSize = createIndexAttrConstant(
+      builder, loc, indexType,
+      llvm::divideCeil(typeConverter.getIndexTypeBitwidth(), 8));
 
   sizes.reserve(sizes.size() + values.size());
   for (auto [desc, addressSpace] : llvm::zip(values, addressSpaces)) {
@@ -378,7 +378,7 @@ void UnrankedMemRefDescriptor::computeSizes(
     // to data layout) into the unranked descriptor.
     Value pointerSize = createIndexAttrConstant(
         builder, loc, indexType,
-        ceilDiv(typeConverter.getPointerBitwidth(addressSpace), 8));
+        llvm::divideCeil(typeConverter.getPointerBitwidth(addressSpace), 8));
     Value doublePointerSize =
         builder.create<LLVM::MulOp>(loc, indexType, two, pointerSize);
 

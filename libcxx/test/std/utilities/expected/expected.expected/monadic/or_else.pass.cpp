@@ -178,8 +178,8 @@ struct NonConst {
 constexpr void test_sfinae() {
   std::expected<int, NonConst> e{1};
   auto l = [](auto&& x) { return x.non_const(); };
-  e.or_else(l);
-  std::move(e).or_else(l);
+  (void)e.or_else(l);
+  (void)std::move(e).or_else(l);
 }
 
 constexpr void test_move_only_error_type() {
@@ -187,28 +187,28 @@ constexpr void test_move_only_error_type() {
   {
       std::expected<int, MoveOnlyErrorType> e;
       auto l = [](MoveOnlyErrorType&) { return std::expected<int, int>{}; };
-      e.or_else(l);
+      (void)e.or_else(l);
   }
 
   // Test const&
   {
       const std::expected<int, MoveOnlyErrorType> e;
       auto l = [](const MoveOnlyErrorType&) { return std::expected<int, int>{}; };
-      e.or_else(l);
+      (void)e.or_else(l);
   }
 
   // Test &&
   {
       std::expected<int, MoveOnlyErrorType> e;
       auto l = [](MoveOnlyErrorType&&) { return std::expected<int, int>{}; };
-      std::move(e).or_else(l);
+      (void)std::move(e).or_else(l);
   }
 
   // Test const&&
   {
       const std::expected<int, MoveOnlyErrorType> e;
       auto l = [](const MoveOnlyErrorType&&) { return std::expected<int, int>{}; };
-      std::move(e).or_else(l);
+      (void)std::move(e).or_else(l);
   }
 }
 
@@ -225,10 +225,10 @@ constexpr bool test() {
     return std::expected<int, int>();
   };
 
-  e.or_else(never_called);
-  std::move(e).or_else(never_called);
-  ce.or_else(never_called);
-  std::move(ce).or_else(never_called);
+  (void)e.or_else(never_called);
+  (void)std::move(e).or_else(never_called);
+  (void)ce.or_else(never_called);
+  (void)std::move(ce).or_else(never_called);
   return true;
 }
 

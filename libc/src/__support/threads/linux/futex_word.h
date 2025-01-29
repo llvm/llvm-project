@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_FUTEX_WORD_H
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_FUTEX_WORD_H
 
+#include "src/__support/macros/config.h"
 #include <stdint.h>
 #include <sys/syscall.h>
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // Futexes are 32 bits in size on all platforms, including 64-bit platforms.
 using FutexWordType = uint32_t;
@@ -25,6 +25,6 @@ constexpr auto FUTEX_SYSCALL_ID = SYS_futex_time64;
 #error "futex and futex_time64 syscalls not available."
 #endif
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_FUTEX_WORD_H

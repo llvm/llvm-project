@@ -1,5 +1,5 @@
-// RUN: llvm-mc -filetype=obj -triple i386-pc-linux-gnu %s -relax-relocations=false -o - | llvm-readobj -r  - | FileCheck  %s --check-prefix=CHECK --check-prefix=I386
-// RUN: llvm-mc -filetype=obj -triple i386-pc-elfiamcu %s -relax-relocations=false  -o - | llvm-readobj -r  - | FileCheck  %s --check-prefix=CHECK --check-prefix=IAMCU
+// RUN: llvm-mc -filetype=obj -triple i386-pc-linux-gnu %s -x86-relax-relocations=false -o - | llvm-readobj -r  - | FileCheck  %s --check-prefix=CHECK --check-prefix=I386
+// RUN: llvm-mc -filetype=obj -triple i386-pc-elfiamcu %s -x86-relax-relocations=false  -o - | llvm-readobj -r  - | FileCheck  %s --check-prefix=CHECK --check-prefix=IAMCU
 // RUN: not llvm-mc -filetype=obj -triple=i686 --defsym ERR=1 %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
 
 // Test that we produce the correct relocation types and that the relocations

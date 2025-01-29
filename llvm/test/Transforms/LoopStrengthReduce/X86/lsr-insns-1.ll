@@ -65,7 +65,7 @@ define void @foo(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr nocap
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl 4096(%rsi,%rax), %ecx

@@ -1,9 +1,9 @@
-; RUN: llc -march=amdgcn < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN %s
 
 @array = external addrspace(4) constant [32 x [800 x i32]], align 4
 
 ; GCN-LABEL: {{^}}test_lsr_voidty:
-define amdgpu_kernel void @test_lsr_voidty() {
+define amdgpu_kernel void @test_lsr_voidty(i1 %arg) {
 entry:
   br label %for.body
 
@@ -32,5 +32,5 @@ for.body.i:                               ; preds = %for.body.i, %for.body
   %reorder_shuffle2 = shufflevector <4 x i32> %tmp5, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %tmp6 = select <4 x i1> undef, <4 x i32> zeroinitializer, <4 x i32> %reorder_shuffle2
   %inc14 = add nuw nsw i32 %ij, 4
-  br i1 undef, label %for.body, label %for.body.i
+  br i1 %arg, label %for.body, label %for.body.i
 }

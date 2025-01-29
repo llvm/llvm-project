@@ -8,7 +8,7 @@
 define internal i32 @test1a(i32 %A) {
 ; CHECK-LABEL: define internal i32 @test1a
 ; CHECK-SAME: (i32 [[A:%.*]]) {
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %X = add i32 1, 2
   ret i32 %A
@@ -34,7 +34,7 @@ define internal i32 @test2a(i32 %A) {
 ; CHECK-NEXT:    br label [[T:%.*]]
 ; CHECK:       T:
 ; CHECK-NEXT:    [[B:%.*]] = call i32 @test2a(i32 0)
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %C = icmp eq i32 %A, 0
   br i1 %C, label %T, label %F
@@ -71,7 +71,7 @@ define void @test3a() {
 }
 
 define i32 @test3b() {
-; CHECK-LABEL: define i32 @test3b() {
+; CHECK-LABEL: define range(i32 0, 18) i32 @test3b() {
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr @G, align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[V]], 17
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
@@ -97,7 +97,7 @@ F:
 
 define internal {i64,i64} @test4a() {
 ; CHECK-LABEL: define internal { i64, i64 } @test4a() {
-; CHECK-NEXT:    ret { i64, i64 } undef
+; CHECK-NEXT:    ret { i64, i64 } poison
 ;
   %a = insertvalue {i64,i64} undef, i64 4, 1
   %b = insertvalue {i64,i64} %a, i64 5, 0
@@ -105,15 +105,15 @@ define internal {i64,i64} @test4a() {
 }
 
 define i64 @test4b() personality ptr @__gxx_personality_v0 {
-; CHECK-LABEL: define i64 @test4b() personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: define range(i64 0, 6) i64 @test4b() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[A:%.*]] = invoke { i64, i64 } @test4a()
-; CHECK-NEXT:    to label [[A:%.*]] unwind label [[B:%.*]]
+; CHECK-NEXT:            to label [[A:%.*]] unwind label [[B:%.*]]
 ; CHECK:       A:
 ; CHECK-NEXT:    [[C:%.*]] = call i64 @test4c(i64 5)
 ; CHECK-NEXT:    ret i64 5
 ; CHECK:       B:
 ; CHECK-NEXT:    [[VAL:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:            catch ptr null
 ; CHECK-NEXT:    ret i64 0
 ;
   %a = invoke {i64,i64} @test4a()
@@ -131,7 +131,7 @@ B:
 define internal i64 @test4c(i64 %a) {
 ; CHECK-LABEL: define internal i64 @test4c
 ; CHECK-SAME: (i64 [[A:%.*]]) {
-; CHECK-NEXT:    ret i64 undef
+; CHECK-NEXT:    ret i64 poison
 ;
   ret i64 %a
 }
@@ -141,7 +141,7 @@ define internal i64 @test4c(i64 %a) {
 ; PR4313
 define internal {i64,i64} @test5a() {
 ; CHECK-LABEL: define internal { i64, i64 } @test5a() {
-; CHECK-NEXT:    ret { i64, i64 } undef
+; CHECK-NEXT:    ret { i64, i64 } poison
 ;
   %a = insertvalue {i64,i64} undef, i64 4, 1
   %b = insertvalue {i64,i64} %a, i64 5, 0
@@ -149,15 +149,15 @@ define internal {i64,i64} @test5a() {
 }
 
 define i64 @test5b() personality ptr @__gxx_personality_v0 {
-; CHECK-LABEL: define i64 @test5b() personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: define range(i64 0, 6) i64 @test5b() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[A:%.*]] = invoke { i64, i64 } @test5a()
-; CHECK-NEXT:    to label [[A:%.*]] unwind label [[B:%.*]]
+; CHECK-NEXT:            to label [[A:%.*]] unwind label [[B:%.*]]
 ; CHECK:       A:
 ; CHECK-NEXT:    [[C:%.*]] = call i64 @test5c({ i64, i64 } { i64 5, i64 4 })
 ; CHECK-NEXT:    ret i64 5
 ; CHECK:       B:
 ; CHECK-NEXT:    [[VAL:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:            catch ptr null
 ; CHECK-NEXT:    ret i64 0
 ;
   %a = invoke {i64,i64} @test5a()
@@ -174,7 +174,7 @@ B:
 define internal i64 @test5c({i64,i64} %a) {
 ; CHECK-LABEL: define internal i64 @test5c
 ; CHECK-SAME: ({ i64, i64 } [[A:%.*]]) {
-; CHECK-NEXT:    ret i64 undef
+; CHECK-NEXT:    ret i64 poison
 ;
   %b = extractvalue {i64,i64} %a, 0
   ret i64 %b
@@ -206,7 +206,7 @@ define i64 @test6b() {
 define internal %T @test7a(i32 %A) {
 ; CHECK-LABEL: define internal %T @test7a
 ; CHECK-SAME: (i32 [[A:%.*]]) {
-; CHECK-NEXT:    ret [[T:%.*]] undef
+; CHECK-NEXT:    ret [[T:%.*]] poison
 ;
   %X = add i32 1, %A
   %mrv0 = insertvalue %T undef, i32 %X, 0
@@ -216,7 +216,7 @@ define internal %T @test7a(i32 %A) {
 
 define i32 @test7b() {
 ; CHECK-LABEL: define i32 @test7b() {
-; CHECK-NEXT:    [[X:%.*]] = call [[T:%.*]] @test7a(i32 17)
+; CHECK-NEXT:    [[X:%.*]] = call [[T:%.*]] @[[TEST7A:[a-zA-Z0-9_$\"\\.-]*[a-zA-Z_$\"\\.-][a-zA-Z0-9_$\"\\.-]*]](i32 17)
 ; CHECK-NEXT:    ret i32 36
 ;
   %X = call %T @test7a(i32 17)
@@ -232,7 +232,7 @@ define internal {} @test8a(i32 %A, ptr %P) {
 ; CHECK-LABEL: define internal {} @test8a
 ; CHECK-SAME: (i32 [[A:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    store i32 5, ptr [[P]], align 4
-; CHECK-NEXT:    ret {} undef
+; CHECK-NEXT:    ret {} poison
 ;
   store i32 %A, ptr %P
   ret {} {}

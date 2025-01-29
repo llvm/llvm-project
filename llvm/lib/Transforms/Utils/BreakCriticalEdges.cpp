@@ -344,12 +344,9 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
   // this lowers the common case's overhead to O(Blocks) instead of O(Edges).
   SmallSetVector<BasicBlock *, 16> Targets;
   for (auto &BB : F) {
-    auto *IBI = dyn_cast<IndirectBrInst>(BB.getTerminator());
-    if (!IBI)
-      continue;
-
-    for (unsigned Succ = 0, E = IBI->getNumSuccessors(); Succ != E; ++Succ)
-      Targets.insert(IBI->getSuccessor(Succ));
+    if (isa<IndirectBrInst>(BB.getTerminator()))
+      for (BasicBlock *Succ : successors(&BB))
+        Targets.insert(Succ);
   }
 
   if (Targets.empty())
@@ -369,8 +366,8 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
       continue;
 
     // Don't even think about ehpads/landingpads.
-    Instruction *FirstNonPHI = Target->getFirstNonPHI();
-    if (FirstNonPHI->isEHPad() || Target->isLandingPad())
+    auto FirstNonPHIIt = Target->getFirstNonPHIIt();
+    if (FirstNonPHIIt->isEHPad() || Target->isLandingPad())
       continue;
 
     // Remember edge probabilities if needed.
@@ -383,7 +380,7 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
       BPI->eraseBlock(Target);
     }
 
-    BasicBlock *BodyBlock = Target->splitBasicBlock(FirstNonPHI, ".split");
+    BasicBlock *BodyBlock = Target->splitBasicBlock(FirstNonPHIIt, ".split");
     if (ShouldUpdateAnalysis) {
       // Copy the BFI/BPI from Target to BodyBlock.
       BPI->setEdgeProbability(BodyBlock, EdgeProbabilities);
@@ -423,7 +420,7 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
     // (b) Leave that as the only edge in the "Indirect" PHI.
     // (c) Merge the two in the body block.
     BasicBlock::iterator Indirect = Target->begin(),
-                         End = Target->getFirstNonPHI()->getIterator();
+                         End = Target->getFirstNonPHIIt();
     BasicBlock::iterator Direct = DirectSucc->begin();
     BasicBlock::iterator MergeInsert = BodyBlock->getFirstInsertionPt();
 
@@ -433,6 +430,7 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
     while (Indirect != End) {
       PHINode *DirPHI = cast<PHINode>(Direct);
       PHINode *IndPHI = cast<PHINode>(Indirect);
+      BasicBlock::iterator InsertPt = Indirect;
 
       // Now, clean up - the direct block shouldn't get the indirect value,
       // and vice versa.
@@ -443,7 +441,7 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
       // PHI is erased.
       Indirect++;
 
-      PHINode *NewIndPHI = PHINode::Create(IndPHI->getType(), 1, "ind", IndPHI);
+      PHINode *NewIndPHI = PHINode::Create(IndPHI->getType(), 1, "ind", InsertPt);
       NewIndPHI->addIncoming(IndPHI->getIncomingValueForBlock(IBRPred),
                              IBRPred);
 

@@ -7,7 +7,7 @@ define void @test(ptr %ptr, i32 %a, i32 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[A]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[TMP1]], i64 10
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP1]], i64 40
 ; CHECK-NEXT:    store i32 [[B]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -79,7 +79,7 @@ define void @test_zext_nneg(ptr %ptr, i32 %a, i32 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[A]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[TMP0]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[TMP1]], i64 10
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP1]], i64 40
 ; CHECK-NEXT:    store i32 [[B]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -97,7 +97,7 @@ define void @test_zext_missing_nneg(ptr %ptr, i32 %a, i32 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], 10
 ; CHECK-NEXT:    [[IDX:%.*]] = zext i32 [[ADD]] to i64
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i64 [[IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i32, ptr [[PTR]], i64 [[IDX]]
 ; CHECK-NEXT:    store i32 [[B]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -107,4 +107,164 @@ entry:
   %gep = getelementptr inbounds i32, ptr %ptr, i64 %idx
   store i32 %b, ptr %gep
   ret void
+}
+
+define ptr @gep_inbounds_add_nsw_nonneg(ptr %ptr, i64 %a, i64 %b) {
+; CHECK-LABEL: define ptr @gep_inbounds_add_nsw_nonneg(
+; CHECK-SAME: ptr [[PTR:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-NEXT:    [[A_NNEG:%.*]] = icmp sgt i64 [[A]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NNEG]])
+; CHECK-NEXT:    [[B_NNEG:%.*]] = icmp sgt i64 [[B]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[B_NNEG]])
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i32, ptr [[PTR]], i64 [[A]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i64 [[B]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %a.nneg = icmp sgt i64 %a, -1
+  call void @llvm.assume(i1 %a.nneg)
+  %b.nneg = icmp sgt i64 %b, -1
+  call void @llvm.assume(i1 %b.nneg)
+  %add = add nsw i64 %a, %b
+  %gep = getelementptr inbounds i32, ptr %ptr, i64 %add
+  ret ptr %gep
+}
+
+define ptr @gep_inbounds_add_nsw_not_nonneg1(ptr %ptr, i64 %a, i64 %b) {
+; CHECK-LABEL: define ptr @gep_inbounds_add_nsw_not_nonneg1(
+; CHECK-SAME: ptr [[PTR:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-NEXT:    [[A_NNEG:%.*]] = icmp sgt i64 [[A]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NNEG]])
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[A]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[TMP1]], i64 [[B]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %a.nneg = icmp sgt i64 %a, -1
+  call void @llvm.assume(i1 %a.nneg)
+  %add = add nsw i64 %a, %b
+  %gep = getelementptr inbounds i32, ptr %ptr, i64 %add
+  ret ptr %gep
+}
+
+define ptr @gep_inbounds_add_nsw_not_nonneg2(ptr %ptr, i64 %a, i64 %b) {
+; CHECK-LABEL: define ptr @gep_inbounds_add_nsw_not_nonneg2(
+; CHECK-SAME: ptr [[PTR:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-NEXT:    [[B_NNEG:%.*]] = icmp sgt i64 [[B]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[B_NNEG]])
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[A]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[TMP1]], i64 [[B]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %b.nneg = icmp sgt i64 %b, -1
+  call void @llvm.assume(i1 %b.nneg)
+  %add = add nsw i64 %a, %b
+  %gep = getelementptr inbounds i32, ptr %ptr, i64 %add
+  ret ptr %gep
+}
+
+define ptr @gep_not_inbounds_add_nsw_nonneg(ptr %ptr, i64 %a, i64 %b) {
+; CHECK-LABEL: define ptr @gep_not_inbounds_add_nsw_nonneg(
+; CHECK-SAME: ptr [[PTR:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-NEXT:    [[A_NNEG:%.*]] = icmp sgt i64 [[A]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NNEG]])
+; CHECK-NEXT:    [[B_NNEG:%.*]] = icmp sgt i64 [[B]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[B_NNEG]])
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[A]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[TMP1]], i64 [[B]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %a.nneg = icmp sgt i64 %a, -1
+  call void @llvm.assume(i1 %a.nneg)
+  %b.nneg = icmp sgt i64 %b, -1
+  call void @llvm.assume(i1 %b.nneg)
+  %add = add nsw i64 %a, %b
+  %gep = getelementptr i32, ptr %ptr, i64 %add
+  ret ptr %gep
+}
+
+define ptr @gep_inbounds_add_not_nsw_nonneg(ptr %ptr, i64 %a, i64 %b) {
+; CHECK-LABEL: define ptr @gep_inbounds_add_not_nsw_nonneg(
+; CHECK-SAME: ptr [[PTR:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-NEXT:    [[A_NNEG:%.*]] = icmp sgt i64 [[A]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NNEG]])
+; CHECK-NEXT:    [[B_NNEG:%.*]] = icmp sgt i64 [[B]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[B_NNEG]])
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[A]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[TMP1]], i64 [[B]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %a.nneg = icmp sgt i64 %a, -1
+  call void @llvm.assume(i1 %a.nneg)
+  %b.nneg = icmp sgt i64 %b, -1
+  call void @llvm.assume(i1 %b.nneg)
+  %add = add i64 %a, %b
+  %gep = getelementptr inbounds i32, ptr %ptr, i64 %add
+  ret ptr %gep
+}
+
+define ptr @gep_inbounds_sext_add_nonneg(ptr %ptr, i32 %a) {
+; CHECK-LABEL: define ptr @gep_inbounds_sext_add_nonneg(
+; CHECK-SAME: ptr [[PTR:%.*]], i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[A_NNEG:%.*]] = icmp sgt i32 [[A]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NNEG]])
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[A]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[PTR]], i64 [[TMP1]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 40
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %a.nneg = icmp sgt i32 %a, -1
+  call void @llvm.assume(i1 %a.nneg)
+  %add = add nsw i32 %a, 10
+  %idx = sext i32 %add to i64
+  %gep = getelementptr inbounds i32, ptr %ptr, i64 %idx
+  ret ptr %gep
+}
+
+define ptr @gep_inbounds_sext_add_not_nonneg_1(ptr %ptr, i32 %a) {
+; CHECK-LABEL: define ptr @gep_inbounds_sext_add_not_nonneg_1(
+; CHECK-SAME: ptr [[PTR:%.*]], i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[A_NNEG:%.*]] = icmp sgt i32 [[A]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NNEG]])
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[A]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[TMP1]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP2]], i64 -40
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %a.nneg = icmp sgt i32 %a, -1
+  call void @llvm.assume(i1 %a.nneg)
+  %add = add nsw i32 %a, -10
+  %idx = sext i32 %add to i64
+  %gep = getelementptr inbounds i32, ptr %ptr, i64 %idx
+  ret ptr %gep
+}
+
+define ptr @gep_inbounds_sext_add_not_nonneg_2(ptr %ptr, i32 %a) {
+; CHECK-LABEL: define ptr @gep_inbounds_sext_add_not_nonneg_2(
+; CHECK-SAME: ptr [[PTR:%.*]], i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[A]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[TMP1]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP2]], i64 40
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %add = add nsw i32 %a, 10
+  %idx = sext i32 %add to i64
+  %gep = getelementptr inbounds i32, ptr %ptr, i64 %idx
+  ret ptr %gep
+}
+
+define ptr @gep_not_inbounds_sext_add_nonneg(ptr %ptr, i32 %a) {
+; CHECK-LABEL: define ptr @gep_not_inbounds_sext_add_nonneg(
+; CHECK-SAME: ptr [[PTR:%.*]], i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[A_NNEG:%.*]] = icmp sgt i32 [[A]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NNEG]])
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[A]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[TMP1]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP2]], i64 40
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %a.nneg = icmp sgt i32 %a, -1
+  call void @llvm.assume(i1 %a.nneg)
+  %add = add nsw i32 %a, 10
+  %idx = sext i32 %add to i64
+  %gep = getelementptr i32, ptr %ptr, i64 %idx
+  ret ptr %gep
 }

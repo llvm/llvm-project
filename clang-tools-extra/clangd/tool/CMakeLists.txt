@@ -1,7 +1,7 @@
 # Needed by LLVM's CMake checks because this file defines multiple targets.
 set(LLVM_OPTIONAL_SOURCES ClangdToolMain.cpp)
 
-add_clang_library(clangdMain
+add_clang_library(clangdMain STATIC
   ClangdMain.cpp
   Check.cpp
   )
@@ -33,6 +33,7 @@ clang_target_link_libraries(clangdMain
 target_link_libraries(clangdMain
   PRIVATE
   clangTidy
+  clangTidyUtils
 
   clangDaemon
   clangdRemoteIndex

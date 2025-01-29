@@ -95,13 +95,13 @@ import lldb
 
 debugger = lldb.SBDebugger.Create()
 
-if debugger.IsValid() == False:
+if not debugger.IsValid():
     print("Couldn't create an SBDebugger")
     sys.exit(-1)
 
 target = debugger.CreateTargetWithFileAndArch(None, arg_ns.arch)
 
-if target.IsValid() == False:
+if not target.IsValid():
     print("Couldn't create an SBTarget for architecture " + arg_ns.arch)
     sys.exit(-1)
 

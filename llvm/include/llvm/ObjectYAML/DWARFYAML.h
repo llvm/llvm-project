@@ -115,7 +115,32 @@ struct Unit {
   llvm::dwarf::UnitType Type; // Added in DWARF 5
   std::optional<uint64_t> AbbrevTableID;
   std::optional<yaml::Hex64> AbbrOffset;
+  yaml::Hex64 TypeSignatureOrDwoID; // For type or split units
+  yaml::Hex64 TypeOffset;           // For type units
+
   std::vector<Entry> Entries;
+};
+
+struct IdxForm {
+  dwarf::Index Idx;
+  dwarf::Form Form;
+};
+
+struct DebugNameAbbreviation {
+  yaml::Hex64 Code;
+  dwarf::Tag Tag;
+  std::vector<IdxForm> Indices;
+};
+
+struct DebugNameEntry {
+  yaml::Hex32 NameStrp;
+  yaml::Hex64 Code;
+  std::vector<yaml::Hex64> Values;
+};
+
+struct DebugNamesSection {
+  std::vector<DebugNameAbbreviation> Abbrevs;
+  std::vector<DebugNameEntry> Entries;
 };
 
 struct File {
@@ -223,11 +248,12 @@ struct Data {
   std::optional<PubSection> GNUPubNames;
   std::optional<PubSection> GNUPubTypes;
 
-  std::vector<Unit> CompileUnits;
+  std::vector<Unit> Units;
 
   std::vector<LineTable> DebugLines;
   std::optional<std::vector<ListTable<RnglistEntry>>> DebugRnglists;
   std::optional<std::vector<ListTable<LoclistEntry>>> DebugLoclists;
+  std::optional<DebugNamesSection> DebugNames;
 
   bool isEmpty() const;
 
@@ -276,6 +302,9 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(
     llvm::DWARFYAML::ListEntries<DWARFYAML::LoclistEntry>)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::LoclistEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::DWARFOperation)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::DebugNameEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::DebugNameAbbreviation)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::IdxForm)
 
 namespace llvm {
 namespace yaml {
@@ -322,6 +351,19 @@ template <> struct MappingTraits<DWARFYAML::PubSection> {
 
 template <> struct MappingTraits<DWARFYAML::Unit> {
   static void mapping(IO &IO, DWARFYAML::Unit &Unit);
+};
+
+template <> struct MappingTraits<DWARFYAML::DebugNamesSection> {
+  static void mapping(IO &IO, DWARFYAML::DebugNamesSection &);
+};
+template <> struct MappingTraits<DWARFYAML::DebugNameEntry> {
+  static void mapping(IO &IO, DWARFYAML::DebugNameEntry &);
+};
+template <> struct MappingTraits<DWARFYAML::DebugNameAbbreviation> {
+  static void mapping(IO &IO, DWARFYAML::DebugNameAbbreviation &);
+};
+template <> struct MappingTraits<DWARFYAML::IdxForm> {
+  static void mapping(IO &IO, DWARFYAML::IdxForm &);
 };
 
 template <> struct MappingTraits<DWARFYAML::Entry> {
@@ -437,6 +479,16 @@ template <> struct ScalarEnumerationTraits<dwarf::Form> {
   }
 };
 
+#define HANDLE_DW_IDX(unused, name)                                            \
+  io.enumCase(value, "DW_IDX_" #name, dwarf::DW_IDX_##name);
+
+template <> struct ScalarEnumerationTraits<dwarf::Index> {
+  static void enumeration(IO &io, dwarf::Index &value) {
+#include "llvm/BinaryFormat/Dwarf.def"
+    io.enumFallback<Hex16>(value);
+  }
+};
+
 #define HANDLE_DW_UT(unused, name)                                             \
   io.enumCase(value, "DW_UT_" #name, dwarf::DW_UT_##name);
 
@@ -473,7 +525,7 @@ template <> struct ScalarEnumerationTraits<dwarf::LoclistEntries> {
   }
 };
 
-#define HANDLE_DW_OP(id, name, version, vendor)                                \
+#define HANDLE_DW_OP(id, name, operands, arity, version, vendor)               \
   io.enumCase(value, "DW_OP_" #name, dwarf::DW_OP_##name);
 
 template <> struct ScalarEnumerationTraits<dwarf::LocationAtom> {

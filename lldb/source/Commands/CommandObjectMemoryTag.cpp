@@ -77,7 +77,7 @@ protected:
         process->GetMemoryTagManager();
 
     if (!tag_manager_or_err) {
-      result.SetError(Status(tag_manager_or_err.takeError()));
+      result.SetError(Status::FromError(tag_manager_or_err.takeError()));
       return;
     }
 
@@ -102,7 +102,7 @@ protected:
         tag_manager->MakeTaggedRange(start_addr, end_addr, memory_regions);
 
     if (!tagged_range) {
-      result.SetError(Status(tagged_range.takeError()));
+      result.SetError(Status::FromError(tagged_range.takeError()));
       return;
     }
 
@@ -110,7 +110,7 @@ protected:
         tagged_range->GetRangeBase(), tagged_range->GetByteSize());
 
     if (!tags) {
-      result.SetError(Status(tags.takeError()));
+      result.SetError(Status::FromError(tags.takeError()));
       return;
     }
 
@@ -230,7 +230,7 @@ protected:
         process->GetMemoryTagManager();
 
     if (!tag_manager_or_err) {
-      result.SetError(Status(tag_manager_or_err.takeError()));
+      result.SetError(Status::FromError(tag_manager_or_err.takeError()));
       return;
     }
 
@@ -282,7 +282,7 @@ protected:
                                      memory_regions);
 
     if (!tagged_range) {
-      result.SetError(Status(tagged_range.takeError()));
+      result.SetError(Status::FromError(tagged_range.takeError()));
       return;
     }
 
@@ -290,7 +290,7 @@ protected:
                                              tagged_range->GetByteSize(), tags);
 
     if (status.Fail()) {
-      result.SetError(status);
+      result.SetError(std::move(status));
       return;
     }
 

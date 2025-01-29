@@ -24,11 +24,34 @@
 #define FORTRAN_RUNTIME_ASSIGN_H_
 
 #include "flang/Runtime/entry-names.h"
+#include "flang/Runtime/freestanding-tools.h"
 
 namespace Fortran::runtime {
 class Descriptor;
+class Terminator;
+
+enum AssignFlags {
+  NoAssignFlags = 0,
+  MaybeReallocate = 1 << 0,
+  NeedFinalization = 1 << 1,
+  CanBeDefinedAssignment = 1 << 2,
+  ComponentCanBeDefinedAssignment = 1 << 3,
+  ExplicitLengthCharacterLHS = 1 << 4,
+  PolymorphicLHS = 1 << 5,
+  DeallocateLHS = 1 << 6
+};
+
+#ifdef RT_DEVICE_COMPILATION
+RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
+    Terminator &terminator, int flags, MemmoveFct memmoveFct = &MemmoveWrapper);
+#else
+RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
+    Terminator &terminator, int flags,
+    MemmoveFct memmoveFct = &Fortran::runtime::memmove);
+#endif
 
 extern "C" {
+
 // API for lowering assignment
 void RTDECL(Assign)(Descriptor &to, const Descriptor &from,
     const char *sourceFile = nullptr, int sourceLine = 0);
@@ -36,8 +59,16 @@ void RTDECL(Assign)(Descriptor &to, const Descriptor &from,
 // reallocation.
 void RTDECL(AssignTemporary)(Descriptor &to, const Descriptor &from,
     const char *sourceFile = nullptr, int sourceLine = 0);
-void RTDECL(CopyOutAssign)(Descriptor &to, const Descriptor &from,
-    bool skipToInit, const char *sourceFile = nullptr, int sourceLine = 0);
+
+// Establish "temp" descriptor as an allocatable descriptor with the same type,
+// rank, and length parameters as "var" and copy "var" to it using
+// AssignTemporary.
+void RTDECL(CopyInAssign)(Descriptor &temp, const Descriptor &var,
+    const char *sourceFile = nullptr, int sourceLine = 0);
+// When "var" is provided, copy "temp" to it assuming "var" is already
+// initialized. Destroy and deallocate "temp" in all cases.
+void RTDECL(CopyOutAssign)(Descriptor *var, Descriptor &temp,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 // This variant is for assignments to explicit-length CHARACTER left-hand
 // sides that might need to handle truncation or blank-fill, and
 // must maintain the character length even if an allocatable array

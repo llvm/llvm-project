@@ -43,7 +43,7 @@ void dumpCFI(const BinaryFunction &BF, const MCInst &Instr, AsmPrinter &MAP) {
   case MCCFIInstruction::OpRememberState:
   case MCCFIInstruction::OpRestoreState:
     if (opts::Verbosity >= 2)
-      errs()
+      BF.getBinaryContext().errs()
           << "BOLT-WARNING: AsmDump: skipping unsupported CFI instruction in "
           << BF << ".\n";
 
@@ -102,9 +102,9 @@ void dumpFunction(const BinaryFunction &BF) {
   // Make sure the new directory exists, creating it if necessary.
   if (!opts::AsmDump.empty()) {
     if (std::error_code EC = sys::fs::create_directories(opts::AsmDump)) {
-      errs() << "BOLT-ERROR: could not create directory '" << opts::AsmDump
-             << "': " << EC.message() << '\n';
-      exit(1);
+      BC.errs() << "BOLT-ERROR: could not create directory '" << opts::AsmDump
+                << "': " << EC.message() << '\n';
+      return;
     }
   }
 
@@ -115,14 +115,14 @@ void dumpFunction(const BinaryFunction &BF) {
           ? (PrintName + ".s")
           : (opts::AsmDump + sys::path::get_separator() + PrintName + ".s")
                 .str();
-  outs() << "BOLT-INFO: Dumping function assembly to " << Filename << "\n";
+  BC.outs() << "BOLT-INFO: Dumping function assembly to " << Filename << "\n";
 
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC, sys::fs::OF_None);
   if (EC) {
-    errs() << "BOLT-ERROR: " << EC.message() << ", unable to open " << Filename
-           << " for output.\n";
-    exit(1);
+    BC.errs() << "BOLT-ERROR: " << EC.message() << ", unable to open "
+              << Filename << " for output.\n";
+    return;
   }
   OS.SetUnbuffered();
 
@@ -139,11 +139,8 @@ void dumpFunction(const BinaryFunction &BF) {
   auto FOut = std::make_unique<formatted_raw_ostream>(OS);
   FOut->SetUnbuffered();
   std::unique_ptr<MCStreamer> AsmStreamer(
-      createAsmStreamer(*LocalCtx, std::move(FOut),
-                        /*isVerboseAsm=*/true,
-                        /*useDwarfDirectory=*/false, InstructionPrinter,
-                        std::move(MCEInstance.MCE), std::move(MAB),
-                        /*ShowInst=*/false));
+      createAsmStreamer(*LocalCtx, std::move(FOut), InstructionPrinter,
+                        std::move(MCEInstance.MCE), std::move(MAB)));
   AsmStreamer->initSections(true, *BC.STI);
   std::unique_ptr<TargetMachine> TM(BC.TheTarget->createTargetMachine(
       BC.TripleName, "", "", TargetOptions(), std::nullopt));
@@ -237,9 +234,10 @@ void dumpFunction(const BinaryFunction &BF) {
     dumpBinaryDataSymbols(OS, BD, LastSection);
 }
 
-void AsmDumpPass::runOnFunctions(BinaryContext &BC) {
+Error AsmDumpPass::runOnFunctions(BinaryContext &BC) {
   for (const auto &BFIt : BC.getBinaryFunctions())
     dumpFunction(BFIt.second);
+  return Error::success();
 }
 
 } // namespace bolt

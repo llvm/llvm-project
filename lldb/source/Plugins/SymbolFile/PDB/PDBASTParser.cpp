@@ -420,7 +420,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
 
       clang_type = m_ast.CreateRecordType(
           decl_context, OptionalClangModuleID(), access, name, tag_type_kind,
-          lldb::eLanguageTypeC_plus_plus, &metadata);
+          lldb::eLanguageTypeC_plus_plus, metadata);
       assert(clang_type.IsValid());
 
       auto record_decl =
@@ -975,8 +975,8 @@ PDBASTParser::GetDeclForSymbol(const llvm::pdb::PDBSymbol &symbol) {
         }
       }
     }
-    if (params.size())
-      m_ast.SetFunctionParameters(decl, params);
+    if (params.size() && decl)
+      decl->setParams(params);
 
     m_uid_to_decl[sym_id] = decl;
 
@@ -1139,7 +1139,7 @@ PDBASTParser::FindNamespaceDecl(const clang::DeclContext *parent,
   assert(set);
 
   for (clang::NamespaceDecl *namespace_decl : *set)
-    if (namespace_decl->getName().equals(name))
+    if (namespace_decl->getName() == name)
       return namespace_decl;
 
   for (clang::NamespaceDecl *namespace_decl : *set)

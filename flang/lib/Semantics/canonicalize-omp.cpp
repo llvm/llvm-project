@@ -50,6 +50,43 @@ public:
 
   void Post(parser::ExecutionPart &body) { RewriteOmpAllocations(body); }
 
+  // Pre-visit all constructs that have both a specification part and
+  // an execution part, and store the connection between the two.
+  bool Pre(parser::BlockConstruct &x) {
+    auto *spec = &std::get<parser::BlockSpecificationPart>(x.t).v;
+    auto *block = &std::get<parser::Block>(x.t);
+    blockForSpec_.insert(std::make_pair(spec, block));
+    return true;
+  }
+  bool Pre(parser::MainProgram &x) {
+    auto *spec = &std::get<parser::SpecificationPart>(x.t);
+    auto *block = &std::get<parser::ExecutionPart>(x.t).v;
+    blockForSpec_.insert(std::make_pair(spec, block));
+    return true;
+  }
+  bool Pre(parser::FunctionSubprogram &x) {
+    auto *spec = &std::get<parser::SpecificationPart>(x.t);
+    auto *block = &std::get<parser::ExecutionPart>(x.t).v;
+    blockForSpec_.insert(std::make_pair(spec, block));
+    return true;
+  }
+  bool Pre(parser::SubroutineSubprogram &x) {
+    auto *spec = &std::get<parser::SpecificationPart>(x.t);
+    auto *block = &std::get<parser::ExecutionPart>(x.t).v;
+    blockForSpec_.insert(std::make_pair(spec, block));
+    return true;
+  }
+  bool Pre(parser::SeparateModuleSubprogram &x) {
+    auto *spec = &std::get<parser::SpecificationPart>(x.t);
+    auto *block = &std::get<parser::ExecutionPart>(x.t).v;
+    blockForSpec_.insert(std::make_pair(spec, block));
+    return true;
+  }
+
+  void Post(parser::SpecificationPart &spec) {
+    CanonicalizeUtilityConstructs(spec);
+  }
+
 private:
   template <typename T> T *GetConstructIf(parser::ExecutionPartConstruct &x) {
     if (auto *y{std::get_if<parser::ExecutableConstruct>(&x.u)}) {
@@ -90,7 +127,11 @@ private:
     auto &dir{std::get<parser::OmpLoopDirective>(beginDir.t)};
 
     nextIt = it;
-    if (++nextIt != block.end()) {
+    while (++nextIt != block.end()) {
+      // Ignore compiler directives.
+      if (GetConstructIf<parser::CompilerDirective>(*nextIt))
+        continue;
+
       if (auto *doCons{GetConstructIf<parser::DoConstruct>(*nextIt)}) {
         if (doCons->GetLoopControl()) {
           // move DoConstruct
@@ -111,12 +152,14 @@ private:
               "DO loop after the %s directive must have loop control"_err_en_US,
               parser::ToUpperCaseLetters(dir.source.ToString()));
         }
-        return; // found do-loop
+      } else {
+        messages_.Say(dir.source,
+            "A DO loop must follow the %s directive"_err_en_US,
+            parser::ToUpperCaseLetters(dir.source.ToString()));
       }
+      // If we get here, we either found a loop, or issued an error message.
+      return;
     }
-    messages_.Say(dir.source,
-        "A DO loop must follow the %s directive"_err_en_US,
-        parser::ToUpperCaseLetters(dir.source.ToString()));
   }
 
   void RewriteOmpAllocations(parser::ExecutionPart &body) {
@@ -149,6 +192,131 @@ private:
     }
   }
 
+  // Canonicalization of utility constructs.
+  //
+  // This addresses the issue of utility constructs that appear at the
+  // boundary between the specification and the execution parts, e.g.
+  //   subroutine foo
+  //     integer :: x     ! Specification
+  //     !$omp nothing
+  //     x = 1            ! Execution
+  //     ...
+  //   end
+  //
+  // Utility constructs (error and nothing) can appear in both the
+  // specification part and the execution part, except "error at(execution)",
+  // which cannot be present in the specification part (whereas any utility
+  // construct can be in the execution part).
+  // When a utility construct is at the boundary, it should preferably be
+  // parsed as an element of the execution part, but since the specification
+  // part is parsed first, the utility construct ends up belonging to the
+  // specification part.
+  //
+  // To allow the likes of the following code to compile, move all utility
+  // construct that are at the end of the specification part to the beginning
+  // of the execution part.
+  //
+  // subroutine foo
+  //   !$omp error at(execution)  ! Initially parsed as declarative construct.
+  //                              ! Move it to the execution part.
+  // end
+
+  void CanonicalizeUtilityConstructs(parser::SpecificationPart &spec) {
+    auto found = blockForSpec_.find(&spec);
+    if (found == blockForSpec_.end()) {
+      // There is no corresponding execution part, so there is nothing to do.
+      return;
+    }
+    parser::Block &block = *found->second;
+
+    // There are two places where an OpenMP declarative construct can
+    // show up in the tuple in specification part:
+    // (1) in std::list<OpenMPDeclarativeConstruct>, or
+    // (2) in std::list<DeclarationConstruct>.
+    // The case (1) is only possible is the list (2) is empty.
+
+    auto &omps =
+        std::get<std::list<parser::OpenMPDeclarativeConstruct>>(spec.t);
+    auto &decls = std::get<std::list<parser::DeclarationConstruct>>(spec.t);
+
+    if (!decls.empty()) {
+      MoveUtilityConstructsFromDecls(decls, block);
+    } else {
+      MoveUtilityConstructsFromOmps(omps, block);
+    }
+  }
+
+  void MoveUtilityConstructsFromDecls(
+      std::list<parser::DeclarationConstruct> &decls, parser::Block &block) {
+    // Find the trailing range of DeclarationConstructs that are OpenMP
+    // utility construct, that are to be moved to the execution part.
+    std::list<parser::DeclarationConstruct>::reverse_iterator rlast = [&]() {
+      for (auto rit = decls.rbegin(), rend = decls.rend(); rit != rend; ++rit) {
+        parser::DeclarationConstruct &dc = *rit;
+        if (!std::holds_alternative<parser::SpecificationConstruct>(dc.u)) {
+          return rit;
+        }
+        auto &sc = std::get<parser::SpecificationConstruct>(dc.u);
+        using OpenMPDeclarativeConstruct =
+            common::Indirection<parser::OpenMPDeclarativeConstruct>;
+        if (!std::holds_alternative<OpenMPDeclarativeConstruct>(sc.u)) {
+          return rit;
+        }
+        // Got OpenMPDeclarativeConstruct. If it's not a utility construct
+        // then stop.
+        auto &odc = std::get<OpenMPDeclarativeConstruct>(sc.u).value();
+        if (!std::holds_alternative<parser::OpenMPUtilityConstruct>(odc.u)) {
+          return rit;
+        }
+      }
+      return decls.rend();
+    }();
+
+    std::transform(decls.rbegin(), rlast, std::front_inserter(block),
+        [](parser::DeclarationConstruct &dc) {
+          auto &sc = std::get<parser::SpecificationConstruct>(dc.u);
+          using OpenMPDeclarativeConstruct =
+              common::Indirection<parser::OpenMPDeclarativeConstruct>;
+          auto &oc = std::get<OpenMPDeclarativeConstruct>(sc.u).value();
+          auto &ut = std::get<parser::OpenMPUtilityConstruct>(oc.u);
+
+          return parser::ExecutionPartConstruct(parser::ExecutableConstruct(
+              common::Indirection(parser::OpenMPConstruct(std::move(ut)))));
+        });
+
+    decls.erase(rlast.base(), decls.end());
+  }
+
+  void MoveUtilityConstructsFromOmps(
+      std::list<parser::OpenMPDeclarativeConstruct> &omps,
+      parser::Block &block) {
+    using OpenMPDeclarativeConstruct = parser::OpenMPDeclarativeConstruct;
+    // Find the trailing range of OpenMPDeclarativeConstruct that are OpenMP
+    // utility construct, that are to be moved to the execution part.
+    std::list<OpenMPDeclarativeConstruct>::reverse_iterator rlast = [&]() {
+      for (auto rit = omps.rbegin(), rend = omps.rend(); rit != rend; ++rit) {
+        OpenMPDeclarativeConstruct &dc = *rit;
+        if (!std::holds_alternative<parser::OpenMPUtilityConstruct>(dc.u)) {
+          return rit;
+        }
+      }
+      return omps.rend();
+    }();
+
+    std::transform(omps.rbegin(), rlast, std::front_inserter(block),
+        [](parser::OpenMPDeclarativeConstruct &dc) {
+          auto &ut = std::get<parser::OpenMPUtilityConstruct>(dc.u);
+          return parser::ExecutionPartConstruct(parser::ExecutableConstruct(
+              common::Indirection(parser::OpenMPConstruct(std::move(ut)))));
+        });
+
+    omps.erase(rlast.base(), omps.end());
+  }
+
+  // Mapping from the specification parts to the blocks that follow in the
+  // same construct. This is for converting utility constructs to executable
+  // constructs.
+  std::map<parser::SpecificationPart *, parser::Block *> blockForSpec_;
   parser::Messages &messages_;
 };
 

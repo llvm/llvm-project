@@ -19,29 +19,52 @@ class AArch64Reg<bits<16> enc, string n, list<Register> subregs = [],
 }
 
 let Namespace = "AArch64" in {
-  def sub_32 : SubRegIndex<32>;
+  // SubRegIndexes for GPR registers
+  def sub_32   : SubRegIndex<32>;
+  def sube64   : SubRegIndex<64>;
+  def subo64   : SubRegIndex<64>;
+  def sube32   : SubRegIndex<32>;
+  def subo32   : SubRegIndex<32>;
 
-  def bsub : SubRegIndex<8>;
-  def hsub : SubRegIndex<16>;
-  def ssub : SubRegIndex<32>;
-  def dsub : SubRegIndex<64>;
-  def sube32 : SubRegIndex<32>;
-  def subo32 : SubRegIndex<32>;
-  def sube64 : SubRegIndex<64>;
-  def subo64 : SubRegIndex<64>;
-  // SVE
-  def zsub    : SubRegIndex<128>;
+  // SubRegIndexes for FPR/Vector registers
+  def bsub    : SubRegIndex<8, 0>;
+  def hsub    : SubRegIndex<16, 0>;
+  def ssub    : SubRegIndex<32, 0>;
+  def dsub    : SubRegIndex<64, 0>;
+  def zsub    : SubRegIndex<128, 0>;
+
+  // The _hi SubRegIndexes describe the high bits of a register which are not
+  // separately addressable. They need to be described so that partially
+  // overlapping registers end up with a different lane mask. This is required
+  // to enable subreg liveness tracking.
+  //
+  // For example: 8-bit B0 is a sub-register of 16-bit H0.
+  // * B0 is described with 'bsub'.
+  // * H0 is described with 'bsub + bsub_hi' == 'hsub'.
+  def bsub_hi   : SubRegIndex<8, 8>;
+  def hsub_hi   : SubRegIndex<16, 16>;
+  def ssub_hi   : SubRegIndex<32, 32>;
+  def dsub_hi   : SubRegIndex<64, 64>;
+  def zsub_hi   : SubRegIndex<-1, 128>;
+  // sub_32_hi describes the top 32 bits in e.g. X0
+  def sub_32_hi : SubRegIndex<32, 32>;
   // Note: Code depends on these having consecutive numbers
-  def dsub0 : SubRegIndex<64>;
-  def dsub1 : SubRegIndex<64>;
-  def dsub2 : SubRegIndex<64>;
-  def dsub3 : SubRegIndex<64>;
+  def zsub0 : SubRegIndex<-1>;
+  def zsub1 : SubRegIndex<-1>;
+  def zsub2 : SubRegIndex<-1>;
+  def zsub3 : SubRegIndex<-1>;
   // Note: Code depends on these having consecutive numbers
   def qsub0 : SubRegIndex<128>;
-  def qsub1 : SubRegIndex<128>;
-  def qsub2 : SubRegIndex<128>;
-  def qsub3 : SubRegIndex<128>;
+  def qsub1 : ComposedSubRegIndex<zsub1, zsub>;
+  def qsub2 : ComposedSubRegIndex<zsub2, zsub>;
+  def qsub3 : ComposedSubRegIndex<zsub3, zsub>;
   // Note: Code depends on these having consecutive numbers
+  def dsub0 : SubRegIndex<64>;
+  def dsub1 : ComposedSubRegIndex<qsub1, dsub>;
+  def dsub2 : ComposedSubRegIndex<qsub2, dsub>;
+  def dsub3 : ComposedSubRegIndex<qsub3, dsub>;
+
+  // SubRegIndexes for SME Matrix tiles
   def zasubb  : SubRegIndex<2048>; // (16 x 16)/1 bytes  = 2048 bits
   def zasubh0 : SubRegIndex<1024>; // (16 x 16)/2 bytes  = 1024 bits
   def zasubh1 : SubRegIndex<1024>; // (16 x 16)/2 bytes  = 1024 bits
@@ -52,7 +75,11 @@ let Namespace = "AArch64" in {
   def zasubq0 : SubRegIndex<128>;  // (16 x 16)/16 bytes = 128 bits
   def zasubq1 : SubRegIndex<128>;  // (16 x 16)/16 bytes = 128 bits
 
-  def psub : SubRegIndex<16>;
+  // SubRegIndexes for SVE Predicates
+  def psub  : SubRegIndex<-1>;
+  // Note: Code depends on these having consecutive numbers
+  def psub0 : SubRegIndex<-1>;
+  def psub1 : SubRegIndex<-1>;
 }
 
 let Namespace = "AArch64" in {
@@ -63,6 +90,14 @@ let Namespace = "AArch64" in {
 //===----------------------------------------------------------------------===//
 // Registers
 //===----------------------------------------------------------------------===//
+
+foreach i = 0-30 in {
+  // Define W0_HI, W1_HI, .. W30_HI
+  def W#i#_HI : AArch64Reg<-1,  "w"#i#"_hi"> { let isArtificial = 1; }
+}
+def WSP_HI : AArch64Reg<-1,  "wsp_hi"> { let isArtificial = 1; }
+def WZR_HI : AArch64Reg<-1,  "wzr_hi"> { let isArtificial = 1; }
+
 def W0    : AArch64Reg<0,   "w0" >, DwarfRegNum<[0]>;
 def W1    : AArch64Reg<1,   "w1" >, DwarfRegNum<[1]>;
 def W2    : AArch64Reg<2,   "w2" >, DwarfRegNum<[2]>;
@@ -95,44 +130,42 @@ def W28   : AArch64Reg<28, "w28">, DwarfRegNum<[28]>;
 def W29   : AArch64Reg<29, "w29">, DwarfRegNum<[29]>;
 def W30   : AArch64Reg<30, "w30">, DwarfRegNum<[30]>;
 def WSP   : AArch64Reg<31, "wsp">, DwarfRegNum<[31]>;
-let isConstant = true in
-def WZR   : AArch64Reg<31, "wzr">, DwarfRegAlias<WSP>;
+def WZR   : AArch64Reg<31, "wzr">, DwarfRegAlias<WSP> { let isConstant = true; }
 
-let SubRegIndices = [sub_32] in {
-def X0    : AArch64Reg<0,   "x0",  [W0]>, DwarfRegAlias<W0>;
-def X1    : AArch64Reg<1,   "x1",  [W1]>, DwarfRegAlias<W1>;
-def X2    : AArch64Reg<2,   "x2",  [W2]>, DwarfRegAlias<W2>;
-def X3    : AArch64Reg<3,   "x3",  [W3]>, DwarfRegAlias<W3>;
-def X4    : AArch64Reg<4,   "x4",  [W4]>, DwarfRegAlias<W4>;
-def X5    : AArch64Reg<5,   "x5",  [W5]>, DwarfRegAlias<W5>;
-def X6    : AArch64Reg<6,   "x6",  [W6]>, DwarfRegAlias<W6>;
-def X7    : AArch64Reg<7,   "x7",  [W7]>, DwarfRegAlias<W7>;
-def X8    : AArch64Reg<8,   "x8",  [W8]>, DwarfRegAlias<W8>;
-def X9    : AArch64Reg<9,   "x9",  [W9]>, DwarfRegAlias<W9>;
-def X10   : AArch64Reg<10, "x10", [W10]>, DwarfRegAlias<W10>;
-def X11   : AArch64Reg<11, "x11", [W11]>, DwarfRegAlias<W11>;
-def X12   : AArch64Reg<12, "x12", [W12]>, DwarfRegAlias<W12>;
-def X13   : AArch64Reg<13, "x13", [W13]>, DwarfRegAlias<W13>;
-def X14   : AArch64Reg<14, "x14", [W14]>, DwarfRegAlias<W14>;
-def X15   : AArch64Reg<15, "x15", [W15]>, DwarfRegAlias<W15>;
-def X16   : AArch64Reg<16, "x16", [W16]>, DwarfRegAlias<W16>;
-def X17   : AArch64Reg<17, "x17", [W17]>, DwarfRegAlias<W17>;
-def X18   : AArch64Reg<18, "x18", [W18]>, DwarfRegAlias<W18>;
-def X19   : AArch64Reg<19, "x19", [W19]>, DwarfRegAlias<W19>;
-def X20   : AArch64Reg<20, "x20", [W20]>, DwarfRegAlias<W20>;
-def X21   : AArch64Reg<21, "x21", [W21]>, DwarfRegAlias<W21>;
-def X22   : AArch64Reg<22, "x22", [W22]>, DwarfRegAlias<W22>;
-def X23   : AArch64Reg<23, "x23", [W23]>, DwarfRegAlias<W23>;
-def X24   : AArch64Reg<24, "x24", [W24]>, DwarfRegAlias<W24>;
-def X25   : AArch64Reg<25, "x25", [W25]>, DwarfRegAlias<W25>;
-def X26   : AArch64Reg<26, "x26", [W26]>, DwarfRegAlias<W26>;
-def X27   : AArch64Reg<27, "x27", [W27]>, DwarfRegAlias<W27>;
-def X28   : AArch64Reg<28, "x28", [W28]>, DwarfRegAlias<W28>;
-def FP    : AArch64Reg<29, "x29", [W29]>, DwarfRegAlias<W29>;
-def LR    : AArch64Reg<30, "x30", [W30]>, DwarfRegAlias<W30>;
-def SP    : AArch64Reg<31, "sp",  [WSP]>, DwarfRegAlias<WSP>;
-let isConstant = true in
-def XZR   : AArch64Reg<31, "xzr", [WZR]>, DwarfRegAlias<WSP>;
+let SubRegIndices = [sub_32, sub_32_hi], CoveredBySubRegs = 1 in {
+def X0    : AArch64Reg<0,   "x0",  [W0,  W0_HI]>, DwarfRegAlias<W0>;
+def X1    : AArch64Reg<1,   "x1",  [W1,  W1_HI]>, DwarfRegAlias<W1>;
+def X2    : AArch64Reg<2,   "x2",  [W2,  W2_HI]>, DwarfRegAlias<W2>;
+def X3    : AArch64Reg<3,   "x3",  [W3,  W3_HI]>, DwarfRegAlias<W3>;
+def X4    : AArch64Reg<4,   "x4",  [W4,  W4_HI]>, DwarfRegAlias<W4>;
+def X5    : AArch64Reg<5,   "x5",  [W5,  W5_HI]>, DwarfRegAlias<W5>;
+def X6    : AArch64Reg<6,   "x6",  [W6,  W6_HI]>, DwarfRegAlias<W6>;
+def X7    : AArch64Reg<7,   "x7",  [W7,  W7_HI]>, DwarfRegAlias<W7>;
+def X8    : AArch64Reg<8,   "x8",  [W8,  W8_HI]>, DwarfRegAlias<W8>;
+def X9    : AArch64Reg<9,   "x9",  [W9,  W9_HI]>, DwarfRegAlias<W9>;
+def X10   : AArch64Reg<10, "x10", [W10, W10_HI]>, DwarfRegAlias<W10>;
+def X11   : AArch64Reg<11, "x11", [W11, W11_HI]>, DwarfRegAlias<W11>;
+def X12   : AArch64Reg<12, "x12", [W12, W12_HI]>, DwarfRegAlias<W12>;
+def X13   : AArch64Reg<13, "x13", [W13, W13_HI]>, DwarfRegAlias<W13>;
+def X14   : AArch64Reg<14, "x14", [W14, W14_HI]>, DwarfRegAlias<W14>;
+def X15   : AArch64Reg<15, "x15", [W15, W15_HI]>, DwarfRegAlias<W15>;
+def X16   : AArch64Reg<16, "x16", [W16, W16_HI]>, DwarfRegAlias<W16>;
+def X17   : AArch64Reg<17, "x17", [W17, W17_HI]>, DwarfRegAlias<W17>;
+def X18   : AArch64Reg<18, "x18", [W18, W18_HI]>, DwarfRegAlias<W18>;
+def X19   : AArch64Reg<19, "x19", [W19, W19_HI]>, DwarfRegAlias<W19>;
+def X20   : AArch64Reg<20, "x20", [W20, W20_HI]>, DwarfRegAlias<W20>;
+def X21   : AArch64Reg<21, "x21", [W21, W21_HI]>, DwarfRegAlias<W21>;
+def X22   : AArch64Reg<22, "x22", [W22, W22_HI]>, DwarfRegAlias<W22>;
+def X23   : AArch64Reg<23, "x23", [W23, W23_HI]>, DwarfRegAlias<W23>;
+def X24   : AArch64Reg<24, "x24", [W24, W24_HI]>, DwarfRegAlias<W24>;
+def X25   : AArch64Reg<25, "x25", [W25, W25_HI]>, DwarfRegAlias<W25>;
+def X26   : AArch64Reg<26, "x26", [W26, W26_HI]>, DwarfRegAlias<W26>;
+def X27   : AArch64Reg<27, "x27", [W27, W27_HI]>, DwarfRegAlias<W27>;
+def X28   : AArch64Reg<28, "x28", [W28, W28_HI]>, DwarfRegAlias<W28>;
+def FP    : AArch64Reg<29, "x29", [W29, W29_HI]>, DwarfRegAlias<W29>;
+def LR    : AArch64Reg<30, "x30", [W30, W30_HI]>, DwarfRegAlias<W30>;
+def SP    : AArch64Reg<31, "sp",  [WSP, WSP_HI]>, DwarfRegAlias<WSP>;
+def XZR   : AArch64Reg<31, "xzr", [WZR, WZR_HI]>, DwarfRegAlias<WSP> { let isConstant = true; }
 }
 
 // Condition code register.
@@ -147,6 +180,12 @@ def VG : AArch64Reg<0, "vg">, DwarfRegNum<[46]>;
 // Floating-point control register
 def FPCR : AArch64Reg<0, "fpcr">;
 
+// Floating-point Mode Register
+def FPMR : AArch64Reg<0, "fpmr">;
+
+// Floating-point status register.
+def FPSR : AArch64Reg<0, "fpsr">;
+
 // GPR register classes with the intersections of GPR32/GPR32sp and
 // GPR64/GPR64sp for use by the coalescer.
 def GPR32common : RegisterClass<"AArch64", [i32], 32, (sequence "W%u", 0, 30)> {
@@ -157,25 +196,30 @@ def GPR64common : RegisterClass<"AArch64", [i64], 64,
                                 (add (sequence "X%u", 0, 28), FP, LR)> {
   let AltOrders = [(rotl GPR64common, 8)];
   let AltOrderSelect = [{ return 1; }];
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::GPR64commonRegClassID, 0, 31>";
 }
 // GPR register classes which exclude SP/WSP.
 def GPR32 : RegisterClass<"AArch64", [i32], 32, (add GPR32common, WZR)> {
   let AltOrders = [(rotl GPR32, 8)];
   let AltOrderSelect = [{ return 1; }];
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::GPR32RegClassID, 0, 32>";
 }
 def GPR64 : RegisterClass<"AArch64", [i64], 64, (add GPR64common, XZR)> {
   let AltOrders = [(rotl GPR64, 8)];
   let AltOrderSelect = [{ return 1; }];
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::GPR64RegClassID, 0, 32>";
 }
 
 // GPR register classes which include SP/WSP.
 def GPR32sp : RegisterClass<"AArch64", [i32], 32, (add GPR32common, WSP)> {
   let AltOrders = [(rotl GPR32sp, 8)];
   let AltOrderSelect = [{ return 1; }];
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::GPR32spRegClassID, 0, 32>";
 }
 def GPR64sp : RegisterClass<"AArch64", [i64], 64, (add GPR64common, SP)> {
   let AltOrders = [(rotl GPR64sp, 8)];
   let AltOrderSelect = [{ return 1; }];
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::GPR64spRegClassID,0, 32>";
 }
 
 def GPR32sponly : RegisterClass<"AArch64", [i32], 32, (add WSP)>;
@@ -217,16 +261,28 @@ def tcGPR64 : RegisterClass<"AArch64", [i64], 64, (sub GPR64common, X19, X20, X2
                                                      X22, X23, X24, X25, X26,
                                                      X27, X28, FP, LR)>;
 
-// Restricted set of tail call registers, for use when branch target
-// enforcement is enabled. These are the only registers which can be used to
-// indirectly branch (not call) to the "BTI c" instruction at the start of a
-// BTI-protected function.
-def rtcGPR64 : RegisterClass<"AArch64", [i64], 64, (add X16, X17)>;
+// Restricted sets of tail call registers, for use when branch target
+// enforcement or PAuthLR are enabled.
+// For BTI, x16 and x17 are the only registers which can be used to indirectly
+// branch (not call) to the "BTI c" instruction at the start of a BTI-protected
+// function.
+// For PAuthLR, x16 must be used in the function epilogue for other purposes,
+// so cannot hold the function pointer.
+def tcGPRx17 : RegisterClass<"AArch64", [i64], 64, (add X17)>;
+def tcGPRx16x17 : RegisterClass<"AArch64", [i64], 64, (add X16, X17)>;
+def tcGPRnotx16 : RegisterClass<"AArch64", [i64], 64, (sub tcGPR64, X16)>;
+// LR checking code expects either x16 or x17 to be available as a scratch
+// register - for that reason restrict one of two register operands of
+// AUTH_TCRETURN* pseudos.
+def tcGPRnotx16x17 : RegisterClass<"AArch64", [i64], 64, (sub tcGPR64, X16, X17)>;
 
 // Register set that excludes registers that are reserved for procedure calls.
 // This is used for pseudo-instructions that are actually implemented using a
 // procedure call.
-def GPR64noip : RegisterClass<"AArch64", [i64], 64, (sub GPR64, X16, X17, LR)>;
+def GPR64noip : RegisterClass<"AArch64", [i64], 64, (sub GPR64, X16, X17, LR)> {
+  let AltOrders = [(rotl GPR64noip, 8)];
+  let AltOrderSelect = [{ return 1; }];
+}
 
 // GPR register classes for post increment amount of vector load/store that
 // has alternate printing when Rm=31 and prints a constant immediate value
@@ -259,6 +315,14 @@ def CCR : RegisterClass<"AArch64", [i32], 32, (add NZCV)> {
 //===----------------------------------------------------------------------===//
 // Floating Point Scalar Registers
 //===----------------------------------------------------------------------===//
+
+foreach i = 0-31 in {
+  def B#i#_HI : AArch64Reg<-1,  "b"#i#"_hi"> { let isArtificial = 1; }
+  def H#i#_HI : AArch64Reg<-1,  "h"#i#"_hi"> { let isArtificial = 1; }
+  def S#i#_HI : AArch64Reg<-1,  "s"#i#"_hi"> { let isArtificial = 1; }
+  def D#i#_HI : AArch64Reg<-1,  "d"#i#"_hi"> { let isArtificial = 1; }
+  def Q#i#_HI : AArch64Reg<-1,  "q"#i#"_hi"> { let isArtificial = 1; }
+}
 
 def B0    : AArch64Reg<0,   "b0">, DwarfRegNum<[64]>;
 def B1    : AArch64Reg<1,   "b1">, DwarfRegNum<[65]>;
@@ -293,160 +357,166 @@ def B29   : AArch64Reg<29, "b29">, DwarfRegNum<[93]>;
 def B30   : AArch64Reg<30, "b30">, DwarfRegNum<[94]>;
 def B31   : AArch64Reg<31, "b31">, DwarfRegNum<[95]>;
 
-let SubRegIndices = [bsub] in {
-def H0    : AArch64Reg<0,   "h0", [B0]>, DwarfRegAlias<B0>;
-def H1    : AArch64Reg<1,   "h1", [B1]>, DwarfRegAlias<B1>;
-def H2    : AArch64Reg<2,   "h2", [B2]>, DwarfRegAlias<B2>;
-def H3    : AArch64Reg<3,   "h3", [B3]>, DwarfRegAlias<B3>;
-def H4    : AArch64Reg<4,   "h4", [B4]>, DwarfRegAlias<B4>;
-def H5    : AArch64Reg<5,   "h5", [B5]>, DwarfRegAlias<B5>;
-def H6    : AArch64Reg<6,   "h6", [B6]>, DwarfRegAlias<B6>;
-def H7    : AArch64Reg<7,   "h7", [B7]>, DwarfRegAlias<B7>;
-def H8    : AArch64Reg<8,   "h8", [B8]>, DwarfRegAlias<B8>;
-def H9    : AArch64Reg<9,   "h9", [B9]>, DwarfRegAlias<B9>;
-def H10   : AArch64Reg<10, "h10", [B10]>, DwarfRegAlias<B10>;
-def H11   : AArch64Reg<11, "h11", [B11]>, DwarfRegAlias<B11>;
-def H12   : AArch64Reg<12, "h12", [B12]>, DwarfRegAlias<B12>;
-def H13   : AArch64Reg<13, "h13", [B13]>, DwarfRegAlias<B13>;
-def H14   : AArch64Reg<14, "h14", [B14]>, DwarfRegAlias<B14>;
-def H15   : AArch64Reg<15, "h15", [B15]>, DwarfRegAlias<B15>;
-def H16   : AArch64Reg<16, "h16", [B16]>, DwarfRegAlias<B16>;
-def H17   : AArch64Reg<17, "h17", [B17]>, DwarfRegAlias<B17>;
-def H18   : AArch64Reg<18, "h18", [B18]>, DwarfRegAlias<B18>;
-def H19   : AArch64Reg<19, "h19", [B19]>, DwarfRegAlias<B19>;
-def H20   : AArch64Reg<20, "h20", [B20]>, DwarfRegAlias<B20>;
-def H21   : AArch64Reg<21, "h21", [B21]>, DwarfRegAlias<B21>;
-def H22   : AArch64Reg<22, "h22", [B22]>, DwarfRegAlias<B22>;
-def H23   : AArch64Reg<23, "h23", [B23]>, DwarfRegAlias<B23>;
-def H24   : AArch64Reg<24, "h24", [B24]>, DwarfRegAlias<B24>;
-def H25   : AArch64Reg<25, "h25", [B25]>, DwarfRegAlias<B25>;
-def H26   : AArch64Reg<26, "h26", [B26]>, DwarfRegAlias<B26>;
-def H27   : AArch64Reg<27, "h27", [B27]>, DwarfRegAlias<B27>;
-def H28   : AArch64Reg<28, "h28", [B28]>, DwarfRegAlias<B28>;
-def H29   : AArch64Reg<29, "h29", [B29]>, DwarfRegAlias<B29>;
-def H30   : AArch64Reg<30, "h30", [B30]>, DwarfRegAlias<B30>;
-def H31   : AArch64Reg<31, "h31", [B31]>, DwarfRegAlias<B31>;
+let SubRegIndices = [bsub, bsub_hi] in {
+def H0    : AArch64Reg<0,   "h0", [B0, B0_HI]>, DwarfRegAlias<B0>;
+def H1    : AArch64Reg<1,   "h1", [B1, B1_HI]>, DwarfRegAlias<B1>;
+def H2    : AArch64Reg<2,   "h2", [B2, B2_HI]>, DwarfRegAlias<B2>;
+def H3    : AArch64Reg<3,   "h3", [B3, B3_HI]>, DwarfRegAlias<B3>;
+def H4    : AArch64Reg<4,   "h4", [B4, B4_HI]>, DwarfRegAlias<B4>;
+def H5    : AArch64Reg<5,   "h5", [B5, B5_HI]>, DwarfRegAlias<B5>;
+def H6    : AArch64Reg<6,   "h6", [B6, B6_HI]>, DwarfRegAlias<B6>;
+def H7    : AArch64Reg<7,   "h7", [B7, B7_HI]>, DwarfRegAlias<B7>;
+def H8    : AArch64Reg<8,   "h8", [B8, B8_HI]>, DwarfRegAlias<B8>;
+def H9    : AArch64Reg<9,   "h9", [B9, B9_HI]>, DwarfRegAlias<B9>;
+def H10   : AArch64Reg<10, "h10", [B10, B10_HI]>, DwarfRegAlias<B10>;
+def H11   : AArch64Reg<11, "h11", [B11, B11_HI]>, DwarfRegAlias<B11>;
+def H12   : AArch64Reg<12, "h12", [B12, B12_HI]>, DwarfRegAlias<B12>;
+def H13   : AArch64Reg<13, "h13", [B13, B13_HI]>, DwarfRegAlias<B13>;
+def H14   : AArch64Reg<14, "h14", [B14, B14_HI]>, DwarfRegAlias<B14>;
+def H15   : AArch64Reg<15, "h15", [B15, B15_HI]>, DwarfRegAlias<B15>;
+def H16   : AArch64Reg<16, "h16", [B16, B16_HI]>, DwarfRegAlias<B16>;
+def H17   : AArch64Reg<17, "h17", [B17, B17_HI]>, DwarfRegAlias<B17>;
+def H18   : AArch64Reg<18, "h18", [B18, B18_HI]>, DwarfRegAlias<B18>;
+def H19   : AArch64Reg<19, "h19", [B19, B19_HI]>, DwarfRegAlias<B19>;
+def H20   : AArch64Reg<20, "h20", [B20, B20_HI]>, DwarfRegAlias<B20>;
+def H21   : AArch64Reg<21, "h21", [B21, B21_HI]>, DwarfRegAlias<B21>;
+def H22   : AArch64Reg<22, "h22", [B22, B22_HI]>, DwarfRegAlias<B22>;
+def H23   : AArch64Reg<23, "h23", [B23, B23_HI]>, DwarfRegAlias<B23>;
+def H24   : AArch64Reg<24, "h24", [B24, B24_HI]>, DwarfRegAlias<B24>;
+def H25   : AArch64Reg<25, "h25", [B25, B25_HI]>, DwarfRegAlias<B25>;
+def H26   : AArch64Reg<26, "h26", [B26, B26_HI]>, DwarfRegAlias<B26>;
+def H27   : AArch64Reg<27, "h27", [B27, B27_HI]>, DwarfRegAlias<B27>;
+def H28   : AArch64Reg<28, "h28", [B28, B28_HI]>, DwarfRegAlias<B28>;
+def H29   : AArch64Reg<29, "h29", [B29, B29_HI]>, DwarfRegAlias<B29>;
+def H30   : AArch64Reg<30, "h30", [B30, B30_HI]>, DwarfRegAlias<B30>;
+def H31   : AArch64Reg<31, "h31", [B31, B31_HI]>, DwarfRegAlias<B31>;
 }
 
-let SubRegIndices = [hsub] in {
-def S0    : AArch64Reg<0,   "s0", [H0]>, DwarfRegAlias<B0>;
-def S1    : AArch64Reg<1,   "s1", [H1]>, DwarfRegAlias<B1>;
-def S2    : AArch64Reg<2,   "s2", [H2]>, DwarfRegAlias<B2>;
-def S3    : AArch64Reg<3,   "s3", [H3]>, DwarfRegAlias<B3>;
-def S4    : AArch64Reg<4,   "s4", [H4]>, DwarfRegAlias<B4>;
-def S5    : AArch64Reg<5,   "s5", [H5]>, DwarfRegAlias<B5>;
-def S6    : AArch64Reg<6,   "s6", [H6]>, DwarfRegAlias<B6>;
-def S7    : AArch64Reg<7,   "s7", [H7]>, DwarfRegAlias<B7>;
-def S8    : AArch64Reg<8,   "s8", [H8]>, DwarfRegAlias<B8>;
-def S9    : AArch64Reg<9,   "s9", [H9]>, DwarfRegAlias<B9>;
-def S10   : AArch64Reg<10, "s10", [H10]>, DwarfRegAlias<B10>;
-def S11   : AArch64Reg<11, "s11", [H11]>, DwarfRegAlias<B11>;
-def S12   : AArch64Reg<12, "s12", [H12]>, DwarfRegAlias<B12>;
-def S13   : AArch64Reg<13, "s13", [H13]>, DwarfRegAlias<B13>;
-def S14   : AArch64Reg<14, "s14", [H14]>, DwarfRegAlias<B14>;
-def S15   : AArch64Reg<15, "s15", [H15]>, DwarfRegAlias<B15>;
-def S16   : AArch64Reg<16, "s16", [H16]>, DwarfRegAlias<B16>;
-def S17   : AArch64Reg<17, "s17", [H17]>, DwarfRegAlias<B17>;
-def S18   : AArch64Reg<18, "s18", [H18]>, DwarfRegAlias<B18>;
-def S19   : AArch64Reg<19, "s19", [H19]>, DwarfRegAlias<B19>;
-def S20   : AArch64Reg<20, "s20", [H20]>, DwarfRegAlias<B20>;
-def S21   : AArch64Reg<21, "s21", [H21]>, DwarfRegAlias<B21>;
-def S22   : AArch64Reg<22, "s22", [H22]>, DwarfRegAlias<B22>;
-def S23   : AArch64Reg<23, "s23", [H23]>, DwarfRegAlias<B23>;
-def S24   : AArch64Reg<24, "s24", [H24]>, DwarfRegAlias<B24>;
-def S25   : AArch64Reg<25, "s25", [H25]>, DwarfRegAlias<B25>;
-def S26   : AArch64Reg<26, "s26", [H26]>, DwarfRegAlias<B26>;
-def S27   : AArch64Reg<27, "s27", [H27]>, DwarfRegAlias<B27>;
-def S28   : AArch64Reg<28, "s28", [H28]>, DwarfRegAlias<B28>;
-def S29   : AArch64Reg<29, "s29", [H29]>, DwarfRegAlias<B29>;
-def S30   : AArch64Reg<30, "s30", [H30]>, DwarfRegAlias<B30>;
-def S31   : AArch64Reg<31, "s31", [H31]>, DwarfRegAlias<B31>;
+let SubRegIndices = [hsub, hsub_hi] in {
+def S0    : AArch64Reg<0,   "s0", [H0, H0_HI]>, DwarfRegAlias<B0>;
+def S1    : AArch64Reg<1,   "s1", [H1, H1_HI]>, DwarfRegAlias<B1>;
+def S2    : AArch64Reg<2,   "s2", [H2, H2_HI]>, DwarfRegAlias<B2>;
+def S3    : AArch64Reg<3,   "s3", [H3, H3_HI]>, DwarfRegAlias<B3>;
+def S4    : AArch64Reg<4,   "s4", [H4, H4_HI]>, DwarfRegAlias<B4>;
+def S5    : AArch64Reg<5,   "s5", [H5, H5_HI]>, DwarfRegAlias<B5>;
+def S6    : AArch64Reg<6,   "s6", [H6, H6_HI]>, DwarfRegAlias<B6>;
+def S7    : AArch64Reg<7,   "s7", [H7, H7_HI]>, DwarfRegAlias<B7>;
+def S8    : AArch64Reg<8,   "s8", [H8, H8_HI]>, DwarfRegAlias<B8>;
+def S9    : AArch64Reg<9,   "s9", [H9, H9_HI]>, DwarfRegAlias<B9>;
+def S10   : AArch64Reg<10, "s10", [H10, H10_HI]>, DwarfRegAlias<B10>;
+def S11   : AArch64Reg<11, "s11", [H11, H11_HI]>, DwarfRegAlias<B11>;
+def S12   : AArch64Reg<12, "s12", [H12, H12_HI]>, DwarfRegAlias<B12>;
+def S13   : AArch64Reg<13, "s13", [H13, H13_HI]>, DwarfRegAlias<B13>;
+def S14   : AArch64Reg<14, "s14", [H14, H14_HI]>, DwarfRegAlias<B14>;
+def S15   : AArch64Reg<15, "s15", [H15, H15_HI]>, DwarfRegAlias<B15>;
+def S16   : AArch64Reg<16, "s16", [H16, H16_HI]>, DwarfRegAlias<B16>;
+def S17   : AArch64Reg<17, "s17", [H17, H17_HI]>, DwarfRegAlias<B17>;
+def S18   : AArch64Reg<18, "s18", [H18, H18_HI]>, DwarfRegAlias<B18>;
+def S19   : AArch64Reg<19, "s19", [H19, H19_HI]>, DwarfRegAlias<B19>;
+def S20   : AArch64Reg<20, "s20", [H20, H20_HI]>, DwarfRegAlias<B20>;
+def S21   : AArch64Reg<21, "s21", [H21, H21_HI]>, DwarfRegAlias<B21>;
+def S22   : AArch64Reg<22, "s22", [H22, H22_HI]>, DwarfRegAlias<B22>;
+def S23   : AArch64Reg<23, "s23", [H23, H23_HI]>, DwarfRegAlias<B23>;
+def S24   : AArch64Reg<24, "s24", [H24, H24_HI]>, DwarfRegAlias<B24>;
+def S25   : AArch64Reg<25, "s25", [H25, H25_HI]>, DwarfRegAlias<B25>;
+def S26   : AArch64Reg<26, "s26", [H26, H26_HI]>, DwarfRegAlias<B26>;
+def S27   : AArch64Reg<27, "s27", [H27, H27_HI]>, DwarfRegAlias<B27>;
+def S28   : AArch64Reg<28, "s28", [H28, H28_HI]>, DwarfRegAlias<B28>;
+def S29   : AArch64Reg<29, "s29", [H29, H29_HI]>, DwarfRegAlias<B29>;
+def S30   : AArch64Reg<30, "s30", [H30, H30_HI]>, DwarfRegAlias<B30>;
+def S31   : AArch64Reg<31, "s31", [H31, H31_HI]>, DwarfRegAlias<B31>;
 }
 
-let SubRegIndices = [ssub], RegAltNameIndices = [vreg, vlist1] in {
-def D0    : AArch64Reg<0,   "d0", [S0], ["v0", ""]>, DwarfRegAlias<B0>;
-def D1    : AArch64Reg<1,   "d1", [S1], ["v1", ""]>, DwarfRegAlias<B1>;
-def D2    : AArch64Reg<2,   "d2", [S2], ["v2", ""]>, DwarfRegAlias<B2>;
-def D3    : AArch64Reg<3,   "d3", [S3], ["v3", ""]>, DwarfRegAlias<B3>;
-def D4    : AArch64Reg<4,   "d4", [S4], ["v4", ""]>, DwarfRegAlias<B4>;
-def D5    : AArch64Reg<5,   "d5", [S5], ["v5", ""]>, DwarfRegAlias<B5>;
-def D6    : AArch64Reg<6,   "d6", [S6], ["v6", ""]>, DwarfRegAlias<B6>;
-def D7    : AArch64Reg<7,   "d7", [S7], ["v7", ""]>, DwarfRegAlias<B7>;
-def D8    : AArch64Reg<8,   "d8", [S8], ["v8", ""]>, DwarfRegAlias<B8>;
-def D9    : AArch64Reg<9,   "d9", [S9], ["v9", ""]>, DwarfRegAlias<B9>;
-def D10   : AArch64Reg<10, "d10", [S10], ["v10", ""]>, DwarfRegAlias<B10>;
-def D11   : AArch64Reg<11, "d11", [S11], ["v11", ""]>, DwarfRegAlias<B11>;
-def D12   : AArch64Reg<12, "d12", [S12], ["v12", ""]>, DwarfRegAlias<B12>;
-def D13   : AArch64Reg<13, "d13", [S13], ["v13", ""]>, DwarfRegAlias<B13>;
-def D14   : AArch64Reg<14, "d14", [S14], ["v14", ""]>, DwarfRegAlias<B14>;
-def D15   : AArch64Reg<15, "d15", [S15], ["v15", ""]>, DwarfRegAlias<B15>;
-def D16   : AArch64Reg<16, "d16", [S16], ["v16", ""]>, DwarfRegAlias<B16>;
-def D17   : AArch64Reg<17, "d17", [S17], ["v17", ""]>, DwarfRegAlias<B17>;
-def D18   : AArch64Reg<18, "d18", [S18], ["v18", ""]>, DwarfRegAlias<B18>;
-def D19   : AArch64Reg<19, "d19", [S19], ["v19", ""]>, DwarfRegAlias<B19>;
-def D20   : AArch64Reg<20, "d20", [S20], ["v20", ""]>, DwarfRegAlias<B20>;
-def D21   : AArch64Reg<21, "d21", [S21], ["v21", ""]>, DwarfRegAlias<B21>;
-def D22   : AArch64Reg<22, "d22", [S22], ["v22", ""]>, DwarfRegAlias<B22>;
-def D23   : AArch64Reg<23, "d23", [S23], ["v23", ""]>, DwarfRegAlias<B23>;
-def D24   : AArch64Reg<24, "d24", [S24], ["v24", ""]>, DwarfRegAlias<B24>;
-def D25   : AArch64Reg<25, "d25", [S25], ["v25", ""]>, DwarfRegAlias<B25>;
-def D26   : AArch64Reg<26, "d26", [S26], ["v26", ""]>, DwarfRegAlias<B26>;
-def D27   : AArch64Reg<27, "d27", [S27], ["v27", ""]>, DwarfRegAlias<B27>;
-def D28   : AArch64Reg<28, "d28", [S28], ["v28", ""]>, DwarfRegAlias<B28>;
-def D29   : AArch64Reg<29, "d29", [S29], ["v29", ""]>, DwarfRegAlias<B29>;
-def D30   : AArch64Reg<30, "d30", [S30], ["v30", ""]>, DwarfRegAlias<B30>;
-def D31   : AArch64Reg<31, "d31", [S31], ["v31", ""]>, DwarfRegAlias<B31>;
+let SubRegIndices = [ssub, ssub_hi], RegAltNameIndices = [vreg, vlist1] in {
+def D0    : AArch64Reg<0,   "d0", [S0, S0_HI], ["v0", ""]>, DwarfRegAlias<B0>;
+def D1    : AArch64Reg<1,   "d1", [S1, S1_HI], ["v1", ""]>, DwarfRegAlias<B1>;
+def D2    : AArch64Reg<2,   "d2", [S2, S2_HI], ["v2", ""]>, DwarfRegAlias<B2>;
+def D3    : AArch64Reg<3,   "d3", [S3, S3_HI], ["v3", ""]>, DwarfRegAlias<B3>;
+def D4    : AArch64Reg<4,   "d4", [S4, S4_HI], ["v4", ""]>, DwarfRegAlias<B4>;
+def D5    : AArch64Reg<5,   "d5", [S5, S5_HI], ["v5", ""]>, DwarfRegAlias<B5>;
+def D6    : AArch64Reg<6,   "d6", [S6, S6_HI], ["v6", ""]>, DwarfRegAlias<B6>;
+def D7    : AArch64Reg<7,   "d7", [S7, S7_HI], ["v7", ""]>, DwarfRegAlias<B7>;
+def D8    : AArch64Reg<8,   "d8", [S8, S8_HI], ["v8", ""]>, DwarfRegAlias<B8>;
+def D9    : AArch64Reg<9,   "d9", [S9, S9_HI], ["v9", ""]>, DwarfRegAlias<B9>;
+def D10   : AArch64Reg<10, "d10", [S10, S10_HI], ["v10", ""]>, DwarfRegAlias<B10>;
+def D11   : AArch64Reg<11, "d11", [S11, S11_HI], ["v11", ""]>, DwarfRegAlias<B11>;
+def D12   : AArch64Reg<12, "d12", [S12, S12_HI], ["v12", ""]>, DwarfRegAlias<B12>;
+def D13   : AArch64Reg<13, "d13", [S13, S13_HI], ["v13", ""]>, DwarfRegAlias<B13>;
+def D14   : AArch64Reg<14, "d14", [S14, S14_HI], ["v14", ""]>, DwarfRegAlias<B14>;
+def D15   : AArch64Reg<15, "d15", [S15, S15_HI], ["v15", ""]>, DwarfRegAlias<B15>;
+def D16   : AArch64Reg<16, "d16", [S16, S16_HI], ["v16", ""]>, DwarfRegAlias<B16>;
+def D17   : AArch64Reg<17, "d17", [S17, S17_HI], ["v17", ""]>, DwarfRegAlias<B17>;
+def D18   : AArch64Reg<18, "d18", [S18, S18_HI], ["v18", ""]>, DwarfRegAlias<B18>;
+def D19   : AArch64Reg<19, "d19", [S19, S19_HI], ["v19", ""]>, DwarfRegAlias<B19>;
+def D20   : AArch64Reg<20, "d20", [S20, S20_HI], ["v20", ""]>, DwarfRegAlias<B20>;
+def D21   : AArch64Reg<21, "d21", [S21, S21_HI], ["v21", ""]>, DwarfRegAlias<B21>;
+def D22   : AArch64Reg<22, "d22", [S22, S22_HI], ["v22", ""]>, DwarfRegAlias<B22>;
+def D23   : AArch64Reg<23, "d23", [S23, S23_HI], ["v23", ""]>, DwarfRegAlias<B23>;
+def D24   : AArch64Reg<24, "d24", [S24, S24_HI], ["v24", ""]>, DwarfRegAlias<B24>;
+def D25   : AArch64Reg<25, "d25", [S25, S25_HI], ["v25", ""]>, DwarfRegAlias<B25>;
+def D26   : AArch64Reg<26, "d26", [S26, S26_HI], ["v26", ""]>, DwarfRegAlias<B26>;
+def D27   : AArch64Reg<27, "d27", [S27, S27_HI], ["v27", ""]>, DwarfRegAlias<B27>;
+def D28   : AArch64Reg<28, "d28", [S28, S28_HI], ["v28", ""]>, DwarfRegAlias<B28>;
+def D29   : AArch64Reg<29, "d29", [S29, S29_HI], ["v29", ""]>, DwarfRegAlias<B29>;
+def D30   : AArch64Reg<30, "d30", [S30, S30_HI], ["v30", ""]>, DwarfRegAlias<B30>;
+def D31   : AArch64Reg<31, "d31", [S31, S31_HI], ["v31", ""]>, DwarfRegAlias<B31>;
 }
 
-let SubRegIndices = [dsub], RegAltNameIndices = [vreg, vlist1] in {
-def Q0    : AArch64Reg<0,   "q0", [D0], ["v0", ""]>, DwarfRegAlias<B0>;
-def Q1    : AArch64Reg<1,   "q1", [D1], ["v1", ""]>, DwarfRegAlias<B1>;
-def Q2    : AArch64Reg<2,   "q2", [D2], ["v2", ""]>, DwarfRegAlias<B2>;
-def Q3    : AArch64Reg<3,   "q3", [D3], ["v3", ""]>, DwarfRegAlias<B3>;
-def Q4    : AArch64Reg<4,   "q4", [D4], ["v4", ""]>, DwarfRegAlias<B4>;
-def Q5    : AArch64Reg<5,   "q5", [D5], ["v5", ""]>, DwarfRegAlias<B5>;
-def Q6    : AArch64Reg<6,   "q6", [D6], ["v6", ""]>, DwarfRegAlias<B6>;
-def Q7    : AArch64Reg<7,   "q7", [D7], ["v7", ""]>, DwarfRegAlias<B7>;
-def Q8    : AArch64Reg<8,   "q8", [D8], ["v8", ""]>, DwarfRegAlias<B8>;
-def Q9    : AArch64Reg<9,   "q9", [D9], ["v9", ""]>, DwarfRegAlias<B9>;
-def Q10   : AArch64Reg<10, "q10", [D10], ["v10", ""]>, DwarfRegAlias<B10>;
-def Q11   : AArch64Reg<11, "q11", [D11], ["v11", ""]>, DwarfRegAlias<B11>;
-def Q12   : AArch64Reg<12, "q12", [D12], ["v12", ""]>, DwarfRegAlias<B12>;
-def Q13   : AArch64Reg<13, "q13", [D13], ["v13", ""]>, DwarfRegAlias<B13>;
-def Q14   : AArch64Reg<14, "q14", [D14], ["v14", ""]>, DwarfRegAlias<B14>;
-def Q15   : AArch64Reg<15, "q15", [D15], ["v15", ""]>, DwarfRegAlias<B15>;
-def Q16   : AArch64Reg<16, "q16", [D16], ["v16", ""]>, DwarfRegAlias<B16>;
-def Q17   : AArch64Reg<17, "q17", [D17], ["v17", ""]>, DwarfRegAlias<B17>;
-def Q18   : AArch64Reg<18, "q18", [D18], ["v18", ""]>, DwarfRegAlias<B18>;
-def Q19   : AArch64Reg<19, "q19", [D19], ["v19", ""]>, DwarfRegAlias<B19>;
-def Q20   : AArch64Reg<20, "q20", [D20], ["v20", ""]>, DwarfRegAlias<B20>;
-def Q21   : AArch64Reg<21, "q21", [D21], ["v21", ""]>, DwarfRegAlias<B21>;
-def Q22   : AArch64Reg<22, "q22", [D22], ["v22", ""]>, DwarfRegAlias<B22>;
-def Q23   : AArch64Reg<23, "q23", [D23], ["v23", ""]>, DwarfRegAlias<B23>;
-def Q24   : AArch64Reg<24, "q24", [D24], ["v24", ""]>, DwarfRegAlias<B24>;
-def Q25   : AArch64Reg<25, "q25", [D25], ["v25", ""]>, DwarfRegAlias<B25>;
-def Q26   : AArch64Reg<26, "q26", [D26], ["v26", ""]>, DwarfRegAlias<B26>;
-def Q27   : AArch64Reg<27, "q27", [D27], ["v27", ""]>, DwarfRegAlias<B27>;
-def Q28   : AArch64Reg<28, "q28", [D28], ["v28", ""]>, DwarfRegAlias<B28>;
-def Q29   : AArch64Reg<29, "q29", [D29], ["v29", ""]>, DwarfRegAlias<B29>;
-def Q30   : AArch64Reg<30, "q30", [D30], ["v30", ""]>, DwarfRegAlias<B30>;
-def Q31   : AArch64Reg<31, "q31", [D31], ["v31", ""]>, DwarfRegAlias<B31>;
+let SubRegIndices = [dsub, dsub_hi], RegAltNameIndices = [vreg, vlist1] in {
+def Q0    : AArch64Reg<0,   "q0", [D0, D0_HI], ["v0", ""]>, DwarfRegAlias<B0>;
+def Q1    : AArch64Reg<1,   "q1", [D1, D1_HI], ["v1", ""]>, DwarfRegAlias<B1>;
+def Q2    : AArch64Reg<2,   "q2", [D2, D2_HI], ["v2", ""]>, DwarfRegAlias<B2>;
+def Q3    : AArch64Reg<3,   "q3", [D3, D3_HI], ["v3", ""]>, DwarfRegAlias<B3>;
+def Q4    : AArch64Reg<4,   "q4", [D4, D4_HI], ["v4", ""]>, DwarfRegAlias<B4>;
+def Q5    : AArch64Reg<5,   "q5", [D5, D5_HI], ["v5", ""]>, DwarfRegAlias<B5>;
+def Q6    : AArch64Reg<6,   "q6", [D6, D6_HI], ["v6", ""]>, DwarfRegAlias<B6>;
+def Q7    : AArch64Reg<7,   "q7", [D7, D7_HI], ["v7", ""]>, DwarfRegAlias<B7>;
+def Q8    : AArch64Reg<8,   "q8", [D8, D8_HI], ["v8", ""]>, DwarfRegAlias<B8>;
+def Q9    : AArch64Reg<9,   "q9", [D9, D9_HI], ["v9", ""]>, DwarfRegAlias<B9>;
+def Q10   : AArch64Reg<10, "q10", [D10, D10_HI], ["v10", ""]>, DwarfRegAlias<B10>;
+def Q11   : AArch64Reg<11, "q11", [D11, D11_HI], ["v11", ""]>, DwarfRegAlias<B11>;
+def Q12   : AArch64Reg<12, "q12", [D12, D12_HI], ["v12", ""]>, DwarfRegAlias<B12>;
+def Q13   : AArch64Reg<13, "q13", [D13, D13_HI], ["v13", ""]>, DwarfRegAlias<B13>;
+def Q14   : AArch64Reg<14, "q14", [D14, D14_HI], ["v14", ""]>, DwarfRegAlias<B14>;
+def Q15   : AArch64Reg<15, "q15", [D15, D15_HI], ["v15", ""]>, DwarfRegAlias<B15>;
+def Q16   : AArch64Reg<16, "q16", [D16, D16_HI], ["v16", ""]>, DwarfRegAlias<B16>;
+def Q17   : AArch64Reg<17, "q17", [D17, D17_HI], ["v17", ""]>, DwarfRegAlias<B17>;
+def Q18   : AArch64Reg<18, "q18", [D18, D18_HI], ["v18", ""]>, DwarfRegAlias<B18>;
+def Q19   : AArch64Reg<19, "q19", [D19, D19_HI], ["v19", ""]>, DwarfRegAlias<B19>;
+def Q20   : AArch64Reg<20, "q20", [D20, D20_HI], ["v20", ""]>, DwarfRegAlias<B20>;
+def Q21   : AArch64Reg<21, "q21", [D21, D21_HI], ["v21", ""]>, DwarfRegAlias<B21>;
+def Q22   : AArch64Reg<22, "q22", [D22, D22_HI], ["v22", ""]>, DwarfRegAlias<B22>;
+def Q23   : AArch64Reg<23, "q23", [D23, D23_HI], ["v23", ""]>, DwarfRegAlias<B23>;
+def Q24   : AArch64Reg<24, "q24", [D24, D24_HI], ["v24", ""]>, DwarfRegAlias<B24>;
+def Q25   : AArch64Reg<25, "q25", [D25, D25_HI], ["v25", ""]>, DwarfRegAlias<B25>;
+def Q26   : AArch64Reg<26, "q26", [D26, D26_HI], ["v26", ""]>, DwarfRegAlias<B26>;
+def Q27   : AArch64Reg<27, "q27", [D27, D27_HI], ["v27", ""]>, DwarfRegAlias<B27>;
+def Q28   : AArch64Reg<28, "q28", [D28, D28_HI], ["v28", ""]>, DwarfRegAlias<B28>;
+def Q29   : AArch64Reg<29, "q29", [D29, D29_HI], ["v29", ""]>, DwarfRegAlias<B29>;
+def Q30   : AArch64Reg<30, "q30", [D30, D30_HI], ["v30", ""]>, DwarfRegAlias<B30>;
+def Q31   : AArch64Reg<31, "q31", [D31, D31_HI], ["v31", ""]>, DwarfRegAlias<B31>;
 }
 
 def FPR8  : RegisterClass<"AArch64", [i8], 8, (sequence "B%u", 0, 31)> {
   let Size = 8;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::FPR8RegClassID, 0, 32>";
 }
 def FPR16 : RegisterClass<"AArch64", [f16, bf16, i16], 16, (sequence "H%u", 0, 31)> {
   let Size = 16;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::FPR16RegClassID, 0, 32>";
 }
 
 def FPR16_lo : RegisterClass<"AArch64", [f16], 16, (trunc FPR16, 16)> {
   let Size = 16;
 }
-def FPR32 : RegisterClass<"AArch64", [f32, i32], 32,(sequence "S%u", 0, 31)>;
+def FPR32 : RegisterClass<"AArch64", [f32, i32], 32,(sequence "S%u", 0, 31)> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::FPR32RegClassID, 0, 32>";
+}
 def FPR64 : RegisterClass<"AArch64", [f64, i64, v2f32, v1f64, v8i8, v4i16, v2i32,
                                       v1i64, v4f16, v4bf16],
-                                     64, (sequence "D%u", 0, 31)>;
+                                     64, (sequence "D%u", 0, 31)> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::FPR64RegClassID, 0, 32>";
+}
 def FPR64_lo : RegisterClass<"AArch64",
                              [v8i8, v4i16, v2i32, v1i64, v4f16, v4bf16, v2f32,
                               v1f64],
@@ -458,21 +528,27 @@ def FPR64_lo : RegisterClass<"AArch64",
 def FPR128 : RegisterClass<"AArch64",
                            [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, f128,
                             v8f16, v8bf16],
-                           128, (sequence "Q%u", 0, 31)>;
+                           128, (sequence "Q%u", 0, 31)> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::FPR128RegClassID, 0, 32>";
+}
 
 // The lower 16 vector registers.  Some instructions can only take registers
 // in this range.
 def FPR128_lo : RegisterClass<"AArch64",
                               [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, v8f16,
                                v8bf16],
-                              128, (trunc FPR128, 16)>;
+                              128, (trunc FPR128, 16)> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::FPR128RegClassID, 0, 16>";
+}
 
 // The lower 8 vector registers.  Some instructions can only take registers
 // in this range.
 def FPR128_0to7 : RegisterClass<"AArch64",
                                 [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, v8f16,
                                  v8bf16],
-                                128, (trunc FPR128, 8)>;
+                                128, (trunc FPR128, 8)> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::FPR128RegClassID, 0, 8>";
+}
 
 // Pairs, triples, and quads of 64-bit vector registers.
 def DSeqPairs : RegisterTuples<[dsub0, dsub1], [(rotl FPR64, 0), (rotl FPR64, 1)]>;
@@ -484,12 +560,15 @@ def DSeqQuads : RegisterTuples<[dsub0, dsub1, dsub2, dsub3],
                                 (rotl FPR64, 2), (rotl FPR64, 3)]>;
 def DD   : RegisterClass<"AArch64", [untyped], 64, (add DSeqPairs)> {
   let Size = 128;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::DDRegClassID, 0, 32>";
 }
 def DDD  : RegisterClass<"AArch64", [untyped], 64, (add DSeqTriples)> {
   let Size = 192;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::DDDRegClassID, 0, 32>";
 }
 def DDDD : RegisterClass<"AArch64", [untyped], 64, (add DSeqQuads)> {
   let Size = 256;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::DDDDRegClassID, 0, 32>";
 }
 
 // Pairs, triples, and quads of 128-bit vector registers.
@@ -502,12 +581,15 @@ def QSeqQuads : RegisterTuples<[qsub0, qsub1, qsub2, qsub3],
                                 (rotl FPR128, 2), (rotl FPR128, 3)]>;
 def QQ   : RegisterClass<"AArch64", [untyped], 128, (add QSeqPairs)> {
   let Size = 256;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::QQRegClassID, 0, 32>";
 }
 def QQQ  : RegisterClass<"AArch64", [untyped], 128, (add QSeqTriples)> {
   let Size = 384;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::QQQRegClassID, 0, 32>";
 }
 def QQQQ : RegisterClass<"AArch64", [untyped], 128, (add QSeqQuads)> {
   let Size = 512;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::QQQQRegClassID, 0, 32>";
 }
 
 
@@ -564,7 +646,7 @@ class TypedVecListRegOperand<RegisterClass Reg, int lanes, string eltsize>
                                                    # eltsize # "'>">;
 
 multiclass VectorList<int count, RegisterClass Reg64, RegisterClass Reg128> {
-  // With implicit types (probably on instruction instead). E.g. { v0, v1 }
+  // With implicit types (probably on instruction instead). E.g. { v0, v1 } or {v0, v2, v4}.
   def _64AsmOperand : AsmOperandClass {
     let Name = NAME # "64";
     let PredicateMethod = "isImplicitlyTypedVectorList<RegKind::NeonVector, " # count # ">";
@@ -583,6 +665,17 @@ multiclass VectorList<int count, RegisterClass Reg64, RegisterClass Reg128> {
 
   def "128" : RegisterOperand<Reg128, "printImplicitlyTypedVectorList"> {
     let ParserMatchClass = !cast<AsmOperandClass>(NAME # "_128AsmOperand");
+  }
+
+  // With implicit types (probably on instruction instead), consecutive registers. E.g. { v0, v1, v2 }
+  def _Consecutive128AsmOperand : AsmOperandClass {
+    let Name = NAME # "Consecutive128";
+    let PredicateMethod = "isImplicitlyTypedVectorList<RegKind::NeonVector, " # count # ", true>";
+    let RenderMethod = "addVectorListOperands<AArch64Operand::VecListIdx_QReg, " # count # ", true>";
+  }
+
+  def "Consecutive128" : RegisterOperand<Reg128, "printImplicitlyTypedVectorList"> {
+    let ParserMatchClass = !cast<AsmOperandClass>(NAME # "_Consecutive128AsmOperand");
   }
 
   // 64-bit register lists with explicit type.
@@ -820,39 +913,39 @@ let SubRegIndices = [psub] in {
 }
 
 // SVE variable-size vector registers
-let SubRegIndices = [zsub] in {
-def Z0    : AArch64Reg<0,   "z0",  [Q0]>, DwarfRegNum<[96]>;
-def Z1    : AArch64Reg<1,   "z1",  [Q1]>, DwarfRegNum<[97]>;
-def Z2    : AArch64Reg<2,   "z2",  [Q2]>, DwarfRegNum<[98]>;
-def Z3    : AArch64Reg<3,   "z3",  [Q3]>, DwarfRegNum<[99]>;
-def Z4    : AArch64Reg<4,   "z4",  [Q4]>, DwarfRegNum<[100]>;
-def Z5    : AArch64Reg<5,   "z5",  [Q5]>, DwarfRegNum<[101]>;
-def Z6    : AArch64Reg<6,   "z6",  [Q6]>, DwarfRegNum<[102]>;
-def Z7    : AArch64Reg<7,   "z7",  [Q7]>, DwarfRegNum<[103]>;
-def Z8    : AArch64Reg<8,   "z8",  [Q8]>, DwarfRegNum<[104]>;
-def Z9    : AArch64Reg<9,   "z9",  [Q9]>, DwarfRegNum<[105]>;
-def Z10   : AArch64Reg<10, "z10", [Q10]>, DwarfRegNum<[106]>;
-def Z11   : AArch64Reg<11, "z11", [Q11]>, DwarfRegNum<[107]>;
-def Z12   : AArch64Reg<12, "z12", [Q12]>, DwarfRegNum<[108]>;
-def Z13   : AArch64Reg<13, "z13", [Q13]>, DwarfRegNum<[109]>;
-def Z14   : AArch64Reg<14, "z14", [Q14]>, DwarfRegNum<[110]>;
-def Z15   : AArch64Reg<15, "z15", [Q15]>, DwarfRegNum<[111]>;
-def Z16   : AArch64Reg<16, "z16", [Q16]>, DwarfRegNum<[112]>;
-def Z17   : AArch64Reg<17, "z17", [Q17]>, DwarfRegNum<[113]>;
-def Z18   : AArch64Reg<18, "z18", [Q18]>, DwarfRegNum<[114]>;
-def Z19   : AArch64Reg<19, "z19", [Q19]>, DwarfRegNum<[115]>;
-def Z20   : AArch64Reg<20, "z20", [Q20]>, DwarfRegNum<[116]>;
-def Z21   : AArch64Reg<21, "z21", [Q21]>, DwarfRegNum<[117]>;
-def Z22   : AArch64Reg<22, "z22", [Q22]>, DwarfRegNum<[118]>;
-def Z23   : AArch64Reg<23, "z23", [Q23]>, DwarfRegNum<[119]>;
-def Z24   : AArch64Reg<24, "z24", [Q24]>, DwarfRegNum<[120]>;
-def Z25   : AArch64Reg<25, "z25", [Q25]>, DwarfRegNum<[121]>;
-def Z26   : AArch64Reg<26, "z26", [Q26]>, DwarfRegNum<[122]>;
-def Z27   : AArch64Reg<27, "z27", [Q27]>, DwarfRegNum<[123]>;
-def Z28   : AArch64Reg<28, "z28", [Q28]>, DwarfRegNum<[124]>;
-def Z29   : AArch64Reg<29, "z29", [Q29]>, DwarfRegNum<[125]>;
-def Z30   : AArch64Reg<30, "z30", [Q30]>, DwarfRegNum<[126]>;
-def Z31   : AArch64Reg<31, "z31", [Q31]>, DwarfRegNum<[127]>;
+let SubRegIndices = [zsub, zsub_hi] in {
+def Z0    : AArch64Reg<0,   "z0",  [Q0, Q0_HI]>, DwarfRegNum<[96]>;
+def Z1    : AArch64Reg<1,   "z1",  [Q1, Q1_HI]>, DwarfRegNum<[97]>;
+def Z2    : AArch64Reg<2,   "z2",  [Q2, Q2_HI]>, DwarfRegNum<[98]>;
+def Z3    : AArch64Reg<3,   "z3",  [Q3, Q3_HI]>, DwarfRegNum<[99]>;
+def Z4    : AArch64Reg<4,   "z4",  [Q4, Q4_HI]>, DwarfRegNum<[100]>;
+def Z5    : AArch64Reg<5,   "z5",  [Q5, Q5_HI]>, DwarfRegNum<[101]>;
+def Z6    : AArch64Reg<6,   "z6",  [Q6, Q6_HI]>, DwarfRegNum<[102]>;
+def Z7    : AArch64Reg<7,   "z7",  [Q7, Q7_HI]>, DwarfRegNum<[103]>;
+def Z8    : AArch64Reg<8,   "z8",  [Q8, Q8_HI]>, DwarfRegNum<[104]>;
+def Z9    : AArch64Reg<9,   "z9",  [Q9, Q9_HI]>, DwarfRegNum<[105]>;
+def Z10   : AArch64Reg<10, "z10", [Q10, Q10_HI]>, DwarfRegNum<[106]>;
+def Z11   : AArch64Reg<11, "z11", [Q11, Q11_HI]>, DwarfRegNum<[107]>;
+def Z12   : AArch64Reg<12, "z12", [Q12, Q12_HI]>, DwarfRegNum<[108]>;
+def Z13   : AArch64Reg<13, "z13", [Q13, Q13_HI]>, DwarfRegNum<[109]>;
+def Z14   : AArch64Reg<14, "z14", [Q14, Q14_HI]>, DwarfRegNum<[110]>;
+def Z15   : AArch64Reg<15, "z15", [Q15, Q15_HI]>, DwarfRegNum<[111]>;
+def Z16   : AArch64Reg<16, "z16", [Q16, Q16_HI]>, DwarfRegNum<[112]>;
+def Z17   : AArch64Reg<17, "z17", [Q17, Q17_HI]>, DwarfRegNum<[113]>;
+def Z18   : AArch64Reg<18, "z18", [Q18, Q18_HI]>, DwarfRegNum<[114]>;
+def Z19   : AArch64Reg<19, "z19", [Q19, Q19_HI]>, DwarfRegNum<[115]>;
+def Z20   : AArch64Reg<20, "z20", [Q20, Q20_HI]>, DwarfRegNum<[116]>;
+def Z21   : AArch64Reg<21, "z21", [Q21, Q21_HI]>, DwarfRegNum<[117]>;
+def Z22   : AArch64Reg<22, "z22", [Q22, Q22_HI]>, DwarfRegNum<[118]>;
+def Z23   : AArch64Reg<23, "z23", [Q23, Q23_HI]>, DwarfRegNum<[119]>;
+def Z24   : AArch64Reg<24, "z24", [Q24, Q24_HI]>, DwarfRegNum<[120]>;
+def Z25   : AArch64Reg<25, "z25", [Q25, Q25_HI]>, DwarfRegNum<[121]>;
+def Z26   : AArch64Reg<26, "z26", [Q26, Q26_HI]>, DwarfRegNum<[122]>;
+def Z27   : AArch64Reg<27, "z27", [Q27, Q27_HI]>, DwarfRegNum<[123]>;
+def Z28   : AArch64Reg<28, "z28", [Q28, Q28_HI]>, DwarfRegNum<[124]>;
+def Z29   : AArch64Reg<29, "z29", [Q29, Q29_HI]>, DwarfRegNum<[125]>;
+def Z30   : AArch64Reg<30, "z30", [Q30, Q30_HI]>, DwarfRegNum<[126]>;
+def Z31   : AArch64Reg<31, "z31", [Q31, Q31_HI]>, DwarfRegNum<[127]>;
 }
 
 // Enum describing the element size for destructive
@@ -886,16 +979,23 @@ class ZPRRegOp <string Suffix, AsmOperandClass C, ElementSizeEnum Size,
 //******************************************************************************
 
 // SVE predicate register classes.
-class PPRClass<int firstreg, int lastreg> : RegisterClass<
-                                  "AArch64",
+class PPRClass<int firstreg, int lastreg, int step = 1> : RegisterClass<"AArch64",
                                   [ nxv16i1, nxv8i1, nxv4i1, nxv2i1, nxv1i1 ], 16,
-                                  (sequence "P%u", firstreg, lastreg)> {
+                                  (sequence "P%u", firstreg, lastreg, step)> {
   let Size = 16;
 }
 
-def PPR    : PPRClass<0, 15>;
-def PPR_3b : PPRClass<0, 7>; // Restricted 3 bit SVE predicate register class.
-def PPR_p8to15 : PPRClass<8, 15>;
+def PPR    : PPRClass<0, 15> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::PPRRegClassID, 0, 16>";
+}
+def PPR_3b : PPRClass<0, 7> { // Restricted 3 bit SVE predicate register class.
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::PPRRegClassID, 0, 8>";
+}
+def PPR_p8to15 : PPRClass<8, 15> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::PNRRegClassID, 8, 8>";
+}
+
+def PPRMul2 : PPRClass<0, 14, 2>;
 
 class PPRAsmOperand <string name, string RegClass, int Width>: AsmOperandClass {
   let Name = "SVE" # name # "Reg";
@@ -930,7 +1030,9 @@ class PNRClass<int firstreg, int lastreg> : RegisterClass<
   let Size = 16;
 }
 
-def PNR        : PNRClass<0, 15>;
+def PNR        : PNRClass<0, 15> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::PNRRegClassID, 0, 16>";
+}
 def PNR_3b     : PNRClass<0, 7>;
 def PNR_p8to15 : PNRClass<8, 15>;
 
@@ -944,17 +1046,6 @@ class PNRAsmOperand<string name, string RegClass, int Width>: AsmOperandClass {
   let RenderMethod = "addRegOperands";
   let ParserMethod   = "tryParseSVEPredicateVector<RegKind::SVEPredicateAsCounter>";
 }
-
-let RenderMethod = "addPNRasPPRRegOperands" in {
-  def PNRasPPROpAny : PNRAsmOperand<"PNRasPPRPredicateAny", "PNR",  0>;
-  def PNRasPPROp8   : PNRAsmOperand<"PNRasPPRPredicateB",   "PNR",  8>;
-}
-
-class PNRasPPRRegOp<string Suffix, AsmOperandClass C, ElementSizeEnum Size,
-                RegisterClass RC> : SVERegOp<Suffix, C, Size, RC> {}
-
-def PNRasPPRAny : PNRasPPRRegOp<"",  PNRasPPROpAny, ElementSizeNone, PPR>;
-def PNRasPPR8   : PNRasPPRRegOp<"b", PNRasPPROp8,   ElementSizeB,    PPR>;
 
 def PNRAsmOpAny: PNRAsmOperand<"PNPredicateAny", "PNR", 0>;
 def PNRAsmOp8  : PNRAsmOperand<"PNPredicateB",   "PNR", 8>;
@@ -982,7 +1073,7 @@ class PNRP8to15RegOp<string Suffix, AsmOperandClass C, int Width, RegisterClass 
     : SVERegOp<Suffix, C, ElementSizeNone, RC> {
   let PrintMethod   = "printPredicateAsCounter<" # Width # ">";
   let EncoderMethod = "EncodePNR_p8to15";
-  let DecoderMethod = "DecodePNR_p8to15RegisterClass";
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::PNRRegClassID, 8, 8>";
 }
 
 def PNRAny_p8to15 : PNRP8to15RegOp<"",  PNRAsmAny_p8to15,  0,  PNR_p8to15>;
@@ -991,16 +1082,37 @@ def PNR16_p8to15  : PNRP8to15RegOp<"h", PNRAsmOp16_p8to15, 16, PNR_p8to15>;
 def PNR32_p8to15  : PNRP8to15RegOp<"s", PNRAsmOp32_p8to15, 32, PNR_p8to15>;
 def PNR64_p8to15  : PNRP8to15RegOp<"d", PNRAsmOp64_p8to15, 64, PNR_p8to15>;
 
-let Namespace = "AArch64" in {
-  def psub0 : SubRegIndex<16, -1>;
-  def psub1 : SubRegIndex<16, -1>;
+class PPRorPNRClass : RegisterClass<
+                                  "AArch64",
+                                  [ nxv16i1, nxv8i1, nxv4i1, nxv2i1, nxv1i1, aarch64svcount ], 16,
+                                  (add PPR, PNR)> {
+  let Size = 16;
 }
+
+class PPRorPNRAsmOperand<string name, string RegClass, int Width>: AsmOperandClass {
+  let Name = "SVE" # name # "Reg";
+  let PredicateMethod = "isSVEPredicateOrPredicateAsCounterRegOfWidth<"
+                            # Width # ", " # "AArch64::"
+                            # RegClass # "RegClassID>";
+  let DiagnosticType = "InvalidSVE" # name # "Reg";
+  let RenderMethod = "addPPRorPNRRegOperands";
+  let ParserMethod = "tryParseSVEPredicateOrPredicateAsCounterVector";
+}
+
+def PPRorPNR         : PPRorPNRClass {
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::PPRorPNRRegClassID, 0, 16>";
+}
+def PPRorPNRAsmOp8   : PPRorPNRAsmOperand<"PPRorPNRB", "PPRorPNR", 8>;
+def PPRorPNRAsmOpAny : PPRorPNRAsmOperand<"PPRorPNRAny", "PPRorPNR", 0>;
+def PPRorPNRAny      : PPRRegOp<"", PPRorPNRAsmOpAny, ElementSizeNone, PPRorPNR>;
+def PPRorPNR8        : PPRRegOp<"b", PPRorPNRAsmOp8, ElementSizeB, PPRorPNR>;
 
 // Pairs of SVE predicate vector registers.
 def PSeqPairs : RegisterTuples<[psub0, psub1], [(rotl PPR, 0), (rotl PPR, 1)]>;
 
 def PPR2 : RegisterClass<"AArch64", [untyped], 16, (add PSeqPairs)> {
   let Size = 32;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::PPR2RegClassID, 0, 16>";
 }
 
 class PPRVectorList<int ElementWidth, int NumRegs> : AsmOperandClass {
@@ -1038,10 +1150,11 @@ class PPRVectorListMul<int ElementWidth, int NumRegs> : PPRVectorList<ElementWid
   let DiagnosticType = "Invalid" # Name;
   let PredicateMethod =
       "isTypedVectorListMultiple<RegKind::SVEPredicateVector, " # NumRegs # ", 0, "
-                                                                # ElementWidth # ">";
+                                                                # ElementWidth #
+                                                                ", AArch64::PPRMul2RegClassID>";
 }
 
-let EncoderMethod = "EncodeRegAsMultipleOf<2>",
+let EncoderMethod = "EncodeRegMul_MinMax<2, 0, 14>",
     DecoderMethod = "DecodePPR2Mul2RegisterClass" in {
   def PP_b_mul_r : RegisterOperand<PPR2Mul2, "printTypedVectorList<0,'b'>"> {
     let ParserMatchClass = PPRVectorListMul<8, 2>;
@@ -1061,22 +1174,32 @@ let EncoderMethod = "EncodeRegAsMultipleOf<2>",
 }  // end let EncoderMethod/DecoderMethod
 
 
-//******************************************************************************
-
+//===----------------------------------------------------------------------===//
 // SVE vector register classes
-class ZPRClass<int lastreg> : RegisterClass<"AArch64",
+class ZPRClass<int firstreg, int lastreg, int step = 1> : RegisterClass<"AArch64",
                                             [nxv16i8, nxv8i16, nxv4i32, nxv2i64,
                                              nxv2f16, nxv4f16, nxv8f16,
                                              nxv2bf16, nxv4bf16, nxv8bf16,
                                              nxv2f32, nxv4f32,
                                              nxv2f64],
-                                            128, (sequence "Z%u", 0, lastreg)> {
+                                            128, (sequence "Z%u", firstreg, lastreg, step)> {
   let Size = 128;
 }
 
-def ZPR    : ZPRClass<31>;
-def ZPR_4b : ZPRClass<15>; // Restricted 4 bit SVE vector register class.
-def ZPR_3b : ZPRClass<7>;  // Restricted 3 bit SVE vector register class.
+def ZPRMul2    : ZPRClass<0,  30, 2>;
+def ZPRMul4    : ZPRClass<0,  28, 4>;
+def ZPRMul2_Lo : ZPRClass<0,  14, 2>;
+def ZPRMul2_Hi : ZPRClass<16, 30, 2>;
+
+def ZPR    : ZPRClass<0, 31> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPRRegClassID, 0, 32>";
+}
+def ZPR_4b : ZPRClass<0, 15> { // Restricted 4 bit SVE vector register class.
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPRRegClassID, 0, 16>";
+}
+def ZPR_3b : ZPRClass<0, 7> {  // Restricted 3 bit SVE vector register class.
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPRRegClassID, 0, 8>";
+}
 
 class ZPRAsmOperand<string name, int Width, string RegClassSuffix = "">
     : AsmOperandClass {
@@ -1122,6 +1245,39 @@ def ZPR4b16 : ZPRRegOp<"h", ZPRAsmOp4b16, ElementSizeH, ZPR_4b>;
 def ZPR4b32 : ZPRRegOp<"s", ZPRAsmOp4b32, ElementSizeS, ZPR_4b>;
 def ZPR4b64 : ZPRRegOp<"d", ZPRAsmOp4b64, ElementSizeD, ZPR_4b>;
 
+class ZPRMul2_MinToMaxRegOp<string Suffix, AsmOperandClass C, int  Min, int Max, ElementSizeEnum  Width, RegisterClass RC>
+    : ZPRRegOp<Suffix, C, Width, RC> {
+  let EncoderMethod = "EncodeRegMul_MinMax<2," # Min # ", " # Max # ">";
+  let DecoderMethod = "DecodeZPRMul2_MinMax<" # Min # ", " # Max # ">";
+}
+
+def ZPRMul2AsmOp8_Lo  : ZPRAsmOperand<"VectorB_Lo",  8, "Mul2_Lo">;
+def ZPRMul2AsmOp8_Hi  : ZPRAsmOperand<"VectorB_Hi",  8, "Mul2_Hi">;
+def ZPRMul2AsmOp16_Lo : ZPRAsmOperand<"VectorH_Lo", 16, "Mul2_Lo">;
+def ZPRMul2AsmOp16_Hi : ZPRAsmOperand<"VectorH_Hi", 16, "Mul2_Hi">;
+def ZPRMul2AsmOp32_Lo : ZPRAsmOperand<"VectorS_Lo", 32, "Mul2_Lo">;
+def ZPRMul2AsmOp32_Hi : ZPRAsmOperand<"VectorS_Hi", 32, "Mul2_Hi">;
+def ZPRMul2AsmOp64_Lo : ZPRAsmOperand<"VectorD_Lo", 64, "Mul2_Lo">;
+def ZPRMul2AsmOp64_Hi : ZPRAsmOperand<"VectorD_Hi", 64, "Mul2_Hi">;
+
+def ZPR_K : RegisterClass<"AArch64", [untyped], 128,
+                          (add Z20, Z21, Z22, Z23, Z28, Z29, Z30, Z31)>;
+
+def ZK : RegisterOperand<ZPR_K, "printSVERegOp<>">{
+  let EncoderMethod = "EncodeZK";
+  let DecoderMethod = "DecodeZK";
+  let ParserMatchClass = ZPRAsmOperand<"Vector_20to23or28to31", 0, "_K">;
+}
+
+def ZPR8Mul2_Lo  : ZPRMul2_MinToMaxRegOp<"b", ZPRMul2AsmOp8_Lo,   0, 14, ElementSizeB, ZPRMul2_Lo>;
+def ZPR8Mul2_Hi  : ZPRMul2_MinToMaxRegOp<"b", ZPRMul2AsmOp8_Hi,  16, 30, ElementSizeB, ZPRMul2_Hi>;
+def ZPR16Mul2_Lo : ZPRMul2_MinToMaxRegOp<"h", ZPRMul2AsmOp16_Lo,  0, 14, ElementSizeH, ZPRMul2_Lo>;
+def ZPR16Mul2_Hi : ZPRMul2_MinToMaxRegOp<"h", ZPRMul2AsmOp16_Hi, 16, 30, ElementSizeH, ZPRMul2_Hi>;
+def ZPR32Mul2_Lo : ZPRMul2_MinToMaxRegOp<"s", ZPRMul2AsmOp32_Lo,  0, 14, ElementSizeS, ZPRMul2_Lo>;
+def ZPR32Mul2_Hi : ZPRMul2_MinToMaxRegOp<"s", ZPRMul2AsmOp32_Hi, 16, 30, ElementSizeS, ZPRMul2_Hi>;
+def ZPR64Mul2_Lo : ZPRMul2_MinToMaxRegOp<"d", ZPRMul2AsmOp64_Lo,  0, 14, ElementSizeD, ZPRMul2_Lo>;
+def ZPR64Mul2_Hi : ZPRMul2_MinToMaxRegOp<"d", ZPRMul2AsmOp64_Hi, 16, 30, ElementSizeD, ZPRMul2_Hi>;
+
 class FPRasZPR<int Width> : AsmOperandClass{
   let Name = "FPR" # Width # "asZPR";
   let PredicateMethod = "isFPRasZPR<AArch64::FPR" # Width # "RegClassID>";
@@ -1139,13 +1295,6 @@ def FPR32asZPR  : FPRasZPROperand<32>;
 def FPR64asZPR  : FPRasZPROperand<64>;
 def FPR128asZPR : FPRasZPROperand<128>;
 
-let Namespace = "AArch64" in {
-  def zsub0 : SubRegIndex<128, -1>;
-  def zsub1 : SubRegIndex<128, -1>;
-  def zsub2 : SubRegIndex<128, -1>;
-  def zsub3 : SubRegIndex<128, -1>;
-}
-
 // Pairs, triples, and quads of SVE vector registers.
 def ZSeqPairs   : RegisterTuples<[zsub0, zsub1], [(rotl ZPR, 0), (rotl ZPR, 1)]>;
 def ZSeqTriples : RegisterTuples<[zsub0, zsub1, zsub2], [(rotl ZPR, 0), (rotl ZPR, 1), (rotl ZPR, 2)]>;
@@ -1153,12 +1302,15 @@ def ZSeqQuads   : RegisterTuples<[zsub0, zsub1, zsub2, zsub3], [(rotl ZPR, 0), (
 
 def ZPR2   : RegisterClass<"AArch64", [untyped], 128, (add ZSeqPairs)>  {
   let Size = 256;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPR2RegClassID, 0, 32>";
 }
 def ZPR3  : RegisterClass<"AArch64", [untyped], 128, (add ZSeqTriples)> {
   let Size = 384;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPR3RegClassID, 0, 32>";
 }
 def ZPR4 : RegisterClass<"AArch64", [untyped], 128, (add ZSeqQuads)> {
   let Size = 512;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPR4RegClassID, 0, 32>";
 }
 
 class ZPRVectorList<int ElementWidth, int NumRegs> : AsmOperandClass {
@@ -1258,63 +1410,116 @@ def ZPR4Mul4 : RegisterClass<"AArch64", [untyped], 128, (add (decimate ZSeqQuads
   let Size = 512;
 }
 
-class ZPRVectorListMul<int ElementWidth, int NumRegs> : ZPRVectorList<ElementWidth, NumRegs> {
-  let Name = "SVEVectorListMul" # NumRegs # "x" # ElementWidth;
+class ZPRVectorListMul<int ElementWidth, int NumRegs, string RegClassSuffix = "">
+  : ZPRVectorList<ElementWidth, NumRegs> {
+  let Name = "SVEVectorList" # NumRegs # "x" # ElementWidth # RegClassSuffix;
   let DiagnosticType = "Invalid" # Name;
   let PredicateMethod =
-      "isTypedVectorListMultiple<RegKind::SVEDataVector, " # NumRegs # ", 0, "
-                                                           # ElementWidth # ">";
+      "isTypedVectorListMultiple<RegKind::SVEDataVector, "
+                                 # NumRegs # ", 0, "
+                                 # ElementWidth #  ", "
+                                 # "AArch64::ZPR" # RegClassSuffix # "RegClassID" # ">";
 }
 
-let EncoderMethod = "EncodeRegAsMultipleOf<2>",
-    DecoderMethod = "DecodeZPR2Mul2RegisterClass" in {
+let EncoderMethod = "EncodeRegMul_MinMax<2, 0, 30>",
+    DecoderMethod = "DecodeZPR2Mul2RegisterClass<0, 30>" in {
   def ZZ_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,0>"> {
-    let ParserMatchClass = ZPRVectorListMul<0, 2>;
+    let ParserMatchClass = ZPRVectorListMul<0, 2, "Mul2">;
   }
 
   def ZZ_b_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,'b'>"> {
-    let ParserMatchClass = ZPRVectorListMul<8, 2>;
+    let ParserMatchClass = ZPRVectorListMul<8, 2, "Mul2">;
   }
 
   def ZZ_h_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,'h'>"> {
-    let ParserMatchClass = ZPRVectorListMul<16, 2>;
+    let ParserMatchClass = ZPRVectorListMul<16, 2, "Mul2">;
   }
 
   def ZZ_s_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,'s'>"> {
-    let ParserMatchClass = ZPRVectorListMul<32, 2>;
+    let ParserMatchClass = ZPRVectorListMul<32, 2, "Mul2">;
   }
 
   def ZZ_d_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,'d'>"> {
-    let ParserMatchClass = ZPRVectorListMul<64, 2>;
+    let ParserMatchClass = ZPRVectorListMul<64, 2, "Mul2">;
   }
 
   def ZZ_q_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,'q'>"> {
-    let ParserMatchClass = ZPRVectorListMul<128, 2>;
+    let ParserMatchClass = ZPRVectorListMul<128, 2, "Mul2">;
   }
 } // end let EncoderMethod/DecoderMethod
 
-let EncoderMethod = "EncodeRegAsMultipleOf<4>",
+let EncoderMethod = "EncodeRegMul_MinMax<4, 0, 28>",
     DecoderMethod = "DecodeZPR4Mul4RegisterClass" in {
   def ZZZZ_b_mul_r : RegisterOperand<ZPR4Mul4, "printTypedVectorList<0,'b'>"> {
-    let ParserMatchClass = ZPRVectorListMul<8, 4>;
+    let ParserMatchClass = ZPRVectorListMul<8, 4, "Mul4">;
   }
 
   def ZZZZ_h_mul_r : RegisterOperand<ZPR4Mul4, "printTypedVectorList<0,'h'>"> {
-    let ParserMatchClass = ZPRVectorListMul<16, 4>;
+    let ParserMatchClass = ZPRVectorListMul<16, 4, "Mul4">;
   }
 
   def ZZZZ_s_mul_r : RegisterOperand<ZPR4Mul4, "printTypedVectorList<0,'s'>"> {
-    let ParserMatchClass = ZPRVectorListMul<32, 4>;
+    let ParserMatchClass = ZPRVectorListMul<32, 4, "Mul4">;
   }
 
   def ZZZZ_d_mul_r : RegisterOperand<ZPR4Mul4, "printTypedVectorList<0,'d'>"> {
-    let ParserMatchClass = ZPRVectorListMul<64, 4>;
+    let ParserMatchClass = ZPRVectorListMul<64, 4, "Mul4">;
   }
 
   def ZZZZ_q_mul_r : RegisterOperand<ZPR4Mul4, "printTypedVectorList<0,'q'>"> {
-    let ParserMatchClass = ZPRVectorListMul<128, 4>;
+    let ParserMatchClass = ZPRVectorListMul<128, 4, "Mul4">;
   }
 } // end let EncoderMethod/DecoderMethod
+
+// Pairs of consecutive ZPR, starting with an even register, split into
+// Lo=0-14 and Hi=16-30.
+def ZPR2Mul2_Lo : RegisterClass<"AArch64", [untyped], 128,
+                                (trunc (decimate ZSeqPairs, 2), 8)>  {
+  let Size = 256;
+}
+
+def ZPR2Mul2_Hi : RegisterClass<"AArch64", [untyped], 128,
+                                (trunc (rotr (decimate ZSeqPairs, 2), 8), 8)>  {
+  let Size = 256;
+}
+
+let EncoderMethod = "EncodeRegMul_MinMax<2, 0, 14>",
+    DecoderMethod = "DecodeZPR2Mul2RegisterClass<0, 16>" in {
+  def ZZ_b_mul_r_Lo : RegisterOperand<ZPR2Mul2_Lo, "printTypedVectorList<0,'b'>"> {
+    let ParserMatchClass = ZPRVectorListMul<8, 2, "Mul2_Lo">;
+  }
+
+  def ZZ_h_mul_r_Lo : RegisterOperand<ZPR2Mul2_Lo, "printTypedVectorList<0,'h'>"> {
+    let ParserMatchClass = ZPRVectorListMul<16, 2, "Mul2_Lo">;
+  }
+
+  def ZZ_s_mul_r_Lo : RegisterOperand<ZPR2Mul2_Lo, "printTypedVectorList<0,'s'>"> {
+    let ParserMatchClass = ZPRVectorListMul<32, 2, "Mul2_Lo">;
+  }
+
+  def ZZ_d_mul_r_Lo : RegisterOperand<ZPR2Mul2_Lo, "printTypedVectorList<0,'d'>"> {
+    let ParserMatchClass = ZPRVectorListMul<64, 2, "Mul2_Lo">;
+  }
+}
+
+let EncoderMethod = "EncodeRegMul_MinMax<2, 16, 30>",
+    DecoderMethod = "DecodeZPR2Mul2RegisterClass<16, 31>" in {
+  def ZZ_b_mul_r_Hi : RegisterOperand<ZPR2Mul2_Hi, "printTypedVectorList<0,'b'>"> {
+    let ParserMatchClass = ZPRVectorListMul<8, 2, "Mul2_Hi">;
+  }
+
+  def ZZ_h_mul_r_Hi : RegisterOperand<ZPR2Mul2_Hi, "printTypedVectorList<0,'h'>"> {
+    let ParserMatchClass = ZPRVectorListMul<16, 2, "Mul2_Hi">;
+  }
+
+  def ZZ_s_mul_r_Hi : RegisterOperand<ZPR2Mul2_Hi, "printTypedVectorList<0,'s'>"> {
+    let ParserMatchClass = ZPRVectorListMul<32, 2, "Mul2_Hi">;
+  }
+
+  def ZZ_d_mul_r_Hi : RegisterOperand<ZPR2Mul2_Hi, "printTypedVectorList<0,'d'>"> {
+    let ParserMatchClass = ZPRVectorListMul<64, 2, "Mul2_Hi">;
+  }
+ } // end let EncoderMethod/DecoderMethod
 
 // SME2 strided multi-vector operands
 
@@ -1356,10 +1561,12 @@ def ZStridedQuadsHi : RegisterTuples<[zsub0, zsub1, zsub2, zsub3], [
 def ZPR2Strided : RegisterClass<"AArch64", [untyped], 128,
                                 (add ZStridedPairsLo, ZStridedPairsHi)>  {
   let Size = 256;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPR2StridedRegClassID, 0, 16>";
 }
 def ZPR4Strided : RegisterClass<"AArch64", [untyped], 128,
                                 (add ZStridedQuadsLo, ZStridedQuadsHi)>  {
   let Size = 512;
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPR4StridedRegClassID, 0, 8>";
 }
 
 def ZPR2StridedOrContiguous : RegisterClass<"AArch64", [untyped], 128,
@@ -1378,7 +1585,7 @@ class ZPRVectorListStrided<int ElementWidth, int NumRegs, int Stride>
 }
 
 let EncoderMethod = "EncodeZPR2StridedRegisterClass",
-    DecoderMethod = "DecodeZPR2StridedRegisterClass" in {
+    DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPR2StridedRegClassID, 0, 16>" in {
   def ZZ_b_strided
       : RegisterOperand<ZPR2Strided, "printTypedVectorList<0, 'b'>"> {
     let ParserMatchClass = ZPRVectorListStrided<8, 2, 8>;
@@ -1416,7 +1623,7 @@ def ZPR4StridedOrContiguous : RegisterClass<"AArch64", [untyped], 128,
 }
 
 let EncoderMethod = "EncodeZPR4StridedRegisterClass",
-    DecoderMethod = "DecodeZPR4StridedRegisterClass" in {
+    DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPR4StridedRegClassID, 0, 16>" in {
   def ZZZZ_b_strided
       : RegisterOperand<ZPR4Strided, "printTypedVectorList<0,'b'>"> {
     let ParserMatchClass = ZPRVectorListStrided<8, 4, 4>;
@@ -1751,9 +1958,11 @@ def MatrixTileList : MatrixTileListOperand<>;
 
 def MatrixIndexGPR32_8_11 : RegisterClass<"AArch64", [i32], 32, (sequence "W%u", 8, 11)> {
    let DiagnosticType = "InvalidMatrixIndexGPR32_8_11";
+   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::MatrixIndexGPR32_8_11RegClassID, 0, 4>";
 }
 def MatrixIndexGPR32_12_15 : RegisterClass<"AArch64", [i32], 32, (sequence "W%u", 12, 15)> {
   let DiagnosticType = "InvalidMatrixIndexGPR32_12_15";
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::MatrixIndexGPR32_12_15RegClassID, 0, 4>";
 }
 def MatrixIndexGPR32Op8_11 : RegisterOperand<MatrixIndexGPR32_8_11> {
   let EncoderMethod = "encodeMatrixIndexGPR32<AArch64::W8>";
@@ -1779,6 +1988,15 @@ def svcr_op : Operand<i32>, TImmLeaf<i32, [{
       return false;
     return AArch64SVCR::lookupSVCRByEncoding(MCOp.getImm()) != nullptr;
   }];
+}
+
+let isAllocatable = 0, GeneratePressureSet = 0 in {
+  def W_HI_DummyRC : RegisterClass<"AArch64", [untyped], 0, (add (sequence "W%u_HI", 0, 30), WZR_HI, WSP_HI)>;
+  def B_HI_DummyRC : RegisterClass<"AArch64", [untyped], 0, (sequence "B%u_HI", 0, 31)>;
+  def H_HI_DummyRC : RegisterClass<"AArch64", [untyped], 0, (sequence "H%u_HI", 0, 31)>;
+  def S_HI_DummyRC : RegisterClass<"AArch64", [untyped], 0, (sequence "S%u_HI", 0, 31)>;
+  def D_HI_DummyRC : RegisterClass<"AArch64", [untyped], 0, (sequence "D%u_HI", 0, 31)>;
+  def Q_HI_DummyRC : RegisterClass<"AArch64", [untyped], 0, (sequence "Q%u_HI", 0, 31)>;
 }
 
 //===----------------------------------------------------------------------===//

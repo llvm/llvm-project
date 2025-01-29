@@ -37,6 +37,7 @@ func.func @_QPmaxval2(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"
 // CHECK:           %[[ARG0:.*]]: !fir.box<!fir.array<?x?xi32>>
 // CHECK:           %[[ARG1:.*]]: !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[ARG2:.*]]: !fir.ref<index>
+// CHECK-DAG:     %[[TRUE:.*]] = arith.constant true
 // CHECK-DAG:     %[[ARRAY:.*]]:2 = hlfir.declare %[[ARG0]]
 // CHECK-DAG:     %[[RES:.*]]:2 = hlfir.declare %[[ARG1]]
 // CHECK-DAG:     %[[DIM_VAR:.*]]:2 = hlfir.declare %[[ARG2]]
@@ -55,7 +56,7 @@ func.func @_QPmaxval2(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"
 // CHECK-DAG:     %[[RET_ARG:.*]] = fir.convert %[[RET_BOX]]
 // CHECK-DAG:     %[[ARRAY_ARG:.*]] = fir.convert %[[ARRAY]]#1 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<none>
 // CHECK-DAG:     %[[MASK_ARG:.*]] = fir.convert %[[MASK]] : (!fir.box<i1>) -> !fir.box<none>
-// CHECK:         %[[NONE:.*]] = fir.call @_FortranAMaxvalDim(%[[RET_ARG]], %[[ARRAY_ARG]], %[[DIM]], %[[LOC_STR:.*]], %[[LOC_N:.*]], %[[MASK_ARG]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>) -> none
+// CHECK:         fir.call @_FortranAMaxvalDim(%[[RET_ARG]], %[[ARRAY_ARG]], %[[DIM]], %[[LOC_STR:.*]], %[[LOC_N:.*]], %[[MASK_ARG]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>) -> ()
 
 // CHECK:         %[[RET:.*]] = fir.load %[[RET_BOX]]
 // CHECK:         %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[RET]]
@@ -63,7 +64,6 @@ func.func @_QPmaxval2(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"
 // CHECK-NEXT:    %[[SHIFT:.*]] = fir.shape_shift %[[BOX_DIMS]]#0, %[[BOX_DIMS]]#1
 // TODO: fix alias analysis in hlfir.assign bufferization
 // CHECK-NEXT:    %[[TMP:.*]]:2 = hlfir.declare %[[ADDR]](%[[SHIFT]]) {uniq_name = ".tmp.intrinsic_result"}
-// CHECK:         %[[TRUE:.*]] = arith.constant true
 // CHECK:         %[[ASEXPR:.*]] = hlfir.as_expr %[[TMP]]#0 move %[[TRUE]] : (!fir.box<!fir.array<?xi32>>, i1) -> !hlfir.expr<?xi32>
 // CHECK:         hlfir.assign %[[ASEXPR]] to %[[RES]]#0
 // CHECK:         hlfir.destroy %[[ASEXPR]]
@@ -175,7 +175,7 @@ func.func @_QPmaxval5(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_name = "s"})
 // CHECK-DAG:     %[[RET_ARG:.*]] = fir.convert %[[RET_BOX]]
 // CHECK-DAG:     %[[ARRAY_ARG:.*]] = fir.convert %[[ARRAY_BOX]] : (!fir.box<!fir.array<2x2xi32>>) -> !fir.box<none>
 // CHECK-DAG:     %[[MASK_ARG:.*]] = fir.convert %[[MASK_BOX]] : (!fir.box<!fir.logical<4>>) -> !fir.box<none>
-// CHECK:         %[[NONE:.*]] = fir.call @_FortranAMaxvalDim(%[[RET_ARG]], %[[ARRAY_ARG]], %[[DIM]], %[[LOC_STR:.*]], %[[LOC_N:.*]], %[[MASK_ARG]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>) -> none
+// CHECK:         fir.call @_FortranAMaxvalDim(%[[RET_ARG]], %[[ARRAY_ARG]], %[[DIM]], %[[LOC_STR:.*]], %[[LOC_N:.*]], %[[MASK_ARG]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>) -> ()
 
 // simple one argument maxval for character
 func.func @_QPmaxval6(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_name = "a"}, %arg1: !fir.boxchar<1> {fir.bindc_name = "s"}) {
@@ -190,6 +190,7 @@ func.func @_QPmaxval6(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_n
 // CHECK-LABEL: func.func @_QPmaxval6(
 // CHECK:           %[[ARG0:.*]]: !fir.box<!fir.array<?x!fir.char<1,?>>>
 // CHECK:           %[[ARG1:.*]]: !fir.boxchar<1>
+// CHECK-DAG:     %[[TRUE:.*]] = arith.constant true
 // CHECK-DAG:     %[[ARRAY:.*]]:2 = hlfir.declare %[[ARG0]]
 // CHECK-DAG:     %[[UNBOXED:.*]]:2 = fir.unboxchar %[[ARG1]]
 // CHECK-DAG:     %[[RES:.*]]:2 = hlfir.declare %[[UNBOXED]]#0 typeparams %[[UNBOXED]]#1
@@ -204,13 +205,12 @@ func.func @_QPmaxval6(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_n
 // CHECK-DAG:     %[[RET_ARG:.*]] = fir.convert %[[RET_BOX]]
 // CHECK-DAG:     %[[ARRAY_ARG:.*]] = fir.convert %[[ARRAY]]#1 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.box<none>
 // CHECK-DAG:     %[[MASK_ARG:.*]] = fir.convert %[[MASK]] : (!fir.box<i1>) -> !fir.box<none>
-// CHECK:         %[[NONE:.*]] = fir.call @_FortranAMaxvalCharacter(%[[RET_ARG]], %[[ARRAY_ARG]], %[[LOC_STR:.*]], %[[LOC_N:.*]], %[[MASK_ARG]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32, !fir.box<none>) -> none
+// CHECK:         fir.call @_FortranAMaxvalCharacter(%[[RET_ARG]], %[[ARRAY_ARG]], %[[LOC_STR:.*]], %[[LOC_N:.*]], %[[MASK_ARG]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32, !fir.box<none>) -> ()
 
 // CHECK:         %[[RET:.*]] = fir.load %[[RET_BOX]]
 // CHECK:         %[[BOX_ELESIZE:.*]] = fir.box_elesize %[[RET]]
 // CHECK-NEXT:    %[[ADDR:.*]] = fir.box_addr %[[RET]]
 // CHECK-NEXT:    %[[TMP:.*]]:2 = hlfir.declare %[[ADDR]] typeparams %[[BOX_ELESIZE]] {uniq_name = ".tmp.intrinsic_result"}
-// CHECK:         %[[TRUE:.*]] = arith.constant true
 // CHECK:         %[[ASEXPR:.*]] = hlfir.as_expr %[[TMP]]#0 move %[[TRUE]] : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
 // CHECK:         hlfir.assign %[[ASEXPR]] to %[[RES]]#0
 // CHECK:         hlfir.destroy %[[ASEXPR]]

@@ -44,7 +44,6 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
@@ -521,8 +520,8 @@ bool X86AvoidSFBPass::alias(const MachineMemOperand &Op1,
     return true;
 
   int64_t MinOffset = std::min(Op1.getOffset(), Op2.getOffset());
-  int64_t Overlapa = Op1.getSize() + Op1.getOffset() - MinOffset;
-  int64_t Overlapb = Op2.getSize() + Op2.getOffset() - MinOffset;
+  int64_t Overlapa = Op1.getSize().getValue() + Op1.getOffset() - MinOffset;
+  int64_t Overlapb = Op2.getSize().getValue() + Op2.getOffset() - MinOffset;
 
   return !AA->isNoAlias(
       MemoryLocation(Op1.getValue(), Overlapa, Op1.getAAInfo()),
@@ -688,7 +687,7 @@ bool X86AvoidSFBPass::runOnMachineFunction(MachineFunction &MF) {
           !isRelevantAddressingMode(PBInst) || !PBInst->hasOneMemOperand())
         continue;
       int64_t PBstDispImm = getDispOperand(PBInst).getImm();
-      unsigned PBstSize = (*PBInst->memoperands_begin())->getSize();
+      unsigned PBstSize = (*PBInst->memoperands_begin())->getSize().getValue();
       // This check doesn't cover all cases, but it will suffice for now.
       // TODO: take branch probability into consideration, if the blocking
       // store is in an unreached block, breaking the memcopy could lose

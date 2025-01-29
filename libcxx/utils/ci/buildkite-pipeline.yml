@@ -1,10 +1,10 @@
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 
 #
 # This file describes the various pre-commit CI bots used to test libc++.
@@ -17,18 +17,6 @@
 # goal being to reduce the load on testers when a commit is known to fail.
 #
 
-# The Linux CI runners use the nightly ToT build provided by the Docker image.
-# (Note the image isn't updated daily.) The LLVM_HEAD_VERSION contains that
-# version number. The Linux CI runners for GCC use the latest stable version.
-# Theses numbers are available in all runners, making it easier to update the
-# version number.
-env:
-    # LLVM POST-BRANCH bump version
-    # LLVM POST-BRANCH add compiler test for ToT - 1, e.g. "Clang 17"
-    # LLVM RELEASE bump remove compiler ToT - 3, e.g. "Clang 15"
-    LLVM_HEAD_VERSION: "18"   # Used compiler, update POST-BRANCH.
-    GCC_STABLE_VERSION: "13"
-
 definitions:
   _common: &common
     timeout_in_minutes: 120
@@ -40,139 +28,11 @@ definitions:
       - "**/test-results.xml"
       - "**/*.abilist"
       - "**/crash_diagnostics/*"
-
-environment_definitions:
-  _common_env: &common_env
-      ENABLE_CLANG_TIDY: "On"
-      LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-${LLVM_HEAD_VERSION}"
-      CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
-      CC: clang-${LLVM_HEAD_VERSION}
-      CXX: clang++-${LLVM_HEAD_VERSION}
-      CMAKE: /opt/bin/cmake
-
-  _absolute_path_clang: &absolute_path_clang
-    # Note modules require and absolute path for clang-scan-deps
-    # https://github.com/llvm/llvm-project/issues/61006
-    CC: /usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang
-    CXX: /usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang++
-
+      - "**/CMakeConfigureLog.yaml"
+      - "**/CMakeError.log"
+      - "**/CMakeOutput.log"
 
 steps:
-- group: ':windows: Windows'
-  steps:
-  - label: Clang-cl (DLL)
-    command: bash libcxx/utils/ci/run-buildbot clang-cl-dll
-    agents:
-      queue: windows
-    <<: *common
-
-  - label: Clang-cl (Static)
-    command: bash libcxx/utils/ci/run-buildbot clang-cl-static
-    agents:
-      queue: windows
-    <<: *common
-
-  - label: Clang-cl (no vcruntime exceptions)
-    command: bash libcxx/utils/ci/run-buildbot clang-cl-no-vcruntime
-    <<: *common
-    agents:
-      queue: windows
-
-  - label: Clang-cl (Debug mode)
-    command: bash libcxx/utils/ci/run-buildbot clang-cl-debug
-    agents:
-      queue: windows
-    <<: *common
-
-  - label: Clang-cl (Static CRT)
-    command: bash libcxx/utils/ci/run-buildbot clang-cl-static-crt
-    agents:
-      queue: windows
-    <<: *common
-
-  - label: MinGW (DLL, x86_64)
-    command: bash libcxx/utils/ci/run-buildbot mingw-dll
-    agents:
-      queue: windows
-    <<: *common
-
-  - label: MinGW (Static, x86_64)
-    command: bash libcxx/utils/ci/run-buildbot mingw-static
-    agents:
-      queue: windows
-    <<: *common
-
-  - label: MinGW (DLL, i686)
-    command: bash libcxx/utils/ci/run-buildbot mingw-dll-i686
-    agents:
-      queue: windows
-    <<: *common
-
-- group: ':mac: Apple'
-  steps:
-  - label: MacOS x86_64
-    command: libcxx/utils/ci/run-buildbot generic-cxx23
-    agents:
-      queue: libcxx-builders
-      os: macos
-      arch: x86_64
-    <<: *common
-
-  - label: MacOS arm64
-    command: libcxx/utils/ci/run-buildbot generic-cxx23
-    agents:
-      queue: libcxx-builders
-      os: macos
-      arch: arm64
-    <<: *common
-
-  - label: MacOS with Modules
-    command: libcxx/utils/ci/run-buildbot generic-modules
-    agents:
-      queue: libcxx-builders
-      os: macos
-    <<: *common
-
-  - label: MacOS with C++03
-    command: libcxx/utils/ci/run-buildbot generic-cxx03
-    agents:
-      queue: libcxx-builders
-      os: macos
-    <<: *common
-
-    # Build with the configuration we use to generate libc++.dylib on Apple platforms
-  - label: Apple system
-    command: libcxx/utils/ci/run-buildbot apple-system
-    agents:
-      queue: libcxx-builders
-      os: macos
-      arch: arm64 # This can technically run on any architecture, but we have more resources on arm64 so we pin this job to arm64
-    <<: *common
-
-  - label: Apple back-deployment macosx10.13
-    command: libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.13
-    agents:
-      queue: libcxx-builders
-      os: macos
-      arch: x86_64 # We need to use x86_64 for back-deployment CI on this target since macOS didn't support arm64 back then
-    <<: *common
-
-  - label: Apple back-deployment macosx10.15
-    command: libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.15
-    agents:
-      queue: libcxx-builders
-      os: macos
-      arch: x86_64 # We need to use x86_64 for back-deployment CI on this target since macOS didn't support arm64 back then
-    <<: *common
-
-  - label: Apple back-deployment with hardening enabled
-    command: libcxx/utils/ci/run-buildbot apple-system-backdeployment-hardened-11.0
-    agents:
-      queue: libcxx-builders
-      os: macos
-      arch: x86_64 # TODO: Remove this once we are able to run back-deployment on arm64 again, since this isn't x86_64 specific
-    <<: *common
-
 - group: ARM
   steps:
   - label: AArch64
@@ -255,18 +115,19 @@ steps:
       os: aix
     <<: *common
 
-- group: ':freebsd: FreeBSD'
-  steps:
-  - label: FreeBSD 13 amd64
-    command: libcxx/utils/ci/run-buildbot generic-cxx23
-    env:
-      CC: clang16
-      CXX: clang++16
-      ENABLE_STD_MODULES: 'Off'
-    agents:
-      queue: libcxx-builders
-      os: freebsd
-    <<: *common
+# TODO: Re-enable this when the FreeBSD runners are back online
+#       https://github.com/llvm/llvm-project/issues/117780
+# - group: ':freebsd: FreeBSD'
+#   steps:
+#   - label: FreeBSD 13 amd64
+#     command: libcxx/utils/ci/run-buildbot generic-cxx26
+#     env:
+#       CC: clang17
+#       CXX: clang++17
+#     agents:
+#       queue: libcxx-builders
+#       os: freebsd
+#     <<: *common
 
 - group: ':android: Android'
   steps:
@@ -283,20 +144,3 @@ steps:
       queue: libcxx-builders
       os: android
     <<: *common
-
-
-    # TODO: Re-enable this once we've figured out how to run back-deployment testing on arm64 on recent OSes
-    # - label: "Apple back-deployment macosx11.0 arm64"
-    #   command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-11.0"
-    #   artifact_paths:
-    #     - "**/test-results.xml"
-    #     - "**/*.abilist"
-    #   agents:
-    #     queue: "libcxx-builders"
-    #     os: "macos"
-    #     arch: "arm64"
-    #   retry:
-    #     automatic:
-    #       - exit_status: -1  # Agent was lost
-    #         limit: 2
-    #   timeout_in_minutes: 120

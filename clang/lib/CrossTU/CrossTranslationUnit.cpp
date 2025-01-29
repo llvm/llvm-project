@@ -247,7 +247,7 @@ CrossTranslationUnitContext::getLookupName(const NamedDecl *ND) {
   bool Ret = index::generateUSRForDecl(ND, DeclUSR);
   if (Ret)
     return {};
-  return std::string(DeclUSR.str());
+  return std::string(DeclUSR);
 }
 
 /// Recursively visits the decls of a DeclContext, and returns one with the
@@ -566,9 +566,9 @@ CrossTranslationUnitContext::ASTLoader::loadFromDump(StringRef ASTDumpPath) {
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
       new DiagnosticsEngine(DiagID, &*DiagOpts, DiagClient));
   return ASTUnit::LoadFromASTFile(
-      std::string(ASTDumpPath.str()),
-      CI.getPCHContainerOperations()->getRawReader(), ASTUnit::LoadEverything,
-      Diags, CI.getFileSystemOpts(), CI.getHeaderSearchOptsPtr());
+      ASTDumpPath, CI.getPCHContainerOperations()->getRawReader(),
+      ASTUnit::LoadEverything, Diags, CI.getFileSystemOpts(),
+      CI.getHeaderSearchOptsPtr());
 }
 
 /// Load the AST from a source-file, which is supposed to be located inside the

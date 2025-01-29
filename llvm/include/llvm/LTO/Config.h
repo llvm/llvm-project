@@ -60,9 +60,6 @@ struct Config {
   bool VerifyEach = false;
   bool DisableVerify = false;
 
-  /// Use the standard optimization pipeline.
-  bool UseDefaultPipeline = false;
-
   /// Flag to indicate that the optimizer should not assume builtins are present
   /// on the target.
   bool Freestanding = false;
@@ -90,6 +87,11 @@ struct Config {
   /// LTO modules were linked. This option is useful for some build system which
   /// want to know a priori all possible output files.
   bool AlwaysEmitRegularLTOObj = false;
+
+  /// If true, the LTO instance creates copies of the symbol names for LTO::run.
+  /// The lld linker uses string saver to keep symbol names alive and doesn't
+  /// need to create copies, so it can set this field to false.
+  bool KeepSymbolNameCopies = true;
 
   /// Allows non-imported definitions to get the potentially more constraining
   /// visibility from the prevailing definition. FromPrevailing is the default

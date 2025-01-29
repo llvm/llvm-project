@@ -112,8 +112,9 @@ Operands:
 
 The first operand is an ID to be encoded within the stack map. The
 second operand is the number of shadow bytes following the
-intrinsic. The variable number of operands that follow are the ``live
-values`` for which locations will be recorded in the stack map.
+intrinsic. These first two operands should be immediate, e.g. cannot
+be passed as variables. The variable number of operands that follow are
+the ``live values`` for which locations will be recorded in the stack map.
 
 To use this intrinsic as a bare-bones stack map, with no code patching
 support, the number of shadow bytes can be set to zero.
@@ -514,4 +515,4 @@ Supported Architectures
 Support for StackMap generation and the related intrinsics requires
 some code for each backend.  Today, only a subset of LLVM's backends
 are supported.  The currently supported architectures are X86_64,
-PowerPC, Aarch64 and SystemZ.
+PowerPC, AArch64 and SystemZ.

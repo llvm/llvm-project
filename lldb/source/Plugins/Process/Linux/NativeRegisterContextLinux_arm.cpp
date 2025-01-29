@@ -104,7 +104,7 @@ NativeRegisterContextLinux_arm::ReadRegister(const RegisterInfo *reg_info,
   Status error;
 
   if (!reg_info) {
-    error.SetErrorString("reg_info NULL");
+    error = Status::FromErrorString("reg_info NULL");
     return error;
   }
 
@@ -160,8 +160,8 @@ NativeRegisterContextLinux_arm::ReadRegister(const RegisterInfo *reg_info,
     break;
   default:
     assert(false && "Unhandled data size.");
-    error.SetErrorStringWithFormat("unhandled byte size: %" PRIu32,
-                                   reg_info->byte_size);
+    error = Status::FromErrorStringWithFormat("unhandled byte size: %" PRIu32,
+                                              reg_info->byte_size);
     break;
   }
 
@@ -172,13 +172,13 @@ Status
 NativeRegisterContextLinux_arm::WriteRegister(const RegisterInfo *reg_info,
                                               const RegisterValue &reg_value) {
   if (!reg_info)
-    return Status("reg_info NULL");
+    return Status::FromErrorString("reg_info NULL");
 
   const uint32_t reg_index = reg_info->kinds[lldb::eRegisterKindLLDB];
   if (reg_index == LLDB_INVALID_REGNUM)
-    return Status("no lldb regnum for %s", reg_info && reg_info->name
-                                               ? reg_info->name
-                                               : "<unknown register>");
+    return Status::FromErrorStringWithFormat(
+        "no lldb regnum for %s",
+        reg_info && reg_info->name ? reg_info->name : "<unknown register>");
 
   if (IsGPR(reg_index))
     return WriteRegisterRaw(reg_index, reg_value);
@@ -193,8 +193,9 @@ NativeRegisterContextLinux_arm::WriteRegister(const RegisterInfo *reg_info,
     return WriteFPR();
   }
 
-  return Status("failed - register wasn't recognized to be a GPR or an FPR, "
-                "write strategy unknown");
+  return Status::FromErrorString(
+      "failed - register wasn't recognized to be a GPR or an FPR, "
+      "write strategy unknown");
 }
 
 Status NativeRegisterContextLinux_arm::ReadAllRegisterValues(
@@ -223,14 +224,14 @@ Status NativeRegisterContextLinux_arm::WriteAllRegisterValues(
   Status error;
 
   if (!data_sp) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "NativeRegisterContextLinux_arm::%s invalid data_sp provided",
         __FUNCTION__);
     return error;
   }
 
   if (data_sp->GetByteSize() != REG_CONTEXT_SIZE) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "NativeRegisterContextLinux_arm::%s data_sp contained mismatched "
         "data size, expected %" PRIu64 ", actual %" PRIu64,
         __FUNCTION__, (uint64_t)REG_CONTEXT_SIZE, data_sp->GetByteSize());
@@ -239,10 +240,11 @@ Status NativeRegisterContextLinux_arm::WriteAllRegisterValues(
 
   const uint8_t *src = data_sp->GetBytes();
   if (src == nullptr) {
-    error.SetErrorStringWithFormat("NativeRegisterContextLinux_arm::%s "
-                                   "DataBuffer::GetBytes() returned a null "
-                                   "pointer",
-                                   __FUNCTION__);
+    error = Status::FromErrorStringWithFormat(
+        "NativeRegisterContextLinux_arm::%s "
+        "DataBuffer::GetBytes() returned a null "
+        "pointer",
+        __FUNCTION__);
     return error;
   }
   ::memcpy(&m_gpr_arm, src, GetRegisterInfoInterface().GetGPRSize());
@@ -506,7 +508,7 @@ uint32_t NativeRegisterContextLinux_arm::SetHardwareWatchpoint(
       return LLDB_INVALID_INDEX32;
     else if (watch_mask <= 0x02)
       size = 2;
-    else if (watch_mask <= 0x04)
+    else
       size = 4;
 
     addr = addr & (~0x03);
@@ -796,7 +798,8 @@ Status NativeRegisterContextLinux_arm::DoReadRegisterValue(
   // processing time in lldb-server.
   assert(offset % 4 == 0 && "Try to write a register with unaligned offset");
   if (offset + sizeof(uint32_t) > sizeof(m_gpr_arm))
-    return Status("Register isn't fit into the size of the GPR area");
+    return Status::FromErrorString(
+        "Register isn't fit into the size of the GPR area");
 
   Status error = ReadGPR();
   if (error.Fail())
@@ -815,7 +818,8 @@ Status NativeRegisterContextLinux_arm::DoWriteRegisterValue(
   // overhead is negligible in comparison to processing time in lldb-server.
   assert(offset % 4 == 0 && "Try to write a register with unaligned offset");
   if (offset + sizeof(uint32_t) > sizeof(m_gpr_arm))
-    return Status("Register isn't fit into the size of the GPR area");
+    return Status::FromErrorString(
+        "Register isn't fit into the size of the GPR area");
 
   Status error = ReadGPR();
   if (error.Fail())

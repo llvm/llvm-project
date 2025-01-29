@@ -45,7 +45,7 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
                                     const CallEvent &Call) {
   SVal ThisVal;
   bool AlwaysReturnsLValue;
-  const CXXRecordDecl *ThisRD = nullptr;
+  [[maybe_unused]] const CXXRecordDecl *ThisRD = nullptr;
   if (const CXXConstructorCall *Ctor = dyn_cast<CXXConstructorCall>(&Call)) {
     assert(Ctor->getDecl()->isTrivial());
     assert(Ctor->getDecl()->isCopyOrMoveConstructor());
@@ -68,23 +68,15 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
   Bldr.takeNodes(Pred);
 
   assert(ThisRD);
-  if (!ThisRD->isEmpty()) {
-    // Load the source value only for non-empty classes.
-    // Otherwise it'd retrieve an UnknownVal
-    // and bind it and RegionStore would think that the actual value
-    // in this region at this offset is unknown.
-    SVal V = Call.getArgSVal(0);
+  SVal V = Call.getArgSVal(0);
 
-    // If the value being copied is not unknown, load from its location to get
-    // an aggregate rvalue.
-    if (std::optional<Loc> L = V.getAs<Loc>())
-      V = Pred->getState()->getSVal(*L);
-    else
-      assert(V.isUnknownOrUndef());
-    evalBind(Dst, CallExpr, Pred, ThisVal, V, true);
-  } else {
-    Dst.Add(Pred);
-  }
+  // If the value being copied is not unknown, load from its location to get
+  // an aggregate rvalue.
+  if (std::optional<Loc> L = V.getAs<Loc>())
+    V = Pred->getState()->getSVal(*L);
+  else
+    assert(V.isUnknownOrUndef());
+  evalBind(Dst, CallExpr, Pred, ThisVal, V, true);
 
   PostStmt PS(CallExpr, LCtx);
   for (ExplodedNode *N : Dst) {
@@ -229,7 +221,7 @@ SVal ExprEngine::computeObjectUnderConstruction(
         // We are on the top frame of the analysis. We do not know where is the
         // object returned to. Conjure a symbolic region for the return value.
         // TODO: We probably need a new MemRegion kind to represent the storage
-        // of that SymbolicRegion, so that we cound produce a fancy symbol
+        // of that SymbolicRegion, so that we could produce a fancy symbol
         // instead of an anonymous conjured symbol.
         // TODO: Do we need to track the region to avoid having it dead
         // too early? It does die too early, at least in C++17, but because
@@ -513,70 +505,25 @@ ProgramStateRef ExprEngine::updateObjectsUnderConstruction(
 static ProgramStateRef
 bindRequiredArrayElementToEnvironment(ProgramStateRef State,
                                       const ArrayInitLoopExpr *AILE,
-                                      const LocationContext *LCtx, SVal Idx) {
-  // The ctor in this case is guaranteed to be a copy ctor, otherwise we hit a
-  // compile time error.
-  //
-  //  -ArrayInitLoopExpr                <-- we're here
-  //   |-OpaqueValueExpr
-  //   | `-DeclRefExpr                  <-- match this
-  //   `-CXXConstructExpr
-  //     `-ImplicitCastExpr
-  //       `-ArraySubscriptExpr
-  //         |-ImplicitCastExpr
-  //         | `-OpaqueValueExpr
-  //         |   `-DeclRefExpr
-  //         `-ArrayInitIndexExpr
-  //
-  // The resulting expression might look like the one below in an implicit
-  // copy/move ctor.
-  //
-  //   ArrayInitLoopExpr                <-- we're here
-  //   |-OpaqueValueExpr
-  //   | `-MemberExpr                   <-- match this
-  //   |  (`-CXXStaticCastExpr)         <-- move ctor only
-  //   |     `-DeclRefExpr
-  //   `-CXXConstructExpr
-  //     `-ArraySubscriptExpr
-  //       |-ImplicitCastExpr
-  //       | `-OpaqueValueExpr
-  //       |   `-MemberExpr
-  //       |     `-DeclRefExpr
-  //       `-ArrayInitIndexExpr
-  //
-  // The resulting expression for a multidimensional array.
-  // ArrayInitLoopExpr                  <-- we're here
-  // |-OpaqueValueExpr
-  // | `-DeclRefExpr                    <-- match this
-  // `-ArrayInitLoopExpr
-  //   |-OpaqueValueExpr
-  //   | `-ArraySubscriptExpr
-  //   |   |-ImplicitCastExpr
-  //   |   | `-OpaqueValueExpr
-  //   |   |   `-DeclRefExpr
-  //   |   `-ArrayInitIndexExpr
-  //   `-CXXConstructExpr             <-- extract this
-  //     ` ...
-
-  const auto *OVESrc = AILE->getCommonExpr()->getSourceExpr();
+                                      const LocationContext *LCtx, NonLoc Idx) {
+  SValBuilder &SVB = State->getStateManager().getSValBuilder();
+  MemRegionManager &MRMgr = SVB.getRegionManager();
+  ASTContext &Ctx = SVB.getContext();
 
   // HACK: There is no way we can put the index of the array element into the
   // CFG unless we unroll the loop, so we manually select and bind the required
   // parameter to the environment.
-  const auto *CE =
+  const Expr *SourceArray = AILE->getCommonExpr()->getSourceExpr();
+  const auto *Ctor =
       cast<CXXConstructExpr>(extractElementInitializerFromNestedAILE(AILE));
 
-  SVal Base = UnknownVal();
-  if (const auto *ME = dyn_cast<MemberExpr>(OVESrc))
-    Base = State->getSVal(ME, LCtx);
-  else if (const auto *DRE = dyn_cast<DeclRefExpr>(OVESrc))
-    Base = State->getLValue(cast<VarDecl>(DRE->getDecl()), LCtx);
-  else
-    llvm_unreachable("ArrayInitLoopExpr contains unexpected source expression");
+  const auto *SourceArrayRegion =
+      cast<SubRegion>(State->getSVal(SourceArray, LCtx).getAsRegion());
+  const ElementRegion *ElementRegion =
+      MRMgr.getElementRegion(Ctor->getType(), Idx, SourceArrayRegion, Ctx);
 
-  SVal NthElem = State->getLValue(CE->getType(), Idx, Base);
-
-  return State->BindExpr(CE->getArg(0), LCtx, NthElem);
+  return State->BindExpr(Ctor->getArg(0), LCtx,
+                         loc::MemRegionVal(ElementRegion));
 }
 
 void ExprEngine::handleConstructor(const Expr *E,

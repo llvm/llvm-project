@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/BugReporter/BugSuppression.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 
 using namespace clang;
@@ -76,21 +76,21 @@ inline bool fullyContains(SourceRange Larger, SourceRange Smaller,
          isLessOrEqual(Smaller.getEnd(), Larger.getEnd(), SM);
 }
 
-class CacheInitializer : public RecursiveASTVisitor<CacheInitializer> {
+class CacheInitializer : public DynamicRecursiveASTVisitor {
 public:
   static void initialize(const Decl *D, Ranges &ToInit) {
     CacheInitializer(ToInit).TraverseDecl(const_cast<Decl *>(D));
   }
 
-  bool VisitVarDecl(VarDecl *VD) {
+  bool VisitDecl(Decl *D) override {
     // Bug location could be somewhere in the init value of
     // a freshly declared variable.  Even though it looks like the
     // user applied attribute to a statement, it will apply to a
     // variable declaration, and this is where we check for it.
-    return VisitAttributedNode(VD);
+    return VisitAttributedNode(D);
   }
 
-  bool VisitAttributedStmt(AttributedStmt *AS) {
+  bool VisitAttributedStmt(AttributedStmt *AS) override {
     // When we apply attributes to statements, it actually creates
     // a wrapper statement that only contains attributes and the wrapped
     // statement.
@@ -138,8 +138,30 @@ bool BugSuppression::isSuppressed(const BugReport &R) {
 bool BugSuppression::isSuppressed(const PathDiagnosticLocation &Location,
                                   const Decl *DeclWithIssue,
                                   DiagnosticIdentifierList Hashtags) {
-  if (!Location.isValid() || DeclWithIssue == nullptr)
+  if (!Location.isValid())
     return false;
+
+  if (!DeclWithIssue) {
+    // FIXME: This defeats the purpose of passing DeclWithIssue to begin with.
+    // If this branch is ever hit, we're re-doing all the work we've already
+    // done as well as perform a lot of work we'll never need.
+    // Gladly, none of our on-by-default checkers currently need it.
+    DeclWithIssue = ACtx.getTranslationUnitDecl();
+  } else {
+    // This is the fast path. However, we should still consider the topmost
+    // declaration that isn't TranslationUnitDecl, because we should respect
+    // attributes on the entire declaration chain.
+    while (true) {
+      // Use the "lexical" parent. Eg., if the attribute is on a class, suppress
+      // warnings in inline methods but not in out-of-line methods.
+      const Decl *Parent =
+          dyn_cast_or_null<Decl>(DeclWithIssue->getLexicalDeclContext());
+      if (Parent == nullptr || isa<TranslationUnitDecl>(Parent))
+        break;
+
+      DeclWithIssue = Parent;
+    }
+  }
 
   // While some warnings are attached to AST nodes (mostly path-sensitive
   // checks), others are simply associated with a plain source location

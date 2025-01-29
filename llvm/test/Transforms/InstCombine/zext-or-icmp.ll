@@ -168,7 +168,7 @@ define i32 @PR49475(i32 %x, i16 %y) {
 
 ; This would infinite-loop.
 
-define i8 @PR49475_infloop(i32 %t0, i16 %insert, i64 %e, i8 %i162) {
+define i8 @PR49475_infloop(i32 %t0, i16 %insert, i64 %e, i8 %i162) "instcombine-no-verify-fixpoint" {
 ; CHECK-LABEL: @PR49475_infloop(
 ; CHECK-NEXT:    [[B2:%.*]] = icmp eq i16 [[INSERT:%.*]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[T0:%.*]], 1
@@ -180,11 +180,11 @@ define i8 @PR49475_infloop(i32 %t0, i16 %insert, i64 %e, i8 %i162) {
 ; CHECK-NEXT:    [[SEXT:%.*]] = shl i64 [[SUB17]], 32
 ; CHECK-NEXT:    [[CONV18:%.*]] = ashr exact i64 [[SEXT]], 32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i64 [[XOR]], [[CONV18]]
-; CHECK-NEXT:    [[CONV19:%.*]] = zext i1 [[CMP]] to i16
-; CHECK-NEXT:    [[OR21:%.*]] = or i16 [[CONV19]], [[INSERT]]
-; CHECK-NEXT:    [[TOBOOL23_NOT:%.*]] = icmp eq i16 [[OR21]], 0
+; CHECK-NEXT:    [[TRUNC44:%.*]] = zext i1 [[CMP]] to i8
+; CHECK-NEXT:    [[INC:%.*]] = add i8 [[I162]], [[TRUNC44]]
+; CHECK-NEXT:    [[TOBOOL23_NOT:%.*]] = xor i1 [[CMP]], true
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TOBOOL23_NOT]])
-; CHECK-NEXT:    ret i8 [[I162]]
+; CHECK-NEXT:    ret i8 [[INC]]
 ;
   %b = icmp eq i32 %t0, 0
   %b2 = icmp eq i16 %insert, 0

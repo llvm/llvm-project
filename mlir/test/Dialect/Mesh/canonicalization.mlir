@@ -1,6 +1,6 @@
 // RUN: mlir-opt --canonicalize %s | FileCheck %s
 
-mesh.cluster @mesh0(rank = 2, dim_sizes = 2x4)
+mesh.mesh @mesh0(shape = 2x4)
 
 // CHECK-LABEL: func @all_reduce_empty_mesh_axes
 func.func @all_reduce_empty_mesh_axes(
@@ -31,7 +31,7 @@ func.func @all_reduce_default_reduction(
   %0 = mesh.all_reduce %arg0 on @mesh0
     mesh_axes = [0]
 // CHECK-NOT: reduction
-    reduction = <sum>
+    reduction = sum
     : tensor<4xf32> -> tensor<4xf64>
   return %0 : tensor<4xf64>
 }
@@ -58,6 +58,19 @@ func.func @all_gather_empty_mesh_axes(
   %0 = mesh.all_gather %arg0 on @mesh0
     mesh_axes = []
     gather_axis = 0
+    : tensor<4xf32> -> tensor<4xf32>
+// CHECK: return %[[ARG]]
+  return %0 : tensor<4xf32>
+}
+
+// CHECK-LABEL: func @all_slice_empty_mesh_axes
+func.func @all_slice_empty_mesh_axes(
+// CHECK-SAME: %[[ARG:.*]]: tensor<4xf32>
+    %arg0 : tensor<4xf32>) -> tensor<4xf32> {
+// CHECK-NOT: mesh.scatter
+  %0 = mesh.all_slice %arg0 on @mesh0
+    mesh_axes = []
+    slice_axis = 0
     : tensor<4xf32> -> tensor<4xf32>
 // CHECK: return %[[ARG]]
   return %0 : tensor<4xf32>
@@ -146,7 +159,7 @@ func.func @reduce_scatter_default_reduction(
   %0 = mesh.reduce_scatter %arg0 on @mesh0
     mesh_axes = [0]
 // CHECK-NOT: reduction
-    reduction = <sum>
+    reduction = sum
     scatter_axis = 0
     : tensor<4xf32> -> tensor<2xf64>
   return %0 : tensor<2xf64>
@@ -177,4 +190,21 @@ func.func @send_empty_mesh_axes(
     : (tensor<4xf32>) -> tensor<4xf32>
 // CHECK: return %[[ARG]]
   return %0 : tensor<4xf32>
+}
+
+mesh.mesh @mesh4x4(shape = 4x4)
+// CHECK-LABEL: func @test_halo_sizes
+func.func @test_halo_sizes() -> !mesh.sharding {
+  %c2_i64 = arith.constant 2 : i64
+  // CHECK mesh.sharding @mesh4x4 split_axes = [[0], [1]] halo_sizes = [1, 2, 2, 22] : !mesh.sharding
+  %sharding = mesh.sharding @mesh4x4 split_axes = [[0], [1]] halo_sizes = [1, %c2_i64, %c2_i64, 22] : !mesh.sharding
+  return %sharding : !mesh.sharding
+}
+
+// CHECK-LABEL: func @test_shard_offs
+func.func @test_shard_offs() -> !mesh.sharding {
+  %c2_i64 = arith.constant 2 : i64
+  // CHECK mesh.sharding @mesh4x4 split_axes = [[0], [1]] sharded_dims_offsets = [0, 1, 2, 3, 4, 0, 2, 3, 4, 22] : !mesh.sharding
+  %sharding = mesh.sharding @mesh4x4 split_axes = [[0], [1]] sharded_dims_offsets = [0, 1, %c2_i64, 3, 4, 0, %c2_i64, 3, 4, 22] : !mesh.sharding
+  return %sharding : !mesh.sharding
 }

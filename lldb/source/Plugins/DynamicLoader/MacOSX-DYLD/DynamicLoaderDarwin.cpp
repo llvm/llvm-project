@@ -8,6 +8,7 @@
 
 #include "DynamicLoaderDarwin.h"
 
+#include "DynamicLoaderDarwinProperties.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -31,6 +32,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
+#include "llvm/Support/ThreadPool.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
@@ -77,6 +79,17 @@ void DynamicLoaderDarwin::DidLaunch() {
   SetNotificationBreakpoint();
 }
 
+void DynamicLoaderDarwin::CreateSettings(lldb_private::Debugger &debugger) {
+  if (!PluginManager::GetSettingForDynamicLoaderPlugin(
+          debugger, DynamicLoaderDarwinProperties::GetSettingName())) {
+    const bool is_global_setting = true;
+    PluginManager::CreateSettingForDynamicLoaderPlugin(
+        debugger,
+        DynamicLoaderDarwinProperties::GetGlobal().GetValueProperties(),
+        "Properties for the DynamicLoaderDarwin plug-in.", is_global_setting);
+  }
+}
+
 // Clear out the state of this class.
 void DynamicLoaderDarwin::Clear(bool clear_process) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -88,7 +101,7 @@ void DynamicLoaderDarwin::Clear(bool clear_process) {
 }
 
 ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
-    ImageInfo &image_info, bool can_create, bool *did_create_ptr) {
+    const ImageInfo &image_info, bool can_create, bool *did_create_ptr) {
   if (did_create_ptr)
     *did_create_ptr = false;
 
@@ -404,8 +417,8 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
         image_infos[i].os_type = llvm::Triple::TvOS;
       else if (os_name == "watchos")
         image_infos[i].os_type = llvm::Triple::WatchOS;
-      // NEED_BRIDGEOS_TRIPLE else if (os_name == "bridgeos")
-      // NEED_BRIDGEOS_TRIPLE   image_infos[i].os_type = llvm::Triple::BridgeOS;
+      else if (os_name == "bridgeos")
+        image_infos[i].os_type = llvm::Triple::BridgeOS;
       else if (os_name == "maccatalyst") {
         image_infos[i].os_type = llvm::Triple::IOS;
         image_infos[i].os_env = llvm::Triple::MacABI;
@@ -517,8 +530,8 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
   return true;
 }
 
-void DynamicLoaderDarwin::UpdateSpecialBinariesFromNewImageInfos(
-    ImageInfo::collection &image_infos) {
+void DynamicLoaderDarwin::UpdateSpecialBinariesFromPreloadedModules(
+    std::vector<std::pair<ImageInfo, ModuleSP>> &images) {
   uint32_t exe_idx = UINT32_MAX;
   uint32_t dyld_idx = UINT32_MAX;
   Target &target = m_process->GetTarget();
@@ -526,35 +539,34 @@ void DynamicLoaderDarwin::UpdateSpecialBinariesFromNewImageInfos(
   ConstString g_dyld_sim_filename("dyld_sim");
 
   ArchSpec target_arch = target.GetArchitecture();
-  const size_t image_infos_size = image_infos.size();
-  for (size_t i = 0; i < image_infos_size; i++) {
-    if (image_infos[i].header.filetype == llvm::MachO::MH_DYLINKER) {
+  const size_t images_size = images.size();
+  for (size_t i = 0; i < images_size; i++) {
+    const auto &image_info = images[i].first;
+    if (image_info.header.filetype == llvm::MachO::MH_DYLINKER) {
       // In a "simulator" process we will have two dyld modules --
       // a "dyld" that we want to keep track of, and a "dyld_sim" which
       // we don't need to keep track of here.  dyld_sim will have a non-macosx
       // OS.
       if (target_arch.GetTriple().getEnvironment() == llvm::Triple::Simulator &&
-          image_infos[i].os_type != llvm::Triple::OSType::MacOSX) {
+          image_info.os_type != llvm::Triple::OSType::MacOSX) {
         continue;
       }
 
       dyld_idx = i;
     }
-    if (image_infos[i].header.filetype == llvm::MachO::MH_EXECUTE) {
+    if (image_info.header.filetype == llvm::MachO::MH_EXECUTE) {
       exe_idx = i;
     }
   }
 
   // Set the target executable if we haven't found one so far.
   if (exe_idx != UINT32_MAX && !target.GetExecutableModule()) {
-    const bool can_create = true;
-    ModuleSP exe_module_sp(FindTargetModuleForImageInfo(image_infos[exe_idx],
-                                                        can_create, nullptr));
+    ModuleSP exe_module_sp = images[exe_idx].second;
     if (exe_module_sp) {
       LLDB_LOGF(log, "Found executable module: %s",
                 exe_module_sp->GetFileSpec().GetPath().c_str());
       target.GetImages().AppendIfNeeded(exe_module_sp);
-      UpdateImageLoadAddress(exe_module_sp.get(), image_infos[exe_idx]);
+      UpdateImageLoadAddress(exe_module_sp.get(), images[exe_idx].first);
       if (exe_module_sp.get() != target.GetExecutableModulePointer())
         target.SetExecutableModule(exe_module_sp, eLoadDependentsNo);
 
@@ -581,20 +593,18 @@ void DynamicLoaderDarwin::UpdateSpecialBinariesFromNewImageInfos(
   }
 
   if (dyld_idx != UINT32_MAX) {
-    const bool can_create = true;
-    ModuleSP dyld_sp = FindTargetModuleForImageInfo(image_infos[dyld_idx],
-                                                    can_create, nullptr);
+    ModuleSP dyld_sp = images[dyld_idx].second;
     if (dyld_sp.get()) {
       LLDB_LOGF(log, "Found dyld module: %s",
                 dyld_sp->GetFileSpec().GetPath().c_str());
       target.GetImages().AppendIfNeeded(dyld_sp);
-      UpdateImageLoadAddress(dyld_sp.get(), image_infos[dyld_idx]);
+      UpdateImageLoadAddress(dyld_sp.get(), images[dyld_idx].first);
       SetDYLDModule(dyld_sp);
     }
   }
 }
 
-void DynamicLoaderDarwin::UpdateDYLDImageInfoFromNewImageInfo(
+bool DynamicLoaderDarwin::UpdateDYLDImageInfoFromNewImageInfo(
     ImageInfo &image_info) {
   if (image_info.header.filetype == llvm::MachO::MH_DYLINKER) {
     const bool can_create = true;
@@ -605,8 +615,30 @@ void DynamicLoaderDarwin::UpdateDYLDImageInfoFromNewImageInfo(
       target.GetImages().AppendIfNeeded(dyld_sp);
       UpdateImageLoadAddress(dyld_sp.get(), image_info);
       SetDYLDModule(dyld_sp);
+      return true;
     }
   }
+  return false;
+}
+
+std::optional<lldb_private::Address> DynamicLoaderDarwin::GetStartAddress() {
+  Log *log = GetLog(LLDBLog::DynamicLoader);
+
+  auto log_err = [log](llvm::StringLiteral err_msg) -> std::nullopt_t {
+    LLDB_LOGV(log, "{}", err_msg);
+    return std::nullopt;
+  };
+
+  ModuleSP dyld_sp = GetDYLDModule();
+  if (!dyld_sp)
+    return log_err("Couldn't retrieve DYLD module. Cannot get `start` symbol.");
+
+  const Symbol *symbol =
+      dyld_sp->FindFirstSymbolWithNameAndType(ConstString("_dyld_start"));
+  if (!symbol)
+    return log_err("Cannot find `start` symbol in DYLD module.");
+
+  return symbol->GetAddress();
 }
 
 void DynamicLoaderDarwin::SetDYLDModule(lldb::ModuleSP &dyld_module_sp) {
@@ -620,8 +652,42 @@ ModuleSP DynamicLoaderDarwin::GetDYLDModule() {
 
 void DynamicLoaderDarwin::ClearDYLDModule() { m_dyld_module_wp.reset(); }
 
+std::vector<std::pair<DynamicLoaderDarwin::ImageInfo, ModuleSP>>
+DynamicLoaderDarwin::PreloadModulesFromImageInfos(
+    const ImageInfo::collection &image_infos) {
+  const auto size = image_infos.size();
+  std::vector<std::pair<DynamicLoaderDarwin::ImageInfo, ModuleSP>> images(size);
+  auto LoadImage = [&](size_t i, ImageInfo::collection::const_iterator it) {
+    const auto &image_info = *it;
+    images[i] = std::make_pair(
+        image_info, FindTargetModuleForImageInfo(image_info, true, nullptr));
+  };
+  auto it = image_infos.begin();
+  bool is_parallel_load =
+      DynamicLoaderDarwinProperties::GetGlobal().GetEnableParallelImageLoad();
+  if (is_parallel_load) {
+    llvm::ThreadPoolTaskGroup taskGroup(Debugger::GetThreadPool());
+    for (size_t i = 0; i < size; ++i, ++it) {
+      taskGroup.async(LoadImage, i, it);
+    }
+    taskGroup.wait();
+  } else {
+    for (size_t i = 0; i < size; ++i, ++it) {
+      LoadImage(i, it);
+    }
+  }
+  return images;
+}
+
 bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
     ImageInfo::collection &image_infos) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  auto images = PreloadModulesFromImageInfos(image_infos);
+  return AddModulesUsingPreloadedModules(images);
+}
+
+bool DynamicLoaderDarwin::AddModulesUsingPreloadedModules(
+    std::vector<std::pair<ImageInfo, ModuleSP>> &images) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   // Now add these images to the main list.
   ModuleList loaded_module_list;
@@ -629,17 +695,15 @@ bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
   Target &target = m_process->GetTarget();
   ModuleList &target_images = target.GetImages();
 
-  for (uint32_t idx = 0; idx < image_infos.size(); ++idx) {
+  for (uint32_t idx = 0; idx < images.size(); ++idx) {
+    auto &image_info = images[idx].first;
+    const auto &image_module_sp = images[idx].second;
     if (log) {
       LLDB_LOGF(log, "Adding new image at address=0x%16.16" PRIx64 ".",
-                image_infos[idx].address);
-      image_infos[idx].PutToLog(log);
+                image_info.address);
+      image_info.PutToLog(log);
     }
-
-    m_dyld_image_infos.push_back(image_infos[idx]);
-
-    ModuleSP image_module_sp(
-        FindTargetModuleForImageInfo(image_infos[idx], true, nullptr));
+    m_dyld_image_infos.push_back(image_info);
 
     if (image_module_sp) {
       ObjectFile *objfile = image_module_sp->GetObjectFile();
@@ -651,7 +715,7 @@ bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
               sections->FindSectionByName(commpage_dbstr).get();
           if (commpage_section) {
             ModuleSpec module_spec(objfile->GetFileSpec(),
-                                   image_infos[idx].GetArchitecture());
+                                   image_info.GetArchitecture());
             module_spec.GetObjectName() = commpage_dbstr;
             ModuleSP commpage_image_module_sp(
                 target_images.FindFirstModule(module_spec));
@@ -664,17 +728,17 @@ bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
               if (!commpage_image_module_sp ||
                   commpage_image_module_sp->GetObjectFile() == nullptr) {
                 commpage_image_module_sp = m_process->ReadModuleFromMemory(
-                    image_infos[idx].file_spec, image_infos[idx].address);
+                    image_info.file_spec, image_info.address);
                 // Always load a memory image right away in the target in case
                 // we end up trying to read the symbol table from memory... The
                 // __LINKEDIT will need to be mapped so we can figure out where
                 // the symbol table bits are...
                 bool changed = false;
                 UpdateImageLoadAddress(commpage_image_module_sp.get(),
-                                       image_infos[idx]);
+                                       image_info);
                 target.GetImages().Append(commpage_image_module_sp);
                 if (changed) {
-                  image_infos[idx].load_stop_id = m_process->GetStopID();
+                  image_info.load_stop_id = m_process->GetStopID();
                   loaded_module_list.AppendIfNeeded(commpage_image_module_sp);
                 }
               }
@@ -687,14 +751,14 @@ bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
       // address. We need to check this so we don't mention that all loaded
       // shared libraries are newly loaded each time we hit out dyld breakpoint
       // since dyld will list all shared libraries each time.
-      if (UpdateImageLoadAddress(image_module_sp.get(), image_infos[idx])) {
+      if (UpdateImageLoadAddress(image_module_sp.get(), image_info)) {
         target_images.AppendIfNeeded(image_module_sp);
         loaded_module_list.AppendIfNeeded(image_module_sp);
       }
 
       // To support macCatalyst and legacy iOS simulator,
       // update the module's platform with the DYLD info.
-      ArchSpec dyld_spec = image_infos[idx].GetArchitecture();
+      ArchSpec dyld_spec = image_info.GetArchitecture();
       auto &dyld_triple = dyld_spec.GetTriple();
       if ((dyld_triple.getEnvironment() == llvm::Triple::MacABI &&
            dyld_triple.getOS() == llvm::Triple::IOS) ||
@@ -732,10 +796,8 @@ bool DynamicLoaderDarwin::AlwaysRelyOnEHUnwindInfo(SymbolContext &sym_ctx) {
   if (sym_ctx.symbol) {
     module_sp = sym_ctx.symbol->GetAddressRef().GetModule();
   }
-  if (module_sp.get() == nullptr && sym_ctx.function) {
-    module_sp =
-        sym_ctx.function->GetAddressRange().GetBaseAddress().GetModule();
-  }
+  if (module_sp.get() == nullptr && sym_ctx.function)
+    module_sp = sym_ctx.function->GetAddress().GetModule();
   if (module_sp.get() == nullptr)
     return false;
 
@@ -1048,73 +1110,103 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
 
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  const uint32_t addr_size = m_process->GetAddressByteSize();
-  uint8_t buf[sizeof(lldb::addr_t) * 3];
-
   lldb_private::Address tls_addr;
-  if (module_sp->ResolveFileAddress(tls_file_addr, tls_addr)) {
-    Status error;
-    const size_t tsl_data_size = addr_size * 3;
-    Target &target = m_process->GetTarget();
-    if (target.ReadMemory(tls_addr, buf, tsl_data_size, error, true) ==
-        tsl_data_size) {
-      const ByteOrder byte_order = m_process->GetByteOrder();
-      DataExtractor data(buf, sizeof(buf), byte_order, addr_size);
-      lldb::offset_t offset = addr_size; // Skip the first pointer
-      const lldb::addr_t pthread_key = data.GetAddress(&offset);
-      const lldb::addr_t tls_offset = data.GetAddress(&offset);
-      if (pthread_key != 0) {
-        // First check to see if we have already figured out the location of
-        // TLS data for the pthread_key on a specific thread yet. If we have we
-        // can re-use it since its location will not change unless the process
-        // execs.
-        const tid_t tid = thread_sp->GetID();
-        auto tid_pos = m_tid_to_tls_map.find(tid);
-        if (tid_pos != m_tid_to_tls_map.end()) {
-          auto tls_pos = tid_pos->second.find(pthread_key);
-          if (tls_pos != tid_pos->second.end()) {
-            return tls_pos->second + tls_offset;
-          }
-        }
-        StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(0);
-        if (frame_sp) {
-          TypeSystemClangSP scratch_ts_sp =
-              ScratchTypeSystemClang::GetForTarget(target);
+  if (!module_sp->ResolveFileAddress(tls_file_addr, tls_addr))
+    return LLDB_INVALID_ADDRESS;
 
-          if (!scratch_ts_sp)
-            return LLDB_INVALID_ADDRESS;
+  Target &target = m_process->GetTarget();
+  TypeSystemClangSP scratch_ts_sp =
+      ScratchTypeSystemClang::GetForTarget(target);
+  if (!scratch_ts_sp)
+    return LLDB_INVALID_ADDRESS;
 
-          CompilerType clang_void_ptr_type =
-              scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
-          Address pthread_getspecific_addr = GetPthreadSetSpecificAddress();
-          if (pthread_getspecific_addr.IsValid()) {
-            EvaluateExpressionOptions options;
+  CompilerType clang_void_ptr_type =
+      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
 
-            lldb::ThreadPlanSP thread_plan_sp(new ThreadPlanCallFunction(
-                *thread_sp, pthread_getspecific_addr, clang_void_ptr_type,
-                llvm::ArrayRef<lldb::addr_t>(pthread_key), options));
+  auto evaluate_tls_address = [this, &thread_sp, &clang_void_ptr_type](
+                                  Address func_ptr,
+                                  llvm::ArrayRef<addr_t> args) -> addr_t {
+    EvaluateExpressionOptions options;
 
-            DiagnosticManager execution_errors;
-            ExecutionContext exe_ctx(thread_sp);
-            lldb::ExpressionResults results = m_process->RunThreadPlan(
-                exe_ctx, thread_plan_sp, options, execution_errors);
+    lldb::ThreadPlanSP thread_plan_sp(new ThreadPlanCallFunction(
+        *thread_sp, func_ptr, clang_void_ptr_type, args, options));
 
-            if (results == lldb::eExpressionCompleted) {
-              lldb::ValueObjectSP result_valobj_sp =
-                  thread_plan_sp->GetReturnValueObject();
-              if (result_valobj_sp) {
-                const lldb::addr_t pthread_key_data =
-                    result_valobj_sp->GetValueAsUnsigned(0);
-                if (pthread_key_data) {
-                  m_tid_to_tls_map[tid].insert(
-                      std::make_pair(pthread_key, pthread_key_data));
-                  return pthread_key_data + tls_offset;
-                }
-              }
-            }
-          }
-        }
+    DiagnosticManager execution_errors;
+    ExecutionContext exe_ctx(thread_sp);
+    lldb::ExpressionResults results = m_process->RunThreadPlan(
+        exe_ctx, thread_plan_sp, options, execution_errors);
+
+    if (results == lldb::eExpressionCompleted) {
+      if (lldb::ValueObjectSP result_valobj_sp =
+              thread_plan_sp->GetReturnValueObject()) {
+        return result_valobj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
       }
+    }
+    return LLDB_INVALID_ADDRESS;
+  };
+
+  // On modern apple platforms, there is a small data structure that looks
+  // approximately like this:
+  // struct TLS_Thunk {
+  //  void *(*get_addr)(struct TLS_Thunk *);
+  //  size_t key;
+  //  size_t offset;
+  // }
+  //
+  // The strategy is to take get_addr, call it with the address of the
+  // containing TLS_Thunk structure, and add the offset to the resulting
+  // pointer to get the data block.
+  //
+  // On older apple platforms, the key is treated as a pthread_key_t and passed
+  // to pthread_getspecific. The pointer returned from that call is added to
+  // offset to get the relevant data block.
+
+  const uint32_t addr_size = m_process->GetAddressByteSize();
+  uint8_t buf[sizeof(addr_t) * 3];
+  Status error;
+  const size_t tls_data_size = addr_size * 3;
+  const size_t bytes_read = target.ReadMemory(
+      tls_addr, buf, tls_data_size, error, /*force_live_memory = */ true);
+  if (bytes_read != tls_data_size || error.Fail())
+    return LLDB_INVALID_ADDRESS;
+
+  DataExtractor data(buf, sizeof(buf), m_process->GetByteOrder(), addr_size);
+  lldb::offset_t offset = 0;
+  const addr_t tls_thunk = data.GetAddress(&offset);
+  const addr_t key = data.GetAddress(&offset);
+  const addr_t tls_offset = data.GetAddress(&offset);
+
+  if (tls_thunk != 0) {
+    const addr_t fixed_tls_thunk = m_process->FixCodeAddress(tls_thunk);
+    Address thunk_load_addr;
+    if (target.ResolveLoadAddress(fixed_tls_thunk, thunk_load_addr)) {
+      const addr_t tls_load_addr = tls_addr.GetLoadAddress(&target);
+      const addr_t tls_data = evaluate_tls_address(
+          thunk_load_addr, llvm::ArrayRef<addr_t>(tls_load_addr));
+      if (tls_data != LLDB_INVALID_ADDRESS)
+        return tls_data + tls_offset;
+    }
+  }
+
+  if (key != 0) {
+    // First check to see if we have already figured out the location of
+    // TLS data for the pthread_key on a specific thread yet. If we have we
+    // can re-use it since its location will not change unless the process
+    // execs.
+    const lldb::tid_t tid = thread_sp->GetID();
+    auto tid_pos = m_tid_to_tls_map.find(tid);
+    if (tid_pos != m_tid_to_tls_map.end()) {
+      auto tls_pos = tid_pos->second.find(key);
+      if (tls_pos != tid_pos->second.end()) {
+        return tls_pos->second + tls_offset;
+      }
+    }
+    Address pthread_getspecific_addr = GetPthreadSetSpecificAddress();
+    if (pthread_getspecific_addr.IsValid()) {
+      const addr_t tls_data = evaluate_tls_address(pthread_getspecific_addr,
+                                                   llvm::ArrayRef<addr_t>(key));
+      if (tls_data != LLDB_INVALID_ADDRESS)
+        return tls_data + tls_offset;
     }
   }
   return LLDB_INVALID_ADDRESS;

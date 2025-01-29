@@ -25,9 +25,10 @@
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_H2:[A-Z0-9]+]]",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/header2.h",
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/header2.h"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "header2"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],
@@ -43,8 +44,8 @@
 // CHECK-NEXT:       "command-line": [
 // CHECK:            ],
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/modules-fmodule-name-no-module-built.m"
-// CHECK-NEXT:         "[[PREFIX]]/Inputs/header3.h"
+// CHECK-NEXT:         "[[PREFIX]]/modules-fmodule-name-no-module-built.m",
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/header3.h",
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/header.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "input-file": "[[PREFIX]]/modules-fmodule-name-no-module-built.m"

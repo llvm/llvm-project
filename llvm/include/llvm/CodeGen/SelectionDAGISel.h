@@ -14,7 +14,9 @@
 #ifndef LLVM_CODEGEN_SELECTIONDAGISEL_H
 #define LLVM_CODEGEN_SELECTIONDAGISEL_H
 
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/IR/BasicBlock.h"
 #include <memory>
@@ -24,6 +26,7 @@ class AAResults;
 class AssumptionCache;
 class TargetInstrInfo;
 class TargetMachine;
+class SSPLayoutInfo;
 class SelectionDAGBuilder;
 class SDValue;
 class MachineRegisterInfo;
@@ -31,6 +34,7 @@ class MachineFunction;
 class OptimizationRemarkEmitter;
 class TargetLowering;
 class TargetLibraryInfo;
+class TargetTransformInfo;
 class FunctionLoweringInfo;
 class SwiftErrorValueTracking;
 class GCFunctionInfo;
@@ -38,19 +42,24 @@ class ScheduleDAGSDNodes;
 
 /// SelectionDAGISel - This is the common base class used for SelectionDAG-based
 /// pattern-matching instruction selectors.
-class SelectionDAGISel : public MachineFunctionPass {
+class SelectionDAGISel {
 public:
   TargetMachine &TM;
   const TargetLibraryInfo *LibInfo;
   std::unique_ptr<FunctionLoweringInfo> FuncInfo;
   SwiftErrorValueTracking *SwiftError;
   MachineFunction *MF;
+  MachineModuleInfo *MMI;
   MachineRegisterInfo *RegInfo;
   SelectionDAG *CurDAG;
   std::unique_ptr<SelectionDAGBuilder> SDB;
-  AAResults *AA = nullptr;
+  mutable std::optional<BatchAAResults> BatchAA;
   AssumptionCache *AC = nullptr;
   GCFunctionInfo *GFI = nullptr;
+  SSPLayoutInfo *SP = nullptr;
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
+  TargetTransformInfo *TTI = nullptr;
+#endif
   CodeGenOptLevel OptLevel;
   const TargetInstrInfo *TII;
   const TargetLowering *TLI;
@@ -67,16 +76,25 @@ public:
   /// functions. Storing the filter result here so that we only need to do the
   /// filtering once.
   bool MatchFilterFuncName = false;
+  StringRef FuncName;
 
-  explicit SelectionDAGISel(char &ID, TargetMachine &tm,
+  explicit SelectionDAGISel(TargetMachine &tm,
                             CodeGenOptLevel OL = CodeGenOptLevel::Default);
-  ~SelectionDAGISel() override;
+  virtual ~SelectionDAGISel();
+
+  /// Returns a (possibly null) pointer to the current BatchAAResults.
+  BatchAAResults *getBatchAA() const {
+    if (BatchAA.has_value())
+      return &BatchAA.value();
+    return nullptr;
+  }
 
   const TargetLowering *getTargetLowering() const { return TLI; }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  void initializeAnalysisResults(MachineFunctionAnalysisManager &MFAM);
+  void initializeAnalysisResults(MachineFunctionPass &MFP);
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  virtual bool runOnMachineFunction(MachineFunction &mf);
 
   virtual void emitFunctionEntryCode() {}
 
@@ -159,8 +177,24 @@ public:
     OPC_CheckChild2Same,
     OPC_CheckChild3Same,
     OPC_CheckPatternPredicate,
+    OPC_CheckPatternPredicate0,
+    OPC_CheckPatternPredicate1,
     OPC_CheckPatternPredicate2,
+    OPC_CheckPatternPredicate3,
+    OPC_CheckPatternPredicate4,
+    OPC_CheckPatternPredicate5,
+    OPC_CheckPatternPredicate6,
+    OPC_CheckPatternPredicate7,
+    OPC_CheckPatternPredicateTwoByte,
     OPC_CheckPredicate,
+    OPC_CheckPredicate0,
+    OPC_CheckPredicate1,
+    OPC_CheckPredicate2,
+    OPC_CheckPredicate3,
+    OPC_CheckPredicate4,
+    OPC_CheckPredicate5,
+    OPC_CheckPredicate6,
+    OPC_CheckPredicate7,
     OPC_CheckPredicateWithOperands,
     OPC_CheckOpcode,
     OPC_SwitchOpcode,
@@ -207,6 +241,14 @@ public:
     OPC_CheckChild2CondCode,
     OPC_CheckValueType,
     OPC_CheckComplexPat,
+    OPC_CheckComplexPat0,
+    OPC_CheckComplexPat1,
+    OPC_CheckComplexPat2,
+    OPC_CheckComplexPat3,
+    OPC_CheckComplexPat4,
+    OPC_CheckComplexPat5,
+    OPC_CheckComplexPat6,
+    OPC_CheckComplexPat7,
     OPC_CheckAndImm,
     OPC_CheckOrImm,
     OPC_CheckImmAllOnesV,
@@ -281,7 +323,7 @@ public:
     OPC_MorphNodeTo1GlueOutput,
     OPC_MorphNodeTo2GlueOutput,
     OPC_CompleteMatch,
-    // Contains offset in table for pattern being selected
+    // Contains 32-bit offset in table for pattern being selected
     OPC_Coverage
   };
 
@@ -429,11 +471,16 @@ private:
   void Select_READ_REGISTER(SDNode *Op);
   void Select_WRITE_REGISTER(SDNode *Op);
   void Select_UNDEF(SDNode *N);
+  void Select_FAKE_USE(SDNode *N);
   void CannotYetSelect(SDNode *N);
 
   void Select_FREEZE(SDNode *N);
   void Select_ARITH_FENCE(SDNode *N);
   void Select_MEMBARRIER(SDNode *N);
+
+  void Select_CONVERGENCECTRL_ANCHOR(SDNode *N);
+  void Select_CONVERGENCECTRL_ENTRY(SDNode *N);
+  void Select_CONVERGENCECTRL_LOOP(SDNode *N);
 
   void pushStackMapLiveVariable(SmallVectorImpl<SDValue> &Ops, SDValue Operand,
                                 SDLoc DL);
@@ -489,6 +536,31 @@ private:
                     bool isMorphNodeTo);
 };
 
+class SelectionDAGISelLegacy : public MachineFunctionPass {
+  std::unique_ptr<SelectionDAGISel> Selector;
+
+public:
+  SelectionDAGISelLegacy(char &ID, std::unique_ptr<SelectionDAGISel> S);
+
+  ~SelectionDAGISelLegacy() override = default;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+};
+
+class SelectionDAGISelPass : public PassInfoMixin<SelectionDAGISelPass> {
+  std::unique_ptr<SelectionDAGISel> Selector;
+
+protected:
+  SelectionDAGISelPass(std::unique_ptr<SelectionDAGISel> Selector)
+      : Selector(std::move(Selector)) {}
+
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
 }
 
 #endif /* LLVM_CODEGEN_SELECTIONDAGISEL_H */

@@ -73,8 +73,17 @@ SANITIZER("fuzzer", Fuzzer)
 // libFuzzer-required instrumentation, no linking.
 SANITIZER("fuzzer-no-link", FuzzerNoLink)
 
+// TypeSanitizer
+SANITIZER("type", Type)
+
 // ThreadSanitizer
 SANITIZER("thread", Thread)
+
+// Numerical stability sanitizer.
+SANITIZER("numerical", NumericalStability)
+
+// RealtimeSanitizer
+SANITIZER("realtime", Realtime)
 
 // LeakSanitizer
 SANITIZER("leak", Leak)
@@ -163,23 +172,23 @@ SANITIZER_GROUP("implicit-integer-arithmetic-value-change",
                 ImplicitIntegerArithmeticValueChange,
                 ImplicitIntegerSignChange | ImplicitSignedIntegerTruncation)
 
-SANITIZER("objc-cast", ObjCCast)
-
-// FIXME:
-//SANITIZER_GROUP("implicit-integer-conversion", ImplicitIntegerConversion,
-//                ImplicitIntegerArithmeticValueChange |
-//                    ImplicitUnsignedIntegerTruncation)
-//SANITIZER_GROUP("implicit-conversion", ImplicitConversion,
-//                ImplicitIntegerConversion)
-
-SANITIZER_GROUP("implicit-conversion", ImplicitConversion,
+SANITIZER_GROUP("implicit-integer-conversion", ImplicitIntegerConversion,
                 ImplicitIntegerArithmeticValueChange |
                     ImplicitUnsignedIntegerTruncation)
 
+// Implicit bitfield sanitizers
+SANITIZER("implicit-bitfield-conversion", ImplicitBitfieldConversion)
+
+SANITIZER_GROUP("implicit-conversion", ImplicitConversion,
+                ImplicitIntegerConversion |
+                    ImplicitBitfieldConversion)
+
 SANITIZER_GROUP("integer", Integer,
-                ImplicitConversion | IntegerDivideByZero | Shift |
+                ImplicitIntegerConversion | IntegerDivideByZero | Shift |
                     SignedIntegerOverflow | UnsignedIntegerOverflow |
                     UnsignedShiftBase)
+
+SANITIZER("objc-cast", ObjCCast)
 
 SANITIZER("local-bounds", LocalBounds)
 SANITIZER_GROUP("bounds", Bounds, ArrayBounds | LocalBounds)

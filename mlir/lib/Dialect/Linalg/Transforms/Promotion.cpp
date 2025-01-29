@@ -164,7 +164,8 @@ struct LinalgOpInstancePromotionOptions {
 LinalgOpInstancePromotionOptions::LinalgOpInstancePromotionOptions(
     LinalgOp linalgOp, const LinalgPromotionOptions &options)
     : subViews(), alignment(options.alignment) {
-  assert(linalgOp.hasBufferSemantics() && "revisit usage of shaped operand");
+  assert(linalgOp.hasPureBufferSemantics() &&
+         "revisit usage of shaped operand");
   auto vUseFullTileBuffers =
       options.useFullTileBuffers.value_or(llvm::SmallBitVector());
   vUseFullTileBuffers.resize(linalgOp->getNumOperands(),
@@ -256,14 +257,12 @@ FailureOr<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
     if (auto attr = llvm::dyn_cast_if_present<Attribute>(rangeValue.size)) {
       size = getValueOrCreateConstantIndexOp(b, loc, rangeValue.size);
     } else {
-      Value materializedSize =
-          getValueOrCreateConstantIndexOp(b, loc, rangeValue.size);
       FailureOr<int64_t> upperBound =
           ValueBoundsConstraintSet::computeConstantBound(
-              presburger::BoundType::UB, materializedSize, /*dim=*/std::nullopt,
+              presburger::BoundType::UB, rangeValue.size,
               /*stopCondition=*/nullptr, /*closedUB=*/true);
       size = failed(upperBound)
-                 ? materializedSize
+                 ? getValueOrCreateConstantIndexOp(b, loc, rangeValue.size)
                  : b.create<arith::ConstantIndexOp>(loc, *upperBound);
     }
     LLVM_DEBUG(llvm::dbgs() << "Extracted tightest: " << size << "\n");
@@ -330,7 +329,7 @@ promoteSubViews(ImplicitLocOpBuilder &b,
 
   // Copy data into the promoted buffers. Use callback if provided.
   for (auto v : options.subViews) {
-    auto info = promotionInfoMap.find(v.first);
+    auto *info = promotionInfoMap.find(v.first);
     if (info == promotionInfoMap.end())
       continue;
     if (options.operandsNumbersToCopyIn.count(v.first) == 0)
@@ -346,7 +345,8 @@ promoteSubViews(ImplicitLocOpBuilder &b,
 static FailureOr<LinalgOp>
 promoteSubViews(ImplicitLocOpBuilder &b, LinalgOp op,
                 LinalgOpInstancePromotionOptions options, DataLayout &layout) {
-  assert(op.hasBufferSemantics() && "expected linalg op with buffer semantics");
+  assert(op.hasPureBufferSemantics() &&
+         "expected linalg op with buffer semantics");
 
   // 1. Promote the specified views and use them in the new op.
   auto promotedBuffersAndViews = promoteSubViews(b, options, layout);
@@ -400,7 +400,7 @@ mlir::linalg::promoteSubviewsPrecondition(Operation *op,
                                           LinalgPromotionOptions options) {
   LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
   // Transformation applies to buffers only.
-  if (!linalgOp || !linalgOp.hasBufferSemantics())
+  if (!linalgOp || !linalgOp.hasPureBufferSemantics())
     return failure();
   // Check that at least one of the requested operands is indeed a subview.
   for (OpOperand &opOperand : linalgOp->getOpOperands()) {
@@ -451,7 +451,7 @@ static std::optional<Value> allocateSubviewGPUMemoryInAddressSpace(
     shape.push_back(value.getSExtValue());
   }
 
-  builder.setInsertionPoint(&funcOp.front(), funcOp.front().begin());
+  builder.setInsertionPointToStart(&funcOp.front());
   auto type = MemRefType::get(
       shape, subview.getType().getElementType(), MemRefLayoutAttrInterface{},
       gpu::AddressSpaceAttr::get(builder.getContext(), addressSpace));

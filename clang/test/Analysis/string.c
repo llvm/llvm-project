@@ -25,7 +25,7 @@
 // RUN: %clang_analyze_cc1 -verify %s -Wno-null-dereference \
 // RUN:   -DUSE_BUILTINS -DVARIANT \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-checker=optin.taint \
 // RUN:   -analyzer-checker=unix.cstring \
 // RUN:   -analyzer-checker=unix.Malloc \
 // RUN:   -analyzer-checker=alpha.unix.cstring \
@@ -38,7 +38,7 @@
 // RUN:   -analyzer-checker=unix.cstring \
 // RUN:   -analyzer-checker=unix.Malloc \
 // RUN:   -analyzer-checker=alpha.unix.cstring.BufferOverlap \
-// RUN:   -analyzer-checker=alpha.unix.cstring.NotNullTerminated \
+// RUN:   -analyzer-checker=unix.cstring.NotNullTerminated \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false
 
@@ -71,7 +71,7 @@ void clang_analyzer_eval(int);
 int scanf(const char *restrict format, ...);
 void *malloc(size_t);
 void free(void *);
-void *memcpy(void *dest, const void *src, size_t n);
+void *memcpy(void *restrict dest, const void *restrict src, size_t n);
 
 //===----------------------------------------------------------------------===
 // strlen()
@@ -361,6 +361,10 @@ void strcpy_fn_const(char *x) {
   strcpy(x, (const char*)&strcpy_fn); // expected-warning{{Argument to string copy function is the address of the function 'strcpy_fn', which is not a null-terminated string}}
 }
 
+void strcpy_fn_dst(const char *x) {
+  strcpy((char*)&strcpy_fn, x); // expected-warning{{Argument to string copy function is the address of the function 'strcpy_fn', which is not a null-terminated string}}
+}
+
 extern int globalInt;
 void strcpy_effects(char *x, char *y) {
   char a = x[0];
@@ -469,8 +473,22 @@ void strcat_null_src(char *x) {
   strcat(x, NULL); // expected-warning{{Null pointer passed as 2nd argument to string concatenation function}}
 }
 
-void strcat_fn(char *x) {
-  strcat(x, (char*)&strcat_fn); // expected-warning{{Argument to string concatenation function is the address of the function 'strcat_fn', which is not a null-terminated string}}
+void strcat_fn_dst(const char *x) {
+  strcat((char*)&strcat_fn_dst, x); // expected-warning{{Argument to string concatenation function is the address of the function 'strcat_fn_dst', which is not a null-terminated string}}
+}
+
+void strcat_fn_src(char *x) {
+  strcat(x, (char*)&strcat_fn_src); // expected-warning{{Argument to string concatenation function is the address of the function 'strcat_fn_src', which is not a null-terminated string}}
+}
+
+void strcat_label_dst(const char *x) {
+label:
+  strcat((char*)&&label, x); // expected-warning{{Argument to string concatenation function is the address of the label 'label', which is not a null-terminated string}}
+}
+
+void strcat_label_src(char *x) {
+label:
+  strcat(x, (char*)&&label); // expected-warning{{Argument to string concatenation function is the address of the label 'label', which is not a null-terminated string}}
 }
 
 void strcat_effects(char *y) {
@@ -568,8 +586,12 @@ void strncpy_null_src(char *x) {
   strncpy(x, NULL, 5); // expected-warning{{Null pointer passed as 2nd argument to string copy function}}
 }
 
-void strncpy_fn(char *x) {
-  strncpy(x, (char*)&strcpy_fn, 5); // expected-warning{{Argument to string copy function is the address of the function 'strcpy_fn', which is not a null-terminated string}}
+void strncpy_fn_src(char *x) {
+  strncpy(x, (char*)&strncpy_fn_src, 5); // expected-warning{{Argument to string copy function is the address of the function 'strncpy_fn_src', which is not a null-terminated string}}
+}
+
+void strncpy_fn_dst(const char *x) {
+  strncpy((char*)&strncpy_fn_dst, x, 5); // expected-warning{{Argument to string copy function is the address of the function 'strncpy_fn_dst', which is not a null-terminated string}}
 }
 
 void strncpy_effects(char *x, char *y) {
@@ -680,8 +702,12 @@ void strncat_null_src(char *x) {
   strncat(x, NULL, 4); // expected-warning{{Null pointer passed as 2nd argument to string concatenation function}}
 }
 
-void strncat_fn(char *x) {
-  strncat(x, (char*)&strncat_fn, 4); // expected-warning{{Argument to string concatenation function is the address of the function 'strncat_fn', which is not a null-terminated string}}
+void strncat_fn_src(char *x) {
+  strncat(x, (char*)&strncat_fn_src, 4); // expected-warning{{Argument to string concatenation function is the address of the function 'strncat_fn_src', which is not a null-terminated string}}
+}
+
+void strncat_fn_dst(const char *x) {
+  strncat((char*)&strncat_fn_dst, x, 4); // expected-warning{{Argument to string concatenation function is the address of the function 'strncat_fn_dst', which is not a null-terminated string}}
 }
 
 void strncat_effects(char *y) {
@@ -919,6 +945,14 @@ int strcmp_null_argument(char *a) {
   char *b = 0;
   // Do not warn about the first argument!
   return strcmp(a, b); // expected-warning{{Null pointer passed as 2nd argument to string comparison function}}
+}
+
+void strcmp_fn_r(char *x) {
+  strcmp(x, (char*)&strcmp_null_argument); // expected-warning{{Argument to string comparison function is the address of the function 'strcmp_null_argument', which is not a null-terminated string}}
+}
+
+void strcmp_fn_l(char *x) {
+  strcmp((char*)&strcmp_null_argument, x); // expected-warning{{Argument to string comparison function is the address of the function 'strcmp_null_argument', which is not a null-terminated string}}
 }
 
 //===----------------------------------------------------------------------===
@@ -1252,7 +1286,7 @@ int strncasecmp_null_argument(char *a, size_t n) {
 // strsep()
 //===----------------------------------------------------------------------===
 
-char *strsep(char **stringp, const char *delim);
+char *strsep(char ** restrict stringp, const char * restrict delim);
 
 void strsep_null_delim(char *s) {
   strsep(&s, NULL); // expected-warning{{Null pointer passed as 2nd argument to strsep()}}

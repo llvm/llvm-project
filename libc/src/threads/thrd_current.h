@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_THREADS_THRD_CURRENT_H
 #define LLVM_LIBC_SRC_THREADS_THRD_CURRENT_H
 
+#include "src/__support/macros/config.h"
 #include <threads.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 thrd_t thrd_current();
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_THREADS_THRD_CURRENT_H

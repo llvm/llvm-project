@@ -55,7 +55,7 @@ define i16 @n2(i8 %x) {
 
 define <2 x i16> @t3_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @t3_vec(
-; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 4, i8 4>
+; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i8> [[X:%.*]], splat (i8 4)
 ; CHECK-NEXT:    call void @usevec(<2 x i8> [[A]])
 ; CHECK-NEXT:    [[C:%.*]] = sext <2 x i8> [[A]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[C]]
@@ -86,7 +86,7 @@ define i16 @t5_extrause(i8 %x) {
 ; CHECK-LABEL: @t5_extrause(
 ; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 5
 ; CHECK-NEXT:    call void @use8(i8 [[A]])
-; CHECK-NEXT:    [[B:%.*]] = trunc i8 [[A]] to i4
+; CHECK-NEXT:    [[B:%.*]] = trunc nsw i8 [[A]] to i4
 ; CHECK-NEXT:    call void @use4(i4 [[B]])
 ; CHECK-NEXT:    [[C:%.*]] = sext i8 [[A]] to i16
 ; CHECK-NEXT:    ret i16 [[C]]
@@ -134,7 +134,7 @@ define i24 @wide_source_matching_signbits(i32 %x) {
 ; CHECK-LABEL: @wide_source_matching_signbits(
 ; CHECK-NEXT:    [[M:%.*]] = and i32 [[X:%.*]], 7
 ; CHECK-NEXT:    [[A:%.*]] = shl nsw i32 -1, [[M]]
-; CHECK-NEXT:    [[C:%.*]] = trunc i32 [[A]] to i24
+; CHECK-NEXT:    [[C:%.*]] = trunc nsw i32 [[A]] to i24
 ; CHECK-NEXT:    ret i24 [[C]]
 ;
   %m = and i32 %x, 7
@@ -194,7 +194,7 @@ define i32 @same_source_matching_signbits_extra_use(i32 %x) {
 ; CHECK-LABEL: @same_source_matching_signbits_extra_use(
 ; CHECK-NEXT:    [[M:%.*]] = and i32 [[X:%.*]], 7
 ; CHECK-NEXT:    [[A:%.*]] = shl nsw i32 -1, [[M]]
-; CHECK-NEXT:    [[B:%.*]] = trunc i32 [[A]] to i8
+; CHECK-NEXT:    [[B:%.*]] = trunc nsw i32 [[A]] to i8
 ; CHECK-NEXT:    call void @use8(i8 [[B]])
 ; CHECK-NEXT:    ret i32 [[A]]
 ;

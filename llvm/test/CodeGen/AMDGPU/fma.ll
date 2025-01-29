@@ -1,13 +1,13 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX906 -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=cedar -verify-machineinstrs < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=juniper -verify-machineinstrs < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=redwood -verify-machineinstrs < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=sumo -verify-machineinstrs < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=barts -verify-machineinstrs < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=caicos -verify-machineinstrs < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=turks -verify-machineinstrs < %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX906 -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=cedar -verify-machineinstrs < %s
+; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=juniper -verify-machineinstrs < %s
+; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=redwood -verify-machineinstrs < %s
+; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=sumo -verify-machineinstrs < %s
+; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=barts -verify-machineinstrs < %s
+; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=caicos -verify-machineinstrs < %s
+; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=turks -verify-machineinstrs < %s
 
 declare float @llvm.fma.f32(float, float, float) nounwind readnone
 declare <2 x float> @llvm.fma.v2f32(<2 x float>, <2 x float>, <2 x float>) nounwind readnone
@@ -159,15 +159,15 @@ define float @fold_fmul_distributive(float %x, float %y) {
 define amdgpu_kernel void @vec_mul_scalar_add_fma(<2 x float> %a, <2 x float> %b, float %c1, ptr addrspace(1) %inptr) {
 ; GFX906-LABEL: vec_mul_scalar_add_fma:
 ; GFX906:       ; %bb.0:
-; GFX906-NEXT:    s_load_dword s8, s[0:1], 0x34
-; GFX906-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; GFX906-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x3c
+; GFX906-NEXT:    s_load_dword s8, s[4:5], 0x34
+; GFX906-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX906-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x3c
 ; GFX906-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX906-NEXT:    v_mov_b32_e32 v1, s8
-; GFX906-NEXT:    v_mov_b32_e32 v2, s6
-; GFX906-NEXT:    v_fmac_f32_e32 v1, s4, v2
-; GFX906-NEXT:    global_store_dword v0, v1, s[2:3] offset:4
+; GFX906-NEXT:    v_mov_b32_e32 v2, s2
+; GFX906-NEXT:    v_fmac_f32_e32 v1, s0, v2
+; GFX906-NEXT:    global_store_dword v0, v1, s[6:7] offset:4
 ; GFX906-NEXT:    s_endpgm
   %gep = getelementptr float, ptr addrspace(1) %inptr, i32 1
   %c = shufflevector <2 x float> %a, <2 x float> poison, <2 x i32> zeroinitializer

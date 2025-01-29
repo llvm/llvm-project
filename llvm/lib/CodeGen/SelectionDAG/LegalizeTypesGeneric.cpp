@@ -265,7 +265,7 @@ void DAGTypeLegalizer::ExpandRes_NormalLoad(SDNode *N, SDValue &Lo,
 
   // Increment the pointer to the other half.
   unsigned IncrementSize = NVT.getSizeInBits() / 8;
-  Ptr = DAG.getMemBasePlusOffset(Ptr, TypeSize::getFixed(IncrementSize), dl);
+  Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::getFixed(IncrementSize));
   Hi = DAG.getLoad(
       NVT, dl, Chain, Ptr, LD->getPointerInfo().getWithOffset(IncrementSize),
       LD->getOriginalAlign(), LD->getMemOperand()->getFlags(), AAInfo);
@@ -376,6 +376,15 @@ SDValue DAGTypeLegalizer::ExpandOp_BUILD_VECTOR(SDNode *N) {
   assert(OldVT == VecVT.getVectorElementType() &&
          "BUILD_VECTOR operand type doesn't match vector element type!");
 
+  if (VecVT.isInteger() && TLI.isOperationLegal(ISD::SPLAT_VECTOR, VecVT) &&
+      TLI.isOperationLegalOrCustom(ISD::SPLAT_VECTOR_PARTS, VecVT)) {
+    if (SDValue V = cast<BuildVectorSDNode>(N)->getSplatValue()) {
+      SDValue Lo, Hi;
+      GetExpandedOp(V, Lo, Hi);
+      return DAG.getNode(ISD::SPLAT_VECTOR_PARTS, dl, VecVT, Lo, Hi);
+    }
+  }
+
   // Build a vector of twice the length out of the expanded elements.
   // For example <3 x i64> -> <6 x i32>.
   SmallVector<SDValue, 16> NewElts;
@@ -401,6 +410,17 @@ SDValue DAGTypeLegalizer::ExpandOp_EXTRACT_ELEMENT(SDNode *N) {
   SDValue Lo, Hi;
   GetExpandedOp(N->getOperand(0), Lo, Hi);
   return N->getConstantOperandVal(1) ? Hi : Lo;
+}
+
+// Split the integer operand in two and create a second FAKE_USE node for
+// the other half. The original SDNode is updated in place.
+SDValue DAGTypeLegalizer::ExpandOp_FAKE_USE(SDNode *N) {
+  SDValue Lo, Hi;
+  SDValue Chain = N->getOperand(0);
+  GetExpandedOp(N->getOperand(1), Lo, Hi);
+  SDValue LoUse = DAG.getNode(ISD::FAKE_USE, SDLoc(), MVT::Other, Chain, Lo);
+  DAG.UpdateNodeOperands(N, LoUse, Hi);
+  return SDValue(N, 0);
 }
 
 SDValue DAGTypeLegalizer::ExpandOp_INSERT_VECTOR_ELT(SDNode *N) {

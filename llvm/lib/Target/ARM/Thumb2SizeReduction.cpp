@@ -29,13 +29,11 @@
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <functional>
@@ -755,6 +753,9 @@ Thumb2SizeReduce::ReduceTo2Addr(MachineBasicBlock &MBB, MachineInstr *MI,
   Register Reg1 = MI->getOperand(1).getReg();
   // t2MUL is "special". The tied source operand is second, not first.
   if (MI->getOpcode() == ARM::t2MUL) {
+    // MULS can be slower than MUL
+    if (!MinimizeSize && STI->avoidMULS())
+      return false;
     Register Reg2 = MI->getOperand(2).getReg();
     // Early exit if the regs aren't all low regs.
     if (!isARMLowRegister(Reg0) || !isARMLowRegister(Reg1)
@@ -1097,12 +1098,13 @@ bool Thumb2SizeReduce::ReduceMBB(MachineBasicBlock &MBB,
       // marker is only on the BUNDLE instruction. Process the BUNDLE
       // instruction as we finish with the bundled instruction to work around
       // the inconsistency.
-      if (BundleMI->killsRegister(ARM::CPSR))
+      if (BundleMI->killsRegister(ARM::CPSR, /*TRI=*/nullptr))
         LiveCPSR = false;
-      MachineOperand *MO = BundleMI->findRegisterDefOperand(ARM::CPSR);
+      MachineOperand *MO =
+          BundleMI->findRegisterDefOperand(ARM::CPSR, /*TRI=*/nullptr);
       if (MO && !MO->isDead())
         LiveCPSR = true;
-      MO = BundleMI->findRegisterUseOperand(ARM::CPSR);
+      MO = BundleMI->findRegisterUseOperand(ARM::CPSR, /*TRI=*/nullptr);
       if (MO && !MO->isKill())
         LiveCPSR = true;
     }

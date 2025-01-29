@@ -1,4 +1,13 @@
 set(LLVM_LINK_COMPONENTS
+  AsmParser
+  Core
+  SandboxIR
   Support)
 
-add_benchmark(DummyYAML DummyYAML.cpp)
+add_benchmark(DummyYAML DummyYAML.cpp PARTIAL_SOURCES_INTENDED)
+add_benchmark(xxhash xxhash.cpp PARTIAL_SOURCES_INTENDED)
+add_benchmark(GetIntrinsicForClangBuiltin GetIntrinsicForClangBuiltin.cpp PARTIAL_SOURCES_INTENDED)
+add_benchmark(FormatVariadicBM FormatVariadicBM.cpp PARTIAL_SOURCES_INTENDED)
+add_benchmark(GetIntrinsicInfoTableEntriesBM GetIntrinsicInfoTableEntriesBM.cpp PARTIAL_SOURCES_INTENDED)
+add_benchmark(SandboxIRBench SandboxIRBench.cpp PARTIAL_SOURCES_INTENDED)
+

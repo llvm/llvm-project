@@ -10,24 +10,29 @@ target triple = "arm64-apple-ios5.0.0"
 define i32 @main() #0 !dbg !14 {
   ; CHECK-LABEL: name: main
   ; CHECK: bb.1.entry:
-  ; CHECK:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
-  ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1
-  ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-  ; CHECK:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2
-  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.retval
-  ; CHECK:   G_STORE [[C]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %ir.retval)
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0), debug-location !17 :: (dereferenceable load (s32) from @var1)
-  ; CHECK:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[LOAD]](s32), [[C1]], debug-location !19
-  ; CHECK:   G_BRCOND [[ICMP]](s1), %bb.2, debug-location !20
-  ; CHECK:   G_BR %bb.3, debug-location !20
-  ; CHECK: bb.2.if.then:
-  ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   G_STORE [[C2]](s32), [[GV1]](p0), debug-location !21 :: (store (s32) into @var2)
-  ; CHECK: bb.3.if.end:
-  ; CHECK:   $w0 = COPY [[C]](s32), debug-location !24
-  ; CHECK:   RET_ReallyLR implicit $w0, debug-location !24
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
+  ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2
+  ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.retval
+  ; CHECK-NEXT:   G_STORE [[C]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %ir.retval)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0), debug-location !17 :: (dereferenceable load (s32) from @var1)
+  ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[LOAD]](s32), [[C1]], debug-location !19
+  ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.2, debug-location !20
+  ; CHECK-NEXT:   G_BR %bb.3, debug-location !20
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.if.then:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   G_STORE [[C2]](s32), [[GV1]](p0), debug-location !21 :: (store (s32) into @var2)
+  ; CHECK-NEXT:   G_BR %bb.3, debug-location !23
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3.if.end:
+  ; CHECK-NEXT:   $w0 = COPY [[C]](s32), debug-location !24
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0, debug-location !24
 entry:
   %retval = alloca i32, align 4
   store i32 0, ptr %retval, align 4

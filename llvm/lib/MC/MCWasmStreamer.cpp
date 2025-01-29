@@ -27,7 +27,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 class MCContext;
@@ -39,19 +38,6 @@ using namespace llvm;
 
 MCWasmStreamer::~MCWasmStreamer() = default; // anchor.
 
-void MCWasmStreamer::mergeFragment(MCDataFragment *DF, MCDataFragment *EF) {
-  flushPendingLabels(DF, DF->getContents().size());
-
-  for (unsigned I = 0, E = EF->getFixups().size(); I != E; ++I) {
-    EF->getFixups()[I].setOffset(EF->getFixups()[I].getOffset() +
-                                 DF->getContents().size());
-    DF->getFixups().push_back(EF->getFixups()[I]);
-  }
-  if (DF->getSubtargetInfo() == nullptr && EF->getSubtargetInfo())
-    DF->setHasInstructions(*EF->getSubtargetInfo());
-  DF->getContents().append(EF->getContents().begin(), EF->getContents().end());
-}
-
 void MCWasmStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
   auto *Symbol = cast<MCSymbolWasm>(S);
   MCObjectStreamer::emitLabel(Symbol, Loc);
@@ -62,7 +48,7 @@ void MCWasmStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
     Symbol->setTLS();
 }
 
-void MCWasmStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCFragment *F,
+void MCWasmStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCDataFragment &F,
                                     uint64_t Offset) {
   auto *Symbol = cast<MCSymbolWasm>(S);
   MCObjectStreamer::emitLabelAtPos(Symbol, Loc, F, Offset);
@@ -81,8 +67,7 @@ void MCWasmStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
   llvm_unreachable("invalid assembler flag!");
 }
 
-void MCWasmStreamer::changeSection(MCSection *Section,
-                                   const MCExpr *Subsection) {
+void MCWasmStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   MCAssembler &Asm = getAssembler();
   auto *SectionWasm = cast<MCSectionWasm>(Section);
   const MCSymbol *Grp = SectionWasm->getGroup();
@@ -211,7 +196,7 @@ void MCWasmStreamer::emitInstToData(const MCInst &Inst,
     DF->getFixups().push_back(Fixups[I]);
   }
   DF->setHasInstructions(STI);
-  DF->getContents().append(Code.begin(), Code.end());
+  DF->appendContents(Code);
 }
 
 void MCWasmStreamer::finishImpl() {
@@ -275,11 +260,8 @@ void MCWasmStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
 MCStreamer *llvm::createWasmStreamer(MCContext &Context,
                                      std::unique_ptr<MCAsmBackend> &&MAB,
                                      std::unique_ptr<MCObjectWriter> &&OW,
-                                     std::unique_ptr<MCCodeEmitter> &&CE,
-                                     bool RelaxAll) {
+                                     std::unique_ptr<MCCodeEmitter> &&CE) {
   MCWasmStreamer *S =
       new MCWasmStreamer(Context, std::move(MAB), std::move(OW), std::move(CE));
-  if (RelaxAll)
-    S->getAssembler().setRelaxAll(true);
   return S;
 }

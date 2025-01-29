@@ -1,0 +1,17 @@
+source_set("Basic") {
+  deps = [
+    "//llvm/lib/Support",
+    "//llvm/lib/TableGen",
+  ]
+  sources = [
+    "ARMTargetDefEmitter.cpp",
+    "Attributes.cpp",
+    "CodeGenIntrinsics.cpp",
+    "DirectiveEmitter.cpp",
+    "IntrinsicEmitter.cpp",
+    "RISCVTargetDefEmitter.cpp",
+    "SDNodeProperties.cpp",
+    "TableGen.cpp",
+    "VTEmitter.cpp",
+  ]
+}

@@ -9,6 +9,7 @@
 #define LLVM_MC_MCSYMBOLELF_H
 
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolTableEntry.h"
 
 namespace llvm {
 class MCSymbolELF : public MCSymbol {
@@ -17,7 +18,7 @@ class MCSymbolELF : public MCSymbol {
   const MCExpr *SymbolSize = nullptr;
 
 public:
-  MCSymbolELF(const StringMapEntry<bool> *Name, bool isTemporary)
+  MCSymbolELF(const MCSymbolTableEntry *Name, bool isTemporary)
       : MCSymbol(SymbolKindELF, Name, isTemporary) {}
   void setSize(const MCExpr *SS) { SymbolSize = SS; }
 

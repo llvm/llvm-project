@@ -85,7 +85,7 @@ class ExplodedNodeSet;
 class ExplodedNode;
 class IndirectGotoNodeBuilder;
 class MemRegion;
-struct NodeBuilderContext;
+class NodeBuilderContext;
 class NodeBuilderWithSinks;
 class ProgramState;
 class ProgramStateManager;
@@ -187,17 +187,9 @@ public:
 
   /// Returns true if there is still simulation state on the worklist.
   bool ExecuteWorkList(const LocationContext *L, unsigned Steps = 150000) {
+    assert(L->inTopFrame());
+    BR.setAnalysisEntryPoint(L->getDecl());
     return Engine.ExecuteWorkList(L, Steps, nullptr);
-  }
-
-  /// Execute the work list with an initial state. Nodes that reaches the exit
-  /// of the function are added into the Dst set, which represent the exit
-  /// state of the function call. Returns true if there is still simulation
-  /// state on the worklist.
-  bool ExecuteWorkListWithInitialState(const LocationContext *L, unsigned Steps,
-                                       ProgramStateRef InitState,
-                                       ExplodedNodeSet &Dst) {
-    return Engine.ExecuteWorkListWithInitialState(L, Steps, InitState, Dst);
   }
 
   /// getContext - Return the ASTContext associated with this analysis.
@@ -294,6 +286,10 @@ public:
             const Stmt *DiagnosticStmt = nullptr,
             ProgramPoint::Kind K = ProgramPoint::PreStmtPurgeDeadSymbolsKind);
 
+  /// A tag to track convenience transitions, which can be removed at cleanup.
+  /// This tag applies to a node created after removeDead.
+  static const ProgramPointTag *cleanupNodeTag();
+
   /// processCFGElement - Called by CoreEngine. Used to generate new successor
   ///  nodes by processing the 'effects' of a CFG element.
   void processCFGElement(const CFGElement E, ExplodedNode *Pred,
@@ -325,14 +321,14 @@ public:
                                NodeBuilderWithSinks &nodeBuilder,
                                ExplodedNode *Pred);
 
-  /// ProcessBranch - Called by CoreEngine.  Used to generate successor
-  ///  nodes by processing the 'effects' of a branch condition.
-  void processBranch(const Stmt *Condition,
-                     NodeBuilderContext& BuilderCtx,
-                     ExplodedNode *Pred,
-                     ExplodedNodeSet &Dst,
-                     const CFGBlock *DstT,
-                     const CFGBlock *DstF);
+  /// ProcessBranch - Called by CoreEngine. Used to generate successor nodes by
+  /// processing the 'effects' of a branch condition. If the branch condition
+  /// is a loop condition, IterationsCompletedInLoop is the number of completed
+  /// iterations (otherwise it's std::nullopt).
+  void processBranch(const Stmt *Condition, NodeBuilderContext &BuilderCtx,
+                     ExplodedNode *Pred, ExplodedNodeSet &Dst,
+                     const CFGBlock *DstT, const CFGBlock *DstF,
+                     std::optional<unsigned> IterationsCompletedInLoop);
 
   /// Called by CoreEngine.
   /// Used to generate successor nodes for temporary destructors depending
@@ -587,14 +583,15 @@ public:
                                 ExplodedNode *Pred,
                                 ExplodedNodeSet &Dst);
 
-  /// evalEagerlyAssumeBinOpBifurcation - Given the nodes in 'Src', eagerly assume symbolic
-  ///  expressions of the form 'x != 0' and generate new nodes (stored in Dst)
-  ///  with those assumptions.
-  void evalEagerlyAssumeBinOpBifurcation(ExplodedNodeSet &Dst, ExplodedNodeSet &Src,
-                         const Expr *Ex);
+  /// evalEagerlyAssumeBifurcation - Given the nodes in 'Src', eagerly assume
+  /// concrete boolean values for 'Ex', storing the resulting nodes in 'Dst'.
+  void evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst, ExplodedNodeSet &Src,
+                                    const Expr *Ex);
+
+  bool didEagerlyAssumeBifurcateAt(ProgramStateRef State, const Expr *Ex) const;
 
   static std::pair<const ProgramPointTag *, const ProgramPointTag *>
-    geteagerlyAssumeBinOpBifurcationTags();
+  getEagerlyAssumeBifurcationTags();
 
   ProgramStateRef handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
                                       const LocationContext *LCtx, QualType T,

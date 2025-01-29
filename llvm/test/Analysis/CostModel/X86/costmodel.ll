@@ -29,7 +29,7 @@ define i64 @foo(i64 %arg) {
 ; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I2P = inttoptr i64 undef to ptr
 ; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %P2I = ptrtoint ptr undef to i64
 ; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %TC = trunc i64 undef to i32
-; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %uadd = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 undef, i32 undef)
+; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %uadd = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 undef, i32 undef)
 ; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void undef()
 ; CODESIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i64 undef
 ;

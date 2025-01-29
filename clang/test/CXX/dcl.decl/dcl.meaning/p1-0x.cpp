@@ -6,8 +6,8 @@ class foo {
   void func();
 };
 
-int decltype(foo())::i; // expected-error{{'decltype' cannot be used to name a declaration}}
-void decltype(foo())::func() { // expected-error{{'decltype' cannot be used to name a declaration}}
+int decltype(foo())::i; // expected-error{{a 'decltype' specifier cannot be used in a declarative nested name specifier}}
+void decltype(foo())::func() { // expected-error{{a 'decltype' specifier cannot be used in a declarative nested name specifier}}
 }
 
 

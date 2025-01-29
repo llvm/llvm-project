@@ -49,26 +49,26 @@ define <4 x float> @fmul_pow2_ldexp_4xfloat(<4 x i32> %i) {
 ; CHECK-SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
 ; CHECK-SSE-NEXT:    movd %xmm1, %edi
-; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = [9.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-SSE-NEXT:    callq ldexpf@PLT
 ; CHECK-SSE-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-SSE-NEXT:    pshufd $238, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-SSE-NEXT:    # xmm0 = mem[2,3,2,3]
 ; CHECK-SSE-NEXT:    movd %xmm0, %edi
-; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = [9.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-SSE-NEXT:    callq ldexpf@PLT
 ; CHECK-SSE-NEXT:    unpcklps (%rsp), %xmm0 # 16-byte Folded Reload
 ; CHECK-SSE-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-SSE-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-SSE-NEXT:    movd %xmm0, %edi
-; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = [9.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-SSE-NEXT:    callq ldexpf@PLT
 ; CHECK-SSE-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-SSE-NEXT:    pshufd $85, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-SSE-NEXT:    # xmm0 = mem[1,1,1,1]
 ; CHECK-SSE-NEXT:    movd %xmm0, %edi
-; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = [9.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-SSE-NEXT:    callq ldexpf@PLT
 ; CHECK-SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-SSE-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -85,26 +85,26 @@ define <4 x float> @fmul_pow2_ldexp_4xfloat(<4 x i32> %i) {
 ; CHECK-AVX-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-AVX-NEXT:    vextractps $1, %xmm0, %edi
-; CHECK-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX-NEXT:    vmovss {{.*#+}} xmm0 = [9.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX-NEXT:    callq ldexpf@PLT
 ; CHECK-AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-AVX-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-AVX-NEXT:    vmovd %xmm0, %edi
-; CHECK-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX-NEXT:    vmovss {{.*#+}} xmm0 = [9.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX-NEXT:    callq ldexpf@PLT
 ; CHECK-AVX-NEXT:    vinsertps $16, (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-AVX-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; CHECK-AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-AVX-NEXT:    vextractps $2, %xmm0, %edi
-; CHECK-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX-NEXT:    vmovss {{.*#+}} xmm0 = [9.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX-NEXT:    callq ldexpf@PLT
 ; CHECK-AVX-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
 ; CHECK-AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-AVX-NEXT:    vextractps $3, %xmm0, %edi
-; CHECK-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX-NEXT:    vmovss {{.*#+}} xmm0 = [9.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX-NEXT:    callq ldexpf@PLT
 ; CHECK-AVX-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
@@ -141,72 +141,63 @@ declare <8 x half> @llvm.ldexp.v8f16.v8i16(<8 x half>, <8 x i16>)
 define <8 x half> @fmul_pow2_8xhalf(<8 x i16> %i) {
 ; CHECK-SSE-LABEL: fmul_pow2_8xhalf:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    subq $88, %rsp
-; CHECK-SSE-NEXT:    .cfi_def_cfa_offset 96
+; CHECK-SSE-NEXT:    subq $104, %rsp
+; CHECK-SSE-NEXT:    .cfi_def_cfa_offset 112
 ; CHECK-SSE-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-SSE-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
 ; CHECK-SSE-NEXT:    pslld $23, %xmm1
 ; CHECK-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [1065353216,1065353216,1065353216,1065353216]
 ; CHECK-SSE-NEXT:    paddd %xmm2, %xmm1
 ; CHECK-SSE-NEXT:    cvttps2dq %xmm1, %xmm1
-; CHECK-SSE-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
+; CHECK-SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-SSE-NEXT:    pslld $16, %xmm1
+; CHECK-SSE-NEXT:    movdqa %xmm1, (%rsp) # 16-byte Spill
 ; CHECK-SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; CHECK-SSE-NEXT:    pslld $23, %xmm0
 ; CHECK-SSE-NEXT:    paddd %xmm2, %xmm0
 ; CHECK-SSE-NEXT:    cvttps2dq %xmm0, %xmm0
-; CHECK-SSE-NEXT:    pslld $16, %xmm0
-; CHECK-SSE-NEXT:    psrld $16, %xmm0
 ; CHECK-SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; CHECK-SSE-NEXT:    pslld $16, %xmm0
+; CHECK-SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-SSE-NEXT:    psrld $16, %xmm0
 ; CHECK-SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-SSE-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-SSE-NEXT:    cvtdq2ps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
-; CHECK-SSE-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-SSE-NEXT:    pshufd $238, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-SSE-NEXT:    # xmm0 = mem[2,3,2,3]
+; CHECK-SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-SSE-NEXT:    psrlq $48, %xmm0
 ; CHECK-SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-SSE-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-SSE-NEXT:    pshufd $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-SSE-NEXT:    # xmm0 = mem[3,3,3,3]
+; CHECK-SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-SSE-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
+; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
+; CHECK-SSE-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-SSE-NEXT:    xorps %xmm0, %xmm0
+; CHECK-SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; CHECK-SSE-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; CHECK-SSE-NEXT:    cvtdq2ps %xmm1, %xmm0
+; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
+; CHECK-SSE-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-SSE-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
+; CHECK-SSE-NEXT:    psrld $16, %xmm0
 ; CHECK-SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-SSE-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-SSE-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-SSE-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
-; CHECK-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; CHECK-SSE-NEXT:    psrlq $48, %xmm0
 ; CHECK-SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-SSE-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-SSE-NEXT:    cvtdq2ps (%rsp), %xmm0 # 16-byte Folded Reload
-; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
-; CHECK-SSE-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-SSE-NEXT:    pshufd $238, (%rsp), %xmm0 # 16-byte Folded Reload
-; CHECK-SSE-NEXT:    # xmm0 = mem[2,3,2,3]
+; CHECK-SSE-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
+; CHECK-SSE-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-SSE-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-SSE-NEXT:    pshufd $255, (%rsp), %xmm0 # 16-byte Folded Reload
-; CHECK-SSE-NEXT:    # xmm0 = mem[3,3,3,3]
+; CHECK-SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-SSE-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],mem[4],xmm0[5],mem[5],xmm0[6],mem[6],xmm0[7],mem[7]
 ; CHECK-SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
-; CHECK-SSE-NEXT:    callq __extendhfsf2@PLT
-; CHECK-SSE-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
-; CHECK-SSE-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-SSE-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
-; CHECK-SSE-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-SSE-NEXT:    callq __extendhfsf2@PLT
-; CHECK-SSE-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
-; CHECK-SSE-NEXT:    punpcklwd (%rsp), %xmm0 # 16-byte Folded Reload
-; CHECK-SSE-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-SSE-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
-; CHECK-SSE-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; CHECK-SSE-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-SSE-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
@@ -218,8 +209,6 @@ define <8 x half> @fmul_pow2_8xhalf(<8 x i16> %i) {
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-SSE-NEXT:    movdqa (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; CHECK-SSE-NEXT:    punpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; CHECK-SSE-NEXT:    # xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
 ; CHECK-SSE-NEXT:    movdqa %xmm1, (%rsp) # 16-byte Spill
 ; CHECK-SSE-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; CHECK-SSE-NEXT:    # xmm0 = mem[0],zero,zero,zero
@@ -234,7 +223,23 @@ define <8 x half> @fmul_pow2_8xhalf(<8 x i16> %i) {
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-SSE-NEXT:    punpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-SSE-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-SSE-NEXT:    punpckldq (%rsp), %xmm0 # 16-byte Folded Reload
+; CHECK-SSE-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-SSE-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; CHECK-SSE-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; CHECK-SSE-NEXT:    callq __extendhfsf2@PLT
+; CHECK-SSE-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
+; CHECK-SSE-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; CHECK-SSE-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; CHECK-SSE-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; CHECK-SSE-NEXT:    callq __extendhfsf2@PLT
+; CHECK-SSE-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
+; CHECK-SSE-NEXT:    movdqa (%rsp), %xmm1 # 16-byte Reload
+; CHECK-SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; CHECK-SSE-NEXT:    movdqa %xmm1, (%rsp) # 16-byte Spill
 ; CHECK-SSE-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; CHECK-SSE-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; CHECK-SSE-NEXT:    callq __extendhfsf2@PLT
@@ -246,14 +251,13 @@ define <8 x half> @fmul_pow2_8xhalf(<8 x i16> %i) {
 ; CHECK-SSE-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-SSE-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
-; CHECK-SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; CHECK-SSE-NEXT:    punpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; CHECK-SSE-NEXT:    # xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
-; CHECK-SSE-NEXT:    punpcklqdq (%rsp), %xmm1 # 16-byte Folded Reload
-; CHECK-SSE-NEXT:    # xmm1 = xmm1[0],mem[0]
-; CHECK-SSE-NEXT:    movdqa %xmm1, %xmm0
-; CHECK-SSE-NEXT:    addq $88, %rsp
+; CHECK-SSE-NEXT:    punpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-SSE-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-SSE-NEXT:    punpckldq (%rsp), %xmm0 # 16-byte Folded Reload
+; CHECK-SSE-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; CHECK-SSE-NEXT:    punpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-SSE-NEXT:    # xmm0 = xmm0[0],mem[0]
+; CHECK-SSE-NEXT:    addq $104, %rsp
 ; CHECK-SSE-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-SSE-NEXT:    retq
 ;
@@ -406,28 +410,32 @@ define <8 x half> @fmul_pow2_ldexp_8xhalf(<8 x i16> %i) {
 ; CHECK-SSE-NEXT:    subq $72, %rsp
 ; CHECK-SSE-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-SSE-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
-; CHECK-SSE-NEXT:    pextrw $7, %xmm0, %edi
-; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-SSE-NEXT:    pextrw $7, %xmm0, %eax
+; CHECK-SSE-NEXT:    movswl %ax, %edi
+; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-SSE-NEXT:    callq ldexpf@PLT
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-SSE-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-SSE-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-SSE-NEXT:    pextrw $6, %xmm0, %edi
-; CHECK-SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-SSE-NEXT:    pextrw $6, %xmm0, %eax
+; CHECK-SSE-NEXT:    movswl %ax, %edi
+; CHECK-SSE-NEXT:    movd {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-SSE-NEXT:    callq ldexpf@PLT
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-SSE-NEXT:    punpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-SSE-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; CHECK-SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-SSE-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-SSE-NEXT:    pextrw $5, %xmm0, %edi
-; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-SSE-NEXT:    pextrw $5, %xmm0, %eax
+; CHECK-SSE-NEXT:    movswl %ax, %edi
+; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-SSE-NEXT:    callq ldexpf@PLT
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-SSE-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-SSE-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-SSE-NEXT:    pextrw $4, %xmm0, %edi
-; CHECK-SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-SSE-NEXT:    pextrw $4, %xmm0, %eax
+; CHECK-SSE-NEXT:    movswl %ax, %edi
+; CHECK-SSE-NEXT:    movd {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-SSE-NEXT:    callq ldexpf@PLT
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-SSE-NEXT:    punpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
@@ -436,29 +444,32 @@ define <8 x half> @fmul_pow2_ldexp_8xhalf(<8 x i16> %i) {
 ; CHECK-SSE-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-SSE-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-SSE-NEXT:    pextrw $3, %xmm0, %edi
-; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-SSE-NEXT:    pextrw $3, %xmm0, %eax
+; CHECK-SSE-NEXT:    movswl %ax, %edi
+; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-SSE-NEXT:    callq ldexpf@PLT
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-SSE-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-SSE-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-SSE-NEXT:    pextrw $2, %xmm0, %edi
-; CHECK-SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-SSE-NEXT:    pextrw $2, %xmm0, %eax
+; CHECK-SSE-NEXT:    movswl %ax, %edi
+; CHECK-SSE-NEXT:    movd {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-SSE-NEXT:    callq ldexpf@PLT
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-SSE-NEXT:    punpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-SSE-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; CHECK-SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-SSE-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-SSE-NEXT:    pextrw $1, %xmm0, %edi
-; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-SSE-NEXT:    pextrw $1, %xmm0, %eax
+; CHECK-SSE-NEXT:    movswl %ax, %edi
+; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-SSE-NEXT:    callq ldexpf@PLT
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-SSE-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-SSE-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-SSE-NEXT:    movd %xmm0, %eax
-; CHECK-SSE-NEXT:    movzwl %ax, %edi
-; CHECK-SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-SSE-NEXT:    movswl %ax, %edi
+; CHECK-SSE-NEXT:    movd {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-SSE-NEXT:    callq ldexpf@PLT
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-SSE-NEXT:    punpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
@@ -476,28 +487,32 @@ define <8 x half> @fmul_pow2_ldexp_8xhalf(<8 x i16> %i) {
 ; CHECK-AVX2-NEXT:    subq $72, %rsp
 ; CHECK-AVX2-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-AVX2-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
-; CHECK-AVX2-NEXT:    vpextrw $7, %xmm0, %edi
-; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX2-NEXT:    vpextrw $7, %xmm0, %eax
+; CHECK-AVX2-NEXT:    movswl %ax, %edi
+; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX2-NEXT:    callq ldexpf@PLT
 ; CHECK-AVX2-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-AVX2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-AVX2-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-AVX2-NEXT:    vpextrw $6, %xmm0, %edi
-; CHECK-AVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX2-NEXT:    vpextrw $6, %xmm0, %eax
+; CHECK-AVX2-NEXT:    movswl %ax, %edi
+; CHECK-AVX2-NEXT:    vmovd {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX2-NEXT:    callq ldexpf@PLT
 ; CHECK-AVX2-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-AVX2-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-AVX2-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; CHECK-AVX2-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-AVX2-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-AVX2-NEXT:    vpextrw $5, %xmm0, %edi
-; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX2-NEXT:    vpextrw $5, %xmm0, %eax
+; CHECK-AVX2-NEXT:    movswl %ax, %edi
+; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX2-NEXT:    callq ldexpf@PLT
 ; CHECK-AVX2-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-AVX2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-AVX2-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-AVX2-NEXT:    vpextrw $4, %xmm0, %edi
-; CHECK-AVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX2-NEXT:    vpextrw $4, %xmm0, %eax
+; CHECK-AVX2-NEXT:    movswl %ax, %edi
+; CHECK-AVX2-NEXT:    vmovd {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX2-NEXT:    callq ldexpf@PLT
 ; CHECK-AVX2-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-AVX2-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
@@ -506,29 +521,32 @@ define <8 x half> @fmul_pow2_ldexp_8xhalf(<8 x i16> %i) {
 ; CHECK-AVX2-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-AVX2-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-AVX2-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-AVX2-NEXT:    vpextrw $3, %xmm0, %edi
-; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX2-NEXT:    vpextrw $3, %xmm0, %eax
+; CHECK-AVX2-NEXT:    movswl %ax, %edi
+; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX2-NEXT:    callq ldexpf@PLT
 ; CHECK-AVX2-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-AVX2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-AVX2-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-AVX2-NEXT:    vpextrw $2, %xmm0, %edi
-; CHECK-AVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX2-NEXT:    vpextrw $2, %xmm0, %eax
+; CHECK-AVX2-NEXT:    movswl %ax, %edi
+; CHECK-AVX2-NEXT:    vmovd {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX2-NEXT:    callq ldexpf@PLT
 ; CHECK-AVX2-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-AVX2-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-AVX2-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; CHECK-AVX2-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-AVX2-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-AVX2-NEXT:    vpextrw $1, %xmm0, %edi
-; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX2-NEXT:    vpextrw $1, %xmm0, %eax
+; CHECK-AVX2-NEXT:    movswl %ax, %edi
+; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX2-NEXT:    callq ldexpf@PLT
 ; CHECK-AVX2-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-AVX2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-AVX2-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-AVX2-NEXT:    vmovd %xmm0, %eax
-; CHECK-AVX2-NEXT:    movzwl %ax, %edi
-; CHECK-AVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX2-NEXT:    movswl %ax, %edi
+; CHECK-AVX2-NEXT:    vmovd {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX2-NEXT:    callq ldexpf@PLT
 ; CHECK-AVX2-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-AVX2-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
@@ -546,16 +564,18 @@ define <8 x half> @fmul_pow2_ldexp_8xhalf(<8 x i16> %i) {
 ; CHECK-AVX512F-NEXT:    subq $72, %rsp
 ; CHECK-AVX512F-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-AVX512F-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
-; CHECK-AVX512F-NEXT:    vpextrw $7, %xmm0, %edi
-; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX512F-NEXT:    vpextrw $7, %xmm0, %eax
+; CHECK-AVX512F-NEXT:    movswl %ax, %edi
+; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX512F-NEXT:    callq ldexpf@PLT
 ; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; CHECK-AVX512F-NEXT:    vmovd %xmm0, %eax
 ; CHECK-AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; CHECK-AVX512F-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-AVX512F-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-AVX512F-NEXT:    vpextrw $6, %xmm0, %edi
-; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX512F-NEXT:    vpextrw $6, %xmm0, %eax
+; CHECK-AVX512F-NEXT:    movswl %ax, %edi
+; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX512F-NEXT:    callq ldexpf@PLT
 ; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; CHECK-AVX512F-NEXT:    vmovd %xmm0, %eax
@@ -564,16 +584,18 @@ define <8 x half> @fmul_pow2_ldexp_8xhalf(<8 x i16> %i) {
 ; CHECK-AVX512F-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; CHECK-AVX512F-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-AVX512F-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-AVX512F-NEXT:    vpextrw $5, %xmm0, %edi
-; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX512F-NEXT:    vpextrw $5, %xmm0, %eax
+; CHECK-AVX512F-NEXT:    movswl %ax, %edi
+; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX512F-NEXT:    callq ldexpf@PLT
 ; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; CHECK-AVX512F-NEXT:    vmovd %xmm0, %eax
 ; CHECK-AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; CHECK-AVX512F-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-AVX512F-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-AVX512F-NEXT:    vpextrw $4, %xmm0, %edi
-; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX512F-NEXT:    vpextrw $4, %xmm0, %eax
+; CHECK-AVX512F-NEXT:    movswl %ax, %edi
+; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX512F-NEXT:    callq ldexpf@PLT
 ; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; CHECK-AVX512F-NEXT:    vmovd %xmm0, %eax
@@ -584,16 +606,18 @@ define <8 x half> @fmul_pow2_ldexp_8xhalf(<8 x i16> %i) {
 ; CHECK-AVX512F-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-AVX512F-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-AVX512F-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-AVX512F-NEXT:    vpextrw $3, %xmm0, %edi
-; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX512F-NEXT:    vpextrw $3, %xmm0, %eax
+; CHECK-AVX512F-NEXT:    movswl %ax, %edi
+; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX512F-NEXT:    callq ldexpf@PLT
 ; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; CHECK-AVX512F-NEXT:    vmovd %xmm0, %eax
 ; CHECK-AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; CHECK-AVX512F-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-AVX512F-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-AVX512F-NEXT:    vpextrw $2, %xmm0, %edi
-; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX512F-NEXT:    vpextrw $2, %xmm0, %eax
+; CHECK-AVX512F-NEXT:    movswl %ax, %edi
+; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX512F-NEXT:    callq ldexpf@PLT
 ; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; CHECK-AVX512F-NEXT:    vmovd %xmm0, %eax
@@ -602,8 +626,9 @@ define <8 x half> @fmul_pow2_ldexp_8xhalf(<8 x i16> %i) {
 ; CHECK-AVX512F-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; CHECK-AVX512F-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-AVX512F-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-AVX512F-NEXT:    vpextrw $1, %xmm0, %edi
-; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX512F-NEXT:    vpextrw $1, %xmm0, %eax
+; CHECK-AVX512F-NEXT:    movswl %ax, %edi
+; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX512F-NEXT:    callq ldexpf@PLT
 ; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; CHECK-AVX512F-NEXT:    vmovd %xmm0, %eax
@@ -611,8 +636,8 @@ define <8 x half> @fmul_pow2_ldexp_8xhalf(<8 x i16> %i) {
 ; CHECK-AVX512F-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-AVX512F-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-AVX512F-NEXT:    vmovd %xmm0, %eax
-; CHECK-AVX512F-NEXT:    movzwl %ax, %edi
-; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX512F-NEXT:    movswl %ax, %edi
+; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX512F-NEXT:    callq ldexpf@PLT
 ; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; CHECK-AVX512F-NEXT:    vmovd %xmm0, %eax
@@ -840,76 +865,43 @@ define double @fmul_pow_shl_cnt_fail_maybe_non_pow2(i64 %v, i64 %cnt) nounwind {
 define <2 x float> @fmul_pow_shl_cnt_vec_fail_expensive_cast(<2 x i64> %cnt) nounwind {
 ; CHECK-SSE-LABEL: fmul_pow_shl_cnt_vec_fail_expensive_cast:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; CHECK-SSE-NEXT:    movdqa {{.*#+}} xmm3 = [2,2]
-; CHECK-SSE-NEXT:    movdqa %xmm3, %xmm1
-; CHECK-SSE-NEXT:    psllq %xmm2, %xmm1
-; CHECK-SSE-NEXT:    psllq %xmm0, %xmm3
-; CHECK-SSE-NEXT:    movq %xmm3, %rax
-; CHECK-SSE-NEXT:    testq %rax, %rax
-; CHECK-SSE-NEXT:    js .LBB12_1
-; CHECK-SSE-NEXT:  # %bb.2:
+; CHECK-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; CHECK-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2,2]
+; CHECK-SSE-NEXT:    movdqa %xmm2, %xmm3
+; CHECK-SSE-NEXT:    psllq %xmm1, %xmm3
+; CHECK-SSE-NEXT:    psllq %xmm0, %xmm2
+; CHECK-SSE-NEXT:    movq %xmm2, %rax
 ; CHECK-SSE-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-SSE-NEXT:    cvtsi2ss %rax, %xmm0
-; CHECK-SSE-NEXT:    jmp .LBB12_3
-; CHECK-SSE-NEXT:  .LBB12_1:
-; CHECK-SSE-NEXT:    movq %rax, %rcx
-; CHECK-SSE-NEXT:    shrq %rcx
-; CHECK-SSE-NEXT:    andl $1, %eax
-; CHECK-SSE-NEXT:    orq %rcx, %rax
-; CHECK-SSE-NEXT:    xorps %xmm0, %xmm0
-; CHECK-SSE-NEXT:    cvtsi2ss %rax, %xmm0
-; CHECK-SSE-NEXT:    addss %xmm0, %xmm0
-; CHECK-SSE-NEXT:  .LBB12_3:
-; CHECK-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; CHECK-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[2,3,2,3]
 ; CHECK-SSE-NEXT:    movq %xmm1, %rax
-; CHECK-SSE-NEXT:    testq %rax, %rax
-; CHECK-SSE-NEXT:    js .LBB12_4
-; CHECK-SSE-NEXT:  # %bb.5:
 ; CHECK-SSE-NEXT:    xorps %xmm1, %xmm1
 ; CHECK-SSE-NEXT:    cvtsi2ss %rax, %xmm1
-; CHECK-SSE-NEXT:    jmp .LBB12_6
-; CHECK-SSE-NEXT:  .LBB12_4:
-; CHECK-SSE-NEXT:    movq %rax, %rcx
-; CHECK-SSE-NEXT:    shrq %rcx
-; CHECK-SSE-NEXT:    andl $1, %eax
-; CHECK-SSE-NEXT:    orq %rcx, %rax
-; CHECK-SSE-NEXT:    xorps %xmm1, %xmm1
-; CHECK-SSE-NEXT:    cvtsi2ss %rax, %xmm1
-; CHECK-SSE-NEXT:    addss %xmm1, %xmm1
-; CHECK-SSE-NEXT:  .LBB12_6:
 ; CHECK-SSE-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; CHECK-SSE-NEXT:    mulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
 ; CHECK-AVX2-LABEL: fmul_pow_shl_cnt_vec_fail_expensive_cast:
 ; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [2,2]
+; CHECK-AVX2-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [2,2]
 ; CHECK-AVX2-NEXT:    vpsllvq %xmm0, %xmm1, %xmm0
-; CHECK-AVX2-NEXT:    vpsrlq $1, %xmm0, %xmm1
-; CHECK-AVX2-NEXT:    vblendvpd %xmm0, %xmm1, %xmm0, %xmm1
-; CHECK-AVX2-NEXT:    vpextrq $1, %xmm1, %rax
-; CHECK-AVX2-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm2
-; CHECK-AVX2-NEXT:    vmovq %xmm1, %rax
-; CHECK-AVX2-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm1
-; CHECK-AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],zero,zero
-; CHECK-AVX2-NEXT:    vaddps %xmm1, %xmm1, %xmm2
-; CHECK-AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; CHECK-AVX2-NEXT:    vpcmpgtq %xmm0, %xmm3, %xmm0
-; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
-; CHECK-AVX2-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; CHECK-AVX2-NEXT:    vpextrq $1, %xmm0, %rax
+; CHECK-AVX2-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm1
+; CHECK-AVX2-NEXT:    vmovq %xmm0, %rax
+; CHECK-AVX2-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm0
+; CHECK-AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; CHECK-AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.5E+1,1.5E+1,1.5E+1,1.5E+1]
 ; CHECK-AVX2-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    retq
 ;
 ; CHECK-NO-FASTFMA-LABEL: fmul_pow_shl_cnt_vec_fail_expensive_cast:
 ; CHECK-NO-FASTFMA:       # %bb.0:
-; CHECK-NO-FASTFMA-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [2,2]
+; CHECK-NO-FASTFMA-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [2,2]
 ; CHECK-NO-FASTFMA-NEXT:    vpsllvq %xmm0, %xmm1, %xmm0
 ; CHECK-NO-FASTFMA-NEXT:    vpextrq $1, %xmm0, %rax
-; CHECK-NO-FASTFMA-NEXT:    vcvtusi2ss %rax, %xmm2, %xmm1
+; CHECK-NO-FASTFMA-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm1
 ; CHECK-NO-FASTFMA-NEXT:    vmovq %xmm0, %rax
-; CHECK-NO-FASTFMA-NEXT:    vcvtusi2ss %rax, %xmm2, %xmm0
+; CHECK-NO-FASTFMA-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm0
 ; CHECK-NO-FASTFMA-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; CHECK-NO-FASTFMA-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.5E+1,1.5E+1,1.5E+1,1.5E+1]
 ; CHECK-NO-FASTFMA-NEXT:    vmulps %xmm1, %xmm0, %xmm0
@@ -919,7 +911,7 @@ define <2 x float> @fmul_pow_shl_cnt_vec_fail_expensive_cast(<2 x i64> %cnt) nou
 ; CHECK-FMA:       # %bb.0:
 ; CHECK-FMA-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [2,2]
 ; CHECK-FMA-NEXT:    vpsllvq %xmm0, %xmm1, %xmm0
-; CHECK-FMA-NEXT:    vcvtuqq2ps %xmm0, %xmm0
+; CHECK-FMA-NEXT:    vcvtqq2ps %xmm0, %xmm0
 ; CHECK-FMA-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-FMA-NEXT:    retq
   %shl = shl nsw nuw <2 x i64> <i64 2, i64 2>, %cnt
@@ -986,7 +978,7 @@ define <4 x float> @fmul_pow_shl_cnt_vec_preserve_fma(<4 x i32> %cnt, <4 x float
 ; CHECK-FMA:       # %bb.0:
 ; CHECK-FMA-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2,2,2,2]
 ; CHECK-FMA-NEXT:    vpsllvd %xmm0, %xmm2, %xmm0
-; CHECK-FMA-NEXT:    vcvtudq2ps %xmm0, %xmm0
+; CHECK-FMA-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; CHECK-FMA-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * mem) + xmm1
 ; CHECK-FMA-NEXT:    retq
   %shl = shl nsw nuw <4 x i32> <i32 2, i32 2, i32 2, i32 2>, %cnt
@@ -1040,17 +1032,17 @@ define <2 x half> @fmul_pow_shl_cnt_vec_fail_to_large(<2 x i16> %cnt) nounwind {
 ; CHECK-SSE-NEXT:    pslld $23, %xmm0
 ; CHECK-SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE-NEXT:    cvttps2dq %xmm0, %xmm0
-; CHECK-SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[0,2,2,3,4,5,6,7]
-; CHECK-SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; CHECK-SSE-NEXT:    pxor %xmm0, %xmm0
-; CHECK-SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; CHECK-SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-SSE-NEXT:    cvtdq2ps %xmm1, %xmm0
+; CHECK-SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
+; CHECK-SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2,2,u,u,u,u,u,u]
+; CHECK-SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-SSE-NEXT:    psrld $16, %xmm0
+; CHECK-SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-SSE-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-SSE-NEXT:    pshufd $85, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-SSE-NEXT:    # xmm0 = mem[1,1,1,1]
-; CHECK-SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
+; CHECK-SSE-NEXT:    xorps %xmm0, %xmm0
+; CHECK-SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; CHECK-SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; CHECK-SSE-NEXT:    cvtdq2ps %xmm1, %xmm0
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-SSE-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-SSE-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -1061,8 +1053,9 @@ define <2 x half> @fmul_pow_shl_cnt_vec_fail_to_large(<2 x i16> %cnt) nounwind {
 ; CHECK-SSE-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-SSE-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
-; CHECK-SSE-NEXT:    punpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-SSE-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; CHECK-SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; CHECK-SSE-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-SSE-NEXT:    addq $40, %rsp
 ; CHECK-SSE-NEXT:    retq
 ;
@@ -1070,8 +1063,7 @@ define <2 x half> @fmul_pow_shl_cnt_vec_fail_to_large(<2 x i16> %cnt) nounwind {
 ; CHECK-AVX2:       # %bb.0:
 ; CHECK-AVX2-NEXT:    subq $56, %rsp
 ; CHECK-AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; CHECK-AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [2,2,0,0,2,2,0,0]
-; CHECK-AVX2-NEXT:    # ymm1 = mem[0,1,0,1]
+; CHECK-AVX2-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [2,2,0,0,0,0,0,0]
 ; CHECK-AVX2-NEXT:    vpsllvd %ymm0, %ymm1, %ymm0
 ; CHECK-AVX2-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; CHECK-AVX2-NEXT:    vpextrw $2, %xmm0, %eax
@@ -1101,8 +1093,7 @@ define <2 x half> @fmul_pow_shl_cnt_vec_fail_to_large(<2 x i16> %cnt) nounwind {
 ; CHECK-NO-FASTFMA-LABEL: fmul_pow_shl_cnt_vec_fail_to_large:
 ; CHECK-NO-FASTFMA:       # %bb.0:
 ; CHECK-NO-FASTFMA-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; CHECK-NO-FASTFMA-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [2,2,0,0,2,2,0,0]
-; CHECK-NO-FASTFMA-NEXT:    # ymm1 = mem[0,1,0,1]
+; CHECK-NO-FASTFMA-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [2,2,0,0,0,0,0,0]
 ; CHECK-NO-FASTFMA-NEXT:    vpsllvd %ymm0, %ymm1, %ymm0
 ; CHECK-NO-FASTFMA-NEXT:    vpmovdw %zmm0, %ymm0
 ; CHECK-NO-FASTFMA-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
@@ -1236,7 +1227,7 @@ define <2 x float> @fdiv_pow_shl_cnt_vec_with_expensive_cast(<2 x i64> %cnt) nou
 ; CHECK-SSE:       # %bb.0:
 ; CHECK-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,2,2,3]
 ; CHECK-SSE-NEXT:    pslld $23, %xmm1
-; CHECK-SSE-NEXT:    movdqa {{.*#+}} xmm0 = <1065353216,1065353216,u,u>
+; CHECK-SSE-NEXT:    movdqa {{.*#+}} xmm0 = [1065353216,1065353216,u,u]
 ; CHECK-SSE-NEXT:    psubd %xmm1, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
@@ -1270,7 +1261,7 @@ define float @fdiv_pow_shl_cnt_fail_maybe_z(i64 %cnt) nounwind {
 ; CHECK-SSE-NEXT:    cvtsi2ss %rax, %xmm1
 ; CHECK-SSE-NEXT:    addss %xmm1, %xmm1
 ; CHECK-SSE-NEXT:  .LBB22_3:
-; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = [-9.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-SSE-NEXT:    divss %xmm1, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
@@ -1290,7 +1281,7 @@ define float @fdiv_pow_shl_cnt_fail_maybe_z(i64 %cnt) nounwind {
 ; CHECK-AVX2-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    vaddss %xmm0, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:  .LBB22_3:
-; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm1 = [-9.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX2-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; CHECK-AVX2-NEXT:    retq
 ;
@@ -1301,7 +1292,7 @@ define float @fdiv_pow_shl_cnt_fail_maybe_z(i64 %cnt) nounwind {
 ; CHECK-NO-FASTFMA-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; CHECK-NO-FASTFMA-NEXT:    shlq %cl, %rax
 ; CHECK-NO-FASTFMA-NEXT:    vcvtusi2ss %rax, %xmm0, %xmm0
-; CHECK-NO-FASTFMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NO-FASTFMA-NEXT:    vmovss {{.*#+}} xmm1 = [-9.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NO-FASTFMA-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; CHECK-NO-FASTFMA-NEXT:    retq
 ;
@@ -1310,7 +1301,7 @@ define float @fdiv_pow_shl_cnt_fail_maybe_z(i64 %cnt) nounwind {
 ; CHECK-FMA-NEXT:    movl $8, %eax
 ; CHECK-FMA-NEXT:    shlxq %rdi, %rax, %rax
 ; CHECK-FMA-NEXT:    vcvtusi2ss %rax, %xmm0, %xmm0
-; CHECK-FMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-FMA-NEXT:    vmovss {{.*#+}} xmm1 = [-9.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-FMA-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; CHECK-FMA-NEXT:    retq
   %shl = shl i64 8, %cnt
@@ -1327,7 +1318,7 @@ define float @fdiv_pow_shl_cnt_fail_neg_int(i64 %cnt) nounwind {
 ; CHECK-SSE-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; CHECK-SSE-NEXT:    shlq %cl, %rax
 ; CHECK-SSE-NEXT:    cvtsi2ss %rax, %xmm1
-; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = [-9.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-SSE-NEXT:    divss %xmm1, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
@@ -1338,7 +1329,7 @@ define float @fdiv_pow_shl_cnt_fail_neg_int(i64 %cnt) nounwind {
 ; CHECK-AVX2-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; CHECK-AVX2-NEXT:    shlq %cl, %rax
 ; CHECK-AVX2-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
-; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm1 = [-9.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX2-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; CHECK-AVX2-NEXT:    retq
 ;
@@ -1349,7 +1340,7 @@ define float @fdiv_pow_shl_cnt_fail_neg_int(i64 %cnt) nounwind {
 ; CHECK-NO-FASTFMA-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; CHECK-NO-FASTFMA-NEXT:    shlq %cl, %rax
 ; CHECK-NO-FASTFMA-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
-; CHECK-NO-FASTFMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NO-FASTFMA-NEXT:    vmovss {{.*#+}} xmm1 = [-9.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NO-FASTFMA-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; CHECK-NO-FASTFMA-NEXT:    retq
 ;
@@ -1358,7 +1349,7 @@ define float @fdiv_pow_shl_cnt_fail_neg_int(i64 %cnt) nounwind {
 ; CHECK-FMA-NEXT:    movl $8, %eax
 ; CHECK-FMA-NEXT:    shlxq %rdi, %rax, %rax
 ; CHECK-FMA-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
-; CHECK-FMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-FMA-NEXT:    vmovss {{.*#+}} xmm1 = [-9.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-FMA-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; CHECK-FMA-NEXT:    retq
   %shl = shl i64 8, %cnt
@@ -1370,49 +1361,21 @@ define float @fdiv_pow_shl_cnt_fail_neg_int(i64 %cnt) nounwind {
 define float @fdiv_pow_shl_cnt(i64 %cnt_in) nounwind {
 ; CHECK-SSE-LABEL: fdiv_pow_shl_cnt:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    movq %rdi, %rcx
-; CHECK-SSE-NEXT:    andb $31, %cl
-; CHECK-SSE-NEXT:    movl $8, %eax
-; CHECK-SSE-NEXT:    # kill: def $cl killed $cl killed $rcx
-; CHECK-SSE-NEXT:    shlq %cl, %rax
-; CHECK-SSE-NEXT:    cvtsi2ss %rax, %xmm1
-; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-SSE-NEXT:    divss %xmm1, %xmm0
+; CHECK-SSE-NEXT:    andl $31, %edi
+; CHECK-SSE-NEXT:    shll $23, %edi
+; CHECK-SSE-NEXT:    movl $-1115684864, %eax # imm = 0xBD800000
+; CHECK-SSE-NEXT:    subl %edi, %eax
+; CHECK-SSE-NEXT:    movd %eax, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
-; CHECK-AVX2-LABEL: fdiv_pow_shl_cnt:
-; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    movq %rdi, %rcx
-; CHECK-AVX2-NEXT:    andb $31, %cl
-; CHECK-AVX2-NEXT:    movl $8, %eax
-; CHECK-AVX2-NEXT:    # kill: def $cl killed $cl killed $rcx
-; CHECK-AVX2-NEXT:    shlq %cl, %rax
-; CHECK-AVX2-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
-; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-AVX2-NEXT:    vdivss %xmm0, %xmm1, %xmm0
-; CHECK-AVX2-NEXT:    retq
-;
-; CHECK-NO-FASTFMA-LABEL: fdiv_pow_shl_cnt:
-; CHECK-NO-FASTFMA:       # %bb.0:
-; CHECK-NO-FASTFMA-NEXT:    movq %rdi, %rcx
-; CHECK-NO-FASTFMA-NEXT:    andb $31, %cl
-; CHECK-NO-FASTFMA-NEXT:    movl $8, %eax
-; CHECK-NO-FASTFMA-NEXT:    # kill: def $cl killed $cl killed $rcx
-; CHECK-NO-FASTFMA-NEXT:    shlq %cl, %rax
-; CHECK-NO-FASTFMA-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
-; CHECK-NO-FASTFMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NO-FASTFMA-NEXT:    vdivss %xmm0, %xmm1, %xmm0
-; CHECK-NO-FASTFMA-NEXT:    retq
-;
-; CHECK-FMA-LABEL: fdiv_pow_shl_cnt:
-; CHECK-FMA:       # %bb.0:
-; CHECK-FMA-NEXT:    andb $31, %dil
-; CHECK-FMA-NEXT:    movl $8, %eax
-; CHECK-FMA-NEXT:    shlxq %rdi, %rax, %rax
-; CHECK-FMA-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
-; CHECK-FMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-FMA-NEXT:    vdivss %xmm0, %xmm1, %xmm0
-; CHECK-FMA-NEXT:    retq
+; CHECK-AVX-LABEL: fdiv_pow_shl_cnt:
+; CHECK-AVX:       # %bb.0:
+; CHECK-AVX-NEXT:    andl $31, %edi
+; CHECK-AVX-NEXT:    shll $23, %edi
+; CHECK-AVX-NEXT:    movl $-1115684864, %eax # imm = 0xBD800000
+; CHECK-AVX-NEXT:    subl %edi, %eax
+; CHECK-AVX-NEXT:    vmovd %eax, %xmm0
+; CHECK-AVX-NEXT:    retq
   %cnt = and i64 %cnt_in, 31
   %shl = shl i64 8, %cnt
   %conv = sitofp i64 %shl to float
@@ -1431,7 +1394,7 @@ define half @fdiv_pow_shl_cnt_fail_out_of_bounds(i32 %cnt) nounwind {
 ; CHECK-SSE-NEXT:    cvtsi2ss %rax, %xmm0
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-SSE-NEXT:    callq __extendhfsf2@PLT
-; CHECK-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-SSE-NEXT:    movss {{.*#+}} xmm1 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-SSE-NEXT:    divss %xmm0, %xmm1
 ; CHECK-SSE-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
@@ -1448,7 +1411,7 @@ define half @fdiv_pow_shl_cnt_fail_out_of_bounds(i32 %cnt) nounwind {
 ; CHECK-AVX2-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-AVX2-NEXT:    callq __extendhfsf2@PLT
-; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm1 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX2-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; CHECK-AVX2-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-AVX2-NEXT:    popq %rax
@@ -1462,9 +1425,8 @@ define half @fdiv_pow_shl_cnt_fail_out_of_bounds(i32 %cnt) nounwind {
 ; CHECK-NO-FASTFMA-NEXT:    shll %cl, %eax
 ; CHECK-NO-FASTFMA-NEXT:    vcvtusi2ss %eax, %xmm0, %xmm0
 ; CHECK-NO-FASTFMA-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-NO-FASTFMA-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; CHECK-NO-FASTFMA-NEXT:    vcvtph2ps %xmm0, %xmm0
-; CHECK-NO-FASTFMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NO-FASTFMA-NEXT:    vmovss {{.*#+}} xmm1 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NO-FASTFMA-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; CHECK-NO-FASTFMA-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; CHECK-NO-FASTFMA-NEXT:    vmovd %xmm0, %eax
@@ -1477,9 +1439,8 @@ define half @fdiv_pow_shl_cnt_fail_out_of_bounds(i32 %cnt) nounwind {
 ; CHECK-FMA-NEXT:    shlxl %edi, %eax, %eax
 ; CHECK-FMA-NEXT:    vcvtusi2ss %eax, %xmm0, %xmm0
 ; CHECK-FMA-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-FMA-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; CHECK-FMA-NEXT:    vcvtph2ps %xmm0, %xmm0
-; CHECK-FMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-FMA-NEXT:    vmovss {{.*#+}} xmm1 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-FMA-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; CHECK-FMA-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; CHECK-FMA-NEXT:    vmovd %xmm0, %eax
@@ -1547,7 +1508,7 @@ define half @fdiv_pow_shl_cnt_fail_out_of_bound2(i16 %cnt) nounwind {
 ; CHECK-SSE-NEXT:    cvtsi2ss %eax, %xmm0
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-SSE-NEXT:    callq __extendhfsf2@PLT
-; CHECK-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-SSE-NEXT:    movss {{.*#+}} xmm1 = [2.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-SSE-NEXT:    divss %xmm0, %xmm1
 ; CHECK-SSE-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-SSE-NEXT:    callq __truncsfhf2@PLT
@@ -1565,7 +1526,7 @@ define half @fdiv_pow_shl_cnt_fail_out_of_bound2(i16 %cnt) nounwind {
 ; CHECK-AVX2-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-AVX2-NEXT:    callq __extendhfsf2@PLT
-; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm1 = [2.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX2-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; CHECK-AVX2-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-AVX2-NEXT:    popq %rax
@@ -1580,9 +1541,8 @@ define half @fdiv_pow_shl_cnt_fail_out_of_bound2(i16 %cnt) nounwind {
 ; CHECK-NO-FASTFMA-NEXT:    movzwl %ax, %eax
 ; CHECK-NO-FASTFMA-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
 ; CHECK-NO-FASTFMA-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-NO-FASTFMA-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; CHECK-NO-FASTFMA-NEXT:    vcvtph2ps %xmm0, %xmm0
-; CHECK-NO-FASTFMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NO-FASTFMA-NEXT:    vmovss {{.*#+}} xmm1 = [2.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NO-FASTFMA-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; CHECK-NO-FASTFMA-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; CHECK-NO-FASTFMA-NEXT:    vmovd %xmm0, %eax
@@ -1596,9 +1556,8 @@ define half @fdiv_pow_shl_cnt_fail_out_of_bound2(i16 %cnt) nounwind {
 ; CHECK-FMA-NEXT:    movzwl %ax, %eax
 ; CHECK-FMA-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
 ; CHECK-FMA-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-FMA-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; CHECK-FMA-NEXT:    vcvtph2ps %xmm0, %xmm0
-; CHECK-FMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-FMA-NEXT:    vmovss {{.*#+}} xmm1 = [2.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-FMA-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; CHECK-FMA-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; CHECK-FMA-NEXT:    vmovd %xmm0, %eax
@@ -1642,7 +1601,7 @@ define float @fdiv_pow_shl_cnt32_out_of_bounds2(i32 %cnt) nounwind {
 ; CHECK-SSE-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-SSE-NEXT:    shll %cl, %eax
 ; CHECK-SSE-NEXT:    cvtsi2ss %rax, %xmm1
-; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-SSE-NEXT:    movss {{.*#+}} xmm0 = [1.00974148E-28,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-SSE-NEXT:    divss %xmm1, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
@@ -1653,7 +1612,7 @@ define float @fdiv_pow_shl_cnt32_out_of_bounds2(i32 %cnt) nounwind {
 ; CHECK-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-AVX2-NEXT:    shll %cl, %eax
 ; CHECK-AVX2-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
-; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm1 = [1.00974148E-28,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX2-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; CHECK-AVX2-NEXT:    retq
 ;
@@ -1664,7 +1623,7 @@ define float @fdiv_pow_shl_cnt32_out_of_bounds2(i32 %cnt) nounwind {
 ; CHECK-NO-FASTFMA-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NO-FASTFMA-NEXT:    shll %cl, %eax
 ; CHECK-NO-FASTFMA-NEXT:    vcvtusi2ss %eax, %xmm0, %xmm0
-; CHECK-NO-FASTFMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NO-FASTFMA-NEXT:    vmovss {{.*#+}} xmm1 = [1.00974148E-28,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NO-FASTFMA-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; CHECK-NO-FASTFMA-NEXT:    retq
 ;
@@ -1673,7 +1632,7 @@ define float @fdiv_pow_shl_cnt32_out_of_bounds2(i32 %cnt) nounwind {
 ; CHECK-FMA-NEXT:    movl $1, %eax
 ; CHECK-FMA-NEXT:    shlxl %edi, %eax, %eax
 ; CHECK-FMA-NEXT:    vcvtusi2ss %eax, %xmm0, %xmm0
-; CHECK-FMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-FMA-NEXT:    vmovss {{.*#+}} xmm1 = [1.00974148E-28,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-FMA-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; CHECK-FMA-NEXT:    retq
   %shl = shl nuw i32 1, %cnt

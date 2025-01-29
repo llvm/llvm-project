@@ -44,18 +44,18 @@ define i16 @shl_or(i16 %x, i16 %py) {
   ret i16 %sh1
 }
 
-define <2 x i16> @shl_or_undef(<2 x i16> %x, <2 x i16> %py) {
-; CHECK-LABEL: @shl_or_undef(
-; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i16> [[PY:%.*]], <i16 42, i16 42>
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i16> [[X:%.*]], <i16 12, i16 undef>
-; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i16> [[Y]], <i16 7, i16 undef>
+define <2 x i16> @shl_or_poison(<2 x i16> %x, <2 x i16> %py) {
+; CHECK-LABEL: @shl_or_poison(
+; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i16> [[PY:%.*]], splat (i16 42)
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i16> [[X:%.*]], <i16 12, i16 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw <2 x i16> [[Y]], <i16 7, i16 poison>
 ; CHECK-NEXT:    [[SH1:%.*]] = or <2 x i16> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i16> [[SH1]]
 ;
   %y = srem <2 x i16> %py, <i16 42, i16 42> ; thwart complexity-based canonicalization
-  %sh0 = shl <2 x i16> %x, <i16 5, i16 undef>
+  %sh0 = shl <2 x i16> %x, <i16 5, i16 poison>
   %r = or <2 x i16> %y, %sh0
-  %sh1 = shl <2 x i16> %r, <i16 7, i16 undef>
+  %sh1 = shl <2 x i16> %r, <i16 7, i16 poison>
   ret <2 x i16> %sh1
 }
 
@@ -100,25 +100,25 @@ define i64 @lshr_and(i64 %x, i64 %py) {
   ret i64 %sh1
 }
 
-define <2 x i64> @lshr_and_undef(<2 x i64> %x, <2 x i64> %py) {
-; CHECK-LABEL: @lshr_and_undef(
-; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i64> [[PY:%.*]], <i64 42, i64 42>
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i64> [[X:%.*]], <i64 12, i64 undef>
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i64> [[Y]], <i64 7, i64 undef>
+define <2 x i64> @lshr_and_poison(<2 x i64> %x, <2 x i64> %py) {
+; CHECK-LABEL: @lshr_and_poison(
+; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i64> [[PY:%.*]], splat (i64 42)
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i64> [[X:%.*]], <i64 12, i64 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i64> [[Y]], <i64 7, i64 poison>
 ; CHECK-NEXT:    [[SH1:%.*]] = and <2 x i64> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i64> [[SH1]]
 ;
   %y = srem <2 x i64> %py, <i64 42, i64 42> ; thwart complexity-based canonicalization
-  %sh0 = lshr <2 x i64> %x, <i64 5, i64 undef>
+  %sh0 = lshr <2 x i64> %x, <i64 5, i64 poison>
   %r = and <2 x i64> %y, %sh0
-  %sh1 = lshr <2 x i64> %r, <i64 7, i64 undef>
+  %sh1 = lshr <2 x i64> %r, <i64 7, i64 poison>
   ret <2 x i64> %sh1
 }
 
 define <4 x i32> @lshr_or(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @lshr_or(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> [[X:%.*]], <i32 12, i32 12, i32 12, i32 12>
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[Y:%.*]], <i32 7, i32 7, i32 7, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> [[X:%.*]], splat (i32 12)
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[Y:%.*]], splat (i32 7)
 ; CHECK-NEXT:    [[SH1:%.*]] = or <4 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <4 x i32> [[SH1]]
 ;
@@ -130,9 +130,9 @@ define <4 x i32> @lshr_or(<4 x i32> %x, <4 x i32> %y) {
 
 define <8 x i16> @lshr_xor(<8 x i16> %x, <8 x i16> %py) {
 ; CHECK-LABEL: @lshr_xor(
-; CHECK-NEXT:    [[Y:%.*]] = srem <8 x i16> [[PY:%.*]], <i16 42, i16 42, i16 42, i16 42, i16 42, i16 42, i16 42, i16 42>
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <8 x i16> [[X:%.*]], <i16 12, i16 12, i16 12, i16 12, i16 12, i16 12, i16 12, i16 12>
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <8 x i16> [[Y]], <i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7>
+; CHECK-NEXT:    [[Y:%.*]] = srem <8 x i16> [[PY:%.*]], splat (i16 42)
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <8 x i16> [[X:%.*]], splat (i16 12)
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <8 x i16> [[Y]], splat (i16 7)
 ; CHECK-NEXT:    [[SH1:%.*]] = xor <8 x i16> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <8 x i16> [[SH1]]
 ;
@@ -146,8 +146,8 @@ define <8 x i16> @lshr_xor(<8 x i16> %x, <8 x i16> %py) {
 define <16 x i8> @ashr_and(<16 x i8> %x, <16 x i8> %py, <16 x i8> %pz) {
 ; CHECK-LABEL: @ashr_and(
 ; CHECK-NEXT:    [[Y:%.*]] = srem <16 x i8> [[PY:%.*]], [[PZ:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <16 x i8> [[X:%.*]], <i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5, i8 5>
-; CHECK-NEXT:    [[TMP2:%.*]] = ashr <16 x i8> [[Y]], <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <16 x i8> [[X:%.*]], splat (i8 5)
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr <16 x i8> [[Y]], splat (i8 2)
 ; CHECK-NEXT:    [[SH1:%.*]] = and <16 x i8> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <16 x i8> [[SH1]]
 ;
@@ -160,8 +160,8 @@ define <16 x i8> @ashr_and(<16 x i8> %x, <16 x i8> %py, <16 x i8> %pz) {
 
 define <2 x i64> @ashr_or(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: @ashr_or(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i64> [[X:%.*]], <i64 12, i64 12>
-; CHECK-NEXT:    [[TMP2:%.*]] = ashr <2 x i64> [[Y:%.*]], <i64 7, i64 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i64> [[X:%.*]], splat (i64 12)
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr <2 x i64> [[Y:%.*]], splat (i64 7)
 ; CHECK-NEXT:    [[SH1:%.*]] = or <2 x i64> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i64> [[SH1]]
 ;
@@ -189,7 +189,7 @@ define i32 @ashr_xor(i32 %x, i32 %py) {
 define i32 @shr_mismatch_xor(i32 %x, i32 %y) {
 ; CHECK-LABEL: @shr_mismatch_xor(
 ; CHECK-NEXT:    [[SH0:%.*]] = ashr i32 [[X:%.*]], 5
-; CHECK-NEXT:    [[R:%.*]] = xor i32 [[SH0]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[Y:%.*]], [[SH0]]
 ; CHECK-NEXT:    [[SH1:%.*]] = lshr i32 [[R]], 7
 ; CHECK-NEXT:    ret i32 [[SH1]]
 ;
@@ -202,7 +202,7 @@ define i32 @shr_mismatch_xor(i32 %x, i32 %y) {
 define i32 @ashr_overshift_xor(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ashr_overshift_xor(
 ; CHECK-NEXT:    [[SH0:%.*]] = ashr i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[R:%.*]] = xor i32 [[SH0]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[Y:%.*]], [[SH0]]
 ; CHECK-NEXT:    [[SH1:%.*]] = ashr i32 [[R]], 17
 ; CHECK-NEXT:    ret i32 [[SH1]]
 ;
@@ -212,16 +212,16 @@ define i32 @ashr_overshift_xor(i32 %x, i32 %y) {
   ret i32 %sh1
 }
 
-define <2 x i32> @ashr_undef_undef_xor(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @ashr_undef_undef_xor(
-; CHECK-NEXT:    [[SH0:%.*]] = ashr <2 x i32> [[X:%.*]], <i32 15, i32 undef>
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i32> [[SH0]], [[Y:%.*]]
-; CHECK-NEXT:    [[SH1:%.*]] = ashr <2 x i32> [[R]], <i32 undef, i32 17>
+define <2 x i32> @ashr_poison_poison_xor(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @ashr_poison_poison_xor(
+; CHECK-NEXT:    [[SH0:%.*]] = ashr <2 x i32> [[X:%.*]], <i32 15, i32 poison>
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i32> [[Y:%.*]], [[SH0]]
+; CHECK-NEXT:    [[SH1:%.*]] = ashr <2 x i32> [[R]], <i32 poison, i32 17>
 ; CHECK-NEXT:    ret <2 x i32> [[SH1]]
 ;
-  %sh0 = ashr <2 x i32> %x, <i32 15, i32 undef>
+  %sh0 = ashr <2 x i32> %x, <i32 15, i32 poison>
   %r = xor <2 x i32> %y, %sh0
-  %sh1 = ashr <2 x i32> %r, <i32 undef, i32 17>
+  %sh1 = ashr <2 x i32> %r, <i32 poison, i32 17>
   ret <2 x i32> %sh1
 }
 
@@ -247,12 +247,14 @@ define i32 @lshr_or_extra_use(i32 %x, i32 %y, ptr %p) {
 define i32 @PR44028(i32 %x) {
 ; CHECK-LABEL: @PR44028(
 ; CHECK-NEXT:    [[SH1:%.*]] = ashr exact i32 [[X:%.*]], 16
-; CHECK-NEXT:    [[T0:%.*]] = xor i32 [[SH1]], shl (i32 ptrtoint (ptr @g to i32), i32 16)
+; CHECK-NEXT:    [[SH2:%.*]] = shl i32 ptrtoint (ptr @g to i32), 16
+; CHECK-NEXT:    [[T0:%.*]] = xor i32 [[SH1]], [[SH2]]
 ; CHECK-NEXT:    [[T27:%.*]] = ashr exact i32 [[T0]], 16
 ; CHECK-NEXT:    ret i32 [[T27]]
 ;
   %sh1 = ashr exact i32 %x, 16
-  %t0 = xor i32 %sh1, shl (i32 ptrtoint (ptr @g to i32), i32 16)
+  %sh2 = shl i32 ptrtoint (ptr @g to i32), 16
+  %t0 = xor i32 %sh1, %sh2
   %t27 = ashr exact i32 %t0, 16
   ret i32 %t27
 }
@@ -279,7 +281,7 @@ define i64 @lshr_mul_nuw_nsw(i64 %0) {
 
 define <4 x i32> @lshr_mul_vector(<4 x i32> %0) {
 ; CHECK-LABEL: @lshr_mul_vector(
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw <4 x i32> [[TMP0:%.*]], <i32 13, i32 13, i32 13, i32 13>
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw <4 x i32> [[TMP0:%.*]], splat (i32 13)
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %2 = mul nuw <4 x i32> %0, <i32 52, i32 52, i32 52, i32 52>
@@ -346,6 +348,36 @@ define i8 @shl_add(i8 %x, i8 %y) {
   ret i8 %sh1
 }
 
+define i8 @shl_add_multiuse(i8 %x) {
+; CHECK-LABEL: @shl_add_multiuse(
+; CHECK-NEXT:    [[SH0:%.*]] = shl i8 [[X:%.*]], 3
+; CHECK-NEXT:    call void @use(i8 [[SH0]])
+; CHECK-NEXT:    [[R:%.*]] = shl i8 [[X]], 5
+; CHECK-NEXT:    [[SH1:%.*]] = add i8 [[R]], 88
+; CHECK-NEXT:    ret i8 [[SH1]]
+;
+  %sh0 = shl i8 %x, 3
+  %r = add i8 %sh0, -42
+  call void @use(i8 %sh0)
+  %sh1 = shl i8 %r, 2
+  ret i8 %sh1
+}
+
+define i8 @shl_add_multiuse_nonconstant(i8 %x, i8 %y) {
+; CHECK-LABEL: @shl_add_multiuse_nonconstant(
+; CHECK-NEXT:    [[SH0:%.*]] = shl i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[SH0]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[SH0]])
+; CHECK-NEXT:    [[SH1:%.*]] = shl i8 [[R]], 2
+; CHECK-NEXT:    ret i8 [[SH1]]
+;
+  %sh0 = shl i8 %x, 3
+  %r = add i8 %sh0, %y
+  call void @use(i8 %sh0)
+  %sh1 = shl i8 %r, 2
+  ret i8 %sh1
+}
+
 define <2 x i8> @shl_add_nonuniform(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @shl_add_nonuniform(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i8> [[X:%.*]], <i8 5, i8 4>
@@ -360,18 +392,18 @@ define <2 x i8> @shl_add_nonuniform(<2 x i8> %x, <2 x i8> %y) {
 }
 
 
-define <2 x i64> @shl_add_undef(<2 x i64> %x, <2 x i64> %py) {
-; CHECK-LABEL: @shl_add_undef(
-; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i64> [[PY:%.*]], <i64 42, i64 42>
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[X:%.*]], <i64 12, i64 undef>
-; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i64> [[Y]], <i64 7, i64 undef>
+define <2 x i64> @shl_add_poison(<2 x i64> %x, <2 x i64> %py) {
+; CHECK-LABEL: @shl_add_poison(
+; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i64> [[PY:%.*]], splat (i64 42)
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[X:%.*]], <i64 12, i64 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw <2 x i64> [[Y]], <i64 7, i64 poison>
 ; CHECK-NEXT:    [[SH1:%.*]] = add <2 x i64> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i64> [[SH1]]
 ;
   %y = srem <2 x i64> %py, <i64 42, i64 42> ; thwart complexity-based canonicalization
-  %sh0 = shl <2 x i64> %x, <i64 5, i64 undef>
+  %sh0 = shl <2 x i64> %x, <i64 5, i64 poison>
   %r = add <2 x i64> %y, %sh0
-  %sh1 = shl <2 x i64> %r, <i64 7, i64 undef>
+  %sh1 = shl <2 x i64> %r, <i64 7, i64 poison>
   ret <2 x i64> %sh1
 }
 
@@ -402,18 +434,18 @@ define <2 x i8> @lshr_add_nonuniform(<2 x i8> %x, <2 x i8> %y) {
   ret <2 x i8> %sh1
 }
 
-define <2 x i64> @lshr_add_undef(<2 x i64> %x, <2 x i64> %py) {
-; CHECK-LABEL: @lshr_add_undef(
-; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i64> [[PY:%.*]], <i64 42, i64 42>
-; CHECK-NEXT:    [[SH0:%.*]] = lshr <2 x i64> [[X:%.*]], <i64 5, i64 undef>
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i64> [[Y]], [[SH0]]
-; CHECK-NEXT:    [[SH1:%.*]] = lshr <2 x i64> [[R]], <i64 7, i64 undef>
+define <2 x i64> @lshr_add_poison(<2 x i64> %x, <2 x i64> %py) {
+; CHECK-LABEL: @lshr_add_poison(
+; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i64> [[PY:%.*]], splat (i64 42)
+; CHECK-NEXT:    [[SH0:%.*]] = lshr <2 x i64> [[X:%.*]], <i64 5, i64 poison>
+; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i64> [[Y]], [[SH0]]
+; CHECK-NEXT:    [[SH1:%.*]] = lshr <2 x i64> [[R]], <i64 7, i64 poison>
 ; CHECK-NEXT:    ret <2 x i64> [[SH1]]
 ;
   %y = srem <2 x i64> %py, <i64 42, i64 42> ; thwart complexity-based canonicalization
-  %sh0 = lshr <2 x i64> %x, <i64 5, i64 undef>
+  %sh0 = lshr <2 x i64> %x, <i64 5, i64 poison>
   %r = add <2 x i64> %y, %sh0
-  %sh1 = lshr <2 x i64> %r, <i64 7, i64 undef>
+  %sh1 = lshr <2 x i64> %r, <i64 7, i64 poison>
   ret <2 x i64> %sh1
 }
 
@@ -458,18 +490,18 @@ define <2 x i8> @shl_sub_nonuniform(<2 x i8> %x, <2 x i8> %y) {
 }
 
 
-define <2 x i64> @shl_sub_undef(<2 x i64> %x, <2 x i64> %py) {
-; CHECK-LABEL: @shl_sub_undef(
-; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i64> [[PY:%.*]], <i64 42, i64 42>
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[X:%.*]], <i64 12, i64 undef>
-; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i64> [[Y]], <i64 7, i64 undef>
+define <2 x i64> @shl_sub_poison(<2 x i64> %x, <2 x i64> %py) {
+; CHECK-LABEL: @shl_sub_poison(
+; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i64> [[PY:%.*]], splat (i64 42)
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[X:%.*]], <i64 12, i64 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw <2 x i64> [[Y]], <i64 7, i64 poison>
 ; CHECK-NEXT:    [[SH1:%.*]] = sub <2 x i64> [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i64> [[SH1]]
 ;
   %y = srem <2 x i64> %py, <i64 42, i64 42> ; thwart complexity-based canonicalization
-  %sh0 = shl <2 x i64> %x, <i64 5, i64 undef>
+  %sh0 = shl <2 x i64> %x, <i64 5, i64 poison>
   %r = sub <2 x i64> %y, %sh0
-  %sh1 = shl <2 x i64> %r, <i64 7, i64 undef>
+  %sh1 = shl <2 x i64> %r, <i64 7, i64 poison>
   ret <2 x i64> %sh1
 }
 
@@ -500,17 +532,17 @@ define <2 x i8> @lshr_sub_nonuniform(<2 x i8> %x, <2 x i8> %y) {
   ret <2 x i8> %sh1
 }
 
-define <2 x i64> @lshr_sub_undef(<2 x i64> %x, <2 x i64> %py) {
-; CHECK-LABEL: @lshr_sub_undef(
-; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i64> [[PY:%.*]], <i64 42, i64 42>
-; CHECK-NEXT:    [[SH0:%.*]] = lshr <2 x i64> [[X:%.*]], <i64 5, i64 undef>
-; CHECK-NEXT:    [[R:%.*]] = sub <2 x i64> [[Y]], [[SH0]]
-; CHECK-NEXT:    [[SH1:%.*]] = lshr <2 x i64> [[R]], <i64 7, i64 undef>
+define <2 x i64> @lshr_sub_poison(<2 x i64> %x, <2 x i64> %py) {
+; CHECK-LABEL: @lshr_sub_poison(
+; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i64> [[PY:%.*]], splat (i64 42)
+; CHECK-NEXT:    [[SH0:%.*]] = lshr <2 x i64> [[X:%.*]], <i64 5, i64 poison>
+; CHECK-NEXT:    [[R:%.*]] = sub nsw <2 x i64> [[Y]], [[SH0]]
+; CHECK-NEXT:    [[SH1:%.*]] = lshr <2 x i64> [[R]], <i64 7, i64 poison>
 ; CHECK-NEXT:    ret <2 x i64> [[SH1]]
 ;
   %y = srem <2 x i64> %py, <i64 42, i64 42> ; thwart complexity-based canonicalization
-  %sh0 = lshr <2 x i64> %x, <i64 5, i64 undef>
+  %sh0 = lshr <2 x i64> %x, <i64 5, i64 poison>
   %r = sub <2 x i64> %y, %sh0
-  %sh1 = lshr <2 x i64> %r, <i64 7, i64 undef>
+  %sh1 = lshr <2 x i64> %r, <i64 7, i64 poison>
   ret <2 x i64> %sh1
 }

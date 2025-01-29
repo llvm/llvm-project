@@ -16,4 +16,12 @@ typedef unsigned __INTPTR_TYPE__ uintptr_t;
 #error Every target should have __INTPTR_TYPE__
 #endif
 
+#ifdef __INTPTR_MAX__
+#define  INTPTR_MAX    __INTPTR_MAX__
+#endif
+
+#ifdef __UINTPTR_MAX__
+#define UINTPTR_MAX   __UINTPTR_MAX__
+#endif
+
 #endif /* STDINT_H */

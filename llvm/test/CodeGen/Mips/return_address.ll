@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel -verify-machineinstrs < %s | FileCheck %s
 
 define ptr @f1() nounwind {
 entry:

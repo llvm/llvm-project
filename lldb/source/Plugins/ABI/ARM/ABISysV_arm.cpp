@@ -17,7 +17,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -27,6 +26,7 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "Utility/ARM_DWARF_Registers.h"
@@ -38,13 +38,6 @@ using namespace lldb_private;
 LLDB_PLUGIN_DEFINE(ABISysV_arm)
 
 static const RegisterInfo g_register_infos[] = {
-    //  NAME       ALT       SZ OFF ENCODING         FORMAT          EH_FRAME
-    //  DWARF               GENERIC                     PROCESS PLUGIN
-    //  LLDB NATIVE            VALUE REGS    INVALIDATE REGS
-    //  ========== =======   == === =============    ============
-    //  ======================= =================== ===========================
-    //  ======================= ====================== ==========
-    //  ===============
     {"r0",
      nullptr,
      4,
@@ -1831,13 +1824,13 @@ Status ABISysV_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
                                          lldb::ValueObjectSP &new_value_sp) {
   Status error;
   if (!new_value_sp) {
-    error.SetErrorString("Empty value object for return value.");
+    error = Status::FromErrorString("Empty value object for return value.");
     return error;
   }
 
   CompilerType compiler_type = new_value_sp->GetCompilerType();
   if (!compiler_type) {
-    error.SetErrorString("Null clang type for return value.");
+    error = Status::FromErrorString("Null clang type for return value.");
     return error;
   }
 
@@ -1856,7 +1849,7 @@ Status ABISysV_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
     Status data_error;
     size_t num_bytes = new_value_sp->GetData(data, data_error);
     if (data_error.Fail()) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "Couldn't convert return value to raw data: %s",
           data_error.AsCString());
       return error;
@@ -1883,20 +1876,21 @@ Status ABISysV_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
         }
       }
     } else {
-      error.SetErrorString("We don't support returning longer than 64 bit "
-                           "integer values at present.");
+      error = Status::FromErrorString(
+          "We don't support returning longer than 64 bit "
+          "integer values at present.");
     }
   } else if (compiler_type.IsFloatingPointType(count, is_complex)) {
     if (is_complex)
-      error.SetErrorString(
+      error = Status::FromErrorString(
           "We don't support returning complex values at present");
     else
-      error.SetErrorString(
+      error = Status::FromErrorString(
           "We don't support returning float values at present");
   }
 
   if (!set_it_simple)
-    error.SetErrorString(
+    error = Status::FromErrorString(
         "We only support setting simple integer return types at present.");
 
   return error;

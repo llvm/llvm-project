@@ -19,7 +19,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
 #include <optional>
@@ -229,7 +228,7 @@ static void computeRelativePath(FileManager &FM, const DirectoryEntry *Dir,
   StringRef FilePath = File.getDir().getName();
   StringRef Path = FilePath;
   while (!Path.empty()) {
-    if (auto CurDir = FM.getDirectory(Path)) {
+    if (auto CurDir = FM.getOptionalDirectoryRef(Path)) {
       if (*CurDir == Dir) {
         Result = FilePath.substr(Path.size());
         llvm::sys::path::append(Result,
@@ -368,8 +367,7 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
       // Okay, this has a controlling macro, remember in HeaderFileInfo.
       if (OptionalFileEntryRef FE = CurPPLexer->getFileEntry()) {
         HeaderInfo.SetFileControllingMacro(*FE, ControllingMacro);
-        if (MacroInfo *MI =
-              getMacroInfo(const_cast<IdentifierInfo*>(ControllingMacro)))
+        if (MacroInfo *MI = getMacroInfo(ControllingMacro))
           MI->setUsedForHeaderGuard(true);
         if (const IdentifierInfo *DefinedMacro =
               CurPPLexer->MIOpt.GetDefinedMacro()) {
@@ -805,7 +803,7 @@ Module *Preprocessor::LeaveSubmodule(bool ForPragma) {
   llvm::SmallPtrSet<const IdentifierInfo*, 8> VisitedMacros;
   for (unsigned I = Info.OuterPendingModuleMacroNames;
        I != PendingModuleMacroNames.size(); ++I) {
-    auto *II = const_cast<IdentifierInfo*>(PendingModuleMacroNames[I]);
+    auto *II = PendingModuleMacroNames[I];
     if (!VisitedMacros.insert(II).second)
       continue;
 
@@ -855,8 +853,8 @@ Module *Preprocessor::LeaveSubmodule(bool ForPragma) {
         // Don't bother creating a module macro if it would represent a #undef
         // that doesn't override anything.
         if (Def || !Macro.getOverriddenMacros().empty())
-          addModuleMacro(LeavingMod, II, Def,
-                         Macro.getOverriddenMacros(), IsNew);
+          addModuleMacro(LeavingMod, II, Def, Macro.getOverriddenMacros(),
+                         IsNew);
 
         if (!getLangOpts().ModulesLocalVisibility) {
           // This macro is exposed to the rest of this compilation as a

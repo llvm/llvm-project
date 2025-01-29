@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; Test that the HexagonVectorCombine pass does not move an instruction

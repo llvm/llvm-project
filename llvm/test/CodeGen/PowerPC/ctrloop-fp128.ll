@@ -9,24 +9,17 @@
 define void @fmul_ctrloop_fp128() nounwind {
 ; PWR9-LABEL: fmul_ctrloop_fp128:
 ; PWR9:       # %bb.0: # %entry
-; PWR9-NEXT:    addis 3, 2, a@toc@ha
+; PWR9-NEXT:    addis 3, 2, .L_MergedGlobals@toc@ha
 ; PWR9-NEXT:    li 4, 4
-; PWR9-NEXT:    addi 3, 3, a@toc@l
+; PWR9-NEXT:    addi 3, 3, .L_MergedGlobals@toc@l
 ; PWR9-NEXT:    lxv 34, 0(3)
-; PWR9-NEXT:    addis 3, 2, y@toc@ha
 ; PWR9-NEXT:    mtctr 4
-; PWR9-NEXT:    addis 4, 2, x@toc@ha
-; PWR9-NEXT:    addi 3, 3, y@toc@l
-; PWR9-NEXT:    addi 4, 4, x@toc@l
-; PWR9-NEXT:    addi 3, 3, -16
-; PWR9-NEXT:    addi 4, 4, -16
 ; PWR9-NEXT:    .p2align 5
 ; PWR9-NEXT:  .LBB0_1: # %for.body
 ; PWR9-NEXT:    #
-; PWR9-NEXT:    lxv 35, 16(4)
-; PWR9-NEXT:    addi 4, 4, 16
+; PWR9-NEXT:    lxv 35, 16(3)
 ; PWR9-NEXT:    xsmulqp 3, 2, 3
-; PWR9-NEXT:    stxv 35, 16(3)
+; PWR9-NEXT:    stxv 35, 80(3)
 ; PWR9-NEXT:    addi 3, 3, 16
 ; PWR9-NEXT:    bdnz .LBB0_1
 ; PWR9-NEXT:  # %bb.2: # %for.end
@@ -38,40 +31,33 @@ define void @fmul_ctrloop_fp128() nounwind {
 ; PWR8-NEXT:    stdu 1, -112(1)
 ; PWR8-NEXT:    li 3, 48
 ; PWR8-NEXT:    std 0, 128(1)
-; PWR8-NEXT:    std 28, 80(1) # 8-byte Folded Spill
-; PWR8-NEXT:    std 29, 88(1) # 8-byte Folded Spill
 ; PWR8-NEXT:    std 30, 96(1) # 8-byte Folded Spill
-; PWR8-NEXT:    li 30, 4
-; PWR8-NEXT:    li 29, 16
-; PWR8-NEXT:    std 26, 64(1) # 8-byte Folded Spill
-; PWR8-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
-; PWR8-NEXT:    addis 3, 2, a@toc@ha
-; PWR8-NEXT:    addi 3, 3, a@toc@l
 ; PWR8-NEXT:    std 27, 72(1) # 8-byte Folded Spill
-; PWR8-NEXT:    lxvd2x 0, 0, 3
-; PWR8-NEXT:    addis 3, 2, y@toc@ha
-; PWR8-NEXT:    addi 3, 3, y@toc@l
-; PWR8-NEXT:    addi 28, 3, -16
-; PWR8-NEXT:    addis 3, 2, x@toc@ha
-; PWR8-NEXT:    addi 3, 3, x@toc@l
-; PWR8-NEXT:    addi 3, 3, -16
+; PWR8-NEXT:    std 28, 80(1) # 8-byte Folded Spill
+; PWR8-NEXT:    li 28, 16
+; PWR8-NEXT:    li 27, 80
+; PWR8-NEXT:    std 29, 88(1) # 8-byte Folded Spill
+; PWR8-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
+; PWR8-NEXT:    addis 3, 2, .L_MergedGlobals@toc@ha
+; PWR8-NEXT:    li 29, 4
+; PWR8-NEXT:    addi 30, 3, .L_MergedGlobals@toc@l
+; PWR8-NEXT:    std 26, 64(1) # 8-byte Folded Spill
+; PWR8-NEXT:    lxvd2x 0, 0, 30
 ; PWR8-NEXT:    xxswapd 63, 0
 ; PWR8-NEXT:    .p2align 4
 ; PWR8-NEXT:  .LBB0_1: # %for.body
 ; PWR8-NEXT:    #
-; PWR8-NEXT:    lxvd2x 0, 3, 29
+; PWR8-NEXT:    lxvd2x 0, 30, 28
 ; PWR8-NEXT:    vmr 2, 31
-; PWR8-NEXT:    addi 27, 28, 16
-; PWR8-NEXT:    addi 26, 3, 16
+; PWR8-NEXT:    addi 26, 30, 16
 ; PWR8-NEXT:    xxswapd 35, 0
 ; PWR8-NEXT:    bl __mulkf3
 ; PWR8-NEXT:    nop
-; PWR8-NEXT:    addi 30, 30, -1
+; PWR8-NEXT:    addi 29, 29, -1
 ; PWR8-NEXT:    xxswapd 0, 34
-; PWR8-NEXT:    mr 3, 26
-; PWR8-NEXT:    cmpldi 30, 0
-; PWR8-NEXT:    stxvd2x 0, 28, 29
-; PWR8-NEXT:    mr 28, 27
+; PWR8-NEXT:    cmpldi 29, 0
+; PWR8-NEXT:    stxvd2x 0, 30, 27
+; PWR8-NEXT:    mr 30, 26
 ; PWR8-NEXT:    bc 12, 1, .LBB0_1
 ; PWR8-NEXT:  # %bb.2: # %for.end
 ; PWR8-NEXT:    li 3, 48
@@ -110,9 +96,9 @@ define void @fpext_ctrloop_fp128(ptr %a) nounwind {
 ; PWR9-NEXT:    li 4, 4
 ; PWR9-NEXT:    addi 3, 3, -8
 ; PWR9-NEXT:    mtctr 4
-; PWR9-NEXT:    addis 4, 2, y@toc@ha
-; PWR9-NEXT:    addi 4, 4, y@toc@l
-; PWR9-NEXT:    addi 4, 4, -16
+; PWR9-NEXT:    addis 4, 2, .L_MergedGlobals@toc@ha
+; PWR9-NEXT:    addi 4, 4, .L_MergedGlobals@toc@l
+; PWR9-NEXT:    addi 4, 4, 64
 ; PWR9-NEXT:    .p2align 5
 ; PWR9-NEXT:  .LBB1_1: # %for.body
 ; PWR9-NEXT:    #
@@ -133,11 +119,11 @@ define void @fpext_ctrloop_fp128(ptr %a) nounwind {
 ; PWR8-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; PWR8-NEXT:    stdu 1, -64(1)
 ; PWR8-NEXT:    addi 30, 3, -8
-; PWR8-NEXT:    addis 3, 2, y@toc@ha
+; PWR8-NEXT:    addis 3, 2, .L_MergedGlobals@toc@ha
 ; PWR8-NEXT:    li 29, 4
 ; PWR8-NEXT:    std 0, 80(1)
-; PWR8-NEXT:    addi 3, 3, y@toc@l
-; PWR8-NEXT:    addi 28, 3, -16
+; PWR8-NEXT:    addi 3, 3, .L_MergedGlobals@toc@l
+; PWR8-NEXT:    addi 28, 3, 64
 ; PWR8-NEXT:    .p2align 4
 ; PWR8-NEXT:  .LBB1_1: # %for.body
 ; PWR8-NEXT:    #
@@ -182,9 +168,8 @@ define void @fptrunc_ctrloop_fp128(ptr %a) nounwind {
 ; PWR9-NEXT:    li 4, 4
 ; PWR9-NEXT:    addi 3, 3, -8
 ; PWR9-NEXT:    mtctr 4
-; PWR9-NEXT:    addis 4, 2, x@toc@ha
-; PWR9-NEXT:    addi 4, 4, x@toc@l
-; PWR9-NEXT:    addi 4, 4, -16
+; PWR9-NEXT:    addis 4, 2, .L_MergedGlobals@toc@ha
+; PWR9-NEXT:    addi 4, 4, .L_MergedGlobals@toc@l
 ; PWR9-NEXT:    .p2align 5
 ; PWR9-NEXT:  .LBB2_1: # %for.body
 ; PWR9-NEXT:    #
@@ -205,11 +190,10 @@ define void @fptrunc_ctrloop_fp128(ptr %a) nounwind {
 ; PWR8-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; PWR8-NEXT:    stdu 1, -64(1)
 ; PWR8-NEXT:    addi 30, 3, -8
-; PWR8-NEXT:    addis 3, 2, x@toc@ha
+; PWR8-NEXT:    addis 3, 2, .L_MergedGlobals@toc@ha
 ; PWR8-NEXT:    li 29, 4
 ; PWR8-NEXT:    std 0, 80(1)
-; PWR8-NEXT:    addi 3, 3, x@toc@l
-; PWR8-NEXT:    addi 28, 3, -16
+; PWR8-NEXT:    addi 28, 3, .L_MergedGlobals@toc@l
 ; PWR8-NEXT:    .p2align 4
 ; PWR8-NEXT:  .LBB2_1: # %for.body
 ; PWR8-NEXT:    #

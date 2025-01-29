@@ -37,7 +37,6 @@
 #include "sanitizer_common/sanitizer_platform_limits_netbsd.h"
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
-#include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "sanitizer_common/sanitizer_vector.h"
 
 #if SANITIZER_NETBSD
@@ -60,8 +59,8 @@ using __sanitizer::atomic_uintptr_t;
 
 DECLARE_REAL(SIZE_T, strlen, const char *s)
 DECLARE_REAL(SIZE_T, strnlen, const char *s, SIZE_T maxlen)
-DECLARE_REAL(void *, memcpy, void *dest, const void *src, uptr n)
-DECLARE_REAL(void *, memset, void *dest, int c, uptr n)
+DECLARE_REAL(void *, memcpy, void *dest, const void *src, SIZE_T n)
+DECLARE_REAL(void *, memset, void *dest, int c, SIZE_T n)
 
 // True if this is a nested interceptor.
 static THREADLOCAL int in_interceptor_scope;
@@ -185,10 +184,7 @@ INTERCEPTOR(void *, aligned_alloc, SIZE_T alignment, SIZE_T size) {
 #if !SANITIZER_NETBSD
 INTERCEPTOR(void *, __libc_memalign, SIZE_T alignment, SIZE_T size) {
   GET_MALLOC_STACK_TRACE;
-  void *ptr = msan_memalign(alignment, size, &stack);
-  if (ptr)
-    DTLS_on_libc_memalign(ptr, size);
-  return ptr;
+  return msan_memalign(alignment, size, &stack);
 }
 #define MSAN_MAYBE_INTERCEPT___LIBC_MEMALIGN INTERCEPT_FUNCTION(__libc_memalign)
 #else
@@ -255,7 +251,7 @@ static NOINLINE void clear_mallinfo(T *sret) {
 #if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
 // Interceptors use NRVO and assume that sret will be pre-allocated in
 // caller frame.
-INTERCEPTOR(__sanitizer_struct_mallinfo, mallinfo) {
+INTERCEPTOR(__sanitizer_struct_mallinfo, mallinfo,) {
   __sanitizer_struct_mallinfo sret;
   clear_mallinfo(&sret);
   return sret;
@@ -1226,7 +1222,7 @@ INTERCEPTOR(int, pthread_timedjoin_np, void *thread, void **retval,
 }
 #endif
 
-DEFINE_REAL_PTHREAD_FUNCTIONS
+DEFINE_INTERNAL_PTHREAD_FUNCTIONS
 
 extern char *tzname[2];
 
@@ -1255,7 +1251,7 @@ struct InterceptorContext {
   }
 };
 
-static ALIGNED(64) char interceptor_placeholder[sizeof(InterceptorContext)];
+alignas(64) static char interceptor_placeholder[sizeof(InterceptorContext)];
 InterceptorContext *interceptor_ctx() {
   return reinterpret_cast<InterceptorContext*>(&interceptor_placeholder[0]);
 }
@@ -1761,6 +1757,8 @@ namespace __msan {
 void InitializeInterceptors() {
   static int inited = 0;
   CHECK_EQ(inited, 0);
+
+  __interception::DoesNotSupportStaticLinking();
 
   new(interceptor_ctx()) InterceptorContext();
 

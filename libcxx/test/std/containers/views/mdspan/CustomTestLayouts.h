@@ -25,11 +25,12 @@
 #include <cstddef>
 #include <limits>
 #include <mdspan>
+#include <span> // dynamic_extent
 #include <type_traits>
 #include <utility>
 
 // Layout that wraps indices to test some idiosyncratic behavior
-// - basically it is a layout_left where indicies are first wrapped i.e. i%Wrap
+// - basically it is a layout_left where indices are first wrapped i.e. i%Wrap
 // - only accepts integers as indices
 // - is_always_strided and is_always_unique are false
 // - is_strided and is_unique are true if all extents are smaller than Wrap

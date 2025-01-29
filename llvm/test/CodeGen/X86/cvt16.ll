@@ -34,8 +34,7 @@ define void @test1(float %src, ptr %dest) nounwind {
 ; F16C-LABEL: test1:
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, (%rdi)
+; F16C-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; F16C-NEXT:    retq
 ;
 ; SOFTFLOAT-LABEL: test1:
@@ -59,8 +58,7 @@ define float @test2(ptr nocapture %src) nounwind {
 ;
 ; F16C-LABEL: test2:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    movzwl (%rdi), %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
+; F16C-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    retq
 ;
@@ -89,7 +87,6 @@ define float @test3(float %src) nounwind uwtable readnone {
 ; F16C-LABEL: test3:
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    retq
 ;
@@ -120,8 +117,7 @@ define double @test4(ptr nocapture %src) nounwind {
 ;
 ; F16C-LABEL: test4:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    movzwl (%rdi), %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
+; F16C-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; F16C-NEXT:    retq

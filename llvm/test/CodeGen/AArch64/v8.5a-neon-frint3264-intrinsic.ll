@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=aarch64-eabi -mattr=+v8.5a  | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64 -mattr=+v8.5a  | FileCheck %s
 
 declare <2 x float> @llvm.aarch64.neon.frint32x.v2f32(<2 x float>)
 declare <4 x float> @llvm.aarch64.neon.frint32x.v4f32(<4 x float>)

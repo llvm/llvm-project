@@ -1,11 +1,13 @@
 ; RUN: llc -fast-isel -fast-isel-abort=1 -mtriple=x86_64-unknown-unknown -stop-after=finalize-isel %s -o - | \
 ; RUN:    FileCheck %s
 
+; RUN: llc --try-experimental-debuginfo-iterators -fast-isel -fast-isel-abort=1 -mtriple=x86_64-unknown-unknown -stop-after=finalize-isel %s -o - |  FileCheck %s
+
 define void @foo(ptr noalias nocapture %arg) !dbg !38 {
   %k.debug = alloca ptr, align 8
   store ptr %arg, ptr %k.debug, align 8, !dbg !70
   call void @llvm.dbg.value(metadata ptr %k.debug, metadata !55, metadata !DIExpression(DW_OP_deref)), !dbg !70
-; CHECK: call void @llvm.dbg.value(metadata ptr %{{.*}}, metadata ![[VAR:.*]], metadata ![[EXPR:.*]])
+; CHECK: #dbg_value(ptr %{{.*}}, ![[VAR:.*]], ![[EXPR:.*]], 
 ; CHECK: DBG_VALUE %stack.0{{.*}}, $noreg, ![[VAR]], ![[EXPR]]
   ret void, !dbg !70
 }

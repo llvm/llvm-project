@@ -114,6 +114,47 @@ def SPIRV_MatrixTimesScalarOp : SPIRV_Op<
 
 // -----
 
+def SPIRV_MatrixTimesVectorOp : SPIRV_Op<"MatrixTimesVector", [Pure]> {
+  let summary = "Linear-algebraic multiply of matrix X vector.";
+
+  let description = [{
+    Result Type must be a vector of floating-point type.
+
+    Matrix must be an OpTypeMatrix whose Column Type is Result Type.
+
+    Vector must be a vector with the same Component Type as the Component Type in Result Type. Its number of components must equal the number of columns in Matrix.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.MatrixTimesVector %matrix, %vector : 
+        !spirv.matrix<3 x vector<2xf32>>, vector<3xf32> -> vector<2xf32>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Matrix]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyMatrix:$matrix,
+    SPIRV_AnyVector:$vector
+  );
+
+  let results = (outs
+    SPIRV_AnyVector:$result
+  );
+
+  let assemblyFormat = [{
+    operands attr-dict `:` type($matrix) `,` type($vector) `->` type($result)
+  }];
+}
+
+// -----
+
 def SPIRV_TransposeOp : SPIRV_Op<"Transpose", [Pure]> {
   let summary = "Transpose a matrix.";
 

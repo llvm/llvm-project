@@ -32,7 +32,7 @@ int main() {
 
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_taskloop_begin:
   // CHECK-SAME: parallel_id=[[PARALLEL_ID]]
-  // CHECK-SAME: parent_task_id=[[IMPLICIT_TASK_ID1]]
+  // CHECK-SAME: task_id=[[IMPLICIT_TASK_ID1]]
   // CHECK-SAME: codeptr_ra=[[RETURN_ADDRESS:0x[0-f]+]], count=16
 
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create:

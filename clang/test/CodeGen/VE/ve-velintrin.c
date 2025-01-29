@@ -1,6 +1,6 @@
 // REQUIRES: ve-registered-target
 
-// RUN: %clang_cc1 -S -emit-llvm -triple ve-unknown-linux-gnu \
+// RUN: %clang_cc1 -emit-llvm -triple ve-unknown-linux-gnu \
 // RUN:   -ffreestanding %s -o - | FileCheck %s
 
 #include <velintrin.h>

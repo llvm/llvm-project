@@ -8,8 +8,8 @@
 
 import os
 import pickle
-import pipes
 import platform
+import shlex
 import shutil
 import tempfile
 
@@ -276,7 +276,7 @@ def hasAnyLocale(config, locales):
     """
     program = """
     #include <stddef.h>
-    #if defined(_LIBCPP_HAS_NO_LOCALIZATION)
+    #if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_LOCALIZATION
       int main(int, char**) { return 1; }
     #else
       #include <locale.h>
@@ -290,7 +290,7 @@ def hasAnyLocale(config, locales):
       }
     #endif
   """
-    return programSucceeds(config, program, args=[pipes.quote(l) for l in locales])
+    return programSucceeds(config, program, args=[shlex.quote(l) for l in locales])
 
 
 @_memoizeExpensiveOperation(lambda c, flags="": (c.substitutions, c.environment, flags))
@@ -308,8 +308,8 @@ def compilerMacros(config, flags=""):
         with open(test.getSourcePath(), "w") as sourceFile:
             sourceFile.write(
                 """
-      #if __has_include(<__config_site>)
-      #  include <__config_site>
+      #if __has_include(<__config>)
+      #  include <__config>
       #endif
       """
             )

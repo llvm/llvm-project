@@ -1,0 +1,1282 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Smoke tests for LLVM libc math.h functions.
+
+load("//libc/test/src/math:libc_math_test_rules.bzl", "math_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+math_test(name = "acosf")
+
+math_test(name = "acoshf")
+
+math_test(name = "asinf")
+
+math_test(name = "asinhf")
+
+math_test(name = "atan2")
+
+math_test(name = "atan2f")
+
+math_test(name = "atanf")
+
+math_test(name = "atanhf")
+
+math_test(
+    name = "canonicalize",
+    hdrs = ["CanonicalizeTest.h"],
+    deps = [
+        "//libc:__support_integer_literals",
+    ],
+)
+
+math_test(
+    name = "canonicalizef",
+    hdrs = ["CanonicalizeTest.h"],
+    deps = [
+        "//libc:__support_integer_literals",
+    ],
+)
+
+math_test(
+    name = "canonicalizel",
+    hdrs = ["CanonicalizeTest.h"],
+    deps = [
+        "//libc:__support_integer_literals",
+    ],
+)
+
+math_test(
+    name = "canonicalizef128",
+    hdrs = ["CanonicalizeTest.h"],
+    deps = [
+        "//libc:__support_integer_literals",
+    ],
+)
+
+math_test(name = "cbrt")
+
+math_test(name = "cbrtf")
+
+math_test(
+    name = "ceil",
+    hdrs = ["CeilTest.h"],
+)
+
+math_test(
+    name = "ceilf",
+    hdrs = ["CeilTest.h"],
+)
+
+math_test(
+    name = "ceill",
+    hdrs = ["CeilTest.h"],
+)
+
+math_test(
+    name = "ceilf128",
+    hdrs = ["CeilTest.h"],
+)
+
+math_test(
+    name = "copysign",
+    hdrs = ["CopySignTest.h"],
+)
+
+math_test(
+    name = "copysignf",
+    hdrs = ["CopySignTest.h"],
+)
+
+math_test(
+    name = "copysignl",
+    hdrs = ["CopySignTest.h"],
+)
+
+math_test(
+    name = "copysignf128",
+    hdrs = ["CopySignTest.h"],
+)
+
+math_test(name = "cos")
+
+math_test(name = "cosf")
+
+math_test(
+    name = "coshf",
+    deps = [
+        "//libc:__support_cpp_array",
+    ],
+)
+
+math_test(name = "cospif")
+
+math_test(
+    name = "daddl",
+    hdrs = ["AddTest.h"],
+)
+
+math_test(
+    name = "daddf128",
+    hdrs = ["AddTest.h"],
+)
+
+math_test(
+    name = "ddivl",
+    hdrs = ["DivTest.h"],
+)
+
+math_test(
+    name = "ddivf128",
+    hdrs = ["DivTest.h"],
+)
+
+math_test(
+    name = "dfmal",
+    hdrs = ["FmaTest.h"],
+)
+
+math_test(
+    name = "dfmaf128",
+    hdrs = ["FmaTest.h"],
+)
+
+math_test(
+    name = "dmull",
+    hdrs = ["MulTest.h"],
+)
+
+math_test(
+    name = "dmulf128",
+    hdrs = ["MulTest.h"],
+)
+
+math_test(
+    name = "dsqrtl",
+    hdrs = ["SqrtTest.h"],
+)
+
+math_test(
+    name = "dsqrtf128",
+    hdrs = ["SqrtTest.h"],
+)
+
+math_test(
+    name = "dsubl",
+    hdrs = ["SubTest.h"],
+)
+
+math_test(
+    name = "dsubf128",
+    hdrs = ["SubTest.h"],
+)
+
+math_test(name = "erff")
+
+math_test(name = "exp")
+
+math_test(name = "expf")
+
+math_test(name = "exp10")
+
+math_test(name = "exp10f")
+
+math_test(name = "exp2")
+
+math_test(name = "exp2f")
+
+math_test(name = "exp2m1f")
+
+math_test(name = "expm1")
+
+math_test(name = "expm1f")
+
+math_test(
+    name = "fabs",
+    hdrs = ["FAbsTest.h"],
+)
+
+math_test(
+    name = "fabsf",
+    hdrs = ["FAbsTest.h"],
+)
+
+math_test(
+    name = "fabsl",
+    hdrs = ["FAbsTest.h"],
+)
+
+math_test(
+    name = "fabsf128",
+    hdrs = ["FAbsTest.h"],
+)
+
+math_test(
+    name = "fadd",
+    hdrs = ["AddTest.h"],
+)
+
+math_test(
+    name = "faddl",
+    hdrs = ["AddTest.h"],
+)
+
+math_test(
+    name = "faddf128",
+    hdrs = ["AddTest.h"],
+)
+
+math_test(
+    name = "fdim",
+    hdrs = ["FDimTest.h"],
+)
+
+math_test(
+    name = "fdimf",
+    hdrs = ["FDimTest.h"],
+)
+
+math_test(
+    name = "fdiml",
+    hdrs = ["FDimTest.h"],
+)
+
+math_test(
+    name = "fdimf128",
+    hdrs = ["FDimTest.h"],
+)
+
+math_test(
+    name = "fdiv",
+    hdrs = ["DivTest.h"],
+)
+
+math_test(
+    name = "fdivl",
+    hdrs = ["DivTest.h"],
+)
+
+math_test(
+    name = "fdivf128",
+    hdrs = ["DivTest.h"],
+)
+
+math_test(
+    name = "ffma",
+    hdrs = ["FmaTest.h"],
+)
+
+math_test(
+    name = "ffmal",
+    hdrs = ["FmaTest.h"],
+)
+
+math_test(
+    name = "ffmaf128",
+    hdrs = ["FmaTest.h"],
+)
+
+math_test(
+    name = "floor",
+    hdrs = ["FloorTest.h"],
+)
+
+math_test(
+    name = "floorf",
+    hdrs = ["FloorTest.h"],
+)
+
+math_test(
+    name = "floorl",
+    hdrs = ["FloorTest.h"],
+)
+
+math_test(
+    name = "floorf128",
+    hdrs = ["FloorTest.h"],
+)
+
+# TODO: Add fma, fmaf, fmal, fmaf128 tests.
+
+math_test(
+    name = "fmax",
+    hdrs = ["FMaxTest.h"],
+)
+
+math_test(
+    name = "fmaxf",
+    hdrs = ["FMaxTest.h"],
+)
+
+math_test(
+    name = "fmaxl",
+    hdrs = ["FMaxTest.h"],
+)
+
+math_test(
+    name = "fmaxf128",
+    hdrs = ["FMaxTest.h"],
+)
+
+math_test(
+    name = "fmaximum",
+    hdrs = ["FMaximumTest.h"],
+)
+
+math_test(
+    name = "fmaximumf",
+    hdrs = ["FMaximumTest.h"],
+)
+
+math_test(
+    name = "fmaximuml",
+    hdrs = ["FMaximumTest.h"],
+)
+
+math_test(
+    name = "fmaximumf128",
+    hdrs = ["FMaximumTest.h"],
+)
+
+math_test(
+    name = "fmaximum_mag",
+    hdrs = ["FMaximumMagTest.h"],
+)
+
+math_test(
+    name = "fmaximum_magf",
+    hdrs = ["FMaximumMagTest.h"],
+)
+
+math_test(
+    name = "fmaximum_magl",
+    hdrs = ["FMaximumMagTest.h"],
+)
+
+math_test(
+    name = "fmaximum_magf128",
+    hdrs = ["FMaximumMagTest.h"],
+)
+
+math_test(
+    name = "fmaximum_mag_num",
+    hdrs = ["FMaximumMagNumTest.h"],
+)
+
+math_test(
+    name = "fmaximum_mag_numf",
+    hdrs = ["FMaximumMagNumTest.h"],
+)
+
+math_test(
+    name = "fmaximum_mag_numl",
+    hdrs = ["FMaximumMagNumTest.h"],
+)
+
+math_test(
+    name = "fmaximum_mag_numf128",
+    hdrs = ["FMaximumMagNumTest.h"],
+)
+
+math_test(
+    name = "fmaximum_num",
+    hdrs = ["FMaximumNumTest.h"],
+)
+
+math_test(
+    name = "fmaximum_numf",
+    hdrs = ["FMaximumNumTest.h"],
+)
+
+math_test(
+    name = "fmaximum_numl",
+    hdrs = ["FMaximumNumTest.h"],
+)
+
+math_test(
+    name = "fmaximum_numf128",
+    hdrs = ["FMaximumNumTest.h"],
+)
+
+math_test(
+    name = "fmin",
+    hdrs = ["FMinTest.h"],
+)
+
+math_test(
+    name = "fminf",
+    hdrs = ["FMinTest.h"],
+)
+
+math_test(
+    name = "fminl",
+    hdrs = ["FMinTest.h"],
+)
+
+math_test(
+    name = "fminf128",
+    hdrs = ["FMinTest.h"],
+)
+
+math_test(
+    name = "fminimum",
+    hdrs = ["FMinimumTest.h"],
+)
+
+math_test(
+    name = "fminimumf",
+    hdrs = ["FMinimumTest.h"],
+)
+
+math_test(
+    name = "fminimuml",
+    hdrs = ["FMinimumTest.h"],
+)
+
+math_test(
+    name = "fminimumf128",
+    hdrs = ["FMinimumTest.h"],
+)
+
+math_test(
+    name = "fminimum_mag",
+    hdrs = ["FMinimumMagTest.h"],
+)
+
+math_test(
+    name = "fminimum_magf",
+    hdrs = ["FMinimumMagTest.h"],
+)
+
+math_test(
+    name = "fminimum_magl",
+    hdrs = ["FMinimumMagTest.h"],
+)
+
+math_test(
+    name = "fminimum_magf128",
+    hdrs = ["FMinimumMagTest.h"],
+)
+
+math_test(
+    name = "fminimum_mag_num",
+    hdrs = ["FMinimumMagNumTest.h"],
+)
+
+math_test(
+    name = "fminimum_mag_numf",
+    hdrs = ["FMinimumMagNumTest.h"],
+)
+
+math_test(
+    name = "fminimum_mag_numl",
+    hdrs = ["FMinimumMagNumTest.h"],
+)
+
+math_test(
+    name = "fminimum_mag_numf128",
+    hdrs = ["FMinimumMagNumTest.h"],
+)
+
+math_test(
+    name = "fminimum_num",
+    hdrs = ["FMinimumNumTest.h"],
+)
+
+math_test(
+    name = "fminimum_numf",
+    hdrs = ["FMinimumNumTest.h"],
+)
+
+math_test(
+    name = "fminimum_numl",
+    hdrs = ["FMinimumNumTest.h"],
+)
+
+math_test(
+    name = "fminimum_numf128",
+    hdrs = ["FMinimumNumTest.h"],
+)
+
+math_test(
+    name = "fmod",
+    hdrs = ["FModTest.h"],
+)
+
+math_test(
+    name = "fmodf",
+    hdrs = ["FModTest.h"],
+)
+
+math_test(
+    name = "fmodl",
+    hdrs = ["FModTest.h"],
+)
+
+math_test(
+    name = "fmodf128",
+    hdrs = ["FModTest.h"],
+)
+
+math_test(
+    name = "fmul",
+    hdrs = ["MulTest.h"],
+)
+
+math_test(
+    name = "fmull",
+    hdrs = ["MulTest.h"],
+)
+
+math_test(
+    name = "fmulf128",
+    hdrs = ["MulTest.h"],
+)
+
+math_test(
+    name = "frexp",
+    hdrs = ["FrexpTest.h"],
+)
+
+math_test(
+    name = "frexpf",
+    hdrs = ["FrexpTest.h"],
+)
+
+math_test(
+    name = "frexpl",
+    hdrs = ["FrexpTest.h"],
+)
+
+math_test(
+    name = "frexpf128",
+    hdrs = ["FrexpTest.h"],
+)
+
+math_test(
+    name = "fromfp",
+    hdrs = ["FromfpTest.h"],
+)
+
+math_test(
+    name = "fromfpf",
+    hdrs = ["FromfpTest.h"],
+)
+
+math_test(
+    name = "fromfpl",
+    hdrs = ["FromfpTest.h"],
+)
+
+math_test(
+    name = "fromfpf128",
+    hdrs = ["FromfpTest.h"],
+)
+
+math_test(
+    name = "fromfpx",
+    hdrs = ["FromfpxTest.h"],
+)
+
+math_test(
+    name = "fromfpxf",
+    hdrs = ["FromfpxTest.h"],
+)
+
+math_test(
+    name = "fromfpxl",
+    hdrs = ["FromfpxTest.h"],
+)
+
+math_test(
+    name = "fromfpxf128",
+    hdrs = ["FromfpxTest.h"],
+)
+
+math_test(
+    name = "fsqrt",
+    hdrs = ["SqrtTest.h"],
+)
+
+math_test(
+    name = "fsqrtl",
+    hdrs = ["SqrtTest.h"],
+)
+
+math_test(
+    name = "fsqrtf128",
+    hdrs = ["SqrtTest.h"],
+)
+
+math_test(
+    name = "fsub",
+    hdrs = ["SubTest.h"],
+)
+
+math_test(
+    name = "fsubl",
+    hdrs = ["SubTest.h"],
+)
+
+math_test(
+    name = "fsubf128",
+    hdrs = ["SubTest.h"],
+)
+
+math_test(
+    name = "getpayload",
+    hdrs = ["GetPayloadTest.h"],
+)
+
+math_test(
+    name = "getpayloadf",
+    hdrs = ["GetPayloadTest.h"],
+)
+
+math_test(
+    name = "getpayloadl",
+    hdrs = ["GetPayloadTest.h"],
+)
+
+math_test(
+    name = "getpayloadf128",
+    hdrs = ["GetPayloadTest.h"],
+)
+
+math_test(
+    name = "hypot",
+    hdrs = ["HypotTest.h"],
+)
+
+math_test(
+    name = "hypotf",
+    hdrs = ["HypotTest.h"],
+)
+
+math_test(
+    name = "ilogb",
+    hdrs = ["ILogbTest.h"],
+)
+
+math_test(
+    name = "ilogbf",
+    hdrs = ["ILogbTest.h"],
+)
+
+math_test(
+    name = "ilogbl",
+    hdrs = ["ILogbTest.h"],
+)
+
+math_test(
+    name = "ilogbf128",
+    hdrs = ["ILogbTest.h"],
+)
+
+math_test(
+    name = "ldexp",
+    hdrs = ["LdExpTest.h"],
+)
+
+math_test(
+    name = "ldexpf",
+    hdrs = ["LdExpTest.h"],
+)
+
+math_test(
+    name = "ldexpl",
+    hdrs = ["LdExpTest.h"],
+)
+
+math_test(
+    name = "ldexpf128",
+    hdrs = ["LdExpTest.h"],
+)
+
+math_test(
+    name = "llogb",
+    hdrs = ["ILogbTest.h"],
+)
+
+math_test(
+    name = "llogbf",
+    hdrs = ["ILogbTest.h"],
+)
+
+math_test(
+    name = "llogbl",
+    hdrs = ["ILogbTest.h"],
+)
+
+math_test(
+    name = "llogbf128",
+    hdrs = ["ILogbTest.h"],
+)
+
+math_test(
+    name = "llrint",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_test(
+    name = "llrintf",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_test(
+    name = "llrintl",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_test(
+    name = "llrintf128",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_test(
+    name = "llround",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_test(
+    name = "llroundf",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_test(
+    name = "llroundl",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_test(
+    name = "llroundf128",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_test(name = "log")
+
+math_test(name = "logf")
+
+math_test(name = "log10")
+
+math_test(name = "log10f")
+
+math_test(name = "log1p")
+
+math_test(name = "log1pf")
+
+math_test(name = "log2")
+
+math_test(name = "log2f")
+
+math_test(
+    name = "logb",
+    hdrs = ["LogbTest.h"],
+)
+
+math_test(
+    name = "logbf",
+    hdrs = ["LogbTest.h"],
+)
+
+math_test(
+    name = "logbl",
+    hdrs = ["LogbTest.h"],
+)
+
+math_test(
+    name = "logbf128",
+    hdrs = ["LogbTest.h"],
+)
+
+math_test(
+    name = "lrint",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_test(
+    name = "lrintf",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_test(
+    name = "lrintl",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_test(
+    name = "lrintf128",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_test(
+    name = "lround",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_test(
+    name = "lroundf",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_test(
+    name = "lroundl",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_test(
+    name = "lroundf128",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_test(
+    name = "modf",
+    hdrs = ["ModfTest.h"],
+)
+
+math_test(
+    name = "modff",
+    hdrs = ["ModfTest.h"],
+)
+
+math_test(
+    name = "modfl",
+    hdrs = ["ModfTest.h"],
+)
+
+math_test(
+    name = "modff128",
+    hdrs = ["ModfTest.h"],
+)
+
+# TODO: add nan tests.
+
+math_test(
+    name = "nearbyint",
+    hdrs = ["NearbyIntTest.h"],
+)
+
+math_test(
+    name = "nearbyintf",
+    hdrs = ["NearbyIntTest.h"],
+)
+
+math_test(
+    name = "nearbyintl",
+    hdrs = ["NearbyIntTest.h"],
+)
+
+math_test(
+    name = "nearbyintf128",
+    hdrs = ["NearbyIntTest.h"],
+)
+
+math_test(
+    name = "nextafter",
+    hdrs = ["NextAfterTest.h"],
+)
+
+math_test(
+    name = "nextafterf",
+    hdrs = ["NextAfterTest.h"],
+)
+
+math_test(
+    name = "nextafterl",
+    hdrs = ["NextAfterTest.h"],
+)
+
+math_test(
+    name = "nextafterf128",
+    hdrs = ["NextAfterTest.h"],
+)
+
+math_test(
+    name = "nextdown",
+    hdrs = ["NextDownTest.h"],
+)
+
+math_test(
+    name = "nextdownf",
+    hdrs = ["NextDownTest.h"],
+)
+
+math_test(
+    name = "nextdownl",
+    hdrs = ["NextDownTest.h"],
+)
+
+math_test(
+    name = "nextdownf128",
+    hdrs = ["NextDownTest.h"],
+)
+
+math_test(
+    name = "nexttoward",
+    hdrs = ["NextTowardTest.h"],
+)
+
+math_test(
+    name = "nexttowardf",
+    hdrs = ["NextTowardTest.h"],
+)
+
+math_test(
+    name = "nexttowardl",
+    hdrs = ["NextTowardTest.h"],
+)
+
+math_test(
+    name = "nextup",
+    hdrs = ["NextUpTest.h"],
+)
+
+math_test(
+    name = "nextupf",
+    hdrs = ["NextUpTest.h"],
+)
+
+math_test(
+    name = "nextupl",
+    hdrs = ["NextUpTest.h"],
+)
+
+math_test(
+    name = "nextupf128",
+    hdrs = ["NextUpTest.h"],
+)
+
+math_test(name = "pow")
+
+math_test(name = "powf")
+
+math_test(
+    name = "remquo",
+    hdrs = ["RemQuoTest.h"],
+)
+
+math_test(
+    name = "remquof",
+    hdrs = ["RemQuoTest.h"],
+)
+
+math_test(
+    name = "remquol",
+    hdrs = ["RemQuoTest.h"],
+)
+
+math_test(
+    name = "remquof128",
+    hdrs = ["RemQuoTest.h"],
+)
+
+math_test(
+    name = "rint",
+    hdrs = ["RIntTest.h"],
+)
+
+math_test(
+    name = "rintf",
+    hdrs = ["RIntTest.h"],
+)
+
+math_test(
+    name = "rintl",
+    hdrs = ["RIntTest.h"],
+)
+
+math_test(
+    name = "rintf128",
+    hdrs = ["RIntTest.h"],
+)
+
+math_test(
+    name = "roundeven",
+    hdrs = ["RoundEvenTest.h"],
+)
+
+math_test(
+    name = "roundevenf",
+    hdrs = ["RoundEvenTest.h"],
+)
+
+math_test(
+    name = "roundevenl",
+    hdrs = ["RoundEvenTest.h"],
+)
+
+math_test(
+    name = "roundevenf128",
+    hdrs = ["RoundEvenTest.h"],
+)
+
+math_test(
+    name = "round",
+    hdrs = ["RoundTest.h"],
+)
+
+math_test(
+    name = "roundf",
+    hdrs = ["RoundTest.h"],
+)
+
+math_test(
+    name = "roundl",
+    hdrs = ["RoundTest.h"],
+)
+
+math_test(
+    name = "roundf128",
+    hdrs = ["RoundTest.h"],
+)
+
+math_test(
+    name = "scalbn",
+    hdrs = [
+        "LdExpTest.h",
+        "ScalbnTest.h",
+    ],
+)
+
+math_test(
+    name = "scalbnf",
+    hdrs = [
+        "LdExpTest.h",
+        "ScalbnTest.h",
+    ],
+)
+
+math_test(
+    name = "scalbnl",
+    hdrs = [
+        "LdExpTest.h",
+        "ScalbnTest.h",
+    ],
+)
+
+math_test(
+    name = "scalbnf128",
+    hdrs = [
+        "LdExpTest.h",
+        "ScalbnTest.h",
+    ],
+)
+
+math_test(
+    name = "scalbln",
+    hdrs = [
+        "LdExpTest.h",
+        "ScalbnTest.h",
+    ],
+)
+
+math_test(
+    name = "scalblnf",
+    hdrs = [
+        "LdExpTest.h",
+        "ScalbnTest.h",
+    ],
+)
+
+math_test(
+    name = "scalblnl",
+    hdrs = [
+        "LdExpTest.h",
+        "ScalbnTest.h",
+    ],
+)
+
+math_test(
+    name = "scalblnf128",
+    hdrs = [
+        "LdExpTest.h",
+        "ScalbnTest.h",
+    ],
+)
+
+math_test(
+    name = "setpayload",
+    hdrs = ["SetPayloadTest.h"],
+)
+
+math_test(
+    name = "setpayloadf",
+    hdrs = ["SetPayloadTest.h"],
+)
+
+math_test(
+    name = "setpayloadl",
+    hdrs = ["SetPayloadTest.h"],
+)
+
+math_test(
+    name = "setpayloadf128",
+    hdrs = ["SetPayloadTest.h"],
+)
+
+math_test(
+    name = "setpayloadsig",
+    hdrs = ["SetPayloadSigTest.h"],
+)
+
+math_test(
+    name = "setpayloadsigf",
+    hdrs = ["SetPayloadSigTest.h"],
+)
+
+math_test(
+    name = "setpayloadsigl",
+    hdrs = ["SetPayloadSigTest.h"],
+)
+
+math_test(
+    name = "setpayloadsigf128",
+    hdrs = ["SetPayloadSigTest.h"],
+)
+
+math_test(name = "sin")
+
+math_test(name = "sinf")
+
+math_test(name = "sincos")
+
+math_test(name = "sincosf")
+
+math_test(
+    name = "sinhf",
+    deps = [
+        "//libc:__support_cpp_array",
+    ],
+)
+
+math_test(name = "sinpif")
+
+math_test(
+    name = "sqrt",
+    hdrs = ["SqrtTest.h"],
+)
+
+math_test(
+    name = "sqrtf",
+    hdrs = ["SqrtTest.h"],
+)
+
+math_test(
+    name = "sqrtl",
+    hdrs = ["SqrtTest.h"],
+)
+
+math_test(
+    name = "sqrtf128",
+    hdrs = ["SqrtTest.h"],
+)
+
+math_test(name = "tan")
+
+math_test(name = "tanf")
+
+math_test(name = "tanhf")
+
+math_test(
+    name = "totalorder",
+    hdrs = ["TotalOrderTest.h"],
+)
+
+math_test(
+    name = "totalorderf",
+    hdrs = ["TotalOrderTest.h"],
+)
+
+math_test(
+    name = "totalorderl",
+    hdrs = ["TotalOrderTest.h"],
+)
+
+math_test(
+    name = "totalorderf128",
+    hdrs = ["TotalOrderTest.h"],
+)
+
+math_test(
+    name = "totalordermag",
+    hdrs = ["TotalOrderMagTest.h"],
+)
+
+math_test(
+    name = "totalordermagf",
+    hdrs = ["TotalOrderMagTest.h"],
+)
+
+math_test(
+    name = "totalordermagl",
+    hdrs = ["TotalOrderMagTest.h"],
+)
+
+math_test(
+    name = "totalordermagf128",
+    hdrs = ["TotalOrderMagTest.h"],
+)
+
+math_test(
+    name = "trunc",
+    hdrs = ["TruncTest.h"],
+)
+
+math_test(
+    name = "truncf",
+    hdrs = ["TruncTest.h"],
+)
+
+math_test(
+    name = "truncl",
+    hdrs = ["TruncTest.h"],
+)
+
+math_test(
+    name = "truncf128",
+    hdrs = ["TruncTest.h"],
+)
+
+math_test(
+    name = "ufromfp",
+    hdrs = ["UfromfpTest.h"],
+)
+
+math_test(
+    name = "ufromfpf",
+    hdrs = ["UfromfpTest.h"],
+)
+
+math_test(
+    name = "ufromfpl",
+    hdrs = ["UfromfpTest.h"],
+)
+
+math_test(
+    name = "ufromfpf128",
+    hdrs = ["UfromfpTest.h"],
+)
+
+math_test(
+    name = "ufromfpx",
+    hdrs = ["UfromfpxTest.h"],
+)
+
+math_test(
+    name = "ufromfpxf",
+    hdrs = ["UfromfpxTest.h"],
+)
+
+math_test(
+    name = "ufromfpxl",
+    hdrs = ["UfromfpxTest.h"],
+)
+
+math_test(
+    name = "ufromfpxf128",
+    hdrs = ["UfromfpxTest.h"],
+)

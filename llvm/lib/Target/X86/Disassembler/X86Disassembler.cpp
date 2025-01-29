@@ -100,7 +100,7 @@ using namespace llvm::X86Disassembler;
 // this information is known, we have narrowed down to a single instruction.
 struct ModRMDecision {
   uint8_t modrm_type;
-  uint16_t instructionIDs;
+  uint32_t instructionIDs;
 };
 
 // Specifies which set of ModR/M->instruction tables to look at
@@ -284,7 +284,10 @@ static int readPrefixes(struct InternalInstruction *insn) {
       //      it's not mandatory prefix
       //  3. if (nextByte >= 0x40 && nextByte <= 0x4f) it's REX and we need
       //     0x0f exactly after it to be mandatory prefix
-      if (isREX(insn, nextByte) || nextByte == 0x0f || nextByte == 0x66)
+      //  4. if (nextByte == 0xd5) it's REX2 and we need
+      //     0x0f exactly after it to be mandatory prefix
+      if (isREX(insn, nextByte) || isREX2(insn, nextByte) || nextByte == 0x0f ||
+          nextByte == 0x66)
         // The last of 0xf2 /0xf3 is mandatory prefix
         insn->mandatoryPrefix = byte;
       insn->repeatPrefix = byte;
@@ -324,6 +327,14 @@ static int readPrefixes(struct InternalInstruction *insn) {
     default: // Not a prefix byte
       isPrefix = false;
       break;
+    }
+
+    if (isREX(insn, byte)) {
+      insn->rexPrefix = byte;
+      isPrefix = true;
+      LLVM_DEBUG(dbgs() << format("Found REX prefix 0x%hhx", byte));
+    } else if (isPrefix) {
+      insn->rexPrefix = 0;
     }
 
     if (isPrefix)
@@ -374,7 +385,7 @@ static int readPrefixes(struct InternalInstruction *insn) {
         // We simulate the REX2 prefix for simplicity's sake
         insn->rex2ExtensionPrefix[1] =
             (r2FromEVEX2of4(insn->vectorExtensionPrefix[1]) << 6) |
-            (x2FromEVEX3of4(insn->vectorExtensionPrefix[2]) << 5) |
+            (uFromEVEX3of4(insn->vectorExtensionPrefix[2]) << 5) |
             (b2FromEVEX2of4(insn->vectorExtensionPrefix[1]) << 4);
       }
 
@@ -503,11 +514,6 @@ static int readPrefixes(struct InternalInstruction *insn) {
     LLVM_DEBUG(dbgs() << format("Found REX2 prefix 0x%hhx 0x%hhx",
                                 insn->rex2ExtensionPrefix[0],
                                 insn->rex2ExtensionPrefix[1]));
-  } else if (isREX(insn, byte)) {
-    if (peek(insn, nextByte))
-      return -1;
-    insn->rexPrefix = byte;
-    LLVM_DEBUG(dbgs() << format("Found REX prefix 0x%hhx", byte));
   } else
     --insn->readerCursor;
 
@@ -803,6 +809,10 @@ static int readModRM(struct InternalInstruction *insn) {
       if (index > 7)                                                           \
         *valid = 0;                                                            \
       return prefix##_TMM0 + index;                                            \
+    case TYPE_TMM_PAIR:                                                        \
+      if (index > 7)                                                           \
+        *valid = 0;                                                            \
+      return prefix##_TMM0_TMM1 + (index / 2);                                 \
     case TYPE_VK:                                                              \
       index &= 0xf;                                                            \
       if (index > 7)                                                           \
@@ -819,8 +829,12 @@ static int readModRM(struct InternalInstruction *insn) {
         *valid = 0;                                                            \
       return prefix##_ES + (index & 7);                                        \
     case TYPE_DEBUGREG:                                                        \
+      if (index > 15)                                                          \
+        *valid = 0;                                                            \
       return prefix##_DR0 + index;                                             \
     case TYPE_CONTROLREG:                                                      \
+      if (index > 15)                                                          \
+        *valid = 0;                                                            \
       return prefix##_CR0 + index;                                             \
     case TYPE_MVSIBX:                                                          \
       return prefix##_XMM0 + index;                                            \
@@ -940,6 +954,9 @@ static bool readOpcode(struct InternalInstruction *insn) {
       return consume(insn, insn->opcode);
     case VEX_LOB_MAP6:
       insn->opcodeType = MAP6;
+      return consume(insn, insn->opcode);
+    case VEX_LOB_MAP7:
+      insn->opcodeType = MAP7;
       return consume(insn, insn->opcode);
     }
   } else if (insn->vectorExtensionType == TYPE_VEX_3B) {
@@ -1134,6 +1151,46 @@ static int getInstructionIDWithAttrMask(uint16_t *instructionID,
   return 0;
 }
 
+static bool isCCMPOrCTEST(InternalInstruction *insn) {
+  if (insn->opcodeType != MAP4)
+    return false;
+  if (insn->opcode == 0x83 && regFromModRM(insn->modRM) == 7)
+    return true;
+  switch (insn->opcode & 0xfe) {
+  default:
+    return false;
+  case 0x38:
+  case 0x3a:
+  case 0x84:
+    return true;
+  case 0x80:
+    return regFromModRM(insn->modRM) == 7;
+  case 0xf6:
+    return regFromModRM(insn->modRM) == 0;
+  }
+}
+
+static bool isNF(InternalInstruction *insn) {
+  if (!nfFromEVEX4of4(insn->vectorExtensionPrefix[3]))
+    return false;
+  if (insn->opcodeType == MAP4)
+    return true;
+  // Below NF instructions are not in map4.
+  if (insn->opcodeType == THREEBYTE_38 &&
+      ppFromEVEX3of4(insn->vectorExtensionPrefix[2]) == VEX_PREFIX_NONE) {
+    switch (insn->opcode) {
+    case 0xf2: // ANDN
+    case 0xf3: // BLSI, BLSR, BLSMSK
+    case 0xf5: // BZHI
+    case 0xf7: // BEXTR
+      return true;
+    default:
+      break;
+    }
+  }
+  return false;
+}
+
 // Determine the ID of an instruction, consuming the ModR/M byte as appropriate
 // for extended and escape opcodes. Determines the attributes and context for
 // the instruction before doing so.
@@ -1167,14 +1224,19 @@ static int getInstructionID(struct InternalInstruction *insn,
 
       if (zFromEVEX4of4(insn->vectorExtensionPrefix[3]))
         attrMask |= ATTR_EVEXKZ;
-      if (bFromEVEX4of4(insn->vectorExtensionPrefix[3]))
-        attrMask |= ATTR_EVEXB;
-      // nf bit is the MSB of aaa
-      if (nfFromEVEX4of4(insn->vectorExtensionPrefix[3]) &&
-          insn->opcodeType == MAP4)
+      if (isNF(insn) && !readModRM(insn) &&
+          !isCCMPOrCTEST(insn)) // NF bit is the MSB of aaa.
         attrMask |= ATTR_EVEXNF;
-      else if (aaaFromEVEX4of4(insn->vectorExtensionPrefix[3]))
+      // aaa is not used a opmask in MAP4
+      else if (aaaFromEVEX4of4(insn->vectorExtensionPrefix[3]) &&
+               (insn->opcodeType != MAP4))
         attrMask |= ATTR_EVEXK;
+      if (bFromEVEX4of4(insn->vectorExtensionPrefix[3])) {
+        attrMask |= ATTR_EVEXB;
+        if (uFromEVEX3of4(insn->vectorExtensionPrefix[2]) && !readModRM(insn) &&
+            modFromModRM(insn->modRM) == 3)
+          attrMask |= ATTR_EVEXU;
+      }
       if (lFromEVEX4of4(insn->vectorExtensionPrefix[3]))
         attrMask |= ATTR_VEXL;
       if (l2FromEVEX4of4(insn->vectorExtensionPrefix[3]))
@@ -1706,8 +1768,15 @@ static int readOperands(struct InternalInstruction *insn) {
       if (readOpcodeRegister(insn, 0))
         return -1;
       break;
+    case ENCODING_CF:
+      insn->immediates[1] = oszcFromEVEX3of4(insn->vectorExtensionPrefix[2]);
+      needVVVV = false; // oszc shares the same bits with VVVV
+      break;
     case ENCODING_CC:
-      insn->immediates[1] = insn->opcode & 0xf;
+      if (isCCMPOrCTEST(insn))
+        insn->immediates[2] = scFromEVEX4of4(insn->vectorExtensionPrefix[3]);
+      else
+        insn->immediates[1] = insn->opcode & 0xf;
       break;
     case ENCODING_FP:
       break;
@@ -2253,6 +2322,7 @@ static bool translateRM(MCInst &mcInst, const OperandSpecifier &operand,
   case TYPE_YMM:
   case TYPE_ZMM:
   case TYPE_TMM:
+  case TYPE_TMM_PAIR:
   case TYPE_VK_PAIR:
   case TYPE_VK:
   case TYPE_DEBUGREG:
@@ -2345,8 +2415,14 @@ static bool translateOperand(MCInst &mcInst, const OperandSpecifier &operand,
   case ENCODING_Rv:
     translateRegister(mcInst, insn.opcodeRegister);
     return false;
-  case ENCODING_CC:
+  case ENCODING_CF:
     mcInst.addOperand(MCOperand::createImm(insn.immediates[1]));
+    return false;
+  case ENCODING_CC:
+    if (isCCMPOrCTEST(&insn))
+      mcInst.addOperand(MCOperand::createImm(insn.immediates[2]));
+    else
+      mcInst.addOperand(MCOperand::createImm(insn.immediates[1]));
     return false;
   case ENCODING_FP:
     translateFPRegister(mcInst, insn.modRM & 7);
@@ -2406,7 +2482,7 @@ static MCDisassembler *createX86Disassembler(const Target &T,
   return new X86GenericDisassembler(STI, Ctx, std::move(MII));
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Disassembler() {
+extern "C" LLVM_C_ABI void LLVMInitializeX86Disassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheX86_32Target(),
                                          createX86Disassembler);

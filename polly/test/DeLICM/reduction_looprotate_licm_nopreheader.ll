@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-delicm -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=print<polly-delicm>' -disable-output < %s | FileCheck %s
 ;
 ; Register-promoted reduction but without preheader.
 ;

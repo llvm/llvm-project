@@ -184,7 +184,7 @@ public:
   iterator end() { return Elems.end(); }
   iterator find(AllocGroup G) {
     auto I = lower_bound(Elems, G, compareKey);
-    return (I->first == G) ? I : end();
+    return (I == end() || I->first == G) ? I : end();
   }
 
   bool empty() const { return Elems.empty(); }

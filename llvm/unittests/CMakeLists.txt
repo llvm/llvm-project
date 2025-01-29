@@ -1,5 +1,5 @@
 add_custom_target(UnitTests)
-set_target_properties(UnitTests PROPERTIES FOLDER "Tests/UnitTests")
+set_target_properties(UnitTests PROPERTIES FOLDER "LLVM/Tests")
 
 function(add_llvm_unittest test_dirname)
   add_unittest(UnitTests ${test_dirname} ${ARGN})
@@ -14,12 +14,27 @@ function(add_llvm_target_unittest test_dir_name)
   add_llvm_unittest(${test_dir_name} DISABLE_LLVM_LINK_LLVM_DYLIB ${ARGN})
 endfunction()
 
+# gtest macros like EXPECT_TRUE are expanded to a single line
+# multi-statement code with if/else. eg:
+#   if (...)
+#     EXPECT_TURE(...)
+# will be expanded into something like:
+#   if(...)
+#     switch (0) case 0: default: if (...) ; else return;;
+# GCC may emit false positive dangling-else warnings for such code.
+# However, such warnings are actually against LLVM's style guide.
+# disable the warning for GCC so that one can enbable Werror.
+if (CMAKE_COMPILER_IS_GNUCXX)
+  list(APPEND LLVM_COMPILE_FLAGS "-Wno-dangling-else")
+endif ()
+
 add_subdirectory(ADT)
 add_subdirectory(Analysis)
 add_subdirectory(AsmParser)
 add_subdirectory(BinaryFormat)
 add_subdirectory(Bitcode)
 add_subdirectory(Bitstream)
+add_subdirectory(CGData)
 add_subdirectory(CodeGen)
 add_subdirectory(DebugInfo)
 add_subdirectory(Debuginfod)
@@ -43,10 +58,12 @@ add_subdirectory(Option)
 add_subdirectory(Remarks)
 add_subdirectory(Passes)
 add_subdirectory(ProfileData)
+add_subdirectory(SandboxIR)
 add_subdirectory(Support)
 add_subdirectory(TableGen)
 add_subdirectory(Target)
 add_subdirectory(TargetParser)
+add_subdirectory(Telemetry)
 add_subdirectory(Testing)
 add_subdirectory(TextAPI)
 add_subdirectory(Transforms)

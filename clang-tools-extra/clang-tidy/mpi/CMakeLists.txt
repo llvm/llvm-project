@@ -3,7 +3,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_clang_library(clangTidyMPIModule
+add_clang_library(clangTidyMPIModule STATIC
   BufferDerefCheck.cpp
   MPITidyModule.cpp
   TypeMismatchCheck.cpp

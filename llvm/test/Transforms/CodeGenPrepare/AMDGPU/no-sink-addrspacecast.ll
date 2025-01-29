@@ -1,4 +1,4 @@
-; RUN: opt -S -codegenprepare -mtriple=amdgcn-unknown-unknown < %s | FileCheck -check-prefix=ASC -check-prefix=COMMON %s
+; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -mtriple=amdgcn-unknown-unknown < %s | FileCheck -check-prefix=ASC -check-prefix=COMMON %s
 
 ; COMMON-LABEL: @test_sink_ptrtoint_asc(
 ; ASC: addrspacecast

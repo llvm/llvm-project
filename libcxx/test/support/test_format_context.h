@@ -19,9 +19,9 @@
  * required object.
  *
  * @note This requires every standard library implementation to write their own
- * helper function. Vendors are encouraged to file a review at
- * https://reviews.llvm.org/ so their specific implementation can be part of
- * this file.
+ * helper function. Vendors are encouraged to file a PR at
+ * https://github.com/llvm/llvm-project so their specific implementation can be
+ * part of this file.
  */
 
 #include "test_macros.h"
@@ -57,7 +57,8 @@ std::basic_format_context<OutIt, CharT> test_format_context_create(
 }
 #  endif // TEST_HAS_NO_LOCALIZATION
 #else    // _LIBCPP_VERSION
-#  error "Please create a vendor specific version of the test functions and file a review at https://reviews.llvm.org/"
+#  error                                                                                                               \
+      "Please create a vendor specific version of the test typedef and file a PR at https://github.com/llvm/llvm-project"
 #endif // _LIBCPP_VERSION
 
 #endif // SUPPORT_TEST_FORMAT_CONTEXT_HPP

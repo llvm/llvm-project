@@ -254,6 +254,10 @@ SystemZRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   return Regs->getCallPreservedMask(MF, CC);
 }
 
+const uint32_t *SystemZRegisterInfo::getNoPreservedMask() const {
+  return CSR_SystemZ_NoRegs_RegMask;
+}
+
 BitVector
 SystemZRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
@@ -387,7 +391,8 @@ bool SystemZRegisterInfo::shouldCoalesce(MachineInstr *MI,
 
   // Coalesce anything which is not a COPY involving a subreg to/from GR128.
   if (!(NewRC->hasSuperClassEq(&SystemZ::GR128BitRegClass) &&
-        (getRegSizeInBits(*SrcRC) <= 64 || getRegSizeInBits(*DstRC) <= 64)))
+        (getRegSizeInBits(*SrcRC) <= 64 || getRegSizeInBits(*DstRC) <= 64) &&
+        !MI->getOperand(1).isUndef()))
     return true;
 
   // Allow coalescing of a GR128 subreg COPY only if the subreg liverange is

@@ -37,6 +37,33 @@ protected:
   }
 };
 
+class LLVM_LIBRARY_VISIBILITY ErrataWorkaround : public MachineFunctionPass {
+protected:
+  const SparcSubtarget *ST;
+  const TargetInstrInfo *TII;
+  const TargetRegisterInfo *TRI;
+
+  bool checkSeqTN0009A(MachineBasicBlock::iterator I);
+  bool checkSeqTN0009B(MachineBasicBlock::iterator I);
+  bool checkSeqTN0010First(MachineBasicBlock &MBB);
+  bool checkSeqTN0010(MachineBasicBlock::iterator I);
+  bool checkSeqTN0012(MachineBasicBlock::iterator I);
+  bool checkSeqTN0013(MachineBasicBlock::iterator I);
+
+  bool moveNext(MachineBasicBlock::iterator &I);
+  bool isFloat(MachineBasicBlock::iterator I);
+  bool isDivSqrt(MachineBasicBlock::iterator I);
+  void insertNop(MachineBasicBlock::iterator I);
+
+public:
+  static char ID;
+
+  ErrataWorkaround();
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  StringRef getPassName() const override { return "Errata workaround pass"; };
+};
+
 class LLVM_LIBRARY_VISIBILITY InsertNOPLoad : public LEONMachineFunctionPass {
 public:
   static char ID;

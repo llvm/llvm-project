@@ -4,15 +4,13 @@
 
 // Fortran Intrinsic types
 // CHECK-LABEL: func private @it1() -> !fir.int<4>
-// CHECK-LABEL: func private @it2() -> !fir.real<8>
-// CHECK-LABEL: func private @it3() -> !fir.complex<8>
+// CHECK-LABEL: func private @it3() -> complex<f64>
 // CHECK-LABEL: func private @it4() -> !fir.logical<1>
 // CHECK-LABEL: func private @it5() -> !fir.char<1>
 // CHECK-LABEL: func private @it6() -> !fir.char<2,10>
 // CHECK-LABEL: func private @it7() -> !fir.char<4,?>
 func.func private @it1() -> !fir.int<4>
-func.func private @it2() -> !fir.real<8>
-func.func private @it3() -> !fir.complex<8>
+func.func private @it3() -> complex<f64>
 func.func private @it4() -> !fir.logical<1>
 func.func private @it5() -> !fir.char<1>
 func.func private @it6() -> !fir.char<2,10>

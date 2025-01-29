@@ -39,8 +39,8 @@ class PlatformSDKTestCase(TestBase):
 
     @no_debug_info_test
     @skipUnlessDarwin
-    @expectedFailureIfFn(no_debugserver)
-    @expectedFailureIfFn(port_not_available)
+    @skipTestIfFn(no_debugserver)
+    @skipTestIfFn(port_not_available)
     @skipIfRemote
     def test_macos_sdk(self):
         self.build()

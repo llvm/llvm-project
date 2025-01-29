@@ -177,26 +177,25 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       }
     }
 
-    for (unsigned i = 0, e = Defs.size(); i != e; ++i) {
-      MachineOperand &MO = *Defs[i];
-      Register Reg = MO.getReg();
+    for (MachineOperand *MO : Defs) {
+      Register Reg = MO->getReg();
       if (!Reg)
         continue;
 
       if (LocalDefSet.insert(Reg).second) {
         LocalDefs.push_back(Reg);
-        if (MO.isDead()) {
+        if (MO->isDead()) {
           DeadDefSet.insert(Reg);
         }
       } else {
         // Re-defined inside the bundle, it's no longer killed.
         KilledDefSet.erase(Reg);
-        if (!MO.isDead())
+        if (!MO->isDead())
           // Previously defined but dead.
           DeadDefSet.erase(Reg);
       }
 
-      if (!MO.isDead() && Reg.isPhysical()) {
+      if (!MO->isDead() && Reg.isPhysical()) {
         for (MCPhysReg SubReg : TRI->subregs(Reg)) {
           if (LocalDefSet.insert(SubReg).second)
             LocalDefs.push_back(SubReg);
@@ -312,8 +311,7 @@ llvm::AnalyzeVirtRegLanesInBundle(const MachineInstr &MI, Register Reg,
 
   LaneBitmask UseMask, DefMask;
 
-  for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
-    const MachineOperand &MO = *O;
+  for (const MachineOperand &MO : const_mi_bundle_ops(MI)) {
     if (!MO.isReg() || MO.getReg() != Reg)
       continue;
 
@@ -339,9 +337,7 @@ PhysRegInfo llvm::AnalyzePhysRegInBundle(const MachineInstr &MI, Register Reg,
   PhysRegInfo PRI = {false, false, false, false, false, false, false, false};
 
   assert(Reg.isPhysical() && "analyzePhysReg not given a physical register!");
-  for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
-    const MachineOperand &MO = *O;
-
+  for (const MachineOperand &MO : const_mi_bundle_ops(MI)) {
     if (MO.isRegMask() && MO.clobbersPhysReg(Reg)) {
       PRI.Clobbered = true;
       continue;

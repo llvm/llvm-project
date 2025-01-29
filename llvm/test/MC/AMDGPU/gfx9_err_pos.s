@@ -168,16 +168,6 @@ v_bfe_u32 v0, v2, undef, v3
 // CHECK-NEXT:{{^}}v_bfe_u32 v0, v2, undef, v3
 // CHECK-NEXT:{{^}}                  ^
 
-v_add_i16 v5, v1, 0.5
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
-// CHECK-NEXT:{{^}}v_add_i16 v5, v1, 0.5
-// CHECK-NEXT:{{^}}                  ^
-
-v_add_i16 v5, 0.5, v2
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
-// CHECK-NEXT:{{^}}v_add_i16 v5, 0.5, v2
-// CHECK-NEXT:{{^}}              ^
-
 //==============================================================================
 // too few operands for instruction
 
