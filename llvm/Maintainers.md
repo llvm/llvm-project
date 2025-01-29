@@ -436,8 +436,8 @@ echristo@gmail.com (email), [echristo](https://github.com/echristo) (GitHub)
 
 #### Exception handling
 
-Eli Friedman \
-efriedma@quicinc.com (email), [efriedma-quic](https://github.com/efriedma-quic) (GitHub)
+Reid Kleckner \
+rnk@google.com (email), [rnk](https://github.com/rnk) (GitHub)
 
 #### LLVM Buildbot
 
