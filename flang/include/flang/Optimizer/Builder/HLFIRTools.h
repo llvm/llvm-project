@@ -516,7 +516,7 @@ Entity loadElementAt(mlir::Location loc, fir::FirOpBuilder &builder,
 /// Return a vector of extents for the given entity.
 /// The function creates new operations, but tries to clean-up
 /// after itself.
-llvm::SmallVector<mlir::Value>
+llvm::SmallVector<mlir::Value, Fortran::common::maxRank>
 genExtentsVector(mlir::Location loc, fir::FirOpBuilder &builder, Entity entity);
 
 } // namespace hlfir

@@ -1562,6 +1562,12 @@ def : Pat<(vector_insert v8f32:$vd, FPR32:$fj, uimm3:$imm),
 def : Pat<(vector_insert v4f64:$vd, FPR64:$fj, uimm2:$imm),
           (XVINSGR2VR_D $vd, (COPY_TO_REGCLASS FPR64:$fj, GPR), uimm2:$imm)>;
 
+// scalar_to_vector
+def : Pat<(v8f32 (scalar_to_vector FPR32:$fj)),
+          (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32)>;
+def : Pat<(v4f64 (scalar_to_vector FPR64:$fj)),
+          (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64)>; 
+
 // XVPICKVE2GR_W[U]
 def : Pat<(loongarch_vpick_sext_elt v8i32:$xd, uimm3:$imm, i32),
           (XVPICKVE2GR_W v8i32:$xd, uimm3:$imm)>;

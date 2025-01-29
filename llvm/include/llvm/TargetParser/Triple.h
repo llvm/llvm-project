@@ -498,6 +498,9 @@ public:
     return getArchPointerBitWidth(getArch());
   }
 
+  /// Returns the trampoline size in bytes for this configuration.
+  unsigned getTrampolineSize() const;
+
   /// Test whether the architecture is 64-bit
   ///
   /// Note that this tests for 64-bit pointer width, and nothing else. Note
@@ -652,6 +655,9 @@ public:
   bool isOSWindows() const {
     return getOS() == Triple::Win32;
   }
+
+  /// Tests whether the OS is Windows or UEFI.
+  bool isOSWindowsOrUEFI() const { return isOSWindows() || isUEFI(); }
 
   /// Checks if the environment is MSVC.
   bool isKnownWindowsMSVCEnvironment() const {
