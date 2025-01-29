@@ -3368,10 +3368,13 @@ struct CompilerDirective {
     TUPLE_CLASS_BOILERPLATE(NameValue);
     std::tuple<Name, std::optional<std::uint64_t>> t;
   };
+  struct Unroll {
+    WRAPPER_CLASS_BOILERPLATE(Unroll, std::optional<std::uint64_t>);
+  };
   EMPTY_CLASS(Unrecognized);
   CharBlock source;
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
-      VectorAlways, std::list<NameValue>, Unrecognized>
+      VectorAlways, std::list<NameValue>, Unroll, Unrecognized>
       u;
 };
 
