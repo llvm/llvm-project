@@ -421,7 +421,7 @@ TEST(LlvmLibcStrftimeTest, CenturyTests) {
 // A helper class to generate simple padded numbers. It places the result in its
 // internal buffer, which is cleared on every call.
 class SimplePaddedNum {
-  static constexpr size_t BUFF_LEN = 8;
+  static constexpr size_t BUFF_LEN = 16;
   char buff[BUFF_LEN];
   size_t cur_len; // length of string currently in buff
 
@@ -434,7 +434,7 @@ class SimplePaddedNum {
 public:
   SimplePaddedNum() = default;
 
-  // PRECONDITIONS: num < 999, min_width < 3
+  // PRECONDITIONS: num < 99999, min_width < 5
   // Returns: Pointer to the start of the padded number as a string, stored in
   // the internal buffer.
   char *get_padded_num(int num, size_t min_width) {
@@ -554,10 +554,10 @@ TEST(LlvmLibcStrftimeTest, ISOYearOfCentury) {
   time.tm_yday = 100;
 
   // Test the easy cases
-  for (size_t i = 1; i < 32; ++i) {
+  for (size_t i = 0; i < 102; ++i) {
     time.tm_year = i;
     written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%g", &time);
-    char *result = spn.get_padded_num(i, 2);
+    char *result = spn.get_padded_num(i % 100, 2);
 
     ASSERT_STREQ(buffer, result);
     ASSERT_EQ(written, spn.get_str_len());
@@ -569,36 +569,40 @@ TEST(LlvmLibcStrftimeTest, ISOYearOfCentury) {
   // matter for the end-of-year tests.
   time.tm_year = 99;
 
+  /*
+This table has an X for each day that should be in the previous year,
+everywhere else should be in the current year.
+
+       yday
+      1234567
+  i 1         Monday
+  s 2         Tuesday
+  o 3         Wednesday
+  w 4         Thursday
+  d 5 X       Friday
+  a 6 XX      Saturday
+  y 7 XXX     Sunday
+*/
+
   // check the first days of the year
-  for (size_t wday = 0; wday < 7; ++wday) {
-    for (size_t yday = 1; yday < 5; ++yday) {
-      time.tm_wday = wday;
+  for (size_t yday = 1; yday < 5; ++yday) {
+    for (size_t iso_wday = 1; iso_wday < 8; ++iso_wday) {
+      // start with monday, to match the ISO week.
+      time.tm_wday = iso_wday % 7;
       time.tm_yday = yday;
 
       written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%g", &time);
-      if (yday == 4) {
-        // Since the first ISO week must contain the 4th yday, this must always
-        // return the current year.
+
+      if (iso_wday <= 4 || yday >= 4) {
+        // monday - thursday are never in the previous year, nor are the 4th and
+        // after.
         EXPECT_STREQ_LEN(written, buffer, "99");
-      } else if (yday == 3) {
-        // Only sunday the 3rd can be in a week that doesn't contain the 4th.
-        if (wday == 0) {
-          EXPECT_STREQ_LEN(written, buffer, "98");
-        } else {
-          EXPECT_STREQ_LEN(written, buffer, "99");
-        }
-      } else if (yday == 2) {
-        // Sunday or Monday the 2nd can be in a week that doesn't contain the
-        // 4th.
-        if (wday == 0 || wday == 6) {
-          EXPECT_STREQ_LEN(written, buffer, "98");
-        } else {
-          EXPECT_STREQ_LEN(written, buffer, "99");
-        }
       } else {
-        // Sunday, Monday, or tuesday the 1st can be in a week that doesn't
-        // contain the 4th.
-        if (wday == 0 || wday == 6 || wday == 5) {
+        // iso_wday is 5, 6, or 7 and yday is 1, 2, or 3.
+        // days_since_thursday is therefor 1, 2, or 3.
+        const size_t days_since_thursday = iso_wday - 4;
+
+        if (days_since_thursday >= yday) {
           EXPECT_STREQ_LEN(written, buffer, "98");
         } else {
           EXPECT_STREQ_LEN(written, buffer, "99");
@@ -607,40 +611,73 @@ TEST(LlvmLibcStrftimeTest, ISOYearOfCentury) {
     }
   }
 
+  /*
+  Similar to above, but the Xs represent being in the NEXT year. Also the
+  top counts down until the end of the year.
 
-  // check the last days of the year
-  for (size_t wday = 0; wday < 7; ++wday) {
-    for (size_t yday = 363; yday < 5; ++yday) {
-      time.tm_wday = wday;
-      time.tm_yday = yday;
+    year end - yday
+        7654321
+    i 1     XXX Monday
+    s 2      XX Tuesday
+    o 3       X Wednesday
+    w 4         Thursday
+    d 5         Friday
+    a 6         Saturday
+    y 7         Sunday
+
+
+  If we place the charts next to each other, you can more easily see the
+  pattern:
+
+year end - yday yday
+        6543210 1234567
+    i 1     XXX         Monday
+    s 2      XX         Tuesday
+    o 3       X         Wednesday
+    w 4                 Thursday
+    d 5         X       Friday
+    a 6         XX      Saturday
+    y 7         XXX     Sunday
+
+    From this we can see that thursday is always in the same ISO and regular
+    year.
+  */
+
+  // set up all the extra stuff to cover leap years.
+  struct tm time_leap_year;
+  char buffer_leap_year[100];
+  size_t written_leap_year = 0;
+  time_leap_year = time;
+  time_leap_year.tm_year = 100; // 2000 is a leap year.
+
+  // check the last days of the year. Checking 5 to make sure all the leap year
+  // cases are covered as well.
+  for (size_t days_left = 0; days_left < 5; ++days_left) {
+    for (size_t iso_wday = 1; iso_wday < 8; ++iso_wday) {
+      // start with monday, to match the ISO week.
+      time.tm_wday = iso_wday % 7;
+      time.tm_yday = 365 - days_left;
+
+      time_leap_year.tm_wday = iso_wday % 7;
+      time_leap_year.tm_yday = 366 - days_left;
 
       written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%g", &time);
-      if (yday == 4) {
-        // Since the first ISO week must contain the 4th yday, this must always
-        // return the current year.
+      written_leap_year = LIBC_NAMESPACE::strftime(
+          buffer_leap_year, sizeof(buffer_leap_year), "%g", &time_leap_year);
+
+      if (iso_wday >= 4 || days_left >= 3) {
+        // thursday - sunday are never in the next year, nor are days more than
+        // 3 days before the end.
         EXPECT_STREQ_LEN(written, buffer, "99");
-      } else if (yday == 3) {
-        // Only sunday the 3rd can be in a week that doesn't contain the 4th.
-        if (wday == 0) {
-          EXPECT_STREQ_LEN(written, buffer, "98");
-        } else {
-          EXPECT_STREQ_LEN(written, buffer, "99");
-        }
-      } else if (yday == 2) {
-        // Sunday or Monday the 2nd can be in a week that doesn't contain the
-        // 4th.
-        if (wday == 0 || wday == 6) {
-          EXPECT_STREQ_LEN(written, buffer, "98");
-        } else {
-          EXPECT_STREQ_LEN(written, buffer, "99");
-        }
+        EXPECT_STREQ_LEN(written_leap_year, buffer_leap_year, "00");
       } else {
-        // Sunday, Monday, or tuesday the 1st can be in a week that doesn't
-        // contain the 4th.
-        if (wday == 0 || wday == 6 || wday == 5) {
-          EXPECT_STREQ_LEN(written, buffer, "98");
+        // iso_wday is 1, 2 or 3 and days_left is 0, 1, or 2
+        if (iso_wday + days_left <= 3) {
+          EXPECT_STREQ_LEN(written, buffer, "00");
+          EXPECT_STREQ_LEN(written_leap_year, buffer_leap_year, "01");
         } else {
           EXPECT_STREQ_LEN(written, buffer, "99");
+          EXPECT_STREQ_LEN(written_leap_year, buffer_leap_year, "00");
         }
       }
     }
@@ -667,6 +704,144 @@ TEST(LlvmLibcStrftimeTest, ISOYearOfCentury) {
 
   written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%05g", &time);
   EXPECT_STREQ_LEN(written, buffer, "00031");
+}
+
+TEST(LlvmLibcStrftimeTest, ISOYear) {
+  // this tests %G, which reads: [tm_year, tm_wday, tm_yday]
+
+  // This stuff is all the same as above, but for brevity I'm not going to
+  // duplicate all the comments explaining exactly how ISO years work. The
+  // general comments are still here though.
+
+  struct tm time;
+  char buffer[100];
+  size_t written = 0;
+  SimplePaddedNum spn;
+
+  // a sunday in the middle of the year. No need to worry about rounding
+  time.tm_wday = 0;
+  time.tm_yday = 100;
+
+  // Test the easy cases
+  for (int i = 1 - 1900; i < 10000 - 1900; ++i) {
+    time.tm_year = i;
+    written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%G", &time);
+    // apparently %G doesn't pad by default.
+    char *result = spn.get_padded_num(i + 1900, 0);
+
+    ASSERT_STREQ(buffer, result);
+    ASSERT_EQ(written, spn.get_str_len());
+  }
+
+  // also check it handles years with extra digits properly
+  time.tm_year = 12345 - 1900;
+  written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%G", &time);
+  EXPECT_STREQ_LEN(written, buffer, "12345");
+
+  // Test the harder to round cases
+
+  // not a leap year. Not relevant for the start-of-year tests, but it does
+  // matter for the end-of-year tests.
+  time.tm_year = 99;
+
+  // check the first days of the year
+  for (size_t yday = 1; yday < 5; ++yday) {
+    for (size_t iso_wday = 1; iso_wday < 8; ++iso_wday) {
+      // start with monday, to match the ISO week.
+      time.tm_wday = iso_wday % 7;
+      time.tm_yday = yday;
+
+      written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%G", &time);
+
+      if (iso_wday <= 4 || yday >= 4) {
+        // monday - thursday are never in the previous year, nor are the 4th and
+        // after.
+        EXPECT_STREQ_LEN(written, buffer, "1999");
+      } else {
+        // iso_wday is 5, 6, or 7 and yday is 1, 2, or 3.
+        // days_since_thursday is therefor 1, 2, or 3.
+        const size_t days_since_thursday = iso_wday - 4;
+
+        if (days_since_thursday >= yday) {
+          EXPECT_STREQ_LEN(written, buffer, "1998");
+        } else {
+          EXPECT_STREQ_LEN(written, buffer, "1999");
+        }
+      }
+    }
+  }
+
+  // set up all the extra stuff to cover leap years.
+  struct tm time_leap_year;
+  char buffer_leap_year[100];
+  size_t written_leap_year = 0;
+  time_leap_year = time;
+  time_leap_year.tm_year = 100; // 2000 is a leap year.
+
+  // check the last days of the year. Checking 5 to make sure all the leap year
+  // cases are covered as well.
+  for (size_t days_left = 0; days_left < 5; ++days_left) {
+    for (size_t iso_wday = 1; iso_wday < 8; ++iso_wday) {
+      // start with monday, to match the ISO week.
+      time.tm_wday = iso_wday % 7;
+      time.tm_yday = 365 - days_left;
+
+      time_leap_year.tm_wday = iso_wday % 7;
+      time_leap_year.tm_yday = 366 - days_left;
+
+      written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%G", &time);
+      written_leap_year = LIBC_NAMESPACE::strftime(
+          buffer_leap_year, sizeof(buffer_leap_year), "%G", &time_leap_year);
+
+      if (iso_wday >= 4 || days_left >= 3) {
+        // thursday - sunday are never in the next year, nor are days more than
+        // 3 days before the end.
+        EXPECT_STREQ_LEN(written, buffer, "1999");
+        EXPECT_STREQ_LEN(written_leap_year, buffer_leap_year, "2000");
+      } else {
+        // iso_wday is 1, 2 or 3 and days_left is 0, 1, or 2
+        if (iso_wday + days_left <= 3) {
+          EXPECT_STREQ_LEN(written, buffer, "2000");
+          EXPECT_STREQ_LEN(written_leap_year, buffer_leap_year, "2001");
+        } else {
+          EXPECT_STREQ_LEN(written, buffer, "1999");
+          EXPECT_STREQ_LEN(written_leap_year, buffer_leap_year, "2000");
+        }
+      }
+    }
+  }
+
+  // padding is technically undefined for this conversion, but we support it, so
+  // we need to test it.
+  time.tm_year = 5 - 1900;
+  written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%01G", &time);
+  EXPECT_STREQ_LEN(written, buffer, "5");
+
+  written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%02G", &time);
+  EXPECT_STREQ_LEN(written, buffer, "05");
+
+  written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%05G", &time);
+  EXPECT_STREQ_LEN(written, buffer, "00005");
+
+  time.tm_year = 31 - 1900;
+  written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%01G", &time);
+  EXPECT_STREQ_LEN(written, buffer, "31");
+
+  written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%02G", &time);
+  EXPECT_STREQ_LEN(written, buffer, "31");
+
+  written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%05G", &time);
+  EXPECT_STREQ_LEN(written, buffer, "00031");
+
+  time.tm_year = 2001 - 1900;
+  written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%01G", &time);
+  EXPECT_STREQ_LEN(written, buffer, "2001");
+
+  written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%02G", &time);
+  EXPECT_STREQ_LEN(written, buffer, "2001");
+
+  written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%05G", &time);
+  EXPECT_STREQ_LEN(written, buffer, "02001");
 }
 
 // TODO: tests for each other conversion.
