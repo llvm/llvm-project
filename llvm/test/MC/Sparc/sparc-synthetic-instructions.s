@@ -54,6 +54,13 @@
         ! CHECK:                                 !   fixup A - offset: 0, value: %lo(2147483647), kind: fixup_sparc_lo10
         set 2147483647, %o1
 
+        !! setuw is a mnemonic alias for set.
+        ! CHECK: sethi %hi(32768), %g1            ! encoding: [0x03,0b00AAAAAA,A,A]
+        ! CHECK:                                  !   fixup A - offset: 0, value: %hi(32768), kind: fixup_sparc_hi22
+        setuw 32768, %g1
+        ! CHECK: mov 1, %g1 ! encoding: [0x82,0x10,0x20,0x01]
+        setuw 1, %g1
+
         ! CHECK: xnor %g1, %g0, %g2               ! encoding: [0x84,0x38,0x40,0x00]
         not %g1, %g2
         ! CHECK: xnor %g1, %g0, %g1               ! encoding: [0x82,0x38,0x40,0x00]
