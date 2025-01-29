@@ -58,11 +58,28 @@ static void testToLLVMIR(MlirContext ctx) {
   LLVMContextDispose(llvmCtx);
 }
 
+// CHECK-LABEL: testTypeFromLLVMIRTranslator
+static void testTypeFromLLVMIRTranslator(MlirContext ctx) {
+  fprintf(stderr, "testTypeFromLLVMIRTranslator\n");
+  LLVMContextRef llvmCtx = LLVMContextCreate();
+
+  LLVMTypeRef llvmTy = LLVMInt32TypeInContext(llvmCtx);
+  MlirTypeFromLLVMIRTranslator translator =
+      mlirTypeFromLLVMIRTranslatorCreate(ctx);
+  MlirType mlirTy =
+      mlirTypeFromLLVMIRTranslatorTranslateType(translator, llvmTy);
+  // CHECK: i32
+  mlirTypeDump(mlirTy);
+
+  LLVMContextDispose(llvmCtx);
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   mlirDialectHandleRegisterDialect(mlirGetDialectHandle__llvm__(), ctx);
   mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("llvm"));
   testToLLVMIR(ctx);
+  testTypeFromLLVMIRTranslator(ctx);
   mlirContextDestroy(ctx);
   return 0;
 }

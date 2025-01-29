@@ -16,6 +16,8 @@
 
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
+#include "mlir/CAPI/Wrap.h"
+#include "mlir/Target/LLVMIR/TypeFromLLVM.h"
 #include "llvm-c/Support.h"
 
 #ifdef __cplusplus
@@ -31,6 +33,24 @@ extern "C" {
 /// owned by the caller.
 MLIR_CAPI_EXPORTED LLVMModuleRef
 mlirTranslateModuleToLLVMIR(MlirOperation module, LLVMContextRef context);
+
+struct MlirTypeFromLLVMIRTranslator {
+  void *ptr;
+};
+
+typedef struct MlirTypeFromLLVMIRTranslator MlirTypeFromLLVMIRTranslator;
+
+DEFINE_C_API_PTR_METHODS(MlirTypeFromLLVMIRTranslator,
+                         mlir::LLVM::TypeFromLLVMIRTranslator);
+
+MLIR_CAPI_EXPORTED MlirTypeFromLLVMIRTranslator
+mlirTypeFromLLVMIRTranslatorCreate(MlirContext ctx);
+
+MLIR_CAPI_EXPORTED MlirTypeFromLLVMIRTranslator
+mlirTypeFromLLVMIRTranslatorCreate(MlirContext ctx);
+
+MLIR_CAPI_EXPORTED MlirType mlirTypeFromLLVMIRTranslatorTranslateType(
+    MlirTypeFromLLVMIRTranslator translator, LLVMTypeRef llvmType);
 
 #ifdef __cplusplus
 }
