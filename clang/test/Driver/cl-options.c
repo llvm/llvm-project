@@ -680,6 +680,7 @@
 // RUN:     -fcoverage-mapping \
 // RUN:     -fno-coverage-mapping \
 // RUN:     -fdiagnostics-color \
+// RUN:     -fdiagnostics-color=auto \
 // RUN:     -fno-diagnostics-color \
 // RUN:     -fdebug-compilation-dir . \
 // RUN:     -fdebug-compilation-dir=. \
@@ -738,6 +739,8 @@
 // RUN:     -fimplicit-modules \
 // RUN:     -fno-implicit-modules \
 // RUN:     -ftrivial-auto-var-init=zero \
+// RUN:     -fwrapv \
+// RUN:     -fno-wrapv \
 // RUN:     --version \
 // RUN:     -Werror /Zs -- %s 2>&1
 

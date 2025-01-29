@@ -32,6 +32,12 @@ struct AccessType {
 
 } // namespace
 
+static bool userSkipsPermissionChecks() {
+  // The tests in this file assume normal permission checks apply to the user
+  // running the tests. This isn't true when the test is run by root.
+  return geteuid() == 0;
+}
+
 static std::string addPIDSuffix(const char *name) {
   std::stringstream ss;
   ss << name;
@@ -166,6 +172,10 @@ TEST(AccessTests, TestRead) {
 
   ASSERT_EQ(unlink(path.c_str()), 0);
 
+  if (userSkipsPermissionChecks()) {
+    return;
+  }
+
   ASSERT_EQ(res, 0);
 }
 
@@ -181,6 +191,10 @@ TEST(AccessTests, TestNotRead) {
 
   ASSERT_EQ(unlink(path.c_str()), 0);
 
+  if (userSkipsPermissionChecks()) {
+    return;
+  }
+
   ASSERT_NE(res, 0);
 }
 
@@ -194,6 +208,10 @@ TEST(AccessTests, TestWrite) {
   std::int64_t res = callAccess(path, accessType);
 
   ASSERT_EQ(unlink(path.c_str()), 0);
+
+  if (userSkipsPermissionChecks()) {
+    return;
+  }
 
   ASSERT_EQ(res, 0);
 }
@@ -210,6 +228,10 @@ TEST(AccessTests, TestNotWrite) {
 
   ASSERT_EQ(unlink(path.c_str()), 0);
 
+  if (userSkipsPermissionChecks()) {
+    return;
+  }
+
   ASSERT_NE(res, 0);
 }
 
@@ -224,6 +246,10 @@ TEST(AccessTests, TestReadWrite) {
   std::int64_t res = callAccess(path, accessType);
 
   ASSERT_EQ(unlink(path.c_str()), 0);
+
+  if (userSkipsPermissionChecks()) {
+    return;
+  }
 
   ASSERT_EQ(res, 0);
 }
@@ -242,6 +268,10 @@ TEST(AccessTests, TestNotReadWrite0) {
 
   ASSERT_EQ(unlink(path.c_str()), 0);
 
+  if (userSkipsPermissionChecks()) {
+    return;
+  }
+
   ASSERT_NE(res, 0);
 }
 
@@ -258,6 +288,10 @@ TEST(AccessTests, TestNotReadWrite1) {
   std::int64_t res = callAccess(path, accessType);
 
   ASSERT_EQ(unlink(path.c_str()), 0);
+
+  if (userSkipsPermissionChecks()) {
+    return;
+  }
 
   ASSERT_NE(res, 0);
 }
@@ -276,6 +310,10 @@ TEST(AccessTests, TestNotReadWrite2) {
 
   ASSERT_EQ(unlink(path.c_str()), 0);
 
+  if (userSkipsPermissionChecks()) {
+    return;
+  }
+
   ASSERT_NE(res, 0);
 }
 
@@ -289,6 +327,10 @@ TEST(AccessTests, TestExecute) {
   std::int64_t res = callAccess(path, accessType);
 
   ASSERT_EQ(unlink(path.c_str()), 0);
+
+  if (userSkipsPermissionChecks()) {
+    return;
+  }
 
   ASSERT_EQ(res, 0);
 }
@@ -305,6 +347,10 @@ TEST(AccessTests, TestNotExecute) {
 
   ASSERT_EQ(unlink(path.c_str()), 0);
 
+  if (userSkipsPermissionChecks()) {
+    return;
+  }
+
   ASSERT_NE(res, 0);
 }
 
@@ -320,6 +366,10 @@ TEST(AccessTests, TestRWX) {
   std::int64_t res = callAccess(path, accessType);
 
   ASSERT_EQ(unlink(path.c_str()), 0);
+
+  if (userSkipsPermissionChecks()) {
+    return;
+  }
 
   ASSERT_EQ(res, 0);
 }
@@ -340,6 +390,10 @@ TEST(AccessTests, TestNotRWX0) {
 
   ASSERT_EQ(unlink(path.c_str()), 0);
 
+  if (userSkipsPermissionChecks()) {
+    return;
+  }
+
   ASSERT_NE(res, 0);
 }
 
@@ -358,6 +412,10 @@ TEST(AccessTests, TestNotRWX1) {
   std::int64_t res = callAccess(path, accessType);
 
   ASSERT_EQ(unlink(path.c_str()), 0);
+
+  if (userSkipsPermissionChecks()) {
+    return;
+  }
 
   ASSERT_NE(res, 0);
 }
@@ -378,6 +436,10 @@ TEST(AccessTests, TestNotRWX2) {
 
   ASSERT_EQ(unlink(path.c_str()), 0);
 
+  if (userSkipsPermissionChecks()) {
+    return;
+  }
+
   ASSERT_NE(res, 0);
 }
 
@@ -397,6 +459,10 @@ TEST(AccessTests, TestNotRWX3) {
 
   ASSERT_EQ(unlink(path.c_str()), 0);
 
+  if (userSkipsPermissionChecks()) {
+    return;
+  }
+
   ASSERT_NE(res, 0);
 }
 
@@ -415,6 +481,10 @@ TEST(AccessTests, TestNotRWX4) {
   std::int64_t res = callAccess(path, accessType);
 
   ASSERT_EQ(unlink(path.c_str()), 0);
+
+  if (userSkipsPermissionChecks()) {
+    return;
+  }
 
   ASSERT_NE(res, 0);
 }

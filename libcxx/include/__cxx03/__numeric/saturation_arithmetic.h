@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NUMERIC_SATURATION_ARITHMETIC_H
-#define _LIBCPP___NUMERIC_SATURATION_ARITHMETIC_H
+#ifndef _LIBCPP___CXX03___NUMERIC_SATURATION_ARITHMETIC_H
+#define _LIBCPP___CXX03___NUMERIC_SATURATION_ARITHMETIC_H
 
 #include <__cxx03/__assert>
 #include <__cxx03/__concepts/arithmetic.h>
@@ -142,4 +142,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___NUMERIC_SATURATION_ARITHMETIC_H
+#endif // _LIBCPP___CXX03___NUMERIC_SATURATION_ARITHMETIC_H

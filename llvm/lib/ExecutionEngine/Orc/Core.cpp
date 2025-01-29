@@ -178,6 +178,27 @@ void UnexpectedSymbolDefinitions::log(raw_ostream &OS) const {
      << ": " << Symbols;
 }
 
+void SymbolInstance::lookupAsync(LookupAsyncOnCompleteFn OnComplete) const {
+  JD->getExecutionSession().lookup(
+      LookupKind::Static, {{JD.get(), JITDylibLookupFlags::MatchAllSymbols}},
+      SymbolLookupSet(Name), SymbolState::Ready,
+      [OnComplete = std::move(OnComplete)
+#ifndef NDEBUG
+           ,
+       Name = this->Name // Captured for the assert below only.
+#endif                   // NDEBUG
+  ](Expected<SymbolMap> Result) mutable {
+        if (Result) {
+          assert(Result->size() == 1 && "Unexpected number of results");
+          assert(Result->count(Name) &&
+                 "Result does not contain expected symbol");
+          OnComplete(Result->begin()->second);
+        } else
+          OnComplete(Result.takeError());
+      },
+      NoDependenciesToRegister);
+}
+
 AsynchronousSymbolQuery::AsynchronousSymbolQuery(
     const SymbolLookupSet &Symbols, SymbolState RequiredState,
     SymbolsResolvedCallback NotifyComplete)
@@ -1455,10 +1476,9 @@ void JITDylib::installMaterializationUnit(
 void JITDylib::detachQueryHelper(AsynchronousSymbolQuery &Q,
                                  const SymbolNameSet &QuerySymbols) {
   for (auto &QuerySymbol : QuerySymbols) {
-    assert(MaterializingInfos.count(QuerySymbol) &&
-           "QuerySymbol does not have MaterializingInfo");
-    auto &MI = MaterializingInfos[QuerySymbol];
-    MI.removeQuery(Q);
+    auto MII = MaterializingInfos.find(QuerySymbol);
+    if (MII != MaterializingInfos.end())
+      MII->second.removeQuery(Q);
   }
 }
 
@@ -1556,12 +1576,22 @@ void Platform::lookupInitSymbolsAsync(
   }
 }
 
+MaterializationTask::~MaterializationTask() {
+  // If this task wasn't run then fail materialization.
+  if (MR)
+    MR->failMaterialization();
+}
+
 void MaterializationTask::printDescription(raw_ostream &OS) {
   OS << "Materialization task: " << MU->getName() << " in "
      << MR->getTargetJITDylib().getName();
 }
 
-void MaterializationTask::run() { MU->materialize(std::move(MR)); }
+void MaterializationTask::run() {
+  assert(MU && "MU should not be null");
+  assert(MR && "MR should not be null");
+  MU->materialize(std::move(MR));
+}
 
 void LookupTask::printDescription(raw_ostream &OS) { OS << "Lookup task"; }
 
@@ -1801,17 +1831,10 @@ ExecutionSession::lookup(const JITDylibSearchOrder &SearchOrder,
                          RegisterDependenciesFunction RegisterDependencies) {
 #if LLVM_ENABLE_THREADS
   // In the threaded case we use promises to return the results.
-  std::promise<SymbolMap> PromisedResult;
-  Error ResolutionError = Error::success();
+  std::promise<MSVCPExpected<SymbolMap>> PromisedResult;
 
   auto NotifyComplete = [&](Expected<SymbolMap> R) {
-    if (R)
-      PromisedResult.set_value(std::move(*R));
-    else {
-      ErrorAsOutParameter _(ResolutionError);
-      ResolutionError = R.takeError();
-      PromisedResult.set_value(SymbolMap());
-    }
+    PromisedResult.set_value(std::move(R));
   };
 
 #else
@@ -1828,18 +1851,11 @@ ExecutionSession::lookup(const JITDylibSearchOrder &SearchOrder,
 #endif
 
   // Perform the asynchronous lookup.
-  lookup(K, SearchOrder, std::move(Symbols), RequiredState, NotifyComplete,
-         RegisterDependencies);
+  lookup(K, SearchOrder, std::move(Symbols), RequiredState,
+         std::move(NotifyComplete), RegisterDependencies);
 
 #if LLVM_ENABLE_THREADS
-  auto ResultFuture = PromisedResult.get_future();
-  auto Result = ResultFuture.get();
-
-  if (ResolutionError)
-    return std::move(ResolutionError);
-
-  return std::move(Result);
-
+  return PromisedResult.get_future().get();
 #else
   if (ResolutionError)
     return std::move(ResolutionError);

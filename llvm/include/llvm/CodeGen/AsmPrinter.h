@@ -44,6 +44,7 @@ class DebugHandlerBase;
 class DIE;
 class DIEAbbrev;
 class DwarfDebug;
+class EHStreamer;
 class GCMetadataPrinter;
 class GCStrategy;
 class GlobalAlias;
@@ -187,14 +188,16 @@ protected:
   /// For dso_local functions, the current $local alias for the function.
   MCSymbol *CurrentFnBeginLocal = nullptr;
 
-  /// A vector of all debug/EH info emitters we should use. This vector
-  /// maintains ownership of the emitters.
+  /// A handle to the EH info emitter (if present).
+  // Only for EHStreamer subtypes, but some C++ compilers will incorrectly warn
+  // us if we declare that directly.
+  SmallVector<std::unique_ptr<AsmPrinterHandler>, 1> EHHandlers;
+
+  // A vector of all Debuginfo emitters we should use. Protected so that
+  // targets can add their own. This vector maintains ownership of the
+  // emitters.
   SmallVector<std::unique_ptr<AsmPrinterHandler>, 2> Handlers;
   size_t NumUserHandlers = 0;
-
-  /// Debuginfo handler. Protected so that targets can add their own.
-  SmallVector<std::unique_ptr<DebugHandlerBase>, 1> DebugHandlers;
-  size_t NumUserDebugHandlers = 0;
 
   StackMaps SM;
 
@@ -526,8 +529,6 @@ public:
   //===------------------------------------------------------------------===//
 
   void addAsmPrinterHandler(std::unique_ptr<AsmPrinterHandler> Handler);
-
-  void addDebugHandler(std::unique_ptr<DebugHandlerBase> Handler);
 
   // Targets can, or in the case of EmitInstruction, must implement these to
   // customize output.
@@ -892,10 +893,13 @@ private:
   // Internal Implementation Details
   //===------------------------------------------------------------------===//
 
-  void emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
+  void emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
+                         ArrayRef<unsigned> JumpTableIndices,
+                         bool JTInDiffSection);
+  void emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
                           const MachineBasicBlock *MBB, unsigned uid) const;
 
-  void emitJumpTableSizesSection(const MachineJumpTableInfo *MJTI,
+  void emitJumpTableSizesSection(const MachineJumpTableInfo &MJTI,
                                  const Function &F) const;
 
   void emitLLVMUsedList(const ConstantArray *InitList);

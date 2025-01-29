@@ -2655,6 +2655,15 @@ CXXBaseSpecifier *Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
       return nullptr;
     }
 
+    if (BaseType.hasQualifiers()) {
+      std::string Quals =
+          BaseType.getQualifiers().getAsString(Context.getPrintingPolicy());
+      Diag(BaseLoc, diag::warn_qual_base_type)
+          << Quals << std::count(Quals.begin(), Quals.end(), ' ') + 1
+          << BaseType;
+      Diag(BaseLoc, diag::note_base_class_specified_here) << BaseType;
+    }
+
     // For the MS ABI, propagate DLL attributes to base class templates.
     if (Context.getTargetInfo().getCXXABI().isMicrosoft() ||
         Context.getTargetInfo().getTriple().isPS()) {
@@ -3307,6 +3316,29 @@ void Sema::CheckShadowInheritedFields(const SourceLocation &Loc,
   }
 }
 
+template <typename AttrType>
+inline static bool HasAttribute(const QualType &T) {
+  if (const TagDecl *TD = T->getAsTagDecl())
+    return TD->hasAttr<AttrType>();
+  if (const TypedefType *TDT = T->getAs<TypedefType>())
+    return TDT->getDecl()->hasAttr<AttrType>();
+  return false;
+}
+
+static bool IsUnusedPrivateField(const FieldDecl *FD) {
+  if (FD->getAccess() == AS_private && FD->getDeclName()) {
+    QualType FieldType = FD->getType();
+    if (HasAttribute<WarnUnusedAttr>(FieldType))
+      return true;
+
+    return !FD->isImplicit() && !FD->hasAttr<UnusedAttr>() &&
+           !FD->getParent()->isDependentContext() &&
+           !HasAttribute<UnusedAttr>(FieldType) &&
+           !InitializationHasSideEffects(*FD);
+  }
+  return false;
+}
+
 NamedDecl *
 Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
                                MultiTemplateParamsArg TemplateParameterLists,
@@ -3589,25 +3621,11 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
     FieldDecl *FD = cast<FieldDecl>(Member);
     FieldCollector->Add(FD);
 
-    if (!Diags.isIgnored(diag::warn_unused_private_field, FD->getLocation())) {
+    if (!Diags.isIgnored(diag::warn_unused_private_field, FD->getLocation()) &&
+        IsUnusedPrivateField(FD)) {
       // Remember all explicit private FieldDecls that have a name, no side
       // effects and are not part of a dependent type declaration.
-
-      auto DeclHasUnusedAttr = [](const QualType &T) {
-        if (const TagDecl *TD = T->getAsTagDecl())
-          return TD->hasAttr<UnusedAttr>();
-        if (const TypedefType *TDT = T->getAs<TypedefType>())
-          return TDT->getDecl()->hasAttr<UnusedAttr>();
-        return false;
-      };
-
-      if (!FD->isImplicit() && FD->getDeclName() &&
-          FD->getAccess() == AS_private &&
-          !FD->hasAttr<UnusedAttr>() &&
-          !FD->getParent()->isDependentContext() &&
-          !DeclHasUnusedAttr(FD->getType()) &&
-          !InitializationHasSideEffects(*FD))
-        UnusedPrivateFields.insert(FD);
+      UnusedPrivateFields.insert(FD);
     }
   }
 
@@ -4074,24 +4092,28 @@ ExprResult Sema::ConvertMemberDefaultInitExpression(FieldDecl *FD,
 
 void Sema::ActOnFinishCXXInClassMemberInitializer(Decl *D,
                                                   SourceLocation InitLoc,
-                                                  Expr *InitExpr) {
+                                                  ExprResult InitExpr) {
   // Pop the notional constructor scope we created earlier.
   PopFunctionScopeInfo(nullptr, D);
 
-  FieldDecl *FD = dyn_cast<FieldDecl>(D);
-  assert((isa<MSPropertyDecl>(D) || FD->getInClassInitStyle() != ICIS_NoInit) &&
-         "must set init style when field is created");
-
-  if (!InitExpr) {
+  // Microsoft C++'s property declaration cannot have a default member
+  // initializer.
+  if (isa<MSPropertyDecl>(D)) {
     D->setInvalidDecl();
-    if (FD)
-      FD->removeInClassInitializer();
     return;
   }
 
-  if (DiagnoseUnexpandedParameterPack(InitExpr, UPPC_Initializer)) {
+  FieldDecl *FD = dyn_cast<FieldDecl>(D);
+  assert((FD && FD->getInClassInitStyle() != ICIS_NoInit) &&
+         "must set init style when field is created");
+
+  if (!InitExpr.isUsable() ||
+      DiagnoseUnexpandedParameterPack(InitExpr.get(), UPPC_Initializer)) {
     FD->setInvalidDecl();
-    FD->removeInClassInitializer();
+    ExprResult RecoveryInit =
+        CreateRecoveryExpr(InitLoc, InitLoc, {}, FD->getType());
+    if (RecoveryInit.isUsable())
+      FD->setInClassInitializer(RecoveryInit.get());
     return;
   }
 
@@ -4873,7 +4895,7 @@ BuildImplicitMemberInitializer(Sema &SemaRef, CXXConstructorDecl *Constructor,
     QualType ParamType = Param->getType().getNonReferenceType();
 
     // Suppress copying zero-width bitfields.
-    if (Field->isZeroLengthBitField(SemaRef.Context))
+    if (Field->isZeroLengthBitField())
       return false;
 
     Expr *MemberExprBase =
@@ -9222,7 +9244,7 @@ struct SpecialMemberVisitor {
   static SourceLocation getSubobjectLoc(Subobject Subobj) {
     // FIXME: For an indirect virtual base, the direct base leading to
     // the indirect virtual base would be a more useful choice.
-    if (auto *B = Subobj.dyn_cast<CXXBaseSpecifier*>())
+    if (auto *B = dyn_cast<CXXBaseSpecifier *>(Subobj))
       return B->getBaseTypeLoc();
     else
       return cast<FieldDecl *>(Subobj)->getLocation();
@@ -10753,6 +10775,22 @@ static void checkMethodTypeQualifiers(Sema &S, Declarator &D, unsigned DiagID) {
   }
 }
 
+static void diagnoseInvalidDeclaratorChunks(Sema &S, Declarator &D,
+                                            unsigned Kind) {
+  if (D.isInvalidType() || D.getNumTypeObjects() <= 1)
+    return;
+
+  DeclaratorChunk &Chunk = D.getTypeObject(D.getNumTypeObjects() - 1);
+  if (Chunk.Kind == DeclaratorChunk::Paren ||
+      Chunk.Kind == DeclaratorChunk::Function)
+    return;
+
+  SourceLocation PointerLoc = Chunk.getSourceRange().getBegin();
+  S.Diag(PointerLoc, diag::err_invalid_ctor_dtor_decl)
+      << Kind << Chunk.getSourceRange();
+  D.setInvalidType();
+}
+
 QualType Sema::CheckConstructorDeclarator(Declarator &D, QualType R,
                                           StorageClass &SC) {
   bool isVirtual = D.getDeclSpec().isVirtualSpecified();
@@ -10788,6 +10826,7 @@ QualType Sema::CheckConstructorDeclarator(Declarator &D, QualType R,
   }
 
   checkMethodTypeQualifiers(*this, D, diag::err_invalid_qualified_constructor);
+  diagnoseInvalidDeclaratorChunks(*this, D, /*constructor*/ 0);
 
   // C++0x [class.ctor]p4:
   //   A constructor shall not be declared with a ref-qualifier.
@@ -10954,6 +10993,7 @@ QualType Sema::CheckDestructorDeclarator(Declarator &D, QualType R,
   }
 
   checkMethodTypeQualifiers(*this, D, diag::err_invalid_qualified_destructor);
+  diagnoseInvalidDeclaratorChunks(*this, D, /*destructor*/ 1);
 
   // C++0x [class.dtor]p2:
   //   A destructor shall not be declared with a ref-qualifier.
@@ -11927,7 +11967,7 @@ bool Sema::isStdInitializerList(QualType Ty, QualType *Element) {
     if (TemplateClass->getIdentifier() !=
             &PP.getIdentifierTable().get("initializer_list") ||
         !getStdNamespace()->InEnclosingNamespaceSetOf(
-            TemplateClass->getDeclContext()))
+            TemplateClass->getNonTransparentDeclContext()))
       return false;
     // This is a template called std::initializer_list, but is it the right
     // template?
@@ -13213,18 +13253,18 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc, bool HasTypename,
         if (getLangOpts().CPlusPlus11) {
           // Convert 'using X::Y;' to 'using Y = X::Y;'.
           Diag(SS.getBeginLoc(), diag::note_using_decl_class_member_workaround)
-            << 0 // alias declaration
-            << FixItHint::CreateInsertion(SS.getBeginLoc(),
-                                          NameInfo.getName().getAsString() +
-                                              " = ");
+              << diag::MemClassWorkaround::AliasDecl
+              << FixItHint::CreateInsertion(SS.getBeginLoc(),
+                                            NameInfo.getName().getAsString() +
+                                                " = ");
         } else {
           // Convert 'using X::Y;' to 'typedef X::Y Y;'.
           SourceLocation InsertLoc = getLocForEndOfToken(NameInfo.getEndLoc());
           Diag(InsertLoc, diag::note_using_decl_class_member_workaround)
-            << 1 // typedef declaration
-            << FixItHint::CreateReplacement(UsingLoc, "typedef")
-            << FixItHint::CreateInsertion(
-                   InsertLoc, " " + NameInfo.getName().getAsString());
+              << diag::MemClassWorkaround::TypedefDecl
+              << FixItHint::CreateReplacement(UsingLoc, "typedef")
+              << FixItHint::CreateInsertion(
+                     InsertLoc, " " + NameInfo.getName().getAsString());
         }
       } else if (R->getAsSingle<VarDecl>()) {
         // Don't provide a fixit outside C++11 mode; we don't want to suggest
@@ -13237,8 +13277,7 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc, bool HasTypename,
         }
 
         Diag(UsingLoc, diag::note_using_decl_class_member_workaround)
-          << 2 // reference declaration
-          << FixIt;
+            << diag::MemClassWorkaround::ReferenceDecl << FixIt;
       } else if (R->getAsSingle<EnumConstantDecl>()) {
         // Don't provide a fixit outside C++11 mode; we don't want to suggest
         // repeating the type of the enumeration here, and we can't do so if
@@ -13252,8 +13291,10 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc, bool HasTypename,
         }
 
         Diag(UsingLoc, diag::note_using_decl_class_member_workaround)
-          << (getLangOpts().CPlusPlus11 ? 4 : 3) // const[expr] variable
-          << FixIt;
+            << (getLangOpts().CPlusPlus11
+                    ? diag::MemClassWorkaround::ConstexprVar
+                    : diag::MemClassWorkaround::ConstVar)
+            << FixIt;
       }
     }
 
@@ -13374,8 +13415,6 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
                                   SourceLocation UsingLoc, UnqualifiedId &Name,
                                   const ParsedAttributesView &AttrList,
                                   TypeResult Type, Decl *DeclFromDeclSpec) {
-  // Get the innermost enclosing declaration scope.
-  S = S->getDeclParent();
 
   if (Type.isInvalid())
     return nullptr;
@@ -13425,6 +13464,9 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
 
   CheckTypedefForVariablyModifiedType(S, NewTD);
   Invalid |= NewTD->isInvalidDecl();
+
+  // Get the innermost enclosing declaration scope.
+  S = S->getDeclParent();
 
   bool Redeclaration = false;
 
@@ -13822,8 +13864,7 @@ void Sema::setupImplicitSpecialMemberType(CXXMethodDecl *SpecialMem,
   // During template instantiation of implicit special member functions we need
   // a reliable TypeSourceInfo for the function prototype in order to allow
   // functions to be substituted.
-  if (inTemplateInstantiation() &&
-      cast<CXXRecordDecl>(SpecialMem->getParent())->isLambda()) {
+  if (inTemplateInstantiation() && isLambdaMethod(SpecialMem)) {
     TypeSourceInfo *TSI =
         Context.getTrivialTypeSourceInfo(SpecialMem->getType());
     SpecialMem->setTypeSourceInfo(TSI);
@@ -15037,7 +15078,7 @@ void Sema::DefineImplicitCopyAssignment(SourceLocation CurrentLocation,
     }
 
     // Suppress assigning zero-width bitfields.
-    if (Field->isZeroLengthBitField(Context))
+    if (Field->isZeroLengthBitField())
       continue;
 
     QualType FieldType = Field->getType().getNonReferenceType();
@@ -15424,7 +15465,7 @@ void Sema::DefineImplicitMoveAssignment(SourceLocation CurrentLocation,
     }
 
     // Suppress assigning zero-width bitfields.
-    if (Field->isZeroLengthBitField(Context))
+    if (Field->isZeroLengthBitField())
       continue;
 
     QualType FieldType = Field->getType().getNonReferenceType();
@@ -17492,7 +17533,7 @@ DeclResult Sema::ActOnTemplatedFriendTag(
   unsigned FriendDeclDepth = TempParamLists.front()->getDepth();
   for (UnexpandedParameterPack &U : Unexpanded) {
     if (getDepthAndIndex(U).first >= FriendDeclDepth) {
-      auto *ND = U.first.dyn_cast<NamedDecl *>();
+      auto *ND = dyn_cast<NamedDecl *>(U.first);
       if (!ND)
         ND = cast<const TemplateTypeParmType *>(U.first)->getDecl();
       Diag(U.second, diag::friend_template_decl_malformed_pack_expansion)

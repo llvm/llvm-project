@@ -38,6 +38,8 @@ extern gpu::Constant<uint64_t> __llvm_libc_clock_freq;
 #error "Unsupported target"
 #endif
 
+constexpr uint64_t TICKS_PER_SEC = 1000000000UL;
+
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_TIME_GPU_TIME_UTILS_H

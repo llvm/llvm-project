@@ -164,6 +164,7 @@ interesting areas to contribute to lldb.
    resources/fuzzing
    resources/sbapi
    resources/dataformatters
+   resources/formatterbytecode
    resources/extensions
    resources/lldbgdbremote
    resources/lldbplatformpackets

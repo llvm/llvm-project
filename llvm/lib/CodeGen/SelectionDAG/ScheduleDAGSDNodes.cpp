@@ -43,9 +43,9 @@ STATISTIC(LoadsClustered, "Number of loads clustered together");
 // without a target itinerary. The choice of number here has more to do with
 // balancing scheduler heuristics than with the actual machine latency.
 static cl::opt<int> HighLatencyCycles(
-  "sched-high-latency-cycles", cl::Hidden, cl::init(10),
-  cl::desc("Roughly estimate the number of cycles that 'long latency'"
-           "instructions take for targets with no itinerary"));
+    "sched-high-latency-cycles", cl::Hidden, cl::init(10),
+    cl::desc("Roughly estimate the number of cycles that 'long latency' "
+             "instructions take for targets with no itinerary"));
 
 ScheduleDAGSDNodes::ScheduleDAGSDNodes(MachineFunction &mf)
     : ScheduleDAG(mf), InstrItins(mf.getSubtarget().getInstrItineraryData()) {}
@@ -236,7 +236,7 @@ void ScheduleDAGSDNodes::ClusterNeighboringLoads(SDNode *Node) {
   // This algorithm requires a reasonably low use count before finding a match
   // to avoid uselessly blowing up compile time in large blocks.
   unsigned UseCount = 0;
-  for (SDNode::use_iterator I = Chain->use_begin(), E = Chain->use_end();
+  for (SDNode::user_iterator I = Chain->user_begin(), E = Chain->user_end();
        I != E && UseCount < 100; ++I, ++UseCount) {
     if (I.getUse().getResNo() != Chain.getResNo())
       continue;
@@ -388,7 +388,7 @@ void ScheduleDAGSDNodes::BuildSchedUnits() {
 
       // There are either zero or one users of the Glue result.
       bool HasGlueUse = false;
-      for (SDNode *U : N->uses())
+      for (SDNode *U : N->users())
         if (GlueVal.isOperandOf(U)) {
           HasGlueUse = true;
           assert(N->getNodeId() == -1 && "Node already inserted!");
@@ -536,7 +536,7 @@ void ScheduleDAGSDNodes::AddSchedEdges() {
 /// are input.  This SUnit graph is similar to the SelectionDAG, but
 /// excludes nodes that aren't interesting to scheduling, and represents
 /// glued together nodes with a single SUnit.
-void ScheduleDAGSDNodes::BuildSchedGraph(AAResults *AA) {
+void ScheduleDAGSDNodes::BuildSchedGraph() {
   // Cluster certain nodes which should be scheduled together.
   ClusterNodes();
   // Populate the SUnits array.
@@ -888,9 +888,13 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
       MI = &*std::next(Before);
     }
 
-    if (MI->isCandidateForCallSiteEntry() &&
-        DAG->getTarget().Options.EmitCallSiteInfo) {
-      MF.addCallSiteInfo(MI, DAG->getCallSiteInfo(Node));
+    if (MI->isCandidateForAdditionalCallInfo()) {
+      if (DAG->getTarget().Options.EmitCallSiteInfo)
+        MF.addCallSiteInfo(MI, DAG->getCallSiteInfo(Node));
+
+      if (auto CalledGlobal = DAG->getCalledGlobal(Node))
+        if (CalledGlobal->Callee)
+          MF.addCalledGlobal(MI, *CalledGlobal);
     }
 
     if (DAG->getNoMergeSiteInfo(Node)) {

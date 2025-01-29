@@ -8,9 +8,9 @@ define void @spam(ptr %arg) {
 ; CHECK-SAME: ptr [[ARG:%.*]]) {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    call void @blam(i32 0, ptr nonnull [[ARG]])
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [4 x [24 x float]], ptr [[ARG]], i64 0, i64 1, i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [4 x [24 x float]], ptr [[ARG]], i64 0, i64 1, i64 0
 ; CHECK-NEXT:    call void @blam(i32 1, ptr nonnull [[TMP1]])
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x [24 x float]], ptr [[ARG]], i64 0, i64 2, i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [4 x [24 x float]], ptr [[ARG]], i64 0, i64 2, i64 0
 ; CHECK-NEXT:    call void @blam(i32 2, ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    ret void
 ;
@@ -26,7 +26,7 @@ bb:
 ; Make sure we do not incorrectly eliminate the checks in @blam.
 define internal void @blam(i32 %arg, ptr nocapture %arg1) {
 ; CHECK-LABEL: define internal void @blam(
-; CHECK-SAME: i32 range(i32 0, 3) [[ARG:%.*]], ptr nocapture [[ARG1:%.*]]) {
+; CHECK-SAME: i32 range(i32 0, 3) [[ARG:%.*]], ptr captures(none) [[ARG1:%.*]]) {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[TMP:%.*]] = icmp eq i32 [[ARG]], 0
 ; CHECK-NEXT:    br i1 [[TMP]], label %[[BB2:.*]], label %[[BB3:.*]]

@@ -795,7 +795,6 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
 
   auto Begin = Instructions.begin();
   if (BC.isAArch64()) {
-    PreserveNops = BC.HasRelocations;
     // Start at the last label as an approximation of the current basic block.
     // This is a heuristic, since the full set of labels have yet to be
     // determined
@@ -1504,6 +1503,20 @@ MCSymbol *BinaryFunction::registerBranch(uint64_t Src, uint64_t Dst) {
   return Target;
 }
 
+void BinaryFunction::analyzeInstructionForFuncReference(const MCInst &Inst) {
+  for (const MCOperand &Op : MCPlus::primeOperands(Inst)) {
+    if (!Op.isExpr())
+      continue;
+    const MCExpr &Expr = *Op.getExpr();
+    if (Expr.getKind() != MCExpr::SymbolRef)
+      continue;
+    const MCSymbol &Symbol = cast<MCSymbolRefExpr>(Expr).getSymbol();
+    // Set HasAddressTaken for a function regardless of the ICF level.
+    if (BinaryFunction *BF = BC.getFunctionForSymbol(&Symbol))
+      BF->setHasAddressTaken(true);
+  }
+}
+
 bool BinaryFunction::scanExternalRefs() {
   bool Success = true;
   bool DisassemblyFailed = false;
@@ -1624,6 +1637,8 @@ bool BinaryFunction::scanExternalRefs() {
                              [](const MCOperand &Op) { return Op.isExpr(); })) {
       // Skip assembly if the instruction may not have any symbolic operands.
       continue;
+    } else {
+      analyzeInstructionForFuncReference(Instruction);
     }
 
     // Emit the instruction using temp emitter and generate relocations.
@@ -2284,6 +2299,10 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
       BC.errs() << "BOLT-WARNING: failed to post-process indirect branches for "
                 << *this << '\n';
     }
+
+    if (BC.isAArch64())
+      PreserveNops = BC.HasRelocations;
+
     // In relocation mode we want to keep processing the function but avoid
     // optimizing it.
     setSimple(false);

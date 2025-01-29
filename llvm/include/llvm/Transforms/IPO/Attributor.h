@@ -1287,6 +1287,12 @@ struct InformationCache {
     return AG.getAnalysis<TargetLibraryAnalysis>(F);
   }
 
+  /// Return true if \p F has the "kernel" function attribute
+  bool isKernel(const Function &F) {
+    FunctionInfo &FI = getFunctionInfo(F);
+    return FI.IsKernel;
+  }
+
   /// Return true if \p Arg is involved in a must-tail call, thus the argument
   /// of the caller or callee.
   bool isInvolvedInMustTailCall(const Argument &Arg) {
@@ -1361,6 +1367,9 @@ private:
 
     /// Function contains a `musttail` call.
     bool ContainsMustTailCall;
+
+    /// Function has the `"kernel"` attribute
+    bool IsKernel;
   };
 
   /// A map type from functions to informatio about it.
@@ -1478,7 +1487,7 @@ struct AttributorConfig {
   /// The name of the pass running the attributor, used to emit remarks.
   const char *PassName = nullptr;
 
-  using IPOAmendableCBTy = function_ref<bool(const Function &F)>;
+  using IPOAmendableCBTy = std::function<bool(const Function &F)>;
   IPOAmendableCBTy IPOAmendableCB;
 };
 
@@ -1945,8 +1954,12 @@ struct Attributor {
 private:
   /// Helper to check \p Attrs for \p AK, if not found, check if \p
   /// AAType::isImpliedByIR is true, and if not, create AAType for \p IRP.
+  /// If \p SkipHasAttrCheck is true, don't check whether the attribute is set
+  /// first. This should be used if only some values of a complex IR attribute
+  /// imply the AAType.
   template <Attribute::AttrKind AK, typename AAType>
-  void checkAndQueryIRAttr(const IRPosition &IRP, AttributeSet Attrs);
+  void checkAndQueryIRAttr(const IRPosition &IRP, AttributeSet Attrs,
+                           bool SkipHasAttrCheck = false);
 
   /// Helper to apply \p CB on all attributes of type \p AttrDescs of \p IRP.
   template <typename DescTy>
@@ -3853,7 +3866,7 @@ struct AANoAlias
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+    if (!IRP.getAssociatedType()->isPointerTy())
       return false;
     return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
@@ -4220,7 +4233,7 @@ struct AADereferenceable
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+    if (!IRP.getAssociatedType()->isPointerTy())
       return false;
     return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
@@ -4346,7 +4359,7 @@ struct AAInstanceInfo : public StateWrapper<BooleanState, AbstractAttribute> {
 /// An abstract interface for all nocapture attributes.
 struct AANoCapture
     : public IRAttribute<
-          Attribute::NoCapture,
+          Attribute::Captures,
           StateWrapper<BitIntegerState<uint16_t, 7, 0>, AbstractAttribute>,
           AANoCapture> {
   AANoCapture(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
@@ -4364,7 +4377,7 @@ struct AANoCapture
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+    if (!IRP.getAssociatedType()->isPointerTy())
       return false;
     return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
@@ -4635,8 +4648,7 @@ struct AAMemoryBehavior
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    if (!IRP.isFunctionScope() &&
-        !IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+    if (!IRP.isFunctionScope() && !IRP.getAssociatedType()->isPointerTy())
       return false;
     return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
@@ -6505,7 +6517,7 @@ bool hasAssumedIRAttr(Attributor &A, const AbstractAttribute *QueryingAA,
     CASE(NoUnwind, AANoUnwind, );
     CASE(WillReturn, AAWillReturn, );
     CASE(NoFree, AANoFree, );
-    CASE(NoCapture, AANoCapture, );
+    CASE(Captures, AANoCapture, );
     CASE(NoRecurse, AANoRecurse, );
     CASE(NoReturn, AANoReturn, );
     CASE(NoSync, AANoSync, );

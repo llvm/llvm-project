@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple riscv32 -riscv-no-aliases < %s -show-encoding \
+# RUN: llvm-mc -triple riscv32 -M no-aliases < %s -show-encoding \
 # RUN:     | FileCheck -check-prefix=CHECK-FIXUP %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
 # RUN:     | llvm-objdump --no-print-imm-hex -M no-aliases -d - \

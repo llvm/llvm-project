@@ -145,7 +145,7 @@ void DiagnosticsEngine::Reset(bool soft /*=false*/) {
 
     // Create a DiagState and DiagStatePoint representing diagnostic changes
     // through command-line.
-    DiagStates.emplace_back();
+    DiagStates.emplace_back(*Diags);
     DiagStatesByLoc.appendFirst(&DiagStates.back());
   }
 }
@@ -156,8 +156,11 @@ DiagnosticsEngine::DiagState::getOrAddMapping(diag::kind Diag) {
       DiagMap.insert(std::make_pair(Diag, DiagnosticMapping()));
 
   // Initialize the entry if we added it.
-  if (Result.second)
-    Result.first->second = DiagnosticIDs::getDefaultMapping(Diag);
+  if (Result.second) {
+    Result.first->second = DiagIDs.getDefaultMapping(Diag);
+    if (DiagnosticIDs::IsCustomDiag(Diag))
+      DiagIDs.initCustomDiagMapping(Result.first->second, Diag);
+  }
 
   return Result.first->second;
 }
@@ -299,7 +302,8 @@ void DiagnosticsEngine::DiagStateMap::dump(SourceManager &SrcMgr,
 
       for (auto &Mapping : *Transition.State) {
         StringRef Option =
-            DiagnosticIDs::getWarningOptionForDiag(Mapping.first);
+            SrcMgr.getDiagnostics().Diags->getWarningOptionForDiag(
+                Mapping.first);
         if (!DiagName.empty() && DiagName != Option)
           continue;
 
@@ -343,9 +347,7 @@ void DiagnosticsEngine::PushDiagStatePoint(DiagState *State,
 
 void DiagnosticsEngine::setSeverity(diag::kind Diag, diag::Severity Map,
                                     SourceLocation L) {
-  assert(Diag < diag::DIAG_UPPER_LIMIT &&
-         "Can only map builtin diagnostics");
-  assert((Diags->isBuiltinWarningOrExtension(Diag) ||
+  assert((Diags->isWarningOrExtension(Diag) ||
           (Map == diag::Severity::Fatal || Map == diag::Severity::Error)) &&
          "Cannot map errors into warnings!");
   assert((L.isInvalid() || SourceMgr) && "No SourceMgr for valid location");
@@ -397,6 +399,8 @@ bool DiagnosticsEngine::setSeverityForGroup(diag::Flavor Flavor,
   if (Diags->getDiagnosticsInGroup(Flavor, Group, GroupDiags))
     return true;
 
+  Diags->setGroupSeverity(Group, Map);
+
   // Set the mapping.
   for (diag::kind Diag : GroupDiags)
     setSeverity(Diag, Map, Loc);
@@ -419,6 +423,7 @@ bool DiagnosticsEngine::setDiagnosticGroupWarningAsError(StringRef Group,
   if (Enabled)
     return setSeverityForGroup(diag::Flavor::WarningOrError, Group,
                                diag::Severity::Error);
+  Diags->setGroupSeverity(Group, diag::Severity::Warning);
 
   // Otherwise, we want to set the diagnostic mapping's "no Werror" bit, and
   // potentially downgrade anything already mapped to be a warning.
@@ -450,6 +455,7 @@ bool DiagnosticsEngine::setDiagnosticGroupErrorAsFatal(StringRef Group,
   if (Enabled)
     return setSeverityForGroup(diag::Flavor::WarningOrError, Group,
                                diag::Severity::Fatal);
+  Diags->setGroupSeverity(Group, diag::Severity::Error);
 
   // Otherwise, we want to set the diagnostic mapping's "no Wfatal-errors" bit,
   // and potentially downgrade anything already mapped to be a fatal error.
@@ -482,7 +488,7 @@ void DiagnosticsEngine::setSeverityForAll(diag::Flavor Flavor,
 
   // Set the mapping.
   for (diag::kind Diag : AllDiags)
-    if (Diags->isBuiltinWarningOrExtension(Diag))
+    if (Diags->isWarningOrExtension(Diag))
       setSeverity(Diag, Map, Loc);
 }
 
@@ -500,7 +506,8 @@ public:
   // the last section take precedence in such cases.
   void processSections(DiagnosticsEngine &Diags);
 
-  bool isDiagSuppressed(diag::kind DiagId, StringRef FilePath) const;
+  bool isDiagSuppressed(diag::kind DiagId, SourceLocation DiagLoc,
+                        const SourceManager &SM) const;
 
 private:
   // Find the longest glob pattern that matches FilePath amongst
@@ -573,13 +580,14 @@ void DiagnosticsEngine::setDiagSuppressionMapping(llvm::MemoryBuffer &Input) {
   WarningSuppressionList->processSections(*this);
   DiagSuppressionMapping =
       [WarningSuppressionList(std::move(WarningSuppressionList))](
-          diag::kind DiagId, StringRef Path) {
-        return WarningSuppressionList->isDiagSuppressed(DiagId, Path);
+          diag::kind DiagId, SourceLocation DiagLoc, const SourceManager &SM) {
+        return WarningSuppressionList->isDiagSuppressed(DiagId, DiagLoc, SM);
       };
 }
 
 bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
-                                               StringRef FilePath) const {
+                                               SourceLocation DiagLoc,
+                                               const SourceManager &SM) const {
   const Section *DiagSection = DiagToSection.lookup(DiagId);
   if (!DiagSection)
     return false;
@@ -589,7 +597,13 @@ bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
     return false;
   const llvm::StringMap<llvm::SpecialCaseList::Matcher> &CategoriesToMatchers =
       SrcEntriesIt->getValue();
-  return globsMatches(CategoriesToMatchers, FilePath);
+  // We also use presumed locations here to improve reproducibility for
+  // preprocessed inputs.
+  if (PresumedLoc PLoc = SM.getPresumedLoc(DiagLoc); PLoc.isValid())
+    return globsMatches(
+        CategoriesToMatchers,
+        llvm::sys::path::remove_leading_dotslash(PLoc.getFilename()));
+  return false;
 }
 
 bool WarningsSpecialCaseList::globsMatches(
@@ -614,8 +628,10 @@ bool WarningsSpecialCaseList::globsMatches(
 }
 
 bool DiagnosticsEngine::isSuppressedViaMapping(diag::kind DiagId,
-                                               StringRef FilePath) const {
-  return DiagSuppressionMapping && DiagSuppressionMapping(DiagId, FilePath);
+                                               SourceLocation DiagLoc) const {
+  if (!hasSourceManager() || !DiagSuppressionMapping)
+    return false;
+  return DiagSuppressionMapping(DiagId, DiagLoc, getSourceManager());
 }
 
 void DiagnosticsEngine::Report(const StoredDiagnostic &storedDiag) {

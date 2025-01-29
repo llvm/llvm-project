@@ -558,8 +558,8 @@ namespace jitlink {
 Error buildTables_MachO_arm64(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Visiting edges in graph:\n");
 
-  aarch64::GOTTableManager GOT;
-  aarch64::PLTTableManager PLT(GOT);
+  aarch64::GOTTableManager GOT(G);
+  aarch64::PLTTableManager PLT(G, GOT);
   visitExistingEdges(G, GOT, PLT);
   return Error::success();
 }

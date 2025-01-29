@@ -52,7 +52,7 @@ struct vector {
 
   void push_back(const T&);
   void push_back(T&&);
-  
+  const T& back() const;
   void insert(iterator, T&&);
 };
 
@@ -127,6 +127,11 @@ struct reference_wrapper {
 
 template<typename T>
 reference_wrapper<T> ref(T& t) noexcept;
+
+template <typename T>
+struct [[gsl::Pointer]] iterator {
+  T& operator*() const;
+};
 
 struct false_type {
     static constexpr bool value = false;

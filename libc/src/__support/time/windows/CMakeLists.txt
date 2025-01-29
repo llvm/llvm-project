@@ -1,3 +1,12 @@
+add_header_library(
+  performance_counter
+  HDRS
+    performance_counter.h
+  DEPENDS
+    libc.src.__support.CPP.atomic
+    libc.src.__support.common
+)
+
 add_object_library(
   clock_gettime
   HDRS
@@ -5,6 +14,7 @@ add_object_library(
   SRCS
     clock_gettime.cpp
   DEPENDS
+    .performance_counter
     libc.hdr.types.struct_timespec
     libc.hdr.types.clockid_t
     libc.hdr.errno_macros

@@ -284,3 +284,11 @@ define <1 x i32> @bitcast_constexpr_scalar_fp_to_vector_int() {
   %res = bitcast float 1.0 to <1 x i32>
   ret <1 x i32> %res
 }
+
+define <2 x i64> @bitcast_constexpr_4f32_2i64_1111() {
+; CHECK-LABEL: @bitcast_constexpr_4f32_2i64_1111(
+; CHECK-NEXT:    ret <2 x i64> splat (i64 4575657222473777152)
+;
+  %res = bitcast <4 x float> splat (float 1.0) to <2 x i64>
+  ret <2 x i64> %res
+}

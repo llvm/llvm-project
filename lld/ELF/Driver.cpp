@@ -105,6 +105,13 @@ llvm::raw_fd_ostream Ctx::openAuxiliaryFile(llvm::StringRef filename,
   using namespace llvm::sys::fs;
   OpenFlags flags =
       auxiliaryFiles.insert(filename).second ? OF_None : OF_Append;
+  if (e.disableOutput && filename == "-") {
+#ifdef _WIN32
+    filename = "NUL";
+#else
+    filename = "/dev/null";
+#endif
+  }
   return {filename, ec, flags};
 }
 
@@ -1410,6 +1417,9 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.searchPaths = args::getStrings(args, OPT_library_path);
   ctx.arg.sectionStartMap = getSectionStartMap(ctx, args);
   ctx.arg.shared = args.hasArg(OPT_shared);
+  if (args.hasArg(OPT_randomize_section_padding))
+    ctx.arg.randomizeSectionPadding =
+        args::getInteger(args, OPT_randomize_section_padding, 0);
   ctx.arg.singleRoRx = !args.hasFlag(OPT_rosegment, OPT_no_rosegment, true);
   ctx.arg.soName = args.getLastArgValue(OPT_soname);
   ctx.arg.sortSection = getSortSection(ctx, args);
@@ -1453,7 +1463,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   }
   ctx.arg.thinLTOModulesToCompile =
       args::getStrings(args, OPT_thinlto_single_module_eq);
-  ctx.arg.timeTraceEnabled = args.hasArg(OPT_time_trace_eq);
+  ctx.arg.timeTraceEnabled =
+      args.hasArg(OPT_time_trace_eq) && !ctx.e.disableOutput;
   ctx.arg.timeTraceGranularity =
       args::getInteger(args, OPT_time_trace_granularity, 500);
   ctx.arg.trace = args.hasArg(OPT_trace);
@@ -1484,6 +1495,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
   ctx.arg.zLrodataAfterBss =
       getZFlag(args, "lrodata-after-bss", "nolrodata-after-bss", false);
+  ctx.arg.zNoBtCfi = hasZOption(args, "nobtcfi");
   ctx.arg.zNodefaultlib = hasZOption(args, "nodefaultlib");
   ctx.arg.zNodelete = hasZOption(args, "nodelete");
   ctx.arg.zNodlopen = hasZOption(args, "nodlopen");
@@ -1742,13 +1754,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     if (args.hasArg(OPT_call_graph_ordering_file))
       ErrAlways(ctx) << "--symbol-ordering-file and --call-graph-order-file "
                         "may not be used together";
-    if (std::optional<MemoryBufferRef> buffer =
-            readFile(ctx, arg->getValue())) {
+    if (auto buffer = readFile(ctx, arg->getValue()))
       ctx.arg.symbolOrderingFile = getSymbolOrderingFile(ctx, *buffer);
-      // Also need to disable CallGraphProfileSort to prevent
-      // LLD order symbols with CGProfile
-      ctx.arg.callGraphProfileSort = CGProfileSortKind::None;
-    }
   }
 
   assert(ctx.arg.versionDefinitions.empty());
@@ -2150,9 +2157,12 @@ static void excludeLibs(Ctx &ctx, opt::InputArgList &args) {
     ArrayRef<Symbol *> symbols = file->getSymbols();
     if (isa<ELFFileBase>(file))
       symbols = cast<ELFFileBase>(file)->getGlobalSymbols();
-    for (Symbol *sym : symbols)
-      if (!sym->isUndefined() && sym->file == file)
+    for (Symbol *sym : symbols) {
+      if (!sym->isUndefined() && sym->file == file) {
         sym->versionId = VER_NDX_LOCAL;
+        sym->isExported = false;
+      }
+    }
   };
 
   for (ELFFileBase *file : ctx.objectFiles)
@@ -2419,8 +2429,10 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
         unsigned size;
         const char *err = nullptr;
         uint64_t symIndex = decodeULEB128(cur, &size, contents.end(), &err);
-        if (err)
-          Fatal(ctx) << f << ": could not decode addrsig section: " << err;
+        if (err) {
+          Err(ctx) << f << ": could not decode addrsig section: " << err;
+          break;
+        }
         markAddrsig(icfSafe, syms[symIndex]);
         cur += size;
       }
@@ -2452,7 +2464,7 @@ static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
     sym = readEntry(s->file, rels.rels);
   else
     sym = readEntry(s->file, rels.relas);
-  if (!isa_and_nonnull<Defined>(sym) || !sym->includeInDynsym(ctx))
+  if (!isa_and_nonnull<Defined>(sym) || !sym->isExported)
     return;
 
   StringRef partName = reinterpret_cast<const char *>(s->content().data());
@@ -2536,11 +2548,17 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
     auto *obj = cast<ObjFile<ELFT>>(file.get());
     obj->parse(/*ignoreComdats=*/true);
 
-    // Parse '@' in symbol names for non-relocatable output.
+    // For defined symbols in non-relocatable output,
+    // compute isExported and parse '@'.
     if (!ctx.arg.relocatable)
-      for (Symbol *sym : obj->getGlobalSymbols())
+      for (Symbol *sym : obj->getGlobalSymbols()) {
+        if (!sym->isDefined())
+          continue;
+        if (ctx.hasDynsym && sym->includeInDynsym(ctx))
+          sym->isExported = true;
         if (sym->hasVersionSuffix)
           sym->parseSymbolVersion(ctx);
+      }
     ctx.objectFiles.push_back(obj);
   }
 }
@@ -2881,8 +2899,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   parseFiles(ctx, files);
 
+  // Dynamic linking is used if there is an input DSO,
+  // or -shared or non-static pie is specified.
+  ctx.hasDynsym = !ctx.sharedFiles.empty() || ctx.arg.shared ||
+                  (ctx.arg.pie && !ctx.arg.noDynamicLinker);
   // Create dynamic sections for dynamic linking and static PIE.
-  ctx.arg.hasDynSymTab = !ctx.sharedFiles.empty() || ctx.arg.isPic;
+  ctx.arg.hasDynSymTab = ctx.hasDynsym || ctx.arg.isPic;
 
   // If an entry symbol is in a static archive, pull out that file now.
   if (Symbol *sym = ctx.symtab->find(ctx.arg.entry))
@@ -2987,6 +3009,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   if (!ctx.arg.relocatable) {
     llvm::TimeTraceScope timeScope("Process symbol versions");
     ctx.symtab->scanVersionScript();
+
+    parseVersionAndComputeIsPreemptible(ctx);
   }
 
   // Skip the normal linked output if some LTO options are specified.
@@ -3050,7 +3074,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Handle --exclude-libs again because lto.tmp may reference additional
   // libcalls symbols defined in an excluded archive. This may override
-  // versionId set by scanVersionScript().
+  // versionId set by scanVersionScript() and isExported.
   if (args.hasArg(OPT_exclude_libs))
     excludeLibs(ctx, args);
 
@@ -3209,11 +3233,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Read the callgraph now that we know what was gced or icfed
   if (ctx.arg.callGraphProfileSort != CGProfileSortKind::None) {
-    if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file))
+    if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file)) {
       if (std::optional<MemoryBufferRef> buffer =
               readFile(ctx, arg->getValue()))
         readCallGraph(ctx, *buffer);
-    readCallGraphsFromObjectFiles<ELFT>(ctx);
+    } else
+      readCallGraphsFromObjectFiles<ELFT>(ctx);
   }
 
   // Write the result to the file.

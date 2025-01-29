@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=sparcv9 | FileCheck %s
+; RUN: llc < %s -mtriple=sparcv9 | FileCheck %s
 
 target datalayout = "E-i64:64-n32:64-S128"
 target triple = "sparc64-sun-sparc"

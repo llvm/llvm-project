@@ -42,8 +42,7 @@ TEST(AllocatableCUFTest, SimpleDeviceAllocatable) {
   CUDA_REPORT_IF_ERROR(cudaMalloc(&device_desc, a->SizeInBytes()));
 
   RTNAME(AllocatableAllocate)
-  (*a, /*asyncId=*/-1, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__,
-      __LINE__);
+  (*a, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
   EXPECT_TRUE(a->IsAllocated());
   RTNAME(CUFDescriptorSync)(device_desc, a.get(), __FILE__, __LINE__);
   cudaDeviceSynchronize();

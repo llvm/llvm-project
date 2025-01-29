@@ -145,7 +145,7 @@ constexpr FeatureBitset FeaturesDiamondRapids =
     FeatureSM4 | FeatureEGPR | FeatureZU | FeatureCCMP | FeaturePush2Pop2 |
     FeaturePPX | FeatureNDD | FeatureNF | FeatureCF | FeatureMOVRS |
     FeatureAMX_MOVRS | FeatureAMX_AVX512 | FeatureAMX_FP8 | FeatureAMX_TF32 |
-    FeatureAMX_TRANSPOSE;
+    FeatureAMX_TRANSPOSE | FeatureUSERMSR;
 
 // Intel Atom processors.
 // Bonnell has feature parity with Core2 and adds MOVBE.

@@ -346,7 +346,7 @@ end
 ! CHECK:         fir.store %[[VAL_11]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.type<_QFtest_parent_component3Tbase{m:!fir.array<2x!fir.char<1,5>>}>>>
 ! CHECK:         %[[VAL_14:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.type<_QFtest_parent_component3Tbase{m:!fir.array<2x!fir.char<1,5>>}>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_15:.*]] = fir.convert %[[VAL_9]] : (!fir.box<!fir.ptr<!fir.type<_QFtest_parent_component3Tbase{m:!fir.array<2x!fir.char<1,5>>}>>>) -> !fir.box<none>
-! CHECK:         %[[VAL_17:.*]] = fir.call @_FortranAAssign(%[[VAL_14]], %[[VAL_15]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:         fir.call @_FortranAAssign(%[[VAL_14]], %[[VAL_15]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 ! CHECK:         %[[VAL_18:.*]] = fir.field_index mask, !fir.type<_QFtest_parent_component3Tmid{m:!fir.array<2x!fir.char<1,5>>,mask:!fir.logical<4>}>
 ! CHECK:         %[[VAL_19:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_18]] : (!fir.ref<!fir.type<_QFtest_parent_component3Tmid{m:!fir.array<2x!fir.char<1,5>>,mask:!fir.logical<4>}>>, !fir.field) -> !fir.ref<!fir.logical<4>>
 ! CHECK:         %[[VAL_20:.*]] = arith.constant true

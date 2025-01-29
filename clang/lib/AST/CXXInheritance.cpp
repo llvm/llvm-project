@@ -368,8 +368,8 @@ bool CXXRecordDecl::FindBaseClass(const CXXBaseSpecifier *Specifier,
                                   const CXXRecordDecl *BaseRecord) {
   assert(BaseRecord->getCanonicalDecl() == BaseRecord &&
          "User data for FindBaseClass is not canonical!");
-  return Specifier->getType()->castAs<RecordType>()->getDecl()
-            ->getCanonicalDecl() == BaseRecord;
+  return cast<CXXRecordDecl>(Specifier->getType()->getAsRecordDecl())
+             ->getCanonicalDecl() == BaseRecord;
 }
 
 bool CXXRecordDecl::FindVirtualBaseClass(const CXXBaseSpecifier *Specifier,
@@ -378,8 +378,8 @@ bool CXXRecordDecl::FindVirtualBaseClass(const CXXBaseSpecifier *Specifier,
   assert(BaseRecord->getCanonicalDecl() == BaseRecord &&
          "User data for FindBaseClass is not canonical!");
   return Specifier->isVirtual() &&
-         Specifier->getType()->castAs<RecordType>()->getDecl()
-            ->getCanonicalDecl() == BaseRecord;
+         cast<CXXRecordDecl>(Specifier->getType()->getAsRecordDecl())
+                 ->getCanonicalDecl() == BaseRecord;
 }
 
 static bool isOrdinaryMember(const NamedDecl *ND) {
@@ -692,7 +692,7 @@ AddIndirectPrimaryBases(const CXXRecordDecl *RD, ASTContext &Context,
            "Cannot get indirect primary bases for class with dependent bases.");
 
     const CXXRecordDecl *BaseDecl =
-      cast<CXXRecordDecl>(I.getType()->castAs<RecordType>()->getDecl());
+        cast<CXXRecordDecl>(I.getType()->getAsRecordDecl());
 
     // Only bases with virtual bases participate in computing the
     // indirect primary virtual base classes.
@@ -714,7 +714,7 @@ CXXRecordDecl::getIndirectPrimaryBases(CXXIndirectPrimaryBaseSet& Bases) const {
            "Cannot get indirect primary bases for class with dependent bases.");
 
     const CXXRecordDecl *BaseDecl =
-      cast<CXXRecordDecl>(I.getType()->castAs<RecordType>()->getDecl());
+        cast<CXXRecordDecl>(I.getType()->getAsRecordDecl());
 
     // Only bases with virtual bases participate in computing the
     // indirect primary virtual base classes.

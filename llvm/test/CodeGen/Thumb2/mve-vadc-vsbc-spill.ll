@@ -59,7 +59,7 @@ define void @sub_256(<4 x i32> %a_low, <4 x i32> %a_high, <4 x i32> %b_low, <4 x
 ; CHECK-NEXT:    pop.w {r7, lr}
 ; CHECK-NEXT:    b use_int32x4_t
 entry:
-  %adc_low = tail call { <4 x i32>, i32 } @llvm.arm.mve.vsbc.v4i32(<4 x i32> %a_low, <4 x i32> %b_low, i32 0)
+  %adc_low = tail call { <4 x i32>, i32 } @llvm.arm.mve.vsbc.v4i32(<4 x i32> %a_low, <4 x i32> %b_low, i32 536870912)
   %carry = extractvalue { <4 x i32>, i32 } %adc_low, 1
   %result_low = extractvalue { <4 x i32>, i32 } %adc_low, 0
   tail call void @use_int32x4_t(<4 x i32> %result_low)

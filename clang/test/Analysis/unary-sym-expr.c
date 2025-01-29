@@ -11,9 +11,9 @@ int test(int x, int y) {
   clang_analyzer_dump(-x);       // expected-warning{{-reg_$0<int x>}}
   clang_analyzer_dump(~x);       // expected-warning{{~reg_$0<int x>}}
   int z = x + y;
-  clang_analyzer_dump(-z);       // expected-warning{{-((reg_$0<int x>) + (reg_$1<int y>))}}
-  clang_analyzer_dump(-(x + y)); // expected-warning{{-((reg_$0<int x>) + (reg_$1<int y>))}}
-  clang_analyzer_dump(-x + y);   // expected-warning{{(-reg_$0<int x>) + (reg_$1<int y>)}}
+  clang_analyzer_dump(-z);       // expected-warning{{-((reg_$0<int x>) + (reg_$3<int y>))}}
+  clang_analyzer_dump(-(x + y)); // expected-warning{{-((reg_$0<int x>) + (reg_$3<int y>))}}
+  clang_analyzer_dump(-x + y);   // expected-warning{{(-reg_$0<int x>) + (reg_$3<int y>)}}
 
   if (-x == 0) {
     clang_analyzer_eval(-x == 0); // expected-warning{{TRUE}}

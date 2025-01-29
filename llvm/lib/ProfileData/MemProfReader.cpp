@@ -32,6 +32,7 @@
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/ProfileData/MemProfReader.h"
+#include "llvm/ProfileData/MemProfYAML.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
@@ -45,7 +46,7 @@ namespace llvm {
 namespace memprof {
 namespace {
 template <class T = uint64_t> inline T alignedRead(const char *Ptr) {
-  static_assert(std::is_pod<T>::value, "Not a pod type.");
+  static_assert(std::is_integral_v<T>, "Not an integral type");
   assert(reinterpret_cast<size_t>(Ptr) % sizeof(T) == 0 && "Unaligned Read");
   return *reinterpret_cast<const T *>(Ptr);
 }
@@ -500,8 +501,7 @@ Error RawMemProfReader::mapRawProfileToRecords() {
       Callstack.append(Frames.begin(), Frames.end());
     }
 
-    CallStackId CSId = hashCallStack(Callstack);
-    MemProfData.CallStacks.insert({CSId, Callstack});
+    CallStackId CSId = MemProfData.addCallStack(Callstack);
 
     // We attach the memprof record to each function bottom-up including the
     // first non-inline frame.
@@ -520,11 +520,8 @@ Error RawMemProfReader::mapRawProfileToRecords() {
     // Some functions may have only callsite data and no allocation data. Here
     // we insert a new entry for callsite data if we need to.
     IndexedMemProfRecord &Record = MemProfData.Records[Id];
-    for (LocationPtr Loc : Locs) {
-      CallStackId CSId = hashCallStack(*Loc);
-      MemProfData.CallStacks.insert({CSId, *Loc});
-      Record.CallSiteIds.push_back(CSId);
-    }
+    for (LocationPtr Loc : Locs)
+      Record.CallSiteIds.push_back(MemProfData.addCallStack(*Loc));
   }
 
   return Error::success();
@@ -599,8 +596,8 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
   // Drop the entries where the callstack is empty.
   for (const uint64_t Id : EntriesToErase) {
     StackMap.erase(Id);
-    if(CallstackProfileData[Id].AccessHistogramSize > 0)
-      free((void*) CallstackProfileData[Id].AccessHistogram);
+    if (CallstackProfileData[Id].AccessHistogramSize > 0)
+      free((void *)CallstackProfileData[Id].AccessHistogram);
     CallstackProfileData.erase(Id);
   }
 
@@ -755,6 +752,36 @@ Error RawMemProfReader::readNextRecord(
   return MemProfReader::readNextRecord(GuidRecord, IdToFrameCallback);
 }
 
+Expected<std::unique_ptr<YAMLMemProfReader>>
+YAMLMemProfReader::create(const Twine &Path) {
+  auto BufferOr = MemoryBuffer::getFileOrSTDIN(Path, /*IsText=*/true);
+  if (std::error_code EC = BufferOr.getError())
+    return report(errorCodeToError(EC), Path.getSingleStringRef());
+
+  std::unique_ptr<MemoryBuffer> Buffer(BufferOr.get().release());
+  return create(std::move(Buffer));
+}
+
+Expected<std::unique_ptr<YAMLMemProfReader>>
+YAMLMemProfReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
+  auto Reader = std::make_unique<YAMLMemProfReader>();
+  Reader->parse(Buffer->getBuffer());
+  return std::move(Reader);
+}
+
+bool YAMLMemProfReader::hasFormat(const StringRef Path) {
+  auto BufferOr = MemoryBuffer::getFileOrSTDIN(Path, /*IsText=*/true);
+  if (!BufferOr)
+    return false;
+
+  std::unique_ptr<MemoryBuffer> Buffer(BufferOr.get().release());
+  return hasFormat(*Buffer);
+}
+
+bool YAMLMemProfReader::hasFormat(const MemoryBuffer &Buffer) {
+  return Buffer.getBuffer().starts_with("---");
+}
+
 void YAMLMemProfReader::parse(StringRef YAMLData) {
   memprof::AllMemProfData Doc;
   yaml::Input Yin(YAMLData);
@@ -769,9 +796,7 @@ void YAMLMemProfReader::parse(StringRef YAMLData) {
     IndexedCallStack.reserve(CallStack.size());
     for (const Frame &F : CallStack)
       IndexedCallStack.push_back(MemProfData.addFrame(F));
-    CallStackId CSId = hashCallStack(IndexedCallStack);
-    MemProfData.CallStacks.try_emplace(CSId, std::move(IndexedCallStack));
-    return CSId;
+    return MemProfData.addCallStack(std::move(IndexedCallStack));
   };
 
   for (const auto &[GUID, Record] : Doc.HeapProfileRecords) {

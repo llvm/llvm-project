@@ -173,7 +173,8 @@ using namespace InstructionSet;
 
 namespace SPIRV {
 /// Parses the name part of the demangled builtin call.
-std::string lookupBuiltinNameHelper(StringRef DemangledCall) {
+std::string lookupBuiltinNameHelper(StringRef DemangledCall,
+                                    FPDecorationId *DecorationId) {
   const static std::string PassPrefix = "(anonymous namespace)::";
   std::string BuiltinName;
   // Itanium Demangler result may have "(anonymous namespace)::" prefix
@@ -231,10 +232,17 @@ std::string lookupBuiltinNameHelper(StringRef DemangledCall) {
       "ReadClockKHR|SubgroupBlockReadINTEL|SubgroupImageBlockReadINTEL|"
       "SubgroupImageMediaBlockReadINTEL|SubgroupImageMediaBlockWriteINTEL|"
       "Convert|"
-      "UConvert|SConvert|FConvert|SatConvert).*)_R.*");
+      "UConvert|SConvert|FConvert|SatConvert).*)_R[^_]*_?(\\w+)?.*");
   std::smatch Match;
-  if (std::regex_match(BuiltinName, Match, SpvWithR) && Match.size() > 2)
-    BuiltinName = Match[1].str();
+  if (std::regex_match(BuiltinName, Match, SpvWithR) && Match.size() > 1) {
+    std::ssub_match SubMatch;
+    if (DecorationId && Match.size() > 3) {
+      SubMatch = Match[3];
+      *DecorationId = demangledPostfixToDecorationId(SubMatch.str());
+    }
+    SubMatch = Match[1];
+    BuiltinName = SubMatch.str();
+  }
 
   return BuiltinName;
 }
@@ -527,15 +535,15 @@ extern Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
 static SPIRV::MemorySemantics::MemorySemantics
 getSPIRVMemSemantics(std::memory_order MemOrder) {
   switch (MemOrder) {
-  case std::memory_order::memory_order_relaxed:
+  case std::memory_order_relaxed:
     return SPIRV::MemorySemantics::None;
-  case std::memory_order::memory_order_acquire:
+  case std::memory_order_acquire:
     return SPIRV::MemorySemantics::Acquire;
-  case std::memory_order::memory_order_release:
+  case std::memory_order_release:
     return SPIRV::MemorySemantics::Release;
-  case std::memory_order::memory_order_acq_rel:
+  case std::memory_order_acq_rel:
     return SPIRV::MemorySemantics::AcquireRelease;
-  case std::memory_order::memory_order_seq_cst:
+  case std::memory_order_seq_cst:
     return SPIRV::MemorySemantics::SequentiallyConsistent;
   default:
     report_fatal_error("Unknown CL memory scope");
@@ -583,6 +591,15 @@ static Register buildScopeReg(Register CLScopeRegister,
   return buildConstantIntReg32(Scope, MIRBuilder, GR);
 }
 
+static void setRegClassIfNull(Register Reg, MachineRegisterInfo *MRI,
+                              SPIRVGlobalRegistry *GR) {
+  if (MRI->getRegClassOrNull(Reg))
+    return;
+  SPIRVType *SpvType = GR->getSPIRVTypeForVReg(Reg);
+  MRI->setRegClass(Reg,
+                   SpvType ? GR->getRegClass(SpvType) : &SPIRV::iIDRegClass);
+}
+
 static Register buildMemSemanticsReg(Register SemanticsRegister,
                                      Register PtrRegister, unsigned &Semantics,
                                      MachineIRBuilder &MIRBuilder,
@@ -594,8 +611,7 @@ static Register buildMemSemanticsReg(Register SemanticsRegister,
     Semantics =
         getSPIRVMemSemantics(Order) |
         getMemSemanticsForStorageClass(GR->getPointerStorageClass(PtrRegister));
-
-    if (Order == Semantics) {
+    if (static_cast<unsigned>(Order) == Semantics) {
       MRI->setRegClass(SemanticsRegister, &SPIRV::iIDRegClass);
       return SemanticsRegister;
     }
@@ -740,9 +756,9 @@ static bool buildAtomicCompareExchangeInst(
         static_cast<std::memory_order>(getIConstVal(Call->Arguments[4], MRI));
     MemSemEqual = getSPIRVMemSemantics(MemOrdEq) | MemSemStorage;
     MemSemUnequal = getSPIRVMemSemantics(MemOrdNeq) | MemSemStorage;
-    if (MemOrdEq == MemSemEqual)
+    if (static_cast<unsigned>(MemOrdEq) == MemSemEqual)
       MemSemEqualReg = Call->Arguments[3];
-    if (MemOrdNeq == MemSemEqual)
+    if (static_cast<unsigned>(MemOrdNeq) == MemSemEqual)
       MemSemUnequalReg = Call->Arguments[4];
   }
   if (!MemSemEqualReg.isValid())
@@ -1160,7 +1176,7 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
         MIRBuilder.buildInstr(TargetOpcode::G_BUILD_VECTOR).addDef(VecReg);
     for (unsigned i = 1; i < Call->Arguments.size(); i++) {
       MIB.addUse(Call->Arguments[i]);
-      MRI->setRegClass(Call->Arguments[i], &SPIRV::iIDRegClass);
+      setRegClassIfNull(Call->Arguments[i], MRI, GR);
     }
     insertAssignInstr(VecReg, nullptr, VecType, GR, MIRBuilder,
                       MIRBuilder.getMF().getRegInfo());
@@ -1176,7 +1192,7 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
     MIB.addImm(GroupBuiltin->GroupOperation);
   if (Call->Arguments.size() > 0) {
     MIB.addUse(Arg0.isValid() ? Arg0 : Call->Arguments[0]);
-    MRI->setRegClass(Call->Arguments[0], &SPIRV::iIDRegClass);
+    setRegClassIfNull(Call->Arguments[0], MRI, GR);
     if (VecReg.isValid())
       MIB.addUse(VecReg);
     else
@@ -1633,8 +1649,14 @@ static bool generateICarryBorrowInst(const SPIRV::IncomingCall *Call,
     }
 
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-  Register ResReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
-  MRI->setRegClass(ResReg, &SPIRV::iIDRegClass);
+  Register ResReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
+  if (const TargetRegisterClass *DstRC =
+          MRI->getRegClassOrNull(Call->Arguments[1])) {
+    MRI->setRegClass(ResReg, DstRC);
+    MRI->setType(ResReg, MRI->getType(Call->Arguments[1]));
+  } else {
+    MRI->setType(ResReg, LLT::scalar(64));
+  }
   GR->assignSPIRVTypeToVReg(RetType, ResReg, MIRBuilder.getMF());
   MIRBuilder.buildInstr(Opcode)
       .addDef(ResReg)
@@ -2154,14 +2176,8 @@ static SPIRVType *
 getOrCreateSPIRVDeviceEventPointer(MachineIRBuilder &MIRBuilder,
                                    SPIRVGlobalRegistry *GR) {
   LLVMContext &Context = MIRBuilder.getMF().getFunction().getContext();
-  Type *OpaqueType = StructType::getTypeByName(Context, "spirv.DeviceEvent");
-  if (!OpaqueType)
-    OpaqueType = StructType::getTypeByName(Context, "opencl.clk_event_t");
-  if (!OpaqueType)
-    OpaqueType = StructType::create(Context, "spirv.DeviceEvent");
-  unsigned SC0 = storageClassToAddressSpace(SPIRV::StorageClass::Function);
   unsigned SC1 = storageClassToAddressSpace(SPIRV::StorageClass::Generic);
-  Type *PtrType = PointerType::get(PointerType::get(OpaqueType, SC0), SC1);
+  Type *PtrType = PointerType::get(Context, SC1);
   return GR->getOrCreateSPIRVType(PtrType, MIRBuilder);
 }
 
@@ -2664,16 +2680,7 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
   return false;
 }
 
-Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
-                                       unsigned ArgIdx, LLVMContext &Ctx) {
-  SmallVector<StringRef, 10> BuiltinArgsTypeStrs;
-  StringRef BuiltinArgs =
-      DemangledCall.slice(DemangledCall.find('(') + 1, DemangledCall.find(')'));
-  BuiltinArgs.split(BuiltinArgsTypeStrs, ',', -1, false);
-  if (ArgIdx >= BuiltinArgsTypeStrs.size())
-    return nullptr;
-  StringRef TypeStr = BuiltinArgsTypeStrs[ArgIdx].trim();
-
+Type *parseBuiltinCallArgumentType(StringRef TypeStr, LLVMContext &Ctx) {
   // Parse strings representing OpenCL builtin types.
   if (hasBuiltinTypePrefix(TypeStr)) {
     // OpenCL builtin types in demangled call strings have the following format:
@@ -2715,6 +2722,29 @@ Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
         BaseType->isVoidTy() ? Type::getInt8Ty(Ctx) : BaseType, VecElts, false);
 
   return BaseType;
+}
+
+bool parseBuiltinTypeStr(SmallVector<StringRef, 10> &BuiltinArgsTypeStrs,
+                         const StringRef DemangledCall, LLVMContext &Ctx) {
+  auto Pos1 = DemangledCall.find('(');
+  if (Pos1 == StringRef::npos)
+    return false;
+  auto Pos2 = DemangledCall.find(')');
+  if (Pos2 == StringRef::npos || Pos1 > Pos2)
+    return false;
+  DemangledCall.slice(Pos1 + 1, Pos2)
+      .split(BuiltinArgsTypeStrs, ',', -1, false);
+  return true;
+}
+
+Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
+                                       unsigned ArgIdx, LLVMContext &Ctx) {
+  SmallVector<StringRef, 10> BuiltinArgsTypeStrs;
+  parseBuiltinTypeStr(BuiltinArgsTypeStrs, DemangledCall, Ctx);
+  if (ArgIdx >= BuiltinArgsTypeStrs.size())
+    return nullptr;
+  StringRef TypeStr = BuiltinArgsTypeStrs[ArgIdx].trim();
+  return parseBuiltinCallArgumentType(TypeStr, Ctx);
 }
 
 struct BuiltinType {

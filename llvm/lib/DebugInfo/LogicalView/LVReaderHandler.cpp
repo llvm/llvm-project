@@ -88,6 +88,9 @@ Error LVReaderHandler::handleArchive(LVReaders &Readers, StringRef Filename,
                                Filename.str().c_str());
   }
 
+  if (Err)
+    return createStringError(errorToErrorCode(std::move(Err)), "%s",
+                             Filename.str().c_str());
   return Error::success();
 }
 

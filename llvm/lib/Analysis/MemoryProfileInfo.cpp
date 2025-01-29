@@ -42,6 +42,11 @@ cl::opt<unsigned> MemProfMinAveLifetimeAccessDensityHotThreshold(
     cl::desc("The minimum TotalLifetimeAccessDensity / AllocCount for an "
              "allocation to be considered hot"));
 
+cl::opt<bool>
+    MemProfUseHotHints("memprof-use-hot-hints", cl::init(false), cl::Hidden,
+                       cl::desc("Enable use of hot hints (only supported for "
+                                "unambigously hot allocations)"));
+
 cl::opt<bool> MemProfReportHintedSizes(
     "memprof-report-hinted-sizes", cl::init(false), cl::Hidden,
     cl::desc("Report total allocation sizes of hinted allocations"));
@@ -60,8 +65,9 @@ AllocationType llvm::memprof::getAllocType(uint64_t TotalLifetimeAccessDensity,
 
   // The access densities are multiplied by 100 to hold 2 decimal places of
   // precision, so need to divide by 100.
-  if (((float)TotalLifetimeAccessDensity) / AllocCount / 100 >
-      MemProfMinAveLifetimeAccessDensityHotThreshold)
+  if (MemProfUseHotHints &&
+      ((float)TotalLifetimeAccessDensity) / AllocCount / 100 >
+          MemProfMinAveLifetimeAccessDensityHotThreshold)
     return AllocationType::Hot;
 
   return AllocationType::NotCold;
@@ -141,7 +147,7 @@ void CallStackTrie::addCallStack(
       First = false;
       if (Alloc) {
         assert(AllocStackId == StackId);
-        Alloc->AllocTypes |= static_cast<uint8_t>(AllocType);
+        Alloc->addAllocType(AllocType);
       } else {
         AllocStackId = StackId;
         Alloc = new CallStackTrieNode(AllocType);
@@ -153,7 +159,7 @@ void CallStackTrie::addCallStack(
     auto Next = Curr->Callers.find(StackId);
     if (Next != Curr->Callers.end()) {
       Curr = Next->second;
-      Curr->AllocTypes |= static_cast<uint8_t>(AllocType);
+      Curr->addAllocType(AllocType);
       continue;
     }
     // Otherwise add a new caller node.
@@ -164,8 +170,6 @@ void CallStackTrie::addCallStack(
   assert(Curr);
   Curr->ContextSizeInfo.insert(Curr->ContextSizeInfo.end(),
                                ContextSizeInfo.begin(), ContextSizeInfo.end());
-  std::vector<ContextTotalSize> AllContextSizeInfo;
-  collectContextSizeInfo(Curr, AllContextSizeInfo);
 }
 
 void CallStackTrie::addCallStack(MDNode *MIB) {
@@ -224,6 +228,15 @@ void CallStackTrie::collectContextSizeInfo(
     collectContextSizeInfo(Caller.second, ContextSizeInfo);
 }
 
+void CallStackTrie::convertHotToNotCold(CallStackTrieNode *Node) {
+  if (Node->hasAllocType(AllocationType::Hot)) {
+    Node->removeAllocType(AllocationType::Hot);
+    Node->addAllocType(AllocationType::NotCold);
+  }
+  for (auto &Caller : Node->Callers)
+    convertHotToNotCold(Caller.second);
+}
+
 // Recursive helper to trim contexts and create metadata nodes.
 // Caller should have pushed Node's loc to MIBCallStack. Doing this in the
 // caller makes it simpler to handle the many early returns in this method.
@@ -280,26 +293,46 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
   return true;
 }
 
+void CallStackTrie::addSingleAllocTypeAttribute(CallBase *CI, AllocationType AT,
+                                                StringRef Descriptor) {
+  addAllocTypeAttribute(CI->getContext(), CI, AT);
+  if (MemProfReportHintedSizes) {
+    std::vector<ContextTotalSize> ContextSizeInfo;
+    collectContextSizeInfo(Alloc, ContextSizeInfo);
+    for (const auto &[FullStackId, TotalSize] : ContextSizeInfo) {
+      errs() << "MemProf hinting: Total size for full allocation context hash "
+             << FullStackId << " and " << Descriptor << " alloc type "
+             << getAllocTypeAttributeString(AT) << ": " << TotalSize << "\n";
+    }
+  }
+}
+
 // Build and attach the minimal necessary MIB metadata. If the alloc has a
 // single allocation type, add a function attribute instead. Returns true if
 // memprof metadata attached, false if not (attribute added).
 bool CallStackTrie::buildAndAttachMIBMetadata(CallBase *CI) {
-  auto &Ctx = CI->getContext();
   if (hasSingleAllocType(Alloc->AllocTypes)) {
-    addAllocTypeAttribute(Ctx, CI, (AllocationType)Alloc->AllocTypes);
-    if (MemProfReportHintedSizes) {
-      std::vector<ContextTotalSize> ContextSizeInfo;
-      collectContextSizeInfo(Alloc, ContextSizeInfo);
-      for (const auto &[FullStackId, TotalSize] : ContextSizeInfo) {
-        errs()
-            << "MemProf hinting: Total size for full allocation context hash "
-            << FullStackId << " and single alloc type "
-            << getAllocTypeAttributeString((AllocationType)Alloc->AllocTypes)
-            << ": " << TotalSize << "\n";
-      }
-    }
+    addSingleAllocTypeAttribute(CI, (AllocationType)Alloc->AllocTypes,
+                                "single");
     return false;
   }
+  // If there were any hot allocation contexts, the Alloc trie node would have
+  // the Hot type set. If so, because we don't currently support cloning for hot
+  // contexts, they should be converted to NotCold. This happens in the cloning
+  // support anyway, however, doing this now enables more aggressive context
+  // trimming when building the MIB metadata (and possibly may make the
+  // allocation have a single NotCold allocation type), greatly reducing
+  // overheads in bitcode, cloning memory and cloning time.
+  if (Alloc->hasAllocType(AllocationType::Hot)) {
+    convertHotToNotCold(Alloc);
+    // Check whether we now have a single alloc type.
+    if (hasSingleAllocType(Alloc->AllocTypes)) {
+      addSingleAllocTypeAttribute(CI, (AllocationType)Alloc->AllocTypes,
+                                  "single");
+      return false;
+    }
+  }
+  auto &Ctx = CI->getContext();
   std::vector<uint64_t> MIBCallStack;
   MIBCallStack.push_back(AllocStackId);
   std::vector<Metadata *> MIBNodes;
@@ -316,8 +349,9 @@ bool CallStackTrie::buildAndAttachMIBMetadata(CallBase *CI) {
   // If there exists corner case that CallStackTrie has one chain to leaf
   // and all node in the chain have multi alloc type, conservatively give
   // it non-cold allocation type.
-  // FIXME: Avoid this case before memory profile created.
-  addAllocTypeAttribute(Ctx, CI, AllocationType::NotCold);
+  // FIXME: Avoid this case before memory profile created. Alternatively, select
+  // hint based on fraction cold.
+  addSingleAllocTypeAttribute(CI, AllocationType::NotCold, "indistinguishable");
   return false;
 }
 
@@ -343,4 +377,21 @@ template <> uint64_t CallStack<MDNode, MDNode::op_iterator>::back() const {
   assert(N);
   return mdconst::dyn_extract<ConstantInt>(N->operands().back())
       ->getZExtValue();
+}
+
+MDNode *MDNode::getMergedMemProfMetadata(MDNode *A, MDNode *B) {
+  // TODO: Support more sophisticated merging, such as selecting the one with
+  // more bytes allocated, or implement support for carrying multiple allocation
+  // leaf contexts. For now, keep the first one.
+  if (A)
+    return A;
+  return B;
+}
+
+MDNode *MDNode::getMergedCallsiteMetadata(MDNode *A, MDNode *B) {
+  // TODO: Support more sophisticated merging, which will require support for
+  // carrying multiple contexts. For now, keep the first one.
+  if (A)
+    return A;
+  return B;
 }

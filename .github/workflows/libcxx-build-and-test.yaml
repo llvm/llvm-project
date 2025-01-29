@@ -37,18 +37,19 @@ jobs:
   stage1:
     if: github.repository_owner == 'llvm'
     runs-on: libcxx-self-hosted-linux
-    container: ghcr.io/llvm/libcxx-linux-builder:0fd6f684b9c84c32d6cbfd9742402e788b2879f1
+    container: ghcr.io/llvm/libcxx-linux-builder:d8a0709b1090350a7fe3604d8ab78c7d62f10698
     continue-on-error: false
     strategy:
       fail-fast: false
       matrix:
         config: [
+          'frozen-cxx03-headers',
           'generic-cxx03',
           'generic-cxx26',
           'generic-modules'
         ]
-        cc: [  'clang-19' ]
-        cxx: [ 'clang++-19' ]
+        cc: [  'clang-20' ]
+        cxx: [ 'clang++-20' ]
         include:
           - config: 'generic-gcc'
             cc: 'gcc-14'
@@ -74,7 +75,7 @@ jobs:
   stage2:
     if: github.repository_owner == 'llvm'
     runs-on: libcxx-self-hosted-linux
-    container: ghcr.io/llvm/libcxx-linux-builder:0fd6f684b9c84c32d6cbfd9742402e788b2879f1
+    container: ghcr.io/llvm/libcxx-linux-builder:d8a0709b1090350a7fe3604d8ab78c7d62f10698
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -87,18 +88,18 @@ jobs:
           'generic-cxx20',
           'generic-cxx23'
         ]
-        cc: [ 'clang-19' ]
-        cxx: [ 'clang++-19' ]
+        cc: [ 'clang-20' ]
+        cxx: [ 'clang++-20' ]
         include:
           - config: 'generic-gcc-cxx11'
             cc: 'gcc-14'
             cxx: 'g++-14'
           - config: 'generic-cxx23'
-            cc: 'clang-17'
-            cxx: 'clang++-17'
-          - config: 'generic-cxx26'
             cc: 'clang-18'
             cxx: 'clang++-18'
+          - config: 'generic-cxx26'
+            cc: 'clang-19'
+            cxx: 'clang++-19'
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}
@@ -162,14 +163,14 @@ jobs:
         - config: 'generic-msan'
           machine: libcxx-self-hosted-linux
     runs-on: ${{ matrix.machine }}
-    container: ghcr.io/llvm/libcxx-linux-builder:0fd6f684b9c84c32d6cbfd9742402e788b2879f1
+    container: ghcr.io/llvm/libcxx-linux-builder:d8a0709b1090350a7fe3604d8ab78c7d62f10698
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
-          CC: clang-19
-          CXX: clang++-19
+          CC: clang-20
+          CXX: clang++-20
       - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: always()
         with:

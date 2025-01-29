@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_INITIALIZER_LIST
-#define _LIBCPP_INITIALIZER_LIST
+#ifndef _LIBCPP___CXX03_INITIALIZER_LIST
+#define _LIBCPP___CXX03_INITIALIZER_LIST
 
 /*
     initializer_list synopsis
@@ -95,4 +95,4 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Ep* end(initia
 
 } // namespace std
 
-#endif // _LIBCPP_INITIALIZER_LIST
+#endif // _LIBCPP___CXX03_INITIALIZER_LIST

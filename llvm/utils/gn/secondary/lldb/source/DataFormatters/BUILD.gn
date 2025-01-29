@@ -18,6 +18,8 @@ static_library("DataFormatters") {
     "FormatCache.cpp",
     "FormatClasses.cpp",
     "FormatManager.cpp",
+    "FormatterBytecode.cpp",
+    "FormatterSection.cpp",
     "FormattersHelpers.cpp",
     "LanguageCategory.cpp",
     "StringPrinter.cpp",

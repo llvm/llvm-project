@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_COMP_H
-#define _LIBCPP___ALGORITHM_COMP_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_COMP_H
+#define _LIBCPP___CXX03___ALGORITHM_COMP_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/desugars_to.h>
@@ -46,4 +46,4 @@ inline const bool __desugars_to_v<__less_tag, __less<>, _Tp, _Tp> = true;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_COMP_H
+#endif // _LIBCPP___CXX03___ALGORITHM_COMP_H

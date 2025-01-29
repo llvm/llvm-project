@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_FOLD_H
-#define _LIBCPP___ALGORITHM_FOLD_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_FOLD_H
+#define _LIBCPP___CXX03___ALGORITHM_FOLD_H
 
 #include <__cxx03/__concepts/assignable.h>
 #include <__cxx03/__concepts/convertible_to.h>
@@ -125,4 +125,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_FOLD_H
+#endif // _LIBCPP___CXX03___ALGORITHM_FOLD_H

@@ -1,0 +1,45 @@
+header: locale.h
+header_template: locale.h.def
+types:
+  - type_name: locale_t
+  - type_name: struct_lconv
+functions:
+  - name: localeconv
+    standards:
+      - stdc
+    return_type: struct lconv *
+    arguments:
+      - type: void
+  - name: duplocale
+    standards:
+      - stdc
+    return_type: locale_t
+    arguments:
+      - type: locale_t
+  - name: freelocale
+    standards:
+      - stdc
+    return_type: void
+    arguments:
+      - type: locale_t
+  - name: newlocale
+    standards:
+      - stdc
+    return_type: locale_t
+    arguments:
+      - type: int
+      - type: const char *
+      - type: locale_t
+  - name: setlocale
+    standards:
+      - stdc
+    return_type: char *
+    arguments:
+      - type: int
+      - type: const char *
+  - name: uselocale
+    standards:
+      - stdc
+    return_type: locale_t
+    arguments:
+      - type: locale_t

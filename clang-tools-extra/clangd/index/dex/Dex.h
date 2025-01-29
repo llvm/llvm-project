@@ -146,6 +146,8 @@ private:
   // Set of files which were used during this index build.
   llvm::StringSet<> Files;
   // Contents of the index (symbols, references, etc.)
+  // This is only populated if `Files` is, which applies to some but not all
+  // consumers of this class.
   IndexContents IdxContents = IndexContents::None;
   // Size of memory retained by KeepAlive.
   size_t BackingDataSize = 0;

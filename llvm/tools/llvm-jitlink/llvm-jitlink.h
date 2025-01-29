@@ -15,9 +15,9 @@
 
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/EPCIndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/LazyObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/LazyReexports.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/RedirectionManager.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
@@ -33,20 +33,18 @@ namespace llvm {
 struct Session {
 
   struct LazyLinkingSupport {
-    LazyLinkingSupport(std::unique_ptr<orc::EPCIndirectionUtils> EPCIU,
-                       std::unique_ptr<orc::RedirectableSymbolManager> RSMgr,
-                       orc::ObjectLinkingLayer &ObjLinkingLayer)
-        : EPCIU(std::move(EPCIU)), RSMgr(std::move(RSMgr)),
-          LazyObjLinkingLayer(ObjLinkingLayer,
-                              this->EPCIU->getLazyCallThroughManager(),
-                              *this->RSMgr) {}
-    ~LazyLinkingSupport() {
-      if (auto Err = EPCIU->cleanup())
-        LazyObjLinkingLayer.getExecutionSession().reportError(std::move(Err));
-    }
+    LazyLinkingSupport(
+        std::unique_ptr<orc::RedirectableSymbolManager> RSMgr,
+        std::shared_ptr<orc::SimpleLazyReexportsSpeculator> Speculator,
+        std::unique_ptr<orc::LazyReexportsManager> LRMgr,
+        orc::ObjectLinkingLayer &ObjLinkingLayer)
+        : RSMgr(std::move(RSMgr)), Speculator(std::move(Speculator)),
+          LRMgr(std::move(LRMgr)),
+          LazyObjLinkingLayer(ObjLinkingLayer, *this->LRMgr) {}
 
-    std::unique_ptr<orc::EPCIndirectionUtils> EPCIU;
     std::unique_ptr<orc::RedirectableSymbolManager> RSMgr;
+    std::shared_ptr<orc::SimpleLazyReexportsSpeculator> Speculator;
+    std::unique_ptr<orc::LazyReexportsManager> LRMgr;
     orc::LazyObjectLinkingLayer LazyObjLinkingLayer;
   };
 
@@ -58,6 +56,7 @@ struct Session {
   std::unique_ptr<LazyLinkingSupport> LazyLinking;
   orc::JITDylibSearchOrder JDSearchOrder;
   SubtargetFeatures Features;
+  std::vector<std::pair<std::string, orc::SymbolStringPtr>> LazyFnExecOrder;
 
   ~Session();
 
@@ -66,6 +65,16 @@ struct Session {
   void dumpSessionInfo(raw_ostream &OS);
   void modifyPassConfig(jitlink::LinkGraph &G,
                         jitlink::PassConfiguration &PassConfig);
+
+  /// For -check: wait for all files that are referenced (transitively) from
+  /// the entry point *file* to be linked. (ORC's usual dependence tracking is
+  /// to fine-grained here: a lookup of the main symbol will return as soon as
+  /// all reachable symbols have been linked, but testcases may want to
+  /// inspect side-effects in unreachable symbols)..
+  void waitForFilesLinkedFromEntryPointFile() {
+    std::unique_lock<std::mutex> Lock(M);
+    return ActiveLinksCV.wait(Lock, [this]() { return ActiveLinks == 0; });
+  }
 
   using MemoryRegionInfo = RuntimeDyldChecker::MemoryRegionInfo;
 
@@ -116,6 +125,9 @@ struct Session {
 
   DynLibJDMap DynLibJDs;
 
+  std::mutex M;
+  std::condition_variable ActiveLinksCV;
+  size_t ActiveLinks = 0;
   SymbolInfoMap SymbolInfos;
   FileInfoMap FileInfos;
 

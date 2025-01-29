@@ -1,7 +1,7 @@
-; RUN: llc -O2 -march=bpfel -mattr=+alu32 < %s | FileCheck %s
-; RUN: llc -O2 -march=bpfel -mcpu=v3 < %s | FileCheck %s
-; RUN: llc -O2 -march=bpfeb -mattr=+alu32 < %s | FileCheck %s
-; RUN: llc -O2 -march=bpfeb -mcpu=v3 < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=bpfel -mattr=+alu32 < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=bpfel -mcpu=v3 < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=bpfeb -mattr=+alu32 < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=bpfeb -mcpu=v3 < %s | FileCheck %s
 ;
 ; long zext(unsigned int a)
 ; {

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TUPLE_TUPLE_SIZE_H
-#define _LIBCPP___TUPLE_TUPLE_SIZE_H
+#ifndef _LIBCPP___CXX03___TUPLE_TUPLE_SIZE_H
+#define _LIBCPP___CXX03___TUPLE_TUPLE_SIZE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/tuple.h>
@@ -72,4 +72,4 @@ inline constexpr size_t tuple_size_v = tuple_size<_Tp>::value;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TUPLE_TUPLE_SIZE_H
+#endif // _LIBCPP___CXX03___TUPLE_TUPLE_SIZE_H

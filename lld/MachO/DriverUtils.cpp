@@ -34,13 +34,14 @@ using namespace llvm::sys;
 using namespace lld;
 using namespace lld::macho;
 
-// Create prefix string literals used in Options.td
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Options.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+// Create prefix string literals used in Options.td
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Options.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 // Create table mapping all options defined in Options.td
 static constexpr OptTable::Info optInfo[] = {
@@ -65,7 +66,8 @@ static constexpr OptTable::Info optInfo[] = {
 #undef OPTION
 };
 
-MachOOptTable::MachOOptTable() : GenericOptTable(optInfo) {}
+MachOOptTable::MachOOptTable()
+    : GenericOptTable(OptionStrTable, OptionPrefixesTable, optInfo) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.

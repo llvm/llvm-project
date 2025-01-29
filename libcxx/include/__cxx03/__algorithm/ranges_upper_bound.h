@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_UPPER_BOUND_H
-#define _LIBCPP___ALGORITHM_RANGES_UPPER_BOUND_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_RANGES_UPPER_BOUND_H
+#define _LIBCPP___CXX03___ALGORITHM_RANGES_UPPER_BOUND_H
 
 #include <__cxx03/__algorithm/iterator_operations.h>
 #include <__cxx03/__algorithm/lower_bound.h>
@@ -71,4 +71,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP___ALGORITHM_RANGES_UPPER_BOUND_H
+#endif // _LIBCPP___CXX03___ALGORITHM_RANGES_UPPER_BOUND_H

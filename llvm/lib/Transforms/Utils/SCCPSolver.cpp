@@ -147,6 +147,16 @@ static bool refineInstruction(SCCPSolver &Solver,
         Changed = true;
       }
     }
+  } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&Inst)) {
+    if (GEP->hasNoUnsignedWrap() || !GEP->hasNoUnsignedSignedWrap())
+      return false;
+
+    if (all_of(GEP->indices(),
+               [&](Value *V) { return GetRange(V).isAllNonNegative(); })) {
+      GEP->setNoWrapFlags(GEP->getNoWrapFlags() |
+                          GEPNoWrapFlags::noUnsignedWrap());
+      Changed = true;
+    }
   }
 
   return Changed;

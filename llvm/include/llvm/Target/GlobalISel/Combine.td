@@ -306,11 +306,23 @@ def ptr_add_immed_chain : GICombineRule<
          [{ return Helper.matchPtrAddImmedChain(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.applyPtrAddImmedChain(*${d}, ${matchinfo}); }])>;
 
+def shift_const_op : GICombinePatFrag<
+  (outs root:$dst), (ins),
+  !foreach(op,
+           [G_SHL, G_ASHR, G_LSHR],
+           (pattern (op $dst, $shifted, $amt)))>;
+def shift_result_matchdata : GIDefMatchData<"std::optional<int64_t>">;
 def shifts_too_big : GICombineRule<
-  (defs root:$root),
-  (match (wip_match_opcode G_SHL, G_ASHR, G_LSHR):$root,
-         [{ return Helper.matchShiftsTooBig(*${root}); }]),
-  (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
+  (defs root:$root, shift_result_matchdata:$matchinfo),
+  (match (shift_const_op $root):$mi,
+         [{ return Helper.matchShiftsTooBig(*${mi}, ${matchinfo}); }]),
+  (apply [{
+    if (${matchinfo}) {
+      Helper.replaceInstWithConstant(*${mi}, *${matchinfo});
+    } else {
+      Helper.replaceInstWithUndef(*${mi});
+    }
+  }])>;
 
 // Fold shift (shift base x), y -> shift base, (x+y), if shifts are same
 def shift_immed_matchdata : GIDefMatchData<"RegisterImmPair">;
@@ -424,11 +436,22 @@ def unary_undef_to_zero: GICombineRule<
          [{ return Helper.matchOperandIsUndef(*${root}, 1); }]),
   (apply [{ Helper.replaceInstWithConstant(*${root}, 0); }])>;
 
+def unary_undef_to_undef_frags : GICombinePatFrag<
+  (outs root:$dst), (ins),
+  !foreach(op,
+           [G_TRUNC, G_BITCAST, G_ANYEXT, G_PTRTOINT, G_INTTOPTR, G_FPTOSI,
+            G_FPTOUI],
+           (pattern (op $dst, $x), (G_IMPLICIT_DEF $x)))>;
+def unary_undef_to_undef : GICombineRule<
+  (defs root:$dst),
+  (match (unary_undef_to_undef_frags $dst)),
+  (apply [{ Helper.replaceInstWithUndef(*${dst}.getParent()); }])>;
+
 // Instructions where if any source operand is undef, the instruction can be
 // replaced with undef.
 def propagate_undef_any_op: GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_ADD, G_FPTOSI, G_FPTOUI, G_SUB, G_XOR, G_TRUNC, G_BITCAST, G_ANYEXT):$root,
+  (match (wip_match_opcode G_ADD, G_SUB, G_XOR):$root,
          [{ return Helper.matchAnyExplicitUseIsUndef(*${root}); }]),
   (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
 
@@ -1361,6 +1384,12 @@ def select_to_iminmax: GICombineRule<
          [{ return Helper.matchSelectIMinMax(${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFnMO(${root}, ${info}); }])>;
 
+def simplify_neg_minmax : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_SUB):$root,
+         [{ return Helper.matchSimplifyNegMinMax(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
 def match_selects : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (wip_match_opcode G_SELECT):$root,
@@ -1919,6 +1948,7 @@ def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      binop_left_undef_to_zero,
                                      binop_right_undef_to_undef,
                                      unary_undef_to_zero,
+                                     unary_undef_to_undef,
                                      propagate_undef_any_op,
                                      propagate_undef_all_ops,
                                      propagate_undef_shuffle_mask,
@@ -1996,7 +2026,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
     sub_add_reg, select_to_minmax,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
-    combine_concat_vector,
+    simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
     combine_use_vector_truncate, merge_combines, overflow_combines]>;
 

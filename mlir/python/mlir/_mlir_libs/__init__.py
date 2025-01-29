@@ -58,6 +58,7 @@ def get_include_dirs() -> Sequence[str]:
 # needs.
 
 _dialect_registry = None
+_load_on_create_dialects = None
 
 
 def get_dialect_registry():
@@ -69,6 +70,21 @@ def get_dialect_registry():
         _dialect_registry = ir.DialectRegistry()
 
     return _dialect_registry
+
+
+def append_load_on_create_dialect(dialect: str):
+    global _load_on_create_dialects
+    if _load_on_create_dialects is None:
+        _load_on_create_dialects = [dialect]
+    else:
+        _load_on_create_dialects.append(dialect)
+
+
+def get_load_on_create_dialects():
+    global _load_on_create_dialects
+    if _load_on_create_dialects is None:
+        _load_on_create_dialects = []
+    return _load_on_create_dialects
 
 
 def _site_initialize():
@@ -132,15 +148,35 @@ def _site_initialize():
             break
 
     class Context(ir._BaseContext):
-        def __init__(self, *args, **kwargs):
+        def __init__(self, load_on_create_dialects=None, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.append_dialect_registry(get_dialect_registry())
             for hook in post_init_hooks:
                 hook(self)
             if not disable_multithreading:
                 self.enable_multithreading(True)
-            if not disable_load_all_available_dialects:
-                self.load_all_available_dialects()
+            if load_on_create_dialects is not None:
+                logger.debug(
+                    "Loading all dialects from load_on_create_dialects arg %r",
+                    load_on_create_dialects,
+                )
+                for dialect in load_on_create_dialects:
+                    # This triggers loading the dialect into the context.
+                    _ = self.dialects[dialect]
+            else:
+                if disable_load_all_available_dialects:
+                    dialects = get_load_on_create_dialects()
+                    if dialects:
+                        logger.debug(
+                            "Loading all dialects from global load_on_create_dialects %r",
+                            dialects,
+                        )
+                        for dialect in dialects:
+                            # This triggers loading the dialect into the context.
+                            _ = self.dialects[dialect]
+                else:
+                    logger.debug("Loading all available dialects")
+                    self.load_all_available_dialects()
             if init_module:
                 logger.debug(
                     "Registering translations from initializer %r", init_module

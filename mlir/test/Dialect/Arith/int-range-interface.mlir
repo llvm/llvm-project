@@ -249,6 +249,18 @@ func.func @ceil_divsi(%arg0 : index) -> i1 {
     func.return %10 : i1
 }
 
+// There was a bug, which was causing this expr errorneously fold to constant
+// CHECK-LABEL: func @ceil_divsi_full_range
+// CHECK-SAME: (%[[arg:.*]]: index)
+// CHECK: %[[c64:.*]] = arith.constant 64 : index
+// CHECK: %[[ret:.*]] = arith.ceildivsi %[[arg]], %[[c64]] : index
+// CHECK: return %[[ret]]
+func.func @ceil_divsi_full_range(%6: index) -> index {
+  %c64 = arith.constant 64 : index
+  %55 = arith.ceildivsi %6, %c64 : index
+  return %55 : index
+}
+
 // CHECK-LABEL: func @ceil_divsi_intmin_bug_115293
 // CHECK: %[[ret:.*]] = arith.constant true
 // CHECK: return %[[ret]]

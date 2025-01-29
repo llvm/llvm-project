@@ -1,6 +1,6 @@
 ; Check that stubs generation for mips16 hard-float mode does not depend
 ; on the function 'use-soft-float' attribute's value.
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel \
+; RUN: llc -mtriple=mipsel-linux-gnu \
 ; RUN:     -mattr=mips16 -relocation-model=pic < %s | FileCheck %s
 
 define void @bar_hf() #0 {

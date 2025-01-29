@@ -98,3 +98,18 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub2
 ! CHECK: cuf.kernel
+
+subroutine sub3()
+  integer, device :: a(10), b(10)
+  integer :: lb = 1
+  integer :: n = 10
+  integer :: s = 1
+
+  !$cuf kernel do <<< *, * >>>
+  do i = lb, n, s
+    a(i) = a(i) * b(i)
+  end do
+end
+
+! CHECK-LABEL: func.func @_QPsub3
+! CHECK: cuf.kernel

@@ -344,4 +344,73 @@ void foo() {
 #pragma acc kernels loop worker(num:5)
   for(int i = 0;i<5;++i);
 
+  // CHECK: #pragma acc parallel loop vector
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc parallel loop vector
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc parallel loop vector(length: 5)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc parallel loop vector(5)
+  for(int i = 0;i<5;++i);
+
+// CHECK: #pragma acc parallel loop vector(length: 5)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc parallel loop vector(length:5)
+  for(int i = 0;i<5;++i);
+
+// CHECK-NEXT: #pragma acc kernels loop vector
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc kernels loop vector
+  for(int i = 0;i<5;++i);
+
+// CHECK-NEXT: #pragma acc kernels loop vector(length: 5)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc kernels loop vector(5)
+  for(int i = 0;i<5;++i);
+
+// CHECK-NEXT: #pragma acc kernels loop vector(length: 5)
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc kernels loop vector(length:5)
+  for(int i = 0;i<5;++i);
+
+// CHECK-NEXT: #pragma acc serial loop vector
+// CHECK-NEXT: for (int i = 0; i < 5; ++i)
+// CHECK-NEXT: ;
+#pragma acc serial loop vector
+  for(int i = 0;i<5;++i);
+
+//CHECK: #pragma acc parallel loop reduction(+: iPtr)
+#pragma acc parallel loop reduction(+: iPtr)
+  for(int i = 0;i<5;++i);
+//CHECK: #pragma acc serial loop reduction(*: i)
+#pragma acc serial loop reduction(*: i)
+  for(int i = 0;i<5;++i);
+//CHECK: #pragma acc kernels loop reduction(max: SomeB)
+#pragma acc kernels loop reduction(max: SomeB)
+  for(int i = 0;i<5;++i);
+//CHECK: #pragma acc parallel loop reduction(min: iPtr)
+#pragma acc parallel loop reduction(min: iPtr)
+  for(int i = 0;i<5;++i);
+//CHECK: #pragma acc serial loop reduction(&: i)
+#pragma acc serial loop reduction(&: i)
+  for(int i = 0;i<5;++i);
+//CHECK: #pragma acc kernels loop reduction(|: SomeB)
+#pragma acc kernels loop reduction(|: SomeB)
+  for(int i = 0;i<5;++i);
+//CHECK: #pragma acc parallel loop reduction(^: iPtr)
+#pragma acc parallel loop reduction(^: iPtr)
+  for(int i = 0;i<5;++i);
+//CHECK: #pragma acc serial loop reduction(&&: i)
+#pragma acc serial loop reduction(&&: i)
+  for(int i = 0;i<5;++i);
+//CHECK: #pragma acc kernels loop reduction(||: SomeB)
+#pragma acc kernels loop reduction(||: SomeB)
+  for(int i = 0;i<5;++i);
 }

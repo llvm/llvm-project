@@ -1567,7 +1567,7 @@ bool ScopBuilder::buildAccessMemIntrinsic(MemAccInst Inst, ScopStmt *Stmt) {
     return false;
 
   auto *L = LI.getLoopFor(Inst->getParent());
-  auto *LengthVal = SE.getSCEVAtScope(MemIntr->getLength(), L);
+  const SCEV *LengthVal = SE.getSCEVAtScope(MemIntr->getLength(), L);
   assert(LengthVal);
 
   // Check if the length val is actually affine or if we overapproximate it
@@ -1586,7 +1586,7 @@ bool ScopBuilder::buildAccessMemIntrinsic(MemAccInst Inst, ScopStmt *Stmt) {
   auto *DestPtrVal = MemIntr->getDest();
   assert(DestPtrVal);
 
-  auto *DestAccFunc = SE.getSCEVAtScope(DestPtrVal, L);
+  const SCEV *DestAccFunc = SE.getSCEVAtScope(DestPtrVal, L);
   assert(DestAccFunc);
   // Ignore accesses to "NULL".
   // TODO: We could use this to optimize the region further, e.g., intersect
@@ -1616,7 +1616,7 @@ bool ScopBuilder::buildAccessMemIntrinsic(MemAccInst Inst, ScopStmt *Stmt) {
   auto *SrcPtrVal = MemTrans->getSource();
   assert(SrcPtrVal);
 
-  auto *SrcAccFunc = SE.getSCEVAtScope(SrcPtrVal, L);
+  const SCEV *SrcAccFunc = SE.getSCEVAtScope(SrcPtrVal, L);
   assert(SrcAccFunc);
   // Ignore accesses to "NULL".
   // TODO: See above TODO
@@ -1643,7 +1643,7 @@ bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, ScopStmt *Stmt) {
   if (CI->doesNotAccessMemory() || isIgnoredIntrinsic(CI) || isDebugCall(CI))
     return true;
 
-  auto *AF = SE.getConstant(IntegerType::getInt64Ty(CI->getContext()), 0);
+  const SCEV *AF = SE.getConstant(IntegerType::getInt64Ty(CI->getContext()), 0);
   auto *CalledFunction = CI->getCalledFunction();
   MemoryEffects ME = AA.getMemoryEffects(CalledFunction);
   if (ME.doesNotAccessMemory())
@@ -1658,7 +1658,7 @@ bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, ScopStmt *Stmt) {
       if (!Arg->getType()->isPointerTy())
         continue;
 
-      auto *ArgSCEV = SE.getSCEVAtScope(Arg, L);
+      const SCEV *ArgSCEV = SE.getSCEVAtScope(Arg, L);
       if (ArgSCEV->isZero())
         continue;
 
@@ -2169,7 +2169,7 @@ static bool isDivisible(const SCEV *Expr, unsigned Size, ScalarEvolution &SE) {
 
   // Only one factor needs to be divisible.
   if (auto *MulExpr = dyn_cast<SCEVMulExpr>(Expr)) {
-    for (auto *FactorExpr : MulExpr->operands())
+    for (const SCEV *FactorExpr : MulExpr->operands())
       if (isDivisible(FactorExpr, Size, SE))
         return true;
     return false;
@@ -2178,15 +2178,15 @@ static bool isDivisible(const SCEV *Expr, unsigned Size, ScalarEvolution &SE) {
   // For other n-ary expressions (Add, AddRec, Max,...) all operands need
   // to be divisible.
   if (auto *NAryExpr = dyn_cast<SCEVNAryExpr>(Expr)) {
-    for (auto *OpExpr : NAryExpr->operands())
+    for (const SCEV *OpExpr : NAryExpr->operands())
       if (!isDivisible(OpExpr, Size, SE))
         return false;
     return true;
   }
 
-  auto *SizeSCEV = SE.getConstant(Expr->getType(), Size);
-  auto *UDivSCEV = SE.getUDivExpr(Expr, SizeSCEV);
-  auto *MulSCEV = SE.getMulExpr(UDivSCEV, SizeSCEV);
+  const SCEV *SizeSCEV = SE.getConstant(Expr->getType(), Size);
+  const SCEV *UDivSCEV = SE.getUDivExpr(Expr, SizeSCEV);
+  const SCEV *MulSCEV = SE.getMulExpr(UDivSCEV, SizeSCEV);
   return MulSCEV == Expr;
 }
 
@@ -2522,7 +2522,7 @@ combineReductionType(MemoryAccess::ReductionType RT0,
   return MemoryAccess::RT_NONE;
 }
 
-///  True if @p AllAccs intersects with @p MemAccs execpt @p LoadMA and @p
+///  True if @p AllAccs intersects with @p MemAccs except @p LoadMA and @p
 ///  StoreMA
 bool hasIntersectingAccesses(isl::set AllAccs, MemoryAccess *LoadMA,
                              MemoryAccess *StoreMA, isl::set Domain,
@@ -3672,7 +3672,7 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
   }
 
   // Create memory accesses for global reads since all arrays are now known.
-  auto *AF = SE.getConstant(IntegerType::getInt64Ty(SE.getContext()), 0);
+  const SCEV *AF = SE.getConstant(IntegerType::getInt64Ty(SE.getContext()), 0);
   for (auto GlobalReadPair : GlobalReads) {
     ScopStmt *GlobalReadStmt = GlobalReadPair.first;
     Instruction *GlobalRead = GlobalReadPair.second;

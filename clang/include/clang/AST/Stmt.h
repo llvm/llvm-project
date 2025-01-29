@@ -109,6 +109,8 @@ protected:
 
   //===--- Statement bitfields classes ---===//
 
+  #define NumStmtBits 9
+
   class StmtBitfields {
     friend class ASTStmtReader;
     friend class ASTStmtWriter;
@@ -116,9 +118,8 @@ protected:
 
     /// The statement class.
     LLVM_PREFERRED_TYPE(StmtClass)
-    unsigned sClass : 8;
+    unsigned sClass : NumStmtBits;
   };
-  enum { NumStmtBits = 8 };
 
   class NullStmtBitfields {
     friend class ASTStmtReader;

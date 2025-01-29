@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass hexagon-rdf-opt -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-rdf-opt -verify-machineinstrs %s -o - | FileCheck %s
 
 # Check that the L2_loadrd_io load from stack to $d6
 # register, in bb.0, is not considered as dead code by RDF

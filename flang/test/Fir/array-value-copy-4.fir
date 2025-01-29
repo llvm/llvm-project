@@ -43,7 +43,7 @@ func.func @_QMmodPsub1(%arg0: !fir.box<!fir.array<?x!fir.type<_QMmodTrec1{dat:!f
     %23 = fir.convert %0 : (!fir.ref<!fir.box<!fir.type<_QMmodTrec1{dat:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>) -> !fir.ref<!fir.box<none>>
     %24 = fir.convert %21 : (!fir.box<!fir.type<_QMmodTrec1{dat:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.box<none>
     %25 = fir.convert %22 : (!fir.ref<!fir.char<1,12>>) -> !fir.ref<i8>
-    %26 = fir.call @_FortranAAssign(%23, %24, %25, %c9_i32) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+    fir.call @_FortranAAssign(%23, %24, %25, %c9_i32) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
     %27 = fir.array_amend %arg2, %19 : (!fir.array<?x!fir.type<_QMmodTrec1{dat:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>, !fir.ref<!fir.type<_QMmodTrec1{dat:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.array<?x!fir.type<_QMmodTrec1{dat:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
     fir.result %27 : !fir.array<?x!fir.type<_QMmodTrec1{dat:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
   }

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_TO_H
-#define _LIBCPP___RANGES_TO_H
+#ifndef _LIBCPP___CXX03___RANGES_TO_H
+#define _LIBCPP___CXX03___RANGES_TO_H
 
 #include <__cxx03/__algorithm/ranges_copy.h>
 #include <__cxx03/__concepts/constructible.h>
@@ -242,4 +242,4 @@ template <template <class...> class _Container, class... _Args>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_TO_H
+#endif // _LIBCPP___CXX03___RANGES_TO_H

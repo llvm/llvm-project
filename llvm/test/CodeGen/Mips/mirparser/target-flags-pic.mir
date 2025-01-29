@@ -1,4 +1,4 @@
-# RUN: llc -march=mips64 -target-abi n64 -start-before=finalize-isel \
+# RUN: llc -mtriple=mips64 -target-abi n64 -start-before=finalize-isel \
 # RUN:     -stop-after=finalize-isel -relocation-model=pic \
 # RUN:     -o /dev/null %s
 

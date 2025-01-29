@@ -7,8 +7,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_SPAN_H
-#define _LIBCPP___FWD_SPAN_H
+#ifndef _LIBCPP___CXX03___FWD_SPAN_H
+#define _LIBCPP___CXX03___FWD_SPAN_H
 
 #include <__cxx03/__config>
 #include <__cxx03/cstddef>
@@ -35,4 +35,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FWD_SPAN_H
+#endif // _LIBCPP___CXX03___FWD_SPAN_H

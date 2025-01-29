@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_PREV_H
-#define _LIBCPP___ITERATOR_PREV_H
+#ifndef _LIBCPP___CXX03___ITERATOR_PREV_H
+#define _LIBCPP___CXX03___ITERATOR_PREV_H
 
 #include <__cxx03/__assert>
 #include <__cxx03/__config>
@@ -73,4 +73,4 @@ inline constexpr auto prev = __prev::__fn{};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_PREV_H
+#endif // _LIBCPP___CXX03___ITERATOR_PREV_H

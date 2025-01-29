@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STACK
-#define _LIBCPP_STACK
+#ifndef _LIBCPP___CXX03_STACK
+#define _LIBCPP___CXX03_STACK
 
 /*
     stack synopsis
@@ -376,4 +376,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_STACK
+#endif // _LIBCPP___CXX03_STACK

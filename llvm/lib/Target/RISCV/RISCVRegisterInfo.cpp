@@ -162,7 +162,7 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
 bool RISCVRegisterInfo::isAsmClobberable(const MachineFunction &MF,
                                          MCRegister PhysReg) const {
-  return !MF.getSubtarget<RISCVSubtarget>().isRegisterReservedByUser(PhysReg);
+  return !MF.getSubtarget().isRegisterReservedByUser(PhysReg);
 }
 
 const uint32_t *RISCVRegisterInfo::getNoPreservedMask() const {
@@ -924,6 +924,26 @@ bool RISCVRegisterInfo::getRegAllocationHints(
       } else if (MI.isCommutable() && OpIdx == 2 &&
                  (!NeedGPRC || isCompressibleOpnd(MI.getOperand(1)))) {
         tryAddHint(MO, MI.getOperand(0), NeedGPRC);
+      }
+    }
+
+    // Add a hint if it would allow auipc/lui+addi(w) fusion.
+    if ((MI.getOpcode() == RISCV::ADDIW || MI.getOpcode() == RISCV::ADDI) &&
+        MI.getOperand(1).isReg()) {
+      const MachineBasicBlock &MBB = *MI.getParent();
+      MachineBasicBlock::const_iterator I = MI.getIterator();
+      // Is the previous instruction a LUI or AUIPC that can be fused?
+      if (I != MBB.begin()) {
+        I = skipDebugInstructionsBackward(std::prev(I), MBB.begin());
+        if (((I->getOpcode() == RISCV::LUI && Subtarget.hasLUIADDIFusion()) ||
+             (I->getOpcode() == RISCV::AUIPC &&
+              Subtarget.hasAUIPCADDIFusion())) &&
+            I->getOperand(0).getReg() == MI.getOperand(1).getReg()) {
+          if (OpIdx == 0)
+            tryAddHint(MO, MI.getOperand(1), /*NeedGPRC=*/false);
+          else
+            tryAddHint(MO, MI.getOperand(0), /*NeedGPRC=*/false);
+        }
       }
     }
   }
