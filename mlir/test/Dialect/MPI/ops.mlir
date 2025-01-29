@@ -39,20 +39,20 @@ func.func @mpi_test(%ref : memref<100xf32>) -> () {
     // CHECK-NEXT: %3 = mpi.isend(%arg0, %rank, %rank) : memref<100xf32>, i32, i32 -> mpi.request
     %req1 = mpi.isend(%ref, %rank, %rank) : memref<100xf32>, i32, i32 -> mpi.request
 
-    // CHECK-NEXT: %4, %5 = mpi.isend(%arg0, %rank, %rank) : memref<100xf32>, i32, i32 -> !mpi.retval, mpi.request
-    %err4, %req2 = mpi.isend(%ref, %rank, %rank) : memref<100xf32>, i32, i32 -> !mpi.retval, mpi.request
+    // CHECK-NEXT: %4, %5 = mpi.isend(%arg0, %rank, %rank) : memref<100xf32>, i32, i32 -> mpi.request, !mpi.retval
+    %req2, %err4, = mpi.isend(%ref, %rank, %rank) : memref<100xf32>, i32, i32 -> mpi.request, !mpi.retval
 
     // CHECK-NEXT: %3 = mpi.isend(%arg0, %rank, %rank, %comm) : memref<100xf32>, i32, i32, mpi.comm -> mpi.request
     %req1 = mpi.isend(%ref, %rank, %rank, %comm) : memref<100xf32>, i32, i32, mpi.comm -> mpi.request
 
     // CHECK-NEXT: %6 = mpi.irecv(%arg0, %rank, %rank) : memref<100xf32>, i32, i32 -> mpi.request
-    %req3 = mpi.irecv(%ref, %rank, %rank) : memref<100xf32>, i32, i32
+    %req3 = mpi.irecv(%ref, %rank, %rank) : memref<100xf32>, i32, i32 -> mpi.request
 
-    // CHECK-NEXT: %7, %8 = mpi.irecv(%arg0, %rank, %rank) : memref<100xf32>, i32, i32 -> !mpi.retval, mpi.request
-    %err5, %req4 = mpi.irecv(%ref, %rank, %rank) : memref<100xf32>, i32, i32 -> !mpi.retval
+    // CHECK-NEXT: %7, %8 = mpi.irecv(%arg0, %rank, %rank) : memref<100xf32>, i32, i32 -> mpi.request, !mpi.retval
+    %req4, %err5 = mpi.irecv(%ref, %rank, %rank) : memref<100xf32>, i32, i32 -> mpi.request, !mpi.retval
 
     // CHECK-NEXT: %6 = mpi.irecv(%arg0, %rank, %rank, %comm) : memref<100xf32>, i32, i32, mpi.comm -> mpi.request
-    %req3 = mpi.irecv(%ref, %rank, %rank, %comm) : memref<100xf32>, i32, i32, mpi.comm
+    %req3 = mpi.irecv(%ref, %rank, %rank, %comm) : memref<100xf32>, i32, i32, mpi.comm -> mpi.request
 
     // CHECK-NEXT: mpi.wait(%req1) : mpi.request
     mpi.wait(%req1) : mpi.request
