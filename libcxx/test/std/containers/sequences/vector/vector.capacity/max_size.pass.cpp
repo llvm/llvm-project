@@ -27,7 +27,7 @@
 template <typename T, typename Alloc>
 TEST_CONSTEXPR_CXX20 void test(const std::vector<T, Alloc>& v) {
   using Vector              = std::vector<T, Alloc>;
-  using alloc_traits        = typename Vector::__alloc_traits;
+  using alloc_traits        = std::allocator_traits<typename Vector::allocator_type>;
   using size_type           = typename Vector::size_type;
   using difference_type     = typename Vector::difference_type;
   const size_type max_dist  = static_cast<size_type>(std::numeric_limits<difference_type>::max());
@@ -37,7 +37,7 @@ TEST_CONSTEXPR_CXX20 void test(const std::vector<T, Alloc>& v) {
   LIBCPP_ASSERT(v.max_size() == std::min<size_type>(max_dist, max_alloc));
 }
 
-#endif
+#endif // TEST_STD_VER >= 11
 
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
@@ -82,7 +82,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     test(std::vector<int, limited_allocator<int, static_cast<std::size_t>(-1) / 4> >());
   }
 
-#endif
+#endif // TEST_STD_VER >= 11
 
   return true;
 }

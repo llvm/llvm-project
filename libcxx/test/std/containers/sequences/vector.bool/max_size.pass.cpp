@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // <vector>
+// vector<bool>
 
 // size_type max_size() const;
 
@@ -28,47 +29,46 @@
 
 template <typename Alloc>
 TEST_CONSTEXPR_CXX20 void test(const std::vector<bool, Alloc>& v) {
-  using Vector              = std::vector<bool, Alloc>;
-  using size_type           = typename Vector::size_type;
-  using difference_type     = typename Vector::difference_type;
+  using Vector             = std::vector<bool, Alloc>;
+  using size_type          = typename Vector::size_type;
+  using difference_type    = typename Vector::difference_type;
+  const size_type max_dist = static_cast<size_type>(std::numeric_limits<difference_type>::max());
+  assert(v.max_size() <= max_dist);
+
+  // The following check is specific to libc++ implementation details and is not portable to libstdc++
+  // and MSVC STL, as they use different types for the underlying word storage.
+#  if defined(_LIBCPP_VERSION)
   using storage_type        = typename Vector::__storage_type;
   using storage_alloc       = typename std::allocator_traits<Alloc>::template rebind_alloc<storage_type>;
   using storage_traits      = typename std::allocator_traits<Alloc>::template rebind_traits<storage_type>;
-  const size_type max_dist  = static_cast<size_type>(std::numeric_limits<difference_type>::max());
   const size_type max_alloc = storage_traits::max_size(storage_alloc(v.get_allocator()));
   std::size_t bits_per_word = sizeof(storage_type) * CHAR_BIT;
   const size_type max_size  = max_dist / bits_per_word < max_alloc ? max_dist : max_alloc * bits_per_word;
-  assert(v.max_size() <= max_dist);
   assert(v.max_size() / bits_per_word <= max_alloc); // max_alloc * bits_per_word may overflow
-  LIBCPP_ASSERT(v.max_size() == max_size);
+  assert(v.max_size() == max_size);
+#  endif // defined(_LIBCPP_VERSION)
 }
 
-#endif
+#endif // TEST_STD_VER >= 11
 
 TEST_CONSTEXPR_CXX20 bool tests() {
-  // Test with limited_allocator where v.max_size() is determined by allocator::max_size()
+  // The following check is specific to libc++ implementation details and is not portable to libstdc++
+  // and MSVC STL, as they use different types for the underlying word storage.
+#if defined(_LIBCPP_VERSION)
+  // Test cases where v.max_size() is determined by allocator::max_size()
   {
     using Alloc        = limited_allocator<bool, 10>;
     using Vector       = std::vector<bool, Alloc>;
     using storage_type = Vector::__storage_type;
     Vector v;
     std::size_t bits_per_word = sizeof(storage_type) * CHAR_BIT;
-    assert(v.max_size() <= 10 * bits_per_word);
-    LIBCPP_ASSERT(v.max_size() == 10 * bits_per_word);
+    assert(v.max_size() == 10 * bits_per_word);
   }
-  {
-    using Alloc        = limited_allocator<double, 10>;
-    using Vector       = std::vector<bool, Alloc>;
-    using storage_type = Vector::__storage_type;
-    Vector v;
-    std::size_t bits_per_word = sizeof(storage_type) * CHAR_BIT;
-    assert(v.max_size() <= 10 * bits_per_word);
-    LIBCPP_ASSERT(v.max_size() == 10 * bits_per_word);
-  }
+#endif // defined(_LIBCPP_VERSION)
 
 #if TEST_STD_VER >= 11
 
-  // Test with various allocators and diffrent size_type
+  // Test with various allocators and different `size_type`s
   {
     test(std::vector<bool>());
     test(std::vector<bool, std::allocator<int> >());
@@ -82,15 +82,14 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     test(std::vector<bool, limited_allocator<bool, static_cast<std::size_t>(-1)> >());
   }
 
-  // Test cases to identify incorrect implementations that unconditionally return:
-  //   std::min<size_type>(__nmax, __internal_cap_to_external(__amax))
-  // This can cause overflow in __internal_cap_to_external and lead to incorrect results.
+  // Test cases to identify incorrect implementations that unconditionally compute an internal-to-external
+  // capacity in a way that can overflow, leading to incorrect results.
   {
     test(std::vector<bool, limited_allocator<bool, static_cast<std::size_t>(-1) / 61> >());
     test(std::vector<bool, limited_allocator<bool, static_cast<std::size_t>(-1) / 63> >());
   }
 
-#endif
+#endif // TEST_STD_VER >= 11
 
   return true;
 }
