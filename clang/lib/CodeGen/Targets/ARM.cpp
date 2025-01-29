@@ -790,8 +790,7 @@ RValue ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   if ((IsEmpty || Size == 0) && shouldIgnoreEmptyArg(Ty))
     return Slot.asRValue();
 
-  CharUnits TySize =
-      std::max(getContext().getTypeSizeInChars(Ty), CharUnits::fromQuantity(1));
+  CharUnits TySize = getContext().getTypeSizeInChars(Ty);
   CharUnits TyAlignForABI = getContext().getTypeUnadjustedAlignInChars(Ty);
 
   // Use indirect if size of the illegal vector is bigger than 16 bytes.
