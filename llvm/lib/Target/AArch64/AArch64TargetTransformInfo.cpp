@@ -2188,7 +2188,7 @@ static std::optional<Instruction *> instCombineDMB(InstCombiner &IC,
     NI = NI->getNextNonDebugInstruction();
     if (!NI) {
       if (auto *SuccBB = NIBB->getUniqueSuccessor())
-        NI = SuccBB->getFirstNonPHIOrDbgOrLifetime();
+        NI = &*SuccBB->getFirstNonPHIOrDbgOrLifetime();
       else
         break;
     }

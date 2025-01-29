@@ -1538,9 +1538,12 @@ static bool interp__builtin_constant_p(InterpState &S, CodePtr OpPC,
   if (ArgType->isIntegralOrEnumerationType() || ArgType->isFloatingType() ||
       ArgType->isAnyComplexType() || ArgType->isPointerType() ||
       ArgType->isNullPtrType()) {
+    auto PrevDiags = S.getEvalStatus().Diag;
+    S.getEvalStatus().Diag = nullptr;
     InterpStack Stk;
     Compiler<EvalEmitter> C(S.Ctx, S.P, S, Stk);
     auto Res = C.interpretExpr(Arg, /*ConvertResultToRValue=*/Arg->isGLValue());
+    S.getEvalStatus().Diag = PrevDiags;
     if (Res.isInvalid()) {
       C.cleanup();
       Stk.clear();

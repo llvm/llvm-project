@@ -597,7 +597,8 @@ static void replaceSwiftErrorOps(Function &F, coro::Shape &Shape,
     }
 
     // Create a swifterror alloca.
-    IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrDbg());
+    IRBuilder<> Builder(&F.getEntryBlock(),
+                        F.getEntryBlock().getFirstNonPHIOrDbg());
     auto Alloca = Builder.CreateAlloca(ValueTy);
     Alloca->setSwiftError(true);
 
@@ -823,7 +824,16 @@ static void updateScopeLine(Instruction *ActiveSuspend,
   if (!ActiveSuspend)
     return;
 
-  auto *Successor = ActiveSuspend->getNextNonDebugInstruction();
+  // No subsequent instruction -> fallback to the location of ActiveSuspend.
+  if (!ActiveSuspend->getNextNonDebugInstruction()) {
+    if (auto DL = ActiveSuspend->getDebugLoc())
+      if (SPToUpdate.getFile() == DL->getFile())
+        SPToUpdate.setScopeLine(DL->getLine());
+    return;
+  }
+
+  BasicBlock::iterator Successor =
+      ActiveSuspend->getNextNonDebugInstruction()->getIterator();
   // Corosplit splits the BB around ActiveSuspend, so the meaningful
   // instructions are not in the same BB.
   if (auto *Branch = dyn_cast_or_null<BranchInst>(Successor);
@@ -832,7 +842,9 @@ static void updateScopeLine(Instruction *ActiveSuspend,
 
   // Find the first successor of ActiveSuspend with a non-zero line location.
   // If that matches the file of ActiveSuspend, use it.
-  for (; Successor; Successor = Successor->getNextNonDebugInstruction()) {
+  BasicBlock *PBB = Successor->getParent();
+  for (; Successor != PBB->end(); Successor = std::next(Successor)) {
+    Successor = skipDebugIntrinsics(Successor);
     auto DL = Successor->getDebugLoc();
     if (!DL || DL.getLine() == 0)
       continue;

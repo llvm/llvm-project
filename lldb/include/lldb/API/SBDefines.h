@@ -95,6 +95,7 @@ class LLDB_API SBPlatformShellCommand;
 class LLDB_API SBProcess;
 class LLDB_API SBProcessInfo;
 class LLDB_API SBProcessInfoList;
+class LLDB_API SBProgress;
 class LLDB_API SBQueue;
 class LLDB_API SBQueueItem;
 class LLDB_API SBReplayOptions;

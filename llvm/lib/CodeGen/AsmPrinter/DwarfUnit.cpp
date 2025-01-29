@@ -863,6 +863,7 @@ DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {
       addType(Arg, Ty);
       if (Ty->isArtificial())
         addFlag(Arg, dwarf::DW_AT_artificial);
+
       if (Ty->isObjectPointer()) {
         assert(!ObjectPointerIndex &&
                "Can't have more than one object pointer");
