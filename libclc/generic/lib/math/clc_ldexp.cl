@@ -22,6 +22,7 @@
 
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
+#include <clc/integer/clc_add_sat.h>
 #include <clc/math/clc_subnormal_config.h>
 #include <clc/math/math.h>
 #include <clc/relational/clc_isinf.h>
@@ -37,7 +38,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_ldexp(float x, int n) {
     int e = (i >> 23) & 0xff;
     int m = i & 0x007fffff;
     int s = i & 0x80000000;
-    int v = add_sat(e, n);
+    int v = __clc_add_sat(e, n);
     v = __clc_clamp(v, 0, 0xff);
     int mr = e == 0 | v == 0 | v == 0xff ? 0 : m;
     int c = e == 0xff;
