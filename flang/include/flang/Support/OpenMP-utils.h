@@ -73,4 +73,4 @@ mlir::Block *genEntryBlock(
     mlir::OpBuilder &builder, const EntryBlockArgs &args, mlir::Region &region);
 } // namespace Fortran::common::openmp
 
-#endif /* FORTRAN_SUPPORT_OPENMP_UTILS_H_ */
+#endif // FORTRAN_SUPPORT_OPENMP_UTILS_H_

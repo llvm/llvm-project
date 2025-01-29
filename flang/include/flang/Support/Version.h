@@ -53,4 +53,4 @@ std::string getFlangFullVersion();
 std::string getFlangToolFullVersion(llvm::StringRef ToolName);
 } // namespace Fortran::common
 
-#endif /* FORTRAN_SUPPORT_VERSION_H_ */
+#endif // FORTRAN_SUPPORT_VERSION_H_

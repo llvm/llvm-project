@@ -125,4 +125,4 @@ private:
   bool warnAllUsage_{false};
 };
 } // namespace Fortran::common
-#endif /* FORTRAN_SUPPORT_FORTRAN_FEATURES_H_ */
+#endif // FORTRAN_SUPPORT_FORTRAN_FEATURES_H_

@@ -39,4 +39,4 @@ void RTNAME(RandomSeed)(const Descriptor *size, const Descriptor *put,
 } // extern "C"
 } // namespace Fortran::runtime
 
-#endif /* FORTRAN_RUNTIME_RANDOM_H_ */
+#endif // FORTRAN_RUNTIME_RANDOM_H_
