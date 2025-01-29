@@ -9,9 +9,9 @@
 #ifndef FORTRAN_SUPPORT_FORTRAN_FEATURES_H_
 #define FORTRAN_SUPPORT_FORTRAN_FEATURES_H_
 
+#include "Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
-#include "flang/Support/Fortran.h"
 #include <optional>
 #include <vector>
 

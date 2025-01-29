@@ -22,7 +22,7 @@
 
 /* clang-format off */
 #include <stddef.h>
-#include "flang/Common/api-attrs.h"
+#include "api-attrs.h"
 #ifdef __cplusplus
 namespace Fortran {
 namespace ISO {

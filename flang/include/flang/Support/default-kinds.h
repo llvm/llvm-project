@@ -9,7 +9,7 @@
 #ifndef FORTRAN_SUPPORT_DEFAULT_KINDS_H_
 #define FORTRAN_SUPPORT_DEFAULT_KINDS_H_
 
-#include "flang/Support/Fortran.h"
+#include "Fortran.h"
 #include <cstdint>
 
 namespace Fortran::common {
