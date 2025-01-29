@@ -124,7 +124,8 @@ TEST(ScudoSecondaryTest, Basic) {
 }
 
 struct ScudoSecondaryAllocatorTest : public Test {
-  using LargeAllocator = scudo::MapAllocator<scudo::SecondaryConfig<TestNoCacheConfig>>;
+  using LargeAllocator =
+      scudo::MapAllocator<scudo::SecondaryConfig<TestNoCacheConfig>>;
 
   void SetUp() override { Allocator->init(nullptr); }
 
@@ -189,7 +190,8 @@ TEST_F(ScudoSecondaryAllocatorTest, Iterate) {
   Str.output();
 }
 
-struct ScudoSecondaryAllocatorWithReleaseTest : public ScudoSecondaryAllocatorTest {
+struct ScudoSecondaryAllocatorWithReleaseTest
+    : public ScudoSecondaryAllocatorTest {
   void SetUp() override { Allocator->init(nullptr, /*ReleaseToOsInterval=*/0); }
 
   void performAllocations() {
@@ -224,8 +226,8 @@ struct ScudoSecondaryAllocatorWithReleaseTest : public ScudoSecondaryAllocatorTe
 TEST_F(ScudoSecondaryAllocatorWithReleaseTest, ThreadsRace) {
   std::thread Threads[16];
   for (scudo::uptr I = 0; I < ARRAY_SIZE(Threads); I++)
-    Threads[I] =
-        std::thread(&ScudoSecondaryAllocatorWithReleaseTest::performAllocations, this);
+    Threads[I] = std::thread(
+        &ScudoSecondaryAllocatorWithReleaseTest::performAllocations, this);
   {
     std::unique_lock<std::mutex> Lock(Mutex);
     Ready = true;
@@ -369,17 +371,14 @@ TEST_F(ScudoSecondaryAllocatorCacheTest, Options) {
 
   // Various valid combinations.
   EXPECT_TRUE(Cache->setOption(scudo::Option::MaxCacheEntriesCount, 4U));
-  EXPECT_TRUE(
-      Cache->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 20));
+  EXPECT_TRUE(Cache->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 20));
   EXPECT_TRUE(Cache->canCache(1UL << 18));
-  EXPECT_TRUE(
-      Cache->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 17));
+  EXPECT_TRUE(Cache->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 17));
   EXPECT_FALSE(Cache->canCache(1UL << 18));
   EXPECT_TRUE(Cache->canCache(1UL << 16));
   EXPECT_TRUE(Cache->setOption(scudo::Option::MaxCacheEntriesCount, 0U));
   EXPECT_FALSE(Cache->canCache(1UL << 16));
   EXPECT_TRUE(Cache->setOption(scudo::Option::MaxCacheEntriesCount, 4U));
-  EXPECT_TRUE(
-      Cache->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 20));
+  EXPECT_TRUE(Cache->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 20));
   EXPECT_TRUE(Cache->canCache(1UL << 16));
 }
