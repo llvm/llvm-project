@@ -15,6 +15,7 @@ add_clang_library(clangLex
   MacroArgs.cpp
   MacroInfo.cpp
   ModuleMap.cpp
+  ModuleMapFile.cpp
   PPCaching.cpp
   PPCallbacks.cpp
   PPConditionalDirectiveRecord.cpp
