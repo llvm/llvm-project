@@ -1349,8 +1349,7 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
     for (MachineInstr &MI : reverse(*MBB)) {
       if (!isCandidate(MI))
         continue;
-      if (auto DemandedVL = checkUsers(MI))
-        DemandedVLs.insert({&MI, *DemandedVL});
+      DemandedVLs.insert({&MI, checkUsers(MI)});
     }
   }
 
