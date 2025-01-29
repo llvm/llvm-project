@@ -52,18 +52,23 @@ rounding_direction(const LIBC_NAMESPACE::UInt<Bits> &value, size_t rshift,
       // We round up, unless the value is an exact halfway case and
       // the bit that will end up in the units place is 0, in which
       // case tie-break-to-even says round down.
-      return value.get_bit(rshift) != 0 || (value << (Bits - rshift + 1)) != 0
-                 ? +1
-                 : -1;
+      bool round_bit = rshift < Bits ? value.get_bit(rshift) : 0;
+      return round_bit != 0 || (value << (Bits - rshift + 1)) != 0 ? +1 : -1;
     } else {
       return -1;
     }
   case FE_TOWARDZERO:
     return -1;
   case FE_DOWNWARD:
-    return logical_sign.is_neg() && (value << (Bits - rshift)) != 0 ? +1 : -1;
+    return logical_sign.is_neg() &&
+                   (rshift < Bits && (value << (Bits - rshift)) != 0)
+               ? +1
+               : -1;
   case FE_UPWARD:
-    return logical_sign.is_pos() && (value << (Bits - rshift)) != 0 ? +1 : -1;
+    return logical_sign.is_pos() &&
+                   (rshift < Bits && (value << (Bits - rshift)) != 0)
+               ? +1
+               : -1;
   default:
     __builtin_unreachable();
   }
@@ -652,9 +657,8 @@ rounded_div(const DyadicFloat<Bits> &af, const DyadicFloat<Bits> &bf) {
   }
 
   DyadicFloat<(Bits * 2)> qbig(qf.sign, qf.exponent - 2, q);
-  auto qfinal = DyadicFloat<Bits>::round(qbig.sign, qbig.exponent + Bits,
-                                         qbig.mantissa, Bits);
-  return qfinal;
+  return DyadicFloat<Bits>::round(qbig.sign, qbig.exponent + Bits,
+                                  qbig.mantissa, Bits);
 }
 
 // Simple polynomial approximation.
