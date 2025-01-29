@@ -152,12 +152,14 @@ public:
 
 private:
   void InitializeThreadsPrivate() {
-// Since Python 3.7 `Py_Initialize` calls `PyEval_InitThreads` inside itself,
-// so there is no way to determine whether the embedded interpreter
-// was already initialized by some external code. `PyEval_ThreadsInitialized`
-// would always return `true` and `PyGILState_Ensure/Release` flow would be
-// executed instead of unlocking GIL with `PyEval_SaveThread`. When
-// an another thread calls `PyGILState_Ensure` it would get stuck in deadlock.
+    // Since Python 3.7 `Py_Initialize` calls `PyEval_InitThreads` inside
+    // itself, so there is no way to determine whether the embedded interpreter
+    // was already initialized by some external code.
+    // `PyEval_ThreadsInitialized` would always return `true` and
+    // `PyGILState_Ensure/Release` flow would be executed instead of unlocking
+    // GIL with `PyEval_SaveThread`. When an another thread calls
+    // `PyGILState_Ensure` it would get stuck in deadlock.
+
     // The only case we should go further and acquire the GIL: it is unlocked.
     if (PyGILState_Check())
       return;
