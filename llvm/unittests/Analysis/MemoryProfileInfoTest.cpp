@@ -15,6 +15,7 @@
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/SourceMgr.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstring>
 #include <sys/types.h>
@@ -220,6 +221,48 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   EXPECT_EQ(Call4->getFnAttr("memprof").getValueAsString(), "notcold");
 }
 
+// TODO: Use this matcher in existing tests.
+// ExpectedVals should be a vector of expected MIBs and their allocation type
+// and stack id contents in order, of type:
+//  std::vector<std::pair<AllocationType, std::vector<unsigned>>>
+MATCHER_P(MemprofMetadataEquals, ExpectedVals, "Matching !memprof contents") {
+  auto PrintAndFail = [&]() {
+    std::string Buffer;
+    llvm::raw_string_ostream OS(Buffer);
+    OS << "Expected:\n";
+    for (auto &[ExpectedAllocType, ExpectedStackIds] : ExpectedVals) {
+      OS << "\t" << getAllocTypeAttributeString(ExpectedAllocType) << " { ";
+      for (auto Id : ExpectedStackIds)
+        OS << Id << " ";
+      OS << "}\n";
+    }
+    OS << "Got:\n";
+    arg->printTree(OS);
+    *result_listener << "!memprof metadata differs!\n" << Buffer;
+    return false;
+  };
+
+  if (ExpectedVals.size() != arg->getNumOperands())
+    return PrintAndFail();
+
+  for (size_t I = 0; I < ExpectedVals.size(); I++) {
+    const auto &[ExpectedAllocType, ExpectedStackIds] = ExpectedVals[I];
+    MDNode *MIB = dyn_cast<MDNode>(arg->getOperand(I));
+    if (getMIBAllocType(MIB) != ExpectedAllocType)
+      return PrintAndFail();
+    MDNode *StackMD = getMIBStackNode(MIB);
+    EXPECT_NE(StackMD, nullptr);
+    if (StackMD->getNumOperands() != ExpectedStackIds.size())
+      return PrintAndFail();
+    for (size_t J = 0; J < ExpectedStackIds.size(); J++) {
+      auto *StackId = mdconst::dyn_extract<ConstantInt>(StackMD->getOperand(J));
+      if (StackId->getZExtValue() != ExpectedStackIds[J])
+        return PrintAndFail();
+    }
+  }
+  return true;
+}
+
 // Test CallStackTrie::addCallStack interface taking allocation type and list of
 // call stack ids.
 // Test that an allocation call reached by both cold and non cold call stacks
@@ -344,6 +387,8 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   CallStackTrie Trie;
   Trie.addCallStack(AllocationType::Cold, {1, 2});
   Trie.addCallStack(AllocationType::NotCold, {1, 3});
+  // This will be pruned as it is unnecessary to determine how to clone the
+  // cold allocation.
   Trie.addCallStack(AllocationType::Hot, {1, 4});
 
   CallBase *Call = findCall(*Func, "call");
@@ -352,7 +397,7 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   EXPECT_FALSE(Call->hasFnAttr("memprof"));
   EXPECT_TRUE(Call->hasMetadata(LLVMContext::MD_memprof));
   MDNode *MemProfMD = Call->getMetadata(LLVMContext::MD_memprof);
-  ASSERT_EQ(MemProfMD->getNumOperands(), 3u);
+  ASSERT_EQ(MemProfMD->getNumOperands(), 2u);
   for (auto &MIBOp : MemProfMD->operands()) {
     MDNode *MIB = dyn_cast<MDNode>(MIBOp);
     MDNode *StackMD = getMIBStackNode(MIB);
@@ -364,10 +409,6 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
     if (StackId->getZExtValue() == 2u) {
       EXPECT_EQ(getMIBAllocType(MIB), AllocationType::Cold);
     } else if (StackId->getZExtValue() == 3u) {
-      EXPECT_EQ(getMIBAllocType(MIB), AllocationType::NotCold);
-    } else {
-      ASSERT_EQ(StackId->getZExtValue(), 4u);
-      // Hot contexts are converted to NotCold when building the metadata.
       EXPECT_EQ(getMIBAllocType(MIB), AllocationType::NotCold);
     }
   }
@@ -404,8 +445,8 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   // with the non-cold context {1, 5}.
   Trie.addCallStack(AllocationType::NotCold, {1, 5, 6});
   Trie.addCallStack(AllocationType::NotCold, {1, 5, 7});
-  // We should be able to trim the following two and combine into a single MIB
-  // with the hot context {1, 8}.
+  // These will be pruned as they are unnecessary to determine how to clone the
+  // cold allocation.
   Trie.addCallStack(AllocationType::Hot, {1, 8, 9});
   Trie.addCallStack(AllocationType::Hot, {1, 8, 10});
 
@@ -415,7 +456,7 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   EXPECT_FALSE(Call->hasFnAttr("memprof"));
   EXPECT_TRUE(Call->hasMetadata(LLVMContext::MD_memprof));
   MDNode *MemProfMD = Call->getMetadata(LLVMContext::MD_memprof);
-  ASSERT_EQ(MemProfMD->getNumOperands(), 3u);
+  ASSERT_EQ(MemProfMD->getNumOperands(), 2u);
   for (auto &MIBOp : MemProfMD->operands()) {
     MDNode *MIB = dyn_cast<MDNode>(MIBOp);
     MDNode *StackMD = getMIBStackNode(MIB);
@@ -428,12 +469,65 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
       EXPECT_EQ(getMIBAllocType(MIB), AllocationType::Cold);
     else if (StackId->getZExtValue() == 5u)
       EXPECT_EQ(getMIBAllocType(MIB), AllocationType::NotCold);
-    else {
-      ASSERT_EQ(StackId->getZExtValue(), 8u);
-      // Hot contexts are converted to NotCold when building the metadata.
-      EXPECT_EQ(getMIBAllocType(MIB), AllocationType::NotCold);
-    }
   }
+}
+
+// Test to ensure that we prune NotCold contexts that are unneeded for
+// determining where Cold contexts need to be cloned to enable correct hinting.
+TEST_F(MemoryProfileInfoTest, PruneUnneededNotColdContexts) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = makeLLVMModule(C,
+                                             R"IR(
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
+define i32* @test() {
+entry:
+  %call = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
+  %0 = bitcast i8* %call to i32*
+  ret i32* %0
+}
+declare dso_local noalias noundef i8* @malloc(i64 noundef)
+)IR");
+
+  Function *Func = M->getFunction("test");
+
+  CallStackTrie Trie;
+
+  Trie.addCallStack(AllocationType::Cold, {1, 2, 3, 4});
+  Trie.addCallStack(AllocationType::Cold, {1, 2, 3, 5, 6, 7});
+  // This NotCold context is needed to know where the above two Cold contexts
+  // must be cloned from:
+  Trie.addCallStack(AllocationType::NotCold, {1, 2, 3, 5, 6, 13});
+
+  Trie.addCallStack(AllocationType::Cold, {1, 2, 3, 8, 9, 10});
+  // This NotCold context is needed to know where the above Cold context must be
+  // cloned from:
+  Trie.addCallStack(AllocationType::NotCold, {1, 2, 3, 8, 9, 14});
+  // This NotCold context is not needed since the above is sufficient (we pick
+  // the first in sorted order).
+  Trie.addCallStack(AllocationType::NotCold, {1, 2, 3, 8, 9, 15});
+
+  // None of these NotCold contexts are needed as the Cold contexts they
+  // overlap with are covered by longer overlapping NotCold contexts.
+  Trie.addCallStack(AllocationType::NotCold, {1, 2, 3, 12});
+  Trie.addCallStack(AllocationType::NotCold, {1, 2, 11});
+  Trie.addCallStack(AllocationType::NotCold, {1, 16});
+
+  std::vector<std::pair<AllocationType, std::vector<unsigned>>> ExpectedVals = {
+      {AllocationType::Cold, {1, 2, 3, 4}},
+      {AllocationType::Cold, {1, 2, 3, 5, 6, 7}},
+      {AllocationType::NotCold, {1, 2, 3, 5, 6, 13}},
+      {AllocationType::Cold, {1, 2, 3, 8, 9, 10}},
+      {AllocationType::NotCold, {1, 2, 3, 8, 9, 14}}};
+
+  CallBase *Call = findCall(*Func, "call");
+  ASSERT_NE(Call, nullptr);
+  Trie.buildAndAttachMIBMetadata(Call);
+
+  EXPECT_FALSE(Call->hasFnAttr("memprof"));
+  EXPECT_TRUE(Call->hasMetadata(LLVMContext::MD_memprof));
+  MDNode *MemProfMD = Call->getMetadata(LLVMContext::MD_memprof);
+  EXPECT_THAT(MemProfMD, MemprofMetadataEquals(ExpectedVals));
 }
 
 // Test CallStackTrie::addCallStack interface taking memprof MIB metadata.
@@ -555,11 +649,13 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   // with the cold context {1, 2}.
   // We should be able to trim the second two and combine into a single MIB
   // with the non-cold context {1, 5}.
+  // The hot allocations will be converted to NotCold and pruned as they
+  // are unnecessary to determine how to clone the cold allocation.
 
   EXPECT_FALSE(Call->hasFnAttr("memprof"));
   EXPECT_TRUE(Call->hasMetadata(LLVMContext::MD_memprof));
   MemProfMD = Call->getMetadata(LLVMContext::MD_memprof);
-  ASSERT_EQ(MemProfMD->getNumOperands(), 3u);
+  ASSERT_EQ(MemProfMD->getNumOperands(), 2u);
   for (auto &MIBOp : MemProfMD->operands()) {
     MDNode *MIB = dyn_cast<MDNode>(MIBOp);
     MDNode *StackMD = getMIBStackNode(MIB);
@@ -572,11 +668,6 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
       EXPECT_EQ(getMIBAllocType(MIB), AllocationType::Cold);
     else if (StackId->getZExtValue() == 5u)
       EXPECT_EQ(getMIBAllocType(MIB), AllocationType::NotCold);
-    else {
-      ASSERT_EQ(StackId->getZExtValue(), 8u);
-      // Hot contexts are converted to NotCold when building the new metadata.
-      EXPECT_EQ(getMIBAllocType(MIB), AllocationType::NotCold);
-    }
   }
 }
 
