@@ -49,4 +49,4 @@ void setOpenMPMacro(int version, FortranPredefinitions &predefinitions) {
   }
 }
 } // namespace Fortran::common
-#endif /* FORTRAN_SUPPORT_OPENMP_FEATURES_H_ */
+#endif // FORTRAN_SUPPORT_OPENMP_FEATURES_H_
