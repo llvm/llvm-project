@@ -3,12 +3,11 @@
 
 # Test that the loop carried dependence check correctly identifies a recurrence.
 
-# CHECK: Rec NodeSet
-# CHECK: Rec NodeSet
-# CHECK: Rec NodeSet
-# CHECK: Rec NodeSet
-# CHECK-NEXT: SU(4)
-# CHECK-NEXT: SU(6)
+# CHECK: Loop Carried Edges:
+# CHECK-NEXT:   Loop carried edges from SU(6)
+# CHECK-NEXT:     Order
+# CHECK-NEXT:       SU(4)
+# CHECK-NEXT: calculateResMII:
 
 --- |
 

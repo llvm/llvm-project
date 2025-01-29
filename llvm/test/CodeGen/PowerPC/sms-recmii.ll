@@ -3,7 +3,7 @@
 ; RUN:       -mcpu=pwr9 --ppc-enable-pipeliner --debug-only=pipeliner 2>&1 | FileCheck %s
 
 ; Test that the pipeliner doesn't overestimate the recurrence MII when evaluating circuits.
-; CHECK: MII = 16 MAX_II = 26 (rec=16, res=5)
+; CHECK: MII = 17 MAX_II = {{[0-9]+}} (rec=17, res={{[0-9]+}})
 define dso_local void @comp_method(ptr noalias nocapture noundef readonly %0, ptr nocapture noundef writeonly %1, ptr nocapture noundef writeonly %2, i32 noundef %3, i32 noundef %4, i32 noundef %5, i32 noundef %6, i64 %v1) local_unnamed_addr {
   %8 = icmp sgt i32 %3, 64
   tail call void @llvm.assume(i1 %8)

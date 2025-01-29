@@ -42,6 +42,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
@@ -190,6 +191,33 @@ public:
   bool ignoreDependence(bool IgnoreAnti) const;
 };
 
+struct LoopCarriedEdges {
+  using OutputDep = SmallDenseMap<Register, SmallSetVector<SUnit *, 4>>;
+  using OrderDep = SmallSetVector<SUnit *, 8>;
+  using OutputDepsType = DenseMap<SUnit *, OutputDep>;
+  using OrderDepsType = DenseMap<SUnit *, OrderDep>;
+
+  OutputDepsType OutputDeps;
+  OrderDepsType OrderDeps;
+
+  const OutputDep *getOutputDepOrNull(SUnit *Key) const {
+    auto Ite = OutputDeps.find(Key);
+    if (Ite == OutputDeps.end())
+      return nullptr;
+    return &Ite->second;
+  }
+
+  const OrderDep *getOrderDepOrNull(SUnit *Key) const {
+    auto Ite = OrderDeps.find(Key);
+    if (Ite == OrderDeps.end())
+      return nullptr;
+    return &Ite->second;
+  }
+
+  void dump(SUnit *SU, const TargetRegisterInfo *TRI,
+            const MachineRegisterInfo *MRI) const;
+};
+
 /// Represents dependencies between instructions. This class is a wrapper of
 /// `SUnits` and its dependencies to manipulate back-edges in a natural way.
 /// Currently it only supports back-edges via PHI, which are expressed as
@@ -217,8 +245,12 @@ class SwingSchedulerDDG {
   SwingSchedulerDDGEdges &getEdges(const SUnit *SU);
   const SwingSchedulerDDGEdges &getEdges(const SUnit *SU) const;
 
+  void addLoopCarriedEdges(std::vector<SUnit> &SUnits,
+                           const LoopCarriedEdges &LCE);
+
 public:
-  SwingSchedulerDDG(std::vector<SUnit> &SUnits, SUnit *EntrySU, SUnit *ExitSU);
+  SwingSchedulerDDG(std::vector<SUnit> &SUnits, SUnit *EntrySU, SUnit *ExitSU,
+                    const LoopCarriedEdges &LCE);
 
   const EdgesType &getInEdges(const SUnit *SU) const;
 
@@ -285,22 +317,14 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
     BitVector Blocked;
     SmallVector<SmallPtrSet<SUnit *, 4>, 10> B;
     SmallVector<SmallVector<int, 4>, 16> AdjK;
-    // Node to Index from ScheduleDAGTopologicalSort
-    std::vector<int> *Node2Idx;
+    SmallVector<BitVector, 16> LoopCarried;
     unsigned NumPaths = 0u;
-    static unsigned MaxPaths;
 
   public:
-    Circuits(std::vector<SUnit> &SUs, ScheduleDAGTopologicalSort &Topo)
-        : SUnits(SUs), Blocked(SUs.size()), B(SUs.size()), AdjK(SUs.size()) {
-      Node2Idx = new std::vector<int>(SUs.size());
-      unsigned Idx = 0;
-      for (const auto &NodeNum : Topo)
-        Node2Idx->at(NodeNum) = Idx++;
-    }
+    Circuits(std::vector<SUnit> &SUs)
+        : SUnits(SUs), Blocked(SUs.size()), B(SUs.size()), AdjK(SUs.size()) {}
     Circuits &operator=(const Circuits &other) = delete;
     Circuits(const Circuits &other) = delete;
-    ~Circuits() { delete Node2Idx; }
 
     /// Reset the data structures used in the circuit algorithm.
     void reset() {
@@ -310,9 +334,9 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
       NumPaths = 0;
     }
 
-    void createAdjacencyStructure(SwingSchedulerDAG *DAG);
+    void createAdjacencyStructure(const SwingSchedulerDDG *DDG);
     bool circuit(int V, int S, NodeSetType &NodeSets,
-                 const SwingSchedulerDAG *DAG, bool HasBackedge = false);
+                 const SwingSchedulerDDG *DDG, bool HasLoopCarriedEdge = false);
     void unblock(int U);
   };
 
@@ -366,7 +390,8 @@ public:
     return ScheduleInfo[Node->NodeNum].ZeroLatencyHeight;
   }
 
-  bool isLoopCarriedDep(const SwingSchedulerDDGEdge &Edge) const;
+  bool hasLoopCarriedMemDep(const MachineInstr *Src, const MachineInstr *Dst,
+                            BatchAAResults *BAA) const;
 
   void applyInstrChange(MachineInstr *MI, SMSchedule &Schedule);
 
@@ -391,7 +416,9 @@ public:
   const SwingSchedulerDDG *getDDG() const { return DDG.get(); }
 
 private:
-  void addLoopCarriedDependences(AAResults *AA);
+  LoopCarriedEdges addLoopCarriedDependences(AAResults *AA);
+  AliasResult::Kind checkLoopCarriedMemDep(const MachineInstr *Src,
+                                           const MachineInstr *Dst) const;
   void updatePhiDependences();
   void changeDependences();
   unsigned calculateResMII();
@@ -409,7 +436,7 @@ private:
   void computeNodeOrder(NodeSetType &NodeSets);
   void checkValidNodeOrder(const NodeSetType &Circuits) const;
   bool schedulePipeline(SMSchedule &Schedule);
-  bool computeDelta(MachineInstr &MI, unsigned &Delta) const;
+  bool computeDelta(const MachineInstr &MI, unsigned &Delta) const;
   MachineInstr *findDefInLoop(Register Reg);
   bool canUseLastOffsetValue(MachineInstr *MI, unsigned &BasePos,
                              unsigned &OffsetPos, unsigned &NewBase,
@@ -437,7 +464,7 @@ public:
   using iterator = SetVector<SUnit *>::const_iterator;
 
   NodeSet() = default;
-  NodeSet(iterator S, iterator E, const SwingSchedulerDAG *DAG)
+  NodeSet(iterator S, iterator E, const SwingSchedulerDDG *DDG)
       : Nodes(S, E), HasRecurrence(true) {
     // Calculate the latency of this node set.
     // Example to demonstrate the calculation:
@@ -453,7 +480,6 @@ public:
     //
     // Hold a map from each SUnit in the circle to the maximum distance from the
     // source node by only considering the nodes.
-    const SwingSchedulerDDG *DDG = DAG->getDDG();
     DenseMap<SUnit *, unsigned> SUnitToDistance;
     for (auto *Node : Nodes)
       SUnitToDistance[Node] = 0;
@@ -470,22 +496,6 @@ public:
         }
       }
     }
-    // Handle a back-edge in loop carried dependencies
-    SUnit *FirstNode = Nodes[0];
-    SUnit *LastNode = Nodes[Nodes.size() - 1];
-
-    for (auto &PI : DDG->getInEdges(LastNode)) {
-      // If we have an order dep that is potentially loop carried then a
-      // back-edge exists between the last node and the first node that isn't
-      // modeled in the DAG. Handle it manually by adding 1 to the distance of
-      // the last node.
-      if (PI.getSrc() != FirstNode || !PI.isOrderDep() ||
-          !DAG->isLoopCarriedDep(PI))
-        continue;
-      SUnitToDistance[FirstNode] =
-          std::max(SUnitToDistance[FirstNode], SUnitToDistance[LastNode] + 1);
-    }
-
     // The latency is the distance from the source node to itself.
     Latency = SUnitToDistance[Nodes.front()];
   }
