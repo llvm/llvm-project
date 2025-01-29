@@ -380,8 +380,9 @@ static void rmwStore(OpBuilder &builder, Location loc,
                                                    origVecValue);
 
   // Construct the final masked value and yield it.
-  Value maskedValue = selectAndCast(builder, loc, oneElemVecType, mask,
-                                    origVecValue, valueToStore);
+  Value maskedValue =
+      downcastSelectAndUpcast(builder, loc, valueToStore.getType(),
+                              oneElemVecType, mask, valueToStore, origVecValue);
   builder.create<vector::StoreOp>(loc, maskedValue, linearizedMemref,
                                   linearizedIndex);
 }
