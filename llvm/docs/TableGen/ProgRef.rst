@@ -670,7 +670,7 @@ arguments.
 
 .. productionlist::
    Body: ";" | "{" `BodyItem`* "}"
-   BodyItem: (`Type` | "code") `TokIdentifier` ["=" `Value`] ";"
+   BodyItem: ["field"] (`Type` | "code") `TokIdentifier` ["=" `Value`] ";"
            :| "let" `TokIdentifier` ["{" `RangeList` "}"] "=" `Value` ";"
            :| "defvar" `TokIdentifier` "=" `Value` ";"
            :| `Assert`
