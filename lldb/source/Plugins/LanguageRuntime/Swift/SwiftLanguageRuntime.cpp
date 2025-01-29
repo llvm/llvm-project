@@ -2294,6 +2294,21 @@ static llvm::Expected<addr_t> GetCFA(Process &process, RegisterContext &regctx,
       cfa_loc.GetValueType());
 }
 
+static UnwindPlanSP GetUnwindPlanForAsyncRegister(FuncUnwinders &unwinders,
+                                                  Target &target,
+                                                  Thread &thread) {
+  // We cannot trust compiler emitted unwind plans, as they respect the
+  // swifttail calling convention, which assumes the async register is _not_
+  // restored and therefore it is not tracked by compiler plans. If LLDB uses
+  // those plans, it may take "no info" to mean "register not clobbered". For
+  // those reasons, always favour the assembly plan first, it will try to track
+  // the async register by assuming the usual arm calling conventions.
+  if (UnwindPlanSP asm_plan = unwinders.GetAssemblyUnwindPlan(target, thread))
+    return asm_plan;
+  // In the unlikely case the assembly plan is not available, try all others.
+  return unwinders.GetUnwindPlanAtNonCallSite(target, thread);
+}
+
 /// Attempts to use UnwindPlans that inspect assembly to recover the entry value
 /// of the async context register. This is a simplified version of the methods
 /// in RegisterContextUnwind, since plumbing access to those here would be
@@ -2311,7 +2326,7 @@ static llvm::Expected<addr_t> ReadAsyncContextRegisterFromUnwind(
 
   Target &target = process.GetTarget();
   UnwindPlanSP unwind_plan =
-      unwinders->GetUnwindPlanAtNonCallSite(target, regctx.GetThread());
+      GetUnwindPlanForAsyncRegister(*unwinders, target, regctx.GetThread());
   if (!unwind_plan)
     return llvm::createStringError(
         "SwiftLanguageRuntime: Failed to find non call site unwind plan at "
