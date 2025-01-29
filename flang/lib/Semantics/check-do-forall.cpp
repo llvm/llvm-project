@@ -8,6 +8,7 @@
 
 #include "check-do-forall.h"
 #include "definable.h"
+#include "flang/Common/template.h"
 #include "flang/Evaluate/call.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/tools.h"
@@ -21,7 +22,6 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
-#include "flang/Support/template.h"
 
 namespace Fortran::evaluate {
 using ActualArgumentRef = common::Reference<const ActualArgument>;

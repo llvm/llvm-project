@@ -10,6 +10,7 @@
 #include "definable.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/restorer.h"
+#include "flang/Common/template.h"
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
@@ -20,7 +21,6 @@
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
-#include "flang/Support/template.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <set>
