@@ -3316,6 +3316,29 @@ void Sema::CheckShadowInheritedFields(const SourceLocation &Loc,
   }
 }
 
+template <typename AttrType>
+inline static bool HasAttribute(const QualType &T) {
+  if (const TagDecl *TD = T->getAsTagDecl())
+    return TD->hasAttr<AttrType>();
+  if (const TypedefType *TDT = T->getAs<TypedefType>())
+    return TDT->getDecl()->hasAttr<AttrType>();
+  return false;
+}
+
+static bool IsUnusedPrivateField(const FieldDecl *FD) {
+  if (FD->getAccess() == AS_private && FD->getDeclName()) {
+    QualType FieldType = FD->getType();
+    if (HasAttribute<WarnUnusedAttr>(FieldType))
+      return true;
+
+    return !FD->isImplicit() && !FD->hasAttr<UnusedAttr>() &&
+           !FD->getParent()->isDependentContext() &&
+           !HasAttribute<UnusedAttr>(FieldType) &&
+           !InitializationHasSideEffects(*FD);
+  }
+  return false;
+}
+
 NamedDecl *
 Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
                                MultiTemplateParamsArg TemplateParameterLists,
@@ -3598,25 +3621,11 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
     FieldDecl *FD = cast<FieldDecl>(Member);
     FieldCollector->Add(FD);
 
-    if (!Diags.isIgnored(diag::warn_unused_private_field, FD->getLocation())) {
+    if (!Diags.isIgnored(diag::warn_unused_private_field, FD->getLocation()) &&
+        IsUnusedPrivateField(FD)) {
       // Remember all explicit private FieldDecls that have a name, no side
       // effects and are not part of a dependent type declaration.
-
-      auto DeclHasUnusedAttr = [](const QualType &T) {
-        if (const TagDecl *TD = T->getAsTagDecl())
-          return TD->hasAttr<UnusedAttr>();
-        if (const TypedefType *TDT = T->getAs<TypedefType>())
-          return TDT->getDecl()->hasAttr<UnusedAttr>();
-        return false;
-      };
-
-      if (!FD->isImplicit() && FD->getDeclName() &&
-          FD->getAccess() == AS_private &&
-          !FD->hasAttr<UnusedAttr>() &&
-          !FD->getParent()->isDependentContext() &&
-          !DeclHasUnusedAttr(FD->getType()) &&
-          !InitializationHasSideEffects(*FD))
-        UnusedPrivateFields.insert(FD);
+      UnusedPrivateFields.insert(FD);
     }
   }
 

@@ -133,6 +133,8 @@ Changes to TableGen
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
+* Added RelLookupTableConverterPass to LTO post-link pass pipeline.
+
 Changes to the AArch64 Backend
 ------------------------------
 

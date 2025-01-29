@@ -1143,16 +1143,6 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   if (MI.getNumDefs() != 1)
     return false;
 
-  unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
-  const MachineOperand &VLOp = MI.getOperand(VLOpNum);
-
-  // If the VL is 1, then there is no need to reduce it. This is an
-  // optimization, not needed to preserve correctness.
-  if (VLOp.isImm() && VLOp.getImm() == 1) {
-    LLVM_DEBUG(dbgs() << "  Not a candidate because VL is already 1\n");
-    return false;
-  }
-
   if (MI.mayRaiseFPException()) {
     LLVM_DEBUG(dbgs() << "Not a candidate because may raise FP exception\n");
     return false;
@@ -1285,15 +1275,22 @@ std::optional<MachineOperand> RISCVVLOptimizer::checkUsers(MachineInstr &MI) {
 bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) {
   LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI << "\n");
 
+  unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
+  MachineOperand &VLOp = MI.getOperand(VLOpNum);
+
+  // If the VL is 1, then there is no need to reduce it. This is an
+  // optimization, not needed to preserve correctness.
+  if (VLOp.isImm() && VLOp.getImm() == 1) {
+    LLVM_DEBUG(dbgs() << "  Abort due to VL == 1, no point in reducing.\n");
+    return false;
+  }
+
   auto CommonVL = checkUsers(MI);
   if (!CommonVL)
     return false;
 
   assert((CommonVL->isImm() || CommonVL->getReg().isVirtual()) &&
          "Expected VL to be an Imm or virtual Reg");
-
-  unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
-  MachineOperand &VLOp = MI.getOperand(VLOpNum);
 
   if (!RISCV::isVLKnownLE(*CommonVL, VLOp)) {
     LLVM_DEBUG(dbgs() << "    Abort due to CommonVL not <= VLOp.\n");
