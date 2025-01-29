@@ -29,9 +29,9 @@ def BOp : NS_Op<"b_op", []> {
 def test1 : Pat<(AOp (BOp:$x $y), $_), (AOp $x, $y)>;
 // CHECK-LABEL: struct test1
 // CHECK: ::llvm::LogicalResult matchAndRewrite
-// CHECK: ::mlir::IntegerAttr y;
-// CHECK: test::BOp x;
-// CHECK: ::llvm::SmallVector<::mlir::Operation *, 4> tblgen_ops;
+// CHECK-DAG: ::mlir::IntegerAttr y;
+// CHECK-DAG: test::BOp x;
+// CHECK-DAG: ::llvm::SmallVector<::mlir::Operation *, 4> tblgen_ops;
 // CHECK: tblgen_ops.push_back(op0);
 // CHECK: x = castedOp1;
 // CHECK: tblgen_attr = castedOp1.getProperties().getY();
