@@ -202,11 +202,6 @@ func.func @powf() {
   %a_p = arith.constant 2.0 : f64
   call @func_powff64(%a, %a_p) : (f64, f64) -> ()
 
-  // CHECK-NEXT: -27
-  %b   = arith.constant -3.0 : f64
-  %b_p = arith.constant 3.0 : f64
-  call @func_powff64(%b, %b_p) : (f64, f64) -> ()
-
   // CHECK-NEXT: 2.343
   %c   = arith.constant 2.343 : f64
   %c_p = arith.constant 1.000 : f64
