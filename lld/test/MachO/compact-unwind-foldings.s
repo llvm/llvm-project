@@ -23,8 +23,8 @@
 ## Check that [1] offset starts at c's address + 3 (its length).
 # CHECK-LABEL: Contents of __unwind_info section:
 # CHECK:  Top level indices: (count = 2)
-# CHECK-NEXT : [0]: function offset=[[#%#.7x,MAIN_ADDR]]
-# CHECK-NEXT : [1]: function offset=[[#%#.7x,C_ADDR + 3]]
+# CHECK-NEXT: [0]: function offset=[[#%#.7x,MAIN_ADDR]]
+# CHECK-NEXT: [1]: function offset=[[#%#.7x,C_ADDR + 3]]
 
 #--- fold-tail.s
         .text
