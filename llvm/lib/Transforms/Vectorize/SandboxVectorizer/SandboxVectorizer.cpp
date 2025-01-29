@@ -87,5 +87,8 @@ bool SandboxVectorizerPass::runImpl(Function &LLVMF) {
   // Create SandboxIR for LLVMF and run BottomUpVec on it.
   sandboxir::Function &F = *Ctx->createFunction(&LLVMF);
   sandboxir::Analyses A(*AA, *SE, *TTI);
-  return FPM.runOnFunction(F, A);
+  bool Change = FPM.runOnFunction(F, A);
+  // TODO: This is a function pass, so we won't be needing the function-level
+  // Sandbox IR objects in the future. So we should clear them.
+  return Change;
 }

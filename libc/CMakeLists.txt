@@ -262,6 +262,7 @@ if(LIBC_TARGET_OS_IS_GPU)
 endif()
 
 include(LLVMLibCCheckMPFR)
+include(LLVMLibCCheckMPC)
 
 if(LLVM_LIBC_CLANG_TIDY)
   set(LLVM_LIBC_ENABLE_LINTING ON)

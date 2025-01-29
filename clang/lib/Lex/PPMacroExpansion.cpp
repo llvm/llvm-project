@@ -1804,9 +1804,8 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
                                            diag::err_feature_check_malformed);
         if (!II)
           return false;
-        auto BuiltinID = II->getBuiltinID();
-        if (BuiltinID != 0) {
-          switch (BuiltinID) {
+        else if (II->getBuiltinID() != 0) {
+          switch (II->getBuiltinID()) {
           case Builtin::BI__builtin_cpu_is:
             return getTargetInfo().supportsCpuIs();
           case Builtin::BI__builtin_cpu_init:
@@ -1819,11 +1818,8 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
             // usual allocation and deallocation functions. Required by libc++
             return 201802;
           default:
-            // __has_builtin should return false for aux builtins.
-            if (getBuiltinInfo().isAuxBuiltinID(BuiltinID))
-              return false;
             return Builtin::evaluateRequiredTargetFeatures(
-                getBuiltinInfo().getRequiredFeatures(BuiltinID),
+                getBuiltinInfo().getRequiredFeatures(II->getBuiltinID()),
                 getTargetInfo().getTargetOpts().FeatureMap);
           }
           return true;

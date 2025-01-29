@@ -11,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "LoopVectorizationPlanner.h"
 #include "VPlan.h"
 #include "VPlanAnalysis.h"
 #include "VPlanPatternMatch.h"
@@ -935,6 +936,22 @@ InstructionCost VPIRInstruction::computeCost(ElementCount VF,
   // The recipe wraps an existing IR instruction on the border of VPlan's scope,
   // hence it does not contribute to the cost-modeling for the VPlan.
   return 0;
+}
+
+void VPIRInstruction::extractLastLaneOfOperand(VPBuilder &Builder) {
+  assert(isa<PHINode>(getInstruction()) &&
+         "can only add exiting operands to phi nodes");
+  assert(getNumOperands() == 1 && "must have a single operand");
+  VPValue *Exiting = getOperand(0);
+  if (!Exiting->isLiveIn()) {
+    LLVMContext &Ctx = getInstruction().getContext();
+    auto &Plan = *getParent()->getPlan();
+    Exiting = Builder.createNaryOp(
+        VPInstruction::ExtractFromEnd,
+        {Exiting,
+         Plan.getOrAddLiveIn(ConstantInt::get(IntegerType::get(Ctx, 32), 1))});
+  }
+  setOperand(0, Exiting);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2427,16 +2444,12 @@ void VPScalarCastRecipe ::print(raw_ostream &O, const Twine &Indent,
 void VPBranchOnMaskRecipe::execute(VPTransformState &State) {
   assert(State.Lane && "Branch on Mask works only on single instance.");
 
-  unsigned Lane = State.Lane->getKnownLane();
 
   Value *ConditionBit = nullptr;
   VPValue *BlockInMask = getMask();
-  if (BlockInMask) {
-    ConditionBit = State.get(BlockInMask);
-    if (ConditionBit->getType()->isVectorTy())
-      ConditionBit = State.Builder.CreateExtractElement(
-          ConditionBit, State.Builder.getInt32(Lane));
-  } else // Block in mask is all-one.
+  if (BlockInMask)
+    ConditionBit = State.get(BlockInMask, *State.Lane);
+  else // Block in mask is all-one.
     ConditionBit = State.Builder.getTrue();
 
   // Replace the temporary unreachable terminator with a new conditional branch,

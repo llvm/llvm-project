@@ -266,6 +266,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("PenaltyBreakAssignment: 1234", PenaltyBreakAssignment, 1234u);
   CHECK_PARSE("PenaltyBreakBeforeFirstCallParameter: 1234",
               PenaltyBreakBeforeFirstCallParameter, 1234u);
+  CHECK_PARSE("PenaltyBreakBeforeMemberAccess: 1234",
+              PenaltyBreakBeforeMemberAccess, 1234u);
   CHECK_PARSE("PenaltyBreakTemplateDeclaration: 1234",
               PenaltyBreakTemplateDeclaration, 1234u);
   CHECK_PARSE("PenaltyBreakOpenParenthesis: 1234", PenaltyBreakOpenParenthesis,

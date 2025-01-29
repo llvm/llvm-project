@@ -106,10 +106,10 @@ implicit none
     real, intent(inout) :: address
     real, value :: val
     end function
-    attributes(device) pure real*8 function atomicaddd(address, val)
+    attributes(device) pure real(8) function atomicaddd(address, val)
   !dir$ ignore_tkr (d) address, (d) val
-    real*8, intent(inout) :: address
-    real*8, value :: val
+    real(8), intent(inout) :: address
+    real(8), value :: val
     end function
     attributes(device) pure integer(8) function atomicaddl(address, val)
   !dir$ ignore_tkr (d) address, (d) val
@@ -117,6 +117,115 @@ implicit none
     integer(8), value :: val
     end function
   end interface 
-public :: atomicadd
+  public :: atomicadd
+
+  interface atomicsub
+    attributes(device) pure integer function atomicsubi(address, val)
+  !dir$ ignore_tkr (d) address, (d) val
+    integer, intent(inout) :: address
+    integer, value :: val
+    end function
+    attributes(device) pure real function atomicsubf(address, val)
+  !dir$ ignore_tkr (d) address, (d) val
+    real, intent(inout) :: address
+    real, value :: val
+    end function
+    attributes(device) pure real(8) function atomicsubd(address, val)
+  !dir$ ignore_tkr (d) address, (d) val
+    real(8), intent(inout) :: address
+    real(8), value :: val
+    end function
+    attributes(device) pure integer(8) function atomicsubl(address, val)
+  !dir$ ignore_tkr (d) address, (dk) val
+    integer(8), intent(inout) :: address
+    integer(8), value :: val
+    end function
+  end interface
+  public :: atomicsub
+  
+  interface atomicmax
+    attributes(device) pure integer function atomicmaxi(address, val)
+  !dir$ ignore_tkr (d) address, (d) val
+    integer, intent(inout) :: address
+    integer, value :: val
+    end function
+    attributes(device) pure real function atomicmaxf(address, val)
+  !dir$ ignore_tkr (d) address, (d) val
+    real, intent(inout) :: address
+    real, value :: val
+    end function
+    attributes(device) pure real(8) function atomicmaxd(address, val)
+  !dir$ ignore_tkr (d) address, (d) val
+    real(8), intent(inout) :: address
+    real(8), value :: val
+    end function
+    attributes(device) pure integer(8) function atomicmaxl(address, val)
+  !dir$ ignore_tkr (d) address, (dk) val
+    integer(8), intent(inout) :: address
+    integer(8), value :: val
+    end function
+  end interface
+  public :: atomicmax
+  
+  interface atomicmin
+    attributes(device) pure integer function atomicmini(address, val)
+  !dir$ ignore_tkr (d) address, (d) val
+    integer, intent(inout) :: address
+    integer, value :: val
+    end function
+    attributes(device) pure real function atomicminf(address, val)
+  !dir$ ignore_tkr (d) address, (d) val
+    real, intent(inout) :: address
+    real, value :: val
+    end function
+    attributes(device) pure real(8) function atomicmind(address, val)
+  !dir$ ignore_tkr (d) address, (d) val
+    real(8), intent(inout) :: address
+    real(8), value :: val
+    end function
+    attributes(device) pure integer(8) function atomicminl(address, val)
+  !dir$ ignore_tkr (d) address, (dk) val
+    integer(8), intent(inout) :: address
+    integer(8), value :: val
+    end function
+  end interface
+  public :: atomicmin
+  
+  interface atomicand
+    attributes(device) pure integer function atomicandi(address, val)
+  !dir$ ignore_tkr (d) address, (d) val
+    integer, intent(inout) :: address
+    integer, value :: val
+    end function
+  end interface
+  public :: atomicand
+  
+  interface atomicor
+    attributes(device) pure integer function atomicori(address, val)
+  !dir$ ignore_tkr (d) address, (d) val
+    integer, intent(inout) :: address
+    integer, value :: val
+    end function
+  end interface
+  public :: atomicor
+
+  interface atomicinc
+    attributes(device) pure integer function atomicinci(address, val)
+  !dir$ ignore_tkr (d) address, (d) val
+    integer, intent(inout) :: address
+    integer, value :: val
+    end function
+  end interface
+  public :: atomicinc
+  
+  interface atomicdec
+    attributes(device) pure integer function atomicdeci(address, val)
+  !dir$ ignore_tkr (d) address, (d) val
+    integer, intent(inout) :: address
+    integer, value :: val
+    end function
+  end interface
+  public :: atomicdec
+
 
 end module

@@ -1496,7 +1496,7 @@ SourceRange VarTemplateSpecializationDecl::getSourceRange() const {
 }
 
 void VarTemplateSpecializationDecl::setExternKeywordLoc(SourceLocation Loc) {
-  auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>();
+  auto *Info = dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo);
   if (!Info) {
     // Don't allocate if the location is invalid.
     if (Loc.isInvalid())
@@ -1509,7 +1509,7 @@ void VarTemplateSpecializationDecl::setExternKeywordLoc(SourceLocation Loc) {
 }
 
 void VarTemplateSpecializationDecl::setTemplateKeywordLoc(SourceLocation Loc) {
-  auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>();
+  auto *Info = dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo);
   if (!Info) {
     // Don't allocate if the location is invalid.
     if (Loc.isInvalid())

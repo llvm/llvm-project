@@ -96,6 +96,7 @@ ENUM_CLASS(KindCode, none, defaultIntegerKind,
     typeless, // BOZ literals are INTEGER with this kind
     ieeeFlagType, // IEEE_FLAG_TYPE from ISO_FORTRAN_EXCEPTION
     ieeeRoundType, // IEEE_ROUND_TYPE from ISO_FORTRAN_ARITHMETIC
+    eventType, // EVENT_TYPE from module ISO_FORTRAN_ENV (for coarrays)
     teamType, // TEAM_TYPE from module ISO_FORTRAN_ENV (for coarrays)
     kindArg, // this argument is KIND=
     effectiveKind, // for function results: "kindArg" value, possibly defaulted
@@ -129,6 +130,7 @@ static constexpr TypePattern DefaultChar{CharType, KindCode::defaultCharKind};
 static constexpr TypePattern DefaultLogical{
     LogicalType, KindCode::defaultLogicalKind};
 static constexpr TypePattern BOZ{IntType, KindCode::typeless};
+static constexpr TypePattern EventType{DerivedType, KindCode::eventType};
 static constexpr TypePattern IeeeFlagType{DerivedType, KindCode::ieeeFlagType};
 static constexpr TypePattern IeeeRoundType{
     DerivedType, KindCode::ieeeRoundType};
@@ -1311,6 +1313,14 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
 
 static const IntrinsicInterface intrinsicSubroutine[]{
     {"abort", {}, {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"atomic_add",
+        {{"atom", AtomicInt, Rank::atom, Optionality::required,
+             common::Intent::InOut},
+            {"value", AnyInt, Rank::scalar, Optionality::required,
+                common::Intent::In},
+            {"stat", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::atomicSubroutine},
     {"atomic_and",
         {{"atom", AtomicInt, Rank::atom, Optionality::required,
              common::Intent::InOut},
@@ -1463,6 +1473,13 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"time", TypePattern{RealType, KindCode::exactKind, 4},
                 Rank::scalar, Optionality::required, common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"event_query",
+        {{"event", EventType, Rank::scalar},
+            {"count", AnyInt, Rank::scalar, Optionality::required,
+                common::Intent::Out},
+            {"stat", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"execute_command_line",
         {{"command", DefaultChar, Rank::scalar},
             {"wait", AnyLogical, Rank::scalar, Optionality::optional},
@@ -1584,8 +1601,6 @@ static const IntrinsicInterface intrinsicSubroutine[]{
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
 };
 
-// TODO: Intrinsic subroutine EVENT_QUERY
-// TODO: Atomic intrinsic subroutines: ATOMIC_ADD
 // TODO: Collective intrinsic subroutines: co_reduce
 
 // Finds a built-in derived type and returns it as a DynamicType.
@@ -1713,8 +1728,8 @@ static bool CheckAndPushMinMaxArgument(ActualArgument &arg,
 }
 
 static bool CheckAtomicKind(const ActualArgument &arg,
-    const semantics::Scope *builtinsScope,
-    parser::ContextualMessages &messages) {
+    const semantics::Scope *builtinsScope, parser::ContextualMessages &messages,
+    const char *keyword) {
   std::string atomicKindStr;
   std::optional<DynamicType> type{arg.GetType()};
 
@@ -1727,11 +1742,12 @@ static bool CheckAtomicKind(const ActualArgument &arg,
                 "must be used with IntType or LogicalType");
   }
 
-  bool argOk = type->kind() ==
-      GetBuiltinKind(builtinsScope, ("__builtin_" + atomicKindStr).c_str());
+  bool argOk{type->kind() ==
+      GetBuiltinKind(builtinsScope, ("__builtin_" + atomicKindStr).c_str())};
   if (!argOk) {
     messages.Say(arg.sourceLocation(),
-        "Actual argument for 'atom=' must have kind=atomic_int_kind or atomic_logical_kind, but is '%s'"_err_en_US,
+        "Actual argument for '%s=' must have kind=atomic_%s_kind, but is '%s'"_err_en_US,
+        keyword, type->category() == TypeCategory::Integer ? "int" : "logical",
         type->AsFortran());
   }
   return argOk;
@@ -1960,6 +1976,11 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::typeless:
       argOk = false;
       break;
+    case KindCode::eventType:
+      argOk = !type->IsUnlimitedPolymorphic() &&
+          type->category() == TypeCategory::Derived &&
+          semantics::IsEventType(&type->GetDerivedTypeSpec());
+      break;
     case KindCode::ieeeFlagType:
       argOk = !type->IsUnlimitedPolymorphic() &&
           type->category() == TypeCategory::Derived &&
@@ -2052,7 +2073,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::sameAtom:
       if (!sameArg) {
         sameArg = arg;
-        argOk = CheckAtomicKind(DEREF(arg), builtinsScope, messages);
+        argOk = CheckAtomicKind(DEREF(arg), builtinsScope, messages, d.keyword);
       } else {
         argOk = type->IsTkCompatibleWith(sameArg->GetType().value());
         if (!argOk) {
@@ -2061,23 +2082,21 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
               d.keyword, type->AsFortran());
         }
       }
-      if (!argOk)
+      if (!argOk) {
         return std::nullopt;
+      }
       break;
     case KindCode::atomicIntKind:
-      argOk = type->kind() ==
-          GetBuiltinKind(builtinsScope, "__builtin_atomic_int_kind");
+      argOk = CheckAtomicKind(DEREF(arg), builtinsScope, messages, d.keyword);
       if (!argOk) {
-        messages.Say(arg->sourceLocation(),
-            "Actual argument for '%s=' must have kind=atomic_int_kind, but is '%s'"_err_en_US,
-            d.keyword, type->AsFortran());
         return std::nullopt;
       }
       break;
     case KindCode::atomicIntOrLogicalKind:
-      argOk = CheckAtomicKind(DEREF(arg), builtinsScope, messages);
-      if (!argOk)
+      argOk = CheckAtomicKind(DEREF(arg), builtinsScope, messages, d.keyword);
+      if (!argOk) {
         return std::nullopt;
+      }
       break;
     default:
       CRASH_NO_CASE;
@@ -2557,6 +2576,10 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             // Dummy procedures are never elemental.
             dummyProc->procedure.value().attrs.reset(
                 characteristics::Procedure::Attr::Elemental);
+          } else if (auto *dummyObject{
+                         std::get_if<characteristics::DummyDataObject>(
+                             &dc->u)}) {
+            dummyObject->type.set_corank(0);
           }
           dummyArgs.emplace_back(std::move(*dc));
           if (d.typePattern.kindCode == KindCode::same && !sameDummyArg) {
@@ -3232,8 +3255,8 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
           arg ? arg->sourceLocation() : context.messages().at(),
           "Argument of ALLOCATED() must be an ALLOCATABLE object or component"_err_en_US);
     }
-  } else if (name == "atomic_and" || name == "atomic_or" ||
-      name == "atomic_xor") {
+  } else if (name == "atomic_add" || name == "atomic_and" ||
+      name == "atomic_or" || name == "atomic_xor" || name == "event_query") {
     return CheckForCoindexedObject(
         context.messages(), call.arguments[2], name, "stat");
   } else if (name == "atomic_cas") {

@@ -20,14 +20,13 @@
  * THE SOFTWARE.
  */
 
+#include "sincos_helpers.h"
 #include <clc/clc.h>
 #include <clc/math/clc_mad.h>
 #include <clc/math/clc_trunc.h>
+#include <clc/math/math.h>
+#include <clc/math/tables.h>
 #include <clc/shared/clc_max.h>
-
-#include "math.h"
-#include "sincos_helpers.h"
-#include "tables.h"
 
 #define bitalign(hi, lo, shift) ((hi) << (32 - (shift))) | ((lo) >> (shift));
 

@@ -17,6 +17,11 @@
 # CHECK-NEXT: Other: 0
 # CHECK-NEXT: Section: Undefined
 
+# RUN: ld.lld -pie -o %t %t1.o --start-lib %t2.o --no-dynamic-linker
+# RUN: llvm-readelf --dyn-syms %t | FileCheck %s --check-prefix=STATICPIE
+
+# STATICPIE: Symbol table '.dynsym' contains 1
+
 ## -u specifies a STB_DEFAULT undefined symbol, so the definition from %t2.o is
 ## fetched.
 # RUN: ld.lld -u foo %t1.o --start-lib %t2.o -o %t1

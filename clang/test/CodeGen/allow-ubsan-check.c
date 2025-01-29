@@ -202,7 +202,7 @@ void use(double*);
 // TR-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA7:![0-9]+]]
 // TR-NEXT:    ret double [[TMP5]]
 // TR:       [[TRAP]]:
-// TR-NEXT:    call void @llvm.ubsantrap(i8 3) #[[ATTR5]], !nosanitize [[META2]]
+// TR-NEXT:    call void @llvm.ubsantrap(i8 71) #[[ATTR5]], !nosanitize [[META2]]
 // TR-NEXT:    unreachable, !nosanitize [[META2]]
 //
 // REC-LABEL: define dso_local double @lbounds(

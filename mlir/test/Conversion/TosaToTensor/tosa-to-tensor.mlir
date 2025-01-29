@@ -86,7 +86,7 @@ func.func @test_reshape_1d_down_s2s_explicit(%arg0: tensor<1xf32>) -> tensor<f32
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[DIM:.*]] = tensor.dim %arg0, %[[C0]] : tensor<?xf32>
 // CHECK: %[[C2:.*]] = arith.constant 2 : index
-// CHECK: %[[VAL_0:.*]] = arith.divui %[[DIM]], %[[C2]] : index
+// CHECK: %[[VAL_0:.*]] = arith.divsi %[[DIM]], %[[C2]] : index
 // CHECK: %[[EXPANDED:.*]] = tensor.expand_shape %[[ARG_0]] {{\[\[}}0, 1]] output_shape [2, %[[VAL_0]]] : tensor<?xf32> into tensor<2x?xf32>
 // CHECK: return %[[EXPANDED]] : tensor<2x?xf32>
 func.func @test_reshape_1d_up_d2d_auto(%arg0: tensor<?xf32>) -> tensor<2x?xf32> {
@@ -135,7 +135,7 @@ func.func @test_reshape_2d_down_s2s_explicit(%arg0: tensor<2x3xf32>) -> tensor<6
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[DIM:.*]] = tensor.dim %[[VAL_0]], %[[C0]] : tensor<?xf32>
 // CHECK: %[[C2:.*]] = arith.constant 2 : index
-// CHECK: %[[DIV:.*]] = arith.divui %[[DIM]], %[[C2]] : index
+// CHECK: %[[DIV:.*]] = arith.divsi %[[DIM]], %[[C2]] : index
 // CHECK: %[[EXPANDED:.*]] = tensor.expand_shape %[[VAL_0]] {{\[\[}}0, 1]] output_shape [2, %[[DIV]]] : tensor<?xf32> into tensor<2x?xf32>
 // CHECK: return %[[EXPANDED]] : tensor<2x?xf32>
 func.func @test_reshape_2d_same_d2d_auto(%arg0: tensor<?x2xf32>) -> tensor<2x?xf32> {
@@ -189,7 +189,7 @@ func.func @test_reshape_2d_same_s2s_explicit(%arg0: tensor<3x2xf32>) -> tensor<2
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[DIM:.*]] = tensor.dim %[[VAL_0]], %[[C0]] : tensor<?xf32>
 // CHECK: %[[C0_0:.*]] = arith.constant 0 : index
-// CHECK: %[[DIV:.*]] = arith.divui %[[DIM]], %[[C0_0]] : index
+// CHECK: %[[DIV:.*]] = arith.divsi %[[DIM]], %[[C0_0]] : index
 // CHECK: %[[VAL_1:.*]] = tensor.expand_shape %[[VAL_0]] {{\[\[}}0, 1, 2]] output_shape [0, 3, %[[DIV]]] : tensor<?xf32> into tensor<0x3x?xf32>
 // CHECK: %[[VAL_2:.*]] = tensor.cast %[[VAL_1]] : tensor<0x3x?xf32> to tensor<?x?x?xf32>
 // CHECK: return %[[VAL_2]] : tensor<?x?x?xf32>
@@ -206,7 +206,7 @@ func.func @test_reshape_3d_same_d2d_auto_empty(%arg0: tensor<3x2x?xf32>) -> tens
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[DIM:.*]] = tensor.dim %[[VAL_0]], %[[C0]] : tensor<?xf32>
 // CHECK: %[[C8:.*]] = arith.constant 8 : index
-// CHECK: %[[DIV:.*]] = arith.divui %[[DIM]], %[[C8]] : index
+// CHECK: %[[DIV:.*]] = arith.divsi %[[DIM]], %[[C8]] : index
 // CHECK: %[[VAL_1:.*]] = tensor.expand_shape %[[VAL_0]] {{\[\[}}0, 1, 2]] output_shape [2, %[[DIV]], 4] : tensor<?xf32> into tensor<2x?x4xf32>
 // CHECK: %[[VAL_2:.*]] = tensor.cast %[[VAL_1]] : tensor<2x?x4xf32> to tensor<?x?x?xf32>
 // CHECK: return %[[VAL_2]] : tensor<?x?x?xf32>
@@ -223,7 +223,7 @@ func.func @test_reshape_3d_same_d2d_auto(%arg0: tensor<2x?x?xf32>) -> tensor<?x?
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[DIM:.*]] = tensor.dim %[[VAL_0]], %[[C0]] : tensor<?xf32>
 // CHECK: %[[C6:.*]] = arith.constant 6 : index
-// CHECK: %[[DIV:.*]] = arith.divui %[[DIM]], %[[C6]] : index
+// CHECK: %[[DIV:.*]] = arith.divsi %[[DIM]], %[[C6]] : index
 // CHECK: %[[VAL_1:.*]] = tensor.expand_shape %[[VAL_0]] {{\[\[}}0, 1, 2]] output_shape [2, 3, %[[DIV]]] : tensor<?xf32> into tensor<2x3x?xf32>
 // CHECK: return %[[VAL_1]] : tensor<2x3x?xf32>
 func.func @test_reshape_3d_same_d2d_auto_identity(%arg0: tensor<?x3x4xf32>) -> tensor<2x3x?xf32> {
@@ -239,7 +239,7 @@ func.func @test_reshape_3d_same_d2d_auto_identity(%arg0: tensor<?x3x4xf32>) -> t
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[DIM:.*]] = tensor.dim %[[VAL_0]], %[[C0]] : tensor<?xf32>
 // CHECK: %[[C6:.*]] = arith.constant 6 : index
-// CHECK: %[[DIV:.*]] = arith.divui %[[DIM]], %[[C6]] : index
+// CHECK: %[[DIV:.*]] = arith.divsi %[[DIM]], %[[C6]] : index
 // CHECK: %[[EXPANDED:.*]] = tensor.expand_shape %[[VAL_0]] {{\[\[}}0, 1, 2]] output_shape [%[[DIV]], 3, 2] : tensor<?xf32> into tensor<?x3x2xf32>
 // CHECK: %[[VAL_2:.*]] = tensor.cast %[[EXPANDED]] : tensor<?x3x2xf32> to tensor<?x?x?xf32>
 // CHECK: return %[[VAL_2]] : tensor<?x?x?xf32>
@@ -256,7 +256,7 @@ func.func @test_reshape_3d_same_d2d_explicit_empty(%arg0: tensor<3x2x?xf32>) -> 
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[DIM:.*]] = tensor.dim %[[VAL_0]], %[[C0]] : tensor<?xf32>
 // CHECK: %[[C12:.*]] = arith.constant 12 : index
-// CHECK: %[[DIV:.*]] = arith.divui %[[DIM]], %[[C12]] : index
+// CHECK: %[[DIV:.*]] = arith.divsi %[[DIM]], %[[C12]] : index
 // CHECK: %[[EXPANDED:.*]] = tensor.expand_shape %[[VAL_0]] {{\[\[}}0, 1, 2]] output_shape [%[[DIV]], 3, 4] : tensor<?xf32> into tensor<?x3x4xf32>
 // CHECK: %[[VAL_2:.*]] = tensor.cast %[[EXPANDED]] : tensor<?x3x4xf32> to tensor<?x?x?xf32>
 // CHECK: return %[[VAL_2]] : tensor<?x?x?xf32>
@@ -284,7 +284,7 @@ func.func @test_reshape_3d_same_d2d_explicit_identity(%arg0: tensor<?x3x4xf32>) 
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[DIM:.*]] = tensor.dim %[[VAL_0]], %[[C0]] : tensor<?xf32>
 // CHECK: %[[C8:.*]] = arith.constant 8 : index
-// CHECK: %[[DIV:.*]] = arith.divui %[[DIM]], %[[C8]] : index
+// CHECK: %[[DIV:.*]] = arith.divsi %[[DIM]], %[[C8]] : index
 // CHECK: %[[EXPANDED:.*]] = tensor.expand_shape %[[VAL_0]] {{\[\[}}0, 1, 2]] output_shape [2, %[[DIV]], 4] : tensor<?xf32> into tensor<2x?x4xf32>
 // CHECK: %[[VAL_2:.*]] = tensor.cast %[[EXPANDED]] : tensor<2x?x4xf32> to tensor<2x3x4xf32>
 // CHECK: return %[[VAL_2]] : tensor<2x3x4xf32>
@@ -301,7 +301,7 @@ func.func @test_reshape_3d_same_d2s_auto(%arg0: tensor<?x?x?xf32>) -> tensor<2x3
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[DIM:.*]] = tensor.dim %[[VAL_0]], %[[C0]] : tensor<?xf32>
 // CHECK: %[[C12:.*]] = arith.constant 12 : index
-// CHECK: %[[DIV:.*]] = arith.divui %[[DIM]], %[[C12]] : index
+// CHECK: %[[DIV:.*]] = arith.divsi %[[DIM]], %[[C12]] : index
 // CHECK: %[[EXPANDED:.*]] = tensor.expand_shape %[[VAL_0]] {{\[\[}}0, 1, 2]] output_shape [%[[DIV]], 3, 4] : tensor<?xf32> into tensor<?x3x4xf32>
 // CHECK: %[[VAL_2:.*]] = tensor.cast %[[EXPANDED]] : tensor<?x3x4xf32> to tensor<2x3x4xf32>
 // CHECK: return %[[VAL_2]] : tensor<2x3x4xf32>
@@ -328,7 +328,7 @@ func.func @test_reshape_3d_same_s2s_explicit_identity(%arg0: tensor<2x3x4xf32>) 
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[DIM:.*]] = tensor.dim %[[COLLAPSED]], %[[C0]] : tensor<?xf32>
 // CHECK: %[[C6:.*]] = arith.constant 6 : index
-// CHECK: %[[VAL_0:.*]] = arith.divui %[[DIM]], %[[C6]] : index
+// CHECK: %[[VAL_0:.*]] = arith.divsi %[[DIM]], %[[C6]] : index
 // CHECK: %[[EXPANDED:.*]] = tensor.expand_shape %[[COLLAPSED]] {{\[\[}}0, 1, 2, 3]] output_shape [%[[VAL_0]], 3, 2, 1] : tensor<?xf32> into tensor<?x3x2x1xf32>
 // CHECK: %[[CAST:.*]] = tensor.cast %[[EXPANDED]] : tensor<?x3x2x1xf32> to tensor<1x3x2x1xf32>
 // CHECK: return %[[CAST]] : tensor<1x3x2x1xf32>
@@ -357,7 +357,7 @@ func.func @test_reshape_4d_down_d2s_explicit(%arg0: tensor<?x?x?x?xf32>) -> tens
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[DIM:.*]] = tensor.dim %[[COLLAPSED]], %[[C0]] : tensor<?xf32>
 // CHECK: %[[C6:.*]] = arith.constant 6 : index
-// CHECK: %[[VAL_0:.*]] = arith.divui %[[DIM]], %[[C6]] : index
+// CHECK: %[[VAL_0:.*]] = arith.divsi %[[DIM]], %[[C6]] : index
 // CHECK: %[[EXPANDED:.*]] = tensor.expand_shape %[[COLLAPSED]] {{\[\[}}0, 1, 2]] output_shape [%[[VAL_0]], 2, 3] : tensor<?xf32> into tensor<?x2x3xf32>
 // CHECK: return %[[EXPANDED]] : tensor<?x2x3xf32>
 func.func @test_reshape_5d_down_d2d_auto(%arg0: tensor<?x?x?x2x3xf32>) -> tensor<?x2x3xf32> {
@@ -373,7 +373,7 @@ func.func @test_reshape_5d_down_d2d_auto(%arg0: tensor<?x?x?x2x3xf32>) -> tensor
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[DIM:.*]] = tensor.dim %[[COLLAPSED]], %[[C0]] : tensor<?xf32>
 // CHECK: %[[C385:.*]] = arith.constant 385 : index
-// CHECK: %[[VAL_0:.*]] = arith.divui %[[DIM]], %[[C385]] : index
+// CHECK: %[[VAL_0:.*]] = arith.divsi %[[DIM]], %[[C385]] : index
 // CHECK: %[[EXPANDED:.*]] = tensor.expand_shape %[[COLLAPSED]] {{\[\[}}0, 1, 2]] output_shape [%[[VAL_0]], 5, 77] : tensor<?xf32> into tensor<?x5x77xf32>
 // CHECK: return %[[EXPANDED]] : tensor<?x5x77xf32>
 func.func @test_reshape_6d_down_d2d_auto(%arg0: tensor<1x2x?x5x7x11xf32>) -> tensor<?x5x77xf32> {

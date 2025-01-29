@@ -134,9 +134,10 @@ const int FUTEX_WAKE_PRIVATE = FUTEX_WAKE | FUTEX_PRIVATE_FLAG;
 // Are we using 32-bit or 64-bit Linux syscalls?
 // x32 (which defines __x86_64__) has SANITIZER_WORDSIZE == 32
 // but it still needs to use 64-bit syscalls.
-#  if SANITIZER_LINUX && (defined(__x86_64__) || defined(__powerpc64__) || \
-                          SANITIZER_WORDSIZE == 64 ||                      \
-                          (defined(__mips__) && _MIPS_SIM == _ABIN32))
+#  if SANITIZER_LINUX &&                                \
+      (defined(__x86_64__) || defined(__powerpc64__) || \
+       SANITIZER_WORDSIZE == 64 ||                      \
+       (defined(__mips__) && defined(_ABIN32) && _MIPS_SIM == _ABIN32))
 #    define SANITIZER_LINUX_USES_64BIT_SYSCALLS 1
 #  else
 #    define SANITIZER_LINUX_USES_64BIT_SYSCALLS 0
@@ -429,8 +430,9 @@ uptr internal_stat(const char *path, void *buf) {
                              AT_NO_AUTOMOUNT, STATX_BASIC_STATS, (uptr)&bufx);
   statx_to_stat(&bufx, (struct stat *)buf);
   return res;
-#      elif (SANITIZER_WORDSIZE == 64 || SANITIZER_X32 ||    \
-             (defined(__mips__) && _MIPS_SIM == _ABIN32)) && \
+#      elif (                                                                 \
+          SANITIZER_WORDSIZE == 64 || SANITIZER_X32 ||                        \
+          (defined(__mips__) && defined(_ABIN32) && _MIPS_SIM == _ABIN32)) && \
           !SANITIZER_SPARC
   return internal_syscall(SYSCALL(newfstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           0);
@@ -467,8 +469,9 @@ uptr internal_lstat(const char *path, void *buf) {
                              STATX_BASIC_STATS, (uptr)&bufx);
   statx_to_stat(&bufx, (struct stat *)buf);
   return res;
-#      elif (defined(_LP64) || SANITIZER_X32 ||              \
-             (defined(__mips__) && _MIPS_SIM == _ABIN32)) && \
+#      elif (                                                                 \
+          defined(_LP64) || SANITIZER_X32 ||                                  \
+          (defined(__mips__) && defined(_ABIN32) && _MIPS_SIM == _ABIN32)) && \
           !SANITIZER_SPARC
   return internal_syscall(SYSCALL(newfstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           AT_SYMLINK_NOFOLLOW);

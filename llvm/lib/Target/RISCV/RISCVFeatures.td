@@ -1228,6 +1228,21 @@ def HasVendorXCVbi
     : Predicate<"Subtarget->hasVendorXCVbi()">,
       AssemblerPredicate<(all_of FeatureVendorXCVbi),
                          "'XCVbi' (CORE-V Immediate Branching)">;
+// MIPS Extensions
+
+def FeatureVendorXMIPSCMove
+    : RISCVExtension<1, 0, "MIPS conditional move instruction(s) (ccmov)">;
+def HasVendorXMIPSCMove
+    : Predicate<"Subtarget->hasVendorXMIPSCMove()">,
+      AssemblerPredicate<(all_of FeatureVendorXMIPSCMove),
+                         "'Xmipscmove' ('mips.ccmov' instruction)">;
+def UseCCMovInsn : Predicate<"Subtarget->useCCMovInsn()">;
+def FeatureVendorXMIPSLSP
+    : RISCVExtension<1, 0, "MIPS optimization for hardware load-store bonding">;
+def HasVendorXMIPSLSP
+    : Predicate<"Subtarget->hasVendorXMIPSLSP()">,
+      AssemblerPredicate<(all_of FeatureVendorXMIPSLSP),
+                         "'Xmipslsp' (load and store pair instructions)">;
 
 // WCH / Nanjing Qinheng Microelectronics Extension(s)
 
@@ -1279,7 +1294,7 @@ def HasVendorXqcilsm
                          "'Xqcilsm' (Qualcomm uC Load Store Multiple Extension)">;
 
 def FeatureVendorXqciac
-    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Load-Store Address Calculation Extension",
+    : RISCVExperimentalExtension<0, 3, "Qualcomm uC Load-Store Address Calculation Extension",
                                  [FeatureStdExtZca]>;
 def HasVendorXqciac
     : Predicate<"Subtarget->hasVendorXqciac()">,

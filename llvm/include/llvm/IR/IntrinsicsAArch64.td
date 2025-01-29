@@ -993,6 +993,82 @@ def int_aarch64_st64b: Intrinsic<[], !listconcat([llvm_ptr_ty], data512)>;
 def int_aarch64_st64bv: Intrinsic<[llvm_i64_ty], !listconcat([llvm_ptr_ty], data512)>;
 def int_aarch64_st64bv0: Intrinsic<[llvm_i64_ty], !listconcat([llvm_ptr_ty], data512)>;
 
+  //
+  // Neon FP8 intrinsics
+  //
+
+  // Conversions
+  class AdvSIMD_FP8_1VectorArg_Long_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty], [llvm_anyvector_ty], [IntrReadMem, IntrInaccessibleMemOnly]>;
+
+  def int_aarch64_neon_fp8_cvtl1   : AdvSIMD_FP8_1VectorArg_Long_Intrinsic;
+  def int_aarch64_neon_fp8_cvtl2   : AdvSIMD_FP8_1VectorArg_Long_Intrinsic;
+
+  def int_aarch64_neon_fp8_fcvtn
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [llvm_anyvector_ty,
+                             LLVMMatchType<1>],
+                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+  def int_aarch64_neon_fp8_fcvtn2
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>,
+                             llvm_anyvector_ty,
+                             LLVMMatchType<1>],
+                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+
+  // Dot-product
+  class AdvSIMD_FP8_DOT_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>,
+                             llvm_anyvector_ty,
+                             LLVMMatchType<1>],
+                             [IntrReadMem, IntrInaccessibleMemOnly]>;
+  class AdvSIMD_FP8_DOT_LANE_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>,
+                             llvm_anyvector_ty,
+                             llvm_v16i8_ty,
+                             llvm_i32_ty],
+                             [IntrReadMem, IntrInaccessibleMemOnly, ImmArg<ArgIndex<3>>]>;
+
+  def int_aarch64_neon_fp8_fdot2 : AdvSIMD_FP8_DOT_Intrinsic;
+  def int_aarch64_neon_fp8_fdot2_lane : AdvSIMD_FP8_DOT_LANE_Intrinsic;
+
+  def int_aarch64_neon_fp8_fdot4 : AdvSIMD_FP8_DOT_Intrinsic;
+  def int_aarch64_neon_fp8_fdot4_lane : AdvSIMD_FP8_DOT_LANE_Intrinsic;
+
+
+// Fused multiply-add
+  class AdvSIMD_FP8_FMLA_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>,
+                             llvm_v16i8_ty,
+                             llvm_v16i8_ty],
+                             [IntrReadMem, IntrInaccessibleMemOnly]>;
+
+  class AdvSIMD_FP8_FMLA_LANE_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>,
+                             llvm_v16i8_ty,
+                             llvm_v16i8_ty,
+                             llvm_i32_ty],
+                             [IntrReadMem, IntrInaccessibleMemOnly, ImmArg<ArgIndex<3>>]>;
+
+  def int_aarch64_neon_fp8_fmlalb : AdvSIMD_FP8_FMLA_Intrinsic;
+  def int_aarch64_neon_fp8_fmlalt : AdvSIMD_FP8_FMLA_Intrinsic;
+
+  def int_aarch64_neon_fp8_fmlallbb : AdvSIMD_FP8_FMLA_Intrinsic;
+  def int_aarch64_neon_fp8_fmlallbt : AdvSIMD_FP8_FMLA_Intrinsic;
+  def int_aarch64_neon_fp8_fmlalltb : AdvSIMD_FP8_FMLA_Intrinsic;
+  def int_aarch64_neon_fp8_fmlalltt : AdvSIMD_FP8_FMLA_Intrinsic;
+
+  def int_aarch64_neon_fp8_fmlalb_lane : AdvSIMD_FP8_FMLA_LANE_Intrinsic;
+  def int_aarch64_neon_fp8_fmlalt_lane : AdvSIMD_FP8_FMLA_LANE_Intrinsic;
+
+  def int_aarch64_neon_fp8_fmlallbb_lane : AdvSIMD_FP8_FMLA_LANE_Intrinsic;
+  def int_aarch64_neon_fp8_fmlallbt_lane : AdvSIMD_FP8_FMLA_LANE_Intrinsic;
+  def int_aarch64_neon_fp8_fmlalltb_lane : AdvSIMD_FP8_FMLA_LANE_Intrinsic;
+  def int_aarch64_neon_fp8_fmlalltt_lane : AdvSIMD_FP8_FMLA_LANE_Intrinsic;
 }
 
 def llvm_nxv1i1_ty  : LLVMType<nxv1i1>;

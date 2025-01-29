@@ -529,6 +529,9 @@ public:
     // having to check against an end() iterator.
     explicit operator bool() const { return !componentPath_.empty(); }
 
+    // Returns the current sequence of components, including parent components.
+    SymbolVector GetComponentPath() const;
+
     // Builds a designator name of the referenced component for messages.
     // The designator helps when the component referred to by the iterator
     // may be "buried" into other components. This gives the full
@@ -626,7 +629,7 @@ using PotentialAndPointerComponentIterator =
 // is returned. Otherwise, the returned iterator casts to true and can be
 // dereferenced.
 PotentialComponentIterator::const_iterator FindEventOrLockPotentialComponent(
-    const DerivedTypeSpec &);
+    const DerivedTypeSpec &, bool ignoreCoarrays = false);
 UltimateComponentIterator::const_iterator FindCoarrayUltimateComponent(
     const DerivedTypeSpec &);
 UltimateComponentIterator::const_iterator FindPointerUltimateComponent(

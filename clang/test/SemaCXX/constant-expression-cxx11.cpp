@@ -1462,7 +1462,7 @@ namespace InstantiateCaseStmt {
 
 namespace ConvertedConstantExpr {
   extern int &m;
-  extern int &n; // expected-note 2{{declared here}}
+  extern int &n; // pre-cxx23-note 2{{declared here}}
 
   constexpr int k = 4;
   int &m = const_cast<int&>(k);
@@ -1471,9 +1471,9 @@ namespace ConvertedConstantExpr {
   // useless note and instead just point to the non-constant subexpression.
   enum class E {
     em = m,
-    en = n, // cxx23-note {{initializer of 'n' is not a constant expression}} expected-error {{enumerator value is not a constant expression}} cxx11_20-note {{initializer of 'n' is unknown}}
-    eo = (m + // expected-error {{not a constant expression}}
-          n // cxx23-note {{initializer of 'n' is not a constant expression}} cxx11_20-note {{initializer of 'n' is unknown}}
+    en = n, // expected-error {{enumerator value is not a constant expression}} cxx11_20-note {{initializer of 'n' is unknown}}
+    eo = (m + // pre-cxx23-error {{not a constant expression}}
+          n // cxx11_20-note {{initializer of 'n' is unknown}} cxx23-error {{not a constant expression}}
           ),
     eq = reinterpret_cast<long>((int*)0) // expected-error {{not a constant expression}} expected-note {{reinterpret_cast}}
   };

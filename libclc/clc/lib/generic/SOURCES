@@ -5,6 +5,7 @@ geometric/clc_dot.cl
 integer/clc_abs.cl
 integer/clc_abs_diff.cl
 math/clc_ceil.cl
+math/clc_copysign.cl
 math/clc_fabs.cl
 math/clc_floor.cl
 math/clc_mad.cl

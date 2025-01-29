@@ -58,7 +58,8 @@ OpenMP support. We then set ``RUNTIMES_<triple>_LLVM_ENABLE_RUNTIMES`` to enable
 ``libc`` for the GPU targets. The ``LLVM_RUNTIME_TARGETS`` sets the enabled
 targets to build, in this case we want the default target and the GPU targets.
 Note that if ``libc`` were included in ``LLVM_ENABLE_RUNTIMES`` it would build
-targeting the default host environment as well.
+targeting the default host environment as well. Alternatively, you can point
+your build towards the ``libc/cmake/caches/gpu.cmake`` cache file with ``-C``.
 
 Runtimes cross build
 --------------------

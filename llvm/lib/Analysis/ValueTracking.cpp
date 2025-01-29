@@ -593,11 +593,14 @@ static bool cmpExcludesZero(CmpInst::Predicate Pred, const Value *RHS) {
 }
 
 static void breakSelfRecursivePHI(const Use *U, const PHINode *PHI,
-                                  Value *&ValOut, Instruction *&CtxIOut) {
+                                  Value *&ValOut, Instruction *&CtxIOut,
+                                  const PHINode **PhiOut = nullptr) {
   ValOut = U->get();
   if (ValOut == PHI)
     return;
   CtxIOut = PHI->getIncomingBlock(*U)->getTerminator();
+  if (PhiOut)
+    *PhiOut = PHI;
   Value *V;
   // If the Use is a select of this phi, compute analysis on other arm to break
   // recursion.
@@ -610,11 +613,13 @@ static void breakSelfRecursivePHI(const Use *U, const PHINode *PHI,
   // incoming value to break recursion.
   // TODO: We could handle any number of incoming edges as long as we only have
   // two unique values.
-  else if (auto *IncPhi = dyn_cast<PHINode>(ValOut);
-           IncPhi && IncPhi->getNumIncomingValues() == 2) {
+  if (auto *IncPhi = dyn_cast<PHINode>(ValOut);
+      IncPhi && IncPhi->getNumIncomingValues() == 2) {
     for (int Idx = 0; Idx < 2; ++Idx) {
       if (IncPhi->getIncomingValue(Idx) == PHI) {
         ValOut = IncPhi->getIncomingValue(1 - Idx);
+        if (PhiOut)
+          *PhiOut = IncPhi;
         CtxIOut = IncPhi->getIncomingBlock(1 - Idx)->getTerminator();
         break;
       }
@@ -1673,8 +1678,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
       Known.One.setAllBits();
       for (const Use &U : P->operands()) {
         Value *IncValue;
+        const PHINode *CxtPhi;
         Instruction *CxtI;
-        breakSelfRecursivePHI(&U, P, IncValue, CxtI);
+        breakSelfRecursivePHI(&U, P, IncValue, CxtI, &CxtPhi);
         // Skip direct self references.
         if (IncValue == P)
           continue;
@@ -1705,9 +1711,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
                     m_Br(m_c_ICmp(Pred, m_Specific(IncValue), m_APInt(RHSC)),
                          m_BasicBlock(TrueSucc), m_BasicBlock(FalseSucc)))) {
             // Check for cases of duplicate successors.
-            if ((TrueSucc == P->getParent()) != (FalseSucc == P->getParent())) {
+            if ((TrueSucc == CxtPhi->getParent()) !=
+                (FalseSucc == CxtPhi->getParent())) {
               // If we're using the false successor, invert the predicate.
-              if (FalseSucc == P->getParent())
+              if (FalseSucc == CxtPhi->getParent())
                 Pred = CmpInst::getInversePredicate(Pred);
               // Get the knownbits implied by the incoming phi condition.
               auto CR = ConstantRange::makeExactICmpRegion(Pred, *RHSC);

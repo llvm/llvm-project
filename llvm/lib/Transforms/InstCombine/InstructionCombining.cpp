@@ -732,7 +732,7 @@ static Value *tryFactorization(BinaryOperator &I, const SimplifyQuery &SQ,
   RetVal->takeName(&I);
 
   // Try to add no-overflow flags to the final value.
-  if (isa<OverflowingBinaryOperator>(RetVal)) {
+  if (isa<BinaryOperator>(RetVal)) {
     bool HasNSW = false;
     bool HasNUW = false;
     if (isa<OverflowingBinaryOperator>(&I)) {

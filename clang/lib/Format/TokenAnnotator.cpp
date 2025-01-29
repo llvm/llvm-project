@@ -252,10 +252,10 @@ private:
       // parameters.
       // FIXME: This is getting out of hand, write a decent parser.
       if (MaybeAngles && InExpr && !Line.startsWith(tok::kw_template) &&
-          Prev.is(TT_BinaryOperator)) {
-        const auto Precedence = Prev.getPrecedence();
-        if (Precedence > prec::Conditional && Precedence < prec::Relational)
-          MaybeAngles = false;
+          Prev.is(TT_BinaryOperator) &&
+          (Prev.isOneOf(tok::pipepipe, tok::ampamp) ||
+           Prev.getPrecedence() == prec::Equality)) {
+        MaybeAngles = false;
       }
       if (Prev.isOneOf(tok::question, tok::colon) && !Style.isProto())
         SeenTernaryOperator = true;
@@ -4313,9 +4313,11 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
     //
     //   aaaaaaa
     //       .aaaaaaaaa.bbbbbbbb(cccccccc);
-    return !Right.NextOperator || !Right.NextOperator->Previous->closesScope()
-               ? 150
-               : 35;
+    const auto *NextOperator = Right.NextOperator;
+    const auto Penalty = Style.PenaltyBreakBeforeMemberAccess;
+    return NextOperator && NextOperator->Previous->closesScope()
+               ? std::min(Penalty, 35u)
+               : Penalty;
   }
 
   if (Right.is(TT_TrailingAnnotation) &&

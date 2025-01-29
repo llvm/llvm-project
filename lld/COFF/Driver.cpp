@@ -2353,12 +2353,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     llvm::TimeTraceScope timeScope("Delay load");
     for (auto *arg : args.filtered(OPT_delayload)) {
       config->delayLoads.insert(StringRef(arg->getValue()).lower());
-      if (config->machine == I386) {
-        config->delayLoadHelper = ctx.symtab.addGCRoot("___delayLoadHelper2@8");
-      } else {
-        config->delayLoadHelper =
-            ctx.symtab.addGCRoot("__delayLoadHelper2", true);
-      }
+      ctx.forEachSymtab([&](SymbolTable &symtab) {
+        if (symtab.machine == I386) {
+          symtab.delayLoadHelper = symtab.addGCRoot("___delayLoadHelper2@8");
+        } else {
+          symtab.delayLoadHelper = symtab.addGCRoot("__delayLoadHelper2", true);
+        }
+      });
     }
   }
 

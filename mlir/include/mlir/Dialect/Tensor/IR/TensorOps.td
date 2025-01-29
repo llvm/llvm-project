@@ -1165,6 +1165,9 @@ def Tensor_ExpandShapeOp : Tensor_ReassociativeReshapeOp<"expand_shape"> {
   let extraClassDeclaration = commonExtraClassDeclaration # [{
     int64_t getCorrespondingSourceDim(int64_t resultDim);
 
+    // Return output shape as mixes static/dynamic shapes.
+    SmallVector<OpFoldResult> getMixedOutputShape();
+
     // Infer the output shape for a tensor.expand_shape when it is possible
     // to do so.
     static FailureOr<SmallVector<OpFoldResult>> inferOutputShape(

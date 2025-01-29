@@ -2853,7 +2853,6 @@ void AsmPrinter::emitConstantPool() {
 // Print assembly representations of the jump tables used by the current
 // function.
 void AsmPrinter::emitJumpTableInfo() {
-  const DataLayout &DL = MF->getDataLayout();
   const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
   if (!MJTI) return;
   if (MJTI->getEntryKind() == MachineJumpTableInfo::EK_Inline) return;
@@ -2868,42 +2867,62 @@ void AsmPrinter::emitJumpTableInfo() {
       MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 ||
           MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference64,
       F);
+
+  SmallVector<unsigned> JumpTableIndices;
+  for (unsigned JTI = 0, JTSize = JT.size(); JTI < JTSize; ++JTI) {
+    JumpTableIndices.push_back(JTI);
+  }
+  emitJumpTableImpl(*MJTI, JumpTableIndices, JTInDiffSection);
+}
+
+void AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
+                                   ArrayRef<unsigned> JumpTableIndices,
+                                   bool JTInDiffSection) {
+  if (JumpTableIndices.empty())
+    return;
+
+  const TargetLoweringObjectFile &TLOF = getObjFileLowering();
+  const Function &F = MF->getFunction();
+  const std::vector<MachineJumpTableEntry> &JT = MJTI.getJumpTables();
+  MCSection *JumpTableSection = TLOF.getSectionForJumpTable(F, TM);
+
+  const DataLayout &DL = MF->getDataLayout();
   if (JTInDiffSection) {
-    // Drop it in the readonly section.
-    MCSection *ReadOnlySection = TLOF.getSectionForJumpTable(F, TM);
-    OutStreamer->switchSection(ReadOnlySection);
+    OutStreamer->switchSection(JumpTableSection);
   }
 
-  emitAlignment(Align(MJTI->getEntryAlignment(DL)));
+  emitAlignment(Align(MJTI.getEntryAlignment(MF->getDataLayout())));
 
   // Jump tables in code sections are marked with a data_region directive
   // where that's supported.
   if (!JTInDiffSection)
     OutStreamer->emitDataRegion(MCDR_DataRegionJT32);
 
-  for (unsigned JTI = 0, e = JT.size(); JTI != e; ++JTI) {
-    const std::vector<MachineBasicBlock*> &JTBBs = JT[JTI].MBBs;
+  for (const unsigned JumpTableIndex : JumpTableIndices) {
+    ArrayRef<MachineBasicBlock *> JTBBs = JT[JumpTableIndex].MBBs;
 
     // If this jump table was deleted, ignore it.
-    if (JTBBs.empty()) continue;
+    if (JTBBs.empty())
+      continue;
 
     // For the EK_LabelDifference32 entry, if using .set avoids a relocation,
     /// emit a .set directive for each unique entry.
-    if (MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 &&
+    if (MJTI.getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 &&
         MAI->doesSetDirectiveSuppressReloc()) {
-      SmallPtrSet<const MachineBasicBlock*, 16> EmittedSets;
+      SmallPtrSet<const MachineBasicBlock *, 16> EmittedSets;
       const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
-      const MCExpr *Base = TLI->getPICJumpTableRelocBaseExpr(MF,JTI,OutContext);
+      const MCExpr *Base =
+          TLI->getPICJumpTableRelocBaseExpr(MF, JumpTableIndex, OutContext);
       for (const MachineBasicBlock *MBB : JTBBs) {
         if (!EmittedSets.insert(MBB).second)
           continue;
 
         // .set LJTSet, LBB32-base
         const MCExpr *LHS =
-          MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
-        OutStreamer->emitAssignment(GetJTSetSymbol(JTI, MBB->getNumber()),
-                                    MCBinaryExpr::createSub(LHS, Base,
-                                                            OutContext));
+            MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
+        OutStreamer->emitAssignment(
+            GetJTSetSymbol(JumpTableIndex, MBB->getNumber()),
+            MCBinaryExpr::createSub(LHS, Base, OutContext));
       }
     }
 
@@ -2915,19 +2934,19 @@ void AsmPrinter::emitJumpTableInfo() {
       // FIXME: This doesn't have to have any specific name, just any randomly
       // named and numbered local label started with 'l' would work.  Simplify
       // GetJTISymbol.
-      OutStreamer->emitLabel(GetJTISymbol(JTI, true));
+      OutStreamer->emitLabel(GetJTISymbol(JumpTableIndex, true));
 
-    MCSymbol* JTISymbol = GetJTISymbol(JTI);
+    MCSymbol *JTISymbol = GetJTISymbol(JumpTableIndex);
     OutStreamer->emitLabel(JTISymbol);
 
     // Defer MCAssembler based constant folding due to a performance issue. The
     // label differences will be evaluated at write time.
     for (const MachineBasicBlock *MBB : JTBBs)
-      emitJumpTableEntry(*MJTI, MBB, JTI);
+      emitJumpTableEntry(MJTI, MBB, JumpTableIndex);
   }
 
   if (EmitJumpTableSizesSection)
-    emitJumpTableSizesSection(*MJTI, F);
+    emitJumpTableSizesSection(MJTI, MF->getFunction());
 
   if (!JTInDiffSection)
     OutStreamer->emitDataRegion(MCDR_DataRegionEnd);

@@ -692,7 +692,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsNonTemplateAngleBrackets) {
   EXPECT_TOKEN(Tokens[4], tok::less, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[8], tok::greater, TT_BinaryOperator);
 
-  Tokens = annotate("return A < B ^ A > B;");
+  Tokens = annotate("return A < B != A > B;");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::less, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[6], tok::greater, TT_BinaryOperator);
@@ -3675,6 +3675,11 @@ TEST_F(TokenAnnotatorTest, TemplateName) {
 TEST_F(TokenAnnotatorTest, TemplateInstantiation) {
   auto Tokens = annotate("return FixedInt<N | M>();");
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[6], tok::greater, TT_TemplateCloser);
+
+  Tokens = annotate("return FixedInt<N | M>(foo);");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
   EXPECT_TOKEN(Tokens[6], tok::greater, TT_TemplateCloser);
 

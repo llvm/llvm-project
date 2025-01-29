@@ -29,11 +29,7 @@ namespace {
 class GenericLoopConversionPattern
     : public mlir::OpConversionPattern<mlir::omp::LoopOp> {
 public:
-  enum class GenericLoopCombinedInfo {
-    Standalone,
-    TargetTeamsLoop,
-    TargetParallelLoop
-  };
+  enum class GenericLoopCombinedInfo { Standalone, TeamsLoop, ParallelLoop };
 
   using mlir::OpConversionPattern<mlir::omp::LoopOp>::OpConversionPattern;
 
@@ -55,10 +51,11 @@ public:
     case GenericLoopCombinedInfo::Standalone:
       rewriteStandaloneLoop(loopOp, rewriter);
       break;
-    case GenericLoopCombinedInfo::TargetParallelLoop:
-      llvm_unreachable("not yet implemented: `parallel loop` direcitve");
+    case GenericLoopCombinedInfo::ParallelLoop:
+      llvm_unreachable(
+          "not yet implemented: Combined `parallel loop` directive");
       break;
-    case GenericLoopCombinedInfo::TargetTeamsLoop:
+    case GenericLoopCombinedInfo::TeamsLoop:
       rewriteToDistributeParallelDo(loopOp, rewriter);
       break;
     }
@@ -74,10 +71,10 @@ public:
     switch (combinedInfo) {
     case GenericLoopCombinedInfo::Standalone:
       break;
-    case GenericLoopCombinedInfo::TargetParallelLoop:
+    case GenericLoopCombinedInfo::ParallelLoop:
       return loopOp.emitError(
-          "not yet implemented: Combined `omp target parallel loop` directive");
-    case GenericLoopCombinedInfo::TargetTeamsLoop:
+          "not yet implemented: Combined `parallel loop` directive");
+    case GenericLoopCombinedInfo::TeamsLoop:
       break;
     }
 
@@ -99,7 +96,7 @@ public:
     if (!loopOp.getReductionVars().empty())
       return todo("reduction");
 
-    // TODO For `target teams loop`, check similar constrains to what is checked
+    // TODO For `teams loop`, check similar constrains to what is checked
     // by `TeamsLoopChecker` in SemaOpenMP.cpp.
     return mlir::success();
   }
@@ -111,13 +108,11 @@ private:
     GenericLoopCombinedInfo result = GenericLoopCombinedInfo::Standalone;
 
     if (auto teamsOp = mlir::dyn_cast_if_present<mlir::omp::TeamsOp>(parentOp))
-      if (mlir::isa_and_present<mlir::omp::TargetOp>(teamsOp->getParentOp()))
-        result = GenericLoopCombinedInfo::TargetTeamsLoop;
+      result = GenericLoopCombinedInfo::TeamsLoop;
 
     if (auto parallelOp =
             mlir::dyn_cast_if_present<mlir::omp::ParallelOp>(parentOp))
-      if (mlir::isa_and_present<mlir::omp::TargetOp>(parallelOp->getParentOp()))
-        result = GenericLoopCombinedInfo::TargetParallelLoop;
+      result = GenericLoopCombinedInfo::ParallelLoop;
 
     return result;
   }

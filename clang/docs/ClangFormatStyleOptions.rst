@@ -5198,6 +5198,11 @@ the configuration (without a prefix: ``Auto``).
 **PenaltyBreakBeforeFirstCallParameter** (``Unsigned``) :versionbadge:`clang-format 3.7` :ref:`¶ <PenaltyBreakBeforeFirstCallParameter>`
   The penalty for breaking a function call after ``call(``.
 
+.. _PenaltyBreakBeforeMemberAccess:
+
+**PenaltyBreakBeforeMemberAccess** (``Unsigned``) :versionbadge:`clang-format 20` :ref:`¶ <PenaltyBreakBeforeMemberAccess>`
+  The penalty for breaking before a member access operator (``.``, ``->``).
+
 .. _PenaltyBreakComment:
 
 **PenaltyBreakComment** (``Unsigned``) :versionbadge:`clang-format 3.7` :ref:`¶ <PenaltyBreakComment>`

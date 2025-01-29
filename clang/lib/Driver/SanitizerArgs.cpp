@@ -575,6 +575,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                                      options::OPT_fstrict_overflow, false);
         if (Args.hasFlagNoClaim(options::OPT_fwrapv, options::OPT_fno_wrapv, S))
           Add &= ~SanitizerKind::SignedIntegerOverflow;
+        if (Args.hasFlagNoClaim(options::OPT_fwrapv_pointer,
+                                options::OPT_fno_wrapv_pointer, S))
+          Add &= ~SanitizerKind::PointerOverflow;
       }
       Add &= Supported;
 
