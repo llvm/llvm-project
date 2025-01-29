@@ -108,6 +108,7 @@ private:
                        Instruction &I);
   bool foldExtractExtract(Instruction &I);
   bool foldInsExtFNeg(Instruction &I);
+  bool foldInsExtBinop(Instruction &I);
   bool foldInsExtVectorToShuffle(Instruction &I);
   bool foldBitcastShuffle(Instruction &I);
   bool scalarizeBinopOrCmp(Instruction &I);
@@ -735,6 +736,64 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
   }
 
   replaceValue(I, *NewShuf);
+  return true;
+}
+
+/// Try to fold insert(binop(x,y),binop(a,b),idx)
+///         --> binop(insert(x,a,idx),insert(x,a,idx))
+bool VectorCombine::foldInsExtBinop(Instruction &I) {
+  BinaryOperator *VecBinOp, *SclBinOp;
+  uint64_t Index;
+  if (!match(&I,
+             m_InsertElt(m_OneUse(m_BinOp(VecBinOp)),
+                         m_OneUse(m_BinOp(SclBinOp)), m_ConstantInt(Index))))
+    return false;
+
+  // TODO: Add support for addlike etc.
+  Instruction::BinaryOps BinOpcode = VecBinOp->getOpcode();
+  if (BinOpcode != SclBinOp->getOpcode())
+    return false;
+
+  auto *ResultTy = dyn_cast<FixedVectorType>(I.getType());
+  if (!ResultTy)
+    return false;
+
+  // TODO: Attempt to detect m_ExtractElt for scalar operands and convert to
+  // shuffle?
+
+  InstructionCost OldCost = TTI.getInstructionCost(&I, CostKind) +
+                            TTI.getInstructionCost(VecBinOp, CostKind) +
+                            TTI.getInstructionCost(SclBinOp, CostKind);
+  InstructionCost NewCost =
+      TTI.getArithmeticInstrCost(BinOpcode, ResultTy, CostKind) +
+      TTI.getVectorInstrCost(Instruction::InsertElement, ResultTy, CostKind,
+                             Index, VecBinOp->getOperand(0),
+                             SclBinOp->getOperand(0)) +
+      TTI.getVectorInstrCost(Instruction::InsertElement, ResultTy, CostKind,
+                             Index, VecBinOp->getOperand(1),
+                             SclBinOp->getOperand(1));
+
+  LLVM_DEBUG(dbgs() << "Found an insertion of two binops: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+  if (NewCost > OldCost)
+    return false;
+
+  Value *NewIns0 = Builder.CreateInsertElement(VecBinOp->getOperand(0),
+                                               SclBinOp->getOperand(0), Index);
+  Value *NewIns1 = Builder.CreateInsertElement(VecBinOp->getOperand(1),
+                                               SclBinOp->getOperand(1), Index);
+  Value *NewBO = Builder.CreateBinOp(BinOpcode, NewIns0, NewIns1);
+
+  // Intersect flags from the old binops.
+  if (auto *NewInst = dyn_cast<Instruction>(NewBO)) {
+    NewInst->copyIRFlags(VecBinOp);
+    NewInst->andIRFlags(SclBinOp);
+  }
+
+  Worklist.pushValue(NewIns0);
+  Worklist.pushValue(NewIns1);
+  replaceValue(I, *NewBO);
   return true;
 }
 
@@ -3206,6 +3265,7 @@ bool VectorCombine::run() {
       switch (Opcode) {
       case Instruction::InsertElement:
         MadeChange |= foldInsExtFNeg(I);
+        MadeChange |= foldInsExtBinop(I);
         MadeChange |= foldInsExtVectorToShuffle(I);
         break;
       case Instruction::ShuffleVector:
