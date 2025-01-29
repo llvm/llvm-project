@@ -2541,10 +2541,9 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
     return TemplateDeductionResult::NonDeducedMismatch;
 
   case TemplateArgument::NullPtr:
-    if (A.getKind() == TemplateArgument::NullPtr &&
-        S.Context.hasSameType(P.getNullPtrType(), A.getNullPtrType()))
+    // 'nullptr' has only one possible value, so it always matches.
+    if (A.getKind() == TemplateArgument::NullPtr)
       return TemplateDeductionResult::Success;
-
     Info.FirstArg = P;
     Info.SecondArg = A;
     return TemplateDeductionResult::NonDeducedMismatch;
@@ -2559,6 +2558,8 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
     return TemplateDeductionResult::NonDeducedMismatch;
 
   case TemplateArgument::StructuralValue:
+    // FIXME: structural equality will also compare types,
+    // but they should match iff they have the same value.
     if (A.getKind() == TemplateArgument::StructuralValue &&
         A.structurallyEquals(P))
       return TemplateDeductionResult::Success;
