@@ -17980,7 +17980,7 @@ static bool funcHasParameterSizeMangling(Sema &S, FunctionDecl *FD) {
   // These manglings don't do anything on non-Windows or non-x86 platforms, so
   // we don't need parameter type sizes.
   const llvm::Triple &TT = S.Context.getTargetInfo().getTriple();
-  if (!TT.isOSWindows() || !TT.isX86())
+  if (!TT.isOSWindowsOrUEFI() || !TT.isX86())
     return false;
 
   // If this is C++ and this isn't an extern "C" function, parameters do not
