@@ -5109,6 +5109,7 @@ cc_library(
         ":SubsetOpInterface",
         ":Support",
         ":TensorDialect",
+        ":UBDialect",
         ":ValueBoundsOpInterface",
         ":VectorAttributesIncGen",
         ":VectorDialectIncGen",
@@ -6198,6 +6199,7 @@ cc_library(
         ":SPIRVDialect",
         ":Support",
         ":TransformUtils",
+        ":UBDialect",
         ":VectorDialect",
         "//llvm:Support",
     ],
@@ -8406,6 +8408,7 @@ cc_library(
         ":Support",
         ":TransformUtils",
         ":TransformsPassIncGen",
+        ":UBDialect",
         "//llvm:Support",
     ],
 )

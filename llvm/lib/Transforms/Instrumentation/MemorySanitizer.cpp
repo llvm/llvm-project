@@ -2989,17 +2989,24 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   /// Handle (SIMD arithmetic)-like intrinsics.
   ///
-  /// Instrument intrinsics with any number of arguments of the same type,
-  /// equal to the return type. The type should be simple (no aggregates or
-  /// pointers; vectors are fine).
+  /// Instrument intrinsics with any number of arguments of the same type [*],
+  /// equal to the return type, plus a specified number of trailing flags of
+  /// any type.
+  ///
+  /// [*] The type should be simple (no aggregates or pointers; vectors are
+  /// fine).
+  ///
   /// Caller guarantees that this intrinsic does not access memory.
-  bool maybeHandleSimpleNomemIntrinsic(IntrinsicInst &I) {
+  [[maybe_unused]] bool
+  maybeHandleSimpleNomemIntrinsic(IntrinsicInst &I,
+                                  unsigned int trailingFlags) {
     Type *RetTy = I.getType();
     if (!(RetTy->isIntOrIntVectorTy() || RetTy->isFPOrFPVectorTy()))
       return false;
 
     unsigned NumArgOperands = I.arg_size();
-    for (unsigned i = 0; i < NumArgOperands; ++i) {
+    assert(NumArgOperands >= trailingFlags);
+    for (unsigned i = 0; i < NumArgOperands - trailingFlags; ++i) {
       Type *Ty = I.getArgOperand(i)->getType();
       if (Ty != RetTy)
         return false;
@@ -3043,7 +3050,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
 
     if (I.doesNotAccessMemory())
-      if (maybeHandleSimpleNomemIntrinsic(I))
+      if (maybeHandleSimpleNomemIntrinsic(I, /*trailingFlags=*/0))
         return true;
 
     // FIXME: detect and handle SSE maskstore/maskload?
@@ -4039,19 +4046,83 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void handleAVXHorizontalAddSubIntrinsic(IntrinsicInst &I) {
     // Approximation only:
-    //    output         = horizontal_add(A, B)
+    //    output         = horizontal_add/sub(A, B)
     // => shadow[output] = horizontal_add(shadow[A], shadow[B])
     //
-    // - If we add/subtract two adjacent zero (initialized) shadow values, the
+    // We always use horizontal add instead of subtract, because subtracting
+    // a fully uninitialized shadow would result in a fully initialized shadow.
+    //
+    // - If we add two adjacent zero (initialized) shadow values, the
     //   result always be zero i.e., no false positives.
-    // - If we add/subtract two shadows, one of which is uninitialized, the
-    //   result will always be non-zero i.e., no false negative.
-    // - However, we can have false negatives if we subtract two non-zero
-    //   shadows of the same value (or do an addition that wraps to zero); we
-    //   consider this an acceptable tradeoff for performance.
+    // - If we add two shadows, one of which is uninitialized, the
+    //   result will always be non-zero i.e., no false negatives.
+    // - However, we can have false negatives if we do an addition that wraps
+    //   to zero; we consider this an acceptable tradeoff for performance.
+    //
     // To make shadow propagation precise, we want the equivalent of
-    // "horizontal OR", but this is not available.
-    return handleIntrinsicByApplyingToShadow(I, /* trailingVerbatimArgs */ 0);
+    // "horizontal OR", but this is not available for SSE3/SSSE3/AVX/AVX2.
+
+    Intrinsic::ID shadowIntrinsicID = I.getIntrinsicID();
+
+    switch (I.getIntrinsicID()) {
+    case Intrinsic::x86_sse3_hsub_ps:
+      shadowIntrinsicID = Intrinsic::x86_sse3_hadd_ps;
+      break;
+
+    case Intrinsic::x86_sse3_hsub_pd:
+      shadowIntrinsicID = Intrinsic::x86_sse3_hadd_pd;
+      break;
+
+    case Intrinsic::x86_ssse3_phsub_d:
+      shadowIntrinsicID = Intrinsic::x86_ssse3_phadd_d;
+      break;
+
+    case Intrinsic::x86_ssse3_phsub_d_128:
+      shadowIntrinsicID = Intrinsic::x86_ssse3_phadd_d_128;
+      break;
+
+    case Intrinsic::x86_ssse3_phsub_w:
+      shadowIntrinsicID = Intrinsic::x86_ssse3_phadd_w;
+      break;
+
+    case Intrinsic::x86_ssse3_phsub_w_128:
+      shadowIntrinsicID = Intrinsic::x86_ssse3_phadd_w_128;
+      break;
+
+    case Intrinsic::x86_ssse3_phsub_sw:
+      shadowIntrinsicID = Intrinsic::x86_ssse3_phadd_sw;
+      break;
+
+    case Intrinsic::x86_ssse3_phsub_sw_128:
+      shadowIntrinsicID = Intrinsic::x86_ssse3_phadd_sw_128;
+      break;
+
+    case Intrinsic::x86_avx_hsub_pd_256:
+      shadowIntrinsicID = Intrinsic::x86_avx_hadd_pd_256;
+      break;
+
+    case Intrinsic::x86_avx_hsub_ps_256:
+      shadowIntrinsicID = Intrinsic::x86_avx_hadd_ps_256;
+      break;
+
+    case Intrinsic::x86_avx2_phsub_d:
+      shadowIntrinsicID = Intrinsic::x86_avx2_phadd_d;
+      break;
+
+    case Intrinsic::x86_avx2_phsub_w:
+      shadowIntrinsicID = Intrinsic::x86_avx2_phadd_w;
+      break;
+
+    case Intrinsic::x86_avx2_phsub_sw:
+      shadowIntrinsicID = Intrinsic::x86_avx2_phadd_sw;
+      break;
+
+    default:
+      break;
+    }
+
+    return handleIntrinsicByApplyingToShadow(I, shadowIntrinsicID,
+                                             /*trailingVerbatimArgs*/ 0);
   }
 
   /// Handle Arm NEON vector store intrinsics (vst{2,3,4}, vst1x_{2,3,4},
@@ -4158,6 +4229,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///     shadow[out] =
   ///         intrinsic(shadow[var1], shadow[var2], opType) | shadow[opType]
   ///
+  /// Typically, shadowIntrinsicID will be specified by the caller to be
+  /// I.getIntrinsicID(), but the caller can choose to replace it with another
+  /// intrinsic of the same type.
+  ///
   /// CAUTION: this assumes that the intrinsic will handle arbitrary
   ///          bit-patterns (for example, if the intrinsic accepts floats for
   ///          var1, we require that it doesn't care if inputs are NaNs).
@@ -4167,6 +4242,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// The origin is approximated using setOriginForNaryOp.
   void handleIntrinsicByApplyingToShadow(IntrinsicInst &I,
+                                         Intrinsic::ID shadowIntrinsicID,
                                          unsigned int trailingVerbatimArgs) {
     IRBuilder<> IRB(&I);
 
@@ -4190,7 +4266,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
 
     CallInst *CI =
-        IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(), ShadowArgs);
+        IRB.CreateIntrinsic(I.getType(), shadowIntrinsicID, ShadowArgs);
     Value *CombinedShadow = CI;
 
     // Combine the computed shadow with the shadow of trailing args
@@ -4620,6 +4696,19 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     }
 
+    // Packed
+    case Intrinsic::x86_avx512_min_ps_512:
+    case Intrinsic::x86_avx512_min_pd_512:
+    case Intrinsic::x86_avx512_max_ps_512:
+    case Intrinsic::x86_avx512_max_pd_512: {
+      // These AVX512 variants contain the rounding mode as a trailing flag.
+      // Earlier variants do not have a trailing flag and are already handled
+      // by maybeHandleSimpleNomemIntrinsic(I, 0) via handleUnknownIntrinsic.
+      bool Success = maybeHandleSimpleNomemIntrinsic(I, /*trailingFlags=*/1);
+      assert(Success);
+      break;
+    }
+
     case Intrinsic::fshl:
     case Intrinsic::fshr:
       handleFunnelShift(I);
@@ -4666,7 +4755,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_tbx3:
     case Intrinsic::aarch64_neon_tbx4: {
       // The last trailing argument (index register) should be handled verbatim
-      handleIntrinsicByApplyingToShadow(I, 1);
+      handleIntrinsicByApplyingToShadow(
+          I, /*shadowIntrinsicID=*/I.getIntrinsicID(),
+          /*trailingVerbatimArgs*/ 1);
       break;
     }
 
