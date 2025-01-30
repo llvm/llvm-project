@@ -9,6 +9,7 @@
 
 #include "mlir-c/Target/LLVMIR.h"
 
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
@@ -76,4 +77,16 @@ mlirTypeToLLVMIRTranslatorTranslateType(MlirTypeToLLVMIRTranslator translator,
   LLVM::TypeToLLVMIRTranslator *translator_ = unwrap(translator);
   llvm::Type *type = translator_->translateType(unwrap(mlirType));
   return llvm::wrap(type);
+}
+
+LLVMTypeRef mlirTypeToLLVMIRTranslatorUncheckedGetIntrinsicSignature(
+    MlirTypeToLLVMIRTranslator translator, unsigned id,
+    MlirType *mlirParamTypes, unsigned numParams) {
+  SmallVector<mlir::Type, 4> paramTypes;
+  for (unsigned i = 0; i < numParams; i++)
+    paramTypes.emplace_back(unwrap(mlirParamTypes[i]));
+  LLVM::TypeToLLVMIRTranslator *translator_ = unwrap(translator);
+  llvm::Type *functionType =
+      translator_->uncheckedGetIntrinsicSignature(id, paramTypes);
+  return llvm::wrap(functionType);
 }
