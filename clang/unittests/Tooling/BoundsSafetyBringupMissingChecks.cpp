@@ -171,13 +171,19 @@ TEST(BoundsSafetyBringUpMissingChecks, ChkPairValidMask) {
   ASSERT_EQ(SeenBits, LangOptions::BS_CHK_All);
 }
 
+#if 1
+#define NEED_CC1_ARG
+#else
+#define NEED_CC1_ARG "-Xclang",
+#endif
+
 // =============================================================================
 // Default behavior
 // =============================================================================
 
 TEST(BoundsSafetyBringUpMissingChecks, DefaultWithBoundsSafety) {
-  bool Result =
-      runOnToolAndCheckLangOptions({"-fbounds-safety"}, [](LangOptions &LO) {
+  bool Result = runOnToolAndCheckLangOptions(
+      {NEED_CC1_ARG "-fbounds-safety"}, [](LangOptions &LO) {
         EXPECT_EQ(LO.getBoundsSafetyBringUpMissingChecks(),
                   LangOptions::BS_CHK_Default);
       });
@@ -185,8 +191,8 @@ TEST(BoundsSafetyBringUpMissingChecks, DefaultWithBoundsSafety) {
 }
 
 TEST(BoundsSafetyBringUpMissingChecks, DefaultWithoutBoundsSafety) {
-  bool Result =
-      runOnToolAndCheckLangOptions({"-fno-bounds-safety"}, [](LangOptions &LO) {
+  bool Result = runOnToolAndCheckLangOptions(
+      {NEED_CC1_ARG "-fno-bounds-safety"}, [](LangOptions &LO) {
         EXPECT_EQ(LO.getBoundsSafetyBringUpMissingChecks(),
                   LangOptions::BS_CHK_Default);
       });
@@ -201,7 +207,8 @@ TEST(BoundsSafetyBringUpMissingChecks, DefaultWithoutBoundsSafety) {
 TEST(BoundsSafetyBringUpMissingChecks,
      DefaultAllDisabledExperimentalBoundsSafetyAttributes) {
   bool Result = runOnToolAndCheckLangOptions(
-      {"-fexperimental-bounds-safety-attributes"}, [](LangOptions &LO) {
+      {NEED_CC1_ARG "-fexperimental-bounds-safety-attributes"},
+      [](LangOptions &LO) {
         EXPECT_EQ(LO.getBoundsSafetyBringUpMissingChecks(),
                   LangOptions::BS_CHK_Default);
       });
@@ -214,7 +221,8 @@ TEST(BoundsSafetyBringUpMissingChecks,
 
 TEST(BoundsSafetyBringUpMissingChecks, all_eq) {
   bool Result = runOnToolAndCheckLangOptions(
-      {"-fbounds-safety", "-fbounds-safety-bringup-missing-checks=all"},
+      {NEED_CC1_ARG "-fbounds-safety",
+       NEED_CC1_ARG "-fbounds-safety-bringup-missing-checks=all"},
       [](LangOptions &LO) {
         EXPECT_EQ(LO.getBoundsSafetyBringUpMissingChecks(),
                   LangOptions::BS_CHK_All);
@@ -229,7 +237,8 @@ TEST(BoundsSafetyBringUpMissingChecks, all_eq) {
 
 TEST(BoundsSafetyBringUpMissingChecks, all) {
   bool Result = runOnToolAndCheckLangOptions(
-      {"-fbounds-safety", "-fbounds-safety-bringup-missing-checks"},
+      {NEED_CC1_ARG "-fbounds-safety",
+       NEED_CC1_ARG "-fbounds-safety-bringup-missing-checks"},
       [](LangOptions &LO) {
         EXPECT_EQ(LO.getBoundsSafetyBringUpMissingChecks(),
                   LangOptions::BS_CHK_All);
@@ -249,9 +258,10 @@ TEST(BoundsSafetyBringUpMissingChecks, all) {
 TEST(BoundsSafetyBringUpMissingChecks, only_one_check) {
   for (size_t ChkIdx = 0; ChkIdx < NumPairs; ++ChkIdx) {
     ChkPair Chk = Pairs[ChkIdx];
-    std::vector<std::string> Args = {"-fbounds-safety",
+    std::vector<std::string> Args = {NEED_CC1_ARG "-fbounds-safety",
+                                     NEED_CC1_ARG
                                      "-fbounds-safety-bringup-missing-checks="};
-    Args[1].append(Chk.arg);
+    Args[Args.size() - 1].append(Chk.arg);
 
     bool Result = runOnToolAndCheckLangOptions(Args, [&Chk](LangOptions &LO) {
       EXPECT_EQ(LO.getBoundsSafetyBringUpMissingChecks(), Chk.Mask);
@@ -284,10 +294,11 @@ TEST(BoundsSafetyBringUpMissingChecks, all_pairs) {
       ChkPair First = Pairs[firstIdx];
       auto Second = Pairs[secondIdx];
       std::vector<std::string> Args = {
-          "-fbounds-safety", "-fbounds-safety-bringup-missing-checks="};
-      Args[1].append(First.arg);
-      Args[1].append(",");
-      Args[1].append(Second.arg);
+          NEED_CC1_ARG "-fbounds-safety",
+          NEED_CC1_ARG "-fbounds-safety-bringup-missing-checks="};
+      Args[Args.size() - 1].append(First.arg);
+      Args[Args.size() - 1].append(",");
+      Args[Args.size() - 1].append(Second.arg);
       ASSERT_NE(First.Mask, Second.Mask);
 
       bool Result = runOnToolAndCheckLangOptions(
@@ -320,9 +331,10 @@ TEST(BoundsSafetyBringUpMissingChecks, all_with_one_removed) {
   for (size_t ChkIdx = 0; ChkIdx < NumPairs; ++ChkIdx) {
     ChkPair Chk = Pairs[ChkIdx];
     std::vector<std::string> Args = {
-        "-fbounds-safety", "-fbounds-safety-bringup-missing-checks=all",
-        "-fno-bounds-safety-bringup-missing-checks="};
-    Args[2].append(Chk.arg);
+        NEED_CC1_ARG "-fbounds-safety",
+        NEED_CC1_ARG "-fbounds-safety-bringup-missing-checks=all",
+        NEED_CC1_ARG "-fno-bounds-safety-bringup-missing-checks="};
+    Args[Args.size() - 1].append(Chk.arg);
 
     bool Result = runOnToolAndCheckLangOptions(Args, [&Chk](LangOptions &LO) {
       unsigned ExpectedMask = LangOptions::BS_CHK_All & (~Chk.Mask);
@@ -350,7 +362,8 @@ TEST(BoundsSafetyBringUpMissingChecks, all_with_one_removed) {
 
 TEST(BoundsSafetyBringUpMissingChecks, all_disabled) {
   bool Result = runOnToolAndCheckLangOptions(
-      {"-fbounds-safety", "-fno-bounds-safety-bringup-missing-checks"},
+      {NEED_CC1_ARG "-fbounds-safety",
+       NEED_CC1_ARG "-fno-bounds-safety-bringup-missing-checks"},
       [](LangOptions &LO) {
         EXPECT_EQ(LO.getBoundsSafetyBringUpMissingChecks(),
                   LangOptions::BS_CHK_None);
@@ -360,8 +373,9 @@ TEST(BoundsSafetyBringUpMissingChecks, all_disabled) {
 
 TEST(BoundsSafetyBringUpMissingChecks, all_enable_then_disable) {
   bool Result = runOnToolAndCheckLangOptions(
-      {"-fbounds-safety", "-fbounds-safety-bringup-missing-checks",
-       "-fno-bounds-safety-bringup-missing-checks"},
+      {NEED_CC1_ARG "-fbounds-safety",
+       NEED_CC1_ARG "-fbounds-safety-bringup-missing-checks",
+       NEED_CC1_ARG "-fno-bounds-safety-bringup-missing-checks"},
       [](LangOptions &LO) {
         EXPECT_EQ(LO.getBoundsSafetyBringUpMissingChecks(),
                   LangOptions::BS_CHK_None);
@@ -377,9 +391,10 @@ TEST(BoundsSafetyBringUpMissingChecks, all_disabled_then_enable_one) {
   for (size_t ChkIdx = 0; ChkIdx < NumPairs; ++ChkIdx) {
     ChkPair Chk = Pairs[ChkIdx];
     std::vector<std::string> Args = {
-        "-fbounds-safety", "-fno-bounds-safety-bringup-missing-checks",
-        "-fbounds-safety-bringup-missing-checks="};
-    Args[2].append(Chk.arg);
+        NEED_CC1_ARG "-fbounds-safety",
+        NEED_CC1_ARG "-fno-bounds-safety-bringup-missing-checks",
+        NEED_CC1_ARG "-fbounds-safety-bringup-missing-checks="};
+    Args[Args.size() - 1].append(Chk.arg);
 
     bool Result = runOnToolAndCheckLangOptions(Args, [&Chk](LangOptions &LO) {
       EXPECT_EQ(LO.getBoundsSafetyBringUpMissingChecks(), Chk.Mask);
