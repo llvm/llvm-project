@@ -714,7 +714,8 @@ const Value *Value::stripPointerCastsForAliasAnalysis() const {
 const Value *Value::stripAndAccumulateConstantOffsets(
     const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
     bool AllowInvariantGroup,
-    function_ref<bool(Value &, APInt &)> ExternalAnalysis) const {
+    function_ref<bool(Value &, APInt &)> ExternalAnalysis,
+    bool LookThroughIntToPtr) const {
   if (!getType()->isPtrOrPtrVectorTy())
     return this;
 
@@ -777,22 +778,22 @@ const Value *Value::stripAndAccumulateConstantOffsets(
           V = Call->getArgOperand(0);
     } else if (auto *Int2Ptr = dyn_cast<Operator>(V)) {
       // Try to accumulate across (inttoptr (add (ptrtoint p), off)).
-      if (!Int2Ptr || Int2Ptr->getOpcode() != Instruction::IntToPtr ||
+      if (!AllowNonInbounds || !LookThroughIntToPtr || !Int2Ptr ||
+          Int2Ptr->getOpcode() != Instruction::IntToPtr ||
           Int2Ptr->getOperand(0)->getType()->getScalarSizeInBits() != BitWidth)
         return V;
+
       auto *Add = dyn_cast<AddOperator>(Int2Ptr->getOperand(0));
-      if (!AllowNonInbounds || !Add)
+      if (!Add)
         return V;
+
       auto *Ptr2Int = dyn_cast<PtrToIntOperator>(Add->getOperand(0));
       auto *CI = dyn_cast<ConstantInt>(Add->getOperand(1));
       if (!Ptr2Int || !CI)
         return V;
 
-      APInt AddOffset = CI->getValue();
-      if (AddOffset.getSignificantBits() > BitWidth)
-        return V;
-
-      Offset = AddOffset.sextOrTrunc(BitWidth);
+      const APInt &AddOffset = CI->getValue();
+      Offset += AddOffset;
       V = Ptr2Int->getOperand(0);
     }
     assert(V->getType()->isPtrOrPtrVectorTy() && "Unexpected operand type!");

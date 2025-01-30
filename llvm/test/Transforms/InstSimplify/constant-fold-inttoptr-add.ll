@@ -13,8 +13,7 @@ define i1 @known_constexpr_add_eq() {
 
 define i1 @known_constexpr_add_eq_ops_swapped() {
 ; CHECK-LABEL: define i1 @known_constexpr_add_eq_ops_swapped() {
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr getelementptr inbounds nuw (i8, ptr @glob, i64 80), inttoptr (i64 add (i64 ptrtoint (ptr @glob to i64), i64 -80) to ptr)
-; CHECK-NEXT:    ret i1 [[COND]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cond = icmp eq ptr getelementptr inbounds nuw (i8, ptr @glob, i64 80), inttoptr (i64 add (i64 ptrtoint (ptr @glob to i64), i64 -80) to ptr)
   ret i1 %cond
@@ -95,4 +94,21 @@ define ptr @return_inttoptr() {
 ; CHECK-NEXT:    ret ptr inttoptr (i64 add (i64 ptrtoint (ptr @glob to i64), i64 8) to ptr)
 ;
   ret ptr inttoptr (i64 add (i64 ptrtoint (ptr @glob to i64), i64 8) to ptr)
+}
+
+define i1 @known_constexpr_add_nested_1() {
+; CHECK-LABEL: define i1 @known_constexpr_add_nested_1() {
+; CHECK-NEXT:    ret i1 true
+;
+  %cond = icmp eq ptr @glob, inttoptr (i64 add (i64 ptrtoint (ptr getelementptr inbounds nuw (i8, ptr @glob, i64 80) to i64), i64 -80) to ptr)
+  ret i1 %cond
+}
+
+define i1 @known_constexpr_add_nested_2() {
+; CHECK-LABEL: define i1 @known_constexpr_add_nested_2() {
+; CHECK-NEXT:    ret i1 true
+;
+  ;%cond = icmp eq ptr @glob, ptr getelementptr inbounds nuw (i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @glob to i64), i64 -80) to ptr), i64 80)
+  %cond = icmp eq ptr @glob, getelementptr inbounds nuw (i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @glob to i64), i64 -80) to ptr), i64 80)
+  ret i1 %cond
 }
