@@ -379,50 +379,55 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
     case Intrinsic::experimental_memset_pattern: {
       auto *Memset = cast<MemSetPatternInst>(Inst);
       const TargetLibraryInfo &TLI = LookupTLI(*Memset->getFunction());
-      if (Constant *PatternValue = getMemSetPattern16Value(Memset, TLI)) {
-        // FIXME: There is currently no profitability calculation for emitting
-        // the libcall vs expanding the memset.pattern directly.
-        IRBuilder<> Builder(Inst);
-        Module *M = Memset->getModule();
-        const DataLayout &DL = Memset->getDataLayout();
-
-        StringRef FuncName = "memset_pattern16";
-        FunctionCallee MSP = getOrInsertLibFunc(
-            M, TLI, LibFunc_memset_pattern16, Builder.getVoidTy(),
-            Memset->getRawDest()->getType(), Builder.getPtrTy(),
-            Memset->getLength()->getType());
-        inferNonMandatoryLibFuncAttrs(M, FuncName, TLI);
-
-        // Otherwise we should form a memset_pattern16.  PatternValue is known
-        // to be an constant array of 16-bytes. Put the value into a mergable
-        // global.
-        assert(Memset->getRawDest()->getType()->getPointerAddressSpace() == 0 &&
-               "Should have skipped if non-zero AS");
-        GlobalVariable *GV = new GlobalVariable(
-            *M, PatternValue->getType(), /*isConstant=*/true,
-            GlobalValue::PrivateLinkage, PatternValue, ".memset_pattern");
-        GV->setUnnamedAddr(
-            GlobalValue::UnnamedAddr::Global); // Ok to merge these.
-        // TODO: Consider relaxing alignment requirement.
-        GV->setAlignment(Align(16));
-        Value *PatternPtr = GV;
-        Value *NumBytes = Builder.CreateMul(
-            Builder.getInt64(
-                DL.getTypeSizeInBits(Memset->getValue()->getType()) / 8),
-            Memset->getLength());
-        CallInst *MemsetPattern16Call = Builder.CreateCall(
-            MSP, {Memset->getRawDest(), PatternPtr, NumBytes});
-        MemsetPattern16Call->setAAMetadata(Memset->getAAMetadata());
-        // Preserve any call site attributes on the destination pointer
-        // argument (e.g. alignment).
-        AttrBuilder ArgAttrs(Memset->getContext(),
-                             Memset->getAttributes().getParamAttrs(0));
-        MemsetPattern16Call->setAttributes(
-            MemsetPattern16Call->getAttributes().addParamAttributes(
-                Memset->getContext(), 0, ArgAttrs));
-      } else {
+      Constant *PatternValue = getMemSetPattern16Value(Memset, TLI);
+      if (!PatternValue) {
+        // If it isn't possible to emit a memset_pattern16 libcall, expand to
+        // a loop instead.
         expandMemSetPatternAsLoop(Memset);
+        Changed = true;
+        Memset->eraseFromParent();
+        break;
       }
+      // FIXME: There is currently no profitability calculation for emitting
+      // the libcall vs expanding the memset.pattern directly.
+      IRBuilder<> Builder(Inst);
+      Module *M = Memset->getModule();
+      const DataLayout &DL = Memset->getDataLayout();
+
+      StringRef FuncName = "memset_pattern16";
+      FunctionCallee MSP = getOrInsertLibFunc(
+          M, TLI, LibFunc_memset_pattern16, Builder.getVoidTy(),
+          Memset->getRawDest()->getType(), Builder.getPtrTy(),
+          Memset->getLength()->getType());
+      inferNonMandatoryLibFuncAttrs(M, FuncName, TLI);
+
+      // Otherwise we should form a memset_pattern16.  PatternValue is known
+      // to be an constant array of 16-bytes. Put the value into a mergable
+      // global.
+      assert(Memset->getRawDest()->getType()->getPointerAddressSpace() == 0 &&
+             "Should have skipped if non-zero AS");
+      GlobalVariable *GV = new GlobalVariable(
+          *M, PatternValue->getType(), /*isConstant=*/true,
+          GlobalValue::PrivateLinkage, PatternValue, ".memset_pattern");
+      GV->setUnnamedAddr(
+          GlobalValue::UnnamedAddr::Global); // Ok to merge these.
+      // TODO: Consider relaxing alignment requirement.
+      GV->setAlignment(Align(16));
+      Value *PatternPtr = GV;
+      Value *NumBytes = Builder.CreateMul(
+          Builder.getInt64(DL.getTypeSizeInBits(Memset->getValue()->getType()) /
+                           8),
+          Memset->getLength());
+      CallInst *MemsetPattern16Call =
+          Builder.CreateCall(MSP, {Memset->getRawDest(), PatternPtr, NumBytes});
+      MemsetPattern16Call->setAAMetadata(Memset->getAAMetadata());
+      // Preserve any call site attributes on the destination pointer
+      // argument (e.g. alignment).
+      AttrBuilder ArgAttrs(Memset->getContext(),
+                           Memset->getAttributes().getParamAttrs(0));
+      MemsetPattern16Call->setAttributes(
+          MemsetPattern16Call->getAttributes().addParamAttributes(
+              Memset->getContext(), 0, ArgAttrs));
       Changed = true;
       Memset->eraseFromParent();
       break;
