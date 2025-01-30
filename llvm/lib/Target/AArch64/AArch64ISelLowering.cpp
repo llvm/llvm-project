@@ -975,6 +975,20 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 #undef LCALLNAME5
   }
 
+  if (Subtarget->outlineAtomics() && !Subtarget->hasLSFE()) {
+    setOperationAction(ISD::ATOMIC_LOAD_FADD, MVT::f16, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FADD, MVT::f32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FADD, MVT::f64, LibCall);
+
+    setOperationAction(ISD::ATOMIC_LOAD_FMAX, MVT::f16, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMAX, MVT::f32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMAX, MVT::f64, LibCall);
+
+    setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::f16, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::f32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::f64, LibCall);
+  }
+
   if (Subtarget->hasLSE128()) {
     // Custom lowering because i128 is not legal. Must be replaced by 2x64
     // values. ATOMIC_LOAD_AND also needs op legalisation to emit LDCLRP.
@@ -27829,6 +27843,14 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
                        AI->getOperation() == AtomicRMWInst::Or ||
                        AI->getOperation() == AtomicRMWInst::And);
   if (CanUseLSE128)
+    return AtomicExpansionKind::None;
+
+  // Add support for LDFADD and friends
+  bool CanUseAtomicFP =
+      Subtarget->hasLSFE() && (AI->getOperation() == AtomicRMWInst::FAdd ||
+                               AI->getOperation() == AtomicRMWInst::FMax ||
+                               AI->getOperation() == AtomicRMWInst::FMin);
+  if (CanUseAtomicFP)
     return AtomicExpansionKind::None;
 
   // Nand is not supported in LSE.

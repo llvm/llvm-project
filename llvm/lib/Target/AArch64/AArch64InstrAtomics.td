@@ -543,6 +543,16 @@ let Predicates = [HasLSE] in {
   defm : LDOPregister_patterns_mod<"LDCLR", "atomic_load_and", "ORN">;
 }
 
+defm atomic_load_fadd  : binary_atomic_op_fp<atomic_load_fadd>;
+defm atomic_load_fmin  : binary_atomic_op_fp<atomic_load_fmin>;
+defm atomic_load_fmax  : binary_atomic_op_fp<atomic_load_fmax>;
+
+let Predicates = [HasLSFE] in {
+  defm : LDFPOPregister_patterns<"LDFADD", "atomic_load_fadd">;
+  defm : LDFPOPregister_patterns<"LDFMAX", "atomic_load_fmax">;
+  defm : LDFPOPregister_patterns<"LDFMIN", "atomic_load_fmin">;
+}
+
 // v8.9a/v9.4a FEAT_LRCPC patterns
 let Predicates = [HasRCPC3, HasNEON] in {
   // LDAP1 loads

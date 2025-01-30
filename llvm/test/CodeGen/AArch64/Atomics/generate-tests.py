@@ -41,6 +41,20 @@ FPType = ByteSizes([
 # fmt: on
 
 
+# FP Type name size
+class FPType(enum.Enum):
+    # Value is the size in bytes
+    half = 2
+    float = 4
+    double = 8
+
+    def align(self, aligned: bool) -> int:
+        return self.value if aligned else 1
+
+    def __str__(self) -> str:
+        return self.name
+
+
 # Is this an aligned or unaligned access?
 class Aligned(enum.Enum):
     aligned = True
@@ -123,6 +137,7 @@ class Feature(enum.Flag):
     v8_1a = enum.auto()  # -mattr=+v8.1a, mandatory FEAT_LOR, FEAT_LSE
     rcpc = enum.auto()  # FEAT_LRCPC
     lse2 = enum.auto()  # FEAT_LSE2
+    lsfe = enum.auto()  # FEAT_LSFE
     outline_atomics = enum.auto()  # -moutline-atomics
     rcpc3 = enum.auto()  # FEAT_LSE2 + FEAT_LRCPC3
     lse2_lse128 = enum.auto()  # FEAT_LSE2 + FEAT_LSE128
@@ -140,6 +155,8 @@ class Feature(enum.Flag):
             return "+lse2,+rcpc3"
         if self == Feature.lse2_lse128:
             return "+lse2,+lse128"
+        if self == Feature.lsfe:
+            return "+lsfe"
         return "+" + self.name
 
 
@@ -180,24 +197,10 @@ FP_ATOMICRMW_OPS = [
 ]
 
 
-def relpath():
-    # __file__ changed to return absolute path in Python 3.9. Print only
-    # up to llvm-project (6 levels higher), to avoid unnecessary diffs and
-    # revealing directory structure of people running this script
-    top = "../" * 6
-    fp = os.path.relpath(__file__, os.path.abspath(os.path.join(__file__, top)))
-    return fp
-
-
-def align(val, aligned: bool) -> int:
-    return val if aligned else 1
-
-
 def all_atomicrmw(f, datatype, atomicrmw_ops):
     for op in atomicrmw_ops:
         for aligned in Aligned:
-            for ty, val in datatype:
-                alignval = align(val, aligned)
+            for ty in datatype:
                 for ordering in ATOMICRMW_ORDERS:
                     name = f"atomicrmw_{op}_{ty}_{aligned}_{ordering}"
                     instr = "atomicrmw"
@@ -340,10 +343,13 @@ def write_lit_tests(feature, datatypes, ops):
             with open(f"{triple}-atomicrmw-{feat.name}.ll", "w") as f:
                 filter_args = r'--filter-out "\b(sp)\b" --filter "^\s*(ld[^r]|st[^r]|swp|cas|bl|add|and|eor|orn|orr|sub|mvn|sxt|cmp|ccmp|csel|dmb)"'
                 header(f, triple, [feat], filter_args)
-                all_atomicrmw(f, datatypes, ops)
+                if feat != Feature.lsfe:
+                    all_atomicrmw(f, Type, ATOMICRMW_OPS)
+                else:
+                    all_atomicrmw(f, FPType, FP_ATOMICRMW_OPS)
 
             # Floating point atomics only supported for atomicrmw currently
-            if feature.test_scope() == "atomicrmw":
+            if feat == Feature.lsfe:
                 continue
 
             with open(f"{triple}-cmpxchg-{feat.name}.ll", "w") as f:

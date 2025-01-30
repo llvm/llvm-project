@@ -12483,6 +12483,32 @@ multiclass LDOPregister_patterns_mod<string inst, string op, string mod> {
                         (i32 (!cast<Instruction>(mod#Wrr) WZR, GPR32:$Rm))>;
 }
 
+let Predicates = [HasLSFE] in
+multiclass LDFPOPregister_patterns_ord_dag<string inst, string suffix, string op,
+                                         ValueType vt, dag SrcRHS, dag DstRHS> {
+  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_monotonic") FPR64:$Rn, SrcRHS),
+            (!cast<Instruction>(inst # suffix) DstRHS, FPR64:$Rn)>;
+  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_acquire") FPR64:$Rn, SrcRHS),
+            (!cast<Instruction>(inst # "A" # suffix) DstRHS, FPR64:$Rn)>;
+  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_release") FPR64:$Rn, SrcRHS),
+            (!cast<Instruction>(inst # "L" # suffix) DstRHS, FPR64:$Rn)>;
+  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_acq_rel") FPR64:$Rn, SrcRHS),
+            (!cast<Instruction>(inst # "AL" # suffix) DstRHS, FPR64:$Rn)>;
+  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_seq_cst") FPR64:$Rn, SrcRHS),
+            (!cast<Instruction>(inst # "AL" # suffix) DstRHS, FPR64:$Rn)>;
+}
+
+multiclass LDFPOPregister_patterns_ord<string inst, string suffix, string op,
+                                     ValueType vt, dag RHS> {
+  defm : LDFPOPregister_patterns_ord_dag<inst, suffix, op, vt, RHS, RHS>;
+}
+
+multiclass LDFPOPregister_patterns<string inst, string op> {
+  defm : LDFPOPregister_patterns_ord<inst, "H", op, f16, (f16 FPR16:$Rm)>;
+  defm : LDFPOPregister_patterns_ord<inst, "S", op, f32, (f32 FPR32:$Rm)>;
+  defm : LDFPOPregister_patterns_ord<inst, "D", op, f64, (f64 FPR64:$Rm)>;
+}
+
 let Predicates = [HasLSE] in
 multiclass CASregister_patterns_ord_dag<string inst, string suffix, string op,
                                         ValueType vt, dag OLD, dag NEW> {
