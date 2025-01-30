@@ -697,7 +697,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(const vector& __v
       __alloc_(__storage_traits::select_on_container_copy_construction(__v.__alloc_)) {
   if (__v.size() > 0) {
     __vallocate(__v.size());
-    __construct_at_end(__v.begin(), __v.end(), __v.size());
+    std::copy(__v.__begin_, __v.__begin_ + __external_cap_to_internal(__v.size()), __begin_);
+    __size_ = __v.size();
   }
 }
 
@@ -706,7 +707,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(const vector& __v
     : __begin_(nullptr), __size_(0), __cap_(0), __alloc_(__a) {
   if (__v.size() > 0) {
     __vallocate(__v.size());
-    __construct_at_end(__v.begin(), __v.end(), __v.size());
+    std::copy(__v.__begin_, __v.__begin_ + __external_cap_to_internal(__v.size()), __begin_);
+    __size_ = __v.size();
   }
 }
 
@@ -754,7 +756,8 @@ vector<bool, _Allocator>::vector(vector&& __v, const __type_identity_t<allocator
     __v.__cap_ = __v.__size_ = 0;
   } else if (__v.size() > 0) {
     __vallocate(__v.size());
-    __construct_at_end(__v.begin(), __v.end(), __v.size());
+    std::copy(__v.__begin_, __v.__begin_ + __external_cap_to_internal(__v.size()), __begin_);
+    __size_ = __v.size();
   }
 }
 
@@ -849,7 +852,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::reserve(size_type _
       this->__throw_length_error();
     vector __v(this->get_allocator());
     __v.__vallocate(__n);
-    __v.__construct_at_end(this->begin(), this->end(), this->size());
+    std::copy(__begin_, __begin_ + __external_cap_to_internal(size()), __v.__begin_);
+    __v.__size_ = size();
     swap(__v);
   }
 }

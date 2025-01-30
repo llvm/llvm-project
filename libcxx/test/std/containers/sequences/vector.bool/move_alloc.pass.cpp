@@ -9,78 +9,90 @@
 // UNSUPPORTED: c++03
 
 // <vector>
+// vector<bool>
 
 // vector(vector&& c, const allocator_type& a);
 
-#include <vector>
 #include <cassert>
-#include "test_macros.h"
-#include "test_allocator.h"
+#include <vector>
+
 #include "min_allocator.h"
+#include "test_allocator.h"
+#include "test_macros.h"
 
-TEST_CONSTEXPR_CXX20 bool tests()
-{
-    {
-        std::vector<bool, test_allocator<bool> > l(test_allocator<bool>(5));
-        std::vector<bool, test_allocator<bool> > lo(test_allocator<bool>(5));
-        for (int i = 1; i <= 3; ++i)
-        {
-            l.push_back(i);
-            lo.push_back(i);
-        }
-        std::vector<bool, test_allocator<bool> > l2(std::move(l), test_allocator<bool>(6));
-        assert(l2 == lo);
-        assert(!l.empty());
-        assert(l2.get_allocator() == test_allocator<bool>(6));
-    }
-    {
-        std::vector<bool, test_allocator<bool> > l(test_allocator<bool>(5));
-        std::vector<bool, test_allocator<bool> > lo(test_allocator<bool>(5));
-        for (int i = 1; i <= 3; ++i)
-        {
-            l.push_back(i);
-            lo.push_back(i);
-        }
-        std::vector<bool, test_allocator<bool> > l2(std::move(l), test_allocator<bool>(5));
-        assert(l2 == lo);
-        assert(l.empty());
-        assert(l2.get_allocator() == test_allocator<bool>(5));
-    }
-    {
-        std::vector<bool, other_allocator<bool> > l(other_allocator<bool>(5));
-        std::vector<bool, other_allocator<bool> > lo(other_allocator<bool>(5));
-        for (int i = 1; i <= 3; ++i)
-        {
-            l.push_back(i);
-            lo.push_back(i);
-        }
-        std::vector<bool, other_allocator<bool> > l2(std::move(l), other_allocator<bool>(4));
-        assert(l2 == lo);
-        assert(!l.empty());
-        assert(l2.get_allocator() == other_allocator<bool>(4));
-    }
-    {
-        std::vector<bool, min_allocator<bool> > l(min_allocator<bool>{});
-        std::vector<bool, min_allocator<bool> > lo(min_allocator<bool>{});
-        for (int i = 1; i <= 3; ++i)
-        {
-            l.push_back(i);
-            lo.push_back(i);
-        }
-        std::vector<bool, min_allocator<bool> > l2(std::move(l), min_allocator<bool>());
-        assert(l2 == lo);
-        assert(l.empty());
-        assert(l2.get_allocator() == min_allocator<bool>());
-    }
-
-    return true;
+template <unsigned N, class A>
+TEST_CONSTEXPR_CXX20 void test(const A& a1, const A& a2) {
+  std::vector<bool, A> l(N, true, a1);
+  std::vector<bool, A> lo(N, true, a1);
+  for (unsigned i = 1; i < N; i += 2) {
+    l[i]  = false;
+    lo[i] = false;
+  }
+  std::vector<bool, A> l2(std::move(l), a2);
+  assert(l2 == lo);
+  if (a1 == a2)
+    assert(l.empty());
+  else
+    LIBCPP_ASSERT(!l.empty()); // For incompatible allocators, l is not guaranteed to be empty after the move.
+  assert(l2.get_allocator() == a2);
 }
 
-int main(int, char**)
-{
-    tests();
-#if TEST_STD_VER > 17
-    static_assert(tests());
+TEST_CONSTEXPR_CXX20 bool tests() {
+  { // Test with default allocator: compatible allocators
+    using A = std::allocator<bool>;
+    test<5>(A(), A());
+    test<17>(A(), A());
+    test<65>(A(), A());
+    test<257>(A(), A());
+  }
+
+  { // Test with test_allocator: compatible and incompatible allocators
+    using A = test_allocator<bool>;
+
+    // Compatible allocators
+    test<5>(A(5), A(5));
+    test<17>(A(5), A(5));
+    test<65>(A(5), A(5));
+    test<257>(A(5), A(5));
+
+    // Incompatible allocators
+    test<5>(A(5), A(6));
+    test<17>(A(5), A(6));
+    test<65>(A(5), A(6));
+    test<257>(A(5), A(6));
+  }
+
+  { // Test with other_allocator: compatible and incompatible allocators
+    using A = other_allocator<bool>;
+
+    // Compatible allocators
+    test<5>(A(5), A(5));
+    test<17>(A(5), A(5));
+    test<65>(A(5), A(5));
+    test<257>(A(5), A(5));
+
+    // Incompatible allocators
+    test<5>(A(5), A(3));
+    test<17>(A(5), A(3));
+    test<65>(A(5), A(3));
+    test<257>(A(5), A(3));
+  }
+
+  { // Test with min_allocator: compatible allocators
+    using A = min_allocator<bool>;
+    test<5>(A(), A());
+    test<17>(A(), A());
+    test<65>(A(), A());
+    test<257>(A(), A());
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  tests();
+#if TEST_STD_VER >= 20
+  static_assert(tests());
 #endif
-    return 0;
+  return 0;
 }

@@ -39,6 +39,16 @@ void BM_CopyConstruct(benchmark::State& st, Container) {
   }
 }
 
+template <class Container, class Allocator>
+void BM_CopyConstruct_Alloc(benchmark::State& st, Container, Allocator a) {
+  auto size = st.range(0);
+  Container c(size);
+  for (auto _ : st) {
+    Container v(c, a); // we assume the destructor doesn't dominate the benchmark
+    DoNotOptimizeData(v);
+  }
+}
+
 template <class Container>
 void BM_Assignment(benchmark::State& st, Container) {
   auto size = st.range(0);
