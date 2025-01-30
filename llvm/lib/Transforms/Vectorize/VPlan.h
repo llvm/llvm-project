@@ -1315,6 +1315,9 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override {
     // TODO: Compute accurate cost after retiring the legacy cost model.
+    // Use legacy cost model for now.
+    if (auto *I = dyn_cast_or_null<Instruction>(getUnderlyingValue()))
+      return Ctx.getLegacyCost(I, VF);
     return 0;
   }
 
