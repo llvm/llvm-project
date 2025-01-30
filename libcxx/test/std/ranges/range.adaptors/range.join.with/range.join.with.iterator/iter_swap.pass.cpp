@@ -28,10 +28,11 @@ template <class I>
 concept CanIterSwap = requires(I i) { iter_swap(i); };
 
 enum class SwapKind { no_swap, with_same_type, with_different_type };
+enum class IterKind { inner_view, pattern };
 
-template <std::forward_iterator Iter>
+template <std::forward_iterator Iter, IterKind Kind>
 class IterSwapTrackingIterator {
-  template <std::forward_iterator T>
+  template <std::forward_iterator T, IterKind K>
   friend class IterSwapTrackingIterator;
 
 public:
@@ -63,9 +64,9 @@ public:
     return std::ranges::iter_swap(lhs.iter_, rhs.iter_);
   }
 
-  template <std::indirectly_swappable<Iter> OtherIter>
+  template <std::indirectly_swappable<Iter> OtherIter, IterKind OtherKind>
   friend constexpr decltype(auto)
-  iter_swap(const IterSwapTrackingIterator& lhs, const IterSwapTrackingIterator<OtherIter>& rhs) {
+  iter_swap(const IterSwapTrackingIterator& lhs, const IterSwapTrackingIterator<OtherIter, OtherKind>& rhs) {
     assert(lhs.flag_ != nullptr && rhs.flag_ != nullptr);
     *lhs.flag_ = *rhs.flag_ = SwapKind::with_different_type;
     return std::ranges::iter_swap(lhs.iter_, rhs.iter_);
@@ -76,8 +77,8 @@ private:
   SwapKind* flag_ = nullptr;
 };
 
-static_assert(std::forward_iterator<IterSwapTrackingIterator<int*>> &&
-              !std::bidirectional_iterator<IterSwapTrackingIterator<int*>>);
+static_assert(std::forward_iterator<IterSwapTrackingIterator<int*, IterKind::inner_view>> &&
+              !std::bidirectional_iterator<IterSwapTrackingIterator<int*, IterKind::inner_view>>);
 
 constexpr bool test() {
   { // Test common usage
@@ -114,10 +115,10 @@ constexpr bool test() {
 
   { // Make sure `iter_swap` calls underlying's iterator `iter_swap` (not `ranges::swap(*i1, *i2)`).
     using Inner               = std::vector<int>;
-    using InnerTrackingIter   = IterSwapTrackingIterator<Inner::iterator>;
+    using InnerTrackingIter   = IterSwapTrackingIterator<Inner::iterator, IterKind::inner_view>;
     using TrackingInner       = std::ranges::subrange<InnerTrackingIter>;
     using Pattern             = std::array<int, 2>;
-    using PatternTrackingIter = IterSwapTrackingIterator<Pattern::iterator>;
+    using PatternTrackingIter = IterSwapTrackingIterator<Pattern::iterator, IterKind::pattern>;
     using TrackingPattern     = std::ranges::subrange<PatternTrackingIter>;
     using JWV                 = std::ranges::join_with_view<std::span<TrackingInner>, TrackingPattern>;
 
