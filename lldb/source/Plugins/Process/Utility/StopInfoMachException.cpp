@@ -734,7 +734,7 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
         // or not.  Clear this in the Tread object so we step past it on resume.
         thread.SetThreadHitBreakpointSite();
 
-        if (bp_site_sp->ValidForThisThread(thread) {
+        if (bp_site_sp->ValidForThisThread(thread)) {
           // Update the PC if we were asked to do so, but only do so if we find
           // a breakpoint that we know about because this could be a trap
           // instruction in the code.
