@@ -13,11 +13,14 @@
 #include <cfenv>
 #if defined(__aarch64__) && !defined(_WIN32)
 #include <fpu_control.h>
-#elif defined(__x86_64__)
+#elif defined(__x86_64__) && !defined(_WIN32)
 #include <xmmintrin.h>
 #endif
 
-// fenv.h may not define exception macros.
+// File fenv.h usually, but not always, defines standard exceptions as both
+// enumerator values and preprocessor #defines. Some x86 environments also
+// define a nonstandard __FE_DENORM enumerator, but without a corresponding
+// #define, which makes it more difficult to determine if it is present or not.
 #ifndef FE_INVALID
 #define FE_INVALID 0
 #endif
@@ -33,6 +36,12 @@
 #ifndef FE_INEXACT
 #define FE_INEXACT 0
 #endif
+#if FE_INVALID == 1 && FE_DIVBYZERO == 4 && FE_OVERFLOW == 8 && \
+    FE_UNDERFLOW == 16 && FE_INEXACT == 32
+#define __FE_DENORM 2
+#else
+#define __FE_DENORM 0
+#endif
 
 namespace Fortran::runtime {
 
@@ -44,11 +53,7 @@ uint32_t RTNAME(MapException)(uint32_t excepts) {
   Terminator terminator{__FILE__, __LINE__};
 
   static constexpr uint32_t v{FE_INVALID};
-#if __x86_64__
-  static constexpr uint32_t s{__FE_DENORM}; // nonstandard, not a #define
-#else
-  static constexpr uint32_t s{0};
-#endif
+  static constexpr uint32_t s{__FE_DENORM};
   static constexpr uint32_t z{FE_DIVBYZERO};
   static constexpr uint32_t o{FE_OVERFLOW};
   static constexpr uint32_t u{FE_UNDERFLOW};
