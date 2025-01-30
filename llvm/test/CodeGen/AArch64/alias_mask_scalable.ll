@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=aarch64 -mattr=+sve2 %s -o - | FileCheck %s --check-prefix=CHECK-SVE2
 ; RUN: llc -mtriple=aarch64 -mattr=+sve %s -o - | FileCheck %s --check-prefix=CHECK-SVE
 
-define <vscale x 16 x i1> @whilewr_8(i64 %a, i64 %b) {
+define <vscale x 16 x i1> @whilewr_8(ptr %a, ptr %b) {
 ; CHECK-SVE2-LABEL: whilewr_8:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    whilewr p0.b, x0, x1
@@ -60,11 +60,11 @@ define <vscale x 16 x i1> @whilewr_8(i64 %a, i64 %b) {
 ; CHECK-SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE-NEXT:    ret
 entry:
-  %0 = call <vscale x 16 x i1> @llvm.experimental.get.alias.lane.mask.v16i1.i64.i64(i64 %a, i64 %b, i64 1, i1 1)
+  %0 = call <vscale x 16 x i1> @llvm.experimental.get.alias.lane.mask.v16i1(ptr %a, ptr %b, i64 1, i1 1)
   ret <vscale x 16 x i1> %0
 }
 
-define <vscale x 8 x i1> @whilewr_16(i64 %a, i64 %b) {
+define <vscale x 8 x i1> @whilewr_16(ptr %a, ptr %b) {
 ; CHECK-SVE2-LABEL: whilewr_16:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    whilewr p0.h, x0, x1
@@ -98,11 +98,11 @@ define <vscale x 8 x i1> @whilewr_16(i64 %a, i64 %b) {
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
 entry:
-  %0 = call <vscale x 8 x i1> @llvm.experimental.get.alias.lane.mask.v8i1.i64.i64(i64 %a, i64 %b, i64 2, i1 1)
+  %0 = call <vscale x 8 x i1> @llvm.experimental.get.alias.lane.mask.v8i1(ptr %a, ptr %b, i64 2, i1 1)
   ret <vscale x 8 x i1> %0
 }
 
-define <vscale x 4 x i1> @whilewr_32(i64 %a, i64 %b) {
+define <vscale x 4 x i1> @whilewr_32(ptr %a, ptr %b) {
 ; CHECK-SVE2-LABEL: whilewr_32:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    whilewr p0.s, x0, x1
@@ -130,11 +130,11 @@ define <vscale x 4 x i1> @whilewr_32(i64 %a, i64 %b) {
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
 entry:
-  %0 = call <vscale x 4 x i1> @llvm.experimental.get.alias.lane.mask.v4i1.i64.i64(i64 %a, i64 %b, i64 4, i1 1)
+  %0 = call <vscale x 4 x i1> @llvm.experimental.get.alias.lane.mask.v4i1(ptr %a, ptr %b, i64 4, i1 1)
   ret <vscale x 4 x i1> %0
 }
 
-define <vscale x 2 x i1> @whilewr_64(i64 %a, i64 %b) {
+define <vscale x 2 x i1> @whilewr_64(ptr %a, ptr %b) {
 ; CHECK-SVE2-LABEL: whilewr_64:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    whilewr p0.d, x0, x1
@@ -158,11 +158,11 @@ define <vscale x 2 x i1> @whilewr_64(i64 %a, i64 %b) {
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
 entry:
-  %0 = call <vscale x 2 x i1> @llvm.experimental.get.alias.lane.mask.v2i1.i64.i64(i64 %a, i64 %b, i64 8, i1 1)
+  %0 = call <vscale x 2 x i1> @llvm.experimental.get.alias.lane.mask.v2i1(ptr %a, ptr %b, i64 8, i1 1)
   ret <vscale x 2 x i1> %0
 }
 
-define <vscale x 16 x i1> @whilerw_8(i64 %a, i64 %b) {
+define <vscale x 16 x i1> @whilerw_8(ptr %a, ptr %b) {
 ; CHECK-SVE2-LABEL: whilerw_8:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    whilerw p0.b, x0, x1
@@ -223,11 +223,11 @@ define <vscale x 16 x i1> @whilerw_8(i64 %a, i64 %b) {
 ; CHECK-SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE-NEXT:    ret
 entry:
-  %0 = call <vscale x 16 x i1> @llvm.experimental.get.alias.lane.mask.v16i1.i64.i64(i64 %a, i64 %b, i64 1, i1 0)
+  %0 = call <vscale x 16 x i1> @llvm.experimental.get.alias.lane.mask.v16i1(ptr %a, ptr %b, i64 1, i1 0)
   ret <vscale x 16 x i1> %0
 }
 
-define <vscale x 8 x i1> @whilerw_16(i64 %a, i64 %b) {
+define <vscale x 8 x i1> @whilerw_16(ptr %a, ptr %b) {
 ; CHECK-SVE2-LABEL: whilerw_16:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    whilerw p0.h, x0, x1
@@ -262,11 +262,11 @@ define <vscale x 8 x i1> @whilerw_16(i64 %a, i64 %b) {
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
 entry:
-  %0 = call <vscale x 8 x i1> @llvm.experimental.get.alias.lane.mask.v8i1.i64.i64(i64 %a, i64 %b, i64 2, i1 0)
+  %0 = call <vscale x 8 x i1> @llvm.experimental.get.alias.lane.mask.v8i1(ptr %a, ptr %b, i64 2, i1 0)
   ret <vscale x 8 x i1> %0
 }
 
-define <vscale x 4 x i1> @whilerw_32(i64 %a, i64 %b) {
+define <vscale x 4 x i1> @whilerw_32(ptr %a, ptr %b) {
 ; CHECK-SVE2-LABEL: whilerw_32:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    whilerw p0.s, x0, x1
@@ -295,11 +295,11 @@ define <vscale x 4 x i1> @whilerw_32(i64 %a, i64 %b) {
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
 entry:
-  %0 = call <vscale x 4 x i1> @llvm.experimental.get.alias.lane.mask.v4i1.i64.i64(i64 %a, i64 %b, i64 4, i1 0)
+  %0 = call <vscale x 4 x i1> @llvm.experimental.get.alias.lane.mask.v4i1(ptr %a, ptr %b, i64 4, i1 0)
   ret <vscale x 4 x i1> %0
 }
 
-define <vscale x 2 x i1> @whilerw_64(i64 %a, i64 %b) {
+define <vscale x 2 x i1> @whilerw_64(ptr %a, ptr %b) {
 ; CHECK-SVE2-LABEL: whilerw_64:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    whilerw p0.d, x0, x1
@@ -324,6 +324,6 @@ define <vscale x 2 x i1> @whilerw_64(i64 %a, i64 %b) {
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
 entry:
-  %0 = call <vscale x 2 x i1> @llvm.experimental.get.alias.lane.mask.v2i1.i64.i64(i64 %a, i64 %b, i64 8, i1 0)
+  %0 = call <vscale x 2 x i1> @llvm.experimental.get.alias.lane.mask.v2i1(ptr %a, ptr %b, i64 8, i1 0)
   ret <vscale x 2 x i1> %0
 }

@@ -24115,10 +24115,10 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <4 x i1> @llvm.experimental.get.alias.lane.mask.v4i1.i64.i64(i64 %ptrA, i64 %ptrB, i64 immarg %elementSize, i1 immarg %writeAfterRead)
-      declare <8 x i1> @llvm.experimental.get.alias.lane.mask.v8i1.i64.i64(i64 %ptrA, i64 %ptrB, i64 immarg %elementSize, i1 immarg %writeAfterRead)
-      declare <16 x i1> @llvm.experimental.get.alias.lane.mask.v16i1.i64.i32(i64 %ptrA, i64 %ptrB, i32 immarg %elementSize, i1 immarg %writeAfterRead)
-      declare <vscale x 16 x i1> @llvm.experimental.get.alias.lane.mask.nxv16i1.i64.i32(i64 %ptrA, i64 %ptrB, i32 immarg %elementSize, i1 immarg %writeAfterRead)
+      declare <4 x i1> @llvm.experimental.get.alias.lane.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize, i1 immarg %writeAfterRead)
+      declare <8 x i1> @llvm.experimental.get.alias.lane.mask.v8i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize, i1 immarg %writeAfterRead)
+      declare <16 x i1> @llvm.experimental.get.alias.lane.mask.v16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize, i1 immarg %writeAfterRead)
+      declare <vscale x 16 x i1> @llvm.experimental.get.alias.lane.mask.nxv16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize, i1 immarg %writeAfterRead)
 
 
 Overview:
@@ -24158,7 +24158,7 @@ equivalent to:
       %m[i] = (icmp ult i, %diff) || (%diff == 0)
 
 where ``%m`` is a vector (mask) of active/inactive lanes with its elements
-indexed by ``i``,  and ``%ptrA``, ``%ptrB`` are the two i64 arguments to
+indexed by ``i``,  and ``%ptrA``, ``%ptrB`` are the two ptr arguments to
 ``llvm.experimental.get.alias.lane.mask.*`` and ``%elementSize`` is the first
 immediate argument. The ``%writeAfterRead`` argument is expected to be true if
 ``%ptrB`` is stored to after ``%ptrA`` is read from.
@@ -24184,7 +24184,7 @@ Examples:
 
 .. code-block:: llvm
 
-      %alias.lane.mask = call <4 x i1> @llvm.experimental.get.alias.lane.mask.v4i1.i64.i32(i64 %ptrA, i64 %ptrB, i32 4, i1 1)
+      %alias.lane.mask = call <4 x i1> @llvm.experimental.get.alias.lane.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 4, i1 1)
       %vecA = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %ptrA, i32 4, <4 x i1> %alias.lane.mask, <4 x i32> poison)
       [...]
       call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, <4 x i32>* %ptrB, i32 4, <4 x i1> %alias.lane.mask)
