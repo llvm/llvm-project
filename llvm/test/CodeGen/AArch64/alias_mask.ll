@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=aarch64 -mattr=+sve2 %s -o - | FileCheck %s --check-prefix=CHECK-SVE
 ; RUN: llc -mtriple=aarch64 %s -o - | FileCheck %s --check-prefix=CHECK-NOSVE
 
-define <16 x i1> @whilewr_8(i64 %a, i64 %b) {
+define <16 x i1> @whilewr_8(ptr %a, ptr %b) {
 ; CHECK-SVE-LABEL: whilewr_8:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    whilewr p0.b, x0, x1
@@ -53,11 +53,11 @@ define <16 x i1> @whilewr_8(i64 %a, i64 %b) {
 ; CHECK-NOSVE-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
-  %0 = call <16 x i1> @llvm.experimental.get.alias.lane.mask.v16i1.i64.i64(i64 %a, i64 %b, i64 1, i1 1)
+  %0 = call <16 x i1> @llvm.experimental.get.alias.lane.mask.v16i1(ptr %a, ptr %b, i64 1, i1 1)
   ret <16 x i1> %0
 }
 
-define <8 x i1> @whilewr_16(i64 %a, i64 %b) {
+define <8 x i1> @whilewr_16(ptr %a, ptr %b) {
 ; CHECK-SVE-LABEL: whilewr_16:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    whilewr p0.b, x0, x1
@@ -95,11 +95,11 @@ define <8 x i1> @whilewr_16(i64 %a, i64 %b) {
 ; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
-  %0 = call <8 x i1> @llvm.experimental.get.alias.lane.mask.v8i1.i64.i64(i64 %a, i64 %b, i64 2, i1 1)
+  %0 = call <8 x i1> @llvm.experimental.get.alias.lane.mask.v8i1(ptr %a, ptr %b, i64 2, i1 1)
   ret <8 x i1> %0
 }
 
-define <4 x i1> @whilewr_32(i64 %a, i64 %b) {
+define <4 x i1> @whilewr_32(ptr %a, ptr %b) {
 ; CHECK-SVE-LABEL: whilewr_32:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    whilewr p0.h, x0, x1
@@ -129,11 +129,11 @@ define <4 x i1> @whilewr_32(i64 %a, i64 %b) {
 ; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
-  %0 = call <4 x i1> @llvm.experimental.get.alias.lane.mask.v4i1.i64.i64(i64 %a, i64 %b, i64 4, i1 1)
+  %0 = call <4 x i1> @llvm.experimental.get.alias.lane.mask.v4i1(ptr %a, ptr %b, i64 4, i1 1)
   ret <4 x i1> %0
 }
 
-define <2 x i1> @whilewr_64(i64 %a, i64 %b) {
+define <2 x i1> @whilewr_64(ptr %a, ptr %b) {
 ; CHECK-SVE-LABEL: whilewr_64:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    whilewr p0.s, x0, x1
@@ -159,11 +159,11 @@ define <2 x i1> @whilewr_64(i64 %a, i64 %b) {
 ; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
-  %0 = call <2 x i1> @llvm.experimental.get.alias.lane.mask.v2i1.i64.i64(i64 %a, i64 %b, i64 8, i1 1)
+  %0 = call <2 x i1> @llvm.experimental.get.alias.lane.mask.v2i1(ptr %a, ptr %b, i64 8, i1 1)
   ret <2 x i1> %0
 }
 
-define <16 x i1> @whilerw_8(i64 %a, i64 %b) {
+define <16 x i1> @whilerw_8(ptr %a, ptr %b) {
 ; CHECK-SVE-LABEL: whilerw_8:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    whilerw p0.b, x0, x1
@@ -215,11 +215,11 @@ define <16 x i1> @whilerw_8(i64 %a, i64 %b) {
 ; CHECK-NOSVE-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
-  %0 = call <16 x i1> @llvm.experimental.get.alias.lane.mask.v16i1.i64.i64(i64 %a, i64 %b, i64 1, i1 0)
+  %0 = call <16 x i1> @llvm.experimental.get.alias.lane.mask.v16i1(ptr %a, ptr %b, i64 1, i1 0)
   ret <16 x i1> %0
 }
 
-define <8 x i1> @whilerw_16(i64 %a, i64 %b) {
+define <8 x i1> @whilerw_16(ptr %a, ptr %b) {
 ; CHECK-SVE-LABEL: whilerw_16:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    whilerw p0.b, x0, x1
@@ -258,11 +258,11 @@ define <8 x i1> @whilerw_16(i64 %a, i64 %b) {
 ; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
-  %0 = call <8 x i1> @llvm.experimental.get.alias.lane.mask.v8i1.i64.i64(i64 %a, i64 %b, i64 2, i1 0)
+  %0 = call <8 x i1> @llvm.experimental.get.alias.lane.mask.v8i1(ptr %a, ptr %b, i64 2, i1 0)
   ret <8 x i1> %0
 }
 
-define <4 x i1> @whilerw_32(i64 %a, i64 %b) {
+define <4 x i1> @whilerw_32(ptr %a, ptr %b) {
 ; CHECK-SVE-LABEL: whilerw_32:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    whilerw p0.h, x0, x1
@@ -293,11 +293,11 @@ define <4 x i1> @whilerw_32(i64 %a, i64 %b) {
 ; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
-  %0 = call <4 x i1> @llvm.experimental.get.alias.lane.mask.v4i1.i64.i64(i64 %a, i64 %b, i64 4, i1 0)
+  %0 = call <4 x i1> @llvm.experimental.get.alias.lane.mask.v4i1(ptr %a, ptr %b, i64 4, i1 0)
   ret <4 x i1> %0
 }
 
-define <2 x i1> @whilerw_64(i64 %a, i64 %b) {
+define <2 x i1> @whilerw_64(ptr %a, ptr %b) {
 ; CHECK-SVE-LABEL: whilerw_64:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    whilerw p0.s, x0, x1
@@ -324,6 +324,6 @@ define <2 x i1> @whilerw_64(i64 %a, i64 %b) {
 ; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
-  %0 = call <2 x i1> @llvm.experimental.get.alias.lane.mask.v2i1.i64.i64(i64 %a, i64 %b, i64 8, i1 0)
+  %0 = call <2 x i1> @llvm.experimental.get.alias.lane.mask.v2i1(ptr %a, ptr %b, i64 8, i1 0)
   ret <2 x i1> %0
 }
