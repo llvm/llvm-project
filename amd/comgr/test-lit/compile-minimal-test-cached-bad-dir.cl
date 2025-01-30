@@ -1,3 +1,5 @@
+// RUN: export AMD_COMGR_CACHE=1
+//
 // COM: fail to create the cache, but still produce something valid
 // RUN: rm -f %t.log
 // RUN: echo "not a directory" >  %t.txt

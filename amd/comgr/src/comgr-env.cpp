@@ -280,6 +280,13 @@ StringRef getCachePolicy() {
 }
 
 StringRef getCacheDirectory() {
+  // By default the cache is deactivated. We hope to remove this variable in the
+  // future.
+  static const char *Enable = std::getenv("AMD_COMGR_CACHE");
+  bool CacheDisabled = !Enable || StringRef(Enable) == "0";
+  if (CacheDisabled)
+    return "";
+
   static const char *EnvCacheDirectory = std::getenv("AMD_COMGR_CACHE_DIR");
   if (EnvCacheDirectory)
     return EnvCacheDirectory;
