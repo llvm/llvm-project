@@ -209,7 +209,7 @@ constexpr bool test() {
         std::fill(vec.begin(), vec.end(), false);
         std::fill(vec.begin() + offset, vec.begin() + i + offset, true);
 
-        // check both (range) and (iterator, sentinel) overloads
+        // check both range and iterator-sentinel overloads
         assert(std::ranges::find(vec, true) == std::ranges::begin(vec) + offset);
         assert(std::ranges::find(std::ranges::begin(vec) + offset, std::ranges::end(vec), false) ==
                std::ranges::begin(vec) + offset + i);

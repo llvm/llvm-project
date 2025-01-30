@@ -109,6 +109,23 @@ struct Storage {
   };
 };
 
+TEST_CONSTEXPR_CXX20 bool test_vector_bool(std::size_t N) {
+  { // Test with full bytes
+    std::vector<bool> in(N, false);
+    std::vector<bool> expected(N, true);
+    std::fill_n(in.begin(), N, true);
+    assert(in == expected);
+  }
+  { // Test with partial bytes with offset
+    std::vector<bool> in(N, false);
+    std::vector<bool> expected(N, true);
+    std::fill_n(in.begin() + 4, N - 4, true);
+    assert(std::equal(in.begin() + 4, in.end() - 4, expected.begin()));
+  }
+
+  return true;
+}
+
 // Make sure std::fill_n behaves properly with std::vector<bool> iterators with custom size types.
 // See https://github.com/llvm/llvm-project/pull/122410.
 TEST_CONSTEXPR_CXX20 void test_bititer_with_custom_sized_types() {
@@ -169,21 +186,19 @@ TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::forward_iterator_list<int*>(), Test<int>());
 
   test_int_array();
-  test_struct_array(); 
-  test_int_array_struct_source(); 
+  test_struct_array();
+  test_int_array_struct_source();
 
   { // Test vector<bool>::iterator optimization
-    for (std::size_t N = 8; N <= 256; N *= 2) {
-      // Test with both full and partial bytes
-      for (std::size_t offset = 0; offset <= 4; offset += 4) {
-        std::vector<bool> in(N + 2 * offset);
-        std::vector<bool> expected(N, true);
-        std::fill_n(in.begin() + offset, N + offset, true);
-        assert(std::equal(in.begin() + offset, in.end() - offset, expected.begin()));
-      }
-    }
+    assert(test_vector_bool(8));
+    assert(test_vector_bool(19));
+    assert(test_vector_bool(32));
+    assert(test_vector_bool(49));
+    assert(test_vector_bool(64));
+    assert(test_vector_bool(199));
+    assert(test_vector_bool(256));
   }
-  
+
   test_bititer_with_custom_sized_types();
 
   return true;

@@ -234,7 +234,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
       for (size_t offset = 0; offset < 8; offset += 2) {
         std::fill(vec.begin(), vec.end(), false);
         std::fill(vec.begin() + offset, vec.begin() + i + offset, true);
-        assert(std::find(vec.begin(), vec.begin() + i + offset, true) == vec.begin() + offset);
+        assert(std::find(vec.begin(), vec.end(), true) == vec.begin() + offset);
         assert(std::find(vec.begin() + offset, vec.end(), false) == vec.begin() + offset + i);
       }
     }

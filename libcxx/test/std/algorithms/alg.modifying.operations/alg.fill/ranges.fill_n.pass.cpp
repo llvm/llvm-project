@@ -88,6 +88,23 @@ TEST_CONSTEXPR_CXX20 void test_bititer_with_custom_sized_types() {
     assert(in == expected);
   }
 }
+
+constexpr bool test_vector_bool(std::size_t N) {
+  { // Test with full bytes
+    std::vector<bool> in(N, false);
+    std::vector<bool> expected(N, true);
+    std::ranges::fill_n(std::ranges::begin(in), N, true);
+    assert(in == expected);
+  }
+  { // Test with partial bytes with offset
+    std::vector<bool> in(N, false);
+    std::vector<bool> expected(N, true);
+    std::ranges::fill_n(std::ranges::begin(in) + 4, N - 4, true);
+    assert(std::equal(in.begin() + 4, in.end(), expected.begin()));
+  }
+
+  return true;
+}
 #endif
 
 constexpr bool test() {
@@ -123,15 +140,13 @@ constexpr bool test() {
 
 #if TEST_STD_VER >= 23
   { // Test vector<bool>::iterator optimization
-    for (std::size_t N = 8; N <= 256; N *= 2) {
-      // Test with both full and partial bytes
-      for (std::size_t offset : {0, 4}) {
-        std::vector<bool> in(N + 2 * offset);
-        std::vector<bool> expected(N, true);
-        std::ranges::fill_n(std::ranges::begin(in) + offset, N, true);
-        assert(std::equal(in.begin() + offset, in.end() - offset, expected.begin()));
-      }
-    }
+    assert(test_vector_bool(8));
+    assert(test_vector_bool(19));
+    assert(test_vector_bool(32));
+    assert(test_vector_bool(49));
+    assert(test_vector_bool(64));
+    assert(test_vector_bool(199));
+    assert(test_vector_bool(256));
   }
 
   test_bititer_with_custom_sized_types();
