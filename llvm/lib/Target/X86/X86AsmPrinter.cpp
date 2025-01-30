@@ -216,24 +216,77 @@ void processInstructions(
 }
 
 /// Walk through the control flow of a function starting at the entry block
-/// using depth first search. This makes sure the mappings are are generated in
-/// the correct order.
+/// using depth first search and analyse spills into other registers or the
+/// stack. This is required in order to encode additional locations into
+/// stackmaps. When blocks appear in a loop, we run a fixed-point algorithm to
+/// make sure that extra locations are valid in each iteration.
+///
+/// To give an example:
+///
+/// bb0:
+///   mov rax, [rbp-8]
+///   br bb1
+///
+/// bb1:
+///   STACKMAP [rax]
+///   br bb2
+///
+/// bb2:
+///   mov rax, [rbp-16]
+///   br bb1
+///
+/// Here, the first time we enter `bb1` the variable that's stored in `rax` has
+/// an extra location `rbp-8`. However, when we enter `bb1` again via `bb2`,
+/// the extra location has now changed to `rbp-16`. We thus encode neither
+/// extra location into the stackmap.
+///
 /// YKFIXME: Can be updated to use an iterative approach.
 void findSpillLocations(
     const MachineBasicBlock *MBB,
-    std::set<const MachineBasicBlock *> &Seen,
+    std::map<const MachineBasicBlock *, std::map<Register, std::set<int64_t>>> &MBSpillMaps,
     std::map<Register, std::set<int64_t>> SpillMap,
     std::map<const MachineInstr *, std::map<Register, std::set<int64_t>>> &StackmapSpillMaps
     ) {
 
-  // Block has already been processed.
-  if (Seen.count(MBB) > 0) {
-    return;
+  int Changed = false;
+  // For each livein intersect the existing spills for this block with the
+  // spills passed down from the predecessor block.
+  if (auto Val = MBSpillMaps.find(MBB); Val != MBSpillMaps.end()) {
+    // We've already processed this block before, which means this block is
+    // part of a loop. Check if the spills have changed and remove any mappings
+    // that don't appear in both the old and new spill map. We only need to
+    // check the spills of variables passed into the block from the
+    // predecessors.
+    auto PrevSM = Val->second;
+    for (auto LiveIn = MBB->livein_begin(); LiveIn != MBB->livein_end(); LiveIn++) {
+      auto DwReg = getDwarfRegNum(Register((*LiveIn).PhysReg), TRI);
+      auto Prev = PrevSM[DwReg];
+      auto New = SpillMap[DwReg];
+      std::set<int64_t> Inter;
+      std::set_intersection(
+          Prev.begin(), Prev.end(),
+          New.begin(), New.end(),
+          std::inserter(Inter, Inter.begin())
+      );
+      if (Prev != Inter) {
+        // The mappings have changed, so update the running spill map and make
+        // sure we re-process all predecessors.
+        SpillMap[DwReg] = Inter;
+        Changed = true;
+      }
+    }
+  } else {
+    // We are processing this block for the first time.
+    Changed = true;
   }
-  Seen.insert(MBB);
-  processInstructions(MBB, SpillMap, StackmapSpillMaps);
-  for (MachineBasicBlock *Succ : MBB->successors()) {
-    findSpillLocations(Succ, Seen, SpillMap, StackmapSpillMaps);
+
+  // Remember this blocks spillmap.
+  MBSpillMaps[MBB] = SpillMap;
+  if (Changed) {
+    processInstructions(MBB, SpillMap, StackmapSpillMaps);
+    for (MachineBasicBlock *Succ : MBB->successors()) {
+      findSpillLocations(Succ, MBSpillMaps, SpillMap, StackmapSpillMaps);
+    }
   }
 }
 
@@ -269,10 +322,10 @@ bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // Analyse control flow to find out the location of register spills to the
   // stack or to other registers, so we can also encode those in stackmaps.
   TII = MF.getSubtarget().getInstrInfo();
-  std::set<const MachineBasicBlock *> S;
   std::map<Register, std::set<int64_t>> SpillMap;
+  std::map<const MachineBasicBlock *, std::map<Register, std::set<int64_t>>> MBSpillMaps;
   if (YkStackMapAdditionalLocs) {
-    findSpillLocations(&*MF.begin(), S, SpillMap, StackmapSpillMaps);
+    findSpillLocations(&*MF.begin(), MBSpillMaps, SpillMap, StackmapSpillMaps);
   }
 
   // Emit the rest of the function body.
