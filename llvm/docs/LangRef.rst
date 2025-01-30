@@ -24137,6 +24137,7 @@ The final two are immediates and the result is a vector with the i1 element type
 Semantics:
 """"""""""
 
+``%elementSize`` is the size of the accessed elements in bytes.
 The intrinsic will return poison if ``%ptrA`` and ``%ptrB`` are within
 VF * ``%elementSize`` of each other and ``%ptrA`` + VF * ``%elementSize`` wraps.
 In other cases when ``%writeAfterRead`` is true, the
@@ -24161,7 +24162,8 @@ where ``%m`` is a vector (mask) of active/inactive lanes with its elements
 indexed by ``i``,  and ``%ptrA``, ``%ptrB`` are the two ptr arguments to
 ``llvm.experimental.get.alias.lane.mask.*`` and ``%elementSize`` is the first
 immediate argument. The ``%writeAfterRead`` argument is expected to be true if
-``%ptrB`` is stored to after ``%ptrA`` is read from.
+``%ptrB`` is stored to after ``%ptrA`` is read from, otherwise it is false for
+a read after write.
 The above is equivalent to:
 
 ::
