@@ -99,6 +99,18 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(0, /*Min=*/8)
       .clampScalar(0, s8, sMaxScalar);
 
+  getActionDefinitionsBuilder(G_LROUND)
+      .libcallIf([=](const LegalityQuery &Query) -> bool {
+        return (typeInSet(0, {s32, s64})(Query) &&
+                typeInSet(1, {s32, s64, s80})(Query));
+      });
+
+  getActionDefinitionsBuilder(G_LLROUND)
+      .libcallIf([=](const LegalityQuery &Query) -> bool {
+        return (typeIs(0, s64)(Query) &&
+                typeInSet(1, {s32, s64, s80})(Query));
+      });
+
   // merge/unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
     unsigned BigTyIdx = Op == G_MERGE_VALUES ? 0 : 1;
