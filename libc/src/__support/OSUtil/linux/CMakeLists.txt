@@ -53,3 +53,11 @@ add_object_library(
     libc.src.errno.errno
     libc.src.sys.auxv.getauxval
 )
+
+add_header_library(
+  cross_compile_clippy
+  HDRS
+    cross_compile_clippy.h
+  DEPENDS
+    libc.src.__support.macros.properties.architectures
+)
