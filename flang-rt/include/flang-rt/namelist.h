@@ -51,4 +51,4 @@ public:
 RT_API_ATTRS bool IsNamelistNameOrSlash(IoStatementState &);
 
 } // namespace Fortran::runtime::io
-#endif /* FLANG_RT_NAMELIST_H_ */
+#endif // FLANG_RT_NAMELIST_H_

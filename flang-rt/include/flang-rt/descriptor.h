@@ -482,4 +482,4 @@ private:
 };
 
 } // namespace Fortran::runtime
-#endif /* FLANG_RT_DESCRIPTOR_H_ */
+#endif // FLANG_RT_DESCRIPTOR_H_

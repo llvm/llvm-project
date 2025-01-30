@@ -55,4 +55,4 @@ RT_OFFLOAD_VAR_GROUP_END
 
 } // namespace Fortran::runtime
 
-#endif /* FLANG_RT_ALLOCATOR_REGISTRY_H_ */
+#endif // FLANG_RT_ALLOCATOR_REGISTRY_H_

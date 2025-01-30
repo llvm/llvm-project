@@ -22,4 +22,4 @@ RT_API_ATTRS void CopyElement(const Descriptor &to, const SubscriptValue toAt[],
     const Descriptor &from, const SubscriptValue fromAt[], Terminator &);
 
 } // namespace Fortran::runtime
-#endif /* FLANG_RT_COPY_H_ */
+#endif // FLANG_RT_COPY_H_

@@ -60,4 +60,4 @@ RT_API_ATTRS int ToErrmsg(const Descriptor *errmsg, int stat); // returns stat
 RT_API_ATTRS int ReturnError(Terminator &, int stat,
     const Descriptor *errmsg = nullptr, bool hasStat = false);
 } // namespace Fortran::runtime
-#endif /* FLANG_RT_STAT_H_ */
+#endif // FLANG_RT_STAT_H_

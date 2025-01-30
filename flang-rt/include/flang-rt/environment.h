@@ -67,4 +67,4 @@ RT_OFFLOAD_VAR_GROUP_END
 
 } // namespace Fortran::runtime
 
-#endif /* FLANG_RT_ENVIRONMENT_H_ */
+#endif // FLANG_RT_ENVIRONMENT_H_

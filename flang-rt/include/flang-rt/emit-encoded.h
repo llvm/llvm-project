@@ -114,4 +114,4 @@ RT_API_ATTRS bool EmitRepeated(CONTEXT &to, char ch, std::size_t n) {
 }
 
 } // namespace Fortran::runtime::io
-#endif /* FLANG_RT_EMIT_ENCODED_H_ */
+#endif // FLANG_RT_EMIT_ENCODED_H_

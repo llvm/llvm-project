@@ -113,4 +113,4 @@ private:
 };
 } // namespace Fortran::runtime
 
-#endif /* FLANG_RT_LOCK_H_ */
+#endif // FLANG_RT_LOCK_H_

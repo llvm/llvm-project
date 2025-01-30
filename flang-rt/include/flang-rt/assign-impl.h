@@ -28,4 +28,4 @@ RT_API_ATTRS void DoFromSourceAssign(Descriptor &, const Descriptor &,
 #endif
 
 } // namespace Fortran::runtime
-#endif /* FLANG_RT_ASSIGN_IMPL_H_ */
+#endif // FLANG_RT_ASSIGN_IMPL_H_

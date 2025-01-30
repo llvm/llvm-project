@@ -570,4 +570,4 @@ RT_API_ATTRS void CreatePartialReductionResult(Descriptor &result,
     const char *intrinsic, TypeCode);
 
 } // namespace Fortran::runtime
-#endif /* FLANG_RT_TOOLS_H_ */
+#endif // FLANG_RT_TOOLS_H_

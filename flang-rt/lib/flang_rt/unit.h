@@ -291,4 +291,4 @@ private:
 };
 
 } // namespace Fortran::runtime::io
-#endif /* FLANG_RT_UNIT_H_ */
+#endif // FLANG_RT_UNIT_H_

@@ -138,4 +138,4 @@ extern template class RealOutputEditing<10>;
 extern template class RealOutputEditing<16>;
 
 } // namespace Fortran::runtime::io
-#endif /* FLANG_RT_EDIT_OUTPUT_H_ */
+#endif // FLANG_RT_EDIT_OUTPUT_H_
