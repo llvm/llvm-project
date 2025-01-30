@@ -5933,17 +5933,17 @@ define amdgpu_kernel void @global_sextload_v4i16_to_v4i64(ptr addrspace(1) %out,
 ;
 ; GCN-NOHSA-VI-LABEL: global_sextload_v4i16_to_v4i64:
 ; GCN-NOHSA-VI:       ; %bb.0:
-; GCN-NOHSA-VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GCN-NOHSA-VI-NEXT:    s_mov_b32 s7, 0xf000
-; GCN-NOHSA-VI-NEXT:    s_mov_b32 s6, -1
-; GCN-NOHSA-VI-NEXT:    s_mov_b32 s10, s6
-; GCN-NOHSA-VI-NEXT:    s_mov_b32 s11, s7
+; GCN-NOHSA-VI-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x24
+; GCN-NOHSA-VI-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-NOHSA-VI-NEXT:    s_mov_b32 s2, -1
+; GCN-NOHSA-VI-NEXT:    s_mov_b32 s10, s2
+; GCN-NOHSA-VI-NEXT:    s_mov_b32 s11, s3
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NOHSA-VI-NEXT:    s_mov_b32 s8, s2
-; GCN-NOHSA-VI-NEXT:    s_mov_b32 s9, s3
+; GCN-NOHSA-VI-NEXT:    s_mov_b32 s8, s6
+; GCN-NOHSA-VI-NEXT:    s_mov_b32 s9, s7
 ; GCN-NOHSA-VI-NEXT:    buffer_load_dwordx2 v[1:2], off, s[8:11], 0
-; GCN-NOHSA-VI-NEXT:    s_mov_b32 s4, s0
-; GCN-NOHSA-VI-NEXT:    s_mov_b32 s5, s1
+; GCN-NOHSA-VI-NEXT:    s_mov_b32 s0, s4
+; GCN-NOHSA-VI-NEXT:    s_mov_b32 s1, s5
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v4, v2
 ; GCN-NOHSA-VI-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
@@ -5956,8 +5956,8 @@ define amdgpu_kernel void @global_sextload_v4i16_to_v4i64(ptr addrspace(1) %out,
 ; GCN-NOHSA-VI-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
 ; GCN-NOHSA-VI-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GCN-NOHSA-VI-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
-; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[4:7], 0 offset:16
-; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
+; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:16
+; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; GCN-NOHSA-VI-NEXT:    s_endpgm
 ;
 ; EG-LABEL: global_sextload_v4i16_to_v4i64:

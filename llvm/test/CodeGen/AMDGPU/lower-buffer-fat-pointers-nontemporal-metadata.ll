@@ -92,11 +92,11 @@ define amdgpu_kernel void @buffer_nontemporal_load_store(ptr addrspace(7) %in, p
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v9, s0
 ; GFX940-SDAG-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX940-SDAG-NEXT:    s_waitcnt vmcnt(4)
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v6, v11
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v5, v10
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v6, v11
 ; GFX940-SDAG-NEXT:    s_waitcnt vmcnt(1)
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, v13
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, v12
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, v13
 ; GFX940-SDAG-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
 ; GFX940-SDAG-NEXT:    v_readfirstlane_b32 s4, v4
 ; GFX940-SDAG-NEXT:    v_readfirstlane_b32 s5, v5
@@ -523,11 +523,11 @@ define amdgpu_kernel void @buffer_nontemporal_and_volatile_load_store(ptr addrsp
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v9, s0
 ; GFX940-SDAG-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX940-SDAG-NEXT:    s_waitcnt vmcnt(4)
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v6, v11
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v5, v10
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v6, v11
 ; GFX940-SDAG-NEXT:    s_waitcnt vmcnt(1)
-; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, v13
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, v12
+; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, v13
 ; GFX940-SDAG-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
 ; GFX940-SDAG-NEXT:    v_readfirstlane_b32 s4, v4
 ; GFX940-SDAG-NEXT:    v_readfirstlane_b32 s5, v5
