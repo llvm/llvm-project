@@ -124,7 +124,7 @@ bool CommandObject::ParseOptions(Args &args, CommandReturnObject &result) {
       error = Status::FromError(args_or.takeError());
 
     if (error.Success()) {
-      if (options->VerifyOptions(result))
+      if (options->VerifyOptions())
         return true;
     } else {
       result.SetError(error.takeError());
