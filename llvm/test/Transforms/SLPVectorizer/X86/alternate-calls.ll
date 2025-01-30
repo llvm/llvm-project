@@ -107,7 +107,7 @@ define <8 x float> @ceil_floor(<8 x float> %a) {
   %ab5 = call float @llvm.ceil.f32(float %a5)
   %ab6 = call float @llvm.floor.f32(float %a6)
   %ab7 = call float @llvm.floor.f32(float %a7)
-  %r0 = insertelement <8 x float> undef, float %ab0, i32 0
+  %r0 = insertelement <8 x float> zeroinitializer, float %ab0, i32 0
   %r1 = insertelement <8 x float>   %r0, float %ab1, i32 1
   %r2 = insertelement <8 x float>   %r1, float %ab2, i32 2
   %r3 = insertelement <8 x float>   %r2, float %ab3, i32 3
