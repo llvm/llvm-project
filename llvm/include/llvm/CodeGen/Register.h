@@ -101,7 +101,7 @@ public:
   /// Compute the frame index from a register value representing a stack slot.
   int stackSlotIndex() const {
     assert(isStack() && "Not a stack slot");
-    return int(Reg - MCRegister::FirstStackSlot);
+    return static_cast<int>(Reg - MCRegister::FirstStackSlot);
   }
 
   constexpr operator unsigned() const { return Reg; }
