@@ -1,8 +1,6 @@
 #include "clang/Sema/Common.h"
 
-namespace clang {
-
-bool CheckArgTypeIsCorrect(
+bool clang::CheckArgTypeIsCorrect(
     Sema *S, Expr *Arg, QualType ExpectedType,
     llvm::function_ref<bool(clang::QualType PassedType)> Check) {
   QualType PassedType = Arg->getType();
@@ -17,7 +15,7 @@ bool CheckArgTypeIsCorrect(
   return false;
 }
 
-bool CheckAllArgTypesAreCorrect(
+bool clang::CheckAllArgTypesAreCorrect(
     Sema *SemaPtr, CallExpr *TheCall,
     std::variant<QualType, std::nullopt_t> ExpectedType, CheckParam Check) {
   unsigned int NumElts;
@@ -61,5 +59,3 @@ bool CheckAllArgTypesAreCorrect(
 
   return false;
 }
-
-} // namespace clang
