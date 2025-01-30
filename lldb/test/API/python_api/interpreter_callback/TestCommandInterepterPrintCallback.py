@@ -4,7 +4,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class BreakpointAPITestCase(TestBase):
+class CommandInterepterPrintCallbackTest(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def run_command_interpreter_with_output_file(self, out_filename, input_str):
@@ -15,7 +15,7 @@ class BreakpointAPITestCase(TestBase):
             self.dbg.RunCommandInterpreter(True, False, opts, 0, False, False)
 
     def test_command_interpreter_print_callback(self):
-        """Make sure that if an SBBreakpoint gets deleted its IsValid returns false."""
+        """Test the command interpreter print callback."""
         self.build()
         exe = self.getBuildArtifact("a.out")
 

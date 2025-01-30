@@ -1012,7 +1012,7 @@ static void LLDBSwigPythonCallPythonLogOutputCallback(const char *str,
   }
 }
 
-// For DebuggerTerminateCallback functions
+// For CommandPrintCallback functions
 static CommandReturnObjectCallbackResult LLDBSwigPythonCallPythonCommandPrintCallback(SBCommandReturnObject& result, void *callback_baton) {
   SWIG_Python_Thread_Block swig_thread_block;
 
