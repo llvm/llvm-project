@@ -256,7 +256,7 @@ jobs:
       shell: bash
       run: |
         find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname ${{ needs.prepare.outputs.release-binary-filename }} -delete
-        find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname _CPack_Packages -delete
+        find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname _CPack_Packages -prune -exec rm -r {} \;
     
     - name: Save Stage
       uses: ./workflows-main/.github/workflows/release-binaries-save-stage
