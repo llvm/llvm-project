@@ -1,10 +1,10 @@
 include(CMakePushCheckState)
 include(CheckLibraryExists)
 include(CheckSymbolExists)
-include(LLVMCheckCompilerLinkerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckCSourceCompiles)
+include(LLVMCheckCompilerLinkerFlag)
 
 # The compiler driver may be implicitly trying to link against libunwind.
 # This is normally ok (libcxx relies on an unwinder), but if libunwind is
@@ -13,7 +13,8 @@ include(CheckCSourceCompiles)
 # libunwind (and the compiler implicit -lunwind wouldn't succeed as the newly
 # built libunwind isn't installed yet). For those cases, it'd be good to
 # link with --unwindlib=none. Check if that option works.
-llvm_check_compiler_linker_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
+llvm_check_compiler_linker_flag(
+    C "--unwindlib=none" RESET STATIC_LIBRARY CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
 
 if (NOT LIBCXX_USE_COMPILER_RT)
   if(WIN32 AND NOT MINGW)
@@ -27,8 +28,10 @@ if (NOT LIBCXX_USE_COMPILER_RT)
   endif()
 endif()
 
-check_cxx_compiler_flag(-nostdlibinc CXX_SUPPORTS_NOSTDLIBINC_FLAG)
-check_cxx_compiler_flag(-nolibc CXX_SUPPORTS_NOLIBC_FLAG)
+llvm_check_compiler_linker_flag(
+    CXX "-nostdlibinc" RESET STATIC_LIBRARY CXX_SUPPORTS_NOSTDLIBINC_FLAG)
+llvm_check_compiler_linker_flag(
+    CXX "-nolibc" RESET STATIC_LIBRARY CXX_SUPPORTS_NOLIBC_FLAG)
 
 # libc++ is using -nostdlib++ at the link step when available,
 # otherwise -nodefaultlibs is used. We want all our checks to also
@@ -39,11 +42,13 @@ check_cxx_compiler_flag(-nolibc CXX_SUPPORTS_NOLIBC_FLAG)
 # required for the link to go through. We remove sanitizers from the
 # configuration checks to avoid spurious link errors.
 
-check_cxx_compiler_flag(-nostdlib++ CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+llvm_check_compiler_linker_flag(
+    CXX "-nostdlib++" RESET STATIC_LIBRARY CXX_SUPPORTS_NOSTDLIBXX_FLAG)
 if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
 else()
-  check_c_compiler_flag(-nodefaultlibs C_SUPPORTS_NODEFAULTLIBS_FLAG)
+  llvm_check_compiler_linker_flag(
+      C "-nodefaultlibs" RESET STATIC_LIBRARY C_SUPPORTS_NODEFAULTLIBS_FLAG)
   if (C_SUPPORTS_NODEFAULTLIBS_FLAG)
     set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nodefaultlibs")
   endif()
