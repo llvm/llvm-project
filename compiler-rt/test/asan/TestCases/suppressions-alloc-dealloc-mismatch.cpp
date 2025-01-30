@@ -1,10 +1,10 @@
 // Check that without suppressions, we catch the issue.
 // RUN: %clangxx_asan -O0 %s -o %t
-// RUN: not %run %t 2>&1 | FileCheck --check-prefix=CHECK-CRASH %s
+// RUN: %env_asan_opts=alloc_dealloc_mismatch=1 not %run %t 2>&1 | FileCheck --check-prefix=CHECK-CRASH %s
 
 // RUN: echo "alloc_dealloc_mismatch:function" > %t.supp
-// RUN: %clangxx_asan -O0 %s -o %t && %env_asan_opts=suppressions='"%t.supp"' %run %t 2>&1 | FileCheck --check-prefix=CHECK-IGNORE %s
-// RUN: %clangxx_asan -O3 %s -o %t && %env_asan_opts=suppressions='"%t.supp"' %run %t 2>&1 | FileCheck --check-prefix=CHECK-IGNORE %s
+// RUN: %clangxx_asan -O0 %s -o %t && %env_asan_opts=alloc_dealloc_mismatch=1:suppressions='"%t.supp"' %run %t 2>&1 | FileCheck --check-prefix=CHECK-IGNORE %s
+// RUN: %clangxx_asan -O3 %s -o %t && %env_asan_opts=alloc_dealloc_mismatch=1:suppressions='"%t.supp"' %run %t 2>&1 | FileCheck --check-prefix=CHECK-IGNORE %s
 
 #include <stdio.h>
 #include <stdlib.h>
