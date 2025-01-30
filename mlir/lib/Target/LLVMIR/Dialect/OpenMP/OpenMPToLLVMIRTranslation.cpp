@@ -3303,7 +3303,15 @@ static void processMapMembersWithParent(
     combinedInfo.BasePointers.emplace_back(
         mapData.BasePointers[basePointerIndex]);
     combinedInfo.Pointers.emplace_back(mapData.Pointers[memberDataIdx]);
-    combinedInfo.Sizes.emplace_back(mapData.Sizes[memberDataIdx]);
+
+    llvm::Value *size = mapData.Sizes[memberDataIdx];
+    if (checkIfPointerMap(memberClause)) {
+      size = builder.CreateSelect(
+          builder.CreateIsNull(mapData.Pointers[memberDataIdx]),
+          builder.getInt64(0), size);
+    }
+
+    combinedInfo.Sizes.emplace_back(size);
   }
 }
 

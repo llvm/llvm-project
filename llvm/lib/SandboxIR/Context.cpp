@@ -611,6 +611,12 @@ Context::Context(LLVMContext &LLVMCtx)
 
 Context::~Context() {}
 
+void Context::clear() {
+  // TODO: Ideally we should clear only function-scope objects, and keep global
+  // objects, like Constants to avoid recreating them.
+  LLVMValueToValueMap.clear();
+}
+
 Module *Context::getModule(llvm::Module *LLVMM) const {
   auto It = LLVMModuleToModuleMap.find(LLVMM);
   if (It != LLVMModuleToModuleMap.end())

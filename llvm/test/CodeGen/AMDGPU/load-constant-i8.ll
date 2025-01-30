@@ -8756,7 +8756,6 @@ define amdgpu_kernel void @constant_sextload_v32i8_to_v32i64(ptr addrspace(1) %o
 ; GFX12-NEXT:    v_dual_mov_b32 v24, 0 :: v_dual_mov_b32 v1, s37
 ; GFX12-NEXT:    s_bfe_i64 s[44:45], s[44:45], 0x80000
 ; GFX12-NEXT:    s_bfe_i64 s[42:43], s[42:43], 0x80000
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v3, s75
 ; GFX12-NEXT:    v_dual_mov_b32 v2, s74 :: v_dual_mov_b32 v5, s41
 ; GFX12-NEXT:    s_lshr_b32 s48, s5, 16
