@@ -98,8 +98,8 @@ SBCommandInterpreter::SBCommandInterpreter(const SBCommandInterpreter &rhs)
 
 SBCommandInterpreter::~SBCommandInterpreter() = default;
 
-const SBCommandInterpreter &SBCommandInterpreter::
-operator=(const SBCommandInterpreter &rhs) {
+const SBCommandInterpreter &
+SBCommandInterpreter::operator=(const SBCommandInterpreter &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   m_opaque_ptr = rhs.m_opaque_ptr;
@@ -222,8 +222,7 @@ void SBCommandInterpreter::HandleCommandsFromFile(
   if (override_context.get())
     m_opaque_ptr->HandleCommandsFromFile(tmp_spec,
                                          override_context.get()->Lock(true),
-                                         options.ref(),
-                                         result.ref());
+                                         options.ref(), result.ref());
 
   else
     m_opaque_ptr->HandleCommandsFromFile(tmp_spec, options.ref(), result.ref());
@@ -649,7 +648,8 @@ SBCommand::operator bool() const {
 const char *SBCommand::GetName() {
   LLDB_INSTRUMENT_VA(this);
 
-  return (IsValid() ? ConstString(m_opaque_sp->GetCommandName()).AsCString() : nullptr);
+  return (IsValid() ? ConstString(m_opaque_sp->GetCommandName()).AsCString()
+                    : nullptr);
 }
 
 const char *SBCommand::GetHelp() {
@@ -744,40 +744,14 @@ void SBCommand::SetFlags(uint32_t flags) {
     m_opaque_sp->GetFlags().Set(flags);
 }
 
-namespace lldb_private {
-struct CommandCallbackData {
-  SBCommandPrintCallback callback;
-  void *callback_baton;
-};
-
-class CommandPrintCallbackBaton
-    : public lldb_private::TypedBaton<CommandCallbackData> {
-public:
-  CommandPrintCallbackBaton(SBCommandPrintCallback callback, void *baton)
-      : TypedBaton(std::make_unique<CommandCallbackData>()) {
-    getItem()->callback = callback;
-    getItem()->callback_baton = baton;
-  }
-
-  static lldb::CommandReturnObjectCallbackResult
-  PrivateCallback(lldb_private::CommandReturnObject &result, void *baton) {
-    if (baton) {
-      CommandCallbackData *data = (CommandCallbackData *)baton;
-      SBCommandReturnObject sb_result(result);
-      return data->callback(sb_result, data->callback_baton);
-    }
-    return eCommandReturnObjectPrintCallbackSkipped;
-  }
-};
-} // namespace lldb_private
-
 void SBCommandInterpreter::SetPrintCallback(
     lldb::SBCommandPrintCallback callback, void *baton) {
   LLDB_INSTRUMENT_VA(this, callback, baton);
 
-  BatonSP baton_sp =
-      std::make_shared<CommandPrintCallbackBaton>(callback, baton);
   if (m_opaque_ptr)
     return m_opaque_ptr->SetPrintCallback(
-        &CommandPrintCallbackBaton::PrivateCallback, baton_sp);
+        [callback, baton](lldb_private::CommandReturnObject &result) {
+          SBCommandReturnObject sb_result(result);
+          return callback(sb_result, baton);
+        });
 }

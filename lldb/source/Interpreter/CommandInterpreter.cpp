@@ -3215,11 +3215,7 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
     };
 
     if (m_print_callback) {
-      void *baton = m_print_callback_baton_sp
-                        ? m_print_callback_baton_sp->data()
-                        : nullptr;
-      lldb::CommandReturnObjectCallbackResult callback_result =
-          m_print_callback(result, baton);
+      const auto callback_result = m_print_callback(result);
       if (callback_result == eCommandReturnObjectPrintCallbackSkipped)
         DefaultPrintCallback(result);
     } else {
@@ -3675,8 +3671,7 @@ const StructuredData::Array &CommandInterpreter::GetTranscript() const {
   return m_transcript;
 }
 
-void CommandInterpreter::SetPrintCallback(CommandReturnObjectCallback callback,
-                                          lldb::BatonSP baton_sp) {
+void CommandInterpreter::SetPrintCallback(
+    CommandReturnObjectCallback callback) {
   m_print_callback = callback;
-  m_print_callback_baton_sp = baton_sp;
 }
