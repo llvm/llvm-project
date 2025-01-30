@@ -7706,20 +7706,22 @@ SDValue PPCTargetLowering::LowerCall_AIX(
     CCValAssign &VA = ArgLocs[I++];
     const MVT LocVT = VA.getLocVT();
     const MVT ValVT = VA.getValVT();
-
-    switch (VA.getLocInfo()) {
-    default:
-      report_fatal_error("Unexpected argument extension type.");
-    case CCValAssign::Full:
-      break;
-    case CCValAssign::ZExt:
-      Arg = DAG.getNode(ISD::ZERO_EXTEND, dl, VA.getLocVT(), Arg);
-      break;
-    case CCValAssign::SExt:
-      Arg = DAG.getNode(ISD::SIGN_EXTEND, dl, VA.getLocVT(), Arg);
-      break;
+    if (Arg.getOpcode() == ISD::UNDEF)
+      Arg = DAG.getUNDEF(VA.getLocVT());
+    else {
+      switch (VA.getLocInfo()) {
+      default:
+        report_fatal_error("Unexpected argument extension type.");
+      case CCValAssign::Full:
+        break;
+      case CCValAssign::ZExt:
+        Arg = DAG.getNode(ISD::ZERO_EXTEND, dl, VA.getLocVT(), Arg);
+        break;
+      case CCValAssign::SExt:
+        Arg = DAG.getNode(ISD::SIGN_EXTEND, dl, VA.getLocVT(), Arg);
+        break;
+      }
     }
-
     if (VA.isRegLoc() && !VA.needsCustom()) {
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
       continue;
@@ -18814,6 +18816,12 @@ bool PPCTargetLowering::splitValueIntoRegisterParts(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
     unsigned NumParts, MVT PartVT, std::optional<CallingConv::ID> CC) const {
   EVT ValVT = Val.getValueType();
+  if (Val.getOpcode() == ISD::UNDEF) {
+    for (unsigned i = 0; i <= NumParts; i++)
+      Parts[i] = DAG.getUNDEF(PartVT);
+    return true;
+  }
+
   // If we are splitting a scalar integer into f64 parts (i.e. so they
   // can be placed into VFRC registers), we need to zero extend and
   // bitcast the values. This will ensure the value is placed into a
