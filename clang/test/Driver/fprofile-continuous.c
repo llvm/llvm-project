@@ -17,5 +17,5 @@
 // RUN: %clang -target x86_64-unknown-fuchsia -fcs-profile-generate -fprofile-continuous -### -c %s 2>&1 | FileCheck %s --check-prefix=RELOC
 
 // RUN: not %clang -fprofile-continuous -### -c %s 2>&1 | FileCheck %s --check-prefix=ERROR
-// ERROR: clang: error: invalid argument '-fprofile-continuous' only allowed with '-fprofile-generate, -fprofile-instr-generate, or -fcs-profile-generate'
+// ERROR: error: invalid argument '-fprofile-continuous' only allowed with '-fprofile-generate, -fprofile-instr-generate, or -fcs-profile-generate'
 void foo(){}
