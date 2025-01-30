@@ -209,3 +209,64 @@ body: |
   bb.1:
     %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
     PseudoRET
+...
+---
+# Can reduce %x even though %y uses it as a passthru, because %y's inactive elements aren't demanded
+name: passthru_not_demanded
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: passthru_not_demanded
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 %x, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    %y:vr = PseudoVADD_VV_M1 %x, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+...
+---
+# Can't reduce %x because %y uses it as a passthru, and %y's inactive elements are demanded by %z
+name: passthru_demanded
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: passthru_demanded
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 %x, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 2, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    %y:vr = PseudoVADD_VV_M1 %x, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 2, 3 /* e8 */, 0 /* tu, mu */
+...
+---
+# Can reduce %x even though %y uses it as a passthru, because %y's inactive elements aren't demanded
+name: passthru_not_demanded_passthru_chain
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: passthru_not_demanded_passthru_chain
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 %x, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %z:vr = PseudoVADD_VV_M1 %y, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %a:vr = PseudoVADD_VV_M1 %z, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %b:vr = PseudoVADD_VV_M1 $noreg, %a, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    %y:vr = PseudoVADD_VV_M1 %x, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    %z:vr = PseudoVADD_VV_M1 %y, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    %a:vr = PseudoVADD_VV_M1 %z, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    %b:vr = PseudoVADD_VV_M1 $noreg, %a, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+...
+---
+# Can't reduce %x because %y uses it as a passthru, and %y's inactive elements are ultimately demanded in %b
+name: passthru_demanded_passthru_chain
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: passthru_demanded_passthru_chain
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 %x, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %z:vr = PseudoVADD_VV_M1 %y, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %a:vr = PseudoVADD_VV_M1 %z, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %b:vr = PseudoVADD_VV_M1 $noreg, %a, $noreg, 2, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    %y:vr = PseudoVADD_VV_M1 %x, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    %z:vr = PseudoVADD_VV_M1 %y, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    %a:vr = PseudoVADD_VV_M1 %z, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    %b:vr = PseudoVADD_VV_M1 $noreg, %a, $noreg, 2, 3 /* e8 */, 0 /* tu, mu */
+...

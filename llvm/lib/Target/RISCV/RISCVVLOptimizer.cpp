@@ -1188,6 +1188,25 @@ RISCVVLOptimizer::getMinimumVLForUser(MachineOperand &UserOp) {
     return std::nullopt;
   }
 
+  unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
+  const MachineOperand &VLOp = UserMI.getOperand(VLOpNum);
+  // Looking for an immediate or a register VL that isn't X0.
+  assert((!VLOp.isReg() || VLOp.getReg() != RISCV::X0) &&
+         "Did not expect X0 VL");
+
+  // If the user is a passthru it will read the elements past VL, so
+  // abort if any of the elements past VL are demanded.
+  if (UserOp.isTied()) {
+    assert(UserOp.getOperandNo() == UserMI.getNumExplicitDefs() &&
+           RISCVII::isFirstDefTiedToFirstUse(UserMI.getDesc()));
+    auto DemandedVL = DemandedVLs[&UserMI];
+    if (!DemandedVL || !RISCV::isVLKnownLE(*DemandedVL, VLOp)) {
+      LLVM_DEBUG(dbgs() << "    Abort because user is passthru in "
+                           "instruction with demanded tail\n");
+      return std::nullopt;
+    }
+  }
+
   // Instructions like reductions may use a vector register as a scalar
   // register. In this case, we should treat it as only reading the first lane.
   if (isVectorOpUsedAsScalarOp(UserOp)) {
@@ -1199,12 +1218,6 @@ RISCVVLOptimizer::getMinimumVLForUser(MachineOperand &UserOp) {
 
     return MachineOperand::CreateImm(1);
   }
-
-  unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
-  const MachineOperand &VLOp = UserMI.getOperand(VLOpNum);
-  // Looking for an immediate or a register VL that isn't X0.
-  assert((!VLOp.isReg() || VLOp.getReg() != RISCV::X0) &&
-         "Did not expect X0 VL");
 
   // If we know the demanded VL of UserMI, then we can reduce the VL it
   // requires.
@@ -1224,12 +1237,6 @@ std::optional<MachineOperand> RISCVVLOptimizer::checkUsers(MachineInstr &MI) {
     LLVM_DEBUG(dbgs() << "  Checking user: " << UserMI << "\n");
     if (mayReadPastVL(UserMI)) {
       LLVM_DEBUG(dbgs() << "    Abort because used by unsafe instruction\n");
-      return std::nullopt;
-    }
-
-    // If used as a passthru, elements past VL will be read.
-    if (UserOp.isTied()) {
-      LLVM_DEBUG(dbgs() << "    Abort because user used as tied operand\n");
       return std::nullopt;
     }
 
