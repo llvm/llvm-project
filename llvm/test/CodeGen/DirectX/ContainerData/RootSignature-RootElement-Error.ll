@@ -1,9 +1,8 @@
-; RUN: not opt -passes='print<dxil-root-signature>' %s -S -o - 2>&1 | FileCheck %s
+; RUN: not llc %s --filetype=obj -o - 2>&1 | FileCheck %s
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
-; CHECK: error: Missing Root Element Metadata Node.
-; CHECK-NOT: Root Signature Definitions
+; CHECK: LLVM ERROR: Missing Root Element Metadata Node.
 
 
 define void @main() #0 {

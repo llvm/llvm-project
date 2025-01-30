@@ -1,9 +1,8 @@
-; RUN: not opt -passes='print<dxil-root-signature>' %s -S -o - 2>&1 | FileCheck %s
-
-; CHECK: error: Invalid Root Signature flag value
-; CHECK-NOT: Root Signature Definitions
+; RUN: not llc %s --filetype=obj -o - 2>&1 | FileCheck %s
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
+
+; CHECK: LLVM ERROR: Invalid flag value for RootFlag
 
 
 define void @main() #0 {
