@@ -262,8 +262,7 @@ define amdgpu_kernel void @call_coldcc() #0 {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX1250-NEXT:    s_get_pc_i64 s[6:7]
-; GFX1250-NEXT:    s_wait_alu 0xfffe
-; GFX1250-NEXT:    s_add_nc_u64 s[6:7], s[6:7], coldcc@GOTPCREL+8
+; GFX1250-NEXT:    s_add_nc_u64 s[6:7], s[6:7], coldcc@GOTPCREL+4
 ; GFX1250-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, 1.0
 ; GFX1250-NEXT:    s_load_b64 s[12:13], s[6:7], 0x0
 ; GFX1250-NEXT:    s_add_nc_u64 s[8:9], s[4:5], 36
@@ -272,7 +271,6 @@ define amdgpu_kernel void @call_coldcc() #0 {
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX1250-NEXT:    s_mov_b32 s32, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_wait_alu 0xfffe
 ; GFX1250-NEXT:    s_swap_pc_i64 s[30:31], s[12:13]
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX1250-NEXT:    s_endpgm
@@ -375,8 +373,7 @@ define amdgpu_kernel void @call_fastcc() #0 {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX1250-NEXT:    s_get_pc_i64 s[6:7]
-; GFX1250-NEXT:    s_wait_alu 0xfffe
-; GFX1250-NEXT:    s_add_nc_u64 s[6:7], s[6:7], fastcc@GOTPCREL+8
+; GFX1250-NEXT:    s_add_nc_u64 s[6:7], s[6:7], fastcc@GOTPCREL+4
 ; GFX1250-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, 1.0
 ; GFX1250-NEXT:    s_load_b64 s[12:13], s[6:7], 0x0
 ; GFX1250-NEXT:    s_add_nc_u64 s[8:9], s[4:5], 36
@@ -385,7 +382,6 @@ define amdgpu_kernel void @call_fastcc() #0 {
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX1250-NEXT:    s_mov_b32 s32, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_wait_alu 0xfffe
 ; GFX1250-NEXT:    s_swap_pc_i64 s[30:31], s[12:13]
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX1250-NEXT:    s_endpgm

@@ -430,7 +430,6 @@ define amdgpu_kernel void @private_nontemporal_load_1(
 ; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-WGP-NEXT:    s_mov_b32 s3, 0x3ff
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    v_and_b32_e64 v1, v1, s3
 ; GFX12-WGP-NEXT:    s_mov_b32 s3, 2
 ; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
@@ -448,7 +447,6 @@ define amdgpu_kernel void @private_nontemporal_load_1(
 ; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-CU-NEXT:    s_mov_b32 s3, 0x3ff
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    v_and_b32_e64 v1, v1, s3
 ; GFX12-CU-NEXT:    s_mov_b32 s3, 2
 ; GFX12-CU-NEXT:    s_wait_alu 0xfffe
@@ -466,7 +464,6 @@ define amdgpu_kernel void @private_nontemporal_load_1(
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_mov_b32 s3, 0x3ff
-; GFX1250-NEXT:    s_wait_alu 0xfffe
 ; GFX1250-NEXT:    v_and_b32_e64 v1, v1, s3
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    scratch_load_b32 v1, v1, s2 scale_offset th:TH_LOAD_NT
@@ -856,7 +853,6 @@ define amdgpu_kernel void @private_nontemporal_store_1(
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[2:3], 0x0
 ; GFX12-WGP-NEXT:    s_mov_b32 s2, 0x3ff
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    v_and_b32_e64 v0, v0, s2
 ; GFX12-WGP-NEXT:    s_mov_b32 s2, 2
 ; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
@@ -873,7 +869,6 @@ define amdgpu_kernel void @private_nontemporal_store_1(
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[2:3], 0x0
 ; GFX12-CU-NEXT:    s_mov_b32 s2, 0x3ff
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    v_and_b32_e64 v0, v0, s2
 ; GFX12-CU-NEXT:    s_mov_b32 s2, 2
 ; GFX12-CU-NEXT:    s_wait_alu 0xfffe
@@ -891,7 +886,6 @@ define amdgpu_kernel void @private_nontemporal_store_1(
 ; GFX1250-NEXT:    s_load_b32 s1, s[2:3], 0x0
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 s2, 0x3ff
-; GFX1250-NEXT:    s_wait_alu 0xfffe
 ; GFX1250-NEXT:    v_and_b32_e64 v1, v0, s2
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s1

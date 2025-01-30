@@ -85,7 +85,6 @@ define void @v_mov_b64_double(ptr addrspace(1) %ptr) {
 ; GCN-NEXT:    s_cbranch_execnz .LBB6_1
 ; GCN-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_set_pc_i64 s[30:31]
   %result = atomicrmw fadd ptr addrspace(1) %ptr, double 153.1 monotonic
   ret void
@@ -124,6 +123,7 @@ define i1 @class_f64() noinline optnone {
 ; GCN-SDAG-NEXT:    s_mov_b64 s[0:1], 0x4063233333333333
 ; GCN-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GCN-SDAG-NEXT:    v_cmp_class_f64_e64 s0, s[0:1], s2
+; GCN-SDAG-NEXT:    s_wait_alu 0xf1ff
 ; GCN-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GCN-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -139,6 +139,7 @@ define i1 @class_f64() noinline optnone {
 ; GCN-GISEL-NEXT:    v_cmp_class_f64_e64 s0, v[0:1], v2
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v0, 1
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GCN-GISEL-NEXT:    s_wait_alu 0xf1ff
 ; GCN-GISEL-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s0
 ; GCN-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %result = call i1 @llvm.amdgcn.class.f64(double 153.1, i32 1) nounwind readnone

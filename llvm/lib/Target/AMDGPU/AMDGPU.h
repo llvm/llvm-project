@@ -466,6 +466,9 @@ void initializeAMDGPUSetWavePriorityPass(PassRegistry &);
 void initializeGCNRewritePartialRegUsesPass(llvm::PassRegistry &);
 extern char &GCNRewritePartialRegUsesID;
 
+void initializeAMDGPUWaitSGPRHazardsLegacyPass(PassRegistry &);
+extern char &AMDGPUWaitSGPRHazardsLegacyID;
+
 namespace AMDGPU {
 enum TargetIndex {
   TI_CONSTDATA_START,
