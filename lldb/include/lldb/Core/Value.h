@@ -158,7 +158,7 @@ protected:
   /// - Load Address: `m_value` contains the load address.
   /// - File Address: `m_value` contains the file address.
   /// - Host Address: `m_value` contains a pointer to the start of the buffer in
-  /// host memory.
+  ///    host memory.
   ///   Currently, this can point to either:
   ///     - The `m_data_buffer` of this Value instance (e.g., in DWARF
   ///     computations).
