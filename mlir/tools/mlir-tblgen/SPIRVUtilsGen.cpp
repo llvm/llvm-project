@@ -114,13 +114,12 @@ Availability::Availability(const Record *def) : def(def) {
 }
 
 StringRef Availability::getClass() const {
-  SmallVector<const Record *, 1> parentClass;
-  def->getDirectSuperClasses(parentClass);
-  if (parentClass.size() != 1) {
+  if (def->getDirectSuperClasses().size() != 1) {
     PrintFatalError(def->getLoc(),
                     "expected to only have one direct superclass");
   }
-  return parentClass.front()->getName();
+  const Record *parentClass = def->getDirectSuperClasses().front().first;
+  return parentClass->getName();
 }
 
 StringRef Availability::getInterfaceClassNamespace() const {
@@ -204,18 +203,17 @@ static bool emitInterfaceDefs(const RecordKeeper &records, raw_ostream &os) {
   auto defs = records.getAllDerivedDefinitions("Availability");
   SmallVector<const Record *, 1> handledClasses;
   for (const Record *def : defs) {
-    SmallVector<const Record *, 1> parent;
-    def->getDirectSuperClasses(parent);
-    if (parent.size() != 1) {
+    if (def->getDirectSuperClasses().size() != 1) {
       PrintFatalError(def->getLoc(),
                       "expected to only have one direct superclass");
     }
-    if (llvm::is_contained(handledClasses, parent.front()))
+    const Record *parent = def->getDirectSuperClasses().front().first;
+    if (llvm::is_contained(handledClasses, parent))
       continue;
 
     Availability availability(def);
     emitInterfaceDef(availability, os);
-    handledClasses.push_back(parent.front());
+    handledClasses.push_back(parent);
   }
   return false;
 }
@@ -293,18 +291,17 @@ static bool emitInterfaceDecls(const RecordKeeper &records, raw_ostream &os) {
   auto defs = records.getAllDerivedDefinitions("Availability");
   SmallVector<const Record *, 4> handledClasses;
   for (const Record *def : defs) {
-    SmallVector<const Record *, 1> parent;
-    def->getDirectSuperClasses(parent);
-    if (parent.size() != 1) {
+    if (def->getDirectSuperClasses().size() != 1) {
       PrintFatalError(def->getLoc(),
                       "expected to only have one direct superclass");
     }
-    if (llvm::is_contained(handledClasses, parent.front()))
+    const Record *parent = def->getDirectSuperClasses().front().first;
+    if (llvm::is_contained(handledClasses, parent))
       continue;
 
     Availability avail(def);
     emitInterfaceDecl(avail, os);
-    handledClasses.push_back(parent.front());
+    handledClasses.push_back(parent);
   }
   return false;
 }
