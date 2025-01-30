@@ -120,6 +120,58 @@ func.func @generalize_matmul_unsigned_tensor_f16f64i32(%A : tensor<16x8xf16>, %B
 
 // -----
 
+func.func @generalize_matmul_as_contraction_tensor_f16f64f32(
+    %A: tensor<16x8xf16>,
+    %B: tensor<8x32xf64>,
+    %C: tensor<16x32xf32>) -> tensor<16x32xf32> {
+  %0 = linalg.contract
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>,
+                       affine_map<(d0, d1, d2) -> (d2, d1)>,
+                      affine_map<(d0, d1, d2) -> (d0, d1)>]
+      ins(%A, %B: tensor<16x8xf16>, tensor<8x32xf64>)
+      outs(%C: tensor<16x32xf32>) -> tensor<16x32xf32>
+  return %0: tensor<16x32xf32>
+}
+
+// CHECK-LABEL: @generalize_matmul_as_contraction_tensor_f16f64f32
+// CHECK:         ^{{.*}}(%[[A_ARG:.+]]: f16, %[[B_ARG:.+]]: f64, %[[C_ARG:.+]]: f32)
+// Verify floating point extension and truncation.
+// CHECK-NEXT:      %[[A_CAST:.+]] = arith.extf %[[A_ARG]] : f16 to f32
+// CHECK-NEXT:      %[[B_CAST:.+]] = arith.truncf %[[B_ARG]] : f64 to f32
+// CHECK-NEXT:      %[[MUL:.+]] = arith.mulf %[[A_CAST]], %[[B_CAST]] : f32
+// CHECK-NEXT:      %[[ADD:.+]] = arith.addf %[[C_ARG]], %[[MUL]] : f32
+// CHECK-NEXT:      linalg.yield %[[ADD]] : f32
+// CHECK-NEXT:    -> tensor<16x32xf32>
+
+// -----
+
+func.func @generalize_matmul_as_contract_with_ext_and_trunc(
+    %A: tensor<24x12xf16>,
+    %B: tensor<12x25xf16>,
+    %C: tensor<24x25xf32>) -> tensor<24x25xf16> {
+  %0 = linalg.contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (k, n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %B : tensor<24x12xf16>, tensor<12x25xf16>)
+      outs(%C : tensor<24x25xf32>) -> tensor<24x25xf32>
+  %1 = arith.truncf %0 : tensor<24x25xf32> to tensor<24x25xf16>
+  func.return %1 : tensor<24x25xf16>
+}
+
+// CHECK-LABEL: @generalize_matmul_as_contract_with_ext_and_trunc
+// CHECK:         ^{{.*}}(%[[A_ARG:.+]]: f16, %[[B_ARG:.+]]: f16, %[[C_ARG:.+]]: f32)
+// Verify floating point extension and truncation.
+// CHECK-NEXT:      %[[A_CAST:.+]] = arith.extf %[[A_ARG]] : f16 to f32
+// CHECK-NEXT:      %[[B_CAST:.+]] = arith.extf %[[B_ARG]] : f16 to f32
+// CHECK-NEXT:      %[[MUL:.+]] = arith.mulf %[[A_CAST]], %[[B_CAST]] : f32
+// CHECK-NEXT:      %[[ADD:.+]] = arith.addf %[[C_ARG]], %[[MUL]] : f32
+// CHECK-NEXT:      linalg.yield %[[ADD]] : f32
+// CHECK-NEXT:    -> tensor<24x25xf32>
+// CHECK-NEXT:    %[[RES:.+]] = arith.truncf {{.*}} : tensor<24x25xf32> to tensor<24x25xf16>
+
+// -----
+
 func.func @generalize_pooling_nhwc_max_f32(%input : tensor<1x4x16x1xf32>, %shape: tensor<2x2xf32>, %output: tensor<1x2x4x1xf32>) -> tensor<1x2x4x1xf32> {
   %0 = linalg.pooling_nhwc_max {dilations = dense<[1, 2]> : tensor<2xi64>, strides = dense<[2, 4]> : tensor<2xi64>}
     ins(%input, %shape : tensor<1x4x16x1xf32>, tensor<2x2xf32>) outs(%output : tensor<1x2x4x1xf32>) -> tensor<1x2x4x1xf32>

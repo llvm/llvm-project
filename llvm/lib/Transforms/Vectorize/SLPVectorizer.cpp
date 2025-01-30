@@ -8405,6 +8405,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   }
 
   // Tries to build split node.
+  constexpr unsigned SmallNodeSize = 4;
   auto TrySplitNode = [&, &TTI = *TTI](unsigned SmallNodeSize,
                                        const InstructionsState &LocalState) {
     if (VL.size() <= SmallNodeSize)
@@ -8634,7 +8635,6 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         break;
       }
       // Last chance to try to vectorize alternate node.
-      constexpr unsigned SmallNodeSize = 4;
       if (MainOp && AltOp &&
           TrySplitNode(SmallNodeSize, InstructionsState(MainOp, AltOp)))
         return;
@@ -8719,7 +8719,6 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   }
 
   // FIXME: investigate if there are profitable cases for VL.size() <= 4.
-  constexpr unsigned SmallNodeSize = 4;
   if (S.isAltShuffle() && TrySplitNode(SmallNodeSize, S))
     return;
 
@@ -8756,7 +8755,6 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
             !BS.getScheduleData(VL0)->isPartOfBundle()) &&
            "tryScheduleBundle should cancelScheduling on failure");
     // Last chance to try to vectorize alternate node.
-    constexpr unsigned SmallNodeSize = 4;
     if (S.isAltShuffle() && TrySplitNode(SmallNodeSize, S))
       return;
     newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx,
@@ -10119,11 +10117,14 @@ void BoUpSLP::transformNodes() {
       reorderGatherNode(E);
   }
 
+  // Better to use full gathered loads analysis, if there are only 2 loads
+  // gathered nodes each having less than 16 elements.
+  constexpr unsigned VFLimit = 16;
   bool ForceLoadGather =
-      count_if(VectorizableTree, [](const std::unique_ptr<TreeEntry> &TE) {
+      count_if(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
         return TE->isGather() && TE->hasState() &&
                TE->getOpcode() == Instruction::Load &&
-               TE->getVectorFactor() < 16;
+               TE->getVectorFactor() < VFLimit;
       }) == 2;
 
   // The tree may grow here, so iterate over nodes, built before.
@@ -12629,12 +12630,18 @@ InstructionCost BoUpSLP::getSpillCost() const {
         if (auto *II = dyn_cast<IntrinsicInst>(I)) {
           if (II->isAssumeLikeIntrinsic())
             return true;
-          IntrinsicCostAttributes ICA(II->getIntrinsicID(), *II);
+          FastMathFlags FMF;
+          SmallVector<Type *, 4> Tys;
+          for (auto &ArgOp : II->args())
+            Tys.push_back(ArgOp->getType());
+          if (auto *FPMO = dyn_cast<FPMathOperator>(II))
+            FMF = FPMO->getFastMathFlags();
+          IntrinsicCostAttributes ICA(II->getIntrinsicID(), II->getType(), Tys,
+                                      FMF);
           InstructionCost IntrCost =
               TTI->getIntrinsicInstrCost(ICA, TTI::TCK_RecipThroughput);
-          InstructionCost CallCost =
-              TTI->getCallInstrCost(nullptr, II->getType(), ICA.getArgTypes(),
-                                    TTI::TCK_RecipThroughput);
+          InstructionCost CallCost = TTI->getCallInstrCost(
+              nullptr, II->getType(), Tys, TTI::TCK_RecipThroughput);
           if (IntrCost < CallCost)
             return true;
         }
