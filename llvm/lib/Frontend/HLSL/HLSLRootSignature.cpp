@@ -1,4 +1,5 @@
-//===- HLSLRootSignature.cpp - HLSL Root Signature helper objects ----------===//
+//===- HLSLRootSignature.cpp - HLSL Root Signature helper objects
+//----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +18,9 @@
 
 namespace llvm {
 namespace hlsl {
-namespace root_signature {
+namespace rootsig {
+
+// Static helper functions
 
 static MDString *ClauseTypeToName(LLVMContext &Ctx, ClauseType Type) {
   StringRef Name;
@@ -47,16 +50,15 @@ template <class... Ts> OverloadBuilds(Ts...) -> OverloadBuilds<Ts...>;
 MDNode *MetadataBuilder::BuildRootSignature() {
   for (const RootElement &Element : Elements) {
     MDNode *ElementMD =
-      std::visit(
-        OverloadBuilds{
-            [&](DescriptorTable Table) -> MDNode * {
-              return BuildDescriptorTable(Table);
-            },
-            [&](DescriptorTableClause Clause) -> MDNode * {
-              return BuildDescriptorTableClause(Clause);
-            },
-        },
-        Element);
+        std::visit(OverloadBuilds{
+                       [&](DescriptorTable Table) -> MDNode * {
+                         return BuildDescriptorTable(Table);
+                       },
+                       [&](DescriptorTableClause Clause) -> MDNode * {
+                         return BuildDescriptorTableClause(Clause);
+                       },
+                   },
+                   Element);
     GeneratedMetadata.push_back(ElementMD);
   }
 
@@ -66,29 +68,41 @@ MDNode *MetadataBuilder::BuildRootSignature() {
 MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {
   IRBuilder<> B(Ctx);
   SmallVector<Metadata *> TableOperands;
+  // Set the mandatory arguments
   TableOperands.push_back(MDString::get(Ctx, "DescriptorTable"));
-  TableOperands.push_back(ConstantAsMetadata::get(B.getInt32(llvm::to_underlying(Table.Visibility))));
+  TableOperands.push_back(ConstantAsMetadata::get(
+      B.getInt32(llvm::to_underlying(Table.Visibility))));
 
-  assert(Table.NumClauses <= GeneratedMetadata.size() && "Table expected all owned clauses to be generated already");
-  TableOperands.append(GeneratedMetadata.end() - Table.NumClauses, GeneratedMetadata.end());
+  // Remaining operands are references to the table's clauses. The in-memory
+  // representation of the Root Elements created from parsing will ensure that
+  // the previous N elements are the clauses for this table.
+  assert(Table.NumClauses <= GeneratedMetadata.size() &&
+         "Table expected all owned clauses to be generated already");
+  // So, add a refence to each clause to our operands
+  TableOperands.append(GeneratedMetadata.end() - Table.NumClauses,
+                       GeneratedMetadata.end());
+  // Then, remove those clauses from the general list of Root Elements
   GeneratedMetadata.pop_back_n(Table.NumClauses);
 
   return MDNode::get(Ctx, TableOperands);
 }
 
-MDNode *MetadataBuilder::BuildDescriptorTableClause(const DescriptorTableClause &Clause) {
+MDNode *MetadataBuilder::BuildDescriptorTableClause(
+    const DescriptorTableClause &Clause) {
   IRBuilder<> B(Ctx);
-  return MDNode::get(Ctx, {
-    ClauseTypeToName(Ctx, Clause.Type),
-    ConstantAsMetadata::get(B.getInt32(Clause.NumDescriptors)),
-    ConstantAsMetadata::get(B.getInt32(Clause.Register.Number)),
-    ConstantAsMetadata::get(B.getInt32(Clause.Space)),
-    ConstantAsMetadata::get(B.getInt32(llvm::to_underlying(Clause.Offset))),
-    ConstantAsMetadata::get(B.getInt32(llvm::to_underlying(Clause.Flags))),
-  });
+  return MDNode::get(
+      Ctx, {
+               ClauseTypeToName(Ctx, Clause.Type),
+               ConstantAsMetadata::get(B.getInt32(Clause.NumDescriptors)),
+               ConstantAsMetadata::get(B.getInt32(Clause.Register.Number)),
+               ConstantAsMetadata::get(B.getInt32(Clause.Space)),
+               ConstantAsMetadata::get(
+                   B.getInt32(llvm::to_underlying(Clause.Offset))),
+               ConstantAsMetadata::get(
+                   B.getInt32(llvm::to_underlying(Clause.Flags))),
+           });
 }
 
-} // namespace root_signature
+} // namespace rootsig
 } // namespace hlsl
 } // namespace llvm
-

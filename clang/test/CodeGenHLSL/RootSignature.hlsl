@@ -19,7 +19,7 @@ void FirstEntry() {}
 [numthreads(1,1,1)]
 void SecondEntry() {}
 
-// Sanity test to ensure to root is added for this function
+// Sanity test to ensure no root is added for this function
 [shader("compute")]
 [numthreads(1,1,1)]
 void ThirdEntry() {}
