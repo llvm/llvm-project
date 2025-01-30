@@ -47,9 +47,6 @@ Implemented Papers
 - ``std::jthread`` and ``<stop_token>`` are not guarded behind ``-fexperimental-library`` anymore
 - P2674R1: A trait for implicit lifetime types (`Github <https://github.com/llvm/llvm-project/issues/105259>`__)
 - P0429R9: A Standard ``flat_map`` (`Github <https://github.com/llvm/llvm-project/issues/105190>`__)
-- P2441R2 - ``views::join_with``
-- P2711R1 - Making multi-param constructors of ``views`` ``explicit``
-- P2770R0 - Stashing stashing ``iterators`` for proper flattening
 
 Improvements and New Features
 -----------------------------
