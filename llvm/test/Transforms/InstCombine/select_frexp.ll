@@ -40,10 +40,9 @@ define float @test_select_frexp_multi_use(float %x, i1 %cond) {
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], float 1.000000e+00, float [[X]]
 ; CHECK-NEXT:    call void @use(float [[SEL]])
-; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
+; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[SEL]])
 ; CHECK-NEXT:    [[FREXP_0:%.*]] = extractvalue { float, i32 } [[FREXP]], 0
-; CHECK-NEXT:    [[SELECT_FREXP:%.*]] = select i1 [[COND]], float 5.000000e-01, float [[FREXP_0]]
-; CHECK-NEXT:    ret float [[SELECT_FREXP]]
+; CHECK-NEXT:    ret float [[FREXP_0]]
 ;
   %sel = select i1 %cond, float 1.000000e+00, float %x
   call void @use(float %sel)
@@ -158,4 +157,35 @@ define <2 x float> @test_select_frexp_vec_fast_math(<2 x float> %x, <2 x i1> %co
   ret <2 x float> %frexp.0
 }
 
+; Test with scalable vectors with constant at True Position
+define <vscale x 2 x float> @test_select_frexp_scalable_vec0(<vscale x 2 x float> %x, <vscale x 2 x i1> %cond) {
+; CHECK-LABEL: define <vscale x 2 x float> @test_select_frexp_scalable_vec0(
+; CHECK-SAME: <vscale x 2 x float> [[X:%.*]], <vscale x 2 x i1> [[COND:%.*]]) {
+; CHECK-NEXT:    [[FREXP1:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x i32> } @llvm.frexp.nxv2f32.nxv2i32(<vscale x 2 x float> [[X]])
+; CHECK-NEXT:    [[MANTISSA:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x i32> } [[FREXP1]], 0
+; CHECK-NEXT:    [[SELECT_FREXP:%.*]] = select <vscale x 2 x i1> [[COND]], <vscale x 2 x float> splat (float 5.000000e-01), <vscale x 2 x float> [[MANTISSA]]
+; CHECK-NEXT:    ret <vscale x 2 x float> [[SELECT_FREXP]]
+;
+  %sel = select <vscale x 2 x i1> %cond, <vscale x 2 x float> splat (float 1.000000e+00), <vscale x 2 x float> %x
+  %frexp = call { <vscale x 2 x float>, <vscale x 2 x i32> } @llvm.frexp.nxv2f32.nxv2i32(<vscale x 2 x float> %sel)
+  %frexp.0 = extractvalue { <vscale x 2 x float>, <vscale x 2 x i32> } %frexp, 0
+  ret <vscale x 2 x float> %frexp.0
+}
+
+; Test with scalable vectors with constant at False Position
+define <vscale x 2 x float> @test_select_frexp_scalable_vec1(<vscale x 2 x float> %x, <vscale x 2 x i1> %cond) {
+; CHECK-LABEL: define <vscale x 2 x float> @test_select_frexp_scalable_vec1(
+; CHECK-SAME: <vscale x 2 x float> [[X:%.*]], <vscale x 2 x i1> [[COND:%.*]]) {
+; CHECK-NEXT:    [[FREXP1:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x i32> } @llvm.frexp.nxv2f32.nxv2i32(<vscale x 2 x float> [[X]])
+; CHECK-NEXT:    [[MANTISSA:%.*]] = extractvalue { <vscale x 2 x float>, <vscale x 2 x i32> } [[FREXP1]], 0
+; CHECK-NEXT:    [[SELECT_FREXP:%.*]] = select <vscale x 2 x i1> [[COND]], <vscale x 2 x float> [[MANTISSA]], <vscale x 2 x float> splat (float 5.000000e-01)
+; CHECK-NEXT:    ret <vscale x 2 x float> [[SELECT_FREXP]]
+;
+  %sel = select <vscale x 2 x i1> %cond, <vscale x 2 x float> %x, <vscale x 2 x float> splat (float 1.000000e+00)
+  %frexp = call { <vscale x 2 x float>, <vscale x 2 x i32> } @llvm.frexp.nxv2f32.nxv2i32(<vscale x 2 x float> %sel)
+  %frexp.0 = extractvalue { <vscale x 2 x float>, <vscale x 2 x i32> } %frexp, 0
+  ret <vscale x 2 x float> %frexp.0
+}
+
 declare { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float>)
+declare { <vscale x 2 x float>, <vscale x 2 x i32> } @llvm.frexp.nxv2f32.nxv2i32(<vscale x 2 x float>)
