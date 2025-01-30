@@ -797,27 +797,22 @@ static void addSanitizers(const Triple &TargetTriple,
 
   // SanitizeSkipHotCutoffs: doubles with range [0, 1]
   // Opts.cutoffs: ints with range [0, 1000000]
-  std::optional<std::vector<int>> scaledCutoffs =
+  std::optional<std::vector<int>> ScaledCutoffs =
       CodeGenOpts.SanitizeSkipHotCutoffs.getAllScaled(1000000);
 
   // TODO: remove IsRequested()
-  if (LowerAllowCheckPass::IsRequested() || scaledCutoffs.has_value()) {
+  if (LowerAllowCheckPass::IsRequested() || ScaledCutoffs.has_value()) {
     // We want to call it after inline, which is about OptimizerEarlyEPCallback.
     PB.registerOptimizerEarlyEPCallback([&](ModulePassManager &MPM,
                                             OptimizationLevel Level,
                                             ThinOrFullLTOPhase Phase) {
       LowerAllowCheckPass::Options Opts;
 
-      // TODO: after removing IsRequested(), the if case will be unconditional
-      if (scaledCutoffs.has_value()) {
+      // TODO: after removing IsRequested(), make this unconditional
+      if (ScaledCutoffs.has_value())
         // Copy from std::vector<int> to std::vector<unsigned int>
-        Opts.cutoffs = {scaledCutoffs.value().begin(),
-                        scaledCutoffs.value().end()};
-      } else {
-        for (unsigned int i = 0; i < SanitizerKind::SO_Count; ++i) {
-          Opts.cutoffs.push_back(0);
-        }
-      }
+        Opts.cutoffs = {ScaledCutoffs.value().begin(),
+                        ScaledCutoffs.value().end()};
 
       MPM.addPass(createModuleToFunctionPassAdaptor(LowerAllowCheckPass(Opts)));
     });
