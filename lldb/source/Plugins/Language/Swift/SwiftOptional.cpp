@@ -38,30 +38,37 @@ std::string lldb_private::formatters::swift::SwiftOptionalSummaryProvider::
   return sstr.GetString().str();
 }
 
-// if this ValueObject is an Optional<T> with the Some(T) case selected,
-// retrieve the value of the Some case..
-static PointerOrSP
+/// If this ValueObject is an Optional<T> with the Some(T) case selected,
+/// retrieve the value of the Some case.
+///
+/// Returns {} on error, nullptr on .none, and a ValueObject on .some.
+/// None of the callees can pass on errors messages, so this function
+/// doesn't return them either.
+static std::optional<ValueObjectSP>
 ExtractSomeIfAny(ValueObject *optional,
                  bool synthetic_value = false) {
   if (!optional)
-    return nullptr;
+    return {};
 
   static ConstString g_Some("some");
   static ConstString g_None("none");
 
   ValueObjectSP non_synth_valobj = optional->GetNonSyntheticValue();
   if (!non_synth_valobj)
-    return nullptr;
+    return {};
 
   ConstString value(non_synth_valobj->GetValueAsCString());
 
-  if (!value || value == g_None)
+  if (!value)
+    return {};
+
+  if (value == g_None)
     return nullptr;
 
-  PointerOrSP value_sp(
-      non_synth_valobj->GetChildMemberWithName(g_Some, true).get());
+  ValueObjectSP value_sp(
+      non_synth_valobj->GetChildMemberWithName(g_Some, true));
   if (!value_sp)
-    return nullptr;
+    return {};
 
   auto process_sp = optional->GetProcessSP();
   auto *swift_runtime = SwiftLanguageRuntime::Get(process_sp);
@@ -69,7 +76,7 @@ ExtractSomeIfAny(ValueObject *optional,
   CompilerType type = non_synth_valobj->GetCompilerType();
   auto type_system = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
   if (!type_system)
-    return nullptr;
+    return {};
   if (auto kind = type_system->GetNonTriviallyManagedReferenceKind(
           type.GetOpaqueQualType())) {
     if (*kind == TypeSystemSwift::NonTriviallyManagedReferenceKind::eWeak) {
@@ -86,10 +93,10 @@ ExtractSomeIfAny(ValueObject *optional,
           DataExtractor extractor(buffer_sp, process_sp->GetByteOrder(),
                                   process_sp->GetAddressByteSize());
           ExecutionContext exe_ctx(process_sp);
-          value_sp = PointerOrSP(ValueObject::CreateValueObjectFromData(
-              value_sp->GetName().AsCString(), extractor, exe_ctx, value_type));
+          value_sp = ValueObject::CreateValueObjectFromData(
+              value_sp->GetName().AsCString(), extractor, exe_ctx, value_type);
           if (!value_sp)
-            return nullptr;
+            return {};
           else
             value_sp->SetSyntheticChildrenGenerated(true);
         }
@@ -116,12 +123,16 @@ ExtractSomeIfAny(ValueObject *optional,
     value_sp = value_sp->GetSyntheticValue();
 
   return value_sp;
-  }
+}
 
 static bool
 SwiftOptional_SummaryProvider_Impl(ValueObject &valobj, Stream &stream,
                                    const TypeSummaryOptions &options) {
-  PointerOrSP some = ExtractSomeIfAny(&valobj, true);
+  std::optional<ValueObjectSP> maybe_some = ExtractSomeIfAny(&valobj, true);
+  if (!maybe_some)
+    return false;
+
+  ValueObjectSP some = *maybe_some;
   if (!some) {
     stream.Printf("nil");
     return true;
@@ -145,7 +156,7 @@ SwiftOptional_SummaryProvider_Impl(ValueObject &valobj, Stream &stream,
         .SetSkipReferences(false);
     StringSummaryFormat oneliner(oneliner_flags, "");
     std::string buffer;
-    oneliner.FormatObject(some, buffer, options);
+    oneliner.FormatObject(some.get(), buffer, options);
     stream.Printf("%s", buffer.c_str());
   }
 
@@ -172,8 +183,12 @@ bool lldb_private::formatters::swift::SwiftOptionalSummaryProvider::
   if (!target_valobj)
     return false;
 
-  PointerOrSP some = ExtractSomeIfAny(target_valobj, true);
+  std::optional<ValueObjectSP> maybe_some =
+      ExtractSomeIfAny(target_valobj, true);
+  if (!maybe_some)
+    return false;
 
+  ValueObjectSP some = *maybe_some;
   if (!some)
     return true;
 
@@ -191,7 +206,7 @@ bool lldb_private::formatters::swift::SwiftOptionalSummaryProvider::
       return false;
     return some->HasChildren();
   }
-  return some->HasChildren() && summary_sp->DoesPrintChildren(some);
+  return some->HasChildren() && summary_sp->DoesPrintChildren(some.get());
 }
 
 bool lldb_private::formatters::swift::SwiftOptionalSummaryProvider::
@@ -231,7 +246,12 @@ lldb::ChildCacheState lldb_private::formatters::swift::SwiftOptionalSyntheticFro
   m_is_none = true;
   m_children = false;
 
-  m_some = ExtractSomeIfAny(&m_backend, true);
+  std::optional<ValueObjectSP> maybe_some =
+      ExtractSomeIfAny(&m_backend, true);
+  if (!maybe_some)
+    return ChildCacheState::eRefetch;
+
+  m_some = *maybe_some;
 
   if (!m_some) {
     m_is_none = true;
