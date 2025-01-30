@@ -135,6 +135,58 @@ def SPIRV_ImageQuerySizeOp : SPIRV_Op<"ImageQuerySize", [Pure]> {
 
 // -----
 
+def SPIRV_ImageWriteOp : SPIRV_Op<"ImageWrite", []> {
+  let summary = "Write a texel to an image without a sampler.";
+
+  let description = [{
+    Image must be an object whose type is OpTypeImage with a Sampled operand
+    of 0 or 2. If the Arrayed operand is 1, then additional capabilities may
+    be required; e.g., ImageCubeArray, or ImageMSArray. Its Dim operand
+    must not be SubpassData.
+
+    Coordinate must be a scalar or vector of floating-point type or integer
+    type. It contains non-normalized texel coordinates (u[, v] ... [, array
+    layer]) as needed by the definition of Image. See the client API
+    specification for handling of coordinates outside the image.
+
+    Texel is the data to write. It must be a scalar or vector with component
+    type the same as Sampled Type of the OpTypeImage (unless that Sampled
+    Type is OpTypeVoid).
+
+    The Image Format must not be Unknown, unless the
+    StorageImageWriteWithoutFormat Capability was declared.
+
+    Image Operands encodes what operands follow, as per Image Operands.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    spirv.ImageWrite %0 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba16>, %1 : vector<2xsi32>, %2 : vector<4xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_AnyImage:$image,
+    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>]>:$coordinate,
+    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>]>:$texel,
+    OptionalAttr<SPIRV_ImageOperandsAttr>:$imageoperands,
+    Variadic<SPIRV_Type>:$operand_arguments
+  );
+
+  let results = (outs);
+
+  let assemblyFormat = [{$image `:` type($image) `,`
+                         $coordinate `:` type($coordinate) `,`
+                         $texel `:` type($texel)
+                         custom<ImageOperands>($imageoperands)
+                         ( `(` $operand_arguments^ `:` type($operand_arguments) `)`)?
+                         attr-dict}];
+}
+
+// -----
+
 def SPIRV_ImageOp : SPIRV_Op<"Image",
     [Pure,
      TypesMatchWith<"type of 'result' matches image type of 'sampledimage'",

@@ -2043,6 +2043,65 @@ LogicalResult spirv::ImageDrefGatherOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.ImageWriteOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::ImageWriteOp::verify() {
+  ImageType imageType = llvm::cast<ImageType>(getImage().getType());
+  Type sampledType = imageType.getElementType();
+  ImageSamplerUseInfo samplerInfo = imageType.getSamplerUseInfo();
+
+  if (samplerInfo != spirv::ImageSamplerUseInfo::SamplerUnknown &&
+      samplerInfo != spirv::ImageSamplerUseInfo::NoSampler) {
+    return emitOpError(
+        "the sampled operand of the underlying image must be 0 or 2");
+  }
+
+  // TODO: Do we need check for: "If the Arrayed operand is 1, then additional
+  // capabilities may be required; e.g., ImageCubeArray, or ImageMSArray.".
+
+  if (imageType.getDim() == spirv::Dim::SubpassData) {
+    return emitOpError(
+        "the Dim operand of the underlying image must not be SubpassData");
+  }
+
+  Type texelType = getTexel().getType();
+  if (llvm::isa<VectorType>(texelType)) {
+    texelType = llvm::cast<VectorType>(texelType).getElementType();
+  }
+
+  if (!llvm::isa<NoneType>(sampledType) && texelType != sampledType) {
+    return emitOpError(
+        "the texel component type must match the image sampled type");
+  }
+
+  if (imageType.getImageFormat() == spirv::ImageFormat::Unknown) {
+    auto module = this->getOperation()->getParentOfType<spirv::ModuleOp>();
+    if (module) {
+      if (std::optional<spirv::VerCapExtAttr> triple = module.getVceTriple()) {
+        auto capabilities = (*triple).getCapabilities();
+        auto requiredCapability =
+            std::find(capabilities.begin(), capabilities.end(),
+                      spirv::Capability::StorageImageWriteWithoutFormat);
+        // It is allowed for the format to be unknown if
+        // StorageImageWriteWithoutFormat capability is present.
+        if (requiredCapability == capabilities.end())
+          return emitOpError("the image format operand of the underlying image "
+                             "must not be unknown");
+      } else {
+        return emitOpError("the image format operand of the underlying image "
+                           "must not be unknown");
+      }
+    }
+  }
+
+  spirv::ImageOperandsAttr attr = getImageoperandsAttr();
+  auto operandArguments = getOperandArguments();
+
+  return verifyImageOperands(*this, attr, operandArguments);
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.ShiftLeftLogicalOp
 //===----------------------------------------------------------------------===//
 
