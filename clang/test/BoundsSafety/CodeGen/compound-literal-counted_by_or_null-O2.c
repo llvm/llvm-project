@@ -58,7 +58,7 @@ void receive_transparent_union(union TransparentUnion);
 // =============================================================================
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr(
-// CHECK-SAME: ptr nocapture noundef writeonly [[PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]], ptr nocapture noundef readonly [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) [[PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]], ptr noundef readonly captures(none) [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_PTR]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_NEW_PTR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NEW_PTR]], i64 8
@@ -102,7 +102,7 @@ void assign_via_ptr(struct cbon* ptr, int new_count,
 }
 
 // CHECK-LABEL: define dso_local void @assign_operator(
-// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr nocapture noundef readonly [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr noundef readonly captures(none) [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_PTR]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_NEW_PTR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NEW_PTR]], i64 8
@@ -142,7 +142,7 @@ void assign_operator(int new_count, char* __bidi_indexable new_ptr) {
 
 
 // CHECK-LABEL: define dso_local void @local_var_init(
-// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr nocapture noundef readonly [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr noundef readonly captures(none) [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_PTR]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_NEW_PTR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NEW_PTR]], i64 8
@@ -180,7 +180,7 @@ void local_var_init(int new_count, char* __bidi_indexable new_ptr) {
 }
 
 // CHECK-LABEL: define dso_local void @call_arg(
-// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr nocapture noundef readonly [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr noundef readonly captures(none) [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_PTR]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_NEW_PTR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NEW_PTR]], i64 8
@@ -226,7 +226,7 @@ void call_arg(int new_count, char* __bidi_indexable new_ptr) {
 }
 
 // CHECK-LABEL: define dso_local [2 x i64] @return_cbon(
-// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr nocapture noundef readonly [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr noundef readonly captures(none) [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_PTR]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_NEW_PTR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NEW_PTR]], i64 8
@@ -271,7 +271,7 @@ struct cbon return_cbon(int new_count, char* __bidi_indexable new_ptr) {
 }
 
 // CHECK-LABEL: define dso_local void @construct_not_used(
-// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr nocapture noundef readonly [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr noundef readonly captures(none) [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_PTR]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_NEW_PTR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NEW_PTR]], i64 8
@@ -309,7 +309,7 @@ void construct_not_used(int new_count, char* __bidi_indexable new_ptr) {
 }
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_nullptr(
-// CHECK-SAME: ptr nocapture noundef writeonly initializes((0, 16)) [[PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) initializes((0, 16)) [[PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    store i32 [[NEW_COUNT]], ptr [[PTR]], align 8, !tbaa [[TBAA10]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 4
@@ -326,7 +326,7 @@ void assign_via_ptr_nullptr(struct cbon* ptr, int new_count) {
 }
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_nested(
-// CHECK-SAME: ptr nocapture noundef writeonly [[PTR:%.*]], ptr nocapture noundef readonly [[NEW_PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) [[PTR:%.*]], ptr noundef readonly captures(none) [[NEW_PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_PTR]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_NEW_PTR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NEW_PTR]], i64 8
@@ -375,7 +375,7 @@ void assign_via_ptr_nested(struct nested_cbon* ptr,
 }
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_nested_v2(
-// CHECK-SAME: ptr nocapture noundef writeonly [[PTR:%.*]], ptr nocapture noundef readonly [[NEW_PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) [[PTR:%.*]], ptr noundef readonly captures(none) [[NEW_PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_PTR]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_NEW_PTR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NEW_PTR]], i64 8
@@ -424,7 +424,7 @@ void assign_via_ptr_nested_v2(struct nested_cbon* ptr,
 }
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_nested_v3(
-// CHECK-SAME: ptr nocapture noundef writeonly [[PTR:%.*]], ptr nocapture noundef readonly [[NEW_PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) [[PTR:%.*]], ptr noundef readonly captures(none) [[NEW_PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_PTR]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_NEW_PTR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NEW_PTR]], i64 8
@@ -477,7 +477,7 @@ void assign_via_ptr_nested_v3(struct nested_and_outer_cbon* ptr,
 }
 
 // CHECK-LABEL: define dso_local void @array_of_struct_init(
-// CHECK-SAME: ptr nocapture noundef readonly [[NEW_PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[NEW_PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [2 x %struct.cbon], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[ARR]]) #[[ATTR7]]
@@ -529,7 +529,7 @@ void array_of_struct_init(char* __bidi_indexable new_ptr,
 
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_other_data_side_effect(
-// CHECK-SAME: ptr nocapture noundef writeonly [[PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]], ptr nocapture noundef readonly [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) [[PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]], ptr noundef readonly captures(none) [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_PTR]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_NEW_PTR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NEW_PTR]], i64 8
@@ -581,7 +581,7 @@ void assign_via_ptr_other_data_side_effect(struct cbon_with_other_data* ptr,
 }
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_other_data_side_effect_zero_ptr(
-// CHECK-SAME: ptr nocapture noundef writeonly initializes((0, 24)) [[PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]], ptr nocapture noundef readnone [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) initializes((0, 24)) [[PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]], ptr noundef readnone captures(none) [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @get_int() #[[ATTR7]]
 // CHECK-NEXT:    store i32 [[NEW_COUNT]], ptr [[PTR]], align 8, !tbaa [[TBAA10]]
@@ -607,7 +607,7 @@ void assign_via_ptr_other_data_side_effect_zero_ptr(struct cbon_with_other_data*
 }
 
 // CHECK-LABEL: define dso_local void @call_arg_transparent_union(
-// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr nocapture noundef readonly [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr noundef readonly captures(none) [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[UNION_TRANSPARENTUNION:%.*]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_PTR]], align 8
@@ -660,7 +660,7 @@ void call_arg_transparent_union(int new_count,
 }
 
 // CHECK-LABEL: define dso_local void @call_arg_transparent_union_untransparently(
-// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr nocapture noundef readonly [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr noundef readonly captures(none) [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[BYVAL_TEMP:%.*]] = alloca [[UNION_TRANSPARENTUNION:%.*]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_PTR]], align 8
@@ -721,7 +721,7 @@ void call_arg_transparent_union_untransparently(int new_count,
 //
 // =============================================================================
 // CHECK-LABEL: define dso_local void @assign_via_ptr_from_ptr(
-// CHECK-SAME: ptr nocapture noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef captures(none) [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR]], align 8, !tbaa [[TBAA14]]
 // CHECK-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
@@ -746,7 +746,7 @@ void assign_via_ptr_from_ptr(struct cbon* ptr) {
 }
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_from_cbon(
-// CHECK-SAME: ptr nocapture noundef writeonly [[PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]], ptr noundef [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) [[PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]], ptr noundef [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ne ptr [[NEW_PTR]], null, !annotation [[META22]]
 // CHECK-NEXT:    [[CMP_NOT46:%.*]] = icmp slt i32 [[NEW_COUNT]], 0
@@ -888,7 +888,7 @@ void construct_not_used_from_cbon(int new_count,
 }
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_nested_from_cbon(
-// CHECK-SAME: ptr nocapture noundef writeonly [[PTR:%.*]], ptr noundef [[NEW_PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) [[PTR:%.*]], ptr noundef [[NEW_PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ne ptr [[NEW_PTR]], null, !annotation [[META22]]
 // CHECK-NEXT:    [[CMP_NOT46:%.*]] = icmp slt i32 [[NEW_COUNT]], 0
@@ -919,7 +919,7 @@ void assign_via_ptr_nested_from_cbon(struct nested_cbon* ptr,
 }
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_nested_v2_from_cbon(
-// CHECK-SAME: ptr nocapture noundef writeonly [[PTR:%.*]], ptr noundef [[NEW_PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) [[PTR:%.*]], ptr noundef [[NEW_PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ne ptr [[NEW_PTR]], null, !annotation [[META22]]
 // CHECK-NEXT:    [[CMP_NOT46:%.*]] = icmp slt i32 [[NEW_COUNT]], 0
@@ -983,7 +983,7 @@ void array_of_struct_init_from_cbon(char* __counted_by_or_null(new_count) new_pt
 }
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_other_data_side_effect_from_cbon(
-// CHECK-SAME: ptr nocapture noundef writeonly [[PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]], ptr noundef [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) [[PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]], ptr noundef [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ne ptr [[NEW_PTR]], null, !annotation [[META22]]
 // CHECK-NEXT:    [[CMP_NOT46:%.*]] = icmp slt i32 [[NEW_COUNT]], 0
@@ -1017,7 +1017,7 @@ void assign_via_ptr_other_data_side_effect_from_cbon(struct cbon_with_other_data
 }
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_other_data_side_effect_zero_ptr_from_cbon(
-// CHECK-SAME: ptr nocapture noundef writeonly initializes((0, 24)) [[PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]], ptr nocapture noundef readnone [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) initializes((0, 24)) [[PTR:%.*]], i32 noundef [[NEW_COUNT:%.*]], ptr noundef readnone captures(none) [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @get_int() #[[ATTR7]]
 // CHECK-NEXT:    store i32 [[NEW_COUNT]], ptr [[PTR]], align 8, !tbaa [[TBAA10]]
@@ -1043,7 +1043,7 @@ void assign_via_ptr_other_data_side_effect_zero_ptr_from_cbon(struct cbon_with_o
 }
 
 // CHECK-LABEL: define dso_local void @call_arg_transparent_union_from_cbon(
-// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr nocapture noundef readonly [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr noundef readonly captures(none) [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[UNION_TRANSPARENTUNION:%.*]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_PTR]], align 8
@@ -1097,7 +1097,7 @@ void call_arg_transparent_union_from_cbon(int new_count,
 
 
 // CHECK-LABEL: define dso_local void @call_arg_transparent_union_untransparently_from_cbon(
-// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr nocapture noundef readonly [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef [[NEW_COUNT:%.*]], ptr noundef readonly captures(none) [[NEW_PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[BYVAL_TEMP:%.*]] = alloca [[UNION_TRANSPARENTUNION:%.*]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_PTR]], align 8

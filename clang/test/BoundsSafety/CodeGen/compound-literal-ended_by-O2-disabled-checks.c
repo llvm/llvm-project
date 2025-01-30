@@ -57,7 +57,7 @@ void receive_transparent_union(union TransparentUnion);
 // =============================================================================
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr(
-// CHECK-SAME: ptr nocapture noundef writeonly initializes((0, 16)) [[PTR:%.*]], ptr nocapture noundef readonly [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) initializes((0, 16)) [[PTR:%.*]], ptr noundef readonly captures(none) [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_START]], align 8
 // CHECK-NEXT:    store ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], ptr [[PTR]], align 8, !tbaa [[TBAA2:![0-9]+]]
@@ -74,7 +74,7 @@ void assign_via_ptr(struct eb* ptr,
 }
 
 // CHECK-LABEL: define dso_local void @assign_operator(
-// CHECK-SAME: ptr nocapture noundef readnone [[NEW_START:%.*]], ptr nocapture noundef readnone [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+// CHECK-SAME: ptr noundef readnone captures(none) [[NEW_START:%.*]], ptr noundef readnone captures(none) [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret void
 //
@@ -88,7 +88,7 @@ void assign_operator(char* __bidi_indexable new_start, char* new_end) {
 
 
 // CHECK-LABEL: define dso_local void @local_var_init(
-// CHECK-SAME: ptr nocapture noundef readnone [[NEW_START:%.*]], ptr nocapture noundef readnone [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// CHECK-SAME: ptr noundef readnone captures(none) [[NEW_START:%.*]], ptr noundef readnone captures(none) [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret void
 //
@@ -100,7 +100,7 @@ void local_var_init(char* __bidi_indexable new_start, char* new_end) {
 }
 
 // CHECK-LABEL: define dso_local void @call_arg(
-// CHECK-SAME: ptr nocapture noundef readonly [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_START]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]] to i64
@@ -118,7 +118,7 @@ void call_arg(char* __bidi_indexable new_start, char* new_end) {
 }
 
 // CHECK-LABEL: define dso_local [2 x i64] @return_eb(
-// CHECK-SAME: ptr nocapture noundef readonly [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_START]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]] to i64
@@ -135,7 +135,7 @@ struct eb return_eb(char* __bidi_indexable new_start, char* new_end) {
 }
 
 // CHECK-LABEL: define dso_local void @construct_not_used(
-// CHECK-SAME: ptr nocapture noundef readnone [[NEW_START:%.*]], ptr nocapture noundef readnone [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// CHECK-SAME: ptr noundef readnone captures(none) [[NEW_START:%.*]], ptr noundef readnone captures(none) [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret void
 //
@@ -147,7 +147,7 @@ void construct_not_used(char* __bidi_indexable new_start, char* new_end) {
 }
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_nullptr(
-// CHECK-SAME: ptr nocapture noundef writeonly initializes((0, 16)) [[PTR:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR6:[0-9]+]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) initializes((0, 16)) [[PTR:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR6:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    store ptr null, ptr [[PTR]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
@@ -163,7 +163,7 @@ void assign_via_ptr_nullptr(struct eb* ptr, char* new_end) {
 }
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_nested(
-// CHECK-SAME: ptr nocapture noundef writeonly initializes((0, 24)) [[PTR:%.*]], ptr nocapture noundef readonly [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) initializes((0, 24)) [[PTR:%.*]], ptr noundef readonly captures(none) [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_START]], align 8
 // CHECK-NEXT:    store ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], ptr [[PTR]], align 8, !tbaa [[TBAA2]]
@@ -185,7 +185,7 @@ void assign_via_ptr_nested(struct nested_eb* ptr,
 }
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_nested_v2(
-// CHECK-SAME: ptr nocapture noundef writeonly initializes((0, 24)) [[PTR:%.*]], ptr nocapture noundef readonly [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) initializes((0, 24)) [[PTR:%.*]], ptr noundef readonly captures(none) [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_START]], align 8
 // CHECK-NEXT:    store ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], ptr [[PTR]], align 8, !tbaa [[TBAA2]]
@@ -207,7 +207,7 @@ void assign_via_ptr_nested_v2(struct nested_eb* ptr,
 }
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_nested_v3(
-// CHECK-SAME: ptr nocapture noundef writeonly initializes((0, 40)) [[PTR:%.*]], ptr nocapture noundef readonly [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) initializes((0, 40)) [[PTR:%.*]], ptr noundef readonly captures(none) [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_START]], align 8
 // CHECK-NEXT:    store ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], ptr [[PTR]], align 8, !tbaa [[TBAA2]]
@@ -235,7 +235,7 @@ void assign_via_ptr_nested_v3(struct nested_and_outer_eb* ptr,
 }
 
 // CHECK-LABEL: define dso_local void @array_of_struct_init(
-// CHECK-SAME: ptr nocapture noundef readonly [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR3]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [2 x %struct.eb], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[ARR]]) #[[ATTR8]]
@@ -259,7 +259,7 @@ void array_of_struct_init(char* __bidi_indexable new_start, char* new_end) {
 
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_other_data_side_effect(
-// CHECK-SAME: ptr nocapture noundef writeonly initializes((0, 24)) [[PTR:%.*]], ptr nocapture noundef readonly [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR3]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) initializes((0, 24)) [[PTR:%.*]], ptr noundef readonly captures(none) [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_START]], align 8
 // CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @get_int() #[[ATTR8]]
@@ -284,7 +284,7 @@ void assign_via_ptr_other_data_side_effect(struct eb_with_other_data* ptr,
 }
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_other_data_side_effect_zero_ptr(
-// CHECK-SAME: ptr nocapture noundef writeonly initializes((0, 24)) [[PTR:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR3]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) initializes((0, 24)) [[PTR:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @get_int() #[[ATTR8]]
 // CHECK-NEXT:    store ptr null, ptr [[PTR]], align 8, !tbaa [[TBAA2]]
@@ -307,7 +307,7 @@ void assign_via_ptr_other_data_side_effect_zero_ptr(struct eb_with_other_data* p
 }
 
 // CHECK-LABEL: define dso_local void @call_arg_transparent_union(
-// CHECK-SAME: ptr nocapture noundef readonly [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR3]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[UNION_TRANSPARENTUNION:%.*]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_START]], align 8
@@ -333,7 +333,7 @@ void call_arg_transparent_union(char* __bidi_indexable new_start,
 }
 
 // CHECK-LABEL: define dso_local void @call_arg_transparent_union_untransparently(
-// CHECK-SAME: ptr nocapture noundef readonly [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR3]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[BYVAL_TEMP:%.*]] = alloca [[UNION_TRANSPARENTUNION:%.*]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[NEW_START]], align 8
@@ -368,7 +368,7 @@ void call_arg_transparent_union_untransparently(
 // =============================================================================
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_from_eb(
-// CHECK-SAME: ptr nocapture noundef writeonly initializes((0, 16)) [[PTR:%.*]], ptr noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR6]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) initializes((0, 16)) [[PTR:%.*]], ptr noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR6]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    store ptr [[NEW_START]], ptr [[PTR]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
@@ -384,7 +384,7 @@ void assign_via_ptr_from_eb(struct eb* ptr,
 }
 
 // CHECK-LABEL: define dso_local void @assign_operator_from_eb(
-// CHECK-SAME: ptr nocapture noundef readnone [[NEW_START:%.*]], ptr nocapture noundef readnone [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// CHECK-SAME: ptr noundef readnone captures(none) [[NEW_START:%.*]], ptr noundef readnone captures(none) [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret void
 //
@@ -398,7 +398,7 @@ void assign_operator_from_eb(char* __ended_by(new_end) new_start, char* new_end)
 
 
 // CHECK-LABEL: define dso_local void @local_var_init_from_eb(
-// CHECK-SAME: ptr nocapture noundef readnone [[NEW_START:%.*]], ptr nocapture noundef readnone [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// CHECK-SAME: ptr noundef readnone captures(none) [[NEW_START:%.*]], ptr noundef readnone captures(none) [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret void
 //
@@ -443,7 +443,7 @@ struct eb return_eb_from_eb(char* __ended_by(new_end) new_start, char* new_end) 
 }
 
 // CHECK-LABEL: define dso_local void @construct_not_used_from_eb(
-// CHECK-SAME: ptr nocapture noundef readnone [[NEW_START:%.*]], ptr nocapture noundef readnone [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// CHECK-SAME: ptr noundef readnone captures(none) [[NEW_START:%.*]], ptr noundef readnone captures(none) [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret void
 //
@@ -455,7 +455,7 @@ void construct_not_used_from_eb(char* __ended_by(new_end) new_start, char* new_e
 }
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_nullptr_from_eb(
-// CHECK-SAME: ptr nocapture noundef writeonly initializes((0, 16)) [[PTR:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR6]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) initializes((0, 16)) [[PTR:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR6]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    store ptr null, ptr [[PTR]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
@@ -471,7 +471,7 @@ void assign_via_ptr_nullptr_from_eb(struct eb* ptr, char* new_end) {
 }
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_nested_from_eb(
-// CHECK-SAME: ptr nocapture noundef writeonly initializes((0, 24)) [[PTR:%.*]], ptr noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR6]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) initializes((0, 24)) [[PTR:%.*]], ptr noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR6]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    store ptr [[NEW_START]], ptr [[PTR]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
@@ -492,7 +492,7 @@ void assign_via_ptr_nested_from_eb(struct nested_eb* ptr,
 }
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_nested_v2_from_eb(
-// CHECK-SAME: ptr nocapture noundef writeonly initializes((0, 24)) [[PTR:%.*]], ptr noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR6]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) initializes((0, 24)) [[PTR:%.*]], ptr noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR6]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    store ptr [[NEW_START]], ptr [[PTR]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
@@ -536,7 +536,7 @@ void array_of_struct_init_from_eb(char* __ended_by(new_end) new_start, char* new
 
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_other_data_side_effect_from_eb(
-// CHECK-SAME: ptr nocapture noundef writeonly initializes((0, 24)) [[PTR:%.*]], ptr noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR3]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) initializes((0, 24)) [[PTR:%.*]], ptr noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @get_int() #[[ATTR8]]
 // CHECK-NEXT:    store ptr [[NEW_START]], ptr [[PTR]], align 8, !tbaa [[TBAA2]]
@@ -560,7 +560,7 @@ void assign_via_ptr_other_data_side_effect_from_eb(struct eb_with_other_data* pt
 }
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_other_data_side_effect_zero_ptr_from_eb(
-// CHECK-SAME: ptr nocapture noundef writeonly initializes((0, 24)) [[PTR:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR3]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) initializes((0, 24)) [[PTR:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @get_int() #[[ATTR8]]
 // CHECK-NEXT:    store ptr null, ptr [[PTR]], align 8, !tbaa [[TBAA2]]

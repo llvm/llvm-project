@@ -7,7 +7,7 @@
 #include <ptrcheck.h>
 
 // CHECK-LABEL: define dso_local ptr @cb_in_from_bidi(
-// CHECK-SAME: i32 noundef [[COUNT:%.*]], ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: i32 noundef [[COUNT:%.*]], ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
@@ -172,7 +172,7 @@ int *__counted_by(count) cb_in_from_cbn2(int count, int *__counted_by_or_null(le
 }
 
 // CHECK-LABEL: define dso_local noundef ptr @cb_out_from_single(
-// CHECK-SAME: ptr nocapture noundef readonly [[COUNT:%.*]], ptr noundef readnone returned [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[COUNT:%.*]], ptr noundef readnone returned [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[COUNT]], align 4, !tbaa [[TBAA11:![0-9]+]]
 // CHECK-NEXT:    [[OR_COND:%.*]] = icmp ult i32 [[TMP0]], 2, !annotation [[META2]]
@@ -205,7 +205,7 @@ int *__counted_by_or_null(count) cbn_in_from_single(int count, int *__single p) 
 }
 
 // CHECK-LABEL: define dso_local ptr @sb_in_from_bidi(
-// CHECK-SAME: i32 noundef [[SIZE:%.*]], ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef [[SIZE:%.*]], ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
@@ -252,7 +252,7 @@ void *__sized_by(size) sb_in_from_single(int size, int *__single p) {
 }
 
 // CHECK-LABEL: define dso_local ptr @eb_in_from_bidi(
-// CHECK-SAME: ptr noundef readnone [[END:%.*]], ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readnone [[END:%.*]], ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_1_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_1_0_P_SROA_IDX]], align 8
