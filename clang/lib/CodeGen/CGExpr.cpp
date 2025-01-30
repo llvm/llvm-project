@@ -3614,27 +3614,31 @@ void CodeGenFunction::EmitCheck(
   llvm::Value *RecoverableCond = nullptr;
   llvm::Value *TrapCond = nullptr;
   bool NoMerge = false;
+  // Expand checks into:
+  //   (Check1 || !allow_ubsan_check) && (Check2 || !allow_ubsan_check) ...
+  // We need separate allow_ubsan_check intrinsics because they have separately
+  // specified cutoffs.
+  // This expression looks expensive but will be simplified after
+  // LowerAllowCheckPass.
   for (auto &[Check, Ord] : Checked) {
+    llvm::Value *GuardedCheck = Check;
+    if (ClSanitizeGuardChecks ||
+        (CGM.getCodeGenOpts().SanitizeSkipHotCutoffs[Ord] > 0)) {
+      llvm::Value *Allow = Builder.CreateCall(
+          CGM.getIntrinsic(llvm::Intrinsic::allow_ubsan_check),
+          llvm::ConstantInt::get(CGM.Int8Ty, Ord));
+      GuardedCheck = Builder.CreateOr(Check, Builder.CreateNot(Allow));
+    }
+
     // -fsanitize-trap= overrides -fsanitize-recover=.
     llvm::Value *&Cond = CGM.getCodeGenOpts().SanitizeTrap.has(Ord) ? TrapCond
                          : CGM.getCodeGenOpts().SanitizeRecover.has(Ord)
                              ? RecoverableCond
                              : FatalCond;
-    Cond = Cond ? Builder.CreateAnd(Cond, Check) : Check;
+    Cond = Cond ? Builder.CreateAnd(Cond, GuardedCheck) : GuardedCheck;
 
     if (!CGM.getCodeGenOpts().SanitizeMergeHandlers.has(Ord))
       NoMerge = true;
-  }
-
-  if (ClSanitizeGuardChecks) {
-    llvm::Value *Allow =
-        Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::allow_ubsan_check),
-                           llvm::ConstantInt::get(CGM.Int8Ty, CheckHandler));
-
-    for (llvm::Value **Cond : {&FatalCond, &RecoverableCond, &TrapCond}) {
-      if (*Cond)
-        *Cond = Builder.CreateOr(*Cond, Builder.CreateNot(Allow));
-    }
   }
 
   if (TrapCond)
