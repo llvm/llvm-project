@@ -14,9 +14,12 @@
 #ifndef MLIR_TARGET_LLVMIR_TYPETOLLVM_H
 #define MLIR_TARGET_LLVMIR_TYPETOLLVM_H
 
+#include "llvm/ADT/ArrayRef.h"
+
 #include <memory>
 
 namespace llvm {
+class FunctionType;
 class DataLayout;
 class LLVMContext;
 class Type;
@@ -49,6 +52,12 @@ public:
 
   /// Translates the given MLIR LLVM dialect type to LLVM IR.
   llvm::Type *translateType(Type type);
+
+  /// Attempts to look up the LLVM intrinsic matching `id` with parameter types
+  /// `types`. Note, since no return type is required, no check is performed to
+  /// verify the found intrinsic.
+  llvm::FunctionType *
+  uncheckedGetIntrinsicSignature(unsigned id, llvm::ArrayRef<Type> types);
 
 private:
   /// Private implementation.

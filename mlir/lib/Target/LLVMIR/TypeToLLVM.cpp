@@ -14,6 +14,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 
 using namespace mlir;
@@ -82,6 +83,15 @@ public:
     // Cache the result of the conversion and return.
     knownTranslations.try_emplace(type, translated);
     return translated;
+  }
+
+  llvm::FunctionType *
+  uncheckedGetIntrinsicSignature(unsigned id, llvm::ArrayRef<Type> types) {
+    SmallVector<llvm::Type *, 8> paramTypes;
+    if (llvm::Intrinsic::isOverloaded(id)) {
+      translateTypes(types, paramTypes);
+    }
+    return llvm::Intrinsic::getType(context, id, paramTypes);
   }
 
 private:
@@ -191,6 +201,12 @@ LLVM::TypeToLLVMIRTranslator::~TypeToLLVMIRTranslator() = default;
 
 llvm::Type *LLVM::TypeToLLVMIRTranslator::translateType(Type type) {
   return impl->translateType(type);
+}
+
+llvm::FunctionType *
+LLVM::TypeToLLVMIRTranslator::uncheckedGetIntrinsicSignature(
+    unsigned id, llvm::ArrayRef<Type> types) {
+  return impl->uncheckedGetIntrinsicSignature(id, types);
 }
 
 unsigned LLVM::TypeToLLVMIRTranslator::getPreferredAlignment(
