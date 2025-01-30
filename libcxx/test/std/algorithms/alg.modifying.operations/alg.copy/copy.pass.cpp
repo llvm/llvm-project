@@ -17,6 +17,7 @@
 
 #include "test_macros.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
 class PaddedBase {
 public:
@@ -60,8 +61,7 @@ struct TestInIters {
 };
 
 TEST_CONSTEXPR_CXX20 bool test() {
-  types::for_each(types::cpp17_input_iterator_list<int*>(), TestInIters());
-
+  types::for_each(types::cpp17_input_iterator_list<const int*>(), TestInIters());
   { // Make sure that padding bits aren't copied
     Derived src(1, 2, 3);
     Derived dst(4, 5, 6);
@@ -70,7 +70,6 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(dst.b_ == 2);
     assert(dst.c_ == 6);
   }
-
   { // Make sure that overlapping ranges can be copied
     int a[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     std::copy(a + 3, a + 10, a);
