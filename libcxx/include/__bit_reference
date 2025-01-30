@@ -313,22 +313,6 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator<_Cp, f
   return std::__copy_backward_unaligned(__first, __last, __result);
 }
 
-// move
-
-template <class _Cp, bool _IsConst>
-inline _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false>
-move(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, __bit_iterator<_Cp, false> __result) {
-  return std::copy(__first, __last, __result);
-}
-
-// move_backward
-
-template <class _Cp, bool _IsConst>
-inline _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false> move_backward(
-    __bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, __bit_iterator<_Cp, false> __result) {
-  return std::copy_backward(__first, __last, __result);
-}
-
 // swap_ranges
 
 template <class _Cl, class _Cr>
