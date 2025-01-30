@@ -710,6 +710,15 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
     OS << ", " << CFI.getOffset();
     OS << ", " << CFI.getAddressSpace();
     break;
+  case MCCFIInstruction::OpLLVMRegOffset:
+    OS << "llvm_reg_offset ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(CFI.getRegister(), OS, TRI);
+    OS << ", ";
+    printCFIRegister(CFI.getRegister2(), OS, TRI);
+    OS << ", " << CFI.getOffset();
+    break;
   case MCCFIInstruction::OpRelOffset:
     OS << "rel_offset ";
     if (MCSymbol *Label = CFI.getLabel())

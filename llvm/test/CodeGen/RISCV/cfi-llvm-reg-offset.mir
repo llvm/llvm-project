@@ -1,0 +1,25 @@
+# RUN: llc -mtriple=riscv64 -start-after=unpack-mi-bundles  -o - %s \
+# RUN: | FileCheck %s
+
+# Check that `llvm_reg_offset` generates an escape expression corresponding to `deref(FrameReg + Offset)`. See comments in `MCCFIInstruction::createRegOffsetExpression`.
+# DW_CFA_expression = 0x10
+# $x1 = 0x01 - the register to be defined
+# 0x06 - length of expression encoding the (FrameReg + Offset)
+# DW_OP_consts = 0x11
+# le128 signed encoding of -42 = 0x56
+# DW_OP_bregx = 0x92
+# $x2 = 0x02
+# the second argument of DW_OP_bregx = 0x0
+# DW_OP_plus = 0x92
+name: func
+body: |
+  bb.0:
+    CFI_INSTRUCTION llvm_reg_offset $x1, $x2, -42
+    PseudoRET
+#CHECK-LABEL: func:
+#CHECK: .cfi_startproc
+#CHECK: .cfi_escape 0x10, 0x01, 0x06, 0x11, 0x56, 0x92, 0x02, 0x00, 0x22
+#CHECK: ret
+#CHECK: .Lfunc_end0:
+#CHECK: .size   func, .Lfunc_end0-func
+#CHECK: .cfi_endproc
