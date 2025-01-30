@@ -3726,7 +3726,7 @@ private:
 #endif
 
   /// Get list of vector entries, associated with the value \p V.
-  ArrayRef<TreeEntry *> getTreeEntries(const Value *V) const {
+  ArrayRef<TreeEntry *> getTreeEntries(Value *V) const {
     assert(V && "V cannot be nullptr.");
     auto It = ScalarToTreeEntries.find(V);
     if (It == ScalarToTreeEntries.end())
@@ -12257,26 +12257,7 @@ InstructionCost BoUpSLP::getSpillCost() {
       // Vectorized calls, represented as vector intrinsics, do not impact spill
       // cost.
       if (const auto *CB = dyn_cast<CallBase>(&*PrevInstIt);
-          CB && !NoCallIntrinsic(CB) &&
-          (!isVectorized(CB) ||
-           any_of(getTreeEntries(CB), [&](const TreeEntry *TE) {
-             auto *CI = cast<CallInst>(TE->getMainOp());
-             Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
-
-             unsigned MinBW = MinBWs.lookup(TE).first;
-             SmallVector<Type *> ArgTys =
-                 buildIntrinsicArgTypes(CI, ID, TE->Scalars.size(), MinBW, TTI);
-             Type *ScalarTy = CI->getType();
-             if (MinBW)
-               ScalarTy = IntegerType::get(CI->getContext(), MinBW);
-             FixedVectorType *VecTy =
-                 getWidenedType(ScalarTy, TE->Scalars.size());
-             auto VecCallCosts =
-                 getVectorCallCosts(CI, VecTy, TTI, TLI, ArgTys);
-             bool UseIntrinsic = ID != Intrinsic::not_intrinsic &&
-                                 VecCallCosts.first <= VecCallCosts.second;
-             return !UseIntrinsic;
-           })))
+          CB && !NoCallIntrinsic(CB) && !isVectorized(CB))
         NumCalls++;
 
       ++PrevInstIt;
