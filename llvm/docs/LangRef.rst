@@ -24159,11 +24159,11 @@ equivalent to:
       %m[i] = (icmp ult i, %diff) || (%diff == 0)
 
 where ``%m`` is a vector (mask) of active/inactive lanes with its elements
-indexed by ``i``,  and ``%ptrA``, ``%ptrB`` are the two ptr arguments to
-``llvm.experimental.get.alias.lane.mask.*`` and ``%elementSize`` is the first
-immediate argument. The ``%writeAfterRead`` argument is expected to be true if
-``%ptrB`` is stored to after ``%ptrA`` is read from, otherwise it is false for
-a read after write.
+indexed by ``i`` (i = 0 to VF - 1),  and ``%ptrA``, ``%ptrB`` are the two ptr
+arguments to ``llvm.experimental.get.alias.lane.mask.*`` and ``%elementSize``
+is the first immediate argument. The ``%writeAfterRead`` argument is expected
+to be true if ``%ptrB`` is stored to after ``%ptrA`` is read from, otherwise
+it is false for a read after write.
 The above is equivalent to:
 
 ::
