@@ -1057,6 +1057,7 @@ template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::removeEdgeFromGraph(
     ContextEdge *Edge, EdgeIter *EI, bool CalleeIter) {
   assert(!EI || (*EI)->get() == Edge);
+  assert(!Edge->isRemoved());
   // Save the Caller and Callee pointers so we can erase Edge from their edge
   // lists after clearing Edge below. We do the clearing first in case it is
   // destructed after removing from the edge lists (if those were the last
@@ -1069,6 +1070,10 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::removeEdgeFromGraph(
   // reference.
   Edge->clear();
 
+#ifndef NDEBUG
+  auto CalleeCallerCount = Callee->CallerEdges.size();
+  auto CallerCalleeCount = Caller->CalleeEdges.size();
+#endif
   if (!EI) {
     Callee->eraseCallerEdge(Edge);
     Caller->eraseCalleeEdge(Edge);
@@ -1079,6 +1084,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::removeEdgeFromGraph(
     Caller->eraseCalleeEdge(Edge);
     *EI = Callee->CallerEdges.erase(*EI);
   }
+  assert(Callee->CallerEdges.size() < CalleeCallerCount);
+  assert(Caller->CalleeEdges.size() < CallerCalleeCount);
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
