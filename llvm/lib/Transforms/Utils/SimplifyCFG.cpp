@@ -3342,12 +3342,11 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
     if (match(&I,
               m_ExtractValue<1>(m_OneUse(
                   m_Intrinsic<Intrinsic::umul_with_overflow>(m_Value())))) &&
-        ThenBB->size() <= 3) {
+        ThenBB->size() <= 3)
       PatternFound = true;
-    }
 
     BlockCostSoFar += computeSpeculationCost(&I, TTI);
-    if (! PatternFound && !IsSafeCheapLoadStore && !SpeculatedStoreValue &&
+    if (!PatternFound && !IsSafeCheapLoadStore && !SpeculatedStoreValue &&
         BlockCostSoFar >
             PHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic)
       return false;
