@@ -1560,6 +1560,13 @@ def combine_shuffle_concat : GICombineRule<
         [{ return Helper.matchCombineShuffleConcat(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineShuffleConcat(*${root}, ${matchinfo}); }])>;
 
+// Combines shuffles of vector into extract_subvector
+def combine_shuffle_vector : GICombineRule<
+  (defs root:$root, int64_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
+    [{ return Helper.matchCombineShuffleExtract(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyCombineShuffleExtract(*${root}, ${matchinfo}); }])>;
+
 def insert_vector_element_idx_undef : GICombineRule<
    (defs root:$root),
    (match (G_IMPLICIT_DEF $idx),
@@ -2026,7 +2033,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
     sub_add_reg, select_to_minmax,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
-    simplify_neg_minmax, combine_concat_vector,
+    simplify_neg_minmax, combine_concat_vector, combine_shuffle_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
     combine_use_vector_truncate, merge_combines, overflow_combines]>;
 

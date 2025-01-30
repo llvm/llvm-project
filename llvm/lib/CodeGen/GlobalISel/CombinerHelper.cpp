@@ -384,6 +384,65 @@ void CombinerHelper::applyCombineConcatVectors(
   MI.eraseFromParent();
 }
 
+bool CombinerHelper::matchCombineShuffleExtract(MachineInstr &MI, int64_t &Idx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR &&
+         "Invalid instruction");
+  auto &Shuffle = cast<GShuffleVector>(MI);
+  
+  auto SrcVec1 = Shuffle.getSrc1Reg();
+  int SrcVec2 = Shuffle.getSrc2Reg();
+  auto Mask = Shuffle.getMask();
+
+  int Width = MRI.getType(SrcVec1).getNumElements();
+  int Width2 = MRI.getType(SrcVec2).getNumElements();
+
+  if (!llvm::isPowerOf2_32(Width))
+    return false;
+
+  // Check if all elements are extracted from the same vector, or within single
+  // vector.
+  auto MaxValue = *std::max_element(Mask.begin(), Mask.end());
+  auto MinValue = *std::min_element(Mask.begin(), Mask.end());
+  if (MaxValue >= Width && MinValue < Width) {
+    return false;
+  }
+
+  LLT ExtractTy =  MaxValue < Width ? MRI.getType(SrcVec1) : MRI.getType(SrcVec2);
+
+  // Check that the extractee length is power of 2.
+  if ((MaxValue < Width && !llvm::isPowerOf2_32(Width)) ||
+      (MinValue >= Width && !llvm::isPowerOf2_32(Width2))) {
+    return false;
+  }
+
+  // Check if the extractee's order is kept, and they should be conscecutive.
+  for (size_t i = 1; i < Mask.size(); ++i) {
+    if (Mask[i] != Mask[i - 1] + 1 || Mask[i] == -1) {
+      return false; // Not consecutive
+    }
+  }
+
+  if (!LI->isLegalOrCustom({TargetOpcode::G_EXTRACT_SUBVECTOR, {ExtractTy}})) {
+    return false;
+  }
+
+  Idx = Mask.front();
+  return true;
+}
+
+void CombinerHelper::applyCombineShuffleExtract(MachineInstr &MI, int64_t Idx) const {
+  auto &Shuffle = cast<GShuffleVector>(MI);
+
+  auto SrcVec1 = Shuffle.getSrc1Reg();
+  auto SrcVec2 = Shuffle.getSrc2Reg();
+  int Width = MRI.getType(SrcVec1).getNumElements();
+
+  auto SrcVec = Idx < Width ? SrcVec1 : SrcVec2;
+
+  Builder.buildExtractSubvector(MI.getOperand(0).getReg(), SrcVec, Idx);
+  MI.eraseFromParent();
+}
+
 bool CombinerHelper::matchCombineShuffleConcat(
     MachineInstr &MI, SmallVector<Register> &Ops) const {
   ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();

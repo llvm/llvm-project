@@ -264,6 +264,10 @@ public:
   void applyCombineShuffleConcat(MachineInstr &MI,
                                  SmallVector<Register> &Ops) const;
 
+  /// Replace \p MI with a narrow extract_subvector.
+  bool matchCombineShuffleExtract(MachineInstr &MI, int64_t &IsFirst) const;
+  void applyCombineShuffleExtract(MachineInstr &MI, int64_t IsFirst) const;
+
   /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
   /// Returns true if MI changed.
   ///
