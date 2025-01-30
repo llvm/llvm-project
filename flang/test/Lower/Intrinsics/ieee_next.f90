@@ -19,12 +19,12 @@ end subroutine
 !CHECK-KIND10:           %[[VAL_14:.*]]:2 = hlfir.declare {{.*}}x2"
 !CHECK-KIND10:           %[[VAL_15:.*]] = fir.load %[[VAL_14]]#0 : !fir.ref<f16>
 !CHECK-KIND10:           %[[VAL_16:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<f80>
-!CHECK-KIND10:           %[[VAL_17:.*]] = "llvm.intr.is.fpclass"(%[[VAL_16]]) <{bit = 3 : i32}> : (f80) -> i1
-!CHECK-KIND10:           %[[VAL_18:.*]] = arith.constant 2 : i8
-!CHECK-KIND10:           %[[VAL_19:.*]] = fir.address_of(@_FortranAIeeeValueTable_2) : !fir.ref<!fir.array<12xi16>>
-!CHECK-KIND10:           %[[VAL_20:.*]] = fir.coordinate_of %[[VAL_19]], %[[VAL_18]] : (!fir.ref<!fir.array<12xi16>>, i8) -> !fir.ref<i16>
-!CHECK-KIND10:           %[[VAL_21:.*]] = fir.load %[[VAL_20]] : !fir.ref<i16>
-!CHECK-KIND10:           %[[VAL_22:.*]] = arith.bitcast %[[VAL_21]] : i16 to f16
+!CHECK-KIND10-DAG:       %[[VAL_17:.*]] = "llvm.intr.is.fpclass"(%[[VAL_16]]) <{bit = 3 : i32}> : (f80) -> i1
+!CHECK-KIND10-DAG:       %[[VAL_18:.*]] = arith.constant 2 : i8
+!CHECK-KIND10-DAG:       %[[VAL_19:.*]] = fir.address_of(@_FortranAIeeeValueTable_2) : !fir.ref<!fir.array<12xi16>>
+!CHECK-KIND10-DAG:       %[[VAL_20:.*]] = fir.coordinate_of %[[VAL_19]], %[[VAL_18]] : (!fir.ref<!fir.array<12xi16>>, i8) -> !fir.ref<i16>
+!CHECK-KIND10-DAG:       %[[VAL_21:.*]] = fir.load %[[VAL_20]] : !fir.ref<i16>
+!CHECK-KIND10-DAG:       %[[VAL_22:.*]] = arith.bitcast %[[VAL_21]] : i16 to f16
 !CHECK-KIND10:           %[[VAL_23:.*]] = arith.select %[[VAL_17]], %[[VAL_22]], %[[VAL_15]] : f16
 !CHECK-KIND10:           %[[VAL_24:.*]] = "llvm.intr.is.fpclass"(%[[VAL_23]]) <{bit = 3 : i32}> : (f16) -> i1
 !CHECK-KIND10:           %[[VAL_25:.*]] = arith.constant 1 : i16
@@ -193,12 +193,12 @@ end subroutine
 !CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare {{.*}}x8"
 !CHECK:           %[[VAL_15:.*]] = fir.load %[[VAL_14]]#0 : !fir.ref<f64>
 !CHECK:           %[[VAL_16:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<f16>
-!CHECK:           %[[VAL_17:.*]] = "llvm.intr.is.fpclass"(%[[VAL_16]]) <{bit = 3 : i32}> : (f16) -> i1
-!CHECK:           %[[VAL_18:.*]] = arith.constant 2 : i8
-!CHECK:           %[[VAL_19:.*]] = fir.address_of(@_FortranAIeeeValueTable_8) : !fir.ref<!fir.array<12xi64>>
-!CHECK:           %[[VAL_20:.*]] = fir.coordinate_of %[[VAL_19]], %[[VAL_18]] : (!fir.ref<!fir.array<12xi64>>, i8) -> !fir.ref<i64>
-!CHECK:           %[[VAL_21:.*]] = fir.load %[[VAL_20]] : !fir.ref<i64>
-!CHECK:           %[[VAL_22:.*]] = arith.bitcast %[[VAL_21]] : i64 to f64
+!CHECK-DAG:       %[[VAL_17:.*]] = "llvm.intr.is.fpclass"(%[[VAL_16]]) <{bit = 3 : i32}> : (f16) -> i1
+!CHECK-DAG:       %[[VAL_18:.*]] = arith.constant 2 : i8
+!CHECK-DAG:       %[[VAL_19:.*]] = fir.address_of(@_FortranAIeeeValueTable_8) : !fir.ref<!fir.array<12xi64>>
+!CHECK-DAG:       %[[VAL_20:.*]] = fir.coordinate_of %[[VAL_19]], %[[VAL_18]] : (!fir.ref<!fir.array<12xi64>>, i8) -> !fir.ref<i64>
+!CHECK-DAG:       %[[VAL_21:.*]] = fir.load %[[VAL_20]] : !fir.ref<i64>
+!CHECK-DAG:       %[[VAL_22:.*]] = arith.bitcast %[[VAL_21]] : i64 to f64
 !CHECK:           %[[VAL_23:.*]] = arith.select %[[VAL_17]], %[[VAL_22]], %[[VAL_15]] : f64
 !CHECK:           %[[VAL_24:.*]] = "llvm.intr.is.fpclass"(%[[VAL_23]]) <{bit = 3 : i32}> : (f64) -> i1
 !CHECK:           %[[VAL_25:.*]] = arith.constant 1 : i64
