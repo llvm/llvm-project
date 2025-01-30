@@ -19,7 +19,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, poll, (struct pollfd *fds, nfds_t nfds, int timeout)) {
+LLVM_LIBC_FUNCTION(int, poll, (struct pollfd * fds, nfds_t nfds, int timeout)) {
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_poll, fds, nfds, timeout);
   if (ret < 0) {
     libc_errno = -ret;
