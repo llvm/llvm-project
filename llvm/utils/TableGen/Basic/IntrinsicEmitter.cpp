@@ -416,9 +416,9 @@ static bool compareFnAttributes(const CodeGenIntrinsic *L,
   auto TieBoolAttributes = [](const CodeGenIntrinsic *I) -> auto {
     // Sort throwing intrinsics after non-throwing intrinsics.
     return std::tie(I->canThrow, I->isNoDuplicate, I->isNoMerge, I->isNoReturn,
-                    I->isNoCallback, I->isNoSync, I->isNoFree, I->isWillReturn,
-                    I->isCold, I->isConvergent, I->isSpeculatable,
-                    I->hasSideEffects, I->isStrictFP);
+                    I->isNoRecurse, I->isNoCallback, I->isNoSync, I->isNoFree,
+                    I->isWillReturn, I->isCold, I->isConvergent,
+                    I->isSpeculatable, I->hasSideEffects, I->isStrictFP);
   };
 
   auto TieL = TieBoolAttributes(L);
@@ -440,10 +440,11 @@ static bool compareFnAttributes(const CodeGenIntrinsic *L,
 /// NoUnwind = !canThrow, so we need to negate it's sense to test if the
 // intrinsic has NoUnwind attribute.
 static bool hasFnAttributes(const CodeGenIntrinsic &Int) {
-  return !Int.canThrow || Int.isNoReturn || Int.isNoCallback || Int.isNoSync ||
-         Int.isNoFree || Int.isWillReturn || Int.isCold || Int.isNoDuplicate ||
-         Int.isNoMerge || Int.isConvergent || Int.isSpeculatable ||
-         Int.isStrictFP || getEffectiveME(Int) != MemoryEffects::unknown();
+  return !Int.canThrow || Int.isNoReturn || Int.isNoRecurse ||
+         Int.isNoCallback || Int.isNoSync || Int.isNoFree || Int.isWillReturn ||
+         Int.isCold || Int.isNoDuplicate || Int.isNoMerge || Int.isConvergent ||
+         Int.isSpeculatable || Int.isStrictFP ||
+         getEffectiveME(Int) != MemoryEffects::unknown();
 }
 
 namespace {
@@ -572,6 +573,8 @@ static AttributeSet getIntrinsicFnAttributeSet(LLVMContext &C, unsigned ID) {
       addAttribute("NoUnwind");
     if (Int.isNoReturn)
       addAttribute("NoReturn");
+    if (Int.isNoRecurse)
+      addAttribute("NoRecurse");
     if (Int.isNoCallback)
       addAttribute("NoCallback");
     if (Int.isNoSync)

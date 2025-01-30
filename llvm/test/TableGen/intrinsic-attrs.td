@@ -6,6 +6,8 @@ def int_random_gen   : Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrHasSideEffec
 
 def int_deref_ptr_ret : Intrinsic<[llvm_ptr_ty], [], [Dereferenceable<RetIndex, 16>]>;
 
+def int_no_recurse   : Intrinsic<[llvm_i32_ty], [], [IntrNoRecurse]>;
+
 // CHECK: static AttributeSet getIntrinsicArgAttributeSet(LLVMContext &C, unsigned ID) {
 // CHECK-NEXT:   switch (ID) {
 // CHECK-NEXT: default: llvm_unreachable("Invalid attribute set number");
@@ -21,11 +23,17 @@ def int_deref_ptr_ret : Intrinsic<[llvm_ptr_ty], [], [Dereferenceable<RetIndex, 
 // CHECK-NEXT: return AttributeSet::get(C, {
 // CHECK-NEXT: Attribute::get(C, Attribute::NoUnwind),
 // CHECK-NEXT: });
+// CHECK: case 1:
+// CHECK-NEXT: return AttributeSet::get(C, {
+// CHECK-NEXT: Attribute::get(C, Attribute::NoUnwind),
+// CHECK-NEXT: Attribute::get(C, Attribute::NoRecurse),
+// CHECK-NEXT: });
 
 
 // CHECK: getAttributes(LLVMContext &C, ID id)
 // CHECK: 0 << 8 | 0, // llvm.deref.ptr.ret
-// CHECK: 1 << 8 | 1, // llvm.random.gen
+// CHECK: 1 << 8 | 1, // llvm.no.recurse
+// CHECK: 2 << 8 | 1, // llvm.random.gen
 
 // CHECK: case 1:
 // CHECK-NEXT: return AttributeList::get(C, {

@@ -388,6 +388,8 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     isConvergent = true;
   else if (R->getName() == "IntrNoReturn")
     isNoReturn = true;
+  else if (R->getName() == "IntrNoRecurse")
+    isNoRecurse = true;
   else if (R->getName() == "IntrNoCallback")
     isNoCallback = true;
   else if (R->getName() == "IntrNoSync")
