@@ -1,8 +1,8 @@
-
-
 // RUN: %clang_cc1 -ast-dump -fbounds-safety %s -Wcast-qual 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -ast-dump -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental %s -Wcast-qual 2>&1 | FileCheck %s
+
 #include <ptrcheck.h>
+
 void foo(void) {
     char *dst, *src;
     __builtin_memcpy(dst, src, 10);
@@ -16,7 +16,7 @@ void foo(void) {
 // CHECK: {{^}}|   `-MaterializeSequenceExpr {{.+}} <Unbind>
 // CHECK: {{^}}|     |-MaterializeSequenceExpr {{.+}} <Bind>
 // CHECK: {{^}}|     | |-BoundsSafetyPointerPromotionExpr {{.+}} 'void *__bidi_indexable'
-// CHECK: {{^}}|     | | |-OpaqueValueExpr [[ove:0x[^ ]+]] {{.*}} 'void *__single __sized_by()':'void *__single'
+// CHECK: {{^}}|     | | |-OpaqueValueExpr [[ove:0x[^ ]+]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 // CHECK: {{^}}|     | | |   | | | `-OpaqueValueExpr [[ove_1:0x[^ ]+]] {{.*}} 'void *__bidi_indexable'
 // CHECK: {{^}}|     | | |   | | | `-OpaqueValueExpr [[ove_2:0x[^ ]+]] {{.*}} 'const void *__bidi_indexable'
 // CHECK: {{^}}|     | | |   | | `-OpaqueValueExpr [[ove_3:0x[^ ]+]] {{.*}} 'unsigned long'
@@ -24,7 +24,7 @@ void foo(void) {
 // CHECK: {{^}}|     | | | `-BinaryOperator {{.+}} 'char *' '+'
 // CHECK: {{^}}|     | | |   |-CStyleCastExpr {{.+}} 'char *' <BitCast>
 // CHECK: {{^}}|     | | |   | `-ImplicitCastExpr {{.+}} 'void *' <BoundsSafetyPointerCast>
-// CHECK: {{^}}|     | | |   |   `-OpaqueValueExpr [[ove]] {{.*}} 'void *__single __sized_by()':'void *__single'
+// CHECK: {{^}}|     | | |   |   `-OpaqueValueExpr [[ove]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
 // CHECK: {{^}}|     | | |   `-AssumptionExpr
 // CHECK: {{^}}|     | | |     |-OpaqueValueExpr [[ove_3]] {{.*}} 'unsigned long'
 // CHECK: {{^}}|     | | |     `-BinaryOperator {{.+}} 'int' '>='
@@ -47,11 +47,11 @@ void foo(void) {
 // CHECK: {{^}}|     |   `-BoundsCheckExpr
 // CHECK: {{^}}|     |     |-BoundsCheckExpr
 // CHECK: {{^}}|     |     | |-CallExpr
-// CHECK: {{^}}|     |     | | |-ImplicitCastExpr {{.+}} 'void *__single __sized_by()(*)(void *__single __sized_by(), const void *__single __sized_by(), unsigned long)' <BuiltinFnToFnPtr>
+// CHECK: {{^}}|     |     | | |-ImplicitCastExpr {{.+}} 'void *__single __sized_by(function-parameter-0-2)(*)(void *__single __sized_by(function-parameter-0-2), const void *__single __sized_by(function-parameter-0-2), unsigned long)' <BuiltinFnToFnPtr>
 // CHECK: {{^}}|     |     | | | `-DeclRefExpr {{.+}}
-// CHECK: {{^}}|     |     | | |-ImplicitCastExpr {{.+}} 'void *__single __sized_by()':'void *__single' <BoundsSafetyPointerCast>
+// CHECK: {{^}}|     |     | | |-ImplicitCastExpr {{.+}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single' <BoundsSafetyPointerCast>
 // CHECK: {{^}}|     |     | | | `-OpaqueValueExpr [[ove_1]] {{.*}} 'void *__bidi_indexable'
-// CHECK: {{^}}|     |     | | |-ImplicitCastExpr {{.+}} 'const void *__single __sized_by()':'const void *__single' <BoundsSafetyPointerCast>
+// CHECK: {{^}}|     |     | | |-ImplicitCastExpr {{.+}} 'const void *__single __sized_by(function-parameter-0-2)':'const void *__single' <BoundsSafetyPointerCast>
 // CHECK: {{^}}|     |     | | | `-OpaqueValueExpr [[ove_2]] {{.*}} 'const void *__bidi_indexable'
 // CHECK: {{^}}|     |     | | `-OpaqueValueExpr [[ove_3]] {{.*}} 'unsigned long'
 // CHECK: {{^}}|     |     | `-BinaryOperator {{.+}} 'int' '&&'
@@ -107,4 +107,4 @@ void foo(void) {
 // CHECK: {{^}}|     |-OpaqueValueExpr [[ove_1]] {{.*}} 'void *__bidi_indexable'
 // CHECK: {{^}}|     |-OpaqueValueExpr [[ove_2]] {{.*}} 'const void *__bidi_indexable'
 // CHECK: {{^}}|     |-OpaqueValueExpr [[ove_3]] {{.*}} 'unsigned long'
-// CHECK: {{^}}|     `-OpaqueValueExpr [[ove]] {{.*}} 'void *__single __sized_by()':'void *__single'
+// CHECK: {{^}}|     `-OpaqueValueExpr [[ove]] {{.*}} 'void *__single __sized_by(function-parameter-0-2)':'void *__single'
