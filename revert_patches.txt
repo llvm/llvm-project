@@ -28,12 +28,6 @@ revert: breaks build of rccl __cpuidex
 1c28b92373 [Clang] __has_builtin should return false for aux triple builtins (#121839) 
 Ron and Saiyed
 ---
-
--- 
-revert: breaks classic flang
-de7438e47283 - [NVPTX] Auto-Upgrade some nvvm.annotations to attributes
-Ron
----
 revert: need clean patch from Amit
 b68b4f64a2bd [Driver][ASan] Refactor Clang-Driver "Sanitizer
 ---
