@@ -238,20 +238,23 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset,
 }
 
 template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
-  std::string out;
-  int indent = 0;
   if (!whyLive.contains(s))
     return;
-  for (std::optional<LiveObject> cur = s; cur; indent += 2) {
-    if (indent)
-      out += "\n" + std::string(indent, ' ');
+  auto diag = Msg(ctx);
+  bool first = true;
+  for (std::optional<LiveObject> cur = s; cur;) {
     if (std::holds_alternative<Symbol *>(*cur)) {
       auto *s = std::get<Symbol *>(*cur);
-      out += toStr(ctx, *s) + " from " + toStr(ctx, s->file);
+      // Match the syntax for sections below.
+      diag << toStr(ctx, s->file) << ":(" << toStr(ctx, *s) << ')';
     } else {
       auto *s = std::get<InputSectionBase *>(*cur);
-      // TODO: Fancy formatting
-      out += toStr(ctx, s);
+      diag << toStr(ctx, s);
+    }
+
+    if (first) {
+      diag << " live because:";
+      first = false;
     }
 
     auto it = whyLive.find(*cur);
@@ -270,8 +273,11 @@ template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
              "all live objects should have a tracked reason for being live");
       cur = LiveObject{parent};
     }
+
+    if (cur)
+      diag << "\n>>> referenced by "
+           << (std::holds_alternative<Symbol *>(*cur) ? "symbol " : "section ");
   }
-  message(out);
 }
 
 template <class ELFT> void MarkLive<ELFT>::markSymbol(Symbol *sym) {
