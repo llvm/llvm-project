@@ -16440,7 +16440,7 @@ static SDValue performVP_TRUNCATECombine(SDNode *N, SelectionDAG &DAG,
     if (Op.getOpcode() != ISD::VP_ZERO_EXTEND || Op.getOperand(1) != Mask ||
         Op.getOperand(2) != VL)
       return SDValue();
-    // Input must be smaller than our result.
+    // Input must be the same size or smaller than our result.
     if (Op.getOperand(0).getScalarValueSizeInBits() > VT.getScalarSizeInBits())
       return SDValue();
   }
