@@ -766,8 +766,7 @@ getOperandInfo(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   };
 
   // All others have EMUL=EEW/SEW*LMUL
-  return OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(*Log2EEW, MI),
-                     *Log2EEW);
+  return OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(*Log2EEW, MI), *Log2EEW);
 }
 
 /// Return true if this optimization should consider MI for VL reduction. This
