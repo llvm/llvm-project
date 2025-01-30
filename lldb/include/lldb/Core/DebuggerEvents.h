@@ -44,16 +44,12 @@ public:
   uint64_t GetCompleted() const { return m_completed; }
   uint64_t GetTotal() const { return m_total; }
   std::string GetMessage() const {
-    // Only put the title in the message of the progress create event.
-    if (m_completed == 0) {
-      std::string message = m_title;
-      if (!m_details.empty()) {
-        message.append(": ");
-        message.append(m_details);
-      }
-      return message;
-    } else
-      return !m_details.empty() ? m_details : std::string();
+    std::string message = m_title;
+    if (!m_details.empty()) {
+      message.append(": ");
+      message.append(m_details);
+    }
+    return message;
   }
   const std::string &GetTitle() const { return m_title; }
   const std::string &GetDetails() const { return m_details; }
