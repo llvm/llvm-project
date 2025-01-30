@@ -1463,7 +1463,7 @@ SourceRange VarTemplateSpecializationDecl::getSourceRange() const {
     assert(!Pattern.isNull() &&
            "Variable template specialization without pattern?");
     if (const auto *VTPSD =
-            Pattern.dyn_cast<VarTemplatePartialSpecializationDecl *>())
+            dyn_cast<VarTemplatePartialSpecializationDecl *>(Pattern))
       return VTPSD->getSourceRange();
     VarTemplateDecl *VTD = cast<VarTemplateDecl *>(Pattern);
     if (hasInit()) {
@@ -1496,7 +1496,7 @@ SourceRange VarTemplateSpecializationDecl::getSourceRange() const {
 }
 
 void VarTemplateSpecializationDecl::setExternKeywordLoc(SourceLocation Loc) {
-  auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>();
+  auto *Info = dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo);
   if (!Info) {
     // Don't allocate if the location is invalid.
     if (Loc.isInvalid())
@@ -1509,7 +1509,7 @@ void VarTemplateSpecializationDecl::setExternKeywordLoc(SourceLocation Loc) {
 }
 
 void VarTemplateSpecializationDecl::setTemplateKeywordLoc(SourceLocation Loc) {
-  auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>();
+  auto *Info = dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo);
   if (!Info) {
     // Don't allocate if the location is invalid.
     if (Loc.isInvalid())
