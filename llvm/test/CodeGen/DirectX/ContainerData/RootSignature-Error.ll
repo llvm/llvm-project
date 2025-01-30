@@ -1,9 +1,8 @@
-; RUN: not opt -passes='print<dxil-root-signature>' %s -S -o - 2>&1 | FileCheck %s
+; RUN: not llc %s --filetype=obj -o - 2>&1 | FileCheck %s
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
-; CHECK: error: Invalid format for Root Signature Definition. Pairs of function, root signature expected.
-; CHECK-NOT: Root Signature Definitions
+; CHECK: LLVM ERROR: Invalid format for Root Signature Definition. Pairs of function, root signature expected.
 
 
 define void @main() #0 {

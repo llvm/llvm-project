@@ -1,5 +1,4 @@
-//===- DXILRootSignature.cpp - DXIL Root Signature helper objects
-//---------------===//
+//===- DXILRootSignature.cpp - DXIL Root Signature helper objects ----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,23 +13,31 @@
 #include "DXILRootSignature.h"
 #include "DirectX.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::dxil;
 
+static bool reportError(Twine Message) {
+  report_fatal_error(Message, false);
+  return true;
+}
+
 static bool parseRootFlags(ModuleRootSignature *MRS, MDNode *RootFlagNode) {
 
-  assert(RootFlagNode->getNumOperands() == 2 &&
-         "Invalid format for RootFlag Element");
+  if (RootFlagNode->getNumOperands() != 2)
+    return reportError("Invalid format for RootFlag Element");
+
   auto *Flag = mdconst::extract<ConstantInt>(RootFlagNode->getOperand(1));
-  auto Value = Flag->getZExtValue();
+  uint32_t Value = Flag->getZExtValue();
 
   // Root Element validation, as specified:
   // https://github.com/llvm/wg-hlsl/blob/main/proposals/0002-root-signature-in-clang.md#validations-during-dxil-generation
-  assert((Value & ~0x80000fff) == 0 && "Invalid flag for RootFlag Element");
+  if ((Value & ~0x80000fff) != 0)
+    return reportError("Invalid flag value for RootFlag");
 
   MRS->Flags = Value;
   return false;
@@ -39,8 +46,8 @@ static bool parseRootFlags(ModuleRootSignature *MRS, MDNode *RootFlagNode) {
 static bool parseRootSignatureElement(ModuleRootSignature *MRS,
                                       MDNode *Element) {
   MDString *ElementText = cast<MDString>(Element->getOperand(0));
-  assert(ElementText != nullptr &&
-         "First preoperty of element is not a string");
+  if (ElementText == nullptr)
+    return reportError("Invalid format for Root Element");
 
   RootSignatureElementKind ElementKind =
       StringSwitch<RootSignatureElementKind>(ElementText->getString())
@@ -66,7 +73,7 @@ static bool parseRootSignatureElement(ModuleRootSignature *MRS,
   case RootSignatureElementKind::DescriptorTable:
   case RootSignatureElementKind::StaticSampler:
   case RootSignatureElementKind::None:
-    llvm_unreachable("Not Implemented yet");
+    return reportError("Invalid Root Element: " + ElementText->getString());
     break;
   }
 
@@ -77,19 +84,37 @@ bool ModuleRootSignature::parse(int32_t Version, NamedMDNode *Root) {
   this->Version = Version;
   bool HasError = false;
 
+  /** Root Signature are specified as following in the metadata:
+
+      !dx.rootsignatures = !{!2} ; list of function/root signature pairs
+      !2 = !{ ptr @main, !3 } ; function, root signature
+      !3 = !{ !4, !5, !6, !7 } ; list of root signature elements
+
+      So for each MDNode inside dx.rootsignatures NamedMDNode
+      (the Root parameter of this function), the parsing process needs
+      to loop through each of it's operand and process the pairs function
+      signature pair.
+   */
+
   for (unsigned int Sid = 0; Sid < Root->getNumOperands(); Sid++) {
-    // This should be an if, for error handling
-    MDNode *Node = cast<MDNode>(Root->getOperand(Sid));
+    MDNode *Node = dyn_cast<MDNode>(Root->getOperand(Sid));
 
-    // Not sure what use this for...
-    // Metadata *Func = Node->getOperand(0).get();
+    if (Node == nullptr || Node->getNumOperands() != 2)
+      return reportError("Invalid format for Root Signature Definition. Pairs "
+                         "of function, root signature expected.");
 
-    MDNode *Elements = cast<MDNode>(Node->getOperand(1).get());
-    assert(Elements && "Invalid Metadata type on root signature");
+    // Get the Root Signature Description from the function signature pair.
+    MDNode *RS = dyn_cast<MDNode>(Node->getOperand(1).get());
 
-    for (unsigned int Eid = 0; Eid < Elements->getNumOperands(); Eid++) {
-      MDNode *Element = cast<MDNode>(Elements->getOperand(Eid));
-      assert(Element && "Invalid Metadata type on root element");
+    if (RS == nullptr)
+      return reportError("Missing Root Signature Metadata node.");
+
+    // Loop through the Root Elements of the root signature.
+    for (unsigned int Eid = 0; Eid < RS->getNumOperands(); Eid++) {
+
+      MDNode *Element = dyn_cast<MDNode>(RS->getOperand(Eid));
+      if (Element == nullptr)
+        return reportError("Missing Root Element Metadata Node.");
 
       HasError = HasError || parseRootSignatureElement(this, Element);
     }
@@ -97,29 +122,29 @@ bool ModuleRootSignature::parse(int32_t Version, NamedMDNode *Root) {
   return HasError;
 }
 
-AnalysisKey RootSignatureAnalysis::Key;
-
-ModuleRootSignature RootSignatureAnalysis::run(Module &M,
-                                               ModuleAnalysisManager &AM) {
-  ModuleRootSignature MRSI;
-
-  NamedMDNode *RootSignatureNode = M.getNamedMetadata("dx.rootsignatures");
-  if (RootSignatureNode) {
-    MRSI.parse(1, RootSignatureNode);
-  }
-
-  return MRSI;
-}
-
-//===----------------------------------------------------------------------===//
-bool RootSignatureAnalysisWrapper::runOnModule(Module &M) {
+ModuleRootSignature ModuleRootSignature::analyzeModule(Module &M) {
   ModuleRootSignature MRS;
 
   NamedMDNode *RootSignatureNode = M.getNamedMetadata("dx.rootsignatures");
   if (RootSignatureNode) {
-    MRS.parse(1, RootSignatureNode);
-    this->MRS = MRS;
+    if (MRS.parse(1, RootSignatureNode))
+      llvm_unreachable("Invalid Root Signature Metadata.");
   }
+
+  return MRS;
+}
+
+AnalysisKey RootSignatureAnalysis::Key;
+
+ModuleRootSignature RootSignatureAnalysis::run(Module &M,
+                                               ModuleAnalysisManager &AM) {
+  return ModuleRootSignature::analyzeModule(M);
+}
+
+//===----------------------------------------------------------------------===//
+bool RootSignatureAnalysisWrapper::runOnModule(Module &M) {
+
+  this->MRS = MRS = ModuleRootSignature::analyzeModule(M);
 
   return false;
 }
