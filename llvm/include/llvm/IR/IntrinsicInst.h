@@ -128,6 +128,9 @@ public:
   /// course of IR transformations
   static bool mayLowerToFunctionCall(Intrinsic::ID IID);
 
+  /// Check if the specified intrinsic can read or write FP environment.
+  static bool canAccessFPEnvironment(LLVMContext &C, Intrinsic::ID IID);
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const CallInst *I) {
     if (const Function *CF = I->getCalledFunction())

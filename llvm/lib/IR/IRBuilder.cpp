@@ -86,6 +86,33 @@ IRBuilderBase::createCallHelper(Function *Callee, ArrayRef<Value *> Ops,
   return CI;
 }
 
+CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
+                                    ArrayRef<Value *> Args,
+                                    ArrayRef<OperandBundleDef> OpBundles,
+                                    const Twine &Name, MDNode *FPMathTag) {
+  bool CallAccessesFPEnv = false;
+  if (IsFPConstrained) {
+    if (const auto *Func = dyn_cast<Function>(Callee)) {
+      if (Intrinsic::ID ID = Func->getIntrinsicID()) {
+        LLVMContext &C = Func->getContext();
+        CallAccessesFPEnv = IntrinsicInst::canAccessFPEnvironment(C, ID);
+      }
+      // A call to a function that has the 'StrictFP' attribute makes the call
+      // site 'StrictFP' also.
+      else if (Func->hasFnAttribute(Attribute::StrictFP)) {
+        CallAccessesFPEnv = true;
+      }
+    }
+  }
+
+  CallInst *CI = CallInst::Create(FTy, Callee, Args, OpBundles);
+  if (IsFPConstrained && CallAccessesFPEnv)
+    setConstrainedFPCallAttr(CI);
+  if (isa<FPMathOperator>(CI))
+    setFPAttrs(CI, FPMathTag, FMF);
+  return Insert(CI, Name);
+}
+
 Value *IRBuilderBase::CreateVScale(Constant *Scaling, const Twine &Name) {
   assert(isa<ConstantInt>(Scaling) && "Expected constant integer");
   if (cast<ConstantInt>(Scaling)->isZero())

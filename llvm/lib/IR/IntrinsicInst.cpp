@@ -66,6 +66,12 @@ bool IntrinsicInst::mayLowerToFunctionCall(Intrinsic::ID IID) {
   }
 }
 
+bool IntrinsicInst::canAccessFPEnvironment(LLVMContext &C, Intrinsic::ID IID) {
+  AttributeList Attrs = Intrinsic::getAttributes(C, IID);
+  MemoryEffects ME = Attrs.getMemoryEffects();
+  return ME.doesAccessInaccessibleMem();
+}
+
 //===----------------------------------------------------------------------===//
 /// DbgVariableIntrinsic - This is the common base class for debug info
 /// intrinsics for variables.
