@@ -13,12 +13,10 @@ Parts:
     Size:            8
     RootSignature:
       Size: 8
-      Version:         1
       AllowInputAssemblerInputLayout: true
   
 #CHECK:    - Name: RTS0
 #CHECK-NEXT: Size: 8
 #CHECK-NEXT: RootSignature:
 #CHECK-NEXT:   Size: 8
-#CHECK-NEXT:   Version: 1
 #CHECK-NEXT:   AllowInputAssemblerInputLayout: true

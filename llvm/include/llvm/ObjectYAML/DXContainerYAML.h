@@ -80,7 +80,6 @@ struct RootSignatureDesc {
 
   uint32_t getEncodedFlags();
   uint32_t Size;
-  uint32_t Version;
   uint32_t NumParameters;
   SmallVector<dxbc::RootParameter> Parameters;
 

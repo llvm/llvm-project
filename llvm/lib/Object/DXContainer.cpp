@@ -252,9 +252,6 @@ Error DirectX::RootSignature::parse() {
   Size = support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
-  Version = support::endian::read<uint32_t, llvm::endianness::little>(Current);
-  Current += sizeof(uint32_t);
-
   Flags = support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 

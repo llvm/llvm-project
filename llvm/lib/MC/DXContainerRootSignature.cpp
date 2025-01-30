@@ -18,6 +18,5 @@ void RootSignatureHeader::write(raw_ostream &OS) {
 
   uint32_t SizeInfo = sizeof(this);
   support::endian::write(OS, SizeInfo, llvm::endianness::little);
-  support::endian::write(OS, Version, llvm::endianness::little);
   support::endian::write(OS, Flags, llvm::endianness::little);
 }

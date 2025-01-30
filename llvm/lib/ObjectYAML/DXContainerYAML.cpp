@@ -32,7 +32,7 @@ DXContainerYAML::ShaderFeatureFlags::ShaderFeatureFlags(uint64_t FlagData) {
 
 DXContainerYAML::RootSignatureDesc::RootSignatureDesc(
     const object::DirectX::RootSignature &Data)
-    : Size(Data.getSize()), Version(Data.getVersion()) {
+    : Size(Data.getSize()) {
   uint32_t Flags = Data.getFlags();
 #define ROOT_ELEMENT_FLAG(Num, Val, Str)                                       \
   Val = (Flags & (uint32_t)dxbc::RootElementFlag::Val) > 0;
@@ -210,7 +210,6 @@ void MappingTraits<DXContainerYAML::Signature>::mapping(
 void MappingTraits<DXContainerYAML::RootSignatureDesc>::mapping(
     IO &IO, DXContainerYAML::RootSignatureDesc &S) {
   IO.mapRequired("Size", S.Size);
-  IO.mapRequired("Version", S.Version);
 #define ROOT_ELEMENT_FLAG(Num, Val, Str) IO.mapOptional(#Val, S.Val, false);
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }

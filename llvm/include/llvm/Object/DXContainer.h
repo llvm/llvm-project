@@ -121,7 +121,6 @@ class RootSignature {
 private:
   StringRef Data;
   uint32_t Size;
-  uint32_t Version;
   uint32_t Flags;
 
 public:
@@ -130,8 +129,6 @@ public:
   Error parse();
 
   uint32_t getSize() const { return Size; }
-
-  uint32_t getVersion() const { return Version; }
 
   uint32_t getFlags() const { return Flags; }
 };
