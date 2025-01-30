@@ -1293,9 +1293,9 @@ void ScheduleDAGMILive::initRegPressure() {
     updatePressureDiffs(LiveUses);
   }
 
-  LLVM_DEBUG(dbgs() << "Top Pressure:\n";
+  LLVM_DEBUG(dbgs() << "Top Pressure: ";
              dumpRegSetPressure(TopRPTracker.getRegSetPressureAtPos(), TRI);
-             dbgs() << "Bottom Pressure:\n";
+             dbgs() << "Bottom Pressure: ";
              dumpRegSetPressure(BotRPTracker.getRegSetPressureAtPos(), TRI););
 
   assert((BotRPTracker.getPos() == RegionEnd ||
@@ -1316,11 +1316,12 @@ void ScheduleDAGMILive::initRegPressure() {
       RegionCriticalPSets.push_back(PressureChange(i));
     }
   }
-  LLVM_DEBUG(dbgs() << "Excess PSets: ";
-             for (const PressureChange &RCPS
-                  : RegionCriticalPSets) dbgs()
-             << TRI->getRegPressureSetName(RCPS.getPSet()) << " ";
-             dbgs() << "\n");
+  if (RegionCriticalPSets.size() > 0)
+    LLVM_DEBUG(dbgs() << "Excess PSets: ";
+               for (const PressureChange &RCPS
+                    : RegionCriticalPSets) dbgs()
+               << TRI->getRegPressureSetName(RCPS.getPSet()) << " ";
+               dbgs() << "\n");
 }
 
 void ScheduleDAGMILive::
@@ -1374,10 +1375,11 @@ void ScheduleDAGMILive::updatePressureDiffs(ArrayRef<VRegMaskOrUnit> LiveUses) {
 
         PressureDiff &PDiff = getPressureDiff(&SU);
         PDiff.addPressureChange(Reg, Decrement, &MRI);
-        LLVM_DEBUG(dbgs() << "  UpdateRegP: SU(" << SU.NodeNum << ") "
-                          << printReg(Reg, TRI) << ':'
-                          << PrintLaneMask(P.LaneMask) << ' ' << *SU.getInstr();
-                   dbgs() << "              to "; PDiff.dump(*TRI););
+        if (llvm::any_of(PDiff, [](const PressureChange &Change) { return Change.isValid(); }))
+          LLVM_DEBUG(dbgs() << "  UpdateRegPressure: SU(" << SU.NodeNum << ") "
+                            << printReg(Reg, TRI) << ':'
+                            << PrintLaneMask(P.LaneMask) << ' ' << *SU.getInstr();
+                     dbgs() << "                     to "; PDiff.dump(*TRI););
       }
     } else {
       assert(P.LaneMask.any());
@@ -1409,9 +1411,10 @@ void ScheduleDAGMILive::updatePressureDiffs(ArrayRef<VRegMaskOrUnit> LiveUses) {
           if (LRQ.valueIn() == VNI) {
             PressureDiff &PDiff = getPressureDiff(SU);
             PDiff.addPressureChange(Reg, true, &MRI);
-            LLVM_DEBUG(dbgs() << "  UpdateRegP: SU(" << SU->NodeNum << ") "
-                              << *SU->getInstr();
-                       dbgs() << "              to "; PDiff.dump(*TRI););
+            if (llvm::any_of(PDiff, [](const PressureChange &Change) { return Change.isValid(); }))
+              LLVM_DEBUG(dbgs() << "  UpdateRegPressure: SU(" << SU->NodeNum << ") "
+                                << *SU->getInstr();
+                         dbgs() << "                     to "; PDiff.dump(*TRI););
           }
         }
       }
@@ -1671,7 +1674,7 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
 
       TopRPTracker.advance(RegOpers);
       assert(TopRPTracker.getPos() == CurrentTop && "out of sync");
-      LLVM_DEBUG(dbgs() << "Top Pressure:\n"; dumpRegSetPressure(
+      LLVM_DEBUG(dbgs() << "Top Pressure: "; dumpRegSetPressure(
                      TopRPTracker.getRegSetPressureAtPos(), TRI););
 
       updateScheduledPressure(SU, TopRPTracker.getPressure().MaxSetPressure);
@@ -1709,7 +1712,7 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
       SmallVector<VRegMaskOrUnit, 8> LiveUses;
       BotRPTracker.recede(RegOpers, &LiveUses);
       assert(BotRPTracker.getPos() == CurrentBottom && "out of sync");
-      LLVM_DEBUG(dbgs() << "Bottom Pressure:\n"; dumpRegSetPressure(
+      LLVM_DEBUG(dbgs() << "Bottom Pressure: "; dumpRegSetPressure(
                      BotRPTracker.getRegSetPressureAtPos(), TRI););
 
       updateScheduledPressure(SU, BotRPTracker.getPressure().MaxSetPressure);
