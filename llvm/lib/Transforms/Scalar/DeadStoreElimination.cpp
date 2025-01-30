@@ -579,7 +579,6 @@ static void trimDereferencableAttrs(AnyMemIntrinsic *Intrinsic, unsigned Arg,
     Intrinsic->removeParamAttr(Arg, Attribute::DereferenceableOrNull);
 }
 
-
 static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
                          uint64_t &DeadSize, int64_t KillingStart,
                          uint64_t KillingSize, bool IsOverwriteEnd) {
