@@ -1285,8 +1285,12 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
         if (MMO.getRanges()) {
           ConstantInt *i =
               mdconst::extract<ConstantInt>(MMO.getRanges()->getOperand(0));
-          if (i->getIntegerType()->getBitWidth() !=
-              ValTy.getScalarType().getSizeInBits()) {
+          const LLT RangeTy = LLT::scalar(i->getIntegerType()->getBitWidth());
+          const LLT MemTy = MMO.getMemoryType();
+          if (MemTy.getScalarType() != RangeTy ||
+              ValTy.isScalar() != MemTy.isScalar() ||
+              (ValTy.isVector() &&
+               ValTy.getNumElements() != MemTy.getNumElements())) {
             report("range is incompatible with the result type", MI);
           }
         }
