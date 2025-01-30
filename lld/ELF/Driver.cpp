@@ -49,11 +49,15 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Object/ELFTypes.h"
 #include "llvm/Object/IRObjectFile.h"
+#include "llvm/Option/ArgList.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -68,6 +72,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
+#include <memory>
 #include <tuple>
 #include <utility>
 
@@ -402,6 +407,8 @@ static void checkOptions(Ctx &ctx) {
       ErrAlways(ctx) << "-z pauth-report only supported on AArch64";
     if (ctx.arg.zGcsReport != GcsReportPolicy::None)
       ErrAlways(ctx) << "-z gcs-report only supported on AArch64";
+    if(ctx.arg.zGcsReportDynamic != GcsReportPolicy::None)
+      ErrAlways(ctx) << "-z gcs-report-dynamic only supported on AArch64";
     if (ctx.arg.zGcs != GcsPolicy::Implicit)
       ErrAlways(ctx) << "-z gcs only supported on AArch64";
   }
@@ -590,6 +597,36 @@ static GcsReportPolicy getZGcsReport(Ctx &ctx, opt::InputArgList &args) {
       else
         ErrAlways(ctx) << "unknown -z gcs-report= value: " << kv.second;
     }
+  }
+
+  return ret;
+}
+
+static GcsReportPolicy getZGcsReportDynamic(Ctx &ctx, opt::InputArgList &args) {
+  GcsReportPolicy ret = GcsReportPolicy::None;
+  for (auto *arg : args.filtered(OPT_z)) {
+    std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
+    if (kv.first == "gcs-report-dynamic") {
+      arg->claim();
+      if (kv.second == "none")
+        ret = GcsReportPolicy::None;
+      else if (kv.second == "warning")
+        ret = GcsReportPolicy::Warning;
+      else if (kv.second == "error")
+        ret = GcsReportPolicy::Error;
+      else
+        ErrAlways(ctx) << "unknown -z gcs-report-dynamic= value: " << kv.second;
+      // once the gcs-report-dynamic option has been processed, we want to break
+      // from the loop to ensure we do not overwrite the return value if the
+      // user has also passed a value for the gcs-report option.
+      break;
+    }
+    // If the user has not defined a value for gcs-report-dynamic, but has for
+    // gcs-report, we want to inherit that value for gcs-report-dynamic. This is
+    // capped at a warning to ensure a users module can still build, while providing
+    // information relating to if a dynamic object supports GCS.
+    if (kv.first == "gcs-report" && (kv.second == "warning" || kv.second == "error"))
+      ret = GcsReportPolicy::Warning;
   }
 
   return ret;
@@ -1575,6 +1612,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zForceIbt = hasZOption(args, "force-ibt");
   ctx.arg.zGcs = getZGcs(ctx, args);
   ctx.arg.zGcsReport = getZGcsReport(ctx, args);
+  ctx.arg.zGcsReportDynamic = getZGcsReportDynamic(ctx, args);
   ctx.arg.zGlobal = hasZOption(args, "global");
   ctx.arg.zGnustack = getZGnuStack(args);
   ctx.arg.zHazardplt = hasZOption(args, "hazardplt");
@@ -2941,6 +2979,16 @@ static void readSecurityNotes(Ctx &ctx) {
     ctx.arg.andFeatures |= GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
   else if (ctx.arg.zGcs == GcsPolicy::Never)
     ctx.arg.andFeatures &= ~GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+
+  // If we are utilising GCS at any stage, the sharedFiles should be checked to ensure they also support this feature.
+  // The gcs-report-dynamic option is used to indicate if the user wants information relating to this, and will be set
+  // depending on the user's input, or warning if gcs-report is set to either `warning` or `error`.
+  if(ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
+    for (SharedFile *f : ctx.sharedFiles)
+      reportGcsPolicy(ctx.arg.zGcsReportDynamic, f->andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_GCS) << f
+        << ": GCS is required by -z gcs, but this shared library lacks the necessary property note. The "
+        << "dynamic loader might not enable GCS or refuse to load the program unless all shared library "
+        << "dependancies have the GCS marking.";
 }
 
 static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {

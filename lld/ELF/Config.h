@@ -136,7 +136,7 @@ enum LtoKind : uint8_t {UnifiedThin, UnifiedRegular, Default};
 // For -z gcs=
 enum class GcsPolicy { Implicit, Never, Always };
 
-// For -z gcs-report=
+// For -z gcs-report= and -zgcs-report-dynamic
 enum class GcsReportPolicy { None, Warning, Error };
 
 struct SymbolVersion {
@@ -397,6 +397,7 @@ struct Config {
   Target2Policy target2;
   GcsPolicy zGcs;
   GcsReportPolicy zGcsReport;
+  GcsReportPolicy zGcsReportDynamic;
   bool power10Stubs;
   ARMVFPArgKind armVFPArgs = ARMVFPArgKind::Default;
   BuildIdKind buildId = BuildIdKind::None;
