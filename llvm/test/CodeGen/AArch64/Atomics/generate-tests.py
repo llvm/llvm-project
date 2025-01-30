@@ -2,6 +2,7 @@
 import textwrap
 import enum
 import os
+import re
 
 """
 Generate the tests in llvm/test/CodeGen/AArch64/Atomics. Run from top level llvm-project.
@@ -13,20 +14,31 @@ TRIPLES = [
 ]
 
 
-# Type name size
-class Type(enum.Enum):
-    # Value is the size in bytes
-    i8 = 1
-    i16 = 2
-    i32 = 4
-    i64 = 8
-    i128 = 16
+class ByteSizes:
+    def __init__(self, pairs):
+        if not isinstance(pairs, list):
+            raise ValueError("Must init with a list of key-value pairs")
 
-    def align(self, aligned: bool) -> int:
-        return self.value if aligned else 1
+        self._data = pairs[:]  # Store pairs as a list of tuples
 
-    def __str__(self) -> str:
-        return self.name
+    def __iter__(self):
+        return iter(self._data)  # Iterate over the list of key-value pairs
+
+
+# fmt: off
+Type = ByteSizes([
+   ("i8",   1),
+   ("i16",  2),
+   ("i32",  4),
+   ("i64",  8),
+   ("i128", 16)])
+
+FPType = ByteSizes([
+   ("half",   2),
+   ("bfloat", 2),
+   ("float",  4),
+   ("double", 8)])
+# fmt: on
 
 
 # Is this an aligned or unaligned access?
@@ -111,6 +123,7 @@ class Feature(enum.Flag):
     v8_1a = enum.auto()  # -mattr=+v8.1a, mandatory FEAT_LOR, FEAT_LSE
     rcpc = enum.auto()  # FEAT_LRCPC
     lse2 = enum.auto()  # FEAT_LSE2
+    lsfe = enum.auto()  # FEAT_LSFE
     outline_atomics = enum.auto()  # -moutline-atomics
     rcpc3 = enum.auto()  # FEAT_LSE2 + FEAT_LRCPC3
     lse2_lse128 = enum.auto()  # FEAT_LSE2 + FEAT_LSE128
@@ -125,6 +138,8 @@ class Feature(enum.Flag):
             return "+lse2,+rcpc3"
         if self == Feature.lse2_lse128:
             return "+lse2,+lse128"
+        if self == Feature.lsfe:
+            return "+lsfe"
         return "+" + self.name
 
 
@@ -142,11 +157,23 @@ ATOMICRMW_OPS = [
     "umin",
 ]
 
+FP_ATOMICRMW_OPS = [
+    "fadd",
+    "fsub",
+    "fmax",
+    "fmin",
+]
 
-def all_atomicrmw(f):
-    for op in ATOMICRMW_OPS:
+
+def align(val, aligned: bool) -> int:
+    return val if aligned else 1
+
+
+def all_atomicrmw(f, datatype, atomicrmw_ops):
+    for op in atomicrmw_ops:
         for aligned in Aligned:
-            for ty in Type:
+            for ty, val in datatype:
+                alignval = align(val, aligned)
                 for ordering in ATOMICRMW_ORDERS:
                     name = f"atomicrmw_{op}_{ty}_{aligned}_{ordering}"
                     instr = "atomicrmw"
@@ -154,7 +181,7 @@ def all_atomicrmw(f):
                         textwrap.dedent(
                             f"""
                         define dso_local {ty} @{name}(ptr %ptr, {ty} %value) {{
-                            %r = {instr} {op} ptr %ptr, {ty} %value {ordering}, align {ty.align(aligned)}
+                            %r = {instr} {op} ptr %ptr, {ty} %value {ordering}, align {alignval}
                             ret {ty} %r
                         }}
                     """
@@ -164,7 +191,8 @@ def all_atomicrmw(f):
 
 def all_load(f):
     for aligned in Aligned:
-        for ty in Type:
+        for ty, val in Type:
+            alignval = align(val, aligned)
             for ordering in ATOMIC_LOAD_ORDERS:
                 for const in [False, True]:
                     name = f"load_atomic_{ty}_{aligned}_{ordering}"
@@ -176,7 +204,7 @@ def all_load(f):
                         textwrap.dedent(
                             f"""
                         define dso_local {ty} @{name}({arg}) {{
-                            %r = {instr} {ty}, ptr %ptr {ordering}, align {ty.align(aligned)}
+                            %r = {instr} {ty}, ptr %ptr {ordering}, align {alignval}
                             ret {ty} %r
                         }}
                     """
@@ -186,7 +214,8 @@ def all_load(f):
 
 def all_store(f):
     for aligned in Aligned:
-        for ty in Type:
+        for ty, val in Type:
+            alignval = align(val, aligned)
             for ordering in ATOMIC_STORE_ORDERS:  # FIXME stores
                 name = f"store_atomic_{ty}_{aligned}_{ordering}"
                 instr = "store atomic"
@@ -194,7 +223,7 @@ def all_store(f):
                     textwrap.dedent(
                         f"""
                     define dso_local void @{name}({ty} %value, ptr %ptr) {{
-                        {instr} {ty} %value, ptr %ptr {ordering}, align {ty.align(aligned)}
+                        {instr} {ty} %value, ptr %ptr {ordering}, align {alignval}
                         ret void
                     }}
                 """
@@ -204,7 +233,8 @@ def all_store(f):
 
 def all_cmpxchg(f):
     for aligned in Aligned:
-        for ty in Type:
+        for ty, val in Type:
+            alignval = align(val, aligned)
             for success_ordering in CMPXCHG_SUCCESS_ORDERS:
                 for failure_ordering in CMPXCHG_FAILURE_ORDERS:
                     for weak in [False, True]:
@@ -217,7 +247,7 @@ def all_cmpxchg(f):
                             textwrap.dedent(
                                 f"""
                             define dso_local {ty} @{name}({ty} %expected, {ty} %new, ptr %ptr) {{
-                                %pair = {instr} ptr %ptr, {ty} %expected, {ty} %new {success_ordering} {failure_ordering}, align {ty.align(aligned)}
+                                %pair = {instr} ptr %ptr, {ty} %expected, {ty} %new {success_ordering} {failure_ordering}, align {alignval}
                                 %r = extractvalue {{ {ty}, i1 }} %pair, 0
                                 ret {ty} %r
                             }}
@@ -241,16 +271,33 @@ def all_fence(f):
         )
 
 
-def header(f, triple, features, filter_args: str):
+def header(f, triple, features, filter_args: str, no_opt=False):
     f.write(
         "; NOTE: Assertions have been autogenerated by "
         "utils/update_llc_test_checks.py UTC_ARGS: "
     )
     f.write(filter_args)
     f.write("\n")
-    f.write(f"; The base test file was generated by {__file__}\n")
+
+    # __file__ changed to return absolute path in Python 3.9. Print only
+    # back to llvm-project top-level, to avoid unnecessary diffs and
+    # revealing directory structure of people running this script
+    top = "../../../../../.."
+    fp = os.path.relpath(__file__, os.path.abspath(os.path.join(__file__, top)))
+    f.write(f"; The base test file was generated by ./{fp}\n")
+
     for feat in features:
-        for OptFlag in ["-O0", "-O1"]:
+        Opts = ["-O0", "-O1"]
+        if no_opt:  # For some features, generate code without -mattr=+feat
+            Opts.append("")
+        for OptFlag in Opts:
+            if OptFlag == "":
+                CheckFlag = "-no" + feat.mattr.replace("+", "-")
+                CheckFlag = re.sub("[,.]", "", CheckFlag)
+                mattr_feat = f""
+            else:
+                CheckFlag = "," + OptFlag
+                mattr_feat = f"-mattr={feat.mattr}"
             f.write(
                 " ".join(
                     [
@@ -262,12 +309,12 @@ def header(f, triple, features, filter_args: str):
                         "-",
                         "-verify-machineinstrs",
                         f"-mtriple={triple}",
-                        f"-mattr={feat.mattr}",
+                        mattr_feat,
                         OptFlag,
                         "|",
                         "FileCheck",
                         "%s",
-                        f"--check-prefixes=CHECK,{OptFlag}\n",
+                        f"--check-prefixes=CHECK{CheckFlag}\n",
                     ]
                 )
             )
@@ -285,8 +332,16 @@ def write_lit_tests():
         for feat in Feature:
             with open(f"{triple}-atomicrmw-{feat.name}.ll", "w") as f:
                 filter_args = r'--filter-out "\b(sp)\b" --filter "^\s*(ld[^r]|st[^r]|swp|cas|bl|add|and|eor|orn|orr|sub|mvn|sxt|cmp|ccmp|csel|dmb)"'
-                header(f, triple, [feat], filter_args)
-                all_atomicrmw(f)
+                if feat != Feature.lsfe:
+                    header(f, triple, [feat], filter_args)
+                    all_atomicrmw(f, Type, ATOMICRMW_OPS)
+                else:
+                    header(f, triple, [feat], filter_args, True)
+                    all_atomicrmw(f, FPType, FP_ATOMICRMW_OPS)
+
+            # Floating point atomics only supported for atomicrmw currently
+            if feat == Feature.lsfe:
+                continue
 
             with open(f"{triple}-cmpxchg-{feat.name}.ll", "w") as f:
                 filter_args = r'--filter-out "\b(sp)\b" --filter "^\s*(ld[^r]|st[^r]|swp|cas|bl|add|and|eor|orn|orr|sub|mvn|sxt|cmp|ccmp|csel|dmb)"'
