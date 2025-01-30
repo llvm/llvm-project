@@ -14,7 +14,6 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 
 using namespace mlir;
