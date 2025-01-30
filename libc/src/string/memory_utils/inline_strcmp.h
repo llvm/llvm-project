@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_STRCMP_H
 
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 #include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
@@ -17,6 +18,8 @@ namespace LIBC_NAMESPACE_DECL {
 template <typename Comp>
 LIBC_INLINE constexpr int inline_strcmp(const char *left, const char *right,
                                         Comp &&comp) {
+  LIBC_CRASH_ON_NULLPTR(left);
+  LIBC_CRASH_ON_NULLPTR(right);
   // TODO: Look at benefits for comparing words at a time.
   for (; *left && !comp(*left, *right); ++left, ++right)
     ;
@@ -27,6 +30,8 @@ LIBC_INLINE constexpr int inline_strcmp(const char *left, const char *right,
 template <typename Comp>
 LIBC_INLINE constexpr int inline_strncmp(const char *left, const char *right,
                                          size_t n, Comp &&comp) {
+  LIBC_CRASH_ON_NULLPTR(left);
+  LIBC_CRASH_ON_NULLPTR(right);
   if (n == 0)
     return 0;
 
