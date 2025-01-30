@@ -951,6 +951,9 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
       if (FeatureOrErr->FuncEntryCount)
         PGOAnalysis.FuncEntryCount = Data.getULEB128(Cur);
 
+      if (FeatureOrErr->DynamicInstCount)
+        PGOAnalysis.DynamicInstCount = Data.getULEB128(Cur);
+
       if (FeatureOrErr->hasPGOAnalysisBBData()) {
         auto &PGOBBEntries = PGOAnalysis.PGOBBEntries.emplace();
         for (uint64_t BlockIndex = 0; Cur && BlockIndex < TotalNumBlocks;

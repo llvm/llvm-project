@@ -7859,6 +7859,9 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
         if (PAM.FeatEnable.FuncEntryCount)
           W.printNumber("FuncEntryCount", PAM.FuncEntryCount);
 
+        if (PAM.FeatEnable.DynamicInstCount)
+          W.printNumber("DynamicInstCount", PAM.DynamicInstCount);
+
         if (PAM.FeatEnable.hasPGOAnalysisBBData()) {
           ListScope L(W, "PGO BB entries");
           for (const PGOAnalysisMap::PGOBBEntry &PBBE : PAM.BBEntries) {

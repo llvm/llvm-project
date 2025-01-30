@@ -887,6 +887,12 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
               ? readULEB128As<uint64_t>(Data, Cur, ULEBSizeErr)
               : 0;
 
+      // Dynamic instruction count
+      uint64_t DynInstCount =
+          FeatEnable.DynamicInstCount
+              ? readULEB128As<uint64_t>(Data, Cur, ULEBSizeErr)
+              : 0;
+
       std::vector<PGOAnalysisMap::PGOBBEntry> PGOBBEntries;
       for (uint32_t BlockIndex = 0;
            FeatEnable.hasPGOAnalysisBBData() && !MetadataDecodeErr &&
@@ -915,8 +921,8 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
       }
 
       if (PGOAnalyses)
-        PGOAnalyses->push_back(
-            {FuncEntryCount, std::move(PGOBBEntries), FeatEnable});
+        PGOAnalyses->push_back({FuncEntryCount, DynInstCount,
+                                std::move(PGOBBEntries), FeatEnable});
     }
   }
   // Either Cur is in the error state, or we have an error in ULEBSizeErr or
