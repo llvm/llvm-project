@@ -77,4 +77,4 @@ public:
 
 } // end namespace Fortran::common
 
-#endif /* FORTRAN_SUPPORT_LANGOPTIONS_H_ */
+#endif // FORTRAN_SUPPORT_LANGOPTIONS_H_

@@ -41,4 +41,4 @@ private:
 
 } // namespace Fortran::common
 
-#endif /* FORTRAN_SUPPORT_MATHOPTIONSBASE_H_ */
+#endif // FORTRAN_SUPPORT_MATHOPTIONSBASE_H_
