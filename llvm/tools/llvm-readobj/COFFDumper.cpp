@@ -134,7 +134,7 @@ private:
   void printCodeViewTypeSection(StringRef SectionName, const SectionRef &Section);
   StringRef getFileNameForFileOffset(uint32_t FileOffset);
   void printFileNameForOffset(StringRef Label, uint32_t FileOffset);
-  void printTypeIndex(StringRef FieldName, TypeIndex TI) {
+  void printTypeIndex(StringRef FieldName, const TypeIndex &TI) {
     // Forward to CVTypeDumper for simplicity.
     codeview::printTypeIndex(Writer, FieldName, TI, Types);
   }

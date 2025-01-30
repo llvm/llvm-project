@@ -1201,7 +1201,7 @@ static void
 dumpFullTypeStream(LinePrinter &Printer, LazyRandomTypeCollection &Types,
                    TypeReferenceTracker *RefTracker, uint32_t NumTypeRecords,
                    uint32_t NumHashBuckets,
-                   FixedStreamArray<support::ulittle32_t> HashValues,
+                   const FixedStreamArray<support::ulittle32_t> &HashValues,
                    TpiStream *Stream, bool Bytes, bool Extras) {
 
   Printer.formatLine("Showing {0:N} records", NumTypeRecords);

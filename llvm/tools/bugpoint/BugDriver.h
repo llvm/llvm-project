@@ -183,7 +183,7 @@ public:
   /// MayModifySemantics argument is true, then the cleanups is allowed to
   /// modify how the code behaves.
   ///
-  std::unique_ptr<Module> performFinalCleanups(std::unique_ptr<Module> M,
+  std::unique_ptr<Module> performFinalCleanups(const std::unique_ptr<Module> &M,
                                                bool MayModifySemantics = false);
 
   /// Given a module, extract up to one loop from it into a new function. This
