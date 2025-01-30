@@ -474,7 +474,7 @@ TypeIndex CodeViewDebug::getMemberFunctionType(const DISubprogram *SP,
 }
 
 TypeIndex CodeViewDebug::recordTypeIndexForDINode(const DINode *Node,
-                                                  TypeIndex TI,
+                                                  const TypeIndex &TI,
                                                   const DIType *ClassTy) {
   auto InsertResult = TypeIndices.insert({{Node, ClassTy}, TI});
   (void)InsertResult;
@@ -2208,7 +2208,7 @@ static ClassOptions getCommonClassOptions(const DICompositeType *Ty) {
   return CO;
 }
 
-void CodeViewDebug::addUDTSrcLine(const DIType *Ty, TypeIndex TI) {
+void CodeViewDebug::addUDTSrcLine(const DIType *Ty, const TypeIndex &TI) {
   switch (Ty->getTag()) {
   case dwarf::DW_TAG_class_type:
   case dwarf::DW_TAG_structure_type:

@@ -105,7 +105,7 @@ private:
   }
 
   // Returns a profile parsing error for the current line.
-  Error createProfileParseError(Twine Message) const {
+  Error createProfileParseError(const Twine &Message) const {
     return make_error<StringError>(
         Twine("invalid profile " + MBuf->getBufferIdentifier() + " at line " +
               Twine(LineIt.line_number()) + ": " + Message),

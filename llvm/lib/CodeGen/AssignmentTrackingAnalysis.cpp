@@ -111,7 +111,7 @@ public:
   unsigned getNumVariables() const { return Variables.size(); }
 
   /// Find or insert \p V and return the ID.
-  VariableID insertVariable(DebugVariable V) {
+  VariableID insertVariable(const DebugVariable &V) {
     return static_cast<VariableID>(Variables.insert(V));
   }
 
@@ -135,7 +135,7 @@ public:
   }
 
   /// Add a def for a variable that is valid for its lifetime.
-  void addSingleLocVar(DebugVariable Var, DIExpression *Expr, DebugLoc DL,
+  void addSingleLocVar(const DebugVariable &Var, DIExpression *Expr, DebugLoc DL,
                        RawLocationWrapper R) {
     VarLocInfo VarLoc;
     VarLoc.VariableID = insertVariable(Var);
@@ -146,7 +146,7 @@ public:
   }
 
   /// Add a def to the wedge of defs just before /p Before.
-  void addVarLoc(VarLocInsertPt Before, DebugVariable Var, DIExpression *Expr,
+  void addVarLoc(VarLocInsertPt Before, const DebugVariable &Var, DIExpression *Expr,
                  DebugLoc DL, RawLocationWrapper R) {
     VarLocInfo VarLoc;
     VarLoc.VariableID = insertVariable(Var);
