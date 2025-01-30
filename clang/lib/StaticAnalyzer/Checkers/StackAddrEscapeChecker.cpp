@@ -261,7 +261,7 @@ public:
   bool VisitSymbol(SymbolRef sym) override { return true; }
 
   bool VisitMemRegion(const MemRegion *MR) override {
-    llvm::dbgs() << "Visiting region: " << MR << '\n';
+    // llvm::dbgs() << "Visiting region: " << MR << '\n';
 
     const StackSpaceRegion *SSR = dyn_cast<StackSpaceRegion>(MR->getMemorySpace());
     if (SSR && SSR->getStackFrame() == StackFrameContext)
@@ -445,38 +445,39 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
     /// Look for stack variables referring to popped stack variables.
     /// Returns true only if it found some dangling stack variables
     /// referred by an other stack variable from different stack frame.
-    bool checkForDanglingStackVariable(const MemRegion *Referrer,
-                                       const MemRegion *Referred) {
-      const auto *ReferrerMemSpace = getStackOrGlobalSpaceRegion(Referrer);
-      const auto *ReferredMemSpace = 
-          Referred->getMemorySpace()->getAs<StackSpaceRegion>();
+    /// Here, ReferrerMS is either a StackSpaceRegion or GlobalSpaceRegion,
+    /// and Referred has StackSpaceRegion that is the same as PoppedFrame.
+    bool isDanglingStackVariable(const MemRegion *Referrer, const MemSpaceRegion *ReferrerMemSpace,
+                                 const MemRegion *Referred) {
+      // Case 1: The referrer is a global and Referred is in the current stack context
+      if (isa<GlobalsSpaceRegion>(ReferrerMemSpace))
+        return true;
 
-      if (!ReferrerMemSpace || !ReferredMemSpace)
+      const auto *ReferredMemSpace = Referred->getMemorySpace()->getAs<StackSpaceRegion>();
+      if (!ReferredMemSpace)
         return false;
 
-      const auto *ReferrerStackSpace =
-          ReferrerMemSpace->getAs<StackSpaceRegion>();
-
+      const auto *ReferrerStackSpace = ReferrerMemSpace->getAs<StackSpaceRegion>();
       if (!ReferrerStackSpace)
         return false;
 
-      if (const auto *ReferredFrame = ReferredMemSpace->getStackFrame();
-          ReferredFrame != PoppedFrame) {
-        return false;
-      }
-
+      // Case 2: The referrer stack space is a parent of the referred stack space, e.g., 
+      // in case of leaking a local in a lambda to the outer scope
       if (ReferrerStackSpace->getStackFrame()->isParentOf(PoppedFrame)) {
-        V.emplace_back(Referrer, Referred);
         return true;
       }
+
+      // Case 3: The referrer is a memregion of a stack argument, e.g., an out
+      // argument, this is a top-level function, and referred is this top level
+      // stack space
       if (isa<StackArgumentsSpaceRegion>(ReferrerMemSpace) &&
           // Not a simple ptr (int*) but something deeper, e.g. int**
           isa<SymbolicRegion>(Referrer->getBaseRegion()) &&
           ReferrerStackSpace->getStackFrame() == PoppedFrame && TopFrame) {
         // Output parameter of a top-level function
-        V.emplace_back(Referrer, Referred);
         return true;
       }
+
       return false;
     }
 
@@ -500,36 +501,23 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
     CallBack(CheckerContext &CC, bool TopFrame)
         : Ctx(CC), PoppedFrame(CC.getStackFrame()), TopFrame(TopFrame) {}
 
-    bool HandleBinding(StoreManager &SMgr, Store S, const MemRegion *Region,
+    bool HandleBinding(StoreManager &SMgr, Store S, const MemRegion *Referrer,
                        SVal Val) override {
-      recordInInvalidatedRegions(Region);
+      recordInInvalidatedRegions(Referrer);
 
-      const MemRegion *ReferrerMR = getStackOrGlobalSpaceRegion(Region);
-
-      if (!isa_and_nonnull<GlobalsSpaceRegion, StackArgumentsSpaceRegion>(ReferrerMR))
+      const MemSpaceRegion *ReferrerMS = getStackOrGlobalSpaceRegion(Referrer);
+      if (!ReferrerMS)
         return true;
 
-      SmallVector<const MemRegion *> EscapingStackAddrs;
-      FindEscapingStackRegions(Ctx, EscapingStackAddrs, Val);
+      SmallVector<const MemRegion *> PotentialEscapingAddrs;
+      FindEscapingStackRegions(Ctx, PotentialEscapingAddrs, Val);
 
-      for (const MemRegion *Escapee : EscapingStackAddrs) {
-        V.emplace_back(Region, Escapee);
+      for (const MemRegion *Escapee : PotentialEscapingAddrs) {
+        if (isDanglingStackVariable(Referrer, ReferrerMS, Escapee))
+          V.emplace_back(Referrer, Escapee);
       }
 
       return true;
-      // const MemRegion *VR = Val.getAsRegion();
-      // if (!VR)
-      //   return true;
-
-      // if (checkForDanglingStackVariable(Region, VR))
-      //   return true;
-
-      // // Check the globals for the same.
-      // if (!isa_and_nonnull<GlobalsSpaceRegion>())
-      //   return true;
-      // if (VR && VR->hasStackStorage() && !isNotInCurrentFrame(VR, Ctx))
-      //   V.emplace_back(Region, VR);
-      // return true;
     }
   };
 
