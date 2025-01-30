@@ -3482,7 +3482,7 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
 #include "clang/Basic/OpenCLExtensionTypes.def"
 #define SVE_TYPE(Name, Id, SingletonId) \
   case Id: \
-    return Name;
+    return #Name;
 #include "clang/Basic/AArch64SVEACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
   case Id: \
