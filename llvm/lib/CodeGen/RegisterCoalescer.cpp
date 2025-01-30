@@ -384,13 +384,10 @@ public:
                     const MachineLoopInfo *Loops)
       : LIS(LIS), SI(SI), Loops(Loops) {}
 
-  void releaseMemory();
   bool run(MachineFunction &MF);
 };
 
 class RegisterCoalescerLegacy : public MachineFunctionPass {
-  RegisterCoalescer Impl;
-
 public:
   static char ID; ///< Class identification, replacement for typeinfo
 
@@ -404,8 +401,6 @@ public:
     return MachineFunctionProperties().set(
         MachineFunctionProperties::Property::IsSSA);
   }
-
-  void releaseMemory() override { Impl.releaseMemory(); }
 
   /// This is the pass entry point.
   bool runOnMachineFunction(MachineFunction &) override;
@@ -4246,14 +4241,6 @@ void RegisterCoalescer::joinAllIntervals() {
   lateLiveIntervalUpdate();
 }
 
-void RegisterCoalescer::releaseMemory() {
-  ErasedInstrs.clear();
-  WorkList.clear();
-  DeadDefs.clear();
-  InflateRegs.clear();
-  LargeLIVisitCounter.clear();
-}
-
 PreservedAnalyses
 RegisterCoalescerPass::run(MachineFunction &MF,
                            MachineFunctionAnalysisManager &MFAM) {
@@ -4276,7 +4263,7 @@ bool RegisterCoalescerLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto *Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   auto *SIWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>();
   SlotIndexes *SI = SIWrapper ? &SIWrapper->getSI() : nullptr;
-  Impl = RegisterCoalescer(LIS, SI, Loops);
+  RegisterCoalescer Impl(LIS, SI, Loops);
   return Impl.run(MF);
 }
 
