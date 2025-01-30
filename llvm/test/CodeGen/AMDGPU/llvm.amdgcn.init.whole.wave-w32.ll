@@ -26,7 +26,6 @@ define amdgpu_cs_chain void @basic(<3 x i32> inreg %sgpr, ptr inreg %callee, i32
 ; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GISEL12-NEXT:    v_add_nc_u32_e32 v11, 32, v12
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s5
-; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    s_setpc_b64 s[6:7]
 ;
 ; DAGISEL12-LABEL: basic:
@@ -50,7 +49,6 @@ define amdgpu_cs_chain void @basic(<3 x i32> inreg %sgpr, ptr inreg %callee, i32
 ; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; DAGISEL12-NEXT:    v_add_nc_u32_e32 v11, 32, v12
 ; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s5
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL12-NEXT:    s_setpc_b64 s[6:7]
 ;
 ; GISEL10-LABEL: basic:
@@ -123,8 +121,9 @@ define amdgpu_cs_chain void @wwm_in_shader(<3 x i32> inreg %sgpr, ptr inreg %cal
 ; GISEL12-NEXT:    s_or_saveexec_b32 s4, -1
 ; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    v_cndmask_b32_e64 v0, 0x47, v10, s4
-; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GISEL12-NEXT:    v_cmp_ne_u32_e64 s8, 0, v0
+; GISEL12-NEXT:    s_wait_alu 0xf1ff
 ; GISEL12-NEXT:    v_mov_b32_e32 v0, s8
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s4
 ; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -132,7 +131,6 @@ define amdgpu_cs_chain void @wwm_in_shader(<3 x i32> inreg %sgpr, ptr inreg %cal
 ; GISEL12-NEXT:  ; %bb.2: ; %tail
 ; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s5
-; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    s_setpc_b64 s[6:7]
 ;
 ; DAGISEL12-LABEL: wwm_in_shader:
@@ -159,7 +157,6 @@ define amdgpu_cs_chain void @wwm_in_shader(<3 x i32> inreg %sgpr, ptr inreg %cal
 ; DAGISEL12-NEXT:  ; %bb.2: ; %tail
 ; DAGISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s5
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL12-NEXT:    s_setpc_b64 s[6:7]
 ;
 ; GISEL10-LABEL: wwm_in_shader:
@@ -244,8 +241,9 @@ define amdgpu_cs_chain void @phi_whole_struct(<3 x i32> inreg %sgpr, ptr inreg %
 ; GISEL12-NEXT:    s_or_saveexec_b32 s4, -1
 ; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    v_cndmask_b32_e64 v0, 0x47, v12, s4
-; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GISEL12-NEXT:    v_cmp_ne_u32_e64 s8, 0, v0
+; GISEL12-NEXT:    s_wait_alu 0xf1ff
 ; GISEL12-NEXT:    v_mov_b32_e32 v0, s8
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s4
 ; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -253,7 +251,6 @@ define amdgpu_cs_chain void @phi_whole_struct(<3 x i32> inreg %sgpr, ptr inreg %
 ; GISEL12-NEXT:  ; %bb.2: ; %tail
 ; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s5
-; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    s_setpc_b64 s[6:7]
 ;
 ; DAGISEL12-LABEL: phi_whole_struct:
@@ -279,7 +276,6 @@ define amdgpu_cs_chain void @phi_whole_struct(<3 x i32> inreg %sgpr, ptr inreg %
 ; DAGISEL12-NEXT:  ; %bb.2: ; %tail
 ; DAGISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s5
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL12-NEXT:    s_setpc_b64 s[6:7]
 ;
 ; GISEL10-LABEL: phi_whole_struct:
@@ -367,8 +363,9 @@ define amdgpu_cs_chain void @control_flow(<3 x i32> inreg %sgpr, ptr inreg %call
 ; GISEL12-NEXT:    s_or_saveexec_b32 s8, -1
 ; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    v_cndmask_b32_e64 v0, 0x47, v1, s8
-; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GISEL12-NEXT:    v_cmp_ne_u32_e64 s9, 0, v0
+; GISEL12-NEXT:    s_wait_alu 0xf1ff
 ; GISEL12-NEXT:    v_mov_b32_e32 v0, s9
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s8
 ; GISEL12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v13, v1
@@ -406,7 +403,6 @@ define amdgpu_cs_chain void @control_flow(<3 x i32> inreg %sgpr, ptr inreg %call
 ; GISEL12-NEXT:  ; %bb.8: ; %tail.end
 ; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s5
-; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    s_setpc_b64 s[6:7]
 ;
 ; DAGISEL12-LABEL: control_flow:
@@ -465,7 +461,6 @@ define amdgpu_cs_chain void @control_flow(<3 x i32> inreg %sgpr, ptr inreg %call
 ; DAGISEL12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s5
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL12-NEXT:    s_setpc_b64 s[6:7]
 ;
 ; GISEL10-LABEL: control_flow:
@@ -619,8 +614,9 @@ define amdgpu_cs_chain void @use_v0_7(<3 x i32> inreg %sgpr, ptr inreg %callee, 
 ; GISEL12-NEXT:    s_or_saveexec_b32 s4, -1
 ; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    v_cndmask_b32_e64 v13, 0x47, v12, s4
-; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GISEL12-NEXT:    v_cmp_ne_u32_e64 s8, 0, v13
+; GISEL12-NEXT:    s_wait_alu 0xf1ff
 ; GISEL12-NEXT:    v_mov_b32_e32 v13, s8
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s4
 ; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -632,7 +628,6 @@ define amdgpu_cs_chain void @use_v0_7(<3 x i32> inreg %sgpr, ptr inreg %callee, 
 ; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s5
-; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    s_setpc_b64 s[6:7]
 ;
 ; DAGISEL12-LABEL: use_v0_7:
@@ -663,7 +658,6 @@ define amdgpu_cs_chain void @use_v0_7(<3 x i32> inreg %sgpr, ptr inreg %callee, 
 ; DAGISEL12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s5
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL12-NEXT:    s_setpc_b64 s[6:7]
 ;
 ; GISEL10-LABEL: use_v0_7:
@@ -786,7 +780,6 @@ define amdgpu_cs_chain void @wwm_write_to_arg_reg(<3 x i32> inreg %sgpr, ptr inr
 ; GISEL12-NEXT:    v_dual_mov_b32 v12, v36 :: v_dual_mov_b32 v13, v37
 ; GISEL12-NEXT:    v_dual_mov_b32 v14, v38 :: v_dual_mov_b32 v15, v39
 ; GISEL12-NEXT:    s_wait_kmcnt 0x0
-; GISEL12-NEXT:    s_wait_alu 0xfffe
 ; GISEL12-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GISEL12-NEXT:    v_dual_mov_b32 v24, v0 :: v_dual_mov_b32 v25, v1
 ; GISEL12-NEXT:    v_dual_mov_b32 v26, v2 :: v_dual_mov_b32 v27, v3
@@ -861,7 +854,6 @@ define amdgpu_cs_chain void @wwm_write_to_arg_reg(<3 x i32> inreg %sgpr, ptr inr
 ; DAGISEL12-NEXT:    v_dual_mov_b32 v12, v36 :: v_dual_mov_b32 v13, v37
 ; DAGISEL12-NEXT:    v_dual_mov_b32 v14, v38 :: v_dual_mov_b32 v15, v39
 ; DAGISEL12-NEXT:    s_wait_kmcnt 0x0
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL12-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; DAGISEL12-NEXT:    v_dual_mov_b32 v40, v0 :: v_dual_mov_b32 v41, v1
 ; DAGISEL12-NEXT:    v_dual_mov_b32 v42, v2 :: v_dual_mov_b32 v43, v3
