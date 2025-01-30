@@ -36,6 +36,8 @@ page](https://llvm.org/releases/).
 
 ## Build System Changes
 
+ * FortranRuntime has been renamed to `flang_rt`.
+
 ## New Issues Found
 
 
