@@ -46,13 +46,18 @@ void SanitizerMaskCutoffs::clear(SanitizerMask K) { set(K, 0); }
 
 std::optional<std::vector<unsigned>>
 SanitizerMaskCutoffs::getAllScaled(unsigned ScalingFactor) const {
-  std::vector<int> ScaledCutoffs;
+  std::vector<unsigned> ScaledCutoffs;
 
   bool AnyCutoff = false;
   for (unsigned int i = 0; i < SanitizerKind::SO_Count; ++i) {
     auto C = (*this)[i];
-    ScaledCutoffs.push_back(C.has_value() ? lround(std::clamp(ScalingFactor, 0.0, 1.0) * *C) : 0);
-    AnyCutoff |= C.has_value();
+    if (C.has_value()) {
+      ScaledCutoffs.push_back(
+          lround(std::clamp(*C, 0.0, 1.0) * ScalingFactor));
+      AnyCutoff = true;
+    } else {
+      ScaledCutoffs.push_back(0);
+    }
   }
 
   if (AnyCutoff)
