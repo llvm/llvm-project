@@ -2032,16 +2032,16 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       dimArg = j;
       argOk = true;
       break;
-    case KindCode::same: {
+    case KindCode::same:
       if (!sameArg) {
         sameArg = arg;
+        argOk = true;
+      } else {
+        auto sameType{sameArg->GetType().value()};
+        argOk = sameType.IsTkLenCompatibleWith(*type) ||
+            (name == "move_alloc"s && type->IsTkLenCompatibleWith(sameType));
       }
-      // Check both ways so that a CLASS(*) actuals to
-      // MOVE_ALLOC and EOSHIFT both work.
-      auto sameType{sameArg->GetType().value()};
-      argOk = sameType.IsTkLenCompatibleWith(*type) ||
-          type->IsTkLenCompatibleWith(sameType);
-    } break;
+      break;
     case KindCode::sameKind:
       if (!sameArg) {
         sameArg = arg;
