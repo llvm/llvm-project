@@ -5241,6 +5241,20 @@ QualType ASTContext::getEnumType(const EnumDecl *Decl) const {
   return QualType(newType, 0);
 }
 
+void ASTContext::updateNumOfEnumBits(llvm::APSInt *InitVal,
+                                     unsigned &NumNegativeBits,
+                                     unsigned &NumPositiveBits) {
+  if (InitVal->isUnsigned() || InitVal->isNonNegative()) {
+    // If the enumerator is zero that should still be counted as a positive
+    // bit since we need a bit to store the value zero.
+    unsigned ActiveBits = InitVal->getActiveBits();
+    NumPositiveBits = std::max({NumPositiveBits, ActiveBits, 1u});
+  } else {
+    NumNegativeBits =
+        std::max(NumNegativeBits, (unsigned)InitVal->getSignificantBits());
+  }
+}
+
 bool ASTContext::computeBestEnumTypes(bool IsPacked, unsigned NumNegativeBits,
                                       unsigned NumPositiveBits,
                                       QualType &BestType,

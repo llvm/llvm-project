@@ -1726,6 +1726,11 @@ public:
 
   QualType getEnumType(const EnumDecl *Decl) const;
 
+  /// Update the maximum amount of negative and positive bits
+  /// based on the provided enumerator value.
+  void updateNumOfEnumBits(llvm::APSInt *InitVal, unsigned &NumNegativeBits,
+                           unsigned &NumPositiveBits);
+
   /// Compute BestType and BestPromotionType for an enum based on the highest
   /// number of negative and positive bits of its elements.
   /// Returns true if enum width is too large.
