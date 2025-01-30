@@ -249,8 +249,7 @@ jobs:
       shell: bash
       run: |
         ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-package
-        release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
-        mv ${{ steps.setup-stage.outputs.build-prefix  }}/$release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
+        mv ${{ steps.setup-stage.outputs.build-prefix  }}/build/tools/clang/stage2-bins/${{ needs.prepare.outputs.release-binary-filename }} .
     
     - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
       with:
@@ -265,7 +264,7 @@ jobs:
       shell: bash
       run: |
         find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname ${{ needs.prepare.outputs.release-binary-filename }} -delete
-        find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname _CPack_Packages -delete
+        rm -Rf ${{ steps.setup-stage.outputs.build-prefix }}/build/tools/clang/stage2-bins/_CPack_Packages
     
     - name: Save Stage
       uses: ./workflows-main/.github/workflows/release-binaries-save-stage
