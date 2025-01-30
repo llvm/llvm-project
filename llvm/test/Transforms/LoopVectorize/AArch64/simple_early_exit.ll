@@ -55,7 +55,7 @@ define i64 @same_exit_block_pre_inc_use1() #1 {
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       vector.early.exit:
 ; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv16i1(<vscale x 16 x i1> [[TMP16]], i1 true)
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <vscale x 16 x i64> [[VEC_IND]], i64 [[FIRST_ACTIVE_LANE]]
+; CHECK-NEXT:    [[EARLY_EXIT_VALUE:%.*]] = extractelement <vscale x 16 x i64> [[VEC_IND]], i64 [[FIRST_ACTIVE_LANE]]
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 64, [[N_VEC]]
@@ -76,7 +76,7 @@ define i64 @same_exit_block_pre_inc_use1() #1 {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 67
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOP_END]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP]] ], [ 67, [[LOOP_INC]] ], [ 67, [[MIDDLE_BLOCK]] ], [ [[TMP20]], [[VECTOR_EARLY_EXIT]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP]] ], [ 67, [[LOOP_INC]] ], [ 67, [[MIDDLE_BLOCK]] ], [ [[EARLY_EXIT_VALUE]], [[VECTOR_EARLY_EXIT]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -138,7 +138,7 @@ define i64 @same_exit_block_pre_inc_use4() {
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       vector.early.exit:
 ; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP4]], i1 true)
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[VEC_IND]], i64 [[FIRST_ACTIVE_LANE]]
+; CHECK-NEXT:    [[EARLY_EXIT_VALUE:%.*]] = extractelement <2 x i64> [[VEC_IND]], i64 [[FIRST_ACTIVE_LANE]]
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[LOOP_END]], label [[SCALAR_PH]]
@@ -156,7 +156,7 @@ define i64 @same_exit_block_pre_inc_use4() {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 67
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOP_END]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP]] ], [ 67, [[LOOP_INC]] ], [ 67, [[MIDDLE_BLOCK]] ], [ [[TMP8]], [[VECTOR_EARLY_EXIT]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP]] ], [ 67, [[LOOP_INC]] ], [ 67, [[MIDDLE_BLOCK]] ], [ [[EARLY_EXIT_VALUE]], [[VECTOR_EARLY_EXIT]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -216,7 +216,7 @@ define i64 @loop_contains_safe_call() #1 {
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       vector.early.exit:
 ; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP5]], i1 true)
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i64> [[VEC_IND]], i64 [[FIRST_ACTIVE_LANE]]
+; CHECK-NEXT:    [[EARLY_EXIT_VALUE:%.*]] = extractelement <4 x i64> [[VEC_IND]], i64 [[FIRST_ACTIVE_LANE]]
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[LOOP_END]], label [[SCALAR_PH]]
@@ -235,7 +235,7 @@ define i64 @loop_contains_safe_call() #1 {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 67
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOP_END]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP]] ], [ 67, [[LOOP_INC]] ], [ 67, [[MIDDLE_BLOCK]] ], [ [[TMP9]], [[VECTOR_EARLY_EXIT]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP]] ], [ 67, [[LOOP_INC]] ], [ 67, [[MIDDLE_BLOCK]] ], [ [[EARLY_EXIT_VALUE]], [[VECTOR_EARLY_EXIT]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -296,7 +296,7 @@ define i64 @loop_contains_safe_div() #1 {
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       vector.early.exit:
 ; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP5]], i1 true)
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[VEC_IND]], i64 [[FIRST_ACTIVE_LANE]]
+; CHECK-NEXT:    [[EARLY_EXIT_VALUE:%.*]] = extractelement <2 x i64> [[VEC_IND]], i64 [[FIRST_ACTIVE_LANE]]
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[LOOP_END]], label [[SCALAR_PH]]
@@ -315,7 +315,7 @@ define i64 @loop_contains_safe_div() #1 {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 67
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOP_END]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP]] ], [ 67, [[LOOP_INC]] ], [ 67, [[MIDDLE_BLOCK]] ], [ [[TMP9]], [[VECTOR_EARLY_EXIT]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP]] ], [ 67, [[LOOP_INC]] ], [ 67, [[MIDDLE_BLOCK]] ], [ [[EARLY_EXIT_VALUE]], [[VECTOR_EARLY_EXIT]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -381,7 +381,7 @@ define i64 @loop_contains_load_after_early_exit(ptr dereferenceable(1024) align(
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       vector.early.exit:
 ; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP6]], i1 true)
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[VEC_IND]], i64 [[FIRST_ACTIVE_LANE]]
+; CHECK-NEXT:    [[EARLY_EXIT_VALUE:%.*]] = extractelement <4 x i64> [[VEC_IND]], i64 [[FIRST_ACTIVE_LANE]]
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[LOOP_END]], label [[SCALAR_PH]]
@@ -401,7 +401,7 @@ define i64 @loop_contains_load_after_early_exit(ptr dereferenceable(1024) align(
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 67
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOP_END]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP]] ], [ [[LD2]], [[LOOP_INC]] ], [ [[TMP10]], [[MIDDLE_BLOCK]] ], [ [[TMP11]], [[VECTOR_EARLY_EXIT]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP]] ], [ [[LD2]], [[LOOP_INC]] ], [ [[TMP10]], [[MIDDLE_BLOCK]] ], [ [[EARLY_EXIT_VALUE]], [[VECTOR_EARLY_EXIT]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:

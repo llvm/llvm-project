@@ -702,7 +702,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *Mask = State.get(getOperand(1));
     Value *Ctz = Builder.CreateCountTrailingZeroElems(
         Builder.getInt64Ty(), Mask, true, "first.active.lane");
-    return Builder.CreateExtractElement(Vec, Ctz);
+    return Builder.CreateExtractElement(Vec, Ctz, "early.exit.value");
   }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
