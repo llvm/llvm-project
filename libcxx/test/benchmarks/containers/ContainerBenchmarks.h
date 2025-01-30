@@ -51,6 +51,20 @@ void BM_Assignment(benchmark::State& st, Container) {
   }
 }
 
+template <class Container, class Allocator>
+void BM_Move_Assignment(benchmark::State& st, Container, Allocator) {
+  auto size = st.range(0);
+  Container c1(Allocator{1});
+  Container c2(Allocator{2});
+  // c1.reserve(size);
+  c2.resize(size);
+  for (auto _ : st) {
+    c1 = std::move(c2);
+    DoNotOptimizeData(c1);
+    DoNotOptimizeData(c2);
+  }
+}
+
 template <std::size_t... sz, typename Container, typename GenInputs>
 void BM_AssignInputIterIter(benchmark::State& st, Container c, GenInputs gen) {
   auto v = gen(1, sz...);
