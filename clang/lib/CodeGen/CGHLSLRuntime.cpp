@@ -119,6 +119,21 @@ GlobalVariable *replaceBuffer(CGHLSLRuntime::Buffer &Buf) {
   return CBGV;
 }
 
+void addRootSignature(
+    ArrayRef<llvm::hlsl::root_signature::RootElement> Elements,
+    llvm::Function *Fn, llvm::Module &M) {
+  auto &Ctx = M.getContext();
+
+  llvm::hlsl::root_signature::MetadataBuilder Builder(Ctx, Elements);
+  MDNode *RootSignature = Builder.BuildRootSignature();
+  MDNode *FnPairing =
+      MDNode::get(Ctx, {ValueAsMetadata::get(Fn), RootSignature});
+
+  StringRef RootSignatureValKey = "dx.rootsignatures";
+  auto *RootSignatureValMD = M.getOrInsertNamedMetadata(RootSignatureValKey);
+  RootSignatureValMD->addOperand(FnPairing);
+}
+
 } // namespace
 
 llvm::Type *CGHLSLRuntime::convertHLSLSpecificType(const Type *T) {
@@ -453,6 +468,12 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   // FIXME: Handle codegen for return type semantics.
   // See: https://github.com/llvm/llvm-project/issues/57875
   B.CreateRetVoid();
+
+  // Add and identify root signature to function, if applicable
+  const AttrVec &Attrs = FD->getAttrs();
+  for (const Attr *Attr : Attrs)
+    if (const auto *RSAttr = dyn_cast<HLSLRootSignatureAttr>(Attr))
+      addRootSignature(RSAttr->getElements(), EntryFn, M);
 }
 
 void CGHLSLRuntime::setHLSLFunctionAttributes(const FunctionDecl *FD,
