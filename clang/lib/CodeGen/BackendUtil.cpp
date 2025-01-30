@@ -807,13 +807,9 @@ static void addSanitizers(const Triple &TargetTriple,
                                             OptimizationLevel Level,
                                             ThinOrFullLTOPhase Phase) {
       LowerAllowCheckPass::Options Opts;
-
       // TODO: after removing IsRequested(), make this unconditional
       if (ScaledCutoffs.has_value())
-        // Copy from std::vector<int> to std::vector<unsigned int>
-        Opts.cutoffs = {ScaledCutoffs.value().begin(),
-                        ScaledCutoffs.value().end()};
-
+        Opts.cutoffs = ScaledCutoffs.value();
       MPM.addPass(createModuleToFunctionPassAdaptor(LowerAllowCheckPass(Opts)));
     });
   }
