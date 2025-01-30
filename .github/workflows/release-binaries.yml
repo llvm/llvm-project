@@ -242,7 +242,7 @@ jobs:
             ${{ needs.prepare.outputs.target-cmake-flags }} \
             -C clang/cmake/caches/Release.cmake \
             -DBOOTSTRAP_LLVM_PARALLEL_LINK_JOBS=1 \
-            -DBOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}" \
+            -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}" \
             -DCMAKE_C_COMPILER_LAUNCHER=$CCACHE_BIN \
             -DCMAKE_CXX_COMPILER_LAUNCHER=$CCACHE_BIN
     - name: Build
@@ -250,7 +250,7 @@ jobs:
       run: |
         ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-package
         release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
-        mv ${{ steps.setup-stage.outputs.build-prefix  }}/$release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
+        mv $release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
     
     - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
       with:
