@@ -181,6 +181,10 @@ void DXContainerGlobals::addRootSignature(Module &M,
   RootSignatureHeader RSH;
   RSH.Flags = MRS->Flags;
 
+  for (const auto &Part : MRS->Parts) {
+    RSH.pushPart(constructHeaderPart(Part));
+  }
+
   RSH.write(OS);
 
   Constant *Constant =
