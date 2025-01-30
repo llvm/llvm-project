@@ -563,22 +563,6 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
   for_each(LinkedDVRAssigns, InsertAssignForOverlap);
 }
 
-// Helper to trim or drop any dereferencable/dereferencable_or_null attributes
-// for a given argument, based on the new access being restricted to derefence
-// bytes in the range [Offset, Offset+Size).
-static void trimDereferencableAttrs(AnyMemIntrinsic *Intrinsic, unsigned Arg,
-                                    uint64_t Offset, uint64_t Size) {
-  uint64_t End = Offset + Size;
-  if (Intrinsic->getParamDereferenceableBytes(Arg) >= End)
-    Intrinsic->addDereferenceableParamAttr(Arg, Size);
-  else
-    Intrinsic->removeParamAttr(Arg, Attribute::Dereferenceable);
-  if (Intrinsic->getParamDereferenceableOrNullBytes(Arg) >= End)
-    Intrinsic->addDereferenceableOrNullParamAttr(Arg, Size);
-  else
-    Intrinsic->removeParamAttr(Arg, Attribute::DereferenceableOrNull);
-}
-
 static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
                          uint64_t &DeadSize, int64_t KillingStart,
                          uint64_t KillingSize, bool IsOverwriteEnd) {
@@ -660,7 +644,11 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
         DeadI->getIterator());
     NewDestGEP->setDebugLoc(DeadIntrinsic->getDebugLoc());
     DeadIntrinsic->setDest(NewDestGEP);
-    trimDereferencableAttrs(DeadIntrinsic, 0, ToRemoveSize, NewSize);
+    // Simply drop any dereferenceable attributes (memset with a constant length
+    // already implies dereferenceability by itself, so dropping is simpler than
+    // trying to adjust the dereferenceable size).
+    DeadIntrinsic->removeParamAttr(0, Attribute::Dereferenceable);
+    DeadIntrinsic->removeParamAttr(0, Attribute::DereferenceableOrNull);
   }
 
   // Update attached dbg.assign intrinsics. Assume 8-bit byte.
