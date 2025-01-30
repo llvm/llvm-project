@@ -82,6 +82,7 @@ public:
   bool GetUseSwiftDWARFImporter() const;
   bool SetUseSwiftDWARFImporter(bool new_value);
   bool GetSwiftValidateTypeSystem() const;
+  bool GetSwiftLoadConformances() const;
   SwiftModuleLoadingMode GetSwiftModuleLoadingMode() const;
   bool SetSwiftModuleLoadingMode(SwiftModuleLoadingMode);
 
