@@ -1817,7 +1817,7 @@ public:
     int functionCount = 0;
     for (llvm::Function &F : M) {
       // Skip cloned functions
-      if (!StringRef(F.getName()).startswith(YK_CLONE_PREFIX)) {
+      if (!StringRef(F.getName()).startswith(YK_UNOPT_PREFIX)) {
         FunctionIndexMap[&F] = functionCount;
         functionCount++;
       }
@@ -1827,7 +1827,7 @@ public:
     // funcs:
     for (llvm::Function &F : M) {
       // Skip cloned functions
-      if (StringRef(F.getName()).startswith(YK_CLONE_PREFIX)) {
+      if (StringRef(F.getName()).startswith(YK_UNOPT_PREFIX)) {
         continue;
       }
       serialiseFunc(F);
