@@ -18,6 +18,7 @@ def all : FF<"all", "Equivalent to setting: --file-header, --program-headers, --
              "--symbols, --relocations, --dynamic-table, --notes, --version-info, --unwind, "
              "--section-groups and --histogram">;
 def arch_specific : FF<"arch-specific", "Display architecture-specific information">;
+def func_addr_map : FF<"func-addr-map", "Display the function address map section">;
 def bb_addr_map : FF<"bb-addr-map", "Display the BB address map section">;
 def pretty_pgo_analysis_map : FF<"pretty-pgo-analysis-map", "Display PGO analysis values with formatting rather than raw numbers">;
 def cg_profile : FF<"cg-profile", "Display call graph profile section">;
