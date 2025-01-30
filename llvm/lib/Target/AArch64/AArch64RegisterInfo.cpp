@@ -1098,7 +1098,6 @@ bool AArch64RegisterInfo::getRegAllocationHints(
     Register VirtReg, ArrayRef<MCPhysReg> Order,
     SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
 
   auto &ST = MF.getSubtarget<AArch64Subtarget>();
   if (!ST.hasSME() || !ST.isStreaming())
@@ -1113,6 +1112,7 @@ bool AArch64RegisterInfo::getRegAllocationHints(
   // FORM_TRANSPOSED_REG_TUPLE pseudo, we want to favour reducing copy
   // instructions over reducing the number of clobbered callee-save registers,
   // so we add the strided registers as a hint.
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
   unsigned RegID = MRI.getRegClass(VirtReg)->getID();
   if (RegID == AArch64::ZPR2StridedOrContiguousRegClassID ||
       RegID == AArch64::ZPR4StridedOrContiguousRegClassID) {
