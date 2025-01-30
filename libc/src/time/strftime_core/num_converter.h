@@ -63,11 +63,11 @@ LIBC_INLINE int convert_int(printf_core::Writer *writer,
     pad_to_len = 2;
     break;
   case 'I': // 12-hour format [01-12]
-    raw_num = time_reader.get_hour() % 12;
+    raw_num = ((time_reader.get_hour() + 11) % 12) + 1;
     pad_to_len = 2;
     break;
-  case 'j': // Day of the year [001-366]
-    raw_num = time_reader.get_yday();
+  case 'j':                               // Day of the year [001-366]
+    raw_num = time_reader.get_yday() + 1; // get_yday is 0 indexed
     pad_to_len = 3;
     break;
   case 'm':                              // Month of the year [01-12]
@@ -92,10 +92,15 @@ LIBC_INLINE int convert_int(printf_core::Writer *writer,
     pad_to_len = 1;
     break;
   case 'U': // Week of the year ([00-53] week 1 starts on first *Sunday*)
+    // This doesn't actually end up using tm_year, despite the standard saying
+    // it's needed. The end of the current year doesn't really matter, so leap
+    // years aren't relevant. If this is wrong, please tell me what I'm missing.
     raw_num = time_reader.get_week(time_constants::SUNDAY);
     pad_to_len = 2;
     break;
   case 'V': // ISO week number ([01-53], 01 is first week majority in this year)
+    // This does need to know the year, since it may affect what the week of the
+    // previous year it underflows to.
     raw_num = time_reader.get_iso_week();
     pad_to_len = 2;
     break;
