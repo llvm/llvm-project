@@ -41,7 +41,7 @@ ResourcePressureView::ResourcePressureView(const llvm::MCSubtargetInfo &sti,
 
   ResourceReleaseAtCycles InitValue{0, 0};
   auto Generator = [&InitValue]() {
-    auto Old = InitValue;
+    ResourceReleaseAtCycles Old = InitValue;
     ++InitValue.ResourceIdx;
     return Old;
   };
@@ -222,11 +222,9 @@ json::Value ResourcePressureView::toJSON() const {
                       {"ResourceIndex", RU.ResourceIdx},
                       {"ResourceUsage", Usage}}));
   };
-  for (const auto &R : enumerate(ResourceUsage)) {
-    unsigned InstructionIndex = R.index();
-    for (const auto &RU : R.value())
-      AddToJSON(RU, InstructionIndex);
-  }
+  for (const auto &[InstIndex, Usages] : enumerate(ResourceUsage))
+    for (const auto &RU : Usages)
+      AddToJSON(RU, InstIndex);
   for (const auto &RU : CommonResourceUsage) {
     if (RU.Cycles.getNumerator() != 0)
       AddToJSON(RU, Source.size());
