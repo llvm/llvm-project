@@ -1106,8 +1106,12 @@ bool AMDGPUToolChain::shouldSkipSanitizeOption(
 
   // For simplicity, we only allow -fsanitize=address
   SanitizerMask K = parseSanitizerValue(A->getValue(), /*AllowGroups=*/false);
-  if (K != SanitizerKind::Address)
+  if (K != SanitizerKind::Address) {
+    // Diagnose unsupported sanitizer options only once.
+    Diags.Report(clang::diag::warn_drv_unsupported_option_for_target)
+        << A->getAsString(DriverArgs) << getTriple().str();
     return true;
+  }
 
   llvm::StringMap<bool> FeatureMap;
   auto OptionalGpuArch = parseTargetID(TC.getTriple(), TargetID, &FeatureMap);

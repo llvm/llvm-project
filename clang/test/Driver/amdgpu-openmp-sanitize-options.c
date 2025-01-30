@@ -49,10 +49,10 @@
 // GPUSAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu".* "-emit-llvm-bc".* "-target-cpu" "gfx908".* "-fopenmp".* "-fsanitize=address".* "-x" "c".*}}
 // GPUSAN: {{"[^"]*clang-offload-packager[^"]*" "-o".* "--image=file=.*.bc,triple=amdgcn-amd-amdhsa,arch=gfx908(:xnack\-|:xnack\+)?,kind=openmp(,feature=(\-xnack|\+xnack))?"}}
 // GPUSAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "x86_64-unknown-linux-gnu".* "-fopenmp".* "-fsanitize=address".* "-fopenmp-targets=amdgcn-amd-amdhsa".* "-x" "ir".*}}
-// GPUSAN: {{"[^"]*clang-linker-wrapper[^"]*" "--host-triple=x86_64-unknown-linux-gnu" "--linker-path=[^"]*ld.lld".* "--whole-archive" "[^"]*libclang_rt.asan_static.a".* "--whole-archive" "[^"]*libclang_rt.asan.a".*}}
+// GPUSAN: {{"[^"]*clang-linker-wrapper[^"]*" "--host-triple=x86_64-unknown-linux-gnu" "--linker-path=[^"]*".* "--whole-archive" "[^"]*libclang_rt.asan_static.a".* "--whole-archive" "[^"]*libclang_rt.asan.a".*}}
 
 // NOGPUSAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "x86_64-unknown-linux-gnu".* "-fopenmp".* "-fsanitize=address".* "-fopenmp-targets=amdgcn-amd-amdhsa".* "-x" "c".*}}
 // NOGPUSAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu".* "-emit-llvm-bc".* "-target-cpu" "gfx908".* "-fopenmp".* "-x" "c".*}}
 // NOGPUSAN: {{"[^"]*clang-offload-packager[^"]*" "-o".* "--image=file=.*.bc,triple=amdgcn-amd-amdhsa,arch=gfx908(:xnack\-|:xnack\+)?,kind=openmp(,feature=(\-xnack|\+xnack))?"}}
 // NOGPUSAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "x86_64-unknown-linux-gnu".* "-fopenmp".* "-fsanitize=address".* "-fopenmp-targets=amdgcn-amd-amdhsa".* "-x" "ir".*}}
-// NOGPUSAN: {{"[^"]*clang-linker-wrapper[^"]*" "--host-triple=x86_64-unknown-linux-gnu" "--linker-path=[^"]*ld.lld".* "--whole-archive" "[^"]*libclang_rt.asan_static.a".* "--whole-archive" "[^"]*libclang_rt.asan.a".*}}
+// NOGPUSAN: {{"[^"]*clang-linker-wrapper[^"]*" "--host-triple=x86_64-unknown-linux-gnu" "--linker-path=[^"]*".* "--whole-archive" "[^"]*libclang_rt.asan_static.a".* "--whole-archive" "[^"]*libclang_rt.asan.a".*}}
