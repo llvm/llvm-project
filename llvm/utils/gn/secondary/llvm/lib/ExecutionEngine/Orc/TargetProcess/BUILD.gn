@@ -16,7 +16,6 @@ static_library("TargetProcess") {
     "SimpleExecutorMemoryManager.cpp",
     "SimpleRemoteEPCServer.cpp",
     "TargetExecutionUtils.cpp",
-    "UnwindInfoManager.cpp",
   ]
   if (current_os == "linux") {
     libs = [ "rt" ]
