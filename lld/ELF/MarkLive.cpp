@@ -266,15 +266,13 @@ template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
       msg << "\n>>> included in ";
     }
 
-    msg << (std::holds_alternative<Symbol *>(*cur) ? "symbol " : "section ");
-
     if (std::holds_alternative<Symbol *>(*cur)) {
       auto *s = std::get<Symbol *>(*cur);
       // Match the syntax for sections below.
-      msg << toStr(ctx, s->file) << ":(" << toStr(ctx, *s) << ')';
+      msg << "symbol " << toStr(ctx, s->file) << ":(" << toStr(ctx, *s) << ')';
     } else {
       auto *s = std::get<InputSectionBase *>(*cur);
-      msg << toStr(ctx, s);
+      msg << "section " << toStr(ctx, s);
     }
   }
 }
