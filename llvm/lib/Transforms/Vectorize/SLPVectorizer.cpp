@@ -12231,25 +12231,24 @@ InstructionCost BoUpSLP::getSpillCost() const {
       }
 
       auto NoCallIntrinsic = [this](Instruction *I) {
-        if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-          if (II->isAssumeLikeIntrinsic())
-            return true;
-          FastMathFlags FMF;
-          SmallVector<Type *, 4> Tys;
-          for (auto &ArgOp : II->args())
-            Tys.push_back(ArgOp->getType());
-          if (auto *FPMO = dyn_cast<FPMathOperator>(II))
-            FMF = FPMO->getFastMathFlags();
-          IntrinsicCostAttributes ICA(II->getIntrinsicID(), II->getType(), Tys,
-                                      FMF);
-          InstructionCost IntrCost =
-              TTI->getIntrinsicInstrCost(ICA, TTI::TCK_RecipThroughput);
-          InstructionCost CallCost = TTI->getCallInstrCost(
-              nullptr, II->getType(), Tys, TTI::TCK_RecipThroughput);
-          if (IntrCost < CallCost)
-            return true;
-        }
-        return false;
+        auto *II = dyn_cast<IntrinsicInst>(I);
+        if (!II)
+          return false;
+        if (II->isAssumeLikeIntrinsic())
+          return true;
+        FastMathFlags FMF;
+        SmallVector<Type *, 4> Tys;
+        for (auto &ArgOp : II->args())
+          Tys.push_back(ArgOp->getType());
+        if (auto *FPMO = dyn_cast<FPMathOperator>(II))
+          FMF = FPMO->getFastMathFlags();
+        IntrinsicCostAttributes ICA(II->getIntrinsicID(), II->getType(), Tys,
+                                    FMF);
+        InstructionCost IntrCost =
+            TTI->getIntrinsicInstrCost(ICA, TTI::TCK_RecipThroughput);
+        InstructionCost CallCost = TTI->getCallInstrCost(
+            nullptr, II->getType(), Tys, TTI::TCK_RecipThroughput);
+        return IntrCost < CallCost;
       };
 
       // Debug information does not impact spill cost.
