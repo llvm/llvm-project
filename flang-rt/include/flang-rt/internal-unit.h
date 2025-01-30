@@ -56,4 +56,4 @@ private:
 extern template class InternalDescriptorUnit<Direction::Output>;
 extern template class InternalDescriptorUnit<Direction::Input>;
 } // namespace Fortran::runtime::io
-#endif /* FLANG_RT_INTERNAL_UNIT_H_ */
+#endif // FLANG_RT_INTERNAL_UNIT_H_

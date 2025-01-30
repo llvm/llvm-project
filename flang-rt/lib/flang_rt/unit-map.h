@@ -100,4 +100,4 @@ private:
   int emergencyNewUnit_{maxNewUnits_}; // not recycled
 };
 } // namespace Fortran::runtime::io
-#endif /* FLANG_RT_UNIT_MAP_H_ */
+#endif // FLANG_RT_UNIT_MAP_H_

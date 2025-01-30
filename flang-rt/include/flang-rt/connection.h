@@ -124,4 +124,4 @@ private:
 };
 
 } // namespace Fortran::runtime::io
-#endif /* FLANG_RT_CONNECTION_H_ */
+#endif // FLANG_RT_CONNECTION_H_

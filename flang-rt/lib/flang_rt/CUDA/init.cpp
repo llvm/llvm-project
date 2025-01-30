@@ -1,4 +1,4 @@
-//===-- runtime/CUDA/init.cpp ---------------------------------------------===//
+//===-- lib/flang_rt/CUDA/init.cpp ------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/CUDA/init.h"
-#include "../environment.h"
-#include "../terminator.h"
+#include "flang-rt/environment.h"
+#include "flang-rt/terminator.h"
 #include "flang/Runtime/CUDA/common.h"
 
 #include "cuda_runtime.h"

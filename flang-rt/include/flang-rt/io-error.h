@@ -80,4 +80,4 @@ private:
 };
 
 } // namespace Fortran::runtime::io
-#endif /* FLANG_RT_IO_ERROR_H_ */
+#endif // FLANG_RT_IO_ERROR_H_

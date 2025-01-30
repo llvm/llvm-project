@@ -791,4 +791,4 @@ private:
 };
 
 } // namespace Fortran::runtime::io
-#endif /* FLANG_RT_IO_STMT_H_ */
+#endif // FLANG_RT_IO_STMT_H_

@@ -133,4 +133,4 @@ private:
   Terminator &terminator_;
 };
 } // namespace Fortran::runtime
-#endif /* FLANG_RT_STACK_H_ */
+#endif // FLANG_RT_STACK_H_

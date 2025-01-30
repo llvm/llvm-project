@@ -113,4 +113,4 @@ RT_API_ATTRS bool MayWrite(const char *path);
 RT_API_ATTRS bool MayReadAndWrite(const char *path);
 RT_API_ATTRS std::int64_t SizeInBytes(const char *path);
 } // namespace Fortran::runtime::io
-#endif /* FLANG_RT_FILE_H_ */
+#endif // FLANG_RT_FILE_H_

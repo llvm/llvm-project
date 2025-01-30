@@ -601,4 +601,4 @@ RT_API_ATTRS void FormatControl<CONTEXT>::Finish(Context &context) {
   }
 }
 } // namespace Fortran::runtime::io
-#endif /* FLANG_RT_FORMAT_IMPLEMENTATION_H_ */
+#endif // FLANG_RT_FORMAT_IMPLEMENTATION_H_

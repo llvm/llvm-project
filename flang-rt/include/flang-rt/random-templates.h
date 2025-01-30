@@ -108,4 +108,4 @@ inline void GenerateUnsigned(const Descriptor &harvest) {
 
 } // namespace Fortran::runtime::random
 
-#endif /* FLANG_RT_RANDOM_TEMPLATES_H_ */
+#endif // FLANG_RT_RANDOM_TEMPLATES_H_

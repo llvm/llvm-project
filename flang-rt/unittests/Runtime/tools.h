@@ -54,4 +54,4 @@ static OwningPtr<Descriptor> MakeArray(const std::vector<int> &shape,
 }
 
 } // namespace Fortran::runtime
-#endif /* FLANG_RT_UNITTESTS_RUNTIME_TOOLS_H_ */
+#endif // FLANG_RT_UNITTESTS_RUNTIME_TOOLS_H_

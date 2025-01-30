@@ -626,4 +626,4 @@ static RT_API_ATTRS bool DescriptorIO(IoStatementState &io,
   return false;
 }
 } // namespace Fortran::runtime::io::descr
-#endif /* FLANG_RT_DESCRIPTOR_IO_H_ */
+#endif // FLANG_RT_DESCRIPTOR_IO_H_

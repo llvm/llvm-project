@@ -33,4 +33,4 @@ void *CUFAllocUnified(std::size_t);
 void CUFFreeUnified(void *);
 
 } // namespace Fortran::runtime::cuda
-#endif /* FLANG_RT_CUDA_ALLOCATOR_H_ */
+#endif // FLANG_RT_CUDA_ALLOCATOR_H_
