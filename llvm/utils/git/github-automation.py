@@ -257,10 +257,10 @@ class CommitRequestGreeter:
 
     def run(self) -> bool:
         # Post greeter comment:
-        comment = f"""
+        comment = textwrap.dedent(f"""
             @{self.issue.user.login} thank you for apply for commit access.  Please  review the project's [code review policy](https://llvm.org/docs/CodeReview.html).
-        """
-        self.issue.create_comment(textwrap.dedent(comment))
+        """)
+        self.issue.create_comment(comment)
 
         # Post activity summary:
         total_prs = 0
