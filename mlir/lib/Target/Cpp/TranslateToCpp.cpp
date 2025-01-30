@@ -232,7 +232,7 @@ struct CppEmitter {
   /// be declared at the beginning of a function.
   bool shouldDeclareVariablesAtTop() { return declareVariablesAtTop; };
 
-  /// Returns whether this translation unit should be emitted
+  /// Returns whether this file op should be emitted
   bool shouldEmitFile(FileOp file) {
     return !fileId.empty() && file.getId() == fileId;
   }
@@ -264,7 +264,7 @@ private:
   /// includes results from ops located in nested regions.
   bool declareVariablesAtTop;
 
-  /// Only emit translation units whos id matches this value.
+  /// Only emit file ops whos id matches this value.
   std::string fileId;
 
   /// Map from value to name of C++ variable that contain the name.

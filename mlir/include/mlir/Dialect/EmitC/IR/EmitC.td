@@ -64,8 +64,9 @@ def EmitC_FileOp
   let description = [{
     A `file` represents a single C/C++ file.
 
-    `mlir-translate` emits only the file selected via
-    the `-translation-unit-id=id` flag. By default, no file is emitted.
+    `mlir-translate` ignores the body of all `emitc.file` ops
+    unless the `-file-id=id` flag is used. With that flag, the `emitc.file`
+    with matching id is emitted.
 
     Example:
 
