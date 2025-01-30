@@ -978,7 +978,10 @@ public:
                              InterleavedAccessInfo &IAI)
       : ScalarEpilogueStatus(SEL), TheLoop(L), PSE(PSE), LI(LI), Legal(Legal),
         TTI(TTI), TLI(TLI), DB(DB), AC(AC), ORE(ORE), TheFunction(F),
-        Hints(Hints), InterleaveInfo(IAI), CostKind(TTI::TCK_RecipThroughput) {}
+        Hints(Hints), InterleaveInfo(IAI), CostKind(TTI::TCK_RecipThroughput) {
+    if (TTI.supportsScalableVectors() || ForceTargetSupportsScalableVectors)
+      initializeVScaleForTuning();
+  }
 
   /// \return An upper bound for the vectorization factors (both fixed and
   /// scalable). If the factors are 0, vectorization and interleaving should be
@@ -1560,6 +1563,8 @@ public:
 private:
   unsigned NumPredStores = 0;
 
+  /// Used to store the value of vscale used for tuning the cost model. It is
+  /// initialized during object construction.
   std::optional<unsigned> VScaleForTuning;
 
   /// Initializes the value of vscale used for tuning the cost model. If
@@ -3860,11 +3865,6 @@ FixedScalableVFPair LoopVectorizationCostModel::computeFeasibleMaxVF(
   auto MaxSafeScalableVF = getMaxLegalScalableVF(MaxSafeElements);
   if (!Legal->isSafeForAnyVectorWidth())
     this->MaxSafeElements = MaxSafeElements;
-
-  if (MaxSafeScalableVF != ElementCount::getScalable(0)) {
-    // Cache the value of vscale for tuning, since we'll need it.
-    initializeVScaleForTuning();
-  }
 
   LLVM_DEBUG(dbgs() << "LV: The max safe fixed VF is: " << MaxSafeFixedVF
                     << ".\n");
