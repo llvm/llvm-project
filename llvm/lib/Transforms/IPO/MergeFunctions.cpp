@@ -891,8 +891,10 @@ bool MergeFunctions::writeThunkOrAlias(Function *F, Function *G) {
 
 // Merge two equivalent functions. Upon completion, Function G is deleted.
 void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
-  if (F->isInterposable() || G->hasWeakODRLinkage() || G->hasLinkOnceODRLinkage()) {
-    assert(G->isInterposable() || G->hasWeakODRLinkage()|| G->hasLinkOnceODRLinkage());
+  if (F->isInterposable() || G->hasWeakODRLinkage() ||
+      G->hasLinkOnceODRLinkage()) {
+    assert(G->isInterposable() || G->hasWeakODRLinkage() ||
+           G->hasLinkOnceODRLinkage());
 
     // Both writeThunkOrAlias() calls below must succeed, either because we can
     // create aliases for G and NewF, or because a thunk for F is profitable.
