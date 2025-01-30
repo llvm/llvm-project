@@ -49,6 +49,7 @@ struct ol_event_handle_t_ {
 
 struct ol_program_handle_t_ {
   llvm::omp::target::plugin::DeviceImageTy *Image;
+  std::unique_ptr<MemoryBuffer> ImageData;
   std::atomic_uint32_t RefCount;
 };
 
@@ -531,17 +532,22 @@ ol_impl_result_t olEnqueueDataCopy_impl(ol_queue_handle_t Queue, void *SrcPtr,
 ol_impl_result_t olCreateProgram_impl(ol_device_handle_t Device, void *ProgData,
                                       size_t ProgDataSize,
                                       ol_program_handle_t *Program) {
+  auto ImageData = MemoryBuffer::getMemBufferCopy(
+      StringRef(reinterpret_cast<char *>(ProgData), ProgDataSize));
+  __tgt_device_image DeviceImage{(char *) ImageData->getBuffer().data(),
+                                 ((char *)ImageData->getBuffer().data()) +
+                                     ProgDataSize - 1,
+                                 nullptr, nullptr};
 
-  __tgt_device_image DeviceImage{
-      ProgData, ((char *)ProgData) + ProgDataSize - 1, nullptr, nullptr};
+  ol_program_handle_t Prog = new ol_program_handle_t_();
 
   auto Res = Device->Device.loadBinary(Device->Device.Plugin, &DeviceImage);
   if (!Res)
     return OL_ERRC_INVALID_VALUE;
 
-  ol_program_handle_t Prog = new ol_program_handle_t_();
   Prog->Image = *Res;
   Prog->RefCount = 1;
+  Prog->ImageData = std::move(ImageData);
   *Program = Prog;
 
   return OL_SUCCESS;
