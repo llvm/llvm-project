@@ -39,6 +39,12 @@ A list of non-standard directives supported by Flang
 * `!dir$ vector always` forces vectorization on the following loop regardless
   of cost model decisions. The loop must still be vectorizable.
   [This directive currently only works on plain do loops without labels].
+* `!dir$ unroll [N]` control how many times a loop should be unrolled. It must
+  be placed immediately before a loop. `N` is an integer that specifying the 
+  unrolling factor.
+* `!dir$ unroll_and_jam [N]` control how many times a loop should be unrolled and
+  jammed. It must be placed immediately before a loop that follows. `N` is an 
+  integer that specifying the unrolling factor.
 
 # Directive Details
 
