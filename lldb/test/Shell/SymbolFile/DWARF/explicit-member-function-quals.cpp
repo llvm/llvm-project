@@ -16,7 +16,7 @@
 
 struct Foo {
   void Method(this Foo) {}
-  void cMethod(this Foo const&) {}
-  void vMethod(this Foo volatile&) {}
-  void cvMethod(this Foo const volatile&) {}
+  void cMethod(this Foo const &) {}
+  void vMethod(this Foo volatile &) {}
+  void cvMethod(this Foo const volatile &) {}
 } f;
