@@ -25,5 +25,4 @@
 ! platform individually.
 
 ! CHECK-NOT: "-lFortranRuntime"
-! CHECK-NOT: "-lFortranDecimal"
 ! CHECK-NOT: "-lgcc"
