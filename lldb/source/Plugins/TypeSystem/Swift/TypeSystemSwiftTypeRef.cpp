@@ -3767,17 +3767,6 @@ TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
           if (llvm::StringRef(AsMangledName(type))
                   .ends_with("sSo18NSNotificationNameaD"))
             return GetTypeFromMangledTypename(ConstString("$sSo8NSStringCD"));
-          if (result->GetMangledTypeName().GetStringRef().count('$') > 1 &&
-              get_ast_num_children() ==
-                  llvm::expectedToStdOptional(runtime->GetNumChildren(
-                      {weak_from_this(), type}, exe_scope)))
-            // If available, prefer the AST for private types. Private
-            // identifiers are not ABI; the runtime returns anonymous private
-            // identifiers (using a '$' prefix) which cannot match identifiers
-            // in the AST. Because these private types can't be used in an AST
-            // context, prefer the AST type if available.
-            if (auto ast_type = fallback())
-              return ast_type;
           return result;
         }
         if (!result)
