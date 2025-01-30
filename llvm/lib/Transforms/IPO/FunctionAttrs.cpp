@@ -71,7 +71,9 @@ using namespace llvm;
 #define DEBUG_TYPE "function-attrs"
 
 STATISTIC(NumMemoryAttr, "Number of functions with improved memory attribute");
-STATISTIC(NumNoCapture, "Number of arguments marked nocapture");
+STATISTIC(NumCapturesNone, "Number of arguments marked captures(none)");
+STATISTIC(NumCapturesOther, "Number of arguments marked with captures "
+                            "attribute other than captures(none)");
 STATISTIC(NumReturned, "Number of arguments marked returned");
 STATISTIC(NumReadNoneArg, "Number of arguments marked readnone");
 STATISTIC(NumReadOnlyArg, "Number of arguments marked readonly");
@@ -107,6 +109,13 @@ static cl::opt<bool> DisableNoFreeInference(
 static cl::opt<bool> DisableThinLTOPropagation(
     "disable-thinlto-funcattrs", cl::init(true), cl::Hidden,
     cl::desc("Don't propagate function-attrs in thinLTO"));
+
+static void addCapturesStat(CaptureInfo CI) {
+  if (capturesNothing(CI))
+    ++NumCapturesNone;
+  else
+    ++NumCapturesOther;
+}
 
 namespace {
 
@@ -494,6 +503,9 @@ namespace {
 /// SCC of the arguments.
 struct ArgumentGraphNode {
   Argument *Definition;
+  /// CaptureComponents for this argument, excluding captures via Uses.
+  /// We don't distinguish between other/return captures here.
+  CaptureComponents CC = CaptureComponents::None;
   SmallVector<ArgumentGraphNode *, 4> Uses;
 };
 
@@ -535,18 +547,37 @@ public:
 struct ArgumentUsesTracker : public CaptureTracker {
   ArgumentUsesTracker(const SCCNodeSet &SCCNodes) : SCCNodes(SCCNodes) {}
 
-  void tooManyUses() override { Captured = true; }
+  void tooManyUses() override { CI = CaptureInfo::all(); }
 
-  bool captured(const Use *U) override {
+  std::optional<CaptureComponents> captured(const Use *U,
+                                            CaptureInfo UseCI) override {
+    if (updateCaptureInfo(U, UseCI.getOtherComponents())) {
+      // Don't bother continuing if we already capture everything.
+      if (capturesAll(CI.getOtherComponents()))
+        return stop();
+      return continueDefault(UseCI);
+    }
+
+    // For SCC argument tracking, we're not going to analyze other/ret
+    // components separately, so don't follow the return value.
+    return continueIgnoringReturn();
+  }
+
+  bool updateCaptureInfo(const Use *U, CaptureComponents CC) {
     CallBase *CB = dyn_cast<CallBase>(U->getUser());
     if (!CB) {
-      Captured = true;
+      if (isa<ReturnInst>(U->getUser()))
+        CI |= CaptureInfo::retOnly(CC);
+      else
+        // Conservatively assume that the captured value might make its way
+        // into the return value as well. This could be made more precise.
+        CI |= CaptureInfo(CC);
       return true;
     }
 
     Function *F = CB->getCalledFunction();
     if (!F || !F->hasExactDefinition() || !SCCNodes.count(F)) {
-      Captured = true;
+      CI |= CaptureInfo(CC);
       return true;
     }
 
@@ -560,22 +591,24 @@ struct ArgumentUsesTracker : public CaptureTracker {
       // use.  In this case it does not matter if the callee is within our SCC
       // or not -- we've been captured in some unknown way, and we have to be
       // conservative.
-      Captured = true;
+      CI |= CaptureInfo(CC);
       return true;
     }
 
     if (UseIndex >= F->arg_size()) {
       assert(F->isVarArg() && "More params than args in non-varargs call");
-      Captured = true;
+      CI |= CaptureInfo(CC);
       return true;
     }
 
+    // TODO(captures): Could improve precision by remembering maximum
+    // capture components for the argument.
     Uses.push_back(&*std::next(F->arg_begin(), UseIndex));
     return false;
   }
 
-  // True only if certainly captured (used outside our SCC).
-  bool Captured = false;
+  // Does not include potential captures via Uses in the SCC.
+  CaptureInfo CI = CaptureInfo::none();
 
   // Uses within our SCC.
   SmallVector<Argument *, 4> Uses;
@@ -1190,6 +1223,15 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
                              bool SkipInitializes) {
   ArgumentGraph AG;
 
+  auto DetermineAccessAttrsForSingleton = [](Argument *A) {
+    SmallPtrSet<Argument *, 8> Self;
+    Self.insert(A);
+    Attribute::AttrKind R = determinePointerAccessAttrs(A, Self);
+    if (R != Attribute::None)
+      return addAccessAttr(A, R);
+    return false;
+  };
+
   // Check each function in turn, determining which pointer arguments are not
   // captured.
   for (Function *F : SCCNodes) {
@@ -1210,7 +1252,7 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
         if (A.getType()->isPointerTy() && !A.hasNoCaptureAttr()) {
           A.addAttr(Attribute::getWithCaptureInfo(A.getContext(),
                                                   CaptureInfo::none()));
-          ++NumNoCapture;
+          ++NumCapturesNone;
           Changed.insert(F);
         }
       }
@@ -1221,21 +1263,23 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
       if (!A.getType()->isPointerTy())
         continue;
       bool HasNonLocalUses = false;
-      if (!A.hasNoCaptureAttr()) {
+      CaptureInfo OrigCI = A.getAttributes().getCaptureInfo();
+      if (!capturesNothing(OrigCI)) {
         ArgumentUsesTracker Tracker(SCCNodes);
         PointerMayBeCaptured(&A, &Tracker);
-        if (!Tracker.Captured) {
+        CaptureInfo NewCI = Tracker.CI & OrigCI;
+        if (NewCI != OrigCI) {
           if (Tracker.Uses.empty()) {
-            // If it's trivially not captured, mark it nocapture now.
-            A.addAttr(Attribute::getWithCaptureInfo(A.getContext(),
-                                                    CaptureInfo::none()));
-            ++NumNoCapture;
+            // If the information is complete, add the attribute now.
+            A.addAttr(Attribute::getWithCaptureInfo(A.getContext(), NewCI));
+            addCapturesStat(NewCI);
             Changed.insert(F);
           } else {
             // If it's not trivially captured and not trivially not captured,
             // then it must be calling into another function in our SCC. Save
             // its particulars for Argument-SCC analysis later.
             ArgumentGraphNode *Node = AG[&A];
+            Node->CC = CaptureComponents(NewCI);
             for (Argument *Use : Tracker.Uses) {
               Node->Uses.push_back(AG[Use]);
               if (Use != &A)
@@ -1250,12 +1294,8 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
         // an SCC? Note that we don't allow any calls at all here, or else our
         // result will be dependent on the iteration order through the
         // functions in the SCC.
-        SmallPtrSet<Argument *, 8> Self;
-        Self.insert(&A);
-        Attribute::AttrKind R = determinePointerAccessAttrs(&A, Self);
-        if (R != Attribute::None)
-          if (addAccessAttr(&A, R))
-            Changed.insert(F);
+        if (DetermineAccessAttrsForSingleton(&A))
+          Changed.insert(F);
       }
       if (!SkipInitializes && !A.onlyReadsMemory()) {
         if (inferInitializes(A, *F))
@@ -1281,17 +1321,15 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
       if (ArgumentSCC[0]->Uses.size() == 1 &&
           ArgumentSCC[0]->Uses[0] == ArgumentSCC[0]) {
         Argument *A = ArgumentSCC[0]->Definition;
-        A->addAttr(Attribute::getWithCaptureInfo(A->getContext(),
-                                                 CaptureInfo::none()));
-        ++NumNoCapture;
-        Changed.insert(A->getParent());
+        CaptureInfo NewCI = ArgumentSCC[0]->CC;
+        if (NewCI != A->getAttributes().getCaptureInfo()) {
+          A->addAttr(Attribute::getWithCaptureInfo(A->getContext(), NewCI));
+          addCapturesStat(NewCI);
+          Changed.insert(A->getParent());
+        }
 
-        // Infer the access attributes given the new nocapture one
-        SmallPtrSet<Argument *, 8> Self;
-        Self.insert(&*A);
-        Attribute::AttrKind R = determinePointerAccessAttrs(&*A, Self);
-        if (R != Attribute::None)
-          addAccessAttr(A, R);
+        // Infer the access attributes given the new captures one
+        DetermineAccessAttrsForSingleton(A);
       }
       continue;
     }
@@ -1303,27 +1341,42 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
       ArgumentSCCNodes.insert(I->Definition);
     }
 
-    bool SCCCaptured = false;
+    // At the SCC level, only track merged CaptureComponents. We're not
+    // currently prepared to handle propagation of return-only captures across
+    // the SCC.
+    CaptureComponents CC = CaptureComponents::None;
     for (ArgumentGraphNode *N : ArgumentSCC) {
       for (ArgumentGraphNode *Use : N->Uses) {
         Argument *A = Use->Definition;
-        if (A->hasNoCaptureAttr() || ArgumentSCCNodes.count(A))
-          continue;
-        SCCCaptured = true;
+        if (ArgumentSCCNodes.count(A))
+          CC |= Use->CC;
+        else
+          CC |= CaptureComponents(A->getAttributes().getCaptureInfo());
         break;
       }
-      if (SCCCaptured)
+      if (capturesAll(CC))
         break;
     }
-    if (SCCCaptured)
-      continue;
 
-    for (ArgumentGraphNode *N : ArgumentSCC) {
-      Argument *A = N->Definition;
-      A->addAttr(
-          Attribute::getWithCaptureInfo(A->getContext(), CaptureInfo::none()));
-      ++NumNoCapture;
-      Changed.insert(A->getParent());
+    if (!capturesAll(CC)) {
+      for (ArgumentGraphNode *N : ArgumentSCC) {
+        Argument *A = N->Definition;
+        CaptureInfo CI = N->CC | CC;
+        A->addAttr(Attribute::getWithCaptureInfo(A->getContext(), CI));
+        addCapturesStat(CI);
+        Changed.insert(A->getParent());
+      }
+    }
+
+    // TODO(captures): Ignore address-only captures.
+    if (!capturesNothing(CC)) {
+      // As the pointer may be captured, determine the pointer attributes
+      // looking at each argument invidivually.
+      for (ArgumentGraphNode *N : ArgumentSCC) {
+        if (DetermineAccessAttrsForSingleton(N->Definition))
+          Changed.insert(N->Definition->getParent());
+      }
+      continue;
     }
 
     // We also want to compute readonly/readnone/writeonly. With a small number

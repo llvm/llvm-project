@@ -14,11 +14,13 @@
 #define LLVM_ANALYSIS_CAPTURETRACKING_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/ModRef.h"
 
 namespace llvm {
 
   class Value;
   class Use;
+  class CaptureInfo;
   class DataLayout;
   class Instruction;
   class DominatorTree;
@@ -94,10 +96,38 @@ namespace llvm {
     /// U->getUser() is always an Instruction.
     virtual bool shouldExplore(const Use *U);
 
-    /// captured - Information about the pointer was captured by the user of
-    /// use U. Return true to stop the traversal or false to continue looking
-    /// for more capturing instructions.
-    virtual bool captured(const Use *U) = 0;
+    /// When returned from captures(), stop the traversal.
+    static std::optional<CaptureComponents> stop() { return std::nullopt; }
+
+    /// When returned from captures(), continue traversal, but do not follow
+    /// the return value of this user, even if it has additional capture
+    /// components. Should only be used if captures() has already taken the
+    /// potential return caputres into account.
+    static std::optional<CaptureComponents> continueIgnoringReturn() {
+      return CaptureComponents::None;
+    }
+
+    /// When returned from captures(), continue traversal, and also follow
+    /// the return value of this user if it has additional capture components
+    /// (that is, capture components in Ret that are not part of Other).
+    static std::optional<CaptureComponents> continueDefault(CaptureInfo CI) {
+      CaptureComponents RetCC = CI.getRetComponents();
+      if (!capturesNothing(RetCC & ~CI.getOtherComponents()))
+        return RetCC;
+      return CaptureComponents::None;
+    }
+
+    /// Use U directly captures CI.getOtherComponents() and additionally
+    /// CI.getRetComponents() through the return value of the user of U.
+    ///
+    /// Return std::nullopt to stop the traversal, or the CaptureComponents to
+    /// follow via the return value, which must be a subset of
+    /// CI.getRetComponents().
+    ///
+    /// For convenience, prefer returning one of stop(), continueDefault(CI) or
+    /// continueIgnoringReturn().
+    virtual std::optional<CaptureComponents> captured(const Use *U,
+                                                      CaptureInfo CI) = 0;
 
     /// isDereferenceableOrNull - Overload to allow clients with additional
     /// knowledge about pointer dereferenceability to provide it and thereby
@@ -105,20 +135,14 @@ namespace llvm {
     virtual bool isDereferenceableOrNull(Value *O, const DataLayout &DL);
   };
 
-  /// Types of use capture kinds, see \p DetermineUseCaptureKind.
-  enum class UseCaptureKind {
-    NO_CAPTURE,
-    MAY_CAPTURE,
-    PASSTHROUGH,
-  };
-
   /// Determine what kind of capture behaviour \p U may exhibit.
   ///
-  /// A use can be no-capture, a use can potentially capture, or a use can be
-  /// passthrough such that the uses of the user or \p U should be inspected.
+  /// The Other part of the returned CaptureInfo indicates which component of
+  /// the pointer may be captured directly by the use. The Ret part indicates
+  /// which components may be captured by following uses of the user of \p U.
   /// The \p IsDereferenceableOrNull callback is used to rule out capturing for
   /// certain comparisons.
-  UseCaptureKind
+  CaptureInfo
   DetermineUseCaptureKind(const Use &U,
                           llvm::function_ref<bool(Value *, const DataLayout &)>
                               IsDereferenceableOrNull);

@@ -309,6 +309,10 @@ inline bool capturesFullProvenance(CaptureComponents CC) {
   return (CC & CaptureComponents::Provenance) == CaptureComponents::Provenance;
 }
 
+inline bool capturesAll(CaptureComponents CC) {
+  return CC == CaptureComponents::All;
+}
+
 raw_ostream &operator<<(raw_ostream &OS, CaptureComponents CC);
 
 /// Represents which components of the pointer may be captured in which
@@ -332,6 +336,22 @@ public:
 
   /// Create CaptureInfo that may capture all components of the pointer.
   static CaptureInfo all() { return CaptureInfo(CaptureComponents::All); }
+
+  /// Create CaptureInfo that may only capture through means other than the
+  /// return value.
+  static CaptureInfo
+  otherOnly(CaptureComponents OtherComponents = CaptureComponents::All) {
+    return CaptureInfo(OtherComponents, CaptureComponents::None);
+  }
+
+  /// Create CaptureInfo that may only capture via the return value.
+  static CaptureInfo
+  retOnly(CaptureComponents RetComponents = CaptureComponents::All) {
+    return CaptureInfo(CaptureComponents::None, RetComponents);
+  }
+
+  /// Whether the pointer is only captured via the return value.
+  bool isRetOnly() const { return capturesNothing(OtherComponents); }
 
   /// Get components potentially captured by the return value.
   CaptureComponents getRetComponents() const { return RetComponents; }

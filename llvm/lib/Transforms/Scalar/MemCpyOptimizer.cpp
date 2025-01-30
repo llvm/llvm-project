@@ -1550,32 +1550,32 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
         }
         if (!Visited.insert(&U).second)
           continue;
-        switch (DetermineUseCaptureKind(U, IsDereferenceableOrNull)) {
-        case UseCaptureKind::MAY_CAPTURE:
-          return false;
-        case UseCaptureKind::PASSTHROUGH:
-          // Instructions cannot have non-instruction users.
-          Worklist.push_back(UI);
-          continue;
-        case UseCaptureKind::NO_CAPTURE: {
-          if (UI->isLifetimeStartOrEnd()) {
-            // We note the locations of these intrinsic calls so that we can
-            // delete them later if the optimization succeeds, this is safe
-            // since both llvm.lifetime.start and llvm.lifetime.end intrinsics
-            // practically fill all the bytes of the alloca with an undefined
-            // value, although conceptually marked as alive/dead.
-            int64_t Size = cast<ConstantInt>(UI->getOperand(0))->getSExtValue();
-            if (Size < 0 || Size == DestSize) {
-              LifetimeMarkers.push_back(UI);
-              continue;
-            }
+        CaptureInfo CI = DetermineUseCaptureKind(U, IsDereferenceableOrNull);
+        // TODO(captures): Make this more precise.
+        if (!capturesNothing(CI)) {
+          if (CI.isRetOnly()) {
+            Worklist.push_back(UI);
+            continue;
           }
-          if (UI->hasMetadata(LLVMContext::MD_noalias))
-            NoAliasInstrs.insert(UI);
-          if (!ModRefCallback(UI))
-            return false;
+          return false;
         }
+
+        if (UI->isLifetimeStartOrEnd()) {
+          // We note the locations of these intrinsic calls so that we can
+          // delete them later if the optimization succeeds, this is safe
+          // since both llvm.lifetime.start and llvm.lifetime.end intrinsics
+          // practically fill all the bytes of the alloca with an undefined
+          // value, although conceptually marked as alive/dead.
+          int64_t Size = cast<ConstantInt>(UI->getOperand(0))->getSExtValue();
+          if (Size < 0 || Size == DestSize) {
+            LifetimeMarkers.push_back(UI);
+            continue;
+          }
         }
+        if (UI->hasMetadata(LLVMContext::MD_noalias))
+          NoAliasInstrs.insert(UI);
+        if (!ModRefCallback(UI))
+          return false;
       }
     }
     return true;
