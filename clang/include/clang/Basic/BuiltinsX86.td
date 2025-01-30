@@ -147,7 +147,7 @@ let Attributes = [Const, NoThrow, RequiredVectorWidth<256>], Features = "avx" in
 // pre-TableGen version.
 
 let Features = "mmx", Header = "immintrin.h", Attributes = [NoThrow, Const] in {
-  def _mm_prefetch : X86LibBuiltin<"void(char const *, int)">;
+  def _mm_prefetch : X86LibBuiltin<"void(void const *, int)">;
 }
 
 let Features = "mmx", Header = "intrin.h", Attributes = [NoThrow, Const] in {
