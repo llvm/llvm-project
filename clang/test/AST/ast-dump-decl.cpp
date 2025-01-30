@@ -15,7 +15,9 @@ class testEnumDecl {
   enum TestEnumDeclFixed : int;
 };
 // CHECK: EnumDecl{{.*}} class TestEnumDeclScoped 'int'
+// CHECK-NOT: instantiated_from
 // CHECK: EnumDecl{{.*}} TestEnumDeclFixed 'int'
+// CHECK-NOT: instantiated_from
 
 class testFieldDecl {
   int TestFieldDeclInit = 0;
@@ -485,6 +487,165 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:    | |-MoveAssignment exists simple trivial needs_implicit{{$}}
 // CHECK-NEXT:    | `-Destructor simple irrelevant trivial needs_implicit{{$}}
 // CHECK-NEXT:    `-CXXRecordDecl 0x{{.+}} <col:41, col:48> col:48 implicit struct TestTemplateTemplateDefaultType{{$}}
+
+
+namespace testClassTemplateDecl {
+  template<typename T> struct TestClassTemplateWithScopedMemberEnum {
+    enum class E1 : T { A, B, C, D };
+    enum class E2 : int { A, B, C, D };
+    enum class E3 : T;
+    enum class E4 : int;
+  };
+
+  template struct TestClassTemplateWithScopedMemberEnum<unsigned>;
+
+  TestClassTemplateWithScopedMemberEnum<int> TestClassTemplateWithScopedMemberEnumObject;
+}
+
+// CHECK: ClassTemplateDecl 0x{{.+}} <{{.+}}:[[@LINE-12]]:3, line:[[@LINE-7]]:3> line:[[@LINE-12]]:31 TestClassTemplateWithScopedMemberEnum
+// CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:21> col:21 referenced typename depth 0 index 0 T
+// CHECK-NEXT: |-CXXRecordDecl 0x{{.+}} <col:24, line:[[@LINE-9]]:3> line:493:31 struct TestClassTemplateWithScopedMemberEnum definition
+// CHECK-NEXT: | |-DefinitionData empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
+// CHECK-NEXT: | | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
+// CHECK-NEXT: | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT: | | |-MoveConstructor exists simple trivial needs_implicit
+// CHECK-NEXT: | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT: | | |-MoveAssignment exists simple trivial needs_implicit
+// CHECK-NEXT: | | `-Destructor simple irrelevant trivial needs_implicit
+// CHECK-NEXT: | |-CXXRecordDecl 0x{{.+}} <col:24, col:31> col:31 implicit struct TestClassTemplateWithScopedMemberEnum
+// CHECK-NEXT: | |-EnumDecl 0x[[#%x,SCOPED_MEMBER_ENUM_E1:]] <line:494:5, col:36> col:16 class E1 'T'
+// CHECK-NEXT: | | |-EnumConstantDecl 0x{{.+}} <col:25> col:25 A 'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum::E1'
+// CHECK-NEXT: | | |-EnumConstantDecl 0x{{.+}} <col:28> col:28 B 'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum::E1'
+// CHECK-NEXT: | | |-EnumConstantDecl 0x{{.+}} <col:31> col:31 C 'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum::E1'
+// CHECK-NEXT: | | `-EnumConstantDecl 0x{{.+}} <col:34> col:34 D 'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum::E1'
+// CHECK-NEXT: | |-EnumDecl 0x[[#%x,SCOPED_MEMBER_ENUM_E2:]] <line:495:5, col:38> col:16 class E2 'int'
+// CHECK-NEXT: | | |-EnumConstantDecl 0x{{.+}} <col:27> col:27 A 'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum::E2'
+// CHECK-NEXT: | | |-EnumConstantDecl 0x{{.+}} <col:30> col:30 B 'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum::E2'
+// CHECK-NEXT: | | |-EnumConstantDecl 0x{{.+}} <col:33> col:33 C 'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum::E2'
+// CHECK-NEXT: | | `-EnumConstantDecl 0x{{.+}} <col:36> col:36 D 'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum::E2'
+// CHECK-NEXT: | |-EnumDecl 0x[[#%x,SCOPED_MEMBER_ENUM_E3:]] <line:[[@LINE-30]]:5, col:21> col:16 class E3 'T'
+// CHECK-NEXT: | `-EnumDecl 0x[[#%x,SCOPED_MEMBER_ENUM_E4:]] <line:[[@LINE-30]]:5, col:21> col:16 class E4 'int'
+// CHECK-NEXT: |-ClassTemplateSpecialization 0x{{.+}} 'TestClassTemplateWithScopedMemberEnum'
+// CHECK-NEXT: `-ClassTemplateSpecializationDecl 0x{{.+}} <line:[[@LINE-36]]:3, line:[[@LINE-31]]:3> line:[[@LINE-36]]:31 struct TestClassTemplateWithScopedMemberEnum definition implicit_instantiation
+// CHECK-NEXT:   |-DefinitionData pass_in_registers empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
+// CHECK-NEXT:   | |-DefaultConstructor exists trivial constexpr defaulted_is_constexpr
+// CHECK-NEXT:   | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
+// CHECK-NEXT:   | |-MoveConstructor exists simple trivial
+// CHECK-NEXT:   | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT:   | |-MoveAssignment exists simple trivial needs_implicit
+// CHECK-NEXT:   | `-Destructor simple irrelevant trivial needs_implicit
+// CHECK-NEXT:   |-TemplateArgument type 'int'
+// CHECK-NEXT:   | `-BuiltinType 0x{{.+}} 'int'
+// CHECK-NEXT:   |-CXXRecordDecl 0x{{.+}} <col:24, col:31> col:31 implicit struct TestClassTemplateWithScopedMemberEnum
+// CHECK-NEXT:   |-EnumDecl 0x{{.+}} <line:[[@LINE-46]]:5, col:21> col:16 class E1 'int' instantiated_from 0x[[#SCOPED_MEMBER_ENUM_E1]]{{$}}
+// CHECK-NEXT:   |-EnumDecl 0x{{.+}} <line:[[@LINE-46]]:5, col:21> col:16 class E2 'int' instantiated_from 0x[[#SCOPED_MEMBER_ENUM_E2]]{{$}}
+// CHECK-NEXT:   |-EnumDecl 0x{{.+}} <line:[[@LINE-46]]:5, col:21> col:16 class E3 'int' instantiated_from 0x[[#SCOPED_MEMBER_ENUM_E3]]{{$}}
+// CHECK-NEXT:   |-EnumDecl 0x{{.+}} <line:[[@LINE-46]]:5, col:21> col:16 class E4 'int' instantiated_from 0x[[#SCOPED_MEMBER_ENUM_E4]]{{$}}
+// CHECK-NEXT:   |-CXXConstructorDecl 0x{{.+}} <line:[[@LINE-51]]:31> col:31 implicit used constexpr TestClassTemplateWithScopedMemberEnum 'void () noexcept' inline default trivial
+// CHECK-NEXT:   | `-CompoundStmt 0x{{.+}} <col:31>
+// CHECK-NEXT:   |-CXXConstructorDecl 0x{{.+}} <col:31> col:31 implicit constexpr TestClassTemplateWithScopedMemberEnum 'void (const TestClassTemplateWithScopedMemberEnum<int> &)' inline default trivial noexcept-unevaluated 0x{{.+}}
+// CHECK-NEXT:   | `-ParmVarDecl 0x{{.+}} <col:31> col:31 'const TestClassTemplateWithScopedMemberEnum<int> &'
+// CHECK-NEXT:   `-CXXConstructorDecl 0x{{.+}} <col:31> col:31 implicit constexpr TestClassTemplateWithScopedMemberEnum 'void (TestClassTemplateWithScopedMemberEnum<int> &&)' inline default trivial noexcept-unevaluated 0x{{.+}}
+// CHECK-NEXT:     `-ParmVarDecl 0x{{.+}} <col:31> col:31 'TestClassTemplateWithScopedMemberEnum<int> &&'
+
+// CHECK: ClassTemplateSpecializationDecl 0x{{.+}} <{{.+}}:[[@LINE-51]]:3, col:65> col:19 struct TestClassTemplateWithScopedMemberEnum definition explicit_instantiation_definition
+// CHECK-NEXT: |-DefinitionData pass_in_registers empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
+// CHECK-NEXT: | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
+// CHECK-NEXT: | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT: | |-MoveConstructor exists simple trivial needs_implicit
+// CHECK-NEXT: | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT: | |-MoveAssignment exists simple trivial needs_implicit
+// CHECK-NEXT: | `-Destructor simple irrelevant trivial needs_implicit
+// CHECK-NEXT: |-TemplateArgument type 'unsigned int'
+// CHECK-NEXT: | `-BuiltinType 0x{{.+}} 'unsigned int'
+// CHECK-NEXT: |-CXXRecordDecl 0x{{.+}} <line:[[@LINE-68]]:24, col:31> col:31 implicit struct TestClassTemplateWithScopedMemberEnum
+// CHECK-NEXT: |-EnumDecl 0x{{.+}} <line:[[@LINE-68]]:5, col:21> col:16 class E1 'unsigned int' instantiated_from 0x[[#SCOPED_MEMBER_ENUM_E1]]{{$}}
+// CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:25> col:25 A 'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum<unsigned int>::E1'
+// CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:28> col:28 B 'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum<unsigned int>::E1'
+// CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:31> col:31 C 'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum<unsigned int>::E1'
+// CHECK-NEXT: | `-EnumConstantDecl 0x{{.+}} <col:34> col:34 D 'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum<unsigned int>::E1'
+// CHECK-NEXT: |-EnumDecl 0x{{.+}} <line:[[@LINE-72]]:5, col:21> col:16 class E2 'int' instantiated_from 0x[[#SCOPED_MEMBER_ENUM_E2]]{{$}}
+// CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:27> col:27 A 'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum<unsigned int>::E2'
+// CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:30> col:30 B 'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum<unsigned int>::E2'
+// CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:33> col:33 C 'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum<unsigned int>::E2'
+// CHECK-NEXT: | `-EnumConstantDecl 0x{{.+}} <col:36> col:36 D 'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum<unsigned int>::E2'
+// CHECK-NEXT: |-EnumDecl 0x{{.+}} <line:[[@LINE-76]]:5, col:21> col:16 class E3 'unsigned int' instantiated_from 0x[[#SCOPED_MEMBER_ENUM_E3]]{{$}}
+// CHECK-NEXT: `-EnumDecl 0x{{.+}} <line:[[@LINE-76]]:5, col:21> col:16 class E4 'int' instantiated_from 0x[[#SCOPED_MEMBER_ENUM_E4]]{{$}}
+
+// CHECK: VarDecl 0x{{.+}} <{{.+}}:[[@LINE-73]]:3, col:46> col:46 TestClassTemplateWithScopedMemberEnumObject 'TestClassTemplateWithScopedMemberEnum<int>':'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum<int>' callinit
+// CHECK-NEXT: `-CXXConstructExpr 0x{{.+}} <col:46> 'TestClassTemplateWithScopedMemberEnum<int>':'testClassTemplateDecl::TestClassTemplateWithScopedMemberEnum<int>' 'void () noexcept'
+
+
+namespace testClassTemplateDecl {
+  template<typename T> struct TestClassTemplateWithUnscopedMemberEnum {
+    enum E1 : T { E1_A, E1_B, E1_C, E1_D };
+    enum E2 : int { E2_A, E2_B, E2_C, E2_D };
+    enum E3 : T;
+    enum E4 : int;
+  };
+
+  template struct TestClassTemplateWithUnscopedMemberEnum<unsigned>;
+
+  TestClassTemplateWithUnscopedMemberEnum<unsigned> TestClassTemplateWithUnscopedMemberEnumObject;
+}
+
+// CHECK: ClassTemplateDecl 0x{{.+}} <{{.+}}:[[@LINE-12]]:3, line:[[@LINE-7]]:3> line:[[@LINE-12]]:31 TestClassTemplateWithUnscopedMemberEnum
+// CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:21> col:21 referenced typename depth 0 index 0 T
+// CHECK-NEXT: |-CXXRecordDecl 0x{{.+}} <col:24, line:[[@LINE-9]]:3> line:[[@LINE-14]]:31 struct TestClassTemplateWithUnscopedMemberEnum definition
+// CHECK-NEXT: | |-DefinitionData empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
+// CHECK-NEXT: | | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
+// CHECK-NEXT: | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT: | | |-MoveConstructor exists simple trivial needs_implicit
+// CHECK-NEXT: | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT: | | |-MoveAssignment exists simple trivial needs_implicit
+// CHECK-NEXT: | | `-Destructor simple irrelevant trivial needs_implicit
+// CHECK-NEXT: | |-CXXRecordDecl 0x{{.+}} <col:24, col:31> col:31 implicit struct TestClassTemplateWithUnscopedMemberEnum
+// CHECK-NEXT: | |-EnumDecl 0x[[#%x,UNSCOPED_MEMBER_ENUM_E1:]] <line:[[@LINE-22]]:5, col:42> col:10 E1 'T'
+// CHECK-NEXT: | | |-EnumConstantDecl 0x{{.+}} <col:19> col:19 E1_A 'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum::E1'
+// CHECK-NEXT: | | |-EnumConstantDecl 0x{{.+}} <col:25> col:25 E1_B 'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum::E1'
+// CHECK-NEXT: | | |-EnumConstantDecl 0x{{.+}} <col:31> col:31 E1_C 'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum::E1'
+// CHECK-NEXT: | | `-EnumConstantDecl 0x{{.+}} <col:37> col:37 E1_D 'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum::E1'
+// CHECK-NEXT: | |-EnumDecl 0x[[#%x,UNSCOPED_MEMBER_ENUM_E2:]] <line:[[@LINE-26]]:5, col:44> col:10 E2 'int'
+// CHECK-NEXT: | | |-EnumConstantDecl 0x{{.+}} <col:21> col:21 E2_A 'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum::E2'
+// CHECK-NEXT: | | |-EnumConstantDecl 0x{{.+}} <col:27> col:27 E2_B 'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum::E2'
+// CHECK-NEXT: | | |-EnumConstantDecl 0x{{.+}} <col:33> col:33 E2_C 'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum::E2'
+// CHECK-NEXT: | | `-EnumConstantDecl 0x{{.+}} <col:39> col:39 E2_D 'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum::E2'
+// CHECK-NEXT: | |-EnumDecl 0x[[#%x,UNSCOPED_MEMBER_ENUM_E3:]] <line:[[@LINE-30]]:5, col:15> col:10 E3 'T'
+// CHECK-NEXT: | `-EnumDecl 0x[[#%x,UNSCOPED_MEMBER_ENUM_E4:]] <line:[[@LINE-30]]:5, col:15> col:10 E4 'int'
+// CHECK-NEXT: `-ClassTemplateSpecialization {{.+}} 'TestClassTemplateWithUnscopedMemberEnum'
+
+// CHECK: ClassTemplateSpecializationDecl 0x{{.+}} <{{.+}}:[[@LINE-30]]:3, col:67> col:19 struct TestClassTemplateWithUnscopedMemberEnum definition explicit_instantiation_definition
+// CHECK-NEXT: |-DefinitionData pass_in_registers empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
+// CHECK-NEXT: | |-DefaultConstructor exists trivial constexpr defaulted_is_constexpr
+// CHECK-NEXT: | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
+// CHECK-NEXT: | |-MoveConstructor exists simple trivial
+// CHECK-NEXT: | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+// CHECK-NEXT: | |-MoveAssignment exists simple trivial needs_implicit
+// CHECK-NEXT: | `-Destructor simple irrelevant trivial needs_implicit
+// CHECK-NEXT: |-TemplateArgument type 'unsigned int'
+// CHECK-NEXT: | `-BuiltinType 0x{{.+}} 'unsigned int'
+// CHECK-NEXT: |-CXXRecordDecl 0x{{.+}} <line:[[@LINE-47]]:24, col:31> col:31 implicit struct TestClassTemplateWithUnscopedMemberEnum
+// CHECK-NEXT: |-EnumDecl 0x{{.+}} <line:[[@LINE-47]]:5, col:15> col:10 E1 'unsigned int' instantiated_from 0x[[#UNSCOPED_MEMBER_ENUM_E1]]{{$}}
+// CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:19> col:19 E1_A 'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum<unsigned int>::E1'
+// CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:25> col:25 E1_B 'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum<unsigned int>::E1'
+// CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:31> col:31 E1_C 'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum<unsigned int>::E1'
+// CHECK-NEXT: | `-EnumConstantDecl 0x{{.+}} <col:37> col:37 E1_D 'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum<unsigned int>::E1'
+// CHECK-NEXT: |-EnumDecl 0x{{.+}} <line:[[@LINE-51]]:5, col:15> col:10 E2 'int' instantiated_from 0x[[#UNSCOPED_MEMBER_ENUM_E2]]{{$}}
+// CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:21> col:21 E2_A 'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum<unsigned int>::E2'
+// CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:27> col:27 E2_B 'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum<unsigned int>::E2'
+// CHECK-NEXT: | |-EnumConstantDecl 0x{{.+}} <col:33> col:33 E2_C 'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum<unsigned int>::E2'
+// CHECK-NEXT: | `-EnumConstantDecl 0x{{.+}} <col:39> col:39 E2_D 'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum<unsigned int>::E2'
+// CHECK-NEXT: |-EnumDecl 0x{{.+}} <line:[[@LINE-55]]:5, col:15> col:10 E3 'unsigned int' instantiated_from 0x[[#UNSCOPED_MEMBER_ENUM_E3]]{{$}}
+// CHECK-NEXT: |-EnumDecl 0x{{.+}} <line:[[@LINE-55]]:5, col:15> col:10 E4 'int' instantiated_from 0x[[#UNSCOPED_MEMBER_ENUM_E4]]{{$}}
+// CHECK-NEXT: |-CXXConstructorDecl 0x{{.+}} <line:[[@LINE-53]]:19> col:19 implicit used constexpr TestClassTemplateWithUnscopedMemberEnum 'void () noexcept' inline default trivial
+// CHECK-NEXT: | `-CompoundStmt 0x{{.+}} <col:19>
+// CHECK-NEXT: |-CXXConstructorDecl 0x{{.+}} <col:19> col:19 implicit constexpr TestClassTemplateWithUnscopedMemberEnum 'void (const TestClassTemplateWithUnscopedMemberEnum<unsigned int> &)' inline default trivial noexcept-unevaluated {{.+}}
+// CHECK-NEXT: | `-ParmVarDecl 0x{{.+}} <col:19> col:19 'const TestClassTemplateWithUnscopedMemberEnum<unsigned int> &'
+// CHECK-NEXT: `-CXXConstructorDecl 0x{{.+}} <col:19> col:19 implicit constexpr TestClassTemplateWithUnscopedMemberEnum 'void (TestClassTemplateWithUnscopedMemberEnum<unsigned int> &&)' inline default trivial noexcept-unevaluated {{.+}}
+// CHECK-NEXT:   `-ParmVarDecl 0x{{.+}} <col:19> col:19 'TestClassTemplateWithUnscopedMemberEnum<unsigned int> &&'
+
+// CHECK: VarDecl {{.+}} <{{.+}}:[[@LINE-58]]:3, col:53> col:53 TestClassTemplateWithUnscopedMemberEnumObject 'TestClassTemplateWithUnscopedMemberEnum<unsigned int>':'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum<unsigned int>' callinit
+// CHECK-NEXT: `-CXXConstructExpr {{.+}} <col:53> 'TestClassTemplateWithUnscopedMemberEnum<unsigned int>':'testClassTemplateDecl::TestClassTemplateWithUnscopedMemberEnum<unsigned int>' 'void () noexcept'
 
 
 // PR15220 dump instantiation only once
