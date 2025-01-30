@@ -20,7 +20,6 @@ import shutil
 class TestSwiftRewriteClangPaths(TestBase):
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
-    @skipIf(setting=('symbols.swift-precise-compiler-invocation', 'false'))
     @skipUnlessDarwin
     @swiftTest
     @skipIf(debug_info=no_match(["dsym"]))
@@ -29,7 +28,6 @@ class TestSwiftRewriteClangPaths(TestBase):
 
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
-    @skipIf(setting=('symbols.swift-precise-compiler-invocation', 'false'))
     @skipUnlessDarwin
     @swiftTest
     @skipIf(debug_info=no_match(["dsym"]))
