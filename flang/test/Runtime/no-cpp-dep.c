@@ -3,7 +3,7 @@ This test makes sure that flang's runtime does not depend on the C++ runtime
 library. It tries to link this simple file against libFortranRuntime.a with
 a C compiler.
 
-REQUIRES: c-compiler
+REQUIRES: c-compiler, flang-rt
 
 RUN: %if system-aix %{ export OBJECT_MODE=64 %}
 RUN: %cc -std=c99 %s -I%include %libruntime -lm  \
