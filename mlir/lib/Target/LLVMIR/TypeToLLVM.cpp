@@ -85,15 +85,6 @@ public:
     return translated;
   }
 
-  llvm::FunctionType *
-  uncheckedGetIntrinsicSignature(unsigned id, llvm::ArrayRef<Type> types) {
-    SmallVector<llvm::Type *, 8> paramTypes;
-    if (llvm::Intrinsic::isOverloaded(id)) {
-      translateTypes(types, paramTypes);
-    }
-    return llvm::Intrinsic::getType(context, id, paramTypes);
-  }
-
 private:
   /// Translates the given array type.
   llvm::Type *translate(LLVM::LLVMArrayType type) {
@@ -201,12 +192,6 @@ LLVM::TypeToLLVMIRTranslator::~TypeToLLVMIRTranslator() = default;
 
 llvm::Type *LLVM::TypeToLLVMIRTranslator::translateType(Type type) {
   return impl->translateType(type);
-}
-
-llvm::FunctionType *
-LLVM::TypeToLLVMIRTranslator::uncheckedGetIntrinsicSignature(
-    unsigned id, llvm::ArrayRef<Type> types) {
-  return impl->uncheckedGetIntrinsicSignature(id, types);
 }
 
 unsigned LLVM::TypeToLLVMIRTranslator::getPreferredAlignment(

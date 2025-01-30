@@ -79,36 +79,6 @@ static void testTypeToFromLLVMIRTranslator(MlirContext ctx) {
   LLVMDumpType(llvmTy2);
   fprintf(stderr, "\n");
 
-  // check "not overloaded" path
-  MlirType i32 = mlirIntegerTypeGet(ctx, 32);
-  MlirType nonOverloadeTys[] = {i32};
-  unsigned returnAddressIID = LLVMLookupIntrinsicID("llvm.returnaddress", 18);
-  LLVMTypeRef returnAddressIntrinsicTy =
-      mlirTypeToLLVMIRTranslatorUncheckedGetIntrinsicSignature(
-          toLLVMTranslator, returnAddressIID, nonOverloadeTys, 1);
-  // CHECK: ptr (i32)
-  LLVMDumpType(returnAddressIntrinsicTy);
-  fprintf(stderr, "\n");
-
-  // check "overloaded" path
-  MlirType overloadeTys[] = {i32, i32};
-  unsigned sMaxIID = LLVMLookupIntrinsicID("llvm.smax", 9);
-  LLVMTypeRef llvmSMaxIntrinsicTy =
-      mlirTypeToLLVMIRTranslatorUncheckedGetIntrinsicSignature(
-          toLLVMTranslator, sMaxIID, overloadeTys, 2);
-  // CHECK: i32 (i32, i32)
-  LLVMDumpType(llvmSMaxIntrinsicTy);
-  fprintf(stderr, "\n");
-
-  MlirType mlirSMaxIntrinsicTy = mlirTypeFromLLVMIRTranslatorTranslateType(
-      fromLLVMTranslator, llvmSMaxIntrinsicTy);
-  // CHECK: !llvm.func<i32 (i32, i32)>
-  mlirTypeDump(mlirSMaxIntrinsicTy);
-
-  MlirType retType = mlirLLVMFunctionTypeGetReturnType(mlirSMaxIntrinsicTy);
-  // CHECK: i32
-  mlirTypeDump(retType);
-
   mlirTypeFromLLVMIRTranslatorDestroy(fromLLVMTranslator);
   mlirTypeToLLVMIRTranslatorDestroy(toLLVMTranslator);
   LLVMContextDispose(llvmCtx);

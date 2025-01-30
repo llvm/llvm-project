@@ -53,12 +53,6 @@ public:
   /// Translates the given MLIR LLVM dialect type to LLVM IR.
   llvm::Type *translateType(Type type);
 
-  /// Attempts to look up the LLVM intrinsic matching `id` with parameter types
-  /// `types`. Note, since no return type is required, no check is performed to
-  /// verify the found intrinsic.
-  llvm::FunctionType *
-  uncheckedGetIntrinsicSignature(unsigned id, llvm::ArrayRef<Type> types);
-
 private:
   /// Private implementation.
   std::unique_ptr<detail::TypeToLLVMIRTranslatorImpl> impl;
