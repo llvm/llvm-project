@@ -4708,23 +4708,7 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
     return KnownArchs.lookup(TC);
 
   llvm::DenseSet<StringRef> Archs;
-  for (auto *Arg : Args) {
-    // Extract any '--[no-]offload-arch' arguments intended for this toolchain.
-    std::unique_ptr<llvm::opt::Arg> ExtractedArg = nullptr;
-    if (Arg->getOption().matches(options::OPT_Xopenmp_target_EQ) &&
-        ToolChain::getOpenMPTriple(Arg->getValue(0)) == TC->getTriple()) {
-      Arg->claim();
-      unsigned Index = Args.getBaseArgs().MakeIndex(Arg->getValue(1));
-      unsigned Prev = Index;
-      ExtractedArg = getOpts().ParseOneArg(Args, Index);
-      if (!ExtractedArg || Index > Prev + 1) {
-        TC->getDriver().Diag(diag::err_drv_invalid_Xopenmp_target_with_args)
-            << Arg->getAsString(Args);
-        continue;
-      }
-      Arg = ExtractedArg.get();
-    }
-
+  for (auto *Arg : C.getArgsForToolChain(TC, /*BoundArch=*/"", Kind)) {
     // Add or remove the seen architectures in order of appearance. If an
     // invalid architecture is given we simply exit.
     if (Arg->getOption().matches(options::OPT_offload_arch_EQ)) {
@@ -4781,14 +4765,31 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
     return Archs;
 
   if (Archs.empty()) {
-    if (Kind == Action::OFK_Cuda)
+    if (Kind == Action::OFK_Cuda) {
       Archs.insert(OffloadArchToString(OffloadArch::CudaDefault));
-    else if (Kind == Action::OFK_HIP)
+    } else if (Kind == Action::OFK_HIP) {
       Archs.insert(OffloadArchToString(OffloadArch::HIPDefault));
-    else if (Kind == Action::OFK_OpenMP)
+    } else if (Kind == Action::OFK_SYCL) {
       Archs.insert(StringRef());
-    else if (Kind == Action::OFK_SYCL)
-      Archs.insert(StringRef());
+    } else if (Kind == Action::OFK_OpenMP) {
+      // Accept legacy `-march` device arguments for OpenMP.
+      if (auto *Arg = C.getArgsForToolChain(TC, /*BoundArch=*/"", Kind)
+                          .getLastArg(options::OPT_march_EQ)) {
+        Archs.insert(Arg->getValue());
+      } else {
+        auto ArchsOrErr = TC->getSystemGPUArchs(Args);
+        if (!ArchsOrErr) {
+          TC->getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
+              << llvm::Triple::getArchTypeName(TC->getArch())
+              << llvm::toString(ArchsOrErr.takeError()) << "--offload-arch";
+        } else if (!ArchsOrErr->empty()) {
+          for (auto Arch : *ArchsOrErr)
+            Archs.insert(Args.MakeArgStringRef(Arch));
+        } else {
+          Archs.insert(StringRef());
+        }
+      }
+    }
   } else {
     Args.ClaimAllArgs(options::OPT_offload_arch_EQ);
     Args.ClaimAllArgs(options::OPT_no_offload_arch_EQ);
