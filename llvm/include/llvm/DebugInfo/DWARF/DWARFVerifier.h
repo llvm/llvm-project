@@ -30,9 +30,14 @@ class DWARFDebugAbbrev;
 class DataExtractor;
 struct DWARFSection;
 
+struct AggregationData {
+  unsigned OverallCount;
+  std::map<std::string, unsigned> DetailedCounts;
+};
+
 class OutputCategoryAggregator {
 private:
-  std::map<std::string, unsigned> Aggregation;
+  std::map<std::string, AggregationData> Aggregation;
   bool IncludeDetail;
 
 public:
@@ -40,8 +45,13 @@ public:
       : IncludeDetail(includeDetail) {}
   void ShowDetail(bool showDetail) { IncludeDetail = showDetail; }
   size_t GetNumCategories() const { return Aggregation.size(); }
-  void Report(StringRef s, std::function<void()> detailCallback);
+  void Report(StringRef category, std::function<void()> detailCallback);
+  void Report(StringRef category, StringRef sub_category,
+              std::function<void()> detailCallback);
   void EnumerateResults(std::function<void(StringRef, unsigned)> handleCounts);
+  void EnumerateDetailedResultsFor(
+      StringRef category,
+      std::function<void(StringRef, unsigned)> handleCounts);
 };
 
 /// A class that verifies DWARF debug information given a DWARF Context.

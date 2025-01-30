@@ -1941,12 +1941,14 @@ unsigned DWARFVerifier::verifyNameIndexCompleteness(
     if (none_of(NI.equal_range(Name), [&](const DWARFDebugNames::Entry &E) {
           return E.getDIEUnitOffset() == DieUnitOffset;
         })) {
-      ErrorCategory.Report("Name Index DIE entry missing name", [&]() {
-        error() << formatv(
-            "Name Index @ {0:x}: Entry for DIE @ {1:x} ({2}) with "
-            "name {3} missing.\n",
-            NI.getUnitOffset(), Die.getOffset(), Die.getTag(), Name);
-      });
+      ErrorCategory.Report(
+          "Name Index DIE entry missing name",
+          llvm::dwarf::TagString(Die.getTag()), [&]() {
+            error() << formatv(
+                "Name Index @ {0:x}: Entry for DIE @ {1:x} ({2}) with "
+                "name {3} missing.\n",
+                NI.getUnitOffset(), Die.getOffset(), Die.getTag(), Name);
+          });
       ++NumErrors;
     }
   }
@@ -2168,15 +2170,35 @@ bool DWARFVerifier::verifyDebugStrOffsets(
 
 void OutputCategoryAggregator::Report(
     StringRef s, std::function<void(void)> detailCallback) {
-  Aggregation[std::string(s)]++;
+  this->Report(s, "", detailCallback);
+}
+
+void OutputCategoryAggregator::Report(
+    StringRef category, StringRef sub_category,
+    std::function<void(void)> detailCallback) {
+  std::string category_str = std::string(category);
+  AggregationData &Agg = Aggregation[category_str];
+  Agg.OverallCount++;
+  if (!sub_category.empty()) {
+    Agg.DetailedCounts[std::string(sub_category)]++;
+  }
   if (IncludeDetail)
     detailCallback();
 }
 
 void OutputCategoryAggregator::EnumerateResults(
     std::function<void(StringRef, unsigned)> handleCounts) {
-  for (auto &&[name, count] : Aggregation) {
-    handleCounts(name, count);
+  for (const auto &[name, aggData] : Aggregation) {
+    handleCounts(name, aggData.OverallCount);
+  }
+}
+void OutputCategoryAggregator::EnumerateDetailedResultsFor(
+    StringRef category, std::function<void(StringRef, unsigned)> handleCounts) {
+  const auto Agg = Aggregation.find(std::string(category));
+  if (Agg != Aggregation.end()) {
+    for (const auto &[name, aggData] : Agg->second.DetailedCounts) {
+      handleCounts(name, aggData);
+    }
   }
 }
 
@@ -2203,6 +2225,12 @@ void DWARFVerifier::summarize() {
     ErrorCategory.EnumerateResults([&](StringRef Category, unsigned Count) {
       llvm::json::Object Val;
       Val.try_emplace("count", Count);
+      llvm::json::Object Details;
+      ErrorCategory.EnumerateDetailedResultsFor(
+          Category, [&](StringRef SubCategory, unsigned SubCount) {
+            Details.try_emplace(SubCategory, SubCount);
+          });
+      Val.try_emplace("details", std::move(Details));
       Categories.try_emplace(Category, std::move(Val));
       ErrorCount += Count;
     });
