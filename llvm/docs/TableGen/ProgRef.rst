@@ -392,7 +392,7 @@ A question mark represents an uninitialized value.
 .. productionlist::
    SimpleValue4: "{" [`ValueList`] "}"
    ValueList: `ValueListNE`
-   ValueListNE: `Value` ("," `Value`)*
+   ValueListNE: `Value` ("," `Value`)* [","]
 
 This value represents a sequence of bits, which can be used to initialize a
 ``bits<``\ *n*\ ``>`` field (note the braces). When doing so, the values
@@ -488,7 +488,7 @@ See `Using Classes as Subroutines`_ for more information.
 
 .. productionlist::
    SimpleValue9: `BangOperator` ["<" `Type` ">"] "(" `ValueListNE` ")"
-              :| `CondOperator` "(" `CondClause` ("," `CondClause`)* ")"
+              :| `CondOperator` "(" `CondClause` ("," `CondClause`)* [","] ")"
    CondClause: `Value` ":" `Value`
 
 The bang operators provide functions that are not available with the other
