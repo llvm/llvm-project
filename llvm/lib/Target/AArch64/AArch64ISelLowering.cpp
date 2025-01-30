@@ -5242,40 +5242,33 @@ SDValue
 AArch64TargetLowering::LowerNONALIAS_LANE_MASK(SDValue Op,
                                                SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  unsigned IntrinsicID = 0;
   uint64_t EltSize = Op.getConstantOperandVal(2);
   bool IsWriteAfterRead = Op.getConstantOperandVal(3) == 1;
+  unsigned Opcode =
+      IsWriteAfterRead ? AArch64ISD::WHILEWR : AArch64ISD::WHILERW;
   EVT VT = Op.getValueType();
   MVT SimpleVT = VT.getSimpleVT();
   // Make sure that the promoted mask size and element size match
   switch (EltSize) {
   case 1:
-    IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_b
-                                   : Intrinsic::aarch64_sve_whilerw_b;
     assert((SimpleVT == MVT::v16i8 || SimpleVT == MVT::nxv16i1) &&
            "Unexpected mask or element size");
     IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_b
                                    : Intrinsic::aarch64_sve_whilerw_b;
     break;
   case 2:
-    IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_h
-                                   : Intrinsic::aarch64_sve_whilerw_h;
     assert((SimpleVT == MVT::v8i8 || SimpleVT == MVT::nxv8i1) &&
            "Unexpected mask or element size");
     IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_h
                                    : Intrinsic::aarch64_sve_whilerw_h;
     break;
   case 4:
-    IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_s
-                                   : Intrinsic::aarch64_sve_whilerw_s;
     assert((SimpleVT == MVT::v4i16 || SimpleVT == MVT::nxv4i1) &&
            "Unexpected mask or element size");
     IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_s
                                    : Intrinsic::aarch64_sve_whilerw_s;
     break;
   case 8:
-    IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_d
-                                   : Intrinsic::aarch64_sve_whilerw_d;
     assert((SimpleVT == MVT::v2i32 || SimpleVT == MVT::nxv2i1) &&
            "Unexpected mask or element size");
     IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_d
@@ -5285,11 +5278,9 @@ AArch64TargetLowering::LowerNONALIAS_LANE_MASK(SDValue Op,
     llvm_unreachable("Unexpected element size for get.alias.lane.mask");
     break;
   }
-  SDValue ID = DAG.getTargetConstant(IntrinsicID, DL, MVT::i64);
 
   if (VT.isScalableVector())
-    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT, ID, Op.getOperand(0),
-                       Op.getOperand(1));
+    return DAG.getNode(Opcode, DL, VT, Op.getOperand(0), Op.getOperand(1));
 
   // We can use the SVE whilewr/whilerw instruction to lower this
   // intrinsic by creating the appropriate sequence of scalable vector
@@ -5299,8 +5290,8 @@ AArch64TargetLowering::LowerNONALIAS_LANE_MASK(SDValue Op,
   EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
   EVT WhileVT = ContainerVT.changeElementType(MVT::i1);
 
-  SDValue Mask = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, WhileVT, ID,
-                             Op.getOperand(0), Op.getOperand(1));
+  SDValue Mask =
+      DAG.getNode(Opcode, DL, WhileVT, Op.getOperand(0), Op.getOperand(1));
   SDValue MaskAsInt = DAG.getNode(ISD::SIGN_EXTEND, DL, ContainerVT, Mask);
   return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, MaskAsInt,
                      DAG.getVectorIdxConstant(0, DL));
