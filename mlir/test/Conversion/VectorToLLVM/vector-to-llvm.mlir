@@ -1473,6 +1473,26 @@ func.func @extract_scalar_from_vec_0d_index(%arg0: vector<index>) -> index {
 //       CHECK:   %[[T3:.*]] = builtin.unrealized_conversion_cast %[[T2]] : i64 to index
 //       CHECK:   return %[[T3]] : index
 
+
+// -----
+
+func.func @extract_scalar_from_vec_2d_f32_dynamic_idxs_compile_time_const(%arg : vector<32x1xi32>) -> i32 {
+  %0 = arith.constant 0 : index
+  %1 = vector.extract %arg[%0, %0] : i32 from vector<32x1xi32>
+  return %1 : i32
+}
+
+// Compile-time if the indices of extractOp if constants, the constants will be collapsed,
+// the constants are folded away, hence the lowering works.
+
+// CHECK-LABEL: @extract_scalar_from_vec_2d_f32_dynamic_idxs_compile_time_const
+//  CHECK-SAME:   %[[ARG:.*]]: vector<32x1xi32>) -> i32 {
+//       CHECK:   %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : vector<32x1xi32> to !llvm.array<32 x vector<1xi32>>
+//       CHECK:   %[[VEC_0:.*]] = llvm.extractvalue %[[CAST]][0] : !llvm.array<32 x vector<1xi32>>
+//       CHECK:   %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
+//       CHECK:   %[[RES:.*]] = llvm.extractelement %[[VEC_0]]{{\[}}%[[C0]] : i64] : vector<1xi32>
+//       CHECK:   return %[[RES]] : i32
+
 // -----
 
 //===----------------------------------------------------------------------===//
@@ -1723,6 +1743,29 @@ func.func @insert_scalar_into_vec_2d_f32_dynamic_idx_scalable(%arg0: vector<1x[1
 
 // CHECK-LABEL: @insert_scalar_into_vec_2d_f32_dynamic_idx_scalable(
 //       CHECK:   vector.insert
+
+// -----
+
+func.func @insert_scalar_from_vec_2d_f32_dynamic_idxs_compile_time_const(%arg : vector<4x1xi32>) -> vector<4x1xi32> {
+  %0 = arith.constant 0 : index
+  %1 = arith.constant 1 : i32
+  %res = vector.insert %1, %arg[%0, %0] : i32 into vector<4x1xi32>
+  return %res : vector<4x1xi32>
+}
+
+// Compile-time if the indices of insertOp if constants, the constants will be collapsed,
+// the constants are folded away, hence the lowering works.
+
+// CHECK-LABEL: @insert_scalar_from_vec_2d_f32_dynamic_idxs_compile_time_const
+//  CHECK-SAME:   %[[ARG:.*]]: vector<4x1xi32>) -> vector<4x1xi32> {
+//       CHECK:   %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : vector<4x1xi32> to !llvm.array<4 x vector<1xi32>>
+//       CHECK:   %[[C1:.*]] = arith.constant 1 : i32
+//       CHECK:   %[[VEC_0:.*]] = llvm.extractvalue %[[CAST]][0] : !llvm.array<4 x vector<1xi32>>
+//       CHECK:   %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
+//       CHECK:   %[[VEC_1:.*]] = llvm.insertelement %[[C1]], %[[VEC_0]]{{\[}}%[[C0]] : i64] : vector<1xi32>
+//       CHECK:   %[[VEC_2:.*]] = llvm.insertvalue %[[VEC_1]], %[[CAST]][0] : !llvm.array<4 x vector<1xi32>>
+//       CHECK:   %[[RES:.*]] = builtin.unrealized_conversion_cast %[[VEC_2]] : !llvm.array<4 x vector<1xi32>> to vector<4x1xi32>
+//       CHECK:   return %[[RES]] : vector<4x1xi32>
 
 // -----
 
@@ -4125,42 +4168,3 @@ func.func @step_scalable() -> vector<[4]xindex> {
   %0 = vector.step : vector<[4]xindex>
   return %0 : vector<[4]xindex>
 }
-
-// -----
-
-// CHECK-LABEL: func @fold_extract_constant_indices
-
-func.func @fold_extract_constant_indices(%arg : vector<32x1xi32>) -> i32 {
-  %0 = arith.constant 0 : index
-  %1 = vector.extract %arg[%0, %0] : i32 from vector<32x1xi32>
-  return %1 : i32
-}
-
-// CHECK-SAME: %[[ARG:.*]]: vector<32x1xi32>) -> i32 {
-// CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : vector<32x1xi32> to !llvm.array<32 x vector<1xi32>>
-// CHECK: %[[VEC_0:.*]] = llvm.extractvalue %[[CAST]][0] : !llvm.array<32 x vector<1xi32>>
-// CHECK: %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
-// CHECK: %[[RES:.*]] = llvm.extractelement %[[VEC_0]]{{\[}}%[[C0]] : i64] : vector<1xi32>
-// CHECK:  return %[[RES]] : i32
-
-// -----
-
-// CHECK-LABEL: func @fold_insert_constant_indices
-
-func.func @fold_insert_constant_indices(%arg : vector<4x1xi32>) -> vector<4x1xi32> {
-  %0 = arith.constant 0 : index
-  %1 = arith.constant 1 : i32
-  %res = vector.insert %1, %arg[%0, %0] : i32 into vector<4x1xi32>
-  return %res : vector<4x1xi32>
-}
-
-
-// CHECK-SAME: %[[ARG:.*]]: vector<4x1xi32>) -> vector<4x1xi32> {
-// CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : vector<4x1xi32> to !llvm.array<4 x vector<1xi32>>
-// CHECK: %[[C1:.*]] = arith.constant 1 : i32
-// CHECK: %[[VEC_0:.*]] = llvm.extractvalue %[[CAST]][0] : !llvm.array<4 x vector<1xi32>>
-// CHECK: %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
-// CHECK: %[[VEC_1:.*]] = llvm.insertelement %[[C1]], %[[VEC_0]]{{\[}}%[[C0]] : i64] : vector<1xi32>
-// CHECK: %[[VEC_2:.*]] = llvm.insertvalue %[[VEC_1]], %[[CAST]][0] : !llvm.array<4 x vector<1xi32>>
-// CHECK: %[[RES:.*]] = builtin.unrealized_conversion_cast %[[VEC_2]] : !llvm.array<4 x vector<1xi32>> to vector<4x1xi32>
-// CHECK: return %[[RES]] : vector<4x1xi32>

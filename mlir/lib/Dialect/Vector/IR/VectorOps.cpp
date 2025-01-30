@@ -1986,17 +1986,20 @@ static Value foldScalarExtractFromFromElements(ExtractOp extractOp) {
   return fromElementsOp.getElements()[flatIndex];
 }
 
-// If the dynamic operands of `extractOp` or `insertOp` is result of
+// If the dynamic indices of `extractOp` or `insertOp` are result of
 // `constantOp`, then fold it.
 template <typename OpType, typename AdaptorType>
 static Value extractInsertFoldConstantOp(OpType op, AdaptorType adaptor,
                                          SmallVectorImpl<Value> &operands) {
-  auto staticPosition = op.getStaticPosition().vec();
+  std::vector<int64_t> staticPosition = op.getStaticPosition().vec();
   OperandRange dynamicPosition = op.getDynamicPosition();
   ArrayRef<Attribute> dynamicPositionAttr = adaptor.getDynamicPosition();
+
   // If the dynamic operands is empty, it is returned directly.
   if (!dynamicPosition.size())
     return {};
+
+  // `index` is used to iterate over the `dynamicPosition`.
   unsigned index = 0;
 
   // `opChange` is a flag. If it is true, it means to update `op` in place.
