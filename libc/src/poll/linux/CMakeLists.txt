@@ -7,6 +7,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.nfds_t
     libc.hdr.types.struct_pollfd
+    libc.hdr.types.struct_timespec
     libc.include.poll
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
