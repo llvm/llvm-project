@@ -23,8 +23,8 @@ using namespace lldb_private;
 
 static llvm::Error
 ProcessAliasOptionsArgs(lldb::CommandObjectSP &cmd_obj_sp,
-                                    llvm::StringRef options_args,
-                                    OptionArgVectorSP &option_arg_vector_sp) {
+                        llvm::StringRef options_args,
+                        OptionArgVectorSP &option_arg_vector_sp) {
   OptionArgVector *option_arg_vector = option_arg_vector_sp.get();
 
   if (options_args.size() < 1)
@@ -61,7 +61,7 @@ ProcessAliasOptionsArgs(lldb::CommandObjectSP &cmd_obj_sp,
         if (!entry.ref().empty())
           option_arg_vector->emplace_back(
               std::string(CommandInterpreter::g_argument), -1,
-                                          std::string(entry.ref()));
+              std::string(entry.ref()));
       }
     }
   }
