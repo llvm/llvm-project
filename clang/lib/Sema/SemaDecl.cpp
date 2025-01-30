@@ -13379,7 +13379,7 @@ void Sema::checkNonTrivialCUnion(QualType QT, SourceLocation Loc,
 
 bool Sema::GloballyUniqueObjectMightBeAccidentallyDuplicated(
     const VarDecl *Dcl) {
-  if (!Dcl || !getLangOpts().CPlusPlus)
+  if (!getLangOpts().CPlusPlus)
     return false;
 
   // We only need to warn if the definition is in a header file, so wait to
