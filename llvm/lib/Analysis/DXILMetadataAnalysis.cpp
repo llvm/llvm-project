@@ -71,17 +71,32 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
 
   // Set shader flags based on Module properties
   SmallVector<llvm::Module::ModuleFlagEntry> FlagEntries;
+  SmallVector<llvm::Module::ModuleFlagEntry> NewFlagEntries;
   M.getModuleFlagsMetadata(FlagEntries);
   for (const auto &Flag : FlagEntries) {
-    if (Flag.Behavior != Module::ModFlagBehavior::Override)
-      continue;
-    if (Flag.Key->getString().compare("dx.disable_optimizations") == 0) {
+    if ((Flag.Behavior == Module::ModFlagBehavior::Override) &&
+        (Flag.Key->getString().compare("dx.disable_optimizations") == 0)) {
       const auto *V = mdconst::extract<llvm::ConstantInt>(Flag.Val);
-      if (V->isOne()) {
+      if (V->isOne())
         MMDAI.DisableOptimizations = true;
-        break;
-      }
-    }
+    } else
+      // Collect all Module Flags other than dx.disable_optimizations.
+      NewFlagEntries.push_back(Flag);
+  }
+
+  // "dx.disable_optimizations" is not included in the metadata specified in
+  // DXIL specification. Hence it needs to be deleted such that it is not
+  // emitted in the final DXIL output, now that its intent is captured in MMDAI,
+  // if present.
+
+  if (NewFlagEntries.size() != FlagEntries.size()) {
+    NamedMDNode *OrigMDFlags = M.getModuleFlagsMetadata();
+    // Delete all Module flags
+    OrigMDFlags->eraseFromParent();
+    // Repopulate Module flags using the list that excludes
+    // dx.delete_optimizations.
+    for (const auto &Flag : NewFlagEntries)
+      M.addModuleFlag(Flag.Behavior, Flag.Key->getString(), Flag.Val);
   }
 
   return MMDAI;

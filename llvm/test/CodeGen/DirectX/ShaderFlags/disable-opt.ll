@@ -18,8 +18,10 @@ entry:
   ret void
 }
 
+; CHECK-NOT: llvm.module.flags
 !llvm.module.flags = !{!0}
 
+; CHECK-NOT: "dx.disable_optimizations"
 !0 = !{i32 4, !"dx.disable_optimizations", i32 1}
 
 
