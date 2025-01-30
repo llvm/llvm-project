@@ -2204,7 +2204,6 @@ cc_library(
     hdrs = glob(["include/clang/FrontendTool/*.h"]),
     includes = ["include"],
     deps = [
-        ":arc_migrate",
         ":codegen",
         ":config",
         ":driver",
@@ -2226,7 +2225,6 @@ cc_library(
     hdrs = glob(["include/clang-c/*.h"]),
     defines = ["CINDEX_NO_EXPORTS"],
     deps = [
-        ":arc_migrate",
         ":ast",
         ":basic",
         ":codegen",
@@ -2259,7 +2257,6 @@ cc_plugin_library(
     }),
     strip_include_prefix = "include",
     deps = [
-        ":arc_migrate",
         ":ast",
         ":basic",
         ":codegen",
