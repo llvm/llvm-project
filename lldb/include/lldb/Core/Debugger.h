@@ -19,6 +19,7 @@
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/SourceManager.h"
+#include "lldb/Core/Statusline.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/StreamFile.h"
@@ -307,6 +308,10 @@ public:
   bool GetShowProgress() const;
 
   bool SetShowProgress(bool show_progress);
+
+  bool GetShowStatusline() const;
+
+  const FormatEntity::Entry *GetStatuslineFormat() const;
 
   llvm::StringRef GetShowProgressAnsiPrefix() const;
 
@@ -604,6 +609,14 @@ public:
     return m_source_file_cache;
   }
 
+  struct ProgressReport {
+    uint64_t id;
+    uint64_t completed;
+    uint64_t total;
+    std::string message;
+  };
+  std::optional<ProgressReport> GetCurrentProgressReport() const;
+
 protected:
   friend class CommandInterpreter;
   friend class REPL;
@@ -728,7 +741,7 @@ protected:
   IOHandlerStack m_io_handler_stack;
   std::recursive_mutex m_io_handler_synchronous_mutex;
 
-  std::optional<uint64_t> m_current_event_id;
+  std::optional<Statusline> m_statusline;
 
   llvm::StringMap<std::weak_ptr<LogHandler>> m_stream_handlers;
   std::shared_ptr<CallbackLogHandler> m_callback_handler_sp;
@@ -744,6 +757,12 @@ protected:
   llvm::once_flag m_clear_once;
   lldb::TargetSP m_dummy_target_sp;
   Diagnostics::CallbackID m_diagnostics_callback_id;
+
+  /// Bookkeeping for command line progress events.
+  /// @{
+  llvm::SmallVector<ProgressReport, 4> m_progress_reports;
+  mutable std::mutex m_progress_reports_mutex;
+  /// @}
 
   std::mutex m_destroy_callback_mutex;
   lldb::callback_token_t m_destroy_callback_next_token = 0;
