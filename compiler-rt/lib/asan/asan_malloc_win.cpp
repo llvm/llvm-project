@@ -155,7 +155,7 @@ __declspec(noinline) void *_aligned_realloc(void *p, size_t size,
                                             size_t alignment) {
   GET_STACK_TRACE_MALLOC;
   void *n = asan_aligned_alloc(alignment, size, &stack);
-  if (n) {
+  if (n && p) {
     size_t osize = _msize(p);
     REAL(memcpy)(n, p, Min<size_t>(osize, size));
     free(p);
