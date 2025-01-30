@@ -64,7 +64,16 @@ MDNode *MetadataBuilder::BuildRootSignature() {
 }
 
 MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {
-  return MDNode::get(Ctx, {MDString::get(Ctx, "DescriptorTable")});
+  IRBuilder<> B(Ctx);
+  SmallVector<Metadata *> TableOperands;
+  TableOperands.push_back(MDString::get(Ctx, "DescriptorTable"));
+  TableOperands.push_back(ConstantAsMetadata::get(B.getInt32(llvm::to_underlying(Table.Visibility))));
+
+  assert(Table.NumClauses <= GeneratedMetadata.size() && "Table expected all owned clauses to be generated already");
+  TableOperands.append(GeneratedMetadata.end() - Table.NumClauses, GeneratedMetadata.end());
+  GeneratedMetadata.pop_back_n(Table.NumClauses);
+
+  return MDNode::get(Ctx, TableOperands);
 }
 
 MDNode *MetadataBuilder::BuildDescriptorTableClause(const DescriptorTableClause &Clause) {

@@ -6,12 +6,14 @@
 void FirstEntry() {}
 
 // CHECK-DAG: ![[#CBV:]] = !{!"CBV", i32 1, i32 0, i32 0, i32 -1, i32 4}
-// CHECK-DAG: ![[#TABLE:]] = !{!"DescriptorTable"}
+// CHECK-DAG: ![[#SRV:]] = !{!"SRV", i32 4, i32 42, i32 3, i32 32, i32 0}
+// CHECK-DAG: ![[#TABLE:]] = !{!"DescriptorTable", i32 0, ![[#CBV]], ![[#SRV]]}
 // CHECK-DAG: ![[#SECOND_RS:]] = !{![[#TABLE]]}
 
 #define SampleDescriptorTable \
   "DescriptorTable( " \
-  "  CBV(b0) " \
+  "  CBV(b0), " \
+  "  SRV(t42, space = 3, offset = 32, numDescriptors = 4, flags = 0) " \
   ")"
 [shader("compute"), RootSignature(SampleDescriptorTable)]
 [numthreads(1,1,1)]
