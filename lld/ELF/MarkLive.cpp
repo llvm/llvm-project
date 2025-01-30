@@ -246,14 +246,13 @@ template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
   msg << "live symbol: " << toStr(ctx, *s);
 
   std::optional<LiveObject> cur = s;
-  while (cur) {
-    std::optional<LiveObject> next;
+  while (true) {
     auto it = whyLive.find(*cur);
     if (it != whyLive.end()) {
       // If there is a specific reason this object is live, report it.
       if (!it->second)
         break;
-      next = *it->second;
+      cur = *it->second;
       msg << "\n>>> referenced by ";
     } else {
       // This object is live merely by being a member of its parent section, so
@@ -263,23 +262,20 @@ template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
         parent = dyn_cast<InputSectionBase>(d->section);
       assert(parent &&
              "all live objects should have a tracked reason for being live");
-      next = LiveObject{parent};
+      cur = LiveObject{parent};
       msg << "\n>>> included in ";
     }
 
-    if (next)
-      msg << (std::holds_alternative<Symbol *>(*cur) ? "symbol " : "section ");
+    msg << (std::holds_alternative<Symbol *>(*cur) ? "symbol " : "section ");
 
-    if (std::holds_alternative<Symbol *>(*next)) {
-      auto *s = std::get<Symbol *>(*next);
+    if (std::holds_alternative<Symbol *>(*cur)) {
+      auto *s = std::get<Symbol *>(*cur);
       // Match the syntax for sections below.
       msg << toStr(ctx, s->file) << ":(" << toStr(ctx, *s) << ')';
     } else {
-      auto *s = std::get<InputSectionBase *>(*next);
+      auto *s = std::get<InputSectionBase *>(*cur);
       msg << toStr(ctx, s);
     }
-
-    cur = next;
   }
 }
 
