@@ -65,10 +65,9 @@ define half @round_f16(half %h) {
 ;
 ; AVX512FP16-LABEL: round_f16:
 ; AVX512FP16:       ## %bb.0: ## %entry
-; AVX512FP16-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; AVX512FP16-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1]
-; AVX512FP16-NEXT:    vpternlogq $248, %xmm1, %xmm0, %xmm2
-; AVX512FP16-NEXT:    vaddsh %xmm2, %xmm0, %xmm0
+; AVX512FP16-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1]
+; AVX512FP16-NEXT:    vpternlogd $248, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm1
+; AVX512FP16-NEXT:    vaddsh %xmm1, %xmm0, %xmm0
 ; AVX512FP16-NEXT:    vrndscalesh $11, %xmm0, %xmm0, %xmm0
 ; AVX512FP16-NEXT:    retq
 entry:

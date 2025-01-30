@@ -1451,8 +1451,7 @@ define <8 x i64> @f8xi64_i128(<8 x i64> %a) {
 ;
 ; AVX512-LABEL: f8xi64_i128:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vbroadcasti32x4 {{.*#+}} zmm1 = [0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0]
-; AVX512-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [0,1,0,1,0,1,0,1]
 ; AVX512-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retl
@@ -1485,8 +1484,7 @@ define <8 x i64> @f8xi64_i128(<8 x i64> %a) {
 ;
 ; AVX512F-64-LABEL: f8xi64_i128:
 ; AVX512F-64:       # %bb.0:
-; AVX512F-64-NEXT:    vbroadcasti32x4 {{.*#+}} zmm1 = [0,1,0,1,0,1,0,1]
-; AVX512F-64-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; AVX512F-64-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [0,1,0,1,0,1,0,1]
 ; AVX512F-64-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; AVX512F-64-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; AVX512F-64-NEXT:    retq
@@ -1524,8 +1522,7 @@ define <8 x i64> @f8xi64_i256(<8 x i64> %a) {
 ;
 ; AVX512-LABEL: f8xi64_i256:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vbroadcasti64x4 {{.*#+}} zmm1 = [0,0,1,0,2,0,3,0,0,0,1,0,2,0,3,0]
-; AVX512-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [0,1,2,3,0,1,2,3]
 ; AVX512-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retl
@@ -1557,8 +1554,7 @@ define <8 x i64> @f8xi64_i256(<8 x i64> %a) {
 ;
 ; AVX512F-64-LABEL: f8xi64_i256:
 ; AVX512F-64:       # %bb.0:
-; AVX512F-64-NEXT:    vbroadcasti64x4 {{.*#+}} zmm1 = [0,1,2,3,0,1,2,3]
-; AVX512F-64-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3]
+; AVX512F-64-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [0,1,2,3,0,1,2,3]
 ; AVX512F-64-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; AVX512F-64-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; AVX512F-64-NEXT:    retq

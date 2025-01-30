@@ -22,11 +22,10 @@ define <8 x half> @test2(<8 x half> %x) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vcvtph2ps %xmm0, %ymm1
 ; CHECK-NEXT:    vcmpgtps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %k1
-; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf]
-; CHECK-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; CHECK-NEXT:    vmovdqa32 %ymm2, %ymm2 {%k1} {z}
-; CHECK-NEXT:    vpmovdw %ymm2, %xmm2
-; CHECK-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm1 ^ (xmm2 & (xmm0 ^ xmm1))
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vmovdqa32 %ymm1, %ymm1 {%k1} {z}
+; CHECK-NEXT:    vpmovdw %ymm1, %xmm1
+; CHECK-NEXT:    vpternlogd {{.*#+}} xmm0 = mem ^ (xmm1 & (xmm0 ^ mem))
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:
