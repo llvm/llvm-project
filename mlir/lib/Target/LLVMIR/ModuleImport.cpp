@@ -1519,22 +1519,72 @@ ModuleImport::convertCallOperands(llvm::CallBase *callInst,
   return operands;
 }
 
-LLVMFunctionType ModuleImport::convertFunctionType(llvm::CallBase *callInst) {
-  llvm::Value *calledOperand = callInst->getCalledOperand();
-  Type converted = [&] {
-    if (auto callee = dyn_cast<llvm::Function>(calledOperand))
-      return convertType(callee->getFunctionType());
-    return convertType(callInst->getFunctionType());
-  }();
+/// Checks if `callType` and `calleeType` are compatible and can be represented
+/// in MLIR.
+static LogicalResult
+verifyFunctionTypeCompatibility(LLVMFunctionType callType,
+                                LLVMFunctionType calleeType) {
+  if (callType.getReturnType() != calleeType.getReturnType())
+    return failure();
 
-  if (auto funcTy = dyn_cast_or_null<LLVMFunctionType>(converted))
+  if (calleeType.isVarArg()) {
+    // For variadic functions, the call can have more types than the callee
+    // specifies.
+    if (callType.getNumParams() < calleeType.getNumParams())
+      return failure();
+  } else {
+    // For non-variadic functions, the number of parameters needs to be the
+    // same.
+    if (callType.getNumParams() != calleeType.getNumParams())
+      return failure();
+  }
+
+  // Check that all operands match.
+  for (auto [operandType, argumentType] :
+       llvm::zip(callType.getParams(), calleeType.getParams()))
+    if (operandType != argumentType)
+      return failure();
+
+  return success();
+}
+
+FailureOr<LLVMFunctionType>
+ModuleImport::convertFunctionType(llvm::CallBase *callInst) {
+  auto castOrFailure = [](Type convertedType) -> FailureOr<LLVMFunctionType> {
+    auto funcTy = dyn_cast_or_null<LLVMFunctionType>(convertedType);
+    if (!funcTy)
+      return failure();
     return funcTy;
-  return {};
+  };
+
+  llvm::Value *calledOperand = callInst->getCalledOperand();
+  FailureOr<LLVMFunctionType> callType =
+      castOrFailure(convertType(callInst->getFunctionType()));
+  if (failed(callType))
+    return failure();
+  auto *callee = dyn_cast<llvm::Function>(calledOperand);
+  // For indirect calls, return the type of the call itself.
+  if (!callee)
+    return callType;
+
+  FailureOr<LLVMFunctionType> calleeType =
+      castOrFailure(convertType(callee->getFunctionType()));
+  if (failed(calleeType))
+    return failure();
+
+  // Compare the types to avoid constructing illegal call/invoke operations.
+  if (failed(verifyFunctionTypeCompatibility(*callType, *calleeType))) {
+    Location loc = translateLoc(callInst->getDebugLoc());
+    return emitError(loc) << "incompatible call and callee types: " << *callType
+                          << " and " << *calleeType;
+  }
+
+  return calleeType;
 }
 
 FlatSymbolRefAttr ModuleImport::convertCalleeName(llvm::CallBase *callInst) {
   llvm::Value *calledOperand = callInst->getCalledOperand();
-  if (auto callee = dyn_cast<llvm::Function>(calledOperand))
+  if (auto *callee = dyn_cast<llvm::Function>(calledOperand))
     return SymbolRefAttr::get(context, callee->getName());
   return {};
 }
@@ -1620,7 +1670,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     return success();
   }
   if (inst->getOpcode() == llvm::Instruction::Call) {
-    auto callInst = cast<llvm::CallInst>(inst);
+    auto *callInst = cast<llvm::CallInst>(inst);
     llvm::Value *calledOperand = callInst->getCalledOperand();
 
     FailureOr<SmallVector<Value>> operands =
@@ -1629,7 +1679,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
       return failure();
 
     auto callOp = [&]() -> FailureOr<Operation *> {
-      if (auto asmI = dyn_cast<llvm::InlineAsm>(calledOperand)) {
+      if (auto *asmI = dyn_cast<llvm::InlineAsm>(calledOperand)) {
         Type resultTy = convertType(callInst->getType());
         if (!resultTy)
           return failure();
@@ -1642,17 +1692,16 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                 /*is_align_stack=*/false, /*asm_dialect=*/nullptr,
                 /*operand_attrs=*/nullptr)
             .getOperation();
-      } else {
-        LLVMFunctionType funcTy = convertFunctionType(callInst);
-        if (!funcTy)
-          return failure();
-
-        FlatSymbolRefAttr callee = convertCalleeName(callInst);
-        auto callOp = builder.create<CallOp>(loc, funcTy, callee, *operands);
-        if (failed(convertCallAttributes(callInst, callOp)))
-          return failure();
-        return callOp.getOperation();
       }
+      FailureOr<LLVMFunctionType> funcTy = convertFunctionType(callInst);
+      if (failed(funcTy))
+        return failure();
+
+      FlatSymbolRefAttr callee = convertCalleeName(callInst);
+      auto callOp = builder.create<CallOp>(loc, *funcTy, callee, *operands);
+      if (failed(convertCallAttributes(callInst, callOp)))
+        return failure();
+      return callOp.getOperation();
     }();
 
     if (failed(callOp))
@@ -1716,8 +1765,8 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                                  unwindArgs)))
       return failure();
 
-    auto funcTy = convertFunctionType(invokeInst);
-    if (!funcTy)
+    FailureOr<LLVMFunctionType> funcTy = convertFunctionType(invokeInst);
+    if (failed(funcTy))
       return failure();
 
     FlatSymbolRefAttr calleeName = convertCalleeName(invokeInst);
@@ -1726,7 +1775,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     // added later on to handle the case in which the operation result is
     // included in this list.
     auto invokeOp = builder.create<InvokeOp>(
-        loc, funcTy, calleeName, *operands, directNormalDest, ValueRange(),
+        loc, *funcTy, calleeName, *operands, directNormalDest, ValueRange(),
         lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
 
     if (failed(convertInvokeAttributes(invokeInst, invokeOp)))
