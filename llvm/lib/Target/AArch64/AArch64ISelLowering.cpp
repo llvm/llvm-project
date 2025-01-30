@@ -8765,17 +8765,9 @@ static bool checkZExtBool(SDValue Arg, const SelectionDAG &DAG) {
 bool shouldUseFormStridedPseudo(MachineInstr &MI) {
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
 
-  const TargetRegisterClass *RegClass = nullptr;
-  switch (MI.getOpcode()) {
-  case AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO:
-    RegClass = &AArch64::ZPR2StridedOrContiguousRegClass;
-    break;
-  case AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO:
-    RegClass = &AArch64::ZPR4StridedOrContiguousRegClass;
-    break;
-  default:
-    llvm_unreachable("Unexpected opcode.");
-  }
+  assert((MI.getOpcode() == AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO ||
+          MI.getOpcode() == AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO) &&
+         "Unexpected opcode.");
 
   MCRegister SubReg = MCRegister::NoRegister;
   for (unsigned I = 1; I < MI.getNumOperands(); ++I) {
@@ -8792,8 +8784,11 @@ bool shouldUseFormStridedPseudo(MachineInstr &MI) {
       SubReg = OpSubReg;
 
     MachineOperand *CopySrcOp = MRI.getOneDef(CopySrc.getReg());
+    const TargetRegisterClass *CopySrcClass =
+        MRI.getRegClass(CopySrcOp->getReg());
     if (!CopySrcOp || !CopySrcOp->isReg() || OpSubReg != SubReg ||
-        MRI.getRegClass(CopySrcOp->getReg()) != RegClass)
+        (CopySrcClass != &AArch64::ZPR2StridedOrContiguousRegClass &&
+         CopySrcClass != &AArch64::ZPR4StridedOrContiguousRegClass))
       return false;
   }
 
