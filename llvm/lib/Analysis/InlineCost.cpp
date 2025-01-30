@@ -20,6 +20,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/DomConditionCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
@@ -440,6 +441,7 @@ protected:
   bool canFoldInboundsGEP(GetElementPtrInst &I);
   bool accumulateGEPOffset(GEPOperator &GEP, APInt &Offset);
   bool simplifyCallSite(Function *F, CallBase &Call);
+  bool simplifyCmpInst(Function *F, CmpInst &Cmp);
   bool simplifyInstruction(Instruction &I);
   bool simplifyIntrinsicCallIsConstant(CallBase &CB);
   bool simplifyIntrinsicCallObjectSize(CallBase &CB);
@@ -1666,6 +1668,71 @@ bool CallAnalyzer::visitGetElementPtr(GetElementPtrInst &I) {
   return isGEPFree(I);
 }
 
+/// Simplify \p Cmp if RHS is const and we can ValueTrack LHS,
+// This handles the case when the Cmp instruction is guarded a recursive call
+// that will cause the Cmp to fail/succeed for the next iteration.
+bool CallAnalyzer::simplifyCmpInst(Function *F, CmpInst &Cmp) {
+  // Bail out if the RHS is NOT const:
+  if (!isa<Constant>(Cmp.getOperand(1)))
+    return false;
+  auto *CmpOp = Cmp.getOperand(0);
+  // Iterate over the users of the function to check if it's a recursive
+  // function:
+  for (auto *U : F->users()) {
+    CallInst *Call = dyn_cast<CallInst>(U);
+    if (!Call || Call->getFunction() != F)
+      continue;
+    auto *CallBB = Call->getParent();
+    auto *Predecessor = CallBB->getSinglePredecessor();
+    // Only handle the case when the callsite has a single predecessor:
+    if (!Predecessor)
+      continue;
+
+    auto *Br = dyn_cast<BranchInst>(Predecessor->getTerminator());
+    if (!Br || Br->isUnconditional())
+      continue;
+    // Check if the Br condition is the same Cmp instr we are investigating:
+    auto *CmpInstr = dyn_cast<CmpInst>(Br->getCondition());
+    if (!CmpInstr || CmpInstr != &Cmp)
+      continue;
+    // Check if there are any arg of the recursive callsite is affecting the cmp
+    // instr:
+    bool ArgFound = false;
+    Value *FuncArg = nullptr, *CallArg = nullptr;
+    for (unsigned ArgNum = 0;
+         ArgNum < F->arg_size() && ArgNum < Call->arg_size(); ArgNum++) {
+      FuncArg = F->getArg(ArgNum);
+      CallArg = Call->getArgOperand(ArgNum);
+      if ((FuncArg == CmpOp) && (CallArg != CmpOp)) {
+        ArgFound = true;
+        break;
+      }
+    }
+    if (!ArgFound)
+      continue;
+    // Now we have a recursive call that is guarded by a cmp instruction.
+    // Check if this cmp can be simplified:
+    SimplifyQuery SQ(DL, dyn_cast<Instruction>(CallArg));
+    DomConditionCache DC;
+    DC.registerBranch(Br);
+    SQ.DC = &DC;
+    DominatorTree DT(*F);
+    SQ.DT = &DT;
+    Value *simplifiedInstruction = llvm::simplifyInstructionWithOperands(
+        CmpInstr, {CallArg, Cmp.getOperand(1)}, SQ);
+    if (!simplifiedInstruction)
+      continue;
+    if (auto *ConstVal = dyn_cast<llvm::ConstantInt>(simplifiedInstruction)) {
+      bool isTrueSuccessor = CallBB == Br->getSuccessor(0);
+      SimplifiedValues[&Cmp] = ConstVal;
+      if (ConstVal->isOne())
+        return !isTrueSuccessor;
+      return isTrueSuccessor;
+    }
+  }
+  return false;
+}
+
 /// Simplify \p I if its operands are constants and update SimplifiedValues.
 bool CallAnalyzer::simplifyInstruction(Instruction &I) {
   SmallVector<Constant *> COps;
@@ -2048,6 +2115,10 @@ bool CallAnalyzer::visitCmpInst(CmpInst &I) {
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
   // First try to handle simplified comparisons.
   if (simplifyInstruction(I))
+    return true;
+
+  // Try to handle comparison that can be simplified using ValueTracking.
+  if (simplifyCmpInst(I.getFunction(), I))
     return true;
 
   if (I.getOpcode() == Instruction::FCmp)
