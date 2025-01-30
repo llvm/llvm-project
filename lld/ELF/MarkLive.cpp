@@ -240,20 +240,21 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset,
 template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
   if (!whyLive.contains(s))
     return;
-  auto diag = Msg(ctx);
+
+  auto msg = Msg(ctx);
   bool first = true;
   for (std::optional<LiveObject> cur = s; cur;) {
     if (std::holds_alternative<Symbol *>(*cur)) {
       auto *s = std::get<Symbol *>(*cur);
       // Match the syntax for sections below.
-      diag << toStr(ctx, s->file) << ":(" << toStr(ctx, *s) << ')';
+      msg << toStr(ctx, s->file) << ":(" << toStr(ctx, *s) << ')';
     } else {
       auto *s = std::get<InputSectionBase *>(*cur);
-      diag << toStr(ctx, s);
+      msg << toStr(ctx, s);
     }
 
     if (first) {
-      diag << " live because:";
+      msg << " live because:";
       first = false;
     }
 
@@ -275,8 +276,8 @@ template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
     }
 
     if (cur)
-      diag << "\n>>> referenced by "
-           << (std::holds_alternative<Symbol *>(*cur) ? "symbol " : "section ");
+      msg << "\n>>> referenced by "
+          << (std::holds_alternative<Symbol *>(*cur) ? "symbol " : "section ");
   }
 }
 
