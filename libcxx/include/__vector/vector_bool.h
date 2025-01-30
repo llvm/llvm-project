@@ -10,6 +10,7 @@
 #define _LIBCPP___VECTOR_VECTOR_BOOL_H
 
 #include <__algorithm/copy.h>
+#include <__algorithm/copy_backward.h>
 #include <__algorithm/fill_n.h>
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/max.h>
