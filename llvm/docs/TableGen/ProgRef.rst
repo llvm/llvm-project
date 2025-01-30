@@ -672,7 +672,7 @@ arguments.
    Body: ";" | "{" `BodyItem`* "}"
    BodyItem: (`Type` | "code") `TokIdentifier` ["=" `Value`] ";"
            :| "let" `TokIdentifier` ["{" `RangeList` "}"] "=" `Value` ";"
-           :| "defvar" `TokIdentifier` "=" `Value` ";"
+           :| `Defvar`
            :| `Assert`
 
 A field definition in the body specifies a field to be included in the class
