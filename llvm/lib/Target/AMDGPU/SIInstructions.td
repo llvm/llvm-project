@@ -228,15 +228,38 @@ def S_INVERSE_BALLOT_U64 : SPseudoInstSI<
 // Pseudo instructions used for @llvm.fptrunc.round. The final codegen is done
 // in the ModeRegister pass.
 let Uses = [MODE, EXEC] in {
+let True16Predicate = NotHasTrue16BitInsts in
 def FPTRUNC_ROUND_F16_F32_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
   (ins VGPR_32:$src0, i32imm:$round)>;
+
+let True16Predicate = UseFakeTrue16Insts in
+def FPTRUNC_ROUND_F16_F32_PSEUDO_fake16_e32 : VPseudoInstSI <(outs VGPR_32:$vdst),
+  (ins VGPR_32:$src0, i32imm:$round)>;
+
+let True16Predicate = UseRealTrue16Insts in
+// The operands of these pseudos should match V_CVT_F16_F32_t16_e64
+def FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64 : VPseudoInstSI <(outs VOPDstOperand_t16:$vdst),
+  (ins FP32InputMods:$src0_modifiers, VSrc_f32:$src0, Clamp0:$clamp, omod0:$omod, op_sel0:$op_sel, i32imm:$round)> {
+   let FPClamp = 1;
+   let ClampLo = 1;
+   let UseNamedOperandTable = 1;
+}
 
 def FPTRUNC_ROUND_F32_F64_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
   (ins VReg_64:$src0, i32imm:$round)>;
 } // End Uses = [MODE, EXEC]
 
+let True16Predicate = NotHasTrue16BitInsts in
 def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 SupportedRoundMode:$round))),
      (FPTRUNC_ROUND_F16_F32_PSEUDO $src0, (as_hw_round_mode $round))>;
+
+let True16Predicate = UseFakeTrue16Insts in
+def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 SupportedRoundMode:$round))),
+     (FPTRUNC_ROUND_F16_F32_PSEUDO_fake16_e32 $src0, (as_hw_round_mode $round))>;
+
+let True16Predicate = UseRealTrue16Insts in
+def : GCNPat <(f16 (fptrunc_round (f32 (VOP3OpSelMods f32:$src0, i32:$src0_modifiers)), (i32 SupportedRoundMode:$round))),
+     (FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64 $src0_modifiers, $src0, (as_hw_round_mode $round))>;
 
 def : GCNPat <(f32 (fptrunc_round f64:$src0, (i32 SupportedRoundMode:$round))),
      (FPTRUNC_ROUND_F32_F64_PSEUDO $src0, (as_hw_round_mode $round))>;
