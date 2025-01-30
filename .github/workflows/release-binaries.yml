@@ -226,14 +226,6 @@ jobs:
       id: setup-stage
       uses: ./workflows-main/.github/workflows/release-binaries-setup-stage
 
-    - name: Setup sccache
-      uses: hendrikmuhs/ccache-action@ca3acd2731eef11f1572ccb126356c2f9298d35e # v1.2.9
-      with:
-        # Default to 2G to workaround: https://github.com/hendrikmuhs/ccache-action/issues/174
-        max-size: 2G
-        key: ${{ needs.prepare.outputs.ccache }}-${{ runner.os }}-${{ runner.arch }}-release
-        variant: ${{ needs.prepare.outputs.ccache }}
-
     - name: Configure
       id: build
       shell: bash
@@ -246,9 +238,8 @@ jobs:
             ${{ needs.prepare.outputs.target-cmake-flags }} \
             -C clang/cmake/caches/Release.cmake \
             -DBOOTSTRAP_LLVM_PARALLEL_LINK_JOBS=1 \
-            -DBOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}" \
-            -DCMAKE_C_COMPILER_LAUNCHER=$CCACHE_BIN \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=$CCACHE_BIN
+            -DBOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
+
     - name: Build
       shell: bash
       run: |
