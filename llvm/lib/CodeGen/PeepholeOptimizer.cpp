@@ -1956,22 +1956,7 @@ ValueTrackerResult ValueTracker::getNextSourceFromRegSequence() {
   assert((Def->isRegSequence() || Def->isRegSequenceLike()) &&
          "Invalid definition");
 
-  if (Def->getOperand(DefIdx).getSubReg())
-    // If we are composing subregs, bail out.
-    // The case we are checking is Def.<subreg> = REG_SEQUENCE.
-    // This should almost never happen as the SSA property is tracked at
-    // the register level (as opposed to the subreg level).
-    // I.e.,
-    // Def.sub0 =
-    // Def.sub1 =
-    // is a valid SSA representation for Def.sub0 and Def.sub1, but not for
-    // Def. Thus, it must not be generated.
-    // However, some code could theoretically generates a single
-    // Def.sub0 (i.e, not defining the other subregs) and we would
-    // have this case.
-    // If we can ascertain (or force) that this never happens, we could
-    // turn that into an assertion.
-    return ValueTrackerResult();
+  assert(!Def->getOperand(DefIdx).getSubReg() && "illegal subregister def");
 
   SmallVector<RegSubRegPairAndIdx, 8> RegSeqInputRegs;
   if (!TII->getRegSequenceInputs(*Def, DefIdx, RegSeqInputRegs))
