@@ -802,15 +802,16 @@ static void addSanitizers(const Triple &TargetTriple,
   // TODO: remove IsRequested()
   if (LowerAllowCheckPass::IsRequested() || ScaledCutoffs.has_value()) {
     // We want to call it after inline, which is about OptimizerEarlyEPCallback.
-    PB.registerOptimizerEarlyEPCallback([&](ModulePassManager &MPM,
-                                            OptimizationLevel Level,
-                                            ThinOrFullLTOPhase Phase) {
-      LowerAllowCheckPass::Options Opts;
-      // TODO: after removing IsRequested(), make this unconditional
-      if (ScaledCutoffs.has_value())
-        Opts.cutoffs = ScaledCutoffs.value();
-      MPM.addPass(createModuleToFunctionPassAdaptor(LowerAllowCheckPass(Opts)));
-    });
+    PB.registerOptimizerEarlyEPCallback(
+        [ScaledCutoffs](ModulePassManager &MPM, OptimizationLevel Level,
+                        ThinOrFullLTOPhase Phase) {
+          LowerAllowCheckPass::Options Opts;
+          // TODO: after removing IsRequested(), make this unconditional
+          if (ScaledCutoffs.has_value())
+            Opts.cutoffs = ScaledCutoffs.value();
+          MPM.addPass(
+              createModuleToFunctionPassAdaptor(LowerAllowCheckPass(Opts)));
+        });
   }
 }
 
