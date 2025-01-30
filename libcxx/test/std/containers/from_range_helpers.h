@@ -50,8 +50,46 @@ constexpr auto wrap_input(std::vector<T>& input) {
   return std::ranges::subrange(std::move(b), std::move(e));
 }
 
+template <class Iter, class Sent = Iter>
+class forward_range_wrapper {
+public:
+  using _Iter = forward_iterator<Iter>;
+  using _Sent = sentinel_wrapper<_Iter>;
+
+  forward_range_wrapper() = default;
+  forward_range_wrapper(Iter begin, Iter end) : begin_(std::move(begin)), end_(std::move(end)) {}
+  _Iter begin() { return _Iter(std::move(begin_)); }
+  _Sent end() { return _Sent(_Iter(std::move(end_))); }
+
+private:
+  Iter begin_;
+  Sent end_;
+};
+
+template <class Iter, class Sent>
+forward_range_wrapper(Iter, Sent) -> forward_range_wrapper<Iter, Sent>;
+
+template <class Iter, class Sent = Iter>
+class random_access_range_wrapper {
+public:
+  using _Iter = cpp20_random_access_iterator<Iter>;
+  using _Sent = sized_sentinel<_Iter>;
+
+  random_access_range_wrapper() = default;
+  random_access_range_wrapper(Iter begin, Iter end) : begin_(std::move(begin)), end_(std::move(end)) {}
+  _Iter begin() { return _Iter(std::move(begin_)); }
+  _Sent end() { return _Sent(_Iter(std::move(end_))); }
+
+private:
+  Iter begin_;
+  Sent end_;
+};
+
+template <class Iter, class Sent>
+random_access_range_wrapper(Iter, Sent) -> random_access_range_wrapper<Iter, Sent>;
+
 struct KeyValue {
-  int key; // Only the key is considered for equality comparison.
+  int key;    // Only the key is considered for equality comparison.
   char value; // Allows distinguishing equivalent instances.
 
   bool operator<(const KeyValue& other) const { return key < other.key; }
@@ -60,17 +98,15 @@ struct KeyValue {
 
 template <>
 struct std::hash<KeyValue> {
-  std::size_t operator()(const KeyValue& kv) const {
-    return kv.key;
-  }
+  std::size_t operator()(const KeyValue& kv) const { return kv.key; }
 };
 
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
 
 template <class T>
 struct ThrowingAllocator {
-  using value_type = T;
-  using char_type = T;
+  using value_type      = T;
+  using char_type       = T;
   using is_always_equal = std::false_type;
 
   ThrowingAllocator() = default;
@@ -90,14 +126,13 @@ struct ThrowingAllocator {
 
 template <class T, class Func>
 constexpr void for_all_iterators_and_allocators(Func f) {
-  using Iterators = types::type_list<
-    cpp20_input_iterator<T*>,
-    forward_iterator<T*>,
-    bidirectional_iterator<T*>,
-    random_access_iterator<T*>,
-    contiguous_iterator<T*>,
-    T*
-  >;
+  using Iterators =
+      types::type_list< cpp20_input_iterator<T*>,
+                        forward_iterator<T*>,
+                        bidirectional_iterator<T*>,
+                        random_access_iterator<T*>,
+                        contiguous_iterator<T*>,
+                        T* >;
 
   types::for_each(Iterators{}, [=]<class Iter>() {
     f.template operator()<Iter, sentinel_wrapper<Iter>, std::allocator<T>>();

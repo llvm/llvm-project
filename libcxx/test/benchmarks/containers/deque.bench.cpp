@@ -24,22 +24,21 @@ BENCHMARK_CAPTURE(BM_ConstructSize, deque_byte, std::deque<unsigned char>{})->Ar
 
 BENCHMARK_CAPTURE(BM_ConstructSizeValue, deque_byte, std::deque<unsigned char>{}, 0)->Arg(5140480);
 
-BENCHMARK_CAPTURE(BM_ConstructIterIter, deque_char, std::deque<char>{}, getRandomIntegerInputs<char>)
+BENCHMARK_CAPTURE(BM_ConstructIterIter<std::deque<char>>, deque_char, getRandomIntegerInputs<char>)->Arg(TestNumInputs);
+
+BENCHMARK_CAPTURE(BM_ConstructIterIter<std::deque<size_t>>, deque_size_t, getRandomIntegerInputs<size_t>)
     ->Arg(TestNumInputs);
 
-BENCHMARK_CAPTURE(BM_ConstructIterIter, deque_size_t, std::deque<size_t>{}, getRandomIntegerInputs<size_t>)
+BENCHMARK_CAPTURE(BM_ConstructIterIter<std::deque<std::string>>, deque_string, getRandomStringInputs)
     ->Arg(TestNumInputs);
 
-BENCHMARK_CAPTURE(BM_ConstructIterIter, deque_string, std::deque<std::string>{}, getRandomStringInputs)
+BENCHMARK_CAPTURE(BM_ConstructFromRange<std::deque<char>>, deque_char, getRandomIntegerInputs<char>)
     ->Arg(TestNumInputs);
 
-BENCHMARK_CAPTURE(BM_ConstructFromRange, deque_char, std::deque<char>{}, getRandomIntegerInputs<char>)
+BENCHMARK_CAPTURE(BM_ConstructFromRange<std::deque<size_t>>, deque_size_t, getRandomIntegerInputs<size_t>)
     ->Arg(TestNumInputs);
 
-BENCHMARK_CAPTURE(BM_ConstructFromRange, deque_size_t, std::deque<size_t>{}, getRandomIntegerInputs<size_t>)
-    ->Arg(TestNumInputs);
-
-BENCHMARK_CAPTURE(BM_ConstructFromRange, deque_string, std::deque<std::string>{}, getRandomStringInputs)
+BENCHMARK_CAPTURE(BM_ConstructFromRange<std::deque<std::string>>, deque_string, getRandomStringInputs)
     ->Arg(TestNumInputs);
 
 BENCHMARK_CAPTURE(BM_erase_iter_in_middle, deque_int, std::deque<int>{}, getRandomIntegerInputs<int>)

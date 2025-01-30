@@ -171,7 +171,6 @@ public:
     if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
       auto __n = static_cast<size_type>(ranges::distance(__range));
       __init_with_size(ranges::begin(__range), ranges::end(__range), __n);
-
     } else {
       __init_with_sentinel(ranges::begin(__range), ranges::end(__range));
     }

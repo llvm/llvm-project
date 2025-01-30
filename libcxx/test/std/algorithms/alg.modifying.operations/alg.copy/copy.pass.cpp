@@ -13,7 +13,9 @@
 //   copy(InIter first, InIter last, OutIter result);
 
 #include <algorithm>
+#include <array>
 #include <cassert>
+#include <vector>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -59,6 +61,29 @@ struct TestInIters {
   }
 };
 
+template <std::size_t N>
+struct TestFwdIterInBitIterOut {
+  std::array<bool, N> in = {};
+  template <class FwdIter>
+  TEST_CONSTEXPR_CXX20 void operator()() {
+    for (std::size_t i = 0; i < in.size(); i += 2)
+      in[i] = true;
+
+    { // Test with full bytes
+      std::vector<bool> out(N);
+      std::copy(FwdIter(in.data()), FwdIter(in.data() + N), out.begin());
+      for (std::size_t i = 0; i < N; ++i)
+        assert(out[i] == static_cast<bool>(in[i]));
+    }
+    { // Test with partial bytes in both front and back
+      std::vector<bool> out(N + 8);
+      std::copy(FwdIter(in.data()), FwdIter(in.data() + N), out.begin() + 4);
+      for (std::size_t i = 0; i < N; ++i)
+        assert(out[i + 4] == static_cast<bool>(in[i]));
+    }
+  }
+};
+
 TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::cpp17_input_iterator_list<int*>(), TestInIters());
 
@@ -76,6 +101,14 @@ TEST_CONSTEXPR_CXX20 bool test() {
     std::copy(a + 3, a + 10, a);
     int expected[] = {4, 5, 6, 7, 8, 9, 10, 8, 9, 10};
     assert(std::equal(a, a + 10, expected));
+  }
+
+  { // Test std::copy() with forward_iterator-pair input and vector<bool>::iterator output
+    types::for_each(types::forward_iterator_list<bool*>(), TestFwdIterInBitIterOut<8>());
+    types::for_each(types::forward_iterator_list<bool*>(), TestFwdIterInBitIterOut<16>());
+    types::for_each(types::forward_iterator_list<bool*>(), TestFwdIterInBitIterOut<32>());
+    types::for_each(types::forward_iterator_list<bool*>(), TestFwdIterInBitIterOut<64>());
+    types::for_each(types::forward_iterator_list<bool*>(), TestFwdIterInBitIterOut<256>());
   }
 
   return true;

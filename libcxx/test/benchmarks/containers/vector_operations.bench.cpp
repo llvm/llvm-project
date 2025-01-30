@@ -33,22 +33,22 @@ BENCHMARK_CAPTURE(BM_Assignment, vector_int, std::vector<int>{})->Arg(5140480);
 
 BENCHMARK_CAPTURE(BM_ConstructSizeValue, vector_byte, std::vector<unsigned char>{}, 0)->Arg(5140480);
 
-BENCHMARK_CAPTURE(BM_ConstructIterIter, vector_char, std::vector<char>{}, getRandomIntegerInputs<char>)
+BENCHMARK_CAPTURE(BM_ConstructIterIter<std::vector<char>>, vector_char, getRandomIntegerInputs<char>)
     ->Arg(TestNumInputs);
 
-BENCHMARK_CAPTURE(BM_ConstructIterIter, vector_size_t, std::vector<size_t>{}, getRandomIntegerInputs<size_t>)
+BENCHMARK_CAPTURE(BM_ConstructIterIter<std::vector<size_t>>, vector_size_t, getRandomIntegerInputs<size_t>)
     ->Arg(TestNumInputs);
 
-BENCHMARK_CAPTURE(BM_ConstructIterIter, vector_string, std::vector<std::string>{}, getRandomStringInputs)
+BENCHMARK_CAPTURE(BM_ConstructIterIter<std::vector<std::string>>, vector_string, getRandomStringInputs)
     ->Arg(TestNumInputs);
 
-BENCHMARK_CAPTURE(BM_ConstructFromRange, vector_char, std::vector<char>{}, getRandomIntegerInputs<char>)
+BENCHMARK_CAPTURE(BM_ConstructFromRange<std::vector<char>>, vector_char, getRandomIntegerInputs<char>)
     ->Arg(TestNumInputs);
 
-BENCHMARK_CAPTURE(BM_ConstructFromRange, vector_size_t, std::vector<size_t>{}, getRandomIntegerInputs<size_t>)
+BENCHMARK_CAPTURE(BM_ConstructFromRange<std::vector<size_t>>, vector_size_t, getRandomIntegerInputs<size_t>)
     ->Arg(TestNumInputs);
 
-BENCHMARK_CAPTURE(BM_ConstructFromRange, vector_string, std::vector<std::string>{}, getRandomStringInputs)
+BENCHMARK_CAPTURE(BM_ConstructFromRange<std::vector<std::string>>, vector_string, getRandomStringInputs)
     ->Arg(TestNumInputs);
 
 BENCHMARK_CAPTURE(BM_Pushback_no_grow, vector_int, std::vector<int>{})->Arg(TestNumInputs);
@@ -78,18 +78,9 @@ BENCHMARK(bm_grow<std::string>);
 BENCHMARK(bm_grow<std::unique_ptr<int>>);
 BENCHMARK(bm_grow<std::deque<int>>);
 
-BENCHMARK_CAPTURE(BM_AssignInputIterIter, vector_int, std::vector<int>{}, getRandomIntegerInputs<int>)
-    ->Args({TestNumInputs, TestNumInputs});
+BENCHMARK_CAPTURE(BM_AssignIterIter<std::vector<int>>, vector_int, getRandomIntegerInputs<int>)->Arg(10240);
 
-BENCHMARK_CAPTURE(
-    BM_AssignInputIterIter<32>, vector_string, std::vector<std::string>{}, getRandomStringInputsWithLength)
-    ->Args({TestNumInputs, TestNumInputs});
-
-BENCHMARK_CAPTURE(BM_AssignInputIterIter<100>,
-                  vector_vector_int,
-                  std::vector<std::vector<int>>{},
-                  getRandomIntegerInputsWithLength<int>)
-    ->Args({TestNumInputs, TestNumInputs});
+BENCHMARK_CAPTURE(BM_AssignIterIter<std::vector<std::string>>, vector_string, getRandomStringInputs)->Arg(10240);
 
 BENCHMARK_CAPTURE(BM_Insert_InputIterIter_NoRealloc, vector_int, std::vector<int>(100, 1), getRandomIntegerInputs<int>)
     ->Arg(514048);

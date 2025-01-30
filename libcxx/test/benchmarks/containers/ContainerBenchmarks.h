@@ -10,11 +10,13 @@
 #ifndef BENCHMARK_CONTAINER_BENCHMARKS_H
 #define BENCHMARK_CONTAINER_BENCHMARKS_H
 
+#include <__type_traits/type_identity.h>
 #include <cassert>
 #include <iterator>
 #include <utility>
 
 #include "benchmark/benchmark.h"
+#include "../../std/containers/from_range_helpers.h"
 #include "../Utilities.h"
 #include "test_iterators.h"
 
@@ -51,16 +53,57 @@ void BM_Assignment(benchmark::State& st, Container) {
   }
 }
 
+template <class Container, class Generator, class InputIter = decltype(std::declval<Generator>()(0).begin())>
+void BM_AssignIterIter(benchmark::State& st, Generator gen, InputIter = {}) {
+  using T   = typename Container::value_type;
+  auto size = st.range(0);
+  auto in1  = gen(size);
+  auto in2  = gen(size);
+  DoNotOptimizeData(in1);
+  DoNotOptimizeData(in2);
+  Container c(in1.begin(), in1.end());
+  DoNotOptimizeData(c);
+  bool toggle = false;
+  for (auto _ : st) {
+    std::vector<T>& in = toggle ? in1 : in2;
+    auto first         = in.begin();
+    auto last          = in.end();
+    c.assign(InputIter(first), InputIter(last));
+    toggle = !toggle;
+    DoNotOptimizeData(c);
+  }
+}
+
+template <typename Container, class Generator, class Range = std::__type_identity_t<Container>>
+void BM_AssignRange(benchmark::State& st, Generator gen, Range = {}) {
+  auto size = st.range(0);
+  auto in1  = gen(size);
+  auto in2  = gen(size);
+  DoNotOptimizeData(in1);
+  DoNotOptimizeData(in2);
+  Range rg1(std::ranges::begin(in1), std::ranges::end(in1));
+  Range rg2(std::ranges::begin(in2), std::ranges::end(in2));
+  Container c(std::from_range, rg1);
+  DoNotOptimizeData(c);
+  bool toggle = false;
+  for (auto _ : st) {
+    auto& rg = toggle ? rg1 : rg2;
+    c.assign_range(rg);
+    toggle = !toggle;
+    DoNotOptimizeData(c);
+  }
+}
+
 template <std::size_t... sz, typename Container, typename GenInputs>
 void BM_AssignInputIterIter(benchmark::State& st, Container c, GenInputs gen) {
   auto v = gen(1, sz...);
   c.resize(st.range(0), v[0]);
   auto in = gen(st.range(1), sz...);
-  benchmark::DoNotOptimize(&in);
-  benchmark::DoNotOptimize(&c);
+  DoNotOptimizeData(in);
+  DoNotOptimizeData(c);
   for (auto _ : st) {
     c.assign(cpp17_input_iterator(in.begin()), cpp17_input_iterator(in.end()));
-    benchmark::ClobberMemory();
+    DoNotOptimizeData(c);
   }
 }
 
@@ -73,24 +116,25 @@ void BM_ConstructSizeValue(benchmark::State& st, Container, typename Container::
   }
 }
 
-template <class Container, class GenInputs>
-void BM_ConstructIterIter(benchmark::State& st, Container, GenInputs gen) {
-  auto in          = gen(st.range(0));
-  const auto begin = in.begin();
-  const auto end   = in.end();
-  benchmark::DoNotOptimize(&in);
+template <class Container, class GenInputs, class InputIter = decltype(std::declval<GenInputs>()(0).begin())>
+void BM_ConstructIterIter(benchmark::State& st, GenInputs gen, InputIter = {}) {
+  auto in = gen(st.range(0));
+  DoNotOptimizeData(in);
+  const auto begin = InputIter(in.begin());
+  const auto end   = InputIter(in.end());
   while (st.KeepRunning()) {
-    Container c(begin, end);
+    Container c(begin, end); // we assume the destructor doesn't dominate the benchmark
     DoNotOptimizeData(c);
   }
 }
 
-template <class Container, class GenInputs>
-void BM_ConstructFromRange(benchmark::State& st, Container, GenInputs gen) {
+template <class Container, class GenInputs, class Range = std::__type_identity_t<Container>>
+void BM_ConstructFromRange(benchmark::State& st, GenInputs gen, Range = {}) {
   auto in = gen(st.range(0));
-  benchmark::DoNotOptimize(&in);
+  DoNotOptimizeData(in);
+  Range rg(std::ranges::begin(in), std::ranges::end(in));
   while (st.KeepRunning()) {
-    Container c(std::from_range, in);
+    Container c(std::from_range, rg); // we assume the destructor doesn't dominate the benchmark
     DoNotOptimizeData(c);
   }
 }
@@ -105,6 +149,52 @@ void BM_Pushback_no_grow(benchmark::State& state, Container c) {
       c.push_back(i);
     }
     benchmark::DoNotOptimize(c.data());
+  }
+}
+
+template <class Container, class GenInputs, class InputIter = decltype(std::declval<GenInputs>()(0).begin())>
+void BM_InsertIterIterIter(benchmark::State& st, GenInputs gen, InputIter = {}) {
+  auto in = gen(st.range(0));
+  DoNotOptimizeData(in);
+  const auto beg      = InputIter(in.begin());
+  const auto end      = InputIter(in.end());
+  const unsigned size = 100;
+  Container c(size);
+  DoNotOptimizeData(c);
+  for (auto _ : st) {
+    c.insert(c.begin(), beg, end);
+    DoNotOptimizeData(c);
+    c.erase(c.begin() + size, c.end()); // avoid growing indefinitely
+  }
+}
+
+template <class Container, class GenInputs, class Range = std::__type_identity_t<Container>>
+void BM_InsertRange(benchmark::State& st, GenInputs gen, Range = {}) {
+  auto in = gen(st.range(0));
+  DoNotOptimizeData(in);
+  Range rg(std::ranges::begin(in), std::ranges::end(in));
+  const unsigned size = 100;
+  Container c(size);
+  DoNotOptimizeData(c);
+  for (auto _ : st) {
+    c.insert_range(c.begin(), rg);
+    DoNotOptimizeData(c);
+    c.erase(c.begin() + size, c.end()); // avoid growing indefinitely
+  }
+}
+
+template <class Container, class GenInputs, class Range = std::__type_identity_t<Container>>
+void BM_AppendRange(benchmark::State& st, GenInputs gen, Range = {}) {
+  auto in = gen(st.range(0));
+  DoNotOptimizeData(in);
+  Range rg(std::ranges::begin(in), std::ranges::end(in));
+  const unsigned size = 100;
+  Container c(size);
+  DoNotOptimizeData(c);
+  for (auto _ : st) {
+    c.append_range(rg);
+    DoNotOptimizeData(c);
+    c.erase(c.begin() + size, c.end()); // avoid growing indefinitely
   }
 }
 
