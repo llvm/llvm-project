@@ -30,12 +30,11 @@ enum class RootSignatureElementKind {
 };
 
 struct ModuleRootSignature {
-  uint32_t Version;
   uint32_t Flags;
 
   ModuleRootSignature() = default;
 
-  bool parse(int32_t Version, NamedMDNode *Root);
+  bool parse(NamedMDNode *Root);
 
   static ModuleRootSignature analyzeModule(Module &M);
 };

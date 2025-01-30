@@ -80,8 +80,7 @@ static bool parseRootSignatureElement(ModuleRootSignature *MRS,
   return true;
 }
 
-bool ModuleRootSignature::parse(int32_t Version, NamedMDNode *Root) {
-  this->Version = Version;
+bool ModuleRootSignature::parse(NamedMDNode *Root) {
   bool HasError = false;
 
   /** Root Signature are specified as following in the metadata:
@@ -127,7 +126,7 @@ ModuleRootSignature ModuleRootSignature::analyzeModule(Module &M) {
 
   NamedMDNode *RootSignatureNode = M.getNamedMetadata("dx.rootsignatures");
   if (RootSignatureNode) {
-    if (MRS.parse(1, RootSignatureNode))
+    if (MRS.parse(RootSignatureNode))
       llvm_unreachable("Invalid Root Signature Metadata.");
   }
 
