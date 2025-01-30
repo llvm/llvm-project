@@ -1,0 +1,11 @@
+add_object_library(
+  file
+  SRCS
+    file.cpp
+  HDRS
+    file.h
+  DEPENDS
+    libc.include.uefi
+    libc.hdr.types.FILE
+    libc.src.__support.CPP.new
+)

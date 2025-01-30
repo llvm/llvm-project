@@ -20,3 +20,5 @@ have reached their EOL. Compatibility patches for obsolete operating systems
 will not be accepted.
 
 For GPU, reference `our GPU docs <gpu/index.html>`__.
+
+For UEFI, reference `our UEFI docs <uefi/index.html>`__.

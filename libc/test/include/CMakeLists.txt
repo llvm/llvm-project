@@ -1,3 +1,7 @@
+if(LIBC_TARGET_OS_IS_UEFI)
+  return()
+endif()
+
 add_custom_target(libc_include_tests)
 add_dependencies(check-libc libc_include_tests)
 

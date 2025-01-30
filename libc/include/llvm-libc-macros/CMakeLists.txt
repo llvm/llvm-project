@@ -321,3 +321,9 @@ add_macro_header(
   HDR
     pthread-macros.h
 )
+
+add_macro_header(
+  EFIAPI_macros
+  HDR
+    EFIAPI-macros.h
+)

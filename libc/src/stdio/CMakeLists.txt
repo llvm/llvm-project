@@ -22,7 +22,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
-if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
+if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU AND NOT LIBC_TARGET_OS_IS_UEFI)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/generic)
 endif()
 
@@ -240,26 +240,28 @@ add_entrypoint_object(
 add_subdirectory(printf_core)
 add_subdirectory(scanf_core)
 
-add_entrypoint_object(
-  remove
-  ALIAS
-  DEPENDS
-    .${LIBC_TARGET_OS}.remove
-)
+if(NOT LIBC_TARGET_OS_IS_UEFI)
+  add_entrypoint_object(
+    remove
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.remove
+  )
 
-add_entrypoint_object(
-  rename
-  ALIAS
-  DEPENDS
-    .${LIBC_TARGET_OS}.rename
-)
+  add_entrypoint_object(
+    rename
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.rename
+  )
 
-add_entrypoint_object(
-  fdopen
-  ALIAS
-  DEPENDS
-    .${LIBC_TARGET_OS}.fdopen
-)
+  add_entrypoint_object(
+    fdopen
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.fdopen
+  )
+endif()
 
 # These entrypoints have multiple potential implementations.
 add_stdio_entrypoint_object(feof)

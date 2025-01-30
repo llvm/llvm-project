@@ -1,4 +1,4 @@
-if(NOT (TARGET libc.src.__support.threads.mutex) OR LIBC_TARGET_OS_IS_GPU)
+if(NOT (TARGET libc.src.__support.threads.mutex) OR LIBC_TARGET_OS_IS_GPU OR LIBC_TARGET_OS_IS_UEFI)
   # Not all platforms have a mutex implementation. If mutex is unvailable,
   # we just skip everything about files. The GPU does not currently support
   # files as well.

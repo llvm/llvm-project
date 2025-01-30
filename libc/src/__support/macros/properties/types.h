@@ -10,7 +10,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_TYPES_H
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_TYPES_H
 
-#include "hdr/float_macros.h"                      // LDBL_MANT_DIG
+#include "hdr/float_macros.h"                        // LDBL_MANT_DIG
 #include "include/llvm-libc-macros/float16-macros.h" // LIBC_TYPES_HAS_FLOAT16
 #include "include/llvm-libc-types/float128.h"        // float128
 #include "src/__support/macros/properties/architectures.h"
@@ -43,7 +43,7 @@
 
 // int128 / uint128 support
 #if defined(__SIZEOF_INT128__) && !defined(LIBC_TARGET_OS_IS_WINDOWS)
-#define LIBC_TYPES_HAS_INT128
+// #define LIBC_TYPES_HAS_INT128
 #endif // defined(__SIZEOF_INT128__)
 
 // -- float16 support ---------------------------------------------------------

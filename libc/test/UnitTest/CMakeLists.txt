@@ -25,7 +25,8 @@ function(add_unittest_framework_library name)
     endif()
   endforeach()
 
-  if(LLVM_LIBC_FULL_BUILD)
+  # UEFI requires full builds
+  if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_UEFI)
     # TODO: Build test framework with LIBC_FULL_BUILD in full build mode after
     # making LibcFPExceptionHelpers and LibcDeathTestExecutors hermetic.
     set(LLVM_LIBC_FULL_BUILD "")

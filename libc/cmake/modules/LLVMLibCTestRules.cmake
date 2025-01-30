@@ -603,6 +603,7 @@ function(add_integration_test test_name)
       ${INTEGRATION_TEST_ENV}
       $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}>
       ${CMAKE_CROSSCOMPILING_EMULATOR}
+      $<$<BOOL:${LIBC_TARGET_OS_IS_UEFI}>:${LIBC_TARGET_TRIPLE}>
       ${INTEGRATION_TEST_LOADER_ARGS}
       $<TARGET_FILE:${fq_build_target_name}> ${INTEGRATION_TEST_ARGS})
   add_custom_target(
@@ -671,6 +672,7 @@ function(add_libc_hermetic test_name)
       libc.src.string.memset
       libc.src.strings.bcmp
       libc.src.strings.bzero
+      libc.src.stdlib.atexit
   )
 
   if(libc.src.compiler.__stack_chk_fail IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
@@ -741,6 +743,11 @@ function(add_libc_hermetic test_name)
     endif()
   endforeach()
 
+  if(LIBC_TARGET_OS_IS_UEFI)
+    target_link_options(${fq_build_target_name} PRIVATE
+      ${LIBC_COMPILE_OPTIONS_DEFAULT} "-Wl,/lldmingw")
+  endif()
+
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
@@ -776,7 +783,7 @@ function(add_libc_hermetic test_name)
                    ${fq_deps_list})
   # TODO: currently the dependency chain is broken such that getauxval cannot properly
   # propagate to hermetic tests. This is a temporary workaround.
-  if (LIBC_TARGET_ARCHITECTURE_IS_AARCH64)
+  if (LIBC_TARGET_ARCHITECTURE_IS_AARCH64 AND NOT LIBC_TARGET_OS_IS_UEFI)
     target_link_libraries(
       ${fq_build_target_name}
       PRIVATE
@@ -791,7 +798,8 @@ function(add_libc_hermetic test_name)
   endif()
 
   set(test_cmd ${HERMETIC_TEST_ENV}
-      $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}> ${CMAKE_CROSSCOMPILING_EMULATOR} ${HERMETIC_TEST_LOADER_ARGS}
+      $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}> ${CMAKE_CROSSCOMPILING_EMULATOR}
+      $<$<BOOL:${LIBC_TARGET_OS_IS_UEFI}>:${LIBC_TARGET_TRIPLE}> ${HERMETIC_TEST_LOADER_ARGS}
       $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
   add_custom_target(
     ${fq_target_name}
