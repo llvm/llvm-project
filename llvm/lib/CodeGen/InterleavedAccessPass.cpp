@@ -649,8 +649,7 @@ static Value *getMask(Value *WideMask, unsigned Factor,
     // Scale the vector length of all-ones mask.
     ElementCount OrigEC =
         cast<VectorType>(WideMask->getType())->getElementCount();
-    if (OrigEC.getKnownMinValue() % Factor)
-      return nullptr;
+    assert(OrigEC.getKnownMinValue() % Factor == 0);
     return ConstantVector::getSplat(OrigEC.divideCoefficientBy(Factor),
                                     cast<Constant>(WideMask)->getSplatValue());
   }

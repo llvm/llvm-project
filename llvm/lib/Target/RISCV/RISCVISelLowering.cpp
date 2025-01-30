@@ -22574,12 +22574,12 @@ static bool isMultipleOfN(const Value *V, const DataLayout &DL, unsigned N) {
 /// removed by the caller
 bool RISCVTargetLowering::lowerDeinterleavedIntrinsicToVPLoad(
     VPIntrinsic *Load, Value *Mask,
-    ArrayRef<Value *> DeInterleaveResults) const {
+    ArrayRef<Value *> DeinterleaveResults) const {
   assert(Mask && "Expect a valid mask");
   assert(Load->getIntrinsicID() == Intrinsic::vp_load &&
          "Unexpected intrinsic");
 
-  const unsigned Factor = DeInterleaveResults.size();
+  const unsigned Factor = DeinterleaveResults.size();
 
   auto *WideVTy = dyn_cast<ScalableVectorType>(Load->getType());
   // TODO: Support fixed vectors.
@@ -22592,10 +22592,9 @@ bool RISCVTargetLowering::lowerDeinterleavedIntrinsicToVPLoad(
   auto *VTy =
       VectorType::get(WideVTy->getScalarType(), WideNumElements / Factor,
                       WideVTy->isScalableTy());
-  // FIXME: Should pass alignment attribute from pointer, but vectorizer needs
-  // to emit it first.
   auto &DL = Load->getModule()->getDataLayout();
-  Align Alignment = Align(DL.getTypeStoreSize(WideVTy->getScalarType()));
+  Align Alignment = Load->getParamAlign(0).value_or(
+      DL.getABITypeAlign(WideVTy->getElementType()));
   if (!isLegalInterleavedAccessType(
           VTy, Factor, Alignment,
           Load->getArgOperand(0)->getType()->getPointerAddressSpace(), DL))
@@ -22629,20 +22628,18 @@ bool RISCVTargetLowering::lowerDeinterleavedIntrinsicToVPLoad(
       Factor);
 
   Value *PoisonVal = PoisonValue::get(VecTupTy);
-  SmallVector<Value *> Operands{PoisonVal, Load->getArgOperand(0)};
 
   Function *VlsegNFunc = Intrinsic::getOrInsertDeclaration(
       Load->getModule(), IntrMaskIds[Factor - 2],
       {VecTupTy, Mask->getType(), EVL->getType()});
 
-  Operands.push_back(Mask);
-
-  Operands.push_back(EVL);
-
-  Operands.push_back(ConstantInt::get(XLenTy, RISCVII::TAIL_AGNOSTIC |
-                                                  RISCVII::MASK_AGNOSTIC));
-
-  Operands.push_back(ConstantInt::get(XLenTy, Log2_64(SEW)));
+  Value *Operands[] = {
+      PoisonVal,
+      Load->getArgOperand(0),
+      Mask,
+      EVL,
+      ConstantInt::get(XLenTy, RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC),
+      ConstantInt::get(XLenTy, Log2_64(SEW))};
 
   CallInst *VlsegN = Builder.CreateCall(VlsegNFunc, Operands);
 
@@ -22657,7 +22654,7 @@ bool RISCVTargetLowering::lowerDeinterleavedIntrinsicToVPLoad(
     Return = Builder.CreateInsertValue(Return, VecExtract, i);
   }
 
-  for (auto [Idx, DIO] : enumerate(DeInterleaveResults)) {
+  for (auto [Idx, DIO] : enumerate(DeinterleaveResults)) {
     // We have to create a brand new ExtractValue to replace each
     // of these old ExtractValue instructions.
     Value *NewEV =
@@ -22743,10 +22740,9 @@ bool RISCVTargetLowering::lowerInterleavedIntrinsicToVPStore(
   if (!VTy)
     return false;
 
-  // FIXME: Should pass alignment attribute from pointer, but vectorizer needs
-  // to emit it first.
   const DataLayout &DL = Store->getDataLayout();
-  Align Alignment = Align(DL.getTypeStoreSize(VTy->getScalarType()));
+  Align Alignment = Store->getParamAlign(1).value_or(
+      DL.getABITypeAlign(VTy->getElementType()));
   if (!isLegalInterleavedAccessType(
           VTy, Factor, Alignment,
           Store->getArgOperand(1)->getType()->getPointerAddressSpace(), DL))
