@@ -43,8 +43,6 @@ func main() {
     v[2] = 2
     v[3] = 3
 
-  // break here
-    print(v)
-
+    print(v)  // break here
 }
 main()

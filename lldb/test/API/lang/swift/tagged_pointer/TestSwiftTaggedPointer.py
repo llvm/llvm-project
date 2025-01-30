@@ -13,7 +13,6 @@ class TestSwiftTaggedPointer(lldbtest.TestBase):
     @skipUnlessDarwin
     # This test exposes a bug in DWARFImporterForClangTypes, which
     # doesn't do type completion correctly. (rdar://118337109)
-    @skipIf(setting=('symbols.swift-precise-compiler-invocation', 'true'))
     def test(self):
         self.build()
         # On the bots only, Swift typesystem validation fails.
