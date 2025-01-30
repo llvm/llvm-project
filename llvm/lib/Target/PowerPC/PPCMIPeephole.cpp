@@ -190,9 +190,8 @@ void PPCMIPeephole::addRegToUpdateWithLine(Register Reg, int Line) {
   if (!Reg.isVirtual())
     return;
   if (RegsToUpdate.insert(Reg).second)
-    LLVM_DEBUG(dbgs() << "Adding register: " << Reg.virtRegIndex()
-                      << " on line " << Line
-                      << " for re-computation of kill flags\n");
+    LLVM_DEBUG(dbgs() << "Adding register: " << printReg(Reg) << " on line "
+                      << Line << " for re-computation of kill flags\n");
 }
 
 // Initialize class variables.
