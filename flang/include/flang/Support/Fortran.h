@@ -109,4 +109,4 @@ inline std::string GetExternalAssemblyName(
 }
 
 } // namespace Fortran::common
-#endif /* FORTRAN_SUPPORT_FORTRAN_H_ */
+#endif // FORTRAN_SUPPORT_FORTRAN_H_
