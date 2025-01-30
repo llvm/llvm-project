@@ -2369,7 +2369,8 @@ struct AAICVTrackerFunction : public AAICVTracker {
 
     const auto *CB = dyn_cast<CallBase>(&I);
     if (!CB || CB->hasFnAttr("no_openmp") ||
-        CB->hasFnAttr("no_openmp_routines"))
+        CB->hasFnAttr("no_openmp_routines") ||
+        CB->hasFnAttr("no_openmp_constructs"))
       return std::nullopt;
 
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());

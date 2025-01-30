@@ -5274,6 +5274,7 @@ optimization passes are aware of the following assumptions:
     "omp_no_openmp"
     "omp_no_openmp_routines"
     "omp_no_parallelism"
+    "omp_no_openmp_constructs"
 
 The OpenMP standard defines the meaning of OpenMP assumptions ("omp_XYZ" is
 spelled "XYZ" in the `OpenMP 5.1 Standard`_).
