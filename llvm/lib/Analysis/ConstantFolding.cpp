@@ -1262,12 +1262,12 @@ Constant *llvm::ConstantFoldCompareInstOperands(
       Value *Stripped0 = Ops0->stripAndAccumulateConstantOffsets(
           DL, Offset0, /*AllowNonInbounds=*/IsEqPred,
           /*AllowInvariantGroup=*/false, /*ExternalAnalysis=*/nullptr,
-          /*LookThroughIntToPtr*/ IsEqPred);
+          /*LookThroughIntToPtr=*/IsEqPred);
       APInt Offset1(IndexWidth, 0);
       Value *Stripped1 = Ops1->stripAndAccumulateConstantOffsets(
           DL, Offset1, /*AllowNonInbounds=*/IsEqPred,
           /*AllowInvariantGroup=*/false, /*ExternalAnalysis=*/nullptr,
-          /*LookThroughIntToPtr*/ IsEqPred);
+          /*LookThroughIntToPtr=*/IsEqPred);
       if (Stripped0 == Stripped1)
         return ConstantInt::getBool(
             Ops0->getContext(),

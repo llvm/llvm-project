@@ -792,8 +792,7 @@ const Value *Value::stripAndAccumulateConstantOffsets(
       if (!Ptr2Int || !CI)
         return V;
 
-      const APInt &AddOffset = CI->getValue();
-      Offset += AddOffset;
+      Offset += CI->getValue();
       V = Ptr2Int->getOperand(0);
     }
     assert(V->getType()->isPtrOrPtrVectorTy() && "Unexpected operand type!");
