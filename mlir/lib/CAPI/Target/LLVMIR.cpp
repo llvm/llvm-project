@@ -44,6 +44,11 @@ mlirTypeFromLLVMIRTranslatorCreate(MlirContext ctx) {
   return wrap(translator);
 }
 
+void mlirTypeFromLLVMIRTranslatorDestroy(
+    MlirTypeFromLLVMIRTranslator translator) {
+  delete static_cast<LLVM::TypeFromLLVMIRTranslator *>(unwrap(translator));
+}
+
 MlirType mlirTypeFromLLVMIRTranslatorTranslateType(
     MlirTypeFromLLVMIRTranslator translator, LLVMTypeRef llvmType) {
   LLVM::TypeFromLLVMIRTranslator *translator_ = unwrap(translator);
