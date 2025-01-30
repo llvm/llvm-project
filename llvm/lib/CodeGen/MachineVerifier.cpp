@@ -3178,7 +3178,7 @@ struct VRegFilter {
     for (Register Reg : FromRegSet) {
       if (!Reg.isVirtual())
         continue;
-      unsigned Index = Register::virtReg2Index(Reg);
+      unsigned Index = Reg.virtRegIndex();
       if (Index < SparseUniverseMax) {
         if (Index < SparseUniverse && Sparse.test(Index))
           continue;
@@ -3201,7 +3201,7 @@ struct VRegFilter {
     Dense.reserve(NewDenseSize);
     for (unsigned I = Begin; I < End; ++I) {
       Register Reg = ToVRegs[I];
-      unsigned Index = Register::virtReg2Index(Reg);
+      unsigned Index = Reg.virtRegIndex();
       if (Index < SparseUniverseMax)
         Sparse.set(Index);
       else
