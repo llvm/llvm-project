@@ -56,6 +56,8 @@ Makes programs 10x faster by doing Special New Thing.
 Changes to the LLVM IR
 ----------------------
 
+* The `nocapture` attribute has been replaced by `captures(none)`.
+
 Changes to LLVM infrastructure
 ------------------------------
 

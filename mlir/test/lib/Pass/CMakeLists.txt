@@ -15,6 +15,7 @@ add_mlir_library(MLIRTestPass
 mlir_target_link_libraries(MLIRTestPass PUBLIC
   ${conversion_libs}
   MLIRIR
+  MLIRSPIRVTransforms
   MLIRPass
   MLIRTestDialect
   )

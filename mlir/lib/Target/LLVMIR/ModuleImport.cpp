@@ -2048,6 +2048,17 @@ ModuleImport::convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
     // Skip attributes that are not attached.
     if (!llvmAttr.isValid())
       continue;
+
+    // TODO: Import captures(none) as a nocapture unit attribute until the
+    // LLVM dialect switches to the captures representation.
+    if (llvmAttr.hasKindAsEnum() &&
+        llvmAttr.getKindAsEnum() == llvm::Attribute::Captures) {
+      if (llvm::capturesNothing(llvmAttr.getCaptureInfo()))
+        paramAttrs.push_back(
+            builder.getNamedAttr(mlirName, builder.getUnitAttr()));
+      continue;
+    }
+
     Attribute mlirAttr;
     if (llvmAttr.isTypeAttribute())
       mlirAttr = TypeAttr::get(convertType(llvmAttr.getValueAsType()));
@@ -2128,7 +2139,7 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
       iface.isConvertibleIntrinsic(func->getIntrinsicID()))
     return success();
 
-  bool dsoLocal = func->hasLocalLinkage();
+  bool dsoLocal = func->isDSOLocal();
   CConv cconv = convertCConvFromLLVM(func->getCallingConv());
 
   // Insert the function at the end of the module.
