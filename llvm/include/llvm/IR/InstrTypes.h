@@ -1560,6 +1560,11 @@ public:
   }
 
   /// adds the dereferenceable attribute to the list of attributes.
+  void addDereferenceableOrNullParamAttr(unsigned i, uint64_t Bytes) {
+    Attrs = Attrs.addDereferenceableOrNullParamAttr(getContext(), i, Bytes);
+  }
+
+  /// adds the dereferenceable attribute to the list of attributes.
   void addDereferenceableRetAttr(uint64_t Bytes) {
     Attrs = Attrs.addDereferenceableRetAttr(getContext(), Bytes);
   }
