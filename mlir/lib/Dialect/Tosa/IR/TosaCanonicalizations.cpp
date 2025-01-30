@@ -111,8 +111,8 @@ struct ConsolidateTransposeOptimization
     auto permsTy =
         RankedTensorType::get(transposePerms.size(), rewriter.getI32Type());
     auto permsAttr = DenseIntElementsAttr::get(permsTy, perms);
-    Value permsValue =
-        rewriter.create<arith::ConstantOp>(transposeOp.getLoc(), permsAttr);
+    Value permsValue = rewriter.create<tosa::ConstOp>(transposeOp.getLoc(),
+                                                      permsTy, permsAttr);
 
     rewriter.replaceOpWithNewOp<tosa::TransposeOp>(
         transposeOp, transposeOp.getResult().getType(),
