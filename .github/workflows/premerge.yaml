@@ -151,10 +151,14 @@ jobs:
         uses: llvm/actions/install-ninja@main
       - name: Build and Test
         run: |
-          git config --global --add safe.directory '*'
-
           modified_files=$(git diff --name-only HEAD~1...HEAD)
           modified_dirs=$(echo "$modified_files" | cut -d'/' -f1 | sort -u)
+
+          echo $modified_files
+          echo $modified_dirs
+
+          . ./.ci/compute-projects.sh
+
           all_projects="clang clang-tools-extra lld lldb llvm mlir"
           modified_projects="$(keep-modified-projects ${all_projects})"
 
