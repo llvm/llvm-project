@@ -16451,7 +16451,8 @@ static SDValue performVP_TRUNCATECombine(SDNode *N, SelectionDAG &DAG,
                                Operands[0].getOperand(0), Mask, VL);
   SDValue NewOp1 = DAG.getNode(ISD::VP_ZERO_EXTEND, SDLoc(Operands[1]), VT,
                                Operands[1].getOperand(0), Mask, VL);
-  // Build a VAADDU with RNU rounding mode.
+  // Build a AVGCEILU_VL which will be selected as a VAADDU with RNU rounding
+  // mode.
   SDLoc DL(N);
   return DAG.getNode(RISCVISD::AVGCEILU_VL, DL, VT,
                      {NewOp0, NewOp1, DAG.getUNDEF(VT), Mask, VL});
