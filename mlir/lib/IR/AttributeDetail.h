@@ -23,6 +23,7 @@
 #include "mlir/Support/ThreadLocalCache.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/TrailingObjects.h"
 
 namespace mlir {
@@ -409,14 +410,31 @@ public:
   operator=(const DistinctAttributeAllocator &) = delete;
 
   /// Allocates a distinct attribute storage using a thread local bump pointer
-  /// allocator to enable synchronization free parallel allocations.
+  /// allocator to enable synchronization free parallel allocations. If
+  /// threading is disabled on the owning MLIR context, a normal non
+  /// thread-local bump pointer allocator is used instead to prevent
+  /// use-after-free errors whenever attribute storage created on a crash
+  /// recover thread is accessed after the thread joins.
   DistinctAttrStorage *allocate(Attribute referencedAttr) {
-    return new (allocatorCache.get().Allocate<DistinctAttrStorage>())
+    return new (getAllocatorInUse().Allocate<DistinctAttrStorage>())
         DistinctAttrStorage(referencedAttr);
   }
 
+  void disableMultithreading(bool disable = true) {
+    useThreadLocalCache = !disable;
+  };
+
 private:
+  llvm::BumpPtrAllocator &getAllocatorInUse() {
+    if (useThreadLocalCache) {
+      return allocatorCache.get();
+    }
+    return allocator;
+  }
+
   ThreadLocalCache<llvm::BumpPtrAllocator> allocatorCache;
+  llvm::BumpPtrAllocator allocator;
+  bool useThreadLocalCache : 1;
 };
 } // namespace detail
 } // namespace mlir

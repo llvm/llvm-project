@@ -596,6 +596,7 @@ void MLIRContext::disableMultithreading(bool disable) {
   // Update the threading mode for each of the uniquers.
   impl->affineUniquer.disableMultithreading(disable);
   impl->attributeUniquer.disableMultithreading(disable);
+  impl->distinctAttributeAllocator.disableMultithreading(disable);
   impl->typeUniquer.disableMultithreading(disable);
 
   // Destroy thread pool (stop all threads) if it is no longer needed, or create
