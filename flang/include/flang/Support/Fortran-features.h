@@ -73,7 +73,8 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     PreviousScalarUse, RedeclaredInaccessibleComponent, ImplicitShared,
     IndexVarRedefinition, IncompatibleImplicitInterfaces, BadTypeForTarget,
     VectorSubscriptFinalization, UndefinedFunctionResult, UselessIomsg,
-    MismatchingDummyProcedure, SubscriptedEmptyArray, UnsignedLiteralTruncation)
+    MismatchingDummyProcedure, SubscriptedEmptyArray, UnsignedLiteralTruncation,
+    CompatibleDeclarationsFromDistinctModules)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;
@@ -125,4 +126,4 @@ private:
   bool warnAllUsage_{false};
 };
 } // namespace Fortran::common
-#endif /* FORTRAN_SUPPORT_FORTRAN_FEATURES_H_ */
+#endif // FORTRAN_SUPPORT_FORTRAN_FEATURES_H_

@@ -3600,8 +3600,12 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
        VD->mightBeUsableInConstantExpressions(Info.Ctx)) ||
       ((Info.getLangOpts().CPlusPlus || Info.getLangOpts().OpenCL) &&
        !Info.getLangOpts().CPlusPlus11 && !VD->hasICEInitializer(Info.Ctx))) {
-    Info.CCEDiag(E, diag::note_constexpr_var_init_non_constant, 1) << VD;
-    NoteLValueLocation(Info, Base);
+    if (Init) {
+      Info.CCEDiag(E, diag::note_constexpr_var_init_non_constant, 1) << VD;
+      NoteLValueLocation(Info, Base);
+    } else {
+      Info.CCEDiag(E);
+    }
   }
 
   // Never use the initializer of a weak variable, not even for constant
@@ -5221,7 +5225,7 @@ static bool EvaluateDecl(EvalInfo &Info, const Decl *D) {
     OK &= EvaluateVarDecl(Info, VD);
 
   if (const DecompositionDecl *DD = dyn_cast<DecompositionDecl>(D))
-    for (auto *BD : DD->bindings())
+    for (auto *BD : DD->flat_bindings())
       if (auto *VD = BD->getHoldingVar())
         OK &= EvaluateDecl(Info, VD);
 
@@ -17249,6 +17253,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::SYCLUniqueStableNameExprClass:
   case Expr::CXXParenListInitExprClass:
   case Expr::HLSLOutArgExprClass:
+  case Expr::ResolvedUnexpandedPackExprClass:
     return ICEDiag(IK_NotICE, E->getBeginLoc());
 
   case Expr::InitListExprClass: {
