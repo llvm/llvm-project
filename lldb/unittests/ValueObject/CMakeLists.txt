@@ -6,6 +6,7 @@ add_lldb_unittest(LLDBValueObjectTests
     lldbValueObject
     lldbPluginPlatformLinux
     lldbPluginScriptInterpreterNone
+    LLVMTestingSupport
 
   LINK_COMPONENTS
     Support
