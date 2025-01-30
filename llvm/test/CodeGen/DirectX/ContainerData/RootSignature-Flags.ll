@@ -3,7 +3,7 @@
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
-; CHECK: @dx.rts0 = private constant [12 x i8]  c"{{.*}}", section "RTS0", align 4
+; CHECK: @dx.rts0 = private constant [16 x i8]  c"{{.*}}", section "RTS0", align 4
 
 
 define void @main() #0 {
