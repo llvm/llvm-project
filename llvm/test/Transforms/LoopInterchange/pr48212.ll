@@ -2,7 +2,7 @@
 ; RUN:     -verify-dom-info -verify-loop-info -verify-loop-lcssa 2>&1
 ; RUN: FileCheck --input-file=%t --check-prefix=REMARKS %s
 
-; REMARKS: --- !Passed
+; REMARKS: --- !Analysis
 ; REMARKS-NEXT: Pass:            loop-interchange
 ; REMARKS-NEXT: Name:            Dependence
 ; REMARKS-NEXT: Function:        pr48212

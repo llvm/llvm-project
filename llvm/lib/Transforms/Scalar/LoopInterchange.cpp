@@ -1766,9 +1766,9 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
   }
 
   ORE.emit([&]() {
-    return OptimizationRemark(DEBUG_TYPE, "Dependence",
-                              LN.getOutermostLoop().getStartLoc(),
-                              LN.getOutermostLoop().getHeader())
+    return OptimizationRemarkAnalysis(DEBUG_TYPE, "Dependence",
+                                      LN.getOutermostLoop().getStartLoc(),
+                                      LN.getOutermostLoop().getHeader())
            << "Computed dependence info, invoking the transform.";
   });
 

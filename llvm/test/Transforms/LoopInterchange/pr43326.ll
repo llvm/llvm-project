@@ -8,7 +8,7 @@
 @d = global i32 0
 @e = global [1 x [1 x i32]] zeroinitializer
 
-; REMARKS: --- !Passed
+; REMARKS: --- !Analysis
 ; REMARKS-NEXT: Pass:            loop-interchange
 ; REMARKS-NEXT: Name:            Dependence
 ; REMARKS-NEXT: Function:        pr43326

@@ -58,7 +58,7 @@ for.end19:
   ret void
 }
 
-; CHECK: --- !Passed
+; CHECK: --- !Analysis
 ; CHECK-NEXT: Pass:            loop-interchange
 ; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        test01
@@ -74,7 +74,7 @@ for.end19:
 ; CHECK-NEXT:   - String:          Cannot interchange loops due to dependences.
 ; CHECK-NEXT: ...
 
-; DELIN: --- !Passed
+; DELIN: --- !Analysis
 ; DELIN-NEXT: Pass:            loop-interchange
 ; DELIN-NEXT: Name:            Dependence
 ; DELIN-NEXT: Function:        test01
@@ -134,7 +134,7 @@ define void @test02(i32 %k, i32 %N) {
    ret void
 }
 
-; CHECK: --- !Passed
+; CHECK: --- !Analysis
 ; CHECK-NEXT: Pass:            loop-interchange
 ; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        test02
@@ -150,7 +150,7 @@ define void @test02(i32 %k, i32 %N) {
 ; CHECK-NEXT:   - String:          Cannot interchange loops due to dependences.
 ; CHECK-NEXT: ...
 
-; DELIN: --- !Passed
+; DELIN: --- !Analysis
 ; DELIN-NEXT: Pass:            loop-interchange
 ; DELIN-NEXT: Name:            Dependence
 ; DELIN-NEXT: Function:        test02
@@ -206,7 +206,7 @@ for.body4:                                        ; preds = %for.body4, %for.con
   br i1 %exitcond, label %for.body4, label %for.cond.loopexit
 }
 
-; CHECK: --- !Passed
+; CHECK: --- !Analysis
 ; CHECK-NEXT: Pass:            loop-interchange
 ; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        test03
@@ -222,7 +222,7 @@ for.body4:                                        ; preds = %for.body4, %for.con
 ; CHECK-NEXT:   - String:          Loop interchanged with enclosing loop.
 ; CHECK-NEXT: ...
 
-; DELIN: --- !Passed
+; DELIN: --- !Analysis
 ; DELIN-NEXT: Pass:            loop-interchange
 ; DELIN-NEXT: Name:            Dependence
 ; DELIN-NEXT: Function:        test03
