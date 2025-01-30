@@ -2,7 +2,7 @@
 ; CHECK: .p2align{{.*}}5
 
 ; Function Attrs: nounwind
-define void @wobble(ptr noalias nocapture readonly %arg, i32 %arg1, i32 %arg2, i32 %arg3, ptr noalias nocapture %arg4, i32 %arg5) #0 {
+define void @wobble(ptr noalias nocapture readonly %arg, i32 %arg1, i32 %arg2, i32 %arg3, ptr noalias nocapture %arg4, i32 %arg5, ptr noalias nocapture %arg6) #0 {
 bb:
   %ashr = ashr i32 %arg3, 2
   %ashr6 = ashr i32 %arg3, 1
@@ -29,7 +29,7 @@ bb11:                                             ; preds = %bb9
   %add16 = add i32 %mul, %ashr
   %add17 = add i32 %mul, %ashr6
   %getelementptr = getelementptr inbounds i8, ptr %arg4, i32 %mul13
-  %getelementptr18 = getelementptr inbounds i8, ptr %arg4, i32 %mul14
+  %getelementptr18 = getelementptr inbounds i8, ptr %arg6, i32 %mul14
   %getelementptr19 = getelementptr inbounds i16, ptr %arg, i32 %add15
   %getelementptr20 = getelementptr inbounds i16, ptr %arg, i32 %add16
   %getelementptr21 = getelementptr inbounds i16, ptr %arg, i32 %add17
