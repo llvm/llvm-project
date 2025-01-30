@@ -42,6 +42,10 @@ class ModuleLinker {
   bool shouldOverrideFromSrc() { return flags & Linker::OverrideFromSrc; }
   bool shouldLinkOnlyNeeded() { return flags & Linker::LinkOnlyNeeded; }
 
+  bool shouldLinkFromSource(bool &linkFromSrc,
+                            GlobalValueLinkageOpInterface dst,
+                            GlobalValueLinkageOpInterface src);
+
   DenseMap<StringRef, std::pair<ComdatSelectionKind, LinkFrom>> comdatsChosen;
 
   bool getComdatResult(StringRef srcSymbol,
@@ -96,6 +100,78 @@ public:
         internalizeCallback(std::move(internalizeCallback)) {}
   LogicalResult run();
 };
+
+bool ModuleLinker::shouldLinkFromSource(bool &linkFromSrc,
+                                        GlobalValueLinkageOpInterface dst,
+                                        GlobalValueLinkageOpInterface src) {
+  if (shouldOverrideFromSrc()) {
+    linkFromSrc = true;
+    return false;
+  }
+
+  // We always have to add src if it has appending linkage.
+  if (src.hasAppendingLinkage() || dst.hasAppendingLinkage()) {
+    linkFromSrc = true;
+    return false;
+  }
+
+  bool srcIsDeclaration =
+      src.isDeclarationForLinkage() || src.hasAvailableExternallyLinkage();
+  bool dstIsDeclaration =
+      dst.isDeclarationForLinkage() || dst.hasAvailableExternallyLinkage();
+
+  if (srcIsDeclaration) {
+    llvm_unreachable("unimplemented");
+  }
+
+  if (dstIsDeclaration) {
+    // If dst is external but src is not:
+    linkFromSrc = true;
+    return false;
+  }
+
+  if (src.hasCommonLinkage()) {
+    if (dst.hasLinkOnceLinkage() || dst.hasWeakLinkage()) {
+      linkFromSrc = true;
+      return false;
+    }
+
+    if (!dst.hasCommonLinkage()) {
+      linkFromSrc = false;
+      return false;
+    }
+
+    llvm_unreachable("unimplemented");
+  }
+
+  if (isWeakForLinker(src.getLinkage())) {
+    assert(!dst.hasExternalWeakLinkage());
+    assert(!dst.hasAvailableExternallyLinkage());
+
+    if (dst.hasLinkOnceLinkage() || src.hasWeakLinkage()) {
+      linkFromSrc = true;
+      return false;
+    }
+
+    linkFromSrc = false;
+    return false;
+  }
+
+  if (isWeakForLinker(dst.getLinkage())) {
+    assert(src.hasExternalLinkage());
+    linkFromSrc = true;
+    return false;
+  }
+
+  assert(!src.hasExternalWeakLinkage());
+  assert(!dst.hasExternalWeakLinkage());
+  assert(dst.hasExternalLinkage() && src.hasExternalLinkage() &&
+         "Unexpected linkage type!");
+
+  return true;
+  // return emitError("Linking globals named '" + src.getLinkedName() +
+  //                  "': symbol multiply defined!");
+}
 
 bool ModuleLinker::getComdatResult(StringRef srcSymbol,
                                    ComdatSelectionKind srcSelectionKind,
@@ -189,15 +265,52 @@ bool ModuleLinker::linkIfNeeded(GlobalValueLinkageOpInterface gv,
       // module.
       if (!dgv)
         return false;
-      // Don't import globals that are already defined in the destination module
+      // Don't import globals that are already defined in the destination
+      // module
       if (!dgv.isDeclarationForLinkage())
         return false;
     }
   }
 
-  // TBD: Implement the rest of the function
+  if (dgv && !gv.hasLocalLinkage() && !gv.hasAppendingLinkage()) {
+    auto dgvar = dyn_cast<GlobalVariableLinkageOpInterface>(dgv.getOperation());
+    auto sgvar = dyn_cast<GlobalVariableLinkageOpInterface>(gv.getOperation());
+    if (dgvar && sgvar) {
+      if (dgvar.isDeclarationForLinkage() && sgvar.isDeclarationForLinkage() &&
+          (!dgvar.isConstant() || !sgvar.isConstant())) {
+        llvm_unreachable("unimplemented");
+      }
+    }
 
-  valuesToLink.insert(gv.getOperation());
+    if (dgv.hasCommonLinkage() && gv.hasCommonLinkage()) {
+      llvm_unreachable("unimplemented");
+    }
+
+    llvm_unreachable("unimplemented");
+  }
+
+  if (!dgv && !shouldOverrideFromSrc() &&
+      (gv.hasLocalLinkage() || gv.hasLinkOnceLinkage() ||
+       gv.hasAvailableExternallyLinkage()))
+    return false;
+
+  if (gv.isDeclarationForLinkage())
+    return false;
+
+  LinkFrom comdatFrom = LinkFrom::Dst;
+  if (gv.getComdatSelectionKind()) {
+    comdatFrom = comdatsChosen[dgv.getLinkedName()].second;
+    if (comdatFrom == LinkFrom::Dst)
+      return false;
+  }
+
+  bool linkFromSrc = true;
+  if (dgv && shouldLinkFromSource(linkFromSrc, dgv, gv))
+    return true;
+  if (dgv && comdatFrom == LinkFrom::Both)
+    gvToClone.push_back(linkFromSrc ? dgv.getOperation() : gv.getOperation());
+  if (linkFromSrc)
+    valuesToLink.insert(gv.getOperation());
   return false;
 }
 
