@@ -2032,16 +2032,21 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       dimArg = j;
       argOk = true;
       break;
-    case KindCode::same:
+    case KindCode::same: {
       if (!sameArg) {
         sameArg = arg;
-        argOk = true;
-      } else {
-        auto sameType{sameArg->GetType().value()};
-        argOk = sameType.IsTkLenCompatibleWith(*type) ||
-            (name == "move_alloc"s && type->IsTkLenCompatibleWith(sameType));
       }
-      break;
+      auto sameType{sameArg->GetType().value()};
+      if (name == "move_alloc"s) {
+        // second argument can be more general
+        argOk = type->IsTkLenCompatibleWith(sameType);
+      } else if (name == "merge"s) {
+        argOk = type->IsTkLenCompatibleWith(sameType) &&
+            sameType.IsTkLenCompatibleWith(*type);
+      } else {
+        argOk = sameType.IsTkLenCompatibleWith(*type);
+      }
+    } break;
     case KindCode::sameKind:
       if (!sameArg) {
         sameArg = arg;
