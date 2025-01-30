@@ -448,6 +448,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
     llvm::UpgradeDebugInfo(*M);
 
   UpgradeModuleFlags(*M);
+  UpgradeNVVMAnnotations(*M);
   UpgradeSectionAttributes(*M);
 
   if (PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE)
@@ -2001,6 +2002,12 @@ bool LLParser::parseOptionalParamOrReturnAttrs(AttrBuilder &B, bool IsParam) {
     if (Token == lltok::StringConstant) {
       if (parseStringAttribute(B))
         return true;
+      continue;
+    }
+
+    if (Token == lltok::kw_nocapture) {
+      Lex.Lex();
+      B.addCapturesAttr(CaptureInfo::none());
       continue;
     }
 
