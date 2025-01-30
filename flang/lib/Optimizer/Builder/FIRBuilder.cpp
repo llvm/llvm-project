@@ -1778,7 +1778,7 @@ llvm::SmallVector<mlir::Value> fir::factory::updateRuntimeExtentsForEmptyArrays(
     isEmpty = builder.create<mlir::arith::OrIOp>(loc, isEmpty, isZero);
   }
 
-  llvm::SmallVector<mlir::Value, Fortran::common::maxRank> newExtents;
+  llvm::SmallVector<mlir::Value> newExtents;
   for (auto [zero, extent] : llvm::zip_equal(zeroes, extents)) {
     newExtents.push_back(
         builder.create<mlir::arith::SelectOp>(loc, isEmpty, zero, extent));
