@@ -912,6 +912,8 @@ Bug Fixes to Compiler Builtins
 
 - Fix ``__builtin_source_location`` incorrectly returning wrong column for method chains. (#GH119129)
 
+- The behvaiour of ``__add_pointer`` and ``__remove_pointer`` for Objective-C++'s ``id`` and interfaces has been fixed.
+
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
