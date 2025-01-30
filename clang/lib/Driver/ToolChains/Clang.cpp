@@ -7502,20 +7502,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptOutFlag(CmdArgs, options::OPT_fassume_unique_vtables,
                      options::OPT_fno_assume_unique_vtables);
 
-  // -frelaxed-template-template-args is deprecated.
-  if (Arg *A =
-          Args.getLastArg(options::OPT_frelaxed_template_template_args,
-                          options::OPT_fno_relaxed_template_template_args)) {
-    if (A->getOption().matches(
-            options::OPT_fno_relaxed_template_template_args)) {
-      D.Diag(diag::warn_drv_deprecated_arg_no_relaxed_template_template_args);
-      CmdArgs.push_back("-fno-relaxed-template-template-args");
-    } else {
-      D.Diag(diag::warn_drv_deprecated_arg)
-          << A->getAsString(Args) << /*hasReplacement=*/false;
-    }
-  }
-
   // -fsized-deallocation is on by default in C++14 onwards and otherwise off
   // by default.
   Args.addLastArg(CmdArgs, options::OPT_fsized_deallocation,
