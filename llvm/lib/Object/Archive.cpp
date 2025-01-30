@@ -40,7 +40,7 @@ using namespace llvm::support::endian;
 
 void Archive::anchor() {}
 
-static Error malformedError(Twine Msg) {
+static Error malformedError(const Twine &Msg) {
   std::string StringMsg = "truncated or malformed archive (" + Msg.str() + ")";
   return make_error<GenericBinaryError>(std::move(StringMsg),
                                         object_error::parse_failed);
@@ -177,7 +177,7 @@ Expected<StringRef> ArchiveMemberHeader::getRawName() const {
 }
 
 Expected<uint64_t>
-getArchiveMemberDecField(Twine FieldName, const StringRef RawField,
+getArchiveMemberDecField(const Twine &FieldName, const StringRef RawField,
                          const Archive *Parent,
                          const AbstractArchiveMemberHeader *MemHeader) {
   uint64_t Value;
@@ -195,7 +195,7 @@ getArchiveMemberDecField(Twine FieldName, const StringRef RawField,
 }
 
 Expected<uint64_t>
-getArchiveMemberOctField(Twine FieldName, const StringRef RawField,
+getArchiveMemberOctField(const Twine &FieldName, const StringRef RawField,
                          const Archive *Parent,
                          const AbstractArchiveMemberHeader *MemHeader) {
   uint64_t Value;

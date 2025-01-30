@@ -362,7 +362,7 @@ private:
   bool AddUnderscores;
 };
 
-Expected<COFFModuleDefinition> parseCOFFModuleDefinition(MemoryBufferRef MB,
+Expected<COFFModuleDefinition> parseCOFFModuleDefinition(const MemoryBufferRef &MB,
                                                          MachineTypes Machine,
                                                          bool MingwDef,
                                                          bool AddUnderscores) {

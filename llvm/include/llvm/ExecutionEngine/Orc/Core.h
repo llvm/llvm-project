@@ -1437,7 +1437,7 @@ public:
   /// If a Platform is attached then Platform::setupJITDylib will be called to
   /// install standard platform symbols (e.g. standard library interposes).
   /// If no Platform is attached this call is equivalent to createBareJITDylib.
-  Expected<JITDylib &> createJITDylib(std::string Name);
+  Expected<JITDylib &> createJITDylib(const std::string &Name);
 
   /// Removes the given JITDylibs from the ExecutionSession.
   ///
