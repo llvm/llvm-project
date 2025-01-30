@@ -139,7 +139,7 @@ void AMDGPUInstPrinter::printFlatOffset(const MCInst *MI, unsigned OpNo,
     const MCInstrDesc &Desc = MII.get(MI->getOpcode());
     bool AllowNegative = (Desc.TSFlags & (SIInstrFlags::FlatGlobal |
                                           SIInstrFlags::FlatScratch)) ||
-                         AMDGPU::isGFX12(STI);
+                         AMDGPU::isGFX12Plus(STI);
 
     if (AllowNegative) // Signed offset
       O << formatDec(SignExtend32(Imm, AMDGPU::getNumFlatOffsetBits(STI)));

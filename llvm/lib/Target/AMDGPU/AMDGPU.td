@@ -2157,6 +2157,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureShaderCyclesRegister,
    FeatureArchitectedFlatScratch,
    FeatureArchitectedSGPRs,
+   FeatureFlatGVSMode,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
    FeatureAtomicDsPkAdd16Insts,
