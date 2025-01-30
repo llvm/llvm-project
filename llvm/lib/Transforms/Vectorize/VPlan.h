@@ -1223,6 +1223,9 @@ public:
     // Returns a scalar boolean value, which is true if any lane of its (only
     // boolean) vector operand is true.
     AnyOf,
+    // Extracts the first active lane of a vector, where the first operand is
+    // the predicate, and the second operand is the vector to extract.
+    ExtractFirstActive,
   };
 
 private:
@@ -3966,6 +3969,9 @@ public:
   /// VPlanHCFG, as the definition of the type needs access to the definitions
   /// of VPBlockShallowTraversalWrapper.
   auto getExitBlocks();
+
+  /// Returns true if \p VPBB is an exit block.
+  bool isExitBlock(VPBlockBase *VPBB);
 
   /// The trip count of the original loop.
   VPValue *getTripCount() const {
