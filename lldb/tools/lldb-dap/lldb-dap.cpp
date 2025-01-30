@@ -21,12 +21,13 @@
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/Host/Config.h"
+#include "lldb/Host/File.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
 #include "lldb/Host/Socket.h"
-#include "lldb/Host/common/TCPSocket.h"
-#include "lldb/Host/posix/DomainSocket.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/UriParser.h"
+#include "lldb/lldb-forward.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -44,6 +45,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <array>
@@ -59,6 +61,7 @@
 #include <optional>
 #include <ostream>
 #include <set>
+#include <string>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <thread>
@@ -95,6 +98,8 @@ typedef int socklen_t;
 
 using namespace lldb_dap;
 using lldb_private::MainLoop;
+using lldb_private::MainLoopBase;
+using lldb_private::NativeFile;
 using lldb_private::NativeSocket;
 using lldb_private::Socket;
 using lldb_private::Status;
@@ -4835,10 +4840,10 @@ EXAMPLES:
   The debug adapter can be started in two modes.
 
   Running lldb-dap without any arguments will start communicating with the
-  parent over stdio. Passing a port number causes lldb-dap to start listening
-  for connections on that port.
+  parent over stdio. Passing a --connection URI will cause lldb-dap to listen 
+  for a connection in the specified mode.
 
-    lldb-dap -p <port>
+    lldb-dap --connection connection://localhost:<port>
 
   Passing --wait-for-debugger will pause the process at startup and wait for a
   debugger to attach to the process.
@@ -4931,24 +4936,25 @@ static int DuplicateFileDescriptor(int fd) {
 }
 
 static llvm::Expected<std::pair<Socket::SocketProtocol, std::string>>
-parseConnection(llvm::StringRef conn) {
-  if (conn.contains("://")) {
-    llvm::StringRef scheme, rest;
-    std::tie(scheme, rest) = conn.split("://");
+validateConnection(llvm::StringRef conn) {
+  auto uri = lldb_private::URI::Parse(conn);
 
-    if (scheme == "unix" || scheme == "unix-connect") {
-      return std::make_pair(Socket::ProtocolUnixDomain, rest.str());
-    }
-    if (scheme == "tcp" || scheme == "connect") {
-      return std::make_pair(Socket::ProtocolTcp, rest.str());
-    }
-  } else if (conn.starts_with("/")) {
-    return std::make_pair(Socket::ProtocolUnixDomain, conn.str());
-  } else if (conn.contains(":")) {
-    return std::make_pair(Socket::ProtocolTcp, conn.str());
+  if (uri && (uri->scheme == "tcp" || uri->scheme == "connect" ||
+              !uri->hostname.empty() || uri->port)) {
+    return std::make_pair(
+        Socket::ProtocolTcp,
+        formatv("[{0}]:{1}", uri->hostname.empty() ? "0.0.0.0" : uri->hostname,
+                uri->port.value_or(0)));
   }
+
+  if (uri && (uri->scheme == "unix" || uri->scheme == "unix-connect" ||
+              uri->path != "/")) {
+    return std::make_pair(Socket::ProtocolUnixDomain, uri->path.str());
+  }
+
   return llvm::createStringError(
-      "expected '[unix://]/path' or '[tcp://][host]:port', got '%s'.",
+      "Unsupported connection specifier, expected 'unix-connect:///path' or "
+      "'connect://[host]:port', got '%s'.",
       conn.str().c_str());
 }
 
@@ -5060,40 +5066,40 @@ int main(int argc, char *argv[]) {
   }
 
   auto HandleClient =
-      [=, log = log.get()](std::string name, StreamDescriptor input,
-                           StreamDescriptor output, std::FILE *redirectOut,
+      [=, log = log.get()](std::string name, lldb::IOObjectSP input,
+                           lldb::IOObjectSP output, std::FILE *redirectOut,
                            std::FILE *redirectErr) -> bool {
-    DAP dap = DAP(name, program_path.str(), log, default_repl_mode,
-                  std::move(input), std::move(output));
+    DAP dap = DAP(name, program_path.str(), log, std::move(input),
+                  std::move(output), default_repl_mode, pre_init_commands);
 
     // stdout/stderr redirection to the IDE's console
     if (auto Err = dap.ConfigureIO(redirectOut, redirectErr)) {
       llvm::logAllUnhandledErrors(
           std::move(Err), llvm::errs(),
           "Failed to configure lldb-dap IO operations: ");
-      return EXIT_FAILURE;
+      return false;
     }
 
     RegisterRequestCallbacks(dap);
-
-    dap.pre_init_commands = pre_init_commands;
 
     // used only by TestVSCode_redirection_to_console.py
     if (getenv("LLDB_DAP_TEST_STDOUT_STDERR_REDIRECTION") != nullptr)
       redirection_test();
 
     if (auto Err = dap.Loop()) {
+      std::string errorMessage = llvm::toString(std::move(Err));
       if (log)
-        *log << "Transport Error: " << llvm::toString(std::move(Err)) << "\n";
+        *log << "Transport Error: " << errorMessage << "\n";
       return false;
     }
     return true;
   };
 
   if (!connection.empty()) {
-    auto maybeProtoclAndName = parseConnection(connection);
+    auto maybeProtoclAndName = validateConnection(connection);
     if (auto Err = maybeProtoclAndName.takeError()) {
-      llvm::errs() << "Invalid connection specification " << Err << "\n";
+      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                  "Invalid connection: ");
       return EXIT_FAILURE;
     }
 
@@ -5104,15 +5110,15 @@ int main(int argc, char *argv[]) {
     Status error;
     std::unique_ptr<Socket> listener = Socket::Create(protocol, error);
     if (error.Fail()) {
-      llvm::errs() << "Failed to create listener for protocol "
-                   << Socket::FindSchemeByProtocol(protocol)
-                   << ", error: " << error.takeError() << "\n";
+      llvm::logAllUnhandledErrors(error.takeError(), llvm::errs(),
+                                  "Failed to create socket listener: ");
       return EXIT_FAILURE;
     }
 
     error = listener->Listen(name, /* backlog */ 5);
     if (error.Fail()) {
-      llvm::errs() << "Failed to listen, error: " << error.takeError() << "\n";
+      llvm::logAllUnhandledErrors(error.takeError(), llvm::errs(),
+                                  "Failed to listen for connections: ");
       return EXIT_FAILURE;
     }
 
@@ -5127,43 +5133,41 @@ int main(int argc, char *argv[]) {
     llvm::outs().flush();
 
     MainLoop mainloop;
-    mainloop.RegisterSignal(
-        SIGHUP, [](auto &RL) { RL.RequestTermination(); }, error);
-
     unsigned int clientCount = 0;
-    auto OnAccept = [=, log = log.get(),
-                     &clientCount](std::unique_ptr<Socket> client) {
+    llvm::DefaultThreadPool pool(llvm::optimal_concurrency());
+    auto OnAccept = [=, &pool, &clientCount,
+                     log = log.get()](std::unique_ptr<Socket> client) {
       std::string name = llvm::formatv("client_{0}", clientCount++).str();
 
       if (log) {
         auto now = std::chrono::duration<double>(
             std::chrono::system_clock::now().time_since_epoch());
-        *log << llvm::formatv("{0:f9} client connected: {1}", now.count(), name)
-                    .str()
-             << std::endl;
+        *log << llvm::formatv("{0:f9}", now.count()).str()
+             << " client connected: " << name << "\n";
       }
-      // Start a thread for each connection, unblocking the listening thread.
-      std::thread([=, client = std::move(client)]() {
-        HandleClient(
-            name,
-            StreamDescriptor::from_socket(client->GetNativeSocket(), false),
-            StreamDescriptor::from_socket(client->GetNativeSocket(), false),
-            /*=redirectOut*/ nullptr, /*=redirectErr*/ nullptr);
-      }).detach();
+
+      // Move the client into the connection pool to unblock accepting the next
+      // client.
+      lldb::IOObjectSP IO(std::move(client));
+      pool.async(HandleClient, name, IO, IO,
+                 /*redirectOut=*/nullptr, /*redirectErr=*/nullptr);
     };
 
     auto handles = listener->Accept(mainloop, OnAccept);
     if (auto Err = handles.takeError()) {
-      llvm::errs() << "failed to register accept() with the main loop: " << Err
-                   << "\n";
+      llvm::logAllUnhandledErrors(error.takeError(), llvm::errs(),
+                                  "Failed to register accept handler: ");
       return EXIT_FAILURE;
     }
 
     error = mainloop.Run();
     if (error.Fail()) {
-      llvm::errs() << "failed to accept()" << error.takeError() << "\n";
+      llvm::logAllUnhandledErrors(error.takeError(), llvm::errs(),
+                                  "Main run loop failed: ");
       return EXIT_FAILURE;
     }
+
+    pool.wait();
 
     return EXIT_SUCCESS;
   }
@@ -5187,14 +5191,11 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-  std::FILE *redirectOut = stdout;
-  std::FILE *redirectErr = stderr;
+  lldb::IOObjectSP input = std::make_shared<NativeFile>(stdin, false);
+  lldb::IOObjectSP output = std::make_shared<NativeFile>(
+      stdout_fd, lldb_private::NativeFile::eOpenOptionWriteOnly, false);
 
-  StreamDescriptor input = StreamDescriptor::from_file(fileno(stdin), false);
-  StreamDescriptor output = StreamDescriptor::from_file(stdout_fd, false);
-
-  return HandleClient("stdin/stdout", std::move(input), std::move(output),
-                      redirectOut, redirectErr)
-             ? EXIT_SUCCESS
-             : EXIT_FAILURE;
+  bool status = HandleClient("stdin/stdout", std::move(input),
+                             std::move(output), stdout, stderr);
+  return status ? EXIT_SUCCESS : EXIT_FAILURE;
 }

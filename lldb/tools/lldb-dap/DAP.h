@@ -205,7 +205,8 @@ struct DAP {
   std::string last_nonempty_var_expression;
 
   DAP(std::string name, llvm::StringRef path, std::ofstream *log,
-      ReplMode repl_mode, StreamDescriptor input, StreamDescriptor output);
+      lldb::IOObjectSP input, lldb::IOObjectSP output, ReplMode repl_mode,
+      std::vector<std::string> pre_init_commands);
   ~DAP();
   DAP(const DAP &rhs) = delete;
   void operator=(const DAP &rhs) = delete;

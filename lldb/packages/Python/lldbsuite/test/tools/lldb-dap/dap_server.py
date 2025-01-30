@@ -1207,11 +1207,12 @@ class DebugAdaptorServer(DebugCommunication):
                     out.removeprefix(expected_prefix).rstrip("\r\n").split(",", 1)[0]
                 )
 
-            if connection.startswith("unix-connect://"):  # unix-connect:///path
+            scheme, address = connection.split("://")
+            if scheme == "unix-connect":  # unix-connect:///path
                 s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-                s.connect(connection.removeprefix("unix-connect://"))
-            elif connection.startswith("connection://"):  # connection://[host]:port
-                host, port = connection.removeprefix("connection://").rsplit(":", 1)
+                s.connect(address)
+            elif scheme == "connection":  # connection://[host]:port
+                host, port = address.rsplit(":", 1)
                 # create_connection with try both ipv4 and ipv6.
                 s = socket.create_connection((host.strip("[]"), int(port)))
             else:
@@ -1390,10 +1391,9 @@ def main():
     )
 
     parser.add_option(
-        "--port",
-        type="int",
-        dest="port",
-        help="Attach a socket to a port instead of using STDIN for VSCode",
+        "--connection",
+        dest="connection",
+        help="Attach a socket connection of using STDIN for VSCode",
         default=None,
     )
 
@@ -1539,15 +1539,16 @@ def main():
 
     (options, args) = parser.parse_args(sys.argv[1:])
 
-    if options.vscode_path is None and options.port is None:
+    if options.vscode_path is None and options.connection is None:
         print(
             "error: must either specify a path to a Visual Studio Code "
             "Debug Adaptor vscode executable path using the --vscode "
-            "option, or a port to attach to for an existing lldb-dap "
-            "using the --port option"
+            "option, or using the --connection option"
         )
         return
-    dbg = DebugAdaptorServer(executable=options.vscode_path, port=options.port)
+    dbg = DebugAdaptorServer(
+        executable=options.vscode_path, connection=options.connection
+    )
     if options.debug:
         raw_input('Waiting for debugger to attach pid "%i"' % (dbg.get_pid()))
     if options.replay:

@@ -3,6 +3,7 @@ Test lldb-dap server integration.
 """
 
 import os
+import signal
 import tempfile
 
 import dap_server
@@ -12,9 +13,7 @@ import lldbdap_testcase
 
 
 class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
-    def do_test_server(self, connection):
-        self.build()
-
+    def start_server(self, connection):
         log_file_path = self.getBuildArtifact("dap.txt")
         server = dap_server.DebugAdaptorServer(
             executable=self.lldbDAPExec,
@@ -28,46 +27,36 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
 
         self.addTearDownHook(cleanup)
 
+        return server
+
+    def run_debug_session(self, connection, name):
         self.dap_server = dap_server.DebugAdaptorServer(
-            connection=server.connection,
+            connection=connection,
         )
         program = self.getBuildArtifact("a.out")
         source = "main.c"
         breakpoint_line = line_number(source, "// breakpoint")
 
-        # Initial connection over the connection.
         self.launch(
             program,
-            args=["Alice"],
+            args=[name],
             disconnectAutomatically=False,
         )
         self.set_source_breakpoints(source, [breakpoint_line])
         self.continue_to_next_stop()
         self.continue_to_exit()
         output = self.get_stdout()
-        self.assertEqual(output, "Hello Alice!\r\n")
+        self.assertEqual(output, f"Hello {name}!\r\n")
         self.dap_server.request_disconnect()
-
-        # Second connection over the connection.
-        self.dap_server = dap_server.DebugAdaptorServer(
-            connection=server.connection,
-        )
-        self.launch(
-            program,
-            args=["Bob"],
-            disconnectAutomatically=False,
-        )
-        self.set_source_breakpoints(source, [breakpoint_line])
-        self.continue_to_next_stop()
-        self.continue_to_exit()
-        output = self.get_stdout()
-        self.assertEqual(output, "Hello Bob!\r\n")
 
     def test_server_port(self):
         """
         Test launching a binary with a lldb-dap in server mode on a specific port.
         """
-        self.do_test_server(connection="tcp://localhost:0")
+        self.build()
+        server = self.start_server(connection="tcp://localhost:0")
+        self.run_debug_session(server.connection, "Alice")
+        self.run_debug_session(server.connection, "Bob")
 
     @skipIfWindows
     def test_server_unix_socket(self):
@@ -79,6 +68,9 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
 
         def cleanup():
             os.unlink(name)
-
         self.addTearDownHook(cleanup)
-        self.do_test_server(connection="unix://" + name)
+
+        self.build()
+        server = self.start_server(connection="unix://" + name)
+        self.run_debug_session(server.connection, "Alice")
+        self.run_debug_session(server.connection, "Bob")

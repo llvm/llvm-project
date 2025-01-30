@@ -17,7 +17,6 @@
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
-#include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
@@ -59,11 +58,12 @@ const char DEV_NULL[] = "/dev/null";
 namespace lldb_dap {
 
 DAP::DAP(std::string name, llvm::StringRef path, std::ofstream *log,
-         ReplMode repl_mode, StreamDescriptor input, StreamDescriptor output)
+         lldb::IOObjectSP input, lldb::IOObjectSP output, ReplMode repl_mode,
+         std::vector<std::string> pre_init_commands)
     : name(name), debug_adaptor_path(path), log(log), input(std::move(input)),
       output(std::move(output)), broadcaster("lldb-dap"),
-      exception_breakpoints(), focus_tid(LLDB_INVALID_THREAD_ID),
-      stop_at_entry(false), is_attach(false),
+      exception_breakpoints(), pre_init_commands(pre_init_commands),
+      focus_tid(LLDB_INVALID_THREAD_ID), stop_at_entry(false), is_attach(false),
       enable_auto_variable_summaries(false),
       enable_synthetic_child_debugging(false),
       display_extended_backtrace(false),
@@ -230,10 +230,10 @@ void DAP::StopIO() {
 // "Content-Length:" field followed by the length, followed by the raw
 // JSON bytes.
 void DAP::SendJSON(const std::string &json_str) {
-  output.write_full("Content-Length: ");
-  output.write_full(llvm::utostr(json_str.size()));
-  output.write_full("\r\n\r\n");
-  output.write_full(json_str);
+  output.write_full(log, "Content-Length: ");
+  output.write_full(log, llvm::utostr(json_str.size()));
+  output.write_full(log, "\r\n\r\n");
+  output.write_full(log, json_str);
 }
 
 // Serialize the JSON value into a string and send the JSON packet to
