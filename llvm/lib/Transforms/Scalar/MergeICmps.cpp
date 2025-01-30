@@ -52,6 +52,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/ValueMap.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Scalar.h"
@@ -842,6 +843,119 @@ bool processPhi(PHINode &Phi, const TargetLibraryInfo &TLI, AliasAnalysis &AA,
   return CmpChain.simplify(TLI, AA, DTU);
 }
 
+void removeUnusedOperands(SmallVector<Value *, 8> toCheck) {
+  while (!toCheck.empty()) {
+    Value *V = toCheck.pop_back_val();
+    
+    // Only process instructions (skip constants, globals, etc.)
+    if (Instruction *OpI = dyn_cast<Instruction>(V)) {
+      if (OpI->use_empty()) {
+        toCheck.append(OpI->operands().begin(),OpI->operands().end());
+        OpI->eraseFromParent();
+      }
+    }
+  }
+}
+
+struct CommonCmp {
+  ICmpInst* CmpI;
+  unsigned Offset;
+};
+
+void mergeAdjacentComparisons(SelectInst* SelectI,Value* Base,std::vector<CommonCmp> AdjacentMem,const TargetLibraryInfo &TLI) {
+  auto First = AdjacentMem[0];
+  IRBuilder<> Builder(SelectI);
+  LLVMContext &Context = First.CmpI->getContext();
+  const auto &DL = First.CmpI->getDataLayout();
+
+  auto *CmpType = First.CmpI->getOperand(0)->getType();
+  auto* ArrayType = ArrayType::get(CmpType,AdjacentMem.size());
+  auto ArraySize = DL.getTypeAllocSize(ArrayType);
+  // TODO: check for alignment
+  auto* ArrayAlloca = Builder.CreateAlloca(ArrayType,nullptr);
+
+  std::vector<Constant*> Constants;
+  for (const auto& CI : AdjacentMem) {
+    // safe since we checked before that second operand is constantint
+    Constants.emplace_back(cast<Constant>(CI.CmpI->getOperand(1)));
+  }
+  auto *ArrayConstant = ConstantArray::get(ArrayType, Constants);
+  Builder.CreateStore(ArrayConstant,ArrayAlloca);
+
+  // TODO: adjust base-ptr to point to start of load-offset
+  // TODO: also have to handle !=
+  Value *const MemCmpCall = emitMemCmp(
+      Base, ArrayAlloca,
+      ConstantInt::get(Type::getInt64Ty(Context), ArraySize),
+      Builder, DL, &TLI);
+  auto *MergedCmp = new ICmpInst(ICmpInst::ICMP_EQ,MemCmpCall, ConstantInt::get(Type::getInt32Ty(Context), 0));
+
+  BasicBlock::iterator ii(SelectI);
+  SmallVector<Value *, 8> deadOperands(SelectI->operands());
+  ReplaceInstWithInst(SelectI->getParent(),ii,MergedCmp);
+  removeUnusedOperands(deadOperands);
+
+  dbgs() << "DONE merging";
+}
+
+// Combines Icmp instructions if they operate on adjacent memory
+// TODO: check that base address' memory isn't modified between comparisons
+bool tryMergeIcmps(SelectInst* SelectI, Value* Base, std::vector<CommonCmp> &Icmps,const TargetLibraryInfo &TLI) {
+  assert(!Icmps.empty() && "if entry exists then has at least one cmp");
+  bool hasMerged = false;
+
+  std::vector<CommonCmp> AdjacentMem{Icmps[0]};
+  auto Prev = Icmps[0];
+  for (auto& Cmp : llvm::drop_begin(Icmps)) {
+    if (Cmp.Offset == (Prev.Offset + 1)) {
+      AdjacentMem.emplace_back(Cmp);
+    } else if (AdjacentMem.size() > 1) {
+      mergeAdjacentComparisons(SelectI,Base, AdjacentMem,TLI);
+      hasMerged = true;
+      AdjacentMem.clear();
+      AdjacentMem.emplace_back(Cmp);
+    }
+    Prev = Cmp;
+  }
+
+  if (AdjacentMem.size() > 1) {
+    mergeAdjacentComparisons(SelectI, Base, AdjacentMem,TLI);
+    hasMerged = true;
+  }
+
+  return hasMerged;
+}
+
+// Given an operand from a load, return the original base pointer and
+// if operand is GEP also it's offset from base pointer
+// but only if offset is known at compile time
+std::tuple<Value*, std::optional<unsigned>> findPtrAndOffset(Value* V, unsigned Offset) {
+  if (const auto& GepI = dyn_cast<GetElementPtrInst>(V)){
+    if (const auto& Index = dyn_cast<ConstantInt>(GepI->getOperand(1))) {
+      if (Index->getBitWidth() <= 64) {
+        return findPtrAndOffset(GepI->getPointerOperand(), Offset + Index->getZExtValue());
+      }
+    }
+    return {V,std::nullopt};
+  }
+
+  return {V,Offset};
+}
+
+    
+std::optional<Value*>  constantCmp(ICmpInst* CmpI,std::vector<CommonCmp>* cmps) {
+  auto const& LoadI = dyn_cast<LoadInst>(CmpI->getOperand(0));
+  auto const& ConstantI = dyn_cast<ConstantInt>(CmpI->getOperand(1));
+  if (!LoadI || !ConstantI)
+    return std::nullopt;
+
+  auto [BasePtr, Offset] = findPtrAndOffset(LoadI->getOperand(0),0);
+  if (Offset)
+    cmps->emplace_back(CommonCmp {CmpI, *Offset});
+
+  return BasePtr;
+}
+
 static bool runImpl(Function &F, const TargetLibraryInfo &TLI,
                     const TargetTransformInfo &TTI, AliasAnalysis &AA,
                     DominatorTree *DT) {
@@ -866,6 +980,34 @@ static bool runImpl(Function &F, const TargetLibraryInfo &TLI,
     if (auto *const Phi = dyn_cast<PHINode>(&*BB.begin()))
       MadeChange |= processPhi(*Phi, TLI, AA, DTU);
   }
+
+  // merge cmps that load from same address and compare with constant
+  for (BasicBlock &BB : F) {
+    // from bottom up to find the root result of all comparisons
+    for (Instruction &I : llvm::reverse(BB)) {
+      if (auto const &SelectI = dyn_cast<SelectInst>(&I)) {
+        auto const& Cmp1 = dyn_cast<ICmpInst>(SelectI->getOperand(0));
+        auto const& Cmp2 = dyn_cast<ICmpInst>(SelectI->getOperand(1));
+        auto const& ConstantI = dyn_cast<Constant>(SelectI->getOperand(2));
+
+        if (!Cmp1 || !Cmp2 ||!ConstantI ||!ConstantI->isZeroValue())
+          continue;
+
+        Value* BasePtr;
+        std::vector<CommonCmp> cmps;
+        if (auto bp = constantCmp(Cmp1,&cmps))
+          BasePtr = *bp;
+        if (auto bp = constantCmp(Cmp2,&cmps)) {
+          if (BasePtr != bp) continue;
+        }
+
+        MadeChange |= tryMergeIcmps(SelectI,BasePtr,cmps,TLI);
+        break;
+      }
+    }
+  }
+
+  F.dump();
 
   return MadeChange;
 }
