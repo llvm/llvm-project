@@ -26,13 +26,23 @@ static bool reportError(Twine Message) {
   return true;
 }
 
+
+static bool isValidShaderVisibility(uint32_t V) {
+    return V < static_cast<uint32_t>(ShaderVisibility::MAX_VALUE);
+}
+
+
+static uint64_t extractInt(MDNode *Node, unsigned int I) {
+  assert(I > 0 && I < Node->getNumOperands() && "Invalid operand Index");
+  return mdconst::extract<ConstantInt>(Node->getOperand(I))->getZExtValue();
+}
+
+
 static bool parseRootFlags(ModuleRootSignature *MRS, MDNode *RootFlagNode) {
 
   if (RootFlagNode->getNumOperands() != 2)
     return reportError("Invalid format for RootFlag Element");
-
-  auto *Flag = mdconst::extract<ConstantInt>(RootFlagNode->getOperand(1));
-  uint32_t Value = Flag->getZExtValue();
+  uint64_t Value = extractInt(RootFlagNode, 1);
 
   // Root Element validation, as specified:
   // https://github.com/llvm/wg-hlsl/blob/main/proposals/0002-root-signature-in-clang.md#validations-during-dxil-generation
@@ -40,6 +50,36 @@ static bool parseRootFlags(ModuleRootSignature *MRS, MDNode *RootFlagNode) {
     return reportError("Invalid flag value for RootFlag");
 
   MRS->Flags = Value;
+  return false;
+}
+
+static bool parseRootConstants(ModuleRootSignature *MRS, MDNode *RootFlagNode) {
+  assert(RootFlagNode->getNumOperands() == 5 &&
+         "Invalid format for RootFlag Element");
+  
+  uint32_t MaybeShaderVisibility  = extractInt(RootFlagNode, 1);
+  assert(isValidShaderVisibility(MaybeShaderVisibility) && "Invalid shader visibility value");
+
+  ShaderVisibility Visibility = static_cast<ShaderVisibility>(MaybeShaderVisibility);
+  
+  uint32_t ShaderRegistry  = extractInt(RootFlagNode, 2);
+  uint32_t RegisterSpace  = extractInt(RootFlagNode, 3);
+  uint32_t Num32BitsValue  = extractInt(RootFlagNode, 4);
+
+  RootConstants Constant {
+    ShaderRegistry,
+    RegisterSpace,
+    Num32BitsValue
+  };
+
+  RootSignaturePart Part {
+    PartType::Constants,
+    {Constant},
+    Visibility
+  };
+
+  MRS->pushPart(Part);
+
   return false;
 }
 
@@ -68,7 +108,10 @@ static bool parseRootSignatureElement(ModuleRootSignature *MRS,
     break;
   }
 
-  case RootSignatureElementKind::RootConstants:
+  case RootSignatureElementKind::RootConstants:{
+    return parseRootConstants(MRS, Element);
+    break;
+  }
   case RootSignatureElementKind::RootDescriptor:
   case RootSignatureElementKind::DescriptorTable:
   case RootSignatureElementKind::StaticSampler:

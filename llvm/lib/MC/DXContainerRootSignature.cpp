@@ -30,3 +30,7 @@ void RootSignatureHeader::write(raw_ostream &OS) {
       OS.write(reinterpret_cast<const char *>(&Param), BindingSize);
   }
 }
+
+void RootSignatureHeader::pushPart(dxbc::RootParameter Param){
+  Parameters.push_back(Param);
+}

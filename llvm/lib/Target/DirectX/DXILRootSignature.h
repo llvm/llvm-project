@@ -12,9 +12,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include <cstdint>
 #include <optional>
 
 namespace llvm {
@@ -29,14 +31,50 @@ enum class RootSignatureElementKind {
   StaticSampler = 5
 };
 
+enum class PartType {
+  Constants = 0
+};
+
+enum class ShaderVisibility : uint32_t {
+  SHADER_VISIBILITY_ALL = 0,
+  SHADER_VISIBILITY_VERTEX = 1,
+  SHADER_VISIBILITY_HULL = 2,
+  SHADER_VISIBILITY_DOMAIN = 3,
+  SHADER_VISIBILITY_GEOMETRY =4 ,
+  SHADER_VISIBILITY_PIXEL = 5,
+  SHADER_VISIBILITY_AMPLIFICATION = 6,
+  SHADER_VISIBILITY_MESH = 7,
+  // not a flag
+  MAX_VALUE = 8
+};
+
+struct RootConstants {
+  uint32_t ShaderRegistry;
+  uint32_t RegistrySpace;
+  uint32_t Number32BitValues;
+};
+
+struct RootSignaturePart {
+    PartType Type;
+    union {
+      RootConstants Constants;
+    };
+    ShaderVisibility Visibility;
+};
+
 struct ModuleRootSignature {
   uint32_t Flags;
+  SmallVector<RootSignaturePart> Parts;
 
   ModuleRootSignature() = default;
 
   bool parse(NamedMDNode *Root);
 
   static ModuleRootSignature analyzeModule(Module &M);
+
+  void pushPart(RootSignaturePart Part) {
+    Parts.push_back(Part);
+  }
 };
 
 class RootSignatureAnalysis : public AnalysisInfoMixin<RootSignatureAnalysis> {

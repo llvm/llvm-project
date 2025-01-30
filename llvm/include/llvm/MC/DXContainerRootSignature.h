@@ -8,7 +8,6 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/DXContainer.h"
-#include <cstdint>
 #include <limits>
 
 namespace llvm {
@@ -22,6 +21,8 @@ struct RootSignatureHeader {
 
   void swapBytes();
   void write(raw_ostream &OS);
+
+  void pushPart(dxbc::RootParameter Part);
 };
 } // namespace mcdxbc
 } // namespace llvm
