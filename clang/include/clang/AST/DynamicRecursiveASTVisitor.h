@@ -254,6 +254,7 @@ public:
   virtual bool Traverse##CLASS##Decl(MaybeConst<CLASS##Decl> *D);
 #include "clang/AST/DeclNodes.inc"
 
+#define ABSTRACT_DECL(DECL)
 #define DECL(CLASS, BASE)                                                      \
   bool WalkUpFrom##CLASS##Decl(MaybeConst<CLASS##Decl> *D);                    \
   virtual bool Visit##CLASS##Decl(MaybeConst<CLASS##Decl> *D) { return true; }
@@ -275,6 +276,7 @@ public:
   virtual bool Traverse##CLASS##Type(MaybeConst<CLASS##Type> *T);
 #include "clang/AST/TypeNodes.inc"
 
+#define ABSTRACT_TYPE(CLASS, BASE)
 #define TYPE(CLASS, BASE)                                                      \
   bool WalkUpFrom##CLASS##Type(MaybeConst<CLASS##Type> *T);                    \
   virtual bool Visit##CLASS##Type(MaybeConst<CLASS##Type> *T) { return true; }
