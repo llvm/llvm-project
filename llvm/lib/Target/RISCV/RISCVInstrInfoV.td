@@ -581,15 +581,16 @@ multiclass VALU_IV_X<string opcodestr, bits<6> funct6> {
            SchedBinaryMC<"WriteVIALUX", "ReadVIALUV", "ReadVIALUX">;
 }
 
-multiclass VALU_IV_I<string opcodestr, bits<6> funct6> {
-  def I  : VALUVI<funct6, opcodestr # ".vi">,
-           SchedUnaryMC<"WriteVIALUI", "ReadVIALUV">;
+multiclass VALU_IV_I<string opcodestr, bits<6> funct6, Operand optype = simm5> {
+  def I : VALUVI<funct6, opcodestr#".vi", optype>,
+          SchedUnaryMC<"WriteVIALUI", "ReadVIALUV">;
 }
 
-multiclass VALU_IV_V_X_I<string opcodestr, bits<6> funct6>
+multiclass VALU_IV_V_X_I<string opcodestr, bits<6> funct6,
+                         Operand optype = simm5>
     : VALU_IV_V<opcodestr, funct6>,
       VALU_IV_X<opcodestr, funct6>,
-      VALU_IV_I<opcodestr, funct6>;
+      VALU_IV_I<opcodestr, funct6, optype>;
 
 multiclass VALU_IV_V_X<string opcodestr, bits<6> funct6>
     : VALU_IV_V<opcodestr, funct6>,
