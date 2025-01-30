@@ -197,7 +197,10 @@ def GlobalValueLinkageOpInterface : OpInterface<"GlobalValueLinkageOpInterface">
       /*args=*/        (ins)
     >,
     InterfaceMethod<
-      /*desc=*/        "Returns whether the operation is a declaration",
+      /*desc=*/        [{
+        Return true if the primary definition of this global value is outside of
+        the current translation unit.
+      }],
       /*returnType=*/  "bool",
       /*methodName=*/  "isDeclarationForLinkage",
       /*args=*/        (ins),
@@ -252,6 +255,18 @@ def GlobalVariableLinkageOpInterface
                 [GlobalObjectLinkageOpInterface]> {
   let description = [{ WIP }];
   let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/        [{
+        If the value is a global constant, its value is immutable throughout the
+        runtime execution of the program.
+      }],
+      /*returnType=*/  "bool",
+      /*methodName=*/  "isConstant",
+      /*args=*/        (ins)
+    >
+  ];
 }
 
 #endif // MLIR_INTERFACES_LINKAGEINTERFACES
