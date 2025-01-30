@@ -1375,10 +1375,13 @@ void ScheduleDAGMILive::updatePressureDiffs(ArrayRef<VRegMaskOrUnit> LiveUses) {
 
         PressureDiff &PDiff = getPressureDiff(&SU);
         PDiff.addPressureChange(Reg, Decrement, &MRI);
-        if (llvm::any_of(PDiff, [](const PressureChange &Change) { return Change.isValid(); }))
-          LLVM_DEBUG(dbgs() << "  UpdateRegPressure: SU(" << SU.NodeNum << ") "
-                            << printReg(Reg, TRI) << ':'
-                            << PrintLaneMask(P.LaneMask) << ' ' << *SU.getInstr();
+        if (llvm::any_of(PDiff, [](const PressureChange &Change) {
+              return Change.isValid();
+            }))
+          LLVM_DEBUG(dbgs()
+                         << "  UpdateRegPressure: SU(" << SU.NodeNum << ") "
+                         << printReg(Reg, TRI) << ':'
+                         << PrintLaneMask(P.LaneMask) << ' ' << *SU.getInstr();
                      dbgs() << "                     to "; PDiff.dump(*TRI););
       }
     } else {
@@ -1411,10 +1414,13 @@ void ScheduleDAGMILive::updatePressureDiffs(ArrayRef<VRegMaskOrUnit> LiveUses) {
           if (LRQ.valueIn() == VNI) {
             PressureDiff &PDiff = getPressureDiff(SU);
             PDiff.addPressureChange(Reg, true, &MRI);
-            if (llvm::any_of(PDiff, [](const PressureChange &Change) { return Change.isValid(); }))
-              LLVM_DEBUG(dbgs() << "  UpdateRegPressure: SU(" << SU->NodeNum << ") "
-                                << *SU->getInstr();
-                         dbgs() << "                     to "; PDiff.dump(*TRI););
+            if (llvm::any_of(PDiff, [](const PressureChange &Change) {
+                  return Change.isValid();
+                }))
+              LLVM_DEBUG(dbgs() << "  UpdateRegPressure: SU(" << SU->NodeNum
+                                << ") " << *SU->getInstr();
+                         dbgs() << "                     to ";
+                         PDiff.dump(*TRI););
           }
         }
       }
