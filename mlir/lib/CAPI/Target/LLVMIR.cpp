@@ -55,3 +55,25 @@ MlirType mlirTypeFromLLVMIRTranslatorTranslateType(
   mlir::Type type = translator_->translateType(llvm::unwrap(llvmType));
   return wrap(type);
 }
+
+DEFINE_C_API_PTR_METHODS(MlirTypeToLLVMIRTranslator,
+                         mlir::LLVM::TypeToLLVMIRTranslator);
+
+MlirTypeToLLVMIRTranslator
+mlirTypeToLLVMIRTranslatorCreate(LLVMContextRef ctx) {
+  llvm::LLVMContext *context = llvm::unwrap(ctx);
+  auto *translator = new LLVM::TypeToLLVMIRTranslator(*context);
+  return wrap(translator);
+}
+
+void mlirTypeToLLVMIRTranslatorDestroy(MlirTypeToLLVMIRTranslator translator) {
+  delete static_cast<LLVM::TypeToLLVMIRTranslator *>(unwrap(translator));
+}
+
+LLVMTypeRef
+mlirTypeToLLVMIRTranslatorTranslateType(MlirTypeToLLVMIRTranslator translator,
+                                        MlirType mlirType) {
+  LLVM::TypeToLLVMIRTranslator *translator_ = unwrap(translator);
+  llvm::Type *type = translator_->translateType(unwrap(mlirType));
+  return llvm::wrap(type);
+}
