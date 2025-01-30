@@ -44,7 +44,8 @@ Implemented Papers
 Improvements and New Features
 -----------------------------
 
-- TODO
+- The ``std::ranges::copy`` and ``std::ranges::copy_n`` algorithms have been optimized for ``std::vector<bool>::iterator``\s,
+  resulting in a performance improvement of up to 2000x.
 
 
 Deprecations and Removals

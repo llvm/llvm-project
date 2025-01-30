@@ -2958,7 +2958,7 @@ public:
   }
 
   /// Check if the value is vectorized in the tree.
-  bool isVectorized(Value *V) const {
+  bool isVectorized(const Value *V) const {
     assert(V && "V cannot be nullptr.");
     return ScalarToTreeEntries.contains(V);
   }
@@ -3726,7 +3726,7 @@ private:
 #endif
 
   /// Get list of vector entries, associated with the value \p V.
-  ArrayRef<TreeEntry *> getTreeEntries(Value *V) const {
+  ArrayRef<TreeEntry *> getTreeEntries(const Value *V) const {
     assert(V && "V cannot be nullptr.");
     auto It = ScalarToTreeEntries.find(V);
     if (It == ScalarToTreeEntries.end())
@@ -12233,24 +12233,50 @@ InstructionCost BoUpSLP::getSpillCost() {
       }
 
       auto NoCallIntrinsic = [this](const Instruction *I) {
-        if (const auto *II = dyn_cast<IntrinsicInst>(I)) {
-          if (II->isAssumeLikeIntrinsic())
-            return true;
-          IntrinsicCostAttributes ICA(II->getIntrinsicID(), *II);
-          InstructionCost IntrCost =
-              TTI->getIntrinsicInstrCost(ICA, TTI::TCK_RecipThroughput);
-          InstructionCost CallCost =
-              TTI->getCallInstrCost(nullptr, II->getType(), ICA.getArgTypes(),
-                                    TTI::TCK_RecipThroughput);
-          if (IntrCost < CallCost)
-            return true;
-        }
-        return false;
+        const auto *II = dyn_cast<IntrinsicInst>(I);
+        if (!II)
+          return false;
+        if (II->isAssumeLikeIntrinsic())
+          return true;
+        FastMathFlags FMF;
+        SmallVector<Type *, 4> Tys;
+        for (auto &ArgOp : II->args())
+          Tys.push_back(ArgOp->getType());
+        if (auto *FPMO = dyn_cast<FPMathOperator>(II))
+          FMF = FPMO->getFastMathFlags();
+        IntrinsicCostAttributes ICA(II->getIntrinsicID(), II->getType(), Tys,
+                                    FMF);
+        InstructionCost IntrCost =
+            TTI->getIntrinsicInstrCost(ICA, TTI::TCK_RecipThroughput);
+        InstructionCost CallCost = TTI->getCallInstrCost(
+            nullptr, II->getType(), Tys, TTI::TCK_RecipThroughput);
+        return IntrCost < CallCost;
       };
 
       // Debug information does not impact spill cost.
-      if (isa<CallBase>(&*PrevInstIt) && !NoCallIntrinsic(&*PrevInstIt) &&
-          &*PrevInstIt != PrevInst)
+      // Vectorized calls, represented as vector intrinsics, do not impact spill
+      // cost.
+      if (const auto *CB = dyn_cast<CallBase>(&*PrevInstIt);
+          CB && !NoCallIntrinsic(CB) &&
+          (!isVectorized(CB) ||
+           any_of(getTreeEntries(CB), [&](const TreeEntry *TE) {
+             auto *CI = cast<CallInst>(TE->getMainOp());
+             Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
+
+             unsigned MinBW = MinBWs.lookup(TE).first;
+             SmallVector<Type *> ArgTys =
+                 buildIntrinsicArgTypes(CI, ID, TE->Scalars.size(), MinBW, TTI);
+             Type *ScalarTy = CI->getType();
+             if (MinBW)
+               ScalarTy = IntegerType::get(CI->getContext(), MinBW);
+             FixedVectorType *VecTy =
+                 getWidenedType(ScalarTy, TE->Scalars.size());
+             auto VecCallCosts =
+                 getVectorCallCosts(CI, VecTy, TTI, TLI, ArgTys);
+             bool UseIntrinsic = ID != Intrinsic::not_intrinsic &&
+                                 VecCallCosts.first <= VecCallCosts.second;
+             return !UseIntrinsic;
+           })))
         NumCalls++;
 
       ++PrevInstIt;
