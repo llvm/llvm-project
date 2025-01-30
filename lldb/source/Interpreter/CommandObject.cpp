@@ -124,11 +124,14 @@ bool CommandObject::ParseOptions(Args &args, CommandReturnObject &result) {
       error = Status::FromError(args_or.takeError());
 
     if (error.Success()) {
-      if (options->VerifyOptions())
-        return true;
-    } else {
-      result.SetError(error.takeError());
+      if (llvm::Error error = options->VerifyOptions()) {
+        result.SetError(std::move(error));
+        return false;
+      }
+      return true;
     }
+
+    result.SetError(error.takeError());
     result.SetStatus(eReturnStatusFailed);
     return false;
   }
