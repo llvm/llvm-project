@@ -509,7 +509,7 @@ void ReachingDefAnalysis::getLiveOuts(MachineBasicBlock *MBB, Register Reg,
   VisitedBBs.insert(MBB);
   LiveRegUnits LiveRegs(*TRI);
   LiveRegs.addLiveOuts(*MBB);
-  if (Register::isPhysicalRegister(Reg) && LiveRegs.available(Reg))
+  if (Reg.isPhysical() && LiveRegs.available(Reg))
     return;
 
   if (auto *Def = getLocalLiveOutMIDef(MBB, Reg))
@@ -590,7 +590,7 @@ bool ReachingDefAnalysis::isReachingDefLiveOut(MachineInstr *MI,
   MachineBasicBlock *MBB = MI->getParent();
   LiveRegUnits LiveRegs(*TRI);
   LiveRegs.addLiveOuts(*MBB);
-  if (Register::isPhysicalRegister(Reg) && LiveRegs.available(Reg))
+  if (Reg.isPhysical() && LiveRegs.available(Reg))
     return false;
 
   auto Last = MBB->getLastNonDebugInstr();
@@ -610,7 +610,7 @@ MachineInstr *ReachingDefAnalysis::getLocalLiveOutMIDef(MachineBasicBlock *MBB,
                                                         Register Reg) const {
   LiveRegUnits LiveRegs(*TRI);
   LiveRegs.addLiveOuts(*MBB);
-  if (Register::isPhysicalRegister(Reg) && LiveRegs.available(Reg))
+  if (Reg.isPhysical() && LiveRegs.available(Reg))
     return nullptr;
 
   auto Last = MBB->getLastNonDebugInstr();
