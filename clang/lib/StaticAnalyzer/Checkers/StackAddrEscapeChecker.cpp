@@ -29,7 +29,8 @@ using namespace ento;
 
 namespace {
 class StackAddrEscapeChecker
-    : public Checker<check::PreCall, check::PreStmt<ReturnStmt>,
+    : public Checker<check::PreCall,
+                     check::PreStmt<ReturnStmt>,
                      check::EndFunction> {
   mutable IdentifierInfo *dispatch_semaphore_tII = nullptr;
   mutable std::unique_ptr<BugType> BT_stackleak;
@@ -260,9 +261,7 @@ public:
   bool VisitSymbol(SymbolRef sym) override { return true; }
 
   bool VisitMemRegion(const MemRegion *MR) override {
-    llvm::dbgs() << "Visiting region: ";
-    MR->dumpToStream(llvm::dbgs());
-    llvm::dbgs() << '\n';
+    llvm::dbgs() << "Visiting region: " << MR << '\n';
 
     const StackSpaceRegion *SSR = dyn_cast<StackSpaceRegion>(MR->getMemorySpace());
     if (SSR && SSR->getStackFrame() == StackFrameContext)
@@ -277,8 +276,44 @@ static void FindEscapingStackRegions(CheckerContext &C, SmallVector<const MemReg
   Scanner.scan(SVal);
 }
 
-void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS,
-                                          CheckerContext &C) const {
+static void FilterReturnExpressionLeaks(SmallVector<const MemRegion *> &MaybeEscaped, 
+  CheckerContext &C, 
+  const Expr *RetE,
+  SVal &RetVal) {
+
+  // Returning a record by value is fine. (In this case, the returned
+  // expression will be a copy-constructor, possibly wrapped in an
+  // ExprWithCleanups node.)
+  if (const ExprWithCleanups *Cleanup = dyn_cast<ExprWithCleanups>(RetE))
+    RetE = Cleanup->getSubExpr();
+  bool IsConstructExpr = isa<CXXConstructExpr>(RetE) && RetE->getType()->isRecordType();
+
+  const MemRegion *RetRegion = RetVal.getAsRegion();
+
+  // The CK_CopyAndAutoreleaseBlockObject cast causes the block to be copied
+  // so the stack address is not escaping here.
+  bool IsCopyAndAutoreleaseBlockObj = false;
+  if (const auto *ICE = dyn_cast<ImplicitCastExpr>(RetE)) {
+    IsCopyAndAutoreleaseBlockObj = RetRegion && 
+      isa<BlockDataRegion>(RetRegion) && 
+      ICE->getCastKind() == CK_CopyAndAutoreleaseBlockObject;
+  }
+
+  // Assuming MR is never nullptr
+  auto ShouldNotEmitError = [=](const MemRegion *MR) -> bool {
+    // If this particular MR is one of these special cases, then
+    // don't emit an error for this MR, but this still allows emitting these
+    // errors for MRs captured by, e.g., the temporary object.
+    if (RetRegion == MR) {
+      return IsConstructExpr || IsCopyAndAutoreleaseBlockObj;;
+    }
+    return false;
+  };
+
+  std::ignore = std::remove_if(MaybeEscaped.begin(), MaybeEscaped.end(), ShouldNotEmitError);
+}
+
+void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const {
   if (!ChecksEnabled[CK_StackAddrEscapeChecker])
     return;
 
@@ -290,64 +325,13 @@ void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS,
   SVal V = C.getSVal(RetE);
 
   SmallVector<const MemRegion *> EscapedRegions;
+
   FindEscapingStackRegions(C, EscapedRegions, V);
+  FilterReturnExpressionLeaks(EscapedRegions, C, RetE, V);
 
   for (const MemRegion *ER : EscapedRegions) {
-    llvm::dbgs() << "Escaped region: ";
-    ER->dumpToStream(llvm::dbgs());
-    llvm::dbgs() << '\n';
-
-    const MemRegion *R = ER;
-    while (true) {
-      switch (R->getKind()) {
-        case MemRegion::ElementRegionKind:
-        case MemRegion::FieldRegionKind:
-        case MemRegion::ObjCIvarRegionKind:
-        case MemRegion::CXXBaseObjectRegionKind:
-        case MemRegion::CXXDerivedObjectRegionKind: {
-          const SubRegion *SR = cast<SubRegion>(R);
-          R = SR->getSuperRegion();
-          llvm::dbgs() << "SuperRegion: ";
-          R->dumpToStream(llvm::dbgs());
-          llvm::dbgs() << '\n';
-          continue;
-        }
-        default:
-          break;
-      }
-      break;
-    }
-
-    const VarRegion *Base = dyn_cast<VarRegion>(ER->getBaseRegion());
-    if (Base) {
-      Base->getDecl()->getBeginLoc().dump(C.getSourceManager());
-    }
-
     EmitStackError(C, ER, RetE);
   }
-
-  // if (const BlockDataRegion *B = dyn_cast<BlockDataRegion>(R))
-    // checkReturnedBlockCaptures(*B, C);
-
-  // Returning a record by value is fine. (In this case, the returned
-  // expression will be a copy-constructor, possibly wrapped in an
-  // ExprWithCleanups node.)
-  // if (const ExprWithCleanups *Cleanup = dyn_cast<ExprWithCleanups>(RetE))
-  //   RetE = Cleanup->getSubExpr();
-  // if (isa<CXXConstructExpr>(RetE) && RetE->getType()->isRecordType())
-  //   return;
-
-  // // The CK_CopyAndAutoreleaseBlockObject cast causes the block to be copied
-  // // so the stack address is not escaping here.
-  // if (const auto *ICE = dyn_cast<ImplicitCastExpr>(RetE)) {
-  //   const MemRegion *R = V.getAsRegion();
-  //   if (R && isa<BlockDataRegion>(R) &&
-  //       ICE->getCastKind() == CK_CopyAndAutoreleaseBlockObject) {
-  //     return;
-  //   }
-  // }
-
-  // EmitStackError(C, R, RetE);
 }
 
 static const MemSpaceRegion *getStackOrGlobalSpaceRegion(const MemRegion *R) {
