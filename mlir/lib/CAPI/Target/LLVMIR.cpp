@@ -35,7 +35,7 @@ LLVMModuleRef mlirTranslateModuleToLLVMIR(MlirOperation module,
 }
 
 DEFINE_C_API_PTR_METHODS(MlirTypeFromLLVMIRTranslator,
-                         mlir::LLVM::TypeFromLLVMIRTranslator);
+                         mlir::LLVM::TypeFromLLVMIRTranslator)
 
 MlirTypeFromLLVMIRTranslator
 mlirTypeFromLLVMIRTranslatorCreate(MlirContext ctx) {
@@ -57,7 +57,7 @@ MlirType mlirTypeFromLLVMIRTranslatorTranslateType(
 }
 
 DEFINE_C_API_PTR_METHODS(MlirTypeToLLVMIRTranslator,
-                         mlir::LLVM::TypeToLLVMIRTranslator);
+                         mlir::LLVM::TypeToLLVMIRTranslator)
 
 MlirTypeToLLVMIRTranslator
 mlirTypeToLLVMIRTranslatorCreate(LLVMContextRef ctx) {
