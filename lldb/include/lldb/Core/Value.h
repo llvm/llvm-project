@@ -166,12 +166,12 @@ protected:
   // TODO: the GetScalar() API relies on knowledge not codified by the type
   // system, making it hard to understand and easy to misuse.
   // - Separate the scalar from the variable that contains the address (be it a
-  // load, file or host address).
+  //   load, file or host address).
   // - Rename GetScalar() to something more indicative to what the scalar is,
-  // like GetScalarOrAddress() for example.
+  //   like GetScalarOrAddress() for example.
   // - Split GetScalar() into two functions, GetScalar() and GetAddress(), which
-  // verify (or assert) what m_value_type is to make sure users of the class are
-  // querying the right thing.
+  //   verify (or assert) what m_value_type is to make sure users of the class are
+  //   querying the right thing.
   // TODO: It's confusing to point to multiple possible buffers when the
   // ValueType is a host address. Value should probably always own its buffer.
   // Perhaps as a shared pointer with a copy on write system if the same buffer
