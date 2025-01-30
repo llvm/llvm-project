@@ -7587,6 +7587,11 @@ def fexperimental_assignment_tracking_EQ : Joined<["-"], "fexperimental-assignme
 def enable_tlsdesc : Flag<["-"], "enable-tlsdesc">,
   MarshallingInfoFlag<CodeGenOpts<"EnableTLSDESC">>;
 
+def import_call_optimization : Flag<["-"], "import-call-optimization">,
+    HelpText<"Emit Import Call sections on supported targets that can be used "
+             "by the Windows kernel to enable import call optimization">,
+    MarshallingInfoFlag<CodeGenOpts<"ImportCallOptimization">>;
+
 } // let Visibility = [CC1Option]
 
 //===----------------------------------------------------------------------===//
