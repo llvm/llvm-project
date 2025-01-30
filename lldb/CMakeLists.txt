@@ -59,8 +59,23 @@ if (LLDB_ENABLE_PYTHON)
   set(cachestring_LLDB_PYTHON_EXT_SUFFIX
     "Filename extension for native code python modules")
 
+  set(LLDB_USE_HOST_PYTHON FALSE)
+  if(NOT CMAKE_CROSSCOMPILING)
+    set(LLDB_USE_HOST_PYTHON TRUE)
+  else()
+    # Used when cross-compiling LLDB with Python:
+    # - `_PYTHON_HOST_PLATFORM`: Specifies the host platform, e.g., 'linux-x86_64'.
+    # - `_PYTHON_SYSCONFIGDATA_NAME`: The name of the Python configuration module containing
+    #   platform, build, and configuration details (e.g., `_sysconfigdata__linux_x86_64-linux-gnu`).
+    # See: https://peps.python.org/pep-0720/#upstream-support
+    # If both environment variables are defined, we assume host Python can be used.
+    if(DEFINED ENV{_PYTHON_HOST_PLATFORM} AND DEFINED ENV{_PYTHON_SYSCONFIGDATA_NAME})
+      set(LLDB_USE_HOST_PYTHON TRUE)
+    endif()
+  endif()
+
   foreach(var LLDB_PYTHON_RELATIVE_PATH LLDB_PYTHON_EXE_RELATIVE_PATH LLDB_PYTHON_EXT_SUFFIX)
-    if(NOT DEFINED ${var} AND NOT CMAKE_CROSSCOMPILING)
+    if(NOT DEFINED ${var} AND LLDB_USE_HOST_PYTHON)
       execute_process(
         COMMAND ${Python3_EXECUTABLE}
           ${CMAKE_CURRENT_SOURCE_DIR}/bindings/python/get-python-config.py

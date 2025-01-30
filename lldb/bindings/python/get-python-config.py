@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
 
+# In this script, we should only use the following to retrieve configuration values:
+# - `sysconfig.get_config_var`
+# - `sysconfig.get_platform`
+# - `sysconfig.get_path`
+# This is because certain variables may return invalid data during cross-compilation, for example:
+# - sys.prefix -> Use sysconfig.get_config_var("prefix") instead.
+# - sys.executable -> Use sysconfig.get_config_var("EXENAME") instead.
+# - os.name -> Use sysconfig.get_platform() for platform detection.
+
 import os
 import sys
 import argparse
@@ -32,20 +41,25 @@ def main():
         # If not, you'll have to use lldb -P or lldb -print-script-interpreter-info
         # to figure out where it is.
         try:
-            print(relpath_nodots(sysconfig.get_path("platlib"), sys.prefix))
+            print(relpath_nodots(sysconfig.get_path("platlib"), sysconfig.get_config_var("prefix")))
         except ValueError:
             # Try to fall back to something reasonable if sysconfig's platlib
             # is outside of sys.prefix
             if os.name == "posix":
-                print("lib/python%d.%d/site-packages" % sys.version_info[:2])
+                print("lib/python%s/site-packages" % sysconfig.get_config_var("VERSION"))
             elif os.name == "nt":
                 print("Lib\\site-packages")
             else:
                 raise
     elif args.variable_name == "LLDB_PYTHON_EXE_RELATIVE_PATH":
         tried = list()
-        exe = sys.executable
-        prefix = os.path.realpath(sys.prefix)
+        exe = sysconfig.get_config_var("EXENAME")
+        if not exe:
+            # Fallback: 'EXENAME' is not available on Windows
+            exe_name = "python" + sysconfig.get_config_var("VERSION") + sysconfig.get_config_var("EXE")
+            exe = os.path.join(sysconfig.get_config_var("BINDIR"), exe_name)
+
+        prefix = os.path.realpath(sysconfig.get_config_var("prefix"))
         while True:
             try:
                 print(relpath_nodots(exe, prefix))
@@ -59,13 +73,13 @@ def main():
                     continue
                 else:
                     print(
-                        "Could not find a relative path to sys.executable under sys.prefix",
+                        "Could not find a relative path to sysconfig.get_config_var(\"EXENAME\") under sysconfig.get_config_var(\"prefix\")",
                         file=sys.stderr,
                     )
                     for e in tried:
                         print("tried:", e, file=sys.stderr)
-                    print("realpath(sys.prefix):", prefix, file=sys.stderr)
-                    print("sys.prefix:", sys.prefix, file=sys.stderr)
+                    print("realpath(sysconfig.get_config_var(\"prefix\")):", prefix, file=sys.stderr)
+                    print("sysconfig.get_config_var(\"prefix\"):", sysconfig.get_config_var("prefix"), file=sys.stderr)
                     sys.exit(1)
     elif args.variable_name == "LLDB_PYTHON_EXT_SUFFIX":
         print(sysconfig.get_config_var("EXT_SUFFIX"))
