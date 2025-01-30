@@ -1279,6 +1279,18 @@ TEST_F(QualifierFixerTest, WithConstraints) {
                Style);
 }
 
+TEST_F(QualifierFixerTest, WithCpp11Attribute) {
+  FormatStyle Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"static", "constexpr", "inline", "type"};
+
+  verifyFormat("[[nodiscard]] static constexpr inline int func() noexcept {}",
+               "[[nodiscard]] inline constexpr static int func() noexcept {}",
+               Style);
+  verifyFormat("[[maybe_unused]] static constexpr int A",
+               "[[maybe_unused]] constexpr static int A", Style);
+}
+
 TEST_F(QualifierFixerTest, DisableRegions) {
   FormatStyle Style = getLLVMStyle();
   Style.QualifierAlignment = FormatStyle::QAS_Custom;

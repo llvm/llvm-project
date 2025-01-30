@@ -498,6 +498,9 @@ public:
     return getArchPointerBitWidth(getArch());
   }
 
+  /// Returns the trampoline size in bytes for this configuration.
+  unsigned getTrampolineSize() const;
+
   /// Test whether the architecture is 64-bit
   ///
   /// Note that this tests for 64-bit pointer width, and nothing else. Note

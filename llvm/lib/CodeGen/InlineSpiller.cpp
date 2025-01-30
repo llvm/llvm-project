@@ -1578,7 +1578,8 @@ void HoistSpillHelper::runHoistSpills(
       for (auto *const SpillBB : SpillsInSubTree) {
         // When SpillBB is a BB contains original spill, insert the spill
         // to SpillsToRm.
-        if (SpillsToKeep.contains(SpillBB) && !SpillsToKeep[SpillBB]) {
+        if (auto It = SpillsToKeep.find(SpillBB);
+            It != SpillsToKeep.end() && !It->second) {
           MachineInstr *SpillToRm = SpillBBToSpill[SpillBB];
           SpillsToRm.push_back(SpillToRm);
         }

@@ -532,6 +532,8 @@ BENIGN_LANGOPT(CheckConstexprFunctionBodies, 1, 1,
 
 LANGOPT(BoundsSafety, 1, 0, "Bounds safety extension for C")
 
+LANGOPT(PreserveVec3Type, 1, 0, "Preserve 3-component vector type")
+
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT
 #undef BENIGN_LANGOPT

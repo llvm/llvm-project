@@ -128,10 +128,10 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   PM->RTLsMtx.lock();
 
   // Add in all the OpenMP requirements associated with this binary.
-  for (__tgt_offload_entry &Entry :
+  for (llvm::offloading::EntryTy &Entry :
        llvm::make_range(Desc->HostEntriesBegin, Desc->HostEntriesEnd))
-    if (Entry.flags == OMP_REGISTER_REQUIRES)
-      PM->addRequirements(Entry.data);
+    if (Entry.Flags == OMP_REGISTER_REQUIRES)
+      PM->addRequirements(Entry.Data);
 
   // Extract the exectuable image and extra information if availible.
   for (int32_t i = 0; i < Desc->NumDeviceImages; ++i)
@@ -268,9 +268,9 @@ void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
 
   // Remove entries from PM->HostPtrToTableMap
   PM->TblMapMtx.lock();
-  for (__tgt_offload_entry *Cur = Desc->HostEntriesBegin;
+  for (llvm::offloading::EntryTy *Cur = Desc->HostEntriesBegin;
        Cur < Desc->HostEntriesEnd; ++Cur) {
-    PM->HostPtrToTableMap.erase(Cur->addr);
+    PM->HostPtrToTableMap.erase(Cur->Address);
   }
 
   // Remove translation table for this descriptor.
@@ -336,35 +336,36 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
       }
 
       // 3) Create the translation table.
-      llvm::SmallVector<__tgt_offload_entry> &DeviceEntries =
+      llvm::SmallVector<llvm::offloading::EntryTy> &DeviceEntries =
           TransTable->TargetsEntries[DeviceId];
-      for (__tgt_offload_entry &Entry :
+      for (llvm::offloading::EntryTy &Entry :
            llvm::make_range(Img->EntriesBegin, Img->EntriesEnd)) {
         __tgt_device_binary &Binary = *BinaryOrErr;
 
-        __tgt_offload_entry DeviceEntry = Entry;
-        if (Entry.size) {
-          if (Device.RTL->get_global(Binary, Entry.size, Entry.name,
-                                     &DeviceEntry.addr) != OFFLOAD_SUCCESS)
-            REPORT("Failed to load symbol %s\n", Entry.name);
+        llvm::offloading::EntryTy DeviceEntry = Entry;
+        if (Entry.Size) {
+          if (Device.RTL->get_global(Binary, Entry.Size, Entry.SymbolName,
+                                     &DeviceEntry.Address) != OFFLOAD_SUCCESS)
+            REPORT("Failed to load symbol %s\n", Entry.SymbolName);
 
           // If unified memory is active, the corresponding global is a device
           // reference to the host global. We need to initialize the pointer on
           // the device to point to the memory on the host.
           if ((PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
               (PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY)) {
-            if (Device.RTL->data_submit(DeviceId, DeviceEntry.addr, Entry.addr,
-                                        Entry.size) != OFFLOAD_SUCCESS)
-              REPORT("Failed to write symbol for USM %s\n", Entry.name);
+            if (Device.RTL->data_submit(DeviceId, DeviceEntry.Address,
+                                        Entry.Address,
+                                        Entry.Size) != OFFLOAD_SUCCESS)
+              REPORT("Failed to write symbol for USM %s\n", Entry.SymbolName);
           }
-        } else if (Entry.addr) {
-          if (Device.RTL->get_function(Binary, Entry.name, &DeviceEntry.addr) !=
-              OFFLOAD_SUCCESS)
-            REPORT("Failed to load kernel %s\n", Entry.name);
+        } else if (Entry.Address) {
+          if (Device.RTL->get_function(Binary, Entry.SymbolName,
+                                       &DeviceEntry.Address) != OFFLOAD_SUCCESS)
+            REPORT("Failed to load kernel %s\n", Entry.SymbolName);
         }
         DP("Entry point " DPxMOD " maps to%s %s (" DPxMOD ")\n",
-           DPxPTR(Entry.addr), (Entry.size) ? " global" : "", Entry.name,
-           DPxPTR(DeviceEntry.addr));
+           DPxPTR(Entry.Address), (Entry.Size) ? " global" : "",
+           Entry.SymbolName, DPxPTR(DeviceEntry.Address));
 
         DeviceEntries.emplace_back(DeviceEntry);
       }
@@ -396,30 +397,31 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
           Device.getMappingInfo().HostDataToTargetMap.getExclusiveAccessor();
 
       __tgt_target_table *HostTable = &TransTable->HostTable;
-      for (__tgt_offload_entry *CurrDeviceEntry = TargetTable->EntriesBegin,
-                               *CurrHostEntry = HostTable->EntriesBegin,
-                               *EntryDeviceEnd = TargetTable->EntriesEnd;
+      for (llvm::offloading::EntryTy *
+               CurrDeviceEntry = TargetTable->EntriesBegin,
+              *CurrHostEntry = HostTable->EntriesBegin,
+              *EntryDeviceEnd = TargetTable->EntriesEnd;
            CurrDeviceEntry != EntryDeviceEnd;
            CurrDeviceEntry++, CurrHostEntry++) {
-        if (CurrDeviceEntry->size == 0)
+        if (CurrDeviceEntry->Size == 0)
           continue;
 
-        assert(CurrDeviceEntry->size == CurrHostEntry->size &&
+        assert(CurrDeviceEntry->Size == CurrHostEntry->Size &&
                "data size mismatch");
 
         // Fortran may use multiple weak declarations for the same symbol,
         // therefore we must allow for multiple weak symbols to be loaded from
         // the fat binary. Treat these mappings as any other "regular"
         // mapping. Add entry to map.
-        if (Device.getMappingInfo().getTgtPtrBegin(HDTTMap, CurrHostEntry->addr,
-                                                   CurrHostEntry->size))
+        if (Device.getMappingInfo().getTgtPtrBegin(
+                HDTTMap, CurrHostEntry->Address, CurrHostEntry->Size))
           continue;
 
-        void *CurrDeviceEntryAddr = CurrDeviceEntry->addr;
+        void *CurrDeviceEntryAddr = CurrDeviceEntry->Address;
 
         // For indirect mapping, follow the indirection and map the actual
         // target.
-        if (CurrDeviceEntry->flags & OMP_DECLARE_TARGET_INDIRECT) {
+        if (CurrDeviceEntry->Flags & OMP_DECLARE_TARGET_INDIRECT) {
           AsyncInfoTy AsyncInfo(Device);
           void *DevPtr;
           Device.retrieveData(&DevPtr, CurrDeviceEntryAddr, sizeof(void *),
@@ -431,19 +433,21 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
 
         DP("Add mapping from host " DPxMOD " to device " DPxMOD " with size %zu"
            ", name \"%s\"\n",
-           DPxPTR(CurrHostEntry->addr), DPxPTR(CurrDeviceEntry->addr),
-           CurrDeviceEntry->size, CurrDeviceEntry->name);
+           DPxPTR(CurrHostEntry->Address), DPxPTR(CurrDeviceEntry->Address),
+           CurrDeviceEntry->Size, CurrDeviceEntry->SymbolName);
         HDTTMap->emplace(new HostDataToTargetTy(
-            (uintptr_t)CurrHostEntry->addr /*HstPtrBase*/,
-            (uintptr_t)CurrHostEntry->addr /*HstPtrBegin*/,
-            (uintptr_t)CurrHostEntry->addr + CurrHostEntry->size /*HstPtrEnd*/,
+            (uintptr_t)CurrHostEntry->Address /*HstPtrBase*/,
+            (uintptr_t)CurrHostEntry->Address /*HstPtrBegin*/,
+            (uintptr_t)CurrHostEntry->Address +
+                CurrHostEntry->Size /*HstPtrEnd*/,
             (uintptr_t)CurrDeviceEntryAddr /*TgtAllocBegin*/,
             (uintptr_t)CurrDeviceEntryAddr /*TgtPtrBegin*/,
-            false /*UseHoldRefCount*/, CurrHostEntry->name,
+            false /*UseHoldRefCount*/, CurrHostEntry->SymbolName,
             true /*IsRefCountINF*/));
 
         // Notify about the new mapping.
-        if (Device.notifyDataMapped(CurrHostEntry->addr, CurrHostEntry->size))
+        if (Device.notifyDataMapped(CurrHostEntry->Address,
+                                    CurrHostEntry->Size))
           return OFFLOAD_FAIL;
       }
     }

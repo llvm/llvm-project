@@ -244,6 +244,7 @@ AArch64ABIInfo::convertFixedToScalableVectorType(const VectorType *VT) const {
 
     case BuiltinType::SChar:
     case BuiltinType::UChar:
+    case BuiltinType::MFloat8:
       return llvm::ScalableVectorType::get(
           llvm::Type::getInt8Ty(getVMContext()), 16);
 
@@ -383,10 +384,6 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
         NSRN = std::min(NSRN + 1, 8u);
       else {
         switch (BT->getKind()) {
-        case BuiltinType::MFloat8x8:
-        case BuiltinType::MFloat8x16:
-          NSRN = std::min(NSRN + 1, 8u);
-          break;
         case BuiltinType::SveBool:
         case BuiltinType::SveCount:
           NPRN = std::min(NPRN + 1, 4u);
@@ -629,8 +626,7 @@ bool AArch64ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
   // but with the difference that any floating-point type is allowed,
   // including __fp16.
   if (const BuiltinType *BT = Ty->getAs<BuiltinType>()) {
-    if (BT->isFloatingPoint() || BT->getKind() == BuiltinType::MFloat8x16 ||
-        BT->getKind() == BuiltinType::MFloat8x8)
+    if (BT->isFloatingPoint())
       return true;
   } else if (const VectorType *VT = Ty->getAs<VectorType>()) {
     if (auto Kind = VT->getVectorKind();
@@ -781,8 +777,10 @@ bool AArch64ABIInfo::passAsPureScalableType(
     NPred += Info.NumVectors;
   else
     NVec += Info.NumVectors;
-  auto VTy = llvm::ScalableVectorType::get(CGT.ConvertType(Info.ElementType),
-                                           Info.EC.getKnownMinValue());
+  llvm::Type *EltTy = Info.ElementType->isMFloat8Type()
+                          ? llvm::Type::getInt8Ty(getVMContext())
+                          : CGT.ConvertType(Info.ElementType);
+  auto *VTy = llvm::ScalableVectorType::get(EltTy, Info.EC.getKnownMinValue());
 
   if (CoerceToSeq.size() + Info.NumVectors > 12)
     return false;

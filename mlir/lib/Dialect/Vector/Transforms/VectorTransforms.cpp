@@ -906,6 +906,13 @@ public:
     VectorType castDstType = bitcastOp.getResultVectorType();
     assert(castSrcType.getRank() == castDstType.getRank());
 
+    // This transformation builds on top of
+    // vector.{extract|insert}_strided_slice, which do not support
+    // extracting/inserting "scallable sub-vectors". Bail out.
+    if (castSrcType.isScalable())
+      return rewriter.notifyMatchFailure(bitcastOp,
+                                         "Scalable vectors are not supported");
+
     // Only support rank 1 case for now.
     if (castSrcType.getRank() != 1)
       return failure();
@@ -930,8 +937,8 @@ public:
         loc, elemType, rewriter.getZeroAttr(elemType));
     Value res = rewriter.create<SplatOp>(loc, castDstType, zero);
 
-    SmallVector<int64_t> sliceShape{castDstLastDim};
-    SmallVector<int64_t> strides{1};
+    SmallVector<int64_t> sliceShape = {castDstLastDim};
+    SmallVector<int64_t> strides = {1};
     VectorType newCastDstType =
         VectorType::get(SmallVector<int64_t>{castDstLastDim / shrinkRatio},
                         castDstType.getElementType());
@@ -1243,7 +1250,7 @@ static FailureOr<size_t>
 getTransferFoldableInnerUnitDims(MemRefType srcType, VectorType vectorType) {
   SmallVector<int64_t> srcStrides;
   int64_t srcOffset;
-  if (failed(getStridesAndOffset(srcType, srcStrides, srcOffset)))
+  if (failed(srcType.getStridesAndOffset(srcStrides, srcOffset)))
     return failure();
 
   auto isUnitDim = [](VectorType type, int dim) {

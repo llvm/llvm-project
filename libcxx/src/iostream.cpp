@@ -103,7 +103,7 @@ alignas(wostream) _LIBCPP_EXPORTED_FROM_ABI char wclog[sizeof(wostream)]
 static void force_locale_initialization() {
 #if defined(_LIBCPP_MSVCRT_LIKE)
   static bool once = []() {
-    auto loc = __locale::__newlocale(LC_ALL_MASK, "C", 0);
+    auto loc = __locale::__newlocale(_LIBCPP_ALL_MASK, "C", 0);
     {
       __locale::__locale_guard g(loc); // forces initialization of locale TLS
       ((void)g);

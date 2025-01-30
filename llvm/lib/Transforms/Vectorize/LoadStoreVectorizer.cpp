@@ -232,7 +232,7 @@ void reorder(Instruction *I) {
     Instruction *IM = &*(BBI++);
     if (!InstructionsToMove.contains(IM))
       continue;
-    IM->moveBefore(I);
+    IM->moveBefore(I->getIterator());
   }
 }
 

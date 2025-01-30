@@ -215,31 +215,6 @@ static LogicalResult convertFmaFOp(math::FmaOp op, PatternRewriter &rewriter) {
   return success();
 }
 
-// Converts a floorf() function to the following:
-// floorf(float x) ->
-//     y = (float)(int) x
-//     if (x < 0) then incr = -1 else incr = 0
-//     y = y + incr    <= replace this op with the floorf op.
-static LogicalResult convertFloorOp(math::FloorOp op,
-                                    PatternRewriter &rewriter) {
-  ImplicitLocOpBuilder b(op->getLoc(), rewriter);
-  Value operand = op.getOperand();
-  Type opType = operand.getType();
-  Value fpFixedConvert = createTruncatedFPValue(operand, b);
-
-  // Creating constants for later use.
-  Value zero = createFloatConst(op->getLoc(), opType, 0.00, rewriter);
-  Value negOne = createFloatConst(op->getLoc(), opType, -1.00, rewriter);
-
-  Value negCheck =
-      b.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, operand, zero);
-  Value incrValue =
-      b.create<arith::SelectOp>(op->getLoc(), negCheck, negOne, zero);
-  Value ret = b.create<arith::AddFOp>(opType, fpFixedConvert, incrValue);
-  rewriter.replaceOp(op, ret);
-  return success();
-}
-
 // Converts a ceilf() function to the following:
 // ceilf(float x) ->
 //      y = (float)(int) x
@@ -694,10 +669,6 @@ void mlir::populateExpandFPowIPattern(RewritePatternSet &patterns) {
 
 void mlir::populateExpandRoundFPattern(RewritePatternSet &patterns) {
   patterns.add(convertRoundOp);
-}
-
-void mlir::populateExpandFloorFPattern(RewritePatternSet &patterns) {
-  patterns.add(convertFloorOp);
 }
 
 void mlir::populateExpandRoundEvenPattern(RewritePatternSet &patterns) {

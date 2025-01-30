@@ -95,3 +95,20 @@ __attribute__((no_sanitize("all"))) int test_no_sanitize_all(int *x, int *y) {
 // CHECK: attributes #[[ATTR3]] = { mustprogress nofree norecurse nounwind willreturn memory(write, argmem: readwrite, inaccessiblemem: none) "min-legal-vector-width"="0" "no-trapping-math"="true" "no_sanitize_thread" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 // CHECK: attributes #[[ATTR4:[0-9]+]] = { nounwind "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 //.
+// CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+// CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META2]] = !{!"sanmd_covered2!C", [[META3:![0-9]+]]}
+// CHECK: [[META3]] = !{i64 0}
+// CHECK: [[META4]] = !{!"sanmd_covered2!C", [[META5:![0-9]+]]}
+// CHECK: [[META5]] = !{i64 3}
+// CHECK: [[TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
+// CHECK: [[META7]] = !{!"p1 int", [[META8:![0-9]+]], i64 0}
+// CHECK: [[META8]] = !{!"any pointer", [[META9:![0-9]+]], i64 0}
+// CHECK: [[META9]] = !{!"omnipotent char", [[META10:![0-9]+]], i64 0}
+// CHECK: [[META10]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[META11]] = !{!"sanmd_atomics2!C"}
+// CHECK: [[TBAA12]] = !{[[META13:![0-9]+]], [[META13]], i64 0}
+// CHECK: [[META13]] = !{!"int", [[META9]], i64 0}
+// CHECK: [[META14]] = !{!"sanmd_covered2!C", [[META15:![0-9]+]]}
+// CHECK: [[META15]] = !{i64 2}
+//.

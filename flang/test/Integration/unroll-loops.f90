@@ -3,6 +3,9 @@
 ! RUN: %flang_fc1 -emit-llvm -O1 -fno-unroll-loops -mllvm -force-vector-width=2 -o- %s | FileCheck %s --check-prefixes=CHECK,NO-UNROLL
 ! RUN: %flang_fc1 -emit-llvm -O1 -mllvm -force-vector-width=2 -o- %s | FileCheck %s --check-prefixes=CHECK,NO-UNROLL
 
+! FIXME: https://github.com/llvm/llvm-project/issues/123668
+! XFAIL: target=powerpc64{{.*}}
+
 ! CHECK-LABEL: @unroll
 ! CHECK-SAME: (ptr nocapture writeonly %[[ARG0:.*]])
 subroutine unroll(a)

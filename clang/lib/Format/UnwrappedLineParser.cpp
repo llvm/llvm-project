@@ -3167,8 +3167,7 @@ void UnwrappedLineParser::parseNamespace() {
 }
 
 void UnwrappedLineParser::parseCppExportBlock() {
-  parseNamespaceOrExportBlock(/*AddLevels=*/Style.ExportBlockIndentation ? 1
-                                                                         : 0);
+  parseNamespaceOrExportBlock(/*AddLevels=*/Style.IndentExportBlock ? 1 : 0);
 }
 
 void UnwrappedLineParser::parseNew() {
@@ -4076,7 +4075,8 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       break;
     default:
       if (!JSPastExtendsOrImplements && !ClassName &&
-          Previous->is(tok::identifier) && Previous->isNot(TT_AttributeMacro)) {
+          Previous->is(tok::identifier) && Previous->isNot(TT_AttributeMacro) &&
+          Previous->TokenText != Previous->TokenText.upper()) {
         ClassName = Previous;
       }
     }
