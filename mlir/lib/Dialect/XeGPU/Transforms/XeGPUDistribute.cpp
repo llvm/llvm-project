@@ -213,7 +213,6 @@ LogicalResult WarpOpStoreNd::matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
 
   if (storeOp.getTensorDescType().getShape().size() != 2)
     return rewriter.notifyMatchFailure(storeOp, "unsupported shape");
-  DBGS() << "Matched store_nd: " << storeOp << "\n";
 
   auto distributedTypeOrFailure =
       getDistributedVectorType(storeOp.getValueType(), sgMap);
