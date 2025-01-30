@@ -147,12 +147,12 @@ let Attributes = [Const, NoThrow, RequiredVectorWidth<256>], Features = "avx" in
 // pre-TableGen version.
 
 let Features = "mmx", Header = "immintrin.h", Attributes = [NoThrow, Const] in {
-  def _mm_prefetch : X86NoPrefixBuiltin<"void(char const *, int)">;
+  def _mm_prefetch : X86LibBuiltin<"void(char const *, int)">;
 }
 
 let Features = "mmx", Header = "intrin.h", Attributes = [NoThrow, Const] in {
-  def _m_prefetch : X86NoPrefixBuiltin<"void(void *)">;
-  def _m_prefetchw : X86NoPrefixBuiltin<"void(const void *)">;
+  def _m_prefetch : X86LibBuiltin<"void(void *)">;
+  def _m_prefetchw : X86LibBuiltin<"void(void volatile const *)">;
 }
 
 let Features = "sse", Attributes = [NoThrow] in {
