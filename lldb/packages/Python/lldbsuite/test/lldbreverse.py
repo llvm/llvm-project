@@ -123,6 +123,10 @@ class ReverseTestBase(GDBProxyTestBase):
             # Suppress this because it contains thread stop reasons which we might
             # need to modify, and we don't want to have to implement that.
             return ""
+        if packet[0] == "x":
+            # Suppress *binary* reads as results starting with "O" can be mistaken for an output packet
+            # by the test server code
+            return ""
         if packet[0] == "z" or packet[0] == "Z":
             reply = self.pass_through(packet)
             if reply == "OK":
