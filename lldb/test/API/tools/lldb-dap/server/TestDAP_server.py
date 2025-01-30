@@ -68,6 +68,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
 
         def cleanup():
             os.unlink(name)
+
         self.addTearDownHook(cleanup)
 
         self.build()
