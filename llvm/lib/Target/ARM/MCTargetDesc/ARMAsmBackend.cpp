@@ -909,7 +909,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
 
 bool ARMAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                           const MCFixup &Fixup,
-                                          const MCValue &Target,
+                                          const MCValue &Target, const uint64_t,
                                           const MCSubtargetInfo *STI) {
   const MCSymbolRefExpr *A = Target.getSymA();
   const MCSymbol *Sym = A ? &A->getSymbol() : nullptr;

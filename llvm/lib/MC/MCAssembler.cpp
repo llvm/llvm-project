@@ -231,7 +231,7 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
 
   // Let the backend force a relocation if needed.
   if (IsResolved &&
-      getBackend().shouldForceRelocation(*this, Fixup, Target, STI)) {
+      getBackend().shouldForceRelocation(*this, Fixup, Target, Value, STI)) {
     IsResolved = false;
     WasForced = true;
   }

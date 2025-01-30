@@ -174,7 +174,7 @@ public:
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
+                             const MCValue &Target, const uint64_t Value,
                              const MCSubtargetInfo *STI) override;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
@@ -658,6 +658,7 @@ const MCFixupKindInfo &X86AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
 bool X86AsmBackend::shouldForceRelocation(const MCAssembler &,
                                           const MCFixup &Fixup, const MCValue &,
+                                          const uint64_t,
                                           const MCSubtargetInfo *STI) {
   return Fixup.getKind() >= FirstLiteralRelocationKind;
 }

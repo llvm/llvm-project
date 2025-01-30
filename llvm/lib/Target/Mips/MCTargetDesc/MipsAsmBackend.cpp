@@ -546,6 +546,7 @@ bool MipsAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
 bool MipsAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                            const MCFixup &Fixup,
                                            const MCValue &Target,
+                                           const uint64_t,
                                            const MCSubtargetInfo *STI) {
   if (Fixup.getKind() >= FirstLiteralRelocationKind)
     return true;
