@@ -5,11 +5,13 @@
 [numthreads(1,1,1)]
 void FirstEntry() {}
 
+// CHECK-DAG: ![[#CBV:]] = !{!"CBV", i32 1, i32 0, i32 0, i32 -1, i32 4}
 // CHECK-DAG: ![[#TABLE:]] = !{!"DescriptorTable"}
 // CHECK-DAG: ![[#SECOND_RS:]] = !{![[#TABLE]]}
 
 #define SampleDescriptorTable \
   "DescriptorTable( " \
+  "  CBV(b0) " \
   ")"
 [shader("compute"), RootSignature(SampleDescriptorTable)]
 [numthreads(1,1,1)]
