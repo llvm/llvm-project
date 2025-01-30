@@ -30,9 +30,6 @@ public:
   SmallDenseMap<const DICompileUnit *, DebugInfoFinder> Result;
 
   DebugInfoCache(const Module &M);
-
-  bool invalidate(Module &, const PreservedAnalyses &,
-                  ModuleAnalysisManager::Invalidator &);
 };
 
 class DebugInfoCacheAnalysis

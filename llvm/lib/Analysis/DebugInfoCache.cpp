@@ -32,14 +32,6 @@ DebugInfoCache::DebugInfoCache(const Module &M) {
   }
 }
 
-bool DebugInfoCache::invalidate(Module &M, const PreservedAnalyses &PA,
-                                ModuleAnalysisManager::Invalidator &) {
-  // Check whether the analysis has been explicitly invalidated. Otherwise, it's
-  // stateless and remains preserved.
-  auto PAC = PA.getChecker<DebugInfoCacheAnalysis>();
-  return !PAC.preservedWhenStateless();
-}
-
 AnalysisKey DebugInfoCacheAnalysis::Key;
 
 DebugInfoCache DebugInfoCacheAnalysis::run(Module &M, ModuleAnalysisManager &) {
