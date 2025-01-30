@@ -221,7 +221,7 @@ template <bool Const> struct Impl : RecursiveASTVisitor<Impl<Const>> {
     return Visitor.Traverse##CLASS##Decl(D);                                   \
   }
 #include "clang/AST/DeclNodes.inc"
-#define ABSTRACT_DECL(DECL)
+
 #define DECL(CLASS, BASE)                                                      \
   bool Visit##CLASS##Decl(CLASS##Decl *D) {                                    \
     return Visitor.Visit##CLASS##Decl(D);                                      \
@@ -246,7 +246,6 @@ template <bool Const> struct Impl : RecursiveASTVisitor<Impl<Const>> {
   }
 #include "clang/AST/TypeNodes.inc"
 
-#define ABSTRACT_TYPE(CLASS, BASE)
 #define TYPE(CLASS, BASE)                                                      \
   bool Visit##CLASS##Type(CLASS##Type *T) {                                    \
     return Visitor.Visit##CLASS##Type(T);                                      \
