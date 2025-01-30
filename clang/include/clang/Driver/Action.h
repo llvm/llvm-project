@@ -61,7 +61,6 @@ public:
     PrecompileJobClass,
     ExtractAPIJobClass,
     AnalyzeJobClass,
-    MigrateJobClass,
     CompileJobClass,
     BackendJobClass,
     AssembleJobClass,
@@ -475,17 +474,6 @@ public:
 
   static bool classof(const Action *A) {
     return A->getKind() == AnalyzeJobClass;
-  }
-};
-
-class MigrateJobAction : public JobAction {
-  void anchor() override;
-
-public:
-  MigrateJobAction(Action *Input, types::ID OutputType);
-
-  static bool classof(const Action *A) {
-    return A->getKind() == MigrateJobClass;
   }
 };
 
