@@ -89,6 +89,20 @@ void Preprocessor::appendMacroDirective(IdentifierInfo *II, MacroDirective *MD){
     II->setHasMacroDefinition(false);
   if (II->isFromAST())
     II->setChangedSinceDeserialization();
+  // handle __THIS_MACRO__ if presented
+  MacroInfo *MI = MD->getMacroInfo();
+  if (!MI || !MI->isFunctionLike())
+    return;
+  auto is_this_macro = [&](const Token &t) {
+    return t.is(tok::identifier) &&
+           t.getIdentifierInfo() == Ident__THIS_MACRO__;
+  };
+  if (llvm::none_of(MI->tokens(), is_this_macro))
+    return;
+  MI->setAllowRecursive(true);
+  for (auto &t : MI->tokens())
+    if (is_this_macro(t))
+      t.setIdentifierInfo(II);
 }
 
 void Preprocessor::setLoadedMacroDirective(IdentifierInfo *II,
