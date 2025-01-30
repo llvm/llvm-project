@@ -201,4 +201,4 @@ private:
   Iteration stack_[maxMaxHeight];
 };
 } // namespace Fortran::runtime::io
-#endif /* FLANG_RT_FORMAT_H_ */
+#endif // FLANG_RT_FORMAT_H_

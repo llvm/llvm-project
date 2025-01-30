@@ -3043,7 +3043,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       llvm::Value *numElts = CGF.getVLASize(vla).NumElts;
       if (!isInc) numElts = Builder.CreateNSWNeg(numElts, "vla.negsize");
       llvm::Type *elemTy = CGF.ConvertTypeForMem(vla->getElementType());
-      if (CGF.getLangOpts().isSignedOverflowDefined())
+      if (CGF.getLangOpts().PointerOverflowDefined)
         value = Builder.CreateGEP(elemTy, value, numElts, "vla.inc");
       else
         value = CGF.EmitCheckedInBoundsGEP(
@@ -3054,7 +3054,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     } else if (type->isFunctionType()) {
       llvm::Value *amt = Builder.getInt32(amount);
 
-      if (CGF.getLangOpts().isSignedOverflowDefined())
+      if (CGF.getLangOpts().PointerOverflowDefined)
         value = Builder.CreateGEP(CGF.Int8Ty, value, amt, "incdec.funcptr");
       else
         value =
@@ -3066,7 +3066,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     } else {
       llvm::Value *amt = Builder.getInt32(amount);
       llvm::Type *elemTy = CGF.ConvertTypeForMem(type);
-      if (CGF.getLangOpts().isSignedOverflowDefined())
+      if (CGF.getLangOpts().PointerOverflowDefined)
         value = Builder.CreateGEP(elemTy, value, amt, "incdec.ptr");
       else
         value = CGF.EmitCheckedInBoundsGEP(
@@ -3179,7 +3179,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     llvm::Value *sizeValue =
       llvm::ConstantInt::get(CGF.SizeTy, size.getQuantity());
 
-    if (CGF.getLangOpts().isSignedOverflowDefined())
+    if (CGF.getLangOpts().PointerOverflowDefined)
       value = Builder.CreateGEP(CGF.Int8Ty, value, sizeValue, "incdec.objptr");
     else
       value = CGF.EmitCheckedInBoundsGEP(
@@ -4075,7 +4075,7 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
     // signed-overflow, so we use the same semantics for our explicit
     // multiply.  We suppress this if overflow is not undefined behavior.
     llvm::Type *elemTy = CGF.ConvertTypeForMem(vla->getElementType());
-    if (CGF.getLangOpts().isSignedOverflowDefined()) {
+    if (CGF.getLangOpts().PointerOverflowDefined) {
       index = CGF.Builder.CreateMul(index, numElements, "vla.index");
       pointer = CGF.Builder.CreateGEP(elemTy, pointer, index, "add.ptr");
     } else {
@@ -4096,7 +4096,7 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
   else
     elemTy = CGF.ConvertTypeForMem(elementType);
 
-  if (CGF.getLangOpts().isSignedOverflowDefined())
+  if (CGF.getLangOpts().PointerOverflowDefined)
     return CGF.Builder.CreateGEP(elemTy, pointer, index, "add.ptr");
 
   return CGF.EmitCheckedInBoundsGEP(

@@ -99,4 +99,4 @@ static inline RT_API_ATTRS void EstablishDescriptor(CFI_cdesc_t *descriptor,
   }
 }
 } // namespace Fortran::ISO
-#endif /* FLANG_RT_ISO_FORTRAN_UTIL_H_ */
+#endif // FLANG_RT_ISO_FORTRAN_UTIL_H_

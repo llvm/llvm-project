@@ -75,4 +75,4 @@ private:
   ISO::CFI_type_t raw_{CFI_type_other};
 };
 } // namespace Fortran::runtime
-#endif /* FLANG_RT_TYPE_CODE_H_ */
+#endif // FLANG_RT_TYPE_CODE_H_

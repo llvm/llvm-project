@@ -416,4 +416,4 @@ template <int KIND> struct Norm2Helper {
 };
 
 } // namespace Fortran::runtime
-#endif /* FLANG_RT_REDUCTION_TEMPLATES_H_ */
+#endif // FLANG_RT_REDUCTION_TEMPLATES_H_

@@ -10,6 +10,7 @@ add_flangrt_library(CufRuntime STATIC SHARED
   allocatable.cpp
   allocator.cpp
   descriptor.cpp
+  init.cpp
   kernel.cpp
   memmove-function.cpp
   memory.cpp

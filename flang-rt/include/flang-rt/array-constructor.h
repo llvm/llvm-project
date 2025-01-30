@@ -54,4 +54,4 @@ static_assert(alignof(Fortran::runtime::ArrayConstructorVector) <=
     "MaxArrayConstructorVectorAlignInBytes");
 
 } // namespace Fortran::runtime
-#endif /* FLANG_RT_ARRAY_CONSTRUCTOR_H_ */
+#endif // FLANG_RT_ARRAY_CONSTRUCTOR_H_

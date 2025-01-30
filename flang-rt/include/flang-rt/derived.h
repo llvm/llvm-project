@@ -48,4 +48,4 @@ RT_API_ATTRS void Destroy(const Descriptor &, bool finalize,
 RT_API_ATTRS bool HasDynamicComponent(const Descriptor &);
 
 } // namespace Fortran::runtime
-#endif /* FLANG_RT_DERIVED_H_ */
+#endif // FLANG_RT_DERIVED_H_

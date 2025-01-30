@@ -94,4 +94,4 @@ RT_API_ATTRS Cookie BeginExternalListIO(
 }
 
 } // namespace Fortran::runtime::io
-#endif /* FLANG_RT_IO_API_COMMON_H_ */
+#endif // FLANG_RT_IO_API_COMMON_H_

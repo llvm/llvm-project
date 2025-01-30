@@ -368,4 +368,4 @@ template <typename T> inline RT_API_ATTRS T ErfcScaled(T arg) {
 
 } // namespace Fortran::runtime
 
-#endif /* FLANG_RT_NUMERIC_TEMPLATES_H_ */
+#endif // FLANG_RT_NUMERIC_TEMPLATES_H_

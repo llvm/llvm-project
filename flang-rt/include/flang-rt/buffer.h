@@ -221,4 +221,4 @@ private:
   bool dirty_{false};
 };
 } // namespace Fortran::runtime::io
-#endif /* FLANG_RT_BUFFER_H_ */
+#endif // FLANG_RT_BUFFER_H_

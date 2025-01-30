@@ -70,4 +70,4 @@ RT_API_ATTRS Fortran::common::optional<char32_t> DecodeUTF8(const char *);
 RT_API_ATTRS std::size_t EncodeUTF8(char *, char32_t);
 
 } // namespace Fortran::runtime
-#endif /* FLANG_RT_UTF_H_ */
+#endif // FLANG_RT_UTF_H_

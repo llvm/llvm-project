@@ -52,4 +52,4 @@ template <> struct SQRTTy<F128Type> {
 };
 
 } // namespace Fortran::runtime
-#endif /* FLANG_RT_FORTRANFLOAT128MATH_NUMERIC_TEMPLATE_SPECS_H_ */
+#endif // FLANG_RT_FORTRANFLOAT128MATH_NUMERIC_TEMPLATE_SPECS_H_

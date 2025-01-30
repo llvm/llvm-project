@@ -50,4 +50,4 @@ extern template RT_API_ATTRS bool EditCharacterInput(
     IoStatementState &, const DataEdit &, char32_t *, std::size_t);
 
 } // namespace Fortran::runtime::io
-#endif /* FLANG_RT_EDIT_INPUT_H_ */
+#endif // FLANG_RT_EDIT_INPUT_H_

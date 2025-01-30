@@ -321,4 +321,4 @@ private:
 };
 
 } // namespace Fortran::runtime::typeInfo
-#endif /* FLANG_RT_TYPE_INFO_H_ */
+#endif // FLANG_RT_TYPE_INFO_H_
