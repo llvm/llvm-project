@@ -10,13 +10,13 @@ Header:
   PartOffsets:     [ 60 ]
 Parts:
   - Name:            RTS0
-    Size:            8
+    Size:            4
     RootSignature:
       Size: 8
       AllowInputAssemblerInputLayout: true
   
 #CHECK:    - Name: RTS0
-#CHECK-NEXT: Size: 8
+#CHECK-NEXT: Size: 4
 #CHECK-NEXT: RootSignature:
 #CHECK-NEXT:   Size: 8
 #CHECK-NEXT:   AllowInputAssemblerInputLayout: true
