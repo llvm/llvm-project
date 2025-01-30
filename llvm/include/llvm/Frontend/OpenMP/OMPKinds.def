@@ -732,7 +732,6 @@ __OMP_RTL(__last, false, Void, )
 #define EnumAttrInt(Kind, N) Attribute::get(Ctx, Attribute::AttrKind::Kind, N)
 #define AllocSizeAttr(N, M) Attribute::getWithAllocSizeArgs(Ctx, N, M)
 #define MemoryAttr(ME) Attribute::getWithMemoryEffects(Ctx, ME)
-#define NoCaptureAttr Attribute::getWithCaptureInfo(Ctx, CaptureInfo::none())
 #define AttributeSet(...)                                                      \
   AttributeSet::get(Ctx, ArrayRef<Attribute>({__VA_ARGS__}))
 
@@ -821,7 +820,7 @@ __OMP_ATTRS_SET(ForkAttrs, OptimisticAttributes
 __OMP_ATTRS_SET(ReadOnlyPtrAttrs,
                 OptimisticAttributes
                     ? AttributeSet(EnumAttr(ReadOnly), EnumAttr(NoFree),
-                                   NoCaptureAttr)
+                                   EnumAttr(NoCapture))
                     : AttributeSet())
 
 __OMP_ATTRS_SET(DeviceAllocAttrs,
@@ -833,13 +832,13 @@ __OMP_ATTRS_SET(DeviceAllocAttrs,
 __OMP_ATTRS_SET(WriteOnlyPtrAttrs,
                 OptimisticAttributes
                     ? AttributeSet(EnumAttr(WriteOnly), EnumAttr(NoFree),
-                                   NoCaptureAttr)
+                                   EnumAttr(NoCapture))
                     : AttributeSet())
 #endif
 
 __OMP_ATTRS_SET(ArgPtrAttrs,
                 OptimisticAttributes
-                    ? AttributeSet(NoCaptureAttr, EnumAttr(NoFree))
+                    ? AttributeSet(EnumAttr(NoCapture), EnumAttr(NoFree))
                     : AttributeSet())
 
 __OMP_ATTRS_SET(ReturnPtrAttrs, AttributeSet(EnumAttr(NoAlias)))
@@ -937,8 +936,8 @@ __OMP_RTL_ATTRS(omp_get_cancellation, GetterAttrs, SExt, ParamAttrs())
 __OMP_RTL_ATTRS(omp_get_nested, GetterAttrs, SExt, ParamAttrs())
 __OMP_RTL_ATTRS(
     omp_get_schedule, GetterArgWriteAttrs, AttributeSet(),
-    ParamAttrs(AttributeSet(NoCaptureAttr, EnumAttr(WriteOnly)),
-               AttributeSet(NoCaptureAttr, EnumAttr(WriteOnly))))
+    ParamAttrs(AttributeSet(EnumAttr(NoCapture), EnumAttr(WriteOnly)),
+               AttributeSet(EnumAttr(NoCapture), EnumAttr(WriteOnly))))
 __OMP_RTL_ATTRS(omp_get_thread_limit, GetterAttrs, SExt, ParamAttrs())
 __OMP_RTL_ATTRS(omp_get_supported_active_levels, GetterAttrs, SExt, ParamAttrs())
 __OMP_RTL_ATTRS(omp_get_max_active_levels, GetterAttrs, SExt, ParamAttrs())
@@ -951,7 +950,7 @@ __OMP_RTL_ATTRS(omp_get_proc_bind, GetterAttrs, SExt, ParamAttrs())
 __OMP_RTL_ATTRS(omp_get_num_places, GetterAttrs, SExt, ParamAttrs())
 __OMP_RTL_ATTRS(omp_get_num_procs, GetterAttrs, SExt, ParamAttrs())
 __OMP_RTL_ATTRS(omp_get_place_proc_ids, GetterArgWriteAttrs, AttributeSet(),
-                ParamAttrs(SExt, AttributeSet(NoCaptureAttr,
+                ParamAttrs(SExt, AttributeSet(EnumAttr(NoCapture),
                                               EnumAttr(WriteOnly))))
 __OMP_RTL_ATTRS(omp_get_place_num, GetterAttrs, SExt, ParamAttrs())
 __OMP_RTL_ATTRS(omp_get_partition_num_places, GetterAttrs, SExt, ParamAttrs())
@@ -1203,7 +1202,7 @@ __OMP_RTL_ATTRS(__kmpc_alloc_shared, AttributeSet(
   AllocSizeAttr(0, std::nullopt)), ReturnPtrAttrs, ParamAttrs(SizeTyExt))
 
 __OMP_RTL_ATTRS(__kmpc_free_shared, DeviceAllocAttrs, AttributeSet(),
-                ParamAttrs(AttributeSet(NoCaptureAttr,
+                ParamAttrs(AttributeSet(EnumAttr(NoCapture),
                                         EnumAttr(AllocatedPointer)),
                            SizeTyExt))
 __OMP_RTL_ATTRS(__kmpc_begin_sharing_variables, AttributeSet(), AttributeSet(),

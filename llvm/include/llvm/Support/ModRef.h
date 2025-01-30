@@ -327,9 +327,6 @@ public:
   CaptureInfo(CaptureComponents Components)
       : OtherComponents(Components), RetComponents(Components) {}
 
-  /// Create CaptureInfo that does not capture any components of the pointer
-  static CaptureInfo none() { return CaptureInfo(CaptureComponents::None); }
-
   /// Create CaptureInfo that may capture all components of the pointer.
   static CaptureInfo all() { return CaptureInfo(CaptureComponents::All); }
 
@@ -361,20 +358,6 @@ public:
   CaptureInfo operator&(CaptureInfo Other) const {
     return CaptureInfo(OtherComponents & Other.OtherComponents,
                        RetComponents & Other.RetComponents);
-  }
-
-  /// Compute union of CaptureInfos in-place.
-  CaptureInfo &operator|=(CaptureInfo Other) {
-    OtherComponents |= Other.OtherComponents;
-    RetComponents |= Other.RetComponents;
-    return *this;
-  }
-
-  /// Compute intersection of CaptureInfos in-place.
-  CaptureInfo &operator&=(CaptureInfo Other) {
-    OtherComponents &= Other.OtherComponents;
-    RetComponents &= Other.RetComponents;
-    return *this;
   }
 
   static CaptureInfo createFromIntValue(uint32_t Data) {

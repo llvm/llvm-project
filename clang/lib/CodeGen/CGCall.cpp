@@ -2882,7 +2882,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     }
 
     if (FI.getExtParameterInfo(ArgNo).isNoEscape())
-      Attrs.addCapturesAttr(llvm::CaptureInfo::none());
+      Attrs.addAttribute(llvm::Attribute::NoCapture);
 
     if (Attrs.hasAttributes()) {
       unsigned FirstIRArg, NumIRArgs;

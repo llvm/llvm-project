@@ -1094,8 +1094,7 @@ Value *LibCallSimplifier::optimizeStrTo(CallInst *CI, IRBuilderBase &B) {
   if (isa<ConstantPointerNull>(EndPtr)) {
     // With a null EndPtr, this function won't capture the main argument.
     // It would be readonly too, except that it still may write to errno.
-    CI->addParamAttr(0, Attribute::getWithCaptureInfo(CI->getContext(),
-                                                      CaptureInfo::none()));
+    CI->addParamAttr(0, Attribute::NoCapture);
   }
 
   return nullptr;
@@ -3206,8 +3205,7 @@ Value *LibCallSimplifier::optimizeStrToInt(CallInst *CI, IRBuilderBase &B,
   if (isa<ConstantPointerNull>(EndPtr)) {
     // With a null EndPtr, this function won't capture the main argument.
     // It would be readonly too, except that it still may write to errno.
-    CI->addParamAttr(0, Attribute::getWithCaptureInfo(CI->getContext(),
-                                                      CaptureInfo::none()));
+    CI->addParamAttr(0, Attribute::NoCapture);
     EndPtr = nullptr;
   } else if (!isKnownNonZero(EndPtr, DL))
     return nullptr;

@@ -983,6 +983,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::InReg:
       case Attribute::Nest:
       case Attribute::NoAlias:
+      case Attribute::NoCapture:
       case Attribute::NoUndef:
       case Attribute::NonNull:
       case Attribute::Preallocated:

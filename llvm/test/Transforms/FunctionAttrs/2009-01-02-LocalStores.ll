@@ -1,6 +1,6 @@
 ; RUN: opt < %s -passes=function-attrs -S | FileCheck %s
 
-; CHECK: define ptr @a(ptr readonly captures(none) %p)
+; CHECK: define ptr @a(ptr nocapture readonly %p)
 define ptr @a(ptr %p) {
 	%tmp = load ptr, ptr %p
 	ret ptr %tmp

@@ -845,7 +845,7 @@ bool AA::isAssumedThreadLocalObject(Attributor &A, Value &Obj,
       return true;
     }
     bool IsKnownNoCapture;
-    bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::Captures>(
+    bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::NoCapture>(
         A, &QueryingAA, IRPosition::value(Obj), DepClassTy::OPTIONAL,
         IsKnownNoCapture);
     LLVM_DEBUG(dbgs() << "[AA] Object '" << Obj << "' is "
@@ -3330,10 +3330,10 @@ void Attributor::rememberDependences() {
 }
 
 template <Attribute::AttrKind AK, typename AAType>
-void Attributor::checkAndQueryIRAttr(const IRPosition &IRP, AttributeSet Attrs,
-                                     bool SkipHasAttrCheck) {
+void Attributor::checkAndQueryIRAttr(const IRPosition &IRP,
+                                     AttributeSet Attrs) {
   bool IsKnown;
-  if (SkipHasAttrCheck || !Attrs.hasAttribute(AK))
+  if (!Attrs.hasAttribute(AK))
     if (!Configuration.Allowed || Configuration.Allowed->count(&AAType::ID))
       if (!AA::hasAssumedIRAttr<AK>(*this, nullptr, IRP, DepClassTy::NONE,
                                     IsKnown))
@@ -3498,8 +3498,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       getOrCreateAAFor<AAAlign>(ArgPos);
 
       // Every argument with pointer type might be marked nocapture.
-      checkAndQueryIRAttr<Attribute::Captures, AANoCapture>(
-          ArgPos, ArgAttrs, /*SkipHasAttrCheck=*/true);
+      checkAndQueryIRAttr<Attribute::NoCapture, AANoCapture>(ArgPos, ArgAttrs);
 
       // Every argument with pointer type might be marked
       // "readnone/readonly/writeonly/..."
@@ -3583,9 +3582,9 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       // Call site argument attribute "non-null".
       checkAndQueryIRAttr<Attribute::NonNull, AANonNull>(CBArgPos, CBArgAttrs);
 
-      // Call site argument attribute "captures(none)".
-      checkAndQueryIRAttr<Attribute::Captures, AANoCapture>(
-          CBArgPos, CBArgAttrs, /*SkipHasAttrCheck=*/true);
+      // Call site argument attribute "nocapture".
+      checkAndQueryIRAttr<Attribute::NoCapture, AANoCapture>(CBArgPos,
+                                                             CBArgAttrs);
 
       // Call site argument attribute "no-alias".
       checkAndQueryIRAttr<Attribute::NoAlias, AANoAlias>(CBArgPos, CBArgAttrs);

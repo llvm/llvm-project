@@ -773,9 +773,7 @@ class CGObjCGNUstep : public CGObjCGNU {
 
       // The lookup function is guaranteed not to capture the receiver pointer.
       if (auto *LookupFn2 = dyn_cast<llvm::Function>(LookupFn.getCallee()))
-        LookupFn2->addParamAttr(
-            0, llvm::Attribute::getWithCaptureInfo(CGF.getLLVMContext(),
-                                                   llvm::CaptureInfo::none()));
+        LookupFn2->addParamAttr(0, llvm::Attribute::NoCapture);
 
       llvm::Value *args[] = {
           EnforceType(Builder, ReceiverPtr.getPointer(), PtrToIdTy),

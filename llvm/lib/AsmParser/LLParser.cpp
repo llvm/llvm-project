@@ -2016,12 +2016,6 @@ bool LLParser::parseOptionalParamOrReturnAttrs(AttrBuilder &B, bool IsParam) {
       continue;
     }
 
-    if (Token == lltok::kw_nocapture) {
-      Lex.Lex();
-      B.addCapturesAttr(CaptureInfo::none());
-      continue;
-    }
-
     SMLoc Loc = Lex.getLoc();
     Attribute::AttrKind Attr = tokenToAttribute(Token);
     if (Attr == Attribute::None)

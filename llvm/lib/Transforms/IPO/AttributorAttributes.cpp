@@ -2051,7 +2051,7 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
     }
 
     bool IsKnownNoCapture;
-    if (!AA::hasAssumedIRAttr<Attribute::Captures>(
+    if (!AA::hasAssumedIRAttr<Attribute::NoCapture>(
             A, this, getIRPosition(), DepClassTy::OPTIONAL, IsKnownNoCapture))
       return indicatePessimisticFixpoint();
 
@@ -3954,7 +3954,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
             unsigned ArgNo = CB->getArgOperandNo(&U);
 
             bool IsKnownNoCapture;
-            if (AA::hasAssumedIRAttr<Attribute::Captures>(
+            if (AA::hasAssumedIRAttr<Attribute::NoCapture>(
                     A, this, IRPosition::callsite_argument(*CB, ArgNo),
                     DepClassTy::OPTIONAL, IsKnownNoCapture))
               return true;
@@ -3986,7 +3986,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
 
     bool IsKnownNoCapture;
     const AANoCapture *NoCaptureAA = nullptr;
-    bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::Captures>(
+    bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::NoCapture>(
         A, this, VIRP, DepClassTy::NONE, IsKnownNoCapture, false, &NoCaptureAA);
     if (!IsAssumedNoCapture &&
         (!NoCaptureAA || !NoCaptureAA->isAssumedNoCaptureMaybeReturned())) {
@@ -4072,7 +4072,7 @@ struct AANoAliasReturned final : AANoAliasImpl {
 
       bool IsKnownNoCapture;
       const AANoCapture *NoCaptureAA = nullptr;
-      bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::Captures>(
+      bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::NoCapture>(
           A, this, RVPos, DepClassTy::REQUIRED, IsKnownNoCapture, false,
           &NoCaptureAA);
       return IsAssumedNoCapture ||
@@ -5727,7 +5727,7 @@ struct AAInstanceInfoCallSiteReturned final : AAInstanceInfoFloating {
 bool AANoCapture::isImpliedByIR(Attributor &A, const IRPosition &IRP,
                                 Attribute::AttrKind ImpliedAttributeKind,
                                 bool IgnoreSubsumingPositions) {
-  assert(ImpliedAttributeKind == Attribute::Captures &&
+  assert(ImpliedAttributeKind == Attribute::NoCapture &&
          "Unexpected attribute kind");
   Value &V = IRP.getAssociatedValue();
   if (!IRP.isArgumentPosition())
@@ -5742,36 +5742,27 @@ bool AANoCapture::isImpliedByIR(Attributor &A, const IRPosition &IRP,
     return true;
   }
 
-  SmallVector<Attribute, 1> Attrs;
-  A.getAttrs(IRP, {Attribute::Captures}, Attrs,
-             /* IgnoreSubsumingPositions */ true);
-  for (const Attribute &Attr : Attrs)
-    if (capturesNothing(Attr.getCaptureInfo()))
-      return true;
+  if (A.hasAttr(IRP, {Attribute::NoCapture},
+                /* IgnoreSubsumingPositions */ true, Attribute::NoCapture))
+    return true;
 
   if (IRP.getPositionKind() == IRP_CALL_SITE_ARGUMENT)
-    if (Argument *Arg = IRP.getAssociatedArgument()) {
-      SmallVector<Attribute, 1> Attrs;
-      A.getAttrs(IRP, {Attribute::Captures, Attribute::ByVal}, Attrs,
-                 /* IgnoreSubsumingPositions */ true);
-      bool ArgNoCapture = any_of(Attrs, [](Attribute Attr) {
-        return Attr.getKindAsEnum() == Attribute::ByVal ||
-               capturesNothing(Attr.getCaptureInfo());
-      });
-      if (ArgNoCapture) {
-        A.manifestAttrs(IRP, Attribute::getWithCaptureInfo(
-                                 V.getContext(), CaptureInfo::none()));
+    if (Argument *Arg = IRP.getAssociatedArgument())
+      if (A.hasAttr(IRPosition::argument(*Arg),
+                    {Attribute::NoCapture, Attribute::ByVal},
+                    /* IgnoreSubsumingPositions */ true)) {
+        A.manifestAttrs(IRP,
+                        Attribute::get(V.getContext(), Attribute::NoCapture));
         return true;
       }
-    }
 
   if (const Function *F = IRP.getAssociatedFunction()) {
     // Check what state the associated function can actually capture.
     AANoCapture::StateType State;
     determineFunctionCaptureCapabilities(IRP, *F, State);
     if (State.isKnown(NO_CAPTURE)) {
-      A.manifestAttrs(IRP, Attribute::getWithCaptureInfo(V.getContext(),
-                                                         CaptureInfo::none()));
+      A.manifestAttrs(IRP,
+                      Attribute::get(V.getContext(), Attribute::NoCapture));
       return true;
     }
   }
@@ -5834,7 +5825,7 @@ struct AANoCaptureImpl : public AANoCapture {
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     bool IsKnown;
-    assert(!AA::hasAssumedIRAttr<Attribute::Captures>(
+    assert(!AA::hasAssumedIRAttr<Attribute::NoCapture>(
         A, nullptr, getIRPosition(), DepClassTy::NONE, IsKnown));
     (void)IsKnown;
   }
@@ -5850,7 +5841,7 @@ struct AANoCaptureImpl : public AANoCapture {
 
     if (isArgumentPosition()) {
       if (isAssumedNoCapture())
-        Attrs.emplace_back(Attribute::get(Ctx, Attribute::Captures));
+        Attrs.emplace_back(Attribute::get(Ctx, Attribute::NoCapture));
       else if (ManifestInternal)
         Attrs.emplace_back(Attribute::get(Ctx, "no-capture-maybe-returned"));
     }
@@ -5912,7 +5903,7 @@ struct AANoCaptureImpl : public AANoCapture {
     // it to justify a non-capture attribute here. This allows recursion!
     bool IsKnownNoCapture;
     const AANoCapture *ArgNoCaptureAA = nullptr;
-    bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::Captures>(
+    bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::NoCapture>(
         A, this, CSArgPos, DepClassTy::REQUIRED, IsKnownNoCapture, false,
         &ArgNoCaptureAA);
     if (IsAssumedNoCapture)
@@ -6068,7 +6059,7 @@ struct AANoCaptureCallSiteArgument final : AANoCaptureImpl {
     const IRPosition &ArgPos = IRPosition::argument(*Arg);
     bool IsKnownNoCapture;
     const AANoCapture *ArgAA = nullptr;
-    if (AA::hasAssumedIRAttr<Attribute::Captures>(
+    if (AA::hasAssumedIRAttr<Attribute::NoCapture>(
             A, this, ArgPos, DepClassTy::REQUIRED, IsKnownNoCapture, false,
             &ArgAA))
       return ChangeStatus::UNCHANGED;
@@ -7066,7 +7057,7 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
         auto CBIRP = IRPosition::callsite_argument(*CB, ArgNo);
 
         bool IsKnownNoCapture;
-        bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::Captures>(
+        bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::NoCapture>(
             A, this, CBIRP, DepClassTy::OPTIONAL, IsKnownNoCapture);
 
         // If a call site argument use is nofree, we are fine.
@@ -7733,7 +7724,7 @@ struct AAPrivatizablePtrCallSiteArgument final
 
     const IRPosition &IRP = getIRPosition();
     bool IsKnownNoCapture;
-    bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::Captures>(
+    bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::NoCapture>(
         A, this, IRP, DepClassTy::REQUIRED, IsKnownNoCapture);
     if (!IsAssumedNoCapture) {
       LLVM_DEBUG(dbgs() << "[AAPrivatizablePtr] pointer might be captured!\n");
@@ -8188,7 +8179,7 @@ ChangeStatus AAMemoryBehaviorFloating::updateImpl(Attributor &A) {
   // to fall back to anythign less optimistic than the function state.
   bool IsKnownNoCapture;
   const AANoCapture *ArgNoCaptureAA = nullptr;
-  bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::Captures>(
+  bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::NoCapture>(
       A, this, IRP, DepClassTy::OPTIONAL, IsKnownNoCapture, false,
       &ArgNoCaptureAA);
 
@@ -8248,7 +8239,7 @@ bool AAMemoryBehaviorFloating::followUsersOfUseIn(Attributor &A, const Use &U,
   if (U.get()->getType()->isPointerTy()) {
     unsigned ArgNo = CB->getArgOperandNo(&U);
     bool IsKnownNoCapture;
-    return !AA::hasAssumedIRAttr<Attribute::Captures>(
+    return !AA::hasAssumedIRAttr<Attribute::NoCapture>(
         A, this, IRPosition::callsite_argument(*CB, ArgNo),
         DepClassTy::OPTIONAL, IsKnownNoCapture);
   }
@@ -12821,7 +12812,7 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
       return indicatePessimisticFixpoint();
 
     bool IsKnownNoCapture;
-    if (!AA::hasAssumedIRAttr<Attribute::Captures>(
+    if (!AA::hasAssumedIRAttr<Attribute::NoCapture>(
             A, this, IRP, DepClassTy::OPTIONAL, IsKnownNoCapture))
       return indicatePessimisticFixpoint();
 

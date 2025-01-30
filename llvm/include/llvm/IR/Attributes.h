@@ -165,7 +165,6 @@ public:
   static Attribute getWithUWTableKind(LLVMContext &Context, UWTableKind Kind);
   static Attribute getWithMemoryEffects(LLVMContext &Context, MemoryEffects ME);
   static Attribute getWithNoFPClass(LLVMContext &Context, FPClassTest Mask);
-  static Attribute getWithCaptureInfo(LLVMContext &Context, CaptureInfo CI);
 
   /// For a typed attribute, return the equivalent attribute with the type
   /// changed to \p ReplacementTy.

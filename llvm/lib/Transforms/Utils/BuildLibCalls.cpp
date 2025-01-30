@@ -133,10 +133,9 @@ static bool setRetDoesNotAlias(Function &F) {
 }
 
 static bool setDoesNotCapture(Function &F, unsigned ArgNo) {
-  if (F.hasParamAttribute(ArgNo, Attribute::Captures))
+  if (F.hasParamAttribute(ArgNo, Attribute::NoCapture))
     return false;
-  F.addParamAttr(ArgNo, Attribute::getWithCaptureInfo(F.getContext(),
-                                                      CaptureInfo::none()));
+  F.addParamAttr(ArgNo, Attribute::NoCapture);
   ++NumNoCapture;
   return true;
 }
