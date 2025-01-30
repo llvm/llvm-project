@@ -36,6 +36,8 @@ jobs:
         # are ready for people to start recieving notifications.
         continue-on-error: true
         run: |
+          git config --global --add safe.directory '*'
+
           modified_files=$(git diff --name-only HEAD~1...HEAD)
           modified_dirs=$(echo "$modified_files" | cut -d'/' -f1 | sort -u)
 
@@ -94,7 +96,6 @@ jobs:
         run: |
           modified_files=$(git diff --name-only HEAD~1...HEAD)
           modified_dirs=$(echo "$modified_files" | cut -d'/' -f1 | sort | uniq)
-
 
           echo $modified_files
           echo $modified_dirs
