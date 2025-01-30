@@ -1149,7 +1149,7 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT:     CLONE ir<%gep.ptr> = getelementptr inbounds ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.ptr>
 ; CHECK-NEXT:     WIDEN ir<%for.1.next> = load vp<[[VEC_PTR]]>
-; CHECK-NEXT:     EMIT vp<[[FOR1_SPLICE:%.+]]> = first-order splice ir<%for.1>, ir<%for.1.next>
+; CHECK-NEXT:     EMIT vp<[[FOR1_SPLICE:%.+]]> = first-order splice ir<%for.1>, ir<%for.1.next>, ir<-1>
 ; CHECK-NEXT:     WIDEN ir<%add> = add vp<[[FOR1_SPLICE]]>, ir<1>
 ; CHECK-NEXT:     vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%gep.ptr>
 ; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR2]]>, ir<%add>
