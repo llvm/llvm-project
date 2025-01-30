@@ -14,7 +14,7 @@ omp.private {type = private} @_QFsub1Et1_private_ref_rec__QFsub1Tt : !fir.ref<!f
   %3 = fir.address_of(@_QQclXea6256ba131ddd9c2210e68030a0edd3) : !fir.ref<!fir.char<1,49>>
   %4 = fir.convert %2 : (!fir.box<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>) -> !fir.box<none>
   %5 = fir.convert %3 : (!fir.ref<!fir.char<1,49>>) -> !fir.ref<i8>
-  %6 = fir.call @_FortranAInitialize(%4, %5, %c1_i32) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+  fir.call @_FortranAInitialize(%4, %5, %c1_i32) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32) -> ()
 //CHECK: omp.yield(%{{.*}} : !fir.ref<!fir.type<_QFsub1TtUnboxProc{p1:() -> ()}>>)
   omp.yield(%1 : !fir.ref<!fir.type<_QFsub1Tt{p1:!fir.boxproc<() -> ()>}>>)
 }
@@ -52,7 +52,7 @@ omp.private {type = firstprivate} @_QFsub2Et1_firstprivate_ref_box_heap_rec__QFs
   %4 = fir.convert %arg1 : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>) -> !fir.ref<!fir.box<none>>
   %5 = fir.convert %2 : (!fir.box<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>) -> !fir.box<none>
   %6 = fir.convert %3 : (!fir.ref<!fir.char<1,8>>) -> !fir.ref<i8>
-  %7 = fir.call @_FortranAAssign(%4, %5, %6, %c5_i32) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+  fir.call @_FortranAAssign(%4, %5, %6, %c5_i32) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 //CHECK: omp.yield(%{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2TtUnboxProc{p1:() -> ()}>>>>)
   omp.yield(%arg1 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFsub2Tt{p1:!fir.boxproc<() -> ()>}>>>>)
 } dealloc {
@@ -78,10 +78,10 @@ func.func @_QPsub2() {
   }
   return
 }
-func.func private @_FortranAInitialize(!fir.box<none>, !fir.ref<i8>, i32) -> none attributes {fir.runtime}
+func.func private @_FortranAInitialize(!fir.box<none>, !fir.ref<i8>, i32) -> () attributes {fir.runtime}
 fir.global linkonce @_QQclXea constant : !fir.char<1,8> {
   %0 = fir.string_lit "pp.f90\00"(8) : !fir.char<1,8>
   fir.has_value %0 : !fir.char<1,8>
 }
 func.func private @_FortranAAllocatableDeallocate(!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32 attributes {fir.runtime}
-func.func private @_FortranAAssign(!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none attributes {fir.runtime}
+func.func private @_FortranAAssign(!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> () attributes {fir.runtime}

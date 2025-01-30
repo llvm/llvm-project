@@ -11,7 +11,7 @@
 // RUN: -convert-arith-to-llvm \
 // RUN: -convert-cf-to-llvm \
 // RUN: -reconcile-unrealized-casts | \
-// RUN: mlir-cpu-runner -e main -entry-point-result=void \
+// RUN: mlir-runner -e main -entry-point-result=void \
 // RUN:     -shared-libs=%mlir_runner_utils \
 // RUN:     -shared-libs=%mlir_c_runner_utils 2>&1 | \
 // RUN: FileCheck %s

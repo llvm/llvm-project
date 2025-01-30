@@ -1,4 +1,4 @@
-//===-- CUFOpConversion.cpp -----------------------------------------------===//
+//===-- CUFDeviceGlobal.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -36,13 +36,11 @@ static void processAddrOfOp(fir::AddrOfOp addrOfOp,
           addrOfOp.getSymbol().getRootReference().getValue())) {
     // TO DO: limit candidates to non-scalars. Scalars appear to have been
     // folded in already.
-    if (globalOp.getConstant()) {
-      if (recurseInGlobal)
-        globalOp.walk([&](fir::AddrOfOp op) {
-          processAddrOfOp(op, symbolTable, candidates, recurseInGlobal);
-        });
-      candidates.insert(globalOp);
-    }
+    if (recurseInGlobal)
+      globalOp.walk([&](fir::AddrOfOp op) {
+        processAddrOfOp(op, symbolTable, candidates, recurseInGlobal);
+      });
+    candidates.insert(globalOp);
   }
 }
 

@@ -45,6 +45,7 @@ def Tosa_Dialect : Dialect {
   let cppNamespace = "mlir::tosa";
   let hasConstantMaterializer = 1;
   let useDefaultAttributePrinterParser = 1;
+  let useDefaultTypePrinterParser = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -218,18 +219,26 @@ def TosaElementwiseOperator : NativeOpTrait<"TosaElementwiseOperator"> {
 }
 
 //===----------------------------------------------------------------------===//
+// TOSA Operator Trait.
+//===----------------------------------------------------------------------===//
+// Op operands with TOSA shape types must be compile time resolvable
+def TosaResolvableShapeOperands : NativeOpTrait<"TosaResolvableShapeOperands"> {
+  let cppNamespace = "mlir::OpTrait::tosa";
+}
+
+//===----------------------------------------------------------------------===//
 // TOSA Operator Class.
 //===----------------------------------------------------------------------===//
 
 class Tosa_Op<string mnemonic, list<Trait> traits = []> :
-    Op<Tosa_Dialect, mnemonic, !listconcat(traits, [TosaOpInterface])> {
+    Op<Tosa_Dialect, mnemonic, !listconcat(traits, [TosaOpInterface,
+    TosaResolvableShapeOperands])> {
 }
 
 class Tosa_ElementwiseOp<string mnemonic, list<Trait> traits = []> :
     Tosa_Op<mnemonic, !listconcat(traits, [
               DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
                                         ["inferReturnTypeComponents"]>,
-              ResultsBroadcastableShape,
               TosaElementwiseOperator,
               Pure])> {
   let assemblyFormat =
@@ -239,6 +248,8 @@ class Tosa_ElementwiseOp<string mnemonic, list<Trait> traits = []> :
 class Tosa_ElementwiseUnaryOp<string mnemonic, list<Trait> traits = []> :
     Tosa_ElementwiseOp<mnemonic, !listconcat(traits, [
               SameOperandsAndResultShape,
+              ResultsBroadcastableShape,
+              SameOperandsAndResultRank,
               SameOperandsAndResultElementType])> {}
 
 class Tosa_InferTensorTypeOp<string mnemonic, list<Trait> traits = []>

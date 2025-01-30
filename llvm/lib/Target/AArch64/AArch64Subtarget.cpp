@@ -358,7 +358,10 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
       CustomCallSavedXRegs(AArch64::GPR64commonRegClass.getNumRegs()),
       IsLittle(LittleEndian), IsStreaming(IsStreaming),
       IsStreamingCompatible(IsStreamingCompatible),
-      StreamingHazardSize(AArch64StreamingHazardSize),
+      StreamingHazardSize(
+          AArch64StreamingHazardSize.getNumOccurrences() > 0
+              ? std::optional<unsigned>(AArch64StreamingHazardSize)
+              : std::nullopt),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
       MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU, HasMinSize)),

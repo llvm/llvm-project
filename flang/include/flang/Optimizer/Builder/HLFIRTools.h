@@ -125,7 +125,7 @@ public:
   bool isSimplyContiguous() const {
     // If this can be described without a fir.box in FIR, this must
     // be contiguous.
-    if (!hlfir::isBoxAddressOrValueType(getFirBase().getType()))
+    if (!hlfir::isBoxAddressOrValueType(getFirBase().getType()) || isScalar())
       return true;
     // Otherwise, if this entity has a visible declaration in FIR,
     // or is the dereference of an allocatable or contiguous pointer
@@ -507,6 +507,17 @@ std::pair<hlfir::Entity, std::optional<hlfir::CleanupFunction>>
 genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
                       hlfir::Entity source, mlir::Type toType,
                       bool preserveLowerBounds);
+
+/// A shortcut for loadTrivialScalar(getElementAt()),
+/// which designates and loads an element of an array.
+Entity loadElementAt(mlir::Location loc, fir::FirOpBuilder &builder,
+                     Entity entity, mlir::ValueRange oneBasedIndices);
+
+/// Return a vector of extents for the given entity.
+/// The function creates new operations, but tries to clean-up
+/// after itself.
+llvm::SmallVector<mlir::Value, Fortran::common::maxRank>
+genExtentsVector(mlir::Location loc, fir::FirOpBuilder &builder, Entity entity);
 
 } // namespace hlfir
 
