@@ -877,6 +877,16 @@ public:
            VK == RISCVMCExpr::VK_RISCV_None;
   }
 
+  bool isUImm7Lsb000() const {
+    if (!isImm())
+      return false;
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && isShiftedUInt<4, 3>(Imm) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
   bool isUImm8Lsb00() const {
     if (!isImm())
       return false;
@@ -1680,6 +1690,10 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidVMaskRegister: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
     return Error(ErrorLoc, "operand must be v0.t");
+  }
+  case Match_InvalidVMaskCarryInRegister: {
+    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(ErrorLoc, "operand must be v0");
   }
   case Match_InvalidSImm5Plus1: {
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 4) + 1,

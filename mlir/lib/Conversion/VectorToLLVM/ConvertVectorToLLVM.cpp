@@ -1546,11 +1546,15 @@ public:
 
     auto punct = printOp.getPunctuation();
     if (auto stringLiteral = printOp.getStringLiteral()) {
-      LLVM::createPrintStrCall(rewriter, loc, parent, "vector_print_str",
-                               *stringLiteral, *getTypeConverter(),
-                               /*addNewline=*/false);
+      auto createResult =
+          LLVM::createPrintStrCall(rewriter, loc, parent, "vector_print_str",
+                                   *stringLiteral, *getTypeConverter(),
+                                   /*addNewline=*/false);
+      if (createResult.failed())
+        return failure();
+
     } else if (punct != PrintPunctuation::NoPunctuation) {
-      emitCall(rewriter, printOp->getLoc(), [&] {
+      FailureOr<LLVM::LLVMFuncOp> op = [&]() {
         switch (punct) {
         case PrintPunctuation::Close:
           return LLVM::lookupOrCreatePrintCloseFn(parent);
@@ -1563,7 +1567,10 @@ public:
         default:
           llvm_unreachable("unexpected punctuation");
         }
-      }());
+      }();
+      if (failed(op))
+        return failure();
+      emitCall(rewriter, printOp->getLoc(), op.value());
     }
 
     rewriter.eraseOp(printOp);
@@ -1588,7 +1595,7 @@ private:
 
     // Make sure element type has runtime support.
     PrintConversion conversion = PrintConversion::None;
-    Operation *printer;
+    FailureOr<Operation *> printer;
     if (printType.isF32()) {
       printer = LLVM::lookupOrCreatePrintF32Fn(parent);
     } else if (printType.isF64()) {
@@ -1631,6 +1638,8 @@ private:
     } else {
       return failure();
     }
+    if (failed(printer))
+      return failure();
 
     switch (conversion) {
     case PrintConversion::ZeroExt64:
@@ -1648,7 +1657,7 @@ private:
     case PrintConversion::None:
       break;
     }
-    emitCall(rewriter, loc, printer, value);
+    emitCall(rewriter, loc, printer.value(), value);
     return success();
   }
 

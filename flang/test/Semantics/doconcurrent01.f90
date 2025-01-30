@@ -97,7 +97,7 @@ end subroutine s3
 
 subroutine s4()
   use iso_fortran_env
-  type(lock_type) :: l
+  type(lock_type), save :: l[*]
 
   do concurrent (i = 1:n)
 !ERROR: An image control statement is not allowed in DO CONCURRENT

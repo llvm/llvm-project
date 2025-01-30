@@ -1584,6 +1584,10 @@ namespace {
     /// pack.
     ExprResult TransformFunctionParmPackExpr(FunctionParmPackExpr *E);
 
+    // Transform a ResolvedUnexpandedPackExpr
+    ExprResult
+    TransformResolvedUnexpandedPackExpr(ResolvedUnexpandedPackExpr *E);
+
     QualType TransformFunctionProtoType(TypeLocBuilder &TLB,
                                         FunctionProtoTypeLoc TL) {
       // Call the base version; it will forward to our overridden version below.
@@ -1762,23 +1766,6 @@ namespace {
       return inherited::TransformLambdaBody(E, Body);
     }
 
-    ExprResult TransformSizeOfPackExpr(SizeOfPackExpr *E) {
-      ExprResult Transformed = inherited::TransformSizeOfPackExpr(E);
-      if (!Transformed.isUsable())
-        return Transformed;
-      auto *TransformedExpr = cast<SizeOfPackExpr>(Transformed.get());
-      if (SemaRef.CodeSynthesisContexts.back().Kind ==
-              Sema::CodeSynthesisContext::ConstraintNormalization &&
-          TransformedExpr->getPack() == E->getPack()) {
-        Decl *NewPack =
-            TransformDecl(E->getPackLoc(), TransformedExpr->getPack());
-        if (!NewPack)
-          return ExprError();
-        TransformedExpr->setPack(cast<NamedDecl>(NewPack));
-      }
-      return TransformedExpr;
-    }
-
     ExprResult TransformRequiresExpr(RequiresExpr *E) {
       LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
       ExprResult TransReq = inherited::TransformRequiresExpr(E);
@@ -1866,7 +1853,8 @@ bool TemplateInstantiator::AlreadyTransformed(QualType T) {
   if (T.isNull())
     return true;
 
-  if (T->isInstantiationDependentType() || T->isVariablyModifiedType())
+  if (T->isInstantiationDependentType() || T->isVariablyModifiedType() ||
+      T->containsUnexpandedParameterPack())
     return false;
 
   getSema().MarkDeclarationsReferencedInType(Loc, T);
@@ -1902,15 +1890,6 @@ Decl *TemplateInstantiator::TransformDecl(SourceLocation Loc, Decl *D) {
       TemplateArgument Arg = TemplateArgs(TTP->getDepth(), TTP->getPosition());
 
       if (TTP->isParameterPack()) {
-        // We might not have an index for pack expansion when normalizing
-        // constraint expressions. In that case, resort to instantiation scopes
-        // for the transformed declarations.
-        if (SemaRef.ArgumentPackSubstitutionIndex == -1 &&
-            SemaRef.CodeSynthesisContexts.back().Kind ==
-                Sema::CodeSynthesisContext::ConstraintNormalization) {
-          return SemaRef.FindInstantiatedDecl(Loc, cast<NamedDecl>(D),
-                                              TemplateArgs);
-        }
         assert(Arg.getKind() == TemplateArgument::Pack &&
                "Missing argument pack");
         Arg = getPackSubstitutedTemplateArgument(getSema(), Arg);
@@ -2399,9 +2378,10 @@ TemplateInstantiator::TransformSubstNonTypeTemplateParmExpr(
   // The call to CheckTemplateArgument here produces the ImpCast.
   TemplateArgument SugaredConverted, CanonicalConverted;
   if (SemaRef
-          .CheckTemplateArgument(E->getParameter(), SubstType,
-                                 SubstReplacement.get(), SugaredConverted,
-                                 CanonicalConverted, Sema::CTAK_Specified)
+          .CheckTemplateArgument(
+              E->getParameter(), SubstType, SubstReplacement.get(),
+              SugaredConverted, CanonicalConverted,
+              /*PartialOrderingTTP=*/false, Sema::CTAK_Specified)
           .isInvalid())
     return true;
   return transformNonTypeTemplateParmRef(E->getAssociatedDecl(),
@@ -2498,6 +2478,15 @@ TemplateInstantiator::TransformDeclRefExpr(DeclRefExpr *E) {
   if (VarDecl *PD = dyn_cast<VarDecl>(D))
     if (PD->isParameterPack())
       return TransformFunctionParmPackRefExpr(E, PD);
+
+  if (BindingDecl *BD = dyn_cast<BindingDecl>(D); BD && BD->isParameterPack()) {
+    BD = cast_or_null<BindingDecl>(TransformDecl(BD->getLocation(), BD));
+    if (!BD)
+      return ExprError();
+    if (auto *RP =
+            dyn_cast_if_present<ResolvedUnexpandedPackExpr>(BD->getBinding()))
+      return TransformResolvedUnexpandedPackExpr(RP);
+  }
 
   return inherited::TransformDeclRefExpr(E);
 }
@@ -2661,6 +2650,19 @@ TemplateInstantiator::TransformTemplateTypeParmType(TypeLocBuilder &TLB,
   TemplateTypeParmTypeLoc NewTL = TLB.push<TemplateTypeParmTypeLoc>(Result);
   NewTL.setNameLoc(TL.getNameLoc());
   return Result;
+}
+
+ExprResult TemplateInstantiator::TransformResolvedUnexpandedPackExpr(
+    ResolvedUnexpandedPackExpr *E) {
+  if (getSema().ArgumentPackSubstitutionIndex != -1) {
+    assert(static_cast<unsigned>(getSema().ArgumentPackSubstitutionIndex) <
+               E->getNumExprs() &&
+           "ArgumentPackSubstitutionIndex is out of range");
+    return TransformExpr(
+        E->getExpansion(getSema().ArgumentPackSubstitutionIndex));
+  }
+
+  return inherited::TransformResolvedUnexpandedPackExpr(E);
 }
 
 QualType TemplateInstantiator::TransformSubstTemplateTypeParmPackType(

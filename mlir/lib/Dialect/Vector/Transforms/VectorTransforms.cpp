@@ -906,6 +906,13 @@ public:
     VectorType castDstType = bitcastOp.getResultVectorType();
     assert(castSrcType.getRank() == castDstType.getRank());
 
+    // This transformation builds on top of
+    // vector.{extract|insert}_strided_slice, which do not support
+    // extracting/inserting "scallable sub-vectors". Bail out.
+    if (castSrcType.isScalable())
+      return rewriter.notifyMatchFailure(bitcastOp,
+                                         "Scalable vectors are not supported");
+
     // Only support rank 1 case for now.
     if (castSrcType.getRank() != 1)
       return failure();
@@ -1785,11 +1792,11 @@ struct DropUnitDimsFromTransposeOp final
     auto dropDimsShapeCast = rewriter.create<vector::ShapeCastOp>(
         loc, sourceTypeWithoutUnitDims, op.getVector());
     // Create the new transpose.
-    auto tranposeWithoutUnitDims =
+    auto transposeWithoutUnitDims =
         rewriter.create<vector::TransposeOp>(loc, dropDimsShapeCast, newPerm);
     // Restore the unit dims via shape cast.
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
-        op, op.getResultVectorType(), tranposeWithoutUnitDims);
+        op, op.getResultVectorType(), transposeWithoutUnitDims);
 
     return success();
   }

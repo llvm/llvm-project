@@ -506,6 +506,17 @@ feature_test_macros = [
             "libcxx_guard": "_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY",
         },
         {
+            "name": "__cpp_lib_flat_map",
+            "values": {"c++23": 202207},
+            "headers": ["flat_map"],
+        },
+        {
+            "name": "__cpp_lib_flat_set",
+            "values": {"c++23": 202207},
+            "headers": ["flat_set"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_format",
             "values": {
                 "c++20": 202110,
