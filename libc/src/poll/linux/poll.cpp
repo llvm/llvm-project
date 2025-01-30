@@ -33,8 +33,8 @@ LLVM_LIBC_FUNCTION(int, poll, (struct pollfd * fds, nfds_t nfds, int timeout)) {
   } else {
     tsp = nullptr;
   }
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_ppoll, fds, nfds, tsp,
-                                              nullptr, 0);
+  int ret =
+      LIBC_NAMESPACE::syscall_impl<int>(SYS_ppoll, fds, nfds, tsp, nullptr, 0);
 #else
 #error "SYS_ppoll_time64?"
 #endif
