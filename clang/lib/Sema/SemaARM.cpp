@@ -636,7 +636,8 @@ static ArmSMEState getSMEState(unsigned BuiltinID) {
 
 bool SemaARM::CheckSMEBuiltinFunctionCall(unsigned BuiltinID,
                                           CallExpr *TheCall) {
-  if (const FunctionDecl *FD = SemaRef.getCurFunctionDecl()) {
+  if (const FunctionDecl *FD =
+          SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)) {
     std::optional<ArmStreamingType> BuiltinType;
 
     switch (BuiltinID) {
@@ -676,7 +677,8 @@ bool SemaARM::CheckSMEBuiltinFunctionCall(unsigned BuiltinID,
 
 bool SemaARM::CheckSVEBuiltinFunctionCall(unsigned BuiltinID,
                                           CallExpr *TheCall) {
-  if (const FunctionDecl *FD = SemaRef.getCurFunctionDecl()) {
+  if (const FunctionDecl *FD =
+          SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)) {
     std::optional<ArmStreamingType> BuiltinType;
 
     switch (BuiltinID) {
@@ -705,7 +707,8 @@ bool SemaARM::CheckSVEBuiltinFunctionCall(unsigned BuiltinID,
 bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
                                            unsigned BuiltinID,
                                            CallExpr *TheCall) {
-  if (const FunctionDecl *FD = SemaRef.getCurFunctionDecl()) {
+  if (const FunctionDecl *FD =
+          SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)) {
 
     switch (BuiltinID) {
     default:
