@@ -524,21 +524,22 @@ define amdgpu_kernel void @copy_flat_divergent(ptr nocapture %d, ptr nocapture r
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, s7, 0, s1
 ; GFX12-NEXT:    v_add_co_u32 v0, s1, s4, v0
 ; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, 0xb0, v2
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, s5, 0, s1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX12-NEXT:  .LBB4_2: ; %for.body
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    flat_load_b128 v[4:7], v[2:3] offset:-176
 ; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 16
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_i32 s0, s0, -1
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    flat_store_b128 v[0:1], v[4:7]
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 16
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB4_2
 ; GFX12-NEXT:  .LBB4_3: ; %for.end
@@ -561,21 +562,22 @@ define amdgpu_kernel void @copy_flat_divergent(ptr nocapture %d, ptr nocapture r
 ; GFX12-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v3, null, s7, 0, s1
 ; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v0, s1, s4, v0
 ; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v2, vcc_lo, 0xb0, v2
+; GFX12-SPREFETCH-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v1, null, s5, 0, s1
-; GFX12-SPREFETCH-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX12-SPREFETCH-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX12-SPREFETCH-NEXT:  .LBB4_2: ; %for.body
 ; GFX12-SPREFETCH-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-SPREFETCH-NEXT:    flat_load_b128 v[4:7], v[2:3] offset:-176
 ; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 16
+; GFX12-SPREFETCH-NEXT:    s_wait_alu 0xfffd
 ; GFX12-SPREFETCH-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
-; GFX12-SPREFETCH-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SPREFETCH-NEXT:    s_add_co_i32 s0, s0, -1
 ; GFX12-SPREFETCH-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SPREFETCH-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX12-SPREFETCH-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SPREFETCH-NEXT:    flat_store_b128 v[0:1], v[4:7]
 ; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 16
+; GFX12-SPREFETCH-NEXT:    s_wait_alu 0xfffd
 ; GFX12-SPREFETCH-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX12-SPREFETCH-NEXT:    s_cbranch_scc1 .LBB4_2
 ; GFX12-SPREFETCH-NEXT:  .LBB4_3: ; %for.end
@@ -599,8 +601,8 @@ define amdgpu_kernel void @copy_flat_divergent(ptr nocapture %d, ptr nocapture r
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v3, null, s7, 0, s1
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_u32 v0, s1, s4, v0
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_u32 v2, vcc_lo, 0xb0, v2
+; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu 0xf1ff
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v1, null, s5, 0, s1
-; GFX12ES2-SPREFETCH-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX12ES2-SPREFETCH-NEXT:  .LBB4_2: ; %for.body
 ; GFX12ES2-SPREFETCH-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -608,8 +610,8 @@ define amdgpu_kernel void @copy_flat_divergent(ptr nocapture %d, ptr nocapture r
 ; GFX12ES2-SPREFETCH-NEXT:    flat_load_b128 v[4:7], v[2:3] offset:-176
 ; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu 0xffe3
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 16
+; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu 0xfffd
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
-; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu 0xfffe
 ; GFX12ES2-SPREFETCH-NEXT:    s_add_co_i32 s0, s0, -1
 ; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu 0xfffe
 ; GFX12ES2-SPREFETCH-NEXT:    s_cmp_lg_u32 s0, 0
@@ -617,6 +619,7 @@ define amdgpu_kernel void @copy_flat_divergent(ptr nocapture %d, ptr nocapture r
 ; GFX12ES2-SPREFETCH-NEXT:    flat_store_b128 v[0:1], v[4:7]
 ; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu 0xffe3
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 16
+; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu 0xfffd
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX12ES2-SPREFETCH-NEXT:    s_cbranch_scc1 .LBB4_2
 ; GFX12ES2-SPREFETCH-NEXT:  .LBB4_3: ; %for.end
@@ -694,21 +697,22 @@ define amdgpu_kernel void @copy_global_divergent(ptr addrspace(1) nocapture %d, 
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, s7, 0, s1
 ; GFX12-NEXT:    v_add_co_u32 v0, s1, s4, v0
 ; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, 0xb0, v2
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, s5, 0, s1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX12-NEXT:  .LBB5_2: ; %for.body
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    global_load_b128 v[4:7], v[2:3], off offset:-176
 ; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 16
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_co_i32 s0, s0, -1
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b128 v[0:1], v[4:7], off
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 16
+; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB5_2
 ; GFX12-NEXT:  .LBB5_3: ; %for.end
@@ -731,21 +735,22 @@ define amdgpu_kernel void @copy_global_divergent(ptr addrspace(1) nocapture %d, 
 ; GFX12-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v3, null, s7, 0, s1
 ; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v0, s1, s4, v0
 ; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v2, vcc_lo, 0xb0, v2
+; GFX12-SPREFETCH-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v1, null, s5, 0, s1
-; GFX12-SPREFETCH-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX12-SPREFETCH-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX12-SPREFETCH-NEXT:  .LBB5_2: ; %for.body
 ; GFX12-SPREFETCH-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-SPREFETCH-NEXT:    global_load_b128 v[4:7], v[2:3], off offset:-176
 ; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 16
+; GFX12-SPREFETCH-NEXT:    s_wait_alu 0xfffd
 ; GFX12-SPREFETCH-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
-; GFX12-SPREFETCH-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SPREFETCH-NEXT:    s_add_co_i32 s0, s0, -1
 ; GFX12-SPREFETCH-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SPREFETCH-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX12-SPREFETCH-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SPREFETCH-NEXT:    global_store_b128 v[0:1], v[4:7], off
 ; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 16
+; GFX12-SPREFETCH-NEXT:    s_wait_alu 0xfffd
 ; GFX12-SPREFETCH-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX12-SPREFETCH-NEXT:    s_cbranch_scc1 .LBB5_2
 ; GFX12-SPREFETCH-NEXT:  .LBB5_3: ; %for.end
@@ -769,8 +774,8 @@ define amdgpu_kernel void @copy_global_divergent(ptr addrspace(1) nocapture %d, 
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v3, null, s7, 0, s1
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_u32 v0, s1, s4, v0
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_u32 v2, vcc_lo, 0xb0, v2
+; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu 0xf1ff
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v1, null, s5, 0, s1
-; GFX12ES2-SPREFETCH-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX12ES2-SPREFETCH-NEXT:  .LBB5_2: ; %for.body
 ; GFX12ES2-SPREFETCH-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -778,8 +783,8 @@ define amdgpu_kernel void @copy_global_divergent(ptr addrspace(1) nocapture %d, 
 ; GFX12ES2-SPREFETCH-NEXT:    global_load_b128 v[4:7], v[2:3], off offset:-176
 ; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu 0xffe3
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 16
+; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu 0xfffd
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
-; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu 0xfffe
 ; GFX12ES2-SPREFETCH-NEXT:    s_add_co_i32 s0, s0, -1
 ; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu 0xfffe
 ; GFX12ES2-SPREFETCH-NEXT:    s_cmp_lg_u32 s0, 0
@@ -787,6 +792,7 @@ define amdgpu_kernel void @copy_global_divergent(ptr addrspace(1) nocapture %d, 
 ; GFX12ES2-SPREFETCH-NEXT:    global_store_b128 v[0:1], v[4:7], off
 ; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu 0xffe3
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 16
+; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu 0xfffd
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX12ES2-SPREFETCH-NEXT:    s_cbranch_scc1 .LBB5_2
 ; GFX12ES2-SPREFETCH-NEXT:  .LBB5_3: ; %for.end

@@ -34,6 +34,8 @@ latest release, please see the `Clang Web Site <https://clang.llvm.org>`_ or the
 Potentially Breaking Changes
 ============================
 
+- The Objective-C ARC migrator (ARCMigrate) has been removed.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 

@@ -269,6 +269,7 @@ define amdgpu_ps i64 @test_umin_i64_s(i64 inreg %a, i64 inreg %b) {
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-NEXT:    s_wait_alu 0xf1ff
 ; GFX1250-NEXT:    ; return to shader part epilog
 ;
 ; GFX13-LABEL: test_umin_i64_s:
@@ -293,6 +294,7 @@ define amdgpu_ps i64 @test_umax_i64_s(i64 inreg %a, i64 inreg %b) {
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-NEXT:    s_wait_alu 0xf1ff
 ; GFX1250-NEXT:    ; return to shader part epilog
 ;
 ; GFX13-LABEL: test_umax_i64_s:
@@ -317,6 +319,7 @@ define amdgpu_ps i64 @test_smin_i64_s(i64 inreg %a, i64 inreg %b) {
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-NEXT:    s_wait_alu 0xf1ff
 ; GFX1250-NEXT:    ; return to shader part epilog
 ;
 ; GFX13-LABEL: test_smin_i64_s:
@@ -341,6 +344,7 @@ define amdgpu_ps i64 @test_smax_i64_s(i64 inreg %a, i64 inreg %b) {
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-NEXT:    s_wait_alu 0xf1ff
 ; GFX1250-NEXT:    ; return to shader part epilog
 ;
 ; GFX13-LABEL: test_smax_i64_s:

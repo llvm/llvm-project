@@ -48,6 +48,7 @@ define amdgpu_ps float @flat_load_b32_idxprom_wrong_stride(ptr align 4 inreg %p,
 ; GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v3, v1, vcc_lo
 ; GISEL-NEXT:    flat_load_b32 v0, v[0:1]
 ; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-NEXT:    s_wait_alu 0xfffd
 ; GISEL-NEXT:    ; return to shader part epilog
 entry:
   %idxprom = sext i32 %idx to i64
@@ -417,6 +418,7 @@ define amdgpu_ps <2 x float> @flat_atomicrmw_b64_rtn_idxprom(ptr align 8 inreg %
 ; GISEL-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[4:5]
 ; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GISEL-NEXT:    v_subrev_nc_u32_e32 v0, src_flat_scratch_base_lo, v4
+; GISEL-NEXT:    s_wait_alu 0xfffd
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-NEXT:    v_cndmask_b32_e32 v4, -1, v0, vcc_lo
 ; GISEL-NEXT:    scratch_load_b64 v[0:1], v4, off
