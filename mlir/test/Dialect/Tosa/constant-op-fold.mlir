@@ -511,7 +511,10 @@ func.func @reshape_splat() -> tensor<6x5x4xi32> {
 func.func @slice_splat() -> tensor<1x1x1xi32> {
   // CHECK: %[[SLICE:.+]] = "tosa.const"() <{value = dense<42> : tensor<1x1x1xi32>}
   %splat = "tosa.const"() {value = dense<42> : tensor<4x5x6xi32>} : () -> tensor<4x5x6xi32>
-  %slice = tosa.slice %splat { size = array<i64: 1, 1, 1>, start = array<i64: 1, 2, 3> } : (tensor<4x5x6xi32>) -> tensor<1x1x1xi32>
+  %start = tosa.const_shape {value = dense<[1, 2, 3]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %size = tosa.const_shape {value = dense<[1, 1, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %slice= tosa.slice %splat, %start, %size : (tensor<4x5x6xi32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<1x1x1xi32>
+
   // CHECK: return %[[SLICE]]
   return %slice : tensor<1x1x1xi32>
 }
@@ -522,7 +525,9 @@ func.func @slice_splat() -> tensor<1x1x1xi32> {
 func.func @slice_singleton() -> tensor<1x1xi32> {
   %splat = "tosa.const"() {value = dense<[[0, 1, 2], [3, 4, 5], [6, 7 ,8]]> : tensor<3x3xi32>} : () -> tensor<3x3xi32>
   // CHECK: %[[SLICE:.+]] = "tosa.const"() <{value = dense<4> : tensor<1x1xi32>}
-  %slice = tosa.slice %splat { size = array<i64: 1, 1>, start = array<i64: 1, 1> } : (tensor<3x3xi32>) -> tensor<1x1xi32>
+  %start = tosa.const_shape {value = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %size = tosa.const_shape {value = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %slice= tosa.slice %splat, %start, %size : (tensor<3x3xi32>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x1xi32>
   // CHECK: return %[[SLICE]]
   return %slice : tensor<1x1xi32>
 }
