@@ -86,7 +86,6 @@ define void @test_remat_s_getpc_b64() {
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call i64 @llvm.amdgcn.s.getpc()

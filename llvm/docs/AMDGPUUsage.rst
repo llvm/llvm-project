@@ -1710,6 +1710,20 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                              as hidden. Hidden arguments are managed by the compiler and are not part of
                                              the explicit arguments supplied by the user.
 
+     "amdgpu-sgpr-hazard-wait"               Disabled SGPR hazard wait insertion if set to 0.
+                                             Exists for testing performance impact of SGPR hazard waits only.
+
+     "amdgpu-sgpr-hazard-boundary-cull"      Enable insertion of SGPR hazard cull sequences at function call boundaries.
+                                             Cull sequence reduces future hazard waits, but has a performance cost.
+
+     "amdgpu-sgpr-hazard-mem-wait-cull"      Enable insertion of SGPR hazard cull sequences before memory waits.
+                                             Cull sequence reduces future hazard waits, but has a performance cost.
+                                             Attempt to amortize cost by overlapping with memory accesses.
+
+     "amdgpu-sgpr-hazard-mem-wait-cull-threshold"
+                                             Sets the number of active SGPR hazards that must be present before
+                                             inserting a cull sequence at a memory wait.
+
      ======================================= ==========================================================
 
 Calling Conventions
