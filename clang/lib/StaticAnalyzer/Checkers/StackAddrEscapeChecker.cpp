@@ -261,8 +261,6 @@ public:
   bool VisitSymbol(SymbolRef sym) override { return true; }
 
   bool VisitMemRegion(const MemRegion *MR) override {
-    // llvm::dbgs() << "Visiting region: " << MR << '\n';
-
     const StackSpaceRegion *SSR = dyn_cast<StackSpaceRegion>(MR->getMemorySpace());
     if (SSR && SSR->getStackFrame() == StackFrameContext)
       EscapingStackRegions.push_back(MR);
@@ -270,7 +268,7 @@ public:
   }
 };
 
-static void FindEscapingStackRegions(CheckerContext &C, SmallVector<const MemRegion *> &EscapedRegionsStorage, SVal SVal) {
+static void FindEscapingStackRegions(SmallVector<const MemRegion *> &EscapedRegionsStorage, CheckerContext &C, SVal SVal) {
   FindStackRegionsSymbolVisitor Finder(C, EscapedRegionsStorage);
   ScanReachableSymbols Scanner(C.getState(), Finder);
   Scanner.scan(SVal);
@@ -326,7 +324,7 @@ void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS, CheckerContext &
 
   SmallVector<const MemRegion *> EscapedRegions;
 
-  FindEscapingStackRegions(C, EscapedRegions, V);
+  FindEscapingStackRegions(EscapedRegions, C, V);
   FilterReturnExpressionLeaks(EscapedRegions, C, RetE, V);
 
   for (const MemRegion *ER : EscapedRegions) {
@@ -463,9 +461,8 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
 
       // Case 2: The referrer stack space is a parent of the referred stack space, e.g., 
       // in case of leaking a local in a lambda to the outer scope
-      if (ReferrerStackSpace->getStackFrame()->isParentOf(PoppedFrame)) {
+      if (ReferrerStackSpace->getStackFrame()->isParentOf(PoppedFrame))
         return true;
-      }
 
       // Case 3: The referrer is a memregion of a stack argument, e.g., an out
       // argument, this is a top-level function, and referred is this top level
@@ -503,6 +500,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
 
     bool HandleBinding(StoreManager &SMgr, Store S, const MemRegion *Referrer,
                        SVal Val) override {
+                        llvm::dbgs() << "HandleBinding: (" << Referrer << ", " << Val << ")\n";
       recordInInvalidatedRegions(Referrer);
 
       const MemSpaceRegion *ReferrerMS = getStackOrGlobalSpaceRegion(Referrer);
@@ -510,7 +508,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
         return true;
 
       SmallVector<const MemRegion *> PotentialEscapingAddrs;
-      FindEscapingStackRegions(Ctx, PotentialEscapingAddrs, Val);
+      FindEscapingStackRegions(PotentialEscapingAddrs, Ctx, Val);
 
       for (const MemRegion *Escapee : PotentialEscapingAddrs) {
         if (isDanglingStackVariable(Referrer, ReferrerMS, Escapee))
