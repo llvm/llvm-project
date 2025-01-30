@@ -37,6 +37,7 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/SetTheory.h"
+#include "llvm/TableGen/StringToOffsetTable.h"
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -2061,40 +2062,51 @@ void NeonEmitter::createIntrinsic(const Record *R,
   CurrentRecord = nullptr;
 }
 
-/// genBuiltinsDef: Generate the BuiltinsARM.def and  BuiltinsAArch64.def
-/// declaration of builtins, checking for unique builtin declarations.
+/// genBuiltinsDef: Generate the builtin infos, checking for unique builtin
+/// declarations.
 void NeonEmitter::genBuiltinsDef(raw_ostream &OS,
                                  SmallVectorImpl<Intrinsic *> &Defs) {
-  OS << "#ifdef GET_NEON_BUILTINS\n";
+  // We only want to emit a builtin once, and in order of its name.
+  std::map<std::string, Intrinsic *> Builtins;
 
-  // We only want to emit a builtin once, and we want to emit them in
-  // alphabetical order, so use a std::set.
-  std::set<std::pair<std::string, std::string>> Builtins;
+  llvm::StringToOffsetTable Table;
+  Table.GetOrAddStringOffset("");
+  Table.GetOrAddStringOffset("n");
 
   for (auto *Def : Defs) {
     if (Def->hasBody())
       continue;
 
-    std::string S = "__builtin_neon_" + Def->getMangledName() + ", \"";
-    S += Def->getBuiltinTypeStr();
-    S += "\", \"n\"";
-
-    Builtins.emplace(S, Def->getTargetGuard());
+    if (Builtins.insert({Def->getMangledName(), Def}).second) {
+      Table.GetOrAddStringOffset(Def->getMangledName());
+      Table.GetOrAddStringOffset(Def->getBuiltinTypeStr());
+      Table.GetOrAddStringOffset(Def->getTargetGuard());
+    }
   }
 
-  for (auto &S : Builtins) {
-    if (S.second == "")
-      OS << "BUILTIN(";
-    else
-      OS << "TARGET_BUILTIN(";
-    OS << S.first;
-    if (S.second == "")
-      OS << ")\n";
-    else
-      OS << ", \"" << S.second << "\")\n";
+  OS << "#ifdef GET_NEON_BUILTIN_ENUMERATORS\n";
+  for (const auto &[Name, Def] : Builtins) {
+    OS << "  BI__builtin_neon_" << Name << ",\n";
   }
+  OS << "#endif // GET_NEON_BUILTIN_ENUMERATORS\n\n";
 
-  OS << "#endif\n\n";
+  OS << "#ifdef GET_NEON_BUILTIN_STR_TABLE\n";
+  Table.EmitStringTableDef(OS, "BuiltinStrings");
+  OS << "#endif // GET_NEON_BUILTIN_STR_TABLE\n\n";
+
+  OS << "#ifdef GET_NEON_BUILTIN_INFOS\n";
+  for (const auto &[Name, Def] : Builtins) {
+    OS << "    Builtin::Info{Builtin::Info::StrOffsets{"
+       << Table.GetStringOffset(Def->getMangledName()) << " /* "
+       << Def->getMangledName() << " */, ";
+    OS << Table.GetStringOffset(Def->getBuiltinTypeStr()) << " /* "
+       << Def->getBuiltinTypeStr() << " */, ";
+    OS << Table.GetStringOffset("n") << " /* n */, ";
+    OS << Table.GetStringOffset(Def->getTargetGuard()) << " /* "
+       << Def->getTargetGuard() << " */}, ";
+    OS << "HeaderDesc::NO_HEADER, ALL_LANGUAGES},\n";
+  }
+  OS << "#endif // GET_NEON_BUILTIN_INFOS\n\n";
 }
 
 void NeonEmitter::genStreamingSVECompatibleList(

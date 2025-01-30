@@ -264,8 +264,10 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
                                                      unsigned BuiltinID) {
   assert(Context.BuiltinInfo.isLibFunction(BuiltinID));
 
-  // Get the name, skip over the __builtin_ prefix (if necessary).
-  StringRef Name;
+  // Get the name, skip over the __builtin_ prefix (if necessary). We may have
+  // to build this up so provide a small stack buffer to handle the vast
+  // majority of names.
+  llvm::SmallString<64> Name;
   GlobalDecl D(FD);
 
   // TODO: This list should be expanded or refactored after all GCC-compatible
@@ -6454,7 +6456,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     LargestVectorWidth = std::max(LargestVectorWidth, VectorWidth);
 
   // See if we have a target specific intrinsic.
-  StringRef Name = getContext().BuiltinInfo.getName(BuiltinID);
+  std::string Name = getContext().BuiltinInfo.getName(BuiltinID);
   Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic;
   StringRef Prefix =
       llvm::Triple::getArchTypePrefix(getTarget().getTriple().getArch());
@@ -21449,7 +21451,7 @@ static Value *MakeHalfType(unsigned IntrinsicID, unsigned BuiltinID,
   auto &C = CGF.CGM.getContext();
   if (!(C.getLangOpts().NativeHalfType ||
         !C.getTargetInfo().useFP16ConversionIntrinsics())) {
-    CGF.CGM.Error(E->getExprLoc(), C.BuiltinInfo.getName(BuiltinID).str() +
+    CGF.CGM.Error(E->getExprLoc(), C.BuiltinInfo.getQuotedName(BuiltinID) +
                                        " requires native half type support.");
     return nullptr;
   }
