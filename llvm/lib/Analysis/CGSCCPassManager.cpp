@@ -14,6 +14,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Analysis/DebugInfoCache.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/InstIterator.h"
@@ -138,6 +139,11 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
 
   // Get the call graph for this module.
   LazyCallGraph &CG = AM.getResult<LazyCallGraphAnalysis>(M);
+
+  // Prime DebugInfoCache.
+  // TODO: Currently, the only user is CoroSplitPass. Consider running
+  // conditionally.
+  AM.getResult<DebugInfoCacheAnalysis>(M);
 
   // Get Function analysis manager from its proxy.
   FunctionAnalysisManager &FAM =
@@ -350,6 +356,7 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
   // analysis proxies by handling them above and in any nested pass managers.
   PA.preserveSet<AllAnalysesOn<LazyCallGraph::SCC>>();
   PA.preserve<LazyCallGraphAnalysis>();
+  PA.preserve<DebugInfoCacheAnalysis>();
   PA.preserve<CGSCCAnalysisManagerModuleProxy>();
   PA.preserve<FunctionAnalysisManagerModuleProxy>();
   return PA;

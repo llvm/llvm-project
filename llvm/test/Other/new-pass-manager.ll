@@ -23,6 +23,7 @@
 ; CHECK-CGSCC-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*(FunctionAnalysisManager|AnalysisManager<.*Function.*>).*}},{{.*}}Module>
 ; CHECK-CGSCC-PASS-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-CGSCC-PASS-NEXT: Running analysis: TargetLibraryAnalysis
+; CHECK-CGSCC-PASS-NEXT: Running analysis: DebugInfoCacheAnalysis
 ; CHECK-CGSCC-PASS-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy
 ; CHECK-CGSCC-PASS-NEXT: Running analysis: OuterAnalysisManagerProxy<{{.*}}LazyCallGraph::SCC{{.*}}>
 ; CHECK-CGSCC-PASS-NEXT: Running pass: NoOpCGSCCPass

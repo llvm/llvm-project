@@ -62,6 +62,7 @@
 ; CHECK-O-NEXT: Running analysis: InlineAdvisorAnalysis
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O-NEXT: Running analysis: LazyCallGraphAnalysis
+; CHECK-O-NEXT: Running analysis: DebugInfoCacheAnalysis
 ; CHECK-O-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy on (foo)
 ; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O-NEXT: Running pass: InlinerPass on (foo)
@@ -81,6 +82,7 @@
 ; CHECK-O-NEXT: Invalidating analysis: InnerAnalysisManagerProxy
 ; CHECK-O-NEXT: Invalidating analysis: LazyCallGraphAnalysis on
 ; CHECK-O-NEXT: Invalidating analysis: InnerAnalysisManagerProxy
+; CHECK-O-NEXT: Invalidating analysis: DebugInfoCacheAnalysis
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}ProfileSummaryAnalysis
 ; CHECK-O-NEXT: Running pass: PGOIndirectCallPromotion on
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
@@ -97,6 +99,7 @@
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis on foo
+; CHECK-O-NEXT: Running analysis: DebugInfoCacheAnalysis
 ; CHECK-O-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy
 ; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy<{{.*}}LazyCallGraph::SCC{{.*}}>
 ; CHECK-O-NEXT: Running pass: DevirtSCCRepeatedPass
