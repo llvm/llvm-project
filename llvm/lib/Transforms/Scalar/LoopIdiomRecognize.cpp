@@ -20,8 +20,7 @@
 //
 // TODO List:
 //
-// Future loop memory idioms to recognize:
-//   memcmp, strlen, etc.
+// Future loop memory idioms to recognize: memcmp, etc.
 //
 // This could recognize common matrix multiplies and dot product idioms and
 // replace them with calls to BLAS (if linked in??).
@@ -33,6 +32,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -97,6 +97,7 @@ using namespace llvm;
 STATISTIC(NumMemSet, "Number of memset's formed from loop stores");
 STATISTIC(NumMemCpy, "Number of memcpy's formed from loop load+stores");
 STATISTIC(NumMemMove, "Number of memmove's formed from loop load+stores");
+STATISTIC(NumStrLen, "Number of strlen's formed from loop loads");
 STATISTIC(
     NumShiftUntilBitTest,
     "Number of uncountable loops recognized as 'shift until bitttest' idiom");
@@ -124,6 +125,22 @@ static cl::opt<bool, true>
                       cl::desc("Proceed with loop idiom recognize pass, but do "
                                "not convert loop(s) to memcpy."),
                       cl::location(DisableLIRP::Memcpy), cl::init(false),
+                      cl::ReallyHidden);
+
+bool DisableLIRP::Strlen;
+static cl::opt<bool, true>
+    DisableLIRPStrlen("disable-" DEBUG_TYPE "-strlen",
+                      cl::desc("Proceed with loop idiom recognize pass, but do "
+                               "not convert loop(s) to strlen."),
+                      cl::location(DisableLIRP::Strlen), cl::init(false),
+                      cl::ReallyHidden);
+
+bool DisableLIRP::Wcslen;
+static cl::opt<bool, true>
+    DisableLIRPWcslen("disable-" DEBUG_TYPE "-wcslen",
+                      cl::desc("Proceed with loop idiom recognize pass, but do "
+                               "not convert loop(s) to wcslen."),
+                      cl::location(DisableLIRP::Wcslen), cl::init(false),
                       cl::ReallyHidden);
 
 static cl::opt<bool> UseLIRCodeSizeHeurs(
@@ -235,7 +252,7 @@ private:
   bool insertFFSIfProfitable(Intrinsic::ID IntrinID, Value *InitX,
                              Instruction *DefX, PHINode *CntPhi,
                              Instruction *CntInst);
-  bool recognizeAndInsertFFS();  /// Find First Set: ctlz or cttz
+  bool recognizeAndInsertFFS(); /// Find First Set: ctlz or cttz
   bool recognizeShiftUntilLessThan();
   void transformLoopToCountable(Intrinsic::ID IntrinID, BasicBlock *PreCondBB,
                                 Instruction *CntInst, PHINode *CntPhi,
@@ -246,6 +263,7 @@ private:
 
   bool recognizeShiftUntilBitTest();
   bool recognizeShiftUntilZero();
+  bool recognizeAndInsertStrLen();
 
   /// @}
 };
@@ -602,7 +620,8 @@ bool LoopIdiomRecognize::processLoopStores(SmallVectorImpl<StoreInst *> &SL,
     const SCEVAddRecExpr *FirstStoreEv =
         cast<SCEVAddRecExpr>(SE->getSCEV(FirstStorePtr));
     APInt FirstStride = getStoreStride(FirstStoreEv);
-    unsigned FirstStoreSize = DL->getTypeStoreSize(SL[i]->getValueOperand()->getType());
+    unsigned FirstStoreSize =
+        DL->getTypeStoreSize(SL[i]->getValueOperand()->getType());
 
     // See if we can optimize just this store in isolation.
     if (FirstStride == FirstStoreSize || -FirstStride == FirstStoreSize) {
@@ -1093,13 +1112,14 @@ bool LoopIdiomRecognize::processLoopStridedStore(
         BasePtr, SplatValue, NumBytes, MaybeAlign(StoreAlignment),
         /*isVolatile=*/false, AATags.TBAA, AATags.Scope, AATags.NoAlias);
   } else {
-    assert (isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16));
+    assert(isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16));
     // Everything is emitted in default address space
     Type *Int8PtrTy = DestInt8PtrTy;
 
     StringRef FuncName = "memset_pattern16";
-    FunctionCallee MSP = getOrInsertLibFunc(M, *TLI, LibFunc_memset_pattern16,
-                            Builder.getVoidTy(), Int8PtrTy, Int8PtrTy, IntIdxTy);
+    FunctionCallee MSP =
+        getOrInsertLibFunc(M, *TLI, LibFunc_memset_pattern16,
+                           Builder.getVoidTy(), Int8PtrTy, Int8PtrTy, IntIdxTy);
     inferNonMandatoryLibFuncAttrs(M, FuncName, *TLI);
 
     // Otherwise we should form a memset_pattern16.  PatternValue is known to be
@@ -1141,8 +1161,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     R << "Transformed loop-strided store in "
       << ore::NV("Function", TheStore->getFunction())
       << " function into a call to "
-      << ore::NV("NewFunction", NewCall->getCalledFunction())
-      << "() intrinsic";
+      << ore::NV("NewFunction", NewCall->getCalledFunction()) << "() intrinsic";
     if (!Stores.empty())
       R << ore::setExtraArgs();
     for (auto *I : Stores) {
@@ -1448,8 +1467,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
            << ore::NV("NewFunction", NewCall->getCalledFunction())
            << "() intrinsic from " << ore::NV("Inst", InstRemark)
            << " instruction in " << ore::NV("Function", TheStore->getFunction())
-           << " function"
-           << ore::setExtraArgs()
+           << " function" << ore::setExtraArgs()
            << ore::NV("FromBlock", TheStore->getParent()->getName())
            << ore::NV("ToBlock", Preheader->getName());
   });
@@ -1494,7 +1512,7 @@ bool LoopIdiomRecognize::runOnNoncountableLoop() {
 
   return recognizePopcount() || recognizeAndInsertFFS() ||
          recognizeShiftUntilBitTest() || recognizeShiftUntilZero() ||
-         recognizeShiftUntilLessThan();
+         recognizeShiftUntilLessThan() || recognizeAndInsertStrLen();
 }
 
 /// Check if the given conditional branch is based on the comparison between
@@ -1512,9 +1530,11 @@ static Value *matchCondition(BranchInst *BI, BasicBlock *LoopEntry,
   if (!Cond)
     return nullptr;
 
-  ConstantInt *CmpZero = dyn_cast<ConstantInt>(Cond->getOperand(1));
-  if (!CmpZero || !CmpZero->isZero())
-    return nullptr;
+  if (!isa<ConstantPointerNull>(Cond->getOperand(1))) {
+    ConstantInt *CmpZero = dyn_cast<ConstantInt>(Cond->getOperand(1));
+    if (!CmpZero || !CmpZero->isZero())
+      return nullptr;
+  }
 
   BasicBlock *TrueSucc = BI->getSuccessor(0);
   BasicBlock *FalseSucc = BI->getSuccessor(1);
@@ -1527,6 +1547,261 @@ static Value *matchCondition(BranchInst *BI, BasicBlock *LoopEntry,
     return Cond->getOperand(0);
 
   return nullptr;
+}
+
+struct StrlenIdiom {
+  unsigned IdiomSize;
+  ConstantInt *StepSize;
+  const SCEV *LoadBaseEv;
+  Type *LoadType;
+};
+
+/// Trying to detect strlen idiom that increments a char pointer
+/// with a single loop body bb.
+static bool detectStrLenIdiom(const Loop *CurLoop, ScalarEvolution *SE,
+                              const TargetLibraryInfo *TLI,
+                              StrlenIdiom &Idiom) {
+  /*
+  outs() << "current loop:\n";
+  CurLoop->print(outs());
+  outs() << "\n";
+  */
+
+  // Give up if the loop has multiple blocks, multiple backedges, or
+  // multiple exit blocks
+  if (CurLoop->getNumBackEdges() != 1 || CurLoop->getNumBlocks() != 1 ||
+      !CurLoop->getUniqueExitBlock())
+    return false;
+
+  // It should have a preheader and a branch instruction.
+  BasicBlock *Preheader = CurLoop->getLoopPreheader();
+  if (!Preheader)
+    return false;
+
+  BranchInst *EntryBI = dyn_cast<BranchInst>(Preheader->getTerminator());
+  if (!EntryBI)
+    return false;
+
+  // The loop exit must be conditioned on an icmp with 0 the null terminator.
+  // The icmp operand has to be a load on some SSA reg that increments
+  // by 1 in the loop.
+  BasicBlock *LoopBody = *CurLoop->block_begin();
+
+  // Skip if the body is too big as it most likely is not a strlen idiom.
+  if (!LoopBody || LoopBody->size() >= 15)
+    return false;
+
+  BranchInst *LoopTerm = dyn_cast<BranchInst>(LoopBody->getTerminator());
+  Value *LoopCond = matchCondition(LoopTerm, LoopBody);
+  if (!LoopCond)
+    return false;
+
+  auto *LoopLoad = dyn_cast<LoadInst>(LoopCond);
+  if (!LoopLoad || LoopLoad->getPointerAddressSpace() != 0)
+    return false;
+
+  Type *OperandType = LoopLoad->getType();
+  if (!OperandType || !OperandType->isIntegerTy())
+    return false;
+
+  // See if the pointer expression is an AddRec with constant step a of form
+  // ({n,+,a}) where a is the width of the char type.
+  auto *IncPtr = LoopLoad->getPointerOperand();
+  const SCEVAddRecExpr *LoadEv = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(IncPtr));
+  if (!LoadEv || LoadEv->getLoop() != CurLoop || !LoadEv->isAffine())
+    return false;
+
+  /*
+  outs() << "pointer load ev: ";
+  LoadEv->print(outs());
+  outs() << "\n";
+  */
+
+  const SCEVConstant *Step =
+      dyn_cast<SCEVConstant>(LoadEv->getStepRecurrence(*SE));
+  if (!Step)
+    return false;
+
+  unsigned StepSize = 0;
+  ConstantInt *StepSizeCI = dyn_cast<ConstantInt>(Step->getValue());
+  if (!StepSizeCI)
+    return false;
+  StepSize = StepSizeCI->getZExtValue();
+
+  // Verify that StepSize is consistent with platform char width.
+  unsigned OpWidth = OperandType->getIntegerBitWidth();
+  unsigned WcharSize = TLI->getWCharSize(*LoopLoad->getModule());
+  if (OpWidth != StepSize * 8)
+    return false;
+  if (OpWidth != 8 && OpWidth != 16 && OpWidth != 32)
+    return false;
+  if (OpWidth >= 16)
+    if (OpWidth != WcharSize * 8)
+      return false;
+
+  // Scan every instruction in the loop to ensure there are no side effects.
+  for (auto &I : *LoopBody)
+    if (I.mayHaveSideEffects())
+      return false;
+
+  auto *LoopExitBB = CurLoop->getExitBlock();
+  if (!LoopExitBB)
+    return false;
+
+  for (PHINode &PN : LoopExitBB->phis()) {
+    if (!SE->isSCEVable(PN.getType()))
+      return false;
+
+    const SCEV *Ev = SE->getSCEV(&PN);
+    /*
+    outs() << "loop exit block scev exprs: ";
+    PN.print(outs());
+    if (Ev)
+      Ev->print(outs());
+    outs() << "\n";
+    */
+
+    if (!Ev)
+      return false;
+
+    // Since we verified that the loop trip count will be a valid strlen idiom,
+    // we can expand all lcssa phi with {n,+,1} as (n + strlen) and use
+    // SCEVExpander materialize the loop output.
+    const SCEVAddRecExpr *AddRecEv = dyn_cast<SCEVAddRecExpr>(Ev);
+    if (!AddRecEv || !AddRecEv->isAffine())
+      return false;
+
+    // We only want RecAddExpr with recurrence step that are constant. This
+    // is good enough for all the idioms we want to recognize. Later we expand
+    // the recurrence as {base,+,a} -> (base + a * strlen) and materialize
+    if (!dyn_cast<SCEVConstant>(AddRecEv->getStepRecurrence(*SE)))
+      return false;
+  }
+
+  Idiom.LoadBaseEv = LoadEv->getStart();
+  Idiom.IdiomSize = OpWidth;
+  Idiom.StepSize = StepSizeCI;
+  Idiom.LoadType = OperandType;
+  return true;
+}
+
+/// Recognizes a strlen idiom by checking for loops that increment
+/// a char pointer and then subtract with the base pointer.
+///
+/// If detected, transforms the relevant code to a strlen function
+/// call, and returns true; otherwise, returns false.
+///
+/// The core idiom we are trying to detect is:
+/// \code
+///     start = str;
+///     do {
+///       str++;
+///     } while(*str != '\0');
+/// \endcode
+///
+/// The transformed output is similar to below c-code:
+/// \code
+///     str = start + strlen(start)
+///     len = str - start
+/// \endcode
+///
+/// Later the pointer subtraction will be folded by InstCombine
+bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
+  /*
+  const auto *First = CurLoop->block_begin();
+  if (First != CurLoop->block_end()) {
+    auto *F = (*First)->getParent();
+    outs() << "\n\n\n\n\n========== NEW LOOP ============\n";
+    F->print(outs());
+  }
+  */
+
+  // TODO: check for disable options
+  StrlenIdiom Idiom;
+  if (!detectStrLenIdiom(CurLoop, SE, TLI, Idiom))
+    return false;
+
+  // outs() << "idiom is good\n\n";
+
+  BasicBlock *Preheader = CurLoop->getLoopPreheader();
+  BasicBlock *LoopExitBB = CurLoop->getExitBlock();
+
+  IRBuilder<> Builder(Preheader->getTerminator());
+  SCEVExpander Expander(*SE, Preheader->getModule()->getDataLayout(), "scev");
+  Value *MaterialzedBase = Expander.expandCodeFor(
+      Idiom.LoadBaseEv, Idiom.LoadBaseEv->getType(), Builder.GetInsertPoint());
+
+  Value *StrLenFunc = nullptr;
+  switch (Idiom.IdiomSize) {
+  case 8:
+    if (!isLibFuncEmittable(Preheader->getModule(), TLI, LibFunc_strlen))
+      return false;
+    StrLenFunc = emitStrLen(MaterialzedBase, Builder, *DL, TLI);
+    break;
+  case 16:
+  case 32:
+    if (!isLibFuncEmittable(Preheader->getModule(), TLI, LibFunc_wcslen))
+      return false;
+    StrLenFunc = emitWcsLen(MaterialzedBase, Builder, *DL, TLI);
+  }
+  assert(StrLenFunc && "Failed to emit strlen function.");
+
+  const SCEV *StrlenEv = SE->getSCEV(StrLenFunc);
+  SmallVector<PHINode *, 4> Cleanup;
+  for (PHINode &PN : LoopExitBB->phis()) {
+    const SCEV *Ev = SE->getSCEV(&PN);
+    const SCEVAddRecExpr *AddRecEv = dyn_cast<SCEVAddRecExpr>(Ev);
+    const SCEVConstant *Step =
+        dyn_cast<SCEVConstant>(AddRecEv->getStepRecurrence(*SE));
+    const SCEV *Base = AddRecEv->getStart();
+
+    /*
+    outs() << "creating new mult scev: ";
+    Base->getType()->print(outs());
+    outs() << " ";
+    Step->getType()->print(outs());
+    outs() << " ";
+    StrlenEv->getType()->print(outs());
+    outs() << "\n";
+    */
+
+    // It is safe to truncate to base since if base is narrower than size_t
+    // the equivalent user code will have to truncate anyways.
+    const SCEV *NewEv = SE->getAddExpr(
+        Base, SE->getMulExpr(Step, SE->getTruncateOrSignExtend(
+                                       StrlenEv, Base->getType())));
+
+    /*
+    outs() << "new ev exprs: ";
+    PN.print(outs());
+    if (NewEv)
+      NewEv->print(outs());
+    outs() << "\n";
+    */
+
+    Expander.clear();
+    Value *MaterializedPHI = Expander.expandCodeFor(NewEv, NewEv->getType(),
+                                                    Builder.GetInsertPoint());
+    PN.replaceAllUsesWith(MaterializedPHI);
+    Cleanup.push_back(&PN);
+  }
+
+  // All LCSSA Loop Phi are dead, the left over loop body can be cleaned up by
+  // later passes
+  for (PHINode *PN : Cleanup) {
+    RecursivelyDeleteDeadPHINode(PN);
+  }
+  SE->forgetLoop(CurLoop);
+
+  ++NumStrLen;
+  LLVM_DEBUG(dbgs() << "  Formed strlen idiom: " << *StrLenFunc << "\n");
+  ORE.emit([&]() {
+    return OptimizationRemark(DEBUG_TYPE, "recognizeAndInsertStrLen",
+                              CurLoop->getStartLoc(), Preheader)
+           << "Transformed strlen loop idiom";
+  });
+
+  return true;
 }
 
 /// Check if the given conditional branch is based on an unsigned less-than
@@ -1736,8 +2011,7 @@ static bool detectPopcountIdiom(Loop *CurLoop, BasicBlock *PreCondBB,
     ConstantInt *Dec = dyn_cast<ConstantInt>(SubOneOp->getOperand(1));
     if (!Dec ||
         !((SubOneOp->getOpcode() == Instruction::Sub && Dec->isOne()) ||
-          (SubOneOp->getOpcode() == Instruction::Add &&
-           Dec->isMinusOne()))) {
+          (SubOneOp->getOpcode() == Instruction::Add && Dec->isMinusOne()))) {
       return false;
     }
   }
@@ -1848,8 +2122,8 @@ static bool detectShiftUntilZeroIdiom(Loop *CurLoop, const DataLayout &DL,
   // step 2: detect instructions corresponding to "x.next = x >> 1 or x << 1"
   if (!DefX || !DefX->isShift())
     return false;
-  IntrinID = DefX->getOpcode() == Instruction::Shl ? Intrinsic::cttz :
-                                                     Intrinsic::ctlz;
+  IntrinID =
+      DefX->getOpcode() == Instruction::Shl ? Intrinsic::cttz : Intrinsic::ctlz;
   ConstantInt *Shft = dyn_cast<ConstantInt>(DefX->getOperand(1));
   if (!Shft || !Shft->isOne())
     return false;
@@ -2352,9 +2626,8 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
     TcPhi->insertBefore(Body->begin());
 
     Builder.SetInsertPoint(LbCond);
-    Instruction *TcDec = cast<Instruction>(
-        Builder.CreateSub(TcPhi, ConstantInt::get(Ty, 1),
-                          "tcdec", false, true));
+    Instruction *TcDec = cast<Instruction>(Builder.CreateSub(
+        TcPhi, ConstantInt::get(Ty, 1), "tcdec", false, true));
 
     TcPhi->addIncoming(TripCnt, PreHead);
     TcPhi->addIncoming(TcDec, Body);
@@ -2984,7 +3257,8 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
   // intrinsic we'll use are not cheap. Note that we are okay with *just*
   // making the loop countable, even if nothing else changes.
   IntrinsicCostAttributes Attrs(
-      IntrID, Ty, {PoisonValue::get(Ty), /*is_zero_poison=*/Builder.getFalse()});
+      IntrID, Ty,
+      {PoisonValue::get(Ty), /*is_zero_poison=*/Builder.getFalse()});
   InstructionCost Cost = TTI->getIntrinsicInstrCost(Attrs, CostKind);
   if (Cost > TargetTransformInfo::TCC_Basic) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE
