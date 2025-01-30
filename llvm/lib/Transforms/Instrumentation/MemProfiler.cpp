@@ -1034,13 +1034,15 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
   std::map<uint64_t, std::set<const AllocationInfo *>> LocHashToAllocInfo;
   // A hash function for std::unordered_set<ArrayRef<Frame>> to work.
   struct CallStackHash {
-    size_t operator()(ArrayRef<Frame> CS) const {
-      return computeFullStackId(CS);
+    size_t operator()(const std::pair<ArrayRef<Frame>, unsigned> &CS) const {
+      auto &[CallStack, Idx] = CS;
+      return computeFullStackId(ArrayRef<Frame>(CallStack).drop_front(Idx));
     }
   };
   // For the callsites we need to record slices of the frame array (see comments
   // below where the map entries are added).
-  std::map<uint64_t, std::unordered_set<ArrayRef<Frame>, CallStackHash>>
+  std::map<uint64_t, std::unordered_set<std::pair<ArrayRef<Frame>, unsigned>,
+                                        CallStackHash>>
       LocHashToCallSites;
   for (auto &AI : MemProfRec->AllocSites) {
     NumOfMemProfAllocContextProfiles++;
@@ -1058,7 +1060,7 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
     unsigned Idx = 0;
     for (auto &StackFrame : CS) {
       uint64_t StackId = computeStackId(StackFrame);
-      LocHashToCallSites[StackId].insert(ArrayRef<Frame>(CS).drop_front(Idx++));
+      LocHashToCallSites[StackId].emplace(CS, Idx++);
       ProfileHasColumns |= StackFrame.Column;
       // Once we find this function, we can stop recording.
       if (StackFrame.Function == FuncGUID)
@@ -1201,15 +1203,22 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
       // instruction's leaf location in the callsites map and not the allocation
       // map.
       assert(CallSitesIter != LocHashToCallSites.end());
-      for (auto CallStackIdx : CallSitesIter->second) {
+      for (auto &[ProfileCallStack, Idx] : CallSitesIter->second) {
         // If we found and thus matched all frames on the call, create and
         // attach call stack metadata.
-        if (stackFrameIncludesInlinedCallStack(CallStackIdx,
+        if (stackFrameIncludesInlinedCallStack(ProfileCallStack.drop_front(Idx),
                                                InlinedCallStack)) {
           NumOfMemProfMatchedCallSites++;
           addCallsiteMetadata(I, InlinedCallStack, Ctx);
           // Only need to find one with a matching call stack and add a single
           // callsite metadata.
+
+          // Dump call site matching information upon request.
+          if (ClPrintMemProfMatchInfo) {
+            uint64_t FullStackId = computeFullStackId(ProfileCallStack);
+            errs() << "MemProf callsite " << FullStackId << " " << Idx << " "
+                   << InlinedCallStack.size() << "\n";
+          }
           break;
         }
       }
