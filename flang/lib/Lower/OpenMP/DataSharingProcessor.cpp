@@ -116,6 +116,24 @@ void DataSharingProcessor::cloneSymbol(const semantics::Symbol *sym) {
       *sym, /*skipDefaultInit=*/isFirstPrivate);
   (void)success;
   assert(success && "Privatization failed due to existing binding");
+
+  // Initialize clone from original object if it has any allocatable member.
+  auto needInitClone = [&] {
+    if (isFirstPrivate)
+      return false;
+
+    SymbolBox sb = symTable.lookupSymbol(sym);
+    assert(sb);
+    mlir::Value addr = sb.getAddr();
+    assert(addr);
+    return !fir::isPointerType(addr.getType()) &&
+           hlfir::mayHaveAllocatableComponent(addr.getType());
+  };
+
+  if (needInitClone()) {
+    Fortran::lower::initializeCloneAtRuntime(converter, *sym, symTable);
+    callsInitClone = true;
+  }
 }
 
 void DataSharingProcessor::copyFirstPrivateSymbol(
@@ -127,7 +145,7 @@ void DataSharingProcessor::copyFirstPrivateSymbol(
 void DataSharingProcessor::copyLastPrivateSymbol(
     const semantics::Symbol *sym, mlir::OpBuilder::InsertPoint *lastPrivIP) {
   if (sym->test(semantics::Symbol::Flag::OmpLastPrivate))
-    converter.copyHostAssociateVar(*sym, lastPrivIP);
+    converter.copyHostAssociateVar(*sym, lastPrivIP, /*hostIsSource=*/false);
 }
 
 void DataSharingProcessor::collectOmpObjectListSymbol(
@@ -165,8 +183,8 @@ bool DataSharingProcessor::needBarrier() {
   // variables.
   // Emit implicit barrier for linear clause. Maybe on somewhere else.
   for (const semantics::Symbol *sym : allPrivatizedSymbols) {
-    if (sym->test(semantics::Symbol::Flag::OmpFirstPrivate) &&
-        sym->test(semantics::Symbol::Flag::OmpLastPrivate))
+    if (sym->test(semantics::Symbol::Flag::OmpLastPrivate) &&
+        (sym->test(semantics::Symbol::Flag::OmpFirstPrivate) || callsInitClone))
       return true;
   }
   return false;

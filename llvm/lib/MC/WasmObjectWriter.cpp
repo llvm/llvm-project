@@ -734,12 +734,9 @@ static void addData(SmallVectorImpl<char> &DataBytes,
       DataBytes.insert(DataBytes.end(), Fill->getValueSize() * NumValues,
                        Fill->getValue());
     } else if (auto *LEB = dyn_cast<MCLEBFragment>(&Frag)) {
-      const SmallVectorImpl<char> &Contents = LEB->getContents();
-      llvm::append_range(DataBytes, Contents);
+      llvm::append_range(DataBytes, LEB->getContents());
     } else {
-      const auto &DataFrag = cast<MCDataFragment>(Frag);
-      const SmallVectorImpl<char> &Contents = DataFrag.getContents();
-      llvm::append_range(DataBytes, Contents);
+      llvm::append_range(DataBytes, cast<MCDataFragment>(Frag).getContents());
     }
   }
 
@@ -749,10 +746,11 @@ static void addData(SmallVectorImpl<char> &DataBytes,
 uint32_t
 WasmObjectWriter::getRelocationIndexValue(const WasmRelocationEntry &RelEntry) {
   if (RelEntry.Type == wasm::R_WASM_TYPE_INDEX_LEB) {
-    if (!TypeIndices.count(RelEntry.Symbol))
+    auto It = TypeIndices.find(RelEntry.Symbol);
+    if (It == TypeIndices.end())
       report_fatal_error("symbol not found in type index space: " +
                          RelEntry.Symbol->getName());
-    return TypeIndices[RelEntry.Symbol];
+    return It->second;
   }
 
   return RelEntry.Symbol->getIndex();
@@ -1022,7 +1020,7 @@ void WasmObjectWriter::writeElemSection(
   encodeSLEB128(InitialTableOffset, W->OS);
   W->OS << char(wasm::WASM_OPCODE_END);
 
-  if (Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND) {
+  if (Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_DESC) {
     // We only write active function table initializers, for which the elem kind
     // is specified to be written as 0x00 and interpreted to mean "funcref".
     const uint8_t ElemKind = 0;
@@ -1896,14 +1894,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
           report_fatal_error("invalid .init_array section priority");
       }
       const auto &DataFrag = cast<MCDataFragment>(Frag);
-      const SmallVectorImpl<char> &Contents = DataFrag.getContents();
-      for (const uint8_t *
-               P = (const uint8_t *)Contents.data(),
-              *End = (const uint8_t *)Contents.data() + Contents.size();
-           P != End; ++P) {
-        if (*P != 0)
-          report_fatal_error("non-symbolic data in .init_array section");
-      }
+      assert(llvm::all_of(DataFrag.getContents(), [](char C) { return !C; }));
       for (const MCFixup &Fixup : DataFrag.getFixups()) {
         assert(Fixup.getKind() ==
                MCFixup::getKindForSize(is64Bit() ? 8 : 4, false));

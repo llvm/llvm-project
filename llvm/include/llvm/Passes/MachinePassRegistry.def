@@ -179,7 +179,7 @@ MACHINE_FUNCTION_PASS("verify<machine-trace-metrics>", MachineTraceMetricsVerifi
                                           PARAMS)
 #endif
 MACHINE_FUNCTION_PASS_WITH_PARAMS(
-    "regallocfast", "RegAllocFast",
+    "regallocfast", "RegAllocFastPass",
     [](RegAllocFastPassOptions Opts) { return RegAllocFastPass(Opts); },
     [PB = this](StringRef Params) {
       return parseRegAllocFastPassOptions(*PB, Params);
@@ -194,7 +194,6 @@ MACHINE_FUNCTION_PASS_WITH_PARAMS(
 #ifndef DUMMY_FUNCTION_PASS
 #define DUMMY_FUNCTION_PASS(NAME, PASS_NAME)
 #endif
-DUMMY_FUNCTION_PASS("atomic-expand", AtomicExpandPass)
 #undef DUMMY_FUNCTION_PASS
 
 #ifndef DUMMY_MACHINE_MODULE_PASS
@@ -236,6 +235,7 @@ DUMMY_MACHINE_FUNCTION_PASS("livedebugvalues", LiveDebugValuesPass)
 DUMMY_MACHINE_FUNCTION_PASS("lrshrink", LiveRangeShrinkPass)
 DUMMY_MACHINE_FUNCTION_PASS("machine-combiner", MachineCombinerPass)
 DUMMY_MACHINE_FUNCTION_PASS("machine-cp", MachineCopyPropagationPass)
+DUMMY_MACHINE_FUNCTION_PASS("static-data-splitter", StaticDataSplitter)
 DUMMY_MACHINE_FUNCTION_PASS("machine-function-splitter", MachineFunctionSplitterPass)
 DUMMY_MACHINE_FUNCTION_PASS("machine-latecleanup", MachineLateInstrsCleanupPass)
 DUMMY_MACHINE_FUNCTION_PASS("machine-sanmd", MachineSanitizerBinaryMetadata)

@@ -100,8 +100,7 @@ public:
                                LazyBool stop_on_error, LazyBool stop_on_crash,
                                LazyBool echo_commands, LazyBool echo_comments,
                                LazyBool print_results, LazyBool print_errors,
-                               LazyBool add_to_history,
-                               LazyBool handle_repeats)
+                               LazyBool add_to_history, LazyBool handle_repeats)
       : m_stop_on_continue(stop_on_continue), m_stop_on_error(stop_on_error),
         m_stop_on_crash(stop_on_crash), m_echo_commands(echo_commands),
         m_echo_comment_commands(echo_comments), m_print_results(print_results),
@@ -248,13 +247,13 @@ public:
   enum CommandTypes {
     eCommandTypesBuiltin = 0x0001, //< native commands such as "frame"
     eCommandTypesUserDef = 0x0002, //< scripted commands
-    eCommandTypesUserMW  = 0x0004, //< multiword commands (command containers)
+    eCommandTypesUserMW = 0x0004,  //< multiword commands (command containers)
     eCommandTypesAliases = 0x0008, //< aliases such as "po"
-    eCommandTypesHidden  = 0x0010, //< commands prefixed with an underscore
+    eCommandTypesHidden = 0x0010,  //< commands prefixed with an underscore
     eCommandTypesAllThem = 0xFFFF  //< all commands
   };
 
-  // The CommandAlias and CommandInterpreter both have a hand in 
+  // The CommandAlias and CommandInterpreter both have a hand in
   // substituting for alias commands.  They work by writing special tokens
   // in the template form of the Alias command, and then detecting them when the
   // command is executed.  These are the special tokens:
@@ -334,9 +333,8 @@ public:
   ///         dummy "contains everything MWC, so we return null here, but
   ///         in this case error.Success is true.
 
-  CommandObjectMultiword *VerifyUserMultiwordCmdPath(Args &path,
-                                                     bool leaf_is_command,
-                                                     Status &result);
+  CommandObjectMultiword *
+  VerifyUserMultiwordCmdPath(Args &path, bool leaf_is_command, Status &result);
 
   CommandAlias *AddAlias(llvm::StringRef alias_name,
                          lldb::CommandObjectSP &command_obj_sp,
@@ -596,7 +594,7 @@ public:
   void SetEchoCommentCommands(bool enable);
 
   bool GetRepeatPreviousCommand() const;
-  
+
   bool GetRequireCommandOverwrite() const;
 
   const CommandObject::CommandMap &GetUserCommands() const {

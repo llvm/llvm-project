@@ -53,6 +53,12 @@ public:
   static std::optional<CmpPredicate> getMatching(CmpPredicate A,
                                                  CmpPredicate B);
 
+  /// Attempts to return a signed CmpInst::Predicate from the CmpPredicate. If
+  /// the CmpPredicate has samesign, return ICmpInst::getSignedPredicate,
+  /// dropping samesign information. Otherwise, return the predicate, dropping
+  /// samesign information.
+  CmpInst::Predicate getPreferredSignedPredicate() const;
+
   /// An operator== on the underlying Predicate.
   bool operator==(CmpInst::Predicate P) const { return Pred == P; }
   bool operator!=(CmpInst::Predicate P) const { return Pred != P; }
@@ -71,13 +77,7 @@ public:
 
   /// Get the swapped predicate of a CmpInst.
   static CmpPredicate getSwapped(const CmpInst *Cmp);
-
-  /// Provided to facilitate storing a CmpPredicate in data structures that
-  /// require hashing.
-  friend hash_code hash_value(const CmpPredicate &Arg); // NOLINT
 };
-
-[[nodiscard]] hash_code hash_value(const CmpPredicate &Arg);
 } // namespace llvm
 
 #endif

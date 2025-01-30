@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx | FileCheck %s
-; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -march=nvptx -verify-machineinstrs | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx | FileCheck %s
+; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple=nvptx -verify-machineinstrs | %ptxas-verify %}
 
 target triple = "nvptx64-nvidia-cuda"
 

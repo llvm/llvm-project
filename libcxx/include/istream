@@ -158,8 +158,9 @@ template <class Stream, class T>
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/istream>
+#else
 #  include <__config>
 
 #  if _LIBCPP_HAS_LOCALIZATION
@@ -1383,6 +1384,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_ISTREAM

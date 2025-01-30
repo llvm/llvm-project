@@ -134,7 +134,14 @@ std::vector<std::vector<IntT>> getRandomIntegerInputsWithLength(std::size_t N, s
   return inputs;
 }
 
-inline std::vector<std::string> getPrefixedRandomStringInputs(std::size_t N) {
+inline std::vector<std::string> getSSORandomStringInputs(size_t N) {
+  std::vector<std::string> inputs;
+  for (size_t i = 0; i < N; ++i)
+    inputs.push_back(getRandomString(10)); // SSO
+  return inputs;
+}
+
+inline std::vector<std::string> getPrefixedRandomStringInputs(size_t N) {
   std::vector<std::string> inputs;
   inputs.reserve(N);
   constexpr int kSuffixLength = 32;

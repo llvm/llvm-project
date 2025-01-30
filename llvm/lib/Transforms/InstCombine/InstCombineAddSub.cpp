@@ -1326,6 +1326,18 @@ Instruction *InstCombinerImpl::foldAddLikeCommutative(Value *LHS, Value *RHS,
     R->setHasNoUnsignedWrap(NUWOut);
     return R;
   }
+
+  // ((X s/ C1) << C2) + X => X s% -C1 where -C1 is 1 << C2
+  const APInt *C1, *C2;
+  if (match(LHS, m_Shl(m_SDiv(m_Specific(RHS), m_APInt(C1)), m_APInt(C2)))) {
+    APInt One(C2->getBitWidth(), 1);
+    APInt MinusC1 = -(*C1);
+    if (MinusC1 == (One << *C2)) {
+      Constant *NewRHS = ConstantInt::get(RHS->getType(), MinusC1);
+      return BinaryOperator::CreateSRem(RHS, NewRHS);
+    }
+  }
+
   return nullptr;
 }
 
@@ -1623,17 +1635,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   // X % C0 + (( X / C0 ) % C1) * C0 => X % (C0 * C1)
   if (Value *V = SimplifyAddWithRemainder(I)) return replaceInstUsesWith(I, V);
 
-  // ((X s/ C1) << C2) + X => X s% -C1 where -C1 is 1 << C2
-  const APInt *C1, *C2;
-  if (match(LHS, m_Shl(m_SDiv(m_Specific(RHS), m_APInt(C1)), m_APInt(C2)))) {
-    APInt one(C2->getBitWidth(), 1);
-    APInt minusC1 = -(*C1);
-    if (minusC1 == (one << *C2)) {
-      Constant *NewRHS = ConstantInt::get(RHS->getType(), minusC1);
-      return BinaryOperator::CreateSRem(RHS, NewRHS);
-    }
-  }
-
+  const APInt *C1;
   // (A & 2^C1) + A => A & (2^C1 - 1) iff bit C1 in A is a sign bit
   if (match(&I, m_c_Add(m_And(m_Value(A), m_APInt(C1)), m_Deferred(A))) &&
       C1->isPowerOf2() && (ComputeNumSignBits(A) > C1->countl_zero())) {
@@ -1771,6 +1773,15 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
                                       : InstCombiner::SubOne(C);
       return replaceInstUsesWith(I, Builder.CreateSelect(Cond, Add, A));
     }
+  }
+
+  // (add (add A, 1), (sext (icmp ne A, 0))) => call umax(A, 1)
+  if (match(LHS, m_Add(m_Value(A), m_One())) &&
+      match(RHS, m_OneUse(m_SExt(m_OneUse(m_SpecificICmp(
+                     ICmpInst::ICMP_NE, m_Specific(A), m_ZeroInt())))))) {
+    Value *OneConst = ConstantInt::get(A->getType(), 1);
+    Value *UMax = Builder.CreateBinaryIntrinsic(Intrinsic::umax, A, OneConst);
+    return replaceInstUsesWith(I, UMax);
   }
 
   if (Instruction *Ashr = foldAddToAshr(I))
@@ -2845,12 +2856,11 @@ Instruction *InstCombinerImpl::hoistFNegAboveFMulFDiv(Value *FNegOp,
     // Make sure to preserve flags and metadata on the call.
     if (II->getIntrinsicID() == Intrinsic::ldexp) {
       FastMathFlags FMF = FMFSource.getFastMathFlags() | II->getFastMathFlags();
-      IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
-      Builder.setFastMathFlags(FMF);
-
-      CallInst *New = Builder.CreateCall(
-          II->getCalledFunction(),
-          {Builder.CreateFNeg(II->getArgOperand(0)), II->getArgOperand(1)});
+      CallInst *New =
+          Builder.CreateCall(II->getCalledFunction(),
+                             {Builder.CreateFNegFMF(II->getArgOperand(0), FMF),
+                              II->getArgOperand(1)});
+      New->setFastMathFlags(FMF);
       New->copyMetadata(*II);
       return New;
     }
@@ -2932,12 +2942,8 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
     // flags the copysign doesn't also have.
     FastMathFlags FMF = I.getFastMathFlags();
     FMF &= cast<FPMathOperator>(OneUse)->getFastMathFlags();
-
-    IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
-    Builder.setFastMathFlags(FMF);
-
-    Value *NegY = Builder.CreateFNeg(Y);
-    Value *NewCopySign = Builder.CreateCopySign(X, NegY);
+    Value *NegY = Builder.CreateFNegFMF(Y, FMF);
+    Value *NewCopySign = Builder.CreateCopySign(X, NegY, FMF);
     return replaceInstUsesWith(I, NewCopySign);
   }
 

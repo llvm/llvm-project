@@ -1346,7 +1346,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     if (Src1Ty->getNumElements() > Src1NumElts) {
       Src1 = IC.Builder.CreateExtractVector(
-          FixedVectorType::get(Src0Ty->getElementType(), Src1NumElts), Src1,
+          FixedVectorType::get(Src1Ty->getElementType(), Src1NumElts), Src1,
           IC.Builder.getInt64(0));
       MadeChange = true;
     }

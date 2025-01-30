@@ -125,7 +125,14 @@ private:
 class ResourceManager {
 public:
   virtual ~ResourceManager();
+
+  /// This function will be called *outside* the session lock. ResourceManagers
+  /// should perform book-keeping under the session lock, and any expensive
+  /// cleanup outside the session lock.
   virtual Error handleRemoveResources(JITDylib &JD, ResourceKey K) = 0;
+
+  /// This function will be called *inside* the session lock. ResourceManagers
+  /// DO NOT need to re-lock the session.
   virtual void handleTransferResources(JITDylib &JD, ResourceKey DstK,
                                        ResourceKey SrcK) = 0;
 };
@@ -192,6 +199,11 @@ public:
   using const_iterator = UnderlyingVector::const_iterator;
 
   SymbolLookupSet() = default;
+
+  SymbolLookupSet(std::initializer_list<value_type> Elems) {
+    for (auto &E : Elems)
+      Symbols.push_back(std::move(E));
+  }
 
   explicit SymbolLookupSet(
       SymbolStringPtr Name,
@@ -1192,8 +1204,13 @@ private:
 
   JITDylib(ExecutionSession &ES, std::string Name);
 
-  std::pair<AsynchronousSymbolQuerySet, std::shared_ptr<SymbolDependenceMap>>
-  IL_removeTracker(ResourceTracker &RT);
+  struct RemoveTrackerResult {
+    AsynchronousSymbolQuerySet QueriesToFail;
+    std::shared_ptr<SymbolDependenceMap> FailedSymbols;
+    std::vector<std::unique_ptr<MaterializationUnit>> DefunctMUs;
+  };
+
+  RemoveTrackerResult IL_removeTracker(ResourceTracker &RT);
 
   void transferTracker(ResourceTracker &DstRT, ResourceTracker &SrcRT);
 
@@ -1300,6 +1317,7 @@ public:
   MaterializationTask(std::unique_ptr<MaterializationUnit> MU,
                       std::unique_ptr<MaterializationResponsibility> MR)
       : MU(std::move(MU)), MR(std::move(MR)) {}
+  ~MaterializationTask() override;
   void printDescription(raw_ostream &OS) override;
   void run() override;
 

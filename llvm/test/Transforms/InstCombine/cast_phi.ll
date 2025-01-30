@@ -31,8 +31,8 @@ define void @MainKernel(i32 %iNumSteps, i32 %tid, i32 %base) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[I12_06]], [[BASE:%.*]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[I12_06]], 1
 ; CHECK-NEXT:    [[CONV_I9:%.*]] = sext i32 [[ADD]] to i64
-; CHECK-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds nuw [258 x float], ptr [[CALLA]], i64 0, i64 [[CONV_I9]]
-; CHECK-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds nuw [258 x float], ptr [[CALLB]], i64 0, i64 [[CONV_I9]]
+; CHECK-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds [258 x float], ptr [[CALLA]], i64 0, i64 [[CONV_I9]]
+; CHECK-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds [258 x float], ptr [[CALLB]], i64 0, i64 [[CONV_I9]]
 ; CHECK-NEXT:    [[CMP40:%.*]] = icmp ult i32 [[I12_06]], [[BASE]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[DOTBB4:%.*]], label [[DOTBB5:%.*]]
 ; CHECK:       .bb4:

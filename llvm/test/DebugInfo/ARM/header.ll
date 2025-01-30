@@ -4,8 +4,8 @@
 ; This is particularly important on ARM MachO as a change in section order can
 ; cause a change the relaxation of the instructions used.
 
-; CHECK:      .section        __TEXT,__text,regular,pure_instructions
-; CHECK-NEXT: .syntax unified
+; CHECK:      .syntax unified
+; CHECK-NEXT: .section        __TEXT,__text,regular,pure_instructions
 ; CHECK-NEXT: .globl  _f
 ; CHECK-NEXT: .p2align  2
 ; CHECK-NEXT: .code 32                    @ @f

@@ -1804,7 +1804,7 @@ private:
 ///
 /// Used to implement the \c loc() matcher.
 class TypeLocTypeMatcher : public MatcherInterface<TypeLoc> {
-  DynTypedMatcher InnerMatcher;
+  Matcher<QualType> InnerMatcher;
 
 public:
   explicit TypeLocTypeMatcher(const Matcher<QualType> &InnerMatcher)
@@ -1814,8 +1814,7 @@ public:
                BoundNodesTreeBuilder *Builder) const override {
     if (!Node)
       return false;
-    return this->InnerMatcher.matches(DynTypedNode::create(Node.getType()),
-                                      Finder, Builder);
+    return this->InnerMatcher.matches(Node.getType(), Finder, Builder);
   }
 };
 
@@ -2341,6 +2340,14 @@ MatchTemplateArgLocAt(const TemplateSpecializationTypeLoc &Node,
                       internal::BoundNodesTreeBuilder *Builder) {
   return !Node.isNull() && Index < Node.getNumArgs() &&
          InnerMatcher.matches(Node.getArgLoc(Index), Finder, Builder);
+}
+
+inline std::string getDependentName(const DependentScopeDeclRefExpr &node) {
+  return node.getDeclName().getAsString();
+}
+
+inline std::string getDependentName(const DependentNameType &node) {
+  return node.getIdentifier()->getName().str();
 }
 
 } // namespace internal

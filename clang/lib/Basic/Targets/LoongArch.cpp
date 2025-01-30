@@ -206,7 +206,7 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
       // arch feature set will be used to include all sub-features belonging to
       // the V1.1 ISA version.
       if (HasFeatureFrecipe && HasFeatureLAM_BH && HasFeatureLAMCAS &&
-          HasFeatureLD_SEQ_SA && HasFeatureDiv32)
+          HasFeatureLD_SEQ_SA && HasFeatureDiv32 && HasFeatureSCQ)
         Builder.defineMacro("__loongarch_arch",
                             Twine('"') + "la64v1.1" + Twine('"'));
       else
@@ -249,6 +249,9 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasFeatureDiv32)
     Builder.defineMacro("__loongarch_div32", Twine(1));
 
+  if (HasFeatureSCQ)
+    Builder.defineMacro("__loongarch_scq", Twine(1));
+
   StringRef ABI = getABI();
   if (ABI == "lp64d" || ABI == "lp64f" || ABI == "lp64s")
     Builder.defineMacro("__loongarch_lp64");
@@ -270,18 +273,13 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
 }
 
-static constexpr int NumBuiltins =
-    clang::LoongArch::LastTSBuiltin - Builtin::FirstTSBuiltin;
-
-static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+static constexpr Builtin::Info BuiltinInfo[] = {
+#define BUILTIN(ID, TYPE, ATTRS)                                               \
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #include "clang/Basic/BuiltinsLoongArch.def"
-    , {
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsLoongArch.def"
-      });
+};
 
 bool LoongArchTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
@@ -308,9 +306,9 @@ bool LoongArchTargetInfo::hasFeature(StringRef Feature) const {
       .Default(false);
 }
 
-std::pair<const char *, ArrayRef<Builtin::Info>>
-LoongArchTargetInfo::getTargetBuiltinStorage() const {
-  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
+ArrayRef<Builtin::Info> LoongArchTargetInfo::getTargetBuiltins() const {
+  return llvm::ArrayRef(BuiltinInfo, clang::LoongArch::LastTSBuiltin -
+                                         Builtin::FirstTSBuiltin);
 }
 
 bool LoongArchTargetInfo::handleTargetFeatures(
@@ -338,6 +336,8 @@ bool LoongArchTargetInfo::handleTargetFeatures(
       HasFeatureLD_SEQ_SA = true;
     else if (Feature == "+div32")
       HasFeatureDiv32 = true;
+    else if (Feature == "+scq")
+      HasFeatureSCQ = true;
   }
   return true;
 }

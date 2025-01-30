@@ -40,10 +40,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  std::pair<const char *, ArrayRef<Builtin::Info>>
-  getTargetBuiltinStorage() const override {
-    return {nullptr, {}};
-  }
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override { return {}; }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::VoidPtrBuiltinVaList;

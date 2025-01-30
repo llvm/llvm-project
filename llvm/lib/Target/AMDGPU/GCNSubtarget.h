@@ -21,7 +21,6 @@
 #include "SIISelLowering.h"
 #include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define GET_SUBTARGETINFO_HEADER
@@ -49,6 +48,9 @@ public:
   };
 
 private:
+  /// SelectionDAGISel related APIs.
+  std::unique_ptr<const SelectionDAGTargetInfo> TSInfo;
+
   /// GlobalISel related APIs.
   std::unique_ptr<AMDGPUCallLowering> CallLoweringInfo;
   std::unique_ptr<InlineAsmLowering> InlineAsmLoweringInfo;
@@ -257,7 +259,6 @@ protected:
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
 
-  SelectionDAGTargetInfo TSInfo;
 private:
   SIInstrInfo InstrInfo;
   SITargetLowering TLInfo;
@@ -291,6 +292,8 @@ public:
     return &InstrInfo.getRegisterInfo();
   }
 
+  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
+
   const CallLowering *getCallLowering() const override {
     return CallLoweringInfo.get();
   }
@@ -313,11 +316,6 @@ public:
 
   const AMDGPU::IsaInfo::AMDGPUTargetID &getTargetID() const {
     return TargetID;
-  }
-
-  // Nothing implemented, just prevent crashes on use.
-  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
-    return &TSInfo;
   }
 
   const InstrItineraryData *getInstrItineraryData() const override {
@@ -1370,12 +1368,18 @@ public:
   /// VGPRs
   unsigned getOccupancyWithNumVGPRs(unsigned VGPRs) const;
 
-  /// Return occupancy for the given function. Used LDS and a number of
-  /// registers if provided.
-  /// Note, occupancy can be affected by the scratch allocation as well, but
+  /// Subtarget's minimum/maximum occupancy, in number of waves per EU, that can
+  /// be achieved when the only function running on a CU is \p F, each workgroup
+  /// uses \p LDSSize bytes of LDS, and each wave uses \p NumSGPRs SGPRs and \p
+  /// NumVGPRs VGPRs. The flat workgroup sizes associated to the function are a
+  /// range, so this returns a range as well.
+  ///
+  /// Note that occupancy can be affected by the scratch allocation as well, but
   /// we do not have enough information to compute it.
-  unsigned computeOccupancy(const Function &F, unsigned LDSSize = 0,
-                            unsigned NumSGPRs = 0, unsigned NumVGPRs = 0) const;
+  std::pair<unsigned, unsigned> computeOccupancy(const Function &F,
+                                                 unsigned LDSSize = 0,
+                                                 unsigned NumSGPRs = 0,
+                                                 unsigned NumVGPRs = 0) const;
 
   /// \returns true if the flat_scratch register should be initialized with the
   /// pointer to the wave's scratch memory rather than a size and offset.
@@ -1576,13 +1580,6 @@ public:
   /// subtarget's specifications, or does not meet number of waves per execution
   /// unit requirement.
   unsigned getMaxNumVGPRs(const MachineFunction &MF) const;
-
-  void getPostRAMutations(
-      std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations)
-      const override;
-
-  std::unique_ptr<ScheduleDAGMutation>
-  createFillMFMAShadowMutation(const TargetInstrInfo *TII) const;
 
   bool isWave32() const {
     return getWavefrontSize() == 32;

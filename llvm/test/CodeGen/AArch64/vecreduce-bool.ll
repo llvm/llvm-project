@@ -15,8 +15,15 @@ declare i1 @llvm.vector.reduce.or.v8i1(<8 x i1> %a)
 declare i1 @llvm.vector.reduce.or.v16i1(<16 x i1> %a)
 declare i1 @llvm.vector.reduce.or.v32i1(<32 x i1> %a)
 
-define i32 @reduce_and_v1(<1 x i8> %a0, i32 %a1, i32 %a2) nounwind {
-; CHECK-LABEL: reduce_and_v1:
+declare i1 @llvm.vector.reduce.xor.v1i1(<1 x i1> %a)
+declare i1 @llvm.vector.reduce.xor.v2i1(<2 x i1> %a)
+declare i1 @llvm.vector.reduce.xor.v4i1(<4 x i1> %a)
+declare i1 @llvm.vector.reduce.xor.v8i1(<8 x i1> %a)
+declare i1 @llvm.vector.reduce.xor.v16i1(<16 x i1> %a)
+declare i1 @llvm.vector.reduce.xor.v32i1(<32 x i1> %a)
+
+define i32 @reduce_and_v1i8(<1 x i8> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_and_v1i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov w8, v0.b[0]
@@ -29,8 +36,8 @@ define i32 @reduce_and_v1(<1 x i8> %a0, i32 %a1, i32 %a2) nounwind {
   ret i32 %z
 }
 
-define i32 @reduce_and_v2(<2 x i8> %a0, i32 %a1, i32 %a2) nounwind {
-; CHECK-LABEL: reduce_and_v2:
+define i32 @reduce_and_v2i8(<2 x i8> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_and_v2i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #24
 ; CHECK-NEXT:    sshr v0.2s, v0.2s, #24
@@ -46,8 +53,8 @@ define i32 @reduce_and_v2(<2 x i8> %a0, i32 %a1, i32 %a2) nounwind {
   ret i32 %z
 }
 
-define i32 @reduce_and_v4(<4 x i8> %a0, i32 %a1, i32 %a2) nounwind {
-; CHECK-LABEL: reduce_and_v4:
+define i32 @reduce_and_v4i8(<4 x i8> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_and_v4i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-NEXT:    sshr v0.4h, v0.4h, #8
@@ -63,8 +70,8 @@ define i32 @reduce_and_v4(<4 x i8> %a0, i32 %a1, i32 %a2) nounwind {
   ret i32 %z
 }
 
-define i32 @reduce_and_v8(<8 x i8> %a0, i32 %a1, i32 %a2) nounwind {
-; CHECK-LABEL: reduce_and_v8:
+define i32 @reduce_and_v8i8(<8 x i8> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_and_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
 ; CHECK-NEXT:    uminv b0, v0.8b
@@ -78,8 +85,8 @@ define i32 @reduce_and_v8(<8 x i8> %a0, i32 %a1, i32 %a2) nounwind {
   ret i32 %z
 }
 
-define i32 @reduce_and_v16(<16 x i8> %a0, i32 %a1, i32 %a2) nounwind {
-; CHECK-LABEL: reduce_and_v16:
+define i32 @reduce_and_v16i8(<16 x i8> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_and_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    uminv b0, v0.16b
@@ -93,8 +100,8 @@ define i32 @reduce_and_v16(<16 x i8> %a0, i32 %a1, i32 %a2) nounwind {
   ret i32 %z
 }
 
-define i32 @reduce_and_v32(<32 x i8> %a0, i32 %a1, i32 %a2) nounwind {
-; CHECK-LABEL: reduce_and_v32:
+define i32 @reduce_and_v32i8(<32 x i8> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_and_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
@@ -109,8 +116,193 @@ define i32 @reduce_and_v32(<32 x i8> %a0, i32 %a1, i32 %a2) nounwind {
   ret i32 %z
 }
 
-define i32 @reduce_or_v1(<1 x i8> %a0, i32 %a1, i32 %a2) nounwind {
-; CHECK-LABEL: reduce_or_v1:
+define i32 @reduce_and_v1i16(<1 x i16> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_and_v1i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    smov w8, v0.h[0]
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    csel w0, w0, w1, lt
+; CHECK-NEXT:    ret
+  %x = icmp slt <1 x i16> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.and.v1i1(<1 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_and_v2i16(<2 x i16> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_and_v2i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.2s, v0.2s, #16
+; CHECK-NEXT:    sshr v0.2s, v0.2s, #16
+; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
+; CHECK-NEXT:    uminp v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <2 x i16> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_and_v4i16(<4 x i16> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_and_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
+; CHECK-NEXT:    uminv h0, v0.4h
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <4 x i16> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_and_v8i16(<8 x i16> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_and_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.8h, v0.8h, #0
+; CHECK-NEXT:    uminv h0, v0.8h
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <8 x i16> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_and_v16i16(<16 x i16> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_and_v16i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v1.8h, v1.8h, #0
+; CHECK-NEXT:    cmlt v0.8h, v0.8h, #0
+; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    uminv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <16 x i16> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.and.v16i1(<16 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_and_v1i32(<1 x i32> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_and_v1i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    csel w0, w0, w1, lt
+; CHECK-NEXT:    ret
+  %x = icmp slt <1 x i32> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.and.v1i1(<1 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_and_v2i32(<2 x i32> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_and_v2i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
+; CHECK-NEXT:    uminp v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <2 x i32> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_and_v4i32(<4 x i32> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_and_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
+; CHECK-NEXT:    uminv s0, v0.4s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <4 x i32> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_and_v8i32(<8 x i32> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_and_v8i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v1.4s, v1.4s, #0
+; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
+; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    uminv h0, v0.8h
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <8 x i32> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_and_v1i64(<1 x i64> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_and_v1i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    csel w0, w0, w1, lt
+; CHECK-NEXT:    ret
+  %x = icmp slt <1 x i64> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.and.v1i1(<1 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_and_v2i64(<2 x i64> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_and_v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.2d, v0.2d, #0
+; CHECK-NEXT:    uminv s0, v0.4s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <2 x i64> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_and_v4i64(<4 x i64> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_and_v4i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v1.2d, v1.2d, #0
+; CHECK-NEXT:    cmlt v0.2d, v0.2d, #0
+; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    uminv s0, v0.4s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <4 x i64> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_or_v1i8(<1 x i8> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_or_v1i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    smov w8, v0.b[0]
@@ -123,8 +315,8 @@ define i32 @reduce_or_v1(<1 x i8> %a0, i32 %a1, i32 %a2) nounwind {
   ret i32 %z
 }
 
-define i32 @reduce_or_v2(<2 x i8> %a0, i32 %a1, i32 %a2) nounwind {
-; CHECK-LABEL: reduce_or_v2:
+define i32 @reduce_or_v2i8(<2 x i8> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_or_v2i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #24
 ; CHECK-NEXT:    sshr v0.2s, v0.2s, #24
@@ -140,8 +332,8 @@ define i32 @reduce_or_v2(<2 x i8> %a0, i32 %a1, i32 %a2) nounwind {
   ret i32 %z
 }
 
-define i32 @reduce_or_v4(<4 x i8> %a0, i32 %a1, i32 %a2) nounwind {
-; CHECK-LABEL: reduce_or_v4:
+define i32 @reduce_or_v4i8(<4 x i8> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_or_v4i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-NEXT:    sshr v0.4h, v0.4h, #8
@@ -157,8 +349,8 @@ define i32 @reduce_or_v4(<4 x i8> %a0, i32 %a1, i32 %a2) nounwind {
   ret i32 %z
 }
 
-define i32 @reduce_or_v8(<8 x i8> %a0, i32 %a1, i32 %a2) nounwind {
-; CHECK-LABEL: reduce_or_v8:
+define i32 @reduce_or_v8i8(<8 x i8> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_or_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
 ; CHECK-NEXT:    umaxv b0, v0.8b
@@ -172,8 +364,8 @@ define i32 @reduce_or_v8(<8 x i8> %a0, i32 %a1, i32 %a2) nounwind {
   ret i32 %z
 }
 
-define i32 @reduce_or_v16(<16 x i8> %a0, i32 %a1, i32 %a2) nounwind {
-; CHECK-LABEL: reduce_or_v16:
+define i32 @reduce_or_v16i8(<16 x i8> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_or_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    umaxv b0, v0.16b
@@ -187,8 +379,8 @@ define i32 @reduce_or_v16(<16 x i8> %a0, i32 %a1, i32 %a2) nounwind {
   ret i32 %z
 }
 
-define i32 @reduce_or_v32(<32 x i8> %a0, i32 %a1, i32 %a2) nounwind {
-; CHECK-LABEL: reduce_or_v32:
+define i32 @reduce_or_v32i8(<32 x i8> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_or_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
@@ -199,6 +391,471 @@ define i32 @reduce_or_v32(<32 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-NEXT:    ret
   %x = icmp slt <32 x i8> %a0, zeroinitializer
   %y = call i1 @llvm.vector.reduce.or.v32i1(<32 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_or_v1i16(<1 x i16> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_or_v1i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    smov w8, v0.h[0]
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    csel w0, w0, w1, lt
+; CHECK-NEXT:    ret
+  %x = icmp slt <1 x i16> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.or.v1i1(<1 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_or_v2i16(<2 x i16> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_or_v2i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.2s, v0.2s, #16
+; CHECK-NEXT:    sshr v0.2s, v0.2s, #16
+; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
+; CHECK-NEXT:    umaxp v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <2 x i16> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_or_v4i16(<4 x i16> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_or_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
+; CHECK-NEXT:    umaxv h0, v0.4h
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <4 x i16> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_or_v8i16(<8 x i16> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_or_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.8h, v0.8h, #0
+; CHECK-NEXT:    umaxv h0, v0.8h
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <8 x i16> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_or_v16i16(<16 x i16> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_or_v16i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v1.8h, v1.8h, #0
+; CHECK-NEXT:    cmlt v0.8h, v0.8h, #0
+; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umaxv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <16 x i16> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_or_v1i32(<1 x i32> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_or_v1i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    csel w0, w0, w1, lt
+; CHECK-NEXT:    ret
+  %x = icmp slt <1 x i32> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.or.v1i1(<1 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_or_v2i32(<2 x i32> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_or_v2i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
+; CHECK-NEXT:    umaxp v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <2 x i32> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_or_v4i32(<4 x i32> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_or_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
+; CHECK-NEXT:    umaxv s0, v0.4s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <4 x i32> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_or_v8i32(<8 x i32> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_or_v8i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v1.4s, v1.4s, #0
+; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
+; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    umaxv h0, v0.8h
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <8 x i32> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_or_v1i64(<1 x i64> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_or_v1i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    csel w0, w0, w1, lt
+; CHECK-NEXT:    ret
+  %x = icmp slt <1 x i64> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.or.v1i1(<1 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_or_v2i64(<2 x i64> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_or_v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.2d, v0.2d, #0
+; CHECK-NEXT:    umaxv s0, v0.4s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <2 x i64> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_or_v4i64(<4 x i64> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_or_v4i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v1.2d, v1.2d, #0
+; CHECK-NEXT:    cmlt v0.2d, v0.2d, #0
+; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    umaxv s0, v0.4s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <4 x i64> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_xor_v1i8(<1 x i8> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_xor_v1i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    smov w8, v0.b[0]
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    csel w0, w0, w1, lt
+; CHECK-NEXT:    ret
+  %x = icmp slt <1 x i8> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.xor.v1i1(<1 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_xor_v2i8(<2 x i8> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_xor_v2i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.2s, v0.2s, #24
+; CHECK-NEXT:    sshr v0.2s, v0.2s, #24
+; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
+; CHECK-NEXT:    addp v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <2 x i8> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.xor.v2i1(<2 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_xor_v4i8(<4 x i8> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_xor_v4i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.4h, v0.4h, #8
+; CHECK-NEXT:    sshr v0.4h, v0.4h, #8
+; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
+; CHECK-NEXT:    addv h0, v0.4h
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <4 x i8> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.xor.v4i1(<4 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_xor_v8i8(<8 x i8> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_xor_v8i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
+; CHECK-NEXT:    addv b0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <8 x i8> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.xor.v8i1(<8 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_xor_v16i8(<16 x i8> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_xor_v16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
+; CHECK-NEXT:    addv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <16 x i8> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.xor.v16i1(<16 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_xor_v32i8(<32 x i8> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_xor_v32i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v1.16b, v1.16b, #0
+; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
+; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    addv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <32 x i8> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.xor.v32i1(<32 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_xor_v1i16(<1 x i16> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_xor_v1i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    smov w8, v0.h[0]
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    csel w0, w0, w1, lt
+; CHECK-NEXT:    ret
+  %x = icmp slt <1 x i16> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.xor.v1i1(<1 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_xor_v2i16(<2 x i16> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_xor_v2i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.2s, v0.2s, #16
+; CHECK-NEXT:    sshr v0.2s, v0.2s, #16
+; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
+; CHECK-NEXT:    addp v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <2 x i16> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.xor.v2i1(<2 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_xor_v4i16(<4 x i16> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_xor_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
+; CHECK-NEXT:    addv h0, v0.4h
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <4 x i16> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.xor.v4i1(<4 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_xor_v8i16(<8 x i16> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_xor_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.8h, v0.8h, #0
+; CHECK-NEXT:    addv h0, v0.8h
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <8 x i16> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.xor.v8i1(<8 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_xor_v16i16(<16 x i16> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_xor_v16i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v1.8h, v1.8h, #0
+; CHECK-NEXT:    cmlt v0.8h, v0.8h, #0
+; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    addv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <16 x i16> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.xor.v16i1(<16 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_xor_v1i32(<1 x i32> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_xor_v1i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    csel w0, w0, w1, lt
+; CHECK-NEXT:    ret
+  %x = icmp slt <1 x i32> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.xor.v1i1(<1 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_xor_v2i32(<2 x i32> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_xor_v2i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
+; CHECK-NEXT:    addp v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <2 x i32> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.xor.v2i1(<2 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_xor_v4i32(<4 x i32> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_xor_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
+; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <4 x i32> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.xor.v4i1(<4 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_xor_v8i32(<8 x i32> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_xor_v8i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v1.4s, v1.4s, #0
+; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
+; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    addv h0, v0.8h
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <8 x i32> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.xor.v8i1(<8 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_xor_v1i64(<1 x i64> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_xor_v1i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    csel w0, w0, w1, lt
+; CHECK-NEXT:    ret
+  %x = icmp slt <1 x i64> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.xor.v1i1(<1 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_xor_v2i64(<2 x i64> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_xor_v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.2d, v0.2d, #0
+; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <2 x i64> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.xor.v2i1(<2 x i1> %x)
+  %z = select i1 %y, i32 %a1, i32 %a2
+  ret i32 %z
+}
+
+define i32 @reduce_xor_v4i64(<4 x i64> %a0, i32 %a1, i32 %a2) nounwind {
+; CHECK-LABEL: reduce_xor_v4i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v1.2d, v1.2d, #0
+; CHECK-NEXT:    cmlt v0.2d, v0.2d, #0
+; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csel w0, w0, w1, ne
+; CHECK-NEXT:    ret
+  %x = icmp slt <4 x i64> %a0, zeroinitializer
+  %y = call i1 @llvm.vector.reduce.xor.v4i1(<4 x i1> %x)
   %z = select i1 %y, i32 %a1, i32 %a2
   ret i32 %z
 }

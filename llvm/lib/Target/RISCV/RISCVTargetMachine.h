@@ -16,7 +16,6 @@
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
-#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include <optional>
 

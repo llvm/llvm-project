@@ -4280,7 +4280,7 @@ bool AMDGPULegalizerInfo::loadInputValue(Register DstReg, MachineIRBuilder &B,
                                          const TargetRegisterClass *ArgRC,
                                          LLT ArgTy) const {
   MCRegister SrcReg = Arg->getRegister();
-  assert(Register::isPhysicalRegister(SrcReg) && "Physical register expected");
+  assert(SrcReg.isPhysical() && "Physical register expected");
   assert(DstReg.isVirtual() && "Virtual register expected");
 
   Register LiveIn = getFunctionLiveInPhysReg(B.getMF(), B.getTII(), SrcReg,

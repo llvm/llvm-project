@@ -197,8 +197,9 @@ template <class T, class Allocator, class Predicate>
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/list>
+#else
 #  include <__algorithm/comp.h>
 #  include <__algorithm/equal.h>
 #  include <__algorithm/lexicographical_compare.h>
@@ -222,6 +223,7 @@ template <class T, class Allocator, class Predicate>
 #  include <__memory/pointer_traits.h>
 #  include <__memory/swap_allocator.h>
 #  include <__memory_resource/polymorphic_allocator.h>
+#  include <__new/launder.h>
 #  include <__ranges/access.h>
 #  include <__ranges/concepts.h>
 #  include <__ranges/container_compatible_range.h>
@@ -240,7 +242,6 @@ template <class T, class Allocator, class Predicate>
 #  include <__utility/swap.h>
 #  include <cstring>
 #  include <limits>
-#  include <new> // __launder
 #  include <version>
 
 // standard-mandated includes
@@ -1749,6 +1750,6 @@ _LIBCPP_POP_MACROS
 #    include <type_traits>
 #    include <typeinfo>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_LIST
