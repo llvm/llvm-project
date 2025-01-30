@@ -634,8 +634,6 @@ getVectorDeinterleaveFactor(IntrinsicInst *II,
 // mask.
 static Value *getMask(Value *WideMask, unsigned Factor,
                       VectorType *LeafValueTy) {
-  Value *MaskVal = nullptr;
-
   using namespace llvm::PatternMatch;
   if (auto *IMI = dyn_cast<IntrinsicInst>(WideMask)) {
     SmallVector<Value *, 8> Operands;
@@ -643,28 +641,21 @@ static Value *getMask(Value *WideMask, unsigned Factor,
     if (getVectorInterleaveFactor(IMI, Operands, DeadInsts)) {
       assert(!Operands.empty());
       if (Operands.size() == Factor && llvm::all_equal(Operands))
-        MaskVal = Operands[0];
+        return Operands[0];
     }
   }
 
   if (match(WideMask, m_AllOnes())) {
-    // Scale the vector length.
+    // Scale the vector length of all-ones mask.
     ElementCount OrigEC =
         cast<VectorType>(WideMask->getType())->getElementCount();
-    MaskVal =
-        ConstantVector::getSplat(OrigEC.divideCoefficientBy(Factor),
-                                 cast<Constant>(WideMask)->getSplatValue());
-  }
-
-  if (MaskVal) {
-    // Check if the vector length of mask matches that of the leaf values.
-    auto *MaskTy = cast<VectorType>(MaskVal->getType());
-    if (!MaskTy->getElementType()->isIntegerTy(/*Bitwidth=*/1) ||
-        MaskTy->getElementCount() != LeafValueTy->getElementCount())
+    if (OrigEC.getKnownMinValue() % Factor)
       return nullptr;
+    return ConstantVector::getSplat(OrigEC.divideCoefficientBy(Factor),
+                                    cast<Constant>(WideMask)->getSplatValue());
   }
 
-  return MaskVal;
+  return nullptr;
 }
 
 bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(

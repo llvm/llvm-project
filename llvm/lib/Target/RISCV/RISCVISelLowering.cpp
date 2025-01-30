@@ -22538,12 +22538,12 @@ static bool isMultipleOfN(const Value *V, const DataLayout &DL, unsigned N) {
   if (isPowerOf2_32(N)) {
     KnownBits KB = llvm::computeKnownBits(V, DL);
     return KB.countMinTrailingZeros() >= Log2_32(N);
-  } else {
-    using namespace PatternMatch;
-    // Right now we're only recognizing the simplest pattern.
-    uint64_t C;
-    return match(V, m_c_Mul(m_Value(), m_ConstantInt(C))) && C && C % N == 0;
   }
+
+  using namespace PatternMatch;
+  // Right now we're only recognizing the simplest pattern.
+  uint64_t C;
+  return match(V, m_c_Mul(m_Value(), m_ConstantInt(C))) && C && C % N == 0;
 }
 
 /// Lower an interleaved vp.load into a vlsegN intrinsic.
