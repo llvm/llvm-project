@@ -109,14 +109,14 @@ Printable printReg(Register Reg, const TargetRegisterInfo *TRI,
   return Printable([Reg, TRI, SubIdx, MRI](raw_ostream &OS) {
     if (!Reg)
       OS << "$noreg";
-    else if (Register::isStackSlot(Reg))
-      OS << "SS#" << Register::stackSlot2Index(Reg);
+    else if (Reg.isStack())
+      OS << "SS#" << Reg.stackSlotIndex();
     else if (Reg.isVirtual()) {
       StringRef Name = MRI ? MRI->getVRegName(Reg) : "";
       if (Name != "") {
         OS << '%' << Name;
       } else {
-        OS << '%' << Register::virtReg2Index(Reg);
+        OS << '%' << Reg.virtRegIndex();
       }
     } else if (!TRI)
       OS << '$' << "physreg" << Reg.id();

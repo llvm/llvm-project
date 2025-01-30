@@ -59,12 +59,12 @@ define void @packFromOtherBB(ptr %ptr, i8 %val) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[ADD0:%.*]] = add i8 [[VAL]], 0
 ; CHECK-NEXT:    [[MUL1:%.*]] = mul i8 [[VAL]], 1
-; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x i8> poison, i8 [[ADD0]], i32 0
-; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x i8> [[PACK]], i8 [[MUL1]], i32 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[PHI0:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
 ; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x i8> poison, i8 [[ADD0]], i32 0
+; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x i8> [[PACK]], i8 [[MUL1]], i32 1
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i8, ptr [[PTR]], i64 0
 ; CHECK-NEXT:    store <2 x i8> [[PACK1]], ptr [[GEP0]], align 1
 ; CHECK-NEXT:    br label %[[LOOP]]
@@ -86,5 +86,32 @@ loop:
   br label %loop
 
 exit:
+  ret void
+}
+
+define void @packFromDiffBBs(ptr %ptr, i8 %v) {
+; CHECK-LABEL: define void @packFromDiffBBs(
+; CHECK-SAME: ptr [[PTR:%.*]], i8 [[V:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ADD0:%.*]] = add i8 [[V]], 1
+; CHECK-NEXT:    br label %[[BB:.*]]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[ADD1:%.*]] = add i8 [[V]], 2
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x i8> poison, i8 [[ADD0]], i32 0
+; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x i8> [[PACK]], i8 [[ADD1]], i32 1
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i8, ptr [[PTR]], i64 0
+; CHECK-NEXT:    store <2 x i8> [[PACK1]], ptr [[GEP0]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %add0 = add i8 %v, 1
+  br label %bb
+
+bb:
+  %add1 = add i8 %v, 2
+  %gep0 = getelementptr i8, ptr %ptr, i64 0
+  %gep1 = getelementptr i8, ptr %ptr, i64 1
+  store i8 %add0, ptr %gep0
+  store i8 %add1, ptr %gep1
   ret void
 }

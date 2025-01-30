@@ -5503,20 +5503,19 @@ public:
   bool expandMULO(SDNode *Node, SDValue &Result, SDValue &Overflow,
                   SelectionDAG &DAG) const;
 
-  /// forceExpandWideMUL - Unconditionally expand a MUL into either a libcall or
-  /// brute force via a wide multiplication. The expansion works by
-  /// attempting to do a multiplication on a wider type twice the size of the
-  /// original operands. LL and LH represent the lower and upper halves of the
-  /// first operand. RL and RH represent the lower and upper halves of the
-  /// second operand. The upper and lower halves of the result are stored in Lo
-  /// and Hi.
-  void forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl, bool Signed,
-                          EVT WideVT, const SDValue LL, const SDValue LH,
-                          const SDValue RL, const SDValue RH, SDValue &Lo,
-                          SDValue &Hi) const;
+  /// Calculate the product twice the width of LHS and RHS. If HiLHS/HiRHS are
+  /// non-null they will be included in the multiplication. The expansion works
+  /// by splitting the 2 inputs into 4 pieces that we can multiply and add
+  /// together without neding MULH or MUL_LOHI.
+  void forceExpandMultiply(SelectionDAG &DAG, const SDLoc &dl, bool Signed,
+                           SDValue &Lo, SDValue &Hi, SDValue LHS, SDValue RHS,
+                           SDValue HiLHS = SDValue(),
+                           SDValue HiRHS = SDValue()) const;
 
-  /// Same as above, but creates the upper halves of each operand by
-  /// sign/zero-extending the operands.
+  /// Calculate full product of LHS and RHS either via a libcall or through
+  /// brute force expansion of the multiplication. The expansion works by
+  /// splitting the 2 inputs into 4 pieces that we can multiply and add together
+  /// without needing MULH or MUL_LOHI.
   void forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl, bool Signed,
                           const SDValue LHS, const SDValue RHS, SDValue &Lo,
                           SDValue &Hi) const;

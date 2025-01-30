@@ -48,7 +48,7 @@ struct TwoFloats {
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
 // CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB {
-  // CHECK: VarDecl {{.*}} col:9 used a1 'float'
+  // CHECK: VarDecl {{.*}} col:9 used a1 'hlsl_constant float'
   float a1;
   // CHECK: CXXRecordDecl {{.*}} implicit referenced class __layout_CB definition
   // CHECK: FieldDecl {{.*}} a1 'float'
@@ -60,7 +60,7 @@ _Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(OneFloat, __layout
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
 // CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB {
-  // CHECK: VarDecl {{.*}} col:9 used a2 'float'
+  // CHECK: VarDecl {{.*}} col:9 used a2 'hlsl_constant float'
   float a2;
   // CHECK: VarDecl {{.*}} col:19 b2 'RWBuffer<float>':'hlsl::RWBuffer<float>'
   RWBuffer<float> b2; 
@@ -68,7 +68,7 @@ cbuffer CB {
   EmptyStruct c2;
   // CHECK: VarDecl {{.*}} col:9 d2 'float[0]'
   float d2[0];
-  // CHECK: VarDecl {{.*}} col:9 e2 'float'
+  // CHECK: VarDecl {{.*}} col:9 e2 'hlsl_constant float'
   float e2;
   // CHECK: CXXRecordDecl {{.*}} implicit referenced class __layout_CB_1 definition
   // CHECK: FieldDecl {{.*}} a2 'float'
@@ -81,11 +81,11 @@ _Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(TwoFloats, __layou
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
 // CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB {
-  // CHECK: VarDecl {{.*}} col:5 used s1 'A'
+  // CHECK: VarDecl {{.*}} col:5 used s1 'hlsl_constant A'
   A s1;
-  // CHECK: VarDecl {{.*}} col:5 s2 'B'
+  // CHECK: VarDecl {{.*}} col:5 s2 'hlsl_constant B'
   B s2;
-  // CHECK: VarDecl {{.*}} col:12 s3 'CTypedef':'C
+  // CHECK: VarDecl {{.*}} col:12 s3 'CTypedef':'C'
   CTypedef s3;
   // CHECK: CXXRecordDecl {{.*}} implicit referenced class __layout_CB_2 definition
   // CHECK: FieldDecl {{.*}} s1 'A'
@@ -102,7 +102,7 @@ _Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(TwoFloats, __layou
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
 // CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB {
-  // CHECK: VarDecl {{.*}} s4 'D'
+  // CHECK: VarDecl {{.*}} s4 'hlsl_constant D'
   D s4;
   // CHECK: CXXRecordDecl {{.*}} implicit referenced class __layout_CB_3 definition
   // CHECK: FieldDecl {{.*}} s4 '__layout_D'
@@ -120,9 +120,9 @@ _Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(TwoFloats, __layou
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
 // CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB {
-  // CHECK: VarDecl {{.*}}  s5 'E'
+  // CHECK: VarDecl {{.*}}  s5 'hlsl_constant E'
   E s5;
-  // CHECK: VarDecl {{.*}} s6 'BTypedef':'B'
+  // CHECK: VarDecl {{.*}} s6 'hlsl_constant BTypedef':'hlsl_constant B'
   BTypedef s6;
   // CHECK: CXXRecordDecl {{.*}}  implicit referenced class __layout_CB_4 definition
   // CHECK: FieldDecl {{.*}} s5 '__layout_E'
@@ -158,7 +158,7 @@ cbuffer CB {
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
 // CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB {
-  // CHECK: VarDecl {{.*}} s8 'F'
+  // CHECK: VarDecl {{.*}} s8 'hlsl_constant F'
   F s8;
   // CHECK: CXXRecordDecl {{.*}} implicit referenced class __layout_CB_6 definition
   // CHECK: FieldDecl {{.*}} s8 '__layout_F'
@@ -182,7 +182,7 @@ cbuffer CB {
     // CHECK: FieldDecl {{.*}} f 'RWBuffer<float>':'hlsl::RWBuffer<float>'
     RWBuffer<float> f;
   } s9;
-  // CHECK: VarDecl {{.*}} s9 'struct (unnamed struct at {{.*}}cbuffer.hlsl:177:3
+  // CHECK: VarDecl {{.*}} s9 'hlsl_constant struct (unnamed struct at {{.*}}cbuffer.hlsl:177:3
   // CHECK: CXXRecordDecl {{.*}} struct definition
   struct {
     // CHECK: FieldDecl {{.*}} g 'float'
@@ -190,7 +190,7 @@ cbuffer CB {
     // CHECK: FieldDecl {{.*}} f 'RWBuffer<float>':'hlsl::RWBuffer<float>'
     RWBuffer<float> f;
   } s10;
-  // CHECK: VarDecl {{.*}} s10 'struct (unnamed struct at {{.*}}cbuffer.hlsl:187:3
+  // CHECK: VarDecl {{.*}} s10 'hlsl_constant struct (unnamed struct at {{.*}}cbuffer.hlsl:187:3
   // CHECK: CXXRecordDecl {{.*}} implicit referenced class __layout_anon definition
   // CHECK: FieldDecl {{.*}} e 'float'
   // CHECK: CXXRecordDecl {{.*}} implicit referenced class __layout_anon_1 definition

@@ -1785,8 +1785,7 @@ static void emitDiagArrays(DiagsInGroupTy &DiagsInGroup,
 /// This creates an `llvm::StringTable` of all the diagnostic group names.
 static void emitDiagGroupNames(const StringToOffsetTable &GroupNames,
                                raw_ostream &OS) {
-  GroupNames.EmitStringLiteralDef(
-      OS, "static constexpr llvm::StringTable DiagGroupNames");
+  GroupNames.EmitStringTableDef(OS, "DiagGroupNames");
   OS << "\n";
 }
 
@@ -1939,9 +1938,6 @@ void clang::EmitClangDiagGroups(const RecordKeeper &Records, raw_ostream &OS) {
   inferPedantic.compute(&DiagsInPedantic, &GroupsInPedantic);
 
   StringToOffsetTable GroupNames;
-  // Add an empty string to the table first so we can use `llvm::StringTable`.
-  // TODO: Factor this into `StringToOffsetTable`.
-  GroupNames.GetOrAddStringOffset("");
   for (const auto &[Name, Group] : DiagsInGroup) {
     GroupNames.GetOrAddStringOffset(Name);
   }

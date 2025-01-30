@@ -6,7 +6,7 @@ Sandbox IR is an IR layer on top of LLVM IR that allows you to save/restore its 
 
 Within your LLVM pass:
 
-```
+``` C++
 // 1. Include the necessary Sandbox IR header files.
 #include "llvm/SandboxIR/Context.h
 #include "llvm/SandboxIR/Function.h
