@@ -8630,8 +8630,11 @@ void DeclarationVisitor::PointerInitialization(
     if (!context().HasError(ultimate)) {
       if (IsProcedurePointer(ultimate)) {
         auto &details{ultimate.get<ProcEntityDetails>()};
-        CHECK(!details.init());
-        if (const auto *targetName{std::get_if<parser::Name>(&target.u)}) {
+        if (details.init()) {
+          Say(name, "'%s' was previously initialized"_err_en_US);
+          context().SetError(ultimate);
+        } else if (const auto *targetName{
+                       std::get_if<parser::Name>(&target.u)}) {
           Walk(target);
           if (!CheckUseError(*targetName) && targetName->symbol) {
             // Validation is done in declaration checking.
@@ -8642,8 +8645,7 @@ void DeclarationVisitor::PointerInitialization(
         }
       } else {
         Say(name,
-            "'%s' is not a procedure pointer but is initialized "
-            "like one"_err_en_US);
+            "'%s' is not a procedure pointer but is initialized like one"_err_en_US);
         context().SetError(ultimate);
       }
     }
@@ -9456,7 +9458,8 @@ void ResolveNamesVisitor::Post(const parser::AssignedGotoStmt &x) {
 }
 
 void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
-  if (std::holds_alternative<parser::CompilerDirective::VectorAlways>(x.u)) {
+  if (std::holds_alternative<parser::CompilerDirective::VectorAlways>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::Unroll>(x.u)) {
     return;
   }
   if (const auto *tkr{

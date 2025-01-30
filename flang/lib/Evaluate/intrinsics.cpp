@@ -96,6 +96,7 @@ ENUM_CLASS(KindCode, none, defaultIntegerKind,
     typeless, // BOZ literals are INTEGER with this kind
     ieeeFlagType, // IEEE_FLAG_TYPE from ISO_FORTRAN_EXCEPTION
     ieeeRoundType, // IEEE_ROUND_TYPE from ISO_FORTRAN_ARITHMETIC
+    eventType, // EVENT_TYPE from module ISO_FORTRAN_ENV (for coarrays)
     teamType, // TEAM_TYPE from module ISO_FORTRAN_ENV (for coarrays)
     kindArg, // this argument is KIND=
     effectiveKind, // for function results: "kindArg" value, possibly defaulted
@@ -129,6 +130,7 @@ static constexpr TypePattern DefaultChar{CharType, KindCode::defaultCharKind};
 static constexpr TypePattern DefaultLogical{
     LogicalType, KindCode::defaultLogicalKind};
 static constexpr TypePattern BOZ{IntType, KindCode::typeless};
+static constexpr TypePattern EventType{DerivedType, KindCode::eventType};
 static constexpr TypePattern IeeeFlagType{DerivedType, KindCode::ieeeFlagType};
 static constexpr TypePattern IeeeRoundType{
     DerivedType, KindCode::ieeeRoundType};
@@ -404,6 +406,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         DefaultLogical},
     {"ceiling", {{"a", AnyReal}, DefaultingKIND}, KINDInt},
     {"char", {{"i", AnyInt, Rank::elementalOrBOZ}, DefaultingKIND}, KINDChar},
+    {"chdir", {{"name", DefaultChar, Rank::scalar, Optionality::required}},
+        DefaultInt},
     {"cmplx", {{"x", AnyComplex}, DefaultingKIND}, KINDComplex},
     {"cmplx",
         {{"x", AnyIntUnsignedOrReal, Rank::elementalOrBOZ},
@@ -1411,6 +1415,11 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"stat", AnyInt, Rank::scalar, Optionality::optional,
                 common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::atomicSubroutine},
+    {"chdir",
+        {{"name", DefaultChar, Rank::scalar, Optionality::required},
+            {"status", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"co_broadcast",
         {{"a", AnyData, Rank::anyOrAssumedRank, Optionality::required,
              common::Intent::InOut},
@@ -1470,6 +1479,13 @@ static const IntrinsicInterface intrinsicSubroutine[]{
              Optionality::required, common::Intent::Out},
             {"time", TypePattern{RealType, KindCode::exactKind, 4},
                 Rank::scalar, Optionality::required, common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"event_query",
+        {{"event", EventType, Rank::scalar},
+            {"count", AnyInt, Rank::scalar, Optionality::required,
+                common::Intent::Out},
+            {"stat", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"execute_command_line",
         {{"command", DefaultChar, Rank::scalar},
@@ -1592,7 +1608,6 @@ static const IntrinsicInterface intrinsicSubroutine[]{
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
 };
 
-// TODO: Intrinsic subroutine EVENT_QUERY
 // TODO: Collective intrinsic subroutines: co_reduce
 
 // Finds a built-in derived type and returns it as a DynamicType.
@@ -1967,6 +1982,11 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::none:
     case KindCode::typeless:
       argOk = false;
+      break;
+    case KindCode::eventType:
+      argOk = !type->IsUnlimitedPolymorphic() &&
+          type->category() == TypeCategory::Derived &&
+          semantics::IsEventType(&type->GetDerivedTypeSpec());
       break;
     case KindCode::ieeeFlagType:
       argOk = !type->IsUnlimitedPolymorphic() &&
@@ -2563,6 +2583,10 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             // Dummy procedures are never elemental.
             dummyProc->procedure.value().attrs.reset(
                 characteristics::Procedure::Attr::Elemental);
+          } else if (auto *dummyObject{
+                         std::get_if<characteristics::DummyDataObject>(
+                             &dc->u)}) {
+            dummyObject->type.set_corank(0);
           }
           dummyArgs.emplace_back(std::move(*dc));
           if (d.typePattern.kindCode == KindCode::same && !sameDummyArg) {
@@ -2725,8 +2749,8 @@ bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
     const std::string &name) const {
   // Collection for some intrinsics with function and subroutine form,
   // in order to pass the semantic check.
-  static const std::string dualIntrinsic[]{
-      {"etime"s}, {"getcwd"s}, {"rename"s}, {"second"s}, {"system"s}};
+  static const std::string dualIntrinsic[]{{"chdir"s}, {"etime"s}, {"getcwd"s},
+      {"rename"s}, {"second"s}, {"system"s}};
 
   return llvm::is_contained(dualIntrinsic, name);
 }
@@ -3239,7 +3263,7 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
           "Argument of ALLOCATED() must be an ALLOCATABLE object or component"_err_en_US);
     }
   } else if (name == "atomic_add" || name == "atomic_and" ||
-      name == "atomic_or" || name == "atomic_xor") {
+      name == "atomic_or" || name == "atomic_xor" || name == "event_query") {
     return CheckForCoindexedObject(
         context.messages(), call.arguments[2], name, "stat");
   } else if (name == "atomic_cas") {

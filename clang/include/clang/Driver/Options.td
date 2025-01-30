@@ -3557,11 +3557,6 @@ defm application_extension : BoolFOption<"application-extension",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Restrict code to those available for App Extensions">,
   NegFlag<SetFalse>>;
-defm relaxed_template_template_args : BoolFOption<"relaxed-template-template-args",
-  LangOpts<"RelaxedTemplateTemplateArgs">, DefaultTrue,
-  PosFlag<SetTrue, [], [], "Enable">,
-  NegFlag<SetFalse, [], [CC1Option], "Disable">,
-  BothFlags<[], [ClangOption], " C++17 relaxed template template argument matching">>;
 defm retain_subst_template_type_parm_type_ast_nodes : BoolFOption<"retain-subst-template-type-parm-type-ast-nodes",
   LangOpts<"RetainSubstTemplateTypeParmTypeAstNodes">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
@@ -4301,6 +4296,11 @@ def fwrapv : Flag<["-"], "fwrapv">, Group<f_Group>,
   HelpText<"Treat signed integer overflow as two's complement">;
 def fno_wrapv : Flag<["-"], "fno-wrapv">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, FlangOption]>;
+def fwrapv_pointer : Flag<["-"], "fwrapv-pointer">, Group<f_Group>,
+  Visibility<[ClangOption, CLOption, CC1Option, FlangOption, FC1Option]>,
+  HelpText<"Treat pointer overflow as two's complement">;
+def fno_wrapv_pointer : Flag<["-"], "fno-wrapv-pointer">, Group<f_Group>,
+  Visibility<[ClangOption, CLOption, FlangOption]>;
 def fwritable_strings : Flag<["-"], "fwritable-strings">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Store string literals as writable data">,
@@ -4344,6 +4344,18 @@ def stack_usage_file : Separate<["-"], "stack-usage-file">,
   Visibility<[CC1Option]>,
   HelpText<"Filename (or -) to write stack usage output to">,
   MarshallingInfoString<CodeGenOpts<"StackUsageOutput">>;
+def fextend_variable_liveness_EQ : Joined<["-"], "fextend-variable-liveness=">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Extend the liveness of user variables through optimizations to "
+           "prevent stale or optimized-out variable values when debugging.">,
+  Values<"all,this,none">,
+  NormalizedValues<["All", "This", "None"]>,
+  NormalizedValuesScope<"CodeGenOptions::ExtendVariableLivenessKind">,
+  MarshallingInfoEnum<CodeGenOpts<"ExtendVariableLiveness">, "None">;
+def fextend_variable_liveness : Flag<["-"], "fextend-variable-liveness">,
+  Visibility<[ClangOption, CC1Option]>,
+  Alias<fextend_variable_liveness_EQ>, AliasArgs<["all"]>,
+  HelpText<"Alias for -fextend-variable-liveness=all.">;
 
 defm unique_basic_block_section_names : BoolFOption<"unique-basic-block-section-names",
   CodeGenOpts<"UniqueBasicBlockSectionNames">, DefaultFalse,

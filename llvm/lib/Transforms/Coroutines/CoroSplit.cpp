@@ -824,16 +824,27 @@ static void updateScopeLine(Instruction *ActiveSuspend,
   if (!ActiveSuspend)
     return;
 
-  auto *Successor = ActiveSuspend->getNextNonDebugInstruction();
+  // No subsequent instruction -> fallback to the location of ActiveSuspend.
+  if (!ActiveSuspend->getNextNonDebugInstruction()) {
+    if (auto DL = ActiveSuspend->getDebugLoc())
+      if (SPToUpdate.getFile() == DL->getFile())
+        SPToUpdate.setScopeLine(DL->getLine());
+    return;
+  }
+
+  BasicBlock::iterator Successor =
+      ActiveSuspend->getNextNonDebugInstruction()->getIterator();
   // Corosplit splits the BB around ActiveSuspend, so the meaningful
   // instructions are not in the same BB.
   if (auto *Branch = dyn_cast_or_null<BranchInst>(Successor);
       Branch && Branch->isUnconditional())
-    Successor = &*Branch->getSuccessor(0)->getFirstNonPHIOrDbg();
+    Successor = Branch->getSuccessor(0)->getFirstNonPHIOrDbg();
 
   // Find the first successor of ActiveSuspend with a non-zero line location.
   // If that matches the file of ActiveSuspend, use it.
-  for (; Successor; Successor = Successor->getNextNonDebugInstruction()) {
+  BasicBlock *PBB = Successor->getParent();
+  for (; Successor != PBB->end(); Successor = std::next(Successor)) {
+    Successor = skipDebugIntrinsics(Successor);
     auto DL = Successor->getDebugLoc();
     if (!DL || DL.getLine() == 0)
       continue;
