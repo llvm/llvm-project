@@ -7258,10 +7258,12 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
     // If `HasNoWait == true`, we call  @__kmpc_omp_target_task_alloc to provide
     // the DeviceID to the deferred task and also since
     // @__kmpc_omp_target_task_alloc creates an untied/async task.
+    bool NeedsTargetTask = HasNoWait && DeviceID;
     Function *TaskAllocFn =
-        !HasNoWait ? getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_alloc)
-                   : getOrCreateRuntimeFunctionPtr(
-                         OMPRTL___kmpc_omp_target_task_alloc);
+        !NeedsTargetTask
+            ? getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_alloc)
+            : getOrCreateRuntimeFunctionPtr(
+                  OMPRTL___kmpc_omp_target_task_alloc);
 
     // Arguments - `loc_ref` (Ident) and `gtid` (ThreadID)
     // call.
@@ -7310,8 +7312,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
         /*sizeof_task=*/TaskSize, /*sizeof_shared=*/SharedsSize,
         /*task_func=*/ProxyFn};
 
-    if (HasNoWait)
+    if (NeedsTargetTask) {
+      assert(DeviceID && "Expected non-empty device ID.");
       TaskAllocArgs.push_back(DeviceID);
+    }
 
     TaskData = Builder.CreateCall(TaskAllocFn, TaskAllocArgs);
 
@@ -7333,7 +7337,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
     // ---------------------------------------------------------------
     // The above means that the lack of a nowait on the target construct
     // translates to '#pragma omp task if(0)'
-    if (!HasNoWait) {
+    if (!NeedsTargetTask) {
       if (DepArray) {
         Function *TaskWaitFn =
             getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_wait_deps);
@@ -9215,7 +9219,8 @@ void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
                                          StringRef Name) {
   if (!Config.isGPU()) {
     llvm::offloading::emitOffloadingEntry(
-        M, ID, Name.empty() ? Addr->getName() : Name, Size, Flags, /*Data=*/0,
+        M, object::OffloadKind::OFK_OpenMP, ID,
+        Name.empty() ? Addr->getName() : Name, Size, Flags, /*Data=*/0,
         "omp_offloading_entries");
     return;
   }
@@ -9390,7 +9395,8 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
   //       entries should be redesigned to better suit this use-case.
   if (Config.hasRequiresFlags() && !Config.isTargetDevice())
     offloading::emitOffloadingEntry(
-        M, Constant::getNullValue(PointerType::getUnqual(M.getContext())),
+        M, object::OffloadKind::OFK_OpenMP,
+        Constant::getNullValue(PointerType::getUnqual(M.getContext())),
         /*Name=*/"",
         /*Size=*/0, OffloadEntriesInfoManager::OMPTargetGlobalRegisterRequires,
         Config.getRequiresFlags(), "omp_offloading_entries");

@@ -45,9 +45,11 @@
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1285,8 +1287,20 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
       OS << "value-parameter-" << TD->getDepth() << '-' << TD->getIndex() << "";
       break;
     }
+    case Decl::ParmVar: {
+      auto *PD = cast<ParmVarDecl>(VD);
+      OS << "function-parameter-" << PD->getFunctionScopeDepth() << '-'
+         << PD->getFunctionScopeIndex();
+      break;
+    }
+    case Decl::Decomposition:
+      OS << "decomposition";
+      for (const auto &I : cast<DecompositionDecl>(VD)->bindings())
+        OS << '-' << I->getName();
+      break;
     default:
-      llvm_unreachable("Unhandled anonymous declaration kind");
+      OS << "unhandled-anonymous-" << VD->getDeclKindName();
+      break;
     }
   }
   if (Node->hasExplicitTemplateArgs()) {
@@ -2579,6 +2593,15 @@ void StmtPrinter::VisitPackIndexingExpr(PackIndexingExpr *E) {
   OS << "...[";
   PrintExpr(E->getIndexExpr());
   OS << "]";
+}
+
+void StmtPrinter::VisitResolvedUnexpandedPackExpr(
+    ResolvedUnexpandedPackExpr *E) {
+  OS << "<<resolved pack(";
+  llvm::interleave(
+      E->getExprs().begin(), E->getExprs().end(),
+      [this](auto *X) { PrintExpr(X); }, [this] { OS << ", "; });
+  OS << ")>>";
 }
 
 void StmtPrinter::VisitSubstNonTypeTemplateParmPackExpr(

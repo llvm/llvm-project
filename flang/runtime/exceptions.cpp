@@ -11,9 +11,9 @@
 #include "flang/Runtime/exceptions.h"
 #include "terminator.h"
 #include <cfenv>
-#if __aarch64__
+#if defined(__aarch64__) && !defined(_WIN32)
 #include <fpu_control.h>
-#elif __x86_64__
+#elif defined(__x86_64__)
 #include <xmmintrin.h>
 #endif
 
