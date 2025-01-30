@@ -6,12 +6,18 @@
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb0.json.in > %t/cdb0.json
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb1.json.in > %t/cdb1.json
-// RUN: sed -e "s|DIR|%/t|g" %t/cdb2.json.in > %t/cdb2.json
+// RUN: sed -e "s|DIR|%/t|g" %t/cdb3.json.in > %t/cdb3.json
+// RUN: sed -e "s|DIR|%/t|g" %t/cdb4.json.in > %t/cdb4.json
 // RUN: clang-scan-deps -compilation-database %t/cdb0.json -format experimental-full > %t/result0.json
 // RUN: clang-scan-deps -compilation-database %t/cdb1.json -format experimental-full > %t/result1.json
-// RUN: clang-scan-deps -compilation-database %t/cdb2.json -format experimental-full -optimize-args=header-search,system-warnings,vfs,canonicalize-macros > %t/result2.json
+// It is not a typo to use cdb1.json for result2. We intend to use the same
+// compilation database, but different clang-scan-deps optimize-args options.
+// RUN: clang-scan-deps -compilation-database %t/cdb1.json -format experimental-full -optimize-args=header-search,system-warnings,vfs,canonicalize-macros > %t/result2.json
+// RUN: clang-scan-deps -compilation-database %t/cdb3.json -format experimental-full > %t/result3.json
+// RUN: clang-scan-deps -compilation-database %t/cdb4.json -format experimental-full > %t/result4.json
 // RUN: cat %t/result0.json %t/result1.json | FileCheck %s
 // RUN: cat %t/result0.json %t/result2.json | FileCheck %s -check-prefix=SKIPOPT
+// RUN: cat %t/result3.json %t/result4.json | FileCheck %s -check-prefix=RELPATH
 
 //--- cdb0.json.in
 [{
@@ -27,13 +33,21 @@
   "file": "DIR/tu.c"
 }]
 
-//--- cdb2.json.in
+// cdb2 is skipped because we reuse cdb1.
+
+//--- cdb3.json.in
 [{
-  "directory": "DIR/a/",
-  "command": "clang -c DIR/tu.c -fmodules -fmodules-cache-path=DIR/cache -IDIR/include/ -o DIR/tu.o",
+  "directory": "DIR",
+  "command": "clang -c DIR/tu.c -fmodules -fmodules-cache-path=DIR/cache -fprebuilt-module-path=.././module -IDIR/include/ -o DIR/tu.o ",
   "file": "DIR/tu.c"
 }]
 
+//--- cdb4.json.in
+[{
+  "directory": "DIR/a/",
+  "command": "clang -c DIR/tu.c -fmodules -fmodules-cache-path=DIR/cache -fprebuilt-module-path=.././module -IDIR/include/ -o DIR/tu.o ",
+  "file": "DIR/tu.c"
+}]
 //--- include/module.modulemap
 module mod {
   header "mod.h"
@@ -120,4 +134,44 @@ module mod {
 // SKIPOPT-NEXT:              "module-name": "mod"
 // SKIPOPT:            }
 // SKIPOPT:          ],
+
+// Check that result3 and result4 contain different hashes because
+// both have a same relative path as a command line input, and
+// they are produced using different compiler working directories.
+// RELPATH:      {
+// RELPATH-NEXT:   "modules": [
+// RELPATH-NEXT:    {
+// RELPATH-NEXT:      "clang-module-deps": [],
+// RELPATH:           "context-hash": "[[HASH3:.*]]",
+// RELPATH:         }
+// RELPATH:        "translation-units": [
+// RELPATH:         {
+// RELPATH:            "commands": [
+// RELPATH:             {
+// RELPATH-NEXT:          "clang-context-hash": "{{.*}}",
+// RELPATH-NEXT:          "clang-module-deps": [
+// RELPATH-NEXT:            {
+// RELPATH-NEXT:              "context-hash": "[[HASH3]]",
+// RELPATH-NEXT:              "module-name": "mod"
+// RELPATH:            }
+// RELPATH:          ],
+// RELPATH:      {
+// RELPATH-NEXT:   "modules": [
+// RELPATH-NEXT:     {
+// RELPATH-NEXT:       "clang-module-deps": [],
+// RELPATH-NOT:        "context-hash": "[[HASH3]]",
+// RELPATH:            "context-hash": "[[HASH4:.*]]",
+// RELPATH:          }
+// RELPATH:       "translation-units": [
+// RELPATH:         {
+// RELPATH:           "commands": [
+// RELPATH:             {
+// RELPATH-NEXT:          "clang-context-hash": "{{.*}}",
+// RELPATH-NEXT:          "clang-module-deps": [
+// RELPATH-NEXT:            {
+// RELPATH-NOT:              "context-hash": "[[HASH3]]",
+// RELPATH-NEXT:             "context-hash": "[[HASH4]]"
+// RELPATH-NEXT:              "module-name": "mod"
+// RELPATH:            }
+// RELPATH:          ],
 
