@@ -1374,6 +1374,11 @@ bool TargetTransformInfo::preferEpilogueVectorization() const {
   return TTIImpl->preferEpilogueVectorization();
 }
 
+bool TargetTransformInfo::enableConditionalScalarAssignmentVectorization()
+    const {
+  return TTIImpl->enableConditionalScalarAssignmentVectorization();
+}
+
 TargetTransformInfo::VPLegalization
 TargetTransformInfo::getVPLegalizationStrategy(const VPIntrinsic &VPI) const {
   return TTIImpl->getVPLegalizationStrategy(VPI);

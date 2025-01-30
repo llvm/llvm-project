@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file "describes" induction and recurrence variables.
+// This file "describes" induction, recurrence, and conditional scalar
+// assignment variables.
 //
 //===----------------------------------------------------------------------===//
 
@@ -421,6 +422,69 @@ private:
   // Instructions used for type-casts of the induction variable,
   // that are redundant when guarded with a runtime SCEV overflow check.
   SmallVector<Instruction *, 2> RedundantCasts;
+};
+
+/// A Conditional Scalar Assignment is an assignment from an initial
+/// scalar that may or may not occur.
+class ConditionalScalarAssignmentDescriptor {
+  /// If the conditional assignment occurs inside a loop, then Phi chooses
+  /// the value of the assignment from the entry block or the loop body block.
+  PHINode *Phi = nullptr;
+
+  /// The initial value of the ConditionalScalarAssignment. If the condition
+  /// guarding the assignment is not met, then the assignment retains this
+  /// value.
+  Value *InitScalar = nullptr;
+
+  /// The Instruction that conditionally assigned to inside the loop.
+  SelectInst *Assignment = nullptr;
+
+  /// Create a ConditionalScalarAssignmentDescriptor that models a valid
+  /// conditional scalar assignment with its members initialized correctly.
+  ConditionalScalarAssignmentDescriptor(PHINode *Phi, SelectInst *Assignment,
+                                        Value *InitScalar)
+      : Phi(Phi), InitScalar(InitScalar), Assignment(Assignment) {}
+
+public:
+  /// Create a ConditionalScalarAssignmentDescriptor that models an invalid
+  /// ConditionalScalarAssignment.
+  ConditionalScalarAssignmentDescriptor() = default;
+
+  /// If Phi is the root of a ConditionalScalarAssignment, set
+  /// ConditionalScalarAssignmentDesc as the ConditionalScalarAssignment rooted
+  /// by Phi. Otherwise, return a false, leaving ConditionalScalarAssignmentDesc
+  /// unmodified.
+  static bool
+  isConditionalScalarAssignmentPhi(PHINode *Phi, Loop *TheLoop,
+                                   ConditionalScalarAssignmentDescriptor &Desc);
+
+  operator bool() const { return isValid(); }
+
+  /// Returns whether SI is the Assignment in ConditionalScalarAssignment
+  static bool isConditionalScalarAssignmentSelect(
+      ConditionalScalarAssignmentDescriptor Desc, SelectInst *SI) {
+    return Desc.getAssignment() == SI;
+  }
+
+  /// Return whether this ConditionalScalarAssignmentDescriptor models a valid
+  /// ConditionalScalarAssignment.
+  bool isValid() const { return Phi && InitScalar && Assignment; }
+
+  /// Return the PHI that roots this ConditionalScalarAssignment.
+  PHINode *getPhi() const { return Phi; }
+
+  /// Return the initial value of the ConditionalScalarAssignment. This is the
+  /// value if the conditional assignment does not occur.
+  Value *getInitScalar() const { return InitScalar; }
+
+  /// The Instruction that is used after the loop
+  SelectInst *getAssignment() const { return Assignment; }
+
+  /// Return the condition that this ConditionalScalarAssignment is conditional
+  /// upon.
+  Value *getCond() const {
+    return Assignment ? Assignment->getCondition() : nullptr;
+  }
 };
 
 } // end namespace llvm

@@ -306,6 +306,10 @@ public:
     return TLI->isVScaleKnownToBeAPowerOfTwo();
   }
 
+  /// \returns true if the loop vectorizer should vectorize conditional
+  /// scalar assignments for the target.
+  bool enableConditionalScalarAssignmentVectorization() const;
+
   /// \returns How the target needs this vector-predicated operation to be
   /// transformed.
   TargetTransformInfo::VPLegalization

@@ -1005,7 +1005,7 @@ void VPlan::execute(VPTransformState *State) {
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
   for (VPRecipeBase &R : Header->phis()) {
     // Skip phi-like recipes that generate their backedege values themselves.
-    if (isa<VPWidenPHIRecipe>(&R))
+    if (R.isPhiThatGeneratesBackedge())
       continue;
 
     if (isa<VPWidenInductionRecipe>(&R)) {
