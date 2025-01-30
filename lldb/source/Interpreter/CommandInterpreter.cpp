@@ -284,8 +284,6 @@ bool CommandInterpreter::GetRequireCommandOverwrite() const {
 void CommandInterpreter::Initialize() {
   LLDB_SCOPED_TIMER();
 
-  CommandReturnObject result(m_debugger.GetUseColor());
-
   LoadCommandDictionary();
 
   // An alias arguments vector to reuse - reset it before use...
