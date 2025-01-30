@@ -4,6 +4,7 @@
 // RUN: %clangxx_asan -DWAIT4_RUSAGE -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -DWAIT4_RUSAGE -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
+// XFAIL: android
 // UNSUPPORTED: darwin
 
 #include <assert.h>
@@ -11,6 +12,13 @@
 #include <unistd.h>
 
 int main(int argc, char **argv) {
+  // This test passes on some versions of Android NDK and fails on other.
+  // https://code.google.com/p/memory-sanitizer/issues/detail?id=64
+  // Make it fail unconditionally on Android.
+#ifdef __ANDROID__
+  return 0;
+#endif
+
   pid_t pid = fork();
   if (pid) { // parent
     int x[3];
