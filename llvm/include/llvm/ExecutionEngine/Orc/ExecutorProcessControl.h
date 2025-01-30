@@ -506,6 +506,9 @@ private:
   void lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
                           SymbolLookupCompleteFn F) override;
 
+  void resolveSymbolsAsync(ArrayRef<SymbolLookupSet> Request,
+                           ResolveSymbolsCompleteFn F) override;
+
   std::unique_ptr<jitlink::JITLinkMemoryManager> OwnedMemMgr;
   char GlobalManglingPrefix = 0;
 };
