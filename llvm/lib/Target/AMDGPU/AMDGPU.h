@@ -448,8 +448,8 @@ ModulePass *createAMDGPUOpenCLEnqueuedBlockLoweringLegacyPass();
 void initializeAMDGPUOpenCLEnqueuedBlockLoweringLegacyPass(PassRegistry &);
 extern char &AMDGPUOpenCLEnqueuedBlockLoweringLegacyID;
 
-void initializeGCNNSAReassignPass(PassRegistry &);
-extern char &GCNNSAReassignID;
+void initializeGCNNSAReassignLegacyPass(PassRegistry &);
+extern char &GCNNSAReassignLegacyID;
 
 void initializeGCNPreRALongBranchRegLegacyPass(PassRegistry &);
 extern char &GCNPreRALongBranchRegID;
