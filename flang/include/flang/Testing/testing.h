@@ -1,5 +1,13 @@
-#ifndef FORTRAN_EVALUATE_TESTING_H_
-#define FORTRAN_EVALUATE_TESTING_H_
+//===-- include/flang/Testing/testing.h -------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef FORTRAN_TESTING_TESTING_H_
+#define FORTRAN_TESTING_TESTING_H_
 
 #include <cinttypes>
 #include <string>
@@ -33,4 +41,4 @@ FailureDetailPrinter Match(const char *file, int line, const std::string &want,
 FailureDetailPrinter Compare(const char *file, int line, const char *xs,
     const char *rel, const char *ys, std::uint64_t x, std::uint64_t y);
 } // namespace testing
-#endif // FORTRAN_EVALUATE_TESTING_H_
+#endif /* FORTRAN_TESTING_TESTING_H_ */
