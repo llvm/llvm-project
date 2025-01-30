@@ -406,20 +406,15 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
 }
 
 unsigned AArch64Subtarget::getHwModeSet() const {
-  unsigned Modes = 0;
-
-  // Use a special hardware mode in streaming functions with stack hazards.
-  // This changes the spill size (and alignment) for the predicate register
-  // class.
-  //
-  // FIXME: This overrides the table-gen'd `getHwModeSet()` which only looks at
-  // CPU features.
+  // Use a special hardware mode in streaming[-compatible] functions with
+  // aarch64-enable-zpr-predicate-spills. This changes the spill size (and
+  // alignment) for the predicate register class.
   if (EnableZPRPredicateSpills.getValue() &&
       (isStreaming() || isStreamingCompatible())) {
-    Modes |= (1 << 0);
+    return to_underlying(AArch64HwModeBits::SMEWithZPRPredicateSpills);
   }
 
-  return Modes;
+  return to_underlying(AArch64HwModeBits::DefaultMode);
 }
 
 const CallLowering *AArch64Subtarget::getCallLowering() const {

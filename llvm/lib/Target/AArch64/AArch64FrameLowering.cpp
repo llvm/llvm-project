@@ -4208,7 +4208,7 @@ struct ScopedScavengeOrSpill {
   ScopedScavengeOrSpill(ScopedScavengeOrSpill &&) = delete;
 
   ScopedScavengeOrSpill(MachineFunction &MF, MachineBasicBlock &MBB,
-                        MachineBasicBlock::iterator MBBI, Register &FreeReg,
+                        MachineBasicBlock::iterator MBBI,
                         Register SpillCandidate, const TargetRegisterClass &RC,
                         LiveRegUnits const &UsedRegs,
                         BitVector const &AllocatableRegs,
@@ -4226,17 +4226,22 @@ struct ScopedScavengeOrSpill {
       *MaybeSpillFI = MFI.CreateSpillStackObject(TRI.getSpillSize(RC),
                                                  TRI.getSpillAlign(RC));
     }
-    FreeReg = SpilledReg = SpillCandidate;
+    FreeReg = SpillCandidate;
     SpillFI = MaybeSpillFI->value();
-    TII.storeRegToStackSlot(MBB, MBBI, SpilledReg, false, SpillFI, &RC, &TRI,
+    TII.storeRegToStackSlot(MBB, MBBI, FreeReg, false, *SpillFI, &RC, &TRI,
                             Register());
   }
 
-  bool hasSpilled() const { return SpilledReg != AArch64::NoRegister; }
+  bool hasSpilled() const { return SpillFI.has_value(); }
+
+  /// Returns the free register (found from scavenging or spilling a register).
+  Register freeRegister() const { return FreeReg; }
+
+  Register operator*() const { return freeRegister(); }
 
   ~ScopedScavengeOrSpill() {
     if (hasSpilled())
-      TII.loadRegFromStackSlot(MBB, MBBI, SpilledReg, SpillFI, &RC, &TRI,
+      TII.loadRegFromStackSlot(MBB, MBBI, FreeReg, *SpillFI, &RC, &TRI,
                                Register());
   }
 
@@ -4246,8 +4251,8 @@ private:
   const TargetRegisterClass &RC;
   const AArch64InstrInfo &TII;
   const TargetRegisterInfo &TRI;
-  Register SpilledReg = AArch64::NoRegister;
-  int SpillFI = -1;
+  Register FreeReg = AArch64::NoRegister;
+  std::optional<int> SpillFI;
 };
 
 /// Emergency stack slots for expanding SPILL_PPR_TO_ZPR_SLOT_PSEUDO and
@@ -4291,22 +4296,20 @@ static void expandSpillPPRToZPRSlotPseudo(MachineBasicBlock &MBB,
   auto *TII =
       static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
 
-  Register ZPredReg = AArch64::NoRegister;
-  ScopedScavengeOrSpill FindZPRReg(
-      MF, MBB, MachineBasicBlock::iterator(MI), ZPredReg, AArch64::Z0,
-      AArch64::ZPRRegClass, UsedRegs, SR.ZPRRegs,
+  ScopedScavengeOrSpill ZPredReg(
+      MF, MBB, MI, AArch64::Z0, AArch64::ZPRRegClass, UsedRegs, SR.ZPRRegs,
       isInPrologueOrEpilogue(MI) ? nullptr : &SpillSlots.ZPRSpillFI);
 
   SmallVector<MachineInstr *, 2> MachineInstrs;
   const DebugLoc &DL = MI.getDebugLoc();
   MachineInstrs.push_back(BuildMI(MBB, MI, DL, TII->get(AArch64::CPY_ZPzI_B))
-                              .addReg(ZPredReg, RegState::Define)
+                              .addReg(*ZPredReg, RegState::Define)
                               .add(MI.getOperand(0))
                               .addImm(1)
                               .addImm(0)
                               .getInstr());
   MachineInstrs.push_back(BuildMI(MBB, MI, DL, TII->get(AArch64::STR_ZXI))
-                              .addReg(ZPredReg)
+                              .addReg(*ZPredReg)
                               .add(MI.getOperand(1))
                               .addImm(MI.getOperand(2).getImm())
                               .setMemRefs(MI.memoperands())
@@ -4338,61 +4341,56 @@ static bool expandFillPPRFromZPRSlotPseudo(MachineBasicBlock &MBB,
   auto *TII =
       static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
 
-  Register ZPredReg = AArch64::NoRegister;
-  ScopedScavengeOrSpill FindZPRReg(
-      MF, MBB, MachineBasicBlock::iterator(MI), ZPredReg, AArch64::Z0,
-      AArch64::ZPRRegClass, UsedRegs, SR.ZPRRegs,
+  ScopedScavengeOrSpill ZPredReg(
+      MF, MBB, MI, AArch64::Z0, AArch64::ZPRRegClass, UsedRegs, SR.ZPRRegs,
       isInPrologueOrEpilogue(MI) ? nullptr : &SpillSlots.ZPRSpillFI);
 
-  Register PredReg = AArch64::NoRegister;
-  ScopedScavengeOrSpill FindPPR3bReg(
-      MF, MBB, MachineBasicBlock::iterator(MI), PredReg, AArch64::P0,
-      AArch64::PPR_3bRegClass, UsedRegs, SR.PPR3bRegs,
+  ScopedScavengeOrSpill PredReg(
+      MF, MBB, MI, AArch64::P0, AArch64::PPR_3bRegClass, UsedRegs, SR.PPR3bRegs,
       isInPrologueOrEpilogue(MI) ? nullptr : &SpillSlots.PPRSpillFI);
 
   // Elide NZCV spills if we know it is not used.
-  Register NZCVSaveReg = AArch64::NoRegister;
   bool IsNZCVUsed = !UsedRegs.available(AArch64::NZCV);
-  std::optional<ScopedScavengeOrSpill> FindGPRReg;
+  std::optional<ScopedScavengeOrSpill> NZCVSaveReg;
   if (IsNZCVUsed)
-    FindGPRReg.emplace(
-        MF, MBB, MachineBasicBlock::iterator(MI), NZCVSaveReg, AArch64::X0,
-        AArch64::GPR64RegClass, UsedRegs, SR.GPRRegs,
+    NZCVSaveReg.emplace(
+        MF, MBB, MI, AArch64::X0, AArch64::GPR64RegClass, UsedRegs, SR.GPRRegs,
         isInPrologueOrEpilogue(MI) ? nullptr : &SpillSlots.GPRSpillFI);
   SmallVector<MachineInstr *, 4> MachineInstrs;
   const DebugLoc &DL = MI.getDebugLoc();
   MachineInstrs.push_back(BuildMI(MBB, MI, DL, TII->get(AArch64::LDR_ZXI))
-                              .addReg(ZPredReg, RegState::Define)
+                              .addReg(*ZPredReg, RegState::Define)
                               .add(MI.getOperand(1))
                               .addImm(MI.getOperand(2).getImm())
                               .setMemRefs(MI.memoperands())
                               .getInstr());
   if (IsNZCVUsed)
-    MachineInstrs.push_back(BuildMI(MBB, MI, DL, TII->get(AArch64::MRS))
-                                .addReg(NZCVSaveReg, RegState::Define)
-                                .addImm(AArch64SysReg::NZCV)
-                                .addReg(AArch64::NZCV, RegState::Implicit)
-                                .getInstr());
+    MachineInstrs.push_back(
+        BuildMI(MBB, MI, DL, TII->get(AArch64::MRS))
+            .addReg(NZCVSaveReg->freeRegister(), RegState::Define)
+            .addImm(AArch64SysReg::NZCV)
+            .addReg(AArch64::NZCV, RegState::Implicit)
+            .getInstr());
   MachineInstrs.push_back(BuildMI(MBB, MI, DL, TII->get(AArch64::PTRUE_B))
-                              .addReg(PredReg, RegState::Define)
+                              .addReg(*PredReg, RegState::Define)
                               .addImm(31));
   MachineInstrs.push_back(
       BuildMI(MBB, MI, DL, TII->get(AArch64::CMPNE_PPzZI_B))
           .addReg(MI.getOperand(0).getReg(), RegState::Define)
-          .addReg(PredReg)
-          .addReg(ZPredReg)
+          .addReg(*PredReg)
+          .addReg(*ZPredReg)
           .addImm(0)
           .addReg(AArch64::NZCV, RegState::ImplicitDefine)
           .getInstr());
   if (IsNZCVUsed)
     MachineInstrs.push_back(BuildMI(MBB, MI, DL, TII->get(AArch64::MSR))
                                 .addImm(AArch64SysReg::NZCV)
-                                .addReg(NZCVSaveReg)
+                                .addReg(NZCVSaveReg->freeRegister())
                                 .addReg(AArch64::NZCV, RegState::ImplicitDefine)
                                 .getInstr());
 
   propagateFrameFlags(MI, MachineInstrs);
-  return FindPPR3bReg.hasSpilled();
+  return PredReg.hasSpilled();
 }
 
 /// Expands all FILL_PPR_FROM_ZPR_SLOT_PSEUDO and SPILL_PPR_TO_ZPR_SLOT_PSEUDO
@@ -5510,7 +5508,6 @@ void AArch64FrameLowering::emitRemarks(
             if (MI.getOpcode() != AArch64::SPILL_PPR_TO_ZPR_SLOT_PSEUDO &&
                 MI.getOpcode() != AArch64::FILL_PPR_FROM_ZPR_SLOT_PSEUDO &&
                 AArch64::PPRRegClass.contains(MI.getOperand(0).getReg())) {
-              MI.dump();
               RegTy = StackAccess::PPR;
             } else
               RegTy = StackAccess::FPR;
