@@ -24187,9 +24187,9 @@ Examples:
 .. code-block:: llvm
 
       %nonalias.lane.mask = call <4 x i1> @llvm.experimental.get.nonalias.lane.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 4, i1 1)
-      %vecA = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %ptrA, i32 4, <4 x i1> %nonalias.lane.mask, <4 x i32> poison)
+      %vecA = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr %ptrA, i32 4, <4 x i1> %nonalias.lane.mask, <4 x i32> poison)
       [...]
-      call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, <4 x i32>* %ptrB, i32 4, <4 x i1> %nonalias.lane.mask)
+      call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, ptr %ptrB, i32 4, <4 x i1> %nonalias.lane.mask)
 
 .. _int_experimental_vp_splice:
 
