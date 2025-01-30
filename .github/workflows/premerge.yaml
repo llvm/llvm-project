@@ -125,6 +125,7 @@ jobs:
 
           # -DLLVM_DISABLE_ASSEMBLY_FILES=ON is for
           # https://github.com/llvm/llvm-project/issues/81967
+          # Disable sharding in lit so that the LIT_XFAIL environment var works.
           cmake -G Ninja \
                 -B build \
                 -S llvm \
@@ -133,11 +134,12 @@ jobs:
                 -DCMAKE_BUILD_TYPE=Release \
                 -DLLDB_INCLUDE_TESTS=OFF \
                 -DLLVM_ENABLE_ASSERTIONS=ON \
+                -DLLVM_LIT_ARGS="-vv --time-tests --no-gtest-sharding"\
                 -DCMAKE_C_COMPILER_LAUNCHER=ccache \
                 -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
           # XFAIL some tests that are failing:
-          export LIT_XFAIL="LLVM-Unit :: Target/SPIRV/./SPIRVTests/SPIRVAPITest/checkTranslateAllExtensions;LLVM-Unit :: Target/SPIRV/./SPIRVTests/SPIRVAPITest/checkTranslateExtensionError;LLVM-Unit :: Target/SPIRV/./SPIRVTests/SPIRVAPITest/checkTranslateUnknownExtensionByOpts;LLVM-Unit :: Target/SPIRV/./SPIRVTests/SPIRVAPITest/checkTranslateWrongExtensionByArg;LLVM-Unit :: Target/SPIRV/./SPIRVTests/SPIRVAPITest/checkTranslateWrongExtensionByOpts"
+          export LIT_XFAIL="LLVM-Unit :: Target/SPIRV/./SPIRVTests"
 
           # The libcxx tests fail, so we are skipping the runtime targets.
           ninja -C build  $mac_check_targets
