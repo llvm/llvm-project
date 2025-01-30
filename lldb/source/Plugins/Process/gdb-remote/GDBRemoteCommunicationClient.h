@@ -220,8 +220,10 @@ public:
 
   enum class xPacketState {
     Unimplemented,
-    Prefixed, // Successful responses start with a 'b' character.
-    Bare,     // No prefix, packets starts with the memory being read.
+    Prefixed, // Successful responses start with a 'b' character. This is the
+              // style used by GDB.
+    Bare,     // No prefix, packets starts with the memory being read. This is
+              // LLDB's original style.
   };
   xPacketState GetxPacketState();
 
