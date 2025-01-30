@@ -199,7 +199,7 @@ void function_interface_impl::insertFunctionArguments(
   // There are 3 things that need to be updated:
   // - Function type.
   // - Arg attrs.
-  // - Block arguments of entry block.
+  // - Block arguments of entry block, if not empty.
   Block &entry = op->getRegion(0).front();
 
   // Update the argument attributes of the function.
@@ -228,8 +228,11 @@ void function_interface_impl::insertFunctionArguments(
 
   // Update the function type and any entry block arguments.
   op.setFunctionTypeAttr(TypeAttr::get(newType));
-  for (unsigned i = 0, e = argIndices.size(); i < e; ++i)
-    entry.insertArgument(argIndices[i] + i, argTypes[i], argLocs[i]);
+
+  // Update the block arguments of the entry block when it is not external.
+  if (!op.isExternal())
+    for (unsigned i = 0, e = argIndices.size(); i < e; ++i)
+      entry.insertArgument(argIndices[i] + i, argTypes[i], argLocs[i]);
 }
 
 void function_interface_impl::insertFunctionResults(
@@ -279,7 +282,7 @@ void function_interface_impl::eraseFunctionArguments(
   // There are 3 things that need to be updated:
   // - Function type.
   // - Arg attrs.
-  // - Block arguments of entry block.
+  // - Block arguments of entry block, if not empty.
   Block &entry = op->getRegion(0).front();
 
   // Update the argument attributes of the function.
@@ -294,7 +297,10 @@ void function_interface_impl::eraseFunctionArguments(
 
   // Update the function type and any entry block arguments.
   op.setFunctionTypeAttr(TypeAttr::get(newType));
-  entry.eraseArguments(argIndices);
+
+  // Update the block arguments of the entry block when it is not external.
+  if (!op.isExternal())
+    entry.eraseArguments(argIndices);
 }
 
 void function_interface_impl::eraseFunctionResults(
