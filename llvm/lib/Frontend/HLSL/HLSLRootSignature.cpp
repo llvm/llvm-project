@@ -10,8 +10,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/bit.h"
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -198,17 +198,27 @@ MDNode *MetadataBuilder::BuildRootSignature() {
 MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {
   IRBuilder<> B(Ctx);
   SmallVector<Metadata *> TableOperands;
+  // Set the mandatory arguments
   TableOperands.push_back(MDString::get(Ctx, "DescriptorTable"));
-  TableOperands.push_back(ConstantAsMetadata::get(B.getInt32(llvm::to_underlying(Table.Visibility))));
+  TableOperands.push_back(ConstantAsMetadata::get(
+      B.getInt32(llvm::to_underlying(Table.Visibility))));
 
-  assert(Table.NumClauses <= GeneratedMetadata.size() && "Table expected all owned clauses to be generated already");
-  TableOperands.append(GeneratedMetadata.end() - Table.NumClauses, GeneratedMetadata.end());
+  // Remaining operands are references to the table's clauses. The in-memory
+  // representation of the Root Elements created from parsing will ensure that
+  // the previous N elements are the clauses for this table.
+  assert(Table.NumClauses <= GeneratedMetadata.size() &&
+         "Table expected all owned clauses to be generated already");
+  // So, add a refence to each clause to our operands
+  TableOperands.append(GeneratedMetadata.end() - Table.NumClauses,
+                       GeneratedMetadata.end());
+  // Then, remove those clauses from the general list of Root Elements
   GeneratedMetadata.pop_back_n(Table.NumClauses);
 
   return MDNode::get(Ctx, TableOperands);
 }
 
-MDNode *MetadataBuilder::BuildDescriptorTableClause(const DescriptorTableClause &Clause) {
+MDNode *MetadataBuilder::BuildDescriptorTableClause(
+    const DescriptorTableClause &Clause) {
   IRBuilder<> B(Ctx);
   return MDNode::get(Ctx, {
     ClauseTypeToName(Ctx, Clause.Type),
