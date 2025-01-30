@@ -1536,10 +1536,13 @@ StringRef maybeGetValueNameFromLoc(Value value, StringRef name) {
 } // namespace
 
 void SSANameState::numberValuesInRegion(Region &region) {
+  // indicate whether OpAsmOpInterface set a name.
+  bool opAsmOpInterfaceUsed = false;
   auto setBlockArgNameFn = [&](Value arg, StringRef name) {
     assert(!valueIDs.count(arg) && "arg numbered multiple times");
     assert(llvm::cast<BlockArgument>(arg).getOwner()->getParent() == &region &&
            "arg not defined in current region");
+    opAsmOpInterfaceUsed = true;
     if (LLVM_UNLIKELY(printerFlags.shouldUseNameLocAsPrefix()))
       name = maybeGetValueNameFromLoc(arg, name);
     setValueName(arg, name);
@@ -1549,6 +1552,18 @@ void SSANameState::numberValuesInRegion(Region &region) {
     if (Operation *op = region.getParentOp()) {
       if (auto asmInterface = dyn_cast<OpAsmOpInterface>(op))
         asmInterface.getAsmBlockArgumentNames(region, setBlockArgNameFn);
+      if (!opAsmOpInterfaceUsed) {
+        // If the OpAsmOpInterface didn't set a name, get name from the type.
+        for (auto arg : region.getArguments()) {
+          if (auto typeInterface =
+                  mlir::dyn_cast<OpAsmTypeInterface>(arg.getType())) {
+            auto setNameFn = [&](StringRef name) {
+              setBlockArgNameFn(arg, name);
+            };
+            typeInterface.getAsmName(setNameFn);
+          }
+        }
+      }
     }
   }
 
@@ -1598,9 +1613,12 @@ void SSANameState::numberValuesInBlock(Block &block) {
 void SSANameState::numberValuesInOp(Operation &op) {
   // Function used to set the special result names for the operation.
   SmallVector<int, 2> resultGroups(/*Size=*/1, /*Value=*/0);
+  // indicating whether OpAsmOpInterface set a name.
+  bool opAsmOpInterfaceUsed = false;
   auto setResultNameFn = [&](Value result, StringRef name) {
     assert(!valueIDs.count(result) && "result numbered multiple times");
     assert(result.getDefiningOp() == &op && "result not defined by 'op'");
+    opAsmOpInterfaceUsed = true;
     if (LLVM_UNLIKELY(printerFlags.shouldUseNameLocAsPrefix()))
       name = maybeGetValueNameFromLoc(result, name);
     setValueName(result, name);
@@ -1629,6 +1647,23 @@ void SSANameState::numberValuesInOp(Operation &op) {
     if (OpAsmOpInterface asmInterface = dyn_cast<OpAsmOpInterface>(&op)) {
       asmInterface.getAsmBlockNames(setBlockNameFn);
       asmInterface.getAsmResultNames(setResultNameFn);
+    }
+    if (!opAsmOpInterfaceUsed) {
+      // If the OpAsmOpInterface didn't set a name, and
+      // all results have OpAsmTypeInterface, get names from types.
+      bool allHaveOpAsmTypeInterface =
+          llvm::all_of(op.getResultTypes(), [&](Type type) {
+            return mlir::isa<OpAsmTypeInterface>(type);
+          });
+      if (allHaveOpAsmTypeInterface) {
+        for (auto result : op.getResults()) {
+          auto typeInterface = mlir::cast<OpAsmTypeInterface>(result.getType());
+          auto setNameFn = [&](StringRef name) {
+            setResultNameFn(result, name);
+          };
+          typeInterface.getAsmName(setNameFn);
+        }
+      }
     }
   }
 
