@@ -2197,6 +2197,7 @@ _mm_storer_ps(float *__p, __m128 __a)
 #define _MM_HINT_T2  1
 #define _MM_HINT_NTA 0
 
+#if 0
 /// Loads one cache line of data from the specified address to a location
 ///    closer to the processor.
 ///
@@ -2225,6 +2226,9 @@ _mm_storer_ps(float *__p, __m128 __a)
 /// _mm_prefetch is implemented as a "library builtin" directly in Clang,
 /// similar to how it is done in MSVC. Clang will warn if the user doesn't
 /// include xmmintrin.h or immintrin.h.
+#define _mm_prefetch(a, sel) (__builtin_prefetch((const void *)(a), \
+                                                 ((sel) >> 2) & 1, (sel) & 0x3))
+#endif
 
 /// Stores a 64-bit integer in the specified aligned memory location. To
 ///    minimize caching, the data is flagged as non-temporal (unlikely to be
