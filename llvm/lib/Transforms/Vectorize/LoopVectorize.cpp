@@ -7553,6 +7553,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
                         CM.CostKind);
   precomputeCosts(BestPlan, BestFactor.Width, CostCtx);
   assert((BestFactor.Width == LegacyVF.Width ||
+          Legal->hasUncountableEarlyExit() ||
           planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
                                                 CostCtx, OrigLoop) ||
           planContainsAdditionalSimplifications(getPlanFor(LegacyVF.Width),
