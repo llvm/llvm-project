@@ -16,6 +16,7 @@
 
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
+#include "llvm-c/Core.h"
 #include "llvm-c/Support.h"
 
 #ifdef __cplusplus
@@ -73,14 +74,6 @@ mlirTypeToLLVMIRTranslatorDestroy(MlirTypeToLLVMIRTranslator translator);
 /// Translates the given MLIR LLVM dialect to the LLVM IR type.
 MLIR_CAPI_EXPORTED LLVMTypeRef mlirTypeToLLVMIRTranslatorTranslateType(
     MlirTypeToLLVMIRTranslator translator, MlirType mlirType);
-
-/// Attempts to look up the LLVM intrinsic matching `id` with parameter types
-/// `mlirParamTypes`. Note, since no return type is required, no check is
-/// performed to verify the found intrinsic.
-MLIR_CAPI_EXPORTED LLVMTypeRef
-mlirTypeToLLVMIRTranslatorUncheckedGetIntrinsicSignature(
-    MlirTypeToLLVMIRTranslator translator, unsigned id,
-    MlirType *mlirParamTypes, unsigned numParams);
 
 #ifdef __cplusplus
 }
