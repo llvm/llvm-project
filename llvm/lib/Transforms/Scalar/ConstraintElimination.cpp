@@ -141,7 +141,7 @@ struct FactOrCheck {
 
   static FactOrCheck getConditionFact(DomTreeNode *DTN, CmpPredicate Pred,
                                       Value *Op0, Value *Op1,
-                                      ConditionTy Precond = {}) {
+                                      const ConditionTy &Precond = {}) {
     return FactOrCheck(DTN, Pred, Op0, Op1, Precond);
   }
 

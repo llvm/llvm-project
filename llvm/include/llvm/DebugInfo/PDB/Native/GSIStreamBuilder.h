@@ -54,7 +54,7 @@ public:
 
   Error finalizeMsfLayout();
 
-  Error commit(const msf::MSFLayout &Layout, WritableBinaryStreamRef Buffer);
+  Error commit(const msf::MSFLayout &Layout, const WritableBinaryStreamRef &Buffer);
 
   uint32_t getPublicsStreamIndex() const { return PublicsStreamIndex; }
   uint32_t getGlobalsStreamIndex() const { return GlobalsStreamIndex; }

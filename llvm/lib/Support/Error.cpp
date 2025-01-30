@@ -62,7 +62,7 @@ char ECError::ID = 0;
 char StringError::ID = 0;
 char FileError::ID = 0;
 
-void logAllUnhandledErrors(Error E, raw_ostream &OS, Twine ErrorBanner) {
+void logAllUnhandledErrors(Error E, raw_ostream &OS, const Twine &ErrorBanner) {
   if (!E)
     return;
   OS << ErrorBanner;

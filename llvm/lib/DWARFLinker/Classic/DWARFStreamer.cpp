@@ -474,7 +474,7 @@ void DwarfStreamer::emitDwarfDebugArangesTable(
 
 void DwarfStreamer::emitDwarfDebugRangesTableFragment(
     const CompileUnit &Unit, const AddressRanges &LinkedRanges,
-    PatchLocation Patch) {
+    const PatchLocation &Patch) {
   Patch.set(RangesSectionSize);
 
   // Make .debug_ranges to be current section.
@@ -563,7 +563,7 @@ void DwarfStreamer::emitDwarfDebugRangeListFooter(const CompileUnit &Unit,
 
 void DwarfStreamer::emitDwarfDebugRngListsTableFragment(
     const CompileUnit &Unit, const AddressRanges &LinkedRanges,
-    PatchLocation Patch, DebugDieValuePool &AddrPool) {
+    const PatchLocation &Patch, DebugDieValuePool &AddrPool) {
   Patch.set(RngListsSectionSize);
 
   // Make .debug_rnglists to be current section.
@@ -666,7 +666,7 @@ void DwarfStreamer::emitDwarfDebugLocListFooter(const CompileUnit &Unit,
 void DwarfStreamer::emitDwarfDebugLocTableFragment(
     const CompileUnit &Unit,
     const DWARFLocationExpressionsVector &LinkedLocationExpression,
-    PatchLocation Patch) {
+    const PatchLocation &Patch) {
   Patch.set(LocSectionSize);
 
   // Make .debug_loc to be current section.
@@ -757,7 +757,7 @@ void DwarfStreamer::emitDwarfDebugAddrsFooter(const CompileUnit &Unit,
 void DwarfStreamer::emitDwarfDebugLocListsTableFragment(
     const CompileUnit &Unit,
     const DWARFLocationExpressionsVector &LinkedLocationExpression,
-    PatchLocation Patch, DebugDieValuePool &AddrPool) {
+    const PatchLocation &Patch, DebugDieValuePool &AddrPool) {
   Patch.set(LocListsSectionSize);
 
   // Make .debug_loclists the current section.
