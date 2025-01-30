@@ -65,8 +65,13 @@ LLVM_LIBC_FUNCTION(float16, asinf16, (float16 x)) {
 
   // |x| > 1, asinf16(x) = NaN
   if (LIBC_UNLIKELY(x_abs > 0x3c00)) {
-    fputil::set_errno_if_required(EDOM);
-    fputil::raise_except_if_required(FE_INVALID);
+    // |x| <= +/-inf
+    if (LIBC_UNLIKELY(x_abs <= 0x7c00)) {
+      if (!xbits.is_signaling_nan())
+        fputil::set_errno_if_required(EDOM);
+
+      fputil::raise_except_if_required(FE_INVALID);
+    }
 
     return FPBits::quiet_nan().get_val();
   }
@@ -91,7 +96,7 @@ LLVM_LIBC_FUNCTION(float16, asinf16, (float16 x)) {
   //       2 * asin(sqrt(u)) = z
   // 9:  Recall [3], z = pi/2 - y. Therefore:
   //       y = pi/2 - z
-  //       y = pi/2 - 2 * arcsin(sqrt(u))
+  //       y = pi/2 - 2 * asin(sqrt(u))
   // 10: Recall [1], y = asin(x). Therefore:
   //       asin(x) = pi/2 - 2 * asin(sqrt(u))
   //
