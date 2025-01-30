@@ -2204,7 +2204,6 @@ cc_library(
     hdrs = glob(["include/clang/FrontendTool/*.h"]),
     includes = ["include"],
     deps = [
-        ":arc_migrate",
         ":codegen",
         ":config",
         ":driver",
@@ -2218,33 +2217,6 @@ cc_library(
 )
 
 cc_library(
-    name = "arc_migrate",
-    srcs = glob([
-        "lib/ARCMigrate/*.cpp",
-        "lib/ARCMigrate/*.h",
-    ]),
-    hdrs = glob(["include/clang/ARCMigrate/*.h"]),
-    includes = ["include"],
-    deps = [
-        ":analysis",
-        ":ast",
-        ":basic",
-        ":edit",
-        ":frontend",
-        ":frontend_rewrite",
-        ":lex",
-        ":parse",
-        ":rewrite",
-        ":sema",
-        ":serialization",
-        ":static_analyzer_checkers",
-        ":static_analyzer_core",
-        "//llvm:Support",
-        "//llvm:TargetParser",
-    ],
-)
-
-cc_library(
     name = "libclang_static",
     srcs = glob([
         "tools/libclang/*.cpp",
@@ -2253,7 +2225,6 @@ cc_library(
     hdrs = glob(["include/clang-c/*.h"]),
     defines = ["CINDEX_NO_EXPORTS"],
     deps = [
-        ":arc_migrate",
         ":ast",
         ":basic",
         ":codegen",
@@ -2286,7 +2257,6 @@ cc_plugin_library(
     }),
     strip_include_prefix = "include",
     deps = [
-        ":arc_migrate",
         ":ast",
         ":basic",
         ":codegen",
@@ -2371,39 +2341,6 @@ cc_binary(
     stamp = 0,
     deps = [
         ":apinotes",
-        "//llvm:Support",
-    ],
-)
-
-cc_binary(
-    name = "arcmt-test",
-    testonly = 1,
-    srcs = ["tools/arcmt-test/arcmt-test.cpp"],
-    stamp = 0,
-    deps = [
-        ":arc_migrate",
-        ":ast",
-        ":basic",
-        ":frontend",
-        ":frontend_rewrite",
-        ":lex",
-        "//llvm:Support",
-    ],
-)
-
-cc_binary(
-    name = "c-arcmt-test",
-    testonly = 1,
-    srcs = ["tools/c-arcmt-test/c-arcmt-test.c"],
-    copts = select({
-        "@platforms//os:windows": [],
-        "//conditions:default": ["-std=gnu99"],
-    }),
-    stamp = 0,
-    deps = [
-        ":codegen",
-        ":libclang",
-        "//llvm:MC",
         "//llvm:Support",
     ],
 )
