@@ -434,8 +434,8 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
     Node = Node->getFirstPred();
   }
 
-  // Iterate over all bindings to global variables and see if it contains
-  // a memory region in the stack space.
+  // Iterate over all bindings to global variables and stack arguments 
+  // see if they contain a memory region in the current stack frame.
   class CallBack : public StoreManager::BindingsHandler {
   private:
     CheckerContext &Ctx;
@@ -503,20 +503,33 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
     bool HandleBinding(StoreManager &SMgr, Store S, const MemRegion *Region,
                        SVal Val) override {
       recordInInvalidatedRegions(Region);
-      const MemRegion *VR = Val.getAsRegion();
-      if (!VR)
+
+      const MemRegion *ReferrerMR = getStackOrGlobalSpaceRegion(Region);
+
+      if (!isa_and_nonnull<GlobalsSpaceRegion, StackArgumentsSpaceRegion>(ReferrerMR))
         return true;
 
-      if (checkForDanglingStackVariable(Region, VR))
-        return true;
+      SmallVector<const MemRegion *> EscapingStackAddrs;
+      FindEscapingStackRegions(Ctx, EscapingStackAddrs, Val);
 
-      // Check the globals for the same.
-      if (!isa_and_nonnull<GlobalsSpaceRegion>(
-              getStackOrGlobalSpaceRegion(Region)))
-        return true;
-      if (VR && VR->hasStackStorage() && !isNotInCurrentFrame(VR, Ctx))
-        V.emplace_back(Region, VR);
+      for (const MemRegion *Escapee : EscapingStackAddrs) {
+        V.emplace_back(Region, Escapee);
+      }
+
       return true;
+      // const MemRegion *VR = Val.getAsRegion();
+      // if (!VR)
+      //   return true;
+
+      // if (checkForDanglingStackVariable(Region, VR))
+      //   return true;
+
+      // // Check the globals for the same.
+      // if (!isa_and_nonnull<GlobalsSpaceRegion>())
+      //   return true;
+      // if (VR && VR->hasStackStorage() && !isNotInCurrentFrame(VR, Ctx))
+      //   V.emplace_back(Region, VR);
+      // return true;
     }
   };
 
