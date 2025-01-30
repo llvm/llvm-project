@@ -5262,8 +5262,8 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
 bool SimplifyCFGOpt::simplifyResume(ResumeInst *RI, IRBuilder<> &Builder) {
   if (isa<PHINode>(RI->getValue()))
     return simplifyCommonResume(RI);
-  else if (isa<LandingPadInst>(RI->getParent()->getFirstNonPHI()) &&
-           RI->getValue() == RI->getParent()->getFirstNonPHI())
+  else if (isa<LandingPadInst>(RI->getParent()->getFirstNonPHIIt()) &&
+           RI->getValue() == &*RI->getParent()->getFirstNonPHIIt())
     // The resume must unwind the exception that caused control to branch here.
     return simplifySingleResume(RI);
 
@@ -5297,8 +5297,8 @@ bool SimplifyCFGOpt::simplifyCommonResume(ResumeInst *RI) {
 
   // Check that there are no other instructions except for debug and lifetime
   // intrinsics between the phi's and resume instruction.
-  if (!isCleanupBlockEmpty(
-          make_range(RI->getParent()->getFirstNonPHI(), BB->getTerminator())))
+  if (!isCleanupBlockEmpty(make_range(RI->getParent()->getFirstNonPHIIt(),
+                                      BB->getTerminator()->getIterator())))
     return false;
 
   SmallSetVector<BasicBlock *, 4> TrivialUnwindBlocks;
@@ -5315,7 +5315,7 @@ bool SimplifyCFGOpt::simplifyCommonResume(ResumeInst *RI) {
     if (IncomingBB->getUniqueSuccessor() != BB)
       continue;
 
-    auto *LandingPad = dyn_cast<LandingPadInst>(IncomingBB->getFirstNonPHI());
+    auto *LandingPad = dyn_cast<LandingPadInst>(IncomingBB->getFirstNonPHIIt());
     // Not the landing pad that caused the control to branch here.
     if (IncomingValue != LandingPad)
       continue;
@@ -5364,7 +5364,7 @@ bool SimplifyCFGOpt::simplifyCommonResume(ResumeInst *RI) {
 // Simplify resume that is only used by a single (non-phi) landing pad.
 bool SimplifyCFGOpt::simplifySingleResume(ResumeInst *RI) {
   BasicBlock *BB = RI->getParent();
-  auto *LPInst = cast<LandingPadInst>(BB->getFirstNonPHI());
+  auto *LPInst = cast<LandingPadInst>(BB->getFirstNonPHIIt());
   assert(RI->getValue() == LPInst &&
          "Resume must unwind the exception that caused control to here");
 
@@ -5412,7 +5412,6 @@ static bool removeEmptyCleanup(CleanupReturnInst *RI, DomTreeUpdater *DTU) {
   // If the cleanup return we are simplifying unwinds to the caller, this will
   // set UnwindDest to nullptr.
   BasicBlock *UnwindDest = RI->getUnwindDest();
-  Instruction *DestEHPad = UnwindDest ? UnwindDest->getFirstNonPHI() : nullptr;
 
   // We're about to remove BB from the control flow.  Before we do, sink any
   // PHINodes into the unwind destination.  Doing this before changing the
@@ -5449,7 +5448,7 @@ static bool removeEmptyCleanup(CleanupReturnInst *RI, DomTreeUpdater *DTU) {
     }
 
     // Sink any remaining PHI nodes directly into UnwindDest.
-    Instruction *InsertPt = DestEHPad;
+    BasicBlock::iterator InsertPt = UnwindDest->getFirstNonPHIIt();
     for (PHINode &PN : make_early_inc_range(BB->phis())) {
       if (PN.use_empty() || !PN.isUsedOutsideOfBlock(BB))
         // If the PHI node has no uses or all of its uses are in this basic
@@ -6004,7 +6003,7 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
 /// the phi node, and set PhiIndex to BB's index in the phi node.
 static PHINode *findPHIForConditionForwarding(ConstantInt *CaseValue,
                                               BasicBlock *BB, int *PhiIndex) {
-  if (BB->getFirstNonPHIOrDbg() != BB->getTerminator())
+  if (&*BB->getFirstNonPHIIt() != BB->getTerminator())
     return nullptr; // BB must be empty to be a candidate for simplification.
   if (!BB->getSinglePredecessor())
     return nullptr; // BB must be dominated by the switch.
@@ -7885,7 +7884,7 @@ bool SimplifyCFGOpt::simplifyUncondBranch(BranchInst *BI,
       Options.NeedCanonicalLoop &&
       (!LoopHeaders.empty() && BB->hasNPredecessorsOrMore(2) &&
        (is_contained(LoopHeaders, BB) || is_contained(LoopHeaders, Succ)));
-  BasicBlock::iterator I = BB->getFirstNonPHIOrDbg(true)->getIterator();
+  BasicBlock::iterator I = BB->getFirstNonPHIOrDbg();
   if (I->isTerminator() && BB != &BB->getParent()->getEntryBlock() &&
       !NeedCanonicalLoop && TryToSimplifyUncondBranchFromEmptyBlock(BB, DTU))
     return true;

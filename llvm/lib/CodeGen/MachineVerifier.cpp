@@ -1281,6 +1281,19 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
         if (TypeSize::isKnownGT(MMO.getSize().getValue(),
                                 ValTy.getSizeInBytes()))
           report("load memory size cannot exceed result size", MI);
+
+        if (MMO.getRanges()) {
+          ConstantInt *i =
+              mdconst::extract<ConstantInt>(MMO.getRanges()->getOperand(0));
+          const LLT RangeTy = LLT::scalar(i->getIntegerType()->getBitWidth());
+          const LLT MemTy = MMO.getMemoryType();
+          if (MemTy.getScalarType() != RangeTy ||
+              ValTy.isScalar() != MemTy.isScalar() ||
+              (ValTy.isVector() &&
+               ValTy.getNumElements() != MemTy.getNumElements())) {
+            report("range is incompatible with the result type", MI);
+          }
+        }
       } else if (MI->getOpcode() == TargetOpcode::G_STORE) {
         if (TypeSize::isKnownLT(ValTy.getSizeInBytes(),
                                 MMO.getSize().getValue()))
@@ -3165,7 +3178,7 @@ struct VRegFilter {
     for (Register Reg : FromRegSet) {
       if (!Reg.isVirtual())
         continue;
-      unsigned Index = Register::virtReg2Index(Reg);
+      unsigned Index = Reg.virtRegIndex();
       if (Index < SparseUniverseMax) {
         if (Index < SparseUniverse && Sparse.test(Index))
           continue;
@@ -3188,7 +3201,7 @@ struct VRegFilter {
     Dense.reserve(NewDenseSize);
     for (unsigned I = Begin; I < End; ++I) {
       Register Reg = ToVRegs[I];
-      unsigned Index = Register::virtReg2Index(Reg);
+      unsigned Index = Reg.virtRegIndex();
       if (Index < SparseUniverseMax)
         Sparse.set(Index);
       else

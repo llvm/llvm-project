@@ -1053,39 +1053,40 @@ def : GCNPat<
   (SI_ELSE $src, $target)
 >;
 
-def : Pat <
+def : GCNPat <
   (int_amdgcn_kill i1:$src),
   (SI_KILL_I1_PSEUDO SCSrc_i1:$src, 0)
 >;
 
-def : Pat <
+def : GCNPat <
   (int_amdgcn_kill (i1 (not i1:$src))),
   (SI_KILL_I1_PSEUDO SCSrc_i1:$src, -1)
 >;
 
-def : Pat <
+let SubtargetPredicate = NotHasSALUFloatInsts in
+def : GCNPat <
   (int_amdgcn_kill (i1 (setcc f32:$src, InlineImmFP32:$imm, cond:$cond))),
   (SI_KILL_F32_COND_IMM_PSEUDO VSrc_b32:$src, (bitcast_fpimm_to_i32 $imm), (cond_as_i32imm $cond))
 >;
 
-def : Pat <
+def : GCNPat <
   (int_amdgcn_wqm_demote i1:$src),
   (SI_DEMOTE_I1 SCSrc_i1:$src, 0)
 >;
 
-def : Pat <
+def : GCNPat <
   (int_amdgcn_wqm_demote (i1 (not i1:$src))),
   (SI_DEMOTE_I1 SCSrc_i1:$src, -1)
 >;
 
   // TODO: we could add more variants for other types of conditionals
 
-def : Pat <
+def : GCNPat <
   (i64 (int_amdgcn_icmp i1:$src, (i1 0), (i32 33))),
   (COPY $src) // Return the SGPRs representing i1 src
 >;
 
-def : Pat <
+def : GCNPat <
   (i32 (int_amdgcn_icmp i1:$src, (i1 0), (i32 33))),
   (COPY $src) // Return the SGPRs representing i1 src
 >;
@@ -3788,15 +3789,18 @@ let True16Predicate = UseFakeTrue16Insts in {
 }
 } // End SubtargetPredicate = [isGFX9Plus]
 
-let OtherPredicates = [isGFX12Plus] in {
+let SubtargetPredicate = isGFX12Plus in {
 def : FPMinMaxPat<V_MINIMUMMAXIMUM_F32_e64, f32, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
 def : FPMinMaxPat<V_MAXIMUMMINIMUM_F32_e64, f32, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
-def : FPMinMaxPat<V_MINIMUMMAXIMUM_F16_e64, f16, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
-def : FPMinMaxPat<V_MAXIMUMMINIMUM_F16_e64, f16, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
 def : FPMinCanonMaxPat<V_MINIMUMMAXIMUM_F32_e64, f32, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
 def : FPMinCanonMaxPat<V_MAXIMUMMINIMUM_F32_e64, f32, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
-def : FPMinCanonMaxPat<V_MINIMUMMAXIMUM_F16_e64, f16, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
-def : FPMinCanonMaxPat<V_MAXIMUMMINIMUM_F16_e64, f16, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
+}
+
+let True16Predicate = UseFakeTrue16Insts, SubtargetPredicate = isGFX12Plus in {
+def : FPMinMaxPat<V_MINIMUMMAXIMUM_F16_fake16_e64, f16, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
+def : FPMinMaxPat<V_MAXIMUMMINIMUM_F16_fake16_e64, f16, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
+def : FPMinCanonMaxPat<V_MINIMUMMAXIMUM_F16_fake16_e64, f16, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
+def : FPMinCanonMaxPat<V_MAXIMUMMINIMUM_F16_fake16_e64, f16, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
 }
 
 // Convert a floating-point power of 2 to the integer exponent.

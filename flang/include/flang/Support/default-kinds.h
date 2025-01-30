@@ -58,4 +58,4 @@ private:
   int defaultLogicalKind_{defaultIntegerKind_};
 };
 } // namespace Fortran::common
-#endif /* FORTRAN_SUPPORT_DEFAULT_KINDS_H_ */
+#endif // FORTRAN_SUPPORT_DEFAULT_KINDS_H_

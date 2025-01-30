@@ -12,10 +12,12 @@ functions:
       - POSIX
     return_type: int
     arguments:
+      - type: int
       - type: struct rlimit *
   - name: setrlimit
     standards:
       - POSIX
     return_type: int
     arguments:
-      - type: const struct rlimit
+      - type: int
+      - type: const struct rlimit *

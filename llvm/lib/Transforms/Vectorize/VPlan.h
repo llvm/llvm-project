@@ -60,6 +60,7 @@ class RecurrenceDescriptor;
 class SCEV;
 class Type;
 class VPBasicBlock;
+class VPBuilder;
 class VPRegionBlock;
 class VPlan;
 class VPReplicateRecipe;
@@ -1422,6 +1423,11 @@ public:
            "Op must be an operand of the recipe");
     return true;
   }
+
+  /// Update the recipes single operand to the last lane of the operand using \p
+  /// Builder. Must only be used for single operand VPIRInstructions wrapping a
+  /// PHINode.
+  void extractLastLaneOfOperand(VPBuilder &Builder);
 };
 
 /// VPWidenRecipe is a recipe for producing a widened instruction using the
@@ -2456,7 +2462,10 @@ public:
       : VPSingleDefRecipe(VPDef::VPPartialReductionSC,
                           ArrayRef<VPValue *>({Op0, Op1}), ReductionInst),
         Opcode(Opcode) {
-    assert(isa<VPReductionPHIRecipe>(getOperand(1)->getDefiningRecipe()) &&
+    [[maybe_unused]] auto *AccumulatorRecipe =
+        getOperand(1)->getDefiningRecipe();
+    assert((isa<VPReductionPHIRecipe>(AccumulatorRecipe) ||
+            isa<VPPartialReductionRecipe>(AccumulatorRecipe)) &&
            "Unexpected operand order for partial reduction recipe");
   }
   ~VPPartialReductionRecipe() override = default;

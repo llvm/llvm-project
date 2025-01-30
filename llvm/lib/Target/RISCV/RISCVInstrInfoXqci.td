@@ -299,9 +299,9 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 
 let Predicates = [HasVendorXqciac, IsRV32], DecoderNamespace = "Xqciac" in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
-  def QC_C_MULADDI : RVInst16CL<0b001, 0b10, (outs GPRC:$rd_wb),
+  def QC_C_MULIADD : RVInst16CL<0b001, 0b10, (outs GPRC:$rd_wb),
                                (ins GPRC:$rd, GPRC:$rs1, uimm5:$uimm),
-                               "qc.c.muladdi", "$rd, $rs1, $uimm"> {
+                               "qc.c.muliadd", "$rd, $rs1, $uimm"> {
     let Constraints = "$rd = $rd_wb";
     bits<5> uimm;
 
@@ -310,9 +310,9 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
     let Inst{5} = uimm{4};
   }
 
-  def QC_MULADDI : RVInstI<0b110, OPC_CUSTOM_0, (outs GPRNoX0:$rd_wb),
+  def QC_MULIADD : RVInstI<0b110, OPC_CUSTOM_0, (outs GPRNoX0:$rd_wb),
                            (ins GPRNoX0:$rd, GPRNoX0:$rs1, simm12:$imm12),
-                           "qc.muladdi", "$rd, $rs1, $imm12"> {
+                           "qc.muliadd", "$rd, $rs1, $imm12"> {
     let Constraints = "$rd = $rd_wb";
   }
 
