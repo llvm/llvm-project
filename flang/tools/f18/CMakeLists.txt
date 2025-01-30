@@ -111,7 +111,10 @@ if (NOT CMAKE_CROSSCOMPILING)
     set(include_in_link FALSE)
     if(${filename} IN_LIST MODULES_WITH_IMPLEMENTATION)
       set(object_output "${CMAKE_CURRENT_BINARY_DIR}/${filename}${CMAKE_CXX_OUTPUT_EXTENSION}")
-      set(compile_with -c -o ${object_output})
+      # flang-new defaults to LLVM_DEFAULT_TARGET_TRIPLE as target, but
+      # currently we can build the runtime for the same target as the host
+      # compiler.
+      set(compile_with -target ${LLVM_HOST_TRIPLE} -c -o ${object_output})
       set(include_in_link TRUE)
     endif()
 
