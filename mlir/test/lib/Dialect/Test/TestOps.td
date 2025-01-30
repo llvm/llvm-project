@@ -324,6 +324,10 @@ def DenseArrayAttrOp : TEST_Op<"dense_array_attr"> {
   }];
 }
 
+def SlashAttrOp : TEST_Op<"slash_attr"> {
+  let arguments = (ins SlashAttr:$attr);
+}
+
 //===----------------------------------------------------------------------===//
 // Test Attributes Constraints
 //===----------------------------------------------------------------------===//
