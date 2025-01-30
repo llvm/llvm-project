@@ -93,7 +93,6 @@
 #define ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER 0
 
 /* Enable each functionality of modules */
-#define CLANG_ENABLE_ARCMT 1
 #define CLANG_ENABLE_OBJC_REWRITER 1
 #define CLANG_ENABLE_STATIC_ANALYZER 1
 
