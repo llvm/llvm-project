@@ -97,6 +97,12 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`boost-use-ranges
+  <clang-tidy/checks/boost/use-ranges>` check to more precisely remove comma.
+
+- Improved :doc:`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` check to more precisely remove comma.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
