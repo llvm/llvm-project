@@ -21,14 +21,6 @@ end function
 ! ALL-LABEL: @_QPtest_real8
 ! ALL: {{%[A-Za-z0-9._]+}} = fir.call @llvm.trunc.f64({{%[A-Za-z0-9._]+}}) {{.*}}: (f64) -> f64
 
-function test_real10(x)
-  real(10) :: x, test_real10
-  test_real10 = aint(x)
-end function
-
-! ALL-LABEL: @_QPtest_real10
-! ALL: {{%[A-Za-z0-9._]+}} = fir.call @llvm.trunc.f80({{%[A-Za-z0-9._]+}}) {{.*}}: (f80) -> f80
-
 ! TODO: wait until fp128 is supported well in llvm.trunc
 !function test_real16(x)
 !  real(16) :: x, test_real16
@@ -37,4 +29,3 @@ end function
 
 ! ALL-DAG: func.func private @llvm.trunc.f32(f32) -> f32 attributes {fir.bindc_name = "llvm.trunc.f32", fir.runtime}
 ! ALL-DAG: func.func private @llvm.trunc.f64(f64) -> f64 attributes {fir.bindc_name = "llvm.trunc.f64", fir.runtime}
-! ALL-DAG: func.func private @llvm.trunc.f80(f80) -> f80 attributes {fir.bindc_name = "llvm.trunc.f80", fir.runtime}
