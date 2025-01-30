@@ -6,7 +6,6 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
-  let usePropertiesForAttributes = 0;
 }
 class NS_Op<string mnemonic, list<Trait> traits> :
     Op<Test_Dialect, mnemonic, traits>;
@@ -206,4 +205,4 @@ def OpM : NS_Op<"mix_diff_size_variadic_and_normal_results_op", [AttrSizedResult
 }
 
 // CHECK-LABEL: OpM::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::TypeRange output1, ::mlir::Type output2, /*optional*/::mlir::Type output3)
-// CHECK: odsState.addAttribute(getResultSegmentSizesAttrName(odsState.name), odsBuilder.getDenseI32ArrayAttr({static_cast<int32_t>(output1.size()), 1, (output3 ? 1 : 0)}));
+// CHECK: ::llvm::copy(::llvm::ArrayRef<int32_t>({static_cast<int32_t>(output1.size()), 1, (output3 ? 1 : 0)}),  odsState.getOrAddProperties<Properties>().resultSegmentSizes.begin());

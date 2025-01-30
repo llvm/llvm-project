@@ -2076,8 +2076,8 @@ void OpEmitter::genOptionalAttrRemovers() {
       return;
     if (useProperties) {
       method->body() << formatv(R"(
-    auto &attr = getProperties().{0};
-    attr = {{};
+    auto attr = getProperties().{0};
+    getProperties().{0} = {{};
     return attr;
 )",
                                 name);
