@@ -162,7 +162,7 @@ void DXContainerGlobals::addRootSignature(Module &M,
 
   RootSignatureHeader RSH;
   RSH.Flags = MRS->Flags;
-  RSH.Version = MRS->Version;
+
   RSH.write(OS);
 
   Constant *Constant =
