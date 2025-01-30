@@ -657,6 +657,60 @@ define i64 @combine_fshl_load_i64(ptr %p) nounwind {
   ret i64 %res
 }
 
+define i16 @combine_fshl_load_i16_chain_use(ptr %p, ptr %q, i16 %r) nounwind {
+; X86-FAST-LABEL: combine_fshl_load_i16_chain_use:
+; X86-FAST:       # %bb.0:
+; X86-FAST-NEXT:    pushl %esi
+; X86-FAST-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-FAST-NEXT:    movzwl (%eax), %esi
+; X86-FAST-NEXT:    movzwl 2(%eax), %eax
+; X86-FAST-NEXT:    shldw $8, %si, %ax
+; X86-FAST-NEXT:    movw %cx, (%edx)
+; X86-FAST-NEXT:    popl %esi
+; X86-FAST-NEXT:    retl
+;
+; X86-SLOW-LABEL: combine_fshl_load_i16_chain_use:
+; X86-SLOW:       # %bb.0:
+; X86-SLOW-NEXT:    pushl %esi
+; X86-SLOW-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SLOW-NEXT:    movzwl 2(%esi), %eax
+; X86-SLOW-NEXT:    movzbl 1(%esi), %esi
+; X86-SLOW-NEXT:    shll $8, %eax
+; X86-SLOW-NEXT:    orl %esi, %eax
+; X86-SLOW-NEXT:    movw %cx, (%edx)
+; X86-SLOW-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-SLOW-NEXT:    popl %esi
+; X86-SLOW-NEXT:    retl
+;
+; X64-FAST-LABEL: combine_fshl_load_i16_chain_use:
+; X64-FAST:       # %bb.0:
+; X64-FAST-NEXT:    movzwl (%rdi), %ecx
+; X64-FAST-NEXT:    movzwl 2(%rdi), %eax
+; X64-FAST-NEXT:    shldw $8, %cx, %ax
+; X64-FAST-NEXT:    movw %dx, (%rsi)
+; X64-FAST-NEXT:    retq
+;
+; X64-SLOW-LABEL: combine_fshl_load_i16_chain_use:
+; X64-SLOW:       # %bb.0:
+; X64-SLOW-NEXT:    movzwl 2(%rdi), %eax
+; X64-SLOW-NEXT:    movzbl 1(%rdi), %ecx
+; X64-SLOW-NEXT:    shll $8, %eax
+; X64-SLOW-NEXT:    orl %ecx, %eax
+; X64-SLOW-NEXT:    movw %dx, (%rsi)
+; X64-SLOW-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-SLOW-NEXT:    retq
+  %p1 = getelementptr i16, ptr %p, i32 1
+  %ld0 = load i16, ptr %p
+  %ld1 = load i16, ptr %p1
+  %res = call i16 @llvm.fshl.i16(i16 %ld1, i16 %ld0, i16 8)
+  store i16 %r, ptr %q
+  ret i16 %res
+}
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
