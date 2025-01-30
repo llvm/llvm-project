@@ -5,6 +5,13 @@
 // RUN: %clang_cc1 -triple x86_64 -fbounds-safety -emit-llvm -O2 -fno-bounds-safety-bringup-missing-checks=indirect_count_update %s -o - | FileCheck --check-prefix WITHOUT %s
 #include <ptrcheck.h>
 
+//
+// WITHOUT-LABEL: define dso_local void @foo(
+// WITHOUT-SAME: ptr noundef writeonly captures(none) initializes((0, 4)) [[START:%.*]], ptr noundef writeonly captures(none) initializes((0, 4)) [[END:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// WITHOUT-NEXT:  [[ENTRY:.*:]]
+// WITHOUT-NEXT:    store i32 0, ptr [[END]], align 4, !tbaa [[TBAA2:![0-9]+]]
+// WITHOUT-NEXT:    store i32 0, ptr [[START]], align 4, !tbaa [[TBAA2]]
+// WITHOUT-NEXT:    ret void
 // CHECK-LABEL: define dso_local void @foo(
 // CHECK-SAME: ptr noundef writeonly [[START:%.*]], ptr noundef writeonly [[END:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -24,18 +31,20 @@
 // CHECK-NEXT:    store i32 0, ptr [[START]], align 4, !tbaa [[TBAA3]]
 // CHECK-NEXT:    ret void
 //
-// WITHOUT-LABEL: define dso_local void @foo(
-// WITHOUT-SAME: ptr nocapture noundef writeonly initializes((0, 4)) [[START:%.*]], ptr nocapture noundef writeonly initializes((0, 4)) [[END:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-// WITHOUT-NEXT:  [[ENTRY:.*:]]
-// WITHOUT-NEXT:    store i32 0, ptr [[END]], align 4, !tbaa [[TBAA2:![0-9]+]]
-// WITHOUT-NEXT:    store i32 0, ptr [[START]], align 4, !tbaa [[TBAA2]]
-// WITHOUT-NEXT:    ret void
-//
 void foo(int *__ended_by(end) start, int * end) {
     *end-- = 0;
 	*start++ = 0;
 }
 
+//
+// WITHOUT-LABEL: define dso_local void @bar(
+// WITHOUT-SAME: ptr noundef writeonly captures(none) initializes((4, 8)) [[START:%.*]], ptr noundef writeonly captures(none) initializes((-4, 0)) [[END:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// WITHOUT-NEXT:  [[ENTRY:.*:]]
+// WITHOUT-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[START]], i64 4
+// WITHOUT-NEXT:    store i32 0, ptr [[BOUND_PTR_ARITH]], align 4, !tbaa [[TBAA2]]
+// WITHOUT-NEXT:    [[BOUND_PTR_ARITH3:%.*]] = getelementptr i8, ptr [[END]], i64 -4
+// WITHOUT-NEXT:    store i32 0, ptr [[BOUND_PTR_ARITH3]], align 4, !tbaa [[TBAA2]]
+// WITHOUT-NEXT:    ret void
 // CHECK-LABEL: define dso_local void @bar(
 // CHECK-SAME: ptr noundef writeonly [[START:%.*]], ptr noundef writeonly [[END:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -55,28 +64,18 @@ void foo(int *__ended_by(end) start, int * end) {
 // CHECK-NEXT:    store i32 0, ptr [[BOUND_PTR_ARITH3]], align 4, !tbaa [[TBAA3]]
 // CHECK-NEXT:    ret void
 //
-// WITHOUT-LABEL: define dso_local void @bar(
-// WITHOUT-SAME: ptr nocapture noundef writeonly initializes((4, 8)) [[START:%.*]], ptr nocapture noundef writeonly initializes((-4, 0)) [[END:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// WITHOUT-NEXT:  [[ENTRY:.*:]]
-// WITHOUT-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[START]], i64 4
-// WITHOUT-NEXT:    store i32 0, ptr [[BOUND_PTR_ARITH]], align 4, !tbaa [[TBAA2]]
-// WITHOUT-NEXT:    [[BOUND_PTR_ARITH3:%.*]] = getelementptr i8, ptr [[END]], i64 -4
-// WITHOUT-NEXT:    store i32 0, ptr [[BOUND_PTR_ARITH3]], align 4, !tbaa [[TBAA2]]
-// WITHOUT-NEXT:    ret void
-//
 void bar(int *__ended_by(end) start, int * end) {
 	*(start = start+1) = 0;
     *(end = end-1) = 0;
 }
+// WITHOUT: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
+// WITHOUT: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
+// WITHOUT: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// WITHOUT: [[META5]] = !{!"Simple C/C++ TBAA"}
 //.
 // CHECK: [[META2]] = !{!"bounds-safety-generic"}
 // CHECK: [[TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
 // CHECK: [[META4]] = !{!"int", [[META5:![0-9]+]], i64 0}
 // CHECK: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
 // CHECK: [[META6]] = !{!"Simple C/C++ TBAA"}
-//.
-// WITHOUT: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// WITHOUT: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
-// WITHOUT: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
-// WITHOUT: [[META5]] = !{!"Simple C/C++ TBAA"}
 //.

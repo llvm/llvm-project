@@ -7,7 +7,7 @@
 #include <stddef.h>
 
 // CHECK-LABEL: define dso_local void @to_bidi(
-// CHECK-SAME: ptr dead_on_unwind noalias nocapture writable writeonly sret(%"__bounds_safety::wide_ptr.bidi_indexable") align 8 [[AGG_RESULT:%.*]], ptr noundef readnone [[ARG:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(%"__bounds_safety::wide_ptr.bidi_indexable") align 8 captures(none) [[AGG_RESULT:%.*]], ptr noundef readnone [[ARG:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq ptr [[ARG]], null, !annotation [[META2:![0-9]+]]
 // CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[BOUNDSCHECK_NULL:%.*]], label [[TRAP:%.*]], !annotation [[META2]]
@@ -25,7 +25,7 @@ int *__bidi_indexable to_bidi(int * arg) {
 }
 
 // CHECK-LABEL: define dso_local void @to_bidi_literal_count(
-// CHECK-SAME: ptr dead_on_unwind noalias nocapture writable writeonly sret(%"__bounds_safety::wide_ptr.bidi_indexable") align 8 [[AGG_RESULT:%.*]], ptr noundef readnone [[ARG:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(%"__bounds_safety::wide_ptr.bidi_indexable") align 8 captures(none) [[AGG_RESULT:%.*]], ptr noundef readnone [[ARG:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq ptr [[ARG]], null, !annotation [[META2]]
 // CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[BOUNDSCHECK_NULL:%.*]], label [[TRAP_CRITEDGE:%.*]], !annotation [[META2]]
@@ -42,7 +42,7 @@ int *__bidi_indexable to_bidi_literal_count(int * arg) {
 }
 
 // CHECK-LABEL: define dso_local void @to_bidi_const_count(
-// CHECK-SAME: ptr dead_on_unwind noalias nocapture writable writeonly sret(%"__bounds_safety::wide_ptr.bidi_indexable") align 8 [[AGG_RESULT:%.*]], ptr noundef readnone [[ARG:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(%"__bounds_safety::wide_ptr.bidi_indexable") align 8 captures(none) [[AGG_RESULT:%.*]], ptr noundef readnone [[ARG:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq ptr [[ARG]], null, !annotation [[META2]]
 // CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[BOUNDSCHECK_NULL:%.*]], label [[TRAP_CRITEDGE:%.*]], !annotation [[META2]]
@@ -60,7 +60,7 @@ int *__bidi_indexable to_bidi_const_count(int * arg) {
 }
 
 // CHECK-LABEL: define dso_local void @back_and_forth_to_bidi(
-// CHECK-SAME: ptr nocapture noundef writeonly initializes((0, 24)) [[ARG:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// CHECK-SAME: ptr noundef writeonly captures(none) initializes((0, 24)) [[ARG:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  boundscheck.null49:
 // CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(24) [[ARG]], i8 0, i64 24, i1 false)
 // CHECK-NEXT:    ret void

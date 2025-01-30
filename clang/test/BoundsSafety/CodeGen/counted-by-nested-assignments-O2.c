@@ -5,6 +5,12 @@
 // RUN: %clang_cc1 -triple x86_64 -fbounds-safety -emit-llvm -fno-bounds-safety-bringup-missing-checks=indirect_count_update -O2 %s -o - | FileCheck %s --check-prefix WITHOUT
 #include <ptrcheck.h>
 
+//
+// WITHOUT-LABEL: define dso_local void @foo(
+// WITHOUT-SAME: ptr noundef writeonly captures(none) initializes((0, 4)) [[X:%.*]], i32 noundef [[COUNT:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// WITHOUT-NEXT:  [[ENTRY:.*:]]
+// WITHOUT-NEXT:    store i32 0, ptr [[X]], align 4, !tbaa [[TBAA2:![0-9]+]]
+// WITHOUT-NEXT:    ret void
 // CHECK-LABEL: define dso_local void @foo(
 // CHECK-SAME: ptr noundef writeonly [[X:%.*]], i32 noundef [[COUNT:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -30,12 +36,6 @@
 // CHECK-NEXT:    store i32 0, ptr [[X]], align 4, !tbaa [[TBAA7:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
-// WITHOUT-LABEL: define dso_local void @foo(
-// WITHOUT-SAME: ptr nocapture noundef writeonly initializes((0, 4)) [[X:%.*]], i32 noundef [[COUNT:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-// WITHOUT-NEXT:  [[ENTRY:.*:]]
-// WITHOUT-NEXT:    store i32 0, ptr [[X]], align 4, !tbaa [[TBAA2:![0-9]+]]
-// WITHOUT-NEXT:    ret void
-//
 void foo(int *__counted_by(count) x, unsigned count) {
 	*x++ = 0;
     #ifdef WITH
@@ -46,6 +46,13 @@ void foo(int *__counted_by(count) x, unsigned count) {
     #endif
 }
 
+//
+// WITHOUT-LABEL: define dso_local void @bar(
+// WITHOUT-SAME: ptr noundef writeonly captures(none) initializes((4, 8)) [[X:%.*]], i32 noundef [[COUNT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// WITHOUT-NEXT:  [[ENTRY:.*:]]
+// WITHOUT-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[X]], i64 4
+// WITHOUT-NEXT:    store i32 0, ptr [[BOUND_PTR_ARITH]], align 4, !tbaa [[TBAA2]]
+// WITHOUT-NEXT:    ret void
 // CHECK-LABEL: define dso_local void @bar(
 // CHECK-SAME: ptr noundef writeonly [[X:%.*]], i32 noundef [[COUNT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -73,13 +80,6 @@ void foo(int *__counted_by(count) x, unsigned count) {
 // CHECK-NEXT:    store i32 0, ptr [[BOUND_PTR_ARITH]], align 4, !tbaa [[TBAA7]]
 // CHECK-NEXT:    ret void
 //
-// WITHOUT-LABEL: define dso_local void @bar(
-// WITHOUT-SAME: ptr nocapture noundef writeonly initializes((4, 8)) [[X:%.*]], i32 noundef [[COUNT:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// WITHOUT-NEXT:  [[ENTRY:.*:]]
-// WITHOUT-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[X]], i64 4
-// WITHOUT-NEXT:    store i32 0, ptr [[BOUND_PTR_ARITH]], align 4, !tbaa [[TBAA2]]
-// WITHOUT-NEXT:    ret void
-//
 void bar(int *__counted_by(count) x, int count) {
     #ifdef WITH
     // NOTE: It's necessary to exclude the count update with
@@ -90,6 +90,10 @@ void bar(int *__counted_by(count) x, int count) {
 	*(x = x+1) = 0;
 }
 
+// WITHOUT: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
+// WITHOUT: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
+// WITHOUT: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// WITHOUT: [[META5]] = !{!"Simple C/C++ TBAA"}
 //.
 // CHECK: [[META2]] = !{!"bounds-safety-generic"}
 // CHECK: [[META3]] = !{[[META4:![0-9]+]]}
@@ -101,9 +105,4 @@ void bar(int *__counted_by(count) x, int count) {
 // CHECK: [[META9]] = !{!"omnipotent char", [[META10:![0-9]+]], i64 0}
 // CHECK: [[META10]] = !{!"Simple C/C++ TBAA"}
 // CHECK: [[META11]] = !{[[META6]]}
-//.
-// WITHOUT: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// WITHOUT: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
-// WITHOUT: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
-// WITHOUT: [[META5]] = !{!"Simple C/C++ TBAA"}
 //.

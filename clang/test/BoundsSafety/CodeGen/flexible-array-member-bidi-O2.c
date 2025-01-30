@@ -14,7 +14,7 @@ struct Simple {
 // rdar://132731845 the flexible arrays are not bounds checked
 
 // CHECK-LABEL: define dso_local void @simple_no_flexbase_update(
-// CHECK-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
@@ -38,7 +38,7 @@ void simple_no_flexbase_update(struct Simple * __bidi_indexable p) {
 }
 
 // CHECK-LABEL: define dso_local void @simple_flexbase_update(
-// CHECK-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[P2_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    [[P2_SROA_4_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
@@ -63,7 +63,7 @@ void simple_flexbase_update(struct Simple * __bidi_indexable p) {
 }
 
 // CHECK-LABEL: define dso_local void @simple_flexbase_self_assign(
-// CHECK-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
@@ -95,7 +95,7 @@ struct Shared {
 int * __counted_by(len) baz(int len);
 
 // CHECK-LABEL: define dso_local void @shared_no_flexbase_update(
-// CHECK-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @baz(i32 noundef 11) #[[ATTR4:[0-9]+]]
 // CHECK-NEXT:    [[AGG_TEMP29_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
@@ -132,7 +132,7 @@ void shared_no_flexbase_update(struct Shared * __bidi_indexable p) {
 }
 
 // CHECK-LABEL: define dso_local void @shared_no_flexbase_update_reverse(
-// CHECK-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @baz(i32 noundef 11) #[[ATTR4]]
 // CHECK-NEXT:    [[AGG_TEMP36_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
@@ -168,7 +168,7 @@ void shared_no_flexbase_update_reverse(struct Shared * __bidi_indexable p) {
 }
 
 // CHECK-LABEL: define dso_local void @shared_flexbase_update(
-// CHECK-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @baz(i32 noundef 11) #[[ATTR4]]
 // CHECK-NEXT:    [[P2_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
@@ -198,7 +198,7 @@ void shared_flexbase_update(struct Shared * __bidi_indexable p) {
 }
 
 // CHECK-LABEL: define dso_local void @shared_flexbase_update_reverse(
-// CHECK-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @baz(i32 noundef 11) #[[ATTR4]]
 // CHECK-NEXT:    [[P2_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
@@ -228,7 +228,7 @@ void shared_flexbase_update_reverse(struct Shared * __bidi_indexable p) {
 }
 
 // CHECK-LABEL: define dso_local void @shared_flexbase_self_assign(
-// CHECK-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @baz(i32 noundef 11) #[[ATTR4]]
 // CHECK-NEXT:    [[AGG_TEMP36_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
@@ -266,7 +266,7 @@ void shared_flexbase_self_assign(struct Shared * __bidi_indexable p) {
 }
 
 // CHECK-LABEL: define dso_local void @shared_flexbase_self_assign_reverse(
-// CHECK-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @baz(i32 noundef 11) #[[ATTR4]]
 // CHECK-NEXT:    [[AGG_TEMP29_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
@@ -304,7 +304,7 @@ void shared_flexbase_self_assign_reverse(struct Shared * __bidi_indexable p) {
 }
 
 // CHECK-LABEL: define dso_local void @shared_flexbase_self_assign_fr(
-// CHECK-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
@@ -334,7 +334,7 @@ void shared_flexbase_self_assign_fr(struct Shared * __bidi_indexable p) {
 }
 
 // CHECK-LABEL: define dso_local void @shared_flexbase_self_assign_fr_reverse(
-// CHECK-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
@@ -382,7 +382,7 @@ struct Double {
 };
 
 // CHECK-LABEL: define dso_local void @double_no_flexbase_update_once(
-// CHECK-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
@@ -406,7 +406,7 @@ void double_no_flexbase_update_once(struct Double * __bidi_indexable p) {
 }
 
 // CHECK-LABEL: define dso_local void @double_no_flexbase_update_both(
-// CHECK-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8

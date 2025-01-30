@@ -12,7 +12,7 @@ int main(int argc, char **argv) {
     char *__single tp = dcp;
 }
 
-// IR: define{{.*}} i32 @main(i32 noundef %argc, ptr nocapture noundef readonly %argv)
+// IR: define{{.*}} i32 @main(i32 noundef %argc, ptr noundef readonly captures(none) %argv)
 // IR:  %[[ARGV_DEREF:[a-z0-9.]+]] = load ptr, ptr %argv, align 8, !dbg ![[LOC_11_44:[0-9]+]]
 // IR:  %[[NULL_CHECK:[a-z0-9.]+]] = icmp eq ptr %[[ARGV_DEREF]], null, !dbg ![[LOC_12_25:[0-9]+]], !annotation ![[NULL_CHECK_ANNOT:[0-9]+]]
 // IR:  br i1 %[[NULL_CHECK]], label %[[LABEL_CONT:[a-z0-9.]+]], label %[[LABEL_TRAP_RES:[a-z0-9.]+]], !dbg ![[LOC_12_25]], !annotation ![[NULL_CHECK_ANNOT]]
