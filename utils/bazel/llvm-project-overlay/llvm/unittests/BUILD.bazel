@@ -437,6 +437,7 @@ cc_test(
         "//llvm:Passes",
         "//llvm:Support",
         "//llvm:TargetParser",
+        "//llvm:TestingSupport",
         "//llvm:TransformUtils",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
@@ -535,6 +536,7 @@ cc_test(
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
@@ -697,7 +699,7 @@ cc_test(
     ],
     linkstatic = 1,
     tags = [
-        "local",  # Not compatible with the sandbox on MacOS
+        "no-sandbox",  # FileSystemTest.permissions not compatible with the sandbox on MacOS
     ],
     deps = [
         "//llvm:AllTargetsCodeGens",

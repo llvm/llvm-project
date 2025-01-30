@@ -174,8 +174,8 @@ TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(CallbackInvokedWithInitialLLVMIR)) {
   };
 
   gpu::TargetOptions opts(
-      {}, {}, {}, mlir::gpu::TargetOptions::getDefaultCompilationTarget(), {},
-      initialCallback);
+      {}, {}, {}, {}, mlir::gpu::TargetOptions::getDefaultCompilationTarget(),
+      {}, initialCallback);
   std::optional<SmallVector<char, 0>> serializedBinary =
       targetAttr.serializeToObject(*module, opts);
 
@@ -202,8 +202,8 @@ TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(CallbackInvokedWithLinkedLLVMIR)) {
   };
 
   gpu::TargetOptions opts(
-      {}, {}, {}, mlir::gpu::TargetOptions::getDefaultCompilationTarget(), {},
-      {}, linkedCallback);
+      {}, {}, {}, {}, mlir::gpu::TargetOptions::getDefaultCompilationTarget(),
+      {}, {}, linkedCallback);
   std::optional<SmallVector<char, 0>> serializedBinary =
       targetAttr.serializeToObject(*module, opts);
 
@@ -231,8 +231,8 @@ TEST_F(MLIRTargetLLVM,
   };
 
   gpu::TargetOptions opts(
-      {}, {}, {}, mlir::gpu::TargetOptions::getDefaultCompilationTarget(), {},
-      {}, {}, optimizedCallback);
+      {}, {}, {}, {}, mlir::gpu::TargetOptions::getDefaultCompilationTarget(),
+      {}, {}, {}, optimizedCallback);
   std::optional<SmallVector<char, 0>> serializedBinary =
       targetAttr.serializeToObject(*module, opts);
 

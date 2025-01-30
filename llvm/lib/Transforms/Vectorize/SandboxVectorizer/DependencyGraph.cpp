@@ -232,6 +232,9 @@ void DependencyGraph::setDefUseUnscheduledSuccs(
       auto *OpI = dyn_cast<Instruction>(Op);
       if (OpI == nullptr)
         continue;
+      // TODO: For now don't cross BBs.
+      if (OpI->getParent() != I.getParent())
+        continue;
       if (!NewInterval.contains(OpI))
         continue;
       auto *OpN = getNode(OpI);
@@ -264,10 +267,10 @@ void DependencyGraph::setDefUseUnscheduledSuccs(
       auto *OpI = dyn_cast<Instruction>(Op);
       if (OpI == nullptr)
         continue;
-      if (!TopInterval.contains(OpI))
-        continue;
       auto *OpN = getNode(OpI);
       if (OpN == nullptr)
+        continue;
+      if (!TopInterval.contains(OpI))
         continue;
       ++OpN->UnscheduledSuccs;
     }
@@ -283,8 +286,6 @@ void DependencyGraph::createNewNodes(const Interval<Instruction> &NewInterval) {
     // Build the Mem node chain.
     if (auto *MemN = dyn_cast<MemDGNode>(N)) {
       MemN->setPrevNode(LastMemN);
-      if (LastMemN != nullptr)
-        LastMemN->setNextNode(MemN);
       LastMemN = MemN;
     }
   }
@@ -302,7 +303,6 @@ void DependencyGraph::createNewNodes(const Interval<Instruction> &NewInterval) {
            "Wrong order!");
     if (LinkTopN != nullptr && LinkBotN != nullptr) {
       LinkTopN->setNextNode(LinkBotN);
-      LinkBotN->setPrevNode(LinkTopN);
     }
 #ifndef NDEBUG
     // TODO: Remove this once we've done enough testing.
@@ -323,6 +323,136 @@ void DependencyGraph::createNewNodes(const Interval<Instruction> &NewInterval) {
   }
 
   setDefUseUnscheduledSuccs(NewInterval);
+}
+
+MemDGNode *DependencyGraph::getMemDGNodeBefore(DGNode *N, bool IncludingN,
+                                               MemDGNode *SkipN) const {
+  auto *I = N->getInstruction();
+  for (auto *PrevI = IncludingN ? I : I->getPrevNode(); PrevI != nullptr;
+       PrevI = PrevI->getPrevNode()) {
+    auto *PrevN = getNodeOrNull(PrevI);
+    if (PrevN == nullptr)
+      return nullptr;
+    auto *PrevMemN = dyn_cast<MemDGNode>(PrevN);
+    if (PrevMemN != nullptr && PrevMemN != SkipN)
+      return PrevMemN;
+  }
+  return nullptr;
+}
+
+MemDGNode *DependencyGraph::getMemDGNodeAfter(DGNode *N, bool IncludingN,
+                                              MemDGNode *SkipN) const {
+  auto *I = N->getInstruction();
+  for (auto *NextI = IncludingN ? I : I->getNextNode(); NextI != nullptr;
+       NextI = NextI->getNextNode()) {
+    auto *NextN = getNodeOrNull(NextI);
+    if (NextN == nullptr)
+      return nullptr;
+    auto *NextMemN = dyn_cast<MemDGNode>(NextN);
+    if (NextMemN != nullptr && NextMemN != SkipN)
+      return NextMemN;
+  }
+  return nullptr;
+}
+
+void DependencyGraph::notifyCreateInstr(Instruction *I) {
+  auto *MemN = dyn_cast<MemDGNode>(getOrCreateNode(I));
+  // TODO: Update the dependencies for the new node.
+
+  // Update the MemDGNode chain if this is a memory node.
+  if (MemN != nullptr) {
+    if (auto *PrevMemN = getMemDGNodeBefore(MemN, /*IncludingN=*/false)) {
+      PrevMemN->NextMemN = MemN;
+      MemN->PrevMemN = PrevMemN;
+    }
+    if (auto *NextMemN = getMemDGNodeAfter(MemN, /*IncludingN=*/false)) {
+      NextMemN->PrevMemN = MemN;
+      MemN->NextMemN = NextMemN;
+    }
+  }
+}
+
+void DependencyGraph::notifyMoveInstr(Instruction *I, const BBIterator &To) {
+  // NOTE: This function runs before `I` moves to its new destination.
+  BasicBlock *BB = To.getNodeParent();
+  assert(!(To != BB->end() && &*To == I->getNextNode()) &&
+         !(To == BB->end() && std::next(I->getIterator()) == BB->end()) &&
+         "Should not have been called if destination is same as origin.");
+
+  // TODO: We can only handle fully internal movements within DAGInterval or at
+  // the borders, i.e., right before the top or right after the bottom.
+  assert(To.getNodeParent() == I->getParent() &&
+         "TODO: We don't support movement across BBs!");
+  assert(
+      (To == std::next(DAGInterval.bottom()->getIterator()) ||
+       (To != BB->end() && std::next(To) == DAGInterval.top()->getIterator()) ||
+       (To != BB->end() && DAGInterval.contains(&*To))) &&
+      "TODO: To should be either within the DAGInterval or right "
+      "before/after it.");
+
+  // Make a copy of the DAGInterval before we update it.
+  auto OrigDAGInterval = DAGInterval;
+
+  // Maintain the DAGInterval.
+  DAGInterval.notifyMoveInstr(I, To);
+
+  // TODO: Perhaps check if this is legal by checking the dependencies?
+
+  // Update the MemDGNode chain to reflect the instr movement if necessary.
+  DGNode *N = getNodeOrNull(I);
+  if (N == nullptr)
+    return;
+  MemDGNode *MemN = dyn_cast<MemDGNode>(N);
+  if (MemN == nullptr)
+    return;
+
+  // First safely detach it from the existing chain.
+  MemN->detachFromChain();
+
+  // Now insert it back into the chain at the new location.
+  //
+  // We won't always have a DGNode to insert before it. If `To` is BB->end() or
+  // if it points to an instr after DAGInterval.bottom() then we will have to
+  // find a node to insert *after*.
+  //
+  // BB:                              BB:
+  //  I1                               I1 ^
+  //  I2                               I2 | DAGInteval [I1 to I3]
+  //  I3                               I3 V
+  //  I4                               I4   <- `To` == right after DAGInterval
+  //    <- `To` == BB->end()
+  //
+  if (To == BB->end() ||
+      To == std::next(OrigDAGInterval.bottom()->getIterator())) {
+    // If we don't have a node to insert before, find a node to insert after and
+    // update the chain.
+    DGNode *InsertAfterN = getNode(&*std::prev(To));
+    MemN->setPrevNode(
+        getMemDGNodeBefore(InsertAfterN, /*IncludingN=*/true, /*SkipN=*/MemN));
+  } else {
+    // We have a node to insert before, so update the chain.
+    DGNode *BeforeToN = getNode(&*To);
+    MemN->setPrevNode(
+        getMemDGNodeBefore(BeforeToN, /*IncludingN=*/false, /*SkipN=*/MemN));
+    MemN->setNextNode(
+        getMemDGNodeAfter(BeforeToN, /*IncludingN=*/true, /*SkipN=*/MemN));
+  }
+}
+
+void DependencyGraph::notifyEraseInstr(Instruction *I) {
+  // Update the MemDGNode chain if this is a memory node.
+  if (auto *MemN = dyn_cast_or_null<MemDGNode>(getNodeOrNull(I))) {
+    auto *PrevMemN = getMemDGNodeBefore(MemN, /*IncludingN=*/false);
+    auto *NextMemN = getMemDGNodeAfter(MemN, /*IncludingN=*/false);
+    if (PrevMemN != nullptr)
+      PrevMemN->NextMemN = NextMemN;
+    if (NextMemN != nullptr)
+      NextMemN->PrevMemN = PrevMemN;
+  }
+
+  InstrToNodeMap.erase(I);
+
+  // TODO: Update the dependencies.
 }
 
 Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {

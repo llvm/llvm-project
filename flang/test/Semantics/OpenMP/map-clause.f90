@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=52
 ! Check OpenMP MAP clause validity. Section 5.8.3 OpenMP 5.2.
 
 subroutine sb(arr)

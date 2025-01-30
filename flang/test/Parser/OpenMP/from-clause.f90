@@ -28,7 +28,7 @@ end
 
 !PARSE-TREE: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target update
 !PARSE-TREE: OmpClauseList -> OmpClause -> From -> OmpFromClause
-!PARSE-TREE: | Expectation = Present
+!PARSE-TREE: | Modifier -> OmpExpectation -> Value = Present
 !PARSE-TREE: | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | bool = 'true'
 
@@ -44,8 +44,8 @@ end
 
 !PARSE-TREE: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target update
 !PARSE-TREE: OmpClauseList -> OmpClause -> From -> OmpFromClause
-!PARSE-TREE: | Expectation = Present
-!PARSE-TREE: | OmpIterator -> OmpIteratorSpecifier
+!PARSE-TREE: | Modifier -> OmpExpectation -> Value = Present
+!PARSE-TREE: | Modifier -> OmpIterator -> OmpIteratorSpecifier
 !PARSE-TREE: | | TypeDeclarationStmt
 !PARSE-TREE: | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
 !PARSE-TREE: | | | EntityDecl
@@ -73,8 +73,8 @@ end
 
 !PARSE-TREE: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target update
 !PARSE-TREE: OmpClauseList -> OmpClause -> From -> OmpFromClause
-!PARSE-TREE: | Expectation = Present
-!PARSE-TREE: | OmpIterator -> OmpIteratorSpecifier
+!PARSE-TREE: | Modifier -> OmpExpectation -> Value = Present
+!PARSE-TREE: | Modifier -> OmpIterator -> OmpIteratorSpecifier
 !PARSE-TREE: | | TypeDeclarationStmt
 !PARSE-TREE: | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
 !PARSE-TREE: | | | EntityDecl

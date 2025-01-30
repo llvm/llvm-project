@@ -2555,6 +2555,14 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::ST4H_IMM:
   case AArch64::ST4W_IMM:
   case AArch64::STGPi:
+  case AArch64::STGPreIndex:
+  case AArch64::STZGPreIndex:
+  case AArch64::ST2GPreIndex:
+  case AArch64::STZ2GPreIndex:
+  case AArch64::STGPostIndex:
+  case AArch64::STZGPostIndex:
+  case AArch64::ST2GPostIndex:
+  case AArch64::STZ2GPostIndex:
   case AArch64::STNPDi:
   case AArch64::STNPQi:
   case AArch64::STNPSi:
@@ -2598,6 +2606,8 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::LDPWpre:
   case AArch64::LDPXpost:
   case AArch64::LDPXpre:
+  case AArch64::STGPpre:
+  case AArch64::STGPpost:
   case AArch64::STPDpost:
   case AArch64::STPDpre:
   case AArch64::STPQpost:
@@ -4167,7 +4177,11 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     break;
   case AArch64::LDG:
   case AArch64::STGi:
+  case AArch64::STGPreIndex:
+  case AArch64::STGPostIndex:
   case AArch64::STZGi:
+  case AArch64::STZGPreIndex:
+  case AArch64::STZGPostIndex:
     Scale = TypeSize::getFixed(16);
     Width = TypeSize::getFixed(16);
     MinOffset = -256;
@@ -4334,13 +4348,19 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     MaxOffset = 7;
     break;
   case AArch64::ST2Gi:
+  case AArch64::ST2GPreIndex:
+  case AArch64::ST2GPostIndex:
   case AArch64::STZ2Gi:
+  case AArch64::STZ2GPreIndex:
+  case AArch64::STZ2GPostIndex:
     Scale = TypeSize::getFixed(16);
     Width = TypeSize::getFixed(32);
     MinOffset = -256;
     MaxOffset = 255;
     break;
   case AArch64::STGPi:
+  case AArch64::STGPpost:
+  case AArch64::STGPpre:
     Scale = TypeSize::getFixed(16);
     Width = TypeSize::getFixed(16);
     MinOffset = -64;
@@ -4810,7 +4830,7 @@ static const MachineInstrBuilder &AddSubReg(const MachineInstrBuilder &MIB,
   if (!SubIdx)
     return MIB.addReg(Reg, State);
 
-  if (Register::isPhysicalRegister(Reg))
+  if (Reg.isPhysical())
     return MIB.addReg(TRI->getSubReg(Reg, SubIdx), State);
   return MIB.addReg(Reg, State, SubIdx);
 }
@@ -5258,7 +5278,8 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                            Register SrcReg, bool isKill, int FI,
                                            const TargetRegisterClass *RC,
                                            const TargetRegisterInfo *TRI,
-                                           Register VReg) const {
+                                           Register VReg,
+                                           MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
@@ -5425,12 +5446,10 @@ static void loadRegPairFromStackSlot(const TargetRegisterInfo &TRI,
       .addMemOperand(MMO);
 }
 
-void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                            MachineBasicBlock::iterator MBBI,
-                                            Register DestReg, int FI,
-                                            const TargetRegisterClass *RC,
-                                            const TargetRegisterInfo *TRI,
-                                            Register VReg) const {
+void AArch64InstrInfo::loadRegFromStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register DestReg,
+    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+    Register VReg, MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
@@ -9722,9 +9741,11 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
 
   // AArch64::ORRWrs and AArch64::ORRXrs with WZR/XZR reg
   // and zero immediate operands used as an alias for mov instruction.
-  if (MI.getOpcode() == AArch64::ORRWrs &&
-      MI.getOperand(1).getReg() == AArch64::WZR &&
-      MI.getOperand(3).getImm() == 0x0 &&
+  if (((MI.getOpcode() == AArch64::ORRWrs &&
+        MI.getOperand(1).getReg() == AArch64::WZR &&
+        MI.getOperand(3).getImm() == 0x0) ||
+       (MI.getOpcode() == AArch64::ORRWrr &&
+        MI.getOperand(1).getReg() == AArch64::WZR)) &&
       // Check that the w->w move is not a zero-extending w->x mov.
       (!MI.getOperand(0).getReg().isVirtual() ||
        MI.getOperand(0).getSubReg() == 0) &&
@@ -9744,9 +9765,11 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
 
 std::optional<DestSourcePair>
 AArch64InstrInfo::isCopyLikeInstrImpl(const MachineInstr &MI) const {
-  if (MI.getOpcode() == AArch64::ORRWrs &&
-      MI.getOperand(1).getReg() == AArch64::WZR &&
-      MI.getOperand(3).getImm() == 0x0)
+  if ((MI.getOpcode() == AArch64::ORRWrs &&
+       MI.getOperand(1).getReg() == AArch64::WZR &&
+       MI.getOperand(3).getImm() == 0x0) ||
+      (MI.getOpcode() == AArch64::ORRWrr &&
+       MI.getOperand(1).getReg() == AArch64::WZR))
     return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
   return std::nullopt;
 }
@@ -10120,7 +10143,6 @@ public:
 
   void adjustTripCount(int TripCountAdjust) override {}
 
-  void disposed() override {}
   bool isMVEExpanderSupported() override { return true; }
 };
 } // namespace

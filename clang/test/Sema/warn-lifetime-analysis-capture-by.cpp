@@ -143,6 +143,20 @@ void use() {
 }
 } // namespace this_is_captured
 
+namespace temporary_capturing_object {
+struct S {
+  void add(const int& x [[clang::lifetime_capture_by(this)]]);
+};
+
+void test() {
+  // We still give an warning even the capturing object is a temoprary.
+  // It is possible that the capturing object uses the captured object in its
+  // destructor.
+  S().add(1); // expected-warning {{object whose reference is captured}}
+  S{}.add(1); // expected-warning {{object whose reference is captured}}
+}
+} // namespace ignore_temporary_class_object
+
 // ****************************************************************************
 // Capture by Global and Unknown.
 // ****************************************************************************
@@ -366,3 +380,95 @@ void use() {
   capture3(std::string(), x3); // expected-warning {{object whose reference is captured by 'x3' will be destroyed at the end of the full-expression}}
 }
 } // namespace temporary_views
+
+// ****************************************************************************
+// Inferring annotation for STL containers
+// ****************************************************************************
+namespace inferred_capture_by {
+const std::string* getLifetimeBoundPointer(const std::string &s [[clang::lifetimebound]]);
+const std::string* getNotLifetimeBoundPointer(const std::string &s);
+
+std::string_view getLifetimeBoundView(const std::string& s [[clang::lifetimebound]]);
+std::string_view getNotLifetimeBoundView(const std::string& s);
+void use() {
+  std::string local;
+  std::vector<std::string_view> views;
+  views.push_back(std::string()); // expected-warning {{object whose reference is captured by 'views' will be destroyed at the end of the full-expression}}
+  views.insert(views.begin(), 
+            std::string()); // expected-warning {{object whose reference is captured by 'views' will be destroyed at the end of the full-expression}}
+  views.push_back(getLifetimeBoundView(std::string())); // expected-warning {{object whose reference is captured by 'views' will be destroyed at the end of the full-expression}}
+  views.push_back(getNotLifetimeBoundView(std::string()));
+  views.push_back(local);
+  views.insert(views.end(), local);
+
+  std::vector<std::string> strings;
+  strings.push_back(std::string());
+  strings.insert(strings.begin(), std::string());
+
+  std::vector<const std::string*> pointers;
+  pointers.push_back(getLifetimeBoundPointer(std::string()));
+  pointers.push_back(&local);
+}
+
+namespace with_span {
+// Templated view types.
+template<typename T>
+struct [[gsl::Pointer]] Span {
+  Span(const std::vector<T> &V);
+};
+
+void use() {
+  std::vector<Span<int>> spans;
+  spans.push_back(std::vector<int>{1, 2, 3}); // expected-warning {{object whose reference is captured by 'spans' will be destroyed at the end of the full-expression}}
+  std::vector<int> local;
+  spans.push_back(local);
+}
+} // namespace with_span
+} // namespace inferred_capture_by
+
+namespace on_constructor {
+struct T {
+  T(const int& t [[clang::lifetime_capture_by(this)]]);
+};
+struct T2 {
+  T2(const int& t [[clang::lifetime_capture_by(x)]], int& x);
+};
+struct T3 {
+  T3(const T& t [[clang::lifetime_capture_by(this)]]);
+};
+
+int foo(const T& t);
+int bar(const T& t[[clang::lifetimebound]]);
+
+void test() {
+  auto x = foo(T(1)); // OK. no diagnosic
+  T(1); // OK. no diagnostic
+  T t(1); // expected-warning {{temporary whose address is used}}
+  auto y = bar(T(1)); // expected-warning {{temporary whose address is used}}
+  T3 t3(T(1)); // expected-warning {{temporary whose address is used}}
+    
+  int a;
+  T2(1, a); // expected-warning {{object whose reference is captured by}}
+}
+} // namespace on_constructor
+
+namespace GH121391 {
+
+struct Foo {};
+
+template <typename T>
+struct Container {
+  const T& tt() [[clang::lifetimebound]];
+};
+template<typename T>
+struct StatusOr {
+   T* get() [[clang::lifetimebound]];
+};
+StatusOr<Container<const Foo*>> getContainer();
+
+void test() {
+  std::vector<const Foo*> vv;
+  vv.push_back(getContainer().get()->tt()); // OK
+}
+
+} // namespace GH121391

@@ -47,12 +47,16 @@ BreakFunctionNames("break-funcs",
   cl::cat(BoltCategory));
 
 static cl::list<std::string>
-FunctionPadSpec("pad-funcs",
-  cl::CommaSeparated,
-  cl::desc("list of functions to pad with amount of bytes"),
-  cl::value_desc("func1:pad1,func2:pad2,func3:pad3,..."),
-  cl::Hidden,
-  cl::cat(BoltCategory));
+    FunctionPadSpec("pad-funcs", cl::CommaSeparated,
+                    cl::desc("list of functions to pad with amount of bytes"),
+                    cl::value_desc("func1:pad1,func2:pad2,func3:pad3,..."),
+                    cl::Hidden, cl::cat(BoltCategory));
+
+static cl::list<std::string> FunctionPadBeforeSpec(
+    "pad-funcs-before", cl::CommaSeparated,
+    cl::desc("list of functions to pad with amount of bytes"),
+    cl::value_desc("func1:pad1,func2:pad2,func3:pad3,..."), cl::Hidden,
+    cl::cat(BoltCategory));
 
 static cl::opt<bool> MarkFuncs(
     "mark-funcs",
@@ -70,11 +74,11 @@ X86AlignBranchBoundaryHotOnly("x86-align-branch-boundary-hot-only",
   cl::init(true),
   cl::cat(BoltOptCategory));
 
-size_t padFunction(const BinaryFunction &Function) {
-  static std::map<std::string, size_t> FunctionPadding;
-
-  if (FunctionPadding.empty() && !FunctionPadSpec.empty()) {
-    for (std::string &Spec : FunctionPadSpec) {
+size_t padFunction(std::map<std::string, size_t> &FunctionPadding,
+                   const cl::list<std::string> &Spec,
+                   const BinaryFunction &Function) {
+  if (FunctionPadding.empty() && !Spec.empty()) {
+    for (const std::string &Spec : Spec) {
       size_t N = Spec.find(':');
       if (N == std::string::npos)
         continue;
@@ -92,6 +96,15 @@ size_t padFunction(const BinaryFunction &Function) {
   }
 
   return 0;
+}
+
+size_t padFunctionBefore(const BinaryFunction &Function) {
+  static std::map<std::string, size_t> CacheFunctionPadding;
+  return padFunction(CacheFunctionPadding, FunctionPadBeforeSpec, Function);
+}
+size_t padFunctionAfter(const BinaryFunction &Function) {
+  static std::map<std::string, size_t> CacheFunctionPadding;
+  return padFunction(CacheFunctionPadding, FunctionPadSpec, Function);
 }
 
 } // namespace opts
@@ -140,7 +153,7 @@ private:
 
   void emitCFIInstruction(const MCCFIInstruction &Inst) const;
 
-  /// Emit exception handling ranges for the function.
+  /// Emit exception handling ranges for the function fragment.
   void emitLSDA(BinaryFunction &BF, const FunctionFragment &FF);
 
   /// Emit line number information corresponding to \p NewLoc. \p PrevLoc
@@ -319,6 +332,31 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
     Streamer.emitCodeAlignment(Function.getAlign(), &*BC.STI);
   }
 
+  if (size_t Padding = opts::padFunctionBefore(Function)) {
+    // Handle padFuncsBefore after the above alignment logic but before
+    // symbol addresses are decided.
+    if (!BC.HasRelocations) {
+      BC.errs() << "BOLT-ERROR: -pad-before-funcs is not supported in "
+                << "non-relocation mode\n";
+      exit(1);
+    }
+
+    // Preserve Function.getMinAlign().
+    if (!isAligned(Function.getMinAlign(), Padding)) {
+      BC.errs() << "BOLT-ERROR: user-requested " << Padding
+                << " padding bytes before function " << Function
+                << " is not a multiple of the minimum function alignment ("
+                << Function.getMinAlign().value() << ").\n";
+      exit(1);
+    }
+
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: padding before function " << Function
+                      << " with " << Padding << " bytes\n");
+
+    // Since the padding is not executed, it can be null bytes.
+    Streamer.emitFill(Padding, 0);
+  }
+
   MCContext &Context = Streamer.getContext();
   const MCAsmInfo *MAI = Context.getAsmInfo();
 
@@ -373,7 +411,7 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
   emitFunctionBody(Function, FF, /*EmitCodeOnly=*/false);
 
   // Emit padding if requested.
-  if (size_t Padding = opts::padFunction(Function)) {
+  if (size_t Padding = opts::padFunctionAfter(Function)) {
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: padding function " << Function << " with "
                       << Padding << " bytes\n");
     Streamer.emitFill(Padding, MAI->getTextAlignFillValue());
@@ -730,30 +768,16 @@ void BinaryEmitter::emitJumpTables(const BinaryFunction &BF) {
       continue;
     if (opts::PrintJumpTables)
       JT.print(BC.outs());
-    if (opts::JumpTables == JTS_BASIC && BC.HasRelocations) {
+    if (opts::JumpTables == JTS_BASIC) {
       JT.updateOriginal();
     } else {
       MCSection *HotSection, *ColdSection;
-      if (opts::JumpTables == JTS_BASIC) {
-        // In non-relocation mode we have to emit jump tables in local sections.
-        // This way we only overwrite them when the corresponding function is
-        // overwritten.
-        std::string Name = ".local." + JT.Labels[0]->getName().str();
-        std::replace(Name.begin(), Name.end(), '/', '.');
-        BinarySection &Section =
-            BC.registerOrUpdateSection(Name, ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
-        Section.setAnonymous(true);
-        JT.setOutputSection(Section);
-        HotSection = BC.getDataSection(Name);
-        ColdSection = HotSection;
+      if (BF.isSimple()) {
+        HotSection = ReadOnlySection;
+        ColdSection = ReadOnlyColdSection;
       } else {
-        if (BF.isSimple()) {
-          HotSection = ReadOnlySection;
-          ColdSection = ReadOnlyColdSection;
-        } else {
-          HotSection = BF.hasProfile() ? ReadOnlySection : ReadOnlyColdSection;
-          ColdSection = HotSection;
-        }
+        HotSection = BF.hasProfile() ? ReadOnlySection : ReadOnlyColdSection;
+        ColdSection = HotSection;
       }
       emitJumpTable(JT, HotSection, ColdSection);
     }
@@ -915,17 +939,29 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
   // Emit the LSDA header.
 
   // If LPStart is omitted, then the start of the FDE is used as a base for
-  // landing pad displacements. Then, if a cold fragment starts with a landing
-  // pad, this means that the first landing pad offset will be 0. However, C++
-  // runtime treats 0 as if there is no landing pad present, thus we *must* emit
-  // non-zero offsets for all valid LPs.
+  // landing pad displacements. Then, if a cold fragment starts with
+  // a landing pad, this means that the first landing pad offset will be 0.
+  // However, C++ runtime will treat 0 as if there is no landing pad, thus we
+  // cannot emit LP offset as 0.
   //
   // As a solution, for fixed-address binaries we set LPStart to 0, and for
-  // position-independent binaries we set LP start to FDE start minus one byte
-  // for FDEs that start with a landing pad.
-  const bool NeedsLPAdjustment = !FF.empty() && FF.front()->isLandingPad();
+  // position-independent binaries we offset LP start by one byte.
+  bool NeedsLPAdjustment = false;
   std::function<void(const MCSymbol *)> emitLandingPad;
-  if (BC.HasFixedLoadAddress) {
+
+  // Check if there's a symbol associated with a landing pad fragment.
+  const MCSymbol *LPStartSymbol = BF.getLPStartSymbol(FF.getFragmentNum());
+  if (!LPStartSymbol) {
+    // Since landing pads are not in the same fragment, we fall back to emitting
+    // absolute addresses for this FDE.
+    if (opts::Verbosity >= 2) {
+      BC.outs() << "BOLT-INFO: falling back to generating absolute-address "
+                << "exception ranges for " << BF << '\n';
+    }
+
+    assert(BC.HasFixedLoadAddress &&
+           "Cannot emit absolute-address landing pads for PIE/DSO");
+
     Streamer.emitIntValue(dwarf::DW_EH_PE_udata4, 1); // LPStart format
     Streamer.emitIntValue(0, 4);                      // LPStart
     emitLandingPad = [&](const MCSymbol *LPSymbol) {
@@ -935,17 +971,23 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
         Streamer.emitIntValue(0, 4);
     };
   } else {
-    if (NeedsLPAdjustment) {
-      // Use relative LPStart format and emit LPStart as [SymbolStart - 1].
+    std::optional<FragmentNum> LPFN = BF.getLPFragment(FF.getFragmentNum());
+    const FunctionFragment &LPFragment = BF.getLayout().getFragment(*LPFN);
+    NeedsLPAdjustment =
+        (!LPFragment.empty() && LPFragment.front()->isLandingPad());
+
+    // Emit LPStart encoding and optionally LPStart.
+    if (NeedsLPAdjustment || LPStartSymbol != StartSymbol) {
       Streamer.emitIntValue(dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4, 1);
       MCSymbol *DotSymbol = BC.Ctx->createTempSymbol("LPBase");
       Streamer.emitLabel(DotSymbol);
 
       const MCExpr *LPStartExpr = MCBinaryExpr::createSub(
-          MCSymbolRefExpr::create(StartSymbol, *BC.Ctx),
+          MCSymbolRefExpr::create(LPStartSymbol, *BC.Ctx),
           MCSymbolRefExpr::create(DotSymbol, *BC.Ctx), *BC.Ctx);
-      LPStartExpr = MCBinaryExpr::createSub(
-          LPStartExpr, MCConstantExpr::create(1, *BC.Ctx), *BC.Ctx);
+      if (NeedsLPAdjustment)
+        LPStartExpr = MCBinaryExpr::createSub(
+            LPStartExpr, MCConstantExpr::create(1, *BC.Ctx), *BC.Ctx);
       Streamer.emitValue(LPStartExpr, 4);
     } else {
       // DW_EH_PE_omit means FDE start (StartSymbol) will be used as LPStart.
@@ -955,7 +997,7 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
       if (LPSymbol) {
         const MCExpr *LPOffsetExpr = MCBinaryExpr::createSub(
             MCSymbolRefExpr::create(LPSymbol, *BC.Ctx),
-            MCSymbolRefExpr::create(StartSymbol, *BC.Ctx), *BC.Ctx);
+            MCSymbolRefExpr::create(LPStartSymbol, *BC.Ctx), *BC.Ctx);
         if (NeedsLPAdjustment)
           LPOffsetExpr = MCBinaryExpr::createAdd(
               LPOffsetExpr, MCConstantExpr::create(1, *BC.Ctx), *BC.Ctx);
@@ -978,7 +1020,7 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
 
   // Emit encoding of entries in the call site table. The format is used for the
   // call site start, length, and corresponding landing pad.
-  if (BC.HasFixedLoadAddress)
+  if (!LPStartSymbol)
     Streamer.emitIntValue(dwarf::DW_EH_PE_sdata4, 1);
   else
     Streamer.emitIntValue(dwarf::DW_EH_PE_uleb128, 1);
@@ -998,7 +1040,7 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
 
     // Start of the range is emitted relative to the start of current
     // function split part.
-    if (BC.HasFixedLoadAddress) {
+    if (!LPStartSymbol) {
       Streamer.emitAbsoluteSymbolDiff(BeginLabel, StartSymbol, 4);
       Streamer.emitAbsoluteSymbolDiff(EndLabel, BeginLabel, 4);
     } else {

@@ -202,10 +202,10 @@ InputSection *ARM64::getThunkBranchTarget(InputSection *thunk) const {
   assert(thunk->relocs.size() == 1 &&
          "expected a single reloc on ARM64 ICF thunk");
   auto &reloc = thunk->relocs[0];
-  assert(reloc.referent.is<InputSection *>() &&
+  assert(isa<InputSection *>(reloc.referent) &&
          "ARM64 thunk reloc is expected to point to an InputSection");
 
-  return reloc.referent.dyn_cast<InputSection *>();
+  return cast<InputSection *>(reloc.referent);
 }
 
 uint32_t ARM64::getICFSafeThunkSize() const { return sizeof(icfSafeThunkCode); }

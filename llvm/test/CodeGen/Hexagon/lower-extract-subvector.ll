@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; This test checks if we custom lower extract_subvector. If we cannot
 ; custom lower extract_subvector this test makes the compiler crash.

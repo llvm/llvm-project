@@ -149,7 +149,7 @@ private:
   // transformed in innermost-first order.
   isl::schedule Result;
 
-  /// Check wether a schedule after a  transformation is legal. Return the old
+  /// Check whether a schedule after a  transformation is legal. Return the old
   /// schedule without the transformation.
   isl::schedule
   checkDependencyViolation(llvm::MDNode *LoopMD, llvm::Value *CodeRegion,

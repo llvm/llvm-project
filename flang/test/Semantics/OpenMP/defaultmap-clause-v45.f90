@@ -1,7 +1,7 @@
 !RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=45 -Werror
 
 subroutine f00
-!WARNING: The DEFAULTMAP clause requires a variable-category SCALAR in OpenMP v4.5, try -fopenmp-version=50
+!WARNING: 'variable-category' modifier is required
   !$omp target defaultmap(tofrom)
   !$omp end target
 end

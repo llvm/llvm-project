@@ -4,13 +4,13 @@
 subroutine foo()
   integer :: i, j
   j = 0
-! CHECK: !$OMP DO  REDUCTION(TASK,*:j)
+! CHECK: !$OMP DO  REDUCTION(TASK, *: j)
 ! PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
 ! PARSE-TREE: | | | OmpBeginLoopDirective
 ! PARSE-TREE: | | | | OmpLoopDirective -> llvm::omp::Directive = do
 ! PARSE-TREE: | | | | OmpClauseList -> OmpClause -> Reduction -> OmpReductionClause
-! PARSE-TREE: | | | | | ReductionModifier = Task
-! PARSE-TREE: | | | | | OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Multiply
+! PARSE-TREE: | | | | | Modifier -> OmpReductionModifier -> Value = Task
+! PARSE-TREE: | | | | | Modifier -> OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Multiply
 ! PARSE-TREE: | | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'j
   !$omp do reduction (task, *: j)
   do i = 1, 10

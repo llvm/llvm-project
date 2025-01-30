@@ -58,7 +58,8 @@ protected:
   void initializeBolt() {
     Relocation::Arch = ObjFile->makeTriple().getArch();
     BC = cantFail(BinaryContext::createBinaryContext(
-        ObjFile->makeTriple(), ObjFile->getFileName(), nullptr, true,
+        ObjFile->makeTriple(), std::make_shared<orc::SymbolStringPool>(),
+        ObjFile->getFileName(), nullptr, true,
         DWARFContext::create(*ObjFile.get()), {llvm::outs(), llvm::errs()}));
     ASSERT_FALSE(!BC);
     BC->initializeTarget(std::unique_ptr<MCPlusBuilder>(

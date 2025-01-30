@@ -82,8 +82,12 @@ def print_dylib_search: Flag<["--"], "print-dylib-search">,
     HelpText<"Print which paths lld searched when trying to find dylibs">,
     Group<grp_lld>;
 def icf_eq: Joined<["--"], "icf=">,
-    HelpText<"Set level for identical code folding (default: none)">,
-    MetaVarName<"[none,safe,all]">,
+    HelpText<"Set level for identical code folding (default: none). Possible values:\n"
+            "  none        - Disable ICF\n"
+            "  safe        - Only folds non-address significant functions (as described by `__addrsig` section)\n"
+            "  safe_thunks - Like safe, but replaces address-significant functions with thunks\n"
+            "  all         - Fold all identical functions">,
+    MetaVarName<"[none,safe,safe_thunks,all]">,
     Group<grp_lld>;
 def keep_icf_stabs: Joined<["--"], "keep-icf-stabs">,
     HelpText<"Generate STABS entries for symbols folded by ICF. These entries can then be used by dsymutil to discover the address range where folded symbols are located.">,
@@ -126,19 +130,36 @@ def no_call_graph_profile_sort : Flag<["--"], "no-call-graph-profile-sort">,
 def print_symbol_order_eq: Joined<["--"], "print-symbol-order=">,
     HelpText<"Print a symbol order specified by --call-graph-profile-sort into the specified file">,
     Group<grp_lld>;
+def irpgo_profile: Separate<["--"], "irpgo-profile">, Group<grp_lld>;
+def irpgo_profile_eq: Joined<["--"], "irpgo-profile=">,
+    Alias<!cast<Separate>(irpgo_profile)>, MetaVarName<"<profile>">,
+    HelpText<"Read the IRPGO <profile> for use with --bp-startup-sort and other profile-guided optimizations">,
+    Group<grp_lld>;
+def bp_startup_sort: Joined<["--"], "bp-startup-sort=">,
+    MetaVarName<"[none,function]">,
+    HelpText<"Order sections based on profile data to improve startup time">,
+    Group<grp_lld>;
+def bp_compression_sort_startup_functions: Flag<["--"], "bp-compression-sort-startup-functions">,
+    HelpText<"Order startup functions to improve compressed size in addition to startup time">,
+    Group<grp_lld>;
+def no_bp_compression_sort_startup_functions: Flag<["--"], "no-bp-compression-sort-startup-functions">,
+    HelpText<"Do not order startup function for compression">, Group<grp_lld>;
+def bp_compression_sort: Joined<["--"], "bp-compression-sort=">,
+    MetaVarName<"[none,function,data,both]">,
+    HelpText<"Order sections to improve compressed size">, Group<grp_lld>;
 def irpgo_profile_sort: Separate<["--"], "irpgo-profile-sort">, Group<grp_lld>;
 def irpgo_profile_sort_eq: Joined<["--"], "irpgo-profile-sort=">,
     Alias<!cast<Separate>(irpgo_profile_sort)>, MetaVarName<"<profile>">,
-    HelpText<"Read the IRPGO profile at <profile> to order sections to improve startup time">,
+    HelpText<"Deprecated. Please use --irpgo-profile and --bp-startup-sort=function">,
     Group<grp_lld>;
 def compression_sort_startup_functions: Flag<["--"], "compression-sort-startup-functions">,
-    HelpText<"Order startup functions to improve compressed size in addition to startup time">,
-    Group<grp_lld>;
+    Alias<!cast<Flag>(bp_compression_sort_startup_functions)>, HelpText<"Deprecated. Please use --bp-compression-sort-startup-functions">, Group<grp_lld>;
 def no_compression_sort_startup_functions: Flag<["--"], "no-compression-sort-startup-functions">,
-    HelpText<"Do not order startup function for compression">, Group<grp_lld>;
+    Alias<!cast<Flag>(no_bp_compression_sort_startup_functions)>, HelpText<"Deprecated. Please use --no-bp-compression-sort-startup-functions">, Group<grp_lld>;
 def compression_sort: Joined<["--"], "compression-sort=">,
     MetaVarName<"[none,function,data,both]">,
-    HelpText<"Order sections to improve compressed size">, Group<grp_lld>;
+    Alias<!cast<Joined>(bp_compression_sort)>,
+    HelpText<"Deprecated. Please use --bp-compression-sort=">, Group<grp_lld>;
 def verbose_bp_section_orderer: Flag<["--"], "verbose-bp-section-orderer">,
     HelpText<"Print information on how many sections were ordered by balanced partitioning and a measure of the expected number of page faults">,
     Group<grp_lld>;
@@ -162,6 +183,12 @@ def no_objc_category_merging : Flag<["-"], "no_objc_category_merging">,
     Group<grp_lld>;
 def lto_debug_pass_manager: Flag<["--"], "lto-debug-pass-manager">,
     HelpText<"Debug new pass manager">, Group<grp_lld>;
+def lto_newpm_passes: Joined<["--"], "lto-newpm-passes=">,
+    HelpText<"Passes to run during LTO">, Group<grp_lld>;
+def load_pass_plugins : Separate<["--"], "load-pass-plugin">, Group<grp_lld>;
+def load_pass_plugins_eq : Joined<["--"], "load-pass-plugin=">,
+    Alias<!cast<Separate>(load_pass_plugins)>,
+    HelpText<"Load passes from plugin library">, Group<grp_lld>;
 def codegen_data_generate_path : Separate<["--"], "codegen-data-generate-path">, Group<grp_lld>;
 def codegen_data_generate_path_eq : Joined<["--"], "codegen-data-generate-path=">,
     Alias<!cast<Separate>(codegen_data_generate_path)>, MetaVarName<"<cgdata>">,
@@ -870,8 +897,7 @@ def sub_umbrella : Separate<["-"], "sub_umbrella">,
     Group<grp_rare>;
 def allowable_client : Separate<["-"], "allowable_client">,
     MetaVarName<"<name>">,
-    HelpText<"Specify <name> of a dylib or framework that is allowed to link to this dylib">,
-    Flags<[HelpHidden]>,
+    HelpText<"Specify <name> of a dylib, framework, or executable that is allowed to link to this dylib">,
     Group<grp_rare>;
 def client_name : Separate<["-"], "client_name">,
     MetaVarName<"<name>">,
@@ -1450,3 +1476,8 @@ def no_warn_duplicate_libraries : Flag<["-"], "no_warn_duplicate_libraries">,
     HelpText<"Do not warn if the input contains duplicate library options.">,
     Flags<[HelpHidden]>,
     Group<grp_ignored_silently>;
+
+// Add this with the other flags in the rare options group
+def no_deduplicate_symbol_strings : Flag<["-"], "no-deduplicate-symbol-strings">,
+    HelpText<"Do not deduplicate strings in the symbol string table. Might result in larger binaries but slightly faster link times.">,
+    Group<grp_rare>;

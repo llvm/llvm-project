@@ -65,7 +65,7 @@ static void applyPatterns(Region &region,
     // because we don't have expectation this reduction will be success or not.
     GreedyRewriteConfig config;
     config.strictMode = GreedyRewriteStrictness::ExistingOps;
-    (void)applyOpPatternsAndFold(op, patterns, config);
+    (void)applyOpPatternsGreedily(op, patterns, config);
   }
 
   if (eraseOpNotInRange)

@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple=arm64e-apple-macosx -filetype=obj -o %t.o %s
 # RUN: llvm-jitlink %t.o
 #
-# REQUIRES: native && system-darwin
+# REQUIRES: system-darwin && host=arm64{{.*}}
 #
 # Check that arm64e ptrauth relocations are handled correctly.
 #

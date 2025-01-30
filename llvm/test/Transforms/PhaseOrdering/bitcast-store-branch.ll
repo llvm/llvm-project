@@ -14,7 +14,7 @@ define ptr @parent(ptr align 8 dereferenceable(72) %f, half %val1, i16 %val2, i3
 ; CHECK-LABEL: define noundef nonnull ptr @parent
 ; CHECK-SAME: (ptr readonly returned align 8 dereferenceable(72) [[F:%.*]], half [[VAL1:%.*]], i16 [[VAL2:%.*]], i32 [[VAL3:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] align 2 {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[F]], i64 64
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[F]], i64 64
 ; CHECK-NEXT:    [[F_VAL:%.*]] = load ptr, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[CMP_NOT_NOT_I:%.*]] = icmp eq i32 [[VAL3]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast half [[VAL1]] to i16
@@ -22,7 +22,7 @@ define ptr @parent(ptr align 8 dereferenceable(72) %f, half %val1, i16 %val2, i3
 ; CHECK-NEXT:    [[VAL2_SINK_I:%.*]] = select i1 [[CMP_NOT_NOT_I]], i16 [[TMP1]], i16 [[VAL2]]
 ; CHECK-NEXT:    [[VAL1_SINK_I:%.*]] = select i1 [[CMP_NOT_NOT_I]], half [[TMP2]], half [[VAL1]]
 ; CHECK-NEXT:    store i16 [[VAL2_SINK_I]], ptr [[F_VAL]], align 2
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[F_VAL]], i64 16
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[F_VAL]], i64 16
 ; CHECK-NEXT:    store half [[VAL1_SINK_I]], ptr [[TMP3]], align 2
 ; CHECK-NEXT:    ret ptr [[F]]
 ;

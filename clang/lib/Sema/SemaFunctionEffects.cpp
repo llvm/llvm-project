@@ -516,7 +516,7 @@ class Analyzer {
     CompleteFunctionAnalysis *completedAnalysisForDecl(const Decl *D) const {
       if (FuncAnalysisPtr AP = lookup(D);
           isa_and_nonnull<CompleteFunctionAnalysis *>(AP))
-        return AP.get<CompleteFunctionAnalysis *>();
+        return cast<CompleteFunctionAnalysis *>(AP);
       return nullptr;
     }
 
@@ -528,12 +528,10 @@ class Analyzer {
         OS << item.first << " " << CI.getNameForDiagnostic(SemaRef) << " : ";
         if (AP.isNull()) {
           OS << "null\n";
-        } else if (isa<CompleteFunctionAnalysis *>(AP)) {
-          auto *CFA = AP.get<CompleteFunctionAnalysis *>();
+        } else if (auto *CFA = dyn_cast<CompleteFunctionAnalysis *>(AP)) {
           OS << CFA << " ";
           CFA->dump(OS);
-        } else if (isa<PendingFunctionAnalysis *>(AP)) {
-          auto *PFA = AP.get<PendingFunctionAnalysis *>();
+        } else if (auto *PFA = dyn_cast<PendingFunctionAnalysis *>(AP)) {
           OS << PFA << " ";
           PFA->dump(SemaRef, OS);
         } else
@@ -569,7 +567,7 @@ public:
     while (!VerificationQueue.empty()) {
       const Decl *D = VerificationQueue.back();
       if (FuncAnalysisPtr AP = DeclAnalysis.lookup(D)) {
-        if (auto *Pending = AP.dyn_cast<PendingFunctionAnalysis *>()) {
+        if (auto *Pending = dyn_cast<PendingFunctionAnalysis *>(AP)) {
           // All children have been traversed; finish analysis.
           finishPendingAnalysis(D, Pending);
         }
@@ -627,7 +625,7 @@ private:
           IsNoexcept = isNoexcept(FD);
         } else if (auto *BD = dyn_cast<BlockDecl>(D)) {
           if (auto *TSI = BD->getSignatureAsWritten()) {
-            auto *FPT = TSI->getType()->getAs<FunctionProtoType>();
+            auto *FPT = TSI->getType()->castAs<FunctionProtoType>();
             IsNoexcept = FPT->isNothrow() || BD->hasAttr<NoThrowAttr>();
           }
         }
@@ -1376,10 +1374,10 @@ private:
 Analyzer::AnalysisMap::~AnalysisMap() {
   for (const auto &Item : *this) {
     FuncAnalysisPtr AP = Item.second;
-    if (isa<PendingFunctionAnalysis *>(AP))
-      delete AP.get<PendingFunctionAnalysis *>();
+    if (auto *PFA = dyn_cast<PendingFunctionAnalysis *>(AP))
+      delete PFA;
     else
-      delete AP.get<CompleteFunctionAnalysis *>();
+      delete cast<CompleteFunctionAnalysis *>(AP);
   }
 }
 

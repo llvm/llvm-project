@@ -852,7 +852,7 @@ bool StubsManager_prev7::visitEdge(LinkGraph &G, Block *B, Edge &E) {
 
   Symbol &Target = E.getTarget();
   assert(Target.hasName() && "Edge cannot point to anonymous target");
-  auto [Slot, NewStub] = getStubMapSlot(Target.getName());
+  auto [Slot, NewStub] = getStubMapSlot(*Target.getName());
 
   if (NewStub) {
     if (!StubsSection)
@@ -896,7 +896,7 @@ bool StubsManager_v7::visitEdge(LinkGraph &G, Block *B, Edge &E) {
 
   Symbol &Target = E.getTarget();
   assert(Target.hasName() && "Edge cannot point to anonymous target");
-  Symbol *&StubSymbol = getStubSymbolSlot(Target.getName(), MakeThumb);
+  Symbol *&StubSymbol = getStubSymbolSlot(*Target.getName(), MakeThumb);
 
   if (!StubSymbol) {
     if (!StubsSection)

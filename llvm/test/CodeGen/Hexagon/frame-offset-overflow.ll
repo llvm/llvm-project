@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc -march=hexagon --stats -o - 2>&1 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon --stats -o - 2>&1 < %s | FileCheck %s
 
 ; Check that the compilation succeeded and that some code was generated.
 ; CHECK: vadd
