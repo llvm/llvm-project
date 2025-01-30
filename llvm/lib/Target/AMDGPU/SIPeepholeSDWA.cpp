@@ -171,9 +171,9 @@ public:
       : SDWAOperand(TargetOp, ReplacedOp),
         SrcSel(SrcSel_), Abs(Abs_), Neg(Neg_), Sext(Sext_) {}
 
-  MachineInstr *
-  potentialToConvert(const SIInstrInfo *TII, const GCNSubtarget &ST,
-                     SDWAOperandsMap *PotentialMatches = nullptr) override;
+  MachineInstr *potentialToConvert(const SIInstrInfo *TII,
+                                   const GCNSubtarget &ST,
+                                   SDWAOperandsMap *PotentialMatches = nullptr) override;
   bool convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) override;
 
   SdwaSel getSrcSel() const { return SrcSel; }
@@ -200,9 +200,9 @@ public:
                  SdwaSel DstSel_ = DWORD, DstUnused DstUn_ = UNUSED_PAD)
     : SDWAOperand(TargetOp, ReplacedOp), DstSel(DstSel_), DstUn(DstUn_) {}
 
-  MachineInstr *
-  potentialToConvert(const SIInstrInfo *TII, const GCNSubtarget &ST,
-                     SDWAOperandsMap *PotentialMatches = nullptr) override;
+  MachineInstr *potentialToConvert(const SIInstrInfo *TII,
+                                   const GCNSubtarget &ST,
+                                   SDWAOperandsMap *PotentialMatches = nullptr) override;
   bool convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) override;
 
   SdwaSel getDstSel() const { return DstSel; }
