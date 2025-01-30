@@ -57,7 +57,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaDisassembler() {
                                          createXtensaDisassembler);
 }
 
-static const unsigned ARDecoderTable[] = {
+const unsigned ARDecoderTable[] = {
     Xtensa::A0,  Xtensa::SP,  Xtensa::A2,  Xtensa::A3, Xtensa::A4,  Xtensa::A5,
     Xtensa::A6,  Xtensa::A7,  Xtensa::A8,  Xtensa::A9, Xtensa::A10, Xtensa::A11,
     Xtensa::A12, Xtensa::A13, Xtensa::A14, Xtensa::A15};
@@ -73,7 +73,7 @@ static DecodeStatus DecodeARRegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
-static const unsigned SRDecoderTable[] = {
+const unsigned SRDecoderTable[] = {
     Xtensa::SAR, 3, Xtensa::WINDOWBASE, 72, Xtensa::WINDOWSTART, 73};
 
 static DecodeStatus DecodeSRRegisterClass(MCInst &Inst, uint64_t RegNo,
