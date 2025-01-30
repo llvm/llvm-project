@@ -53,6 +53,27 @@ mlirTypeFromLLVMIRTranslatorDestroy(MlirTypeFromLLVMIRTranslator translator);
 MLIR_CAPI_EXPORTED MlirType mlirTypeFromLLVMIRTranslatorTranslateType(
     MlirTypeFromLLVMIRTranslator translator, LLVMTypeRef llvmType);
 
+struct MlirTypeToLLVMIRTranslator {
+  void *ptr;
+};
+
+typedef struct MlirTypeToLLVMIRTranslator MlirTypeToLLVMIRTranslator;
+
+/// Create an LLVM::TypeToLLVMIRTranslator and transfer ownership to the
+/// caller.
+MLIR_CAPI_EXPORTED MlirTypeToLLVMIRTranslator
+mlirTypeToLLVMIRTranslatorCreate(LLVMContextRef ctx);
+
+/// Takes an LLVM::TypeToLLVMIRTranslator owned by the caller and destroys it.
+/// It is the responsibility of the user to only pass an
+/// LLVM::TypeToLLVMIRTranslator class.
+MLIR_CAPI_EXPORTED void
+mlirTypeToLLVMIRTranslatorDestroy(MlirTypeToLLVMIRTranslator translator);
+
+/// Translates the given MLIR LLVM dialect to the LLVM IR type.
+MLIR_CAPI_EXPORTED LLVMTypeRef mlirTypeToLLVMIRTranslatorTranslateType(
+    MlirTypeToLLVMIRTranslator translator, MlirType mlirType);
+
 #ifdef __cplusplus
 }
 #endif

@@ -64,13 +64,22 @@ static void testTypeFromLLVMIRTranslator(MlirContext ctx) {
   LLVMContextRef llvmCtx = LLVMContextCreate();
 
   LLVMTypeRef llvmTy = LLVMInt32TypeInContext(llvmCtx);
-  MlirTypeFromLLVMIRTranslator translator =
+  MlirTypeFromLLVMIRTranslator fromLLVMTranslator =
       mlirTypeFromLLVMIRTranslatorCreate(ctx);
   MlirType mlirTy =
-      mlirTypeFromLLVMIRTranslatorTranslateType(translator, llvmTy);
+      mlirTypeFromLLVMIRTranslatorTranslateType(fromLLVMTranslator, llvmTy);
   // CHECK: i32
   mlirTypeDump(mlirTy);
 
+  MlirTypeToLLVMIRTranslator toLLVMTranslator =
+      mlirTypeToLLVMIRTranslatorCreate(llvmCtx);
+  LLVMTypeRef llvmTy2 =
+      mlirTypeToLLVMIRTranslatorTranslateType(toLLVMTranslator, mlirTy);
+  // CHECK: i32
+  LLVMDumpType(llvmTy2);
+
+  mlirTypeFromLLVMIRTranslatorDestroy(fromLLVMTranslator);
+  mlirTypeToLLVMIRTranslatorDestroy(toLLVMTranslator);
   LLVMContextDispose(llvmCtx);
 }
 
