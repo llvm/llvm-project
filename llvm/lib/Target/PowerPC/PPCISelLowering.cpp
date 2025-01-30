@@ -8593,7 +8593,7 @@ SDValue PPCTargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG,
 // to insert our load, L, into the chain as a peer of O. To do this, we give L
 // the same chain operand as O, we create a token factor from the chain results
 // of O and L, and we replace all uses of O's chain result with that token
-// factor (see spliceIntoChain below for this last part).
+// factor (this last part is handled by makeEquivalentMemoryOrdering).
 bool PPCTargetLowering::canReuseLoadAddress(SDValue Op, EVT MemVT,
                                             ReuseLoadInfo &RLI,
                                             SelectionDAG &DAG,
@@ -8646,27 +8646,6 @@ bool PPCTargetLowering::canReuseLoadAddress(SDValue Op, EVT MemVT,
 
   RLI.ResChain = SDValue(LD, LD->isIndexed() ? 2 : 1);
   return true;
-}
-
-// Given the head of the old chain, ResChain, insert a token factor containing
-// it and NewResChain, and make users of ResChain now be users of that token
-// factor.
-// TODO: Remove and use DAG::makeEquivalentMemoryOrdering() instead.
-void PPCTargetLowering::spliceIntoChain(SDValue ResChain,
-                                        SDValue NewResChain,
-                                        SelectionDAG &DAG) const {
-  if (!ResChain)
-    return;
-
-  SDLoc dl(NewResChain);
-
-  SDValue TF = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
-                           NewResChain, DAG.getUNDEF(MVT::Other));
-  assert(TF.getNode() != NewResChain.getNode() &&
-         "A new TF really is required here");
-
-  DAG.ReplaceAllUsesOfValueWith(ResChain, TF);
-  DAG.UpdateNodeOperands(TF.getNode(), ResChain, NewResChain);
 }
 
 /// Analyze profitability of direct move
@@ -8930,7 +8909,8 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
     if (canReuseLoadAddress(SINT, MVT::i64, RLI, DAG)) {
       Bits = DAG.getLoad(MVT::f64, dl, RLI.Chain, RLI.Ptr, RLI.MPI,
                          RLI.Alignment, RLI.MMOFlags(), RLI.AAInfo, RLI.Ranges);
-      spliceIntoChain(RLI.ResChain, Bits.getValue(1), DAG);
+      if (RLI.ResChain)
+        DAG.makeEquivalentMemoryOrdering(RLI.ResChain, Bits.getValue(1));
     } else if (Subtarget.hasLFIWAX() &&
                canReuseLoadAddress(SINT, MVT::i32, RLI, DAG, ISD::SEXTLOAD)) {
       MachineMemOperand *MMO =
@@ -8940,7 +8920,8 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
       Bits = DAG.getMemIntrinsicNode(PPCISD::LFIWAX, dl,
                                      DAG.getVTList(MVT::f64, MVT::Other),
                                      Ops, MVT::i32, MMO);
-      spliceIntoChain(RLI.ResChain, Bits.getValue(1), DAG);
+      if (RLI.ResChain)
+        DAG.makeEquivalentMemoryOrdering(RLI.ResChain, Bits.getValue(1));
     } else if (Subtarget.hasFPCVT() &&
                canReuseLoadAddress(SINT, MVT::i32, RLI, DAG, ISD::ZEXTLOAD)) {
       MachineMemOperand *MMO =
@@ -8950,7 +8931,8 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
       Bits = DAG.getMemIntrinsicNode(PPCISD::LFIWZX, dl,
                                      DAG.getVTList(MVT::f64, MVT::Other),
                                      Ops, MVT::i32, MMO);
-      spliceIntoChain(RLI.ResChain, Bits.getValue(1), DAG);
+      if (RLI.ResChain)
+        DAG.makeEquivalentMemoryOrdering(RLI.ResChain, Bits.getValue(1));
     } else if (((Subtarget.hasLFIWAX() &&
                  SINT.getOpcode() == ISD::SIGN_EXTEND) ||
                 (Subtarget.hasFPCVT() &&
@@ -9046,8 +9028,9 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
                                  DAG.getVTList(MVT::f64, MVT::Other), Ops,
                                  MVT::i32, MMO);
     Chain = Ld.getValue(1);
-    if (ReusingLoad)
-      spliceIntoChain(RLI.ResChain, Ld.getValue(1), DAG);
+    if (ReusingLoad && RLI.ResChain) {
+      DAG.makeEquivalentMemoryOrdering(RLI.ResChain, Ld.getValue(1));
+    }
   } else {
     assert(Subtarget.isPPC64() &&
            "i32->FP without LFIWAX supported only on PPC64");
@@ -11669,7 +11652,8 @@ SDValue PPCTargetLowering::LowerSCALAR_TO_VECTOR(SDValue Op,
     SDValue Bits = DAG.getMemIntrinsicNode(
         PPCISD::LD_SPLAT, dl, DAG.getVTList(MVT::v4i32, MVT::Other), Ops,
         MVT::i32, MMO);
-    spliceIntoChain(RLI.ResChain, Bits.getValue(1), DAG);
+    if (RLI.ResChain)
+      DAG.makeEquivalentMemoryOrdering(RLI.ResChain, Bits.getValue(1));
     return Bits.getValue(0);
   }
 

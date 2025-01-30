@@ -7014,9 +7014,10 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
   case Decl::VarTemplateSpecialization:
     EmitGlobal(cast<VarDecl>(D));
     if (auto *DD = dyn_cast<DecompositionDecl>(D))
-      for (auto *B : DD->bindings())
+      for (auto *B : DD->flat_bindings())
         if (auto *HD = B->getHoldingVar())
           EmitGlobal(HD);
+
     break;
 
   // Indirect fields from global anonymous structs and unions can be

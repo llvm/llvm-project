@@ -588,20 +588,6 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // more information.
   ArgStringList CmdArgs;
 
-  /// Hack(tm) to ignore linking errors when we are doing ARC migration.
-  if (Args.hasArg(options::OPT_ccc_arcmt_check,
-                  options::OPT_ccc_arcmt_migrate)) {
-    for (const auto &Arg : Args)
-      Arg->claim();
-    const char *Exec =
-        Args.MakeArgString(getToolChain().GetProgramPath("touch"));
-    CmdArgs.push_back(Output.getFilename());
-    C.addCommand(std::make_unique<Command>(JA, *this,
-                                           ResponseFileSupport::None(), Exec,
-                                           CmdArgs, std::nullopt, Output));
-    return;
-  }
-
   VersionTuple Version = getMachOToolChain().getLinkerVersion(Args);
 
   bool LinkerIsLLD;

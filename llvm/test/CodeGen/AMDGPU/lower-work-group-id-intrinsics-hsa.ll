@@ -193,7 +193,6 @@ define amdgpu_kernel void @caller() {
 ; GFX12-SDAG-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX12-SDAG-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX12-SDAG-NEXT:    s_mov_b32 s32, 0
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_swappc_b64 s[30:31], s[12:13]
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
@@ -207,7 +206,6 @@ define amdgpu_kernel void @caller() {
 ; GFX12-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX12-GISEL-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX12-GISEL-NEXT:    s_mov_b32 s32, 0
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX12-GISEL-NEXT:    s_swappc_b64 s[30:31], s[12:13]
 ; GFX12-GISEL-NEXT:    s_endpgm
   %idx = call i32 @llvm.amdgcn.workgroup.id.x()

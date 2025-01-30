@@ -716,29 +716,29 @@ define float @reduce_float_case3(ptr %a) {
 ; CHECK-NEXT:    [[GEP5:%.*]] = getelementptr inbounds float, ptr [[A]], i32 5
 ; CHECK-NEXT:    [[GEP6:%.*]] = getelementptr inbounds float, ptr [[A]], i32 6
 ; CHECK-NEXT:    [[GEP7:%.*]] = getelementptr inbounds float, ptr [[A]], i32 7
-; CHECK-NEXT:    [[LOAD2:%.*]] = load float, ptr [[A]], align 4
-; CHECK-NEXT:    [[LOAD3:%.*]] = load float, ptr [[GEP1]], align 4
-; CHECK-NEXT:    [[LOAD4:%.*]] = load float, ptr [[GEP2]], align 4
-; CHECK-NEXT:    [[LOAD5:%.*]] = load float, ptr [[GEP3]], align 4
-; CHECK-NEXT:    [[LOAD6:%.*]] = load float, ptr [[GEP4]], align 4
-; CHECK-NEXT:    [[LOAD7:%.*]] = load float, ptr [[GEP5]], align 4
-; CHECK-NEXT:    [[LOAD8:%.*]] = load float, ptr [[GEP6]], align 4
-; CHECK-NEXT:    [[LOAD9:%.*]] = load float, ptr [[GEP7]], align 4
+; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr [[A]], align 4
+; CHECK-NEXT:    [[LOAD1:%.*]] = load float, ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[LOAD2:%.*]] = load float, ptr [[GEP2]], align 4
+; CHECK-NEXT:    [[LOAD3:%.*]] = load float, ptr [[GEP3]], align 4
+; CHECK-NEXT:    [[LOAD4:%.*]] = load float, ptr [[GEP4]], align 4
+; CHECK-NEXT:    [[LOAD5:%.*]] = load float, ptr [[GEP5]], align 4
+; CHECK-NEXT:    [[LOAD6:%.*]] = load float, ptr [[GEP6]], align 4
+; CHECK-NEXT:    [[LOAD7:%.*]] = load float, ptr [[GEP7]], align 4
+; CHECK-NEXT:    [[LOG:%.*]] = call float @llvm.log.f32(float [[LOAD]])
+; CHECK-NEXT:    [[LOG1:%.*]] = call float @llvm.log.f32(float [[LOAD1]])
 ; CHECK-NEXT:    [[LOG2:%.*]] = call float @llvm.log.f32(float [[LOAD2]])
 ; CHECK-NEXT:    [[LOG3:%.*]] = call float @llvm.log.f32(float [[LOAD3]])
 ; CHECK-NEXT:    [[LOG4:%.*]] = call float @llvm.log.f32(float [[LOAD4]])
 ; CHECK-NEXT:    [[LOG5:%.*]] = call float @llvm.log.f32(float [[LOAD5]])
 ; CHECK-NEXT:    [[LOG6:%.*]] = call float @llvm.log.f32(float [[LOAD6]])
 ; CHECK-NEXT:    [[LOG7:%.*]] = call float @llvm.log.f32(float [[LOAD7]])
-; CHECK-NEXT:    [[LOG8:%.*]] = call float @llvm.log.f32(float [[LOAD8]])
-; CHECK-NEXT:    [[LOG9:%.*]] = call float @llvm.log.f32(float [[LOAD9]])
-; CHECK-NEXT:    [[ADD3:%.*]] = fadd float [[LOG2]], [[LOG3]]
+; CHECK-NEXT:    [[ADD1:%.*]] = fadd float [[LOG]], [[LOG1]]
+; CHECK-NEXT:    [[ADD2:%.*]] = fadd float [[ADD1]], [[LOG2]]
+; CHECK-NEXT:    [[ADD3:%.*]] = fadd float [[ADD2]], [[LOG3]]
 ; CHECK-NEXT:    [[ADD4:%.*]] = fadd float [[ADD3]], [[LOG4]]
 ; CHECK-NEXT:    [[ADD5:%.*]] = fadd float [[ADD4]], [[LOG5]]
 ; CHECK-NEXT:    [[ADD6:%.*]] = fadd float [[ADD5]], [[LOG6]]
-; CHECK-NEXT:    [[ADD8:%.*]] = fadd float [[ADD6]], [[LOG7]]
-; CHECK-NEXT:    [[ADD9:%.*]] = fadd float [[ADD8]], [[LOG8]]
-; CHECK-NEXT:    [[ADD7:%.*]] = fadd float [[ADD9]], [[LOG9]]
+; CHECK-NEXT:    [[ADD7:%.*]] = fadd float [[ADD6]], [[LOG7]]
 ; CHECK-NEXT:    ret float [[ADD7]]
 ;
 entry:

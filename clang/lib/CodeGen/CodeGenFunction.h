@@ -724,8 +724,8 @@ public:
   };
 
   // We are using objects of this 'cleanup' class to emit fake.use calls
-  // for -fextend-lifetimes and -fextend-this-ptr. They are placed at the end of
-  // a variable's scope analogous to lifetime markers.
+  // for -fextend-variable-liveness. They are placed at the end of a variable's
+  // scope analogous to lifetime markers.
   class FakeUse final : public EHScopeStack::Cleanup {
     Address Addr;
 

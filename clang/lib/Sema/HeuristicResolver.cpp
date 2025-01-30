@@ -71,8 +71,8 @@ private:
 
   // Helper function for HeuristicResolver::resolveDependentMember()
   // which takes a possibly-dependent type `T` and heuristically
-  // resolves it to a CXXRecordDecl in which we can try name lookup.
-  CXXRecordDecl *resolveTypeToRecordDecl(const Type *T);
+  // resolves it to a TagDecl in which we can try name lookup.
+  TagDecl *resolveTypeToTagDecl(const Type *T);
 
   // This is a reimplementation of CXXRecordDecl::lookupDependentName()
   // so that the implementation can call into other HeuristicResolver helpers.
@@ -130,7 +130,7 @@ TemplateName getReferencedTemplateName(const Type *T) {
 // Helper function for HeuristicResolver::resolveDependentMember()
 // which takes a possibly-dependent type `T` and heuristically
 // resolves it to a CXXRecordDecl in which we can try name lookup.
-CXXRecordDecl *HeuristicResolverImpl::resolveTypeToRecordDecl(const Type *T) {
+TagDecl *HeuristicResolverImpl::resolveTypeToTagDecl(const Type *T) {
   assert(T);
 
   // Unwrap type sugar such as type aliases.
@@ -144,8 +144,9 @@ CXXRecordDecl *HeuristicResolverImpl::resolveTypeToRecordDecl(const Type *T) {
     T = T->getCanonicalTypeInternal().getTypePtr();
   }
 
-  if (const auto *RT = T->getAs<RecordType>())
-    return dyn_cast<CXXRecordDecl>(RT->getDecl());
+  if (auto *TT = T->getAs<TagType>()) {
+    return TT->getDecl();
+  }
 
   if (const auto *ICNT = T->getAs<InjectedClassNameType>())
     T = ICNT->getInjectedSpecializationType().getTypePtrOrNull();
@@ -278,7 +279,7 @@ HeuristicResolverImpl::resolveTypeOfCallExpr(const CallExpr *CE) {
     CalleeType = FnTypePtr->getPointeeType();
   if (const FunctionType *FnType = CalleeType->getAs<FunctionType>()) {
     if (const auto *D =
-            resolveTypeToRecordDecl(FnType->getReturnType().getTypePtr())) {
+            resolveTypeToTagDecl(FnType->getReturnType().getTypePtr())) {
       return {D};
     }
   }
@@ -389,11 +390,11 @@ bool findOrdinaryMember(const CXXRecordDecl *RD, CXXBasePath &Path,
 bool HeuristicResolverImpl::findOrdinaryMemberInDependentClasses(
     const CXXBaseSpecifier *Specifier, CXXBasePath &Path,
     DeclarationName Name) {
-  CXXRecordDecl *RD =
-      resolveTypeToRecordDecl(Specifier->getType().getTypePtr());
-  if (!RD)
-    return false;
-  return findOrdinaryMember(RD, Path, Name);
+  TagDecl *TD = resolveTypeToTagDecl(Specifier->getType().getTypePtr());
+  if (const auto *RD = dyn_cast_if_present<CXXRecordDecl>(TD)) {
+    return findOrdinaryMember(RD, Path, Name);
+  }
+  return false;
 }
 
 std::vector<const NamedDecl *> HeuristicResolverImpl::lookupDependentName(
@@ -435,11 +436,14 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveDependentMember(
   const Type *T = QT.getTypePtrOrNull();
   if (!T)
     return {};
-  if (auto *ET = T->getAs<EnumType>()) {
-    auto Result = ET->getDecl()->lookup(Name);
+  TagDecl *TD = resolveTypeToTagDecl(T);
+  if (!TD)
+    return {};
+  if (auto *ED = dyn_cast<EnumDecl>(TD)) {
+    auto Result = ED->lookup(Name);
     return {Result.begin(), Result.end()};
   }
-  if (auto *RD = resolveTypeToRecordDecl(T)) {
+  if (auto *RD = dyn_cast<CXXRecordDecl>(TD)) {
     if (!RD->hasDefinition())
       return {};
     RD = RD->getDefinition();

@@ -216,7 +216,8 @@ void DependenceAnalysisWrapperPass::print(raw_ostream &OS,
 
 PreservedAnalyses
 DependenceAnalysisPrinterPass::run(Function &F, FunctionAnalysisManager &FAM) {
-  OS << "'Dependence Analysis' for function '" << F.getName() << "':\n";
+  OS << "Printing analysis 'Dependence Analysis' for function '" << F.getName()
+     << "':\n";
   dumpExampleDependence(OS, &FAM.getResult<DependenceAnalysis>(F),
                         FAM.getResult<ScalarEvolutionAnalysis>(F),
                         NormalizeResults);
@@ -722,7 +723,10 @@ static AliasResult underlyingObjectsAlias(AAResults *AA,
       MemoryLocation::getBeforeOrAfter(LocA.Ptr, LocA.AATags);
   MemoryLocation LocBS =
       MemoryLocation::getBeforeOrAfter(LocB.Ptr, LocB.AATags);
-  if (AA->isNoAlias(LocAS, LocBS))
+  BatchAAResults BAA(*AA);
+  BAA.enableCrossIterationMode();
+
+  if (BAA.isNoAlias(LocAS, LocBS))
     return AliasResult::NoAlias;
 
   // Check the underlying objects are the same
@@ -742,7 +746,6 @@ static AliasResult underlyingObjectsAlias(AAResults *AA,
   // must not alias.
   return AliasResult::NoAlias;
 }
-
 
 // Returns true if the load or store can be analyzed. Atomic and volatile
 // operations have properties which this analysis does not understand.

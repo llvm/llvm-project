@@ -86,10 +86,11 @@ func.func @test_reverse(%arg0: tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1x13
 // -----
 // CHECK-LABEL: slice
 func.func @test_slice(%arg0: tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1x4x11x1xf32> {
+  %0 = tosa.const_shape {value = dense<[0, 0, 0, 0, 6, 8, 0]> : tensor<7xindex>} : () -> !tosa.shape<7>
+  %1 = tosa.const_shape {value = dense<[1, 1, 1, 1, 4, 11, 1]> : tensor<7xindex>} : () -> !tosa.shape<7>
   // expected-error@+1 {{'tosa.slice' op failed level check: operand rank(shape) <= MAX_RANK}}
-  %0 = "tosa.slice"(%arg0) {start = array<i64: 0, 0, 0, 0, 6, 8, 0>, size = array<i64: 1, 1, 1, 1, 4, 11, 1>} :
-          (tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1x4x11x1xf32>
-  return %0 : tensor<1x1x1x1x4x11x1xf32>
+  %2= tosa.slice %arg0, %0, %1 : (tensor<1x1x1x1x13x21x3xf32>, !tosa.shape<7>, !tosa.shape<7>) -> tensor<1x1x1x1x4x11x1xf32>
+  return %2 : tensor<1x1x1x1x4x11x1xf32>
 }
 
 // -----
@@ -736,8 +737,10 @@ func.func @test_custom(%arg0: tensor<1x1x1x1x1x1x10xi32>) -> tensor<1x1x1x1x1x1x
 
 // CHECK-LABEL: unranked_tensor
 func.func @test_unranked_tensor(%arg0: tensor<*xf32>) {
+  %0 = tosa.const_shape {value = dense<[0]> : tensor<1xindex>} : () -> !tosa.shape<1>
+  %1 = tosa.const_shape {value = dense<[1]> : tensor<1xindex>} : () -> !tosa.shape<1>
+
   // expected-error@+1 {{'tosa.slice' op failed level check: unranked tensor}}
-  %0 = "tosa.slice"(%arg0) {start = array<i64>, size = array<i64>} :
-          (tensor<*xf32>) -> tensor<*xf32>
+  %2= tosa.slice %arg0, %0, %1 : (tensor<*xf32>, !tosa.shape<1>, !tosa.shape<1>) -> tensor<*xf32>
   return
 }

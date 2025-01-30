@@ -409,7 +409,8 @@ QualType Descriptor::getElemQualType() const {
   assert(isArray());
   QualType T = getType();
   if (T->isPointerOrReferenceType())
-    return T->getPointeeType();
+    T = T->getPointeeType();
+
   if (const auto *AT = T->getAsArrayTypeUnsafe()) {
     // For primitive arrays, we don't save a QualType at all,
     // just a PrimType. Try to figure out the QualType here.
@@ -424,7 +425,8 @@ QualType Descriptor::getElemQualType() const {
     return CT->getElementType();
   if (const auto *CT = T->getAs<VectorType>())
     return CT->getElementType();
-  llvm_unreachable("Array that's not an array/complex/vector type?");
+
+  return T;
 }
 
 SourceLocation Descriptor::getLocation() const {

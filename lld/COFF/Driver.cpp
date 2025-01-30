@@ -954,20 +954,31 @@ std::string LinkerDriver::getImportName(bool asLib) {
 
 void LinkerDriver::createImportLibrary(bool asLib) {
   llvm::TimeTraceScope timeScope("Create import library");
-  std::vector<COFFShortExport> exports;
-  for (Export &e1 : ctx.symtab.exports) {
-    COFFShortExport e2;
-    e2.Name = std::string(e1.name);
-    e2.SymbolName = std::string(e1.symbolName);
-    e2.ExtName = std::string(e1.extName);
-    e2.ExportAs = std::string(e1.exportAs);
-    e2.ImportName = std::string(e1.importName);
-    e2.Ordinal = e1.ordinal;
-    e2.Noname = e1.noname;
-    e2.Data = e1.data;
-    e2.Private = e1.isPrivate;
-    e2.Constant = e1.constant;
-    exports.push_back(e2);
+  std::vector<COFFShortExport> exports, nativeExports;
+
+  auto getExports = [](SymbolTable &symtab,
+                       std::vector<COFFShortExport> &exports) {
+    for (Export &e1 : symtab.exports) {
+      COFFShortExport e2;
+      e2.Name = std::string(e1.name);
+      e2.SymbolName = std::string(e1.symbolName);
+      e2.ExtName = std::string(e1.extName);
+      e2.ExportAs = std::string(e1.exportAs);
+      e2.ImportName = std::string(e1.importName);
+      e2.Ordinal = e1.ordinal;
+      e2.Noname = e1.noname;
+      e2.Data = e1.data;
+      e2.Private = e1.isPrivate;
+      e2.Constant = e1.constant;
+      exports.push_back(e2);
+    }
+  };
+
+  if (ctx.hybridSymtab) {
+    getExports(ctx.symtab, nativeExports);
+    getExports(*ctx.hybridSymtab, exports);
+  } else {
+    getExports(ctx.symtab, exports);
   }
 
   std::string libName = getImportName(asLib);
@@ -975,7 +986,7 @@ void LinkerDriver::createImportLibrary(bool asLib) {
 
   if (!ctx.config.incremental) {
     checkError(writeImportLibrary(libName, path, exports, ctx.config.machine,
-                                  ctx.config.mingw));
+                                  ctx.config.mingw, nativeExports));
     return;
   }
 
@@ -985,7 +996,7 @@ void LinkerDriver::createImportLibrary(bool asLib) {
       path, /*IsText=*/false, /*RequiresNullTerminator=*/false);
   if (!oldBuf) {
     checkError(writeImportLibrary(libName, path, exports, ctx.config.machine,
-                                  ctx.config.mingw));
+                                  ctx.config.mingw, nativeExports));
     return;
   }
 
@@ -995,8 +1006,9 @@ void LinkerDriver::createImportLibrary(bool asLib) {
     Fatal(ctx) << "cannot create temporary file for import library " << path
                << ": " << ec.message();
 
-  if (Error e = writeImportLibrary(libName, tmpName, exports,
-                                   ctx.config.machine, ctx.config.mingw)) {
+  if (Error e =
+          writeImportLibrary(libName, tmpName, exports, ctx.config.machine,
+                             ctx.config.mingw, nativeExports)) {
     checkError(std::move(e));
     return;
   }
@@ -2668,7 +2680,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Windows specific -- when we are creating a .dll file, we also
   // need to create a .lib file. In MinGW mode, we only do that when the
   // -implib option is given explicitly, for compatibility with GNU ld.
-  if (!ctx.symtab.exports.empty() || config->dll) {
+  if (config->dll || !ctx.symtab.exports.empty() ||
+      (ctx.hybridSymtab && !ctx.hybridSymtab->exports.empty())) {
     llvm::TimeTraceScope timeScope("Create .lib exports");
     ctx.forEachSymtab([](SymbolTable &symtab) { symtab.fixupExports(); });
     if (!config->noimplib && (!config->mingw || !config->implib.empty()))

@@ -4933,7 +4933,7 @@ recurse:
   case Expr::SourceLocExprClass:
   case Expr::EmbedExprClass:
   case Expr::BuiltinBitCastExprClass:
-  {
+  case Expr::ResolvedUnexpandedPackExprClass: {
     NotPrimaryExpr();
     if (!NullOut) {
       // As bad as this diagnostic is, it's better than crashing.

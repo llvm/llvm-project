@@ -6,63 +6,6 @@
  * when the result is true.
  */
 
-#define _CLC_DEFINE_RELATIONAL_UNARY_SCALAR(RET_TYPE, FUNCTION, BUILTIN_NAME,  \
-                                            ARG_TYPE)                          \
-  _CLC_DEF _CLC_OVERLOAD RET_TYPE FUNCTION(ARG_TYPE x) {                       \
-    return BUILTIN_NAME(x);                                                    \
-  }
-
-#define _CLC_DEFINE_RELATIONAL_UNARY_VEC2(RET_TYPE, FUNCTION, ARG_TYPE)        \
-  _CLC_DEF _CLC_OVERLOAD RET_TYPE FUNCTION(ARG_TYPE x) {                       \
-    return (RET_TYPE)((RET_TYPE){FUNCTION(x.lo), FUNCTION(x.hi)} !=            \
-                      (RET_TYPE)0);                                            \
-  }
-
-#define _CLC_DEFINE_RELATIONAL_UNARY_VEC3(RET_TYPE, FUNCTION, ARG_TYPE)        \
-  _CLC_DEF _CLC_OVERLOAD RET_TYPE FUNCTION(ARG_TYPE x) {                       \
-    return (RET_TYPE)((RET_TYPE){FUNCTION(x.s0), FUNCTION(x.s1),               \
-                                 FUNCTION(x.s2)} != (RET_TYPE)0);              \
-  }
-
-#define _CLC_DEFINE_RELATIONAL_UNARY_VEC4(RET_TYPE, FUNCTION, ARG_TYPE)        \
-  _CLC_DEF _CLC_OVERLOAD RET_TYPE FUNCTION(ARG_TYPE x) {                       \
-    return (RET_TYPE)((RET_TYPE){FUNCTION(x.s0), FUNCTION(x.s1),               \
-                                 FUNCTION(x.s2),                               \
-                                 FUNCTION(x.s3)} != (RET_TYPE)0);              \
-  }
-
-#define _CLC_DEFINE_RELATIONAL_UNARY_VEC8(RET_TYPE, FUNCTION, ARG_TYPE)        \
-  _CLC_DEF _CLC_OVERLOAD RET_TYPE FUNCTION(ARG_TYPE x) {                       \
-    return (                                                                   \
-        RET_TYPE)((RET_TYPE){FUNCTION(x.s0), FUNCTION(x.s1), FUNCTION(x.s2),   \
-                             FUNCTION(x.s3), FUNCTION(x.s4), FUNCTION(x.s5),   \
-                             FUNCTION(x.s6), FUNCTION(x.s7)} != (RET_TYPE)0);  \
-  }
-
-#define _CLC_DEFINE_RELATIONAL_UNARY_VEC16(RET_TYPE, FUNCTION, ARG_TYPE)       \
-  _CLC_DEF _CLC_OVERLOAD RET_TYPE FUNCTION(ARG_TYPE x) {                       \
-    return (                                                                   \
-        RET_TYPE)((RET_TYPE){FUNCTION(x.s0), FUNCTION(x.s1), FUNCTION(x.s2),   \
-                             FUNCTION(x.s3), FUNCTION(x.s4), FUNCTION(x.s5),   \
-                             FUNCTION(x.s6), FUNCTION(x.s7), FUNCTION(x.s8),   \
-                             FUNCTION(x.s9), FUNCTION(x.sa), FUNCTION(x.sb),   \
-                             FUNCTION(x.sc), FUNCTION(x.sd), FUNCTION(x.se),   \
-                             FUNCTION(x.sf)} != (RET_TYPE)0);                  \
-  }
-
-#define _CLC_DEFINE_RELATIONAL_UNARY_VEC_ALL(RET_TYPE, FUNCTION, ARG_TYPE)     \
-  _CLC_DEFINE_RELATIONAL_UNARY_VEC2(RET_TYPE##2, FUNCTION, ARG_TYPE##2)        \
-  _CLC_DEFINE_RELATIONAL_UNARY_VEC3(RET_TYPE##3, FUNCTION, ARG_TYPE##3)        \
-  _CLC_DEFINE_RELATIONAL_UNARY_VEC4(RET_TYPE##4, FUNCTION, ARG_TYPE##4)        \
-  _CLC_DEFINE_RELATIONAL_UNARY_VEC8(RET_TYPE##8, FUNCTION, ARG_TYPE##8)        \
-  _CLC_DEFINE_RELATIONAL_UNARY_VEC16(RET_TYPE##16, FUNCTION, ARG_TYPE##16)
-
-#define _CLC_DEFINE_RELATIONAL_UNARY(RET_TYPE, FUNCTION, BUILTIN_FUNCTION,     \
-                                     ARG_TYPE)                                 \
-  _CLC_DEFINE_RELATIONAL_UNARY_SCALAR(RET_TYPE, FUNCTION, BUILTIN_FUNCTION,    \
-                                      ARG_TYPE)                                \
-  _CLC_DEFINE_RELATIONAL_UNARY_VEC_ALL(RET_TYPE, FUNCTION, ARG_TYPE)
-
 #define _CLC_DEFINE_SIMPLE_RELATIONAL_BINARY(RET_TYPE, RET_TYPE_VEC, FUNCTION, \
                                              ARG1_TYPE, ARG2_TYPE)             \
   _CLC_DEF _CLC_OVERLOAD RET_TYPE FUNCTION(ARG1_TYPE x, ARG2_TYPE y) {         \
@@ -88,5 +31,30 @@
                                                    ARG2_TYPE##16 y) {          \
     return _CLC_RELATIONAL_OP(x, y);                                           \
   }
+
+#define fcNan (__FPCLASS_SNAN | __FPCLASS_QNAN)
+#define fcInf (__FPCLASS_POSINF | __FPCLASS_NEGINF)
+#define fcNormal (__FPCLASS_POSNORMAL | __FPCLASS_NEGNORMAL)
+#define fcPosFinite                                                            \
+  (__FPCLASS_POSNORMAL | __FPCLASS_POSSUBNORMAL | __FPCLASS_POSZERO)
+#define fcNegFinite                                                            \
+  (__FPCLASS_NEGNORMAL | __FPCLASS_NEGSUBNORMAL | __FPCLASS_NEGZERO)
+#define fcFinite (fcPosFinite | fcNegFinite)
+
+#define _CLC_DEFINE_ISFPCLASS_VEC(RET_TYPE, FUNCTION, MASK, ARG_TYPE)          \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE FUNCTION(ARG_TYPE x) {                       \
+    return (RET_TYPE)(__builtin_isfpclass(x, (MASK)) != (RET_TYPE)0);          \
+  }
+
+#define _CLC_DEFINE_ISFPCLASS(RET_TYPE, VEC_RET_TYPE, FUNCTION, MASK,          \
+                              ARG_TYPE)                                        \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE FUNCTION(ARG_TYPE x) {                       \
+    return __builtin_isfpclass(x, (MASK));                                     \
+  }                                                                            \
+  _CLC_DEFINE_ISFPCLASS_VEC(VEC_RET_TYPE##2, FUNCTION, MASK, ARG_TYPE##2)      \
+  _CLC_DEFINE_ISFPCLASS_VEC(VEC_RET_TYPE##3, FUNCTION, MASK, ARG_TYPE##3)      \
+  _CLC_DEFINE_ISFPCLASS_VEC(VEC_RET_TYPE##4, FUNCTION, MASK, ARG_TYPE##4)      \
+  _CLC_DEFINE_ISFPCLASS_VEC(VEC_RET_TYPE##8, FUNCTION, MASK, ARG_TYPE##8)      \
+  _CLC_DEFINE_ISFPCLASS_VEC(VEC_RET_TYPE##16, FUNCTION, MASK, ARG_TYPE##16)
 
 #endif // __CLC_RELATIONAL_RELATIONAL_H__

@@ -38,12 +38,12 @@ using namespace mlir;
 
 namespace {
 
-bool isStaticStrideOrOffset(int64_t strideOrOffset) {
+static bool isStaticStrideOrOffset(int64_t strideOrOffset) {
   return !ShapedType::isDynamic(strideOrOffset);
 }
 
-LLVM::LLVMFuncOp getFreeFn(const LLVMTypeConverter *typeConverter,
-                           ModuleOp module) {
+static FailureOr<LLVM::LLVMFuncOp>
+getFreeFn(const LLVMTypeConverter *typeConverter, ModuleOp module) {
   bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
 
   if (useGenericFn)
@@ -220,8 +220,10 @@ struct DeallocOpLowering : public ConvertOpToLLVMPattern<memref::DeallocOp> {
   matchAndRewrite(memref::DeallocOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Insert the `free` declaration if it is not already present.
-    LLVM::LLVMFuncOp freeFunc =
+    FailureOr<LLVM::LLVMFuncOp> freeFunc =
         getFreeFn(getTypeConverter(), op->getParentOfType<ModuleOp>());
+    if (failed(freeFunc))
+      return failure();
     Value allocatedPtr;
     if (auto unrankedTy =
             llvm::dyn_cast<UnrankedMemRefType>(op.getMemref().getType())) {
@@ -236,7 +238,8 @@ struct DeallocOpLowering : public ConvertOpToLLVMPattern<memref::DeallocOp> {
       allocatedPtr = MemRefDescriptor(adaptor.getMemref())
                          .allocatedPtr(rewriter, op.getLoc());
     }
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, freeFunc, allocatedPtr);
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, freeFunc.value(),
+                                              allocatedPtr);
     return success();
   }
 };
@@ -838,7 +841,9 @@ struct MemRefCopyOpLowering : public ConvertOpToLLVMPattern<memref::CopyOp> {
     auto elemSize = getSizeInBytes(loc, srcType.getElementType(), rewriter);
     auto copyFn = LLVM::lookupOrCreateMemRefCopyFn(
         op->getParentOfType<ModuleOp>(), getIndexType(), sourcePtr.getType());
-    rewriter.create<LLVM::CallOp>(loc, copyFn,
+    if (failed(copyFn))
+      return failure();
+    rewriter.create<LLVM::CallOp>(loc, copyFn.value(),
                                   ValueRange{elemSize, sourcePtr, targetPtr});
 
     // Restore stack used for descriptors

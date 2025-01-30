@@ -391,6 +391,7 @@ FUNCTION_PASS("irce", IRCEPass())
 FUNCTION_PASS("jump-threading", JumpThreadingPass())
 FUNCTION_PASS("jump-table-to-switch", JumpTableToSwitchPass());
 FUNCTION_PASS("kcfi", KCFIPass())
+FUNCTION_PASS("kernel-info", KernelInfoPrinter(TM))
 FUNCTION_PASS("lcssa", LCSSAPass())
 FUNCTION_PASS("libcalls-shrinkwrap", LibCallsShrinkWrapPass())
 FUNCTION_PASS("lint", LintPass())

@@ -47,6 +47,7 @@ void OSSpinLockLock(volatile OSSpinLock *__lock);
 #include <stdarg.h>
 #include <stdio.h>
 #if SANITIZER_LINUX
+#include <linux/mman.h>
 #include <sys/inotify.h>
 #endif
 #include <sys/select.h>
@@ -870,6 +871,32 @@ INTERCEPTOR(void *, mmap64, void *addr, size_t length, int prot, int flags,
 #define RTSAN_MAYBE_INTERCEPT_MMAP64
 #endif // SANITIZER_INTERCEPT_MMAP64
 
+#if SANITIZER_LINUX
+// Note that even if rtsan is ported to netbsd, it has a slighty different
+// and non-variadic signature
+INTERCEPTOR(void *, mremap, void *oaddr, size_t olength, size_t nlength,
+            int flags, ...) {
+  __rtsan_notify_intercepted_call("mremap");
+
+  // the last optional argument is only used in this case
+  // as the new page region will be assigned to. Is ignored otherwise.
+  if (flags & MREMAP_FIXED) {
+    va_list args;
+
+    va_start(args, flags);
+    void *naddr = va_arg(args, void *);
+    va_end(args);
+
+    return REAL(mremap)(oaddr, olength, nlength, flags, naddr);
+  }
+
+  return REAL(mremap)(oaddr, olength, nlength, flags);
+}
+#define RTSAN_MAYBE_INTERCEPT_MREMAP INTERCEPT_FUNCTION(mremap)
+#else
+#define RTSAN_MAYBE_INTERCEPT_MREMAP
+#endif
+
 INTERCEPTOR(int, munmap, void *addr, size_t length) {
   __rtsan_notify_intercepted_call("munmap");
   return REAL(munmap)(addr, length);
@@ -1346,6 +1373,7 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(posix_memalign);
   INTERCEPT_FUNCTION(mmap);
   RTSAN_MAYBE_INTERCEPT_MMAP64;
+  RTSAN_MAYBE_INTERCEPT_MREMAP;
   INTERCEPT_FUNCTION(munmap);
   RTSAN_MAYBE_INTERCEPT_MADVISE;
   RTSAN_MAYBE_INTERCEPT_POSIX_MADVISE;

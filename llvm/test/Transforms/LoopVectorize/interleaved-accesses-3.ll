@@ -23,7 +23,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @_Z4funcPjS_hh(ptr noalias nocapture readonly %a, ptr noalias nocapture %b, i8 zeroext %x, i8 zeroext %y) local_unnamed_addr {
 ; CHECK-LABEL: define void @_Z4funcPjS_hh(
-; CHECK-SAME: ptr noalias nocapture readonly [[A:%.*]], ptr noalias nocapture [[B:%.*]], i8 zeroext [[X:%.*]], i8 zeroext [[Y:%.*]]) local_unnamed_addr {
+; CHECK-SAME: ptr noalias readonly captures(none) [[A:%.*]], ptr noalias captures(none) [[B:%.*]], i8 zeroext [[X:%.*]], i8 zeroext [[Y:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i8 [[Y]], 0
 ; CHECK-NEXT:    br i1 [[CMP9]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]

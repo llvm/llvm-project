@@ -437,7 +437,9 @@ func.func @test_reshape_samerank_unsigned(%arg0: tensor<3x2xui8>) -> tensor<2x3x
 // CHECK-LABEL: func @slice
 func.func @slice(%arg0: tensor<6xf32>) ->() {
   // CHECK: [[SLICE:%.+]] = tensor.extract_slice %arg0[2] [1] [1]
-  %0 = "tosa.slice"(%arg0) {start = array<i64: 2>, size = array<i64: 1>} : (tensor<6xf32>)  -> (tensor<1xf32>)
+  %0 = tosa.const_shape  {value = dense<2> : tensor<1xindex>} : () -> !tosa.shape<1>
+  %1 = tosa.const_shape  {value = dense<1> : tensor<1xindex>} : () -> !tosa.shape<1>
+  %2 = tosa.slice %arg0, %0, %1 : (tensor<6xf32>, !tosa.shape<1>, !tosa.shape<1>) -> tensor<1xf32>
   return
 }
 
@@ -450,8 +452,10 @@ func.func @slice_dyn(%arg0: tensor<?xf32>) -> (tensor<?xf32>) {
   // CHECK: %[[C2:.+]] = arith.constant 2 : index
   // CHECK: %[[SUB:.+]] = arith.subi %[[DIM]], %[[C2]]
   // CHECK: tensor.extract_slice %arg0[2] [%[[SUB]]] [1]
-  %0 = "tosa.slice"(%arg0) {start = array<i64: 2>, size = array<i64: -1>} : (tensor<?xf32>)  -> (tensor<?xf32>)
-  return %0 : tensor<?xf32>
+  %0 = tosa.const_shape  {value = dense<2> : tensor<1xindex>} : () -> !tosa.shape<1>
+  %1 = tosa.const_shape  {value = dense<-1> : tensor<1xindex>} : () -> !tosa.shape<1>
+  %2 = tosa.slice %arg0, %0, %1 : (tensor<?xf32>, !tosa.shape<1>, !tosa.shape<1>) -> tensor<?xf32>
+  return %2 : tensor<?xf32>
 }
 
 // -----
