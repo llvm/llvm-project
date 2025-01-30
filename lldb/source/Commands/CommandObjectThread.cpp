@@ -978,9 +978,14 @@ protected:
           if (line_table->FindLineEntryByAddress(addr, unused, &idx))
             lowest_func_idx = std::min(lowest_func_idx, idx);
 
-          addr.Slide(range.GetByteSize() - 1);
-          if (line_table->FindLineEntryByAddress(addr, unused, &idx))
+          addr.Slide(range.GetByteSize());
+          if (line_table->FindLineEntryByAddress(addr, unused, &idx)) {
             highest_func_idx = std::max(highest_func_idx, idx);
+          } else {
+            // No line entry after the current function. The function is the
+            // last in the file, so we can just search until the end.
+            highest_func_idx = UINT32_MAX;
+          }
         }
 
         bool found_something = false;
