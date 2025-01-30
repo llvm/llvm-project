@@ -63,40 +63,12 @@ struct ShaderHash {
   void swapBytes() { sys::swapByteOrder(Flags); }
 };
 
-#define ROOT_PARAMETER(RootParameter) RootParameter,
-enum class RootParameterType {
-#include "DXContainerConstants.def"
-};
-
-#define SHADER_VISIBILITY(ShaderVisibility) ShaderVisibility,
-enum class ShaderVisibilityFlag {
-#include "DXContainerConstants.def"
-};
-
-struct RootConstants {
-  uint32_t ShaderRegister;
-  uint32_t RegisterSpace;
-  uint32_t Num32BitValues;
-};
-
-struct RootParameter {
-  RootParameterType ParameterType;
-  union {
-    RootConstants Constants;
-  };
-  ShaderVisibilityFlag ShaderVisibility;
-};
-
 struct RootSignatureDesc {
   uint32_t Size;
-  uint32_t Version;
   uint32_t Flags;
-  uint32_t NumParameters;
-  RootParameter *Parameters;
 
   void swapBytes() {
     sys::swapByteOrder(Size);
-    sys::swapByteOrder(Version);
     sys::swapByteOrder(Flags);
   }
 };
