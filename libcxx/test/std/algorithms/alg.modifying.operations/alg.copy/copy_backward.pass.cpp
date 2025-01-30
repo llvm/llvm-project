@@ -115,9 +115,11 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
   { // Test vector<bool>::iterator optimization
     assert(test_vector_bool(8));
-    assert(test_vector_bool(16));
+    assert(test_vector_bool(19));
     assert(test_vector_bool(32));
+    assert(test_vector_bool(49));
     assert(test_vector_bool(64));
+    assert(test_vector_bool(199));
     assert(test_vector_bool(256));
   }
 
