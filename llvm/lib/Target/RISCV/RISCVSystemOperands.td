@@ -48,6 +48,12 @@ def SysRegsList : GenericTable {
   let PrimaryKeyReturnRange = true;
 }
 
+def SysRegEncodings : GenericEnum {
+  let FilterClass = "SysReg";
+  let NameField = "Name";
+  let ValueField = "Encoding";
+}
+
 def lookupSysRegByName : SearchIndex {
   let Table = SysRegsList;
   let Key = [ "Name" ];

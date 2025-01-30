@@ -1,4 +1,5 @@
 header: assert.h
+header_template: assert.h.def
 macros: []
 types: []
 enums: []

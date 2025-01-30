@@ -31,15 +31,15 @@ define <2 x i128> @flag_copy_2(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; CHECK-NEXT:    movq %r8, %rdi
 ; CHECK-NEXT:    {nf} sarq $63, %rdi
 ; CHECK-NEXT:    cmovoq %rdi, %rcx
-; CHECK-NEXT:    movabsq $-9223372036854775808, %r9 # imm = 0x8000000000000000
-; CHECK-NEXT:    {nf} xorq %r9, %rdi
+; CHECK-NEXT:    movabsq $-9223372036854775808, %r10 # imm = 0x8000000000000000
+; CHECK-NEXT:    {nf} xorq %r10, %rdi
 ; CHECK-NEXT:    cmovnoq %r8, %rdi
-; CHECK-NEXT:    subq {{[0-9]+}}(%rsp), %rsi
+; CHECK-NEXT:    subq %r9, %rsi
 ; CHECK-NEXT:    sbbq {{[0-9]+}}(%rsp), %rdx
 ; CHECK-NEXT:    movq %rdx, %r8
 ; CHECK-NEXT:    {nf} sarq $63, %r8
 ; CHECK-NEXT:    cmovoq %r8, %rsi
-; CHECK-NEXT:    {nf} xorq %r9, %r8
+; CHECK-NEXT:    {nf} xorq %r10, %r8
 ; CHECK-NEXT:    cmovnoq %rdx, %r8
 ; CHECK-NEXT:    movq %rcx, 16(%rax)
 ; CHECK-NEXT:    movq %rsi, (%rax)

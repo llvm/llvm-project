@@ -292,7 +292,7 @@ define <16 x i32> @shuffle_v16i32_01_02_03_16_05_06_07_20_09_10_11_24_13_14_15_2
 define <16 x float> @shuffle_v16f32_02_05_u_u_07_u_0a_01_00_05_u_04_07_u_0a_01(<16 x float> %a)  {
 ; ALL-LABEL: shuffle_v16f32_02_05_u_u_07_u_0a_01_00_05_u_04_07_u_0a_01:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vmovaps {{.*#+}} zmm1 = [2,5,u,u,7,u,10,1,0,5,u,4,7,u,10,1]
+; ALL-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [2,5,0,0,7,0,10,1,0,5,0,4,7,0,10,1]
 ; ALL-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; ALL-NEXT:    retq
   %c = shufflevector <16 x float> %a, <16 x float> poison, <16 x i32> <i32 2, i32 5, i32 poison, i32 poison, i32 7, i32 poison, i32 10, i32 1,  i32 0, i32 5, i32 poison, i32 4, i32 7, i32 poison, i32 10, i32 1>
@@ -302,7 +302,7 @@ define <16 x float> @shuffle_v16f32_02_05_u_u_07_u_0a_01_00_05_u_04_07_u_0a_01(<
 define <16 x i32> @shuffle_v16i32_02_05_u_u_07_u_0a_01_00_05_u_04_07_u_0a_01(<16 x i32> %a)  {
 ; ALL-LABEL: shuffle_v16i32_02_05_u_u_07_u_0a_01_00_05_u_04_07_u_0a_01:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vmovaps {{.*#+}} zmm1 = [2,5,u,u,7,u,10,1,0,5,u,4,7,u,10,1]
+; ALL-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [2,5,0,0,7,0,10,1,0,5,0,4,7,0,10,1]
 ; ALL-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; ALL-NEXT:    retq
   %c = shufflevector <16 x i32> %a, <16 x i32> poison, <16 x i32> <i32 2, i32 5, i32 poison, i32 poison, i32 7, i32 poison, i32 10, i32 1,  i32 0, i32 5, i32 poison, i32 4, i32 7, i32 poison, i32 10, i32 1>
@@ -322,7 +322,7 @@ define <16 x i32> @shuffle_v16i32_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08_1
 define <16 x float> @shuffle_v16f32_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08_18(<16 x float> %a, <16 x float> %b)  {
 ; ALL-LABEL: shuffle_v16f32_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08_18:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vmovaps {{.*#+}} zmm2 = [15,31,14,22,13,29,4,28,11,27,10,26,9,25,8,24]
+; ALL-NEXT:    vpmovsxbd {{.*#+}} zmm2 = [15,31,14,22,13,29,4,28,11,27,10,26,9,25,8,24]
 ; ALL-NEXT:    vpermt2ps %zmm1, %zmm2, %zmm0
 ; ALL-NEXT:    retq
   %c = shufflevector <16 x float> %a, <16 x float> %b, <16 x i32> <i32 15, i32 31, i32 14, i32 22, i32 13, i32 29, i32 4, i32 28, i32 11, i32 27, i32 10, i32 26, i32 9, i32 25, i32 8, i32 24>
@@ -339,7 +339,7 @@ define <16 x i32> @shuffle_v16i32_0b_0a_09_08_0f_0e_0d_0c_03_02_01_00_07_06_05_0
 ;
 ; FAST-LABEL: shuffle_v16i32_0b_0a_09_08_0f_0e_0d_0c_03_02_01_00_07_06_05_04:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    vmovaps {{.*#+}} zmm1 = [11,10,9,8,15,14,13,12,3,2,1,0,7,6,5,4]
+; FAST-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [11,10,9,8,15,14,13,12,3,2,1,0,7,6,5,4]
 ; FAST-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; FAST-NEXT:    retq
   %1 = shufflevector <16 x i32> %a, <16 x i32> poison, <16 x i32> <i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12, i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
@@ -355,7 +355,7 @@ define <16 x float> @shuffle_v16f32_0b_0a_09_08_0f_0e_0d_0c_03_02_01_00_07_06_05
 ;
 ; FAST-LABEL: shuffle_v16f32_0b_0a_09_08_0f_0e_0d_0c_03_02_01_00_07_06_05_04:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    vmovaps {{.*#+}} zmm1 = [11,10,9,8,15,14,13,12,3,2,1,0,7,6,5,4]
+; FAST-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [11,10,9,8,15,14,13,12,3,2,1,0,7,6,5,4]
 ; FAST-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; FAST-NEXT:    retq
   %1 = shufflevector <16 x float> %a, <16 x float> poison, <16 x i32> <i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12, i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
@@ -365,7 +365,7 @@ define <16 x float> @shuffle_v16f32_0b_0a_09_08_0f_0e_0d_0c_03_02_01_00_07_06_05
 define <16 x float> @shuffle_v16f32_load_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08_18(<16 x float> %a, ptr %b)  {
 ; ALL-LABEL: shuffle_v16f32_load_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08_18:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vmovaps {{.*#+}} zmm1 = [15,31,14,22,13,29,4,28,11,27,10,26,9,25,8,24]
+; ALL-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [15,31,14,22,13,29,4,28,11,27,10,26,9,25,8,24]
 ; ALL-NEXT:    vpermt2ps (%rdi), %zmm1, %zmm0
 ; ALL-NEXT:    retq
   %c = load <16 x float>, ptr %b
@@ -382,7 +382,7 @@ define <16 x float> @shuffle_v16f32_load_08_11_10_00_12_15_14_04(<16 x float> %a
 ;
 ; FAST-LABEL: shuffle_v16f32_load_08_11_10_00_12_15_14_04:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    vmovaps {{.*#+}} zmm1 = [0,3,2,16,4,7,6,20,8,11,10,24,12,15,14,28]
+; FAST-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [0,3,2,16,4,7,6,20,8,11,10,24,12,15,14,28]
 ; FAST-NEXT:    vpermt2ps (%rdi), %zmm1, %zmm0
 ; FAST-NEXT:    retq
   %1 = load <16 x float>, ptr %a1
@@ -421,7 +421,7 @@ define <8 x i32> @test_v16i32_1_3_5_7_9_11_13_15(<16 x i32> %v) {
 ;
 ; FAST-LABEL: test_v16i32_1_3_5_7_9_11_13_15:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    vmovaps {{.*#+}} ymm1 = [1,3,5,7,9,11,13,15]
+; FAST-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [1,3,5,7,9,11,13,15]
 ; FAST-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; FAST-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; FAST-NEXT:    retq
@@ -441,7 +441,7 @@ define <4 x i32> @test_v16i32_0_1_2_12 (<16 x i32> %v) {
 ;
 ; FAST-LABEL: test_v16i32_0_1_2_12:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    vmovaps {{.*#+}} xmm1 = [0,1,2,12]
+; FAST-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [0,1,2,12]
 ; FAST-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; FAST-NEXT:    vzeroupper
@@ -455,7 +455,7 @@ define <4 x i32> @test_v16i32_0_1_2_12 (<16 x i32> %v) {
 define <4 x i32> @test_v16i32_0_4_8_12(<16 x i32> %v) {
 ; ALL-LABEL: test_v16i32_0_4_8_12:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vmovaps {{.*#+}} xmm1 = [0,4,8,12]
+; ALL-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [0,4,8,12]
 ; ALL-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; ALL-NEXT:    vzeroupper
@@ -478,7 +478,7 @@ define <8 x float> @shuffle_v16f32_extract_256(ptr %RET, ptr %a) {
 define <8 x float> @test_v16f32_0_1_2_3_4_6_7_10 (<16 x float> %v) {
 ; ALL-LABEL: test_v16f32_0_1_2_3_4_6_7_10:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vmovaps {{.*#+}} ymm1 = [0,1,2,3,4,6,7,10]
+; ALL-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [0,1,2,3,4,6,7,10]
 ; ALL-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; ALL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; ALL-NEXT:    retq
@@ -490,7 +490,7 @@ define <8 x float> @test_v16f32_0_1_2_3_4_6_7_10 (<16 x float> %v) {
 define <4 x float> @test_v16f32_0_1_3_6 (<16 x float> %v) {
 ; ALL-LABEL: test_v16f32_0_1_3_6:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vmovaps {{.*#+}} xmm1 = [0,1,3,6]
+; ALL-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [0,1,3,6]
 ; ALL-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; ALL-NEXT:    vzeroupper

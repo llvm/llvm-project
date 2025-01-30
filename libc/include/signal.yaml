@@ -1,4 +1,5 @@
 header: signal.h
+header_template: signal.h.def
 macros: []
 types:
   - type_name: pid_t

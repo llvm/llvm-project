@@ -834,13 +834,7 @@ public:
            I->getKind() <= IK_LastOpInit;
   }
 
-  // Clone - Clone this operator, replacing arguments with the new list
-  virtual const OpInit *clone(ArrayRef<const Init *> Operands) const = 0;
-
-  virtual unsigned getNumOperands() const = 0;
-  virtual const Init *getOperand(unsigned i) const = 0;
-
-  const Init *getBit(unsigned Bit) const override;
+  const Init *getBit(unsigned Bit) const final;
 };
 
 /// !op (X) - Transform an init.
@@ -880,20 +874,6 @@ public:
   static const UnOpInit *get(UnaryOp opc, const Init *lhs, const RecTy *Type);
 
   void Profile(FoldingSetNodeID &ID) const;
-
-  // Clone - Clone this operator, replacing arguments with the new list
-  const OpInit *clone(ArrayRef<const Init *> Operands) const override {
-    assert(Operands.size() == 1 &&
-           "Wrong number of operands for unary operation");
-    return UnOpInit::get(getOpcode(), *Operands.begin(), getType());
-  }
-
-  unsigned getNumOperands() const override { return 1; }
-
-  const Init *getOperand(unsigned i) const override {
-    assert(i == 0 && "Invalid operand id for unary operator");
-    return getOperand();
-  }
 
   UnaryOp getOpcode() const { return (UnaryOp)Opc; }
   const Init *getOperand() const { return LHS; }
@@ -962,22 +942,6 @@ public:
 
   void Profile(FoldingSetNodeID &ID) const;
 
-  // Clone - Clone this operator, replacing arguments with the new list
-  const OpInit *clone(ArrayRef<const Init *> Operands) const override {
-    assert(Operands.size() == 2 &&
-           "Wrong number of operands for binary operation");
-    return BinOpInit::get(getOpcode(), Operands[0], Operands[1], getType());
-  }
-
-  unsigned getNumOperands() const override { return 2; }
-  const Init *getOperand(unsigned i) const override {
-    switch (i) {
-    default: llvm_unreachable("Invalid operand id for binary operator");
-    case 0: return getLHS();
-    case 1: return getRHS();
-    }
-  }
-
   BinaryOp getOpcode() const { return (BinaryOp)Opc; }
   const Init *getLHS() const { return LHS; }
   const Init *getRHS() const { return RHS; }
@@ -1029,24 +993,6 @@ public:
                                const Init *rhs, const RecTy *Type);
 
   void Profile(FoldingSetNodeID &ID) const;
-
-  // Clone - Clone this operator, replacing arguments with the new list
-  const OpInit *clone(ArrayRef<const Init *> Operands) const override {
-    assert(Operands.size() == 3 &&
-           "Wrong number of operands for ternary operation");
-    return TernOpInit::get(getOpcode(), Operands[0], Operands[1], Operands[2],
-                           getType());
-  }
-
-  unsigned getNumOperands() const override { return 3; }
-  const Init *getOperand(unsigned i) const override {
-    switch (i) {
-    default: llvm_unreachable("Invalid operand id for ternary operator");
-    case 0: return getLHS();
-    case 1: return getMHS();
-    case 2: return getRHS();
-    }
-  }
 
   TernaryOp getOpcode() const { return (TernaryOp)Opc; }
   const Init *getLHS() const { return LHS; }
@@ -1870,7 +1816,7 @@ public:
     assert(!CorrespondingDefInit &&
            "changing type of record after it has been referenced");
     assert(!isSubClassOf(R) && "Already subclassing record!");
-    SuperClasses.push_back(std::make_pair(R, Range));
+    SuperClasses.emplace_back(R, Range);
   }
 
   /// If there are any field references that refer to fields that have been
@@ -2025,21 +1971,20 @@ public:
   }
 
   void addClass(std::unique_ptr<Record> R) {
-    bool Ins = Classes.insert(std::make_pair(std::string(R->getName()),
-                                             std::move(R))).second;
+    bool Ins =
+        Classes.try_emplace(std::string(R->getName()), std::move(R)).second;
     (void)Ins;
     assert(Ins && "Class already exists");
   }
 
   void addDef(std::unique_ptr<Record> R) {
-    bool Ins = Defs.insert(std::make_pair(std::string(R->getName()),
-                                          std::move(R))).second;
+    bool Ins = Defs.try_emplace(std::string(R->getName()), std::move(R)).second;
     (void)Ins;
     assert(Ins && "Record already exists");
   }
 
   void addExtraGlobal(StringRef Name, const Init *I) {
-    bool Ins = ExtraGlobals.insert(std::make_pair(std::string(Name), I)).second;
+    bool Ins = ExtraGlobals.try_emplace(std::string(Name), I).second;
     (void)Ins;
     assert(!getDef(Name));
     assert(Ins && "Global already exists");
@@ -2125,14 +2070,14 @@ struct LessRecordRegister {
       for (size_t I = 0, E = Rec.size(); I != E; ++I, ++Len) {
         bool IsDigit = isDigit(Curr[I]);
         if (IsDigit != IsDigitPart) {
-          Parts.push_back(std::make_pair(IsDigitPart, StringRef(Start, Len)));
+          Parts.emplace_back(IsDigitPart, StringRef(Start, Len));
           Len = 0;
           Start = &Curr[I];
           IsDigitPart = isDigit(Curr[I]);
         }
       }
       // Push the last part.
-      Parts.push_back(std::make_pair(IsDigitPart, StringRef(Start, Len)));
+      Parts.emplace_back(IsDigitPart, StringRef(Start, Len));
     }
 
     size_t size() { return Parts.size(); }

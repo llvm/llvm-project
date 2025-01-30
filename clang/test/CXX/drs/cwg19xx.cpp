@@ -6,7 +6,9 @@
 // RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
-namespace std { struct type_info; }
+namespace std {
+struct type_info;
+} // namespace std
 
 namespace cwg1900 { // cwg1900: 2.7
 // See the test for CWG1477 for detailed analysis

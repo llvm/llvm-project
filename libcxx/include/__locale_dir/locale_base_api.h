@@ -29,10 +29,21 @@
 // -----------------
 // namespace __locale {
 //  using __locale_t = implementation-defined;
+//  using __lconv_t  = implementation-defined;
 //  __locale_t  __newlocale(int, const char*, __locale_t);
 //  void        __freelocale(__locale_t);
-//  lconv*      __localeconv(__locale_t&);
+//  char*       __setlocale(int, const char*);
+//  __lconv_t*  __localeconv(__locale_t&);
 // }
+//
+// #define _LIBCPP_COLLATE_MASK   /* implementation-defined */
+// #define _LIBCPP_CTYPE_MASK     /* implementation-defined */
+// #define _LIBCPP_MONETARY_MASK  /* implementation-defined */
+// #define _LIBCPP_NUMERIC_MASK   /* implementation-defined */
+// #define _LIBCPP_TIME_MASK      /* implementation-defined */
+// #define _LIBCPP_MESSAGES_MASK  /* implementation-defined */
+// #define _LIBCPP_ALL_MASK       /* implementation-defined */
+// #define _LIBCPP_LC_ALL         /* implementation-defined */
 //
 // Strtonum functions
 // ------------------
@@ -56,6 +67,7 @@
 //  int     __strcoll(const char*, const char*, __locale_t);
 //  size_t  __strxfrm(char*, const char*, size_t, __locale_t);
 //
+//  int     __iswctype(wint_t, wctype_t, __locale_t);
 //  int     __iswspace(wint_t, __locale_t);
 //  int     __iswprint(wint_t, __locale_t);
 //  int     __iswcntrl(wint_t, __locale_t);
@@ -98,6 +110,8 @@
 #  include <__locale_dir/support/freebsd.h>
 #elif defined(_LIBCPP_MSVCRT_LIKE)
 #  include <__locale_dir/support/windows.h>
+#elif defined(__Fuchsia__)
+#  include <__locale_dir/support/fuchsia.h>
 #else
 
 // TODO: This is a temporary definition to bridge between the old way we defined the locale base API
@@ -110,17 +124,11 @@
 #    include <__locale_dir/locale_base_api/android.h>
 #  elif defined(__OpenBSD__)
 #    include <__locale_dir/locale_base_api/openbsd.h>
-#  elif defined(__Fuchsia__)
-#    include <__locale_dir/locale_base_api/fuchsia.h>
 #  elif defined(__wasi__) || _LIBCPP_HAS_MUSL_LIBC
 #    include <__locale_dir/locale_base_api/musl.h>
 #  endif
 
-#  ifdef _LIBCPP_LOCALE__L_EXTENSIONS
-#    include <__locale_dir/locale_base_api/bsd_locale_defaults.h>
-#  else
-#    include <__locale_dir/locale_base_api/bsd_locale_fallbacks.h>
-#  endif
+#  include <__locale_dir/locale_base_api/bsd_locale_fallbacks.h>
 
 #  include <__cstddef/size_t.h>
 #  include <__utility/forward.h>
@@ -135,15 +143,29 @@ namespace __locale {
 //
 // Locale management
 //
-using __locale_t = locale_t;
+using __locale_t _LIBCPP_NODEBUG = locale_t;
+using __lconv_t _LIBCPP_NODEBUG  = lconv;
 
 inline _LIBCPP_HIDE_FROM_ABI __locale_t __newlocale(int __category_mask, const char* __name, __locale_t __loc) {
   return newlocale(__category_mask, __name, __loc);
 }
 
+inline _LIBCPP_HIDE_FROM_ABI char* __setlocale(int __category, char const* __locale) {
+  return ::setlocale(__category, __locale);
+}
+
 inline _LIBCPP_HIDE_FROM_ABI void __freelocale(__locale_t __loc) { freelocale(__loc); }
 
-inline _LIBCPP_HIDE_FROM_ABI lconv* __localeconv(__locale_t& __loc) { return __libcpp_localeconv_l(__loc); }
+inline _LIBCPP_HIDE_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc) { return __libcpp_localeconv_l(__loc); }
+
+#  define _LIBCPP_COLLATE_MASK LC_COLLATE_MASK
+#  define _LIBCPP_CTYPE_MASK LC_CTYPE_MASK
+#  define _LIBCPP_MONETARY_MASK LC_MONETARY_MASK
+#  define _LIBCPP_NUMERIC_MASK LC_NUMERIC_MASK
+#  define _LIBCPP_TIME_MASK LC_TIME_MASK
+#  define _LIBCPP_MESSAGES_MASK LC_MESSAGES_MASK
+#  define _LIBCPP_ALL_MASK LC_ALL_MASK
+#  define _LIBCPP_LC_ALL LC_ALL
 
 //
 // Strtonum functions
@@ -191,6 +213,9 @@ inline _LIBCPP_HIDE_FROM_ABI int __wcscoll(const wchar_t* __s1, const wchar_t* _
 }
 inline _LIBCPP_HIDE_FROM_ABI size_t __wcsxfrm(wchar_t* __dest, const wchar_t* __src, size_t __n, __locale_t __loc) {
   return wcsxfrm_l(__dest, __src, __n, __loc);
+}
+inline _LIBCPP_HIDE_FROM_ABI int __iswctype(wint_t __ch, wctype_t __type, __locale_t __loc) {
+  return iswctype_l(__ch, __type, __loc);
 }
 inline _LIBCPP_HIDE_FROM_ABI int __iswspace(wint_t __ch, __locale_t __loc) { return iswspace_l(__ch, __loc); }
 inline _LIBCPP_HIDE_FROM_ABI int __iswprint(wint_t __ch, __locale_t __loc) { return iswprint_l(__ch, __loc); }
