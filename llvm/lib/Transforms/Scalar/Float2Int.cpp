@@ -125,7 +125,7 @@ ConstantRange Float2IntPass::badRange() {
 ConstantRange Float2IntPass::unknownRange() {
   return ConstantRange::getEmpty(MaxIntegerBW + 1);
 }
-ConstantRange Float2IntPass::validateRange(ConstantRange R) {
+ConstantRange Float2IntPass::validateRange(const ConstantRange &R) {
   if (R.getBitWidth() > MaxIntegerBW + 1)
     return badRange();
   return R;

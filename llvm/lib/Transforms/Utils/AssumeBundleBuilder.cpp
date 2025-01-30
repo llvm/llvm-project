@@ -113,7 +113,7 @@ struct AssumeBuilderState {
                      AssumptionCache *AC = nullptr, DominatorTree *DT = nullptr)
       : M(M), InstBeingModified(I), AC(AC), DT(DT) {}
 
-  bool tryToPreserveWithoutAddingAssume(RetainedKnowledge RK) {
+  bool tryToPreserveWithoutAddingAssume(const RetainedKnowledge &RK) const {
     if (!InstBeingModified || !RK.WasOn)
       return false;
     bool HasBeenPreserved = false;

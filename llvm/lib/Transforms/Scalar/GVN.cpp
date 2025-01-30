@@ -1171,7 +1171,7 @@ static bool liesBetween(const Instruction *From, Instruction *Between,
 
 /// Try to locate the three instruction involved in a missed
 /// load-elimination case that is due to an intervening store.
-static void reportMayClobberedLoad(LoadInst *Load, MemDepResult DepInfo,
+static void reportMayClobberedLoad(LoadInst *Load, const MemDepResult &DepInfo,
                                    DominatorTree *DT,
                                    OptimizationRemarkEmitter *ORE) {
   using namespace ore;
@@ -1254,7 +1254,7 @@ static Value *findDominatingValue(const MemoryLocation &Loc, Type *LoadTy,
 }
 
 std::optional<AvailableValue>
-GVNPass::AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
+GVNPass::AnalyzeLoadAvailability(LoadInst *Load, const MemDepResult &DepInfo,
                                  Value *Address) {
   assert(Load->isUnordered() && "rules below are incorrect for ordered access");
   assert(DepInfo.isLocal() && "expected a local dependence");

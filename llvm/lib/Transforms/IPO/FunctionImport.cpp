@@ -1085,7 +1085,7 @@ void ModuleImportsManager::computeImportForModule(
 }
 
 #ifndef NDEBUG
-static bool isGlobalVarSummary(const ModuleSummaryIndex &Index, ValueInfo VI) {
+static bool isGlobalVarSummary(const ModuleSummaryIndex &Index, const ValueInfo &VI) {
   auto SL = VI.getSummaryList();
   return SL.empty()
              ? false
