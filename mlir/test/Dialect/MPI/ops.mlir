@@ -33,34 +33,34 @@ func.func @mpi_test(%ref : memref<100xf32>) -> () {
     // CHECK-NEXT: %req_3 = mpi.irecv(%arg0, %rank, %rank) : memref<100xf32>, i32, i32 -> !mpi.request
     %req3 = mpi.irecv(%ref, %rank, %rank) : memref<100xf32>, i32, i32 -> !mpi.request
 
-    // CHECK-NEXT: %retval_2, %req_4 = mpi.irecv(%arg0, %rank, %rank) : memref<100xf32>, i32, i32 -> !mpi.retval, !mpi.request
+    // CHECK-NEXT: %retval_4, %req_5 = mpi.irecv(%arg0, %rank, %rank) : memref<100xf32>, i32, i32 -> !mpi.retval, !mpi.request
     %err5, %req4 = mpi.irecv(%ref, %rank, %rank) : memref<100xf32>, i32, i32 -> !mpi.retval, !mpi.request
 
-    // CHECK-NEXT: mpi.wait(%req1) : !mpi.request
+    // CHECK-NEXT: mpi.wait(%req) : !mpi.request
     mpi.wait(%req) : !mpi.request
 
-    // CHECK-NEXT: %9 = mpi.wait(%req1) : !mpi.request -> !mpi.retval
+    // CHECK-NEXT: %3 = mpi.wait(%req_2) : !mpi.request -> !mpi.retval
     %err6 = mpi.wait(%req2) : !mpi.request -> !mpi.retval
 
     // CHECK-NEXT: mpi.barrier : !mpi.retval
     mpi.barrier : !mpi.retval
 
-    // CHECK-NEXT: %10 = mpi.barrier : !mpi.retval
+    // CHECK-NEXT: %5 = mpi.barrier : !mpi.retval
     %err7 = mpi.barrier : !mpi.retval
 
-    // CHECK-NEXT: mpi.allreduce(%arg0, %arg0, MPI_SUM) : memref<100xf32>, memref<100xf32>
+    // CHECK-NEXT: mpi.allreduce(%arg0, %arg0, <MPI_SUM>) : memref<100xf32>, memref<100xf32>
     mpi.allreduce(%ref, %ref, <MPI_SUM>) : memref<100xf32>, memref<100xf32>
 
-    // CHECK-NEXT: mpi.allreduce(%arg0, %arg0, MPI_SUM) : memref<100xf32>, memref<100xf32> -> !mpi.retval
+    // CHECK-NEXT: mpi.allreduce(%arg0, %arg0, <MPI_SUM>) : memref<100xf32>, memref<100xf32> -> !mpi.retval
     %err8 = mpi.allreduce(%ref, %ref, <MPI_SUM>) : memref<100xf32>, memref<100xf32> -> !mpi.retval
 
-    // CHECK-NEXT: %11 = mpi.finalize : !mpi.retval
+    // CHECK-NEXT: %7 = mpi.finalize : !mpi.retval
     %rval = mpi.finalize : !mpi.retval
 
-    // CHECK-NEXT: %12 = mpi.retval_check %retval = <MPI_SUCCESS> : i1
+    // CHECK-NEXT: %8 = mpi.retval_check %retval = <MPI_SUCCESS> : i1
     %res = mpi.retval_check %retval = <MPI_SUCCESS> : i1
 
-    // CHECK-NEXT: %13 = mpi.error_class %0 : !mpi.retval
+    // CHECK-NEXT: %9 = mpi.error_class %0 : !mpi.retval
     %errclass = mpi.error_class %err : !mpi.retval
 
     // CHECK-NEXT: return
