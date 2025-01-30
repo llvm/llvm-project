@@ -242,28 +242,19 @@ template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
     return;
 
   auto msg = Msg(ctx);
-  bool first = true;
-  for (std::optional<LiveObject> cur = s; cur;) {
-    if (std::holds_alternative<Symbol *>(*cur)) {
-      auto *s = std::get<Symbol *>(*cur);
-      // Match the syntax for sections below.
-      msg << toStr(ctx, s->file) << ":(" << toStr(ctx, *s) << ')';
-    } else {
-      auto *s = std::get<InputSectionBase *>(*cur);
-      msg << toStr(ctx, s);
-    }
 
-    if (first) {
-      msg << " live because:";
-      first = false;
-    }
+  msg << "live symbol: " << toStr(ctx, *s);
 
+  std::optional<LiveObject> cur = s;
+  while (cur) {
+    std::optional<LiveObject> next;
     auto it = whyLive.find(*cur);
     if (it != whyLive.end()) {
       // If there is a specific reason this object is live, report it.
       if (!it->second)
         break;
-      cur = *it->second;
+      next = *it->second;
+      msg << "\n>>> referenced by ";
     } else {
       // This object is live merely by being a member of its parent section, so
       // report the parent.
@@ -272,12 +263,23 @@ template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
         parent = dyn_cast<InputSectionBase>(d->section);
       assert(parent &&
              "all live objects should have a tracked reason for being live");
-      cur = LiveObject{parent};
+      next = LiveObject{parent};
+      msg << "\n>>> included in ";
     }
 
-    if (cur)
-      msg << "\n>>> referenced by "
-          << (std::holds_alternative<Symbol *>(*cur) ? "symbol " : "section ");
+    if (next)
+      msg << (std::holds_alternative<Symbol *>(*cur) ? "symbol " : "section ");
+
+    if (std::holds_alternative<Symbol *>(*next)) {
+      auto *s = std::get<Symbol *>(*next);
+      // Match the syntax for sections below.
+      msg << toStr(ctx, s->file) << ":(" << toStr(ctx, *s) << ')';
+    } else {
+      auto *s = std::get<InputSectionBase *>(*next);
+      msg << toStr(ctx, s);
+    }
+
+    cur = next;
   }
 }
 
