@@ -135,6 +135,9 @@ jobs:
 
   permerge-check-macos:
     runs-on: macos-14
+    concurrency:
+      group: ${{ github.workflow }}-macos-${{ github.event.pull_request.number || github.sha }}
+      cancel-in-progress: true
     if: >-
       (startswith(github.ref_name, 'release/') ||
        startswith(github.base_ref, 'refs/heads/release/'))
