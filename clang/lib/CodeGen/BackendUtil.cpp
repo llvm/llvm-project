@@ -796,7 +796,7 @@ static void addSanitizers(const Triple &TargetTriple,
   }
 
   // SanitizeSkipHotCutoffs: doubles with range [0, 1]
-  // Opts.cutoffs: ints with range [0, 1000000]
+  // Opts.cutoffs: unsigned ints with range [0, 1000000]
   auto ScaledCutoffs = CodeGenOpts.SanitizeSkipHotCutoffs.getAllScaled(1000000);
 
   // TODO: remove IsRequested()
