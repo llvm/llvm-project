@@ -202,6 +202,7 @@ jobs:
                 -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
           # XFAIL some tests that are failing:
+          # https://github.com/llvm/llvm-project/issues/125121
           export LIT_XFAIL="LLVM-Unit :: Target/SPIRV/./SPIRVTests"
 
           # The libcxx tests fail, so we are skipping the runtime targets.
