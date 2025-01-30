@@ -40,7 +40,7 @@
 
 using namespace llvm;
 
-cl::OptionCategory InstrInfoEmitterCat("Options for -gen-instr-info");
+static cl::OptionCategory InstrInfoEmitterCat("Options for -gen-instr-info");
 static cl::opt<bool> ExpandMIOperandInfo(
     "instr-info-expand-mi-operand-info",
     cl::desc("Expand operand's MIOperandInfo DAG into suboperands"),
@@ -67,13 +67,6 @@ private:
   typedef std::vector<OperandInfoTy> OperandInfoListTy;
   typedef std::map<OperandInfoTy, unsigned> OperandInfoMapTy;
 
-  /// The keys of this map are maps which have OpName enum values as their keys
-  /// and instruction operand indices as their values.  The values of this map
-  /// are lists of instruction names.
-  typedef std::map<std::map<unsigned, unsigned>, std::vector<std::string>>
-      OpNameMapTy;
-  typedef std::map<std::string, unsigned>::iterator StrUintMapIter;
-
   /// Generate member functions in the target-specific GenInstrInfo class.
   ///
   /// This method is used to custom expand TIIPredicate definitions.
@@ -95,15 +88,9 @@ private:
   void emitOperandTypeMappings(
       raw_ostream &OS, const CodeGenTarget &Target,
       ArrayRef<const CodeGenInstruction *> NumberedInstructions);
-  void
-  initOperandMapData(ArrayRef<const CodeGenInstruction *> NumberedInstructions,
-                     StringRef Namespace,
-                     std::map<std::string, unsigned> &Operands,
-                     OpNameMapTy &OperandMap);
   void emitOperandNameMappings(
       raw_ostream &OS, const CodeGenTarget &Target,
       ArrayRef<const CodeGenInstruction *> NumberedInstructions);
-
   void emitLogicalOperandSizeMappings(
       raw_ostream &OS, StringRef Namespace,
       ArrayRef<const CodeGenInstruction *> NumberedInstructions);
@@ -239,35 +226,6 @@ void InstrInfoEmitter::EmitOperandInfo(raw_ostream &OS,
   }
 }
 
-/// Initialize data structures for generating operand name mappings.
-///
-/// \param Operands [out] A map used to generate the OpName enum with operand
-///        names as its keys and operand enum values as its values.
-/// \param OperandMap [out] A map for representing the operand name mappings for
-///        each instructions.  This is used to generate the OperandMap table as
-///        well as the getNamedOperandIdx() function.
-void InstrInfoEmitter::initOperandMapData(
-    ArrayRef<const CodeGenInstruction *> NumberedInstructions,
-    StringRef Namespace, std::map<std::string, unsigned> &Operands,
-    OpNameMapTy &OperandMap) {
-  unsigned NumOperands = 0;
-  for (const CodeGenInstruction *Inst : NumberedInstructions) {
-    if (!Inst->TheDef->getValueAsBit("UseNamedOperandTable"))
-      continue;
-    std::map<unsigned, unsigned> OpList;
-    for (const auto &Info : Inst->Operands) {
-      StrUintMapIter I = Operands.find(Info.Name);
-
-      if (I == Operands.end()) {
-        I = Operands.insert(Operands.begin(), {Info.Name, NumOperands++});
-      }
-      OpList[I->second] = Info.MIOperandNo;
-    }
-    OperandMap[OpList].push_back(Namespace.str() +
-                                 "::" + Inst->TheDef->getName().str());
-  }
-}
-
 /// Generate a table and function for looking up the indices of operands by
 /// name.
 ///
@@ -283,22 +241,52 @@ void InstrInfoEmitter::emitOperandNameMappings(
     raw_ostream &OS, const CodeGenTarget &Target,
     ArrayRef<const CodeGenInstruction *> NumberedInstructions) {
   StringRef Namespace = Target.getInstNamespace();
-  // Map of operand names to their enumeration value.  This will be used to
-  // generate the OpName enum.
-  std::map<std::string, unsigned> Operands;
-  OpNameMapTy OperandMap;
 
-  initOperandMapData(NumberedInstructions, Namespace, Operands, OperandMap);
+  /// To facilitate assigning OpName enum values in the sorted alphabetical
+  /// order, we go through an indirection from OpName -> ID, and Enum -> ID.
+  /// This allows us to build the OpList and assign IDs to OpNames in a single
+  /// scan of the instructions below.
+
+  // Map of operand names to their ID.
+  std::map<StringRef, unsigned> OperandNameToID;
+  // Map from operand name enum value -> ID.
+  std::vector<unsigned> OperandEnumToID;
+
+  /// The keys of this map is a map which have OpName ID values as their keys
+  /// and instruction operand indices as their values. The values of this map
+  /// are lists of instruction names. This map helps to unique entries among
+  /// instructions that have identical OpName -> Operand index mapping.
+  std::map<std::map<unsigned, unsigned>, std::vector<StringRef>> OperandMap;
+
+  // Max operand index seen.
+  unsigned MaxOperandNo = 0;
+
+  for (const CodeGenInstruction *Inst : NumberedInstructions) {
+    if (!Inst->TheDef->getValueAsBit("UseNamedOperandTable"))
+      continue;
+    std::map<unsigned, unsigned> OpList;
+    for (const auto &Info : Inst->Operands) {
+      unsigned ID =
+          OperandNameToID.try_emplace(Info.Name, OperandNameToID.size())
+              .first->second;
+      OpList[ID] = Info.MIOperandNo;
+      MaxOperandNo = std::max(MaxOperandNo, Info.MIOperandNo);
+    }
+    OperandMap[OpList].push_back(Inst->TheDef->getName());
+  }
+
+  const size_t NumOperandNames = OperandNameToID.size();
+  OperandEnumToID.reserve(NumOperandNames);
+  for (const auto &Op : OperandNameToID)
+    OperandEnumToID.push_back(Op.second);
 
   OS << "#ifdef GET_INSTRINFO_OPERAND_ENUM\n";
   OS << "#undef GET_INSTRINFO_OPERAND_ENUM\n";
   OS << "namespace llvm::" << Namespace << "::OpName {\n";
   OS << "enum {\n";
-  for (const auto &Op : Operands)
-    OS << "  " << Op.first << " = " << Op.second << ",\n";
-
-  OS << "  OPERAND_LAST";
-  OS << "\n};\n";
+  for (const auto &[I, Op] : enumerate(OperandNameToID))
+    OS << "  " << Op.first << " = " << I << ",\n";
+  OS << "};\n";
   OS << "} // end namespace llvm::" << Namespace << "::OpName\n";
   OS << "#endif //GET_INSTRINFO_OPERAND_ENUM\n\n";
 
@@ -307,28 +295,30 @@ void InstrInfoEmitter::emitOperandNameMappings(
   OS << "namespace llvm::" << Namespace << " {\n";
   OS << "LLVM_READONLY\n";
   OS << "int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIdx) {\n";
-  if (!Operands.empty()) {
-    OS << "  static const int16_t OperandMap [][" << Operands.size()
+  if (NumOperandNames != 0) {
+    assert(MaxOperandNo <= INT16_MAX &&
+           "Too many operands for the operand name -> index table");
+    StringRef Type = MaxOperandNo <= INT8_MAX ? "int8_t" : "int16_t";
+    OS << "  static constexpr " << Type << " OperandMap[][" << NumOperandNames
        << "] = {\n";
     for (const auto &Entry : OperandMap) {
       const std::map<unsigned, unsigned> &OpList = Entry.first;
-      OS << "{";
 
-      // Emit a row of the OperandMap table
-      for (unsigned i = 0, e = Operands.size(); i != e; ++i)
-        OS << (OpList.count(i) == 0 ? -1 : (int)OpList.find(i)->second) << ", ";
-
+      // Emit a row of the OperandMap table.
+      OS << "    {";
+      for (unsigned ID : OperandEnumToID) {
+        auto Iter = OpList.find(ID);
+        OS << (Iter != OpList.end() ? (int)Iter->second : -1) << ", ";
+      }
       OS << "},\n";
     }
-    OS << "};\n";
+    OS << "  };\n";
 
     OS << "  switch(Opcode) {\n";
-    unsigned TableIndex = 0;
-    for (const auto &Entry : OperandMap) {
-      for (const std::string &Name : Entry.second)
-        OS << "  case " << Name << ":\n";
-
-      OS << "    return OperandMap[" << TableIndex++ << "][NamedIdx];\n";
+    for (const auto &[TableIndex, Entry] : enumerate(OperandMap)) {
+      for (StringRef Name : Entry.second)
+        OS << "  case " << Namespace << "::" << Name << ":\n";
+      OS << "    return OperandMap[" << TableIndex << "][NamedIdx];\n";
     }
     OS << "  default: return -1;\n";
     OS << "  }\n";
