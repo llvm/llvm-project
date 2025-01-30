@@ -793,8 +793,8 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
 
   // For the scalar case, we may not always execute the original predicated
   // block, Thus, scale the block's cost by the probability of executing it.
-  if (VF.isScalar() && Ctx.CostKind != TTI::TCK_CodeSize)
-    return ThenCost / getReciprocalPredBlockProb();
+  if (VF.isScalar())
+    return ThenCost / getPredBlockCostDivisor(Ctx.CostKind);
 
   return ThenCost;
 }

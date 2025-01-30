@@ -3345,7 +3345,7 @@ LoopVectorizationCostModel::getDivRemSpeculationCost(Instruction *I,
     // Scale the cost by the probability of executing the predicated blocks.
     // This assumes the predicated block for each vector lane is equally
     // likely.
-    ScalarizationCost = ScalarizationCost / getReciprocalPredBlockProb();
+    ScalarizationCost = ScalarizationCost / getPredBlockCostDivisor(CostKind);
   }
   InstructionCost SafeDivisorCost = 0;
 
@@ -5515,8 +5515,7 @@ InstructionCost LoopVectorizationCostModel::computePredInstDiscount(
       }
 
     // Scale the total scalar cost by block probability.
-    if (CostKind != TTI::TCK_CodeSize)
-      ScalarCost /= getReciprocalPredBlockProb();
+    ScalarCost /= getPredBlockCostDivisor(CostKind);
 
     // Compute the discount. A non-negative discount means the vector version
     // of the instruction costs more, and scalarizing would be beneficial.
@@ -5568,9 +5567,8 @@ InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
     // the predicated block, if it is an if-else block. Thus, scale the block's
     // cost by the probability of executing it. blockNeedsPredication from
     // Legal is used so as to not include all blocks in tail folded loops.
-    if (VF.isScalar() && Legal->blockNeedsPredication(BB) &&
-        CostKind != TTI::TCK_CodeSize)
-      BlockCost /= getReciprocalPredBlockProb();
+    if (VF.isScalar() && Legal->blockNeedsPredication(BB))
+      BlockCost /= getPredBlockCostDivisor(CostKind);
 
     Cost += BlockCost;
   }
@@ -5648,8 +5646,7 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
   // conditional branches, but may not be executed for each vector lane. Scale
   // the cost by the probability of executing the predicated block.
   if (isPredicatedInst(I)) {
-    if (CostKind != TTI::TCK_CodeSize)
-      Cost /= getReciprocalPredBlockProb();
+    Cost /= getPredBlockCostDivisor(CostKind);
 
     // Add the cost of an i1 extract and a branch
     auto *VecI1Ty =
