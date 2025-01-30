@@ -5,6 +5,8 @@
 ! C717 The value of kind-param shall specify an approximation method that
 ! exists on the processor.
 
+! UNSUPPORTED: system-aix
+
 subroutine s(var)
   real :: realvar1 = 4.0E6_4
   real :: realvar2 = 4.0D6
