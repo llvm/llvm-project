@@ -17,6 +17,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <functional>
+#include <mutex>
 #include <optional>
 
 namespace mlir {
@@ -497,6 +498,10 @@ private:
 
   /// A flag that indicates if the IR should be verified in between passes.
   bool verifyPasses : 1;
+
+  /// A mutex used to serialixe thread access when running the pass manager with
+  /// crash reproduction enabled.
+  std::mutex crashRecoveryLock;
 };
 
 /// Register a set of useful command-line options that can be used to configure

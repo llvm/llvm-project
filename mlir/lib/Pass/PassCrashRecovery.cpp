@@ -411,14 +411,36 @@ private:
 
 LogicalResult PassManager::runWithCrashRecovery(Operation *op,
                                                 AnalysisManager am) {
+  // Notify the context to disable the use of thread-local storage for
+  // allocating attribute storage while the pass manager is running in a crash
+  // recovery context thread. Re-enable the thread-local storage upon function
+  // exit. This is required to persist any attribute storage allocated in
+  // thread-local storage during passes beyond the lifetime of the recovery
+  // context thread.
+  const bool threadingEnabled = getContext()->isMultithreadingEnabled();
+  if (threadingEnabled) {
+    crashRecoveryLock.lock();
+    getContext()->disableThreadLocalStorage();
+  }
+  auto guard = llvm::make_scope_exit([this]() {
+    getContext()->enableThreadLocalStorage();
+    crashRecoveryLock.unlock();
+  });
+
   crashReproGenerator->initialize(getPasses(), op, verifyPasses);
 
   // Safely invoke the passes within a recovery context.
   LogicalResult passManagerResult = failure();
   llvm::CrashRecoveryContext recoveryContext;
-  recoveryContext.RunSafelyOnThread(
-      [&] { passManagerResult = runPasses(op, am); });
+  const auto runPassesFn = [&] { passManagerResult = runPasses(op, am); };
+  if (threadingEnabled)
+    recoveryContext.RunSafelyOnThread(runPassesFn);
+  else
+    recoveryContext.RunSafely(runPassesFn);
   crashReproGenerator->finalize(op, passManagerResult);
+
+  if (!threadingEnabled)
+    guard.release();
   return passManagerResult;
 }
 

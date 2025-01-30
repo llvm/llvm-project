@@ -711,6 +711,13 @@ bool MLIRContext::isOperationRegistered(StringRef name) {
   return RegisteredOperationName::lookup(name, this).has_value();
 }
 
+void MLIRContext::disableThreadLocalStorage(bool disable) {
+  const auto mode =
+      disable ? DistinctAttributeAllocator::AllocationMode::SharedLocked
+              : DistinctAttributeAllocator::AllocationMode::ThreadLocal;
+  getImpl().distinctAttributeAllocator.setAllocationMode(mode);
+}
+
 void Dialect::addType(TypeID typeID, AbstractType &&typeInfo) {
   auto &impl = context->getImpl();
   assert(impl.multiThreadedExecutionContext == 0 &&
