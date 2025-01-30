@@ -1591,6 +1591,14 @@ public:
   /// Determine whether the argument or parameter has the given attribute.
   bool paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const;
 
+  /// Return true if this argument has the nonnull attribute on either the
+  /// CallBase instruction or the called function. Also returns true if at least
+  /// one byte is known to be dereferenceable and the pointer is in
+  /// addrspace(0). If \p AllowUndefOrPoison is true, respect the semantics of
+  /// nonnull attribute and return true even if the argument can be undef or
+  /// poison.
+  bool paramHasNonNullAttr(unsigned ArgNo, bool AllowUndefOrPoison) const;
+
   /// Get the attribute of a given kind at a position.
   Attribute getAttributeAtIndex(unsigned i, Attribute::AttrKind Kind) const {
     return getAttributes().getAttributeAtIndex(i, Kind);
