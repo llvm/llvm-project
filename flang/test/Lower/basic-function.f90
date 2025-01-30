@@ -145,7 +145,7 @@ end
 
 function cplxfct6()
   integer, parameter :: kind16 = merge(16, 4, selected_real_kind(p=33).eq.16)
-  complex(kind16) :: cplxfct5
+  complex(kind16) :: cplxfct6
 end
 ! CHECK-KIND16-LABEL: func @_QPcplxfct6() -> complex<f128>
 ! CHECK-KIND16:         return %{{.*}} : complex<f128>

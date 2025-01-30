@@ -30,6 +30,6 @@ subroutine fraction_16(res16, x16)
     integer, parameter :: kind16 = merge(16, 4, selected_real_kind(p=33).eq.16)
     real(kind = kind16) :: x16, res16
     res16 = fraction(x16)
-  ! CHECK-KIND16: %[[temp2:.*]] = fir.load %{{.*}} : !fir.ref<128>
-  ! CHECK-KIND16: fir.call @_FortranAFraction16(%[[temp2:.*]]) {{.*}}: (128) -> 128
+  ! CHECK-KIND16: %[[temp2:.*]] = fir.load %{{.*}} : !fir.ref<f128>
+  ! CHECK-KIND16: fir.call @_FortranAFraction16(%[[temp2:.*]]) {{.*}}: (f128) -> f128
 end subroutine

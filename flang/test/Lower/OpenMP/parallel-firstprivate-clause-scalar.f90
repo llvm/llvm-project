@@ -157,11 +157,11 @@ subroutine firstprivate_real10(arg1)
 end subroutine
 
 !CHECK-KIND16-LABEL: func @_QPfirstprivate_real16(
-!CHECK-KIND16-SAME: %[[ARG1:.*]]: !fir.ref<f80>{{.*}}) {
-!CHECK-KIND16:   %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFfirstprivate_real16Earg1"} : (!fir.ref<f80>, !fir.dscope) -> (!fir.ref<f80>, !fir.ref<f80>)
+!CHECK-KIND16-SAME: %[[ARG1:.*]]: !fir.ref<f128>{{.*}}) {
+!CHECK-KIND16:   %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFfirstprivate_real16Earg1"} : (!fir.ref<f128>, !fir.dscope) -> (!fir.ref<f128>, !fir.ref<f128>)
 !CHECK-KIND16:  omp.parallel private({{.*firstprivate.*}} {{.*}}#0 -> %[[ARG1_PVT:.*]] : {{.*}}) {
-!CHECK-KIND16:     %[[ARG1_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG1_PVT]] {uniq_name = "_QFfirstprivate_real16Earg1"} : (!fir.ref<f80>) -> (!fir.ref<f80>, !fir.ref<f80>)
-!CHECK-KIND16:     fir.call @_QPqux16(%[[ARG1_PVT_DECL]]#1) {{.*}} : (!fir.ref<f80>) -> ()
+!CHECK-KIND16:     %[[ARG1_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG1_PVT]] {uniq_name = "_QFfirstprivate_real16Earg1"} : (!fir.ref<f128>) -> (!fir.ref<f128>, !fir.ref<f128>)
+!CHECK-KIND16:     fir.call @_QPqux16(%[[ARG1_PVT_DECL]]#1) {{.*}} : (!fir.ref<f128>) -> ()
 !CHECK-KIND16:     omp.terminator
 !CHECK-KIND16:   }
 subroutine firstprivate_real16(arg1)

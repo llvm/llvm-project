@@ -1,11 +1,11 @@
 ! RUN: %flang_fc1 -emit-hlfir -o - -mllvm -math-runtime=fast %s \
-! RUN: | FileCheck %s --check-prefixes=ALL,FAST%if target=x86_64{{.*}} %{,ALL-KIND10,FAST-KIND10%}%if flang-supports-f128-math %{ALL-KIND16,FAST-KIND16%}
+! RUN: | FileCheck %s --check-prefixes=ALL,FAST%if target=x86_64{{.*}} %{,ALL-KIND10,FAST-KIND10%}%if flang-supports-f128-math %{,ALL-KIND16,FAST-KIND16%}
 
 ! RUN: %flang_fc1 -emit-hlfir -o - -mllvm -math-runtime=relaxed %s \
-! RUN: | FileCheck %s --check-prefixes=ALL,RELAXED%if target=x86_64{{.*}} %{,ALL-KIND10,RELAXED-KIND10%}%if flang-supports-f128-math %{ALL-KIND16,RELAXED-KIND16%}
+! RUN: | FileCheck %s --check-prefixes=ALL,RELAXED%if target=x86_64{{.*}} %{,ALL-KIND10,RELAXED-KIND10%}%if flang-supports-f128-math %{,ALL-KIND16,RELAXED-KIND16%}
 
 ! RUN: %flang_fc1 -emit-hlfir -o - -mllvm -math-runtime=precise %s \
-! RUN: | FileCheck %s --check-prefixes=ALL,PRECISE%if target=x86_64{{.*}} %{,ALL-KIND10,PRECISE-KIND10%}%if flang-supports-f128-math %{ALL-KIND16,PRECISE-KIND16%}
+! RUN: | FileCheck %s --check-prefixes=ALL,PRECISE%if target=x86_64{{.*}} %{,ALL-KIND10,PRECISE-KIND10%}%if flang-supports-f128-math %{,ALL-KIND16,PRECISE-KIND16%}
 
 function test_real4(x, y)
   real :: x, y, test_real4

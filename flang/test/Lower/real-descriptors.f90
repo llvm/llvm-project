@@ -1,6 +1,6 @@
 ! RUN: bbc %s -o - | tco | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-supports-f128-math %{,CHECK-KIND16%}
 
-! CHECK-LABEL: test_reals
+! CHECK-LABEL: define void {{.*}}test_reals
 subroutine test_reals(x2, x3, x4, x8, c2, c3, c4, c8)
   character(10) :: in = 'NaN NaN'
 
