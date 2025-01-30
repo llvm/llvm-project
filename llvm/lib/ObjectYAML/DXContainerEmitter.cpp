@@ -267,7 +267,6 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
         continue;
 
       mcdxbc::RootSignatureHeader Header;
-      Header.Version = P.RootSignature->Version;
       Header.Flags = P.RootSignature->getEncodedFlags();
 
       Header.write(OS);
