@@ -2426,6 +2426,11 @@ public:
         << IsSimpleCount << QualType(CATy, 0) << !PtrParamName.empty()
         << PtrParamName << CountParamName;
   }
+
+  void handleUnsafeSinglePointerArgument(const Expr *Arg, bool IsRelatedToDecl,
+                                         ASTContext &Ctx) override {
+    S.Diag(Arg->getBeginLoc(), diag::warn_unsafe_single_pointer_argument);
+  }
   /* TO_UPSTREAM(BoundsSafety) OFF */
 
   void handleUnsafeVariableGroup(const VarDecl *Variable,

@@ -13598,6 +13598,9 @@ def note_unsafe_count_attributed_pointer_argument : Note<
   "consider using %select{|a safe container and passing '.data()' to the "
   "parameter%select{| '%3'}2 and '.size()' to its dependent parameter '%4' or }0"
   "'std::span' and passing '.first(...).data()' to the parameter%select{| '%3'}2">;
+def warn_unsafe_single_pointer_argument : Warning<
+  "unsafe assignment to function parameter of __single pointer type">,
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
 #ifndef NDEBUG
 // Not a user-facing diagnostic. Useful for debugging false negatives in
 // -fsafe-buffer-usage-suggestions (i.e. lack of -Wunsafe-buffer-usage fixits).

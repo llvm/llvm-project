@@ -227,6 +227,10 @@ AST_MATCHER(QualType, isCountAttributedType) {
   return Node->isCountAttributedType();
 }
 
+AST_MATCHER(QualType, isSinglePointerType) {
+  return Node->isSinglePointerType();
+}
+
 AST_MATCHER_P(Stmt, forEachDescendantEvaluatedStmt, internal::Matcher<Stmt>,
               innerMatcher) {
   const DynTypedMatcher &DTM = static_cast<DynTypedMatcher>(innerMatcher);
@@ -830,6 +834,58 @@ bool isCountAttributedPointerArgumentSafe(ASTContext &Context,
 
   return isCompatibleWithCountExpr(ArgCount, CAT->getCountExpr(), MemberBase,
                                    &*ValuesOpt, Context);
+}
+
+// Checks if the argument passed to __single pointer is one of the following
+// forms:
+// 0. `nullptr`.
+// 1. `&var`, if `var` is a variable identifier.
+// 2. `&C[_]`, if `C` is a hardened container/view.
+// 3. `sp.first(1).data()` and friends.
+bool isSinglePointerArgumentSafe(ASTContext &Context, const Expr *Arg) {
+  const Expr *ArgNoImp = Arg->IgnoreParenImpCasts();
+
+  // Check form 0:
+  if (ArgNoImp->getType()->isNullPtrType())
+    return true;
+
+  // Check form 1:
+  {
+    auto AddrOfDREMatcher = expr(
+        unaryOperator(hasOperatorName("&"),
+                      hasUnaryOperand(ignoringParenImpCasts(declRefExpr()))));
+    bool Matches = !match(AddrOfDREMatcher, *ArgNoImp, Context).empty();
+    if (Matches)
+      return true;
+  }
+
+  // Check form 2:
+  {
+    // TODO: Add more classes.
+    auto HardenedClassNameMatcher =
+        anyOf(hasName("::std::array"), hasName("::std::basic_string"),
+              hasName("::std::basic_string_view"), hasName("::std::span"),
+              hasName("::std::vector"));
+    auto SubscriptOpMatcher = cxxOperatorCallExpr(callee(cxxMethodDecl(
+        hasName("operator[]"), ofClass(HardenedClassNameMatcher))));
+    auto AddrOfMatcher = expr(unaryOperator(
+        hasOperatorName("&"),
+        hasUnaryOperand(ignoringParenImpCasts(SubscriptOpMatcher))));
+    bool Matches = !match(AddrOfMatcher, *ArgNoImp, Context).empty();
+    if (Matches)
+      return true;
+  }
+
+  // Check form 3:
+  if (const Expr *ExtentExpr =
+          extractExtentFromSubviewDataCall(Context, ArgNoImp)) {
+    std::optional<llvm::APSInt> ExtentVal =
+        ExtentExpr->getIntegerConstantExpr(Context);
+    if (ExtentVal.has_value() && ExtentVal->isOne())
+      return true;
+  }
+
+  return false;
 }
 
 } // namespace
@@ -1527,6 +1583,12 @@ AST_MATCHER_P(CallExpr, forEachUnsafeCountAttributedPointerArgument,
   }
 
   return Matched;
+}
+
+// Matches iff the argument passed to __single pointer type is safe.
+AST_MATCHER(Expr, isSinglePointerArgumentSafe) {
+  ASTContext &Context = Finder->getASTContext();
+  return isSinglePointerArgumentSafe(Context, &Node);
 }
 
 } // namespace clang::ast_matchers
@@ -2621,6 +2683,45 @@ public:
                              ASTContext &Ctx) const override {
     Handler.handleUnsafeCountAttributedPointerArgument(Call, Arg,
                                                        IsRelatedToDecl, Ctx);
+  }
+
+  SourceLocation getSourceLoc() const override { return Arg->getBeginLoc(); }
+
+  virtual DeclUseList getClaimedVarUseSites() const override {
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(Arg)) {
+      return {DRE};
+    }
+    return {};
+  }
+};
+
+// Represents an argument that is being passed to a __single pointer.
+class SinglePointerArgumentGadget : public WarningGadget {
+private:
+  static constexpr const char *const ArgTag = "SinglePointerArgument_Arg";
+  const Expr *Arg;
+
+public:
+  explicit SinglePointerArgumentGadget(const MatchFinder::MatchResult &Result)
+      : WarningGadget(Kind::SinglePointerArgument),
+        Arg(Result.Nodes.getNodeAs<Expr>(ArgTag)) {
+    assert(Arg != nullptr && "Expecting a non-null matching result");
+  }
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::SinglePointerArgument;
+  }
+
+  static Matcher matcher() {
+    return stmt(callExpr(forEachArgumentWithParamType(
+        expr(unless(isSinglePointerArgumentSafe())).bind(ArgTag),
+        isSinglePointerType())));
+  }
+
+  void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
+                             bool IsRelatedToDecl,
+                             ASTContext &Ctx) const override {
+    Handler.handleUnsafeSinglePointerArgument(Arg, IsRelatedToDecl, Ctx);
   }
 
   SourceLocation getSourceLoc() const override { return Arg->getBeginLoc(); }
