@@ -105,8 +105,8 @@ collectNestedBranches(const coverage::CoverageMapping &Coverage,
   return Branches;
 }
 
-bool sortLine(llvm::coverage::CountedRegion I,
-              llvm::coverage::CountedRegion J) {
+bool sortLine(const llvm::coverage::CountedRegion &I,
+              const llvm::coverage::CountedRegion &J) {
   return (I.LineStart < J.LineStart) ||
          ((I.LineStart == J.LineStart) && (I.ColumnStart < J.ColumnStart));
 }
