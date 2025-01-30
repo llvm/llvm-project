@@ -14,12 +14,9 @@
 #ifndef MLIR_TARGET_LLVMIR_TYPETOLLVM_H
 #define MLIR_TARGET_LLVMIR_TYPETOLLVM_H
 
-#include "llvm/ADT/ArrayRef.h"
-
 #include <memory>
 
 namespace llvm {
-class FunctionType;
 class DataLayout;
 class LLVMContext;
 class Type;
