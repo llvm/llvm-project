@@ -39,7 +39,7 @@ getAttrKindToNameMapping() {
       {llvm::Attribute::AttrKind::InReg, LLVMDialect::getInRegAttrName()},
       {llvm::Attribute::AttrKind::Nest, LLVMDialect::getNestAttrName()},
       {llvm::Attribute::AttrKind::NoAlias, LLVMDialect::getNoAliasAttrName()},
-      {llvm::Attribute::AttrKind::NoCapture,
+      {llvm::Attribute::AttrKind::Captures,
        LLVMDialect::getNoCaptureAttrName()},
       {llvm::Attribute::AttrKind::NoFree, LLVMDialect::getNoFreeAttrName()},
       {llvm::Attribute::AttrKind::NonNull, LLVMDialect::getNonNullAttrName()},
