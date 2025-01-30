@@ -1229,7 +1229,8 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
 def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, Symbol,
     GlobalVariableLinkageOpInterface,
-    DeclareOpInterfaceMethods<GlobalValueLinkageOpInterface>]> {
+    DeclareOpInterfaceMethods<GlobalValueLinkageOpInterface>,
+    DeclareOpInterfaceMethods<GlobalVariableLinkageOpInterface>]> {
   let arguments = (ins
     TypeAttr:$global_type,
     UnitAttr:$constant,
