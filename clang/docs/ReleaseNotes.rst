@@ -98,6 +98,8 @@ C2y Feature Support
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
+- Clang now supports `N3006 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3006.htm>`_ Underspecified object declarations.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 

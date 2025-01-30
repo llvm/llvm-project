@@ -7101,10 +7101,38 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
                                            diagID))
         return ExprError();
     }
+  } else if (LangOpts.C23 &&
+             (literalType->isRecordType() || literalType->isEnumeralType())) {
+    // C23 6.2.1p7: Structure, union, and enumeration tags have scope that
+    // begins just after the appearance of the tag in a type specifier that
+    // declares the tag.
+    // [...]
+    // An ordinary identifier that has an underspecified definition has scope
+    // that starts when the definition is completed; if the same ordinary
+    // identifier declares another entity with a scope that encloses the current
+    // block, that declaration is hidden as soon as the inner declarator is
+    // completed*.)
+    // [...]
+    // *) That means, that the outer declaration is not visible for the
+    // initializer.
+    auto Range = SourceRange(LParenLoc, RParenLoc);
+    const auto *Tag = literalType->castAs<TagType>();
+    const auto &TagRange = Tag->getDecl()->getSourceRange();
+
+    // We should diagnose underspecified declaration, unless the identifier has
+    // been diagnosed as being a redefinition, since the tag is made anonymous.
+    if (Range.fullyContains(TagRange) && Tag->getDecl()->getIdentifier()) {
+      Diag(TagRange.getBegin(), diag::err_c23_underspecified_object_declaration)
+          << (unsigned)Tag->getDecl()->getTagKind() << Tag->getDecl()->getName()
+          << TagRange;
+      return ExprError();
+    }
   } else if (!literalType->isDependentType() &&
-             RequireCompleteType(LParenLoc, literalType,
-               diag::err_typecheck_decl_incomplete_type,
-               SourceRange(LParenLoc, LiteralExpr->getSourceRange().getEnd())))
+             RequireCompleteType(
+                 LParenLoc, literalType,
+                 diag::err_typecheck_decl_incomplete_type,
+                 SourceRange(LParenLoc,
+                             LiteralExpr->getSourceRange().getEnd())))
     return ExprError();
 
   InitializedEntity Entity
