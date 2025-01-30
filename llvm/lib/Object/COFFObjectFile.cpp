@@ -43,7 +43,7 @@ using support::ulittle64_t;
 using support::little16_t;
 
 // Returns false if size is greater than the buffer size. And sets ec.
-static bool checkSize(MemoryBufferRef M, std::error_code &EC, uint64_t Size) {
+static bool checkSize(const MemoryBufferRef &M, std::error_code &EC, uint64_t Size) {
   if (M.getBufferSize() < Size) {
     EC = object_error::unexpected_eof;
     return false;
@@ -353,7 +353,7 @@ bool COFFObjectFile::isSectionVirtual(DataRefImpl Ref) const {
 }
 
 static uint32_t getNumberOfRelocations(const coff_section *Sec,
-                                       MemoryBufferRef M, const uint8_t *base) {
+                                       const MemoryBufferRef &M, const uint8_t *base) {
   // The field for the number of relocations in COFF section table is only
   // 16-bit wide. If a section has more than 65535 relocations, 0xFFFF is set to
   // NumberOfRelocations field, and the actual relocation count is stored in the
@@ -373,7 +373,7 @@ static uint32_t getNumberOfRelocations(const coff_section *Sec,
 }
 
 static const coff_relocation *
-getFirstReloc(const coff_section *Sec, MemoryBufferRef M, const uint8_t *Base) {
+getFirstReloc(const coff_section *Sec, const MemoryBufferRef &M, const uint8_t *Base) {
   uint64_t NumRelocs = getNumberOfRelocations(Sec, M, Base);
   if (!NumRelocs)
     return nullptr;
@@ -1893,7 +1893,7 @@ Error ImportedSymbolRef::getOrdinal(uint16_t &Result) const {
 }
 
 Expected<std::unique_ptr<COFFObjectFile>>
-ObjectFile::createCOFFObjectFile(MemoryBufferRef Object) {
+ObjectFile::createCOFFObjectFile(const MemoryBufferRef &Object) {
   return COFFObjectFile::create(Object);
 }
 
