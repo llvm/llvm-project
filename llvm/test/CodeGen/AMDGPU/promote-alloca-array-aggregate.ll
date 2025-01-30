@@ -127,14 +127,14 @@ define amdgpu_vs void @promote_load_from_store_aggr() #0 {
 %gl_PV = type { <4 x i32>, i32, [1 x i32], [1 x i32] }
 @pv1 = external addrspace(1) global %gl_PV
 
-; This should should not crash on variable offset that can be
-; optimized out (variable foo4 in the test)
-define amdgpu_vs void @promote_load_from_store_aggr_varoff() local_unnamed_addr {
+; This should not crash on an aliased variable offset that can be
+; optimized out (variable %aliasToG1 in the test)
+define amdgpu_vs void @promote_load_from_store_aggr_varoff(<4 x i32> %input) {
 ; CHECK-LABEL: @promote_load_from_store_aggr_varoff(
 ; CHECK-NEXT:    [[FOO3_UNPACK2:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @block4, i64 8), align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x i32> undef, i32 [[FOO3_UNPACK2]], i32 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <3 x i32> [[TMP1]], i32 [[FOO3_UNPACK2]]
-; CHECK-NEXT:    [[FOO12:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i64 3
+; CHECK-NEXT:    [[FOO12:%.*]] = insertelement <4 x i32> %input, i32 [[TMP2]], i64 3
 ; CHECK-NEXT:    store <4 x i32> [[FOO12]], ptr addrspace(1) @pv1, align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -142,10 +142,10 @@ define amdgpu_vs void @promote_load_from_store_aggr_varoff() local_unnamed_addr 
   %G1 = getelementptr inbounds i8, ptr addrspace(5) %f1, i32 8
   %foo3.unpack2 = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @block4, i64 8), align 4
   store i32 %foo3.unpack2, ptr addrspace(5) %G1, align 4
-  %foo4 = load i32, ptr addrspace(5) %G1, align 4
-  %foo5 = getelementptr [3 x i32], ptr addrspace(5) %f1, i32 0, i32 %foo4
+  %aliasToG1 = load i32, ptr addrspace(5) %G1, align 4
+  %foo5 = getelementptr [3 x i32], ptr addrspace(5) %f1, i32 0, i32 %aliasToG1
   %foo6 = load i32, ptr addrspace(5) %foo5, align 4
-  %foo12 = insertelement <4 x i32> poison, i32 %foo6, i64 3
+  %foo12 = insertelement <4 x i32> %input, i32 %foo6, i64 3
   store <4 x i32> %foo12, ptr addrspace(1) @pv1, align 16
   ret void
 }

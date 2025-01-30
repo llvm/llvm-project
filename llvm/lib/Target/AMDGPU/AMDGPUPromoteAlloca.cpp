@@ -385,57 +385,20 @@ static bool isSupportedMemset(MemSetInst *I, AllocaInst *AI,
          match(I->getOperand(2), m_SpecificInt(Size)) && !I->isVolatile();
 }
 
-static bool hasVariableOffset(GetElementPtrInst *GEP) {
-  // Iterate over all operands starting from the first index (index 0 is the
-  // base pointer).
-  for (unsigned i = 1, e = GEP->getNumOperands(); i != e; ++i) {
-    Value *Op = GEP->getOperand(i);
-    // Check if the operand is not a constant integer value
-    if (!isa<ConstantInt>(Op)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-static Value *
-calculateVectorIndex(Value *Ptr, std::map<GetElementPtrInst *, Value *> &GEPIdx,
-                     const DataLayout &DL) {
-  auto *GEP = dyn_cast<GetElementPtrInst>(Ptr->stripPointerCasts());
-  if (!GEP)
-    return ConstantInt::getNullValue(Type::getInt32Ty(Ptr->getContext()));
-
-  // If the index of this GEP is a variable that might be deleted,
-  // update the index with its latest value. We've already handled any GEPs
-  // with unsupported index types(in GEPToVectorIndex) at this point.
-  if (hasVariableOffset(GEP)) {
-    unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
-    SmallMapVector<Value *, APInt, 4> VarOffsets;
-    APInt ConstOffset(BW, 0);
-    if (GEP->collectOffset(DL, BW, VarOffsets, ConstOffset)) {
-      if (VarOffsets.size() == 1 && ConstOffset.isZero()) {
-        auto *UpdatedValue = VarOffsets.front().first;
-        GEPIdx[GEP] = UpdatedValue;
-        return UpdatedValue;
-      }
-    }
-  }
-
-  auto I = GEPIdx.find(GEP);
-  assert(I != GEPIdx.end() && "Must have entry for GEP!");
-  return I->second;
-}
-
-static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
-                               Type *VecElemTy, const DataLayout &DL) {
+static Value *GEPToVectorIndex(GetElementPtrInst *GEP, Type *VecElemTy,
+                               const DataLayout &DL,
+                               AllocaInst *Alloca = nullptr) {
   // TODO: Extracting a "multiple of X" from a GEP might be a useful generic
   // helper.
   unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
   SmallMapVector<Value *, APInt, 4> VarOffsets;
   APInt ConstOffset(BW, 0);
-  if (GEP->getPointerOperand()->stripPointerCasts() != Alloca ||
-      !GEP->collectOffset(DL, BW, VarOffsets, ConstOffset))
-    return nullptr;
+
+  bool CanCollect = GEP->collectOffset(DL, BW, VarOffsets, ConstOffset);
+
+  if (Alloca)
+    if (GEP->getPointerOperand()->stripPointerCasts() != Alloca || !CanCollect)
+      return nullptr;
 
   unsigned VecElemSize = DL.getTypeAllocSize(VecElemTy);
   if (VarOffsets.size() > 1)
@@ -457,6 +420,36 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
     return nullptr;
 
   return ConstantInt::get(GEP->getContext(), Quot);
+}
+
+// Function to check if a Value is an operand of a GetElementPtrInst.
+static bool isValueInGEP(GetElementPtrInst *GEP, Value *ValueToCheck) {
+  if (!GEP || !ValueToCheck)
+    return false;
+
+  for (unsigned i = 0; i < GEP->getNumOperands(); ++i)
+    if (GEP->getOperand(i) == ValueToCheck)
+      return true;
+
+  return false;
+}
+
+static Value *
+calculateVectorIndex(Value *Ptr, std::map<GetElementPtrInst *, Value *> &GEPIdx,
+                     Type *VecElemTy, const DataLayout &DL) {
+  auto *GEP = dyn_cast<GetElementPtrInst>(Ptr->stripPointerCasts());
+  if (!GEP)
+    return ConstantInt::getNullValue(Type::getInt32Ty(Ptr->getContext()));
+
+  // Update the cached index if the value is changed.
+  if (!isValueInGEP(GEP, GEPIdx[GEP])) {
+    Value *Index = GEPToVectorIndex(GEP, VecElemTy, DL);
+    GEPIdx[GEP] = Index;
+  }
+
+  auto I = GEPIdx.find(GEP);
+  assert(I != GEPIdx.end() && "Must have entry for GEP!");
+  return I->second;
 }
 
 /// Promotes a single user of the alloca to a vector form.
@@ -525,7 +518,7 @@ static Value *promoteAllocaUserToVector(
     }
 
     Value *Index = calculateVectorIndex(
-        cast<LoadInst>(Inst)->getPointerOperand(), GEPVectorIdx, DL);
+        cast<LoadInst>(Inst)->getPointerOperand(), GEPVectorIdx, VecEltTy, DL);
 
     // We're loading the full vector.
     Type *AccessTy = Inst->getType();
@@ -581,8 +574,8 @@ static Value *promoteAllocaUserToVector(
     // to know the current value. If this is a store of a single element, we
     // need to know the value.
     StoreInst *SI = cast<StoreInst>(Inst);
-    Value *Index =
-        calculateVectorIndex(SI->getPointerOperand(), GEPVectorIdx, DL);
+    Value *Index = calculateVectorIndex(SI->getPointerOperand(), GEPVectorIdx,
+                                        VecEltTy, DL);
     Value *Val = SI->getValueOperand();
 
     // We're storing the full vector, we can handle this without knowing CurVal.
@@ -845,7 +838,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
     if (auto *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
       // If we can't compute a vector index from this GEP, then we can't
       // promote this alloca to vector.
-      Value *Index = GEPToVectorIndex(GEP, &Alloca, VecEltTy, *DL);
+      Value *Index = GEPToVectorIndex(GEP, VecEltTy, *DL, &Alloca);
       if (!Index)
         return RejectUser(Inst, "cannot compute vector index for GEP");
 
@@ -881,7 +874,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
           return nullptr;
 
         return dyn_cast<ConstantInt>(
-            calculateVectorIndex(Ptr, GEPVectorIdx, *DL));
+            calculateVectorIndex(Ptr, GEPVectorIdx, VecEltTy, *DL));
       };
 
       unsigned OpNum = U->getOperandNo();
