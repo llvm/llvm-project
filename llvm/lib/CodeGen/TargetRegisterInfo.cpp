@@ -116,7 +116,7 @@ Printable printReg(Register Reg, const TargetRegisterInfo *TRI,
       if (Name != "") {
         OS << '%' << Name;
       } else {
-        OS << '%' << Register::virtReg2Index(Reg);
+        OS << '%' << Reg.virtRegIndex();
       }
     } else if (!TRI)
       OS << '$' << "physreg" << Reg.id();

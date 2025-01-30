@@ -187,10 +187,10 @@ public:
 
 #define addRegToUpdate(R) addRegToUpdateWithLine(R, __LINE__)
 void PPCMIPeephole::addRegToUpdateWithLine(Register Reg, int Line) {
-  if (!Register::isVirtualRegister(Reg))
+  if (!Reg.isVirtual())
     return;
   if (RegsToUpdate.insert(Reg).second)
-    LLVM_DEBUG(dbgs() << "Adding register: " << Register::virtReg2Index(Reg)
+    LLVM_DEBUG(dbgs() << "Adding register: " << Reg.virtRegIndex()
                       << " on line " << Line
                       << " for re-computation of kill flags\n");
 }
