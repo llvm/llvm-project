@@ -3658,6 +3658,9 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
       }
       break;
     case BodyGenTy::DupNoPriv:
+      // We must always restoreIP regardless of doing anything the caller
+      // does not restore it, leading to incorrect (no) branch generation.
+      builder.restoreIP(codeGenIP);
       break;
     case BodyGenTy::NoPriv:
       // If device info is available then region has already been generated
