@@ -52,6 +52,7 @@ using namespace llvm::VPlanPatternMatch;
 namespace llvm {
 extern cl::opt<bool> EnableVPlanNativePath;
 }
+
 extern cl::opt<unsigned> ForceTargetInstructionCost;
 
 static cl::opt<bool> PrintVPlansInDotFormat(
@@ -1024,7 +1025,7 @@ void VPlan::execute(VPTransformState *State) {
       // Move the last step to the end of the latch block. This ensures
       // consistent placement of all induction updates.
       Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
-      Inc->moveBefore(VectorLatchBB->getTerminator()->getPrevNode());
+      Inc->moveBefore(std::prev(VectorLatchBB->getTerminator()->getIterator()));
 
       // Use the steps for the last part as backedge value for the induction.
       if (auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
