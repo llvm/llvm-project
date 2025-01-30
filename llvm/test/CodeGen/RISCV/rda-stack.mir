@@ -149,3 +149,40 @@ body:             |
     $x10 = LD %stack.0, 0 :: (load (s64))
     PseudoRET implicit $x10
 ...
+---
+name:            test4
+tracksRegLiveness: true
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  ; CHECK: RDA results for test4
+  ; CHECK-NEXT: $x10:{ }
+  ; CHECK-NEXT: %stack.0:{ }
+  ; CHECK-NEXT: 0: SD $x10, %stack.0, 0 :: (store (s64))
+  ; CHECK-EMPTY:
+  ; CHECK-NEXT: $x11:{ }
+  ; CHECK-NEXT: %stack.0:{ 0 }
+  ; CHECK-NEXT: 1: SD $x11, %stack.0, 0 :: (store (s64))
+  ; CHECK-EMPTY:
+  ; CHECK-NEXT: $x10:{ }
+  ; CHECK-NEXT: %stack.1:{ }
+  ; CHECK-NEXT: 2: SD $x10, %stack.1, 0 :: (store (s64))
+  ; CHECK-EMPTY:
+  ; CHECK-NEXT: $x11:{ }
+  ; CHECK-NEXT: %stack.1:{ }
+  ; CHECK-NEXT: 3: SD $x11, %stack.1, 0 :: (store (s64))
+  ; CHECK-EMPTY:
+  ; CHECK-NEXT: 4: PseudoRET
+  bb.0.entry:
+    liveins: $x10, $x11
+    SD $x10, %stack.0, 0 :: (store (s64))
+    SD $x11, %stack.0, 0 :: (store (s64))
+    SD $x10, %stack.1, 0 :: (store (s64))
+    SD $x11, %stack.1, 0 :: (store (s64))
+    PseudoRET
+...
