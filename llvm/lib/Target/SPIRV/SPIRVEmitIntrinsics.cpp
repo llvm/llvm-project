@@ -1706,6 +1706,11 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
 }
 
 Instruction *SPIRVEmitIntrinsics::visitInsertElementInst(InsertElementInst &I) {
+  // If it's a <1 x Type> vector type, don't modify it. It's not a legal vector
+  // type in LLT and IRTranslator will replace it by the scalar.
+  if (isVector1(I.getType()))
+    return &I;
+
   SmallVector<Type *, 4> Types = {I.getType(), I.getOperand(0)->getType(),
                                   I.getOperand(1)->getType(),
                                   I.getOperand(2)->getType()};
@@ -1719,6 +1724,11 @@ Instruction *SPIRVEmitIntrinsics::visitInsertElementInst(InsertElementInst &I) {
 
 Instruction *
 SPIRVEmitIntrinsics::visitExtractElementInst(ExtractElementInst &I) {
+  // If it's a <1 x Type> vector type, don't modify it. It's not a legal vector
+  // type in LLT and IRTranslator will replace it by the scalar.
+  if (isVector1(I.getVectorOperandType()))
+    return &I;
+
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
   SmallVector<Type *, 3> Types = {I.getType(), I.getVectorOperandType(),
