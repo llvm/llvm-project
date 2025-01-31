@@ -27,7 +27,11 @@ add_mlir_library(MLIRTestIR
   TestVisitorsGeneric.cpp
 
   EXCLUDE_FROM_LIBMLIR
+
+  DEPENDS
+  MLIRTestDialect
   )
+
 mlir_target_link_libraries(MLIRTestIR PUBLIC
   MLIRPass
   MLIRBytecodeReader
