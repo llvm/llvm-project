@@ -6,7 +6,7 @@
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
 # RUN: llvm-bolt %t.exe -o %t.bolt 2>&1 | FileCheck %s
-# RUN: llvm-bolt %t.exe -o %t.bolt --print-cfg | FileCheck --check-prefix=CHECK-ENTRYS %s
+# RUN: llvm-bolt %t.exe -o %t.bolt --print-cfg | FileCheck --check-prefix=CHECK-ENTRIES %s
 
 // Checks for dynamic relocations.
 # RUN: llvm-readelf -dr %t.bolt > %t.out.txt
@@ -31,12 +31,12 @@
 # CHECK-RELOCS: [[#ADDR + 8]] <unknown>
 
 // Check that BOLT registers extra entry points for dynamic relocations.
-# CHECK-ENTRYS: Binary Function "main" after building cfg {
-# CHECK-ENTRYS:  IsMultiEntry: 1
-# CHECK-ENTRYS: .Ltmp0 {{.*}}
-# CHECK-ENTRYS-NEXT: Secondary Entry Point: {{.*}}
-# CHECK-ENTRYS: .Ltmp1 {{.*}}
-# CHECK-ENTRYS-NEXT: Secondary Entry Point: {{.*}}
+# CHECK-ENTRIES: Binary Function "main" after building cfg {
+# CHECK-ENTRIES:  IsMultiEntry: 1
+# CHECK-ENTRIES: .Ltmp0 {{.*}}
+# CHECK-ENTRIES-NEXT: Secondary Entry Point: {{.*}}
+# CHECK-ENTRIES: .Ltmp1 {{.*}}
+# CHECK-ENTRIES-NEXT: Secondary Entry Point: {{.*}}
 
 .globl  main
 .p2align        2
