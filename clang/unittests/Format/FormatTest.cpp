@@ -9615,7 +9615,7 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
                "    ) {};",
                Style);
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaa(\n"
-               "    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n"
+               "    &bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n"
                ");",
                Style);
 }
