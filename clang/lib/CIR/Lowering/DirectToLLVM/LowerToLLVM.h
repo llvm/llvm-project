@@ -21,12 +21,12 @@ namespace direct {
 
 class CIRToLLVMGlobalOpLowering
     : public mlir::OpConversionPattern<cir::GlobalOp> {
-  mlir::DataLayout const &dataLayout;
+  const mlir::DataLayout &dataLayout;
 
 public:
   CIRToLLVMGlobalOpLowering(const mlir::TypeConverter &typeConverter,
                             mlir::MLIRContext *context,
-                            mlir::DataLayout const &dataLayout)
+                            const mlir::DataLayout &dataLayout)
       : OpConversionPattern(typeConverter, context), dataLayout(dataLayout) {
     setHasBoundedRewriteRecursion();
   }
