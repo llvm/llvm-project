@@ -507,16 +507,8 @@ declare <vscale x 32 x half> @llvm.vp.sitofp.nxv32f16.nxv32i32(<vscale x 32 x i3
 define <vscale x 32 x half> @vsitofp_nxv32f16_nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vsitofp_nxv32f16_nxv32i32:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    addi sp, sp, -16
-; ZVFH-NEXT:    .cfi_def_cfa_offset 16
-; ZVFH-NEXT:    csrr a1, vlenb
-; ZVFH-NEXT:    slli a1, a1, 3
-; ZVFH-NEXT:    sub sp, sp, a1
-; ZVFH-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; ZVFH-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
-; ZVFH-NEXT:    vmv1r.v v7, v0
-; ZVFH-NEXT:    addi a1, sp, 16
-; ZVFH-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
+; ZVFH-NEXT:    vmv1r.v v24, v0
 ; ZVFH-NEXT:    csrr a1, vlenb
 ; ZVFH-NEXT:    srli a2, a1, 2
 ; ZVFH-NEXT:    slli a1, a1, 1
@@ -525,24 +517,16 @@ define <vscale x 32 x half> @vsitofp_nxv32f16_nxv32i32(<vscale x 32 x i32> %va, 
 ; ZVFH-NEXT:    sltu a3, a0, a2
 ; ZVFH-NEXT:    addi a3, a3, -1
 ; ZVFH-NEXT:    and a2, a3, a2
-; ZVFH-NEXT:    addi a3, sp, 16
-; ZVFH-NEXT:    vl8r.v v24, (a3) # Unknown-size Folded Reload
 ; ZVFH-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
-; ZVFH-NEXT:    vfncvt.f.x.w v20, v24, v0.t
+; ZVFH-NEXT:    vfncvt.f.x.w v28, v16, v0.t
 ; ZVFH-NEXT:    bltu a0, a1, .LBB34_2
 ; ZVFH-NEXT:  # %bb.1:
 ; ZVFH-NEXT:    mv a0, a1
 ; ZVFH-NEXT:  .LBB34_2:
-; ZVFH-NEXT:    vmv1r.v v0, v7
+; ZVFH-NEXT:    vmv1r.v v0, v24
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; ZVFH-NEXT:    vfncvt.f.x.w v16, v8, v0.t
-; ZVFH-NEXT:    vmv8r.v v8, v16
-; ZVFH-NEXT:    csrr a0, vlenb
-; ZVFH-NEXT:    slli a0, a0, 3
-; ZVFH-NEXT:    add sp, sp, a0
-; ZVFH-NEXT:    .cfi_def_cfa sp, 16
-; ZVFH-NEXT:    addi sp, sp, 16
-; ZVFH-NEXT:    .cfi_def_cfa_offset 0
+; ZVFH-NEXT:    vfncvt.f.x.w v24, v8, v0.t
+; ZVFH-NEXT:    vmv8r.v v8, v24
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vsitofp_nxv32f16_nxv32i32:

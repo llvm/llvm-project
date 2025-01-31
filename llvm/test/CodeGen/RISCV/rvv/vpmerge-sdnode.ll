@@ -168,17 +168,17 @@ define <vscale x 64 x i1> @vpmerge_nxv64i1(<vscale x 64 x i1> %va, <vscale x 64 
 ; CHECK-LABEL: vpmerge_nxv64i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vmv.v.i v24, 0
+; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vmerge.vim v16, v24, 1, v0
+; CHECK-NEXT:    vmerge.vim v24, v16, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vmerge.vim v24, v24, 1, v0
+; CHECK-NEXT:    vmerge.vim v16, v16, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, tu, ma
-; CHECK-NEXT:    vmerge.vvm v24, v24, v16, v0
+; CHECK-NEXT:    vmerge.vvm v16, v16, v24, v0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vmsne.vi v0, v24, 0
+; CHECK-NEXT:    vmsne.vi v0, v16, 0
 ; CHECK-NEXT:    ret
   %v = call <vscale x 64 x i1> @llvm.vp.merge.nxv64i1(<vscale x 64 x i1> %m, <vscale x 64 x i1> %va, <vscale x 64 x i1> %vb, i32 %evl)
   ret <vscale x 64 x i1> %v
@@ -217,17 +217,17 @@ define <vscale x 128 x i1> @vpmerge_nxv128i1(<vscale x 128 x i1> %va, <vscale x 
 ; CHECK-NEXT:    vmsne.vi v9, v16, 0
 ; CHECK-NEXT:    and a0, a0, a2
 ; CHECK-NEXT:    vmv1r.v v0, v5
-; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    vmv.v.i v24, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vmerge.vim v24, v16, 1, v0
+; CHECK-NEXT:    vmerge.vim v16, v24, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v6
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vmerge.vim v16, v16, 1, v0
+; CHECK-NEXT:    vmerge.vim v24, v24, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, tu, ma
-; CHECK-NEXT:    vmerge.vvm v16, v16, v24, v0
+; CHECK-NEXT:    vmerge.vvm v24, v24, v16, v0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vmsne.vi v8, v16, 0
+; CHECK-NEXT:    vmsne.vi v8, v24, 0
 ; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    ret
   %v = call <vscale x 128 x i1> @llvm.vp.merge.nxv128i1(<vscale x 128 x i1> %m, <vscale x 128 x i1> %va, <vscale x 128 x i1> %vb, i32 %evl)

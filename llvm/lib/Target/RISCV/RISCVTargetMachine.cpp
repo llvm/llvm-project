@@ -605,7 +605,7 @@ void RISCVPassConfig::addPreRegAlloc() {
   // TODO: Move this as late as possible before regalloc
   if (TM->getOptLevel() == CodeGenOptLevel::None)
     addPass(createRISCVVMV0EliminationPass());
-  
+
   addPass(createRISCVPreRAExpandPseudoPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createRISCVMergeBaseOffsetOptPass());

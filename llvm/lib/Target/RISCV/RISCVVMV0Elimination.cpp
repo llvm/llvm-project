@@ -72,6 +72,10 @@ FunctionPass *llvm::createRISCVVMV0EliminationPass() {
   return new RISCVVMV0Elimination();
 }
 
+static bool isVMV0(const MCOperandInfo &MCOI) {
+  return MCOI.RegClass == RISCV::VMV0RegClassID;
+}
+
 bool RISCVVMV0Elimination::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -85,29 +89,26 @@ bool RISCVVMV0Elimination::runOnMachineFunction(MachineFunction &MF) {
   const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
   const TargetInstrInfo *TII = ST->getInstrInfo();
 
-  auto IsVMV0 = [](const MCOperandInfo &MCOI) {
-    return MCOI.RegClass == RISCV::VMV0RegClassID;
-  };
-
 #ifndef NDEBUG
-  // Assert that we won't clobber any existing reads of V0 where we need to
+  // Assert that we won't clobber any existing reads of v0 where we need to
   // insert copies.
   ReversePostOrderTraversal<MachineBasicBlock *> RPOT(&*MF.begin());
-  SmallPtrSet<MachineBasicBlock *, 8> V0ClobberedOnEntry;
   for (MachineBasicBlock *MBB : RPOT) {
-    bool V0Clobbered = V0ClobberedOnEntry.contains(MBB);
+    bool V0Clobbered = false;
     for (MachineInstr &MI : *MBB) {
-      assert(!(MI.readsRegister(RISCV::V0, TRI) && V0Clobbered));
+      assert(!(MI.readsRegister(RISCV::V0, TRI) && V0Clobbered) &&
+             "Inserting a copy to v0 would clobber a read");
       if (MI.modifiesRegister(RISCV::V0, TRI))
         V0Clobbered = false;
 
-      if (any_of(MI.getDesc().operands(), IsVMV0))
+      if (any_of(MI.getDesc().operands(), isVMV0))
         V0Clobbered = true;
     }
 
-    if (V0Clobbered)
-      for (MachineBasicBlock *Succ : MBB->successors())
-        V0ClobberedOnEntry.insert(Succ);
+    assert(!(V0Clobbered &&
+             any_of(MBB->successors(),
+                    [](auto *Succ) { return Succ->isLiveIn(RISCV::V0); })) &&
+           "Clobbered a v0 used in a successor");
   }
 #endif
 
@@ -116,14 +117,26 @@ bool RISCVVMV0Elimination::runOnMachineFunction(MachineFunction &MF) {
   // For any instruction with a vmv0 operand, replace it with a copy to v0.
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      // An instruction should only have one or zero vmv0 operands.
-      assert(count_if(MI.getDesc().operands(), IsVMV0) < 2);
+      assert(count_if(MI.getDesc().operands(), isVMV0) < 2 &&
+             "Expected only one or zero vmv0 operands");
 
       for (auto [OpNo, MCOI] : enumerate(MI.getDesc().operands())) {
-        if (IsVMV0(MCOI)) {
+        if (isVMV0(MCOI)) {
           MachineOperand &MO = MI.getOperand(OpNo);
+          Register Src = MO.getReg();
+          assert(MO.isUse() && MO.getSubReg() == RISCV::NoSubRegister &&
+                 Src.isVirtual() && "vmv0 use in unexpected form");
+
+          // Peek through a single copy to match what isel does.
+          MachineInstr *SrcMI = MRI.getVRegDef(Src);
+          if (SrcMI->isCopy() && SrcMI->getOperand(1).getReg().isVirtual()) {
+            assert(SrcMI->getOperand(1).getSubReg() == RISCV::NoSubRegister);
+            Src = SrcMI->getOperand(1).getReg();
+          }
+
           BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::COPY), RISCV::V0)
-              .addReg(MO.getReg());
+              .addReg(Src);
+
           MO.setReg(RISCV::V0);
           MadeChange = true;
           break;
@@ -131,6 +144,9 @@ bool RISCVVMV0Elimination::runOnMachineFunction(MachineFunction &MF) {
       }
     }
   }
+
+  if (!MadeChange)
+    return false;
 
   // Now that any constraints requiring vmv0 are gone, eliminate any uses of
   // vmv0 by recomputing the reg class.
@@ -143,7 +159,8 @@ bool RISCVVMV0Elimination::runOnMachineFunction(MachineFunction &MF) {
           MRI.recomputeRegClass(MO.getReg());
           assert(MRI.getRegClass(MO.getReg()) != &RISCV::VMV0RegClass ||
                  MI.isInlineAsm() ||
-                 MRI.getVRegDef(MO.getReg())->isInlineAsm());
+                 MRI.getVRegDef(MO.getReg())->isInlineAsm() &&
+                     "Non-inline-asm use of vmv0 left behind");
           MadeChange = true;
         }
       }

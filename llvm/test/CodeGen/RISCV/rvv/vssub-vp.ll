@@ -591,22 +591,22 @@ define <vscale x 128 x i8> @vssub_vi_nxv128i8(<vscale x 128 x i8> %va, <vscale x
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    vlm.v v0, (a0)
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 3
-; CHECK-NEXT:    sub a0, a1, a2
-; CHECK-NEXT:    sltu a3, a1, a0
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    sub a2, a1, a0
+; CHECK-NEXT:    sltu a3, a1, a2
 ; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a3, a3, a0
-; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    and a3, a3, a2
+; CHECK-NEXT:    li a2, -1
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
-; CHECK-NEXT:    vssub.vx v16, v16, a0, v0.t
-; CHECK-NEXT:    bltu a1, a2, .LBB50_2
+; CHECK-NEXT:    vssub.vx v16, v16, a2, v0.t
+; CHECK-NEXT:    bltu a1, a0, .LBB50_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a1, a2
+; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:  .LBB50_2:
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-; CHECK-NEXT:    vssub.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    vssub.vx v8, v8, a2, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 128 x i8> @llvm.vp.ssub.sat.nxv128i8(<vscale x 128 x i8> %va, <vscale x 128 x i8> splat (i8 -1), <vscale x 128 x i1> %m, i32 %evl)
   ret <vscale x 128 x i8> %v
