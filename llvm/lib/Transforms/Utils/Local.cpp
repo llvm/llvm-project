@@ -3272,7 +3272,8 @@ Instruction *llvm::removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU) {
 /// if they are in a dead cycle.  Return true if a change was made, false
 /// otherwise.
 bool llvm::removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU,
-                                   MemorySSAUpdater *MSSAU) {
+                                   MemorySSAUpdater *MSSAU,
+                                   bool KeepOneInputPHIs) {
   SmallPtrSet<BasicBlock *, 16> Reachable;
   bool Changed = markAliveBlocks(F, Reachable, DTU);
 
@@ -3303,7 +3304,7 @@ bool llvm::removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU,
   if (MSSAU)
     MSSAU->removeBlocks(BlocksToRemove);
 
-  DeleteDeadBlocks(BlocksToRemove.takeVector(), DTU);
+  DeleteDeadBlocks(BlocksToRemove.takeVector(), DTU, KeepOneInputPHIs);
 
   return Changed;
 }
