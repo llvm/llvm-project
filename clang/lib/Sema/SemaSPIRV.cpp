@@ -10,7 +10,6 @@
 
 #include "clang/Sema/SemaSPIRV.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "clang/Sema/Common.h"
 #include "clang/Sema/Sema.h"
 
 namespace clang {
@@ -21,10 +20,10 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(unsigned BuiltinID,
                                               CallExpr *TheCall) {
   switch (BuiltinID) {
   case SPIRV::BI__builtin_spirv_distance: {
-    return CheckAllArgTypesAreCorrect(&SemaRef, TheCall, 2, 2);
+    return clang::Sema::CheckAllArgTypesAreCorrect(&SemaRef, TheCall, 2, 2);
   }
   case SPIRV::BI__builtin_spirv_length: {
-    return CheckAllArgTypesAreCorrect(&SemaRef, TheCall, 1, 2);
+    return clang::Sema::CheckAllArgTypesAreCorrect(&SemaRef, TheCall, 1, 2);
   }
   }
   return false;

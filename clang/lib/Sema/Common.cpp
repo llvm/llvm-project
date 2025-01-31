@@ -9,9 +9,9 @@
 // analysis constructs.
 //===----------------------------------------------------------------------===//
 
-#include "clang/Sema/Common.h"
+#include "clang/Sema/Sema.h"
 
-bool clang::CheckArgTypeIsCorrect(
+bool clang::Sema::CheckArgTypeIsCorrect(
     Sema *S, Expr *Arg, QualType ExpectedType,
     llvm::function_ref<bool(clang::QualType PassedType)> Check) {
   QualType PassedType = Arg->getType();
@@ -26,7 +26,7 @@ bool clang::CheckArgTypeIsCorrect(
   return false;
 }
 
-bool clang::CheckAllArgTypesAreCorrect(
+bool clang::Sema::CheckAllArgTypesAreCorrect(
     Sema *S, CallExpr *TheCall, QualType ExpectedType,
     llvm::function_ref<bool(clang::QualType PassedType)> Check) {
   for (unsigned i = 0; i < TheCall->getNumArgs(); ++i) {
@@ -38,9 +38,9 @@ bool clang::CheckAllArgTypesAreCorrect(
   return false;
 }
 
-bool clang::CheckAllArgTypesAreCorrect(Sema *SemaPtr, CallExpr *TheCall,
-                                       unsigned int NumOfElts,
-                                       unsigned int expectedNumOfElts) {
+bool clang::Sema::CheckAllArgTypesAreCorrect(Sema *SemaPtr, CallExpr *TheCall,
+                                             unsigned int NumOfElts,
+                                             unsigned int expectedNumOfElts) {
   if (SemaPtr->checkArgCount(TheCall, NumOfElts)) {
     return true;
   }
