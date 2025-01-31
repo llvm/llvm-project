@@ -8491,7 +8491,8 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
     return;
   }
 
-  auto VScale = S.Context.getTargetInfo().getVScaleRange(S.getLangOpts());
+  auto VScale =
+      S.Context.getTargetInfo().getVScaleRange(S.getLangOpts(), false);
   if (!VScale || !VScale->first || VScale->first != VScale->second) {
     S.Diag(Attr.getLoc(), diag::err_attribute_riscv_rvv_bits_unsupported)
         << Attr;
