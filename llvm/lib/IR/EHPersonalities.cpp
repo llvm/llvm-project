@@ -12,6 +12,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -25,7 +26,14 @@ EHPersonality llvm::classifyEHPersonality(const Value *Pers) {
       Pers ? dyn_cast<GlobalValue>(Pers->stripPointerCasts()) : nullptr;
   if (!F || !F->getValueType() || !F->getValueType()->isFunctionTy())
     return EHPersonality::Unknown;
-  return StringSwitch<EHPersonality>(F->getName())
+
+  StringRef Name = F->getName();
+  if (Triple(F->getParent()->getTargetTriple()).isWindowsArm64EC()) {
+    // Demangle the personality name.
+    Name.consume_front("#");
+  }
+
+  return StringSwitch<EHPersonality>(Name)
       .Case("__gnat_eh_personality", EHPersonality::GNU_Ada)
       .Case("__gxx_personality_v0", EHPersonality::GNU_CXX)
       .Case("__gxx_personality_seh0", EHPersonality::GNU_CXX)
