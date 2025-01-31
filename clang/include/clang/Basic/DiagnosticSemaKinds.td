@@ -7924,6 +7924,8 @@ def err_attribute_arm_mve_polymorphism : Error<
   "'__clang_arm_mve_strict_polymorphism' attribute can only be applied to an MVE/NEON vector type">;
 def err_attribute_webassembly_funcref : Error<
   "'__funcref' attribute can only be applied to a function pointer type">;
+def err_c23_underspecified_object_declaration: Error<
+  "'%select{struct|<ERROR>|union|<ERROR>|enum}0 %1' is defined as an underspecified object initializer">;
 
 def warn_setter_getter_impl_required : Warning<
   "property %0 requires method %1 to be defined - "
