@@ -711,7 +711,7 @@ void SymbolTableSection::assignIndices() {
   }
 }
 
-void SymbolTableSection::addSymbol(Twine Name, uint8_t Bind, uint8_t Type,
+void SymbolTableSection::addSymbol(const Twine &Name, uint8_t Bind, uint8_t Type,
                                    SectionBase *DefinedIn, uint64_t Value,
                                    uint8_t Visibility, uint16_t Shndx,
                                    uint64_t SymbolSize) {
@@ -1680,7 +1680,7 @@ static Error initRelocations(RelocationSection *Relocs, T RelRange) {
 }
 
 Expected<SectionBase *> SectionTableRef::getSection(uint32_t Index,
-                                                    Twine ErrMsg) {
+                                                    const Twine &ErrMsg) {
   if (Index == SHN_UNDEF || Index > Sections.size())
     return createStringError(errc::invalid_argument, ErrMsg);
   return Sections[Index - 1].get();
