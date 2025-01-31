@@ -390,9 +390,6 @@ public:
 
   /// This is the pass entry point.
   bool runOnMachineFunction(MachineFunction &) override;
-
-  /// Implement the dump method.
-  void print(raw_ostream &O, const Module * = nullptr) const override;
 };
 
 } // end anonymous namespace
@@ -4344,12 +4341,8 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
   PHIValToPos.clear();
   RegToPHIIdx.clear();
 
-  LLVM_DEBUG(dump());
+  LLVM_DEBUG(LIS->dump());
   if (VerifyCoalescing)
     MF->verify(this, "After register coalescing", &errs());
   return true;
-}
-
-void RegisterCoalescer::print(raw_ostream &O, const Module *m) const {
-  LIS->print(O);
 }
