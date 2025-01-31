@@ -342,6 +342,9 @@ public:
       typename SyncDependenceAnalysisT::DivergenceDescriptor;
   using BlockLabelMapT = typename SyncDependenceAnalysisT::BlockLabelMap;
 
+  using TemporalDivergenceTuple =
+      std::tuple<InstructionT *, InstructionT *, const CycleT *>;
+
   GenericUniformityAnalysisImpl(const DominatorTreeT &DT, const CycleInfoT &CI,
                                 const TargetTransformInfo *TTI)
       : Context(CI.getSSAContext()), F(*Context.getFunction()), CI(CI),
@@ -395,6 +398,11 @@ public:
   }
 
   void print(raw_ostream &out) const;
+
+  SmallVector<TemporalDivergenceTuple, 8> TemporalDivergenceList;
+
+  void recordTemporalDivergence(const InstructionT *, const InstructionT *,
+                                const CycleT *);
 
 protected:
   /// \brief Value/block pair representing a single phi input.
@@ -1130,6 +1138,13 @@ void GenericUniformityAnalysisImpl<ContextT>::compute() {
 }
 
 template <typename ContextT>
+void GenericUniformityAnalysisImpl<ContextT>::recordTemporalDivergence(
+    const InstructionT *Inst, const InstructionT *User, const CycleT *Cycle) {
+  TemporalDivergenceList.emplace_back(const_cast<InstructionT *>(Inst),
+                                      const_cast<InstructionT *>(User), Cycle);
+}
+
+template <typename ContextT>
 bool GenericUniformityAnalysisImpl<ContextT>::isAlwaysUniform(
     const InstructionT &Instr) const {
   return UniformOverrides.contains(&Instr);
@@ -1180,6 +1195,16 @@ void GenericUniformityAnalysisImpl<ContextT>::print(raw_ostream &OS) const {
     }
   }
 
+  if (!TemporalDivergenceList.empty()) {
+    OS << "\nTEMPORAL DIVERGENCE LIST:\n";
+
+    for (auto [Inst, UseInst, Cycle] : TemporalDivergenceList) {
+      OS << "Inst    :" << Context.print(Inst)
+         << "Used by :" << Context.print(UseInst)
+         << "Outside cycle :" << Cycle->print(Context) << "\n\n";
+    }
+  }
+
   for (auto &block : F) {
     OS << "\nBLOCK " << Context.print(&block) << '\n';
 
@@ -1208,6 +1233,14 @@ void GenericUniformityAnalysisImpl<ContextT>::print(raw_ostream &OS) const {
 
     OS << "END BLOCK\n";
   }
+}
+
+template <typename ContextT>
+iterator_range<
+    typename GenericUniformityInfo<ContextT>::TemporalDivergenceTuple *>
+GenericUniformityInfo<ContextT>::getTemporalDivergenceList() const {
+  return make_range(DA->TemporalDivergenceList.begin(),
+                    DA->TemporalDivergenceList.end());
 }
 
 template <typename ContextT>
