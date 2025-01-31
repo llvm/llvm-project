@@ -109,8 +109,11 @@ template <class _Container, input_range _Range, class... _Args>
         __result.reserve(static_cast<range_size_t<_Container>>(ranges::size(__range)));
       }
 
-      for (auto&& __ref : __range) {
-        using _Ref = decltype(__ref);
+      auto __iter = ranges::begin(__range);
+      auto __sent = ranges::end(__range);
+      for (; __iter != __sent; ++__iter) {
+        auto&& __ref = *__iter;
+        using _Ref   = decltype(__ref);
         if constexpr (requires { __result.emplace_back(std::declval<_Ref>()); }) {
           __result.emplace_back(std::forward<_Ref>(__ref));
         } else if constexpr (requires { __result.push_back(std::declval<_Ref>()); }) {
