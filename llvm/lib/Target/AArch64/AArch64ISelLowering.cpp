@@ -6897,6 +6897,7 @@ static SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) {
   assert(TLI.getTargetMachine().getPointerSize(SrcAS) !=
              TLI.getTargetMachine().getPointerSize(DestAS) &&
          "addrspacecast must be between different ptr sizes");
+  (void)TLI;
 
   if (SrcAS == ARM64AS::PTR32_SPTR) {
     return DAG.getNode(ISD::SIGN_EXTEND, dl, DestVT, Src,
