@@ -3367,6 +3367,11 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
       return ABIArgInfo::getDirect(llvm::FixedVectorType::get(
           llvm::Type::getInt64Ty(getVMContext()), 2));
 
+    case BuiltinType::Float128:
+      // f128 is too large to fit in integer registers so the Windows ABI
+      // require it be passed on the stack. GCC does the same.
+      return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+
     default:
       break;
     }
