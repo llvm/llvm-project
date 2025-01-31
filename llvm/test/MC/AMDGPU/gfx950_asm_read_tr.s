@@ -32,3 +32,11 @@ ds_read_b96_tr_b6 v[0:2], v0
 ds_read_b96_tr_b6 v[2:4], v2 offset:64
 // GFX940-ERR: [[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX950: encoding: [0x40,0x00,0xc2,0xd9,0x02,0x00,0x00,0x02]
+
+ds_read_b96_tr_b6 v[1:3], v0
+// GFX940-ERR: [[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX950: encoding: [0x00,0x00,0xc2,0xd9,0x00,0x00,0x00,0x01]
+
+ds_read_b96_tr_b6 v[1:3], v2 offset:64
+// GFX940-ERR: [[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX950: encoding: [0x40,0x00,0xc2,0xd9,0x02,0x00,0x00,0x01]
