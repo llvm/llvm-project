@@ -35,7 +35,7 @@ bool TargetFrameLowering::enableCalleeSaveSkip(const MachineFunction &MF) const 
   return false;
 }
 
-bool TargetFrameLowering::enableCFIFixup(MachineFunction &MF) const {
+bool TargetFrameLowering::enableCFIFixup(const MachineFunction &MF) const {
   return MF.needsFrameMoves() &&
          !MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
 }

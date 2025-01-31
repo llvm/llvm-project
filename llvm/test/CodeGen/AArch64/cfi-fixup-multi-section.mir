@@ -285,6 +285,10 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x16, 0x12, 0x02, 0x82, 0x78
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION negate_ra_sign_state
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 16
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $w30, -16
   ; CHECK-NEXT:   renamable $w0 = nsw SUBWri killed renamable $w0, 1, 0
   ; CHECK-NEXT:   BL @g, csr_aarch64_aapcs_scs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit-def $sp, implicit-def $w0
   ; CHECK-NEXT:   renamable $w0 = nsw ADDWri killed renamable $w0, 1, 0
