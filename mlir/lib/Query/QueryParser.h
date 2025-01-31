@@ -39,8 +39,8 @@ private:
   struct LexOrCompleteWord;
 
   QueryRef completeMatcherExpression();
-
   QueryRef endQuery(QueryRef queryRef);
+  QueryRef parseSetBool(bool QuerySession::*var);
 
   // Parse [begin, end) and returns a reference to the parsed query object,
   // which may be an InvalidQuery if a parse error occurs.

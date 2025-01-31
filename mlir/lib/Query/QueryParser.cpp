@@ -107,6 +107,18 @@ QueryRef QueryParser::endQuery(QueryRef queryRef) {
   return queryRef;
 }
 
+QueryRef QueryParser::parseSetBool(bool QuerySession::*var) {
+  StringRef valStr;
+  unsigned value = LexOrCompleteWord<unsigned>(this, valStr)
+                       .Case("false", 0)
+                       .Case("true", 1)
+                       .Default(~0u);
+  if (value == ~0u) {
+    return new InvalidQuery("expected 'true' or 'false', got '" + valStr + "'");
+  }
+  return new SetQuery<bool>(var, value);
+}
+
 namespace {
 
 enum class ParsedQueryKind {
@@ -116,6 +128,14 @@ enum class ParsedQueryKind {
   Help,
   Match,
   Quit,
+  Set,
+};
+
+enum ParsedQueryVariable {
+  Invalid,
+  OmitBlockArguments,
+  OmitUsesFromAbove,
+  Inclusive,
 };
 
 QueryRef
@@ -147,6 +167,7 @@ QueryRef QueryParser::doParse() {
           .Case("#", ParsedQueryKind::Comment, /*isCompletion=*/false)
           .Case("help", ParsedQueryKind::Help)
           .Case("m", ParsedQueryKind::Match, /*isCompletion=*/false)
+          .Case("set", ParsedQueryKind::Set)
           .Case("match", ParsedQueryKind::Match)
           .Case("q", ParsedQueryKind::Quit, /*IsCompletion=*/false)
           .Case("quit", ParsedQueryKind::Quit)
@@ -166,7 +187,6 @@ QueryRef QueryParser::doParse() {
 
   case ParsedQueryKind::Quit:
     return endQuery(new QuitQuery);
-
   case ParsedQueryKind::Match: {
     if (completionPos) {
       return completeMatcherExpression();
@@ -183,11 +203,41 @@ QueryRef QueryParser::doParse() {
     }
     auto actualSource = origMatcherSource.substr(0, origMatcherSource.size() -
                                                         matcherSource.size());
+
     QueryRef query = new MatchQuery(actualSource, *matcher);
     query->remainingContent = matcherSource;
     return query;
   }
-
+  case ParsedQueryKind::Set: {
+    llvm::StringRef varStr;
+    ParsedQueryVariable var =
+        LexOrCompleteWord<ParsedQueryVariable>(this, varStr)
+            .Case("omitBlockArguments", ParsedQueryVariable::OmitBlockArguments)
+            .Case("omitUsesFromAbove", ParsedQueryVariable::OmitUsesFromAbove)
+            .Case("inclusive", ParsedQueryVariable::Inclusive)
+            .Default(ParsedQueryVariable::Invalid);
+    if (varStr.empty()) {
+      return new InvalidQuery("expected variable name");
+    }
+    if (var == ParsedQueryVariable::Invalid) {
+      return new InvalidQuery("unknown variable: '" + varStr + "'");
+    }
+    QueryRef query;
+    switch (var) {
+    case ParsedQueryVariable::OmitBlockArguments:
+      query = parseSetBool(&QuerySession::omitBlockArguments);
+      break;
+    case ParsedQueryVariable::OmitUsesFromAbove:
+      query = parseSetBool(&QuerySession::omitUsesFromAbove);
+      break;
+    case ParsedQueryVariable::Inclusive:
+      query = parseSetBool(&QuerySession::inclusive);
+      break;
+    case ParsedQueryVariable::Invalid:
+      llvm_unreachable("Invalid query kind");
+    }
+    return endQuery(query);
+  }
   case ParsedQueryKind::Invalid:
     return new InvalidQuery("unknown command: " + commandStr);
   }
