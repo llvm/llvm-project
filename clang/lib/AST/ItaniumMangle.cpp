@@ -4206,7 +4206,7 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
 
   // Apend the LMUL suffix.
   auto VScale = getASTContext().getTargetInfo().getVScaleRange(
-      getASTContext().getLangOpts());
+      getASTContext().getLangOpts(), false);
   unsigned VLen = VScale->first * llvm::RISCV::RVVBitsPerBlock;
 
   if (T->getVectorKind() == VectorKind::RVVFixedLengthData) {
