@@ -221,7 +221,7 @@ bool hlfir::Entity::mayHaveNonDefaultLowerBounds() const {
   return true;
 }
 
-mlir::Operation* traverseConverts(mlir::Operation *op) {
+mlir::Operation *traverseConverts(mlir::Operation *op) {
   while (auto convert = llvm::dyn_cast_or_null<fir::ConvertOp>(op))
     op = convert.getValue().getDefiningOp();
   return op;
@@ -1043,7 +1043,8 @@ conditionnalyEvaluate(mlir::Location loc, fir::FirOpBuilder &builder,
 
 static fir::ExtendedValue translateVariableToExtendedValue(
     mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity variable,
-    bool forceHlfirBase = false, bool contiguousHint = false, bool keepScalarOptionalBoxed = false) {
+    bool forceHlfirBase = false, bool contiguousHint = false,
+    bool keepScalarOptionalBoxed = false) {
   assert(variable.isVariable() && "must be a variable");
   // When going towards FIR, use the original base value to avoid
   // introducing descriptors at runtime when they are not required.
@@ -1062,8 +1063,7 @@ static fir::ExtendedValue translateVariableToExtendedValue(
     const bool contiguous = variable.isSimplyContiguous() || contiguousHint;
     const bool isAssumedRank = variable.isAssumedRank();
     if (!contiguous || variable.isPolymorphic() ||
-        variable.isDerivedWithLengthParameters() ||
-        isAssumedRank) {
+        variable.isDerivedWithLengthParameters() || isAssumedRank) {
       llvm::SmallVector<mlir::Value> nonDefaultLbounds;
       if (!isAssumedRank)
         nonDefaultLbounds = getNonDefaultLowerBounds(loc, builder, variable);
@@ -1085,7 +1085,8 @@ static fir::ExtendedValue translateVariableToExtendedValue(
               return base;
             });
       }
-      llvm::SmallVector<mlir::Value> nonDefaultLbounds = getNonDefaultLowerBounds(loc, builder, variable);
+      llvm::SmallVector<mlir::Value> nonDefaultLbounds =
+          getNonDefaultLowerBounds(loc, builder, variable);
       return fir::BoxValue(base, nonDefaultLbounds,
                            getExplicitTypeParams(variable));
     }
