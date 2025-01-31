@@ -244,7 +244,7 @@ SourceInfo InterpFrame::getSource(CodePtr PC) const {
 
 const Expr *InterpFrame::getExpr(CodePtr PC) const {
   if (Func && !funcHasUsableBody(Func) && Caller)
-    return Caller->getExpr(PC);
+    return Caller->getExpr(RetPC);
 
   return S.getExpr(Func, PC);
 }
