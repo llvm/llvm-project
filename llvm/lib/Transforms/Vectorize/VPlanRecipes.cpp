@@ -284,18 +284,14 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const {
   std::optional<unsigned> Opcode = std::nullopt;
   VPValue *BinOp = getOperand(0);
+  // If BinOp is a negation, use the side effect of match to assign the actual
+  // binary operation to BinOp
+  match(BinOp, VPlanPatternMatch::m_Binary<Instruction::Sub>(
+                   VPlanPatternMatch::m_SpecificInt(0),
+                   VPlanPatternMatch::m_VPValue(BinOp)));
   VPRecipeBase *BinOpR = BinOp->getDefiningRecipe();
 
   using namespace llvm::PatternMatch;
-  if (auto *UnderInst =
-          dyn_cast_if_present<Instruction>(BinOp->getUnderlyingValue())) {
-    if (match(UnderInst, m_Neg(m_BinOp()))) {
-      BinOpR = BinOpR->getOperand(1)->getDefiningRecipe();
-    }
-  }
-  // BinOp is never used again, any further interaction should be via the
-  // defining recipe `BinOpR`
-  BinOp = nullptr;
 
   if (auto *WidenR = dyn_cast<VPWidenRecipe>(BinOpR))
     Opcode = std::make_optional(WidenR->getOpcode());
