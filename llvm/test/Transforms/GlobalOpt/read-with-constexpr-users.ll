@@ -5,15 +5,14 @@
 @H = internal global [2 x i64 ] zeroinitializer
 
 ;.
-; CHECK: @G = internal global [2 x i64] zeroinitializer
+; CHECK: @G = internal constant [2 x i64] zeroinitializer
 ; CHECK: @H = internal global [2 x i64] zeroinitializer
 ;.
 define i64 @G_used_by_gep_inttoptr_exprs() {
 ; CHECK-LABEL: define i64 @G_used_by_gep_inttoptr_exprs() local_unnamed_addr {
-; CHECK-NEXT:    [[L:%.*]] = load i64, ptr @G, align 8
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr getelementptr inbounds nuw (i8, ptr @G, i64 16) to i64), i64 8) to ptr), i64 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[GEP]], @G
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i64 [[L]], i64 9
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i64 0, i64 9
 ; CHECK-NEXT:    ret i64 [[SEL]]
 ;
   %l = load i64, ptr @G, align 8
