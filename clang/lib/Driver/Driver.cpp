@@ -18,8 +18,8 @@
 #include "ToolChains/CrossWindows.h"
 #include "ToolChains/Cuda.h"
 #include "ToolChains/Darwin.h"
-#include "ToolChains/DragonFly.h"
 #include "ToolChains/FreeBSD.h"
+#include "ToolChains/DragonFly.h"
 #include "ToolChains/Fuchsia.h"
 #include "ToolChains/Gnu.h"
 #include "ToolChains/HIPAMD.h"
@@ -107,7 +107,7 @@
 
 using namespace clang::driver;
 using namespace clang;
-using namespace llvm::opt;
+        using namespace llvm::opt;
 
 static std::optional<llvm::Triple> getOffloadTargetTriple(const Driver &D,
                                                           const ArgList &Args) {
@@ -314,14 +314,14 @@ InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
   ContainsError = false;
 
   llvm::opt::Visibility VisibilityMask = getOptionVisibilityMask(UseDriverMode);
-  unsigned MissingArgIndex, MissingArgCount;
-  InputArgList Args = getOpts().ParseArgs(ArgStrings, MissingArgIndex,
+  unsigned missing_arg_index, MissingArgCount;
+  InputArgList Args = getOpts().ParseArgs(ArgStrings, missing_arg_index,
                                           MissingArgCount, VisibilityMask);
 
   // Check for missing argument error.
   if (MissingArgCount) {
     Diag(diag::err_drv_missing_argument)
-        << Args.getArgString(MissingArgIndex) << MissingArgCount;
+        << Args.getArgString(missing_arg_index) << MissingArgCount;
     ContainsError |=
         Diags.getDiagnosticLevel(diag::err_drv_missing_argument,
                                  SourceLocation()) > DiagnosticsEngine::Warning;
@@ -371,8 +371,7 @@ InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
                      DiagnosticsEngine::Warning;
   }
 
-  for (const Arg *A : Args.filtered(options::OPT_o)) {
-    if (ArgStrings[A->getIndex()] == A->getSpelling())
+  for (const Arg *A : Args.filtered(options::OPT_o)) { if (ArgStrings[A->getIndex()] == A->getSpelling())
       continue;
 
     // Warn on joined arguments that are similar to a long argument.
