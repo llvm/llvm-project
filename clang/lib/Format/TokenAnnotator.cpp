@@ -1565,7 +1565,8 @@ private:
         if (const auto *Previous = Tok->Previous;
             !Previous ||
             (!Previous->isAttribute() &&
-             !Previous->isOneOf(TT_RequiresClause, TT_LeadingJavaAnnotation))) {
+             !Previous->isOneOf(TT_RequiresClause, TT_LeadingJavaAnnotation,
+                                TT_BinaryOperator))) {
           Line.MightBeFunctionDecl = true;
           Tok->MightBeFunctionDeclParen = true;
         }

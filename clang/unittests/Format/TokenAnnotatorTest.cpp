@@ -1143,9 +1143,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   EXPECT_TOKEN(Tokens[16], tok::pipepipe, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[21], tok::ampamp, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[27], tok::ampamp, TT_BinaryOperator);
+  // Not TT_TrailingAnnotation.
+  EXPECT_TOKEN(Tokens[28], tok::identifier, TT_Unknown);
   EXPECT_TOKEN(Tokens[31], tok::greater, TT_TemplateCloser);
   EXPECT_EQ(Tokens[31]->FakeRParens, 1u);
   EXPECT_TRUE(Tokens[31]->ClosesRequiresClause);
+  // Not TT_TrailingAnnotation.
+  EXPECT_TOKEN(Tokens[33], tok::identifier, TT_Unknown);
 
   Tokens =
       annotate("template<typename T>\n"
