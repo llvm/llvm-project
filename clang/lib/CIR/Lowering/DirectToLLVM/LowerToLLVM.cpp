@@ -25,6 +25,7 @@
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/TimeProfiler.h"
 
@@ -62,12 +63,18 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   // This is the LLVM dialect type.
   const mlir::Type llvmType = getTypeConverter()->convertType(cirSymType);
   // FIXME: These default values are placeholders until the the equivalent
-  //        attributes are available on cir.global ops.  
+  //        attributes are available on cir.global ops.
+  assert(!cir::MissingFeatures::opGlobalConstant());
   const bool isConst = false;
+  assert(!cir::MissingFeatures::addressSpace());
   const unsigned addrSpace = 0;
+  assert(!cir::MissingFeatures::opGlobalDSOLocal());
   const bool isDsoLocal = true;
+  assert(!cir::MissingFeatures::opGlobalThreadLocal());
   const bool isThreadLocal = false;
+  assert(!cir::MissingFeatures::opGlobalAlignment());
   const uint64_t alignment = 0;
+  assert(!cir::MissingFeatures::opGlobalLinkage());
   const mlir::LLVM::Linkage linkage = mlir::LLVM::Linkage::External;
   const StringRef symbol = op.getSymName();
   std::optional<mlir::Attribute> init = op.getInitialValue();
