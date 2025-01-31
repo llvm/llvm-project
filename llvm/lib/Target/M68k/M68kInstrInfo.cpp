@@ -593,7 +593,6 @@ bool M68kInstrInfo::ExpandCCR(MachineInstrBuilder &MIB, bool IsToCCR) const {
 bool M68kInstrInfo::ExpandMOVEM(MachineInstrBuilder &MIB,
                                 const MCInstrDesc &Desc, bool IsRM) const {
   int Reg = 0, Offset = 0, Base = 0;
-  auto XR32 = RI.getRegClass(M68k::XR32RegClassID);
   auto DL = MIB->getDebugLoc();
   auto MI = MIB.getInstr();
   auto &MBB = *MIB->getParent();
@@ -606,13 +605,6 @@ bool M68kInstrInfo::ExpandMOVEM(MachineInstrBuilder &MIB,
     Offset = MIB->getOperand(0).getImm();
     Base = MIB->getOperand(1).getReg();
     Reg = MIB->getOperand(2).getReg();
-  }
-
-  // If the register is not in XR32 then it is smaller than 32 bit, we
-  // implicitly promote it to 32
-  if (!XR32->contains(Reg)) {
-    Reg = RI.getMatchingMegaReg(Reg, XR32);
-    assert(Reg && "Has not meaningful MEGA register");
   }
 
   unsigned Mask = 1 << RI.getSpillRegisterOrder(Reg);
