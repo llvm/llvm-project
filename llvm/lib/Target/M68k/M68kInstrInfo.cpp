@@ -791,22 +791,25 @@ namespace {
 unsigned getLoadStoreRegOpcode(unsigned Reg, const TargetRegisterClass *RC,
                                const TargetRegisterInfo *TRI,
                                const M68kSubtarget &STI, bool load) {
-  switch (TRI->getRegSizeInBits(*RC)) {
+  switch (TRI->getSpillSize(*RC)) {
   default:
+    LLVM_DEBUG(
+        dbgs() << "Cannot determine appropriate opcode for load/store to/from "
+               << TRI->getName(Reg) << " of class " << TRI->getRegClassName(RC)
+               << " with spill size " << TRI->getSpillSize(*RC) << '\n');
     llvm_unreachable("Unknown spill size");
-  case 8:
+  case 2:
+    if (M68k::XR16RegClass.hasSubClassEq(RC))
+      return load ? M68k::MOVM16mp_P : M68k::MOVM16pm_P;
     if (M68k::DR8RegClass.hasSubClassEq(RC))
-      return load ? M68k::MOV8dp : M68k::MOV8pd;
+      return load ? M68k::MOVM16mp_P : M68k::MOVM16pm_P;
     if (M68k::CCRCRegClass.hasSubClassEq(RC))
-      return load ? M68k::MOV16cp : M68k::MOV16pc;
-
-    llvm_unreachable("Unknown 1-byte regclass");
-  case 16:
-    assert(M68k::XR16RegClass.hasSubClassEq(RC) && "Unknown 2-byte regclass");
-    return load ? M68k::MOVM16mp_P : M68k::MOVM16pm_P;
-  case 32:
-    assert(M68k::XR32RegClass.hasSubClassEq(RC) && "Unknown 4-byte regclass");
-    return load ? M68k::MOVM32mp_P : M68k::MOVM32pm_P;
+      return load ? M68k::MOVM16mp_P : M68k::MOVM16pm_P;
+    llvm_unreachable("Unknown 2-byte regclass");
+  case 4:
+    if (M68k::XR32RegClass.hasSubClassEq(RC))
+      return load ? M68k::MOVM32mp_P : M68k::MOVM32pm_P;
+    llvm_unreachable("Unknown 4-byte regclass");
   }
 }
 
