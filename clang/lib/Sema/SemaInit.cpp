@@ -4863,8 +4863,9 @@ static void TryListInitialization(Sema &S,
             S.Context.hasSameUnqualifiedType(SubInit[0]->getType(), DestType) &&
             "Deduced to other type?");
         TryArrayCopy(S,
-                     InitializationKind::CreateCopy(Kind.getLocation(),
-                                                    InitList->getLBraceLoc()),
+                     InitializationKind::CreateDirect(Kind.getLocation(),
+                                                      InitList->getLBraceLoc(),
+                                                      InitList->getRBraceLoc()),
                      Entity, SubInit[0], DestType, Sequence,
                      TreatUnavailableAsInvalid);
         if (Sequence)
