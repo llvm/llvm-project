@@ -12,8 +12,6 @@
 
 // template<size_t Alignment, class T>
 //   bool is_sufficiently_aligned(T* ptr);
-//
-//
 
 #include <cassert>
 #include <cstddef>
@@ -23,7 +21,7 @@
 #include "test_macros.h"
 
 template <typename T>
-constexpr void test_is_sufficiently_aligned() {
+void test_is_sufficiently_aligned() {
   constexpr std::size_t N = alignof(T);
 
   alignas(8 * N) std::remove_cv_t<T> buf[5];
@@ -55,7 +53,7 @@ constexpr void test_is_sufficiently_aligned() {
 }
 
 template <typename T>
-constexpr void check(T* p) {
+void check(T* p) {
   ASSERT_SAME_TYPE(bool, decltype(std::is_sufficiently_aligned<alignof(T)>(p)));
   test_is_sufficiently_aligned<T>();
   test_is_sufficiently_aligned<const T>();
