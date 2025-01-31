@@ -20064,25 +20064,20 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
   unsigned NumPositiveBits = 0;
   bool MembersRepresentableByInt = true;
 
+  llvm::SmallVector<EnumConstantDecl *> EnumConstants;
   for (unsigned i = 0, e = Elements.size(); i != e; ++i) {
     EnumConstantDecl *ECD =
       cast_or_null<EnumConstantDecl>(Elements[i]);
     if (!ECD) continue;  // Already issued a diagnostic.
 
-    llvm::APSInt InitVal = ECD->getInitVal();
-    // Keep track of the size of positive and negative values.
-    Context.updateNumOfEnumBits(&InitVal, NumNegativeBits, NumPositiveBits);
+    EnumConstants.emplace_back(ECD);
 
+    llvm::APSInt InitVal = ECD->getInitVal();
     MembersRepresentableByInt &=
         isRepresentableIntegerValue(Context, InitVal, Context.IntTy);
   }
 
-  // If we have an empty set of enumerators we still need one bit.
-  // From [dcl.enum]p8
-  // If the enumerator-list is empty, the values of the enumeration are as if
-  // the enumeration had a single enumerator with value 0
-  if (!NumPositiveBits && !NumNegativeBits)
-    NumPositiveBits = 1;
+  Context.computeEnumBits(EnumConstants, NumNegativeBits, NumPositiveBits);
 
   // Figure out the type that should be used for this enum.
   QualType BestType;

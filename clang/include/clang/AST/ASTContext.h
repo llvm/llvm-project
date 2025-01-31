@@ -1726,11 +1726,33 @@ public:
 
   QualType getEnumType(const EnumDecl *Decl) const;
 
-  /// Update the maximum amount of negative and positive bits
-  /// based on the provided enumerator value.
-  void updateNumOfEnumBits(llvm::APSInt *InitVal, unsigned &NumNegativeBits,
-                           unsigned &NumPositiveBits);
+  /// Compute the maximum number of negative and positive bits
+  /// of enum elements.
+  template <typename RangeT>
+  void computeEnumBits(RangeT EnumConstants, unsigned &NumNegativeBits,
+                       unsigned &NumPositiveBits) {
+    for (auto ECD : EnumConstants) {
+      llvm::APSInt InitVal = ECD->getInitVal();
+      if (InitVal.isUnsigned() || InitVal.isNonNegative()) {
+        // If the enumerator is zero that should still be counted as a positive
+        // bit since we need a bit to store the value zero.
+        unsigned ActiveBits = InitVal.getActiveBits();
+        NumPositiveBits = std::max({NumPositiveBits, ActiveBits, 1u});
+      } else {
+        NumNegativeBits =
+            std::max(NumNegativeBits, (unsigned)InitVal.getSignificantBits());
+      }
+    }
 
+    // If we have an empty set of enumerators we still need one bit.
+    // From [dcl.enum]p8
+    // If the enumerator-list is empty, the values of the enumeration are as if
+    // the enumeration had a single enumerator with value 0
+    if (!NumPositiveBits && !NumNegativeBits)
+      NumPositiveBits = 1;
+
+    return;
+  }
   /// Compute BestType and BestPromotionType for an enum based on the highest
   /// number of negative and positive bits of its elements.
   /// Returns true if enum width is too large.
