@@ -90,9 +90,9 @@ static void EnumerateConstantFPRangesImpl(Fn TestFn, bool Exhaustive,
     SmallVector<APFloat, 36> Values;
     Values.push_back(APFloat::getInf(Sem, /*Negative=*/true));
     Values.push_back(APFloat::getLargest(Sem, /*Negative=*/true));
-    unsigned BitWidth = APFloat::semanticsSizeInBits(Sem);
-    unsigned Exponents = APFloat::semanticsMaxExponent(Sem) -
-                         APFloat::semanticsMinExponent(Sem) + 3;
+    unsigned BitWidth = Sem.sizeInBits;
+    unsigned Exponents = Sem.maxExponent -
+                         Sem.minExponent + 3;
     unsigned MantissaBits = APFloat::semanticsPrecision(Sem) - 1;
     // Add -2^(max exponent), -2^(max exponent-1), ..., -2^(min exponent)
     for (unsigned M = Exponents - 2; M != 0; --M)
@@ -175,7 +175,7 @@ static void EnumerateValuesInConstantFPRange(const ConstantFPRange &CR,
       TestFn(Lower);
     while (Next(Lower));
   } else {
-    unsigned Bits = APFloat::semanticsSizeInBits(Sem);
+    unsigned Bits = Sem.sizeInBits;
     assert(Bits < 32 && "Too many bits");
     for (unsigned I = 0, E = (1U << Bits) - 1; I != E; ++I) {
       APFloat V(Sem, APInt(Bits, I));
@@ -217,7 +217,7 @@ static bool AnyOfValueInConstantFPRange(const ConstantFPRange &CR, Fn TestFn,
         return true;
     } while (Next(Lower));
   } else {
-    unsigned Bits = APFloat::semanticsSizeInBits(Sem);
+    unsigned Bits = Sem.sizeInBits;
     assert(Bits < 32 && "Too many bits");
     for (unsigned I = 0, E = (1U << Bits) - 1; I != E; ++I) {
       APFloat V(Sem, APInt(Bits, I));

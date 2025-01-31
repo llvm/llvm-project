@@ -30,7 +30,7 @@ def CIRFPTypeInterface : TypeInterface<"CIRFPTypeInterface"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-          return llvm::APFloat::semanticsSizeInBits($_type.getFloatSemantics());
+          return $_type.getFloatSemantics().sizeInBits;
         }]
     >,
     InterfaceMethod<[{
@@ -41,7 +41,7 @@ def CIRFPTypeInterface : TypeInterface<"CIRFPTypeInterface"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-          return llvm::APFloat::semanticsPrecision($_type.getFloatSemantics());
+          return $_type.getFloatSemantics().precision;
         }]
     >,
     InterfaceMethod<[{
