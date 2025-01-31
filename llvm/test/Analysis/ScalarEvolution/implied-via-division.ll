@@ -416,15 +416,15 @@ define void @swapped_predicate(i32 %n) {
 ; Prove that (n s>= 1) ===> (0 s>= -n / 2).
 ; CHECK-LABEL: 'swapped_predicate'
 ; CHECK-NEXT:  Determining loop execution counts for: @swapped_predicate
-; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + %n.div.2)<nuw><nsw>
+; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + %n.div.2)<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741824
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + %n.div.2)<nuw><nsw>
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + %n.div.2)<nsw>
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
   %cmp1 = icmp sge i32 %n, 1
   %n.div.2 = sdiv i32 %n, 2
-  call void @llvm.assume(i1 %cmp1)
+  call void(i1, ...) @llvm.experimental.guard(i1 %cmp1) [ "deopt"() ]
   br label %header
 
 header:
@@ -450,7 +450,7 @@ define void @swapped_predicate_neg(i32 %n) {
 entry:
   %cmp1 = icmp sge i32 %n, 1
   %n.div.2 = sdiv i32 %n, 2
-  call void @llvm.assume(i1 %cmp1)
+  call void(i1, ...) @llvm.experimental.guard(i1 %cmp1) [ "deopt"() ]
   br label %header
 
 header:

@@ -2,10 +2,9 @@
 ; RUN: opt < %s -disable-output -passes="print<scalar-evolution>" \
 ; RUN:   -scalar-evolution-classify-expressions=0 2>&1 | FileCheck %s
 
-define void @implied1(i32 %n) {
-; Prove that (n s> 1) ===> (n - 1 s> 0).
-; CHECK-LABEL: 'implied1'
-; CHECK-NEXT:  Determining loop execution counts for: @implied1
+define void @add(i32 %n) {
+; CHECK-LABEL: 'add'
+; CHECK-NEXT:  Determining loop execution counts for: @add
 ; CHECK-NEXT:  Loop %header: backedge-taken count is (-2 + %n)
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 2147483645
 ; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-2 + %n)
@@ -27,10 +26,9 @@ exit:
   ret void
 }
 
-define void @implied1_neg(i32 %n) {
-; Prove that (n s> 0) =\=> (n - 1 s> 0).
-; CHECK-LABEL: 'implied1_neg'
-; CHECK-NEXT:  Determining loop execution counts for: @implied1_neg
+define void @add_neg(i32 %n) {
+; CHECK-LABEL: 'add_neg'
+; CHECK-NEXT:  Determining loop execution counts for: @add_neg
 ; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (1 smax (-1 + %n)<nsw>))<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 2147483645
 ; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (1 smax (-1 + %n)<nsw>))<nsw>
@@ -52,10 +50,9 @@ exit:
   ret void
 }
 
-define void @implied2(i32 %n) {
-; Prove that (n u>= -1) ===> (n + 1 u>= 0).
-; CHECK-LABEL: 'implied2'
-; CHECK-NEXT:  Determining loop execution counts for: @implied2
+define void @predicated_add(i32 %n) {
+; CHECK-LABEL: 'predicated_add'
+; CHECK-NEXT:  Determining loop execution counts for: @predicated_add
 ; CHECK-NEXT:  Loop %header: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %header: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %header: Unpredictable symbolic max backedge-taken count.
@@ -85,10 +82,9 @@ exit:
   ret void
 }
 
-define void @implied2_neg(i32 %n) {
-; Prove that (n u>= -1) =\=> (n - 1 s>= 0).
-; CHECK-LABEL: 'implied2_neg'
-; CHECK-NEXT:  Determining loop execution counts for: @implied2_neg
+define void @predicated_add_neg(i32 %n) {
+; CHECK-LABEL: 'predicated_add_neg'
+; CHECK-NEXT:  Determining loop execution counts for: @predicated_add_neg
 ; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (1 smax %n))<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 2147483646
 ; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (1 smax %n))<nsw>
@@ -104,6 +100,57 @@ header:
   %indvar = phi i32 [ %indvar.next, %header ], [ 0, %entry ]
   %indvar.next = add i32 %indvar, 1
   %exitcond = icmp sge i32 %n.minus.1, %indvar.next
+  br i1 %exitcond, label %header, label %exit
+
+exit:
+  ret void
+}
+
+define void @div(i32 %n) {
+; CHECK-LABEL: 'div'
+; CHECK-NEXT:  Determining loop execution counts for: @div
+; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + %n.div.2)<nuw><nsw>
+; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741824
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + %n.div.2)<nuw><nsw>
+; CHECK-NEXT:  Loop %header: Trip multiple is 1
+;
+entry:
+  %cmp1 = icmp sge i32 %n, 1
+  %n.div.2 = sdiv i32 %n, 2
+  call void @llvm.assume(i1 %cmp1)
+  br label %header
+
+header:
+  %indvar = phi i32 [ %indvar.next, %header ], [ 0, %entry ]
+  %indvar.next = add i32 %indvar, 1
+  %minus.indvar = sub nsw i32 0, %indvar
+  %minus.n.div.2 = sub nsw i32 0, %n.div.2
+  %exitcond = icmp sge i32 %minus.indvar, %minus.n.div.2
+  br i1 %exitcond, label %header, label %exit
+
+exit:
+  ret void
+}
+
+define void @div_neg(i32 %n) {
+; CHECK-LABEL: 'div_neg'
+; CHECK-NEXT:  Determining loop execution counts for: @div_neg
+; CHECK-NEXT:  Loop %header: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %header: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %header: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  %cmp1 = icmp sge i32 %n, 1
+  %n.div.2 = sdiv i32 %n, 2
+  call void @llvm.assume(i1 %cmp1)
+  br label %header
+
+header:
+  %indvar = phi i32 [ %indvar.next, %header ], [ 0, %entry ]
+  %indvar.next = add i32 %indvar, 1
+  %minus.indvar = sub nsw i32 0, %indvar
+  %minus.n.div.2 = sub nsw i32 0, %n.div.2
+  %exitcond = icmp sge i32 %minus.n.div.2, %minus.indvar
   br i1 %exitcond, label %header, label %exit
 
 exit:
