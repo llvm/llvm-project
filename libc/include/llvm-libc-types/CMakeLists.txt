@@ -102,15 +102,15 @@ add_header(__getoptargv_t HDR __getoptargv_t.h)
 add_header(wchar_t HDR wchar_t.h)
 add_header(char8_t HDR char8_t.h)
 add_header(
-    char16_t 
-  HDR 
+    char16_t
+  HDR
     char16_t.h
   DEPENDS
     libc.include.llvm-libc-macros.stdint_macros
 )
 add_header(
-    char32_t 
-  HDR 
+    char32_t
+  HDR
     char32_t.h
   DEPENDS
     libc.include.llvm-libc-macros.stdint_macros
@@ -145,8 +145,8 @@ add_header(cfloat16 HDR cfloat16.h)
 add_header(fsblkcnt_t HDR fsblkcnt_t.h)
 add_header(fsfilcnt_t HDR fsfilcnt_t.h)
 add_header(
-  struct_statvfs 
-HDR 
+  struct_statvfs
+HDR
   struct_statvfs.h
 DEPENDS
   .fsblkcnt_t

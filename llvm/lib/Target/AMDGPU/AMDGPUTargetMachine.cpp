@@ -29,6 +29,7 @@
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
 #include "AMDGPUUnifyDivergentExitNodes.h"
+#include "AMDGPUWaitSGPRHazards.h"
 #include "GCNDPPCombine.h"
 #include "GCNIterativeScheduler.h"
 #include "GCNSchedStrategy.h"
@@ -53,6 +54,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
+#include "llvm/Analysis/KernelInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
@@ -548,6 +550,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeGCNRewritePartialRegUsesPass(*PR);
   initializeGCNRegPressurePrinterPass(*PR);
   initializeAMDGPUPreloadKernArgPrologLegacyPass(*PR);
+  initializeAMDGPUWaitSGPRHazardsLegacyPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -878,6 +881,11 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
               Opt.IsClosedWorld = true;
             PM.addPass(AMDGPUAttributorPass(*this, Opt));
           }
+        }
+        if (!NoKernelInfoEndLTO) {
+          FunctionPassManager FPM;
+          FPM.addPass(KernelInfoPrinter(this));
+          PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
         }
       });
 
@@ -1672,6 +1680,8 @@ void GCNPassConfig::addPreEmitPass() {
   // cases.
   addPass(&PostRAHazardRecognizerID);
 
+  addPass(&AMDGPUWaitSGPRHazardsLegacyID);
+
   if (isPassEnabled(EnableInsertDelayAlu, CodeGenOptLevel::Less))
     addPass(&AMDGPUInsertDelayAluID);
 
@@ -1721,7 +1731,7 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
 
   if (MFI->Occupancy == 0) {
     // Fixup the subtarget dependent default value.
-    MFI->Occupancy = ST.computeOccupancy(MF.getFunction(), MFI->getLDSSize());
+    MFI->Occupancy = ST.getOccupancyWithWorkGroupSizes(MF).second;
   }
 
   auto parseRegister = [&](const yaml::StringValue &RegName, Register &RegVal) {
@@ -1949,6 +1959,9 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
   addPass(AlwaysInlinerPass());
 
   addPass(AMDGPUOpenCLEnqueuedBlockLoweringPass());
+
+  if (EnableSwLowerLDS)
+    addPass(AMDGPUSwLowerLDSPass(TM));
 
   // Runs before PromoteAlloca so the latter can account for function uses
   if (EnableLowerModuleLDS)

@@ -1013,7 +1013,7 @@ DbgInstPtr DIBuilder::insertDbgAssign(Instruction *LinkedInstr, Value *Val,
   B.SetCurrentDebugLocation(DL);
 
   auto *DVI = cast<DbgAssignIntrinsic>(B.CreateCall(AssignFn, Args));
-  DVI->insertAfter(LinkedInstr);
+  DVI->insertAfter(LinkedInstr->getIterator());
   return DVI;
 }
 

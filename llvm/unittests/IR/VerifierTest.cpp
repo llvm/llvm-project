@@ -60,7 +60,7 @@ TEST(VerifierTest, Freeze) {
   // Valid type : freeze(<2 x i32>)
   Constant *CV = ConstantVector::getSplat(ElementCount::getFixed(2), CI);
   FreezeInst *FI_vec = new FreezeInst(CV);
-  FI_vec->insertBefore(RI);
+  FI_vec->insertBefore(RI->getIterator());
 
   EXPECT_FALSE(verifyFunction(*F));
 
@@ -69,7 +69,7 @@ TEST(VerifierTest, Freeze) {
   // Valid type : freeze(float)
   Constant *CFP = ConstantFP::get(Type::getDoubleTy(C), 0.0);
   FreezeInst *FI_dbl = new FreezeInst(CFP);
-  FI_dbl->insertBefore(RI);
+  FI_dbl->insertBefore(RI->getIterator());
 
   EXPECT_FALSE(verifyFunction(*F));
 
@@ -79,7 +79,7 @@ TEST(VerifierTest, Freeze) {
   PointerType *PT = PointerType::get(C, 0);
   ConstantPointerNull *CPN = ConstantPointerNull::get(PT);
   FreezeInst *FI_ptr = new FreezeInst(CPN);
-  FI_ptr->insertBefore(RI);
+  FI_ptr->insertBefore(RI->getIterator());
 
   EXPECT_FALSE(verifyFunction(*F));
 
@@ -87,7 +87,7 @@ TEST(VerifierTest, Freeze) {
 
   // Valid type : freeze(int)
   FreezeInst *FI = new FreezeInst(CI);
-  FI->insertBefore(RI);
+  FI->insertBefore(RI->getIterator());
 
   EXPECT_FALSE(verifyFunction(*F));
 
@@ -403,7 +403,7 @@ TEST(VerifierTest, GetElementPtrInst) {
                                 ConstantInt::get(Type::getInt64Ty(C), 0))},
       Entry);
 
-  GEPVec->insertBefore(RI);
+  GEPVec->insertBefore(RI->getIterator());
 
   // Break the address space of the source value
   GEPVec->getOperandUse(0).set(ConstantAggregateZero::get(V2P2Ty));

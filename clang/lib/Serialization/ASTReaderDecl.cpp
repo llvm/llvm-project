@@ -409,6 +409,7 @@ public:
   void VisitFriendTemplateDecl(FriendTemplateDecl *D);
   void VisitStaticAssertDecl(StaticAssertDecl *D);
   void VisitBlockDecl(BlockDecl *BD);
+  void VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D);
   void VisitCapturedDecl(CapturedDecl *CD);
   void VisitEmptyDecl(EmptyDecl *D);
   void VisitLifetimeExtendedTemporaryDecl(LifetimeExtendedTemporaryDecl *D);
@@ -1795,6 +1796,15 @@ void ASTDeclReader::VisitBlockDecl(BlockDecl *BD) {
   BD->setCaptures(Reader.getContext(), captures, capturesCXXThis);
 }
 
+void ASTDeclReader::VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D) {
+  // NumParams is deserialized by OutlinedFunctionDecl::CreateDeserialized().
+  VisitDecl(D);
+  for (unsigned I = 0; I < D->NumParams; ++I)
+    D->setParam(I, readDeclAs<ImplicitParamDecl>());
+  D->setNothrow(Record.readInt() != 0);
+  D->setBody(cast_or_null<Stmt>(Record.readStmt()));
+}
+
 void ASTDeclReader::VisitCapturedDecl(CapturedDecl *CD) {
   VisitDecl(CD);
   unsigned ContextParamPos = Record.readInt();
@@ -2285,6 +2295,10 @@ void ASTDeclReader::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
   VisitFunctionDecl(D);
   D->setDeductionCandidateKind(
       static_cast<DeductionCandidate>(Record.readInt()));
+  D->setSourceDeductionGuide(readDeclAs<CXXDeductionGuideDecl>());
+  D->setSourceDeductionGuideKind(
+      static_cast<CXXDeductionGuideDecl::SourceDeductionGuideKind>(
+          Record.readInt()));
 }
 
 void ASTDeclReader::VisitCXXMethodDecl(CXXMethodDecl *D) {
@@ -4104,6 +4118,9 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   case DECL_TEMPLATE_PARAM_OBJECT:
     D = TemplateParamObjectDecl::CreateDeserialized(Context, ID);
     break;
+  case DECL_OUTLINEDFUNCTION:
+    D = OutlinedFunctionDecl::CreateDeserialized(Context, ID, Record.readInt());
+    break;
   case DECL_CAPTURED:
     D = CapturedDecl::CreateDeserialized(Context, ID, Record.readInt());
     break;
@@ -4665,8 +4682,8 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
         MSInfo->setPointOfInstantiation(POI);
       } else {
         auto *FD = cast<FunctionDecl>(D);
-        if (auto *FTSInfo = FD->TemplateOrSpecialization
-                    .dyn_cast<FunctionTemplateSpecializationInfo *>())
+        if (auto *FTSInfo = dyn_cast<FunctionTemplateSpecializationInfo *>(
+                FD->TemplateOrSpecialization))
           FTSInfo->setPointOfInstantiation(POI);
         else
           cast<MemberSpecializationInfo *>(FD->TemplateOrSpecialization)

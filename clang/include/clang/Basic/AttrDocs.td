@@ -487,6 +487,7 @@ following requirements.
 * Is not a C variadic function.
 * Is not a coroutine.
 * Is not defined as deleted or as defaulted.
+* Is not defined with a function try block.
 * Is not declared with the ``constexpr`` or ``consteval`` specifiers.
 * Is not declared with the ``[[noreturn]]`` attribute.
 

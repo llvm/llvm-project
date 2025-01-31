@@ -299,7 +299,7 @@ static CallBase &versionCallSiteWithCond(CallBase &CB, Value *Cond,
     BasicBlock *ThenBlock = ThenTerm->getParent();
     ThenBlock->setName("if.true.direct_targ");
     CallBase *NewInst = cast<CallBase>(OrigInst->clone());
-    NewInst->insertBefore(ThenTerm);
+    NewInst->insertBefore(ThenTerm->getIterator());
 
     // Place a clone of the optional bitcast after the new call site.
     Value *NewRetVal = NewInst;
@@ -309,7 +309,7 @@ static CallBase &versionCallSiteWithCond(CallBase &CB, Value *Cond,
              "bitcast following musttail call must use the call");
       auto NewBitCast = BitCast->clone();
       NewBitCast->replaceUsesOfWith(OrigInst, NewInst);
-      NewBitCast->insertBefore(ThenTerm);
+      NewBitCast->insertBefore(ThenTerm->getIterator());
       NewRetVal = NewBitCast;
       Next = BitCast->getNextNode();
     }
@@ -320,7 +320,7 @@ static CallBase &versionCallSiteWithCond(CallBase &CB, Value *Cond,
     auto NewRet = Ret->clone();
     if (Ret->getReturnValue())
       NewRet->replaceUsesOfWith(Ret->getReturnValue(), NewRetVal);
-    NewRet->insertBefore(ThenTerm);
+    NewRet->insertBefore(ThenTerm->getIterator());
 
     // A return instructions is terminating, so we don't need the terminator
     // instruction just created.
@@ -344,8 +344,8 @@ static CallBase &versionCallSiteWithCond(CallBase &CB, Value *Cond,
   MergeBlock->setName("if.end.icp");
 
   CallBase *NewInst = cast<CallBase>(OrigInst->clone());
-  OrigInst->moveBefore(ElseTerm);
-  NewInst->insertBefore(ThenTerm);
+  OrigInst->moveBefore(ElseTerm->getIterator());
+  NewInst->insertBefore(ThenTerm->getIterator());
 
   // If the original call site is an invoke instruction, we have extra work to
   // do since invoke instructions are terminating. We have to fix-up phi nodes
@@ -589,12 +589,12 @@ CallBase *llvm::promoteCallWithIfThenElse(CallBase &CB, Function &Callee,
 
   CallBase &DirectCall = promoteCall(
       versionCallSite(CB, &Callee, /*BranchWeights=*/nullptr), &Callee);
-  CSInstr->moveBefore(&CB);
+  CSInstr->moveBefore(CB.getIterator());
   const auto NewCSID = CtxProf.allocateNextCallsiteIndex(Caller);
   auto *NewCSInstr = cast<InstrProfCallsite>(CSInstr->clone());
   NewCSInstr->setIndex(NewCSID);
   NewCSInstr->setCallee(&Callee);
-  NewCSInstr->insertBefore(&DirectCall);
+  NewCSInstr->insertBefore(DirectCall.getIterator());
   auto &DirectBB = *DirectCall.getParent();
   auto &IndirectBB = *CB.getParent();
 
