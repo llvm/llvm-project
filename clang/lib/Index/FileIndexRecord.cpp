@@ -55,7 +55,7 @@ void FileIndexRecord::removeHeaderGuardMacros() {
 void FileIndexRecord::print(llvm::raw_ostream &OS, SourceManager &SM) const {
   OS << "DECLS BEGIN ---\n";
   for (auto &DclInfo : Decls) {
-    if (const auto *D = DclInfo.DeclOrMacro.dyn_cast<const Decl *>()) {
+    if (const auto *D = dyn_cast<const Decl *>(DclInfo.DeclOrMacro)) {
       SourceLocation Loc = SM.getFileLoc(D->getLocation());
       PresumedLoc PLoc = SM.getPresumedLoc(Loc);
       OS << llvm::sys::path::filename(PLoc.getFilename()) << ':'

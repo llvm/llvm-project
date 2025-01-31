@@ -400,16 +400,16 @@ unsigned GCNSubtarget::getReservedNumSGPRs(const Function &F) const {
   return getBaseReservedNumSGPRs(KernelUsesFlatScratch);
 }
 
-unsigned GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
-                                        unsigned NumSGPRs,
-                                        unsigned NumVGPRs) const {
-  unsigned Occupancy =
-      std::min(getMaxWavesPerEU(), getOccupancyWithLocalMemSize(LDSSize, F));
-  if (NumSGPRs)
-    Occupancy = std::min(Occupancy, getOccupancyWithNumSGPRs(NumSGPRs));
-  if (NumVGPRs)
-    Occupancy = std::min(Occupancy, getOccupancyWithNumVGPRs(NumVGPRs));
-  return Occupancy;
+std::pair<unsigned, unsigned>
+GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
+                               unsigned NumSGPRs, unsigned NumVGPRs) const {
+  auto [MinOcc, MaxOcc] = getOccupancyWithWorkGroupSizes(LDSSize, F);
+  unsigned SGPROcc = getOccupancyWithNumSGPRs(NumSGPRs);
+  unsigned VGPROcc = getOccupancyWithNumVGPRs(NumVGPRs);
+
+  // Maximum occupancy may be further limited by high SGPR/VGPR usage.
+  MaxOcc = std::min(MaxOcc, std::min(SGPROcc, VGPROcc));
+  return {std::min(MinOcc, MaxOcc), MaxOcc};
 }
 
 unsigned GCNSubtarget::getBaseMaxNumSGPRs(

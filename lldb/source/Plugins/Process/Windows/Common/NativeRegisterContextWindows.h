@@ -17,12 +17,9 @@ namespace lldb_private {
 
 class NativeThreadWindows;
 
-class NativeRegisterContextWindows : public NativeRegisterContextRegisterInfo {
+class NativeRegisterContextWindows
+    : public virtual NativeRegisterContextRegisterInfo {
 public:
-  NativeRegisterContextWindows(
-      NativeThreadProtocol &native_thread,
-      RegisterInfoInterface *reg_info_interface_p);
-
   static std::unique_ptr<NativeRegisterContextWindows>
   CreateHostNativeRegisterContextWindows(const ArchSpec &target_arch,
                                          NativeThreadProtocol &native_thread);

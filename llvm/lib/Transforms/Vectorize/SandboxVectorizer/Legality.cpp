@@ -214,6 +214,15 @@ const LegalityResult &LegalityAnalysis::canVectorize(ArrayRef<Value *> Bndl,
                dumpBndl(Bndl););
     return createLegalityResult<Pack>(ResultReason::NotInstructions);
   }
+  // Pack if not in the same BB.
+  auto *BB = cast<Instruction>(Bndl[0])->getParent();
+  if (any_of(drop_begin(Bndl),
+             [BB](auto *V) { return cast<Instruction>(V)->getParent() != BB; }))
+    return createLegalityResult<Pack>(ResultReason::DiffBBs);
+  // Pack if instructions repeat, i.e., require some sort of broadcast.
+  SmallPtrSet<Value *, 8> Unique(Bndl.begin(), Bndl.end());
+  if (Unique.size() != Bndl.size())
+    return createLegalityResult<Pack>(ResultReason::RepeatedInstrs);
 
   auto CollectDescrs = getHowToCollectValues(Bndl);
   if (CollectDescrs.hasVectorInputs()) {
@@ -223,7 +232,8 @@ const LegalityResult &LegalityAnalysis::canVectorize(ArrayRef<Value *> Bndl,
         return createLegalityResult<DiamondReuse>(Vec);
       return createLegalityResult<DiamondReuseWithShuffle>(Vec, Mask);
     }
-    llvm_unreachable("TODO: Unimplemented");
+    return createLegalityResult<DiamondReuseMultiInput>(
+        std::move(CollectDescrs));
   }
 
   if (auto ReasonOpt = notVectorizableBasedOnOpcodesAndTypes(Bndl))
