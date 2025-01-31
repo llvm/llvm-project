@@ -9746,7 +9746,7 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
       },
       node.stmt());
   Walk(node.spec());
-  bool inDeviceSubprogram = false;
+  bool inDeviceSubprogram{false};
   // If this is a function, convert result to an object. This is to prevent the
   // result from being converted later to a function symbol if it is called
   // inside the function.
