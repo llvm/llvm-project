@@ -2122,12 +2122,10 @@ mlir::Value CIRGenFunction::emitScalarOrConstFoldImmArg(unsigned ICEArguments,
 static mlir::Value emitArmLdrexNon128Intrinsic(unsigned int builtinID,
                                                const CallExpr *clangCallExpr,
                                                CIRGenFunction &cgf) {
-  StringRef intrinsicName;
-  if (builtinID == clang::AArch64::BI__builtin_arm_ldrex) {
-    intrinsicName = "aarch64.ldxr";
-  } else {
-    llvm_unreachable("Unknown builtinID");
-  }
+  StringRef intrinsicName = builtinID == clang::AArch64::BI__builtin_arm_ldrex
+                                ? "aarch64.ldxr"
+                                : "aarch64.ldaxr";
+
   // Argument
   mlir::Value loadAddr = cgf.emitScalarExpr(clangCallExpr->getArg(0));
   // Get Instrinc call
