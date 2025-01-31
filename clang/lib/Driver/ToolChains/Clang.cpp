@@ -2422,6 +2422,9 @@ void Clang::AddWebAssemblyTargetArgs(const ArgList &Args,
   if (!Args.hasArg(options::OPT_fvisibility_EQ,
                    options::OPT_fvisibility_ms_compat))
     CmdArgs.push_back("-fvisibility=hidden");
+
+  if (!Args.hasFlag(options::OPT_mred_zone, options::OPT_mno_red_zone, true))
+    CmdArgs.push_back("-disable-red-zone");
 }
 
 void Clang::AddVETargetArgs(const ArgList &Args, ArgStringList &CmdArgs) const {
