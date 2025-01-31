@@ -30,7 +30,7 @@ enum class RootSignatureElementKind {
 };
 
 struct ModuleRootSignature {
-  uint32_t Flags;
+  uint32_t Flags = 0;
 
   ModuleRootSignature() = default;
 
