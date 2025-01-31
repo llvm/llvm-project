@@ -11172,7 +11172,7 @@ VectorExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
   QualType EltTy = VT->getElementType();
   SmallVector<APValue, 4> Elements;
 
-  // MFloat8 type doesn't have constants and thus constant folding 
+  // MFloat8 type doesn't have constants and thus constant folding
   // is impossible.
   if (EltTy->isMFloat8Type())
     return false;
