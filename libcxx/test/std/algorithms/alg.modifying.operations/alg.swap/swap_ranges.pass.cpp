@@ -14,162 +14,109 @@
 //   swap_ranges(Iter1 first1, Iter1 last1, Iter2 first2);
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <memory>
 #include <utility>
 
 #include "test_macros.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
-template<class Iter1, class Iter2>
-void
-test()
-{
-    int i[3] = {1, 2, 3};
-    int j[3] = {4, 5, 6};
-    Iter2 r = std::swap_ranges(Iter1(i), Iter1(i+3), Iter2(j));
-    assert(base(r) == j+3);
-    assert(i[0] == 4);
-    assert(i[1] == 5);
-    assert(i[2] == 6);
-    assert(j[0] == 1);
-    assert(j[1] == 2);
-    assert(j[2] == 3);
+template <class Iter1>
+struct Test1 {
+  template <class Iter2>
+  TEST_CONSTEXPR_CXX20 void operator()() {
+    int a[] = {1, 2, 3};
+    int b[] = {4, 5, 6};
+    Iter2 r = std::swap_ranges(Iter1(a), Iter1(a + 3), Iter2(b));
+    assert(base(r) == b + 3);
+    assert(a[0] == 4 && a[1] == 5 && a[2] == 6);
+    assert(b[0] == 1 && b[1] == 2 && b[2] == 3);
+  }
+};
+
+struct TestPtr {
+  template <class Iter>
+  TEST_CONSTEXPR_CXX20 void operator()() {
+    types::for_each(types::forward_iterator_list<int*>(), Test1<Iter>());
+  }
+};
+
+TEST_CONSTEXPR_CXX20 bool test_ptr() {
+  types::for_each(types::forward_iterator_list<int*>(), TestPtr());
+  return true;
 }
 
 #if TEST_STD_VER >= 11
-template<class Iter1, class Iter2>
-void
-test1()
-{
-    std::unique_ptr<int> i[3];
+template <class Iter1>
+struct Test2 {
+  template <class Iter2>
+  TEST_CONSTEXPR_CXX23 void operator()() {
+    std::unique_ptr<int> a[3];
     for (int k = 0; k < 3; ++k)
-        i[k].reset(new int(k+1));
-    std::unique_ptr<int> j[3];
+      a[k].reset(new int(k + 1));
+    std::unique_ptr<int> b[3];
     for (int k = 0; k < 3; ++k)
-        j[k].reset(new int(k+4));
-    Iter2 r = std::swap_ranges(Iter1(i), Iter1(i+3), Iter2(j));
-    assert(base(r) == j+3);
-    assert(*i[0] == 4);
-    assert(*i[1] == 5);
-    assert(*i[2] == 6);
-    assert(*j[0] == 1);
-    assert(*j[1] == 2);
-    assert(*j[2] == 3);
+      b[k].reset(new int(k + 4));
+    Iter2 r = std::swap_ranges(Iter1(a), Iter1(a + 3), Iter2(b));
+    assert(base(r) == b + 3);
+    assert(*a[0] == 4 && *a[1] == 5 && *a[2] == 6);
+    assert(*b[0] == 1 && *b[1] == 2 && *b[2] == 3);
+  }
+};
+
+struct TestUnqPtr {
+  template <class Iter>
+  TEST_CONSTEXPR_CXX20 void operator()() {
+    types::for_each(types::forward_iterator_list<std::unique_ptr<int>*>(), Test2<Iter>());
+  }
+};
+
+TEST_CONSTEXPR_CXX23 bool test_unq_ptr() {
+  types::for_each(types::forward_iterator_list<std::unique_ptr<int>*>(), TestUnqPtr());
+  return true;
 }
-#endif // TEST_STD_VER >= 11
+#endif
 
-void test2()
-{
-    {
-    int src[2][2]      = {{0, 1}, {2, 3}};
-    decltype(src) dest = {{9, 8}, {7, 6}};
+TEST_CONSTEXPR_CXX20 bool test_simple_cases() {
+  {
+    std::array<int, 3> a = {1, 2, 3}, a0 = a;
+    std::array<int, 3> b = {4, 5, 6}, b0 = b;
+    std::swap_ranges(a.begin(), a.end(), b.begin());
+    assert(a == b0);
+    assert(b == a0);
+  }
+  {
+    std::array<std::array<int, 2>, 2> a = {{{0, 1}, {2, 3}}}, a0 = a;
+    std::array<std::array<int, 2>, 2> b = {{{9, 8}, {7, 6}}}, b0 = b;
+    std::swap(a, b);
+    assert(a == b0);
+    assert(b == a0);
+  }
+  {
+    std::array<std::array<int, 3>, 3> a = {{{0, 1, 2}, {3, 4, 5}, {6, 7, 8}}}, a0 = a;
+    std::array<std::array<int, 3>, 3> b = {{{9, 8, 7}, {6, 5, 4}, {3, 2, 1}}}, b0 = b;
+    std::swap(a, b);
+    assert(a == b0);
+    assert(b == a0);
+  }
 
-    std::swap(src, dest);
-
-    assert ( src[0][0] == 9 );
-    assert ( src[0][1] == 8 );
-    assert ( src[1][0] == 7 );
-    assert ( src[1][1] == 6 );
-
-    assert ( dest[0][0] == 0 );
-    assert ( dest[0][1] == 1 );
-    assert ( dest[1][0] == 2 );
-    assert ( dest[1][1] == 3 );
-    }
-
-    {
-    int src[3][3]      = {{0, 1, 2}, {3, 4, 5}, {6, 7, 8}};
-    decltype(src) dest = {{9, 8, 7}, {6, 5, 4}, {3, 2, 1}};
-
-    std::swap(src, dest);
-
-    assert ( src[0][0] == 9 );
-    assert ( src[0][1] == 8 );
-    assert ( src[0][2] == 7 );
-    assert ( src[1][0] == 6 );
-    assert ( src[1][1] == 5 );
-    assert ( src[1][2] == 4 );
-    assert ( src[2][0] == 3 );
-    assert ( src[2][1] == 2 );
-    assert ( src[2][2] == 1 );
-
-    assert ( dest[0][0] == 0 );
-    assert ( dest[0][1] == 1 );
-    assert ( dest[0][2] == 2 );
-    assert ( dest[1][0] == 3 );
-    assert ( dest[1][1] == 4 );
-    assert ( dest[1][2] == 5 );
-    assert ( dest[2][0] == 6 );
-    assert ( dest[2][1] == 7 );
-    assert ( dest[2][2] == 8 );
-    }
+  return true;
 }
 
-#if TEST_STD_VER > 17
-constexpr bool test_swap_constexpr()
-{
-    int i[3] = {1, 2, 3};
-    int j[3] = {4, 5, 6};
-    std::swap_ranges(i, i+3, j);
-    return i[0] == 4 &&
-           i[1] == 5 &&
-           i[2] == 6 &&
-           j[0] == 1 &&
-           j[1] == 2 &&
-           j[2] == 3;
-}
-#endif // TEST_STD_VER > 17
-
-int main(int, char**)
-{
-    test<forward_iterator<int*>, forward_iterator<int*> >();
-    test<forward_iterator<int*>, bidirectional_iterator<int*> >();
-    test<forward_iterator<int*>, random_access_iterator<int*> >();
-    test<forward_iterator<int*>, int*>();
-
-    test<bidirectional_iterator<int*>, forward_iterator<int*> >();
-    test<bidirectional_iterator<int*>, bidirectional_iterator<int*> >();
-    test<bidirectional_iterator<int*>, random_access_iterator<int*> >();
-    test<bidirectional_iterator<int*>, int*>();
-
-    test<random_access_iterator<int*>, forward_iterator<int*> >();
-    test<random_access_iterator<int*>, bidirectional_iterator<int*> >();
-    test<random_access_iterator<int*>, random_access_iterator<int*> >();
-    test<random_access_iterator<int*>, int*>();
-
-    test<int*, forward_iterator<int*> >();
-    test<int*, bidirectional_iterator<int*> >();
-    test<int*, random_access_iterator<int*> >();
-    test<int*, int*>();
-
+int main(int, char**) {
+  test_simple_cases();
+  test_ptr();
 #if TEST_STD_VER >= 11
-    test1<forward_iterator<std::unique_ptr<int>*>, forward_iterator<std::unique_ptr<int>*> >();
-    test1<forward_iterator<std::unique_ptr<int>*>, bidirectional_iterator<std::unique_ptr<int>*> >();
-    test1<forward_iterator<std::unique_ptr<int>*>, random_access_iterator<std::unique_ptr<int>*> >();
-    test1<forward_iterator<std::unique_ptr<int>*>, std::unique_ptr<int>*>();
-
-    test1<bidirectional_iterator<std::unique_ptr<int>*>, forward_iterator<std::unique_ptr<int>*> >();
-    test1<bidirectional_iterator<std::unique_ptr<int>*>, bidirectional_iterator<std::unique_ptr<int>*> >();
-    test1<bidirectional_iterator<std::unique_ptr<int>*>, random_access_iterator<std::unique_ptr<int>*> >();
-    test1<bidirectional_iterator<std::unique_ptr<int>*>, std::unique_ptr<int>*>();
-
-    test1<random_access_iterator<std::unique_ptr<int>*>, forward_iterator<std::unique_ptr<int>*> >();
-    test1<random_access_iterator<std::unique_ptr<int>*>, bidirectional_iterator<std::unique_ptr<int>*> >();
-    test1<random_access_iterator<std::unique_ptr<int>*>, random_access_iterator<std::unique_ptr<int>*> >();
-    test1<random_access_iterator<std::unique_ptr<int>*>, std::unique_ptr<int>*>();
-
-    test1<std::unique_ptr<int>*, forward_iterator<std::unique_ptr<int>*> >();
-    test1<std::unique_ptr<int>*, bidirectional_iterator<std::unique_ptr<int>*> >();
-    test1<std::unique_ptr<int>*, random_access_iterator<std::unique_ptr<int>*> >();
-    test1<std::unique_ptr<int>*, std::unique_ptr<int>*>();
-#endif // TEST_STD_VER >= 11
-
-#if TEST_STD_VER > 17
-    static_assert(test_swap_constexpr());
-#endif // TEST_STD_VER > 17
-
-    test2();
-
+  test_unq_ptr();
+#endif
+#if TEST_STD_VER >= 20
+  static_assert(test_simple_cases());
+  static_assert(test_ptr());
+#endif
+#if TEST_STD_VER >= 23
+  static_assert(test_unq_ptr());
+#endif
   return 0;
 }
