@@ -2698,6 +2698,168 @@ define void @test_writelane_v8i16(ptr addrspace(1) %out, <8 x i16> %src, i32 %sr
   ret void
 }
 
+define void @test_writelane_i8(ptr addrspace(1) %out, i8 %src, i32 %src1) {
+; GFX802-SDAG-LABEL: test_writelane_i8:
+; GFX802-SDAG:       ; %bb.0:
+; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX802-SDAG-NEXT:    flat_load_ubyte v4, v[0:1]
+; GFX802-SDAG-NEXT:    v_readfirstlane_b32 m0, v3
+; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s4, v2
+; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX802-SDAG-NEXT:    s_nop 1
+; GFX802-SDAG-NEXT:    v_writelane_b32 v4, s4, m0
+; GFX802-SDAG-NEXT:    flat_store_byte v[0:1], v4
+; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX802-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1010-SDAG-LABEL: test_writelane_i8:
+; GFX1010-SDAG:       ; %bb.0:
+; GFX1010-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1010-SDAG-NEXT:    global_load_ubyte v4, v[0:1], off
+; GFX1010-SDAG-NEXT:    v_readfirstlane_b32 s4, v2
+; GFX1010-SDAG-NEXT:    v_readfirstlane_b32 s5, v3
+; GFX1010-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX1010-SDAG-NEXT:    v_writelane_b32 v4, s4, s5
+; GFX1010-SDAG-NEXT:    global_store_byte v[0:1], v4, off
+; GFX1010-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-SDAG-LABEL: test_writelane_i8:
+; GFX1100-SDAG:       ; %bb.0:
+; GFX1100-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-SDAG-NEXT:    global_load_u8 v4, v[0:1], off
+; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX1100-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1100-SDAG-NEXT:    v_writelane_b32 v4, s0, s1
+; GFX1100-SDAG-NEXT:    global_store_b8 v[0:1], v4, off
+; GFX1100-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX802-GISEL-LABEL: test_writelane_i8:
+; GFX802-GISEL:       ; %bb.0:
+; GFX802-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX802-GISEL-NEXT:    flat_load_ubyte v4, v[0:1]
+; GFX802-GISEL-NEXT:    v_readfirstlane_b32 s5, v3
+; GFX802-GISEL-NEXT:    v_readfirstlane_b32 s4, v2
+; GFX802-GISEL-NEXT:    s_mov_b32 m0, s5
+; GFX802-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX802-GISEL-NEXT:    v_writelane_b32 v4, s4, m0
+; GFX802-GISEL-NEXT:    flat_store_byte v[0:1], v4
+; GFX802-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX802-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1010-GISEL-LABEL: test_writelane_i8:
+; GFX1010-GISEL:       ; %bb.0:
+; GFX1010-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1010-GISEL-NEXT:    global_load_ubyte v4, v[0:1], off
+; GFX1010-GISEL-NEXT:    v_readfirstlane_b32 s4, v2
+; GFX1010-GISEL-NEXT:    v_readfirstlane_b32 s5, v3
+; GFX1010-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1010-GISEL-NEXT:    v_writelane_b32 v4, s4, s5
+; GFX1010-GISEL-NEXT:    global_store_byte v[0:1], v4, off
+; GFX1010-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-GISEL-LABEL: test_writelane_i8:
+; GFX1100-GISEL:       ; %bb.0:
+; GFX1100-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-GISEL-NEXT:    global_load_u8 v4, v[0:1], off
+; GFX1100-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX1100-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX1100-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1100-GISEL-NEXT:    v_writelane_b32 v4, s0, s1
+; GFX1100-GISEL-NEXT:    global_store_b8 v[0:1], v4, off
+; GFX1100-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %oldval = load i8, ptr addrspace(1) %out
+  %writelane = call i8 @llvm.amdgcn.writelane.i8(i8 %src, i32 %src1, i8 %oldval)
+  store i8 %writelane, ptr addrspace(1) %out
+  ret void
+}
+
+define void @test_writelane_i1(ptr addrspace(1) %out, i1 %src, i32 %src1) {
+; GFX802-SDAG-LABEL: test_writelane_i1:
+; GFX802-SDAG:       ; %bb.0:
+; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX802-SDAG-NEXT:    flat_load_ubyte v4, v[0:1]
+; GFX802-SDAG-NEXT:    v_readfirstlane_b32 m0, v3
+; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s4, v2
+; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX802-SDAG-NEXT:    s_nop 1
+; GFX802-SDAG-NEXT:    v_writelane_b32 v4, s4, m0
+; GFX802-SDAG-NEXT:    v_and_b32_e32 v2, 1, v4
+; GFX802-SDAG-NEXT:    flat_store_byte v[0:1], v2
+; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX802-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1010-SDAG-LABEL: test_writelane_i1:
+; GFX1010-SDAG:       ; %bb.0:
+; GFX1010-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1010-SDAG-NEXT:    global_load_ubyte v4, v[0:1], off
+; GFX1010-SDAG-NEXT:    v_readfirstlane_b32 s4, v2
+; GFX1010-SDAG-NEXT:    v_readfirstlane_b32 s5, v3
+; GFX1010-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX1010-SDAG-NEXT:    v_writelane_b32 v4, s4, s5
+; GFX1010-SDAG-NEXT:    v_and_b32_e32 v2, 1, v4
+; GFX1010-SDAG-NEXT:    global_store_byte v[0:1], v2, off
+; GFX1010-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-SDAG-LABEL: test_writelane_i1:
+; GFX1100-SDAG:       ; %bb.0:
+; GFX1100-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-SDAG-NEXT:    global_load_u8 v4, v[0:1], off
+; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX1100-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1100-SDAG-NEXT:    v_writelane_b32 v4, s0, s1
+; GFX1100-SDAG-NEXT:    v_and_b32_e32 v2, 1, v4
+; GFX1100-SDAG-NEXT:    global_store_b8 v[0:1], v2, off
+; GFX1100-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX802-GISEL-LABEL: test_writelane_i1:
+; GFX802-GISEL:       ; %bb.0:
+; GFX802-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX802-GISEL-NEXT:    flat_load_ubyte v4, v[0:1]
+; GFX802-GISEL-NEXT:    v_readfirstlane_b32 s5, v3
+; GFX802-GISEL-NEXT:    v_readfirstlane_b32 s4, v2
+; GFX802-GISEL-NEXT:    s_mov_b32 m0, s5
+; GFX802-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX802-GISEL-NEXT:    v_writelane_b32 v4, s4, m0
+; GFX802-GISEL-NEXT:    v_and_b32_e32 v2, 1, v4
+; GFX802-GISEL-NEXT:    flat_store_byte v[0:1], v2
+; GFX802-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX802-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1010-GISEL-LABEL: test_writelane_i1:
+; GFX1010-GISEL:       ; %bb.0:
+; GFX1010-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1010-GISEL-NEXT:    global_load_ubyte v4, v[0:1], off
+; GFX1010-GISEL-NEXT:    v_readfirstlane_b32 s4, v2
+; GFX1010-GISEL-NEXT:    v_readfirstlane_b32 s5, v3
+; GFX1010-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1010-GISEL-NEXT:    v_writelane_b32 v4, s4, s5
+; GFX1010-GISEL-NEXT:    v_and_b32_e32 v2, 1, v4
+; GFX1010-GISEL-NEXT:    global_store_byte v[0:1], v2, off
+; GFX1010-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1100-GISEL-LABEL: test_writelane_i1:
+; GFX1100-GISEL:       ; %bb.0:
+; GFX1100-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-GISEL-NEXT:    global_load_u8 v4, v[0:1], off
+; GFX1100-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX1100-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX1100-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1100-GISEL-NEXT:    v_writelane_b32 v4, s0, s1
+; GFX1100-GISEL-NEXT:    v_and_b32_e32 v2, 1, v4
+; GFX1100-GISEL-NEXT:    global_store_b8 v[0:1], v2, off
+; GFX1100-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %oldval = load i1, ptr addrspace(1) %out
+  %writelane = call i1 @llvm.amdgcn.writelane.i1(i1 %src, i32 %src1, i1 %oldval)
+  store i1 %writelane, ptr addrspace(1) %out
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #2
 
 attributes #0 = { nounwind readnone convergent }

@@ -700,3 +700,51 @@ define void @test_readfirstlane_v8i16(ptr addrspace(1) %out, <8 x i16> %src) {
   call void asm sideeffect "; use $0", "s"(<8 x i16> %x)
   ret void
 }
+
+define void @dpp8_i8(i8 %in, ptr addrspace(1) %out) {
+; CHECK-SDAG-LABEL: dpp8_i8:
+; CHECK-SDAG:       ; %bb.0:
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s4, v0
+; CHECK-SDAG-NEXT:    v_mov_b32_e32 v0, s4
+; CHECK-SDAG-NEXT:    flat_store_byte v[1:2], v0
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-GISEL-LABEL: dpp8_i8:
+; CHECK-GISEL:       ; %bb.0:
+; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; CHECK-GISEL-NEXT:    v_mov_b32_e32 v0, s4
+; CHECK-GISEL-NEXT:    flat_store_byte v[1:2], v0
+; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %tmp0 = call i8 @llvm.amdgcn.readfirstlane.i8(i8 %in)
+  store i8 %tmp0, ptr addrspace(1) %out
+  ret void
+}
+
+define void @dpp8_i1(i1 %in, ptr addrspace(1) %out) {
+; CHECK-SDAG-LABEL: dpp8_i1:
+; CHECK-SDAG:       ; %bb.0:
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s4, v0
+; CHECK-SDAG-NEXT:    s_and_b32 s4, s4, 1
+; CHECK-SDAG-NEXT:    v_mov_b32_e32 v0, s4
+; CHECK-SDAG-NEXT:    flat_store_byte v[1:2], v0
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-GISEL-LABEL: dpp8_i1:
+; CHECK-GISEL:       ; %bb.0:
+; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; CHECK-GISEL-NEXT:    s_and_b32 s4, s4, 1
+; CHECK-GISEL-NEXT:    v_mov_b32_e32 v0, s4
+; CHECK-GISEL-NEXT:    flat_store_byte v[1:2], v0
+; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %tmp0 = call i1 @llvm.amdgcn.readfirstlane.i1(i1 %in)
+  store i1 %tmp0, ptr addrspace(1) %out
+  ret void
+}
