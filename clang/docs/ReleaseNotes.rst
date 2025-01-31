@@ -109,6 +109,8 @@ Removed Compiler Flags
 
 Attribute Changes in Clang
 --------------------------
+Adding [[clang::unsafe_buffer_usage]] attribute to a method definition now turns off all -Wunsafe-buffer-usage
+related warnings within the method body.
 
 Improvements to Clang's diagnostics
 -----------------------------------

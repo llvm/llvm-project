@@ -119,16 +119,15 @@ struct HoldsUnsafeMembers {
 
     [[clang::unsafe_buffer_usage]]
     HoldsUnsafeMembers(int i)
-        : FromCtor(i),  // expected-warning{{function introduces unsafe buffer manipulation}}
-          FromCtor2{i}  // expected-warning{{function introduces unsafe buffer manipulation}}
-    {}
+        : FromCtor(i),
+          FromCtor2{i} {}
 
     HoldsUnsafeMembers(float f)
         : HoldsUnsafeMembers(0) {}  // expected-warning{{function introduces unsafe buffer manipulation}}
 
     UnsafeMembers FromCtor;
     UnsafeMembers FromCtor2;
-    UnsafeMembers FromField{3};  // expected-warning 2{{function introduces unsafe buffer manipulation}}
+    UnsafeMembers FromField{3};  // expected-warning {{function introduces unsafe buffer manipulation}}
 };
 
 struct SubclassUnsafeMembers : public UnsafeMembers {
@@ -138,8 +137,7 @@ struct SubclassUnsafeMembers : public UnsafeMembers {
 
     [[clang::unsafe_buffer_usage]]
     SubclassUnsafeMembers(int i)
-        : UnsafeMembers(i)  // expected-warning{{function introduces unsafe buffer manipulation}}
-    {}
+        : UnsafeMembers(i){}
 };
 
 // https://github.com/llvm/llvm-project/issues/80482
@@ -245,3 +243,40 @@ struct AggregateViaDefaultInit {
 void testAggregateViaDefaultInit() {
     AggregateViaDefaultInit A;
 };
+
+struct A {
+  int arr[2];
+
+  [[clang::unsafe_buffer_usage]]
+  int *ptr;
+};
+
+namespace std{
+  template <typename T> class span {
+
+   T *elements;
+
+   public:
+
+   constexpr span(T *, unsigned){}
+
+   template<class Begin, class End>
+   constexpr span(Begin first, End last){}
+
+   constexpr T* data() const noexcept {
+     return elements;
+   }
+ };
+}
+
+[[clang::unsafe_buffer_usage]]
+void check_no_warnings(unsigned idx) {
+  int *arr = new int[20];
+
+  int k = arr[idx]; // no-warning
+
+  std::span<int> sp = {arr, 20}; // no-warning
+  A *ptr = reinterpret_cast<A*> (sp.data()); // no-warning
+  A a;
+  a.ptr = arr; // no-warning
+}
