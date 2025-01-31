@@ -397,8 +397,9 @@ void ModuloScheduleExpander::generateExistingPhis(
     // The Phi value from the loop body typically is defined in the loop, but
     // not always. So, we need to check if the value is defined in the loop.
     unsigned PhiOp2 = LoopVal;
-    if (VRMap[LastStageNum].count(LoopVal))
-      PhiOp2 = VRMap[LastStageNum][LoopVal];
+    if (auto It = VRMap[LastStageNum].find(LoopVal);
+        It != VRMap[LastStageNum].end())
+      PhiOp2 = It->second;
 
     int StageScheduled = Schedule.getStage(&*BBI);
     int LoopValStage = Schedule.getStage(MRI.getVRegDef(LoopVal));
@@ -899,7 +900,7 @@ void ModuloScheduleExpander::addBranches(MachineBasicBlock &PreheaderBB,
         LastEpi->eraseFromParent();
       }
       if (LastPro == KernelBB) {
-        LoopInfo->disposed();
+        LoopInfo->disposed(&LIS);
         NewKernel = nullptr;
       }
       LastPro->clear();
@@ -1055,8 +1056,8 @@ void ModuloScheduleExpander::updateInstruction(MachineInstr *NewMI,
         // Make an adjustment to get the last definition.
         StageNum -= StageDiff;
       }
-      if (VRMap[StageNum].count(reg))
-        MO.setReg(VRMap[StageNum][reg]);
+      if (auto It = VRMap[StageNum].find(reg); It != VRMap[StageNum].end())
+        MO.setReg(It->second);
     }
   }
 }
@@ -1710,8 +1711,8 @@ void PeelingModuloScheduleExpander::moveStageBetweenBlocks(
     for (MachineOperand &MO : I->uses()) {
       if (!MO.isReg())
         continue;
-      if (Remaps.count(MO.getReg()))
-        MO.setReg(Remaps[MO.getReg()]);
+      if (auto It = Remaps.find(MO.getReg()); It != Remaps.end())
+        MO.setReg(It->second);
       else {
         // If we are using a phi from the source block we need to add a new phi
         // pointing to the old one.

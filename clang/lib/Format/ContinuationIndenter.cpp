@@ -148,6 +148,7 @@ static bool startsNextOperand(const FormatToken &Current) {
 static bool mustBreakBinaryOperation(const FormatToken &Current,
                                      const FormatStyle &Style) {
   return Style.BreakBinaryOperations != FormatStyle::BBO_Never &&
+         Current.CanBreakBefore &&
          (Style.BreakBeforeBinaryOperators == FormatStyle::BOS_None
               ? startsNextOperand
               : isAlignableBinaryOperator)(Current);
@@ -346,6 +347,13 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
       if (State.Column - State.FirstIndent < 6)
         return false;
     }
+  }
+
+  // Allow breaking before the right parens with block indentation if there was
+  // a break after the left parens, which is tracked by BreakBeforeClosingParen.
+  if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent &&
+      Current.is(tok::r_paren)) {
+    return CurrentState.BreakBeforeClosingParen;
   }
 
   // Don't allow breaking before a closing brace of a block-indented braced list

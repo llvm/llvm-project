@@ -4853,7 +4853,10 @@ bool AMDGPUAsmParser::validateAGPRLdSt(const MCInst &Inst) const {
 
 bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
   auto FB = getFeatureBits();
-  if (!FB[AMDGPU::FeatureGFX90AInsts])
+  unsigned Opc = Inst.getOpcode();
+  // DS_READ_B96_TR_B6 is the only DS instruction in GFX950, that allows
+  // unaligned VGPR. All others only allow even aligned VGPRs.
+  if (!(FB[AMDGPU::FeatureGFX90AInsts]) || Opc == AMDGPU::DS_READ_B96_TR_B6_vi)
     return true;
 
   const MCRegisterInfo *MRI = getMRI();
@@ -9760,10 +9763,14 @@ unsigned AMDGPUAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
   case MCK_SReg_64:
   case MCK_SReg_64_XEXEC:
     // Null is defined as a 32-bit register but
-    // it should also be enabled with 64-bit operands.
-    // The following code enables it for SReg_64 operands
+    // it should also be enabled with 64-bit operands or larger.
+    // The following code enables it for SReg_64 and larger operands
     // used as source and destination. Remaining source
     // operands are handled in isInlinableImm.
+  case MCK_SReg_96:
+  case MCK_SReg_128:
+  case MCK_SReg_256:
+  case MCK_SReg_512:
     return Operand.isNull() ? Match_Success : Match_InvalidOperand;
   default:
     return Match_InvalidOperand;

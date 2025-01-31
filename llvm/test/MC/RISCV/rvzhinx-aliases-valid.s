@@ -1,8 +1,8 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+zhinx -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+zhinx -M no-aliases \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+zhinx \
 # RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+zhinx -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+zhinx -M no-aliases \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+zhinx \
 # RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s

@@ -216,10 +216,29 @@ class MemDGNode final : public DGNode {
   /// Memory predecessors.
   DenseSet<MemDGNode *> MemPreds;
   friend class PredIterator; // For MemPreds.
-
-  void setNextNode(MemDGNode *N) { NextMemN = N; }
-  void setPrevNode(MemDGNode *N) { PrevMemN = N; }
+  /// Creates both edges: this<->N.
+  void setNextNode(MemDGNode *N) {
+    assert(N != this && "About to point to self!");
+    NextMemN = N;
+    if (NextMemN != nullptr)
+      NextMemN->PrevMemN = this;
+  }
+  /// Creates both edges: N<->this.
+  void setPrevNode(MemDGNode *N) {
+    assert(N != this && "About to point to self!");
+    PrevMemN = N;
+    if (PrevMemN != nullptr)
+      PrevMemN->NextMemN = this;
+  }
   friend class DependencyGraph; // For setNextNode(), setPrevNode().
+  void detachFromChain() {
+    if (PrevMemN != nullptr)
+      PrevMemN->NextMemN = NextMemN;
+    if (NextMemN != nullptr)
+      NextMemN->PrevMemN = PrevMemN;
+    PrevMemN = nullptr;
+    NextMemN = nullptr;
+  }
 
 public:
   MemDGNode(Instruction *I) : DGNode(I, DGNodeID::MemDGNode) {
@@ -293,6 +312,7 @@ private:
   Context *Ctx = nullptr;
   std::optional<Context::CallbackID> CreateInstrCB;
   std::optional<Context::CallbackID> EraseInstrCB;
+  std::optional<Context::CallbackID> MoveInstrCB;
 
   std::unique_ptr<BatchAAResults> BatchAA;
 
@@ -330,19 +350,24 @@ private:
   void createNewNodes(const Interval<Instruction> &NewInterval);
 
   /// Helper for `notify*Instr()`. \Returns the first MemDGNode that comes
-  /// before \p N, including or excluding \p N based on \p IncludingN, or
-  /// nullptr if not found.
-  MemDGNode *getMemDGNodeBefore(DGNode *N, bool IncludingN) const;
+  /// before \p N, skipping \p SkipN, including or excluding \p N based on
+  /// \p IncludingN, or nullptr if not found.
+  MemDGNode *getMemDGNodeBefore(DGNode *N, bool IncludingN,
+                                MemDGNode *SkipN = nullptr) const;
   /// Helper for `notifyMoveInstr()`. \Returns the first MemDGNode that comes
-  /// after \p N, including or excluding \p N based on \p IncludingN, or nullptr
-  /// if not found.
-  MemDGNode *getMemDGNodeAfter(DGNode *N, bool IncludingN) const;
+  /// after \p N, skipping \p SkipN, including or excluding \p N based on \p
+  /// IncludingN, or nullptr if not found.
+  MemDGNode *getMemDGNodeAfter(DGNode *N, bool IncludingN,
+                               MemDGNode *SkipN = nullptr) const;
 
   /// Called by the callbacks when a new instruction \p I has been created.
   void notifyCreateInstr(Instruction *I);
   /// Called by the callbacks when instruction \p I is about to get
   /// deleted.
   void notifyEraseInstr(Instruction *I);
+  /// Called by the callbacks when instruction \p I is about to be moved to
+  /// \p To.
+  void notifyMoveInstr(Instruction *I, const BBIterator &To);
 
 public:
   /// This constructor also registers callbacks.
@@ -352,12 +377,18 @@ public:
         [this](Instruction *I) { notifyCreateInstr(I); });
     EraseInstrCB = Ctx.registerEraseInstrCallback(
         [this](Instruction *I) { notifyEraseInstr(I); });
+    MoveInstrCB = Ctx.registerMoveInstrCallback(
+        [this](Instruction *I, const BBIterator &To) {
+          notifyMoveInstr(I, To);
+        });
   }
   ~DependencyGraph() {
     if (CreateInstrCB)
       Ctx->unregisterCreateInstrCallback(*CreateInstrCB);
     if (EraseInstrCB)
       Ctx->unregisterEraseInstrCallback(*EraseInstrCB);
+    if (MoveInstrCB)
+      Ctx->unregisterMoveInstrCallback(*MoveInstrCB);
   }
 
   DGNode *getNode(Instruction *I) const {
@@ -390,6 +421,13 @@ public:
     DAGInterval = {};
   }
 #ifndef NDEBUG
+  /// \Returns true if the DAG's state is clear. Used in assertions.
+  bool empty() const {
+    bool IsEmpty = InstrToNodeMap.empty();
+    assert(IsEmpty == DAGInterval.empty() &&
+           "Interval and InstrToNodeMap out of sync!");
+    return IsEmpty;
+  }
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
 #endif // NDEBUG

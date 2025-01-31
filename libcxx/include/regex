@@ -789,8 +789,9 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 } // std
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/regex>
+#else
 #  include <__algorithm/find.h>
 #  include <__algorithm/search.h>
 #  include <__assert>
@@ -4228,7 +4229,8 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator==(const sub_match<_BiIter>& __x, cons
 
 #  if _LIBCPP_STD_VER >= 20
 template <class _BiIter>
-using __sub_match_cat = compare_three_way_result_t<basic_string<typename iterator_traits<_BiIter>::value_type>>;
+using __sub_match_cat _LIBCPP_NODEBUG =
+    compare_three_way_result_t<basic_string<typename iterator_traits<_BiIter>::value_type>>;
 
 template <class _BiIter>
 _LIBCPP_HIDE_FROM_ABI auto operator<=>(const sub_match<_BiIter>& __x, const sub_match<_BiIter>& __y) {
@@ -5546,9 +5548,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI bool operator==(const regex_token_iterator& __x) const;
 #  if _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDE_FROM_ABI bool operator==(default_sentinel_t) const {
-    return *this == regex_token_iterator();
-  }
+  _LIBCPP_HIDE_FROM_ABI bool operator==(default_sentinel_t) const { return *this == regex_token_iterator(); }
 #  endif
 #  if _LIBCPP_STD_VER < 20
   _LIBCPP_HIDE_FROM_ABI bool operator!=(const regex_token_iterator& __x) const { return !(*this == __x); }
@@ -5834,6 +5834,6 @@ _LIBCPP_POP_MACROS
 #    include <typeinfo>
 #    include <utility>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_REGEX

@@ -871,14 +871,11 @@ const char *
 WebAssemblyTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch (static_cast<WebAssemblyISD::NodeType>(Opcode)) {
   case WebAssemblyISD::FIRST_NUMBER:
-  case WebAssemblyISD::FIRST_MEM_OPCODE:
     break;
 #define HANDLE_NODETYPE(NODE)                                                  \
   case WebAssemblyISD::NODE:                                                   \
     return "WebAssemblyISD::" #NODE;
-#define HANDLE_MEM_NODETYPE(NODE) HANDLE_NODETYPE(NODE)
 #include "WebAssemblyISD.def"
-#undef HANDLE_MEM_NODETYPE
 #undef HANDLE_NODETYPE
   }
   return nullptr;
@@ -1432,7 +1429,8 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
 bool WebAssemblyTargetLowering::CanLowerReturn(
     CallingConv::ID /*CallConv*/, MachineFunction & /*MF*/, bool /*IsVarArg*/,
     const SmallVectorImpl<ISD::OutputArg> &Outs,
-    LLVMContext & /*Context*/) const {
+    LLVMContext & /*Context*/,
+    const Type *RetTy) const {
   // WebAssembly can only handle returning tuples with multivalue enabled
   return WebAssembly::canLowerReturn(Outs.size(), Subtarget);
 }

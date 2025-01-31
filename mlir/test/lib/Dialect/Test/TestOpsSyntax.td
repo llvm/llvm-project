@@ -88,12 +88,12 @@ def OIListTrivial : TEST_Op<"oilist_with_keywords_only"> {
 
 // Ops related to OIList primitive
 def OIListTrivialProperties : TEST_Op<"oilist_with_keywords_only_properties"> {
-  let arguments = (ins UnitProperty:$keyword, UnitProperty:$otherKeyword,
-                       UnitProperty:$diffNameUnitPropertyKeyword);
+  let arguments = (ins UnitProp:$keyword, UnitProp:$otherKeyword,
+                       UnitProp:$diffNameUnitPropKeyword);
   let assemblyFormat = [{
     oilist( `keyword` $keyword
           | `otherKeyword` $otherKeyword
-          | `thirdKeyword` $diffNameUnitPropertyKeyword) attr-dict
+          | `thirdKeyword` $diffNameUnitPropKeyword) attr-dict
   }];
 }
 
@@ -404,13 +404,13 @@ def FormatOptionalUnitAttrNoElide
 }
 
 def FormatOptionalUnitProperty : TEST_Op<"format_optional_unit_property"> {
-  let arguments = (ins UnitProperty:$is_optional);
+  let arguments = (ins UnitProp:$is_optional);
   let assemblyFormat = "(`is_optional` $is_optional^)? attr-dict";
 }
 
 def FormatOptionalUnitPropertyNoElide
     : TEST_Op<"format_optional_unit_property_no_elide"> {
-  let arguments = (ins UnitProperty:$is_optional);
+  let arguments = (ins UnitProp:$is_optional);
   let assemblyFormat = "($is_optional^)? attr-dict";
 }
 
@@ -433,8 +433,8 @@ def FormatOptionalWithElse : TEST_Op<"format_optional_else"> {
 
 def FormatOptionalPropDict : TEST_Op<"format_optional_prop_dict"> {
   let arguments = (ins
-    OptionalProperty<StringProperty>:$a,
-    DefaultValuedProperty<I32Property, "1">:$b);
+    OptionalProp<StringProp>:$a,
+    DefaultValuedProp<I32Prop, "1">:$b);
   let assemblyFormat = "prop-dict attr-dict";
 }
 

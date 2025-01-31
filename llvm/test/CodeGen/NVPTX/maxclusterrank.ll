@@ -11,16 +11,15 @@ target triple = "nvptx64-unknown-unknown"
 
 ; Make sure that for SM version prior to 90 `.maxclusterrank` directive is
 ; sielently ignored.
-define dso_local void @_Z18TestMaxClusterRankv() {
+define dso_local ptx_kernel void @_Z18TestMaxClusterRankv() {
 entry:
   %a = alloca i32, align 4
   store volatile i32 1, ptr %a, align 4
   ret void
 }
 
-!nvvm.annotations = !{!0, !1, !2, !3}
+!nvvm.annotations = !{!1, !2, !3}
 
-!0 = !{ptr @_Z18TestMaxClusterRankv, !"kernel", i32 1}
 !1 = !{ptr @_Z18TestMaxClusterRankv, !"maxntidx", i32 128}
 !2 = !{ptr @_Z18TestMaxClusterRankv, !"minctasm", i32 2}
 !3 = !{ptr @_Z18TestMaxClusterRankv, !"maxclusterrank", i32 8}

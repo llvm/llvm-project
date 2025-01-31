@@ -358,7 +358,14 @@ public:
     //    void *__saved_reg_area_end_pointer;
     //    void *__overflow_area_pointer;
     //} va_list;
-    HexagonBuiltinVaList
+    HexagonBuiltinVaList,
+
+    // typedef struct __va_list_tag {
+    //    int* __va_stk;
+    //    int* __va_reg;
+    //    int __va_ndx;
+    //} va_list;
+    XtensaABIBuiltinVaList
   };
 
 protected:
@@ -1016,7 +1023,8 @@ public:
 
   /// Returns target-specific min and max values VScale_Range.
   virtual std::optional<std::pair<unsigned, unsigned>>
-  getVScaleRange(const LangOptions &LangOpts) const {
+  getVScaleRange(const LangOptions &LangOpts,
+                 bool IsArmStreamingFunction) const {
     return std::nullopt;
   }
   /// The __builtin_clz* and __builtin_ctz* built-in
@@ -1524,7 +1532,7 @@ public:
 
   // Return the target-specific priority for features/cpus/vendors so
   // that they can be properly sorted for checking.
-  virtual unsigned getFMVPriority(ArrayRef<StringRef> Features) const {
+  virtual uint64_t getFMVPriority(ArrayRef<StringRef> Features) const {
     return 0;
   }
 

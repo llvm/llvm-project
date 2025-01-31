@@ -366,14 +366,26 @@ public:
   /// @name Normalization
   /// @{
 
+  /// Canonical form
+  enum class CanonicalForm {
+    ANY = 0,
+    THREE_IDENT = 3, // ARCHITECTURE-VENDOR-OPERATING_SYSTEM
+    FOUR_IDENT = 4,  // ARCHITECTURE-VENDOR-OPERATING_SYSTEM-ENVIRONMENT
+    FIVE_IDENT = 5,  // ARCHITECTURE-VENDOR-OPERATING_SYSTEM-ENVIRONMENT-FORMAT
+  };
+
   /// Turn an arbitrary machine specification into the canonical triple form (or
   /// something sensible that the Triple class understands if nothing better can
   /// reasonably be done).  In particular, it handles the common case in which
-  /// otherwise valid components are in the wrong order.
-  static std::string normalize(StringRef Str);
+  /// otherwise valid components are in the wrong order. \p Form is used to
+  /// specify the output canonical form.
+  static std::string normalize(StringRef Str,
+                               CanonicalForm Form = CanonicalForm::ANY);
 
   /// Return the normalized form of this triple's string.
-  std::string normalize() const { return normalize(Data); }
+  std::string normalize(CanonicalForm Form = CanonicalForm::ANY) const {
+    return normalize(Data, Form);
+  }
 
   /// @}
   /// @name Typed Component Access
@@ -486,6 +498,9 @@ public:
     return getArchPointerBitWidth(getArch());
   }
 
+  /// Returns the trampoline size in bytes for this configuration.
+  unsigned getTrampolineSize() const;
+
   /// Test whether the architecture is 64-bit
   ///
   /// Note that this tests for 64-bit pointer width, and nothing else. Note
@@ -564,6 +579,11 @@ public:
 
   bool isOSzOS() const { return getOS() == Triple::ZOS; }
 
+  /// Is this an Apple MachO triple.
+  bool isAppleMachO() const {
+    return (getVendor() == Triple::Apple) && isOSBinFormatMachO();
+  }
+
   /// Is this a "Darwin" OS (macOS, iOS, tvOS, watchOS, XROS, or DriverKit).
   bool isOSDarwin() const {
     return isMacOSX() || isiOS() || isWatchOS() || isDriverKit() || isXROS();
@@ -635,6 +655,9 @@ public:
   bool isOSWindows() const {
     return getOS() == Triple::Win32;
   }
+
+  /// Tests whether the OS is Windows or UEFI.
+  bool isOSWindowsOrUEFI() const { return isOSWindows() || isUEFI(); }
 
   /// Checks if the environment is MSVC.
   bool isKnownWindowsMSVCEnvironment() const {
@@ -845,6 +868,9 @@ public:
     return getArch() == Triple::spirv32 || getArch() == Triple::spirv64 ||
            getArch() == Triple::spirv;
   }
+
+  // Tests whether the target is SPIR-V or SPIR.
+  bool isSPIROrSPIRV() const { return isSPIR() || isSPIRV(); }
 
   /// Tests whether the target is SPIR-V Logical
   bool isSPIRVLogical() const {
@@ -1097,9 +1123,10 @@ public:
            isWindowsCygwinEnvironment() || isOHOSFamily();
   }
 
-  /// True if the target supports both general-dynamic and TLSDESC, and TLSDESC
-  /// is enabled by default.
-  bool hasDefaultTLSDESC() const { return isAndroid() && isRISCV64(); }
+  /// True if the target uses TLSDESC by default.
+  bool hasDefaultTLSDESC() const {
+    return isAArch64() || (isAndroid() && isRISCV64()) || isOSFuchsia();
+  }
 
   /// Tests whether the target uses -data-sections as default.
   bool hasDefaultDataSections() const {

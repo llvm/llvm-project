@@ -16,6 +16,8 @@ namespace llvm {
 class NVPTXSelectionDAGInfo : public SelectionDAGTargetInfo {
 public:
   ~NVPTXSelectionDAGInfo() override;
+
+  bool isTargetMemoryOpcode(unsigned Opcode) const override;
 };
 
 } // namespace llvm

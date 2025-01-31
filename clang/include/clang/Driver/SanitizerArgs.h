@@ -26,6 +26,7 @@ class SanitizerArgs {
   SanitizerSet RecoverableSanitizers;
   SanitizerSet TrapSanitizers;
   SanitizerSet MergeHandlers;
+  SanitizerMaskCutoffs SkipHotCutoffs;
 
   std::vector<std::string> UserIgnorelistFiles;
   std::vector<std::string> SystemIgnorelistFiles;
@@ -99,6 +100,7 @@ public:
   }
   bool needsFuzzerInterceptors() const;
   bool needsUbsanRt() const;
+  bool needsUbsanCXXRt() const;
   bool requiresMinimalRuntime() const { return MinimalRuntime; }
   bool needsDfsanRt() const { return Sanitizers.has(SanitizerKind::DataFlow); }
   bool needsSafeStackRt() const { return SafeStackRuntime; }

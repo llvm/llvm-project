@@ -184,17 +184,14 @@ define half @test_atomicrmw_fmin_f16_seq_cst_align4(ptr %ptr, half %value) #0 {
 define bfloat @test_atomicrmw_fmin_bf16_seq_cst_align2(ptr %ptr, bfloat %value) #0 {
 ; NOLSE-LABEL: test_atomicrmw_fmin_bf16_seq_cst_align2:
 ; NOLSE:       // %bb.0:
-; NOLSE-NEXT:    // kill: def $h0 killed $h0 def $s0
-; NOLSE-NEXT:    fmov w9, s0
+; NOLSE-NEXT:    // kill: def $h0 killed $h0 def $d0
+; NOLSE-NEXT:    shll v1.4s, v0.4h, #16
 ; NOLSE-NEXT:    mov w8, #32767 // =0x7fff
-; NOLSE-NEXT:    lsl w9, w9, #16
-; NOLSE-NEXT:    fmov s1, w9
 ; NOLSE-NEXT:  .LBB2_1: // %atomicrmw.start
 ; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; NOLSE-NEXT:    ldaxrh w9, [x0]
 ; NOLSE-NEXT:    fmov s0, w9
-; NOLSE-NEXT:    lsl w9, w9, #16
-; NOLSE-NEXT:    fmov s2, w9
+; NOLSE-NEXT:    shll v2.4s, v0.4h, #16
 ; NOLSE-NEXT:    fminnm s2, s2, s1
 ; NOLSE-NEXT:    fmov w9, s2
 ; NOLSE-NEXT:    ubfx w10, w9, #16, #1
@@ -204,36 +201,34 @@ define bfloat @test_atomicrmw_fmin_bf16_seq_cst_align2(ptr %ptr, bfloat %value) 
 ; NOLSE-NEXT:    stlxrh w10, w9, [x0]
 ; NOLSE-NEXT:    cbnz w10, .LBB2_1
 ; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
-; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $d0
 ; NOLSE-NEXT:    ret
 ;
 ; LSE-LABEL: test_atomicrmw_fmin_bf16_seq_cst_align2:
 ; LSE:       // %bb.0:
-; LSE-NEXT:    // kill: def $h0 killed $h0 def $s0
-; LSE-NEXT:    fmov w9, s0
+; LSE-NEXT:    // kill: def $h0 killed $h0 def $d0
+; LSE-NEXT:    shll v1.4s, v0.4h, #16
 ; LSE-NEXT:    mov w8, #32767 // =0x7fff
 ; LSE-NEXT:    ldr h0, [x0]
-; LSE-NEXT:    lsl w9, w9, #16
-; LSE-NEXT:    fmov s1, w9
 ; LSE-NEXT:  .LBB2_1: // %atomicrmw.start
 ; LSE-NEXT:    // =>This Inner Loop Header: Depth=1
-; LSE-NEXT:    fmov w9, s0
-; LSE-NEXT:    lsl w9, w9, #16
-; LSE-NEXT:    fmov s2, w9
+; LSE-NEXT:    shll v2.4s, v0.4h, #16
 ; LSE-NEXT:    fminnm s2, s2, s1
 ; LSE-NEXT:    fmov w9, s2
 ; LSE-NEXT:    ubfx w10, w9, #16, #1
 ; LSE-NEXT:    add w9, w9, w8
 ; LSE-NEXT:    add w9, w10, w9
-; LSE-NEXT:    fmov w10, s0
 ; LSE-NEXT:    lsr w9, w9, #16
-; LSE-NEXT:    mov w11, w10
-; LSE-NEXT:    casalh w11, w9, [x0]
+; LSE-NEXT:    fmov s2, w9
+; LSE-NEXT:    fmov w9, s0
+; LSE-NEXT:    fmov w10, s2
+; LSE-NEXT:    mov w11, w9
+; LSE-NEXT:    casalh w11, w10, [x0]
 ; LSE-NEXT:    fmov s0, w11
-; LSE-NEXT:    cmp w11, w10, uxth
+; LSE-NEXT:    cmp w11, w9, uxth
 ; LSE-NEXT:    b.ne .LBB2_1
 ; LSE-NEXT:  // %bb.2: // %atomicrmw.end
-; LSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; LSE-NEXT:    // kill: def $h0 killed $h0 killed $d0
 ; LSE-NEXT:    ret
 ;
 ; SOFTFP-NOLSE-LABEL: test_atomicrmw_fmin_bf16_seq_cst_align2:
@@ -283,17 +278,14 @@ define bfloat @test_atomicrmw_fmin_bf16_seq_cst_align2(ptr %ptr, bfloat %value) 
 define bfloat @test_atomicrmw_fmin_bf16_seq_cst_align4(ptr %ptr, bfloat %value) #0 {
 ; NOLSE-LABEL: test_atomicrmw_fmin_bf16_seq_cst_align4:
 ; NOLSE:       // %bb.0:
-; NOLSE-NEXT:    // kill: def $h0 killed $h0 def $s0
-; NOLSE-NEXT:    fmov w9, s0
+; NOLSE-NEXT:    // kill: def $h0 killed $h0 def $d0
+; NOLSE-NEXT:    shll v1.4s, v0.4h, #16
 ; NOLSE-NEXT:    mov w8, #32767 // =0x7fff
-; NOLSE-NEXT:    lsl w9, w9, #16
-; NOLSE-NEXT:    fmov s1, w9
 ; NOLSE-NEXT:  .LBB3_1: // %atomicrmw.start
 ; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; NOLSE-NEXT:    ldaxrh w9, [x0]
 ; NOLSE-NEXT:    fmov s0, w9
-; NOLSE-NEXT:    lsl w9, w9, #16
-; NOLSE-NEXT:    fmov s2, w9
+; NOLSE-NEXT:    shll v2.4s, v0.4h, #16
 ; NOLSE-NEXT:    fminnm s2, s2, s1
 ; NOLSE-NEXT:    fmov w9, s2
 ; NOLSE-NEXT:    ubfx w10, w9, #16, #1
@@ -303,36 +295,34 @@ define bfloat @test_atomicrmw_fmin_bf16_seq_cst_align4(ptr %ptr, bfloat %value) 
 ; NOLSE-NEXT:    stlxrh w10, w9, [x0]
 ; NOLSE-NEXT:    cbnz w10, .LBB3_1
 ; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
-; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $d0
 ; NOLSE-NEXT:    ret
 ;
 ; LSE-LABEL: test_atomicrmw_fmin_bf16_seq_cst_align4:
 ; LSE:       // %bb.0:
-; LSE-NEXT:    // kill: def $h0 killed $h0 def $s0
-; LSE-NEXT:    fmov w9, s0
+; LSE-NEXT:    // kill: def $h0 killed $h0 def $d0
+; LSE-NEXT:    shll v1.4s, v0.4h, #16
 ; LSE-NEXT:    mov w8, #32767 // =0x7fff
 ; LSE-NEXT:    ldr h0, [x0]
-; LSE-NEXT:    lsl w9, w9, #16
-; LSE-NEXT:    fmov s1, w9
 ; LSE-NEXT:  .LBB3_1: // %atomicrmw.start
 ; LSE-NEXT:    // =>This Inner Loop Header: Depth=1
-; LSE-NEXT:    fmov w9, s0
-; LSE-NEXT:    lsl w9, w9, #16
-; LSE-NEXT:    fmov s2, w9
+; LSE-NEXT:    shll v2.4s, v0.4h, #16
 ; LSE-NEXT:    fminnm s2, s2, s1
 ; LSE-NEXT:    fmov w9, s2
 ; LSE-NEXT:    ubfx w10, w9, #16, #1
 ; LSE-NEXT:    add w9, w9, w8
 ; LSE-NEXT:    add w9, w10, w9
-; LSE-NEXT:    fmov w10, s0
 ; LSE-NEXT:    lsr w9, w9, #16
-; LSE-NEXT:    mov w11, w10
-; LSE-NEXT:    casalh w11, w9, [x0]
+; LSE-NEXT:    fmov s2, w9
+; LSE-NEXT:    fmov w9, s0
+; LSE-NEXT:    fmov w10, s2
+; LSE-NEXT:    mov w11, w9
+; LSE-NEXT:    casalh w11, w10, [x0]
 ; LSE-NEXT:    fmov s0, w11
-; LSE-NEXT:    cmp w11, w10, uxth
+; LSE-NEXT:    cmp w11, w9, uxth
 ; LSE-NEXT:    b.ne .LBB3_1
 ; LSE-NEXT:  // %bb.2: // %atomicrmw.end
-; LSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; LSE-NEXT:    // kill: def $h0 killed $h0 killed $d0
 ; LSE-NEXT:    ret
 ;
 ; SOFTFP-NOLSE-LABEL: test_atomicrmw_fmin_bf16_seq_cst_align4:
@@ -653,31 +643,23 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_seq_cst_align4(ptr %ptr, <2 x bf
 ; NOLSE-LABEL: test_atomicrmw_fmin_v2bf16_seq_cst_align4:
 ; NOLSE:       // %bb.0:
 ; NOLSE-NEXT:    // kill: def $d0 killed $d0 def $q0
-; NOLSE-NEXT:    mov h1, v0.h[1]
-; NOLSE-NEXT:    fmov w10, s0
+; NOLSE-NEXT:    dup v1.4h, v0.h[1]
 ; NOLSE-NEXT:    mov w8, #32767 // =0x7fff
-; NOLSE-NEXT:    lsl w10, w10, #16
-; NOLSE-NEXT:    fmov w9, s1
-; NOLSE-NEXT:    fmov s1, w10
-; NOLSE-NEXT:    lsl w9, w9, #16
-; NOLSE-NEXT:    fmov s0, w9
+; NOLSE-NEXT:    shll v0.4s, v0.4h, #16
+; NOLSE-NEXT:    shll v1.4s, v1.4h, #16
 ; NOLSE-NEXT:  .LBB7_1: // %atomicrmw.start
 ; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; NOLSE-NEXT:    ldaxr w9, [x0]
 ; NOLSE-NEXT:    fmov s2, w9
-; NOLSE-NEXT:    mov h3, v2.h[1]
-; NOLSE-NEXT:    fmov w11, s2
-; NOLSE-NEXT:    lsl w11, w11, #16
-; NOLSE-NEXT:    fmov w10, s3
-; NOLSE-NEXT:    fmov s3, w11
-; NOLSE-NEXT:    lsl w10, w10, #16
-; NOLSE-NEXT:    fminnm s3, s3, s1
-; NOLSE-NEXT:    fmov s2, w10
+; NOLSE-NEXT:    dup v3.4h, v2.h[1]
+; NOLSE-NEXT:    shll v2.4s, v2.4h, #16
 ; NOLSE-NEXT:    fminnm s2, s2, s0
-; NOLSE-NEXT:    fmov w11, s3
+; NOLSE-NEXT:    shll v3.4s, v3.4h, #16
+; NOLSE-NEXT:    fminnm s3, s3, s1
+; NOLSE-NEXT:    fmov w11, s2
 ; NOLSE-NEXT:    ubfx w13, w11, #16, #1
 ; NOLSE-NEXT:    add w11, w11, w8
-; NOLSE-NEXT:    fmov w10, s2
+; NOLSE-NEXT:    fmov w10, s3
 ; NOLSE-NEXT:    add w11, w13, w11
 ; NOLSE-NEXT:    lsr w11, w11, #16
 ; NOLSE-NEXT:    ubfx w12, w10, #16, #1
@@ -697,25 +679,17 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_seq_cst_align4(ptr %ptr, <2 x bf
 ; LSE-LABEL: test_atomicrmw_fmin_v2bf16_seq_cst_align4:
 ; LSE:       // %bb.0:
 ; LSE-NEXT:    // kill: def $d0 killed $d0 def $q0
-; LSE-NEXT:    mov h1, v0.h[1]
-; LSE-NEXT:    fmov w10, s0
+; LSE-NEXT:    dup v1.4h, v0.h[1]
+; LSE-NEXT:    shll v2.4s, v0.4h, #16
 ; LSE-NEXT:    mov w8, #32767 // =0x7fff
 ; LSE-NEXT:    ldr s0, [x0]
-; LSE-NEXT:    lsl w10, w10, #16
-; LSE-NEXT:    fmov w9, s1
-; LSE-NEXT:    fmov s2, w10
-; LSE-NEXT:    lsl w9, w9, #16
-; LSE-NEXT:    fmov s1, w9
+; LSE-NEXT:    shll v1.4s, v1.4h, #16
 ; LSE-NEXT:  .LBB7_1: // %atomicrmw.start
 ; LSE-NEXT:    // =>This Inner Loop Header: Depth=1
-; LSE-NEXT:    mov h3, v0.h[1]
-; LSE-NEXT:    fmov w10, s0
-; LSE-NEXT:    lsl w10, w10, #16
-; LSE-NEXT:    fmov w9, s3
-; LSE-NEXT:    fmov s4, w10
-; LSE-NEXT:    lsl w9, w9, #16
+; LSE-NEXT:    dup v3.4h, v0.h[1]
+; LSE-NEXT:    shll v4.4s, v0.4h, #16
 ; LSE-NEXT:    fminnm s4, s4, s2
-; LSE-NEXT:    fmov s3, w9
+; LSE-NEXT:    shll v3.4s, v3.4h, #16
 ; LSE-NEXT:    fminnm s3, s3, s1
 ; LSE-NEXT:    fmov w10, s4
 ; LSE-NEXT:    ubfx w12, w10, #16, #1

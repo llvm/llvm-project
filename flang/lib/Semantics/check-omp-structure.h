@@ -73,6 +73,9 @@ public:
 
   void Enter(const parser::OpenMPConstruct &);
   void Leave(const parser::OpenMPConstruct &);
+  void Enter(const parser::OpenMPDeclarativeConstruct &);
+  void Leave(const parser::OpenMPDeclarativeConstruct &);
+
   void Enter(const parser::OpenMPLoopConstruct &);
   void Leave(const parser::OpenMPLoopConstruct &);
   void Enter(const parser::OmpEndLoopDirective &);
@@ -102,8 +105,10 @@ public:
   void Enter(const parser::OmpDeclareTargetWithList &);
   void Enter(const parser::OmpDeclareTargetWithClause &);
   void Leave(const parser::OmpDeclareTargetWithClause &);
-  void Enter(const parser::OpenMPErrorConstruct &);
-  void Leave(const parser::OpenMPErrorConstruct &);
+  void Enter(const parser::OpenMPDispatchConstruct &);
+  void Leave(const parser::OpenMPDispatchConstruct &);
+  void Enter(const parser::OmpErrorDirective &);
+  void Leave(const parser::OmpErrorDirective &);
   void Enter(const parser::OpenMPExecutableAllocate &);
   void Leave(const parser::OpenMPExecutableAllocate &);
   void Enter(const parser::OpenMPAllocatorsConstruct &);
@@ -140,6 +145,15 @@ public:
 
   void Enter(const parser::DoConstruct &);
   void Leave(const parser::DoConstruct &);
+
+  void Enter(const parser::OmpDirectiveSpecification &);
+  void Leave(const parser::OmpDirectiveSpecification &);
+
+  void Enter(const parser::OmpMetadirectiveDirective &);
+  void Leave(const parser::OmpMetadirectiveDirective &);
+
+  void Enter(const parser::OmpContextSelector &);
+  void Leave(const parser::OmpContextSelector &);
 
 #define GEN_FLANG_CLAUSE_CHECK_ENTER
 #include "llvm/Frontend/OpenMP/OMP.inc"
@@ -194,6 +208,8 @@ private:
       const parser::CharBlock &source, const parser::OmpObjectList &objList);
   void CheckIntentInPointer(SymbolSourceMap &, const llvm::omp::Clause);
   void CheckProcedurePointer(SymbolSourceMap &, const llvm::omp::Clause);
+  void CheckCrayPointee(const parser::OmpObjectList &objectList,
+      llvm::StringRef clause, bool suggestToUseCrayPointer = true);
   void GetSymbolsInObjectList(const parser::OmpObjectList &, SymbolSourceMap &);
   void CheckDefinableObjects(SymbolSourceMap &, const llvm::omp::Clause);
   void CheckCopyingPolymorphicAllocatable(
@@ -261,6 +277,8 @@ private:
   void CheckAllowedRequiresClause(llvmOmpClause clause);
   bool deviceConstructFound_{false};
 
+  void CheckAlignValue(const parser::OmpClause &);
+
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }
   int GetDirectiveNest(const int index) { return directiveNest_[index]; }
@@ -270,11 +288,13 @@ private:
       const parser::Variable &, const parser::Expr &);
   inline void ErrIfNonScalarAssignmentStmt(
       const parser::Variable &, const parser::Expr &);
-  enum directiveNestType {
+  enum directiveNestType : int {
     SIMDNest,
     TargetBlockOnlyTeams,
     TargetNest,
-    LastType
+    DeclarativeNest,
+    ContextSelectorNest,
+    LastType = ContextSelectorNest,
   };
   int directiveNest_[LastType + 1] = {0};
 

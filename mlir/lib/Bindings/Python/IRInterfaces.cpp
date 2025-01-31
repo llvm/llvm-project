@@ -6,10 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <nanobind/nanobind.h>
-#include <nanobind/stl/optional.h>
-#include <nanobind/stl/vector.h>
-
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -21,6 +17,7 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/Interfaces.h"
 #include "mlir-c/Support.h"
+#include "mlir/Bindings/Python/Nanobind.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 

@@ -5,7 +5,7 @@
 
 target triple = "nvptx-nvidia-cuda"
 
-define void @foo(ptr noalias readonly %ptr, ptr noalias %retval) {
+define ptx_kernel void @foo(ptr noalias readonly %ptr, ptr noalias %retval) {
 ; CHECK-LABEL: foo(
 ; CHECK:    .reg .b16 %rs<2>;
 ; CHECK:    .reg .b32 %r<4>;
@@ -28,7 +28,3 @@ define void @foo(ptr noalias readonly %ptr, ptr noalias %retval) {
   store i32 %and, ptr %retval
   ret void
 }
-
-!nvvm.annotations = !{!0}
-
-!0 = !{ptr @foo, !"kernel", i32 1}

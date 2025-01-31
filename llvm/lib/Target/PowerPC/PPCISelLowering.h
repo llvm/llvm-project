@@ -36,14 +36,11 @@ namespace llvm {
 
   namespace PPCISD {
 
-    // When adding a NEW PPCISD node please add it to the correct position in
-    // the enum. The order of elements in this enum matters!
-    // Values that are added after this entry:
-    //     STBRX = ISD::FIRST_TARGET_MEMORY_OPCODE
-    // are considered memory opcodes and are treated differently than entries
-    // that come before it. For example, ADD or MUL should be placed before
-    // the ISD::FIRST_TARGET_MEMORY_OPCODE while a LOAD or STORE should come
-    // after it.
+  // When adding a NEW PPCISD node please add it to the correct position in
+  // the enum. The order of elements in this enum matters!
+  // Values that are added between FIRST_MEMORY_OPCODE and LAST_MEMORY_OPCODE
+  // are considered memory opcodes and are treated differently than other
+  // entries.
   enum NodeType : unsigned {
     // Start the numbering where the builtin ops and target ops leave off.
     FIRST_NUMBER = ISD::BUILTIN_OP_END,
@@ -487,7 +484,8 @@ namespace llvm {
     XXMFACC,
 
     // Constrained conversion from floating point to int
-    STRICT_FCTIDZ = ISD::FIRST_TARGET_STRICTFP_OPCODE,
+    FIRST_STRICTFP_OPCODE,
+    STRICT_FCTIDZ = FIRST_STRICTFP_OPCODE,
     STRICT_FCTIWZ,
     STRICT_FCTIDUZ,
     STRICT_FCTIWUZ,
@@ -500,6 +498,7 @@ namespace llvm {
 
     /// Constrained floating point add in round-to-zero mode.
     STRICT_FADDRTZ,
+    LAST_STRICTFP_OPCODE = STRICT_FADDRTZ,
 
     /// SETBC - The ISA 3.1 (P10) SETBC instruction.
     SETBC,
@@ -516,7 +515,8 @@ namespace llvm {
     /// byte-swapping store instruction.  It byte-swaps the low "Type" bits of
     /// the GPRC input, then stores it through Ptr.  Type can be either i16 or
     /// i32.
-    STBRX = ISD::FIRST_TARGET_MEMORY_OPCODE,
+    FIRST_MEMORY_OPCODE,
+    STBRX = FIRST_MEMORY_OPCODE,
 
     /// GPRC, CHAIN = LBRX CHAIN, Ptr, Type - This is a
     /// byte-swapping load instruction.  It loads "Type" bits, byte swaps it,
@@ -607,7 +607,8 @@ namespace llvm {
     /// GPRC = TOC_ENTRY GA, TOC
     /// Loads the entry for GA from the TOC, where the TOC base is given by
     /// the last operand.
-    TOC_ENTRY
+    TOC_ENTRY,
+    LAST_MEMORY_OPCODE = TOC_ENTRY,
   };
 
   } // end namespace PPCISD
@@ -1225,8 +1226,6 @@ namespace llvm {
     bool canReuseLoadAddress(SDValue Op, EVT MemVT, ReuseLoadInfo &RLI,
                              SelectionDAG &DAG,
                              ISD::LoadExtType ET = ISD::NON_EXTLOAD) const;
-    void spliceIntoChain(SDValue ResChain, SDValue NewResChain,
-                         SelectionDAG &DAG) const;
 
     void LowerFP_TO_INTForReuse(SDValue Op, ReuseLoadInfo &RLI,
                                 SelectionDAG &DAG, const SDLoc &dl) const;
@@ -1372,7 +1371,7 @@ namespace llvm {
     bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                         bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                        LLVMContext &Context) const override;
+                        LLVMContext &Context, const Type *RetTy) const override;
 
     SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,

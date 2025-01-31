@@ -7,20 +7,14 @@ define void @test(i1 %c, ptr %arg) {
 ; CHECK:       if:
 ; CHECK-NEXT:    [[ARG2_2:%.*]] = getelementptr inbounds i8, ptr [[ARG:%.*]], i64 24
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[ARG]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr [[ARG2_2]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i64> @llvm.vector.insert.v4i64.v2i64(<4 x i64> poison, <2 x i64> [[TMP4]], i64 0)
-; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i64> @llvm.vector.insert.v4i64.v2i64(<4 x i64> [[TMP5]], <2 x i64> [[TMP2]], i64 2)
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> [[TMP1]], <4 x i32> <i32 1, i32 0, i32 3, i32 2>
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[ARG_2:%.*]] = getelementptr inbounds i8, ptr [[ARG]], i64 24
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i64>, ptr [[ARG]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i64> [[TMP7]], <2 x i64> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x i64>, ptr [[ARG_2]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i64> [[TMP9]], <2 x i64> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP11:%.*]] = call <4 x i64> @llvm.vector.insert.v4i64.v2i64(<4 x i64> poison, <2 x i64> [[TMP10]], i64 0)
-; CHECK-NEXT:    [[TMP12:%.*]] = call <4 x i64> @llvm.vector.insert.v4i64.v2i64(<4 x i64> [[TMP11]], <2 x i64> [[TMP8]], i64 2)
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i64> [[TMP9]], <2 x i64> [[TMP7]], <4 x i32> <i32 1, i32 0, i32 3, i32 2>
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
 ; CHECK-NEXT:    [[TMP13:%.*]] = phi <4 x i64> [ [[TMP6]], [[IF]] ], [ [[TMP12]], [[ELSE]] ]

@@ -96,8 +96,9 @@ using namespace PatternMatch;
 cl::opt<bool> llvm::RequireAndPreserveDomTree(
     "simplifycfg-require-and-preserve-domtree", cl::Hidden,
 
-    cl::desc("Temorary development switch used to gradually uplift SimplifyCFG "
-             "into preserving DomTree,"));
+    cl::desc(
+        "Temporary development switch used to gradually uplift SimplifyCFG "
+        "into preserving DomTree,"));
 
 // Chosen as 2 so as to be cheap, but still to have enough power to fold
 // a select, so the "clamp" idiom (of a min followed by a max) will be caught.
@@ -126,7 +127,7 @@ static cl::opt<bool> HoistLoadsStoresWithCondFaulting(
 
 static cl::opt<unsigned> HoistLoadsStoresWithCondFaultingThreshold(
     "hoist-loads-stores-with-cond-faulting-threshold", cl::Hidden, cl::init(6),
-    cl::desc("Control the maximal conditonal load/store that we are willing "
+    cl::desc("Control the maximal conditional load/store that we are willing "
              "to speculatively execute to eliminate conditional branch "
              "(default = 6)"));
 
@@ -2003,11 +2004,11 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
         // We've just hoisted DbgVariableRecords; move I1 after them (before TI)
         // and leave any that were not hoisted behind (by calling moveBefore
         // rather than moveBeforePreserving).
-        I1->moveBefore(TI);
+        I1->moveBefore(TI->getIterator());
         for (auto &SuccIter : OtherSuccIterRange) {
           auto *I2 = &*SuccIter++;
           assert(isa<DbgInfoIntrinsic>(I2));
-          I2->moveBefore(TI);
+          I2->moveBefore(TI->getIterator());
         }
       } else {
         // For a normal instruction, we just move one to right before the
@@ -2017,7 +2018,7 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
         // We've just hoisted DbgVariableRecords; move I1 after them (before TI)
         // and leave any that were not hoisted behind (by calling moveBefore
         // rather than moveBeforePreserving).
-        I1->moveBefore(TI);
+        I1->moveBefore(TI->getIterator());
         for (auto &SuccIter : OtherSuccIterRange) {
           Instruction *I2 = &*SuccIter++;
           assert(I2 != I1);
@@ -2153,12 +2154,9 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
         SelectInst *&SI = InsertedSelects[std::make_pair(BB1V, BB2V)];
         if (!SI) {
           // Propagate fast-math-flags from phi node to its replacement select.
-          IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
-          if (isa<FPMathOperator>(PN))
-            Builder.setFastMathFlags(PN.getFastMathFlags());
-
-          SI = cast<SelectInst>(Builder.CreateSelect(
+          SI = cast<SelectInst>(Builder.CreateSelectFMF(
               BI->getCondition(), BB1V, BB2V,
+              isa<FPMathOperator>(PN) ? &PN : nullptr,
               BB1V->getName() + "." + BB2V->getName(), BI));
         }
 
@@ -3898,16 +3896,14 @@ static bool foldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
 
   IRBuilder<NoFolder> Builder(DomBI);
   // Propagate fast-math-flags from phi nodes to replacement selects.
-  IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
   while (PHINode *PN = dyn_cast<PHINode>(BB->begin())) {
-    if (isa<FPMathOperator>(PN))
-      Builder.setFastMathFlags(PN->getFastMathFlags());
-
     // Change the PHI node into a select instruction.
     Value *TrueVal = PN->getIncomingValueForBlock(IfTrue);
     Value *FalseVal = PN->getIncomingValueForBlock(IfFalse);
 
-    Value *Sel = Builder.CreateSelect(IfCond, TrueVal, FalseVal, "", DomBI);
+    Value *Sel = Builder.CreateSelectFMF(IfCond, TrueVal, FalseVal,
+                                         isa<FPMathOperator>(PN) ? PN : nullptr,
+                                         "", DomBI);
     PN->replaceAllUsesWith(Sel);
     Sel->takeName(PN);
     PN->eraseFromParent();
@@ -5266,8 +5262,8 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
 bool SimplifyCFGOpt::simplifyResume(ResumeInst *RI, IRBuilder<> &Builder) {
   if (isa<PHINode>(RI->getValue()))
     return simplifyCommonResume(RI);
-  else if (isa<LandingPadInst>(RI->getParent()->getFirstNonPHI()) &&
-           RI->getValue() == RI->getParent()->getFirstNonPHI())
+  else if (isa<LandingPadInst>(RI->getParent()->getFirstNonPHIIt()) &&
+           RI->getValue() == &*RI->getParent()->getFirstNonPHIIt())
     // The resume must unwind the exception that caused control to branch here.
     return simplifySingleResume(RI);
 
@@ -5301,8 +5297,8 @@ bool SimplifyCFGOpt::simplifyCommonResume(ResumeInst *RI) {
 
   // Check that there are no other instructions except for debug and lifetime
   // intrinsics between the phi's and resume instruction.
-  if (!isCleanupBlockEmpty(
-          make_range(RI->getParent()->getFirstNonPHI(), BB->getTerminator())))
+  if (!isCleanupBlockEmpty(make_range(RI->getParent()->getFirstNonPHIIt(),
+                                      BB->getTerminator()->getIterator())))
     return false;
 
   SmallSetVector<BasicBlock *, 4> TrivialUnwindBlocks;
@@ -5319,7 +5315,7 @@ bool SimplifyCFGOpt::simplifyCommonResume(ResumeInst *RI) {
     if (IncomingBB->getUniqueSuccessor() != BB)
       continue;
 
-    auto *LandingPad = dyn_cast<LandingPadInst>(IncomingBB->getFirstNonPHI());
+    auto *LandingPad = dyn_cast<LandingPadInst>(IncomingBB->getFirstNonPHIIt());
     // Not the landing pad that caused the control to branch here.
     if (IncomingValue != LandingPad)
       continue;
@@ -5368,7 +5364,7 @@ bool SimplifyCFGOpt::simplifyCommonResume(ResumeInst *RI) {
 // Simplify resume that is only used by a single (non-phi) landing pad.
 bool SimplifyCFGOpt::simplifySingleResume(ResumeInst *RI) {
   BasicBlock *BB = RI->getParent();
-  auto *LPInst = cast<LandingPadInst>(BB->getFirstNonPHI());
+  auto *LPInst = cast<LandingPadInst>(BB->getFirstNonPHIIt());
   assert(RI->getValue() == LPInst &&
          "Resume must unwind the exception that caused control to here");
 
@@ -5416,7 +5412,6 @@ static bool removeEmptyCleanup(CleanupReturnInst *RI, DomTreeUpdater *DTU) {
   // If the cleanup return we are simplifying unwinds to the caller, this will
   // set UnwindDest to nullptr.
   BasicBlock *UnwindDest = RI->getUnwindDest();
-  Instruction *DestEHPad = UnwindDest ? UnwindDest->getFirstNonPHI() : nullptr;
 
   // We're about to remove BB from the control flow.  Before we do, sink any
   // PHINodes into the unwind destination.  Doing this before changing the
@@ -5453,7 +5448,7 @@ static bool removeEmptyCleanup(CleanupReturnInst *RI, DomTreeUpdater *DTU) {
     }
 
     // Sink any remaining PHI nodes directly into UnwindDest.
-    Instruction *InsertPt = DestEHPad;
+    BasicBlock::iterator InsertPt = UnwindDest->getFirstNonPHIIt();
     for (PHINode &PN : make_early_inc_range(BB->phis())) {
       if (PN.use_empty() || !PN.isUsedOutsideOfBlock(BB))
         // If the PHI node has no uses or all of its uses are in this basic
@@ -6008,7 +6003,7 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
 /// the phi node, and set PhiIndex to BB's index in the phi node.
 static PHINode *findPHIForConditionForwarding(ConstantInt *CaseValue,
                                               BasicBlock *BB, int *PhiIndex) {
-  if (BB->getFirstNonPHIOrDbg() != BB->getTerminator())
+  if (&*BB->getFirstNonPHIIt() != BB->getTerminator())
     return nullptr; // BB must be empty to be a candidate for simplification.
   if (!BB->getSinglePredecessor())
     return nullptr; // BB must be dominated by the switch.
@@ -6531,8 +6526,8 @@ SwitchLookupTable::SwitchLookupTable(
     uint64_t Idx = (CaseVal->getValue() - Offset->getValue()).getLimitedValue();
     TableContents[Idx] = CaseRes;
 
-    if (CaseRes != SingleValue)
-      SingleValue = nullptr;
+    if (SingleValue && !isa<PoisonValue>(CaseRes) && CaseRes != SingleValue)
+      SingleValue = isa<PoisonValue>(SingleValue) ? CaseRes : nullptr;
   }
 
   // Fill in any holes in the table with the default result.
@@ -6545,7 +6540,10 @@ SwitchLookupTable::SwitchLookupTable(
         TableContents[I] = DefaultValue;
     }
 
-    if (DefaultValue != SingleValue)
+    // If the default value is poison, all the holes are poison.
+    bool DefaultValueIsPoison = isa<PoisonValue>(DefaultValue);
+
+    if (DefaultValue != SingleValue && !DefaultValueIsPoison)
       SingleValue = nullptr;
   }
 
@@ -6569,6 +6567,16 @@ SwitchLookupTable::SwitchLookupTable(
     // Check if there is the same distance between two consecutive values.
     for (uint64_t I = 0; I < TableSize; ++I) {
       ConstantInt *ConstVal = dyn_cast<ConstantInt>(TableContents[I]);
+
+      if (!ConstVal && isa<PoisonValue>(TableContents[I])) {
+        // This is an poison, so it's (probably) a lookup table hole.
+        // To prevent any regressions from before we switched to using poison as
+        // the default value, holes will fall back to using the first value.
+        // This can be removed once we add proper handling for poisons in lookup
+        // tables.
+        ConstVal = dyn_cast<ConstantInt>(Values[0].second);
+      }
+
       if (!ConstVal) {
         // This is an undef. We could deal with it, but undefs in lookup tables
         // are very seldom. It's probably not worth the additional complexity.
@@ -7003,8 +7011,8 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
 
   // If the table has holes but the default destination doesn't produce any
   // constant results, the lookup table entries corresponding to the holes will
-  // contain undefined values.
-  bool AllHolesAreUndefined = TableHasHoles && !HasDefaultResults;
+  // contain poison.
+  bool AllHolesArePoison = TableHasHoles && !HasDefaultResults;
 
   // If the default destination doesn't produce a constant result but is still
   // reachable, and the lookup table has holes, we need to use a mask to
@@ -7012,7 +7020,7 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   // to the default case.
   // The mask is unnecessary if the table has holes but the default destination
   // is unreachable, as in that case the holes must also be unreachable.
-  bool NeedMask = AllHolesAreUndefined && DefaultIsReachable;
+  bool NeedMask = AllHolesArePoison && DefaultIsReachable;
   if (NeedMask) {
     // As an extra penalty for the validity test we require more cases.
     if (SI->getNumCases() < 4) // FIXME: Find best threshold value (benchmark).
@@ -7157,9 +7165,11 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   for (PHINode *PHI : PHIs) {
     const ResultListTy &ResultList = ResultLists[PHI];
 
+    Type *ResultType = ResultList.begin()->second->getType();
+
     // Use any value to fill the lookup table holes.
     Constant *DV =
-        AllHolesAreUndefined ? ResultLists[PHI][0].second : DefaultResults[PHI];
+        AllHolesArePoison ? PoisonValue::get(ResultType) : DefaultResults[PHI];
     StringRef FuncName = Fn->getName();
     SwitchLookupTable Table(Mod, TableSize, TableIndexOffset, ResultList, DV,
                             DL, FuncName);
@@ -7874,7 +7884,7 @@ bool SimplifyCFGOpt::simplifyUncondBranch(BranchInst *BI,
       Options.NeedCanonicalLoop &&
       (!LoopHeaders.empty() && BB->hasNPredecessorsOrMore(2) &&
        (is_contained(LoopHeaders, BB) || is_contained(LoopHeaders, Succ)));
-  BasicBlock::iterator I = BB->getFirstNonPHIOrDbg(true)->getIterator();
+  BasicBlock::iterator I = BB->getFirstNonPHIOrDbg();
   if (I->isTerminator() && BB != &BB->getParent()->getEntryBlock() &&
       !NeedCanonicalLoop && TryToSimplifyUncondBranchFromEmptyBlock(BB, DTU))
     return true;
