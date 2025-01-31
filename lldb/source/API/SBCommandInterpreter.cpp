@@ -749,7 +749,7 @@ void SBCommandInterpreter::SetPrintCallback(
   LLDB_INSTRUMENT_VA(this, callback, baton);
 
   if (m_opaque_ptr)
-    return m_opaque_ptr->SetPrintCallback(
+    m_opaque_ptr->SetPrintCallback(
         [callback, baton](lldb_private::CommandReturnObject &result) {
           SBCommandReturnObject sb_result(result);
           return callback(sb_result, baton);
