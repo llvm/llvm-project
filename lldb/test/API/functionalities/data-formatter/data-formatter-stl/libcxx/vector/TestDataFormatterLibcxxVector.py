@@ -11,7 +11,7 @@ from lldbsuite.test import lldbutil
 
 class LibcxxVectorDataFormatterTestCase(TestBase):
     def check_numbers(self, var_name, show_ptr=False):
-        if show_ptr:           
+        if show_ptr:
             self.expect(
                 "frame variable " + var_name,
                 patterns=[var_name + " = 0x.* size=7"],
