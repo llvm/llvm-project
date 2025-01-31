@@ -4244,6 +4244,7 @@ void RegisterCoalescer::joinAllIntervals() {
 PreservedAnalyses
 RegisterCoalescerPass::run(MachineFunction &MF,
                            MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
   auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
   auto &Loops = MFAM.getResult<MachineLoopAnalysis>(MF);
   auto *SI = MFAM.getCachedResult<SlotIndexesAnalysis>(MF);
