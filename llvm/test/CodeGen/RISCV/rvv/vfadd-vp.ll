@@ -436,19 +436,15 @@ define <vscale x 32 x bfloat> @vfadd_vv_nxv32bf16(<vscale x 32 x bfloat> %va, <v
 ; CHECK-NEXT:    addi a3, a3, 16
 ; CHECK-NEXT:    vs8r.v v16, (a3) # Unknown-size Folded Spill
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v12, v0.t
-; CHECK-NEXT:    addi a2, sp, 16
-; CHECK-NEXT:    vs8r.v v16, (a2) # Unknown-size Folded Spill
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v12, v0.t
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 4
 ; CHECK-NEXT:    add a2, sp, a2
 ; CHECK-NEXT:    addi a2, a2, 16
 ; CHECK-NEXT:    vl8r.v v16, (a2) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v20, v0.t
-; CHECK-NEXT:    addi a2, sp, 16
-; CHECK-NEXT:    vl8r.v v16, (a2) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vfadd.vv v16, v8, v16, v0.t
+; CHECK-NEXT:    vfadd.vv v16, v8, v24, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v12, v16, v0.t
 ; CHECK-NEXT:    bltu a0, a1, .LBB22_2
@@ -1249,19 +1245,15 @@ define <vscale x 32 x half> @vfadd_vv_nxv32f16(<vscale x 32 x half> %va, <vscale
 ; ZVFHMIN-NEXT:    addi a3, a3, 16
 ; ZVFHMIN-NEXT:    vs8r.v v16, (a3) # Unknown-size Folded Spill
 ; ZVFHMIN-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v12, v0.t
-; ZVFHMIN-NEXT:    addi a2, sp, 16
-; ZVFHMIN-NEXT:    vs8r.v v16, (a2) # Unknown-size Folded Spill
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v12, v0.t
 ; ZVFHMIN-NEXT:    csrr a2, vlenb
 ; ZVFHMIN-NEXT:    slli a2, a2, 4
 ; ZVFHMIN-NEXT:    add a2, sp, a2
 ; ZVFHMIN-NEXT:    addi a2, a2, 16
 ; ZVFHMIN-NEXT:    vl8r.v v16, (a2) # Unknown-size Folded Reload
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v20, v0.t
-; ZVFHMIN-NEXT:    addi a2, sp, 16
-; ZVFHMIN-NEXT:    vl8r.v v16, (a2) # Unknown-size Folded Reload
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vfadd.vv v16, v8, v16, v0.t
+; ZVFHMIN-NEXT:    vfadd.vv v16, v8, v24, v0.t
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v16, v0.t
 ; ZVFHMIN-NEXT:    bltu a0, a1, .LBB48_2
