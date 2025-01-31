@@ -228,14 +228,15 @@ mlir::Operation* traverseConverts(mlir::Operation *op) {
 }
 
 bool hlfir::Entity::mayBeOptional() const {
-  if (auto varIface = getIfVariableInterface())
-    return varIface.isOptional();
   if (!isVariable())
     return false;
   // TODO: introduce a fir type to better identify optionals.
-  if (mlir::Operation* op = traverseConverts(getDefiningOp()))
+  if (mlir::Operation *op = traverseConverts(getDefiningOp())) {
+    if (auto varIface = llvm::dyn_cast<fir::FortranVariableOpInterface>(op))
+      return varIface.isOptional();
     return !llvm::isa<fir::AllocaOp, fir::AllocMemOp, fir::ReboxOp,
-                      fir::EmboxOp>(op);
+                      fir::EmboxOp, fir::LoadOp>(op);
+  }
   return true;
 }
 
