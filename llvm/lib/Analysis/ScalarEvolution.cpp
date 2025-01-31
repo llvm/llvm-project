@@ -11165,9 +11165,8 @@ ScalarEvolution::getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,
 }
 
 std::optional<ScalarEvolution::LoopInvariantPredicate>
-ScalarEvolution::getLoopInvariantPredicate(ICmpInst::Predicate Pred,
-                                           const SCEV *LHS, const SCEV *RHS,
-                                           const Loop *L,
+ScalarEvolution::getLoopInvariantPredicate(CmpPredicate Pred, const SCEV *LHS,
+                                           const SCEV *RHS, const Loop *L,
                                            const Instruction *CtxI) {
   // If there is a loop-invariant, force it into the RHS, otherwise bail out.
   if (!isLoopInvariant(RHS, L)) {
@@ -11175,7 +11174,7 @@ ScalarEvolution::getLoopInvariantPredicate(ICmpInst::Predicate Pred,
       return std::nullopt;
 
     std::swap(LHS, RHS);
-    Pred = ICmpInst::getSwappedPredicate(Pred);
+    Pred = ICmpInst::getSwappedCmpPredicate(Pred);
   }
 
   const SCEVAddRecExpr *ArLHS = dyn_cast<SCEVAddRecExpr>(LHS);
@@ -11203,7 +11202,7 @@ ScalarEvolution::getLoopInvariantPredicate(ICmpInst::Predicate Pred,
   // A similar reasoning applies for a monotonically decreasing predicate, by
   // replacing true with false and false with true in the above two bullets.
   bool Increasing = *MonotonicType == ScalarEvolution::MonotonicallyIncreasing;
-  auto P = Increasing ? Pred : ICmpInst::getInversePredicate(Pred);
+  auto P = Increasing ? Pred : ICmpInst::getInverseCmpPredicate(Pred);
 
   if (isLoopBackedgeGuardedByCond(L, P, LHS, RHS))
     return ScalarEvolution::LoopInvariantPredicate(Pred, ArLHS->getStart(),
