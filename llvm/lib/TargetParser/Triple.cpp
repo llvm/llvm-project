@@ -270,6 +270,7 @@ StringRef Triple::getVendorTypeName(VendorType Kind) {
   case PC: return "pc";
   case SCEI: return "scei";
   case SUSE: return "suse";
+  case Plumbear: return "plumbear";
   }
 
   llvm_unreachable("Invalid VendorType!");
@@ -319,6 +320,7 @@ StringRef Triple::getOSTypeName(OSType Kind) {
   case LiteOS: return "liteos";
   case XROS: return "xros";
   case Vulkan: return "vulkan";
+  case PlumOS: return "plumos";
   }
 
   llvm_unreachable("Invalid OSType");
@@ -384,6 +386,7 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
     return "pauthtest";
   case LLVM:
     return "llvm";
+  case PlumEnv: return "plumenv";
   }
 
   llvm_unreachable("Invalid EnvironmentType!");
@@ -400,6 +403,7 @@ StringRef Triple::getObjectFormatTypeName(ObjectFormatType Kind) {
   case XCOFF: return "xcoff";
   case DXContainer: return "dxcontainer";
   case SPIRV: return "spirv";
+  case PLM: return "plm";
   }
   llvm_unreachable("unknown object format type");
 }
@@ -664,6 +668,7 @@ static Triple::VendorType parseVendor(StringRef VendorName) {
       .Case("suse", Triple::SUSE)
       .Case("oe", Triple::OpenEmbedded)
       .Case("intel", Triple::Intel)
+      .Case("plumbear", Triple::Plumbear)
       .Default(Triple::UnknownVendor);
 }
 
@@ -711,6 +716,7 @@ static Triple::OSType parseOS(StringRef OSName) {
     .StartsWith("liteos", Triple::LiteOS)
     .StartsWith("serenity", Triple::Serenity)
     .StartsWith("vulkan", Triple::Vulkan)
+    .StartsWith("plumos", Triple::PlumOS)
     .Default(Triple::UnknownOS);
 }
 
@@ -766,6 +772,7 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
       .StartsWith("ohos", Triple::OpenHOS)
       .StartsWith("pauthtest", Triple::PAuthTest)
       .StartsWith("llvm", Triple::LLVM)
+      .StartsWith("plumenv", Triple::PlumEnv)
       .Default(Triple::UnknownEnvironment);
 }
 
@@ -780,6 +787,7 @@ static Triple::ObjectFormatType parseFormat(StringRef EnvironmentName) {
       .EndsWith("macho", Triple::MachO)
       .EndsWith("wasm", Triple::Wasm)
       .EndsWith("spirv", Triple::SPIRV)
+      .EndsWith("plm", Triple::PLM)
       .Default(Triple::UnknownObjectFormat);
 }
 
