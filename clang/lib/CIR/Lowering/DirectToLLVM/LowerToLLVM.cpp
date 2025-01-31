@@ -75,7 +75,11 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   SmallVector<mlir::NamedAttribute> attributes;
 
   if (init.has_value()) {
-    if (auto intAttr = mlir::dyn_cast<cir::IntAttr>(init.value())) {
+    if (auto fltAttr = mlir::dyn_cast<cir::FPAttr>(init.value())) {
+      // Initializer is a constant floating-point number: convert to MLIR
+      // builtin constant.
+      init = rewriter.getFloatAttr(llvmType, fltAttr.getValue());
+    } else if (auto intAttr = mlir::dyn_cast<cir::IntAttr>(init.value())) {
       // Initializer is a constant array: convert it to a compatible llvm init.
       init = rewriter.getIntegerAttr(llvmType, intAttr.getValue());
     } else {
@@ -98,6 +102,27 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   converter.addConversion([&](cir::IntType type) -> mlir::Type {
     // LLVM doesn't work with signed types, so we drop the CIR signs here.
     return mlir::IntegerType::get(type.getContext(), type.getWidth());
+  });
+  converter.addConversion([&](cir::SingleType type) -> mlir::Type {
+    return mlir::Float32Type::get(type.getContext());
+  });
+  converter.addConversion([&](cir::DoubleType type) -> mlir::Type {
+    return mlir::Float64Type::get(type.getContext());
+  });
+  converter.addConversion([&](cir::FP80Type type) -> mlir::Type {
+    return mlir::Float80Type::get(type.getContext());
+  });
+  converter.addConversion([&](cir::FP128Type type) -> mlir::Type {
+    return mlir::Float128Type::get(type.getContext());
+  });
+  converter.addConversion([&](cir::LongDoubleType type) -> mlir::Type {
+    return converter.convertType(type.getUnderlying());
+  });
+  converter.addConversion([&](cir::FP16Type type) -> mlir::Type {
+    return mlir::Float16Type::get(type.getContext());
+  });
+  converter.addConversion([&](cir::BF16Type type) -> mlir::Type {
+    return mlir::BFloat16Type::get(type.getContext());
   });
 }
 

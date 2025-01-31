@@ -61,3 +61,21 @@ _BitInt(20) sb20;
 
 unsigned _BitInt(48) ub48;
 // CHECK: @ub48 = external dso_local global i48
+
+_Float16 f16;
+// CHECK: @f16 = external dso_local global half
+
+__bf16 bf16;
+// CHECK: @bf16 = external dso_local global bfloat
+
+float f;
+// CHECK: @f = external dso_local global float
+
+double d = 1.25;
+// CHECK: @d = dso_local global double 1.250000e+00
+
+long double ld;
+// CHECK: @ld = external dso_local global x86_fp80
+
+__float128 f128;
+// CHECK: @f128 = external dso_local global fp128
