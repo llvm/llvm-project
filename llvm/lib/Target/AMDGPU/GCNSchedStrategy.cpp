@@ -1691,6 +1691,47 @@ void PreRARematStage::collectRematerializableInstructions() {
     if (Def->getParent() == UseI->getParent())
       continue;
 
+    bool HasRematDependency = false;
+    // Check if this instruction uses any registers that are planned to be
+    // rematerialized
+    for (auto &RematEntry : RematerializableInsts) {
+      if (find_if(RematEntry.second,
+                  [&Def](std::pair<MachineInstr *, MachineInstr *> &Remat) {
+                    for (MachineOperand &MO : Def->operands()) {
+                      if (!MO.isReg())
+                        continue;
+                      if (MO.getReg() == Remat.first->getOperand(0).getReg())
+                        return true;
+                    }
+                    return false;
+                  }) != RematEntry.second.end()) {
+        HasRematDependency = true;
+        break;
+      }
+    }
+    // Do not rematerialize an instruction if it uses an instruction that we
+    // have designated for rematerialization.
+    // FIXME: Allow for rematerialization chains: this requires 1. updating
+    // remat points to account for uses that are rematerialized, and 2. either
+    // rematerializing the candidates in careful ordering, or deferring the MBB
+    // RP walk until the entire chain has been rematerialized.
+    if (HasRematDependency)
+      continue;
+
+    // Similarly, check if the UseI is planned to be remat.
+    for (auto &RematEntry : RematerializableInsts) {
+      if (find_if(RematEntry.second,
+                  [&UseI](std::pair<MachineInstr *, MachineInstr *> &Remat) {
+                    return Remat.first == UseI;
+                  }) != RematEntry.second.end()) {
+        HasRematDependency = true;
+        break;
+      }
+    }
+
+    if (HasRematDependency)
+      break;
+
     // We are only collecting defs that are defined in another block and are
     // live-through or used inside regions at MinOccupancy. This means that the
     // register must be in the live-in set for the region.
