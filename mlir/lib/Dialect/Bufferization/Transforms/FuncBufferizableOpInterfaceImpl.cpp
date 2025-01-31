@@ -20,11 +20,13 @@
 
 namespace mlir {
 /// Return all func.return ops in the given function.
-SmallVector<func::ReturnOp> bufferization::getReturnOps(func::FuncOp funcOp) {
-  SmallVector<func::ReturnOp> result;
-  for (Block &b : funcOp.getBody())
-    if (auto returnOp = dyn_cast<func::ReturnOp>(b.getTerminator()))
-      result.push_back(returnOp);
+SmallVector<Operation *> bufferization::getReturnOps(func::FuncOp funcOp) {
+  SmallVector<Operation *> result;
+  for (Block &b : funcOp.getBody()) {
+    Operation *terminator = b.getTerminator();
+    if (terminator->hasTrait<OpTrait::ReturnLike>())
+      result.push_back(b.getTerminator());
+  }
   return result;
 }
 
@@ -439,7 +441,7 @@ struct FuncOpInterface
         return failure();
 
     // 2. Bufferize the operands of the all return op.
-    for (func::ReturnOp returnOp : getReturnOps(funcOp)) {
+    for (Operation *returnOp : getReturnOps(funcOp)) {
       assert(returnOp->getNumOperands() == retTypes.size() &&
              "incorrect number of return values");
       SmallVector<Value> returnValues;
@@ -457,11 +459,13 @@ struct FuncOpInterface
         // Note: If `inferFunctionResultLayout = true`, casts are later folded
         // away.
         Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
-            returnOp.getLoc(), bufferizedType, returnVal);
+            returnOp->getLoc(), bufferizedType, returnVal);
         returnValues.push_back(toMemrefOp);
       }
 
-      returnOp.getOperandsMutable().assign(returnValues);
+      for (auto [i, operand] : enumerate(returnValues)) {
+        returnOp->setOperand(i, operand);
+      }
     }
 
     // 3. Set the new function type.

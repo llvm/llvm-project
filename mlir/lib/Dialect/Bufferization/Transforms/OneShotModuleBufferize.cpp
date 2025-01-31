@@ -133,7 +133,7 @@ aliasingFuncOpBBArgsAnalysis(FuncOp funcOp, OneShotAnalysisState &state,
   }
 
   // Find all func.return ops.
-  SmallVector<func::ReturnOp> returnOps = getReturnOps(funcOp);
+  SmallVector<Operation *> returnOps = getReturnOps(funcOp);
   assert(!returnOps.empty() && "expected at least one ReturnOp");
 
   // Build alias sets. Merge all aliases from all func.return ops.
@@ -142,7 +142,7 @@ aliasingFuncOpBBArgsAnalysis(FuncOp funcOp, OneShotAnalysisState &state,
       int64_t bbArgIdx = bbArg.getArgNumber();
       // Store aliases in a set, so that we don't add the same alias twice.
       SetVector<int64_t> aliases;
-      for (func::ReturnOp returnOp : returnOps) {
+      for (Operation *returnOp : returnOps) {
         for (OpOperand &returnVal : returnOp->getOpOperands()) {
           if (isa<RankedTensorType>(returnVal.get().getType())) {
             int64_t returnIdx = returnVal.getOperandNumber();
@@ -192,7 +192,7 @@ aliasingFuncOpBBArgsAnalysis(FuncOp funcOp, OneShotAnalysisState &state,
     // argument for the i-th operand. In contrast to aliasing information,
     // which is just "merged", equivalence information must match across all
     // func.return ops.
-    for (func::ReturnOp returnOp : ArrayRef(returnOps).drop_front()) {
+    for (Operation *returnOp : ArrayRef(returnOps).drop_front()) {
       std::optional<int64_t> maybeEquiv =
           findEquivalentBlockArgIdx(returnOp->getOpOperand(i));
       if (maybeEquiv != bbArgIdx) {
@@ -398,7 +398,7 @@ static Value unpackCast(Value v) {
 /// func.return ops. This function returns as many types as the return ops have
 /// operands. If the i-th operand is not the same for all func.return ops, then
 /// the i-th returned type is an "empty" type.
-static SmallVector<Type> getReturnTypes(SmallVector<func::ReturnOp> returnOps) {
+static SmallVector<Type> getReturnTypes(SmallVector<Operation *> returnOps) {
   assert(!returnOps.empty() && "expected at least one ReturnOp");
   int numOperands = returnOps.front()->getNumOperands();
 
@@ -434,11 +434,11 @@ static void foldMemRefCasts(func::FuncOp funcOp) {
     return;
 
   // Compute the common result types of all return ops.
-  SmallVector<func::ReturnOp> returnOps = getReturnOps(funcOp);
+  SmallVector<Operation *> returnOps = getReturnOps(funcOp);
   SmallVector<Type> resultTypes = getReturnTypes(returnOps);
 
   // Remove direct casts.
-  for (func::ReturnOp returnOp : returnOps) {
+  for (Operation *returnOp : returnOps) {
     for (OpOperand &operand : returnOp->getOpOperands()) {
       // Bail if no common result type was found.
       if (resultTypes[operand.getOperandNumber()]) {
