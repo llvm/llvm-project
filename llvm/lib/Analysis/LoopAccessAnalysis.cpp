@@ -2894,8 +2894,8 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
       if (!StepConst)
         return nullptr;
 
-      if (auto StepVal = StepConst->getAPInt().trySExtValue();
-          !StepVal || StepVal != 1)
+      auto StepVal = StepConst->getAPInt().trySExtValue();
+      if (!StepVal || StepVal != 1)
         return nullptr;
 
       V = M->getOperand(1);
