@@ -2685,10 +2685,11 @@ OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
     return {};
 
   // Fold shuffle V1, V2, [0, 1, 2, 3] : <4xi32>, <2xi32> -> V1.
-  if (isStepIndexArray(getMask(), 0, v1Type.getDimSize(0)))
+  auto mask = getMask();
+  if (isStepIndexArray(mask, 0, v1Type.getDimSize(0)))
     return getV1();
   // Fold shuffle V1, V2, [4, 5] : <4xi32>, <2xi32> -> V2.
-  if (isStepIndexArray(getMask(), v1Type.getDimSize(0), v2Type.getDimSize(0)))
+  if (isStepIndexArray(mask, v1Type.getDimSize(0), v2Type.getDimSize(0)))
     return getV2();
 
   Attribute v1Attr = adaptor.getV1(), v2Attr = adaptor.getV2();
@@ -2705,7 +2706,7 @@ OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
   SmallVector<Attribute> results;
   auto v1Elements = cast<DenseElementsAttr>(v1Attr).getValues<Attribute>();
   auto v2Elements = cast<DenseElementsAttr>(v2Attr).getValues<Attribute>();
-  for (int64_t maskIdx : this->getMask()) {
+  for (int64_t maskIdx : mask) {
     Attribute indexedElm;
     // Select v1[0] for poison indices.
     // TODO: Return a partial poison vector when supported by the UB dialect.
