@@ -18,7 +18,7 @@
 
 #include <mdspan>
 #include <cassert>
-#include <cstdint>
+#include <cstddef>
 #include <type_traits>
 
 #include "test_macros.h"
@@ -28,7 +28,7 @@
 struct Base {};
 struct Derived : public Base {};
 
-template <class FromT, class ToT, size_t ToN>
+template <class FromT, class ToT, std::size_t ToN>
 constexpr void test_conversion() {
   std::default_accessor<FromT> from;
   ASSERT_NOEXCEPT(std::aligned_accessor<ToT, ToN>(from));
@@ -40,7 +40,7 @@ constexpr void test_conversion() {
 
 template <class From, class To>
 constexpr void test_it() {
-  constexpr size_t N = alignof(To);
+  constexpr std::size_t N = alignof(To);
   test_conversion<From, To, N>();
   test_conversion<From, To, 2 * N>();
   test_conversion<From, To, 4 * N>();

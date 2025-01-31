@@ -16,14 +16,14 @@
 
 #include <mdspan>
 #include <cassert>
-#include <cstdint>
+#include <cstddef>
 #include <type_traits>
 
 #include "test_macros.h"
 
 #include "../MinimalElementType.h"
 
-template <class T, size_t N>
+template <class T, std::size_t N>
 constexpr void test_construction() {
   ASSERT_NOEXCEPT(std::aligned_accessor<T, N>{});
   [[maybe_unused]] std::aligned_accessor<T, N> acc;
@@ -32,7 +32,7 @@ constexpr void test_construction() {
 
 template <class T>
 constexpr void test_it() {
-  constexpr size_t N = alignof(T);
+  constexpr std::size_t N = alignof(T);
   test_construction<T, N>();
   test_construction<T, 2 * N>();
   test_construction<T, 4 * N>();
