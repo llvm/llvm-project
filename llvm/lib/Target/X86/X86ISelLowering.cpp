@@ -55483,6 +55483,81 @@ static SDValue truncateAVX512SetCCNoBWI(EVT VT, EVT OpVT, SDValue LHS,
   return SDValue();
 }
 
+static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
+                                        const SDLoc &DL, SelectionDAG &DAG,
+                                        const X86Subtarget &Subtarget) {
+  if (CC != ISD::SETNE && CC != ISD::SETEQ)
+    return SDValue();
+
+  if (!Subtarget.hasAVX512())
+    return SDValue();
+
+  if (Op0.getOpcode() != ISD::AND)
+    return SDValue();
+
+  SDValue Broadcast = Op0.getOperand(0);
+  if (Broadcast.getOpcode() != X86ISD::VBROADCAST &&
+      Broadcast.getOpcode() != X86ISD::VBROADCAST_LOAD)
+    return SDValue();
+
+  SDValue Load = Op0.getOperand(1);
+  EVT LoadVT = Load.getSimpleValueType();
+
+  APInt UndefElts;
+  SmallVector<APInt, 32> EltBits;
+  if (!getTargetConstantBitsFromNode(Load, LoadVT.getScalarSizeInBits(),
+                                     UndefElts, EltBits,
+                                     /*AllowWholeUndefs*/ true,
+                                     /*AllowPartialUndefs*/ false) ||
+      UndefElts[0] || !EltBits[0].isPowerOf2())
+    return SDValue();
+
+  unsigned N = EltBits[0].logBase2();
+  unsigned Len = UndefElts.getBitWidth();
+  for (unsigned I = 1; I != Len; ++I) {
+    if (UndefElts[I]) {
+      if (!UndefElts.extractBits(Len - (I + 1), I + 1).isAllOnes())
+        return SDValue();
+      break;
+    }
+
+    if (EltBits[I] != 1ULL << (N + I))
+      return SDValue();
+  }
+
+  SDValue BroadcastOp = Broadcast.getOpcode() == X86ISD::VBROADCAST
+                            ? Broadcast.getOperand(0)
+                            : Broadcast.getOperand(1);
+  MVT BroadcastOpVT = BroadcastOp.getSimpleValueType();
+  SDValue Masked = BroadcastOp;
+  if (N != 0) {
+    unsigned Mask = (1ULL << Len) - 1;
+    SDValue ShiftedValue = DAG.getNode(ISD::SRL, DL, BroadcastOpVT, BroadcastOp,
+                                       DAG.getConstant(N, DL, BroadcastOpVT));
+    Masked = DAG.getNode(ISD::AND, DL, BroadcastOpVT, ShiftedValue,
+                         DAG.getConstant(Mask, DL, BroadcastOpVT));
+  }
+  SDValue Trunc = DAG.getNode(BroadcastOpVT.bitsGT(MVT::i16) ? ISD::TRUNCATE
+                                                             : ISD::ANY_EXTEND,
+                              DL, MVT::i16, Masked);
+  SDValue Bitcast = DAG.getNode(ISD::BITCAST, DL, MVT::v16i1, Trunc);
+  MVT PtrTy = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
+
+  if (CC == ISD::SETEQ)
+    Bitcast = DAG.getNode(
+        ISD::XOR, DL, MVT::v16i1, Bitcast,
+        DAG.getSplatBuildVector(
+            MVT::v16i1, DL,
+            DAG.getConstant(APInt::getAllOnes(PtrTy.getSizeInBits()), DL,
+                            PtrTy)));
+
+  if (VT != MVT::v16i1)
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Bitcast,
+                       DAG.getConstant(0, DL, PtrTy));
+
+  return Bitcast;
+}
+
 static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
                             TargetLowering::DAGCombinerInfo &DCI,
                             const X86Subtarget &Subtarget) {
@@ -55614,6 +55689,12 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
       assert((TmpCC == ISD::SETNE || TmpCC == ISD::SETLT) &&
              "Unexpected condition code!");
       return Op0.getOperand(0);
+    }
+
+    if (IsVZero1) {
+      if (SDValue V =
+              combineAVX512SetCCToKMOV(VT, Op0, TmpCC, DL, DAG, Subtarget))
+        return V;
     }
   }
 
