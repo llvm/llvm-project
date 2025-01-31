@@ -94,7 +94,7 @@ define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %
 ; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB2]], i32 [[TMP2]])
 ; CHECK-NEXT:    br label [[REGION_EXIT:%.*]]
 ; CHECK:       region.exit:
-; CHECK-NEXT:    call void @usei8ptr(ptr nocapture [[HEAP2STACK_H2S]]) #[[ATTR9:[0-9]+]]
+; CHECK-NEXT:    call void @usei8ptr(ptr captures(none) [[HEAP2STACK_H2S]]) #[[ATTR9:[0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_COND_I:%.*]]
 ; CHECK:       for.cond.i:
 ; CHECK-NEXT:    [[I_0_I:%.*]] = phi i32 [ 2, [[REGION_EXIT]] ], [ [[INC_I:%.*]], [[REGION_EXIT3:%.*]] ]
@@ -237,7 +237,7 @@ define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %
 ; CHECK-DISABLED-NEXT:    [[IDXPROM_I:%.*]] = ashr exact i64 [[SEXT]], 32
 ; CHECK-DISABLED-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM_I]]
 ; CHECK-DISABLED-NEXT:    store i32 [[N_ADDR_SROA_0_0_EXTRACT_TRUNC]], ptr [[ARRAYIDX2_I]], align 4, !noalias [[META7]]
-; CHECK-DISABLED-NEXT:    call void @usei8ptr(ptr nocapture [[HEAP2STACK_H2S]]) #[[ATTR9:[0-9]+]]
+; CHECK-DISABLED-NEXT:    call void @usei8ptr(ptr captures(none) [[HEAP2STACK_H2S]]) #[[ATTR9:[0-9]+]]
 ; CHECK-DISABLED-NEXT:    br label [[FOR_COND_I:%.*]]
 ; CHECK-DISABLED:       for.cond.i:
 ; CHECK-DISABLED-NEXT:    [[I_0_I:%.*]] = phi i32 [ 2, [[USER_CODE_ENTRY]] ], [ [[INC_I:%.*]], [[FOR_BODY_I:%.*]] ]

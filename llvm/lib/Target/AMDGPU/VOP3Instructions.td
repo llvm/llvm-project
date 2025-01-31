@@ -645,8 +645,8 @@ defm V_ADD_I16 : VOP3Inst_t16 <"v_add_i16", VOP_I16_I16_I16>;
 defm V_SUB_I16 : VOP3Inst_t16 <"v_sub_i16", VOP_I16_I16_I16>;
 
 let isCommutable = 1 in {
-  defm V_MAD_U32_U16 : VOP3Inst <"v_mad_u32_u16", VOP3_Profile<VOP_I32_I16_I16_I32, VOP3_OPSEL>>;
-  defm V_MAD_I32_I16 : VOP3Inst <"v_mad_i32_i16", VOP3_Profile<VOP_I32_I16_I16_I32, VOP3_OPSEL>>;
+  defm V_MAD_U32_U16 : VOP3Inst_t16 <"v_mad_u32_u16", VOP_I32_I16_I16_I32>;
+  defm V_MAD_I32_I16 : VOP3Inst_t16 <"v_mad_i32_i16", VOP_I32_I16_I16_I32>;
 } // End isCommutable = 1
 
 defm V_CVT_PKNORM_I16_F16 : VOP3Inst_t16 <"v_cvt_pknorm_i16_f16", VOP_B32_F16_F16>;
@@ -1736,8 +1736,8 @@ defm V_ADD3_U32            : VOP3_Realtriple_gfx11_gfx12<0x255>;
 defm V_LSHL_OR_B32         : VOP3_Realtriple_gfx11_gfx12<0x256>;
 defm V_AND_OR_B32          : VOP3_Realtriple_gfx11_gfx12<0x257>;
 defm V_OR3_B32             : VOP3_Realtriple_gfx11_gfx12<0x258>;
-defm V_MAD_U32_U16         : VOP3_Realtriple_gfx11_gfx12<0x259>;
-defm V_MAD_I32_I16         : VOP3_Realtriple_gfx11_gfx12<0x25a>;
+defm V_MAD_U32_U16         : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x259, "v_mad_u32_u16">;
+defm V_MAD_I32_I16         : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x25a, "v_mad_i32_i16">;
 defm V_PERMLANE16_B32      : VOP3_Real_Base_gfx11_gfx12<0x25b>;
 defm V_PERMLANEX16_B32     : VOP3_Real_Base_gfx11_gfx12<0x25c>;
 defm V_MAXMIN_F32          : VOP3_Realtriple_gfx11<0x25e>;

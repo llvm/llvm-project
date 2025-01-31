@@ -98,6 +98,12 @@ public:
   /// register in a function will get the index 0.
   unsigned virtRegIndex() const { return virtReg2Index(Reg); }
 
+  /// Compute the frame index from a register value representing a stack slot.
+  int stackSlotIndex() const {
+    assert(isStack() && "Not a stack slot");
+    return static_cast<int>(Reg - MCRegister::FirstStackSlot);
+  }
+
   constexpr operator unsigned() const { return Reg; }
 
   constexpr unsigned id() const { return Reg; }

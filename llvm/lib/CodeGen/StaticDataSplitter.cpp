@@ -35,19 +35,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "static-data-splitter"
 
-STATISTIC(NumHotJumpTables, "Number of hot jump tables seen");
-STATISTIC(NumColdJumpTables, "Number of cold jump tables seen");
+STATISTIC(NumHotJumpTables, "Number of hot jump tables seen.");
+STATISTIC(NumColdJumpTables, "Number of cold jump tables seen.");
 STATISTIC(NumUnknownJumpTables,
-          "Number of jump tables with unknown hotness. Option "
-          "-static-data-default-hotness specifies the hotness.");
-
-static cl::opt<MachineFunctionDataHotness> StaticDataDefaultHotness(
-    "static-data-default-hotness", cl::Hidden,
-    cl::desc("This option specifies the hotness of static data when profile "
-             "information is unavailable"),
-    cl::init(MachineFunctionDataHotness::Hot),
-    cl::values(clEnumValN(MachineFunctionDataHotness::Hot, "hot", "Hot"),
-               clEnumValN(MachineFunctionDataHotness::Cold, "cold", "Cold")));
+          "Number of jump tables with unknown hotness. They are from functions "
+          "without profile information.");
 
 class StaticDataSplitter : public MachineFunctionPass {
   const MachineBranchProbabilityInfo *MBPI = nullptr;
@@ -155,13 +147,6 @@ bool StaticDataSplitter::splitJumpTables(MachineFunction &MF) {
   // Place jump tables according to block hotness if function has profile data.
   if (ProfileAvailable)
     return splitJumpTablesWithProfiles(MF, *MJTI);
-
-  // If function profile is unavailable (e.g., module not instrumented, or new
-  // code paths lacking samples), -static-data-default-hotness specifies the
-  // hotness.
-  for (size_t JTI = 0; JTI < MJTI->getJumpTables().size(); JTI++)
-    MF.getJumpTableInfo()->updateJumpTableEntryHotness(
-        JTI, StaticDataDefaultHotness);
 
   return true;
 }

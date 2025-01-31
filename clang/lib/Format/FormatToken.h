@@ -44,6 +44,8 @@ namespace format {
   TYPE(CaseLabelColon)                                                         \
   TYPE(CastRParen)                                                             \
   TYPE(ClassLBrace)                                                            \
+  /* Name of class/struct/union/interface definition. */                       \
+  TYPE(ClassHeadName)                                                          \
   TYPE(ClassRBrace)                                                            \
   TYPE(CompoundRequirementLBrace)                                              \
   /* ternary ?: expression */                                                  \

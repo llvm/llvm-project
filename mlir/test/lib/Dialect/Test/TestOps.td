@@ -193,8 +193,15 @@ def TypeArrayAttrWithDefaultOp : TEST_Op<"type_array_attr_with_default"> {
   let arguments = (ins DefaultValuedAttr<TypeArrayAttr, "{}">:$attr);
 }
 
-def TypeStringAttrWithTypeOp : TEST_Op<"string_attr_with_type"> {
-  let arguments = (ins TypedStrAttr<AnyType>:$attr);
+def TypedStringAttrWithTypeOp : TEST_Op<"string_attr_with_type"> {
+  let arguments = (ins TypedStrAttr<AnyInteger>:$attr);
+  let assemblyFormat = "$attr attr-dict";
+}
+
+def TypedStringAttrWithMixedTypeOp : TEST_Op<"string_attr_with_mixed_type"> {
+  let arguments = (ins
+    AnyAttrOf<[TypedStrAttr<AnyInteger>, I64Attr]>:$attr
+  );
   let assemblyFormat = "$attr attr-dict";
 }
 

@@ -32,9 +32,9 @@ public:
   ~CommandReturnObject() = default;
 
   /// Format any inline diagnostics with an indentation of \c indent.
-  std::string GetInlineDiagnosticString(unsigned indent);
+  std::string GetInlineDiagnosticString(unsigned indent) const;
 
-  llvm::StringRef GetOutputString() {
+  llvm::StringRef GetOutputString() const {
     lldb::StreamSP stream_sp(m_out_stream.GetStreamAtIndex(eStreamStringIndex));
     if (stream_sp)
       return std::static_pointer_cast<StreamString>(stream_sp)->GetString();
@@ -46,7 +46,7 @@ public:
   /// If \c with_diagnostics is true, all diagnostics are also
   /// rendered into the string. Otherwise the expectation is that they
   /// are fetched with \ref GetInlineDiagnosticString().
-  std::string GetErrorString(bool with_diagnostics = true);
+  std::string GetErrorString(bool with_diagnostics = true) const;
   StructuredData::ObjectSP GetErrorData();
 
   Stream &GetOutputStream() {
@@ -95,11 +95,11 @@ public:
     m_err_stream.SetStreamAtIndex(eImmediateStreamIndex, stream_sp);
   }
 
-  lldb::StreamSP GetImmediateOutputStream() {
+  lldb::StreamSP GetImmediateOutputStream() const {
     return m_out_stream.GetStreamAtIndex(eImmediateStreamIndex);
   }
 
-  lldb::StreamSP GetImmediateErrorStream() {
+  lldb::StreamSP GetImmediateErrorStream() const {
     return m_err_stream.GetStreamAtIndex(eImmediateStreamIndex);
   }
 

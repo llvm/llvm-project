@@ -40,35 +40,6 @@ def ConvertToLLVMPass : Pass<"convert-to-llvm"> {
 }
 
 //===----------------------------------------------------------------------===//
-// ToSPIRV
-//===----------------------------------------------------------------------===//
-
-def ConvertToSPIRVPass : Pass<"convert-to-spirv"> {
-  let summary = "Convert to SPIR-V";
-  let description = [{
-    This is a generic pass to convert to SPIR-V.
-  }];
-  let dependentDialects = [
-    "spirv::SPIRVDialect",
-    "vector::VectorDialect",
-  ];
-  let options = [
-    Option<"runSignatureConversion", "run-signature-conversion", "bool",
-    /*default=*/"true",
-    "Run function signature conversion to convert vector types">,
-    Option<"runVectorUnrolling", "run-vector-unrolling", "bool",
-    /*default=*/"true",
-    "Run vector unrolling to convert vector types in function bodies">,
-    Option<"convertGPUModules", "convert-gpu-modules", "bool",
-    /*default=*/"false",
-    "Clone and convert GPU modules">,
-    Option<"nestInGPUModule", "nest-in-gpu-module", "bool",
-    /*default=*/"false",
-    "Put converted SPIR-V module inside the gpu.module instead of alongside it.">,
-  ];
-}
-
-//===----------------------------------------------------------------------===//
 // AffineToStandard
 //===----------------------------------------------------------------------===//
 

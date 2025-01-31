@@ -216,12 +216,6 @@ typedef basic_fstream<wchar_t> wfstream;
 _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
-#  if !defined(_LIBCPP_MSVCRT) && !defined(_NEWLIB_VERSION)
-#    define _LIBCPP_HAS_OFF_T_FUNCTIONS 1
-#  else
-#    define _LIBCPP_HAS_OFF_T_FUNCTIONS 0
-#  endif
-
 #  if _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -361,6 +355,9 @@ private:
 
   bool __read_mode();
   void __write_mode();
+
+  _LIBCPP_HIDE_FROM_ABI static int __fseek(FILE* __file, pos_type __offset, int __whence);
+  _LIBCPP_HIDE_FROM_ABI static pos_type __ftell(FILE* __file);
 
   _LIBCPP_EXPORTED_FROM_ABI friend FILE* __get_ostream_file(ostream&);
 
@@ -936,17 +933,33 @@ basic_filebuf<_CharT, _Traits>::seekoff(off_type __off, ios_base::seekdir __way,
   default:
     return pos_type(off_type(-1));
   }
-#    if !_LIBCPP_HAS_OFF_T_FUNCTIONS
-  if (fseek(__file_, __width > 0 ? __width * __off : 0, __whence))
+  if (__fseek(__file_, __width > 0 ? __width * __off : 0, __whence))
     return pos_type(off_type(-1));
-  pos_type __r = ftell(__file_);
-#    else
-  if (::fseeko(__file_, __width > 0 ? __width * __off : 0, __whence))
-    return pos_type(off_type(-1));
-  pos_type __r = ftello(__file_);
-#    endif
+  pos_type __r = __ftell(__file_);
   __r.state(__st_);
   return __r;
+}
+
+template <class _CharT, class _Traits>
+int basic_filebuf<_CharT, _Traits>::__fseek(FILE* __file, pos_type __offset, int __whence) {
+#    if defined(_LIBCPP_MSVCRT_LIKE)
+  return _fseeki64(__file, __offset, __whence);
+#    elif defined(_NEWLIB_VERSION)
+  return fseek(__file, __offset, __whence);
+#    else
+  return ::fseeko(__file, __offset, __whence);
+#    endif
+}
+
+template <class _CharT, class _Traits>
+typename basic_filebuf<_CharT, _Traits>::pos_type basic_filebuf<_CharT, _Traits>::__ftell(FILE* __file) {
+#    if defined(_LIBCPP_MSVCRT_LIKE)
+  return _ftelli64(__file);
+#    elif defined(_NEWLIB_VERSION)
+  return ftell(__file);
+#    else
+  return ftello(__file);
+#    endif
 }
 
 template <class _CharT, class _Traits>
@@ -954,13 +967,8 @@ typename basic_filebuf<_CharT, _Traits>::pos_type
 basic_filebuf<_CharT, _Traits>::seekpos(pos_type __sp, ios_base::openmode) {
   if (__file_ == nullptr || sync())
     return pos_type(off_type(-1));
-#    if !_LIBCPP_HAS_OFF_T_FUNCTIONS
-  if (fseek(__file_, __sp, SEEK_SET))
+  if (__fseek(__file_, __sp, SEEK_SET))
     return pos_type(off_type(-1));
-#    else
-  if (::fseeko(__file_, __sp, SEEK_SET))
-    return pos_type(off_type(-1));
-#    endif
   __st_ = __sp.state();
   return __sp;
 }
@@ -1007,13 +1015,8 @@ int basic_filebuf<_CharT, _Traits>::sync() {
         }
       }
     }
-#    if !_LIBCPP_HAS_OFF_T_FUNCTIONS
-    if (fseek(__file_, -__c, SEEK_CUR))
+    if (__fseek(__file_, -__c, SEEK_CUR))
       return -1;
-#    else
-    if (::fseeko(__file_, -__c, SEEK_CUR))
-      return -1;
-#    endif
     if (__update_st)
       __st_ = __state;
     __extbufnext_ = __extbufend_ = __extbuf_;

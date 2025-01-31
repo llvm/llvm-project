@@ -26,6 +26,7 @@ class CIRGenAction : public clang::ASTFrontendAction {
 public:
   enum class OutputType {
     EmitCIR,
+    EmitLLVM,
   };
 
 private:
@@ -53,6 +54,13 @@ class EmitCIRAction : public CIRGenAction {
 
 public:
   EmitCIRAction(mlir::MLIRContext *MLIRCtx = nullptr);
+};
+
+class EmitLLVMAction : public CIRGenAction {
+  virtual void anchor();
+
+public:
+  EmitLLVMAction(mlir::MLIRContext *MLIRCtx = nullptr);
 };
 
 } // namespace cir

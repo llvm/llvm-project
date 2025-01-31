@@ -160,11 +160,16 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
         unsigned Levels = D->getLevels();
         char Direction;
         for (unsigned II = 1; II <= Levels; ++II) {
+          // `DVEntry::LE` is converted to `*`. This is because `LE` means `<`
+          // or `=`, for which we don't have an equivalent representation, so
+          // that the conservative approximation is necessary. The same goes for
+          // `DVEntry::GE`.
+          // TODO: Use of fine-grained expressions allows for more accurate
+          // analysis.
           unsigned Dir = D->getDirection(II);
-          if (Dir == Dependence::DVEntry::LT || Dir == Dependence::DVEntry::LE)
+          if (Dir == Dependence::DVEntry::LT)
             Direction = '<';
-          else if (Dir == Dependence::DVEntry::GT ||
-                   Dir == Dependence::DVEntry::GE)
+          else if (Dir == Dependence::DVEntry::GT)
             Direction = '>';
           else if (Dir == Dependence::DVEntry::EQ)
             Direction = '=';

@@ -6,50 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <deque>
 #include <string>
 
+#include "container_benchmarks.h"
 #include "benchmark/benchmark.h"
 
-#include "ContainerBenchmarks.h"
-#include "../GenerateInput.h"
+int main(int argc, char** argv) {
+  ContainerBenchmarks::sequence_container_benchmarks<std::deque<int>>("std::deque<int>");
+  ContainerBenchmarks::sequence_container_benchmarks<std::deque<std::string>>("std::deque<std::string>");
 
-using namespace ContainerBenchmarks;
-
-constexpr std::size_t TestNumInputs = 1024;
-
-BENCHMARK_CAPTURE(BM_ConstructSize, deque_byte, std::deque<unsigned char>{})->Arg(5140480);
-
-BENCHMARK_CAPTURE(BM_ConstructSizeValue, deque_byte, std::deque<unsigned char>{}, 0)->Arg(5140480);
-
-BENCHMARK_CAPTURE(BM_ConstructIterIter, deque_char, std::deque<char>{}, getRandomIntegerInputs<char>)
-    ->Arg(TestNumInputs);
-
-BENCHMARK_CAPTURE(BM_ConstructIterIter, deque_size_t, std::deque<size_t>{}, getRandomIntegerInputs<size_t>)
-    ->Arg(TestNumInputs);
-
-BENCHMARK_CAPTURE(BM_ConstructIterIter, deque_string, std::deque<std::string>{}, getRandomStringInputs)
-    ->Arg(TestNumInputs);
-
-BENCHMARK_CAPTURE(BM_ConstructFromRange, deque_char, std::deque<char>{}, getRandomIntegerInputs<char>)
-    ->Arg(TestNumInputs);
-
-BENCHMARK_CAPTURE(BM_ConstructFromRange, deque_size_t, std::deque<size_t>{}, getRandomIntegerInputs<size_t>)
-    ->Arg(TestNumInputs);
-
-BENCHMARK_CAPTURE(BM_ConstructFromRange, deque_string, std::deque<std::string>{}, getRandomStringInputs)
-    ->Arg(TestNumInputs);
-
-BENCHMARK_CAPTURE(BM_erase_iter_in_middle, deque_int, std::deque<int>{}, getRandomIntegerInputs<int>)
-    ->Range(TestNumInputs, TestNumInputs * 10);
-BENCHMARK_CAPTURE(BM_erase_iter_in_middle, deque_string, std::deque<std::string>{}, getRandomStringInputs)
-    ->Range(TestNumInputs, TestNumInputs * 10);
-
-BENCHMARK_CAPTURE(BM_erase_iter_at_start, deque_int, std::deque<int>{}, getRandomIntegerInputs<int>)
-    ->Range(TestNumInputs, TestNumInputs * 10);
-BENCHMARK_CAPTURE(BM_erase_iter_at_start, deque_string, std::deque<std::string>{}, getRandomStringInputs)
-    ->Range(TestNumInputs, TestNumInputs * 10);
-
-BENCHMARK_MAIN();
+  benchmark::Initialize(&argc, argv);
+  benchmark::RunSpecifiedBenchmarks();
+  benchmark::Shutdown();
+  return 0;
+}

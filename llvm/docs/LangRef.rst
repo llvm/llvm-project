@@ -191,7 +191,7 @@ symbol table entries. Here is an example of the "hello world" module:
     @.str = private unnamed_addr constant [13 x i8] c"hello world\0A\00"
 
     ; External declaration of the puts function
-    declare i32 @puts(ptr nocapture) nounwind
+    declare i32 @puts(ptr captures(none)) nounwind
 
     ; Definition of main function
     define i32 @main() {
@@ -1170,7 +1170,7 @@ spaces. For example:
 .. code-block:: llvm
 
     ; On function declarations/definitions:
-    declare i32 @printf(ptr noalias nocapture, ...)
+    declare i32 @printf(ptr noalias captures(none), ...)
     declare i32 @atoi(i8 zeroext)
     declare signext i8 @returns_signed_char()
     define void @baz(i32 "amdgpu-flat-work-group-size"="1,256" %x)
@@ -1431,24 +1431,6 @@ Currently, only the following parameter attributes are defined:
     - ``captures(address_is_null, ret: address, provenance)``: The whole pointer
       is captured through the return value, and additionally whether the pointer
       is null is captured in some other way.
-
-.. _nocapture:
-
-``nocapture``
-    This indicates that the callee does not :ref:`capture <pointercapture>` the
-    pointer. This is not a valid attribute for return values.
-    This attribute applies only to the particular copy of the pointer passed in
-    this argument. A caller could pass two copies of the same pointer with one
-    being annotated nocapture and the other not, and the callee could validly
-    capture through the non annotated parameter.
-
-.. code-block:: llvm
-
-    define void @f(ptr nocapture %a, ptr %b) {
-      ; (capture %b)
-    }
-
-    call void @f(ptr @glb, ptr @glb) ; well-defined
 
 ``nofree``
     This indicates that callee does not free the pointer argument. This is not
@@ -13923,7 +13905,7 @@ Syntax:
 
       declare <pointer type>
         @llvm.experimental.gc.get.pointer.base(
-          <pointer type> readnone nocapture %derived_ptr)
+          <pointer type> readnone captures(none) %derived_ptr)
           nounwind willreturn memory(none)
 
 Overview:
@@ -13961,7 +13943,7 @@ Syntax:
 
       declare i64
         @llvm.experimental.gc.get.pointer.offset(
-          <pointer type> readnone nocapture %derived_ptr)
+          <pointer type> readnone captures(none) %derived_ptr)
           nounwind willreturn memory(none)
 
 Overview:
@@ -26222,7 +26204,7 @@ Syntax:
 
 ::
 
-      declare void @llvm.lifetime.start(i64 <size>, ptr nocapture <ptr>)
+      declare void @llvm.lifetime.start(i64 <size>, ptr captures(none) <ptr>)
 
 Overview:
 """""""""
@@ -26272,7 +26254,7 @@ Syntax:
 
 ::
 
-      declare void @llvm.lifetime.end(i64 <size>, ptr nocapture <ptr>)
+      declare void @llvm.lifetime.end(i64 <size>, ptr captures(none) <ptr>)
 
 Overview:
 """""""""
@@ -26312,7 +26294,7 @@ This is an overloaded intrinsic. The memory object can belong to any address spa
 
 ::
 
-      declare ptr @llvm.invariant.start.p0(i64 <size>, ptr nocapture <ptr>)
+      declare ptr @llvm.invariant.start.p0(i64 <size>, ptr captures(none) <ptr>)
 
 Overview:
 """""""""
@@ -26343,7 +26325,7 @@ This is an overloaded intrinsic. The memory object can belong to any address spa
 
 ::
 
-      declare void @llvm.invariant.end.p0(ptr <start>, i64 <size>, ptr nocapture <ptr>)
+      declare void @llvm.invariant.end.p0(ptr <start>, i64 <size>, ptr captures(none) <ptr>)
 
 Overview:
 """""""""

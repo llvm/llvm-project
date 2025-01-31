@@ -14,6 +14,7 @@ using ast_matchers::callee;
 using ast_matchers::cxxMemberCallExpr;
 using ast_matchers::cxxMethodDecl;
 using ast_matchers::cxxOperatorCallExpr;
+using ast_matchers::hasCanonicalType;
 using ast_matchers::hasName;
 using ast_matchers::hasOverloadedOperatorName;
 using ast_matchers::ofClass;
@@ -122,27 +123,29 @@ namespace clang::dataflow {
 ast_matchers::StatementMatcher isSmartPointerLikeOperatorStar() {
   return cxxOperatorCallExpr(
       hasOverloadedOperatorName("*"),
-      callee(cxxMethodDecl(parameterCountIs(0), returns(referenceType()),
+      callee(cxxMethodDecl(parameterCountIs(0),
+                           returns(hasCanonicalType(referenceType())),
                            ofClass(smartPointerClassWithGetOrValue()))));
 }
 
 ast_matchers::StatementMatcher isSmartPointerLikeOperatorArrow() {
   return cxxOperatorCallExpr(
       hasOverloadedOperatorName("->"),
-      callee(cxxMethodDecl(parameterCountIs(0), returns(pointerType()),
+      callee(cxxMethodDecl(parameterCountIs(0),
+                           returns(hasCanonicalType(pointerType())),
                            ofClass(smartPointerClassWithGetOrValue()))));
 }
 
 ast_matchers::StatementMatcher isSmartPointerLikeValueMethodCall() {
-  return cxxMemberCallExpr(callee(
-      cxxMethodDecl(parameterCountIs(0), returns(referenceType()),
-                    hasName("value"), ofClass(smartPointerClassWithValue()))));
+  return cxxMemberCallExpr(callee(cxxMethodDecl(
+      parameterCountIs(0), returns(hasCanonicalType(referenceType())),
+      hasName("value"), ofClass(smartPointerClassWithValue()))));
 }
 
 ast_matchers::StatementMatcher isSmartPointerLikeGetMethodCall() {
-  return cxxMemberCallExpr(callee(
-      cxxMethodDecl(parameterCountIs(0), returns(pointerType()), hasName("get"),
-                    ofClass(smartPointerClassWithGet()))));
+  return cxxMemberCallExpr(callee(cxxMethodDecl(
+      parameterCountIs(0), returns(hasCanonicalType(pointerType())),
+      hasName("get"), ofClass(smartPointerClassWithGet()))));
 }
 
 const FunctionDecl *

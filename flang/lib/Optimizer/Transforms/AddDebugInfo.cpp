@@ -523,7 +523,7 @@ void AddDebugInfoPass::runOnOperation() {
   llvm::StringRef fileName;
   std::string filePath;
   std::optional<mlir::DataLayout> dl =
-      fir::support::getOrSetDataLayout(module, /*allowDefaultLayout=*/true);
+      fir::support::getOrSetMLIRDataLayout(module, /*allowDefaultLayout=*/true);
   if (!dl) {
     mlir::emitError(module.getLoc(), "Missing data layout attribute in module");
     signalPassFailure();

@@ -1372,13 +1372,19 @@ public:
 
     MlirType type = mlirAttributeGetType(*this);
     type = mlirShapedTypeGetElementType(type);
-    assert(mlirTypeIsAInteger(type) &&
-           "expected integer element type in dense int elements attribute");
+    // Index type can also appear as a DenseIntElementsAttr and therefore can be
+    // casted to integer.
+    assert(mlirTypeIsAInteger(type) ||
+           mlirTypeIsAIndex(type) && "expected integer/index element type in "
+                                     "dense int elements attribute");
     // Dispatch element extraction to an appropriate C function based on the
     // elemental type of the attribute. nb::int_ is implicitly constructible
     // from any C++ integral type and handles bitwidth correctly.
     // TODO: consider caching the type properties in the constructor to avoid
     // querying them on each element access.
+    if (mlirTypeIsAIndex(type)) {
+      return nb::int_(mlirDenseElementsAttrGetIndexValue(*this, pos));
+    }
     unsigned width = mlirIntegerTypeGetWidth(type);
     bool isUnsigned = mlirIntegerTypeIsUnsigned(type);
     if (isUnsigned) {

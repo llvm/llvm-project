@@ -2204,19 +2204,19 @@ InstructionCost X86TTIImpl::getShuffleCost(
       {TTI::SK_PermuteSingleSrc, MVT::v2f64, {1, 1, 1, 1}}, // shufpd
       {TTI::SK_PermuteSingleSrc, MVT::v2i64, {1, 1, 1, 1}}, // pshufd
       {TTI::SK_PermuteSingleSrc, MVT::v4i32, {1, 1, 1, 1}}, // pshufd
-      {TTI::SK_PermuteSingleSrc, MVT::v8i16, {5, 5, 5, 5}}, // 2*pshuflw + 2*pshufhw
+      {TTI::SK_PermuteSingleSrc, MVT::v8i16, {3, 5, 5, 5}}, // 2*pshuflw + 2*pshufhw
                                                             // + pshufd/unpck
-      {TTI::SK_PermuteSingleSrc, MVT::v8f16, {5, 5, 5, 5}}, // 2*pshuflw + 2*pshufhw
+      {TTI::SK_PermuteSingleSrc, MVT::v8f16, {3, 5, 5, 5}}, // 2*pshuflw + 2*pshufhw
                                                             // + pshufd/unpck
-      {TTI::SK_PermuteSingleSrc, MVT::v16i8, {10, 10, 10, 10}}, // 2*pshuflw + 2*pshufhw
-                                                                // + 2*pshufd + 2*unpck + 2*packus
+      {TTI::SK_PermuteSingleSrc, MVT::v16i8, {8, 10, 10, 10}}, // 2*pshuflw + 2*pshufhw
+                                                               // + 2*pshufd + 2*unpck + 2*packus
 
       {TTI::SK_PermuteTwoSrc, MVT::v2f64, {1, 1, 1, 1}},     // shufpd
       {TTI::SK_PermuteTwoSrc, MVT::v2i64, {1, 1, 1, 1}},     // shufpd
       {TTI::SK_PermuteTwoSrc, MVT::v4i32, {2, 2, 2, 2}},     // 2*{unpck,movsd,pshufd}
-      {TTI::SK_PermuteTwoSrc, MVT::v8i16, {8, 8, 8, 8}},     // blend+permute
-      {TTI::SK_PermuteTwoSrc, MVT::v8f16, {8, 8, 8, 8}},     // blend+permute
-      {TTI::SK_PermuteTwoSrc, MVT::v16i8, {13, 13, 13, 13}}, // blend+permute
+      {TTI::SK_PermuteTwoSrc, MVT::v8i16, {6, 8, 8, 8}},     // blend+permute
+      {TTI::SK_PermuteTwoSrc, MVT::v8f16, {6, 8, 8, 8}},     // blend+permute
+      {TTI::SK_PermuteTwoSrc, MVT::v16i8, {11, 13, 13, 13}}, // blend+permute
   };
 
   static const CostTblEntry SSE3BroadcastLoadTbl[] = {
