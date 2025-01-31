@@ -1349,8 +1349,8 @@ AliasResult BasicAAResult::aliasGEP(
     const VariableGEPIndex &Var1 = DecompGEP1.VarIndices[1];
     if (Var0.hasNegatedScaleOf(Var1) && Var0.Val.TruncBits == 0 &&
         Var0.Val.hasSameCastsAs(Var1.Val) && !AAQI.MayBeCrossIteration &&
-        isKnownNonEqual(Var0.Val.V, Var1.Val.V, DL, &AC, /* CxtI */ nullptr,
-                        DT))
+        isKnownNonEqual(Var0.Val.V, Var1.Val.V,
+                        SimplifyQuery(DL, DT, &AC, /*CxtI=*/nullptr)))
       MinAbsVarIndex = Var0.Scale.abs();
   }
 
