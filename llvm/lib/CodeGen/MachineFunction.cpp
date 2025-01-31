@@ -622,11 +622,14 @@ const char *MachineFunction::createExternalSymbolName(StringRef Name) {
   return Dest;
 }
 
-uint32_t *MachineFunction::allocateRegMask() {
+uint32_t *MachineFunction::allocateRegMask(uint32_t InitValue,
+                                           unsigned *OutSize) {
   unsigned NumRegs = getSubtarget().getRegisterInfo()->getNumRegs();
   unsigned Size = MachineOperand::getRegMaskSize(NumRegs);
   uint32_t *Mask = Allocator.Allocate<uint32_t>(Size);
-  memset(Mask, 0, Size * sizeof(Mask[0]));
+  memset(Mask, InitValue, Size * sizeof(Mask[0]));
+  if (OutSize)
+    *OutSize = Size;
   return Mask;
 }
 

@@ -1138,8 +1138,10 @@ public:
     OperandRecycler.deallocate(Cap, Array);
   }
 
-  /// Allocate and initialize a register mask with @p NumRegister bits.
-  uint32_t *allocateRegMask();
+  /// Allocate and initialize a register mask with all elements set to
+  /// \p InitValue and size reported via \p OutSize if nonnull.
+  uint32_t *allocateRegMask(uint32_t InitValue = 0,
+                            unsigned *OutSize = nullptr);
 
   ArrayRef<int> allocateShuffleMask(ArrayRef<int> Mask);
 

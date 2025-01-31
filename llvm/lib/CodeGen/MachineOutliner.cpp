@@ -1117,6 +1117,7 @@ bool MachineOutliner::outline(
         // instruction. It also updates call site information for moved
         // code.
         SmallSet<Register, 2> UseRegs, DefRegs;
+        SmallPtrSet<const uint32_t *, 2> RegMasks;
         // Copy over the defs in the outlined range.
         // First inst in outlined range <-- Anything that's defined in this
         // ...                           .. range has to be added as an
@@ -1130,6 +1131,12 @@ bool MachineOutliner::outline(
           MachineInstr *MI = &*Iter;
           SmallSet<Register, 2> InstrUseRegs;
           for (MachineOperand &MOP : MI->operands()) {
+            // Collect all regmasks. Merge them in the end.
+            if (MOP.isRegMask()) {
+              RegMasks.insert(MOP.getRegMask());
+              continue;
+            }
+
             // Skip over anything that isn't a register.
             if (!MOP.isReg())
               continue;
@@ -1151,6 +1158,20 @@ bool MachineOutliner::outline(
           }
           if (MI->isCandidateForAdditionalCallInfo())
             MI->getMF()->eraseAdditionalCallInfo(MI);
+        }
+
+        if (!RegMasks.empty()) {
+          if (RegMasks.size() == 1) {
+            CallInst->addOperand(
+                MachineOperand::CreateRegMask(*RegMasks.begin()));
+          } else {
+            unsigned Size;
+            uint32_t *RegMask = MF->allocateRegMask(UINT32_MAX, &Size);
+            for (const uint32_t *Mask : RegMasks)
+              for (unsigned I = 0; I < Size; ++I)
+                RegMask[I] &= Mask[I];
+            CallInst->addOperand(MachineOperand::CreateRegMask(RegMask));
+          }
         }
 
         for (const Register &I : DefRegs)
