@@ -34,7 +34,8 @@ void test_octal(const char *expected)
 {
     std::stringstream ss;
     ss << std::oct << static_cast<T>(-1);
-    assert(ss.str() == expected);
+    auto str = ss.str();
+    assert(str == expected);
 }
 
 template <typename T>
