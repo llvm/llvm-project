@@ -1329,18 +1329,17 @@ findAssociatedValue(Value privateVar, llvm::IRBuilderBase &builder,
   return moduleTranslation.lookupValue(privateVar);
 }
 
-/// Allocate delayed private variables. Returns the basic block which comes
-/// after all of these allocations. llvm::Value * for each of these private
-/// variables are populated in llvmPrivateVars.
-static llvm::Expected<llvm::BasicBlock *>
-allocatePrivateVars(llvm::IRBuilderBase &builder,
-                    LLVM::ModuleTranslation &moduleTranslation,
-                    MutableArrayRef<BlockArgument> privateBlockArgs,
-                    MutableArrayRef<omp::PrivateClauseOp> privateDecls,
-                    MutableArrayRef<mlir::Value> mlirPrivateVars,
-                    llvm::SmallVectorImpl<llvm::Value *> &llvmPrivateVars,
-                    const llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
-                    llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
+/// Allocate and initialize delayed private variables. Returns the basic block
+/// which comes after all of these allocations. llvm::Value * for each of these
+/// private variables are populated in llvmPrivateVars.
+static llvm::Expected<llvm::BasicBlock *> allocateAndInitPrivateVars(
+    llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation,
+    MutableArrayRef<BlockArgument> privateBlockArgs,
+    MutableArrayRef<omp::PrivateClauseOp> privateDecls,
+    MutableArrayRef<mlir::Value> mlirPrivateVars,
+    llvm::SmallVectorImpl<llvm::Value *> &llvmPrivateVars,
+    const llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
+    llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
   // Allocate private vars
   llvm::BranchInst *allocaTerminator =
       llvm::cast<llvm::BranchInst>(allocaIP.getBlock()->getTerminator());
@@ -1358,57 +1357,51 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
 
   llvm::BasicBlock *afterAllocas = allocaTerminator->getSuccessor(0);
 
-  // FIXME: Some of the allocation regions do more than just allocating.
-  // They read from their block argument (amongst other non-alloca things).
-  // When OpenMPIRBuilder outlines the parallel region into a different
-  // function it places the loads for live in-values (such as these block
-  // arguments) at the end of the entry block (because the entry block is
-  // assumed to contain only allocas). Therefore, if we put these complicated
-  // alloc blocks in the entry block, these will not dominate the availability
-  // of the live-in values they are using. Fix this by adding a latealloc
-  // block after the entry block to put these in (this also helps to avoid
-  // mixing non-alloca code with allocas).
-  // Alloc regions which do not use the block argument can still be placed in
-  // the entry block (therefore keeping the allocas together).
-  llvm::BasicBlock *privAllocBlock = nullptr;
+  llvm::BasicBlock *privInitBlock = nullptr;
   if (!privateBlockArgs.empty())
-    privAllocBlock = splitBB(builder, true, "omp.private.latealloc");
+    privInitBlock = splitBB(builder, true, "omp.private.init");
   for (auto [privDecl, mlirPrivVar, blockArg] :
        llvm::zip_equal(privateDecls, mlirPrivateVars, privateBlockArgs)) {
-    Region &allocRegion = privDecl.getAllocRegion();
+    llvm::Type *llvmAllocType =
+        moduleTranslation.convertType(privDecl.getType());
+    builder.SetInsertPoint(allocaIP.getBlock()->getTerminator());
+    llvm::Value *llvmPrivateVar = builder.CreateAlloca(
+        llvmAllocType, /*ArraySize=*/nullptr, "omp.private.alloc");
 
-    // map allocation region block argument
+    Region &initRegion = privDecl.getInitRegion();
+    if (initRegion.empty()) {
+      moduleTranslation.mapValue(blockArg, llvmPrivateVar);
+      llvmPrivateVars.push_back(llvmPrivateVar);
+      continue;
+    }
+
+    // map initialization region block arguments
     llvm::Value *nonPrivateVar = findAssociatedValue(
         mlirPrivVar, builder, moduleTranslation, mappedPrivateVars);
     assert(nonPrivateVar);
-    moduleTranslation.mapValue(privDecl.getAllocMoldArg(), nonPrivateVar);
+    moduleTranslation.mapValue(privDecl.getInitMoldArg(), nonPrivateVar);
+    moduleTranslation.mapValue(privDecl.getInitPrivateArg(), llvmPrivateVar);
 
-    // in-place convert the private allocation region
+    // in-place convert the private initialization region
     SmallVector<llvm::Value *, 1> phis;
-    if (privDecl.getAllocMoldArg().getUses().empty()) {
-      // TODO this should use
-      // allocaIP.getBlock()->getFirstNonPHIOrDbgOrAlloca() so it goes before
-      // the code for fetching the thread id. Not doing this for now to avoid
-      // test churn.
-      builder.SetInsertPoint(allocaIP.getBlock()->getTerminator());
-    } else {
-      builder.SetInsertPoint(privAllocBlock->getTerminator());
-    }
-
-    if (failed(inlineConvertOmpRegions(allocRegion, "omp.private.alloc",
-                                       builder, moduleTranslation, &phis)))
+    builder.SetInsertPoint(privInitBlock->getTerminator());
+    if (failed(inlineConvertOmpRegions(initRegion, "omp.private.init", builder,
+                                       moduleTranslation, &phis)))
       return llvm::createStringError(
-          "failed to inline `alloc` region of `omp.private`");
+          "failed to inline `init` region of `omp.private`");
 
     assert(phis.size() == 1 && "expected one allocation to be yielded");
 
+    // prefer the value yielded from the init region to the allocated private
+    // variable in case the region is operating on arguments by-value (e.g.
+    // Fortran character boxes).
     moduleTranslation.mapValue(blockArg, phis[0]);
     llvmPrivateVars.push_back(phis[0]);
 
-    // clear alloc region block argument mapping in case it needs to be
+    // clear init region block argument mapping in case it needs to be
     // re-created with a different source for another use of the same
     // reduction decl
-    moduleTranslation.forgetMapping(allocRegion);
+    moduleTranslation.forgetMapping(initRegion);
   }
   return afterAllocas;
 }
@@ -1746,9 +1739,10 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
     LLVM::ModuleTranslation::SaveStack<OpenMPAllocaStackFrame> frame(
         moduleTranslation, allocaIP);
 
-    llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
-        builder, moduleTranslation, privateBlockArgs, privateDecls,
-        mlirPrivateVars, llvmPrivateVars, allocaIP);
+    llvm::Expected<llvm::BasicBlock *> afterAllocas =
+        allocateAndInitPrivateVars(builder, moduleTranslation, privateBlockArgs,
+                                   privateDecls, mlirPrivateVars,
+                                   llvmPrivateVars, allocaIP);
     if (handleError(afterAllocas, *taskOp).failed())
       return llvm::make_error<PreviouslyReportedError>();
 
@@ -1880,7 +1874,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   SmallVector<llvm::Value *> privateReductionVariables(
       wsloopOp.getNumReductionVars());
 
-  llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
+  llvm::Expected<llvm::BasicBlock *> afterAllocas = allocateAndInitPrivateVars(
       builder, moduleTranslation, privateBlockArgs, privateDecls,
       mlirPrivateVars, llvmPrivateVars, allocaIP);
   if (handleError(afterAllocas, opInst).failed())
@@ -2052,9 +2046,10 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
 
   auto bodyGenCB = [&](InsertPointTy allocaIP,
                        InsertPointTy codeGenIP) -> llvm::Error {
-    llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
-        builder, moduleTranslation, privateBlockArgs, privateDecls,
-        mlirPrivateVars, llvmPrivateVars, allocaIP);
+    llvm::Expected<llvm::BasicBlock *> afterAllocas =
+        allocateAndInitPrivateVars(builder, moduleTranslation, privateBlockArgs,
+                                   privateDecls, mlirPrivateVars,
+                                   llvmPrivateVars, allocaIP);
     if (handleError(afterAllocas, *opInst).failed())
       return llvm::make_error<PreviouslyReportedError>();
 
@@ -2232,7 +2227,7 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
       findAllocaInsertPoint(builder, moduleTranslation);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
 
-  llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
+  llvm::Expected<llvm::BasicBlock *> afterAllocas = allocateAndInitPrivateVars(
       builder, moduleTranslation, privateBlockArgs, privateDecls,
       mlirPrivateVars, llvmPrivateVars, allocaIP);
   if (handleError(afterAllocas, opInst).failed())
@@ -4252,9 +4247,10 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
     for (mlir::Value privateVar : targetOp.getPrivateVars())
       mlirPrivateVars.push_back(privateVar);
 
-    llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
-        builder, moduleTranslation, privateBlockArgs, privateDecls,
-        mlirPrivateVars, llvmPrivateVars, allocaIP, &mappedPrivateVars);
+    llvm::Expected<llvm::BasicBlock *> afterAllocas =
+        allocateAndInitPrivateVars(
+            builder, moduleTranslation, privateBlockArgs, privateDecls,
+            mlirPrivateVars, llvmPrivateVars, allocaIP, &mappedPrivateVars);
 
     if (failed(handleError(afterAllocas, *targetOp)))
       return llvm::make_error<PreviouslyReportedError>();
