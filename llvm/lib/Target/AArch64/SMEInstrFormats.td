@@ -177,15 +177,15 @@ class SME2_ZA_TwoOp_VG4_Multi_Single_Pat<string name, SDPatternOperator intrinsi
 class SME2_ZA_TwoOp_VG2_Multi_Multi_Pat<string name, SDPatternOperator intrinsic, Operand index_ty, ValueType vt, ComplexPattern tileslice>
     : Pat<(intrinsic (i32 (tileslice MatrixIndexGPR32Op8_11:$base, index_ty:$offset)), vt:$Zn1, vt:$Zn2, vt:$Zm1, vt:$Zm2),
           (!cast<Instruction>(name # _PSEUDO) $base, $offset,
-                                              (REG_SEQUENCE ZPR2Mul2, vt:$Zn1, zsub0, vt:$Zn2, zsub1),
-                                              (REG_SEQUENCE ZPR2Mul2, vt:$Zm1, zsub0, vt:$Zm2, zsub1))>;
+                                              (FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO vt:$Zn1, vt:$Zn2),
+                                              (FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO vt:$Zm1, vt:$Zm2))>;
 
 class SME2_ZA_TwoOp_VG4_Multi_Multi_Pat<string name, SDPatternOperator intrinsic, Operand index_ty, ValueType vt, ComplexPattern tileslice>
     : Pat<(intrinsic (i32 (tileslice MatrixIndexGPR32Op8_11:$base, index_ty:$offset)),
                      vt:$Zn1, vt:$Zn2, vt:$Zn3, vt:$Zn4, vt:$Zm1, vt:$Zm2, vt:$Zm3, vt:$Zm4),
           (!cast<Instruction>(name # _PSEUDO) $base, $offset,
-                                              (REG_SEQUENCE ZPR4Mul4, vt:$Zn1, zsub0, vt:$Zn2, zsub1, vt:$Zn3, zsub2, vt:$Zn4, zsub3),
-                                              (REG_SEQUENCE ZPR4Mul4, vt:$Zm1, zsub0, vt:$Zm2, zsub1, vt:$Zm3, zsub2, vt:$Zm4, zsub3))>;
+                                              (FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO vt:$Zn1, vt:$Zn2, vt:$Zn3, vt:$Zn4),
+                                              (FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO vt:$Zm1, vt:$Zm2, vt:$Zm3, vt:$Zm4))>;
 
 class SME2_ZA_TwoOp_Multi_Index_Pat<string name, SDPatternOperator intrinsic, Operand index_ty, ZPRRegOp zpr_ty, ValueType vt,
                                     Operand imm_ty, ComplexPattern tileslice>
@@ -209,32 +209,32 @@ class SME2_ZA_TwoOp_VG4_Multi_Index_Pat<string name, SDPatternOperator intrinsic
 
 class SME2_Sat_Shift_VG2_Pat<string name, SDPatternOperator intrinsic, ValueType out_vt, ValueType in_vt, Operand imm_ty>
     : Pat<(out_vt (intrinsic in_vt:$Zn1, in_vt:$Zn2, (i32 imm_ty:$i))),
-                  (!cast<Instruction>(name) (REG_SEQUENCE ZPR2Mul2, in_vt:$Zn1, zsub0, in_vt:$Zn2, zsub1), imm_ty:$i)>;
+                  (!cast<Instruction>(name) (FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO in_vt:$Zn1, in_vt:$Zn2), imm_ty:$i)>;
 
 class SME2_Sat_Shift_VG4_Pat<string name, SDPatternOperator intrinsic, ValueType out_vt, ValueType in_vt, Operand imm_ty>
     : Pat<(out_vt (intrinsic in_vt:$Zn1, in_vt:$Zn2, in_vt:$Zn3, in_vt:$Zn4, (i32 imm_ty:$i))),
-                  (!cast<Instruction>(name) (REG_SEQUENCE ZPR4Mul4, in_vt:$Zn1, zsub0, in_vt:$Zn2, zsub1, in_vt:$Zn3, zsub2, in_vt:$Zn4, zsub3),
+                  (!cast<Instruction>(name) (FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO in_vt:$Zn1, in_vt:$Zn2, in_vt:$Zn3, in_vt:$Zn4),
                                             imm_ty:$i)>;
 
 class SME2_Cvt_VG4_Pat<string name, SDPatternOperator intrinsic, ValueType out_vt, ValueType in_vt>
     : Pat<(out_vt (intrinsic in_vt:$Zn1, in_vt:$Zn2, in_vt:$Zn3, in_vt:$Zn4)),
-                  (!cast<Instruction>(name) (REG_SEQUENCE ZPR4Mul4, in_vt:$Zn1, zsub0, in_vt:$Zn2, zsub1, in_vt:$Zn3, zsub2, in_vt:$Zn4, zsub3))>;
+                  (!cast<Instruction>(name) (FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO in_vt:$Zn1, in_vt:$Zn2, in_vt:$Zn3, in_vt:$Zn4))>;
 
 class SME2_ZA_VG1x2_Multi_Pat<string name, SDPatternOperator intrinsic, ValueType vt, Operand index_ty, ComplexPattern tileslice>
     : Pat<(intrinsic (i32 (tileslice MatrixIndexGPR32Op8_11:$base, index_ty:$offset)), vt:$Zn1, vt:$Zn2),
-          (!cast<Instruction>(name # _PSEUDO) $base, $offset, (REG_SEQUENCE ZPR2Mul2, vt:$Zn1, zsub0, vt:$Zn2, zsub1))>;
+          (!cast<Instruction>(name # _PSEUDO) $base, $offset, (FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO vt:$Zn1, vt:$Zn2))>;
 
 class SME2_ZA_VG1x4_Multi_Pat<string name, SDPatternOperator intrinsic, ValueType vt, Operand index_ty, ComplexPattern tileslice>
     : Pat<(intrinsic (i32 (tileslice MatrixIndexGPR32Op8_11:$base, index_ty:$offset)), vt:$Zn1, vt:$Zn2, vt:$Zn3, vt:$Zn4),
-          (!cast<Instruction>(name # _PSEUDO) $base, $offset, (REG_SEQUENCE ZPR4Mul4, vt:$Zn1, zsub0, vt:$Zn2, zsub1, vt:$Zn3, zsub2, vt:$Zn4, zsub3))>;
+          (!cast<Instruction>(name # _PSEUDO) $base, $offset, (FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO vt:$Zn1, vt:$Zn2, vt:$Zn3, vt:$Zn4))>;
 
 class SME2_Tile_VG2_Multi_Pat<string name, SDPatternOperator intrinsic, Operand tile_imm, ValueType vt, Operand index_ty, ComplexPattern tileslice>
     : Pat<(intrinsic tile_imm:$tile, (i32 (tileslice MatrixIndexGPR32Op12_15:$base, index_ty:$offset)), vt:$Zn1, vt:$Zn2),
-          (!cast<Instruction>(name # _PSEUDO) $tile, $base, $offset, (REG_SEQUENCE ZPR2Mul2, vt:$Zn1, zsub0, vt:$Zn2, zsub1))>;
+          (!cast<Instruction>(name # _PSEUDO) $tile, $base, $offset, (FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO vt:$Zn1, vt:$Zn2))>;
 
 class SME2_Tile_VG4_Multi_Pat<string name, SDPatternOperator intrinsic, Operand tile_imm, ValueType vt, Operand index_ty, ComplexPattern tileslice>
     : Pat<(intrinsic tile_imm:$tile, (i32 (tileslice MatrixIndexGPR32Op12_15:$base, index_ty:$offset)), vt:$Zn1, vt:$Zn2, vt:$Zn3, vt:$Zn4),
-          (!cast<Instruction>(name # _PSEUDO) $tile, $base, $offset, (REG_SEQUENCE ZPR4Mul4, vt:$Zn1, zsub0, vt:$Zn2, zsub1, vt:$Zn3, zsub2, vt:$Zn4, zsub3))>;
+          (!cast<Instruction>(name # _PSEUDO) $tile, $base, $offset, (FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO vt:$Zn1, vt:$Zn2, vt:$Zn3, vt:$Zn4))>;
 
 class SME2_Zero_Matrix_Pat<string name, SDPatternOperator intrinsic, Operand offset_ty, ComplexPattern tileslice>
     : Pat<(intrinsic (i32 (tileslice MatrixIndexGPR32Op8_11:$base, offset_ty:$offset))),
@@ -2446,7 +2446,7 @@ multiclass sme2_fp8_cvt_vg2_single<string mnemonic, bit op, ValueType in_vt, SDP
     let Uses = [FPMR, FPCR];
   }
   def : Pat<(nxv16i8 (intrinsic in_vt:$Zn1, in_vt:$Zn2)),
-            (!cast<Instruction>(NAME) (REG_SEQUENCE ZPR2Mul2, in_vt:$Zn1, zsub0, in_vt:$Zn2, zsub1))>;
+            (!cast<Instruction>(NAME) (FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO in_vt:$Zn1, in_vt:$Zn2))>;
 }
 
 class sme2_cvt_unpk_vector_vg2<bits<2>sz, bits<3> op, bit u, RegisterOperand first_ty,
