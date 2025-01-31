@@ -958,6 +958,28 @@ LogicalResult tosa::SliceOp::verify() {
   return success();
 }
 
+LogicalResult tosa::MulOp::inferReturnTypeComponents(
+    MLIRContext *context, ::std::optional<Location> location,
+    ValueShapeRange operands, DictionaryAttr attributes,
+    OpaqueProperties properties, RegionRange regions,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  LogicalResult status = success();
+  llvm::SmallVector<int64_t> outShape;
+  if (operands.size() == 2) {
+    status = resolveBroadcastShape(operands, outShape);
+  } else {
+    // mul op's output shape only depend on input1 and input2, not on shift
+    ValueShapeRange two_inputs = operands.drop_back();
+    status = resolveBroadcastShape(two_inputs, outShape);
+  }
+  if (status.failed()) {
+    inferredReturnShapes.push_back(ShapedTypeComponents());
+  } else {
+    inferredReturnShapes.push_back(ShapedTypeComponents(outShape));
+  }
+  return success();
+}
+
 LogicalResult tosa::MulOp::verify() {
   auto resElemType = getElementTypeOrSelf(getOutput());
 
@@ -1028,6 +1050,20 @@ LogicalResult tosa::MulOp::verify() {
     if (rank != getRank(type)) {
       return emitOpError("result type has different rank than operands");
     }
+  }
+
+  // check for broadcast compatible shapes in first two operands (ignoring
+  // shift)
+
+  // delegate function that returns shape of shaped type
+  auto getShape = [](const Type type) {
+    return mlir::cast<ShapedType>(type).getShape();
+  };
+  SmallVector<int64_t> resultShape;
+  if (!mlir::OpTrait::util::getBroadcastedShape(getShape(rankedOperandTypes[0]),
+                                                getShape(rankedOperandTypes[1]),
+                                                resultShape)) {
+    return emitOpError("operands don't have broadcast-compatible shapes");
   }
 
   return success();
@@ -1670,7 +1706,6 @@ NARY_SHAPE_INFER(tosa::LogicalRightShiftOp)
 NARY_SHAPE_INFER(tosa::LogicalXorOp)
 NARY_SHAPE_INFER(tosa::MaximumOp)
 NARY_SHAPE_INFER(tosa::MinimumOp)
-NARY_SHAPE_INFER(tosa::MulOp)
 NARY_SHAPE_INFER(tosa::NegateOp)
 NARY_SHAPE_INFER(tosa::PowOp)
 NARY_SHAPE_INFER(tosa::ReciprocalOp)

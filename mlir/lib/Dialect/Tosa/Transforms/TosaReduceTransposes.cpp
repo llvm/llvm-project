@@ -281,13 +281,20 @@ bool TosaReduceTransposes::collectFanIn(Operation *op,
   if (!llvm::isa<tosa::TransposeOp>(op) && !llvm::isa<tosa::ReshapeOp>(op) &&
       !llvm::isa<tosa::ConstOp>(op)) {
 
-    if (!op->hasTrait<OpTrait::tosa::TosaElementwiseOperator>())
+    if (!llvm::isa<tosa::MulOp>(op) &&
+        !op->hasTrait<OpTrait::tosa::TosaElementwiseOperator>())
       return false;
 
-    for (Value operand : op->getOperands())
+    for (Value operand : op->getOperands()) {
       // If this is a problem in future, think about alternatives to recursion.
+      if (llvm::isa<tosa::MulOp>(op) && op->getNumOperands() == 3 &&
+          operand == op->getOperand(2)) {
+        // do not recurse into MulOp's shift operand
+        continue;
+      }
       if (!collectFanIn(operand.getDefiningOp(), collected))
         return false;
+    }
   }
 
   // Insert in topological order.
@@ -316,7 +323,8 @@ std::optional<Value> TosaReduceTransposes::buildMappedToValue(
     Operation *op, const DenseMap<Value, Value> &valuesMap,
     IRRewriter &rewriter, ArrayRef<int32_t> hoistedPerms) {
   if (op->getNumResults() != 1 ||
-      !op->hasTrait<OpTrait::tosa::TosaElementwiseOperator>())
+      (!llvm::isa<tosa::MulOp>(op) &&
+       !op->hasTrait<OpTrait::tosa::TosaElementwiseOperator>()))
     return std::nullopt;
 
   auto resultType = llvm::cast<RankedTensorType>(op->getResult(0).getType());
@@ -324,6 +332,10 @@ std::optional<Value> TosaReduceTransposes::buildMappedToValue(
   for (Value v : op->getOperands()) {
     if (valuesMap.contains(v)) {
       operands.push_back(valuesMap.at(v));
+    } else if (llvm::isa<tosa::MulOp>(op) && op->getNumOperands() == 3 &&
+               v == op->getOperand(2)) {
+      // special case for MulOp's shift operand
+      operands.push_back(v);
     } else {
       return std::nullopt;
     }
