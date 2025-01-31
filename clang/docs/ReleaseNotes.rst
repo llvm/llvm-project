@@ -397,6 +397,8 @@ Resolutions to C++ Defect Reports
 C Language Changes
 ------------------
 
+- Clang now allows an ``inline`` specifier on a typedef declaration of a
+  function type in Microsoft compatibility mode. #GH124869
 - Extend clang's ``<limits.h>`` to define ``LONG_LONG_*`` macros for Android's bionic.
 - Macro ``__STDC_NO_THREADS__`` is no longer necessary for MSVC 2022 1939 and later.
 - Exposed the the ``__nullptr`` keyword as an alias for ``nullptr`` in all C language modes.
