@@ -94,6 +94,13 @@ public:
   std::optional<int> clusterId;
 };
 
+struct DataFlowEdge {
+  Value value;
+  std::string outPort;
+  Node node;
+  std::string inPort;
+};
+
 /// This pass generates a Graphviz dataflow visualization of an MLIR operation.
 /// Note: See https://www.graphviz.org/doc/info/lang.html for more information
 /// about the Graphviz DOT language.
@@ -144,8 +151,9 @@ private:
   /// emitted.
   void emitAllEdgeStmts() {
     if (printDataFlowEdges) {
-      for (const auto &[value, node, label] : dataFlowEdges) {
-        emitEdgeStmt(valueToNode[value], "", node, "", kLineStyleDataFlow);
+      for (const auto &e : dataFlowEdges) {
+        emitEdgeStmt(valueToNode[e.value], e.outPort, e.node, e.inPort,
+                     kLineStyleDataFlow);
       }
     }
 
@@ -269,19 +277,33 @@ private:
     return Node(nodeId);
   }
 
+  std::string getOperandPortName(Value operand) {
+    // Print value as an operand and omit the leading '%' character.
+    return strFromOs([&](raw_ostream &os) {
+             operand.printAsOperand(os, OpPrintingFlags());
+           })
+        .substr(1, std::string::npos);
+  }
+
   /// Generate a label for an operation.
   std::string getLabel(Operation *op) {
     return strFromOs([&](raw_ostream &os) {
-      os << "{{";
+      os << "{";
+
       // Print operation inputs.
-      interleave(
-          op->getOperands(), os,
-          [&](Value operand) {
-            OpPrintingFlags flags;
-            operand.printAsOperand(os, flags);
-          },
-          "|");
-      os << "}|";
+      if (op->getNumOperands() > 0) {
+        os << "{";
+        interleave(
+            op->getOperands(), os,
+            [&](Value operand) {
+              os << "<";
+              os << getOperandPortName(operand);
+              os << "> ";
+              operand.printAsOperand(os, OpPrintingFlags());
+            },
+            "|");
+        os << "}|";
+      }
       // Print operation name and type.
       os << op->getName();
       if (printResultTypes) {
@@ -347,9 +369,11 @@ private:
     // Insert data flow edges originating from each operand.
     if (printDataFlowEdges) {
       unsigned numOperands = op->getNumOperands();
-      for (unsigned i = 0; i < numOperands; i++)
-        dataFlowEdges.push_back({op->getOperand(i), node,
-                                 numOperands == 1 ? "" : std::to_string(i)});
+      for (unsigned i = 0; i < numOperands; i++) {
+        auto operand = op->getOperand(i);
+        auto inPort = getOperandPortName(operand);
+        dataFlowEdges.push_back({operand, "", node, inPort});
+      }
     }
 
     for (Value result : op->getResults())
@@ -379,7 +403,7 @@ private:
   /// Mapping of SSA values to Graphviz nodes/clusters.
   DenseMap<Value, Node> valueToNode;
   /// Output for data flow edges is delayed until the end to handle cycles
-  std::vector<std::tuple<Value, Node, std::string>> dataFlowEdges;
+  std::vector<DataFlowEdge> dataFlowEdges;
   /// Counter for generating unique node/subgraph identifiers.
   int counter = 0;
 
