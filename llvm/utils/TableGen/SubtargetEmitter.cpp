@@ -2121,7 +2121,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
     for (unsigned M = 0, NumModes = CGH.getNumModeIds(); M != NumModes; ++M) {
       StringRef ModeName = CGH.getModeName(M, /*IncludeDefault=*/true);
       OS << "    " << ModeName << " = ";
-      if (M == CodeGenHwModes::DefaultMode)
+      if (M == 0)
         OS << "0";
       else
         OS << "(1 << " << (M - 1) << ")";
