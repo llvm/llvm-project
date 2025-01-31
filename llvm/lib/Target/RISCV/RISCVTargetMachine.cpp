@@ -137,6 +137,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVExpandPseudoPass(*PR);
   initializeRISCVVectorPeepholePass(*PR);
   initializeRISCVVLOptimizerPass(*PR);
+  initializeRISCVVMV0EliminationPass(*PR);
   initializeRISCVInsertVSETVLIPass(*PR);
   initializeRISCVInsertReadWriteCSRPass(*PR);
   initializeRISCVInsertWriteVXRMPass(*PR);
@@ -612,6 +613,8 @@ void RISCVPassConfig::addPreRegAlloc() {
 
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableMachinePipeliner)
     addPass(&MachinePipelinerID);
+
+  addPass(createRISCVVMV0EliminationPass());
 }
 
 void RISCVPassConfig::addFastRegAlloc() {

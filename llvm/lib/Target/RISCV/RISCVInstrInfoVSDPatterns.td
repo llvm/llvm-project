@@ -947,16 +947,16 @@ foreach vtiToWti = AllWidenableIntVectors in {
               (!cast<Instruction>("PseudoVWADDU_VV_"#vti.LMul.MX)
                   (wti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs1, vti.RegClass:$rs1,
                   vti.AVL, vti.Log2SEW, TA_MA)>;
-    def : Pat<(shl (wti.Vector (riscv_sext_vl_oneuse (vti.Vector vti.RegClass:$rs1), (vti.Mask V0), VLOpFrag)),
+    def : Pat<(shl (wti.Vector (riscv_sext_vl_oneuse (vti.Vector vti.RegClass:$rs1), (vti.Mask VMV0:$vm), VLOpFrag)),
                    (wti.Vector (riscv_vmv_v_x_vl (wti.Vector undef), 1, (XLenVT srcvalue)))),
               (!cast<Instruction>("PseudoVWADD_VV_"#vti.LMul.MX#"_MASK")
                   (wti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs1, vti.RegClass:$rs1,
-                  (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
-    def : Pat<(shl (wti.Vector (riscv_zext_vl_oneuse (vti.Vector vti.RegClass:$rs1), (vti.Mask V0), VLOpFrag)),
+                  (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+    def : Pat<(shl (wti.Vector (riscv_zext_vl_oneuse (vti.Vector vti.RegClass:$rs1), (vti.Mask VMV0:$vm), VLOpFrag)),
                    (wti.Vector (riscv_vmv_v_x_vl (wti.Vector undef), 1, (XLenVT srcvalue)))),
               (!cast<Instruction>("PseudoVWADDU_VV_"#vti.LMul.MX#"_MASK")
                   (wti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs1, vti.RegClass:$rs1,
-                  (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+                  (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
   }
 }
 
@@ -1100,24 +1100,24 @@ defm : VPatWidenMulAddSDNode_VX<zext_oneuse, sext_oneuse, "PseudoVWMACCUS">;
 // 11.15. Vector Integer Merge Instructions
 foreach vti = AllIntegerVectors in {
   let Predicates = GetVTypePredicates<vti>.Predicates in {
-    def : Pat<(vti.Vector (vselect (vti.Mask V0), vti.RegClass:$rs1,
+    def : Pat<(vti.Vector (vselect (vti.Mask VMV0:$vm), vti.RegClass:$rs1,
                                                         vti.RegClass:$rs2)),
               (!cast<Instruction>("PseudoVMERGE_VVM_"#vti.LMul.MX)
                    (vti.Vector (IMPLICIT_DEF)),
-                   vti.RegClass:$rs2, vti.RegClass:$rs1, (vti.Mask V0),
+                   vti.RegClass:$rs2, vti.RegClass:$rs1, (vti.Mask VMV0:$vm),
                    vti.AVL, vti.Log2SEW)>;
 
-    def : Pat<(vti.Vector (vselect (vti.Mask V0), (SplatPat XLenVT:$rs1),
+    def : Pat<(vti.Vector (vselect (vti.Mask VMV0:$vm), (SplatPat XLenVT:$rs1),
                                                         vti.RegClass:$rs2)),
               (!cast<Instruction>("PseudoVMERGE_VXM_"#vti.LMul.MX)
                    (vti.Vector (IMPLICIT_DEF)),
-                   vti.RegClass:$rs2, GPR:$rs1, (vti.Mask V0), vti.AVL, vti.Log2SEW)>;
+                   vti.RegClass:$rs2, GPR:$rs1, (vti.Mask VMV0:$vm), vti.AVL, vti.Log2SEW)>;
 
-    def : Pat<(vti.Vector (vselect (vti.Mask V0), (SplatPat_simm5 simm5:$rs1),
+    def : Pat<(vti.Vector (vselect (vti.Mask VMV0:$vm), (SplatPat_simm5 simm5:$rs1),
                                                         vti.RegClass:$rs2)),
               (!cast<Instruction>("PseudoVMERGE_VIM_"#vti.LMul.MX)
                    (vti.Vector (IMPLICIT_DEF)),
-                   vti.RegClass:$rs2, simm5:$rs1, (vti.Mask V0), vti.AVL, vti.Log2SEW)>;
+                   vti.RegClass:$rs2, simm5:$rs1, (vti.Mask VMV0:$vm), vti.AVL, vti.Log2SEW)>;
   }
 }
 
@@ -1367,39 +1367,39 @@ defm : VPatFPSetCCSDNode_VV_VF_FV<SETOLE, "PseudoVMFLE", "PseudoVMFGE">;
 foreach fvti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
   defvar ivti = GetIntVTypeInfo<fvti>.Vti;
   let Predicates = GetVTypePredicates<ivti>.Predicates in {
-    def : Pat<(fvti.Vector (vselect (fvti.Mask V0), fvti.RegClass:$rs1,
+    def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm), fvti.RegClass:$rs1,
                                                           fvti.RegClass:$rs2)),
               (!cast<Instruction>("PseudoVMERGE_VVM_"#fvti.LMul.MX)
                    (fvti.Vector (IMPLICIT_DEF)),
-                   fvti.RegClass:$rs2, fvti.RegClass:$rs1, (fvti.Mask V0),
+                   fvti.RegClass:$rs2, fvti.RegClass:$rs1, (fvti.Mask VMV0:$vm),
                    fvti.AVL, fvti.Log2SEW)>;
 
-    def : Pat<(fvti.Vector (vselect (fvti.Mask V0),
+    def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
                                     (SplatFPOp (SelectScalarFPAsInt (XLenVT GPR:$imm))),
                                     fvti.RegClass:$rs2)),
               (!cast<Instruction>("PseudoVMERGE_VXM_"#fvti.LMul.MX)
                    (fvti.Vector (IMPLICIT_DEF)),
-                   fvti.RegClass:$rs2, GPR:$imm, (fvti.Mask V0), fvti.AVL, fvti.Log2SEW)>;
+                   fvti.RegClass:$rs2, GPR:$imm, (fvti.Mask VMV0:$vm), fvti.AVL, fvti.Log2SEW)>;
 
-    def : Pat<(fvti.Vector (vselect (fvti.Mask V0),
+    def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
                                     (SplatFPOp (fvti.Scalar fpimm0)),
                                     fvti.RegClass:$rs2)),
               (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
                    (fvti.Vector (IMPLICIT_DEF)),
-                   fvti.RegClass:$rs2, 0, (fvti.Mask V0), fvti.AVL, fvti.Log2SEW)>;
+                   fvti.RegClass:$rs2, 0, (fvti.Mask VMV0:$vm), fvti.AVL, fvti.Log2SEW)>;
   }
 }
 
 foreach fvti = AllFloatVectors in {
   let Predicates = GetVTypePredicates<fvti>.Predicates in
-    def : Pat<(fvti.Vector (vselect (fvti.Mask V0),
+    def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
                                     (SplatFPOp fvti.ScalarRegClass:$rs1),
                                     fvti.RegClass:$rs2)),
               (!cast<Instruction>("PseudoVFMERGE_V"#fvti.ScalarSuffix#"M_"#fvti.LMul.MX)
                    (fvti.Vector (IMPLICIT_DEF)),
                    fvti.RegClass:$rs2,
                    (fvti.Scalar fvti.ScalarRegClass:$rs1),
-                   (fvti.Mask V0), fvti.AVL, fvti.Log2SEW)>;
+                   (fvti.Mask VMV0:$vm), fvti.AVL, fvti.Log2SEW)>;
 }
 
 // 13.17. Vector Single-Width Floating-Point/Integer Type-Convert Instructions
