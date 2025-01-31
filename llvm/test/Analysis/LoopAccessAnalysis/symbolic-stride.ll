@@ -145,9 +145,9 @@ define void @single_stride_array(ptr noalias %A, ptr noalias %B, i64 %N, i64 %st
 ; CHECK-LABEL: 'single_stride_array'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unsafe indirect dependence.
+; CHECK-NEXT:  Backward loop carried data dependence.
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        IndirectUnsafe:
+; CHECK-NEXT:        Backward:
 ; CHECK-NEXT:            %load = load [2 x i32], ptr %gep.A, align 4 ->
 ; CHECK-NEXT:            store [2 x i32] %ins, ptr %gep.A.next, align 4
 ; CHECK-EMPTY:
@@ -156,8 +156,12 @@ define void @single_stride_array(ptr noalias %A, ptr noalias %B, i64 %N, i64 %st
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      Equal predicate: %stride == 1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:      [PSE] %gep.A = getelementptr inbounds [2 x i32], ptr %A, i64 %mul, i64 1:
+; CHECK-NEXT:        {(4 + %A),+,(8 * %stride)}<%loop>
+; CHECK-NEXT:        --> {(4 + %A),+,8}<%loop>
 ;
 entry:
   br label %loop
