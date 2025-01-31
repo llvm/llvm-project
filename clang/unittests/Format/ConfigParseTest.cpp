@@ -213,6 +213,11 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(SpaceBeforeSquareBrackets);
   CHECK_PARSE_BOOL(VerilogBreakBetweenInstancePorts);
 
+  CHECK_PARSE_NESTED_BOOL(AlignAfterOpenBracketBreak,
+                          InIfConditionalStatements);
+  CHECK_PARSE_NESTED_BOOL(AlignAfterOpenBracketBreak,
+                          InOtherConditionalStatements);
+  CHECK_PARSE_NESTED_BOOL(AlignAfterOpenBracketBreak, Other);
   CHECK_PARSE_NESTED_BOOL(AlignConsecutiveShortCaseStatements, Enabled);
   CHECK_PARSE_NESTED_BOOL(AlignConsecutiveShortCaseStatements,
                           AcrossEmptyLines);
@@ -532,6 +537,13 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::BAS_DontAlign);
   CHECK_PARSE("AlignAfterOpenBracket: true", AlignAfterOpenBracket,
               FormatStyle::BAS_Align);
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
+  Style.AlignAfterOpenBracketBreak = {};
+  CHECK_PARSE("AlignAfterOpenBracket: AlwaysBreak", AlignAfterOpenBracketBreak,
+              FormatStyle::AlignAfterOpenBracketCustom(true, false, true));
+  Style.AlignAfterOpenBracketBreak = {};
+  CHECK_PARSE("AlignAfterOpenBracket: BlockIndent", AlignAfterOpenBracketBreak,
+              FormatStyle::AlignAfterOpenBracketCustom(false, false, true));
 
   Style.AlignEscapedNewlines = FormatStyle::ENAS_Left;
   CHECK_PARSE("AlignEscapedNewlines: DontAlign", AlignEscapedNewlines,
