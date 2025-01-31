@@ -66,7 +66,7 @@ std::string escapeLabelString(const std::string &str) {
   std::string buf;
   llvm::raw_string_ostream os(buf);
   for (char c : str) {
-    if (c == '{' || c == '|' || c == '<' || c == '}' || c == '>') {
+    if (c == '{' || c == '|' || c == '<' || c == '}' || c == '>' || c == '\n') {
       os << '\\';
     }
     os << c;
@@ -222,7 +222,7 @@ private:
     std::string buf;
     llvm::raw_string_ostream ss(buf);
     attr.print(ss);
-    os << truncateString(buf);
+    os << escapeLabelString(truncateString(buf));
   }
 
   /// Append an edge to the list of edges.
@@ -306,6 +306,16 @@ private:
       }
       // Print operation name and type.
       os << op->getName();
+
+      // Print attributes.
+      if (printAttrs && !op->getAttrs().empty()) {
+        os << "\\n";
+        for (const NamedAttribute &attr : op->getAttrs()) {
+          os << "\\n" << attr.getName().getValue() << ": ";
+          emitMlirAttr(os, attr.getValue());
+        }
+      }
+
       if (printResultTypes && op->getNumResults() > 0) {
         os << "|{";
         std::string buf;
@@ -321,14 +331,6 @@ private:
         os << buf << "}";
       }
 
-      // Print attributes.
-      if (printAttrs) {
-        os << "\n";
-        for (const NamedAttribute &attr : op->getAttrs()) {
-          os << '\n' << attr.getName().getValue() << ": ";
-          emitMlirAttr(os, attr.getValue());
-        }
-      }
       os << "}";
     });
   }
