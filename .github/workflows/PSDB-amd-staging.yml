@@ -19,7 +19,7 @@ jobs:
     container:
       image: compute-artifactory.amd.com:5000/rocm-base-images/ghemu-action-ubuntu-24.04:2024101101
     env:
-        svc_acc_org_secret: ${{'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'}}
+        svc_acc_org_secret: ${{'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'}}
         input_sha: ${{ github.event.pull_request.head.sha != '' && github.event.pull_request.head.sha || github.sha }}
         input_pr_num: ${{ github.event.pull_request.number != '' && github.event.pull_request.number || 0 }}
         input_pr_url: ${{ github.event.pull_request.html_url != '' && github.event.pull_request.html_url || '' }}
@@ -36,7 +36,7 @@ jobs:
           #ref: ci-utils-dev-siva
           #fetch-depth: 2
           repository: AMD-Lightning-Internal/ci-utils
-          token: ${{ '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' }}
+          token: ${{ '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' }}
           #token: ${{'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'}}
        
 
@@ -77,7 +77,7 @@ jobs:
           pip3 show python-jenkins || echo "python-jenkins is not installed"
           #sudo -H pip3 install --upgrade python-jenkins
           # pipeline name shuould be unique to the workfow yml for a given repository
-          #curl -L -X POST -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${{'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'}}" ${{github.event.pull_request.comments_url}} -d '{"body":"Github action triggered jenkins job for compute-psdb-staging-smi-libs-ghemu "}'
+          #curl -L -X POST -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${{'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'}}" ${{github.event.pull_request.comments_url}} -d '{"body":"Github action triggered jenkins job for compute-psdb-staging-smi-libs-ghemu "}'
       - name: Trigger Jenkins Pipeline
         if: steps.check_changes.outcome != 'failure'
         run: |
