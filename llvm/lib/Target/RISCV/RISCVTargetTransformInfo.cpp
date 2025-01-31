@@ -1337,6 +1337,8 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                                   : RISCV::VMV_V_X,
                                               LT.second, CostKind);
   }
+  case Intrinsic::experimental_vp_splice:
+    return 1;
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
