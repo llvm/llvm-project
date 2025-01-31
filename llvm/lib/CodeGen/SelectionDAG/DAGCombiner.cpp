@@ -11005,8 +11005,8 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
       auto *RHS = dyn_cast<LoadSDNode>(N1);
       if (LHS && RHS && LHS->isSimple() && RHS->isSimple() &&
           LHS->getAddressSpace() == RHS->getAddressSpace() &&
-          (LHS->hasOneUse() || RHS->hasOneUse()) && ISD::isNON_EXTLoad(RHS) &&
-          ISD::isNON_EXTLoad(LHS)) {
+          (LHS->hasNUsesOfValue(1, 0) || RHS->hasNUsesOfValue(1, 0)) &&
+          ISD::isNON_EXTLoad(RHS) && ISD::isNON_EXTLoad(LHS)) {
         if (DAG.areNonVolatileConsecutiveLoads(LHS, RHS, BitWidth / 8, 1)) {
           SDLoc DL(RHS);
           uint64_t PtrOff =
@@ -11024,9 +11024,8 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
                 VT, DL, RHS->getChain(), NewPtr,
                 RHS->getPointerInfo().getWithOffset(PtrOff), NewAlign,
                 RHS->getMemOperand()->getFlags(), RHS->getAAInfo());
-            // Replace the old load's chain with the new load's chain.
-            WorklistRemover DeadNodes(*this);
-            DAG.ReplaceAllUsesOfValueWith(N1.getValue(1), Load.getValue(1));
+            DAG.makeEquivalentMemoryOrdering(LHS, Load.getValue(1));
+            DAG.makeEquivalentMemoryOrdering(RHS, Load.getValue(1));
             return Load;
           }
         }
