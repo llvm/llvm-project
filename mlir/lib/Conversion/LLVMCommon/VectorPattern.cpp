@@ -104,6 +104,8 @@ LogicalResult LLVM::detail::handleMultidimensionalVectors(
 }
 
 static bool isVectorCompatibleType(Type type) {
+  // Limit `vectorOneToOneRewrite` to scalar and vector types (and to
+  // `LLVM::LLVMArrayType` which have a special handling).
   return isa<LLVM::LLVMArrayType, VectorType, IntegerType, FloatType>(type) &&
          LLVM::isCompatibleType(type);
 }

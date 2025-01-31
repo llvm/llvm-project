@@ -54,7 +54,8 @@ struct ConstrainedVectorConvertToLLVMPattern
   }
 };
 
-/// No-op bitcast.
+/// No-op bitcast. Propagate type input arg if converted source and dest types
+/// are the same.
 struct IdentityBitcastLowering final
     : public OpConversionPattern<arith::BitcastOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -63,7 +64,8 @@ struct IdentityBitcastLowering final
   matchAndRewrite(arith::BitcastOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     Value src = adaptor.getIn();
-    if (src.getType() != getTypeConverter()->convertType(op.getType()))
+    Type resultType = getTypeConverter()->convertType(op.getType());
+    if (src.getType() != resultType)
       return rewriter.notifyMatchFailure(op, "Types are different");
 
     rewriter.replaceOp(op, src);
