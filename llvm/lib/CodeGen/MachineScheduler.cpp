@@ -1317,10 +1317,12 @@ void ScheduleDAGMILive::initRegPressure() {
     }
   }
   if (RegionCriticalPSets.size() > 0)
-    LLVM_DEBUG(dbgs() << "Excess PSets: ";
-               for (const PressureChange &RCPS : RegionCriticalPSets) dbgs()
-               << TRI->getRegPressureSetName(RCPS.getPSet()) << " ";
-               dbgs() << "\n");
+    LLVM_DEBUG({
+      dbgs() << "Excess PSets: ";
+      for (const PressureChange &RCPS : RegionCriticalPSets)
+        dbgs() << TRI->getRegPressureSetName(RCPS.getPSet()) << " ";
+      dbgs() << "\n";
+    });
 }
 
 void ScheduleDAGMILive::
