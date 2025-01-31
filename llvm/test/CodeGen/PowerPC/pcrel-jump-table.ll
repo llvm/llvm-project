@@ -27,8 +27,8 @@ define dso_local signext i32 @jumptable(i32 signext %param) {
 ; CHECK-R-NEXT:  # %bb.1: # %entry
 ; CHECK-R-NEXT:    rldic r4, r4, 2, 30
 ; CHECK-R-NEXT:    paddi r5, 0, .LJTI0_0@PCREL, 1
-; CHECK-R-NEXT:    lwax r4, r4, r5
-; CHECK-R-NEXT:    add r4, r4, r5
+; CHECK-R-NEXT:    lwax r4, r5, r4
+; CHECK-R-NEXT:    add r4, r5, r4
 ; CHECK-R-NEXT:    mtctr r4
 ; CHECK-R-NEXT:    bctr
 ; CHECK-R-NEXT:  .LBB0_2: # %sw.bb1
@@ -56,7 +56,7 @@ define dso_local signext i32 @jumptable(i32 signext %param) {
 ; CHECK-A-LE-NEXT:  # %bb.1: # %entry
 ; CHECK-A-LE-NEXT:    rldic r4, r4, 3, 29
 ; CHECK-A-LE-NEXT:    paddi r5, 0, .LJTI0_0@PCREL, 1
-; CHECK-A-LE-NEXT:    ldx r4, r4, r5
+; CHECK-A-LE-NEXT:    ldx r4, r5, r4
 ; CHECK-A-LE-NEXT:    mtctr r4
 ; CHECK-A-LE-NEXT:    bctr
 ; CHECK-A-LE-NEXT:  .LBB0_2: # %sw.bb1
@@ -84,7 +84,7 @@ define dso_local signext i32 @jumptable(i32 signext %param) {
 ; CHECK-A-BE-NEXT:  # %bb.1: # %entry
 ; CHECK-A-BE-NEXT:    rldic r4, r4, 2, 30
 ; CHECK-A-BE-NEXT:    paddi r5, 0, .LJTI0_0@PCREL, 1
-; CHECK-A-BE-NEXT:    lwax r4, r4, r5
+; CHECK-A-BE-NEXT:    lwax r4, r5, r4
 ; CHECK-A-BE-NEXT:    mtctr r4
 ; CHECK-A-BE-NEXT:    bctr
 ; CHECK-A-BE-NEXT:  .LBB0_2: # %sw.bb1

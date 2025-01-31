@@ -66,7 +66,7 @@ define i32 @main() nounwind readnone {
 ; PIC-O32-NEXT:    lw $3, %got($JTI0_0)($2)
 ; PIC-O32-NEXT:    addu $1, $1, $3
 ; PIC-O32-NEXT:    lw $1, %lo($JTI0_0)($1)
-; PIC-O32-NEXT:    addu $1, $1, $2
+; PIC-O32-NEXT:    addu $1, $2, $1
 ; PIC-O32-NEXT:    jr $1
 ; PIC-O32-NEXT:    nop
 ; PIC-O32-NEXT:  $BB0_2: # %bb5
@@ -109,7 +109,7 @@ define i32 @main() nounwind readnone {
 ; PIC-N64-NEXT:    ld $3, %got_page(.LJTI0_0)($1)
 ; PIC-N64-NEXT:    daddu $2, $2, $3
 ; PIC-N64-NEXT:    ld $2, %got_ofst(.LJTI0_0)($2)
-; PIC-N64-NEXT:    daddu $1, $2, $1
+; PIC-N64-NEXT:    daddu $1, $1, $2
 ; PIC-N64-NEXT:    jr $1
 ; PIC-N64-NEXT:    nop
 ; PIC-N64-NEXT:  .LBB0_2: # %bb5
