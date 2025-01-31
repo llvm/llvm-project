@@ -768,11 +768,19 @@ void SIWholeQuadMode::splitBlock(MachineInstr *TermMI) {
   case AMDGPU::S_MOV_B64:
     NewOpcode = AMDGPU::S_MOV_B64_term;
     break;
-  default:
+  case AMDGPU::S_ANDN2_B32:
+    NewOpcode = AMDGPU::S_ANDN2_B32_term;
     break;
+  case AMDGPU::S_ANDN2_B64:
+    NewOpcode = AMDGPU::S_ANDN2_B64_term;
+    break;
+  default:
+    llvm_unreachable("Unexpected instruction");
   }
-  if (NewOpcode)
-    TermMI->setDesc(TII->get(NewOpcode));
+
+  // these terminators fallthrough to the next block, no need to add an
+  // unconditional branch to the next block (SplitBB)
+  TermMI->setDesc(TII->get(NewOpcode));
 
   if (SplitBB != BB) {
     // Update dominator trees
@@ -787,12 +795,6 @@ void SIWholeQuadMode::splitBlock(MachineInstr *TermMI) {
       MDT->applyUpdates(DTUpdates);
     if (PDT)
       PDT->applyUpdates(DTUpdates);
-
-    // Link blocks
-    MachineInstr *MI =
-        BuildMI(*BB, BB->end(), DebugLoc(), TII->get(AMDGPU::S_BRANCH))
-            .addMBB(SplitBB);
-    LIS->InsertMachineInstrInMaps(*MI);
   }
 }
 
@@ -901,8 +903,6 @@ MachineInstr *SIWholeQuadMode::lowerKillF32(MachineInstr &MI) {
       BuildMI(MBB, MI, DL, TII->get(AndN2Opc), Exec).addReg(Exec).addReg(VCC);
 
   assert(MBB.succ_size() == 1);
-  MachineInstr *NewTerm = BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_BRANCH))
-                              .addMBB(*MBB.succ_begin());
 
   // Update live intervals
   LIS->ReplaceMachineInstrInMaps(MI, *VcmpMI);
@@ -911,9 +911,8 @@ MachineInstr *SIWholeQuadMode::lowerKillF32(MachineInstr &MI) {
   LIS->InsertMachineInstrInMaps(*MaskUpdateMI);
   LIS->InsertMachineInstrInMaps(*ExecMaskMI);
   LIS->InsertMachineInstrInMaps(*EarlyTermMI);
-  LIS->InsertMachineInstrInMaps(*NewTerm);
 
-  return NewTerm;
+  return ExecMaskMI;
 }
 
 MachineInstr *SIWholeQuadMode::lowerKillI1(MachineInstr &MI, bool IsWQM) {
@@ -940,17 +939,17 @@ MachineInstr *SIWholeQuadMode::lowerKillI1(MachineInstr &MI, bool IsWQM) {
                          .addReg(Exec);
     } else {
       // Static: kill does nothing
-      MachineInstr *NewTerm = nullptr;
-      if (MI.getOpcode() == AMDGPU::SI_DEMOTE_I1) {
+      bool IsLastTerminator = std::next(MI.getIterator()) == MBB.end();
+      if (!IsLastTerminator) {
         LIS->RemoveMachineInstrFromMaps(MI);
       } else {
-        assert(MBB.succ_size() == 1);
-        NewTerm = BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_BRANCH))
-                      .addMBB(*MBB.succ_begin());
+        assert(MBB.succ_size() == 1 && MI.getOpcode() != AMDGPU::SI_DEMOTE_I1);
+        MachineInstr *NewTerm = BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_BRANCH))
+                                    .addMBB(*MBB.succ_begin());
         LIS->ReplaceMachineInstrInMaps(MI, *NewTerm);
       }
       MBB.remove(&MI);
-      return NewTerm;
+      return nullptr;
     }
   } else {
     if (!KillVal) {
