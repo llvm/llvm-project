@@ -48,6 +48,11 @@ class RISCVTTIImpl : public BasicTTIImplBase<RISCVTTIImpl> {
   /// actual target hardware.
   unsigned getEstimatedVLFor(VectorType *Ty);
 
+  /// This function calculates the costs for one or more RVV opcodes based
+  /// on the vtype and the cost kind.
+  /// \param Opcodes A list of opcodes of the RVV instruction to evaluate.
+  /// \param VT The MVT of vtype associated with the RVV instructions.
+  /// \param CostKind The type of cost to compute.
   InstructionCost getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
                                           TTI::TargetCostKind CostKind);
 
