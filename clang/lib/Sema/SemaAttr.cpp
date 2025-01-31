@@ -1318,6 +1318,189 @@ void Sema::AddImplicitMSFunctionNoBuiltinAttr(FunctionDecl *FD) {
     FD->addAttr(NoBuiltinAttr::CreateImplicit(Context, V.data(), V.size()));
 }
 
+static bool typeListMatches(ASTContext& Context, FunctionDecl *FD,
+                            const clang::Sema::SymbolLabel &Label) {
+  assert(Label.TypeList.has_value());
+  if (FD->getNumParams() != Label.TypeList->size()) {
+    return false;
+  }
+
+  // Check if arguments match.
+  for (unsigned i = 0; i != FD->getNumParams(); ++i) {
+    const ParmVarDecl *PVD = FD->getParamDecl(i);
+    QualType ParmType = PVD->getType().getCanonicalType();
+    fprintf(stderr, "SDP: --- pramtype\n");
+    ParmType->dump();
+    if (ParmType->isArrayType())
+      ParmType = Context.getArrayDecayedType(ParmType);
+    else if (ParmType->isFunctionType())
+    { fprintf(stderr, "  - is function\n");
+      ParmType = Context.getPointerType(ParmType);
+      }
+    ParmType->dump();
+
+    QualType MapArgType = (*Label.TypeList)[i].getCanonicalType();
+    fprintf(stderr, "SDP: --- MapArgtype\n");
+    MapArgType->dump();
+    if (MapArgType->isArrayType())
+      MapArgType = Context.getArrayDecayedType(MapArgType);
+    else if (MapArgType->isFunctionType())
+    { fprintf(stderr, "  - is function\n");
+      MapArgType = Context.getPointerType(MapArgType);
+      }
+    MapArgType.getDesugaredType(Context)->dump();
+
+    assert(!ParmType->canDecayToPointerType());
+    assert(!MapArgType->canDecayToPointerType());
+    if (ParmType != MapArgType)
+      return false;
+  }
+
+  if (isa<CXXMethodDecl>(FD)) {
+    // Check if CV qualifiers match.
+    const clang::CXXMethodDecl *const MFD =
+        clang::cast<clang::CXXMethodDecl>(FD);
+    if (MFD && (MFD->isConst() != Label.CVQual.hasConst() ||
+                MFD->isVolatile() != Label.CVQual.hasVolatile())) {
+      return false;
+    }
+  } else if (Label.CVQual.hasConst() || Label.CVQual.hasVolatile())
+    return false;
+
+  return true;
+}
+
+FunctionDecl *Sema::tryFunctionLookUpInPragma(NestedNameSpecifier *NestedName,
+                                      SourceLocation NameLoc) {
+  assert(!NestedName->getPrefix() ||
+         NestedName->getPrefix()->getKind() == NestedNameSpecifier::Identifier);
+  IdentifierInfo *Prefix =
+      NestedName->getPrefix() ? NestedName->getPrefix()->getAsIdentifier() : 0;
+  IdentifierInfo *Name = NestedName->getAsIdentifier();
+  LookupResult Result(*this, (Prefix ? Prefix : Name), NameLoc,
+                      LookupOrdinaryName);
+  LookupName(Result, TUScope);
+
+  // Filter down to just a function, namespace or class.
+  LookupResult::Filter F = Result.makeFilter();
+  while (F.hasNext()) {
+    NamedDecl *D = F.next();
+    if (!(isa<FunctionDecl>(D)))
+      F.erase();
+  }
+  F.done();
+  // Loop over all the found decls and see if the arguments match
+  // any of the results
+  for (LookupResult::iterator I = Result.begin(); I != Result.end(); ++I) {
+    NamedDecl *ND = (*I)->getUnderlyingDecl();
+    FunctionDecl *FD = dyn_cast<FunctionDecl>(ND);
+    if (FD) {
+      return FD;
+    }
+  }
+  return nullptr;
+}
+
+NamedDecl *Sema::trySymbolLookUpInPragma(NestedNameSpecifier *NestedName,
+                                 const clang::Sema::SymbolLabel &Label) {
+
+  assert(!NestedName->getPrefix() ||
+         NestedName->getPrefix()->getKind() == NestedNameSpecifier::Identifier);
+  IdentifierInfo *Prefix =
+      NestedName->getPrefix() ? NestedName->getPrefix()->getAsIdentifier() : 0;
+  IdentifierInfo *Name = NestedName->getAsIdentifier();
+  LookupResult Result(*this, (Prefix ? Prefix : Name), Label.NameLoc,
+                      LookupOrdinaryName);
+  LookupName(Result, TUScope);
+
+  // Filter down to just a function, namespace or class.
+  LookupResult::Filter F = Result.makeFilter();
+  while (F.hasNext()) {
+    NamedDecl *D = F.next();
+    if (!(isa<FunctionDecl>(D) || isa<VarDecl>(D) || isa<NamespaceDecl>(D) ||
+          isa<CXXRecordDecl>(D)))
+      F.erase();
+  }
+  F.done();
+
+  auto MatchDecl = [this, Name, Label](DeclContext *DC) -> NamedDecl * {
+    auto LRes = DC->lookup(DeclarationName(Name));
+    for (auto *I : LRes) {
+      if (isa<VarDecl>(I))
+        return I;
+      if (isa<FunctionDecl>(I)) {
+        FunctionDecl *FD = dyn_cast<FunctionDecl>(I);
+
+        // All function parameters must match if specified in pragma otherwise,
+        // we accept a function found by lookup only if it's the only one.
+        if ((Label.TypeList.has_value() && typeListMatches(Context, FD, Label)) ||
+            (!Label.TypeList.has_value() && LRes.isSingleResult()))
+          return FD;
+      }
+    }
+    return nullptr;
+  };
+
+  // global variable or function in a namespace
+  if (NamespaceDecl *ND = Result.getAsSingle<NamespaceDecl>()) {
+    if (ND->getIdentifierNamespace() == Decl::IDNS_Namespace) {
+      return MatchDecl(ND);
+    }
+  }
+
+  // data or function member
+  if (CXXRecordDecl *RD = Result.getAsSingle<CXXRecordDecl>()) {
+    return MatchDecl(RD);
+  }
+
+  // either a variable, or a non-overloaded function, or an overloaded
+  // function with extern "C" linkage.
+  if (!Label.TypeList.has_value()) {
+    if (Result.isSingleResult())
+      return Result.getFoundDecl();
+    if (Result.isOverloadedResult()) {
+      for (auto *Iter : Result) {
+        FunctionDecl *FD = dyn_cast<FunctionDecl>(Iter);
+        if (FD && FD->isExternC())
+          return FD;
+      }
+      return nullptr;
+    }
+    return nullptr;
+  }
+
+  // Loop over all the found decls and see if the arguments match
+  // any of the results
+  for (LookupResult::iterator I = Result.begin(); I != Result.end(); ++I) {
+    NamedDecl *ND = (*I)->getUnderlyingDecl();
+    FunctionDecl *FD = dyn_cast<FunctionDecl>(ND);
+    if (FD && typeListMatches(Context, FD, Label)) {
+      return FD;
+    }
+  }
+  return nullptr;
+}
+
+void Sema::ActOnPragmaExport(NestedNameSpecifier *NestedId,
+                             SourceLocation NameLoc,
+                             std::optional<SmallVector<QualType, 4>> &&TypeList,
+                             Qualifiers CVQual) {
+  SymbolLabel Label;
+  Label.NameLoc = NameLoc;
+  Label.CVQual = CVQual;
+  Label.TypeList = std::move(TypeList);
+
+  auto I = PendingExportNames.find(NestedId);
+  if (I == PendingExportNames.end()) {
+    std::pair<SymbolNames::iterator, bool> IB = PendingExportNames.insert(
+        std::pair<NestedNameSpecifier *, PendingSymbolOverloads>(
+            NestedId, PendingSymbolOverloads()));
+    assert(IB.second);
+    I = IB.first;
+  }
+  I->second.push_back(Label);
+}
+
 typedef std::vector<std::pair<unsigned, SourceLocation> > VisStack;
 enum : unsigned { NoVisibility = ~0U };
 

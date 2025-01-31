@@ -349,6 +349,8 @@ KEYWORD(__func__                    , KEYALL)
 KEYWORD(__objc_yes                  , KEYALL)
 KEYWORD(__objc_no                   , KEYALL)
 
+// z/OS specific keywords
+KEYWORD(_Export                     , KEYZOS)
 
 // C++ 2.11p1: Keywords.
 KEYWORD(asm                         , KEYCXX|KEYGNU)
@@ -1006,6 +1008,9 @@ PRAGMA_ANNOTATION(pragma_fp)
 
 // Annotation for the attribute pragma directives - #pragma clang attribute ...
 PRAGMA_ANNOTATION(pragma_attribute)
+
+// Annotation for C/C++ #pragma export(ident)
+PRAGMA_ANNOTATION(pragma_export)
 
 // Annotation for the riscv pragma directives - #pragma clang riscv intrinsic ...
 PRAGMA_ANNOTATION(pragma_riscv)
