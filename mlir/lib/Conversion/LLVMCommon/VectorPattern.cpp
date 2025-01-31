@@ -103,6 +103,11 @@ LogicalResult LLVM::detail::handleMultidimensionalVectors(
   return success();
 }
 
+static bool isVectorCompatibleType(Type type) {
+  return isa<LLVM::LLVMArrayType, VectorType, IntegerType, FloatType>(type) &&
+         LLVM::isCompatibleType(type);
+}
+
 LogicalResult LLVM::detail::vectorOneToOneRewrite(
     Operation *op, StringRef targetOp, ValueRange operands,
     ArrayRef<NamedAttribute> targetAttrs,
@@ -111,7 +116,7 @@ LogicalResult LLVM::detail::vectorOneToOneRewrite(
   assert(!operands.empty());
 
   // Cannot convert ops if their operands are not of LLVM type.
-  if (!llvm::all_of(operands.getTypes(), isCompatibleType))
+  if (!llvm::all_of(operands.getTypes(), isVectorCompatibleType))
     return failure();
 
   auto llvmNDVectorTy = operands[0].getType();
