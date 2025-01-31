@@ -48,6 +48,23 @@ def BPF_END  : BPFArithOp<0xd>;
 def BPF_XCHG    : BPFArithOp<0xe>;
 def BPF_CMPXCHG : BPFArithOp<0xf>;
 
+class BPFAtomicLoadStoreOp<bits<4> val> {
+  bits<4> Value = val;
+}
+
+def BPF_ATOMIC_LOAD : BPFAtomicLoadStoreOp<0x1>;
+def BPF_ATOMIC_STORE : BPFAtomicLoadStoreOp<0x2>;
+
+class BPFAtomicOrdering<bits<4> val> {
+  bits<4> Value = val;
+}
+
+def BPF_RELAXED : BPFAtomicOrdering<0x0>;
+def BPF_ACQUIRE : BPFAtomicOrdering<0x1>;
+def BPF_RELEASE : BPFAtomicOrdering<0x2>;
+def BPF_ACQ_REL : BPFAtomicOrdering<0x3>;
+def BPF_SEQ_CST : BPFAtomicOrdering<0x4>;
+
 class BPFEndDir<bits<1> val> {
   bits<1> Value = val;
 }
