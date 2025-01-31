@@ -2609,11 +2609,15 @@ void ProcessGDBRemote::WillPublicStop() {
 // Process Memory
 size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
                                       Status &error) {
+  using xPacketState = GDBRemoteCommunicationClient::xPacketState;
+
   GetMaxMemorySize();
-  bool binary_memory_read = m_gdb_comm.GetxPacketSupported();
+  xPacketState x_state = m_gdb_comm.GetxPacketState();
+
   // M and m packets take 2 bytes for 1 byte of memory
-  size_t max_memory_size =
-      binary_memory_read ? m_max_memory_size : m_max_memory_size / 2;
+  size_t max_memory_size = x_state != xPacketState::Unimplemented
+                               ? m_max_memory_size
+                               : m_max_memory_size / 2;
   if (size > max_memory_size) {
     // Keep memory read sizes down to a sane limit. This function will be
     // called multiple times in order to complete the task by
@@ -2624,8 +2628,8 @@ size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
   char packet[64];
   int packet_len;
   packet_len = ::snprintf(packet, sizeof(packet), "%c%" PRIx64 ",%" PRIx64,
-                          binary_memory_read ? 'x' : 'm', (uint64_t)addr,
-                          (uint64_t)size);
+                          x_state != xPacketState::Unimplemented ? 'x' : 'm',
+                          (uint64_t)addr, (uint64_t)size);
   assert(packet_len + 1 < (int)sizeof(packet));
   UNUSED_IF_ASSERT_DISABLED(packet_len);
   StringExtractorGDBRemote response;
@@ -2634,19 +2638,25 @@ size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
       GDBRemoteCommunication::PacketResult::Success) {
     if (response.IsNormalResponse()) {
       error.Clear();
-      if (binary_memory_read) {
+      if (x_state != xPacketState::Unimplemented) {
         // The lower level GDBRemoteCommunication packet receive layer has
         // already de-quoted any 0x7d character escaping that was present in
         // the packet
 
-        size_t data_received_size = response.GetBytesLeft();
-        if (data_received_size > size) {
-          // Don't write past the end of BUF if the remote debug server gave us
-          // too much data for some reason.
-          data_received_size = size;
+        llvm::StringRef data_received = response.GetStringRef();
+        if (x_state == xPacketState::Prefixed &&
+            !data_received.consume_front("b")) {
+          error = Status::FromErrorStringWithFormatv(
+              "unexpected response to GDB server memory read packet '{0}': "
+              "'{1}'",
+              packet, data_received);
+          return 0;
         }
-        memcpy(buf, response.GetStringRef().data(), data_received_size);
-        return data_received_size;
+        // Don't write past the end of BUF if the remote debug server gave us
+        // too much data for some reason.
+        size_t memcpy_size = std::min(size, data_received.size());
+        memcpy(buf, data_received.data(), memcpy_size);
+        return memcpy_size;
       } else {
         return response.GetHexBytes(
             llvm::MutableArrayRef<uint8_t>((uint8_t *)buf, size), '\xdd');
