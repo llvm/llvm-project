@@ -1,16 +1,18 @@
 # RUN: yaml2obj %s -o %t.dSYM
 
 ## Verify that we don't keep merged functions by default
-# RUN: llvm-gsymutil --num-threads=1 --convert %t.dSYM --out-file=%t.default.gSYM
+# RUN: llvm-gsymutil --num-threads=1 --convert %t.dSYM --out-file=%t.default.gSYM | FileCheck --check-prefix=CHECK-GSYM-CREATE-NOMERGE %s
 # RUN: llvm-gsymutil --verify --verbose %t.default.gSYM | FileCheck --check-prefix=CHECK-GSYM-DEFAULT %s
 
 ## Verify that we keep merged functions when specyfing --merged-functions
-# RUN: llvm-gsymutil --num-threads=1 --convert %t.dSYM --out-file=%t.keep.gSYM --merged-functions
+# RUN: llvm-gsymutil --num-threads=1 --convert %t.dSYM --out-file=%t.keep.gSYM --merged-functions | FileCheck --check-prefix=CHECK-GSYM-CREATE-MERGE %s
 # RUN: llvm-gsymutil --verify --verbose %t.keep.gSYM | FileCheck --check-prefix=CHECK-GSYM-KEEP %s
 
 ## Note: For identical functions, the dSYM / gSYM cannot be counted on to be deterministic.
 ## So we can only match the general structure, not exact function names / offsets
 
+# CHECK-GSYM-CREATE-NOMERGE: warning: same address range contains different debug info.
+# CHECK-GSYM-CREATE-MERGE-NOT: warning: same address range contains different debug info.
 
 # CHECK-GSYM-DEFAULT-NOT: Merged FunctionInfos
 # CHECK-GSYM-DEFAULT:      FunctionInfo @ 0x{{[0-9a-fA-F]+}}: [0x{{[0-9a-fA-F]+}} - 0x{{[0-9a-fA-F]+}}) "my_func_03"
