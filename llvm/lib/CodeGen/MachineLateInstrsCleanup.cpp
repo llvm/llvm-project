@@ -144,8 +144,8 @@ void MachineLateInstrsCleanup::clearKillsForDef(Register Reg,
   // be ok to stop after removing that (and any other) kill-flag, but it
   // doesn't seem noticeably faster while it would be a bit more complicated.
   Reg2MIVecMap &MBBKills = RegKills[MBB->getNumber()];
-  if (MBBKills.contains(Reg))
-    for (auto *KillMI : MBBKills[Reg])
+  if (auto Kills = MBBKills.find(Reg); Kills != MBBKills.end())
+    for (auto *KillMI : Kills->second)
       KillMI->clearRegisterKills(Reg, TRI);
 
   // Definition in current MBB: done.
