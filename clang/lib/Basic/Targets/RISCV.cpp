@@ -222,7 +222,7 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   // Currently we support the v1.0 RISC-V V intrinsics.
   Builder.defineMacro("__riscv_v_intrinsic", Twine(getVersionValue(1, 0)));
 
-  auto VScale = getVScaleRange(Opts);
+  auto VScale = getVScaleRange(Opts, false);
   if (VScale && VScale->first && VScale->first == VScale->second)
     Builder.defineMacro("__riscv_v_fixed_vlen",
                         Twine(VScale->first * llvm::RISCV::RVVBitsPerBlock));
@@ -289,7 +289,8 @@ bool RISCVTargetInfo::initFeatureMap(
 }
 
 std::optional<std::pair<unsigned, unsigned>>
-RISCVTargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
+RISCVTargetInfo::getVScaleRange(const LangOptions &LangOpts,
+                                bool IsArmStreamingFunction) const {
   // RISCV::RVVBitsPerBlock is 64.
   unsigned VScaleMin = ISAInfo->getMinVLen() / llvm::RISCV::RVVBitsPerBlock;
 
