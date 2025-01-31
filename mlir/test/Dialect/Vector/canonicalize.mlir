@@ -2008,6 +2008,9 @@ func.func @shuffle_1d() -> vector<4xi32> {
 
 // -----
 
+// Check that poison indices pick the first element of the first non-poison
+// input vector. That is, %v[0] (i.e., 5) in this test.
+
 // CHECK-LABEL: func @shuffle_1d_poison_idx
 //       CHECK:   %[[V:.+]] = arith.constant dense<[2, 5, 0, 5]> : vector<4xi32>
 //       CHECK:   return %[[V]]
