@@ -2834,13 +2834,12 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
   // Check for generic or explicit INTRINSIC of the same name in outer scopes.
   // See 15.5.5.2 for details.
   if (!symbol.owner().IsGlobal() && !symbol.owner().IsDerivedType()) {
-    for (const std::string &n : GetAllNames(context_, symbol.name())) {
-      if (const Symbol *outer{symbol.owner().parent().FindSymbol(n)}) {
-        auto pair{ResolveGeneric(*outer, actuals, adjustActuals, isSubroutine,
-            mightBeStructureConstructor)};
-        if (pair.first) {
-          return pair;
-        }
+    if (const Symbol *
+        outer{symbol.owner().parent().FindSymbol(symbol.name())}) {
+      auto pair{ResolveGeneric(*outer, actuals, adjustActuals, isSubroutine,
+          mightBeStructureConstructor)};
+      if (pair.first) {
+        return pair;
       }
     }
   }
@@ -3635,13 +3634,13 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::Concat &x) {
 // The Name represents a user-defined intrinsic operator.
 // If the actuals match one of the specific procedures, return a function ref.
 // Otherwise report the error in messages.
-MaybeExpr ExpressionAnalyzer::AnalyzeDefinedOp(
-    const parser::Name &name, ActualArguments &&actuals) {
+MaybeExpr ExpressionAnalyzer::AnalyzeDefinedOp(const parser::Name &name,
+    ActualArguments &&actuals, const Symbol *&symbol) {
   if (auto callee{GetCalleeAndArguments(name, std::move(actuals))}) {
-    CHECK(std::holds_alternative<ProcedureDesignator>(callee->u));
-    return MakeFunctionRef(name.source,
-        std::move(std::get<ProcedureDesignator>(callee->u)),
-        std::move(callee->arguments));
+    auto &proc{std::get<evaluate::ProcedureDesignator>(callee->u)};
+    symbol = proc.GetSymbol();
+    return MakeFunctionRef(
+        name.source, std::move(proc), std::move(callee->arguments));
   } else {
     return std::nullopt;
   }
@@ -4453,38 +4452,45 @@ MaybeExpr ArgumentAnalyzer::TryDefinedOp(
     parser::Messages buffer;
     auto restorer{context_.GetContextualMessages().SetMessages(buffer)};
     const auto &scope{context_.context().FindScope(source_)};
-    if (Symbol *symbol{scope.FindSymbol(oprName)}) {
+
+    auto FoundOne{[&](MaybeExpr &&thisResult, const Symbol &generic,
+                      const Symbol *resolution) {
       anyPossibilities = true;
-      parser::Name name{symbol->name(), symbol};
-      if (!fatalErrors_) {
-        result = context_.AnalyzeDefinedOp(name, GetActuals());
-      }
-      if (result) {
-        inaccessible = CheckAccessibleSymbol(scope, *symbol);
-        if (inaccessible) {
-          result.reset();
+      if (thisResult) {
+        if (auto thisInaccessible{CheckAccessibleSymbol(scope, generic)}) {
+          inaccessible = thisInaccessible;
         } else {
-          hit.push_back(symbol);
-          hitBuffer = std::move(buffer);
+          bool isElemental{IsElementalProcedure(DEREF(resolution))};
+          bool hitsAreNonElemental{
+              !hit.empty() && !IsElementalProcedure(DEREF(hit[0]))};
+          if (isElemental && hitsAreNonElemental) {
+            // ignore elemental resolutions in favor of a non-elemental one
+          } else {
+            if (!isElemental && !hitsAreNonElemental) {
+              hit.clear();
+            }
+            result = std::move(thisResult);
+            hit.push_back(resolution);
+            hitBuffer = std::move(buffer);
+          }
         }
       }
+    }};
+
+    if (Symbol * generic{scope.FindSymbol(oprName)}; generic && !fatalErrors_) {
+      parser::Name name{generic->name(), generic};
+      const Symbol *resultSymbol{nullptr};
+      MaybeExpr possibleResult{context_.AnalyzeDefinedOp(
+          name, ActualArguments{actuals_}, resultSymbol)};
+      FoundOne(std::move(possibleResult), *generic, resultSymbol);
     }
     for (std::size_t passIndex{0}; passIndex < actuals_.size(); ++passIndex) {
       buffer.clear();
       const Symbol *generic{nullptr};
-      if (const Symbol *binding{
-              FindBoundOp(oprName, passIndex, generic, false)}) {
-        anyPossibilities = true;
-        if (MaybeExpr thisResult{TryBoundOp(*binding, passIndex)}) {
-          if (auto thisInaccessible{
-                  CheckAccessibleSymbol(scope, DEREF(generic))}) {
-            inaccessible = thisInaccessible;
-          } else {
-            result = std::move(thisResult);
-            hit.push_back(binding);
-            hitBuffer = std::move(buffer);
-          }
-        }
+      if (const Symbol *
+          binding{FindBoundOp(
+              oprName, passIndex, generic, /*isSubroutine=*/false)}) {
+        FoundOne(TryBoundOp(*binding, passIndex), DEREF(generic), binding);
       }
     }
   }
@@ -4655,7 +4661,8 @@ std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc() {
     }
     for (std::size_t i{0}; !proc && i < actuals_.size(); ++i) {
       const Symbol *generic{nullptr};
-      if (const Symbol *binding{FindBoundOp(oprName, i, generic, true)}) {
+      if (const Symbol *
+          binding{FindBoundOp(oprName, i, generic, /*isSubroutine=*/true)}) {
         if (CheckAccessibleSymbol(scope, DEREF(generic))) {
           // ignore inaccessible type-bound ASSIGNMENT(=) generic
         } else if (const Symbol *

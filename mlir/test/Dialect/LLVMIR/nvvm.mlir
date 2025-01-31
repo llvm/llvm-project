@@ -522,6 +522,15 @@ func.func @griddepcontrol_launch_dependents()
   return
 }
 
+// CHECK-LABEL: @mapa
+func.func @mapa(%a: !llvm.ptr, %a_shared: !llvm.ptr<3>, %b : i32) {
+  // CHECK:   nvvm.mapa %{{.*}}
+  %0 = nvvm.mapa %a, %b: !llvm.ptr -> !llvm.ptr
+  // CHECK:   nvvm.mapa %{{.*}}
+  %1 = nvvm.mapa %a_shared, %b: !llvm.ptr<3> -> !llvm.ptr<3>
+  return
+}
+
 // -----
 
 // Just check these don't emit errors.
