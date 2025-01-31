@@ -11,6 +11,8 @@
 
 // IWYU pragma: begin_exports
 
+#include "lldb/lldb-forward.h"
+
 namespace lldb_dap {
 struct BreakpointBase;
 struct ExceptionBreakpoint;
