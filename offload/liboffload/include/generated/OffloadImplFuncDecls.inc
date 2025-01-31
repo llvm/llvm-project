@@ -36,3 +36,64 @@ ol_impl_result_t olGetDeviceInfo_impl(ol_device_handle_t Device,
 ol_impl_result_t olGetDeviceInfoSize_impl(ol_device_handle_t Device,
                                           ol_device_info_t PropName,
                                           size_t *PropSizeRet);
+
+ol_impl_result_t olMemAlloc_impl(ol_device_handle_t Device,
+                                 ol_alloc_type_t Type, size_t Size,
+                                 size_t Aligment, void **AllocationOut);
+
+ol_impl_result_t olMemFree_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
+                                void *Address);
+
+ol_impl_result_t olCreateQueue_impl(ol_device_handle_t Device,
+                                    ol_queue_handle_t *Queue);
+
+ol_impl_result_t olRetainQueue_impl(ol_queue_handle_t Queue);
+
+ol_impl_result_t olReleaseQueue_impl(ol_queue_handle_t Queue);
+
+ol_impl_result_t olFinishQueue_impl(ol_queue_handle_t Queue);
+
+ol_impl_result_t olRetainEvent_impl(ol_event_handle_t Event);
+
+ol_impl_result_t olReleaseEvent_impl(ol_event_handle_t Event);
+
+ol_impl_result_t olWaitEvent_impl(ol_event_handle_t Event);
+
+ol_impl_result_t olEnqueueDataWrite_impl(ol_queue_handle_t Queue, void *SrcPtr,
+                                         void *DstPtr, size_t Size,
+                                         ol_event_handle_t *EventOut);
+
+ol_impl_result_t olEnqueueDataRead_impl(ol_queue_handle_t Queue, void *SrcPtr,
+                                        void *DstPtr, size_t Size,
+                                        ol_event_handle_t *EventOut);
+
+ol_impl_result_t olEnqueueDataCopy_impl(ol_queue_handle_t Queue, void *SrcPtr,
+                                        void *DstPtr,
+                                        ol_device_handle_t DstDevice,
+                                        size_t Size,
+                                        ol_event_handle_t *EventOut);
+
+ol_impl_result_t olEnqueueKernelLaunch_impl(ol_queue_handle_t Queue,
+                                            ol_kernel_handle_t Kernel,
+                                            const size_t *GlobalWorkSize,
+                                            ol_event_handle_t *EventOut);
+
+ol_impl_result_t olCreateProgram_impl(ol_device_handle_t Device, void *ProgData,
+                                      size_t ProgDataSize,
+                                      ol_program_handle_t *Queue);
+
+ol_impl_result_t olRetainProgram_impl(ol_program_handle_t Program);
+
+ol_impl_result_t olReleaseProgram_impl(ol_program_handle_t Program);
+
+ol_impl_result_t olCreateKernel_impl(ol_program_handle_t Program,
+                                     const char *KernelName,
+                                     ol_kernel_handle_t *Kernel);
+
+ol_impl_result_t olRetainKernel_impl(ol_kernel_handle_t Kernel);
+
+ol_impl_result_t olReleaseKernel_impl(ol_kernel_handle_t Kernel);
+
+ol_impl_result_t olSetKernelArgValue_impl(ol_kernel_handle_t Kernel,
+                                          uint32_t Index, size_t Size,
+                                          void *ArgData);

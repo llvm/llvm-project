@@ -131,8 +131,9 @@ public:
 
   /// Get the address and size of a global in the image. Address and size are
   /// return in \p ImageGlobal, the global name is passed in \p ImageGlobal.
-  Error getGlobalMetadataFromImage(GenericDeviceTy &Device,
-                                   DeviceImageTy &Image, GlobalTy &ImageGlobal);
+  virtual Error getGlobalMetadataFromImage(GenericDeviceTy &Device,
+                                           DeviceImageTy &Image,
+                                           GlobalTy &ImageGlobal);
 
   /// Read the memory associated with a global from the image and store it on
   /// the host. The name, size, and destination are defined by \p HostGlobal.

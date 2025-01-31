@@ -86,6 +86,22 @@ typedef struct ol_device_handle_t_ *ol_device_handle_t;
 typedef struct ol_context_handle_t_ *ol_context_handle_t;
 
 ///////////////////////////////////////////////////////////////////////////////
+/// @brief Handle of queue object
+typedef struct ol_queue_handle_t_ *ol_queue_handle_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Handle of event object
+typedef struct ol_event_handle_t_ *ol_event_handle_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Handle of program object
+typedef struct ol_program_handle_t_ *ol_program_handle_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Handle of kernel object
+typedef struct ol_kernel_handle_t_ *ol_kernel_handle_t;
+
+///////////////////////////////////////////////////////////////////////////////
 /// @brief Defines Return/Error codes
 typedef enum ol_errc_t {
   /// Success
@@ -461,6 +477,422 @@ OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceInfoSize(
     size_t *PropSizeRet);
 
 ///////////////////////////////////////////////////////////////////////////////
+/// @brief Represents the type of allocation made with olMemAlloc
+typedef enum ol_alloc_type_t {
+  /// Host allocation
+  OL_ALLOC_TYPE_HOST = 0,
+  /// Device allocation
+  OL_ALLOC_TYPE_DEVICE = 1,
+  /// Shared allocation
+  OL_ALLOC_TYPE_SHARED = 2,
+  /// @cond
+  OL_ALLOC_TYPE_FORCE_UINT32 = 0x7fffffff
+  /// @endcond
+
+} ol_alloc_type_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Creates a memory allocation on the specified device
+///
+/// @details
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_SIZE
+///         + `Size == 0`
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Device`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+///         + `NULL == AllocationOut`
+OL_APIEXPORT ol_result_t OL_APICALL olMemAlloc(
+    // [in] handle of the device to allocate on
+    ol_device_handle_t Device,
+    // [in] type of the allocation
+    ol_alloc_type_t Type,
+    // [in] size of the allocation in bytes
+    size_t Size,
+    // [in] alignment of the allocation in bytes
+    size_t Aligment,
+    // [out] output for the allocated pointer
+    void **AllocationOut);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Frees a memory allocation previously made by olMemAlloc
+///
+/// @details
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Device`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+///         + `NULL == Address`
+OL_APIEXPORT ol_result_t OL_APICALL olMemFree(
+    // [in] handle of the device to allocate on
+    ol_device_handle_t Device,
+    // [in] type of the allocation
+    ol_alloc_type_t Type,
+    // [in] address of the allocation to free
+    void *Address);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Create a queue for the given device
+///
+/// @details
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Device`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+///         + `NULL == Queue`
+OL_APIEXPORT ol_result_t OL_APICALL olCreateQueue(
+    // [in] handle of the device
+    ol_device_handle_t Device,
+    // [out] output pointer for the created queue
+    ol_queue_handle_t *Queue);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Create a queue for the given device
+///
+/// @details
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Queue`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+OL_APIEXPORT ol_result_t OL_APICALL olRetainQueue(
+    // [in] handle of the queue
+    ol_queue_handle_t Queue);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Create a queue for the given device
+///
+/// @details
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Queue`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+OL_APIEXPORT ol_result_t OL_APICALL olReleaseQueue(
+    // [in] handle of the queue
+    ol_queue_handle_t Queue);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Wait for the enqueued work on a queue to complete
+///
+/// @details
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Queue`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+OL_APIEXPORT ol_result_t OL_APICALL olFinishQueue(
+    // [in] handle of the queue
+    ol_queue_handle_t Queue);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Increment the reference count of the given event
+///
+/// @details
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Event`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+OL_APIEXPORT ol_result_t OL_APICALL olRetainEvent(
+    // [in] handle of the event
+    ol_event_handle_t Event);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Decrement the reference count of the given event
+///
+/// @details
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Event`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+OL_APIEXPORT ol_result_t OL_APICALL olReleaseEvent(
+    // [in] handle of the event
+    ol_event_handle_t Event);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Wait for the event to be complete
+///
+/// @details
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Event`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+OL_APIEXPORT ol_result_t OL_APICALL olWaitEvent(
+    // [in] handle of the event
+    ol_event_handle_t Event);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Enqueue a write operation from host to device memory
+///
+/// @details
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Queue`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+///         + `NULL == SrcPtr`
+///         + `NULL == DstPtr`
+OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataWrite(
+    // [in] handle of the queue
+    ol_queue_handle_t Queue,
+    // [in] host pointer to copy from
+    void *SrcPtr,
+    // [in] device pointer to copy to
+    void *DstPtr,
+    // [in] size in bytes of data to copy
+    size_t Size,
+    // [out][optional] optional recorded event for the enqueued operation
+    ol_event_handle_t *EventOut);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Enqueue a read operation from device to host memory
+///
+/// @details
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Queue`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+///         + `NULL == SrcPtr`
+///         + `NULL == DstPtr`
+OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataRead(
+    // [in] handle of the queue
+    ol_queue_handle_t Queue,
+    // [in] device pointer to copy from
+    void *SrcPtr,
+    // [in] host pointer to copy to
+    void *DstPtr,
+    // [in] size in bytes of data to copy
+    size_t Size,
+    // [out][optional] optional recorded event for the enqueued operation
+    ol_event_handle_t *EventOut);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Enqueue a write operation between device allocations
+///
+/// @details
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Queue`
+///         + `NULL == DstDevice`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+///         + `NULL == SrcPtr`
+///         + `NULL == DstPtr`
+OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataCopy(
+    // [in] handle of the queue
+    ol_queue_handle_t Queue,
+    // [in] device pointer to copy from
+    void *SrcPtr,
+    // [in] device pointer to copy to
+    void *DstPtr,
+    // [in] device that the destination pointer is resident on
+    ol_device_handle_t DstDevice,
+    // [in] size in bytes of data to copy
+    size_t Size,
+    // [out][optional] optional recorded event for the enqueued operation
+    ol_event_handle_t *EventOut);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Enqueue a kernel launch with the specified size and parameters
+///
+/// @details
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Queue`
+///         + `NULL == Kernel`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+///         + `NULL == GlobalWorkSize`
+OL_APIEXPORT ol_result_t OL_APICALL olEnqueueKernelLaunch(
+    // [in] handle of the queue
+    ol_queue_handle_t Queue,
+    // [in] handle of the kernel
+    ol_kernel_handle_t Kernel,
+    // [in] an array of size 3 representing the global work size
+    const size_t *GlobalWorkSize,
+    // [out][optional] optional recorded event for the enqueued operation
+    ol_event_handle_t *EventOut);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief
+///
+/// @details
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Device`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+///         + `NULL == ProgData`
+///         + `NULL == Queue`
+OL_APIEXPORT ol_result_t OL_APICALL olCreateProgram(
+    // [in] handle of the device
+    ol_device_handle_t Device,
+    // [in] pointer to the program binary data
+    void *ProgData,
+    // [in] size of the program binary in bytes
+    size_t ProgDataSize,
+    // [out] output pointer for the created program
+    ol_program_handle_t *Queue);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Create a queue for the given device
+///
+/// @details
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Program`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+OL_APIEXPORT ol_result_t OL_APICALL olRetainProgram(
+    // [in] handle of the program
+    ol_program_handle_t Program);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Create a queue for the given device
+///
+/// @details
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Program`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+OL_APIEXPORT ol_result_t OL_APICALL olReleaseProgram(
+    // [in] handle of the program
+    ol_program_handle_t Program);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief
+///
+/// @details
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Program`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+///         + `NULL == KernelName`
+///         + `NULL == Kernel`
+OL_APIEXPORT ol_result_t OL_APICALL olCreateKernel(
+    // [in] handle of the program
+    ol_program_handle_t Program,
+    // [in] name of the kernel entry point in the program
+    const char *KernelName,
+    // [out] output pointer for the created kernel
+    ol_kernel_handle_t *Kernel);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Create a queue for the given device
+///
+/// @details
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Kernel`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+OL_APIEXPORT ol_result_t OL_APICALL olRetainKernel(
+    // [in] handle of the kernel
+    ol_kernel_handle_t Kernel);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Create a queue for the given device
+///
+/// @details
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Kernel`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+OL_APIEXPORT ol_result_t OL_APICALL olReleaseKernel(
+    // [in] handle of the kernel
+    ol_kernel_handle_t Kernel);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Create a queue for the given device
+///
+/// @details
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Kernel`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+///         + `NULL == ArgData`
+OL_APIEXPORT ol_result_t OL_APICALL olSetKernelArgValue(
+    // [in] handle of the kernel
+    ol_kernel_handle_t Kernel,
+    // [in] index of the argument
+    uint32_t Index,
+    // [in] size of the argument data
+    size_t Size,
+    // [in] pointer to the argument data
+    void *ArgData);
+
+///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for olGetPlatform
 /// @details Each entry is a pointer to the parameter passed to the function;
 typedef struct ol_get_platform_params_t {
@@ -529,6 +961,177 @@ typedef struct ol_get_device_info_size_params_t {
   ol_device_info_t *pPropName;
   size_t **pPropSizeRet;
 } ol_get_device_info_size_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olMemAlloc
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_mem_alloc_params_t {
+  ol_device_handle_t *pDevice;
+  ol_alloc_type_t *pType;
+  size_t *pSize;
+  size_t *pAligment;
+  void ***pAllocationOut;
+} ol_mem_alloc_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olMemFree
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_mem_free_params_t {
+  ol_device_handle_t *pDevice;
+  ol_alloc_type_t *pType;
+  void **pAddress;
+} ol_mem_free_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olCreateQueue
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_create_queue_params_t {
+  ol_device_handle_t *pDevice;
+  ol_queue_handle_t **pQueue;
+} ol_create_queue_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olRetainQueue
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_retain_queue_params_t {
+  ol_queue_handle_t *pQueue;
+} ol_retain_queue_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olReleaseQueue
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_release_queue_params_t {
+  ol_queue_handle_t *pQueue;
+} ol_release_queue_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olFinishQueue
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_finish_queue_params_t {
+  ol_queue_handle_t *pQueue;
+} ol_finish_queue_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olRetainEvent
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_retain_event_params_t {
+  ol_event_handle_t *pEvent;
+} ol_retain_event_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olReleaseEvent
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_release_event_params_t {
+  ol_event_handle_t *pEvent;
+} ol_release_event_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olWaitEvent
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_wait_event_params_t {
+  ol_event_handle_t *pEvent;
+} ol_wait_event_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olEnqueueDataWrite
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_enqueue_data_write_params_t {
+  ol_queue_handle_t *pQueue;
+  void **pSrcPtr;
+  void **pDstPtr;
+  size_t *pSize;
+  ol_event_handle_t **pEventOut;
+} ol_enqueue_data_write_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olEnqueueDataRead
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_enqueue_data_read_params_t {
+  ol_queue_handle_t *pQueue;
+  void **pSrcPtr;
+  void **pDstPtr;
+  size_t *pSize;
+  ol_event_handle_t **pEventOut;
+} ol_enqueue_data_read_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olEnqueueDataCopy
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_enqueue_data_copy_params_t {
+  ol_queue_handle_t *pQueue;
+  void **pSrcPtr;
+  void **pDstPtr;
+  ol_device_handle_t *pDstDevice;
+  size_t *pSize;
+  ol_event_handle_t **pEventOut;
+} ol_enqueue_data_copy_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olEnqueueKernelLaunch
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_enqueue_kernel_launch_params_t {
+  ol_queue_handle_t *pQueue;
+  ol_kernel_handle_t *pKernel;
+  const size_t **pGlobalWorkSize;
+  ol_event_handle_t **pEventOut;
+} ol_enqueue_kernel_launch_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olCreateProgram
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_create_program_params_t {
+  ol_device_handle_t *pDevice;
+  void **pProgData;
+  size_t *pProgDataSize;
+  ol_program_handle_t **pQueue;
+} ol_create_program_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olRetainProgram
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_retain_program_params_t {
+  ol_program_handle_t *pProgram;
+} ol_retain_program_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olReleaseProgram
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_release_program_params_t {
+  ol_program_handle_t *pProgram;
+} ol_release_program_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olCreateKernel
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_create_kernel_params_t {
+  ol_program_handle_t *pProgram;
+  const char **pKernelName;
+  ol_kernel_handle_t **pKernel;
+} ol_create_kernel_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olRetainKernel
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_retain_kernel_params_t {
+  ol_kernel_handle_t *pKernel;
+} ol_retain_kernel_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olReleaseKernel
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_release_kernel_params_t {
+  ol_kernel_handle_t *pKernel;
+} ol_release_kernel_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olSetKernelArgValue
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_set_kernel_arg_value_params_t {
+  ol_kernel_handle_t *pKernel;
+  uint32_t *pIndex;
+  size_t *pSize;
+  void **pArgData;
+} ol_set_kernel_arg_value_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of olInit that also sets source code location information
@@ -603,6 +1206,156 @@ OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceInfoWithCodeLoc(
 /// @details See also ::olGetDeviceInfoSize
 OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceInfoSizeWithCodeLoc(
     ol_device_handle_t Device, ol_device_info_t PropName, size_t *PropSizeRet,
+    ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olMemAlloc that also sets source code location information
+/// @details See also ::olMemAlloc
+OL_APIEXPORT ol_result_t OL_APICALL olMemAllocWithCodeLoc(
+    ol_device_handle_t Device, ol_alloc_type_t Type, size_t Size,
+    size_t Aligment, void **AllocationOut, ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olMemFree that also sets source code location information
+/// @details See also ::olMemFree
+OL_APIEXPORT ol_result_t OL_APICALL
+olMemFreeWithCodeLoc(ol_device_handle_t Device, ol_alloc_type_t Type,
+                     void *Address, ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olCreateQueue that also sets source code location
+/// information
+/// @details See also ::olCreateQueue
+OL_APIEXPORT ol_result_t OL_APICALL
+olCreateQueueWithCodeLoc(ol_device_handle_t Device, ol_queue_handle_t *Queue,
+                         ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olRetainQueue that also sets source code location
+/// information
+/// @details See also ::olRetainQueue
+OL_APIEXPORT ol_result_t OL_APICALL olRetainQueueWithCodeLoc(
+    ol_queue_handle_t Queue, ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olReleaseQueue that also sets source code location
+/// information
+/// @details See also ::olReleaseQueue
+OL_APIEXPORT ol_result_t OL_APICALL olReleaseQueueWithCodeLoc(
+    ol_queue_handle_t Queue, ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olFinishQueue that also sets source code location
+/// information
+/// @details See also ::olFinishQueue
+OL_APIEXPORT ol_result_t OL_APICALL olFinishQueueWithCodeLoc(
+    ol_queue_handle_t Queue, ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olRetainEvent that also sets source code location
+/// information
+/// @details See also ::olRetainEvent
+OL_APIEXPORT ol_result_t OL_APICALL olRetainEventWithCodeLoc(
+    ol_event_handle_t Event, ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olReleaseEvent that also sets source code location
+/// information
+/// @details See also ::olReleaseEvent
+OL_APIEXPORT ol_result_t OL_APICALL olReleaseEventWithCodeLoc(
+    ol_event_handle_t Event, ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olWaitEvent that also sets source code location
+/// information
+/// @details See also ::olWaitEvent
+OL_APIEXPORT ol_result_t OL_APICALL olWaitEventWithCodeLoc(
+    ol_event_handle_t Event, ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olEnqueueDataWrite that also sets source code location
+/// information
+/// @details See also ::olEnqueueDataWrite
+OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataWriteWithCodeLoc(
+    ol_queue_handle_t Queue, void *SrcPtr, void *DstPtr, size_t Size,
+    ol_event_handle_t *EventOut, ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olEnqueueDataRead that also sets source code location
+/// information
+/// @details See also ::olEnqueueDataRead
+OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataReadWithCodeLoc(
+    ol_queue_handle_t Queue, void *SrcPtr, void *DstPtr, size_t Size,
+    ol_event_handle_t *EventOut, ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olEnqueueDataCopy that also sets source code location
+/// information
+/// @details See also ::olEnqueueDataCopy
+OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataCopyWithCodeLoc(
+    ol_queue_handle_t Queue, void *SrcPtr, void *DstPtr,
+    ol_device_handle_t DstDevice, size_t Size, ol_event_handle_t *EventOut,
+    ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olEnqueueKernelLaunch that also sets source code location
+/// information
+/// @details See also ::olEnqueueKernelLaunch
+OL_APIEXPORT ol_result_t OL_APICALL olEnqueueKernelLaunchWithCodeLoc(
+    ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
+    const size_t *GlobalWorkSize, ol_event_handle_t *EventOut,
+    ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olCreateProgram that also sets source code location
+/// information
+/// @details See also ::olCreateProgram
+OL_APIEXPORT ol_result_t OL_APICALL olCreateProgramWithCodeLoc(
+    ol_device_handle_t Device, void *ProgData, size_t ProgDataSize,
+    ol_program_handle_t *Queue, ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olRetainProgram that also sets source code location
+/// information
+/// @details See also ::olRetainProgram
+OL_APIEXPORT ol_result_t OL_APICALL olRetainProgramWithCodeLoc(
+    ol_program_handle_t Program, ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olReleaseProgram that also sets source code location
+/// information
+/// @details See also ::olReleaseProgram
+OL_APIEXPORT ol_result_t OL_APICALL olReleaseProgramWithCodeLoc(
+    ol_program_handle_t Program, ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olCreateKernel that also sets source code location
+/// information
+/// @details See also ::olCreateKernel
+OL_APIEXPORT ol_result_t OL_APICALL olCreateKernelWithCodeLoc(
+    ol_program_handle_t Program, const char *KernelName,
+    ol_kernel_handle_t *Kernel, ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olRetainKernel that also sets source code location
+/// information
+/// @details See also ::olRetainKernel
+OL_APIEXPORT ol_result_t OL_APICALL olRetainKernelWithCodeLoc(
+    ol_kernel_handle_t Kernel, ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olReleaseKernel that also sets source code location
+/// information
+/// @details See also ::olReleaseKernel
+OL_APIEXPORT ol_result_t OL_APICALL olReleaseKernelWithCodeLoc(
+    ol_kernel_handle_t Kernel, ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olSetKernelArgValue that also sets source code location
+/// information
+/// @details See also ::olSetKernelArgValue
+OL_APIEXPORT ol_result_t OL_APICALL olSetKernelArgValueWithCodeLoc(
+    ol_kernel_handle_t Kernel, uint32_t Index, size_t Size, void *ArgData,
     ol_code_location_t *CodeLocation);
 
 #if defined(__cplusplus)

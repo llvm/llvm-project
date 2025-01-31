@@ -62,6 +62,26 @@ def : Handle {
   let desc = "Handle of context object";
 }
 
+def : Handle {
+  let name = "ol_queue_handle_t";
+  let desc = "Handle of queue object";
+}
+
+def : Handle {
+  let name = "ol_event_handle_t";
+  let desc = "Handle of event object";
+}
+
+def : Handle {
+  let name = "ol_program_handle_t";
+  let desc = "Handle of program object";
+}
+
+def : Handle {
+  let name = "ol_kernel_handle_t";
+  let desc = "Handle of kernel object";
+}
+
 def : Enum {
   let name = "ol_errc_t";
   let desc = "Defines Return/Error codes";

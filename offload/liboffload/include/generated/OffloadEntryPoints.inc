@@ -439,3 +439,875 @@ ol_result_t olGetDeviceInfoSizeWithCodeLoc(ol_device_handle_t Device,
   currentCodeLocation() = nullptr;
   return Result;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olMemAlloc_val(ol_device_handle_t Device, ol_alloc_type_t Type,
+                                size_t Size, size_t Aligment,
+                                void **AllocationOut) {
+  if (true /*enableParameterValidation*/) {
+    if (Size == 0) {
+      return OL_ERRC_INVALID_SIZE;
+    }
+
+    if (NULL == Device) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+
+    if (NULL == AllocationOut) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+  }
+
+  return olMemAlloc_impl(Device, Type, Size, Aligment, AllocationOut);
+}
+OL_APIEXPORT ol_result_t OL_APICALL olMemAlloc(ol_device_handle_t Device,
+                                               ol_alloc_type_t Type,
+                                               size_t Size, size_t Aligment,
+                                               void **AllocationOut) {
+  if (offloadConfig().TracingEnabled) {
+    std::cout << "---> olMemAlloc";
+  }
+
+  ol_result_t Result =
+      olMemAlloc_val(Device, Type, Size, Aligment, AllocationOut);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_mem_alloc_params_t Params = {&Device, &Type, &Size, &Aligment,
+                                    &AllocationOut};
+    std::cout << "(" << &Params << ")";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olMemAllocWithCodeLoc(ol_device_handle_t Device,
+                                  ol_alloc_type_t Type, size_t Size,
+                                  size_t Aligment, void **AllocationOut,
+                                  ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = olMemAlloc(Device, Type, Size, Aligment, AllocationOut);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olMemFree_val(ol_device_handle_t Device, ol_alloc_type_t Type,
+                               void *Address) {
+  if (true /*enableParameterValidation*/) {
+    if (NULL == Device) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+
+    if (NULL == Address) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+  }
+
+  return olMemFree_impl(Device, Type, Address);
+}
+OL_APIEXPORT ol_result_t OL_APICALL olMemFree(ol_device_handle_t Device,
+                                              ol_alloc_type_t Type,
+                                              void *Address) {
+  if (offloadConfig().TracingEnabled) {
+    std::cout << "---> olMemFree";
+  }
+
+  ol_result_t Result = olMemFree_val(Device, Type, Address);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_mem_free_params_t Params = {&Device, &Type, &Address};
+    std::cout << "(" << &Params << ")";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olMemFreeWithCodeLoc(ol_device_handle_t Device,
+                                 ol_alloc_type_t Type, void *Address,
+                                 ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = olMemFree(Device, Type, Address);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olCreateQueue_val(ol_device_handle_t Device,
+                                   ol_queue_handle_t *Queue) {
+  if (true /*enableParameterValidation*/) {
+    if (NULL == Device) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+
+    if (NULL == Queue) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+  }
+
+  return olCreateQueue_impl(Device, Queue);
+}
+OL_APIEXPORT ol_result_t OL_APICALL olCreateQueue(ol_device_handle_t Device,
+                                                  ol_queue_handle_t *Queue) {
+  if (offloadConfig().TracingEnabled) {
+    std::cout << "---> olCreateQueue";
+  }
+
+  ol_result_t Result = olCreateQueue_val(Device, Queue);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_create_queue_params_t Params = {&Device, &Queue};
+    std::cout << "(" << &Params << ")";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olCreateQueueWithCodeLoc(ol_device_handle_t Device,
+                                     ol_queue_handle_t *Queue,
+                                     ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = olCreateQueue(Device, Queue);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olRetainQueue_val(ol_queue_handle_t Queue) {
+  if (true /*enableParameterValidation*/) {
+    if (NULL == Queue) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+  }
+
+  return olRetainQueue_impl(Queue);
+}
+OL_APIEXPORT ol_result_t OL_APICALL olRetainQueue(ol_queue_handle_t Queue) {
+  if (offloadConfig().TracingEnabled) {
+    std::cout << "---> olRetainQueue";
+  }
+
+  ol_result_t Result = olRetainQueue_val(Queue);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_retain_queue_params_t Params = {&Queue};
+    std::cout << "(" << &Params << ")";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olRetainQueueWithCodeLoc(ol_queue_handle_t Queue,
+                                     ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = olRetainQueue(Queue);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olReleaseQueue_val(ol_queue_handle_t Queue) {
+  if (true /*enableParameterValidation*/) {
+    if (NULL == Queue) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+  }
+
+  return olReleaseQueue_impl(Queue);
+}
+OL_APIEXPORT ol_result_t OL_APICALL olReleaseQueue(ol_queue_handle_t Queue) {
+  if (offloadConfig().TracingEnabled) {
+    std::cout << "---> olReleaseQueue";
+  }
+
+  ol_result_t Result = olReleaseQueue_val(Queue);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_release_queue_params_t Params = {&Queue};
+    std::cout << "(" << &Params << ")";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olReleaseQueueWithCodeLoc(ol_queue_handle_t Queue,
+                                      ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = olReleaseQueue(Queue);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olFinishQueue_val(ol_queue_handle_t Queue) {
+  if (true /*enableParameterValidation*/) {
+    if (NULL == Queue) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+  }
+
+  return olFinishQueue_impl(Queue);
+}
+OL_APIEXPORT ol_result_t OL_APICALL olFinishQueue(ol_queue_handle_t Queue) {
+  if (offloadConfig().TracingEnabled) {
+    std::cout << "---> olFinishQueue";
+  }
+
+  ol_result_t Result = olFinishQueue_val(Queue);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_finish_queue_params_t Params = {&Queue};
+    std::cout << "(" << &Params << ")";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olFinishQueueWithCodeLoc(ol_queue_handle_t Queue,
+                                     ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = olFinishQueue(Queue);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olRetainEvent_val(ol_event_handle_t Event) {
+  if (true /*enableParameterValidation*/) {
+    if (NULL == Event) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+  }
+
+  return olRetainEvent_impl(Event);
+}
+OL_APIEXPORT ol_result_t OL_APICALL olRetainEvent(ol_event_handle_t Event) {
+  if (offloadConfig().TracingEnabled) {
+    std::cout << "---> olRetainEvent";
+  }
+
+  ol_result_t Result = olRetainEvent_val(Event);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_retain_event_params_t Params = {&Event};
+    std::cout << "(" << &Params << ")";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olRetainEventWithCodeLoc(ol_event_handle_t Event,
+                                     ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = olRetainEvent(Event);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olReleaseEvent_val(ol_event_handle_t Event) {
+  if (true /*enableParameterValidation*/) {
+    if (NULL == Event) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+  }
+
+  return olReleaseEvent_impl(Event);
+}
+OL_APIEXPORT ol_result_t OL_APICALL olReleaseEvent(ol_event_handle_t Event) {
+  if (offloadConfig().TracingEnabled) {
+    std::cout << "---> olReleaseEvent";
+  }
+
+  ol_result_t Result = olReleaseEvent_val(Event);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_release_event_params_t Params = {&Event};
+    std::cout << "(" << &Params << ")";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olReleaseEventWithCodeLoc(ol_event_handle_t Event,
+                                      ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = olReleaseEvent(Event);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olWaitEvent_val(ol_event_handle_t Event) {
+  if (true /*enableParameterValidation*/) {
+    if (NULL == Event) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+  }
+
+  return olWaitEvent_impl(Event);
+}
+OL_APIEXPORT ol_result_t OL_APICALL olWaitEvent(ol_event_handle_t Event) {
+  if (offloadConfig().TracingEnabled) {
+    std::cout << "---> olWaitEvent";
+  }
+
+  ol_result_t Result = olWaitEvent_val(Event);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_wait_event_params_t Params = {&Event};
+    std::cout << "(" << &Params << ")";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olWaitEventWithCodeLoc(ol_event_handle_t Event,
+                                   ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = olWaitEvent(Event);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olEnqueueDataWrite_val(ol_queue_handle_t Queue, void *SrcPtr,
+                                        void *DstPtr, size_t Size,
+                                        ol_event_handle_t *EventOut) {
+  if (true /*enableParameterValidation*/) {
+    if (NULL == Queue) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+
+    if (NULL == SrcPtr) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+
+    if (NULL == DstPtr) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+  }
+
+  return olEnqueueDataWrite_impl(Queue, SrcPtr, DstPtr, Size, EventOut);
+}
+OL_APIEXPORT ol_result_t OL_APICALL
+olEnqueueDataWrite(ol_queue_handle_t Queue, void *SrcPtr, void *DstPtr,
+                   size_t Size, ol_event_handle_t *EventOut) {
+  if (offloadConfig().TracingEnabled) {
+    std::cout << "---> olEnqueueDataWrite";
+  }
+
+  ol_result_t Result =
+      olEnqueueDataWrite_val(Queue, SrcPtr, DstPtr, Size, EventOut);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_enqueue_data_write_params_t Params = {&Queue, &SrcPtr, &DstPtr, &Size,
+                                             &EventOut};
+    std::cout << "(" << &Params << ")";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olEnqueueDataWriteWithCodeLoc(ol_queue_handle_t Queue, void *SrcPtr,
+                                          void *DstPtr, size_t Size,
+                                          ol_event_handle_t *EventOut,
+                                          ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result =
+      olEnqueueDataWrite(Queue, SrcPtr, DstPtr, Size, EventOut);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olEnqueueDataRead_val(ol_queue_handle_t Queue, void *SrcPtr,
+                                       void *DstPtr, size_t Size,
+                                       ol_event_handle_t *EventOut) {
+  if (true /*enableParameterValidation*/) {
+    if (NULL == Queue) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+
+    if (NULL == SrcPtr) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+
+    if (NULL == DstPtr) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+  }
+
+  return olEnqueueDataRead_impl(Queue, SrcPtr, DstPtr, Size, EventOut);
+}
+OL_APIEXPORT ol_result_t OL_APICALL
+olEnqueueDataRead(ol_queue_handle_t Queue, void *SrcPtr, void *DstPtr,
+                  size_t Size, ol_event_handle_t *EventOut) {
+  if (offloadConfig().TracingEnabled) {
+    std::cout << "---> olEnqueueDataRead";
+  }
+
+  ol_result_t Result =
+      olEnqueueDataRead_val(Queue, SrcPtr, DstPtr, Size, EventOut);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_enqueue_data_read_params_t Params = {&Queue, &SrcPtr, &DstPtr, &Size,
+                                            &EventOut};
+    std::cout << "(" << &Params << ")";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olEnqueueDataReadWithCodeLoc(ol_queue_handle_t Queue, void *SrcPtr,
+                                         void *DstPtr, size_t Size,
+                                         ol_event_handle_t *EventOut,
+                                         ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = olEnqueueDataRead(Queue, SrcPtr, DstPtr, Size, EventOut);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olEnqueueDataCopy_val(ol_queue_handle_t Queue, void *SrcPtr,
+                                       void *DstPtr,
+                                       ol_device_handle_t DstDevice,
+                                       size_t Size,
+                                       ol_event_handle_t *EventOut) {
+  if (true /*enableParameterValidation*/) {
+    if (NULL == Queue) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+
+    if (NULL == DstDevice) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+
+    if (NULL == SrcPtr) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+
+    if (NULL == DstPtr) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+  }
+
+  return olEnqueueDataCopy_impl(Queue, SrcPtr, DstPtr, DstDevice, Size,
+                                EventOut);
+}
+OL_APIEXPORT ol_result_t OL_APICALL olEnqueueDataCopy(
+    ol_queue_handle_t Queue, void *SrcPtr, void *DstPtr,
+    ol_device_handle_t DstDevice, size_t Size, ol_event_handle_t *EventOut) {
+  if (offloadConfig().TracingEnabled) {
+    std::cout << "---> olEnqueueDataCopy";
+  }
+
+  ol_result_t Result =
+      olEnqueueDataCopy_val(Queue, SrcPtr, DstPtr, DstDevice, Size, EventOut);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_enqueue_data_copy_params_t Params = {&Queue,     &SrcPtr, &DstPtr,
+                                            &DstDevice, &Size,   &EventOut};
+    std::cout << "(" << &Params << ")";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olEnqueueDataCopyWithCodeLoc(ol_queue_handle_t Queue, void *SrcPtr,
+                                         void *DstPtr,
+                                         ol_device_handle_t DstDevice,
+                                         size_t Size,
+                                         ol_event_handle_t *EventOut,
+                                         ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result =
+      olEnqueueDataCopy(Queue, SrcPtr, DstPtr, DstDevice, Size, EventOut);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olEnqueueKernelLaunch_val(ol_queue_handle_t Queue,
+                                           ol_kernel_handle_t Kernel,
+                                           const size_t *GlobalWorkSize,
+                                           ol_event_handle_t *EventOut) {
+  if (true /*enableParameterValidation*/) {
+    if (NULL == Queue) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+
+    if (NULL == Kernel) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+
+    if (NULL == GlobalWorkSize) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+  }
+
+  return olEnqueueKernelLaunch_impl(Queue, Kernel, GlobalWorkSize, EventOut);
+}
+OL_APIEXPORT ol_result_t OL_APICALL olEnqueueKernelLaunch(
+    ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
+    const size_t *GlobalWorkSize, ol_event_handle_t *EventOut) {
+  if (offloadConfig().TracingEnabled) {
+    std::cout << "---> olEnqueueKernelLaunch";
+  }
+
+  ol_result_t Result =
+      olEnqueueKernelLaunch_val(Queue, Kernel, GlobalWorkSize, EventOut);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_enqueue_kernel_launch_params_t Params = {&Queue, &Kernel,
+                                                &GlobalWorkSize, &EventOut};
+    std::cout << "(" << &Params << ")";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olEnqueueKernelLaunchWithCodeLoc(ol_queue_handle_t Queue,
+                                             ol_kernel_handle_t Kernel,
+                                             const size_t *GlobalWorkSize,
+                                             ol_event_handle_t *EventOut,
+                                             ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result =
+      olEnqueueKernelLaunch(Queue, Kernel, GlobalWorkSize, EventOut);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olCreateProgram_val(ol_device_handle_t Device, void *ProgData,
+                                     size_t ProgDataSize,
+                                     ol_program_handle_t *Queue) {
+  if (true /*enableParameterValidation*/) {
+    if (NULL == Device) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+
+    if (NULL == ProgData) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+
+    if (NULL == Queue) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+  }
+
+  return olCreateProgram_impl(Device, ProgData, ProgDataSize, Queue);
+}
+OL_APIEXPORT ol_result_t OL_APICALL
+olCreateProgram(ol_device_handle_t Device, void *ProgData, size_t ProgDataSize,
+                ol_program_handle_t *Queue) {
+  if (offloadConfig().TracingEnabled) {
+    std::cout << "---> olCreateProgram";
+  }
+
+  ol_result_t Result =
+      olCreateProgram_val(Device, ProgData, ProgDataSize, Queue);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_create_program_params_t Params = {&Device, &ProgData, &ProgDataSize,
+                                         &Queue};
+    std::cout << "(" << &Params << ")";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olCreateProgramWithCodeLoc(ol_device_handle_t Device,
+                                       void *ProgData, size_t ProgDataSize,
+                                       ol_program_handle_t *Queue,
+                                       ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = olCreateProgram(Device, ProgData, ProgDataSize, Queue);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olRetainProgram_val(ol_program_handle_t Program) {
+  if (true /*enableParameterValidation*/) {
+    if (NULL == Program) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+  }
+
+  return olRetainProgram_impl(Program);
+}
+OL_APIEXPORT ol_result_t OL_APICALL
+olRetainProgram(ol_program_handle_t Program) {
+  if (offloadConfig().TracingEnabled) {
+    std::cout << "---> olRetainProgram";
+  }
+
+  ol_result_t Result = olRetainProgram_val(Program);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_retain_program_params_t Params = {&Program};
+    std::cout << "(" << &Params << ")";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olRetainProgramWithCodeLoc(ol_program_handle_t Program,
+                                       ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = olRetainProgram(Program);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olReleaseProgram_val(ol_program_handle_t Program) {
+  if (true /*enableParameterValidation*/) {
+    if (NULL == Program) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+  }
+
+  return olReleaseProgram_impl(Program);
+}
+OL_APIEXPORT ol_result_t OL_APICALL
+olReleaseProgram(ol_program_handle_t Program) {
+  if (offloadConfig().TracingEnabled) {
+    std::cout << "---> olReleaseProgram";
+  }
+
+  ol_result_t Result = olReleaseProgram_val(Program);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_release_program_params_t Params = {&Program};
+    std::cout << "(" << &Params << ")";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olReleaseProgramWithCodeLoc(ol_program_handle_t Program,
+                                        ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = olReleaseProgram(Program);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olCreateKernel_val(ol_program_handle_t Program,
+                                    const char *KernelName,
+                                    ol_kernel_handle_t *Kernel) {
+  if (true /*enableParameterValidation*/) {
+    if (NULL == Program) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+
+    if (NULL == KernelName) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+
+    if (NULL == Kernel) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+  }
+
+  return olCreateKernel_impl(Program, KernelName, Kernel);
+}
+OL_APIEXPORT ol_result_t OL_APICALL olCreateKernel(ol_program_handle_t Program,
+                                                   const char *KernelName,
+                                                   ol_kernel_handle_t *Kernel) {
+  if (offloadConfig().TracingEnabled) {
+    std::cout << "---> olCreateKernel";
+  }
+
+  ol_result_t Result = olCreateKernel_val(Program, KernelName, Kernel);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_create_kernel_params_t Params = {&Program, &KernelName, &Kernel};
+    std::cout << "(" << &Params << ")";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olCreateKernelWithCodeLoc(ol_program_handle_t Program,
+                                      const char *KernelName,
+                                      ol_kernel_handle_t *Kernel,
+                                      ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = olCreateKernel(Program, KernelName, Kernel);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olRetainKernel_val(ol_kernel_handle_t Kernel) {
+  if (true /*enableParameterValidation*/) {
+    if (NULL == Kernel) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+  }
+
+  return olRetainKernel_impl(Kernel);
+}
+OL_APIEXPORT ol_result_t OL_APICALL olRetainKernel(ol_kernel_handle_t Kernel) {
+  if (offloadConfig().TracingEnabled) {
+    std::cout << "---> olRetainKernel";
+  }
+
+  ol_result_t Result = olRetainKernel_val(Kernel);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_retain_kernel_params_t Params = {&Kernel};
+    std::cout << "(" << &Params << ")";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olRetainKernelWithCodeLoc(ol_kernel_handle_t Kernel,
+                                      ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = olRetainKernel(Kernel);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olReleaseKernel_val(ol_kernel_handle_t Kernel) {
+  if (true /*enableParameterValidation*/) {
+    if (NULL == Kernel) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+  }
+
+  return olReleaseKernel_impl(Kernel);
+}
+OL_APIEXPORT ol_result_t OL_APICALL olReleaseKernel(ol_kernel_handle_t Kernel) {
+  if (offloadConfig().TracingEnabled) {
+    std::cout << "---> olReleaseKernel";
+  }
+
+  ol_result_t Result = olReleaseKernel_val(Kernel);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_release_kernel_params_t Params = {&Kernel};
+    std::cout << "(" << &Params << ")";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olReleaseKernelWithCodeLoc(ol_kernel_handle_t Kernel,
+                                       ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = olReleaseKernel(Kernel);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olSetKernelArgValue_val(ol_kernel_handle_t Kernel,
+                                         uint32_t Index, size_t Size,
+                                         void *ArgData) {
+  if (true /*enableParameterValidation*/) {
+    if (NULL == Kernel) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+
+    if (NULL == ArgData) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+  }
+
+  return olSetKernelArgValue_impl(Kernel, Index, Size, ArgData);
+}
+OL_APIEXPORT ol_result_t OL_APICALL olSetKernelArgValue(
+    ol_kernel_handle_t Kernel, uint32_t Index, size_t Size, void *ArgData) {
+  if (offloadConfig().TracingEnabled) {
+    std::cout << "---> olSetKernelArgValue";
+  }
+
+  ol_result_t Result = olSetKernelArgValue_val(Kernel, Index, Size, ArgData);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_set_kernel_arg_value_params_t Params = {&Kernel, &Index, &Size,
+                                               &ArgData};
+    std::cout << "(" << &Params << ")";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olSetKernelArgValueWithCodeLoc(ol_kernel_handle_t Kernel,
+                                           uint32_t Index, size_t Size,
+                                           void *ArgData,
+                                           ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = olSetKernelArgValue(Kernel, Index, Size, ArgData);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}

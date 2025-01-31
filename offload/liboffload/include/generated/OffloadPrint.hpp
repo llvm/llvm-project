@@ -22,6 +22,10 @@ template <typename T> struct is_handle : std::false_type {};
 template <> struct is_handle<ol_platform_handle_t> : std::true_type {};
 template <> struct is_handle<ol_device_handle_t> : std::true_type {};
 template <> struct is_handle<ol_context_handle_t> : std::true_type {};
+template <> struct is_handle<ol_queue_handle_t> : std::true_type {};
+template <> struct is_handle<ol_event_handle_t> : std::true_type {};
+template <> struct is_handle<ol_program_handle_t> : std::true_type {};
+template <> struct is_handle<ol_kernel_handle_t> : std::true_type {};
 template <typename T> inline constexpr bool is_handle_v = is_handle<T>::value;
 
 inline std::ostream &operator<<(std::ostream &os, enum ol_errc_t value);
@@ -31,6 +35,7 @@ inline std::ostream &operator<<(std::ostream &os,
                                 enum ol_platform_backend_t value);
 inline std::ostream &operator<<(std::ostream &os, enum ol_device_type_t value);
 inline std::ostream &operator<<(std::ostream &os, enum ol_device_info_t value);
+inline std::ostream &operator<<(std::ostream &os, enum ol_alloc_type_t value);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Print operator for the ol_errc_t type
@@ -274,6 +279,26 @@ inline void printTagged(std::ostream &os, const void *ptr,
     break;
   }
 }
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Print operator for the ol_alloc_type_t type
+/// @returns std::ostream &
+inline std::ostream &operator<<(std::ostream &os, enum ol_alloc_type_t value) {
+  switch (value) {
+  case OL_ALLOC_TYPE_HOST:
+    os << "OL_ALLOC_TYPE_HOST";
+    break;
+  case OL_ALLOC_TYPE_DEVICE:
+    os << "OL_ALLOC_TYPE_DEVICE";
+    break;
+  case OL_ALLOC_TYPE_SHARED:
+    os << "OL_ALLOC_TYPE_SHARED";
+    break;
+  default:
+    os << "unknown enumerator";
+    break;
+  }
+  return os;
+}
 
 inline std::ostream &operator<<(std::ostream &os,
                                 const ol_error_struct_t *Err) {
@@ -399,6 +424,244 @@ operator<<(std::ostream &os,
   os << ", ";
   os << ".PropSizeRet = ";
   printPtr(os, *params->pPropSizeRet);
+  return os;
+}
+
+inline std::ostream &operator<<(std::ostream &os,
+                                const struct ol_mem_alloc_params_t *params) {
+  os << ".Device = ";
+  printPtr(os, *params->pDevice);
+  os << ", ";
+  os << ".Type = ";
+  os << *params->pType;
+  os << ", ";
+  os << ".Size = ";
+  os << *params->pSize;
+  os << ", ";
+  os << ".Aligment = ";
+  os << *params->pAligment;
+  os << ", ";
+  os << ".AllocationOut = ";
+  printPtr(os, *params->pAllocationOut);
+  return os;
+}
+
+inline std::ostream &operator<<(std::ostream &os,
+                                const struct ol_mem_free_params_t *params) {
+  os << ".Device = ";
+  printPtr(os, *params->pDevice);
+  os << ", ";
+  os << ".Type = ";
+  os << *params->pType;
+  os << ", ";
+  os << ".Address = ";
+  printPtr(os, *params->pAddress);
+  return os;
+}
+
+inline std::ostream &operator<<(std::ostream &os,
+                                const struct ol_create_queue_params_t *params) {
+  os << ".Device = ";
+  printPtr(os, *params->pDevice);
+  os << ", ";
+  os << ".Queue = ";
+  printPtr(os, *params->pQueue);
+  return os;
+}
+
+inline std::ostream &operator<<(std::ostream &os,
+                                const struct ol_retain_queue_params_t *params) {
+  os << ".Queue = ";
+  printPtr(os, *params->pQueue);
+  return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os, const struct ol_release_queue_params_t *params) {
+  os << ".Queue = ";
+  printPtr(os, *params->pQueue);
+  return os;
+}
+
+inline std::ostream &operator<<(std::ostream &os,
+                                const struct ol_finish_queue_params_t *params) {
+  os << ".Queue = ";
+  printPtr(os, *params->pQueue);
+  return os;
+}
+
+inline std::ostream &operator<<(std::ostream &os,
+                                const struct ol_retain_event_params_t *params) {
+  os << ".Event = ";
+  printPtr(os, *params->pEvent);
+  return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os, const struct ol_release_event_params_t *params) {
+  os << ".Event = ";
+  printPtr(os, *params->pEvent);
+  return os;
+}
+
+inline std::ostream &operator<<(std::ostream &os,
+                                const struct ol_wait_event_params_t *params) {
+  os << ".Event = ";
+  printPtr(os, *params->pEvent);
+  return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ol_enqueue_data_write_params_t *params) {
+  os << ".Queue = ";
+  printPtr(os, *params->pQueue);
+  os << ", ";
+  os << ".SrcPtr = ";
+  printPtr(os, *params->pSrcPtr);
+  os << ", ";
+  os << ".DstPtr = ";
+  printPtr(os, *params->pDstPtr);
+  os << ", ";
+  os << ".Size = ";
+  os << *params->pSize;
+  os << ", ";
+  os << ".EventOut = ";
+  printPtr(os, *params->pEventOut);
+  return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ol_enqueue_data_read_params_t *params) {
+  os << ".Queue = ";
+  printPtr(os, *params->pQueue);
+  os << ", ";
+  os << ".SrcPtr = ";
+  printPtr(os, *params->pSrcPtr);
+  os << ", ";
+  os << ".DstPtr = ";
+  printPtr(os, *params->pDstPtr);
+  os << ", ";
+  os << ".Size = ";
+  os << *params->pSize;
+  os << ", ";
+  os << ".EventOut = ";
+  printPtr(os, *params->pEventOut);
+  return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ol_enqueue_data_copy_params_t *params) {
+  os << ".Queue = ";
+  printPtr(os, *params->pQueue);
+  os << ", ";
+  os << ".SrcPtr = ";
+  printPtr(os, *params->pSrcPtr);
+  os << ", ";
+  os << ".DstPtr = ";
+  printPtr(os, *params->pDstPtr);
+  os << ", ";
+  os << ".DstDevice = ";
+  printPtr(os, *params->pDstDevice);
+  os << ", ";
+  os << ".Size = ";
+  os << *params->pSize;
+  os << ", ";
+  os << ".EventOut = ";
+  printPtr(os, *params->pEventOut);
+  return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ol_enqueue_kernel_launch_params_t *params) {
+  os << ".Queue = ";
+  printPtr(os, *params->pQueue);
+  os << ", ";
+  os << ".Kernel = ";
+  printPtr(os, *params->pKernel);
+  os << ", ";
+  os << ".GlobalWorkSize = ";
+  printPtr(os, *params->pGlobalWorkSize);
+  os << ", ";
+  os << ".EventOut = ";
+  printPtr(os, *params->pEventOut);
+  return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os, const struct ol_create_program_params_t *params) {
+  os << ".Device = ";
+  printPtr(os, *params->pDevice);
+  os << ", ";
+  os << ".ProgData = ";
+  printPtr(os, *params->pProgData);
+  os << ", ";
+  os << ".ProgDataSize = ";
+  os << *params->pProgDataSize;
+  os << ", ";
+  os << ".Queue = ";
+  printPtr(os, *params->pQueue);
+  return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os, const struct ol_retain_program_params_t *params) {
+  os << ".Program = ";
+  printPtr(os, *params->pProgram);
+  return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os, const struct ol_release_program_params_t *params) {
+  os << ".Program = ";
+  printPtr(os, *params->pProgram);
+  return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os, const struct ol_create_kernel_params_t *params) {
+  os << ".Program = ";
+  printPtr(os, *params->pProgram);
+  os << ", ";
+  os << ".KernelName = ";
+  printPtr(os, *params->pKernelName);
+  os << ", ";
+  os << ".Kernel = ";
+  printPtr(os, *params->pKernel);
+  return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os, const struct ol_retain_kernel_params_t *params) {
+  os << ".Kernel = ";
+  printPtr(os, *params->pKernel);
+  return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os, const struct ol_release_kernel_params_t *params) {
+  os << ".Kernel = ";
+  printPtr(os, *params->pKernel);
+  return os;
+}
+
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ol_set_kernel_arg_value_params_t *params) {
+  os << ".Kernel = ";
+  printPtr(os, *params->pKernel);
+  os << ", ";
+  os << ".Index = ";
+  os << *params->pIndex;
+  os << ", ";
+  os << ".Size = ";
+  os << *params->pSize;
+  os << ", ";
+  os << ".ArgData = ";
+  printPtr(os, *params->pArgData);
   return os;
 }
 
