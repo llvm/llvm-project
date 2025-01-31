@@ -887,11 +887,12 @@ declarative parameter to `parse` method argument is detailed below:
     -   Variadic: `SmallVectorImpl<Type> &`
     -   VariadicOfVariadic: `SmallVectorImpl<SmallVector<Type>> &`
 *   `attr-dict` Directive: `NamedAttrList &`
+*   `prop-dict` Directive: `OperationState &`
 
 When a variable is optional, the value should only be specified if the variable
 is present. Otherwise, the value should remain `None` or null.
 
-The arguments to the `print<UserDirective>` method is firstly a reference to the
+The arguments to the `print<UserDirective>` method are firstly a reference to the
 `OpAsmPrinter`(`OpAsmPrinter &`), second the op (e.g. `FooOp op` which can be
 `Operation *op` alternatively), and finally a set of output parameters
 corresponding to the parameters specified in the format. The mapping of
@@ -921,6 +922,7 @@ declarative parameter to `print` method argument is detailed below:
     -   Variadic: `TypeRange`
     -   VariadicOfVariadic: `TypeRangeRange`
 *   `attr-dict` Directive: `DictionaryAttr`
+*   `prop-dict` Directive: `FooOp::Properties`
 
 When a variable is optional, the provided value may be null. When a variable is
 referenced in a custom directive parameter using `ref`, it is passed in by
