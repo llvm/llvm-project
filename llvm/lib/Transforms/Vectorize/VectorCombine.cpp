@@ -740,7 +740,7 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
 }
 
 /// Try to fold insert(binop(x,y),binop(a,b),idx)
-///         --> binop(insert(x,a,idx),insert(x,a,idx))
+///         --> binop(insert(x,a,idx),insert(y,b,idx))
 bool VectorCombine::foldInsExtBinop(Instruction &I) {
   BinaryOperator *VecBinOp, *SclBinOp;
   uint64_t Index;
