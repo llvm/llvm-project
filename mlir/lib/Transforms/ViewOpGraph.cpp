@@ -62,12 +62,12 @@ static std::string quoteString(const std::string &str) {
 /// For Graphviz record nodes:
 /// " Braces, vertical bars and angle brackets must be escaped with a backslash
 /// character if you wish them to appear as a literal character "
-static std::string escapeLabelString(const std::string &str) {
+std::string escapeLabelString(const std::string &str) {
   std::string buf;
   llvm::raw_string_ostream os(buf);
   for (char c : str) {
     if (c == '{' || c == '|' || c == '<' || c == '}' || c == '>') {
-      os << "\\\\";
+      os << '\\';
     }
     os << c;
   }
@@ -145,7 +145,7 @@ private:
   void emitAllEdgeStmts() {
     if (printDataFlowEdges) {
       for (const auto &[value, node, label] : dataFlowEdges) {
-        emitEdgeStmt(valueToNode[value], node, label, kLineStyleDataFlow);
+        emitEdgeStmt(valueToNode[value], "", node, "", kLineStyleDataFlow);
       }
     }
 
@@ -219,14 +219,10 @@ private:
 
   /// Append an edge to the list of edges.
   /// Note: Edges are written to the output stream via `emitAllEdgeStmts`.
-  void emitEdgeStmt(Node n1, Node n2, std::string label, StringRef style) {
+  void emitEdgeStmt(Node n1, std::string outPort, Node n2, std::string inPort,
+                    StringRef style) {
     AttributeMap attrs;
     attrs["style"] = style.str();
-    // Do not label edges that start/end at a cluster boundary. Such edges are
-    // clipped at the boundary, but labels are not. This can lead to labels
-    // floating around without any edge next to them.
-    if (!n1.clusterId && !n2.clusterId)
-      attrs["label"] = quoteString(escapeString(std::move(label)));
     // Use `ltail` and `lhead` to draw edges between clusters.
     if (n1.clusterId)
       attrs["ltail"] = "cluster_" + std::to_string(*n1.clusterId);
@@ -234,7 +230,13 @@ private:
       attrs["lhead"] = "cluster_" + std::to_string(*n2.clusterId);
 
     edges.push_back(strFromOs([&](raw_ostream &os) {
-      os << llvm::format("v%i -> v%i ", n1.id, n2.id);
+      os << "v" << n1.id;
+      if (!outPort.empty())
+        os << ":" << outPort;
+      os << " -> ";
+      os << "v" << n2.id;
+      if (!inPort.empty())
+        os << ":" << inPort;
       emitAttrList(os, attrs);
     }));
   }
@@ -255,8 +257,7 @@ private:
                     StringRef background = "") {
     int nodeId = ++counter;
     AttributeMap attrs;
-    attrs["label"] =
-        quoteString(escapeString(escapeLabelString(std::move(label))));
+    attrs["label"] = quoteString(escapeString(std::move(label)));
     attrs["shape"] = shape.str();
     if (!background.empty()) {
       attrs["style"] = "filled";
@@ -271,6 +272,16 @@ private:
   /// Generate a label for an operation.
   std::string getLabel(Operation *op) {
     return strFromOs([&](raw_ostream &os) {
+      os << "{{";
+      // Print operation inputs.
+      interleave(
+          op->getOperands(), os,
+          [&](Value operand) {
+            OpPrintingFlags flags;
+            operand.printAsOperand(os, flags);
+          },
+          "|");
+      os << "}|";
       // Print operation name and type.
       os << op->getName();
       if (printResultTypes) {
@@ -289,6 +300,7 @@ private:
           emitMlirAttr(os, attr.getValue());
         }
       }
+      os << "}";
     });
   }
 
@@ -301,16 +313,15 @@ private:
   /// operation inside the cluster.
   void processBlock(Block &block) {
     emitClusterStmt([&]() {
-      for (BlockArgument &blockArg : block.getArguments())
+      for (BlockArgument &blockArg : block.getArguments()) {
         valueToNode[blockArg] = emitNodeStmt(getLabel(blockArg));
-
+      }
       // Emit a node for each operation.
       std::optional<Node> prevNode;
       for (Operation &op : block) {
         Node nextNode = processOperation(&op);
         if (printControlFlowEdges && prevNode)
-          emitEdgeStmt(*prevNode, nextNode, /*label=*/"",
-                       kLineStyleControlFlow);
+          emitEdgeStmt(*prevNode, "", nextNode, "", kLineStyleControlFlow);
         prevNode = nextNode;
       }
     });
