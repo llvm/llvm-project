@@ -296,12 +296,13 @@ define i32 @mismatched_byval(ptr %x) {
 ; CHECK-NEXT:    global.set __stack_pointer, $pop7
 ; CHECK-NEXT:    i32.load $push0=, 0($0)
 ; CHECK-NEXT:    i32.store 12($1), $pop0
+; CHECK-NEXT:    i32.const $push5=, 12
+; CHECK-NEXT:    i32.add $push6=, $1, $pop5
+; CHECK-NEXT:    call $0=, quux, $pop6
 ; CHECK-NEXT:    i32.const $push3=, 16
 ; CHECK-NEXT:    i32.add $push4=, $1, $pop3
 ; CHECK-NEXT:    global.set __stack_pointer, $pop4
-; CHECK-NEXT:    i32.const $push5=, 12
-; CHECK-NEXT:    i32.add $push6=, $1, $pop5
-; CHECK-NEXT:    return_call quux, $pop6
+; CHECK-NEXT:    return $0
   %v = tail call i32 @quux(ptr byval(i32) %x)
   ret i32 %v
 }
