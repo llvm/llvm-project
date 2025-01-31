@@ -107,7 +107,13 @@ private:
 ///   };
 /// }
 /// ```
+
+#if defined(_WIN32) && defined(LLVM_BUILD_LLVM_DYLIB)
+extern "C" ::llvm::PassPluginLibraryInfo __declspec(dllexport)
+llvmGetPassPluginInfo();
+#else
 extern "C" ::llvm::PassPluginLibraryInfo LLVM_ATTRIBUTE_WEAK
 llvmGetPassPluginInfo();
+#endif
 
 #endif /* LLVM_PASSES_PASSPLUGIN_H */
