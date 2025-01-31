@@ -222,7 +222,6 @@ void ScalarEnumerationTraits<dxbc::ShaderVisibilityFlag>::enumeration(
     IO.enumCase(Value, E.Name.str().c_str(), E.Value);
 }
 
-
 void MappingTraits<DXContainerYAML::RootSignatureDesc>::mapping(
     IO &IO, DXContainerYAML::RootSignatureDesc &S) {
   IO.mapRequired("Size", S.Size);

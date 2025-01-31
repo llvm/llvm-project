@@ -70,7 +70,6 @@ enum class RootParameterType : uint8_t {
 
 ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
 
-
 #define SHADER_VISIBILITY(Val, Enum) Enum = Val,
 enum class ShaderVisibilityFlag : uint8_t {
 #include "DXContainerConstants.def"
