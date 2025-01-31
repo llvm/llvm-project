@@ -3286,7 +3286,21 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
 
   SmallVector<Instruction *, 4> SpeculatedDbgIntrinsics;
 
+  // The number of already examined instructions. Debug instructions don't
+  // count!
   unsigned SpeculatedInstructions = 0;
+  // By default the number of instructions that may be speculatevly executed is
+  // one. Whenever a pattern is found in the basic block, that is cheap for sure
+  // we increase this number to the size of the pattern (how many instructions
+  // are there in that pattern).
+  unsigned MaxSpeculatedInstructionsToHoist = 1;
+  // In case we have found a cheap pattern, we don't want to do cost checking
+  // anymore. We are sure we want to hoist the pattern. To know, that we are
+  // only hoisting the cheap pattern only and not other expensive instructions
+  // too, we have the `MaxSpeculatedInstructionsToHoist` variable to track that
+  // the basic block truly only contains that pattern.
+  bool PatternFound = false;
+
   bool HoistLoadsStores = HoistLoadsStoresWithCondFaulting &&
                           Options.HoistLoadsStoresWithCondFaulting;
   SmallVector<Instruction *, 2> SpeculatedConditionalLoadsStores;
@@ -3294,7 +3308,6 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   Value *SpeculatedStoreValue = nullptr;
   StoreInst *SpeculatedStore = nullptr;
   EphemeralValueTracker EphTracker;
-  bool PatternFound = false;
   for (Instruction &I : reverse(drop_end(*ThenBB))) {
     // Skip debug info.
     if (isa<DbgInfoIntrinsic>(I)) {
@@ -3341,9 +3354,10 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
 
     if (match(&I,
               m_ExtractValue<1>(m_OneUse(
-                  m_Intrinsic<Intrinsic::umul_with_overflow>(m_Value())))) &&
-        ThenBB->size() <= 3)
+                  m_Intrinsic<Intrinsic::umul_with_overflow>(m_Value()))))) {
+      MaxSpeculatedInstructionsToHoist = 3;
       PatternFound = true;
+    }
 
     BlockCostSoFar += computeSpeculationCost(&I, TTI);
     if (!PatternFound && !IsSafeCheapLoadStore && !SpeculatedStoreValue &&
@@ -3352,7 +3366,8 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
       return false;
     // If we don't find any pattern, that must be cheap, then only speculatively
     // execute a single instruction (not counting the terminator).
-    if (!PatternFound && SpeculatedInstructions > 1)
+    if (!PatternFound &&
+        SpeculatedInstructions > MaxSpeculatedInstructionsToHoist)
       return false;
 
     // Store the store speculation candidate.
