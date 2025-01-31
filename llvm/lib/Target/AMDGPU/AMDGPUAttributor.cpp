@@ -1529,7 +1529,7 @@ static void markKernelArgsAsInreg(SetVector<Function *> &Functions,
   for (auto *F : Functions) {
     const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*F);
     if (!ST.hasKernargPreload() ||
-        F->getCallingConv() != CallingConv::AMDGPU_KERNEL || F->arg_empty())
+        F->getCallingConv() != CallingConv::AMDGPU_KERNEL)
       continue;
 
     PreloadKernelArgInfo PreloadInfo(*F, ST);
@@ -1541,6 +1541,8 @@ static void markKernelArgsAsInreg(SetVector<Function *> &Functions,
     for (Argument &Arg : F->args()) {
       // Avoid incompatible attributes and guard against running this pass
       // twice.
+      //
+      // TODO: Preload byref kernel arguments
       if (Arg.hasByRefAttr() || Arg.hasNestAttr() ||
           Arg.hasAttribute("amdgpu-hidden-argument"))
         break;

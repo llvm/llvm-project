@@ -3,24 +3,30 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -amdgpu-attributor -amdgpu-kernarg-preload-count=100 -S < %s | FileCheck -check-prefix=PRELOAD %s
 
 
-define amdgpu_kernel void @incompatible_attribute_block_count_x(ptr addrspace(1) byref(i32) %out) {
+define amdgpu_kernel void @incompatible_attribute_block_count_x(ptr addrspace(1) %out, ptr addrspace(1) byref(i32) %arg) {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@incompatible_attribute_block_count_x
-; NO-PRELOAD-SAME: (ptr addrspace(1) byref(i32) [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
+; NO-PRELOAD-SAME: (ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) byref(i32) [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; NO-PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; NO-PRELOAD-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(4) [[IMP_ARG_PTR]], align 4
-; NO-PRELOAD-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT]], align 4
+; NO-PRELOAD-NEXT:    [[LOAD0:%.*]] = load i32, ptr addrspace(4) [[IMP_ARG_PTR]], align 4
+; NO-PRELOAD-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[ARG]], align 4
+; NO-PRELOAD-NEXT:    [[ADD:%.*]] = add i32 [[LOAD0]], [[LOAD1]]
+; NO-PRELOAD-NEXT:    store i32 [[ADD]], ptr addrspace(1) [[OUT]], align 4
 ; NO-PRELOAD-NEXT:    ret void
 ;
 ; PRELOAD-LABEL: define {{[^@]+}}@incompatible_attribute_block_count_x
-; PRELOAD-SAME: (ptr addrspace(1) byref(i32) [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
+; PRELOAD-SAME: (ptr addrspace(1) inreg [[OUT:%.*]], ptr addrspace(1) byref(i32) [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; PRELOAD-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(4) [[IMP_ARG_PTR]], align 4
-; PRELOAD-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT]], align 4
+; PRELOAD-NEXT:    [[LOAD0:%.*]] = load i32, ptr addrspace(4) [[IMP_ARG_PTR]], align 4
+; PRELOAD-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[ARG]], align 4
+; PRELOAD-NEXT:    [[ADD:%.*]] = add i32 [[LOAD0]], [[LOAD1]]
+; PRELOAD-NEXT:    store i32 [[ADD]], ptr addrspace(1) [[OUT]], align 4
 ; PRELOAD-NEXT:    ret void
 ;
   %imp_arg_ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-  %load = load i32, ptr addrspace(4) %imp_arg_ptr
-  store i32 %load, ptr addrspace(1) %out
+  %load0 = load i32, ptr addrspace(4) %imp_arg_ptr
+  %load1 = load i32, ptr addrspace(1) %arg
+  %add = add i32 %load0, %load1
+  store i32 %add, ptr addrspace(1) %out
   ret void
 }
 
@@ -87,16 +93,16 @@ define amdgpu_kernel void @preload_unused_arg_block_count_x(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @no_free_sgprs_block_count_x(ptr addrspace(1) %out, i512 inreg) {
+define amdgpu_kernel void @no_free_sgprs_block_count_x(ptr addrspace(1) %out, <16 x i32> inreg) {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@no_free_sgprs_block_count_x
-; NO-PRELOAD-SAME: (ptr addrspace(1) [[OUT:%.*]], i512 inreg [[TMP0:%.*]]) #[[ATTR0]] {
+; NO-PRELOAD-SAME: (ptr addrspace(1) [[OUT:%.*]], <16 x i32> inreg [[TMP0:%.*]]) #[[ATTR0]] {
 ; NO-PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; NO-PRELOAD-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(4) [[IMP_ARG_PTR]], align 4
 ; NO-PRELOAD-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT]], align 4
 ; NO-PRELOAD-NEXT:    ret void
 ;
 ; PRELOAD-LABEL: define {{[^@]+}}@no_free_sgprs_block_count_x
-; PRELOAD-SAME: (ptr addrspace(1) inreg [[OUT:%.*]], i512 inreg [[TMP0:%.*]]) #[[ATTR0]] {
+; PRELOAD-SAME: (ptr addrspace(1) inreg [[OUT:%.*]], <16 x i32> inreg [[TMP0:%.*]]) #[[ATTR0]] {
 ; PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; PRELOAD-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(4) [[IMP_ARG_PTR]], align 4
 ; PRELOAD-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT]], align 4

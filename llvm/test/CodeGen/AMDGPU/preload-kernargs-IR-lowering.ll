@@ -469,17 +469,17 @@ define amdgpu_kernel void @ptr1_byref_i32_i32_staggered_kernel(ptr addrspace(1) 
 
 define amdgpu_kernel void @ptr1_v8i32_kernel(ptr addrspace(1) nocapture %out, <8 x i32> %in) {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@ptr1_v8i32_kernel
-; NO-PRELOAD-SAME: (ptr addrspace(1) nocapture [[OUT:%.*]], <8 x i32> [[IN:%.*]]) #[[ATTR0]] {
+; NO-PRELOAD-SAME: (ptr addrspace(1) captures(none) [[OUT:%.*]], <8 x i32> [[IN:%.*]]) #[[ATTR0]] {
 ; NO-PRELOAD-NEXT:    store <8 x i32> [[IN]], ptr addrspace(1) [[OUT]], align 4
 ; NO-PRELOAD-NEXT:    ret void
 ;
 ; PRELOAD-2-LABEL: define {{[^@]+}}@ptr1_v8i32_kernel
-; PRELOAD-2-SAME: (ptr addrspace(1) inreg nocapture [[OUT:%.*]], <8 x i32> [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-2-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <8 x i32> [[IN:%.*]]) #[[ATTR0]] {
 ; PRELOAD-2-NEXT:    store <8 x i32> [[IN]], ptr addrspace(1) [[OUT]], align 4
 ; PRELOAD-2-NEXT:    ret void
 ;
 ; PRELOAD-ALL-LABEL: define {{[^@]+}}@ptr1_v8i32_kernel
-; PRELOAD-ALL-SAME: (ptr addrspace(1) inreg nocapture [[OUT:%.*]], <8 x i32> [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-ALL-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <8 x i32> [[IN:%.*]]) #[[ATTR0]] {
 ; PRELOAD-ALL-NEXT:    store <8 x i32> [[IN]], ptr addrspace(1) [[OUT]], align 4
 ; PRELOAD-ALL-NEXT:    ret void
 ;
@@ -489,17 +489,17 @@ define amdgpu_kernel void @ptr1_v8i32_kernel(ptr addrspace(1) nocapture %out, <8
 
 define amdgpu_kernel void @ptr1_v3i16_kernel(ptr addrspace(1) nocapture %out, <3 x i16> %in) {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@ptr1_v3i16_kernel
-; NO-PRELOAD-SAME: (ptr addrspace(1) nocapture [[OUT:%.*]], <3 x i16> [[IN:%.*]]) #[[ATTR0]] {
+; NO-PRELOAD-SAME: (ptr addrspace(1) captures(none) [[OUT:%.*]], <3 x i16> [[IN:%.*]]) #[[ATTR0]] {
 ; NO-PRELOAD-NEXT:    store <3 x i16> [[IN]], ptr addrspace(1) [[OUT]], align 4
 ; NO-PRELOAD-NEXT:    ret void
 ;
 ; PRELOAD-2-LABEL: define {{[^@]+}}@ptr1_v3i16_kernel
-; PRELOAD-2-SAME: (ptr addrspace(1) inreg nocapture [[OUT:%.*]], <3 x i16> inreg [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-2-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <3 x i16> inreg [[IN:%.*]]) #[[ATTR0]] {
 ; PRELOAD-2-NEXT:    store <3 x i16> [[IN]], ptr addrspace(1) [[OUT]], align 4
 ; PRELOAD-2-NEXT:    ret void
 ;
 ; PRELOAD-ALL-LABEL: define {{[^@]+}}@ptr1_v3i16_kernel
-; PRELOAD-ALL-SAME: (ptr addrspace(1) inreg nocapture [[OUT:%.*]], <3 x i16> inreg [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-ALL-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <3 x i16> inreg [[IN:%.*]]) #[[ATTR0]] {
 ; PRELOAD-ALL-NEXT:    store <3 x i16> [[IN]], ptr addrspace(1) [[OUT]], align 4
 ; PRELOAD-ALL-NEXT:    ret void
 ;
@@ -509,17 +509,17 @@ define amdgpu_kernel void @ptr1_v3i16_kernel(ptr addrspace(1) nocapture %out, <3
 
 define amdgpu_kernel void @ptr1_v3i32_kernel(ptr addrspace(1) nocapture %out, <3 x i32> %in) {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@ptr1_v3i32_kernel
-; NO-PRELOAD-SAME: (ptr addrspace(1) nocapture [[OUT:%.*]], <3 x i32> [[IN:%.*]]) #[[ATTR0]] {
+; NO-PRELOAD-SAME: (ptr addrspace(1) captures(none) [[OUT:%.*]], <3 x i32> [[IN:%.*]]) #[[ATTR0]] {
 ; NO-PRELOAD-NEXT:    store <3 x i32> [[IN]], ptr addrspace(1) [[OUT]], align 4
 ; NO-PRELOAD-NEXT:    ret void
 ;
 ; PRELOAD-2-LABEL: define {{[^@]+}}@ptr1_v3i32_kernel
-; PRELOAD-2-SAME: (ptr addrspace(1) inreg nocapture [[OUT:%.*]], <3 x i32> inreg [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-2-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <3 x i32> inreg [[IN:%.*]]) #[[ATTR0]] {
 ; PRELOAD-2-NEXT:    store <3 x i32> [[IN]], ptr addrspace(1) [[OUT]], align 4
 ; PRELOAD-2-NEXT:    ret void
 ;
 ; PRELOAD-ALL-LABEL: define {{[^@]+}}@ptr1_v3i32_kernel
-; PRELOAD-ALL-SAME: (ptr addrspace(1) inreg nocapture [[OUT:%.*]], <3 x i32> inreg [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-ALL-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <3 x i32> inreg [[IN:%.*]]) #[[ATTR0]] {
 ; PRELOAD-ALL-NEXT:    store <3 x i32> [[IN]], ptr addrspace(1) [[OUT]], align 4
 ; PRELOAD-ALL-NEXT:    ret void
 ;
@@ -529,17 +529,17 @@ define amdgpu_kernel void @ptr1_v3i32_kernel(ptr addrspace(1) nocapture %out, <3
 
 define amdgpu_kernel void @ptr1_v3f32_kernel(ptr addrspace(1) nocapture %out, <3 x float> %in) {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@ptr1_v3f32_kernel
-; NO-PRELOAD-SAME: (ptr addrspace(1) nocapture [[OUT:%.*]], <3 x float> [[IN:%.*]]) #[[ATTR0]] {
+; NO-PRELOAD-SAME: (ptr addrspace(1) captures(none) [[OUT:%.*]], <3 x float> [[IN:%.*]]) #[[ATTR0]] {
 ; NO-PRELOAD-NEXT:    store <3 x float> [[IN]], ptr addrspace(1) [[OUT]], align 4
 ; NO-PRELOAD-NEXT:    ret void
 ;
 ; PRELOAD-2-LABEL: define {{[^@]+}}@ptr1_v3f32_kernel
-; PRELOAD-2-SAME: (ptr addrspace(1) inreg nocapture [[OUT:%.*]], <3 x float> inreg [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-2-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <3 x float> inreg [[IN:%.*]]) #[[ATTR0]] {
 ; PRELOAD-2-NEXT:    store <3 x float> [[IN]], ptr addrspace(1) [[OUT]], align 4
 ; PRELOAD-2-NEXT:    ret void
 ;
 ; PRELOAD-ALL-LABEL: define {{[^@]+}}@ptr1_v3f32_kernel
-; PRELOAD-ALL-SAME: (ptr addrspace(1) inreg nocapture [[OUT:%.*]], <3 x float> inreg [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-ALL-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <3 x float> inreg [[IN:%.*]]) #[[ATTR0]] {
 ; PRELOAD-ALL-NEXT:    store <3 x float> [[IN]], ptr addrspace(1) [[OUT]], align 4
 ; PRELOAD-ALL-NEXT:    ret void
 ;
@@ -549,17 +549,17 @@ define amdgpu_kernel void @ptr1_v3f32_kernel(ptr addrspace(1) nocapture %out, <3
 
 define amdgpu_kernel void @ptr1_v5i8_kernel(ptr addrspace(1) nocapture %out, <5 x i8> %in) {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@ptr1_v5i8_kernel
-; NO-PRELOAD-SAME: (ptr addrspace(1) nocapture [[OUT:%.*]], <5 x i8> [[IN:%.*]]) #[[ATTR0]] {
+; NO-PRELOAD-SAME: (ptr addrspace(1) captures(none) [[OUT:%.*]], <5 x i8> [[IN:%.*]]) #[[ATTR0]] {
 ; NO-PRELOAD-NEXT:    store <5 x i8> [[IN]], ptr addrspace(1) [[OUT]], align 4
 ; NO-PRELOAD-NEXT:    ret void
 ;
 ; PRELOAD-2-LABEL: define {{[^@]+}}@ptr1_v5i8_kernel
-; PRELOAD-2-SAME: (ptr addrspace(1) inreg nocapture [[OUT:%.*]], <5 x i8> inreg [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-2-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <5 x i8> inreg [[IN:%.*]]) #[[ATTR0]] {
 ; PRELOAD-2-NEXT:    store <5 x i8> [[IN]], ptr addrspace(1) [[OUT]], align 4
 ; PRELOAD-2-NEXT:    ret void
 ;
 ; PRELOAD-ALL-LABEL: define {{[^@]+}}@ptr1_v5i8_kernel
-; PRELOAD-ALL-SAME: (ptr addrspace(1) inreg nocapture [[OUT:%.*]], <5 x i8> inreg [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-ALL-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <5 x i8> inreg [[IN:%.*]]) #[[ATTR0]] {
 ; PRELOAD-ALL-NEXT:    store <5 x i8> [[IN]], ptr addrspace(1) [[OUT]], align 4
 ; PRELOAD-ALL-NEXT:    ret void
 ;
@@ -569,17 +569,17 @@ define amdgpu_kernel void @ptr1_v5i8_kernel(ptr addrspace(1) nocapture %out, <5 
 
 define amdgpu_kernel void @ptr1_v5f64_kernel(ptr addrspace(1) nocapture %out, <5 x double> %in) {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@ptr1_v5f64_kernel
-; NO-PRELOAD-SAME: (ptr addrspace(1) nocapture [[OUT:%.*]], <5 x double> [[IN:%.*]]) #[[ATTR0]] {
+; NO-PRELOAD-SAME: (ptr addrspace(1) captures(none) [[OUT:%.*]], <5 x double> [[IN:%.*]]) #[[ATTR0]] {
 ; NO-PRELOAD-NEXT:    store <5 x double> [[IN]], ptr addrspace(1) [[OUT]], align 8
 ; NO-PRELOAD-NEXT:    ret void
 ;
 ; PRELOAD-2-LABEL: define {{[^@]+}}@ptr1_v5f64_kernel
-; PRELOAD-2-SAME: (ptr addrspace(1) inreg nocapture [[OUT:%.*]], <5 x double> [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-2-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <5 x double> [[IN:%.*]]) #[[ATTR0]] {
 ; PRELOAD-2-NEXT:    store <5 x double> [[IN]], ptr addrspace(1) [[OUT]], align 8
 ; PRELOAD-2-NEXT:    ret void
 ;
 ; PRELOAD-ALL-LABEL: define {{[^@]+}}@ptr1_v5f64_kernel
-; PRELOAD-ALL-SAME: (ptr addrspace(1) inreg nocapture [[OUT:%.*]], <5 x double> [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-ALL-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <5 x double> [[IN:%.*]]) #[[ATTR0]] {
 ; PRELOAD-ALL-NEXT:    store <5 x double> [[IN]], ptr addrspace(1) [[OUT]], align 8
 ; PRELOAD-ALL-NEXT:    ret void
 ;
