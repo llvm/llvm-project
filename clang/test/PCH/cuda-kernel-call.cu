@@ -16,6 +16,8 @@ void kcall(void (*kp)()) {
 __global__ void kern() {
 }
 
+// Make sure that target overloaded functions remain
+// available as overloads after PCH deserialization.
 __host__ int overloaded_func();
 __device__ int overloaded_func();
 
