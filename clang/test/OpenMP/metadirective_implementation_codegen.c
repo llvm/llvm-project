@@ -12,27 +12,27 @@ void foo(void) {
 #pragma omp metadirective when(implementation = {vendor(score(0)  \
                                                         : llvm)}, \
                                device = {kind(cpu)}               \
-                               : parallel) default(target teams)
+                               : parallel) otherwise(target teams)
   bar();
 #pragma omp metadirective when(device = {kind(gpu)}                                 \
                                : target teams) when(implementation = {vendor(llvm)} \
-                                                    : parallel) default()
+                                                    : parallel) otherwise()
   bar();
-#pragma omp metadirective default(target) when(implementation = {vendor(score(5)  \
+#pragma omp metadirective otherwise(target) when(implementation = {vendor(score(5)  \
                                                                         : llvm)}, \
                                                device = {kind(cpu, host)}         \
                                                : parallel)
   bar();
 #pragma omp metadirective when(implementation = {extension(match_all)} \
-                               : parallel) default(parallel for)
+                               : parallel) otherwise(parallel for)
   for (int i = 0; i < 100; i++)
     ;
 #pragma omp metadirective when(implementation = {extension(match_any)} \
-                               : parallel) default(parallel for)
+                               : parallel) otherwise(parallel for)
   for (int i = 0; i < 100; i++)
     ;
 #pragma omp metadirective when(implementation = {extension(match_none)} \
-                               : parallel) default(parallel for)
+                               : parallel) otherwise(parallel for)
   for (int i = 0; i < 100; i++)
     ;
 }
