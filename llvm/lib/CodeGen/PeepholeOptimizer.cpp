@@ -201,11 +201,11 @@ public:
 
   bool getNextRewritableSource(RegSubRegPair &Src,
                                RegSubRegPair &Dst) override {
-    if (CurrentSrcIdx++ > 1)
+    if (++CurrentSrcIdx > 1)
       return false;
 
     // The rewritable source is the argument.
-    const MachineOperand &MOSrc = CopyLike.getOperand(1);
+    const MachineOperand &MOSrc = CopyLike.getOperand(CurrentSrcIdx);
     Src = RegSubRegPair(MOSrc.getReg(), MOSrc.getSubReg());
     // What we track are the alternative sources of the definition.
     const MachineOperand &MODef = CopyLike.getOperand(0);
