@@ -10,10 +10,12 @@ define i32 @test(ptr %c) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[BITLEN]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> poison, <6 x i32> <i32 1, i32 1, i32 1, i32 1, i32 0, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <6 x i64> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 1, i32 0, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = call <8 x i64> @llvm.vector.insert.v8i64.v6i64(<8 x i64> poison, <6 x i64> [[TMP2]], i64 0)
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i64> [[TMP4]], <8 x i64> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc <8 x i64> [[TMP5]] to <8 x i8>
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc <6 x i64> [[TMP1]] to <6 x i8>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <6 x i8> [[TMP3]], <6 x i8> poison, <2 x i32> <i32 4, i32 0>
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc <6 x i64> [[TMP2]] to <6 x i8>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <6 x i8> [[TMP5]], <6 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x i8> @llvm.vector.insert.v8i8.v2i8(<8 x i8> [[TMP8]], <2 x i8> [[TMP4]], i64 6)
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i8> [[TMP7]], <8 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 6, i32 4, i32 5>
 ; CHECK-NEXT:    store <8 x i8> [[TMP6]], ptr [[INCDEC_PTR_3_1]], align 1
 ; CHECK-NEXT:    ret i32 0
 ;
