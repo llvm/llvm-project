@@ -1409,7 +1409,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   // API, we need the begin address itself, i.e. &A[N], as the API operates on
   // begin addresses, not bases. That's why we pass args and offsets as two
   // separate entities so that each plugin can do what it needs. This behavior
-  // was introdued via https://reviews.llvm.org/D33028 and commit 1546d319244c.
+  // was introduced via https://reviews.llvm.org/D33028 and commit 1546d319244c.
   SmallVector<void *> TgtArgs;
   SmallVector<ptrdiff_t> TgtOffsets;
 
@@ -1431,7 +1431,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 
     // Clang might pass more values via the ArgPtrs to the runtime that we pass
     // on to the kernel.
-    // TOOD: Next time we adjust the KernelArgsTy we should introduce a new
+    // TODO: Next time we adjust the KernelArgsTy we should introduce a new
     // NumKernelArgs field.
     KernelArgs.NumArgs = TgtArgs.size();
   }
