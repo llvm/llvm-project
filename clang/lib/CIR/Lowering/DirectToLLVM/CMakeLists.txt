@@ -9,7 +9,9 @@ add_clang_library(clangCIRLoweringDirectToLLVM
   LowerToLLVM.cpp
 
   LINK_LIBS
+  MLIRIR
   ${dialect_libs}
+  MLIRCIR
   MLIRBuiltinToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
   )
