@@ -958,9 +958,9 @@ void TextNodeDumper::dumpAccessSpecifier(AccessSpecifier AS) {
 
 void TextNodeDumper::dumpCleanupObject(
     const ExprWithCleanups::CleanupObject &C) {
-  if (auto *BD = C.dyn_cast<BlockDecl *>())
+  if (auto *BD = dyn_cast<BlockDecl *>(C))
     dumpDeclRef(BD, "cleanup");
-  else if (auto *CLE = C.dyn_cast<CompoundLiteralExpr *>())
+  else if (auto *CLE = dyn_cast<CompoundLiteralExpr *>(C))
     AddChild([=] {
       OS << "cleanup ";
       {
