@@ -4289,16 +4289,10 @@ private:
     // TODO: replace with ROCr API once it becomes available.
     // MI300A
     llvm::StringRef StrGfxName(ComputeUnitKind);
-    IsAPU = llvm::StringSwitch<bool>(StrGfxName)
-                .Case("gfx940", true)
-                .Default(false);
-    if (IsAPU)
-      return Plugin::success();
-
     bool MayBeAPU = llvm::StringSwitch<bool>(StrGfxName)
                         .Case("gfx942", true)
                         .Default(false);
-    if (!MayBeAPU) // not gfx90a, gfx940, gfx941, or or gfx942
+    if (!MayBeAPU) // not gfx90a or gfx942
       return Plugin::success();
 
     // Can be MI300A or MI300X
@@ -4322,12 +4316,6 @@ private:
 
   Error checkIfMI300x() {
     llvm::StringRef StrGfxName(ComputeUnitKind);
-    IsEquippedWithMI300X = llvm::StringSwitch<bool>(StrGfxName)
-                               .Case("gfx941", true)
-                               .Default(false);
-
-    if (IsEquippedWithMI300X)
-      return Plugin::success();
 
     bool isMI300 = llvm::StringSwitch<bool>(StrGfxName)
                        .Case("gfx942", true)

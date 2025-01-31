@@ -7089,12 +7089,6 @@ emitOMPAtomicRMW(CodeGenFunction &CGF, LValue X, RValue Update,
                  bool IsXLHSInRHSPart, const Expr *Hint, SourceLocation Loc) {
   ASTContext &Context = CGF.getContext();
 
-  if (CGF.CGM.getOpenMPRuntime().mustEmitSafeAtomic(CGF, X, Update, BO)) {
-    // this will force emission of cmpxchg in the caller using
-    // clang machinery
-    return std::make_pair(false, RValue::get(nullptr));
-  }
-
   bool useFPAtomics = canUseAMDGPUFastFPAtomics(CGF, X, Update, BO, Hint, Loc);
   if (useFPAtomics) {
     auto Ret = CGF.CGM.getOpenMPRuntime().emitFastFPAtomicCall(
@@ -7451,14 +7445,6 @@ static void emitOMPAtomicCompareExpr(
   };
 
   llvm::Value *EVal = EmitRValueWithCastIfNeeded(X, E);
-
-  if (CGF.CGM.getOpenMPRuntime().mustEmitSafeAtomic(
-          CGF, XLVal, RValue::get(EVal),
-          cast<BinaryOperator>(CE)->getOpcode())) {
-    CGF.CGM.getOpenMPRuntime().emitAtomicCASLoop(
-        CGF, XLVal, RValue::get(EVal), cast<BinaryOperator>(CE)->getOpcode());
-    return;
-  }
 
   // Check if fast AMDGPU FP atomics can be used for the current operation:
   bool canUseFastAtomics = canUseAMDGPUFastFPAtomics(
