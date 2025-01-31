@@ -44,9 +44,10 @@ namespace dwarf {
 enum LLVMConstants : uint32_t {
   /// LLVM mock tags (see also llvm/BinaryFormat/Dwarf.def).
   /// \{
-  DW_TAG_invalid = ~0U,        ///< Tag for invalid results.
-  DW_VIRTUALITY_invalid = ~0U, ///< Virtuality for invalid results.
-  DW_MACINFO_invalid = ~0U,    ///< Macinfo type for invalid results.
+  DW_TAG_invalid = ~0U,             ///< Tag for invalid results.
+  DW_VIRTUALITY_invalid = ~0U,      ///< Virtuality for invalid results.
+  DW_MACINFO_invalid = ~0U,         ///< Macinfo type for invalid results.
+  DW_APPLE_ENUM_KIND_invalid = ~0U, ///< Virtuality for invalid results.
   /// \}
 
   /// Special values for an initial length field.
@@ -196,6 +197,12 @@ enum VirtualityAttribute {
 #define HANDLE_DW_VIRTUALITY(ID, NAME) DW_VIRTUALITY_##NAME = ID,
 #include "llvm/BinaryFormat/Dwarf.def"
   DW_VIRTUALITY_max = 0x02
+};
+
+enum EnumKindAttribute {
+#define HANDLE_DW_APPLE_ENUM_KIND(ID, NAME) DW_APPLE_ENUM_KIND_##NAME = ID,
+#include "llvm/BinaryFormat/Dwarf.def"
+  DW_APPLE_ENUM_KIND_max = 0x01
 };
 
 enum DefaultedMemberAttribute {
@@ -981,6 +988,7 @@ StringRef AccessibilityString(unsigned Access);
 StringRef DefaultedMemberString(unsigned DefaultedEncodings);
 StringRef VisibilityString(unsigned Visibility);
 StringRef VirtualityString(unsigned Virtuality);
+StringRef EnumKindString(unsigned Virtuality);
 StringRef LanguageString(unsigned Language);
 StringRef CaseString(unsigned Case);
 StringRef ConventionString(unsigned Convention);
@@ -1020,6 +1028,7 @@ unsigned getOperationEncoding(StringRef OperationEncodingString);
 unsigned getSubOperationEncoding(unsigned OpEncoding,
                                  StringRef SubOperationEncodingString);
 unsigned getVirtuality(StringRef VirtualityString);
+unsigned getEnumKind(StringRef EnumKindString);
 unsigned getLanguage(StringRef LanguageString);
 unsigned getCallingConvention(StringRef LanguageString);
 unsigned getAttributeEncoding(StringRef EncodingString);
