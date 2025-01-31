@@ -249,7 +249,7 @@ private:
     }
   }
 
-  AliasSet &addMemoryLocation(MemoryLocation Loc, AliasSet::AccessLattice E);
+  AliasSet &addMemoryLocation(const MemoryLocation &Loc, AliasSet::AccessLattice E);
   AliasSet *mergeAliasSetsForMemoryLocation(const MemoryLocation &MemLoc,
                                             AliasSet *PtrAS,
                                             bool &MustAliasAll);

@@ -520,7 +520,7 @@ void MachineFunction::deleteMachineBasicBlock(MachineBasicBlock *MBB) {
 }
 
 MachineMemOperand *MachineFunction::getMachineMemOperand(
-    MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LocationSize Size,
+    const MachinePointerInfo &PtrInfo, MachineMemOperand::Flags F, LocationSize Size,
     Align BaseAlignment, const AAMDNodes &AAInfo, const MDNode *Ranges,
     SyncScope::ID SSID, AtomicOrdering Ordering,
     AtomicOrdering FailureOrdering) {

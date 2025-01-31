@@ -151,7 +151,7 @@ void AsmPrinter::emitDwarfSymbolReference(const MCSymbol *Label,
                       getDwarfOffsetByteSize());
 }
 
-void AsmPrinter::emitDwarfStringOffset(DwarfStringPoolEntry S) const {
+void AsmPrinter::emitDwarfStringOffset(const DwarfStringPoolEntry &S) const {
   if (doesDwarfUseRelocationsAcrossSections()) {
     assert(S.Symbol && "No symbol available");
     emitDwarfSymbolReference(S.Symbol);
