@@ -217,7 +217,7 @@ std::error_code fromString(StringRef String, Metadata &HSAMetadata) {
   return YamlInput.error();
 }
 
-std::error_code toString(Metadata HSAMetadata, std::string &String) {
+std::error_code toString(Metadata &HSAMetadata, std::string &String) {
   raw_string_ostream YamlStream(String);
   yaml::Output YamlOutput(YamlStream, nullptr, std::numeric_limits<int>::max());
   YamlOutput << HSAMetadata;

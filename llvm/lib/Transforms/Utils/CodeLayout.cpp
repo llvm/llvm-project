@@ -407,7 +407,7 @@ struct ChainEdge {
     return Src == SrcChain ? CachedGainForward : CachedGainBackward;
   }
 
-  void setCachedMergeGain(ChainT *Src, ChainT *Dst, MergeGainT MergeGain) {
+  void setCachedMergeGain(ChainT *Src, ChainT *Dst, const MergeGainT &MergeGain) {
     if (Src == SrcChain) {
       CachedGainForward = MergeGain;
       CacheValidForward = true;
@@ -422,7 +422,7 @@ struct ChainEdge {
     CacheValidBackward = false;
   }
 
-  void setMergeGain(MergeGainT Gain) { CachedGain = Gain; }
+  void setMergeGain(const MergeGainT &Gain) { CachedGain = Gain; }
 
   MergeGainT getMergeGain() const { return CachedGain; }
 

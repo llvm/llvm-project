@@ -43,7 +43,7 @@ bool FunctionImportGlobalProcessing::doImportAsDefinition(
 }
 
 bool FunctionImportGlobalProcessing::shouldPromoteLocalToGlobal(
-    const GlobalValue *SGV, ValueInfo VI) {
+    const GlobalValue *SGV, const ValueInfo &VI) {
   assert(SGV->hasLocalLinkage());
 
   // Ifuncs and ifunc alias does not have summary.
