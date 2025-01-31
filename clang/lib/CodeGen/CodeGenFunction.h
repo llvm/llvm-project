@@ -3406,20 +3406,11 @@ public:
                            llvm::Value *Index, QualType IndexType,
                            QualType IndexedType, bool Accessed);
 
-  // Find a struct's flexible array member and get its offset. It may be
-  // embedded inside multiple sub-structs, but must still be the last field.
-  const FieldDecl *
-  FindFlexibleArrayMemberFieldAndOffset(ASTContext &Ctx, const RecordDecl *RD,
-                                        const FieldDecl *FAMDecl,
-                                        uint64_t &Offset);
-
-  llvm::Value *GetCountedByFieldExprGEP(const Expr *Base,
-                                        const FieldDecl *FAMDecl,
+  llvm::Value *GetCountedByFieldExprGEP(const Expr *Base, const FieldDecl *FD,
                                         const FieldDecl *CountDecl);
 
   /// Build an expression accessing the "counted_by" field.
-  llvm::Value *EmitLoadOfCountedByField(const Expr *Base,
-                                        const FieldDecl *FAMDecl,
+  llvm::Value *EmitLoadOfCountedByField(const Expr *Base, const FieldDecl *FD,
                                         const FieldDecl *CountDecl);
 
   /*TO_UPSTREAM(BoundsSafety) ON*/
@@ -5525,8 +5516,9 @@ private:
                                      llvm::Value *EmittedE,
                                      bool IsDynamic);
 
-  llvm::Value *emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
-                                           llvm::IntegerType *ResType);
+  llvm::Value *emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
+                                       unsigned Type,
+                                       llvm::IntegerType *ResType);
 
   void emitZeroOrPatternForAutoVarInit(QualType type, const VarDecl &D,
                                        Address Loc);
