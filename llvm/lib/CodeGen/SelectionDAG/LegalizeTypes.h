@@ -379,7 +379,7 @@ private:
   SDValue PromoteIntRes_IS_FPCLASS(SDNode *N);
   SDValue PromoteIntRes_PATCHPOINT(SDNode *N);
   SDValue PromoteIntRes_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
-  SDValue PromoteIntRes_EXPERIMENTAL_NONALIAS_LANE_MASK(SDNode *N);
+  SDValue PromoteIntRes_EXPERIMENTAL_NOALIAS_LANE_MASK(SDNode *N);
 
   // Integer Operand Promotion.
   bool PromoteIntegerOperand(SDNode *N, unsigned OpNo);
@@ -431,8 +431,7 @@ private:
   SDValue PromoteIntOp_VP_SPLICE(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_VECTOR_HISTOGRAM(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N, unsigned OpNo);
-  SDValue PromoteIntOp_EXPERIMENTAL_NONALIAS_LANE_MASK(SDNode *N,
-                                                       unsigned OpNo);
+  SDValue PromoteIntOp_EXPERIMENTAL_NOALIAS_LANE_MASK(SDNode *N, unsigned OpNo);
 
   void SExtOrZExtPromotedOperands(SDValue &LHS, SDValue &RHS);
   void PromoteSetCCOperands(SDValue &LHS,SDValue &RHS, ISD::CondCode Code);

@@ -312,8 +312,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
     Res = PromoteIntRes_VP_REDUCE(N);
     break;
 
-  case ISD::EXPERIMENTAL_NONALIAS_LANE_MASK:
-    Res = PromoteIntRes_EXPERIMENTAL_NONALIAS_LANE_MASK(N);
+  case ISD::EXPERIMENTAL_NOALIAS_LANE_MASK:
+    Res = PromoteIntRes_EXPERIMENTAL_NOALIAS_LANE_MASK(N);
     break;
 
   case ISD::FREEZE:
@@ -364,10 +364,10 @@ SDValue DAGTypeLegalizer::PromoteIntRes_MERGE_VALUES(SDNode *N,
 }
 
 SDValue
-DAGTypeLegalizer::PromoteIntRes_EXPERIMENTAL_NONALIAS_LANE_MASK(SDNode *N) {
+DAGTypeLegalizer::PromoteIntRes_EXPERIMENTAL_NOALIAS_LANE_MASK(SDNode *N) {
   EVT VT = N->getValueType(0);
   EVT NewVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
-  return DAG.getNode(ISD::EXPERIMENTAL_NONALIAS_LANE_MASK, SDLoc(N), NewVT,
+  return DAG.getNode(ISD::EXPERIMENTAL_NOALIAS_LANE_MASK, SDLoc(N), NewVT,
                      N->ops());
 }
 
@@ -2088,8 +2088,8 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     Res = PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(N, OpNo);
     break;
-  case ISD::EXPERIMENTAL_NONALIAS_LANE_MASK:
-    Res = PromoteIntOp_EXPERIMENTAL_NONALIAS_LANE_MASK(N, OpNo);
+  case ISD::EXPERIMENTAL_NOALIAS_LANE_MASK:
+    Res = PromoteIntOp_EXPERIMENTAL_NOALIAS_LANE_MASK(N, OpNo);
     break;
   }
 
@@ -2840,8 +2840,8 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N,
 }
 
 SDValue
-DAGTypeLegalizer::PromoteIntOp_EXPERIMENTAL_NONALIAS_LANE_MASK(SDNode *N,
-                                                               unsigned OpNo) {
+DAGTypeLegalizer::PromoteIntOp_EXPERIMENTAL_NOALIAS_LANE_MASK(SDNode *N,
+                                                              unsigned OpNo) {
   SmallVector<SDValue, 4> NewOps(N->ops());
   NewOps[OpNo] = GetPromotedInteger(N->getOperand(OpNo));
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
