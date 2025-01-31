@@ -7264,7 +7264,7 @@ LegalizerHelper::lowerFunnelShiftAsShifts(MachineInstr &MI) {
     }
   }
 
-  MIRBuilder.buildOr(Dst, ShX, ShY);
+  MIRBuilder.buildOr(Dst, ShX, ShY, MachineInstr::Disjoint);
   MI.eraseFromParent();
   return Legalized;
 }
