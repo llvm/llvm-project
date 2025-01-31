@@ -307,6 +307,109 @@ define i32 @mismatched_byval(ptr %x) {
   ret i32 %v
 }
 
+@global = external global i32
+define i32 @mismatched_byval_location(ptr byval(i32) %x) {
+; CHECK-LABEL: mismatched_byval_location:
+; CHECK:         .functype mismatched_byval_location (i32) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get $push2=, __stack_pointer
+; CHECK-NEXT:    i32.const $push3=, 16
+; CHECK-NEXT:    i32.sub $push9=, $pop2, $pop3
+; CHECK-NEXT:    local.tee $push8=, $2=, $pop9
+; CHECK-NEXT:    global.set __stack_pointer, $pop8
+; CHECK-NEXT:    i32.const $push0=, 0
+; CHECK-NEXT:    i32.load $push1=, global($pop0)
+; CHECK-NEXT:    i32.store 12($2), $pop1
+; CHECK-NEXT:    i32.const $push6=, 12
+; CHECK-NEXT:    i32.add $push7=, $2, $pop6
+; CHECK-NEXT:    call $1=, quux, $pop7
+; CHECK-NEXT:    i32.const $push4=, 16
+; CHECK-NEXT:    i32.add $push5=, $2, $pop4
+; CHECK-NEXT:    global.set __stack_pointer, $pop5
+; CHECK-NEXT:    return $1
+  %v = tail call i32 @quux(ptr byval(i32) @global)
+  ret i32 %v
+}
+
+declare i32 @quux2(ptr byval(i32), ptr byval(i32))
+
+define i32 @mismatched_byval_location_late(ptr byval(i32) %x, ptr byval(i32) %y) {
+; CHECK-LABEL: mismatched_byval_location_late:
+; CHECK:         .functype mismatched_byval_location_late (i32, i32) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get $push3=, __stack_pointer
+; CHECK-NEXT:    i32.const $push4=, 16
+; CHECK-NEXT:    i32.sub $push12=, $pop3, $pop4
+; CHECK-NEXT:    local.tee $push11=, $2=, $pop12
+; CHECK-NEXT:    global.set __stack_pointer, $pop11
+; CHECK-NEXT:    i32.load $push0=, 0($0)
+; CHECK-NEXT:    i32.store 12($2), $pop0
+; CHECK-NEXT:    i32.const $push1=, 0
+; CHECK-NEXT:    i32.load $push2=, global($pop1)
+; CHECK-NEXT:    i32.store 8($2), $pop2
+; CHECK-NEXT:    i32.const $push7=, 12
+; CHECK-NEXT:    i32.add $push8=, $2, $pop7
+; CHECK-NEXT:    i32.const $push9=, 8
+; CHECK-NEXT:    i32.add $push10=, $2, $pop9
+; CHECK-NEXT:    call $0=, quux2, $pop8, $pop10
+; CHECK-NEXT:    i32.const $push5=, 16
+; CHECK-NEXT:    i32.add $push6=, $2, $pop5
+; CHECK-NEXT:    global.set __stack_pointer, $pop6
+; CHECK-NEXT:    return $0
+  %v = tail call i32 @quux2(ptr byval(i32) %x, ptr byval(i32) @global)
+  ret i32 %v
+}
+
+define i32 @mismatched_byval_duplicated(ptr byval(i32) %x) {
+; CHECK-LABEL: mismatched_byval_duplicated:
+; CHECK:         .functype mismatched_byval_duplicated (i32) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get $push2=, __stack_pointer
+; CHECK-NEXT:    i32.const $push3=, 16
+; CHECK-NEXT:    i32.sub $push11=, $pop2, $pop3
+; CHECK-NEXT:    local.tee $push10=, $1=, $pop11
+; CHECK-NEXT:    global.set __stack_pointer, $pop10
+; CHECK-NEXT:    i32.load $push0=, 0($0)
+; CHECK-NEXT:    i32.store 12($1), $pop0
+; CHECK-NEXT:    i32.load $push1=, 0($0)
+; CHECK-NEXT:    i32.store 8($1), $pop1
+; CHECK-NEXT:    i32.const $push6=, 12
+; CHECK-NEXT:    i32.add $push7=, $1, $pop6
+; CHECK-NEXT:    i32.const $push8=, 8
+; CHECK-NEXT:    i32.add $push9=, $1, $pop8
+; CHECK-NEXT:    call $0=, quux2, $pop7, $pop9
+; CHECK-NEXT:    i32.const $push4=, 16
+; CHECK-NEXT:    i32.add $push5=, $1, $pop4
+; CHECK-NEXT:    global.set __stack_pointer, $pop5
+; CHECK-NEXT:    return $0
+  %v = tail call i32 @quux2(ptr byval(i32) %x, ptr byval(i32) %x)
+  ret i32 %v
+}
+
+; TODO: We could optimize this to forward the byval argument without copying and
+; tail call.
+define i32 @matched_byval(ptr byval(i32) %x) {
+; CHECK-LABEL: matched_byval:
+; CHECK:         .functype matched_byval (i32) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get $push1=, __stack_pointer
+; CHECK-NEXT:    i32.const $push2=, 16
+; CHECK-NEXT:    i32.sub $push8=, $pop1, $pop2
+; CHECK-NEXT:    local.tee $push7=, $1=, $pop8
+; CHECK-NEXT:    global.set __stack_pointer, $pop7
+; CHECK-NEXT:    i32.load $push0=, 0($0)
+; CHECK-NEXT:    i32.store 12($1), $pop0
+; CHECK-NEXT:    i32.const $push5=, 12
+; CHECK-NEXT:    i32.add $push6=, $1, $pop5
+; CHECK-NEXT:    call $0=, quux, $pop6
+; CHECK-NEXT:    i32.const $push3=, 16
+; CHECK-NEXT:    i32.add $push4=, $1, $pop3
+; CHECK-NEXT:    global.set __stack_pointer, $pop4
+; CHECK-NEXT:    return $0
+  %v = tail call i32 @quux(ptr byval(i32) %x)
+  ret i32 %v
+}
+
 declare i32 @var(...)
 define i32 @varargs(i32 %x) {
 ; CHECK-LABEL: varargs:
