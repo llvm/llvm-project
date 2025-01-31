@@ -309,7 +309,7 @@ protected:
   std::optional<unsigned>
   allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
                 const ValueDecl *ExtendingDecl = nullptr);
-  unsigned allocateTemporary(const Expr *E);
+  std::optional<unsigned> allocateTemporary(const Expr *E);
 
 private:
   friend class VariableScope<Emitter>;
