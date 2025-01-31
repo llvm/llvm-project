@@ -3166,7 +3166,11 @@ bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
   auto *ExtVTy = VectorType::getExtendedElementVectorType(VTy);
   unsigned Width = VTy->getElementType()->getIntegerBitWidth();
 
-  if (TTI.getInstructionCost(&I, CostKind) <
+  // Just in case the cost of interleave2 intrinsic and bitcast are both
+  // invalid, in which case we want to bail out, we use <= rather
+  // than < here. Even they both have valid and equal costs, it's probably
+  // not a good idea to emit a high-cost constant splat.
+  if (TTI.getInstructionCost(&I, CostKind) <=
       TTI.getCastInstrCost(Instruction::BitCast, I.getType(), ExtVTy,
                            TTI::CastContextHint::None, CostKind)) {
     LLVM_DEBUG(dbgs() << "VC: The cost to cast from " << *ExtVTy << " to "
