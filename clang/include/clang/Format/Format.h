@@ -2284,7 +2284,7 @@ struct FormatStyle {
 
   /// The style of when a line break will be placed before the ``>`` that closes
   /// a template.
-  /// \version 20
+  /// \version 21
   BreakBeforeTemplateCloserStyle BreakBeforeTemplateCloser;
 
   /// If ``true``, ternary operators will be placed after line breaks.
