@@ -1262,14 +1262,14 @@ static std::optional<Value *>
 createReplacement(ICmpInst *ICmp, const Loop *L, BasicBlock *ExitingBB,
                   const SCEV *MaxIter, bool Inverted, bool SkipLastIter,
                   ScalarEvolution *SE, SCEVExpander &Rewriter) {
-  ICmpInst::Predicate Pred = ICmp->getPredicate();
+  CmpPredicate Pred = ICmp->getCmpPredicate();
   Value *LHS = ICmp->getOperand(0);
   Value *RHS = ICmp->getOperand(1);
 
   // 'LHS pred RHS' should now mean that we stay in loop.
   auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
   if (Inverted)
-    Pred = CmpInst::getInversePredicate(Pred);
+    Pred = ICmpInst::getInverseCmpPredicate(Pred);
 
   const SCEV *LHSS = SE->getSCEVAtScope(LHS, L);
   const SCEV *RHSS = SE->getSCEVAtScope(RHS, L);
