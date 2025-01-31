@@ -50,6 +50,8 @@ struct ConvertCIRToLLVMPass
   StringRef getArgument() const override { return "cir-flat-to-llvm"; }
 };
 
+// This pass requires the CIR to be in a "flat" state. All blocks in each
+// function must belong to the parent region.
 mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
     cir::GlobalOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -57,40 +59,36 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   // Fetch required values to create LLVM op.
   const mlir::Type cirSymType = op.getSymType();
 
-  // This is the LLVM dialect type
+  // This is the LLVM dialect type.
   const mlir::Type llvmType = getTypeConverter()->convertType(cirSymType);
-  // These defaults are just here until the equivalent attributes are
-  // available on cir.global ops.
+  // FIXME: These default values are placeholders until the the equivalent
+  //        attributes are available on cir.global ops.  
   const bool isConst = false;
+  const unsigned addrSpace = 0;
   const bool isDsoLocal = true;
+  const bool isThreadLocal = false;
+  const uint64_t alignment = 0;
   const mlir::LLVM::Linkage linkage = mlir::LLVM::Linkage::External;
   const StringRef symbol = op.getSymName();
   std::optional<mlir::Attribute> init = op.getInitialValue();
 
   SmallVector<mlir::NamedAttribute> attributes;
 
-  // Check for missing funcionalities.
-  if (!init.has_value()) {
-    rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
-        op, llvmType, isConst, linkage, symbol, mlir::Attribute(),
-        /*alignment*/ 0, /*addrSpace*/ 0, /*dsoLocal*/ isDsoLocal,
-        /*threadLocal*/ false, /*comdat*/ mlir::SymbolRefAttr(), attributes);
-    return mlir::success();
-  }
-
-  // Initializer is a constant array: convert it to a compatible llvm init.
-  if (auto intAttr = mlir::dyn_cast<cir::IntAttr>(init.value())) {
-    init = rewriter.getIntegerAttr(llvmType, intAttr.getValue());
-  } else {
-    op.emitError() << "unsupported initializer '" << init.value() << "'";
-    return mlir::failure();
+  if (init.has_value()) {
+    if (auto intAttr = mlir::dyn_cast<cir::IntAttr>(init.value())) {
+      // Initializer is a constant array: convert it to a compatible llvm init.
+      init = rewriter.getIntegerAttr(llvmType, intAttr.getValue());
+    } else {
+      op.emitError() << "unsupported initializer '" << init.value() << "'";
+      return mlir::failure();
+    }
   }
 
   // Rewrite op.
   rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
-      op, llvmType, isConst, linkage, symbol, init.value(), /*alignment*/ 0,
-      /*addrSpace*/ 0, /*dsoLocal*/ isDsoLocal, /*threadLocal*/ false,
-      /*comdat*/ mlir::SymbolRefAttr(), attributes);
+      op, llvmType, isConst, linkage, symbol, init.value_or(mlir::Attribute()),
+      alignment, addrSpace, isDsoLocal, isThreadLocal,
+      /*comdat=*/ mlir::SymbolRefAttr(), attributes);
 
   return mlir::success();
 }
@@ -109,7 +107,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   mlir::ModuleOp module = getOperation();
   mlir::DataLayout dl(module);
   mlir::LLVMTypeConverter converter(&getContext());
-  prepareTypeConverter(converter, dl); // , lowerModule.get());
+  prepareTypeConverter(converter, dl);
 
   mlir::RewritePatternSet patterns(&getContext());
 
@@ -142,22 +140,25 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx) {
   mlir::PassManager pm(mlirCtx);
   populateCIRToLLVMPasses(pm);
 
-  bool result = !mlir::failed(pm.run(mlirModule));
-  if (!result)
+  if (mlir::failed(pm.run(mlirModule))) {
+    // FIXME: Handle any errors where they occurs and return a nullptr here.
     report_fatal_error(
         "The pass manager failed to lower CIR to LLVMIR dialect!");
+  }
 
   mlir::registerBuiltinDialectTranslation(*mlirCtx);
   mlir::registerLLVMDialectTranslation(*mlirCtx);
 
   llvm::TimeTraceScope translateScope("translateModuleToLLVMIR");
 
-  std::optional<StringRef> moduleName = mlirModule.getName();
+  StringRef moduleName = mlirModule.getName().value_or("CIRToLLVMModule");
   std::unique_ptr<llvm::Module> llvmModule = mlir::translateModuleToLLVMIR(
-      mlirModule, llvmCtx, moduleName ? *moduleName : "CIRToLLVMModule");
+      mlirModule, llvmCtx, moduleName);
 
-  if (!llvmModule)
+  if (!llvmModule) {
+    // FIXME: Handle any errors where they occurs and return a nullptr here.
     report_fatal_error("Lowering from LLVMIR dialect to llvm IR failed!");
+  }
 
   return llvmModule;
 }
