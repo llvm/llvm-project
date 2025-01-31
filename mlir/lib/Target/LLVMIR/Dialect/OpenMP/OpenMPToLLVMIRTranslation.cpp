@@ -3557,7 +3557,7 @@ static llvm::Expected<llvm::Function *>
 getOrCreateUserDefinedMapperFunc(Operation *declMapperOp,
                                  llvm::IRBuilderBase &builder,
                                  LLVM::ModuleTranslation &moduleTranslation) {
-  llvm::DenseMap<const Operation *, llvm::Function *> userDefMapperMap;
+  static llvm::DenseMap<const Operation *, llvm::Function *> userDefMapperMap;
   auto iter = userDefMapperMap.find(declMapperOp);
   if (iter != userDefMapperMap.end())
     return iter->second;
@@ -3566,7 +3566,7 @@ getOrCreateUserDefinedMapperFunc(Operation *declMapperOp,
   if (!mapperFunc)
     return mapperFunc.takeError();
   userDefMapperMap.try_emplace(declMapperOp, *mapperFunc);
-  return userDefMapperMap.lookup(declMapperOp);
+  return mapperFunc;
 }
 
 static llvm::Expected<llvm::Function *>
