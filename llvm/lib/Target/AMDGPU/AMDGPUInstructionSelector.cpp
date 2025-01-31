@@ -5835,6 +5835,15 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsImpl(MachineOperand &Root,
       CheckAbsNeg();
     }
 
+	// Since we looked through FPEXT and removed it, we must also remove
+    // G_TRUNC. G_TRUNC to 16-bits would have a destination in RC VGPR_16, which
+    // is not compatible with MadMix instructions
+    if (Subtarget->UseRealTrue16Insts() && MI->getOpcode() == AMDGPU::G_TRUNC) {
+      MO = &MI->getOperand(1);
+      Src = MO->getReg();
+      MI = getDefIgnoringCopies(Src, *MRI);
+    }
+
     Matched = true;
   }
 
