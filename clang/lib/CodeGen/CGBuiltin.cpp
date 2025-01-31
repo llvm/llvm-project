@@ -1319,12 +1319,36 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
 
   //  size_t field_offset = offsetof (struct s, field);
   Value *FieldOffset = nullptr;
+  llvm::ConstantInt *FieldBaseSize = nullptr;
   if (FlexibleArrayMemberFD != FD) {
     std::optional<int64_t> Offset = GetFieldOffset(Ctx, RD, FD);
     if (!Offset)
       return nullptr;
     FieldOffset =
         llvm::ConstantInt::get(ResType, *Offset / CharWidth, IsSigned);
+
+    if (Idx) {
+      // From option (4):
+      //  size_t field_base_size = sizeof (*ptr->field_array);
+      if (!FieldTy->isArrayType())
+        // The field isn't an array. For example:
+        //
+        //     struct {
+        //         int count;
+        //         char *string;
+        //         int array[] __counted_by(count);
+        //     } x;
+        //
+        //     __builtin_dynamic_object_size(x.string[42], 0);
+        //
+        // If built with '-Wno-int-conversion', FieldTy won't be an array here.
+        return nullptr;
+
+      const ArrayType *ArrayTy = Ctx.getAsArrayType(FieldTy);
+      CharUnits BaseSize = Ctx.getTypeSizeInChars(ArrayTy->getElementType());
+      FieldBaseSize =
+          llvm::ConstantInt::get(ResType, BaseSize.getQuantity(), IsSigned);
+    }
   }
 
   //  size_t count = (size_t) ptr->count;
@@ -1376,12 +1400,6 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
         llvm::ConstantInt::get(ResType, Size.getKnownMinValue() / CharWidth);
 
     if (Idx) { // Option (4) '&ptr->field_array[idx]'
-      //  size_t field_base_size = sizeof (*ptr->field_array);
-      const ArrayType *ArrayTy = Ctx.getAsArrayType(FieldTy);
-      CharUnits BaseSize = Ctx.getTypeSizeInChars(ArrayTy->getElementType());
-      auto *FieldBaseSize =
-          llvm::ConstantInt::get(ResType, BaseSize.getQuantity(), IsSigned);
-
       //  field_offset += index * field_base_size;
       Value *Mul = Builder.CreateMul(Index, FieldBaseSize, "field_offset",
                                      !IsSigned, IsSigned);
