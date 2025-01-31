@@ -25,15 +25,16 @@
 //  Each specialization of aligned_accessor is a trivially copyable type that models semiregular.
 
 #include <mdspan>
-#include <type_traits>
-#include <concepts>
 #include <cassert>
+#include <concepts>
+#include <cstddef>
+#include <type_traits>
 
 #include "test_macros.h"
 
 #include "../MinimalElementType.h"
 
-template <class T, size_t N>
+template <class T, std::size_t N>
 void test_types() {
   using A = std::aligned_accessor<T, N>;
   ASSERT_SAME_TYPE(typename A::offset_policy, std::default_accessor<T>);
@@ -41,7 +42,7 @@ void test_types() {
   ASSERT_SAME_TYPE(typename A::reference, T&);
   ASSERT_SAME_TYPE(typename A::data_handle_type, T*);
 
-  ASSERT_SAME_TYPE(decltype(A::byte_alignment), const size_t);
+  ASSERT_SAME_TYPE(decltype(A::byte_alignment), const std::size_t);
   static_assert(A::byte_alignment == N);
 
   static_assert(std::semiregular<A>);
@@ -51,8 +52,8 @@ void test_types() {
 }
 
 template <class T>
-constexpr void test() {
-  constexpr size_t N = alignof(T);
+void test() {
+  constexpr std::size_t N = alignof(T);
   test_types<T, N>();
   test_types<T, 2 * N>();
   test_types<T, 4 * N>();
