@@ -6,15 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file includes TestIRDLToCpp dialect.
+// This file includes TestIRDLToCpp dialect headers.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/Dialect.h"
-#include "mlir/IR/Region.h"
+#ifndef MLIR_TEST_LIB_DIALECT_TESTIRDLTOCPP_TESTIRDLTOCPPDIALECT_H
+#define MLIR_TEST_LIB_DIALECT_TESTIRDLTOCPP_TESTIRDLTOCPPDIALECT_H
 
-#include "TestIRDLToCppDialect.h"
-
-#define GEN_DIALECT_DEF
+#define GEN_DIALECT_DECL_HEADER
 #include "test_irdl_to_cpp.irdl.mlir.cpp.inc"
 
+#endif // MLIR_TEST_LIB_DIALECT_TESTIRDLTOCPP_TESTIRDLTOCPPDIALECT_H
