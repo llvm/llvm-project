@@ -5622,6 +5622,18 @@ public:
   // joining their results. SDValue() is returned when expansion did not happen.
   SDValue expandVectorNaryOpBySplitting(SDNode *Node, SelectionDAG &DAG) const;
 
+  /// Replace an extraction of a load with a narrowed load.
+  ///
+  /// \param ResultVT type of the result extraction.
+  /// \param InVecVT type of the input vector to with bitcasts resolved.
+  /// \param EltNo index of the vector element to load.
+  /// \param OriginalLoad vector load that to be replaced.
+  /// \returns \p ResultVT Load on success SDValue() on failure.
+  SDValue scalarizeExtractedVectorLoad(EVT ResultVT, const SDLoc &DL,
+                                       EVT InVecVT, SDValue EltNo,
+                                       LoadSDNode *OriginalLoad,
+                                       SelectionDAG &DAG) const;
+
 private:
   SDValue foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
                            const SDLoc &DL, DAGCombinerInfo &DCI) const;
