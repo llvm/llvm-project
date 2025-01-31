@@ -23,9 +23,7 @@ class Category:
     def __init__(self, name, kinds):
         self.name = name
         self.kinds = kinds
-        assert (
-            isinstance(kinds, list) and kinds
-        ), "kinds should be a nonempty list"
+        assert isinstance(kinds, list) and kinds, "kinds should be a nonempty list"
 
     def to_string(self):
         return f"Fortran::common::TypeCategory::{self.name}"
@@ -111,9 +109,7 @@ class Type:
         self.kind = kind
 
     def to_string(self):
-        return (
-            f"Fortran::evaluate::Type<{self.category.to_string()}, "
-            f"{self.kind}>"
+        return f"Fortran::evaluate::Type<{self.category.to_string()}, {self.kind}>"
         )
 
 
@@ -128,8 +124,7 @@ class Op:
 
     def to_strings(self, category, kind):
         return [
-            f"Fortran::evaluate::{self.name}"
-            f"<{Type(category, kind).to_string()}>"
+            f"Fortran::evaluate::{self.name}<{Type(category, kind).to_string()}>"
         ]
 
     def __repr__(self):
