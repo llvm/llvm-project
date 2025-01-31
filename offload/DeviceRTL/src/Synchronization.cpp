@@ -201,7 +201,8 @@ void destroyLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void setLock(omp_lock_t *Lock) {
   uint64_t lowestActiveThread = utils::ffs(mapping::activemask()) - 1;
   if (mapping::getThreadIdInWarp() == lowestActiveThread) {
-    while (atomic::cas((uint32_t *)Lock, UNSET, SET, atomic::seq_cst, atomic::seq_cst, atomic::MemScopeTy::system) != UNSET) {
+    while (!atomic::cas((uint32_t *)Lock, UNSET, SET, atomic::seq_cst,
+                        atomic::seq_cst, atomic::MemScopeTy::system)) {
       __builtin_amdgcn_s_sleep(0);
     }
   }
