@@ -8,6 +8,7 @@ add_llvm_library(LLVMBOLTPasses
   CacheMetrics.cpp
   DataflowAnalysis.cpp
   DataflowInfoManager.cpp
+  DiscoverNoReturnPass.cpp
   FrameAnalysis.cpp
   FrameOptimizer.cpp
   FixRelaxationPass.cpp

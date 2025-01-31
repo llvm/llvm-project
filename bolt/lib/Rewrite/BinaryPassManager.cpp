@@ -13,6 +13,7 @@
 #include "bolt/Passes/AsmDump.h"
 #include "bolt/Passes/CMOVConversion.h"
 #include "bolt/Passes/ContinuityStats.h"
+#include "bolt/Passes/DiscoverNoReturnPass.h"
 #include "bolt/Passes/FixRISCVCallsPass.h"
 #include "bolt/Passes/FixRelaxationPass.h"
 #include "bolt/Passes/FrameOptimizer.h"
@@ -448,6 +449,7 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   Manager.registerPass(std::make_unique<CMOVConversion>(),
                        opts::CMOVConversionFlag);
+  Manager.registerPass(std::make_unique<DiscoverNoReturnPass>());
 
   // This pass syncs local branches with CFG. If any of the following
   // passes breaks the sync - they either need to re-run the pass or
