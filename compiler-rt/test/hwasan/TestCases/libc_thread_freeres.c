@@ -1,4 +1,4 @@
-// RUN: %clang_hwasan %s -o %t && %env_hwasan_opts=random_tags=1 %run %t
+// RUN: %clang_hwasan -Wno-error=return-type %s -o %t && %env_hwasan_opts=random_tags=1 %run %t
 
 #include <pthread.h>
 #include <sanitizer/hwasan_interface.h>
