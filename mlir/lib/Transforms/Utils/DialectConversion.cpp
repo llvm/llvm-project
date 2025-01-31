@@ -144,6 +144,8 @@ struct ConversionValueMapping {
   template <typename OldVal, typename NewVal>
   std::enable_if_t<IsValueVector<OldVal>::value && IsValueVector<NewVal>::value>
   map(OldVal &&oldVal, NewVal &&newVal) {
+    assert(!mapping.contains(oldVal) &&
+           "attempting to overwrite existing mapping");
     LLVM_DEBUG({
       ValueVector next(newVal);
       while (true) {
@@ -1375,6 +1377,7 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
   for (unsigned i = 0; i != origArgCount; ++i) {
     BlockArgument origArg = block->getArgument(i);
     Type origArgType = origArg.getType();
+    ValueVector currentMapping = mapping.lookupOrDefault(origArg);
 
     std::optional<TypeConverter::SignatureConversion::InputMapping> inputMap =
         signatureConversion.getInputMapping(i);
@@ -1384,7 +1387,7 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
       buildUnresolvedMaterialization(
           MaterializationKind::Source,
           OpBuilder::InsertPoint(newBlock, newBlock->begin()), origArg.getLoc(),
-          /*valuesToMap=*/{origArg}, /*inputs=*/ValueRange(),
+          /*valuesToMap=*/currentMapping, /*inputs=*/ValueRange(),
           /*outputType=*/origArgType, /*originalType=*/Type(), converter);
       appendRewrite<ReplaceBlockArgRewrite>(block, origArg, converter);
       continue;
@@ -1395,7 +1398,7 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
       assert(inputMap->size == 0 &&
              "invalid to provide a replacement value when the argument isn't "
              "dropped");
-      mapping.map(origArg, repl);
+      mapping.map(currentMapping, repl);
       appendRewrite<ReplaceBlockArgRewrite>(block, origArg, converter);
       continue;
     }
@@ -1404,7 +1407,7 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
     auto replArgs =
         newBlock->getArguments().slice(inputMap->inputNo, inputMap->size);
     ValueVector replArgVals = llvm::to_vector_of<Value, 1>(replArgs);
-    mapping.map(origArg, std::move(replArgVals));
+    mapping.map(currentMapping, std::move(replArgVals));
     appendRewrite<ReplaceBlockArgRewrite>(block, origArg, converter);
   }
 
@@ -1713,6 +1716,8 @@ void ConversionPatternRewriter::replaceUsesOfBlockArgument(BlockArgument from,
                              << "'(in region of '" << parentOp->getName()
                              << "'(" << from.getOwner()->getParentOp() << ")\n";
   });
+  llvm::errs() << "replaceUsesOfBlockArgument: " << from.getOwner() << "\n";
+
   impl->appendRewrite<ReplaceBlockArgRewrite>(from.getOwner(), from,
                                               impl->currentTypeConverter);
   impl->mapping.map(impl->mapping.lookupOrDefault(from), to);
