@@ -92,7 +92,8 @@ bool isDereferenceableAndAlignedInLoop(
 /// contains read-only memory accesses.
 bool isDereferenceableReadOnlyLoop(
     Loop *L, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
-    SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
+    SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr,
+    SmallVectorImpl<LoadInst *> *NonDerefLoads = nullptr);
 
 /// Return true if we know that executing a load from this value cannot trap.
 ///

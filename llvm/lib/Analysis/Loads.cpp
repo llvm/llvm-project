@@ -816,15 +816,26 @@ bool llvm::canReplacePointersIfEqual(const Value *From, const Value *To,
 
 bool llvm::isDereferenceableReadOnlyLoop(
     Loop *L, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
-    SmallVectorImpl<const SCEVPredicate *> *Predicates) {
+    SmallVectorImpl<const SCEVPredicate *> *Predicates,
+    SmallVectorImpl<LoadInst *> *NonDerefLoads) {
+  bool Result = true;
   for (BasicBlock *BB : L->blocks()) {
     for (Instruction &I : *BB) {
       if (auto *LI = dyn_cast<LoadInst>(&I)) {
-        if (!isDereferenceableAndAlignedInLoop(LI, L, *SE, *DT, AC, Predicates))
+        if (!isDereferenceableAndAlignedInLoop(LI, L, *SE, *DT, AC,
+                                               Predicates)) {
+          if (!NonDerefLoads)
+            return false;
+          NonDerefLoads->push_back(LI);
+          Result = false;
+        }
+      } else if (I.mayReadFromMemory() || I.mayWriteToMemory() ||
+                 I.mayThrow()) {
+        if (!NonDerefLoads)
           return false;
-      } else if (I.mayReadFromMemory() || I.mayWriteToMemory() || I.mayThrow())
-        return false;
+        Result = false;
+      }
     }
   }
-  return true;
+  return Result;
 }

@@ -400,6 +400,12 @@ static cl::opt<bool> EnableEarlyExitVectorization(
     cl::desc(
         "Enable vectorization of early exit loops with uncountable exits."));
 
+static cl::opt<unsigned> MaxNumPotentiallyFaultingPointers(
+    "max-num-faulting-pointers", cl::init(1), cl::Hidden,
+    cl::desc(
+        "The maximum number of potentially faulting pointers we permit when "
+        "vectorizing loops with uncountable exits."));
+
 // Likelyhood of bypassing the vectorized loop because assumptions about SCEV
 // variables not overflowing do not hold. See `emitSCEVChecks`.
 static constexpr uint32_t SCEVCheckBypassWeights[] = {1, 127};
@@ -1585,6 +1591,22 @@ private:
                                        ElementCount MaxSafeVF,
                                        bool FoldTailByMasking);
 
+  bool isSafeForAnyVectorWidth() const {
+    return Legal->isSafeForAnyVectorWidth() &&
+           (!Legal->hasUncountableEarlyExit() ||
+            !Legal->getNumPotentiallyFaultingLoads());
+  }
+
+  uint64_t getMaxSafeVectorWidthInBits() const {
+    uint64_t MaxSafeVectorWidth = Legal->getMaxSafeVectorWidthInBits();
+    // The legalizer bails out if getMinPageSize does not return a value.
+    if (Legal->hasUncountableEarlyExit() &&
+        Legal->getNumPotentiallyFaultingLoads())
+      MaxSafeVectorWidth =
+          std::min(MaxSafeVectorWidth, uint64_t(*TTI.getMinPageSize()) * 8);
+    return MaxSafeVectorWidth;
+  }
+
   /// Checks if scalable vectorization is supported and enabled. Caches the
   /// result to avoid repeated debug dumps for repeated queries.
   bool isScalableVectorizationAllowed();
@@ -2133,6 +2155,41 @@ public:
 };
 } // namespace
 
+std::optional<unsigned> getMaxVScale(const Function &F,
+                                     const TargetTransformInfo &TTI) {
+  if (std::optional<unsigned> MaxVScale = TTI.getMaxVScale())
+    return MaxVScale;
+
+  if (F.hasFnAttribute(Attribute::VScaleRange))
+    return F.getFnAttribute(Attribute::VScaleRange).getVScaleRangeMax();
+
+  return std::nullopt;
+}
+
+static void addPointerAlignmentChecks(
+    const SmallVectorImpl<std::pair<LoadInst *, const SCEV *>> *Loads,
+    Function *F, PredicatedScalarEvolution &PSE, TargetTransformInfo *TTI,
+    ElementCount VF) {
+  ScalarEvolution *SE = PSE.getSE();
+  const DataLayout &DL = SE->getDataLayout();
+  Type *PtrIntType = DL.getIntPtrType(SE->getContext());
+
+  const SCEV *Zero = SE->getZero(PtrIntType);
+  const SCEV *ScevEC = SE->getElementCount(PtrIntType, VF);
+
+  for (auto Load : *Loads) {
+    APInt EltSize(
+        DL.getIndexTypeSizeInBits(Load.first->getPointerOperandType()),
+        DL.getTypeStoreSize(Load.first->getType()).getFixedValue());
+    const SCEV *Start = SE->getPtrToIntExpr(Load.second, PtrIntType);
+    const SCEV *Align =
+        SE->getMulExpr(ScevEC, SE->getConstant(EltSize),
+                       (SCEV::NoWrapFlags)(SCEV::FlagNSW | SCEV::FlagNUW));
+    const SCEV *Rem = SE->getURemExpr(Start, Align);
+    PSE.addPredicate(*(SE->getEqualPredicate(Rem, Zero)));
+  }
+}
+
 static bool useActiveLaneMask(TailFoldingStyle Style) {
   return Style == TailFoldingStyle::Data ||
          Style == TailFoldingStyle::DataAndControlFlow ||
@@ -2300,17 +2357,6 @@ emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *StartValue,
     return nullptr;
   }
   llvm_unreachable("invalid enum");
-}
-
-std::optional<unsigned> getMaxVScale(const Function &F,
-                                     const TargetTransformInfo &TTI) {
-  if (std::optional<unsigned> MaxVScale = TTI.getMaxVScale())
-    return MaxVScale;
-
-  if (F.hasFnAttribute(Attribute::VScaleRange))
-    return F.getFnAttribute(Attribute::VScaleRange).getVScaleRangeMax();
-
-  return std::nullopt;
 }
 
 /// For the given VF and UF and maximum trip count computed for the loop, return
@@ -3796,9 +3842,18 @@ bool LoopVectorizationCostModel::isScalableVectorizationAllowed() {
     return false;
   }
 
-  if (!Legal->isSafeForAnyVectorWidth() && !getMaxVScale(*TheFunction, TTI)) {
+  if (!isSafeForAnyVectorWidth() && !getMaxVScale(*TheFunction, TTI)) {
     reportVectorizationInfo("The target does not provide maximum vscale value "
                             "for safe distance analysis.",
+                            "ScalableVFUnfeasible", ORE, TheLoop);
+    return false;
+  }
+
+  if (Legal->hasUncountableEarlyExit() &&
+      Legal->getNumPotentiallyFaultingLoads() &&
+      !TTI.isVScaleKnownToBeAPowerOfTwo()) {
+    reportVectorizationInfo("Cannot vectorize potentially faulting early exit "
+                            "loop with scalable vectors.",
                             "ScalableVFUnfeasible", ORE, TheLoop);
     return false;
   }
@@ -3814,7 +3869,7 @@ LoopVectorizationCostModel::getMaxLegalScalableVF(unsigned MaxSafeElements) {
 
   auto MaxScalableVF = ElementCount::getScalable(
       std::numeric_limits<ElementCount::ScalarTy>::max());
-  if (Legal->isSafeForAnyVectorWidth())
+  if (isSafeForAnyVectorWidth())
     return MaxScalableVF;
 
   std::optional<unsigned> MaxVScale = getMaxVScale(*TheFunction, TTI);
@@ -3841,11 +3896,11 @@ FixedScalableVFPair LoopVectorizationCostModel::computeFeasibleMaxVF(
   // the memory accesses that is most restrictive (involved in the smallest
   // dependence distance).
   unsigned MaxSafeElements =
-      llvm::bit_floor(Legal->getMaxSafeVectorWidthInBits() / WidestType);
+      llvm::bit_floor(getMaxSafeVectorWidthInBits() / WidestType);
 
   auto MaxSafeFixedVF = ElementCount::getFixed(MaxSafeElements);
   auto MaxSafeScalableVF = getMaxLegalScalableVF(MaxSafeElements);
-  if (!Legal->isSafeForAnyVectorWidth())
+  if (!isSafeForAnyVectorWidth())
     this->MaxSafeElements = MaxSafeElements;
 
   LLVM_DEBUG(dbgs() << "LV: The max safe fixed VF is: " << MaxSafeFixedVF
@@ -10381,11 +10436,25 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
-  if (LVL.hasUncountableEarlyExit() && !EnableEarlyExitVectorization) {
-    reportVectorizationFailure("Auto-vectorization of loops with uncountable "
-                               "early exit is not enabled",
-                               "UncountableEarlyExitLoopsDisabled", ORE, L);
-    return false;
+  if (LVL.hasUncountableEarlyExit()) {
+    if (!EnableEarlyExitVectorization) {
+      reportVectorizationFailure("Auto-vectorization of loops with uncountable "
+                                 "early exit is not enabled",
+                                 "UncountableEarlyExitLoopsDisabled", ORE, L);
+      return false;
+    }
+
+    unsigned NumPotentiallyFaultingPointers =
+        LVL.getNumPotentiallyFaultingLoads();
+    if (NumPotentiallyFaultingPointers > MaxNumPotentiallyFaultingPointers) {
+      reportVectorizationFailure("Not worth vectorizing loop with uncountable "
+                                 "early exit, due to number of potentially "
+                                 "faulting loads",
+                                 "UncountableEarlyExitMayFault", ORE, L);
+      return false;
+    } else if (NumPotentiallyFaultingPointers)
+      LLVM_DEBUG(dbgs() << "LV: Need to version early-exit vector loop with "
+                        << "pointer alignment checks.\n");
   }
 
   if (LVL.hasStructVectorCall()) {
@@ -10543,8 +10612,19 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     unsigned SelectedIC = std::max(IC, UserIC);
     //  Optimistically generate runtime checks if they are needed. Drop them if
     //  they turn out to not be profitable.
-    if (VF.Width.isVector() || SelectedIC > 1)
+    if (VF.Width.isVector() || SelectedIC > 1) {
+      if (LVL.getNumPotentiallyFaultingLoads()) {
+        assert(SelectedIC == 1 &&
+               "Interleaving not supported for early exit loops and "
+               "potentially faulting loads");
+        assert(!CM.foldTailWithEVL() &&
+               "Explicit vector length unsupported for early exit loops and "
+               "potentially faulting loads");
+        addPointerAlignmentChecks(LVL.getPotentiallyFaultingLoads(), F, PSE,
+                                  TTI, VF.Width);
+      }
       Checks.create(L, *LVL.getLAI(), PSE.getPredicate(), VF.Width, SelectedIC);
+    }
 
     // Check if it is profitable to vectorize with runtime checks.
     bool ForceVectorization =
