@@ -9350,7 +9350,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
         if (!Legal->isInvariantStoreOfReduction(SI))
           continue;
         auto *Recipe = new VPReplicateRecipe(
-            SI, RecipeBuilder.mapToVPValues(Instr->operands()),
+            SI, make_range(Operands.begin(), Operands.end()),
             true /* IsUniform */);
         Recipe->insertBefore(*MiddleVPBB, MBIP);
         continue;
