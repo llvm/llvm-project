@@ -48,7 +48,9 @@ class AbbreviationsTestCase(TestBase):
             "breakpoint set --name main --ignore-count 123", result
         )
         self.assertTrue(result.Succeeded())
-        self.assertEqual("breakpoint set --name main --ignore-count 123", result.GetOutput())
+        self.assertEqual(
+            "breakpoint set --name main --ignore-count 123", result.GetOutput()
+        )
 
         # Create some aliases.
         self.runCmd("com a alias com al")
