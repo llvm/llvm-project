@@ -1172,11 +1172,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   EXPECT_TOKEN(Tokens[16], tok::pipepipe, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[21], tok::ampamp, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[27], tok::ampamp, TT_BinaryOperator);
+  // Not TT_TrailingAnnotation.
+  EXPECT_TOKEN(Tokens[28], tok::identifier, TT_Unknown);
   EXPECT_TOKEN(Tokens[31], tok::greater, TT_TemplateCloser);
   EXPECT_EQ(Tokens[31]->FakeRParens, 1u);
   EXPECT_TRUE(Tokens[31]->ClosesRequiresClause);
-  // FIXME:
-  // EXPECT_TOKEN(Tokens[33], tok::identifier, TT_Unknown); // Not ClassHeadName
+  // Not TT_TrailingAnnotation.
+  EXPECT_TOKEN(Tokens[33], tok::identifier, TT_Unknown);
 
   Tokens =
       annotate("template<typename T>\n"
@@ -3510,8 +3512,7 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
                     getGoogleStyle(FormatStyle::LK_JavaScript));
   ASSERT_EQ(Tokens.size(), 12u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::identifier, TT_ClassHeadName);
-  // FIXME:
-  // EXPECT_TOKEN(Tokens[4], tok::identifier, TT_Unknown); // Not StartOfName
+  EXPECT_TOKEN(Tokens[4], tok::identifier, TT_Unknown); // Not TT_StartOfName
   EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_ClassLBrace);
   EXPECT_BRACE_KIND(Tokens[8], BK_Block);
   EXPECT_TOKEN(Tokens[9], tok::r_brace, TT_ClassRBrace);

@@ -591,9 +591,9 @@ BasicBlock::iterator getSpillInsertionPt(const coro::Shape &Shape, Value *Def,
     // the coroutine frame pointer instruction, i.e. coro.begin.
     InsertPt = Shape.getInsertPtAfterFramePtr();
 
-    // If we're spilling an Argument, make sure we clear 'nocapture'
+    // If we're spilling an Argument, make sure we clear 'captures'
     // from the coroutine function.
-    Arg->getParent()->removeParamAttr(Arg->getArgNo(), Attribute::NoCapture);
+    Arg->getParent()->removeParamAttr(Arg->getArgNo(), Attribute::Captures);
   } else if (auto *CSI = dyn_cast<AnyCoroSuspendInst>(Def)) {
     // Don't spill immediately after a suspend; splitting assumes
     // that the suspend will be followed by a branch.

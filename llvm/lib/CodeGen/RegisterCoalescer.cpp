@@ -20,7 +20,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
@@ -130,7 +129,6 @@ class RegisterCoalescer : public MachineFunctionPass,
   const TargetInstrInfo *TII = nullptr;
   LiveIntervals *LIS = nullptr;
   const MachineLoopInfo *Loops = nullptr;
-  AliasAnalysis *AA = nullptr;
   RegisterClassInfo RegClassInfo;
 
   /// Position and VReg of a PHI instruction during coalescing.
@@ -408,7 +406,6 @@ INITIALIZE_PASS_BEGIN(RegisterCoalescer, "register-coalescer",
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(RegisterCoalescer, "register-coalescer",
                     "Register Coalescer", false, false)
 
@@ -588,7 +585,6 @@ bool CoalescerPair::isCoalescable(const MachineInstr *MI) const {
 
 void RegisterCoalescer::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<LiveIntervalsWrapperPass>();
   AU.addPreserved<LiveIntervalsWrapperPass>();
   AU.addPreserved<SlotIndexesWrapperPass>();
@@ -4265,7 +4261,6 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
   TRI = STI.getRegisterInfo();
   TII = STI.getInstrInfo();
   LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   if (EnableGlobalCopies == cl::BOU_UNSET)
     JoinGlobalCopies = STI.enableJoinGlobalCopies();
