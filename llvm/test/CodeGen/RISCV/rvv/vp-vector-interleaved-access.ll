@@ -137,42 +137,6 @@ define void @store_factor2_v2(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, pt
   ret void
 }
 
-; Expecting unit-stride store here rather than segmented store.
-define void @store_factor2_const_splat(ptr %dst) {
-; RV32-LABEL: store_factor2_const_splat:
-; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    li a1, 777
-; RV32-NEXT:    li a2, 666
-; RV32-NEXT:    sw a2, 8(sp)
-; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    addi a1, sp, 8
-; RV32-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
-; RV32-NEXT:    vlse64.v v8, (a1), zero
-; RV32-NEXT:    li a1, 88
-; RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; RV32-NEXT:    vse32.v v8, (a0)
-; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    .cfi_def_cfa_offset 0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: store_factor2_const_splat:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 777
-; RV64-NEXT:    slli a1, a1, 32
-; RV64-NEXT:    addi a1, a1, 666
-; RV64-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
-; RV64-NEXT:    vmv.v.x v8, a1
-; RV64-NEXT:    li a1, 88
-; RV64-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
-  %interleave2 = call <vscale x 16 x i32> @llvm.vector.interleave2.nxv16i32(<vscale x 8 x i32> splat (i32 666), <vscale x 8 x i32> splat (i32 777))
-  call void @llvm.vp.store.nxv16i32.p0(<vscale x 16 x i32> %interleave2, ptr %dst, <vscale x 16 x i1> splat (i1 true), i32 88)
-  ret void
-}
-
 define void @store_factor4_v2(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, ptr %ptr, i32 %evl) {
 ; RV32-LABEL: store_factor4_v2:
 ; RV32:       # %bb.0:
