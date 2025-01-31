@@ -78,6 +78,8 @@ PRIMARY_REQUIRED(const s32, MaxReleaseToOsIntervalMs)
 
 // PRIMARY_OPTIONAL(TYPE, NAME, DEFAULT)
 //
+PRIMARY_OPTIONAL(const bool, EnableCache, true)
+
 // The scale of a compact pointer. E.g., Ptr = Base + (CompactPtr << Scale).
 PRIMARY_OPTIONAL(const uptr, CompactPtrScale, SCUDO_MIN_ALIGNMENT_LOG)
 
