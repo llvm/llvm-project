@@ -506,7 +506,7 @@ LogicalResult PrefetchOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// XeGPU_jrOp
+// XeGPU_LoadGatherOp
 //===----------------------------------------------------------------------===//
 LogicalResult LoadGatherOp::verify() {
   auto tdescTy = getTensorDescType();

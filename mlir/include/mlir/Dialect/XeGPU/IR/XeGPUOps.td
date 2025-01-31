@@ -277,102 +277,101 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
 
 
 def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
-    AllElementTypesMatch<["value", "TensorDesc"]>,
-    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
+  AllElementTypesMatch<["value", "TensorDesc"]>,
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
   ]> {
-    let summary = "loads a n-D block from memory (represented by TensorDesc)"
-                  "to registers (represented by vector)";
-    let description = [{
-      LoadNdOp essentially mimics the hardware block read instruction to read
-      a block of data from memory to register. It takes a set of optional cache
-      hints for each level of cache, L1, L2 and L3. If hardware does not have a
-      correspoding cache, Corresponding cache hint attribute will be masked.
-      VNNI transformation is an hardware feature for Intel GPU, which is used to
-      do data packing during the load for B operand of matrix operation, if
-      the bit width of the data type is less then 32 bits, e.g., fp16. And
-      transpose is another Intel hardware feature, which will do transpose
-      operation when loading the data if the bit width of the data type is
-      fp32 or fp64. It implies that vnni and transpose cannot exit at the
-      same time.
+  let summary = "loads a n-D block from memory (represented by TensorDesc)"
+                "to registers (represented by vector)";
+  let description = [{
+    LoadNdOp essentially mimics the hardware block read instruction to read
+    a block of data from memory to register. It takes a set of optional cache
+    hints for each level of cache, L1, L2 and L3. If hardware does not have a
+    correspoding cache, Corresponding cache hint attribute will be masked.
+    VNNI transformation is an hardware feature for Intel GPU, which is used to
+    do data packing during the load for B operand of matrix operation, if
+    the bit width of the data type is less then 32 bits, e.g., fp16. And
+    transpose is another Intel hardware feature, which will do transpose
+    operation when loading the data if the bit width of the data type is
+    fp32 or fp64. It implies that vnni and transpose cannot exit at the
+    same time.
 
-      Example:
-      ```mlir
-        xegpu.load_nd %1 {transpose = [1, 0],
-                          l1_hint = #xegpu.cache_hint<cached>,
-                          l2_hint = #xegpu.cache_hint<uncached>,
-                          l3_hint = #xegpu.cache_hint<streaming>}
-                : !xegpu.tensor_desc<8x16xf32> -> vector<16x8xf32>
-      ```
+    Example:
+    ```mlir
+      xegpu.load_nd %1 {transpose = [1, 0],
+                        l1_hint = #xegpu.cache_hint<cached>,
+                        l2_hint = #xegpu.cache_hint<uncached>,
+                        l3_hint = #xegpu.cache_hint<streaming>}
+              : !xegpu.tensor_desc<8x16xf32> -> vector<16x8xf32>
+    ```
 
 
-    }];
+  }];
 
-    let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
-                        OptionalAttr<UnitAttr>: $packed,
-                        OptionalAttr<DenseI64ArrayAttr>: $transpose,
-                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
-                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
-                        OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
+  let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
+                       OptionalAttr<UnitAttr>: $packed,
+                       OptionalAttr<DenseI64ArrayAttr>: $transpose,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
 
-    let results = (outs XeGPU_ValueType: $value);
+  let results = (outs XeGPU_ValueType: $value);
 
-    let extraClassDeclaration = extraBaseClassDeclaration # [{
-      VectorType getType() {
-        return llvm::dyn_cast<VectorType>(getValue().getType());
-      }
+  let extraClassDeclaration = extraBaseClassDeclaration # [{
+    VectorType getType() {
+      return llvm::dyn_cast<VectorType>(getValue().getType());
+    }
 
-      xegpu::TensorDescType getTensorDescType() {
-        return getTensorDesc().getType();
-      }
-    }];
+    xegpu::TensorDescType getTensorDescType() {
+      return getTensorDesc().getType();
+    }
+  }];
 
-    let assemblyFormat = "$TensorDesc prop-dict attr-dict `:` qualified(type($TensorDesc)) `->` type($value)";
-    let hasVerifier = 1;
+  let assemblyFormat = "$TensorDesc prop-dict attr-dict `:` qualified(type($TensorDesc)) `->` type($value)";
+  let hasVerifier = 1;
 }
 
 def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
-    AllElementTypesMatch<["value", "TensorDesc"]>,
-    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
+  AllElementTypesMatch<["value", "TensorDesc"]>, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
   ]> {
-    let summary = "stores a n-D block register region back to memory, currently only supports 2D";
+  let summary = "stores a n-D block register region back to memory, currently only supports 2D";
 
-    let description = [{
-      StoreNdOp essentially mimics the hardware block write instruction io
-      write a block of data from register into the memory region as described
-      by the TensorDesc. It takes a set of optional cache hints for each level
-      of cache, L1, L2 and L3. If hardware does not have a correspoding cache,
-      Corresponding cache hint attribute will be masked.
+  let description = [{
+    StoreNdOp essentially mimics the hardware block write instruction io
+    write a block of data from register into the memory region as described
+    by the TensorDesc. It takes a set of optional cache hints for each level
+    of cache, L1, L2 and L3. If hardware does not have a correspoding cache,
+    Corresponding cache hint attribute will be masked.
 
-      Example:
-      ```mlir
-        xegpu.store_nd %3, %2 {l1_hint = #xegpu.cache_hint<uncached>,
-                              l2_hint = #xegpu.cache_hint<write_back>,
-                              l3_hint = #xegpu.cache_hint<write_through>}
-                              : vector<8x16xf16>, !xegpu.tensor_desc<8x16xf16>
-      ```
+    Example:
+    ```mlir
+      xegpu.store_nd %3, %2 {l1_hint = #xegpu.cache_hint<uncached>,
+                             l2_hint = #xegpu.cache_hint<write_back>,
+                             l3_hint = #xegpu.cache_hint<write_through>}
+                             : vector<8x16xf16>, !xegpu.tensor_desc<8x16xf16>
+    ```
 
 
-    }];
+  }];
 
-    let arguments = (ins XeGPU_ValueType: $value,
-                        XeGPU_TensorDesc: $TensorDesc,
-                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
-                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
-                        OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
+  let arguments = (ins XeGPU_ValueType: $value,
+                       XeGPU_TensorDesc: $TensorDesc,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
 
-    let extraClassDeclaration = extraBaseClassDeclaration # [{
-      VectorType getValueType() {
-        return llvm::dyn_cast<VectorType>(getValue().getType());
-      }
+  let extraClassDeclaration = extraBaseClassDeclaration # [{
+    VectorType getValueType() {
+      return llvm::dyn_cast<VectorType>(getValue().getType());
+    }
 
-      xegpu::TensorDescType getTensorDescType() {
-        return getTensorDesc().getType();
-      }
-    }];
+    xegpu::TensorDescType getTensorDescType() {
+      return getTensorDesc().getType();
+    }
+  }];
 
-    let assemblyFormat = [{$value `,` $TensorDesc prop-dict attr-dict
-                          `:` type($value) `,` qualified(type($TensorDesc))}];
-    let hasVerifier = 1;
+  let assemblyFormat = [{$value `,` $TensorDesc prop-dict attr-dict
+                        `:` type($value) `,` qualified(type($TensorDesc))}];
+  let hasVerifier = 1;
 }
 
 def XeGPU_UpdateNdOffsetOp : XeGPU_Op<"update_nd_offset",
@@ -555,137 +554,134 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
 }
 
 def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
-    AllElementTypesMatch<["value", "TensorDesc"]>,
-    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
+  AllElementTypesMatch<["value", "TensorDesc"]>,
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
   ]> {
-    let summary = "load a set of scattered data points from memory.";
+  let summary = "load a set of scattered data points from memory.";
 
-    let description = [{ It (aka. load) load data per each work-item. The output
-      describes the data being loaded at the subgroup level, so its size is
-      consistent with the number of work-items in a subgroup. When the chunk size
-      is larger than 2, the output vector is a 2D vector, with dim-1 correspoding
-      to work-items, and dim-0 corresponding to the chunk size loaded by each work-item.
-      Specially, there is a transpose effect on the result (as compared to the TensorDesc)
-      due to the hardware implementation. Therefore, a transpose attribute is introduced
-      on purpose, making sure users are aware of this implicit transformation.
+  let description = [{ It (aka. load) load data per each work-item. The output
+    describes the data being loaded at the subgroup level, so its size is
+    consistent with the number of work-items in a subgroup. When the chunk size
+    is larger than 2, the output vector is a 2D vector, with dim-1 correspoding
+    to work-items, and dim-0 corresponding to the chunk size loaded by each work-item.
+    Specially, there is a transpose effect on the result (as compared to the TensorDesc)
+    due to the hardware implementation. Therefore, a transpose attribute is introduced
+    on purpose, making sure users are aware of this implicit transformation.
 
-      The mask operand masks out memory access so that it is safe to pass out-of-boundary
-      addresses/offsets as long as they are masked. It applies to slots of SIMD lanes.
+    The mask operand masks out memory access so that it is safe to pass out-of-boundary
+    addresses/offsets as long as they are masked. It applies to slots of SIMD lanes.
 
-    Example 1:
-    ```mlir
-      %2 = xegpu.load %1, %0 {l1_hint = #xegpu.cache_hint<cached>,
-                              l2_hint = #xegpu.cache_hint<uncached>,
-                              l3_hint = #xegpu.cache_hint<uncached>}
-            : !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<memory_space=global>>,
-              vector<16xi1> -> vector<16xf32>
-    ```
+  Example 1:
+  ```mlir
+    %2 = xegpu.load %1, %0 {l1_hint = #xegpu.cache_hint<cached>,
+                            l2_hint = #xegpu.cache_hint<uncached>,
+                            l3_hint = #xegpu.cache_hint<uncached>}
+          : !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<memory_space=global>>,
+            vector<16xi1> -> vector<16xf32>
+  ```
 
-    Example 2:
-    ```mlir
-      %2 = xegpu.load %1, %0 {transpose,
-                              l1_hint = #xegpu.cache_hint<cached>,
-                              l2_hint = #xegpu.cache_hint<uncached>,
-                              l3_hint = #xegpu.cache_hint<uncached>}
-            : !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<memory_space=global, chunk_size=8>>,
-              vector<16xi1> -> vector<8x16xf32>
-    ```
+  Example 2:
+  ```mlir
+    %2 = xegpu.load %1, %0 {transpose,
+                            l1_hint = #xegpu.cache_hint<cached>,
+                            l2_hint = #xegpu.cache_hint<uncached>,
+                            l3_hint = #xegpu.cache_hint<uncached>}
+          : !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<memory_space=global, chunk_size=8>>,
+            vector<16xi1> -> vector<8x16xf32>
+  ```
 
-    }];
+  }];
 
-    let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
-                        XeGPU_MaskType: $mask,
-                        OptionalAttr<UnitAttr>: $transpose,
-                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
-                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
-                        OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
-    let results = (outs XeGPU_ValueType: $value);
+  let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
+                       XeGPU_MaskType: $mask,
+                       OptionalAttr<UnitAttr>: $transpose,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
+  let results = (outs XeGPU_ValueType: $value);
 
-    let extraClassDeclaration = extraBaseClassDeclaration # [{
-      xegpu::TensorDescType getTensorDescType() {
-        return getTensorDesc().getType();
-      }
+  let extraClassDeclaration = extraBaseClassDeclaration # [{
+    xegpu::TensorDescType getTensorDescType() {
+      return getTensorDesc().getType();
+    }
 
-      mlir::Type getElementType() {
-        auto type = getValue().getType();
-        return getElementTypeOrSelf(type);
-      }
+    mlir::Type getElementType() {
+      auto type = getValue().getType();
+      return getElementTypeOrSelf(type);
+    }
 
-      Type getValueType() {
-        return getValue().getType();
-      }
+    Type getValueType() {
+      return getValue().getType();
+    }
 
-      Type getMaskType() {
-        return getMask().getType();
-      }
+    Type getMaskType() {
+      return getMask().getType();
+    }
 
-    }];
+  }];
 
-    let assemblyFormat = [{$TensorDesc `,` $mask prop-dict attr-dict
-        `:` qualified(type($TensorDesc)) `,` type($mask) `->` type($value)}];
+  let assemblyFormat = [{$TensorDesc `,` $mask prop-dict attr-dict
+      `:` qualified(type($TensorDesc)) `,` type($mask) `->` type($value)}];
 
-    let hasVerifier = 1;
+  let hasVerifier = 1;
 }
 
-def XeGPU_StoreScatterOp : XeGPU_Op<"store", 
-  [
-    AllElementTypesMatch<["value", "TensorDesc"]>,
-    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
-  ]> {
-    let summary = "store data to scattered memory locations.";
-    let description = [{ It (aka. store) stores data to scattered memory locations. The value is
-    typically a 1D vector. But when the chunk size of the TensorDesc is larger than 1, it will be
-    a 2D vector instead. For the later case, dim-1 of the value correspods to the simd lanes
-    and the dim-0 of the value corresponds to the chunk size stored per lane. So `store_scatter`
-    has transpose effect, which is similar to `load_gather`. Therefore, a transpose attribute is
-    introduced on purpose, making sure users are aware of this implicit transformation.
+def XeGPU_StoreScatterOp : XeGPU_Op<"store", [
+  AllElementTypesMatch<["value", "TensorDesc"]>, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "store data to scattered memory locations.";
+  let description = [{ It (aka. store) stores data to scattered memory locations. The value is
+  typically a 1D vector. But when the chunk size of the TensorDesc is larger than 1, it will be
+  a 2D vector instead. For the later case, dim-1 of the value correspods to the simd lanes
+  and the dim-0 of the value corresponds to the chunk size stored per lane. So `store_scatter`
+  has transpose effect, which is similar to `load_gather`. Therefore, a transpose attribute is
+  introduced on purpose, making sure users are aware of this implicit transformation.
 
-    Example 1:
-    ```mlir
-      %3 = xegpu.store %0, %1, %2 {l1_hint = #xegpu.cache_hint<uncached>,
-                                  l2_hint = #xegpu.cache_hint<write_back>,
-                                  l3_hint = #xegpu.cache_hint<write_through>}
-            : vector<16xf32>, !xegpu.tensor_desc<16xf32, #xegpu.scattered_tdesc_attr<>>, vector<16xi1>
-    ```
+  Example 1:
+  ```mlir
+    %3 = xegpu.store %0, %1, %2 {l1_hint = #xegpu.cache_hint<uncached>,
+                                 l2_hint = #xegpu.cache_hint<write_back>,
+                                 l3_hint = #xegpu.cache_hint<write_through>}
+          : vector<16xf32>, !xegpu.tensor_desc<16xf32, #xegpu.scattered_tdesc_attr<>>, vector<16xi1>
+  ```
 
-    Example 2:
-    ```mlir
-      %3 = xegpu.store %0, %1, %2 {transpose,
-                                  l1_hint = #xegpu.cache_hint<uncached>,
-                                  l2_hint = #xegpu.cache_hint<write_back>,
-                                  l3_hint = #xegpu.cache_hint<write_through>}
-            : vector<8x16xf32>, !xegpu.tensor_desc<16x8xf32, #xegpu.scattered_tdesc_attr<chunk_size=8>>, vector<16xi1>
-    ```
+  Example 2:
+  ```mlir
+    %3 = xegpu.store %0, %1, %2 {transpose,
+                                 l1_hint = #xegpu.cache_hint<uncached>,
+                                 l2_hint = #xegpu.cache_hint<write_back>,
+                                 l3_hint = #xegpu.cache_hint<write_through>}
+          : vector<8x16xf32>, !xegpu.tensor_desc<16x8xf32, #xegpu.scattered_tdesc_attr<chunk_size=8>>, vector<16xi1>
+  ```
 
-    }];
+  }];
 
-    let arguments = (ins
-      XeGPU_ValueType: $value,
-      XeGPU_TensorDesc: $TensorDesc,
-      XeGPU_MaskType: $mask,
-      OptionalAttr<UnitAttr>: $transpose,
-      OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
-      OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
-      OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
+  let arguments = (ins
+    XeGPU_ValueType: $value,
+    XeGPU_TensorDesc: $TensorDesc,
+    XeGPU_MaskType: $mask,
+    OptionalAttr<UnitAttr>: $transpose,
+    OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
+    OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
+    OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
 
-    let extraClassDeclaration = extraBaseClassDeclaration # [{
-      xegpu::TensorDescType getTensorDescType() {
-        return getTensorDesc().getType();
-      }
+  let extraClassDeclaration = extraBaseClassDeclaration # [{
+    xegpu::TensorDescType getTensorDescType() {
+      return getTensorDesc().getType();
+    }
 
-      Type getValueType() {
-        return getValue().getType();
-      }
+    Type getValueType() {
+      return getValue().getType();
+    }
 
-      Type getMaskType() {
-        return getMask().getType();
-      }
-    }];
+    Type getMaskType() {
+      return getMask().getType();
+    }
+  }];
 
-    let assemblyFormat = [{$value `,` $TensorDesc `,` $mask prop-dict attr-dict
-              `:` type($value) `,` qualified(type($TensorDesc)) `,` type($mask)}];
+  let assemblyFormat = [{$value `,` $TensorDesc `,` $mask prop-dict attr-dict
+            `:` type($value) `,` qualified(type($TensorDesc)) `,` type($mask)}];
 
-    let hasVerifier = 1;
+  let hasVerifier = 1;
 }
 
 def XeGPU_UpdateOffsetOp: XeGPU_Op<"update_offset",
