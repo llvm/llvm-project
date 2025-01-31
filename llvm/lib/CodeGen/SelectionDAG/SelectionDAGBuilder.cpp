@@ -135,6 +135,10 @@ static cl::opt<unsigned> SwitchPeelThreshold(
              "switch statement. A value greater than 100 will void this "
              "optimization"));
 
+static cl::opt<bool> NewPartialReduceLowering(
+    "new-partial-reduce-lowering", cl::init(false), cl::ReallyHidden,
+    cl::desc("Use the new method of lowering partial reductions."));
+
 // Limit the width of DAG chains. This is important in general to prevent
 // DAG-based analysis from blowing up. For example, alias analysis and
 // load clustering may not complete in reasonable time. It is difficult to
@@ -8118,6 +8122,29 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::experimental_vector_partial_reduce_add: {
+    if (NewPartialReduceLowering) {
+      SDValue Acc = getValue(I.getOperand(0));
+      EVT AccVT = Acc.getValueType();
+      SDValue Input = getValue(I.getOperand(1));
+      EVT InputVT = Input.getValueType();
+
+      assert(AccVT.getVectorElementType() == InputVT.getVectorElementType() &&
+             "Expected operands to have the same vector element type!");
+      assert(
+          InputVT.getVectorElementCount().getKnownMinValue() %
+                  AccVT.getVectorElementCount().getKnownMinValue() ==
+              0 &&
+          "Expected the element count of the Input operand to be a positive "
+          "integer multiple of the element count of the Accumulator operand!");
+
+      // ISD::PARTIAL_REDUCE_UMLA is chosen arbitrarily and would function the
+      // same if ISD::PARTIAL_REDUCE_SMLA was chosen instead. It should be
+      // changed to its correct signedness when combining or expanding,
+      // according to extends being performed on Input.
+      setValue(&I, DAG.getNode(ISD::PARTIAL_REDUCE_UMLA, sdl, AccVT, Acc, Input,
+                               DAG.getConstant(1, sdl, InputVT)));
+      return;
+    }
 
     if (!TLI.shouldExpandPartialReductionIntrinsic(cast<IntrinsicInst>(&I))) {
       visitTargetIntrinsic(I, Intrinsic);
