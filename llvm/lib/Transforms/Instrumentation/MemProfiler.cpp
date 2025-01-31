@@ -966,11 +966,12 @@ undriftMemProfRecord(const DenseMap<uint64_t, LocToLocMap> &UndriftMaps,
     UndriftCallStack(CS);
 }
 
-static void
-readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
-            const TargetLibraryInfo &TLI,
-            std::map<uint64_t, AllocMatchInfo> &FullStackIdToAllocMatchInfo,
-            DenseMap<uint64_t, LocToLocMap> &UndriftMaps) {
+static void readMemprof(
+    Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
+    const TargetLibraryInfo &TLI,
+    std::map<uint64_t, AllocMatchInfo> &FullStackIdToAllocMatchInfo,
+    std::set<std::vector<uint64_t>> &MatchedCallSites,
+    DenseMap<uint64_t, LocToLocMap> &UndriftMaps) {
   auto &Ctx = M.getContext();
   // Previously we used getIRPGOFuncName() here. If F is local linkage,
   // getIRPGOFuncName() returns FuncName with prefix 'FileName;'. But
@@ -1034,15 +1035,13 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
   std::map<uint64_t, std::set<const AllocationInfo *>> LocHashToAllocInfo;
   // A hash function for std::unordered_set<ArrayRef<Frame>> to work.
   struct CallStackHash {
-    size_t operator()(const std::pair<ArrayRef<Frame>, unsigned> &CS) const {
-      auto &[CallStack, Idx] = CS;
-      return computeFullStackId(ArrayRef<Frame>(CallStack).drop_front(Idx));
+    size_t operator()(ArrayRef<Frame> CS) const {
+      return computeFullStackId(CS);
     }
   };
   // For the callsites we need to record slices of the frame array (see comments
   // below where the map entries are added).
-  std::map<uint64_t, std::unordered_set<std::pair<ArrayRef<Frame>, unsigned>,
-                                        CallStackHash>>
+  std::map<uint64_t, std::unordered_set<ArrayRef<Frame>, CallStackHash>>
       LocHashToCallSites;
   for (auto &AI : MemProfRec->AllocSites) {
     NumOfMemProfAllocContextProfiles++;
@@ -1060,7 +1059,7 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
     unsigned Idx = 0;
     for (auto &StackFrame : CS) {
       uint64_t StackId = computeStackId(StackFrame);
-      LocHashToCallSites[StackId].emplace(CS, Idx++);
+      LocHashToCallSites[StackId].insert(ArrayRef<Frame>(CS).drop_front(Idx++));
       ProfileHasColumns |= StackFrame.Column;
       // Once we find this function, we can stop recording.
       if (StackFrame.Function == FuncGUID)
@@ -1203,21 +1202,21 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
       // instruction's leaf location in the callsites map and not the allocation
       // map.
       assert(CallSitesIter != LocHashToCallSites.end());
-      for (auto &[ProfileCallStack, Idx] : CallSitesIter->second) {
+      for (auto CallStackIdx : CallSitesIter->second) {
         // If we found and thus matched all frames on the call, create and
         // attach call stack metadata.
-        if (stackFrameIncludesInlinedCallStack(ProfileCallStack.drop_front(Idx),
+        if (stackFrameIncludesInlinedCallStack(CallStackIdx,
                                                InlinedCallStack)) {
           NumOfMemProfMatchedCallSites++;
           addCallsiteMetadata(I, InlinedCallStack, Ctx);
           // Only need to find one with a matching call stack and add a single
           // callsite metadata.
 
-          // Dump call site matching information upon request.
+          // Accumulate call site matching information upon request.
           if (ClPrintMemProfMatchInfo) {
-            uint64_t FullStackId = computeFullStackId(ProfileCallStack);
-            errs() << "MemProf callsite " << FullStackId << " " << Idx << " "
-                   << InlinedCallStack.size() << "\n";
+            std::vector<uint64_t> CallStack;
+            append_range(CallStack, InlinedCallStack);
+            MatchedCallSites.insert(std::move(CallStack));
           }
           break;
         }
@@ -1275,13 +1274,17 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
   // it to an allocation in the IR.
   std::map<uint64_t, AllocMatchInfo> FullStackIdToAllocMatchInfo;
 
+  // Set of the matched call sites, each expressed as a sequence of an inline
+  // call stack.
+  std::set<std::vector<uint64_t>> MatchedCallSites;
+
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
 
     const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
     readMemprof(M, F, MemProfReader.get(), TLI, FullStackIdToAllocMatchInfo,
-                UndriftMaps);
+                MatchedCallSites, UndriftMaps);
   }
 
   if (ClPrintMemProfMatchInfo) {
@@ -1290,6 +1293,13 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
              << " context with id " << Id << " has total profiled size "
              << Info.TotalSize << (Info.Matched ? " is" : " not")
              << " matched\n";
+
+    for (const auto &CallStack : MatchedCallSites) {
+      errs() << "MemProf callsite match for inline call stack";
+      for (uint64_t StackId : CallStack)
+        errs() << " " << StackId;
+      errs() << "\n";
+    }
   }
 
   return PreservedAnalyses::none();
