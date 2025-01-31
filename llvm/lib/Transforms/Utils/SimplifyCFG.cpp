@@ -3364,10 +3364,10 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
         BlockCostSoFar >
             PHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic)
       return false;
-    // If we don't find any pattern, that must be cheap, then only speculatively
-    // execute a single instruction (not counting the terminator).
-    if (!PatternFound &&
-        SpeculatedInstructions > MaxSpeculatedInstructionsToHoist)
+
+    // The number of instrcutions to be speculatively executed is limited.
+    // This limit is dependent on the found patterns.
+    if (SpeculatedInstructions > MaxSpeculatedInstructionsToHoist)
       return false;
 
     // Store the store speculation candidate.
