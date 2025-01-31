@@ -348,6 +348,7 @@ extern module LLVM_Extern_Utils_DataTypes "module.extern.modulemap"
 module TargetParserGen {
   module AArch64TargetParserDef {
     textual header "llvm/TargetParser/AArch64CPUFeatures.inc"
+    textual header "llvm/TargetParser/AArch64FeatPriorities.inc"
     header "llvm/TargetParser/AArch64TargetParser.h"
     extern module LLVM_Extern_TargetParser_Gen "module.extern.modulemap"
     export *

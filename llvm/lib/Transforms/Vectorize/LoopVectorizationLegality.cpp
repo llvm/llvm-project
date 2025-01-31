@@ -1631,12 +1631,11 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
 
   // Keep a record of all the exiting blocks.
   SmallVector<const SCEVPredicate *, 4> Predicates;
+  std::optional<std::pair<BasicBlock *, BasicBlock *>> SingleUncountableEdge;
   for (BasicBlock *BB : ExitingBlocks) {
     const SCEV *EC =
         PSE.getSE()->getPredicatedExitCount(TheLoop, BB, &Predicates);
     if (isa<SCEVCouldNotCompute>(EC)) {
-      UncountableExitingBlocks.push_back(BB);
-
       SmallVector<BasicBlock *, 2> Succs(successors(BB));
       if (Succs.size() != 2) {
         reportVectorizationFailure(
@@ -1653,7 +1652,16 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
         assert(!TheLoop->contains(Succs[1]));
         ExitBlock = Succs[1];
       }
-      UncountableExitBlocks.push_back(ExitBlock);
+
+      if (SingleUncountableEdge) {
+        reportVectorizationFailure(
+            "Loop has too many uncountable exits",
+            "Cannot vectorize early exit loop with more than one early exit",
+            "TooManyUncountableEarlyExits", ORE, TheLoop);
+        return false;
+      }
+
+      SingleUncountableEdge = {BB, ExitBlock};
     } else
       CountableExitingBlocks.push_back(BB);
   }
@@ -1663,19 +1671,15 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   // PSE.getSymbolicMaxBackedgeTakenCount() below.
   Predicates.clear();
 
-  // We only support one uncountable early exit.
-  if (getUncountableExitingBlocks().size() != 1) {
-    reportVectorizationFailure(
-        "Loop has too many uncountable exits",
-        "Cannot vectorize early exit loop with more than one early exit",
-        "TooManyUncountableEarlyExits", ORE, TheLoop);
+  if (!SingleUncountableEdge) {
+    LLVM_DEBUG(dbgs() << "LV: Cound not find any uncountable exits");
     return false;
   }
 
   // The only supported early exit loops so far are ones where the early
   // exiting block is a unique predecessor of the latch block.
   BasicBlock *LatchPredBB = LatchBB->getUniquePredecessor();
-  if (LatchPredBB != getUncountableEarlyExitingBlock()) {
+  if (LatchPredBB != SingleUncountableEdge->first) {
     reportVectorizationFailure("Early exit is not the latch predecessor",
                                "Cannot vectorize early exit loop",
                                "EarlyExitNotLatchPredecessor", ORE, TheLoop);
@@ -1728,7 +1732,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     }
 
   // The vectoriser cannot handle loads that occur after the early exit block.
-  assert(LatchBB->getUniquePredecessor() == getUncountableEarlyExitingBlock() &&
+  assert(LatchBB->getUniquePredecessor() == SingleUncountableEdge->first &&
          "Expected latch predecessor to be the early exiting block");
 
   // TODO: Handle loops that may fault.
@@ -1751,6 +1755,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   LLVM_DEBUG(dbgs() << "LV: Found an early exit loop with symbolic max "
                        "backedge taken count: "
                     << *SymbolicMaxBTC << '\n');
+  UncountableEdge = SingleUncountableEdge;
   return true;
 }
 
@@ -1812,7 +1817,6 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
-  HasUncountableEarlyExit = false;
   if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount())) {
     if (TheLoop->getExitingBlock()) {
       reportVectorizationFailure("Cannot vectorize uncountable loop",
@@ -1822,10 +1826,8 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       else
         return false;
     } else {
-      HasUncountableEarlyExit = true;
       if (!isVectorizableEarlyExitLoop()) {
-        UncountableExitingBlocks.clear();
-        HasUncountableEarlyExit = false;
+        UncountableEdge = std::nullopt;
         if (DoExtraAnalysis)
           Result = false;
         else

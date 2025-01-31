@@ -555,6 +555,14 @@ func.func @index_arg(%arg0: index) -> index {
   return %arg1 : index
 }
 
+// There is no type conversion rule for tf32, so vector<1xtf32> and, therefore,
+// the func op cannot be converted.
+// CHECK: func.func @non_convertible_arg_type({{.*}}: vector<1xtf32>)
+// CHECK:   llvm.return
+func.func @non_convertible_arg_type(%arg: vector<1xtf32>) {
+  return
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%toplevel_module: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %toplevel_module

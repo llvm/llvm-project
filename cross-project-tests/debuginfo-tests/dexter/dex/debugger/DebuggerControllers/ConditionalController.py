@@ -62,7 +62,7 @@ class BreakpointRange:
         self.finish_on_remove = finish_on_remove
 
     def has_conditions(self):
-        return self.expression != None
+        return self.expression is not None
 
     def get_conditional_expression_list(self):
         conditional_list = []
@@ -76,7 +76,7 @@ class BreakpointRange:
         self.current_hit_count += 1
 
     def should_be_removed(self):
-        if self.max_hit_count == None:
+        if self.max_hit_count is None:
             return False
         return self.current_hit_count >= self.max_hit_count
 

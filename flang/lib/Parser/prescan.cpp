@@ -708,23 +708,11 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       EmitCharAndAdvance(tokens, *at_);
       QuotedCharacterLiteral(tokens, start);
     } else if (IsLetter(*at_) && !preventHollerith_ &&
-        parenthesisNesting_ > 0) {
-      const char *p{at_};
-      int digits{0};
-      for (;; ++digits) {
-        ++p;
-        if (InFixedFormSource()) {
-          p = SkipWhiteSpace(p);
-        }
-        if (!IsDecimalDigit(*p)) {
-          break;
-        }
-      }
-      if (digits > 0 && (*p == 'h' || *p == 'H')) {
-        // Handles FORMAT(3I9HHOLLERITH) by skipping over the first I so that
-        // we don't misrecognize I9HOLLERITH as an identifier in the next case.
-        EmitCharAndAdvance(tokens, *at_);
-      }
+        parenthesisNesting_ > 0 &&
+        !preprocessor_.IsNameDefined(CharBlock{at_, 1})) {
+      // Handles FORMAT(3I9HHOLLERITH) by skipping over the first I so that
+      // we don't misrecognize I9HHOLLERITH as an identifier in the next case.
+      EmitCharAndAdvance(tokens, *at_);
     }
     preventHollerith_ = false;
   } else if (*at_ == '.') {

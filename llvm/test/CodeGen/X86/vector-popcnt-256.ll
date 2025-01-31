@@ -409,19 +409,79 @@ define <32 x i8> @testv32i8(<32 x i8> %in) nounwind {
 }
 
 define <4 x i64> @foldv4i64() nounwind {
-; ALL-LABEL: foldv4i64:
-; ALL:       # %bb.0:
-; ALL-NEXT:    vmovaps {{.*#+}} ymm0 = [1,64,0,8]
-; ALL-NEXT:    retq
+; AVX1-LABEL: foldv4i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [1,64,0,8]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: foldv4i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [1,64,0,8]
+; AVX2-NEXT:    retq
+;
+; XOP-LABEL: foldv4i64:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vmovaps {{.*#+}} ymm0 = [1,64,0,8]
+; XOP-NEXT:    retq
+;
+; AVX512VPOPCNTDQ-LABEL: foldv4i64:
+; AVX512VPOPCNTDQ:       # %bb.0:
+; AVX512VPOPCNTDQ-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [1,64,0,8]
+; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; AVX512VPOPCNTDQVL-LABEL: foldv4i64:
+; AVX512VPOPCNTDQVL:       # %bb.0:
+; AVX512VPOPCNTDQVL-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [1,64,0,8]
+; AVX512VPOPCNTDQVL-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: foldv4i64:
+; BITALG_NOVLX:       # %bb.0:
+; BITALG_NOVLX-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [1,64,0,8]
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: foldv4i64:
+; BITALG:       # %bb.0:
+; BITALG-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [1,64,0,8]
+; BITALG-NEXT:    retq
   %out = call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> <i64 256, i64 -1, i64 0, i64 255>)
   ret <4 x i64> %out
 }
 
 define <8 x i32> @foldv8i32() nounwind {
-; ALL-LABEL: foldv8i32:
-; ALL:       # %bb.0:
-; ALL-NEXT:    vmovaps {{.*#+}} ymm0 = [1,32,0,8,16,3,2,3]
-; ALL-NEXT:    retq
+; AVX1-LABEL: foldv8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [1,32,0,8,16,3,2,3]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: foldv8i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [1,32,0,8,16,3,2,3]
+; AVX2-NEXT:    retq
+;
+; XOP-LABEL: foldv8i32:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vmovaps {{.*#+}} ymm0 = [1,32,0,8,16,3,2,3]
+; XOP-NEXT:    retq
+;
+; AVX512VPOPCNTDQ-LABEL: foldv8i32:
+; AVX512VPOPCNTDQ:       # %bb.0:
+; AVX512VPOPCNTDQ-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [1,32,0,8,16,3,2,3]
+; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; AVX512VPOPCNTDQVL-LABEL: foldv8i32:
+; AVX512VPOPCNTDQVL:       # %bb.0:
+; AVX512VPOPCNTDQVL-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [1,32,0,8,16,3,2,3]
+; AVX512VPOPCNTDQVL-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: foldv8i32:
+; BITALG_NOVLX:       # %bb.0:
+; BITALG_NOVLX-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [1,32,0,8,16,3,2,3]
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: foldv8i32:
+; BITALG:       # %bb.0:
+; BITALG-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [1,32,0,8,16,3,2,3]
+; BITALG-NEXT:    retq
   %out = call <8 x i32> @llvm.ctpop.v8i32(<8 x i32> <i32 256, i32 -1, i32 0, i32 255, i32 -65536, i32 7, i32 24, i32 88>)
   ret <8 x i32> %out
 }

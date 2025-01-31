@@ -629,19 +629,29 @@ define <2 x i64> @foldv2i64() nounwind {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [1,64]
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: foldv2i64:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [1,64]
-; AVX-NEXT:    retq
+; AVX1OR2-LABEL: foldv2i64:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vmovaps {{.*#+}} xmm0 = [1,64]
+; AVX1OR2-NEXT:    retq
+;
+; XOP-LABEL: foldv2i64:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vmovaps {{.*#+}} xmm0 = [1,64]
+; XOP-NEXT:    retq
+;
+; AVX512-LABEL: foldv2i64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [1,64]
+; AVX512-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: foldv2i64:
 ; BITALG_NOVLX:       # %bb.0:
-; BITALG_NOVLX-NEXT:    vmovaps {{.*#+}} xmm0 = [1,64]
+; BITALG_NOVLX-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [1,64]
 ; BITALG_NOVLX-NEXT:    retq
 ;
 ; BITALG-LABEL: foldv2i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vmovaps {{.*#+}} xmm0 = [1,64]
+; BITALG-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [1,64]
 ; BITALG-NEXT:    retq
   %out = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> <i64 256, i64 -1>)
   ret <2 x i64> %out
@@ -653,19 +663,29 @@ define <4 x i32> @foldv4i32() nounwind {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [1,32,0,8]
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: foldv4i32:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [1,32,0,8]
-; AVX-NEXT:    retq
+; AVX1OR2-LABEL: foldv4i32:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vmovaps {{.*#+}} xmm0 = [1,32,0,8]
+; AVX1OR2-NEXT:    retq
+;
+; XOP-LABEL: foldv4i32:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vmovaps {{.*#+}} xmm0 = [1,32,0,8]
+; XOP-NEXT:    retq
+;
+; AVX512-LABEL: foldv4i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [1,32,0,8]
+; AVX512-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: foldv4i32:
 ; BITALG_NOVLX:       # %bb.0:
-; BITALG_NOVLX-NEXT:    vmovaps {{.*#+}} xmm0 = [1,32,0,8]
+; BITALG_NOVLX-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [1,32,0,8]
 ; BITALG_NOVLX-NEXT:    retq
 ;
 ; BITALG-LABEL: foldv4i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vmovaps {{.*#+}} xmm0 = [1,32,0,8]
+; BITALG-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [1,32,0,8]
 ; BITALG-NEXT:    retq
   %out = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> <i32 256, i32 -1, i32 0, i32 255>)
   ret <4 x i32> %out

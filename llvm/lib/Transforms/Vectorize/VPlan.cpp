@@ -52,6 +52,7 @@ using namespace llvm::VPlanPatternMatch;
 namespace llvm {
 extern cl::opt<bool> EnableVPlanNativePath;
 }
+
 extern cl::opt<unsigned> ForceTargetInstructionCost;
 
 static cl::opt<bool> PrintVPlansInDotFormat(
@@ -316,10 +317,9 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
   // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
   // will directly follow the scalar definitions.
   auto OldIP = Builder.saveIP();
-  auto NewIP =
-      isa<PHINode>(LastInst)
-          ? BasicBlock::iterator(LastInst->getParent()->getFirstNonPHI())
-          : std::next(BasicBlock::iterator(LastInst));
+  auto NewIP = isa<PHINode>(LastInst)
+                   ? LastInst->getParent()->getFirstNonPHIIt()
+                   : std::next(BasicBlock::iterator(LastInst));
   Builder.SetInsertPoint(&*NewIP);
 
   // However, if we are vectorizing, we need to construct the vector values.
@@ -438,10 +438,10 @@ void VPBasicBlock::connectToPredecessors(VPTransformState::CFGState &CFG) {
       // Set each forward successor here when it is created, excluding
       // backedges. A backward successor is set when the branch is created.
       unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
-      assert(
-          (!TermBr->getSuccessor(idx) ||
-           (isa<VPIRBasicBlock>(this) && TermBr->getSuccessor(idx) == NewBB)) &&
-          "Trying to reset an existing successor block.");
+      assert((TermBr && (!TermBr->getSuccessor(idx) ||
+                         (isa<VPIRBasicBlock>(this) &&
+                          TermBr->getSuccessor(idx) == NewBB))) &&
+             "Trying to reset an existing successor block.");
       TermBr->setSuccessor(idx, NewBB);
     }
     CFG.DTU.applyUpdates({{DominatorTree::Insert, PredBB, NewBB}});
@@ -501,8 +501,15 @@ void VPBasicBlock::execute(VPTransformState *State) {
     UnreachableInst *Terminator = State->Builder.CreateUnreachable();
     // Register NewBB in its loop. In innermost loops its the same for all
     // BB's.
-    if (State->CurrentParentLoop)
-      State->CurrentParentLoop->addBasicBlockToLoop(NewBB, *State->LI);
+    Loop *ParentLoop = State->CurrentParentLoop;
+    // If this block has a sole successor that is an exit block then it needs
+    // adding to the same parent loop as the exit block.
+    VPBlockBase *SuccVPBB = getSingleSuccessor();
+    if (SuccVPBB && State->Plan->isExitBlock(SuccVPBB))
+      ParentLoop = State->LI->getLoopFor(
+          cast<VPIRBasicBlock>(SuccVPBB)->getIRBasicBlock());
+    if (ParentLoop)
+      ParentLoop->addBasicBlockToLoop(NewBB, *State->LI);
     State->Builder.SetInsertPoint(Terminator);
 
     State->CFG.PrevBB = NewBB;
@@ -770,7 +777,7 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
     InstructionCost BackedgeCost =
         ForceTargetInstructionCost.getNumOccurrences()
             ? InstructionCost(ForceTargetInstructionCost.getNumOccurrences())
-            : Ctx.TTI.getCFInstrCost(Instruction::Br, TTI::TCK_RecipThroughput);
+            : Ctx.TTI.getCFInstrCost(Instruction::Br, Ctx.CostKind);
     LLVM_DEBUG(dbgs() << "Cost of " << BackedgeCost << " for VF " << VF
                       << ": vector loop backedge\n");
     Cost += BackedgeCost;
@@ -950,6 +957,10 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   }
 }
 
+bool VPlan::isExitBlock(VPBlockBase *VPBB) {
+  return isa<VPIRBasicBlock>(VPBB) && VPBB->getNumSuccessors() == 0;
+}
+
 /// Generate the code inside the preheader and body of the vectorized loop.
 /// Assumes a single pre-header basic-block was created for this. Introduce
 /// additional basic-blocks as needed, and fill them all.
@@ -975,7 +986,7 @@ void VPlan::execute(VPTransformState *State) {
   BasicBlock *MiddleBB = State->CFG.ExitBB;
   BasicBlock *ScalarPh = MiddleBB->getSingleSuccessor();
   auto *BrInst = new UnreachableInst(MiddleBB->getContext());
-  BrInst->insertBefore(MiddleBB->getTerminator());
+  BrInst->insertBefore(MiddleBB->getTerminator()->getIterator());
   MiddleBB->getTerminator()->eraseFromParent();
   State->CFG.DTU.applyUpdates({{DominatorTree::Delete, MiddleBB, ScalarPh}});
   // Disconnect scalar preheader and scalar header, as the dominator tree edge
@@ -1025,7 +1036,7 @@ void VPlan::execute(VPTransformState *State) {
       // Move the last step to the end of the latch block. This ensures
       // consistent placement of all induction updates.
       Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
-      Inc->moveBefore(VectorLatchBB->getTerminator()->getPrevNode());
+      Inc->moveBefore(std::prev(VectorLatchBB->getTerminator()->getIterator()));
 
       // Use the steps for the last part as backedge value for the induction.
       if (auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
@@ -1629,6 +1640,9 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
     VFRange SubRange = {VF, MaxVFTimes2};
     auto Plan = buildVPlan(SubRange);
     VPlanTransforms::optimize(*Plan);
+    // Update the name of the latch of the top-level vector loop region region
+    // after optimizations which includes block folding.
+    Plan->getVectorLoopRegion()->getExiting()->setName("vector.latch");
     VPlans.push_back(std::move(Plan));
     VF = SubRange.End;
   }

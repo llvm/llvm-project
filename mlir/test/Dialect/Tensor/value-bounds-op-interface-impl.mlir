@@ -44,6 +44,17 @@ func.func @dim(%t: tensor<?xf32>) -> index {
 
 // -----
 
+// CHECK-LABEL: func @dim_all_positive(
+func.func @dim_all_positive(%t: tensor<?xf32>, %x: index) {
+  %c0 = arith.constant 0 : index
+  %0 = tensor.dim %t, %x : tensor<?xf32>
+  // expected-remark @below{{true}}
+  "test.compare"(%0, %c0) {cmp = "GE" } : (index, index) -> ()
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @empty(
 //  CHECK-SAME:     %[[sz:.*]]: index
 //       CHECK:   %[[c6:.*]] = arith.constant 6 : index

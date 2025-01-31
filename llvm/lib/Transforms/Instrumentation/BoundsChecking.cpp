@@ -108,14 +108,17 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
   return Or;
 }
 
-static CallInst *InsertTrap(BuilderTy &IRB, bool DebugTrapBB) {
+static CallInst *InsertTrap(BuilderTy &IRB, bool DebugTrapBB,
+                            std::optional<int8_t> GuardKind) {
   if (!DebugTrapBB)
     return IRB.CreateIntrinsic(Intrinsic::trap, {}, {});
-  // FIXME: Ideally we would use the SanitizerHandler::OutOfBounds constant.
+
   return IRB.CreateIntrinsic(
       Intrinsic::ubsantrap, {},
       ConstantInt::get(IRB.getInt8Ty(),
-                       IRB.GetInsertBlock()->getParent()->size()));
+                       GuardKind.has_value()
+                           ? GuardKind.value()
+                           : IRB.GetInsertBlock()->getParent()->size()));
 }
 
 static CallInst *InsertCall(BuilderTy &IRB, bool MayReturn, StringRef Name) {
@@ -214,8 +217,15 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
         Or = getBoundsCheckCond(AI->getPointerOperand(), AI->getValOperand(),
                                 DL, TLI, ObjSizeEval, IRB, SE);
     }
-    if (Or)
+    if (Or) {
+      if (Opts.GuardKind) {
+        llvm::Value *Allow = IRB.CreateIntrinsic(
+            IRB.getInt1Ty(), Intrinsic::allow_ubsan_check,
+            {llvm::ConstantInt::getSigned(IRB.getInt8Ty(), *Opts.GuardKind)});
+        Or = IRB.CreateAnd(Or, Allow);
+      }
       TrapInfo.push_back(std::make_pair(&I, Or));
+    }
   }
 
   std::string Name;
@@ -243,7 +253,7 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
 
     bool DebugTrapBB = !Opts.Merge;
     CallInst *TrapCall = Opts.Rt ? InsertCall(IRB, Opts.Rt->MayReturn, Name)
-                                 : InsertTrap(IRB, DebugTrapBB);
+                                 : InsertTrap(IRB, DebugTrapBB, Opts.GuardKind);
     if (DebugTrapBB)
       TrapCall->addFnAttr(llvm::Attribute::NoMerge);
 
@@ -299,5 +309,7 @@ void BoundsCheckingPass::printPipeline(
   }
   if (Opts.Merge)
     OS << ";merge";
+  if (Opts.GuardKind)
+    OS << ";guard=" << static_cast<int>(*Opts.GuardKind);
   OS << ">";
 }

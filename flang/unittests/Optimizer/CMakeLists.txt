@@ -9,8 +9,6 @@ set(LIBS
   FIRDialectSupport
   FIRSupport
   HLFIRDialect
-  ${dialect_libs}
-  ${extension_libs}
   LLVMTargetParser
 )
 
@@ -47,3 +45,8 @@ DEPENDS
 target_link_libraries(FlangOptimizerTests
   PRIVATE
   ${LIBS})
+mlir_target_link_libraries(FlangOptimizerTests
+  PRIVATE
+  ${dialect_libs}
+  ${extension_libs}
+  )

@@ -1060,12 +1060,12 @@ define i32 @test13_crash(i32 %x, i32 %y)  {
 define <4 x i1> @test14()  {
 ; CHECK-LABEL: test14:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,0,1]
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [1,1,0,1]
 ; CHECK-NEXT:    retq
 ;
 ; X86-LABEL: test14:
 ; X86:       ## %bb.0:
-; X86-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,0,1]
+; X86-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [1,1,0,1]
 ; X86-NEXT:    retl
   %a = bitcast i16 21845 to <16 x i1>
   %b = extractelement <16 x i1> %a, i32 2

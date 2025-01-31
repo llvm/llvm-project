@@ -1154,7 +1154,7 @@ bool IsExpandableScalar(const Expr<T> &expr, FoldingContext &context,
     const Shape &shape, bool admitPureCall = false) {
   if (UnexpandabilityFindingVisitor{admitPureCall}(expr)) {
     auto extents{AsConstantExtents(context, shape)};
-    return extents && GetSize(*extents) == 1;
+    return extents && !HasNegativeExtent(*extents) && GetSize(*extents) == 1;
   } else {
     return true;
   }

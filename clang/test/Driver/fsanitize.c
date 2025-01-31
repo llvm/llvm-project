@@ -399,6 +399,11 @@
 // RUN: %clang --target=arm-linux-androideabi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ANDROID-NO-ASAN
 // CHECK-ANDROID-NO-ASAN: "-mrelocation-model" "pic"
 
+// RUN: not %clang --target=aarch64-linux-android -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MSAN-ANDROID
+// RUN: not %clang --target=i386-linux-android -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MSAN-ANDROID
+// RUN: not %clang --target=x86_64-linux-android -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MSAN-ANDROID
+// CHECK-MSAN-ANDROID: unsupported option '-fsanitize=memory' for target
+
 // RUN: %clang --target=x86_64-linux-gnu %s -fsanitize=undefined -### 2>&1 | FileCheck %s --check-prefix=CHECK-RECOVER-UBSAN
 // RUN: %clang --target=x86_64-linux-gnu %s -fsanitize=undefined -fsanitize-recover -### 2>&1 | FileCheck %s --check-prefix=CHECK-RECOVER-UBSAN
 // RUN: %clang --target=x86_64-linux-gnu %s -fsanitize=undefined -fsanitize-recover=all -### 2>&1 | FileCheck %s --check-prefix=CHECK-RECOVER-UBSAN

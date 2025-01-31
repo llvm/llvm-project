@@ -232,6 +232,12 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm, bool enableOpenMP,
   if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
     pm.addPass(mlir::createCSEPass());
+    // Run SimplifyHLFIRIntrinsics pass late after CSE,
+    // and allow introducing operations with new side effects.
+    addNestedPassToAllTopLevelOperations<PassConstructor>(pm, []() {
+      return hlfir::createSimplifyHLFIRIntrinsics(
+          {/*allowNewSideEffects=*/true});
+    });
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createOptimizedBufferization);
     addNestedPassToAllTopLevelOperations<PassConstructor>(
@@ -239,7 +245,15 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm, bool enableOpenMP,
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignments());
   pm.addPass(hlfir::createLowerHLFIRIntrinsics());
-  pm.addPass(hlfir::createBufferizeHLFIR());
+
+  hlfir::BufferizeHLFIROptions bufferizeOptions;
+  // For opt-for-speed, avoid running any of the loops resulting
+  // from hlfir.elemental lowering, if the result is an empty array.
+  // This helps to avoid long running loops for elementals with
+  // shapes like (0, HUGE).
+  if (optLevel.isOptimizingForSpeed())
+    bufferizeOptions.optimizeEmptyElementals = true;
+  pm.addPass(hlfir::createBufferizeHLFIR(bufferizeOptions));
   // Run hlfir.assign inlining again after BufferizeHLFIR,
   // because the latter may introduce new hlfir.assign operations,
   // e.g. for copying an array into a temporary due to
