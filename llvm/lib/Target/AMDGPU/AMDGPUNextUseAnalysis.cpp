@@ -110,6 +110,15 @@ void NextUseResult::analyze(const MachineFunction &MF) {
               UsedInBlock[MBB->getNumber()].insert(P);
             } else if (MO.isDef()) {
               Curr.clear(P);
+              // if (!(MI.isPHI() && LI->isLoopHeader(MI.getParent())))
+                // FIXME: we add a PHIs defined Regs in the LiveIn for the loop
+                // header block. Then we compute the Take set as UsedInBlock
+                // INTERSECT LiveIn. If we remove it here we will not have it in
+                // the Active set for the loop header. We either should not add
+                // PHIs defines to LiveIn, assumiong that the room for them will
+                // be created by the "limit" as for any usual instruction, or
+                // preserve removing PHIs defines from the UsedInBlock set.
+                UsedInBlock[MBB->getNumber()].remove(P);
             }
           }
         }
