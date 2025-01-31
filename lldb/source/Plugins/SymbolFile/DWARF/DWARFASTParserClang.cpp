@@ -2213,7 +2213,7 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
 bool DWARFASTParserClang::CompleteEnumType(const DWARFDIE &die,
                                            lldb_private::Type *type,
                                            const CompilerType &clang_type) {
-  assert (clang_type.IsEnumerationType());
+  assert(clang_type.IsEnumerationType());
 
   if (TypeSystemClang::StartTagDeclarationDefinition(clang_type)) {
     if (die.HasChildren())
