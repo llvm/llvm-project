@@ -1091,6 +1091,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("PenaltyBreakAssignment", Style.PenaltyBreakAssignment);
     IO.mapOptional("PenaltyBreakBeforeFirstCallParameter",
                    Style.PenaltyBreakBeforeFirstCallParameter);
+    IO.mapOptional("PenaltyBreakBeforeMemberAccess",
+                   Style.PenaltyBreakBeforeMemberAccess);
     IO.mapOptional("PenaltyBreakComment", Style.PenaltyBreakComment);
     IO.mapOptional("PenaltyBreakFirstLessLess",
                    Style.PenaltyBreakFirstLessLess);
@@ -1659,6 +1661,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
 
   LLVMStyle.PenaltyBreakAssignment = prec::Assignment;
   LLVMStyle.PenaltyBreakBeforeFirstCallParameter = 19;
+  LLVMStyle.PenaltyBreakBeforeMemberAccess = 150;
   LLVMStyle.PenaltyBreakComment = 300;
   LLVMStyle.PenaltyBreakFirstLessLess = 120;
   LLVMStyle.PenaltyBreakOpenParenthesis = 0;

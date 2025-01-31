@@ -12,6 +12,7 @@
 
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -40,7 +41,7 @@ using namespace llvm;
 
 StringRef Intrinsic::getBaseName(ID id) {
   assert(id < num_intrinsics && "Invalid intrinsic ID!");
-  return IntrinsicNameTable + IntrinsicNameOffsetTable[id];
+  return IntrinsicNameTable[IntrinsicNameOffsetTable[id]];
 }
 
 StringRef Intrinsic::getName(ID id) {
@@ -649,20 +650,20 @@ static int lookupLLVMIntrinsicByName(ArrayRef<unsigned> NameOffsetTable,
       // `equal_range` requires the comparison to work with either side being an
       // offset or the value. Detect which kind each side is to set up the
       // compared strings.
-      const char *LHSStr;
+      StringRef LHSStr;
       if constexpr (std::is_integral_v<decltype(LHS)>) {
-        LHSStr = &IntrinsicNameTable[LHS];
+        LHSStr = IntrinsicNameTable[LHS];
       } else {
         LHSStr = LHS;
       }
-      const char *RHSStr;
+      StringRef RHSStr;
       if constexpr (std::is_integral_v<decltype(RHS)>) {
-        RHSStr = &IntrinsicNameTable[RHS];
+        RHSStr = IntrinsicNameTable[RHS];
       } else {
         RHSStr = RHS;
       }
-      return strncmp(LHSStr + CmpStart, RHSStr + CmpStart, CmpEnd - CmpStart) <
-             0;
+      return strncmp(LHSStr.data() + CmpStart, RHSStr.data() + CmpStart,
+                     CmpEnd - CmpStart) < 0;
     };
     LastLow = Low;
     std::tie(Low, High) = std::equal_range(Low, High, Name.data(), Cmp);
@@ -672,7 +673,7 @@ static int lookupLLVMIntrinsicByName(ArrayRef<unsigned> NameOffsetTable,
 
   if (LastLow == NameOffsetTable.end())
     return -1;
-  StringRef NameFound = &IntrinsicNameTable[*LastLow];
+  StringRef NameFound = IntrinsicNameTable[*LastLow];
   if (Name == NameFound ||
       (Name.starts_with(NameFound) && Name[NameFound.size()] == '.'))
     return LastLow - NameOffsetTable.begin();
@@ -716,7 +717,7 @@ Intrinsic::ID Intrinsic::lookupIntrinsicID(StringRef Name) {
 
   // If the intrinsic is not overloaded, require an exact match. If it is
   // overloaded, require either exact or prefix match.
-  const auto MatchSize = strlen(&IntrinsicNameTable[NameOffsetTable[Idx]]);
+  const auto MatchSize = IntrinsicNameTable[NameOffsetTable[Idx]].size();
   assert(Name.size() >= MatchSize && "Expected either exact or prefix match");
   bool IsExactMatch = Name.size() == MatchSize;
   return IsExactMatch || Intrinsic::isOverloaded(ID) ? ID

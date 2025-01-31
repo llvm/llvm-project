@@ -2653,41 +2653,38 @@ define amdgpu_kernel void @s_mul_i128(ptr addrspace(1) %out, [8 x i32], i128 %a,
 ;
 ; VI-LABEL: s_mul_i128:
 ; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x4c
-; VI-NEXT:    s_load_dwordx4 s[12:15], s[4:5], 0x7c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x4c
+; VI-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x7c
+; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v5, 0
-; VI-NEXT:    s_mov_b32 s3, 0xf000
+; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s10
-; VI-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], s12, v0, 0
-; VI-NEXT:    s_mul_i32 s4, s12, s11
-; VI-NEXT:    v_mov_b32_e32 v6, s12
-; VI-NEXT:    v_add_u32_e32 v3, vcc, s4, v3
-; VI-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], s8, v6, 0
-; VI-NEXT:    s_mul_i32 s6, s13, s10
-; VI-NEXT:    v_add_u32_e32 v3, vcc, s6, v3
+; VI-NEXT:    v_mov_b32_e32 v0, s2
+; VI-NEXT:    v_mad_u64_u32 v[2:3], s[12:13], s8, v0, 0
+; VI-NEXT:    s_mul_i32 s3, s8, s3
+; VI-NEXT:    v_mov_b32_e32 v6, s8
+; VI-NEXT:    v_add_u32_e32 v3, vcc, s3, v3
+; VI-NEXT:    s_mul_i32 s12, s9, s2
+; VI-NEXT:    v_mad_u64_u32 v[0:1], s[2:3], s0, v6, 0
+; VI-NEXT:    v_add_u32_e32 v3, vcc, s12, v3
 ; VI-NEXT:    v_mov_b32_e32 v4, v1
-; VI-NEXT:    v_mad_u64_u32 v[6:7], s[4:5], s9, v6, v[4:5]
-; VI-NEXT:    v_mov_b32_e32 v8, s8
-; VI-NEXT:    v_mad_u64_u32 v[1:2], s[4:5], s14, v8, v[2:3]
-; VI-NEXT:    v_mov_b32_e32 v3, v7
-; VI-NEXT:    v_mov_b32_e32 v7, v5
-; VI-NEXT:    v_mov_b32_e32 v8, s13
-; VI-NEXT:    v_mad_u64_u32 v[4:5], s[4:5], s8, v8, v[6:7]
-; VI-NEXT:    s_mul_i32 s6, s15, s8
-; VI-NEXT:    v_add_u32_e32 v6, vcc, s6, v2
-; VI-NEXT:    v_mov_b32_e32 v2, v5
-; VI-NEXT:    v_add_u32_e32 v2, vcc, v3, v2
-; VI-NEXT:    v_addc_u32_e64 v3, s[4:5], 0, 0, vcc
-; VI-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], s9, v8, v[2:3]
-; VI-NEXT:    s_mul_i32 s6, s14, s9
-; VI-NEXT:    v_add_u32_e32 v5, vcc, s6, v6
-; VI-NEXT:    v_add_u32_e32 v2, vcc, v2, v1
-; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    v_addc_u32_e32 v3, vcc, v3, v5, vcc
-; VI-NEXT:    v_mov_b32_e32 v1, v4
-; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
+; VI-NEXT:    v_mad_u64_u32 v[6:7], s[2:3], s1, v6, v[4:5]
+; VI-NEXT:    v_mov_b32_e32 v8, s0
+; VI-NEXT:    v_mad_u64_u32 v[8:9], s[2:3], s10, v8, v[2:3]
+; VI-NEXT:    v_mov_b32_e32 v4, v6
+; VI-NEXT:    v_mov_b32_e32 v6, s9
+; VI-NEXT:    v_mad_u64_u32 v[1:2], s[2:3], s0, v6, v[4:5]
+; VI-NEXT:    s_mul_i32 s8, s11, s0
+; VI-NEXT:    v_add_u32_e32 v4, vcc, s8, v9
+; VI-NEXT:    v_add_u32_e32 v2, vcc, v7, v2
+; VI-NEXT:    v_addc_u32_e64 v3, s[2:3], 0, 0, vcc
+; VI-NEXT:    s_mul_i32 s8, s10, s1
+; VI-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], s1, v6, v[2:3]
+; VI-NEXT:    v_add_u32_e32 v4, vcc, s8, v4
+; VI-NEXT:    v_add_u32_e32 v2, vcc, v2, v8
+; VI-NEXT:    s_mov_b32 s6, -1
+; VI-NEXT:    v_addc_u32_e32 v3, vcc, v3, v4, vcc
+; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: s_mul_i128:
@@ -3012,52 +3009,49 @@ define amdgpu_kernel void @v_mul_i128(ptr addrspace(1) %out, ptr addrspace(1) %a
 ; VI-NEXT:    v_add_u32_e32 v3, vcc, v15, v3
 ; VI-NEXT:    v_add_u32_e32 v15, vcc, v3, v2
 ; VI-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], v1, v4, v[9:10]
-; VI-NEXT:    v_mov_b32_e32 v4, v3
-; VI-NEXT:    v_mov_b32_e32 v3, v10
-; VI-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], v0, v5, v[2:3]
-; VI-NEXT:    v_mad_u64_u32 v[9:10], s[0:1], v6, v0, v[14:15]
-; VI-NEXT:    v_add_u32_e32 v3, vcc, v4, v3
-; VI-NEXT:    v_addc_u32_e64 v4, s[0:1], 0, 0, vcc
-; VI-NEXT:    v_mul_lo_u32 v0, v7, v0
-; VI-NEXT:    v_mad_u64_u32 v[3:4], s[0:1], v1, v5, v[3:4]
-; VI-NEXT:    v_mul_lo_u32 v1, v6, v1
-; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v10
-; VI-NEXT:    v_add_u32_e32 v0, vcc, v1, v0
-; VI-NEXT:    v_add_u32_e32 v10, vcc, v3, v9
-; VI-NEXT:    v_addc_u32_e32 v11, vcc, v4, v0, vcc
+; VI-NEXT:    v_mad_u64_u32 v[14:15], s[0:1], v6, v0, v[14:15]
 ; VI-NEXT:    v_mov_b32_e32 v9, v2
+; VI-NEXT:    v_mul_lo_u32 v2, v7, v0
+; VI-NEXT:    v_mad_u64_u32 v[9:10], s[0:1], v0, v5, v[9:10]
+; VI-NEXT:    v_mul_lo_u32 v4, v6, v1
+; VI-NEXT:    v_add_u32_e32 v6, vcc, v2, v15
+; VI-NEXT:    v_add_u32_e32 v2, vcc, v3, v10
+; VI-NEXT:    v_addc_u32_e64 v3, s[0:1], 0, 0, vcc
+; VI-NEXT:    v_mad_u64_u32 v[0:1], s[0:1], v1, v5, v[2:3]
+; VI-NEXT:    v_add_u32_e32 v2, vcc, v4, v6
+; VI-NEXT:    v_add_u32_e32 v10, vcc, v0, v14
+; VI-NEXT:    v_addc_u32_e32 v11, vcc, v1, v2, vcc
 ; VI-NEXT:    flat_store_dwordx4 v[12:13], v[8:11]
 ; VI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: v_mul_i128:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
-; GFX9-NEXT:    v_lshlrev_b32_e32 v12, 4, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v14, 4, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v11, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dwordx4 v[0:3], v12, s[0:1]
-; GFX9-NEXT:    global_load_dwordx4 v[4:7], v12, s[2:3]
+; GFX9-NEXT:    global_load_dwordx4 v[0:3], v14, s[0:1]
+; GFX9-NEXT:    global_load_dwordx4 v[4:7], v14, s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mul_lo_u32 v10, v5, v2
-; GFX9-NEXT:    v_mul_lo_u32 v13, v4, v3
+; GFX9-NEXT:    v_mul_lo_u32 v12, v4, v3
 ; GFX9-NEXT:    v_mad_u64_u32 v[8:9], s[0:1], v4, v2, 0
 ; GFX9-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], v0, v4, 0
-; GFX9-NEXT:    v_add3_u32 v9, v9, v13, v10
-; GFX9-NEXT:    v_mul_lo_u32 v13, v6, v1
+; GFX9-NEXT:    v_add3_u32 v9, v9, v12, v10
+; GFX9-NEXT:    v_mul_lo_u32 v15, v6, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v10, v3
-; GFX9-NEXT:    v_mad_u64_u32 v[3:4], s[0:1], v1, v4, v[10:11]
-; GFX9-NEXT:    v_mad_u64_u32 v[8:9], s[0:1], v6, v0, v[8:9]
-; GFX9-NEXT:    v_mov_b32_e32 v10, v4
-; GFX9-NEXT:    v_mov_b32_e32 v4, v11
-; GFX9-NEXT:    v_mad_u64_u32 v[3:4], s[0:1], v0, v5, v[3:4]
-; GFX9-NEXT:    v_mul_lo_u32 v0, v7, v0
-; GFX9-NEXT:    v_add_co_u32_e32 v10, vcc, v10, v4
-; GFX9-NEXT:    v_addc_co_u32_e64 v11, s[0:1], 0, 0, vcc
-; GFX9-NEXT:    v_mad_u64_u32 v[4:5], s[0:1], v1, v5, v[10:11]
-; GFX9-NEXT:    v_add3_u32 v0, v0, v9, v13
-; GFX9-NEXT:    v_add_co_u32_e32 v4, vcc, v4, v8
-; GFX9-NEXT:    v_addc_co_u32_e32 v5, vcc, v5, v0, vcc
-; GFX9-NEXT:    global_store_dwordx4 v12, v[2:5], s[2:3]
+; GFX9-NEXT:    v_mad_u64_u32 v[12:13], s[0:1], v1, v4, v[10:11]
+; GFX9-NEXT:    v_mov_b32_e32 v10, v12
+; GFX9-NEXT:    v_mad_u64_u32 v[3:4], s[0:1], v0, v5, v[10:11]
+; GFX9-NEXT:    v_mul_lo_u32 v10, v7, v0
+; GFX9-NEXT:    v_mad_u64_u32 v[6:7], s[0:1], v6, v0, v[8:9]
+; GFX9-NEXT:    v_add_co_u32_e32 v8, vcc, v13, v4
+; GFX9-NEXT:    v_addc_co_u32_e64 v9, s[0:1], 0, 0, vcc
+; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[0:1], v1, v5, v[8:9]
+; GFX9-NEXT:    v_add3_u32 v5, v10, v7, v15
+; GFX9-NEXT:    v_add_co_u32_e32 v4, vcc, v0, v6
+; GFX9-NEXT:    v_addc_co_u32_e32 v5, vcc, v1, v5, vcc
+; GFX9-NEXT:    global_store_dwordx4 v14, v[2:5], s[2:3]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: v_mul_i128:
@@ -3071,22 +3065,20 @@ define amdgpu_kernel void @v_mul_i128(ptr addrspace(1) %out, ptr addrspace(1) %a
 ; GFX10-NEXT:    global_load_dwordx4 v[4:7], v13, s[2:3]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_mad_u64_u32 v[8:9], s0, v0, v4, 0
-; GFX10-NEXT:    v_mul_lo_u32 v15, v5, v2
+; GFX10-NEXT:    v_mul_lo_u32 v14, v5, v2
 ; GFX10-NEXT:    v_mul_lo_u32 v7, v7, v0
 ; GFX10-NEXT:    v_mad_u64_u32 v[11:12], s0, v1, v4, v[9:10]
-; GFX10-NEXT:    v_mov_b32_e32 v14, v12
-; GFX10-NEXT:    v_mov_b32_e32 v12, v10
-; GFX10-NEXT:    v_mad_u64_u32 v[9:10], s0, v0, v5, v[11:12]
+; GFX10-NEXT:    v_mov_b32_e32 v9, v11
 ; GFX10-NEXT:    v_mul_lo_u32 v11, v4, v3
 ; GFX10-NEXT:    v_mad_u64_u32 v[2:3], s0, v4, v2, 0
-; GFX10-NEXT:    v_mul_lo_u32 v12, v6, v1
-; GFX10-NEXT:    v_mov_b32_e32 v4, v10
-; GFX10-NEXT:    v_add3_u32 v3, v3, v11, v15
-; GFX10-NEXT:    v_add_co_u32 v10, s0, v14, v4
+; GFX10-NEXT:    v_mul_lo_u32 v4, v6, v1
+; GFX10-NEXT:    v_mad_u64_u32 v[9:10], s0, v0, v5, v[9:10]
+; GFX10-NEXT:    v_add3_u32 v3, v3, v11, v14
+; GFX10-NEXT:    v_add_co_u32 v10, s0, v12, v10
 ; GFX10-NEXT:    v_add_co_ci_u32_e64 v11, s0, 0, 0, s0
 ; GFX10-NEXT:    v_mad_u64_u32 v[2:3], s0, v6, v0, v[2:3]
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], s0, v1, v5, v[10:11]
-; GFX10-NEXT:    v_add3_u32 v3, v7, v3, v12
+; GFX10-NEXT:    v_add3_u32 v3, v7, v3, v4
 ; GFX10-NEXT:    v_add_co_u32 v10, vcc_lo, v0, v2
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v11, vcc_lo, v1, v3, vcc_lo
 ; GFX10-NEXT:    global_store_dwordx4 v13, v[8:11], s[2:3]
@@ -3097,37 +3089,37 @@ define amdgpu_kernel void @v_mul_i128(ptr addrspace(1) %out, ptr addrspace(1) %a
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x2c
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_dual_mov_b32 v10, 0 :: v_dual_lshlrev_b32 v15, 4, v0
+; GFX11-NEXT:    v_dual_mov_b32 v12, 0 :: v_dual_lshlrev_b32 v17, 4, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    global_load_b128 v[0:3], v15, s[0:1]
-; GFX11-NEXT:    global_load_b128 v[4:7], v15, s[2:3]
+; GFX11-NEXT:    global_load_b128 v[0:3], v17, s[0:1]
+; GFX11-NEXT:    global_load_b128 v[4:7], v17, s[2:3]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mad_u64_u32 v[8:9], null, v0, v4, 0
-; GFX11-NEXT:    v_mul_lo_u32 v14, v5, v2
+; GFX11-NEXT:    v_mul_lo_u32 v18, v5, v2
 ; GFX11-NEXT:    v_mul_lo_u32 v3, v4, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_mad_u64_u32 v[11:12], null, v1, v4, v[9:10]
-; GFX11-NEXT:    v_dual_mov_b32 v13, v12 :: v_dual_mov_b32 v12, v10
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_mad_u64_u32 v[9:10], null, v0, v5, v[11:12]
-; GFX11-NEXT:    v_mad_u64_u32 v[11:12], null, v4, v2, 0
+; GFX11-NEXT:    v_mad_u64_u32 v[15:16], null, v4, v2, 0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_mov_b32_e32 v11, v9
+; GFX11-NEXT:    v_add3_u32 v16, v16, v3, v18
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_mad_u64_u32 v[13:14], null, v1, v4, v[11:12]
 ; GFX11-NEXT:    v_mul_lo_u32 v4, v6, v1
-; GFX11-NEXT:    v_mov_b32_e32 v2, v10
-; GFX11-NEXT:    v_mul_lo_u32 v10, v7, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_add3_u32 v12, v12, v3, v14
-; GFX11-NEXT:    v_add_co_u32 v2, s0, v13, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    v_mov_b32_e32 v11, v13
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_mad_u64_u32 v[9:10], null, v0, v5, v[11:12]
+; GFX11-NEXT:    v_mul_lo_u32 v12, v7, v0
+; GFX11-NEXT:    v_add_co_u32 v2, s0, v14, v10
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, 0, s0
-; GFX11-NEXT:    v_mad_u64_u32 v[13:14], null, v6, v0, v[11:12]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_mad_u64_u32 v[10:11], null, v6, v0, v[15:16]
 ; GFX11-NEXT:    v_mad_u64_u32 v[6:7], null, v1, v5, v[2:3]
-; GFX11-NEXT:    v_add3_u32 v0, v10, v14, v4
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_add_co_u32 v10, vcc_lo, v6, v13
+; GFX11-NEXT:    v_add3_u32 v0, v12, v11, v4
+; GFX11-NEXT:    v_add_co_u32 v10, vcc_lo, v6, v10
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v11, vcc_lo, v7, v0, vcc_lo
-; GFX11-NEXT:    global_store_b128 v15, v[8:11], s[2:3]
+; GFX11-NEXT:    global_store_b128 v17, v[8:11], s[2:3]
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: v_mul_i128:
@@ -3142,29 +3134,27 @@ define amdgpu_kernel void @v_mul_i128(ptr addrspace(1) %out, ptr addrspace(1) %a
 ; GFX12-NEXT:    global_load_b128 v[4:7], v13, s[2:3]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[8:9], null, v0, v4, 0
-; GFX12-NEXT:    v_mul_lo_u32 v15, v5, v2
+; GFX12-NEXT:    v_mul_lo_u32 v14, v5, v2
 ; GFX12-NEXT:    v_mul_lo_u32 v7, v7, v0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[11:12], null, v1, v4, v[9:10]
-; GFX12-NEXT:    v_mov_b32_e32 v14, v12
-; GFX12-NEXT:    v_mov_b32_e32 v12, v10
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_4)
-; GFX12-NEXT:    v_mad_co_u64_u32 v[9:10], null, v0, v5, v[11:12]
+; GFX12-NEXT:    v_mov_b32_e32 v9, v11
 ; GFX12-NEXT:    v_mul_lo_u32 v11, v4, v3
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[2:3], null, v4, v2, 0
-; GFX12-NEXT:    v_mul_lo_u32 v12, v6, v1
-; GFX12-NEXT:    v_mov_b32_e32 v4, v10
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_add3_u32 v3, v3, v11, v15
-; GFX12-NEXT:    v_add_co_u32 v10, s0, v14, v4
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX12-NEXT:    v_mul_lo_u32 v4, v6, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX12-NEXT:    v_mad_co_u64_u32 v[9:10], null, v0, v5, v[9:10]
+; GFX12-NEXT:    v_add3_u32 v3, v3, v11, v14
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_add_co_u32 v10, s0, v12, v10
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v11, null, 0, 0, s0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[2:3], null, v6, v0, v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[0:1], null, v1, v5, v[10:11]
-; GFX12-NEXT:    v_add3_u32 v3, v7, v3, v12
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_add3_u32 v3, v7, v3, v4
 ; GFX12-NEXT:    v_add_co_u32 v10, vcc_lo, v0, v2
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v11, vcc_lo, v1, v3, vcc_lo
 ; GFX12-NEXT:    global_store_b128 v13, v[8:11], s[2:3]
 ; GFX12-NEXT:    s_endpgm

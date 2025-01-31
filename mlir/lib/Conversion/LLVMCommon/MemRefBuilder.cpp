@@ -218,7 +218,7 @@ Value MemRefDescriptor::bufferPtr(OpBuilder &builder, Location loc,
 /// - aligned pointer;
 /// - offset;
 /// - <rank> sizes;
-/// - <rank> shapes;
+/// - <rank> strides;
 /// where <rank> is the MemRef rank as provided in `type`.
 Value MemRefDescriptor::pack(OpBuilder &builder, Location loc,
                              const LLVMTypeConverter &converter,
@@ -260,7 +260,7 @@ void MemRefDescriptor::unpack(OpBuilder &builder, Location loc, Value packed,
 /// Returns the number of non-aggregate values that would be produced by
 /// `unpack`.
 unsigned MemRefDescriptor::getNumUnpackedValues(MemRefType type) {
-  // Two pointers, offset, <rank> sizes, <rank> shapes.
+  // Two pointers, offset, <rank> sizes, <rank> strides.
   return 3 + 2 * type.getRank();
 }
 
