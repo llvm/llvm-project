@@ -36,6 +36,7 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <numeric>
 #include <optional>
 #include <stack>
 #include <string>
@@ -246,6 +247,96 @@ Expected<int64_t> CounterMappingContext::evaluate(const Counter &C) const {
   return LastPoppedValue;
 }
 
+void CountedRegion::merge(const CountedRegion &RHS, MergeStrategy Strategy) {
+  assert(this->isBranch() && RHS.isBranch());
+  auto MergeCounts = [Strategy](uint64_t &LHSCount, bool &LHSFolded,
+                                uint64_t RHSCount, bool RHSFolded) {
+    switch (Strategy) {
+    default:
+      llvm_unreachable("Don't perform by-parameter merging");
+    case MergeStrategy::Merge:
+      LHSCount += RHSCount;
+      LHSFolded = (LHSFolded && !LHSCount && RHSFolded);
+      break;
+    case MergeStrategy::All:
+      LHSCount = (LHSFolded   ? RHSCount
+                  : RHSFolded ? LHSCount
+                              : std::min(LHSCount, RHSCount));
+      LHSFolded = (LHSFolded && RHSFolded);
+      break;
+    }
+  };
+
+  switch (Strategy) {
+  case MergeStrategy::Any:
+    // Take either better (more satisfied) hand side.
+    // FIXME: Really needed? Better just to merge?
+    if (this->getMergeRank(Strategy) < RHS.getMergeRank(Strategy))
+      *this = RHS;
+    break;
+  case MergeStrategy::Merge:
+  case MergeStrategy::All:
+    // Able to merge by parameter.
+    MergeCounts(this->ExecutionCount, this->TrueFolded, RHS.ExecutionCount,
+                RHS.TrueFolded);
+    MergeCounts(this->FalseExecutionCount, this->FalseFolded,
+                RHS.FalseExecutionCount, RHS.FalseFolded);
+    break;
+  }
+}
+
+void MCDCRecord::merge(MCDCRecord &&RHS, MergeStrategy Strategy) {
+  assert(this->TV.size() ==
+         this->BitmapByCond[false].count() + this->BitmapByCond[true].count());
+  assert(RHS.TV.size() ==
+         RHS.BitmapByCond[false].count() + RHS.BitmapByCond[true].count());
+  assert(this->PosToID == RHS.PosToID);
+  assert(this->CondLoc == RHS.CondLoc);
+
+  switch (Strategy) {
+  case MergeStrategy::Merge:
+    break;
+  case MergeStrategy::Any:
+  case MergeStrategy::All:
+    if (this->getMergeRank(Strategy) < RHS.getMergeRank(Strategy))
+      *this = std::move(RHS);
+    return;
+  }
+
+  std::array<TestVectors, 2> LHSTV;
+  auto LHSI = this->TV.begin();
+  auto RHSI = RHS.TV.begin();
+  bool Merged = false;
+  for (auto MCDCCond : {MCDCRecord::MCDC_False, MCDCRecord::MCDC_True}) {
+    auto &LHSBitmap = this->BitmapByCond[MCDCCond];
+    auto &RHSBitmap = RHS.BitmapByCond[MCDCCond];
+    for (unsigned I = 0, E = LHSBitmap.size(); I != E; ++I) {
+      if (LHSBitmap[I]) {
+        if (RHSBitmap[I])
+          ++RHSI;
+        LHSTV[LHSI->second].push_back(std::move(*LHSI++));
+      } else if (RHSBitmap[I]) {
+        LHSTV[RHSI->second].push_back(std::move(*RHSI++));
+        LHSBitmap[I] = true;
+        Merged = true;
+      }
+    }
+
+    this->Folded[MCDCCond] &= RHS.Folded[MCDCCond];
+  }
+
+  if (Merged)
+    IndependencePairs.reset();
+
+  assert(LHSI == this->TV.end());
+  assert(RHSI == RHS.TV.end());
+  this->TV = std::move(LHSTV[false]);
+  this->TV.append(std::make_move_iterator(LHSTV[true].begin()),
+                  std::make_move_iterator(LHSTV[true].end()));
+  assert(this->TV.size() ==
+         this->BitmapByCond[false].count() + this->BitmapByCond[true].count());
+}
+
 // Find an independence pair for each condition:
 // - The condition is true in one test and false in the other.
 // - The decision outcome is true one test and false in the other.
@@ -257,13 +348,7 @@ void MCDCRecord::findIndependencePairs() {
   IndependencePairs.emplace();
 
   unsigned NumTVs = TV.size();
-  // Will be replaced to shorter expr.
-  unsigned TVTrueIdx = std::distance(
-      TV.begin(),
-      std::find_if(TV.begin(), TV.end(),
-                   [&](auto I) { return (I.second == MCDCRecord::MCDC_True); })
-
-  );
+  unsigned TVTrueIdx = BitmapByCond[false].count();
   for (unsigned I = TVTrueIdx; I < NumTVs; ++I) {
     const auto &[A, ACond] = TV[I];
     assert(ACond == MCDCRecord::MCDC_True);
@@ -408,6 +493,7 @@ class MCDCRecordProcessor : NextIDsBuilder, mcdc::TVIdxBuilder {
   /// with a bit value of '1' indicates that the corresponding Test Vector
   /// identified by that index was executed.
   const BitVector &Bitmap;
+  MCDCRecord::BitmapByCondTy BitmapByCond;
 
   /// Decision Region to which the ExecutedTestVectorBitmap applies.
   const CounterMappingRegion &Region;
@@ -426,13 +512,27 @@ class MCDCRecordProcessor : NextIDsBuilder, mcdc::TVIdxBuilder {
   /// Mapping of calculated MC/DC Independence Pairs for each condition.
   MCDCRecord::TVPairMap IndependencePairs;
 
-  /// Storage for ExecVectors
-  /// ExecVectors is the alias of its 0th element.
-  std::array<MCDCRecord::TestVectors, 2> ExecVectorsByCond;
+  /// Helper for sorting ExecVectors.
+  struct TVIdxTuple {
+    MCDCRecord::CondState MCDCCond; /// True/False
+    unsigned BIdx;                  /// Bitmap Index
+    unsigned Ord;                   /// Last position on ExecVectors
+
+    TVIdxTuple(MCDCRecord::CondState MCDCCond, unsigned BIdx, unsigned Ord)
+        : MCDCCond(MCDCCond), BIdx(BIdx), Ord(Ord) {}
+
+    bool operator<(const TVIdxTuple &RHS) const {
+      return (std::tie(this->MCDCCond, this->BIdx, this->Ord) <
+              std::tie(RHS.MCDCCond, RHS.BIdx, RHS.Ord));
+    }
+  };
+
+  // Indices for sorted TestVectors;
+  std::vector<TVIdxTuple> ExecVectorIdxs;
 
   /// Actual executed Test Vectors for the boolean expression, based on
   /// ExecutedTestVectorBitmap.
-  MCDCRecord::TestVectors &ExecVectors;
+  MCDCRecord::TestVectors ExecVectors;
 
 #ifndef NDEBUG
   DenseSet<unsigned> TVIdxs;
@@ -446,11 +546,11 @@ public:
                       ArrayRef<const CounterMappingRegion *> Branches,
                       bool IsVersion11)
       : NextIDsBuilder(Branches), TVIdxBuilder(this->NextIDs), Bitmap(Bitmap),
+        BitmapByCond{{BitVector(NumTestVectors), BitVector(NumTestVectors)}},
         Region(Region), DecisionParams(Region.getDecisionParams()),
         Branches(Branches), NumConditions(DecisionParams.NumConditions),
         Folded{{BitVector(NumConditions), BitVector(NumConditions)}},
-        IndependencePairs(NumConditions), ExecVectors(ExecVectorsByCond[false]),
-        IsVersion11(IsVersion11) {}
+        IndependencePairs(NumConditions), IsVersion11(IsVersion11) {}
 
 private:
   // Walk the binary decision diagram and try assigning both false and true to
@@ -478,10 +578,14 @@ private:
                       : DecisionParams.BitmapIdx - NumTestVectors + NextTVIdx])
         continue;
 
+      assert(!BitmapByCond[MCDCCond][NextTVIdx]);
+      BitmapByCond[MCDCCond][NextTVIdx] = true;
+      ExecVectorIdxs.emplace_back(MCDCCond, NextTVIdx, ExecVectors.size());
+
       // Copy the completed test vector to the vector of testvectors.
       // The final value (T,F) is equal to the last non-dontcare state on the
       // path (in a short-circuiting system).
-      ExecVectorsByCond[MCDCCond].push_back({TV, MCDCCond});
+      ExecVectors.push_back({TV, MCDCCond});
     }
 
     // Reset back to DontCare.
@@ -500,12 +604,13 @@ private:
     assert(TVIdxs.size() == unsigned(NumTestVectors) &&
            "TVIdxs wasn't fulfilled");
 
-    // Fill ExecVectors order by False items and True items.
-    // ExecVectors is the alias of ExecVectorsByCond[false], so
-    // Append ExecVectorsByCond[true] on it.
-    auto &ExecVectorsT = ExecVectorsByCond[true];
-    ExecVectors.append(std::make_move_iterator(ExecVectorsT.begin()),
-                       std::make_move_iterator(ExecVectorsT.end()));
+    llvm::sort(ExecVectorIdxs);
+    MCDCRecord::TestVectors NewTestVectors;
+    for (const auto &IdxTuple : ExecVectorIdxs)
+      NewTestVectors.push_back(std::move(ExecVectors[IdxTuple.Ord]));
+    ExecVectors = std::move(NewTestVectors);
+
+    assert(!BitmapByCond[false].anyCommon(BitmapByCond[true]));
   }
 
 public:
@@ -544,8 +649,9 @@ public:
     findExecutedTestVectors();
 
     // Record Test vectors, executed vectors, and independence pairs.
-    return MCDCRecord(Region, std::move(ExecVectors), std::move(Folded),
-                      std::move(PosToID), std::move(CondLoc));
+    return MCDCRecord(Region, std::move(ExecVectors), std::move(BitmapByCond),
+                      std::move(Folded), std::move(PosToID),
+                      std::move(CondLoc));
   }
 };
 
@@ -1298,7 +1404,8 @@ class SegmentBuilder {
 
   /// Combine counts of regions which cover the same area.
   static ArrayRef<CountedRegion>
-  combineRegions(MutableArrayRef<CountedRegion> Regions) {
+  combineRegions(MutableArrayRef<CountedRegion> Regions,
+                 MergeStrategy Strategy) {
     if (Regions.empty())
       return Regions;
     auto Active = Regions.begin();
@@ -1324,8 +1431,22 @@ class SegmentBuilder {
       // value for that area.
       // We add counts of the regions of the same kind as the active region
       // to handle the both situations.
-      if (I->Kind == Active->Kind)
+      if (I->Kind != Active->Kind)
+        continue;
+
+      switch (Strategy) {
+      case MergeStrategy::Merge:
         Active->ExecutionCount += I->ExecutionCount;
+        break;
+      case MergeStrategy::Any:
+        Active->ExecutionCount =
+            std::max(Active->ExecutionCount, I->ExecutionCount);
+        break;
+      case MergeStrategy::All:
+        Active->ExecutionCount =
+            std::min(Active->ExecutionCount, I->ExecutionCount);
+        break;
+      }
     }
     return Regions.drop_back(std::distance(++Active, End));
   }
@@ -1333,12 +1454,13 @@ class SegmentBuilder {
 public:
   /// Build a sorted list of CoverageSegments from a list of Regions.
   static std::vector<CoverageSegment>
-  buildSegments(MutableArrayRef<CountedRegion> Regions) {
+  buildSegments(MutableArrayRef<CountedRegion> Regions,
+                MergeStrategy Strategy) {
     std::vector<CoverageSegment> Segments;
     SegmentBuilder Builder(Segments);
 
     sortNestedRegions(Regions);
-    ArrayRef<CountedRegion> CombinedRegions = combineRegions(Regions);
+    ArrayRef<CountedRegion> CombinedRegions = combineRegions(Regions, Strategy);
 
     LLVM_DEBUG({
       dbgs() << "Combined regions:\n";
@@ -1368,6 +1490,107 @@ public:
   }
 };
 
+template <class RecTy>
+static void mergeRecords(std::vector<RecTy> &Records, MergeStrategy Strategy) {
+  if (Records.empty())
+    return;
+
+  std::vector<RecTy> NewRecords;
+
+  assert(Records.size() <= std::numeric_limits<unsigned>::max());
+
+  // Build up sorted indices (rather than pointers) of Records.
+  SmallVector<unsigned, 1> BIdxs(Records.size());
+  std::iota(BIdxs.begin(), BIdxs.end(), 0);
+  llvm::stable_sort(BIdxs, [&](auto A, auto B) {
+    auto StartA = Records[A].viewLoc();
+    auto StartB = Records[B].viewLoc();
+    return (std::tie(StartA, A) < std::tie(StartB, B));
+  });
+
+  // 1st element should be stored into SubView.
+  auto I = BIdxs.begin(), E = BIdxs.end();
+  SmallVector<RecTy, 1> ViewRecords{Records[*I++]};
+
+  auto findMergeableInViewRecords = [&](const RecTy &Branch) {
+    auto I = ViewRecords.rbegin(), E = ViewRecords.rend();
+    for (; I != E; ++I)
+      if (I->isMergeable(Branch))
+        return I;
+
+    // Not mergeable.
+    return E;
+  };
+
+  auto addRecordToSubView = [&] {
+    assert(!ViewRecords.empty() && "Should have the back");
+    for (auto &Acc : ViewRecords) {
+      Acc.commit();
+      NewRecords.push_back(std::move(Acc));
+    }
+  };
+
+  for (; I != E; ++I) {
+    assert(!ViewRecords.empty() && "Should have the back in the loop");
+    auto &AccB = ViewRecords.back();
+    auto &Branch = Records[*I];
+
+    // Flush current and create the next SubView at the different line.
+    if (AccB.viewLoc().first != Branch.viewLoc().first) {
+      addRecordToSubView();
+      ViewRecords = {Branch};
+    } else if (auto AccI = findMergeableInViewRecords(Branch);
+               AccI != ViewRecords.rend()) {
+      // Merge the current Branch into the back of SubView.
+      AccI->merge(std::move(Branch), Strategy);
+    } else {
+      // Not mergeable.
+      ViewRecords.push_back(Branch);
+    }
+  }
+
+  // Flush the last SubView.
+  addRecordToSubView();
+
+  // Replace
+  Records = std::move(NewRecords);
+}
+
+struct MergeableCoverageData : public CoverageData {
+  std::vector<CountedRegion> CodeRegions;
+  MergeStrategy Strategy;
+
+  MergeableCoverageData(MergeStrategy Strategy, bool Single, StringRef Filename)
+      : CoverageData(Single, Filename), Strategy(Strategy) {}
+
+  void addFunctionRegions(
+      const FunctionRecord &Function,
+      std::function<bool(const CounterMappingRegion &CR)> shouldProcess,
+      std::function<bool(const CountedRegion &CR)> shouldExpand) {
+    for (const auto &CR : Function.CountedRegions)
+      if (shouldProcess(CR)) {
+        CodeRegions.push_back(CR);
+        if (shouldExpand(CR))
+          Expansions.emplace_back(CR, Function);
+      }
+    // Capture branch regions specific to the function (excluding expansions).
+    for (const auto &CR : Function.CountedBranchRegions)
+      if (shouldProcess(CR))
+        BranchRegions.push_back(CR);
+    // Capture MCDC records specific to the function.
+    for (const auto &MR : Function.MCDCRecords)
+      if (shouldProcess(MR.getDecisionRegion()))
+        MCDCRecords.push_back(MR);
+  }
+
+  CoverageData merge(MergeStrategy Strategy) {
+    mergeRecords(BranchRegions, Strategy);
+    mergeRecords(MCDCRecords, Strategy);
+
+    Segments = SegmentBuilder::buildSegments(CodeRegions, Strategy);
+    return CoverageData(std::move(*this));
+  }
+};
 } // end anonymous namespace
 
 std::vector<StringRef> CoverageMapping::getUniqueSourceFiles() const {
@@ -1417,10 +1640,11 @@ static bool isExpansion(const CountedRegion &R, unsigned FileID) {
   return R.Kind == CounterMappingRegion::ExpansionRegion && R.FileID == FileID;
 }
 
-CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
+CoverageData CoverageMapping::getCoverageForFile(
+    StringRef Filename, MergeStrategy Strategy,
+    const DenseSet<const FunctionRecord *> &FilteredOutFunctions) const {
   assert(SingleByteCoverage);
-  CoverageData FileCoverage(*SingleByteCoverage, Filename);
-  std::vector<CountedRegion> Regions;
+  MergeableCoverageData FileCoverage(Strategy, *SingleByteCoverage, Filename);
 
   // Look up the function records in the given file. Due to hash collisions on
   // the filename, we may get back some records that are not in the file.
@@ -1428,28 +1652,18 @@ CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
       getImpreciseRecordIndicesForFilename(Filename);
   for (unsigned RecordIndex : RecordIndices) {
     const FunctionRecord &Function = Functions[RecordIndex];
+    if (FilteredOutFunctions.count(&Function))
+      continue;
     auto MainFileID = findMainViewFileID(Filename, Function);
     auto FileIDs = gatherFileIDs(Filename, Function);
-    for (const auto &CR : Function.CountedRegions)
-      if (FileIDs.test(CR.FileID)) {
-        Regions.push_back(CR);
-        if (MainFileID && isExpansion(CR, *MainFileID))
-          FileCoverage.Expansions.emplace_back(CR, Function);
-      }
-    // Capture branch regions specific to the function (excluding expansions).
-    for (const auto &CR : Function.CountedBranchRegions)
-      if (FileIDs.test(CR.FileID))
-        FileCoverage.BranchRegions.push_back(CR);
-    // Capture MCDC records specific to the function.
-    for (const auto &MR : Function.MCDCRecords)
-      if (FileIDs.test(MR.getDecisionRegion().FileID))
-        FileCoverage.MCDCRecords.push_back(MR);
+    FileCoverage.addFunctionRegions(
+        Function, [&](auto &CR) { return FileIDs.test(CR.FileID); },
+        [&](auto &CR) { return (MainFileID && isExpansion(CR, *MainFileID)); });
   }
 
   LLVM_DEBUG(dbgs() << "Emitting segments for file: " << Filename << "\n");
-  FileCoverage.Segments = SegmentBuilder::buildSegments(Regions);
 
-  return FileCoverage;
+  return FileCoverage.merge(Strategy);
 }
 
 std::vector<InstantiationGroup>
@@ -1478,36 +1692,23 @@ CoverageMapping::getInstantiationGroups(StringRef Filename) const {
 }
 
 CoverageData
-CoverageMapping::getCoverageForFunction(const FunctionRecord &Function) const {
+CoverageMapping::getCoverageForFunction(const FunctionRecord &Function,
+                                        MergeStrategy Strategy) const {
   auto MainFileID = findMainViewFileID(Function);
   if (!MainFileID)
     return CoverageData();
 
   assert(SingleByteCoverage);
-  CoverageData FunctionCoverage(*SingleByteCoverage,
-                                Function.Filenames[*MainFileID]);
-  std::vector<CountedRegion> Regions;
-  for (const auto &CR : Function.CountedRegions)
-    if (CR.FileID == *MainFileID) {
-      Regions.push_back(CR);
-      if (isExpansion(CR, *MainFileID))
-        FunctionCoverage.Expansions.emplace_back(CR, Function);
-    }
-  // Capture branch regions specific to the function (excluding expansions).
-  for (const auto &CR : Function.CountedBranchRegions)
-    if (CR.FileID == *MainFileID)
-      FunctionCoverage.BranchRegions.push_back(CR);
-
-  // Capture MCDC records specific to the function.
-  for (const auto &MR : Function.MCDCRecords)
-    if (MR.getDecisionRegion().FileID == *MainFileID)
-      FunctionCoverage.MCDCRecords.push_back(MR);
+  MergeableCoverageData FunctionCoverage(Strategy, *SingleByteCoverage,
+                                         Function.Filenames[*MainFileID]);
+  FunctionCoverage.addFunctionRegions(
+      Function, [&](auto &CR) { return (CR.FileID == *MainFileID); },
+      [&](auto &CR) { return isExpansion(CR, *MainFileID); });
 
   LLVM_DEBUG(dbgs() << "Emitting segments for function: " << Function.Name
                     << "\n");
-  FunctionCoverage.Segments = SegmentBuilder::buildSegments(Regions);
 
-  return FunctionCoverage;
+  return FunctionCoverage.merge(Strategy);
 }
 
 CoverageData CoverageMapping::getCoverageForExpansion(
@@ -1529,7 +1730,8 @@ CoverageData CoverageMapping::getCoverageForExpansion(
 
   LLVM_DEBUG(dbgs() << "Emitting segments for expansion of file "
                     << Expansion.FileID << "\n");
-  ExpansionCoverage.Segments = SegmentBuilder::buildSegments(Regions);
+  ExpansionCoverage.Segments =
+      SegmentBuilder::buildSegments(Regions, MergeStrategy::Merge);
 
   return ExpansionCoverage;
 }
