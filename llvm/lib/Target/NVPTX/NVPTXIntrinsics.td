@@ -1581,6 +1581,28 @@ def INT_NVVM_ADD_RM_D : F_MATH_2<"add.rm.f64 \t$dst, $src0, $src1;",
 def INT_NVVM_ADD_RP_D : F_MATH_2<"add.rp.f64 \t$dst, $src0, $src1;",
   Float64Regs, Float64Regs, Float64Regs, int_nvvm_add_rp_d>;
 
+// F32x2 ops (sm_100+)
+
+def FADD_F32X2 : NVPTXInst<(outs Int64Regs:$res),
+                           (ins Int64Regs:$a, Int64Regs:$b),
+                           "add.rn.f32x2 \t$res, $a, $b;", []>,
+                 Requires<[hasF32x2Instructions]>;
+
+def FSUB_F32X2 : NVPTXInst<(outs Int64Regs:$res),
+                           (ins Int64Regs:$a, Int64Regs:$b),
+                           "sub.rn.f32x2 \t$res, $a, $b;", []>,
+                 Requires<[hasF32x2Instructions]>;
+
+def FMUL_F32X2 : NVPTXInst<(outs Int64Regs:$res),
+                           (ins Int64Regs:$a, Int64Regs:$b),
+                           "mul.rn.f32x2 \t$res, $a, $b;", []>,
+                 Requires<[hasF32x2Instructions]>;
+
+def FMA_F32X2  : NVPTXInst<(outs Int64Regs:$res),
+                           (ins Int64Regs:$a, Int64Regs:$b, Int64Regs:$c),
+                           "fma.rn.f32x2 \t$res, $a, $b;", []>,
+                 Requires<[hasF32x2Instructions]>;
+
 //
 // BFIND
 //

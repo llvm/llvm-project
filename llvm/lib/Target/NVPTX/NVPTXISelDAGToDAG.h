@@ -88,6 +88,7 @@ private:
   bool tryConstantFP(SDNode *N);
   bool SelectSETP_F16X2(SDNode *N);
   bool SelectSETP_BF16X2(SDNode *N);
+  void SelectF32X2Op(SDNode *N);
   bool tryEXTRACT_VECTOR_ELEMENT(SDNode *N);
   void SelectV2I64toI128(SDNode *N);
   void SelectI128toV2I64(SDNode *N);

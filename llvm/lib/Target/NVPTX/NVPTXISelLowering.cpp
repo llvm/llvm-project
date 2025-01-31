@@ -866,6 +866,14 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setBF16OperationAction(ISD::FNEG, MVT::v2bf16, Legal, Expand);
   // (would be) Library functions.
 
+  if (STI.hasF32x2Instructions()) {
+    // Handle custom lowering for: v2f32 = OP v2f32, v2f32
+    for (const auto &Op : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FMA})
+      setOperationAction(Op, MVT::v2f32, Custom);
+    // Handle custom lowering for: i64 = bitcast v2f32
+    setOperationAction(ISD::BITCAST, MVT::v2f32, Custom);
+  }
+
   // These map to conversion instructions for scalar FP types.
   for (const auto &Op : {ISD::FCEIL, ISD::FFLOOR, ISD::FNEARBYINT, ISD::FRINT,
                          ISD::FROUNDEVEN, ISD::FTRUNC}) {
@@ -1066,6 +1074,10 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::STACKSAVE)
     MAKE_CASE(NVPTXISD::SETP_F16X2)
     MAKE_CASE(NVPTXISD::SETP_BF16X2)
+    MAKE_CASE(NVPTXISD::FADD_F32X2)
+    MAKE_CASE(NVPTXISD::FSUB_F32X2)
+    MAKE_CASE(NVPTXISD::FMUL_F32X2)
+    MAKE_CASE(NVPTXISD::FMA_F32X2)
     MAKE_CASE(NVPTXISD::Dummy)
     MAKE_CASE(NVPTXISD::MUL_WIDE_SIGNED)
     MAKE_CASE(NVPTXISD::MUL_WIDE_UNSIGNED)
@@ -2099,24 +2111,58 @@ SDValue NVPTXTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
   // Handle bitcasting from v2i8 without hitting the default promotion
   // strategy which goes through stack memory.
   EVT FromVT = Op->getOperand(0)->getValueType(0);
-  if (FromVT != MVT::v2i8) {
-    return Op;
+  EVT ToVT = Op->getValueType(0);
+  SDLoc DL(Op);
+
+  if (FromVT == MVT::v2i8) {
+    // Pack vector elements into i16 and bitcast to final type
+    SDValue Vec0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8,
+                               Op->getOperand(0), DAG.getIntPtrConstant(0, DL));
+    SDValue Vec1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8,
+                               Op->getOperand(0), DAG.getIntPtrConstant(1, DL));
+    SDValue Extend0 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Vec0);
+    SDValue Extend1 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Vec1);
+    SDValue Const8 = DAG.getConstant(8, DL, MVT::i16);
+    SDValue AsInt = DAG.getNode(
+        ISD::OR, DL, MVT::i16,
+        {Extend0, DAG.getNode(ISD::SHL, DL, MVT::i16, {Extend1, Const8})});
+    EVT ToVT = Op->getValueType(0);
+    return MaybeBitcast(DAG, DL, ToVT, AsInt);
   }
 
-  // Pack vector elements into i16 and bitcast to final type
-  SDLoc DL(Op);
-  SDValue Vec0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8,
-                             Op->getOperand(0), DAG.getIntPtrConstant(0, DL));
-  SDValue Vec1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8,
-                             Op->getOperand(0), DAG.getIntPtrConstant(1, DL));
-  SDValue Extend0 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Vec0);
-  SDValue Extend1 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Vec1);
-  SDValue Const8 = DAG.getConstant(8, DL, MVT::i16);
-  SDValue AsInt = DAG.getNode(
-      ISD::OR, DL, MVT::i16,
-      {Extend0, DAG.getNode(ISD::SHL, DL, MVT::i16, {Extend1, Const8})});
-  EVT ToVT = Op->getValueType(0);
-  return MaybeBitcast(DAG, DL, ToVT, AsInt);
+  if (FromVT == MVT::v2f32) {
+    assert(ToVT == MVT::i64);
+
+    // A bitcast to i64 from v2f32.
+    // See if we can legalize the operand.
+    const SDValue &Operand = Op->getOperand(0);
+    if (Operand.getOpcode() == ISD::BUILD_VECTOR) {
+      const SDValue &BVOp0 = Operand.getOperand(0);
+      const SDValue &BVOp1 = Operand.getOperand(1);
+
+      auto CastToAPInt = [](SDValue Op) -> APInt {
+        if (Op->isUndef())
+          return APInt(64, 0); // undef values default to 0
+        return cast<ConstantFPSDNode>(Op)->getValueAPF().bitcastToAPInt().zext(
+            64);
+      };
+
+      if ((BVOp0->isUndef() || isa<ConstantFPSDNode>(BVOp0)) &&
+          (BVOp1->isUndef() || isa<ConstantFPSDNode>(BVOp1))) {
+        // cast two constants
+        APInt Value(64, 0);
+        Value = CastToAPInt(BVOp0) | CastToAPInt(BVOp1).shl(32);
+        SDValue Const = DAG.getConstant(Value, DL, MVT::i64);
+        return DAG.getBitcast(ToVT, Const);
+      }
+
+      // otherwise build an i64
+      return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64,
+                         DAG.getBitcast(MVT::i32, BVOp0),
+                         DAG.getBitcast(MVT::i32, BVOp1));
+    }
+  }
+  return Op;
 }
 
 // We can init constant f16x2/v2i16/v4i8 with a single .b32 move.  Normally it
@@ -3053,6 +3099,13 @@ bool NVPTXTargetLowering::splitValueIntoRegisterParts(
     return true;
   }
   return false;
+}
+
+const TargetRegisterClass *
+NVPTXTargetLowering::getRegClassFor(MVT VT, bool isDivergent) const {
+  if (VT == MVT::v2f32)
+    return &NVPTX::Int64RegsRegClass;
+  return TargetLowering::getRegClassFor(VT, isDivergent);
 }
 
 // This creates target external symbol for a function parameter.
@@ -5055,10 +5108,10 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
       IsPTXVectorType(VectorVT.getSimpleVT()))
     return SDValue(); // Native vector loads already combine nicely w/
                       // extract_vector_elt.
-  // Don't mess with singletons or v2*16, v4i8 and v8i8 types, we already
+  // Don't mess with singletons or v2*16, v4i8, v8i8, or v2f32 types, we already
   // handle them OK.
   if (VectorVT.getVectorNumElements() == 1 || Isv2x16VT(VectorVT) ||
-      VectorVT == MVT::v4i8 || VectorVT == MVT::v8i8)
+      VectorVT == MVT::v4i8 || VectorVT == MVT::v8i8 || VectorVT == MVT::v2f32)
     return SDValue();
 
   // Don't mess with undef values as sra may be simplified to 0, not undef.
@@ -5478,6 +5531,45 @@ static void ReplaceCopyFromReg_128(SDNode *N, SelectionDAG &DAG,
   Results.push_back(NewValue.getValue(3));
 }
 
+static void ReplaceF32x2Op(SDNode *N, SelectionDAG &DAG,
+                           SmallVectorImpl<SDValue> &Results,
+                           bool UseFTZ) {
+  SDLoc DL(N);
+  EVT OldResultTy = N->getValueType(0); // <2 x float>
+  assert(OldResultTy == MVT::v2f32 && "Unexpected result type for F32x2 op!");
+
+  SmallVector<SDValue> NewOps;
+
+  // whether we use FTZ (TODO)
+
+  // replace with NVPTX F32x2 op:
+  unsigned Opcode;
+  switch (N->getOpcode()) {
+  case ISD::FADD:
+    Opcode = NVPTXISD::FADD_F32X2;
+    break;
+  case ISD::FSUB:
+    Opcode = NVPTXISD::FSUB_F32X2;
+    break;
+  case ISD::FMUL:
+    Opcode = NVPTXISD::FMUL_F32X2;
+    break;
+  case ISD::FMA:
+    Opcode = NVPTXISD::FMA_F32X2;
+    break;
+  default:
+    llvm_unreachable("Unexpected opcode");
+  }
+
+  // bitcast operands: <2 x float> -> i64
+  for (const SDValue &Op : N->ops())
+    NewOps.push_back(DAG.getNode(ISD::BITCAST, DL, MVT::i64, Op));
+
+  // cast i64 result of new op back to <2 x float>
+  SDValue NewValue = DAG.getNode(Opcode, DL, MVT::i64, NewOps);
+  Results.push_back(DAG.getBitcast(OldResultTy, NewValue));
+}
+
 void NVPTXTargetLowering::ReplaceNodeResults(
     SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
   switch (N->getOpcode()) {
@@ -5494,6 +5586,12 @@ void NVPTXTargetLowering::ReplaceNodeResults(
     return;
   case ISD::CopyFromReg:
     ReplaceCopyFromReg_128(N, DAG, Results);
+    return;
+  case ISD::FADD:
+  case ISD::FSUB:
+  case ISD::FMUL:
+  case ISD::FMA:
+    ReplaceF32x2Op(N, DAG, Results, useF32FTZ(DAG.getMachineFunction()));
     return;
   }
 }

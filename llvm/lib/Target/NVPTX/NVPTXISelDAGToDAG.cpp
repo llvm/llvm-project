@@ -121,6 +121,12 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   case NVPTXISD::SETP_BF16X2:
     SelectSETP_BF16X2(N);
     return;
+  case NVPTXISD::FADD_F32X2:
+  case NVPTXISD::FSUB_F32X2:
+  case NVPTXISD::FMUL_F32X2:
+  case NVPTXISD::FMA_F32X2:
+    SelectF32X2Op(N);
+    return;
   case NVPTXISD::LoadV2:
   case NVPTXISD::LoadV4:
     if (tryLoadVector(N))
@@ -293,6 +299,30 @@ bool NVPTXDAGToDAGISel::SelectSETP_BF16X2(SDNode *N) {
       N->getOperand(1), CurDAG->getTargetConstant(PTXCmpMode, DL, MVT::i32));
   ReplaceNode(N, SetP);
   return true;
+}
+
+void NVPTXDAGToDAGISel::SelectF32X2Op(SDNode *N) {
+  unsigned Opcode;
+  switch (N->getOpcode()) {
+  case NVPTXISD::FADD_F32X2:
+    Opcode = NVPTX::FADD_F32X2;
+    break;
+  case NVPTXISD::FSUB_F32X2:
+    Opcode = NVPTX::FSUB_F32X2;
+    break;
+  case NVPTXISD::FMUL_F32X2:
+    Opcode = NVPTX::FMUL_F32X2;
+    break;
+  case NVPTXISD::FMA_F32X2:
+    Opcode = NVPTX::FMA_F32X2;
+    break;
+  default:
+    llvm_unreachable("Unexpected opcode!");
+  }
+  SDLoc DL(N);
+  SmallVector<SDValue> NewOps(N->ops());
+  SDNode *NewNode = CurDAG->getMachineNode(Opcode, DL, MVT::i64, NewOps);
+  ReplaceNode(N, NewNode);
 }
 
 // Find all instances of extract_vector_elt that use this v2f16 vector

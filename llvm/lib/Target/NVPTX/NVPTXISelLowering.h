@@ -55,6 +55,10 @@ enum NodeType : unsigned {
   FSHR_CLAMP,
   MUL_WIDE_SIGNED,
   MUL_WIDE_UNSIGNED,
+  FADD_F32X2,
+  FMUL_F32X2,
+  FSUB_F32X2,
+  FMA_F32X2,
   SETP_F16X2,
   SETP_BF16X2,
   BFE,
@@ -310,6 +314,9 @@ private:
   splitValueIntoRegisterParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val,
                               SDValue *Parts, unsigned NumParts, MVT PartVT,
                               std::optional<CallingConv::ID> CC) const override;
+
+  const TargetRegisterClass *getRegClassFor(MVT VT,
+                                            bool isDivergent) const override;
 
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;

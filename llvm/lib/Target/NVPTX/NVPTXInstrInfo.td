@@ -165,6 +165,7 @@ def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
 def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
 def hasDotInstructions : Predicate<"Subtarget->hasDotInstructions()">;
 def hasTcgen05Instructions : Predicate<"Subtarget->hasTcgen05Instructions()">;
+def hasF32x2Instructions : Predicate<"Subtarget->hasF32x2Instructions()">;
 
 def True : Predicate<"true">;
 def False : Predicate<"false">;
@@ -2638,13 +2639,13 @@ class LastCallArgInstVT<NVPTXRegClass regclass, ValueType vt> :
   NVPTXInst<(outs), (ins regclass:$a), "$a",
             [(LastCallArg (i32 0), vt:$a)]>;
 
-def CallArgI64     : CallArgInst<Int64Regs>;
+def CallArgI64     : CallArgInstVT<Int64Regs, i64>;
 def CallArgI32     : CallArgInstVT<Int32Regs, i32>;
 def CallArgI16     : CallArgInstVT<Int16Regs, i16>;
 def CallArgF64     : CallArgInst<Float64Regs>;
 def CallArgF32     : CallArgInst<Float32Regs>;
 
-def LastCallArgI64 : LastCallArgInst<Int64Regs>;
+def LastCallArgI64 : LastCallArgInstVT<Int64Regs, i64>;
 def LastCallArgI32 : LastCallArgInstVT<Int32Regs, i32>;
 def LastCallArgI16 : LastCallArgInstVT<Int16Regs, i16>;
 def LastCallArgF64 : LastCallArgInst<Float64Regs>;
@@ -3371,6 +3372,9 @@ let hasSideEffects = false in {
   def V2F32toF64 : NVPTXInst<(outs Float64Regs:$d),
                              (ins Float32Regs:$s1, Float32Regs:$s2),
                              "mov.b64 \t$d, {{$s1, $s2}};", []>;
+  def V2F32toI64 : NVPTXInst<(outs Int64Regs:$d),
+                             (ins Float32Regs:$s1, Float32Regs:$s2),
+                             "mov.b64 \t$d, {{$s1, $s2}};", []>;
 
   // unpack a larger int register to a set of smaller int registers
   def I64toV4I16 : NVPTXInst<(outs Int16Regs:$d1, Int16Regs:$d2,
@@ -3435,6 +3439,10 @@ def : Pat<(v2bf16 (build_vector bf16:$a, bf16:$b)),
           (V2I16toI32 $a, $b)>;
 def : Pat<(v2i16 (build_vector i16:$a, i16:$b)),
           (V2I16toI32 $a, $b)>;
+def : Pat<(v2f32 (build_vector f32:$a, f32:$b)),
+          (V2F32toI64 $a, $b)>;
+def : Pat<(i64 (build_pair i32:$a, i32:$b)),
+          (V2I32toI64 $a, $b)>;
 
 def: Pat<(v2i16 (scalar_to_vector i16:$a)),
          (CVT_u32_u16 $a, CvtNONE)>;

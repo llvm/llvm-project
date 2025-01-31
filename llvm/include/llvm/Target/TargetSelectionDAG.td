@@ -818,6 +818,10 @@ def step_vector : SDNode<"ISD::STEP_VECTOR", SDTypeProfile<1, 1,
 def scalar_to_vector : SDNode<"ISD::SCALAR_TO_VECTOR", SDTypeProfile<1, 1, []>,
                               []>;
 
+def build_pair : SDNode<"ISD::BUILD_PAIR", SDTypeProfile<1, 2,
+                        [SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2>]>, []>;
+
+
 // vector_extract/vector_insert are deprecated. extractelt/insertelt
 // are preferred.
 def vector_extract : SDNode<"ISD::EXTRACT_VECTOR_ELT",
