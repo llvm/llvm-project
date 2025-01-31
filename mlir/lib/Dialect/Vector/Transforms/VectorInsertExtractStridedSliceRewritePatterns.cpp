@@ -318,6 +318,8 @@ public:
   }
 };
 
+// TODO: Make sure these `populate*` patterns are tested in isolation.
+
 void vector::populateVectorInsertExtractStridedSliceDecompositionPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<DecomposeDifferentRankInsertStridedSlice,
