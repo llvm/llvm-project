@@ -291,10 +291,10 @@ define amdgpu_ps void @test_s_load_constant_v8i32_align1(ptr addrspace(4) inreg 
 ; GFX9-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_readfirstlane_b32 s8, v4
-; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_readfirstlane_b32 s9, v5
 ; GFX9-NEXT:    v_readfirstlane_b32 s10, v6
 ; GFX9-NEXT:    v_readfirstlane_b32 s11, v7
+; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s7
@@ -322,10 +322,10 @@ define amdgpu_ps void @test_s_load_constant_v8i32_align1(ptr addrspace(4) inreg 
 ; GFX7-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    v_readfirstlane_b32 s8, v4
-; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_readfirstlane_b32 s9, v5
 ; GFX7-NEXT:    v_readfirstlane_b32 s10, v6
 ; GFX7-NEXT:    v_readfirstlane_b32 s11, v7
+; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s3
@@ -383,9 +383,9 @@ define amdgpu_ps void @test_s_load_constant_v8i32_align1(ptr addrspace(4) inreg 
 ; GFX11-NEXT:    v_readfirstlane_b32 s11, v7
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v3, s7
 ; GFX11-NEXT:    v_dual_mov_b32 v1, s5 :: v_dual_mov_b32 v2, s6
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-NEXT:    v_dual_mov_b32 v4, s8 :: v_dual_mov_b32 v7, s11
-; GFX11-NEXT:    v_dual_mov_b32 v5, s9 :: v_dual_mov_b32 v6, s10
+; GFX11-NEXT:    v_dual_mov_b32 v5, s9 :: v_dual_mov_b32 v4, s8
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX11-NEXT:    v_dual_mov_b32 v7, s11 :: v_dual_mov_b32 v6, s10
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b128 v8, v[0:3], s[2:3]
 ; GFX11-NEXT:    global_store_b128 v8, v[4:7], s[2:3] offset:16

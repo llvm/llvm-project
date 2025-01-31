@@ -74,11 +74,11 @@ define amdgpu_ps <4 x float> @sample_1d_tfe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX6789-NEXT:    s_mov_b64 s[14:15], exec
 ; GFX6789-NEXT:    s_wqm_b64 exec, exec
 ; GFX6789-NEXT:    v_mov_b32_e32 v6, 0
-; GFX6789-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX6789-NEXT:    v_mov_b32_e32 v7, v6
 ; GFX6789-NEXT:    v_mov_b32_e32 v8, v6
 ; GFX6789-NEXT:    v_mov_b32_e32 v9, v6
 ; GFX6789-NEXT:    v_mov_b32_e32 v10, v6
+; GFX6789-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX6789-NEXT:    v_mov_b32_e32 v0, v6
 ; GFX6789-NEXT:    v_mov_b32_e32 v1, v7
 ; GFX6789-NEXT:    v_mov_b32_e32 v2, v8
@@ -634,11 +634,11 @@ define amdgpu_ps <4 x float> @sample_1d_lwe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX6789-NEXT:    s_mov_b64 s[14:15], exec
 ; GFX6789-NEXT:    s_wqm_b64 exec, exec
 ; GFX6789-NEXT:    v_mov_b32_e32 v6, 0
-; GFX6789-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX6789-NEXT:    v_mov_b32_e32 v7, v6
 ; GFX6789-NEXT:    v_mov_b32_e32 v8, v6
 ; GFX6789-NEXT:    v_mov_b32_e32 v9, v6
 ; GFX6789-NEXT:    v_mov_b32_e32 v10, v6
+; GFX6789-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX6789-NEXT:    v_mov_b32_e32 v0, v6
 ; GFX6789-NEXT:    v_mov_b32_e32 v1, v7
 ; GFX6789-NEXT:    v_mov_b32_e32 v2, v8

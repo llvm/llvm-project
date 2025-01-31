@@ -7905,8 +7905,8 @@ define amdgpu_kernel void @sdiv_i64_pow2_shl_denom(ptr addrspace(1) %out, i64 %x
 ; GFX6-NEXT:    s_xor_b64 s[4:5], s[4:5], s[6:7]
 ; GFX6-NEXT:    s_sub_u32 s4, s4, s6
 ; GFX6-NEXT:    s_subb_u32 s5, s5, s7
-; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    s_mov_b32 s2, -1
+; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX6-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX6-NEXT:    s_endpgm
@@ -9119,8 +9119,8 @@ define amdgpu_kernel void @srem_i64_pow2_shl_denom(ptr addrspace(1) %out, i64 %x
 ; GFX6-NEXT:    s_xor_b64 s[4:5], s[4:5], s[10:11]
 ; GFX6-NEXT:    s_sub_u32 s4, s4, s10
 ; GFX6-NEXT:    s_subb_u32 s5, s5, s10
-; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    s_mov_b32 s2, -1
+; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX6-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX6-NEXT:    s_endpgm

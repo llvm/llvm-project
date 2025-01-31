@@ -151,8 +151,8 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:  ; %bb.5: ; %bb43
 ; CHECK-NEXT:    s_mov_b32 s16, 0
 ; CHECK-NEXT:    s_mov_b32 s17, s16
-; CHECK-NEXT:    v_mov_b32_e32 v0, s16
 ; CHECK-NEXT:    v_readlane_b32 s44, v7, 16
+; CHECK-NEXT:    v_mov_b32_e32 v0, s16
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s17
 ; CHECK-NEXT:    s_mov_b32 s18, s16
 ; CHECK-NEXT:    s_mov_b32 s19, s16
@@ -203,10 +203,10 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    s_mov_b32 s16, 0
 ; CHECK-NEXT:    s_mov_b32 s20, s16
 ; CHECK-NEXT:    s_mov_b32 s21, s16
-; CHECK-NEXT:    v_mov_b32_e32 v1, s20
 ; CHECK-NEXT:    s_mov_b32 s17, s16
 ; CHECK-NEXT:    s_mov_b32 s18, s16
 ; CHECK-NEXT:    s_mov_b32 s19, s16
+; CHECK-NEXT:    v_mov_b32_e32 v1, s20
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s21
 ; CHECK-NEXT:    image_sample_lz v3, v[1:2], s[8:15], s[16:19] dmask:0x1
 ; CHECK-NEXT:    image_sample_lz v4, v[1:2], s[36:43], s[16:19] dmask:0x1

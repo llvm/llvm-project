@@ -248,8 +248,8 @@ define amdgpu_kernel void @basic_smax_smin_sgpr(ptr addrspace(1) %out, i32 inreg
 ; GISEL-VI-NEXT:    s_and_b32 s2, 0xffff, s2
 ; GISEL-VI-NEXT:    s_lshl_b32 s3, s3, 16
 ; GISEL-VI-NEXT:    s_or_b32 s2, s2, s3
-; GISEL-VI-NEXT:    v_mov_b32_e32 v0, s0
 ; GISEL-VI-NEXT:    v_mov_b32_e32 v2, s2
+; GISEL-VI-NEXT:    v_mov_b32_e32 v0, s0
 ; GISEL-VI-NEXT:    v_mov_b32_e32 v1, s1
 ; GISEL-VI-NEXT:    flat_store_dword v[0:1], v2
 ; GISEL-VI-NEXT:    s_endpgm
@@ -749,8 +749,8 @@ define amdgpu_kernel void @vec_smax_smin_sgpr(ptr addrspace(1) %out, <2 x i16> i
 ; GISEL-VI-NEXT:    s_and_b32 s2, 0xffff, s2
 ; GISEL-VI-NEXT:    s_lshl_b32 s3, s3, 16
 ; GISEL-VI-NEXT:    s_or_b32 s2, s2, s3
-; GISEL-VI-NEXT:    v_mov_b32_e32 v0, s0
 ; GISEL-VI-NEXT:    v_mov_b32_e32 v2, s2
+; GISEL-VI-NEXT:    v_mov_b32_e32 v0, s0
 ; GISEL-VI-NEXT:    v_mov_b32_e32 v1, s1
 ; GISEL-VI-NEXT:    flat_store_dword v[0:1], v2
 ; GISEL-VI-NEXT:    s_endpgm

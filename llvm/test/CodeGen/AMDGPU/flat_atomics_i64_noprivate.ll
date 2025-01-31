@@ -10,9 +10,9 @@ define amdgpu_kernel void @atomic_add_i64_offset(ptr %out, i64 %in) {
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s0, s0, 32
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
-; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s3
+; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX7-NEXT:    flat_atomic_add_x2 v[2:3], v[0:1]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -25,9 +25,9 @@ define amdgpu_kernel void @atomic_add_i64_offset(ptr %out, i64 %in) {
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s0, s0, 32
 ; GFX8-NEXT:    s_addc_u32 s1, s1, 0
-; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
+; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NEXT:    flat_atomic_add_x2 v[2:3], v[0:1]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -59,8 +59,8 @@ define amdgpu_kernel void @atomic_add_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    s_add_u32 s0, s0, 32
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
-; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX7-NEXT:    flat_atomic_add_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -78,8 +78,8 @@ define amdgpu_kernel void @atomic_add_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8-NEXT:    s_add_u32 s0, s0, 32
 ; GFX8-NEXT:    s_addc_u32 s1, s1, 0
-; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NEXT:    flat_atomic_add_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -1196,8 +1196,8 @@ define amdgpu_kernel void @atomic_sub_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX7-NEXT:  .LBB17_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v8, v3
 ; GFX7-NEXT:    v_mov_b32_e32 v7, v2
+; GFX7-NEXT:    v_mov_b32_e32 v8, v3
 ; GFX7-NEXT:    v_subrev_i32_e32 v5, vcc, s4, v7
 ; GFX7-NEXT:    v_subb_u32_e32 v6, vcc, v8, v4, vcc
 ; GFX7-NEXT:    flat_atomic_cmpswap_x2 v[2:3], v[0:1], v[5:8] glc
@@ -1229,8 +1229,8 @@ define amdgpu_kernel void @atomic_sub_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX8-NEXT:  .LBB17_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v8, v3
 ; GFX8-NEXT:    v_mov_b32_e32 v7, v2
+; GFX8-NEXT:    v_mov_b32_e32 v8, v3
 ; GFX8-NEXT:    v_subrev_u32_e32 v5, vcc, s4, v7
 ; GFX8-NEXT:    v_subb_u32_e32 v6, vcc, v8, v4, vcc
 ; GFX8-NEXT:    flat_atomic_cmpswap_x2 v[2:3], v[0:1], v[5:8] glc
@@ -1373,8 +1373,8 @@ define amdgpu_kernel void @atomic_sub_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX7-NEXT:  .LBB19_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v8, v3
 ; GFX7-NEXT:    v_mov_b32_e32 v7, v2
+; GFX7-NEXT:    v_mov_b32_e32 v8, v3
 ; GFX7-NEXT:    v_subrev_i32_e32 v5, vcc, s4, v7
 ; GFX7-NEXT:    v_subb_u32_e32 v6, vcc, v8, v4, vcc
 ; GFX7-NEXT:    flat_atomic_cmpswap_x2 v[2:3], v[0:1], v[5:8] glc
@@ -1408,8 +1408,8 @@ define amdgpu_kernel void @atomic_sub_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX8-NEXT:  .LBB19_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v8, v3
 ; GFX8-NEXT:    v_mov_b32_e32 v7, v2
+; GFX8-NEXT:    v_mov_b32_e32 v8, v3
 ; GFX8-NEXT:    v_subrev_u32_e32 v5, vcc, s4, v7
 ; GFX8-NEXT:    v_subb_u32_e32 v6, vcc, v8, v4, vcc
 ; GFX8-NEXT:    flat_atomic_cmpswap_x2 v[2:3], v[0:1], v[5:8] glc
@@ -1458,8 +1458,8 @@ define amdgpu_kernel void @atomic_sub_i64(ptr %out, i64 %in) {
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX7-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; GFX7-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v6, s3
+; GFX7-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX7-NEXT:  .LBB20_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -1486,8 +1486,8 @@ define amdgpu_kernel void @atomic_sub_i64(ptr %out, i64 %in) {
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v6, s3
+; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX8-NEXT:  .LBB20_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -1531,14 +1531,14 @@ define amdgpu_kernel void @atomic_sub_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX7-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s5
+; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX7-NEXT:  .LBB21_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v8, v1
 ; GFX7-NEXT:    v_mov_b32_e32 v7, v0
+; GFX7-NEXT:    v_mov_b32_e32 v8, v1
 ; GFX7-NEXT:    v_subrev_i32_e32 v5, vcc, s4, v7
 ; GFX7-NEXT:    v_subb_u32_e32 v6, vcc, v8, v4, vcc
 ; GFX7-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[5:8] glc
@@ -1564,14 +1564,14 @@ define amdgpu_kernel void @atomic_sub_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s5
+; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NEXT:  .LBB21_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v8, v1
 ; GFX8-NEXT:    v_mov_b32_e32 v7, v0
+; GFX8-NEXT:    v_mov_b32_e32 v8, v1
 ; GFX8-NEXT:    v_subrev_u32_e32 v5, vcc, s4, v7
 ; GFX8-NEXT:    v_subb_u32_e32 v6, vcc, v8, v4, vcc
 ; GFX8-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[2:3], v[5:8] glc
@@ -1706,8 +1706,8 @@ define amdgpu_kernel void @atomic_sub_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX7-NEXT:  .LBB23_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v8, v3
 ; GFX7-NEXT:    v_mov_b32_e32 v7, v2
+; GFX7-NEXT:    v_mov_b32_e32 v8, v3
 ; GFX7-NEXT:    v_subrev_i32_e32 v5, vcc, s4, v7
 ; GFX7-NEXT:    v_subb_u32_e32 v6, vcc, v8, v4, vcc
 ; GFX7-NEXT:    flat_atomic_cmpswap_x2 v[2:3], v[0:1], v[5:8] glc
@@ -1739,8 +1739,8 @@ define amdgpu_kernel void @atomic_sub_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX8-NEXT:  .LBB23_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v8, v3
 ; GFX8-NEXT:    v_mov_b32_e32 v7, v2
+; GFX8-NEXT:    v_mov_b32_e32 v8, v3
 ; GFX8-NEXT:    v_subrev_u32_e32 v5, vcc, s4, v7
 ; GFX8-NEXT:    v_subb_u32_e32 v6, vcc, v8, v4, vcc
 ; GFX8-NEXT:    flat_atomic_cmpswap_x2 v[2:3], v[0:1], v[5:8] glc
@@ -2138,9 +2138,9 @@ define amdgpu_kernel void @atomic_max_i64(ptr %out, i64 %in) {
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX7-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; GFX7-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v6, s3
 ; GFX7-NEXT:    v_mov_b32_e32 v7, s2
+; GFX7-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX7-NEXT:  .LBB28_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2167,9 +2167,9 @@ define amdgpu_kernel void @atomic_max_i64(ptr %out, i64 %in) {
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v6, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v7, s2
+; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX8-NEXT:  .LBB28_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2213,9 +2213,9 @@ define amdgpu_kernel void @atomic_max_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX7-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s5
 ; GFX7-NEXT:    v_mov_b32_e32 v5, s4
+; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX7-NEXT:  .LBB29_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2247,9 +2247,9 @@ define amdgpu_kernel void @atomic_max_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s5
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s4
+; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NEXT:  .LBB29_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2826,9 +2826,9 @@ define amdgpu_kernel void @atomic_umax_i64(ptr %out, i64 %in) {
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX7-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; GFX7-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v6, s3
 ; GFX7-NEXT:    v_mov_b32_e32 v7, s2
+; GFX7-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX7-NEXT:  .LBB36_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2855,9 +2855,9 @@ define amdgpu_kernel void @atomic_umax_i64(ptr %out, i64 %in) {
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v6, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v7, s2
+; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX8-NEXT:  .LBB36_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2901,9 +2901,9 @@ define amdgpu_kernel void @atomic_umax_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX7-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s5
 ; GFX7-NEXT:    v_mov_b32_e32 v5, s4
+; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX7-NEXT:  .LBB37_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2935,9 +2935,9 @@ define amdgpu_kernel void @atomic_umax_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s5
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s4
+; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NEXT:  .LBB37_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -3514,9 +3514,9 @@ define amdgpu_kernel void @atomic_min_i64(ptr %out, i64 %in) {
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX7-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; GFX7-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v6, s3
 ; GFX7-NEXT:    v_mov_b32_e32 v7, s2
+; GFX7-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX7-NEXT:  .LBB44_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -3543,9 +3543,9 @@ define amdgpu_kernel void @atomic_min_i64(ptr %out, i64 %in) {
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v6, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v7, s2
+; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX8-NEXT:  .LBB44_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -3589,9 +3589,9 @@ define amdgpu_kernel void @atomic_min_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX7-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s5
 ; GFX7-NEXT:    v_mov_b32_e32 v5, s4
+; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX7-NEXT:  .LBB45_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -3623,9 +3623,9 @@ define amdgpu_kernel void @atomic_min_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s5
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s4
+; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NEXT:  .LBB45_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -4202,9 +4202,9 @@ define amdgpu_kernel void @atomic_umin_i64(ptr %out, i64 %in) {
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX7-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; GFX7-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v6, s3
 ; GFX7-NEXT:    v_mov_b32_e32 v7, s2
+; GFX7-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX7-NEXT:  .LBB52_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -4231,9 +4231,9 @@ define amdgpu_kernel void @atomic_umin_i64(ptr %out, i64 %in) {
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v6, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v7, s2
+; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX8-NEXT:  .LBB52_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -4277,9 +4277,9 @@ define amdgpu_kernel void @atomic_umin_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX7-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s5
 ; GFX7-NEXT:    v_mov_b32_e32 v5, s4
+; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX7-NEXT:  .LBB53_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -4311,9 +4311,9 @@ define amdgpu_kernel void @atomic_umin_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s5
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s4
+; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NEXT:  .LBB53_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -5194,9 +5194,9 @@ define amdgpu_kernel void @atomic_xchg_i64_offset(ptr %out, i64 %in) {
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s0, s0, 32
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
-; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s3
+; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX7-NEXT:    flat_atomic_swap_x2 v[2:3], v[0:1]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -5209,9 +5209,9 @@ define amdgpu_kernel void @atomic_xchg_i64_offset(ptr %out, i64 %in) {
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s0, s0, 32
 ; GFX8-NEXT:    s_addc_u32 s1, s1, 0
-; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
+; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NEXT:    flat_atomic_swap_x2 v[2:3], v[0:1]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -5241,9 +5241,9 @@ define amdgpu_kernel void @atomic_xchg_f64_offset(ptr %out, double %in) {
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s0, s0, 32
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
-; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s3
+; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX7-NEXT:    flat_atomic_swap_x2 v[2:3], v[0:1]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -5256,9 +5256,9 @@ define amdgpu_kernel void @atomic_xchg_f64_offset(ptr %out, double %in) {
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s0, s0, 32
 ; GFX8-NEXT:    s_addc_u32 s1, s1, 0
-; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
+; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NEXT:    flat_atomic_swap_x2 v[2:3], v[0:1]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -5288,9 +5288,9 @@ define amdgpu_kernel void @atomic_xchg_pointer_offset(ptr %out, ptr %in) {
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s0, s0, 32
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
-; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s3
+; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX7-NEXT:    flat_atomic_swap_x2 v[2:3], v[0:1]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -5303,9 +5303,9 @@ define amdgpu_kernel void @atomic_xchg_pointer_offset(ptr %out, ptr %in) {
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s0, s0, 32
 ; GFX8-NEXT:    s_addc_u32 s1, s1, 0
-; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
+; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NEXT:    flat_atomic_swap_x2 v[2:3], v[0:1]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -5337,8 +5337,8 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_offset(ptr %out, ptr %out2, i64 %
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    s_add_u32 s0, s0, 32
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
-; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX7-NEXT:    flat_atomic_swap_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -5356,8 +5356,8 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_offset(ptr %out, ptr %out2, i64 %
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8-NEXT:    s_add_u32 s0, s0, 32
 ; GFX8-NEXT:    s_addc_u32 s1, s1, 0
-; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NEXT:    flat_atomic_swap_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -6805,11 +6805,11 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_offset(ptr %out, i64 %in, i64 %old
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s0, s0, 32
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
-; GFX7-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s5
+; GFX7-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX7-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:3]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -6823,11 +6823,11 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_offset(ptr %out, i64 %in, i64 %old
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s0, s0, 32
 ; GFX8-NEXT:    s_addc_u32 s1, s1, 0
-; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s5
+; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX8-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:3]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -6861,11 +6861,11 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_soffset(ptr %out, i64 %in, i64 %ol
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s0, s0, 0x11940
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
-; GFX7-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s5
+; GFX7-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX7-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:3]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -6879,11 +6879,11 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_soffset(ptr %out, i64 %in, i64 %ol
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s0, s0, 0x11940
 ; GFX8-NEXT:    s_addc_u32 s1, s1, 0
-; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s5
+; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX8-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:3]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -6916,11 +6916,11 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_offset(ptr %out, ptr %out2, i6
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s0, s0, 32
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
-; GFX7-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s7
+; GFX7-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX7-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -6936,11 +6936,11 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_offset(ptr %out, ptr %out2, i6
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s0, s0, 32
 ; GFX8-NEXT:    s_addc_u32 s1, s1, 0
-; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s7
+; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX8-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -6981,11 +6981,11 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_addr64_offset(ptr %out, i64 %in, i
 ; GFX7-NEXT:    s_addc_u32 s1, s1, s5
 ; GFX7-NEXT:    s_add_u32 s0, s0, 32
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
-; GFX7-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s7
+; GFX7-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX7-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:3]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -7001,11 +7001,11 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_addr64_offset(ptr %out, i64 %in, i
 ; GFX8-NEXT:    s_addc_u32 s1, s1, s5
 ; GFX8-NEXT:    s_add_u32 s0, s0, 32
 ; GFX8-NEXT:    s_addc_u32 s1, s1, 0
-; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s7
+; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX8-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:3]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -7044,10 +7044,10 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64_offset(ptr %out, ptr %o
 ; GFX7-NEXT:    s_addc_u32 s3, s9, s3
 ; GFX7-NEXT:    s_add_u32 s2, s0, 32
 ; GFX7-NEXT:    s_addc_u32 s3, s3, 0
-; GFX7-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s12
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s13
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s1
+; GFX7-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s2
 ; GFX7-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -7068,10 +7068,10 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64_offset(ptr %out, ptr %o
 ; GFX8-NEXT:    s_addc_u32 s3, s9, s3
 ; GFX8-NEXT:    s_add_u32 s2, s0, 32
 ; GFX8-NEXT:    s_addc_u32 s3, s3, 0
-; GFX8-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s12
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s13
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s1
+; GFX8-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s2
 ; GFX8-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -7223,11 +7223,11 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_addr64(ptr %out, i64 %in, i64 %ind
 ; GFX7-NEXT:    s_lshl_b64 s[4:5], s[4:5], 3
 ; GFX7-NEXT:    s_add_u32 s0, s0, s4
 ; GFX7-NEXT:    s_addc_u32 s1, s1, s5
-; GFX7-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s7
+; GFX7-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX7-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:3]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -7241,11 +7241,11 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_addr64(ptr %out, i64 %in, i64 %ind
 ; GFX8-NEXT:    s_lshl_b64 s[4:5], s[4:5], 3
 ; GFX8-NEXT:    s_add_u32 s0, s0, s4
 ; GFX8-NEXT:    s_addc_u32 s1, s1, s5
-; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s7
+; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX8-NEXT:    flat_atomic_cmpswap_x2 v[4:5], v[0:3]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -7280,11 +7280,11 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64(ptr %out, ptr %out2, i6
 ; GFX7-NEXT:    s_lshl_b64 s[2:3], s[14:15], 3
 ; GFX7-NEXT:    s_add_u32 s2, s8, s2
 ; GFX7-NEXT:    s_addc_u32 s3, s9, s3
-; GFX7-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s12
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s13
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s1
+; GFX7-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s2
 ; GFX7-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -7302,11 +7302,11 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64(ptr %out, ptr %out2, i6
 ; GFX8-NEXT:    s_lshl_b64 s[2:3], s[14:15], 3
 ; GFX8-NEXT:    s_add_u32 s2, s8, s2
 ; GFX8-NEXT:    s_addc_u32 s3, s9, s3
-; GFX8-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s12
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s13
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s1
+; GFX8-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s2
 ; GFX8-NEXT:    flat_atomic_cmpswap_x2 v[0:1], v[4:5], v[0:3] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -7845,8 +7845,8 @@ define amdgpu_kernel void @atomic_inc_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX7-NEXT:  .LBB108_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX7-NEXT:    v_mov_b32_e32 v4, v2
+; GFX7-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX7-NEXT:    v_add_i32_e32 v2, vcc, 1, v4
 ; GFX7-NEXT:    v_addc_u32_e32 v3, vcc, 0, v5, vcc
 ; GFX7-NEXT:    v_cmp_gt_u64_e32 vcc, s[4:5], v[4:5]
@@ -7880,8 +7880,8 @@ define amdgpu_kernel void @atomic_inc_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX8-NEXT:  .LBB108_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX8-NEXT:    v_mov_b32_e32 v4, v2
+; GFX8-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 1, v4
 ; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v5, vcc
 ; GFX8-NEXT:    v_cmp_gt_u64_e32 vcc, s[4:5], v[4:5]
@@ -8030,8 +8030,8 @@ define amdgpu_kernel void @atomic_inc_i64_ret_incr64_offset(ptr %out, ptr %out2,
 ; GFX7-NEXT:  .LBB110_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX7-NEXT:    v_mov_b32_e32 v4, v2
+; GFX7-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX7-NEXT:    v_add_i32_e32 v2, vcc, 1, v4
 ; GFX7-NEXT:    v_addc_u32_e32 v3, vcc, 0, v5, vcc
 ; GFX7-NEXT:    v_cmp_gt_u64_e32 vcc, s[4:5], v[4:5]
@@ -8067,8 +8067,8 @@ define amdgpu_kernel void @atomic_inc_i64_ret_incr64_offset(ptr %out, ptr %out2,
 ; GFX8-NEXT:  .LBB110_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX8-NEXT:    v_mov_b32_e32 v4, v2
+; GFX8-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 1, v4
 ; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v5, vcc
 ; GFX8-NEXT:    v_cmp_gt_u64_e32 vcc, s[4:5], v[4:5]
@@ -8200,8 +8200,8 @@ define amdgpu_kernel void @atomic_inc_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX7-NEXT:  .LBB112_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX7-NEXT:    v_mov_b32_e32 v4, v2
+; GFX7-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX7-NEXT:    v_add_i32_e32 v2, vcc, 1, v4
 ; GFX7-NEXT:    v_addc_u32_e32 v3, vcc, 0, v5, vcc
 ; GFX7-NEXT:    v_cmp_gt_u64_e32 vcc, s[4:5], v[4:5]
@@ -8233,8 +8233,8 @@ define amdgpu_kernel void @atomic_inc_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX8-NEXT:  .LBB112_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX8-NEXT:    v_mov_b32_e32 v4, v2
+; GFX8-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 1, v4
 ; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v5, vcc
 ; GFX8-NEXT:    v_cmp_gt_u64_e32 vcc, s[4:5], v[4:5]
@@ -8375,8 +8375,8 @@ define amdgpu_kernel void @atomic_inc_i64_ret_incr64(ptr %out, ptr %out2, i64 %i
 ; GFX7-NEXT:  .LBB114_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX7-NEXT:    v_mov_b32_e32 v4, v2
+; GFX7-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX7-NEXT:    v_add_i32_e32 v2, vcc, 1, v4
 ; GFX7-NEXT:    v_addc_u32_e32 v3, vcc, 0, v5, vcc
 ; GFX7-NEXT:    v_cmp_gt_u64_e32 vcc, s[4:5], v[4:5]
@@ -8410,8 +8410,8 @@ define amdgpu_kernel void @atomic_inc_i64_ret_incr64(ptr %out, ptr %out2, i64 %i
 ; GFX8-NEXT:  .LBB114_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX8-NEXT:    v_mov_b32_e32 v4, v2
+; GFX8-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 1, v4
 ; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v5, vcc
 ; GFX8-NEXT:    v_cmp_gt_u64_e32 vcc, s[4:5], v[4:5]
@@ -8852,9 +8852,9 @@ define amdgpu_kernel void @atomic_dec_i64(ptr %out, i64 %in) {
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; GFX7-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v6, s7
 ; GFX7-NEXT:    v_mov_b32_e32 v7, s6
+; GFX7-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX7-NEXT:  .LBB119_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -8886,9 +8886,9 @@ define amdgpu_kernel void @atomic_dec_i64(ptr %out, i64 %in) {
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; GFX8-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v6, s7
 ; GFX8-NEXT:    v_mov_b32_e32 v7, s6
+; GFX8-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX8-NEXT:  .LBB119_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1

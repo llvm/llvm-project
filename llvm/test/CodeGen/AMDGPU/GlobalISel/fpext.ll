@@ -194,34 +194,34 @@ define amdgpu_ps <2 x float> @fpext_v2f16_to_v2f32_div(<2 x half> %a) {
 define amdgpu_ps void @fpext_v2f32_to_v2f64_uniform(<2 x float> inreg %a, ptr addrspace(1) %ptr) {
 ; GFX11-LABEL: fpext_v2f32_to_v2f64_uniform:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_cvt_f64_f32_e32 v[4:5], s1
 ; GFX11-NEXT:    v_cvt_f64_f32_e32 v[2:3], s0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_readfirstlane_b32 s3, v5
+; GFX11-NEXT:    v_cvt_f64_f32_e32 v[4:5], s1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_readfirstlane_b32 s2, v4
-; GFX11-NEXT:    v_dual_mov_b32 v5, s3 :: v_dual_mov_b32 v2, s0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v4, s2
+; GFX11-NEXT:    v_readfirstlane_b32 s3, v5
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_dual_mov_b32 v2, s0 :: v_dual_mov_b32 v3, s1
+; GFX11-NEXT:    v_dual_mov_b32 v4, s2 :: v_dual_mov_b32 v5, s3
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: fpext_v2f32_to_v2f64_uniform:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_cvt_f64_f32_e32 v[4:5], s1
 ; GFX12-NEXT:    v_cvt_f64_f32_e32 v[2:3], s0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_readfirstlane_b32 s3, v5
+; GFX12-NEXT:    v_cvt_f64_f32_e32 v[4:5], s1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX12-NEXT:    v_readfirstlane_b32 s2, v4
+; GFX12-NEXT:    v_readfirstlane_b32 s3, v5
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-NEXT:    v_dual_mov_b32 v5, s3 :: v_dual_mov_b32 v2, s0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v4, s2
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_dual_mov_b32 v2, s0 :: v_dual_mov_b32 v3, s1
+; GFX12-NEXT:    v_dual_mov_b32 v4, s2 :: v_dual_mov_b32 v5, s3
 ; GFX12-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX12-NEXT:    s_endpgm
   %result = fpext <2 x float> %a to <2 x double>

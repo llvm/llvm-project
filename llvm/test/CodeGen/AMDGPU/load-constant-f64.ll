@@ -53,9 +53,9 @@ define amdgpu_kernel void @constant_load_f64(ptr addrspace(1) %out, ptr addrspac
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX12-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s3
+; GFX12-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_endpgm
   %ld = load double, ptr addrspace(4) %in

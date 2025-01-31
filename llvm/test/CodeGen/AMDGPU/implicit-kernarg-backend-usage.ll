@@ -286,11 +286,11 @@ define amdgpu_kernel void @llvm_ubsantrap() {
 define amdgpu_kernel void @llvm_amdgcn_queue_ptr(ptr addrspace(1) %ptr)  #0 {
 ; GFX8V4-LABEL: llvm_amdgcn_queue_ptr:
 ; GFX8V4:       ; %bb.0:
+; GFX8V4-NEXT:    s_add_u32 s0, s8, 8
 ; GFX8V4-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8V4-NEXT:    v_mov_b32_e32 v1, s7
-; GFX8V4-NEXT:    s_add_u32 s0, s8, 8
-; GFX8V4-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; GFX8V4-NEXT:    s_addc_u32 s1, s9, 0
+; GFX8V4-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; GFX8V4-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8V4-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8V4-NEXT:    v_mov_b32_e32 v1, s1
@@ -311,11 +311,11 @@ define amdgpu_kernel void @llvm_amdgcn_queue_ptr(ptr addrspace(1) %ptr)  #0 {
 ;
 ; GFX8V5-LABEL: llvm_amdgcn_queue_ptr:
 ; GFX8V5:       ; %bb.0:
+; GFX8V5-NEXT:    s_add_u32 s0, s8, 8
 ; GFX8V5-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8V5-NEXT:    v_mov_b32_e32 v1, s7
-; GFX8V5-NEXT:    s_add_u32 s0, s8, 8
-; GFX8V5-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; GFX8V5-NEXT:    s_addc_u32 s1, s9, 0
+; GFX8V5-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; GFX8V5-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8V5-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8V5-NEXT:    v_mov_b32_e32 v1, s1

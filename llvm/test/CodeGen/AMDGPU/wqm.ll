@@ -1943,9 +1943,9 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) nounwind {
 ; GFX9-W64-NEXT:    s_cbranch_execz .LBB35_4
 ; GFX9-W64-NEXT:  .LBB35_2: ; %loop
 ; GFX9-W64-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-W64-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v8
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v0, v4
-; GFX9-W64-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v8
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v2, v6
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v3, v7

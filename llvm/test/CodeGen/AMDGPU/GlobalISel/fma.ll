@@ -1579,8 +1579,8 @@ define amdgpu_ps void @fma_s64_uniform(double inreg %a, double inreg %b, double 
 ; GFX6-LABEL: fma_s64_uniform:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    v_mov_b32_e32 v2, s2
-; GFX6-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX6-NEXT:    v_mov_b32_e32 v3, s3
+; GFX6-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX6-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX6-NEXT:    v_fma_f64 v[2:3], s[0:1], v[2:3], v[4:5]
 ; GFX6-NEXT:    s_mov_b32 s2, 0
@@ -1592,8 +1592,8 @@ define amdgpu_ps void @fma_s64_uniform(double inreg %a, double inreg %b, double 
 ; GFX8-LABEL: fma_s64_uniform:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s2
-; GFX8-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s3
+; GFX8-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX8-NEXT:    v_fma_f64 v[2:3], s[0:1], v[2:3], v[4:5]
 ; GFX8-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
@@ -1602,8 +1602,8 @@ define amdgpu_ps void @fma_s64_uniform(double inreg %a, double inreg %b, double 
 ; GFX9-LABEL: fma_s64_uniform:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s2
-; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s3
+; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX9-NEXT:    v_fma_f64 v[2:3], s[0:1], v[2:3], v[4:5]
 ; GFX9-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off

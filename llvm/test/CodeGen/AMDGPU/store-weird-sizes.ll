@@ -55,8 +55,8 @@ define amdgpu_kernel void @local_store_i55(ptr addrspace(3) %ptr, i55 %arg) #0 {
 ; HAWAII-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; HAWAII-NEXT:    s_add_u32 s0, s8, 14
 ; HAWAII-NEXT:    s_addc_u32 s1, s9, 0
-; HAWAII-NEXT:    v_mov_b32_e32 v0, s0
 ; HAWAII-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; HAWAII-NEXT:    v_mov_b32_e32 v0, s0
 ; HAWAII-NEXT:    v_mov_b32_e32 v1, s1
 ; HAWAII-NEXT:    flat_load_ubyte v0, v[0:1]
 ; HAWAII-NEXT:    s_load_dword s2, s[8:9], 0x0
@@ -291,8 +291,8 @@ define amdgpu_kernel void @local_store_i65(ptr addrspace(3) %ptr, i65 %arg) #0 {
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_and_b32 s2, s2, 1
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s3
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s2
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    ds_write_b8 v2, v3 offset:8
 ; GFX9-NEXT:    ds_write_b64 v2, v[0:1]
