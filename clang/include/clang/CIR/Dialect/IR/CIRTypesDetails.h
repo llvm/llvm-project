@@ -32,31 +32,33 @@ struct StructTypeStorage : public mlir::TypeStorage {
     mlir::StringAttr name;
     bool incomplete;
     bool packed;
+    bool padded;
     StructType::RecordKind kind;
     ASTRecordDeclInterface ast;
 
     KeyTy(llvm::ArrayRef<mlir::Type> members, mlir::StringAttr name,
-          bool incomplete, bool packed, StructType::RecordKind kind,
-          ASTRecordDeclInterface ast)
+          bool incomplete, bool packed, bool padded,
+          StructType::RecordKind kind, ASTRecordDeclInterface ast)
         : members(members), name(name), incomplete(incomplete), packed(packed),
-          kind(kind), ast(ast) {}
+          padded(padded), kind(kind), ast(ast) {}
   };
 
   llvm::ArrayRef<mlir::Type> members;
   mlir::StringAttr name;
   bool incomplete;
   bool packed;
+  bool padded;
   StructType::RecordKind kind;
   ASTRecordDeclInterface ast;
 
   StructTypeStorage(llvm::ArrayRef<mlir::Type> members, mlir::StringAttr name,
-                    bool incomplete, bool packed, StructType::RecordKind kind,
-                    ASTRecordDeclInterface ast)
+                    bool incomplete, bool packed, bool padded,
+                    StructType::RecordKind kind, ASTRecordDeclInterface ast)
       : members(members), name(name), incomplete(incomplete), packed(packed),
-        kind(kind), ast(ast) {}
+        padded(padded), kind(kind), ast(ast) {}
 
   KeyTy getAsKey() const {
-    return KeyTy(members, name, incomplete, packed, kind, ast);
+    return KeyTy(members, name, incomplete, packed, padded, kind, ast);
   }
 
   bool operator==(const KeyTy &key) const {
@@ -64,21 +66,21 @@ struct StructTypeStorage : public mlir::TypeStorage {
       return (name == key.name) && (kind == key.kind);
     return (members == key.members) && (name == key.name) &&
            (incomplete == key.incomplete) && (packed == key.packed) &&
-           (kind == key.kind) && (ast == key.ast);
+           (padded == key.padded) && (kind == key.kind) && (ast == key.ast);
   }
 
   static llvm::hash_code hashKey(const KeyTy &key) {
     if (key.name)
       return llvm::hash_combine(key.name, key.kind);
-    return llvm::hash_combine(key.members, key.incomplete, key.packed, key.kind,
-                              key.ast);
+    return llvm::hash_combine(key.members, key.incomplete, key.packed,
+                              key.padded, key.kind, key.ast);
   }
 
   static StructTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
                                       const KeyTy &key) {
-    return new (allocator.allocate<StructTypeStorage>())
-        StructTypeStorage(allocator.copyInto(key.members), key.name,
-                          key.incomplete, key.packed, key.kind, key.ast);
+    return new (allocator.allocate<StructTypeStorage>()) StructTypeStorage(
+        allocator.copyInto(key.members), key.name, key.incomplete, key.packed,
+        key.padded, key.kind, key.ast);
   }
 
   /// Mutates the members and attributes an identified struct.
@@ -89,7 +91,7 @@ struct StructTypeStorage : public mlir::TypeStorage {
   /// change the struct.
   llvm::LogicalResult mutate(mlir::TypeStorageAllocator &allocator,
                              llvm::ArrayRef<mlir::Type> members, bool packed,
-                             ASTRecordDeclInterface ast) {
+                             bool padded, ASTRecordDeclInterface ast) {
     // Anonymous structs cannot mutate.
     if (!name)
       return llvm::failure();
@@ -97,12 +99,14 @@ struct StructTypeStorage : public mlir::TypeStorage {
     // Mutation of complete structs are allowed if they change nothing.
     if (!incomplete)
       return mlir::success((this->members == members) &&
-                           (this->packed == packed) && (this->ast == ast));
+                           (this->packed == packed) &&
+                           (this->padded == padded) && (this->ast == ast));
 
     // Mutate incomplete struct.
     this->members = allocator.copyInto(members);
     this->packed = packed;
     this->ast = ast;
+    this->padded = padded;
 
     incomplete = false;
     return llvm::success();

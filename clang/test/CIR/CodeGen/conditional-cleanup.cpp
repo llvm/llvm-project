@@ -23,11 +23,11 @@ namespace test7 {
   }
 }
 
-// CIR-DAG: ![[A:.*]] = !cir.struct<struct "test7::A" {!u8i}
-// CIR-DAG: ![[B:.*]] = !cir.struct<struct "test7::B" {!u8i}
+// CIR-DAG: ![[A:.*]] = !cir.struct<struct "test7::A" padded {!u8i}
+// CIR-DAG: ![[B:.*]] = !cir.struct<struct "test7::B" padded {!u8i}
 
-// CIR_EH-DAG: ![[A:.*]] = !cir.struct<struct "test7::A" {!u8i}
-// CIR_EH-DAG: ![[B:.*]] = !cir.struct<struct "test7::B" {!u8i}
+// CIR_EH-DAG: ![[A:.*]] = !cir.struct<struct "test7::A" padded {!u8i}
+// CIR_EH-DAG: ![[B:.*]] = !cir.struct<struct "test7::B" padded {!u8i}
 
 // CIR-LABEL: _ZN5test74testEv
 // CIR:   %[[RET_VAL:.*]] = cir.alloca !cir.ptr<![[B]]>, !cir.ptr<!cir.ptr<![[B]]>>, ["__retval"] {alignment = 8 : i64}

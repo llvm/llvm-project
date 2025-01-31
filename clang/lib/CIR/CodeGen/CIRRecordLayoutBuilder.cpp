@@ -197,8 +197,10 @@ struct CIRRecordLowering final {
   void fillOutputFields();
 
   void appendPaddingBytes(CharUnits Size) {
-    if (!Size.isZero())
+    if (!Size.isZero()) {
       fieldTypes.push_back(getByteArrayType(Size));
+      isPadded = 1;
+    }
   }
 
   CIRGenTypes &cirGenTypes;
@@ -219,6 +221,7 @@ struct CIRRecordLowering final {
   bool IsZeroInitializable : 1;
   bool IsZeroInitializableAsBase : 1;
   bool isPacked : 1;
+  bool isPadded : 1;
 
 private:
   CIRRecordLowering(const CIRRecordLowering &) = delete;
@@ -235,7 +238,7 @@ CIRRecordLowering::CIRRecordLowering(CIRGenTypes &cirGenTypes,
       astRecordLayout{cirGenTypes.getContext().getASTRecordLayout(recordDecl)},
       dataLayout{cirGenTypes.getModule().getModule()},
       IsZeroInitializable(true), IsZeroInitializableAsBase(true),
-      isPacked{isPacked} {}
+      isPacked{isPacked}, isPadded{false} {}
 
 void CIRRecordLowering::setBitFieldInfo(const FieldDecl *FD,
                                         CharUnits StartOffset,
@@ -366,7 +369,7 @@ void CIRRecordLowering::lowerUnion() {
   if (LayoutSize < getSize(StorageType))
     StorageType = getByteArrayType(LayoutSize);
   // NOTE(cir): Defer padding calculations to the lowering process.
-  // appendPaddingBytes(LayoutSize - getSize(StorageType));
+  appendPaddingBytes(LayoutSize - getSize(StorageType));
   // Set packed if we need it.
   if (LayoutSize % getAlignment(StorageType))
     isPacked = true;
@@ -680,6 +683,7 @@ void CIRRecordLowering::insertPadding() {
   }
   if (Padding.empty())
     return;
+  isPadded = 1;
   // Add the padding to the Members list and sort it.
   for (std::vector<std::pair<CharUnits, CharUnits>>::const_iterator
            Pad = Padding.begin(),
@@ -705,8 +709,9 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *D, cir::StructType *Ty) {
       CIRRecordLowering baseBuilder(*this, D, /*Packed=*/builder.isPacked);
       baseBuilder.lower(/*NonVirtualBaseType=*/true);
       auto baseIdentifier = getRecordTypeName(D, ".base");
-      BaseTy = Builder.getCompleteStructTy(
-          baseBuilder.fieldTypes, baseIdentifier, baseBuilder.isPacked, D);
+      BaseTy = Builder.getCompleteStructTy(baseBuilder.fieldTypes,
+                                           baseIdentifier, baseBuilder.isPacked,
+                                           baseBuilder.isPadded, D);
       // TODO(cir): add something like addRecordTypeName
 
       // BaseTy and Ty must agree on their packedness for getCIRFieldNo to work
@@ -720,7 +725,7 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *D, cir::StructType *Ty) {
   // signifies that the type is no longer opaque and record layout is complete,
   // but we may need to recursively layout D while laying D out as a base type.
   auto astAttr = cir::ASTRecordDeclAttr::get(Ty->getContext(), D);
-  Ty->complete(builder.fieldTypes, builder.isPacked, astAttr);
+  Ty->complete(builder.fieldTypes, builder.isPacked, builder.isPadded, astAttr);
 
   auto RL = std::make_unique<CIRGenRecordLayout>(
       Ty ? *Ty : cir::StructType{}, BaseTy ? BaseTy : cir::StructType{},

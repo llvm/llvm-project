@@ -10,7 +10,7 @@ void fn() {
 }
 
 //      CHECK-DAG: !ty_A = !cir.struct<struct "A" {!s32i}>
-//      CHECK: !ty_anon2E0_ = !cir.struct<class "anon.0" {!u8i}>
+//      CHECK: !ty_anon2E0_ = !cir.struct<class "anon.0" padded {!u8i}>
 //      CHECK-DAG: !ty_anon2E7_ = !cir.struct<class "anon.7" {!ty_A}>
 //      CHECK-DAG: !ty_anon2E8_ = !cir.struct<class "anon.8" {!cir.ptr<!ty_A>}>
 //  CHECK-DAG: module

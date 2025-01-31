@@ -39,7 +39,7 @@ void *operator new[](size_t, void*, bool) throw();
 
 namespace test15 {
   struct A { A(); ~A(); };
-  // CIR-DAG:   ![[TEST15A:.*]] = !cir.struct<struct "test15::A" {!u8i}
+  // CIR-DAG:   ![[TEST15A:.*]] = !cir.struct<struct "test15::A" padded {!u8i}
 
   void test0a(void *p) {
     new (p) A();

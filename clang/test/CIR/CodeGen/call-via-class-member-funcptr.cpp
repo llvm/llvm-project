@@ -16,7 +16,7 @@ public:
 const char *f::b() { return g.b(h); }
 void fn1() { f f1; }
 
-// CIR: ty_a = !cir.struct<class "a" {!u8i} #cir.record.decl.ast>
+// CIR: ty_a = !cir.struct<class "a" padded {!u8i} #cir.record.decl.ast>
 // CIR: ty_f = !cir.struct<class "f" {!ty_a}>
 
 // CIR: cir.global external @h = #cir.int<0>

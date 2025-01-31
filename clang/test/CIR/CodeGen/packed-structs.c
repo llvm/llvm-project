@@ -23,8 +23,8 @@ typedef struct {
 
 
 // CIR: !ty_A = !cir.struct<struct "A" packed {!s32i, !s8i}>
-// CIR: !ty_C = !cir.struct<struct "C" packed {!s32i, !s8i, !u8i}>
-// CIR: !ty_D = !cir.struct<struct "D" packed {!s8i, !u8i, !s32i}
+// CIR: !ty_C = !cir.struct<struct "C" packed padded {!s32i, !s8i, !u8i}>
+// CIR: !ty_D = !cir.struct<struct "D" packed padded {!s8i, !u8i, !s32i}
 // CIR: !ty_F = !cir.struct<struct "F" packed {!s64i, !s8i}
 // CIR: !ty_E = !cir.struct<struct "E" packed {!ty_D
 // CIR: !ty_G = !cir.struct<struct "G" {!ty_F

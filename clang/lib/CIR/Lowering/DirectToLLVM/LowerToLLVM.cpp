@@ -4353,6 +4353,11 @@ void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
       if (largestMember)
         llvmMembers.push_back(
             convertTypeForMemory(converter, dataLayout, largestMember));
+      if (type.getPadded()) {
+        auto last = *type.getMembers().rbegin();
+        llvmMembers.push_back(
+            convertTypeForMemory(converter, dataLayout, last));
+      }
       break;
     }
     }

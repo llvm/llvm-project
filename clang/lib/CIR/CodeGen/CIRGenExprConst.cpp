@@ -385,6 +385,7 @@ mlir::Attribute ConstantAggregateBuilder::buildFrom(
   CharUnits AlignedSize = Size.alignTo(Align);
 
   bool Packed = false;
+  bool Padded = false;
   ArrayRef<mlir::Attribute> UnpackedElems = Elems;
 
   llvm::SmallVector<mlir::Attribute, 32> UnpackedElemStorage;
@@ -435,13 +436,13 @@ mlir::Attribute ConstantAggregateBuilder::buildFrom(
   auto &builder = CGM.getBuilder();
   auto arrAttr = mlir::ArrayAttr::get(builder.getContext(),
                                       Packed ? PackedElems : UnpackedElems);
-  auto strType = builder.getCompleteStructType(arrAttr, Packed);
 
+  auto strType = builder.getCompleteStructType(arrAttr, Packed);
   if (auto desired = dyn_cast<cir::StructType>(DesiredTy))
     if (desired.isLayoutIdentical(strType))
       strType = desired;
 
-  return builder.getConstStructOrZeroAttr(arrAttr, Packed, strType);
+  return builder.getConstStructOrZeroAttr(arrAttr, Packed, Padded, strType);
 }
 
 void ConstantAggregateBuilder::condense(CharUnits Offset,
@@ -520,6 +521,9 @@ private:
   bool ApplyZeroInitPadding(const ASTRecordLayout &Layout, unsigned FieldNo,
                             const FieldDecl &Field, bool AllowOverwrite,
                             CharUnits &SizeSoFar, bool &ZeroFieldSize);
+
+  bool ApplyZeroInitPadding(const ASTRecordLayout &Layout, bool AllowOverwrite,
+                            CharUnits SizeSoFar);
 
   mlir::Attribute Finalize(QualType Ty);
 };
@@ -715,6 +719,10 @@ bool ConstStructBuilder::Build(InitListExpr *ILE, bool AllowOverwrite) {
     }
   }
 
+  if (ZeroInitPadding &&
+      !ApplyZeroInitPadding(Layout, AllowOverwrite, SizeSoFar))
+    return false;
+
   return true;
 }
 
@@ -850,6 +858,19 @@ bool ConstStructBuilder::ApplyZeroInitPadding(
     }
     ZeroFieldSize = Info.Size == 0;
   }
+  return true;
+}
+
+bool ConstStructBuilder::ApplyZeroInitPadding(const ASTRecordLayout &Layout,
+                                              bool AllowOverwrite,
+                                              CharUnits SizeSoFar) {
+  CharUnits TotalSize = Layout.getSize();
+  if (SizeSoFar < TotalSize) {
+    if (!AppendBytes(SizeSoFar, computePadding(CGM, TotalSize - SizeSoFar),
+                     AllowOverwrite))
+      return false;
+  }
+  SizeSoFar = TotalSize;
   return true;
 }
 

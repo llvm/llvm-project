@@ -300,7 +300,7 @@ mlir::Value LoweringPrepareX86CXXABI::lowerVAArgX86_64(
             ? cast<StructType>(ai.getCoerceToType())
             : StructType::get(
                   Context, {DoubleType::get(Context), DoubleType::get(Context)},
-                  /*packed=*/false, StructType::Struct);
+                  /*packed=*/false, /*padded=*/false, StructType::Struct);
     cir::PointerType addrTy = builder.getPointerTo(ty);
     mlir::Value tmp = builder.createAlloca(loc, addrTy, ty, "tmp",
                                            CharUnits::fromQuantity(tyAlign));

@@ -13,10 +13,10 @@ struct S1 {
   Vec v;
 };
 
-// CIR-DAG: ![[VecType:.*]] = !cir.struct<struct "Vec" {!u8i}>
+// CIR-DAG: ![[VecType:.*]] = !cir.struct<struct "Vec" padded {!u8i}>
 // CIR-DAG: ![[S1:.*]] = !cir.struct<struct "S1" {![[VecType]]}>
 
-// CIR_EH-DAG: ![[VecType:.*]] = !cir.struct<struct "Vec" {!u8i}>
+// CIR_EH-DAG: ![[VecType:.*]] = !cir.struct<struct "Vec" padded {!u8i}>
 // CIR_EH-DAG: ![[S1:.*]] = !cir.struct<struct "S1" {![[VecType]]}>
 
 template <int I>

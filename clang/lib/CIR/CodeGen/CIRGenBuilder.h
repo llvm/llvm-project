@@ -178,6 +178,7 @@ public:
 
   mlir::Attribute getConstStructOrZeroAttr(mlir::ArrayAttr arrayAttr,
                                            bool packed = false,
+                                           bool padded = false,
                                            mlir::Type type = {}) {
     llvm::SmallVector<mlir::Type, 8> members;
     auto structTy = mlir::dyn_cast<cir::StructType>(type);
@@ -193,9 +194,9 @@ public:
 
     // Struct type not specified: create anon struct type from members.
     if (!structTy)
-      structTy =
-          getType<cir::StructType>(members, packed, cir::StructType::Struct,
-                                   /*ast=*/nullptr);
+      structTy = getType<cir::StructType>(members, packed, padded,
+                                          cir::StructType::Struct,
+                                          /*ast=*/nullptr);
 
     // Return zero or anonymous constant struct.
     if (isZero)
@@ -205,6 +206,7 @@ public:
 
   cir::ConstStructAttr getAnonConstStruct(mlir::ArrayAttr arrayAttr,
                                           bool packed = false,
+                                          bool padded = false,
                                           mlir::Type ty = {}) {
     llvm::SmallVector<mlir::Type, 4> members;
     for (auto &f : arrayAttr) {
@@ -214,7 +216,7 @@ public:
     }
 
     if (!ty)
-      ty = getAnonStructTy(members, packed);
+      ty = getAnonStructTy(members, packed, padded);
 
     auto sTy = mlir::dyn_cast<cir::StructType>(ty);
     assert(sTy && "expected struct type");
@@ -434,7 +436,7 @@ public:
 
   /// Get a CIR anonymous struct type.
   cir::StructType getAnonStructTy(llvm::ArrayRef<mlir::Type> members,
-                                  bool packed = false,
+                                  bool packed = false, bool padded = false,
                                   const clang::RecordDecl *ast = nullptr) {
     cir::ASTRecordDeclAttr astAttr = nullptr;
     auto kind = cir::StructType::RecordKind::Struct;
@@ -442,7 +444,7 @@ public:
       astAttr = getAttr<cir::ASTRecordDeclAttr>(ast);
       kind = getRecordKind(ast->getTagKind());
     }
-    return getType<cir::StructType>(members, packed, kind, astAttr);
+    return getType<cir::StructType>(members, packed, padded, kind, astAttr);
   }
 
   /// Get a CIR record kind from a AST declaration tag.
@@ -477,6 +479,7 @@ public:
   /// it with a different set of attributes, this method will crash.
   cir::StructType getCompleteStructTy(llvm::ArrayRef<mlir::Type> members,
                                       llvm::StringRef name, bool packed,
+                                      bool padded,
                                       const clang::RecordDecl *ast) {
     const auto nameAttr = getStringAttr(name);
     cir::ASTRecordDeclAttr astAttr = nullptr;
@@ -487,19 +490,19 @@ public:
     }
 
     // Create or get the struct.
-    auto type =
-        getType<cir::StructType>(members, nameAttr, packed, kind, astAttr);
+    auto type = getType<cir::StructType>(members, nameAttr, packed, padded,
+                                         kind, astAttr);
 
     // Complete an incomplete struct or ensure the existing complete struct
     // matches the requested attributes.
-    type.complete(members, packed, astAttr);
+    type.complete(members, packed, padded, astAttr);
 
     return type;
   }
 
   cir::StructType
   getCompleteStructType(mlir::ArrayAttr fields, bool packed = false,
-                        llvm::StringRef name = "",
+                        bool padded = false, llvm::StringRef name = "",
                         const clang::RecordDecl *ast = nullptr) {
     llvm::SmallVector<mlir::Type, 8> members;
     for (auto &attr : fields) {
@@ -508,9 +511,9 @@ public:
     }
 
     if (name.empty())
-      return getAnonStructTy(members, packed, ast);
+      return getAnonStructTy(members, packed, padded, ast);
     else
-      return getCompleteStructTy(members, name, packed, ast);
+      return getCompleteStructTy(members, name, packed, padded, ast);
   }
 
   cir::ArrayType getArrayType(mlir::Type eltType, unsigned size) {

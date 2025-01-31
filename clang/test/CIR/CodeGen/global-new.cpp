@@ -12,7 +12,7 @@
 struct e { e(int); };
 e *g = new e(0);
 
-// CIR_BEFORE: ![[ty:.*]] = !cir.struct<struct "e" {!u8i}
+// CIR_BEFORE: ![[ty:.*]] = !cir.struct<struct "e" padded {!u8i}
 
 // CIR_BEFORE: cir.global external @g = ctor : !cir.ptr<![[ty]]> {
 // CIR_BEFORE:     %[[GlobalAddr:.*]] = cir.get_global @g : !cir.ptr<!cir.ptr<![[ty]]>>
