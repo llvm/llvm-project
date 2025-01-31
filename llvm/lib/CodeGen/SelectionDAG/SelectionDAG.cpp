@@ -5666,7 +5666,8 @@ bool SelectionDAG::isADDLike(SDValue Op, bool NoWrap) const {
 
 bool SelectionDAG::isBaseWithConstantOffset(SDValue Op) const {
   return Op.getNumOperands() == 2 && isa<ConstantSDNode>(Op.getOperand(1)) &&
-         (Op.getOpcode() == ISD::ADD || isADDLike(Op));
+         (Op.getOpcode() == ISD::ADD || Op.getOpcode() == ISD::PTRADD ||
+          isADDLike(Op));
 }
 
 bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const {
@@ -8067,10 +8068,20 @@ SDValue SelectionDAG::getMemBasePlusOffset(SDValue Base, TypeSize Offset,
 
 SDValue SelectionDAG::getMemBasePlusOffset(SDValue Ptr, SDValue Offset,
                                            const SDLoc &DL,
-                                           const SDNodeFlags Flags) {
+                                           const SDNodeFlags Flags,
+                                           const bool Inverted) {
   assert(Offset.getValueType().isInteger());
   EVT BasePtrVT = Ptr.getValueType();
-  return getNode(ISD::ADD, DL, BasePtrVT, Ptr, Offset, Flags);
+  if (!this->getTarget().shouldPreservePtrArith(
+          this->getMachineFunction().getFunction())) {
+    return getNode(ISD::ADD, DL, BasePtrVT, Ptr, Offset, Flags);
+  } else {
+    if (Inverted) {
+      return getNode(ISD::PTRADD, DL, BasePtrVT, Offset, Ptr, Flags);
+    } else {
+      return getNode(ISD::PTRADD, DL, BasePtrVT, Ptr, Offset, Flags);
+    }
+  }
 }
 
 /// Returns true if memcpy source is constant data.
