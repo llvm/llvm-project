@@ -1668,6 +1668,15 @@ void DAGTypeLegalizer::SplitVecRes_INSERT_SUBVECTOR(SDNode *N, SDValue &Lo,
     return;
   }
 
+  if (getTypeAction(SubVecVT) == TargetLowering::TypeWidenVector &&
+      Vec.isUndef() && SubVecVT.getVectorElementType() == MVT::i1) {
+    SDValue WideSubVec = GetWidenedVector(SubVec);
+    if (WideSubVec.getValueType() == VecVT) {
+      std::tie(Lo, Hi) = DAG.SplitVector(WideSubVec, SDLoc(WideSubVec));
+      return;
+    }
+  }
+
   // Spill the vector to the stack.
   // In cases where the vector is illegal it will be broken down into parts
   // and stored in parts - we should use the alignment for the smallest part.
@@ -3183,34 +3192,53 @@ void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
 }
 
 void DAGTypeLegalizer::SplitVecRes_VECTOR_DEINTERLEAVE(SDNode *N) {
+  unsigned Factor = N->getNumOperands();
 
-  SDValue Op0Lo, Op0Hi, Op1Lo, Op1Hi;
-  GetSplitVector(N->getOperand(0), Op0Lo, Op0Hi);
-  GetSplitVector(N->getOperand(1), Op1Lo, Op1Hi);
-  EVT VT = Op0Lo.getValueType();
+  SmallVector<SDValue, 8> Ops(Factor * 2);
+  for (unsigned i = 0; i != Factor; ++i) {
+    SDValue OpLo, OpHi;
+    GetSplitVector(N->getOperand(i), OpLo, OpHi);
+    Ops[i * 2] = OpLo;
+    Ops[i * 2 + 1] = OpHi;
+  }
+
+  SmallVector<EVT, 8> VTs(Factor, Ops[0].getValueType());
+
   SDLoc DL(N);
-  SDValue ResLo = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
-                              DAG.getVTList(VT, VT), Op0Lo, Op0Hi);
-  SDValue ResHi = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
-                              DAG.getVTList(VT, VT), Op1Lo, Op1Hi);
+  SDValue ResLo = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, VTs,
+                              ArrayRef(Ops).slice(0, Factor));
+  SDValue ResHi = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, VTs,
+                              ArrayRef(Ops).slice(Factor, Factor));
 
-  SetSplitVector(SDValue(N, 0), ResLo.getValue(0), ResHi.getValue(0));
-  SetSplitVector(SDValue(N, 1), ResLo.getValue(1), ResHi.getValue(1));
+  for (unsigned i = 0; i != Factor; ++i)
+    SetSplitVector(SDValue(N, i), ResLo.getValue(i), ResHi.getValue(i));
 }
 
 void DAGTypeLegalizer::SplitVecRes_VECTOR_INTERLEAVE(SDNode *N) {
-  SDValue Op0Lo, Op0Hi, Op1Lo, Op1Hi;
-  GetSplitVector(N->getOperand(0), Op0Lo, Op0Hi);
-  GetSplitVector(N->getOperand(1), Op1Lo, Op1Hi);
-  EVT VT = Op0Lo.getValueType();
-  SDLoc DL(N);
-  SDValue Res[] = {DAG.getNode(ISD::VECTOR_INTERLEAVE, DL,
-                               DAG.getVTList(VT, VT), Op0Lo, Op1Lo),
-                   DAG.getNode(ISD::VECTOR_INTERLEAVE, DL,
-                               DAG.getVTList(VT, VT), Op0Hi, Op1Hi)};
+  unsigned Factor = N->getNumOperands();
 
-  SetSplitVector(SDValue(N, 0), Res[0].getValue(0), Res[0].getValue(1));
-  SetSplitVector(SDValue(N, 1), Res[1].getValue(0), Res[1].getValue(1));
+  SmallVector<SDValue, 8> Ops(Factor * 2);
+  for (unsigned i = 0; i != Factor; ++i) {
+    SDValue OpLo, OpHi;
+    GetSplitVector(N->getOperand(i), OpLo, OpHi);
+    Ops[i] = OpLo;
+    Ops[i + Factor] = OpHi;
+  }
+
+  SmallVector<EVT, 8> VTs(Factor, Ops[0].getValueType());
+
+  SDLoc DL(N);
+  SDValue Res[] = {DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, VTs,
+                               ArrayRef(Ops).slice(0, Factor)),
+                   DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, VTs,
+                               ArrayRef(Ops).slice(Factor, Factor))};
+
+  for (unsigned i = 0; i != Factor; ++i) {
+    unsigned IdxLo = 2 * i;
+    unsigned IdxHi = 2 * i + 1;
+    SetSplitVector(SDValue(N, i), Res[IdxLo / Factor].getValue(IdxLo % Factor),
+                   Res[IdxHi / Factor].getValue(IdxHi % Factor));
+  }
 }
 
 //===----------------------------------------------------------------------===//
