@@ -448,7 +448,6 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
     llvm::UpgradeDebugInfo(*M);
 
   UpgradeModuleFlags(*M);
-  UpgradeNVVMAnnotations(*M);
   UpgradeSectionAttributes(*M);
 
   if (PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE)
