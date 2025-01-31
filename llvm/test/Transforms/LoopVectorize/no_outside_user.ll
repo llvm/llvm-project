@@ -330,7 +330,7 @@ f1.exit.loopexit:
 ; not vectorize this.
 define i32 @reduction_sum(i32 %n, ptr noalias nocapture %A, ptr noalias nocapture %B) nounwind uwtable readonly noinline ssp {
 ; CHECK-LABEL: define i32 @reduction_sum(
-; CHECK-SAME: i32 [[N:%.*]], ptr noalias nocapture [[A:%.*]], ptr noalias nocapture [[B:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i32 [[N:%.*]], ptr noalias captures(none) [[A:%.*]], ptr noalias captures(none) [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[C1]], label %[[HEADER_PREHEADER:.*]], [[DOT_CRIT_EDGE:label %.*]]
@@ -450,7 +450,7 @@ f1.exit.loopexit:
 ; cannot vectorize.
 define i32 @not_valid_reduction(i32 %n, ptr noalias nocapture %A) nounwind uwtable readonly {
 ; CHECK-LABEL: define i32 @not_valid_reduction(
-; CHECK-SAME: i32 [[N:%.*]], ptr noalias nocapture [[A:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: i32 [[N:%.*]], ptr noalias captures(none) [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP4]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]
@@ -588,7 +588,7 @@ f1.exit.loopexit:
 
 define i32 @no_vectorize_reduction_with_outside_use(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwind uwtable readonly {
 ; CHECK-LABEL: define i32 @no_vectorize_reduction_with_outside_use(
-; CHECK-SAME: i32 [[N:%.*]], ptr nocapture [[A:%.*]], ptr nocapture [[B:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: i32 [[N:%.*]], ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]
