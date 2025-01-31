@@ -11,6 +11,9 @@
 /// (e.g. `counted_by`)
 ///
 //===----------------------------------------------------------------------===//
+#include "clang/Basic/SourceManager.h"
+#include "clang/Lex/Lexer.h"
+#include "clang/Sema/Initialization.h"
 #include "clang/Sema/Sema.h"
 
 namespace clang {
@@ -102,7 +105,36 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
   // only `PointeeTy->isStructureTypeWithFlexibleArrayMember()` is reachable
   // when `FieldTy->isArrayType()`.
   bool ShouldWarn = false;
-  if (PointeeTy->isIncompleteType() && !CountInBytes) {
+  if (PointeeTy->isAlwaysIncompleteType() && !CountInBytes) {
+    // In general using `counted_by` or `counted_by_or_null` on
+    // pointers where the pointee is an incomplete type are problematic. This is
+    // because it isn't possible to compute the pointer's bounds without knowing
+    // the pointee type size. At the same time it is common to forward declare
+    // types in header files.
+    //
+    // E.g.:
+    //
+    // struct Handle;
+    // struct Wrapper {
+    //   size_t size;
+    //   struct Handle* __counted_by(count) handles;
+    // }
+    //
+    // To allow the above code pattern but still prevent the pointee type from
+    // being incomplete in places where bounds checks are needed the following
+    // scheme is used:
+    //
+    // * When the pointee type might not always be an incomplete type (i.e.
+    // a type that is currently incomplete but might be completed later
+    // on in the translation unit) the attribute is allowed by this method
+    // but later uses of the FieldDecl are checked that the pointee type
+    // is complete see `BoundsSafetyCheckAssignmentToCountAttrPtr`,
+    // `BoundsSafetyCheckInitialization`, and
+    // `BoundsSafetyCheckUseOfCountAttrPtr`
+    //
+    // * When the pointee type is always an incomplete type (e.g.
+    // `void`) the attribute is disallowed by this method because we know the
+    // type can never be completed so there's no reason to allow it.
     InvalidTypeKind = CountedByInvalidPointeeTypeKind::INCOMPLETE;
   } else if (PointeeTy->isSizelessType()) {
     InvalidTypeKind = CountedByInvalidPointeeTypeKind::SIZELESS;
@@ -183,6 +215,190 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
       return true;
     }
   }
+  return false;
+}
+
+static void EmitIncompleteCountedByPointeeNotes(Sema &S,
+                                                const CountAttributedType *CATy,
+                                                NamedDecl *IncompleteTyDecl,
+                                                bool NoteAttrLocation = true) {
+  assert(IncompleteTyDecl == nullptr || isa<TypeDecl>(IncompleteTyDecl));
+
+  if (NoteAttrLocation) {
+    // Note where the attribute is declared
+    // This is an approximation that's not quite right. This points to the
+    // the expression inside the attribute rather than the attribute itself.
+    //
+    // TODO: Implement logic to find the relevant TypeLoc for the attribute and
+    // get the SourceRange from that (#113582).
+    SourceRange AttrSrcRange = CATy->getCountExpr()->getSourceRange();
+    S.Diag(AttrSrcRange.getBegin(), diag::note_named_attribute)
+        << CATy->getAttributeName(/*WithMacroPrefix=*/true) << AttrSrcRange;
+  }
+
+  if (!IncompleteTyDecl)
+    return;
+
+  // If there's an associated forward declaration display it to emphasize
+  // why the type is incomplete (all we have is a forward declaration).
+
+  // Note the `IncompleteTyDecl` type is the underlying type which might not
+  // be the same as `CATy->getPointeeType()` which could be a typedef.
+  //
+  // The diagnostic printed will be at the location of the underlying type but
+  // the diagnostic text will print the type of `CATy->getPointeeType()` which
+  // could be a typedef name rather than the underlying type. This is ok
+  // though because the diagnostic will print the underlying type name too.
+  // E.g:
+  //
+  // `forward declaration of 'Incomplete_Struct_t'
+  //  (aka 'struct IncompleteStructTy')`
+  S.Diag(IncompleteTyDecl->getBeginLoc(), diag::note_forward_declaration)
+      << CATy->getPointeeType();
+}
+
+static std::tuple<const CountAttributedType *, QualType>
+HasCountedByAttrOnIncompletePointee(QualType Ty, NamedDecl **ND) {
+  auto *CATy = Ty->getAs<CountAttributedType>();
+  if (!CATy)
+    return {};
+
+  // Incomplete pointee type is only a problem for
+  // counted_by/counted_by_or_null
+  if (CATy->isCountInBytes())
+    return {};
+
+  auto PointeeTy = CATy->getPointeeType();
+  if (PointeeTy.isNull())
+    return {}; // Reachable?
+
+  if (!PointeeTy->isIncompleteType(ND))
+    return {};
+
+  return {CATy, PointeeTy};
+}
+
+/// Perform Checks for assigning to a `__counted_by` or
+/// `__counted_by_or_null` pointer type \param LHSTy where the pointee type
+/// is incomplete which is invalid.
+///
+/// \param S The Sema instance.
+/// \param LHSTy The type being assigned to. Checks will only be performed if
+///              the type is a `counted_by` or `counted_by_or_null ` pointer.
+/// \param RHSExpr The expression being assigned from.
+/// \param Action The type assignment being performed
+/// \param Loc The SourceLocation to use for error diagnostics
+/// \param Assignee The ValueDecl being assigned. This is used to compute
+///        the name of the assignee. If the assignee isn't known this can
+///        be set to nullptr.
+/// \param ShowFullyQualifiedAssigneeName If set to true when using \p
+///        Assignee to compute the name of the assignee use the fully
+///        qualified name, otherwise use the unqualified name.
+///
+/// \returns True iff no diagnostic where emitted, false otherwise.
+static bool CheckAssignmentToCountAttrPtrWithIncompletePointeeTy(
+    Sema &S, QualType LHSTy, Expr *RHSExpr, AssignmentAction Action,
+    SourceLocation Loc, const ValueDecl *Assignee,
+    bool ShowFullyQualifiedAssigneeName) {
+  NamedDecl *IncompleteTyDecl = nullptr;
+  auto [CATy, PointeeTy] =
+      HasCountedByAttrOnIncompletePointee(LHSTy, &IncompleteTyDecl);
+  if (!CATy)
+    return true;
+
+  std::string AssigneeStr;
+  if (Assignee) {
+    if (ShowFullyQualifiedAssigneeName) {
+      AssigneeStr = Assignee->getQualifiedNameAsString();
+    } else {
+      AssigneeStr = Assignee->getNameAsString();
+    }
+  }
+  {
+    auto D = S.Diag(Loc, diag::err_counted_by_on_incomplete_type_on_assign)
+             << static_cast<int>(Action) << AssigneeStr
+             << (AssigneeStr.size() > 0) << isa<ImplicitValueInitExpr>(RHSExpr)
+             << LHSTy << CATy->getAttributeName(/*WithMacroPrefix=*/true)
+             << PointeeTy << CATy->isOrNull();
+
+    if (RHSExpr->getSourceRange().isValid())
+      D << RHSExpr->getSourceRange();
+  }
+
+  EmitIncompleteCountedByPointeeNotes(S, CATy, IncompleteTyDecl);
+  return false; // check failed
+}
+
+bool Sema::BoundsSafetyCheckAssignmentToCountAttrPtr(
+    QualType LHSTy, Expr *RHSExpr, AssignmentAction Action, SourceLocation Loc,
+    const ValueDecl *Assignee, bool ShowFullyQualifiedAssigneeName) {
+  return CheckAssignmentToCountAttrPtrWithIncompletePointeeTy(
+      *this, LHSTy, RHSExpr, Action, Loc, Assignee,
+      ShowFullyQualifiedAssigneeName);
+}
+
+bool Sema::BoundsSafetyCheckInitialization(const InitializedEntity &Entity,
+                                           const InitializationKind &Kind,
+                                           AssignmentAction Action,
+                                           QualType LHSType, Expr *RHSExpr) {
+  auto SL = Kind.getLocation();
+
+  // Note: We don't call `BoundsSafetyCheckAssignmentToCountAttrPtr` here
+  // because we need conditionalize what is checked. In downstream
+  // Clang `counted_by` is supported on variable definitions and in that
+  // implementation an error diagnostic will be emitted on the variable
+  // definition if the pointee is an incomplete type. To avoid warning about the
+  // same problem twice (once when the variable is defined, once when Sema
+  // checks the initializer) we skip checking the initializer if it's a
+  // variable.
+  if (Action == AssignmentAction::Initializing &&
+      Entity.getKind() != InitializedEntity::EK_Variable) {
+
+    if (!CheckAssignmentToCountAttrPtrWithIncompletePointeeTy(
+            *this, LHSType, RHSExpr, Action, SL,
+            dyn_cast_or_null<ValueDecl>(Entity.getDecl()),
+            /*ShowFullQualifiedAssigneeName=*/true)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool Sema::BoundsSafetyCheckUseOfCountAttrPtr(const Expr *E) {
+  QualType T = E->getType();
+  if (!T->isPointerType())
+    return true;
+
+  NamedDecl *IncompleteTyDecl = nullptr;
+  auto [CATy, PointeeTy] =
+      HasCountedByAttrOnIncompletePointee(T, &IncompleteTyDecl);
+  if (!CATy)
+    return true;
+
+  // Generate a string for the diagnostic that describes the "use".
+  // The string is specialized for direct calls to produce a better
+  // diagnostic.
+  SmallString<64> UseStr;
+  bool IsDirectCall = false;
+  if (const auto *CE = dyn_cast<CallExpr>(E->IgnoreParens())) {
+    if (const auto *FD = CE->getDirectCallee()) {
+      UseStr = FD->getName();
+      IsDirectCall = true;
+    }
+  }
+
+  if (!IsDirectCall) {
+    llvm::raw_svector_ostream SS(UseStr);
+    E->printPretty(SS, nullptr, getPrintingPolicy());
+  }
+
+  Diag(E->getBeginLoc(), diag::err_counted_by_on_incomplete_type_on_use)
+      << IsDirectCall << UseStr << T << PointeeTy
+      << CATy->getAttributeName(/*WithMacroPrefix=*/true) << CATy->isOrNull()
+      << E->getSourceRange();
+
+  EmitIncompleteCountedByPointeeNotes(*this, CATy, IncompleteTyDecl);
   return false;
 }
 
