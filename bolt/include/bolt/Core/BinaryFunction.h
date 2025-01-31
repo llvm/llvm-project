@@ -1610,6 +1610,51 @@ public:
 
   void setHasInferredProfile(bool Inferred) { HasInferredProfile = Inferred; }
 
+  /// Find corrected offset the same way addCFIInstruction does it to skip NOPs.
+  std::optional<uint64_t> getCorrectedCFIOffset(uint64_t Offset) {
+    assert(!Instructions.empty());
+    auto I = Instructions.lower_bound(Offset);
+    if (Offset == getSize()) {
+      assert(I == Instructions.end() && "unexpected iterator value");
+      // Sometimes compiler issues restore_state after all instructions
+      // in the function (even after nop).
+      --I;
+      Offset = I->first;
+    }
+    assert(I->first == Offset && "CFI pointing to unknown instruction");
+    if (I == Instructions.begin())
+      return {};
+
+    --I;
+    while (I != Instructions.begin() && BC.MIB->isNoop(I->second)) {
+      Offset = I->first;
+      --I;
+    }
+    return Offset;
+  }
+
+  void setInstModifiesRAState(uint8_t CFIOpcode, uint64_t Offset) {
+    std::optional<uint64_t> CorrectedOffset = getCorrectedCFIOffset(Offset);
+    if (CorrectedOffset) {
+      auto I = Instructions.lower_bound(*CorrectedOffset);
+      I--;
+
+      switch (CFIOpcode) {
+      case dwarf::DW_CFA_AARCH64_negate_ra_state:
+        BC.MIB->setNegateRAState(I->second);
+        break;
+      case dwarf::DW_CFA_remember_state:
+        BC.MIB->setRememberState(I->second);
+        break;
+      case dwarf::DW_CFA_restore_state:
+        BC.MIB->setRestoreState(I->second);
+        break;
+      default:
+        assert(0 && "CFI Opcode not covered by function");
+      }
+    }
+  }
+
   void addCFIInstruction(uint64_t Offset, MCCFIInstruction &&Inst) {
     assert(!Instructions.empty());
 
