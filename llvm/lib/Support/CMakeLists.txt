@@ -218,6 +218,7 @@ add_llvm_component_library(LLVMSupport
   MD5.cpp
   MSP430Attributes.cpp
   MSP430AttributeParser.cpp
+  Mustache.cpp      
   NativeFormatting.cpp
   OptimizedStructLayout.cpp
   Optional.cpp
