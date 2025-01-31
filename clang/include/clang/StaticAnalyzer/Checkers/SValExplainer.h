@@ -166,7 +166,7 @@ public:
             .getCanonicalType()->getAs<ObjCObjectPointerType>())
       return "object at " + Visit(R->getSymbol());
     // Other heap-based symbolic regions are also special.
-    if (isa<HeapSpaceRegion>(R->getMemorySpace()))
+    if (isa<HeapSpaceRegion>(R->getRawMemorySpace()))
       return "heap segment that starts at " + Visit(R->getSymbol());
     return "pointee of " + Visit(R->getSymbol());
   }

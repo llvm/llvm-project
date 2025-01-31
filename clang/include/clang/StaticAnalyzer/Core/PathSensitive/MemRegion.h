@@ -26,6 +26,7 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "llvm/ADT/DenseMap.h"
@@ -119,7 +120,26 @@ public:
 
   virtual MemRegionManager &getMemRegionManager() const = 0;
 
-  LLVM_ATTRIBUTE_RETURNS_NONNULL const MemSpaceRegion *getMemorySpace() const;
+  /// Deprecated. Gets the 'raw' memory space of a memory region's base region.
+  /// Deprecated in favor of the memory space trait which maps memory regions to
+  /// memory spaces, allowing dynamic updating of a memory region's memory
+  /// space.
+  /// @deprecated Use getMemorySpace(ProgramStateRef) instead.
+  LLVM_ATTRIBUTE_RETURNS_NONNULL const MemSpaceRegion *
+  getRawMemorySpace() const;
+
+  /// Returns the most specific memory space for this memory region in the given
+  /// ProgramStateRef.
+  [[nodiscard]] LLVM_ATTRIBUTE_RETURNS_NONNULL const MemSpaceRegion *
+  getMemorySpace(ProgramStateRef State) const;
+
+  template <typename FirstT, typename... RestT>
+  [[nodiscard]] bool isMemorySpace(ProgramStateRef State) const {
+    return isa_and_nonnull<FirstT, RestT...>(getMemorySpace(State));
+  }
+
+  [[nodiscard]] ProgramStateRef
+  setMemSpaceTrait(ProgramStateRef State, const MemSpaceRegion *MS) const;
 
   LLVM_ATTRIBUTE_RETURNS_NONNULL const MemRegion *getBaseRegion() const;
 
@@ -140,11 +160,20 @@ public:
   /// It might return null.
   const SymbolicRegion *getSymbolicBase() const;
 
-  bool hasStackStorage() const;
+  /// @deprecated Use hasStackStorage(ProgramStateRef) instead.
+  bool hasRawStackStorage() const;
 
-  bool hasStackNonParametersStorage() const;
+  [[nodiscard]] bool hasStackStorage(ProgramStateRef State) const;
 
-  bool hasStackParametersStorage() const;
+  /// @deprecated Use hasStackNonParametersStorage(ProgramStateRef) instead.
+  bool hasRawStackNonParametersStorage() const;
+
+  [[nodiscard]] bool hasStackNonParametersStorage(ProgramStateRef State) const;
+
+  /// @deprecated Use hasStackParametersStorage(ProgramStateRef) instead.
+  bool hasRawStackParametersStorage() const;
+
+  [[nodiscard]] bool hasStackParametersStorage(ProgramStateRef State) const;
 
   /// Compute the offset within the top level memory object.
   RegionOffset getAsOffset() const;

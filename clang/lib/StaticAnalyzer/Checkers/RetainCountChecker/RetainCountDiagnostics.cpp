@@ -690,9 +690,11 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
       const MemRegion *R = FB.getRegion();
       // Do not show local variables belonging to a function other than
       // where the error is reported.
-      if (auto MR = dyn_cast<StackSpaceRegion>(R->getMemorySpace()))
-        if (MR->getStackFrame() == LeakContext->getStackFrame())
-          FirstBinding = R;
+      const StackSpaceRegion *SSR =
+          dyn_cast_if_present<StackSpaceRegion>(R->getMemorySpace(St));
+
+      if (SSR && SSR->getStackFrame() == LeakContext->getStackFrame())
+        FirstBinding = R;
     }
 
     // AllocationNode is the last node in which the symbol was tracked.

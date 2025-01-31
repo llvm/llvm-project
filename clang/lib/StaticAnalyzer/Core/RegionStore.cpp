@@ -1292,9 +1292,9 @@ bool InvalidateRegionsWorker::isInitiallyIncludedGlobalRegion(
   case GFK_None:
     return false;
   case GFK_SystemOnly:
-    return isa<GlobalSystemSpaceRegion>(R->getMemorySpace());
+    return isa<GlobalSystemSpaceRegion>(R->getRawMemorySpace());
   case GFK_All:
-    return isa<NonStaticGlobalSpaceRegion>(R->getMemorySpace());
+    return isa<NonStaticGlobalSpaceRegion>(R->getRawMemorySpace());
   }
 
   llvm_unreachable("unknown globals filter");
@@ -1304,7 +1304,7 @@ bool InvalidateRegionsWorker::includeEntireMemorySpace(const MemRegion *Base) {
   if (isInitiallyIncludedGlobalRegion(Base))
     return true;
 
-  const MemSpaceRegion *MemSpace = Base->getMemorySpace();
+  const MemSpaceRegion *MemSpace = Base->getRawMemorySpace();
   return ITraits.hasTrait(MemSpace,
                           RegionAndSymbolInvalidationTraits::TK_EntireMemSpace);
 }
@@ -1544,7 +1544,7 @@ SVal RegionStoreManager::getBinding(RegionBindingsConstRef B, Loc L, QualType T)
   // The location does not have a bound value.  This means that it has
   // the value it had upon its creation and/or entry to the analyzed
   // function/method.  These are either symbolic values or 'undefined'.
-  if (R->hasStackNonParametersStorage()) {
+  if (R->hasRawStackNonParametersStorage()) {
     // All stack variables are considered to have undefined values
     // upon creation.  All heap allocated blocks are considered to
     // have undefined values as well unless they are explicitly bound
@@ -2175,7 +2175,7 @@ RegionStoreManager::getBindingForFieldOrElementCommon(RegionBindingsConstRef B,
     SR = dyn_cast<SubRegion>(Base);
   }
 
-  if (R->hasStackNonParametersStorage()) {
+  if (R->hasRawStackNonParametersStorage()) {
     if (isa<ElementRegion>(R)) {
       // Currently we don't reason specially about Clang-style vectors.  Check
       // if superR is a vector and if so return Unknown.
@@ -2239,7 +2239,7 @@ SVal RegionStoreManager::getBindingForVar(RegionBindingsConstRef B,
 
   // Lazily derive a value for the VarRegion.
   const VarDecl *VD = R->getDecl();
-  const MemSpaceRegion *MS = R->getMemorySpace();
+  const MemSpaceRegion *MS = R->getRawMemorySpace();
 
   // Arguments are always symbolic.
   if (isa<StackArgumentsSpaceRegion>(MS))

@@ -507,7 +507,7 @@ static bool shouldEscapeRegion(const MemRegion *R) {
 
   const auto *VR = dyn_cast<VarRegion>(R);
 
-  if (!R->hasStackStorage() || !VR)
+  if (!R->hasRawStackStorage() || !VR)
     return true;
 
   const VarDecl *VD = VR->getDecl();

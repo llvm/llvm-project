@@ -61,6 +61,9 @@ using namespace ento;
 
 #define DEBUG_TYPE "MemRegion"
 
+REGISTER_MAP_WITH_PROGRAMSTATE(MemSpacesMap, const clang::ento::MemRegion *,
+                               const clang::ento::MemSpaceRegion *)
+
 //===----------------------------------------------------------------------===//
 // MemRegion Construction.
 //===----------------------------------------------------------------------===//
@@ -163,20 +166,20 @@ MemRegionManager &SubRegion::getMemRegionManager() const {
 }
 
 const StackFrameContext *VarRegion::getStackFrame() const {
-  const auto *SSR = dyn_cast<StackSpaceRegion>(getMemorySpace());
+  const auto *SSR = dyn_cast<StackSpaceRegion>(getRawMemorySpace());
   return SSR ? SSR->getStackFrame() : nullptr;
 }
 
 const StackFrameContext *
 CXXLifetimeExtendedObjectRegion::getStackFrame() const {
-  const auto *SSR = dyn_cast<StackSpaceRegion>(getMemorySpace());
+  const auto *SSR = dyn_cast<StackSpaceRegion>(getRawMemorySpace());
   return SSR ? SSR->getStackFrame() : nullptr;
 }
 
 const StackFrameContext *CXXTempObjectRegion::getStackFrame() const {
-  assert(isa<StackSpaceRegion>(getMemorySpace()) &&
+  assert(isa<StackSpaceRegion>(getRawMemorySpace()) &&
          "A temporary object can only be allocated on the stack");
-  return cast<StackSpaceRegion>(getMemorySpace())->getStackFrame();
+  return cast<StackSpaceRegion>(getRawMemorySpace())->getStackFrame();
 }
 
 ObjCIvarRegion::ObjCIvarRegion(const ObjCIvarDecl *ivd, const SubRegion *sReg)
@@ -1348,7 +1351,7 @@ MemRegionManager::getAllocaRegion(const Expr *E, unsigned cnt,
   return getSubRegion<AllocaRegion>(E, cnt, getStackLocalsRegion(STC));
 }
 
-const MemSpaceRegion *MemRegion::getMemorySpace() const {
+const MemSpaceRegion *MemRegion::getRawMemorySpace() const {
   const MemRegion *R = this;
   const auto *SR = dyn_cast<SubRegion>(this);
 
@@ -1360,16 +1363,57 @@ const MemSpaceRegion *MemRegion::getMemorySpace() const {
   return cast<MemSpaceRegion>(R);
 }
 
-bool MemRegion::hasStackStorage() const {
-  return isa<StackSpaceRegion>(getMemorySpace());
+const MemSpaceRegion *MemRegion::getMemorySpace(ProgramStateRef State) const {
+  const MemRegion *MR = getBaseRegion();
+
+  const MemSpaceRegion *MS = MR->getRawMemorySpace();
+  if (!isa<UnknownSpaceRegion>(MS))
+    return MS;
+
+  const MemSpaceRegion *const *Result = State->get<MemSpacesMap>(MR);
+  return Result ? *Result : MS;
 }
 
-bool MemRegion::hasStackNonParametersStorage() const {
-  return isa<StackLocalsSpaceRegion>(getMemorySpace());
+ProgramStateRef MemRegion::setMemSpaceTrait(ProgramStateRef State,
+                                            const MemSpaceRegion *MS) const {
+  const MemRegion *MR = getBaseRegion();
+
+  // For now, this should only be called to update the trait for memory regions
+  // that have an unknown memory spaces since we assume everywhere else that the
+  // memory space trait is set only for unknown memory spaces (setting this info
+  // otherwise would go unused).
+  assert(isa<UnknownSpaceRegion>(MR->getRawMemorySpace()));
+
+  // Shouldn't use the memory space trait to associate UnknownSpaceRegion with
+  // an already UnknownSpaceRegion
+  assert(!isa<UnknownSpaceRegion>(MS));
+
+  ProgramStateRef NewState = State->set<MemSpacesMap>(MR, MS);
+  return NewState;
 }
 
-bool MemRegion::hasStackParametersStorage() const {
-  return isa<StackArgumentsSpaceRegion>(getMemorySpace());
+bool MemRegion::hasRawStackStorage() const {
+  return isa<StackSpaceRegion>(getRawMemorySpace());
+}
+
+bool MemRegion::hasStackStorage(ProgramStateRef State) const {
+  return isMemorySpace<StackSpaceRegion>(State);
+}
+
+bool MemRegion::hasRawStackNonParametersStorage() const {
+  return isa<StackLocalsSpaceRegion>(getRawMemorySpace());
+}
+
+bool MemRegion::hasStackNonParametersStorage(ProgramStateRef State) const {
+  return isMemorySpace<StackLocalsSpaceRegion>(State);
+}
+
+bool MemRegion::hasRawStackParametersStorage() const {
+  return isa<StackArgumentsSpaceRegion>(getRawMemorySpace());
+}
+
+bool MemRegion::hasStackParametersStorage(ProgramStateRef State) const {
+  return isMemorySpace<StackArgumentsSpaceRegion>(State);
 }
 
 // Strips away all elements and fields.

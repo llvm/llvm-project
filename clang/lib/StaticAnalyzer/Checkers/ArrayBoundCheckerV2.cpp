@@ -352,7 +352,7 @@ static std::string getRegionName(const SubRegion *Region) {
     return "the memory returned by 'alloca'";
 
   if (isa<SymbolicRegion>(Region) &&
-      isa<HeapSpaceRegion>(Region->getMemorySpace()))
+      isa<HeapSpaceRegion>(Region->getRawMemorySpace()))
     return "the heap area";
 
   if (isa<StringRegion>(Region))
@@ -574,7 +574,7 @@ void ArrayBoundCheckerV2::performCheck(const Expr *E, CheckerContext &C) const {
   StateUpdateReporter SUR(Reg, ByteOffset, E, C);
 
   // CHECK LOWER BOUND
-  const MemSpaceRegion *Space = Reg->getMemorySpace();
+  const MemSpaceRegion *Space = Reg->getRawMemorySpace();
   if (!(isa<SymbolicRegion>(Reg) && isa<UnknownSpaceRegion>(Space))) {
     // A symbolic region in unknown space represents an unknown pointer that
     // may point into the middle of an array, so we don't look for underflows.

@@ -3514,14 +3514,15 @@ ProgramStateRef ExprEngine::processPointerEscapedOnBind(
     // Cases (1) and (2).
     const MemRegion *MR = LocAndVal.first.getAsRegion();
     if (!MR ||
-        !isa<StackSpaceRegion, StaticGlobalSpaceRegion>(MR->getMemorySpace())) {
+        !MR->isMemorySpace<StackSpaceRegion, StaticGlobalSpaceRegion>(State)) {
       Escaped.push_back(LocAndVal.second);
       continue;
     }
 
     // Case (3).
     if (const auto *VR = dyn_cast<VarRegion>(MR->getBaseRegion()))
-      if (VR->hasStackParametersStorage() && VR->getStackFrame()->inTopFrame())
+      if (VR->hasRawStackParametersStorage() &&
+          VR->getStackFrame()->inTopFrame())
         if (const auto *RD = VR->getValueType()->getAsCXXRecordDecl())
           if (!RD->hasTrivialDestructor()) {
             Escaped.push_back(LocAndVal.second);
