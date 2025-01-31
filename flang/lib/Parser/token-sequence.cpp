@@ -288,7 +288,8 @@ TokenSequence &TokenSequence::ClipComment(
         isSentinel = prescanner.IsCompilerDirectiveSentinel(&tok[blanks + 1])
                          .has_value();
       }
-      if (isSentinel) {
+      if (isSentinel && skipFirst) {
+        skipFirst = false;
       } else if (skipFirst) {
         skipFirst = false;
       } else {
