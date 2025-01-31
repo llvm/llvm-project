@@ -227,6 +227,11 @@ public:
   bool validatePointerAuthKey(const llvm::APSInt &value) const override;
 
   const char *getBFloat16Mangling() const override { return "u6__bf16"; };
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(256, 64);
+  }
+
   bool hasInt128Type() const override;
 
   bool hasBitIntType() const override { return true; }
