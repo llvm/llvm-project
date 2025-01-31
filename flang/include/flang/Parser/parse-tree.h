@@ -3572,6 +3572,7 @@ struct OmpTraitProperty {
 // Trait-set-selectors:
 //    [D]evice, [T]arget_device, [C]onstruct, [I]mplementation, [U]ser.
 struct OmpTraitSelectorName {
+  std::string ToString() const;
   CharBlock source;
   UNION_CLASS_BOILERPLATE(OmpTraitSelectorName);
   ENUM_CLASS(Value, Arch, Atomic_Default_Mem_Order, Condition, Device_Num,
@@ -3596,6 +3597,7 @@ struct OmpTraitSelector {
 //    CONSTRUCT | DEVICE | IMPLEMENTATION | USER |  // since 5.0
 //    TARGET_DEVICE                                 // since 5.1
 struct OmpTraitSetSelectorName {
+  std::string ToString() const;
   CharBlock source;
   ENUM_CLASS(Value, Construct, Device, Implementation, Target_Device, User)
   WRAPPER_CLASS_BOILERPLATE(OmpTraitSetSelectorName, Value);

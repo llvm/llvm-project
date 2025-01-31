@@ -22,17 +22,17 @@ end
 !PARSE-TREE: | | | OmpClauseList ->
 
 subroutine f01
-  !$omp metadirective when(device={kind(host), device_num(1)}: nothing)
+  !$omp metadirective when(target_device={kind(host), device_num(1)}: nothing)
 end
 
 !UNPARSE: SUBROUTINE f01
-!UNPARSE: !$OMP METADIRECTIVE  WHEN(DEVICE={KIND(host), DEVICE_NUM(1_4)}: NOTHING)
+!UNPARSE: !$OMP METADIRECTIVE  WHEN(TARGET_DEVICE={KIND(host), DEVICE_NUM(1_4)}: NOTHING)
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OmpMetadirectiveDirective
 !PARSE-TREE: | OmpClauseList -> OmpClause -> When -> OmpWhenClause
 !PARSE-TREE: | | Modifier -> OmpContextSelectorSpecification -> OmpTraitSetSelector
-!PARSE-TREE: | | | OmpTraitSetSelectorName -> Value = Device
+!PARSE-TREE: | | | OmpTraitSetSelectorName -> Value = Target_Device
 !PARSE-TREE: | | | OmpTraitSelector
 !PARSE-TREE: | | | | OmpTraitSelectorName -> Value = Kind
 !PARSE-TREE: | | | | Properties
@@ -95,12 +95,12 @@ end
 
 subroutine f04
   !$omp metadirective &
-  !$omp & when(implementation={extension(haha(1), foo(baz, "bar"(1)))}: nothing)
+  !$omp when(implementation={extension_trait(haha(1), foo(baz, "bar"(1)))}: nothing)
 end
 
 !UNPARSE: SUBROUTINE f04
-!UNPARSE: !$OMP METADIRECTIVE  WHEN(IMPLEMENTATION={EXTENSION(haha(1_4), foo(baz,bar(1_4)))}: &
-!UNPARSE: !$OMP&NOTHING)
+!UNPARSE: !$OMP METADIRECTIVE  WHEN(IMPLEMENTATION={extension_trait(haha(1_4), foo(baz,bar(1_4&
+!UNPARSE: !$OMP&)))}: NOTHING)
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OmpMetadirectiveDirective
@@ -108,7 +108,7 @@ end
 !PARSE-TREE: | | Modifier -> OmpContextSelectorSpecification -> OmpTraitSetSelector
 !PARSE-TREE: | | | OmpTraitSetSelectorName -> Value = Implementation
 !PARSE-TREE: | | | OmpTraitSelector
-!PARSE-TREE: | | | | OmpTraitSelectorName -> Value = Extension
+!PARSE-TREE: | | | | OmpTraitSelectorName -> string = 'extension_trait'
 !PARSE-TREE: | | | | Properties
 !PARSE-TREE: | | | | | OmpTraitProperty -> OmpTraitPropertyExtension -> Complex
 !PARSE-TREE: | | | | | | OmpTraitPropertyName -> string = 'haha'
