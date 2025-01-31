@@ -1020,4 +1020,15 @@ Error<"'#pragma unsafe_buffer_usage' was not ended">;
 
 def err_pp_pragma_unsafe_buffer_usage_syntax :
 Error<"expected 'begin' or 'end'">;
+
+// HLSL Root Signature Lexing Errors
+let CategoryName = "Root Signature Lexical Issue" in {
+  def err_hlsl_invalid_number_literal:
+    Error<"expected number literal is not a supported number literal of unsigned integer or integer">;
+  def err_hlsl_number_literal_overflow :
+    Error<"provided %select{unsigned integer|signed integer}0 literal '%1' that overflows the maximum of 32 bits">;
+  def err_hlsl_invalid_token: Error<"unable to lex a valid Root Signature token">;
+  def err_hlsl_invalid_register_literal: Error<"expected unsigned integer literal as part of register">;
+}
+
 }
