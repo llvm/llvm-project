@@ -580,6 +580,7 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
                                    const ArgList &Args, SanitizerArgs &SanArgs,
                                    ArgStringList &CmdArgs) {
   const Driver &D = TC.getDriver();
+  const llvm::Triple &T = TC.getTriple();
   auto *PGOGenerateArg = Args.getLastArg(options::OPT_fprofile_generate,
                                          options::OPT_fprofile_generate_EQ,
                                          options::OPT_fno_profile_generate);
@@ -784,6 +785,34 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     else if (Val != "single")
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Val;
+  }
+  if (const auto *A = Args.getLastArg(options::OPT_fprofile_continuous)) {
+    if (!PGOGenerateArg && !CSPGOGenerateArg && !ProfileGenerateArg)
+      D.Diag(clang::diag::err_drv_argument_only_allowed_with)
+          << A->getSpelling()
+          << "-fprofile-generate, -fprofile-instr-generate, or "
+             "-fcs-profile-generate";
+    else {
+      CmdArgs.push_back("-fprofile-continuous");
+      // Platforms that require a bias variable:
+      if (T.isOSBinFormatELF() || T.isOSAIX()) {
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back("-runtime-counter-relocation");
+      }
+      // -fprofile-instr-generate does not decide the profile file name in the
+      // FE, and so it does not define the filename symbol
+      // (__llvm_profile_filename). Instead, the runtime uses the name
+      // "default.profraw" for the profile file. When continuous mode is ON, we
+      // will create the filename symbol so that we can insert the "%c"
+      // modifier.
+      if (ProfileGenerateArg &&
+          (ProfileGenerateArg->getOption().matches(
+               options::OPT_fprofile_instr_generate) ||
+           (ProfileGenerateArg->getOption().matches(
+                options::OPT_fprofile_instr_generate_EQ) &&
+            strlen(ProfileGenerateArg->getValue()) == 0)))
+        CmdArgs.push_back("-fprofile-instrument-path=default.profraw");
+    }
   }
 
   int FunctionGroups = 1;
