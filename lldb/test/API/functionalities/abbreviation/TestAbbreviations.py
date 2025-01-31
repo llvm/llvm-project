@@ -94,6 +94,12 @@ class AbbreviationsTestCase(TestBase):
         self.assertTrue(result.Succeeded())
         self.assertEqual("scripting run 1+1", result.GetOutput())
 
+        # Name and line are incompatible options.
+        command_interpreter.HandleCommand(
+            "alias zzyx breakpoint set -n %1 -l %2", result
+        )
+        self.assertFalse(result.Succeeded())
+
         # Prompt changing stuff should be tested, but this doesn't seem like the
         # right test to do it in.  It has nothing to do with aliases or abbreviations.
         # self.runCmd("com sou ./change_prompt.lldb")
