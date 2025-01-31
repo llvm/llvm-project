@@ -11,6 +11,7 @@
 
 #include "src/__support/common.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
 #include "src/string/memory_utils/inline_memset.h"
 
 #include <stddef.h> // size_t
