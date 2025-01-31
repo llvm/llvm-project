@@ -29,7 +29,7 @@ using namespace mlir;
 
 static const StringRef kLineStyleControlFlow = "dashed";
 static const StringRef kLineStyleDataFlow = "solid";
-static const StringRef kShapeNode = "ellipse";
+static const StringRef kShapeNode = "record";
 static const StringRef kShapeNone = "plain";
 
 /// Return the size limits for eliding large attributes.
@@ -57,6 +57,21 @@ static std::string escapeString(std::string str) {
 /// Put quotation marks around a given string.
 static std::string quoteString(const std::string &str) {
   return "\"" + str + "\"";
+}
+
+/// For Graphviz record nodes:
+/// " Braces, vertical bars and angle brackets must be escaped with a backslash
+/// character if you wish them to appear as a literal character "
+static std::string escapeLabelString(const std::string &str) {
+  std::string buf;
+  llvm::raw_string_ostream os(buf);
+  for (char c : str) {
+    if (c == '{' || c == '|' || c == '<' || c == '}' || c == '>') {
+      os << "\\\\";
+    }
+    os << c;
+  }
+  return buf;
 }
 
 using AttributeMap = std::map<std::string, std::string>;
@@ -240,7 +255,8 @@ private:
                     StringRef background = "") {
     int nodeId = ++counter;
     AttributeMap attrs;
-    attrs["label"] = quoteString(escapeString(std::move(label)));
+    attrs["label"] =
+        quoteString(escapeString(escapeLabelString(std::move(label))));
     attrs["shape"] = shape.str();
     if (!background.empty()) {
       attrs["style"] = "filled";
