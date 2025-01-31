@@ -65,8 +65,9 @@ static std::string quoteString(const std::string &str) {
 std::string escapeLabelString(const std::string &str) {
   std::string buf;
   llvm::raw_string_ostream os(buf);
+  llvm::DenseSet<char> shouldEscape = {'{', '|', '<', '}', '>', '\n', '"'};
   for (char c : str) {
-    if (c == '{' || c == '|' || c == '<' || c == '}' || c == '>' || c == '\n') {
+    if (shouldEscape.contains(c)) {
       os << '\\';
     }
     os << c;
@@ -279,10 +280,13 @@ private:
 
   std::string getOperandPortName(Value operand) {
     // Print value as an operand and omit the leading '%' character.
-    return strFromOs([&](raw_ostream &os) {
-             operand.printAsOperand(os, OpPrintingFlags());
-           })
-        .substr(1, std::string::npos);
+    auto str = strFromOs([&](raw_ostream &os) {
+      operand.printAsOperand(os, OpPrintingFlags());
+    });
+    // Replace % and # with _
+    std::replace(str.begin(), str.end(), '%', '_');
+    std::replace(str.begin(), str.end(), '#', '_');
+    return str;
   }
 
   /// Generate a label for an operation.
