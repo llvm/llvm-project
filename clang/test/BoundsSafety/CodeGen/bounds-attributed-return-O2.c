@@ -307,6 +307,5 @@ int *__ended_by(end) eb_in_from_single(int *__single end, int *__single p) {
 // CHECK: [[META10]] = !{!"bounds-safety-check-ptr-neq-null"}
 // CHECK: [[TBAA11]] = !{[[META12:![0-9]+]], [[META12]], i64 0}
 // CHECK: [[META12]] = !{!"int", [[META6]], i64 0}
-// CHECK: [[TBAA13]] = !{[[META14:![0-9]+]], [[META14]], i64 0}
-// CHECK: [[META14]] = !{!"p1 void", [[META5]], i64 0}
+// CHECK: [[TBAA13]] = !{[[META5]], [[META5]], i64 0}
 //.
