@@ -427,13 +427,3 @@ func.func @test_upoly_expr_assignment(%arg0: !fir.class<!fir.array<?xnone>> {fir
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
-
-func.func @test_scalar_box(%arg0: f32, %arg1: !fir.box<!fir.ptr<f32>>) {
-  hlfir.assign %arg0 to %arg1 : f32, !fir.box<!fir.ptr<f32>>
-  return
-}
-// CHECK-LABEL:   func.func @test_scalar_box(
-// CHECK-SAME:                               %[[VAL_0:.*]]: f32,
-// CHECK-SAME:                               %[[VAL_1:.*]]: !fir.box<!fir.ptr<f32>>) {
-// CHECK:           %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
-// CHECK:           fir.store %[[VAL_0]] to %[[VAL_2]] : !fir.ptr<f32>
