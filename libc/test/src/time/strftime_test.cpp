@@ -612,7 +612,7 @@ everywhere else should be in the current year.
 */
 
   // check the first days of the year
-  for (size_t yday = 0; yday < 4; ++yday) {
+  for (size_t yday = 0; yday < 5; ++yday) {
     for (size_t iso_wday = LIBC_NAMESPACE::time_constants::MONDAY; iso_wday < 8;
          ++iso_wday) {
       // start with monday, to match the ISO week.
@@ -688,13 +688,14 @@ year end - yday yday
          ++iso_wday) {
       // start with monday, to match the ISO week.
       time.tm_wday = iso_wday % LIBC_NAMESPACE::time_constants::DAYS_PER_WEEK;
-      time.tm_yday =
-          LIBC_NAMESPACE::time_constants::DAYS_PER_NON_LEAP_YEAR - days_left;
+      // subtract 1 from the max yday to handle yday being 0-indexed.
+      time.tm_yday = LIBC_NAMESPACE::time_constants::DAYS_PER_NON_LEAP_YEAR -
+                     1 - days_left;
 
       time_leap_year.tm_wday =
           iso_wday % LIBC_NAMESPACE::time_constants::DAYS_PER_WEEK;
       time_leap_year.tm_yday =
-          LIBC_NAMESPACE::time_constants::DAYS_PER_LEAP_YEAR - days_left;
+          LIBC_NAMESPACE::time_constants::LAST_DAY_OF_LEAP_YEAR - days_left;
 
       written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%g", &time);
       written_leap_year = LIBC_NAMESPACE::strftime(
@@ -781,7 +782,7 @@ TEST(LlvmLibcStrftimeTest, ISOYear) {
   time.tm_year = 99;
 
   // check the first days of the year
-  for (size_t yday = 1; yday < 5; ++yday) {
+  for (size_t yday = 0; yday < 5; ++yday) {
     for (size_t iso_wday = 1; iso_wday < 8; ++iso_wday) {
       // start with monday, to match the ISO week.
       time.tm_wday = iso_wday % LIBC_NAMESPACE::time_constants::DAYS_PER_WEEK;
@@ -789,16 +790,17 @@ TEST(LlvmLibcStrftimeTest, ISOYear) {
 
       written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%G", &time);
 
-      if (iso_wday <= 4 || yday >= 4) {
+      if (iso_wday <= LIBC_NAMESPACE::time_constants::THURSDAY || yday >= 4) {
         // monday - thursday are never in the previous year, nor are the 4th and
         // after.
         EXPECT_STREQ_LEN(written, buffer, "1999");
       } else {
-        // iso_wday is 5, 6, or 7 and yday is 1, 2, or 3.
+        // iso_wday is 5, 6, or 7 and yday is 0, 1, or 2.
         // days_since_thursday is therefor 1, 2, or 3.
-        const size_t days_since_thursday = iso_wday - 4;
+        const size_t days_since_thursday =
+            iso_wday - LIBC_NAMESPACE::time_constants::THURSDAY;
 
-        if (days_since_thursday >= yday) {
+        if (days_since_thursday > yday) {
           EXPECT_STREQ_LEN(written, buffer, "1998");
         } else {
           EXPECT_STREQ_LEN(written, buffer, "1999");
@@ -820,13 +822,14 @@ TEST(LlvmLibcStrftimeTest, ISOYear) {
     for (size_t iso_wday = 1; iso_wday < 8; ++iso_wday) {
       // start with monday, to match the ISO week.
       time.tm_wday = iso_wday % LIBC_NAMESPACE::time_constants::DAYS_PER_WEEK;
+      // subtract 1 from the max yday to handle yday being 0-indexed.
       time.tm_yday =
-          LIBC_NAMESPACE::time_constants::DAYS_PER_NON_LEAP_YEAR - days_left;
+          LIBC_NAMESPACE::time_constants::LAST_DAY_OF_NON_LEAP_YEAR - days_left;
 
       time_leap_year.tm_wday =
           iso_wday % LIBC_NAMESPACE::time_constants::DAYS_PER_WEEK;
       time_leap_year.tm_yday =
-          LIBC_NAMESPACE::time_constants::DAYS_PER_LEAP_YEAR - days_left;
+          LIBC_NAMESPACE::time_constants::LAST_DAY_OF_LEAP_YEAR - days_left;
 
       written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%G", &time);
       written_leap_year = LIBC_NAMESPACE::strftime(
@@ -1273,40 +1276,49 @@ TEST(LlvmLibcStrftimeTest, ISOWeekOfYear) {
     time.tm_wday = first_weekday;
     time.tm_yday = 0;
     size_t cur_week = 1;
-    if (first_weekday == LIBC_NAMESPACE::time_constants::SUNDAY)
+    if (first_weekday == LIBC_NAMESPACE::time_constants::SUNDAY ||
+        first_weekday == LIBC_NAMESPACE::time_constants::SATURDAY)
       cur_week = 52;
-    else if (first_weekday == LIBC_NAMESPACE::time_constants::SATURDAY)
+    else if (first_weekday == LIBC_NAMESPACE::time_constants::FRIDAY)
       cur_week = 53;
 
     // iterate through the year, starting on first_weekday.
-    for (size_t cur_day = 0; cur_day <= days_to_check; ++cur_day) {
+    for (size_t cur_day = 0; cur_day < days_to_check; ++cur_day) {
       // If the week just ended, move to the next week.
 
       written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%V", &time);
       char *result = spn.get_padded_num(cur_week, 2);
 
+      if (result[1] != buffer[1]) {
+        written++;
+      }
       ASSERT_STREQ(buffer, result);
       ASSERT_EQ(written, spn.get_str_len());
 
       // a day has passed, increment the counters.
-      time.tm_wday =
-          (time.tm_wday + 1) % LIBC_NAMESPACE::time_constants::DAYS_PER_WEEK;
       ++time.tm_yday;
-      if ((time.tm_yday ==
-               LIBC_NAMESPACE::time_constants::DAYS_PER_NON_LEAP_YEAR &&
-           time.tm_year != get_adjusted_year(2000)) ||
-          time.tm_yday == LIBC_NAMESPACE::time_constants::DAYS_PER_LEAP_YEAR) {
+      if (time.tm_yday ==
+          (time.tm_year == get_adjusted_year(2000)
+               ? LIBC_NAMESPACE::time_constants::DAYS_PER_LEAP_YEAR
+               : LIBC_NAMESPACE::time_constants::DAYS_PER_NON_LEAP_YEAR)) {
         time.tm_yday = 0;
         ++time.tm_year;
       }
+
+      time.tm_wday =
+          (time.tm_wday + 1) % LIBC_NAMESPACE::time_constants::DAYS_PER_WEEK;
       if (time.tm_wday == WEEK_START) {
         ++cur_week;
-        // TODO: fix this, it should check for if this is the first week of next
-        // year properly. Specifically, if there are less than 4 days left in
-        // this year then it's week 1 of next year.
-        if (cur_week > 51 && time.tm_yday < 10) {
+        const int days_left_in_year =
+            (time.tm_year == get_adjusted_year(2000)
+                 ? LIBC_NAMESPACE::time_constants::LAST_DAY_OF_LEAP_YEAR
+                 : LIBC_NAMESPACE::time_constants::LAST_DAY_OF_NON_LEAP_YEAR) -
+            time.tm_yday;
+
+        // if the week we're currently in is in the next year, or if the year
+        // has turned over, reset the week.
+        if (days_left_in_year < 3 || (cur_week > 51 && time.tm_yday < 10))
           cur_week = 1;
-        }
       }
     }
   }

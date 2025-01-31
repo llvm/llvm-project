@@ -50,6 +50,9 @@ constexpr int MONTHS_PER_YEAR = 12;
 constexpr int DAYS_PER_NON_LEAP_YEAR = 365;
 constexpr int DAYS_PER_LEAP_YEAR = 366;
 
+constexpr int LAST_DAY_OF_NON_LEAP_YEAR = DAYS_PER_NON_LEAP_YEAR - 1;
+constexpr int LAST_DAY_OF_LEAP_YEAR = DAYS_PER_LEAP_YEAR - 1;
+
 constexpr int SECONDS_PER_HOUR = SECONDS_PER_MIN * MINUTES_PER_HOUR;
 constexpr int SECONDS_PER_DAY = SECONDS_PER_HOUR * HOURS_PER_DAY;
 constexpr int NUMBER_OF_SECONDS_IN_LEAP_YEAR =
@@ -59,7 +62,7 @@ constexpr int TIME_YEAR_BASE = 1900;
 constexpr int EPOCH_YEAR = 1970;
 constexpr int EPOCH_WEEK_DAY = 4;
 
-constexpr int ISO_FIRST_DAY_OF_YEAR = 4;
+constexpr int ISO_FIRST_DAY_OF_YEAR = 3; // the 4th day of the year, 0-indexed.
 
 // For asctime the behavior is undefined if struct tm's tm_wday or tm_mon are
 // not within the normal ranges as defined in <time.h>, or if struct tm's

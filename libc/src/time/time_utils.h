@@ -107,6 +107,11 @@ LIBC_INLINE constexpr bool is_leap_year(const int64_t year) {
   return (((year) % 4) == 0 && (((year) % 100) != 0 || ((year) % 400) == 0));
 }
 
+LIBC_INLINE constexpr int get_days_in_year(const int year) {
+  return is_leap_year(year) ? time_constants::DAYS_PER_LEAP_YEAR
+                            : time_constants::DAYS_PER_NON_LEAP_YEAR;
+}
+
 // This is a helper class that takes a struct tm and lets you inspect its
 // values. Where relevant, results are bounds checked and returned as optionals.
 // This class does not, however, do data normalization except where necessary.
@@ -174,11 +179,6 @@ public:
     return time_utils::is_leap_year(get_year());
   }
 
-  LIBC_INLINE constexpr int get_days_in_year() const {
-    return is_leap_year() ? time_constants::DAYS_PER_LEAP_YEAR
-                          : time_constants::DAYS_PER_NON_LEAP_YEAR;
-  }
-
   LIBC_INLINE constexpr int get_iso_wday() const {
     // ISO uses a week that starts on Monday, but struct tm starts its week on
     // Sunday. This function normalizes the weekday so that it always returns a
@@ -192,22 +192,67 @@ public:
   LIBC_INLINE constexpr int get_week(time_constants::WeekDay start_day) const {
     // The most recent start_day. The rest of the days into the current week
     // don't count, so ignore them.
+    // Also add 7 to handle start_day > tm_wday
     const int start_of_cur_week =
         timeptr->tm_yday -
-        ((timeptr->tm_wday - start_day) % time_constants::DAYS_PER_WEEK);
+        ((timeptr->tm_wday + time_constants::DAYS_PER_WEEK - start_day) %
+         time_constants::DAYS_PER_WEEK);
 
+    // Add 1 since the first week may start with day 0
     const int ceil_weeks_since_start =
-        (start_of_cur_week + (time_constants::DAYS_PER_WEEK - 1)) /
+        ((start_of_cur_week + 1) + (time_constants::DAYS_PER_WEEK - 1)) /
         time_constants::DAYS_PER_WEEK;
     return ceil_weeks_since_start;
   }
 
   LIBC_INLINE constexpr int get_iso_week() const {
-    const int BASE_WEEK = get_week(time_constants::THURSDAY);
+    const time_constants::WeekDay start_day = time_constants::MONDAY;
 
-    if (BASE_WEEK >= 1 && BASE_WEEK <= 52)
-      return BASE_WEEK;
-    return -1; // TODO: FINISH THIS
+    // The most recent start_day. The rest of the days into the current week
+    // don't count, so ignore them.
+    // Also add 7 to handle start_day > tm_wday
+    const int start_of_cur_week =
+        timeptr->tm_yday -
+        ((timeptr->tm_wday + time_constants::DAYS_PER_WEEK - start_day) %
+         time_constants::DAYS_PER_WEEK);
+
+    // if the week starts in the previous year, and also if the 4th of this year
+    // is not in this week.
+    if (start_of_cur_week < -3) {
+      const int days_into_prev_year =
+          get_days_in_year(get_year() - 1) + start_of_cur_week;
+      // Each year has at least 52 weeks, but a year's last week will be 53 if
+      // its first week starts in the previous year and its last week ends
+      // in the next year. We know get_year() - 1 must extend into get_year(),
+      // so here we check if it also extended into get_year() - 2 and add 1 week
+      // if it does.
+      return 52 + ((days_into_prev_year % time_constants::DAYS_PER_WEEK) >
+                           time_constants::ISO_FIRST_DAY_OF_YEAR
+                       ? 1
+                       : 0);
+    }
+
+    // subtract 1 to account for yday being 0 indexed
+    const int days_until_end_of_year =
+        get_days_in_year(get_year()) - start_of_cur_week - 1;
+
+    // if there are less than 3 days from the start of this week to the end of
+    // the year, then there must be 4 days in this week in the next year, which
+    // means that this week is the first week of that year.
+    if (days_until_end_of_year < 3)
+      return 1;
+
+    // else just calculate the current week like normal.
+    const int ceil_weeks_since_start =
+        ((start_of_cur_week + 1) + (time_constants::DAYS_PER_WEEK - 1)) /
+        time_constants::DAYS_PER_WEEK;
+
+    // add 1 if this year's first week starts in the previous year.
+    return ceil_weeks_since_start +
+           ((start_of_cur_week % time_constants::DAYS_PER_WEEK) >
+                    time_constants::ISO_FIRST_DAY_OF_YEAR
+                ? 1
+                : 0);
   }
 
   LIBC_INLINE constexpr int get_iso_year() const {
@@ -248,7 +293,8 @@ public:
     }
 
     // last week
-    const int DAYS_LEFT_IN_YEAR = get_days_in_year() - timeptr->tm_yday;
+    const int DAYS_LEFT_IN_YEAR =
+        get_days_in_year(get_year()) - timeptr->tm_yday;
     /*
     Similar to above, we're checking if jan 4 (of next year) is in this week. If
     it is, this is in the next year. Note that this also handles the case of
