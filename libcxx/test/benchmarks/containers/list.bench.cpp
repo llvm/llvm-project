@@ -8,15 +8,15 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-#include <deque>
+#include <list>
 #include <string>
 
 #include "container_benchmarks.h"
 #include "benchmark/benchmark.h"
 
 int main(int argc, char** argv) {
-  ContainerBenchmarks::sequence_container_benchmarks<std::deque<int>>("std::deque<int>");
-  ContainerBenchmarks::sequence_container_benchmarks<std::deque<std::string>>("std::deque<std::string>");
+  ContainerBenchmarks::sequence_container_benchmarks<std::list<int>>("std::list<int>");
+  ContainerBenchmarks::sequence_container_benchmarks<std::list<std::string>>("std::list<std::string>");
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();
