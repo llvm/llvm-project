@@ -36,6 +36,10 @@
 #include <sys/time.h>
 #endif
 
+#if SANITIZER_INTERCEPT_PRCTL
+#include <sys/prctl.h>
+#endif
+
 #include <fcntl.h>
 #include <ifaddrs.h>
 #include <net/if.h>
@@ -777,6 +781,14 @@ TEST(TestRtsanInterceptors, ProcessVmWritevDiesWhenRealtime) {
   iovec rmt{&stack, sizeof(stack)};
   auto Func = [&lcl, &rmt]() { process_vm_writev(0, &lcl, 1, &rmt, 1, 0); };
   ExpectRealtimeDeath(Func, "process_vm_writev");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
+#if SANITIZER_INTERCEPT_PRCTL
+TEST(TestRtsanInterceptors, PrctlDiesWhenRealtime) {
+  auto Func = []() { prctl(PR_GET_DUMPABLE, 0, 0, 0, 0); };
+  ExpectRealtimeDeath(Func, "prctl");
   ExpectNonRealtimeSurvival(Func);
 }
 #endif

@@ -1319,6 +1319,32 @@ INTERCEPTOR(ssize_t, process_vm_writev, pid_t pid,
 #define RTSAN_MAYBE_INTERCEPT_PROCESS_VM_WRITEV
 #endif
 
+#if SANITIZER_INTERCEPT_PRCTL
+INTERCEPTOR(int, prctl, int operation, ...) {
+  __rtsan_notify_intercepted_call("prctl");
+
+  va_list args;
+  va_start(args, operation);
+
+  // in practice, prctl syscall accepts up to 4 additional arguments.
+  // With an operation like PR_SET_NAME however
+  // call does not have to set beyond the 2nd but
+  // it is good practice to set to NULL the rest.
+  using arg_type = unsigned long;
+  arg_type arg1 = va_arg(args, arg_type);
+  arg_type arg2 = va_arg(args, arg_type);
+  arg_type arg3 = va_arg(args, arg_type);
+  arg_type arg4 = va_arg(args, arg_type);
+
+  va_end(args);
+
+  return REAL(prctl)(operation, arg1, arg2, arg3, arg4);
+}
+#define RTSAN_MAYBE_INTERCEPT_PRCTL INTERCEPT_FUNCTION(prctl)
+#else
+#define RTSAN_MAYBE_INTERCEPT_PRCTL
+#endif
+
 // TODO: the `wait` family of functions is an oddity. In testing, if you
 // intercept them, Darwin seemingly ignores them, and linux never returns from
 // the test. Revisit this in the future, but hopefully intercepting fork/exec is
@@ -1520,6 +1546,7 @@ void __rtsan::InitializeInterceptors() {
 
   RTSAN_MAYBE_INTERCEPT_PROCESS_VM_READV;
   RTSAN_MAYBE_INTERCEPT_PROCESS_VM_WRITEV;
+  RTSAN_MAYBE_INTERCEPT_PRCTL;
 
   INTERCEPT_FUNCTION(syscall);
 }
