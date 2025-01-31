@@ -107,7 +107,7 @@ Removed Compiler Flags
 Attribute Changes in Clang
 --------------------------
 
-- Clang now disallows the use of attributes on void parameters. (#GH108819)
+- Clang now diagnoses use of declaration attributes on void parameters. (#GH108819)
 
 Improvements to Clang's diagnostics
 -----------------------------------
