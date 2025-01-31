@@ -72,6 +72,15 @@ using LoopVector = SmallVector<Loop *, 8>;
 // TODO: Check if we can use a sparse matrix here.
 using CharMatrix = std::vector<std::vector<char>>;
 
+// Classification of a direction vector by the leftmost element after removing
+// '=' and 'I' from it.
+enum class DirectionVectorPattern {
+  Zero,     ///< The direction vector contains only '=' or 'I'.
+  Positive, ///< The leftmost element after removing '=' and 'I' is '<'.
+  Negative, ///< The leftmost element after removing '=' and 'I' is '>'.
+  All,      ///< The leftmost element after removing '=' and 'I' is '*'.
+};
+
 } // end anonymous namespace
 
 // Minimum loop depth supported.
@@ -199,18 +208,115 @@ static void interChangeDependencies(CharMatrix &DepMatrix, unsigned FromIndx,
     std::swap(DepMatrix[I][ToIndx], DepMatrix[I][FromIndx]);
 }
 
-// After interchanging, check if the direction vector is valid.
-// [Theorem] A permutation of the loops in a perfect nest is legal if and only
-// if the direction matrix, after the same permutation is applied to its
-// columns, has no ">" direction as the leftmost non-"=" direction in any row.
-static bool isLexicographicallyPositive(std::vector<char> &DV) {
-  for (unsigned char Direction : DV) {
-    if (Direction == '<')
-      return true;
-    if (Direction == '>' || Direction == '*')
-      return false;
+// Classify the direction vector into the four patterns. The target vector is
+// [DV[Left], DV[Left+1], ..., DV[Right-1]], not the whole of \p DV.
+static DirectionVectorPattern
+classifyDirectionVector(const std::vector<char> &DV, unsigned Left,
+                        unsigned Right) {
+  assert(Left <= Right && "Left must be less or equal to Right");
+  for (unsigned I = Left; I < Right; I++) {
+    unsigned char Direction = DV[I];
+    switch (Direction) {
+    case '<':
+      return DirectionVectorPattern::Positive;
+    case '>':
+      return DirectionVectorPattern::Negative;
+    case '*':
+      return DirectionVectorPattern::All;
+    case '=':
+    case 'I':
+      break;
+    default:
+      llvm_unreachable("Unknown element in direction vector");
+    }
   }
-  return true;
+  return DirectionVectorPattern::Zero;
+}
+
+// Check whether the requested interchange is legal or not. The interchange is
+// valid if the following condition holds:
+//
+// [Cond] For two instructions that can access the same location, the execution
+// order of the instructions before and after interchanged is the same.
+//
+// If the direction vector doesn't contain '*', the above Cond is equivalent to
+// one of the following:
+//
+// - The leftmost non-'=' element is '<' before and after interchanging.
+// - The leftmost non-'=' element is '>' before and after interchanging.
+// - All the elements in the direction vector is '='.
+//
+// As for '*', we must treat it as having dependency in all directions. It could
+// be '<', it could be '>', it could be '='. We can eliminate '*'s from the
+// direction vector by enumerating all possible patterns by replacing '*' with
+// '<' or '>' or '=', and then doing the above checks for all of them. The
+// enumeration can grow exponentially, so it is not practical to run it as it
+// is. Fortunately, we can perform the following pruning.
+//
+// - For '*' to the left of \p OuterLoopId, replacing it with '=' is allowed.
+//
+// This is because, for patterns where '<' (or '>') is assigned to some '*' to
+// the left of \p OuterLoopId, the first (or second) condition above holds
+// regardless of interchanging. After doing this pruning, the interchange is
+// legal if the leftmost non-'=' element is the same before and after swapping
+// the element of \p OuterLoopId and \p InnerLoopId.
+//
+//
+// Example: Consider the following loop.
+//
+// ```
+// for (i=0; i<=32; i++)
+//   for (j=0; j<N-1; j++)
+//     for (k=0; k<N-1; k++) {
+// Src:   A[i][j][k] = ...;
+// Dst:   use(A[32-i][j+1][k+1]);
+//     }
+// ```
+//
+// In this case, the direction vector is [* < <] (if the analysis is powerful
+// enough). The enumeration of all possible patterns by replacing '*' is as
+// follows:
+//
+// - [< < <] : when i < 16
+// - [= < <] : when i = 16
+// - [> < <] : when i > 16
+//
+// We can prove that it is safe to interchange the innermost two loops here,
+// because the interchange doesn't change the leftmost non-'=' element for all
+// enumerated vectors.
+//
+// TODO: There are cases where the interchange is legal but rejected. At least
+// the following patterns are legal:
+// - If both Dep[OuterLoopId] and Dep[InnerLoopId] are '=', the interchange is
+// legal regardless of any other elements.
+// - If the loops are adjacent to each other and at least one of them is '=',
+// the interchange is legal even if the other is '*'.
+static bool isLegalToInterchangeLoopsForRow(std::vector<char> Dep,
+                                            unsigned InnerLoopId,
+                                            unsigned OuterLoopId) {
+  // Replace '*' to the left of OuterLoopId with '='. The presence of '<' means
+  // that the direction vector is something like [= = = < ...], where the
+  // interchange is safe.
+  for (unsigned I = 0; I < OuterLoopId; I++) {
+    if (Dep[I] == '<' || Dep[I] == '>')
+      return true;
+    Dep[I] = '=';
+  }
+
+  // From this point on, all elements to the left of OuterLoopId are considered
+  // to be '='.
+
+  // Perform legality checks by comparing the leftmost non-'=' element between
+  // before and after the interchange. If either one is '*', then the
+  // interchange is unsafe. Otherwise it is safe if the element is equal.
+  auto BeforePattern =
+      classifyDirectionVector(Dep, OuterLoopId, InnerLoopId + 1);
+  if (BeforePattern == DirectionVectorPattern::All)
+    return false;
+  std::swap(Dep[InnerLoopId], Dep[OuterLoopId]);
+  auto AfterPattern =
+      classifyDirectionVector(Dep, OuterLoopId, InnerLoopId + 1);
+  return BeforePattern == AfterPattern;
 }
 
 // Checks if it is legal to interchange 2 loops.
@@ -218,16 +324,12 @@ static bool isLegalToInterChangeLoops(CharMatrix &DepMatrix,
                                       unsigned InnerLoopId,
                                       unsigned OuterLoopId) {
   unsigned NumRows = DepMatrix.size();
-  std::vector<char> Cur;
   // For each row check if it is valid to interchange.
   for (unsigned Row = 0; Row < NumRows; ++Row) {
-    // Create temporary DepVector check its lexicographical order
-    // before and after swapping OuterLoop vs InnerLoop
-    Cur = DepMatrix[Row];
-    if (!isLexicographicallyPositive(Cur))
-      return false;
-    std::swap(Cur[InnerLoopId], Cur[OuterLoopId]);
-    if (!isLexicographicallyPositive(Cur))
+    // The vector is copied because the elements will be modified in the
+    // `isLegalToInterchangeLoopsForRow`
+    if (!isLegalToInterchangeLoopsForRow(DepMatrix[Row], InnerLoopId,
+                                         OuterLoopId))
       return false;
   }
   return true;
