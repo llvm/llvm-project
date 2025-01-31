@@ -1984,6 +1984,15 @@ llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
     return Res;
   }
 
+  // In HLSL bool vectors are stored in memory as a vector of i32
+  if (destType->isExtVectorBoolType() && CGM.getContext().getLangOpts().HLSL) {
+    llvm::Type *boolVecTy = CGM.getTypes().ConvertTypeForMem(destType);
+    llvm::Constant *Res = llvm::ConstantFoldCastOperand(
+        llvm::Instruction::ZExt, C, boolVecTy, CGM.getDataLayout());
+    assert(Res && "Constant folding must succeed");
+    return Res;
+  }
+
   if (destType->isBitIntType()) {
     ConstantAggregateBuilder Builder(CGM);
     llvm::Type *LoadStoreTy = CGM.getTypes().convertTypeForLoadStore(destType);
