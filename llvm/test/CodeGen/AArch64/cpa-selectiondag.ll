@@ -62,18 +62,20 @@ entry:
 
 define void @msubpt1(i32 %index, i32 %elem) {
 ; CHECK-CPA-O0-LABEL:    msubpt1:
-; CHECK-CPA-O0:          addpt	[[REG1:x[0-9]+]], x{{[0-9]+}}, x{{[0-9]+}}, lsl #4
-; CHECK-CPA-O0:          addpt	[[REG2:x[0-9]+]], [[REG1]], x{{[0-9]+}}
-; CHECK-CPA-O0:          addpt	[[REG3:x[0-9]+]], x{{[0-9]+}}, x{{[0-9]+}}
-; CHECK-CPA-O0:          ldr	q{{[0-9]+}}, [[[REG3]], #16]
-; CHECK-CPA-O0:          str	q{{[0-9]+}}, [[[REG1]], #288]
-; CHECK-CPA-O0:          str	q{{[0-9]+}}, [[[REG2]], #32]
+; CHECK-CPA-O0:          addpt	[[REG1:x[0-9]+]], x{{[0-9]+}}, [[REG1]]
+; CHECK-CPA-O0:          addpt	[[REG2:x[0-9]+]], x{{[0-9]+}}, [[REG2]]
+; CHECK-CPA-O0:          ldr	q{{[0-9]+}}, [[[REG2]], #16]
+; CHECK-CPA-O0:          ldr	q{{[0-9]+}}, [[[REG2]], #32]
+; CHECK-CPA-O0:          str	q{{[0-9]+}}, [[[REG1]], #32]
+; CHECK-CPA-O0:          str	q{{[0-9]+}}, [[[REG1]], #16]
+; CHECK-CPA-O0:          str	q{{[0-9]+}}, [[[REG1]]]
 ;
 ; CHECK-CPA-O3-LABEL:    msubpt1:
-; CHECK-CPA-O3:          addpt	[[REG1:x[0-9]+]], x{{[0-9]+}}, x{{[0-9]+}}, lsl #4
-; CHECK-CPA-O3:          addpt	[[REG2:x[0-9]+]], [[REG1]], x{{[0-9]+}}
-; CHECK-CPA-O3:          str	q{{[0-9]+}}, [[[REG1]], #288]
+; CHECK-CPA-O3:          addpt	[[REG1:x[0-9]+]], x{{[0-9]+}}, [[REG1]]
+; CHECK-CPA-O3:          ldp	q{{[0-9]+}}, q{{[0-9]+}}, [[[REG1]], #16]
+; CHECK-CPA-O3:          addpt	[[REG2:x[0-9]+]], x{{[0-9]+}}, [[REG2]]
 ; CHECK-CPA-O3:          stp	q{{[0-9]+}}, q{{[0-9]+}}, [[[REG2]], #16]
+; CHECK-CPA-O3:          str	q{{[0-9]+}}, [[[REG2]]]
 ;
 ; CHECK-NOCPA-O0-LABEL:  msubpt1:
 ; CHECK-NOCPA-O0:        mneg	[[REG1:x[0-9]+]], x{{[0-9]+}}, x{{[0-9]+}}
@@ -97,12 +99,12 @@ entry:
 
 define void @subpt1(i32 %index, i32 %elem) {
 ; CHECK-CPA-O0-LABEL:    subpt1:
-; CHECK-CPA-O0:          subpt	[[REG1:x[0-9]+]], x{{[0-9]+}}, x{{[0-9]+}}
-; CHECK-CPA-O0:          str	q{{[0-9]+}}, [[[REG1]], #96]
+; CHECK-CPA-O0:          addpt	[[REG1:x[0-9]+]], x{{[0-9]+}}, [[REG1]]
+; CHECK-CPA-O0:          str	q{{[0-9]+}}, [[[REG1]]]
 ;
 ; CHECK-CPA-O3-LABEL:    subpt1:
-; CHECK-CPA-O3:          subpt	[[REG1:x[0-9]+]], x{{[0-9]+}}, x{{[0-9]+}}
-; CHECK-CPA-O3:          str	q{{[0-9]+}}, [[[REG1]], #96]
+; CHECK-CPA-O3:          addpt	[[REG1:x[0-9]+]], x{{[0-9]+}}, [[REG1]]
+; CHECK-CPA-O3:          str	q{{[0-9]+}}, [[[REG1]]]
 ;
 ; CHECK-NOCPA-O0-LABEL:  subpt1:
 ; CHECK-NOCPA-O0:        subs	[[REG1:x[0-9]+]], x{{[0-9]+}}, x{{[0-9]+}}, lsl #8
@@ -121,12 +123,12 @@ entry:
 
 define void @subpt2(i32 %index, i32 %elem) {
 ; CHECK-CPA-O0-LABEL:    subpt2:
-; CHECK-CPA-O0:          addpt	[[REG1:x[0-9]+]], x{{[0-9]+}}, x{{[0-9]+}}, lsl #4
-; CHECK-CPA-O0:          str	q{{[0-9]+}}, [[[REG1]], #96]
+; CHECK-CPA-O0:          addpt	[[REG1:x[0-9]+]], x{{[0-9]+}}, [[REG1]]
+; CHECK-CPA-O0:          str	q{{[0-9]+}}, [[[REG1]]]
 ;
 ; CHECK-CPA-O3-LABEL:    subpt2:
-; CHECK-CPA-O3:          addpt	[[REG1:x[0-9]+]], x{{[0-9]+}}, x{{[0-9]+}}, lsl #4
-; CHECK-CPA-O3:          str	q{{[0-9]+}}, [[[REG1]], #96]
+; CHECK-CPA-O3:          addpt	[[REG1:x[0-9]+]], x{{[0-9]+}}, [[REG1]]
+; CHECK-CPA-O3:          str	q{{[0-9]+}}, [[[REG1]]]
 ;
 ; CHECK-NOCPA-O0-LABEL:  subpt2:
 ; CHECK-NOCPA-O0:        subs	[[REG1:x[0-9]+]], x{{[0-9]+}}, w{{[0-9]+}}, sxtw #4
@@ -401,7 +403,7 @@ define hidden void @multidim() {
 ; CHECK-CPA-O0:          mov	w9, w9
 ; CHECK-CPA-O0:          add	x9, x9, w10, uxtw #1
 ; CHECK-CPA-O0:          addpt	x8, x8, x9
-; CHECK-CPA-O0:          ldrb	w8, [x8, #2]
+; CHECK-CPA-O0:          ldrb	w8, [x8]
 ;
 ; CHECK-CPA-O3-LABEL:    multidim:
 ; CHECK-CPA-O3:          ret

@@ -2627,11 +2627,11 @@ SDValue DAGCombiner::visitPTRADD(SDNode *N) {
   EVT IntVT = N1.getValueType();
   SDLoc DL(N);
 
-  // fold (ptradd und*f, y) -> und*f
+  // fold (ptradd undef, y) -> undef
   if (N0.isUndef())
     return N0;
 
-  // fold (ptradd x, und*f) -> und*f
+  // fold (ptradd x, undef) -> undef
   if (N1.isUndef())
     return DAG.getUNDEF(PtrVT);
 
@@ -2647,33 +2647,6 @@ SDValue DAGCombiner::visitPTRADD(SDNode *N) {
     bool N0OneUse = N0.hasOneUse();
     bool YIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Y);
     bool ZIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Z);
-
-    // (ptradd (ptradd x, y), z) -> (ptradd (ptradd x, z), y) if:
-    //   * (ptradd x, y) has one use; and
-    //   * y is a constant; and
-    //   * z is not a constant.
-    // Serves to expose constant y for subsequent folding.
-    if (N0OneUse && YIsConstant && !ZIsConstant) {
-      SDValue Add = DAG.getNode(ISD::PTRADD, DL, IntVT, {X, Z});
-
-      // Calling visit() can replace the Add node with ISD::DELETED_NODE if
-      // there aren't any users, so keep a handle around whilst we visit it.
-      HandleSDNode ADDHandle(Add);
-
-      SDValue VisitedAdd = visit(Add.getNode());
-      if (VisitedAdd) {
-        // If visit() returns the same node, it means the SDNode was RAUW'd, and
-        // therefore we have to load the new value to perform the checks whether
-        // the reassociation fold is profitable.
-        if (VisitedAdd.getNode() == Add.getNode())
-          Add = ADDHandle.getValue();
-        else
-          Add = VisitedAdd;
-      }
-
-      return DAG.getMemBasePlusOffset(Add, Y, DL, SDNodeFlags());
-    }
-
     bool ZOneUse = Z.hasOneUse();
 
     // (ptradd (ptradd x, y), z) -> (ptradd x, (add y, z)) if:
