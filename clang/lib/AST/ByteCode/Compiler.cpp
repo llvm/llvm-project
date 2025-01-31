@@ -562,8 +562,10 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     // We're creating a complex value here, so we need to
     // allocate storage for it.
     if (!Initializing) {
-      unsigned LocalIndex = allocateTemporary(CE);
-      if (!this->emitGetPtrLocal(LocalIndex, CE))
+      std::optional<unsigned> LocalIndex = allocateTemporary(CE);
+      if (!LocalIndex)
+        return false;
+      if (!this->emitGetPtrLocal(*LocalIndex, CE))
         return false;
     }
 
@@ -679,8 +681,10 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     assert(CE->getType()->isVectorType());
 
     if (!Initializing) {
-      unsigned LocalIndex = allocateTemporary(CE);
-      if (!this->emitGetPtrLocal(LocalIndex, CE))
+      std::optional<unsigned> LocalIndex = allocateTemporary(CE);
+      if (!LocalIndex)
+        return false;
+      if (!this->emitGetPtrLocal(*LocalIndex, CE))
         return false;
     }
     unsigned ToSize = CE->getType()->getAs<VectorType>()->getNumElements();
@@ -759,8 +763,10 @@ bool Compiler<Emitter>::VisitImaginaryLiteral(const ImaginaryLiteral *E) {
     return true;
 
   if (!Initializing) {
-    unsigned LocalIndex = allocateTemporary(E);
-    if (!this->emitGetPtrLocal(LocalIndex, E))
+    std::optional<unsigned> LocalIndex = allocateTemporary(E);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
       return false;
   }
 
@@ -1118,8 +1124,10 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
   // Prepare storage for result.
   if (!Initializing) {
-    unsigned LocalIndex = allocateTemporary(E);
-    if (!this->emitGetPtrLocal(LocalIndex, E))
+    std::optional<unsigned> LocalIndex = allocateTemporary(E);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
       return false;
   }
 
@@ -1175,7 +1183,10 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
 
     if (!LHSIsComplex) {
       // This is using the RHS type for the fake-complex LHS.
-      LHSOffset = allocateTemporary(RHS);
+      std::optional<unsigned> LocalIndex = allocateTemporary(RHS);
+      if (!LocalIndex)
+        return false;
+      LHSOffset = *LocalIndex;
 
       if (!this->emitGetPtrLocal(LHSOffset, E))
         return false;
@@ -1347,8 +1358,10 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
 
   // Prepare storage for result.
   if (!Initializing && !E->isCompoundAssignmentOp()) {
-    unsigned LocalIndex = allocateTemporary(E);
-    if (!this->emitGetPtrLocal(LocalIndex, E))
+    std::optional<unsigned> LocalIndex = allocateTemporary(E);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
       return false;
   }
 
@@ -4170,14 +4183,16 @@ Compiler<Emitter>::allocateLocal(DeclTy &&Src, QualType Ty,
 }
 
 template <class Emitter>
-unsigned Compiler<Emitter>::allocateTemporary(const Expr *E) {
+std::optional<unsigned> Compiler<Emitter>::allocateTemporary(const Expr *E) {
   QualType Ty = E->getType();
   assert(!Ty->isRecordType());
 
   Descriptor *D = P.createDescriptor(
       E, Ty.getTypePtr(), Descriptor::InlineDescMD, Ty.isConstQualified(),
       /*IsTemporary=*/true, /*IsMutable=*/false, /*Init=*/nullptr);
-  assert(D);
+
+  if (!D)
+    return std::nullopt;
 
   Scope::Local Local = this->createLocal(D);
   VariableScope<Emitter> *S = VarScope;
