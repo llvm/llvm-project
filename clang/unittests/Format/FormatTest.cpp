@@ -9614,6 +9614,10 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
                "        auto aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "    ) {};",
                Style);
+  verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaa(\n"
+               "    &bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n"
+               ");",
+               Style);
 }
 
 TEST_F(FormatTest, ParenthesesAndOperandAlignment) {
