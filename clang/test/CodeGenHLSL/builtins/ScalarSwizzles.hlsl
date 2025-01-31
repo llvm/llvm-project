@@ -104,9 +104,9 @@ vector<float, 1> FillOneHalfFloat(){
 }
 
 // CHECK-LABEL: FillTrue
-// CHECK: [[Tmp:%.*]] = alloca <1 x i32>, align 1
-// CHECK-NEXT: store <1 x i1> splat (i1 true), ptr [[Tmp]], align 1
-// CHECK-NEXT: [[Vec1:%.*]] = load <1 x i32>, ptr [[Tmp]], align 1
+// CHECK: [[Tmp:%.*]] = alloca <1 x i32>, align 4
+// CHECK-NEXT: store <1 x i1> splat (i1 true), ptr [[Tmp]], align 4
+// CHECK-NEXT: [[Vec1:%.*]] = load <1 x i32>, ptr [[Tmp]], align 4
 // CHECK-NEXT: [[Vec2:%.*]] = shufflevector <1 x i32> [[Vec1]], <1 x i32> poison, <2 x i32> zeroinitializer
 // CHECK-NEXT: [[Vec2Ret:%.*]] = trunc <2 x i32> [[Vec2]] to <2 x i1>
 // CHECK-NEXT: ret <2 x i1> [[Vec2Ret]]
@@ -133,15 +133,15 @@ float2 HowManyFloats(float V) {
 
 // CHECK-LABEL: HowManyBools
 // CHECK: [[VAddr:%.*]] = alloca i32, align 4
-// CHECK-NEXT: [[Vec2Ptr:%.*]] = alloca <2 x i32>, align 1
+// CHECK-NEXT: [[Vec2Ptr:%.*]] = alloca <2 x i32>, align 8
 // CHECK-NEXT: [[Tmp:%.*]] = zext i1 {{.*}} to i32
 // CHECK-NEXT: store i32 [[Tmp]], ptr [[VAddr]], align 4
 // CHECK-NEXT: [[VVal:%.*]] = load i32, ptr [[VAddr]], align 4
 // CHECK-NEXT: [[Splat:%.*]] = insertelement <1 x i32> poison, i32 [[VVal]], i64 0
 // CHECK-NEXT: [[Vec2:%.*]] = shufflevector <1 x i32> [[Splat]], <1 x i32> poison, <2 x i32> zeroinitializer
 // CHECK-NEXT: [[Trunc:%.*]] = trunc <2 x i32> [[Vec2]] to <2 x i1>
-// CHECK-NEXT: store <2 x i1> [[Trunc]], ptr [[Vec2Ptr]], align 1
-// CHECK-NEXT: [[V2:%.*]] = load <2 x i32>, ptr [[Vec2Ptr]], align 1
+// CHECK-NEXT: store <2 x i1> [[Trunc]], ptr [[Vec2Ptr]], align 8
+// CHECK-NEXT: [[V2:%.*]] = load <2 x i32>, ptr [[Vec2Ptr]], align 8
 // CHECK-NEXT: [[V3:%.*]] = shufflevector <2 x i32> [[V2]], <2 x i32> poison, <2 x i32> zeroinitializer
 // CHECK-NEXT: [[LV1:%.*]] = trunc <2 x i32> [[V3]] to <2 x i1>
 // CHECK-NEXT: ret <2 x i1> [[LV1]]
