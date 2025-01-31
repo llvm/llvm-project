@@ -745,17 +745,15 @@ public:
     return 1;
   }
 
-  InstructionCost getInsertExtractValueCost(unsigned Opcode, Type *AggType,
-                                            TTI::TargetCostKind CostKind,
-                                            ArrayRef<unsigned> Indices,
-                                            Value *AggDef) const {
-    // Extract/insert values are generally assumed to be free (as the aggregates
-    // will be removed e.g. by SROA). A target may want to override this to cost
-    // an extract operation differently based on the producer (AggDef). E.g. if
-    // AggDef is a call, the result may be returned via the stack (so the
-    // extract acts like a load). However, generally, that cost is included in
-    // the producer's cost.
-    return 0;
+  InstructionCost
+  getInsertExtractValueCost(unsigned Opcode,
+                            TTI::TargetCostKind CostKind) const {
+    // Note: The `insertvalue` cost here is chosen to match the default case of
+    // getInstructionCost() -- as pior to adding this helper `insertvalue` was
+    // not handled.
+    if (Opcode == Instruction::InsertValue)
+      return CostKind == TTI::TCK_RecipThroughput ? -1 : TTI::TCC_Basic;
+    return TTI::TCC_Free;
   }
 
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
@@ -1319,9 +1317,11 @@ public:
     case Instruction::PHI:
     case Instruction::Switch:
       return TargetTTI->getCFInstrCost(Opcode, CostKind, I);
-    case Instruction::ExtractValue:
     case Instruction::Freeze:
       return TTI::TCC_Free;
+    case Instruction::ExtractValue:
+    case Instruction::InsertValue:
+      return TargetTTI->getInsertExtractValueCost(Opcode, CostKind);
     case Instruction::Alloca:
       if (cast<AllocaInst>(U)->isStaticAlloca())
         return TTI::TCC_Free;

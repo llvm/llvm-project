@@ -1114,13 +1114,11 @@ TargetTransformInfo::getVectorInstrCost(const Instruction &I, Type *Val,
 }
 
 InstructionCost TargetTransformInfo::getInsertExtractValueCost(
-    unsigned Opcode, Type *AggType, TTI::TargetCostKind CostKind,
-    ArrayRef<unsigned> Indices, Value *AggDef) const {
+    unsigned Opcode, TTI::TargetCostKind CostKind) const {
   assert((Opcode == Instruction::InsertValue ||
           Opcode == Instruction::ExtractValue) &&
          "Expecting Opcode to be insertvalue/extractvalue.");
-  InstructionCost Cost = TTIImpl->getInsertExtractValueCost(
-      Opcode, AggType, CostKind, Indices, AggDef);
+  InstructionCost Cost = TTIImpl->getInsertExtractValueCost(Opcode, CostKind);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

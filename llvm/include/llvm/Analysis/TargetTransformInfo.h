@@ -1473,14 +1473,11 @@ public:
                                      TTI::TargetCostKind CostKind,
                                      unsigned Index = -1) const;
 
-  /// \return The expected of aggregate inserts and extracts. Use an empty
-  /// ArrayRef to indicate that there is no information on the indices. This is
+  /// \return The expected of aggregate inserts and extracts. This is
   /// used when the instruction is not available; a typical use case is to
   /// provision the cost of vectorization/scalarization in vectorizer passes.
-  InstructionCost getInsertExtractValueCost(unsigned Opcode, Type *AggType,
-                                            TTI::TargetCostKind CostKind,
-                                            ArrayRef<unsigned> Indices,
-                                            Value *AggDef = nullptr) const;
+  InstructionCost getInsertExtractValueCost(unsigned Opcode,
+                                            TTI::TargetCostKind CostKind) const;
 
   /// \return The cost of replication shuffle of \p VF elements typed \p EltTy
   /// \p ReplicationFactor times.
@@ -2233,9 +2230,7 @@ public:
                             TTI::TargetCostKind CostKind) = 0;
 
   virtual InstructionCost
-  getInsertExtractValueCost(unsigned Opcode, Type *AggType,
-                            TTI::TargetCostKind CostKind,
-                            ArrayRef<unsigned> Indices, Value *AggDef) = 0;
+  getInsertExtractValueCost(unsigned Opcode, TTI::TargetCostKind CostKind) = 0;
 
   virtual InstructionCost
   getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
@@ -2964,12 +2959,10 @@ public:
     return Impl.getReplicationShuffleCost(EltTy, ReplicationFactor, VF,
                                           DemandedDstElts, CostKind);
   }
-  InstructionCost getInsertExtractValueCost(unsigned Opcode, Type *AggType,
-                                            TTI::TargetCostKind CostKind,
-                                            ArrayRef<unsigned> Indices,
-                                            Value *AggDef) override {
-    return Impl.getInsertExtractValueCost(Opcode, AggType, CostKind, Indices,
-                                          AggDef);
+  InstructionCost
+  getInsertExtractValueCost(unsigned Opcode,
+                            TTI::TargetCostKind CostKind) override {
+    return Impl.getInsertExtractValueCost(Opcode, CostKind);
   }
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                   unsigned AddressSpace,
