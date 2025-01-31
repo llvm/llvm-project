@@ -1193,7 +1193,9 @@ hlfir::convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
   if (entity.isProcedurePointer())
     entity = hlfir::derefPointersAndAllocatables(loc, builder, entity);
 
-  auto [exv, cleanup] = translateToExtendedValue(loc, builder, entity);
+  auto [exv, cleanup] =
+      translateToExtendedValue(loc, builder, entity, /*contiguousHint=*/false,
+                               /*keepScalarOptionalBoxed=*/true);
   // Procedure entities should not go through createBoxValue that embox
   // object entities. Return the fir.boxproc directly.
   if (entity.isProcedure())
