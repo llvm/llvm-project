@@ -2554,7 +2554,8 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
       for (Symbol *sym : obj->getGlobalSymbols()) {
         if (!sym->isDefined())
           continue;
-        if (ctx.hasDynsym && sym->includeInDynsym(ctx))
+        if (ctx.hasDynsym && ctx.arg.exportDynamic &&
+            sym->computeBinding(ctx) != STB_LOCAL)
           sym->isExported = true;
         if (sym->hasVersionSuffix)
           sym->parseSymbolVersion(ctx);
