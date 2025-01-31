@@ -104,7 +104,7 @@ define spir_kernel void @softmax_kernel(ptr addrspace(1) nocapture writeonly %0,
   br i1 %32, label %74, label %.thread1
 
 .thread1:                                         ; preds = %72
-  %73 = tail call spir_func float @_Z27__spirv_GroupNonUniformFMaxiifj(i32 3, i32 3, float undef, i32 8)
+  %73 = tail call spir_func float @_Z27__spirv_GroupNonUniformFMaxiifj(i32 3, i32 3, float poison, i32 8)
   br label %78
 
 74:                                               ; preds = %72
@@ -147,7 +147,7 @@ define spir_kernel void @softmax_kernel(ptr addrspace(1) nocapture writeonly %0,
   br i1 %32, label %99, label %.thread
 
 .thread:                                          ; preds = %97
-  %98 = tail call spir_func float @_Z27__spirv_GroupNonUniformFAddiifj(i32 3, i32 3, float undef, i32 8)
+  %98 = tail call spir_func float @_Z27__spirv_GroupNonUniformFAddiifj(i32 3, i32 3, float poison, i32 8)
   br label %103
 
 99:                                               ; preds = %97
