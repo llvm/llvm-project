@@ -83,6 +83,9 @@ Resolutions to C++ Defect Reports
 C Language Changes
 ------------------
 
+- Clang now allows an ``inline`` specifier on a typedef declaration of a
+  function type in Microsoft compatibility mode. #GH124869
+
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
