@@ -3462,6 +3462,7 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   Tokens = annotate("a = class Foo extends goog.a {};",
                     getGoogleStyle(FormatStyle::LK_JavaScript));
   ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::identifier, TT_Unknown); // Not TT_StartOfName
   EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_ClassLBrace);
   EXPECT_BRACE_KIND(Tokens[8], BK_Block);
   EXPECT_TOKEN(Tokens[9], tok::r_brace, TT_ClassRBrace);
