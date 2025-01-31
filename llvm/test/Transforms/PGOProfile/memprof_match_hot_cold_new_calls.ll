@@ -105,7 +105,7 @@ entry:
 
 declare noundef ptr @_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t(i64 noundef, i64 noundef, ptr noundef nonnull align 1 dereferenceable(1), i8 noundef zeroext)
 
-; MEMPROF: ![[M1]] = !{![[MIB1:[0-9]+]], ![[MIB2:[0-9]+]], ![[MIB3:[0-9]+]], ![[MIB4:[0-9]+]], ![[MIB5:[0-9]+]]}
+; MEMPROF: ![[M1]] = !{![[MIB1:[0-9]+]], ![[MIB2:[0-9]+]], ![[MIB3:[0-9]+]], ![[MIB4:[0-9]+]]}
 ; MEMPROF: ![[MIB1]] = !{![[STACK1:[0-9]+]], !"cold"}
 ; MEMPROF: ![[STACK1]] = !{i64 2732490490862098848, i64 748269490701775343}
 ; MEMPROF: ![[MIB2]] = !{![[STACK2:[0-9]+]], !"cold"}
@@ -114,8 +114,6 @@ declare noundef ptr @_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t(i64 nounde
 ; MEMPROF: ![[STACK3]] = !{i64 2732490490862098848, i64 2104812325165620841, i64 6281715513834610934, i64 6281715513834610934, i64 6281715513834610934, i64 6281715513834610934}
 ; MEMPROF: ![[MIB4]] = !{![[STACK4:[0-9]+]], !"cold"}
 ; MEMPROF: ![[STACK4]] = !{i64 2732490490862098848, i64 8467819354083268568}
-; MEMPROF: ![[MIB5]] = !{![[STACK5:[0-9]+]], !"notcold"}
-; MEMPROF: ![[STACK5]] = !{i64 2732490490862098848, i64 8690657650969109624}
 ; MEMPROF: ![[C1]] = !{i64 2732490490862098848}
 
 !llvm.dbg.cu = !{!0}

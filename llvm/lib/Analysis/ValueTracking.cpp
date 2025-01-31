@@ -593,11 +593,14 @@ static bool cmpExcludesZero(CmpInst::Predicate Pred, const Value *RHS) {
 }
 
 static void breakSelfRecursivePHI(const Use *U, const PHINode *PHI,
-                                  Value *&ValOut, Instruction *&CtxIOut) {
+                                  Value *&ValOut, Instruction *&CtxIOut,
+                                  const PHINode **PhiOut = nullptr) {
   ValOut = U->get();
   if (ValOut == PHI)
     return;
   CtxIOut = PHI->getIncomingBlock(*U)->getTerminator();
+  if (PhiOut)
+    *PhiOut = PHI;
   Value *V;
   // If the Use is a select of this phi, compute analysis on other arm to break
   // recursion.
@@ -610,11 +613,13 @@ static void breakSelfRecursivePHI(const Use *U, const PHINode *PHI,
   // incoming value to break recursion.
   // TODO: We could handle any number of incoming edges as long as we only have
   // two unique values.
-  else if (auto *IncPhi = dyn_cast<PHINode>(ValOut);
-           IncPhi && IncPhi->getNumIncomingValues() == 2) {
+  if (auto *IncPhi = dyn_cast<PHINode>(ValOut);
+      IncPhi && IncPhi->getNumIncomingValues() == 2) {
     for (int Idx = 0; Idx < 2; ++Idx) {
       if (IncPhi->getIncomingValue(Idx) == PHI) {
         ValOut = IncPhi->getIncomingValue(1 - Idx);
+        if (PhiOut)
+          *PhiOut = IncPhi;
         CtxIOut = IncPhi->getIncomingBlock(1 - Idx)->getTerminator();
         break;
       }
@@ -1673,8 +1678,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
       Known.One.setAllBits();
       for (const Use &U : P->operands()) {
         Value *IncValue;
+        const PHINode *CxtPhi;
         Instruction *CxtI;
-        breakSelfRecursivePHI(&U, P, IncValue, CxtI);
+        breakSelfRecursivePHI(&U, P, IncValue, CxtI, &CxtPhi);
         // Skip direct self references.
         if (IncValue == P)
           continue;
@@ -1705,9 +1711,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
                     m_Br(m_c_ICmp(Pred, m_Specific(IncValue), m_APInt(RHSC)),
                          m_BasicBlock(TrueSucc), m_BasicBlock(FalseSucc)))) {
             // Check for cases of duplicate successors.
-            if ((TrueSucc == P->getParent()) != (FalseSucc == P->getParent())) {
+            if ((TrueSucc == CxtPhi->getParent()) !=
+                (FalseSucc == CxtPhi->getParent())) {
               // If we're using the false successor, invert the predicate.
-              if (FalseSucc == P->getParent())
+              if (FalseSucc == CxtPhi->getParent())
                 Pred = CmpInst::getInversePredicate(Pred);
               // Get the knownbits implied by the incoming phi condition.
               auto CR = ConstantRange::makeExactICmpRegion(Pred, *RHSC);
@@ -2645,40 +2652,42 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
     return false;
 
   unsigned NumUsesExplored = 0;
-  for (const auto *U : V->users()) {
+  for (auto &U : V->uses()) {
     // Avoid massive lists
     if (NumUsesExplored >= DomConditionsMaxUses)
       break;
     NumUsesExplored++;
 
+    const Instruction *UI = cast<Instruction>(U.getUser());
     // If the value is used as an argument to a call or invoke, then argument
     // attributes may provide an answer about null-ness.
-    if (const auto *CB = dyn_cast<CallBase>(U))
-      if (auto *CalledFunc = CB->getCalledFunction())
-        for (const Argument &Arg : CalledFunc->args())
-          if (CB->getArgOperand(Arg.getArgNo()) == V &&
-              Arg.hasNonNullAttr(/* AllowUndefOrPoison */ false) &&
-              DT->dominates(CB, CtxI))
-            return true;
+    if (V->getType()->isPointerTy()) {
+      if (const auto *CB = dyn_cast<CallBase>(UI)) {
+        if (CB->isArgOperand(&U) &&
+            CB->paramHasNonNullAttr(CB->getArgOperandNo(&U),
+                                    /*AllowUndefOrPoison=*/false) &&
+            DT->dominates(CB, CtxI))
+          return true;
+      }
+    }
 
     // If the value is used as a load/store, then the pointer must be non null.
-    if (V == getLoadStorePointerOperand(U)) {
-      const Instruction *I = cast<Instruction>(U);
-      if (!NullPointerIsDefined(I->getFunction(),
+    if (V == getLoadStorePointerOperand(UI)) {
+      if (!NullPointerIsDefined(UI->getFunction(),
                                 V->getType()->getPointerAddressSpace()) &&
-          DT->dominates(I, CtxI))
+          DT->dominates(UI, CtxI))
         return true;
     }
 
-    if ((match(U, m_IDiv(m_Value(), m_Specific(V))) ||
-         match(U, m_IRem(m_Value(), m_Specific(V)))) &&
-        isValidAssumeForContext(cast<Instruction>(U), CtxI, DT))
+    if ((match(UI, m_IDiv(m_Value(), m_Specific(V))) ||
+         match(UI, m_IRem(m_Value(), m_Specific(V)))) &&
+        isValidAssumeForContext(UI, CtxI, DT))
       return true;
 
     // Consider only compare instructions uniquely controlling a branch
     Value *RHS;
     CmpPredicate Pred;
-    if (!match(U, m_c_ICmp(Pred, m_Specific(V), m_Value(RHS))))
+    if (!match(UI, m_c_ICmp(Pred, m_Specific(V), m_Value(RHS))))
       continue;
 
     bool NonNullIfTrue;
@@ -2691,7 +2700,7 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
 
     SmallVector<const User *, 4> WorkList;
     SmallPtrSet<const User *, 4> Visited;
-    for (const auto *CmpU : U->users()) {
+    for (const auto *CmpU : UI->users()) {
       assert(WorkList.empty() && "Should be!");
       if (Visited.insert(CmpU).second)
         WorkList.push_back(CmpU);

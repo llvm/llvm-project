@@ -20,7 +20,8 @@
  * THE SOFTWARE.
  */
 
-#include "clc/clcfunc.h"
+#include <clc/clcfunc.h>
+#include <clc/clctypes.h>
 
 _CLC_DECL float __clc_sinf_piby4(float x, float y);
 _CLC_DECL float __clc_cosf_piby4(float x, float y);
@@ -31,8 +32,10 @@ _CLC_DECL int __clc_argReductionS(float *r, float *rr, float x);
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-_CLC_DECL void __clc_remainder_piby2_medium(double x, double *r, double *rr, int *regn);
-_CLC_DECL void __clc_remainder_piby2_large(double x, double *r, double *rr, int *regn);
+_CLC_DECL void __clc_remainder_piby2_medium(double x, double *r, double *rr,
+                                            int *regn);
+_CLC_DECL void __clc_remainder_piby2_large(double x, double *r, double *rr,
+                                           int *regn);
 _CLC_DECL double2 __clc_sincos_piby4(double x, double xx);
 
 #endif

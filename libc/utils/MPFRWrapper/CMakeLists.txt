@@ -16,6 +16,10 @@ if(LIBC_TESTS_CAN_USE_MPFR OR LIBC_TESTS_CAN_USE_MPC)
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fp_bits
   )
+  if(EXISTS ${LLVM_LIBC_MPFR_INSTALL_PATH})
+    target_include_directories(libcMPCommon PUBLIC ${LLVM_LIBC_MPFR_INSTALL_PATH}/include)
+    target_link_directories(libcMPCommon PUBLIC ${LLVM_LIBC_MPFR_INSTALL_PATH}/lib)
+  endif()
   target_include_directories(libcMPCommon PUBLIC ${LIBC_SOURCE_DIR})
   target_link_libraries(libcMPCommon PUBLIC LibcFPTestHelpers.unit mpfr gmp)
 elseif(NOT LIBC_TARGET_OS_IS_GPU AND NOT LLVM_LIBC_FULL_BUILD)
