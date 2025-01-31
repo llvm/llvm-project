@@ -204,7 +204,7 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
    * - ``SPV_KHR_non_semantic_info``
      - Adds the ability to declare extended instruction sets that have no semantic impact and can be safely removed from a module.
 
-To enable multiple extensions, list them separated by spaces. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
+To enable multiple extensions, list them separated by comma. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
 
 ``-spirv-ext=+SPV_EXT_shader_atomic_float_add,+SPV_INTEL_arbitrary_precision_integers``
 
