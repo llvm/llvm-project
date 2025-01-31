@@ -254,6 +254,7 @@ FEATURE(is_trivially_constructible, LangOpts.CPlusPlus)
 FEATURE(is_trivially_copyable, LangOpts.CPlusPlus)
 FEATURE(is_union, LangOpts.CPlusPlus)
 FEATURE(kcfi, LangOpts.Sanitize.has(SanitizerKind::KCFI))
+FEATURE(kcfi_arity, LangOpts.Sanitize.has(SanitizerKind::KCFI))
 FEATURE(modules, LangOpts.Modules)
 FEATURE(safe_stack, LangOpts.Sanitize.has(SanitizerKind::SafeStack))
 FEATURE(shadow_call_stack,
