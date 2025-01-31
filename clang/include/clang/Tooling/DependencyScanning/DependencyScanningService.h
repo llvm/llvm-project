@@ -63,7 +63,10 @@ enum class ScanningOptimizations {
   /// Canonicalize -D and -U options.
   Macros = 8,
 
-  DSS_LAST_BITMASK_ENUM(Macros),
+  /// Ignore the compiler's working directory if it is safe.
+  IgnoreCWD = 0x10,
+
+  DSS_LAST_BITMASK_ENUM(IgnoreCWD),
   Default = All
 };
 
