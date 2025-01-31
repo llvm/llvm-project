@@ -3981,7 +3981,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       // For PIC, the sequence is:
       // BRIND(RelocBase + load(Jumptable + index))
       // RelocBase can be JumpTable, GOT or some sort of global base.
-      Addr = DAG.getMemBasePlusOffset(TLI.getPICJumpTableRelocBase(Table, DAG),                                      Addr, dl);
+      Addr = DAG.getMemBasePlusOffset(TLI.getPICJumpTableRelocBase(Table, DAG),
+                                      Addr, dl);
     }
 
     Tmp1 = TLI.expandIndirectJTBranch(dl, LD.getValue(1), Addr, JTI, DAG);

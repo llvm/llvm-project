@@ -1149,7 +1149,6 @@ static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
   if (InnerAdd.getOpcode() != ISD::ADD)
     return SDValue();
 
-
   SDValue Lo = InnerAdd.getOperand(0);
   SDValue Other = InnerAdd.getOperand(1);
   if (Lo.getOpcode() != MipsISD::Lo)
