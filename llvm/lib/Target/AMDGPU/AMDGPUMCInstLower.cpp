@@ -116,6 +116,7 @@ bool AMDGPUMCInstLower::lowerOperand(const MachineOperand &MO,
 void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   unsigned Opcode = MI->getOpcode();
   const auto *TII = static_cast<const SIInstrInfo*>(ST.getInstrInfo());
+  const SIRegisterInfo &TRI = TII->getRegisterInfo();
 
   // FIXME: Should be able to handle this with lowerPseudoInstExpansion. We
   // need to select it to the subtarget specific version, and there's no way to
@@ -131,6 +132,35 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
     lowerOperand(MI->getOperand(1), Src);
     OutMI.addOperand(Dest);
     OutMI.addOperand(Src);
+    return;
+  } else if (const auto *Info = AMDGPU::getT16D16Helper(Opcode)) {
+    int VDataIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::vdata);
+    int VDstOrVDataIdx = VDataIdx != -1 ? VDataIdx : 0;
+    MachineOperand MIVDstOrVData = MI->getOperand(VDstOrVDataIdx);
+    bool IsHi = AMDGPU::isHi16Reg(MIVDstOrVData.getReg(), TRI);
+    Opcode = IsHi ? Info->HiOp : Info->LoOp;
+    MIVDstOrVData.clearParent(); // Avoid use list error in setReg call
+    MIVDstOrVData.setReg(TRI.get32BitRegister(MIVDstOrVData.getReg()));
+
+    int MCOpcode = TII->pseudoToMCOpcode(Opcode);
+    assert(MCOpcode != -1 &&
+           "Pseudo instruction doesn't have a target-specific version");
+    OutMI.setOpcode(MCOpcode);
+    for (int I = 0, E = MI->getNumExplicitOperands(); I < E; I++) {
+      const MachineOperand &MO = MI->getOperand(I);
+      MCOperand MCOp;
+      if (I == VDstOrVDataIdx)
+        lowerOperand(MIVDstOrVData, MCOp);
+      else
+        lowerOperand(MO, MCOp);
+      OutMI.addOperand(MCOp);
+    }
+
+    if (AMDGPU::hasNamedOperand(MCOpcode, AMDGPU::OpName::vdst_in)) {
+      MCOperand MCOp;
+      lowerOperand(MIVDstOrVData, MCOp);
+      OutMI.addOperand(MCOp);
+    }
     return;
   } else if (Opcode == AMDGPU::SI_TCRETURN ||
              Opcode == AMDGPU::SI_TCRETURN_GFX) {
