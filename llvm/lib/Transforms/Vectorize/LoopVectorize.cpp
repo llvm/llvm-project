@@ -8918,8 +8918,8 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
       isa<VPPartialReductionRecipe>(BinOpRecipe))
     std::swap(BinOp, Accumulator);
 
-  VPValue *Mask = getBlockInMask(Reduction->getParent());
-  if (Mask) {
+  if (CM.blockNeedsPredicationForAnyReason(Reduction->getParent())) {
+    VPValue *Mask = getBlockInMask(Reduction->getParent());
     VPValue *Zero =
         Plan.getOrAddLiveIn(ConstantInt::get(Reduction->getType(), 0));
     BinOp = Builder.createSelect(Mask, BinOp, Zero, Reduction->getDebugLoc());

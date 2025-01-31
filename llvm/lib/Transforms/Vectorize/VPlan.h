@@ -2104,8 +2104,7 @@ public:
 /// A recipe for forming partial reductions. In the loop, an accumulator and
 /// vector operand are added together and passed to the next iteration as the
 /// next accumulator. After the loop body, the accumulator is reduced to a
-/// scalar value. If the mask operand is not nullptr then it is applied to the
-/// vector operand on each iteration.
+/// scalar value.
 class VPPartialReductionRecipe : public VPSingleDefRecipe {
   unsigned Opcode;
 
