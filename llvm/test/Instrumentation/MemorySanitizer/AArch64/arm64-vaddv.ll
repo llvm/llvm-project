@@ -533,27 +533,29 @@ entry:
   ret <2 x i64> %1
 }
 
-define <1 x i64> @test_vaddv_u64_to_vec(<2 x i64> %a1) #0 {
+define <1 x i64> @test_vaddv_u64_to_vec(<2 x i64> %a1, <1 x i64> %param1) #0 {
 ; CHECK-LABEL: define <1 x i64> @test_vaddv_u64_to_vec(
-; CHECK-SAME: <2 x i64> [[A1:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: <2 x i64> [[A1:%.*]], <1 x i64> [[PARAM1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <1 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
-; CHECK:       2:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
+; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK:       4:
 ; CHECK-NEXT:    [[VADDV_I:%.*]] = tail call i64 @llvm.aarch64.neon.uaddv.i64.v2i64(<2 x i64> [[A1]])
-; CHECK-NEXT:    [[VEC:%.*]] = insertelement <1 x i64> undef, i64 [[VADDV_I]], i32 0
-; CHECK-NEXT:    store <1 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <1 x i64> [[TMP2]], i64 0, i32 0
+; CHECK-NEXT:    [[VEC:%.*]] = insertelement <1 x i64> [[PARAM1]], i64 [[VADDV_I]], i32 0
+; CHECK-NEXT:    store <1 x i64> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <1 x i64> [[VEC]]
 ;
 entry:
   %vaddv.i = tail call i64 @llvm.aarch64.neon.uaddv.i64.v2i64(<2 x i64> %a1)
-  %vec = insertelement <1 x i64> undef, i64 %vaddv.i, i32 0
+  %vec = insertelement <1 x i64> %param1, i64 %vaddv.i, i32 0
   ret <1 x i64> %vec
 }
 
