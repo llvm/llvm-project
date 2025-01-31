@@ -2204,6 +2204,20 @@ public:
       return thisT()->getMaskedMemoryOpCost(Instruction::Load, Ty, TyAlign, 0,
                                             CostKind);
     }
+    case Intrinsic::experimental_vp_strided_store: {
+      auto *Ty = cast<VectorType>(ICA.getArgTypes()[0]);
+      Align Alignment = thisT()->DL.getABITypeAlign(Ty->getElementType());
+      return thisT()->getStridedMemoryOpCost(
+          Instruction::Store, Ty, /*Ptr=*/nullptr, /*VariableMask=*/true,
+          Alignment, CostKind, ICA.getInst());
+    }
+    case Intrinsic::experimental_vp_strided_load: {
+      auto *Ty = cast<VectorType>(ICA.getReturnType());
+      Align Alignment = thisT()->DL.getABITypeAlign(Ty->getElementType());
+      return thisT()->getStridedMemoryOpCost(
+          Instruction::Load, Ty, /*Ptr=*/nullptr, /*VariableMask=*/true,
+          Alignment, CostKind, ICA.getInst());
+    }
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_mul:
     case Intrinsic::vector_reduce_and:
