@@ -385,8 +385,8 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   // tosa::ClampOp
   if (isa<tosa::ClampOp>(op) && isa<FloatType>(elementTy)) {
     bool losesInfo = false;
-    APFloat minApf = cast<FloatAttr>(op->getAttr("min_fp")).getValue();
-    APFloat maxApf = cast<FloatAttr>(op->getAttr("max_fp")).getValue();
+    APFloat minApf = cast<FloatAttr>(op->getAttr("min_val")).getValue();
+    APFloat maxApf = cast<FloatAttr>(op->getAttr("max_val")).getValue();
     minApf.convert(cast<FloatType>(elementTy).getFloatSemantics(),
                    APFloat::rmNearestTiesToEven, &losesInfo);
     maxApf.convert(cast<FloatType>(elementTy).getFloatSemantics(),
@@ -401,9 +401,9 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   if (isa<tosa::ClampOp>(op) && isa<IntegerType>(elementTy)) {
     auto intTy = cast<IntegerType>(elementTy);
     int64_t min =
-        cast<IntegerAttr>(op->getAttr("min_int")).getValue().getSExtValue();
+        cast<IntegerAttr>(op->getAttr("min_val")).getValue().getSExtValue();
     int64_t max =
-        cast<IntegerAttr>(op->getAttr("max_int")).getValue().getSExtValue();
+        cast<IntegerAttr>(op->getAttr("max_val")).getValue().getSExtValue();
 
     int64_t minRepresentable = std::numeric_limits<int64_t>::min();
     int64_t maxRepresentable = std::numeric_limits<int64_t>::max();

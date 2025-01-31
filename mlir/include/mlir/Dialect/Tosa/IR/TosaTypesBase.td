@@ -202,6 +202,14 @@ def Tosa_FloatAttr : Attr<CPred<"::llvm::isa<::mlir::FloatAttr>($_self)">,
   let returnType = [{ ::mlir::APFloat }];
 }
 
+def Tosa_IntegerAttr : Attr<CPred<"::llvm::isa<::mlir::IntegerAttr>($_self)">,
+                          "arbitrary integer attribute"> {
+  let storageType = [{ ::mlir::IntegerAttr }];
+  let returnType = [{ ::llvm::APInt }];
+}
+
+def Tosa_IntOrFloatAttr : AnyAttrOf<[Tosa_IntegerAttr, Tosa_FloatAttr]>;
+
 //===----------------------------------------------------------------------===//
 // Iterable attributes.
 //===----------------------------------------------------------------------===//

@@ -387,10 +387,8 @@ def Tosa_ClampOp : Tosa_ElementwiseUnaryOp<"clamp"> {
 
   let arguments = (ins
     Tosa_Tensor:$input,
-    I64Attr:$min_int,
-    I64Attr:$max_int,
-    Tosa_FloatAttr:$min_fp,
-    Tosa_FloatAttr:$max_fp,
+    Tosa_IntOrFloatAttr:$min_val,
+    Tosa_IntOrFloatAttr:$max_val,
     DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
   );
 

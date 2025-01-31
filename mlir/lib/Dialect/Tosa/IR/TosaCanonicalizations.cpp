@@ -287,10 +287,12 @@ struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
 
     if (isa<FloatType>(inputElementType)) {
       // Unlike integer types, floating point types can represent infinity.
-      auto minClamp = op.getMinFp();
-      auto maxClamp = op.getMaxFp();
-      bool isMin = minClamp.isInfinity() && minClamp.isNegative();
-      bool isMax = maxClamp.isInfinity() && !maxClamp.isNegative();
+      auto minClamp =
+          llvm::cast<mlir::FloatAttr>(op.getMinValAttr()).getValue();
+      auto maxClamp =
+          llvm::cast<mlir::FloatAttr>(op.getMaxValAttr()).getValue();
+      bool isMin = minClamp.isNegInfinity();
+      bool isMax = maxClamp.isInfinity();
 
       if (isMin && isMax) {
         rewriter.replaceOp(op, input);
@@ -300,8 +302,10 @@ struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
     }
 
     if (inputElementType.isUnsignedInteger()) {
-      int64_t minClamp = op.getMinInt();
-      int64_t maxClamp = op.getMaxInt();
+      int64_t minClamp =
+          llvm::cast<mlir::IntegerAttr>(op.getMinValAttr()).getUInt();
+      int64_t maxClamp =
+          llvm::cast<mlir::IntegerAttr>(op.getMaxValAttr()).getUInt();
 
       int64_t intMin =
           APInt::getMinValue(inputElementType.getIntOrFloatBitWidth())
@@ -318,8 +322,10 @@ struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
     }
 
     if (llvm::isa<IntegerType>(inputElementType)) {
-      int64_t minClamp = op.getMinInt();
-      int64_t maxClamp = op.getMaxInt();
+      int64_t minClamp =
+          llvm::cast<mlir::IntegerAttr>(op.getMinValAttr()).getInt();
+      int64_t maxClamp =
+          llvm::cast<mlir::IntegerAttr>(op.getMaxValAttr()).getInt();
 
       int64_t intMin =
           APInt::getSignedMinValue(inputElementType.getIntOrFloatBitWidth())
@@ -374,9 +380,10 @@ struct ClampClampOptimization : public OpRewritePattern<tosa::ClampOp> {
 
   LogicalResult matchAndRewrite(tosa::ClampOp op,
                                 PatternRewriter &rewriter) const override {
+    Value input = op.getInput();
+
     // Check the input to the CLAMP op is itself a CLAMP.
-    auto clampOp =
-        dyn_cast_if_present<tosa::ClampOp>(op.getInput().getDefiningOp());
+    auto clampOp = dyn_cast_if_present<tosa::ClampOp>(input.getDefiningOp());
     if (!clampOp)
       return failure();
 
@@ -386,34 +393,86 @@ struct ClampClampOptimization : public OpRewritePattern<tosa::ClampOp> {
     if (opNanMode == "IGNORE" && clampNanMode == "PROPAGATE")
       return failure();
 
-    // Check we have intersecting ranges.
-    const auto opMinInt = op.getMinInt();
-    const auto opMaxInt = op.getMaxInt();
-    const auto clampOpMinInt = clampOp.getMinInt();
-    const auto clampOpMaxInt = clampOp.getMaxInt();
-    ClampRange<std::int64_t> opRangeIntRange(opMinInt, opMaxInt);
-    ClampRange<std::int64_t> clampRangeIntRange(clampOpMinInt, clampOpMaxInt);
-    if (!opRangeIntRange.intersects(clampRangeIntRange))
-      return failure();
+    auto maxValAttr = op.getMaxValAttr();
+    auto minValAttr = op.getMinValAttr();
+    auto clampOpMaxValAttr = clampOp.getMaxValAttr();
+    auto clampOpMinValAttr = clampOp.getMinValAttr();
 
-    const auto opMinFloat = op.getMinFp();
-    const auto opMaxFloat = op.getMaxFp();
-    const auto clampOpMinFloat = clampOp.getMinFp();
-    const auto clampOpMaxFloat = clampOp.getMaxFp();
-    ClampRange<APFloat> opRangeFloatRange(opMinFloat, opMaxFloat);
-    ClampRange<APFloat> clampRangeFloatRange(clampOpMinFloat, clampOpMaxFloat);
-    if (!opRangeFloatRange.intersects(clampRangeFloatRange))
-      return failure();
+    auto inputEType = llvm::cast<ShapedType>(input.getType()).getElementType();
+    if (auto quantType =
+            llvm::dyn_cast<mlir::quant::UniformQuantizedType>(inputEType)) {
+      inputEType = quantType.getStorageType();
+    }
 
-    // Run the transformation.
-    const auto minFp = std::max(opMinFloat, clampOpMinFloat).convertToFloat();
-    const auto maxFp = std::min(opMaxFloat, clampOpMaxFloat).convertToFloat();
-    const auto minInt = std::max(opMinInt, clampOpMinInt);
-    const auto maxInt = std::min(opMaxInt, clampOpMaxInt);
+    Attribute newMinValAttr, newMaxValAttr;
+    if (mlir::isa<FloatType>(inputEType)) {
+      auto floatMaxValAttr = cast<mlir::FloatAttr>(maxValAttr);
+      auto floatMinValAttr = cast<mlir::FloatAttr>(minValAttr);
+      auto clampOpFloatMaxValAttr = cast<mlir::FloatAttr>(clampOpMaxValAttr);
+      auto clampOpFloatMinValAttr = cast<mlir::FloatAttr>(clampOpMinValAttr);
+
+      // Check we have intersecting ranges.
+      const auto opMinFloat = floatMinValAttr.getValue();
+      const auto opMaxFloat = floatMaxValAttr.getValue();
+      const auto clampOpMinFloat = clampOpFloatMinValAttr.getValue();
+      const auto clampOpMaxFloat = clampOpFloatMaxValAttr.getValue();
+      ClampRange<APFloat> opRangeFloatRange(opMinFloat, opMaxFloat);
+      ClampRange<APFloat> clampRangeFloatRange(clampOpMinFloat,
+                                               clampOpMaxFloat);
+      if (!opRangeFloatRange.intersects(clampRangeFloatRange))
+        return failure();
+
+      // Run the transformation.
+      auto newMinVal = std::max(opMinFloat, clampOpMinFloat);
+      auto newMaxVal = std::min(opMaxFloat, clampOpMaxFloat);
+      newMinValAttr = rewriter.getFloatAttr(inputEType, newMinVal);
+      newMaxValAttr = rewriter.getFloatAttr(inputEType, newMaxVal);
+    } else {
+      assert(mlir::isa<IntegerType>(inputEType));
+      auto intMaxValAttr = cast<mlir::IntegerAttr>(maxValAttr);
+      auto intMinValAttr = cast<mlir::IntegerAttr>(minValAttr);
+      auto clampOpIntMaxValAttr = cast<mlir::IntegerAttr>(clampOpMaxValAttr);
+      auto clampOpIntMinValAttr = cast<mlir::IntegerAttr>(clampOpMinValAttr);
+
+      if (inputEType.isUnsignedInteger()) {
+        // Check we have intersecting ranges.
+        const auto opMinInt = intMinValAttr.getUInt();
+        const auto opMaxInt = intMaxValAttr.getUInt();
+        const auto clampOpMinInt = clampOpIntMinValAttr.getUInt();
+        const auto clampOpMaxInt = clampOpIntMaxValAttr.getUInt();
+        ClampRange<std::uint64_t> opRangeIntRange(opMinInt, opMaxInt);
+        ClampRange<std::uint64_t> clampRangeIntRange(clampOpMinInt,
+                                                     clampOpMaxInt);
+        if (!opRangeIntRange.intersects(clampRangeIntRange))
+          return failure();
+
+        // Run the transformation.
+        auto newMinVal = std::max(opMinInt, clampOpMinInt);
+        auto newMaxVal = std::min(opMaxInt, clampOpMaxInt);
+        newMinValAttr = rewriter.getIntegerAttr(inputEType, newMinVal);
+        newMaxValAttr = rewriter.getIntegerAttr(inputEType, newMaxVal);
+      } else {
+        // Check we have intersecting ranges.
+        const auto opMinInt = intMinValAttr.getInt();
+        const auto opMaxInt = intMaxValAttr.getInt();
+        const auto clampOpMinInt = clampOpIntMinValAttr.getInt();
+        const auto clampOpMaxInt = clampOpIntMaxValAttr.getInt();
+        ClampRange<std::int64_t> opRangeIntRange(opMinInt, opMaxInt);
+        ClampRange<std::int64_t> clampRangeIntRange(clampOpMinInt,
+                                                    clampOpMaxInt);
+        if (!opRangeIntRange.intersects(clampRangeIntRange))
+          return failure();
+
+        // Run the transformation.
+        auto newMinVal = std::max(opMinInt, clampOpMinInt);
+        auto newMaxVal = std::min(opMaxInt, clampOpMaxInt);
+        newMinValAttr = rewriter.getIntegerAttr(inputEType, newMinVal);
+        newMaxValAttr = rewriter.getIntegerAttr(inputEType, newMaxVal);
+      }
+    }
+
     rewriter.replaceOpWithNewOp<tosa::ClampOp>(
-        op, op.getType(), clampOp.getInput(),
-        rewriter.getI64IntegerAttr(minInt), rewriter.getI64IntegerAttr(maxInt),
-        rewriter.getF32FloatAttr(minFp), rewriter.getF32FloatAttr(maxFp),
+        op, op.getType(), clampOp.getInput(), newMinValAttr, newMaxValAttr,
         rewriter.getStringAttr((opNanMode != clampNanMode) ? "IGNORE"
                                                            : opNanMode));
     return success();

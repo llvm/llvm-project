@@ -768,7 +768,7 @@ func.func @test_unsupported_int64_data_type(%arg0: tensor<1x13x13x5xf32>) -> ten
 // CHECK-LABEL: test_mismatch_in_out_data_type_clamp
 func.func @test_mismatch_in_out_data_type_clamp(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf16> {
   // expected-error@+1 {{'tosa.clamp' op requires the same element type for all operands and results}}
-  %0 = tosa.clamp %arg0 {min_fp = 0.0 : f32, max_fp = 1.0: f32, min_int = 0 : i64, max_int = 1 : i64} : (tensor<13x21x3xf32>) -> tensor<13x21x3xf16>
+  %0 = tosa.clamp %arg0 {min_val = 0.0 : f32, max_val = 1.0: f32} : (tensor<13x21x3xf32>) -> tensor<13x21x3xf16>
   return %0 : tensor<13x21x3xf16>
 }
 
@@ -777,7 +777,7 @@ func.func @test_mismatch_in_out_data_type_clamp(%arg0: tensor<13x21x3xf32>) -> t
 // CHECK-LABEL: test_mismatch_in_out_shape_clamp
 func.func @test_mismatch_in_out_shape_clamp(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x1xf32> {
   // expected-error@+1 {{'tosa.clamp' op requires the same shape for all operands and results}}
-  %0 = tosa.clamp %arg0 {min_fp = 0.0 : f32, max_fp = 1.0: f32, min_int = 0 : i64, max_int = 1 : i64} : (tensor<13x21x3xf32>) -> tensor<13x21x1xf32>
+  %0 = tosa.clamp %arg0 {min_val = 0.0 : f32, max_val = 1.0: f32} : (tensor<13x21x3xf32>) -> tensor<13x21x1xf32>
   return %0 : tensor<13x21x1xf32>
 }
 
