@@ -1,0 +1,38 @@
+name: "Find PRs That Need Merging on the Author's Behalf"
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    # Run once an hour
+    - cron:  '5 * * * *'
+
+jobs:
+  check_needs_merge:
+    runs-on: ubuntu-latest
+    permissions:
+      # May change labels and add a comment.
+      pull-requests: write
+    if: >-
+      (github.repository == 'llvm/llvm-project')
+    steps:
+      - name: Checkout Automation Script
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: llvm/utils/git/
+          ref: main
+
+      - name: Setup Automation Script
+        working-directory: ./llvm/utils/git/
+        run: |
+          pip install --require-hashes -r requirements.txt
+
+      - name: Check Open PRs
+        working-directory: ./llvm/utils/git/
+        run: |
+          python3 ./github-automation.py \
+            --token '${{ secrets.GITHUB_TOKEN }}' \
+            check-prs-need-merge
