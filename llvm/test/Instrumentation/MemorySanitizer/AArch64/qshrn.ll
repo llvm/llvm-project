@@ -2,6 +2,9 @@
 ; RUN: opt < %s -passes=msan -S | FileCheck %s
 ;
 ; Forked from llvm/test/CodeGen/AArch64/qshrn.ll
+;
+; Heuristically (but correctly) handled: llvm.smax, llvm.smin, llvm.umin
+; Incorrectly handled (handleUnknownInstruction): llvm.aarch64.neon.sqxtn, llvm.aarch64.neon.sqxtun, llvm.aarch64.neon.uqxtn
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android9001"
