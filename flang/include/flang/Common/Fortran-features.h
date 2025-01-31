@@ -71,7 +71,7 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     ZeroDoStep, UnusedForallIndex, OpenMPUsage, DataLength, IgnoredDirective,
     HomonymousSpecific, HomonymousResult, IgnoredIntrinsicFunctionType,
     PreviousScalarUse, RedeclaredInaccessibleComponent, ImplicitShared,
-    IndexVarRedefinition, IncompatibleImplicitInterfaces, BadTypeForTarget,
+    IndexVarRedefinition, IncompatibleImplicitInterfaces,
     VectorSubscriptFinalization, UndefinedFunctionResult, UselessIomsg,
     MismatchingDummyProcedure, SubscriptedEmptyArray, UnsignedLiteralTruncation,
     CompatibleDeclarationsFromDistinctModules)
