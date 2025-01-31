@@ -42,7 +42,7 @@ namespace WonkyAccess {
 }
 
 namespace rdar9169404 {
-  template<typename T, T N> struct X { };
+  template<typename T, T N> struct X { }; // #rdar9169404-X
   template<bool C> struct X<bool, C> {
     typedef int type;
   };
@@ -50,6 +50,7 @@ namespace rdar9169404 {
   X<bool, -1>::type value;
 #if __cplusplus >= 201103L
   // expected-error@-2 {{non-type template argument evaluates to -1, which cannot be narrowed to type 'bool'}}
+  // expected-note@#rdar9169404-X {{template parameter is declared here}}
 #endif
 }
 

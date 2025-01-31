@@ -408,7 +408,7 @@ void testVariadicInstantiation() {
 // --------------------------------------------------------------------------
 // Parameterized classes are not templates
 // --------------------------------------------------------------------------
-template<template<typename T, typename U> class TT>
+template<template<typename T, typename U> class TT> // expected-note {{template parameter is declared here}}
 struct AcceptsTemplateTemplate { };
 
 typedef AcceptsTemplateTemplate<NSMutableDictionary> TemplateTemplateFail1; // expected-error{{template argument for template template parameter must be a class template or type alias template}}

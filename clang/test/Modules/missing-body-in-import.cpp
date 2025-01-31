@@ -29,6 +29,7 @@ export module mod2;
 import mod1;
 
 struct C: B <A{"a", "b"}> { // expected-error {{non-type template argument is not a constant expression}}
+                            // expected-note@mod1.cppm:11 {{template parameter is declared here}}
   constexpr C(int a) { }
 };
 

@@ -33,11 +33,11 @@ int k = f(X<1000>());
 
 namespace template_argument_recursion {
   struct ostream;
-  template<typename T> T &&declval();
+  template<typename T> T &&declval(); // expected-error {{exceeded maximum depth}}
 
   namespace mlir {
     template<typename T, typename = decltype(declval<ostream&>() << declval<T&>())>
-    ostream &operator<<(ostream& os, const T& obj); // expected-error {{exceeded maximum depth}}
+    ostream &operator<<(ostream& os, const T& obj);
     struct Value;
   }
 
@@ -48,12 +48,12 @@ namespace template_argument_recursion {
 
 namespace template_parameter_type_recursion {
   struct ostream;
-  template<typename T> T &&declval();
+  template<typename T> T &&declval(); // expected-error {{exceeded maximum depth}}
   template<bool B, typename T> struct enable_if { using type = T; };
 
   namespace mlir {
     template<typename T, typename enable_if<declval<ostream&>() << declval<T&>(), void*>::type = nullptr>
-    ostream &operator<<(ostream& os, const T& obj); // expected-error {{exceeded maximum depth}}
+    ostream &operator<<(ostream& os, const T& obj);
     struct Value;
   }
 

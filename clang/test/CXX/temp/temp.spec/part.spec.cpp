@@ -250,7 +250,7 @@ template <typename T> class PCT1 {};
 template <typename T1, typename T2> class PCT2 {};
 template <int X> class PCT3 {};
 template <void (TestClass::*)()> class PCT4 {};
-template <void (*)()> class PCT5 {};
+template <void (*)()> class PCT5 {}; // expected-note {{template parameter is declared here}}
 template <typename T> class PCT6 {
   // expected-note@+1 3{{implicitly declared private here}}
   template <typename NT> class NPCT1 {};
@@ -416,7 +416,7 @@ template <typename T1, typename T2> class PCTT1 {};
 template <typename T1, typename T2, typename T3> class PCTT2 {};
 template <typename T, int X> class PCTT3 {};
 template <typename T, void (TestClass::*)()> class PCTT4 {};
-template <typename T, void (*)()> class PCTT5 {};
+template <typename T, void (*)()> class PCTT5 {}; // expected-note {{template parameter is declared here}}
 template <typename T1, typename T2> class PCTT6 {
   template <typename NT> class NCT1 {};
   template <typename NT> class NCT2; // forward declaration

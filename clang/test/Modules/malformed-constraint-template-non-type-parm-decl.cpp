@@ -11,7 +11,7 @@
 //--- mod.cppm
 export module mod;
 
-template <typename T, auto Q>
+template <typename T, auto Q> // expected-note 2{{template parameter is declared here}}
 concept ReferenceOf = Q;
 
 // expected-error@+2 {{unknown type name 'AngleIsInvalidNow'}}

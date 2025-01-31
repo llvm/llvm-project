@@ -15,13 +15,14 @@ void test_f() {
 }
 
 template <class T, unsigned = sizeof([]() { T::invalid; })>
+// expected-note@-1 {{template parameter is declared here}}
 void g(T);
 void g(...);
 void test_g() {
-  g(0); // expected-error@-4 {{type 'int' cannot be used prior to '::'}}
+  g(0); // expected-error@-5 {{type 'int' cannot be used prior to '::'}}
         // expected-note@-4 {{in instantiation of default argument}}
         // expected-note@-2 {{while substituting deduced template arguments}}
-        // expected-note@-7 {{while substituting into a lambda expression here}}
+        // expected-note@-8 {{while substituting into a lambda expression here}}
 }
 
 template <class T>

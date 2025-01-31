@@ -57,9 +57,9 @@ namespace PR13210 {
 // Don't emit spurious messages
 namespace pr16225add {
 
-  template<class T1, typename T2> struct Known { }; // expected-note 3 {{template is declared here}}
+  template<class T1, typename T2> struct Known { }; // expected-note 3{{template parameter is declared here}}
   template<class T1, typename T2> struct X;
-  template<class T1, typename T2> struct ABC; // expected-note {{template is declared here}}
+  template<class T1, typename T2> struct ABC; // expected-note {{template parameter is declared here}}
   template<int N1, int N2> struct ABC2 {};
 
   template<class T1, typename T2> struct foo :
@@ -68,7 +68,7 @@ namespace pr16225add {
 
   template<class T1, typename T2> struct foo2 :
     UnknownBase<T1,T2>, // expected-error {{no template named 'UnknownBase'}}
-    Known<T1>  // expected-error {{too few template arguments for class template 'Known'}}
+    Known<T1>  // expected-error {{missing template argument for template parameter}}
   { };
 
   template<class T1, typename T2> struct foo3 :
@@ -76,8 +76,8 @@ namespace pr16225add {
   { };
 
   template<class T1, typename T2> struct foo4 :
-    UnknownBase<T1,ABC<T2> >, // expected-error {{too few template arguments for class template 'ABC'}}
-    Known<T1>  // expected-error {{too few template arguments for class template 'Known'}}
+    UnknownBase<T1,ABC<T2> >, // expected-error {{missing template argument for template parameter}}
+    Known<T1>  // expected-error {{missing template argument for template parameter}}
   { };
 
   template<class T1, typename T2> struct foo5 :
@@ -92,7 +92,7 @@ namespace pr16225add {
 #if __cplusplus <= 199711L
     // expected-error@-2 {{use '> >'}}
 #endif
-    Known<T1>  // expected-error {{too few template arguments for class template 'Known'}}
+    Known<T1>  // expected-error {{missing template argument for template parameter}}
   { };
 
   template<class T1, typename T2, int N> struct foo7 :

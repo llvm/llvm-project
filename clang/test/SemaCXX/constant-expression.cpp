@@ -99,7 +99,7 @@ void diags(int n) {
 namespace IntOrEnum {
   const int k = 0;
   const int &p = k; // expected-note {{declared here}}
-  template<int n> struct S {};
+  template<int n> struct S {}; // expected-note {{template parameter is declared here}}
   S<p> s; // expected-error {{not an integral constant expression}} expected-note {{read of variable 'p' of non-integral, non-enumeration type 'const int &'}}
 }
 

@@ -17,7 +17,8 @@ namespace PR24076 {
   }
 
   template<class T,
-           class = void_t<decltype(declval<T>() + 1)>> // expected-error {{invalid operands to binary expression}}
+           class = // expected-note {{template parameter is declared here}}
+             void_t<decltype(declval<T>() + 1)>> // expected-error {{invalid operands to binary expression}}
   struct bar {};
 
   bar<s> bar; // expected-note {{in instantiation of}}

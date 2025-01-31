@@ -403,7 +403,8 @@ public:
   }
 
 private:
-  static std::string toString(CodeSynthesisContext::SynthesisKind Kind) {
+  static std::optional<std::string>
+  toString(CodeSynthesisContext::SynthesisKind Kind) {
     switch (Kind) {
     case CodeSynthesisContext::TemplateInstantiation:
       return "TemplateInstantiation";
@@ -461,8 +462,10 @@ private:
       return "TypeAliasTemplateInstantiation";
     case CodeSynthesisContext::PartialOrderingTTP:
       return "PartialOrderingTTP";
+    case CodeSynthesisContext::CheckTemplateParameter:
+      return std::nullopt;
     }
-    return "";
+    return std::nullopt;
   }
 
   template <bool BeginInstantiation>
@@ -470,12 +473,14 @@ private:
                                     const CodeSynthesisContext &Inst) {
     std::string YAML;
     {
+      std::optional<TemplightEntry> Entry =
+          getTemplightEntry<BeginInstantiation>(TheSema, Inst);
+      if (!Entry)
+        return;
       llvm::raw_string_ostream OS(YAML);
       llvm::yaml::Output YO(OS);
-      TemplightEntry Entry =
-          getTemplightEntry<BeginInstantiation>(TheSema, Inst);
       llvm::yaml::EmptyContext Context;
-      llvm::yaml::yamlize(YO, Entry, true, Context);
+      llvm::yaml::yamlize(YO, *Entry, true, Context);
     }
     Out << "---" << YAML << "\n";
   }
@@ -555,10 +560,13 @@ private:
   }
 
   template <bool BeginInstantiation>
-  static TemplightEntry getTemplightEntry(const Sema &TheSema,
-                                          const CodeSynthesisContext &Inst) {
+  static std::optional<TemplightEntry>
+  getTemplightEntry(const Sema &TheSema, const CodeSynthesisContext &Inst) {
     TemplightEntry Entry;
-    Entry.Kind = toString(Inst.Kind);
+    std::optional<std::string> Kind = toString(Inst.Kind);
+    if (!Kind)
+      return std::nullopt;
+    Entry.Kind = *Kind;
     Entry.Event = BeginInstantiation ? "Begin" : "End";
     llvm::raw_string_ostream OS(Entry.Name);
     printEntryName(TheSema, Inst.Entity, OS);

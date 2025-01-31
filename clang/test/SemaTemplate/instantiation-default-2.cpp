@@ -4,8 +4,7 @@
 
 template<typename T, T Value> struct Constant;
 // FIXME: bad location precxx20-error@-1 {{a non-type template parameter cannot have type 'float'}}
-// expected-note@-2 {{template parameter is declared here}}
-// cxx20-note@-3 {{template parameter is declared here}}
+// expected-note@-2 2{{template parameter is declared here}}
 
 Constant<int, 5> *c1;
 

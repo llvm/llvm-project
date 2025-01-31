@@ -897,7 +897,7 @@ namespace VirtDtor {
 }
 
 namespace TemporaryInNTTP {
-  template<auto n> struct B { /* ... */ };
+  template<auto n> struct B { /* ... */ }; // both-note {{template parameter is declared here}}
   struct J1 {
     J1 *self=this;
   };

@@ -167,7 +167,10 @@ namespace SFINAE {
     f<E>();
   }
 
-  template<typename T, typename U = EnableIf<is_enum<T>>> struct fail1 {}; // expected-note {{here}}
+  template<typename T,
+    typename U = // expected-note {{template parameter is declared here}}
+      EnableIf<is_enum<T>>> // expected-note {{in instantiation of template type alias 'EnableIf' requested here}}
+  struct fail1 {};
   template<typename T> struct fail2 : DisableIf<is_enum<T>> {}; // expected-note {{here}}
 
   fail1<int> f1; // expected-note {{here}}

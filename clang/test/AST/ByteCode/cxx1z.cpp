@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -verify=expected,both %s
 // RUN: %clang_cc1 -std=c++17 -verify=ref,both %s
 
-template<typename T, T val> struct A {};
+template<typename T, T val> struct A {}; // both-note 6{{template parameter is declared here}}
 namespace Temp {
   struct S { int n; };
   constexpr S &addr(S &&s) { return s; }
