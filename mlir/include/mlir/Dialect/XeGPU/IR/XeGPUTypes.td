@@ -179,7 +179,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
   }];
 
   let hasCustomAssemblyFormat = true;
-
+  let genVerifyDecl = 1;
 }
 
 
