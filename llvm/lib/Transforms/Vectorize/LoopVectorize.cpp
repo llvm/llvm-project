@@ -1424,8 +1424,11 @@ public:
   /// Selects and saves TailFoldingStyle for 2 options - if IV update may
   /// overflow or not.
   /// \param IsScalableVF true if scalable vector factors enabled.
+  /// \param CanTailFoldPowOf2 true if tail folding with power-of-2
+  /// safe distance can be enabled.
   /// \param UserIC User specific interleave count.
-  void setTailFoldingStyles(bool IsScalableVF, unsigned UserIC) {
+  void setTailFoldingStyles(bool IsScalableVF, bool CanTailFoldPowOf2,
+                            unsigned UserIC) {
     assert(!ChosenTailFoldingStyle && "Tail folding must not be selected yet.");
     if (!Legal->canFoldTailByMasking()) {
       ChosenTailFoldingStyle =
@@ -1434,26 +1437,40 @@ public:
     }
 
     if (!ForceTailFoldingStyle.getNumOccurrences()) {
-      ChosenTailFoldingStyle = std::make_pair(
-          TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/true),
-          TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/false));
+      if (!CanTailFoldPowOf2)
+        ChosenTailFoldingStyle =
+            std::make_pair(TailFoldingStyle::None, TailFoldingStyle::None);
+      else
+        ChosenTailFoldingStyle = std::make_pair(
+            TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/true),
+            TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/false));
       return;
     }
 
     // Set styles when forced.
     ChosenTailFoldingStyle = std::make_pair(ForceTailFoldingStyle.getValue(),
                                             ForceTailFoldingStyle.getValue());
-    if (ForceTailFoldingStyle != TailFoldingStyle::DataWithEVL)
+    if (ForceTailFoldingStyle != TailFoldingStyle::DataWithEVL) {
+      if (!CanTailFoldPowOf2)
+        ChosenTailFoldingStyle =
+            std::make_pair(TailFoldingStyle::None, TailFoldingStyle::None);
       return;
+    }
     // Override forced styles if needed.
     // FIXME: use actual opcode/data type for analysis here.
     // FIXME: Investigate opportunity for fixed vector factor.
     // FIXME: support fixed-order recurrences by fixing splice of non VFxUF
     // penultimate EVL.
-    bool EVLIsLegal =
-        UserIC <= 1 && TTI.hasActiveVectorLength(0, nullptr, Align()) &&
-        !EnableVPlanNativePath && Legal->getFixedOrderRecurrences().empty();
+    bool EVLIsLegal = UserIC <= 1 && IsScalableVF &&
+                      TTI.hasActiveVectorLength(0, nullptr, Align()) &&
+                      !EnableVPlanNativePath &&
+                      Legal->getFixedOrderRecurrences().empty();
     if (!EVLIsLegal) {
+      if (!CanTailFoldPowOf2) {
+        ChosenTailFoldingStyle =
+            std::make_pair(TailFoldingStyle::None, TailFoldingStyle::None);
+        return;
+      }
       // If for some reason EVL mode is unsupported, fallback to
       // DataWithoutLaneMask to try to vectorize the loop with folded tail
       // in a generic way.
@@ -3796,7 +3813,9 @@ bool LoopVectorizationCostModel::isScalableVectorizationAllowed() {
     return false;
   }
 
-  if (!Legal->isSafeForAnyVectorWidth() && !getMaxVScale(*TheFunction, TTI)) {
+  if ((!Legal->isSafeForAnyVectorWidth() ||
+       Legal->getMaxStoreLoadForwardSafeVFPowerOf2()) &&
+      !getMaxVScale(*TheFunction, TTI)) {
     reportVectorizationInfo("The target does not provide maximum vscale value "
                             "for safe distance analysis.",
                             "ScalableVFUnfeasible", ORE, TheLoop);
@@ -3814,7 +3833,8 @@ LoopVectorizationCostModel::getMaxLegalScalableVF(unsigned MaxSafeElements) {
 
   auto MaxScalableVF = ElementCount::getScalable(
       std::numeric_limits<ElementCount::ScalarTy>::max());
-  if (Legal->isSafeForAnyVectorWidth())
+  if (Legal->isSafeForAnyVectorWidth() &&
+      !Legal->getMaxStoreLoadForwardSafeVFPowerOf2())
     return MaxScalableVF;
 
   std::optional<unsigned> MaxVScale = getMaxVScale(*TheFunction, TTI);
@@ -3840,13 +3860,22 @@ FixedScalableVFPair LoopVectorizationCostModel::computeFeasibleMaxVF(
   // It is computed by MaxVF * sizeOf(type) * 8, where type is taken from
   // the memory accesses that is most restrictive (involved in the smallest
   // dependence distance).
-  unsigned MaxSafeElements =
-      llvm::bit_floor(Legal->getMaxSafeVectorWidthInBits() / WidestType);
+  unsigned MaxSafeElements = Legal->getMaxSafeVectorWidthInBits() / WidestType;
+  if (Legal->isSafeForAnyVectorWidth())
+    MaxSafeElements = bit_ceil(MaxSafeElements);
+  else
+    MaxSafeElements = bit_floor(MaxSafeElements);
+  unsigned MaxSafeElementsPowerOf2 = MaxSafeElements;
+  if (std::optional<unsigned> SLDist =
+          Legal->getMaxStoreLoadForwardSafeVFPowerOf2())
+    MaxSafeElementsPowerOf2 =
+        std::min(MaxSafeElementsPowerOf2, *SLDist / WidestType);
+  auto MaxSafeFixedVF = ElementCount::getFixed(MaxSafeElementsPowerOf2);
+  auto MaxSafeScalableVF = getMaxLegalScalableVF(MaxSafeElementsPowerOf2);
 
-  auto MaxSafeFixedVF = ElementCount::getFixed(MaxSafeElements);
-  auto MaxSafeScalableVF = getMaxLegalScalableVF(MaxSafeElements);
-  if (!Legal->isSafeForAnyVectorWidth())
-    this->MaxSafeElements = MaxSafeElements;
+  if (!Legal->isSafeForAnyVectorWidth() ||
+      Legal->getMaxStoreLoadForwardSafeVFPowerOf2())
+    this->MaxSafeElements = MaxSafeElementsPowerOf2;
 
   LLVM_DEBUG(dbgs() << "LV: The max safe fixed VF is: " << MaxSafeFixedVF
                     << ".\n");
@@ -4074,13 +4103,11 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       LLVM_DEBUG(dbgs() << "LV: No tail will remain for any chosen VF.\n");
       return MaxFactors;
     }
+    MaxPowerOf2RuntimeVF.reset();
   }
 
-  // If we don't know the precise trip count, or if the trip count that we
-  // found modulo the vectorization factor is not zero, try to fold the tail
-  // by masking.
-  // FIXME: look for a smaller MaxVF that does divide TC rather than masking.
-  setTailFoldingStyles(MaxFactors.ScalableVF.isScalable(), UserIC);
+  setTailFoldingStyles(MaxFactors.ScalableVF.isScalable(),
+                       !MaxPowerOf2RuntimeVF.has_value(), UserIC);
   if (foldTailByMasking()) {
     if (getTailFoldingStyle() == TailFoldingStyle::DataWithEVL) {
       LLVM_DEBUG(
@@ -4096,6 +4123,12 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 
       MaxFactors.FixedVF = ElementCount::getFixed(1);
     }
+    return MaxFactors;
+  }
+
+  if (MaxPowerOf2RuntimeVF) {
+    // Accept MaxFixedVF if we do not have a tail.
+    LLVM_DEBUG(dbgs() << "LV: No tail will remain for any chosen VF.\n");
     return MaxFactors;
   }
 
@@ -4885,7 +4918,8 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
   }
 
   // We used the distance for the interleave count.
-  if (!Legal->isSafeForAnyVectorWidth())
+  if (!Legal->isSafeForAnyVectorWidth() ||
+      Legal->getMaxStoreLoadForwardSafeVFPowerOf2())
     return 1;
 
   // We don't attempt to perform interleaving for loops with uncountable early

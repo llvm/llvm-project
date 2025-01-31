@@ -1742,31 +1742,34 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
   // cause any slowdowns.
   const uint64_t NumItersForStoreLoadThroughMemory = 8 * TypeByteSize;
   // Maximum vector factor.
-  uint64_t MaxVFWithoutSLForwardIssues = std::min(
-      VectorizerParams::MaxVectorWidth * TypeByteSize, MinDepDistBytes);
+  uint64_t MaxVFWithoutSLForwardIssuesPowerOf2 = std::min(
+      VectorizerParams::MaxVectorWidth * TypeByteSize,
+      MaxStoreLoadForwardSafeVF.value_or(std::numeric_limits<uint64_t>::max()));
 
   // Compute the smallest VF at which the store and load would be misaligned.
-  for (uint64_t VF = 2 * TypeByteSize; VF <= MaxVFWithoutSLForwardIssues;
-       VF *= 2) {
+  for (uint64_t VF = 2 * TypeByteSize;
+       VF <= MaxVFWithoutSLForwardIssuesPowerOf2; VF *= 2) {
     // If the number of vector iteration between the store and the load are
     // small we could incur conflicts.
     if (Distance % VF && Distance / VF < NumItersForStoreLoadThroughMemory) {
-      MaxVFWithoutSLForwardIssues = (VF >> 1);
+      MaxVFWithoutSLForwardIssuesPowerOf2 = (VF >> 1);
       break;
     }
   }
 
-  if (MaxVFWithoutSLForwardIssues < 2 * TypeByteSize) {
+  if (MaxVFWithoutSLForwardIssuesPowerOf2 < 2 * TypeByteSize) {
     LLVM_DEBUG(
         dbgs() << "LAA: Distance " << Distance
                << " that could cause a store-load forwarding conflict\n");
     return true;
   }
 
-  if (MaxVFWithoutSLForwardIssues < MinDepDistBytes &&
-      MaxVFWithoutSLForwardIssues !=
+  if (MaxVFWithoutSLForwardIssuesPowerOf2 <
+          MaxStoreLoadForwardSafeVF.value_or(
+              std::numeric_limits<uint64_t>::max()) &&
+      MaxVFWithoutSLForwardIssuesPowerOf2 !=
           VectorizerParams::MaxVectorWidth * TypeByteSize)
-    MinDepDistBytes = MaxVFWithoutSLForwardIssues;
+    MinDepDistBytes = MaxVFWithoutSLForwardIssuesPowerOf2;
   return false;
 }
 
@@ -2228,8 +2231,9 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     return Dependence::BackwardVectorizableButPreventsForwarding;
   }
 
-  // An update to MinDepDistBytes requires an update to MaxSafeVectorWidthInBits
-  // since there is a backwards dependency.
+  // An update to MinDepDistBytes requires an update to
+  // MaxStoreLoadForwardSafeVF/MaxSafeVectorWidthInBits since there is a
+  // backwards dependency.
   uint64_t MaxVF = MinDepDistBytes / (TypeByteSize * *CommonStride);
   LLVM_DEBUG(dbgs() << "LAA: Positive min distance " << MinDistance
                     << " with max VF = " << MaxVF << '\n');
@@ -2242,7 +2246,11 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     return Dependence::Unknown;
   }
 
-  MaxSafeVectorWidthInBits = std::min(MaxSafeVectorWidthInBits, MaxVFInBits);
+  if (IsTrueDataDependence && EnableForwardingConflictDetection && ConstDist)
+    MaxStoreLoadForwardSafeVF =
+        std::min(MaxStoreLoadForwardSafeVF.value_or(MaxVFInBits), MaxVFInBits);
+  else
+    MaxSafeVectorWidthInBits = std::min(MaxSafeVectorWidthInBits, MaxVFInBits);
   return Dependence::BackwardVectorizable;
 }
 
@@ -3035,6 +3043,9 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
     if (!DC.isSafeForAnyVectorWidth())
       OS << " with a maximum safe vector width of "
          << DC.getMaxSafeVectorWidthInBits() << " bits";
+    if (std::optional<unsigned> SLDist = DC.getStoreLoadForwardSafeVF())
+      OS << ", with a maximum safe store-load forward width of " << *SLDist
+         << " bits";
     if (PtrRtChecking->Need)
       OS << " with run-time checks";
     OS << "\n";
