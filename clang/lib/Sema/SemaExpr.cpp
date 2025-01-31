@@ -7941,7 +7941,7 @@ bool Sema::CheckDynamicCountSizeForAssignment(
   if (!DependentValues.empty()) {
     if (LHSMemberBase)
       Transform.MemberBase = LHSMemberBase;
-    ExprResult CountExprRes = Transform.TransformBoundsAttrExpr(CountExpr);
+    ExprResult CountExprRes = Transform.TransformExpr(CountExpr);
     if (CountExprRes.isInvalid())
       return false;
     CountExpr = CountExprRes.get();
@@ -22609,14 +22609,6 @@ void diagnoseUncapturableValueReferenceOrBinding(Sema &S, SourceLocation loc,
   if (!S.getLangOpts().CPlusPlus && !S.CurContext->isFunctionOrMethod())
     return;
 
-  /* TO_UPSTREAM(BoundsSafety) ON*/
-  if (S.getLangOpts().BoundsSafety) {
-    // Allow capturing variables/fields in bounds attr expr context.
-    if (S.isAttrContext() && (isa<VarDecl>(var) || isa<FieldDecl>(var)))
-      return;
-  }
-  /* TO_UPSTREAM(BoundsSafety) OFF*/
-
   unsigned ValueKind = isa<BindingDecl>(var) ? 1 : 0;
   unsigned ContextKind = 3; // unknown
   if (isa<CXXMethodDecl>(VarDC) &&
@@ -25456,8 +25448,7 @@ ExprResult Sema::ActOnBoundsSafetyCall(ExprResult Call) {
       QualType ParamType = ParamTypes[I];
       BoundsCheckBuilder Builder(OVEs);
       if (auto *DCPT = ParamType->getAs<CountAttributedType>()) {
-        ExprResult CountExpr =
-            Transform.TransformBoundsAttrExpr(DCPT->getCountExpr());
+        ExprResult CountExpr = Transform.TransformExpr(DCPT->getCountExpr());
         if (!CountExpr.get())
           return ExprError();
         Builder.setAccessCount(CountExpr.get(), DCPT->isCountInBytes(),
@@ -25467,7 +25458,7 @@ ExprResult Sema::ActOnBoundsSafetyCall(ExprResult Call) {
         // will not have an end pointer, just a start pointer. The start pointer
         // will generate the entire breadth of required checks.
         if (auto *EndPtr = DRPT->getEndPointer()) {
-          ExprResult Upper = Transform.TransformBoundsAttrExpr(EndPtr);
+          ExprResult Upper = Transform.TransformExpr(EndPtr);
           if (!Upper.get())
             return ExprError();
           Builder.setAccessLowerBound(OVEs[I]);
@@ -25491,8 +25482,7 @@ ExprResult Sema::ActOnBoundsSafetyCall(ExprResult Call) {
   // for flexible array member pointers.
   QualType ResultTy = ResultExpr->getType();
   if (auto *DCPT = ResultTy->getAs<CountAttributedType>()) {
-    ExprResult ReturnCount =
-        Transform.TransformBoundsAttrExpr(DCPT->getCountExpr());
+    ExprResult ReturnCount = Transform.TransformExpr(DCPT->getCountExpr());
     if (!ReturnCount.get())
       return ExprError();
     ReturnCount = DefaultLvalueConversion(ReturnCount.get());
@@ -25507,7 +25497,7 @@ ExprResult Sema::ActOnBoundsSafetyCall(ExprResult Call) {
     if (!(ResultExpr = Promoted.get()))
       return ExprError();
   } else if (auto *DRPT = ResultTy->getAs<DynamicRangePointerType>()) {
-    ExprResult Upper = Transform.TransformBoundsAttrExpr(DRPT->getEndPointer());
+    ExprResult Upper = Transform.TransformExpr(DRPT->getEndPointer());
     if (!Upper.get())
       return ExprError();
     auto FA = BoundsSafetyPointerAttributes::bidiIndexable();

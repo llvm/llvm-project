@@ -10614,6 +10614,77 @@ static bool isStdBuiltin(ASTContext &Ctx, FunctionDecl *FD,
   }
 }
 
+static void rebuildBoundAttributedTypes(Sema &S, FunctionDecl *FD) {
+  struct ReplaceParams : public TreeTransform<ReplaceParams> {
+    using BaseTransform = TreeTransform<ReplaceParams>;
+    FunctionDecl *FD;
+
+    explicit ReplaceParams(Sema &SemaRef, FunctionDecl *FD)
+        : BaseTransform(SemaRef), FD(FD) {}
+
+    bool AlwaysRebuild() { return true; }
+
+    ExprResult TransformDeclRefExpr(DeclRefExpr *E) {
+      const auto *OldParam = dyn_cast<ParmVarDecl>(E->getDecl());
+      if (!OldParam)
+        return BaseTransform::TransformDeclRefExpr(E);
+      auto *NewParam = FD->getParamDecl(OldParam->getFunctionScopeIndex());
+      return SemaRef.BuildDeclRefExpr(NewParam, E->getType(), E->getValueKind(),
+                                      E->getNameInfo());
+    }
+  } Transform(S, FD);
+
+  auto RebuildBoundAttributeType = [&](QualType Ty) {
+    if (Ty->isBoundsAttributedType() ||
+        (Ty->isPointerType() &&
+         Ty->getPointeeType()->isBoundsAttributedType())) {
+      return Transform.TransformType(Ty);
+    }
+    return Ty;
+  };
+
+  QualType OldRetTy = FD->getReturnType();
+  QualType NewRetTy = RebuildBoundAttributeType(OldRetTy);
+  bool Updated = NewRetTy != OldRetTy;
+
+  llvm::SmallVector<QualType, 4> NewParamTys;
+  NewParamTys.reserve(FD->getNumParams());
+  for (unsigned I = 0; I < FD->getNumParams(); ++I) {
+    ParmVarDecl *Param = FD->getParamDecl(I);
+    QualType OldTy = Param->getType();
+    QualType NewTy = RebuildBoundAttributeType(OldTy);
+
+    NewParamTys.push_back(NewTy);
+
+    if (NewTy == OldTy)
+      continue;
+
+    Param->setType(NewTy);
+    Updated = true;
+
+    // If this param is a count attributed type or a pointer to it (Deref is
+    // true), we need to recreate DependerDeclsAttr for its dependent
+    // parameters.
+    bool Deref = false;
+    const auto *CATy = NewTy->getAs<CountAttributedType>();
+    if (!CATy && NewTy->isPointerType()) {
+      Deref = true;
+      CATy = NewTy->getPointeeType()->getAs<CountAttributedType>();
+    }
+    if (CATy)
+      S.AttachDependerDeclsAttr(Param, CATy, Deref);
+  }
+
+  if (!Updated)
+    return;
+
+  // TODO: We could keep the typeof/typedef sugars.
+  const auto *OldFPT = FD->getType()->castAs<FunctionProtoType>();
+  QualType NewFPT = S.Context.getFunctionType(NewRetTy, NewParamTys,
+                                              OldFPT->getExtProtoInfo());
+  FD->setType(NewFPT);
+}
+
 NamedDecl*
 Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                               TypeSourceInfo *TInfo, LookupResult &Previous,
@@ -11173,11 +11244,64 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     // @endcode
 
     // Synthesize a parameter for each argument type.
-    for (const auto &AI : FT->param_types()) {
-      ParmVarDecl *Param =
-          BuildParmVarDeclForTypedef(NewFD, D.getIdentifierLoc(), AI);
-      Param->setScopeInfo(0, Params.size());
-      Params.push_back(Param);
+
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    if (getLangOpts().BoundsSafetyAttributes) {
+      // If the parameters are used as dependent variables, we can synthesize
+      // named parameters for use in the declaration. Named dependent variables
+      // let us generate better diagnostics for the user (e.g.,
+      // __counted_by(len) instead of __counted_by()). Otherwise, just
+      // synthesize unnamed parameters.
+      llvm::SmallVector<const ParmVarDecl *, 4> NamedParams(FT->getNumParams(),
+                                                            nullptr);
+      auto AddNamedParamFromDependentType = [&](QualType Ty) {
+        const auto *BAT = Ty->getAs<BoundsAttributedType>();
+        if (!BAT && Ty->isPointerType())
+          BAT = Ty->getPointeeType()->getAs<BoundsAttributedType>();
+        if (!BAT)
+          return;
+        for (const auto &DD : BAT->dependent_decls()) {
+          if (const auto *PVD = dyn_cast<ParmVarDecl>(DD.getDecl()))
+            NamedParams[PVD->getFunctionScopeIndex()] = PVD;
+        }
+      };
+      AddNamedParamFromDependentType(FT->getReturnType());
+      for (QualType ParamTy : FT->param_types())
+        AddNamedParamFromDependentType(ParamTy);
+
+      // Temporarily put parameter variables in the translation unit, not the
+      // enclosing context. This is what Sema::ActOnParamDeclarator() already
+      // does when declaring a function without a typedef/typeof. In
+      // BoundsSafety, we do it to allow creating references to the parameters
+      // when rebuilding the count expression. Otherwise, creating such
+      // references triggers an error.
+      for (unsigned I = 0; I < FT->getNumParams(); ++I) {
+        QualType Ty = FT->getParamType(I);
+        const ParmVarDecl *NamedParam = NamedParams[I];
+        ParmVarDecl *Param;
+        if (!NamedParam) {
+          Param = BuildParmVarDeclForTypedef(Context.getTranslationUnitDecl(),
+                                             D.getIdentifierLoc(), Ty);
+        } else {
+          SourceLocation Loc = D.getIdentifierLoc();
+          Param = ParmVarDecl::Create(Context, Context.getTranslationUnitDecl(),
+                                      Loc, Loc, NamedParam->getIdentifier(), Ty,
+                                      Context.getTrivialTypeSourceInfo(Ty, Loc),
+                                      SC_None, nullptr);
+          Param->setImplicit();
+        }
+        Param->setScopeInfo(0, Params.size());
+        Params.push_back(Param);
+      }
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF */
+    else {
+      for (const auto &AI : FT->param_types()) {
+        ParmVarDecl *Param =
+            BuildParmVarDeclForTypedef(NewFD, D.getIdentifierLoc(), AI);
+        Param->setScopeInfo(0, Params.size());
+        Params.push_back(Param);
+      }
     }
   } else {
     assert(R->isFunctionNoProtoType() && NewFD->getNumParams() == 0 &&
@@ -11188,6 +11312,20 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   NewFD->setParams(Params);
 
   /* TO_UPSTREAM(BoundsSafety) ON*/
+  if (getLangOpts().BoundsSafetyAttributes) {
+    if (!D.isFunctionDeclarator() && R->isFunctionProtoType()) {
+      // The function is being declared with a typedef/typeof. We need to
+      // rebuild the bound attributed types, so that their expression refer the
+      // to the new parameters.
+      rebuildBoundAttributedTypes(*this, NewFD);
+
+      for (ParmVarDecl *Param : Params) {
+        assert(Param->getDeclContext() == Context.getTranslationUnitDecl());
+        Param->setDeclContext(NewFD);
+      }
+    }
+  }
+
   if (getLangOpts().BoundsSafety) {
     // This is a good place to make sure that no array parameter has decayed
     // to a __single pointer. Annoyingly, we can't do this when parameters are

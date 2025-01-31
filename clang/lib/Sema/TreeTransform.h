@@ -7658,7 +7658,7 @@ QualType TreeTransform<Derived>::TransformCountAttributedType(
   if (getDerived().AlwaysRebuild() || InnerTy != OldTy->desugar() ||
       OldCount != NewCount) {
     /* TO_UPSTREAM(BoundsSafety) ON */
-    if (SemaRef.getLangOpts().hasBoundsSafety()) {
+    if (SemaRef.getLangOpts().BoundsSafetyAttributes) {
       Result = SemaRef.BuildCountAttributedType(
           InnerTy, NewCount, OldTy->isCountInBytes(), OldTy->isOrNull());
     } else {
