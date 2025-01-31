@@ -176,6 +176,16 @@ public:
                              SmallVectorImpl<MCPhysReg> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
+
+  bool isLegalToSpill2Reg(Register Reg, const TargetRegisterInfo *TRI,
+                          const MachineRegisterInfo *MRI) const override;
+
+  bool targetSupportsSpill2Reg(const TargetSubtargetInfo *STI) const override;
+
+  const TargetRegisterClass *
+  getCandidateRegisterClassForSpill2Reg(const TargetRegisterInfo *TRI,
+                                        const TargetSubtargetInfo *STI,
+                                        Register SpilledReg) const override;
 };
 
 } // End llvm namespace

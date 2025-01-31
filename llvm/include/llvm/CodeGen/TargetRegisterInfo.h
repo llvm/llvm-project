@@ -41,6 +41,7 @@ class RegScavenger;
 class VirtRegMap;
 class LiveIntervals;
 class LiveInterval;
+class TargetSubtargetInfo;
 class TargetRegisterClass {
 public:
   using iterator = const MCPhysReg *;
@@ -1232,6 +1233,25 @@ public:
   virtual SmallVector<StringLiteral>
   getVRegFlagsOfReg(Register Reg, const MachineFunction &MF) const {
     return {};
+  }
+
+  /// \Returns true if a spill/reload of \p Reg can be handled by Spill2Reg.
+  virtual bool isLegalToSpill2Reg(Register Reg, const TargetRegisterInfo *TRI,
+                                  const MachineRegisterInfo *MRI) const {
+    llvm_unreachable(
+        "Target didn't implement TargetInstrInfo::isLegalToSpill2Reg!");
+  }
+
+  virtual bool targetSupportsSpill2Reg(const TargetSubtargetInfo *STI) const {
+    return false;
+  }
+
+  virtual const TargetRegisterClass *
+  getCandidateRegisterClassForSpill2Reg(const TargetRegisterInfo *TRI,
+                                        const TargetSubtargetInfo *STI,
+                                        Register SpilledReg) const {
+    llvm_unreachable("Target didn't implement "
+                     "TargetInstrInfo::getCandidateRegisterClassForSpill2Reg!");
   }
 };
 
