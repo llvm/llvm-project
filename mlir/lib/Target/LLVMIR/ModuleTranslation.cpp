@@ -1268,7 +1268,7 @@ LogicalResult ModuleTranslation::convertAliases() {
                                 ? llvm::GlobalAlias::GeneralDynamicTLSModel
                                 : llvm::GlobalAlias::NotThreadLocal);
 
-    // Note there is no need to steup the comdat because GlobalAlias calls into
+    // Note there is no need to setup the comdat because GlobalAlias calls into
     // the aliasee comdat information automatically.
 
     if (op.getUnnamedAddr().has_value())
@@ -1306,9 +1306,6 @@ LogicalResult ModuleTranslation::convertAliases() {
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::AliasOp>())
     if (failed(convertDialectAttributes(op, {})))
       return failure();
-
-  // Debug info (TODO): finally, update the compile units their respective sets
-  // of global aliases created earlier.
 
   return success();
 }
