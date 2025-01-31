@@ -94,6 +94,11 @@ directory structure will be created.  Additionally, the following special
   not specified (i.e the pattern is "%m"), it's assumed that ``N = 1``. The
   merge pool specifier can only occur once per filename pattern.
 
+* "%b" expands out to the binary ID (build ID). It can be used with "%Nm" to
+  avoid binary signature collisions. To use it, the program should be compiled
+  with the build ID linker option (``--build-id`` for GNU ld or LLD). Linux,
+  Windows and AIX are supported.
+
 * "%c" expands out to nothing, but enables a mode in which profile counter
   updates are continuously synced to a file. This means that if the
   instrumented program crashes, or is killed by a signal, perfect coverage
