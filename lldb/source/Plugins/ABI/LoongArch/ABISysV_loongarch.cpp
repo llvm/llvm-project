@@ -12,6 +12,7 @@
 #include <limits>
 #include <sstream>
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -644,34 +645,25 @@ void ABISysV_loongarch::AugmentRegisterInfo(
     std::vector<lldb_private::DynamicRegisterInfo::Register> &regs) {
   lldb_private::RegInfoBasedABI::AugmentRegisterInfo(regs);
 
+  static const llvm::StringMap<llvm::StringRef> isa_to_abi_alias_map = {
+      {"r0", "zero"}, {"r1", "ra"},  {"r2", "tp"},  {"r3", "sp"},
+      {"r4", "a0"},   {"r5", "a1"},  {"r6", "a2"},  {"r7", "a3"},
+      {"r8", "a4"},   {"r9", "a5"},  {"r10", "a6"}, {"r11", "a7"},
+      {"r12", "t0"},  {"r13", "t1"}, {"r14", "t2"}, {"r15", "t3"},
+      {"r16", "t4"},  {"r17", "t5"}, {"r18", "t6"}, {"r19", "t7"},
+      {"r20", "t8"},  {"r22", "fp"}, {"r23", "s0"}, {"r24", "s1"},
+      {"r25", "s2"},  {"r26", "s3"}, {"r27", "s4"}, {"r28", "s5"},
+      {"r29", "s6"},  {"r30", "s7"}, {"r31", "s8"}};
+
   for (auto it : llvm::enumerate(regs)) {
+    llvm::StringRef reg_name = it.value().name.GetStringRef();
+
     // Set alt name for certain registers for convenience
-    if (it.value().name == "r0")
-      it.value().alt_name.SetCString("zero");
-    else if (it.value().name == "r1")
-      it.value().alt_name.SetCString("ra");
-    else if (it.value().name == "r3")
-      it.value().alt_name.SetCString("sp");
-    else if (it.value().name == "r22")
-      it.value().alt_name.SetCString("fp");
-    else if (it.value().name == "r4")
-      it.value().alt_name.SetCString("a0");
-    else if (it.value().name == "r5")
-      it.value().alt_name.SetCString("a1");
-    else if (it.value().name == "r6")
-      it.value().alt_name.SetCString("a2");
-    else if (it.value().name == "r7")
-      it.value().alt_name.SetCString("a3");
-    else if (it.value().name == "r8")
-      it.value().alt_name.SetCString("a4");
-    else if (it.value().name == "r9")
-      it.value().alt_name.SetCString("a5");
-    else if (it.value().name == "r10")
-      it.value().alt_name.SetCString("a6");
-    else if (it.value().name == "r11")
-      it.value().alt_name.SetCString("a7");
+    llvm::StringRef alias_name = isa_to_abi_alias_map.lookup(reg_name);
+    if (!alias_name.empty())
+      it.value().alt_name.SetString(alias_name);
 
     // Set generic regnum so lldb knows what the PC, etc is
-    it.value().regnum_generic = GetGenericNum(it.value().name.GetStringRef());
+    it.value().regnum_generic = GetGenericNum(reg_name);
   }
 }
