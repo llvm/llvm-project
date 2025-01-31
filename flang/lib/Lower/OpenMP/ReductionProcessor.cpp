@@ -410,10 +410,11 @@ static mlir::Type unwrapSeqOrBoxedType(mlir::Type ty) {
 }
 
 static void createReductionAllocAndInitRegions(
-    fir::FirOpBuilder &builder, mlir::Location loc,
+    AbstractConverter &converter, mlir::Location loc,
     mlir::omp::DeclareReductionOp &reductionDecl,
     const ReductionProcessor::ReductionIdentifier redId, mlir::Type type,
     bool isByRef) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   auto yield = [&](mlir::Value ret) {
     builder.create<mlir::omp::YieldOp>(loc, ret);
   };
@@ -439,10 +440,11 @@ static void createReductionAllocAndInitRegions(
       loc, unwrapSeqOrBoxedType(ty), redId, builder);
 
   if (isByRef) {
-    populateByRefInitAndCleanupRegions(builder, loc, type, initValue, initBlock,
-                                       reductionDecl.getInitializerAllocArg(),
-                                       reductionDecl.getInitializerMoldArg(),
-                                       reductionDecl.getCleanupRegion());
+    populateByRefInitAndCleanupRegions(
+        converter, loc, type, initValue, initBlock,
+        reductionDecl.getInitializerAllocArg(),
+        reductionDecl.getInitializerMoldArg(), reductionDecl.getCleanupRegion(),
+        DeclOperationKind::Reduction);
   }
 
   if (fir::isa_trivial(ty)) {
@@ -466,9 +468,10 @@ static void createReductionAllocAndInitRegions(
 }
 
 mlir::omp::DeclareReductionOp ReductionProcessor::createDeclareReduction(
-    fir::FirOpBuilder &builder, llvm::StringRef reductionOpName,
+    AbstractConverter &converter, llvm::StringRef reductionOpName,
     const ReductionIdentifier redId, mlir::Type type, mlir::Location loc,
     bool isByRef) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::OpBuilder::InsertionGuard guard(builder);
   mlir::ModuleOp module = builder.getModule();
 
@@ -486,7 +489,8 @@ mlir::omp::DeclareReductionOp ReductionProcessor::createDeclareReduction(
 
   decl = modBuilder.create<mlir::omp::DeclareReductionOp>(loc, reductionOpName,
                                                           type);
-  createReductionAllocAndInitRegions(builder, loc, decl, redId, type, isByRef);
+  createReductionAllocAndInitRegions(converter, loc, decl, redId, type,
+                                     isByRef);
 
   builder.createBlock(&decl.getReductionRegion(),
                       decl.getReductionRegion().end(), {type, type},
@@ -645,7 +649,7 @@ void ReductionProcessor::addDeclareReduction(
       TODO(currentLocation, "Unexpected reduction type");
     }
 
-    decl = createDeclareReduction(firOpBuilder, reductionName, redId, redType,
+    decl = createDeclareReduction(converter, reductionName, redId, redType,
                                   currentLocation, isByRef);
     reductionDeclSymbols.push_back(
         mlir::SymbolRefAttr::get(firOpBuilder.getContext(), decl.getSymName()));

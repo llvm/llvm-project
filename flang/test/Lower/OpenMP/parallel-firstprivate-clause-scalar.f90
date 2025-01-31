@@ -4,28 +4,18 @@
 ! RUN: bbc -fopenmp -emit-hlfir %s -o - \
 ! RUN: | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-supports-f128-math %{,CHECK-KIND16%}
 
-!CHECK:  omp.private {type = firstprivate} @[[ARG2_LOGICAL_PRIVATIZER:_QFfirstprivate_logicalEarg2_firstprivate_ref_l8]] : !fir.ref<!fir.logical<1>> alloc
+!CHECK:  omp.private {type = firstprivate} @[[ARG2_LOGICAL_PRIVATIZER:_QFfirstprivate_logicalEarg2_firstprivate_l8]] : !fir.logical<1>
 
-!CHECK:  omp.private {type = firstprivate} @[[ARG1_LOGICAL_PRIVATIZER:_QFfirstprivate_logicalEarg1_firstprivate_ref_l32]] : !fir.ref<!fir.logical<4>> alloc {
-!CHECK:  ^bb0(%{{.*}}: !fir.ref<!fir.logical<4>>):
-!CHECK:    %[[PVT_ALLOC:.*]] = fir.alloca !fir.logical<4> {{.*}}
-!CHECK:    %[[PVT_DECL:.*]]:2 = hlfir.declare %[[PVT_ALLOC]] {{.*}}
-!CHECK:    omp.yield(%[[PVT_DECL]]#0 : !fir.ref<!fir.logical<4>>)
-!CHECK:  } copy {
+!CHECK:  omp.private {type = firstprivate} @[[ARG1_LOGICAL_PRIVATIZER:_QFfirstprivate_logicalEarg1_firstprivate_l32]] : !fir.logical<4> copy {
 !CHECK:  ^bb0(%[[ORIG_REF:.*]]: !fir.ref<!fir.logical<4>>, %[[PVT_REF:.*]]: !fir.ref<!fir.logical<4>>):
 !CHECK:    %[[ORIG_VAL:.*]] = fir.load %[[ORIG_REF]] : {{.*}}
 !CHECK:    hlfir.assign %[[ORIG_VAL]] to %[[PVT_REF]] {{.*}}
 !CHECK:    omp.yield(%[[PVT_REF]] : !fir.ref<!fir.logical<4>>)
 !CHECK:  }
 
-!CHECK:  omp.private {type = firstprivate} @[[ARG2_COMPLEX_PRIVATIZER:_QFfirstprivate_complexEarg2_firstprivate_ref_z64]] : !fir.ref<complex<f64>> alloc
+!CHECK:  omp.private {type = firstprivate} @[[ARG2_COMPLEX_PRIVATIZER:_QFfirstprivate_complexEarg2_firstprivate_z64]] : complex<f64>
 
-!CHECK:  omp.private {type = firstprivate} @[[ARG1_COMPLEX_PRIVATIZER:_QFfirstprivate_complexEarg1_firstprivate_ref_z32]] : !fir.ref<complex<f32>> alloc {
-!CHECK:  ^bb0(%{{.*}}: !fir.ref<complex<f32>>):
-!CHECK:    %[[PVT_ALLOC:.*]] = fir.alloca complex<f32> {bindc_name = "arg1", {{.*}}}
-!CHECK:    %[[PVT_DECL:.*]]:2 = hlfir.declare %[[PVT_ALLOC]] {{.*}}
-!CHECK:    omp.yield(%[[PVT_DECL]]#0 : !fir.ref<complex<f32>>)
-!CHECK:  } copy {
+!CHECK:  omp.private {type = firstprivate} @[[ARG1_COMPLEX_PRIVATIZER:_QFfirstprivate_complexEarg1_firstprivate_z32]] : complex<f32> copy {
 !CHECK:  ^bb0(%[[ORIG_REF:.*]]: !fir.ref<complex<f32>>, %[[PVT_REF:.*]]: !fir.ref<complex<f32>>):
 !CHECK:    %[[ORIG_VAL:.*]] = fir.load %[[ORIG_REF]] : {{.*}}
 !CHECK:    hlfir.assign %[[ORIG_VAL]] to %[[PVT_REF]] {{.*}}
