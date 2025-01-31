@@ -531,6 +531,7 @@ void DWARFDebugLine::Sequence::reset() {
   FirstRowIndex = 0;
   LastRowIndex = 0;
   Empty = true;
+  StmtSeqOffset = UINT64_MAX;
 }
 
 DWARFDebugLine::LineTable::LineTable() { clear(); }
@@ -561,13 +562,12 @@ void DWARFDebugLine::LineTable::clear() {
 DWARFDebugLine::ParsingState::ParsingState(
     struct LineTable *LT, uint64_t TableOffset,
     function_ref<void(Error)> ErrorHandler)
-    : LineTable(LT), LineTableOffset(TableOffset), ErrorHandler(ErrorHandler) {
-  resetRowAndSequence();
-}
+    : LineTable(LT), LineTableOffset(TableOffset), ErrorHandler(ErrorHandler) {}
 
-void DWARFDebugLine::ParsingState::resetRowAndSequence() {
+void DWARFDebugLine::ParsingState::resetRowAndSequence(uint64_t Offset) {
   Row.reset(LineTable->Prologue.DefaultIsStmt);
   Sequence.reset();
+  Sequence.SetSequenceOffset(Offset);
 }
 
 void DWARFDebugLine::ParsingState::appendRowToMatrix() {
@@ -848,6 +848,10 @@ Error DWARFDebugLine::LineTable::parse(
     *OS << '\n';
     Row::dumpTableHeader(*OS, /*Indent=*/Verbose ? 12 : 0);
   }
+  // *OffsetPtr points to the end of the prologue - i.e. the start of the first
+  // sequence. So initialize the first sequence offset accordingly.
+  State.resetRowAndSequence(*OffsetPtr);
+
   bool TombstonedAddress = false;
   auto EmitRow = [&] {
     if (!TombstonedAddress) {
@@ -912,7 +916,9 @@ Error DWARFDebugLine::LineTable::parse(
         // into this code path - if it were invalid, the default case would be
         // followed.
         EmitRow();
-        State.resetRowAndSequence();
+        // Cursor now points to right after the end_sequence opcode - so points
+        // to the start of the next sequence - if one exists.
+        State.resetRowAndSequence(Cursor.tell());
         break;
 
       case DW_LNE_set_address:
@@ -1364,10 +1370,11 @@ DWARFDebugLine::LineTable::lookupAddressImpl(object::SectionedAddress Address,
 
 bool DWARFDebugLine::LineTable::lookupAddressRange(
     object::SectionedAddress Address, uint64_t Size,
-    std::vector<uint32_t> &Result) const {
+    std::vector<uint32_t> &Result,
+    std::optional<uint64_t> StmtSequenceOffset) const {
 
   // Search for relocatable addresses
-  if (lookupAddressRangeImpl(Address, Size, Result))
+  if (lookupAddressRangeImpl(Address, Size, Result, StmtSequenceOffset))
     return true;
 
   if (Address.SectionIndex == object::SectionedAddress::UndefSection)
@@ -1375,12 +1382,13 @@ bool DWARFDebugLine::LineTable::lookupAddressRange(
 
   // Search for absolute addresses
   Address.SectionIndex = object::SectionedAddress::UndefSection;
-  return lookupAddressRangeImpl(Address, Size, Result);
+  return lookupAddressRangeImpl(Address, Size, Result, StmtSequenceOffset);
 }
 
 bool DWARFDebugLine::LineTable::lookupAddressRangeImpl(
     object::SectionedAddress Address, uint64_t Size,
-    std::vector<uint32_t> &Result) const {
+    std::vector<uint32_t> &Result,
+    std::optional<uint64_t> StmtSequenceOffset) const {
   if (Sequences.empty())
     return false;
   uint64_t EndAddr = Address.Address + Size;
@@ -1401,6 +1409,14 @@ bool DWARFDebugLine::LineTable::lookupAddressRangeImpl(
 
   while (SeqPos != LastSeq && SeqPos->LowPC < EndAddr) {
     const DWARFDebugLine::Sequence &CurSeq = *SeqPos;
+
+    // Skip sequences that don't match our stmt_sequence offset if one was
+    // provided
+    if (StmtSequenceOffset && CurSeq.StmtSeqOffset != *StmtSequenceOffset) {
+      ++SeqPos;
+      continue;
+    }
+
     // For the first sequence, we need to find which row in the sequence is the
     // first in our range.
     uint32_t FirstRowIndex = CurSeq.FirstRowIndex;
@@ -1423,7 +1439,7 @@ bool DWARFDebugLine::LineTable::lookupAddressRangeImpl(
     ++SeqPos;
   }
 
-  return true;
+  return !Result.empty();
 }
 
 std::optional<StringRef>
