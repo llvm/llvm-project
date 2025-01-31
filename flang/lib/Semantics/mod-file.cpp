@@ -955,7 +955,13 @@ void ModFileWriter::PutObjectEntity(
     }
   }
   PutEntity(
-      os, symbol, [&]() { PutType(os, DEREF(symbol.GetType())); },
+      os, symbol,
+      [&]() {
+        // Need to check if there is a TYPE on this symbol to avoid any ICE
+        if (details.type()) {
+          PutType(os, DEREF(symbol.GetType()));
+        }
+      },
       getSymbolAttrsToWrite(symbol));
   PutShape(os, details.shape(), '(', ')');
   PutShape(os, details.coshape(), '[', ']');
