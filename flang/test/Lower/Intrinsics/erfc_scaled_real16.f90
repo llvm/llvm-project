@@ -3,9 +3,7 @@
 ! RUN: bbc --math-runtime=precise -emit-fir %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s
 
-! CHECK: fir.call @_FortranAErfcF128({{.*}}){{.*}}: (f128) -> f128
-! CHECK: fir.call @_FortranAErfcF128({{.*}}){{.*}}: (f128) -> f128
-  real(16) :: a, b, c
-  b = erfc(a)
-  c = qerfc(a)
+! CHECK: fir.call @_FortranAErfcScaled16({{.*}}) {{.*}}: (f128) -> f128
+  real(16) :: a, b
+  b = qerfc_scaled(a)
 end
