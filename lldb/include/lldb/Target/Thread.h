@@ -470,6 +470,18 @@ public:
 
   virtual void ClearStackFrames();
 
+  /// Derived classes implementing SetBackingThread should use this to provide
+  /// bidirectional access to the Backing-Backed relationship.
+  void SetBackedThread(Thread &backed_thread) {
+    assert(backed_thread.GetBackingThread().get() == this);
+    m_backed_thread = backed_thread.shared_from_this();
+  }
+
+  void ClearBackedThread() { m_backed_thread.reset(); }
+
+  /// Returns the thread that is backed by this thread, if any.
+  lldb::ThreadSP GetBackedThread() const { return m_backed_thread; }
+
   virtual bool SetBackingThread(const lldb::ThreadSP &thread_sp) {
     return false;
   }
@@ -1348,6 +1360,9 @@ protected:
                          // classes call DestroyThread.
   LazyBool m_override_should_notify;
   mutable std::unique_ptr<ThreadPlanStack> m_null_plan_stack_up;
+
+  /// The Thread backed by this thread, if any.
+  lldb::ThreadSP m_backed_thread;
 
 private:
   bool m_extended_info_fetched; // Have we tried to retrieve the m_extended_info
