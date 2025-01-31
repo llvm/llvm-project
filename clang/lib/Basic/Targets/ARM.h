@@ -155,6 +155,7 @@ public:
   bool isBranchProtectionSupportedArch(StringRef Arch) const override;
   bool validateBranchProtection(StringRef Spec, StringRef Arch,
                                 BranchProtectionInfo &BPI,
+                                const LangOptions &LO,
                                 StringRef &Err) const override;
 
   // FIXME: This should be based on Arch attributes, not CPU names.
