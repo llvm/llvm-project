@@ -63,13 +63,51 @@ struct ShaderHash {
   void swapBytes() { sys::swapByteOrder(Flags); }
 };
 
-struct RootSignatureDesc {
-  uint32_t Size;
-  uint32_t Flags;
+#define ROOT_PARAMETER(Val, Enum) Enum = Val,
+enum class RootParameterType : uint8_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
+
+#define SHADER_VISIBILITY(Val, Enum) Enum = Val,
+enum class ShaderVisibilityFlag : uint8_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<ShaderVisibilityFlag>> getShaderVisibilityFlags();
+
+struct RootConstants {
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t Num32BitValues;
 
   void swapBytes() {
-    sys::swapByteOrder(Size);
-    sys::swapByteOrder(Flags);
+    sys::swapByteOrder(ShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+    sys::swapByteOrder(Num32BitValues);
+  }
+};
+
+struct RootParameter {
+  RootParameterType ParameterType;
+  union {
+    RootConstants Constants;
+  };
+  ShaderVisibilityFlag ShaderVisibility;
+
+  void swapBytes() {
+    switch (ParameterType) {
+
+    case RootParameterType::Constants32Bit:
+      Constants.swapBytes();
+      break;
+    case RootParameterType::DescriptorTable:
+    case RootParameterType::CBV:
+    case RootParameterType::SRV:
+    case RootParameterType::UAV:
+      break;
+    }
   }
 };
 

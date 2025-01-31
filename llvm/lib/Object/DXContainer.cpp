@@ -251,6 +251,26 @@ Error DirectX::RootSignature::parse() {
   Flags = support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
+  NParameters =
+      support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  Current += sizeof(uint32_t);
+
+  if (NParameters > 0) {
+
+    Parameters.Stride =
+        support::endian::read<uint32_t, llvm::endianness::little>(Current);
+    Current += sizeof(uint32_t);
+
+    size_t BindingDataSize = Parameters.Stride * NParameters;
+    Parameters.Data = Data.substr(Current - Data.begin(), BindingDataSize);
+
+    if (Parameters.Data.size() < BindingDataSize)
+      return parseFailed(
+          "Resource binding data extends beyond the bounds of the part");
+
+    Current += BindingDataSize;
+  }
+
   return Error::success();
 }
 
