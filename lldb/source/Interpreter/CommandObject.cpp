@@ -120,20 +120,24 @@ bool CommandObject::ParseOptions(Args &args, CommandReturnObject &result) {
     if (args_or) {
       args = std::move(*args_or);
       error = options->NotifyOptionParsingFinished(&exe_ctx);
-    } else
+    } else {
       error = Status::FromError(args_or.takeError());
-
-    if (error.Success()) {
-      if (llvm::Error error = options->VerifyOptions()) {
-        result.SetError(std::move(error));
-        return false;
-      }
-      return true;
     }
 
-    result.SetError(error.takeError());
-    result.SetStatus(eReturnStatusFailed);
-    return false;
+    if (error.Fail()) {
+      result.SetError(error.takeError());
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    if (llvm::Error error = options->VerifyOptions()) {
+      result.SetError(std::move(error));
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    return true;
   }
   return true;
 }
