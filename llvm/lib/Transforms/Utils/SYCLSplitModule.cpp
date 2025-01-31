@@ -106,7 +106,7 @@ public:
   ModuleDesc(std::unique_ptr<Module> M,
              EntryPointGroup EntryPoints = EntryPointGroup())
       : M(std::move(M)), EntryPoints(std::move(EntryPoints)) {
-    assert(this->M && "Module should be non-empty");
+    assert(this->M && "Module should be non-null");
   }
 
   const EntryPointSet &entries() const { return EntryPoints.Functions; }
@@ -344,13 +344,6 @@ public:
 
 } // namespace
 
-/// Gets attached attribute value if it is present. Otherwise returns empty
-/// stirng.
-static StringRef computeFunctionCategoryFromStringMetadata(const Function &F,
-                                                           StringRef AttrName) {
-  return F.getFnAttribute(AttrName).getValueAsString();
-}
-
 static EntryPointGroupVec selectEntryPointGroups(const Module &M,
                                                  IRSplitMode Mode) {
   // std::map is used here to ensure stable ordering of entry point groups,
@@ -368,7 +361,7 @@ static EntryPointGroupVec selectEntryPointGroups(const Module &M,
       Key = F.getName();
       break;
     case IRSplitMode::IRSM_PER_TU:
-      Key = computeFunctionCategoryFromStringMetadata(F, ATTR_SYCL_MODULE_ID);
+      Key = F.getFnAttribute(ATTR_SYCL_MODULE_ID).getValueAsString();
       break;
     case IRSplitMode::IRSM_NONE:
       llvm_unreachable("");
