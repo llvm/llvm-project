@@ -148,7 +148,7 @@ define hidden void @widget() {
 ; SI-OPT:       bb9:
 ; SI-OPT-NEXT:    [[TMP10:%.*]] = call float @wibble()
 ; SI-OPT-NEXT:    [[TMP11:%.*]] = fcmp nsz ogt float [[TMP10]], 0.000000e+00
-; SI-OPT-NEXT:    [[TMP0:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP11]])
+; SI-OPT-NEXT:    [[TMP0:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP11]], i1 false)
 ; SI-OPT-NEXT:    [[TMP1:%.*]] = extractvalue { i1, i64 } [[TMP0]], 0
 ; SI-OPT-NEXT:    [[TMP2:%.*]] = extractvalue { i1, i64 } [[TMP0]], 1
 ; SI-OPT-NEXT:    br i1 [[TMP1]], label [[BB6:%.*]], label [[BB9_BB12_CRIT_EDGE:%.*]]
@@ -206,7 +206,7 @@ define hidden void @blam() {
 ; SI-OPT-NEXT:    br label [[BB4:%.*]]
 ; SI-OPT:       bb4:
 ; SI-OPT-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[TMP3]], 3
-; SI-OPT-NEXT:    [[TMP0:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP5]])
+; SI-OPT-NEXT:    [[TMP0:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP5]], i1 false)
 ; SI-OPT-NEXT:    [[TMP1:%.*]] = extractvalue { i1, i64 } [[TMP0]], 0
 ; SI-OPT-NEXT:    [[TMP2:%.*]] = extractvalue { i1, i64 } [[TMP0]], 1
 ; SI-OPT-NEXT:    br i1 [[TMP1]], label [[BB8:%.*]], label [[BB6:%.*]]
@@ -216,7 +216,7 @@ define hidden void @blam() {
 ; SI-OPT-NEXT:    br i1 [[TMP7]], label [[BB11:%.*]], label [[BB1:%.*]]
 ; SI-OPT:       bb8:
 ; SI-OPT-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP3]], 1
-; SI-OPT-NEXT:    [[TMP3:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP9]])
+; SI-OPT-NEXT:    [[TMP3:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP9]], i1 false)
 ; SI-OPT-NEXT:    [[TMP4:%.*]] = extractvalue { i1, i64 } [[TMP3]], 0
 ; SI-OPT-NEXT:    [[TMP5:%.*]] = extractvalue { i1, i64 } [[TMP3]], 1
 ; SI-OPT-NEXT:    br i1 [[TMP4]], label [[BB10:%.*]], label [[BB8_BB1_CRIT_EDGE:%.*]]
@@ -229,14 +229,14 @@ define hidden void @blam() {
 ; SI-OPT:       bb11:
 ; SI-OPT-NEXT:    [[TMP12:%.*]] = call float @spam()
 ; SI-OPT-NEXT:    [[TMP13:%.*]] = fcmp nsz oeq float [[TMP12]], 0.000000e+00
-; SI-OPT-NEXT:    [[TMP6:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP13]])
+; SI-OPT-NEXT:    [[TMP6:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP13]], i1 false)
 ; SI-OPT-NEXT:    [[TMP7:%.*]] = extractvalue { i1, i64 } [[TMP6]], 0
 ; SI-OPT-NEXT:    [[TMP8:%.*]] = extractvalue { i1, i64 } [[TMP6]], 1
 ; SI-OPT-NEXT:    br i1 [[TMP7]], label [[BB2]], label [[BB14:%.*]]
 ; SI-OPT:       bb14:
 ; SI-OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP8]])
 ; SI-OPT-NEXT:    [[TMP15:%.*]] = fcmp nsz oeq float [[TMP]], 0.000000e+00
-; SI-OPT-NEXT:    [[TMP9:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP15]])
+; SI-OPT-NEXT:    [[TMP9:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP15]], i1 false)
 ; SI-OPT-NEXT:    [[TMP10:%.*]] = extractvalue { i1, i64 } [[TMP9]], 0
 ; SI-OPT-NEXT:    [[TMP11:%.*]] = extractvalue { i1, i64 } [[TMP9]], 1
 ; SI-OPT-NEXT:    br i1 [[TMP10]], label [[BB17:%.*]], label [[BB16:%.*]]

@@ -29,10 +29,10 @@
   }
 
   ; Function Attrs: convergent nounwind
-  declare { i1, i64 } @llvm.amdgcn.if(i1) #1
+  declare { i1, i64 } @llvm.amdgcn.if(i1, i1) #1
 
   ; Function Attrs: convergent nounwind
-  declare { i1, i64 } @llvm.amdgcn.else(i64) #1
+  declare { i1, i64 } @llvm.amdgcn.else(i64, i1) #1
 
   ; Function Attrs: convergent nounwind readnone
   declare i64 @llvm.amdgcn.break(i64) #2

@@ -49,7 +49,7 @@ body: |
   ; GCN-NEXT:   [[S_ANDN2_B32_:%[0-9]+]]:sreg_32 = S_ANDN2_B32 [[PHI]], $exec_lo, implicit-def $scc
   ; GCN-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[PHI1]], $exec_lo, implicit-def $scc
   ; GCN-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_ANDN2_B32_]], [[S_AND_B32_]], implicit-def $scc
-  ; GCN-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32 = SI_IF [[COPY7]], %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32 = SI_IF [[COPY7]], 0, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.2
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
@@ -114,7 +114,7 @@ body: |
     %17:vreg_64 = PHI %13, %bb.0, %18, %bb.3
     %19:vreg_1 = PHI %14, %bb.0, %20, %bb.3
     %21:sreg_32 = COPY %19
-    %22:sreg_32 = SI_IF %21, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %22:sreg_32 = SI_IF %21, 0, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:

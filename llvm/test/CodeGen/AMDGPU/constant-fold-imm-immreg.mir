@@ -407,7 +407,7 @@ body:             |
     liveins: $vgpr0, $sgpr4_sgpr5
 
     %19:sreg_64 = IMPLICIT_DEF
-    %0:sreg_64 = SI_IF killed %19, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %0:sreg_64 = SI_IF killed %19, 0, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:

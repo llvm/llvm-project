@@ -42,12 +42,12 @@ def AMDGPUFmasOp : SDTypeProfile<1, 4,
 def ImmOp : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 def AMDGPUKillSDT : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 
-def AMDGPUIfOp : SDTypeProfile<1, 2,
-  [SDTCisVT<0, i1>, SDTCisVT<1, i1>, SDTCisVT<2, OtherVT>]
+def AMDGPUIfOp : SDTypeProfile<1, 3,
+  [SDTCisVT<0, i1>, SDTCisVT<1, i1>, SDTCisVT<2, i1>, SDTCisVT<3, OtherVT>]
 >;
 
-def AMDGPUElseOp : SDTypeProfile<1, 2,
-  [SDTCisVT<0, i1>, SDTCisVT<1, i1>, SDTCisVT<2, OtherVT>]
+def AMDGPUElseOp : SDTypeProfile<1, 3,
+  [SDTCisVT<0, i1>, SDTCisVT<1, i1>, SDTCisVT<2, i1>, SDTCisVT<3, OtherVT>]
 >;
 
 def AMDGPULoopOp : SDTypeProfile<0, 2,

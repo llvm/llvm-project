@@ -44,7 +44,7 @@ body:             |
     %0:vgpr_32 = COPY killed $vgpr0
     %1:sreg_64_xexec = COPY $sgpr4_sgpr5
     %2:sreg_64_xexec = V_CMP_EQ_U32_e64 0, %0, implicit $exec
-    %3:sreg_64_xexec = SI_IF %2, %bb.1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    %3:sreg_64_xexec = SI_IF %2, 0, %bb.1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     %4:sreg_64_xexec = S_MOV_B64_term killed %1, implicit $exec
     S_BRANCH %bb.2
 
@@ -90,7 +90,7 @@ body:             |
     %0:vgpr_32 = COPY killed $vgpr0
     %1:sreg_64_xexec = COPY $sgpr4_sgpr5
     %2:sreg_64_xexec = V_CMP_EQ_U32_e64 0, %0, implicit $exec
-    %3:sreg_64_xexec = SI_IF %2, %bb.2, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    %3:sreg_64_xexec = SI_IF %2, 0, %bb.2, implicit-def $exec, implicit-def dead $scc, implicit $exec
     %4:sreg_64_xexec = S_MOV_B64_term killed %1, implicit $exec
 
   bb.1:
@@ -134,7 +134,7 @@ body:             |
     %0:vgpr_32 = COPY killed $vgpr0
     %1:sreg_64_xexec = COPY $sgpr4_sgpr5
     %2:sreg_64_xexec = V_CMP_EQ_U32_e64 0, %0, implicit $exec
-    %3:sreg_64_xexec = SI_ELSE %2, %bb.1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    %3:sreg_64_xexec = SI_ELSE %2, 0, %bb.1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     %4:sreg_64_xexec = S_MOV_B64_term killed %1, implicit $exec
     S_BRANCH %bb.2
 
@@ -250,7 +250,7 @@ body:             |
     %0:vgpr_32 = COPY killed $vgpr0
     %1:vgpr_32 = COPY killed $vgpr1
     %3:sreg_64_xexec = V_CMP_EQ_U32_e64 killed %0, killed %1, implicit $exec
-    %10:sreg_64_xexec = SI_IF %3, %bb.1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    %10:sreg_64_xexec = SI_IF %3, 0, %bb.1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     %14:sreg_64_xexec = S_MOV_B64_term %10, implicit $exec
     %13:sreg_64_xexec = S_MOV_B64_term %10, implicit $exec
     S_BRANCH %bb.2
@@ -264,7 +264,7 @@ body:             |
     %12:sreg_64_xexec = COPY %14
     SI_END_CF killed %12, implicit-def $exec, implicit-def dead $scc, implicit $exec
     S_SLEEP 1
-    %9:sreg_64_xexec = SI_IF %3, %bb.1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    %9:sreg_64_xexec = SI_IF %3, 0, %bb.1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     %14:sreg_64_xexec = S_MOV_B64_term %9, implicit $exec
     %13:sreg_64_xexec = S_MOV_B64_term %9, implicit $exec
     S_BRANCH %bb.2

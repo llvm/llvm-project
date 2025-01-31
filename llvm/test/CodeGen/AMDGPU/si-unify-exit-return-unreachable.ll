@@ -29,7 +29,7 @@ define void @my_func(i32 %0) {
 ; IR:       Flow11:
 ; IR-NEXT:    [[TMP4:%.*]] = phi i1 [ [[TMP9:%.*]], [[FLOW12]] ], [ false, [[FLOW]] ]
 ; IR-NEXT:    [[TMP5:%.*]] = phi i1 [ [[TMP10:%.*]], [[FLOW12]] ], [ [[TMP2]], [[FLOW]] ]
-; IR-NEXT:    [[TMP6:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP5]])
+; IR-NEXT:    [[TMP6:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP5]], i1 false)
 ; IR-NEXT:    [[TMP7:%.*]] = extractvalue { i1, i64 } [[TMP6]], 0
 ; IR-NEXT:    [[TMP8:%.*]] = extractvalue { i1, i64 } [[TMP6]], 1
 ; IR-NEXT:    br i1 [[TMP7]], label [[DO_BODY:%.*]], label [[FLOW17:%.*]]
@@ -41,7 +41,7 @@ define void @my_func(i32 %0) {
 ; IR-NEXT:    br label [[FLOW11]]
 ; IR:       NodeBlock7:
 ; IR-NEXT:    [[PIVOT8:%.*]] = icmp sge i32 [[TMP0:%.*]], 2
-; IR-NEXT:    [[TMP11:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[PIVOT8]])
+; IR-NEXT:    [[TMP11:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[PIVOT8]], i1 false)
 ; IR-NEXT:    [[TMP12:%.*]] = extractvalue { i1, i64 } [[TMP11]], 0
 ; IR-NEXT:    [[TMP13:%.*]] = extractvalue { i1, i64 } [[TMP11]], 1
 ; IR-NEXT:    br i1 [[TMP12]], label [[LEAFBLOCK5:%.*]], label [[FLOW13:%.*]]
@@ -51,7 +51,7 @@ define void @my_func(i32 %0) {
 ; IR:       Flow13:
 ; IR-NEXT:    [[TMP14:%.*]] = phi i1 [ true, [[LEAFBLOCK5]] ], [ false, [[NODEBLOCK7]] ]
 ; IR-NEXT:    [[TMP15:%.*]] = phi i1 [ [[SWITCHLEAF6]], [[LEAFBLOCK5]] ], [ false, [[NODEBLOCK7]] ]
-; IR-NEXT:    [[TMP16:%.*]] = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 [[TMP13]])
+; IR-NEXT:    [[TMP16:%.*]] = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 [[TMP13]], i1 false)
 ; IR-NEXT:    [[TMP17:%.*]] = extractvalue { i1, i64 } [[TMP16]], 0
 ; IR-NEXT:    [[TMP18:%.*]] = extractvalue { i1, i64 } [[TMP16]], 1
 ; IR-NEXT:    br i1 [[TMP17]], label [[LEAFBLOCK3:%.*]], label [[FLOW14:%.*]]
@@ -63,7 +63,7 @@ define void @my_func(i32 %0) {
 ; IR-NEXT:    [[TMP19:%.*]] = phi i1 [ [[SWITCHLEAF4_INV]], [[LEAFBLOCK3]] ], [ [[TMP14]], [[FLOW13]] ]
 ; IR-NEXT:    [[TMP20:%.*]] = phi i1 [ [[SWITCHLEAF4]], [[LEAFBLOCK3]] ], [ [[TMP15]], [[FLOW13]] ]
 ; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP18]])
-; IR-NEXT:    [[TMP21:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP20]])
+; IR-NEXT:    [[TMP21:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP20]], i1 false)
 ; IR-NEXT:    [[TMP22:%.*]] = extractvalue { i1, i64 } [[TMP21]], 0
 ; IR-NEXT:    [[TMP23:%.*]] = extractvalue { i1, i64 } [[TMP21]], 1
 ; IR-NEXT:    br i1 [[TMP22]], label [[LAND_LHS_TRUE_I:%.*]], label [[FLOW15]]
@@ -76,7 +76,7 @@ define void @my_func(i32 %0) {
 ; IR-NEXT:    br label [[FLOW12]]
 ; IR:       LeafBlock9:
 ; IR-NEXT:    [[SWITCHLEAF10:%.*]] = icmp sgt i32 [[TMP0]], 1
-; IR-NEXT:    [[TMP26:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[SWITCHLEAF10]])
+; IR-NEXT:    [[TMP26:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[SWITCHLEAF10]], i1 false)
 ; IR-NEXT:    [[TMP27:%.*]] = extractvalue { i1, i64 } [[TMP26]], 0
 ; IR-NEXT:    [[TMP28:%.*]] = extractvalue { i1, i64 } [[TMP26]], 1
 ; IR-NEXT:    br i1 [[TMP27]], label [[DO_BODY_I_I_I_I:%.*]], label [[FLOW16]]
@@ -94,7 +94,7 @@ define void @my_func(i32 %0) {
 ; IR:       Flow17:
 ; IR-NEXT:    [[TMP31:%.*]] = phi i1 [ true, [[DO_BODY]] ], [ [[TMP4]], [[FLOW11]] ]
 ; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP8]])
-; IR-NEXT:    [[TMP32:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP31]])
+; IR-NEXT:    [[TMP32:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP31]], i1 false)
 ; IR-NEXT:    [[TMP33:%.*]] = extractvalue { i1, i64 } [[TMP32]], 0
 ; IR-NEXT:    [[TMP34:%.*]] = extractvalue { i1, i64 } [[TMP32]], 1
 ; IR-NEXT:    br i1 [[TMP33]], label [[UNIFIEDUNREACHABLEBLOCK:%.*]], label [[UNIFIEDRETURNBLOCK:%.*]]

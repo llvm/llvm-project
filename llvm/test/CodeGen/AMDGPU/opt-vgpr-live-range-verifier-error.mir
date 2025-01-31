@@ -23,20 +23,20 @@ body:             |
     successors: %bb.2(0x40000000), %bb.4(0x40000000)
 
     %5:sreg_64 = V_CMP_LT_I32_e64 0, %4, implicit $exec
-    %6:sreg_64 = SI_IF killed %5, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %6:sreg_64 = SI_IF killed %5, 0, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.4
 
   bb.2:
     successors: %bb.4(0x40000000), %bb.3(0x40000000)
 
-    dead %7:sreg_64 = SI_ELSE killed %6, %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    dead %7:sreg_64 = SI_ELSE killed %6, 0, %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.3
 
   bb.3:
     successors: %bb.4(0x80000000)
 
     %8:sreg_64 = V_CMP_EQ_U32_e64 0, killed %4, implicit $exec
-    dead %9:sreg_64 = SI_IF killed %8, %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    dead %9:sreg_64 = SI_IF killed %8, 0, %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.4
 
   bb.4:

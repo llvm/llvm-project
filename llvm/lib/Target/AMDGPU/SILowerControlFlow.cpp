@@ -55,8 +55,11 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveVariables.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -213,6 +216,21 @@ static bool isSimpleIf(const MachineInstr &MI, const MachineRegisterInfo *MRI) {
   return true;
 }
 
+/// Mark Succ as an unlikely successor of MBB.
+static void setSuccessorUnlikely(MachineBasicBlock &MBB,
+                                 const MachineBasicBlock *Succ) {
+  auto **E = MBB.succ_end();
+  bool Found = false;
+  for (auto **SI = MBB.succ_begin(); SI != E; ++SI) {
+    if (*SI == Succ) {
+      MBB.setSuccProbability(SI, BranchProbability::getZero());
+      Found = true;
+    }
+  }
+  assert(Found && "Succ must be a successor of MBB!");
+  MBB.normalizeSuccProbs();
+}
+
 void SILowerControlFlow::emitIf(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
@@ -221,8 +239,10 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   MachineOperand& Cond = MI.getOperand(1);
   assert(Cond.getSubReg() == AMDGPU::NoSubRegister);
 
-  MachineOperand &ImpDefSCC = MI.getOperand(4);
+  MachineOperand &ImpDefSCC = MI.getOperand(5);
   assert(ImpDefSCC.getReg() == AMDGPU::SCC && ImpDefSCC.isDef());
+
+  bool LikelyDivergent = MI.getOperand(2).getImm();
 
   // If there is only one use of save exec register and that use is SI_END_CF,
   // we can optimize SI_IF by returning the full saved exec mask instead of
@@ -281,7 +301,12 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   // Insert the S_CBRANCH_EXECZ instruction which will be optimized later
   // during SIPreEmitPeephole.
   MachineInstr *NewBr = BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CBRANCH_EXECZ))
-                            .add(MI.getOperand(2));
+                            .add(MI.getOperand(3));
+
+  if (LikelyDivergent) {
+    MachineBasicBlock *ExeczDest = MI.getOperand(3).getMBB();
+    setSuccessorUnlikely(MBB, ExeczDest);
+  }
 
   if (!LIS) {
     MI.eraseFromParent();
@@ -329,7 +354,9 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   if (LV)
     LV->replaceKillInstruction(SrcReg, MI, *OrSaveExec);
 
-  MachineBasicBlock *DestBB = MI.getOperand(2).getMBB();
+  bool LikelyDivergent = MI.getOperand(2).getImm();
+
+  MachineBasicBlock *DestBB = MI.getOperand(3).getMBB();
 
   MachineBasicBlock::iterator ElsePt(MI);
 
@@ -351,6 +378,9 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   MachineInstr *Branch =
       BuildMI(MBB, ElsePt, DL, TII->get(AMDGPU::S_CBRANCH_EXECZ))
           .addMBB(DestBB);
+
+  if (LikelyDivergent)
+    setSuccessorUnlikely(MBB, DestBB);
 
   if (!LIS) {
     MI.eraseFromParent();

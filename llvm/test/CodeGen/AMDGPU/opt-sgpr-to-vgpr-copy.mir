@@ -102,7 +102,7 @@ body:             |
   ; GCN-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1048576
   ; GCN-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
   ; GCN-NEXT:   [[V_CMP_LT_U64_e64_:%[0-9]+]]:sreg_64 = V_CMP_LT_U64_e64 killed [[REG_SEQUENCE1]], [[REG_SEQUENCE2]], implicit $exec
-  ; GCN-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64 = SI_IF killed [[V_CMP_LT_U64_e64_]], %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64 = SI_IF killed [[V_CMP_LT_U64_e64_]], 0, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1.bb1:
@@ -143,7 +143,7 @@ body:             |
     %20 = REG_SEQUENCE killed %19, %subreg.sub0, killed %18, %subreg.sub1
     %22 = COPY killed %20
     %21 = V_CMP_LT_U64_e64 killed %17, %22, implicit $exec
-    %1 = SI_IF killed %21, %bb.2.bb2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %1 = SI_IF killed %21, 0, %bb.2.bb2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.1.bb1
 
   bb.1.bb1:
@@ -243,7 +243,7 @@ body:             |
   ; GCN-NEXT:   [[V_CMP_LT_U64_e64_:%[0-9]+]]:sreg_64 = V_CMP_LT_U64_e64 killed [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], implicit $exec
   ; GCN-NEXT:   [[V_CMP_LT_U64_e64_1:%[0-9]+]]:sreg_64 = V_CMP_LT_U64_e64 killed [[REG_SEQUENCE2]], [[REG_SEQUENCE3]], implicit $exec
   ; GCN-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 killed [[V_CMP_LT_U64_e64_]], killed [[V_CMP_LT_U64_e64_1]], implicit-def dead $scc
-  ; GCN-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64 = SI_IF killed [[S_AND_B64_]], %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64 = SI_IF killed [[S_AND_B64_]], 0, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1.bb1:
@@ -293,7 +293,7 @@ body:             |
     %27 = V_CMP_LT_U64_e64 killed %18, %28, implicit $exec
     %29 = V_CMP_LT_U64_e64 killed %23, %28, implicit $exec
     %31 = S_AND_B64 killed %27, killed %29, implicit-def dead $scc
-    %1 = SI_IF killed %31, %bb.2.bb2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %1 = SI_IF killed %31, 0, %bb.2.bb2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.1.bb1
 
   bb.1.bb1:
@@ -375,7 +375,7 @@ body:             |
   ; GCN-NEXT:   [[V_ADDC_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADDC_U32_e32 0, [[COPY3]], implicit-def $vcc, implicit $vcc, implicit $exec
   ; GCN-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE killed [[V_ADD_CO_U32_e32_]], %subreg.sub0, killed [[V_ADDC_U32_e32_]], %subreg.sub1
   ; GCN-NEXT:   [[V_CMP_LT_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_LT_U32_e64 killed [[REG_SEQUENCE1]].sub0, 12, implicit $exec
-  ; GCN-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64 = SI_IF killed [[V_CMP_LT_U32_e64_]], %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64 = SI_IF killed [[V_CMP_LT_U32_e64_]], 0, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1.bb1:
@@ -416,7 +416,7 @@ body:             |
     %20 = REG_SEQUENCE killed %19, %subreg.sub0, killed %18, %subreg.sub1
     %22 = COPY killed %20.sub1
     %21 = V_CMP_LT_U32_e64 killed %17.sub0, %22, implicit $exec
-    %1 = SI_IF killed %21, %bb.2.bb2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %1 = SI_IF killed %21, 0, %bb.2.bb2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.1.bb1
 
   bb.1.bb1:

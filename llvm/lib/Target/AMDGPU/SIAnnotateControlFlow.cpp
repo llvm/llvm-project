@@ -22,6 +22,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -35,6 +36,25 @@ namespace {
 // Complex types used in this pass
 using StackEntry = std::pair<BasicBlock *, Value *>;
 using StackVector = SmallVector<StackEntry, 16>;
+
+class DynamicDivergenceHeuristic {
+public:
+  DynamicDivergenceHeuristic(const Function &F, const GCNSubtarget &ST) {
+    IsSingleLaneExecution = ST.isSingleLaneExecution(F);
+  }
+
+  /// Check if \p V is likely to be have dynamically diverging values among the
+  /// workitems in each wavefront.
+  bool isLikelyDivergent(const Value *V);
+
+private:
+  bool IsSingleLaneExecution = false;
+
+  bool isWorkitemID(const Value *V) const;
+
+  DenseSet<const Value *> Visited;
+  ValueMap<const Value *, bool> LikelyDivergentCache;
+};
 
 class SIAnnotateControlFlow {
 private:
@@ -61,6 +81,8 @@ private:
   StackVector Stack;
 
   LoopInfo *LI;
+
+  DynamicDivergenceHeuristic DivergenceHeuristic;
 
   void initialize(const GCNSubtarget &ST);
 
@@ -99,7 +121,7 @@ private:
 public:
   SIAnnotateControlFlow(Function &F, const GCNSubtarget &ST, DominatorTree &DT,
                         LoopInfo &LI, UniformityInfo &UA)
-      : F(&F), UA(&UA), DT(&DT), LI(&LI) {
+      : F(&F), UA(&UA), DT(&DT), LI(&LI), DivergenceHeuristic(F, ST) {
     initialize(ST);
   }
 
@@ -186,9 +208,15 @@ bool SIAnnotateControlFlow::openIf(BranchInst *Term) {
   if (isUniform(Term))
     return false;
 
+  // Check if it's likely that at least one lane will always follow the
+  // then-branch, i.e., the then-branch is never skipped completly.
+  Value *IsLikelyDivergent =
+      DivergenceHeuristic.isLikelyDivergent(Term->getCondition()) ? BoolTrue
+                                                                  : BoolFalse;
+
   IRBuilder<> IRB(Term);
   Value *IfCall = IRB.CreateCall(getDecl(If, Intrinsic::amdgcn_if, IntMask),
-                                 {Term->getCondition()});
+                                 {Term->getCondition(), IsLikelyDivergent});
   Value *Cond = IRB.CreateExtractValue(IfCall, {0});
   Value *Mask = IRB.CreateExtractValue(IfCall, {1});
   Term->setCondition(Cond);
@@ -202,9 +230,17 @@ bool SIAnnotateControlFlow::insertElse(BranchInst *Term) {
     return false;
   }
 
+  Value *IncomingMask = popSaved();
+  // Check if it's likely that at least one lane will always follow the
+  // else-branch, i.e., the else-branch is never skipped completly.
+  Value *IsLikelyDivergent = DivergenceHeuristic.isLikelyDivergent(IncomingMask)
+                                 ? BoolTrue
+                                 : BoolFalse;
+
   IRBuilder<> IRB(Term);
-  Value *ElseCall = IRB.CreateCall(
-      getDecl(Else, Intrinsic::amdgcn_else, {IntMask, IntMask}), {popSaved()});
+  Value *ElseCall =
+      IRB.CreateCall(getDecl(Else, Intrinsic::amdgcn_else, {IntMask, IntMask}),
+                     {IncomingMask, IsLikelyDivergent});
   Value *Cond = IRB.CreateExtractValue(ElseCall, {0});
   Value *Mask = IRB.CreateExtractValue(ElseCall, {1});
   Term->setCondition(Cond);
@@ -383,6 +419,65 @@ bool SIAnnotateControlFlow::run() {
   }
 
   return Changed;
+}
+
+bool DynamicDivergenceHeuristic::isWorkitemID(const Value *V) const {
+  auto *II = dyn_cast<IntrinsicInst>(V);
+  if (!II)
+    return false;
+
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::amdgcn_workitem_id_z:
+  case Intrinsic::r600_read_tidig_z:
+  case Intrinsic::amdgcn_workitem_id_y:
+  case Intrinsic::r600_read_tidig_y:
+  case Intrinsic::amdgcn_workitem_id_x:
+  case Intrinsic::r600_read_tidig_x:
+  case Intrinsic::amdgcn_mbcnt_hi:
+  case Intrinsic::amdgcn_mbcnt_lo:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool DynamicDivergenceHeuristic::isLikelyDivergent(const Value *V) {
+  if (IsSingleLaneExecution)
+    return false;
+
+  if (isWorkitemID(V))
+    return true;
+
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return false;
+
+  // ExtractValueInst and IntrinsicInst enable looking through the
+  // amdgcn_if/else intrinsics inserted by SIAnnotateControlFlow.
+  if (!isa<BinaryOperator>(I) && !isa<UnaryOperator>(I) && !isa<CastInst>(I) &&
+      !isa<CmpInst>(I) && !isa<ExtractValueInst>(I) && !isa<IntrinsicInst>(I) &&
+      !isa<PHINode>(I) && !isa<SelectInst>(I))
+    return false;
+
+  // Have we already checked V?
+  auto CacheEntry = LikelyDivergentCache.find(V);
+  if (CacheEntry != LikelyDivergentCache.end())
+    return CacheEntry->second;
+
+  // Have we hit a cycle?
+  if (!Visited.insert(V).second)
+    return false;
+
+  // Does it use a likely varying Value?
+  bool Result = false;
+  for (const auto &Use : I->operands()) {
+    Result |= isLikelyDivergent(Use);
+    if (Result)
+      break;
+  }
+
+  LikelyDivergentCache.insert({V, Result});
+  return Result;
 }
 
 PreservedAnalyses SIAnnotateControlFlowPass::run(Function &F,

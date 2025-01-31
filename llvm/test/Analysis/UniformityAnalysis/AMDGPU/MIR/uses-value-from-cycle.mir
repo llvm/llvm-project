@@ -35,7 +35,7 @@ body:             |
     %13:_(s32) = G_LOAD %11(p0) :: (load (s32))
     %37:_(s32) = G_CONSTANT i32 0
     %14:sreg_32_xm0_xexec(s1) = G_ICMP intpred(slt), %13(s32), %37
-    %16:sreg_32_xm0_xexec(s32) = SI_IF %14(s1), %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
+    %16:sreg_32_xm0_xexec(s32) = SI_IF %14(s1), 0, %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
     G_BR %bb.7
   
   bb.5:
