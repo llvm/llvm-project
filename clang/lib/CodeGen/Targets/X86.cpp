@@ -1298,7 +1298,11 @@ class X86_64ABIInfo : public ABIInfo {
                                            unsigned &NeededSSE,
                                            unsigned &MaxVectorWidth) const;
 
+  // Checks whether vector types for function arguments are illegal
   bool IsIllegalVectorType(QualType Ty) const;
+
+  // Checks whether vector types for returns are illegal
+  bool IsIllegalReturnVectorType(QualType Ty) const;
 
   /// The 0.98 ABI revision clarified a lot of ambiguities,
   /// unfortunately in ways that were not always consistent with
@@ -1328,6 +1332,16 @@ class X86_64ABIInfo : public ABIInfo {
     // Clang <= 9.0 did not do this.
     if (getContext().getLangOpts().getClangABICompat() <=
         LangOptions::ClangABI::Ver9)
+      return false;
+
+    const llvm::Triple &T = getTarget().getTriple();
+    return T.isOSLinux() || T.isOSNetBSD();
+  }
+
+  bool returnIllegalVectorsInMem() const {
+    // Clang <= 19.0 did not do this.
+    if (getContext().getLangOpts().getClangABICompat() <=
+        LangOptions::ClangABI::Ver19)
       return false;
 
     const llvm::Triple &T = getTarget().getTriple();
@@ -2156,9 +2170,12 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
 }
 
 ABIArgInfo X86_64ABIInfo::getIndirectReturnResult(QualType Ty) const {
+  const bool returnIllegalVectorsIndirectly =
+      (returnIllegalVectorsInMem() && IsIllegalReturnVectorType(Ty));
+
   // If this is a scalar LLVM value then assume LLVM will pass it in the right
   // place naturally.
-  if (!isAggregateTypeForABI(Ty)) {
+  if (!isAggregateTypeForABI(Ty) && !returnIllegalVectorsIndirectly) {
     // Treat an enum type as its underlying type.
     if (const EnumType *EnumTy = Ty->getAs<EnumType>())
       Ty = EnumTy->getDecl()->getIntegerType();
@@ -2173,12 +2190,23 @@ ABIArgInfo X86_64ABIInfo::getIndirectReturnResult(QualType Ty) const {
   return getNaturalAlignIndirect(Ty);
 }
 
-bool X86_64ABIInfo::IsIllegalVectorType(QualType Ty) const {
+static bool IsIllegalVector(QualType Ty, uint64_t Size,
+                            X86AVXABILevel AVXLevel) {
   if (const VectorType *VecTy = Ty->getAs<VectorType>()) {
-    uint64_t Size = getContext().getTypeSize(VecTy);
     unsigned LargestVector = getNativeVectorSizeForAVXABI(AVXLevel);
     if (Size <= 64 || Size > LargestVector)
       return true;
+  }
+
+  return false;
+}
+
+bool X86_64ABIInfo::IsIllegalVectorType(QualType Ty) const {
+  if (IsIllegalVector(Ty, getContext().getTypeSize(Ty), AVXLevel))
+    return true;
+
+  // Maintain backward compatibility
+  if (const VectorType *VecTy = Ty->getAs<VectorType>()) {
     QualType EltTy = VecTy->getElementType();
     if (passInt128VectorsInMem() &&
         (EltTy->isSpecificBuiltinType(BuiltinType::Int128) ||
@@ -2187,6 +2215,10 @@ bool X86_64ABIInfo::IsIllegalVectorType(QualType Ty) const {
   }
 
   return false;
+}
+
+bool X86_64ABIInfo::IsIllegalReturnVectorType(QualType Ty) const {
+  return IsIllegalVector(Ty, getContext().getTypeSize(Ty), AVXLevel);
 }
 
 ABIArgInfo X86_64ABIInfo::getIndirectResult(QualType Ty,
