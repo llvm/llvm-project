@@ -8888,8 +8888,8 @@ static void emitOffloadingArraysAndArgs(
     return MFunc;
   };
   OMPBuilder.emitOffloadingArraysAndArgs(
-      AllocaIP, CodeGenIP, Info, Info.RTArgs, CombinedInfo, IsNonContiguous,
-      ForEndCall, DeviceAddrCB, CustomMapperCB);
+      AllocaIP, CodeGenIP, Info, Info.RTArgs, CombinedInfo, CustomMapperCB,
+      IsNonContiguous, ForEndCall, DeviceAddrCB);
 }
 
 /// Check for inner distribute directive.
@@ -9098,9 +9098,10 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
   CGM.getCXXABI().getMangleContext().mangleCanonicalTypeName(Ty, Out);
   std::string Name = getName({"omp_mapper", TyStr, D->getName()});
 
-  auto *NewFn = OMPBuilder.emitUserDefinedMapper(PrivatizeAndGenMapInfoCB,
-                                                 ElemTy, Name, CustomMapperCB);
-  UDMMap.try_emplace(D, NewFn);
+  llvm::Expected<llvm::Function *> NewFn = OMPBuilder.emitUserDefinedMapper(
+      PrivatizeAndGenMapInfoCB, ElemTy, Name, CustomMapperCB);
+  assert(NewFn && "Unexpected error in emitUserDefinedMapper");
+  UDMMap.try_emplace(D, *NewFn);
   if (CGF)
     FunctionUDMMap[CGF->CurFn].push_back(D);
 }
@@ -10092,9 +10093,10 @@ void CGOpenMPRuntime::emitTargetDataCalls(
                           CGF.Builder.GetInsertPoint());
   llvm::OpenMPIRBuilder::LocationDescription OmpLoc(CodeGenIP);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
-      OMPBuilder.createTargetData(
-          OmpLoc, AllocaIP, CodeGenIP, DeviceID, IfCondVal, Info, GenMapInfoCB,
-          /*MapperFunc=*/nullptr, BodyCB, DeviceAddrCB, CustomMapperCB, RTLoc);
+      OMPBuilder.createTargetData(OmpLoc, AllocaIP, CodeGenIP, DeviceID,
+                                  IfCondVal, Info, GenMapInfoCB, CustomMapperCB,
+                                  /*MapperFunc=*/nullptr, BodyCB, DeviceAddrCB,
+                                  RTLoc);
   assert(AfterIP && "unexpected error creating target data");
   CGF.Builder.restoreIP(*AfterIP);
 }
