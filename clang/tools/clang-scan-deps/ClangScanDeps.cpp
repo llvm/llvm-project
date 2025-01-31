@@ -1040,6 +1040,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
           }
           TU = std::move(*MaybeTU);
           TUBuffer = TU->getMemBufferRef();
+          Filename = TU->getBufferIdentifier();
         }
         auto MaybeTUDeps = WorkerTool.getTranslationUnitDependencies(
             Input->CommandLine, CWD, AlreadySeenModules, LookupOutput,

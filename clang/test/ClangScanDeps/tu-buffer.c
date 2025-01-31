@@ -103,7 +103,7 @@ module addition { header "addition.h" }
 // CHECK:                "file-deps": [
 // CHECK-NEXT:             [[PREFIX]]/tu.c
 // CHECK-NEXT:           ],
-// CHECK-NEXT:           "input-file": ""
+// CHECK-NEXT:           "input-file": "[[PREFIX]]/tu.c"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ]
 // CHECK-NEXT:     }
