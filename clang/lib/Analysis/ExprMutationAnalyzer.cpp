@@ -813,10 +813,7 @@ FunctionParmMutationAnalyzer::findMutation(const ParmVarDecl *Parm) {
   // before analyzing parameters of A. Then when analyzing the second "call A",
   // FunctionParmMutationAnalyzer can use this memoized value to avoid infinite
   // recursion.
-  Results[Parm] = nullptr;
-  if (const Stmt *S = BodyAnalyzer.findMutation(Parm))
-    return Results[Parm] = S;
-  return Results[Parm];
+  return Results[Parm] = BodyAnalyzer.findMutation(Parm);
 }
 
 } // namespace clang
