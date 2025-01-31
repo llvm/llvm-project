@@ -265,7 +265,7 @@ private:
                     StringRef background = "") {
     int nodeId = ++counter;
     AttributeMap attrs;
-    attrs["label"] = quoteString(escapeString(std::move(label)));
+    attrs["label"] = quoteString(label);
     attrs["shape"] = shape.str();
     if (!background.empty()) {
       attrs["style"] = "filled";
@@ -306,12 +306,19 @@ private:
       }
       // Print operation name and type.
       os << op->getName();
-      if (printResultTypes) {
-        os << " : (";
+      if (printResultTypes && op->getNumResults() > 0) {
+        os << "|{";
         std::string buf;
         llvm::raw_string_ostream ss(buf);
-        interleaveComma(op->getResultTypes(), ss);
-        os << truncateString(buf) << ")";
+        interleave(
+            op->getResultTypes(), ss,
+            [&](Type type) {
+              ss << escapeLabelString(
+                  strFromOs([&](raw_ostream &os) { os << type; }));
+            },
+            "|");
+        // TODO: how to truncate string without breaking the layout?
+        os << buf << "}";
       }
 
       // Print attributes.
