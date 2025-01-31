@@ -37,7 +37,7 @@ jobs:
           sparse-checkout: .github/workflows/containers/github-action-ci/
       - name: Install Podman
         run: |
-          apt-get install podman
+          sudo apt-get install podman
       - name: Write Variables
         id: vars
         run: |
@@ -89,7 +89,7 @@ jobs:
     steps:
       - name: Install Podman
         run: |
-          apt-get install podman
+          sudo apt-get install podman
       - name: Download container
         uses: actions/download-artifact@v4
 
