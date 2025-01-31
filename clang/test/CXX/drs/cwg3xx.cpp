@@ -1761,6 +1761,7 @@ namespace cwg398 { // cwg398: 2.7
     template <class T> void f(typename T::Y *) {} // #cwg398-f
     template <class T> void g(X<T::N> *) {} // #cwg398-g
     template <class T> void h(Z<T::template TT> *) {} // #cwg398-h
+    // expected-warning@-1 {{the use of the keyword template before the qualified name of a class or alias template without a template argument list is deprecated}}
     struct A {};
     struct B {
       int Y;
