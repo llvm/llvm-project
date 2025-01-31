@@ -3419,24 +3419,24 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
       /* Prior to Clang 18.0 we used this incorrect mangled name */            \
       mangleVendorType("__SVBFloat16_t");                                      \
     } else {                                                                   \
-      type_name = MangledName;                                                 \
-      Out << (type_name == Name ? "u" : "") << type_name.size() << type_name;  \
+      type_name = #MangledName;                                                \
+      Out << (type_name == #Name ? "u" : "") << type_name.size() << type_name; \
     }                                                                          \
     break;
 #define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
   case BuiltinType::Id:                                                        \
-    type_name = MangledName;                                                   \
-    Out << (type_name == Name ? "u" : "") << type_name.size() << type_name;    \
+    type_name = #MangledName;                                                  \
+    Out << (type_name == #Name ? "u" : "") << type_name.size() << type_name;   \
     break;
 #define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)                    \
   case BuiltinType::Id:                                                        \
-    type_name = MangledName;                                                   \
-    Out << (type_name == Name ? "u" : "") << type_name.size() << type_name;    \
+    type_name = #MangledName;                                                  \
+    Out << (type_name == #Name ? "u" : "") << type_name.size() << type_name;   \
     break;
 #define SVE_SCALAR_TYPE(Name, MangledName, Id, SingletonId, Bits)              \
   case BuiltinType::Id:                                                        \
-    type_name = MangledName;                                                   \
-    Out << (type_name == Name ? "u" : "") << type_name.size() << type_name;    \
+    type_name = #MangledName;                                                  \
+    Out << (type_name == #Name ? "u" : "") << type_name.size() << type_name;   \
     break;
 #include "clang/Basic/AArch64SVEACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size)                                        \
