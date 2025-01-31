@@ -1,6 +1,5 @@
 // RUN: cir-opt %s -cir-to-llvm -o %t.mlir
 // RUN: FileCheck %s --input-file=%t.mlir -check-prefix=MLIR
-// XFAIL: *
 
 !s32i = !cir.int<s, 32>
 !u64i = !cir.int<u, 64>
@@ -15,6 +14,7 @@ module {
     %4 = cir.load %3 : !cir.ptr<!s32i>, !s32i
     cir.return
   }
+
   cir.func @g(%arg0: !cir.ptr<!s32i>, %2 : !s32i) {
     %3 = cir.ptr_stride(%arg0 : !cir.ptr<!s32i>, %2 : !s32i), !cir.ptr<!s32i>
     cir.return
@@ -38,8 +38,7 @@ module {
 // MLIR:   llvm.return
 
 // MLIR-LABEL: @g
-// MLIR:      %0 = llvm.sext %arg1 : i32 to i64
-// MLIR-NEXT: llvm.getelementptr %arg0[%0] : (!llvm.ptr, i64) -> !llvm.ptr, i32
+// MLIR: llvm.getelementptr %arg0[%arg1] : (!llvm.ptr, i32) -> !llvm.ptr, i32
 
 // MLIR-LABEL: @bool_stride
 // MLIR: llvm.getelementptr %{{.*}}[%{{.*}}] : (!llvm.ptr, i64) -> !llvm.ptr, i8
