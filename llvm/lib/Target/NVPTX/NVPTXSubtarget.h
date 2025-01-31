@@ -88,6 +88,10 @@ public:
   // Does SM & PTX support memory orderings (weak and atomic: relaxed, acquire,
   // release, acq_rel, sc) ?
   bool hasMemoryOrdering() const { return SmVersion >= 70 && PTXVersion >= 60; }
+  // Does SM & PTX support .acquire and .release qualifiers for fence?
+  bool hasSplitAcquireAndReleaseFences() const {
+    return SmVersion >= 90 && PTXVersion >= 86;
+  }
   // Does SM & PTX support atomic relaxed MMIO operations ?
   bool hasRelaxedMMIO() const { return SmVersion >= 70 && PTXVersion >= 82; }
   bool hasDotInstructions() const {
