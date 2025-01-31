@@ -90,6 +90,13 @@ struct RootConstants {
 };
 
 struct RootParameter {
+  RootParameter() = default;
+  RootParameter(RootConstants RootConstant, ShaderVisibilityFlag Visibility) {
+    ParameterType = RootParameterType::Constants32Bit;
+    Constants = RootConstant;
+    ShaderVisibility = Visibility;
+  }
+
   RootParameterType ParameterType;
   union {
     RootConstants Constants;
@@ -546,6 +553,8 @@ enum class SigComponentType : uint32_t {
 };
 
 ArrayRef<EnumEntry<SigComponentType>> getSigComponentTypes();
+ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
+ArrayRef<EnumEntry<ShaderVisibilityFlag>> getShaderVisibilityFlags();
 
 struct ProgramSignatureHeader {
   uint32_t ParamCount;

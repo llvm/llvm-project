@@ -210,6 +210,27 @@ void MappingTraits<DXContainerYAML::Signature>::mapping(
   IO.mapRequired("Parameters", S.Parameters);
 }
 
+void ScalarEnumerationTraits<dxbc::RootParameterType>::enumeration(
+    IO &IO, dxbc::RootParameterType &Value) {
+  for (const auto &E : dxbc::getRootParameterTypes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::ShaderVisibilityFlag>::enumeration(
+    IO &IO, dxbc::ShaderVisibilityFlag &Value) {
+  for (const auto &E : dxbc::getShaderVisibilityFlags())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void MappingTraits<DXContainerYAML::RootSignatureDesc>::mapping(
+    IO &IO, DXContainerYAML::RootSignatureDesc &S) {
+  IO.mapRequired("Size", S.Size);
+  IO.mapRequired("NumParameters", S.NumParameters);
+  IO.mapRequired("Parameters", S.Parameters);
+#define ROOT_ELEMENT_FLAG(Num, Val, Str) IO.mapOptional(#Val, S.Val, false);
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+}
+
 void MappingTraits<dxbc::RootParameter>::mapping(IO &IO,
                                                  dxbc::RootParameter &S) {
 
@@ -229,33 +250,12 @@ void MappingTraits<dxbc::RootParameter>::mapping(IO &IO,
   }
 }
 
-void ScalarEnumerationTraits<dxbc::RootParameterType>::enumeration(
-    IO &IO, dxbc::RootParameterType &Value) {
-  for (const auto &E : dxbc::getRootParameterTypes())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
-}
-
-void ScalarEnumerationTraits<dxbc::ShaderVisibilityFlag>::enumeration(
-    IO &IO, dxbc::ShaderVisibilityFlag &Value) {
-  for (const auto &E : dxbc::getShaderVisibilityFlags())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
-}
-
 void MappingTraits<dxbc::RootConstants>::mapping(IO &IO,
                                                  dxbc::RootConstants &S) {
 
   IO.mapRequired("Num32BitValues", S.Num32BitValues);
   IO.mapRequired("ShaderRegister", S.ShaderRegister);
   IO.mapRequired("RegisterSpace", S.RegisterSpace);
-}
-
-void MappingTraits<DXContainerYAML::RootSignatureDesc>::mapping(
-    IO &IO, DXContainerYAML::RootSignatureDesc &S) {
-  IO.mapRequired("Size", S.Size);
-  IO.mapRequired("NumParameters", S.NumParameters);
-  IO.mapRequired("Parameters", S.Parameters);
-#define ROOT_ELEMENT_FLAG(Num, Val, Str) IO.mapOptional(#Val, S.Val, false);
-#include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
