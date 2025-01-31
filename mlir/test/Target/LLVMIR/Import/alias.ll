@@ -25,7 +25,7 @@ entry:
 ; CHECK:   llvm.return %0 : !llvm.ptr
 ; CHECK: }
 
-@some_name = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr undef, ptr null] }
+@some_name = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr null] }
 @_ZTV1D = alias { [3 x ptr] }, ptr @some_name
 
 ; CHECK: llvm.mlir.alias external @_ZTV1D {addr_space = 0 : i32} : !llvm.struct<(array<3 x ptr>)> {
