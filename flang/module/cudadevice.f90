@@ -78,7 +78,7 @@ implicit none
   ! Math API
 
   interface __fadd_rn
-   attributes(device) real function __fadd_rn(a,b) bind(c, name='__nv_fmul_rn')
+   attributes(device) real function __fadd_rn(a,b) bind(c, name='__nv_fadd_rn')
   !dir$ ignore_tkr (d) a, (d) b
     real, value :: a, b
    end function
@@ -86,7 +86,7 @@ implicit none
   public :: __fadd_rn
   
   interface __fadd_rz
-   attributes(device) real function __fadd_rz(a,b) bind(c, name='__nv_fmul_rn')
+   attributes(device) real function __fadd_rz(a,b) bind(c, name='__nv_fadd_rz')
   !dir$ ignore_tkr (d) a, (d) b
     real, value :: a, b
    end function
@@ -270,97 +270,97 @@ implicit none
   public :: __fdiv_rd
 
   interface __dadd_rn
-   attributes(device) real function __dadd_rn(a,b) bind(c, name='__nv_dadd_rn')
+   attributes(device) real(8) function __dadd_rn(a,b) bind(c, name='__nv_dadd_rn')
   !dir$ ignore_tkr (d) a, (d) b
-    real, value :: a, b
+    real(8), value :: a, b
    end function
   end interface
   public :: __dadd_rn
 
   interface __dadd_rz
-   attributes(device) real function __dadd_rz(a,b) bind(c, name='__nv_dadd_rz')
+   attributes(device) real(8) function __dadd_rz(a,b) bind(c, name='__nv_dadd_rz')
   !dir$ ignore_tkr (d) a, (d) b
-    real, value :: a, b
+    real(8), value :: a, b
    end function
   end interface
   public :: __dadd_rz
 
   interface __dadd_ru
-   attributes(device) real function __dadd_ru(a,b) bind(c, name='__nv_dadd_ru')
+   attributes(device) real(8) function __dadd_ru(a,b) bind(c, name='__nv_dadd_ru')
   !dir$ ignore_tkr (d) a, (d) b
-    real, value :: a, b
+    real(8), value :: a, b
    end function
   end interface
   public :: __dadd_ru
 
   interface __dadd_rd
-   attributes(device) real function __dadd_rd(a,b) bind(c, name='__nv_dadd_rd')
+   attributes(device) real(8) function __dadd_rd(a,b) bind(c, name='__nv_dadd_rd')
   !dir$ ignore_tkr (d) a, (d) b
-    real, value :: a, b
+    real(8), value :: a, b
    end function
   end interface
   public :: __dadd_rd
 
   interface __dmul_rn
-   attributes(device) real function __dmul_rn(a,b) bind(c, name='__nv_dmul_rn')
+   attributes(device) real(8) function __dmul_rn(a,b) bind(c, name='__nv_dmul_rn')
   !dir$ ignore_tkr (d) a, (d) b
-    real, value :: a, b
+    real(8), value :: a, b
    end function
   end interface
   public :: __dmul_rn
 
   interface __dmul_rz
-   attributes(device) real function __dmul_rz(a,b) bind(c, name='__nv_dmul_rz')
+   attributes(device) real(8) function __dmul_rz(a,b) bind(c, name='__nv_dmul_rz')
   !dir$ ignore_tkr (d) a, (d) b
-    real, value :: a, b
+    real(8), value :: a, b
    end function
   end interface
   public :: __dmul_rz
 
   interface __dmul_ru
-   attributes(device) real function __dmul_ru(a,b) bind(c, name='__nv_dmul_ru')
+   attributes(device) real(8) function __dmul_ru(a,b) bind(c, name='__nv_dmul_ru')
   !dir$ ignore_tkr (d) a, (d) b
-    real, value :: a, b
+    real(8), value :: a, b
    end function
   end interface
   public :: __dmul_ru
 
   interface __dmul_rd
-   attributes(device) real function __dmul_rd(a,b) bind(c, name='__nv_dmul_rd')
+   attributes(device) real(8) function __dmul_rd(a,b) bind(c, name='__nv_dmul_rd')
   !dir$ ignore_tkr (d) a, (d) b
-    real, value :: a, b
+    real(8), value :: a, b
    end function
   end interface
   public :: __dmul_rd
 
   interface __fma_rn
-   attributes(device) real function __fma_rn(a,b) bind(c, name='__nv_fma_rn')
+   attributes(device) real(8) function __fma_rn(a,b,c) bind(c, name='__nv_fma_rn')
   !dir$ ignore_tkr (d) a, (d) b
-    real, value :: a, b
+    real(8), value :: a, b, c
    end function
   end interface
   public :: __fma_rn
 
   interface __fma_rz
-   attributes(device) real function __fma_rz(a,b) bind(c, name='__nv_fma_rz')
+   attributes(device) real(8) function __fma_rz(a,b,c) bind(c, name='__nv_fma_rz')
   !dir$ ignore_tkr (d) a, (d) b
-    real, value :: a, b
+    real(8), value :: a, b, c
    end function
   end interface
   public :: __fma_rz
 
   interface __fma_ru
-   attributes(device) real function __fma_ru(a,b) bind(c, name='__nv_fma_ru')
+   attributes(device) real(8) function __fma_ru(a,b,c) bind(c, name='__nv_fma_ru')
   !dir$ ignore_tkr (d) a, (d) b
-    real, value :: a, b
+    real(8), value :: a, b, c
    end function
   end interface
   public :: __fma_ru
 
   interface __fma_rd
-   attributes(device) real function __fma_rd(a,b) bind(c, name='__nv_fma_rd')
+   attributes(device) real(8) function __fma_rd(a,b,c) bind(c, name='__nv_fma_rd')
   !dir$ ignore_tkr (d) a, (d) b
-    real, value :: a, b
+    real(8), value :: a, b, c
    end function
   end interface
   public :: __fma_rd
