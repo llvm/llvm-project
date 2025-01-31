@@ -286,6 +286,7 @@ void InstrInfoEmitter::emitOperandNameMappings(
   OS << "enum {\n";
   for (const auto &[I, Op] : enumerate(OperandNameToID))
     OS << "  " << Op.first << " = " << I << ",\n";
+  OS << " OPERAND_LAST\n";
   OS << "};\n";
   OS << "} // end namespace llvm::" << Namespace << "::OpName\n";
   OS << "#endif //GET_INSTRINFO_OPERAND_ENUM\n\n";
@@ -299,8 +300,8 @@ void InstrInfoEmitter::emitOperandNameMappings(
     assert(MaxOperandNo <= INT16_MAX &&
            "Too many operands for the operand name -> index table");
     StringRef Type = MaxOperandNo <= INT8_MAX ? "int8_t" : "int16_t";
-    OS << "  static constexpr " << Type << " OperandMap[][" << NumOperandNames
-       << "] = {\n";
+    OS << "  static constexpr " << Type << " OperandMap[]["
+       << NumOperandNames + 1 << "] = {\n";
     for (const auto &Entry : OperandMap) {
       const std::map<unsigned, unsigned> &OpList = Entry.first;
 
@@ -310,7 +311,7 @@ void InstrInfoEmitter::emitOperandNameMappings(
         auto Iter = OpList.find(ID);
         OS << (Iter != OpList.end() ? (int)Iter->second : -1) << ", ";
       }
-      OS << "},\n";
+      OS << "-1 },\n";
     }
     OS << "  };\n";
 
