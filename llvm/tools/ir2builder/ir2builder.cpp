@@ -30,6 +30,7 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -117,7 +118,7 @@ static cl::opt<bool>
 /// When enabled the traversal will be in reverse post order, which can handle
 /// when values are defined after (text-wise) their use.
 /// On the other hand using just linear traversal will also include parts that
-/// are outside of the graph (dead blocks). 
+/// are outside of the graph (dead blocks).
 static cl::opt<bool>
     UseRPO("use-rpo",
            cl::desc("Traverses IR in reverse post order. This can help with "
@@ -126,7 +127,7 @@ static cl::opt<bool>
 
 /// \brief Transpiler from LLVM IR into IRBuilder API calls.
 /// The main purpose for this class is to hold variable counter and variable
-/// names for needed resources, such as LLVMContext. 
+/// names for needed resources, such as LLVMContext.
 class IR2Builder {
 private:
   unsigned long VarI = 0;
@@ -144,7 +145,7 @@ private:
   void outputAttr(Attribute Att, raw_ostream &OS);
 
   std::string getNextVar();
-  
+
   std::string asStr(GlobalValue::LinkageTypes Linkage);
   std::string asStr(GlobalValue::ThreadLocalMode TLM);
   std::string asStr(CmpInst::Predicate P);
@@ -209,31 +210,31 @@ std::string IR2Builder::asStr(GlobalValue::LinkageTypes Linkage) {
   std::string Link = LLVMPrefix + "GlobalValue::";
 
   switch (Linkage) {
-   case GlobalValue::WeakODRLinkage:
+  case GlobalValue::WeakODRLinkage:
     return Link + "WeakODRLinkage";
-   case GlobalValue::LinkOnceODRLinkage:
+  case GlobalValue::LinkOnceODRLinkage:
     return Link + "LinkOnceODRLinkage";
-   case GlobalValue::AvailableExternallyLinkage:
+  case GlobalValue::AvailableExternallyLinkage:
     return Link + "AvailableExternallyLinkage";
-   case GlobalValue::WeakAnyLinkage:
+  case GlobalValue::WeakAnyLinkage:
     return Link + "WeakAnyLinkage";
-   case GlobalValue::LinkOnceAnyLinkage:
+  case GlobalValue::LinkOnceAnyLinkage:
     return Link + "LinkOnceAnyLinkage";
-   case GlobalValue::CommonLinkage:
+  case GlobalValue::CommonLinkage:
     return Link + "CommonLinkage";
-   case GlobalValue::ExternalWeakLinkage:
+  case GlobalValue::ExternalWeakLinkage:
     return Link + "ExternalWeakLinkage";
-   case GlobalValue::ExternalLinkage:
+  case GlobalValue::ExternalLinkage:
     return Link + "ExternalLinkage";
-   case GlobalValue::AppendingLinkage:
+  case GlobalValue::AppendingLinkage:
     return Link + "AppendingLinkage";
-   case GlobalValue::InternalLinkage:
+  case GlobalValue::InternalLinkage:
     return Link + "InternalLinkage";
-   case GlobalValue::PrivateLinkage:
+  case GlobalValue::PrivateLinkage:
     return Link + "PrivateLinkage";
-   default:
+  default:
     return "/* Unknown LinkageTypes (using value) */" + std::to_string(Linkage);
-   }
+  }
 }
 
 std::string IR2Builder::asStr(AtomicRMWInst::BinOp Op) {
@@ -364,7 +365,7 @@ std::string IR2Builder::asStr(SyncScope::ID Sys) {
     return LLVMPrefix + "SyncScope::System";
   if (Sys == SyncScope::SingleThread)
     return LLVMPrefix + "SyncScope::SingleThread";
-    
+
   return "/* TODO: Unknown SyncScope ID (using value) */ " +
          std::to_string(Sys);
 }
@@ -521,10 +522,10 @@ std::string IR2Builder::asStr(const Type *T) {
     case 16:
     case 32:
     case 64:
-      TCall = ("getInt" + Twine(IT->getBitWidth()) + "Ty()").str();
+      TCall = formatv("getInt{0}Ty()", IT->getBitWidth());
       break;
     default:
-      TCall = "getIntNTy(" + std::to_string(IT->getBitWidth()) + ")";
+      TCall = formatv("getIntNTy({0})", IT->getBitWidth());
       break;
     }
   } else if (T->isVoidTy())
@@ -547,22 +548,21 @@ std::string IR2Builder::asStr(const Type *T) {
     if (ST->getNumElements() > 1)
       Elements += "}";
     Elements += ")";
-    return LLVMPrefix + "StructType::create(" + Ctx + ", " + Elements + ")";
+    return formatv("{0}StructType::create({1}, {2})", LLVMPrefix, Ctx,
+                   Elements);
   } else if (auto AT = dyn_cast<ArrayType>(T)) {
-    return LLVMPrefix + "ArrayType::get(" + asStr(AT->getElementType()) +
-           ", " + std::to_string(AT->getArrayNumElements()) + ")";
+    return formatv("{0}ArrayType::get({1}, {2})", LLVMPrefix,
+                   asStr(AT->getElementType()), AT->getArrayNumElements());
   } else if (T->isBFloatTy())
     TCall = "getBFloatTy()";
   else if (auto VT = dyn_cast<VectorType>(T)) {
-    std::string ElemCount =
-        LLVMPrefix + "ElementCount::get(" +
-        std::to_string(VT->getElementCount().getKnownMinValue()) + ", " +
-        toStr(VT->getElementCount().isScalable()) + ")";
-    return LLVMPrefix + "VectorType::get(" + asStr(VT->getElementType()) +
-           ", " + ElemCount + ")";
+    return formatv("{0}VectorType::get({1}, {0}ElementCount::get({2}, {3}))",
+                   LLVMPrefix, asStr(VT->getElementType()),
+                   VT->getElementCount().getKnownMinValue(),
+                   toStr(VT->getElementCount().isScalable()));
   } else if (auto FT = dyn_cast<FunctionType>(T)) {
-    TCall = LLVMPrefix + "FunctionType::get(" + asStr(FT->getReturnType()) +
-            ", {";
+    TCall = formatv("{0}FunctionType::get({1}, {{", LLVMPrefix,
+                    asStr(FT->getReturnType()));
 
     bool IsFirst = true;
     for (auto A : FT->params()) {
@@ -576,23 +576,23 @@ std::string IR2Builder::asStr(const Type *T) {
   } else if (T->isPointerTy())
     TCall = "getPtrTy()";
   else if (T->isHalfTy())
-    return LLVMPrefix + "Type::getHalfTy(" + Ctx + ")";
+    return formatv("{0}Type::getHalfTy({1})", LLVMPrefix, Ctx);
   else if (T->isBFloatTy())
-    return LLVMPrefix + "Type::getBFloatTy(" + Ctx + ")";
+    return formatv("{0}Type::getBFloatTy({1})", LLVMPrefix, Ctx);
   else if (T->isX86_FP80Ty())
-    return LLVMPrefix + "Type::getX86_FP80Ty(" + Ctx + ")";
+    return formatv("{0}Type::getX86_FP80Ty({1})", LLVMPrefix, Ctx);
   else if (T->isFP128Ty())
-    return LLVMPrefix + "Type::getFP128Ty(" + Ctx + ")";
+    return formatv("{0}Type::getFP128Ty({1})", LLVMPrefix, Ctx);
   else if (T->isPPC_FP128Ty())
-    return LLVMPrefix + "Type::getPPC_FP128Ty(" + Ctx + ")";
+    return formatv("{0}Type::getPPC_FP128Ty({1})", LLVMPrefix, Ctx);
   else if (T->isX86_AMXTy())
-    return LLVMPrefix + "Type::getX86_AMXTy(" + Ctx + ")";
+    return formatv("{0}Type::getX86_AMXTy({1})", LLVMPrefix, Ctx);
   else if (T->isLabelTy())
-    return LLVMPrefix + "Type::getLabelTy(" + Ctx + ")";
+    return formatv("{0}Type::getLabelTy({1})", LLVMPrefix, Ctx);
   else if (T->isMetadataTy())
-    return LLVMPrefix + "Type::getMetadataTy(" + Ctx + ")";
+    return formatv("{0}Type::getMetadataTy({1})", LLVMPrefix, Ctx);
   else if (T->isTokenTy())
-    return LLVMPrefix + "Type::getTokenTy(" + Ctx + ")";
+    return formatv("{0}Type::getTokenTy({1})", LLVMPrefix, Ctx);
   else
     return "/* TODO: Unknown type */";
 
@@ -603,8 +603,8 @@ std::string IR2Builder::asStr(const Constant *C) {
   if (auto CI = dyn_cast<ConstantInt>(C)) {
     // TODO: Sign has to be determined.
     auto CVal = CI->getValue();
-    return LLVMPrefix + "ConstantInt::get(" + asStr(C->getType()) + ", " +
-           std::to_string(CVal.getSExtValue()) + ")";
+    return formatv("{0}ConstantInt::get({1}, {2})", LLVMPrefix,
+                   asStr(C->getType()), CVal.getSExtValue());
   }
   if (auto CF = dyn_cast<ConstantFP>(C)) {
     auto CVal = CF->getValue();
@@ -613,8 +613,8 @@ std::string IR2Builder::asStr(const Constant *C) {
     if (std::isnan(DVal) || std::isinf(DVal))
       Val = "\"" + Val + "\"";
     // TODO: Handle double to string conversion to include all digits.
-    return LLVMPrefix + "ConstantFP::get(" + asStr(C->getType()) + ", " +
-           Val + ")";
+    return formatv("{0}ConstantFP::get({1}, {2})", LLVMPrefix,
+                   asStr(C->getType()), Val);
   }
   if (auto AT = dyn_cast<ConstantAggregate>(C)) {
     std::string Values;
@@ -629,22 +629,23 @@ std::string IR2Builder::asStr(const Constant *C) {
     std::string ClassName;
     if (isa<ConstantArray>(C)) {
       ClassName = "ConstantArray";
-      Values = LLVMPrefix + "ArrayRef<" + LLVMPrefix + "Constant *>(" +
-               (AT->getNumOperands() > 1 ? std::string("{") : std::string("")) +
-               Values +
-               (AT->getNumOperands() > 1 ? std::string("}") : std::string("")) +
-               ")";
+      Values = formatv(
+          "{0}ArrayRef<{0}Constant *>({1}{2}{3})", LLVMPrefix,
+          (AT->getNumOperands() > 1 ? std::string("{") : std::string("")),
+          Values,
+          (AT->getNumOperands() > 1 ? std::string("}") : std::string("")));
     } else if (isa<ConstantStruct>(C))
       ClassName = "ConstantStruct";
     else if (isa<ConstantVector>(C)) {
       Values = "{" + Values + "}";
       // ConstantVector does not take type as 1st arg.
-      return LLVMPrefix + "ConstantVector::get(" + Values + ")";
+      return formatv("{0}ConstantVector::get({1})", LLVMPrefix, Values);
     } else
       return "/* TODO: Unknown aggregate constant */";
 
-    return LLVMPrefix + ClassName + "::get(" + asStr(C->getType()) + ", " +
-           Values + ")";
+    assert(!ClassName.empty() && "Class name not set");
+    return formatv("{0}{1}::get({2}, {3})", LLVMPrefix, ClassName,
+                   asStr(C->getType()), Values);
   }
   if (auto CDS = dyn_cast<ConstantDataSequential>(C)) {
     std::string Values;
@@ -667,8 +668,9 @@ std::string IR2Builder::asStr(const Constant *C) {
           Values += ", " + std::to_string(static_cast<uint8_t>(a));
         }
       }
-      return LLVMPrefix + ClassName + "::get(" + Ctx + ", " + LLVMPrefix +
-             "ArrayRef<uint8_t>({" + Values + "}))";
+      assert(!ClassName.empty() && "Class name not set");
+      return formatv("{0}{1}::get({2}, {0}ArrayRef<uint8_t>({3}{4}{5}))",
+                     LLVMPrefix, ClassName, Ctx, "{", Values, "}");
     }
     if (CDS->isCString()) {
       Values = "";
@@ -681,8 +683,9 @@ std::string IR2Builder::asStr(const Constant *C) {
           Values += ", " + std::to_string(static_cast<uint8_t>(A));
         }
       }
-      return LLVMPrefix + ClassName + "::get(" + Ctx + ", " + LLVMPrefix +
-             "ArrayRef<uint8_t>({" + Values + "}))";
+      assert(!ClassName.empty() && "Class name not set");
+      return formatv("{0}{1}::get({2}, {0}ArrayRef<uint8_t>({3}{4}{5}))",
+                     LLVMPrefix, ClassName, Ctx, "{", Values, "}");
     } else {
       Type *ElemT = CDS->getElementType();
       if (ElemT->isIntegerTy()) {
@@ -693,7 +696,7 @@ std::string IR2Builder::asStr(const Constant *C) {
       } else if (ElemT->isFloatTy()) {
         ElemTy = "float";
       }
-      Values = LLVMPrefix + "ArrayRef<" + ElemTy + ">(";
+      Values = formatv("{0}ArrayRef<{1}>(", LLVMPrefix, ElemTy);
       if (CDS->getNumElements() > 1)
         Values += "{";
       bool First = true;
@@ -715,26 +718,21 @@ std::string IR2Builder::asStr(const Constant *C) {
       Values += ")";
     }
 
-    return LLVMPrefix + ClassName + "::get(" + Ctx + ", " + Values + ")";
+    return formatv("{0}{1}::get({2}, {3})", LLVMPrefix, ClassName, Ctx, Values);
   }
-  if (isa<ConstantAggregateZero>(C)) {
-    return LLVMPrefix + "ConstantAggregateZero::get(" + asStr(C->getType()) +
-           ")";
-  }
-  if (isa<PoisonValue>(C)) {
-    return LLVMPrefix + "PoisonValue::get(" + asStr(C->getType()) + ")";
-  }
-  if (isa<UndefValue>(C)) {
-    return LLVMPrefix + "UndefValue::get(" + asStr(C->getType()) + ")";
-  }
-  if (auto ba = dyn_cast<BlockAddress>(C)) {
-    return LLVMPrefix + "BlockAddress::get(" + asStr(ba->getFunction()) +
-           ", " + asStr(ba->getBasicBlock()) + ")";
-  }
-  if (isa<ConstantPointerNull>(C)) {
-    return LLVMPrefix + "ConstantPointerNull::get(" + asStr(C->getType()) +
-           ")";
-  }
+  if (isa<ConstantAggregateZero>(C))
+    return formatv("{0}ConstantAggregateZero::get({1})", LLVMPrefix,
+                   asStr(C->getType()));
+  if (isa<PoisonValue>(C))
+    return formatv("{0}PoisonValue::get({1})", LLVMPrefix, asStr(C->getType()));
+  if (isa<UndefValue>(C))
+    return formatv("{0}UndefValue::get({1})", LLVMPrefix, asStr(C->getType()));
+  if (auto ba = dyn_cast<BlockAddress>(C))
+    return formatv("{0}BlockAddress::get({1}, {2})", LLVMPrefix,
+                   asStr(ba->getFunction()), asStr(ba->getBasicBlock()));
+  if (isa<ConstantPointerNull>(C))
+    return formatv("{0}ConstantPointerNull::get({1})", LLVMPrefix,
+                   asStr(C->getType()));
   if (auto CTN = dyn_cast<ConstantTargetNone>(C)) {
     auto CTNType = CTN->getType();
 
@@ -758,14 +756,13 @@ std::string IR2Builder::asStr(const Constant *C) {
     }
     IntsStr += "}";
 
-    std::string CTNName = "\"" + escape(CTNType->getName().str()) + "\"";
-    std::string TET = LLVMPrefix + "TargetExtType::get(" + Ctx + ", " +
-                      CTNName + ", " + TypeStr + ", " + IntsStr + ")";
-
-    return LLVMPrefix + "ConstantTargetNone::get(" + TET + ")";
+    return formatv("{0}ConstantTargetNone::get({0}TargetExtType::get({1}, "
+                   "\"{2}\", {3}, {4}))",
+                   LLVMPrefix, Ctx, escape(CTNType->getName().str()), TypeStr,
+                   IntsStr);
   }
   if (isa<ConstantTokenNone>(C)) {
-    return LLVMPrefix + "ConstantTokenNone::get(" + Ctx + ")";
+    return formatv("{0}ConstantTokenNone::get({1})", LLVMPrefix, Ctx);
   }
   if (auto CE = dyn_cast<ConstantExpr>(C)) {
     (void)CE;
@@ -808,12 +805,11 @@ std::string IR2Builder::asStr(const InlineAsm *Op) {
     }
   };
 
-  return LLVMPrefix + "InlineAsm::get(" + asStr(Op->getFunctionType()) +
-         ", " + "\"" + escape(Op->getAsmString()) + "\", " + "\"" +
-         escape(Op->getConstraintString()) + "\", " +
-         toStr(Op->hasSideEffects()) + ", " + toStr(Op->isAlignStack()) +
-         ", " + GetAsmDialect(Op->getDialect()) + ", " +
-         toStr(Op->canThrow()) + ")";
+  return formatv("{0}InlineAsm::get({1}, \"{2}\", \"{3}\", {4}, {5}, {6}, {7})",
+                 asStr(Op->getFunctionType()), escape(Op->getAsmString()),
+                 escape(Op->getConstraintString()), toStr(Op->hasSideEffects()),
+                 toStr(Op->isAlignStack()), GetAsmDialect(Op->getDialect()),
+                 toStr(Op->canThrow()));
 }
 
 std::string IR2Builder::asStr(const Metadata *Op) {
@@ -827,16 +823,15 @@ std::string IR2Builder::asStr(const Metadata *Op) {
       First = false;
     }
     Args += "}";
-    return LLVMPrefix + "MDNode::get(" + Ctx + ", " + Args + ")";
+    return formatv("{0}MDNode::get({1}, {2})", LLVMPrefix, Ctx, Args);
   }
-  if (auto VAM = dyn_cast<ValueAsMetadata>(Op)) {
-    return LLVMPrefix + "ValueAsMetadata::get(" + asStr(VAM->getValue()) + ")";
-  }
-  if (auto MDS = dyn_cast<MDString>(Op)) {
-    return LLVMPrefix + "MDString::get(" + Ctx + ", \"" +
-           escape(MDS->getString().str()) + "\")";
-  } 
-  
+  if (auto VAM = dyn_cast<ValueAsMetadata>(Op))
+    return formatv("{0}ValueAsMetadata::get({1})", LLVMPrefix,
+                   asStr(VAM->getValue()));
+  if (auto MDS = dyn_cast<MDString>(Op))
+    return formatv("{0}MDString::get({1}, \"{2}\")", LLVMPrefix, Ctx,
+                   escape(MDS->getString().str()));
+
   return "/* TODO: Metadata creation */";
 }
 
@@ -859,8 +854,8 @@ std::string IR2Builder::asStr(const Value *Op) {
   if (auto InA = dyn_cast<InlineAsm>(Op))
     return asStr(InA);
   if (auto Mtd = dyn_cast<MetadataAsValue>(Op)) {
-    return LLVMPrefix + "MetadataAsValue::get(" + Ctx + ", " +
-           asStr(Mtd->getMetadata()) + ")";
+    return formatv("{0}MetadataAsValue::get({1}, {2})", LLVMPrefix, Ctx,
+                   asStr(Mtd->getMetadata()));
   }
   std::string OpName = getNameOrAsOperand(Op);
   if (OpName[0] == '%')
@@ -873,26 +868,23 @@ std::string IR2Builder::asStr(const Value *Op) {
 
 std::string getBinArithOp(std::string Name, std::string Op1, std::string Op2,
                           const Instruction *I) {
-  return "Create" + Name + "(" + Op1 + ", " + Op2 + ", \"\", " +
-         toStr(I->hasNoUnsignedWrap()) + ", " + toStr(I->hasNoSignedWrap()) +
-         ")";
+  return formatv("Create{0}({1}, {2}, \"\", {3}, {4})", Name, Op1, Op2,
+                 toStr(I->hasNoUnsignedWrap()), toStr(I->hasNoSignedWrap()));
 }
 
 std::string getFPBinArithOp(std::string Name, std::string Op1, std::string Op2,
                             const Instruction *I) {
-  return "Create" + Name + "(" + Op1 + ", " + Op2 + ")";
+  return formatv("Create{0}({1}, {2})", Name, Op1, Op2);
   // TODO: Handle FPMathTag.
 }
 
 std::string IR2Builder::asStr(ConstantRange &CR) {
-  std::stringstream SS;
   auto NumBitsStr = std::to_string(CR.getBitWidth());
   auto Lower = std::to_string(CR.getLower().getLimitedValue());
   auto Upper = std::to_string(CR.getUpper().getLimitedValue());
-  SS << LLVMPrefix << "ConstantRange(APInt(" << NumBitsStr << ", " << Lower
-     << ", true), "
-     << "APInt(" << NumBitsStr << ", " << Upper << ", true))";
-  return SS.str();
+  return formatv(
+      "{0}ConstantRange(APInt({1}, {2}, true), APInt({1}, {3}, true))",
+      LLVMPrefix, NumBitsStr, Lower, Upper);
 }
 
 void IR2Builder::outputAttr(Attribute Att, raw_ostream &OS) {
@@ -991,10 +983,10 @@ int main(int argc, char** argv) {
         // In case of BlockAddress initializer we need to declare the function
         // and basic block so it can be used.
         if (auto BA = dyn_cast<BlockAddress>(G.getInitializer())) {
-          OS << "auto " << asStr(BA->getFunction()) << " = " << ModName
-             << "->getOrInsertFunction(\"" << BA->getFunction()->getName()
-             << "\", " << asStr(BA->getFunction()->getFunctionType())
-             << ");\n";
+          OS << formatv("auto {0} = {1}->getOrInsertFunction(\"{2}\", {3});\n",
+                        asStr(BA->getFunction()), ModName,
+                        BA->getFunction()->getName(),
+                        asStr(BA->getFunction()->getFunctionType()));
           // Extract basic block.
           // TODO: The function might need to be created in here
           // since the basic blocks don't exist yet.
@@ -1004,14 +996,13 @@ int main(int argc, char** argv) {
       }
 
       std::string GName = asStr(&G);
-      OS << "auto " << GName << " = new " << LLVMPrefix << "GlobalVariable(*"
-         << ModName << ", " << asStr(G.getValueType()) << ", "
-         << toStr(G.isConstant()) << ", " << asStr(G.getLinkage()) << ", " << InitVal
-         << ", \"" << escape(G.getName().str()) << "\", "
-         << "nullptr"
-         << ", " << asStr(G.getThreadLocalMode()) << ", "
-         << std::to_string(G.getAddressSpace()) << ", "
-         << toStr(G.isExternallyInitialized()) << ");\n";
+      OS << formatv("auto {0} = new {1}GlobalVariable(*{2}, {3}, {4}, {5}, "
+                    "{6}, \"{7}\", nullptr, {8}, {9}, {10});\n",
+                    GName, LLVMPrefix, ModName, asStr(G.getValueType()),
+                    toStr(G.isConstant()), asStr(G.getLinkage()), InitVal,
+                    escape(G.getName().str()), asStr(G.getThreadLocalMode()),
+                    std::to_string(G.getAddressSpace()),
+                    toStr(G.isExternallyInitialized()));
     }
   }
 
@@ -1036,17 +1027,14 @@ void IR2Builder::convert(Function &F, raw_ostream &OS) {
   // Function.
   OS << "{\n\n";
   auto FDecl = asStr(&F);
-  OS << LLVMPrefix << "Function *" << FDecl;
-  OS << " = " << LLVMPrefix << "Function::Create("
-     << asStr(F.getFunctionType()) << ", " << asStr(F.getLinkage()) << ", \""
-     << F.getName() << "\", " << ModName << ");\n";
-
-  OS << "\n";
+  OS << formatv(
+      "{0}Function *{1} = {0}Function::Create({2}, {3}, \"{4}\", {5});\n\n",
+      LLVMPrefix, FDecl, asStr(F.getFunctionType()), asStr(F.getLinkage()),
+      F.getName(), ModName);
 
   // Set attributes.
   if (F.getCallingConv() != CallingConv::C) { // C is default.
-    OS << FDecl << "->setCallingConv(" + asStr(F.getCallingConv())
-       << ");\n";
+    OS << FDecl << "->setCallingConv(" + asStr(F.getCallingConv()) << ");\n";
   }
   AttributeList AL = F.getAttributes();
   // TODO: Handle attributes with values.
@@ -1076,8 +1064,7 @@ void IR2Builder::convert(Function &F, raw_ostream &OS) {
 
   // Save arguments into variables for easy access.
   for (const auto &[I, Arg] : enumerate(F.args())) {
-    OS << "auto " << asStr(&Arg) << " = " << FDecl << "->getArg("
-       << std::to_string(I) << ");\n";
+    OS << formatv("auto {0} = {1}->getArg({2});\n", asStr(&Arg), FDecl, I);
   }
 
   if (UseRPO) {
@@ -1085,10 +1072,9 @@ void IR2Builder::convert(Function &F, raw_ostream &OS) {
 
     // Basic block declaration in order.
     for (BasicBlock *BB : RPOT) {
-      std::string bbName = asStr(BB);
-      OS << LLVMPrefix << "BasicBlock* " << bbName << " = " << LLVMPrefix
-         << "BasicBlock::Create(" << Ctx << ", \"" << BB->getName() << "\", "
-         << FDecl << ");\n";
+      OS << formatv(
+          "{0}BasicBlock *{1} = {0}BasicBlock::Create({2}, \"{3}\", {4});\n",
+          LLVMPrefix, asStr(BB), Ctx, BB->getName(), FDecl);
     }
 
     OS << "\n";
@@ -1104,10 +1090,9 @@ void IR2Builder::convert(Function &F, raw_ostream &OS) {
     }
   } else {
     for (BasicBlock &BB : F) {
-      std::string bbName = asStr(&BB);
-      OS << LLVMPrefix << "BasicBlock* " << bbName << " = " << LLVMPrefix
-         << "BasicBlock::Create(" << Ctx << ", \"" << BB.getName() << "\", "
-         << FDecl << ");\n";
+      OS << formatv(
+          "{0}BasicBlock *{1} = {0}BasicBlock::Create({2}, \"{3}\", {4});\n",
+          LLVMPrefix, asStr(&BB), Ctx, BB.getName(), FDecl);
     }
 
     OS << "\n";
@@ -1156,32 +1141,32 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
   case Instruction::Br: {
     const BranchInst *BI = dyn_cast<BranchInst>(I);
     if (BI->isUnconditional()) {
-      Call = "CreateBr(" + Op1 + ")";
+      Call = formatv("CreateBr({0})", Op1);
     } else {
-      Call = "CreateCondBr(" + Op1 + ", " + Op3 + ", " + Op2 + ")";
+      Call = formatv("CreateCondBr({0}, {1}, {2})", Op1, Op3, Op2);
     }
   } break;
   case Instruction::Switch: {
     auto SwI = dyn_cast<SwitchInst>(I);
-    Call = "CreateSwitch(" + Op1 + ", " + Op2 + ", " +
-           std::to_string(SwI->getNumCases()) + ")";
+    Call = formatv("CreateSwitch({0}, {1}, {2})", Op1, Op2,
+                   std::to_string(SwI->getNumCases()));
 
     std::string SwVar = getNextVar();
     // No need to save temporary var into symTable.
-    OS << "auto " << SwVar << " = " << Builder << "." << Call << ";\n";
+    OS << formatv("auto {0} = {1}.{2};\n", SwVar, Builder, Call);
 
     for (auto C : SwI->cases()) {
-      OS << SwVar << "->addCase(" << asStr(C.getCaseValue()) << ", "
-         << asStr(C.getCaseSuccessor()) << ");\n";
+      OS << formatv("{0}->addCase({1}, {2});\n", SwVar, asStr(C.getCaseValue()),
+                    asStr(C.getCaseSuccessor()));
     }
     return;
   } break;
   case Instruction::IndirectBr: {
     auto InbrI = dyn_cast<IndirectBrInst>(I);
-    Call = "CreateIndirectBr(" + Op1 + ", " +
-           std::to_string(InbrI->getNumDestinations()) + ")";
+    Call =
+        formatv("CreateIndirectBr({0}, {1})", Op1, InbrI->getNumDestinations());
     std::string InbrVar = getNextVar();
-    OS << "auto " << InbrVar << " = " << Builder << "." << Call << ";\n";
+    OS << formatv("auto {0} = {1}.{2};\n", InbrVar, Builder, Call);
 
     for (auto C : InbrI->successors()) {
       OS << InbrVar << "->addDestination(" << asStr(C) << ");\n";
@@ -1199,36 +1184,37 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     }
     Args += "}";
     std::string FunDecl = getNextVar();
-    OS << "auto " << FunDecl << " = " << ModName << "->getOrInsertFunction(\""
-       << I->getOperand(2)->getName() << "\", "
-       << asStr(InvI->getFunctionType()) << ");\n";
-    Call = "CreateInvoke(" + FunDecl + ", " + asStr(InvI->getNormalDest()) +
-           ", " + asStr(InvI->getUnwindDest()) + ", " + Args + ")";
+    OS << formatv("auto {0} = {1}->getOrInsertFunction(\"{2}\", {3});\n",
+                  FunDecl, ModName, I->getOperand(2)->getName(),
+                  asStr(InvI->getFunctionType()));
+    Call = formatv("CreateInvoke({0}, {1}, {2}, {3})", FunDecl,
+                   asStr(InvI->getNormalDest()), asStr(InvI->getUnwindDest()),
+                   Args);
     // TODO: Handle operand bundles.
   } break;
   case Instruction::Resume: {
-    Call = "CreateResume(" + Op1 + ")";
+    Call = formatv("CreateResume({0})", Op1);
   } break;
   case Instruction::Unreachable: {
     Call = "CreateUnreachable()";
   } break;
   case Instruction::CleanupRet: {
     auto CurI = dyn_cast<CleanupReturnInst>(I);
-    Call =
-        "CreateCleanupRet(" + Op1 + ", " + asStr(CurI->getUnwindDest()) + ")";
+    Call = formatv("CreateCleanupRet({0}, {1})", Op1,
+                   asStr(CurI->getUnwindDest()));
   } break;
   case Instruction::CatchRet: {
-    Call = "CreateCatchRet(" + Op1 + ", " + Op2 + ")";
+    Call = formatv("CreateCatchRet({0}, {1})", Op1, Op2);
   } break;
   case Instruction::CatchSwitch: {
     auto SwI = dyn_cast<CatchSwitchInst>(I);
-    Call = "CreateCatchSwitch(" + Op1 + ", " + Op2 + ", " +
-           std::to_string(SwI->getNumHandlers()) + ")";
+    Call = formatv("CreateCatchSwitch({0}, {1}, {2})", Op1, Op2,
+                   std::to_string(SwI->getNumHandlers()));
 
     std::string SwVar = asStr(SwI);
-    OS << "auto " << SwVar << " = " << Builder << "." << Call << ";\n";
+    OS << formatv("auto {0} = {1}.{2};\n", SwVar, Builder, Call);
     for (auto C : SwI->handlers()) {
-      OS << SwVar << "->addHandler(" << asStr(C) << ");\n";
+      OS << formatv("{0}->addHandler({1});\n", SwVar, asStr(C));
     }
     return;
   } break;
@@ -1253,14 +1239,14 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
       First = false;
     }
     Args += "}";
-    Call = "CreateCallBr(" + asStr(CallBRI->getFunctionType()) + ", " +
-           asStr(I->getOperand(I->getNumOperands() - 1)) + ", " +
-           asStr(CallBRI->getDefaultDest()) + ", " + Inddest + ", " + Args +
-           ")";
+    Call = formatv("CreateCallBr({0}, {1}, {2}, {3}, {4})",
+                   asStr(CallBRI->getFunctionType()),
+                   asStr(I->getOperand(I->getNumOperands() - 1)),
+                   asStr(CallBRI->getDefaultDest()), Inddest, Args);
     // TODO: Handle operand bundles.
   } break;
   case Instruction::FNeg: {
-    Call = "CreateFNeg(" + Op1 + ")";
+    Call = formatv("CreateFNeg({0})", Op1);
     // TODO: Handle FPMathTag.
   } break;
   case Instruction::Add: {
@@ -1282,21 +1268,21 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     Call = getFPBinArithOp("FMul", Op1, Op2, I);
   } break;
   case Instruction::UDiv: {
-    Call = "CreateUDiv(" + Op1 + ", " + Op2 + ", \"\", " +
-           toStr(I->isExact()) + ")";
+    Call = formatv("CreateUDiv({0}, {1}, \"\", {2})", Op1, Op2,
+                   toStr(I->isExact()));
   } break;
   case Instruction::SDiv: {
-    Call = "CreateSDiv(" + Op1 + ", " + Op2 + ", \"\", " +
-           toStr(I->isExact()) + ")";
+    Call = formatv("CreateSDiv({0}, {1}, \"\", {2})", Op1, Op2,
+                   toStr(I->isExact()));
   } break;
   case Instruction::FDiv: {
     Call = getFPBinArithOp("FDiv", Op1, Op2, I);
   } break;
   case Instruction::URem: {
-    Call = "CreateURem(" + Op1 + ", " + Op2 + ")";
+    Call = formatv("CreateURem({0}, {1})", Op1, Op2);
   } break;
   case Instruction::SRem: {
-    Call = "CreateSRem(" + Op1 + ", " + Op2 + ")";
+    Call = formatv("CreateSRem({0}, {1})", Op1, Op2);
   } break;
   case Instruction::FRem: {
     Call = getFPBinArithOp("FRem", Op1, Op2, I);
@@ -1305,42 +1291,43 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     Call = getBinArithOp("Shl", Op1, Op2, I);
   } break;
   case Instruction::LShr: {
-    Call = "CreateLShr(" + Op1 + ", " + Op2 + ", \"\", " +
-           toStr(I->isExact()) + ")";
+    Call = formatv("CreateLShr({0}, {1}, \"\", {2})", Op1, Op2,
+                   toStr(I->isExact()));
   } break;
   case Instruction::AShr: {
-    Call = "CreateAShr(" + Op1 + ", " + Op2 + ", \"\", " +
-           toStr(I->isExact()) + ")";
+    Call = formatv("CreateAShr({0}, {1}, \"\", {2})", Op1, Op2,
+                   toStr(I->isExact()));
   } break;
   case Instruction::And: {
-    Call = "CreateAnd(" + Op1 + ", " + Op2 + ")";
+    Call = formatv("CreateAnd({0}, {1})", Op1, Op2);
   } break;
   case Instruction::Or: {
-    Call = "CreateOr(" + Op1 + ", " + Op2 + ")";
+    Call = formatv("CreateOr({0}, {1})", Op1, Op2);
   } break;
   case Instruction::Xor: {
-    Call = "CreateXor(" + Op1 + ", " + Op2 + ")";
+    Call = formatv("CreateXor({0}, {1})", Op1, Op2);
   } break;
   case Instruction::Alloca: {
     auto AlI = dyn_cast<AllocaInst>(I);
     auto Val = AlI->getArraySize();
     auto ValStr = Val ? asStr(Val) : "nullptr";
-    Call = "CreateAlloca(" + asStr(AlI->getAllocatedType()) + ", " +
-           std::to_string(AlI->getAddressSpace()) + ", " + ValStr + ")";
+    Call =
+        formatv("CreateAlloca({0}, {1}, {2})", asStr(AlI->getAllocatedType()),
+                AlI->getAddressSpace(), ValStr);
   } break;
   case Instruction::Load: {
     auto LI = dyn_cast<LoadInst>(I);
-    Call = "CreateLoad(" + asStr(I->getType()) + ", " + Op1 + ", " +
-           toStr(LI->isVolatile()) + ")";
+    Call = formatv("CreateLoad({0}, {1}, {2})", asStr(I->getType()), Op1,
+                   toStr(LI->isVolatile()));
   } break;
   case Instruction::Store: {
     auto SI = dyn_cast<StoreInst>(I);
-    Call = "CreateStore(" + Op1 + ", " + Op2 + ", " + toStr(SI->isVolatile()) +
-           ")";
+    Call = formatv("CreateStore({0}, {1}, {2})", Op1, Op2,
+                   toStr(SI->isVolatile()));
   } break;
   case Instruction::GetElementPtr: {
     auto GEPI = dyn_cast<GetElementPtrInst>(I);
-    std::string StrList = LLVMPrefix + "ArrayRef<" + LLVMPrefix + "Value*>(";
+    std::string StrList = formatv("{0}ArrayRef<{0}Value*>(", LLVMPrefix);
     if (I->getNumOperands() > 2)
       StrList += "{";
     bool First = true;
@@ -1353,69 +1340,69 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     if (I->getNumOperands() > 2)
       StrList += "}";
     StrList += ")";
-    Call = "CreateGEP(" + asStr(GEPI->getSourceElementType()) + ", " + Op1 +
-           ", " + StrList + ", \"\", " + toStr(GEPI->isInBounds()) + ")";
+    Call = formatv("CreateGEP({0}, {1}, {2}, \"\", {3})",
+                   asStr(GEPI->getSourceElementType()), Op1, StrList,
+                   toStr(GEPI->isInBounds()));
   } break;
   case Instruction::Fence: {
     auto FI = dyn_cast<FenceInst>(I);
-    Call = "CreateFence(" + asStr(FI->getOrdering()) + ", " +
-           asStr(FI->getSyncScopeID()) + ")";
+    Call = formatv("CreateFence({0}, {1})", asStr(FI->getOrdering()),
+                   asStr(FI->getSyncScopeID()));
   } break;
   case Instruction::AtomicCmpXchg: {
     auto AcmpxI = dyn_cast<AtomicCmpXchgInst>(I);
-    Call = "CreateAtomicCmpXchg(" + Op1 + ", " + Op2 + ", " + Op3 + ", Align(" +
-           std::to_string(AcmpxI->getAlign().value()) + "), " +
-           asStr(AcmpxI->getSuccessOrdering()) + ", " +
-           asStr(AcmpxI->getFailureOrdering()) + ", " +
-           asStr(AcmpxI->getSyncScopeID()) + ")";
+    Call = formatv(
+        "CreateAtomicCmpXchg({0}, {1}, {2}, Align({3}), {4}, {5}, {6})", Op1,
+        Op2, Op3, AcmpxI->getAlign().value(),
+        asStr(AcmpxI->getSuccessOrdering()),
+        asStr(AcmpxI->getFailureOrdering()), asStr(AcmpxI->getSyncScopeID()));
   } break;
   case Instruction::AtomicRMW: {
     auto ArmwI = dyn_cast<AtomicRMWInst>(I);
-    Call = "CreateAtomicRMW(" + asStr(ArmwI->getOperation()) + ", " +
-           Op1 + ", " + Op2 + ", Align(" +
-           std::to_string(ArmwI->getAlign().value()) + "), " +
-           asStr(ArmwI->getOrdering()) + ", " +
-           asStr(ArmwI->getSyncScopeID()) + ")";
+    Call = formatv("CreateAtomicRMW({0}, {1}, {2}, Align({3}), {4}, {5})",
+                   asStr(ArmwI->getOperation()), Op1, Op2,
+                   ArmwI->getAlign().value(), asStr(ArmwI->getOrdering()),
+                   asStr(ArmwI->getSyncScopeID()));
   } break;
   case Instruction::Trunc: {
-    Call = "CreateTrunc(" + Op1 + ", " + asStr(I->getType()) + ")";
+    Call = formatv("CreateTrunc({0}, {1})", Op1, asStr(I->getType()));
   } break;
   case Instruction::ZExt: {
-    Call = "CreateZExt(" + Op1 + ", " + asStr(I->getType()) + ", \"\", " +
-           toStr(I->hasNonNeg()) + ")";
+    Call = formatv("CreateZExt({0}, {1}, \"\", {2})", Op1, asStr(I->getType()),
+                   toStr(I->hasNonNeg()));
   } break;
   case Instruction::SExt: {
-    Call = "CreateSExt(" + Op1 + ", " + asStr(I->getType()) + ")";
+    Call = formatv("CreateSExt({0}, {1})", Op1, asStr(I->getType()));
   } break;
   case Instruction::FPToUI: {
-    Call = "CreateFPToUI(" + Op1 + ", " + asStr(I->getType()) + ")";
+    Call = formatv("CreateFPToUI({0}, {1})", Op1, asStr(I->getType()));
   } break;
   case Instruction::FPToSI: {
-    Call = "CreateFPToSI(" + Op1 + ", " + asStr(I->getType()) + ")";
+    Call = formatv("CreateFPToSI({0}, {1})", Op1, asStr(I->getType()));
   } break;
   case Instruction::UIToFP: {
-    Call = "CreateUIToFP(" + Op1 + ", " + asStr(I->getType()) + ")";
+    Call = formatv("CreateUIToFP({0}, {1})", Op1, asStr(I->getType()));
   } break;
   case Instruction::SIToFP: {
-    Call = "CreateSIToFP(" + Op1 + ", " + asStr(I->getType()) + ")";
+    Call = formatv("CreateSIToFP({0}, {1})", Op1, asStr(I->getType()));
   } break;
   case Instruction::FPTrunc: {
-    Call = "CreateFPTrunc(" + Op1 + ", " + asStr(I->getType()) + ")";
+    Call = formatv("CreateFPTrunc({0}, {1})", Op1, asStr(I->getType()));
   } break;
   case Instruction::FPExt: {
-    Call = "CreateFPExt(" + Op1 + ", " + asStr(I->getType()) + ")";
+    Call = formatv("CreateFPExt({0}, {1})", Op1, asStr(I->getType()));
   } break;
   case Instruction::PtrToInt: {
-    Call = "CreatePtrToInt(" + Op1 + ", " + asStr(I->getType()) + ")";
+    Call = formatv("CreatePtrToInt({0}, {1})", Op1, asStr(I->getType()));
   } break;
   case Instruction::IntToPtr: {
-    Call = "CreateIntToPtr(" + Op1 + ", " + asStr(I->getType()) + ")";
+    Call = formatv("CreateIntToPtr({0}, {1})", Op1, asStr(I->getType()));
   } break;
   case Instruction::BitCast: {
-    Call = "CreateBitCast(" + Op1 + ", " + asStr(I->getType()) + ")";
+    Call = formatv("CreateBitCast({0}, {1})", Op1, asStr(I->getType()));
   } break;
   case Instruction::AddrSpaceCast: {
-    Call = "CreateAddrSpaceCast(" + Op1 + ", " + asStr(I->getType()) + ")";
+    Call = formatv("CreateAddrSpaceCast({0}, {1})", Op1, asStr(I->getType()));
   } break;
   case Instruction::CleanupPad: {
     auto CupI = dyn_cast<CleanupPadInst>(I);
@@ -1428,7 +1415,7 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
       First = false;
     }
     ArgsStr += "}";
-    Call = "CreateCleanupPad(" + Op1 + ", " + ArgsStr + ")";
+    Call = formatv("CreateCleanupPad({0}, {1})", Op1, ArgsStr);
   } break;
   case Instruction::CatchPad: {
     auto CapI = dyn_cast<CatchPadInst>(I);
@@ -1441,26 +1428,23 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
       First = false;
     }
     ArgsStr += "}";
-    Call = "CreateCatchPad(" + Op1 + ", " + ArgsStr + ")";
+    Call = formatv("CreateCatchPad({0}, {1})", Op1, ArgsStr);
   } break;
   case Instruction::ICmp: {
     auto CmpI = dyn_cast<CmpInst>(I);
-    std::string CmpPredicate =
-        LLVMPrefix + asStr(CmpI->getPredicate());
-    Call = "CreateICmp(" + CmpPredicate + ", " + Op1 + ", " + Op2 + ")";
+    std::string CmpPredicate = LLVMPrefix + asStr(CmpI->getPredicate());
+    Call = formatv("CreateICmp({0}, {1}, {2})", CmpPredicate, Op1, Op2);
   } break;
   case Instruction::FCmp: {
     auto CmpI = dyn_cast<CmpInst>(I);
-    std::string CmpPredicate =
-        LLVMPrefix + asStr(CmpI->getPredicate());
-    Call = "CreateFCmp(" + CmpPredicate + ", " + Op1 + ", " + Op2 + ")";
+    std::string CmpPredicate = LLVMPrefix + asStr(CmpI->getPredicate());
+    Call = formatv("CreateFCmp({0}, {1}, {2})", CmpPredicate, Op1, Op2);
   } break;
   case Instruction::PHI: {
     auto PhI = dyn_cast<PHINode>(I);
-    Call = "CreatePHI(" + asStr(I->getType()) + ", " +
-           std::to_string(PhI->getNumIncomingValues()) + ")";
     std::string PhVar = asStr(PhI);
-    OS << "auto " << PhVar << " = " << Builder << "." << Call << ";\n";
+    OS << formatv("auto {0} = {1}.CreatePHI({2}, {3});\n", PhVar, Builder,
+                  asStr(I->getType()), PhI->getNumIncomingValues());
 
     unsigned I = 0;
     for (auto B : PhI->blocks()) {
@@ -1469,7 +1453,7 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
       // we save the line we would output here and output it after the
       // whole function body was outputted.
       std::string Line =
-          PhVar + "->addIncoming(" + IncVal + ", " + asStr(B) + ");\n";
+          formatv("{0}->addIncoming({1}, {2});\n", PhVar, IncVal, asStr(B));
       PhiIncomings.push_back(Line);
       ++I;
     }
@@ -1517,52 +1501,48 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     if (!Fun) {
       if (auto InA = dyn_cast<InlineAsm>(FcI->getCalledOperand())) {
         if (ArgDecl.empty()) {
-          Call = "CreateCall(" + asStr(InA->getFunctionType()) + ", " +
-               asStr(I->getOperand(I->getNumOperands() - 1)) + ")";
+          Call = formatv("CreateCall({0}, {1})", asStr(InA->getFunctionType()),
+                         asStr(I->getOperand(I->getNumOperands() - 1)));
         } else {
-          Call = "CreateCall(" + asStr(InA->getFunctionType()) + ", " +
-                asStr(I->getOperand(I->getNumOperands() - 1)) + ", " + ArgDecl +
-                ")";
+          Call = formatv(
+              "CreateCall({0}, {1}, {2})", asStr(InA->getFunctionType()),
+              asStr(I->getOperand(I->getNumOperands() - 1)), ArgDecl);
         }
-      }
-      else if (FcI->isIndirectCall()) {
+      } else if (FcI->isIndirectCall()) {
         if (ArgDecl.empty()) {
-          Call = "CreateCall(" + asStr(FcI->getFunctionType()) + ", " +
-                asStr(I->getOperand(I->getNumOperands() - 1)) + ")";
+          Call = formatv("CreateCall({0}, {1})", asStr(FcI->getFunctionType()),
+                         asStr(I->getOperand(I->getNumOperands() - 1)));
         } else {
-          Call = "CreateCall(" + asStr(FcI->getFunctionType()) + ", " +
-                asStr(I->getOperand(I->getNumOperands() - 1)) + ", " + ArgDecl +
-                ")";
+          Call = formatv(
+              "CreateCall({0}, {1}, {2})", asStr(FcI->getFunctionType()),
+              asStr(I->getOperand(I->getNumOperands() - 1)), ArgDecl);
         }
-      }
-      else if (auto GA = dyn_cast<GlobalAlias>(FcI->getCalledOperand())) {
+      } else if (auto GA = dyn_cast<GlobalAlias>(FcI->getCalledOperand())) {
         Fun = dyn_cast<Function>(GA->getAliaseeObject());
         assert(Fun && "Global alias is not a function");
-        OS << "auto " << FunDecl << " = " << ModName << "->getOrInsertFunction(\""
-            << Fun->getName() << "\", " << asStr(Fun->getFunctionType())
-            << ");\n";
+        OS << formatv("auto {0} = {1}->getOrInsertFunction(\"{2}\", {3});\n",
+                      FunDecl, ModName, Fun->getName(),
+                      asStr(Fun->getFunctionType()));
         if (!ArgDecl.empty())
-          Call = "CreateCall(" + FunDecl + ", " + ArgDecl + ")";
+          Call = formatv("CreateCall({0}, {1})", FunDecl, ArgDecl);
         else
-          Call = "CreateCall(" + FunDecl + ")";
-      }
-      else {
+          Call = formatv("CreateCall({0})", FunDecl);
+      } else {
         OS << "/* TODO: Unknown CallBase type in Call instruction */\n";
         return;
       }
     } else {
-      // No need to save this variable as it is a temporary one.
-      OS << "auto " << FunDecl << " = " << ModName << "->getOrInsertFunction(\""
-         << Fun->getName() << "\", " << asStr(Fun->getFunctionType())
-         << ");\n";
+      OS << formatv("auto {0} = {1}->getOrInsertFunction(\"{2}\", {3});\n",
+                    FunDecl, ModName, Fun->getName(),
+                    asStr(Fun->getFunctionType()));
       if (!ArgDecl.empty())
-        Call = "CreateCall(" + FunDecl + ", " + ArgDecl + ")";
+        Call = formatv("CreateCall({0}, {1})", FunDecl, ArgDecl);
       else
-        Call = "CreateCall(" + FunDecl + ")";
+        Call = formatv("CreateCall({0})", FunDecl);
     }
   } break;
   case Instruction::Select: {
-    Call = "CreateSelect(" + Op1 + ", " + Op2 + ", " + Op3 + ")";
+    Call = formatv("CreateSelect({0}, {1}, {2})", Op1, Op2, Op3);
   } break;
   case Instruction::UserOp1: {
     // Internal opcode.
@@ -1575,13 +1555,13 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     return;
   };
   case Instruction::VAArg: {
-    Call = "CreateVAArg(" + Op1 + ", " + asStr(I->getType()) + ")";
+    Call = formatv("CreateVAArg({0}, {1})", Op1, asStr(I->getType()));
   } break;
   case Instruction::ExtractElement: {
-    Call = "CreateExtractElement(" + Op1 + ", " + Op2 + ")";
+    Call = formatv("CreateExtractElement({0}, {1})", Op1, Op2);
   } break;
   case Instruction::InsertElement: {
-    Call = "CreateInsertElement(" + Op1 + ", " + Op2 + ", " + Op3 + ")";
+    Call = formatv("CreateInsertElement({0}, {1}, {2})", Op1, Op2, Op3);
   } break;
   case Instruction::ShuffleVector: {
     auto SvI = dyn_cast<ShuffleVectorInst>(I);
@@ -1594,7 +1574,7 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
       First = false;
     }
     MaskStr += "}";
-    Call = "CreateShuffleVector(" + Op1 + ", " + Op2 + ", " + MaskStr + ")";
+    Call = formatv("CreateShuffleVector({0}, {1}, {2})", Op1, Op2, MaskStr);
   } break;
   case Instruction::ExtractValue: {
     auto EvI = dyn_cast<ExtractValueInst>(I);
@@ -1607,7 +1587,7 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
       IsFirst = false;
     }
     ArgStr += "}";
-    Call = "CreateExtractValue(" + Op1 + ", " + ArgStr + ")";
+    Call = formatv("CreateExtractValue({0}, {1})", Op1, ArgStr);
   } break;
   case Instruction::InsertValue: {
     auto IvI = dyn_cast<InsertValueInst>(I);
@@ -1620,21 +1600,20 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
       IsFirst = false;
     }
     ArgStr += "}";
-    Call = "CreateInsertValue(" + Op1 + ", " + Op2 + ", " + ArgStr + ")";
+    Call = formatv("CreateInsertValue({0}, {1}, {2})", Op1, Op2, ArgStr);
   } break;
   case Instruction::LandingPad: {
     auto LPI = dyn_cast<LandingPadInst>(I);
     std::string LPVar = asStr(I);
-    Call = "CreateLandingPad(" + asStr(I->getType()) + ", " +
-           std::to_string(LPI->getNumClauses()) + ")";
-    OS << "auto " << LPVar << " = " << Builder << "." << Call << ";\n";
+    OS << formatv("auto {0} = {1}.CreateLandingPad({2}, {3});\n", LPVar,
+                  Builder, asStr(I->getType()), LPI->getNumClauses());
     for (unsigned I = 0; I < LPI->getNumClauses(); ++I) {
-      OS << LPVar << "->addClause(" << asStr(LPI->getClause(I)) << ");\n";
+      OS << formatv("{0}->addClause({1});\n", LPVar, asStr(LPI->getClause(I)));
     }
     return;
   } break;
   case Instruction::Freeze: {
-    Call = "CreateFreeze(" + Op1 + ")";
+    Call = formatv("CreateFreeze({0})", Op1);
   } break;
   default:
     OS << "// Unknown instruction: " << *I << "\n";
