@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/CIR/LowerToLLVM.h"
+#include "LowerToLLVM.h"
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
