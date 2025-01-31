@@ -171,7 +171,8 @@ private:
       llvm::omp::OpenMPOffloadMappingFlags mapTypeBits,
       std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
       llvm::SmallVectorImpl<mlir::Value> &mapVars,
-      llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms) const;
+      llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
+      std::string mapperIdName = "") const;
 
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;
