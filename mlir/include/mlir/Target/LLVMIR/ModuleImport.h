@@ -71,6 +71,10 @@ public:
   /// specification.
   LogicalResult convertDataLayout();
 
+  /// Converts target triple of the LLVM module to an MLIR target triple
+  /// specification.
+  void convertTargetTriple();
+
   /// Stores the mapping between an LLVM value and its MLIR counterpart.
   void mapValue(llvm::Value *llvm, Value mlir) { mapValue(llvm) = mlir; }
 

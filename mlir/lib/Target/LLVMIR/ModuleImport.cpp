@@ -662,6 +662,11 @@ LogicalResult ModuleImport::convertDataLayout() {
   return success();
 }
 
+void ModuleImport::convertTargetTriple() {
+  mlirModule->setAttr(LLVM::LLVMDialect::getTargetTripleAttrName(),
+                      builder.getStringAttr(llvmModule->getTargetTriple()));
+}
+
 LogicalResult ModuleImport::convertFunctions() {
   for (llvm::Function &func : llvmModule->functions())
     if (failed(processFunction(&func)))
@@ -2451,6 +2456,6 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
     return {};
   if (failed(moduleImport.convertFunctions()))
     return {};
-
+  moduleImport.convertTargetTriple();
   return module;
 }
