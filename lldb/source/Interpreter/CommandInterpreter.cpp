@@ -113,7 +113,6 @@ const char *CommandInterpreter::g_no_argument = "<no-argument>";
 const char *CommandInterpreter::g_need_argument = "<need-argument>";
 const char *CommandInterpreter::g_argument = "<argument>";
 
-
 #define LLDB_PROPERTIES_interpreter
 #include "InterpreterProperties.inc"
 
@@ -285,8 +284,6 @@ bool CommandInterpreter::GetRequireCommandOverwrite() const {
 void CommandInterpreter::Initialize() {
   LLDB_SCOPED_TIMER();
 
-  CommandReturnObject result(m_debugger.GetUseColor());
-
   LoadCommandDictionary();
 
   // An alias arguments vector to reuse - reset it before use...
@@ -447,16 +444,17 @@ void CommandInterpreter::Initialize() {
     CommandAlias *parray_alias =
         AddAlias("parray", cmd_obj_sp, "--element-count %1 --");
     if (parray_alias) {
-        parray_alias->SetHelp
-          ("parray <COUNT> <EXPRESSION> -- lldb will evaluate EXPRESSION "
-           "to get a typed-pointer-to-an-array in memory, and will display "
-           "COUNT elements of that type from the array.");
-        parray_alias->SetHelpLong("");
+      parray_alias->SetHelp(
+          "parray <COUNT> <EXPRESSION> -- lldb will evaluate EXPRESSION "
+          "to get a typed-pointer-to-an-array in memory, and will display "
+          "COUNT elements of that type from the array.");
+      parray_alias->SetHelpLong("");
     }
-    CommandAlias *poarray_alias = AddAlias("poarray", cmd_obj_sp,
-             "--object-description --element-count %1 --");
+    CommandAlias *poarray_alias = AddAlias(
+        "poarray", cmd_obj_sp, "--object-description --element-count %1 --");
     if (poarray_alias) {
-      poarray_alias->SetHelp("poarray <COUNT> <EXPRESSION> -- lldb will "
+      poarray_alias->SetHelp(
+          "poarray <COUNT> <EXPRESSION> -- lldb will "
           "evaluate EXPRESSION to get the address of an array of COUNT "
           "objects in memory, and will call po on them.");
       poarray_alias->SetHelpLong("");
@@ -536,9 +534,7 @@ void CommandInterpreter::Initialize() {
   }
 }
 
-void CommandInterpreter::Clear() {
-  m_command_io_handler_sp.reset();
-}
+void CommandInterpreter::Clear() { m_command_io_handler_sp.reset(); }
 
 const char *CommandInterpreter::ProcessEmbeddedScriptCommands(const char *arg) {
   // This function has not yet been implemented.
@@ -851,9 +847,12 @@ void CommandInterpreter::LoadCommandDictionary() {
     // now "bt 3" is the preferred form, in line with gdb.
     if (bt_regex_cmd_up->AddRegexCommand("^([[:digit:]]+)[[:space:]]*$",
                                          "thread backtrace -c %1") &&
-        bt_regex_cmd_up->AddRegexCommand("^(-[^[:space:]].*)$", "thread backtrace %1") &&
-        bt_regex_cmd_up->AddRegexCommand("^all[[:space:]]*$", "thread backtrace all") &&
-        bt_regex_cmd_up->AddRegexCommand("^[[:space:]]*$", "thread backtrace")) {
+        bt_regex_cmd_up->AddRegexCommand("^(-[^[:space:]].*)$",
+                                         "thread backtrace %1") &&
+        bt_regex_cmd_up->AddRegexCommand("^all[[:space:]]*$",
+                                         "thread backtrace all") &&
+        bt_regex_cmd_up->AddRegexCommand("^[[:space:]]*$",
+                                         "thread backtrace")) {
       CommandObjectSP command_sp(bt_regex_cmd_up.release());
       m_command_dict[std::string(command_sp->GetCommandName())] = command_sp;
     }
@@ -954,13 +953,14 @@ int CommandInterpreter::GetCommandNamesMatchingPartialString(
   return matches.GetSize();
 }
 
-CommandObjectMultiword *CommandInterpreter::VerifyUserMultiwordCmdPath(
-    Args &path, bool leaf_is_command, Status &result) {
+CommandObjectMultiword *
+CommandInterpreter::VerifyUserMultiwordCmdPath(Args &path, bool leaf_is_command,
+                                               Status &result) {
   result.Clear();
 
   auto get_multi_or_report_error =
       [&result](CommandObjectSP cmd_sp,
-                           const char *name) -> CommandObjectMultiword * {
+                const char *name) -> CommandObjectMultiword * {
     if (!cmd_sp) {
       result = Status::FromErrorStringWithFormat(
           "Path component: '%s' not found", name);
@@ -1265,8 +1265,8 @@ CommandInterpreter::GetCommandObject(llvm::StringRef cmd_str,
   // Try to find a match among commands and aliases. Allowing inexact matches,
   // but perferring exact matches.
   return GetCommandSP(cmd_str, /*include_aliases=*/true, /*exact=*/false,
-                             matches, descriptions)
-                    .get();
+                      matches, descriptions)
+      .get();
 }
 
 CommandObject *CommandInterpreter::GetUserCommandObject(
@@ -1299,8 +1299,8 @@ CommandObject *CommandInterpreter::GetUserCommandObject(
   StringList tmp_list;
   StringList *matches_ptr = matches ? matches : &tmp_list;
   AddNamesMatchingPartialString(GetUserCommands(), cmd_str, *matches_ptr);
-  AddNamesMatchingPartialString(GetUserMultiwordCommands(),
-                                cmd_str, *matches_ptr);
+  AddNamesMatchingPartialString(GetUserMultiwordCommands(), cmd_str,
+                                *matches_ptr);
 
   return {};
 }
@@ -1798,8 +1798,7 @@ Status CommandInterpreter::PreprocessCommand(std::string &command) {
   return error;
 }
 
-Status
-CommandInterpreter::PreprocessToken(std::string &expr_str) {
+Status CommandInterpreter::PreprocessToken(std::string &expr_str) {
   Status error;
   ExecutionContext exe_ctx(GetExecutionContext());
 
@@ -1819,9 +1818,8 @@ CommandInterpreter::PreprocessToken(std::string &expr_str) {
   options.SetTryAllThreads(true);
   options.SetTimeout(std::nullopt);
 
-  ExpressionResults expr_result =
-      target.EvaluateExpression(expr_str.c_str(), exe_ctx.GetFramePtr(),
-                                expr_result_valobj_sp, options);
+  ExpressionResults expr_result = target.EvaluateExpression(
+      expr_str.c_str(), exe_ctx.GetFramePtr(), expr_result_valobj_sp, options);
 
   if (expr_result == eExpressionCompleted) {
     Scalar scalar;
@@ -1890,7 +1888,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
 
   Log *log = GetLog(LLDBLog::Commands);
   llvm::PrettyStackTraceFormat stack_trace("HandleCommand(command = \"%s\")",
-                                   command_line);
+                                           command_line);
 
   LLDB_LOGF(log, "Processing command: %s", command_line);
   LLDB_SCOPED_TIMERF("Processing command: %s.", command_line);
@@ -2011,7 +2009,8 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   // has the command expanded to the full name.  For example, if the input was
   // "br s -n main", command_string is now "breakpoint set -n main".
   if (log) {
-    llvm::StringRef command_name = cmd_obj ? cmd_obj->GetCommandName() : "<not found>";
+    llvm::StringRef command_name =
+        cmd_obj ? cmd_obj->GetCommandName() : "<not found>";
     LLDB_LOGF(log, "HandleCommand, cmd_obj : '%s'", command_name.str().c_str());
     LLDB_LOGF(log, "HandleCommand, (revised) command_string: '%s'",
               command_string.c_str());
@@ -2216,11 +2215,15 @@ CommandInterpreter::GetAlias(llvm::StringRef alias_name) const {
   return nullptr;
 }
 
-bool CommandInterpreter::HasCommands() const { return (!m_command_dict.empty()); }
+bool CommandInterpreter::HasCommands() const {
+  return (!m_command_dict.empty());
+}
 
 bool CommandInterpreter::HasAliases() const { return (!m_alias_dict.empty()); }
 
-bool CommandInterpreter::HasUserCommands() const { return (!m_user_dict.empty()); }
+bool CommandInterpreter::HasUserCommands() const {
+  return (!m_user_dict.empty());
+}
 
 bool CommandInterpreter::HasUserMultiwordCommands() const {
   return (!m_user_mw_dict.empty());
@@ -2557,8 +2560,7 @@ bool CommandInterpreter::DidProcessStopAbnormally() const {
     const StopReason reason = stop_info->GetStopReason();
     if (reason == eStopReasonException ||
         reason == eStopReasonInstrumentation ||
-        reason == eStopReasonProcessorTrace || reason == eStopReasonInterrupt ||
-        reason == eStopReasonHistoryBoundary)
+        reason == eStopReasonProcessorTrace || reason == eStopReasonInterrupt)
       return true;
 
     if (reason == eStopReasonSignal) {
@@ -2579,20 +2581,18 @@ bool CommandInterpreter::DidProcessStopAbnormally() const {
   return false;
 }
 
-void
-CommandInterpreter::HandleCommands(const StringList &commands,
-                                   const ExecutionContext &override_context,
-                                   const CommandInterpreterRunOptions &options,
-                                   CommandReturnObject &result) {
+void CommandInterpreter::HandleCommands(
+    const StringList &commands, const ExecutionContext &override_context,
+    const CommandInterpreterRunOptions &options, CommandReturnObject &result) {
 
   OverrideExecutionContext(override_context);
   HandleCommands(commands, options, result);
   RestoreExecutionContext();
 }
 
-void CommandInterpreter::HandleCommands(const StringList &commands,
-                                        const CommandInterpreterRunOptions &options,
-                                        CommandReturnObject &result) {
+void CommandInterpreter::HandleCommands(
+    const StringList &commands, const CommandInterpreterRunOptions &options,
+    CommandReturnObject &result) {
   size_t num_lines = commands.GetSize();
 
   // If we are going to continue past a "continue" then we need to run the
@@ -2729,8 +2729,9 @@ void CommandInterpreter::HandleCommandsFromFile(
   RestoreExecutionContext();
 }
 
-void CommandInterpreter::HandleCommandsFromFile(FileSpec &cmd_file,
-    const CommandInterpreterRunOptions &options, CommandReturnObject &result) {
+void CommandInterpreter::HandleCommandsFromFile(
+    FileSpec &cmd_file, const CommandInterpreterRunOptions &options,
+    CommandReturnObject &result) {
   if (!FileSystem::Instance().Exists(cmd_file)) {
     result.AppendErrorWithFormat(
         "Error reading commands from file %s - file not found.\n",
@@ -3135,9 +3136,9 @@ bool CommandInterpreter::EchoCommandNonInteractive(
 
 void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
                                                 std::string &line) {
-    // If we were interrupted, bail out...
-    if (WasInterrupted())
-      return;
+  // If we were interrupted, bail out...
+  if (WasInterrupted())
+    return;
 
   const bool is_interactive = io_handler.GetIsInteractive();
   const bool allow_repeats =

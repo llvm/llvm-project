@@ -131,7 +131,9 @@ define dso_local void @test_null_arg(ptr %f) {
 ; ALL-NEXT:    xorl %edx, %edx
 ; ALL-NEXT:    callq test_noop1
 ; ALL-NEXT:    nop
+; ALL-NEXT:    .seh_startepilogue
 ; ALL-NEXT:    addq $40, %rsp
+; ALL-NEXT:    .seh_endepilogue
 ; ALL-NEXT:    retq
 ; ALL-NEXT:    .seh_endproc
 entry:
