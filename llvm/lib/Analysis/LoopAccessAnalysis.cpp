@@ -1980,14 +1980,9 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   TypeSize AStoreSz = DL.getTypeStoreSize(ATy),
            BStoreSz = DL.getTypeStoreSize(BTy);
 
-  // Fail early if either store size is scalable.
-  if (AStoreSz.isScalable() || BStoreSz.isScalable())
-    return MemoryDepChecker::Dependence::Unknown;
-
   // If store sizes are not the same, set TypeByteSize to zero, so we can check
   // it in the caller.
-  uint64_t ASz = alignTo(AStoreSz, DL.getABITypeAlign(ATy)),
-           BSz = alignTo(BStoreSz, DL.getABITypeAlign(BTy)),
+  uint64_t ASz = DL.getTypeAllocSize(ATy), BSz = DL.getTypeAllocSize(BTy),
            TypeByteSize = AStoreSz == BStoreSz ? BSz : 0;
 
   uint64_t StrideAScaled = std::abs(StrideAPtrInt) * ASz;
