@@ -406,15 +406,17 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
 }
 
 unsigned AArch64Subtarget::getHwModeSet() const {
+  AArch64HwModeBits Modes = AArch64HwModeBits::DefaultMode;
+
   // Use a special hardware mode in streaming[-compatible] functions with
   // aarch64-enable-zpr-predicate-spills. This changes the spill size (and
   // alignment) for the predicate register class.
   if (EnableZPRPredicateSpills.getValue() &&
       (isStreaming() || isStreamingCompatible())) {
-    return to_underlying(AArch64HwModeBits::SMEWithZPRPredicateSpills);
+    Modes |= AArch64HwModeBits::SMEWithZPRPredicateSpills;
   }
 
-  return to_underlying(AArch64HwModeBits::DefaultMode);
+  return to_underlying(Modes);
 }
 
 const CallLowering *AArch64Subtarget::getCallLowering() const {
