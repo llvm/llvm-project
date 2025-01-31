@@ -7445,6 +7445,13 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       // comparing against the legacy cost isn't desirable.
       if (isa<VPPartialReductionRecipe>(&R))
         return true;
+
+      // The VPlan-based cost model may calculate the cost of strided load/store
+      // which can't be modeled in the legacy cost model.
+      if (isa<VPWidenLoadEVLRecipe, VPWidenStoreEVLRecipe>(&R))
+        if (cast<VPWidenMemoryRecipe>(&R)->isReverse())
+          return true;
+
       if (Instruction *UI = GetInstructionForCost(&R))
         SeenInstrs.insert(UI);
     }
