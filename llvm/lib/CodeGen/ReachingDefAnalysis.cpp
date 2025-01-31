@@ -338,11 +338,9 @@ int ReachingDefAnalysis::getReachingDef(MachineInstr *MI, Register Reg) const {
   int LatestDef = ReachingDefDefaultVal;
 
   if (Reg.isStack()) {
-    int FrameIndex = Reg.stackSlotIndex();
-    int Key = FrameIndex - ObjectIndexBegin;
-
     // Check that there was a reaching def.
-    auto Lookup = MBBFrameObjsReachingDefs.find({MBBNumber, Key});
+    int FrameIndex = Reg.stackSlotIndex();
+    auto Lookup = MBBFrameObjsReachingDefs.find({MBBNumber, FrameIndex});
     if (Lookup == MBBFrameObjsReachingDefs.end())
       return LatestDef;
     auto &Defs = Lookup->second;
