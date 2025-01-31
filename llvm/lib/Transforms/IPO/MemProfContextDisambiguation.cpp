@@ -677,18 +677,18 @@ private:
 
   /// Computes the alloc type corresponding to the given context ids, by
   /// unioning their recorded alloc types.
-  uint8_t computeAllocType(DenseSet<uint32_t> &ContextIds);
+  uint8_t computeAllocType(DenseSet<uint32_t> &ContextIds) const;
 
   /// Returns the allocation type of the intersection of the contexts of two
   /// nodes (based on their provided context id sets), optimized for the case
   /// when Node1Ids is smaller than Node2Ids.
   uint8_t intersectAllocTypesImpl(const DenseSet<uint32_t> &Node1Ids,
-                                  const DenseSet<uint32_t> &Node2Ids);
+                                  const DenseSet<uint32_t> &Node2Ids) const;
 
   /// Returns the allocation type of the intersection of the contexts of two
   /// nodes (based on their provided context id sets).
   uint8_t intersectAllocTypes(const DenseSet<uint32_t> &Node1Ids,
-                              const DenseSet<uint32_t> &Node2Ids);
+                              const DenseSet<uint32_t> &Node2Ids) const;
 
   /// Create a clone of Edge's callee and move Edge to that new callee node,
   /// performing the necessary context id and allocation type updates.
@@ -1057,6 +1057,7 @@ template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::removeEdgeFromGraph(
     ContextEdge *Edge, EdgeIter *EI, bool CalleeIter) {
   assert(!EI || (*EI)->get() == Edge);
+  assert(!Edge->isRemoved());
   // Save the Caller and Callee pointers so we can erase Edge from their edge
   // lists after clearing Edge below. We do the clearing first in case it is
   // destructed after removing from the edge lists (if those were the last
@@ -1069,6 +1070,10 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::removeEdgeFromGraph(
   // reference.
   Edge->clear();
 
+#ifndef NDEBUG
+  auto CalleeCallerCount = Callee->CallerEdges.size();
+  auto CallerCalleeCount = Caller->CalleeEdges.size();
+#endif
   if (!EI) {
     Callee->eraseCallerEdge(Edge);
     Caller->eraseCalleeEdge(Edge);
@@ -1079,6 +1084,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::removeEdgeFromGraph(
     Caller->eraseCalleeEdge(Edge);
     *EI = Callee->CallerEdges.erase(*EI);
   }
+  assert(Callee->CallerEdges.size() < CalleeCallerCount);
+  assert(Caller->CalleeEdges.size() < CallerCalleeCount);
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
@@ -1152,12 +1159,12 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 uint8_t CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::computeAllocType(
-    DenseSet<uint32_t> &ContextIds) {
+    DenseSet<uint32_t> &ContextIds) const {
   uint8_t BothTypes =
       (uint8_t)AllocationType::Cold | (uint8_t)AllocationType::NotCold;
   uint8_t AllocType = (uint8_t)AllocationType::None;
   for (auto Id : ContextIds) {
-    AllocType |= (uint8_t)ContextIdToAllocationType[Id];
+    AllocType |= (uint8_t)ContextIdToAllocationType.at(Id);
     // Bail early if alloc type reached both, no further refinement.
     if (AllocType == BothTypes)
       return AllocType;
@@ -1168,14 +1175,15 @@ uint8_t CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::computeAllocType(
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 uint8_t
 CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::intersectAllocTypesImpl(
-    const DenseSet<uint32_t> &Node1Ids, const DenseSet<uint32_t> &Node2Ids) {
+    const DenseSet<uint32_t> &Node1Ids,
+    const DenseSet<uint32_t> &Node2Ids) const {
   uint8_t BothTypes =
       (uint8_t)AllocationType::Cold | (uint8_t)AllocationType::NotCold;
   uint8_t AllocType = (uint8_t)AllocationType::None;
   for (auto Id : Node1Ids) {
     if (!Node2Ids.count(Id))
       continue;
-    AllocType |= (uint8_t)ContextIdToAllocationType[Id];
+    AllocType |= (uint8_t)ContextIdToAllocationType.at(Id);
     // Bail early if alloc type reached both, no further refinement.
     if (AllocType == BothTypes)
       return AllocType;
@@ -1185,7 +1193,8 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::intersectAllocTypesImpl(
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 uint8_t CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::intersectAllocTypes(
-    const DenseSet<uint32_t> &Node1Ids, const DenseSet<uint32_t> &Node2Ids) {
+    const DenseSet<uint32_t> &Node1Ids,
+    const DenseSet<uint32_t> &Node2Ids) const {
   if (Node1Ids.size() < Node2Ids.size())
     return intersectAllocTypesImpl(Node1Ids, Node2Ids);
   else
@@ -4203,7 +4212,8 @@ static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
 // Locate the summary for F. This is complicated by the fact that it might
 // have been internalized or promoted.
 static ValueInfo findValueInfoForFunc(const Function &F, const Module &M,
-                                      const ModuleSummaryIndex *ImportSummary) {
+                                      const ModuleSummaryIndex *ImportSummary,
+                                      const Function *CallingFunc = nullptr) {
   // FIXME: Ideally we would retain the original GUID in some fashion on the
   // function (e.g. as metadata), but for now do our best to locate the
   // summary without that information.
@@ -4218,20 +4228,48 @@ static ValueInfo findValueInfoForFunc(const Function &F, const Module &M,
   // Now query with the original name before any promotion was performed.
   StringRef OrigName =
       ModuleSummaryIndex::getOriginalNameBeforePromote(F.getName());
+  // When this pass is enabled, we always add thinlto_src_file provenance
+  // metadata to imported function definitions, which allows us to recreate the
+  // original internal symbol's GUID.
+  auto SrcFileMD = F.getMetadata("thinlto_src_file");
+  // If this is a call to an imported/promoted local for which we didn't import
+  // the definition, the metadata will not exist on the declaration. However,
+  // since we are doing this early, before any inlining in the LTO backend, we
+  // can simply look at the metadata on the calling function which must have
+  // been from the same module if F was an internal symbol originally.
+  if (!SrcFileMD && F.isDeclaration()) {
+    // We would only call this for a declaration for a direct callsite, in which
+    // case the caller would have provided the calling function pointer.
+    assert(CallingFunc);
+    SrcFileMD = CallingFunc->getMetadata("thinlto_src_file");
+    // If this is a promoted local (OrigName != F.getName()), since this is a
+    // declaration, it must be imported from a different module and therefore we
+    // should always find the metadata on its calling function. Any call to a
+    // promoted local that came from this module should still be a definition.
+    assert(SrcFileMD || OrigName == F.getName());
+  }
+  StringRef SrcFile = M.getSourceFileName();
+  if (SrcFileMD)
+    SrcFile = dyn_cast<MDString>(SrcFileMD->getOperand(0))->getString();
   std::string OrigId = GlobalValue::getGlobalIdentifier(
-      OrigName, GlobalValue::InternalLinkage, M.getSourceFileName());
+      OrigName, GlobalValue::InternalLinkage, SrcFile);
   TheFnVI = ImportSummary->getValueInfo(GlobalValue::getGUID(OrigId));
-  if (TheFnVI)
-    return TheFnVI;
-  // Could be a promoted local imported from another module. We need to pass
-  // down more info here to find the original module id. For now, try with
-  // the OrigName which might have been stored in the OidGuidMap in the
-  // index. This would not work if there were same-named locals in multiple
-  // modules, however.
-  auto OrigGUID =
-      ImportSummary->getGUIDFromOriginalID(GlobalValue::getGUID(OrigName));
-  if (OrigGUID)
-    TheFnVI = ImportSummary->getValueInfo(OrigGUID);
+  // Internal func in original module may have gotten a numbered suffix if we
+  // imported an external function with the same name. This happens
+  // automatically during IR linking for naming conflicts. It would have to
+  // still be internal in that case (otherwise it would have been renamed on
+  // promotion in which case we wouldn't have a naming conflict).
+  if (!TheFnVI && OrigName == F.getName() && F.hasLocalLinkage() &&
+      F.getName().contains('.')) {
+    OrigName = F.getName().rsplit('.').first;
+    OrigId = GlobalValue::getGlobalIdentifier(
+        OrigName, GlobalValue::InternalLinkage, SrcFile);
+    TheFnVI = ImportSummary->getValueInfo(GlobalValue::getGUID(OrigId));
+  }
+  // The only way we may not have a VI is if this is a declaration created for
+  // an imported reference. For distributed ThinLTO we may not have a VI for
+  // such declarations in the distributed summary.
+  assert(TheFnVI || F.isDeclaration());
   return TheFnVI;
 }
 
@@ -4590,7 +4628,7 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
           // Locate the synthesized callsite info for the callee VI, if any was
           // created, and use that for cloning.
           ValueInfo CalleeVI =
-              findValueInfoForFunc(*CalledFunction, M, ImportSummary);
+              findValueInfoForFunc(*CalledFunction, M, ImportSummary, &F);
           if (CalleeVI && MapTailCallCalleeVIToCallsite.count(CalleeVI)) {
             auto Callsite = MapTailCallCalleeVIToCallsite.find(CalleeVI);
             assert(Callsite != MapTailCallCalleeVIToCallsite.end());
