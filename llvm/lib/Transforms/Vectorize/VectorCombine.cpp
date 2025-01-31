@@ -3146,13 +3146,11 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
   return true;
 }
 
+/// If we're interleaving 2 constant splats, for instance `<vscale x 8 x i32>
+/// <splat of 666>` and `<vscale x 8 x i32> <splat of 777>`, we can create a
+/// larger splat `<vscale x 8 x i64> <splat of ((777 << 32) | 666)>` first
+/// before casting it back into `<vscale x 16 x i32>`.
 bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
-  // If we're interleaving 2 constant splats, for instance `<vscale x 8 x i32>
-  // <splat of 666>` and `<vscale x 8 x i32> <splat of 777>`, we can create a
-  // larger splat
-  // `<vscale x 8 x i64> <splat of ((777 << 32) | 666)>` first before casting it
-  // back into `<vscale x 16 x i32>`.
-  using namespace PatternMatch;
   const APInt *SplatVal0, *SplatVal1;
   if (!match(&I, m_Intrinsic<Intrinsic::vector_interleave2>(
                      m_APInt(SplatVal0), m_APInt(SplatVal1))))
