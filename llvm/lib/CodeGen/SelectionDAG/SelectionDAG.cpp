@@ -363,7 +363,7 @@ bool ISD::isFreezeUndef(const SDNode *N) {
 template <typename ConstNodeType>
 bool ISD::matchUnaryPredicateImpl(SDValue Op,
                                   std::function<bool(ConstNodeType *)> Match,
-                                  bool AllowUndefs, bool AllowTrunc) {
+                                  bool AllowUndefs, bool AllowTruncation) {
   // FIXME: Add support for scalar UNDEF cases?
   if (auto *C = dyn_cast<ConstNodeType>(Op))
     return Match(C);
@@ -382,7 +382,8 @@ bool ISD::matchUnaryPredicateImpl(SDValue Op,
     }
 
     auto *Cst = dyn_cast<ConstNodeType>(Op.getOperand(i));
-    if (!Cst || (!AllowTrunc && Cst->getValueType(0) != SVT) || !Match(Cst))
+    if (!Cst || (!AllowTruncation && Cst->getValueType(0) != SVT) ||
+        !Match(Cst))
       return false;
   }
   return true;

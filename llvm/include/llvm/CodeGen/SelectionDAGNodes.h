@@ -3262,15 +3262,15 @@ namespace ISD {
   bool matchUnaryPredicateImpl(SDValue Op,
                                std::function<bool(ConstNodeType *)> Match,
                                bool AllowUndefs = false,
-                               bool AllowTrunc = false);
+                               bool AllowTruncation = false);
 
   /// Hook for matching ConstantSDNode predicate
   inline bool matchUnaryPredicate(SDValue Op,
                                   std::function<bool(ConstantSDNode *)> Match,
                                   bool AllowUndefs = false,
-                                  bool AllowTrunc = false) {
+                                  bool AllowTruncation = false) {
     return matchUnaryPredicateImpl<ConstantSDNode>(Op, Match, AllowUndefs,
-                                                   AllowTrunc);
+                                                   AllowTruncation);
   }
 
   /// Hook for matching ConstantFPSDNode predicate
