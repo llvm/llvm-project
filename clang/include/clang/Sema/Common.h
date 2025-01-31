@@ -16,17 +16,17 @@
 
 namespace clang {
 
-using LLVMFnRef = llvm::function_ref<bool(clang::QualType PassedType)>;
-using PairParam = std::pair<unsigned int, unsigned int>;
-using CheckParam = std::variant<PairParam, LLVMFnRef>;
-
 bool CheckArgTypeIsCorrect(
     Sema *S, Expr *Arg, QualType ExpectedType,
     llvm::function_ref<bool(clang::QualType PassedType)> Check);
 
 bool CheckAllArgTypesAreCorrect(
-    Sema *SemaPtr, CallExpr *TheCall,
-    std::variant<QualType, std::nullopt_t> ExpectedType, CheckParam Check);
+    Sema *S, CallExpr *TheCall, QualType ExpectedType,
+    llvm::function_ref<bool(clang::QualType PassedType)> Check);
+
+bool CheckAllArgTypesAreCorrect(Sema *SemaPtr, CallExpr *TheCall,
+                                unsigned int NumOfElts,
+                                unsigned int expectedNumOfElts);
 
 } // namespace clang
 

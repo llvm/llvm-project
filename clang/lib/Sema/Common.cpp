@@ -27,45 +27,41 @@ bool clang::CheckArgTypeIsCorrect(
 }
 
 bool clang::CheckAllArgTypesAreCorrect(
-    Sema *SemaPtr, CallExpr *TheCall,
-    std::variant<QualType, std::nullopt_t> ExpectedType, CheckParam Check) {
-  unsigned int NumElts;
-  unsigned int expected;
-  if (auto *n = std::get_if<PairParam>(&Check)) {
-    if (SemaPtr->checkArgCount(TheCall, n->first)) {
+    Sema *S, CallExpr *TheCall, QualType ExpectedType,
+    llvm::function_ref<bool(clang::QualType PassedType)> Check) {
+  for (unsigned i = 0; i < TheCall->getNumArgs(); ++i) {
+    Expr *Arg = TheCall->getArg(i);
+    if (CheckArgTypeIsCorrect(S, Arg, ExpectedType, Check)) {
       return true;
     }
-    NumElts = n->first;
-    expected = n->second;
-  } else {
-    NumElts = TheCall->getNumArgs();
+  }
+  return false;
+}
+
+bool clang::CheckAllArgTypesAreCorrect(Sema *SemaPtr, CallExpr *TheCall,
+                                       unsigned int NumOfElts,
+                                       unsigned int expectedNumOfElts) {
+  if (SemaPtr->checkArgCount(TheCall, NumOfElts)) {
+    return true;
   }
 
-  for (unsigned i = 0; i < NumElts; i++) {
+  for (unsigned i = 0; i < NumOfElts; i++) {
     Expr *localArg = TheCall->getArg(i);
-    if (auto *val = std::get_if<QualType>(&ExpectedType)) {
-      if (auto *fn = std::get_if<LLVMFnRef>(&Check)) {
-        return CheckArgTypeIsCorrect(SemaPtr, localArg, *val, *fn);
-      }
-    }
-
     QualType PassedType = localArg->getType();
-    if (PassedType->getAs<VectorType>() == nullptr) {
-      SemaPtr->Diag(localArg->getBeginLoc(),
-                    diag::err_typecheck_convert_incompatible)
-          << PassedType
-          << SemaPtr->Context.getVectorType(PassedType, expected,
-                                            VectorKind::Generic)
-          << 1 << 0 << 0;
+    QualType ExpectedType = SemaPtr->Context.getVectorType(
+        PassedType, expectedNumOfElts, VectorKind::Generic);
+    auto Check = [](QualType PassedType) {
+      return PassedType->getAs<VectorType>() == nullptr;
+    };
+
+    if (CheckArgTypeIsCorrect(SemaPtr, localArg, ExpectedType, Check)) {
       return true;
     }
   }
 
-  if (std::get_if<PairParam>(&Check)) {
-    if (auto *localArgVecTy =
-            TheCall->getArg(0)->getType()->getAs<VectorType>()) {
-      TheCall->setType(localArgVecTy->getElementType());
-    }
+  if (auto *localArgVecTy =
+          TheCall->getArg(0)->getType()->getAs<VectorType>()) {
+    TheCall->setType(localArgVecTy->getElementType());
   }
 
   return false;
