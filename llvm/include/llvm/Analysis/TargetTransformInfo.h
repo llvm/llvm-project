@@ -1759,6 +1759,10 @@ public:
   /// scalable version of the vectorized loop.
   bool preferFixedOverScalableIfEqualCost() const;
 
+  /// \returns True if target prefers SLP vectorizer with altermate opcode
+  /// vectorization, false - otherwise.
+  bool preferAlternateOpcodeVectorization() const;
+
   /// \returns True if the target prefers reductions in loop.
   bool preferInLoopReduction(unsigned Opcode, Type *Ty,
                              ReductionFlags Flags) const;
@@ -2306,6 +2310,7 @@ public:
                                         unsigned ChainSizeInBytes,
                                         VectorType *VecTy) const = 0;
   virtual bool preferFixedOverScalableIfEqualCost() const = 0;
+  virtual bool preferAlternateOpcodeVectorization() const = 0;
   virtual bool preferInLoopReduction(unsigned Opcode, Type *Ty,
                                      ReductionFlags) const = 0;
   virtual bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
@@ -3105,6 +3110,9 @@ public:
   }
   bool preferFixedOverScalableIfEqualCost() const override {
     return Impl.preferFixedOverScalableIfEqualCost();
+  }
+  bool preferAlternateOpcodeVectorization() const override {
+    return Impl.preferAlternateOpcodeVectorization();
   }
   bool preferInLoopReduction(unsigned Opcode, Type *Ty,
                              ReductionFlags Flags) const override {
