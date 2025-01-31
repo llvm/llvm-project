@@ -2457,10 +2457,86 @@ static void emitSimdlenSafelenClause(CodeGenFunction &CGF,
   }
 }
 
+// Check for the presence of an `OMPOrderedDirective`,
+// i.e., `ordered` in `#pragma omp ordered simd`.
+//
+// Consider the following source code:
+// ```
+// __attribute__((noinline)) void omp_simd_loop(float X[ARRAY_SIZE][ARRAY_SIZE])
+// {
+//     for (int r = 1; r < ARRAY_SIZE; ++r) {
+//         for (int c = 1; c < ARRAY_SIZE; ++c) {
+// #pragma omp simd
+//             for (int k = 2; k < ARRAY_SIZE; ++k) {
+// #pragma omp ordered simd
+//                 X[r][k] = X[r][k - 2] + sinf((float)(r / c));
+//             }
+//         }
+//     }
+// }
+// ```
+//
+// Suppose we are in `CodeGenFunction::EmitOMPSimdInit(const OMPLoopDirective
+// &D)`. By examining `D.dump()` we have the following AST containing
+// `OMPOrderedDirective`:
+//
+// ```
+// OMPSimdDirective 0x1c32950
+// `-CapturedStmt 0x1c32028
+//   |-CapturedDecl 0x1c310e8
+//   | |-ForStmt 0x1c31e30
+//   | | |-DeclStmt 0x1c31298
+//   | | | `-VarDecl 0x1c31208  used k 'int' cinit
+//   | | |   `-IntegerLiteral 0x1c31278 'int' 2
+//   | | |-<<<NULL>>>
+//   | | |-BinaryOperator 0x1c31308 'int' '<'
+//   | | | |-ImplicitCastExpr 0x1c312f0 'int' <LValueToRValue>
+//   | | | | `-DeclRefExpr 0x1c312b0 'int' lvalue Var 0x1c31208 'k' 'int'
+//   | | | `-IntegerLiteral 0x1c312d0 'int' 256
+//   | | |-UnaryOperator 0x1c31348 'int' prefix '++'
+//   | | | `-DeclRefExpr 0x1c31328 'int' lvalue Var 0x1c31208 'k' 'int'
+//   | | `-CompoundStmt 0x1c31e18
+//   | |   `-OMPOrderedDirective 0x1c31dd8
+//   | |     |-OMPSimdClause 0x1c31380
+//   | |     `-CapturedStmt 0x1c31cd0
+// ```
+//
+// Note the presence of `OMPOrderedDirective` above:
+// It's (transitively) nested in a `CapturedStmt` representing the pragma
+// annotated compound statement. Thus, we need to consider this nesting and
+// include checking the `getCapturedStmt` in this case.
+static bool hasOrderedDirective(const Stmt *S) {
+  if (isa<OMPOrderedDirective>(S))
+    return true;
+
+  if (const auto *CS = dyn_cast<CapturedStmt>(S))
+    return hasOrderedDirective(CS->getCapturedStmt());
+
+  for (const Stmt *Child : S->children()) {
+    if (Child && hasOrderedDirective(Child))
+      return true;
+  }
+
+  return false;
+}
+
+static void applyConservativeSimdOrderedDirective(const Stmt &AssociatedStmt,
+                                                  LoopInfoStack &LoopStack) {
+  // Check for the presence of an `OMPOrderedDirective`
+  // i.e., `ordered` in `#pragma omp ordered simd`
+  bool HasOrderedDirective = hasOrderedDirective(&AssociatedStmt);
+  // If present then conservatively disable loop vectorization
+  // analogously to how `emitSimdlenSafelenClause` does.
+  if (HasOrderedDirective)
+    LoopStack.setParallel(/*Enable=*/false);
+}
+
 void CodeGenFunction::EmitOMPSimdInit(const OMPLoopDirective &D) {
   // Walk clauses and process safelen/lastprivate.
   LoopStack.setParallel(/*Enable=*/true);
   LoopStack.setVectorizeEnable();
+  const Stmt *AssociatedStmt = D.getAssociatedStmt();
+  applyConservativeSimdOrderedDirective(*AssociatedStmt, LoopStack);
   emitSimdlenSafelenClause(*this, D);
   if (const auto *C = D.getSingleClause<OMPOrderClause>())
     if (C->getKind() == OMPC_ORDER_concurrent)
