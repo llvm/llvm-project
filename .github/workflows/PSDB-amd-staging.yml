@@ -1,5 +1,5 @@
 # This workflow is used to invoke the PSDB jenkins job for rocm CI. The python script can be used to invoke any jenkins job but input params needs to be configured properly
-name: Compiler CI test on ci-utils-dev-siva branch
+name: Compiler CI test on amd-staging branch
 
 # Controls when the workflow will run
 on:
