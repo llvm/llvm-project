@@ -1012,6 +1012,46 @@ static void LLDBSwigPythonCallPythonLogOutputCallback(const char *str,
   }
 }
 
+// For NotificationCallback functions
+static void LLDBSwigPythonCallPythonSBNotificationCallback(
+  lldb::NotificationType type, lldb::SBDebugger &debugger, 
+  lldb::SBExecutionContext &exe_ctx, void *baton) {
+  
+  if (baton != Py_None) {
+    SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+
+    // Convert debugger and exe_ctx to Python objects
+    PythonObject debugger_arg = SWIGBridge::ToSWIGWrapper(
+      std::make_unique<SBDebugger>(debugger));  // Wrap debugger reference
+
+    PythonObject exe_ctx_arg = SWIGBridge::ToSWIGWrapper(
+      std::make_unique<SBExecutionContext>(exe_ctx));  // Wrap ExecutionContext
+
+    // Create a tuple of arguments (type, debugger, exe_ctx)
+    PyObject *args = PyTuple_New(3);
+    
+    // Add NotificationType as an integer to the tuple
+    PyTuple_SetItem(args, 0, PyLong_FromLong(static_cast<long>(type)));
+
+    // Add debugger and exe_ctx to the tuple
+    Py_INCREF(debugger_arg.get());
+    PyTuple_SetItem(args, 1, debugger_arg.get());
+
+    Py_INCREF(exe_ctx_arg.get());
+    PyTuple_SetItem(args, 2, exe_ctx_arg.get());
+
+    // Call the Python function with the tuple of arguments (type, debugger, exe_ctx)
+    PyObject *result = PyObject_CallFunction(
+            reinterpret_cast<PyObject *>(baton), const_cast<char *>("O"), args);
+
+    // Clean up
+    Py_XDECREF(result);
+    Py_DECREF(args);  // Decrement reference count for args
+
+    SWIG_PYTHON_THREAD_END_BLOCK;
+  }
+}
+
 // For DebuggerTerminateCallback functions
 static void LLDBSwigPythonCallPythonSBDebuggerTerminateCallback(lldb::user_id_t debugger_id,
                                                       void *baton) {
