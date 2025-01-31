@@ -2703,15 +2703,20 @@ class FPToI1Pat<Instruction Inst, int KOne, ValueType kone_type, ValueType vt, S
   (i1 (Inst 0, (kone_type KOne), $src0_modifiers, $src0, DSTCLAMP.NONE))
 >;
 
-let OtherPredicates = [NotHasTrue16BitInsts] in {
+let True16Predicate = NotHasTrue16BitInsts in {
   def : FPToI1Pat<V_CMP_EQ_F16_e64, CONST.FP16_ONE, i16, f16, fp_to_uint>;
   def : FPToI1Pat<V_CMP_EQ_F16_e64, CONST.FP16_NEG_ONE, i16, f16, fp_to_sint>;
-} // end OtherPredicates = [NotHasTrue16BitInsts]
+} // end True16Predicate = NotHasTrue16BitInsts
 
-let OtherPredicates = [HasTrue16BitInsts] in {
+let True16Predicate = UseRealTrue16Insts in {
+  def : FPToI1Pat<V_CMP_EQ_F16_t16_e64, CONST.FP16_ONE, i16, f16, fp_to_uint>;
+  def : FPToI1Pat<V_CMP_EQ_F16_t16_e64, CONST.FP16_NEG_ONE, i16, f16, fp_to_sint>;
+} // end True16Predicate = UseRealTrue16BitInsts
+
+let True16Predicate = UseFakeTrue16Insts in {
   def : FPToI1Pat<V_CMP_EQ_F16_fake16_e64, CONST.FP16_ONE, i16, f16, fp_to_uint>;
   def : FPToI1Pat<V_CMP_EQ_F16_fake16_e64, CONST.FP16_NEG_ONE, i16, f16, fp_to_sint>;
-} // end OtherPredicates = [HasTrue16BitInsts]
+} // end True16Predicate = UseFakeTrue16BitInsts
 
 def : FPToI1Pat<V_CMP_EQ_F32_e64, CONST.FP32_ONE, i32, f32, fp_to_uint>;
 def : FPToI1Pat<V_CMP_EQ_F32_e64, CONST.FP32_NEG_ONE, i32, f32, fp_to_sint>;
