@@ -134,7 +134,9 @@ constexpr int dedup_params_into_type_list(TypeList<__builtin_dedup_pack<T...>...
 static_assert(dedup_params_into_type_list(static_cast<TypeList<int,short,long>*>(nullptr), 1, short(1), 1, 1l, 1l) != 5); // expected-error {{static assertion failed}} \
                                                                                                                           // expected-note {{expression evaluates}}
 
-template <class T, __builtin_dedup_pack<T, int>...> // expected-error 2{{expansions of '__builtin_dedup_pack' are not supported here}}
+template <class T, __builtin_dedup_pack<T, int>...>
+// expected-error@-1 2{{expansions of '__builtin_dedup_pack' are not supported here}}
+// expected-note@-2 2{{template parameter is declared here}}
 struct InTemplateParams {};
 InTemplateParams<int> itp1;
 InTemplateParams<int, 1, 2, 3, 4, 5> itp2;

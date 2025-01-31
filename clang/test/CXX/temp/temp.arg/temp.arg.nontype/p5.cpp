@@ -49,7 +49,7 @@ namespace pointer_to_object_parameters {
     operator int() const;
   };
 
-  template<X const *Ptr> struct A2; // expected-note 0-1{{template parameter is declared here}}
+  template<X const *Ptr> struct A2; // expected-note 1-2{{template parameter is declared here}}
 
   X *X_ptr; // expected-note 0-1{{declared here}}
   X an_X;

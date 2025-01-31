@@ -8,7 +8,7 @@ typedef vector<double, 3> double3;
 // expected-error@+1 {{class template 'Buffer' requires template arguments}}
 Buffer BufferErr1;
 
-// expected-error@+1 {{too few template arguments for class template 'Buffer'}}
+// expected-error@+1 {{missing template argument for template parameter}}
 Buffer<> BufferErr2;
 
 // test implicit Buffer concept
@@ -39,7 +39,7 @@ template<typename T> struct TemplatedVector {
 
 // structs not allowed
 // expected-error@+4 {{constraints not satisfied for class template 'Buffer'}}
-// expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_typed_resource_element_compatible<element_type> class Buffer}}
+// expected-note@*:* {{template parameter from hidden source: typename element_type}}
 // expected-note@*:* {{because 's' does not satisfy '__is_typed_resource_element_compatible'}}
 // expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(s)' evaluated to false}}
 Buffer<s> r6;

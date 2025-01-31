@@ -5358,19 +5358,14 @@ def err_template_linkage : Error<"templates must have C++ linkage">;
 def err_template_typedef : Error<"a typedef cannot be a template">;
 def err_template_unnamed_class : Error<
   "cannot declare a class template with no name">;
-def err_template_param_list_different_arity : Error<
-  "%select{too few|too many}0 template parameters in template "
-  "%select{|template parameter }1redeclaration">;
-def note_template_param_list_different_arity : Note<
-  "%select{too few|too many}0 template parameters in template template "
-  "argument">;
+def err_template_param_list_different_arity
+    : Error<"%select{too few|too many}0 template parameters in template "
+            "%select{|template parameter }1redeclaration">;
 def note_template_prev_declaration : Note<
   "previous template %select{declaration|template parameter}0 is here">;
-def err_template_param_different_kind : Error<
-  "template parameter has a different kind in template "
-  "%select{|template parameter }0redeclaration">;
-def note_template_param_different_kind : Note<
-  "template parameter has a different kind in template argument">;
+def err_template_param_different_kind
+    : Error<"template parameter has a different kind in template "
+            "%select{|template parameter }0redeclaration">;
 
 def err_invalid_decl_specifier_in_nontype_parm : Error<
   "invalid declaration specifier in template non-type parameter">;
@@ -5379,8 +5374,6 @@ def err_template_nontype_parm_different_type : Error<
   "template non-type parameter has a different type %0 in template "
   "%select{|template parameter }1redeclaration">;
 
-def note_template_nontype_parm_different_type : Note<
-  "template non-type parameter has a different type %0 in template argument">;
 def note_template_nontype_parm_prev_declaration : Note<
   "previous non-type template parameter with type %0 is here">;
 def err_template_nontype_parm_bad_type : Error<
@@ -5454,10 +5447,17 @@ def err_template_missing_args : Error<
   "%select{class template|function template|variable template|alias template|"
   "template template parameter|concept|template}0 %1 requires template "
   "arguments">;
-def err_template_arg_list_different_arity : Error<
-  "%select{too few|too many}0 template arguments for "
-  "%select{class template|function template|variable template|alias template|"
-  "template template parameter|concept|template}1 %2">;
+def err_template_param_missing_arg
+    : Error<"missing template argument for template parameter">;
+def err_template_template_param_missing_param
+    : Error<"no template parameter in this template template parameter "
+            "corresponds to non-defaulted template parameter of argument "
+            "template">;
+def err_template_too_many_args
+    : Error<"too many template arguments for "
+            "%select{class template|function template|variable template|alias "
+            "template|"
+            "template template parameter|concept|template}0 %1">;
 def note_template_decl_here : Note<"template is declared here">;
 def note_template_decl_external : Note<
   "template declaration from hidden source: %0">;
@@ -5500,12 +5500,9 @@ def err_template_arg_not_valid_template
 def note_template_arg_refers_to_template_here
     : Note<"template argument refers to a %select{function template|class "
            "template|variable template|concept}0 %1, here">;
-def err_template_arg_template_params_mismatch : Error<
-  "template template argument has different template parameters than its "
-  "corresponding template template parameter">;
-def note_template_arg_template_params_mismatch : Note<
-  "template template argument has different template parameters than its "
-  "corresponding template template parameter">;
+def note_template_arg_template_params_mismatch
+    : Note<"template template argument is incompatible with its "
+           "corresponding template template parameter">;
 def err_non_deduced_mismatch : Error<
   "could not match %diff{$ against $|types}0,1">;
 def err_inconsistent_deduction : Error<
@@ -5770,8 +5767,10 @@ def err_template_recursion_depth_exceeded : Error<
 def err_constraint_depends_on_self
     : Error<"satisfaction of constraint %0 depends on itself">,
       NoSFINAE;
-def note_template_recursion_depth : Note<
-  "use -ftemplate-depth=N to increase recursive template instantiation depth">;
+def note_template_recursion_depth
+    : Note<"use -ftemplate-depth=N to increase recursive template "
+           "instantiation depth">,
+      NoSFINAE;
 
 def err_template_instantiate_within_definition : Error<
   "%select{implicit|explicit}0 instantiation of template %1 within its"
@@ -6050,14 +6049,11 @@ def err_template_param_pack_default_arg : Error<
 def err_template_param_pack_must_be_last_template_parameter : Error<
   "template parameter pack must be the last template parameter">;
 
-def err_template_parameter_pack_non_pack : Error<
-  "%select{template type|non-type template|template template}0 parameter"
-  "%select{| pack}1 conflicts with previous %select{template type|"
-  "non-type template|template template}0 parameter%select{ pack|}1">;
-def note_template_parameter_pack_non_pack : Note<
-  "%select{template type|non-type template|template template}0 parameter"
-  "%select{| pack}1 does not match %select{template type|non-type template"
-  "|template template}0 parameter%select{ pack|}1 in template argument">;
+def err_template_parameter_pack_non_pack
+    : Error<"%select{template type|non-type template|template template}0 "
+            "parameter"
+            "%select{| pack}1 conflicts with previous %select{template type|"
+            "non-type template|template template}0 parameter%select{ pack|}1">;
 def note_template_parameter_pack_here : Note<
   "previous %select{template type|non-type template|template template}0 "
   "parameter%select{| pack}1 declared here">;

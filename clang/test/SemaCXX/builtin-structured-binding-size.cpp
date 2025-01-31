@@ -119,6 +119,7 @@ T<int> t1;
 // expected-error@#tpl-1 {{non-type template argument is not a constant expression}} \
 // expected-note@-1 {{in instantiation of default argument for 'T<int>' required here}} \
 // expected-note@-1 {{while checking a default template argument used here}} \
+// expected-note@#tpl-1 2{{template parameter is declared here}}
 
 static_assert(T<S3>::value == 3);
 

@@ -1262,7 +1262,8 @@ constexpr bool f(C auto) { // #GH61824_f
 
 C auto x = 0;
 // expected-error@#T_Type {{type 'int' cannot be used prior to '::'}} \
-// expected-note@-1 {{in instantiation of default argument}}
+// expected-note@-1 {{in instantiation of default argument}} \
+// expected-note@#T_Type {{template parameter is declared here}}
 
 // This will be fixed when we merge https://github.com/llvm/llvm-project/pull/141776
 // Which makes us behave like GCC.
