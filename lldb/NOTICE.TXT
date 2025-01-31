@@ -1,0 +1,7 @@
+
+This product contains small piece of code to support AIX, taken from netbsd.
+
+  * LICENSE:
+    * lldb/source/Host/common/LICENSE.aix-netbsd.txt (OpenSSL License)
+  * HOMEPAGE:
+    * https://ftp.netbsd.org/pub/NetBSD/NetBSD-current/src/crypto/external/bsd/openssl/dist

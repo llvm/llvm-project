@@ -40,6 +40,9 @@
 
 #include <cassert>
 #include <memory>
+#ifdef _AIX
+#include "Plugins/Process/Utility/lldb-ppc64le-register-enums.h"
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -1257,6 +1260,10 @@ bool RegisterContextUnwind::IsTrapHandlerSymbol(
 // Answer the question: Where did THIS frame save the CALLER frame ("previous"
 // frame)'s register value?
 
+#ifdef _AIX
+extern bool UGLY_HACK_NULL_TOPFRAME;
+#endif
+
 enum UnwindLLDB::RegisterSearchResult
 RegisterContextUnwind::SavedLocationForRegister(
     uint32_t lldb_regnum,
@@ -1518,6 +1525,11 @@ RegisterContextUnwind::SavedLocationForRegister(
       new_regloc.type =
           UnwindLLDB::ConcreteRegisterLocation::eRegisterInLiveRegisterContext;
       new_regloc.location.register_number = regnum.GetAsKind(eRegisterKindLLDB);
+#ifdef _AIX
+      if (UGLY_HACK_NULL_TOPFRAME && new_regloc.location.register_number == 0x20) {
+        new_regloc.location.register_number = 0x24;
+      }
+#endif
       m_registers[regnum.GetAsKind(eRegisterKindLLDB)] = new_regloc;
       regloc = new_regloc;
       UnwindLogMsg("supplying caller's register %s (%d) from the live "
@@ -2377,6 +2389,40 @@ bool RegisterContextUnwind::ReadPC(addr_t &pc) {
     return false;
   }
 }
+
+#ifdef _AIX
+bool RegisterContextUnwind::ReadLR(addr_t &lr) {
+  if (!IsValid())
+    return false;
+
+  bool above_trap_handler = false;
+  if (GetNextFrame().get() && GetNextFrame()->IsValid() &&
+      GetNextFrame()->IsTrapHandlerFrame())
+    above_trap_handler = true;
+
+  if (ReadGPRValue(eRegisterKindLLDB, gpr_lr_ppc64le, lr)) {
+    // A lr value of 0 or 1 is impossible in the middle of the stack -- it
+    // indicates the end of a stack walk.
+    // On the currently executing frame (or such a frame interrupted
+    // asynchronously by sigtramp et al) this may occur if code has jumped
+    // through a NULL pointer -- we want to be able to unwind past that frame
+    // to help find the bug.
+
+    ProcessSP process_sp (m_thread.GetProcess());
+    if (process_sp)
+    {
+        ABI *abi = process_sp->GetABI().get();
+        if (abi)
+            lr = abi->FixCodeAddress(lr);
+    }
+
+    return !(m_all_registers_available == false &&
+             above_trap_handler == false && (lr == 0 || lr == 1));
+  } else {
+    return false;
+  }
+}
+#endif
 
 void RegisterContextUnwind::UnwindLogMsg(const char *fmt, ...) {
   Log *log = GetLog(LLDBLog::Unwind);

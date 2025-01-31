@@ -401,6 +401,11 @@ public:
     return false;
   }
 
+  virtual bool SetLoadAddressByType(Target &target, lldb::addr_t value,
+                              bool value_is_offset, int type_id) {
+    return false;
+  }
+
   /// Gets whether endian swapping should occur when extracting data from this
   /// object file.
   ///
