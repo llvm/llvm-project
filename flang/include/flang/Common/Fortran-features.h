@@ -33,7 +33,7 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     EquivalenceNumericWithCharacter, EquivalenceNonDefaultNumeric,
     EquivalenceSameNonSequence, AdditionalIntrinsics, AnonymousParents,
     OldLabelDoEndStatements, LogicalIntegerAssignment, EmptySourceFile,
-    ProgramReturn, ImplicitNoneTypeNever, ImplicitNoneTypeAlways,
+    ProgramReturn, ImplicitNoneTypeNever, ImplicitNoneTypeAlways, ImplicitNoneExternal,
     ForwardRefImplicitNone, OpenAccessAppend, BOZAsDefaultInteger,
     DistinguishableSpecifics, DefaultSave, PointerInSeqType, NonCharacterFormat,
     SaveMainProgram, SaveBigMainProgramVariables,
@@ -54,7 +54,7 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     PolymorphicActualAllocatableOrPointerToMonomorphicDummy, RelaxedPureDummy,
     UndefinableAsynchronousOrVolatileActual, AutomaticInMainProgram, PrintCptr,
     SavedLocalInSpecExpr, PrintNamelist, AssumedRankPassedToNonAssumedRank,
-    IgnoreIrrelevantAttributes, Unsigned, ImplicitNoneExternal)
+    IgnoreIrrelevantAttributes, Unsigned)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
