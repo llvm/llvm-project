@@ -530,8 +530,8 @@ define amdgpu_kernel void @widen_i1_zext_to_i64_constant_load(ptr addrspace(4) %
 ; SI-NEXT:    s_and_b32 s1, s1, 1
 ; SI-NEXT:    s_add_u32 s4, s1, 0x3e7
 ; SI-NEXT:    s_addc_u32 s5, 0, 0
-; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    s_mov_b32 s1, s0
+; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    v_mov_b32_e32 v1, s5
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm

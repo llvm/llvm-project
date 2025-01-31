@@ -239,8 +239,8 @@ define amdgpu_kernel void @marked_kernel_use_other_sgpr(ptr addrspace(1) %ptr) #
 ; FIXEDABI-LABEL: marked_kernel_use_other_sgpr:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_add_u32 s0, s4, 8
-; FIXEDABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; FIXEDABI-NEXT:    s_addc_u32 s1, s5, 0
+; FIXEDABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
 ; FIXEDABI-NEXT:    v_mov_b32_e32 v0, s0
 ; FIXEDABI-NEXT:    v_mov_b32_e32 v1, s1

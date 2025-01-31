@@ -261,8 +261,8 @@ define amdgpu_kernel void @local_store_i65(ptr addrspace(3) %ptr, i65 %arg) #0 {
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_and_b32 s2, s2, 1
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s3
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s2
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    ds_write_b8 v2, v3 offset:8
 ; GFX9-NEXT:    ds_write_b64 v2, v[0:1]

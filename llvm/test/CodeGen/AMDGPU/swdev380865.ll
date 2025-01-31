@@ -23,8 +23,8 @@ define amdgpu_kernel void @_Z6kernelILi4000ELi1EEvPd(ptr addrspace(1) %x.coerce)
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s1, s2
 ; CHECK-NEXT:    s_mov_b32 s2, 0
-; CHECK-NEXT:    v_mov_b32_e32 v0, s6
 ; CHECK-NEXT:    s_mov_b32 s3, 0x40260000
+; CHECK-NEXT:    v_mov_b32_e32 v0, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s7
 ; CHECK-NEXT:  .LBB0_1: ; %for.cond4.preheader
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1

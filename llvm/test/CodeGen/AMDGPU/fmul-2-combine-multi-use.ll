@@ -81,16 +81,16 @@ define amdgpu_kernel void @multiple_use_fadd_fmac_f32(ptr addrspace(1) %out, flo
 ; VI-NEXT:    s_load_dword s4, s[8:9], 0x8
 ; VI-NEXT:    s_load_dword s3, s[8:9], 0x2c
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    s_add_u32 s2, s0, 4
 ; VI-NEXT:    v_add_f32_e64 v2, s4, s4
-; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
 ; VI-NEXT:    s_addc_u32 s3, s1, 0
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    v_mac_f32_e64 v3, s4, 2.0
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
-; VI-NEXT:    v_mac_f32_e64 v3, s4, 2.0
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    flat_store_dword v[0:1], v3
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -140,16 +140,16 @@ define amdgpu_kernel void @multiple_use_fadd_fmad_f32(ptr addrspace(1) %out, flo
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    s_add_u32 s4, s0, 4
 ; VI-NEXT:    v_add_f32_e64 v2, |s2|, |s2|
-; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    s_addc_u32 s5, s1, 0
+; VI-NEXT:    v_mad_f32 v3, |s2|, 2.0, v3
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
-; VI-NEXT:    v_mad_f32 v3, |s2|, 2.0, v3
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_store_dword v[0:1], v3
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -198,11 +198,11 @@ define amdgpu_kernel void @multiple_use_fadd_multi_fmad_f32(ptr addrspace(1) %ou
 ; VI-NEXT:    s_add_u32 s6, s4, 4
 ; VI-NEXT:    v_mov_b32_e32 v0, s1
 ; VI-NEXT:    v_mov_b32_e32 v1, s2
+; VI-NEXT:    s_addc_u32 s7, s5, 0
 ; VI-NEXT:    v_mad_f32 v2, |s0|, 2.0, v0
 ; VI-NEXT:    v_mad_f32 v3, |s0|, 2.0, v1
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
-; VI-NEXT:    s_addc_u32 s7, s5, 0
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s6
@@ -484,13 +484,13 @@ define amdgpu_kernel void @multiple_use_fadd_fmac_f16(ptr addrspace(1) %out, i16
 ; VI-DENORM-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-DENORM-NEXT:    s_lshr_b32 s3, s4, 16
+; VI-DENORM-NEXT:    s_add_u32 s2, s0, 2
 ; VI-DENORM-NEXT:    v_mov_b32_e32 v0, s3
+; VI-DENORM-NEXT:    v_add_f16_e64 v2, s4, s4
+; VI-DENORM-NEXT:    s_addc_u32 s3, s1, 0
 ; VI-DENORM-NEXT:    v_fma_f16 v3, s4, 2.0, v0
 ; VI-DENORM-NEXT:    v_mov_b32_e32 v0, s0
-; VI-DENORM-NEXT:    v_add_f16_e64 v2, s4, s4
-; VI-DENORM-NEXT:    s_add_u32 s2, s0, 2
 ; VI-DENORM-NEXT:    v_mov_b32_e32 v1, s1
-; VI-DENORM-NEXT:    s_addc_u32 s3, s1, 0
 ; VI-DENORM-NEXT:    flat_store_short v[0:1], v2
 ; VI-DENORM-NEXT:    s_waitcnt vmcnt(0)
 ; VI-DENORM-NEXT:    v_mov_b32_e32 v0, s2
@@ -505,16 +505,16 @@ define amdgpu_kernel void @multiple_use_fadd_fmac_f16(ptr addrspace(1) %out, i16
 ; VI-FLUSH-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-FLUSH-NEXT:    s_lshr_b32 s3, s4, 16
-; VI-FLUSH-NEXT:    v_mov_b32_e32 v0, s0
-; VI-FLUSH-NEXT:    v_add_f16_e64 v2, s4, s4
 ; VI-FLUSH-NEXT:    s_add_u32 s2, s0, 2
-; VI-FLUSH-NEXT:    v_mov_b32_e32 v1, s1
+; VI-FLUSH-NEXT:    v_add_f16_e64 v2, s4, s4
 ; VI-FLUSH-NEXT:    v_mov_b32_e32 v3, s3
 ; VI-FLUSH-NEXT:    s_addc_u32 s3, s1, 0
+; VI-FLUSH-NEXT:    v_mov_b32_e32 v0, s0
+; VI-FLUSH-NEXT:    v_mov_b32_e32 v1, s1
+; VI-FLUSH-NEXT:    v_mac_f16_e64 v3, s4, 2.0
 ; VI-FLUSH-NEXT:    flat_store_short v[0:1], v2
 ; VI-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; VI-FLUSH-NEXT:    v_mov_b32_e32 v0, s2
-; VI-FLUSH-NEXT:    v_mac_f16_e64 v3, s4, 2.0
 ; VI-FLUSH-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-FLUSH-NEXT:    flat_store_short v[0:1], v3
 ; VI-FLUSH-NEXT:    s_waitcnt vmcnt(0)
@@ -601,13 +601,13 @@ define amdgpu_kernel void @multiple_use_fadd_fmad_f16(ptr addrspace(1) %out, i16
 ; VI-DENORM-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-DENORM-NEXT:    s_lshr_b32 s3, s4, 16
+; VI-DENORM-NEXT:    s_add_u32 s2, s0, 2
 ; VI-DENORM-NEXT:    v_mov_b32_e32 v0, s3
+; VI-DENORM-NEXT:    v_add_f16_e64 v2, |s4|, |s4|
+; VI-DENORM-NEXT:    s_addc_u32 s3, s1, 0
 ; VI-DENORM-NEXT:    v_fma_f16 v3, |s4|, 2.0, v0
 ; VI-DENORM-NEXT:    v_mov_b32_e32 v0, s0
-; VI-DENORM-NEXT:    v_add_f16_e64 v2, |s4|, |s4|
-; VI-DENORM-NEXT:    s_add_u32 s2, s0, 2
 ; VI-DENORM-NEXT:    v_mov_b32_e32 v1, s1
-; VI-DENORM-NEXT:    s_addc_u32 s3, s1, 0
 ; VI-DENORM-NEXT:    flat_store_short v[0:1], v2
 ; VI-DENORM-NEXT:    s_waitcnt vmcnt(0)
 ; VI-DENORM-NEXT:    v_mov_b32_e32 v0, s2
@@ -622,13 +622,13 @@ define amdgpu_kernel void @multiple_use_fadd_fmad_f16(ptr addrspace(1) %out, i16
 ; VI-FLUSH-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-FLUSH-NEXT:    s_lshr_b32 s3, s4, 16
+; VI-FLUSH-NEXT:    s_add_u32 s2, s0, 2
 ; VI-FLUSH-NEXT:    v_mov_b32_e32 v0, s3
+; VI-FLUSH-NEXT:    v_add_f16_e64 v2, |s4|, |s4|
+; VI-FLUSH-NEXT:    s_addc_u32 s3, s1, 0
 ; VI-FLUSH-NEXT:    v_mad_f16 v3, |s4|, 2.0, v0
 ; VI-FLUSH-NEXT:    v_mov_b32_e32 v0, s0
-; VI-FLUSH-NEXT:    v_add_f16_e64 v2, |s4|, |s4|
-; VI-FLUSH-NEXT:    s_add_u32 s2, s0, 2
 ; VI-FLUSH-NEXT:    v_mov_b32_e32 v1, s1
-; VI-FLUSH-NEXT:    s_addc_u32 s3, s1, 0
 ; VI-FLUSH-NEXT:    flat_store_short v[0:1], v2
 ; VI-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; VI-FLUSH-NEXT:    v_mov_b32_e32 v0, s2
@@ -721,13 +721,13 @@ define amdgpu_kernel void @multiple_use_fadd_multi_fmad_f16(ptr addrspace(1) %ou
 ; VI-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-DENORM-NEXT:    s_lshr_b32 s0, s0, 16
 ; VI-DENORM-NEXT:    v_mov_b32_e32 v0, s0
+; VI-DENORM-NEXT:    s_add_u32 s4, s2, 2
 ; VI-DENORM-NEXT:    v_fma_f16 v2, |s6|, 2.0, v0
 ; VI-DENORM-NEXT:    v_mov_b32_e32 v0, s1
+; VI-DENORM-NEXT:    s_addc_u32 s5, s3, 0
 ; VI-DENORM-NEXT:    v_fma_f16 v3, |s6|, 2.0, v0
 ; VI-DENORM-NEXT:    v_mov_b32_e32 v0, s2
-; VI-DENORM-NEXT:    s_add_u32 s4, s2, 2
 ; VI-DENORM-NEXT:    v_mov_b32_e32 v1, s3
-; VI-DENORM-NEXT:    s_addc_u32 s5, s3, 0
 ; VI-DENORM-NEXT:    flat_store_short v[0:1], v2
 ; VI-DENORM-NEXT:    s_waitcnt vmcnt(0)
 ; VI-DENORM-NEXT:    v_mov_b32_e32 v0, s4
@@ -744,13 +744,13 @@ define amdgpu_kernel void @multiple_use_fadd_multi_fmad_f16(ptr addrspace(1) %ou
 ; VI-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-FLUSH-NEXT:    s_lshr_b32 s0, s0, 16
 ; VI-FLUSH-NEXT:    v_mov_b32_e32 v0, s0
+; VI-FLUSH-NEXT:    s_add_u32 s4, s2, 2
 ; VI-FLUSH-NEXT:    v_mad_f16 v2, |s6|, 2.0, v0
 ; VI-FLUSH-NEXT:    v_mov_b32_e32 v0, s1
+; VI-FLUSH-NEXT:    s_addc_u32 s5, s3, 0
 ; VI-FLUSH-NEXT:    v_mad_f16 v3, |s6|, 2.0, v0
 ; VI-FLUSH-NEXT:    v_mov_b32_e32 v0, s2
-; VI-FLUSH-NEXT:    s_add_u32 s4, s2, 2
 ; VI-FLUSH-NEXT:    v_mov_b32_e32 v1, s3
-; VI-FLUSH-NEXT:    s_addc_u32 s5, s3, 0
 ; VI-FLUSH-NEXT:    flat_store_short v[0:1], v2
 ; VI-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; VI-FLUSH-NEXT:    v_mov_b32_e32 v0, s4

@@ -661,9 +661,9 @@ define double @sitofp_i128_to_f64(i128 %x) {
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v4, v0
 ; GISEL-NEXT:    v_mov_b32_e32 v5, v1
-; GISEL-NEXT:    s_mov_b64 s[4:5], 0
 ; GISEL-NEXT:    v_or_b32_e32 v0, v4, v2
 ; GISEL-NEXT:    v_or_b32_e32 v1, v5, v3
+; GISEL-NEXT:    s_mov_b64 s[4:5], 0
 ; GISEL-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s4
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s5
@@ -946,9 +946,9 @@ define double @uitofp_i128_to_f64(i128 %x) {
 ; GISEL-LABEL: uitofp_i128_to_f64:
 ; GISEL:       ; %bb.0: ; %itofp-entry
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    s_mov_b64 s[4:5], 0
 ; GISEL-NEXT:    v_or_b32_e32 v4, v0, v2
 ; GISEL-NEXT:    v_or_b32_e32 v5, v1, v3
+; GISEL-NEXT:    s_mov_b64 s[4:5], 0
 ; GISEL-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
 ; GISEL-NEXT:    v_mov_b32_e32 v4, s4
 ; GISEL-NEXT:    v_mov_b32_e32 v5, s5
@@ -1045,8 +1045,8 @@ define double @uitofp_i128_to_f64(i128 %x) {
 ; GISEL-NEXT:    s_andn2_saveexec_b64 s[4:5], s[10:11]
 ; GISEL-NEXT:    s_cbranch_execz .LBB3_10
 ; GISEL-NEXT:  ; %bb.9: ; %itofp-sw-bb
-; GISEL-NEXT:    v_lshlrev_b64 v[8:9], 1, v[0:1]
 ; GISEL-NEXT:    v_lshlrev_b64 v[10:11], 1, v[2:3]
+; GISEL-NEXT:    v_lshlrev_b64 v[8:9], 1, v[0:1]
 ; GISEL-NEXT:    v_lshrrev_b32_e32 v0, 31, v1
 ; GISEL-NEXT:    v_or_b32_e32 v10, v10, v0
 ; GISEL-NEXT:    v_mov_b32_e32 v0, v8

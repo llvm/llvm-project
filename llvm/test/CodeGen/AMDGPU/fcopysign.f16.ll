@@ -1888,12 +1888,12 @@ define amdgpu_kernel void @s_copysign_v3f16(ptr addrspace(1) %arg_out, <3 x half
 ; VI-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-NEXT:    v_bfi_b32 v1, s6, v1, v2
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; VI-NEXT:    s_add_u32 s0, s4, 4
 ; VI-NEXT:    v_or_b32_sdwa v2, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    v_mov_b32_e32 v0, s1
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
-; VI-NEXT:    s_add_u32 s0, s4, 4
-; VI-NEXT:    v_bfi_b32 v3, s6, v0, v1
 ; VI-NEXT:    s_addc_u32 s1, s5, 0
+; VI-NEXT:    v_bfi_b32 v3, s6, v0, v1
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_short v[0:1], v3

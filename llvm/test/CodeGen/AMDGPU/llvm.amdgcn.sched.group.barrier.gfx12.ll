@@ -24,24 +24,20 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_SWMMAC_cluster(ptr 
 ; GCN-NEXT:    ds_load_b128 v[0:3], v0 offset:11264
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000100) size(7) SyncID(0)
 ; GCN-NEXT:    s_wait_dscnt 0x6
-; GCN-NEXT:    v_mov_b32_e32 v31, v11
-; GCN-NEXT:    s_wait_dscnt 0x5
-; GCN-NEXT:    v_mov_b32_e32 v35, v15
-; GCN-NEXT:    s_wait_dscnt 0x4
-; GCN-NEXT:    v_mov_b32_e32 v39, v19
-; GCN-NEXT:    s_wait_dscnt 0x3
-; GCN-NEXT:    v_mov_b32_e32 v43, v23
-; GCN-NEXT:    s_wait_dscnt 0x2
-; GCN-NEXT:    v_dual_mov_b32 v47, v27 :: v_dual_mov_b32 v30, v10
+; GCN-NEXT:    v_dual_mov_b32 v31, v11 :: v_dual_mov_b32 v30, v10
 ; GCN-NEXT:    v_dual_mov_b32 v29, v9 :: v_dual_mov_b32 v28, v8
-; GCN-NEXT:    v_dual_mov_b32 v34, v14 :: v_dual_mov_b32 v33, v13
-; GCN-NEXT:    v_mov_b32_e32 v32, v12
-; GCN-NEXT:    v_dual_mov_b32 v38, v18 :: v_dual_mov_b32 v37, v17
-; GCN-NEXT:    v_mov_b32_e32 v36, v16
-; GCN-NEXT:    v_dual_mov_b32 v42, v22 :: v_dual_mov_b32 v41, v21
-; GCN-NEXT:    v_mov_b32_e32 v40, v20
-; GCN-NEXT:    v_dual_mov_b32 v46, v26 :: v_dual_mov_b32 v45, v25
-; GCN-NEXT:    v_mov_b32_e32 v44, v24
+; GCN-NEXT:    s_wait_dscnt 0x5
+; GCN-NEXT:    v_dual_mov_b32 v35, v15 :: v_dual_mov_b32 v34, v14
+; GCN-NEXT:    v_dual_mov_b32 v33, v13 :: v_dual_mov_b32 v32, v12
+; GCN-NEXT:    s_wait_dscnt 0x4
+; GCN-NEXT:    v_dual_mov_b32 v39, v19 :: v_dual_mov_b32 v38, v18
+; GCN-NEXT:    v_dual_mov_b32 v37, v17 :: v_dual_mov_b32 v36, v16
+; GCN-NEXT:    s_wait_dscnt 0x3
+; GCN-NEXT:    v_dual_mov_b32 v43, v23 :: v_dual_mov_b32 v42, v22
+; GCN-NEXT:    v_dual_mov_b32 v41, v21 :: v_dual_mov_b32 v40, v20
+; GCN-NEXT:    s_wait_dscnt 0x2
+; GCN-NEXT:    v_dual_mov_b32 v47, v27 :: v_dual_mov_b32 v46, v26
+; GCN-NEXT:    v_dual_mov_b32 v45, v25 :: v_dual_mov_b32 v44, v24
 ; GCN-NEXT:    s_wait_dscnt 0x0
 ; GCN-NEXT:    v_swmmac_f16_16x16x32_f16 v[28:31], v[8:11], v[0:7], v48
 ; GCN-NEXT:    v_swmmac_f16_16x16x32_f16 v[32:35], v[12:15], v[0:7], v48
@@ -76,24 +72,20 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_SWMMAC_cluster(ptr 
 ; EXACTCUTOFF-NEXT:    ds_load_b128 v[0:3], v0 offset:11264
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000100) size(7) SyncID(0)
 ; EXACTCUTOFF-NEXT:    s_wait_dscnt 0x6
-; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v31, v11
-; EXACTCUTOFF-NEXT:    s_wait_dscnt 0x5
-; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v35, v15
-; EXACTCUTOFF-NEXT:    s_wait_dscnt 0x4
-; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v39, v19
-; EXACTCUTOFF-NEXT:    s_wait_dscnt 0x3
-; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v43, v23
-; EXACTCUTOFF-NEXT:    s_wait_dscnt 0x2
-; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v47, v27 :: v_dual_mov_b32 v30, v10
+; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v31, v11 :: v_dual_mov_b32 v30, v10
 ; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v29, v9 :: v_dual_mov_b32 v28, v8
-; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v34, v14 :: v_dual_mov_b32 v33, v13
-; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v32, v12
-; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v38, v18 :: v_dual_mov_b32 v37, v17
-; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v36, v16
-; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v42, v22 :: v_dual_mov_b32 v41, v21
-; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v40, v20
-; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v46, v26 :: v_dual_mov_b32 v45, v25
-; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v44, v24
+; EXACTCUTOFF-NEXT:    s_wait_dscnt 0x5
+; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v35, v15 :: v_dual_mov_b32 v34, v14
+; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v33, v13 :: v_dual_mov_b32 v32, v12
+; EXACTCUTOFF-NEXT:    s_wait_dscnt 0x4
+; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v39, v19 :: v_dual_mov_b32 v38, v18
+; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v37, v17 :: v_dual_mov_b32 v36, v16
+; EXACTCUTOFF-NEXT:    s_wait_dscnt 0x3
+; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v43, v23 :: v_dual_mov_b32 v42, v22
+; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v41, v21 :: v_dual_mov_b32 v40, v20
+; EXACTCUTOFF-NEXT:    s_wait_dscnt 0x2
+; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v47, v27 :: v_dual_mov_b32 v46, v26
+; EXACTCUTOFF-NEXT:    v_dual_mov_b32 v45, v25 :: v_dual_mov_b32 v44, v24
 ; EXACTCUTOFF-NEXT:    s_wait_dscnt 0x0
 ; EXACTCUTOFF-NEXT:    v_swmmac_f16_16x16x32_f16 v[28:31], v[8:11], v[0:7], v48
 ; EXACTCUTOFF-NEXT:    v_swmmac_f16_16x16x32_f16 v[32:35], v[12:15], v[0:7], v48

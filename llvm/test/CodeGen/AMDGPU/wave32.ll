@@ -880,8 +880,8 @@ define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) #0 {
 ; GFX1032-NEXT:    s_cmp_ge_u32 s1, s4
 ; GFX1032-NEXT:    s_mov_b32 s1, 0
 ; GFX1032-NEXT:    s_cselect_b32 s0, s5, s0
-; GFX1032-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1032-NEXT:    v_mov_b32_e32 v1, s1
+; GFX1032-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1032-NEXT:  .LBB15_3:
 ; GFX1032-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1032-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3] offset:16
@@ -1041,8 +1041,8 @@ define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) #0 {
 ; GFX1064-NEXT:    s_cmp_ge_u32 s1, s4
 ; GFX1064-NEXT:    s_mov_b32 s1, 0
 ; GFX1064-NEXT:    s_cselect_b32 s0, s5, s0
-; GFX1064-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1064-NEXT:    v_mov_b32_e32 v1, s1
+; GFX1064-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1064-NEXT:  .LBB15_3:
 ; GFX1064-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1064-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3] offset:16

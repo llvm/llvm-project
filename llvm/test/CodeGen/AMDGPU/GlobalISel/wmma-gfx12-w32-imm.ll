@@ -20,15 +20,15 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_f16_imm_non_inlineable(<8 x half> 
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_mov_b32 s0, 0x40400000
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_mov_b32 s7, s0
 ; GFX12-NEXT:    s_mov_b32 s1, s0
 ; GFX12-NEXT:    s_mov_b32 s2, s0
 ; GFX12-NEXT:    s_mov_b32 s3, s0
 ; GFX12-NEXT:    s_mov_b32 s4, s0
 ; GFX12-NEXT:    s_mov_b32 s5, s0
 ; GFX12-NEXT:    s_mov_b32 s6, s0
+; GFX12-NEXT:    s_mov_b32 s7, s0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_dual_mov_b32 v17, s7 :: v_dual_mov_b32 v16, s6
+; GFX12-NEXT:    v_dual_mov_b32 v16, s6 :: v_dual_mov_b32 v17, s7
 ; GFX12-NEXT:    v_dual_mov_b32 v15, s5 :: v_dual_mov_b32 v14, s4
 ; GFX12-NEXT:    v_dual_mov_b32 v13, s3 :: v_dual_mov_b32 v12, s2
 ; GFX12-NEXT:    v_dual_mov_b32 v11, s1 :: v_dual_mov_b32 v10, s0
@@ -62,15 +62,15 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_bf16_imm_non_inlineable(<8 x i16> 
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_mov_b32 s0, 0x40400000
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_mov_b32 s7, s0
 ; GFX12-NEXT:    s_mov_b32 s1, s0
 ; GFX12-NEXT:    s_mov_b32 s2, s0
 ; GFX12-NEXT:    s_mov_b32 s3, s0
 ; GFX12-NEXT:    s_mov_b32 s4, s0
 ; GFX12-NEXT:    s_mov_b32 s5, s0
 ; GFX12-NEXT:    s_mov_b32 s6, s0
+; GFX12-NEXT:    s_mov_b32 s7, s0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_dual_mov_b32 v17, s7 :: v_dual_mov_b32 v16, s6
+; GFX12-NEXT:    v_dual_mov_b32 v16, s6 :: v_dual_mov_b32 v17, s7
 ; GFX12-NEXT:    v_dual_mov_b32 v15, s5 :: v_dual_mov_b32 v14, s4
 ; GFX12-NEXT:    v_dual_mov_b32 v13, s3 :: v_dual_mov_b32 v12, s2
 ; GFX12-NEXT:    v_dual_mov_b32 v11, s1 :: v_dual_mov_b32 v10, s0
@@ -102,10 +102,10 @@ define amdgpu_ps void @test_wmma_f16_16x16x16_f16_imm_non_inlineable(<8 x half> 
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_mov_b32 s0, 0x42004200
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX12-NEXT:    s_mov_b32 s3, s0
 ; GFX12-NEXT:    s_mov_b32 s1, s0
 ; GFX12-NEXT:    s_mov_b32 s2, s0
-; GFX12-NEXT:    v_dual_mov_b32 v13, s3 :: v_dual_mov_b32 v12, s2
+; GFX12-NEXT:    s_mov_b32 s3, s0
+; GFX12-NEXT:    v_dual_mov_b32 v12, s2 :: v_dual_mov_b32 v13, s3
 ; GFX12-NEXT:    v_dual_mov_b32 v11, s1 :: v_dual_mov_b32 v10, s0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_wmma_f16_16x16x16_f16 v[10:13], v[0:3], v[4:7], v[10:13]
@@ -122,10 +122,10 @@ define amdgpu_ps void @test_wmma_bf16_16x16x16_bf16_imm(<8 x i16> %A, <8 x i16> 
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_mov_b32 s0, 0x3f803f80
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX12-NEXT:    s_mov_b32 s3, s0
 ; GFX12-NEXT:    s_mov_b32 s1, s0
 ; GFX12-NEXT:    s_mov_b32 s2, s0
-; GFX12-NEXT:    v_dual_mov_b32 v13, s3 :: v_dual_mov_b32 v12, s2
+; GFX12-NEXT:    s_mov_b32 s3, s0
+; GFX12-NEXT:    v_dual_mov_b32 v12, s2 :: v_dual_mov_b32 v13, s3
 ; GFX12-NEXT:    v_dual_mov_b32 v11, s1 :: v_dual_mov_b32 v10, s0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_wmma_bf16_16x16x16_bf16 v[10:13], v[0:3], v[4:7], v[10:13]
@@ -142,10 +142,10 @@ define amdgpu_ps void @test_wmma_bf16_16x16x16_bf16_imm_non_inlineable(<8 x i16>
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_mov_b32 s0, 0x3fc03fc0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX12-NEXT:    s_mov_b32 s3, s0
 ; GFX12-NEXT:    s_mov_b32 s1, s0
 ; GFX12-NEXT:    s_mov_b32 s2, s0
-; GFX12-NEXT:    v_dual_mov_b32 v13, s3 :: v_dual_mov_b32 v12, s2
+; GFX12-NEXT:    s_mov_b32 s3, s0
+; GFX12-NEXT:    v_dual_mov_b32 v12, s2 :: v_dual_mov_b32 v13, s3
 ; GFX12-NEXT:    v_dual_mov_b32 v11, s1 :: v_dual_mov_b32 v10, s0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_wmma_bf16_16x16x16_bf16 v[10:13], v[0:3], v[4:7], v[10:13]
@@ -176,15 +176,15 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_iu8_imm_non_inlineable(<2 x i32> %
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_movk_i32 s0, 0x80
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_mov_b32 s7, s0
 ; GFX12-NEXT:    s_mov_b32 s1, s0
 ; GFX12-NEXT:    s_mov_b32 s2, s0
 ; GFX12-NEXT:    s_mov_b32 s3, s0
 ; GFX12-NEXT:    s_mov_b32 s4, s0
 ; GFX12-NEXT:    s_mov_b32 s5, s0
 ; GFX12-NEXT:    s_mov_b32 s6, s0
+; GFX12-NEXT:    s_mov_b32 s7, s0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_dual_mov_b32 v13, s7 :: v_dual_mov_b32 v12, s6
+; GFX12-NEXT:    v_dual_mov_b32 v12, s6 :: v_dual_mov_b32 v13, s7
 ; GFX12-NEXT:    v_dual_mov_b32 v11, s5 :: v_dual_mov_b32 v10, s4
 ; GFX12-NEXT:    v_dual_mov_b32 v9, s3 :: v_dual_mov_b32 v8, s2
 ; GFX12-NEXT:    v_dual_mov_b32 v7, s1 :: v_dual_mov_b32 v6, s0
@@ -218,15 +218,15 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_iu4_imm_non_inlineable(i32 %A, i32
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_movk_i32 s0, 0x80
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_mov_b32 s7, s0
 ; GFX12-NEXT:    s_mov_b32 s1, s0
 ; GFX12-NEXT:    s_mov_b32 s2, s0
 ; GFX12-NEXT:    s_mov_b32 s3, s0
 ; GFX12-NEXT:    s_mov_b32 s4, s0
 ; GFX12-NEXT:    s_mov_b32 s5, s0
 ; GFX12-NEXT:    s_mov_b32 s6, s0
+; GFX12-NEXT:    s_mov_b32 s7, s0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_dual_mov_b32 v11, s7 :: v_dual_mov_b32 v10, s6
+; GFX12-NEXT:    v_dual_mov_b32 v10, s6 :: v_dual_mov_b32 v11, s7
 ; GFX12-NEXT:    v_dual_mov_b32 v9, s5 :: v_dual_mov_b32 v8, s4
 ; GFX12-NEXT:    v_dual_mov_b32 v7, s3 :: v_dual_mov_b32 v6, s2
 ; GFX12-NEXT:    v_dual_mov_b32 v5, s1 :: v_dual_mov_b32 v4, s0
@@ -260,15 +260,15 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_fp8_fp8_imm_non_inlineable(<2 x i3
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_mov_b32 s0, 0x40400000
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_mov_b32 s7, s0
 ; GFX12-NEXT:    s_mov_b32 s1, s0
 ; GFX12-NEXT:    s_mov_b32 s2, s0
 ; GFX12-NEXT:    s_mov_b32 s3, s0
 ; GFX12-NEXT:    s_mov_b32 s4, s0
 ; GFX12-NEXT:    s_mov_b32 s5, s0
 ; GFX12-NEXT:    s_mov_b32 s6, s0
+; GFX12-NEXT:    s_mov_b32 s7, s0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_dual_mov_b32 v13, s7 :: v_dual_mov_b32 v12, s6
+; GFX12-NEXT:    v_dual_mov_b32 v12, s6 :: v_dual_mov_b32 v13, s7
 ; GFX12-NEXT:    v_dual_mov_b32 v11, s5 :: v_dual_mov_b32 v10, s4
 ; GFX12-NEXT:    v_dual_mov_b32 v9, s3 :: v_dual_mov_b32 v8, s2
 ; GFX12-NEXT:    v_dual_mov_b32 v7, s1 :: v_dual_mov_b32 v6, s0
@@ -302,15 +302,15 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_bf8_fp8_imm_non_inlineable(<2 x i3
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_mov_b32 s0, 0x40400000
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_mov_b32 s7, s0
 ; GFX12-NEXT:    s_mov_b32 s1, s0
 ; GFX12-NEXT:    s_mov_b32 s2, s0
 ; GFX12-NEXT:    s_mov_b32 s3, s0
 ; GFX12-NEXT:    s_mov_b32 s4, s0
 ; GFX12-NEXT:    s_mov_b32 s5, s0
 ; GFX12-NEXT:    s_mov_b32 s6, s0
+; GFX12-NEXT:    s_mov_b32 s7, s0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_dual_mov_b32 v13, s7 :: v_dual_mov_b32 v12, s6
+; GFX12-NEXT:    v_dual_mov_b32 v12, s6 :: v_dual_mov_b32 v13, s7
 ; GFX12-NEXT:    v_dual_mov_b32 v11, s5 :: v_dual_mov_b32 v10, s4
 ; GFX12-NEXT:    v_dual_mov_b32 v9, s3 :: v_dual_mov_b32 v8, s2
 ; GFX12-NEXT:    v_dual_mov_b32 v7, s1 :: v_dual_mov_b32 v6, s0
@@ -344,15 +344,15 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_fp8_bf8_imm_non_inlineable(<2 x i3
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_mov_b32 s0, 0x40400000
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_mov_b32 s7, s0
 ; GFX12-NEXT:    s_mov_b32 s1, s0
 ; GFX12-NEXT:    s_mov_b32 s2, s0
 ; GFX12-NEXT:    s_mov_b32 s3, s0
 ; GFX12-NEXT:    s_mov_b32 s4, s0
 ; GFX12-NEXT:    s_mov_b32 s5, s0
 ; GFX12-NEXT:    s_mov_b32 s6, s0
+; GFX12-NEXT:    s_mov_b32 s7, s0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_dual_mov_b32 v13, s7 :: v_dual_mov_b32 v12, s6
+; GFX12-NEXT:    v_dual_mov_b32 v12, s6 :: v_dual_mov_b32 v13, s7
 ; GFX12-NEXT:    v_dual_mov_b32 v11, s5 :: v_dual_mov_b32 v10, s4
 ; GFX12-NEXT:    v_dual_mov_b32 v9, s3 :: v_dual_mov_b32 v8, s2
 ; GFX12-NEXT:    v_dual_mov_b32 v7, s1 :: v_dual_mov_b32 v6, s0
@@ -386,15 +386,15 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_bf8_bf8_imm_non_inlineable(<2 x i3
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_mov_b32 s0, 0x40400000
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_mov_b32 s7, s0
 ; GFX12-NEXT:    s_mov_b32 s1, s0
 ; GFX12-NEXT:    s_mov_b32 s2, s0
 ; GFX12-NEXT:    s_mov_b32 s3, s0
 ; GFX12-NEXT:    s_mov_b32 s4, s0
 ; GFX12-NEXT:    s_mov_b32 s5, s0
 ; GFX12-NEXT:    s_mov_b32 s6, s0
+; GFX12-NEXT:    s_mov_b32 s7, s0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_dual_mov_b32 v13, s7 :: v_dual_mov_b32 v12, s6
+; GFX12-NEXT:    v_dual_mov_b32 v12, s6 :: v_dual_mov_b32 v13, s7
 ; GFX12-NEXT:    v_dual_mov_b32 v11, s5 :: v_dual_mov_b32 v10, s4
 ; GFX12-NEXT:    v_dual_mov_b32 v9, s3 :: v_dual_mov_b32 v8, s2
 ; GFX12-NEXT:    v_dual_mov_b32 v7, s1 :: v_dual_mov_b32 v6, s0
@@ -428,15 +428,15 @@ define amdgpu_ps void @test_wmma_i32_16x16x32_iu4_imm_non_inlineable(<2 x i32> %
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_movk_i32 s0, 0x80
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_mov_b32 s7, s0
 ; GFX12-NEXT:    s_mov_b32 s1, s0
 ; GFX12-NEXT:    s_mov_b32 s2, s0
 ; GFX12-NEXT:    s_mov_b32 s3, s0
 ; GFX12-NEXT:    s_mov_b32 s4, s0
 ; GFX12-NEXT:    s_mov_b32 s5, s0
 ; GFX12-NEXT:    s_mov_b32 s6, s0
+; GFX12-NEXT:    s_mov_b32 s7, s0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_dual_mov_b32 v13, s7 :: v_dual_mov_b32 v12, s6
+; GFX12-NEXT:    v_dual_mov_b32 v12, s6 :: v_dual_mov_b32 v13, s7
 ; GFX12-NEXT:    v_dual_mov_b32 v11, s5 :: v_dual_mov_b32 v10, s4
 ; GFX12-NEXT:    v_dual_mov_b32 v9, s3 :: v_dual_mov_b32 v8, s2
 ; GFX12-NEXT:    v_dual_mov_b32 v7, s1 :: v_dual_mov_b32 v6, s0

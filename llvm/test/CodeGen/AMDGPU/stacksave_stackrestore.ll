@@ -855,13 +855,13 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE32-OPT-NEXT:    s_load_dwordx4 s[20:23], s[20:21], 0x0
 ; WAVE32-OPT-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; WAVE32-OPT-NEXT:    s_movk_i32 s32, 0x1200
+; WAVE32-OPT-NEXT:    v_mov_b32_e32 v3, 42
+; WAVE32-OPT-NEXT:    v_mov_b32_e32 v4, 17
 ; WAVE32-OPT-NEXT:    s_mov_b32 s13, s9
+; WAVE32-OPT-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; WAVE32-OPT-NEXT:    s_mov_b32 s12, s8
 ; WAVE32-OPT-NEXT:    s_mov_b64 s[8:9], s[4:5]
 ; WAVE32-OPT-NEXT:    s_mov_b32 s4, s32
-; WAVE32-OPT-NEXT:    v_mov_b32_e32 v3, 42
-; WAVE32-OPT-NEXT:    v_mov_b32_e32 v4, 17
-; WAVE32-OPT-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; WAVE32-OPT-NEXT:    s_mov_b32 s14, s10
 ; WAVE32-OPT-NEXT:    s_mov_b32 s17, stack_passed_argument@abs32@hi
 ; WAVE32-OPT-NEXT:    s_mov_b32 s16, stack_passed_argument@abs32@lo
@@ -892,13 +892,13 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE64-OPT-NEXT:    s_load_dwordx4 s[20:23], s[20:21], 0x0
 ; WAVE64-OPT-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; WAVE64-OPT-NEXT:    s_movk_i32 s32, 0x2400
+; WAVE64-OPT-NEXT:    v_mov_b32_e32 v3, 42
+; WAVE64-OPT-NEXT:    v_mov_b32_e32 v4, 17
 ; WAVE64-OPT-NEXT:    s_mov_b32 s13, s9
+; WAVE64-OPT-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; WAVE64-OPT-NEXT:    s_mov_b32 s12, s8
 ; WAVE64-OPT-NEXT:    s_mov_b64 s[8:9], s[4:5]
 ; WAVE64-OPT-NEXT:    s_mov_b32 s4, s32
-; WAVE64-OPT-NEXT:    v_mov_b32_e32 v3, 42
-; WAVE64-OPT-NEXT:    v_mov_b32_e32 v4, 17
-; WAVE64-OPT-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; WAVE64-OPT-NEXT:    s_mov_b32 s14, s10
 ; WAVE64-OPT-NEXT:    s_mov_b32 s17, stack_passed_argument@abs32@hi
 ; WAVE64-OPT-NEXT:    s_mov_b32 s16, stack_passed_argument@abs32@lo

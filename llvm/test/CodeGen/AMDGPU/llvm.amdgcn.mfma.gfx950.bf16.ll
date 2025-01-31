@@ -22,8 +22,8 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_bf16(<8 x bfloat> %arg0, <8 x 
 ; GCN-NEXT:    v_mov_b64_e32 v[0:1], s[24:25]
 ; GCN-NEXT:    v_mov_b64_e32 v[2:3], s[26:27]
 ; GCN-NEXT:    v_mov_b64_e32 v[4:5], s[28:29]
-; GCN-NEXT:    v_accvgpr_write_b32 a0, s8
 ; GCN-NEXT:    v_mov_b64_e32 v[6:7], s[30:31]
+; GCN-NEXT:    v_accvgpr_write_b32 a0, s8
 ; GCN-NEXT:    v_accvgpr_write_b32 a1, s9
 ; GCN-NEXT:    v_accvgpr_write_b32 a2, s10
 ; GCN-NEXT:    v_accvgpr_write_b32 a3, s11
@@ -95,8 +95,8 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_bf16__flags(<8 x bfloat> %arg0
 ; GCN-NEXT:    v_mov_b64_e32 v[0:1], s[24:25]
 ; GCN-NEXT:    v_mov_b64_e32 v[2:3], s[26:27]
 ; GCN-NEXT:    v_mov_b64_e32 v[4:5], s[28:29]
-; GCN-NEXT:    v_accvgpr_write_b32 a0, s8
 ; GCN-NEXT:    v_mov_b64_e32 v[6:7], s[30:31]
+; GCN-NEXT:    v_accvgpr_write_b32 a0, s8
 ; GCN-NEXT:    v_accvgpr_write_b32 a1, s9
 ; GCN-NEXT:    v_accvgpr_write_b32 a2, s10
 ; GCN-NEXT:    v_accvgpr_write_b32 a3, s11
@@ -257,8 +257,8 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_bf16__vgprcd(<8 x bfloat> %arg
 ; GCN-NEXT:    v_mov_b64_e32 v[0:1], s[24:25]
 ; GCN-NEXT:    v_mov_b64_e32 v[2:3], s[26:27]
 ; GCN-NEXT:    v_mov_b64_e32 v[4:5], s[28:29]
-; GCN-NEXT:    v_accvgpr_write_b32 a31, s23
 ; GCN-NEXT:    v_mov_b64_e32 v[6:7], s[30:31]
+; GCN-NEXT:    v_accvgpr_write_b32 a31, s23
 ; GCN-NEXT:    v_accvgpr_write_b32 a30, s22
 ; GCN-NEXT:    v_accvgpr_write_b32 a29, s21
 ; GCN-NEXT:    v_accvgpr_write_b32 a28, s20
@@ -327,8 +327,8 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_bf16__vgprcd__flags(<8 x bfloa
 ; GCN-NEXT:    v_mov_b64_e32 v[0:1], s[24:25]
 ; GCN-NEXT:    v_mov_b64_e32 v[2:3], s[26:27]
 ; GCN-NEXT:    v_mov_b64_e32 v[4:5], s[28:29]
-; GCN-NEXT:    v_accvgpr_write_b32 a31, s23
 ; GCN-NEXT:    v_mov_b64_e32 v[6:7], s[30:31]
+; GCN-NEXT:    v_accvgpr_write_b32 a31, s23
 ; GCN-NEXT:    v_accvgpr_write_b32 a30, s22
 ; GCN-NEXT:    v_accvgpr_write_b32 a29, s21
 ; GCN-NEXT:    v_accvgpr_write_b32 a28, s20
@@ -396,8 +396,8 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_bf16__vgprcd_mac(<8 x bfloat> 
 ; GCN-NEXT:    v_mov_b64_e32 v[0:1], s[24:25]
 ; GCN-NEXT:    v_mov_b64_e32 v[2:3], s[26:27]
 ; GCN-NEXT:    v_mov_b64_e32 v[4:5], s[28:29]
-; GCN-NEXT:    v_accvgpr_write_b32 a0, s8
 ; GCN-NEXT:    v_mov_b64_e32 v[6:7], s[30:31]
+; GCN-NEXT:    v_accvgpr_write_b32 a0, s8
 ; GCN-NEXT:    v_accvgpr_write_b32 a1, s9
 ; GCN-NEXT:    v_accvgpr_write_b32 a2, s10
 ; GCN-NEXT:    v_accvgpr_write_b32 a3, s11
@@ -438,8 +438,8 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_bf16__vgprcd_mac_flags(<8 x bf
 ; GCN-NEXT:    v_mov_b64_e32 v[0:1], s[24:25]
 ; GCN-NEXT:    v_mov_b64_e32 v[2:3], s[26:27]
 ; GCN-NEXT:    v_mov_b64_e32 v[4:5], s[28:29]
-; GCN-NEXT:    v_accvgpr_write_b32 a0, s8
 ; GCN-NEXT:    v_mov_b64_e32 v[6:7], s[30:31]
+; GCN-NEXT:    v_accvgpr_write_b32 a0, s8
 ; GCN-NEXT:    v_accvgpr_write_b32 a1, s9
 ; GCN-NEXT:    v_accvgpr_write_b32 a2, s10
 ; GCN-NEXT:    v_accvgpr_write_b32 a3, s11

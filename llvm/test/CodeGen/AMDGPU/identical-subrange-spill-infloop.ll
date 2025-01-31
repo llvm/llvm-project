@@ -218,8 +218,8 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:  ; %bb.5: ; %bb43
 ; CHECK-NEXT:    s_mov_b32 s8, 0
 ; CHECK-NEXT:    s_mov_b32 s9, s8
-; CHECK-NEXT:    v_mov_b32_e32 v0, s8
 ; CHECK-NEXT:    v_readlane_b32 s36, v7, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, s8
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s9
 ; CHECK-NEXT:    s_mov_b32 s10, s8
 ; CHECK-NEXT:    s_mov_b32 s11, s8
@@ -287,11 +287,11 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    s_mov_b32 s8, 0
 ; CHECK-NEXT:    s_mov_b32 s6, s8
 ; CHECK-NEXT:    s_mov_b32 s7, s8
-; CHECK-NEXT:    v_mov_b32_e32 v1, s6
 ; CHECK-NEXT:    v_readlane_b32 s36, v7, 56
 ; CHECK-NEXT:    s_mov_b32 s9, s8
 ; CHECK-NEXT:    s_mov_b32 s10, s8
 ; CHECK-NEXT:    s_mov_b32 s11, s8
+; CHECK-NEXT:    v_mov_b32_e32 v1, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s7
 ; CHECK-NEXT:    v_readlane_b32 s37, v7, 57
 ; CHECK-NEXT:    v_readlane_b32 s38, v7, 58
@@ -304,7 +304,6 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    image_sample_lz v3, v[1:2], s[36:43], s[8:11] dmask:0x1
 ; CHECK-NEXT:    image_sample_lz v4, v[1:2], s[52:59], s[8:11] dmask:0x1
 ; CHECK-NEXT:    ; kill: killed $vgpr1_vgpr2
-; CHECK-NEXT:    s_mov_b64 s[12:13], s[36:37]
 ; CHECK-NEXT:    s_and_b64 vcc, exec, 0
 ; CHECK-NEXT:    v_readlane_b32 s44, v6, 0
 ; CHECK-NEXT:    v_readlane_b32 s45, v6, 1
@@ -314,6 +313,7 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    v_readlane_b32 s49, v6, 5
 ; CHECK-NEXT:    v_readlane_b32 s50, v6, 6
 ; CHECK-NEXT:    v_readlane_b32 s51, v6, 7
+; CHECK-NEXT:    s_mov_b64 s[12:13], s[36:37]
 ; CHECK-NEXT:    s_mov_b64 s[14:15], s[38:39]
 ; CHECK-NEXT:    s_mov_b64 s[16:17], s[40:41]
 ; CHECK-NEXT:    s_mov_b64 s[18:19], s[42:43]

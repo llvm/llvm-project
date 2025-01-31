@@ -59,8 +59,8 @@ define amdgpu_ps void @test_scalef32_pk32_fp6_f32_vv(<16 x float> %src, float %s
 define amdgpu_ps void @test_scalef32_pk32_fp6_f32_sl(<16 x float> inreg %src, ptr addrspace(1) %out) {
 ; GFX950-SDAG-LABEL: test_scalef32_pk32_fp6_f32_sl:
 ; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[16:17], s[14:15]
 ; GFX950-SDAG-NEXT:    s_mov_b32 s16, 0x42c80000
+; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[16:17], s[14:15]
 ; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[14:15], s[12:13]
 ; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[12:13], s[10:11]
 ; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[10:11], s[8:9]
@@ -119,8 +119,8 @@ define amdgpu_ps void @test_scalef32_pk32_bf6_f32_vv(<16 x float> %src, float %s
 define amdgpu_ps void @test_scalef32_pk32_bf6_f32_sl(<16 x float> inreg %src, ptr addrspace(1) %out) {
 ; GFX950-SDAG-LABEL: test_scalef32_pk32_bf6_f32_sl:
 ; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[16:17], s[14:15]
 ; GFX950-SDAG-NEXT:    s_mov_b32 s16, 0x42c80000
+; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[16:17], s[14:15]
 ; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[14:15], s[12:13]
 ; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[12:13], s[10:11]
 ; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[10:11], s[8:9]
