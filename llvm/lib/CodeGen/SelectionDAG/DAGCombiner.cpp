@@ -2675,6 +2675,35 @@ SDValue DAGCombiner::visitPTRADD(SDNode *N) {
 
       return DAG.getMemBasePlusOffset(X, Add, DL, SDNodeFlags());
     }
+
+    // TODO: There is another possible fold here that was proven useful.
+    // It would be this:
+    //
+    // (ptradd (ptradd x, y), z) -> (ptradd (ptradd x, z), y) if:
+    //   * (ptradd x, y) has one use; and
+    //   * y is a constant; and
+    //   * z is not a constant.
+    //
+    // In some cases, specifically in AArch64's FEAT_CPA, it exposes the
+    // opportunity to select more complex instructions such as SUBPT and MSUBPT
+    // However, a hypothetical corner case has been found that we could not
+    // avoid. Consider this (pseudo-POSIX C):
+    //
+    // char *foo(char *x, int z) {return (x + LARGE_CONSTANT) + z;}
+    // char *p = mmap(LARGE_CONSTANT);
+    // char *q = foo(p, -LARGE_CONSTANT);
+    //
+    // Then x + LARGE_CONSTANT is one-past-the-end, so valid, and a
+    // further + z takes it back to the start of the mapping, so valid,
+    // regardless of the address mmap gave back. However, if mmap gives you an
+    // address < LARGE_CONSTANT (ignoring high bits), x - LARGE_CONSTANT will
+    // borrow from the high bits (with the subsequent + z carrying back into
+    // the high bits to give you a well-defined pointer) and thus trip
+    // FEAT_CPA's pointer corruption checks.
+    //
+    // We leave this fold as an opportunity for future work, addressing the
+    // corner case for FEAT_CPA, as well as reconciling the solution with the
+    // more general application of pointer arithmetic in other future targets.
   }
 
   return SDValue();
