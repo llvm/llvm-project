@@ -9,7 +9,7 @@
 # RUN: FileCheck %s --input-file=%t.out.txt
 
 ## Check if the new address in `chain` is correctly updated by BOLT
-# CHECK: Relocation section '.rela.dyn' at offset 0x{{.*}} contains 1 entries:
+# CHECK: Relocation section '.rela.dyn' at offset 0x{{.*}} contains 1 entr{{.*}}:
 # CHECK: {{.*}} R_X86_64_RELATIVE [[#%x,ADDR:]]
 # CHECK: [[#ADDR]]: c3 retq
 	.text
