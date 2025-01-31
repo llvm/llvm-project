@@ -617,7 +617,7 @@ void Thread::WillStop() {
   current_plan->WillStop();
 }
 
-bool Thread::SetupToStepOverBreakpointIfNeeded(RunDirection direction) {
+bool Thread::SetupForResume() {
   if (GetResumeState() != eStateSuspended) {
     // First check whether this thread is going to "actually" resume at all.
     // For instance, if we're stepping from one level to the next of an
@@ -632,11 +632,10 @@ bool Thread::SetupToStepOverBreakpointIfNeeded(RunDirection direction) {
     // what the current plan is.
 
     lldb::RegisterContextSP reg_ctx_sp(GetRegisterContext());
-    ProcessSP process_sp(GetProcess());
-    if (reg_ctx_sp && process_sp && direction == eRunForward) {
+    if (reg_ctx_sp) {
       const addr_t thread_pc = reg_ctx_sp->GetPC();
       BreakpointSiteSP bp_site_sp =
-          process_sp->GetBreakpointSiteList().FindByAddress(thread_pc);
+          GetProcess()->GetBreakpointSiteList().FindByAddress(thread_pc);
       if (bp_site_sp) {
         // Note, don't assume there's a ThreadPlanStepOverBreakpoint, the
         // target may not require anything special to step over a breakpoint.
@@ -1743,8 +1742,6 @@ std::string Thread::StopReasonAsString(lldb::StopReason reason) {
     return "processor trace";
   case eStopReasonInterrupt:
     return "async interrupt";
-  case eStopReasonHistoryBoundary:
-    return "history boundary";
   }
 
   return "StopReason = " + std::to_string(reason);
