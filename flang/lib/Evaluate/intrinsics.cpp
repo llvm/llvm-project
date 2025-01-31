@@ -83,7 +83,7 @@ static constexpr CategorySet AnyType{IntrinsicType | DerivedType};
 
 ENUM_CLASS(KindCode, none, defaultIntegerKind,
     defaultRealKind, // is also the default COMPLEX kind
-    doublePrecision, defaultCharKind, defaultLogicalKind,
+    doublePrecision, quadPrecision, defaultCharKind, defaultLogicalKind,
     greaterOrEqualToKind, // match kind value greater than or equal to a single
                           // explicit kind value
     any, // matches any kind value; each instance is independent
@@ -139,6 +139,7 @@ static constexpr TypePattern DoublePrecision{
     RealType, KindCode::doublePrecision};
 static constexpr TypePattern DoublePrecisionComplex{
     ComplexType, KindCode::doublePrecision};
+static constexpr TypePattern QuadPrecision{RealType, KindCode::quadPrecision};
 static constexpr TypePattern SubscriptInt{IntType, KindCode::subscript};
 
 // Match any kind of some intrinsic or derived types
@@ -428,6 +429,9 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"shift", AnyInt, Rank::dimRemovedOrScalar}, OptionalDIM},
         SameType, Rank::conformable, IntrinsicClass::transformationalFunction},
     {"dble", {{"a", AnyNumeric, Rank::elementalOrBOZ}}, DoublePrecision},
+    {"derf", {{"x", DoublePrecision}}, DoublePrecision},
+    {"derfc", {{"x", DoublePrecision}}, DoublePrecision},
+    {"derfc_scaled", {{"x", DoublePrecision}}, DoublePrecision},
     {"digits",
         {{"x", AnyIntUnsignedOrReal, Rank::anyOrAssumedRank,
             Optionality::required, common::Intent::In,
@@ -830,6 +834,9 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         DefaultInt, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"present", {{"a", Addressable, Rank::anyOrAssumedRank}}, DefaultLogical,
         Rank::scalar, IntrinsicClass::inquiryFunction},
+    {"qerf", {{"x", QuadPrecision}}, QuadPrecision},
+    {"qerfc", {{"x", QuadPrecision}}, QuadPrecision},
+    {"qerfc_scaled", {{"x", QuadPrecision}}, QuadPrecision},
     {"radix",
         {{"x", AnyIntOrReal, Rank::anyOrAssumedRank, Optionality::required,
             common::Intent::In, {ArgFlag::canBeMoldNull}}},
@@ -2012,6 +2019,9 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::doublePrecision:
       argOk = type->kind() == defaults.doublePrecisionKind();
       break;
+    case KindCode::quadPrecision:
+      argOk = type->kind() == defaults.quadPrecisionKind();
+      break;
     case KindCode::defaultCharKind:
       argOk = type->kind() == defaults.GetDefaultKind(TypeCategory::Character);
       break;
@@ -2316,6 +2326,11 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       CHECK(result.categorySet == CategorySet{*category});
       CHECK(FloatingType.test(*category));
       resultType = DynamicType{*category, defaults.doublePrecisionKind()};
+      break;
+    case KindCode::quadPrecision:
+      CHECK(result.categorySet == CategorySet{*category});
+      CHECK(FloatingType.test(*category));
+      resultType = DynamicType{*category, defaults.quadPrecisionKind()};
       break;
     case KindCode::defaultLogicalKind:
       CHECK(result.categorySet == LogicalType);
@@ -3312,6 +3327,7 @@ static DynamicType GetReturnType(const SpecificIntrinsicInterface &interface,
   case KindCode::defaultIntegerKind:
     break;
   case KindCode::doublePrecision:
+  case KindCode::quadPrecision:
   case KindCode::defaultRealKind:
     category = TypeCategory::Real;
     break;
@@ -3320,6 +3336,8 @@ static DynamicType GetReturnType(const SpecificIntrinsicInterface &interface,
   }
   int kind{interface.result.kindCode == KindCode::doublePrecision
           ? defaults.doublePrecisionKind()
+          : interface.result.kindCode == KindCode::quadPrecision
+          ? defaults.quadPrecisionKind()
           : defaults.GetDefaultKind(category)};
   return DynamicType{category, kind};
 }
@@ -3560,6 +3578,8 @@ DynamicType IntrinsicProcTable::Implementation::GetSpecificType(
   TypeCategory category{set.LeastElement().value()};
   if (pattern.kindCode == KindCode::doublePrecision) {
     return DynamicType{category, defaults_.doublePrecisionKind()};
+  } else if (pattern.kindCode == KindCode::quadPrecision) {
+    return DynamicType{category, defaults_.quadPrecisionKind()};
   } else if (category == TypeCategory::Character) {
     // All character arguments to specific intrinsic functions are
     // assumed-length.
