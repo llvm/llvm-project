@@ -1019,7 +1019,6 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
     // Declaration DIE is inserted into the type map in ParseTypeFromDWARF
   }
 
-
   if (!CompleteEnumType(def_die, type_sp.get(), clang_type)) {
     dwarf->GetObjectFile()->GetModule()->ReportError(
         "DWARF DIE at {0:x16} named \"{1}\" was not able to start its "
@@ -2217,7 +2216,8 @@ bool DWARFASTParserClang::CompleteEnumType(const DWARFDIE &die,
 
   if (TypeSystemClang::StartTagDeclarationDefinition(clang_type)) {
     if (die.HasChildren())
-      ParseChildEnumerators(clang_type, clang_type.IsEnumerationIntegerTypeSigned(),
+      ParseChildEnumerators(clang_type,
+                            clang_type.IsEnumerationIntegerTypeSigned(),
                             type->GetByteSize(nullptr).value_or(0), die);
 
     TypeSystemClang::CompleteTagDeclarationDefinition(clang_type);
