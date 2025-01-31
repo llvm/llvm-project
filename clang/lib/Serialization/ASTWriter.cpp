@@ -5359,7 +5359,7 @@ ASTWriter::WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
   llvm::TimeTraceScope scope("WriteAST", OutputFile);
   WritingAST = true;
 
-  Sema *SemaPtr = Subject.dyn_cast<Sema *>();
+  Sema *SemaPtr = dyn_cast<Sema *>(Subject);
   Preprocessor &PPRef =
       SemaPtr ? SemaPtr->getPreprocessor() : *cast<Preprocessor *>(Subject);
 
