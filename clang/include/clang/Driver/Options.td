@@ -6341,15 +6341,13 @@ def mno_avx : Flag<["-"], "mno-avx">, Group<m_x86_Features_Group>;
 def mavx10_1_256 : Flag<["-"], "mavx10.1-256">, Group<m_x86_AVX10_Features_Group>;
 def mno_avx10_1_256 : Flag<["-"], "mno-avx10.1-256">, Group<m_x86_AVX10_Features_Group>;
 def mavx10_1_512 : Flag<["-"], "mavx10.1-512">, Group<m_x86_AVX10_Features_Group>;
-def mno_avx10_1_512 : Flag<["-"], "mno-avx10.1-512">, Group<m_x86_AVX10_Features_Group>;
-def mavx10_1 : Flag<["-"], "mavx10.1">, Alias<mavx10_1_256>;
-def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Alias<mno_avx10_1_256>;
+def mno_avx10_1_512 : Flag<["-"], "mno-avx10.1-512">, Alias<mno_avx10_1_256>;
+def mavx10_1 : Flag<["-"], "mavx10.1">, Flags<[Unsupported]>;
+def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Flags<[Unsupported]>;
 def mavx10_2_256 : Flag<["-"], "mavx10.2-256">, Group<m_x86_AVX10_Features_Group>;
-def mno_avx10_2_256 : Flag<["-"], "mno-avx10.2-256">, Group<m_x86_AVX10_Features_Group>;
 def mavx10_2_512 : Flag<["-"], "mavx10.2-512">, Group<m_x86_AVX10_Features_Group>;
-def mno_avx10_2_512 : Flag<["-"], "mno-avx10.2-512">, Group<m_x86_AVX10_Features_Group>;
-def mavx10_2 : Flag<["-"], "mavx10.2">, Alias<mavx10_2_256>;
-def mno_avx10_2 : Flag<["-"], "mno-avx10.2">, Alias<mno_avx10_2_256>;
+def mavx10_2 : Flag<["-"], "mavx10.2">, Alias<mavx10_2_512>;
+def mno_avx10_2 : Flag<["-"], "mno-avx10.2">, Group<m_x86_AVX10_Features_Group>;
 def mavx2 : Flag<["-"], "mavx2">, Group<m_x86_Features_Group>;
 def mno_avx2 : Flag<["-"], "mno-avx2">, Group<m_x86_Features_Group>;
 def mavx512f : Flag<["-"], "mavx512f">, Group<m_x86_Features_Group>;
@@ -7588,6 +7586,11 @@ def fexperimental_assignment_tracking_EQ : Joined<["-"], "fexperimental-assignme
 
 def enable_tlsdesc : Flag<["-"], "enable-tlsdesc">,
   MarshallingInfoFlag<CodeGenOpts<"EnableTLSDESC">>;
+
+def import_call_optimization : Flag<["-"], "import-call-optimization">,
+    HelpText<"Emit Import Call sections on supported targets that can be used "
+             "by the Windows kernel to enable import call optimization">,
+    MarshallingInfoFlag<CodeGenOpts<"ImportCallOptimization">>;
 
 } // let Visibility = [CC1Option]
 
