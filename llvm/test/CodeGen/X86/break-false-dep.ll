@@ -516,8 +516,10 @@ define dso_local void @loopdep3() {
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
+; SSE-WIN-NEXT:    .seh_startepilogue
 ; SSE-WIN-NEXT:    addq $160, %rsp
 ; SSE-WIN-NEXT:    popq %rsi
+; SSE-WIN-NEXT:    .seh_endepilogue
 ; SSE-WIN-NEXT:    retq
 ; SSE-WIN-NEXT:    .seh_endproc
 ;
@@ -592,8 +594,10 @@ define dso_local void @loopdep3() {
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
+; AVX-NEXT:    .seh_startepilogue
 ; AVX-NEXT:    addq $160, %rsp
 ; AVX-NEXT:    popq %rsi
+; AVX-NEXT:    .seh_endepilogue
 ; AVX-NEXT:    retq
 ; AVX-NEXT:    .seh_endproc
 entry:
@@ -710,7 +714,9 @@ define dso_local double @inlineasmdep(i64 %arg) {
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
+; SSE-WIN-NEXT:    .seh_startepilogue
 ; SSE-WIN-NEXT:    addq $168, %rsp
+; SSE-WIN-NEXT:    .seh_endepilogue
 ; SSE-WIN-NEXT:    retq
 ; SSE-WIN-NEXT:    .seh_endproc
 ;
@@ -767,7 +773,9 @@ define dso_local double @inlineasmdep(i64 %arg) {
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
+; AVX-NEXT:    .seh_startepilogue
 ; AVX-NEXT:    addq $168, %rsp
+; AVX-NEXT:    .seh_endepilogue
 ; AVX-NEXT:    retq
 ; AVX-NEXT:    .seh_endproc
 top:
@@ -869,7 +877,9 @@ define dso_local double @truedeps(float %arg) {
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
+; SSE-WIN-NEXT:    .seh_startepilogue
 ; SSE-WIN-NEXT:    addq $184, %rsp
+; SSE-WIN-NEXT:    .seh_endepilogue
 ; SSE-WIN-NEXT:    retq
 ; SSE-WIN-NEXT:    .seh_endproc
 ;
@@ -930,7 +940,9 @@ define dso_local double @truedeps(float %arg) {
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
+; AVX-NEXT:    .seh_startepilogue
 ; AVX-NEXT:    addq $184, %rsp
+; AVX-NEXT:    .seh_endepilogue
 ; AVX-NEXT:    retq
 ; AVX-NEXT:    .seh_endproc
 top:
@@ -1029,7 +1041,9 @@ define dso_local double @clearence(i64 %arg) {
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
+; SSE-WIN-NEXT:    .seh_startepilogue
 ; SSE-WIN-NEXT:    addq $168, %rsp
+; SSE-WIN-NEXT:    .seh_endepilogue
 ; SSE-WIN-NEXT:    retq
 ; SSE-WIN-NEXT:    .seh_endproc
 ;
@@ -1088,7 +1102,9 @@ define dso_local double @clearence(i64 %arg) {
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
+; AVX-NEXT:    .seh_startepilogue
 ; AVX-NEXT:    addq $168, %rsp
+; AVX-NEXT:    .seh_endepilogue
 ; AVX-NEXT:    retq
 ; AVX-NEXT:    .seh_endproc
 top:
@@ -1397,7 +1413,9 @@ define dso_local void @loopclearance2(ptr nocapture %y, ptr %x, double %c1, doub
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
+; SSE-WIN-NEXT:    .seh_startepilogue
 ; SSE-WIN-NEXT:    addq $152, %rsp
+; SSE-WIN-NEXT:    .seh_endepilogue
 ; SSE-WIN-NEXT:    retq
 ; SSE-WIN-NEXT:    .seh_endproc
 ;
@@ -1477,7 +1495,9 @@ define dso_local void @loopclearance2(ptr nocapture %y, ptr %x, double %c1, doub
 ; AVX1-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
 ; AVX1-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
 ; AVX1-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
+; AVX1-NEXT:    .seh_startepilogue
 ; AVX1-NEXT:    addq $152, %rsp
+; AVX1-NEXT:    .seh_endepilogue
 ; AVX1-NEXT:    retq
 ; AVX1-NEXT:    .seh_endproc
 ;
@@ -1557,7 +1577,9 @@ define dso_local void @loopclearance2(ptr nocapture %y, ptr %x, double %c1, doub
 ; AVX512VL-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
 ; AVX512VL-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
 ; AVX512VL-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
+; AVX512VL-NEXT:    .seh_startepilogue
 ; AVX512VL-NEXT:    addq $152, %rsp
+; AVX512VL-NEXT:    .seh_endepilogue
 ; AVX512VL-NEXT:    retq
 ; AVX512VL-NEXT:    .seh_endproc
 entry:

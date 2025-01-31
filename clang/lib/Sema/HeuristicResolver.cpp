@@ -482,7 +482,8 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveDependentMember(
       if (!Filter(ND))
         return false;
       if (const auto *MD = dyn_cast<CXXMethodDecl>(ND)) {
-        return MD->getMethodQualifiers().compatiblyIncludes(QT.getQualifiers(),
+        return !MD->isInstance() ||
+               MD->getMethodQualifiers().compatiblyIncludes(QT.getQualifiers(),
                                                             Ctx);
       }
       return true;
