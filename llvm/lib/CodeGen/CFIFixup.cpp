@@ -131,6 +131,9 @@ struct BlockFlags {
   bool StrongNoFrameOnEntry : 1;
   bool HasFrameOnEntry : 1;
   bool HasFrameOnExit : 1;
+  BlockFlags()
+      : Reachable(false), StrongNoFrameOnEntry(false), HasFrameOnEntry(false),
+        HasFrameOnExit(false) {}
 };
 
 // Computes the frame information for each block in the function. Frame info
@@ -138,8 +141,7 @@ struct BlockFlags {
 static SmallVector<BlockFlags>
 computeBlockInfo(const MachineFunction &MF,
                  const MachineBasicBlock *PrologueBlock) {
-  SmallVector<BlockFlags, 32> BlockInfo(MF.getNumBlockIDs(),
-                                        {false, false, false, false});
+  SmallVector<BlockFlags, 32> BlockInfo(MF.getNumBlockIDs());
   BlockInfo[0].Reachable = true;
   BlockInfo[0].StrongNoFrameOnEntry = true;
 
