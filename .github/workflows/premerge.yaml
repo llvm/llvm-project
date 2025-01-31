@@ -153,8 +153,6 @@ jobs:
         uses: llvm/actions/install-ninja@main
       - name: Build and Test
         run: |
-          echo $GITHUB_REF_NAME
-          echo $GITHUB_BASE_REF
           modified_files=$(git diff --name-only HEAD~1...HEAD)
           modified_dirs=$(echo "$modified_files" | cut -d'/' -f1 | sort -u)
 
