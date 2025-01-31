@@ -19654,6 +19654,10 @@ containing both +0.0 and -0.0 elements, the sign of the result is unspecified.
 If the intrinsic call has the ``nnan`` fast-math flag, then the operation can
 assume that NaNs are not present in the input vector.
 
+It is deprecated, since the different order of inputs may produce different
+outputs, and it is hard to optimize with Vector or SIMD extensions.
+Use '``llvm.vector.reduce.fmaximum``' or '``llvm.vector.reduce.fmaximumnum``' instead.
+
 Arguments:
 """"""""""
 The argument to this intrinsic must be a vector of floating-point values.
@@ -19686,6 +19690,10 @@ containing both +0.0 and -0.0 elements, the sign of the result is unspecified.
 
 If the intrinsic call has the ``nnan`` fast-math flag, then the operation can
 assume that NaNs are not present in the input vector.
+
+It is deprecated, since the different order of inputs may produce different
+outputs, and it is hard to optimize with Vector or SIMD extensions.
+Use '``llvm.vector.reduce.fminimum``' or '``llvm.vector.reduce.fminimumnum``' instead.
 
 Arguments:
 """"""""""
@@ -23306,6 +23314,10 @@ vector with maximum element magnitude ``0.0`` and containing both ``+0.0`` and
 
 To ignore the start value, the neutral value can be used.
 
+It is deprecated, since the different order of inputs may produce different
+outputs, and it is hard to optimize with Vector or SIMD extensions.
+Use '``llvm.vp.vector.reduce.fmaximum``' or '``llvm.vp.vector.reduce.fmaximumnum``' instead.
+
 Examples:
 """""""""
 
@@ -23375,6 +23387,10 @@ vector with maximum element magnitude ``0.0`` and containing both ``+0.0`` and
 ``-0.0`` elements, the sign of the result is unspecified.
 
 To ignore the start value, the neutral value can be used.
+
+It is deprecated, since the different order of inputs may produce different
+outputs, and it is hard to optimize with Vector or SIMD extensions.
+Use '``llvm.vp.vector.reduce.fminimum``' or '``llvm.vp.vector.reduce.fminimumnum``' instead.
 
 Examples:
 """""""""
