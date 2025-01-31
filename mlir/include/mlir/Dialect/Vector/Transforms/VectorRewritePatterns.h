@@ -364,10 +364,12 @@ void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
                                                PatternBenefit benefit = 1);
 
 /// Appends patterns for emulating vector operations over narrow types with ops
-/// over wider types.
+/// over wider types. The `useAtomicWrites` indicates whether to use
+/// op `memref.generic_atomic_rmw` to perform atomic subbyte storing, or just a
+/// rmw sequence otherwise.
 void populateVectorNarrowTypeEmulationPatterns(
     const arith::NarrowTypeEmulationConverter &typeConverter,
-    RewritePatternSet &patterns);
+    RewritePatternSet &patterns, bool useAtomicWrites = true);
 
 /// Rewrite a vector `bitcast(trunci)` to use a more efficient sequence of
 /// vector operations comprising `shuffle` and `bitwise` ops.
