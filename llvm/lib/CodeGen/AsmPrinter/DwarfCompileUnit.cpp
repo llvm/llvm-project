@@ -383,8 +383,8 @@ void DwarfCompileUnit::addLocationAttribute(
       }
       if (Asm->TM.getTargetTriple().isNVPTX() && DD->tuneForGDB() &&
           !NVPTXAddressSpace)
-        NVPTXAddressSpace = translateToNVVMDWARFAddrSpace(
-            Global->getType()->getAddressSpace());
+        NVPTXAddressSpace =
+            translateToNVVMDWARFAddrSpace(Global->getType()->getAddressSpace());
     }
     // Global variables attached to symbols are memory locations.
     // It would be better if this were unconditional, but malformed input that
