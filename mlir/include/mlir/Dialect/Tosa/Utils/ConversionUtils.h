@@ -237,6 +237,9 @@ SmallVector<int64_t> convertFromMlirShape(ArrayRef<int64_t> shape);
 bool getConstShapeValue(Operation *op,
                         llvm::SmallVector<int64_t> &result_shape);
 
+// returns a small vector of int64_t values that attr contains
+SmallVector<int64_t> convertFromIntAttr(const DenseElementsAttr &attr,
+                                        const int rank);
 } // namespace tosa
 } // namespace mlir
 

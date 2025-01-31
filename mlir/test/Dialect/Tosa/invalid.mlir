@@ -1061,3 +1061,63 @@ func.func @test_sub_with_unequal_result_ranks(%arg0: tensor<1x21x3xf32>, %arg1: 
   %0 = tosa.sub %arg0, %arg1 : (tensor<1x21x3xf32>, tensor<13x21x3xf32>) -> tensor<1x13x21x3xf32>
   return %0 : tensor<1x13x21x3xf32>
 }
+
+// -----
+
+// CHECK-LABEL: test_resize_invalid_scale_values
+func.func @test_resize_invalid_scale_values(%arg0: tensor<1x8x8x8xf32>) -> tensor<?x?x?x?xf32> {
+  %scale = tosa.const_shape { value = dense<[2, 0, -1, 2]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op expect all scale values to be > 0, got 2, 0, -1, 2}}
+  %1 = tosa.resize %arg0, %scale, %offset, %border { mode = "BILINEAR" } : (tensor<1x8x8x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xf32>
+  return %1 : tensor<?x?x?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_resize_invalid_wholly_divisible_height
+func.func @test_resize_invalid_wholly_divisible_height(%arg0: tensor<1x8x8x8xf32>) -> tensor<1x8x8x8xf32> {
+  %scale = tosa.const_shape { value = dense<[1, 3, 1, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op expected (input_height - 1) * scale_y_n - offset_y + border_y to be wholly divisible by scale_y_d, got ((8 - 1) * 1 - 0 + 0) / 3}}
+  %1 = tosa.resize %arg0, %scale, %offset, %border { mode = "BILINEAR" } : (tensor<1x8x8x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x8x8x8xf32>
+  return %1 : tensor<1x8x8x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_resize_invalid_output_height
+func.func @test_resize_invalid_output_height(%arg0: tensor<1x8x8x8xf32>) -> tensor<1x9x8x8xf32> {
+  %scale = tosa.const_shape { value = dense<[2, 1, 1, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op calculated output height did not match expected: calculated=15, expected=9}}
+  %1 = tosa.resize %arg0, %scale, %offset, %border { mode = "BILINEAR" } : (tensor<1x8x8x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x9x8x8xf32>
+  return %1 : tensor<1x9x8x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_resize_invalid_wholly_divisible_width
+func.func @test_resize_invalid_wholly_divisible_width(%arg0: tensor<1x8x8x8xf32>) -> tensor<1x8x8x8xf32> {
+  %scale = tosa.const_shape { value = dense<[1, 1, 1, 3]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op expected (input_width - 1) * scale_x_n - offset_x + border_x to be wholly divisible by scale_x_d, got ((8 - 1) * 1 - 0 + 0) / 3}}
+  %1 = tosa.resize %arg0, %scale, %offset, %border { mode = "BILINEAR" } : (tensor<1x8x8x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x8x8x8xf32>
+  return %1 : tensor<1x8x8x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_resize_invalid_output_width
+func.func @test_resize_invalid_output_width(%arg0: tensor<1x8x8x8xf32>) -> tensor<1x8x9x8xf32> {
+  %scale = tosa.const_shape { value = dense<[1, 1, 2, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op calculated output width did not match expected: calculated=15, expected=9}}
+  %1 = tosa.resize %arg0, %scale, %offset, %border { mode = "BILINEAR" } : (tensor<1x8x8x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x8x9x8xf32>
+  return %1 : tensor<1x8x9x8xf32>
+}

@@ -193,3 +193,21 @@ bool mlir::tosa::getConstShapeValue(Operation *op,
   // for undefined op, return false.
   return false;
 }
+
+// returns a small vector of int64_t values that attr contains
+SmallVector<int64_t>
+mlir::tosa::convertFromIntAttr(const DenseElementsAttr &attr, const int rank) {
+  if (attr.isSplat()) {
+    int64_t v = attr.getSplatValue<APInt>().getSExtValue();
+    return SmallVector<int64_t>(rank, v);
+  }
+
+  if (auto int_array_attr = llvm::dyn_cast<DenseIntElementsAttr>(attr)) {
+    SmallVector<int64_t> vec;
+    for (APInt val : int_array_attr.getValues<APInt>()) {
+      vec.push_back(val.getSExtValue());
+    }
+    return vec;
+  }
+  return {};
+}
