@@ -2,6 +2,8 @@
 ; RUN: opt -S -mtriple=riscv64 -mattr=+v,+m,+zvfh %s -passes=vector-combine | FileCheck %s
 ; RUN: opt -S -mtriple=riscv32 -mattr=+v,+m,+zvfh %s -passes=vector-combine | FileCheck %s
 
+; We should not form a i128 vector.
+
 define void @interleave2_const_splat_nxv8i64(ptr %dst) {
 ; CHECK-LABEL: define void @interleave2_const_splat_nxv8i64(
 ; CHECK-SAME: ptr [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
