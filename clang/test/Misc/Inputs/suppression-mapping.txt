@@ -11,3 +11,7 @@ src:*foo/*=emit
 [format=2]
 src:*
 src:*foo/*=emit
+
+# A warning group that clang doesn't know about should be silently ignored.
+[barglegunk]
+src:*

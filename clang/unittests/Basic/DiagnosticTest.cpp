@@ -253,8 +253,7 @@ TEST_F(SuppressionMappingTest, UnknownDiagName) {
   FS->addFile("foo.txt", /*ModificationTime=*/{},
               llvm::MemoryBuffer::getMemBuffer("[non-existing-warning]"));
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
-  EXPECT_THAT(diags(), ElementsAre(WithMessage(
-                           "unknown warning option 'non-existing-warning'")));
+  EXPECT_THAT(diags(), IsEmpty());
 }
 
 TEST_F(SuppressionMappingTest, SuppressesGroup) {
