@@ -2711,8 +2711,7 @@ OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
     // TODO: Return a partial poison vector when supported by the UB dialect.
     if (maskIdx == ShuffleOp::kPoisonIndex) {
       indexedElm = v1Elements[0];
-    }
-    else {
+    } else {
       indexedElm =
           maskIdx < v1Size ? v1Elements[maskIdx] : v2Elements[maskIdx - v1Size];
     }
