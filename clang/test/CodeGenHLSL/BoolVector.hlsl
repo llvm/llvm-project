@@ -2,6 +2,8 @@
 
 // CHECK: %struct.S = type { <2 x i32>, float }
 // CHECK: [[ConstS:@.*]] = private unnamed_addr constant %struct.S { <2 x i32> splat (i32 1), float 1.000000e+00 }, align 8
+// CHECK: [[ConstArr:.*]] = private unnamed_addr constant [2 x <2 x i32>] [<2 x i32> splat (i32 1), <2 x i32> zeroinitializer], align 8
+
 struct S {
     bool2 bv;
     float f;
@@ -49,4 +51,17 @@ bool2 fn2(bool V) {
 bool fn3() {
   S s = {{true,true}, 1.0};
   return s.bv[0];
+}
+
+// CHECK-LABEL: define noundef i1 {{.*}}fn4{{.*}}
+// CHECK: [[Arr:%.*]] = alloca [2 x <2 x i32>], align 8
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[Arr]], ptr align 8 [[ConstArr]], i32 16, i1 false)
+// CHECK-NEXT: [[Idx:%.*]] = getelementptr inbounds [2 x <2 x i32>], ptr [[Arr]], i32 0, i32 0
+// CHECK-NEXT: [[L:%.*]] = load <2 x i32>, ptr [[Idx]], align 8
+// CHECK-NEXT: [[LV:%.*]] = trunc <2 x i32> [[L]] to <2 x i1>
+// CHECK-NEXT: [[VX:%.*]] = extractelement <2 x i1> [[LV]], i32 1
+// CHECK-NEXT: ret i1 [[VX]]
+bool fn4() {
+  bool2 Arr[2] = {{true,true}, {false,false}};
+  return Arr[0][1];
 }
