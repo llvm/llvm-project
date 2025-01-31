@@ -323,8 +323,7 @@ bool llvm::isKnownNonEqual(const Value *V1, const Value *V2,
   auto *FVTy = dyn_cast<FixedVectorType>(V1->getType());
   APInt DemandedElts =
       FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
-  return ::isKnownNonEqual(V1, V2, DemandedElts, Depth,
-                           Q.getWithInstruction(safeCxtI(V2, V1, Q.CxtI)));
+  return ::isKnownNonEqual(V1, V2, DemandedElts, Depth, Q);
 }
 
 bool llvm::MaskedValueIsZero(const Value *V, const APInt &Mask,
