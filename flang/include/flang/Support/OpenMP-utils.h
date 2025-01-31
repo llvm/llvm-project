@@ -1,4 +1,4 @@
-//===-- include/flang/Common/OpenMP-utils.h --------------------*- C++ -*-====//
+//===-- include/flang/Support/OpenMP-utils.h --------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_COMMON_OPENMP_UTILS_H_
-#define FORTRAN_COMMON_OPENMP_UTILS_H_
+#ifndef FORTRAN_SUPPORT_OPENMP_UTILS_H_
+#define FORTRAN_SUPPORT_OPENMP_UTILS_H_
 
 #include "flang/Semantics/symbol.h"
 
@@ -73,4 +73,4 @@ mlir::Block *genEntryBlock(
     mlir::OpBuilder &builder, const EntryBlockArgs &args, mlir::Region &region);
 } // namespace Fortran::common::openmp
 
-#endif // FORTRAN_COMMON_OPENMP_UTILS_H_
+#endif // FORTRAN_SUPPORT_OPENMP_UTILS_H_

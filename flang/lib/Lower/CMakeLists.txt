@@ -55,7 +55,7 @@ add_flang_library(FortranLower
   FIRSupport
   FIRTransforms
   HLFIRDialect
-  FortranCommon
+  FortranSupport
   FortranParser
   FortranEvaluate
   FortranSemantics
