@@ -3632,7 +3632,7 @@ void UnwrappedLineParser::parseRequiresClause(FormatToken *RequiresToken) {
   // It could be inlined into here.
   parseConstraintExpression();
 
-  if (!InRequiresExpression)
+  if (!InRequiresExpression && FormatTok->Previous)
     FormatTok->Previous->ClosesRequiresClause = true;
 }
 
