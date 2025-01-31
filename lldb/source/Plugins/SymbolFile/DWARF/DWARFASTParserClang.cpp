@@ -44,6 +44,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypePrinter.h"
@@ -2369,23 +2370,13 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
       m_ast.AddEnumerationValueToEnumerationType(
           clang_type, decl, name, *enum_value, enumerator_byte_size * 8);
       ++enumerators_added;
-
-      llvm::APSInt InitVal = ECD->getInitVal();
-      // Keep track of the size of positive and negative values.
-      m_ast.getASTContext().updateNumOfEnumBits(&InitVal, NumNegativeBits,
-                                                NumPositiveBits);
     }
   }
 
-  // If we have an empty set of enumerators we still need one bit.
-  // From [dcl.enum]p8
-  // If the enumerator-list is empty, the values of the enumeration are as if
-  // the enumeration had a single enumerator with value 0
-  if (!NumPositiveBits && !NumNegativeBits)
-    NumPositiveBits = 1;
-
   clang::EnumDecl *enum_decl =
       ClangUtil::GetQualType(clang_type)->getAs<clang::EnumType>()->getDecl();
+  m_ast.getASTContext().computeEnumBits(enum_decl->enumerators(),
+                                        NumNegativeBits, NumPositiveBits);
   enum_decl->setNumPositiveBits(NumPositiveBits);
   enum_decl->setNumNegativeBits(NumNegativeBits);
 
