@@ -22572,6 +22572,9 @@ static bool isMultipleOfN(const Value *V, const DataLayout &DL, unsigned N) {
 ///
 /// NOTE: the deinterleave2 intrinsic won't be touched and is expected to be
 /// removed by the caller
+/// TODO: We probably can loosen the dependency on matching extractvalue when
+/// dealing with factor of 2 (extractvalue is still required for most of other
+/// factors though).
 bool RISCVTargetLowering::lowerDeinterleavedIntrinsicToVPLoad(
     VPIntrinsic *Load, Value *Mask,
     ArrayRef<Value *> DeinterleaveResults) const {
@@ -22608,7 +22611,7 @@ bool RISCVTargetLowering::lowerDeinterleavedIntrinsicToVPLoad(
     return false;
 
   auto *XLenTy = Type::getIntNTy(Load->getContext(), Subtarget.getXLen());
-  Value *EVL = Builder.CreateZExtOrTrunc(
+  Value *EVL = Builder.CreateZExt(
       Builder.CreateUDiv(WideEVL, ConstantInt::get(WideEVL->getType(), Factor)),
       XLenTy);
 
@@ -22715,7 +22718,7 @@ bool RISCVTargetLowering::lowerInterleavedIntrinsicToVPStore(
     return false;
 
   auto *XLenTy = Type::getIntNTy(Store->getContext(), Subtarget.getXLen());
-  Value *EVL = Builder.CreateZExtOrTrunc(
+  Value *EVL = Builder.CreateZExt(
       Builder.CreateUDiv(WideEVL, ConstantInt::get(WideEVL->getType(), Factor)),
       XLenTy);
 
@@ -22741,17 +22744,12 @@ bool RISCVTargetLowering::lowerInterleavedIntrinsicToVPStore(
     StoredVal = Builder.CreateCall(
         VecInsertFunc, {StoredVal, InterleaveOperands[i], Builder.getInt32(i)});
 
-  SmallVector<Value *, 5> Operands;
-  Operands.push_back(StoredVal);
-  Operands.push_back(Store->getArgOperand(1));
-
   Function *VssegNFunc = Intrinsic::getOrInsertDeclaration(
       Store->getModule(), IntrMaskIds[Factor - 2],
       {VecTupTy, Mask->getType(), EVL->getType()});
 
-  Operands.push_back(Mask);
-  Operands.push_back(EVL);
-  Operands.push_back(ConstantInt::get(XLenTy, Log2_64(SEW)));
+  Value *Operands[] = {StoredVal, Store->getArgOperand(1), Mask, EVL,
+                       ConstantInt::get(XLenTy, Log2_64(SEW))};
 
   Builder.CreateCall(VssegNFunc, Operands);
   return true;

@@ -23,7 +23,7 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor2_v2(ptr %ptr, i32 %
   %deinterleaved.results = call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave2.nxv4i32(<vscale x 4 x i32> %wide.masked.load)
   %t0 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 0
   %t1 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 1
-  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } undef, <vscale x 2 x i32> %t0, 0
+  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> %t0, 0
   %res1 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %res0, <vscale x 2 x i32> %t1, 1
   ret { <vscale x 2 x i32>, <vscale x 2 x i32> } %res1
 }
@@ -56,7 +56,7 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 
   %t1 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %d2, 0
   %t3 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %d2, 1
 
-  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } undef, <vscale x 2 x i32> %t0, 0
+  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> %t0, 0
   %res1 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res0, <vscale x 2 x i32> %t1, 1
   %res2 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res1, <vscale x 2 x i32> %t2, 2
   %res3 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res2, <vscale x 2 x i32> %t3, 3
@@ -104,7 +104,7 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 
   %t3 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %d6, 0
   %t7 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %d6, 1
 
-  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } undef, <vscale x 2 x i32> %t0, 0
+  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> %t0, 0
   %res1 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res0, <vscale x 2 x i32> %t1, 1
   %res2 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res1, <vscale x 2 x i32> %t2, 2
   %res3 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res2, <vscale x 2 x i32> %t3, 3
@@ -227,7 +227,7 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>} @masked_load_factor2_v2(<vscale 
   %deinterleaved.results = tail call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave2.nxv16i32(<vscale x 4 x i32> %wide.masked.load)
   %t0 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 0
   %t1 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 1
-  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } undef, <vscale x 2 x i32> %t0, 0
+  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> %t0, 0
   %res1 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %res0, <vscale x 2 x i32> %t1, 1
   ret { <vscale x 2 x i32>, <vscale x 2 x i32> } %res1
 }
@@ -263,7 +263,7 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 
   %t1 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %d2, 0
   %t3 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %d2, 1
 
-  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } undef, <vscale x 2 x i32> %t0, 0
+  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> %t0, 0
   %res1 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res0, <vscale x 2 x i32> %t1, 1
   %res2 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res1, <vscale x 2 x i32> %t2, 2
   %res3 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res2, <vscale x 2 x i32> %t3, 3
@@ -498,7 +498,7 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 
   %t1 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %d2, 1
   %t3 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %d2, 1
 
-  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } undef, <vscale x 2 x i32> %t0, 0
+  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> %t0, 0
   %res1 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res0, <vscale x 2 x i32> %t1, 1
   %res2 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res1, <vscale x 2 x i32> %t2, 2
   %res3 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res2, <vscale x 2 x i32> %t3, 3
@@ -553,7 +553,7 @@ define {<vscale x 4 x i32>, <vscale x 2 x i32>, <vscale x 1 x i32>, <vscale x 1 
   %t2 = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } %d2, 0
   %t3 = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } %d2, 1
 
-  %res0 = insertvalue { <vscale x 4 x i32>, <vscale x 2 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } undef, <vscale x 4 x i32> %t0, 0
+  %res0 = insertvalue { <vscale x 4 x i32>, <vscale x 2 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } poison, <vscale x 4 x i32> %t0, 0
   %res1 = insertvalue { <vscale x 4 x i32>, <vscale x 2 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } %res0, <vscale x 2 x i32> %t1, 1
   %res2 = insertvalue { <vscale x 4 x i32>, <vscale x 2 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } %res1, <vscale x 1 x i32> %t2, 2
   %res3 = insertvalue { <vscale x 4 x i32>, <vscale x 2 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32> } %res2, <vscale x 1 x i32> %t3, 3
@@ -663,7 +663,7 @@ define {<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>} @not_scalable_vectors(ptr %p
   %t1 = extractvalue { <2 x i32>, <2 x i32> } %d2, 0
   %t3 = extractvalue { <2 x i32>, <2 x i32> } %d2, 1
 
-  %res0 = insertvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } undef, <2 x i32> %t0, 0
+  %res0 = insertvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } poison, <2 x i32> %t0, 0
   %res1 = insertvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } %res0, <2 x i32> %t1, 1
   %res2 = insertvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } %res1, <2 x i32> %t2, 2
   %res3 = insertvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } %res2, <2 x i32> %t3, 3
@@ -753,7 +753,7 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>} @not_same_mask(<vscale x 2 x i1>
   %deinterleaved.results = tail call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave2.nxv16i32(<vscale x 4 x i32> %wide.masked.load)
   %t0 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 0
   %t1 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 1
-  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } undef, <vscale x 2 x i32> %t0, 0
+  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> %t0, 0
   %res1 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %res0, <vscale x 2 x i32> %t1, 1
   ret { <vscale x 2 x i32>, <vscale x 2 x i32> } %res1
 }
@@ -805,7 +805,7 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 
   %t1 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %d2, 0
   %t3 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %d2, 1
 
-  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } undef, <vscale x 2 x i32> %t0, 0
+  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> %t0, 0
   %res1 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res0, <vscale x 2 x i32> %t1, 1
   %res2 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res1, <vscale x 2 x i32> %t2, 2
   %res3 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res2, <vscale x 2 x i32> %t3, 3
