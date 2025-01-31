@@ -190,6 +190,8 @@ public:
   static Function *Create(FunctionType *Ty, LinkageTypes Linkage,
                           const Twine &N, Module &M);
 
+  StringRef getDefaultTargetFeatures(const StringRef TargetABI);
+
   /// Creates a function with some attributes recorded in llvm.module.flags
   /// and the LLVMContext applied.
   ///
