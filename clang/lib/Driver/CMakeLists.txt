@@ -14,6 +14,10 @@ if(WIN32)
   set(system_libs version)
 endif()
 
+if(CLANG_USE_XCSELECT)
+  set(system_libs xcselect)
+endif()
+
 add_clang_library(clangDriver
   Action.cpp
   Compilation.cpp
