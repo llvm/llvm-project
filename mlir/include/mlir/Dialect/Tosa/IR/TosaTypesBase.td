@@ -288,4 +288,9 @@ def Rank1TosaShape : TosaShapeOfRank<1>;
 def Rank2TosaShape : TosaShapeOfRank<2>;
 def Rank4TosaShape : TosaShapeOfRank<4>;
 
+// NOTE: Tosa_ScalarTensor is currently defined as rank-0. If and when this
+// becomes rank-1 it can be used in place of Tosa_ZeroPointTensor and the
+// following def can be removed.
+def Tosa_ZeroPointTensor : TosaTensorRankOf<[Tosa_AnyNumber], [1]>;
+
 #endif // TOSA_TYPES_BASE
