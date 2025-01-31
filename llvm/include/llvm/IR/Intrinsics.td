@@ -2420,7 +2420,7 @@ let IntrProperties = [IntrNoMem, ImmArg<ArgIndex<1>>] in {
                                     llvm_i32_ty]>;
 }
 
-def int_experimental_get_nonalias_lane_mask:
+def int_experimental_get_noalias_lane_mask:
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
             [llvm_ptr_ty, llvm_ptr_ty, llvm_i64_ty, llvm_i1_ty],
             [IntrNoMem, IntrNoSync, IntrWillReturn, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;

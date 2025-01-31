@@ -24104,10 +24104,10 @@ Examples:
       %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %elem0, i64 429)
       %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %3, i32 4, <4 x i1> %active.lane.mask, <4 x i32> poison)
 
-.. _int_experimental_get_nonalias_lane_mask:
+.. _int_experimental_get_noalias_lane_mask:
 
-'``llvm.experimental.get.nonalias.lane.mask.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.experimental.get.noalias.lane.mask.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -24115,10 +24115,10 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <4 x i1> @llvm.experimental.get.nonalias.lane.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize, i1 immarg %writeAfterRead)
-      declare <8 x i1> @llvm.experimental.get.nonalias.lane.mask.v8i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize, i1 immarg %writeAfterRead)
-      declare <16 x i1> @llvm.experimental.get.nonalias.lane.mask.v16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize, i1 immarg %writeAfterRead)
-      declare <vscale x 16 x i1> @llvm.experimental.get.nonalias.lane.mask.nxv16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize, i1 immarg %writeAfterRead)
+      declare <4 x i1> @llvm.experimental.get.noalias.lane.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize, i1 immarg %writeAfterRead)
+      declare <8 x i1> @llvm.experimental.get.noalias.lane.mask.v8i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize, i1 immarg %writeAfterRead)
+      declare <16 x i1> @llvm.experimental.get.noalias.lane.mask.v16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize, i1 immarg %writeAfterRead)
+      declare <vscale x 16 x i1> @llvm.experimental.get.noalias.lane.mask.nxv16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize, i1 immarg %writeAfterRead)
 
 
 Overview:
@@ -24141,7 +24141,7 @@ Semantics:
 The intrinsic will return poison if ``%ptrA`` and ``%ptrB`` are within
 VF * ``%elementSize`` of each other and ``%ptrA`` + VF * ``%elementSize`` wraps.
 In other cases when ``%writeAfterRead`` is true, the
-'``llvm.experimental.get.nonalias.lane.mask.*``' intrinsics are semantically
+'``llvm.experimental.get.noalias.lane.mask.*``' intrinsics are semantically
 equivalent to:
 
 ::
@@ -24150,7 +24150,7 @@ equivalent to:
       %m[i] = (icmp ult i, %diff) || (%diff <= 0)
 
 When the return value is not poison and ``%writeAfterRead`` is false, the
-'``llvm.experimental.get.nonalias.lane.mask.*``' intrinsics are semantically
+'``llvm.experimental.get.noalias.lane.mask.*``' intrinsics are semantically
 equivalent to:
 
 ::
@@ -24160,7 +24160,7 @@ equivalent to:
 
 where ``%m`` is a vector (mask) of active/inactive lanes with its elements
 indexed by ``i`` (i = 0 to VF - 1),  and ``%ptrA``, ``%ptrB`` are the two ptr
-arguments to ``llvm.experimental.get.nonalias.lane.mask.*`` and ``%elementSize``
+arguments to ``llvm.experimental.get.noalias.lane.mask.*`` and ``%elementSize``
 is the first immediate argument. The ``%writeAfterRead`` argument is expected
 to be true if ``%ptrB`` is stored to after ``%ptrA`` is read from, otherwise
 it is false for a read after write.
@@ -24168,7 +24168,7 @@ The above is equivalent to:
 
 ::
 
-      %m = @llvm.experimental.get.nonalias.lane.mask(%ptrA, %ptrB, %elementSize, %writeAfterRead)
+      %m = @llvm.experimental.get.noalias.lane.mask(%ptrA, %ptrB, %elementSize, %writeAfterRead)
 
 This can, for example, be emitted by the loop vectorizer in which case
 ``%ptrA`` is a pointer that is read from within the loop, and ``%ptrB`` is a
@@ -24186,10 +24186,10 @@ Examples:
 
 .. code-block:: llvm
 
-      %nonalias.lane.mask = call <4 x i1> @llvm.experimental.get.nonalias.lane.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 4, i1 1)
-      %vecA = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr %ptrA, i32 4, <4 x i1> %nonalias.lane.mask, <4 x i32> poison)
+      %noalias.lane.mask = call <4 x i1> @llvm.experimental.get.noalias.lane.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 4, i1 1)
+      %vecA = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr %ptrA, i32 4, <4 x i1> %noalias.lane.mask, <4 x i32> poison)
       [...]
-      call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, ptr %ptrB, i32 4, <4 x i1> %nonalias.lane.mask)
+      call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, ptr %ptrB, i32 4, <4 x i1> %noalias.lane.mask)
 
 .. _int_experimental_vp_splice:
 

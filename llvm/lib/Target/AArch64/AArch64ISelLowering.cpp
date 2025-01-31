@@ -1920,7 +1920,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       (Subtarget->hasSME() && Subtarget->isStreaming())) {
     for (auto VT : {MVT::v2i32, MVT::v4i16, MVT::v8i8, MVT::v16i8, MVT::nxv2i1,
                     MVT::nxv4i1, MVT::nxv8i1, MVT::nxv16i1}) {
-      setOperationAction(ISD::EXPERIMENTAL_NONALIAS_LANE_MASK, VT, Custom);
+      setOperationAction(ISD::EXPERIMENTAL_NOALIAS_LANE_MASK, VT, Custom);
     }
   }
 
@@ -5238,9 +5238,8 @@ SDValue AArch64TargetLowering::LowerFSINCOS(SDValue Op,
 
 static MVT getSVEContainerType(EVT ContentTy);
 
-SDValue
-AArch64TargetLowering::LowerNONALIAS_LANE_MASK(SDValue Op,
-                                               SelectionDAG &DAG) const {
+SDValue AArch64TargetLowering::LowerNOALIAS_LANE_MASK(SDValue Op,
+                                                      SelectionDAG &DAG) const {
   SDLoc DL(Op);
   uint64_t EltSize = Op.getConstantOperandVal(2);
   bool IsWriteAfterRead = Op.getConstantOperandVal(3) == 1;
@@ -5253,26 +5252,18 @@ AArch64TargetLowering::LowerNONALIAS_LANE_MASK(SDValue Op,
   case 1:
     assert((SimpleVT == MVT::v16i8 || SimpleVT == MVT::nxv16i1) &&
            "Unexpected mask or element size");
-    IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_b
-                                   : Intrinsic::aarch64_sve_whilerw_b;
     break;
   case 2:
     assert((SimpleVT == MVT::v8i8 || SimpleVT == MVT::nxv8i1) &&
            "Unexpected mask or element size");
-    IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_h
-                                   : Intrinsic::aarch64_sve_whilerw_h;
     break;
   case 4:
     assert((SimpleVT == MVT::v4i16 || SimpleVT == MVT::nxv4i1) &&
            "Unexpected mask or element size");
-    IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_s
-                                   : Intrinsic::aarch64_sve_whilerw_s;
     break;
   case 8:
     assert((SimpleVT == MVT::v2i32 || SimpleVT == MVT::nxv2i1) &&
            "Unexpected mask or element size");
-    IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_d
-                                   : Intrinsic::aarch64_sve_whilerw_d;
     break;
   default:
     llvm_unreachable("Unexpected element size for get.alias.lane.mask");
@@ -7472,8 +7463,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   default:
     llvm_unreachable("unimplemented operand");
     return SDValue();
-  case ISD::EXPERIMENTAL_NONALIAS_LANE_MASK:
-    return LowerNONALIAS_LANE_MASK(Op, DAG);
+  case ISD::EXPERIMENTAL_NOALIAS_LANE_MASK:
+    return LowerNOALIAS_LANE_MASK(Op, DAG);
   case ISD::BITCAST:
     return LowerBITCAST(Op, DAG);
   case ISD::GlobalAddress:
@@ -28304,7 +28295,7 @@ void AArch64TargetLowering::ReplaceNodeResults(
   case ISD::GET_ACTIVE_LANE_MASK:
     ReplaceGetActiveLaneMaskResults(N, Results, DAG);
     return;
-  case ISD::EXPERIMENTAL_NONALIAS_LANE_MASK: {
+  case ISD::EXPERIMENTAL_NOALIAS_LANE_MASK: {
     EVT VT = N->getValueType(0);
     if (!VT.isFixedLengthVector() || VT.getVectorElementType() != MVT::i1)
       return;
@@ -28316,7 +28307,7 @@ void AArch64TargetLowering::ReplaceNodeResults(
 
     SDLoc DL(N);
     auto V =
-        DAG.getNode(ISD::EXPERIMENTAL_NONALIAS_LANE_MASK, DL, NewVT, N->ops());
+        DAG.getNode(ISD::EXPERIMENTAL_NOALIAS_LANE_MASK, DL, NewVT, N->ops());
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, V));
     return;
   }
@@ -28377,7 +28368,7 @@ void AArch64TargetLowering::ReplaceNodeResults(
       return;
     }
     case Intrinsic::experimental_vector_match:
-    case Intrinsic::experimental_get_nonalias_lane_mask: {
+    case Intrinsic::experimental_get_noalias_lane_mask: {
       if (!VT.isFixedLengthVector() || VT.getVectorElementType() != MVT::i1)
         return;
 

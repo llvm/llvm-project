@@ -901,7 +901,7 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE, VT, Expand);
 
     // Non-aliasing lanes mask default to expand
-    setOperationAction(ISD::EXPERIMENTAL_NONALIAS_LANE_MASK, VT, Expand);
+    setOperationAction(ISD::EXPERIMENTAL_NOALIAS_LANE_MASK, VT, Expand);
 
     // FP environment operations default to expand.
     setOperationAction(ISD::GET_FPENV, VT, Expand);
