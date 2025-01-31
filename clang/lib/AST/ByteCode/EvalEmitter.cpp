@@ -174,6 +174,9 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
       return false;
     }
   } else {
+    if (!Ptr.isLive() && !Ptr.isTemporary())
+      return false;
+
     EvalResult.setValue(Ptr.toAPValue(Ctx.getASTContext()));
   }
 
