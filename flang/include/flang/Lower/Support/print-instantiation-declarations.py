@@ -110,7 +110,6 @@ class Type:
 
     def to_string(self):
         return f"Fortran::evaluate::Type<{self.category.to_string()}, {self.kind}>"
-        )
 
 
 ArithCategories = [Complex, Integer, Real, Unsigned]
