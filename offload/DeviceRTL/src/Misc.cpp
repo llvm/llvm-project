@@ -33,7 +33,7 @@ double getWTime();
 
 double getWTick() {
   // The number of ticks per second for the AMDGPU clock varies by card and can
-  // only be retrived by querying the driver. We rely on the device environment
+  // only be retrieved by querying the driver. We rely on the device environment
   // to inform us what the proper frequency is.
   return 1.0 / config::getClockFrequency();
 }
