@@ -17,6 +17,7 @@ debug_info_categories = {"dwarf": True, "dwo": True, "dsym": True, "gmodules": F
 all_categories = {
     "basic_process": "Basic process execution sniff tests.",
     "cmdline": "Tests related to the LLDB command-line interface",
+    "darwin": "Darwin-related tests",
     "dataformatters": "Tests related to the type command and the data formatters subsystem",
     "debugserver": "Debugserver tests",
     "dsym": "Tests that can be run with DSYM debug information",
@@ -30,6 +31,7 @@ all_categories = {
     "instrumentation-runtime": "Tests for the instrumentation runtime plugins",
     "libc++": "Test for libc++ data formatters",
     "libstdcxx": "Test for libstdcxx data formatters",
+    "linux": "Linux-related tests",
     "lldb-server": "Tests related to lldb-server",
     "lldb-dap": "Tests for the Debug Adaptor Protocol with lldb-dap",
     "llgs": "Tests for the gdb-server functionality of lldb-server",
