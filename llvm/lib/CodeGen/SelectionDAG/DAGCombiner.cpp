@@ -2685,9 +2685,9 @@ SDValue DAGCombiner::visitPTRADD(SDNode *N) {
     //   * z is not a constant.
     //
     // In some cases, specifically in AArch64's FEAT_CPA, it exposes the
-    // opportunity to select more complex instructions such as SUBPT and MSUBPT
-    // However, a hypothetical corner case has been found that we could not
-    // avoid. Consider this (pseudo-POSIX C):
+    // opportunity to select more complex instructions such as SUBPT and
+    // MSUBPT. However, a hypothetical corner case has been found that we could
+    // not avoid. Consider this (pseudo-POSIX C):
     //
     // char *foo(char *x, int z) {return (x + LARGE_CONSTANT) + z;}
     // char *p = mmap(LARGE_CONSTANT);
