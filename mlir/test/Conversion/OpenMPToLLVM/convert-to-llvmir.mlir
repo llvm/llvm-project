@@ -607,3 +607,16 @@ func.func @omp_taskloop(%arg0: index, %arg1 : memref<i32>) {
   }
   return
 }
+
+// -----
+
+// CHECK-LABEL: omp.declare_mapper @my_mapper : !llvm.struct<"_QFdeclare_mapperTmy_type", (i32)> {
+omp.declare_mapper @my_mapper : !llvm.struct<"_QFdeclare_mapperTmy_type", (i32)> {
+^bb0(%arg0: !llvm.ptr):
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  %1 = llvm.getelementptr %arg0[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"_QFdeclare_mapperTmy_type", (i32)>
+  %2 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "var%data"}
+  %3 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<"_QFdeclare_mapperTmy_type", (i32)>) map_clauses(tofrom) capture(ByRef) members(%2 : [0] : !llvm.ptr) -> !llvm.ptr {name = "var", partial_map = true}
+  // CHECK: omp.declare_mapper_info map_entries(%{{.*}}, %{{.*}} : !llvm.ptr, !llvm.ptr)
+  omp.declare_mapper_info map_entries(%3, %2 : !llvm.ptr, !llvm.ptr)
+}
