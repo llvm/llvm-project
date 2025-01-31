@@ -29,7 +29,7 @@ using namespace mlir;
 
 static const StringRef kLineStyleControlFlow = "dashed";
 static const StringRef kLineStyleDataFlow = "solid";
-static const StringRef kShapeNode = "record";
+static const StringRef kShapeNode = "Mrecord";
 static const StringRef kShapeNone = "plain";
 
 /// Return the size limits for eliding large attributes.
