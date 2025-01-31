@@ -2581,7 +2581,7 @@ private:
     if (Style.isVerilog())
       return false;
 
-    if (Tok.isNot(tok::identifier) || !Tok.Previous)
+    if (!Tok.Previous || Tok.isNot(tok::identifier) || Tok.is(TT_ClassHeadName))
       return false;
 
     if ((Style.isJavaScript() || Style.Language == FormatStyle::LK_Java) &&
