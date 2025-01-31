@@ -3423,7 +3423,7 @@ the configuration (without a prefix: ``Auto``).
 
 .. _BreakBeforeTemplateCloser:
 
-**BreakBeforeTemplateCloser** (``BreakBeforeTemplateCloserStyle``) :versionbadge:`clang-format 20` :ref:`¶ <BreakBeforeTemplateCloser>`
+**BreakBeforeTemplateCloser** (``BreakBeforeTemplateCloserStyle``) :versionbadge:`clang-format 21` :ref:`¶ <BreakBeforeTemplateCloser>`
   The style of when a line break will be placed before the ``>`` that closes
   a template.
 
