@@ -136,9 +136,8 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-macos-${{ github.event.pull_request.number || github.sha }}
       cancel-in-progress: true
-    if: >-
-      (startswith(github.ref_name, 'release/') ||
-       startswith(github.base_ref, 'refs/heads/release/'))
+    if: >- 
+      github.repository_owner == 'llvm'
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@v4
@@ -152,6 +151,8 @@ jobs:
         uses: llvm/actions/install-ninja@main
       - name: Build and Test
         run: |
+          echo $GITHUB_REF_NAME
+          echo $GITHUB_BASE_REF
           modified_files=$(git diff --name-only HEAD~1...HEAD)
           modified_dirs=$(echo "$modified_files" | cut -d'/' -f1 | sort -u)
 
