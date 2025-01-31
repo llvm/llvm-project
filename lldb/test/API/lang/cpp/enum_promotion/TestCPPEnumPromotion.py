@@ -9,7 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestCPPEnumPromotion(TestBase):
-    @skipIf(debug_info=no_match(["dwarf", "dwo", "dsym"]))
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
