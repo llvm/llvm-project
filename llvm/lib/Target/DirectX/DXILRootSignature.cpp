@@ -95,10 +95,9 @@ bool ModuleRootSignature::parse(NamedMDNode *Root) {
       signature pair.
    */
 
-  for (unsigned int Sid = 0; Sid < Root->getNumOperands(); Sid++) {
-    MDNode *Node = dyn_cast<MDNode>(Root->getOperand(Sid));
+  for (const MDNode *Node : Root->operands()) {
 
-    if (Node == nullptr || Node->getNumOperands() != 2)
+    if (Node->getNumOperands() != 2)
       return reportError("Invalid format for Root Signature Definition. Pairs "
                          "of function, root signature expected.");
 
