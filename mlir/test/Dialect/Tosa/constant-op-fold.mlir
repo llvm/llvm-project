@@ -117,19 +117,19 @@ func.func @transpose_nofold_multi_users() -> (tensor<3x2xf32>, tensor<2x3xf32>) 
   return %1, %input : tensor<3x2xf32>, tensor<2x3xf32>
 }
 
-// CHECK-LABEL: @transpose_nofold_dense_resource
-func.func @transpose_nofold_dense_resource() -> tensor<2x2xf32> {
+// CHECK-LABEL: @transpose_fold_dense_resource
+func.func @transpose_fold_dense_resource() -> tensor<2x2xf32> {
   %0 = "tosa.const"() <{value = dense_resource<resource> : tensor<2x2xf32>}> : () -> tensor<2x2xf32>
   %1 = "tosa.const"() <{value = dense<[1, 0]> : tensor<2xi32>}> : () -> tensor<2xi32>
 
-  // CHECK: tosa.transpose
+  // CHECK-NOT: tosa.transpose
   %2 = tosa.transpose %0, %1 : (tensor<2x2xf32>, tensor<2xi32>) -> tensor<2x2xf32>
   return %2 : tensor<2x2xf32>
 }
 {-#
   dialect_resources: {
     builtin: {
-      resource: "0x08000000010000000000000002000000000000000300000000000000"
+      resource: "0x040000003f800000400000004040000040800000"
     }
   }
 #-}
