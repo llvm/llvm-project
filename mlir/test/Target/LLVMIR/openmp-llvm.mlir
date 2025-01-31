@@ -2829,12 +2829,13 @@ llvm.func @task(%arg0 : !llvm.ptr) {
 // CHECK:         %[[VAL_14:.*]] = load ptr, ptr %[[VAL_13]], align 8
 // CHECK:         br label %task.body
 // CHECK:       task.body:                                        ; preds = %task.alloca
+// CHECK:         %[[VAL_15:.*]] = getelementptr { i32 }, ptr %[[VAL_14]], i32 0, i32 0
 // CHECK:         br label %omp.task.region
 // CHECK:       omp.task.region:                                  ; preds = %task.body
-// CHECK:         call void @foo(ptr %[[VAL_14]])
+// CHECK:         call void @foo(ptr %[[VAL_15]])
 // CHECK:         br label %omp.region.cont
 // CHECK:       omp.region.cont:                                  ; preds = %omp.task.region
-// CHECK:         call void @destroy(ptr %[[VAL_14]])
+// CHECK:         call void @destroy(ptr %[[VAL_15]])
 // CHECK:         br label %task.exit.exitStub
 // CHECK:       task.exit.exitStub:                               ; preds = %omp.region.cont
 // CHECK:         ret void
