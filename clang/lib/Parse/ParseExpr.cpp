@@ -2238,8 +2238,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
               RunSignatureHelp();
             LHS = ExprError();
           } else if (!HasError && HasTrailingComma) {
-            // FIXME: add a FIXIT to remove the trailing comma.
-            Diag(Tok, diag::err_extraneous_trailing_comma);
+            Diag(Tok, diag::err_expected_expression);
           } else if (LHS.isInvalid()) {
             for (auto &E : ArgExprs)
               Actions.CorrectDelayedTyposInExpr(E);

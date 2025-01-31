@@ -703,8 +703,6 @@ def ext_consteval_if : ExtWarn<
 def warn_cxx20_compat_consteval_if : Warning<
   "consteval if is incompatible with C++ standards before C++23">,
   InGroup<CXXPre23Compat>, DefaultIgnore;
-def err_extraneous_trailing_comma : Error<
-  "extraneous trailing comma">;
 
 def ext_init_statement : ExtWarn<
   "'%select{if|switch}0' initialization statements are a C++17 extension">,

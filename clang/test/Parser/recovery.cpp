@@ -219,6 +219,6 @@ class :: : {} a;  // expected-error {{expected identifier}} expected-error {{exp
 namespace GH125225 {
 void func(int);
 void k() {
-  func(1, ); // expected-error {{extraneous trailing comma}}
+  func(1, ); // expected-error {{expected expression}}
 }
 }
