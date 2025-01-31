@@ -1,8 +1,8 @@
 ; RUN: opt < %s -S -nvptx-lower-args --mtriple nvptx64-nvidia-cuda | FileCheck %s --check-prefixes COMMON,IR,IRC
 ; RUN: opt < %s -S -nvptx-lower-args --mtriple nvptx64-nvidia-nvcl | FileCheck %s --check-prefixes COMMON,IR,IRO
-; RUN: llc < %s -mcpu=sm_20 --mtriple nvptx64-nvidia-cuda | FileCheck %s --check-prefixes COMMON,PTX,PTXC
-; RUN: llc < %s -mcpu=sm_20 --mtriple nvptx64-nvidia-nvcl| FileCheck %s --check-prefixes COMMON,PTX,PTXO
-; RUN: %if ptxas %{ llc < %s -mcpu=sm_20 | %ptxas -o %t %}
+; RUN: llc < %s -mcpu=sm_52 --mtriple nvptx64-nvidia-cuda | FileCheck %s --check-prefixes COMMON,PTX,PTXC
+; RUN: llc < %s -mcpu=sm_52 --mtriple nvptx64-nvidia-nvcl| FileCheck %s --check-prefixes COMMON,PTX,PTXO
+; RUN: %if ptxas %{ llc < %s -mcpu=sm_52 | %ptxas -arch=sm_52 - %}
 
 target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
@@ -145,4 +145,6 @@ define ptx_kernel void @ptr_as_int_aggr(ptr nocapture noundef readonly byval(%st
 
 
 ; Function Attrs: convergent nounwind
-declare dso_local ptr @escape(ptr) local_unnamed_addr
+define dso_local ptr @escape(ptr) local_unnamed_addr {
+  ret ptr %0
+}
