@@ -530,6 +530,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::XOR, MVT::i32, Custom);
   setOperationAction(ISD::XOR, MVT::i64, Custom);
 
+  setOperationAction(ISD::ADDRSPACECAST, MVT::i32, Custom);
+  setOperationAction(ISD::ADDRSPACECAST, MVT::i64, Custom);
+
   // Virtually no operation on f128 is legal, but LLVM can't expand them when
   // there's a valid register class, so we need custom operations in most cases.
   setOperationAction(ISD::FABS, MVT::f128, Expand);
@@ -6880,6 +6883,38 @@ static SDValue LowerTruncateVectorStore(SDLoc DL, StoreSDNode *ST,
                       ST->getBasePtr(), ST->getMemOperand());
 }
 
+static SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) {
+  SDLoc dl(Op);
+  SDValue Src = Op.getOperand(0);
+  MVT DestVT = Op.getSimpleValueType();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  AddrSpaceCastSDNode *N = cast<AddrSpaceCastSDNode>(Op.getNode());
+
+  unsigned SrcAS = N->getSrcAddressSpace();
+  unsigned DestAS = N->getDestAddressSpace();
+  assert(SrcAS != DestAS &&
+         "addrspacecast must be between different address spaces");
+  assert(TLI.getTargetMachine().getPointerSize(SrcAS) !=
+             TLI.getTargetMachine().getPointerSize(DestAS) &&
+         "addrspacecast must be between different ptr sizes");
+  (void)TLI;
+
+  if (SrcAS == ARM64AS::PTR32_SPTR) {
+    return DAG.getNode(ISD::SIGN_EXTEND, dl, DestVT, Src,
+                       DAG.getTargetConstant(0, dl, DestVT));
+  } else if (SrcAS == ARM64AS::PTR32_UPTR) {
+    return DAG.getNode(ISD::ZERO_EXTEND, dl, DestVT, Src,
+                       DAG.getTargetConstant(0, dl, DestVT));
+  } else if ((DestAS == ARM64AS::PTR32_SPTR) ||
+             (DestAS == ARM64AS::PTR32_UPTR)) {
+    SDValue Ext = DAG.getAnyExtOrTrunc(Src, dl, DestVT);
+    SDValue Trunc = DAG.getZeroExtendInReg(Ext, dl, DestVT);
+    return Trunc;
+  } else {
+    return Src;
+  }
+}
+
 // Custom lowering for any store, vector or scalar and/or default or with
 // a truncate operations.  Currently only custom lower truncate operation
 // from vector v4i16 to v4i8 or volatile stores of i128.
@@ -7541,6 +7576,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
     return LowerFixedLengthVectorIntExtendToSVE(Op, DAG);
+  case ISD::ADDRSPACECAST:
+    return LowerADDRSPACECAST(Op, DAG);
   case ISD::SIGN_EXTEND_INREG: {
     // Only custom lower when ExtraVT has a legal byte based element type.
     EVT ExtraVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
@@ -23555,6 +23592,26 @@ static SDValue performLOADCombine(SDNode *N,
     performTBISimplification(N->getOperand(1), DCI, DAG);
 
   LoadSDNode *LD = cast<LoadSDNode>(N);
+  EVT RegVT = LD->getValueType(0);
+  EVT MemVT = LD->getMemoryVT();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDLoc DL(LD);
+
+  // Cast ptr32 and ptr64 pointers to the default address space before a load.
+  unsigned AddrSpace = LD->getAddressSpace();
+  if (AddrSpace == ARM64AS::PTR64 || AddrSpace == ARM64AS::PTR32_SPTR ||
+      AddrSpace == ARM64AS::PTR32_UPTR) {
+    MVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
+    if (PtrVT != LD->getBasePtr().getSimpleValueType()) {
+      SDValue Cast =
+          DAG.getAddrSpaceCast(DL, PtrVT, LD->getBasePtr(), AddrSpace, 0);
+      return DAG.getExtLoad(LD->getExtensionType(), DL, RegVT, LD->getChain(),
+                            Cast, LD->getPointerInfo(), MemVT,
+                            LD->getOriginalAlign(),
+                            LD->getMemOperand()->getFlags());
+    }
+  }
+
   if (LD->isVolatile() || !Subtarget->isLittleEndian())
     return SDValue(N, 0);
 
@@ -23564,13 +23621,11 @@ static SDValue performLOADCombine(SDNode *N,
   if (!LD->isNonTemporal())
     return SDValue(N, 0);
 
-  EVT MemVT = LD->getMemoryVT();
   if (MemVT.isScalableVector() || MemVT.getSizeInBits() <= 256 ||
       MemVT.getSizeInBits() % 256 == 0 ||
       256 % MemVT.getScalarSizeInBits() != 0)
     return SDValue(N, 0);
 
-  SDLoc DL(LD);
   SDValue Chain = LD->getChain();
   SDValue BasePtr = LD->getBasePtr();
   SDNodeFlags Flags = LD->getFlags();
@@ -23830,11 +23885,27 @@ static SDValue performSTORECombine(SDNode *N,
   SDValue Value = ST->getValue();
   SDValue Ptr = ST->getBasePtr();
   EVT ValueVT = Value.getValueType();
+  EVT MemVT = ST->getMemoryVT();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDLoc DL(ST);
 
   auto hasValidElementTypeForFPTruncStore = [](EVT VT) {
     EVT EltVT = VT.getVectorElementType();
     return EltVT == MVT::f32 || EltVT == MVT::f64;
   };
+
+  // Cast ptr32 and ptr64 pointers to the default address space before a store.
+  unsigned AddrSpace = ST->getAddressSpace();
+  if (AddrSpace == ARM64AS::PTR64 || AddrSpace == ARM64AS::PTR32_SPTR ||
+      AddrSpace == ARM64AS::PTR32_UPTR) {
+    MVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
+    if (PtrVT != Ptr.getSimpleValueType()) {
+      SDValue Cast = DAG.getAddrSpaceCast(DL, PtrVT, Ptr, AddrSpace, 0);
+      return DAG.getStore(Chain, DL, Value, Cast, ST->getPointerInfo(),
+                          ST->getOriginalAlign(),
+                          ST->getMemOperand()->getFlags(), ST->getAAInfo());
+    }
+  }
 
   if (SDValue Res = combineI8TruncStore(ST, DAG, Subtarget))
     return Res;
@@ -23849,8 +23920,8 @@ static SDValue performSTORECombine(SDNode *N,
       ValueVT.isFixedLengthVector() &&
       ValueVT.getFixedSizeInBits() >= Subtarget->getMinSVEVectorSizeInBits() &&
       hasValidElementTypeForFPTruncStore(Value.getOperand(0).getValueType()))
-    return DAG.getTruncStore(Chain, SDLoc(N), Value.getOperand(0), Ptr,
-                             ST->getMemoryVT(), ST->getMemOperand());
+    return DAG.getTruncStore(Chain, DL, Value.getOperand(0), Ptr, MemVT,
+                             ST->getMemOperand());
 
   if (SDValue Split = splitStores(N, DCI, DAG, Subtarget))
     return Split;
@@ -27389,6 +27460,11 @@ void AArch64TargetLowering::ReplaceNodeResults(
            "Expected 128-bit atomicrmw.");
     // These need custom type legalisation so we go directly to instruction.
     ReplaceATOMIC_LOAD_128Results(N, Results, DAG, Subtarget);
+    return;
+  }
+  case ISD::ADDRSPACECAST: {
+    SDValue V = LowerADDRSPACECAST(SDValue(N, 0), DAG);
+    Results.push_back(V);
     return;
   }
   case ISD::ATOMIC_LOAD:
