@@ -197,13 +197,8 @@ jobs:
                 -DCMAKE_BUILD_TYPE=Release \
                 -DLLDB_INCLUDE_TESTS=OFF \
                 -DLLVM_ENABLE_ASSERTIONS=ON \
-                -DLLVM_LIT_ARGS="-vv --time-tests --no-gtest-sharding"\
                 -DCMAKE_C_COMPILER_LAUNCHER=ccache \
                 -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-
-          # XFAIL some tests that are failing:
-          # https://github.com/llvm/llvm-project/issues/125121
-          export LIT_XFAIL="LLVM-Unit :: Target/SPIRV/./SPIRVTests"
 
           # The libcxx tests fail, so we are skipping the runtime targets.
           ninja -C build  $mac_check_targets
