@@ -2895,6 +2895,7 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
         return nullptr;
 
       auto StepVal = StepConst->getAPInt().trySExtValue();
+      // Bail out on a non-unit pointer access size.
       if (!StepVal || StepVal != 1)
         return nullptr;
 
