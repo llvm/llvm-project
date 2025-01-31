@@ -411,6 +411,8 @@ end
   is accepted before an array specification (`ch*3(2)`) as well
   as afterwards.
 * A zero field width is allowed for logical formatted output (`L0`).
+* `OPEN(..., FORM='BINARY')` is accepted as a legacy synonym for
+  the standard `OPEN(..., FORM='UNFORMATTED', ACCESS='STREAM')`.
 
 ### Extensions supported when enabled by options
 
