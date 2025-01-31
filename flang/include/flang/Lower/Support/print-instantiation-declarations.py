@@ -122,9 +122,7 @@ class Op:
         self.kinds = kinds
 
     def to_strings(self, category, kind):
-        return [
-            f"Fortran::evaluate::{self.name}<{Type(category, kind).to_string()}>"
-        ]
+        return [f"Fortran::evaluate::{self.name}<{Type(category, kind).to_string()}>"]
 
     def __repr__(self):
         return self.name
