@@ -1089,7 +1089,7 @@ private:
                                         mlir::ValueRange extents,
                                         mlir::ValueRange indices) {
     std::size_t rank = extents.size();
-    assert(rank = indices.size());
+    assert(rank == indices.size());
     mlir::Type indexType = builder.getIndexType();
     mlir::Value zero = builder.createIntegerConstant(loc, indexType, 0);
     mlir::Value one = builder.createIntegerConstant(loc, indexType, 1);
