@@ -2,11 +2,6 @@
 ; RUN: opt < %s -passes=msan -S | FileCheck %s
 ;
 ; Forked from llvm/test/CodeGen/AArch64/arm64-vaddv.ll
-;
-; Incorrectly handled by handleUnknownInstruction:
-; - llvm.aarch64.neon.faddv
-; - llvm.aarch64.neon.saddv
-; - llvm.aarch64.neon.uaddv
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android9001"
