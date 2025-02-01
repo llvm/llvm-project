@@ -773,7 +773,7 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
       performOmptCallback(device_initialize, Plugin.getUserId(DeviceId),
                           /*type=*/getComputeUnitKind().c_str(),
                           /*device=*/reinterpret_cast<ompt_device_t *>(this),
-                          /*lookup=*/ompt::lookupCallbackByName,
+                          /*lookup=*/ompt::ompt_device_fn_lookup,
                           /*documentation=*/nullptr);
   }
 #endif
