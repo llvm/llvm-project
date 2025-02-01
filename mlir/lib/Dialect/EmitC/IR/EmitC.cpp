@@ -1290,6 +1290,15 @@ void SwitchOp::getRegionInvocationBounds(
 }
 
 //===----------------------------------------------------------------------===//
+// FileOp
+//===----------------------------------------------------------------------===//
+void FileOp::build(OpBuilder &builder, OperationState &state, StringRef id) {
+  state.addRegion()->emplaceBlock();
+  state.attributes.push_back(
+      builder.getNamedAttr("id", builder.getStringAttr(id)));
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
