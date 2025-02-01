@@ -616,6 +616,29 @@ DIBuilder::createArrayType(uint64_t Size, uint32_t AlignInBits, DIType *Ty,
   return R;
 }
 
+DICompositeType *DIBuilder::createArrayType(
+    DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
+    uint64_t Size, uint32_t AlignInBits, DIType *Ty, DINodeArray Subscripts,
+    PointerUnion<DIExpression *, DIVariable *> DL,
+    PointerUnion<DIExpression *, DIVariable *> AS,
+    PointerUnion<DIExpression *, DIVariable *> AL,
+    PointerUnion<DIExpression *, DIVariable *> RK) {
+  auto *R = DICompositeType::get(
+      VMContext, dwarf::DW_TAG_array_type, Name, File, LineNumber,
+      getNonCompileUnitScope(Scope), Ty, Size, AlignInBits, 0, DINode::FlagZero,
+      Subscripts, 0, nullptr, nullptr, "", nullptr,
+      isa<DIExpression *>(DL) ? (Metadata *)cast<DIExpression *>(DL)
+                              : (Metadata *)cast<DIVariable *>(DL),
+      isa<DIExpression *>(AS) ? (Metadata *)cast<DIExpression *>(AS)
+                              : (Metadata *)cast<DIVariable *>(AS),
+      isa<DIExpression *>(AL) ? (Metadata *)cast<DIExpression *>(AL)
+                              : (Metadata *)cast<DIVariable *>(AL),
+      isa<DIExpression *>(RK) ? (Metadata *)cast<DIExpression *>(RK)
+                              : (Metadata *)cast<DIVariable *>(RK));
+  trackIfUnresolved(R);
+  return R;
+}
+
 DICompositeType *DIBuilder::createVectorType(uint64_t Size,
                                              uint32_t AlignInBits, DIType *Ty,
                                              DINodeArray Subscripts) {
