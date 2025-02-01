@@ -90,6 +90,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
            inferScalarType(R->getOperand(1))->isIntegerTy(1) &&
            "LogicalAnd operands should be bool");
     return IntegerType::get(Ctx, 1);
+  case VPInstruction::Broadcast:
   case VPInstruction::PtrAdd:
     // Return the type based on the pointer argument (i.e. first operand).
     return inferScalarType(R->getOperand(0));

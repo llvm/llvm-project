@@ -169,6 +169,9 @@ struct VPlanTransforms {
   static void
   optimizeInductionExitUsers(VPlan &Plan,
                              DenseMap<VPValue *, VPValue *> &EndValues);
+
+  /// Add explicit broadcasts for live-ins used as vectors.
+  static void materializeBroadcasts(VPlan &Plan);
 };
 
 } // namespace llvm

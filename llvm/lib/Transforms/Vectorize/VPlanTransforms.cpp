@@ -2153,3 +2153,34 @@ void VPlanTransforms::handleUncountableEarlyExit(
   Builder.createNaryOp(VPInstruction::BranchOnCond, AnyExitTaken);
   LatchExitingBranch->eraseFromParent();
 }
+
+void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
+  VPDominatorTree VPDT;
+  VPDT.recalculate(Plan);
+  auto *VectorPreheader = Plan.getVectorPreheader();
+  VPBuilder Builder(VectorPreheader);
+  for (VPValue *LiveIn : Plan.getLiveIns()) {
+    if (all_of(LiveIn->users(),
+               [LiveIn](VPUser *U) {
+                 return cast<VPRecipeBase>(U)->usesScalars(LiveIn);
+               }) ||
+        !LiveIn->getLiveInIRValue() ||
+        isa<Constant>(LiveIn->getLiveInIRValue()))
+      continue;
+
+    // Add explicit broadcast if the vector preheader dominates all users.
+    // TODO: Find valid inert point for all users.
+    if (all_of(LiveIn->users(), [&VPDT, VectorPreheader](VPUser *U) {
+          return VectorPreheader != cast<VPRecipeBase>(U)->getParent() &&
+                 VPDT.dominates(VectorPreheader,
+                                cast<VPRecipeBase>(U)->getParent());
+        })) {
+      auto *Broadcast =
+          Builder.createNaryOp(VPInstruction::Broadcast, {LiveIn});
+      LiveIn->replaceUsesWithIf(Broadcast, [LiveIn, Broadcast](VPUser &U,
+                                                               unsigned Idx) {
+        return Broadcast != &U && !cast<VPRecipeBase>(&U)->usesScalars(LiveIn);
+      });
+    }
+  }
+}
