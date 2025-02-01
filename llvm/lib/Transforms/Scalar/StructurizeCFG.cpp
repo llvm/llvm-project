@@ -971,6 +971,10 @@ void StructurizeCFG::changeExit(RegionNode *Node, BasicBlock *NewExit,
     SubRegion->replaceExit(NewExit);
   } else {
     BasicBlock *BB = Node->getNodeAs<BasicBlock>();
+    for (BasicBlock *Succ : successors(BB)) {
+      if (Succ != NewExit)
+        Predicates[Succ].erase(BB);
+    }
     killTerminator(BB);
     BranchInst *Br = BranchInst::Create(NewExit, BB);
     Br->setDebugLoc(TermDL[BB]);
