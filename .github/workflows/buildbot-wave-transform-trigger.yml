@@ -90,7 +90,7 @@ jobs:
           "
       - name: Set Initial Status to Pending
         run: |
-          docker exec "${{env.CONTAINER_NAME}}" /bin/bash -c "python3 -c \"
+          docker exec -e PR_SHA=$PR_SHA -e GITHUB_TOKEN=$GITHUB_TOKEN "${{env.CONTAINER_NAME}}" /bin/bash -c "python3 -c \"
           import os
           import requests
           GITHUB_TOKEN =  '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' #os.getenv('GITHUB_TOKEN')
