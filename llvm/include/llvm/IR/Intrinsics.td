@@ -885,6 +885,9 @@ def int_readcyclecounter : DefaultAttrsIntrinsic<[llvm_i64_ty]>;
 
 def int_readsteadycounter : DefaultAttrsIntrinsic<[llvm_i64_ty]>;
 
+def int_speculative_data_barrier  : DefaultAttrsIntrinsic<[], [],
+                                            [IntrHasSideEffects]>;
+
 // The assume intrinsic is marked InaccessibleMemOnly so that proper control
 // dependencies will be maintained.
 def int_assume : DefaultAttrsIntrinsic<
