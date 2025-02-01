@@ -443,6 +443,10 @@ public:
     return nullptr;
   }
 
+  virtual void emitFunctionCallProlog(CGBuilderTy &Builder,
+                                      const FunctionDecl *Caller,
+                                      const FunctionDecl *Callee) const {}
+
   // Set the Branch Protection Attributes of the Function accordingly to the
   // BPI. Remove attributes that contradict with current BPI.
   static void
