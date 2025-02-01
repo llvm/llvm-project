@@ -1218,6 +1218,37 @@ BuiltinTemplateDecl *ASTContext::getBuiltinCommonTypeDecl() const {
   return BuiltinCommonTypeDecl;
 }
 
+BuiltinTemplateDecl *ASTContext::getBuiltinCommonReferenceDecl() const {
+  if (!BuiltinCommonReferenceDecl)
+    BuiltinCommonReferenceDecl = buildBuiltinTemplateDecl(
+        BTK__builtin_common_reference, getBuiltinCommonReferenceName());
+  return BuiltinCommonReferenceDecl;
+}
+
+CVRefQualifyingTemplateDecl *
+ASTContext::getCVRefQualifyingAliasDecl(QualType From) const {
+  using CVRefQuals = CVRefQualifyingTemplateDecl::CVRefQuals;
+
+  CVRefQuals Q = CVRefQuals::None;
+  if (From->isReferenceType()) {
+    Q |= From->isLValueReferenceType() ? CVRefQuals::LValueRef
+                                       : CVRefQuals::RValueRef;
+    From = From.getNonReferenceType();
+  }
+
+  if (From.isConstQualified())
+    Q |= CVRefQuals::Const;
+  if (From.isVolatileQualified())
+    Q |= CVRefQuals::Volatile;
+  auto *Decl = CVRefQualifyingDecls[Q];
+  if (!Decl)
+    Decl =
+        CVRefQualifyingTemplateDecl::Create(*this, getTranslationUnitDecl(), Q);
+  Decl->setImplicit();
+  getTranslationUnitDecl()->addDecl(Decl);
+  return Decl;
+}
+
 RecordDecl *ASTContext::buildImplicitRecord(StringRef Name,
                                             RecordDecl::TagKind TK) const {
   SourceLocation Loc;

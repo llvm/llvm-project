@@ -419,6 +419,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// The identifier '__builtin_common_type'.
   mutable IdentifierInfo *BuiltinCommonTypeName = nullptr;
 
+  /// The identifier '__builtin_common_reference'.
+  mutable IdentifierInfo *BuiltinCommonReferenceName = nullptr;
+
   QualType ObjCConstantStringType;
   mutable RecordDecl *CFConstantStringTagDecl = nullptr;
   mutable TypedefDecl *CFConstantStringTypeDecl = nullptr;
@@ -627,6 +630,8 @@ private:
   mutable BuiltinTemplateDecl *MakeIntegerSeqDecl = nullptr;
   mutable BuiltinTemplateDecl *TypePackElementDecl = nullptr;
   mutable BuiltinTemplateDecl *BuiltinCommonTypeDecl = nullptr;
+  mutable BuiltinTemplateDecl *BuiltinCommonReferenceDecl = nullptr;
+  mutable CVRefQualifyingTemplateDecl *CVRefQualifyingDecls[12] = {};
 
   /// The associated SourceManager object.
   SourceManager &SourceMgr;
@@ -1155,6 +1160,8 @@ public:
   BuiltinTemplateDecl *getMakeIntegerSeqDecl() const;
   BuiltinTemplateDecl *getTypePackElementDecl() const;
   BuiltinTemplateDecl *getBuiltinCommonTypeDecl() const;
+  BuiltinTemplateDecl *getBuiltinCommonReferenceDecl() const;
+  CVRefQualifyingTemplateDecl *getCVRefQualifyingAliasDecl(QualType From) const;
 
   // Builtin Types.
   CanQualType VoidTy;
@@ -2077,6 +2084,12 @@ public:
     if (!BuiltinCommonTypeName)
       BuiltinCommonTypeName = &Idents.get("__builtin_common_type");
     return BuiltinCommonTypeName;
+  }
+
+  IdentifierInfo *getBuiltinCommonReferenceName() const {
+    if (!BuiltinCommonReferenceName)
+      BuiltinCommonReferenceName = &Idents.get("__builtin_common_reference");
+    return BuiltinCommonReferenceName;
   }
 
   /// Retrieve the Objective-C "instancetype" type, if already known;

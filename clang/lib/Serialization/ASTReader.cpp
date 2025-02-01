@@ -8142,6 +8142,12 @@ Decl *ASTReader::getPredefinedDecl(PredefinedDeclIDs ID) {
     NewLoaded = Context.getBuiltinCommonTypeDecl();
     break;
 
+  case PREDEF_DECL_COMMON_REFERENCE_ID:
+    if (Context.BuiltinCommonReferenceDecl)
+      return Context.BuiltinCommonReferenceDecl;
+    NewLoaded = Context.getBuiltinCommonReferenceDecl();
+    break;
+
   case NUM_PREDEF_DECL_IDS:
     llvm_unreachable("Invalid decl ID");
     break;

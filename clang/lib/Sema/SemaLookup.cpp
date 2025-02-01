@@ -936,6 +936,10 @@ bool Sema::LookupBuiltin(LookupResult &R) {
           R.addDecl(getASTContext().getBuiltinCommonTypeDecl());
           return true;
         }
+        if (II == getASTContext().getBuiltinCommonReferenceName()) {
+          R.addDecl(getASTContext().getBuiltinCommonReferenceDecl());
+          return true;
+        }
       }
 
       // Check if this is an OpenCL Builtin, and if so, insert its overloads.

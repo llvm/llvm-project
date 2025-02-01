@@ -71,6 +71,7 @@ def Named : DeclNode<Decl, "named declarations", 1>;
       def TypeAliasTemplate : DeclNode<RedeclarableTemplate>;
     def TemplateTemplateParm : DeclNode<Template>;
     def BuiltinTemplate : DeclNode<Template>;
+    def CVRefQualifyingTemplate : DeclNode<Template>;
     def Concept : DeclNode<Template>;
   def BaseUsing : DeclNode<Named, "", 1>;
     def Using : DeclNode<BaseUsing>;

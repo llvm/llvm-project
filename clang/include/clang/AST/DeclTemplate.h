@@ -1776,6 +1776,43 @@ public:
   BuiltinTemplateKind getBuiltinTemplateKind() const { return BTK; }
 };
 
+class CVRefQualifyingTemplateDecl : public TemplateDecl {
+public:
+  // LValueRef and RValueRef are mutually exclusive
+  enum CVRefQuals {
+    None = 0x0,
+    Const = 0x1,
+    Volatile = 0x2,
+    LValueRef = 0x4,
+    RValueRef = 0x8,
+    LLVM_BITMASK_LARGEST_ENUMERATOR,
+  };
+
+private:
+  CVRefQuals Quals;
+
+  CVRefQualifyingTemplateDecl(const ASTContext &C, DeclContext *DC,
+                              CVRefQuals Quals);
+
+  void anchor() override;
+
+public:
+  // Implement isa/cast/dyncast support
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == CVRefQualifyingTemplate; }
+
+  static CVRefQualifyingTemplateDecl *Create(const ASTContext &C,
+                                             DeclContext *DC, CVRefQuals Ref) {
+    return new (C, DC) CVRefQualifyingTemplateDecl(C, DC, Ref);
+  }
+
+  SourceRange getSourceRange() const override LLVM_READONLY {
+    return {};
+  }
+
+  CVRefQuals getQuals() { return Quals; }
+};
+
 /// Provides information about an explicit instantiation of a variable or class
 /// template.
 struct ExplicitInstantiationInfo {

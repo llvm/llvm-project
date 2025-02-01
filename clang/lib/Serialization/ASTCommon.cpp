@@ -450,6 +450,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::OMPDeclareReduction:
   case Decl::OMPDeclareMapper:
   case Decl::BuiltinTemplate:
+  case Decl::CVRefQualifyingTemplate:
   case Decl::Decomposition:
   case Decl::Binding:
   case Decl::Concept:

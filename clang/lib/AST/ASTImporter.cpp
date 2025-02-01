@@ -5474,6 +5474,9 @@ ExpectedDecl ASTNodeImporter::VisitBuiltinTemplateDecl(BuiltinTemplateDecl *D) {
   case BuiltinTemplateKind::BTK__builtin_common_type:
     ToD = Importer.getToContext().getBuiltinCommonTypeDecl();
     break;
+  case BuiltinTemplateKind::BTK__builtin_common_reference:
+    ToD = Importer.getToContext().getBuiltinCommonReferenceDecl();
+    break;
   }
   assert(ToD && "BuiltinTemplateDecl of unsupported kind!");
   Importer.MapImported(D, ToD);
