@@ -16,6 +16,7 @@
 
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::BigInt;
 using LIBC_NAMESPACE::IntegerToString;
 using LIBC_NAMESPACE::cpp::span;
 using LIBC_NAMESPACE::cpp::string_view;
@@ -295,6 +296,51 @@ TEST(LlvmLibcIntegerToStringTest, Sign) {
   EXPECT(DEC, -1, "-1");
   EXPECT(DEC, 0, "+0");
   EXPECT(DEC, 1, "+1");
+}
+
+TEST(LlvmLibcIntegerToStringTest, BigInt_Base_10) {
+  uint64_t uint256_max[4] = {
+      0xFFFFFFFFFFFFFFFF,
+      0xFFFFFFFFFFFFFFFF,
+      0xFFFFFFFFFFFFFFFF,
+      0xFFFFFFFFFFFFFFFF,
+  };
+  uint64_t int256_max[4] = {
+      0xFFFFFFFFFFFFFFFF,
+      0xFFFFFFFFFFFFFFFF,
+      0xFFFFFFFFFFFFFFFF,
+      0x7FFFFFFFFFFFFFFF,
+  };
+  uint64_t int256_min[4] = {
+      0,
+      0,
+      0,
+      0x8000000000000000,
+  };
+
+  using unsigned_type = IntegerToString<BigInt<256, false>, Dec>;
+  EXPECT(unsigned_type, 0, "0");
+  EXPECT(unsigned_type, 1, "1");
+  EXPECT(unsigned_type, uint256_max,
+         "115792089237316195423570985008687907853269984665640564039457584007913"
+         "129639935");
+  EXPECT(unsigned_type, int256_max,
+         "578960446186580977117854925043439539266349923328202820197287920039565"
+         "64819967");
+  EXPECT(unsigned_type, int256_min,
+         "578960446186580977117854925043439539266349923328202820197287920039565"
+         "64819968");
+
+  using signed_type = IntegerToString<BigInt<256, true>, Dec>;
+  EXPECT(signed_type, 0, "0");
+  EXPECT(signed_type, 1, "1");
+  EXPECT(signed_type, uint256_max, "-1");
+  EXPECT(signed_type, int256_max,
+         "578960446186580977117854925043439539266349923328202820197287920039565"
+         "64819967");
+  EXPECT(signed_type, int256_min,
+         "-57896044618658097711785492504343953926634992332820282019728792003956"
+         "564819968");
 }
 
 TEST(LlvmLibcIntegerToStringTest, BufferOverrun) {
