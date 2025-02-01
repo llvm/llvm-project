@@ -62,6 +62,7 @@ private:
   std::unique_ptr<SDWAOperand> matchSDWAOperand(MachineInstr &MI);
   void pseudoOpConvertToVOP2(MachineInstr &MI,
                              const GCNSubtarget &ST) const;
+  MachineInstr *createSDWAVersion(MachineInstr &MI);
   bool convertToSDWA(MachineInstr &MI, const SDWAOperandsVector &SDWAOperands);
   void legalizeScalarOperands(MachineInstr &MI, const GCNSubtarget &ST) const;
 
@@ -84,6 +85,8 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
+
+using namespace AMDGPU::SDWA;
 
 class SDWAOperand {
 private:
@@ -108,6 +111,42 @@ public:
   MachineOperand *getReplacedOperand() const { return Replaced; }
   MachineInstr *getParentInst() const { return Target->getParent(); }
 
+  /// Combine an SDWA instruction's existing SDWA selection \p
+  /// ExistingSel with the SDWA selection \p OpSel of its operand. If
+  /// the selections are compatible, return the combined selection,
+  /// otherwise return a nullopt. For example, if we have ExistingSel
+  /// = BYTE_0 Sel and FoldedSel WORD_1 Sel:
+  ///     BYTE_0 Sel (WORD_1 Sel (%X)) -> BYTE_2 Sel (%X)
+  std::optional<SdwaSel> combineSdwaSel(SdwaSel ExistingSel,
+                                        SdwaSel OperandSel) {
+    if (ExistingSel == SdwaSel::DWORD)
+      return OperandSel;
+
+    if (OperandSel == SdwaSel::DWORD)
+      return ExistingSel;
+
+    if (ExistingSel == SdwaSel::WORD_1 || ExistingSel == SdwaSel::BYTE_2 ||
+        ExistingSel == SdwaSel::BYTE_3)
+      return {};
+
+    if (ExistingSel == OperandSel)
+      return ExistingSel;
+
+    if (OperandSel == SdwaSel::WORD_0)
+      return ExistingSel;
+
+    if (OperandSel == SdwaSel::WORD_1) {
+      if (ExistingSel == SdwaSel::BYTE_0)
+        return SdwaSel::BYTE_2;
+      if (ExistingSel == SdwaSel::BYTE_1)
+        return SdwaSel::BYTE_3;
+      if (ExistingSel == SdwaSel::WORD_0)
+        return SdwaSel::WORD_1;
+    }
+
+    return {};
+  }
+
   MachineRegisterInfo *getMRI() const {
     return &getParentInst()->getParent()->getParent()->getRegInfo();
   }
@@ -117,8 +156,6 @@ public:
   void dump() const { print(dbgs()); }
 #endif
 };
-
-using namespace AMDGPU::SDWA;
 
 class SDWASrcOperand : public SDWAOperand {
 private:
@@ -451,7 +488,12 @@ bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   }
   copyRegOperand(*Src, *getTargetOperand());
   if (!IsPreserveSrc) {
-    SrcSel->setImm(getSrcSel());
+    SdwaSel ExistingSel = static_cast<SdwaSel>(SrcSel->getImm());
+    std::optional<SdwaSel> NewSel = combineSdwaSel(ExistingSel, getSrcSel());
+    if (!NewSel.has_value())
+      return false;
+    SrcSel->setImm(NewSel.value());
+
     SrcMods->setImm(getSrcMods(TII, Src));
   }
   getTargetOperand()->setIsKill(false);
@@ -498,7 +540,13 @@ bool SDWADstOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   copyRegOperand(*Operand, *getTargetOperand());
   MachineOperand *DstSel= TII->getNamedOperand(MI, AMDGPU::OpName::dst_sel);
   assert(DstSel);
-  DstSel->setImm(getDstSel());
+
+  SdwaSel ExistingSel = static_cast<SdwaSel>(DstSel->getImm());
+  std::optional<SdwaSel> NewSel = combineSdwaSel(ExistingSel, getDstSel());
+  if (!NewSel.has_value())
+    return false;
+  DstSel->setImm(NewSel.value());
+
   MachineOperand *DstUnused= TII->getNamedOperand(MI, AMDGPU::OpName::dst_unused);
   assert(DstUnused);
   DstUnused->setImm(getDstUnused());
@@ -962,11 +1010,8 @@ bool isConvertibleToSDWA(MachineInstr &MI,
                          const SIInstrInfo* TII) {
   // Check if this is already an SDWA instruction
   unsigned Opc = MI.getOpcode();
-  if (TII->isSDWA(Opc)) {
-    // FIXME: Reenable after fixing selection handling.
-    // Cf. llvm/test/CodeGen/AMDGPU/sdwa-peephole-instr-combine-sel.ll
-    return false;
-  }
+  if (TII->isSDWA(Opc))
+    return true;
 
   // Check if this instruction has opcode that supports SDWA
   if (AMDGPU::getSDWAOp(Opc) == -1)
@@ -1024,21 +1069,13 @@ bool isConvertibleToSDWA(MachineInstr &MI,
 }
 } // namespace
 
-bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
-                                   const SDWAOperandsVector &SDWAOperands) {
-
-  LLVM_DEBUG(dbgs() << "Convert instruction:" << MI);
-
-  // Convert to sdwa
-  int SDWAOpcode;
+MachineInstr *SIPeepholeSDWA::createSDWAVersion(MachineInstr &MI) {
   unsigned Opcode = MI.getOpcode();
-  if (TII->isSDWA(Opcode)) {
-    SDWAOpcode = Opcode;
-  } else {
-    SDWAOpcode = AMDGPU::getSDWAOp(Opcode);
-    if (SDWAOpcode == -1)
-      SDWAOpcode = AMDGPU::getSDWAOp(AMDGPU::getVOPe32(Opcode));
-  }
+  assert(!TII->isSDWA(Opcode));
+
+  int SDWAOpcode = AMDGPU::getSDWAOp(Opcode);
+  if (SDWAOpcode == -1)
+    SDWAOpcode = AMDGPU::getSDWAOp(AMDGPU::getVOPe32(Opcode));
   assert(SDWAOpcode != -1);
 
   const MCInstrDesc &SDWADesc = TII->get(SDWAOpcode);
@@ -1172,6 +1209,21 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
     SDWAInst->tieOperands(PreserveDstIdx, SDWAInst->getNumOperands() - 1);
   }
 
+  return SDWAInst.getInstr();
+}
+
+bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
+                                   const SDWAOperandsVector &SDWAOperands) {
+  LLVM_DEBUG(dbgs() << "Convert instruction:" << MI);
+
+  MachineInstr *SDWAInst;
+  if (TII->isSDWA(MI.getOpcode())) {
+    SDWAInst = MI.getParent()->getParent()->CloneMachineInstr(&MI);
+    MI.getParent()->insert(MI.getIterator(), SDWAInst);
+  } else {
+    SDWAInst = createSDWAVersion(MI);
+  }
+
   // Apply all sdwa operand patterns.
   bool Converted = false;
   for (auto &Operand : SDWAOperands) {
@@ -1190,19 +1242,18 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
       Converted |= Operand->convertToSDWA(*SDWAInst, TII);
   }
 
-  if (Converted) {
-    ConvertedInstructions.push_back(SDWAInst);
-    for (MachineOperand &MO : SDWAInst->uses()) {
-      if (!MO.isReg())
-        continue;
-
-      MRI->clearKillFlags(MO.getReg());
-    }
-  } else {
+  if (!Converted) {
     SDWAInst->eraseFromParent();
     return false;
   }
 
+  ConvertedInstructions.push_back(SDWAInst);
+  for (MachineOperand &MO : SDWAInst->uses()) {
+    if (!MO.isReg())
+      continue;
+
+    MRI->clearKillFlags(MO.getReg());
+  }
   LLVM_DEBUG(dbgs() << "\nInto:" << *SDWAInst << '\n');
   ++NumSDWAInstructionsPeepholed;
 

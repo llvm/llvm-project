@@ -32,17 +32,15 @@ define amdgpu_kernel void @widget(ptr addrspace(1) %arg, i1 %arg1, ptr addrspace
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    ds_write_b32 v1, v1
 ; CHECK-NEXT:  .LBB0_2: ; %bb20
-; CHECK-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; CHECK-NEXT:    s_mov_b32 s0, exec_lo
-; CHECK-NEXT:    v_cmpx_ne_u16_e32 0, v0
-; CHECK-NEXT:    s_xor_b32 s0, exec_lo, s0
-; CHECK-NEXT:    s_cbranch_execz .LBB0_4
-; CHECK-NEXT:  ; %bb.3: ; %bb11
-; CHECK-NEXT:    v_mov_b32_e32 v1, 2
-; CHECK-NEXT:    v_lshlrev_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_cmp_ne_u16_sdwa s0, v0, v1 src0_sel:WORD_1 src1_sel:DWORD
+; CHECK-NEXT:    s_and_saveexec_b32 s1, s0
+; CHECK-NEXT:    s_xor_b32 s1, exec_lo, s1
+; CHECK-NEXT:  ; %bb.3: ; %bb11
+; CHECK-NEXT:    v_mov_b32_e32 v2, 2
+; CHECK-NEXT:    v_lshlrev_b32_sdwa v0, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; CHECK-NEXT:    ds_write_b32 v0, v1 offset:84
-; CHECK-NEXT:  .LBB0_4: ; %bb14
+; CHECK-NEXT:  ; %bb.4: ; %bb14
 ; CHECK-NEXT:    s_endpgm
 bb:
   %call = tail call i32 @llvm.amdgcn.workitem.id.x()
