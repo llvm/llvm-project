@@ -254,14 +254,20 @@ public:
   }
 
   // Replace alloca instructions with shadow stack accesses.
-  void rewriteAllocas(DataLayout &DL, AllocaVector &Allocas, Value *SSPtr) {
+  // Returns a vector of the GEP instructions that replaced the original
+  // allocas.
+  std::vector<GetElementPtrInst *>
+  rewriteAllocas(DataLayout &DL, AllocaVector &Allocas, Value *SSPtr) {
+    std::vector<GetElementPtrInst *> Instructions;
     for (auto [AI, Off] : Allocas) {
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           Int8Ty, SSPtr, {ConstantInt::get(Int32Ty, Off)}, "", AI);
       AI->replaceAllUsesWith(GEP);
       AI->removeFromParent();
       AI->deleteValue();
+      Instructions.push_back(GEP);
     }
+    return Instructions;
   }
 
   /// At each place the function can return, insert IR to restore the shadow
@@ -301,7 +307,7 @@ public:
     std::vector<ReturnInst *> MainRets;
     size_t SFrameSize = analyseFunction(*Main, DL, MainAllocas, MainRets);
     CallInst *Malloc = insertMainPrologue(Main, SSGlobal, SFrameSize);
-    rewriteAllocas(DL, MainAllocas, Malloc);
+    auto MainGEPs = rewriteAllocas(DL, MainAllocas, Malloc);
 
     // If we have two control points, we need to update the cloned main
     // function as well.
@@ -326,20 +332,25 @@ public:
 
       // Load the current shadow stack pointer from the global variable.
       LoadInst *LoadedSSPtr = Builder.CreateLoad(Int8PtrTy, SSGlobal);
+      auto UnoptMainGEPs = rewriteAllocas(DL, UnoptMainAllocas, LoadedSSPtr);
+      // Validate that opt and unopt main have the same GEPs.
+      assert(MainGEPs.size() == UnoptMainGEPs.size() &&
+             "Expected same number of GEPs between opt/unopt main");
+      // Validate that each pair of GEPs has matching offsets and types
+      for (size_t i = 0; i < MainGEPs.size(); i++) {
+        GetElementPtrInst *OptGEP = MainGEPs[i];
+        GetElementPtrInst *UnoptGEP = UnoptMainGEPs[i];
+        // Check that the offset operands match
+        ConstantInt *OptOffset = cast<ConstantInt>(OptGEP->getOperand(1));
+        ConstantInt *UnoptOffset = cast<ConstantInt>(UnoptGEP->getOperand(1));
+        assert(OptOffset->getValue() == UnoptOffset->getValue() &&
+               "GEP offsets must match between opt/unopt main");
 
-      // Assert that the allocas count match between opt/unopt main
-      assert(MainAllocas.size() == UnoptMainAllocas.size() &&
-             "Expected same number of allocas between opt/unopt main");
-
-      // Assert that the allocas have the same offset
-      for (size_t i = 0; i < MainAllocas.size(); i++) {
-        auto &[optAI, optOffset] = MainAllocas[i];
-        auto &[unoptAI, unoptOffset] = UnoptMainAllocas[i];
-        assert(optOffset == unoptOffset && "Alloca offsets must match");
+        // Check that the resulting pointer types match
+        assert(OptGEP->getResultElementType() ==
+                   UnoptGEP->getResultElementType() &&
+               "GEP result types must match between opt/unopt main");
       }
-
-      // Replace all allocas in UnoptMain with the loaded shadow stack pointer.
-      rewriteAllocas(DL, UnoptMainAllocas, LoadedSSPtr);
     }
   }
 
