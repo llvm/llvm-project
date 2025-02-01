@@ -5193,12 +5193,12 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     CC = CC_X86RegCall;
     break;
   case ParsedAttr::AT_MSABI:
-    CC = Context.getTargetInfo().getTriple().isOSWindows() ? CC_C :
-                                                             CC_Win64;
+    CC = Context.getTargetInfo().getTriple().isOSWindowsOrUEFI() ? CC_C
+                                                                 : CC_Win64;
     break;
   case ParsedAttr::AT_SysVABI:
-    CC = Context.getTargetInfo().getTriple().isOSWindows() ? CC_X86_64SysV :
-                                                             CC_C;
+    CC = Context.getTargetInfo().getTriple().isOSWindowsOrUEFI() ? CC_X86_64SysV
+                                                                 : CC_C;
     break;
   case ParsedAttr::AT_Pcs: {
     StringRef StrRef;
