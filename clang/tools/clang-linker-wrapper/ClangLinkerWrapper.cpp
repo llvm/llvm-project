@@ -498,11 +498,16 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
   };
 
   // Forward all of the `--offload-opt` and similar options to the device.
-  CmdArgs.push_back("-flto");
   for (auto &Arg : Args.filtered(OPT_offload_opt_eq_minus, OPT_mllvm))
     CmdArgs.append(
         {"-Xlinker",
          Args.MakeArgString("--plugin-opt=" + StringRef(Arg->getValue()))});
+
+  if (Triple.isNVPTX() || Triple.isAMDGPU()) {
+    CmdArgs.push_back("-foffload-lto");
+  } else {
+    CmdArgs.push_back("-flto");
+  }
 
   if (!Triple.isNVPTX() && !Triple.isSPIRV())
     CmdArgs.push_back("-Wl,--no-undefined");
