@@ -135,8 +135,6 @@ static void ContractNodes(std::unique_ptr<Matcher> &MatcherPtr,
       // variants.
     }
 
-  ContractNodes(N->getNextPtr(), CGP);
-
   // If we have a CheckType/CheckChildType/Record node followed by a
   // CheckOpcode, invert the two nodes.  We prefer to do structural checks
   // before type checks, as this opens opportunities for factoring on targets
@@ -155,6 +153,8 @@ static void ContractNodes(std::unique_ptr<Matcher> &MatcherPtr,
     CheckType->setNext(Tail);
     return ContractNodes(MatcherPtr, CGP);
   }
+
+  ContractNodes(N->getNextPtr(), CGP);
 
   // If we have a MoveParent followed by a MoveChild, we convert it to
   // MoveSibling.
