@@ -77,21 +77,6 @@ public:
   llvm::OpenMPIRBuilder::InsertPointTy allocaInsertPoint;
 };
 
-/// ModuleTranslation stack frame containing the partial mapping between MLIR
-/// values and their LLVM IR equivalents.
-class OpenMPVarMappingStackFrame
-    : public LLVM::ModuleTranslation::StackFrameBase<
-          OpenMPVarMappingStackFrame> {
-public:
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpenMPVarMappingStackFrame)
-
-  explicit OpenMPVarMappingStackFrame(
-      const DenseMap<Value, llvm::Value *> &mapping)
-      : mapping(mapping) {}
-
-  DenseMap<Value, llvm::Value *> mapping;
-};
-
 /// Custom error class to signal translation errors that don't need reporting,
 /// since encountering them will have already triggered relevant error messages.
 ///
@@ -1724,12 +1709,6 @@ convertOmpSections(Operation &opInst, llvm::IRBuilderBase &builder,
           isByRef)))
     return failure();
 
-  // Store the mapping between reduction variables and their private copies on
-  // ModuleTranslation stack. It can be then recovered when translating
-  // omp.reduce operations in a separate call.
-  LLVM::ModuleTranslation::SaveStack<OpenMPVarMappingStackFrame> mappingGuard(
-      moduleTranslation, reductionVariableMap);
-
   SmallVector<StorableBodyGenCallbackTy> sectionCBs;
 
   for (Operation &op : *sectionsOp.getRegion().begin()) {
@@ -1902,12 +1881,6 @@ convertOmpTeams(omp::TeamsOp op, llvm::IRBuilderBase &builder,
             reductionDecls, privateReductionVariables, reductionVariableMap,
             isByRef)))
       return failure();
-
-    // Store the mapping between reduction variables and their private copies on
-    // ModuleTranslation stack. It can be then recovered when translating
-    // omp.reduce operations in a separate call.
-    LLVM::ModuleTranslation::SaveStack<OpenMPVarMappingStackFrame> mappingGuard(
-        moduleTranslation, reductionVariableMap);
   }
 
   auto bodyCB = [&](InsertPointTy allocaIP, InsertPointTy codegenIP) {
@@ -2302,12 +2275,6 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   if (failed(convertIgnoredWrappers(loopOp, wsloopOp, moduleTranslation)))
     return failure();
 
-  // Store the mapping between reduction variables and their private copies on
-  // ModuleTranslation stack. It can be then recovered when translating
-  // omp.reduce operations in a separate call.
-  LLVM::ModuleTranslation::SaveStack<OpenMPVarMappingStackFrame> mappingGuard(
-      moduleTranslation, reductionVariableMap);
-
   // TODO: Handle doacross loops when the ordered clause has a parameter.
   bool isOrdered = wsloopOp.getOrdered().has_value();
   std::optional<omp::ScheduleModifier> scheduleMod = wsloopOp.getScheduleMod();
@@ -2412,12 +2379,6 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
                               reductionDecls, privateReductionVariables,
                               reductionVariableMap, isByRef, deferredStores)))
       return llvm::make_error<PreviouslyReportedError>();
-
-    // Store the mapping between reduction variables and their private copies on
-    // ModuleTranslation stack. It can be then recovered when translating
-    // omp.reduce operations in a separate call.
-    LLVM::ModuleTranslation::SaveStack<OpenMPVarMappingStackFrame> mappingGuard(
-        moduleTranslation, reductionVariableMap);
 
     // Save the alloca insertion point on ModuleTranslation stack for use in
     // nested regions.
@@ -4255,12 +4216,6 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
             isByRef)))
       return failure();
   }
-
-  // Store the mapping between reduction variables and their private copies on
-  // ModuleTranslation stack. It can be then recovered when translating
-  // omp.reduce operations in a separate call.
-  LLVM::ModuleTranslation::SaveStack<OpenMPVarMappingStackFrame> mappingGuard(
-      moduleTranslation, reductionVariableMap);
 
   auto loopOp = cast<omp::LoopNestOp>(distributeOp.getWrappedLoop());
 
