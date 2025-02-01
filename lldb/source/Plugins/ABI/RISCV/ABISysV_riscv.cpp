@@ -850,8 +850,62 @@ void ABISysV_riscv::AugmentRegisterInfo(
       it.value().alt_name.SetCString("x3");
     else if (it.value().name == "fp")
       it.value().alt_name.SetCString("s0");
+    else if (it.value().name == "tp")
+      it.value().alt_name.SetCString("x4");
     else if (it.value().name == "s0")
       it.value().alt_name.SetCString("x8");
+    else if (it.value().name == "s1")
+      it.value().alt_name.SetCString("x9");
+    else if (it.value().name == "t0")
+      it.value().alt_name.SetCString("x5");
+    else if (it.value().name == "t1")
+      it.value().alt_name.SetCString("x6");
+    else if (it.value().name == "t2")
+      it.value().alt_name.SetCString("x7");
+    else if (it.value().name == "a0")
+      it.value().alt_name.SetCString("x10");
+    else if (it.value().name == "a1")
+      it.value().alt_name.SetCString("x11");
+    else if (it.value().name == "a2")
+      it.value().alt_name.SetCString("x12");
+    else if (it.value().name == "a3")
+      it.value().alt_name.SetCString("x13");
+    else if (it.value().name == "a4")
+      it.value().alt_name.SetCString("x14");
+    else if (it.value().name == "a5")
+      it.value().alt_name.SetCString("x15");
+    else if (it.value().name == "a6")
+      it.value().alt_name.SetCString("x16");
+    else if (it.value().name == "a7")
+      it.value().alt_name.SetCString("x17");
+    else if (it.value().name == "s2")
+      it.value().alt_name.SetCString("x18");
+    else if (it.value().name == "s3")
+      it.value().alt_name.SetCString("x19");
+    else if (it.value().name == "s4")
+      it.value().alt_name.SetCString("x20");
+    else if (it.value().name == "s5")
+      it.value().alt_name.SetCString("x21");
+    else if (it.value().name == "s6")
+      it.value().alt_name.SetCString("x22");
+    else if (it.value().name == "s7")
+      it.value().alt_name.SetCString("x23");
+    else if (it.value().name == "s8")
+      it.value().alt_name.SetCString("x24");
+    else if (it.value().name == "s9")
+      it.value().alt_name.SetCString("x25");
+    else if (it.value().name == "s10")
+      it.value().alt_name.SetCString("x26");
+    else if (it.value().name == "s11")
+      it.value().alt_name.SetCString("x27");
+    else if (it.value().name == "t3")
+      it.value().alt_name.SetCString("x28");
+    else if (it.value().name == "t4")
+      it.value().alt_name.SetCString("x29");
+    else if (it.value().name == "t5")
+      it.value().alt_name.SetCString("x30");
+    else if (it.value().name == "t6")
+      it.value().alt_name.SetCString("x31");
 
     // Set generic regnum so lldb knows what the PC, etc is
     it.value().regnum_generic = GetGenericNum(it.value().name.GetStringRef());
