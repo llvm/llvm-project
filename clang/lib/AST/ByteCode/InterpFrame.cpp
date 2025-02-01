@@ -23,10 +23,6 @@
 using namespace clang;
 using namespace clang::interp;
 
-InterpFrame::InterpFrame(InterpState &S)
-    : Caller(nullptr), S(S), Depth(0), Func(nullptr), RetPC(CodePtr()),
-      ArgSize(0), Args(nullptr), FrameOffset(0), IsBottom(true) {}
-
 InterpFrame::InterpFrame(InterpState &S, const Function *Func,
                          InterpFrame *Caller, CodePtr RetPC, unsigned ArgSize)
     : Caller(Caller), S(S), Depth(Caller ? Caller->Depth + 1 : 0), Func(Func),

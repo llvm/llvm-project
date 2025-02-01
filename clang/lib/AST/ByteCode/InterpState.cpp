@@ -27,7 +27,7 @@ bool InterpState::inConstantContext() const {
 }
 
 InterpState::~InterpState() {
-  while (Current && !Current->isBottomFrame()) {
+  while (Current) {
     InterpFrame *Next = Current->Caller;
     delete Current;
     Current = Next;

@@ -122,8 +122,6 @@ private:
   /// Active block which should be executed.
   LabelTy ActiveLabel = 0;
 
-  InterpFrame BottomFrame;
-
 protected:
 #define GET_EVAL_PROTO
 #include "Opcodes.inc"
