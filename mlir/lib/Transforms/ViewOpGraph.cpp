@@ -322,11 +322,11 @@ private:
         os << "|{";
         auto resultToPort = [&](Value result) {
           os << "<" << getValuePortName(result) << "> ";
+          result.printAsOperand(os, OpPrintingFlags());
           if (printResultTypes)
-            os << truncateString(escapeLabelString(
-                strFromOs([&](raw_ostream &os) { os << result.getType(); })));
-          else
-            result.printAsOperand(os, OpPrintingFlags());
+            os << " "
+               << truncateString(escapeLabelString(strFromOs(
+                      [&](raw_ostream &os) { os << result.getType(); })));
         };
         interleave(op->getResults(), os, resultToPort, "|");
         os << "}";
