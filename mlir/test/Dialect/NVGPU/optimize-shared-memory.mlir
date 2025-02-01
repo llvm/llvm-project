@@ -238,3 +238,13 @@ func.func @abort_if_subview(%arg0: memref<128x128xf16>,
 
   return %mat: vector<1x2xf16>
 }
+
+// -----
+
+// Ensure this case not crash
+
+// CHECK-LABEL: func @test_0_d
+func.func @test_0_d() -> memref<i32, #gpu.address_space<workgroup>> {
+  %alloc = memref.alloc() : memref<i32, #gpu.address_space<workgroup>>
+  return %alloc : memref<i32, #gpu.address_space<workgroup>>
+}

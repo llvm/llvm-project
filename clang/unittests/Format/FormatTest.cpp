@@ -2084,7 +2084,6 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                Style);
 
   Style.PointerAlignment = FormatStyle::PAS_Left;
-  Style.ReferenceAlignment = FormatStyle::RAS_Pointer;
   verifyFormat("int* f1(int* a, int& b, int&& c);", Style);
   verifyFormat("int& f2(int&& c, int* a, int& b);", Style);
   verifyFormat("int&& f3(int& b, int&& c, int* a);", Style);
@@ -2118,6 +2117,7 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
       "function<int(int&)> res1 = [](int& a) { return 0000000000000; },\n"
       "                    res2 = [](int& a) { return 0000000000000; };",
       Style);
+  verifyFormat("[](decltype(foo)& Bar) {}", Style);
 
   Style.AlignConsecutiveDeclarations.Enabled = true;
   Style.AlignConsecutiveDeclarations.AlignFunctionPointers = true;
@@ -9059,9 +9059,9 @@ TEST_F(FormatTest, AdaptiveOnePerLineFormatting) {
                Style);
 }
 
-TEST_F(FormatTest, ExportBlockIndentation) {
+TEST_F(FormatTest, IndentExportBlock) {
   FormatStyle Style = getLLVMStyleWithColumns(80);
-  Style.ExportBlockIndentation = true;
+  Style.IndentExportBlock = true;
   verifyFormat("export {\n"
                "  int x;\n"
                "  int y;\n"
@@ -9072,7 +9072,7 @@ TEST_F(FormatTest, ExportBlockIndentation) {
                "}",
                Style);
 
-  Style.ExportBlockIndentation = false;
+  Style.IndentExportBlock = false;
   verifyFormat("export {\n"
                "int x;\n"
                "int y;\n"
@@ -9086,7 +9086,7 @@ TEST_F(FormatTest, ExportBlockIndentation) {
 
 TEST_F(FormatTest, ShortExportBlocks) {
   FormatStyle Style = getLLVMStyleWithColumns(80);
-  Style.ExportBlockIndentation = false;
+  Style.IndentExportBlock = false;
 
   Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Never;
   verifyFormat("export {\n"
@@ -9613,6 +9613,10 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
                "    [&b](\n"
                "        auto aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "    ) {};",
+               Style);
+  verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaa(\n"
+               "    &bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n"
+               ");",
                Style);
 }
 
@@ -22365,6 +22369,24 @@ TEST_F(FormatTest, BreakPenaltyAfterForLoopLParen) {
                Style);
 }
 
+TEST_F(FormatTest, BreakPenaltyBeforeMemberAccess) {
+  auto Style = getLLVMStyle();
+  EXPECT_EQ(Style.PenaltyBreakBeforeMemberAccess, 150u);
+
+  Style.ColumnLimit = 60;
+  Style.PenaltyBreakBeforeMemberAccess = 110;
+  verifyFormat("aaaaaaaa.aaaaaaaa.bbbbbbbb()\n"
+               "    .ccccccccccccccccccccc(dddddddd);\n"
+               "aaaaaaaa.aaaaaaaa\n"
+               "    .bbbbbbbb(cccccccccccccccccccccccccccccccc);",
+               Style);
+
+  Style.ColumnLimit = 13;
+  verifyFormat("foo->bar\n"
+               "    .b(a);",
+               Style);
+}
+
 TEST_F(FormatTest, BreakPenaltyScopeResolution) {
   FormatStyle Style = getLLVMStyle();
   Style.ColumnLimit = 20;
@@ -26460,6 +26482,9 @@ TEST_F(FormatTest, RequiresClauses) {
                "foo();\n"
                "#endif\n"
                "bar(requires);");
+
+  verifyNoCrash("template <class T>\n"
+                "    requires(requires { std::declval<T>()");
 }
 
 TEST_F(FormatTest, RequiresExpressionIndentation) {

@@ -90,7 +90,7 @@ std::string fixIncludes(const AnalysisResults &Results,
 /// Returned headers are sorted by relevance, first element is the most
 /// likely provider for the symbol.
 llvm::SmallVector<Header> headersForSymbol(const Symbol &S,
-                                           const SourceManager &SM,
+                                           const Preprocessor &PP,
                                            const PragmaIncludes *PI);
 } // namespace include_cleaner
 } // namespace clang

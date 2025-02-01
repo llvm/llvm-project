@@ -35,10 +35,10 @@ define amdgpu_kernel void @buffer_last_use_load_0(ptr addrspace(7) %in, ptr addr
 ; GFX12-NEXT:    v_readfirstlane_b32 s5, v5
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v6
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v7
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[4:5]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[6:7]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX12-NEXT:    s_wait_alu 0xfffe
@@ -47,7 +47,6 @@ define amdgpu_kernel void @buffer_last_use_load_0(ptr addrspace(7) %in, ptr addr
 ; GFX12-NEXT:    buffer_load_b32 v8, v9, s[4:7], null offen th:TH_LOAD_LU
 ; GFX12-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
 ; GFX12-NEXT:    ; implicit-def: $vgpr9
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB0_1
 ; GFX12-NEXT:  ; %bb.2:
@@ -60,6 +59,7 @@ define amdgpu_kernel void @buffer_last_use_load_0(ptr addrspace(7) %in, ptr addr
 ; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
@@ -73,7 +73,6 @@ define amdgpu_kernel void @buffer_last_use_load_0(ptr addrspace(7) %in, ptr addr
 ; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX12-NEXT:    ; implicit-def: $vgpr8
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB0_3
 ; GFX12-NEXT:  ; %bb.4:
@@ -117,10 +116,10 @@ define amdgpu_kernel void @buffer_last_use_load_1(ptr addrspace(7) %in, ptr addr
 ; GFX12-NEXT:    v_readfirstlane_b32 s5, v6
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v7
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v8
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[5:6]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[7:8]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX12-NEXT:    s_wait_alu 0xfffe
@@ -129,7 +128,6 @@ define amdgpu_kernel void @buffer_last_use_load_1(ptr addrspace(7) %in, ptr addr
 ; GFX12-NEXT:    buffer_load_b32 v0, v9, s[4:7], null offen th:TH_LOAD_LU
 ; GFX12-NEXT:    ; implicit-def: $vgpr5_vgpr6_vgpr7_vgpr8
 ; GFX12-NEXT:    ; implicit-def: $vgpr9
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB1_1
 ; GFX12-NEXT:  ; %bb.2:
@@ -142,6 +140,7 @@ define amdgpu_kernel void @buffer_last_use_load_1(ptr addrspace(7) %in, ptr addr
 ; GFX12-NEXT:    v_readfirstlane_b32 s5, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v3
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v4
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[1:2]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[3:4]
@@ -155,7 +154,6 @@ define amdgpu_kernel void @buffer_last_use_load_1(ptr addrspace(7) %in, ptr addr
 ; GFX12-NEXT:    ; implicit-def: $vgpr1_vgpr2_vgpr3_vgpr4
 ; GFX12-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-NEXT:    ; implicit-def: $vgpr5
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB1_3
 ; GFX12-NEXT:  ; %bb.4:
@@ -200,10 +198,10 @@ define amdgpu_kernel void @buffer_last_use_and_volatile_load(ptr addrspace(7) %i
 ; GFX12-NEXT:    v_readfirstlane_b32 s5, v5
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v6
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v7
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[4:5]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[6:7]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX12-NEXT:    s_wait_alu 0xfffe
@@ -212,7 +210,6 @@ define amdgpu_kernel void @buffer_last_use_and_volatile_load(ptr addrspace(7) %i
 ; GFX12-NEXT:    buffer_load_b32 v8, v9, s[4:7], null offen th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; GFX12-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
 ; GFX12-NEXT:    ; implicit-def: $vgpr9
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB2_1
 ; GFX12-NEXT:  ; %bb.2:
@@ -225,6 +222,7 @@ define amdgpu_kernel void @buffer_last_use_and_volatile_load(ptr addrspace(7) %i
 ; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
@@ -238,7 +236,6 @@ define amdgpu_kernel void @buffer_last_use_and_volatile_load(ptr addrspace(7) %i
 ; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX12-NEXT:    ; implicit-def: $vgpr8
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB2_3
 ; GFX12-NEXT:  ; %bb.4:
@@ -281,10 +278,10 @@ define amdgpu_kernel void @buffer_last_use_and_nontemporal_load(ptr addrspace(7)
 ; GFX12-NEXT:    v_readfirstlane_b32 s5, v5
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v6
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v7
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[4:5]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[6:7]
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX12-NEXT:    s_wait_alu 0xfffe
@@ -293,7 +290,6 @@ define amdgpu_kernel void @buffer_last_use_and_nontemporal_load(ptr addrspace(7)
 ; GFX12-NEXT:    buffer_load_b32 v8, v9, s[4:7], null offen th:TH_LOAD_LU
 ; GFX12-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
 ; GFX12-NEXT:    ; implicit-def: $vgpr9
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB3_1
 ; GFX12-NEXT:  ; %bb.2:
@@ -306,6 +302,7 @@ define amdgpu_kernel void @buffer_last_use_and_nontemporal_load(ptr addrspace(7)
 ; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
@@ -319,7 +316,6 @@ define amdgpu_kernel void @buffer_last_use_and_nontemporal_load(ptr addrspace(7)
 ; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX12-NEXT:    ; implicit-def: $vgpr8
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB3_3
 ; GFX12-NEXT:  ; %bb.4:

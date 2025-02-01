@@ -355,6 +355,16 @@ cl::opt<bool> EnableVPlanNativePath(
     "enable-vplan-native-path", cl::Hidden,
     cl::desc("Enable VPlan-native vectorization path with "
              "support for outer loop vectorization."));
+
+cl::opt<bool>
+    VerifyEachVPlan("vplan-verify-each",
+#ifdef EXPENSIVE_CHECKS
+                    cl::init(true),
+#else
+                    cl::init(false),
+#endif
+                    cl::Hidden,
+                    cl::desc("Verfiy VPlans after VPlan transforms."));
 } // namespace llvm
 
 // This flag enables the stress testing of the VPlan H-CFG construction in the
@@ -1438,11 +1448,11 @@ public:
     // Override forced styles if needed.
     // FIXME: use actual opcode/data type for analysis here.
     // FIXME: Investigate opportunity for fixed vector factor.
+    // FIXME: support fixed-order recurrences by fixing splice of non VFxUF
+    // penultimate EVL.
     bool EVLIsLegal =
         UserIC <= 1 && TTI.hasActiveVectorLength(0, nullptr, Align()) &&
-        !EnableVPlanNativePath &&
-        // FIXME: remove this once fixed-ordered recurrence is supported.
-        Legal->getFixedOrderRecurrences().empty();
+        !EnableVPlanNativePath && Legal->getFixedOrderRecurrences().empty();
     if (!EVLIsLegal) {
       // If for some reason EVL mode is unsupported, fallback to
       // DataWithoutLaneMask to try to vectorize the loop with folded tail
@@ -1914,12 +1924,14 @@ public:
       MemCheckBlock->replaceAllUsesWith(Preheader);
 
     if (SCEVCheckBlock) {
-      SCEVCheckBlock->getTerminator()->moveBefore(Preheader->getTerminator());
+      SCEVCheckBlock->getTerminator()->moveBefore(
+          Preheader->getTerminator()->getIterator());
       new UnreachableInst(Preheader->getContext(), SCEVCheckBlock);
       Preheader->getTerminator()->eraseFromParent();
     }
     if (MemCheckBlock) {
-      MemCheckBlock->getTerminator()->moveBefore(Preheader->getTerminator());
+      MemCheckBlock->getTerminator()->moveBefore(
+          Preheader->getTerminator()->getIterator());
       new UnreachableInst(Preheader->getContext(), MemCheckBlock);
       Preheader->getTerminator()->eraseFromParent();
     }
@@ -2998,7 +3010,7 @@ void InnerLoopVectorizer::sinkScalarOperands(Instruction *PredInst) {
 
       // Move the instruction to the beginning of the predicated block, and add
       // it's operands to the worklist.
-      I->moveBefore(&*PredBB->getFirstInsertionPt());
+      I->moveBefore(PredBB->getFirstInsertionPt());
       Worklist.insert(I->op_begin(), I->op_end());
 
       // The sinking may have enabled other instructions to be sunk, so we will
@@ -3388,10 +3400,10 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   if (hasIrregularType(ScalarTy, DL))
     return false;
 
-  // For scalable vectors, the only interleave factor currently supported
-  // must be power of 2 since we require the (de)interleave2 intrinsics
-  // instead of shufflevectors.
-  if (VF.isScalable() && !isPowerOf2_32(InterleaveFactor))
+  // We currently only know how to emit interleave/deinterleave with
+  // Factor=2 for scalable vectors. This is purely an implementation
+  // limit.
+  if (VF.isScalable() && InterleaveFactor != 2)
     return false;
 
   // If the group involves a non-integral pointer, we may not be able to
@@ -7649,8 +7661,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
-  VPlanTransforms::unrollByUF(BestVPlan, BestUF,
-                              OrigLoop->getHeader()->getContext());
+  VPlanTransforms::runPass(VPlanTransforms::unrollByUF, BestVPlan, BestUF,
+                           OrigLoop->getHeader()->getContext());
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
   VPlanTransforms::convertToConcreteRecipes(BestVPlan);
 
@@ -7957,7 +7969,7 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton(
     PhisInBlock.push_back(&Phi);
 
   for (PHINode *Phi : PhisInBlock) {
-    Phi->moveBefore(LoopVectorPreHeader->getFirstNonPHI());
+    Phi->moveBefore(LoopVectorPreHeader->getFirstNonPHIIt());
     Phi->replaceIncomingBlockWith(
         VecEpilogueIterationCountCheck->getSinglePredecessor(),
         VecEpilogueIterationCountCheck);
@@ -8616,8 +8628,9 @@ void VPRecipeBuilder::fixHeaderPhis() {
   }
 }
 
-VPReplicateRecipe *VPRecipeBuilder::handleReplication(Instruction *I,
-                                                      VFRange &Range) {
+VPReplicateRecipe *
+VPRecipeBuilder::handleReplication(Instruction *I, ArrayRef<VPValue *> Operands,
+                                   VFRange &Range) {
   bool IsUniform = LoopVectorizationPlanner::getDecisionAndClampRange(
       [&](ElementCount VF) { return CM.isUniformAfterVectorization(I, VF); },
       Range);
@@ -8673,8 +8686,8 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(Instruction *I,
   assert((Range.Start.isScalar() || !IsUniform || !IsPredicated ||
           (Range.Start.isScalable() && isa<IntrinsicInst>(I))) &&
          "Should not predicate a uniform recipe");
-  auto *Recipe = new VPReplicateRecipe(I, mapToVPValues(I->operands()),
-                                       IsUniform, BlockInMask);
+  auto *Recipe = new VPReplicateRecipe(
+      I, make_range(Operands.begin(), Operands.end()), IsUniform, BlockInMask);
   return Recipe;
 }
 
@@ -8682,12 +8695,12 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(Instruction *I,
 /// are valid so recipes can be formed later.
 void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
   // Find all possible partial reductions.
-  SmallVector<std::pair<PartialReductionChain, unsigned>, 1>
+  SmallVector<std::pair<PartialReductionChain, unsigned>>
       PartialReductionChains;
-  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars())
-    if (std::optional<std::pair<PartialReductionChain, unsigned>> Pair =
-            getScaledReduction(Phi, RdxDesc, Range))
-      PartialReductionChains.push_back(*Pair);
+  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars()) {
+    getScaledReductions(Phi, RdxDesc.getLoopExitInstr(), Range,
+                        PartialReductionChains);
+  }
 
   // A partial reduction is invalid if any of its extends are used by
   // something that isn't another partial reduction. This is because the
@@ -8711,43 +8724,58 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
     PartialReductionChain Chain = Pair.first;
     if (ExtendIsOnlyUsedByPartialReductions(Chain.ExtendA) &&
         ExtendIsOnlyUsedByPartialReductions(Chain.ExtendB))
-      ScaledReductionExitInstrs.insert(std::make_pair(Chain.Reduction, Pair));
+      ScaledReductionMap.insert(std::make_pair(Chain.Reduction, Pair.second));
   }
 }
 
-std::optional<std::pair<PartialReductionChain, unsigned>>
-VPRecipeBuilder::getScaledReduction(PHINode *PHI,
-                                    const RecurrenceDescriptor &Rdx,
-                                    VFRange &Range) {
+bool VPRecipeBuilder::getScaledReductions(
+    Instruction *PHI, Instruction *RdxExitInstr, VFRange &Range,
+    SmallVectorImpl<std::pair<PartialReductionChain, unsigned>> &Chains) {
+
+  if (!CM.TheLoop->contains(RdxExitInstr))
+    return false;
+
   // TODO: Allow scaling reductions when predicating. The select at
   // the end of the loop chooses between the phi value and most recent
   // reduction result, both of which have different VFs to the active lane
   // mask when scaling.
-  if (CM.blockNeedsPredicationForAnyReason(Rdx.getLoopExitInstr()->getParent()))
-    return std::nullopt;
+  if (CM.blockNeedsPredicationForAnyReason(RdxExitInstr->getParent()))
+    return false;
 
-  auto *Update = dyn_cast<BinaryOperator>(Rdx.getLoopExitInstr());
+  auto *Update = dyn_cast<BinaryOperator>(RdxExitInstr);
   if (!Update)
-    return std::nullopt;
+    return false;
 
   Value *Op = Update->getOperand(0);
   Value *PhiOp = Update->getOperand(1);
-  if (Op == PHI) {
-    Op = Update->getOperand(1);
-    PhiOp = Update->getOperand(0);
+  if (Op == PHI)
+    std::swap(Op, PhiOp);
+
+  // Try and get a scaled reduction from the first non-phi operand.
+  // If one is found, we use the discovered reduction instruction in
+  // place of the accumulator for costing.
+  if (auto *OpInst = dyn_cast<Instruction>(Op)) {
+    if (getScaledReductions(PHI, OpInst, Range, Chains)) {
+      PHI = Chains.rbegin()->first.Reduction;
+
+      Op = Update->getOperand(0);
+      PhiOp = Update->getOperand(1);
+      if (Op == PHI)
+        std::swap(Op, PhiOp);
+    }
   }
   if (PhiOp != PHI)
-    return std::nullopt;
+    return false;
 
   auto *BinOp = dyn_cast<BinaryOperator>(Op);
   if (!BinOp || !BinOp->hasOneUse())
-    return std::nullopt;
+    return false;
 
   using namespace llvm::PatternMatch;
   Value *A, *B;
   if (!match(BinOp->getOperand(0), m_ZExtOrSExt(m_Value(A))) ||
       !match(BinOp->getOperand(1), m_ZExtOrSExt(m_Value(B))))
-    return std::nullopt;
+    return false;
 
   Instruction *ExtA = cast<Instruction>(BinOp->getOperand(0));
   Instruction *ExtB = cast<Instruction>(BinOp->getOperand(1));
@@ -8757,7 +8785,7 @@ VPRecipeBuilder::getScaledReduction(PHINode *PHI,
   TTI::PartialReductionExtendKind OpBExtend =
       TargetTransformInfo::getPartialReductionExtendKind(ExtB);
 
-  PartialReductionChain Chain(Rdx.getLoopExitInstr(), ExtA, ExtB, BinOp);
+  PartialReductionChain Chain(RdxExitInstr, ExtA, ExtB, BinOp);
 
   unsigned TargetScaleFactor =
       PHI->getType()->getPrimitiveSizeInBits().getKnownScalarFactor(
@@ -8771,10 +8799,12 @@ VPRecipeBuilder::getScaledReduction(PHINode *PHI,
                 std::make_optional(BinOp->getOpcode()));
             return Cost.isValid();
           },
-          Range))
-    return std::make_pair(Chain, TargetScaleFactor);
+          Range)) {
+    Chains.push_back(std::make_pair(Chain, TargetScaleFactor));
+    return true;
+  }
 
-  return std::nullopt;
+  return false;
 }
 
 VPRecipeBase *
@@ -8803,9 +8833,8 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
              Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader()));
 
       // If the PHI is used by a partial reduction, set the scale factor.
-      std::optional<std::pair<PartialReductionChain, unsigned>> Pair =
-          getScaledReductionForInstr(RdxDesc.getLoopExitInstr());
-      unsigned ScaleFactor = Pair ? Pair->second : 1;
+      unsigned ScaleFactor =
+          getScalingForReduction(RdxDesc.getLoopExitInstr()).value_or(1);
       PhiRecipe = new VPReductionPHIRecipe(
           Phi, RdxDesc, *StartV, CM.isInLoopReduction(Phi),
           CM.useOrderedReductions(RdxDesc), ScaleFactor);
@@ -8840,7 +8869,7 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
   if (isa<LoadInst>(Instr) || isa<StoreInst>(Instr))
     return tryToWidenMemory(Instr, Operands, Range);
 
-  if (getScaledReductionForInstr(Instr))
+  if (getScalingForReduction(Instr))
     return tryToCreatePartialReduction(Instr, Operands);
 
   if (!shouldWiden(Instr, Range))
@@ -8870,12 +8899,14 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
          "Unexpected number of operands for partial reduction");
 
   VPValue *BinOp = Operands[0];
-  VPValue *Phi = Operands[1];
-  if (isa<VPReductionPHIRecipe>(BinOp->getDefiningRecipe()))
-    std::swap(BinOp, Phi);
+  VPValue *Accumulator = Operands[1];
+  VPRecipeBase *BinOpRecipe = BinOp->getDefiningRecipe();
+  if (isa<VPReductionPHIRecipe>(BinOpRecipe) ||
+      isa<VPPartialReductionRecipe>(BinOpRecipe))
+    std::swap(BinOp, Accumulator);
 
-  return new VPPartialReductionRecipe(Reduction->getOpcode(), BinOp, Phi,
-                                      Reduction);
+  return new VPPartialReductionRecipe(Reduction->getOpcode(), BinOp,
+                                      Accumulator, Reduction);
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
@@ -8888,13 +8919,14 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
     if (auto Plan = tryToBuildVPlanWithVPRecipes(SubRange)) {
       // Now optimize the initial VPlan.
       if (!Plan->hasVF(ElementCount::getFixed(1)))
-        VPlanTransforms::truncateToMinimalBitwidths(*Plan,
-                                                    CM.getMinimalBitwidths());
+        VPlanTransforms::runPass(VPlanTransforms::truncateToMinimalBitwidths,
+                                 *Plan, CM.getMinimalBitwidths());
       VPlanTransforms::optimize(*Plan);
       // TODO: try to put it close to addActiveLaneMask().
       // Discard the plan if it is not EVL-compatible
-      if (CM.foldTailWithEVL() && !VPlanTransforms::tryAddExplicitVectorLength(
-                                      *Plan, CM.getMaxSafeElements()))
+      if (CM.foldTailWithEVL() &&
+          !VPlanTransforms::runPass(VPlanTransforms::tryAddExplicitVectorLength,
+                                    *Plan, CM.getMaxSafeElements()))
         break;
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
@@ -9028,14 +9060,10 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
 }
 
 // Collect VPIRInstructions for phis in the exit blocks that are modeled
-// in VPlan and add the exiting VPValue as operand. Some exiting values are not
-// modeled explicitly yet and won't be included. Those are un-truncated
-// VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe and induction
-// increments.
+// in VPlan and add the exiting VPValue as operand.
 static SetVector<VPIRInstruction *>
 collectUsersInExitBlocks(Loop *OrigLoop, VPRecipeBuilder &Builder,
                          VPlan &Plan) {
-  auto *MiddleVPBB = Plan.getMiddleBlock();
   SetVector<VPIRInstruction *> ExitUsersToFix;
   for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks()) {
     for (VPRecipeBase &R : *ExitVPBB) {
@@ -9045,60 +9073,46 @@ collectUsersInExitBlocks(Loop *OrigLoop, VPRecipeBuilder &Builder,
       auto *ExitPhi = dyn_cast<PHINode>(&ExitIRI->getInstruction());
       if (!ExitPhi)
         break;
-      for (VPBlockBase *PredVPBB : ExitVPBB->getPredecessors()) {
-        BasicBlock *ExitingBB = OrigLoop->getLoopLatch();
-        if (PredVPBB != MiddleVPBB) {
-          SmallVector<BasicBlock *> ExitingBlocks;
-          OrigLoop->getExitingBlocks(ExitingBlocks);
-          assert(ExitingBlocks.size() == 2 && "only support 2 exiting blocks");
-          ExitingBB = ExitingBB == ExitingBlocks[0] ? ExitingBlocks[1]
-                                                    : ExitingBlocks[0];
-        }
-        Value *IncomingValue = ExitPhi->getIncomingValueForBlock(ExitingBB);
-        VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue);
-        ExitUsersToFix.insert(ExitIRI);
-        ExitIRI->addOperand(V);
+      if (ExitVPBB->getSinglePredecessor() != Plan.getMiddleBlock()) {
+        assert(ExitIRI->getNumOperands() ==
+                   ExitVPBB->getPredecessors().size() &&
+               "early-exit must update exit values on construction");
+        continue;
       }
+      BasicBlock *ExitingBB = OrigLoop->getLoopLatch();
+      Value *IncomingValue = ExitPhi->getIncomingValueForBlock(ExitingBB);
+      VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue);
+      ExitIRI->addOperand(V);
+      if (V->isLiveIn())
+        continue;
+      assert(V->getDefiningRecipe()->getParent()->getEnclosingLoopRegion() &&
+             "Only recipes defined inside a region should need fixing.");
+      ExitUsersToFix.insert(ExitIRI);
     }
   }
   return ExitUsersToFix;
 }
 
 // Add exit values to \p Plan. Extracts are added for each entry in \p
-// ExitUsersToFix if needed and their operands are updated. Returns true if all
-// exit users can be handled, otherwise return false.
-static bool
+// ExitUsersToFix if needed and their operands are updated.
+static void
 addUsersInExitBlocks(VPlan &Plan,
                      const SetVector<VPIRInstruction *> &ExitUsersToFix) {
   if (ExitUsersToFix.empty())
-    return true;
+    return;
 
   auto *MiddleVPBB = Plan.getMiddleBlock();
   VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
-  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
 
   // Introduce extract for exiting values and update the VPIRInstructions
   // modeling the corresponding LCSSA phis.
   for (VPIRInstruction *ExitIRI : ExitUsersToFix) {
-    for (const auto &[Idx, Op] : enumerate(ExitIRI->operands())) {
-      // Pass live-in values used by exit phis directly through to their users
-      // in the exit block.
-      if (Op->isLiveIn())
-        continue;
-
-      // Currently only live-ins can be used by exit values from blocks not
-      // exiting via the vector latch through to the middle block.
-      if (ExitIRI->getParent()->getSinglePredecessor() != MiddleVPBB)
-        return false;
-
-      LLVMContext &Ctx = ExitIRI->getInstruction().getContext();
-      VPValue *Ext = B.createNaryOp(VPInstruction::ExtractFromEnd,
-                                    {Op, Plan.getOrAddLiveIn(ConstantInt::get(
-                                             IntegerType::get(Ctx, 32), 1))});
-      ExitIRI->setOperand(Idx, Ext);
-    }
+    assert(ExitIRI->getNumOperands() == 1 &&
+           ExitIRI->getParent()->getSinglePredecessor() == MiddleVPBB &&
+           "exit values from early exits must be fixed when branch to "
+           "early-exit is added");
+    ExitIRI->extractLastLaneOfOperand(B);
   }
-  return true;
 }
 
 /// Handle users in the exit block for first order reductions in the original
@@ -9266,9 +9280,9 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
                      CM.getWideningDecision(IG->getInsertPos(), VF) ==
                          LoopVectorizationCostModel::CM_Interleave);
       // For scalable vectors, the only interleave factor currently supported
-      // must be power of 2 since we require the (de)interleave2 intrinsics
-      // instead of shufflevectors.
-      assert((!Result || !VF.isScalable() || isPowerOf2_32(IG->getFactor())) &&
+      // is 2 since we require the (de)interleave2 intrinsics instead of
+      // shufflevectors.
+      assert((!Result || !VF.isScalable() || IG->getFactor() == 2) &&
              "Unsupported interleave factor for scalable vectors");
       return Result;
     };
@@ -9345,7 +9359,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
       VPRecipeBase *Recipe =
           RecipeBuilder.tryToCreateWidenRecipe(Instr, Operands, Range, VPBB);
       if (!Recipe)
-        Recipe = RecipeBuilder.handleReplication(Instr, Range);
+        Recipe = RecipeBuilder.handleReplication(Instr, Operands, Range);
 
       RecipeBuilder.setRecipe(Instr, Recipe);
       if (isa<VPHeaderPHIRecipe>(Recipe)) {
@@ -9394,20 +9408,16 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
 
   if (auto *UncountableExitingBlock =
           Legal->getUncountableEarlyExitingBlock()) {
-    VPlanTransforms::handleUncountableEarlyExit(
-        *Plan, *PSE.getSE(), OrigLoop, UncountableExitingBlock, RecipeBuilder);
+    VPlanTransforms::runPass(VPlanTransforms::handleUncountableEarlyExit, *Plan,
+                             *PSE.getSE(), OrigLoop, UncountableExitingBlock,
+                             RecipeBuilder);
   }
   DenseMap<VPValue *, VPValue *> IVEndValues;
   addScalarResumePhis(RecipeBuilder, *Plan, IVEndValues);
   SetVector<VPIRInstruction *> ExitUsersToFix =
       collectUsersInExitBlocks(OrigLoop, RecipeBuilder, *Plan);
   addExitUsersForFirstOrderRecurrences(*Plan, ExitUsersToFix);
-  if (!addUsersInExitBlocks(*Plan, ExitUsersToFix)) {
-    reportVectorizationFailure(
-        "Some exit values in loop with uncountable exit not supported yet",
-        "UncountableEarlyExitLoopsUnsupportedExitValue", ORE, OrigLoop);
-    return nullptr;
-  }
+  addUsersInExitBlocks(*Plan, ExitUsersToFix);
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
@@ -9420,8 +9430,9 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
   // single VPInterleaveRecipe at its insertion point.
-  VPlanTransforms::createInterleaveGroups(
-      *Plan, InterleaveGroups, RecipeBuilder, CM.isScalarEpilogueAllowed());
+  VPlanTransforms::runPass(VPlanTransforms::createInterleaveGroups, *Plan,
+                           InterleaveGroups, RecipeBuilder,
+                           CM.isScalarEpilogueAllowed());
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);
@@ -9463,13 +9474,16 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
     }
   }
 
-  VPlanTransforms::dropPoisonGeneratingRecipes(*Plan, [this](BasicBlock *BB) {
+  auto BlockNeedsPredication = [this](BasicBlock *BB) {
     return Legal->blockNeedsPredication(BB);
-  });
+  };
+  VPlanTransforms::runPass(VPlanTransforms::dropPoisonGeneratingRecipes, *Plan,
+                           BlockNeedsPredication);
 
   // Sink users of fixed-order recurrence past the recipe defining the previous
   // value and introduce FirstOrderRecurrenceSplice VPInstructions.
-  if (!VPlanTransforms::adjustFixedOrderRecurrences(*Plan, Builder))
+  if (!VPlanTransforms::runPass(VPlanTransforms::adjustFixedOrderRecurrences,
+                                *Plan, Builder))
     return nullptr;
 
   if (useActiveLaneMask(Style)) {
@@ -9510,12 +9524,6 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
       Plan,
       [this](PHINode *P) { return Legal->getIntOrFpInductionDescriptor(P); },
       *PSE.getSE(), *TLI);
-
-  // Remove the existing terminator of the exiting block of the top-most region.
-  // A BranchOnCount will be added instead when adding the canonical IV recipes.
-  auto *Term =
-      Plan->getVectorLoopRegion()->getExitingBasicBlock()->getTerminator();
-  Term->eraseFromParent();
 
   // Tail folding is not supported for outer loops, so the induction increment
   // is guaranteed to not wrap.
@@ -9818,10 +9826,10 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       PhiR->setOperand(0, Plan->getOrAddLiveIn(RdxDesc.getSentinelValue()));
     }
   }
-
-  VPlanTransforms::clearReductionWrapFlags(*Plan);
   for (VPRecipeBase *R : ToDelete)
     R->eraseFromParent();
+
+  VPlanTransforms::runPass(VPlanTransforms::clearReductionWrapFlags, *Plan);
 }
 
 void VPDerivedIVRecipe::execute(VPTransformState &State) {
@@ -10185,7 +10193,7 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
     VPIRInst->eraseFromParent();
     ResumePhi->eraseFromParent();
   }
-  VPlanTransforms::removeDeadRecipes(MainPlan);
+  VPlanTransforms::runPass(VPlanTransforms::removeDeadRecipes, MainPlan);
 
   using namespace VPlanPatternMatch;
   VPBasicBlock *MainScalarPH = MainPlan.getScalarPreheader();
@@ -10293,8 +10301,8 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
         // VPReductionPHIRecipes for AnyOf reductions expect a boolean as
         // start value; compare the final value from the main vector loop
         // to the start value.
-        IRBuilder<> Builder(
-            cast<Instruction>(ResumeV)->getParent()->getFirstNonPHI());
+        BasicBlock *PBB = cast<Instruction>(ResumeV)->getParent();
+        IRBuilder<> Builder(PBB, PBB->getFirstNonPHIIt());
         ResumeV =
             Builder.CreateICmpNE(ResumeV, RdxDesc.getRecurrenceStartValue());
       } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) {
@@ -10304,8 +10312,8 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
         // value. This ensures correctness when the start value might not be
         // less than the minimum value of a monotonically increasing induction
         // variable.
-        IRBuilder<> Builder(
-            cast<Instruction>(ResumeV)->getParent()->getFirstNonPHI());
+        BasicBlock *ResumeBB = cast<Instruction>(ResumeV)->getParent();
+        IRBuilder<> Builder(ResumeBB, ResumeBB->getFirstNonPHIIt());
         Value *Cmp =
             Builder.CreateICmpEQ(ResumeV, RdxDesc.getRecurrenceStartValue());
         ResumeV =
