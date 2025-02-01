@@ -2852,16 +2852,23 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
     if (!match(TrueVal, m_FNeg(m_Specific(X))))
       return nullptr;
 
-    // Forward-propagate nnan and ninf from the fneg to the select.
+    // Forward-propagate nnan and ninf from the fcmp to the select.
     // If all inputs are not those values, then the select is not either.
     // Note: nsz is defined differently, so it may not be correct to propagate.
-    FastMathFlags FMF = cast<FPMathOperator>(TrueVal)->getFastMathFlags();
+    FastMathFlags FMF = cast<FPMathOperator>(CondVal)->getFastMathFlags();
     if (FMF.noNaNs() && !SI.hasNoNaNs()) {
       SI.setHasNoNaNs(true);
       ChangedFMF = true;
     }
     if (FMF.noInfs() && !SI.hasNoInfs()) {
       SI.setHasNoInfs(true);
+      ChangedFMF = true;
+    }
+    // Forward-propagate nnan from the fneg to the select.
+    // The nnan flag can be propagated iff fneg is selected when X is NaN.
+    if (!SI.hasNoNaNs() && cast<FPMathOperator>(TrueVal)->hasNoNaNs() &&
+        (Swap ? FCmpInst::isOrdered(Pred) : FCmpInst::isUnordered(Pred))) {
+      SI.setHasNoNaNs(true);
       ChangedFMF = true;
     }
 

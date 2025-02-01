@@ -361,8 +361,7 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
   }
 
   // Trim the array to match the updated end.
-  if (E != OptionsToMatch.end())
-    OptionsToMatch.erase(E, OptionsToMatch.end());
+  OptionsToMatch.erase(E, OptionsToMatch.end());
 
   // If we're down to a single pattern to match, then we don't need this scope
   // anymore.
