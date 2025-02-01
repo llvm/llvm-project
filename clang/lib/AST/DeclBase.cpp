@@ -1203,6 +1203,8 @@ const FunctionType *Decl::getFunctionType(bool BlocksToo) const {
 
   if (Ty->isFunctionPointerType())
     Ty = Ty->castAs<PointerType>()->getPointeeType();
+  else if (Ty->isMemberFunctionPointerType())
+    Ty = Ty->castAs<MemberPointerType>()->getPointeeType();
   else if (Ty->isFunctionReferenceType())
     Ty = Ty->castAs<ReferenceType>()->getPointeeType();
   else if (BlocksToo && Ty->isBlockPointerType())
