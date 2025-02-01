@@ -313,29 +313,10 @@ multiclass VPatIntegerSetCCSDNode_VX_Swappable<string instruction_name,
                                           SplatPat, GPR>;
 
 multiclass VPatIntegerSetCCSDNode_VI_Swappable<string instruction_name,
-                                               CondCode cc, CondCode invcc>
+                                               CondCode cc, CondCode invcc,
+                                               ComplexPattern splatpat_kind = SplatPat_simm5>
     : VPatIntegerSetCCSDNode_XI_Swappable<instruction_name, cc, invcc, "VI",
-                                          SplatPat_simm5, simm5>;
-
-multiclass VPatIntegerSetCCSDNode_VIPlus1_Swappable<string instruction_name,
-                                                    CondCode cc, CondCode invcc,
-                                                    ComplexPattern splatpat_kind> {
-  foreach vti = AllIntegerVectors in {
-    defvar instruction = !cast<Instruction>(instruction_name#"_VI_"#vti.LMul.MX);
-    let Predicates = GetVTypePredicates<vti>.Predicates in {
-      def : Pat<(vti.Mask (setcc (vti.Vector vti.RegClass:$rs1),
-                                 (vti.Vector (splatpat_kind simm5:$rs2)),
-                                 cc)),
-                (instruction vti.RegClass:$rs1, (DecImm simm5:$rs2),
-                             vti.AVL, vti.Log2SEW)>;
-      def : Pat<(vti.Mask (setcc (vti.Vector (splatpat_kind simm5:$rs2)),
-                                 (vti.Vector vti.RegClass:$rs1),
-                                 invcc)),
-                (instruction vti.RegClass:$rs1, (DecImm simm5:$rs2),
-                             vti.AVL, vti.Log2SEW)>;
-    }
-  }
-}
+                                          splatpat_kind, simm5>;
 
 multiclass VPatFPSetCCSDNode_VV_VF_FV<CondCode cc,
                                       string inst_name,
@@ -1021,14 +1002,14 @@ defm : VPatIntegerSetCCSDNode_VI_Swappable<"PseudoVMSLEU", SETULE, SETUGE>;
 defm : VPatIntegerSetCCSDNode_VI_Swappable<"PseudoVMSGT",  SETGT, SETLT>;
 defm : VPatIntegerSetCCSDNode_VI_Swappable<"PseudoVMSGTU", SETUGT, SETULT>;
 
-defm : VPatIntegerSetCCSDNode_VIPlus1_Swappable<"PseudoVMSLE", SETLT, SETGT,
-                                                SplatPat_simm5_plus1>;
-defm : VPatIntegerSetCCSDNode_VIPlus1_Swappable<"PseudoVMSLEU", SETULT, SETUGT,
-                                                SplatPat_simm5_plus1_nonzero>;
-defm : VPatIntegerSetCCSDNode_VIPlus1_Swappable<"PseudoVMSGT", SETGE, SETLE,
-                                                SplatPat_simm5_plus1>;
-defm : VPatIntegerSetCCSDNode_VIPlus1_Swappable<"PseudoVMSGTU", SETUGE, SETULE,
-                                                SplatPat_simm5_plus1_nonzero>;
+defm : VPatIntegerSetCCSDNode_VI_Swappable<"PseudoVMSLE", SETLT, SETGT,
+                                           SplatPat_simm5_plus1>;
+defm : VPatIntegerSetCCSDNode_VI_Swappable<"PseudoVMSLEU", SETULT, SETUGT,
+                                           SplatPat_simm5_plus1_nonzero>;
+defm : VPatIntegerSetCCSDNode_VI_Swappable<"PseudoVMSGT", SETGE, SETLE,
+                                           SplatPat_simm5_plus1>;
+defm : VPatIntegerSetCCSDNode_VI_Swappable<"PseudoVMSGTU", SETUGE, SETULE,
+                                           SplatPat_simm5_plus1_nonzero>;
 
 // 11.9. Vector Integer Min/Max Instructions
 defm : VPatBinarySDNode_VV_VX<umin, "PseudoVMINU">;
