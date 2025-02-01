@@ -544,8 +544,8 @@ createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
                     VPBuilder &Builder) {
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
-  VPSingleDefRecipe *BaseIV = Builder.createDerivedIV(
-      Kind, FPBinOp, StartV, CanonicalIV, Step, "offset.idx");
+  VPValue *BaseIV = Builder.createDerivedIV(Kind, FPBinOp, StartV, CanonicalIV,
+                                            Step, "offset.idx");
 
   // Truncate base induction if needed.
   Type *CanonicalIVType = CanonicalIV->getScalarType();
@@ -1886,7 +1886,7 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
   auto *CanonicalIVIncrement =
       cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
   Builder.setInsertPoint(CanonicalIVIncrement);
-  VPSingleDefRecipe *OpVPEVL = VPEVL;
+  VPValue *OpVPEVL = VPEVL;
   if (unsigned IVSize = CanonicalIVPHI->getScalarType()->getScalarSizeInBits();
       IVSize != 32) {
     OpVPEVL = Builder.createScalarCast(
