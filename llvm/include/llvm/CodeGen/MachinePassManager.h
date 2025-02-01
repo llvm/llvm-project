@@ -191,14 +191,13 @@ private:
 };
 
 class FunctionToMachineFunctionPassAdaptor
-    : public PassInfoMixin<FunctionToMachineFunctionPassAdaptor> {
+    : public PassInfoMixin<FunctionToMachineFunctionPassAdaptor>,
+      public PassAdaptorMixin<detail::PassConcept<
+          MachineFunction, MachineFunctionAnalysisManager>> {
 public:
-  using PassConceptT =
-      detail::PassConcept<MachineFunction, MachineFunctionAnalysisManager>;
-
   explicit FunctionToMachineFunctionPassAdaptor(
       std::unique_ptr<PassConceptT> Pass)
-      : Pass(std::move(Pass)) {}
+      : PassAdaptorMixin(std::move(Pass)) {}
 
   /// Runs the function pass across every function in the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
@@ -206,9 +205,6 @@ public:
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   static bool isRequired() { return true; }
-
-private:
-  std::unique_ptr<PassConceptT> Pass;
 };
 
 template <typename MachineFunctionPassT>
