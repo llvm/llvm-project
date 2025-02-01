@@ -2917,8 +2917,8 @@ define double @flat_agent_atomic_fmax_ret_f64__amdgpu_no_fine_grained_memory(ptr
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v1
-; GFX10-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX10-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GFX10-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX10-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, s5, v5
 ; GFX10-NEXT:    s_and_saveexec_b32 s4, vcc_lo
@@ -5754,8 +5754,8 @@ define double @flat_agent_atomic_fmax_ret_f64__amdgpu_no_fine_grained_memory__am
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v1
-; GFX10-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX10-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GFX10-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX10-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, s5, v5
 ; GFX10-NEXT:    s_and_saveexec_b32 s4, vcc_lo
