@@ -93,6 +93,10 @@ def HasNo0Dimensions : And<[
     IsRankedTensorTypePred,
     CPred<"::llvm::all_of(::llvm::cast<::mlir::RankedTensorType>($_self).getShape(), [](auto v) { return v != 0; })">]>;
 
+def AllDimensionsAreSizeOne : And<[
+    IsRankedTensorTypePred,
+    CPred<"::llvm::all_of(::llvm::cast<::mlir::RankedTensorType>($_self).getShape(), [](auto v) { return v == 1; })">]>;
+
 class TosaTensorOf<
     list<Type> allowedTypes, string summary = "tosa-conformant tensor">
     : TensorOf<allowedTypes, [Or<[HasNo0Dimensions, IsUnrankedTensorTypePred]>], summary>;
@@ -108,6 +112,11 @@ class TosaTensorRankOf<list<Type> allowedTypes, list<int> ranks>
     : TosaRankedTensorOf<allowedTypes,
       [HasAnyRankOfPred<ranks>],
       !interleave(!foreach(rank, ranks, rank # "D"), "/") # " tensor">;
+
+class TosaScalarTensorOf<list<Type> allowedTypes, list<int> ranks>
+    : TosaRankedTensorOf<allowedTypes,
+      [HasAnyRankOfPred<ranks>, AllDimensionsAreSizeOne],
+      "tosa-conformant scalar tensor">;
 
 //===----------------------------------------------------------------------===//
 // Tensor types
@@ -138,6 +147,9 @@ class Tosa_TensorOfOrNone<list<Type> allowedTypes, string description = ""> :
 
 // Rank-0 (scalar) tensor
 def Tosa_ScalarTensor : TosaTensorRankOf<[Tosa_AnyNumber], [0]>;
+
+// Scalar tensors: Rank-1 (with only one element)
+def Tosa_ScalarInt8Tensor : TosaScalarTensorOf<[Tosa_Int8], [1]>;
 
 // We include unranked tensors as a supported type for all possible tosa
 // Tensors as unranked does not guarantee invalid. If unranked tensors exist
