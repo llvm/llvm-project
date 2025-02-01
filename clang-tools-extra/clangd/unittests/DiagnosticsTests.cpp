@@ -876,17 +876,17 @@ TEST(DiagnosticTest, ClangTidySelfContainedDiags) {
 
   clangd::Fix ExpectedCFix;
   ExpectedCFix.Message = "variable 'C' is not initialized";
-  ExpectedCFix.Edits.push_back(TextEdit{Main.range("CFix"), " = NAN"});
   ExpectedCFix.Edits.push_back(
       TextEdit{Main.range("MathHeader"), "#include <math.h>\n\n"});
+  ExpectedCFix.Edits.push_back(TextEdit{Main.range("CFix"), " = NAN"});
 
   // Again in clang-tidy only the include directive would be emitted for the
   // first warning. However we need the include attaching for both warnings.
   clangd::Fix ExpectedDFix;
   ExpectedDFix.Message = "variable 'D' is not initialized";
-  ExpectedDFix.Edits.push_back(TextEdit{Main.range("DFix"), " = NAN"});
   ExpectedDFix.Edits.push_back(
       TextEdit{Main.range("MathHeader"), "#include <math.h>\n\n"});
+  ExpectedDFix.Edits.push_back(TextEdit{Main.range("DFix"), " = NAN"});
   EXPECT_THAT(
       TU.build().getDiagnostics(),
       ifTidyChecks(UnorderedElementsAre(
@@ -921,14 +921,14 @@ TEST(DiagnosticTest, ClangTidySelfContainedDiagsFormatting) {
   clangd::Fix const ExpectedFix1{
       "prefer using 'override' or (rarely) 'final' "
       "instead of 'virtual'",
-      {TextEdit{Main.range("override1"), " override"},
-       TextEdit{Main.range("virtual1"), ""}},
+      {TextEdit{Main.range("virtual1"), ""},
+       TextEdit{Main.range("override1"), " override"}},
       {}};
   clangd::Fix const ExpectedFix2{
       "prefer using 'override' or (rarely) 'final' "
       "instead of 'virtual'",
-      {TextEdit{Main.range("override2"), " override"},
-       TextEdit{Main.range("virtual2"), ""}},
+      {TextEdit{Main.range("virtual2"), ""},
+       TextEdit{Main.range("override2"), " override"}},
       {}};
   // Note that in the Fix we expect the "virtual" keyword and the following
   // whitespace to be deleted
@@ -1930,10 +1930,10 @@ TEST(ParsedASTTest, ModuleSawDiag) {
   TestTU TU;
 
   auto AST = TU.build();
-        #if 0
+#if 0
   EXPECT_THAT(AST.getDiagnostics(),
               testing::Contains(Diag(Code.range(), KDiagMsg.str())));
-        #endif
+#endif
 }
 
 TEST(Preamble, EndsOnNonEmptyLine) {
@@ -2134,6 +2134,41 @@ TEST(DiagnosticsTest, UnusedInHeader) {
   // https://github.com/clangd/vscode-clangd/issues/360
   TU.Filename = "test.h";
   EXPECT_THAT(TU.build().getDiagnostics(), IsEmpty());
+}
+
+TEST(DiagnosticsTest, CleanupAroundReplacements) {
+  Annotations Test(R"cpp(
+    struct PositiveValueChar {
+      PositiveValueChar() : $c0fix[[c0()]]$comma[[,]] $c1fix[[c1()]] {}
+      const char $c0[[c0]];
+      wchar_t $c1[[c1]];
+    };
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  TU.ClangTidyProvider = addTidyChecks("modernize-use-default-member-init");
+
+  clangd::Fix C0Fix;
+  C0Fix.Message = "use default member initializer for 'c0'";
+  C0Fix.Edits.push_back(
+      TextEdit{{Test.range("c0fix").start, Test.range("comma").end}, ""});
+  C0Fix.Edits.push_back(
+      TextEdit{{Test.range("c0").end, Test.range("c0").end}, "{}"});
+
+  clangd::Fix C1Fix;
+  C1Fix.Message = "use default member initializer for 'c1'";
+  C1Fix.Edits.push_back(TextEdit{Test.range("comma"), ""});
+  C1Fix.Edits.push_back(TextEdit{Test.range("c1fix"), ""});
+  C1Fix.Edits.push_back(
+      TextEdit{{Test.range("c1").end, Test.range("c1").end}, "{}"});
+
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ifTidyChecks(UnorderedElementsAre(
+                  AllOf(Diag(Test.range("c0"),
+                             "use default member initializer for 'c0'"),
+                        withFix(equalToFix(C0Fix))),
+                  AllOf(Diag(Test.range("c1"),
+                             "use default member initializer for 'c1'"),
+                        withFix(equalToFix(C1Fix))))));
 }
 
 } // namespace
