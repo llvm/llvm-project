@@ -93,7 +93,6 @@ jobs:
           import os
           import requests
           GITHUB_TOKEN = "${{ secrets.CI_TOKEN }}"
-          BUILD_URL = 'http://${{ secrets.BUILDBOT_HOST }}:${{ secrets.BUILDBOT_MASTER_PORT }}/api/v2/builds'
           TARGET_SHA = os.getenv('PR_SHA')
           print('debug', TARGET_SHA)
           api_url = f'https://api.github.com/repos/AMD-Lightning-Internal/llvm-project/statuses/{TARGET_SHA}'
