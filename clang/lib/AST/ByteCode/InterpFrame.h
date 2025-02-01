@@ -28,9 +28,6 @@ public:
   /// The frame of the previous function.
   InterpFrame *Caller;
 
-  /// Bottom Frame.
-  InterpFrame(InterpState &S);
-
   /// Creates a new frame for a method call.
   InterpFrame(InterpState &S, const Function *Func, InterpFrame *Caller,
               CodePtr RetPC, unsigned ArgSize);
@@ -44,11 +41,6 @@ public:
 
   /// Destroys the frame, killing all live pointers to stack slots.
   ~InterpFrame();
-
-  static void free(InterpFrame *F) {
-    if (!F->isBottomFrame())
-      delete F;
-  }
 
   /// Invokes the destructors for a scope.
   void destroy(unsigned Idx);
@@ -127,8 +119,6 @@ public:
 
   bool isStdFunction() const;
 
-  bool isBottomFrame() const { return IsBottom; }
-
   void dump() const { dump(llvm::errs(), 0); }
   void dump(llvm::raw_ostream &OS, unsigned Indent = 0) const;
 
@@ -177,7 +167,6 @@ private:
   const size_t FrameOffset;
   /// Mapping from arg offsets to their argument blocks.
   llvm::DenseMap<unsigned, std::unique_ptr<char[]>> Params;
-  bool IsBottom = false;
 };
 
 } // namespace interp
