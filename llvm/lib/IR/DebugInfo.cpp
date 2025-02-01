@@ -694,8 +694,8 @@ private:
           MDS->getContext(), FileAndScope, MDS->getName(), LinkageName,
           FileAndScope, MDS->getLine(), Type, MDS->getScopeLine(),
           ContainingType, MDS->getVirtualIndex(), MDS->getThisAdjustment(),
-          MDS->getFlags(), MDS->getSPFlags(), Unit, TemplateParams, Declaration,
-          Variables);
+          MDS->getFlags(), MDS->getSPFlags(), MDS->getShortBacktrace(), Unit,
+          TemplateParams, Declaration, Variables);
     };
 
     if (MDS->isDistinct())
@@ -705,7 +705,8 @@ private:
         MDS->getContext(), FileAndScope, MDS->getName(), LinkageName,
         FileAndScope, MDS->getLine(), Type, MDS->getScopeLine(), ContainingType,
         MDS->getVirtualIndex(), MDS->getThisAdjustment(), MDS->getFlags(),
-        MDS->getSPFlags(), Unit, TemplateParams, Declaration, Variables);
+        MDS->getSPFlags(), MDS->getShortBacktrace(), Unit, TemplateParams,
+        Declaration, Variables);
 
     StringRef OldLinkageName = MDS->getLinkageName();
 
@@ -1142,7 +1143,7 @@ LLVMMetadataRef LLVMDIBuilderCreateFunction(
       unwrapDI<DIScope>(Scope), {Name, NameLen}, {LinkageName, LinkageNameLen},
       unwrapDI<DIFile>(File), LineNo, unwrapDI<DISubroutineType>(Ty), ScopeLine,
       map_from_llvmDIFlags(Flags),
-      pack_into_DISPFlags(IsLocalToUnit, IsDefinition, IsOptimized), nullptr,
+      pack_into_DISPFlags(IsLocalToUnit, IsDefinition, IsOptimized), {},
       nullptr, nullptr));
 }
 

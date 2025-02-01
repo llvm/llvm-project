@@ -125,6 +125,13 @@ public:
   iterator end() const { return N ? iterator(N->op_end()) : iterator(); }
 };
 
+/// DWARF-like extension attribute for setting short backtrace debuginfo.
+enum class ShortBacktraceAttr {
+  SkipFrame = 0,
+  StartShortBacktrace = 1,
+  EndShortBacktrace = 2,
+};
+
 /// Tagged DWARF-like metadata node.
 ///
 /// A metadata node with a DWARF tag (i.e., a constant named \c DW_TAG_*,
@@ -1750,10 +1757,13 @@ public:
 private:
   DIFlags Flags;
   DISPFlags SPFlags;
+  std::optional<ShortBacktraceAttr> ShortBacktrace;
 
   DISubprogram(LLVMContext &C, StorageType Storage, unsigned Line,
                unsigned ScopeLine, unsigned VirtualIndex, int ThisAdjustment,
-               DIFlags Flags, DISPFlags SPFlags, ArrayRef<Metadata *> Ops);
+               DIFlags Flags, DISPFlags SPFlags,
+               std::optional<ShortBacktraceAttr> ShortBacktrace,
+               ArrayRef<Metadata *> Ops);
   ~DISubprogram() = default;
 
   static DISubprogram *
@@ -1761,24 +1771,26 @@ private:
           StringRef LinkageName, DIFile *File, unsigned Line,
           DISubroutineType *Type, unsigned ScopeLine, DIType *ContainingType,
           unsigned VirtualIndex, int ThisAdjustment, DIFlags Flags,
-          DISPFlags SPFlags, DICompileUnit *Unit,
-          DITemplateParameterArray TemplateParams, DISubprogram *Declaration,
-          DINodeArray RetainedNodes, DITypeArray ThrownTypes,
-          DINodeArray Annotations, StringRef TargetFuncName,
-          StorageType Storage, bool ShouldCreate = true) {
-    return getImpl(Context, Scope, getCanonicalMDString(Context, Name),
-                   getCanonicalMDString(Context, LinkageName), File, Line, Type,
-                   ScopeLine, ContainingType, VirtualIndex, ThisAdjustment,
-                   Flags, SPFlags, Unit, TemplateParams.get(), Declaration,
-                   RetainedNodes.get(), ThrownTypes.get(), Annotations.get(),
-                   getCanonicalMDString(Context, TargetFuncName),
-                   Storage, ShouldCreate);
+          DISPFlags SPFlags, std::optional<ShortBacktraceAttr> ShortBacktrace,
+          DICompileUnit *Unit, DITemplateParameterArray TemplateParams,
+          DISubprogram *Declaration, DINodeArray RetainedNodes,
+          DITypeArray ThrownTypes, DINodeArray Annotations,
+          StringRef TargetFuncName, StorageType Storage,
+          bool ShouldCreate = true) {
+    return getImpl(
+        Context, Scope, getCanonicalMDString(Context, Name),
+        getCanonicalMDString(Context, LinkageName), File, Line, Type, ScopeLine,
+        ContainingType, VirtualIndex, ThisAdjustment, Flags, SPFlags,
+        ShortBacktrace, Unit, TemplateParams.get(), Declaration,
+        RetainedNodes.get(), ThrownTypes.get(), Annotations.get(),
+        getCanonicalMDString(Context, TargetFuncName), Storage, ShouldCreate);
   }
   static DISubprogram *
   getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
           MDString *LinkageName, Metadata *File, unsigned Line, Metadata *Type,
           unsigned ScopeLine, Metadata *ContainingType, unsigned VirtualIndex,
-          int ThisAdjustment, DIFlags Flags, DISPFlags SPFlags, Metadata *Unit,
+          int ThisAdjustment, DIFlags Flags, DISPFlags SPFlags,
+          std::optional<ShortBacktraceAttr> ShortBacktrace, Metadata *Unit,
           Metadata *TemplateParams, Metadata *Declaration,
           Metadata *RetainedNodes, Metadata *ThrownTypes, Metadata *Annotations,
           MDString *TargetFuncName, StorageType Storage,
@@ -1789,9 +1801,9 @@ private:
                         getFile(), getLine(), getType(), getScopeLine(),
                         getContainingType(), getVirtualIndex(),
                         getThisAdjustment(), getFlags(), getSPFlags(),
-                        getUnit(), getTemplateParams(), getDeclaration(),
-                        getRetainedNodes(), getThrownTypes(), getAnnotations(),
-                        getTargetFuncName());
+                        getShortBacktrace(), getUnit(), getTemplateParams(),
+                        getDeclaration(), getRetainedNodes(), getThrownTypes(),
+                        getAnnotations(), getTargetFuncName());
   }
 
 public:
@@ -1800,27 +1812,31 @@ public:
       (DIScope * Scope, StringRef Name, StringRef LinkageName, DIFile *File,
        unsigned Line, DISubroutineType *Type, unsigned ScopeLine,
        DIType *ContainingType, unsigned VirtualIndex, int ThisAdjustment,
-       DIFlags Flags, DISPFlags SPFlags, DICompileUnit *Unit,
+       DIFlags Flags, DISPFlags SPFlags,
+       std::optional<ShortBacktraceAttr> ShortBacktrace, DICompileUnit *Unit,
        DITemplateParameterArray TemplateParams = nullptr,
        DISubprogram *Declaration = nullptr, DINodeArray RetainedNodes = nullptr,
        DITypeArray ThrownTypes = nullptr, DINodeArray Annotations = nullptr,
        StringRef TargetFuncName = ""),
       (Scope, Name, LinkageName, File, Line, Type, ScopeLine, ContainingType,
-       VirtualIndex, ThisAdjustment, Flags, SPFlags, Unit, TemplateParams,
-       Declaration, RetainedNodes, ThrownTypes, Annotations, TargetFuncName))
+       VirtualIndex, ThisAdjustment, Flags, SPFlags, ShortBacktrace, Unit,
+       TemplateParams, Declaration, RetainedNodes, ThrownTypes, Annotations,
+       TargetFuncName))
 
   DEFINE_MDNODE_GET(
       DISubprogram,
       (Metadata * Scope, MDString *Name, MDString *LinkageName, Metadata *File,
        unsigned Line, Metadata *Type, unsigned ScopeLine,
        Metadata *ContainingType, unsigned VirtualIndex, int ThisAdjustment,
-       DIFlags Flags, DISPFlags SPFlags, Metadata *Unit,
+       DIFlags Flags, DISPFlags SPFlags,
+       std::optional<ShortBacktraceAttr> ShortBacktrace, Metadata *Unit,
        Metadata *TemplateParams = nullptr, Metadata *Declaration = nullptr,
        Metadata *RetainedNodes = nullptr, Metadata *ThrownTypes = nullptr,
        Metadata *Annotations = nullptr, MDString *TargetFuncName = nullptr),
       (Scope, Name, LinkageName, File, Line, Type, ScopeLine, ContainingType,
-       VirtualIndex, ThisAdjustment, Flags, SPFlags, Unit, TemplateParams,
-       Declaration, RetainedNodes, ThrownTypes, Annotations, TargetFuncName))
+       VirtualIndex, ThisAdjustment, Flags, SPFlags, ShortBacktrace, Unit,
+       TemplateParams, Declaration, RetainedNodes, ThrownTypes, Annotations,
+       TargetFuncName))
 
   TempDISubprogram clone() const { return cloneImpl(); }
 
@@ -1843,6 +1859,9 @@ public:
   }
   DIFlags getFlags() const { return Flags; }
   DISPFlags getSPFlags() const { return SPFlags; }
+  const std::optional<ShortBacktraceAttr> getShortBacktrace() const {
+    return ShortBacktrace;
+  }
   bool isLocalToUnit() const { return getSPFlags() & SPFlagLocalToUnit; }
   bool isDefinition() const { return getSPFlags() & SPFlagDefinition; }
   bool isOptimized() const { return getSPFlags() & SPFlagOptimized; }
