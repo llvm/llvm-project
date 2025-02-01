@@ -567,6 +567,7 @@ typedef __char32_t char32_t;
       _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++17-extensions")                                                           \
       _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++20-extensions")                                                           \
       _LIBCPP_CLANG_DIAGNOSTIC_IGNORED_CXX23_EXTENSION                                                                 \
+      _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++23-lambda-attributes")                                                    \
       _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++14-extensions")                                                             \
       _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++17-extensions")                                                             \
       _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++20-extensions")                                                             \
