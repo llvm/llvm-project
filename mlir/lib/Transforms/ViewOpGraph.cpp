@@ -241,11 +241,11 @@ private:
     edges.push_back(strFromOs([&](raw_ostream &os) {
       os << "v" << n1.id;
       if (!outPort.empty())
-        os << ":" << outPort;
+        os << ":" << outPort << ":s";
       os << " -> ";
       os << "v" << n2.id;
       if (!inPort.empty())
-        os << ":" << inPort;
+        os << ":" << inPort << ":n";
       emitAttrList(os, attrs);
     }));
   }
