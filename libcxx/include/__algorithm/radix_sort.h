@@ -67,7 +67,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 14
 
 template <class _InputIterator, class _OutputIterator>
-_LIBCPP_HIDE_FROM_ABI pair<_OutputIterator, __iter_value_type<_InputIterator>>
+_LIBCPP_HIDE_FROM_ABI constexpr pair<_OutputIterator, __iter_value_type<_InputIterator>>
 __partial_sum_max(_InputIterator __first, _InputIterator __last, _OutputIterator __result) {
   if (__first == __last)
     return {__result, 0};
@@ -109,7 +109,7 @@ struct __counting_sort_traits {
 };
 
 template <class _Radix, class _Integer>
-_LIBCPP_HIDE_FROM_ABI auto __nth_radix(size_t __radix_number, _Radix __radix, _Integer __n) {
+_LIBCPP_HIDE_FROM_ABI constexpr auto __nth_radix(size_t __radix_number, _Radix __radix, _Integer __n) {
   static_assert(is_unsigned<_Integer>::value);
   using __traits = __counting_sort_traits<_Integer, _Radix>;
 
@@ -117,7 +117,7 @@ _LIBCPP_HIDE_FROM_ABI auto __nth_radix(size_t __radix_number, _Radix __radix, _I
 }
 
 template <class _ForwardIterator, class _Map, class _RandomAccessIterator>
-_LIBCPP_HIDE_FROM_ABI void
+_LIBCPP_HIDE_FROM_ABI constexpr void
 __collect(_ForwardIterator __first, _ForwardIterator __last, _Map __map, _RandomAccessIterator __counters) {
   using __value_type = __iter_value_type<_ForwardIterator>;
   using __traits     = __counting_sort_traits<__value_type, _Map>;
@@ -129,7 +129,7 @@ __collect(_ForwardIterator __first, _ForwardIterator __last, _Map __map, _Random
 }
 
 template <class _ForwardIterator, class _RandomAccessIterator1, class _Map, class _RandomAccessIterator2>
-_LIBCPP_HIDE_FROM_ABI void
+_LIBCPP_HIDE_FROM_ABI constexpr void
 __dispose(_ForwardIterator __first,
           _ForwardIterator __last,
           _RandomAccessIterator1 __result,
@@ -147,7 +147,7 @@ template <class _ForwardIterator,
           class _RandomAccessIterator1,
           class _RandomAccessIterator2,
           size_t... _Radices>
-_LIBCPP_HIDE_FROM_ABI bool __collect_impl(
+_LIBCPP_HIDE_FROM_ABI constexpr bool __collect_impl(
     _ForwardIterator __first,
     _ForwardIterator __last,
     _Map __map,
@@ -177,7 +177,7 @@ _LIBCPP_HIDE_FROM_ABI bool __collect_impl(
 }
 
 template <class _ForwardIterator, class _Map, class _Radix, class _RandomAccessIterator1, class _RandomAccessIterator2>
-_LIBCPP_HIDE_FROM_ABI bool
+_LIBCPP_HIDE_FROM_ABI constexpr bool
 __collect(_ForwardIterator __first,
           _ForwardIterator __last,
           _Map __map,
@@ -191,7 +191,7 @@ __collect(_ForwardIterator __first,
 }
 
 template <class _BidirectionalIterator, class _RandomAccessIterator1, class _Map, class _RandomAccessIterator2>
-_LIBCPP_HIDE_FROM_ABI void __dispose_backward(
+_LIBCPP_HIDE_FROM_ABI constexpr void __dispose_backward(
     _BidirectionalIterator __first,
     _BidirectionalIterator __last,
     _RandomAccessIterator1 __result,
@@ -206,7 +206,7 @@ _LIBCPP_HIDE_FROM_ABI void __dispose_backward(
 }
 
 template <class _ForwardIterator, class _RandomAccessIterator, class _Map>
-_LIBCPP_HIDE_FROM_ABI _RandomAccessIterator
+_LIBCPP_HIDE_FROM_ABI constexpr _RandomAccessIterator
 __counting_sort_impl(_ForwardIterator __first, _ForwardIterator __last, _RandomAccessIterator __result, _Map __map) {
   using __value_type = __iter_value_type<_ForwardIterator>;
   using __traits     = __counting_sort_traits<__value_type, _Map>;
@@ -225,7 +225,7 @@ template <class _RandomAccessIterator1,
           class _Radix,
           enable_if_t< __radix_sort_traits<__iter_value_type<_RandomAccessIterator1>, _Map, _Radix>::__radix_count == 1,
                        int> = 0>
-_LIBCPP_HIDE_FROM_ABI void __radix_sort_impl(
+_LIBCPP_HIDE_FROM_ABI constexpr void __radix_sort_impl(
     _RandomAccessIterator1 __first,
     _RandomAccessIterator1 __last,
     _RandomAccessIterator2 __buffer,
@@ -245,7 +245,7 @@ template <
     class _Radix,
     enable_if_t< __radix_sort_traits<__iter_value_type<_RandomAccessIterator1>, _Map, _Radix>::__radix_count % 2 == 0,
                  int> = 0 >
-_LIBCPP_HIDE_FROM_ABI void __radix_sort_impl(
+_LIBCPP_HIDE_FROM_ABI constexpr void __radix_sort_impl(
     _RandomAccessIterator1 __first,
     _RandomAccessIterator1 __last,
     _RandomAccessIterator2 __buffer_begin,
@@ -307,7 +307,7 @@ struct __low_byte_fn {
 };
 
 template <class _RandomAccessIterator1, class _RandomAccessIterator2, class _Map, class _Radix>
-_LIBCPP_HIDE_FROM_ABI void
+_LIBCPP_HIDE_FROM_ABI constexpr void
 __radix_sort(_RandomAccessIterator1 __first,
              _RandomAccessIterator1 __last,
              _RandomAccessIterator2 __buffer,
@@ -318,7 +318,7 @@ __radix_sort(_RandomAccessIterator1 __first,
 }
 
 template <class _RandomAccessIterator1, class _RandomAccessIterator2>
-_LIBCPP_HIDE_FROM_ABI void
+_LIBCPP_HIDE_FROM_ABI constexpr void
 __radix_sort(_RandomAccessIterator1 __first, _RandomAccessIterator1 __last, _RandomAccessIterator2 __buffer) {
   std::__radix_sort(__first, __last, __buffer, __identity{}, __low_byte_fn{});
 }
