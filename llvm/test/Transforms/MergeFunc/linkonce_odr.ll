@@ -7,9 +7,18 @@
 ; The problem with this is that the linker could then choose these two stubs
 ; each of the two modules and we end up with two stubs calling each other.
 
+; Even a total order based on the names may not be enough, e.g. if @funA calls
+; @funB via  function pointer in the other module. Then we could end up in
+; situations where @funB -> @funA in one module (after merging functions) and
+; @funA -> @funB via the a function pointer in the other module.
+
 ; CHECK-LABEL: define linkonce_odr i32 @funA
 ; CHECK-NEXT:    add
 ; CHECK:         ret
+
+; CHECK-LABEL: define linkonce_odr i32 @funC
+; CHECK-NEXT:    tail call i32 @funA(i32 %0, i32 %1)
+; CHECK-NEXT:    ret
 
 ; CHECK-LABEL: define linkonce_odr i32 @funB
 ; CHECK-NEXT:    tail call i32 @funA(i32 %0, i32 %1)
