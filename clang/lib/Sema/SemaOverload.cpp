@@ -14260,9 +14260,15 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
     const FunctionDecl *FDecl = Best->Function;
     if (FDecl && FDecl->isTemplateInstantiation() &&
         FDecl->getReturnType()->isUndeducedType()) {
+
+      // As there'll be no attempt to resolve UnresolvedLookupExpr again inside
+      // non-dependent context, skip considering it as type-dependent.
+      const DeclContext *DC = CurContext;
+      const bool Resolvable = DC && DC->isDependentContext();
+
       if (const auto *TP =
               FDecl->getTemplateInstantiationPattern(/*ForDefinition=*/false);
-          TP && TP->willHaveBody()) {
+          TP && TP->willHaveBody() && Resolvable) {
         return CallExpr::Create(Context, Fn, Args, Context.DependentTy,
                                 VK_PRValue, RParenLoc, CurFPFeatureOverrides());
       }
