@@ -102,7 +102,7 @@ uint32_t atomicInc(uint32_t *A, uint32_t V, atomic::OrderingTy Ordering,
   default:
     __builtin_unreachable();
     Case(atomic::relaxed);
-    Case(atomic::aquire);
+    Case(atomic::acquire);
     Case(atomic::release);
     Case(atomic::acq_rel);
     Case(atomic::seq_cst);
@@ -125,7 +125,7 @@ void namedBarrier() {
   uint32_t WarpSize = mapping::getWarpSize();
   uint32_t NumWaves = (NumThreads < WarpSize) ? 1 : NumThreads / WarpSize;
 
-  fence::team(atomic::aquire);
+  fence::team(atomic::acquire);
 
   // named barrier implementation for amdgcn.
   // Uses two 16 bit unsigned counters. One for the number of waves to have
@@ -190,7 +190,7 @@ void syncThreads(atomic::OrderingTy Ordering) {
   __builtin_amdgcn_s_barrier();
 
   if (Ordering != atomic::relaxed)
-    fenceTeam(Ordering == atomic::acq_rel ? atomic::aquire : atomic::seq_cst);
+    fenceTeam(Ordering == atomic::acq_rel ? atomic::acquire : atomic::seq_cst);
 }
 void syncThreadsAligned(atomic::OrderingTy Ordering) { syncThreads(Ordering); }
 
@@ -221,7 +221,7 @@ void setCriticalLock(omp_lock_t *Lock) {
         !atomic::cas((uint32_t *)Lock, UNSET, SET, atomic::relaxed, atomic::relaxed)) {
       __builtin_amdgcn_s_sleep(32);
     }
-    fenceKernel(atomic::aquire);
+    fenceKernel(atomic::acquire);
   }
 }
 
@@ -457,7 +457,7 @@ void __kmpc_end_single(IdentTy *Loc, int32_t TId) {
 
 void __kmpc_flush(IdentTy *Loc) { fence::kernel(atomic::seq_cst); }
 
-void __kmpc_flush_acquire(IdentTy *Loc) { fence::kernel(atomic::aquire); }
+void __kmpc_flush_acquire(IdentTy *Loc) { fence::kernel(atomic::acquire); }
 
 void __kmpc_flush_release(IdentTy *Loc) { fence::kernel(atomic::release); }
 

@@ -93,14 +93,14 @@ struct AsyncInfoWrapperTy {
   }
 
   /// Synchronize with the __tgt_async_info's pending operations if it's the
-  /// internal async info. The error associated to the aysnchronous operations
+  /// internal async info. The error associated to the asynchronous operations
   /// issued in this queue must be provided in \p Err. This function will update
   /// the error parameter with the result of the synchronization if it was
   /// actually executed. This function must be called before destroying the
   /// object and only once.
   void finalize(Error &Err);
 
-  /// Register \p Ptr as an associated alloction that is freed after
+  /// Register \p Ptr as an associated allocation that is freed after
   /// finalization.
   void freeAllocationAfterSynchronization(void *Ptr) {
     AsyncInfoPtr->AssociatedAllocations.push_back(Ptr);
@@ -537,7 +537,7 @@ private:
 };
 
 /// Class representing a map of host pinned allocations. We track these pinned
-/// allocations, so memory tranfers invloving these buffers can be optimized.
+/// allocations, so memory transfers involving these buffers can be optimized.
 class PinnedAllocationMapTy {
 
   /// Struct representing a map entry.
@@ -563,7 +563,7 @@ class PinnedAllocationMapTy {
     /// becomes zero.
     mutable size_t References;
 
-    /// Create an entry with the host and device acessible pointers, the buffer
+    /// Create an entry with the host and device accessible pointers, the buffer
     /// size, and a boolean indicating whether the buffer was locked externally.
     EntryTy(void *HstPtr, void *DevAccessiblePtr, size_t Size,
             bool ExternallyLocked)
@@ -598,7 +598,7 @@ class PinnedAllocationMapTy {
   /// Indicate whether mapped host buffers should be locked automatically.
   bool LockMappedBuffers;
 
-  /// Indicate whether failures when locking mapped buffers should be ingored.
+  /// Indicate whether failures when locking mapped buffers should be ignored.
   bool IgnoreLockMappedFailures;
 
   /// Find an allocation that intersects with \p HstPtr pointer. Assume the
@@ -1309,7 +1309,7 @@ struct GenericPluginTy {
   /// Get the reference to the device with a certain device id.
   GenericDeviceTy &getDevice(int32_t DeviceId) {
     assert(isValidDeviceId(DeviceId) && "Invalid device id");
-    assert(Devices[DeviceId] && "Device is unitialized");
+    assert(Devices[DeviceId] && "Device is uninitialized");
 
     return *Devices[DeviceId];
   }
@@ -1493,7 +1493,7 @@ public:
   int32_t data_retrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr,
                         int64_t Size);
 
-  /// Copy data from the given device asynchornously.
+  /// Copy data from the given device asynchronously.
   int32_t data_retrieve_async(int32_t DeviceId, void *HstPtr, void *TgtPtr,
                               int64_t Size, __tgt_async_info *AsyncInfoPtr);
 
@@ -1536,7 +1536,7 @@ public:
   int32_t wait_event(int32_t DeviceId, void *EventPtr,
                      __tgt_async_info *AsyncInfoPtr);
 
-  /// Syncrhonize execution until an event is done.
+  /// Synchronize execution until an event is done.
   int32_t sync_event(int32_t DeviceId, void *EventPtr);
 
   /// Remove the event from the plugin.
