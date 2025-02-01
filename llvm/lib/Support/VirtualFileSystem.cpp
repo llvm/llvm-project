@@ -1093,8 +1093,7 @@ InMemoryFileSystem::openFileForRead(const Twine &Path) {
   // When we have a file provide a heap-allocated wrapper for the memory buffer
   // to match the ownership semantics for File.
   if (auto *F = dyn_cast<detail::InMemoryFile>(*Node))
-    return std::unique_ptr<File>(
-        new detail::InMemoryFileAdaptor(*F, Path.str()));
+    return std::make_unique<detail::InMemoryFileAdaptor>(*F, Path.str());
 
   // FIXME: errc::not_a_file?
   return make_error_code(llvm::errc::invalid_argument);

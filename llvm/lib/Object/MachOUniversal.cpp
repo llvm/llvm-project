@@ -121,8 +121,7 @@ void MachOUniversalBinary::anchor() { }
 Expected<std::unique_ptr<MachOUniversalBinary>>
 MachOUniversalBinary::create(MemoryBufferRef Source) {
   Error Err = Error::success();
-  std::unique_ptr<MachOUniversalBinary> Ret(
-      new MachOUniversalBinary(Source, Err));
+  auto Ret = std::make_unique<MachOUniversalBinary>(Source, Err);
   if (Err)
     return std::move(Err);
   return std::move(Ret);

@@ -474,9 +474,7 @@ createFunctionToLoopPassAdaptor(LoopNestPassT &&Pass, bool UseMemorySSA = false,
                         LoopStandardAnalysisResults &, LPMUpdater &>;
   // Do not use make_unique, it causes too many template instantiations,
   // causing terrible compile times.
-  return FunctionToLoopPassAdaptor(
-      std::unique_ptr<FunctionToLoopPassAdaptor::PassConceptT>(
-          new PassModelT(std::move(LPM))),
+  return FunctionToLoopPassAdaptor(std::make_unique<PassModelT>(std::move(LPM)),
       UseMemorySSA, UseBlockFrequencyInfo, UseBranchProbabilityInfo, true);
 }
 
@@ -495,9 +493,7 @@ createFunctionToLoopPassAdaptor<LoopPassManager>(
   bool LoopNestMode = (LPM.getNumLoopPasses() == 0);
   // Do not use make_unique, it causes too many template instantiations,
   // causing terrible compile times.
-  return FunctionToLoopPassAdaptor(
-      std::unique_ptr<FunctionToLoopPassAdaptor::PassConceptT>(
-          new PassModelT(std::move(LPM))),
+  return FunctionToLoopPassAdaptor(std::make_unique<PassModelT>(std::move(LPM)),
       UseMemorySSA, UseBlockFrequencyInfo, UseBranchProbabilityInfo,
       LoopNestMode);
 }

@@ -36,7 +36,7 @@ std::unique_ptr<IPDBEnumSymbols>
 NativeExeSymbol::findChildren(PDB_SymType Type) const {
   switch (Type) {
   case PDB_SymType::Compiland: {
-    return std::unique_ptr<IPDBEnumSymbols>(new NativeEnumModules(Session));
+    return std::make_unique<NativeEnumModules>(Session);
     break;
   }
   case PDB_SymType::ArrayType:

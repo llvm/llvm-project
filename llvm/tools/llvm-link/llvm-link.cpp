@@ -176,7 +176,7 @@ static std::unique_ptr<Module> loadFile(const char *argv0,
 static std::unique_ptr<Module> loadArFile(const char *Argv0,
                                           std::unique_ptr<MemoryBuffer> Buffer,
                                           LLVMContext &Context) {
-  std::unique_ptr<Module> Result(new Module("ArchiveModule", Context));
+  auto Result = std::make_unique<Module>("ArchiveModule", Context);
   StringRef ArchiveName = Buffer->getBufferIdentifier();
   if (Verbose)
     errs() << "Reading library archive file '" << ArchiveName

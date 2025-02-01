@@ -98,8 +98,7 @@ SymbolCache::createTypeEnumerator(std::vector<TypeLeafKind> Kinds) {
     return nullptr;
   }
   auto &Types = Tpi->typeCollection();
-  return std::unique_ptr<IPDBEnumSymbols>(
-      new NativeEnumTypes(Session, Types, std::move(Kinds)));
+  return std::make_unique<NativeEnumTypes>(Session, Types, std::move(Kinds));
 }
 
 std::unique_ptr<IPDBEnumSymbols>
