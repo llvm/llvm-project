@@ -101,6 +101,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
   additional C++ member functions to match.
 
+- Improved :doc:`misc-const-correctness
+  <clang-tidy/checks/misc/const-correctness>` check by adding the option
+  `AllowedTypes`, that excludes specified types from const-correctness
+  checking.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
