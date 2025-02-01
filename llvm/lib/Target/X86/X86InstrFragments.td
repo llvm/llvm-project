@@ -357,8 +357,13 @@ def addr      : ComplexPattern<iPTR, 5, "selectAddr">;
 def lea32addr : ComplexPattern<i32, 5, "selectLEAAddr",
                                [add, sub, mul, X86mul_imm, shl, or, xor, frameindex],
                                []>;
+// In 64-bit mode 16-bit LEAs can use RIP-relative addressing.
+def lea64_16addr : ComplexPattern<i16, 5, "selectLEA64_Addr",
+                                  [add, sub, mul, X86mul_imm, shl, or, xor,
+                                   frameindex, X86WrapperRIP],
+                                  []>;
 // In 64-bit mode 32-bit LEAs can use RIP-relative addressing.
-def lea64_32addr : ComplexPattern<i32, 5, "selectLEA64_32Addr",
+def lea64_32addr : ComplexPattern<i32, 5, "selectLEA64_Addr",
                                   [add, sub, mul, X86mul_imm, shl, or, xor,
                                    frameindex, X86WrapperRIP],
                                   []>;
