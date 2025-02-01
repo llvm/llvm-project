@@ -6,14 +6,32 @@ func.func @mpi_test(%ref : memref<100xf32>) -> () {
     // CHECK: %0 = mpi.init : !mpi.retval
     %err = mpi.init : !mpi.retval
 
+    // CHECK-NEXT: %comm = mpi.comm_world : !mpi.comm
+    %comm = mpi.comm_world : !mpi.comm
+
+    // CHECK-NEXT: %rank = mpi.comm_rank : i32
+    %rank = mpi.comm_rank : i32
+
     // CHECK-NEXT: %retval, %rank = mpi.comm_rank : !mpi.retval, i32
     %retval, %rank = mpi.comm_rank : !mpi.retval, i32
+
+    // CHECK-NEXT: %retval, %rank = mpi.comm_rank : !mpi.comm -> i32
+    %rank = mpi.comm_rank(%comm) : !mpi.comm -> i32
+
+    // CHECK-NEXT: %retval, %rank = mpi.comm_rank : !mpi.comm -> !mpi.retval, i32
+    %retval, %rank = mpi.comm_rank(%comm) : !mpi.comm -> !mpi.retval, i32
+
+    // CHECK-NEXT: %size = mpi.comm_size : i32
+    %size = mpi.comm_size : i32
 
     // CHECK-NEXT: %retval_0, %size = mpi.comm_size : !mpi.retval, i32
     %retval_0, %size = mpi.comm_size : !mpi.retval, i32
 
-    // CHECK-NEXT: %comm = mpi.comm_world : !mpi.comm
-    %comm = mpi.comm_world : !mpi.comm
+    // CHECK-NEXT: %size = mpi.comm_size : !mpi.comm -> i32
+    %size = mpi.comm_size(%comm) : !mpi.comm -> i32
+
+    // CHECK-NEXT: %retval_0, %size = mpi.comm_size : !mpi.retval, i32
+    %retval_0, %size = mpi.comm_size(%comm) : !mpi.comm -> !mpi.retval, i32
 
     // CHECK-NEXT: %new_comm, %retval3 = mpi.comm_split(%comm, %rank, %rank) : i32, !mpi.retval
     %new_comm, %retval3 = mpi.comm_split(%comm, %rank, %rank) : mpi.comm, i32, i32
