@@ -1819,5 +1819,61 @@ let Predicates = [HasVInstructionsI64, IsRV64] in {
   }
 } // Predicates = [HasVInstructionsI64, IsRV64]
 
+
+// The experimental zvzip extension.  Note these opcodes are very likely to
+// change!
+let Predicates = [HasStdExtZvzip], hasSideEffects = 0, mayLoad = 0,
+  mayStore = 0, isCodeGenOnly = 0, Inst<6-0> = OPC_CUSTOM_2.Value in {
+defm VZIPEVEN_V : VALU_IV_V<"vzipeven", 0b001100>;
+defm VZIPODD_V : VALU_IV_V<"vzipodd", 0b011100>;
+defm VZIP2A_V : VALU_IV_V<"vzip2a", 0b000100>;
+defm VZIP2B_V : VALU_IV_V<"vzip2b", 0b010100>;
+defm VUNZIP2A_V : VALU_IV_V<"vunzip2a", 0b001000>;
+defm VUNZIP2B_V : VALU_IV_V<"vunzip2b", 0b011000>;
+}
+
 include "RISCVInstrInfoZvfbf.td"
 include "RISCVInstrInfoVPseudos.td"
+
+
+// These are modeled after the int binop VL nodes
+def riscv_vzipeven_vl : SDNode<"RISCVISD::VZIPEVEN_VL", SDT_RISCVIntBinOp_VL>;
+def riscv_vzipodd_vl : SDNode<"RISCVISD::VZIPODD_VL", SDT_RISCVIntBinOp_VL>;
+def riscv_vzip2a_vl : SDNode<"RISCVISD::VZIP2A_VL", SDT_RISCVIntBinOp_VL>;
+def riscv_vunzip2a_vl : SDNode<"RISCVISD::VUNZIP2A_VL", SDT_RISCVIntBinOp_VL>;
+def riscv_vunzip2b_vl : SDNode<"RISCVISD::VUNZIP2B_VL", SDT_RISCVIntBinOp_VL>;
+
+multiclass VPseudoVALU_VV<bit Commutable = 0> {
+  foreach m = MxList in {
+    defvar mx = m.MX;
+    defm "" : VPseudoBinaryV_VV<m, Commutable=Commutable>,
+            SchedBinary<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV", mx,
+                        forcePassthruRead=true>;
+  }
+}
+
+multiclass VPatBinaryVL_VV<SDPatternOperator vop, string instruction_name,
+                              list<VTypeInfo> vtilist = AllIntegerVectors,
+                              bit isSEWAware = 0> {
+  foreach vti = vtilist in
+    let Predicates = GetVTypePredicates<vti>.Predicates in
+      def : VPatBinaryVL_V<vop, instruction_name, "VV",
+                           vti.Vector, vti.Vector, vti.Vector, vti.Mask,
+                           vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
+                           vti.RegClass, isSEWAware>;
+}
+
+let Predicates = [HasStdExtZvzip], mayLoad = 0, mayStore = 0,
+    hasSideEffects = 0 in {
+defm PseudoVZIPEVEN   : VPseudoVALU_VV;
+defm PseudoVZIPODD   : VPseudoVALU_VV;
+defm PseudoVZIP2A   : VPseudoVALU_VV;
+defm PseudoVUNZIP2A   : VPseudoVALU_VV;
+defm PseudoVUNZIP2B   : VPseudoVALU_VV;
+}
+
+defm : VPatBinaryVL_VV<riscv_vzipeven_vl, "PseudoVZIPEVEN">;
+defm : VPatBinaryVL_VV<riscv_vzipodd_vl, "PseudoVZIPODD">;
+defm : VPatBinaryVL_VV<riscv_vzip2a_vl, "PseudoVZIP2A">;
+defm : VPatBinaryVL_VV<riscv_vunzip2a_vl, "PseudoVUNZIP2A">;
+defm : VPatBinaryVL_VV<riscv_vunzip2b_vl, "PseudoVUNZIP2B">;

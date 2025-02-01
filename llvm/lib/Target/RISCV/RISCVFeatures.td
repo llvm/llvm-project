@@ -805,6 +805,13 @@ def FeatureStdExtZvksc
 def FeatureStdExtZvksg
     : RISCVExtension<1, 0, "shorthand for 'Zvks' and 'Zvkg'",
                      [FeatureStdExtZvks, FeatureStdExtZvkg]>;
+
+def FeatureStdExtZvzip
+   :  RISCVExperimentalExtension<0, 1, "zip/unzip/zipeven/zipodd">;
+def HasStdExtZvzip : Predicate<"Subtarget->hasStdExtZvzip()">,
+                     AssemblerPredicate<(all_of FeatureStdExtZvzip),
+                         "'Zvzip'">;
+
 // Vector instruction predicates
 
 def HasVInstructions    : Predicate<"Subtarget->hasVInstructions()">,

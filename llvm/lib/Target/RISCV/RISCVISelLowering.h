@@ -402,7 +402,16 @@ enum NodeType : unsigned {
   //  vfirst.m with additional mask and VL operands.
   VFIRST_VL,
 
-  LAST_VL_VECTOR_OP = VFIRST_VL,
+  // Zvzip -- note that these are binary ops (like add), which creates
+  // some semantic oddness for unzip2a/b.
+  VZIPEVEN_VL,
+  VZIPODD_VL,
+  VZIP2A_VL,
+  VZIP2B_VL,
+  VUNZIP2A_VL,
+  VUNZIP2B_VL,
+
+  LAST_VL_VECTOR_OP = VUNZIP2B_VL,
 
   // Read VLENB CSR
   READ_VLENB,
