@@ -10,9 +10,9 @@
 #define _LIBCPP___ATOMIC_SUPPORT_H
 
 #include <__config>
-#include <__type_traits/is_same.h>
+#include <__type_traits/is_const.h>
 #include <__type_traits/is_trivially_copyable.h>
-#include <__type_traits/remove_cv.h>
+#include <__type_traits/is_volatile.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -116,7 +116,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <typename _Tp, typename _Base = __cxx_atomic_base_impl<_Tp> >
 struct __cxx_atomic_impl : public _Base {
   static_assert(is_trivially_copyable<_Tp>::value, "std::atomic<T> requires that 'T' be a trivially copyable type");
-  static_assert(is_same<_Tp, typename remove_cv<_Tp>::type>::value,
+  static_assert(!is_const<_Tp>::value && !is_volatile<_Tp>::value,
                 "std::atomic<T> requires that 'T' be a cv-unqualified type");
 
   _LIBCPP_HIDE_FROM_ABI __cxx_atomic_impl() _NOEXCEPT = default;
