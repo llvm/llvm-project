@@ -234,7 +234,7 @@ static StructType *getBinaryWithCarryType(LLVMContext &Context) {
   if (auto *ST = StructType::getTypeByName(Context, "dx.types.i32c"))
     return ST;
   Type *Int32Ty = Type::getInt32Ty(Context);
-  Type *Int1Ty= Type::getInt1Ty(Context);
+  Type *Int1Ty = Type::getInt1Ty(Context);
   return StructType::create({Int32Ty, Int1Ty}, "dx.types.i32c");
 }
 
