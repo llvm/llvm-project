@@ -1077,14 +1077,7 @@ Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer, OffloadKind Kind,
       bool ResolvesStrongReference =
           ((OldSym & Sym_Undefined && !(OldSym & Sym_Weak)) &&
            !Sym.isUndefined());
-      // We will extract if it defines a new global symbol visible to the
-      // host. This is only necessary for code targeting an offloading
-      // language.
-      bool NewGlobalSymbol =
-          ((NewSymbol || (OldSym & Sym_Undefined)) && !Sym.isUndefined() &&
-           !Sym.canBeOmittedFromSymbolTable() && Kind != object::OFK_None &&
-           (Sym.getVisibility() != GlobalValue::HiddenVisibility));
-      ShouldExtract |= ResolvesStrongReference | NewGlobalSymbol;
+      ShouldExtract |= ResolvesStrongReference;
 
       // Update this symbol in the "table" with the new information.
       if (OldSym & Sym_Undefined && !Sym.isUndefined())
@@ -1133,15 +1126,7 @@ Expected<bool> getSymbolsFromObject(const ObjectFile &Obj, OffloadKind Kind,
     bool ResolvesStrongReference = (OldSym & Sym_Undefined) &&
                                    !(OldSym & Sym_Weak) &&
                                    !(*FlagsOrErr & SymbolRef::SF_Undefined);
-
-    // We will extract if it defines a new global symbol visible to the
-    // host. This is only necessary for code targeting an offloading
-    // language.
-    bool NewGlobalSymbol =
-        ((NewSymbol || (OldSym & Sym_Undefined)) &&
-         !(*FlagsOrErr & SymbolRef::SF_Undefined) && Kind != object::OFK_None &&
-         !(*FlagsOrErr & SymbolRef::SF_Hidden));
-    ShouldExtract |= ResolvesStrongReference | NewGlobalSymbol;
+    ShouldExtract |= ResolvesStrongReference;
 
     // Update this symbol in the "table" with the new information.
     if (OldSym & Sym_Undefined && !(*FlagsOrErr & SymbolRef::SF_Undefined))
@@ -1186,10 +1171,101 @@ Expected<bool> getSymbols(StringRef Image, OffloadKind Kind, bool IsArchive,
   }
 }
 
+Error getNeededDeviceGlobalsFromBitcode(MemoryBufferRef Buffer,
+                                        SmallVectorImpl<std::string> &Symbols) {
+
+  LLVMContext Context;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = getLazyIRModule(
+      MemoryBuffer::getMemBuffer(Buffer, /*RequiresNullTerminator=*/false), Err,
+      Context);
+  if (!M)
+    return createStringError(inconvertibleErrorCode(),
+                             "Failed to create module");
+
+  // Extract offloading data from globals referenced by the
+  // `llvm.embedded.object` metadata with the `.llvm.offloading` section.
+  auto *MD = M->getNamedMetadata("llvm.offloading.symbols");
+  if (!MD)
+    return Error::success();
+
+  for (const MDNode *Op : MD->operands()) {
+    GlobalVariable *GV =
+        mdconst::dyn_extract_or_null<GlobalVariable>(Op->getOperand(0));
+    if (!GV)
+      continue;
+
+    auto *CDS = dyn_cast<ConstantDataSequential>(GV->getInitializer());
+    if (!CDS)
+      continue;
+
+    Symbols.emplace_back(CDS->getAsCString().str());
+  }
+
+  return Error::success();
+}
+
+Error getNeededDeviceGlobalsFromObject(const ObjectFile &Obj,
+                                       SmallVectorImpl<std::string> &Symbols) {
+  for (const auto &Sec : Obj.sections()) {
+    auto NameOrErr = Sec.getName();
+    if (!NameOrErr)
+      return NameOrErr.takeError();
+
+    if (*NameOrErr != ".llvm.rodata.offloading")
+      continue;
+
+    auto ContentsOrErr = Sec.getContents();
+    if (!ContentsOrErr)
+      return ContentsOrErr.takeError();
+    llvm::transform(llvm::split(ContentsOrErr->drop_back(), '\0'),
+                    std::back_inserter(Symbols),
+                    [](StringRef Str) { return Str.str(); });
+  }
+  return Error::success();
+}
+
+Error getNeededDeviceGlobals(MemoryBufferRef Buffer,
+                             SmallVectorImpl<std::string> &Symbols) {
+  file_magic Type = identify_magic(Buffer.getBuffer());
+  switch (Type) {
+  case file_magic::bitcode:
+    return getNeededDeviceGlobalsFromBitcode(Buffer, Symbols);
+  case file_magic::elf_relocatable:
+  case file_magic::coff_object: {
+    Expected<std::unique_ptr<ObjectFile>> ObjFile =
+        ObjectFile::createObjectFile(Buffer, Type);
+    if (!ObjFile)
+      return ObjFile.takeError();
+    return getNeededDeviceGlobalsFromObject(*ObjFile->get(), Symbols);
+  }
+  case file_magic::archive: {
+    Expected<std::unique_ptr<llvm::object::Archive>> LibFile =
+        object::Archive::create(Buffer);
+    if (!LibFile)
+      return LibFile.takeError();
+    Error Err = Error::success();
+    for (auto Child : (*LibFile)->children(Err)) {
+      auto ChildBufferOrErr = Child.getMemoryBufferRef();
+      if (!ChildBufferOrErr)
+        return ChildBufferOrErr.takeError();
+      if (Error Err = getNeededDeviceGlobals(*ChildBufferOrErr, Symbols))
+        return Err;
+    }
+    if (Err)
+      return Err;
+    return Error::success();
+  }
+  default:
+    return Error::success();
+  }
+}
+
 /// Search the input files and libraries for embedded device offloading code
 /// and add it to the list of files to be linked. Files coming from static
 /// libraries are only added to the input if they are used by an existing
-/// input file. Returns a list of input files intended for a single linking job.
+/// input file. Returns a list of input files intended for a single linking
+/// job.
 Expected<SmallVector<SmallVector<OffloadFile>>>
 getDeviceInput(const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("ExtractDeviceCode");
@@ -1210,6 +1286,7 @@ getDeviceInput(const ArgList &Args) {
   bool WholeArchive = Args.hasArg(OPT_wholearchive_flag) ? true : false;
   SmallVector<OffloadFile> ObjectFilesToExtract;
   SmallVector<OffloadFile> ArchiveFilesToExtract;
+  SmallVector<std::string> NeededSymbols;
   for (const opt::Arg *Arg : Args.filtered(
            OPT_INPUT, OPT_library, OPT_whole_archive, OPT_no_whole_archive)) {
     if (Arg->getOption().matches(OPT_whole_archive) ||
@@ -1240,6 +1317,9 @@ getDeviceInput(const ArgList &Args) {
     if (identify_magic(Buffer.getBuffer()) == file_magic::elf_shared_object)
       continue;
 
+    if (Error Err = getNeededDeviceGlobals(Buffer, NeededSymbols))
+      return std::move(Err);
+
     SmallVector<OffloadFile> Binaries;
     if (Error Err = extractOffloadBinaries(Buffer, Binaries))
       return std::move(Err);
@@ -1266,6 +1346,13 @@ getDeviceInput(const ArgList &Args) {
         CompatibleTargets.emplace_back(ID);
 
     for (const auto &[Index, ID] : llvm::enumerate(CompatibleTargets)) {
+      // Initialize the symbol table with the device globals that host needs.
+      // This will force them to be extracted if they are defined in a library.
+      if (!Syms.contains(ID)) {
+        for (auto &Symbol : NeededSymbols)
+          auto &Val = Syms[ID][Symbol] = Sym_Undefined;
+      }
+
       Expected<bool> ExtractOrErr = getSymbols(
           Binary.getBinary()->getImage(), Binary.getBinary()->getOffloadKind(),
           /*IsArchive=*/false, Saver, Syms[ID]);
