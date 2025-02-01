@@ -608,6 +608,7 @@ public:
 
   MachineMemOperand::Flags
   getTargetMMOFlags(const Instruction &I) const override;
+  bool hasBitTest(SDValue X, SDValue Y) const override;
 };
 
 // Returns true if argument is a boolean value which is not serialized into
