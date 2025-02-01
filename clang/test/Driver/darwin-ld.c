@@ -240,6 +240,11 @@
 // RUN: FileCheck -check-prefix=LINK_NO_IOS_ARM64_LIBGCC_S %s < %t.log
 // LINK_NO_IOS_ARM64_LIBGCC_S-NOT: lgcc_s.1
 
+// Check that clang links with libgcc_s.1 for macOS 10.5 and earlier
+// RUN: %clang -target x86_64-apple-macos10.5 -mmacosx-version-min=10.5 -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_OSX_LIBGCC_S %s < %t.log
+// LINK_OSX_LIBGCC_S: lgcc_s.1
+
 // RUN: %clang -target x86_64-apple-darwin12 -rdynamic -### %t.o \
 // RUN:   -fuse-ld= -mlinker-version=100 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_NO_EXPORT_DYNAMIC %s < %t.log
