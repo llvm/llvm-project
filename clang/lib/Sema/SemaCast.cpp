@@ -1399,6 +1399,19 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
     }
   }
 
+  // [expr.static.cast] 7.6.1.9p11, A prvalue of floating-point type can
+  // be explicitly converted to any other floating-point type.
+  // Conversion between fp16 and bf16 is not supported yet.
+  if (SrcExpr.get()->isPRValue() &&
+      Self.Context.doCXX23ExtendedFpTypesRulesApply(DestType, SrcType)) {
+    // FIXME: Support for cast between fp16 and bf16 doesn't exist yet.
+    if (!((DestType->isBFloat16Type() || DestType->isFloat16Type()) &&
+          (SrcType->isBFloat16Type() || SrcType->isFloat16Type()))) {
+      Kind = CK_FloatingCast;
+      return TC_Success;
+    }
+  }
+
   // Reverse integral promotion/conversion. All such conversions are themselves
   // again integral promotions or conversions and are thus already handled by
   // p2 (TryDirectInitialization above).
