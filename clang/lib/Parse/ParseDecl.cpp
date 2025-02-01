@@ -764,6 +764,73 @@ void Parser::ParseGNUAttributeArgs(
                            ScopeLoc, Form);
 }
 
+void Parser::ParseAtomicAttribute(
+    IdentifierInfo &AttrName, SourceLocation AttrNameLoc,
+    ParsedAttributes &Attrs, SourceLocation *EndLoc, IdentifierInfo *ScopeName,
+    SourceLocation ScopeLoc, ParsedAttr::Form Form) {
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.expectAndConsume())
+    return;
+
+  SmallVector<IdentifierLoc *, 4> Identifiers;
+
+  // Parse first argument
+  bool HasNot = false;
+  if (Tok.is(tok::exclaim)) {
+    HasNot = true;
+    ConsumeToken();
+  }
+
+  if (Tok.isNot(tok::identifier)) {
+    Diag(Tok.getLocation(), diag::err_expected) << tok::identifier;
+    SkipUntil(tok::r_paren, StopAtSemi);
+    return;
+  }
+
+  IdentifierLoc *IL = ParseIdentifierLoc();
+  if (HasNot) {
+    std::string Name = "!" + IL->Ident->getName().str();
+    IL->Ident = &Actions.getPreprocessor().getIdentifierTable().get(Name);
+  }
+  Identifiers.push_back(IL);
+
+  // Parse optional second and third arguments
+  while (TryConsumeToken(tok::comma)) {
+    HasNot = false;
+    if (Tok.is(tok::exclaim)) {
+      HasNot = true;
+      ConsumeToken();
+    }
+
+    if (Tok.isNot(tok::identifier)) {
+      Diag(Tok.getLocation(), diag::err_expected) << tok::identifier;
+      SkipUntil(tok::r_paren, StopAtSemi);
+      return;
+    }
+
+    IL = ParseIdentifierLoc();
+    if (HasNot) {
+      std::string Name = "!" + IL->Ident->getName().str();
+      IL->Ident = &Actions.getPreprocessor().getIdentifierTable().get(Name);
+    }
+    Identifiers.push_back(IL);
+  }
+
+  if (T.consumeClose())
+    return;
+
+  if (EndLoc)
+    *EndLoc = T.getCloseLocation();
+
+  SmallVector<ArgsUnion, 4> Args;
+  for (auto *IdLoc : Identifiers) {
+    Args.push_back(IdLoc);
+  }
+
+  Attrs.addNew(&AttrName, SourceRange(AttrNameLoc, T.getCloseLocation()),
+               ScopeName, ScopeLoc, Args.data(), Args.size(), Form);
+}
+
 unsigned Parser::ParseClangAttributeArgs(
     IdentifierInfo *AttrName, SourceLocation AttrNameLoc,
     ParsedAttributes &Attrs, SourceLocation *EndLoc, IdentifierInfo *ScopeName,
@@ -800,6 +867,10 @@ unsigned Parser::ParseClangAttributeArgs(
 
   case ParsedAttr::AT_CXXAssume:
     ParseCXXAssumeAttributeArg(Attrs, AttrName, AttrNameLoc, EndLoc, Form);
+    break;
+  case ParsedAttr::AT_Atomic:
+    ParseAtomicAttribute(*AttrName, AttrNameLoc, Attrs, EndLoc, ScopeName,
+                         ScopeLoc, Form);
     break;
   }
   return !Attrs.empty() ? Attrs.begin()->getNumArgs() : 0;

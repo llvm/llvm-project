@@ -3101,6 +3101,11 @@ private:
   std::optional<AvailabilitySpec> ParseAvailabilitySpec();
   ExprResult ParseAvailabilityCheckExpr(SourceLocation StartLoc);
 
+  void ParseAtomicAttribute(IdentifierInfo &AttrName,
+                            SourceLocation AttrNameLoc, ParsedAttributes &Attrs,
+                            SourceLocation *EndLoc, IdentifierInfo *ScopeName,
+                            SourceLocation ScopeLoc, ParsedAttr::Form Form);
+
   void ParseExternalSourceSymbolAttribute(IdentifierInfo &ExternalSourceSymbol,
                                           SourceLocation Loc,
                                           ParsedAttributes &Attrs,

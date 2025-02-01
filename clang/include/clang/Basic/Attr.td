@@ -4972,3 +4972,16 @@ def NoTrivialAutoVarInit: InheritableAttr {
   let Documentation = [NoTrivialAutoVarInitDocs];
   let SimpleHandler = 1;
 }
+
+def Atomic : StmtAttr {
+  let Spellings = [Clang<"atomic">];
+  let Args = [VariadicStringArgument<"Options">];
+  let Subjects = SubjectList<[CompoundStmt], ErrorDiag, "compound statements">;
+  let HasCustomParsing = 1;
+  let Documentation = [AtomicDocs];
+  let AdditionalMembers = [{
+    AtomicOptionsOverride AOO;
+    AtomicOptionsOverride getAtomicOptionsOverride() const { return AOO; }
+    void setAtomicOptionsOverride(AtomicOptionsOverride A) { AOO = A; }
+  }];
+}

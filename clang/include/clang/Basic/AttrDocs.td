@@ -8068,6 +8068,21 @@ for details.
   }];
 }
 
+def AtomicDocs : Documentation {
+  let Category = DocCatStmt;
+  let Content = [{
+The ``atomic`` attribute can be applied to *compound statements* to override or
+further specify the default atomic code-generation behavior, especially on
+targets such as AMDGPU. You can annotate compound statements with options
+to modify how atomic instructions inside that statement are emitted at the IR
+level.
+
+For details, see the documentation for `@atomic
+<http://clang.llvm.org/docs/LanguageExtensions.html#extensions-for-controlling-atomic-code-generation>`_
+
+  }];
+}
+
 def ClangRandomizeLayoutDocs : Documentation {
   let Category = DocCatDecl;
   let Heading = "randomize_layout, no_randomize_layout";

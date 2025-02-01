@@ -110,6 +110,12 @@ Removed Compiler Flags
 Attribute Changes in Clang
 --------------------------
 
+- Introduced a new statement attribute ``[[clang::atomic]]`` that enables
+  fine-grained control over atomic code generation on a per-statement basis.
+  Supported options include ``no_remote_memory``, ``no_fine_grained_memory``,
+  and ``ignore_denormal_mode``, particularly relevant for AMDGPU targets,
+  where they map to corresponding IR metadata.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 

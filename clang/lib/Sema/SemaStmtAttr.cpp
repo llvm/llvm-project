@@ -625,6 +625,45 @@ static Attr *handleHLSLControlFlowHint(Sema &S, Stmt *St, const ParsedAttr &A,
   return ::new (S.Context) HLSLControlFlowHintAttr(S.Context, A);
 }
 
+static Attr *handleAtomicAttr(Sema &S, Stmt *St, const ParsedAttr &A,
+                              SourceRange Range) {
+  if (!isa<CompoundStmt>(St)) {
+    S.Diag(St->getBeginLoc(), diag::err_attribute_wrong_decl_type)
+        << A << "compound statement";
+    return nullptr;
+  }
+
+  SmallVector<StringRef, 4> OptionStrings;
+  AtomicOptionsOverride AOO;
+
+  for (unsigned i = 0; i < A.getNumArgs(); ++i) {
+    IdentifierLoc *Arg = A.getArgAsIdent(i);
+    if (!Arg || !Arg->Ident) {
+      S.Diag(A.getLoc(), diag::err_attribute_argument_type)
+          << A << AANT_ArgumentIdentifier;
+    }
+
+    StringRef Option = Arg->Ident->getName();
+    bool IsNegated = Option.starts_with("!");
+    StringRef CleanOption = IsNegated ? Option.drop_front(1) : Option;
+
+    if (auto Kind =
+            AtomicOptionsOverride::parseAtomicOverrideKey(CleanOption)) {
+      AOO.setAtomicOverride(*Kind, !IsNegated);
+      OptionStrings.push_back(Option);
+    } else {
+      S.Diag(Arg->Loc, diag::err_attribute_invalid_atomic_argument)
+          << Option << A;
+      return nullptr;
+    }
+  }
+
+  auto *AA = ::new (S.Context)
+      AtomicAttr(S.Context, A, OptionStrings.data(), OptionStrings.size());
+  AA->setAtomicOptionsOverride(AOO);
+  return AA;
+}
+
 static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
                                   SourceRange Range) {
   if (A.isInvalid() || A.getKind() == ParsedAttr::IgnoredAttribute)
@@ -685,6 +724,8 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleNoConvergentAttr(S, St, A, Range);
   case ParsedAttr::AT_Annotate:
     return S.CreateAnnotationAttr(A);
+  case ParsedAttr::AT_Atomic:
+    return handleAtomicAttr(S, St, A, Range);
   default:
     if (Attr *AT = nullptr; A.getInfo().handleStmtAttribute(S, St, A, AT) !=
                             ParsedAttrInfo::NotHandled) {

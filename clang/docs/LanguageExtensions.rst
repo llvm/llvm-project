@@ -5404,6 +5404,115 @@ third argument, can only occur at file scope.
     a = b[i] * c[i] + e;
   }
 
+Extensions for controlling atomic code generation
+=================================================
+
+The ``[[clang::atomic]]`` statement attribute enables users to control how
+atomic operations are lowered in LLVM IR by conveying additional metadata to
+the backend. The primary goal is to allow users to specify certain options,
+like ignoring floating-point denormal modes, or restricting which memory
+regions can be used, without affecting the correctness of code that does not
+rely on these behaviors.
+
+In LLVM, lowering of atomic operations (e.g., ``atomicrmw``) can differ based on
+the target's capabilities. Some backends support native atomic instructions
+only for certain operation types or alignments, or only in specific memory
+regions. Likewise, floating-point atomic instructions may or may not respect
+IEEE denormal requirements. When the user is unconcerned about denormal-mode
+compliance (for performance reasons) or knows that certain atomic operations
+will not function in a particular memory space, extra hints are needed to
+tell the backend how to proceed.
+
+A classic example is an architecture where floating-point atomic add does not
+fully conform to IEEE denormal-mode handling. If the user does not mind ignoring
+that aspect, they would prefer to still emit a faster hardware atomic
+instruction, rather than a fallback or CAS loop. Conversely, on certain GPUs
+(e.g., AMDGPU), memory accessed via PCIe may only support a subset of atomic
+operations (e.g., integer add, exchange, or compare-and-swap). To ensure correct
+and efficient lowering, the compiler must know whether the user wants to prevent 
+the use of these instructions.
+
+Because this is metadata for atomic instructions and can be dropped if the
+backend does not support it, it does not affect correctness (the program's 
+behavior remains correct if the metadata is ignored), but it can significantly
+improve performance or guide code generation in the cases that matter.
+
+The attribute may be applied only to a compound statement and looks like:
+
+.. code-block:: c++
+
+   [[clang::atomic(no_remote_memory, !no_fine_grained_memory, ignore_denormal_mode)]]
+   {
+       // Atomic instructions in this block carry extra metadata reflecting
+       // these user-specified options.
+   }
+
+You can provide one or more of these options, each optionally prefixed with
+``!`` to negate that option. The currently supported options are:
+
+``no_remote_memory``
+   Indicates that atomic operations in this block can assume the accessed memory
+   is not remote memory (relevant for certain GPU memory spaces, like those
+   accessed via PCIe). The prefix ``!`` disables this if a broader scope or
+   command-line had it on.
+
+``no_fine_grained_memory``
+   Suggests that no fine-grained memory regions are accessed by atomic
+   operations. On some GPUs, this can assure certain atomic instructions
+   to work, instead of falling back to CAS loops.
+
+``ignore_denormal_mode``
+   Allows the backend to ignore floating-point denormals for atomic instructions
+   (like 32-bit ``fadd``). This often improves performance on architectures that
+   do not handle denormals efficiently.
+
+Any unspecified option is inherited from the global defaults, which can be set
+by a compiler flag (described below) or the target's built-in defaults.
+
+.. code-block:: c++
+
+   // Suppose we globally set: -fatomic=no_remote_memory:on,no_fine_grained_memory:off
+   // (meaning we do not allow remote memory usage but do allow fine-grained memory)
+
+   void example() {
+       // Locally override the "no_remote_memory" setting to *off* for this block,
+       // but turn on "no_fine_grained_memory".
+       [[clang::atomic(!no_remote_memory, no_fine_grained_memory)]] {
+           // This compound statement's atomic ops behave differently than outside:
+           //   - no_remote_memory is disabled here
+           //   - no_fine_grained_memory is enabled
+           //   - ignore_denormal_mode remains unchanged from global default
+           // ...
+       }
+   }
+
+A new compiler option, ``-fatomic=<key>:<value>[,<key2>:<value2>...]``, can
+globally override the target's defaults for these atomic-lowering options.
+For instance:
+
+.. code-block:: console
+
+   $ clang -fatomic=no_remote_memory:on,ignore_denormal_mode:on file.cpp
+
+Each key can be one of:
+``no_remote_memory``, ``no_fine_grained_memory``, or ``ignore_denormal_mode``.
+Each value can be ``on``, ``off``, ``yes``, ``no``, ``true``, ``false``, ``1``,
+or ``0`` (case-insensitive). Unrecognized options or invalid formats produce an
+error. Code using the ``[[clang::atomic]]`` attribute then selectively overrides
+the command-line defaults on a per-block basis.
+
+Internally, this attribute attaches "atomic options" information to the compound
+statement in the AST, using an approach analogous to how Clang tracks
+floating-point pragmas. During IR emission, Clang checks these options and
+attaches target-specific metadata (e.g., ``amdgpu.no.remote.memory``) to atomic
+instructions, guiding the backend's lowering process.
+
+Although current usage focuses on AMDGPU, the mechanism is general. Other
+backends can ignore or implement their own responses to these flags if desired.
+If a target does not understand or enforce these hints, the IR remains valid,
+and the resulting program is still correct (although potentially less optimized
+for that user's needs).
+
 Specifying an attribute for multiple declarations (#pragma clang attribute)
 ===========================================================================
 

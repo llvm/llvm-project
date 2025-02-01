@@ -625,6 +625,10 @@ public:
   // WebAssembly target.
   bool NoWasmOpt = false;
 
+  /// The default atomic codegen options specified by command line in the
+  /// format of key:{on|off}.
+  std::vector<std::string> AtomicOptionsAsWritten;
+
   LangOptions();
 
   /// Set language defaults for the given input language and
@@ -1094,6 +1098,177 @@ inline FPOptionsOverride FPOptions::getChangesFrom(const FPOptions &Base) const 
 
 inline void FPOptions::applyChanges(FPOptionsOverride FPO) {
   *this = FPO.applyOverrides(*this);
+}
+
+/// Atomic control options
+class AtomicOptionsOverride;
+class AtomicOptions {
+public:
+  using storage_type = uint16_t;
+
+  static constexpr unsigned StorageBitSize = 8 * sizeof(storage_type);
+
+  static constexpr storage_type FirstShift = 0, FirstWidth = 0;
+#define OPTION(NAME, STR, TYPE, WIDTH, PREVIOUS)                               \
+  static constexpr storage_type NAME##Shift =                                  \
+      PREVIOUS##Shift + PREVIOUS##Width;                                       \
+  static constexpr storage_type NAME##Width = WIDTH;                           \
+  static constexpr storage_type NAME##Mask = ((1 << NAME##Width) - 1)          \
+                                             << NAME##Shift;
+#include "clang/Basic/AtomicOptions.def"
+
+  static constexpr storage_type TotalWidth = 0
+#define OPTION(NAME, STR, TYPE, WIDTH, PREVIOUS) +WIDTH
+#include "clang/Basic/AtomicOptions.def"
+      ;
+  static_assert(TotalWidth <= StorageBitSize,
+                "Too short type for AtomicOptions");
+
+private:
+  storage_type Value;
+
+  AtomicOptionsOverride getChangesSlow(const AtomicOptions &Base) const;
+
+public:
+  AtomicOptions() : Value(0) {
+    setNoRemoteMemory(false);
+    setNoFineGrainedMemory(false);
+    setIgnoreDenormalMode(false);
+  }
+
+  bool operator==(AtomicOptions other) const { return Value == other.Value; }
+
+  /// Return the default value of AtomicOptions that's used when trailing
+  /// storage isn't required.
+  static AtomicOptions defaultWithoutTrailingStorage(const LangOptions &LO);
+
+  storage_type getAsOpaqueInt() const { return Value; }
+  static AtomicOptions getFromOpaqueInt(storage_type Value) {
+    AtomicOptions Opts;
+    Opts.Value = Value;
+    return Opts;
+  }
+
+  /// Return difference with the given option set.
+  AtomicOptionsOverride getChangesFrom(const AtomicOptions &Base) const;
+
+  void applyChanges(AtomicOptionsOverride AO);
+
+#define OPTION(NAME, STR, TYPE, WIDTH, PREVIOUS)                               \
+  TYPE get##NAME() const {                                                     \
+    return static_cast<TYPE>((Value & NAME##Mask) >> NAME##Shift);             \
+  }                                                                            \
+  void set##NAME(TYPE value) {                                                 \
+    Value = (Value & ~NAME##Mask) | (storage_type(value) << NAME##Shift);      \
+  }
+#include "clang/Basic/AtomicOptions.def"
+  LLVM_DUMP_METHOD void dump();
+};
+
+enum class AtomicOverrideKind {
+#define OPTION(NAME, STR, TYPE, WIDTH, PREVIOUS) NAME,
+#include "clang/Basic/AtomicOptions.def"
+  LANGOPT_ATOMIC_OPTION_LAST
+};
+#undef OPTION
+/// Represents difference between two AtomicOptions values.
+class AtomicOptionsOverride {
+  AtomicOptions Options = AtomicOptions::getFromOpaqueInt(0);
+  AtomicOptions::storage_type OverrideMask = 0;
+
+public:
+  /// The type suitable for storing values of AtomicOptionsOverride. Must be
+  /// twice as wide as bit size of AtomicOption.
+  using storage_type = uint32_t;
+  static_assert(sizeof(storage_type) >= 2 * sizeof(AtomicOptions::storage_type),
+                "Too short type for AtomicOptionsOverride");
+
+  /// Bit mask selecting bits of OverrideMask in serialized representation of
+  /// AtomicOptionsOverride.
+  static constexpr storage_type OverrideMaskBits =
+      (static_cast<storage_type>(1) << AtomicOptions::StorageBitSize) - 1;
+
+  AtomicOptionsOverride() {}
+  AtomicOptionsOverride(const LangOptions &LO);
+  AtomicOptionsOverride(AtomicOptions AO)
+      : Options(AO), OverrideMask(OverrideMaskBits) {}
+  AtomicOptionsOverride(AtomicOptions AO, AtomicOptions::storage_type Mask)
+      : Options(AO), OverrideMask(Mask) {}
+
+  bool requiresTrailingStorage() const { return OverrideMask != 0; }
+
+  storage_type getAsOpaqueInt() const {
+    return (static_cast<storage_type>(Options.getAsOpaqueInt())
+            << AtomicOptions::StorageBitSize) |
+           OverrideMask;
+  }
+
+  static AtomicOptionsOverride getFromOpaqueInt(storage_type I) {
+    AtomicOptionsOverride Opts;
+    Opts.OverrideMask = I & OverrideMaskBits;
+    Opts.Options =
+        AtomicOptions::getFromOpaqueInt(I >> AtomicOptions::StorageBitSize);
+    return Opts;
+  }
+
+  static std::optional<AtomicOverrideKind>
+  parseAtomicOverrideKey(StringRef Key);
+
+  AtomicOptions applyOverrides(AtomicOptions Base) {
+    AtomicOptions Result = AtomicOptions::getFromOpaqueInt(
+        (Base.getAsOpaqueInt() & ~OverrideMask) |
+        (Options.getAsOpaqueInt() & OverrideMask));
+    return Result;
+  }
+
+  bool operator==(AtomicOptionsOverride other) const {
+    return Options == other.Options && OverrideMask == other.OverrideMask;
+  }
+  bool operator!=(AtomicOptionsOverride other) const {
+    return !(*this == other);
+  }
+
+#define OPTION(NAME, STR, TYPE, WIDTH, PREVIOUS)                               \
+  bool has##NAME##Override() const {                                           \
+    return OverrideMask & AtomicOptions::NAME##Mask;                           \
+  }                                                                            \
+  TYPE get##NAME##Override() const {                                           \
+    assert(has##NAME##Override());                                             \
+    return Options.get##NAME();                                                \
+  }                                                                            \
+  void clear##NAME##Override() {                                               \
+    Options.set##NAME(TYPE(0));                                                \
+    OverrideMask &= ~AtomicOptions::NAME##Mask;                                \
+  }                                                                            \
+  void set##NAME##Override(TYPE value) {                                       \
+    Options.set##NAME(value);                                                  \
+    OverrideMask |= AtomicOptions::NAME##Mask;                                 \
+  }
+#include "clang/Basic/AtomicOptions.def"
+
+  LLVM_DUMP_METHOD void dump();
+  void setAtomicOverride(AtomicOverrideKind Kind, bool Value) {
+    switch (Kind) {
+#define OPTION(NAME, STR, TYPE, WIDTH, PREVIOUS)                               \
+  case AtomicOverrideKind::NAME:                                               \
+    set##NAME##Override(Value);                                                \
+    break;
+#include "clang/Basic/AtomicOptions.def"
+    default:
+      llvm_unreachable("Invalid atomic override kind");
+    }
+  }
+};
+
+inline AtomicOptionsOverride
+AtomicOptions::getChangesFrom(const AtomicOptions &Base) const {
+  if (Value == Base.Value)
+    return AtomicOptionsOverride();
+  return getChangesSlow(Base);
+}
+
+inline void AtomicOptions::applyChanges(AtomicOptionsOverride AO) {
+  *this = AO.applyOverrides(*this);
 }
 
 /// Describes the kind of translation unit being processed.

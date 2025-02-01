@@ -829,6 +829,23 @@ public:
   };
   FPOptions CurFPFeatures;
 
+  class CGAtomicOptionsRAII {
+  public:
+    CGAtomicOptionsRAII(CodeGenModule &CGM_, AtomicOptions AO)
+        : CGM(CGM_), SavedAtomicOpts(CGM.getAtomicOpts()) {
+      CGM.setAtomicOpts(AO);
+    }
+    CGAtomicOptionsRAII(CodeGenModule &CGM_, AtomicOptionsOverride AOO)
+        : CGM(CGM_), SavedAtomicOpts(CGM.getAtomicOpts()) {
+      CGM.setAtomicOpts(AOO.applyOverrides(SavedAtomicOpts));
+    }
+    ~CGAtomicOptionsRAII() { CGM.setAtomicOpts(SavedAtomicOpts); }
+
+  private:
+    CodeGenModule &CGM;
+    AtomicOptions SavedAtomicOpts;
+  };
+
 public:
   /// ObjCEHValueStack - Stack of Objective-C exception values, used for
   /// rethrows.
