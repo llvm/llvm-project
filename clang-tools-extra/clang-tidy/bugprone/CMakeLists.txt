@@ -65,6 +65,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   SizeofContainerCheck.cpp
   SizeofExpressionCheck.cpp
   SmartPtrArrayMismatchCheck.cpp
+  SmartptrResetAmbiguousCallCheck.cpp
   SpuriouslyWakeUpFunctionsCheck.cpp
   StandaloneEmptyCheck.cpp
   StringConstructorCheck.cpp
