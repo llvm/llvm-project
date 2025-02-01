@@ -89,7 +89,7 @@ jobs:
           "
       - name: Set Initial Status to Pending
         run: |
-          python3 -c "
+          docker exec "${{env.CONTAINER_NAME}}" /bin/bash -c "python3 -c \"
           import os
           import requests
           GITHUB_TOKEN = "${{ secrets.CI_TOKEN }}"
@@ -111,7 +111,7 @@ jobs:
             print('Status set to pending successfully.')
           else:
             print(f'Failed to set status: {response.status_code} {response.text}')
-            "
+            \""
       - name: Stop and remove container
         if: always()
         run: |
