@@ -1728,7 +1728,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     thread_sp->SetStopInfo(StopInfoSP());
     // If there's a memory thread backed by this thread, we need to use it to
     // calculate StopInfo.
-    if (ThreadSP memory_thread_sp = m_thread_list.GetBackingThread(thread_sp))
+    if (ThreadSP memory_thread_sp = thread_sp->GetBackedThread())
       thread_sp = memory_thread_sp;
 
     if (exc_type != 0) {
