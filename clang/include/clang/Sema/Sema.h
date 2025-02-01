@@ -4613,6 +4613,11 @@ public:
 
   enum class RetainOwnershipKind { NS, CF, OS };
 
+  void DetectMissingFormatAttributes(const FunctionDecl *Callee,
+                                     ArrayRef<const Expr *> Args,
+                                     SourceLocation Loc);
+  void EmitMissingFormatAttributesDiagnostic(const FunctionDecl *Caller);
+
   UuidAttr *mergeUuidAttr(Decl *D, const AttributeCommonInfo &CI,
                           StringRef UuidAsWritten, MSGuidDecl *GuidDecl);
 

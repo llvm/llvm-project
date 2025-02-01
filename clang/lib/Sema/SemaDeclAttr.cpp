@@ -3676,7 +3676,7 @@ static void handleFormatAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   // In C++ the implicit 'this' function parameter also counts, and they are
   // counted from one.
-  bool HasImplicitThisParam = isInstanceMethod(D);
+  bool HasImplicitThisParam = checkIfMethodHasImplicitObjectParameter(D);
   unsigned NumArgs = getFunctionOrMethodNumParams(D) + HasImplicitThisParam;
 
   IdentifierInfo *II = AL.getArgAsIdent(0)->Ident;
@@ -3789,7 +3789,7 @@ static void handleCallbackAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  bool HasImplicitThisParam = isInstanceMethod(D);
+  bool HasImplicitThisParam = checkIfMethodHasImplicitObjectParameter(D);
   int32_t NumArgs = getFunctionOrMethodNumParams(D);
 
   FunctionDecl *FD = D->getAsFunction();
@@ -5593,6 +5593,181 @@ static void handlePreferredTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                         diag::err_incomplete_type);
 
   D->addAttr(::new (S.Context) PreferredTypeAttr(S.Context, AL, ParmTSI));
+}
+
+// Diagnosing missing format attributes is implemented in two steps:
+// 1. Detect missing format attributes while checking function calls.
+// 2. Emit diagnostic in part that processes function body.
+// For this purpose it is created vector that stores information about format
+// attributes. There are no two format attributes with same arguments in a
+// vector. Vector could contains attributes that only store information about
+// format type (format string and first to check argument are set to -1).
+namespace {
+std::vector<FormatAttr *> MissingAttributes;
+} // end anonymous namespace
+
+// This function is called only if function call is not inside template body.
+// TODO: Add call for function calls inside template body.
+// Detects and stores missing format attributes in a vector.
+void Sema::DetectMissingFormatAttributes(const FunctionDecl *Callee,
+                                         ArrayRef<const Expr *> Args,
+                                         SourceLocation Loc) {
+  assert(Callee);
+
+  // If there is no caller, exit.
+  const FunctionDecl *Caller = getCurFunctionDecl();
+  if (!getCurFunctionDecl())
+    return;
+
+  // Check if callee function is a format function.
+  // If it is, check if caller function misses format attributes.
+
+  if (!Callee->hasAttr<FormatAttr>())
+    return;
+
+  // va_list is not intended to be passed to variadic function.
+  if (Callee->isVariadic())
+    return;
+
+  // Check if va_list is passed to callee function.
+  // If va_list is not passed, return.
+  bool hasVaList = false;
+  for (const auto *Param : Callee->parameters()) {
+    if (Param->getOriginalType().getCanonicalType() ==
+        getASTContext().getBuiltinVaListType().getCanonicalType()) {
+      hasVaList = true;
+      break;
+    }
+  }
+  if (!hasVaList)
+    return;
+
+  unsigned int FormatArgumentIndexOffset =
+      checkIfMethodHasImplicitObjectParameter(Callee) ? 2 : 1;
+
+  // If callee function is format function and format arguments are not
+  // relevant to emit diagnostic, save only information about format type
+  // (format index and first-to-check argument index are set to -1).
+  // Information about format type is later used to determine if there are
+  // more than one format type found.
+
+  unsigned int NumArgs = Args.size();
+  // Check if function has format attribute with forwarded format string.
+  IdentifierInfo *AttrType;
+  const ParmVarDecl *FormatStringArg;
+  if (!llvm::any_of(
+          Callee->specific_attrs<FormatAttr>(), [&](const FormatAttr *Attr) {
+            AttrType = Attr->getType();
+
+            int OffsetFormatIndex =
+                Attr->getFormatIdx() - FormatArgumentIndexOffset;
+            if (OffsetFormatIndex < 0 || (unsigned)OffsetFormatIndex >= NumArgs)
+              return false;
+
+            if (const auto *FormatArgExpr = dyn_cast<DeclRefExpr>(
+                    Args[OffsetFormatIndex]->IgnoreParenCasts()))
+              if (FormatStringArg = dyn_cast_or_null<ParmVarDecl>(
+                      FormatArgExpr->getReferencedDeclOfCallee()))
+                return true;
+            return false;
+          })) {
+    MissingAttributes.push_back(
+        FormatAttr::CreateImplicit(getASTContext(), AttrType, -1, -1));
+    return;
+  }
+
+  unsigned ArgumentIndexOffset =
+      checkIfMethodHasImplicitObjectParameter(Caller) ? 2 : 1;
+
+  unsigned NumOfCallerFunctionParams = Caller->getNumParams();
+
+  // Compare caller and callee function format attribute arguments (archetype
+  // and format string). If they don't match, caller misses format attribute.
+  if (llvm::any_of(
+          Caller->specific_attrs<FormatAttr>(), [&](const FormatAttr *Attr) {
+            if (Attr->getType() != AttrType)
+              return false;
+            int OffsetFormatIndex = Attr->getFormatIdx() - ArgumentIndexOffset;
+
+            if (OffsetFormatIndex < 0 ||
+                (unsigned)OffsetFormatIndex >= NumOfCallerFunctionParams)
+              return false;
+
+            if (Caller->parameters()[OffsetFormatIndex] != FormatStringArg)
+              return false;
+
+            return true;
+          })) {
+    MissingAttributes.push_back(
+        FormatAttr::CreateImplicit(getASTContext(), AttrType, -1, -1));
+    return;
+  }
+
+  // Get format string index
+  int FormatStringIndex =
+      FormatStringArg->getFunctionScopeIndex() + ArgumentIndexOffset;
+
+  // Get first argument index
+  int FirstToCheck = Caller->isVariadic()
+                         ? (NumOfCallerFunctionParams + ArgumentIndexOffset)
+                         : 0;
+
+  // Do not add duplicate in a vector of missing format attributes.
+  if (!llvm::any_of(MissingAttributes, [&](const FormatAttr *Attr) {
+        return Attr->getType() == AttrType &&
+               Attr->getFormatIdx() == FormatStringIndex &&
+               Attr->getFirstArg() == FirstToCheck;
+      }))
+    MissingAttributes.push_back(FormatAttr::CreateImplicit(
+        getASTContext(), AttrType, FormatStringIndex, FirstToCheck, Loc));
+}
+
+// This function is called only if caller function is not template.
+// TODO: Add call for template functions.
+// Emits missing format attribute diagnostics.
+void Sema::EmitMissingFormatAttributesDiagnostic(const FunctionDecl *Caller) {
+  const clang::IdentifierInfo *AttrType = MissingAttributes[0]->getType();
+  for (unsigned i = 1; i < MissingAttributes.size(); ++i) {
+    if (AttrType != MissingAttributes[i]->getType()) {
+      // Clear vector of missing attributes because it could be used in
+      // diagnosing missing format attributes in another caller.
+      MissingAttributes.clear();
+      return;
+    }
+  }
+
+  for (const FormatAttr *FA : MissingAttributes) {
+    // If format index and first-to-check argument index are negative, it means
+    // that this attribute is only saved for multiple format types checking.
+    if (FA->getFormatIdx() < 0 || FA->getFirstArg() < 0)
+      continue;
+
+    // If caller function has format attributes and callee format attribute type
+    // mismatches caller attribute type, do not emit diagnostic.
+    if (Caller->hasAttr<FormatAttr>() &&
+        !llvm::any_of(Caller->specific_attrs<FormatAttr>(),
+                      [FA](const FormatAttr *FunctionAttr) {
+                        return FA->getType() == FunctionAttr->getType();
+                      }))
+      continue;
+
+    // Emit diagnostic
+    SourceLocation Loc = Caller->getFirstDecl()->getLocation();
+    Diag(Loc, diag::warn_missing_format_attribute)
+        << FA->getType() << Caller
+        << FixItHint::CreateInsertion(Loc,
+                                      (llvm::Twine("__attribute__((format(") +
+                                       FA->getType()->getName() + ", " +
+                                       llvm::Twine(FA->getFormatIdx()) + ", " +
+                                       llvm::Twine(FA->getFirstArg()) + ")))")
+                                          .str());
+    Diag(FA->getLocation(), diag::note_format_function) << FA->getType();
+  }
+
+  // Clear vector of missing attributes after emitting diagnostics for caller
+  // function because it could be used in diagnosing missing format attributes
+  // in another caller.
+  MissingAttributes.clear();
 }
 
 //===----------------------------------------------------------------------===//
