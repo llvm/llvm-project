@@ -641,7 +641,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       .SetSkipPointers(false)
       .SetSkipReferences(false)
       .SetDontShowChildren(true)
-      .SetDontShowValue(true)
+      .SetDontShowValue(false)
       .SetShowMembersOneLiner(false)
       .SetHideItemNames(false);
 
@@ -1204,7 +1204,7 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       .SetSkipPointers(false)
       .SetSkipReferences(false)
       .SetDontShowChildren(true)
-      .SetDontShowValue(true)
+      .SetDontShowValue(false)
       .SetShowMembersOneLiner(false)
       .SetHideItemNames(false);
 
