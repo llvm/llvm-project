@@ -139,6 +139,8 @@ def IntrNoReturn : IntrinsicProperty;
 // Applied by default.
 def IntrNoCallback : IntrinsicProperty<1>;
 
+def IntrNoRecurse : IntrinsicProperty;
+
 // IntrNoSync - Threads executing the intrinsic will not synchronize using
 // memory or other means. Applied by default.
 def IntrNoSync : IntrinsicProperty<1>;
