@@ -92,7 +92,7 @@ public:
       SparseSolver<LatticeKey, LatticeVal> &SS) = 0;
 
   /// PrintLatticeVal - Render the given LatticeVal to the specified stream.
-  virtual void PrintLatticeVal(LatticeVal LV, raw_ostream &OS);
+  virtual void PrintLatticeVal(const LatticeVal &LV, raw_ostream &OS);
 
   /// PrintLatticeKey - Render the given LatticeKey to the specified stream.
   virtual void PrintLatticeKey(LatticeKey Key, raw_ostream &OS);
@@ -203,7 +203,7 @@ private:
 
 template <class LatticeKey, class LatticeVal>
 void AbstractLatticeFunction<LatticeKey, LatticeVal>::PrintLatticeVal(
-    LatticeVal V, raw_ostream &OS) {
+    const LatticeVal &V, raw_ostream &OS) {
   if (V == UndefVal)
     OS << "undefined";
   else if (V == OverdefinedVal)

@@ -7546,7 +7546,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
   /// Extract values from \p Base according to the type \p PrivType at the
   /// call position \p ACS. The values are appended to \p ReplacementValues.
   void createReplacementValues(Align Alignment, Type *PrivType,
-                               AbstractCallSite ACS, Value *Base,
+                               const AbstractCallSite &ACS, Value *Base,
                                SmallVectorImpl<Value *> &ReplacementValues) {
     assert(Base && "Expected base value!");
     assert(PrivType && "Expected privatizable type!");
@@ -11166,7 +11166,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     return true;
   }
 
-  bool handleLoadInst(Attributor &A, LoadInst &LI, ItemInfo II,
+  bool handleLoadInst(Attributor &A, LoadInst &LI, const ItemInfo &II,
                       SmallVectorImpl<ItemInfo> &Worklist) {
     SmallSetVector<Value *, 4> PotentialCopies;
     SmallSetVector<Instruction *, 4> PotentialValueOrigins;
@@ -11290,7 +11290,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
   /// Use the generic, non-optimistic InstSimplfy functionality if we managed to
   /// simplify any operand of the instruction \p I. Return true if successful,
   /// in that case Worklist will be updated.
-  bool handleGenericInst(Attributor &A, Instruction &I, ItemInfo II,
+  bool handleGenericInst(Attributor &A, Instruction &I, const ItemInfo &II,
                          SmallVectorImpl<ItemInfo> &Worklist) {
     bool SomeSimplified = false;
     bool UsedAssumedInformation = false;
@@ -11340,7 +11340,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
   }
 
   bool simplifyInstruction(
-      Attributor &A, Instruction &I, ItemInfo II,
+      Attributor &A, Instruction &I, const ItemInfo &II,
       SmallVectorImpl<ItemInfo> &Worklist,
       SmallMapVector<const Function *, LivenessInfo, 4> &LivenessAAs) {
     if (auto *CI = dyn_cast<CmpInst>(&I))

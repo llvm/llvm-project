@@ -208,7 +208,7 @@ Error DXContainer::parsePartOffsets() {
   return Error::success();
 }
 
-Expected<DXContainer> DXContainer::create(MemoryBufferRef Object) {
+Expected<DXContainer> DXContainer::create(const MemoryBufferRef &Object) {
   DXContainer Container(Object);
   if (Error Err = Container.parseHeader())
     return std::move(Err);

@@ -69,15 +69,15 @@ UnwindLocation::createAtRegisterPlusOffset(uint32_t RegNum, int32_t Offset,
   return {RegPlusOffset, RegNum, Offset, AddrSpace, true};
 }
 
-UnwindLocation UnwindLocation::createIsDWARFExpression(DWARFExpression Expr) {
+UnwindLocation UnwindLocation::createIsDWARFExpression(const DWARFExpression &Expr) {
   return {Expr, false};
 }
 
-UnwindLocation UnwindLocation::createAtDWARFExpression(DWARFExpression Expr) {
+UnwindLocation UnwindLocation::createAtDWARFExpression(const DWARFExpression &Expr) {
   return {Expr, true};
 }
 
-void UnwindLocation::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
+void UnwindLocation::dump(raw_ostream &OS, const DIDumpOptions &DumpOpts) const {
   if (Dereference)
     OS << '[';
   switch (Kind) {
@@ -168,7 +168,7 @@ raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS,
   return OS;
 }
 
-void UnwindRow::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+void UnwindRow::dump(raw_ostream &OS, const DIDumpOptions &DumpOpts,
                      unsigned IndentLevel) const {
   OS.indent(2 * IndentLevel);
   if (hasAddress())
@@ -188,7 +188,7 @@ raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS, const UnwindRow &Row) {
   return OS;
 }
 
-void UnwindTable::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+void UnwindTable::dump(raw_ostream &OS, const DIDumpOptions &DumpOpts,
                        unsigned IndentLevel) const {
   for (const UnwindRow &Row : Rows)
     Row.dump(OS, DumpOpts, IndentLevel);
@@ -881,7 +881,7 @@ CFIProgram::getOperandTypes() {
 }
 
 /// Print \p Opcode's operand number \p OperandIdx which has value \p Operand.
-void CFIProgram::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
+void CFIProgram::printOperand(raw_ostream &OS, const DIDumpOptions &DumpOpts,
                               const Instruction &Instr, unsigned OperandIdx,
                               uint64_t Operand,
                               std::optional<uint64_t> &Address) const {
@@ -948,7 +948,7 @@ void CFIProgram::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
   }
 }
 
-void CFIProgram::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+void CFIProgram::dump(raw_ostream &OS, const DIDumpOptions &DumpOpts,
                       unsigned IndentLevel,
                       std::optional<uint64_t> Address) const {
   for (const auto &Instr : Instructions) {
@@ -1055,7 +1055,7 @@ DWARFDebugFrame::DWARFDebugFrame(Triple::ArchType Arch,
 
 DWARFDebugFrame::~DWARFDebugFrame() = default;
 
-static void LLVM_ATTRIBUTE_UNUSED dumpDataAux(DataExtractor Data,
+static void LLVM_ATTRIBUTE_UNUSED dumpDataAux(const DataExtractor &Data,
                                               uint64_t Offset, int Length) {
   errs() << "DUMP: ";
   for (int i = 0; i < Length; ++i) {

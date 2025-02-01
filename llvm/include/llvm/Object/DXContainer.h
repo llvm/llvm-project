@@ -370,7 +370,7 @@ public:
   PartIterator end() const { return PartIterator(*this, PartOffsets.end()); }
 
   StringRef getData() const { return Data.getBuffer(); }
-  static Expected<DXContainer> create(MemoryBufferRef Object);
+  static Expected<DXContainer> create(const MemoryBufferRef &Object);
 
   const dxbc::Header &getHeader() const { return Header; }
 

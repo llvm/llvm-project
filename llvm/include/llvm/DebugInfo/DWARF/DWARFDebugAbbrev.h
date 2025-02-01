@@ -34,7 +34,7 @@ public:
 
   uint64_t getOffset() const { return Offset; }
   void dump(raw_ostream &OS) const;
-  Error extract(DataExtractor Data, uint64_t *OffsetPtr);
+  Error extract(const DataExtractor &Data, uint64_t *OffsetPtr);
 
   const DWARFAbbreviationDeclaration *
   getAbbreviationDeclaration(uint32_t AbbrCode) const;

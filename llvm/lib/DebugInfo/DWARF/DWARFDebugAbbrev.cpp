@@ -24,7 +24,7 @@ void DWARFAbbreviationDeclarationSet::clear() {
   Decls.clear();
 }
 
-Error DWARFAbbreviationDeclarationSet::extract(DataExtractor Data,
+Error DWARFAbbreviationDeclarationSet::extract(const DataExtractor &Data,
                                                uint64_t *OffsetPtr) {
   clear();
   const uint64_t BeginOffset = *OffsetPtr;

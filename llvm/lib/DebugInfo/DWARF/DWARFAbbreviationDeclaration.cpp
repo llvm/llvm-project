@@ -35,7 +35,7 @@ DWARFAbbreviationDeclaration::DWARFAbbreviationDeclaration() {
 }
 
 llvm::Expected<DWARFAbbreviationDeclaration::ExtractState>
-DWARFAbbreviationDeclaration::extract(DataExtractor Data, uint64_t *OffsetPtr) {
+DWARFAbbreviationDeclaration::extract(const DataExtractor &Data, uint64_t *OffsetPtr) {
   clear();
   const uint64_t Offset = *OffsetPtr;
   Error Err = Error::success();

@@ -17,7 +17,7 @@
 
 using namespace llvm;
 
-Error RangeListEntry::extract(DWARFDataExtractor Data, uint64_t *OffsetPtr) {
+Error RangeListEntry::extract(const DWARFDataExtractor &Data, uint64_t *OffsetPtr) {
   Offset = *OffsetPtr;
   SectionIndex = -1ULL;
   // The caller should guarantee that we have at least 1 byte available, so

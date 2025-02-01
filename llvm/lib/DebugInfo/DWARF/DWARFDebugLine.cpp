@@ -115,7 +115,7 @@ void DWARFDebugLine::Prologue::clear() {
 }
 
 void DWARFDebugLine::Prologue::dump(raw_ostream &OS,
-                                    DIDumpOptions DumpOptions) const {
+                                    const DIDumpOptions &DumpOptions) const {
   if (!totalLengthIsValid())
     return;
   int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(FormParams.Format);
@@ -536,7 +536,7 @@ void DWARFDebugLine::Sequence::reset() {
 DWARFDebugLine::LineTable::LineTable() { clear(); }
 
 void DWARFDebugLine::LineTable::dump(raw_ostream &OS,
-                                     DIDumpOptions DumpOptions) const {
+                                     const DIDumpOptions &DumpOptions) const {
   Prologue.dump(OS, DumpOptions);
 
   if (!Rows.empty()) {

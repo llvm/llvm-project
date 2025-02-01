@@ -75,7 +75,7 @@ class CVTypeVisitor {
 public:
   explicit CVTypeVisitor(TypeVisitorCallbacks &Callbacks);
 
-  Error visitTypeRecord(CVType &Record, TypeIndex Index);
+  Error visitTypeRecord(CVType &Record, const TypeIndex &Index);
   Error visitTypeRecord(CVType &Record);
 
   /// Visits the type records in Data. Sets the error flag on parse failures.
@@ -121,7 +121,7 @@ Error CVTypeVisitor::finishVisitation(CVType &Record) {
   return Error::success();
 }
 
-Error CVTypeVisitor::visitTypeRecord(CVType &Record, TypeIndex Index) {
+Error CVTypeVisitor::visitTypeRecord(CVType &Record, const TypeIndex &Index) {
   if (auto EC = Callbacks.visitTypeBegin(Record, Index))
     return EC;
 
@@ -216,7 +216,7 @@ struct VisitHelper {
 };
 }
 
-Error llvm::codeview::visitTypeRecord(CVType &Record, TypeIndex Index,
+Error llvm::codeview::visitTypeRecord(CVType &Record, const TypeIndex &Index,
                                       TypeVisitorCallbacks &Callbacks,
                                       VisitorDataSource Source) {
   VisitHelper V(Callbacks, Source);
@@ -252,7 +252,7 @@ Error llvm::codeview::visitTypeStream(TypeCollection &Types,
   return V.Visitor.visitTypeStream(Types);
 }
 
-Error llvm::codeview::visitMemberRecord(CVMemberRecord Record,
+Error llvm::codeview::visitMemberRecord(const CVMemberRecord &Record,
                                         TypeVisitorCallbacks &Callbacks,
                                         VisitorDataSource Source) {
   FieldListVisitHelper V(Callbacks, Record.Data, Source);

@@ -74,7 +74,7 @@ private:
 public:
   DWARFDebugPubTable() = default;
 
-  void extract(DWARFDataExtractor Data, bool GnuStyle,
+  void extract(const DWARFDataExtractor &Data, bool GnuStyle,
                function_ref<void(Error)> RecoverableErrorHandler);
 
   void dump(raw_ostream &OS) const;

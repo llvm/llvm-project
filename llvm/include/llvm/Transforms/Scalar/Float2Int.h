@@ -40,7 +40,7 @@ private:
   void seen(Instruction *I, ConstantRange R);
   ConstantRange badRange();
   ConstantRange unknownRange();
-  ConstantRange validateRange(ConstantRange R);
+  ConstantRange validateRange(const ConstantRange &R);
   std::optional<ConstantRange> calcRange(Instruction *I);
   void walkBackwards();
   void walkForwards();

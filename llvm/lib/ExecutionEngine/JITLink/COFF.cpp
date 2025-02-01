@@ -40,7 +40,7 @@ static StringRef getMachineName(uint16_t Machine) {
 }
 
 Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromCOFFObject(MemoryBufferRef ObjectBuffer,
+createLinkGraphFromCOFFObject(const MemoryBufferRef &ObjectBuffer,
                               std::shared_ptr<orc::SymbolStringPool> SSP) {
   StringRef Data = ObjectBuffer.getBuffer();
 

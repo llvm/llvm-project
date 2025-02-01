@@ -20,7 +20,7 @@
 using namespace llvm;
 
 void DWARFDebugAranges::extract(
-    DWARFDataExtractor DebugArangesData,
+    const DWARFDataExtractor &DebugArangesData,
     function_ref<void(Error)> RecoverableErrorHandler,
     function_ref<void(Error)> WarningHandler) {
   if (!DebugArangesData.isValidOffset(0))

@@ -133,7 +133,7 @@ Error DWARFDebugAddrTable::extract(const DWARFDataExtractor &Data,
   return extractV5(Data, OffsetPtr, CUAddrSize, WarnCallback);
 }
 
-void DWARFDebugAddrTable::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
+void DWARFDebugAddrTable::dump(raw_ostream &OS, const DIDumpOptions &DumpOpts) const {
   if (DumpOpts.Verbose)
     OS << format("0x%8.8" PRIx64 ": ", Offset);
   if (Length) {

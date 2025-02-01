@@ -1154,7 +1154,7 @@ unsigned DWARFLinker::DIECloner::cloneDieReferenceAttribute(
 }
 
 void DWARFLinker::DIECloner::cloneExpression(
-    DataExtractor &Data, DWARFExpression Expression, const DWARFFile &File,
+    DataExtractor &Data, const DWARFExpression &Expression, const DWARFFile &File,
     CompileUnit &Unit, SmallVectorImpl<uint8_t> &OutputBuffer,
     int64_t AddrRelocAdjustment, bool IsLittleEndian) {
   using Encoding = DWARFExpression::Operation::Encoding;
@@ -1628,7 +1628,7 @@ unsigned DWARFLinker::DIECloner::cloneAttribute(
 
 void DWARFLinker::DIECloner::addObjCAccelerator(CompileUnit &Unit,
                                                 const DIE *Die,
-                                                DwarfStringPoolEntryRef Name,
+                                                const DwarfStringPoolEntryRef &Name,
                                                 OffsetsStringPool &StringPool,
                                                 bool SkipPubSection) {
   std::optional<ObjCSelectorNames> Names =

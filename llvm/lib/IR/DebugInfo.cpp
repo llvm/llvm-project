@@ -2050,7 +2050,7 @@ std::optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
 }
 
 /// Returns nullptr if the assignment shouldn't be attributed to this variable.
-static void emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
+static void emitDbgAssign(const AssignmentInfo &Info, Value *Val, Value *Dest,
                           Instruction &StoreLikeInst, const VarRecord &VarRec,
                           DIBuilder &DIB) {
   auto *ID = StoreLikeInst.getMetadata(LLVMContext::MD_DIAssignID);

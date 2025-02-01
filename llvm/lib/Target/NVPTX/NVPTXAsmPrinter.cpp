@@ -1822,7 +1822,7 @@ void NVPTXAsmPrinter::printFPConstant(const ConstantFP *Fp, raw_ostream &O) {
   } else
     llvm_unreachable("unsupported fp type");
 
-  APInt API = APF.bitcastToAPInt();
+  const APInt &API = APF.bitcastToAPInt();
   O << lead << format_hex_no_prefix(API.getZExtValue(), numHex, /*Upper=*/true);
 }
 

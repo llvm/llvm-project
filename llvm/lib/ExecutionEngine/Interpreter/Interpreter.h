@@ -174,7 +174,7 @@ public:
 
   GenericValue callExternalFunction(Function *F,
                                     ArrayRef<GenericValue> ArgVals);
-  void exitCalled(GenericValue GV);
+  void exitCalled(const GenericValue &GV);
 
   void addAtExitHandler(Function *F) {
     AtExitHandlers.push_back(F);
@@ -224,7 +224,7 @@ private:  // Helper functions
                                    ExecutionContext &SF);
   GenericValue executeBitCastInst(Value *SrcVal, Type *DstTy,
                                   ExecutionContext &SF);
-  void popStackAndReturnValueToCaller(Type *RetTy, GenericValue Result);
+  void popStackAndReturnValueToCaller(Type *RetTy, const GenericValue &Result);
 
 };
 

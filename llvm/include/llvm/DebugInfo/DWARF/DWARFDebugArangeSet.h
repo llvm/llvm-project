@@ -61,7 +61,7 @@ public:
   DWARFDebugArangeSet() { clear(); }
 
   void clear();
-  Error extract(DWARFDataExtractor data, uint64_t *offset_ptr,
+  Error extract(const DWARFDataExtractor &data, uint64_t *offset_ptr,
                 function_ref<void(Error)> WarningHandler = nullptr);
   void dump(raw_ostream &OS) const;
 

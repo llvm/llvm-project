@@ -69,7 +69,7 @@ Expected<uint16_t> readTargetMachineArch(StringRef Buffer) {
 }
 
 Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromELFObject(MemoryBufferRef ObjectBuffer,
+createLinkGraphFromELFObject(const MemoryBufferRef &ObjectBuffer,
                              std::shared_ptr<orc::SymbolStringPool> SSP) {
   StringRef Buffer = ObjectBuffer.getBuffer();
   if (Buffer.size() < ELF::EI_NIDENT)

@@ -665,7 +665,7 @@ private:
                                         CompileUnit &Unit);
 
     /// Clone a DWARF expression that may be referencing another DIE.
-    void cloneExpression(DataExtractor &Data, DWARFExpression Expression,
+    void cloneExpression(DataExtractor &Data, const DWARFExpression &Expression,
                          const DWARFFile &File, CompileUnit &Unit,
                          SmallVectorImpl<uint8_t> &OutputBuffer,
                          int64_t AddrRelocAdjustment, bool IsLittleEndian);
@@ -709,7 +709,7 @@ private:
 
     /// Helper for cloneDIE.
     void addObjCAccelerator(CompileUnit &Unit, const DIE *Die,
-                            DwarfStringPoolEntryRef Name,
+                            const DwarfStringPoolEntryRef &Name,
                             OffsetsStringPool &StringPool, bool SkipPubSection);
 
     void rememberUnitForMacroOffset(CompileUnit &Unit);

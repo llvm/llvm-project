@@ -74,7 +74,7 @@ public:
 
   Error finalizeMsfLayout();
 
-  Error commit(const msf::MSFLayout &Layout, WritableBinaryStreamRef MsfBuffer);
+  Error commit(const msf::MSFLayout &Layout, const WritableBinaryStreamRef &MsfBuffer);
 
   void addSectionContrib(const SectionContrib &SC) {
     SectionContribs.emplace_back(SC);

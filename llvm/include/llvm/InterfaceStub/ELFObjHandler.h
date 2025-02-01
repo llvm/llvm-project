@@ -24,7 +24,7 @@ namespace ifs {
 struct IFSStub;
 
 /// Attempt to read a binary ELF file from a MemoryBuffer.
-Expected<std::unique_ptr<IFSStub>> readELFFile(MemoryBufferRef Buf);
+Expected<std::unique_ptr<IFSStub>> readELFFile(const MemoryBufferRef &Buf);
 
 /// Attempt to write a binary ELF stub.
 /// This function determines appropriate ELFType using the passed ELFTarget and

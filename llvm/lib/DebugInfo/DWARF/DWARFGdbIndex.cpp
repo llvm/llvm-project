@@ -112,7 +112,7 @@ void DWARFGdbIndex::dump(raw_ostream &OS) {
   }
 }
 
-bool DWARFGdbIndex::parseImpl(DataExtractor Data) {
+bool DWARFGdbIndex::parseImpl(const DataExtractor &Data) {
   uint64_t Offset = 0;
 
   // Only version 7 and 8 are supported at this moment.
@@ -195,7 +195,7 @@ bool DWARFGdbIndex::parseImpl(DataExtractor Data) {
   return true;
 }
 
-void DWARFGdbIndex::parse(DataExtractor Data) {
+void DWARFGdbIndex::parse(const DataExtractor &Data) {
   HasContent = !Data.getData().empty();
   HasError = HasContent && !parseImpl(Data);
 }

@@ -27,7 +27,7 @@ public:
 
 private:
   void clear();
-  void extract(DWARFDataExtractor DebugArangesData,
+  void extract(const DWARFDataExtractor &DebugArangesData,
                function_ref<void(Error)> RecoverableErrorHandler,
                function_ref<void(Error)> WarningHandler);
 

@@ -83,7 +83,7 @@ MachineTypes getEmulation(StringRef S) {
       .Default(IMAGE_FILE_MACHINE_UNKNOWN);
 }
 
-MachineTypes getMachine(Triple T) {
+MachineTypes getMachine(const Triple &T) {
   switch (T.getArch()) {
   case Triple::x86:
     return COFF::IMAGE_FILE_MACHINE_I386;

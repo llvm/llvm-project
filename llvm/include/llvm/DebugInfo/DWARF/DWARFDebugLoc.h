@@ -108,7 +108,7 @@ public:
       : DWARFLocationTable(std::move(Data)) {}
 
   /// Print the location lists found within the debug_loc section.
-  void dump(raw_ostream &OS, const DWARFObject &Obj, DIDumpOptions DumpOpts,
+  void dump(raw_ostream &OS, const DWARFObject &Obj, const DIDumpOptions &DumpOpts,
             std::optional<uint64_t> Offset) const;
 
   Error visitLocationList(
@@ -132,7 +132,7 @@ public:
 
   /// Dump all location lists within the given range.
   void dumpRange(uint64_t StartOffset, uint64_t Size, raw_ostream &OS,
-                 const DWARFObject &Obj, DIDumpOptions DumpOpts);
+                 const DWARFObject &Obj, const DIDumpOptions &DumpOpts);
 
 protected:
   void dumpRawEntry(const DWARFLocationEntry &Entry, raw_ostream &OS,

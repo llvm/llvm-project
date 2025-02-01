@@ -350,7 +350,7 @@ static Error load(MachOObjectFile *Obj, RecordsSlice &Slice,
   return Error::success();
 }
 
-Expected<Records> DylibReader::readFile(MemoryBufferRef Buffer,
+Expected<Records> DylibReader::readFile(const MemoryBufferRef &Buffer,
                                         const ParseOption &Opt) {
   Records Results;
 
@@ -425,7 +425,7 @@ Expected<Records> DylibReader::readFile(MemoryBufferRef Buffer,
 }
 
 Expected<std::unique_ptr<InterfaceFile>>
-DylibReader::get(MemoryBufferRef Buffer) {
+DylibReader::get(const MemoryBufferRef &Buffer) {
   ParseOption Options;
   auto SlicesOrErr = readFile(Buffer, Options);
   if (!SlicesOrErr)

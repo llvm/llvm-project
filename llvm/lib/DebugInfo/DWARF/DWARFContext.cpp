@@ -977,7 +977,7 @@ static void dumpLoclistsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
   }
 }
 
-static void dumpPubTableSection(raw_ostream &OS, DIDumpOptions DumpOpts,
+static void dumpPubTableSection(raw_ostream &OS, const DIDumpOptions &DumpOpts,
                                 DWARFDataExtractor Data, bool GnuStyle) {
   DWARFDebugPubTable Table;
   Table.extract(Data, GnuStyle, DumpOpts.RecoverableErrorHandler);

@@ -301,7 +301,7 @@ static void addMemoryAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
 // Compute definitive function attributes for a function taking into account
 // prevailing definitions and linkage types
 static FunctionSummary *calculatePrevailingSummary(
-    ValueInfo VI,
+    const ValueInfo &VI,
     DenseMap<ValueInfo, FunctionSummary *> &CachedPrevailingSummary,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         IsPrevailing) {
@@ -1709,7 +1709,7 @@ private:
   SmallVector<InferenceDescriptor, 4> InferenceDescriptors;
 
 public:
-  void registerAttrInference(InferenceDescriptor AttrInference) {
+  void registerAttrInference(const InferenceDescriptor &AttrInference) {
     InferenceDescriptors.push_back(AttrInference);
   }
 

@@ -30,13 +30,13 @@ enum VisitorDataSource {
                     // supply the bytes.
 };
 
-Error visitTypeRecord(CVType &Record, TypeIndex Index,
+Error visitTypeRecord(CVType &Record, const TypeIndex &Index,
                       TypeVisitorCallbacks &Callbacks,
                       VisitorDataSource Source = VDS_BytesPresent);
 Error visitTypeRecord(CVType &Record, TypeVisitorCallbacks &Callbacks,
                       VisitorDataSource Source = VDS_BytesPresent);
 
-Error visitMemberRecord(CVMemberRecord Record, TypeVisitorCallbacks &Callbacks,
+Error visitMemberRecord(const CVMemberRecord &Record, TypeVisitorCallbacks &Callbacks,
                         VisitorDataSource Source = VDS_BytesPresent);
 Error visitMemberRecord(TypeLeafKind Kind, ArrayRef<uint8_t> Record,
                         TypeVisitorCallbacks &Callbacks);

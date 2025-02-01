@@ -688,7 +688,7 @@ static Error writeELFBinaryToFile(StringRef FilePath, const IFSStub &Stub,
   return FileBuf->commit();
 }
 
-Expected<std::unique_ptr<IFSStub>> readELFFile(MemoryBufferRef Buf) {
+Expected<std::unique_ptr<IFSStub>> readELFFile(const MemoryBufferRef &Buf) {
   Expected<std::unique_ptr<Binary>> BinOrErr = createBinary(Buf);
   if (!BinOrErr) {
     return BinOrErr.takeError();

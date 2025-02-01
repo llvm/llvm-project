@@ -78,13 +78,13 @@ protected:
 
 public:
   explicit AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
-                      const Twine &Name, InsertPosition InsertBefore);
+                      const Twine &Name, const InsertPosition &InsertBefore);
 
   AllocaInst(Type *Ty, unsigned AddrSpace, const Twine &Name,
-             InsertPosition InsertBefore);
+             const InsertPosition &InsertBefore);
 
   AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize, Align Align,
-             const Twine &Name = "", InsertPosition InsertBefore = nullptr);
+             const Twine &Name = "", const InsertPosition &InsertBefore = nullptr);
 
   /// Return true if there is an allocation size parameter to the allocation
   /// instruction that is not 1.
@@ -191,15 +191,15 @@ protected:
 
 public:
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr,
-           InsertPosition InsertBefore);
+           const InsertPosition &InsertBefore);
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
-           InsertPosition InsertBefore);
+           const InsertPosition &InsertBefore);
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
-           Align Align, InsertPosition InsertBefore = nullptr);
+           Align Align, const InsertPosition &InsertBefore = nullptr);
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
            Align Align, AtomicOrdering Order,
            SyncScope::ID SSID = SyncScope::System,
-           InsertPosition InsertBefore = nullptr);
+           const InsertPosition &InsertBefore = nullptr);
 
   /// Return true if this is a load from a volatile memory location.
   bool isVolatile() const { return getSubclassData<VolatileField>(); }
@@ -308,14 +308,14 @@ protected:
   StoreInst *cloneImpl() const;
 
 public:
-  StoreInst(Value *Val, Value *Ptr, InsertPosition InsertBefore);
+  StoreInst(Value *Val, Value *Ptr, const InsertPosition &InsertBefore);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile,
-            InsertPosition InsertBefore);
+            const InsertPosition &InsertBefore);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
-            InsertPosition InsertBefore = nullptr);
+            const InsertPosition &InsertBefore = nullptr);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
             AtomicOrdering Order, SyncScope::ID SSID = SyncScope::System,
-            InsertPosition InsertBefore = nullptr);
+            const InsertPosition &InsertBefore = nullptr);
 
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
@@ -439,7 +439,7 @@ public:
   // SequentiallyConsistent.
   FenceInst(LLVMContext &C, AtomicOrdering Ordering,
             SyncScope::ID SSID = SyncScope::System,
-            InsertPosition InsertBefore = nullptr);
+            const InsertPosition &InsertBefore = nullptr);
 
   // allocate space for exactly zero operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
@@ -520,7 +520,7 @@ public:
   AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal, Align Alignment,
                     AtomicOrdering SuccessOrdering,
                     AtomicOrdering FailureOrdering, SyncScope::ID SSID,
-                    InsertPosition InsertBefore = nullptr);
+                    const InsertPosition &InsertBefore = nullptr);
 
   // allocate space for exactly three operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
@@ -787,7 +787,7 @@ private:
 public:
   AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val, Align Alignment,
                 AtomicOrdering Ordering, SyncScope::ID SSID,
-                InsertPosition InsertBefore = nullptr);
+                const InsertPosition &InsertBefore = nullptr);
 
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
@@ -942,7 +942,7 @@ class GetElementPtrInst : public Instruction {
   /// specified BasicBlock.
   inline GetElementPtrInst(Type *PointeeType, Value *Ptr,
                            ArrayRef<Value *> IdxList, AllocInfo AllocInfo,
-                           const Twine &NameStr, InsertPosition InsertBefore);
+                           const Twine &NameStr, const InsertPosition &InsertBefore);
 
   void init(Value *Ptr, ArrayRef<Value *> IdxList, const Twine &NameStr);
 
@@ -956,7 +956,7 @@ public:
   static GetElementPtrInst *Create(Type *PointeeType, Value *Ptr,
                                    ArrayRef<Value *> IdxList,
                                    const Twine &NameStr = "",
-                                   InsertPosition InsertBefore = nullptr) {
+                                   const InsertPosition &InsertBefore = nullptr) {
     unsigned Values = 1 + unsigned(IdxList.size());
     assert(PointeeType && "Must specify element type");
     IntrusiveOperandsAllocMarker AllocMarker{Values};
@@ -967,7 +967,7 @@ public:
   static GetElementPtrInst *Create(Type *PointeeType, Value *Ptr,
                                    ArrayRef<Value *> IdxList, GEPNoWrapFlags NW,
                                    const Twine &NameStr = "",
-                                   InsertPosition InsertBefore = nullptr) {
+                                   const InsertPosition &InsertBefore = nullptr) {
     GetElementPtrInst *GEP =
         Create(PointeeType, Ptr, IdxList, NameStr, InsertBefore);
     GEP->setNoWrapFlags(NW);
@@ -979,7 +979,7 @@ public:
   static GetElementPtrInst *
   CreateInBounds(Type *PointeeType, Value *Ptr, ArrayRef<Value *> IdxList,
                  const Twine &NameStr = "",
-                 InsertPosition InsertBefore = nullptr) {
+                 const InsertPosition &InsertBefore = nullptr) {
     return Create(PointeeType, Ptr, IdxList, GEPNoWrapFlags::inBounds(),
                   NameStr, InsertBefore);
   }
@@ -1137,7 +1137,7 @@ struct OperandTraits<GetElementPtrInst>
 GetElementPtrInst::GetElementPtrInst(Type *PointeeType, Value *Ptr,
                                      ArrayRef<Value *> IdxList,
                                      AllocInfo AllocInfo, const Twine &NameStr,
-                                     InsertPosition InsertBefore)
+                                     const InsertPosition &InsertBefore)
     : Instruction(getGEPReturnType(Ptr, IdxList), GetElementPtr, AllocInfo,
                   InsertBefore),
       SourceElementType(PointeeType),
@@ -1178,7 +1178,7 @@ protected:
 
 public:
   /// Constructor with insertion semantics.
-  ICmpInst(InsertPosition InsertBefore, ///< Where to insert
+  ICmpInst(const InsertPosition &InsertBefore, ///< Where to insert
            Predicate pred, ///< The predicate to use for the comparison
            Value *LHS,     ///< The left-hand-side of the expression
            Value *RHS,     ///< The right-hand-side of the expression
@@ -1395,7 +1395,7 @@ protected:
 
 public:
   /// Constructor with insertion semantics.
-  FCmpInst(InsertPosition InsertBefore, ///< Where to insert
+  FCmpInst(const InsertPosition &InsertBefore, ///< Where to insert
            Predicate pred, ///< The predicate to use for the comparison
            Value *LHS,     ///< The left-hand-side of the expression
            Value *RHS,     ///< The right-hand-side of the expression
@@ -1482,15 +1482,15 @@ class CallInst : public CallBase {
   /// Construct a CallInst from a range of arguments
   inline CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
                   ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr,
-                  AllocInfo AllocInfo, InsertPosition InsertBefore);
+                  AllocInfo AllocInfo, const InsertPosition &InsertBefore);
 
   inline CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
                   const Twine &NameStr, AllocInfo AllocInfo,
-                  InsertPosition InsertBefore)
+                  const InsertPosition &InsertBefore)
       : CallInst(Ty, Func, Args, {}, NameStr, AllocInfo, InsertBefore) {}
 
   explicit CallInst(FunctionType *Ty, Value *F, const Twine &NameStr,
-                    AllocInfo AllocInfo, InsertPosition InsertBefore);
+                    AllocInfo AllocInfo, const InsertPosition &InsertBefore);
 
   void init(FunctionType *FTy, Value *Func, ArrayRef<Value *> Args,
             ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr);
@@ -1512,7 +1512,7 @@ protected:
 
 public:
   static CallInst *Create(FunctionType *Ty, Value *F, const Twine &NameStr = "",
-                          InsertPosition InsertBefore = nullptr) {
+                          const InsertPosition &InsertBefore = nullptr) {
     IntrusiveOperandsAllocMarker AllocMarker{ComputeNumOperands(0)};
     return new (AllocMarker)
         CallInst(Ty, F, NameStr, AllocMarker, InsertBefore);
@@ -1520,7 +1520,7 @@ public:
 
   static CallInst *Create(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
                           const Twine &NameStr,
-                          InsertPosition InsertBefore = nullptr) {
+                          const InsertPosition &InsertBefore = nullptr) {
     IntrusiveOperandsAllocMarker AllocMarker{ComputeNumOperands(Args.size())};
     return new (AllocMarker)
         CallInst(Ty, Func, Args, {}, NameStr, AllocMarker, InsertBefore);
@@ -1529,7 +1529,7 @@ public:
   static CallInst *Create(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
                           ArrayRef<OperandBundleDef> Bundles = {},
                           const Twine &NameStr = "",
-                          InsertPosition InsertBefore = nullptr) {
+                          const InsertPosition &InsertBefore = nullptr) {
     IntrusiveOperandsAndDescriptorAllocMarker AllocMarker{
         ComputeNumOperands(unsigned(Args.size()), CountBundleInputs(Bundles)),
         unsigned(Bundles.size() * sizeof(BundleOpInfo))};
@@ -1539,7 +1539,7 @@ public:
   }
 
   static CallInst *Create(FunctionCallee Func, const Twine &NameStr = "",
-                          InsertPosition InsertBefore = nullptr) {
+                          const InsertPosition &InsertBefore = nullptr) {
     return Create(Func.getFunctionType(), Func.getCallee(), NameStr,
                   InsertBefore);
   }
@@ -1547,14 +1547,14 @@ public:
   static CallInst *Create(FunctionCallee Func, ArrayRef<Value *> Args,
                           ArrayRef<OperandBundleDef> Bundles = {},
                           const Twine &NameStr = "",
-                          InsertPosition InsertBefore = nullptr) {
+                          const InsertPosition &InsertBefore = nullptr) {
     return Create(Func.getFunctionType(), Func.getCallee(), Args, Bundles,
                   NameStr, InsertBefore);
   }
 
   static CallInst *Create(FunctionCallee Func, ArrayRef<Value *> Args,
                           const Twine &NameStr,
-                          InsertPosition InsertBefore = nullptr) {
+                          const InsertPosition &InsertBefore = nullptr) {
     return Create(Func.getFunctionType(), Func.getCallee(), Args, NameStr,
                   InsertBefore);
   }
@@ -1566,7 +1566,7 @@ public:
   /// the operand bundles for the new instruction are set to the operand bundles
   /// in \p Bundles.
   static CallInst *Create(CallInst *CI, ArrayRef<OperandBundleDef> Bundles,
-                          InsertPosition InsertPt = nullptr);
+                          const InsertPosition &InsertBefore = nullptr);
 
   // Note that 'musttail' implies 'tail'.
   enum TailCallKind : unsigned {
@@ -1640,7 +1640,7 @@ private:
 
 CallInst::CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
                    ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr,
-                   AllocInfo AllocInfo, InsertPosition InsertBefore)
+                   AllocInfo AllocInfo, const InsertPosition &InsertBefore)
     : CallBase(Ty->getReturnType(), Instruction::Call, AllocInfo,
                InsertBefore) {
   assert(AllocInfo.NumOps ==
@@ -1658,7 +1658,7 @@ class SelectInst : public Instruction {
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{3};
 
   SelectInst(Value *C, Value *S1, Value *S2, const Twine &NameStr,
-             InsertPosition InsertBefore)
+             const InsertPosition &InsertBefore)
       : Instruction(S1->getType(), Instruction::Select, AllocMarker,
                     InsertBefore) {
     init(C, S1, S2);
@@ -1681,7 +1681,7 @@ protected:
 public:
   static SelectInst *Create(Value *C, Value *S1, Value *S2,
                             const Twine &NameStr = "",
-                            InsertPosition InsertBefore = nullptr,
+                            const InsertPosition &InsertBefore = nullptr,
                             Instruction *MDFrom = nullptr) {
     SelectInst *Sel =
         new (AllocMarker) SelectInst(C, S1, S2, NameStr, InsertBefore);
@@ -1747,7 +1747,7 @@ protected:
 
 public:
   VAArgInst(Value *List, Type *Ty, const Twine &NameStr = "",
-            InsertPosition InsertBefore = nullptr)
+            const InsertPosition &InsertBefore = nullptr)
       : UnaryInstruction(Ty, VAArg, List, InsertBefore) {
     setName(NameStr);
   }
@@ -1776,7 +1776,7 @@ class ExtractElementInst : public Instruction {
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{2};
 
   ExtractElementInst(Value *Vec, Value *Idx, const Twine &NameStr = "",
-                     InsertPosition InsertBefore = nullptr);
+                     const InsertPosition &InsertBefore = nullptr);
 
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
@@ -1787,7 +1787,7 @@ protected:
 public:
   static ExtractElementInst *Create(Value *Vec, Value *Idx,
                                     const Twine &NameStr = "",
-                                    InsertPosition InsertBefore = nullptr) {
+                                    const InsertPosition &InsertBefore = nullptr) {
     return new (AllocMarker)
         ExtractElementInst(Vec, Idx, NameStr, InsertBefore);
   }
@@ -1836,7 +1836,7 @@ class InsertElementInst : public Instruction {
 
   InsertElementInst(Value *Vec, Value *NewElt, Value *Idx,
                     const Twine &NameStr = "",
-                    InsertPosition InsertBefore = nullptr);
+                    const InsertPosition &InsertBefore = nullptr);
 
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
@@ -1847,7 +1847,7 @@ protected:
 public:
   static InsertElementInst *Create(Value *Vec, Value *NewElt, Value *Idx,
                                    const Twine &NameStr = "",
-                                   InsertPosition InsertBefore = nullptr) {
+                                   const InsertPosition &InsertBefore = nullptr) {
     return new (AllocMarker)
         InsertElementInst(Vec, NewElt, Idx, NameStr, InsertBefore);
   }
@@ -1912,15 +1912,15 @@ protected:
 
 public:
   ShuffleVectorInst(Value *V1, Value *Mask, const Twine &NameStr = "",
-                    InsertPosition InsertBefore = nullptr);
+                    const InsertPosition &InsertBefore = nullptr);
   ShuffleVectorInst(Value *V1, ArrayRef<int> Mask, const Twine &NameStr = "",
-                    InsertPosition InsertBefore = nullptr);
+                    const InsertPosition &InsertBefore = nullptr);
   ShuffleVectorInst(Value *V1, Value *V2, Value *Mask,
                     const Twine &NameStr = "",
-                    InsertPosition InsertBefore = nullptr);
+                    const InsertPosition &InsertBefore = nullptr);
   ShuffleVectorInst(Value *V1, Value *V2, ArrayRef<int> Mask,
                     const Twine &NameStr = "",
-                    InsertPosition InsertBefore = nullptr);
+                    const InsertPosition &InsertBefore = nullptr);
 
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
   void operator delete(void *Ptr) { return User::operator delete(Ptr); }
@@ -2404,7 +2404,7 @@ class ExtractValueInst : public UnaryInstruction {
   /// insert before an existing instruction, the third appends the new
   /// instruction to the specified BasicBlock.
   inline ExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
-                          const Twine &NameStr, InsertPosition InsertBefore);
+                          const Twine &NameStr, const InsertPosition &InsertBefore);
 
   void init(ArrayRef<unsigned> Idxs, const Twine &NameStr);
 
@@ -2417,7 +2417,7 @@ protected:
 public:
   static ExtractValueInst *Create(Value *Agg, ArrayRef<unsigned> Idxs,
                                   const Twine &NameStr = "",
-                                  InsertPosition InsertBefore = nullptr) {
+                                  const InsertPosition &InsertBefore = nullptr) {
     return new
       ExtractValueInst(Agg, Idxs, NameStr, InsertBefore);
   }
@@ -2469,7 +2469,7 @@ public:
 
 ExtractValueInst::ExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
                                    const Twine &NameStr,
-                                   InsertPosition InsertBefore)
+                                   const InsertPosition &InsertBefore)
     : UnaryInstruction(checkGEPType(getIndexedType(Agg->getType(), Idxs)),
                        ExtractValue, Agg, InsertBefore) {
   init(Idxs, NameStr);
@@ -2494,13 +2494,13 @@ class InsertValueInst : public Instruction {
   /// can optionally insert before an existing instruction, the third appends
   /// the new instruction to the specified BasicBlock.
   inline InsertValueInst(Value *Agg, Value *Val, ArrayRef<unsigned> Idxs,
-                         const Twine &NameStr, InsertPosition InsertBefore);
+                         const Twine &NameStr, const InsertPosition &InsertBefore);
 
   /// Constructors - These three constructors are convenience methods because
   /// one and two index insertvalue instructions are so common.
   InsertValueInst(Value *Agg, Value *Val, unsigned Idx,
                   const Twine &NameStr = "",
-                  InsertPosition InsertBefore = nullptr);
+                  const InsertPosition &InsertBefore = nullptr);
 
   void init(Value *Agg, Value *Val, ArrayRef<unsigned> Idxs,
             const Twine &NameStr);
@@ -2519,7 +2519,7 @@ public:
   static InsertValueInst *Create(Value *Agg, Value *Val,
                                  ArrayRef<unsigned> Idxs,
                                  const Twine &NameStr = "",
-                                 InsertPosition InsertBefore = nullptr) {
+                                 const InsertPosition &InsertBefore = nullptr) {
     return new InsertValueInst(Agg, Val, Idxs, NameStr, InsertBefore);
   }
 
@@ -2582,7 +2582,7 @@ struct OperandTraits<InsertValueInst> :
 
 InsertValueInst::InsertValueInst(Value *Agg, Value *Val,
                                  ArrayRef<unsigned> Idxs, const Twine &NameStr,
-                                 InsertPosition InsertBefore)
+                                 const InsertPosition &InsertBefore)
     : Instruction(Agg->getType(), InsertValue, AllocMarker, InsertBefore) {
   init(Agg, Val, Idxs, NameStr);
 }
@@ -2608,7 +2608,7 @@ class PHINode : public Instruction {
 
   explicit PHINode(Type *Ty, unsigned NumReservedValues,
                    const Twine &NameStr = "",
-                   InsertPosition InsertBefore = nullptr)
+                   const InsertPosition &InsertBefore = nullptr)
       : Instruction(Ty, Instruction::PHI, AllocMarker, InsertBefore),
         ReservedSpace(NumReservedValues) {
     assert(!Ty->isTokenTy() && "PHI nodes cannot have token type!");
@@ -2634,7 +2634,7 @@ public:
   /// edges that this phi node will have (use 0 if you really have no idea).
   static PHINode *Create(Type *Ty, unsigned NumReservedValues,
                          const Twine &NameStr = "",
-                         InsertPosition InsertBefore = nullptr) {
+                         const InsertPosition &InsertBefore = nullptr) {
     return new (AllocMarker)
         PHINode(Ty, NumReservedValues, NameStr, InsertBefore);
   }
@@ -2853,7 +2853,7 @@ public:
 
 private:
   explicit LandingPadInst(Type *RetTy, unsigned NumReservedValues,
-                          const Twine &NameStr, InsertPosition InsertBefore);
+                          const Twine &NameStr, const InsertPosition &InsertBefore);
 
   // Allocate space for exactly zero operands.
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
@@ -2874,7 +2874,7 @@ public:
   /// clauses that this landingpad will have (use 0 if you really have no idea).
   static LandingPadInst *Create(Type *RetTy, unsigned NumReservedClauses,
                                 const Twine &NameStr = "",
-                                InsertPosition InsertBefore = nullptr);
+                                const InsertPosition &InsertBefore = nullptr);
 
   /// Provide fast operand accessors
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -2953,7 +2953,7 @@ private:
   // NOTE: If the Value* passed is of type void then the constructor behaves as
   // if it was passed NULL.
   explicit ReturnInst(LLVMContext &C, Value *retVal, AllocInfo AllocInfo,
-                      InsertPosition InsertBefore);
+                      const InsertPosition &InsertBefore);
 
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
@@ -2963,7 +2963,7 @@ protected:
 
 public:
   static ReturnInst *Create(LLVMContext &C, Value *retVal = nullptr,
-                            InsertPosition InsertBefore = nullptr) {
+                            const InsertPosition &InsertBefore = nullptr) {
     IntrusiveOperandsAllocMarker AllocMarker{retVal ? 1U : 0U};
     return new (AllocMarker) ReturnInst(C, retVal, AllocMarker, InsertBefore);
   }
@@ -3029,9 +3029,9 @@ class BranchInst : public Instruction {
   // BranchInst(BB* B, BB *I)                    - 'br B'        insert at end
   // BranchInst(BB* T, BB *F, Value *C, BB *I)   - 'br C, T, F', insert at end
   explicit BranchInst(BasicBlock *IfTrue, AllocInfo AllocInfo,
-                      InsertPosition InsertBefore);
+                      const InsertPosition &InsertBefore);
   BranchInst(BasicBlock *IfTrue, BasicBlock *IfFalse, Value *Cond,
-             AllocInfo AllocInfo, InsertPosition InsertBefore);
+             AllocInfo AllocInfo, const InsertPosition &InsertBefore);
 
   void AssertOK();
 
@@ -3070,14 +3070,14 @@ public:
   };
 
   static BranchInst *Create(BasicBlock *IfTrue,
-                            InsertPosition InsertBefore = nullptr) {
+                            const InsertPosition &InsertBefore = nullptr) {
     IntrusiveOperandsAllocMarker AllocMarker{1};
     return new (AllocMarker) BranchInst(IfTrue, AllocMarker, InsertBefore);
   }
 
   static BranchInst *Create(BasicBlock *IfTrue, BasicBlock *IfFalse,
                             Value *Cond,
-                            InsertPosition InsertBefore = nullptr) {
+                            const InsertPosition &InsertBefore = nullptr) {
     IntrusiveOperandsAllocMarker AllocMarker{3};
     return new (AllocMarker)
         BranchInst(IfTrue, IfFalse, Cond, AllocMarker, InsertBefore);
@@ -3167,7 +3167,7 @@ class SwitchInst : public Instruction {
   /// to make memory allocation more efficient. This constructor can also
   /// auto-insert before another instruction.
   SwitchInst(Value *Value, BasicBlock *Default, unsigned NumCases,
-             InsertPosition InsertBefore);
+             const InsertPosition &InsertBefore);
 
   // allocate space for exactly zero operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
@@ -3337,7 +3337,7 @@ public:
 
   static SwitchInst *Create(Value *Value, BasicBlock *Default,
                             unsigned NumCases,
-                            InsertPosition InsertBefore = nullptr) {
+                            const InsertPosition &InsertBefore = nullptr) {
     return new SwitchInst(Value, Default, NumCases, InsertBefore);
   }
 
@@ -3555,7 +3555,7 @@ class IndirectBrInst : public Instruction {
   /// here to make memory allocation more efficient.  This constructor can also
   /// autoinsert before another instruction.
   IndirectBrInst(Value *Address, unsigned NumDests,
-                 InsertPosition InsertBefore);
+                 const InsertPosition &InsertBefore);
 
   // allocate space for exactly zero operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
@@ -3600,7 +3600,7 @@ public:
   };
 
   static IndirectBrInst *Create(Value *Address, unsigned NumDests,
-                                InsertPosition InsertBefore = nullptr) {
+                                const InsertPosition &InsertBefore = nullptr) {
     return new IndirectBrInst(Address, NumDests, InsertBefore);
   }
 
@@ -3686,7 +3686,7 @@ class InvokeInst : public CallBase {
   inline InvokeInst(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
                     BasicBlock *IfException, ArrayRef<Value *> Args,
                     ArrayRef<OperandBundleDef> Bundles, AllocInfo AllocInfo,
-                    const Twine &NameStr, InsertPosition InsertBefore);
+                    const Twine &NameStr, const InsertPosition &InsertBefore);
 
   void init(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
             BasicBlock *IfException, ArrayRef<Value *> Args,
@@ -3710,7 +3710,7 @@ public:
   static InvokeInst *Create(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
                             BasicBlock *IfException, ArrayRef<Value *> Args,
                             const Twine &NameStr,
-                            InsertPosition InsertBefore = nullptr) {
+                            const InsertPosition &InsertBefore = nullptr) {
     IntrusiveOperandsAllocMarker AllocMarker{
         ComputeNumOperands(unsigned(Args.size()))};
     return new (AllocMarker) InvokeInst(Ty, Func, IfNormal, IfException, Args,
@@ -3721,7 +3721,7 @@ public:
                             BasicBlock *IfException, ArrayRef<Value *> Args,
                             ArrayRef<OperandBundleDef> Bundles = {},
                             const Twine &NameStr = "",
-                            InsertPosition InsertBefore = nullptr) {
+                            const InsertPosition &InsertBefore = nullptr) {
     IntrusiveOperandsAndDescriptorAllocMarker AllocMarker{
         ComputeNumOperands(Args.size(), CountBundleInputs(Bundles)),
         unsigned(Bundles.size() * sizeof(BundleOpInfo))};
@@ -3734,7 +3734,7 @@ public:
   static InvokeInst *Create(FunctionCallee Func, BasicBlock *IfNormal,
                             BasicBlock *IfException, ArrayRef<Value *> Args,
                             const Twine &NameStr,
-                            InsertPosition InsertBefore = nullptr) {
+                            const InsertPosition &InsertBefore = nullptr) {
     return Create(Func.getFunctionType(), Func.getCallee(), IfNormal,
                   IfException, Args, {}, NameStr, InsertBefore);
   }
@@ -3743,7 +3743,7 @@ public:
                             BasicBlock *IfException, ArrayRef<Value *> Args,
                             ArrayRef<OperandBundleDef> Bundles = {},
                             const Twine &NameStr = "",
-                            InsertPosition InsertBefore = nullptr) {
+                            const InsertPosition &InsertBefore = nullptr) {
     return Create(Func.getFunctionType(), Func.getCallee(), IfNormal,
                   IfException, Args, Bundles, NameStr, InsertBefore);
   }
@@ -3755,7 +3755,7 @@ public:
   /// that the operand bundles for the new instruction are set to the operand
   /// bundles in \p Bundles.
   static InvokeInst *Create(InvokeInst *II, ArrayRef<OperandBundleDef> Bundles,
-                            InsertPosition InsertPt = nullptr);
+                            const InsertPosition &InsertBefore = nullptr);
 
   // get*Dest - Return the destination basic blocks...
   BasicBlock *getNormalDest() const {
@@ -3813,7 +3813,7 @@ private:
 InvokeInst::InvokeInst(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
                        BasicBlock *IfException, ArrayRef<Value *> Args,
                        ArrayRef<OperandBundleDef> Bundles, AllocInfo AllocInfo,
-                       const Twine &NameStr, InsertPosition InsertBefore)
+                       const Twine &NameStr, const InsertPosition &InsertBefore)
     : CallBase(Ty->getReturnType(), Instruction::Invoke, AllocInfo,
                InsertBefore) {
   init(Ty, Func, IfNormal, IfException, Args, Bundles, NameStr);
@@ -3840,7 +3840,7 @@ class CallBrInst : public CallBase {
                     ArrayRef<BasicBlock *> IndirectDests,
                     ArrayRef<Value *> Args, ArrayRef<OperandBundleDef> Bundles,
                     AllocInfo AllocInfo, const Twine &NameStr,
-                    InsertPosition InsertBefore);
+                    const InsertPosition &InsertBefore);
 
   void init(FunctionType *FTy, Value *Func, BasicBlock *DefaultDest,
             ArrayRef<BasicBlock *> IndirectDests, ArrayRef<Value *> Args,
@@ -3865,7 +3865,7 @@ public:
                             BasicBlock *DefaultDest,
                             ArrayRef<BasicBlock *> IndirectDests,
                             ArrayRef<Value *> Args, const Twine &NameStr,
-                            InsertPosition InsertBefore = nullptr) {
+                            const InsertPosition &InsertBefore = nullptr) {
     IntrusiveOperandsAllocMarker AllocMarker{
         ComputeNumOperands(Args.size(), IndirectDests.size())};
     return new (AllocMarker)
@@ -3877,7 +3877,7 @@ public:
   Create(FunctionType *Ty, Value *Func, BasicBlock *DefaultDest,
          ArrayRef<BasicBlock *> IndirectDests, ArrayRef<Value *> Args,
          ArrayRef<OperandBundleDef> Bundles = {}, const Twine &NameStr = "",
-         InsertPosition InsertBefore = nullptr) {
+         const InsertPosition &InsertBefore = nullptr) {
     IntrusiveOperandsAndDescriptorAllocMarker AllocMarker{
         ComputeNumOperands(Args.size(), IndirectDests.size(),
                            CountBundleInputs(Bundles)),
@@ -3891,7 +3891,7 @@ public:
   static CallBrInst *Create(FunctionCallee Func, BasicBlock *DefaultDest,
                             ArrayRef<BasicBlock *> IndirectDests,
                             ArrayRef<Value *> Args, const Twine &NameStr,
-                            InsertPosition InsertBefore = nullptr) {
+                            const InsertPosition &InsertBefore = nullptr) {
     return Create(Func.getFunctionType(), Func.getCallee(), DefaultDest,
                   IndirectDests, Args, NameStr, InsertBefore);
   }
@@ -3901,7 +3901,7 @@ public:
                             ArrayRef<Value *> Args,
                             ArrayRef<OperandBundleDef> Bundles = {},
                             const Twine &NameStr = "",
-                            InsertPosition InsertBefore = nullptr) {
+                            const InsertPosition &InsertBefore = nullptr) {
     return Create(Func.getFunctionType(), Func.getCallee(), DefaultDest,
                   IndirectDests, Args, Bundles, NameStr, InsertBefore);
   }
@@ -3913,7 +3913,7 @@ public:
   /// except that the operand bundles for the new instruction are set to the
   /// operand bundles in \p Bundles.
   static CallBrInst *Create(CallBrInst *CBI, ArrayRef<OperandBundleDef> Bundles,
-                            InsertPosition InsertBefore = nullptr);
+                            const InsertPosition &InsertBefore = nullptr);
 
   /// Return the number of callbr indirect dest labels.
   ///
@@ -3986,7 +3986,7 @@ CallBrInst::CallBrInst(FunctionType *Ty, Value *Func, BasicBlock *DefaultDest,
                        ArrayRef<BasicBlock *> IndirectDests,
                        ArrayRef<Value *> Args,
                        ArrayRef<OperandBundleDef> Bundles, AllocInfo AllocInfo,
-                       const Twine &NameStr, InsertPosition InsertBefore)
+                       const Twine &NameStr, const InsertPosition &InsertBefore)
     : CallBase(Ty->getReturnType(), Instruction::CallBr, AllocInfo,
                InsertBefore) {
   init(Ty, Func, DefaultDest, IndirectDests, Args, Bundles, NameStr);
@@ -4004,7 +4004,7 @@ class ResumeInst : public Instruction {
 
   ResumeInst(const ResumeInst &RI);
 
-  explicit ResumeInst(Value *Exn, InsertPosition InsertBefore = nullptr);
+  explicit ResumeInst(Value *Exn, const InsertPosition &InsertBefore = nullptr);
 
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
@@ -4013,7 +4013,7 @@ protected:
   ResumeInst *cloneImpl() const;
 
 public:
-  static ResumeInst *Create(Value *Exn, InsertPosition InsertBefore = nullptr) {
+  static ResumeInst *Create(Value *Exn, const InsertPosition &InsertBefore = nullptr) {
     return new (AllocMarker) ResumeInst(Exn, InsertBefore);
   }
 
@@ -4073,7 +4073,7 @@ class CatchSwitchInst : public Instruction {
   /// This constructor can also autoinsert before another instruction.
   CatchSwitchInst(Value *ParentPad, BasicBlock *UnwindDest,
                   unsigned NumHandlers, const Twine &NameStr,
-                  InsertPosition InsertBefore);
+                  const InsertPosition &InsertBefore);
 
   // allocate space for exactly zero operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
@@ -4093,7 +4093,7 @@ public:
   static CatchSwitchInst *Create(Value *ParentPad, BasicBlock *UnwindDest,
                                  unsigned NumHandlers,
                                  const Twine &NameStr = "",
-                                 InsertPosition InsertBefore = nullptr) {
+                                 const InsertPosition &InsertBefore = nullptr) {
     return new CatchSwitchInst(ParentPad, UnwindDest, NumHandlers, NameStr,
                                InsertBefore);
   }
@@ -4222,14 +4222,14 @@ class CleanupPadInst : public FuncletPadInst {
 private:
   explicit CleanupPadInst(Value *ParentPad, ArrayRef<Value *> Args,
                           AllocInfo AllocInfo, const Twine &NameStr,
-                          InsertPosition InsertBefore)
+                          const InsertPosition &InsertBefore)
       : FuncletPadInst(Instruction::CleanupPad, ParentPad, Args, AllocInfo,
                        NameStr, InsertBefore) {}
 
 public:
   static CleanupPadInst *Create(Value *ParentPad, ArrayRef<Value *> Args = {},
                                 const Twine &NameStr = "",
-                                InsertPosition InsertBefore = nullptr) {
+                                const InsertPosition &InsertBefore = nullptr) {
     IntrusiveOperandsAllocMarker AllocMarker{unsigned(1 + Args.size())};
     return new (AllocMarker)
         CleanupPadInst(ParentPad, Args, AllocMarker, NameStr, InsertBefore);
@@ -4251,14 +4251,14 @@ class CatchPadInst : public FuncletPadInst {
 private:
   explicit CatchPadInst(Value *CatchSwitch, ArrayRef<Value *> Args,
                         AllocInfo AllocInfo, const Twine &NameStr,
-                        InsertPosition InsertBefore)
+                        const InsertPosition &InsertBefore)
       : FuncletPadInst(Instruction::CatchPad, CatchSwitch, Args, AllocInfo,
                        NameStr, InsertBefore) {}
 
 public:
   static CatchPadInst *Create(Value *CatchSwitch, ArrayRef<Value *> Args,
                               const Twine &NameStr = "",
-                              InsertPosition InsertBefore = nullptr) {
+                              const InsertPosition &InsertBefore = nullptr) {
     IntrusiveOperandsAllocMarker AllocMarker{unsigned(1 + Args.size())};
     return new (AllocMarker)
         CatchPadInst(CatchSwitch, Args, AllocMarker, NameStr, InsertBefore);
@@ -4290,7 +4290,7 @@ class CatchReturnInst : public Instruction {
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{2};
 
   CatchReturnInst(const CatchReturnInst &RI);
-  CatchReturnInst(Value *CatchPad, BasicBlock *BB, InsertPosition InsertBefore);
+  CatchReturnInst(Value *CatchPad, BasicBlock *BB, const InsertPosition &InsertBefore);
 
   void init(Value *CatchPad, BasicBlock *BB);
 
@@ -4302,7 +4302,7 @@ protected:
 
 public:
   static CatchReturnInst *Create(Value *CatchPad, BasicBlock *BB,
-                                 InsertPosition InsertBefore = nullptr) {
+                                 const InsertPosition &InsertBefore = nullptr) {
     assert(CatchPad);
     assert(BB);
     return new (AllocMarker) CatchReturnInst(CatchPad, BB, InsertBefore);
@@ -4367,7 +4367,7 @@ class CleanupReturnInst : public Instruction {
 private:
   CleanupReturnInst(const CleanupReturnInst &RI, AllocInfo AllocInfo);
   CleanupReturnInst(Value *CleanupPad, BasicBlock *UnwindBB,
-                    AllocInfo AllocInfo, InsertPosition InsertBefore = nullptr);
+                    AllocInfo AllocInfo, const InsertPosition &InsertBefore = nullptr);
 
   void init(Value *CleanupPad, BasicBlock *UnwindBB);
 
@@ -4380,7 +4380,7 @@ protected:
 public:
   static CleanupReturnInst *Create(Value *CleanupPad,
                                    BasicBlock *UnwindBB = nullptr,
-                                   InsertPosition InsertBefore = nullptr) {
+                                   const InsertPosition &InsertBefore = nullptr) {
     assert(CleanupPad);
     unsigned Values = 1;
     if (UnwindBB)
@@ -4469,7 +4469,7 @@ protected:
 
 public:
   explicit UnreachableInst(LLVMContext &C,
-                           InsertPosition InsertBefore = nullptr);
+                           const InsertPosition &InsertBefore = nullptr);
 
   // allocate space for exactly zero operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
@@ -4515,7 +4515,7 @@ public:
   TruncInst(Value *S,                  ///< The value to be truncated
             Type *Ty,                  ///< The (smaller) type to truncate to
             const Twine &NameStr = "", ///< A name for the new instruction
-            InsertPosition InsertBefore =
+            const InsertPosition &InsertBefore =
                 nullptr ///< Where to insert the new instruction
   );
 
@@ -4579,7 +4579,7 @@ public:
   ZExtInst(Value *S,                  ///< The value to be zero extended
            Type *Ty,                  ///< The type to zero extend to
            const Twine &NameStr = "", ///< A name for the new instruction
-           InsertPosition InsertBefore =
+           const InsertPosition &InsertBefore =
                nullptr ///< Where to insert the new instruction
   );
 
@@ -4610,7 +4610,7 @@ public:
   SExtInst(Value *S,                  ///< The value to be sign extended
            Type *Ty,                  ///< The type to sign extend to
            const Twine &NameStr = "", ///< A name for the new instruction
-           InsertPosition InsertBefore =
+           const InsertPosition &InsertBefore =
                nullptr ///< Where to insert the new instruction
   );
 
@@ -4640,7 +4640,7 @@ public:                 /// Constructor with insert-before-instruction semantics
   FPTruncInst(Value *S, ///< The value to be truncated
               Type *Ty, ///< The type to truncate to
               const Twine &NameStr = "", ///< A name for the new instruction
-              InsertPosition InsertBefore =
+              const InsertPosition &InsertBefore =
                   nullptr ///< Where to insert the new instruction
   );
 
@@ -4671,7 +4671,7 @@ public:
   FPExtInst(Value *S,                  ///< The value to be extended
             Type *Ty,                  ///< The type to extend to
             const Twine &NameStr = "", ///< A name for the new instruction
-            InsertPosition InsertBefore =
+            const InsertPosition &InsertBefore =
                 nullptr ///< Where to insert the new instruction
   );
 
@@ -4702,7 +4702,7 @@ public:
   UIToFPInst(Value *S,                  ///< The value to be converted
              Type *Ty,                  ///< The type to convert to
              const Twine &NameStr = "", ///< A name for the new instruction
-             InsertPosition InsertBefore =
+             const InsertPosition &InsertBefore =
                  nullptr ///< Where to insert the new instruction
   );
 
@@ -4733,7 +4733,7 @@ public:
   SIToFPInst(Value *S,                  ///< The value to be converted
              Type *Ty,                  ///< The type to convert to
              const Twine &NameStr = "", ///< A name for the new instruction
-             InsertPosition InsertBefore =
+             const InsertPosition &InsertBefore =
                  nullptr ///< Where to insert the new instruction
   );
 
@@ -4764,7 +4764,7 @@ public:
   FPToUIInst(Value *S,                  ///< The value to be converted
              Type *Ty,                  ///< The type to convert to
              const Twine &NameStr = "", ///< A name for the new instruction
-             InsertPosition InsertBefore =
+             const InsertPosition &InsertBefore =
                  nullptr ///< Where to insert the new instruction
   );
 
@@ -4795,7 +4795,7 @@ public:
   FPToSIInst(Value *S,                  ///< The value to be converted
              Type *Ty,                  ///< The type to convert to
              const Twine &NameStr = "", ///< A name for the new instruction
-             InsertPosition InsertBefore =
+             const InsertPosition &InsertBefore =
                  nullptr ///< Where to insert the new instruction
   );
 
@@ -4822,7 +4822,7 @@ public:
   IntToPtrInst(Value *S,                  ///< The value to be converted
                Type *Ty,                  ///< The type to convert to
                const Twine &NameStr = "", ///< A name for the new instruction
-               InsertPosition InsertBefore =
+               const InsertPosition &InsertBefore =
                    nullptr ///< Where to insert the new instruction
   );
 
@@ -4861,7 +4861,7 @@ public:
   PtrToIntInst(Value *S,                  ///< The value to be converted
                Type *Ty,                  ///< The type to convert to
                const Twine &NameStr = "", ///< A name for the new instruction
-               InsertPosition InsertBefore =
+               const InsertPosition &InsertBefore =
                    nullptr ///< Where to insert the new instruction
   );
 
@@ -4904,7 +4904,7 @@ public:
   BitCastInst(Value *S,                  ///< The value to be casted
               Type *Ty,                  ///< The type to casted to
               const Twine &NameStr = "", ///< A name for the new instruction
-              InsertPosition InsertBefore =
+              const InsertPosition &InsertBefore =
                   nullptr ///< Where to insert the new instruction
   );
 
@@ -4937,7 +4937,7 @@ public:
       Value *S,                  ///< The value to be casted
       Type *Ty,                  ///< The type to casted to
       const Twine &NameStr = "", ///< A name for the new instruction
-      InsertPosition InsertBefore =
+      const InsertPosition &InsertBefore =
           nullptr ///< Where to insert the new instruction
   );
 
@@ -5095,7 +5095,7 @@ protected:
 
 public:
   explicit FreezeInst(Value *S, const Twine &NameStr = "",
-                      InsertPosition InsertBefore = nullptr);
+                      const InsertPosition &InsertBefore = nullptr);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Instruction *I) {

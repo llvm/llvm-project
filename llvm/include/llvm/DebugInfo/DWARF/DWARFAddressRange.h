@@ -68,7 +68,7 @@ struct DWARFAddressRange {
     return true;
   }
 
-  void dump(raw_ostream &OS, uint32_t AddressSize, DIDumpOptions DumpOpts = {},
+  void dump(raw_ostream &OS, uint32_t AddressSize, const DIDumpOptions &DumpOpts = {},
             const DWARFObject *Obj = nullptr) const;
 };
 

@@ -381,7 +381,7 @@ void DbiStreamBuilder::createSectionMap(
 }
 
 Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
-                               WritableBinaryStreamRef MsfBuffer) {
+                               const WritableBinaryStreamRef &MsfBuffer) {
   llvm::TimeTraceScope timeScope("Commit DBI stream");
   if (auto EC = finalize())
     return EC;

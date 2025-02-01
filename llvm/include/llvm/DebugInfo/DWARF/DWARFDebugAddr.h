@@ -63,7 +63,7 @@ public:
   Error extractPreStandard(const DWARFDataExtractor &Data, uint64_t *OffsetPtr,
                            uint16_t CUVersion, uint8_t CUAddrSize);
 
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts = {}) const;
+  void dump(raw_ostream &OS, const DIDumpOptions &DumpOpts = {}) const;
 
   /// Return the address based on a given index.
   Expected<uint64_t> getAddrEntry(uint32_t Index) const;

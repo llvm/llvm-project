@@ -112,7 +112,7 @@ class DebuginfodLog {
 
 public:
   // Adds a log entry to end of the queue.
-  void push(DebuginfodLogEntry Entry);
+  void push(const DebuginfodLogEntry &Entry);
   // Adds a log entry to end of the queue.
   void push(const Twine &Message);
   // Blocks until there are log entries in the queue, then pops and returns the

@@ -106,7 +106,7 @@ void DWARFDebugMacro::dump(raw_ostream &OS) const {
 
 Error DWARFDebugMacro::parseImpl(
     std::optional<DWARFUnitVector::compile_unit_range> Units,
-    std::optional<DataExtractor> StringExtractor, DWARFDataExtractor Data,
+    std::optional<DataExtractor> StringExtractor, const DWARFDataExtractor &Data,
     bool IsMacro) {
   uint64_t Offset = 0;
   MacroList *M = nullptr;
@@ -230,7 +230,7 @@ Error DWARFDebugMacro::parseImpl(
   return Error::success();
 }
 
-Error DWARFDebugMacro::MacroHeader::parseMacroHeader(DWARFDataExtractor Data,
+Error DWARFDebugMacro::MacroHeader::parseMacroHeader(const DWARFDataExtractor &Data,
                                                      uint64_t *Offset) {
   Version = Data.getU16(Offset);
   uint8_t FlagData = Data.getU8(Offset);

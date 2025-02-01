@@ -1268,7 +1268,7 @@ static bool isArchSpecifierInvalidOrMissing(Binary *Bin, StringRef Arch) {
 
 Expected<std::vector<std::unique_ptr<BinaryCoverageReader>>>
 BinaryCoverageReader::create(
-    MemoryBufferRef ObjectBuffer, StringRef Arch,
+    const MemoryBufferRef &ObjectBuffer, StringRef Arch,
     SmallVectorImpl<std::unique_ptr<MemoryBuffer>> &ObjectFileBuffers,
     StringRef CompilationDir, SmallVectorImpl<object::BuildIDRef> *BinaryIDs) {
   std::vector<std::unique_ptr<BinaryCoverageReader>> Readers;

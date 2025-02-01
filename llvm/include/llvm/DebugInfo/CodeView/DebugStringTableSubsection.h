@@ -36,7 +36,7 @@ public:
     return S->kind() == DebugSubsectionKind::StringTable;
   }
 
-  Error initialize(BinaryStreamRef Contents);
+  Error initialize(const BinaryStreamRef &Contents);
   Error initialize(BinaryStreamReader &Reader);
 
   Expected<StringRef> getString(uint32_t Offset) const;
