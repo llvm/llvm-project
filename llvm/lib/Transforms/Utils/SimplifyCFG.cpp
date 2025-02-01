@@ -3286,7 +3286,21 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
 
   SmallVector<Instruction *, 4> SpeculatedDbgIntrinsics;
 
+  // The number of already examined instructions. Debug instructions don't
+  // count!
   unsigned SpeculatedInstructions = 0;
+  // By default the number of instructions that may be speculatevly executed is
+  // one. Whenever a pattern is found in the basic block, that is cheap for sure
+  // we increase this number to the size of the pattern (how many instructions
+  // are there in that pattern).
+  unsigned MaxSpeculatedInstructionsToHoist = 1;
+  // In case we have found a cheap pattern, we don't want to do cost checking
+  // anymore. We are sure we want to hoist the pattern. To know, that we are
+  // only hoisting the cheap pattern only and not other expensive instructions
+  // too, we have the `MaxSpeculatedInstructionsToHoist` variable to track that
+  // the basic block truly only contains that pattern.
+  bool PartialInst = false;
+
   bool HoistLoadsStores = HoistLoadsStoresWithCondFaulting &&
                           Options.HoistLoadsStoresWithCondFaulting;
   SmallVector<Instruction *, 2> SpeculatedConditionalLoadsStores;
@@ -3324,13 +3338,17 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
                                     HoistLoadsStoresWithCondFaultingThreshold;
     // Not count load/store into cost if target supports conditional faulting
     // b/c it's cheap to speculate it.
+    WithOverflowInst *OI;
     if (IsSafeCheapLoadStore)
       SpeculatedConditionalLoadsStores.push_back(&I);
+    else if (match(&I,
+              m_ExtractValue<1>(m_OneUse(
+                  m_WithOverflowInst(OI))))) {
+      MaxSpeculatedInstructionsToHoist = 3;
+      PartialInst = true;
+    }
     else
       ++SpeculatedInstructions;
-
-    if (SpeculatedInstructions > 1)
-      return false;
 
     // Don't hoist the instruction if it's unsafe or expensive.
     if (!IsSafeCheapLoadStore &&
@@ -3339,9 +3357,15 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
           (SpeculatedStoreValue =
                isSafeToSpeculateStore(&I, BB, ThenBB, EndBB))))
       return false;
-    if (!IsSafeCheapLoadStore && !SpeculatedStoreValue &&
+
+    if (!PartialInst && !IsSafeCheapLoadStore && !SpeculatedStoreValue &&
         computeSpeculationCost(&I, TTI) >
             PHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic)
+      return false;
+
+    // The number of instrcutions to be speculatively executed is limited.
+    // This limit is dependent on the found patterns.
+    if (SpeculatedInstructions > MaxSpeculatedInstructionsToHoist)
       return false;
 
     // Store the store speculation candidate.
