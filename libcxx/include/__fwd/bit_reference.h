@@ -23,6 +23,9 @@ class __bit_iterator;
 template <class, class = void>
 struct __size_difference_type_traits;
 
+template <class _Cp>
+struct __bit_array;
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___FWD_BIT_REFERENCE_H
