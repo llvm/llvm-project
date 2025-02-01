@@ -45,7 +45,9 @@ define x86_regcallcc i1 @test_CallargReti1(i1 %a)  {
 ; WIN64-NEXT:    movzbl %al, %eax
 ; WIN64-NEXT:    callq test_argReti1
 ; WIN64-NEXT:    incb %al
+; WIN64-NEXT:    .seh_startepilogue
 ; WIN64-NEXT:    popq %rcx
+; WIN64-NEXT:    .seh_endepilogue
 ; WIN64-NEXT:    retq
 ; WIN64-NEXT:    .seh_endproc
 ;
