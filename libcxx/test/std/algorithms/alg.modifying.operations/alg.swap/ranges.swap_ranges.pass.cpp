@@ -23,13 +23,14 @@
 #include <array>
 #include <cassert>
 #include <ranges>
+#include <vector>
 
 #include "test_iterators.h"
 
 constexpr void test_different_lengths() {
-  using Expected = std::ranges::swap_ranges_result<int*, int*>;
-  int i[3] = {1, 2, 3};
-  int j[1] = {4};
+  using Expected                = std::ranges::swap_ranges_result<int*, int*>;
+  int i[3]                      = {1, 2, 3};
+  int j[1]                      = {4};
   std::same_as<Expected> auto r = std::ranges::swap_ranges(i, i + 3, j, j + 1);
   assert(r.in1 == i + 1);
   assert(r.in2 == j + 1);
@@ -64,8 +65,8 @@ constexpr void test_range() {
   std::array r1 = {1, 2, 3};
   std::array r2 = {4, 5, 6};
 
-
-  std::same_as<std::ranges::in_in_result<std::array<int, 3>::iterator, std::array<int, 3>::iterator>> auto r = std::ranges::swap_ranges(r1, r2);
+  std::same_as<std::ranges::in_in_result<std::array<int, 3>::iterator, std::array<int, 3>::iterator>> auto r =
+      std::ranges::swap_ranges(r1, r2);
   assert(r.in1 == r1.end());
   assert(r.in2 == r2.end());
 
@@ -110,13 +111,12 @@ constexpr void test_borrowed_input_range() {
 }
 
 constexpr void test_sentinel() {
-  int i[3] = {1, 2, 3};
-  int j[3] = {4, 5, 6};
-  using It = cpp17_input_iterator<int*>;
-  using Sent = sentinel_wrapper<It>;
-  using Expected = std::ranges::swap_ranges_result<It, It>;
-  std::same_as<Expected> auto r =
-      std::ranges::swap_ranges(It(i), Sent(It(i + 3)), It(j), Sent(It(j + 3)));
+  int i[3]                      = {1, 2, 3};
+  int j[3]                      = {4, 5, 6};
+  using It                      = cpp17_input_iterator<int*>;
+  using Sent                    = sentinel_wrapper<It>;
+  using Expected                = std::ranges::swap_ranges_result<It, It>;
+  std::same_as<Expected> auto r = std::ranges::swap_ranges(It(i), Sent(It(i + 3)), It(j), Sent(It(j + 3)));
   assert(base(r.in1) == i + 3);
   assert(base(r.in2) == j + 3);
   assert(i[0] == 4);
@@ -130,8 +130,8 @@ constexpr void test_sentinel() {
 template <class Iter1, class Iter2>
 constexpr void test_iterators() {
   using Expected = std::ranges::swap_ranges_result<Iter1, Iter2>;
-  int i[3] = {1, 2, 3};
-  int j[3] = {4, 5, 6};
+  int i[3]       = {1, 2, 3};
+  int j[3]       = {4, 5, 6};
   std::same_as<Expected> auto r =
       std::ranges::swap_ranges(Iter1(i), sentinel_wrapper(Iter1(i + 3)), Iter2(j), sentinel_wrapper(Iter2(j + 3)));
   assert(base(r.in1) == i + 3);
@@ -146,7 +146,7 @@ constexpr void test_iterators() {
 
 constexpr void test_rval_range() {
   {
-    using Expected = std::ranges::swap_ranges_result<std::array<int, 3>::iterator, std::ranges::dangling>;
+    using Expected       = std::ranges::swap_ranges_result<std::array<int, 3>::iterator, std::ranges::dangling>;
     std::array<int, 3> r = {1, 2, 3};
     std::same_as<Expected> auto a = std::ranges::swap_ranges(r, std::array{4, 5, 6});
     assert((r == std::array{4, 5, 6}));
@@ -154,7 +154,7 @@ constexpr void test_rval_range() {
   }
   {
     std::array<int, 3> r = {1, 2, 3};
-    using Expected = std::ranges::swap_ranges_result<std::ranges::dangling, std::array<int, 3>::iterator>;
+    using Expected       = std::ranges::swap_ranges_result<std::ranges::dangling, std::array<int, 3>::iterator>;
     std::same_as<Expected> auto b = std::ranges::swap_ranges(std::array{4, 5, 6}, r);
     assert((r == std::array{4, 5, 6}));
     assert(b.in2 == r.begin() + 3);
@@ -168,6 +168,22 @@ constexpr void test_proxy_in_iterators() {
   test_iterators<ProxyIterator<bidirectional_iterator<int*>>, Out>();
   test_iterators<ProxyIterator<random_access_iterator<int*>>, Out>();
   test_iterators<ProxyIterator<contiguous_iterator<int*>>, Out>();
+}
+
+template <std::size_t N>
+constexpr void test_vector_bool() {
+  { // Test swap_ranges() with aligned bytes
+    std::vector<bool> f(N, false), t(N, true);
+    std::ranges::swap_ranges(f, t);
+    assert(std::all_of(f.begin(), f.end(), [](bool b) { return b; }));
+    assert(std::all_of(t.begin(), t.end(), [](bool b) { return !b; }));
+  }
+  { // Test swap_ranges() with unaligned bytes
+    std::vector<bool> f(N, false), t(N + 8, true);
+    std::ranges::swap_ranges(f.begin(), f.end(), t.begin() + 4, t.end() - 4);
+    assert(std::all_of(f.begin(), f.end(), [](bool b) { return b; }));
+    assert(std::all_of(t.begin() + 4, t.end() - 4, [](bool b) { return !b; }));
+  }
 }
 
 constexpr bool test() {
@@ -213,6 +229,14 @@ constexpr bool test() {
   test_different_lengths();
   test_borrowed_input_range();
   test_rval_range();
+
+  { // Test vector<bool>::iterator optimization
+    test_vector_bool<8>();
+    test_vector_bool<16>();
+    test_vector_bool<32>();
+    test_vector_bool<64>();
+    test_vector_bool<256>();
+  }
 
   return true;
 }
