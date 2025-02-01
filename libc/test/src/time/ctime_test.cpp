@@ -6,10 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/errno/libc_errno.h"
 #include "src/time/ctime.h"
+#include "test/UnitTest/Test.h"
+#include "test/src/time/TmHelper.h"
+
+#ifdef LIBC_TARGET_OS_IS_LINUX
+
 #include "src/time/linux/localtime_utils.h"
 #include "src/time/linux/timezone.h"
-#include "test/UnitTest/Test.h"
+
+#endif
 
 extern char **environ;
 
