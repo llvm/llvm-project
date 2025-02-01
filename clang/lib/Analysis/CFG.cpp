@@ -457,14 +457,13 @@ reverse_children::reverse_children(Stmt *S, ASTContext &Ctx) {
                               IE->getNumInits());
     return;
   }
-  case Stmt::AttributedStmtClass: {
-    auto *AS = cast<AttributedStmt>(S);
 
+  case Stmt::AttributedStmtClass: {
     // for an attributed stmt, the "children()" returns only the NullStmt
     // (;) but semantically the "children" are supposed to be the
     // expressions _within_ i.e. the two square brackets i.e. [[ HERE ]]
     // so we add the subexpressions first, _then_ add the "children"
-
+    auto *AS = cast<AttributedStmt>(S);
     for (const auto *Attr : AS->getAttrs()) {
       if (const auto *AssumeAttr = dyn_cast<CXXAssumeAttr>(Attr)) {
         Expr *AssumeExpr = AssumeAttr->getAssumption();
@@ -472,18 +471,23 @@ reverse_children::reverse_children(Stmt *S, ASTContext &Ctx) {
           childrenBuf.push_back(AssumeExpr);
         }
       }
-      // Visit the actual children AST nodes.
-      // For CXXAssumeAttrs, this is always a NullStmt.
-      llvm::append_range(childrenBuf, AS->children());
-      children = childrenBuf;
     }
+
+    // Visit the actual children AST nodes.
+    // For CXXAssumeAttrs, this is always a NullStmt.
+    llvm::append_range(childrenBuf, AS->children());
+    children = childrenBuf;
     return;
   }
   default:
-    // Default case for all other statements.
-    llvm::append_range(childrenBuf, S->children());
-    children = childrenBuf;
+    break;
   }
+
+  // Default case for all other statements.
+  llvm::append_range(childrenBuf, S->children());
+
+  // This needs to be done *after* childrenBuf has been populated.
+  children = childrenBuf;
 }
 
 namespace {
@@ -2521,12 +2525,8 @@ CFGBlock *CFGBuilder::VisitAttributedStmt(AttributedStmt *A,
   // So only add the AttributedStmt for FallThrough, which has CFG effects and
   // also no children, and omit the others. None of the other current StmtAttrs
   // have semantic meaning for the CFG.
-  if (isFallthroughStatement(A) && asc.alwaysAdd(*this, A)) {
-    autoCreateBlock();
-    appendStmt(Block, A);
-  }
-
-  if (isCXXAssumeAttr(A) && asc.alwaysAdd(*this, A)) {
+  bool isInterestingAttribute = isFallthroughStatement(A) || isCXXAssumeAttr(A);
+  if (isInterestingAttribute && asc.alwaysAdd(*this, A)) {
     autoCreateBlock();
     appendStmt(Block, A);
   }
