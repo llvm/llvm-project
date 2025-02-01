@@ -231,6 +231,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("escape", MIToken::kw_cfi_escape)
       .Case("def_cfa", MIToken::kw_cfi_def_cfa)
       .Case("llvm_def_aspace_cfa", MIToken::kw_cfi_llvm_def_aspace_cfa)
+      .Case("llvm_reg_offset", MIToken::kw_cfi_llvm_reg_offset)
       .Case("remember_state", MIToken::kw_cfi_remember_state)
       .Case("restore", MIToken::kw_cfi_restore)
       .Case("restore_state", MIToken::kw_cfi_restore_state)

@@ -2547,6 +2547,16 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createLLVMDefAspaceCfa(
         nullptr, Reg, Offset, AddressSpace, SMLoc()));
     break;
+  case MIToken::kw_cfi_llvm_reg_offset: {
+    Register FrameReg;
+    if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
+        parseCFIRegister(FrameReg) || expectAndConsume(MIToken::comma) ||
+        parseCFIOffset(Offset))
+      return true;
+    CFIIndex = MF.addFrameInst(
+        MCCFIInstruction::createLLVMRegOffset(nullptr, Reg, FrameReg, Offset));
+    break;
+  }
   case MIToken::kw_cfi_remember_state:
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createRememberState(nullptr));
     break;

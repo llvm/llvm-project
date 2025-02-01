@@ -15,6 +15,7 @@
 #define LLVM_MC_MCDWARF_H
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -504,6 +505,7 @@ public:
     OpRestoreState,
     OpOffset,
     OpLLVMDefAspaceCfa,
+    OpLLVMRegOffset,
     OpDefCfaRegister,
     OpDefCfaOffset,
     OpDefCfa,
@@ -537,6 +539,11 @@ private:
       unsigned Register;
       unsigned Register2;
     } RR;
+    struct {
+      unsigned Register;
+      unsigned Register2;
+      int64_t Offset;
+    } RRO;
     MCSymbol *CfiLabel;
   } U;
   OpType Operation;
@@ -567,6 +574,14 @@ private:
       : Label(L), Operation(Op), Loc(Loc) {
     assert(Op == OpLabel);
     U.CfiLabel = CfiLabel;
+  }
+
+  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, unsigned R2, int64_t O,
+                   SMLoc Loc, StringRef V, StringRef Comment = "")
+      : Label(L), Operation(Op), Loc(Loc), Values(V.begin(), V.end()),
+        Comment(Comment) {
+    assert(Op == OpLLVMRegOffset);
+    U.RRO = {R, R2, O};
   }
 
 public:
@@ -632,6 +647,22 @@ public:
   static MCCFIInstruction createRegister(MCSymbol *L, unsigned Register1,
                                          unsigned Register2, SMLoc Loc = {}) {
     return MCCFIInstruction(OpRegister, L, Register1, Register2, Loc);
+  }
+
+  /// This is a "pseudo CFI" instruction which generates the escape expression
+  /// deref(FrameReg + Offset) for the register Reg.
+  static void createRegOffsetExpression(unsigned Reg, unsigned FrameReg,
+                                        int64_t Offset,
+                                        SmallString<64> &CFAExpr);
+  static MCCFIInstruction createLLVMRegOffset(MCSymbol *L, unsigned Reg,
+                                              unsigned FrameReg, int64_t Offset,
+                                              SMLoc Loc = {},
+                                              StringRef Comment = "") {
+    // Build up the expression (FrameRegister + Offset)
+    SmallString<64> CFAExpr;
+    createRegOffsetExpression(Reg, FrameReg, Offset, CFAExpr);
+    return MCCFIInstruction(OpLLVMRegOffset, L, Reg, FrameReg, Offset, Loc,
+                            CFAExpr, Comment);
   }
 
   /// .cfi_window_save SPARC register window is saved.
@@ -715,6 +746,8 @@ public:
       return U.RR.Register;
     if (Operation == OpLLVMDefAspaceCfa)
       return U.RIA.Register;
+    if (Operation == OpLLVMRegOffset)
+      return U.RRO.Register;
     assert(Operation == OpDefCfa || Operation == OpOffset ||
            Operation == OpRestore || Operation == OpUndefined ||
            Operation == OpSameValue || Operation == OpDefCfaRegister ||
@@ -723,8 +756,10 @@ public:
   }
 
   unsigned getRegister2() const {
-    assert(Operation == OpRegister);
-    return U.RR.Register2;
+    if (Operation == OpRegister)
+      return U.RR.Register2;
+    assert(Operation == OpLLVMRegOffset);
+    return U.RRO.Register2;
   }
 
   unsigned getAddressSpace() const {
@@ -735,6 +770,8 @@ public:
   int64_t getOffset() const {
     if (Operation == OpLLVMDefAspaceCfa)
       return U.RIA.Offset;
+    if (Operation == OpLLVMRegOffset)
+      return U.RRO.Offset;
     assert(Operation == OpDefCfa || Operation == OpOffset ||
            Operation == OpRelOffset || Operation == OpDefCfaOffset ||
            Operation == OpAdjustCfaOffset || Operation == OpGnuArgsSize ||
@@ -748,7 +785,7 @@ public:
   }
 
   StringRef getValues() const {
-    assert(Operation == OpEscape);
+    assert(Operation == OpEscape || Operation == OpLLVMRegOffset);
     return StringRef(&Values[0], Values.size());
   }
 

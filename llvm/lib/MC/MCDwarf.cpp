@@ -41,6 +41,26 @@
 
 using namespace llvm;
 
+void MCCFIInstruction::createRegOffsetExpression(unsigned Reg,
+                                                 unsigned FrameReg,
+                                                 int64_t Offset,
+                                                 SmallString<64> &CFAExpr) {
+  SmallString<64> Expr;
+  uint8_t Buffer[16];
+  Expr.push_back(dwarf::DW_OP_consts);
+  Expr.append(Buffer, Buffer + encodeSLEB128(Offset, Buffer));
+  Expr.push_back((uint8_t)dwarf::DW_OP_bregx);
+  Expr.append(Buffer, Buffer + encodeULEB128(FrameReg, Buffer));
+  Expr.push_back(0);
+  Expr.push_back((uint8_t)dwarf::DW_OP_plus);
+  // Wrap this into DW_CFA_expression.
+  CFAExpr.push_back(dwarf::DW_CFA_expression);
+  CFAExpr.append(Buffer, Buffer + encodeULEB128(Reg, Buffer));
+  CFAExpr.append(Buffer, Buffer + encodeULEB128(Expr.size(), Buffer));
+  CFAExpr.append(Expr.str());
+  return;
+}
+
 MCSymbol *mcdwarf::emitListsTableHeaderStart(MCStreamer &S) {
   MCSymbol *Start = S.getContext().createTempSymbol("debug_list_header_start");
   MCSymbol *End = S.getContext().createTempSymbol("debug_list_header_end");
@@ -1518,6 +1538,8 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     }
     return;
   }
+  case MCCFIInstruction::OpLLVMRegOffset:
+    llvm_unreachable("Should emit llvm_reg_offset as escape");
   }
   llvm_unreachable("Unhandled case in switch");
 }
