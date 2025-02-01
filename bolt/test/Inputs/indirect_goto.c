@@ -1,6 +1,6 @@
 int main(int argc, char *argv[]) {
-  static const void *T1[] = { &&L1, &&L2 };
-  static const void *T2[] = { &&L2, &&L3 };
+  static const void *T1[] = {&&L1, &&L2};
+  static const void *T2[] = {&&L2, &&L3};
 
   const void **T = (argc > 1) ? T1 : T2;
 
