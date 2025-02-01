@@ -2177,6 +2177,7 @@ private:
     mlir::BoolAttr t = mlir::BoolAttr::get(builder->getContext(), true);
     mlir::LLVM::LoopVectorizeAttr va;
     mlir::LLVM::LoopUnrollAttr ua;
+    mlir::LLVM::LoopUnrollAndJamAttr uja;
     bool has_attrs = false;
     for (const auto *dir : dirs) {
       Fortran::common::visit(
@@ -2198,12 +2199,23 @@ private:
                     {}, /*full*/ u.v.has_value() ? f : t, {}, {}, {});
                 has_attrs = true;
               },
+              [&](const Fortran::parser::CompilerDirective::UnrollAndJam &u) {
+                mlir::IntegerAttr countAttr;
+                if (u.v.has_value()) {
+                  countAttr = builder->getIntegerAttr(builder->getI64Type(),
+                                                      u.v.value());
+                }
+                uja = mlir::LLVM::LoopUnrollAndJamAttr::get(
+                    builder->getContext(), /*disable=*/f, /*count*/ countAttr,
+                    {}, {}, {}, {}, {});
+                has_attrs = true;
+              },
               [&](const auto &) {}},
           dir->u);
     }
     mlir::LLVM::LoopAnnotationAttr la = mlir::LLVM::LoopAnnotationAttr::get(
-        builder->getContext(), {}, /*vectorize=*/va, {}, /*unroll*/ ua, {}, {},
-        {}, {}, {}, {}, {}, {}, {}, {}, {});
+        builder->getContext(), {}, /*vectorize=*/va, {}, /*unroll*/ ua,
+        /*unroll_and_jam*/ uja, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     if (has_attrs)
       info.doLoop.setLoopAnnotationAttr(la);
   }
@@ -2857,6 +2869,9 @@ private:
               attachDirectiveToLoop(dir, &eval);
             },
             [&](const Fortran::parser::CompilerDirective::Unroll &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::UnrollAndJam &) {
               attachDirectiveToLoop(dir, &eval);
             },
             [&](const auto &) {}},
