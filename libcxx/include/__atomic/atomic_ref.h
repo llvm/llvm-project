@@ -301,7 +301,7 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   static_assert(__base::is_always_lock_free || !is_volatile_v<_Tp>);
 
   using difference_type = __base::value_type;
-  using value_type      = __base::value_type;
+  using typename __base::value_type;
 
   _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp& __obj) : __base(__obj) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
@@ -405,7 +405,7 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   static_assert(__base::is_always_lock_free || !is_volatile_v<_Tp>);
 
   using difference_type = __base::value_type;
-  using value_type      = __base::value_type;
+  using typename __base::value_type;
 
   _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp& __obj) : __base(__obj) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
@@ -464,7 +464,7 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   using __base _LIBCPP_NODEBUG = __atomic_ref_base<_Tp>;
 
   using difference_type = ptrdiff_t;
-  using value_type      = typename __base::value_type;
+  using typename __base::value_type;
 
   _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp& __ptr) : __base(__ptr) {}
 
