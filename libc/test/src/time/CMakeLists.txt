@@ -13,8 +13,6 @@ add_libc_unittest(
     20
   DEPENDS
     libc.src.time.asctime
-    .time_utils
-    libc.include.time
     libc.hdr.types.struct_tm
     libc.src.time.time_constants
 )
@@ -31,7 +29,6 @@ add_libc_unittest(
   CXX_STANDARD
     20
   DEPENDS
-    .time_utils
     libc.src.time.asctime_r
     libc.hdr.types.struct_tm
     libc.src.time.time_constants
@@ -51,7 +48,6 @@ add_libc_unittest(
   DEPENDS
     libc.include.time
     libc.hdr.types.time_t
-    .time_utils
     libc.src.time.ctime
     libc.src.time.time_constants
     libc.hdr.types.struct_tm
@@ -69,8 +65,11 @@ add_libc_unittest(
   CXX_STANDARD
     20
   DEPENDS
+    libc.include.time
+    libc.hdr.types.time_t
     libc.src.time.ctime_r
-    unistd.h
+    libc.src.time.time_constants
+    libc.hdr.types.struct_tm
 )
 
 add_libc_unittest(
@@ -175,12 +174,10 @@ add_libc_unittest(
   HDRS
     TmMatcher.h
   DEPENDS
+    libc.src.time.gmtime
     libc.src.__support.CPP.limits
     libc.hdr.types.struct_tm
     libc.src.time.time_constants
-    libc.src.time.localtime
-    libc.src.time.gmtime
-    libc.src.stdio.fopen
 )
 
 add_libc_unittest(
@@ -211,6 +208,8 @@ add_libc_test(
   DEPENDS
     libc.src.time.mktime
     libc.src.__support.CPP.limits
+    libc.hdr.types.struct_tm
+    libc.src.time.time_constants
 )
 
 add_libc_test(
@@ -220,8 +219,10 @@ add_libc_test(
   SRCS
     nanosleep_test.cpp
   DEPENDS
+    libc.include.time
     libc.src.time.nanosleep
     libc.src.errno.errno
+    libc.hdr.types.struct_timespec
 )
 
 add_libc_test(
@@ -243,6 +244,8 @@ add_libc_unittest(
     time_test.cpp
   DEPENDS
     libc.src.time.time
+    libc.src.__support.time.clock_gettime
+    libc.src.errno.errno
 )
 
 add_libc_test(
@@ -263,6 +266,8 @@ add_libc_test(
   SRCS
     clock_test.cpp
   DEPENDS
+    libc.include.time
     libc.src.time.clock
     libc.src.errno.errno
+    libc.hdr.types.clock_t
 )
