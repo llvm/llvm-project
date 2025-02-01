@@ -14,6 +14,7 @@
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Object/DXContainer.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 namespace llvm {
@@ -27,6 +28,24 @@ DXContainerYAML::ShaderFeatureFlags::ShaderFeatureFlags(uint64_t FlagData) {
 #define SHADER_FEATURE_FLAG(Num, DxilModuleNum, Val, Str)                      \
   Val = (FlagData & (uint64_t)dxbc::FeatureFlags::Val) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
+}
+
+DXContainerYAML::RootSignatureDesc::RootSignatureDesc(
+    const object::DirectX::RootSignature &Data)
+    : Size(Data.getSize()) {
+  uint32_t Flags = Data.getFlags();
+#define ROOT_ELEMENT_FLAG(Num, Val, Str)                                       \
+  Val = (Flags & (uint32_t)dxbc::RootElementFlag::Val) > 0;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+}
+
+uint32_t DXContainerYAML::RootSignatureDesc::getEncodedFlags() {
+  uint64_t Flag = 0;
+#define ROOT_ELEMENT_FLAG(Num, Val, Str)                                       \
+  if (Val)                                                                     \
+    Flag |= (uint32_t)dxbc::RootElementFlag::Val;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  return Flag;
 }
 
 uint64_t DXContainerYAML::ShaderFeatureFlags::getEncodedFlags() {
@@ -188,6 +207,13 @@ void MappingTraits<DXContainerYAML::Signature>::mapping(
   IO.mapRequired("Parameters", S.Parameters);
 }
 
+void MappingTraits<DXContainerYAML::RootSignatureDesc>::mapping(
+    IO &IO, DXContainerYAML::RootSignatureDesc &S) {
+  IO.mapRequired("Size", S.Size);
+#define ROOT_ELEMENT_FLAG(Num, Val, Str) IO.mapOptional(#Val, S.Val, false);
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+}
+
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
                                                    DXContainerYAML::Part &P) {
   IO.mapRequired("Name", P.Name);
@@ -197,6 +223,7 @@ void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
   IO.mapOptional("Hash", P.Hash);
   IO.mapOptional("PSVInfo", P.Info);
   IO.mapOptional("Signature", P.Signature);
+  IO.mapOptional("RootSignature", P.RootSignature);
 }
 
 void MappingTraits<DXContainerYAML::Object>::mapping(

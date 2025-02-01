@@ -116,6 +116,23 @@ template <typename T> struct ViewArray {
 };
 
 namespace DirectX {
+
+class RootSignature {
+private:
+  StringRef Data;
+  uint32_t Size;
+  uint32_t Flags;
+
+public:
+  RootSignature(StringRef Data) : Data(Data) {}
+
+  Error parse();
+
+  uint32_t getSize() const { return Size; }
+
+  uint32_t getFlags() const { return Flags; }
+};
+
 class PSVRuntimeInfo {
 
   using ResourceArray = ViewArray<dxbc::PSV::v2::ResourceBindInfo>;
@@ -287,6 +304,7 @@ private:
   std::optional<uint64_t> ShaderFeatureFlags;
   std::optional<dxbc::ShaderHash> Hash;
   std::optional<DirectX::PSVRuntimeInfo> PSVInfo;
+  std::optional<DirectX::RootSignature> RootSignature;
   DirectX::Signature InputSignature;
   DirectX::Signature OutputSignature;
   DirectX::Signature PatchConstantSignature;
@@ -296,6 +314,7 @@ private:
   Error parseDXILHeader(StringRef Part);
   Error parseShaderFeatureFlags(StringRef Part);
   Error parseHash(StringRef Part);
+  Error parseRootSignature(StringRef Part);
   Error parsePSVInfo(StringRef Part);
   Error parseSignature(StringRef Part, DirectX::Signature &Array);
   friend class PartIterator;
@@ -381,6 +400,10 @@ public:
   }
 
   std::optional<dxbc::ShaderHash> getShaderHash() const { return Hash; }
+
+  std::optional<DirectX::RootSignature> getRootSignature() const {
+    return RootSignature;
+  }
 
   const std::optional<DirectX::PSVRuntimeInfo> &getPSVInfo() const {
     return PSVInfo;

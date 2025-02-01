@@ -63,6 +63,16 @@ struct ShaderHash {
   void swapBytes() { sys::swapByteOrder(Flags); }
 };
 
+struct RootSignatureDesc {
+  uint32_t Size;
+  uint32_t Flags;
+
+  void swapBytes() {
+    sys::swapByteOrder(Size);
+    sys::swapByteOrder(Flags);
+  }
+};
+
 struct ContainerVersion {
   uint16_t Major;
   uint16_t Minor;
@@ -151,6 +161,11 @@ enum class FeatureFlags : uint64_t {
 };
 static_assert((uint64_t)FeatureFlags::NextUnusedBit <= 1ull << 63,
               "Shader flag bits exceed enum size.");
+
+#define ROOT_ELEMENT_FLAG(Num, Val, Str) Val = 1ull << Num,
+enum class RootElementFlag : uint32_t {
+#include "DXContainerConstants.def"
+};
 
 PartType parsePartType(StringRef S);
 
