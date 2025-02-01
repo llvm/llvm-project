@@ -2473,6 +2473,23 @@ SDValue SelectionDAG::getShiftAmountOperand(EVT LHSTy, SDValue Op) {
   return getZExtOrTrunc(Op, SDLoc(Op), ShTy);
 }
 
+SDValue SelectionDAG::expandPartialReduceMLA(SDNode *N) {
+  SDLoc DL(N);
+  SDValue Acc = N->getOperand(0);
+  SDValue Input1 = N->getOperand(1);
+  SDValue Input2 = N->getOperand(2);
+
+  EVT FullTy = Input1.getValueType();
+
+  SDValue Input = Input1;
+  APInt ConstantOne;
+  if (!ISD::isConstantSplatVector(Input2.getNode(), ConstantOne) ||
+      !ConstantOne.isOne())
+    Input = getNode(ISD::MUL, DL, FullTy, Input1, Input2);
+
+  return getPartialReduceAdd(DL, Acc.getValueType(), Acc, Input);
+}
+
 SDValue SelectionDAG::getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
                                           SDValue Op2) {
   EVT FullTy = Op2.getValueType();

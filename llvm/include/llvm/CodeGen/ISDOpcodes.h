@@ -1451,6 +1451,20 @@ enum NodeType {
   VECREDUCE_UMAX,
   VECREDUCE_UMIN,
 
+  // PARTIAL_REDUCE_*MLA (Accumulator, Input1, Input2)
+  // Partial reduction nodes. Input1 and Input2 are multiplied together before
+  // being reduced, by addition to the number of elements that Accumulator's
+  // type has.
+  // Input1 and Input2 must be the same type. Accumulator and the output must be
+  // the same type.
+  // The number of elements in Input1 and Input2 must be a positive integer
+  // multiple of the number of elements in the Accumulator / output type.
+  // All operands, as well as the output, must have the same element type.
+  // Operands: Accumulator, Input1, Input2
+  // Outputs: Output
+  PARTIAL_REDUCE_SMLA,
+  PARTIAL_REDUCE_UMLA,
+
   // The `llvm.experimental.stackmap` intrinsic.
   // Operands: input chain, glue, <id>, <numShadowBytes>, [live0[, live1...]]
   // Outputs: output chain, glue
