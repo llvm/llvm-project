@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Affine/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
@@ -430,6 +431,7 @@ void VectorDialect::initialize() {
                             TransferWriteOp>();
   declarePromisedInterface<SubsetExtractionOpInterface, TransferReadOp>();
   declarePromisedInterface<SubsetInsertionOpInterface, TransferWriteOp>();
+  declarePromisedInterface<ConvertToLLVMPatternInterface, VectorDialect>();
 }
 
 /// Materialize a single constant operation from a given attribute value with
