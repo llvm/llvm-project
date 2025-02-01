@@ -15,7 +15,7 @@ jobs:
       PR_URL: ${{ github.event.pull_request.html_url != '' && github.event.pull_request.html_url || '' }}
       PR_TITLE: ${{ github.event.pull_request.title != '' && github.event.pull_request.title || '' }}
       BASE_BRANCH: ${{ github.event.pull_request.base.ref != '' && github.event.pull_request.base.ref || '' }}
-      GITHUB_TOKEN: ${{CI_GITHUB_TOKEN}}
+      GITHUB_TOKEN: ${{secrets.CI_GITHUB_TOKEN}}
       
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
