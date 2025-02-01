@@ -1228,7 +1228,7 @@ genCUFAllocDescriptor(mlir::Location loc,
                       mlir::ModuleOp mod, fir::BaseBoxType boxTy,
                       const fir::LLVMTypeConverter &typeConverter) {
   std::optional<mlir::DataLayout> dl =
-      fir::support::getOrSetDataLayout(mod, /*allowDefaultLayout=*/true);
+      fir::support::getOrSetMLIRDataLayout(mod, /*allowDefaultLayout=*/true);
   if (!dl)
     mlir::emitError(mod.getLoc(),
                     "module operation must carry a data layout attribute "
@@ -3989,7 +3989,7 @@ public:
       return signalPassFailure();
 
     std::optional<mlir::DataLayout> dl =
-        fir::support::getOrSetDataLayout(mod, /*allowDefaultLayout=*/true);
+        fir::support::getOrSetMLIRDataLayout(mod, /*allowDefaultLayout=*/true);
     if (!dl) {
       mlir::emitError(mod.getLoc(),
                       "module operation must carry a data layout attribute "

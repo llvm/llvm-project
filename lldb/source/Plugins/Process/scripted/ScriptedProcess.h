@@ -52,7 +52,7 @@ public:
 
   void DidResume() override;
 
-  Status DoResume(lldb::RunDirection direction) override;
+  Status DoResume() override;
 
   Status DoAttachToProcessWithID(lldb::pid_t pid,
                                  const ProcessAttachInfo &attach_info) override;
