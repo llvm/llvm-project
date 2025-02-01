@@ -8,6 +8,7 @@
 
 from header import HeaderFile
 
+
 class GpuHeaderFile(HeaderFile):
     def __str__(self):
         content = []

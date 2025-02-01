@@ -8,12 +8,16 @@
 
 
 class Macro:
-    def __init__(self, name, value=None):
+    def __init__(self, name, value=None, header=None):
         self.name = name
         self.value = value
+        self.header = header
 
     def __str__(self):
+        if self.header != None:
+            return f"""#ifndef {self.name}
+#error "{self.name} should be defined by llvm-libc-macros/{self.header}"
+#endif"""
         if self.value != None:
             return f"#define {self.name} {self.value}"
-        else:
-            return f"#define {self.name}"
+        return f"#define {self.name}"
