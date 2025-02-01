@@ -3343,6 +3343,9 @@ def err_attribute_argument_out_of_range : Error<
 def err_init_priority_object_attr : Error<
   "can only use 'init_priority' attribute on file-scope definitions "
   "of objects of class type">;
+def warn_init_priority_reserved : Warning<
+  "requested 'init_priority' %0 is reserved for internal use">,
+  InGroup<DiagGroup<"init-priority-reserved">>, DefaultError;
 def err_attribute_argument_out_of_bounds : Error<
   "%0 attribute parameter %1 is out of bounds">;
 def err_attribute_only_once_per_parameter : Error<
