@@ -781,11 +781,8 @@ static StringRef getDynamicLinker(Ctx &ctx, opt::InputArgList &args) {
   auto *arg = args.getLastArg(OPT_dynamic_linker, OPT_no_dynamic_linker);
   if (!arg)
     return "";
-  if (arg->getOption().getID() == OPT_no_dynamic_linker) {
-    // --no-dynamic-linker suppresses undefined weak symbols in .dynsym
-    ctx.arg.noDynamicLinker = true;
+  if (arg->getOption().getID() == OPT_no_dynamic_linker)
     return "";
-  }
   return arg->getValue();
 }
 
@@ -2900,12 +2897,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   parseFiles(ctx, files);
 
-  // Dynamic linking is used if there is an input DSO,
-  // or -shared or non-static pie is specified.
-  ctx.hasDynsym = !ctx.sharedFiles.empty() || ctx.arg.shared ||
-                  (ctx.arg.pie && !ctx.arg.noDynamicLinker);
   // Create dynamic sections for dynamic linking and static PIE.
-  ctx.arg.hasDynSymTab = ctx.hasDynsym || ctx.arg.isPic;
+  ctx.hasDynsym = !ctx.sharedFiles.empty() || ctx.arg.isPic;
 
   // If an entry symbol is in a static archive, pull out that file now.
   if (Symbol *sym = ctx.symtab->find(ctx.arg.entry))
