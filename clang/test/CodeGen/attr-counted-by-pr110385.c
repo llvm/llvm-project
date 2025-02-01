@@ -33,11 +33,10 @@ void init(void * __attribute__((pass_dynamic_object_size(0))));
 // CHECK-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 12
 // CHECK-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 8
 // CHECK-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i32, ptr [[COUNTED_BY_GEP]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[COUNTED_BY_LOAD]] to i64
-// CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[TMP1]], 1
-// CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[COUNTED_BY_LOAD]], -1
-// CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i64 [[TMP2]], i64 0
-// CHECK-NEXT:    tail call void @init(ptr noundef nonnull [[ARRAY]], i64 noundef [[TMP4]]) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    [[COUNT:%.*]] = sext i32 [[COUNTED_BY_LOAD]] to i64
+// CHECK-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = shl nsw i64 [[COUNT]], 1
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.smax.i64(i64 [[FLEXIBLE_ARRAY_MEMBER_SIZE]], i64 0)
+// CHECK-NEXT:    tail call void @init(ptr noundef nonnull [[ARRAY]], i64 noundef [[TMP1]]) #[[ATTR3:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void test1(struct bucket *foo) {
@@ -50,11 +49,10 @@ void test1(struct bucket *foo) {
 // CHECK-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[FOO]], i64 16
 // CHECK-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[FOO]], i64 12
 // CHECK-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i32, ptr [[COUNTED_BY_GEP]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[COUNTED_BY_LOAD]] to i64
-// CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[TMP0]], 1
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[COUNTED_BY_LOAD]], -1
-// CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i64 [[TMP1]], i64 0
-// CHECK-NEXT:    tail call void @init(ptr noundef nonnull [[ARRAY]], i64 noundef [[TMP3]]) #[[ATTR2]]
+// CHECK-NEXT:    [[COUNT:%.*]] = sext i32 [[COUNTED_BY_LOAD]] to i64
+// CHECK-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = shl nsw i64 [[COUNT]], 1
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.smax.i64(i64 [[FLEXIBLE_ARRAY_MEMBER_SIZE]], i64 0)
+// CHECK-NEXT:    tail call void @init(ptr noundef nonnull [[ARRAY]], i64 noundef [[TMP0]]) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 void test2(struct bucket2 *foo) {
