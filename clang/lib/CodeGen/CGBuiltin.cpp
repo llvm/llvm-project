@@ -1331,7 +1331,7 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
       // From option (4):
       //  size_t field_base_size = sizeof (*ptr->field_array);
       if (!FieldTy->isArrayType())
-        // The field isn't an array. For example:
+        // The field isn't an array. It could be a pointer, for example:
         //
         //     struct {
         //         int count;
@@ -1339,9 +1339,10 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
         //         int array[] __counted_by(count);
         //     } x;
         //
-        //     __builtin_dynamic_object_size(x.string[42], 0);
+        //     __builtin_dynamic_object_size(&x.string[42], 0);
         //
-        // If built with '-Wno-int-conversion', FieldTy won't be an array here.
+        // This __bdos isn't wanting the size of the struct, but the size of
+        // 'string's allocation, which __bdos isn't currently able to provide.
         return nullptr;
 
       const ArrayType *ArrayTy = Ctx.getAsArrayType(FieldTy);
