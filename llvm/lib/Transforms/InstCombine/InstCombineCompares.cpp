@@ -834,8 +834,9 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
         return replaceInstUsesWith(
             I, // No comparison is needed here.
             ConstantInt::get(I.getType(), ICmpInst::isTrueWhenEqual(Cond)));
-
-      else if (NumDifferences == 1 && CanFold(NW)) {
+      // If two GEPs only differ by an index, compare them.
+      // Note that nowrap flags are always needed when comparing two indices.
+      else if (NumDifferences == 1 && NW != GEPNoWrapFlags::none()) {
         Value *LHSV = GEPLHS->getOperand(DiffOperand);
         Value *RHSV = GEPRHS->getOperand(DiffOperand);
         return NewICmp(NW, LHSV, RHSV);
