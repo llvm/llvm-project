@@ -106,3 +106,31 @@ uninitialized spinlock and invalid spinlock is left undefined. We follow the rec
 POSIX.1-2024, where EINVAL is returned if the spinlock is invalid (here we only check for null pointers) or
 EBUSY is returned if the spinlock is currently locked. The lock is poisoned after a successful destroy. That is,
 subsequent operations on the lock object without any reinitialization will return EINVAL.
+
+Strftime
+--------
+In the C Standard, it provides a list of modifiers, and the conversions these
+are valid on. It also says that a modifier on an unspecified conversion is
+undefined. For LLVM-libc, the conversion is treated as if the modifier isn't
+there.
+
+If a struct tm with values out of the normal range is passed, the standard says
+the result is undefined. For LLVM-libc, the result may be either the normalized
+value (e.g. weekday % 7) or the actual, out of range value. For any numeric
+conversion where the result is just printing a value out of the struct
+(e.g. "%w" prints the day of the week), no normalization occurs ("%w" on a
+tm_wday of 32 prints "32"). For any numeric conversion where the value is
+calculated (e.g. "%u" prints the day of the week, starting on monday), the
+value is normalized (e.g. "%u" on a tm_wday of 32 prints "4"). For conversions
+that result in strings, passing an out of range value will result in "?".
+
+Posix adds padding support to strftime, but says "the default padding character
+is unspecified." For LLVM-libc, the default padding character is ' ' (space),
+for all string-type conversions and '0' for integer-type conversions.
+
+Posix also adds flags and a minimum field width, but leaves unspecified what
+happens for most combinations of these. For LLVM-libc:
+An unspecified minimum field width defaults to 0.
+More specific flags take precedence over less specific flags (i.e. '+' takes precedence over '0')
+Any conversion with a minimum width is padded with the padding character until it is at least as long as the minimum width.
+Modifiers are applied, then the result is padded if necessary.

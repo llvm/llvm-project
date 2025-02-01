@@ -14,16 +14,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-// Returns number of years from (1, year).
-static constexpr int64_t get_num_of_leap_years_before(int64_t year) {
-  return (year / 4) - (year / 100) + (year / 400);
-}
-
-// Returns True if year is a leap year.
-static constexpr bool is_leap_year(const int64_t year) {
-  return (((year) % 4) == 0 && (((year) % 100) != 0 || ((year) % 400) == 0));
-}
-
 LLVM_LIBC_FUNCTION(time_t, mktime, (struct tm * tm_out)) {
   // Unlike most C Library functions, mktime doesn't just die on bad input.
   // TODO(rtenneti); Handle leap seconds.
@@ -69,7 +59,7 @@ LLVM_LIBC_FUNCTION(time_t, mktime, (struct tm * tm_out)) {
     }
     tm_year_from_base += years;
   }
-  bool tm_year_is_leap = is_leap_year(tm_year_from_base);
+  bool tm_year_is_leap = time_utils::is_leap_year(tm_year_from_base);
 
   // Calculate total number of days based on the month and the day (tm_mday).
   int64_t total_days = tm_out->tm_mday - 1;
@@ -83,21 +73,25 @@ LLVM_LIBC_FUNCTION(time_t, mktime, (struct tm * tm_out)) {
   total_days += (tm_year_from_base - time_constants::EPOCH_YEAR) *
                 time_constants::DAYS_PER_NON_LEAP_YEAR;
   if (tm_year_from_base >= time_constants::EPOCH_YEAR) {
-    total_days += get_num_of_leap_years_before(tm_year_from_base - 1) -
-                  get_num_of_leap_years_before(time_constants::EPOCH_YEAR);
+    total_days +=
+        time_utils::get_num_of_leap_years_before(tm_year_from_base - 1) -
+        time_utils::get_num_of_leap_years_before(time_constants::EPOCH_YEAR);
   } else if (tm_year_from_base >= 1) {
-    total_days -= get_num_of_leap_years_before(time_constants::EPOCH_YEAR) -
-                  get_num_of_leap_years_before(tm_year_from_base - 1);
+    total_days -=
+        time_utils::get_num_of_leap_years_before(time_constants::EPOCH_YEAR) -
+        time_utils::get_num_of_leap_years_before(tm_year_from_base - 1);
   } else {
     // Calculate number of leap years until 0th year.
-    total_days -= get_num_of_leap_years_before(time_constants::EPOCH_YEAR) -
-                  get_num_of_leap_years_before(0);
+    total_days -=
+        time_utils::get_num_of_leap_years_before(time_constants::EPOCH_YEAR) -
+        time_utils::get_num_of_leap_years_before(0);
     if (tm_year_from_base <= 0) {
       total_days -= 1; // Subtract 1 for 0th year.
       // Calculate number of leap years until -1 year
       if (tm_year_from_base < 0) {
-        total_days -= get_num_of_leap_years_before(-tm_year_from_base) -
-                      get_num_of_leap_years_before(1);
+        total_days -=
+            time_utils::get_num_of_leap_years_before(-tm_year_from_base) -
+            time_utils::get_num_of_leap_years_before(1);
       }
     }
   }
