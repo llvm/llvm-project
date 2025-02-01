@@ -9,7 +9,6 @@
 #include "src/errno/libc_errno.h"
 #include "src/time/ctime_r.h"
 #include "src/time/time_constants.h"
-#include "src/time/time_utils.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmHelper.h"
 
