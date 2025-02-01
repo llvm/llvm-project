@@ -55,6 +55,7 @@
 #include <thread>
 #include <vector>
 
+#include <iostream>
 #if defined(_WIN32)
 // We need to #define NOMINMAX in order to skip `min()` and `max()` macro
 // definitions that conflict with other system headers.
@@ -412,6 +413,30 @@ void SendStdOutStdErr(DAP &dap, lldb::SBProcess &process) {
     dap.SendOutput(OutputType::Stderr, llvm::StringRef(buffer, count));
 }
 
+static std::string GetStringFromStructuredData(lldb::SBStructuredData &data,
+                                               const char *key) {
+  lldb::SBStructuredData keyValue = data.GetValueForKey(key);
+  if (!keyValue)
+    return std::string();
+
+  size_t size = keyValue.GetStringValue(nullptr, 0);
+  std::cout << "Size for " << key << " " << size << std::endl;
+  std::string stringValue;
+  stringValue.resize(size);
+  keyValue.GetStringValue(&stringValue[0], size + 1);
+  std::cout << "String value after: " << stringValue << std::endl;
+  return stringValue;
+}
+
+static uint64_t GetUintFromStructuredData(lldb::SBStructuredData &data,
+                                          const char *key) {
+  lldb::SBStructuredData keyValue = data.GetValueForKey(key);
+
+  if (!keyValue.IsValid())
+    return -1;
+  return keyValue.GetUnsignedIntegerValue();
+}
+
 void ProgressEventThreadFunction(DAP &dap) {
   lldb::SBListener listener("lldb-dap.progress.listener");
   dap.debugger.GetBroadcaster().AddListener(
@@ -428,14 +453,27 @@ void ProgressEventThreadFunction(DAP &dap) {
           done = true;
         }
       } else {
-        uint64_t progress_id = 0;
-        uint64_t completed = 0;
-        uint64_t total = 0;
-        bool is_debugger_specific = false;
-        const char *message = lldb::SBDebugger::GetProgressFromEvent(
-            event, progress_id, completed, total, is_debugger_specific);
-        if (message)
-          dap.SendProgressEvent(progress_id, message, completed, total);
+        lldb::SBStructuredData data =
+            lldb::SBDebugger::GetProgressDataFromEvent(event);
+
+        uint64_t progress_id = GetUintFromStructuredData(data, "progress_id");
+        uint64_t completed = GetUintFromStructuredData(data, "completed");
+        uint64_t total = GetUintFromStructuredData(data, "total");
+        std::string message;
+        // Include the title on the first event.
+        if (completed == 0) {
+          std::string title = GetStringFromStructuredData(data, "title");
+          message += title;
+          message += ": ";
+        }
+
+        std::string details = GetStringFromStructuredData(data, "details");
+        message += details;
+        // Verbose check, but we get -1 for the uint64 on failure to read
+        // so we check everything before broadcasting an event.
+        if (message.length() > 0 && progress_id > 0 && total >= 0 &&
+            completed >= 0)
+          dap.SendProgressEvent(progress_id, message.c_str(), completed, total);
       }
     }
   }
