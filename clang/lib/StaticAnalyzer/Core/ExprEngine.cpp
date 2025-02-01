@@ -1813,6 +1813,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPTargetTeamsDistributeSimdDirectiveClass:
     case Stmt::OMPReverseDirectiveClass:
     case Stmt::OMPTileDirectiveClass:
+    case Stmt::OMPStripeDirectiveClass:
     case Stmt::OMPInterchangeDirectiveClass:
     case Stmt::OMPInteropDirectiveClass:
     case Stmt::OMPDispatchDirectiveClass:
