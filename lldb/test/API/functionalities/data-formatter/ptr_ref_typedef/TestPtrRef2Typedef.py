@@ -53,3 +53,15 @@ class PtrRef2TypedefTestCase(TestBase):
         # the match.
         self.expect("frame variable y", substrs=["(Foo &", ") y = 0x", "IntLRef"])
         self.expect("frame variable z", substrs=["(Foo &&", ") z = 0x", "IntRRef"])
+
+        # Test lldb doesn't dereference pointer more than once.
+        # xp has type Foo**, so it can only uses summary for Foo* or int*, not 
+        # summary for Foo or int.
+        self.expect("frame variable xp", substrs=["(Foo **) xp = 0x", "IntPointer"])
+
+        self.runCmd('type summary delete "int *"')
+        self.runCmd('type summary add --cascade true -s "MyInt" "int"')
+        self.expect("frame variable xp", substrs=["(Foo **) xp = 0x"])
+
+        self.runCmd('type summary add --cascade true -s "FooPointer" "Foo *"')
+        self.expect("frame variable xp", substrs=["(Foo **) xp = 0x", "FooPointer"])

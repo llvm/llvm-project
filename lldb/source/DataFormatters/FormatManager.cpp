@@ -222,8 +222,9 @@ void FormatManager::GetPossibleMatches(
 
   if (compiler_type.IsPointerType()) {
     CompilerType non_ptr_type = compiler_type.GetPointeeType();
-    GetPossibleMatches(valobj, non_ptr_type, use_dynamic, entries,
-                       current_flags.WithStrippedPointer());
+    if (!current_flags.stripped_pointer)
+      GetPossibleMatches(valobj, non_ptr_type, use_dynamic, entries,
+                         current_flags.WithStrippedPointer(), false);
     if (non_ptr_type.IsTypedefType()) {
       CompilerType deffed_pointed_type =
           non_ptr_type.GetTypedefedType().GetPointerType();
