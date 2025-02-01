@@ -299,9 +299,8 @@ struct DeduplicateAndRemoveDeadOperandsAndResults
 
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
-    FailureOr<GenericOp> newOp =
-        deduplicateOperandsAndRemoveDeadResults(rewriter, genericOp,
-                                                removeOutputs);
+    FailureOr<GenericOp> newOp = deduplicateOperandsAndRemoveDeadResults(
+        rewriter, genericOp, removeOutputs);
     if (failed(newOp) || newOp.value() == genericOp) {
       return rewriter.notifyMatchFailure(
           genericOp, "failed to dedup operands/remove dead results");
