@@ -9,6 +9,7 @@
 #include "src/time/asctime_r.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/time/time_constants.h"
 #include "src/time/time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
