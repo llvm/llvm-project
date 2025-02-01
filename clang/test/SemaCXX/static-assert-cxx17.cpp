@@ -98,7 +98,8 @@ void foo6() {
   // expected-error@-1{{static assertion failed due to requirement '(const X<int>[0]){} == nullptr'}}
   static_assert(sizeof(X<decltype(X<typename T::T>().X<typename T::T>::~X())>) == 0);
   // expected-error@-1{{static assertion failed due to requirement 'sizeof(X<void>) == 0'}} \
-  // expected-note@-1 {{evaluates to '8 == 0'}}
+  // expected-note@-1 {{evaluates to '8 == 0'}} \
+  // expected-warning@-1 {{use 'template' keyword to treat 'X' as a dependent template name}}
   static_assert(constexpr_return_false<typename T::T, typename T::U>());
   // expected-error@-1{{static assertion failed due to requirement 'constexpr_return_false<int, float>()'}}
 }

@@ -80,6 +80,9 @@ Resolutions to C++ Defect Reports
   two releases. The improvements to template template parameter matching implemented
   in the previous release, as described in P3310 and P3579, made this flag unnecessary.
 
+- Clang now correctly implements lookup for the terminal name of a member-qualified nested-name-specifier.
+  (`CWG1835: Dependent member lookup before < <https://cplusplus.github.io/CWG/issues/1835.html>`_).
+
 C Language Changes
 ------------------
 

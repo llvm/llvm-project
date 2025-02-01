@@ -1179,8 +1179,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   case tok::annot_non_type_dependent:
   case tok::annot_non_type_undeclared: {
     CXXScopeSpec SS;
-    Token Replacement;
-    Res = tryParseCXXIdExpression(SS, isAddressOfOperand, Replacement);
+    Res = tryParseCXXIdExpression(SS, isAddressOfOperand);
     assert(!Res.isUnset() &&
            "should not perform typo correction on annotation token");
     break;
@@ -2390,10 +2389,9 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       }
 
       if (!LHS.isInvalid())
-        LHS = Actions.ActOnMemberAccessExpr(getCurScope(), LHS.get(), OpLoc,
-                                            OpKind, SS, TemplateKWLoc, Name,
-                                 CurParsedObjCImpl ? CurParsedObjCImpl->Dcl
-                                                   : nullptr);
+        LHS = Actions.ActOnMemberAccessExpr(
+            getCurScope(), LHS.get(), OpLoc, OpKind, SS, TemplateKWLoc, Name,
+            CurParsedObjCImpl ? CurParsedObjCImpl->Dcl : nullptr);
       if (!LHS.isInvalid()) {
         if (Tok.is(tok::less))
           checkPotentialAngleBracket(LHS);

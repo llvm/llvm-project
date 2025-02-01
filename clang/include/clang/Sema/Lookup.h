@@ -483,11 +483,15 @@ public:
     ResultKind = Found;
   }
 
+  void addAllDecls(ArrayRef<DeclAccessPair> Other) {
+    Decls.addAllDecls(Other);
+    ResultKind = Found;
+  }
+
   /// Add all the declarations from another set of lookup
   /// results.
   void addAllDecls(const LookupResult &Other) {
-    Decls.append(Other.Decls.begin(), Other.Decls.end());
-    ResultKind = Found;
+    addAllDecls(Other.Decls.pairs());
   }
 
   /// Determine whether no result was found because we could not
