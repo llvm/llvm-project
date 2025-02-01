@@ -76,20 +76,14 @@ jobs:
           echo "github.event.pull_request.id is: ${{github.event.pull_request.id}}"
           echo "github.event.pull_request.html_url is: ${{github.event.pull_request.html_url}}"
           echo "github.event.pull_request.number is: ${{github.event.pull_request.number}}"
-          echo "github.event.pull_request.title  is: ${{github.event.pull_request.title}}"
           echo "github.event.pull_request.url is: ${{github.event.pull_request.url}}"
           echo "github.event.pull_request.issue_url is: ${{github.event.pull_request.issue_url}}"
-          echo "github.event.pull_request.comments_url is: ${{github.event.pull_request.comments_url}}"
-          echo "github.event.pull_request.statuses_url is: ${{github.event.pull_request.statuses_url}}"
           echo "github.event.pull_request.head.sha is: ${{github.event.pull_request.head.sha}}"
           echo "github.event.pull_request.base.ref is: ${{github.event.pull_request.base.ref}}"
           echo "github.event.pull_request.merge_commit_sha is: ${{github.event.pull_request.merge_commit_sha}}"
           echo "github.event.pull_request is: ${{github.event.pull_request}}"
-          pip3 show python-jenkins || echo "python-jenkins is not installed"
-          #sudo -H pip3 install --upgrade python-jenkins
-          # pipeline name shuould be unique to the workfow yml for a given repository
-          #curl -L -X POST -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${{secrets.CI_GITHUB_TOKEN}}" ${{github.event.pull_request.comments_url}} -d '{"body":"Github action triggered jenkins job for compute-psdb-staging-smi-libs-ghemu "}'
-          #python jenkins_api.py -jn compute-psdb-staging-smi-libs-ghemu -ghr $GITHUB_REPOSITORY -ghsha $input_sha -ghprn $input_pr_num -ghpru "$input_pr_url" -ghprt "$input_pr_title"
+        
+          
       - name: Trigger Jenkins Pipeline
         if: steps.check_changes.outcome != 'failure'
         run: |
