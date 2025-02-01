@@ -27,11 +27,12 @@ define void @truncate_to_minimal_bitwidths_widen_cast_recipe(ptr %src) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP5]], i32 0
 ; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 1 x i8> @llvm.vp.load.nxv1i8.p0(ptr align 1 [[TMP6]], <vscale x 1 x i1> splat (i1 true), i32 [[TMP3]])
-; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 1 x i16> @llvm.vp.zext.nxv1i16.nxv1i8(<vscale x 1 x i8> [[VP_OP_LOAD]], <vscale x 1 x i1> splat (i1 true), i32 [[TMP3]])
-; CHECK-NEXT:    [[VP_OP:%.*]] = call <vscale x 1 x i16> @llvm.vp.mul.nxv1i16(<vscale x 1 x i16> zeroinitializer, <vscale x 1 x i16> [[TMP7]], <vscale x 1 x i1> splat (i1 true), i32 [[TMP3]])
-; CHECK-NEXT:    [[VP_OP1:%.*]] = call <vscale x 1 x i16> @llvm.vp.lshr.nxv1i16(<vscale x 1 x i16> [[VP_OP]], <vscale x 1 x i16> trunc (<vscale x 1 x i32> splat (i32 1) to <vscale x 1 x i16>), <vscale x 1 x i1> splat (i1 true), i32 [[TMP3]])
-; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 1 x i8> @llvm.vp.trunc.nxv1i8.nxv1i16(<vscale x 1 x i16> [[VP_OP1]], <vscale x 1 x i1> splat (i1 true), i32 [[TMP3]])
-; CHECK-NEXT:    call void @llvm.vp.scatter.nxv1i8.nxv1p0(<vscale x 1 x i8> [[TMP8]], <vscale x 1 x ptr> align 1 zeroinitializer, <vscale x 1 x i1> splat (i1 true), i32 [[TMP3]])
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i8> [[VP_OP_LOAD]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i8 [[TMP7]] to i32
+; CHECK-NEXT:    [[TMP12:%.*]] = mul i32 0, [[TMP8]]
+; CHECK-NEXT:    [[TMP13:%.*]] = lshr i32 [[TMP12]], 1
+; CHECK-NEXT:    [[TMP14:%.*]] = trunc i32 [[TMP13]] to i8
+; CHECK-NEXT:    store i8 [[TMP14]], ptr null, align 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP3]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP9]], [[EVL_BASED_IV]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]

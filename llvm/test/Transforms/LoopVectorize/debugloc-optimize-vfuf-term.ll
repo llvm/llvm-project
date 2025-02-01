@@ -9,10 +9,11 @@ define i32 @foo(ptr %p) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 0 to i8, !dbg [[DBG3:![0-9]+]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    store i8 0, ptr [[P]], align 1, !dbg [[DBG3:![0-9]+]]
-; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]], !dbg [[DBG7:![0-9]+]]
+; CHECK-NEXT:    store i8 [[TMP0]], ptr [[P]], align 1, !dbg [[DBG7:![0-9]+]]
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]], !dbg [[DBG3]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]], !dbg [[DBG8:![0-9]+]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -20,8 +21,8 @@ define i32 @foo(ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], !dbg [[DBG9]]
-; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 0 to i8, !dbg [[DBG7]]
-; CHECK-NEXT:    store i8 [[CONV]], ptr [[P]], align 1, !dbg [[DBG3]]
+; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 0 to i8, !dbg [[DBG3]]
+; CHECK-NEXT:    store i8 [[CONV]], ptr [[P]], align 1, !dbg [[DBG7]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1, !dbg [[DBG10:![0-9]+]]
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 1, !dbg [[DBG11:![0-9]+]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]], !dbg [[DBG8]], !llvm.loop [[LOOP12:![0-9]+]]
@@ -61,11 +62,11 @@ exit:                              ; preds = %loop
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
 ; CHECK: [[META1]] = !DIFile(filename: "test.cpp", directory: {{.*}})
-; CHECK: [[DBG3]] = !DILocation(line: 6, scope: [[META4:![0-9]+]])
+; CHECK: [[DBG3]] = !DILocation(line: 5, scope: [[META4:![0-9]+]])
 ; CHECK: [[META4]] = distinct !DISubprogram(name: "foo", scope: [[META1]], file: [[META1]], line: 11, type: [[META5:![0-9]+]], spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META6:![0-9]+]])
 ; CHECK: [[META5]] = distinct !DISubroutineType(types: [[META6]])
 ; CHECK: [[META6]] = !{}
-; CHECK: [[DBG7]] = !DILocation(line: 5, scope: [[META4]])
+; CHECK: [[DBG7]] = !DILocation(line: 6, scope: [[META4]])
 ; CHECK: [[DBG8]] = !DILocation(line: 9, scope: [[META4]])
 ; CHECK: [[DBG9]] = !DILocation(line: 4, scope: [[META4]])
 ; CHECK: [[DBG10]] = !DILocation(line: 7, scope: [[META4]])
