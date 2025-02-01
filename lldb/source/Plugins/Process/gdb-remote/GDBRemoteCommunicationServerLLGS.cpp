@@ -716,7 +716,6 @@ static const char *GetStopReasonString(StopReason stop_reason) {
     return "vforkdone";
   case eStopReasonInterrupt:
     return "async interrupt";
-  case eStopReasonHistoryBoundary:
   case eStopReasonInstrumentation:
   case eStopReasonInvalid:
   case eStopReasonPlanComplete:

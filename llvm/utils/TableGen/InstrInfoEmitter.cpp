@@ -286,6 +286,7 @@ void InstrInfoEmitter::emitOperandNameMappings(
   OS << "enum {\n";
   for (const auto &[I, Op] : enumerate(OperandNameToID))
     OS << "  " << Op.first << " = " << I << ",\n";
+  OS << "  OPERAND_LAST = " << NumOperandNames << ",\n";
   OS << "};\n";
   OS << "} // end namespace llvm::" << Namespace << "::OpName\n";
   OS << "#endif //GET_INSTRINFO_OPERAND_ENUM\n\n";

@@ -182,15 +182,10 @@ void ScriptedProcess::DidResume() {
   m_pid = GetInterface().GetProcessID();
 }
 
-Status ScriptedProcess::DoResume(RunDirection direction) {
+Status ScriptedProcess::DoResume() {
   LLDB_LOGF(GetLog(LLDBLog::Process), "ScriptedProcess::%s resuming process", __FUNCTION__);
 
-  if (direction == RunDirection::eRunForward)
-    return GetInterface().Resume();
-  // FIXME: Pipe reverse continue through Scripted Processes
-  return Status::FromErrorStringWithFormatv(
-      "error: {0} does not support reverse execution of processes",
-      GetPluginName());
+  return GetInterface().Resume();
 }
 
 Status ScriptedProcess::DoAttach(const ProcessAttachInfo &attach_info) {

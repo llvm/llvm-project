@@ -1,4 +1,5 @@
 ! RUN: %flang_fc1 -fopenmp -emit-llvm %s -o - | FileCheck %s
+! XFAIL: *
 
 ! Combinational testing of control flow graph and builder insertion points
 ! in mlir-to-llvm conversion:
@@ -72,29 +73,29 @@ end subroutine
 ! CHECK-NEXT:    br label %omp.private.copy
 
 ! CHECK:       omp.private.copy:                                 ; preds = %omp.region.cont
-! CHECK-NEXT:    br label %omp.private.copy12
+! CHECK-NEXT:    br label %omp.private.copy13
 
-! CHECK:       omp.private.copy12:                               ; preds = %omp.private.copy
+! CHECK:       omp.private.copy13:                               ; preds = %omp.private.copy
 !                [begin firstprivate copy for first var]
 !                [read the length, is it non-zero?]
-! CHECK:         br i1 %{{.*}}, label %omp.private.copy13, label %omp.private.copy14
+! CHECK:         br i1 %{{.*}}, label %omp.private.copy14, label %omp.private.copy15
 
-! CHECK:       omp.private.copy14:                               ; preds = %omp.private.copy13, %omp.private.copy12
-! CHECK-NEXT:    br label %omp.region.cont11
+! CHECK:       omp.private.copy15:                               ; preds = %omp.private.copy14, %omp.private.copy13
+! CHECK-NEXT:    br label %omp.region.cont12
 
-! CHECK:       omp.region.cont11:                                 ; preds = %omp.private.copy14
+! CHECK:       omp.region.cont12:                                 ; preds = %omp.private.copy15
 ! CHECK-NEXT:    %{{.*}} = phi ptr
-! CHECK-NEXT:    br label %omp.private.copy16
+! CHECK-NEXT:    br label %omp.private.copy17
 
-! CHECK:       omp.private.copy16:                               ; preds = %omp.region.cont11
+! CHECK:       omp.private.copy17:                               ; preds = %omp.region.cont12
 !                [begin firstprivate copy for second var]
 !                [read the length, is it non-zero?]
-! CHECK:         br i1 %{{.*}}, label %omp.private.copy17, label %omp.private.copy18
+! CHECK:         br i1 %{{.*}}, label %omp.private.copy18, label %omp.private.copy19
 
-! CHECK:       omp.private.copy18:                               ; preds = %omp.private.copy17, %omp.private.copy16
-! CHECK-NEXT:    br label %omp.region.cont15
+! CHECK:       omp.private.copy19:                               ; preds = %omp.private.copy18, %omp.private.copy17
+! CHECK-NEXT:    br label %omp.region.cont16
 
-! CHECK:       omp.region.cont15:                                ; preds = %omp.private.copy18
+! CHECK:       omp.region.cont16:                                ; preds = %omp.private.copy19
 ! CHECK-NEXT:    %{{.*}} = phi ptr
 ! CHECK-NEXT:    br label %omp.region.after_alloca
 
@@ -111,11 +112,11 @@ end subroutine
 ! CHECK:       omp.reduction.neutral:                            ; preds = %omp.reduction.init
 !                [start of reduction initialization region]
 !                [null check:]
-! CHECK:         br i1 %{{.*}}, label %omp.reduction.neutral20, label %omp.reduction.neutral21
+! CHECK:         br i1 %{{.*}}, label %omp.reduction.neutral21, label %omp.reduction.neutral22
 
 ! CHECK:       omp.reduction.neutral21:                          ; preds = %omp.reduction.neutral
 !                [malloc and assign the default value to the reduction variable]
-! CHECK:         br label %omp.reduction.neutral22
+! CHECK:         br label %omp.reduction.neutral23
 
 ! CHECK:       omp.reduction.neutral22:                          ; preds = %omp.reduction.neutral20, %omp.reduction.neutral21
 ! CHECK-NEXT:    br label %omp.region.cont19

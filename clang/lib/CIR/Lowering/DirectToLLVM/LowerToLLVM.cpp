@@ -23,17 +23,17 @@ namespace cir {
 namespace direct {
 
 std::unique_ptr<llvm::Module>
-lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp MOp, LLVMContext &LLVMCtx) {
+lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx) {
   llvm::TimeTraceScope scope("lower from CIR to LLVM directly");
 
-  std::optional<StringRef> ModuleName = MOp.getName();
-  auto M = std::make_unique<llvm::Module>(
-      ModuleName ? *ModuleName : "CIRToLLVMModule", LLVMCtx);
+  std::optional<StringRef> moduleName = mlirModule.getName();
+  auto llvmModule = std::make_unique<llvm::Module>(
+      moduleName ? *moduleName : "CIRToLLVMModule", llvmCtx);
 
-  if (!M)
+  if (!llvmModule)
     report_fatal_error("Lowering from LLVMIR dialect to llvm IR failed!");
 
-  return M;
+  return llvmModule;
 }
 } // namespace direct
 } // namespace cir

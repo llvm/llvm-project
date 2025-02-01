@@ -143,8 +143,6 @@ STOPPED_DUE_TO_STEP_IN = "Process state is stopped due to step in"
 
 STOPPED_DUE_TO_WATCHPOINT = "Process should be stopped due to watchpoint"
 
-STOPPED_DUE_TO_HISTORY_BOUNDARY = "Process should be stopped due to history boundary"
-
 DATA_TYPES_DISPLAYED_CORRECTLY = "Data type(s) displayed correctly"
 
 VALID_BREAKPOINT = "Got a valid breakpoint"
