@@ -276,6 +276,9 @@ public:
   void collectKernelLaunchBounds(
       const Function &F,
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const;
+
+  /// Query if operation is legal
+  bool isOpLegal(Instruction *I) const;
 };
 
 } // end namespace llvm

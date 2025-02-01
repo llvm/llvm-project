@@ -377,6 +377,8 @@ public:
 
   bool isTypeLegal(Type *Ty) const { return false; }
 
+  bool isOpLegal(Instruction *I) const { return false; }
+
   unsigned getRegUsageForType(Type *Ty) const { return 1; }
 
   bool shouldBuildLookupTables() const { return true; }

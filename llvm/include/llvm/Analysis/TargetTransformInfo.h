@@ -890,6 +890,9 @@ public:
   /// Return true if this type is legal.
   bool isTypeLegal(Type *Ty) const;
 
+  /// Return true if this operation is legal.
+  bool isOpLegal(Instruction *I) const;
+
   /// Returns the estimated number of registers required to represent \p Ty.
   unsigned getRegUsageForType(Type *Ty) const;
 
@@ -2037,6 +2040,7 @@ public:
   virtual bool isProfitableToHoist(Instruction *I) = 0;
   virtual bool useAA() = 0;
   virtual bool isTypeLegal(Type *Ty) = 0;
+  virtual bool isOpLegal(Instruction *I) = 0;
   virtual unsigned getRegUsageForType(Type *Ty) = 0;
   virtual bool shouldBuildLookupTables() = 0;
   virtual bool shouldBuildLookupTablesForConstant(Constant *C) = 0;
@@ -2621,6 +2625,7 @@ public:
   }
   bool useAA() override { return Impl.useAA(); }
   bool isTypeLegal(Type *Ty) override { return Impl.isTypeLegal(Ty); }
+  bool isOpLegal(Instruction *I) override {return Impl.isOpLegal(I); }
   unsigned getRegUsageForType(Type *Ty) override {
     return Impl.getRegUsageForType(Ty);
   }

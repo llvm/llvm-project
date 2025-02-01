@@ -14,6 +14,7 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUTargetMachine.h"
+#include "AMDGPUTargetTransformInfo.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -45,6 +46,7 @@ class AMDGPULateCodeGenPrepare
   Function &F;
   const DataLayout &DL;
   const GCNSubtarget &ST;
+  const TargetTransformInfo &TTI;
 
   AssumptionCache *const AC;
   UniformityInfo &UA;
@@ -53,8 +55,9 @@ class AMDGPULateCodeGenPrepare
 
 public:
   AMDGPULateCodeGenPrepare(Function &F, const GCNSubtarget &ST,
-                           AssumptionCache *AC, UniformityInfo &UA)
-      : F(F), DL(F.getDataLayout()), ST(ST), AC(AC), UA(UA) {}
+                           const TargetTransformInfo &TTI, AssumptionCache *AC,
+                           UniformityInfo &UA)
+      : F(F), DL(F.getDataLayout()), ST(ST), TTI(TTI), AC(AC), UA(UA) {}
   bool run();
   bool visitInstruction(Instruction &) { return false; }
 
@@ -75,6 +78,8 @@ private:
   Module &Mod;
   const DataLayout &DL;
   const GCNSubtarget &ST;
+  const TargetTransformInfo &TTI;
+
   /// The scalar type to convert to
   Type *const ConvertToScalar;
   /// The set of visited Instructions
@@ -125,8 +130,45 @@ public:
     return LK.first != TargetLoweringBase::TypeLegal;
   }
 
-  LiveRegOptimizer(Module &Mod, const GCNSubtarget &ST)
-      : Mod(Mod), DL(Mod.getDataLayout()), ST(ST),
+  // Filtering based on operation or its cost.
+  // If an operation incurs high enough cost or natively work on
+  // vector of illegal type, ie. v2i8, then it makes sense to try
+  // to coerce them as packed VGPR across BB.
+  bool shouldReplaceBasedOnOp(Instruction *II) {
+    static const int SCALARIZE_INST_COST = 2;
+    static const int LRO_COST_THRES = 12;
+
+    // Ignore pseudos
+    if (II->isDebugOrPseudoInst())
+      return false;
+
+    // Instruction Cost
+    auto Cost = TTI.getInstructionCost(
+        II, TargetTransformInfo::TargetCostKind::TCK_SizeAndLatency);
+    if (const auto *Def = II->getOperand(0)) {
+      if (const auto *DefTy = dyn_cast<FixedVectorType>(Def->getType())) {
+        const auto *ElTy = dyn_cast<IntegerType>(DefTy->getElementType());
+        // Assume vNi8 and vNi16 will be scalarized.
+        if (ElTy && ElTy->getBitWidth() <= 16) {
+          const auto ElCount = DefTy->getElementCount().getFixedValue();
+          Cost += SCALARIZE_INST_COST * ElCount;
+        }
+      }
+    }
+    LLVM_DEBUG(dbgs() << "shouldReplaceBasedOnOp: " << *II << " Cost=" << Cost
+                      << '\n';);
+    if (Cost >= LRO_COST_THRES)
+      return true;
+
+    if (TTI.isOpLegal(II))
+      return true;
+
+    return false;
+  }
+
+  LiveRegOptimizer(Module &Mod, const GCNSubtarget &ST,
+                   const TargetTransformInfo &TTI)
+      : Mod(Mod), DL(Mod.getDataLayout()), ST(ST), TTI(TTI),
         ConvertToScalar(Type::getInt32Ty(Mod.getContext())) {}
 };
 
@@ -140,7 +182,7 @@ bool AMDGPULateCodeGenPrepare::run() {
   // vectors to equivalent vectors of legal type (which are converted back
   // before uses in subsequent blocks), to pack the bits into fewer physical
   // registers (used in CopyToReg/CopyFromReg pairs).
-  LiveRegOptimizer LRO(*F.getParent(), ST);
+  LiveRegOptimizer LRO(*F.getParent(), ST, TTI);
 
   bool Changed = false;
 
@@ -291,6 +333,9 @@ bool LiveRegOptimizer::optimizeLiveType(
       }
 
       Instruction *UseInst = cast<Instruction>(V);
+      if (!shouldReplaceBasedOnOp(UseInst))
+        break;  // reject this II.
+
       // Collect all uses of PHINodes and any use the crosses BB boundaries.
       if (UseInst->getParent() != II->getParent() || isa<PHINode>(II)) {
         Uses.insert(UseInst);
@@ -478,11 +523,12 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
 PreservedAnalyses
 AMDGPULateCodeGenPreparePass::run(Function &F, FunctionAnalysisManager &FAM) {
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+  const TargetTransformInfo &TTI = TM.getTargetTransformInfo(F);
 
   AssumptionCache &AC = FAM.getResult<AssumptionAnalysis>(F);
   UniformityInfo &UI = FAM.getResult<UniformityInfoAnalysis>(F);
 
-  bool Changed = AMDGPULateCodeGenPrepare(F, ST, &AC, UI).run();
+  bool Changed = AMDGPULateCodeGenPrepare(F, ST, TTI, &AC, UI).run();
 
   if (!Changed)
     return PreservedAnalyses::all();
@@ -518,13 +564,14 @@ bool AMDGPULateCodeGenPrepareLegacy::runOnFunction(Function &F) {
   const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
   const TargetMachine &TM = TPC.getTM<TargetMachine>();
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+  const TargetTransformInfo &TTI = TM.getTargetTransformInfo(F);
 
   AssumptionCache &AC =
       getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   UniformityInfo &UI =
       getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
 
-  return AMDGPULateCodeGenPrepare(F, ST, &AC, UI).run();
+  return AMDGPULateCodeGenPrepare(F, ST, TTI, &AC, UI).run();
 }
 
 INITIALIZE_PASS_BEGIN(AMDGPULateCodeGenPrepareLegacy, DEBUG_TYPE,

@@ -1446,3 +1446,25 @@ void GCNTTIImpl::collectKernelLaunchBounds(
   LB.push_back({"amdgpu-waves-per-eu[0]", WavesPerEU.first});
   LB.push_back({"amdgpu-waves-per-eu[1]", WavesPerEU.second});
 }
+
+/// Check if operation is legal.
+/// TODO: If we had IR<->SDag mapping, we could use TLI->isOperationLegal
+bool GCNTTIImpl::isOpLegal(Instruction *I) const {
+  Type *T = I->getType();
+  if (!isTypeLegal(T)) {
+    // Intrinsics - assume they natively handle illegal type
+    if (isa<IntrinsicInst>(I))
+      return true;
+
+    // Stores
+    if (isa<StoreInst>(I))
+      return true;
+
+    // Shuffles
+    if (isa<ShuffleVectorInst>(I))
+      return true;
+
+    return false;
+  }
+  return true;
+}

@@ -397,13 +397,11 @@ define amdgpu_kernel void @reuseOp() {
 ; GFX906-SAME: ) #[[ATTR0]] {
 ; GFX906-NEXT:  entry:
 ; GFX906-NEXT:    [[VEC1:%.*]] = insertelement <16 x i8> zeroinitializer, i8 0, i64 0
-; GFX906-NEXT:    [[VEC1_BC:%.*]] = bitcast <16 x i8> [[VEC1]] to <4 x i32>
 ; GFX906-NEXT:    br label [[BB_1:%.*]]
 ; GFX906:       bb.1:
-; GFX906-NEXT:    [[VEC1_BC_BC:%.*]] = bitcast <4 x i32> [[VEC1_BC]] to <16 x i8>
 ; GFX906-NEXT:    [[SEL0:%.*]] = select i1 false, <16 x i8> zeroinitializer, <16 x i8> zeroinitializer
 ; GFX906-NEXT:    [[SEL0_BC:%.*]] = bitcast <16 x i8> [[SEL0]] to <4 x i32>
-; GFX906-NEXT:    [[SEL1:%.*]] = select i1 false, <16 x i8> [[VEC1_BC_BC]], <16 x i8> [[SEL0]]
+; GFX906-NEXT:    [[SEL1:%.*]] = select i1 false, <16 x i8> [[VEC1]], <16 x i8> [[SEL0]]
 ; GFX906-NEXT:    br label [[BB_2:%.*]]
 ; GFX906:       bb.2:
 ; GFX906-NEXT:    [[SEL0_BC_BC:%.*]] = bitcast <4 x i32> [[SEL0_BC]] to <16 x i8>

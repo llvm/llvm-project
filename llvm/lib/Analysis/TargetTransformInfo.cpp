@@ -584,6 +584,10 @@ bool TargetTransformInfo::isTypeLegal(Type *Ty) const {
   return TTIImpl->isTypeLegal(Ty);
 }
 
+bool TargetTransformInfo::isOpLegal(Instruction *I) const {
+  return TTIImpl->isOpLegal(I);
+}
+
 unsigned TargetTransformInfo::getRegUsageForType(Type *Ty) const {
   return TTIImpl->getRegUsageForType(Ty);
 }

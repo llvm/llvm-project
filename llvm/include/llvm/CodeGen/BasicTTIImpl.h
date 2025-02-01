@@ -465,9 +465,13 @@ public:
 
   bool useAA() const { return getST()->useAA(); }
 
-  bool isTypeLegal(Type *Ty) {
+  bool isTypeLegal(Type *Ty) const {
     EVT VT = getTLI()->getValueType(DL, Ty, /*AllowUnknown=*/true);
     return getTLI()->isTypeLegal(VT);
+  }
+
+  bool isOpLegal(Instruction *I) const {
+    return isTypeLegal(I->getType());
   }
 
   unsigned getRegUsageForType(Type *Ty) {
