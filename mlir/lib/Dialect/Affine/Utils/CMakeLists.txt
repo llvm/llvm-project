@@ -16,4 +16,5 @@ add_mlir_dialect_library(MLIRAffineUtils
   MLIRMemRefDialect
   MLIRTransformUtils
   MLIRViewLikeInterface
+  MLIRUnrollScopeInterface
   )

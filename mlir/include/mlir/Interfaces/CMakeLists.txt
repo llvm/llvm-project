@@ -17,6 +17,7 @@ add_mlir_interface(TilingInterface)
 add_mlir_interface(ValueBoundsOpInterface)
 add_mlir_interface(VectorInterfaces)
 add_mlir_interface(ViewLikeInterface)
+add_mlir_interface(UnrollScopeInterface)
 
 set(LLVM_TARGET_DEFINITIONS MemorySlotInterfaces.td)
 mlir_tablegen(MemorySlotOpInterfaces.h.inc -gen-op-interface-decls)

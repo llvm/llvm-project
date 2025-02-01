@@ -17,6 +17,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/UnrollScopeInterface.td"
 
 def Func_Dialect : Dialect {
   let name = "func";
@@ -225,8 +226,8 @@ def ConstantOp : Func_Op<"constant",
 //===----------------------------------------------------------------------===//
 
 def FuncOp : Func_Op<"func", [
-  AffineScope, AutomaticAllocationScope,
-  FunctionOpInterface, IsolatedFromAbove, OpAsmOpInterface
+  AffineScope, AutomaticAllocationScope, FunctionOpInterface,
+  IsolatedFromAbove, OpAsmOpInterface, UnrollScopeInterface
 ]> {
   let summary = "An operation with a name containing a single `SSACFG` region";
   let description = [{
