@@ -127,13 +127,13 @@ svfloat64_t test_svrintp_f64_m(svfloat64_t inactive, svbool_t pg, svfloat64_t op
 // CHECK-LABEL: @test_svrintp_f16_x(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.frintp.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x half> [[OP:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.frintp.nxv8f16(<vscale x 8 x half> poison, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x half> [[OP:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svrintp_f16_xu10__SVBool_tu13__SVFloat16_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.frintp.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x half> [[OP:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.frintp.nxv8f16(<vscale x 8 x half> poison, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x half> [[OP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 //
 svfloat16_t test_svrintp_f16_x(svbool_t pg, svfloat16_t op) MODE_ATTR
@@ -144,13 +144,13 @@ svfloat16_t test_svrintp_f16_x(svbool_t pg, svfloat16_t op) MODE_ATTR
 // CHECK-LABEL: @test_svrintp_f32_x(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.frintp.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x i1> [[TMP0]], <vscale x 4 x float> [[OP:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.frintp.nxv4f32(<vscale x 4 x float> poison, <vscale x 4 x i1> [[TMP0]], <vscale x 4 x float> [[OP:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svrintp_f32_xu10__SVBool_tu13__SVFloat32_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.frintp.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x i1> [[TMP0]], <vscale x 4 x float> [[OP:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.frintp.nxv4f32(<vscale x 4 x float> poison, <vscale x 4 x i1> [[TMP0]], <vscale x 4 x float> [[OP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 svfloat32_t test_svrintp_f32_x(svbool_t pg, svfloat32_t op) MODE_ATTR
@@ -161,13 +161,13 @@ svfloat32_t test_svrintp_f32_x(svbool_t pg, svfloat32_t op) MODE_ATTR
 // CHECK-LABEL: @test_svrintp_f64_x(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.frintp.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[OP:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.frintp.nxv2f64(<vscale x 2 x double> poison, <vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[OP:%.*]])
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svrintp_f64_xu10__SVBool_tu13__SVFloat64_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.frintp.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[OP:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.frintp.nxv2f64(<vscale x 2 x double> poison, <vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[OP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 svfloat64_t test_svrintp_f64_x(svbool_t pg, svfloat64_t op) MODE_ATTR
