@@ -24,11 +24,7 @@ enum {
   DIM_Z = 2,
 };
 
-#pragma omp begin declare target device_type(nohost)
-
 inline constexpr uint32_t MaxThreadsPerTeam = 1024;
-
-#pragma omp end declare target
 
 /// Initialize the mapping machinery.
 void init(bool IsSPMD);

@@ -22,8 +22,6 @@ using namespace ompx;
 
 namespace {
 
-#pragma omp begin declare target device_type(nohost)
-
 void gpu_regular_warp_reduce(void *reduce_data, ShuffleReductFnTy shflFct) {
   for (uint32_t mask = mapping::getWarpSize() / 2; mask > 0; mask /= 2) {
     shflFct(reduce_data, /*LaneId - not used= */ 0,
@@ -316,5 +314,3 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
 void *__kmpc_reduction_get_fixed_buffer() {
   return state::getKernelLaunchEnvironment().ReductionBuffer;
 }
-
-#pragma omp end declare target

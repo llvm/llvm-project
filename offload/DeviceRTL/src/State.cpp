@@ -23,16 +23,13 @@
 
 using namespace ompx;
 
-#pragma omp begin declare target device_type(nohost)
-
 /// Memory implementation
 ///
 ///{
 
 /// External symbol to access dynamic shared memory.
-[[gnu::aligned(
-    allocator::ALIGNMENT)]] extern unsigned char DynamicSharedBuffer[];
-#pragma omp allocate(DynamicSharedBuffer) allocator(omp_pteam_mem_alloc)
+[[gnu::aligned(allocator::ALIGNMENT)]] extern unsigned char
+    [[clang::address_space(3)]] DynamicSharedBuffer[];
 
 /// The kernel environment passed to the init method by the compiler.
 static KernelEnvironmentTy *SHARED(KernelEnvironmentPtr);
@@ -452,13 +449,10 @@ void *llvm_omp_get_dynamic_shared() { return __kmpc_get_dynamic_shared(); }
 /// NUM_SHARED_VARIABLES_IN_SHARED_MEM we will malloc space for communication.
 constexpr uint64_t NUM_SHARED_VARIABLES_IN_SHARED_MEM = 64;
 
-[[clang::loader_uninitialized]] static void
-    *SharedMemVariableSharingSpace[NUM_SHARED_VARIABLES_IN_SHARED_MEM];
-#pragma omp allocate(SharedMemVariableSharingSpace)                            \
-    allocator(omp_pteam_mem_alloc)
-[[clang::loader_uninitialized]] static void **SharedMemVariableSharingSpacePtr;
-#pragma omp allocate(SharedMemVariableSharingSpacePtr)                         \
-    allocator(omp_pteam_mem_alloc)
+[[clang::loader_uninitialized]] static void *[[clang::address_space(
+    3)]] SharedMemVariableSharingSpace[NUM_SHARED_VARIABLES_IN_SHARED_MEM];
+[[clang::loader_uninitialized]] static void **[[clang::address_space(
+    3)]] SharedMemVariableSharingSpacePtr;
 
 void __kmpc_begin_sharing_variables(void ***GlobalArgs, uint64_t nArgs) {
   if (nArgs <= NUM_SHARED_VARIABLES_IN_SHARED_MEM) {
@@ -481,4 +475,3 @@ void __kmpc_get_shared_variables(void ***GlobalArgs) {
   *GlobalArgs = SharedMemVariableSharingSpacePtr;
 }
 }
-#pragma omp end declare target
