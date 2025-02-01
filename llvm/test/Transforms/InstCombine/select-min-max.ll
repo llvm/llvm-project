@@ -304,10 +304,8 @@ define i8 @not_smin_swap(i8 %i41, i8 %i43) {
 
 define i8 @sel_umin_constant(i8 %x) {
 ; CHECK-LABEL: @sel_umin_constant(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[UMIN:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 16)
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[UMIN]], i8 16
-; CHECK-NEXT:    ret i8 [[SEL]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i8 @llvm.umin.i8(i8 [[X:%.*]], i8 16)
+; CHECK-NEXT:    ret i8 [[UMIN]]
 ;
   %cmp = icmp sgt i8 %x, -1
   %umin = call i8 @llvm.umin.i8(i8 %x, i8 16)
@@ -317,9 +315,7 @@ define i8 @sel_umin_constant(i8 %x) {
 
 define i8 @sel_constant_smax_with_range_attr(i8 %x) {
 ; CHECK-LABEL: @sel_constant_smax_with_range_attr(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[SMAX:%.*]] = call range(i8 8, 16) i8 @llvm.smax.i8(i8 [[X]], i8 16)
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 16, i8 [[SMAX]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 16)
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
   %cmp = icmp slt i8 %x, 0
