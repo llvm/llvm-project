@@ -15,6 +15,7 @@ config.libomptarget_obj_root = "@CMAKE_CURRENT_BINARY_DIR@/@CURRENT_TARGET@"
 config.library_dir = "@LIBOMPTARGET_LIBRARY_DIR@"
 config.llvm_library_dir = "@LIBOMPTARGET_LLVM_LIBRARY_DIR@"
 config.llvm_library_intdir = "@LIBOMPTARGET_LLVM_LIBRARY_INTDIR@"
+config.llvm_targets_built = "@LLVM_TARGETS_BUILT@".split()
 config.omp_header_directory = "@LIBOMPTARGET_OPENMP_HEADER_FOLDER@"
 config.omp_host_rtl_directory = "@LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER@"
 config.llvm_lib_directory = "@LIBOMPTARGET_LLVM_LIBRARY_DIR@"
@@ -29,5 +30,7 @@ config.has_libomptarget_ompt = @LIBOMPTARGET_OMPT_SUPPORT@
 config.libomptarget_has_libc = @LIBOMPTARGET_GPU_LIBC_SUPPORT@
 config.libomptarget_test_pgo = @LIBOMPTARGET_TEST_GPU_PGO@
 config.offload_tblgen = "@OFFLOAD_TBLGEN_EXECUTABLE@"
+config.offload_packager = "@PACKAGER_TOOL@"
+config.offload_readelf = "@CMAKE_READELF@"
 # Let the main config do the real work.
 lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg")

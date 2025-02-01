@@ -47,6 +47,19 @@ function(find_standalone_test_dependencies)
     set(ENABLE_CHECK_TARGETS FALSE PARENT_SCOPE)
     return()
   endif()
+
+  find_program(OPENMP_LLVM_CONFIG_EXECUTABLE
+   NAMES llvm-config
+   PATHS ${OPENMP_LLVM_TOOLS_DIR})
+  if (LLVM_CONFIG OPENMP_LLVM_CONFIG_EXECUTABLE)
+    message(STATUS "Cannot find 'llvm-config'.")
+    message(STATUS "Please put 'llvm-config' in your PATH, set OPENMP_LLVM_CONFIG_EXECUTABLE to its full path, or point OPENMP_LLVM_TOOLS_DIR to its directory.")
+    message(WARNING "The check targets will not be available!")
+    set(ENABLE_CHECK_TARGETS FALSE PARENT_SCOPE)
+    return()
+  else()
+    set(OPENMP_LLVM_CONFIG_EXECUTABLE ${OPENMP_LLVM_CONFIG_EXECUTABLE} PARENT_SCOPE)
+  endif()
 endfunction()
 
 if (${OPENMP_STANDALONE_BUILD})
@@ -71,6 +84,7 @@ else()
     set(OPENMP_FILECHECK_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/FileCheck)
   endif()
   set(OPENMP_NOT_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/not)
+  set(OPENMP_LLVM_CONFIG_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-config)
 endif()
 set(OFFLOAD_DEVICE_INFO_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-offload-device-info)
 set(OFFLOAD_TBLGEN_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/offload-tblgen)
@@ -163,6 +177,8 @@ else()
   set(OPENMP_TEST_COMPILER_HAS_OMP_H 1)
   set(OPENMP_TEST_COMPILER_OPENMP_FLAGS "-fopenmp ${OPENMP_TEST_COMPILER_THREAD_FLAGS}")
   set(OPENMP_TEST_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS 1)
+  execute_process(COMMAND "${OPENMP_LLVM_CONFIG_EXECUTABLE}" "--targets-built"
+    OUTPUT_VARIABLE LLVM_TARGETS_BUILT OUTPUT_STRIP_TRAILING_WHITESPACE)
 endif()
 
 # Function to set compiler features for use in lit.
