@@ -105,7 +105,9 @@ public:
         "language doesn't support getting vtable information");
   }
 
-  // this call should return true if it could set the name and/or the type
+  // This call should return true if it could set the name and/or the type.
+  // address can be either a legitimate address on the inferior, or an address
+  // in lldb, if value_type == HostAddress.
   virtual bool GetDynamicTypeAndAddress(ValueObject &in_value,
                                         lldb::DynamicValueType use_dynamic,
                                         TypeAndOrName &class_type_or_name,

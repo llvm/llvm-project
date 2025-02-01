@@ -239,11 +239,19 @@ bool ValueObjectDynamicValue::UpdateValue() {
     if (m_address.IsValid())
       SetValueDidChange(true);
 
-    // We've moved, so we should be fine...
-    m_address = dynamic_address;
-    lldb::TargetSP target_sp(GetTargetSP());
-    lldb::addr_t load_address = m_address.GetLoadAddress(target_sp.get());
-    m_value.GetScalar() = load_address;
+    // If we found a host address, point to the buffer in host memory.
+    // Later on this function will copy the buffer over.
+    if (value_type == Value::ValueType::HostAddress) {
+      m_value.GetScalar() = dynamic_address.GetOffset();
+      m_address = LLDB_INVALID_ADDRESS;
+    } else {
+      // Otherwise we have a legitimate address on the target. Point to the load
+      // address.
+      m_address = dynamic_address;
+      lldb::TargetSP target_sp(GetTargetSP());
+      lldb::addr_t load_address = m_address.GetLoadAddress(target_sp.get());
+      m_value.GetScalar() = load_address;
+    }
   }
 
   if (runtime)
@@ -258,7 +266,11 @@ bool ValueObjectDynamicValue::UpdateValue() {
     LLDB_LOGF(log, "[%s %p] has a new dynamic type %s", GetName().GetCString(),
               static_cast<void *>(this), GetTypeName().GetCString());
 
-  if (m_address.IsValid() && m_dynamic_type_info) {
+  // m_address could be invalid but we could still have a local buffer
+  // containing the dynamic value.
+  if ((m_address.IsValid() ||
+       m_value.GetValueType() == Value::ValueType::HostAddress) &&
+      m_dynamic_type_info) {
     // The variable value is in the Scalar value inside the m_value. We can
     // point our m_data right to it.
     m_error = m_value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
