@@ -5570,7 +5570,7 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
           /*SkipImmediateInvocations=*/NestedDefaultChecking))
     return ExprError();
 
-  Expr *RewrittenExpr = Init == Param->getDefaultArg() ? nullptr : Init;
+  Expr *RewrittenExpr = (Init == Param->getDefaultArg() ? nullptr : Init);
   return CXXDefaultArgExpr::Create(Context, InitializationContext->Loc, Param,
                                    RewrittenExpr,
                                    InitializationContext->Context);

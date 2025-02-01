@@ -457,7 +457,7 @@ bool DeadCodeScan::isDeadCodeRoot(const clang::CFGBlock *Block) {
 // Check if the given `DeadStmt` is one of target statements or is a sub-stmt of
 // them. `Block` is the CFGBlock containing the `DeadStmt`.
 template <class... Ts>
-static bool isDeadSubStmtInOneOf(const Stmt *DeadStmt, const CFGBlock *Block) {
+static bool isDeadStmtInOneOf(const Stmt *DeadStmt, const CFGBlock *Block) {
   // The coroutine statement, co_return, co_await, or co_yield.
   const Stmt *TargetStmt = nullptr;
   // Find the first coroutine statement after the DeadStmt in the block.
@@ -503,8 +503,8 @@ static bool isValidDeadStmt(const Stmt *S, const clang::CFGBlock *Block) {
   // If the dead stmt is a sub-stmt of CXXDefaultInitExpr and CXXDefaultArgExpr,
   // we would rather expect to find CXXDefaultInitExpr and CXXDefaultArgExpr as
   // a valid dead stmt.
-  return !isDeadSubStmtInOneOf<CoreturnStmt, CoroutineSuspendExpr,
-                               CXXDefaultArgExpr, CXXDefaultInitExpr>(S, Block);
+  return !isDeadStmtInOneOf<CoreturnStmt, CoroutineSuspendExpr,
+                            CXXDefaultArgExpr, CXXDefaultInitExpr>(S, Block);
 }
 
 const Stmt *DeadCodeScan::findDeadCode(const clang::CFGBlock *Block) {
