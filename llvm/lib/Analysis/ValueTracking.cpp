@@ -8518,7 +8518,7 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
   RHS = FalseVal;
 
   // Handle constant RHS cases like X < 3 ? 2 : X -> max(X, 2)
-  auto *CmpRHSC = dyn_cast<ConstantInt>(CmpRHS);
+  auto *CmpRHSC = dyn_cast<Constant>(CmpRHS);
   if (ICmpInst::isRelational(Pred) && CmpRHSC) {
     if (auto Flipped =
             getFlippedStrictnessPredicateAndConstant(Pred, CmpRHSC)) {

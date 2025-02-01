@@ -19,6 +19,30 @@ define i32 @foo(i32 %h) {
   ret i32 %r
 }
 
+define <2 x i32> @foo_vec(<2 x i32> %h) {
+; CHECK-LABEL: @foo_vec(
+; CHECK-NEXT:    [[SD:%.*]] = sdiv <2 x i32> [[H:%.*]], splat (i32 2)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[SD]], <2 x i32> splat (i32 1))
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %sd = sdiv <2 x i32> %h, splat(i32 2)
+  %t = icmp slt <2 x i32> %sd, splat(i32 1)
+  %r = select <2 x i1> %t, <2 x i32> %sd, <2 x i32> splat(i32 1)
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @foo_vec_nonsplat(<2 x i32> %h) {
+; CHECK-LABEL: @foo_vec_nonsplat(
+; CHECK-NEXT:    [[SD:%.*]] = sdiv <2 x i32> [[H:%.*]], splat (i32 2)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[SD]], <2 x i32> <i32 1, i32 0>)
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %sd = sdiv <2 x i32> %h, splat(i32 2)
+  %t = icmp slt <2 x i32> %sd, <i32 1, i32 0>
+  %r = select <2 x i1> %t, <2 x i32> %sd, <2 x i32> <i32 1, i32 0>
+  ret <2 x i32> %r
+}
+
 define i32 @foo_commuted(i32 %h) {
 ; CHECK-LABEL: @foo_commuted(
 ; CHECK-NEXT:    [[SD:%.*]] = sdiv i32 [[H:%.*]], 2
@@ -29,6 +53,30 @@ define i32 @foo_commuted(i32 %h) {
   %t = icmp sgt i32 %sd, 0
   %r = select i1 %t, i32 1, i32 %sd
   ret i32 %r
+}
+
+define <2 x i32> @foo_commuted_vec(<2 x i32> %h) {
+; CHECK-LABEL: @foo_commuted_vec(
+; CHECK-NEXT:    [[SD:%.*]] = sdiv <2 x i32> [[H:%.*]], splat (i32 2)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[SD]], <2 x i32> splat (i32 1))
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %sd = sdiv <2 x i32> %h, splat(i32 2)
+  %t = icmp sgt <2 x i32> %sd, zeroinitializer
+  %r = select <2 x i1> %t, <2 x i32> splat(i32 1), <2 x i32> %sd
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @foo_commuted_vec_nonsplat(<2 x i32> %h) {
+; CHECK-LABEL: @foo_commuted_vec_nonsplat(
+; CHECK-NEXT:    [[SD:%.*]] = sdiv <2 x i32> [[H:%.*]], splat (i32 2)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[SD]], <2 x i32> <i32 1, i32 0>)
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %sd = sdiv <2 x i32> %h, splat(i32 2)
+  %t = icmp sgt <2 x i32> %sd, <i32 0, i32 -1>
+  %r = select <2 x i1> %t, <2 x i32> <i32 1, i32 0>, <2 x i32> %sd
+  ret <2 x i32> %r
 }
 
 define i32 @bar(i32 %h) {
