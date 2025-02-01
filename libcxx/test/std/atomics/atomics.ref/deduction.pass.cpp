@@ -21,9 +21,18 @@
 template <typename T>
 struct TestDeduction {
   void operator()() const {
-    T x(T(0));
+    do_test<T>();
+    do_test<T const>();
+    if constexpr (std::atomic_ref<T>::is_always_lock_free) {
+      do_test<T volatile>();
+      do_test<T const volatile>();
+    }
+  }
+  template <class U>
+  void do_test() const {
+    U x(U(0));
     std::atomic_ref a(x);
-    ASSERT_SAME_TYPE(decltype(a), std::atomic_ref<T>);
+    ASSERT_SAME_TYPE(decltype(a), std::atomic_ref<U>);
   }
 };
 
