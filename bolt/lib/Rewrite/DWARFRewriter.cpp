@@ -1725,7 +1725,7 @@ StringRef getSectionName(const SectionRef &Section) {
   return Name;
 }
 
-// Exctracts an appropriate slice if input is DWP.
+// Extracts an appropriate slice if input is DWP.
 // Applies patches or overwrites the section.
 std::optional<StringRef> updateDebugData(
     DWARFContext &DWCtx, StringRef SectionName, StringRef SectionContents,
@@ -1761,7 +1761,7 @@ std::optional<StringRef> updateDebugData(
     auto Iter = OverridenSections.find(Kind);
     if (Iter == OverridenSections.end()) {
       errs()
-          << "BOLT-WARNING: [internal-dwarf-error]: Could not find overriden "
+          << "BOLT-WARNING: [internal-dwarf-error]: Could not find overridden "
              "section for: "
           << Twine::utohexstr(DWOId) << ".\n";
       return std::nullopt;
@@ -1992,7 +1992,7 @@ void DWARFRewriter::convertToRangesPatchDebugInfo(
     }
   }
 
-  // HighPC was conveted into DW_AT_ranges.
+  // HighPC was converted into DW_AT_ranges.
   // For DWARF5 we only access ranges through index.
 
   DIEBldr.replaceValue(&Die, HighPCAttrInfo.getAttribute(), dwarf::DW_AT_ranges,

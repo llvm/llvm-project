@@ -892,7 +892,7 @@ public:
     AArch64_AM::ShiftExtendType ExtendType =
         AArch64_AM::getArithExtendType(OperandExtension);
     if (ShiftVal != 2) {
-      // TODO: Handle the patten where ShiftVal != 2.
+      // TODO: Handle the pattern where ShiftVal != 2.
       // The following code sequence below has no shift amount,
       // the range could be 0 to 4.
       // The pattern comes from libc, it occurs when the binary is static.
