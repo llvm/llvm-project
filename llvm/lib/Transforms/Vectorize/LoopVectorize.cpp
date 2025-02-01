@@ -8772,6 +8772,10 @@ bool VPRecipeBuilder::getScaledReductions(
     return false;
 
   using namespace llvm::PatternMatch;
+  // Use the side-effect of match to replace BinOp only if the pattern is
+  // matched, we don't care at this point whether it actually matched.
+  match(BinOp, m_Neg(m_BinOp(BinOp)));
+
   Value *A, *B;
   if (!match(BinOp->getOperand(0), m_ZExtOrSExt(m_Value(A))) ||
       !match(BinOp->getOperand(1), m_ZExtOrSExt(m_Value(B))))
