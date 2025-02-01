@@ -80,6 +80,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
 
 #include <iterator>
@@ -246,10 +247,16 @@ fixupBlock(MachineBasicBlock &CurrBB, const BlockFlagsVector &BlockInfo,
            SmallDenseMap<MBBSectionID, InsertionPoint> &InsertionPts,
            const InsertionPoint &Prologue) {
   const MachineFunction &MF = *CurrBB.getParent();
+  const Function &F = MF.getFunction();
   const TargetFrameLowering &TFL = *MF.getSubtarget().getFrameLowering();
   const BlockFlags &Info = BlockInfo[CurrBB.getNumber()];
 
   if (!Info.Reachable)
+    return false;
+
+  // Only async unwind tables need to fix up CFI at the block level. Otherwise,
+  // the function/section level is sufficient.
+  if (F.getUWTableKind() != UWTableKind::Async && !CurrBB.isBeginSection())
     return false;
 
   // If the previous block and the current block are in the same section,

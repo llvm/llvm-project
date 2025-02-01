@@ -2611,7 +2611,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
 
 bool AArch64FrameLowering::enableCFIFixup(MachineFunction &MF) const {
   return TargetFrameLowering::enableCFIFixup(MF) &&
-         MF.getInfo<AArch64FunctionInfo>()->needsAsyncDwarfUnwindInfo(MF);
+         MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo(MF);
 }
 
 /// getFrameIndexReference - Provide a base+offset reference to an FI slot for
