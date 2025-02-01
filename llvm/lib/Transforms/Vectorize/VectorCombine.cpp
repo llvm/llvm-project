@@ -60,6 +60,12 @@ static cl::opt<unsigned> MaxInstrsToScan(
     "vector-combine-max-scan-instrs", cl::init(30), cl::Hidden,
     cl::desc("Max number of instructions to scan for vector combining."));
 
+static cl::opt<bool> ForceFoldBinopOfReductions(
+    "vector-combine-force-fold-binop-of-reductions", cl::init(false),
+    cl::Hidden,
+    cl::desc("Force folding binary of of two reductions even if it is not "
+             "profitable. Should be used for testing only."));
+
 static const unsigned InvalidIndex = std::numeric_limits<unsigned>::max();
 
 namespace {
@@ -114,6 +120,7 @@ private:
   bool scalarizeBinopOrCmp(Instruction &I);
   bool scalarizeVPIntrinsic(Instruction &I);
   bool foldExtractedCmps(Instruction &I);
+  bool foldBinopOfReductions(Instruction &I);
   bool foldSingleElementStore(Instruction &I);
   bool scalarizeLoadExtract(Instruction &I);
   bool foldConcatOfBoolMasks(Instruction &I);
@@ -1238,6 +1245,57 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
   Value *NewExt = Builder.CreateExtractElement(VecLogic, CheapIndex);
   replaceValue(I, *NewExt);
   ++NumVecCmpBO;
+  return true;
+}
+
+bool VectorCombine::foldBinopOfReductions(Instruction &I) {
+  Instruction::BinaryOps BinOpOpc = cast<BinaryOperator>(&I)->getOpcode();
+  Intrinsic::ID ReductionIID = getReductionForBinop(BinOpOpc);
+  if (BinOpOpc == Instruction::Sub)
+    ReductionIID = Intrinsic::vector_reduce_add;
+  if (ReductionIID == Intrinsic::not_intrinsic)
+    return false;
+
+  auto checkIntrinsicAndGetItsArgument = [](Value *V,
+                                            Intrinsic::ID IID) -> Value * {
+    IntrinsicInst *II = dyn_cast<IntrinsicInst>(V);
+    if (!II)
+      return nullptr;
+    if (II->getIntrinsicID() == IID && II->hasOneUse())
+      return II->getArgOperand(0);
+    return nullptr;
+  };
+
+  Value *V0 = checkIntrinsicAndGetItsArgument(I.getOperand(0), ReductionIID);
+  if (!V0)
+    return false;
+  Value *V1 = checkIntrinsicAndGetItsArgument(I.getOperand(1), ReductionIID);
+  if (!V1)
+    return false;
+
+  VectorType *VTy = cast<VectorType>(V0->getType());
+  if (V1->getType() != VTy)
+    return false;
+
+  InstructionCost ReductionCost =
+      TTI.getArithmeticReductionCost(BinOpOpc, VTy, std::nullopt, CostKind);
+  InstructionCost OldCost =
+      2 * ReductionCost + TTI.getInstructionCost(&I, CostKind);
+  InstructionCost NewCost =
+      ReductionCost + TTI.getArithmeticInstrCost(BinOpOpc, VTy, CostKind);
+  if (NewCost >= OldCost && !ForceFoldBinopOfReductions)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Found two mergeable reductions: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+  Value *VectorBO = Builder.CreateBinOp(BinOpOpc, V0, V1);
+  if (PossiblyDisjointInst *PDInst = dyn_cast<PossiblyDisjointInst>(&I))
+    if (auto *PDVectorBO = dyn_cast<PossiblyDisjointInst>(VectorBO))
+      PDVectorBO->setIsDisjoint(PDInst->isDisjoint());
+
+  Instruction *Rdx = Builder.CreateIntrinsic(ReductionIID, {VTy}, {VectorBO});
+  replaceValue(I, *Rdx);
   return true;
 }
 
@@ -3301,6 +3359,7 @@ bool VectorCombine::run() {
         if (Instruction::isBinaryOp(Opcode)) {
           MadeChange |= foldExtractExtract(I);
           MadeChange |= foldExtractedCmps(I);
+          MadeChange |= foldBinopOfReductions(I);
         }
         break;
       }
