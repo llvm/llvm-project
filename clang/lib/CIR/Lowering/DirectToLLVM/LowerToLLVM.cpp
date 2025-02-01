@@ -35,6 +35,10 @@ using namespace llvm;
 namespace cir {
 namespace direct {
 
+// This pass requires the CIR to be in a "flat" state. All blocks in each
+// function must belong to the parent region. Once scopes and control flow
+// are implemented in CIR, a pass will be run before this one to flatten
+// the CIR and get it into the state that this pass requires.
 struct ConvertCIRToLLVMPass
     : public mlir::PassWrapper<ConvertCIRToLLVMPass,
                                mlir::OperationPass<mlir::ModuleOp>> {
@@ -51,8 +55,6 @@ struct ConvertCIRToLLVMPass
   StringRef getArgument() const override { return "cir-flat-to-llvm"; }
 };
 
-// This pass requires the CIR to be in a "flat" state. All blocks in each
-// function must belong to the parent region.
 mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
     cir::GlobalOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
