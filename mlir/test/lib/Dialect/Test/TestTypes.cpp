@@ -506,6 +506,10 @@ Type TestRecursiveAliasType::parse(AsmParser &parser) {
     return rec;
   }
 
+  // Allow incomplete definitions that can be completed later.
+  if (succeeded(parser.parseGreater()))
+    return rec;
+
   // Otherwise, parse the body and update the type.
   if (failed(parser.parseComma()))
     return Type();
