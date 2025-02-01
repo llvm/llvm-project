@@ -11,8 +11,10 @@
 
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <chrono>
+#include <fstream>
 
 namespace lldb_dap {
 
@@ -21,21 +23,22 @@ namespace lldb_dap {
 /// The file is destroyed when the destructor is invoked.
 struct FifoFile {
   FifoFile(llvm::StringRef path);
+  FifoFile(llvm::StringRef path, FILE *f);
+  // FifoFile(llvm::StringRef path, FILE *f);
+  FifoFile(FifoFile &&other);
+
+  FifoFile(const FifoFile &) = delete;
+  FifoFile &operator=(const FifoFile &) = delete;
 
   ~FifoFile();
 
   std::string m_path;
+  FILE *m_file;
 };
 
-/// Create a fifo file in the filesystem.
-///
-/// \param[in] path
-///     The path for the fifo file.
-///
-/// \return
-///     A \a std::shared_ptr<FifoFile> if the file could be created, or an
-///     \a llvm::Error in case of failures.
-llvm::Expected<std::shared_ptr<FifoFile>> CreateFifoFile(llvm::StringRef path);
+std::error_code createNamedPipe(const llvm::Twine &Prefix,
+                                llvm::StringRef Suffix, int &ResultFd,
+                                llvm::SmallVectorImpl<char> &ResultPath);
 
 class FifoFileIO {
 public:
@@ -45,7 +48,7 @@ public:
   /// \param[in] other_endpoint_name
   ///     A human readable name for the other endpoint that will communicate
   ///     using this file. This is used for error messages.
-  FifoFileIO(llvm::StringRef fifo_file, llvm::StringRef other_endpoint_name);
+  FifoFileIO(FifoFile &&fifo_file, llvm::StringRef other_endpoint_name);
 
   /// Read the next JSON object from the underlying input fifo file.
   ///
@@ -75,8 +78,10 @@ public:
       const llvm::json::Value &json,
       std::chrono::milliseconds timeout = std::chrono::milliseconds(20000));
 
+  llvm::Error WaitForPeer();
+
 private:
-  std::string m_fifo_file;
+  FifoFile m_fifo_file;
   std::string m_other_endpoint_name;
 };
 

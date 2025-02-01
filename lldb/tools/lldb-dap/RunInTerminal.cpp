@@ -97,7 +97,7 @@ static Error ToError(const RunInTerminalMessage &message) {
 
 RunInTerminalLauncherCommChannel::RunInTerminalLauncherCommChannel(
     StringRef comm_file)
-    : m_io(comm_file, "debug adaptor") {}
+    : m_io(FifoFile(comm_file), "debug adaptor") {}
 
 Error RunInTerminalLauncherCommChannel::WaitUntilDebugAdaptorAttaches(
     std::chrono::milliseconds timeout) {
@@ -111,8 +111,10 @@ Error RunInTerminalLauncherCommChannel::WaitUntilDebugAdaptorAttaches(
     return message.takeError();
 }
 
-Error RunInTerminalLauncherCommChannel::NotifyPid() {
-  return m_io.SendJSON(RunInTerminalMessagePid(getpid()).ToJSON());
+Error RunInTerminalLauncherCommChannel::NotifyPid(lldb::pid_t pid) {
+  if (pid == 0)
+    pid = getpid();
+  return m_io.SendJSON(RunInTerminalMessagePid(pid).ToJSON());
 }
 
 void RunInTerminalLauncherCommChannel::NotifyError(StringRef error) {
@@ -122,8 +124,12 @@ void RunInTerminalLauncherCommChannel::NotifyError(StringRef error) {
 }
 
 RunInTerminalDebugAdapterCommChannel::RunInTerminalDebugAdapterCommChannel(
-    StringRef comm_file)
-    : m_io(comm_file, "runInTerminal launcher") {}
+    FifoFile &comm_file)
+    : m_io(std::move(comm_file), "runInTerminal launcher") {}
+
+Error RunInTerminalDebugAdapterCommChannel::WaitForLauncher() {
+  return m_io.WaitForPeer();
+}
 
 // Can't use \a std::future<llvm::Error> because it doesn't compile on Windows
 std::future<lldb::SBError>
@@ -158,13 +164,25 @@ std::string RunInTerminalDebugAdapterCommChannel::GetLauncherError() {
 }
 
 Expected<std::shared_ptr<FifoFile>> CreateRunInTerminalCommFile() {
+  int comm_fd;
   SmallString<256> comm_file;
-  if (std::error_code EC = sys::fs::getPotentiallyUniqueTempFileName(
-          "lldb-dap-run-in-terminal-comm", "", comm_file))
+  if (std::error_code EC = createNamedPipe("lldb-dap-run-in-terminal-comm", "",
+                                           comm_fd, comm_file))
     return createStringError(EC, "Error making unique file name for "
                                  "runInTerminal communication files");
+  FILE *cf = fdopen(comm_fd, "r+");
+  if (setvbuf(cf, NULL, _IONBF, 0))
+    return createStringError(std::error_code(errno, std::generic_category()),
+                             "Error setting unbuffered mode on C FILE");
+  // There is no portable way to conjure an ofstream from HANDLE, so use FILE *
+  // llvm::raw_fd_stream does not support getline() and there is no
+  // llvm::buffer_istream
 
-  return CreateFifoFile(comm_file.str());
+  if (cf == NULL)
+    return createStringError(std::error_code(errno, std::generic_category()),
+                             "Error converting file descriptor to C FILE for "
+                             "runInTerminal comm-file");
+  return std::make_shared<FifoFile>(comm_file, cf);
 }
 
 } // namespace lldb_dap

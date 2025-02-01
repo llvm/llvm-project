@@ -2039,7 +2039,7 @@ llvm::Error request_runInTerminal(DAP &dap,
     return comm_file_or_err.takeError();
   FifoFile &comm_file = *comm_file_or_err.get();
 
-  RunInTerminalDebugAdapterCommChannel comm_channel(comm_file.m_path);
+  RunInTerminalDebugAdapterCommChannel comm_channel(comm_file);
 
   lldb::pid_t debugger_pid = LLDB_INVALID_PROCESS_ID;
 #if !defined(_WIN32)
@@ -2057,6 +2057,11 @@ llvm::Error request_runInTerminal(DAP &dap,
                            }
                          });
 
+  llvm::errs() << "WaitForLauncher\n";
+  auto err = comm_channel.WaitForLauncher();
+  llvm::errs() << "WaitForLauncher returned\n";
+  if (err)
+    return err;
   if (llvm::Expected<lldb::pid_t> pid = comm_channel.GetLauncherPid())
     attach_info.SetProcessID(*pid);
   else
@@ -4892,11 +4897,6 @@ EXAMPLES:
 static void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
                                       llvm::StringRef comm_file,
                                       lldb::pid_t debugger_pid, char *argv[]) {
-#if defined(_WIN32)
-  llvm::errs() << "runInTerminal is only supported on POSIX systems\n";
-  exit(EXIT_FAILURE);
-#else
-
   // On Linux with the Yama security module enabled, a process can only attach
   // to its descendants by default. In the runInTerminal case the target
   // process is launched by the client so we need to allow tracing explicitly.
@@ -4905,8 +4905,36 @@ static void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
     (void)prctl(PR_SET_PTRACER, debugger_pid, 0, 0, 0);
 #endif
 
+  const char *target = target_arg.getValue();
+
+#ifdef _WIN32
+  /* Win32 provides no way to replace the process image. exec* are misnomers.
+     Neither is the adapter notified of new processes due to DebugActiveProcess
+     semantics. Hence, we create the new process in a suspended state and resume
+     it after attach.
+   */
+  std::string cmdline;
+  for (char **arg = argv; *arg != nullptr; ++arg) {
+    cmdline += *arg;
+    cmdline += ' ';
+  }
+  STARTUPINFOA si = {};
+  si.cb = sizeof(si);
+  PROCESS_INFORMATION pi = {};
+  bool res = CreateProcessA(target, cmdline.data(), NULL, NULL, FALSE,
+                            CREATE_SUSPENDED, NULL, NULL, &si, &pi);
+  if (!res) {
+    llvm::errs() << "Failed to create process: " << GetLastError() << "\n";
+    exit(EXIT_FAILURE);
+  }
+#endif
+
   RunInTerminalLauncherCommChannel comm_channel(comm_file);
-  if (llvm::Error err = comm_channel.NotifyPid()) {
+  if (llvm::Error err = comm_channel.NotifyPid(
+#ifdef _WIN32
+          pi.dwProcessId
+#endif
+          )) {
     llvm::errs() << llvm::toString(std::move(err)) << "\n";
     exit(EXIT_FAILURE);
   }
@@ -4923,15 +4951,17 @@ static void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
     llvm::errs() << llvm::toString(std::move(err)) << "\n";
     exit(EXIT_FAILURE);
   }
-
-  const char *target = target_arg.getValue();
+#ifdef _WIN32
+  assert(ResumeThread(pi.hThread) != -1);
+  exit(EXIT_SUCCESS);
+#else
   execvp(target, argv);
+#endif
 
   std::string error = std::strerror(errno);
   comm_channel.NotifyError(error);
   llvm::errs() << error << "\n";
   exit(EXIT_FAILURE);
-#endif
 }
 
 /// used only by TestVSCode_redirection_to_console.py
