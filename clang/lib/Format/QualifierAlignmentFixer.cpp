@@ -132,8 +132,10 @@ static void rotateTokens(const SourceManager &SourceMgr,
   // Then move through the other tokens.
   auto *Tok = Begin;
   while (Tok != End) {
-    if (!NewText.empty() && !endsWithSpace(NewText))
+    if (!NewText.empty() && !endsWithSpace(NewText) &&
+        Tok->isNot(tok::coloncolon)) {
       NewText += " ";
+    }
 
     NewText += Tok->TokenText;
     Tok = Tok->Next;
@@ -412,6 +414,10 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
   // The case `const long long volatile int` -> `const volatile long long int`
   // The case `long volatile long int const` -> `const volatile long long int`
   if (TypeToken->isTypeName(LangOpts)) {
+    if (const auto *Prev = TypeToken->getPreviousNonComment();
+        Prev && Prev->endsSequence(tok::coloncolon, tok::identifier)) {
+      TypeToken = Prev->getPreviousNonComment();
+    }
     const FormatToken *LastSimpleTypeSpecifier = TypeToken;
     while (isConfiguredQualifierOrType(
         LastSimpleTypeSpecifier->getPreviousNonComment(),
