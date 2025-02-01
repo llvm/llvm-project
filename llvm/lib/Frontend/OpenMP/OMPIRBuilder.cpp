@@ -8556,12 +8556,22 @@ OpenMPIRBuilder::createAtomicWrite(const LocationDescription &Loc,
          "OMP Atomic expects a pointer to target memory");
   Type *XElemTy = X.ElemTy;
   assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
-          XElemTy->isPointerTy()) &&
+          XElemTy->isPointerTy() || XElemTy->isStructTy()) &&
          "OMP atomic write expected a scalar type");
 
   if (XElemTy->isIntegerTy()) {
     StoreInst *XSt = Builder.CreateStore(Expr, X.Var, X.IsVolatile);
     XSt->setAtomic(AO);
+  } else if (XElemTy->isStructTy()) {
+    LoadInst *OldVal = Builder.CreateLoad(XElemTy, X.Var, "omp.atomic.read");
+    const DataLayout &LoadDL = OldVal->getModule()->getDataLayout();
+    unsigned LoadSize =
+        LoadDL.getTypeStoreSize(OldVal->getPointerOperand()->getType());
+    OpenMPIRBuilder::AtomicInfo atomicInfo(
+        &Builder, XElemTy, LoadSize * 8, LoadSize * 8, OldVal->getAlign(),
+        OldVal->getAlign(), true /* UseLibcall */, X.Var);
+    atomicInfo.EmitAtomicStoreLibcall(AO, Expr);
+    OldVal->eraseFromParent();
   } else {
     // We need to bitcast and perform atomic op as integers
     IntegerType *IntCastTy =
