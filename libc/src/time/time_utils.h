@@ -9,13 +9,20 @@
 #ifndef LLVM_LIBC_SRC_TIME_TIME_UTILS_H
 #define LLVM_LIBC_SRC_TIME_TIME_UTILS_H
 
-#include "src/__support/CPP/limits.h"
-#include "src/time/time_constants.h"
-#include <time.h>
+#include "hdr/types/size_t.h"
+#include "hdr/types/struct_tm.h"
+#include "hdr/types/time_t.h"
+#include "src/__support/common.h"
+#include "src/__support/macros/config.h"
+#include "src/errno/libc_errno.h"
+#include "time_constants.h"
+#include <stdint.h>
 
 #ifdef LIBC_TARGET_OS_IS_LINUX
+
 #include "src/time/linux/localtime_utils.h"
 #include "src/time/linux/timezone.h"
+
 #endif
 
 namespace LIBC_NAMESPACE_DECL {
