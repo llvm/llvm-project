@@ -110,11 +110,11 @@ define void @private_alloca_to_flat(ptr %ptr) {
 ; GISEL-ASM-LABEL: private_alloca_to_flat:
 ; GISEL-ASM:       ; %bb.0:
 ; GISEL-ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-ASM-NEXT:    s_lshr_b32 s4, s32, 6
 ; GISEL-ASM-NEXT:    s_mov_b64 s[6:7], src_private_base
+; GISEL-ASM-NEXT:    s_lshr_b32 s4, s32, 6
 ; GISEL-ASM-NEXT:    s_mov_b32 s5, s7
-; GISEL-ASM-NEXT:    v_mov_b32_e32 v0, s4
 ; GISEL-ASM-NEXT:    v_mov_b32_e32 v2, 7
+; GISEL-ASM-NEXT:    v_mov_b32_e32 v0, s4
 ; GISEL-ASM-NEXT:    v_mov_b32_e32 v1, s5
 ; GISEL-ASM-NEXT:    flat_store_dword v[0:1], v2
 ; GISEL-ASM-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

@@ -609,11 +609,11 @@ define amdgpu_kernel void @fshl_v4i32_imm(ptr addrspace(1) %in, <4 x i32> %x, <4
 ; VI-NEXT:    v_mov_b32_e32 v1, s14
 ; VI-NEXT:    v_mov_b32_e32 v4, s13
 ; VI-NEXT:    v_alignbit_b32 v3, s11, v0, 31
+; VI-NEXT:    v_mov_b32_e32 v0, s12
 ; VI-NEXT:    v_alignbit_b32 v2, s10, v1, 23
 ; VI-NEXT:    v_alignbit_b32 v1, s9, v4, 25
-; VI-NEXT:    v_mov_b32_e32 v0, s12
-; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    v_alignbit_b32 v0, s8, v0, 31
+; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    v_mov_b32_e32 v4, s0
 ; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-NEXT:    s_endpgm

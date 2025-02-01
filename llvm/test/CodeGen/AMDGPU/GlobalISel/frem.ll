@@ -869,10 +869,10 @@ define amdgpu_kernel void @frem_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    v_fma_f32 v2, -v2, v5, v3
 ; VI-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
 ; VI-NEXT:    v_div_fmas_f32 v2, v2, v4, v5
+; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_div_fixup_f32 v2, v2, v1, s3
 ; VI-NEXT:    v_trunc_f32_e32 v2, v2
 ; VI-NEXT:    v_fma_f32 v1, -v2, v1, s3
-; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
@@ -1031,10 +1031,10 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    v_fma_f32 v4, -v4, v7, v5
 ; VI-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
 ; VI-NEXT:    v_div_fmas_f32 v4, v4, v6, v7
+; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    v_div_fixup_f32 v4, v4, v3, s7
 ; VI-NEXT:    v_trunc_f32_e32 v4, v4
 ; VI-NEXT:    v_fma_f32 v3, -v4, v3, s7
-; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    v_mov_b32_e32 v4, s0
 ; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-NEXT:    s_endpgm

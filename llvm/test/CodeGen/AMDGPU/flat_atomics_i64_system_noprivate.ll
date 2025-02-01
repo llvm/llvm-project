@@ -175,9 +175,9 @@ define amdgpu_gfx void @flat_atomic_xchg_i64_noret_offset_scalar(ptr inreg %out,
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s34, s4, 32
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
-; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX7-NEXT:    flat_atomic_swap_x2 v[2:3], v[0:1]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -189,9 +189,9 @@ define amdgpu_gfx void @flat_atomic_xchg_i64_noret_offset_scalar(ptr inreg %out,
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s34, s4, 32
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
-; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    flat_atomic_swap_x2 v[2:3], v[0:1]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -260,9 +260,9 @@ define amdgpu_gfx i64 @flat_atomic_xchg_i64_ret_offset_scalar(ptr inreg %out, i6
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s34, s4, 32
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
-; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX7-NEXT:    flat_atomic_swap_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -274,9 +274,9 @@ define amdgpu_gfx i64 @flat_atomic_xchg_i64_ret_offset_scalar(ptr inreg %out, i6
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s34, s4, 32
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
-; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    flat_atomic_swap_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -537,9 +537,9 @@ define amdgpu_gfx void @flat_atomic_xchg_f64_noret_offset_scalar(ptr inreg %out,
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s34, s4, 32
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
-; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX7-NEXT:    flat_atomic_swap_x2 v[2:3], v[0:1]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -551,9 +551,9 @@ define amdgpu_gfx void @flat_atomic_xchg_f64_noret_offset_scalar(ptr inreg %out,
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s34, s4, 32
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
-; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    flat_atomic_swap_x2 v[2:3], v[0:1]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -622,9 +622,9 @@ define amdgpu_gfx double @flat_atomic_xchg_f64_ret_offset_scalar(ptr inreg %out,
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s34, s4, 32
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
-; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX7-NEXT:    flat_atomic_swap_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -636,9 +636,9 @@ define amdgpu_gfx double @flat_atomic_xchg_f64_ret_offset_scalar(ptr inreg %out,
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s34, s4, 32
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
-; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    flat_atomic_swap_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -899,9 +899,9 @@ define amdgpu_gfx void @flat_atomic_add_i64_noret_offset_scalar(ptr inreg %out, 
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s34, s4, 32
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
-; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX7-NEXT:    flat_atomic_add_x2 v[2:3], v[0:1]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -913,9 +913,9 @@ define amdgpu_gfx void @flat_atomic_add_i64_noret_offset_scalar(ptr inreg %out, 
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s34, s4, 32
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
-; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    flat_atomic_add_x2 v[2:3], v[0:1]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -984,9 +984,9 @@ define amdgpu_gfx i64 @flat_atomic_add_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s34, s4, 32
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
-; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX7-NEXT:    flat_atomic_add_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -998,9 +998,9 @@ define amdgpu_gfx i64 @flat_atomic_add_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s34, s4, 32
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
-; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    flat_atomic_add_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -1261,9 +1261,9 @@ define amdgpu_gfx void @flat_atomic_sub_i64_noret_offset_scalar(ptr inreg %out, 
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s34, s4, 32
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
-; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX7-NEXT:    flat_atomic_sub_x2 v[2:3], v[0:1]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -1275,9 +1275,9 @@ define amdgpu_gfx void @flat_atomic_sub_i64_noret_offset_scalar(ptr inreg %out, 
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s34, s4, 32
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
-; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    flat_atomic_sub_x2 v[2:3], v[0:1]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -1346,9 +1346,9 @@ define amdgpu_gfx i64 @flat_atomic_sub_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s34, s4, 32
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
-; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX7-NEXT:    flat_atomic_sub_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -1360,9 +1360,9 @@ define amdgpu_gfx i64 @flat_atomic_sub_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s34, s4, 32
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
-; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    flat_atomic_sub_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -1623,9 +1623,9 @@ define amdgpu_gfx void @flat_atomic_and_i64_noret_offset_scalar(ptr inreg %out, 
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s34, s4, 32
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
-; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX7-NEXT:    flat_atomic_and_x2 v[2:3], v[0:1]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -1637,9 +1637,9 @@ define amdgpu_gfx void @flat_atomic_and_i64_noret_offset_scalar(ptr inreg %out, 
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s34, s4, 32
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
-; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    flat_atomic_and_x2 v[2:3], v[0:1]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -1708,9 +1708,9 @@ define amdgpu_gfx i64 @flat_atomic_and_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s34, s4, 32
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
-; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX7-NEXT:    flat_atomic_and_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -1722,9 +1722,9 @@ define amdgpu_gfx i64 @flat_atomic_and_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s34, s4, 32
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
-; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    flat_atomic_and_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -2179,16 +2179,16 @@ define amdgpu_gfx void @flat_atomic_nand_i64_noret_scalar(ptr inreg %ptr, i64 in
 ; GFX7-LABEL: flat_atomic_nand_i64_noret_scalar:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    s_add_u32 s34, s4, 4
+; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s35
 ; GFX7-NEXT:    flat_load_dword v2, v[0:1]
 ; GFX7-NEXT:    flat_load_dword v3, v[3:4]
-; GFX7-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX7-NEXT:    s_mov_b64 s[34:35], 0
+; GFX7-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX7-NEXT:  .LBB54_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2213,16 +2213,16 @@ define amdgpu_gfx void @flat_atomic_nand_i64_noret_scalar(ptr inreg %ptr, i64 in
 ; GFX8-LABEL: flat_atomic_nand_i64_noret_scalar:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    s_add_u32 s34, s4, 4
+; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s35
 ; GFX8-NEXT:    flat_load_dword v2, v[0:1]
 ; GFX8-NEXT:    flat_load_dword v3, v[3:4]
-; GFX8-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX8-NEXT:    s_mov_b64 s[34:35], 0
+; GFX8-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX8-NEXT:  .LBB54_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2250,8 +2250,8 @@ define amdgpu_gfx void @flat_atomic_nand_i64_noret_scalar(ptr inreg %ptr, i64 in
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX9-NEXT:  .LBB54_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2351,8 +2351,8 @@ define amdgpu_gfx void @flat_atomic_nand_i64_noret_offset_scalar(ptr inreg %out,
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    flat_load_dwordx2 v[2:3], v[0:1] offset:32
-; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX9-NEXT:  .LBB55_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2382,16 +2382,16 @@ define amdgpu_gfx i64 @flat_atomic_nand_i64_ret_scalar(ptr inreg %ptr, i64 inreg
 ; GFX7-LABEL: flat_atomic_nand_i64_ret_scalar:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    s_add_u32 s34, s4, 4
+; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX7-NEXT:    flat_load_dword v0, v[0:1]
 ; GFX7-NEXT:    flat_load_dword v1, v[2:3]
-; GFX7-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX7-NEXT:    s_mov_b64 s[34:35], 0
+; GFX7-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX7-NEXT:  .LBB56_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2416,16 +2416,16 @@ define amdgpu_gfx i64 @flat_atomic_nand_i64_ret_scalar(ptr inreg %ptr, i64 inreg
 ; GFX8-LABEL: flat_atomic_nand_i64_ret_scalar:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    s_add_u32 s34, s4, 4
+; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    flat_load_dword v0, v[0:1]
 ; GFX8-NEXT:    flat_load_dword v1, v[2:3]
-; GFX8-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-NEXT:    s_mov_b64 s[34:35], 0
+; GFX8-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX8-NEXT:  .LBB56_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2453,8 +2453,8 @@ define amdgpu_gfx i64 @flat_atomic_nand_i64_ret_scalar(ptr inreg %ptr, i64 inreg
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; GFX9-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX9-NEXT:  .LBB56_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2554,8 +2554,8 @@ define amdgpu_gfx i64 @flat_atomic_nand_i64_ret_offset_scalar(ptr inreg %out, i6
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    flat_load_dwordx2 v[0:1], v[0:1] offset:32
-; GFX9-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX9-NEXT:    s_mov_b64 s[34:35], 0
+; GFX9-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX9-NEXT:  .LBB57_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2935,9 +2935,9 @@ define amdgpu_gfx void @flat_atomic_or_i64_noret_offset_scalar(ptr inreg %out, i
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s34, s4, 32
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
-; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX7-NEXT:    flat_atomic_or_x2 v[2:3], v[0:1]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -2949,9 +2949,9 @@ define amdgpu_gfx void @flat_atomic_or_i64_noret_offset_scalar(ptr inreg %out, i
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s34, s4, 32
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
-; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    flat_atomic_or_x2 v[2:3], v[0:1]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -3020,9 +3020,9 @@ define amdgpu_gfx i64 @flat_atomic_or_i64_ret_offset_scalar(ptr inreg %out, i64 
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s34, s4, 32
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
-; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX7-NEXT:    flat_atomic_or_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -3034,9 +3034,9 @@ define amdgpu_gfx i64 @flat_atomic_or_i64_ret_offset_scalar(ptr inreg %out, i64 
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s34, s4, 32
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
-; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    flat_atomic_or_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -3297,9 +3297,9 @@ define amdgpu_gfx void @flat_atomic_xor_i64_noret_offset_scalar(ptr inreg %out, 
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s34, s4, 32
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
-; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX7-NEXT:    flat_atomic_xor_x2 v[2:3], v[0:1]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -3311,9 +3311,9 @@ define amdgpu_gfx void @flat_atomic_xor_i64_noret_offset_scalar(ptr inreg %out, 
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s34, s4, 32
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
-; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    flat_atomic_xor_x2 v[2:3], v[0:1]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -3382,9 +3382,9 @@ define amdgpu_gfx i64 @flat_atomic_xor_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s34, s4, 32
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
-; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX7-NEXT:    flat_atomic_xor_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -3396,9 +3396,9 @@ define amdgpu_gfx i64 @flat_atomic_xor_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s34, s4, 32
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
-; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    flat_atomic_xor_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -3841,18 +3841,18 @@ define amdgpu_gfx void @flat_atomic_max_i64_noret_scalar(ptr inreg %ptr, i64 inr
 ; GFX7-LABEL: flat_atomic_max_i64_noret_scalar:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    s_add_u32 s34, s4, 4
+; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s35
 ; GFX7-NEXT:    flat_load_dword v2, v[0:1]
 ; GFX7-NEXT:    flat_load_dword v3, v[3:4]
-; GFX7-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX7-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX7-NEXT:    v_mov_b32_e32 v6, s7
 ; GFX7-NEXT:    v_mov_b32_e32 v7, s6
+; GFX7-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX7-NEXT:  .LBB84_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -3876,18 +3876,18 @@ define amdgpu_gfx void @flat_atomic_max_i64_noret_scalar(ptr inreg %ptr, i64 inr
 ; GFX8-LABEL: flat_atomic_max_i64_noret_scalar:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    s_add_u32 s34, s4, 4
+; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s35
 ; GFX8-NEXT:    flat_load_dword v2, v[0:1]
 ; GFX8-NEXT:    flat_load_dword v3, v[3:4]
-; GFX8-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX8-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX8-NEXT:    v_mov_b32_e32 v6, s7
 ; GFX8-NEXT:    v_mov_b32_e32 v7, s6
+; GFX8-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX8-NEXT:  .LBB84_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -3914,10 +3914,10 @@ define amdgpu_gfx void @flat_atomic_max_i64_noret_scalar(ptr inreg %ptr, i64 inr
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v6, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v7, s6
+; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX9-NEXT:  .LBB84_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -4018,10 +4018,10 @@ define amdgpu_gfx void @flat_atomic_max_i64_noret_offset_scalar(ptr inreg %out, 
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    flat_load_dwordx2 v[2:3], v[0:1] offset:32
-; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v6, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v7, s6
+; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX9-NEXT:  .LBB85_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -4050,18 +4050,18 @@ define amdgpu_gfx i64 @flat_atomic_max_i64_ret_scalar(ptr inreg %ptr, i64 inreg 
 ; GFX7-LABEL: flat_atomic_max_i64_ret_scalar:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    s_add_u32 s34, s4, 4
+; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX7-NEXT:    flat_load_dword v0, v[0:1]
 ; GFX7-NEXT:    flat_load_dword v1, v[2:3]
-; GFX7-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX7-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s7
 ; GFX7-NEXT:    v_mov_b32_e32 v5, s6
+; GFX7-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX7-NEXT:  .LBB86_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -4085,18 +4085,18 @@ define amdgpu_gfx i64 @flat_atomic_max_i64_ret_scalar(ptr inreg %ptr, i64 inreg 
 ; GFX8-LABEL: flat_atomic_max_i64_ret_scalar:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    s_add_u32 s34, s4, 4
+; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    flat_load_dword v0, v[0:1]
 ; GFX8-NEXT:    flat_load_dword v1, v[2:3]
-; GFX8-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s7
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s6
+; GFX8-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX8-NEXT:  .LBB86_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -4123,10 +4123,10 @@ define amdgpu_gfx i64 @flat_atomic_max_i64_ret_scalar(ptr inreg %ptr, i64 inreg 
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; GFX9-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX9-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v4, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v5, s6
+; GFX9-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX9-NEXT:  .LBB86_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -4227,10 +4227,10 @@ define amdgpu_gfx i64 @flat_atomic_max_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    flat_load_dwordx2 v[0:1], v[0:1] offset:32
-; GFX9-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX9-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v4, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v5, s6
+; GFX9-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX9-NEXT:  .LBB87_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -5223,18 +5223,18 @@ define amdgpu_gfx void @flat_atomic_umax_i64_noret_scalar(ptr inreg %ptr, i64 in
 ; GFX7-LABEL: flat_atomic_umax_i64_noret_scalar:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    s_add_u32 s34, s4, 4
+; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s35
 ; GFX7-NEXT:    flat_load_dword v2, v[0:1]
 ; GFX7-NEXT:    flat_load_dword v3, v[3:4]
-; GFX7-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX7-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX7-NEXT:    v_mov_b32_e32 v6, s7
 ; GFX7-NEXT:    v_mov_b32_e32 v7, s6
+; GFX7-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX7-NEXT:  .LBB98_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -5258,18 +5258,18 @@ define amdgpu_gfx void @flat_atomic_umax_i64_noret_scalar(ptr inreg %ptr, i64 in
 ; GFX8-LABEL: flat_atomic_umax_i64_noret_scalar:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    s_add_u32 s34, s4, 4
+; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s35
 ; GFX8-NEXT:    flat_load_dword v2, v[0:1]
 ; GFX8-NEXT:    flat_load_dword v3, v[3:4]
-; GFX8-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX8-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX8-NEXT:    v_mov_b32_e32 v6, s7
 ; GFX8-NEXT:    v_mov_b32_e32 v7, s6
+; GFX8-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX8-NEXT:  .LBB98_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -5296,10 +5296,10 @@ define amdgpu_gfx void @flat_atomic_umax_i64_noret_scalar(ptr inreg %ptr, i64 in
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v6, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v7, s6
+; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX9-NEXT:  .LBB98_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -5400,10 +5400,10 @@ define amdgpu_gfx void @flat_atomic_umax_i64_noret_offset_scalar(ptr inreg %out,
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    flat_load_dwordx2 v[2:3], v[0:1] offset:32
-; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v6, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v7, s6
+; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX9-NEXT:  .LBB99_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -5432,18 +5432,18 @@ define amdgpu_gfx i64 @flat_atomic_umax_i64_ret_scalar(ptr inreg %ptr, i64 inreg
 ; GFX7-LABEL: flat_atomic_umax_i64_ret_scalar:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    s_add_u32 s34, s4, 4
+; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX7-NEXT:    flat_load_dword v0, v[0:1]
 ; GFX7-NEXT:    flat_load_dword v1, v[2:3]
-; GFX7-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX7-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s7
 ; GFX7-NEXT:    v_mov_b32_e32 v5, s6
+; GFX7-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX7-NEXT:  .LBB100_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -5467,18 +5467,18 @@ define amdgpu_gfx i64 @flat_atomic_umax_i64_ret_scalar(ptr inreg %ptr, i64 inreg
 ; GFX8-LABEL: flat_atomic_umax_i64_ret_scalar:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    s_add_u32 s34, s4, 4
+; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    flat_load_dword v0, v[0:1]
 ; GFX8-NEXT:    flat_load_dword v1, v[2:3]
-; GFX8-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s7
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s6
+; GFX8-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX8-NEXT:  .LBB100_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -5505,10 +5505,10 @@ define amdgpu_gfx i64 @flat_atomic_umax_i64_ret_scalar(ptr inreg %ptr, i64 inreg
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; GFX9-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX9-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v4, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v5, s6
+; GFX9-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX9-NEXT:  .LBB100_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -5609,10 +5609,10 @@ define amdgpu_gfx i64 @flat_atomic_umax_i64_ret_offset_scalar(ptr inreg %out, i6
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    flat_load_dwordx2 v[0:1], v[0:1] offset:32
-; GFX9-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX9-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v4, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v5, s6
+; GFX9-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX9-NEXT:  .LBB101_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -6503,18 +6503,18 @@ define amdgpu_gfx void @flat_atomic_umin_i64_noret_scalar(ptr inreg %ptr, i64 in
 ; GFX7-LABEL: flat_atomic_umin_i64_noret_scalar:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    s_add_u32 s34, s4, 4
+; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s35
 ; GFX7-NEXT:    flat_load_dword v2, v[0:1]
 ; GFX7-NEXT:    flat_load_dword v3, v[3:4]
-; GFX7-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX7-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX7-NEXT:    v_mov_b32_e32 v6, s7
 ; GFX7-NEXT:    v_mov_b32_e32 v7, s6
+; GFX7-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX7-NEXT:  .LBB111_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -6538,18 +6538,18 @@ define amdgpu_gfx void @flat_atomic_umin_i64_noret_scalar(ptr inreg %ptr, i64 in
 ; GFX8-LABEL: flat_atomic_umin_i64_noret_scalar:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    s_add_u32 s34, s4, 4
+; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s35
 ; GFX8-NEXT:    flat_load_dword v2, v[0:1]
 ; GFX8-NEXT:    flat_load_dword v3, v[3:4]
-; GFX8-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX8-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX8-NEXT:    v_mov_b32_e32 v6, s7
 ; GFX8-NEXT:    v_mov_b32_e32 v7, s6
+; GFX8-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX8-NEXT:  .LBB111_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -6576,10 +6576,10 @@ define amdgpu_gfx void @flat_atomic_umin_i64_noret_scalar(ptr inreg %ptr, i64 in
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v6, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v7, s6
+; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX9-NEXT:  .LBB111_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -6680,10 +6680,10 @@ define amdgpu_gfx void @flat_atomic_umin_i64_noret_offset_scalar(ptr inreg %out,
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    flat_load_dwordx2 v[2:3], v[0:1] offset:32
-; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v6, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v7, s6
+; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX9-NEXT:  .LBB112_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -6712,18 +6712,18 @@ define amdgpu_gfx i64 @flat_atomic_umin_i64_ret_scalar(ptr inreg %ptr, i64 inreg
 ; GFX7-LABEL: flat_atomic_umin_i64_ret_scalar:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    s_add_u32 s34, s4, 4
+; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX7-NEXT:    flat_load_dword v0, v[0:1]
 ; GFX7-NEXT:    flat_load_dword v1, v[2:3]
-; GFX7-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX7-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s7
 ; GFX7-NEXT:    v_mov_b32_e32 v5, s6
+; GFX7-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX7-NEXT:  .LBB113_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -6747,18 +6747,18 @@ define amdgpu_gfx i64 @flat_atomic_umin_i64_ret_scalar(ptr inreg %ptr, i64 inreg
 ; GFX8-LABEL: flat_atomic_umin_i64_ret_scalar:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    s_add_u32 s34, s4, 4
+; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    flat_load_dword v0, v[0:1]
 ; GFX8-NEXT:    flat_load_dword v1, v[2:3]
-; GFX8-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s7
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s6
+; GFX8-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX8-NEXT:  .LBB113_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -6785,10 +6785,10 @@ define amdgpu_gfx i64 @flat_atomic_umin_i64_ret_scalar(ptr inreg %ptr, i64 inreg
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; GFX9-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX9-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v4, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v5, s6
+; GFX9-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX9-NEXT:  .LBB113_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -6889,10 +6889,10 @@ define amdgpu_gfx i64 @flat_atomic_umin_i64_ret_offset_scalar(ptr inreg %out, i6
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    flat_load_dwordx2 v[0:1], v[0:1] offset:32
-; GFX9-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX9-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v4, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v5, s6
+; GFX9-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX9-NEXT:  .LBB114_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -7447,18 +7447,18 @@ define amdgpu_gfx void @flat_atomic_min_i64_noret_scalar(ptr inreg %ptr, i64 inr
 ; GFX7-LABEL: flat_atomic_min_i64_noret_scalar:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    s_add_u32 s34, s4, 4
+; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s35
 ; GFX7-NEXT:    flat_load_dword v2, v[0:1]
 ; GFX7-NEXT:    flat_load_dword v3, v[3:4]
-; GFX7-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX7-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX7-NEXT:    v_mov_b32_e32 v6, s7
 ; GFX7-NEXT:    v_mov_b32_e32 v7, s6
+; GFX7-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX7-NEXT:  .LBB121_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -7482,18 +7482,18 @@ define amdgpu_gfx void @flat_atomic_min_i64_noret_scalar(ptr inreg %ptr, i64 inr
 ; GFX8-LABEL: flat_atomic_min_i64_noret_scalar:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    s_add_u32 s34, s4, 4
+; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s35
 ; GFX8-NEXT:    flat_load_dword v2, v[0:1]
 ; GFX8-NEXT:    flat_load_dword v3, v[3:4]
-; GFX8-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX8-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX8-NEXT:    v_mov_b32_e32 v6, s7
 ; GFX8-NEXT:    v_mov_b32_e32 v7, s6
+; GFX8-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX8-NEXT:  .LBB121_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -7520,10 +7520,10 @@ define amdgpu_gfx void @flat_atomic_min_i64_noret_scalar(ptr inreg %ptr, i64 inr
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v6, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v7, s6
+; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX9-NEXT:  .LBB121_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -7624,10 +7624,10 @@ define amdgpu_gfx void @flat_atomic_min_i64_noret_offset_scalar(ptr inreg %out, 
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    flat_load_dwordx2 v[2:3], v[0:1] offset:32
-; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v6, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v7, s6
+; GFX9-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX9-NEXT:  .LBB122_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -7656,18 +7656,18 @@ define amdgpu_gfx i64 @flat_atomic_min_i64_ret_scalar(ptr inreg %ptr, i64 inreg 
 ; GFX7-LABEL: flat_atomic_min_i64_ret_scalar:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    s_add_u32 s34, s4, 4
+; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX7-NEXT:    flat_load_dword v0, v[0:1]
 ; GFX7-NEXT:    flat_load_dword v1, v[2:3]
-; GFX7-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX7-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s7
 ; GFX7-NEXT:    v_mov_b32_e32 v5, s6
+; GFX7-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX7-NEXT:  .LBB123_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -7691,18 +7691,18 @@ define amdgpu_gfx i64 @flat_atomic_min_i64_ret_scalar(ptr inreg %ptr, i64 inreg 
 ; GFX8-LABEL: flat_atomic_min_i64_ret_scalar:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    s_add_u32 s34, s4, 4
+; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    flat_load_dword v0, v[0:1]
 ; GFX8-NEXT:    flat_load_dword v1, v[2:3]
-; GFX8-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s7
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s6
+; GFX8-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX8-NEXT:  .LBB123_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -7729,10 +7729,10 @@ define amdgpu_gfx i64 @flat_atomic_min_i64_ret_scalar(ptr inreg %ptr, i64 inreg 
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; GFX9-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX9-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v4, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v5, s6
+; GFX9-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX9-NEXT:  .LBB123_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -7833,10 +7833,10 @@ define amdgpu_gfx i64 @flat_atomic_min_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    flat_load_dwordx2 v[0:1], v[0:1] offset:32
-; GFX9-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX9-NEXT:    s_mov_b64 s[34:35], 0
 ; GFX9-NEXT:    v_mov_b32_e32 v4, s7
 ; GFX9-NEXT:    v_mov_b32_e32 v5, s6
+; GFX9-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX9-NEXT:  .LBB124_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -8094,9 +8094,9 @@ define amdgpu_kernel void @atomic_min_i64(ptr %out, i64 %in) {
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX7-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; GFX7-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v6, s3
 ; GFX7-NEXT:    v_mov_b32_e32 v7, s2
+; GFX7-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX7-NEXT:  .LBB127_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -8124,9 +8124,9 @@ define amdgpu_kernel void @atomic_min_i64(ptr %out, i64 %in) {
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v6, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v7, s2
+; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX8-NEXT:  .LBB127_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -8154,9 +8154,9 @@ define amdgpu_kernel void @atomic_min_i64(ptr %out, i64 %in) {
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
-; GFX9-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX9-NEXT:    v_mov_b32_e32 v6, s3
 ; GFX9-NEXT:    v_mov_b32_e32 v7, s2
+; GFX9-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX9-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX9-NEXT:  .LBB127_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -8640,9 +8640,9 @@ define amdgpu_gfx void @flat_atomic_uinc_wrap_i64_noret_offset_scalar(ptr inreg 
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s34, s4, 32
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
-; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX7-NEXT:    flat_atomic_inc_x2 v[2:3], v[0:1]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -8654,9 +8654,9 @@ define amdgpu_gfx void @flat_atomic_uinc_wrap_i64_noret_offset_scalar(ptr inreg 
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s34, s4, 32
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
-; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    flat_atomic_inc_x2 v[2:3], v[0:1]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -8725,9 +8725,9 @@ define amdgpu_gfx i64 @flat_atomic_uinc_wrap_i64_ret_offset_scalar(ptr inreg %ou
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s34, s4, 32
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
-; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX7-NEXT:    flat_atomic_inc_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -8739,9 +8739,9 @@ define amdgpu_gfx i64 @flat_atomic_uinc_wrap_i64_ret_offset_scalar(ptr inreg %ou
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s34, s4, 32
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
-; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    flat_atomic_inc_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -9002,9 +9002,9 @@ define amdgpu_gfx void @flat_atomic_udec_wrap_i64_noret_offset_scalar(ptr inreg 
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s34, s4, 32
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
-; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX7-NEXT:    flat_atomic_dec_x2 v[2:3], v[0:1]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -9016,9 +9016,9 @@ define amdgpu_gfx void @flat_atomic_udec_wrap_i64_noret_offset_scalar(ptr inreg 
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s34, s4, 32
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
-; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    flat_atomic_dec_x2 v[2:3], v[0:1]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -9087,9 +9087,9 @@ define amdgpu_gfx i64 @flat_atomic_udec_wrap_i64_ret_offset_scalar(ptr inreg %ou
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_add_u32 s34, s4, 32
 ; GFX7-NEXT:    s_addc_u32 s35, s5, 0
-; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s7
+; GFX7-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX7-NEXT:    flat_atomic_dec_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -9101,9 +9101,9 @@ define amdgpu_gfx i64 @flat_atomic_udec_wrap_i64_ret_offset_scalar(ptr inreg %ou
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_add_u32 s34, s4, 32
 ; GFX8-NEXT:    s_addc_u32 s35, s5, 0
-; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_mov_b32_e32 v2, s34
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s35
 ; GFX8-NEXT:    flat_atomic_dec_x2 v[0:1], v[2:3], v[0:1] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

@@ -213,8 +213,8 @@ define amdgpu_cs void @inverse_ballot_branch(i64 inreg %s0_1, i64 inreg %s2, ptr
 ; SDAG-NEXT:  ; %bb.1: ; %if
 ; SDAG-NEXT:    s_add_u32 s0, s0, 1
 ; SDAG-NEXT:    s_addc_u32 s1, s1, 0
-; SDAG-NEXT:    v_mov_b32_e32 v3, s1
 ; SDAG-NEXT:    v_mov_b32_e32 v2, s0
+; SDAG-NEXT:    v_mov_b32_e32 v3, s1
 ; SDAG-NEXT:  ; %bb.2: ; %endif
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; SDAG-NEXT:    global_store_b64 v[0:1], v[2:3], off

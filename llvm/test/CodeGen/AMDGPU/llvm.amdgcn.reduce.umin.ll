@@ -296,9 +296,9 @@ define amdgpu_kernel void @divergent_value(ptr addrspace(1) %out) {
 ; GFX8GISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX8GISEL-NEXT:    s_cbranch_scc1 .LBB3_1
 ; GFX8GISEL-NEXT:  ; %bb.2:
+; GFX8GISEL-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX8GISEL-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8GISEL-NEXT:    flat_store_dword v[0:1], v2
 ; GFX8GISEL-NEXT:    s_endpgm

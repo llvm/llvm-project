@@ -44,9 +44,9 @@ define void @issue63986(i64 %0, i64 %idxprom) {
 ; CHECK-NEXT:    flat_load_ubyte v10, v[6:7]
 ; CHECK-NEXT:    v_mov_b32_e32 v9, s5
 ; CHECK-NEXT:    v_add_co_u32_e32 v8, vcc, s4, v2
-; CHECK-NEXT:    v_mov_b32_e32 v7, v5
 ; CHECK-NEXT:    v_addc_co_u32_e32 v9, vcc, v3, v9, vcc
 ; CHECK-NEXT:    s_add_u32 s4, s4, 1
+; CHECK-NEXT:    v_mov_b32_e32 v7, v5
 ; CHECK-NEXT:    v_mov_b32_e32 v6, v4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, 0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -161,8 +161,8 @@ define void @issue63986_reduced_expanded(i64 %idxprom) {
 ; CHECK-NEXT:    v_lshlrev_b64 v[0:1], 1, v[0:1]
 ; CHECK-NEXT:    s_cbranch_execnz .LBB1_8
 ; CHECK-NEXT:  .LBB1_5: ; %loop-memcpy-residual.preheader
-; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    s_mov_b64 s[6:7], 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s5
 ; CHECK-NEXT:  .LBB1_6: ; %loop-memcpy-residual
 ; CHECK-NEXT:    s_add_u32 s4, s6, 1

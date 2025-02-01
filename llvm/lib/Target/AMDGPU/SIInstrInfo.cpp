@@ -627,13 +627,11 @@ static void reportIllegalCopy(const SIInstrInfo *TII, MachineBasicBlock &MBB,
 /// Handle copying from SGPR to AGPR, or from AGPR to AGPR on GFX908. It is not
 /// possible to have a direct copy in these cases on GFX908, so an intermediate
 /// VGPR copy is required.
-static void indirectCopyToAGPR(const SIInstrInfo &TII,
-                               MachineBasicBlock &MBB,
+static void indirectCopyToAGPR(const SIInstrInfo &TII, MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI,
                                const DebugLoc &DL, MCRegister DestReg,
                                MCRegister SrcReg, bool KillSrc,
                                RegScavenger &RS, bool RegsOverlap,
-                               Register ImpDefSuperReg = Register(),
                                Register ImpUseSuperReg = Register()) {
   assert((TII.getSubtarget().hasMAIInsts() &&
           !TII.getSubtarget().hasGFX90AInsts()) &&
@@ -681,10 +679,9 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
       }
 
       MachineInstrBuilder Builder =
-        BuildMI(MBB, MI, DL, TII.get(AMDGPU::V_ACCVGPR_WRITE_B32_e64), DestReg)
-        .add(DefOp);
-      if (ImpDefSuperReg)
-        Builder.addReg(ImpDefSuperReg, RegState::Define | RegState::Implicit);
+          BuildMI(MBB, MI, DL, TII.get(AMDGPU::V_ACCVGPR_WRITE_B32_e64),
+                  DestReg)
+              .add(DefOp);
 
       if (ImpUseSuperReg) {
         Builder.addReg(ImpUseSuperReg,
@@ -738,12 +735,8 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
                       getKillRegState(KillSrc) | RegState::Implicit);
   }
 
-  MachineInstrBuilder DefBuilder
-    = BuildMI(MBB, MI, DL, TII.get(AMDGPU::V_ACCVGPR_WRITE_B32_e64), DestReg)
-    .addReg(Tmp, RegState::Kill);
-
-  if (ImpDefSuperReg)
-    DefBuilder.addReg(ImpDefSuperReg, RegState::Define | RegState::Implicit);
+  BuildMI(MBB, MI, DL, TII.get(AMDGPU::V_ACCVGPR_WRITE_B32_e64), DestReg)
+      .addReg(Tmp, RegState::Kill);
 }
 
 static void expandSGPRCopy(const SIInstrInfo &TII, MachineBasicBlock &MBB,
@@ -790,9 +783,6 @@ static void expandSGPRCopy(const SIInstrInfo &TII, MachineBasicBlock &MBB,
   assert(FirstMI && LastMI);
   if (!Forward)
     std::swap(FirstMI, LastMI);
-
-  FirstMI->addOperand(
-      MachineOperand::CreateReg(DestReg, true /*IsDef*/, true /*IsImp*/));
 
   if (KillSrc)
     LastMI->addRegisterKilled(SrcReg, &RI);
@@ -1118,34 +1108,27 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Register SrcSubReg = RI.getSubReg(SrcReg, SubIdx);
     assert(DestSubReg && SrcSubReg && "Failed to find subregs!");
 
-    bool IsFirstSubreg = Idx == 0;
     bool UseKill = CanKillSuperReg && Idx == SubIndices.size() - 1;
 
     if (Opcode == AMDGPU::INSTRUCTION_LIST_END) {
-      Register ImpDefSuper = IsFirstSubreg ? Register(DestReg) : Register();
       Register ImpUseSuper = SrcReg;
       indirectCopyToAGPR(*this, MBB, MI, DL, DestSubReg, SrcSubReg, UseKill,
-                         *RS, Overlap, ImpDefSuper, ImpUseSuper);
+                         *RS, Overlap, ImpUseSuper);
     } else if (Opcode == AMDGPU::V_PK_MOV_B32) {
-      MachineInstrBuilder MIB =
-          BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), DestSubReg)
-              .addImm(SISrcMods::OP_SEL_1)
-              .addReg(SrcSubReg)
-              .addImm(SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1)
-              .addReg(SrcSubReg)
-              .addImm(0) // op_sel_lo
-              .addImm(0) // op_sel_hi
-              .addImm(0) // neg_lo
-              .addImm(0) // neg_hi
-              .addImm(0) // clamp
-              .addReg(SrcReg, getKillRegState(UseKill) | RegState::Implicit);
-      if (IsFirstSubreg)
-        MIB.addReg(DestReg, RegState::Define | RegState::Implicit);
+      BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), DestSubReg)
+          .addImm(SISrcMods::OP_SEL_1)
+          .addReg(SrcSubReg)
+          .addImm(SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1)
+          .addReg(SrcSubReg)
+          .addImm(0) // op_sel_lo
+          .addImm(0) // op_sel_hi
+          .addImm(0) // neg_lo
+          .addImm(0) // neg_hi
+          .addImm(0) // clamp
+          .addReg(SrcReg, getKillRegState(UseKill) | RegState::Implicit);
     } else {
       MachineInstrBuilder Builder =
           BuildMI(MBB, MI, DL, get(Opcode), DestSubReg).addReg(SrcSubReg);
-      if (IsFirstSubreg)
-        Builder.addReg(DestReg, RegState::Define | RegState::Implicit);
 
       Builder.addReg(SrcReg, getKillRegState(UseKill) | RegState::Implicit);
     }

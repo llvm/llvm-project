@@ -2106,8 +2106,8 @@ define void @crash_lshlrevb16_not_reg_op() {
 ; NOSDWA-NEXT:  .LBB22_1: ; %bb1
 ; NOSDWA-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; NOSDWA-NEXT:    s_lshl_b32 s6, s4, 3
-; NOSDWA-NEXT:    v_mov_b32_e32 v0, s4
 ; NOSDWA-NEXT:    s_lshr_b32 s6, 0x100, s6
+; NOSDWA-NEXT:    v_mov_b32_e32 v0, s4
 ; NOSDWA-NEXT:    v_mov_b32_e32 v1, s5
 ; NOSDWA-NEXT:    s_mov_b64 s[4:5], 1
 ; NOSDWA-NEXT:    v_mov_b32_e32 v2, s6
@@ -2126,8 +2126,8 @@ define void @crash_lshlrevb16_not_reg_op() {
 ; GFX89-NEXT:  .LBB22_1: ; %bb1
 ; GFX89-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX89-NEXT:    s_lshl_b32 s6, s4, 3
-; GFX89-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX89-NEXT:    s_lshr_b32 s6, 0x100, s6
+; GFX89-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX89-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX89-NEXT:    s_mov_b64 s[4:5], 1
 ; GFX89-NEXT:    v_mov_b32_e32 v2, s6
@@ -2146,8 +2146,8 @@ define void @crash_lshlrevb16_not_reg_op() {
 ; GFX9-NEXT:  .LBB22_1: ; %bb1
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    s_lshl_b32 s6, s4, 3
-; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_lshr_b32 s6, 0x100, s6
+; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    s_mov_b64 s[4:5], 1
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s6
