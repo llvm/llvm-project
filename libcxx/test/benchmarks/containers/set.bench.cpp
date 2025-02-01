@@ -8,15 +8,13 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-#include <map>
-#include <string>
+#include <set>
 
 #include "associative_container_benchmarks.h"
 #include "benchmark/benchmark.h"
 
 int main(int argc, char** argv) {
-  support::associative_container_benchmarks<std::map<int, int>>("std::map<int, int>");
-  support::associative_container_benchmarks<std::map<std::string, int>>("std::map<std::string, int>");
+  support::associative_container_benchmarks<std::set<int>>("std::set<int>");
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();
