@@ -264,6 +264,9 @@ compileDeviceRTLLibrary(amdgpu amdgcn-amd-amdhsa -Xclang -mcode-object-version=n
 add_custom_target(omptarget.devicertl.nvptx)
 compileDeviceRTLLibrary(nvptx nvptx64-nvidia-cuda --cuda-feature=+ptx63)
 
+add_custom_target(omptarget.devicertl.spirv64)
+compileDeviceRTLLibrary(spirv64 spirv64)
+
 # Archive all the object files generated above into a static library
 add_library(omptarget.devicertl STATIC)
 set_target_properties(omptarget.devicertl PROPERTIES
