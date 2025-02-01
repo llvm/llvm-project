@@ -1,11 +1,11 @@
 // RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx700 < %s | FileCheck --check-prefix=ASM %s
 // RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=obj < %s > %t
-// RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
+// RUN: llvm-objdump -s -j .amdhsa.kd %t | FileCheck --check-prefix=OBJDUMP %s
 
 // When going from asm -> asm, the expressions should remain the same (i.e., symbolic).
 // When going from asm -> obj, the expressions should get resolved (through fixups),
 
-// OBJDUMP: Contents of section .rodata
+// OBJDUMP: Contents of section .amdhsa.kd
 // expr_defined_later
 // OBJDUMP-NEXT: 0000 2b000000 2c000000 00000000 00000000
 // OBJDUMP-NEXT: 0010 00000000 00000000 00000000 00000000
