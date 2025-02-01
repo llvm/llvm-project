@@ -1816,20 +1816,13 @@ public:
     // Count functions for serilaisation and populate functions map
     int functionCount = 0;
     for (llvm::Function &F : M) {
-      // Skip cloned functions
-      if (!StringRef(F.getName()).startswith(YK_UNOPT_PREFIX)) {
-        FunctionIndexMap[&F] = functionCount;
-        functionCount++;
-      }
+      FunctionIndexMap[&F] = functionCount;
+      functionCount++;
     }
     // Emit the number of functions
     OutStreamer.emitSizeT(functionCount);
     // funcs:
     for (llvm::Function &F : M) {
-      // Skip cloned functions
-      if (StringRef(F.getName()).startswith(YK_UNOPT_PREFIX)) {
-        continue;
-      }
       serialiseFunc(F);
     }
 
