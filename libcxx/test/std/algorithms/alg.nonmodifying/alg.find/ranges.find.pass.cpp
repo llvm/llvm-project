@@ -14,6 +14,8 @@
 // MSVC warning C4242: 'argument': conversion from 'const _Ty' to 'ElementT', possible loss of data
 // MSVC warning C4244: 'argument': conversion from 'const _Ty' to 'ElementT', possible loss of data
 // ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4242 /wd4244
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=20000000
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=80000000
 
 // template<input_iterator I, sentinel_for<I> S, class T, class Proj = identity>
 //   requires indirect_binary_predicate<ranges::equal_to, projected<I, Proj>, const T*>
@@ -26,6 +28,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <deque>
 #include <ranges>
 #include <vector>
@@ -66,14 +69,14 @@ constexpr void test_iterators() {
   using ValueT = std::iter_value_t<It>;
   { // simple test
     {
-      ValueT a[] = {1, 2, 3, 4};
+      ValueT a[]                = {1, 2, 3, 4};
       std::same_as<It> auto ret = std::ranges::find(It(a), Sent(It(a + 4)), 4);
       assert(base(ret) == a + 3);
       assert(*ret == 4);
     }
     {
-      ValueT a[] = {1, 2, 3, 4};
-      auto range = std::ranges::subrange(It(a), Sent(It(a + 4)));
+      ValueT a[]                = {1, 2, 3, 4};
+      auto range                = std::ranges::subrange(It(a), Sent(It(a + 4)));
       std::same_as<It> auto ret = std::ranges::find(range, 4);
       assert(base(ret) == a + 3);
       assert(*ret == 4);
@@ -83,13 +86,13 @@ constexpr void test_iterators() {
   { // check that an empty range works
     {
       std::array<ValueT, 0> a = {};
-      auto ret = std::ranges::find(It(a.data()), Sent(It(a.data())), 1);
+      auto ret                = std::ranges::find(It(a.data()), Sent(It(a.data())), 1);
       assert(base(ret) == a.data());
     }
     {
       std::array<ValueT, 0> a = {};
-      auto range = std::ranges::subrange(It(a.data()), Sent(It(a.data())));
-      auto ret = std::ranges::find(range, 1);
+      auto range              = std::ranges::subrange(It(a.data()), Sent(It(a.data())));
+      auto ret                = std::ranges::find(range, 1);
       assert(base(ret) == a.data());
     }
   }
@@ -97,12 +100,12 @@ constexpr void test_iterators() {
   { // check that last is returned with no match
     {
       ValueT a[] = {1, 1, 1};
-      auto ret = std::ranges::find(a, a + 3, 0);
+      auto ret   = std::ranges::find(a, a + 3, 0);
       assert(ret == a + 3);
     }
     {
       ValueT a[] = {1, 1, 1};
-      auto ret = std::ranges::find(a, 0);
+      auto ret   = std::ranges::find(a, 0);
       assert(ret == a + 3);
     }
   }
@@ -148,7 +151,7 @@ constexpr bool test() {
         int comp;
         int other;
       };
-      S a[] = { {0, 0}, {0, 2}, {0, 1} };
+      S a[]    = {{0, 0}, {0, 2}, {0, 1}};
       auto ret = std::ranges::find(a, 0, &S::comp);
       assert(ret == a);
       assert(ret->comp == 0);
@@ -159,7 +162,7 @@ constexpr bool test() {
         int comp;
         int other;
       };
-      S a[] = { {0, 0}, {0, 2}, {0, 1} };
+      S a[]    = {{0, 0}, {0, 2}, {0, 1}};
       auto ret = std::ranges::find(a, a + 3, 0, &S::comp);
       assert(ret == a);
       assert(ret->comp == 0);
@@ -169,7 +172,7 @@ constexpr bool test() {
 
   {
     // check that an iterator is returned with a borrowing range
-    int a[] = {1, 2, 3, 4};
+    int a[]                     = {1, 2, 3, 4};
     std::same_as<int*> auto ret = std::ranges::find(std::views::all(a), 1);
     assert(ret == a);
     assert(*ret == 1);
@@ -178,20 +181,41 @@ constexpr bool test() {
   {
     // count invocations of the projection
     {
-      int a[] = {1, 2, 3, 4};
+      int a[]              = {1, 2, 3, 4};
       int projection_count = 0;
-      auto ret = std::ranges::find(a, a + 4, 2, [&](int i) { ++projection_count; return i; });
+      auto ret             = std::ranges::find(a, a + 4, 2, [&](int i) {
+        ++projection_count;
+        return i;
+      });
       assert(ret == a + 1);
       assert(*ret == 2);
       assert(projection_count == 2);
     }
     {
-      int a[] = {1, 2, 3, 4};
+      int a[]              = {1, 2, 3, 4};
       int projection_count = 0;
-      auto ret = std::ranges::find(a, 2, [&](int i) { ++projection_count; return i; });
+      auto ret             = std::ranges::find(a, 2, [&](int i) {
+        ++projection_count;
+        return i;
+      });
       assert(ret == a + 1);
       assert(*ret == 2);
       assert(projection_count == 2);
+    }
+  }
+
+  { // Test vector<bool>::iterator optimization
+    std::vector<bool> vec(256 + 8);
+    for (ptrdiff_t i = 8; i <= 256; i *= 2) {
+      for (size_t offset = 0; offset < 8; offset += 2) {
+        std::fill(vec.begin(), vec.end(), false);
+        std::fill(vec.begin() + offset, vec.begin() + i + offset, true);
+
+        // check both (range) and (iterator, sentinel) overloads
+        assert(std::ranges::find(vec, true) == std::ranges::begin(vec) + offset);
+        assert(std::ranges::find(std::ranges::begin(vec) + offset, std::ranges::end(vec), false) ==
+               std::ranges::begin(vec) + offset + i);
+      }
     }
   }
 
@@ -210,9 +234,7 @@ public:
           return size;
         }()) {}
 
-  bool operator==(const Comparable& other) const {
-    return comparable_data[other.index_] == comparable_data[index_];
-  }
+  bool operator==(const Comparable& other) const { return comparable_data[other.index_] == comparable_data[index_]; }
 
   friend bool operator==(const Comparable& lhs, long long rhs) { return comparable_data[lhs.index_] == rhs; }
 };

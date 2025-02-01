@@ -46,53 +46,37 @@ struct Test {
   }
 };
 
+TEST_CONSTEXPR_CXX20 bool test_vector_bool(std::size_t N) {
+  { // Test with full bytes
+    std::vector<bool> in(N, false);
+    std::vector<bool> expected(N, true);
+    std::fill(in.begin(), in.end(), true);
+    assert(in == expected);
+  }
+  { // Test with partial bytes
+    std::vector<bool> in(N, false);
+    std::vector<bool> expected(N, true);
+    std::fill(in.begin() + 4, in.end() - 4, true);
+    assert(std::equal(in.begin() + 4, in.end() - 4, expected.begin()));
+  }
+
+  return true;
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::forward_iterator_list<char*>(), Test<char>());
   types::for_each(types::forward_iterator_list<int*>(), Test<int>());
-  {   // test vector<bool>::iterator optimization
-    { // simple case
-      std::vector<bool> in(4, false);
-      std::vector<bool> expected(4, true);
-      std::fill(in.begin(), in.end(), true);
-      assert(in == expected);
-    }
-    { // partial byte in the front is not filled
-      std::vector<bool> in(8, false);
-      std::vector<bool> expected(8, true);
-      expected[0] = false;
-      expected[1] = false;
-      std::fill(in.begin() + 2, in.end(), true);
-      assert(in == expected);
-    }
-    { // partial byte in the back is not filled
-      std::vector<bool> in(8, false);
-      std::vector<bool> expected(8, true);
-      expected[6] = false;
-      expected[7] = false;
-      std::fill(in.begin(), in.end() - 2, true);
-      assert(in == expected);
-    }
-    { // partial byte in the front and back is not filled
-      std::vector<bool> in(16, false);
-      std::vector<bool> expected(16, true);
-      expected[0]  = false;
-      expected[1]  = false;
-      expected[14] = false;
-      expected[15] = false;
-      std::fill(in.begin() + 2, in.end() - 2, true);
-      assert(in == expected);
-    }
-    { // only a few bits of a byte are set
-      std::vector<bool> in(8, false);
-      std::vector<bool> expected(8, true);
-      expected[0] = false;
-      expected[1] = false;
-      expected[6] = false;
-      expected[7] = false;
-      std::fill(in.begin() + 2, in.end() - 2, true);
-      assert(in == expected);
-    }
+
+  { // Test vector<bool>::iterator optimization
+    assert(test_vector_bool(8));
+    assert(test_vector_bool(19));
+    assert(test_vector_bool(32));
+    assert(test_vector_bool(49));
+    assert(test_vector_bool(64));
+    assert(test_vector_bool(199));
+    assert(test_vector_bool(256));
   }
+
   return true;
 }
 
