@@ -2653,7 +2653,7 @@ llvm.func @omp_task_attrs() -> () attributes {
 // CHECK-LABEL: define void @omp_task_with_deps
 // CHECK-SAME: (ptr %[[zaddr:.+]])
 // CHECK:  %[[dep_arr_addr:.+]] = alloca [1 x %struct.kmp_dep_info], align 8
-// CHECK:  %[[dep_arr_addr_0:.+]] = getelementptr inbounds [1 x %struct.kmp_dep_info], ptr %[[dep_arr_addr]], i64 0, i64 0
+// CHECK:  %[[dep_arr_addr_0:.+]] = getelementptr %struct.kmp_dep_info, ptr %[[dep_arr_addr]], i64 0
 // CHECK:  %[[dep_arr_addr_0_val:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[dep_arr_addr_0]], i32 0, i32 0
 // CHECK:  %[[dep_arr_addr_0_val_int:.+]] = ptrtoint ptr %0 to i64
 // CHECK:  store i64 %[[dep_arr_addr_0_val_int]], ptr %[[dep_arr_addr_0_val]], align 4
@@ -2664,28 +2664,28 @@ llvm.func @omp_task_attrs() -> () attributes {
 // -----
 // dependence_type: Out
 // CHECK:  %[[DEP_ARR_ADDR1:.+]] = alloca [1 x %struct.kmp_dep_info], align 8
-// CHECK:  %[[DEP_ARR_ADDR_1:.+]] = getelementptr inbounds [1 x %struct.kmp_dep_info], ptr %[[DEP_ARR_ADDR1]], i64 0, i64 0
+// CHECK:  %[[DEP_ARR_ADDR_1:.+]] = getelementptr %struct.kmp_dep_info, ptr %[[DEP_ARR_ADDR1]], i64 0
 //         [...]
 // CHECK:  %[[DEP_TYPE_1:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[DEP_ARR_ADDR_1]], i32 0, i32 2
 // CHECK:  store i8 3, ptr %[[DEP_TYPE_1]], align 1
 // -----
 // dependence_type: Inout
 // CHECK:  %[[DEP_ARR_ADDR2:.+]] = alloca [1 x %struct.kmp_dep_info], align 8
-// CHECK:  %[[DEP_ARR_ADDR_2:.+]] = getelementptr inbounds [1 x %struct.kmp_dep_info], ptr %[[DEP_ARR_ADDR2]], i64 0, i64 0
+// CHECK:  %[[DEP_ARR_ADDR_2:.+]] = getelementptr %struct.kmp_dep_info, ptr %[[DEP_ARR_ADDR2]], i64 0
 //         [...]
 // CHECK:  %[[DEP_TYPE_2:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[DEP_ARR_ADDR_2]], i32 0, i32 2
 // CHECK:  store i8 3, ptr %[[DEP_TYPE_2]], align 1
 // -----
 // dependence_type: Mutexinoutset
 // CHECK:  %[[DEP_ARR_ADDR3:.+]] = alloca [1 x %struct.kmp_dep_info], align 8
-// CHECK:  %[[DEP_ARR_ADDR_3:.+]] = getelementptr inbounds [1 x %struct.kmp_dep_info], ptr %[[DEP_ARR_ADDR3]], i64 0, i64 0
+// CHECK:  %[[DEP_ARR_ADDR_3:.+]] = getelementptr %struct.kmp_dep_info, ptr %[[DEP_ARR_ADDR3]], i64 0
 //         [...]
 // CHECK:  %[[DEP_TYPE_3:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[DEP_ARR_ADDR_3]], i32 0, i32 2
 // CHECK:  store i8 4, ptr %[[DEP_TYPE_3]], align 1
 // -----
 // dependence_type: Inoutset
 // CHECK:  %[[DEP_ARR_ADDR4:.+]] = alloca [1 x %struct.kmp_dep_info], align 8
-// CHECK:  %[[DEP_ARR_ADDR_4:.+]] = getelementptr inbounds [1 x %struct.kmp_dep_info], ptr %[[DEP_ARR_ADDR4]], i64 0, i64 0
+// CHECK:  %[[DEP_ARR_ADDR_4:.+]] = getelementptr %struct.kmp_dep_info, ptr %[[DEP_ARR_ADDR4]], i64 0
 //         [...]
 // CHECK:  %[[DEP_TYPE_4:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[DEP_ARR_ADDR_4]], i32 0, i32 2
 // CHECK:  store i8 8, ptr %[[DEP_TYPE_4]], align 1
@@ -2731,6 +2731,63 @@ llvm.func @omp_task_with_deps(%zaddr: !llvm.ptr) {
 // CHECK:   br label %[[exit_stub:[^, ]+]]
 // CHECK: [[exit_stub]]:
 // CHECK:   ret void
+
+// -----
+
+// CHECK-LABEL: define void @omp_task_with_deps_02(ptr %0, ptr %1) {
+
+// CHECK:   %[[obj:.+]] = alloca i64, i64 1, align 8
+// CHECK:   %[[obj_load_01:.+]] = load ptr, ptr %[[obj]], align 8
+// CHECK:   %[[gep_01:.+]] = getelementptr %struct.kmp_dep_info, ptr %[[obj_load_01]], i64 -1
+// CHECK:   %[[gep_02:.+]] = getelementptr inbounds %struct.kmp_dep_info, ptr %[[gep_01]], i64 0, i64 0
+// CHECK:   %[[obj_addr:.+]] = load i64, ptr %[[gep_02]], align 4
+
+// CHECK:   %[[size:.+]] = add i64 %[[obj_addr]], 2
+
+// CHECK:   %[[stack_ptr:.+]] = call ptr @llvm.stacksave.p0()
+// CHECK:   %[[dep_addr:.+]] = alloca %struct.kmp_dep_info, i64 %[[size]], align 16
+// CHECK:   %[[dep_size:.+]] = trunc i64 %[[size]] to i32
+
+// CHECK:   %[[gep_03:.+]] = getelementptr %struct.kmp_dep_info, ptr %[[dep_addr]], i64 0
+// CHECK:   %[[gep_04:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[gep_03]], i32 0, i32 0
+// CHECK:   %[[arg_01_int:.+]] = ptrtoint ptr %0 to i64
+// CHECK:   store i64 %[[arg_01_int]], ptr %[[gep_04]], align 4
+// CHECK:   %[[gep_05:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[gep_03]], i32 0, i32 1
+// CHECK:   store i64 8, ptr %[[gep_05]], align 4
+// CHECK:   %[[gep_06:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[gep_03]], i32 0, i32 2
+// CHECK:   store i8 1, ptr %[[gep_06]], align 1
+
+// CHECK:   %[[gep_07:.+]] = getelementptr %struct.kmp_dep_info, ptr %[[dep_addr]], i64 1
+// CHECK:   %[[gep_08:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[gep_07]], i32 0, i32 0
+// CHECK:   %[[arg_02_int:.+]] = ptrtoint ptr %1 to i64
+// CHECK:   store i64 %[[arg_02_int]], ptr %[[gep_08]], align 4
+// CHECK:   %[[gep_09:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[gep_07]], i32 0, i32 1
+// CHECK:   store i64 8, ptr %[[gep_09]], align 4
+// CHECK:   %[[gep_10:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[gep_07]], i32 0, i32 2
+// CHECK:   store i8 3, ptr %[[gep_10]], align 1
+
+// CHECK:   %[[gep_11:.+]] = getelementptr %struct.kmp_dep_info, ptr %[[dep_addr]], i64 2
+// CHECK:   %[[obj_load_02:.+]] = load ptr, ptr %[[obj]], align 8
+// CHECK:   %[[obj_size:.+]] = mul i64 24, %[[obj_addr]]
+// CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[gep_11]], ptr align 8 %[[obj_load_02]], i64 %[[obj_size]], i1 false)
+// CHECK:   %[[dep_size_idx:.+]] = add i64 2, %[[obj_addr]]
+
+// CHECK:   %[[task:.+]] = call i32 @__kmpc_omp_task_with_deps({{.*}}, i32 %[[dep_size]], ptr %[[dep_addr]], i32 0, ptr null)
+// CHECK:   call void @llvm.stackrestore.p0(ptr %[[stack_ptr]])
+// CHECK: }
+
+
+llvm.func @omp_task_with_deps_02(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
+  %c_1 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %c_1 x i64 : (i64) -> !llvm.ptr
+  omp.task depend(taskdependin -> %arg0 : !llvm.ptr, taskdependdepobj -> %1 : !llvm.ptr, taskdependout -> %arg1 : !llvm.ptr) {
+    %4 = llvm.load %arg0 : !llvm.ptr -> i64
+    %5 = llvm.add %4, %c_1 : i64
+    llvm.store %5, %arg1 : i64, !llvm.ptr
+    omp.terminator
+  }
+  llvm.return
+}
 
 // -----
 
