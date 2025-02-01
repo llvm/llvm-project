@@ -1574,7 +1574,7 @@ template <class ELFT> void SharedFile::parse() {
       }
       Symbol *s = ctx.symtab->addSymbol(
           Undefined{this, name, sym.getBinding(), sym.st_other, sym.getType()});
-      s->exportDynamic = true;
+      s->isExported = true;
       if (sym.getBinding() != STB_WEAK &&
           ctx.arg.unresolvedSymbolsInShlib != UnresolvedPolicy::Ignore)
         requiredSymbols.push_back(s);
@@ -1771,7 +1771,7 @@ static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
                    nullptr);
     // The definition can be omitted if all bitcode definitions satisfy
     // `canBeOmittedFromSymbolTable()` and isUsedInRegularObj is false.
-    // The latter condition is tested in Symbol::includeInDynsym.
+    // The latter condition is tested in parseVersionAndComputeIsPreemptible.
     sym->ltoCanOmit = objSym.canBeOmittedFromSymbolTable() &&
                       (!sym->isDefined() || sym->ltoCanOmit);
     sym->resolve(ctx, newSym);
