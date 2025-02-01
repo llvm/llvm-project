@@ -257,6 +257,15 @@ struct ScalarEnumerationTraits<FormatStyle::BreakBeforeInlineASMColonStyle> {
 };
 
 template <>
+struct ScalarEnumerationTraits<FormatStyle::BreakBeforeTemplateCloserStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::BreakBeforeTemplateCloserStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::BBTCS_Never);
+    IO.enumCase(Value, "BlockIndent", FormatStyle::BBTCS_BlockIndent);
+  }
+};
+
+template <>
 struct ScalarEnumerationTraits<FormatStyle::BreakBinaryOperationsStyle> {
   static void enumeration(IO &IO,
                           FormatStyle::BreakBinaryOperationsStyle &Value) {
@@ -1014,6 +1023,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("BreakBeforeBraces", Style.BreakBeforeBraces);
     IO.mapOptional("BreakBeforeInlineASMColon",
                    Style.BreakBeforeInlineASMColon);
+    IO.mapOptional("BreakBeforeTemplateCloser",
+                   Style.BreakBeforeTemplateCloser);
     IO.mapOptional("BreakBeforeTernaryOperators",
                    Style.BreakBeforeTernaryOperators);
     IO.mapOptional("BreakBinaryOperations", Style.BreakBinaryOperations);
@@ -1535,6 +1546,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakBeforeBraces = FormatStyle::BS_Attach;
   LLVMStyle.BreakBeforeConceptDeclarations = FormatStyle::BBCDS_Always;
   LLVMStyle.BreakBeforeInlineASMColon = FormatStyle::BBIAS_OnlyMultiline;
+  LLVMStyle.BreakBeforeTemplateCloser = FormatStyle::BBTCS_Never;
   LLVMStyle.BreakBeforeTernaryOperators = true;
   LLVMStyle.BreakBinaryOperations = FormatStyle::BBO_Never;
   LLVMStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;

@@ -435,6 +435,12 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("BreakBeforeBinaryOperators: true", BreakBeforeBinaryOperators,
               FormatStyle::BOS_All);
 
+  Style.BreakBeforeTemplateCloser = FormatStyle::BBTCS_Never;
+  CHECK_PARSE("BreakBeforeTemplateCloser: BlockIndent",
+              BreakBeforeTemplateCloser, FormatStyle::BBTCS_BlockIndent);
+  CHECK_PARSE("BreakBeforeTemplateCloser: Never", BreakBeforeTemplateCloser,
+              FormatStyle::BBTCS_Never);
+
   Style.BreakBinaryOperations = FormatStyle::BBO_Never;
   CHECK_PARSE("BreakBinaryOperations: OnePerLine", BreakBinaryOperations,
               FormatStyle::BBO_OnePerLine);

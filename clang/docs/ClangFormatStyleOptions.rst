@@ -3421,6 +3421,46 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _BreakBeforeTemplateCloser:
+
+**BreakBeforeTemplateCloser** (``BreakBeforeTemplateCloserStyle``) :versionbadge:`clang-format 21` :ref:`¶ <BreakBeforeTemplateCloser>`
+  The style of when a line break will be placed before the ``>`` that closes
+  a template.
+
+  Possible values:
+
+  * ``BBTCS_Never`` (in configuration: ``Never``)
+    Never break before a template closer.
+
+    .. code-block:: c++
+
+       template <typename Foo, typename Bar>
+
+       template <typename Foo,
+                 typename Bar>
+
+       template <
+           typename Foo,
+           typename Bar>
+
+  * ``BBTCS_BlockIndent`` (in configuration: ``BlockIndent``)
+    Break before a template closer if the template has broken into block
+    indent style.
+
+    .. code-block:: c++
+
+       template <typename Foo, typename Bar>
+
+       template <typename Foo,
+                 typename Bar>
+
+       template <
+           typename Foo,
+           typename Bar
+       >
+
+
+
 .. _BreakBeforeTernaryOperators:
 
 **BreakBeforeTernaryOperators** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <BreakBeforeTernaryOperators>`

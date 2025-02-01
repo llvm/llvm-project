@@ -304,6 +304,10 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
                                    Current.closesBlockOrBlockTypeList(Style))) {
     return false;
   }
+  if (Style.BreakBeforeTemplateCloser == FormatStyle::BBTCS_BlockIndent &&
+      Current.is(TT_TemplateCloser) && !CurrentState.BreakBeforeClosingAngle) {
+    return false;
+  }
   // The opening "{" of a braced list has to be on the same line as the first
   // element if it is nested in another braced init list or function call.
   if (!Current.MustBreakBefore && Previous.is(tok::l_brace) &&
@@ -413,6 +417,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
     return true;
   }
   if (CurrentState.BreakBeforeClosingParen && Current.is(tok::r_paren))
+    return true;
+  if (CurrentState.BreakBeforeClosingAngle && Current.is(TT_TemplateCloser))
     return true;
   if (Style.Language == FormatStyle::LK_ObjC &&
       Style.ObjCBreakBeforeNestedBlockParam &&
@@ -1243,6 +1249,11 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
         Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent;
   }
 
+  if (PreviousNonComment && PreviousNonComment->is(TT_TemplateOpener)) {
+    CurrentState.BreakBeforeClosingAngle =
+        Style.BreakBeforeTemplateCloser == FormatStyle::BBTCS_BlockIndent;
+  }
+
   if (CurrentState.AvoidBinPacking) {
     // If we are breaking after '(', '{', '<', or this is the break after a ':'
     // to start a member initializer list in a constructor, this should not
@@ -1377,6 +1388,10 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
        (Current.is(tok::r_brace) && Current.MatchingParen &&
         Current.MatchingParen->is(BK_BracedInit))) &&
       State.Stack.size() > 1) {
+    return State.Stack[State.Stack.size() - 2].LastSpace;
+  }
+  if (Style.BreakBeforeTemplateCloser == FormatStyle::BBTCS_BlockIndent &&
+      Current.is(TT_TemplateCloser) && State.Stack.size() > 1) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
   }
   if (NextNonComment->is(TT_TemplateString) && NextNonComment->closesScope())

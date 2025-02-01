@@ -2252,6 +2252,41 @@ struct FormatStyle {
   /// \version 16
   BreakBeforeInlineASMColonStyle BreakBeforeInlineASMColon;
 
+  /// Different styles for whether to break before a template closer.
+  enum BreakBeforeTemplateCloserStyle : int8_t {
+    /// Never break before a template closer.
+    /// \code
+    ///    template <typename Foo, typename Bar>
+    ///
+    ///    template <typename Foo,
+    ///              typename Bar>
+    ///
+    ///    template <
+    ///        typename Foo,
+    ///        typename Bar>
+    /// \endcode
+    BBTCS_Never,
+    /// Break before a template closer if the template has broken into block
+    /// indent style.
+    /// \code
+    ///    template <typename Foo, typename Bar>
+    ///
+    ///    template <typename Foo,
+    ///              typename Bar>
+    ///
+    ///    template <
+    ///        typename Foo,
+    ///        typename Bar
+    ///    >
+    /// \endcode
+    BBTCS_BlockIndent,
+  };
+
+  /// The style of when a line break will be placed before the ``>`` that closes
+  /// a template.
+  /// \version 21
+  BreakBeforeTemplateCloserStyle BreakBeforeTemplateCloser;
+
   /// If ``true``, ternary operators will be placed after line breaks.
   /// \code
   ///    true:
@@ -5251,6 +5286,7 @@ struct FormatStyle {
            BreakBeforeBraces == R.BreakBeforeBraces &&
            BreakBeforeConceptDeclarations == R.BreakBeforeConceptDeclarations &&
            BreakBeforeInlineASMColon == R.BreakBeforeInlineASMColon &&
+           BreakBeforeTemplateCloser == R.BreakBeforeTemplateCloser &&
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
            BreakBinaryOperations == R.BreakBinaryOperations &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&
