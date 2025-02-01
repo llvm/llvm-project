@@ -3299,12 +3299,11 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   // only hoisting the cheap pattern only and not other expensive instructions
   // too, we have the `MaxSpeculatedInstructionsToHoist` variable to track that
   // the basic block truly only contains that pattern.
-  bool PatternFound = false;
+  bool PartialInst = false;
 
   bool HoistLoadsStores = HoistLoadsStoresWithCondFaulting &&
                           Options.HoistLoadsStoresWithCondFaulting;
   SmallVector<Instruction *, 2> SpeculatedConditionalLoadsStores;
-  InstructionCost BlockCostSoFar = 0;
   Value *SpeculatedStoreValue = nullptr;
   StoreInst *SpeculatedStore = nullptr;
   EphemeralValueTracker EphTracker;
@@ -3339,8 +3338,15 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
                                     HoistLoadsStoresWithCondFaultingThreshold;
     // Not count load/store into cost if target supports conditional faulting
     // b/c it's cheap to speculate it.
+    WithOverflowInst *OI;
     if (IsSafeCheapLoadStore)
       SpeculatedConditionalLoadsStores.push_back(&I);
+    else if (match(&I,
+              m_ExtractValue<1>(m_OneUse(
+                  m_WithOverflowInst(OI))))) {
+      MaxSpeculatedInstructionsToHoist = 3;
+      PartialInst = true;
+    }
     else
       ++SpeculatedInstructions;
 
@@ -3352,16 +3358,8 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
                isSafeToSpeculateStore(&I, BB, ThenBB, EndBB))))
       return false;
 
-    if (match(&I,
-              m_ExtractValue<1>(m_OneUse(
-                  m_Intrinsic<Intrinsic::umul_with_overflow>(m_Value()))))) {
-      MaxSpeculatedInstructionsToHoist = 3;
-      PatternFound = true;
-    }
-
-    BlockCostSoFar += computeSpeculationCost(&I, TTI);
-    if (!PatternFound && !IsSafeCheapLoadStore && !SpeculatedStoreValue &&
-        BlockCostSoFar >
+    if (!PartialInst && !IsSafeCheapLoadStore && !SpeculatedStoreValue &&
+        computeSpeculationCost(&I, TTI) >
             PHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic)
       return false;
 
