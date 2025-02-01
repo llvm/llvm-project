@@ -1,5 +1,5 @@
 cc_library(
-    name = "robin_map",
+    name = "robin-map",
     hdrs = [
         "include/tsl/robin_growth_policy.h",
         "include/tsl/robin_hash.h",

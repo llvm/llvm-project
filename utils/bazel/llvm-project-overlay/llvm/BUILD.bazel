@@ -2,7 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_filegroup", "td_library")
@@ -219,6 +219,26 @@ genrule(
           "echo -e '#undef HANDLE_EXTENSION' >> $@\n",
 )
 
+bool_flag(
+    name = "enable_zstd",
+    build_setting_default = True,
+)
+
+config_setting(
+    name = "zstd_enabled",
+    flag_values = {":enable_zstd": "true"},
+)
+
+bool_flag(
+    name = "enable_zlib",
+    build_setting_default = True,
+)
+
+config_setting(
+    name = "zlib_enabled",
+    flag_values = {":enable_zlib": "true"},
+)
+
 cc_library(
     name = "Support",
     srcs = glob([
@@ -289,6 +309,16 @@ cc_library(
             "BLAKE3_NO_SSE2",
             "BLAKE3_NO_SSE41",
         ],
+    }) + select({
+        ":zlib_enabled":  [
+            "LLVM_ENABLE_ZLIB=1",
+        ],
+        "//conditions:default": [],
+    }) + select({
+        ":zstd_enabled":  [
+            "LLVM_ENABLE_ZSTD=1",
+        ],
+        "//conditions:default": [],
     }),
     includes = ["include"],
     linkopts = select({
@@ -318,15 +348,17 @@ cc_library(
     deps = [
         ":config",
         ":Demangle",
-        # We unconditionally depend on the custom LLVM zlib wrapper. This will
-        # be an empty library unless zlib is enabled, in which case it will
-        # both provide the necessary dependencies and configuration defines.
-        "@llvm_zlib//:zlib",
-        # We unconditionally depend on the custom LLVM zstd wrapper. This will
-        # be an empty library unless zstd is enabled, in which case it will
-        # both provide the necessary dependencies and configuration defines.
-        "@llvm_zstd//:zstd",
-    ],
+    ] + select({
+        ":zlib_enabled":  [
+            "@zlib-ng",
+        ],
+        "//conditions:default": [],
+    }) + select({
+        ":zstd_enabled": [
+            "@zstd",
+        ],
+        "//conditions:default": [],
+    }),
 )
 
 # Note: although FileCheck (the binary) is a test utility, some non-test

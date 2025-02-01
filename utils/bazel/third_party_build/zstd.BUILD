@@ -9,46 +9,26 @@ package(
     licenses = ["notice"],
 )
 
-bool_flag(
-    name = "llvm_enable_zstd",
-    build_setting_default = True,
-)
-
-config_setting(
-    name = "llvm_zstd_enabled",
-    flag_values = {":llvm_enable_zstd": "true"},
-)
-
 cc_library(
     name = "zstd",
-    srcs = select({
-        ":llvm_zstd_enabled": glob([
-            "lib/common/*.c",
-            "lib/common/*.h",
-            "lib/compress/*.c",
-            "lib/compress/*.h",
-            "lib/decompress/*.c",
-            "lib/decompress/*.h",
-            "lib/decompress/*.S",
-            "lib/dictBuilder/*.c",
-            "lib/dictBuilder/*.h",
-        ]),
-        "//conditions:default": [],
-    }),
-    hdrs = select({
-        ":llvm_zstd_enabled": [
-            "lib/zdict.h",
-            "lib/zstd.h",
-            "lib/zstd_errors.h",
-        ],
-        "//conditions:default": [],
-    }),
-    defines = select({
-        ":llvm_zstd_enabled": [
-            "LLVM_ENABLE_ZSTD=1",
-            "ZSTD_MULTITHREAD",
-        ],
-        "//conditions:default": [],
-    }),
+    srcs = glob([
+        "lib/common/*.c",
+        "lib/common/*.h",
+        "lib/compress/*.c",
+        "lib/compress/*.h",
+        "lib/decompress/*.c",
+        "lib/decompress/*.h",
+        "lib/decompress/*.S",
+        "lib/dictBuilder/*.c",
+        "lib/dictBuilder/*.h",
+    ]),
+    hdrs = [
+        "lib/zdict.h",
+        "lib/zstd.h",
+        "lib/zstd_errors.h",
+    ],
+    defines = [
+        "ZSTD_MULTITHREAD",
+    ],
     strip_include_prefix = "lib",
 )

@@ -476,6 +476,12 @@ cc_library(
         "Process/gdb-remote/GDBRemoteErrno.def",
     ],
     includes = [".."],
+    defines = select({
+        "//llvm:zlib_enabled":  [
+            "LLVM_ENABLE_ZLIB=1",
+        ],
+        "//conditions:default": [],
+    }),
     deps = [
         ":PluginProcessUtility",
         ":ProcessGDBRemoteProperties",
@@ -493,8 +499,12 @@ cc_library(
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:config",
-        "@llvm_zlib//:zlib",
-    ],
+    ] + select({
+        "//llvm:zlib_enabled":  [
+            "@zlib-ng",
+        ],
+        "//conditions:default": [],
+    })
 )
 
 cc_library(
@@ -1405,6 +1415,12 @@ cc_library(
     srcs = glob(["SymbolFile/CTF/*.cpp"]),
     hdrs = glob(["SymbolFile/CTF/*.h"]),
     includes = [".."],
+    defines = select({
+        "//llvm:zlib_enabled":  [
+            "LLVM_ENABLE_ZLIB=1",
+        ],
+        "//conditions:default": [],
+    }),
     deps = [
         ":PluginExpressionParserClangHeaders",
         ":PluginTypeSystemClangHeaders",
@@ -1416,8 +1432,13 @@ cc_library(
         "//lldb:Utility",
         "//llvm:Support",
         "//llvm:config",
-        "@llvm_zlib//:zlib",
-    ],
+    ] + select({
+        "//llvm:zlib_enabled":  [
+            "@zlib-ng",
+        ],
+        "//conditions:default": [],
+    })
+
 )
 
 cc_library(

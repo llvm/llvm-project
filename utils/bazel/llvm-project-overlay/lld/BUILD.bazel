@@ -85,6 +85,17 @@ cc_library(
     textual_hdrs = [
         "ELF/Arch/PPCInsns.def",
     ],
+    defines = select({
+        "//llvm:zlib_enabled":  [
+            "LLVM_ENABLE_ZLIB=1",
+        ],
+        "//conditions:default": [],
+    }) + select({
+        "//llvm:zstd_enabled":  [
+            "LLVM_ENABLE_ZSTD=1",
+        ],
+        "//conditions:default": [],
+    }),
     deps = [
         ":Common",
         ":elf_options_inc_gen",
@@ -111,9 +122,17 @@ cc_library(
         "//llvm:TargetParser",
         "//llvm:TransformUtils",
         "//llvm:config",
-        "@llvm_zlib//:zlib",
-        "@llvm_zstd//:zstd",
-    ],
+    ] + select({
+        "//llvm:zlib_enabled":  [
+            "@zlib-ng",
+        ],
+        "//conditions:default": [],
+    }) + select({
+        "//llvm:zstd_enabled":  [
+            "@zstd",
+        ],
+        "//conditions:default": [],
+    }),
 )
 
 gentbl(

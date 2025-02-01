@@ -5,7 +5,7 @@
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
-load("@build_bazel_apple_support//rules:apple_genrule.bzl", "apple_genrule")
+load("@apple_support//rules:apple_genrule.bzl", "apple_genrule")
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//:vars.bzl", "LLVM_VERSION_MAJOR", "LLVM_VERSION_MINOR", "LLVM_VERSION_PATCH", "LLVM_VERSION_SUFFIX", "PACKAGE_VERSION")
 load("//lldb/source/Plugins:plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "OBJCPP_COPTS")
