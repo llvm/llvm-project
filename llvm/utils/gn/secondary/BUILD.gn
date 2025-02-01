@@ -14,8 +14,7 @@ group("default") {
     "//lldb/test",
     "//llvm/test",
   ]
-  # FIXME: Reenable once libc hand-in-hand is figured out.
-  if (false && current_os == "linux") {
+  if (current_os == "linux") {
     deps += [
       "//libcxx",
       "//libcxxabi",
