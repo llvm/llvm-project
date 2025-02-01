@@ -191,34 +191,10 @@ static Matcher *FindNodeWithKind(Matcher *M, Matcher::KindTy Kind) {
   return nullptr;
 }
 
-/// FactorNodes - Turn matches like this:
-///   Scope
-///     OPC_CheckType i32
-///       ABC
-///     OPC_CheckType i32
-///       XYZ
-/// into:
-///   OPC_CheckType i32
-///     Scope
-///       ABC
-///       XYZ
-///
-static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
-  // Look for a push node. Iterates instead of recurses to reduce stack usage.
-  ScopeMatcher *Scope = nullptr;
-  std::unique_ptr<Matcher> *RebindableMatcherPtr = &InputMatcherPtr;
-  while (!Scope) {
-    // If we reached the end of the chain, we're done.
-    Matcher *N = RebindableMatcherPtr->get();
-    if (!N)
-      return;
+static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr);
 
-    // If this is not a push node, just scan for one.
-    Scope = dyn_cast<ScopeMatcher>(N);
-    if (!Scope)
-      RebindableMatcherPtr = &(N->getNextPtr());
-  }
-  std::unique_ptr<Matcher> &MatcherPtr = *RebindableMatcherPtr;
+static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
+  ScopeMatcher *Scope = cast<ScopeMatcher>(MatcherPtr.get());
 
   // Okay, pull together the children of the scope node into a vector so we can
   // inspect it more easily.
@@ -353,7 +329,7 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
       Shared->setNext(new ScopeMatcher(std::move(EqualMatchers)));
 
       // Recursively factor the newly created node.
-      FactorNodes(Shared->getNextPtr());
+      FactorScope(Shared->getNextPtr());
     }
 
     // Put the new Matcher where we started in OptionsToMatch.
@@ -470,7 +446,7 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
     for (auto &M : Cases) {
       if (ScopeMatcher *SM = dyn_cast<ScopeMatcher>(M.second)) {
         std::unique_ptr<Matcher> Scope(SM);
-        FactorNodes(Scope);
+        FactorScope(Scope);
         M.second = Scope.release();
         assert(M.second && "null matcher");
       }
@@ -490,6 +466,31 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
   Scope->setNumChildren(OptionsToMatch.size());
   for (unsigned i = 0, e = OptionsToMatch.size(); i != e; ++i)
     Scope->resetChild(i, OptionsToMatch[i]);
+}
+
+/// FactorNodes - Turn matches like this:
+///   Scope
+///     OPC_CheckType i32
+///       ABC
+///     OPC_CheckType i32
+///       XYZ
+/// into:
+///   OPC_CheckType i32
+///     Scope
+///       ABC
+///       XYZ
+///
+static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
+  // Look for a scope matcher. Iterates instead of recurses to reduce stack
+  // usage.
+  std::unique_ptr<Matcher> *MatcherPtr = &InputMatcherPtr;
+  do {
+    if (isa<ScopeMatcher>(*MatcherPtr))
+      return FactorScope(*MatcherPtr);
+
+    // If this is not a scope matcher, go to the next node.
+    MatcherPtr = &(MatcherPtr->get()->getNextPtr());
+  } while (MatcherPtr->get());
 }
 
 void llvm::OptimizeMatcher(std::unique_ptr<Matcher> &MatcherPtr,
