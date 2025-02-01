@@ -113,6 +113,8 @@ Attribute Changes in Clang
 Improvements to Clang's diagnostics
 -----------------------------------
 
+- Fixed a bug where Clang's Analysis did not correctly model the destructor behavior of ``union`` members (#GH119415).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
