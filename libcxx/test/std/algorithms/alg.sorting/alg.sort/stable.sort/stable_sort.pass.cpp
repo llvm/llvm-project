@@ -176,11 +176,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
     test_larger_sorts<T>(997);
     test_larger_sorts<T>(1000);
     test_larger_sorts<T>(1009);
-    test_larger_sorts<T>(1024);
     test_larger_sorts<T>(1031);
+    test_larger_sorts<T>(2053);
   }
   // test constexprness of radix sort branch
-  test_larger_sorts<T>(2053);
+  test_larger_sorts<T>(1024);
 
   // check that the algorithm works without memory
 #ifndef TEST_HAS_NO_EXCEPTIONS
