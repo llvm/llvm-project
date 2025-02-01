@@ -1616,6 +1616,97 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
   }
 }
 
+// CO_REDUCE (F'2023 16.9.49)
+static void CheckCoReduce(
+    evaluate::ActualArguments &arguments, evaluate::FoldingContext &context) {
+  parser::ContextualMessages &messages{context.messages()};
+  evaluate::CheckForCoindexedObject(
+      context.messages(), arguments[0], "co_reduce", "a");
+  evaluate::CheckForCoindexedObject(
+      context.messages(), arguments[2], "co_reduce", "stat");
+  evaluate::CheckForCoindexedObject(
+      context.messages(), arguments[3], "co_reduce", "errmsg");
+
+  std::optional<evaluate::DynamicType> aType;
+  if (const auto &a{arguments[0]}) {
+    aType = a->GetType();
+  }
+  std::optional<characteristics::Procedure> procChars;
+  if (const auto &operation{arguments[1]}) {
+    if (const auto *expr{operation->UnwrapExpr()}) {
+      if (const auto *designator{
+              std::get_if<evaluate::ProcedureDesignator>(&expr->u)}) {
+        procChars = characteristics::Procedure::Characterize(
+            *designator, context, /*emitError=*/true);
+      } else if (const auto *ref{
+                     std::get_if<evaluate::ProcedureRef>(&expr->u)}) {
+        procChars = characteristics::Procedure::Characterize(*ref, context);
+      }
+    }
+  }
+  const auto *result{
+      procChars ? procChars->functionResult->GetTypeAndShape() : nullptr};
+  if (!procChars || !procChars->IsPure() ||
+      procChars->dummyArguments.size() != 2 || !procChars->functionResult) {
+    messages.Say(
+        "OPERATION= argument of CO_REDUCE() must be a pure function of two data arguments"_err_en_US);
+  } else if (procChars->attrs.test(characteristics::Procedure::Attr::BindC)) {
+    messages.Say(
+        "A BIND(C) OPERATION= argument of CO_REDUCE() is not supported"_err_en_US);
+  } else if (!result || result->Rank() != 0) {
+    messages.Say(
+        "OPERATION= argument of CO_REDUCE() must be a scalar function"_err_en_US);
+  } else if (result->type().IsPolymorphic() ||
+      (aType && !aType->IsTkLenCompatibleWith(result->type()))) {
+    messages.Say(
+        "OPERATION= argument of CO_REDUCE() must have the same type as A="_err_en_US);
+  } else if (procChars->functionResult->attrs.test(
+                 characteristics::FunctionResult::Attr::Allocatable) ||
+      procChars->functionResult->attrs.test(
+          characteristics::FunctionResult::Attr::Pointer) ||
+      procChars->functionResult->GetTypeAndShape()->type().IsPolymorphic()) {
+    messages.Say(
+        "Result of OPERATION= procedure of CO_REDUCE() must be scalar and neither allocatable, pointer, nor polymorphic"_err_en_US);
+  } else {
+    const characteristics::DummyDataObject *data[2]{};
+    for (int j{0}; j < 2; ++j) {
+      const auto &dummy{procChars->dummyArguments.at(j)};
+      data[j] = std::get_if<characteristics::DummyDataObject>(&dummy.u);
+    }
+    if (!data[0] || !data[1]) {
+      messages.Say(
+          "OPERATION= argument of CO_REDUCE() may not have dummy procedure arguments"_err_en_US);
+    } else {
+      for (int j{0}; j < 2; ++j) {
+        if (data[j]->attrs.test(
+                characteristics::DummyDataObject::Attr::Optional) ||
+            data[j]->attrs.test(
+                characteristics::DummyDataObject::Attr::Allocatable) ||
+            data[j]->attrs.test(
+                characteristics::DummyDataObject::Attr::Pointer) ||
+            data[j]->type.Rank() != 0 || data[j]->type.type().IsPolymorphic() ||
+            (aType && !data[j]->type.type().IsTkCompatibleWith(*aType))) {
+          messages.Say(
+              "Arguments of OPERATION= procedure of CO_REDUCE() must be both scalar of the same type as A=, and neither allocatable, pointer, polymorphic, nor optional"_err_en_US);
+          break;
+        }
+      }
+      static constexpr characteristics::DummyDataObject::Attr attrs[]{
+          characteristics::DummyDataObject::Attr::Asynchronous,
+          characteristics::DummyDataObject::Attr::Target,
+          characteristics::DummyDataObject::Attr::Value,
+      };
+      for (std::size_t j{0}; j < sizeof attrs / sizeof *attrs; ++j) {
+        if (data[0]->attrs.test(attrs[j]) != data[1]->attrs.test(attrs[j])) {
+          messages.Say(
+              "If either argument of the OPERATION= procedure of CO_REDUCE() has the ASYNCHRONOUS, TARGET, or VALUE attribute, both must have that attribute"_err_en_US);
+          break;
+        }
+      }
+    }
+  }
+}
+
 // EVENT_QUERY (F'2023 16.9.82)
 static void CheckEvent_Query(evaluate::ActualArguments &arguments,
     evaluate::FoldingContext &foldingContext) {
@@ -1982,6 +2073,8 @@ static void CheckSpecificIntrinsic(const characteristics::Procedure &proc,
     const Scope *scope, const evaluate::SpecificIntrinsic &intrinsic) {
   if (intrinsic.name == "associated") {
     CheckAssociated(arguments, context, scope);
+  } else if (intrinsic.name == "co_reduce") {
+    CheckCoReduce(arguments, context.foldingContext());
   } else if (intrinsic.name == "event_query") {
     CheckEvent_Query(arguments, context.foldingContext());
   } else if (intrinsic.name == "image_index") {
