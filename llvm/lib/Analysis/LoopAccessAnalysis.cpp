@@ -2807,11 +2807,18 @@ bool LoopAccessInfo::isInvariant(Value *V) const {
   return SE->isLoopInvariant(S, TheLoop);
 }
 
-/// If \p Ptr is a GEP, which has a loop-variant index, return that index.
+/// If \p Ptr is a GEP, which has a loop-variant operand, return that operand.
 /// Otherwise, return \p Ptr.
-static Value *getLoopVariantGEPIdx(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
+static Value *getLoopVariantGEPOperand(Value *Ptr, ScalarEvolution *SE,
+                                       Loop *Lp) {
   auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
   if (!GEP)
+    return Ptr;
+
+  // There must be exactly one loop-variant operand.
+  if (count_if(GEP->operands(), [&](const Use &U) {
+        return !SE->isLoopInvariant(SE->getSCEV(U), Lp);
+      }) != 1)
     return Ptr;
 
   auto *It = find_if(GEP->operands(), [&](const Use &U) {
@@ -2832,7 +2839,7 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
   // pointer, otherwise, we are analyzing the index.
   Value *OrigPtr = Ptr;
 
-  Ptr = getLoopVariantGEPIdx(Ptr, SE, Lp);
+  Ptr = getLoopVariantGEPOperand(Ptr, SE, Lp);
   const SCEV *V = SE->getSCEV(Ptr);
 
   if (Ptr != OrigPtr)
