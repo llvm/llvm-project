@@ -367,6 +367,9 @@ extractOmpDirective(const parser::OpenMPConstruct &ompConstruct) {
           [](const parser::OpenMPAllocatorsConstruct &c) {
             return llvm::omp::OMPD_allocators;
           },
+          [](const parser::OpenMPAssumeConstruct &c) {
+            return llvm::omp::OMPD_assume;
+          },
           [](const parser::OpenMPAtomicConstruct &c) {
             return llvm::omp::OMPD_atomic;
           },

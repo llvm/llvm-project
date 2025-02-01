@@ -4612,11 +4612,10 @@ struct OpenMPDeclarativeAllocate {
 struct OpenMPDeclarativeConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPDeclarativeConstruct);
   CharBlock source;
-  std::variant<OpenMPDeclarativeAllocate, OpenMPAssumeConstruct, OpenMPDeclarativeAssumes,
-      OpenMPDeclareMapperConstruct,
-      OpenMPDeclareReductionConstruct, OpenMPDeclareSimdConstruct,
-      OpenMPDeclareTargetConstruct, OpenMPThreadprivate,
-      OpenMPRequiresConstruct, OpenMPUtilityConstruct>
+  std::variant<OpenMPDeclarativeAllocate, OpenMPDeclarativeAssumes,
+      OpenMPDeclareMapperConstruct, OpenMPDeclareReductionConstruct,
+      OpenMPDeclareSimdConstruct, OpenMPDeclareTargetConstruct,
+      OpenMPThreadprivate, OpenMPRequiresConstruct, OpenMPUtilityConstruct>
       u;
 };
 

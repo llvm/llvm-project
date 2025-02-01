@@ -2115,9 +2115,6 @@ public:
                   },
         x.u);
   }
-  void Unparse(const llvm::omp::Directive &x) {
-    Word(llvm::omp::getOpenMPDirectiveName(x));
-  }
   void Unparse(const OmpDirectiveNameModifier &x) {
     Word(llvm::omp::getOpenMPDirectiveName(x.v));
   }
@@ -2704,14 +2701,8 @@ public:
     Walk(std::get<std::optional<OmpReductionInitializerClause>>(x.t));
     EndOpenMP();
   }
-  bool Pre(const OpenMPAssumesConstruct &x) {
+  void Unparse(const OpenMPDeclarativeAssumes &x) {
     BeginOpenMP();
-    Word("!$OMP ASSUMES ");
-    Walk(std::get<OmpClauseList>(x.t));
-    Put("\n");
-    EndOpenMP();
-  }
-  bool Pre(const OpenMPDeclarativeAssumes &x) {
     Word("!$OMP ASSUMES ");
     Walk(std::get<OmpClauseList>(x.t));
     Put("\n");
