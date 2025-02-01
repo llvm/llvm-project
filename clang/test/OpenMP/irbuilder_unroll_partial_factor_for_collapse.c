@@ -31,8 +31,6 @@ void unroll_partial_factor_for_collapse(int m, float *a, float *b, float *c, flo
 // CHECK-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[J:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[DOTCAPTURE_EXPR_2:%.*]] = alloca i64, align 8
-// CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    [[DOTUNROLLED_IV_J:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -55,8 +53,6 @@ void unroll_partial_factor_for_collapse(int m, float *a, float *b, float *c, flo
 // CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV]], 2
 // CHECK-NEXT:    [[SUB3:%.*]] = sub nsw i64 [[MUL]], 1
 // CHECK-NEXT:    store i64 [[SUB3]], ptr [[DOTCAPTURE_EXPR_2]], align 8
-// CHECK-NEXT:    store i32 0, ptr [[I]], align 4
-// CHECK-NEXT:    store i32 0, ptr [[DOTUNROLLED_IV_J]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP2]]
 // CHECK-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]

@@ -34,8 +34,6 @@ void foo(int t) {
 // IR-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca i64, align 8
 // IR-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8
 // IR-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
-// IR-NEXT:    [[I8:%.*]] = alloca i32, align 4
-// IR-NEXT:    [[J9:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTOMP_IV:%.*]] = alloca i64, align 8
 // IR-NEXT:    [[I11:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[J12:%.*]] = alloca i32, align 4
@@ -59,8 +57,6 @@ void foo(int t) {
 // IR-NEXT:    store i64 0, ptr [[DOTOMP_LB]], align 8
 // IR-NEXT:    [[TMP4:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_3]], align 8
 // IR-NEXT:    store i64 [[TMP4]], ptr [[DOTOMP_UB]], align 8
-// IR-NEXT:    store i32 0, ptr [[I8]], align 4
-// IR-NEXT:    store i32 0, ptr [[J9]], align 4
 // IR-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP5]]
 // IR-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[SIMD_IF_END:%.*]]
@@ -159,8 +155,6 @@ void foo(int t) {
 // IR-PCH-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca i64, align 8
 // IR-PCH-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8
 // IR-PCH-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
-// IR-PCH-NEXT:    [[I8:%.*]] = alloca i32, align 4
-// IR-PCH-NEXT:    [[J9:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTOMP_IV:%.*]] = alloca i64, align 8
 // IR-PCH-NEXT:    [[I11:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[J12:%.*]] = alloca i32, align 4
@@ -184,8 +178,6 @@ void foo(int t) {
 // IR-PCH-NEXT:    store i64 0, ptr [[DOTOMP_LB]], align 8
 // IR-PCH-NEXT:    [[TMP4:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_3]], align 8
 // IR-PCH-NEXT:    store i64 [[TMP4]], ptr [[DOTOMP_UB]], align 8
-// IR-PCH-NEXT:    store i32 0, ptr [[I8]], align 4
-// IR-PCH-NEXT:    store i32 0, ptr [[J9]], align 4
 // IR-PCH-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-PCH-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP5]]
 // IR-PCH-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[SIMD_IF_END:%.*]]

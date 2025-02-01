@@ -327,7 +327,6 @@ void test_target_teams_atomic() {
 // CHECK1-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -348,7 +347,6 @@ void test_target_teams_atomic() {
 // CHECK1-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK1-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK1-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK1-NEXT:    store i32 0, ptr [[I3]], align 4
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP3]]
 // CHECK1-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -440,7 +438,6 @@ void test_target_teams_atomic() {
 // CHECK1-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTLINEAR_START:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTLINEAR_STEP:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
@@ -464,7 +461,6 @@ void test_target_teams_atomic() {
 // CHECK1-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK1-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK1-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK1-NEXT:    store i32 0, ptr [[I3]], align 4
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP3]]
 // CHECK1-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -590,7 +586,6 @@ void test_target_teams_atomic() {
 // CHECK1-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -610,7 +605,6 @@ void test_target_teams_atomic() {
 // CHECK1-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK1-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK1-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK1-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP3]]
 // CHECK1-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -698,7 +692,6 @@ void test_target_teams_atomic() {
 // CHECK1-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -719,7 +712,6 @@ void test_target_teams_atomic() {
 // CHECK1-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK1-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK1-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK1-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP3]]
 // CHECK1-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1262,7 +1254,6 @@ void test_target_teams_atomic() {
 // CHECK3-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -1283,7 +1274,6 @@ void test_target_teams_atomic() {
 // CHECK3-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK3-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK3-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK3-NEXT:    store i32 0, ptr [[I3]], align 4
 // CHECK3-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK3-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP3]]
 // CHECK3-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1373,7 +1363,6 @@ void test_target_teams_atomic() {
 // CHECK3-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTLINEAR_START:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTLINEAR_STEP:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
@@ -1397,7 +1386,6 @@ void test_target_teams_atomic() {
 // CHECK3-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK3-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK3-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK3-NEXT:    store i32 0, ptr [[I3]], align 4
 // CHECK3-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK3-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP3]]
 // CHECK3-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1520,7 +1508,6 @@ void test_target_teams_atomic() {
 // CHECK3-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -1540,7 +1527,6 @@ void test_target_teams_atomic() {
 // CHECK3-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK3-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK3-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK3-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK3-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK3-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP3]]
 // CHECK3-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1626,7 +1612,6 @@ void test_target_teams_atomic() {
 // CHECK3-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -1647,7 +1632,6 @@ void test_target_teams_atomic() {
 // CHECK3-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK3-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK3-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK3-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK3-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK3-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP3]]
 // CHECK3-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1954,7 +1938,6 @@ void test_target_teams_atomic() {
 // CHECK5-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
-// CHECK5-NEXT:    [[I6:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[DOTLINEAR_START:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[DOTLINEAR_STEP:%.*]] = alloca i32, align 4
@@ -1965,7 +1948,6 @@ void test_target_teams_atomic() {
 // CHECK5-NEXT:    [[DOTCAPTURE_EXPR_17:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[DOTOMP_LB21:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[DOTOMP_UB22:%.*]] = alloca i32, align 4
-// CHECK5-NEXT:    [[I23:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[DOTOMP_IV26:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[I27:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    store ptr [[G]], ptr [[G_ADDR]], align 8
@@ -1988,7 +1970,6 @@ void test_target_teams_atomic() {
 // CHECK5-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
 // CHECK5-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_3]], align 4
 // CHECK5-NEXT:    store i32 [[TMP5]], ptr [[DOTOMP_UB]], align 4
-// CHECK5-NEXT:    store i32 0, ptr [[I6]], align 4
 // CHECK5-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK5-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP6]]
 // CHECK5-NEXT:    br i1 [[CMP]], label [[SIMD_IF_THEN:%.*]], label [[SIMD_IF_END:%.*]]
@@ -2043,20 +2024,19 @@ void test_target_teams_atomic() {
 // CHECK5-NEXT:    store i32 0, ptr [[DOTOMP_LB21]], align 4
 // CHECK5-NEXT:    [[TMP18:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_17]], align 4
 // CHECK5-NEXT:    store i32 [[TMP18]], ptr [[DOTOMP_UB22]], align 4
-// CHECK5-NEXT:    store i32 0, ptr [[I23]], align 4
 // CHECK5-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_16]], align 4
 // CHECK5-NEXT:    [[CMP24:%.*]] = icmp slt i32 0, [[TMP19]]
 // CHECK5-NEXT:    br i1 [[CMP24]], label [[SIMD_IF_THEN25:%.*]], label [[SIMD_IF_END44:%.*]]
-// CHECK5:       simd.if.then25:
+// CHECK5:       simd.if.then
 // CHECK5-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTOMP_LB21]], align 4
 // CHECK5-NEXT:    store i32 [[TMP20]], ptr [[DOTOMP_IV26]], align 4
 // CHECK5-NEXT:    br label [[OMP_INNER_FOR_COND28:%.*]]
-// CHECK5:       omp.inner.for.cond28:
+// CHECK5:       omp.inner.for.cond
 // CHECK5-NEXT:    [[TMP21:%.*]] = load i32, ptr [[DOTOMP_IV26]], align 4, !llvm.access.group [[ACC_GRP5:![0-9]+]]
 // CHECK5-NEXT:    [[TMP22:%.*]] = load i32, ptr [[DOTOMP_UB22]], align 4, !llvm.access.group [[ACC_GRP5]]
 // CHECK5-NEXT:    [[CMP29:%.*]] = icmp sle i32 [[TMP21]], [[TMP22]]
 // CHECK5-NEXT:    br i1 [[CMP29]], label [[OMP_INNER_FOR_BODY30:%.*]], label [[OMP_INNER_FOR_END39:%.*]]
-// CHECK5:       omp.inner.for.body30:
+// CHECK5:       omp.inner.for.body
 // CHECK5-NEXT:    [[TMP23:%.*]] = load i32, ptr [[DOTOMP_IV26]], align 4, !llvm.access.group [[ACC_GRP5]]
 // CHECK5-NEXT:    [[MUL31:%.*]] = mul nsw i32 [[TMP23]], 1
 // CHECK5-NEXT:    [[ADD32:%.*]] = add nsw i32 0, [[MUL31]]
@@ -2069,14 +2049,14 @@ void test_target_teams_atomic() {
 // CHECK5-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds [1000 x i32], ptr [[A]], i64 0, i64 [[IDXPROM34]]
 // CHECK5-NEXT:    store i32 [[TMP25]], ptr [[ARRAYIDX35]], align 4, !llvm.access.group [[ACC_GRP5]]
 // CHECK5-NEXT:    br label [[OMP_BODY_CONTINUE36:%.*]]
-// CHECK5:       omp.body.continue36:
+// CHECK5:       omp.body.continue
 // CHECK5-NEXT:    br label [[OMP_INNER_FOR_INC37:%.*]]
-// CHECK5:       omp.inner.for.inc37:
+// CHECK5:       omp.inner.for.inc
 // CHECK5-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV26]], align 4, !llvm.access.group [[ACC_GRP5]]
 // CHECK5-NEXT:    [[ADD38:%.*]] = add nsw i32 [[TMP27]], 1
 // CHECK5-NEXT:    store i32 [[ADD38]], ptr [[DOTOMP_IV26]], align 4, !llvm.access.group [[ACC_GRP5]]
 // CHECK5-NEXT:    br label [[OMP_INNER_FOR_COND28]], !llvm.loop [[LOOP6:![0-9]+]]
-// CHECK5:       omp.inner.for.end39:
+// CHECK5:       omp.inner.for.end
 // CHECK5-NEXT:    [[TMP28:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_16]], align 4
 // CHECK5-NEXT:    [[SUB40:%.*]] = sub nsw i32 [[TMP28]], 0
 // CHECK5-NEXT:    [[DIV41:%.*]] = sdiv i32 [[SUB40]], 1
@@ -2084,7 +2064,7 @@ void test_target_teams_atomic() {
 // CHECK5-NEXT:    [[ADD43:%.*]] = add nsw i32 0, [[MUL42]]
 // CHECK5-NEXT:    store i32 [[ADD43]], ptr [[I27]], align 4
 // CHECK5-NEXT:    br label [[SIMD_IF_END44]]
-// CHECK5:       simd.if.end44:
+// CHECK5:       simd.if.end
 // CHECK5-NEXT:    [[ARRAYIDX45:%.*]] = getelementptr inbounds [1000 x i32], ptr [[A]], i64 0, i64 0
 // CHECK5-NEXT:    [[TMP29:%.*]] = load i32, ptr [[ARRAYIDX45]], align 4
 // CHECK5-NEXT:    ret i32 [[TMP29]]
@@ -2147,7 +2127,6 @@ void test_target_teams_atomic() {
 // CHECK7-NEXT:    [[DOTCAPTURE_EXPR_3:%.*]] = alloca i32, align 4
 // CHECK7-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK7-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
-// CHECK7-NEXT:    [[I6:%.*]] = alloca i32, align 4
 // CHECK7-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // CHECK7-NEXT:    [[DOTLINEAR_START:%.*]] = alloca i32, align 4
 // CHECK7-NEXT:    [[DOTLINEAR_STEP:%.*]] = alloca i32, align 4
@@ -2158,7 +2137,6 @@ void test_target_teams_atomic() {
 // CHECK7-NEXT:    [[DOTCAPTURE_EXPR_17:%.*]] = alloca i32, align 4
 // CHECK7-NEXT:    [[DOTOMP_LB21:%.*]] = alloca i32, align 4
 // CHECK7-NEXT:    [[DOTOMP_UB22:%.*]] = alloca i32, align 4
-// CHECK7-NEXT:    [[I23:%.*]] = alloca i32, align 4
 // CHECK7-NEXT:    [[DOTOMP_IV26:%.*]] = alloca i32, align 4
 // CHECK7-NEXT:    [[I27:%.*]] = alloca i32, align 4
 // CHECK7-NEXT:    store ptr [[G]], ptr [[G_ADDR]], align 4
@@ -2181,7 +2159,6 @@ void test_target_teams_atomic() {
 // CHECK7-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
 // CHECK7-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_3]], align 4
 // CHECK7-NEXT:    store i32 [[TMP5]], ptr [[DOTOMP_UB]], align 4
-// CHECK7-NEXT:    store i32 0, ptr [[I6]], align 4
 // CHECK7-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK7-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP6]]
 // CHECK7-NEXT:    br i1 [[CMP]], label [[SIMD_IF_THEN:%.*]], label [[SIMD_IF_END:%.*]]
@@ -2235,20 +2212,19 @@ void test_target_teams_atomic() {
 // CHECK7-NEXT:    store i32 0, ptr [[DOTOMP_LB21]], align 4
 // CHECK7-NEXT:    [[TMP18:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_17]], align 4
 // CHECK7-NEXT:    store i32 [[TMP18]], ptr [[DOTOMP_UB22]], align 4
-// CHECK7-NEXT:    store i32 0, ptr [[I23]], align 4
 // CHECK7-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_16]], align 4
 // CHECK7-NEXT:    [[CMP24:%.*]] = icmp slt i32 0, [[TMP19]]
 // CHECK7-NEXT:    br i1 [[CMP24]], label [[SIMD_IF_THEN25:%.*]], label [[SIMD_IF_END43:%.*]]
-// CHECK7:       simd.if.then25:
+// CHECK7:       simd.if.then
 // CHECK7-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTOMP_LB21]], align 4
 // CHECK7-NEXT:    store i32 [[TMP20]], ptr [[DOTOMP_IV26]], align 4
 // CHECK7-NEXT:    br label [[OMP_INNER_FOR_COND28:%.*]]
-// CHECK7:       omp.inner.for.cond28:
+// CHECK7:       omp.inner.for.cond
 // CHECK7-NEXT:    [[TMP21:%.*]] = load i32, ptr [[DOTOMP_IV26]], align 4, !llvm.access.group [[ACC_GRP6:![0-9]+]]
 // CHECK7-NEXT:    [[TMP22:%.*]] = load i32, ptr [[DOTOMP_UB22]], align 4, !llvm.access.group [[ACC_GRP6]]
 // CHECK7-NEXT:    [[CMP29:%.*]] = icmp sle i32 [[TMP21]], [[TMP22]]
 // CHECK7-NEXT:    br i1 [[CMP29]], label [[OMP_INNER_FOR_BODY30:%.*]], label [[OMP_INNER_FOR_END38:%.*]]
-// CHECK7:       omp.inner.for.body30:
+// CHECK7:       omp.inner.for.body
 // CHECK7-NEXT:    [[TMP23:%.*]] = load i32, ptr [[DOTOMP_IV26]], align 4, !llvm.access.group [[ACC_GRP6]]
 // CHECK7-NEXT:    [[MUL31:%.*]] = mul nsw i32 [[TMP23]], 1
 // CHECK7-NEXT:    [[ADD32:%.*]] = add nsw i32 0, [[MUL31]]
@@ -2260,14 +2236,14 @@ void test_target_teams_atomic() {
 // CHECK7-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr inbounds [1000 x i32], ptr [[A]], i32 0, i32 [[TMP26]]
 // CHECK7-NEXT:    store i32 [[TMP25]], ptr [[ARRAYIDX34]], align 4, !llvm.access.group [[ACC_GRP6]]
 // CHECK7-NEXT:    br label [[OMP_BODY_CONTINUE35:%.*]]
-// CHECK7:       omp.body.continue35:
+// CHECK7:       omp.body.continue
 // CHECK7-NEXT:    br label [[OMP_INNER_FOR_INC36:%.*]]
-// CHECK7:       omp.inner.for.inc36:
+// CHECK7:       omp.inner.for.inc
 // CHECK7-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV26]], align 4, !llvm.access.group [[ACC_GRP6]]
 // CHECK7-NEXT:    [[ADD37:%.*]] = add nsw i32 [[TMP27]], 1
 // CHECK7-NEXT:    store i32 [[ADD37]], ptr [[DOTOMP_IV26]], align 4, !llvm.access.group [[ACC_GRP6]]
 // CHECK7-NEXT:    br label [[OMP_INNER_FOR_COND28]], !llvm.loop [[LOOP7:![0-9]+]]
-// CHECK7:       omp.inner.for.end38:
+// CHECK7:       omp.inner.for.end
 // CHECK7-NEXT:    [[TMP28:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_16]], align 4
 // CHECK7-NEXT:    [[SUB39:%.*]] = sub nsw i32 [[TMP28]], 0
 // CHECK7-NEXT:    [[DIV40:%.*]] = sdiv i32 [[SUB39]], 1
@@ -2275,7 +2251,7 @@ void test_target_teams_atomic() {
 // CHECK7-NEXT:    [[ADD42:%.*]] = add nsw i32 0, [[MUL41]]
 // CHECK7-NEXT:    store i32 [[ADD42]], ptr [[I27]], align 4
 // CHECK7-NEXT:    br label [[SIMD_IF_END43]]
-// CHECK7:       simd.if.end43:
+// CHECK7:       simd.if.end
 // CHECK7-NEXT:    [[ARRAYIDX44:%.*]] = getelementptr inbounds [1000 x i32], ptr [[A]], i32 0, i32 0
 // CHECK7-NEXT:    [[TMP29:%.*]] = load i32, ptr [[ARRAYIDX44]], align 4
 // CHECK7-NEXT:    ret i32 [[TMP29]]
@@ -2366,7 +2342,6 @@ void test_target_teams_atomic() {
 // CHECK9-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK9-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -2387,7 +2362,6 @@ void test_target_teams_atomic() {
 // CHECK9-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK9-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK9-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK9-NEXT:    store i32 0, ptr [[I3]], align 4
 // CHECK9-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK9-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP3]]
 // CHECK9-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -2479,7 +2453,6 @@ void test_target_teams_atomic() {
 // CHECK9-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK9-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTLINEAR_START:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTLINEAR_STEP:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
@@ -2503,7 +2476,6 @@ void test_target_teams_atomic() {
 // CHECK9-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK9-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK9-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK9-NEXT:    store i32 0, ptr [[I3]], align 4
 // CHECK9-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK9-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP3]]
 // CHECK9-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -2631,7 +2603,6 @@ void test_target_teams_atomic() {
 // CHECK9-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK9-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -2651,7 +2622,6 @@ void test_target_teams_atomic() {
 // CHECK9-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK9-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK9-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK9-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK9-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK9-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP3]]
 // CHECK9-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -2739,7 +2709,6 @@ void test_target_teams_atomic() {
 // CHECK9-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK9-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -2760,7 +2729,6 @@ void test_target_teams_atomic() {
 // CHECK9-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK9-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK9-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK9-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK9-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK9-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP3]]
 // CHECK9-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -3050,7 +3018,6 @@ void test_target_teams_atomic() {
 // CHECK11-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK11-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -3071,7 +3038,6 @@ void test_target_teams_atomic() {
 // CHECK11-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK11-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK11-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK11-NEXT:    store i32 0, ptr [[I3]], align 4
 // CHECK11-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK11-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP3]]
 // CHECK11-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -3161,7 +3127,6 @@ void test_target_teams_atomic() {
 // CHECK11-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK11-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTLINEAR_START:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTLINEAR_STEP:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
@@ -3185,7 +3150,6 @@ void test_target_teams_atomic() {
 // CHECK11-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK11-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK11-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK11-NEXT:    store i32 0, ptr [[I3]], align 4
 // CHECK11-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK11-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP3]]
 // CHECK11-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -3310,7 +3274,6 @@ void test_target_teams_atomic() {
 // CHECK11-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK11-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -3330,7 +3293,6 @@ void test_target_teams_atomic() {
 // CHECK11-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK11-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK11-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK11-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK11-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK11-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP3]]
 // CHECK11-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -3416,7 +3378,6 @@ void test_target_teams_atomic() {
 // CHECK11-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK11-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -3437,7 +3398,6 @@ void test_target_teams_atomic() {
 // CHECK11-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK11-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK11-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK11-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK11-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK11-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP3]]
 // CHECK11-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]

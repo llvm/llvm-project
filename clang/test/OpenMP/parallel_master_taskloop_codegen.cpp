@@ -451,8 +451,6 @@ struct S {
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_2_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_3_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_6_I:%.*]] = alloca i64, align 8
-// CHECK1-NEXT:    [[I_I:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[J_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[I14_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[J15_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_IV_I:%.*]] = alloca i64, align 8
@@ -524,9 +522,6 @@ struct S {
 // CHECK1-NEXT:    [[MUL_I:%.*]] = mul nsw i64 [[CONV7_I]], [[CONV11_I]]
 // CHECK1-NEXT:    [[SUB12_I:%.*]] = sub nsw i64 [[MUL_I]], 1
 // CHECK1-NEXT:    store i64 [[SUB12_I]], ptr [[DOTCAPTURE_EXPR_6_I]], align 8, !noalias [[META40]]
-// CHECK1-NEXT:    store i32 0, ptr [[I_I]], align 4, !noalias [[META40]]
-// CHECK1-NEXT:    [[TMP35:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_2_I]], align 4, !noalias [[META40]]
-// CHECK1-NEXT:    store i32 [[TMP35]], ptr [[J_I]], align 4, !noalias [[META40]]
 // CHECK1-NEXT:    [[TMP36:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR__I]], align 4, !noalias [[META40]]
 // CHECK1-NEXT:    [[CMP_I:%.*]] = icmp slt i32 0, [[TMP36]]
 // CHECK1-NEXT:    br i1 [[CMP_I]], label [[LAND_LHS_TRUE_I:%.*]], label [[DOTOMP_OUTLINED__5_EXIT:%.*]]
@@ -845,8 +840,6 @@ struct S {
 // CHECK1-NEXT:    [[TMP1_I:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR__I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_2_I:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[A_I:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[TMP4_I:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[A5_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[TMP6_I:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTOMP_IV_I:%.*]] = alloca i32, align 4
@@ -896,9 +889,6 @@ struct S {
 // CHECK1-NEXT:    [[TMP23:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR__I]], align 4, !noalias [[META64]]
 // CHECK1-NEXT:    [[SUB3_I:%.*]] = sub nsw i32 [[TMP23]], 1
 // CHECK1-NEXT:    store i32 [[SUB3_I]], ptr [[DOTCAPTURE_EXPR_2_I]], align 4, !noalias [[META64]]
-// CHECK1-NEXT:    store ptr [[A_I]], ptr [[TMP4_I]], align 8, !noalias [[META64]]
-// CHECK1-NEXT:    [[TMP24:%.*]] = load ptr, ptr [[TMP4_I]], align 8, !noalias [[META64]]
-// CHECK1-NEXT:    store i32 0, ptr [[TMP24]], align 4
 // CHECK1-NEXT:    [[TMP25:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR__I]], align 4, !noalias [[META64]]
 // CHECK1-NEXT:    [[CMP_I:%.*]] = icmp slt i32 0, [[TMP25]]
 // CHECK1-NEXT:    br i1 [[CMP_I]], label [[TASKLOOP_IF_THEN_I:%.*]], label [[DOTOMP_OUTLINED__10_EXIT:%.*]]

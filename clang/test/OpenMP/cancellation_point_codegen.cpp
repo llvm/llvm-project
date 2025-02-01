@@ -100,7 +100,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK1-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_25:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -173,12 +172,12 @@ for (int i = 0; i < argc; ++i) {
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i32, ptr [[DOTOMP_SECTIONS_LB_3]], align 4
 // CHECK1-NEXT:    store i32 [[TMP16]], ptr [[DOTOMP_SECTIONS_IV_7]], align 4
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_COND8:%.*]]
-// CHECK1:       omp.inner.for.cond8:
+// CHECK1:       omp.inner.for.cond
 // CHECK1-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_SECTIONS_IV_7]], align 4
 // CHECK1-NEXT:    [[TMP18:%.*]] = load i32, ptr [[DOTOMP_SECTIONS_UB_4]], align 4
 // CHECK1-NEXT:    [[CMP9:%.*]] = icmp sle i32 [[TMP17]], [[TMP18]]
 // CHECK1-NEXT:    br i1 [[CMP9]], label [[OMP_INNER_FOR_BODY10:%.*]], label [[OMP_INNER_FOR_END22:%.*]]
-// CHECK1:       omp.inner.for.body10:
+// CHECK1:       omp.inner.for.body
 // CHECK1-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTOMP_SECTIONS_IV_7]], align 4
 // CHECK1-NEXT:    switch i32 [[TMP19]], label [[DOTOMP_SECTIONS_EXIT19:%.*]] [
 // CHECK1-NEXT:      i32 0, label [[DOTOMP_SECTIONS_CASE11:%.*]]
@@ -211,12 +210,12 @@ for (int i = 0; i < argc; ++i) {
 // CHECK1-NEXT:    br label [[DOTOMP_SECTIONS_EXIT19]]
 // CHECK1:       .omp.sections.exit19:
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_INC20:%.*]]
-// CHECK1:       omp.inner.for.inc20:
+// CHECK1:       omp.inner.for.inc
 // CHECK1-NEXT:    [[TMP26:%.*]] = load i32, ptr [[DOTOMP_SECTIONS_IV_7]], align 4
 // CHECK1-NEXT:    [[INC21:%.*]] = add nsw i32 [[TMP26]], 1
 // CHECK1-NEXT:    store i32 [[INC21]], ptr [[DOTOMP_SECTIONS_IV_7]], align 4
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_COND8]]
-// CHECK1:       omp.inner.for.end22:
+// CHECK1:       omp.inner.for.end
 // CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3]], i32 [[TMP0]])
 // CHECK1-NEXT:    br label [[CANCEL_CONT24:%.*]]
 // CHECK1:       cancel.cont24:
@@ -228,7 +227,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK1-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK1-NEXT:    [[SUB26:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK1-NEXT:    store i32 [[SUB26]], ptr [[DOTCAPTURE_EXPR_25]], align 4
-// CHECK1-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK1-NEXT:    [[TMP29:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[CMP27:%.*]] = icmp slt i32 0, [[TMP29]]
 // CHECK1-NEXT:    br i1 [[CMP27]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -255,12 +253,12 @@ for (int i = 0; i < argc; ++i) {
 // CHECK1-NEXT:    [[TMP35:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
 // CHECK1-NEXT:    store i32 [[TMP35]], ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_COND30:%.*]]
-// CHECK1:       omp.inner.for.cond30:
+// CHECK1:       omp.inner.for.cond
 // CHECK1-NEXT:    [[TMP36:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[TMP37:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // CHECK1-NEXT:    [[CMP31:%.*]] = icmp sle i32 [[TMP36]], [[TMP37]]
 // CHECK1-NEXT:    br i1 [[CMP31]], label [[OMP_INNER_FOR_BODY32:%.*]], label [[OMP_INNER_FOR_END39:%.*]]
-// CHECK1:       omp.inner.for.body32:
+// CHECK1:       omp.inner.for.body
 // CHECK1-NEXT:    [[TMP38:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP38]], 1
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
@@ -268,37 +266,37 @@ for (int i = 0; i < argc; ++i) {
 // CHECK1-NEXT:    [[TMP39:%.*]] = call i32 @__kmpc_cancellationpoint(ptr @[[GLOB1]], i32 [[TMP0]], i32 2)
 // CHECK1-NEXT:    [[TMP40:%.*]] = icmp ne i32 [[TMP39]], 0
 // CHECK1-NEXT:    br i1 [[TMP40]], label [[DOTCANCEL_EXIT33:%.*]], label [[DOTCANCEL_CONTINUE34:%.*]]
-// CHECK1:       .cancel.exit33:
+// CHECK1:       .cancel.exit
 // CHECK1-NEXT:    br label [[CANCEL_EXIT40:%.*]]
-// CHECK1:       cancel.exit23:
+// CHECK1:       cancel.exit
 // CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3]], i32 [[TMP0]])
 // CHECK1-NEXT:    br label [[CANCEL_CONT24]]
-// CHECK1:       .cancel.continue34:
+// CHECK1:       .cancel.continue
 // CHECK1-NEXT:    [[TMP41:%.*]] = call i32 @__kmpc_cancel(ptr @[[GLOB1]], i32 [[TMP0]], i32 2)
 // CHECK1-NEXT:    [[TMP42:%.*]] = icmp ne i32 [[TMP41]], 0
 // CHECK1-NEXT:    br i1 [[TMP42]], label [[DOTCANCEL_EXIT35:%.*]], label [[DOTCANCEL_CONTINUE36:%.*]]
-// CHECK1:       .cancel.exit35:
+// CHECK1:       .cancel.exit
 // CHECK1-NEXT:    br label [[CANCEL_EXIT40]]
-// CHECK1:       .cancel.continue36:
+// CHECK1:       .cancel.continue
 // CHECK1-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK1:       omp.body.continue:
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_INC37:%.*]]
-// CHECK1:       omp.inner.for.inc37:
+// CHECK1:       omp.inner.for.inc
 // CHECK1-NEXT:    [[TMP43:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[ADD38:%.*]] = add nsw i32 [[TMP43]], 1
 // CHECK1-NEXT:    store i32 [[ADD38]], ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_COND30]]
-// CHECK1:       omp.inner.for.end39:
+// CHECK1:       omp.inner.for.end
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK1:       omp.loop.exit:
 // CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB5]], i32 [[TMP0]])
 // CHECK1-NEXT:    br label [[OMP_PRECOND_END]]
-// CHECK1:       cancel.exit40:
+// CHECK1:       cancel.exit
 // CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB5]], i32 [[TMP0]])
 // CHECK1-NEXT:    br label [[CANCEL_CONT41:%.*]]
 // CHECK1:       omp.precond.end:
 // CHECK1-NEXT:    br label [[CANCEL_CONT41]]
-// CHECK1:       cancel.cont41:
+// CHECK1:       cancel.cont
 // CHECK1-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2:[0-9]+]], i32 [[TMP0]])
 // CHECK1-NEXT:    [[TMP44:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i64 40, i64 1, ptr @.omp_task_entry.)
 // CHECK1-NEXT:    [[TMP45:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP44]], i32 0, i32 0
@@ -606,7 +604,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK1-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
@@ -623,7 +620,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK1-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUB]], 1
 // CHECK1-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK1-NEXT:    store i32 [[SUB2]], ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK1-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP3]]
 // CHECK1-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -675,9 +671,9 @@ for (int i = 0; i < argc; ++i) {
 // CHECK1-NEXT:    [[TMP21:%.*]] = call i32 @__kmpc_cancel(ptr @[[GLOB1]], i32 [[TMP20]], i32 2)
 // CHECK1-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[TMP21]], 0
 // CHECK1-NEXT:    br i1 [[TMP22]], label [[DOTCANCEL_EXIT6:%.*]], label [[DOTCANCEL_CONTINUE7:%.*]]
-// CHECK1:       .cancel.exit6:
+// CHECK1:       .cancel.exit
 // CHECK1-NEXT:    br label [[CANCEL_EXIT]]
-// CHECK1:       .cancel.continue7:
+// CHECK1:       .cancel.continue
 // CHECK1-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK1:       omp.body.continue:
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]

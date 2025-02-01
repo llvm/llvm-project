@@ -745,8 +745,6 @@ int main (int argc, char **argv) {
 // CHECK9-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTCAPTURE_EXPR_4:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTCAPTURE_EXPR_5:%.*]] = alloca i64, align 8
-// CHECK9-NEXT:    [[I:%.*]] = alloca i32, align 4
-// CHECK9-NEXT:    [[J:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i64, align 8
 // CHECK9-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i64, align 8
 // CHECK9-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -780,8 +778,6 @@ int main (int argc, char **argv) {
 // CHECK9-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV]], [[CONV8]]
 // CHECK9-NEXT:    [[SUB9:%.*]] = sub nsw i64 [[MUL]], 1
 // CHECK9-NEXT:    store i64 [[SUB9]], ptr [[DOTCAPTURE_EXPR_5]], align 8
-// CHECK9-NEXT:    store i32 0, ptr [[I]], align 4
-// CHECK9-NEXT:    store i32 0, ptr [[J]], align 4
 // CHECK9-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK9-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP9]]
 // CHECK9-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -859,8 +855,6 @@ int main (int argc, char **argv) {
 // CHECK9-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTCAPTURE_EXPR_4:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTCAPTURE_EXPR_5:%.*]] = alloca i64, align 8
-// CHECK9-NEXT:    [[I:%.*]] = alloca i32, align 4
-// CHECK9-NEXT:    [[J:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8
 // CHECK9-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
 // CHECK9-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -896,8 +890,6 @@ int main (int argc, char **argv) {
 // CHECK9-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV]], [[CONV8]]
 // CHECK9-NEXT:    [[SUB9:%.*]] = sub nsw i64 [[MUL]], 1
 // CHECK9-NEXT:    store i64 [[SUB9]], ptr [[DOTCAPTURE_EXPR_5]], align 8
-// CHECK9-NEXT:    store i32 0, ptr [[I]], align 4
-// CHECK9-NEXT:    store i32 0, ptr [[J]], align 4
 // CHECK9-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK9-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP9]]
 // CHECK9-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1395,8 +1387,6 @@ int main (int argc, char **argv) {
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_4:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_5:%.*]] = alloca i64, align 8
-// CHECK11-NEXT:    [[I:%.*]] = alloca i32, align 4
-// CHECK11-NEXT:    [[J:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i64, align 8
 // CHECK11-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i64, align 8
 // CHECK11-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -1430,8 +1420,6 @@ int main (int argc, char **argv) {
 // CHECK11-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV]], [[CONV8]]
 // CHECK11-NEXT:    [[SUB9:%.*]] = sub nsw i64 [[MUL]], 1
 // CHECK11-NEXT:    store i64 [[SUB9]], ptr [[DOTCAPTURE_EXPR_5]], align 8
-// CHECK11-NEXT:    store i32 0, ptr [[I]], align 4
-// CHECK11-NEXT:    store i32 0, ptr [[J]], align 4
 // CHECK11-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK11-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP9]]
 // CHECK11-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_PRECOND_END:%.*]]
@@ -1511,8 +1499,6 @@ int main (int argc, char **argv) {
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_4:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTCAPTURE_EXPR_5:%.*]] = alloca i64, align 8
-// CHECK11-NEXT:    [[I:%.*]] = alloca i32, align 4
-// CHECK11-NEXT:    [[J:%.*]] = alloca i32, align 4
 // CHECK11-NEXT:    [[DOTOMP_LB:%.*]] = alloca i64, align 8
 // CHECK11-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
 // CHECK11-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
@@ -1548,8 +1534,6 @@ int main (int argc, char **argv) {
 // CHECK11-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV]], [[CONV8]]
 // CHECK11-NEXT:    [[SUB9:%.*]] = sub nsw i64 [[MUL]], 1
 // CHECK11-NEXT:    store i64 [[SUB9]], ptr [[DOTCAPTURE_EXPR_5]], align 8
-// CHECK11-NEXT:    store i32 0, ptr [[I]], align 4
-// CHECK11-NEXT:    store i32 0, ptr [[J]], align 4
 // CHECK11-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK11-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[TMP9]]
 // CHECK11-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_PRECOND_END:%.*]]
