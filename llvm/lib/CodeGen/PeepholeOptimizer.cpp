@@ -153,7 +153,7 @@ class RecurrenceInstr;
 class Rewriter {
 protected:
   MachineInstr &CopyLike;
-  unsigned CurrentSrcIdx = 0; ///< The index of the source being rewritten.
+  int CurrentSrcIdx = 0; ///< The index of the source being rewritten.
 public:
   Rewriter(MachineInstr &CopyLike) : CopyLike(CopyLike) {}
   virtual ~Rewriter() = default;
@@ -201,12 +201,9 @@ public:
 
   bool getNextRewritableSource(RegSubRegPair &Src,
                                RegSubRegPair &Dst) override {
-    // CurrentSrcIdx > 0 means this function has already been called.
-    if (CurrentSrcIdx > 0)
+    if (CurrentSrcIdx++ > 1)
       return false;
-    // This is the first call to getNextRewritableSource.
-    // Move the CurrentSrcIdx to remember that we made that call.
-    CurrentSrcIdx = 1;
+
     // The rewritable source is the argument.
     const MachineOperand &MOSrc = CopyLike.getOperand(1);
     Src = RegSubRegPair(MOSrc.getReg(), MOSrc.getSubReg());
@@ -217,8 +214,6 @@ public:
   }
 
   bool RewriteCurrentSource(Register NewReg, unsigned NewSubReg) override {
-    if (CurrentSrcIdx != 1)
-      return false;
     MachineOperand &MOSrc = CopyLike.getOperand(CurrentSrcIdx);
     MOSrc.setReg(NewReg);
     MOSrc.setSubReg(NewSubReg);
@@ -229,7 +224,7 @@ public:
 /// Helper class to rewrite uncoalescable copy like instructions
 /// into new COPY (coalescable friendly) instructions.
 class UncoalescableRewriter : public Rewriter {
-  unsigned NumDefs; ///< Number of defs in the bitcast.
+  int NumDefs; ///< Number of defs in the bitcast.
 
 public:
   UncoalescableRewriter(MachineInstr &MI) : Rewriter(MI) {
@@ -383,6 +378,7 @@ class RegSequenceRewriter : public Rewriter {
 public:
   RegSequenceRewriter(MachineInstr &MI) : Rewriter(MI) {
     assert(MI.isRegSequence() && "Invalid instruction");
+    CurrentSrcIdx = -1;
   }
 
   /// \see Rewriter::getNextRewritableSource()
@@ -404,16 +400,10 @@ public:
   bool getNextRewritableSource(RegSubRegPair &Src,
                                RegSubRegPair &Dst) override {
     // We are looking at v0 = REG_SEQUENCE v1, sub1, v2, sub2, etc.
+    CurrentSrcIdx += 2;
+    if (static_cast<unsigned>(CurrentSrcIdx) >= CopyLike.getNumOperands())
+      return false;
 
-    // If this is the first call, move to the first argument.
-    if (CurrentSrcIdx == 0) {
-      CurrentSrcIdx = 1;
-    } else {
-      // Otherwise, move to the next argument and check that it is valid.
-      CurrentSrcIdx += 2;
-      if (CurrentSrcIdx >= CopyLike.getNumOperands())
-        return false;
-    }
     const MachineOperand &MOInsertedReg = CopyLike.getOperand(CurrentSrcIdx);
     Src.Reg = MOInsertedReg.getReg();
     // If we have to compose sub-register indices, bail out.
@@ -431,9 +421,10 @@ public:
   }
 
   bool RewriteCurrentSource(Register NewReg, unsigned NewSubReg) override {
-    // We cannot rewrite out of bound operands.
-    // Moreover, rewritable sources are at odd positions.
-    if ((CurrentSrcIdx & 1) != 1 || CurrentSrcIdx > CopyLike.getNumOperands())
+    // Do not introduce new subregister uses in a reg_sequence. Until composing
+    // subregister indices is supported while folding, we're just blocking
+    // folding of subregister copies later in the function.
+    if (NewSubReg)
       return false;
 
     MachineOperand &MO = CopyLike.getOperand(CurrentSrcIdx);
@@ -1044,8 +1035,11 @@ bool PeepholeOptimizer::findNextSource(RegSubRegPair RegSubReg,
         return false;
 
       // Insert the Def -> Use entry for the recently found source.
-      ValueTrackerResult CurSrcRes = RewriteMap.lookup(CurSrcPair);
-      if (CurSrcRes.isValid()) {
+      auto [InsertPt, WasInserted] = RewriteMap.try_emplace(CurSrcPair, Res);
+
+      if (!WasInserted) {
+        const ValueTrackerResult &CurSrcRes = InsertPt->second;
+
         assert(CurSrcRes == Res && "ValueTrackerResult found must match");
         // An existent entry with multiple sources is a PHI cycle we must avoid.
         // Otherwise it's an entry with a valid next source we already found.
@@ -1056,7 +1050,6 @@ bool PeepholeOptimizer::findNextSource(RegSubRegPair RegSubReg,
         }
         break;
       }
-      RewriteMap.insert(std::make_pair(CurSrcPair, Res));
 
       // ValueTrackerResult usually have one source unless it's the result from
       // a PHI instruction. Add the found PHI edges to be looked up further.
@@ -1965,22 +1958,7 @@ ValueTrackerResult ValueTracker::getNextSourceFromRegSequence() {
   assert((Def->isRegSequence() || Def->isRegSequenceLike()) &&
          "Invalid definition");
 
-  if (Def->getOperand(DefIdx).getSubReg())
-    // If we are composing subregs, bail out.
-    // The case we are checking is Def.<subreg> = REG_SEQUENCE.
-    // This should almost never happen as the SSA property is tracked at
-    // the register level (as opposed to the subreg level).
-    // I.e.,
-    // Def.sub0 =
-    // Def.sub1 =
-    // is a valid SSA representation for Def.sub0 and Def.sub1, but not for
-    // Def. Thus, it must not be generated.
-    // However, some code could theoretically generates a single
-    // Def.sub0 (i.e, not defining the other subregs) and we would
-    // have this case.
-    // If we can ascertain (or force) that this never happens, we could
-    // turn that into an assertion.
-    return ValueTrackerResult();
+  assert(!Def->getOperand(DefIdx).getSubReg() && "illegal subregister def");
 
   SmallVector<RegSubRegPairAndIdx, 8> RegSeqInputRegs;
   if (!TII->getRegSequenceInputs(*Def, DefIdx, RegSeqInputRegs))
