@@ -1246,6 +1246,7 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
           Constraint = Conjunction.getAs<Expr>();
       }
       Transformed->setTrailingRequiresClause(Constraint);
+      continue;
     }
     FunctionTemplateDecl *F = dyn_cast<FunctionTemplateDecl>(G);
     if (!F)
