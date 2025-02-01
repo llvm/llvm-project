@@ -31,16 +31,29 @@ using namespace mlir;
 // AliasAnalysis: alias
 //===----------------------------------------------------------------------===//
 
+namespace fir {
+static AliasAnalysis::Source::Attributes
+getAttrsFromVariable(fir::FortranVariableOpInterface var);
+}
+
 /// Temporary function to skip through all the no op operations
 /// TODO: Generalize support of fir.load
-static mlir::Value getOriginalDef(mlir::Value v) {
+static mlir::Value
+getOriginalDef(mlir::Value v,
+               fir::AliasAnalysis::Source::Attributes &attributes,
+               bool &isCapturedInInternalProcedure) {
   mlir::Operation *defOp;
   bool breakFromLoop = false;
   while (!breakFromLoop && (defOp = v.getDefiningOp())) {
     llvm::TypeSwitch<Operation *>(defOp)
         .Case<fir::ConvertOp>([&](fir::ConvertOp op) { v = op.getValue(); })
-        .Case<fir::DeclareOp, hlfir::DeclareOp>(
-            [&](auto op) { v = op.getMemref(); })
+        .Case<fir::DeclareOp, hlfir::DeclareOp>([&](auto op) {
+          v = op.getMemref();
+          auto varIf = llvm::cast<fir::FortranVariableOpInterface>(defOp);
+          attributes |= fir::getAttrsFromVariable(varIf);
+          isCapturedInInternalProcedure |=
+              varIf.isCapturedInInternalProcedure();
+        })
         .Default([&](auto op) { breakFromLoop = true; });
   }
   return v;
@@ -530,6 +543,18 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
   bool isBoxRef{fir::isa_ref_type(v.getType()) &&
                 mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(v.getType()))};
   bool followingData = !isBoxRef;
+  // C1
+  // "fir.alloca !fir.ptr<...>" returns the address *of* a pointer and is thus
+  // non-data, and yet there's no box.  Don't treat it like data, or it will
+  // appear to alias like the address *in* a pointer.  TODO: That case occurs in
+  // our test suite (alias-analysis-2.fir), but does flang currently generate
+  // such code?  Perhaps we should update docs
+  // (AliasAnalysis::Source::SourceOrigin::isData) and debug output
+  // (AliasAnalysis::Source::print) for isData as the current wording implies
+  // !isData requires a box.
+  if (mlir::isa_and_nonnull<fir::AllocaOp, fir::AllocMemOp>(defOp) &&
+      isPointerReference(v.getType()))
+    followingData = false;
   mlir::SymbolRefAttr global;
   Source::Attributes attributes;
   mlir::Operation *instantiationPoint{nullptr};
@@ -543,6 +568,13 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
         .Case<fir::AllocaOp, fir::AllocMemOp>([&](auto op) {
           // Unique memory allocation.
           type = SourceKind::Allocate;
+          // C2
+          // If there's no DeclareOp, then we need to get the pointer attribute
+          // from the type.  TODO: That case occurs in our test suite
+          // (alias-analysis-2.fir), but does flang currently generate such
+          // code?
+          if (isPointerReference(ty))
+            attributes.set(Attribute::Pointer);
           breakFromLoop = true;
         })
         .Case<fir::ConvertOp>([&](auto op) {
@@ -553,6 +585,9 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
         .Case<fir::BoxAddrOp>([&](auto op) {
           v = op->getOperand(0);
           defOp = v.getDefiningOp();
+          // C3
+          //if (fir::isPointerType(v.getType()))
+          //  attributes.set(Attribute::Pointer);
           if (mlir::isa<fir::BaseBoxType>(v.getType()))
             followBoxData = true;
         })
@@ -575,10 +610,12 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
         .Case<fir::LoadOp>([&](auto op) {
           // If the load is from a leaf source, return the leaf. Do not track
           // through indirections otherwise.
-          // TODO: Add support to fir.alloca and fir.allocmem
-          auto def = getOriginalDef(op.getMemref());
+          // TODO: Add support to fir.allocmem.
+          auto def = getOriginalDef(op.getMemref(), attributes,
+                                    isCapturedInInternalProcedure);
           if (isDummyArgument(def) ||
-              def.template getDefiningOp<fir::AddrOfOp>()) {
+              def.template getDefiningOp<fir::AddrOfOp>() ||
+              def.template getDefiningOp<fir::AllocaOp>()) {
             v = def;
             defOp = v.getDefiningOp();
             return;
