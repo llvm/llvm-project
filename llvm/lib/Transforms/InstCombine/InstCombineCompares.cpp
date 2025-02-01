@@ -830,9 +830,10 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
           DiffOperand = i;
         }
 
-      if (NumDifferences == 0)   // SAME GEP?
-        return replaceInstUsesWith(I, // No comparison is needed here.
-          ConstantInt::get(I.getType(), ICmpInst::isTrueWhenEqual(Cond)));
+      if (NumDifferences == 0) // SAME GEP?
+        return replaceInstUsesWith(
+            I, // No comparison is needed here.
+            ConstantInt::get(I.getType(), ICmpInst::isTrueWhenEqual(Cond)));
       // If two GEPs only differ by an index, compare them.
       // Note that nowrap flags are always needed when comparing two indices.
       else if (NumDifferences == 1 && NW != GEPNoWrapFlags::none()) {
