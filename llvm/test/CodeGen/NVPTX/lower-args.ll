@@ -2,7 +2,7 @@
 ; RUN: opt < %s -S -nvptx-lower-args --mtriple nvptx64-nvidia-nvcl | FileCheck %s --check-prefixes COMMON,IR,IRO
 ; RUN: llc < %s -mcpu=sm_52 --mtriple nvptx64-nvidia-cuda | FileCheck %s --check-prefixes COMMON,PTX,PTXC
 ; RUN: llc < %s -mcpu=sm_52 --mtriple nvptx64-nvidia-nvcl| FileCheck %s --check-prefixes COMMON,PTX,PTXO
-; RUN: %if ptxas %{ llc < %s -mcpu=sm_52 | %ptxas -arch=sm_52 - %}
+; RUN: %if ptxas %{ llc < %s -mcpu=sm_52 | %ptxas-verify %}
 
 target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
@@ -87,12 +87,12 @@ define ptx_kernel void @ptr_generic(ptr %out, ptr %in) {
 }
 
 ; COMMON-LABEL: ptr_nongeneric
-define ptx_kernel void @ptr_nongeneric(ptr addrspace(1) %out, ptr addrspace(4) %in) {
+define ptx_kernel void @ptr_nongeneric(ptr addrspace(1) %out, ptr addrspace(3) %in) {
 ; IR-NOT: addrspacecast
 ; PTX-NOT: cvta.to.global
-; PTX:  ld.const.u32
+; PTX:  ld.shared.u32
 ; PTX   st.global.u32
-  %v = load i32, ptr addrspace(4) %in, align 4
+  %v = load i32, ptr addrspace(3) %in, align 4
   store i32 %v, ptr addrspace(1) %out, align 4
   ret void
 }
@@ -145,6 +145,4 @@ define ptx_kernel void @ptr_as_int_aggr(ptr nocapture noundef readonly byval(%st
 
 
 ; Function Attrs: convergent nounwind
-define dso_local ptr @escape(ptr) local_unnamed_addr {
-  ret ptr %0
-}
+declare dso_local ptr @escape(ptr) local_unnamed_addr
