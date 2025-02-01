@@ -316,18 +316,14 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2,
                             const SimplifyQuery &Q);
 
 bool llvm::isKnownNonEqual(const Value *V1, const Value *V2,
-                           const DataLayout &DL, AssumptionCache *AC,
-                           const Instruction *CxtI, const DominatorTree *DT,
-                           bool UseInstrInfo) {
+                           const SimplifyQuery &Q, unsigned Depth) {
   // We don't support looking through casts.
   if (V1 == V2 || V1->getType() != V2->getType())
     return false;
   auto *FVTy = dyn_cast<FixedVectorType>(V1->getType());
   APInt DemandedElts =
       FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
-  return ::isKnownNonEqual(
-      V1, V2, DemandedElts, 0,
-      SimplifyQuery(DL, DT, AC, safeCxtI(V2, V1, CxtI), UseInstrInfo));
+  return ::isKnownNonEqual(V1, V2, DemandedElts, Depth, Q);
 }
 
 bool llvm::MaskedValueIsZero(const Value *V, const APInt &Mask,
