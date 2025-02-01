@@ -15216,6 +15216,30 @@ public:
   void performFunctionEffectAnalysis(TranslationUnitDecl *TU);
 
   ///@}
+
+  //
+  //
+  // -------------------------------------------------------------------------
+  //
+  //
+
+  /// \name Common Helper Functions
+  /// Implementations are in Common.cpp
+  ///@{
+public:
+  static bool CheckArgTypeIsCorrect(
+      Sema *S, Expr *Arg, QualType ExpectedType,
+      llvm::function_ref<bool(clang::QualType PassedType)> Check);
+
+  static bool CheckAllArgTypesAreCorrect(
+      Sema *S, CallExpr *TheCall, QualType ExpectedType,
+      llvm::function_ref<bool(clang::QualType PassedType)> Check);
+
+  static bool CheckAllArgTypesAreCorrect(Sema *SemaPtr, CallExpr *TheCall,
+                                         unsigned int NumOfElts,
+                                         unsigned int expectedNumOfElts);
+
+  ///@}
 };
 
 DeductionFailureInfo
