@@ -72,7 +72,7 @@ private:
 
 public:
   PlainCFGBuilder(Loop *Lp, LoopInfo *LI, VPlan &P)
-      : TheLoop(Lp), LI(LI), Plan(P) {}
+      : TheLoop(Lp), LI(LI), Plan(P), VPIRBuilder(Plan) {}
 
   /// Build plain CFG for TheLoop  and connects it to Plan's entry.
   void buildPlainCFG();

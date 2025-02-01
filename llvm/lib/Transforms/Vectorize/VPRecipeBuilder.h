@@ -12,7 +12,6 @@
 #include "LoopVectorizationPlanner.h"
 #include "VPlan.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/IRBuilder.h"
 
@@ -66,7 +65,7 @@ class VPRecipeBuilder {
 
   PredicatedScalarEvolution &PSE;
 
-  VPBuilder &Builder;
+  VPBuilder Builder;
 
   /// When we if-convert we need to create edge masks. We have to cache values
   /// so that we don't end up with exponential recursion/IR. Note that
@@ -155,9 +154,13 @@ public:
                   const TargetTransformInfo *TTI,
                   LoopVectorizationLegality *Legal,
                   LoopVectorizationCostModel &CM,
-                  PredicatedScalarEvolution &PSE, VPBuilder &Builder)
+                  PredicatedScalarEvolution &PSE)
       : Plan(Plan), OrigLoop(OrigLoop), TLI(TLI), TTI(TTI), Legal(Legal),
-        CM(CM), PSE(PSE), Builder(Builder) {}
+        CM(CM), PSE(PSE), Builder(Plan) {}
+
+  void setInsertPoint(VPBasicBlock *VPBB) { Builder.setInsertPoint(VPBB); }
+
+  VPBuilder &getIRBuilder() { return Builder; }
 
   std::optional<unsigned> getScalingForReduction(const Instruction *ExitInst) {
     auto It = ScaledReductionMap.find(ExitInst);
