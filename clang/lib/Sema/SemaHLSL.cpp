@@ -2706,6 +2706,111 @@ bool SemaHLSL::CheckCompatibleParameterABI(FunctionDecl *New,
   return HadError;
 }
 
+// Generally follows PerformScalarCast, with cases reordered for
+// clarity of what types are supported
+bool SemaHLSL::CanPerformScalarCast(QualType SrcTy, QualType DestTy) {
+
+  if (SemaRef.getASTContext().hasSameUnqualifiedType(SrcTy, DestTy))
+    return true;
+
+  switch (Type::ScalarTypeKind SrcKind = SrcTy->getScalarTypeKind()) {
+  case Type::STK_Bool: // casting from bool is like casting from an integer
+  case Type::STK_Integral:
+    switch (DestTy->getScalarTypeKind()) {
+    case Type::STK_Bool:
+    case Type::STK_Integral:
+    case Type::STK_Floating:
+      return true;
+    case Type::STK_CPointer:
+    case Type::STK_ObjCObjectPointer:
+    case Type::STK_BlockPointer:
+    case Type::STK_MemberPointer:
+      llvm_unreachable("HLSL doesn't support pointers.");
+    case Type::STK_IntegralComplex:
+    case Type::STK_FloatingComplex:
+      llvm_unreachable("HLSL doesn't support complex types.");
+    case Type::STK_FixedPoint:
+      llvm_unreachable("HLSL doesn't support fixed point types.");
+    }
+    llvm_unreachable("Should have returned before this");
+
+  case Type::STK_Floating:
+    switch (DestTy->getScalarTypeKind()) {
+    case Type::STK_Floating:
+    case Type::STK_Bool:
+    case Type::STK_Integral:
+      return true;
+    case Type::STK_FloatingComplex:
+    case Type::STK_IntegralComplex:
+      llvm_unreachable("HLSL doesn't support complex types.");
+    case Type::STK_FixedPoint:
+      llvm_unreachable("HLSL doesn't support fixed point types.");
+    case Type::STK_CPointer:
+    case Type::STK_ObjCObjectPointer:
+    case Type::STK_BlockPointer:
+    case Type::STK_MemberPointer:
+      llvm_unreachable("HLSL doesn't support pointers.");
+    }
+    llvm_unreachable("Should have returned before this");
+
+  case Type::STK_MemberPointer:
+  case Type::STK_CPointer:
+  case Type::STK_BlockPointer:
+  case Type::STK_ObjCObjectPointer:
+    llvm_unreachable("HLSL doesn't support pointers.");
+
+  case Type::STK_FixedPoint:
+    llvm_unreachable("HLSL doesn't support fixed point types.");
+
+  case Type::STK_FloatingComplex:
+  case Type::STK_IntegralComplex:
+    llvm_unreachable("HLSL doesn't support complex types.");
+  }
+
+  llvm_unreachable("Unhandled scalar cast");
+}
+
+// Can we perform an HLSL Flattened cast?
+// TODO: update this code when matrices are added; see issue #88060
+bool SemaHLSL::CanPerformAggregateCast(Expr *Src, QualType DestTy) {
+
+  // Don't handle casts where LHS and RHS are any combination of scalar/vector
+  // There must be an aggregate somewhere
+  QualType SrcTy = Src->getType();
+  if (SrcTy->isScalarType()) // always a splat and this cast doesn't handle that
+    return false;
+
+  if (SrcTy->isVectorType() &&
+      (DestTy->isScalarType() || DestTy->isVectorType()))
+    return false;
+
+  llvm::SmallVector<QualType> DestTypes;
+  BuildFlattenedTypeList(DestTy, DestTypes);
+  llvm::SmallVector<QualType> SrcTypes;
+  BuildFlattenedTypeList(SrcTy, SrcTypes);
+
+  // Usually the size of SrcTypes must be greater than or equal to the size of
+  // DestTypes.
+  if (SrcTypes.size() < DestTypes.size())
+    return false;
+
+  unsigned I;
+  for (I = 0; I < DestTypes.size() && I < SrcTypes.size(); I++) {
+    if (SrcTypes[I]->isUnionType() || DestTypes[I]->isUnionType())
+      return false;
+    if (!CanPerformScalarCast(SrcTypes[I], DestTypes[I])) {
+      return false;
+    }
+  }
+
+  // check the rest of the source type for unions.
+  for (; I < SrcTypes.size(); I++) {
+    if (SrcTypes[I]->isUnionType())
+      return false;
+  }
+  return true;
+}
+
 ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {
   assert(Param->hasAttr<HLSLParamModifierAttr>() &&
          "We should not get here without a parameter modifier expression");
