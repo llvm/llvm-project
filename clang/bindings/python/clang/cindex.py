@@ -1552,6 +1552,9 @@ class Cursor(Structure):
 
         return cursor
 
+    def __hash__(self):
+        return self.hash
+
     def __eq__(self, other):
         return conf.lib.clang_equalCursors(self, other)  # type: ignore [no-any-return]
 
@@ -1807,7 +1810,7 @@ class Cursor(Structure):
         return self._mangled_name
 
     @property
-    def location(self):
+    def location(self) -> SourceLocation:
         """
         Return the source location (the starting character) of the entity
         pointed at by the cursor.
@@ -2033,6 +2036,14 @@ class Cursor(Structure):
         return self._lexical_parent
 
     @property
+    def specialized_template(self):
+        """Return the base template that this cursor is a specialization of, if any."""
+        return Cursor.from_cursor_result(
+            conf.lib.clang_getSpecializedCursorTemplate(self),
+            self
+        )
+
+    @property
     def translation_unit(self):
         """Returns the TranslationUnit to which this Cursor belongs."""
         # If this triggers an AttributeError, the instance was not properly
@@ -2174,6 +2185,9 @@ class Cursor(Structure):
         Retrieve the width of a bitfield.
         """
         return conf.lib.clang_getFieldDeclBitWidth(self)  # type: ignore [no-any-return]
+
+    def has_attrs(self):
+        return bool(conf.lib.clang_Cursor_hasAttrs(self))
 
     @staticmethod
     def from_result(res, arg):
@@ -3452,6 +3466,12 @@ class File(ClangObject):
     def __repr__(self):
         return "<File: %s>" % (self.name)
 
+    def __eq__(self, other):
+        return isinstance(other, File) and bool(conf.lib.clang_File_isEqual(self, other))
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     @staticmethod
     def from_result(res, arg):
         assert isinstance(res, c_object_p)
@@ -3914,6 +3934,7 @@ functionList: list[LibFunc] = [
     ("clang_getCursorType", [Cursor], Type),
     ("clang_getCursorUSR", [Cursor], _CXString),
     ("clang_Cursor_getMangling", [Cursor], _CXString),
+    ("clang_Cursor_hasAttrs", [Cursor], c_uint),
     # ("clang_getCXTUResourceUsage",
     #  [TranslationUnit],
     #  CXTUResourceUsage),
@@ -3938,6 +3959,7 @@ functionList: list[LibFunc] = [
     ("clang_getFile", [TranslationUnit, c_interop_string], c_object_p),
     ("clang_getFileName", [File], _CXString),
     ("clang_getFileTime", [File], c_uint),
+    ("clang_File_isEqual", [File, File], c_int),
     ("clang_getIBOutletCollectionType", [Cursor], Type),
     ("clang_getIncludedFile", [Cursor], c_object_p),
     (
