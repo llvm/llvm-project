@@ -149,8 +149,8 @@ public:
         StringRef DiagMsg;
         StringRef Arch =
             Attr.CPU.empty() ? CGM.getTarget().getTargetOpts().CPU : Attr.CPU;
-        if (!CGM.getTarget().validateBranchProtection(Attr.BranchProtection,
-                                                      Arch, BPI, DiagMsg)) {
+        if (!CGM.getTarget().validateBranchProtection(
+                Attr.BranchProtection, Arch, BPI, CGM.getLangOpts(), DiagMsg)) {
           CGM.getDiags().Report(
               D->getLocation(),
               diag::warn_target_unsupported_branch_protection_attribute)
