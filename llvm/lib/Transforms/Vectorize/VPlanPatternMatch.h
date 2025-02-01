@@ -173,8 +173,8 @@ struct Recipe_match {
     if ((!matchRecipeAndOpcode<RecipeTys>(R) && ...))
       return false;
 
-    assert(R->getNumOperands() == std::tuple_size<Ops_t>::value &&
-           "recipe with matched opcode the expected number of operands");
+    if (R->getNumOperands() != std::tuple_size<Ops_t>::value)
+      return false;
 
     auto IdxSeq = std::make_index_sequence<std::tuple_size<Ops_t>::value>();
     if (all_of_tuple_elements(IdxSeq, [R](auto Op, unsigned Idx) {
@@ -351,6 +351,23 @@ inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Mul,
                              /* Commutative =*/true>
 m_c_Mul(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Binary<Instruction::Mul, Op0_t, Op1_t, true>(Op0, Op1);
+}
+
+/// Match a binary AND operation. Note that while conceptually the operands can
+/// be matched commutatively, \p Commutative defaults to false in line with the
+/// IR-based pattern matching infrastructure. Use m_c_BinaryAnd for a
+/// commutative version of the matcher.
+template <typename Op0_t, typename Op1_t, bool Commutative = false>
+inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::And, Commutative>
+m_BinaryAnd(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::And, Op0_t, Op1_t, Commutative>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::And,
+                             /*Commutative*/ true>
+m_c_BinaryAnd(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_BinaryAnd<Op0_t, Op1_t, /*Commutative*/ true>(Op0, Op1);
 }
 
 /// Match a binary OR operation. Note that while conceptually the operands can
