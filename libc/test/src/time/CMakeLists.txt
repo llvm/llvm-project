@@ -72,6 +72,52 @@ add_libc_unittest(
     libc.hdr.types.struct_tm
 )
 
+add_libc_unittest(
+  localtime_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    localtime_test.cpp
+  HDRS
+    TmHelper.h
+    TmMatcher.h
+  CXX_STANDARD
+    20
+  DEPENDS
+    .time_utils.h
+    libc.src.stdio.fopen
+)
+
+add_libc_unittest(
+  localtime_r_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    localtime_r_test.cpp
+  HDRS
+    TmHelper.h
+    TmMatcher.h
+  CXX_STANDARD
+    20
+  DEPENDS
+    libc.src.time.localtime_r
+)
+
+add_libc_unittest(
+  localtime_s_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    localtime_s_test.cpp
+  HDRS
+    TmHelper.h
+    TmMatcher.h
+  CXX_STANDARD
+    20
+  DEPENDS
+    libc.src.time.localtime_s
+)
+
 add_libc_test(
   clock_gettime_test
   SUITE

@@ -12,8 +12,16 @@
 #include "src/__support/macros/config.h"
 #include "src/time/time_constants.h"
 
+#ifdef LIBC_TARGET_OS_IS_LINUX
+
+#include <unistd.h>
+
+#endif
+
 namespace LIBC_NAMESPACE_DECL {
 namespace time_utils {
+
+char **environ;
 
 static int64_t computeRemainingYears(int64_t daysPerYears,
                                      int64_t quotientYears,
@@ -23,6 +31,39 @@ static int64_t computeRemainingYears(int64_t daysPerYears,
     years--;
   *remainingDays -= years * daysPerYears;
   return years;
+}
+
+void release_file(ErrorOr<File *> error_or_file) {
+  file_usage = 0;
+  error_or_file.value()->close();
+}
+
+ErrorOr<File *> acquire_file(char *filename) {
+  while (1) {
+    if (file_usage == 0) {
+      file_usage = 1;
+      break;
+    }
+  }
+
+  return LIBC_NAMESPACE::openfile(filename, "rb");
+}
+
+char *get_env_var(const char *input) {
+  for (char **env = environ; *env != NULL; ++env) {
+    char *env_var = *env;
+
+    int i = 0;
+    while (input[i] != '\0' && env_var[i] == input[i]) {
+      i++;
+    }
+
+    if (input[i] == '\0' && env_var[i] == '=') {
+      return env_var + i + 1;
+    }
+  }
+
+  return NULL;
 }
 
 // First, divide "total_seconds" by the number of seconds in a day to get the
@@ -144,9 +185,31 @@ int64_t update_from_seconds(int64_t total_seconds, struct tm *tm) {
   tm->tm_sec =
       static_cast<int>(remainingSeconds % time_constants::SECONDS_PER_MIN);
   // TODO(rtenneti): Need to handle timezone and update of tm_isdst.
-  tm->tm_isdst = 0;
+  // tm->tm_isdst = 0;
+
+  if (tm->tm_isdst > 0) {
+    tm->tm_hour += 1;
+  }
 
   return 0;
+}
+
+unsigned char is_dst(struct tm *tm) {
+  unsigned int dst;
+
+  dst = 0;
+
+  if (tm->tm_mon < 3 || tm->tm_mon > 11) {
+    dst = 0;
+  } else if (tm->tm_mon > 3 && tm->tm_mon < 11) {
+    dst = 1;
+  } else if (tm->tm_mon == 3) {
+    dst = (tm->tm_mday - tm->tm_wday) >= 8;
+  } else {
+    dst = (tm->tm_mday - tm->tm_wday) <= 0;
+  }
+
+  return static_cast<unsigned char>(dst);
 }
 
 } // namespace time_utils

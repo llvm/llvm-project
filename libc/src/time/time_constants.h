@@ -94,6 +94,7 @@ constexpr cpp::array<cpp::string_view, MONTHS_PER_YEAR> MONTH_FULL_NAMES = {
 constexpr int NON_LEAP_YEAR_DAYS_IN_MONTH[] = {31, 28, 31, 30, 31, 30,
                                                31, 31, 30, 31, 30, 31};
 
+constexpr size_t TIMEZONE_SIZE = 128;
 } // namespace time_constants
 } // namespace LIBC_NAMESPACE_DECL
 

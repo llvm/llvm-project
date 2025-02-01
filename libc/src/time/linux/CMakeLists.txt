@@ -66,3 +66,27 @@ add_entrypoint_object(
     libc.src.__support.time.units
     libc.src.errno.errno
 )
+
+add_object_library(
+  localtime_utils
+  SRCS
+    localtime_utils.cpp
+  HDRS
+    localtime_utils.h
+  DEPENDS
+    libc.include.time
+    libc.src.__support.CPP.limits
+    libc.src.errno.errno
+)
+
+add_object_library(
+  timezone
+  SRCS
+    timezone.cpp
+  HDRS
+    timezone.h
+  DEPENDS
+    libc.include.time
+    libc.src.__support.CPP.limits
+    libc.src.errno.errno
+)
