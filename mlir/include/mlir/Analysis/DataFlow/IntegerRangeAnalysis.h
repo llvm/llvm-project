@@ -31,6 +31,16 @@ class IntegerValueRangeLattice : public Lattice<IntegerValueRange> {
 public:
   using Lattice::Lattice;
 
+  /// Override the join logic so that arguments to non-entry blocks
+  /// whose arguments come from later in the program get set to
+  /// a maximal value so that we don't prematurely declare code to be
+  /// deade.
+  ChangeResult join(const AbstractSparseLattice &rhs) override;
+
+  ChangeResult join(const IntegerValueRange &range) {
+    return Lattice::join(range);
+  }
+
   /// If the range can be narrowed to an integer constant, update the constant
   /// value of the SSA value.
   void onUpdate(DataFlowSolver *solver) const override;

@@ -37,6 +37,50 @@
 using namespace mlir;
 using namespace mlir::dataflow;
 
+/// Return true if `block` is a non-entry block with a predecessor that's
+/// defined after the block. This allows us to detect loop-varying values
+/// in unstructured control flow.
+static bool isLoopLikeBlock(Block *block) {
+  if (!block || block->isEntryBlock())
+    return false;
+  Region *parent = block->getParent();
+  if (!parent)
+    return false;
+
+  SmallPtrSet<Block *, 4> preds;
+  for (Block *pred : block->getPredecessors())
+    preds.insert(pred);
+  if (preds.size() <= 1)
+    return false;
+
+  for (Block &regionBlock : parent->getBlocks()) {
+    if (&regionBlock == block)
+      break;
+    preds.erase(&regionBlock);
+  }
+
+  // The block loops back on itself or has an edge from further in the program.
+  return !preds.empty();
+}
+
+ChangeResult IntegerValueRangeLattice::join(const AbstractSparseLattice &rhs) {
+  Value lhsAnchor = getAnchor();
+  Block *lhsBlock = lhsAnchor.getParentBlock();
+  unsigned width = ConstantIntRanges::getStorageBitwidth(lhsAnchor.getType());
+  /// Special-case: we're in unstructured control flow and one of the
+  /// predecessors of this block argument is defined in a block that comes after
+  /// the argument. So we conservatively conclude that the value could be
+  /// anything.
+  if (width > 0 && isa<BlockArgument>(lhsAnchor) && isLoopLikeBlock(lhsBlock)) {
+    LLVM_DEBUG(llvm::dbgs() << "Found loop-varying block argument " << lhsAnchor
+                            << " from " << rhs.getAnchor() << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "Inferring maximum range\n");
+    IntegerValueRange maxRange = IntegerValueRange::getMaxRange(lhsAnchor);
+    return join(maxRange);
+  }
+  return Lattice::join(rhs);
+}
+
 void IntegerValueRangeLattice::onUpdate(DataFlowSolver *solver) const {
   Lattice::onUpdate(solver);
 
@@ -205,6 +249,8 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
     if (max.sge(min)) {
       IntegerValueRangeLattice *ivEntry = getLatticeElement(*iv);
       auto ivRange = ConstantIntRanges::fromSigned(min, max);
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Inferred loop bound range: " << ivRange << "\n");
       propagateIfChanged(ivEntry, ivEntry->join(IntegerValueRange{ivRange}));
     }
     return;
