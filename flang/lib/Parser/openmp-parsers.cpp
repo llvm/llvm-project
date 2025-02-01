@@ -1300,27 +1300,27 @@ TYPE_PARSER(sourced(construct<OpenMPDeclarativeAssumes>(
     verbatim("ASSUMES"_tok), Parser<OmpClauseList>{})))
 
 // Declarative constructs
-TYPE_PARSER(startOmpLine >>
-    withMessage("expected OpenMP construct"_err_en_US,
-        sourced(construct<OpenMPDeclarativeConstruct>(
-                Parser<OpenMPDeclarativeAssumes>{}) ||
-            construct<OpenMPDeclarativeConstruct>(
-                Parser<OpenMPDeclareReductionConstruct>{}) ||
-            construct<OpenMPDeclarativeConstruct>(
-                Parser<OpenMPDeclareMapperConstruct>{}) ||
-            construct<OpenMPDeclarativeConstruct>(
-                Parser<OpenMPDeclareSimdConstruct>{}) ||
-            construct<OpenMPDeclarativeConstruct>(
-                Parser<OpenMPDeclareTargetConstruct>{}) ||
-            construct<OpenMPDeclarativeConstruct>(
-                Parser<OpenMPDeclarativeAllocate>{}) ||
-            construct<OpenMPDeclarativeConstruct>(
-                Parser<OpenMPRequiresConstruct>{}) ||
-            construct<OpenMPDeclarativeConstruct>(
-                Parser<OpenMPThreadprivate>{}) ||
-            construct<OpenMPDeclarativeConstruct>(
-                Parser<OpenMPUtilityConstruct>{})) /
-            endOmpLine))
+TYPE_PARSER(
+    startOmpLine >> withMessage("expected OpenMP construct"_err_en_US,
+                        sourced(construct<OpenMPDeclarativeConstruct>(
+                                    Parser<OpenMPDeclarativeAssumes>{}) ||
+                            construct<OpenMPDeclarativeConstruct>(
+                                Parser<OpenMPDeclareReductionConstruct>{}) ||
+                            construct<OpenMPDeclarativeConstruct>(
+                                Parser<OpenMPDeclareMapperConstruct>{}) ||
+                            construct<OpenMPDeclarativeConstruct>(
+                                Parser<OpenMPDeclareSimdConstruct>{}) ||
+                            construct<OpenMPDeclarativeConstruct>(
+                                Parser<OpenMPDeclareTargetConstruct>{}) ||
+                            construct<OpenMPDeclarativeConstruct>(
+                                Parser<OpenMPDeclarativeAllocate>{}) ||
+                            construct<OpenMPDeclarativeConstruct>(
+                                Parser<OpenMPRequiresConstruct>{}) ||
+                            construct<OpenMPDeclarativeConstruct>(
+                                Parser<OpenMPThreadprivate>{}) ||
+                            construct<OpenMPDeclarativeConstruct>(
+                                Parser<OpenMPUtilityConstruct>{})) /
+                            endOmpLine))
 
 // Assume Construct
 TYPE_PARSER(sourced(construct<OmpAssumeDirective>(
