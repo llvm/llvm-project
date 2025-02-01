@@ -4,7 +4,8 @@
 
 # RUN: not llvm-objcopy --dump-section __TEXT,__text=not_exists/text-section %t 2>&1 \
 # RUN:   | FileCheck %s -DINPUT=%t --check-prefix=NO-SUCH-PATH
-# NO-SUCH-PATH: error: 'not_exists/text-section': No such file or directory
+# Don't check the OS-dependent message "No such file or directory".
+# NO-SUCH-PATH: error: 'not_exists/text-section':
 
 --- !mach-o
 FileHeader:
