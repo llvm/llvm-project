@@ -140,6 +140,7 @@ let Predicates = [FeatureVector] in {
   // to use those instructions rather than force a 20-bit displacement
   // into a GPR temporary.
   let mayLoad = 1, canFoldAsLoad = 1 in {
+    def VL16 : UnaryAliasVRX<z_load, v16hb, bdxaddr12pair>;
     def VL32 : UnaryAliasVRX<z_load, v32sb, bdxaddr12pair>;
     def VL64 : UnaryAliasVRX<z_load, v64db, bdxaddr12pair>;
   }
@@ -236,6 +237,7 @@ let Predicates = [FeatureVector] in {
   // to use those instructions rather than force a 20-bit displacement
   // into a GPR temporary.
   let mayStore = 1 in {
+    def VST16 : StoreAliasVRX<store, v16hb, bdxaddr12pair>;
     def VST32 : StoreAliasVRX<store, v32sb, bdxaddr12pair>;
     def VST64 : StoreAliasVRX<store, v64db, bdxaddr12pair>;
   }
@@ -2152,6 +2154,8 @@ let Predicates = [FeatureVector] in {
   def : Pat<(f32 (bitconvert (i32 GR32:$src))), (LEFR GR32:$src)>;
   def : Pat<(i32 (bitconvert (f32 VR32:$src))),
             (EXTRACT_SUBREG (LFER VR32:$src), subreg_l32)>;
+  def LEFR_16 : UnaryAliasVRS<VR16, GR32>;
+  def LFER_16 : UnaryAliasVRS<GR32, VR16>;
 }
 
 // Floating-point values are stored in element 0 of the corresponding

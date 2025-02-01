@@ -255,4 +255,9 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     }
     setLibcallName(RTLIB::MULO_I128, nullptr);
   }
+
+  if (TT.isSystemZ()) {
+    setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
+    setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");
+  }
 }

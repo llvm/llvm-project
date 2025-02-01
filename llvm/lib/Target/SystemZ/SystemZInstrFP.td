@@ -36,6 +36,8 @@ defm CondStoreF64 : CondStores<FP64, simple_store,
 
 // Load zero.
 let isAsCheapAsAMove = 1, isMoveImm = 1 in {
+  let isCodeGenOnly = 1 in
+    def LZER_16 : InherentRRE<"lzer", 0xB374, FP16,  fpimm0>;
   def LZER : InherentRRE<"lzer", 0xB374, FP32,  fpimm0>;
   def LZDR : InherentRRE<"lzdr", 0xB375, FP64,  fpimm0>;
   def LZXR : InherentRRE<"lzxr", 0xB376, FP128, fpimm0>;
@@ -47,8 +49,11 @@ def LDR : UnaryRR <"ldr", 0x28,   null_frag, FP64,  FP64>;
 def LXR : UnaryRRE<"lxr", 0xB365, null_frag, FP128, FP128>;
 
 // For z13 we prefer LDR over LER to avoid partial register dependencies.
-let isCodeGenOnly = 1 in
+let isCodeGenOnly = 1 in {
+  def LER16 : UnaryRR<"ler", 0x38, null_frag, FP16, FP16>;
+  def LDR16 : UnaryRR<"ldr", 0x28, null_frag, FP16, FP16>;
   def LDR32 : UnaryRR<"ldr", 0x28, null_frag, FP32, FP32>;
+}
 
 // Moves between two floating-point registers that also set the condition
 // codes. Note that these instructions will turn SNaNs into QNaNs and should
@@ -129,6 +134,9 @@ defm LoadStoreF128 : MVCLoadStore<load, f128, MVCImm, 15>;
 //===----------------------------------------------------------------------===//
 
 let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1 in {
+  let isCodeGenOnly = 1 in
+      // Reload f16 from 4-byte spill slot.
+      defm LE16 : UnaryRXPair<"le", 0x78, 0xED64, z_load, FP16, 4>;
   defm LE : UnaryRXPair<"le", 0x78, 0xED64, z_load, FP32, 4>;
   defm LD : UnaryRXPair<"ld", 0x68, 0xED65, z_load, FP64, 8>;
 
@@ -149,6 +157,9 @@ let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1 in {
 //===----------------------------------------------------------------------===//
 
 let SimpleBDXStore = 1, mayStore = 1 in {
+  let isCodeGenOnly = 1 in
+      // Spill f16 to 4-byte spill slot.
+      defm STE16 : StoreRXPair<"ste", 0x70, 0xED66, store, FP16, 4>;
   defm STE : StoreRXPair<"ste", 0x70, 0xED66, store, FP32, 4>;
   defm STD : StoreRXPair<"std", 0x60, 0xED67, store, FP64, 8>;
 
@@ -331,8 +342,10 @@ let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0xF in {
 }
 // Generic form, which does not set CC.
 def LCDFR : UnaryRRE<"lcdfr", 0xB373, fneg, FP64,  FP64>;
-let isCodeGenOnly = 1 in
+let isCodeGenOnly = 1 in {
+  def LCDFR_16 : UnaryRRE<"lcdfr", 0xB373, fneg, FP16,  FP16>;
   def LCDFR_32 : UnaryRRE<"lcdfr", 0xB373, fneg, FP32,  FP32>;
+}
 
 // Absolute value (Load Positive).
 let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0xF in {
@@ -592,6 +605,7 @@ let hasSideEffects = 1 in {
 // Peepholes
 //===----------------------------------------------------------------------===//
 
+def : Pat<(f16  fpimmneg0), (LCDFR_16 (LZER_16))>;
 def : Pat<(f32  fpimmneg0), (LCDFR_32 (LZER))>;
 def : Pat<(f64  fpimmneg0), (LCDFR (LZDR))>;
 def : Pat<(f128 fpimmneg0), (LCXBR (LZXR))>;
