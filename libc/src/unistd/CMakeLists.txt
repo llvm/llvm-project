@@ -350,3 +350,10 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.threads.identifier
 )
+
+add_entrypoint_object(
+  getentropy
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getentropy
+)

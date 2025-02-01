@@ -1039,7 +1039,7 @@ void PartialInlinerImpl::FunctionCloner::normalizeReturnBlock() const {
   };
 
   ClonedOI->ReturnBlock = ClonedOI->ReturnBlock->splitBasicBlock(
-      ClonedOI->ReturnBlock->getFirstNonPHI()->getIterator());
+      ClonedOI->ReturnBlock->getFirstNonPHIIt());
   BasicBlock::iterator I = PreReturn->begin();
   BasicBlock::iterator Ins = ClonedOI->ReturnBlock->begin();
   SmallVector<Instruction *, 4> DeadPhis;

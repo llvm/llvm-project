@@ -64,12 +64,16 @@ uint32_t atomicInc(uint32_t *A, uint32_t V, atomic::OrderingTy Ordering,
 
 #define ScopeSwitch(ORDER)                                                     \
   switch (MemScope) {                                                          \
-  case atomic::MemScopeTy::all:                                                \
+  case atomic::MemScopeTy::system:                                             \
     return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "");                     \
   case atomic::MemScopeTy::device:                                             \
     return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "agent");                \
-  case atomic::MemScopeTy::cgroup:                                             \
+  case atomic::MemScopeTy::workgroup:                                          \
     return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "workgroup");            \
+  case atomic::MemScopeTy::wavefront:                                          \
+    return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "wavefront");            \
+  case atomic::MemScopeTy::single:                                             \
+    return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "singlethread");         \
   }
 
 #define Case(ORDER)                                                            \
@@ -80,7 +84,7 @@ uint32_t atomicInc(uint32_t *A, uint32_t V, atomic::OrderingTy Ordering,
   default:
     __builtin_unreachable();
     Case(atomic::relaxed);
-    Case(atomic::aquire);
+    Case(atomic::acquire);
     Case(atomic::release);
     Case(atomic::acq_rel);
     Case(atomic::seq_cst);
@@ -103,7 +107,7 @@ void namedBarrier() {
   uint32_t WarpSize = mapping::getWarpSize();
   uint32_t NumWaves = NumThreads / WarpSize;
 
-  fence::team(atomic::aquire);
+  fence::team(atomic::acquire);
 
   // named barrier implementation for amdgcn.
   // Uses two 16 bit unsigned counters. One for the number of waves to have
@@ -148,7 +152,7 @@ void fenceTeam(atomic::OrderingTy Ordering) {
 }
 
 void fenceKernel(atomic::OrderingTy Ordering) {
-  return __scoped_atomic_thread_fence(Ordering, atomic::device_);
+  return __scoped_atomic_thread_fence(Ordering, atomic::device);
 }
 
 void fenceSystem(atomic::OrderingTy Ordering) {
@@ -168,7 +172,7 @@ void syncThreads(atomic::OrderingTy Ordering) {
   __builtin_amdgcn_s_barrier();
 
   if (Ordering != atomic::relaxed)
-    fenceTeam(Ordering == atomic::acq_rel ? atomic::aquire : atomic::seq_cst);
+    fenceTeam(Ordering == atomic::acq_rel ? atomic::acquire : atomic::seq_cst);
 }
 void syncThreadsAligned(atomic::OrderingTy Ordering) { syncThreads(Ordering); }
 
@@ -194,7 +198,7 @@ void setCriticalLock(omp_lock_t *Lock) {
         !cas((uint32_t *)Lock, UNSET, SET, atomic::relaxed, atomic::relaxed)) {
       __builtin_amdgcn_s_sleep(32);
     }
-    fenceKernel(atomic::aquire);
+    fenceKernel(atomic::acquire);
   }
 }
 

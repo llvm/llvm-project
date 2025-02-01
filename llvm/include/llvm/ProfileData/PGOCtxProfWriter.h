@@ -81,14 +81,6 @@ public:
   static constexpr StringRef ContainerMagic = "CTXP";
 };
 
-/// Representation of the context node suitable for yaml / json serialization /
-/// deserialization.
-struct SerializableCtxRepresentation {
-  ctx_profile::GUID Guid = 0;
-  std::vector<uint64_t> Counters;
-  std::vector<std::vector<SerializableCtxRepresentation>> Callsites;
-};
-
 Error createCtxProfFromYAML(StringRef Profile, raw_ostream &Out);
 } // namespace llvm
 #endif

@@ -4,7 +4,9 @@
 ; RUN: llvm-ctxprof-util fromYAML --input %S/Inputs/empty.yaml -output %t/empty.bitstream
 ; RUN: llvm-bcanalyzer --dump %t/empty.bitstream | FileCheck %s --check-prefix=EMPTY
 
-; RUN: llvm-ctxprof-util fromYAML --input %S/Inputs/valid.yaml -output %t/valid.bitstream
+; RUN: llvm-ctxprof-util fromYAML -input %S/Inputs/valid.yaml -output %t/valid.bitstream
+; RUN: llvm-ctxprof-util toYAML -input %t/valid.bitstream -output %t/valid2.yaml
+; RUN: diff %t/valid2.yaml %S/Inputs/valid.yaml
 
 ; For the valid case, check against a reference output.
 ; Note that uint64_t are printed as signed values by llvm-bcanalyzer:

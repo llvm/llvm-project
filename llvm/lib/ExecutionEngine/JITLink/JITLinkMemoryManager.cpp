@@ -145,7 +145,8 @@ orc::shared::AllocActions &BasicLayout::graphAllocActions() {
 
 void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
                                 std::shared_ptr<orc::SymbolStringPool> SSP,
-                                const JITLinkDylib *JD, SegmentMap Segments,
+                                Triple TT, const JITLinkDylib *JD,
+                                SegmentMap Segments,
                                 OnCreatedFunction OnCreated) {
 
   static_assert(orc::AllocGroup::NumGroups == 32,
@@ -156,8 +157,9 @@ void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
       "__---.finalize", "__R--.finalize", "__-W-.finalize", "__RW-.finalize",
       "__--X.finalize", "__R-X.finalize", "__-WX.finalize", "__RWX.finalize"};
 
-  auto G = std::make_unique<LinkGraph>("", std::move(SSP), Triple(), 0,
-                                       llvm::endianness::native, nullptr);
+  auto G =
+      std::make_unique<LinkGraph>("", std::move(SSP), std::move(TT),
+                                  SubtargetFeatures(), getGenericEdgeKindName);
   orc::AllocGroupSmallMap<Block *> ContentBlocks;
 
   orc::ExecutorAddr NextAddr(0x100000);
@@ -201,13 +203,12 @@ void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
                   });
 }
 
-Expected<SimpleSegmentAlloc>
-SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
-                           std::shared_ptr<orc::SymbolStringPool> SSP,
-                           const JITLinkDylib *JD, SegmentMap Segments) {
+Expected<SimpleSegmentAlloc> SimpleSegmentAlloc::Create(
+    JITLinkMemoryManager &MemMgr, std::shared_ptr<orc::SymbolStringPool> SSP,
+    Triple TT, const JITLinkDylib *JD, SegmentMap Segments) {
   std::promise<MSVCPExpected<SimpleSegmentAlloc>> AllocP;
   auto AllocF = AllocP.get_future();
-  Create(MemMgr, std::move(SSP), JD, std::move(Segments),
+  Create(MemMgr, std::move(SSP), std::move(TT), JD, std::move(Segments),
          [&](Expected<SimpleSegmentAlloc> Result) {
            AllocP.set_value(std::move(Result));
          });

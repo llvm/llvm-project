@@ -1266,15 +1266,10 @@ public:
     return getFlippedSignednessPredicate(getPredicate());
   }
 
-  /// Determine if Pred1 implies Pred2 is true when two compares have matching
-  /// operands.
-  static bool isImpliedTrueByMatchingCmp(CmpPredicate Pred1,
-                                         CmpPredicate Pred2);
-
-  /// Determine if Pred1 implies Pred2 is false when two compares have matching
-  /// operands.
-  static bool isImpliedFalseByMatchingCmp(CmpPredicate Pred1,
-                                          CmpPredicate Pred2);
+  /// Determine if Pred1 implies Pred2 is true, false, or if nothing can be
+  /// inferred about the implication, when two compares have matching operands.
+  static std::optional<bool> isImpliedByMatchingCmp(CmpPredicate Pred1,
+                                                    CmpPredicate Pred2);
 
   void setSameSign(bool B = true) {
     SubclassOptionalData = (SubclassOptionalData & ~SameSign) | (B * SameSign);

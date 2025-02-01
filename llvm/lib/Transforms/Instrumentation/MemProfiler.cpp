@@ -511,7 +511,7 @@ void MemProfiler::instrumentAddress(Instruction *OrigIns,
   }
 
   Type *ShadowTy = ClHistogram ? Type::getInt8Ty(*C) : Type::getInt64Ty(*C);
-  Type *ShadowPtrTy = PointerType::get(ShadowTy, 0);
+  Type *ShadowPtrTy = PointerType::get(*C, 0);
 
   Value *ShadowPtr = memToShadow(AddrLong, IRB);
   Value *ShadowAddr = IRB.CreateIntToPtr(ShadowPtr, ShadowPtrTy);
@@ -1096,9 +1096,8 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
       // can happen because we don't currently have discriminators to
       // distinguish the case when a single line/col maps to both an allocation
       // and another callsite).
-      std::map<uint64_t, std::set<const AllocationInfo *>>::iterator
-          AllocInfoIter;
-      decltype(LocHashToCallSites)::iterator CallSitesIter;
+      auto AllocInfoIter = LocHashToAllocInfo.end();
+      auto CallSitesIter = LocHashToCallSites.end();
       for (const DILocation *DIL = I.getDebugLoc(); DIL != nullptr;
            DIL = DIL->getInlinedAt()) {
         // Use C++ linkage name if possible. Need to compile with

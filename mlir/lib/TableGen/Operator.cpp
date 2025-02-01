@@ -503,8 +503,8 @@ void Operator::populateTypeInferenceInfo(
         for (int otherResultIndex : resultIndices) {
           if (resultIndex == otherResultIndex)
             continue;
-          inference[resultIndex].sources.emplace_back(otherResultIndex,
-                                                      "$_self");
+          inference[resultIndex].sources.emplace_back(
+              InferredResultType::unmapResultIndex(otherResultIndex), "$_self");
         }
       }
     }

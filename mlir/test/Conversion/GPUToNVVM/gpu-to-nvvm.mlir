@@ -1033,3 +1033,27 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+
+gpu.module @test_module_52 {
+  // CHECK: llvm.func @__nv_abs(i32) -> i32
+  // CHECK-LABEL: func @gpu_abs
+  func.func @gpu_abs(%arg_i32 : i32) -> (i32) {
+    %result32 = math.absi %arg_i32 : i32
+    // CHECK: llvm.call @__nv_abs(%{{.*}}) : (i32) -> i32
+    func.return %result32 : i32
+  }
+}
+
+gpu.module @test_module_53 {
+  // CHECK: llvm.func @__nv_powif(f32, i32) -> f32
+  // CHECK: llvm.func @__nv_powi(f64, i32) -> f64
+  // CHECK-LABEL: func @gpu_powi
+  func.func @gpu_powi(%arg_f32 : f32, %arg_f64 : f64, %arg_i32 : i32) -> (f32, f64) {
+    %result32 = math.fpowi %arg_f32, %arg_i32 : f32, i32
+    // CHECK: llvm.call @__nv_powif(%{{.*}}, %{{.*}}) : (f32, i32) -> f32
+    %result64 = math.fpowi %arg_f64, %arg_i32 : f64, i32
+    // CHECK: llvm.call @__nv_powi(%{{.*}}, %{{.*}}) : (f64, i32) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}

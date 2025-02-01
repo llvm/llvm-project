@@ -491,26 +491,28 @@ Examples:
            i32 %byte_offset,
            i32 0)
 
-Texture and Typed Buffer Stores
--------------------------------
+Stores
+------
 
-*relevant types: Textures and TypedBuffer*
+*relevant types: Textures and Buffer*
 
-The `TextureStore`_ and `BufferStore`_ DXIL operations always write all four
-32-bit components to a texture or a typed buffer. While both operations include
-a mask parameter, it is specified that the mask must cover all components when
-used with these types.
+The `TextureStore`_, `BufferStore`_, and `RawBufferStore`_ DXIL operations
+write four components to a texture or a buffer. These include a mask argument
+that is used when fewer than 4 components are written, but notably this only
+takes on the contiguous x, xy, xyz, and xyzw values.
 
-The store operations that we define as intrinsics behave similarly, and will
-only accept writes to the whole of the contained type. This differs from the
-loads above, but this makes sense to do from a semantics preserving point of
-view. Thus, texture and buffer stores may only operate on 4-element vectors of
-types that are 32-bits or fewer, such as ``<4 x i32>``, ``<4 x float>``, and
-``<4 x half>``, and 2 element vectors of 64-bit types like ``<2 x double>`` and
-``<2 x i64>``.
+We define the LLVM store intrinsics to accept vectors when storing multiple
+components rather than using `undef` and a mask, but otherwise match the DXIL
+ops fairly closely.
 
-.. _BufferStore: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#bufferstore
 .. _TextureStore: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#texturestore
+.. _BufferStore: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#bufferstore
+.. _RawBufferStore: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#rawbufferstore
+
+For TypedBuffer, we only need one coordinate, and we must always write a vector
+since partial writes aren't possible. Similarly to the load operations
+described above, we handle 64-bit types specially and only handle 2-element
+vectors rather than 4.
 
 Examples:
 
@@ -548,3 +550,85 @@ Examples:
        target("dx.TypedBuffer", f16, 1, 0) %buf, i32 %index, <4 x f16> %data)
    call void @llvm.dx.resource.store.typedbuffer.tdx.Buffer_v2f64_1_0_0t(
        target("dx.TypedBuffer", f64, 1, 0) %buf, i32 %index, <2 x f64> %data)
+
+For RawBuffer, we need two indices and we accept scalars and vectors of 4 or
+fewer elements. Note that we do allow vectors of 4 64-bit elements here.
+
+Examples:
+
+.. list-table:: ``@llvm.dx.resource.store.rawbuffer``
+   :header-rows: 1
+
+   * - Argument
+     -
+     - Type
+     - Description
+   * - Return value
+     -
+     - ``void``
+     -
+   * - ``%buffer``
+     - 0
+     - ``target(dx.RawBuffer, ...)``
+     - The buffer to store into
+   * - ``%index``
+     - 1
+     - ``i32``
+     - Index into the buffer
+   * - ``%offset``
+     - 2
+     - ``i32``
+     - Byte offset into structured buffer elements
+   * - ``%data``
+     - 3
+     - Scalar or vector
+     - The data to store
+
+Examples:
+
+.. code-block:: llvm
+
+   ; float
+   call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_f32_1_0_0t.f32(
+       target("dx.RawBuffer", float, 1, 0, 0) %buffer,
+       i32 %index, i32 0, float %data)
+   call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i8_1_0_0t.f32(
+       target("dx.RawBuffer", i8, 1, 0, 0) %buffer,
+       i32 %index, i32 0, float %data)
+
+   ; float4
+   call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_v4f32_1_0_0t.v4f32(
+       target("dx.RawBuffer", <4 x float>, 1, 0, 0) %buffer,
+       i32 %index, i32 0, <4 x float> %data)
+   call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i8_1_0_0t.v4f32(
+       target("dx.RawBuffer", i8, 1, 0, 0) %buffer,
+       i32 %index, i32 0, <4 x float> %data)
+
+   ; struct S0 { float4 f; int4 i; }
+   call void @llvm.dx.resource.store.rawbuffer.v4f32(
+       target("dx.RawBuffer", { <4 x float>, <4 x i32> }, 1, 0, 0) %buffer,
+       i32 %index, i32 0, <4 x float> %data0)
+   call void @llvm.dx.resource.store.rawbuffer.v4i32(
+       target("dx.RawBuffer", { <4 x float>, <4 x i32> }, 1, 0, 0) %buffer,
+       i32 %index, i32 16, <4 x i32> %data1)
+
+   ; struct Q { float4 f; int3 i; }
+   ; struct R { int z; S x; }
+   call void @llvm.dx.resource.store.rawbuffer.i32(
+       target("dx.RawBuffer", {i32, {<4 x float>, <3 x half>}}, 1, 0, 0)
+           %buffer,
+       i32 %index, i32 0, i32 %data0)
+   call void @llvm.dx.resource.store.rawbuffer.v4f32(
+       target("dx.RawBuffer", {i32, {<4 x float>, <3 x half>}}, 1, 0, 0)
+           %buffer,
+       i32 %index, i32 4, <4 x float> %data1)
+   call void @llvm.dx.resource.store.rawbuffer.v3f16(
+       target("dx.RawBuffer", {i32, {<4 x float>, <3 x half>}}, 1, 0, 0)
+           %buffer,
+       i32 %index, i32 20, <3 x half> %data2)
+
+   ; byteaddressbuf.Store<int64_t4>
+   call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i8_1_0_0t.v4f64(
+       target("dx.RawBuffer", i8, 1, 0, 0) %buffer,
+       i32 %index, i32 0, <4 x double> %data)
+
