@@ -38,8 +38,8 @@
 // CHECK: Decompression method: zstd
 // CHECK: Hashes match: Yes
 // NOHOST-NOT: host-
-// NOHOST-DAG: hip-amdgcn-amd-amdhsa--gfx900
-// NOHOST-DAG: hip-amdgcn-amd-amdhsa--gfx906
+// NOHOST-DAG: hip-amdgcn-amd-amdhsa-unknown-gfx900
+// NOHOST-DAG: hip-amdgcn-amd-amdhsa-unknown-gfx906
 //
 
 // Check -compression-level= option
@@ -77,10 +77,10 @@
 // RUN:   -output=%t.hip_900.a -output=%t.hip_906.a -input=%t.hip_archive.a
 // RUN: llvm-ar t %t.hip_900.a | FileCheck -check-prefix=HIP-AR-900 %s
 // RUN: llvm-ar t %t.hip_906.a | FileCheck -check-prefix=HIP-AR-906 %s
-// HIP-AR-900-DAG: hip_bundle1-hip-amdgcn-amd-amdhsa--gfx900
-// HIP-AR-900-DAG: hip_bundle2-hip-amdgcn-amd-amdhsa--gfx900
-// HIP-AR-906-DAG: hip_bundle1-hip-amdgcn-amd-amdhsa--gfx906
-// HIP-AR-906-DAG: hip_bundle2-hip-amdgcn-amd-amdhsa--gfx906
+// HIP-AR-900-DAG: hip_bundle1-hip-amdgcn-amd-amdhsa-unknown-gfx900
+// HIP-AR-900-DAG: hip_bundle2-hip-amdgcn-amd-amdhsa-unknown-gfx900
+// HIP-AR-906-DAG: hip_bundle1-hip-amdgcn-amd-amdhsa-unknown-gfx906
+// HIP-AR-906-DAG: hip_bundle2-hip-amdgcn-amd-amdhsa-unknown-gfx906
 
 // Some code so that we can create a binary out of this file.
 int A = 0;
