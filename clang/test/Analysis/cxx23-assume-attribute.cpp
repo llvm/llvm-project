@@ -56,3 +56,22 @@ int ternary_in_assume(int a, int b) {
   // expected-warning-re@-1 {{(reg_${{[0-9]+}}<int b>) + 300}} FIXME: We shouldn't have this dump.
   return 0;
 }
+
+int assume_and_fallthrough_at_the_same_attrstmt(int a, int b) {
+  [[assume(a == 2)]];
+  clang_analyzer_dump(a); // expected-warning {{2 S32b}}
+  // expected-warning-re@-1 {{reg_${{[0-9]+}}<int a>}} FIXME: We shouldn't have this dump.
+  switch (a) {
+    case 2:
+      [[fallthrough, assume(b == 30)]];
+    case 4: {
+      clang_analyzer_dump(b); // expected-warning {{30 S32b}}
+      // expected-warning-re@-1 {{reg_${{[0-9]+}}<int b>}} FIXME: We shouldn't have this dump.
+      return b;
+    }
+  }
+  // This code should be unreachable.
+  [[assume(false)]]; // This should definitely make it so.
+  clang_analyzer_dump(33); // expected-warning {{33 S32b}}
+  return 0;
+}
