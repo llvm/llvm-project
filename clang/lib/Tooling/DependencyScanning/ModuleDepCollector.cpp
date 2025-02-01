@@ -492,8 +492,11 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
   HashBuilder.add(getClangFullRepositoryVersion());
   HashBuilder.add(serialization::VERSION_MAJOR, serialization::VERSION_MINOR);
   llvm::ErrorOr<std::string> CWD = VFS.getCurrentWorkingDirectory();
+  auto &FSOpts = const_cast<FileSystemOptions &>(CI.getFileSystemOpts());
   if (CWD && !IgnoreCWD)
     HashBuilder.add(*CWD);
+  else
+    FSOpts.WorkingDir.clear();
 
   // Hash the BuildInvocation without any input files.
   SmallString<0> ArgVec;
