@@ -272,13 +272,13 @@ void SemaMIPS::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
 
   if (hasFunctionProto(D) && getFunctionOrMethodNumParams(D) != 0) {
     Diag(D->getLocation(), diag::warn_interrupt_attribute_invalid)
-        << /*MIPS*/ 0 << 0;
+        << /*MIPS*/ 0 << "interrupt" << 0;
     return;
   }
 
   if (!getFunctionOrMethodResultType(D)->isVoidType()) {
     Diag(D->getLocation(), diag::warn_interrupt_attribute_invalid)
-        << /*MIPS*/ 0 << 1;
+        << /*MIPS*/ 0 << "interrupt" << 1;
     return;
   }
 
