@@ -67,7 +67,7 @@ struct alignas(32) S32 {};
 struct alignas(64) S64 {};
 struct alignas(128) S128 {};
 
-constexpr bool tests() {
+bool tests() {
   char c;
   int i;
   long l;
