@@ -93,7 +93,7 @@ jobs:
           docker exec "${{env.CONTAINER_NAME}}" /bin/bash -c "python3 -c \"
           import os
           import requests
-          GITHUB_TOKEN =  os.getenv('GITHUB_TOKEN')
+          GITHUB_TOKEN =  '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' #os.getenv('GITHUB_TOKEN')
           TARGET_SHA = os.getenv('PR_SHA')
           print('debug', TARGET_SHA)
           api_url = f'https://api.github.com/repos/AMD-Lightning-Internal/llvm-project/statuses/{TARGET_SHA}'
