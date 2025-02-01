@@ -33,8 +33,11 @@ func.func @mpi_test(%ref : memref<100xf32>) -> () {
     // CHECK-NEXT: %retval_0, %size = mpi.comm_size : !mpi.retval, i32
     %retval_0, %size = mpi.comm_size(%comm) : !mpi.comm -> !mpi.retval, i32
 
-    // CHECK-NEXT: %new_comm, %retval3 = mpi.comm_split(%comm, %rank, %rank) : i32, !mpi.retval
-    %new_comm, %retval3 = mpi.comm_split(%comm, %rank, %rank) : mpi.comm, i32, i32
+    // CHECK-NEXT: %new_comm = mpi.comm_split(%comm, %rank, %rank) : !mpi.comm, i32, i32 -> !mpi.comm
+    %new_comm = mpi.comm_split(%comm, %rank, %rank) : !mpi.comm, i32, i32
+
+    // CHECK-NEXT: %retval3, %new_comm = mpi.comm_split(%comm, %rank, %rank) : !mpi.comm, i32, i32 -> !mpi.retval, !mpi.comm
+    %retval3, %new_comm = mpi.comm_split(%comm, %rank, %rank) : !mpi.comm, i32, i32 -> !mpi.retval, !mpi.comm
 
     // CHECK-NEXT: mpi.send(%arg0, %rank, %rank) : memref<100xf32>, i32, i32
     mpi.send(%ref, %rank, %rank) : memref<100xf32>, i32, i32
@@ -78,14 +81,17 @@ func.func @mpi_test(%ref : memref<100xf32>) -> () {
     // CHECK-NEXT: %3 = mpi.wait(%req_2) : !mpi.request -> !mpi.retval
     %err6 = mpi.wait(%req2) : !mpi.request -> !mpi.retval
 
-    // CHECK-NEXT: mpi.barrier : !mpi.retval
-    mpi.barrier : !mpi.retval
+    // CHECK-NEXT: mpi.barrier
+    mpi.barrier
 
     // CHECK-NEXT: %5 = mpi.barrier : !mpi.retval
     %err7 = mpi.barrier : !mpi.retval
 
-    // CHECK-NEXT: mpi.barrier(%comm) : !mpi.retval
-    mpi.barrier(%comm) : !mpi.retval
+    // CHECK-NEXT: mpi.barrier(%comm)
+    mpi.barrier(%comm)
+
+    // CHECK-NEXT: %5 = mpi.barrier : !mpi.retval
+    %err7 = mpi.barrier : !mpi.retval
 
     // CHECK-NEXT: mpi.allreduce(%arg0, %arg0, <MPI_SUM>) : memref<100xf32>, memref<100xf32>
     mpi.allreduce(%ref, %ref, <MPI_SUM>) : memref<100xf32>, memref<100xf32>
