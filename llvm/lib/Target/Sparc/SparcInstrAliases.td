@@ -605,7 +605,7 @@ def : InstAlias<"unimp", (UNIMP 0), 0>;
 // interchangeable with `unimp` all the time.
 def : MnemonicAlias<"illtrap", "unimp">;
 
-def : MnemonicAlias<"setuw", "set">;
+def : MnemonicAlias<"setuw", "set">, Requires<[HasV9]>;
 
 def : MnemonicAlias<"iflush", "flush">;
 
