@@ -470,6 +470,9 @@ def Dangling : DiagGroup<"dangling", [DanglingAssignment,
                                       DanglingInitializerList,
                                       DanglingGsl,
                                       ReturnStackAddress]>;
+def ReturnStackAddressCFG : DiagGroup<"return-stack-address-cfg">;
+def DanglingCFG : DiagGroup<"dangling-cfg", [ReturnStackAddressCFG]>;
+
 def DistributedObjectModifiers : DiagGroup<"distributed-object-modifiers">;
 def DllexportExplicitInstantiationDecl : DiagGroup<"dllexport-explicit-instantiation-decl">;
 def ExcessInitializers : DiagGroup<"excess-initializers">;

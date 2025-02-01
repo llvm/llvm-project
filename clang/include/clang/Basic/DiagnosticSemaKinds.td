@@ -10201,6 +10201,19 @@ def err_lifetimebound_implicit_object_parameter_void_return_type : Error<
   "parameter of a function that returns void; "
   "did you mean 'lifetime_capture_by(X)'">;
 
+// CFG based lifetime analysis.
+def warn_ret_stack_variable_ref_cfg
+    : Warning<"returning reference to a stack variable">,
+      InGroup<ReturnStackAddressCFG>,
+      DefaultIgnore;
+def note_local_variable_declared_here
+    : Note<"reference to this stack variable is returned">;
+
+def warn_ret_stack_temporary_ref_cfg
+    : Warning<"returning reference to a temporary object">,
+      InGroup<ReturnStackAddressCFG>,
+      DefaultIgnore;
+
 // CHECK: returning address/reference of stack memory
 def warn_ret_stack_addr_ref : Warning<
   "%select{address of|reference to}0 stack memory associated with "

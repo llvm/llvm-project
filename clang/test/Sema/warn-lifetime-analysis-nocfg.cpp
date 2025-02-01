@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wdangling -Wdangling-field -Wreturn-stack-address -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-dangling -Wdangling-cfg -verify=cfg %s
 #include "Inputs/lifetime-analysis.h"
 struct [[gsl::Owner(int)]] MyIntOwner {
   MyIntOwner();
@@ -88,27 +89,32 @@ MyIntPointer returningLocalPointer() {
 }
 
 MyIntPointer daglingGslPtrFromLocalOwner() {
-  MyIntOwner localOwner;
+  MyIntOwner localOwner;  // cfg-note {{reference to this stack variable is returned}}
   return localOwner; // expected-warning {{address of stack memory associated with local variable 'localOwner' returned}}
+  // cfg-warning@-1 {{returning reference to a stack variable}}
 }
 
 MyLongPointerFromConversion daglingGslPtrFromLocalOwnerConv() {
-  MyLongOwnerWithConversion localOwner;
+  MyLongOwnerWithConversion localOwner;  // cfg-note {{reference to this stack variable is returned}}
   return localOwner; // expected-warning {{address of stack memory associated with local variable 'localOwner' returned}}
+  // cfg-warning@-1 {{returning reference to a stack variable}}
 }
 
 MyIntPointer danglingGslPtrFromTemporary() {
   return MyIntOwner{}; // expected-warning {{returning address of local temporary object}}
+  // cfg-warning@-1 {{returning reference to a temporary object}}
 }
 
 MyIntOwner makeTempOwner();
 
 MyIntPointer danglingGslPtrFromTemporary2() {
   return makeTempOwner(); // expected-warning {{returning address of local temporary object}}
+  // cfg-warning@-1 {{returning reference to a temporary object}}
 }
 
 MyLongPointerFromConversion danglingGslPtrFromTemporaryConv() {
   return MyLongOwnerWithConversion{}; // expected-warning {{returning address of local temporary object}}
+  // cfg-warning@-1 {{returning reference to a temporary object}}
 }
 
 int *noFalsePositive(MyIntOwner &o) {
@@ -300,7 +306,7 @@ void danglingStringviewAssignment(std::string_view a1, std::string_view a2) {
 
 std::reference_wrapper<int> danglingPtrFromNonOwnerLocal() {
   int i = 5;
-  return i; // TODO
+  return i;
 }
 
 std::reference_wrapper<int> danglingPtrFromNonOwnerLocal2() {
@@ -411,6 +417,7 @@ MyIntPointer handleDerivedToBaseCast1(MySpecialIntPointer ptr) {
 
 MyIntPointer handleDerivedToBaseCast2(MyOwnerIntPointer ptr) {
   return ptr; // expected-warning {{address of stack memory associated with parameter 'ptr' returned}}
+  // FIXME(cfg): Detect this! we are traversing the type hierarchy for the attr.
 }
 
 std::vector<int>::iterator noFalsePositiveWithVectorOfPointers() {
@@ -615,10 +622,11 @@ std::string_view test5() {
 
 // Pointer<Pointer> from Owner<Pointer>
 // Prevent regression GH108463
-Span<int*> test6(std::vector<int*> v) {
+Span<int*> test6(std::vector<int*> v) { // cfg-note {{reference to this stack variable is returned}}
   Span<int *> dangling = std::vector<int*>(); // expected-warning {{object backing the pointer}}
   dangling = std::vector<int*>(); // expected-warning {{object backing the pointer}}
   return v; // expected-warning {{address of stack memory}}
+  // cfg-warning@-1 {{returning reference to a stack variable}}
 }
 
 /////// From Owner<Owner<Pointer>> ///////
@@ -636,16 +644,18 @@ std::vector<int*> test8(StatusOr<std::vector<int*>> aa) {
 }
 
 // Pointer<Pointer> from Owner<Owner<Pointer>>
-Span<int*> test9(StatusOr<std::vector<int*>> aa) {
+Span<int*> test9(StatusOr<std::vector<int*>> aa) { // cfg-note {{reference to this stack variable is returned}}
   return aa.valueLB(); // expected-warning {{address of stack memory associated}}
+  // cfg-warning@-1 {{returning reference to a stack variable}}
   return aa.valueNoLB(); // OK.
 }
 
 /////// From Owner<Owner> ///////
 
 // Pointer<Owner>> from Owner<Owner>
-Span<std::string> test10(StatusOr<std::vector<std::string>> aa) {
+Span<std::string> test10(StatusOr<std::vector<std::string>> aa) { // cfg-note {{reference to this stack variable is returned}}
   return aa.valueLB(); // expected-warning {{address of stack memory}}
+  // cfg-warning@-1 {{returning reference to a stack variable}}
   return aa.valueNoLB(); // OK.
 }
 
@@ -707,15 +717,17 @@ std::string_view test1() {
   std::string_view t1 = Ref(std::string()); // expected-warning {{object backing}}
   t1 = Ref(std::string()); // expected-warning {{object backing}}
   return Ref(std::string()); // expected-warning {{returning address}}
+                            // cfg-warning@-1 {{returning reference to a temporary object}}
   
   std::string_view t2 = TakeSv(std::string()); // expected-warning {{object backing}}
   t2 = TakeSv(std::string()); // expected-warning {{object backing}}
   return TakeSv(std::string()); // expected-warning {{returning address}}
+                                // cfg-warning@-1 {{returning reference to a temporary object}}
 
   std::string_view t3 = TakeStrRef(std::string()); // expected-warning {{temporary}}
   t3 = TakeStrRef(std::string()); // expected-warning {{object backing}}
   return TakeStrRef(std::string()); // expected-warning {{returning address}}
-
+                                    // cfg-warning@-1 {{returning reference to a temporary object}}
 
   std::string_view t4 = TakeStr(std::string());
   t4 = TakeStr(std::string());
@@ -727,10 +739,13 @@ struct Foo {
   const T& get() const [[clang::lifetimebound]];
   const T& getNoLB() const;
 };
-std::string_view test2(Foo<std::string> r1, Foo<std::string_view> r2) {
+std::string_view test2(
+  Foo<std::string> r1, // cfg-note {{reference to this stack variable is returned}}
+  Foo<std::string_view> r2) {
   std::string_view t1 = Foo<std::string>().get(); // expected-warning {{object backing}}
   t1 = Foo<std::string>().get(); // expected-warning {{object backing}}
   return r1.get(); // expected-warning {{address of stack}}
+  // cfg-warning@-1 {{returning reference to a stack variable}}
   
   std::string_view t2 = Foo<std::string_view>().get();
   t2 = Foo<std::string_view>().get();
@@ -750,6 +765,7 @@ Pointer test3(Bar bar) {
   Pointer p = Pointer(Bar()); // expected-warning {{temporary}}
   p = Pointer(Bar()); // expected-warning {{object backing}}
   return bar; // expected-warning {{address of stack}}
+  // FIXME(cfg): Handle Lifetimebound constructors.
 }
 
 template<typename T>
