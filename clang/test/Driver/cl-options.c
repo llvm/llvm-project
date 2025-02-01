@@ -813,4 +813,8 @@
 // RUN: %clang_cl -vctoolsdir "" /arm64EC /c -target x86_64-pc-windows-msvc  -### -- %s 2>&1 | FileCheck --check-prefix=ARM64EC_OVERRIDE %s
 // ARM64EC_OVERRIDE: warning: /arm64EC has been overridden by specified target: x86_64-pc-windows-msvc; option ignored
 
+// RUN: %clang_cl /funcoverride:override_me1 /funcoverride:override_me2 /c -### -- %s 2>&1 | FileCheck %s --check-prefix=FUNCOVERRIDE
+// FUNCOVERRIDE: -loader-replaceable-function=override_me1
+// FUNCOVERRIDE-SAME: -loader-replaceable-function=override_me2
+
 void f(void) { }

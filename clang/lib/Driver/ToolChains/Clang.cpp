@@ -8504,6 +8504,12 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     }
     A->claim();
   }
+
+  for (const auto &FuncOverride :
+       Args.getAllArgValues(options::OPT__SLASH_funcoverride)) {
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine("-loader-replaceable-function=") + FuncOverride));
+  }
 }
 
 const char *Clang::getBaseInputName(const ArgList &Args,

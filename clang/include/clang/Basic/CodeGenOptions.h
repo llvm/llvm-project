@@ -489,6 +489,9 @@ public:
   /// The name of a file to use with \c .secure_log_unique directives.
   std::string AsSecureLogFile;
 
+  /// A list of functions that are replacable by the loader.
+  std::vector<std::string> LoaderReplaceableFunctionNames;
+
 public:
   // Define accessors/mutators for code generation options of enumeration type.
 #define CODEGENOPT(Name, Bits, Default)
@@ -561,6 +564,16 @@ public:
   /// Reset all of the options that are not considered when building a
   /// module.
   void resetNonModularOptions(StringRef ModuleFormat);
+
+  // Is the given function name one of the functions that can be replaced by the
+  // loader?
+  bool isLoaderReplaceableFunctionName(StringRef FuncName) const {
+    return std::any_of(LoaderReplaceableFunctionNames.begin(),
+                       LoaderReplaceableFunctionNames.end(),
+                       [&](const std::string &ReplaceableName) {
+                         return FuncName == ReplaceableName;
+                       });
+  }
 };
 
 }  // end namespace clang
