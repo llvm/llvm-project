@@ -278,7 +278,7 @@ private:
     return Node(nodeId);
   }
 
-  std::string getOperandPortName(Value operand) {
+  std::string getValuePortName(Value operand) {
     // Print value as an operand and omit the leading '%' character.
     auto str = strFromOs([&](raw_ostream &os) {
       operand.printAsOperand(os, OpPrintingFlags());
@@ -297,15 +297,11 @@ private:
       // Print operation inputs.
       if (op->getNumOperands() > 0) {
         os << "{";
-        interleave(
-            op->getOperands(), os,
-            [&](Value operand) {
-              os << "<";
-              os << getOperandPortName(operand);
-              os << "> ";
-              operand.printAsOperand(os, OpPrintingFlags());
-            },
-            "|");
+        auto operandToPort = [&](Value operand) {
+          os << "<" << getValuePortName(operand) << "> ";
+          operand.printAsOperand(os, OpPrintingFlags());
+        };
+        interleave(op->getOperands(), os, operandToPort, "|");
         os << "}|";
       }
       // Print operation name and type.
@@ -322,16 +318,15 @@ private:
 
       if (op->getNumResults() > 0) {
         os << "|{";
-        interleave(
-            op->getResults(), os,
-            [&](Value result) {
-              os << "<" << getOperandPortName(result) << "> ";
-              if (printResultTypes)
-                os << truncateString(escapeLabelString(strFromOs(
-                    [&](raw_ostream &os) { os << result.getType(); })));
-            },
-            "|");
-        // TODO: how to truncate string without breaking the layout?
+        auto resultToPort = [&](Value result) {
+          os << "<" << getValuePortName(result) << "> ";
+          if (printResultTypes)
+            os << truncateString(escapeLabelString(
+                strFromOs([&](raw_ostream &os) { os << result.getType(); })));
+          else
+            result.printAsOperand(os, OpPrintingFlags());
+        };
+        interleave(op->getResults(), os, resultToPort, "|");
         os << "}";
       }
 
@@ -384,7 +379,7 @@ private:
       unsigned numOperands = op->getNumOperands();
       for (unsigned i = 0; i < numOperands; i++) {
         auto operand = op->getOperand(i);
-        auto inPort = getOperandPortName(operand);
+        auto inPort = getValuePortName(operand);
         dataFlowEdges.push_back({operand, inPort, node, inPort});
       }
     }
