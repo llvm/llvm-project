@@ -1211,6 +1211,13 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
         }
       }
     }
+    // Similarly, we cannot tail call with byval arguments.
+    for (unsigned I = 0; I < CLI.Outs.size(); ++I) {
+      const ISD::OutputArg &Out = CLI.Outs[I];
+      if (Out.Flags.isByVal() && Out.Flags.getByValSize() != 0)
+        NoTail(
+            "WebAssembly does not support tail calling with stack arguments");
+    }
   }
 
   SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
