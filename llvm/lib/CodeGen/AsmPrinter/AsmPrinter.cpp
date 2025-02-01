@@ -4661,3 +4661,109 @@ AsmPrinter::getCodeViewJumpTableInfo(int JTI, const MachineInstr *BranchInstr,
   return std::make_tuple(Base, 0, BranchLabel,
                          codeview::JumpTableEntrySize::Int32);
 }
+
+void AsmPrinter::emitCOFFReplaceableFunctionData(Module &M) {
+  const Triple &TT = TM.getTargetTriple();
+  assert(TT.isOSBinFormatCOFF());
+
+  bool IsTargetArm64EC = TT.isWindowsArm64EC();
+  SmallVector<char> Buf;
+  SmallVector<MCSymbol *> FuncOverrideDefaultSymbols;
+  bool SwitchedToDirectiveSection = false;
+  for (const Function &F : M.functions()) {
+    if (F.hasFnAttribute("loader-replaceable")) {
+      if (!SwitchedToDirectiveSection) {
+        OutStreamer->switchSection(
+            OutContext.getObjectFileInfo()->getDrectveSection());
+        SwitchedToDirectiveSection = true;
+      }
+
+      StringRef Name = F.getName();
+
+      // For hybrid-patchable targets, strip the prefix so that we can mark
+      // the real function as replaceable.
+      if (IsTargetArm64EC && Name.ends_with(HybridPatchableTargetSuffix)) {
+        Name = Name.substr(0, Name.size() - HybridPatchableTargetSuffix.size());
+      }
+
+      MCSymbol *FuncOverrideSymbol =
+          MMI->getContext().getOrCreateSymbol(Name + "_$fo$");
+      OutStreamer->beginCOFFSymbolDef(FuncOverrideSymbol);
+      OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_EXTERNAL);
+      OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
+      OutStreamer->endCOFFSymbolDef();
+
+      MCSymbol *FuncOverrideDefaultSymbol =
+          MMI->getContext().getOrCreateSymbol(Name + "_$fo_default$");
+      OutStreamer->beginCOFFSymbolDef(FuncOverrideDefaultSymbol);
+      OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_EXTERNAL);
+      OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
+      OutStreamer->endCOFFSymbolDef();
+      FuncOverrideDefaultSymbols.push_back(FuncOverrideDefaultSymbol);
+
+      OutStreamer->emitBytes((Twine(" /ALTERNATENAME:") +
+                              FuncOverrideSymbol->getName() + "=" +
+                              FuncOverrideDefaultSymbol->getName())
+                                 .toStringRef(Buf));
+      Buf.clear();
+    }
+  }
+
+  if (SwitchedToDirectiveSection)
+    OutStreamer->popSection();
+
+  if (FuncOverrideDefaultSymbols.empty())
+    return;
+
+  // MSVC emits the symbols for the default variables pointing at the start of
+  // the .data section, but doesn't actually allocate any space for them. LLVM
+  // can't do this, so have all of the variables pointing at a single byte
+  // instead.
+  OutStreamer->switchSection(OutContext.getObjectFileInfo()->getDataSection());
+  for (MCSymbol *Symbol : FuncOverrideDefaultSymbols) {
+    OutStreamer->emitLabel(Symbol);
+  }
+  OutStreamer->emitZeros(1);
+  OutStreamer->popSection();
+}
+
+void AsmPrinter::emitCOFFFeatureSymbol(Module &M) {
+  const Triple &TT = TM.getTargetTriple();
+  assert(TT.isOSBinFormatCOFF());
+
+  // Emit an absolute @feat.00 symbol.
+  MCSymbol *S = MMI->getContext().getOrCreateSymbol(StringRef("@feat.00"));
+  OutStreamer->beginCOFFSymbolDef(S);
+  OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_STATIC);
+  OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
+  OutStreamer->endCOFFSymbolDef();
+  int64_t Feat00Value = 0;
+
+  if (TT.getArch() == Triple::x86) {
+    // According to the PE-COFF spec, the LSB of this value marks the object
+    // for "registered SEH".  This means that all SEH handler entry points
+    // must be registered in .sxdata.  Use of any unregistered handlers will
+    // cause the process to terminate immediately.  LLVM does not know how to
+    // register any SEH handlers, so its object files should be safe.
+    Feat00Value |= COFF::Feat00Flags::SafeSEH;
+  }
+
+  if (M.getModuleFlag("cfguard")) {
+    // Object is CFG-aware.
+    Feat00Value |= COFF::Feat00Flags::GuardCF;
+  }
+
+  if (M.getModuleFlag("ehcontguard")) {
+    // Object also has EHCont.
+    Feat00Value |= COFF::Feat00Flags::GuardEHCont;
+  }
+
+  if (M.getModuleFlag("ms-kernel")) {
+    // Object is compiled with /kernel.
+    Feat00Value |= COFF::Feat00Flags::Kernel;
+  }
+
+  OutStreamer->emitSymbolAttribute(S, MCSA_Global);
+  OutStreamer->emitAssignment(
+      S, MCConstantExpr::create(Feat00Value, MMI->getContext()));
+}

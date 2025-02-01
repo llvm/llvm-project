@@ -2574,6 +2574,10 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     GetCPUAndFeaturesAttributes(CalleeInfo.getCalleeDecl(), FuncAttrs);
   }
 
+  // Mark functions that are replaceable by the loader.
+  if (CodeGenOpts.isLoaderReplaceableFunctionName(Name))
+    FuncAttrs.addAttribute("loader-replaceable");
+
   // Collect attributes from arguments and return values.
   ClangToLLVMArgMapping IRFunctionArgs(getContext(), FI);
 
