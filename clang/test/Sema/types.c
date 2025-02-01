@@ -9,20 +9,20 @@ typedef int (*T)[2];
 restrict T x;
 
 typedef int *S[2];
-restrict S y; // expected-error {{restrict requires a pointer or reference ('S' (aka 'int *[2]') is invalid)}}
-
-
+restrict S y;
 
 // int128_t is available.
 int a(void) {
   __int128_t s;
   __uint128_t t;
-}
+} // expected-warning {{non-void function does not return a value}}
+
 // but not a keyword
 int b(void) {
   int __int128_t;
   int __uint128_t;
-}
+} // expected-warning {{non-void function does not return a value}}
+
 // __int128 is a keyword
 int c(void) {
   __int128 i;

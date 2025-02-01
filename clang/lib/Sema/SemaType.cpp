@@ -1596,12 +1596,16 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
     QualType ProblemTy;
 
     if (T->isAnyPointerType() || T->isReferenceType() ||
-        T->isMemberPointerType()) {
+        T->isMemberPointerType() || T->isArrayType()) {
       QualType EltTy;
+      ProblemTy = Context.getBaseElementType(T);
+
       if (T->isObjCObjectPointerType())
         EltTy = T;
       else if (const MemberPointerType *PTy = T->getAs<MemberPointerType>())
         EltTy = PTy->getPointeeType();
+      else if (T->isArrayType())
+        EltTy = BuildQualifiedType(ProblemTy, Loc, Qs);
       else
         EltTy = T->getPointeeType();
 
