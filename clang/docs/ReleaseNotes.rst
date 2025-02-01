@@ -219,6 +219,10 @@ Code Completion
 Static Analyzer
 ---------------
 
+- Clang currently support extending lifetime of object bound to 
+  reference members of aggregates in CFG and ExprEngine, that are
+  created from default member initializer.
+
 New features
 ^^^^^^^^^^^^
 
