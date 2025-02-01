@@ -2824,7 +2824,7 @@ static Value *getLoopVariantGEPOperand(Value *Ptr, ScalarEvolution *SE,
   auto *It = find_if(GEP->operands(), [&](const Use &U) {
     return !SE->isLoopInvariant(SE->getSCEV(U), Lp);
   });
-  return It == GEP->op_end() ? Ptr : It->get();
+  return It->get();
 }
 
 /// Get the stride of a pointer access in a loop. Looks for symbolic
