@@ -10,12 +10,14 @@ class TestSwiftVariadicGenerics(TestBase):
     def test(self):
         self.build()
 
-        target,  process, _, _ = lldbutil.run_to_source_breakpoint(
+        target,  process, thread, _ = lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec('main.swift'))
-        self.expect('log enable lldb types')
-        self.expect("frame variable v",
+        self.expect("frame variable ints",
                     substrs=["a.Vector<4, Int>", "storage",
-                             "0", "0",
-                             "1", "1",
-                             "2", "2",
-                             "3", "3"])
+                             "0", "1", "2", "3"])
+        self.expect("frame variable bools",
+                    substrs=["a.Vector<2, Bool>", "storage",
+                             "false", "true"])
+        self.expect("frame variable structs",
+                    substrs=["a.Vector<2, S>", "storage",
+                             "i", "1", "j", "2", "i", "3", "j", "4"])

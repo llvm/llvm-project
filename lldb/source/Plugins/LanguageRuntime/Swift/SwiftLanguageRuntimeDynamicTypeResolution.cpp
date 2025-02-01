@@ -833,6 +833,22 @@ SwiftLanguageRuntime::GetNumChildren(CompilerType type,
                                    type.GetMangledTypeName().GetString());
   }
 
+  if (auto *ati = llvm::dyn_cast<swift::reflection::ArrayTypeInfo>(ti)) {
+    LLDB_LOG(GetLog(LLDBLog::Types), "{0}: ArrayTypeInfo()",
+             type.GetMangledTypeName().GetCString());
+    auto *el_ti = ati->getElementTypeInfo();
+    if (!el_ti)
+      return llvm::createStringError("Array without element type info: " +
+                                     type.GetMangledTypeName().GetString());
+    // We could also get the value out of the mangled type name, but
+    // this is cheaper.
+    unsigned stride = el_ti->getStride();
+    if (!stride)
+      return llvm::createStringError("Array without element stride: " +
+                                     type.GetMangledTypeName().GetString());
+    return ati->getSize() / stride;
+  }
+
   LogUnimplementedTypeKind(__FUNCTION__, type);
   return llvm::createStringError("GetNumChildren unimplemented for type " +
                                  type.GetMangledTypeName().GetString());
@@ -1450,6 +1466,40 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
     return llvm::createStringError(llvm::Twine("index") + llvm::Twine(idx) +
                                    "is out of bounds (" + llvm::Twine(i - 1) +
                                    ")");
+  }
+  // Fixed array.
+  if (auto *ati = llvm::dyn_cast<swift::reflection::ArrayTypeInfo>(ti)) {
+    LLDB_LOG(GetLog(LLDBLog::Types), "{0}: ArrayTypeInfo()",
+             type.GetMangledTypeName().GetCString());
+    auto *el_ti = ati->getElementTypeInfo();
+    if (!el_ti)
+      return llvm::createStringError("array without element type info: " +
+                                     type.GetMangledTypeName().GetString());
+    child_name.clear();
+    llvm::raw_string_ostream(child_name) << idx;
+    child_byte_size = el_ti->getSize();
+    child_byte_offset = el_ti->getStride() * idx;
+    if (!ignore_array_bounds &&
+        (int64_t)child_byte_offset > (int64_t)ati->getSize())
+      return llvm::createStringError("array index out of bounds");
+
+    child_bitfield_bit_size = 0;
+    child_bitfield_bit_offset = 0;
+    child_is_base_class = false;
+    child_is_deref_of_parent = false;
+    language_flags = 0;
+
+    swift::Demangle::Demangler dem;
+    swift::Demangle::NodePointer global =
+        dem.demangleSymbol(type.GetMangledTypeName().GetStringRef());
+    using Kind = Node::Kind;
+    auto *dem_array_type = swift_demangle::ChildAtPath(
+        global, {Kind::TypeMangling, Kind::Type, Kind::BuiltinFixedArray});
+    if (!dem_array_type || dem_array_type->getNumChildren() != 2)
+      return llvm::createStringError("Expected fixed array, but found: " +
+                                     type.GetMangledTypeName().GetString());
+    return ts->RemangleAsType(dem, dem_array_type->getChild(1),
+                              ts->GetManglingFlavor());
   }
   if (llvm::dyn_cast_or_null<swift::reflection::BuiltinTypeInfo>(ti)) {
     // Clang enums have an artificial rawValue property. We could
