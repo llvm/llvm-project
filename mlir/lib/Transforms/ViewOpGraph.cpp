@@ -320,19 +320,19 @@ private:
         }
       }
 
-      if (printResultTypes && op->getNumResults() > 0) {
+      if (op->getNumResults() > 0) {
         os << "|{";
-        std::string buf;
-        llvm::raw_string_ostream ss(buf);
         interleave(
-            op->getResultTypes(), ss,
-            [&](Type type) {
-              ss << escapeLabelString(
-                  strFromOs([&](raw_ostream &os) { os << type; }));
+            op->getResults(), os,
+            [&](Value result) {
+              os << "<" << getOperandPortName(result) << "> ";
+              if (printResultTypes)
+                os << truncateString(escapeLabelString(strFromOs(
+                    [&](raw_ostream &os) { os << result.getType(); })));
             },
             "|");
         // TODO: how to truncate string without breaking the layout?
-        os << buf << "}";
+        os << "}";
       }
 
       os << "}";
@@ -385,7 +385,7 @@ private:
       for (unsigned i = 0; i < numOperands; i++) {
         auto operand = op->getOperand(i);
         auto inPort = getOperandPortName(operand);
-        dataFlowEdges.push_back({operand, "", node, inPort});
+        dataFlowEdges.push_back({operand, inPort, node, inPort});
       }
     }
 
