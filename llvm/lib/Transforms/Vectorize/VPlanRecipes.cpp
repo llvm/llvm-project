@@ -709,6 +709,20 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
 }
 
+InstructionCost VPInstruction::computeCost(ElementCount VF,
+                                           VPCostContext &Ctx) const {
+  switch (getOpcode()) {
+  case VPInstruction::AnyOf: {
+    auto *VecI1Ty = VectorType::get(Type::getInt1Ty(Ctx.LLVMCtx), VF);
+    return Ctx.TTI.getArithmeticReductionCost(Instruction::Or, VecI1Ty,
+                                              std::nullopt, Ctx.CostKind);
+  }
+  default:
+    // TODO: Fill out other opcodes!
+    return 0;
+  }
+}
+
 bool VPInstruction::isVectorToScalar() const {
   return getOpcode() == VPInstruction::ExtractFromEnd ||
          getOpcode() == VPInstruction::ExtractFirstActive ||
