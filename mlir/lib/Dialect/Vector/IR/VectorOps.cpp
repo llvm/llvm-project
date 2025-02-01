@@ -1986,6 +1986,42 @@ static Value foldScalarExtractFromFromElements(ExtractOp extractOp) {
   return fromElementsOp.getElements()[flatIndex];
 }
 
+// If the dynamic operands of `extractOp` or `insertOp` is result of
+// `constantOp`, then fold it.
+template <typename OpType, typename AdaptorType>
+static Value extractInsertFoldConstantOp(OpType op, AdaptorType adaptor,
+                                         SmallVectorImpl<Value> &operands) {
+  auto staticPosition = op.getStaticPosition().vec();
+  OperandRange dynamicPosition = op.getDynamicPosition();
+  ArrayRef<Attribute> dynamicPositionAttr = adaptor.getDynamicPosition();
+  // If the dynamic operands is empty, it is returned directly.
+  if (!dynamicPosition.size())
+    return {};
+  unsigned index = 0;
+
+  // `opChange` is a flag. If it is true, it means to update `op` in place.
+  bool opChange = false;
+  for (unsigned i = 0, e = staticPosition.size(); i < e; ++i) {
+    if (!ShapedType::isDynamic(staticPosition[i]))
+      continue;
+    Attribute positionAttr = dynamicPositionAttr[index];
+    Value position = dynamicPosition[index++];
+    if (auto attr = mlir::dyn_cast_if_present<IntegerAttr>(positionAttr)) {
+      staticPosition[i] = attr.getInt();
+      opChange = true;
+      continue;
+    }
+    operands.push_back(position);
+  }
+
+  if (opChange) {
+    op.setStaticPosition(staticPosition);
+    op.getOperation()->setOperands(operands);
+    return op.getResult();
+  }
+  return {};
+}
+
 /// Fold an insert or extract operation into an poison value when a poison index
 /// is found at any dimension of the static position.
 static ub::PoisonAttr
@@ -2021,6 +2057,9 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
   if (auto val = foldExtractStridedOpFromInsertChain(*this))
     return val;
   if (auto val = foldScalarExtractFromFromElements(*this))
+    return val;
+  SmallVector<Value> operands = {getVector()};
+  if (auto val = extractInsertFoldConstantOp(*this, adaptor, operands))
     return val;
   return OpFoldResult();
 }
@@ -3077,6 +3116,9 @@ OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
   // (type mismatch).
   if (getNumIndices() == 0 && getSourceType() == getType())
     return getSource();
+  SmallVector<Value> operands = {getSource(), getDest()};
+  if (auto val = extractInsertFoldConstantOp(*this, adaptor, operands))
+    return val;
   if (auto res = foldPoisonIndexInsertExtractOp(
           getContext(), adaptor.getStaticPosition(), kPoisonIndex))
     return res;
