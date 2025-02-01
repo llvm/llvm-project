@@ -1950,7 +1950,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     // to be explicitly evaluated.
     case Stmt::PredefinedExprClass:
     case Stmt::AddrLabelExprClass:
-    case Stmt::AttributedStmtClass:
     case Stmt::IntegerLiteralClass:
     case Stmt::FixedPointLiteralClass:
     case Stmt::CharacterLiteralClass:
@@ -1977,6 +1976,13 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       ExplodedNodeSet preVisit;
       getCheckerManager().runCheckersForPreStmt(preVisit, Pred, S, *this);
       getCheckerManager().runCheckersForPostStmt(Dst, preVisit, S, *this);
+      Bldr.addNodes(Dst);
+      break;
+    }
+
+    case Stmt::AttributedStmtClass: {
+      Bldr.takeNodes(Pred);
+      VisitAttributedStmt(cast<AttributedStmt>(S), Pred, Dst);
       Bldr.addNodes(Dst);
       break;
     }

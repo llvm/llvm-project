@@ -1,4 +1,7 @@
-// RUN: %clang_analyze_cc1 -std=c++11 -Wno-array-bounds -analyzer-checker=unix,core,security.ArrayBound -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -Wno-array-bounds -verify %s \
+// RUN:   -analyzer-checker=unix,core,security.ArrayBound,debug.ExprInspection
+
+void clang_analyzer_eval(bool);
 
 // Tests doing an out-of-bounds access after the end of an array using:
 // - constant integer index
@@ -180,3 +183,58 @@ int test_reference_that_might_be_after_the_end(int idx) {
   return ref;
 }
 
+// From: https://github.com/llvm/llvm-project/issues/100762
+extern int arrOf10[10];
+void using_builtin(int x) {
+  __builtin_assume(x > 101); // CallExpr
+  arrOf10[x] = 404; // expected-warning {{Out of bound access to memory}}
+}
+
+void using_assume_attr(int ax) {
+  [[assume(ax > 100)]]; // NullStmt with an "assume" attribute.
+  arrOf10[ax] = 405; // expected-warning {{Out of bound access to memory}}
+}
+
+void using_many_assume_attr(int yx) {
+  [[assume(yx > 104), assume(yx > 200), assume(yx < 300)]]; // NullStmt with an attribute
+  arrOf10[yx] = 406; // expected-warning{{Out of bound access to memory}}
+}
+
+
+int using_builtin_assume_has_no_sideeffects(int y) {
+  // We should not apply sideeffects of the argument of [[assume(...)]].
+  // "y" should not get incremented;
+  __builtin_assume(++y == 43); // expected-warning {{assumption is ignored because it contains (potential) side-effects}}
+  clang_analyzer_eval(y == 42); // expected-warning {{FALSE}}
+  return y;
+}
+
+
+
+int using_assume_attr_has_no_sideeffects(int y) {
+
+  // We should not apply sideeffects of the argument of [[assume(...)]].
+  // "y" should not get incremented;
+  [[assume(++y == 43)]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}}
+ 
+  clang_analyzer_eval(y == 42); // expected-warning {{TRUE}} expected-warning {{FALSE}} FIXME: This should be only TRUE.
+
+  clang_analyzer_eval(y == 43); // expected-warning {{FALSE}} expected-warning {{TRUE}} FIXME: This should be only FALSE.
+
+  return y;
+}
+
+
+int using_builtinassume_has_no_sideeffects(int u) {
+  // We should not apply sideeffects of the argument of __builtin_assume(...)
+  // "u" should not get incremented;
+  __builtin_assume(++u == 43); // expected-warning {{assumption is ignored because it contains (potential) side-effects}}
+ 
+  // FIXME: evaluate this to true
+  clang_analyzer_eval(u == 42); // expected-warning {{FALSE}}  current behavior 
+
+  // FIXME: evaluate this to false
+  clang_analyzer_eval(u == 43); // expected-warning {{TRUE}}  current behavior 
+
+  return u;
+}
