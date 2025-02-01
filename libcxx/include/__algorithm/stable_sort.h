@@ -253,8 +253,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void __stable_sort(
   if constexpr (__allowed_radix_sort) {
     if (__len <= __buff_size && __len >= static_cast<difference_type>(__radix_sort_min_bound<value_type>()) &&
         __len <= static_cast<difference_type>(__radix_sort_max_bound<value_type>())) {
-      for (auto* p = __buff; p < __buff + __buff_size; ++p) {
-        std::__construct_at(p, 0);
+      for (auto* __p = __buff; __p < __buff + __buff_size; ++__p) {
+        std::__construct_at(__p, 0);
       }
       __destruct_n __d(__buff_size);
       unique_ptr<value_type, __destruct_n&> __h2(__buff, __d);
