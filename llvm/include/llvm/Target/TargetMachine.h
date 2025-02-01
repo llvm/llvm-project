@@ -20,6 +20,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/PGOOptions.h"
 #include "llvm/Target/CGPassBuilderOption.h"
@@ -28,6 +29,8 @@
 #include <optional>
 #include <string>
 #include <utility>
+
+extern llvm::cl::opt<bool> NoKernelInfoEndLTO;
 
 namespace llvm {
 

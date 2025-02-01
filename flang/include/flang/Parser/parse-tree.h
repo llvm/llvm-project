@@ -3459,6 +3459,14 @@ WRAPPER_CLASS(PauseStmt, std::optional<StopCode>);
 struct OmpClause;
 struct OmpClauseList;
 
+struct OmpDirectiveSpecification {
+  TUPLE_CLASS_BOILERPLATE(OmpDirectiveSpecification);
+  std::tuple<llvm::omp::Directive,
+      std::optional<common::Indirection<OmpClauseList>>>
+      t;
+  CharBlock source;
+};
+
 // 2.1 Directives or clauses may accept a list or extended-list.
 //     A list item is a variable, array section or common block name (enclosed
 //     in slashes). An extended list item is a list item or a procedure Name.
@@ -3508,37 +3516,22 @@ struct OmpTraitScore {
 };
 
 // trait-property-extension ->
-//    trait-property-name (trait-property-value, ...)
-// trait-property-value ->
 //    trait-property-name |
-//    scalar-integer-expression |
-//    trait-property-extension
-//
-// The grammar in OpenMP 5.2+ spec is ambiguous, the above is a different
-// version (but equivalent) that doesn't have ambiguities.
-// The ambiguity is in
-//   trait-property:
-//      trait-property-name          <- (a)
-//      trait-property-clause
-//      trait-property-expression    <- (b)
-//      trait-property-extension     <- this conflicts with (a) and (b)
-//   trait-property-extension:
-//      trait-property-name          <- conflict with (a)
-//      identifier(trait-property-extension[, trait-property-extension[, ...]])
-//      constant integer expression  <- conflict with (b)
+//    scalar-expr |
+//    trait-property-name (trait-property-extension, ...)
 //
 struct OmpTraitPropertyExtension {
   CharBlock source;
-  TUPLE_CLASS_BOILERPLATE(OmpTraitPropertyExtension);
-  struct ExtensionValue {
+  UNION_CLASS_BOILERPLATE(OmpTraitPropertyExtension);
+  struct Complex { // name (prop-ext, prop-ext, ...)
     CharBlock source;
-    UNION_CLASS_BOILERPLATE(ExtensionValue);
-    std::variant<OmpTraitPropertyName, ScalarExpr,
-        common::Indirection<OmpTraitPropertyExtension>>
-        u;
+    TUPLE_CLASS_BOILERPLATE(Complex);
+    std::tuple<OmpTraitPropertyName,
+        std::list<common::Indirection<OmpTraitPropertyExtension>>>
+        t;
   };
-  using ExtensionList = std::list<ExtensionValue>;
-  std::tuple<OmpTraitPropertyName, ExtensionList> t;
+
+  std::variant<OmpTraitPropertyName, ScalarExpr, Complex> u;
 };
 
 // trait-property ->
@@ -3571,9 +3564,10 @@ struct OmpTraitProperty {
 //    UID |               T        // unique-string-id /impl-defined
 //    VENDOR |            I        // name-list (vendor-id /add-def-doc)
 //    EXTENSION |         I        // name-list (ext_name /impl-defined)
-//    ATOMIC_DEFAULT_MEM_ORDER I | // value of admo
+//    ATOMIC_DEFAULT_MEM_ORDER I | // clause-list (value of admo)
 //    REQUIRES |          I        // clause-list (from requires)
 //    CONDITION           U        // logical-expr
+//    <other name>        I        // treated as extension
 //
 // Trait-set-selectors:
 //    [D]evice, [T]arget_device, [C]onstruct, [I]mplementation, [U]ser.
@@ -3582,7 +3576,7 @@ struct OmpTraitSelectorName {
   UNION_CLASS_BOILERPLATE(OmpTraitSelectorName);
   ENUM_CLASS(Value, Arch, Atomic_Default_Mem_Order, Condition, Device_Num,
       Extension, Isa, Kind, Requires, Simd, Uid, Vendor)
-  std::variant<Value, llvm::omp::Directive> u;
+  std::variant<Value, llvm::omp::Directive, std::string> u;
 };
 
 // trait-selector ->
@@ -3976,14 +3970,21 @@ struct OmpBindClause {
 
 // Ref: [4.5:46-50], [5.0:74-78], [5.1:92-96], [5.2:109]
 //
+// When used as a data-sharing clause:
 // default-clause ->
 //    DEFAULT(data-sharing-attribute)               // since 4.5
 // data-sharing-attribute ->
 //    SHARED | NONE |                               // since 4.5
 //    PRIVATE | FIRSTPRIVATE                        // since 5.0
+//
+// When used in METADIRECTIVE:
+// default-clause ->
+//    DEFAULT(directive-specification)              // since 5.0, until 5.1
+// See also otherwise-clause.
 struct OmpDefaultClause {
   ENUM_CLASS(DataSharingAttribute, Private, Firstprivate, Shared, None)
-  WRAPPER_CLASS_BOILERPLATE(OmpDefaultClause, DataSharingAttribute);
+  UNION_CLASS_BOILERPLATE(OmpDefaultClause);
+  std::variant<DataSharingAttribute, OmpDirectiveSpecification> u;
 };
 
 // Ref: [4.5:103-107], [5.0:324-325], [5.1:357-358], [5.2:161-162]
@@ -4201,6 +4202,16 @@ struct OmpMapClause {
   std::tuple<MODIFIERS(), OmpObjectList, /*CommaSeparated=*/bool> t;
 };
 
+// Ref: [5.0:58-60], [5.1:63-68], [5.2:194-195]
+//
+// match-clause ->
+//    MATCH (context-selector-specification)        // since 5.0
+struct OmpMatchClause {
+  // The context-selector is an argument.
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpMatchClause, traits::OmpContextSelectorSpecification);
+};
+
 // Ref: [5.2:217-218]
 // message-clause ->
 //    MESSAGE("message-text")
@@ -4229,6 +4240,17 @@ struct OmpOrderClause {
   ENUM_CLASS(Ordering, Concurrent)
   MODIFIER_BOILERPLATE(OmpOrderModifier);
   std::tuple<MODIFIERS(), Ordering> t;
+};
+
+// Ref: [5.0:56-57], [5.1:60-62], [5.2:191]
+//
+// otherwise-clause ->
+//    DEFAULT ([directive-specification])           // since 5.0, until 5.1
+// otherwise-clause ->
+//    OTHERWISE ([directive-specification])]        // since 5.2
+struct OmpOtherwiseClause {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpOtherwiseClause, std::optional<OmpDirectiveSpecification>);
 };
 
 // Ref: [4.5:46-50], [5.0:74-78], [5.1:92-96], [5.2:229-230]
@@ -4316,6 +4338,17 @@ struct OmpUpdateClause {
   std::variant<OmpDependenceType, OmpTaskDependenceType> u;
 };
 
+// Ref: [5.0:56-57], [5.1:60-62], [5.2:190-191]
+//
+// when-clause ->
+//    WHEN (context-selector :
+//        [directive-specification])                // since 5.0
+struct OmpWhenClause {
+  TUPLE_CLASS_BOILERPLATE(OmpWhenClause);
+  MODIFIER_BOILERPLATE(OmpContextSelector);
+  std::tuple<MODIFIERS(), std::optional<OmpDirectiveSpecification>> t;
+};
+
 // OpenMP Clauses
 struct OmpClause {
   UNION_CLASS_BOILERPLATE(OmpClause);
@@ -4339,6 +4372,12 @@ struct OmpClauseList {
 };
 
 // --- Directives and constructs
+
+struct OmpMetadirectiveDirective {
+  TUPLE_CLASS_BOILERPLATE(OmpMetadirectiveDirective);
+  std::tuple<OmpClauseList> t;
+  CharBlock source;
+};
 
 // Ref: [5.1:89-90], [5.2:216]
 //
@@ -4738,7 +4777,7 @@ struct OpenMPStandaloneConstruct {
   CharBlock source;
   std::variant<OpenMPSimpleStandaloneConstruct, OpenMPFlushConstruct,
       OpenMPCancelConstruct, OpenMPCancellationPointConstruct,
-      OpenMPDepobjConstruct>
+      OpenMPDepobjConstruct, OmpMetadirectiveDirective>
       u;
 };
 

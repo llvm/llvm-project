@@ -27,8 +27,8 @@ const char *Action::getClassName(ActionClass AC) {
   case PrecompileJobClass: return "precompiler";
   case ExtractAPIJobClass:
     return "api-extractor";
-  case AnalyzeJobClass: return "analyzer";
-  case MigrateJobClass: return "migrator";
+  case AnalyzeJobClass:
+    return "analyzer";
   case CompileJobClass: return "compiler";
   case FortranFrontendJobClass:
     return "fortranfrontend";
@@ -397,11 +397,6 @@ void AnalyzeJobAction::anchor() {}
 
 AnalyzeJobAction::AnalyzeJobAction(Action *Input, types::ID OutputType)
     : JobAction(AnalyzeJobClass, Input, OutputType) {}
-
-void MigrateJobAction::anchor() {}
-
-MigrateJobAction::MigrateJobAction(Action *Input, types::ID OutputType)
-    : JobAction(MigrateJobClass, Input, OutputType) {}
 
 void CompileJobAction::anchor() {}
 
