@@ -5582,6 +5582,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_static))
     CmdArgs.push_back("-static-define");
 
+  Args.AddLastArg(CmdArgs, options::OPT_static_libclosure);
+
   if (Args.hasArg(options::OPT_municode))
     CmdArgs.push_back("-DUNICODE");
 
