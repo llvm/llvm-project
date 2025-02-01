@@ -218,6 +218,8 @@ OPTIONS
 .. option:: --offloading
 
   Display the content of the LLVM offloading section.
+  Support added for extracting Clang Fat Binaries, which will
+  respect the :option `--arch-name` option.
 
 .. option:: --prefix=<prefix>
 

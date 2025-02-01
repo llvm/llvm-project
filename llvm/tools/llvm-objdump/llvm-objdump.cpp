@@ -3339,7 +3339,7 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
   if (FaultMapSection)
     printFaultMaps(O);
   if (Offloading)
-    dumpOffloadBinary(*O);
+    dumpOffloadBinary(*O, ArchName);
 }
 
 static void dumpObject(const COFFImportFile *I, const Archive *A,
