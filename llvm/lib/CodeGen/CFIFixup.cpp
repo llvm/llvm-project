@@ -131,6 +131,9 @@ struct BlockFlags {
   bool StrongNoFrameOnEntry : 1;
   bool HasFrameOnEntry : 1;
   bool HasFrameOnExit : 1;
+  BlockFlags()
+      : Reachable(false), StrongNoFrameOnEntry(false), HasFrameOnEntry(false),
+        HasFrameOnExit(false) {}
 };
 
 // Most functions will have <= 32 basic blocks.
@@ -141,7 +144,7 @@ using BlockFlagsVector = SmallVector<BlockFlags, 32>;
 static BlockFlagsVector
 computeBlockInfo(const MachineFunction &MF,
                  const MachineBasicBlock *PrologueBlock) {
-  BlockFlagsVector BlockInfo(MF.getNumBlockIDs(), {false, false, false, false});
+  BlockFlagsVector BlockInfo(MF.getNumBlockIDs());
   BlockInfo[0].Reachable = true;
   BlockInfo[0].StrongNoFrameOnEntry = true;
 
