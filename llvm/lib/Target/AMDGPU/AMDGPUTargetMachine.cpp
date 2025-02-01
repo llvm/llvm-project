@@ -1374,7 +1374,11 @@ bool GCNPassConfig::addPreISel() {
   // control flow modifications.
   addPass(createAMDGPURewriteUndefForPHILegacyPass());
 
-  addPass(createLCSSAPass());
+  // SDAG requires LCSSA, GlobalISel does not. Disable LCSSA for -global-isel
+  // with -new-reg-bank-select and without any of the fallback options.
+  if (!getCGPassBuilderOption().EnableGlobalISelOption ||
+      !isGlobalISelAbortEnabled() || !NewRegBankSelect)
+    addPass(createLCSSAPass());
 
   if (TM->getOptLevel() > CodeGenOptLevel::Less)
     addPass(&AMDGPUPerfHintAnalysisLegacyID);
@@ -2072,7 +2076,9 @@ void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
   // control flow modifications.
   addPass(AMDGPURewriteUndefForPHIPass());
 
-  addPass(LCSSAPass());
+  if (!getCGPassBuilderOption().EnableGlobalISelOption ||
+      !isGlobalISelAbortEnabled() || !NewRegBankSelect)
+    addPass(LCSSAPass());
 
   if (TM.getOptLevel() > CodeGenOptLevel::Less)
     addPass(AMDGPUPerfHintAnalysisPass(TM));

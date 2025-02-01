@@ -312,6 +312,12 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
     }
 
     // Opcodes that also support S1.
+    if (Opc == G_FREEZE &&
+        MRI.getType(MI->getOperand(0).getReg()) != LLT::scalar(1)) {
+      RBLHelper.applyMappingTrivial(*MI);
+      continue;
+    }
+
     if ((Opc == AMDGPU::G_CONSTANT || Opc == AMDGPU::G_FCONSTANT ||
          Opc == AMDGPU::G_IMPLICIT_DEF)) {
       Register Dst = MI->getOperand(0).getReg();
