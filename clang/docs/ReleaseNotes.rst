@@ -210,6 +210,9 @@ AST Matchers
 clang-format
 ------------
 
+- Adds ``BinPackLongBracedLists`` option to override bin packing options in
+  long (20 item or more) braced list initializer lists.
+
 libclang
 --------
 

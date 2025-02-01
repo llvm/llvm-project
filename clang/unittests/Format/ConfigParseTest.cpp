@@ -168,6 +168,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(AllowShortLoopsOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortNamespacesOnASingleLine);
   CHECK_PARSE_BOOL(BinPackArguments);
+  CHECK_PARSE_BOOL(BinPackLongBracedLists);
   CHECK_PARSE_BOOL(BreakAdjacentStringLiterals);
   CHECK_PARSE_BOOL(BreakAfterJavaFieldAnnotations);
   CHECK_PARSE_BOOL(BreakBeforeTernaryOperators);
