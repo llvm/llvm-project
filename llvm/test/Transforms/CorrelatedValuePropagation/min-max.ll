@@ -355,3 +355,28 @@ define i8 @test_umax_nneg(i8 %a, i8 %b) {
   %ret = call i8 @llvm.umax.i8(i8 %nneg_a, i8 %nneg_b)
   ret i8 %ret
 }
+
+define i64 @test_at_use2(i32 %x) {
+; CHECK-LABEL: @test_at_use2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = icmp slt i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 -1)
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i32 [[SMAX]] to i64
+; CHECK-NEXT:    ret i64 [[EXT]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  %cond = icmp slt i32 %x, 0
+  %smax = call i32 @llvm.smax.i32(i32 %x, i32 -1)
+  br i1 %cond, label %if.end, label %if.then
+
+if.then:
+  %ext = zext nneg i32 %smax to i64
+  ret i64 %ext
+
+if.end:
+  ret i64 0
+}
