@@ -1012,9 +1012,9 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   else
     ArgM = ArgMD;
 
+  // Determine the output location.
+  const char *DepFile = nullptr;
   if (ArgM) {
-    // Determine the output location.
-    const char *DepFile;
     if (Arg *MF = Args.getLastArg(options::OPT_MF)) {
       DepFile = MF->getValue();
       C.addFailureResultFile(DepFile, &JA);
@@ -1026,8 +1026,41 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
       DepFile = getDependencyFileName(Args, Inputs);
       C.addFailureResultFile(DepFile, &JA);
     }
-    CmdArgs.push_back("-dependency-file");
-    CmdArgs.push_back(DepFile);
+
+    if (getToolChain().getTriple().isNVPTX() ||
+        getToolChain().getTriple().isAMDGCN()) {
+      //  When we set(CMAKE_DEPFILE_FLAGS_${lang} "-MD -MT <DEP_TARGET> -MF
+      //  <DEP_FILE>.host") in cmake during heterogeneous compilation,
+      // we really gererate *.d.host (for host) and *.d (for GPU target),
+      // the content of *.d  = *.d.host + builtin.bc (i.e. libdevice.10.bc or
+      // some
+      // files in --hip-device-lib)
+      // so when libdevice.10.bc or hip-device-lib is updated, the incremental
+      // build rule will be triggered.
+      if (DepFile) {
+        SmallString<128> NewDepFile(DepFile);
+        llvm::StringRef SubStr = ".host";
+        size_t Pos = NewDepFile.find(SubStr);
+        CmdArgs.push_back("-dependency-file");
+        // for tops target, trim .host in dep file
+        if (Pos != llvm::StringRef::npos) {
+          // erase substr
+          auto ndf = NewDepFile.substr(0, Pos);
+          CmdArgs.push_back(Args.MakeArgString(ndf));
+        } else {
+          // if not set dep file with .host extend, remain depfile not touched
+          CmdArgs.push_back(Args.MakeArgString(DepFile));
+        }
+      }
+    }
+    // Host side remain depfile not touched
+    else {
+      // for host compile, we generate orginal dep file
+      if (DepFile) {
+        CmdArgs.push_back("-dependency-file");
+        CmdArgs.push_back(DepFile);
+      }
+    }
 
     bool HasTarget = false;
     for (const Arg *A : Args.filtered(options::OPT_MT, options::OPT_MQ)) {
