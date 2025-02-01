@@ -124,6 +124,7 @@
 #include "llvm/CodeGen/PHIElimination.h"
 #include "llvm/CodeGen/PeepholeOptimizer.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/CodeGen/RegUsageInfoCollector.h"
 #include "llvm/CodeGen/RegUsageInfoPropagate.h"
