@@ -370,7 +370,7 @@ private:
     /// Strides could either be scaled (in bytes, taking the size of the
     /// underlying type into account), or unscaled (in indexing units; unscaled
     /// stride = scaled stride / size of underlying type). Here, strides are
-    /// unscaled.
+    /// scaled.
     uint64_t MaxStride;
     std::optional<uint64_t> CommonStride;
 
