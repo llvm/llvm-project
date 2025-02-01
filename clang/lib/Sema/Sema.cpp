@@ -1149,7 +1149,7 @@ void Sema::ActOnEndOfTranslationUnitFragment(TUFragmentKind Kind) {
 
   {
     llvm::TimeTraceScope TimeScope("PerformPendingInstantiations");
-    PerformPendingInstantiations();
+    PerformPendingInstantiations(/*LocalOnly=*/false);
   }
 
   emitDeferredDiags();
@@ -1171,6 +1171,7 @@ void Sema::ActOnEndOfTranslationUnitFragment(TUFragmentKind Kind) {
 void Sema::ActOnEndOfTranslationUnit() {
   assert(DelayedDiagnostics.getCurrentPool() == nullptr
          && "reached end of translation unit with a pool attached?");
+  AtEndOfTU = true;
 
   // If code completion is enabled, don't perform any end-of-translation-unit
   // work.
