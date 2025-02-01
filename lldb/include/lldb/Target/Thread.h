@@ -470,11 +470,19 @@ public:
 
   virtual void ClearStackFrames();
 
-  /// Derived classes implementing SetBackingThread should use this to provide
-  /// bidirectional access to the Backing-Backed relationship.
+  /// Sets the thread that is backed by this thread.
+  /// If backed_thread.GetBackedThread() is null, this method also calls
+  /// backed_thread.SetBackedThread(this).
+  /// If backed_thread.GetBackedThread() is non-null, asserts that it is equal
+  /// to `this`.
   void SetBackedThread(Thread &backed_thread) {
-    assert(backed_thread.GetBackingThread().get() == this);
     m_backed_thread = backed_thread.shared_from_this();
+
+    // Ensure the bidrectional relationship is preserved.
+    Thread *backing_thread = backed_thread.GetBackingThread().get();
+    assert(backing_thread == nullptr || backing_thread == this);
+    if (backing_thread == nullptr)
+      backed_thread.SetBackingThread(shared_from_this());
   }
 
   void ClearBackedThread() { m_backed_thread.reset(); }
