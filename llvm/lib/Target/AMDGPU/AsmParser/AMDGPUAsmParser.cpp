@@ -1777,7 +1777,7 @@ private:
   bool validateMIMGDim(const MCInst &Inst, const OperandVector &Operands);
   bool validateMIMGMSAA(const MCInst &Inst);
   bool validateOpSel(const MCInst &Inst);
-  bool validateNeg(const MCInst &Inst, int OpName);
+  bool validateNeg(const MCInst &Inst, AMDGPU::OpName OpName);
   bool validateDPP(const MCInst &Inst, const OperandVector &Operands);
   bool validateVccOperand(MCRegister Reg) const;
   bool validateVOPLiteral(const MCInst &Inst, const OperandVector &Operands);
@@ -3953,8 +3953,9 @@ bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst,
   const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
       AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
   int VAddr0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr0);
-  int RSrcOpName = (Desc.TSFlags & SIInstrFlags::MIMG) ? AMDGPU::OpName::srsrc
-                                                       : AMDGPU::OpName::rsrc;
+  AMDGPU::OpName RSrcOpName = (Desc.TSFlags & SIInstrFlags::MIMG)
+                                  ? AMDGPU::OpName::srsrc
+                                  : AMDGPU::OpName::rsrc;
   int SrsrcIdx = AMDGPU::getNamedOperandIdx(Opc, RSrcOpName);
   int DimIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::dim);
   int A16Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::a16);
@@ -4651,7 +4652,7 @@ bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
   return true;
 }
 
-bool AMDGPUAsmParser::validateNeg(const MCInst &Inst, int OpName) {
+bool AMDGPUAsmParser::validateNeg(const MCInst &Inst, AMDGPU::OpName OpName) {
   assert(OpName == AMDGPU::OpName::neg_lo || OpName == AMDGPU::OpName::neg_hi);
 
   const unsigned Opc = Inst.getOpcode();
@@ -4676,9 +4677,9 @@ bool AMDGPUAsmParser::validateNeg(const MCInst &Inst, int OpName) {
   // It is convenient that such instructions don't have src_modifiers operand
   // for src operands that don't allow neg because they also don't allow opsel.
 
-  int SrcMods[3] = {AMDGPU::OpName::src0_modifiers,
-                    AMDGPU::OpName::src1_modifiers,
-                    AMDGPU::OpName::src2_modifiers};
+  const AMDGPU::OpName SrcMods[3] = {AMDGPU::OpName::src0_modifiers,
+                                     AMDGPU::OpName::src1_modifiers,
+                                     AMDGPU::OpName::src2_modifiers};
 
   for (unsigned i = 0; i < 3; ++i) {
     if (!AMDGPU::hasNamedOperand(Opc, SrcMods[i])) {
@@ -4805,9 +4806,9 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
 }
 
 // Returns -1 if not a register, 0 if VGPR and 1 if AGPR.
-static int IsAGPROperand(const MCInst &Inst, uint16_t NameIdx,
+static int IsAGPROperand(const MCInst &Inst, AMDGPU::OpName Name,
                          const MCRegisterInfo *MRI) {
-  int OpIdx = AMDGPU::getNamedOperandIdx(Inst.getOpcode(), NameIdx);
+  int OpIdx = AMDGPU::getNamedOperandIdx(Inst.getOpcode(), Name);
   if (OpIdx < 0)
     return -1;
 
@@ -4828,12 +4829,13 @@ bool AMDGPUAsmParser::validateAGPRLdSt(const MCInst &Inst) const {
                   SIInstrFlags::DS)) == 0)
     return true;
 
-  uint16_t DataNameIdx = (TSFlags & SIInstrFlags::DS) ? AMDGPU::OpName::data0
-                                                      : AMDGPU::OpName::vdata;
+  AMDGPU::OpName DataName = (TSFlags & SIInstrFlags::DS)
+                                ? AMDGPU::OpName::data0
+                                : AMDGPU::OpName::vdata;
 
   const MCRegisterInfo *MRI = getMRI();
   int DstAreg = IsAGPROperand(Inst, AMDGPU::OpName::vdst, MRI);
-  int DataAreg = IsAGPROperand(Inst, DataNameIdx, MRI);
+  int DataAreg = IsAGPROperand(Inst, DataName, MRI);
 
   if ((TSFlags & SIInstrFlags::DS) && DataAreg >= 0) {
     int Data2Areg = IsAGPROperand(Inst, AMDGPU::OpName::data1, MRI);
@@ -8647,9 +8649,8 @@ static void cvtVOP3DstOpSelOnly(MCInst &Inst, const MCRegisterInfo &MRI) {
     return;
 
   int SrcNum;
-  const int Ops[] = { AMDGPU::OpName::src0,
-                      AMDGPU::OpName::src1,
-                      AMDGPU::OpName::src2 };
+  const AMDGPU::OpName Ops[] = {AMDGPU::OpName::src0, AMDGPU::OpName::src1,
+                                AMDGPU::OpName::src2};
   for (SrcNum = 0; SrcNum < 3 && AMDGPU::hasNamedOperand(Opc, Ops[SrcNum]);
        ++SrcNum)
     ;
@@ -8771,12 +8772,11 @@ void AMDGPUAsmParser::cvtVINTERP(MCInst &Inst, const OperandVector &Operands)
   if (OpSelIdx == -1)
     return;
 
-  const int Ops[] = { AMDGPU::OpName::src0,
-                      AMDGPU::OpName::src1,
-                      AMDGPU::OpName::src2 };
-  const int ModOps[] = { AMDGPU::OpName::src0_modifiers,
-                         AMDGPU::OpName::src1_modifiers,
-                         AMDGPU::OpName::src2_modifiers };
+  const AMDGPU::OpName Ops[] = {AMDGPU::OpName::src0, AMDGPU::OpName::src1,
+                                AMDGPU::OpName::src2};
+  const AMDGPU::OpName ModOps[] = {AMDGPU::OpName::src0_modifiers,
+                                   AMDGPU::OpName::src1_modifiers,
+                                   AMDGPU::OpName::src2_modifiers};
 
   unsigned OpSel = Inst.getOperand(OpSelIdx).getImm();
 
@@ -8912,12 +8912,11 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
   if (NegHiIdx != -1)
     addOptionalImmOperand(Inst, Operands, OptIdx, AMDGPUOperand::ImmTyNegHi);
 
-  const int Ops[] = { AMDGPU::OpName::src0,
-                      AMDGPU::OpName::src1,
-                      AMDGPU::OpName::src2 };
-  const int ModOps[] = { AMDGPU::OpName::src0_modifiers,
-                         AMDGPU::OpName::src1_modifiers,
-                         AMDGPU::OpName::src2_modifiers };
+  const AMDGPU::OpName Ops[] = {AMDGPU::OpName::src0, AMDGPU::OpName::src1,
+                                AMDGPU::OpName::src2};
+  const AMDGPU::OpName ModOps[] = {AMDGPU::OpName::src0_modifiers,
+                                   AMDGPU::OpName::src1_modifiers,
+                                   AMDGPU::OpName::src2_modifiers};
 
   unsigned OpSel = 0;
   unsigned OpSelHi = 0;
@@ -8980,7 +8979,8 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands) {
 }
 
 static void addSrcModifiersAndSrc(MCInst &Inst, const OperandVector &Operands,
-                                  unsigned i, unsigned Opc, unsigned OpName) {
+                                  unsigned i, unsigned Opc,
+                                  AMDGPU::OpName OpName) {
   if (AMDGPU::getNamedOperandIdx(Opc, OpName) != -1)
     ((AMDGPUOperand &)*Operands[i]).addRegOrImmWithFPInputModsOperands(Inst, 2);
   else

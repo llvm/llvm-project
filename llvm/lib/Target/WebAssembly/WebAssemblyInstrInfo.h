@@ -29,8 +29,7 @@ namespace llvm {
 
 namespace WebAssembly {
 
-int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIndex);
-
+int16_t getNamedOperandIdx(uint16_t Opcode, OpName Name);
 }
 
 class WebAssemblySubtarget;

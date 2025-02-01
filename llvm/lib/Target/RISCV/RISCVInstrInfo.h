@@ -331,7 +331,7 @@ isRVVSpillForZvlsseg(unsigned Opcode);
 bool isFaultFirstLoad(const MachineInstr &MI);
 
 // Implemented in RISCVGenInstrInfo.inc
-int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIndex);
+int16_t getNamedOperandIdx(uint16_t Opcode, RISCV::OpName Name);
 
 // Return true if both input instructions have equal rounding mode. If at least
 // one of the instructions does not have rounding mode, false will be returned.
