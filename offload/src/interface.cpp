@@ -43,7 +43,7 @@ using namespace llvm::omp::target::ompt;
 //
 // The return bool indicates if the offload is to the host device
 // There are three possible results:
-// - Return false if the taregt device is ready for offload
+// - Return false if the target device is ready for offload
 // - Return true without reporting a runtime error if offload is
 //   disabled, perhaps because the initial device was specified.
 // - Report a runtime error and return true.

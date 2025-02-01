@@ -1125,7 +1125,7 @@ public:
 
   /// Pack first-private arguments, replace place holder pointers in \p TgtArgs,
   /// and start the transfer.
-  int packAndTransfer(std::vector<void *> &TgtArgs) {
+  int packAndTransfer(SmallVector<void *> &TgtArgs) {
     if (!FirstPrivateArgInfo.empty()) {
       assert(FirstPrivateArgSize != 0 &&
              "FirstPrivateArgSize is 0 but FirstPrivateArgInfo is empty");
@@ -1197,8 +1197,8 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
                              int32_t ArgNum, void **ArgBases, void **Args,
                              int64_t *ArgSizes, int64_t *ArgTypes,
                              map_var_info_t *ArgNames, void **ArgMappers,
-                             std::vector<void *> &TgtArgs,
-                             std::vector<ptrdiff_t> &TgtOffsets,
+                             SmallVector<void *> &TgtArgs,
+                             SmallVector<ptrdiff_t> &TgtOffsets,
                              PrivateArgumentManagerTy &PrivateArgumentManager,
                              AsyncInfoTy &AsyncInfo) {
 
@@ -1403,9 +1403,9 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   // API, we need the begin address itself, i.e. &A[N], as the API operates on
   // begin addresses, not bases. That's why we pass args and offsets as two
   // separate entities so that each plugin can do what it needs. This behavior
-  // was introdued via https://reviews.llvm.org/D33028 and commit 1546d319244c.
-  std::vector<void *> TgtArgs;
-  std::vector<ptrdiff_t> TgtOffsets;
+  // was introduced via https://reviews.llvm.org/D33028 and commit 1546d319244c.
+  SmallVector<void *> TgtArgs;
+  SmallVector<ptrdiff_t> TgtOffsets;
 
   PrivateArgumentManagerTy PrivateArgumentManager(Device, AsyncInfo);
 
@@ -1425,7 +1425,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 
     // Clang might pass more values via the ArgPtrs to the runtime that we pass
     // on to the kernel.
-    // TOOD: Next time we adjust the KernelArgsTy we should introduce a new
+    // TODO: Next time we adjust the KernelArgsTy we should introduce a new
     // NumKernelArgs field.
     KernelArgs.NumArgs = TgtArgs.size();
   }

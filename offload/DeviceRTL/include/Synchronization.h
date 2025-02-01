@@ -22,7 +22,7 @@ namespace atomic {
 
 enum OrderingTy {
   relaxed = __ATOMIC_RELAXED,
-  aquire = __ATOMIC_ACQUIRE,
+  acquire = __ATOMIC_ACQUIRE,
   release = __ATOMIC_RELEASE,
   acq_rel = __ATOMIC_ACQ_REL,
   seq_cst = __ATOMIC_SEQ_CST,
