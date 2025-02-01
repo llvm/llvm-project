@@ -2183,6 +2183,11 @@ void TextNodeDumper::VisitEnumDecl(const EnumDecl *D) {
     OS << " __module_private__";
   if (D->isFixed())
     dumpType(D->getIntegerType());
+
+  if (const auto *Instance = D->getInstantiatedFromMemberEnum()) {
+    OS << " instantiated_from";
+    dumpPointer(Instance);
+  }
 }
 
 void TextNodeDumper::VisitRecordDecl(const RecordDecl *D) {
