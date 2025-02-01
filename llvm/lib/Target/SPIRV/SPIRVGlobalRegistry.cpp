@@ -1406,6 +1406,21 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeByOpcode(
   return SpirvTy;
 }
 
+SPIRVType *SPIRVGlobalRegistry::getOrCreateUnknownType(
+    const Type *Ty, MachineIRBuilder &MIRBuilder, unsigned Opcode,
+    const std::function<llvm::MachineInstrBuilder(llvm::MachineInstrBuilder)>
+        &buildInstr) {
+  Register ResVReg = DT.find(Ty, &MIRBuilder.getMF());
+  if (ResVReg.isValid())
+    return MIRBuilder.getMF().getRegInfo().getUniqueVRegDef(ResVReg);
+  ResVReg = createTypeVReg(MIRBuilder);
+  SPIRVType *SpirvTy = buildInstr(MIRBuilder.buildInstr(SPIRV::UNKNOWN_type)
+                                      .addDef(ResVReg)
+                                      .addImm(Opcode));
+  DT.add(Ty, &MIRBuilder.getMF(), ResVReg);
+  return SpirvTy;
+}
+
 const MachineInstr *
 SPIRVGlobalRegistry::checkSpecialInstr(const SPIRV::SpecialTypeDescriptor &TD,
                                        MachineIRBuilder &MIRBuilder) {
