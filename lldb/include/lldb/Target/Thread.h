@@ -472,7 +472,7 @@ public:
 
   /// Sets the thread that is backed by this thread.
   /// If backed_thread.GetBackedThread() is null, this method also calls
-  /// backed_thread.SetBackedThread(this).
+  /// backed_thread.SetBackingThread(this).
   /// If backed_thread.GetBackedThread() is non-null, asserts that it is equal
   /// to `this`.
   void SetBackedThread(Thread &backed_thread) {
