@@ -73,8 +73,8 @@ def MPI_CommRankOp : MPI_Op<"comm_rank", []> {
     I32 : $rank
   );
 
-  let assemblyFormat = "(`(` $comm ^ `)`)? attr-dict `:` (type($comm) ^ `->`)?"
-                       "type(results)";
+  let assemblyFormat = "(`(` $comm ^ `)`)? attr-dict (`:` type($comm) ^ `->`):"
+                       "(`:`)? type(results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -98,8 +98,8 @@ def MPI_CommSizeOp : MPI_Op<"comm_size", []> {
     I32 : $size
   );
 
-  let assemblyFormat = "(`(` $comm ^ `)`)? attr-dict `:` (type($comm) ^ `->`)?"
-                       "type(results)";
+  let assemblyFormat = "(`(` $comm ^ `)`)? attr-dict (`:` type($comm) ^ `->`):"
+                       "(`:`)? type(results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -122,11 +122,12 @@ def MPI_CommSplit : MPI_Op<"comm_split", []> {
   let arguments = (ins MPI_Comm : $comm, I32 : $color, I32 : $key);
 
   let results = (
-    outs MPI_Comm : $newcomm,
-    Optional<MPI_Retval> : $retval
+    outs Optional<MPI_Retval> : $retval,
+    MPI_Comm : $newcomm
   );
 
   let assemblyFormat = "`(` $comm `,` $color `,` $key `)` attr-dict `:` "
+                       "type($comm) `,` type($color) `,` type($key) `->` "
                        "type(results)";
 }
 
