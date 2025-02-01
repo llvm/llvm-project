@@ -1197,6 +1197,35 @@ public:
   }
 };
 
+static std::unique_ptr<int64_t[]> maskIgnorableMappings(int64_t DeviceId, int32_t ArgNum, int64_t *ArgTypes,
+                                                        int64_t *ArgSizes, map_var_info_t *ArgNames) {
+    std::unique_ptr<int64_t[]> ArgTypesOverride = std::make_unique<int64_t[]>(ArgNum);
+
+    for (int32_t I = 0; I < ArgNum; ++I) {
+        bool IsTargetParam = ArgTypes[I] & OMP_TGT_MAPTYPE_TARGET_PARAM;
+
+        bool IsMapTo = ArgTypes[I] & OMP_TGT_MAPTYPE_TO;
+        if (IsTargetParam || !IsMapTo) {
+            ArgTypesOverride[I] = ArgTypes[I];
+            continue;
+        }
+
+        bool IsMapFrom = ArgTypes[I] & OMP_TGT_MAPTYPE_FROM;
+        const char *Type = IsMapFrom ? "tofrom" : "to";
+
+        // Optimisation: A 'to' or 'tofrom' mapping is not
+        // used by the kernel. Change its type such that
+        // no new mapping is created, but any existing
+        // mapping has its counter decremented.
+        INFO(OMP_INFOTYPE_ALL, DeviceId, "%s(%s)[%" PRId64 "] %s\n", Type,
+             getNameFromMapping(ArgNames[I]).c_str(), ArgSizes[I], "is not used and will not be copied");
+
+        ArgTypesOverride[I] = ArgTypes[I] & ~(OMP_TGT_MAPTYPE_TO | OMP_TGT_MAPTYPE_FROM);
+    }
+
+    return ArgTypesOverride;
+}
+
 /// Process data before launching the kernel, including calling targetDataBegin
 /// to map and transfer data to target device, transferring (first-)private
 /// variables.
@@ -1417,11 +1446,16 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 
   int NumClangLaunchArgs = KernelArgs.NumArgs;
   int Ret = OFFLOAD_SUCCESS;
+
+    std::unique_ptr<int64_t[]> ArgTypesOverride =
+            maskIgnorableMappings(DeviceId, NumClangLaunchArgs, KernelArgs.ArgTypes,
+                                  KernelArgs.ArgSizes, KernelArgs.ArgNames);
+
   if (NumClangLaunchArgs) {
     // Process data, such as data mapping, before launching the kernel
     Ret = processDataBefore(Loc, DeviceId, HostPtr, NumClangLaunchArgs,
                             KernelArgs.ArgBasePtrs, KernelArgs.ArgPtrs,
-                            KernelArgs.ArgSizes, KernelArgs.ArgTypes,
+                            KernelArgs.ArgSizes, ArgTypesOverride.get(),
                             KernelArgs.ArgNames, KernelArgs.ArgMappers, TgtArgs,
                             TgtOffsets, PrivateArgumentManager, AsyncInfo);
     if (Ret != OFFLOAD_SUCCESS) {
@@ -1473,7 +1507,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
     // variables
     Ret = processDataAfter(Loc, DeviceId, HostPtr, NumClangLaunchArgs,
                            KernelArgs.ArgBasePtrs, KernelArgs.ArgPtrs,
-                           KernelArgs.ArgSizes, KernelArgs.ArgTypes,
+                           KernelArgs.ArgSizes, ArgTypesOverride.get(),
                            KernelArgs.ArgNames, KernelArgs.ArgMappers,
                            PrivateArgumentManager, AsyncInfo);
     if (Ret != OFFLOAD_SUCCESS) {
