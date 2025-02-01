@@ -7,6 +7,8 @@
 ; RUN: llc %s -o - -verify-machineinstrs -mtriple=aarch64 -mcpu=cortex-x3 -global-isel=false -O1 | FileCheck %s --check-prefixes=CHECK,SDAG,SDAG-AVOIDLDAPUR
 ; RUN: llc %s -o - -verify-machineinstrs -mtriple=aarch64 -mcpu=cortex-x4 -global-isel=false -O1 | FileCheck %s --check-prefixes=CHECK,SDAG,SDAG-AVOIDLDAPUR
 ; RUN: llc %s -o - -verify-machineinstrs -mtriple=aarch64 -mcpu=cortex-x925 -global-isel=false -O1 | FileCheck %s --check-prefixes=CHECK,SDAG,SDAG-AVOIDLDAPUR
+; RUN: llc %s -o - -verify-machineinstrs -mtriple=aarch64 -mattr=+v9a -global-isel=false -O1 | FileCheck %s --check-prefixes=CHECK,SDAG,SDAG-AVOIDLDAPUR
+; RUN: llc %s -o - -verify-machineinstrs -mtriple=aarch64 -mattr=+v9.3a -global-isel=false -O1 | FileCheck %s --check-prefixes=CHECK,SDAG,SDAG-NOAVOIDLDAPUR
 
 define i8 @load_atomic_i8_aligned_unordered(ptr %ptr) {
 ; CHECK-LABEL: load_atomic_i8_aligned_unordered:
