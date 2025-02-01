@@ -1,0 +1,36 @@
+## Show that llvm-objcopy report that section file path is not exists.
+
+# RUN: yaml2obj %s -o %t
+
+# RUN: not llvm-objcopy --dump-section .text=not_exists/text-section %t 2>&1 \
+# RUN:   | FileCheck %s -DINPUT=%t --check-prefix=NO-SUCH-PATH
+# NO-SUCH-PATH: error: 'not_exists/text-section': No such file or directory
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000001000
+    Content:         "DEADBEEF"
+  - Name:            .foo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE ]
+    Content:         "CAFE"
+  - Name:            .empty
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+  - Name:            .bar
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE ]
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    FirstSec: .text
+    LastSec:  .text
+
