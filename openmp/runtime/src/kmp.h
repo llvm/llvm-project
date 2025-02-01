@@ -2431,6 +2431,7 @@ typedef enum kmp_tasking_mode {
 
 extern kmp_tasking_mode_t
     __kmp_tasking_mode; /* determines how/when to execute tasks */
+extern int __kmp_task_stealing;
 extern int __kmp_task_stealing_constraint;
 extern int __kmp_enable_task_throttling;
 extern kmp_int32 __kmp_default_device; // Set via OMP_DEFAULT_DEVICE if
