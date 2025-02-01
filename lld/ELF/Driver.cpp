@@ -1259,6 +1259,55 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ctx.arg.bsymbolic = BsymbolicKind::All;
   }
   ctx.arg.callGraphProfileSort = getCGProfileSortKind(ctx, args);
+  ctx.arg.irpgoProfilePath = args.getLastArgValue(OPT_irpgo_profile);
+  ctx.arg.bpCompressionSortStartupFunctions =
+      args.hasFlag(OPT_bp_compression_sort_startup_functions,
+                   OPT_no_bp_compression_sort_startup_functions, false);
+  if (auto *arg = args.getLastArg(OPT_bp_startup_sort)) {
+    StringRef startupSortStr = arg->getValue();
+    if (startupSortStr == "function") {
+      ctx.arg.bpStartupFunctionSort = true;
+    } else if (startupSortStr != "none") {
+      ErrAlways(ctx) << "unknown value '" + startupSortStr + "' for " +
+                            arg->getSpelling();
+    }
+    if (startupSortStr != "none")
+      if (args.hasArg(OPT_call_graph_ordering_file))
+        ErrAlways(ctx) << "--bp-startup-sort=function is incompatible with "
+                          "--call-graph-ordering-file";
+  }
+  if (ctx.arg.irpgoProfilePath.empty()) {
+    if (ctx.arg.bpStartupFunctionSort)
+      ErrAlways(ctx) << "--bp-startup-sort=function must be used with "
+                        "--irpgo-profile";
+    if (ctx.arg.bpCompressionSortStartupFunctions)
+      ErrAlways(ctx)
+          << "--bp-compression-sort-startup-functions must be used with "
+             "--irpgo-profile";
+  }
+
+  if (auto *arg = args.getLastArg(OPT_bp_compression_sort)) {
+    StringRef compressionSortStr = arg->getValue();
+    if (compressionSortStr == "function") {
+      ctx.arg.bpFunctionOrderForCompression = true;
+    } else if (compressionSortStr == "data") {
+      ctx.arg.bpDataOrderForCompression = true;
+    } else if (compressionSortStr == "both") {
+      ctx.arg.bpFunctionOrderForCompression = true;
+      ctx.arg.bpDataOrderForCompression = true;
+    } else if (compressionSortStr != "none") {
+      ErrAlways(ctx) << "unknown value '" + compressionSortStr + "' for " +
+                            arg->getSpelling();
+    }
+    if (ctx.arg.bpDataOrderForCompression ||
+        ctx.arg.bpFunctionOrderForCompression) {
+      if (args.getLastArg(OPT_call_graph_ordering_file) != nullptr) {
+        ErrAlways(ctx) << "--bp-compression-sort is incompatible with "
+                          "--call-graph-ordering-file";
+      }
+    }
+  }
+  ctx.arg.bpVerboseSectionOrderer = args.hasArg(OPT_verbose_bp_section_orderer);
   ctx.arg.checkSections =
       args.hasFlag(OPT_check_sections, OPT_no_check_sections, true);
   ctx.arg.chroot = args.getLastArgValue(OPT_chroot);
