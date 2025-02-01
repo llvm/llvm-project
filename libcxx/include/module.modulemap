@@ -1263,6 +1263,17 @@ module std [system] {
     export *
   }
 
+  module flat_set {
+    module flat_set                       {
+      header "__flat_set/flat_set.h"
+      export std.vector.vector
+      export std.vector.fwd
+    }
+
+    header "flat_set"
+    export *
+  }
+
   module format {
     module buffer                             {
       header "__format/buffer.h"
