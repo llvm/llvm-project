@@ -178,6 +178,7 @@ add_entrypoint_object(
     .time_constants
     libc.include.time
     libc.src.errno.errno
+    libc.src.stdio.fopen
     libc.hdr.types.time_t
     libc.hdr.types.struct_tm
 )
