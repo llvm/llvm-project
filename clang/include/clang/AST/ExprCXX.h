@@ -2234,6 +2234,101 @@ enum class CXXNewInitializationStyle {
   Braces
 };
 
+enum class TypeAwareAllocationMode : unsigned { No, Yes };
+inline bool isTypeAwareAllocation(TypeAwareAllocationMode Mode) {
+  return Mode == TypeAwareAllocationMode::Yes;
+}
+inline TypeAwareAllocationMode
+typeAwareAllocationModeFromBool(bool IsTypeAwareAllocation) {
+  return IsTypeAwareAllocation ? TypeAwareAllocationMode::Yes
+                               : TypeAwareAllocationMode::No;
+}
+
+enum class AlignedAllocationMode : unsigned { No, Yes };
+inline bool isAlignedAllocation(AlignedAllocationMode Mode) {
+  return Mode == AlignedAllocationMode::Yes;
+}
+inline AlignedAllocationMode alignedAllocationModeFromBool(bool IsAligned) {
+  return IsAligned ? AlignedAllocationMode::Yes : AlignedAllocationMode::No;
+}
+
+enum class SizedDeallocationMode : unsigned { No, Yes };
+inline bool isSizedDeallocation(SizedDeallocationMode Mode) {
+  return Mode == SizedDeallocationMode::Yes;
+}
+inline SizedDeallocationMode sizedDeallocationModeFromBool(bool IsSized) {
+  return IsSized ? SizedDeallocationMode::Yes : SizedDeallocationMode::No;
+}
+
+struct ImplicitAllocationParameters {
+  ImplicitAllocationParameters(QualType Type,
+                               TypeAwareAllocationMode PassTypeIdentity,
+                               AlignedAllocationMode PassAlignment)
+      : Type(Type.isNull() ? Type : Type.getUnqualifiedType()),
+        PassTypeIdentity(PassTypeIdentity), PassAlignment(PassAlignment) {
+    if (Type.isNull())
+      assert(!isTypeAwareAllocation(PassTypeIdentity));
+    assert(!Type.isNull());
+  }
+  explicit ImplicitAllocationParameters(AlignedAllocationMode PassAlignment)
+      : PassTypeIdentity(TypeAwareAllocationMode::No),
+        PassAlignment(PassAlignment) {}
+  QualType Type;
+  TypeAwareAllocationMode PassTypeIdentity;
+  AlignedAllocationMode PassAlignment;
+  unsigned getNumImplicitArgs() const {
+    unsigned Count = 1; // Size
+    if (isTypeAwareAllocation(PassTypeIdentity))
+      ++Count;
+    if (isAlignedAllocation(PassAlignment))
+      ++Count;
+    return Count;
+  }
+  bool isValid() const {
+    if (!isTypeAwareAllocation(PassTypeIdentity))
+      return true;
+    return !Type.isNull();
+  }
+};
+
+struct ImplicitDeallocationParameters {
+  ImplicitDeallocationParameters(QualType Type,
+                                 TypeAwareAllocationMode PassTypeIdentity,
+                                 AlignedAllocationMode PassAlignment,
+                                 SizedDeallocationMode PassSize)
+      : Type(Type.isNull() ? Type : Type.getUnqualifiedType()),
+        PassTypeIdentity(PassTypeIdentity), PassAlignment(PassAlignment),
+        PassSize(PassSize) {
+    if (Type.isNull())
+      assert(!isTypeAwareAllocation(PassTypeIdentity));
+    assert(!Type.isNull());
+  }
+
+  ImplicitDeallocationParameters(AlignedAllocationMode PassAlignment,
+                                 SizedDeallocationMode PassSize)
+      : PassTypeIdentity(TypeAwareAllocationMode::No),
+        PassAlignment(PassAlignment), PassSize(PassSize) {}
+  QualType Type;
+  TypeAwareAllocationMode PassTypeIdentity;
+  AlignedAllocationMode PassAlignment;
+  SizedDeallocationMode PassSize;
+  unsigned getNumImplicitArgs() const {
+    unsigned Count = 1; // Size
+    if (isTypeAwareAllocation(PassTypeIdentity))
+      ++Count;
+    if (isAlignedAllocation(PassAlignment))
+      ++Count;
+    if (isSizedDeallocation(PassSize))
+      ++Count;
+    return Count;
+  }
+  bool isValid() const {
+    if (!isTypeAwareAllocation(PassTypeIdentity))
+      return true;
+    return !Type.isNull();
+  }
+};
+
 /// Represents a new-expression for memory allocation and constructor
 /// calls, e.g: "new CXXNewExpr(foo)".
 class CXXNewExpr final
@@ -2289,7 +2384,8 @@ class CXXNewExpr final
 
   /// Build a c++ new expression.
   CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
-             FunctionDecl *OperatorDelete, bool ShouldPassAlignment,
+             FunctionDecl *OperatorDelete,
+             const ImplicitAllocationParameters &IAP,
              bool UsualArrayDeleteWantsSize, ArrayRef<Expr *> PlacementArgs,
              SourceRange TypeIdParens, std::optional<Expr *> ArraySize,
              CXXNewInitializationStyle InitializationStyle, Expr *Initializer,
@@ -2304,7 +2400,7 @@ public:
   /// Create a c++ new expression.
   static CXXNewExpr *
   Create(const ASTContext &Ctx, bool IsGlobalNew, FunctionDecl *OperatorNew,
-         FunctionDecl *OperatorDelete, bool ShouldPassAlignment,
+         FunctionDecl *OperatorDelete, const ImplicitAllocationParameters &IAP,
          bool UsualArrayDeleteWantsSize, ArrayRef<Expr *> PlacementArgs,
          SourceRange TypeIdParens, std::optional<Expr *> ArraySize,
          CXXNewInitializationStyle InitializationStyle, Expr *Initializer,
@@ -2393,6 +2489,10 @@ public:
     return const_cast<CXXNewExpr *>(this)->getPlacementArg(I);
   }
 
+  unsigned getNumImplicitArgs() const {
+    return implicitAllocationParameters().getNumImplicitArgs();
+  }
+
   bool isParenTypeId() const { return CXXNewExprBits.IsParenTypeId; }
   SourceRange getTypeIdParens() const {
     return isParenTypeId() ? getTrailingObjects<SourceRange>()[0]
@@ -2436,6 +2536,15 @@ public:
   /// parameter.
   bool doesUsualArrayDeleteWantSize() const {
     return CXXNewExprBits.UsualArrayDeleteWantsSize;
+  }
+
+  /// Provides the full set of information about expected implicit
+  /// parameters in this call
+  ImplicitAllocationParameters implicitAllocationParameters() const {
+    return ImplicitAllocationParameters{
+        getAllocatedType(),
+        typeAwareAllocationModeFromBool(CXXNewExprBits.ShouldPassTypeIdentity),
+        alignedAllocationModeFromBool(CXXNewExprBits.ShouldPassAlignment)};
   }
 
   using arg_iterator = ExprIterator;

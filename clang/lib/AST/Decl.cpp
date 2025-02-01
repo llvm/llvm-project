@@ -3370,6 +3370,8 @@ bool FunctionDecl::isReservedGlobalPlacementOperator() const {
   const auto *proto = getType()->castAs<FunctionProtoType>();
   if (proto->getNumParams() != 2 || proto->isVariadic())
     return false;
+  if (proto->getParamType(0)->isTypeIdentitySpecialization())
+    return false;
 
   const ASTContext &Context =
       cast<TranslationUnitDecl>(getDeclContext()->getRedeclContext())
@@ -3380,7 +3382,7 @@ bool FunctionDecl::isReservedGlobalPlacementOperator() const {
   return (proto->getParamType(1).getCanonicalType() == Context.VoidPtrTy);
 }
 
-bool FunctionDecl::isReplaceableGlobalAllocationFunction(
+bool FunctionDecl::isConstEvalSafeOrReplaceableGlobalAllocationFunction(
     std::optional<unsigned> *AlignmentParam, bool *IsNothrow) const {
   if (getDeclName().getNameKind() != DeclarationName::CXXOperatorName)
     return false;
@@ -3397,16 +3399,20 @@ bool FunctionDecl::isReplaceableGlobalAllocationFunction(
   if (!getDeclContext()->getRedeclContext()->isTranslationUnit())
     return false;
 
+  bool IsTypeAware = isTypeAwareOperatorNewOrDelete();
+  unsigned MaxParamCount = IsTypeAware + 4;
   const auto *FPT = getType()->castAs<FunctionProtoType>();
-  if (FPT->getNumParams() == 0 || FPT->getNumParams() > 4 || FPT->isVariadic())
+  if (FPT->getNumParams() == 0 || FPT->getNumParams() > MaxParamCount ||
+      FPT->isVariadic())
     return false;
 
+  unsigned MinimumParamCount = IsTypeAware + 1;
   // If this is a single-parameter function, it must be a replaceable global
   // allocation or deallocation function.
-  if (FPT->getNumParams() == 1)
+  if (FPT->getNumParams() == MinimumParamCount)
     return true;
 
-  unsigned Params = 1;
+  unsigned Params = MinimumParamCount;
   QualType Ty = FPT->getParamType(Params);
   const ASTContext &Ctx = getASTContext();
 
@@ -3493,13 +3499,38 @@ bool FunctionDecl::isDestroyingOperatorDelete() const {
   //   Within a class C, a single object deallocation function with signature
   //     (T, std::destroying_delete_t, <more params>)
   //   is a destroying operator delete.
-  if (!isa<CXXMethodDecl>(this) || getOverloadedOperator() != OO_Delete ||
-      getNumParams() < 2)
+  if (!isa<CXXMethodDecl>(this) || getOverloadedOperator() != OO_Delete)
     return false;
 
-  auto *RD = getParamDecl(1)->getType()->getAsCXXRecordDecl();
+  unsigned NumParams = getNumParams();
+  unsigned DestroyingDeleteTagParam = 1;
+  bool IsTypeAware = false;
+  if (NumParams > 0)
+    IsTypeAware = getParamDecl(0)->getType()->isTypeIdentitySpecialization();
+
+  if (IsTypeAware)
+    ++DestroyingDeleteTagParam;
+
+  if (getNumParams() <= DestroyingDeleteTagParam)
+    return false;
+
+  auto *RD =
+      getParamDecl(DestroyingDeleteTagParam)->getType()->getAsCXXRecordDecl();
   return RD && RD->isInStdNamespace() && RD->getIdentifier() &&
          RD->getIdentifier()->isStr("destroying_delete_t");
+}
+
+bool FunctionDecl::isTypeAwareOperatorNewOrDelete() const {
+  if (getDeclName().getNameKind() != DeclarationName::CXXOperatorName)
+    return false;
+  if (getDeclName().getCXXOverloadedOperator() != OO_New &&
+      getDeclName().getCXXOverloadedOperator() != OO_Delete &&
+      getDeclName().getCXXOverloadedOperator() != OO_Array_New &&
+      getDeclName().getCXXOverloadedOperator() != OO_Array_Delete)
+    return false;
+  if (getNumParams() < 2)
+    return false;
+  return getParamDecl(0)->getType()->isTypeIdentitySpecialization();
 }
 
 LanguageLinkage FunctionDecl::getLanguageLinkage() const {

@@ -3128,6 +3128,26 @@ bool Type::isStdByteType() const {
   return false;
 }
 
+static const TemplateDecl *getSpecializedTemplateType(const Type *T) {
+  const Type *DesugaredType = T->getUnqualifiedDesugaredType();
+  if (const auto *Specialization =
+          DesugaredType->getAs<TemplateSpecializationType>())
+    return Specialization->getTemplateName().getAsTemplateDecl();
+  if (const auto *Record = DesugaredType->getAsCXXRecordDecl()) {
+    if (const auto *CTS = dyn_cast<ClassTemplateSpecializationDecl>(Record))
+      return CTS->getSpecializedTemplate();
+  }
+  return nullptr;
+}
+
+bool Type::isTypeIdentitySpecialization() const {
+  const TemplateDecl *STDecl = getSpecializedTemplateType(this);
+  if (!STDecl)
+    return false;
+  IdentifierInfo *II = STDecl->getIdentifier();
+  return II && STDecl->isInStdNamespace() && II->isStr("type_identity");
+}
+
 bool Type::isSpecifierType() const {
   // Note that this intentionally does not use the canonical type.
   switch (getTypeClass()) {

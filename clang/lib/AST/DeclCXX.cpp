@@ -2521,19 +2521,41 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
       getOverloadedOperator() != OO_Array_Delete)
     return false;
 
+  unsigned NumParams = getNumParams();
+  bool IsTypeAware = isTypeAwareOperatorNewOrDelete();
+
   // C++ [basic.stc.dynamic.deallocation]p2:
+  //   Pre-type aware allocators:
   //   A template instance is never a usual deallocation function,
   //   regardless of its signature.
-  if (getPrimaryTemplate())
-    return false;
+  //   Pending final C++26 text:
+  //   A template instance is only a usual deallocation function if it
+  //   is a type aware deallocation function, and only the type-identity
+  //   parameter is dependent.
+  if (FunctionTemplateDecl *PrimaryTemplate = getPrimaryTemplate()) {
+    if (!IsTypeAware) {
+      // Stop early on if the specialization is not explicitly type aware
+      return false;
+    }
+
+    FunctionDecl *SpecializedDecl = PrimaryTemplate->getTemplatedDecl();
+    for (unsigned Idx = 1; Idx < NumParams; ++Idx) {
+      if (SpecializedDecl->getParamDecl(Idx)->getType()->isDependentType())
+        return false;
+    }
+  }
+
+  unsigned UsualParams = 1;
+  if (IsTypeAware)
+    ++UsualParams;
 
   // C++ [basic.stc.dynamic.deallocation]p2:
   //   If a class T has a member deallocation function named operator delete
-  //   with exactly one parameter, then that function is a usual (non-placement)
+  //   with exactly one parameter or a type aware operator delete with two
+  //   two arguments, then that function is a usual (non-placement)
   //   deallocation function. [...]
-  if (getNumParams() == 1)
+  if (getNumParams() == UsualParams)
     return true;
-  unsigned UsualParams = 1;
 
   // C++ P0722:
   //   A destroying operator delete is a usual deallocation function if

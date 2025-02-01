@@ -2521,6 +2521,18 @@ public:
   /// the `std::nothrow_t` tag, return true through IsNothrow,
   bool isReplaceableGlobalAllocationFunction(
       std::optional<unsigned> *AlignmentParam = nullptr,
+      bool *IsNothrow = nullptr) const {
+    if (isTypeAwareOperatorNewOrDelete())
+      return false;
+    return isConstEvalSafeOrReplaceableGlobalAllocationFunction(AlignmentParam,
+                                                                IsNothrow);
+  }
+
+  /// Determines whether this function is one of the replaceable global
+  /// allocation functions described in isReplaceableGlobalAllocationFunction,
+  /// or is a function that may be treated as such during constant evaluation
+  bool isConstEvalSafeOrReplaceableGlobalAllocationFunction(
+      std::optional<unsigned> *AlignmentParam = nullptr,
       bool *IsNothrow = nullptr) const;
 
   /// Determine if this function provides an inline implementation of a builtin.
@@ -2528,6 +2540,9 @@ public:
 
   /// Determine whether this is a destroying operator delete.
   bool isDestroyingOperatorDelete() const;
+
+  /// Determine whether this is a type aware operator new or delete.
+  bool isTypeAwareOperatorNewOrDelete() const;
 
   /// Compute the language linkage.
   LanguageLinkage getLanguageLinkage() const;
