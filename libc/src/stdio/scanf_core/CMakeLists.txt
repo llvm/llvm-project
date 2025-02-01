@@ -71,8 +71,7 @@ add_header_library(
     libc.src.__support.macros.attributes
     libc.hdr.types.FILE
     libc.src.__support.File.file
-  COMPILE_OPTIONS
-    ${use_system_file}
+  ${use_system_file}
 )
 endif()
 
@@ -129,7 +128,6 @@ elseif(TARGET libc.src.__support.File.file OR (NOT LLVM_LIBC_FULL_BUILD))
       libc.include.stdio
       libc.src.__support.File.file
       libc.src.__support.arg_list
-    COMPILE_OPTIONS
     ${use_system_file}
   )
 endif()

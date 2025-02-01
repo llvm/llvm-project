@@ -10,7 +10,11 @@
 #define LLVM_LIBC_SRC_STDIO_SCANF_CORE_READER_H
 
 #include "hdr/types/FILE.h"
+
+#ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
 #include "src/__support/File/file.h"
+#endif
+
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
 #include "src/__support/macros/config.h"
 
