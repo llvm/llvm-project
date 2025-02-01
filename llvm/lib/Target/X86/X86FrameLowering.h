@@ -134,12 +134,35 @@ public:
   processFunctionBeforeFrameIndicesReplaced(MachineFunction &MF,
                                             RegScavenger *RS) const override;
 
-  /// Check the instruction before/after the passed instruction. If
-  /// it is an ADD/SUB/LEA instruction it is deleted argument and the
-  /// stack adjustment is returned as a positive value for ADD/LEA and
-  /// a negative for SUB.
-  int mergeSPUpdates(MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI,
-                     bool doMergeWithPrevious) const;
+private:
+  /// Basic Pseudocode:
+  /// if (instruction before/after the passed instruction is ADD/SUB/LEA)
+  ///   Offset = instruction stack adjustment
+  ///            ... positive value for ADD/LEA and negative for SUB
+  ///   return CalcNewOffset(Offset)
+  /// else
+  ///   return CalcNewOffset(0)
+  ///
+  /// It's possible that the selected instruction is not immediately
+  /// before/after MBBI for large adjustments that have been split into multiple
+  /// instructions.
+  ///
+  /// CalcNewOffset should have the signature:
+  ///   int64_t CalcNewOffset(int64_t Offset)
+  template <typename T>
+  int64_t mergeSPUpdates(MachineBasicBlock &MBB,
+                         MachineBasicBlock::iterator &MBBI, T CalcNewOffset,
+                         bool doMergeWithPrevious) const;
+
+public:
+  /// Equivalent to:
+  ///   mergeSPUpdates(MBB, MBBI,
+  ///                  [AddOffset](int64_t Offset) {
+  ///                    return AddOffset + Offset;
+  ///                  },
+  ///                  doMergeWithPrevious);
+  int64_t mergeSPAdd(MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI,
+                     int64_t AddOffset, bool doMergeWithPrevious) const;
 
   /// Emit a series of instructions to increment / decrement the stack
   /// pointer by a constant value.
