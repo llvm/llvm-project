@@ -10,7 +10,7 @@ func.func private @dead_function() {
 
 // Function becomes dead after inlining.
 // CHECK-NOT: func private @dead_function_b
-func.func @dead_function_b() {
+func.func private @dead_function_b() {
   return
 }
 
@@ -41,6 +41,35 @@ func.func private @dead_function_d() {
 func.func @live_function_c() {
   call @dead_function_c() : () -> ()
   call @dead_function_d() : () -> ()
+  return
+}
+
+// A transitive example, but no one be called by live-function.
+
+// CHECK-NOT: func private @dead_function_e
+func.func private @dead_function_e() {
+  call @live_function_b() : () -> ()
+  return
+}
+
+// CHECK-NOT: func private @dead_function_f
+func.func private @dead_function_f() {
+  call @dead_function_e() : () -> ()
+  return
+}
+
+// A function constant is inlined after optimization
+
+// CHECK-NOT: func private @dead_function_h
+func.func private @dead_function_h() {
+  call @live_function_b() : () -> ()
+  return
+}
+
+// CHECK: func @live_function_f
+func.func @live_function_f() {
+  %0 = func.constant @dead_function_h : () -> ()
+  call_indirect %0() : () -> ()
   return
 }
 
