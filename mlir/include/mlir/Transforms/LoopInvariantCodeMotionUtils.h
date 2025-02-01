@@ -47,16 +47,19 @@ class Value;
 ///   }
 /// }
 /// ```
-///
-/// Users must supply three callbacks.
+/// Users must supply four callbacks.
 ///
 /// - `isDefinedOutsideRegion` returns true if the given value is invariant with
 ///   respect to the given region. A common implementation might be:
 ///   `value.getParentRegion()->isProperAncestor(region)`.
 /// - `shouldMoveOutOfRegion` returns true if the provided operation can be
-///   moved of the given region, e.g. if it is side-effect free.
-/// - `moveOutOfRegion` moves the operation out of the given region. A common
-///   implementation might be: `op->moveBefore(region->getParentOp())`.
+///   moved of the given region, e.g. if it is side-effect free or has only read
+///   side effects.
+/// - `moveOutOfRegionWithoutGuard` moves the operation out of the given region
+///   without a guard. A common implementation might be:
+///   `op->moveBefore(region->getParentOp())`.
+/// - `moveOutOfRegionWithGuard` moves the operation out of the given region
+///   with a guard.
 ///
 /// An operation is moved if all of its operands satisfy
 /// `isDefinedOutsideRegion` and it satisfies `shouldMoveOutOfRegion`.
@@ -66,7 +69,8 @@ size_t moveLoopInvariantCode(
     ArrayRef<Region *> regions,
     function_ref<bool(Value, Region *)> isDefinedOutsideRegion,
     function_ref<bool(Operation *, Region *)> shouldMoveOutOfRegion,
-    function_ref<void(Operation *, Region *)> moveOutOfRegion);
+    function_ref<void(Operation *)> moveOutOfRegionWithoutGuard,
+    function_ref<void(Operation *)> moveOutOfRegionWithGuard);
 
 /// Move side-effect free loop invariant code out of a loop-like op using
 /// methods provided by the interface.
