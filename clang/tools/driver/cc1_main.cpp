@@ -26,6 +26,7 @@
 #include "clang/Frontend/Utils.h"
 #include "clang/FrontendTool/Utils.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
+#include "clang/Tooling/ModuleBuildDaemon/Frontend.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/llvm-config.h"
@@ -278,6 +279,12 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   if (!Success) {
     Clang->getDiagnosticClient().finish();
     return 1;
+  }
+
+  // Handle module build daemon functionality if enabled
+  if (Clang->getFrontendOpts().ModuleBuildDaemon) {
+    clang::tooling::cc1modbuildd::spawnModuleBuildDaemonAndHandshake(
+        Clang->getInvocation(), Argv0, Clang->getDiagnostics());
   }
 
   // Execute the frontend actions.

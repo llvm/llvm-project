@@ -4022,6 +4022,19 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
   bool HaveStdCXXModules = IsCXX && HaveStd20;
   bool HaveModules = HaveStdCXXModules;
 
+  // -fmodule-build-daemon enables module build daemon functionality
+  if (Args.hasArg(options::OPT_fmodule_build_daemon))
+    Args.AddLastArg(CmdArgs, options::OPT_fmodule_build_daemon);
+
+  // by default module build daemon socket address and output files are saved
+  // under /tmp/ but that can be overridden by providing the
+  // -fmodule-build-daemon=<path> flag
+  if (Arg *A = Args.getLastArg(options::OPT_fmodule_build_daemon_EQ)) {
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-fmodule-build-daemon=") + A->getValue()));
+    CmdArgs.push_back("-fmodule-build-daemon");
+  }
+
   // -fmodules enables the use of precompiled modules (off by default).
   // Users can pass -fno-cxx-modules to turn off modules support for
   // C++/Objective-C++ programs.
