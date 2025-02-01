@@ -3585,9 +3585,11 @@ bool RISCVDAGToDAGISel::selectVSplatSimm5Plus1(SDValue N, SDValue &SplatVal) {
 bool RISCVDAGToDAGISel::selectVSplatSimm5Plus1NonZero(SDValue N,
                                                       SDValue &SplatVal) {
   return selectVSplatImmHelper(
-      N, SplatVal, *CurDAG, *Subtarget, [](int64_t Imm) {
+      N, SplatVal, *CurDAG, *Subtarget,
+      [](int64_t Imm) {
         return Imm != 0 && ((isInt<5>(Imm) && Imm != -16) || Imm == 16);
-      }, /*Decrement=*/true);
+      },
+      /*Decrement=*/true);
 }
 
 bool RISCVDAGToDAGISel::selectVSplatUimm(SDValue N, unsigned Bits,
