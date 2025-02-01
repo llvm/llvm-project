@@ -504,7 +504,7 @@ void CommandObjectExpression::IOHandlerInputComplete(IOHandler &io_handler,
   StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
 
   CommandReturnObject return_obj(
-      GetCommandInterpreter().GetDebugger().GetUseColor());
+      line, GetCommandInterpreter().GetDebugger().GetUseColor());
   EvaluateExpression(line.c_str(), *output_sp, *error_sp, return_obj);
 
   if (output_sp)

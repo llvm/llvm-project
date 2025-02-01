@@ -3933,7 +3933,7 @@ Target::StopHookCommandLine::HandleStop(ExecutionContext &exc_ctx,
   if (!m_commands.GetSize())
     return StopHookResult::KeepStopped;
 
-  CommandReturnObject result(false);
+  CommandReturnObject result("<stop hook>", false);
   result.SetImmediateOutputStream(output_sp);
   result.SetInteractive(false);
   Debugger &debugger = exc_ctx.GetTargetPtr()->GetDebugger();

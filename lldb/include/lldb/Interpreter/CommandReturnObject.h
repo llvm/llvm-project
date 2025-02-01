@@ -27,9 +27,13 @@ namespace lldb_private {
 
 class CommandReturnObject {
 public:
-  CommandReturnObject(bool colors);
+  CommandReturnObject(std::string command, bool colors);
 
   ~CommandReturnObject() = default;
+
+  const std::string &GetCommand() const { return m_command; }
+
+  void SetCommand(std::string command) { m_command = std::move(command); }
 
   /// Format any inline diagnostics with an indentation of \c indent.
   std::string GetInlineDiagnosticString(unsigned indent) const;
@@ -181,6 +185,8 @@ public:
 
 private:
   enum { eStreamStringIndex = 0, eImmediateStreamIndex = 1 };
+
+  std::string m_command;
 
   StreamTee m_out_stream;
   StreamTee m_err_stream;

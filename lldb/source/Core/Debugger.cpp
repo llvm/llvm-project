@@ -799,7 +799,7 @@ void Debugger::Destroy(DebuggerSP &debugger_sp) {
   CommandInterpreter &cmd_interpreter = debugger_sp->GetCommandInterpreter();
 
   if (cmd_interpreter.GetSaveSessionOnQuit()) {
-    CommandReturnObject result(debugger_sp->GetUseColor());
+    CommandReturnObject result("<save transcript>", debugger_sp->GetUseColor());
     cmd_interpreter.SaveTranscript(result);
     if (result.Succeeded())
       (*debugger_sp->GetAsyncOutputStream())

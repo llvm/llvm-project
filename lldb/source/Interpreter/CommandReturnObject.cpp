@@ -47,8 +47,9 @@ static void DumpStringToStreamWithNewline(Stream &strm, const std::string &s) {
     strm.EOL();
 }
 
-CommandReturnObject::CommandReturnObject(bool colors)
-    : m_out_stream(colors), m_err_stream(colors), m_colors(colors) {}
+CommandReturnObject::CommandReturnObject(std::string command, bool colors)
+    : m_command(std::move(command)), m_out_stream(colors), m_err_stream(colors),
+      m_colors(colors) {}
 
 void CommandReturnObject::AppendErrorWithFormat(const char *format, ...) {
   SetStatus(eReturnStatusFailed);

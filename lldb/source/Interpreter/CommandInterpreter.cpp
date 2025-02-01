@@ -1893,6 +1893,8 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   LLDB_LOGF(log, "Processing command: %s", command_line);
   LLDB_SCOPED_TIMERF("Processing command: %s.", command_line);
 
+  result.SetCommand(command_line);
+
   if (INTERRUPT_REQUESTED(GetDebugger(), "Interrupted initiating command")) {
     result.AppendError("... Interrupted");
     return false;
@@ -2616,7 +2618,7 @@ void CommandInterpreter::HandleCommands(
                                      m_debugger.GetPrompt().str().c_str(), cmd);
     }
 
-    CommandReturnObject tmp_result(m_debugger.GetUseColor());
+    CommandReturnObject tmp_result(cmd, m_debugger.GetUseColor());
     tmp_result.SetInteractive(result.GetInteractive());
     tmp_result.SetSuppressImmediateOutput(true);
 
@@ -2644,7 +2646,8 @@ void CommandInterpreter::HandleCommands(
                                       (uint64_t)idx, cmd, error_msg);
         m_debugger.SetAsyncExecution(old_async_execution);
         return;
-      } else if (options.GetPrintResults()) {
+      }
+      if (options.GetPrintResults()) {
         result.AppendMessageWithFormatv("Command #{0} '{1}' failed with {2}",
                                         (uint64_t)idx + 1, cmd, error_msg);
       }
@@ -3177,7 +3180,7 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
       RestoreExecutionContext();
   });
 
-  lldb_private::CommandReturnObject result(m_debugger.GetUseColor());
+  lldb_private::CommandReturnObject result(line, m_debugger.GetUseColor());
   HandleCommand(line.c_str(), eLazyBoolCalculate, result);
 
   // Now emit the command output text from the command we just executed

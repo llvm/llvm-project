@@ -616,7 +616,8 @@ bool BreakpointOptions::BreakpointOptionsCallbackFunction(
     Target *target = exe_ctx.GetTargetPtr();
     if (target) {
       Debugger &debugger = target->GetDebugger();
-      CommandReturnObject result(debugger.GetUseColor());
+      CommandReturnObject result("<breakpoint callback>",
+                                 debugger.GetUseColor());
 
       // Rig up the results secondary output stream to the debugger's, so the
       // output will come out synchronously if the debugger is set up that way.

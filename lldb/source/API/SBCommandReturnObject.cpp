@@ -23,7 +23,7 @@ using namespace lldb_private;
 
 class lldb_private::SBCommandReturnObjectImpl {
 public:
-  SBCommandReturnObjectImpl() : m_ptr(new CommandReturnObject(false)) {}
+  SBCommandReturnObjectImpl() : m_ptr(new CommandReturnObject("", false)) {}
   SBCommandReturnObjectImpl(CommandReturnObject &ref)
       : m_ptr(&ref), m_owned(false) {}
   SBCommandReturnObjectImpl(const SBCommandReturnObjectImpl &rhs)
@@ -82,6 +82,13 @@ SBCommandReturnObject::operator bool() const {
 
   // This method is not useful but it needs to stay to keep SB API stable.
   return true;
+}
+
+const char *SBCommandReturnObject::GetCommand() {
+  LLDB_INSTRUMENT_VA(this);
+
+  ConstString output(ref().GetCommand());
+  return output.AsCString(/*value_if_empty*/ "");
 }
 
 const char *SBCommandReturnObject::GetOutput() {

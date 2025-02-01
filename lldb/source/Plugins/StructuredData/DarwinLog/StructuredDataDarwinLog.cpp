@@ -1034,7 +1034,8 @@ bool RunEnableCommand(CommandInterpreter &interpreter) {
   }
 
   // Run the command.
-  CommandReturnObject return_object(interpreter.GetDebugger().GetUseColor());
+  CommandReturnObject return_object("<enable command>",
+                                    interpreter.GetDebugger().GetUseColor());
   interpreter.HandleCommand(command_stream.GetData(), eLazyBoolNo,
                             return_object);
   return return_object.Succeeded();
