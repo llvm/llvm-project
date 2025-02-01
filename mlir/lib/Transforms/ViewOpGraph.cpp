@@ -305,14 +305,16 @@ private:
         os << "}|";
       }
       // Print operation name and type.
-      os << op->getName();
+      os << op->getName() << "\\l";
 
       // Print attributes.
       if (printAttrs && !op->getAttrs().empty()) {
-        os << "\\n";
+        // Extra line break to separate attributes from the operation name.
+        os << "\\l";
         for (const NamedAttribute &attr : op->getAttrs()) {
-          os << "\\n" << attr.getName().getValue() << ": ";
+          os << attr.getName().getValue() << ": ";
           emitMlirAttr(os, attr.getValue());
+          os << "\\l";
         }
       }
 
