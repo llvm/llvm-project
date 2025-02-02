@@ -4033,7 +4033,7 @@ bool X86FastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
   }
 
   if (MI->isCall())
-    FuncInfo.MF->moveCallSiteInfo(MI, Result);
+    FuncInfo.MF->moveAdditionalCallInfo(MI, Result);
   Result->addMemOperand(*FuncInfo.MF, createMachineMemOperandFor(LI));
   Result->cloneInstrSymbols(*FuncInfo.MF, *MI);
   MachineBasicBlock::iterator I(MI);

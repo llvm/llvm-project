@@ -268,7 +268,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     // We aren't extracting any DebugInfoFlags now so we
     // emitting zero to use as <id>Flags argument for DebugBasicType
     const Register I32ZeroReg =
-        GR->buildConstantInt(0, MIRBuilder, I32Ty, false);
+        GR->buildConstantInt(0, MIRBuilder, I32Ty, false, false);
 
     // We need to store pairs because further instructions reference
     // the DIBasicTypes and size will be always small so there isn't

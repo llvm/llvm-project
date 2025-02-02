@@ -149,7 +149,7 @@ namespace {
       AU.setPreservesCFG();
       AU.addRequired<SlotIndexesWrapperPass>();
       AU.addPreserved<SlotIndexesWrapperPass>();
-      AU.addRequired<LiveStacks>();
+      AU.addRequired<LiveStacksWrapperLegacy>();
       AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
       AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
       AU.addPreservedID(MachineDominatorsID);
@@ -159,7 +159,7 @@ namespace {
       // may be invoked multiple times requiring it to save these analyses to be
       // used by RA later.
       AU.addPreserved<LiveIntervalsWrapperPass>();
-      AU.addPreserved<LiveDebugVariables>();
+      AU.addPreserved<LiveDebugVariablesWrapperLegacy>();
 
       MachineFunctionPass::getAnalysisUsage(AU);
     }
@@ -185,7 +185,7 @@ char &llvm::StackSlotColoringID = StackSlotColoring::ID;
 INITIALIZE_PASS_BEGIN(StackSlotColoring, DEBUG_TYPE,
                 "Stack Slot Coloring", false, false)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LiveStacks)
+INITIALIZE_PASS_DEPENDENCY(LiveStacksWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(StackSlotColoring, DEBUG_TYPE,
                 "Stack Slot Coloring", false, false)
@@ -266,7 +266,7 @@ void StackSlotColoring::InitializeSlots() {
   for (auto *I : Intervals) {
     LiveInterval &li = I->second;
     LLVM_DEBUG(li.dump());
-    int FI = Register::stackSlot2Index(li.reg());
+    int FI = li.reg().stackSlotIndex();
     if (MFI->isDeadObjectIndex(FI))
       continue;
 
@@ -300,7 +300,7 @@ void StackSlotColoring::InitializeSlots() {
 int StackSlotColoring::ColorSlot(LiveInterval *li) {
   int Color = -1;
   bool Share = false;
-  int FI = Register::stackSlot2Index(li->reg());
+  int FI = li->reg().stackSlotIndex();
   uint8_t StackID = MFI->getStackID(FI);
 
   if (!DisableSharing) {
@@ -361,7 +361,7 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "Color spill slot intervals:\n");
   bool Changed = false;
   for (LiveInterval *li : SSIntervals) {
-    int SS = Register::stackSlot2Index(li->reg());
+    int SS = li->reg().stackSlotIndex();
     int NewSS = ColorSlot(li);
     assert(NewSS >= 0 && "Stack coloring failed?");
     SlotMapping[SS] = NewSS;
@@ -373,7 +373,7 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
 
   LLVM_DEBUG(dbgs() << "\nSpill slots after coloring:\n");
   for (LiveInterval *li : SSIntervals) {
-    int SS = Register::stackSlot2Index(li->reg());
+    int SS = li->reg().stackSlotIndex();
     li->setWeight(SlotWeights[SS]);
   }
   // Sort them by new weight.
@@ -522,7 +522,7 @@ bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
 
   MFI = &MF.getFrameInfo();
   TII = MF.getSubtarget().getInstrInfo();
-  LS = &getAnalysis<LiveStacks>();
+  LS = &getAnalysis<LiveStacksWrapperLegacy>().getLS();
   MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
 

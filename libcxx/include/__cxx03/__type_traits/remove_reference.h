@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_REMOVE_REFERENCE_H
-#define _LIBCPP___TYPE_TRAITS_REMOVE_REFERENCE_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_REMOVE_REFERENCE_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_REMOVE_REFERENCE_H
 
 #include <__cxx03/__config>
 
@@ -44,4 +44,4 @@ using remove_reference_t = __libcpp_remove_reference_t<_Tp>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_REMOVE_REFERENCE_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_REMOVE_REFERENCE_H

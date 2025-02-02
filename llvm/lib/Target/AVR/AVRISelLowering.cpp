@@ -412,24 +412,20 @@ SDValue AVRTargetLowering::LowerShifts(SDValue Op, SelectionDAG &DAG) const {
     } else if (Op.getOpcode() == ISD::ROTL && ShiftAmount == 3) {
       // Optimize left rotation 3 bits to swap then right rotation 1 bit.
       Victim = DAG.getNode(AVRISD::SWAP, dl, VT, Victim);
-      Victim =
-          DAG.getNode(AVRISD::ROR, dl, VT, Victim, DAG.getConstant(1, dl, VT));
+      Victim = DAG.getNode(AVRISD::ROR, dl, VT, Victim);
       ShiftAmount = 0;
     } else if (Op.getOpcode() == ISD::ROTR && ShiftAmount == 3) {
       // Optimize right rotation 3 bits to swap then left rotation 1 bit.
       Victim = DAG.getNode(AVRISD::SWAP, dl, VT, Victim);
-      Victim =
-          DAG.getNode(AVRISD::ROL, dl, VT, Victim, DAG.getConstant(1, dl, VT));
+      Victim = DAG.getNode(AVRISD::ROL, dl, VT, Victim);
       ShiftAmount = 0;
     } else if (Op.getOpcode() == ISD::ROTL && ShiftAmount == 7) {
       // Optimize left rotation 7 bits to right rotation 1 bit.
-      Victim =
-          DAG.getNode(AVRISD::ROR, dl, VT, Victim, DAG.getConstant(1, dl, VT));
+      Victim = DAG.getNode(AVRISD::ROR, dl, VT, Victim);
       ShiftAmount = 0;
     } else if (Op.getOpcode() == ISD::ROTR && ShiftAmount == 7) {
       // Optimize right rotation 7 bits to left rotation 1 bit.
-      Victim =
-          DAG.getNode(AVRISD::ROL, dl, VT, Victim, DAG.getConstant(1, dl, VT));
+      Victim = DAG.getNode(AVRISD::ROL, dl, VT, Victim);
       ShiftAmount = 0;
     } else if ((Op.getOpcode() == ISD::ROTR || Op.getOpcode() == ISD::ROTL) &&
                ShiftAmount >= 4) {
@@ -890,10 +886,9 @@ SDValue AVRTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue TargetCC;
   SDValue Cmp = getAVRCmp(LHS, RHS, CC, TargetCC, DAG, dl);
 
-  SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Glue);
   SDValue Ops[] = {TrueV, FalseV, TargetCC, Cmp};
 
-  return DAG.getNode(AVRISD::SELECT_CC, dl, VTs, Ops);
+  return DAG.getNode(AVRISD::SELECT_CC, dl, Op.getValueType(), Ops);
 }
 
 SDValue AVRTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
@@ -907,10 +902,9 @@ SDValue AVRTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
 
   SDValue TrueV = DAG.getConstant(1, DL, Op.getValueType());
   SDValue FalseV = DAG.getConstant(0, DL, Op.getValueType());
-  SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Glue);
   SDValue Ops[] = {TrueV, FalseV, TargetCC, Cmp};
 
-  return DAG.getNode(AVRISD::SELECT_CC, DL, VTs, Ops);
+  return DAG.getNode(AVRISD::SELECT_CC, DL, Op.getValueType(), Ops);
 }
 
 SDValue AVRTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
@@ -1111,7 +1105,7 @@ bool AVRTargetLowering::getPreIndexedAddressParts(SDNode *N, SDValue &Base,
     }
 
     Base = Op->getOperand(0);
-    Offset = DAG.getConstant(RHSC, DL, MVT::i8);
+    Offset = DAG.getSignedConstant(RHSC, DL, MVT::i8);
     AM = ISD::PRE_DEC;
 
     return true;
@@ -1676,7 +1670,8 @@ SDValue AVRTargetLowering::LowerCallResult(
 
 bool AVRTargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   if (CallConv == CallingConv::AVR_BUILTIN) {
     SmallVector<CCValAssign, 16> RVLocs;
     CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);

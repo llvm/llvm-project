@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass post-RA-sched %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass post-RA-sched %s -o - | FileCheck %s
 
 # Test that the Post RA scheduler does not schedule back-to-back loads
 # when there is another instruction to schedule. The scheduler avoids

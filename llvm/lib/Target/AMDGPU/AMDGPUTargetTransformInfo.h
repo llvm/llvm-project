@@ -220,6 +220,10 @@ public:
 
   bool canSimplifyLegacyMulToMul(const Instruction &I, const Value *Op0,
                                  const Value *Op1, InstCombiner &IC) const;
+
+  bool simplifyDemandedLaneMaskArg(InstCombiner &IC, IntrinsicInst &II,
+                                   unsigned LaneAgIdx) const;
+
   std::optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
                                                     IntrinsicInst &II) const;
   std::optional<Value *> simplifyDemandedVectorEltsIntrinsic(
@@ -269,6 +273,9 @@ public:
 
   /// \return if target want to issue a prefetch in address space \p AS.
   bool shouldPrefetchAddressSpace(unsigned AS) const override;
+  void collectKernelLaunchBounds(
+      const Function &F,
+      SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const;
 };
 
 } // end namespace llvm

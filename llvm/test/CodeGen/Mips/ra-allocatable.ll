@@ -1,4 +1,4 @@
-; RUN: llc  < %s -march=mipsel | FileCheck %s
+; RUN: llc  < %s -mtriple=mipsel | FileCheck %s
 
 @a0 = external global i32
 @b0 = external global ptr

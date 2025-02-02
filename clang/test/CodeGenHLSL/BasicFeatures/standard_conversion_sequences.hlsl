@@ -6,7 +6,7 @@
 // CHECK: store <3 x float> splat (float 1.000000e+00), ptr [[f3]]
 // CHECK: [[vecf3:%.*]] = load <3 x float>, ptr [[f3]]
 // CHECK: [[vecf4:%.*]] = shufflevector <3 x float> [[vecf3]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 0>
-// CHECK: [[vecd4:%.*]] = fpext <4 x float> [[vecf4]] to <4 x double>
+// CHECK: [[vecd4:%.*]] = fpext reassoc nnan ninf nsz arcp afn <4 x float> [[vecf4]] to <4 x double>
 // CHECK: store <4 x double> [[vecd4]], ptr [[d4]]
 void f3_to_d4() {
   vector<float,3> f3 = 1.0;
@@ -30,7 +30,7 @@ void f3_to_f2() {
 // CHECK: [[f2:%.*]] = alloca <2 x float>
 // CHECK: store <4 x double> splat (double 3.000000e+00), ptr [[d4]]
 // CHECK: [[vecd4:%.*]] = load <4 x double>, ptr [[d4]]
-// CHECK: [[vecf4:%.*]] = fptrunc <4 x double> [[vecd4]] to <4 x float>
+// CHECK: [[vecf4:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn <4 x double> [[vecd4]] to <4 x float>
 // CHECK: [[vecf2:%.*]] = shufflevector <4 x float> [[vecf4]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
 // CHECK: store <2 x float> [[vecf2]], ptr [[f2]]
 void d4_to_f2() {
@@ -108,7 +108,7 @@ void i2_to_b2() {
 // CHECK: [[b2:%.*]] = alloca i8
 // CHECK: store <4 x double> splat (double 9.000000e+00), ptr [[d4]]
 // CHECK: [[vecd4:%.*]] = load <4 x double>, ptr [[d4]]
-// CHECK: [[vecb4:%.*]] = fcmp une <4 x double> [[vecd4]], zeroinitializer
+// CHECK: [[vecb4:%.*]] = fcmp reassoc nnan ninf nsz arcp afn une <4 x double> [[vecd4]], zeroinitializer
 // CHECK: [[vecd2:%.*]] = shufflevector <4 x i1> [[vecb4]], <4 x i1> poison, <2 x i32> <i32 0, i32 1>
 // CHECK: [[vecb8:%.*]] = shufflevector <2 x i1> [[vecd2]], <2 x i1> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 // CHECK: [[i8:%.*]] = bitcast <8 x i1> [[vecb8]] to i8

@@ -1,12 +1,12 @@
 #ifndef FORTRAN_TEST_EVALUATE_FP_TESTING_H_
 #define FORTRAN_TEST_EVALUATE_FP_TESTING_H_
 
-#include "flang/Evaluate/target.h"
+#include "flang/Common/target-rounding.h"
 #include <fenv.h>
 
+using Fortran::common::RealFlags;
+using Fortran::common::Rounding;
 using Fortran::common::RoundingMode;
-using Fortran::evaluate::RealFlags;
-using Fortran::evaluate::Rounding;
 
 class ScopedHostFloatingPointEnvironment {
 public:

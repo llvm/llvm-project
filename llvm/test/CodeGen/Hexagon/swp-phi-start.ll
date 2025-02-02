@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner -pipeliner-max-stages=2 -disable-packetizer < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -enable-pipeliner -pipeliner-max-stages=2 -disable-packetizer < %s | FileCheck %s
 
 ; Test that the early start and late start values are computed correctly
 ; when a Phi depends on another Phi. In this case, they should occur in
