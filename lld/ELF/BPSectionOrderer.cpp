@@ -22,7 +22,7 @@ struct BPOrdererELF;
 }
 template <> struct lld::BPOrdererTraits<struct BPOrdererELF> {
   using Section = elf::InputSectionBase;
-  using Symbol = elf::Symbol;
+  using Defined = elf::Defined;
 };
 namespace {
 struct BPOrdererELF : lld::BPOrderer<BPOrdererELF> {
@@ -30,8 +30,8 @@ struct BPOrdererELF : lld::BPOrderer<BPOrdererELF> {
   static bool isCodeSection(const Section &sec) {
     return sec.flags & llvm::ELF::SHF_EXECINSTR;
   }
-  static SmallVector<Symbol *, 0> getSymbols(const Section &sec) {
-    SmallVector<Symbol *, 0> symbols;
+  static SmallVector<Defined *, 0> getSymbols(const Section &sec) {
+    SmallVector<Defined *, 0> symbols;
     for (auto *sym : sec.file->getSymbols())
       if (auto *d = llvm::dyn_cast_or_null<Defined>(sym))
         if (d->size > 0 && d->section == &sec)
@@ -56,17 +56,9 @@ struct BPOrdererELF : lld::BPOrderer<BPOrdererELF> {
     hashes.erase(std::unique(hashes.begin(), hashes.end()), hashes.end());
   }
 
-  static llvm::StringRef getSymName(const Symbol &sym) { return sym.getName(); }
-  static uint64_t getSymValue(const Symbol &sym) {
-    if (auto *d = dyn_cast<Defined>(&sym))
-      return d->value;
-    return 0;
-  }
-  static uint64_t getSymSize(const Symbol &sym) {
-    if (auto *d = dyn_cast<Defined>(&sym))
-      return d->size;
-    return 0;
-  }
+  static StringRef getSymName(const Defined &sym) { return sym.getName(); }
+  static uint64_t getSymValue(const Defined &sym) { return sym.value; }
+  static uint64_t getSymSize(const Defined &sym) { return sym.size; }
 };
 } // namespace
 
