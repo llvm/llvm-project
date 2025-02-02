@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SUPPORT_flat_set_HELPERS_H
-#define SUPPORT_flat_set_HELPERS_H
+#ifndef SUPPORT_FLAT_SET_HELPERS_H
+#define SUPPORT_FLAT_SET_HELPERS_H
 
 #include <algorithm>
 #include <cassert>
@@ -140,6 +140,19 @@ struct EmplaceUnsafeContainer : std::vector<T> {
 
   template <class... Args>
   auto insert(Args&&... args) -> decltype(std::declval<std::vector<T>>().insert(std::forward<Args>(args)...)) {
+    if (this->size() > 1) {
+      auto it1 = this->begin();
+      auto it2 = it1 + 1;
+      // messing up the container
+      std::iter_swap(it1, it2);
+    }
+
+    throw 42;
+  }
+
+  template <class... Args>
+  auto insert_range(Args&&... args)
+      -> decltype(std::declval<std::vector<T>>().insert_range(std::forward<Args>(args)...)) {
     if (this->size() > 1) {
       auto it1 = this->begin();
       auto it2 = it1 + 1;
@@ -291,4 +304,4 @@ public:
   bool moved() const { return int_ == -1; }
 };
 
-#endif // SUPPORT_flat_set_HELPERS_H
+#endif // SUPPORT_FLAT_SET_HELPERS_H

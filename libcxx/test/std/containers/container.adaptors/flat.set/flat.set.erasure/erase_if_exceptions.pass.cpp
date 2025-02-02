@@ -65,7 +65,7 @@ struct ErasurePredicate {
   bool operator()(const auto& x) const { return (3 <= x && x <= 5); }
 };
 
-int main(int, char**) {
+void test() {
   const int expected[] = {1, 2, 3, 4, 5, 6, 7, 8};
   {
     using M = std::flat_set<ThrowingAssignment, ThrowingComparator>;
@@ -124,5 +124,10 @@ int main(int, char**) {
       }
     }
   }
+}
+
+int main(int, char**) {
+  test();
+
   return 0;
 }

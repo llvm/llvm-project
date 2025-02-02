@@ -49,7 +49,7 @@ void test0(
 }
 
 template <class S>
-void test() {
+void test_one() {
   // Test all the plausible signatures for this predicate.
   auto is1   = [](typename S::const_reference v) { return v == 1; };
   auto is2   = [](typename S::value_type v) { return v == 2; };
@@ -76,14 +76,18 @@ void test() {
   test0<S>({1, 2, 3}, False, {1, 2, 3}, 0);
 }
 
+void test() {
+  test_one<std::flat_set<int>>();
+  test_one<std::flat_set<int, std::less<int>, std::vector<int, min_allocator<int>>>>();
+  test_one<std::flat_set<int, std::greater<int>, std::vector<int, test_allocator<int>>>>();
+  test_one<std::flat_set<int, std::less<int>, std::deque<int, min_allocator<int>>>>();
+  test_one<std::flat_set<int, std::greater<int>, std::deque<int, test_allocator<int>>>>();
+  test_one<std::flat_set<long>>();
+  test_one<std::flat_set<double>>();
+}
+
 int main(int, char**) {
-  test<std::flat_set<int>>();
-  test<std::flat_set<int, std::less<int>, std::vector<int, min_allocator<int>>>>();
-  test<std::flat_set<int, std::greater<int>, std::vector<int, test_allocator<int>>>>();
-  test<std::flat_set<int, std::less<int>, std::deque<int, min_allocator<int>>>>();
-  test<std::flat_set<int, std::greater<int>, std::deque<int, test_allocator<int>>>>();
-  test<std::flat_set<long>>();
-  test<std::flat_set<double>>();
+  test();
 
   return 0;
 }

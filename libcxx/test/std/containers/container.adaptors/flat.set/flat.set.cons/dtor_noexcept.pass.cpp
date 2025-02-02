@@ -27,7 +27,7 @@ struct ThrowingDtorComp {
   ~ThrowingDtorComp() noexcept(false) {}
 };
 
-int main(int, char**) {
+void test() {
   {
     using C = std::flat_set<MoveOnly, MoveOnly>;
     static_assert(std::is_nothrow_destructible_v<C>);
@@ -52,6 +52,10 @@ int main(int, char**) {
     C c;
   }
 #endif // _LIBCPP_VERSION
+}
+
+int main(int, char**) {
+  test();
 
   return 0;
 }

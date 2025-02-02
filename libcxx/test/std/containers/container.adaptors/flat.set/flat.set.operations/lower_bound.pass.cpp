@@ -24,7 +24,7 @@
 #include "min_allocator.h"
 
 template <class KeyContainer>
-void test() {
+void test_one() {
   using Key = typename KeyContainer::value_type;
   {
     using M = std::flat_set<Key, std::less<>, KeyContainer>;
@@ -60,11 +60,15 @@ void test() {
   }
 }
 
+void test() {
+  test_one<std::vector<int>>();
+  test_one<std::deque<int>>();
+  test_one<MinSequenceContainer<int>>();
+  test_one<std::vector<int, min_allocator<int>>>();
+}
+
 int main(int, char**) {
-  test<std::vector<int>>();
-  test<std::deque<int>>();
-  test<MinSequenceContainer<int>>();
-  test<std::vector<int, min_allocator<int>>>();
+  test();
 
   return 0;
 }

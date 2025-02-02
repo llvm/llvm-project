@@ -24,7 +24,7 @@
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
-int main(int, char**) {
+void test() {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<container_type, Alloc> is true.
@@ -78,6 +78,10 @@ int main(int, char**) {
     auto keys = std::move(m).extract();
     assert(keys.get_allocator() == A1(5));
   }
+}
+
+int main(int, char**) {
+  test();
 
   return 0;
 }

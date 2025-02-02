@@ -17,11 +17,12 @@
 #include <functional>
 #include <vector>
 
+#include "operator_hijacker.h"
 #include "test_macros.h"
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
-int main(int, char**) {
+void test() {
   {
     // test_allocator is not propagated
     using C = test_less<int>;
@@ -81,5 +82,19 @@ int main(int, char**) {
     m       = static_cast<const M&>(m);
     assert((m == M{{1, 2}}));
   }
+  {
+    // Validate whether the container can be copy-assigned (move-assigned, swapped)
+    // with an ADL-hijacking operator&
+    std::flat_set<operator_hijacker> so;
+    std::flat_set<operator_hijacker> s;
+    s = so;
+    s = std::move(so);
+    swap(s, so);
+  }
+}
+
+int main(int, char**) {
+  test();
+
   return 0;
 }

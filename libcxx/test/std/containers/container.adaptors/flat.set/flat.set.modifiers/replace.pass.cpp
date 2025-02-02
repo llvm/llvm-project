@@ -31,7 +31,7 @@ static_assert(CanReplace<Set, std::vector<int>>);
 static_assert(!CanReplace<Set, const std::vector<int>&>);
 
 template <class KeyContainer>
-void test() {
+void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, std::less<Key>, KeyContainer>;
 
@@ -43,30 +43,36 @@ void test() {
   assert(std::ranges::equal(m, expected_keys));
 }
 
-int main(int, char**) {
-  test<std::vector<int>>();
-  test<std::deque<int>>();
-  test<MinSequenceContainer<int>>();
-  test<std::vector<int, min_allocator<int>>>();
+void test() {
+  test_one<std::vector<int>>();
+  test_one<std::deque<int>>();
+  test_one<MinSequenceContainer<int>>();
+  test_one<std::vector<int, min_allocator<int>>>();
+}
 
-  {
+void test_exception() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    using KeyContainer = ThrowOnMoveContainer<int>;
-    using M            = std::flat_set<int, std::ranges::less, KeyContainer>;
+  using KeyContainer = ThrowOnMoveContainer<int>;
+  using M            = std::flat_set<int, std::ranges::less, KeyContainer>;
 
-    M m;
-    m.emplace(1);
-    m.emplace(2);
-    try {
-      KeyContainer new_keys{3, 4};
-      m.replace(std::move(new_keys));
-      assert(false);
-    } catch (int) {
-      check_invariant(m);
-      // In libc++, we clear the map
-      LIBCPP_ASSERT(m.size() == 0);
-    }
-#endif
+  M m;
+  m.emplace(1);
+  m.emplace(2);
+  try {
+    KeyContainer new_keys{3, 4};
+    m.replace(std::move(new_keys));
+    assert(false);
+  } catch (int) {
+    check_invariant(m);
+    // In libc++, we clear the map
+    LIBCPP_ASSERT(m.size() == 0);
   }
+#endif
+}
+
+int main(int, char**) {
+  test();
+  test_exception();
+
   return 0;
 }

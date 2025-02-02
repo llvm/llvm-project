@@ -22,11 +22,144 @@
 
 #include "test_macros.h"
 #include "MoveOnly.h"
+#include "../helpers.h"
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+struct MoveNegates {
+  int value_    = 0;
+  MoveNegates() = default;
+  MoveNegates(int v) : value_(v) {}
+  MoveNegates(MoveNegates&& rhs) : value_(rhs.value_) { rhs.value_ = -rhs.value_; }
+  MoveNegates& operator=(MoveNegates&& rhs) {
+    value_     = rhs.value_;
+    rhs.value_ = -rhs.value_;
+    return *this;
+  }
+  ~MoveNegates()                             = default;
+  auto operator<=>(const MoveNegates&) const = default;
+};
+
+struct MoveClears {
+  int value_   = 0;
+  MoveClears() = default;
+  MoveClears(int v) : value_(v) {}
+  MoveClears(MoveClears&& rhs) : value_(rhs.value_) { rhs.value_ = 0; }
+  MoveClears& operator=(MoveClears&& rhs) {
+    value_     = rhs.value_;
+    rhs.value_ = 0;
+    return *this;
+  }
+  ~MoveClears()                             = default;
+  auto operator<=>(const MoveClears&) const = default;
+};
+
+void test_move_assign_clears() {
+  // Preserves the class invariant for the moved-from flat_set.
+  {
+    const int expected[] = {1, 2, 3, 4, 5, 6, 7, 8};
+    using M              = std::flat_set<MoveNegates, std::less<MoveNegates>>;
+    M m                  = M(expected, expected + 8);
+    M m2                 = M(expected, expected + 3);
+
+    m2 = std::move(m);
+
+    assert(std::equal(m2.begin(), m2.end(), expected, expected + 8));
+    LIBCPP_ASSERT(m.empty());
+    assert(std::is_sorted(m.begin(), m.end(), m.key_comp()));                // still sorted
+    assert(std::adjacent_find(m.begin(), m.end(), m.key_comp()) == m.end()); // still contains no duplicates
+    m.insert(1);
+    m.insert(2);
+    assert(m.contains(1));
+    assert(m.find(2) != m.end());
+  }
+  {
+    const int expected[] = {1, 2, 3, 4, 5, 6, 7, 8};
+    using M              = std::flat_set<MoveClears, std::less<MoveClears>>;
+    M m                  = M(expected, expected + 8);
+    M m2                 = M(expected, expected + 3);
+
+    m2 = std::move(m);
+
+    assert(std::equal(m2.begin(), m2.end(), expected, expected + 8));
+    LIBCPP_ASSERT(m.empty());
+    assert(std::is_sorted(m.begin(), m.end(), m.key_comp()));                // still sorted
+    assert(std::adjacent_find(m.begin(), m.end(), m.key_comp()) == m.end()); // still contains no duplicates
+    m.insert(1);
+    m.insert(2);
+    assert(m.contains(1));
+    assert(m.find(2) != m.end());
+  }
+  {
+    // moved-from object maintains invariant if one of underlying container does not clear after move
+    using M = std::flat_set<int, std::less<>, std::vector<int>>;
+    M m1    = M({1, 2, 3});
+    M m2    = M({1, 2});
+    m2      = std::move(m1);
+    assert(m2.size() == 3);
+    check_invariant(m1);
+    LIBCPP_ASSERT(m1.empty());
+  }
+}
+
+struct MoveSensitiveComp {
+  MoveSensitiveComp() noexcept(false)                         = default;
+  MoveSensitiveComp(const MoveSensitiveComp&) noexcept(false) = default;
+  MoveSensitiveComp(MoveSensitiveComp&& rhs) { rhs.is_moved_from_ = true; }
+  MoveSensitiveComp& operator=(const MoveSensitiveComp&) noexcept = default;
+  MoveSensitiveComp& operator=(MoveSensitiveComp&& rhs) {
+    rhs.is_moved_from_ = true;
+    return *this;
+  }
+  bool operator()(const auto&, const auto&) const { return false; }
+  bool is_moved_from_ = false;
+};
+
+struct MoveThrowsComp {
+  MoveThrowsComp(MoveThrowsComp&&) noexcept(false);
+  MoveThrowsComp(const MoveThrowsComp&) noexcept(true);
+  MoveThrowsComp& operator=(MoveThrowsComp&&) noexcept(false);
+  MoveThrowsComp& operator=(const MoveThrowsComp&) noexcept(true);
+  bool operator()(const auto&, const auto&) const;
+};
+
+void test_move_assign_no_except() {
+  // This tests a conforming extension
+
+  {
+    using C = std::flat_set<int, int>;
+    LIBCPP_STATIC_ASSERT(std::is_nothrow_move_assignable_v<C>);
+  }
+  {
+    using C = std::flat_set<MoveOnly, std::less<MoveOnly>, std::vector<MoveOnly, test_allocator<MoveOnly>>>;
+    static_assert(!std::is_nothrow_move_assignable_v<C>);
+  }
+  {
+    using C = std::flat_set<int, std::less<int>, std::vector<int, test_allocator<int>>>;
+    static_assert(!std::is_nothrow_move_assignable_v<C>);
+  }
+  {
+    using C = std::flat_set<MoveOnly, std::less<MoveOnly>, std::vector<MoveOnly, other_allocator<MoveOnly>>>;
+    LIBCPP_STATIC_ASSERT(std::is_nothrow_move_assignable_v<C>);
+  }
+  {
+    using C = std::flat_set<int, std::less<int>, std::vector<int, other_allocator<int>>>;
+    LIBCPP_STATIC_ASSERT(std::is_nothrow_move_assignable_v<C>);
+  }
+  {
+    // Test with a comparator that throws on move-assignment.
+    using C = std::flat_set<int, MoveThrowsComp>;
+    LIBCPP_STATIC_ASSERT(!std::is_nothrow_move_assignable_v<C>);
+  }
+  {
+    // Test with a container that throws on move-assignment.
+    using C = std::flat_set<int, std::less<int>, std::pmr::vector<int>>;
+    static_assert(!std::is_nothrow_move_assignable_v<C>);
+  }
+}
+
+void test() {
   {
     using C  = test_less<int>;
     using A1 = test_allocator<int>;
@@ -64,6 +197,12 @@ int main(int, char**) {
     assert(ks.get_allocator() == A());
     assert(mo.empty());
   }
+}
+
+int main(int, char**) {
+  test();
+  test_move_assign_clears();
+  test_move_assign_no_except();
 
   return 0;
 }

@@ -24,6 +24,8 @@
 #include "test_macros.h"
 #include "../helpers.h"
 
+#include "check_assertion.h"
+
 // test noexcept
 
 template <class T>
@@ -38,7 +40,7 @@ static_assert(NoExceptAdlSwap<std::flat_set<int, std::less<int>, ThrowOnMoveCont
 #endif
 
 template <class KeyContainer>
-void test() {
+void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, std::less<Key>, KeyContainer>;
 
@@ -84,11 +86,15 @@ void test() {
   }
 }
 
+void test() {
+  test_one<std::vector<int>>();
+  test_one<std::deque<int>>();
+  test_one<MinSequenceContainer<int>>();
+  test_one<std::vector<int, min_allocator<int>>>();
+}
+
 int main(int, char**) {
-  test<std::vector<int>>();
-  test<std::deque<int>>();
-  test<MinSequenceContainer<int>>();
-  test<std::vector<int, min_allocator<int>>>();
+  test();
 
   return 0;
 }

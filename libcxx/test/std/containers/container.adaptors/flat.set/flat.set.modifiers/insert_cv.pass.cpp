@@ -23,7 +23,7 @@
 #include "min_allocator.h"
 
 template <class KeyContainer>
-void test() {
+void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, std::less<Key>, KeyContainer>;
   using R   = std::pair<typename M::iterator, bool>;
@@ -59,20 +59,25 @@ void test() {
   assert(*r.first == 3);
 }
 
-int main(int, char**) {
-  test<std::vector<int>>();
-  test<std::deque<int>>();
-  test<MinSequenceContainer<int>>();
-  test<std::vector<int, min_allocator<int>>>();
+void test() {
+  test_one<std::vector<int>>();
+  test_one<std::deque<int>>();
+  test_one<MinSequenceContainer<int>>();
+  test_one<std::vector<int, min_allocator<int>>>();
+}
 
-  {
-    auto insert_func = [](auto& m, auto key_arg) {
-      using FlatSet    = std::decay_t<decltype(m)>;
-      using value_type = typename FlatSet::value_type;
-      const value_type p(key_arg);
-      m.insert(p);
-    };
-    test_emplace_exception_guarantee(insert_func);
-  }
+void test_exception() {
+  auto insert_func = [](auto& m, auto key_arg) {
+    using value_type = typename std::decay_t<decltype(m)>::value_type;
+    const value_type p(key_arg);
+    m.insert(p);
+  };
+  test_emplace_exception_guarantee(insert_func);
+}
+
+int main(int, char**) {
+  test();
+  test_exception();
+
   return 0;
 }

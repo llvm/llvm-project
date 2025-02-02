@@ -35,7 +35,7 @@ static_assert(!CanEqualRange<NonTransparentSet>);
 static_assert(!CanEqualRange<const NonTransparentSet>);
 
 template <class KeyContainer>
-void test() {
+void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, TransparentComparator, KeyContainer>;
 
@@ -77,11 +77,11 @@ void test() {
   test_not_found(cm, "zzz", 5);
 }
 
-int main(int, char**) {
-  test<std::vector<std::string>>();
-  test<std::deque<std::string>>();
-  test<MinSequenceContainer<std::string>>();
-  test<std::vector<std::string, min_allocator<std::string>>>();
+void test() {
+  test_one<std::vector<std::string>>();
+  test_one<std::deque<std::string>>();
+  test_one<MinSequenceContainer<std::string>>();
+  test_one<std::vector<std::string, min_allocator<std::string>>>();
 
   {
     bool transparent_used = false;
@@ -92,6 +92,10 @@ int main(int, char**) {
     assert(p.first != p.second);
     assert(transparent_used);
   }
+}
+
+int main(int, char**) {
+  test();
 
   return 0;
 }
