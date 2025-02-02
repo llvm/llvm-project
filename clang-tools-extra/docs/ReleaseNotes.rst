@@ -91,6 +91,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`performance-redundant-lookup
+  <clang-tidy/checks/performance/redundant-lookup>` check.
+
+  Detects redundant container lookups.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
