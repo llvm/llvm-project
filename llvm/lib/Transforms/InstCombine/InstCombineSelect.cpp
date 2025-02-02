@@ -1771,26 +1771,38 @@ static Value *foldSelectInstWithICmpConst(SelectInst &SI, ICmpInst *ICI,
       return Builder.CreateBinaryIntrinsic(Intrinsic::smin, V, TVal);
   }
 
-  BinaryOperator *BO;
+  // Fold icmp(X) ? f(X) : C to f(X) when f(X) is guaranteed to be equal to C
+  // for all X in the exact range of the inverse predicate.
+  Instruction *Op;
   const APInt *C;
   CmpInst::Predicate CPred;
-  if (match(&SI, m_Select(m_Specific(ICI), m_APInt(C), m_BinOp(BO))))
+  if (match(&SI, m_Select(m_Specific(ICI), m_APInt(C), m_Instruction(Op))))
     CPred = ICI->getPredicate();
-  else if (match(&SI, m_Select(m_Specific(ICI), m_BinOp(BO), m_APInt(C))))
+  else if (match(&SI, m_Select(m_Specific(ICI), m_Instruction(Op), m_APInt(C))))
     CPred = ICI->getInversePredicate();
   else
     return nullptr;
 
-  const APInt *BinOpC;
-  if (!match(BO, m_BinOp(m_Specific(V), m_APInt(BinOpC))))
-    return nullptr;
-
-  ConstantRange R = ConstantRange::makeExactICmpRegion(CPred, *CmpC)
-                        .binaryOp(BO->getOpcode(), *BinOpC);
-  if (R == *C) {
-    BO->dropPoisonGeneratingFlags();
-    return BO;
+  ConstantRange InvDomCR = ConstantRange::makeExactICmpRegion(CPred, *CmpC);
+  const APInt *OpC;
+  if (match(Op, m_BinOp(m_Specific(V), m_APInt(OpC)))) {
+    ConstantRange R = InvDomCR.binaryOp(
+        static_cast<Instruction::BinaryOps>(Op->getOpcode()), *OpC);
+    if (R == *C) {
+      Op->dropPoisonGeneratingFlags();
+      return Op;
+    }
   }
+  if (auto *MMI = dyn_cast<MinMaxIntrinsic>(Op);
+      MMI && MMI->getLHS() == V && match(MMI->getRHS(), m_APInt(OpC))) {
+    ConstantRange R = ConstantRange::intrinsic(MMI->getIntrinsicID(),
+                                               {InvDomCR, ConstantRange(*OpC)});
+    if (R == *C) {
+      MMI->dropPoisonGeneratingAnnotations();
+      return MMI;
+    }
+  }
+
   return nullptr;
 }
 
