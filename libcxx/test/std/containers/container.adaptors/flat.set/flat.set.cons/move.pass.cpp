@@ -25,7 +25,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+void test() {
   {
     using C = test_less<int>;
     using A = test_allocator<int>;
@@ -79,5 +79,110 @@ int main(int, char**) {
     LIBCPP_ASSERT(m1.empty());
     LIBCPP_ASSERT(m1.size() == 0);
   }
+}
+
+template <class T>
+struct ThrowingMoveAllocator {
+  using value_type                                    = T;
+  explicit ThrowingMoveAllocator()                    = default;
+  ThrowingMoveAllocator(const ThrowingMoveAllocator&) = default;
+  ThrowingMoveAllocator(ThrowingMoveAllocator&&) noexcept(false) {}
+  T* allocate(std::ptrdiff_t n) { return std::allocator<T>().allocate(n); }
+  void deallocate(T* p, std::ptrdiff_t n) { return std::allocator<T>().deallocate(p, n); }
+  friend bool operator==(ThrowingMoveAllocator, ThrowingMoveAllocator) = default;
+};
+
+struct ThrowingMoveComp {
+  ThrowingMoveComp() = default;
+  ThrowingMoveComp(const ThrowingMoveComp&) noexcept(true) {}
+  ThrowingMoveComp(ThrowingMoveComp&&) noexcept(false) {}
+  bool operator()(const auto&, const auto&) const { return false; }
+};
+
+struct MoveSensitiveComp {
+  MoveSensitiveComp() noexcept(false)                  = default;
+  MoveSensitiveComp(const MoveSensitiveComp&) noexcept = default;
+  MoveSensitiveComp(MoveSensitiveComp&& rhs) { rhs.is_moved_from_ = true; }
+  MoveSensitiveComp& operator=(const MoveSensitiveComp&) noexcept(false) = default;
+  MoveSensitiveComp& operator=(MoveSensitiveComp&& rhs) {
+    rhs.is_moved_from_ = true;
+    return *this;
+  }
+  bool operator()(const auto&, const auto&) const { return false; }
+  bool is_moved_from_ = false;
+};
+
+void test_move_noexcept() {
+  {
+    using C = std::flat_set<int>;
+    LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible_v<C>);
+    C c;
+    C d = std::move(c);
+  }
+  {
+    using C = std::flat_set<int, std::less<int>, std::deque<int, test_allocator<int>>>;
+    LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible_v<C>);
+    C c;
+    C d = std::move(c);
+  }
+#if _LIBCPP_VERSION
+  {
+    // Container fails to be nothrow-move-constructible; this relies on libc++'s support for non-nothrow-copyable allocators
+    using C = std::flat_set<int, std::less<int>, std::deque<int, ThrowingMoveAllocator<int>>>;
+    static_assert(!std::is_nothrow_move_constructible_v<std::deque<int, ThrowingMoveAllocator<int>>>);
+    static_assert(!std::is_nothrow_move_constructible_v<C>);
+    C c;
+    C d = std::move(c);
+  }
+#endif // _LIBCPP_VERSION
+  {
+    // Comparator fails to be nothrow-move-constructible
+    using C = std::flat_set<int, ThrowingMoveComp>;
+    static_assert(!std::is_nothrow_move_constructible_v<C>);
+    C c;
+    C d = std::move(c);
+  }
+}
+
+#if !defined(TEST_HAS_NO_EXCEPTIONS)
+static int countdown = 0;
+
+struct EvilContainer : std::vector<int> {
+  EvilContainer() = default;
+  EvilContainer(EvilContainer&& rhs) {
+    // Throw on move-construction.
+    if (--countdown == 0) {
+      rhs.insert(rhs.end(), 0);
+      rhs.insert(rhs.end(), 0);
+      throw 42;
+    }
+  }
+};
+
+void test_move_exception() {
+  {
+    using M   = std::flat_set<int, std::less<int>, EvilContainer>;
+    M mo      = {1, 2, 3};
+    countdown = 1;
+    try {
+      M m = std::move(mo);
+      assert(false); // not reached
+    } catch (int x) {
+      assert(x == 42);
+    }
+    // The source flat_set maintains its class invariant.
+    check_invariant(mo);
+    LIBCPP_ASSERT(mo.empty());
+  }
+}
+#endif // !defined(TEST_HAS_NO_EXCEPTIONS)
+
+int main(int, char**) {
+  test();
+  test_move_noexcept();
+#if !defined(TEST_HAS_NO_EXCEPTIONS)
+  test_move_exception();
+#endif // !defined(TEST_HAS_NO_EXCEPTIONS)
+
   return 0;
 }

@@ -36,7 +36,7 @@ void conversion_test(T);
 template <class T, class... Args>
 concept ImplicitlyConstructible = requires(Args&&... args) { conversion_test<T>({std::forward<Args>(args)...}); };
 
-int main(int, char**) {
+void test() {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<container_type, Alloc> is true.
@@ -116,21 +116,16 @@ int main(int, char**) {
     auto m  = M(ks, A(4)); // replaces the allocators
     assert(!ks.empty());   // it was an lvalue above
     assert((m == M{1, 2, 3}));
-    auto keys = std::move(m).extract();
+    auto keys = M(m).extract();
     assert(keys.get_allocator() == A(4));
-  }
-  {
-    // flat_set(container_type , const Allocator&)
+
     // explicit(false)
-    using A = test_allocator<int>;
-    using M = std::flat_set<int, std::less<int>, std::deque<int, A>>;
     static_assert(ImplicitlyConstructible<M, const std::deque<int, A>&, const A&>);
-    auto ks = std::deque<int, A>({1, 1, 1, 2, 2, 3, 2, 3, 3}, A(5));
-    M m     = {ks, A(4)}; // implicit ctor
-    assert(!ks.empty());  // it was an lvalue above
-    assert((m == M{1, 2, 3}));
-    auto keys = std::move(m).extract();
-    assert(keys.get_allocator() == A(4));
+    M m2 = {ks, A(4)};   // implicit ctor
+    assert(!ks.empty()); // it was an lvalue above
+    assert(m2 == m);
+    auto keys2 = std::move(m).extract();
+    assert(keys2.get_allocator() == A(4));
   }
   {
     // flat_set(container_type , key_compare, const Allocator&)
@@ -153,6 +148,10 @@ int main(int, char**) {
     keys = std::move(m2).extract();
     assert(keys.get_allocator() == A(5));
   }
+}
+
+int main(int, char**) {
+  test();
 
   return 0;
 }

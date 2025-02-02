@@ -36,7 +36,7 @@ static_assert(!CanInsert<Set, std::sorted_unique_t, int, int>);
 static_assert(!CanInsert<Set, std::sorted_unique_t, cpp20_input_iterator<int*>, cpp20_input_iterator<int*>>);
 
 template <class KeyContainer>
-void test() {
+void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, std::less<Key>, KeyContainer>;
 
@@ -60,18 +60,23 @@ void test() {
   assert(m == expected2);
 }
 
-int main(int, char**) {
-  test<std::vector<int>>();
-  test<std::deque<int>>();
-  test<MinSequenceContainer<int>>();
-  test<std::vector<int, min_allocator<int>>>();
+void test() {
+  test_one<std::vector<int>>();
+  test_one<std::deque<int>>();
+  test_one<MinSequenceContainer<int>>();
+  test_one<std::vector<int, min_allocator<int>>>();
+}
 
-  {
-    auto insert_func = [](auto& m, const auto& newValues) {
-      m.insert(std::sorted_unique, newValues.begin(), newValues.end());
-    };
-    test_insert_range_exception_guarantee(insert_func);
-  }
+void test_exception() {
+  auto insert_func = [](auto& m, const auto& newValues) {
+    m.insert(std::sorted_unique, newValues.begin(), newValues.end());
+  };
+  test_insert_range_exception_guarantee(insert_func);
+}
+
+int main(int, char**) {
+  test();
+  test_exception();
 
   return 0;
 }

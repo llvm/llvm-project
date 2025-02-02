@@ -31,7 +31,7 @@
 #include "test_container_comparisons.h"
 
 template <class KeyContainer>
-void test() {
+void test_one() {
   using Key = typename KeyContainer::value_type;
 
   {
@@ -69,11 +69,11 @@ void test() {
   }
 }
 
-int main(int, char**) {
-  test<std::vector<int>>();
-  test<std::deque<int>>();
-  test<MinSequenceContainer<int>>();
-  test<std::vector<int, min_allocator<int>>>();
+void test() {
+  test_one<std::vector<int>>();
+  test_one<std::deque<int>>();
+  test_one<MinSequenceContainer<int>>();
+  test_one<std::vector<int, min_allocator<int>>>();
 
   {
     using C = std::flat_set<double>;
@@ -101,5 +101,10 @@ int main(int, char**) {
     assert(s1 != s2);
     assert((s1 <=> s2) == std::partial_ordering::unordered);
   }
+}
+
+int main(int, char**) {
+  test();
+
   return 0;
 }

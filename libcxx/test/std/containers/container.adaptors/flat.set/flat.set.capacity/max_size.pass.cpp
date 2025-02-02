@@ -24,7 +24,8 @@
 #include "test_allocator.h"
 #include "test_macros.h"
 
-int main(int, char**) {
+void test() {
+
   {
     using A1 = limited_allocator<int, 10>;
     using C  = std::flat_set<int, std::less<int>, std::vector<int, A1>>;
@@ -59,5 +60,10 @@ int main(int, char**) {
     assert(c.max_size() <= max_dist);
     assert(c.max_size() <= alloc_max_size(std::allocator<char>()));
   }
+}
+
+int main(int, char**) {
+  test();
+
   return 0;
 }

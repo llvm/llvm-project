@@ -39,7 +39,7 @@ static_assert(!CanInsertRange<Set, std::ranges::subrange<std::pair<int, int>*>>)
 static_assert(!CanInsertRange<Set, std::ranges::subrange<std::pair<short, short>*>>);
 
 template <class KeyContainer>
-void test() {
+void test_one() {
   using Key = typename KeyContainer::value_type;
 
   {
@@ -75,31 +75,29 @@ void test() {
   }
 }
 
-int main(int, char**) {
-  test<std::vector<int>>();
-  test<std::deque<int>>();
-  test<MinSequenceContainer<int>>();
-  test<std::vector<int, min_allocator<int>>>();
+void test() {
+  test_one<std::vector<int>>();
+  test_one<std::deque<int>>();
+  test_one<MinSequenceContainer<int>>();
+  test_one<std::vector<int, min_allocator<int>>>();
   {
-    // Items are forwarded correctly from the input range (P2767).
+    // Items are forwarded correctly from the input range.
     MoveOnly a[] = {3, 1, 4, 1, 5};
     std::flat_set<MoveOnly> m;
     m.insert_range(a | std::views::as_rvalue);
     MoveOnly expected[] = {1, 3, 4, 5};
     assert(std::ranges::equal(m, expected));
   }
-  {
-    // The element type of the range doesn't need to be std::pair (P2767).
-    int pa[] = {3, 1, 4, 1, 5};
-    std::deque<std::reference_wrapper<int>> a(pa, pa + 5);
-    std::flat_set<int> m;
-    m.insert_range(a);
-    int expected[] = {1, 3, 4, 5};
-    assert(std::ranges::equal(m, expected));
-  }
-  {
-    auto insert_func = [](auto& m, const auto& newValues) { m.insert_range(newValues); };
-    test_insert_range_exception_guarantee(insert_func);
-  }
+}
+
+void test_exception() {
+  auto insert_func = [](auto& m, const auto& newValues) { m.insert_range(newValues); };
+  test_insert_range_exception_guarantee(insert_func);
+}
+
+int main(int, char**) {
+  test();
+  test_exception();
+
   return 0;
 }

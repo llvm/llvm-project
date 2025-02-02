@@ -57,7 +57,7 @@ struct CompareCounter {
 };
 
 template <class KeyContainer>
-void test() {
+void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, std::less<Key>, KeyContainer>;
 
@@ -121,11 +121,11 @@ void test() {
   }
 }
 
-int main(int, char**) {
-  test<std::vector<CompareCounter>>();
-  test<std::deque<CompareCounter>>();
-  test<MinSequenceContainer<CompareCounter>>();
-  test<std::vector<CompareCounter, min_allocator<CompareCounter>>>();
+void test() {
+  test_one<std::vector<CompareCounter>>();
+  test_one<std::deque<CompareCounter>>();
+  test_one<MinSequenceContainer<CompareCounter>>();
+  test_one<std::vector<CompareCounter, min_allocator<CompareCounter>>>();
 
   {
     // no ambiguity between insert(pos, P&&) and insert(first, last)
@@ -139,6 +139,9 @@ int main(int, char**) {
     ASSERT_SAME_TYPE(decltype(m.insert(m.begin(), Evil())), M::iterator);
     ASSERT_SAME_TYPE(decltype(m.insert(m.begin(), m.end())), void);
   }
+}
+
+void test_exception() {
   {
     auto insert_func = [](auto& m, auto key_arg) {
       using FlatSet = std::decay_t<decltype(m)>;
@@ -165,5 +168,11 @@ int main(int, char**) {
     };
     test_emplace_exception_guarantee(insert_func_iter);
   }
+}
+
+int main(int, char**) {
+  test();
+  test_exception();
+
   return 0;
 }

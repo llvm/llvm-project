@@ -21,7 +21,7 @@
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
-int main(int, char**) {
+void test() {
   {
     using C = test_less<int>;
     std::vector<int, test_allocator<int>> ks({1, 3, 5}, test_allocator<int>(6));
@@ -59,6 +59,10 @@ int main(int, char**) {
     auto keys2 = std::move(mo).extract();
     assert(keys2.get_allocator() == other_allocator<int>(6));
   }
+}
+
+int main(int, char**) {
+  test();
 
   return 0;
 }

@@ -33,7 +33,7 @@ static_assert(!CanExtract<std::flat_set<int> const&>);
 static_assert(!CanExtract<std::flat_set<int> const&&>);
 
 template <class KeyContainer>
-void test() {
+void test_one() {
   using M = std::flat_set<int, std::less<int>, KeyContainer>;
   M m     = M({1, 2, 3});
 
@@ -45,11 +45,12 @@ void test() {
   LIBCPP_ASSERT(m.empty());
 }
 
-int main(int, char**) {
-  test<std::vector<int>>();
-  test<std::deque<int>>();
-  test<MinSequenceContainer<int>>();
-  test<std::vector<int, min_allocator<int>>>();
+void test() {
+  test_one<std::vector<int>>();
+  test_one<std::deque<int>>();
+  test_one<MinSequenceContainer<int>>();
+  test_one<std::vector<int, min_allocator<int>>>();
+
   {
     // extracted object maintains invariant if the underlying container does not clear after move
     using M                                   = std::flat_set<int, std::less<>, CopyOnlyVector<int>>;
@@ -59,7 +60,9 @@ int main(int, char**) {
     check_invariant(m);
     LIBCPP_ASSERT(m.empty());
   }
+}
 
+void test_exception() {
   {
 #ifndef TEST_HAS_NO_EXCEPTIONS
     using KeyContainer = ThrowOnMoveContainer<int>;
@@ -79,5 +82,11 @@ int main(int, char**) {
     }
 #endif
   }
+}
+
+int main(int, char**) {
+  test();
+  test_exception();
+
   return 0;
 }

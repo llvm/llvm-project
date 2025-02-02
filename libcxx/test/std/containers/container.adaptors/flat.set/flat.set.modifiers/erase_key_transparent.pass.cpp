@@ -50,7 +50,7 @@ struct HeterogeneousKey {
 };
 
 template <class KeyContainer>
-void test_simple() {
+void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, std::less<Key>, KeyContainer>;
 
@@ -86,11 +86,11 @@ void test_transparent_comparator() {
   assert(m == expected);
 }
 
-int main(int, char**) {
-  test_simple<std::vector<int>>();
-  test_simple<std::deque<int>>();
-  test_simple<MinSequenceContainer<int>>();
-  test_simple<std::vector<int, min_allocator<int>>>();
+void test() {
+  test_one<std::vector<int>>();
+  test_one<std::deque<int>>();
+  test_one<MinSequenceContainer<int>>();
+  test_one<std::vector<int, min_allocator<int>>>();
 
   test_transparent_comparator<std::vector<std::string>>();
   test_transparent_comparator<std::deque<std::string>>();
@@ -129,14 +129,20 @@ int main(int, char**) {
     assert(n == 1);
     assert(transparent_used);
   }
-  {
-    auto erase_transparent = [](auto& m, auto key_arg) {
-      using Set = std::decay_t<decltype(m)>;
-      using Key = typename Set::key_type;
-      m.erase(Transparent<Key>{key_arg});
-    };
-    test_erase_exception_guarantee(erase_transparent);
-  }
+}
+
+void test_exception() {
+  auto erase_transparent = [](auto& m, auto key_arg) {
+    using Set = std::decay_t<decltype(m)>;
+    using Key = typename Set::key_type;
+    m.erase(Transparent<Key>{key_arg});
+  };
+  test_erase_exception_guarantee(erase_transparent);
+}
+
+int main(int, char**) {
+  test();
+  test_exception();
 
   return 0;
 }

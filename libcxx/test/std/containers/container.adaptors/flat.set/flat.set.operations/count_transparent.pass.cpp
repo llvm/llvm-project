@@ -34,7 +34,7 @@ static_assert(!CanCount<NonTransparentSet>);
 static_assert(!CanCount<const NonTransparentSet>);
 
 template <class KeyContainer>
-void test() {
+void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, TransparentComparator, KeyContainer>;
 
@@ -51,11 +51,11 @@ void test() {
   assert(m.count(Transparent<std::string>{"g"}) == 0);
 }
 
-int main(int, char**) {
-  test<std::vector<std::string>>();
-  test<std::deque<std::string>>();
-  test<MinSequenceContainer<std::string>>();
-  test<std::vector<std::string, min_allocator<std::string>>>();
+void test() {
+  test_one<std::vector<std::string>>();
+  test_one<std::deque<std::string>>();
+  test_one<MinSequenceContainer<std::string>>();
+  test_one<std::vector<std::string, min_allocator<std::string>>>();
 
   {
     bool transparent_used = false;
@@ -66,6 +66,10 @@ int main(int, char**) {
     assert(n == 1);
     assert(transparent_used);
   }
+}
+
+int main(int, char**) {
+  test();
 
   return 0;
 }

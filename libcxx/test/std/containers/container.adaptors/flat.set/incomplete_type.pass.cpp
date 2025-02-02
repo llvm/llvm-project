@@ -27,7 +27,10 @@ struct A {
 // Implement the operator< required in order to instantiate flat_set<A>
 bool operator<(A const& L, A const& R) { return L.data < R.data; }
 
+void test() { A a; }
+
 int main(int, char**) {
-  A a;
+  test();
+
   return 0;
 }

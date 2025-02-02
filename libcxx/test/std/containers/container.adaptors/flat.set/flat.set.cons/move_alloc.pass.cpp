@@ -24,7 +24,7 @@
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
-int main(int, char**) {
+void test() {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<container_type, Alloc> is true.
@@ -53,7 +53,7 @@ int main(int, char**) {
     assert(m.size() == 3);
     auto keys = std::move(m).extract();
     assert(keys.get_allocator() == A(3));
-    assert(std::ranges::equal(keys, expected ));
+    assert(std::ranges::equal(keys, expected));
 
     // The original flat_set is moved-from.
     assert(std::is_sorted(mo.begin(), mo.end(), mo.value_comp()));
@@ -63,13 +63,17 @@ int main(int, char**) {
   }
   {
     // moved-from object maintains invariant if one of underlying container does not clear after move
-    using M = std::flat_set<int, std::less<>,  CopyOnlyVector<int>>;
+    using M = std::flat_set<int, std::less<>, CopyOnlyVector<int>>;
     M m1    = M({1, 2, 3});
     M m2(std::move(m1), std::allocator<int>{});
     assert(m2.size() == 3);
     check_invariant(m1);
     LIBCPP_ASSERT(m1.empty());
   }
+}
+
+int main(int, char**) {
+  test();
 
   return 0;
 }

@@ -21,7 +21,7 @@
 
 #include "test_macros.h"
 
-int main(int, char**) {
+void test() {
   {
     using M    = std::flat_set<int>;
     using Comp = std::less<int>; // the default
@@ -67,6 +67,10 @@ int main(int, char**) {
     assert(vc(1, 2));
     assert(!vc(2, 1));
   }
+}
+
+int main(int, char**) {
+  test();
 
   return 0;
 }

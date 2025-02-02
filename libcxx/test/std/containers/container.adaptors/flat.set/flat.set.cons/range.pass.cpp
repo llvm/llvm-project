@@ -56,7 +56,7 @@ static_assert(
     !std::
         is_constructible_v<Set, std::from_range_t, RangeOf<std::pair<int, int>>, std::less<int>, std::allocator<int>>);
 
-int main(int, char**) {
+void test() {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<container_type, Alloc> is true.
@@ -168,6 +168,10 @@ int main(int, char**) {
     assert(std::ranges::equal(m, expected));
     assert(std::move(m).extract().get_allocator() == A1(5));
   }
+}
+
+int main(int, char**) {
+  test();
 
   return 0;
 }

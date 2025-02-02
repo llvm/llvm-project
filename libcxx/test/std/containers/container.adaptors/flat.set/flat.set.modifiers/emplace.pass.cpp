@@ -28,7 +28,7 @@
 #include "min_allocator.h"
 
 template <class KeyContainer>
-void test() {
+void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, std::less<Key>, KeyContainer>;
   using R   = std::pair<typename M::iterator, bool>;
@@ -121,21 +121,26 @@ void test_emplaceable() {
   assert(*m.begin() == Emplaceable(1, 3.5));
 }
 
-int main(int, char**) {
-  test<std::vector<int>>();
-  test<std::deque<int>>();
-  test<MinSequenceContainer<int>>();
-  test<std::vector<int, min_allocator<int>>>();
+void test() {
+  test_one<std::vector<int>>();
+  test_one<std::deque<int>>();
+  test_one<MinSequenceContainer<int>>();
+  test_one<std::vector<int, min_allocator<int>>>();
 
   test_emplaceable<std::vector<Emplaceable>>();
   test_emplaceable<std::deque<Emplaceable>>();
   test_emplaceable<MinSequenceContainer<Emplaceable>>();
   test_emplaceable<std::vector<Emplaceable, min_allocator<Emplaceable>>>();
+}
 
-  {
-    auto emplace_func = [](auto& m, auto key_arg) { m.emplace(key_arg); };
-    test_emplace_exception_guarantee(emplace_func);
-  }
+void test_exception() {
+  auto emplace_func = [](auto& m, auto key_arg) { m.emplace(key_arg); };
+  test_emplace_exception_guarantee(emplace_func);
+}
+
+int main(int, char**) {
+  test();
+  test_exception();
 
   return 0;
 }
