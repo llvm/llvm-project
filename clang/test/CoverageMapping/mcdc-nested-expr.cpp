@@ -21,8 +21,11 @@ bool func_condop(bool a, bool b, bool c) {
 // Treated as parentheses.
 // CHECK: func_expect{{.*}}:
 bool func_expect(bool a, bool b, bool c) {
-  // WARN: :[[@LINE+1]]:10: warning: unsupported MC/DC boolean expression; contains an operation with a nested boolean expression.
   return a || __builtin_expect(b && c, true);
+  // CHECK:  Decision,File 0, [[@LINE-1]]:10 -> [[#L:@LINE-1]]:45 = M:4, C:3
+  // CHECK:  Branch,File 0, [[#L]]:10 -> [[#L]]:11 = (#0 - #1), #1 [1,0,2]
+  // CHECK:  Branch,File 0, [[#L]]:32 -> [[#L]]:33 = #2, (#1 - #2) [2,3,0]
+  // CHECK:  Branch,File 0, [[#L]]:37 -> [[#L]]:38 = #3, (#2 - #3) [3,0,0]
 }
 
 // LNot among BinOp(s)
