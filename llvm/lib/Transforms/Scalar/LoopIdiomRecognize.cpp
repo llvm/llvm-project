@@ -129,7 +129,7 @@ static cl::opt<bool, true>
 
 bool DisableLIRP::Strlen;
 static cl::opt<bool, true>
-    DisableLIRPStrlen("disable-" DEBUG_TYPE "-strlen",
+    DisableLIRPStrlen("disable-loop-idiom-strlen",
                       cl::desc("Proceed with loop idiom recognize pass, but do "
                                "not convert loop(s) to strlen."),
                       cl::location(DisableLIRP::Strlen), cl::init(false),
@@ -137,7 +137,7 @@ static cl::opt<bool, true>
 
 bool DisableLIRP::Wcslen;
 static cl::opt<bool, true>
-    DisableLIRPWcslen("disable-" DEBUG_TYPE "-wcslen",
+    DisableLIRPWcslen("disable-loop-idiom-wcslen",
                       cl::desc("Proceed with loop idiom recognize pass, but do "
                                "not convert loop(s) to wcslen."),
                       cl::location(DisableLIRP::Wcslen), cl::init(false),
