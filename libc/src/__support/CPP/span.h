@@ -52,6 +52,8 @@ public:
 
   LIBC_INLINE constexpr span() : span_data(nullptr), span_size(0) {}
 
+  LIBC_INLINE constexpr span(const span&) = default;
+
   LIBC_INLINE constexpr span(pointer first, size_type count)
       : span_data(first), span_size(count) {}
 
