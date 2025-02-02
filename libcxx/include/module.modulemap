@@ -1301,8 +1301,8 @@ module std [system] {
       header "__flat_set/flat_set.h"
       export std.vector.vector
       export std.vector.fwd
-      export std.flat_map.sorted_unique
     }
+    module sorted_unique                  { header "__flat_map/sorted_unique.h" }
 
     header "flat_set"
     export *
