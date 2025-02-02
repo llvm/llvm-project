@@ -1515,6 +1515,16 @@ bool LoopIdiomRecognize::runOnNoncountableLoop() {
          recognizeShiftUntilLessThan() || recognizeAndInsertStrLen();
 }
 
+/// Check if a Value is either a nullptr or a constant int zero
+static bool isZeroConstant(const Value *Val) {
+  if (isa<ConstantPointerNull>(Val))
+    return true;
+  const ConstantInt *CmpZero = dyn_cast<ConstantInt>(Val);
+  if (!CmpZero || !CmpZero->isZero())
+    return false;
+  return true;
+}
+
 /// Check if the given conditional branch is based on the comparison between
 /// a variable and zero, and if the variable is non-zero or zero (JmpOnZero is
 /// true), the control yields to the loop entry. If the branch matches the
@@ -1530,11 +1540,8 @@ static Value *matchCondition(BranchInst *BI, BasicBlock *LoopEntry,
   if (!Cond)
     return nullptr;
 
-  if (!isa<ConstantPointerNull>(Cond->getOperand(1))) {
-    ConstantInt *CmpZero = dyn_cast<ConstantInt>(Cond->getOperand(1));
-    if (!CmpZero || !CmpZero->isZero())
-      return nullptr;
-  }
+  if (!isZeroConstant(Cond->getOperand(1)))
+    return nullptr;
 
   BasicBlock *TrueSucc = BI->getSuccessor(0);
   BasicBlock *FalseSucc = BI->getSuccessor(1);
@@ -1587,7 +1594,7 @@ public:
     if (!LoopCond)
       return false;
 
-    auto *LoopLoad = dyn_cast<LoadInst>(LoopCond);
+    LoadInst *LoopLoad = dyn_cast<LoadInst>(LoopCond);
     if (!LoopLoad || LoopLoad->getPointerAddressSpace() != 0)
       return false;
 
@@ -1633,7 +1640,7 @@ public:
         return false;
 
     // Scan every instruction in the loop to ensure there are no side effects.
-    for (auto &I : *LoopBody)
+    for (Instruction &I : *LoopBody)
       if (I.mayHaveSideEffects())
         return false;
 
@@ -1685,27 +1692,30 @@ public:
 
 } // namespace
 
-/// Recognizes a strlen idiom by checking for loops that increment
-/// a char pointer and then subtract with the base pointer.
+/// The Strlen Idiom we are trying to detect has the following structure
 ///
-/// If detected, transforms the relevant code to a strlen function
-/// call, and returns true; otherwise, returns false.
+/// preheader:
+///   ...
+///   br label %body, ...
 ///
-/// The core idiom we are trying to detect is:
-/// \code
-///     start = str;
-///     do {
-///       str++;
-///     } while(*str != '\0');
-/// \endcode
+/// body:
+///   ... ; %0 is incremented by a gep
+///   %1 = load i8, ptr %0, align 1
+///   %2 = icmp eq i8 %1, 0
+///   br i1 %2, label %exit, label %body
 ///
-/// The transformed output is similar to below c-code:
-/// \code
-///     str = start + strlen(start)
-///     len = str - start
-/// \endcode
+/// exit:
+///   %lcssa = phi [%0, %body], ...
 ///
-/// Later the pointer subtraction will be folded by InstCombine
+/// We expect the strlen idiom to have a load of a character type that
+/// is compared against '\0', and such load pointer operand must have scev
+/// expression of the form {%str,+,c} where c is a ConstantInt of the
+/// appropiate character width for the idiom, and %str is the base of the string
+/// And, that all lcssa phis have the form {...,+,n} where n is a constant,
+///
+/// When transforming the output of the strlen idiom, the lccsa phi are
+/// expanded using SCEVExpander as {base scev,+,a} -> (base scev + a * strlen)
+/// and all subsequent uses are replaced.
 bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   if (DisableLIRP::All)
     return false;
@@ -1740,6 +1750,10 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   const SCEV *StrlenEv = SE->getSCEV(StrLenFunc);
   SmallVector<PHINode *, 4> Cleanup;
   for (PHINode &PN : LoopExitBB->phis()) {
+    // We can now materialize the loop output as all phi have scev {base,+,a}.
+    // We expand the phi as:
+    //   %strlen = call i64 @strlen(%str)
+    //   %phi.new = base expression + step * %strlen
     const SCEV *Ev = SE->getSCEV(&PN);
     const SCEVAddRecExpr *AddRecEv = dyn_cast<SCEVAddRecExpr>(Ev);
     const SCEVConstant *Step =
@@ -1759,7 +1773,7 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
     Cleanup.push_back(&PN);
   }
 
-  // All LCSSA Loop Phi are dead, the left over dead loop body can be cleaned 
+  // All LCSSA Loop Phi are dead, the left over dead loop body can be cleaned
   // up by later passes
   for (PHINode *PN : Cleanup) {
     RecursivelyDeleteDeadPHINode(PN);
@@ -1771,7 +1785,7 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   ORE.emit([&]() {
     return OptimizationRemark(DEBUG_TYPE, "recognizeAndInsertStrLen",
                               CurLoop->getStartLoc(), Preheader)
-           << "Transformed strlen loop idiom";
+           << "Transformed " << StrLenFunc->getName() << " loop idiom";
   });
 
   return true;
