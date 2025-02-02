@@ -4106,7 +4106,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       if (AngleNestingLevel == 0) {
         if (FormatTok->is(tok::colon)) {
           IsDerived = true;
-        } else if (FormatTok->is(tok::identifier) &&
+        } else if (!IsDerived && FormatTok->is(tok::identifier) &&
                    FormatTok->Previous->is(tok::coloncolon)) {
           ClassName = FormatTok;
         } else if (FormatTok->is(tok::l_paren) &&
