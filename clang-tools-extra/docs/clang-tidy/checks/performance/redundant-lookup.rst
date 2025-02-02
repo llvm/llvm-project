@@ -59,7 +59,7 @@ is also considered as a "lookup".
 For example, ``contains``, ``count`` but even the ``operator[]``
 should be considered as "lookups".
 
-Technically ``insert``, ``emplace`` or ``try_emplace``are also lookups,
+Technically ``insert``, ``emplace`` or ``try_emplace`` are also lookups,
 even if due to limitations, they are not recognized as such.
 
 Lookups inside macros are ignored, thus not considered as "lookups".
