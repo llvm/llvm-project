@@ -21,6 +21,9 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "lanai-disassembler"
 
 using namespace llvm;
 
