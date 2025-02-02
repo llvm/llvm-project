@@ -123,7 +123,7 @@ void RedundantLookupCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Key = Result.Nodes.getNodeAs<Expr>(LookupKey);
   const auto *ContainerObject = Result.Nodes.getNodeAs<Expr>(ObjKey);
 
-  unsigned LookupHash =
+  const unsigned LookupHash =
       hashLookupEvent(*Result.Context, EnclosingFn, ContainerObject, Key);
   auto &Lookups = RegisteredLookups.try_emplace(LookupHash).first->second;
   if (!llvm::is_contained(Lookups, LookupCall))

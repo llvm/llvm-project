@@ -76,7 +76,7 @@ Options
 
    The regular expression matching the type of the container objects.
    This is matched in a case insensitive manner.
-   Default is ``set|map``.
+   Default is `set|map`.
 
 .. option:: LookupMethodNames
 
@@ -144,4 +144,4 @@ Limitations
    There are technically lookup functions, such as ``insert`` or ``try_emplace``,
    but it would be hard to identify the "key" part of the argument,
    while leaving the implementation open for user-configuration via the
-   ``LookupMethodNames`` option.
+   `LookupMethodNames` option.
