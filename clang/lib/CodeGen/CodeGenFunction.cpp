@@ -1750,8 +1750,9 @@ bool CodeGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
 /// Strip parentheses and simplistic logical-NOT operators.
 const Expr *CodeGenFunction::stripCond(const Expr *C) {
   while (true) {
-    const Expr *SC =
-        IgnoreExprNodes(C, IgnoreParensSingleStep, IgnoreUOpLNotSingleStep);
+    const Expr *SC = IgnoreExprNodes(
+        C, IgnoreParensSingleStep, IgnoreUOpLNotSingleStep,
+        IgnoreBuiltinExpectSingleStep, IgnoreImplicitCastsSingleStep);
     if (C == SC)
       return SC;
     C = SC;
