@@ -69,6 +69,21 @@ For example:
 
     assert(map.count(key) == 0); // Not considered as a "lookup".
 
+Options
+-------
+
+.. option:: ContainerNameRegex
+
+   The regular expression matching the type of the container objects.
+   This is matched in a case insensitive manner.
+   Default is ``set|map``.
+
+.. option:: LookupMethodNames
+
+   Member function names to consider as **lookup** operation.
+   These methods must have exactly 1 argument.
+   Default is ``at;contains;count;find_as;find``.
+
 Limitations
 -----------
 
@@ -130,18 +145,3 @@ Limitations
    but it would be hard to identify the "key" part of the argument,
    while leaving the implementation open for user-configuration via the
    ``LookupMethodNames`` option.
-
-Options
--------
-
-.. option:: ContainerNameRegex
-
-   The regular expression matching the type of the container objects.
-   This is matched in a case insensitive manner.
-   Default is ``set|map``.
-
-.. option:: LookupMethodNames
-
-   Member function names to consider as **lookup** operation.
-   These methods must have exactly 1 argument.
-   Default is ``at;contains;count;find_as;find``.
