@@ -40,6 +40,7 @@ class OptimizationRemarkEmitter;
 class TargetTransformInfo;
 class TargetLibraryInfo;
 class VPRecipeBuilder;
+struct VFRange;
 
 /// VPlan-based builder utility analogous to IRBuilder.
 class VPBuilder {
