@@ -63,6 +63,10 @@ template <class D> struct BPOrderer {
                     const DenseMap<CachedHashStringRef, DenseSet<unsigned>>
                         &rootSymbolToSectionIdxs)
       -> llvm::DenseMap<const Section *, int>;
+
+  std::optional<StringRef> static getResolvedLinkageName(llvm::StringRef name) {
+    return {};
+  }
 };
 } // namespace lld
 

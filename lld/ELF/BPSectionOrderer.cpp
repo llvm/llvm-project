@@ -39,10 +39,6 @@ struct BPOrdererELF : lld::BPOrderer<BPOrdererELF> {
     return symbols;
   }
 
-  std::optional<StringRef> static getResolvedLinkageName(llvm::StringRef name) {
-    return {};
-  }
-
   static void
   getSectionHashes(const Section &sec, llvm::SmallVectorImpl<uint64_t> &hashes,
                    const llvm::DenseMap<const void *, uint64_t> &sectionToIdx) {
