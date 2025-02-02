@@ -142,23 +142,18 @@ def : FF<"no-call-graph-profile-sort">, Alias<call_graph_profile_sort>, AliasArg
   Flags<[HelpHidden]>;
 
 defm irpgo_profile: EEq<"irpgo-profile",
-    "Read the IRPGO profile for use with -bp-startup-sort and other profile-guided optimizations">;
+  "Read a temporary profile file for use with --bp-startup-sort=">;
+def bp_compression_sort: JJ<"bp-compression-sort=">, MetaVarName<"[none,function,data,both]">,
+  HelpText<"Improve Lempel-Ziv compression by grouping similar sections together, resulting in a smaller compressed app size">;
+def bp_startup_sort: JJ<"bp-startup-sort=">, MetaVarName<"[none,function]">,
+  HelpText<"Utilize a temporal profile file to reduce page faults during program startup">;
 
-def bp_startup_sort: JJ<"bp-startup-sort=">,
-    MetaVarName<"[none,function]">,
-    HelpText<"Order sections based on profile data to improve startup time">;
-
+// Auxiliary options related to balanced partition
 defm bp_compression_sort_startup_functions: BB<"bp-compression-sort-startup-functions",
-    "Order startup functions by balanced partition to improve compressed size in addition to startup time",
-    "Do not order startup function for compression">;
-    
-def bp_compression_sort: JJ<"bp-compression-sort=">,
-    MetaVarName<"[none,function,data,both]">,
-    HelpText<"Order sections by balanced partition to improve compressed size">;
-
+  "When --irpgo-profile is pecified, prioritize function similarity for compression in addition to startup time", "">;
 def verbose_bp_section_orderer: FF<"verbose-bp-section-orderer">,
-    HelpText<"Print information on how many sections were ordered by balanced partitioning and a measure of the expected number of page faults">;
-    
+  HelpText<"Print information on balanced partitioning">;
+
 // --chroot doesn't have a help text because it is an internal option.
 def chroot: Separate<["--"], "chroot">;
 

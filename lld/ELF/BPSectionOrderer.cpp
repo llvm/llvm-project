@@ -14,8 +14,6 @@
 #include "lld/Common/BPSectionOrdererBase.inc"
 #include "llvm/Support/Endian.h"
 
-#define DEBUG_TYPE "bp-section-orderer"
-
 using namespace llvm;
 using namespace lld::elf;
 
@@ -86,24 +84,19 @@ DenseMap<const InputSectionBase *, int> lld::elf::runBalancedPartitioning(
   DenseSet<const InputSectionBase *> seenSections;
 
   auto addSection = [&](Symbol &sym) {
-    if (sym.getSize() == 0)
+    auto *d = dyn_cast<Defined>(&sym);
+    if (!d || d->size == 0)
       return;
-    if (auto *d = dyn_cast<Defined>(&sym))
-      if (auto *sec = dyn_cast_or_null<InputSectionBase>(d->section))
-        if (seenSections.insert(sec).second) {
-          size_t idx = sections.size();
-          sections.emplace_back(sec);
-          auto rootName = getRootSymbol(sym.getName());
-          rootSymbolToSectionIdxs[CachedHashStringRef(rootName)].insert(idx);
-          if (auto linkageName = BPOrdererELF::getResolvedLinkageName(rootName))
-            rootSymbolToSectionIdxs[CachedHashStringRef(*linkageName)].insert(
-                idx);
-        }
+    auto *sec = dyn_cast_or_null<InputSectionBase>(d->section);
+    if (sec && seenSections.insert(sec).second) {
+      rootSymbolToSectionIdxs[CachedHashStringRef(getRootSymbol(sym.getName()))]
+          .insert(sections.size());
+      sections.emplace_back(sec);
+    }
   };
 
   for (Symbol *sym : ctx.symtab->getSymbols())
     addSection(*sym);
-
   for (ELFFileBase *file : ctx.objectFiles)
     for (Symbol *sym : file->getLocalSymbols())
       addSection(*sym);

@@ -7,13 +7,15 @@
 # RUN: not ld.lld --bp-compression-sort=function --call-graph-ordering-file /dev/null 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-CALLGRAPH-ERR
 # RUN: not ld.lld --bp-startup-sort=function 2>&1 | FileCheck %s --check-prefix=BP-STARTUP-ERR
 # RUN: not ld.lld --bp-compression-sort-startup-functions 2>&1 | FileCheck %s --check-prefix=BP-STARTUP-COMPRESSION-ERR
-# RUN: not ld.lld --bp-compression-sort=malformed 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-MALFORM
+# RUN: not ld.lld --bp-startup-sort=invalid --bp-compression-sort=invalid 2>&1 | FileCheck %s --check-prefix=BP-INVALID
 
 # BP-STARTUP-CALLGRAPH-ERR: error: --bp-startup-sort=function is incompatible with --call-graph-ordering-file
 # BP-COMPRESSION-CALLGRAPH-ERR: error: --bp-compression-sort is incompatible with --call-graph-ordering-file
 # BP-STARTUP-ERR: error: --bp-startup-sort=function must be used with --irpgo-profile
 # BP-STARTUP-COMPRESSION-ERR: error: --bp-compression-sort-startup-functions must be used with --irpgo-profile
-# BP-COMPRESSION-MALFORM: error: unknown value 'malformed' for --bp-compression-sort=
+
+# BP-INVALID: error: --bp-compression-sort=: expected [none|function|data|both]
+# BP-INVALID: error: --bp-startup-sort=: expected [none|function]
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64 a.s -o a.o
 # RUN: llvm-profdata merge a.proftext -o a.profdata
