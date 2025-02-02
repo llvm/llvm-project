@@ -59,6 +59,7 @@ template <typename T>
 void decompose_struct() {
   T obj{1, 2, 3, 6};
   auto [x, ...rest, y] = obj;
+  static_assert(sizeof...(rest) == 2);
 
   auto [...empty] = type_<int>{};
   static_assert(sizeof...(empty) == 0);
@@ -124,6 +125,14 @@ void lambda_capture() {
   [&x...] { (void)sum(x...); }();
 }
 
+struct S2 {
+    int a, b, c;
+};
+
+auto X = [] <typename = void> () {
+    auto [...pack] = S2{};
+};
+
 int main() {
   decompose_array<int>();
   decompose_tuple<fake_tuple>();
@@ -133,6 +142,8 @@ int main() {
   lambda_capture<int[5]>();
   lambda_capture<fake_tuple>();
   lambda_capture<my_struct>();
+  X();
+
 }
 
 // P1061R10 Stuff
