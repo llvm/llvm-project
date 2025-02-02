@@ -30,14 +30,16 @@ void test_one() {
   {
     M m = {8, 10};
     assert(m.size() == 2);
-    m              = {3, 1, 2, 2, 3, 4, 3, 5, 6, 5};
+    std::same_as<M&> decltype(auto) r = m = {3, 1, 2, 2, 3, 4, 3, 5, 6, 5};
+    assert(&r == &m);
     int expected[] = {1, 2, 3, 4, 5, 6};
     assert(std::ranges::equal(m, expected));
   }
   {
     M m = {10, 8};
     assert(m.size() == 2);
-    m              = {3};
+    std::same_as<M&> decltype(auto) r = m = {3};
+    assert(&r == &m);
     int expected[] = {3};
     assert(std::ranges::equal(m, expected));
   }
