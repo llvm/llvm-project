@@ -172,7 +172,7 @@ public:
     CheckFactories.registerCheck<UseAnyOfAllOfCheck>(
         "readability-use-anyofallof");
     CheckFactories.registerCheck<UseCppStyleCommentsCheck>(
-        "readability-use-cpp-style-comments");    
+        "readability-use-cpp-style-comments");
     CheckFactories.registerCheck<UseStdMinMaxCheck>(
         "readability-use-std-min-max");
   }
