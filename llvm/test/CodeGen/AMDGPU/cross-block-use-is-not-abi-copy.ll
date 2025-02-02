@@ -189,16 +189,16 @@ define amdgpu_kernel void @v3i16_registers(i1 %cond) #0 {
 ; GCN-NEXT:    s_cbranch_vccnz .LBB4_2
 ; GCN-NEXT:  ; %bb.1: ; %if.else
 ; GCN-NEXT:    s_add_u32 s8, s8, 8
+; GCN-NEXT:    s_addc_u32 s9, s9, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
-; GCN-NEXT:    s_addc_u32 s9, s9, 0
+; GCN-NEXT:    s_getpc_b64 s[18:19]
+; GCN-NEXT:    s_add_u32 s18, s18, func_v3i16@rel32@lo+4
+; GCN-NEXT:    s_addc_u32 s19, s19, func_v3i16@rel32@hi+12
 ; GCN-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GCN-NEXT:    s_mov_b32 s12, s14
 ; GCN-NEXT:    s_mov_b32 s13, s15
 ; GCN-NEXT:    s_mov_b32 s14, s16
-; GCN-NEXT:    s_getpc_b64 s[18:19]
-; GCN-NEXT:    s_add_u32 s18, s18, func_v3i16@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s19, s19, func_v3i16@rel32@hi+12
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GCN-NEXT:    s_branch .LBB4_3
 ; GCN-NEXT:  .LBB4_2:
@@ -240,16 +240,16 @@ define amdgpu_kernel void @v3f16_registers(i1 %cond) #0 {
 ; GCN-NEXT:    s_cbranch_vccnz .LBB5_2
 ; GCN-NEXT:  ; %bb.1: ; %if.else
 ; GCN-NEXT:    s_add_u32 s8, s8, 8
+; GCN-NEXT:    s_addc_u32 s9, s9, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
-; GCN-NEXT:    s_addc_u32 s9, s9, 0
+; GCN-NEXT:    s_getpc_b64 s[18:19]
+; GCN-NEXT:    s_add_u32 s18, s18, func_v3f16@rel32@lo+4
+; GCN-NEXT:    s_addc_u32 s19, s19, func_v3f16@rel32@hi+12
 ; GCN-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GCN-NEXT:    s_mov_b32 s12, s14
 ; GCN-NEXT:    s_mov_b32 s13, s15
 ; GCN-NEXT:    s_mov_b32 s14, s16
-; GCN-NEXT:    s_getpc_b64 s[18:19]
-; GCN-NEXT:    s_add_u32 s18, s18, func_v3f16@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s19, s19, func_v3f16@rel32@hi+12
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GCN-NEXT:    s_branch .LBB5_3
 ; GCN-NEXT:  .LBB5_2:
