@@ -147,8 +147,6 @@ public:
         "readability-static-definition-in-anonymous-namespace");
     CheckFactories.registerCheck<StringCompareCheck>(
         "readability-string-compare");
-    CheckFactories.registerCheck<UseCppStyleCommentsCheck>(
-        "readability-use-cpp-style-comments");
     CheckFactories.registerCheck<readability::NamedParameterCheck>(
         "readability-named-parameter");
     CheckFactories.registerCheck<NonConstParameterCheck>(
@@ -173,6 +171,8 @@ public:
         "readability-uppercase-literal-suffix");
     CheckFactories.registerCheck<UseAnyOfAllOfCheck>(
         "readability-use-anyofallof");
+    CheckFactories.registerCheck<UseCppStyleCommentsCheck>(
+        "readability-use-cpp-style-comments");    
     CheckFactories.registerCheck<UseStdMinMaxCheck>(
         "readability-use-std-min-max");
   }
