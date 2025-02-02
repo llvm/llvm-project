@@ -6,12 +6,16 @@ include "llvm/IR/Intrinsics.td"
 // CHECK: foo = 1,
 def int_foo : Intrinsic<[llvm_any_ty]>;
 
-// No conflicts, since .bar is not a vaid mangled type.
+// No conflicts, since .bar is not a valid mangled type.
 // CHECK: foo_bar,
 def int_foo_bar : Intrinsic<[llvm_i32_ty]>;
 
 // CHECK: foo_bar_f32,
 def int_foo_bar_f32 : Intrinsic<[llvm_i32_ty]>;
+
+// No conflicts, since i is not a valid mangled type without a bitwidth.
+// CHECK: foo_i
+def int_foo_i : Intrinsic<[llvm_i32_ty]>;
 
 #ifdef CONFLICT
 // CHECK-CONFLICT: error: intrinsic `llvm.foo.a3` cannot share prefix `llvm.foo.a3` with another overloaded intrinsic `llvm.foo`

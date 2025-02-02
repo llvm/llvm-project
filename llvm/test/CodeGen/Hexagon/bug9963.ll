@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 ; CHECK-NOT: memd
 ; CHECK: call f1
 ; CHECK: r{{[0-9]}}:{{[0-9]}} = combine(#0,#10)
