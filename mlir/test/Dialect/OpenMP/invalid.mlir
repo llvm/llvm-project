@@ -2429,8 +2429,8 @@ func.func @omp_distribute_unconstrained_order() -> () {
   return
 }
 // -----
-omp.private {type = private} @x.privatizer : i32 init {
-^bb0(%arg0: i32, %arg1: i32):
+omp.private {type = private} @x.privatizer : i32 alloc {
+^bb0(%arg0: i32):
   %0 = arith.constant 0.0 : f32
   // expected-error @below {{Invalid yielded value. Expected type: 'i32', got: 'f32'}}
   omp.yield(%0 : f32)
@@ -2438,17 +2438,17 @@ omp.private {type = private} @x.privatizer : i32 init {
 
 // -----
 
-// expected-error @below {{Region argument type mismatch: got 'f32' expected 'i32'.}}
-omp.private {type = private} @x.privatizer : i32 init {
-^bb0(%arg0: i32, %arg1: f32):
+omp.private {type = private} @x.privatizer : i32 alloc {
+^bb0(%arg0: i32):
+  // expected-error @below {{Invalid yielded value. Expected type: 'i32', got: None}}
   omp.yield
 }
 
 // -----
 
-omp.private {type = private} @x.privatizer : f32 init {
-^bb0(%arg0: f32, %arg1: f32):
-  omp.yield(%arg0: f32)
+omp.private {type = private} @x.privatizer : f32 alloc {
+^bb0(%arg0: f32):
+  omp.yield(%arg0 : f32)
 } dealloc {
 ^bb0(%arg0: f32):
   // expected-error @below {{Did not expect any values to be yielded.}}
@@ -2457,24 +2457,27 @@ omp.private {type = private} @x.privatizer : f32 init {
 
 // -----
 
-omp.private {type = private} @x.privatizer : i32 init {
-^bb0(%arg0: i32, %arg1: i32):
+omp.private {type = private} @x.privatizer : i32 alloc {
+^bb0(%arg0: i32):
   // expected-error @below {{expected exit block terminator to be an `omp.yield` op.}}
   omp.terminator
 }
 
 // -----
 
-// expected-error @below {{`init`: expected 2 region arguments, got: 1}}
-omp.private {type = private} @x.privatizer : f32 init {
-^bb0(%arg0: f32):
+// expected-error @below {{`alloc`: expected 1 region arguments, got: 2}}
+omp.private {type = private} @x.privatizer : f32 alloc {
+^bb0(%arg0: f32, %arg1: f32):
   omp.yield(%arg0 : f32)
 }
 
 // -----
 
 // expected-error @below {{`copy`: expected 2 region arguments, got: 1}}
-omp.private {type = firstprivate} @x.privatizer : f32 copy {
+omp.private {type = firstprivate} @x.privatizer : f32 alloc {
+^bb0(%arg0: f32):
+  omp.yield(%arg0 : f32)
+} copy {
 ^bb0(%arg0: f32):
   omp.yield(%arg0 : f32)
 }
@@ -2482,24 +2485,30 @@ omp.private {type = firstprivate} @x.privatizer : f32 copy {
 // -----
 
 // expected-error @below {{`dealloc`: expected 1 region arguments, got: 2}}
-omp.private {type = private} @x.privatizer : f32 dealloc {
+omp.private {type = private} @x.privatizer : f32 alloc {
+^bb0(%arg0: f32):
+  omp.yield(%arg0 : f32)
+} dealloc {
 ^bb0(%arg0: f32, %arg1: f32):
   omp.yield
 }
 
 // -----
 
-// expected-error @below {{`private` clauses do not require a `copy` region.}}
-omp.private {type = private} @x.privatizer : f32 copy {
+// expected-error @below {{`private` clauses require only an `alloc` region.}}
+omp.private {type = private} @x.privatizer : f32 alloc {
+^bb0(%arg0: f32):
+  omp.yield(%arg0 : f32)
+} copy {
 ^bb0(%arg0: f32, %arg1 : f32):
   omp.yield(%arg0 : f32)
 }
 
 // -----
 
-// expected-error @below {{`firstprivate` clauses require at least a `copy` region.}}
-omp.private {type = firstprivate} @x.privatizer : f32 init {
-^bb0(%arg0: f32, %arg1: f32):
+// expected-error @below {{`firstprivate` clauses require both `alloc` and `copy` regions.}}
+omp.private {type = firstprivate} @x.privatizer : f32 alloc {
+^bb0(%arg0: f32):
   omp.yield(%arg0 : f32)
 }
 
@@ -2514,8 +2523,8 @@ func.func @private_type_mismatch(%arg0: index) {
   return
 }
 
-omp.private {type = private} @var1.privatizer : index init {
-^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+omp.private {type = private} @var1.privatizer : !llvm.ptr alloc {
+^bb0(%arg0: !llvm.ptr):
   omp.yield(%arg0 : !llvm.ptr)
 }
 
@@ -2530,7 +2539,10 @@ func.func @firstprivate_type_mismatch(%arg0: index) {
   return
 }
 
-omp.private {type = firstprivate} @var1.privatizer : index copy {
+omp.private {type = firstprivate} @var1.privatizer : !llvm.ptr alloc {
+^bb0(%arg0: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+} copy {
 ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   omp.yield(%arg0 : !llvm.ptr)
 }
@@ -2558,7 +2570,10 @@ func.func @undefined_privatizer(%arg0: !llvm.ptr) {
 
 // -----
 
-omp.private {type = private} @var1.privatizer : !llvm.ptr copy {
+omp.private {type = private} @var1.privatizer : !llvm.ptr alloc {
+^bb0(%arg0: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+} copy {
 ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   omp.yield(%arg0 : !llvm.ptr)
 }
