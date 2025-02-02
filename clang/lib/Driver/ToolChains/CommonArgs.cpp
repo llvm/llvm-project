@@ -1863,18 +1863,6 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
   // Android-specific defaults for PIC/PIE
   if (Triple.isAndroid()) {
     switch (Triple.getArch()) {
-    case llvm::Triple::arm:
-    case llvm::Triple::armeb:
-    case llvm::Triple::thumb:
-    case llvm::Triple::thumbeb:
-    case llvm::Triple::aarch64:
-    case llvm::Triple::mips:
-    case llvm::Triple::mipsel:
-    case llvm::Triple::mips64:
-    case llvm::Triple::mips64el:
-      PIC = true; // "-fpic"
-      break;
-
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
       PIC = true; // "-fPIC"
@@ -1882,6 +1870,7 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
       break;
 
     default:
+      PIC = true; // "-fpic"
       break;
     }
   }
@@ -3106,12 +3095,19 @@ void tools::renderCommonIntegerOverflowOptions(const ArgList &Args,
                                                ArgStringList &CmdArgs) {
   // -fno-strict-overflow implies -fwrapv if it isn't disabled, but
   // -fstrict-overflow won't turn off an explicitly enabled -fwrapv.
+  bool StrictOverflow = Args.hasFlag(options::OPT_fstrict_overflow,
+                                     options::OPT_fno_strict_overflow, true);
   if (Arg *A = Args.getLastArg(options::OPT_fwrapv, options::OPT_fno_wrapv)) {
     if (A->getOption().matches(options::OPT_fwrapv))
       CmdArgs.push_back("-fwrapv");
-  } else if (Arg *A = Args.getLastArg(options::OPT_fstrict_overflow,
-                                      options::OPT_fno_strict_overflow)) {
-    if (A->getOption().matches(options::OPT_fno_strict_overflow))
-      CmdArgs.push_back("-fwrapv");
+  } else if (!StrictOverflow) {
+    CmdArgs.push_back("-fwrapv");
+  }
+  if (Arg *A = Args.getLastArg(options::OPT_fwrapv_pointer,
+                               options::OPT_fno_wrapv_pointer)) {
+    if (A->getOption().matches(options::OPT_fwrapv_pointer))
+      CmdArgs.push_back("-fwrapv-pointer");
+  } else if (!StrictOverflow) {
+    CmdArgs.push_back("-fwrapv-pointer");
   }
 }

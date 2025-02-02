@@ -1491,13 +1491,6 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
     NewOpc = AArch64::LDRQpost;
     break;
   }
-  // Get rid of the SEH code associated with the old instruction.
-  if (NeedsWinCFI) {
-    auto SEH = std::next(MBBI);
-    if (AArch64InstrInfo::isSEHInstruction(*SEH))
-      SEH->eraseFromParent();
-  }
-
   TypeSize Scale = TypeSize::getFixed(1), Width = TypeSize::getFixed(0);
   int64_t MinOffset, MaxOffset;
   bool Success = static_cast<const AArch64InstrInfo *>(TII)->getMemOpInfo(
@@ -1512,14 +1505,25 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
       CSStackSizeInc > MaxOffset * (int64_t)Scale.getFixedValue()) {
     // If we are destroying the frame, make sure we add the increment after the
     // last frame operation.
-    if (FrameFlag == MachineInstr::FrameDestroy)
+    if (FrameFlag == MachineInstr::FrameDestroy) {
       ++MBBI;
+      // Also skip the SEH instruction, if needed
+      if (NeedsWinCFI && AArch64InstrInfo::isSEHInstruction(*MBBI))
+        ++MBBI;
+    }
     emitFrameOffset(MBB, MBBI, DL, AArch64::SP, AArch64::SP,
                     StackOffset::getFixed(CSStackSizeInc), TII, FrameFlag,
-                    false, false, nullptr, EmitCFI,
+                    false, NeedsWinCFI, HasWinCFI, EmitCFI,
                     StackOffset::getFixed(CFAOffset));
 
     return std::prev(MBBI);
+  }
+
+  // Get rid of the SEH code associated with the old instruction.
+  if (NeedsWinCFI) {
+    auto SEH = std::next(MBBI);
+    if (AArch64InstrInfo::isSEHInstruction(*SEH))
+      SEH->eraseFromParent();
   }
 
   MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(NewOpc));

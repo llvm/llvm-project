@@ -248,7 +248,11 @@ std::pair<Value *, Value *> ShapeCalculator::getShape(IntrinsicInst *II,
   case Intrinsic::x86_tdpbuud_internal:
   case Intrinsic::x86_tdpbf16ps_internal:
   case Intrinsic::x86_tdpfp16ps_internal:
-  case Intrinsic::x86_tmmultf32ps_internal: {
+  case Intrinsic::x86_tmmultf32ps_internal:
+  case Intrinsic::x86_tdpbf8ps_internal:
+  case Intrinsic::x86_tdpbhf8ps_internal:
+  case Intrinsic::x86_tdphbf8ps_internal:
+  case Intrinsic::x86_tdphf8ps_internal: {
     switch (OpNo) {
     case 3:
       Row = II->getArgOperand(0);
@@ -935,10 +939,10 @@ bool X86LowerAMXCast::optimizeAMXCastFromPhi(
         BasicBlock::iterator Iter = Block->getTerminator()->getIterator();
         Instruction *NewInst = Builder.CreateIntrinsic(
             Intrinsic::x86_tilezero_internal, {}, {Row, Col});
-        NewInst->moveBefore(&*Iter);
+        NewInst->moveBefore(Iter);
         NewInst = Builder.CreateIntrinsic(Intrinsic::x86_cast_tile_to_vector,
                                           {IncValue->getType()}, {NewInst});
-        NewInst->moveBefore(&*Iter);
+        NewInst->moveBefore(Iter);
         // Replace InValue with new Value.
         OldPN->setIncomingValue(I, NewInst);
         IncValue = NewInst;

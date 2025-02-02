@@ -849,55 +849,24 @@ def LoadCacheModifierKind : I32EnumAttr<"LoadCacheModifierKind",
 
 def LoadCacheModifierAttr : EnumAttr<NVVM_Dialect, LoadCacheModifierKind, "load_cache_modifier">;
 
-def NVVM_CpAsyncOp : NVVM_PTXBuilder_Op<"cp.async.shared.global">,
+def NVVM_CpAsyncOp : NVVM_Op<"cp.async.shared.global">,
   Arguments<(ins LLVM_PointerShared:$dst,
                  LLVM_PointerGlobal:$src,
                  I32Attr:$size,
                  LoadCacheModifierAttr:$modifier,
                  Optional<LLVM_Type>:$cpSize)> {
-  string llvmBuilder = [{
-      llvm::Intrinsic::ID id;
-      switch ($size) {
-        case 4:
-          id = llvm::Intrinsic::nvvm_cp_async_ca_shared_global_4;
-          break;
-        case 8:
-          id = llvm::Intrinsic::nvvm_cp_async_ca_shared_global_8;
-          break;
-        case 16:
-          if($modifier == NVVM::LoadCacheModifierKind::CG)
-            id = llvm::Intrinsic::nvvm_cp_async_cg_shared_global_16;
-          else if($modifier == NVVM::LoadCacheModifierKind::CA)
-            id = llvm::Intrinsic::nvvm_cp_async_ca_shared_global_16;
-          else 
-            llvm_unreachable("unsupported cache modifier");
-          break;
-        default:
-          llvm_unreachable("unsupported async copy size");
-      }
-      createIntrinsicCall(builder, id, {$dst, $src});
-  }];
   let assemblyFormat = "$dst `,` $src `,` $size `,` `cache` `=` $modifier (`,` $cpSize^)? attr-dict `:` type(operands)";
   let hasVerifier = 1;
   let extraClassDeclaration = [{
-    bool hasIntrinsic() { if(getCpSize()) return false; return true; }
-
-    void getAsmValues(RewriterBase &rewriter, 
-        llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &asmValues) {
-      asmValues.push_back({getDst(), PTXRegisterMod::Read});
-      asmValues.push_back({getSrc(), PTXRegisterMod::Read});
-      asmValues.push_back({makeConstantI32(rewriter, getSize()), PTXRegisterMod::Read});
-      asmValues.push_back({getCpSize(), PTXRegisterMod::Read});
-    }        
+    static llvm::Intrinsic::ID
+      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                            llvm::SmallVector<llvm::Value *> &args);
   }];
-  let extraClassDefinition = [{        
-    std::string $cppClass::getPtx() { 
-      if(getModifier() == NVVM::LoadCacheModifierKind::CG)
-        return std::string("cp.async.cg.shared.global [%0], [%1], %2, %3;\n");
-      if(getModifier() == NVVM::LoadCacheModifierKind::CA)
-        return std::string("cp.async.ca.shared.global [%0], [%1], %2, %3;\n");
-      llvm_unreachable("unsupported cache modifier");      
-    }
+  string llvmBuilder = [{
+    llvm::SmallVector<llvm::Value *> translatedOperands;
+    auto id = NVVM::CpAsyncOp::getIntrinsicIDAndArgs(
+      *op, moduleTranslation, translatedOperands);
+    createIntrinsicCall(builder, id, translatedOperands);
   }];
 }
 
@@ -2209,6 +2178,150 @@ def NVVM_CpAsyncBulkTensorReduceOp :
   }];
 }
 
+def NVVM_CpAsyncBulkGlobalToSharedClusterOp :
+  NVVM_Op<"cp.async.bulk.shared.cluster.global", [AttrSizedOperandSegments]> {
+  let summary = "Async bulk copy from global memory to Shared cluster memory";
+  let description = [{
+    Initiates an asynchronous copy operation from global memory to cluster's
+    shared memory.
+
+    The `multicastMask` operand is optional. When it is present, the Op copies
+    data from global memory to shared memory of multiple CTAs in the cluster.
+    Operand `multicastMask` specifies the destination CTAs in the cluster such
+    that each bit position in the 16-bit `multicastMask` operand corresponds to
+    the `nvvm.read.ptx.sreg.ctaid` of the destination CTA.
+
+    The `l2CacheHint` operand is optional, and it is used to specify cache
+    eviction policy that may be used during the memory access.
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk)
+  }];
+
+  let arguments = (ins
+    LLVM_PointerShared:$dstMem,
+    LLVM_PointerGlobal:$srcMem,
+    LLVM_PointerShared:$mbar,
+    I32:$size,
+    Optional<I16>:$multicastMask,
+    Optional<I64>:$l2CacheHint);
+
+  let assemblyFormat = [{
+    $dstMem `,` $srcMem `,` $mbar `,` $size
+    (`multicast_mask` `=` $multicastMask^ )?
+    (`l2_cache_hint` `=` $l2CacheHint^ )?
+    attr-dict  `:` type($dstMem) `,` type($srcMem)
+  }];
+
+  string llvmBuilder = [{
+    // Arguments to the intrinsic:
+    // dst, mbar, src, size
+    // multicast_mask, cache_hint,
+    // flag for multicast_mask,
+    // flag for cache_hint
+    llvm::SmallVector<llvm::Value *> translatedOperands;
+    translatedOperands.push_back($dstMem);
+    translatedOperands.push_back($mbar);
+    translatedOperands.push_back($srcMem);
+    translatedOperands.push_back($size);
+
+    // Multicast, if available
+    llvm::LLVMContext &ctx = moduleTranslation.getLLVMContext();
+    auto *i16Unused = llvm::ConstantInt::get(llvm::Type::getInt16Ty(ctx), 0);
+    bool isMulticast = op.getMulticastMask() ? true : false;
+    translatedOperands.push_back(isMulticast ? $multicastMask : i16Unused);
+
+    // Cachehint, if available
+    auto *i64Unused = llvm::ConstantInt::get(llvm::Type::getInt64Ty(ctx), 0);
+    bool isCacheHint = op.getL2CacheHint() ? true : false;
+    translatedOperands.push_back(isCacheHint ? $l2CacheHint : i64Unused);
+
+    // Flag arguments for multicast and cachehint
+    translatedOperands.push_back(builder.getInt1(isMulticast));
+    translatedOperands.push_back(builder.getInt1(isCacheHint));
+
+    createIntrinsicCall(builder,
+      llvm::Intrinsic::nvvm_cp_async_bulk_global_to_shared_cluster, translatedOperands);
+  }];
+}
+
+def NVVM_CpAsyncBulkSharedCTAToSharedClusterOp :
+  NVVM_Op<"cp.async.bulk.shared.cluster.shared.cta"> {
+  let summary = "Async bulk copy from Shared CTA memory to Shared cluster memory";
+  let description = [{
+    Initiates an asynchronous copy operation from Shared CTA memory to Shared
+    cluster memory.
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk)
+  }];
+
+  let arguments = (ins
+    LLVM_PointerShared:$dstMem,
+    LLVM_PointerShared:$srcMem,
+    LLVM_PointerShared:$mbar,
+    I32:$size);
+
+  let assemblyFormat = [{
+    $dstMem `,` $srcMem `,` $mbar `,` $size
+    attr-dict  `:` type($dstMem) `,` type($srcMem)
+  }];
+
+  string llvmBuilder = [{
+    createIntrinsicCall(builder,
+      llvm::Intrinsic::nvvm_cp_async_bulk_shared_cta_to_cluster,
+      {$dstMem, $mbar, $srcMem, $size});
+  }];
+}
+
+def NVVM_CpAsyncBulkSharedCTAToGlobalOp :
+  NVVM_Op<"cp.async.bulk.global.shared.cta"> {
+  let summary = "Async bulk copy from Shared CTA memory to Global memory";
+  let description = [{
+    Initiates an asynchronous copy operation from Shared CTA memory to
+    global memory.
+
+    The `l2CacheHint` operand is optional, and it is used to specify cache
+    eviction policy that may be used during the memory access.
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk)
+  }];
+
+  let arguments = (ins
+    LLVM_PointerGlobal:$dstMem,
+    LLVM_PointerShared:$srcMem,
+    I32:$size,
+    Optional<I64>:$l2CacheHint);
+
+  let assemblyFormat = [{
+    $dstMem `,` $srcMem `,` $size
+    (`l2_cache_hint` `=` $l2CacheHint^ )?
+    attr-dict  `:` type($dstMem) `,` type($srcMem)
+  }];
+
+  string llvmBuilder = [{
+    // Arguments to the intrinsic:
+    // dst, src, size, cache_hint,
+    // Flag for cache_hint
+    //
+    llvm::SmallVector<llvm::Value *> translatedOperands;
+    translatedOperands.push_back($dstMem);
+    translatedOperands.push_back($srcMem);
+    translatedOperands.push_back($size);
+
+    // Cachehint, if available
+    llvm::LLVMContext &ctx = moduleTranslation.getLLVMContext();
+    auto *i64Unused = llvm::ConstantInt::get(llvm::Type::getInt64Ty(ctx), 0);
+    bool isCacheHint = op.getL2CacheHint() ? true : false;
+    translatedOperands.push_back(isCacheHint ? $l2CacheHint : i64Unused);
+
+    // Flag argument for cachehint
+    translatedOperands.push_back(builder.getInt1(isCacheHint));
+
+    createIntrinsicCall(builder,
+      llvm::Intrinsic::nvvm_cp_async_bulk_shared_cta_to_global, translatedOperands);
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // NVVM Wgmma Ops
 //===----------------------------------------------------------------------===//
@@ -2397,6 +2510,55 @@ def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async",
     void getAsmValues(RewriterBase &rewriter, 
         llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &asmValues);
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM Griddepcontrol Ops
+//===----------------------------------------------------------------------===//
+
+def NVVM_GriddepcontrolWaitOp : NVVM_IntrOp<"griddepcontrol.wait", [], 0> {
+  let assemblyFormat = "attr-dict";
+
+  let description = [{
+    Causes the executing thread to wait until all prerequisite grids in flight 
+    have completed and all the memory operations from the prerequisite grids 
+    are performed and made visible to the current grid.
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-griddepcontrol)
+  }];
+}
+
+def NVVM_GriddepcontrolLaunchDependentsOp
+    : NVVM_IntrOp<"griddepcontrol.launch.dependents", [], 0> {
+  let assemblyFormat = "attr-dict";
+
+  let description = [{
+    Signals that specific dependents the runtime system designated to react to 
+    this instruction can be scheduled as soon as all other CTAs in the grid 
+    issue the same instruction or have completed.
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-griddepcontrol)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM Mapa Op
+//===----------------------------------------------------------------------===//
+
+def NVVM_MapaOp: NVVM_Op<"mapa",
+    [TypesMatchWith<"`res` and `a` should have the same type",
+                    "a", "res", "$_self">]> {
+  let results = (outs AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$res);
+  let arguments = (ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$a, I32:$b);
+
+  string llvmBuilder = [{
+    int addrSpace = llvm::cast<LLVMPointerType>(op.getA().getType()).getAddressSpace();
+    
+    bool isSharedMemory = addrSpace == NVVM::NVVMMemorySpace::kSharedMemorySpace;
+
+    auto intId = isSharedMemory? llvm::Intrinsic::nvvm_mapa_shared_cluster : llvm::Intrinsic::nvvm_mapa;
+    $res = createIntrinsicCall(builder, intId, {$a, $b});
+  }];
+  
+  let assemblyFormat = "$a`,` $b attr-dict `:` type($a) `->` type($res)";
 }
 
 def NVVM_Exit : NVVM_Op<"exit"> {

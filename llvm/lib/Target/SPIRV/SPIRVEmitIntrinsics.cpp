@@ -74,7 +74,6 @@ class SPIRVEmitIntrinsics
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseMap<Instruction *, Type *> AggrConstTypes;
   DenseSet<Instruction *> AggrStores;
-  SPIRV::InstructionSet::InstructionSet InstrSet;
 
   // map of function declarations to <pointer arg index => element type>
   DenseMap<Function *, SmallVector<std::pair<unsigned, Type *>>> FDeclPtrTys;
@@ -896,8 +895,9 @@ bool SPIRVEmitIntrinsics::deduceOperandElementTypeCalledFunction(
       getOclOrSpirvBuiltinDemangledName(CalledF->getName());
   if (DemangledName.length() > 0 &&
       !StringRef(DemangledName).starts_with("llvm.")) {
-    auto [Grp, Opcode, ExtNo] =
-        SPIRV::mapBuiltinToOpcode(DemangledName, InstrSet);
+    const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(*CalledF);
+    auto [Grp, Opcode, ExtNo] = SPIRV::mapBuiltinToOpcode(
+        DemangledName, ST.getPreferredInstructionSet());
     if (Opcode == SPIRV::OpGroupAsyncCopy) {
       for (unsigned i = 0, PtrCnt = 0; i < CI->arg_size() && PtrCnt < 2; ++i) {
         Value *Op = CI->getArgOperand(i);
@@ -2317,8 +2317,6 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
 
   const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(Func);
   GR = ST.getSPIRVGlobalRegistry();
-  InstrSet = ST.isOpenCLEnv() ? SPIRV::InstructionSet::OpenCL_std
-                              : SPIRV::InstructionSet::GLSL_std_450;
 
   if (!CurrF)
     HaveFunPtrs =
@@ -2475,8 +2473,9 @@ void SPIRVEmitIntrinsics::parseFunDeclarations(Module &M) {
     if (DemangledName.empty())
       continue;
     // allow only OpGroupAsyncCopy use case at the moment
-    auto [Grp, Opcode, ExtNo] =
-        SPIRV::mapBuiltinToOpcode(DemangledName, InstrSet);
+    const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(F);
+    auto [Grp, Opcode, ExtNo] = SPIRV::mapBuiltinToOpcode(
+        DemangledName, ST.getPreferredInstructionSet());
     if (Opcode != SPIRV::OpGroupAsyncCopy)
       continue;
     // find pointer arguments

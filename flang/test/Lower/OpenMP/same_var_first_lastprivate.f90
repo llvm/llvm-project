@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -fopenmp -mmlir --openmp-enable-delayed-privatization-staging=true -emit-hlfir %s -o - | FileCheck %s
 
 subroutine first_and_lastprivate
   integer i

@@ -648,12 +648,12 @@ public:
 
     SmallVector<Value> filteredDims = condenseValues(dynDims);
 
-    SmallVector<int64_t> permutation{1, 0};
+    SmallVector<int64_t> permutation = {1, 0};
     auto permutationAttr = rewriter.getI64TensorAttr(permutation);
     Value permutationValue =
         rewriter.create<arith::ConstantOp>(loc, permutationAttr);
 
-    SmallVector<int64_t> newWeightShape{weightShape[1], weightShape[0]};
+    SmallVector<int64_t> newWeightShape = {weightShape[1], weightShape[0]};
     Type newWeightTy =
         RankedTensorType::get(newWeightShape, weightTy.getElementType());
 

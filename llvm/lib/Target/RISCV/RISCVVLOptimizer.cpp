@@ -18,7 +18,7 @@
 
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
-#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
@@ -56,6 +56,10 @@ private:
   std::optional<MachineOperand> checkUsers(MachineInstr &MI);
   bool tryReduceVL(MachineInstr &MI);
   bool isCandidate(const MachineInstr &MI) const;
+
+  /// For a given instruction, records what elements of it are demanded by
+  /// downstream users.
+  DenseMap<const MachineInstr *, std::optional<MachineOperand>> DemandedVLs;
 };
 
 } // end anonymous namespace
@@ -207,13 +211,6 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
 
   const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MI.getDesc());
   const bool IsTied = RISCVII::isTiedPseudo(MI.getDesc().TSFlags);
-
-  // We bail out early for instructions that have passthru with non NoRegister,
-  // which means they are using TU policy. We are not interested in these
-  // since they must preserve the entire register content.
-  if (HasPassthru && MO.getOperandNo() == MI.getNumExplicitDefs() &&
-      (MO.getReg() != RISCV::NoRegister))
-    return std::nullopt;
 
   bool IsMODef = MO.getOperandNo() == 0;
 
@@ -1024,6 +1021,18 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   // Vector Widening Floating-Point Multiply
   case RISCV::VFWMUL_VF:
   case RISCV::VFWMUL_VV:
+  // Vector Floating-Point MIN/MAX Instructions
+  case RISCV::VFMIN_VF:
+  case RISCV::VFMIN_VV:
+  case RISCV::VFMAX_VF:
+  case RISCV::VFMAX_VV:
+  // Vector Floating-Point Sign-Injection Instructions
+  case RISCV::VFSGNJ_VF:
+  case RISCV::VFSGNJ_VV:
+  case RISCV::VFSGNJN_VV:
+  case RISCV::VFSGNJN_VF:
+  case RISCV::VFSGNJX_VF:
+  case RISCV::VFSGNJX_VV:
   // Vector Floating-Point Compare Instructions
   case RISCV::VMFEQ_VF:
   case RISCV::VMFEQ_VV:
@@ -1138,35 +1147,6 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   if (MI.getNumDefs() != 1)
     return false;
 
-  // If we're not using VLMAX, then we need to be careful whether we are using
-  // TA/TU when there is a non-undef Passthru. But when we are using VLMAX, it
-  // does not matter whether we are using TA/TU with a non-undef Passthru, since
-  // there are no tail elements to be preserved.
-  unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
-  const MachineOperand &VLOp = MI.getOperand(VLOpNum);
-  if (VLOp.isReg() || VLOp.getImm() != RISCV::VLMaxSentinel) {
-    // If MI has a non-undef passthru, we will not try to optimize it since
-    // that requires us to preserve tail elements according to TA/TU.
-    // Otherwise, The MI has an undef Passthru, so it doesn't matter whether we
-    // are using TA/TU.
-    bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(Desc);
-    unsigned PassthruOpIdx = MI.getNumExplicitDefs();
-    if (HasPassthru &&
-        MI.getOperand(PassthruOpIdx).getReg() != RISCV::NoRegister) {
-      LLVM_DEBUG(
-          dbgs() << "  Not a candidate because it uses non-undef passthru"
-                    " with non-VLMAX VL\n");
-      return false;
-    }
-  }
-
-  // If the VL is 1, then there is no need to reduce it. This is an
-  // optimization, not needed to preserve correctness.
-  if (VLOp.isImm() && VLOp.getImm() == 1) {
-    LLVM_DEBUG(dbgs() << "  Not a candidate because VL is already 1\n");
-    return false;
-  }
-
   if (MI.mayRaiseFPException()) {
     LLVM_DEBUG(dbgs() << "Not a candidate because may raise FP exception\n");
     return false;
@@ -1188,6 +1168,10 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
     LLVM_DEBUG(dbgs() << "Not a candidate due to unsupported instruction\n");
     return false;
   }
+
+  assert(MI.getOperand(0).isReg() &&
+         isVectorRegClass(MI.getOperand(0).getReg(), MRI) &&
+         "All supported instructions produce a vector register result");
 
   LLVM_DEBUG(dbgs() << "Found a candidate for VL reduction: " << MI << "\n");
   return true;
@@ -1221,14 +1205,19 @@ RISCVVLOptimizer::getMinimumVLForUser(MachineOperand &UserOp) {
   // Looking for an immediate or a register VL that isn't X0.
   assert((!VLOp.isReg() || VLOp.getReg() != RISCV::X0) &&
          "Did not expect X0 VL");
+
+  // If we know the demanded VL of UserMI, then we can reduce the VL it
+  // requires.
+  if (auto DemandedVL = DemandedVLs[&UserMI]) {
+    assert(isCandidate(UserMI));
+    if (RISCV::isVLKnownLE(*DemandedVL, VLOp))
+      return DemandedVL;
+  }
+
   return VLOp;
 }
 
 std::optional<MachineOperand> RISCVVLOptimizer::checkUsers(MachineInstr &MI) {
-  // FIXME: Avoid visiting each user for each time we visit something on the
-  // worklist, combined with an extra visit from the outer loop. Restructure
-  // along lines of an instcombine style worklist which integrates the outer
-  // pass.
   std::optional<MachineOperand> CommonVL;
   for (auto &UserOp : MRI->use_operands(MI.getOperand(0).getReg())) {
     const MachineInstr &UserMI = *UserOp.getParent();
@@ -1238,7 +1227,7 @@ std::optional<MachineOperand> RISCVVLOptimizer::checkUsers(MachineInstr &MI) {
       return std::nullopt;
     }
 
-    // Tied operands might pass through.
+    // If used as a passthru, elements past VL will be read.
     if (UserOp.isTied()) {
       LLVM_DEBUG(dbgs() << "    Abort because user used as tied operand\n");
       return std::nullopt;
@@ -1292,70 +1281,54 @@ std::optional<MachineOperand> RISCVVLOptimizer::checkUsers(MachineInstr &MI) {
   return CommonVL;
 }
 
-bool RISCVVLOptimizer::tryReduceVL(MachineInstr &OrigMI) {
-  SetVector<MachineInstr *> Worklist;
-  Worklist.insert(&OrigMI);
+bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) {
+  LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI << "\n");
 
-  bool MadeChange = false;
-  while (!Worklist.empty()) {
-    MachineInstr &MI = *Worklist.pop_back_val();
-    LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI << "\n");
+  unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
+  MachineOperand &VLOp = MI.getOperand(VLOpNum);
 
-    if (!isVectorRegClass(MI.getOperand(0).getReg(), MRI))
-      continue;
-
-    auto CommonVL = checkUsers(MI);
-    if (!CommonVL)
-      continue;
-
-    assert((CommonVL->isImm() || CommonVL->getReg().isVirtual()) &&
-           "Expected VL to be an Imm or virtual Reg");
-
-    unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
-    MachineOperand &VLOp = MI.getOperand(VLOpNum);
-
-    if (!RISCV::isVLKnownLE(*CommonVL, VLOp)) {
-      LLVM_DEBUG(dbgs() << "    Abort due to CommonVL not <= VLOp.\n");
-      continue;
-    }
-
-    if (CommonVL->isImm()) {
-      LLVM_DEBUG(dbgs() << "  Reduce VL from " << VLOp << " to "
-                        << CommonVL->getImm() << " for " << MI << "\n");
-      VLOp.ChangeToImmediate(CommonVL->getImm());
-    } else {
-      const MachineInstr *VLMI = MRI->getVRegDef(CommonVL->getReg());
-      if (!MDT->dominates(VLMI, &MI))
-        continue;
-      LLVM_DEBUG(
-          dbgs() << "  Reduce VL from " << VLOp << " to "
-                 << printReg(CommonVL->getReg(), MRI->getTargetRegisterInfo())
-                 << " for " << MI << "\n");
-
-      // All our checks passed. We can reduce VL.
-      VLOp.ChangeToRegister(CommonVL->getReg(), false);
-    }
-
-    MadeChange = true;
-
-    // Now add all inputs to this instruction to the worklist.
-    for (auto &Op : MI.operands()) {
-      if (!Op.isReg() || !Op.isUse() || !Op.getReg().isVirtual())
-        continue;
-
-      if (!isVectorRegClass(Op.getReg(), MRI))
-        continue;
-
-      MachineInstr *DefMI = MRI->getVRegDef(Op.getReg());
-
-      if (!isCandidate(*DefMI))
-        continue;
-
-      Worklist.insert(DefMI);
-    }
+  // If the VL is 1, then there is no need to reduce it. This is an
+  // optimization, not needed to preserve correctness.
+  if (VLOp.isImm() && VLOp.getImm() == 1) {
+    LLVM_DEBUG(dbgs() << "  Abort due to VL == 1, no point in reducing.\n");
+    return false;
   }
 
-  return MadeChange;
+  auto CommonVL = DemandedVLs[&MI];
+  if (!CommonVL)
+    return false;
+
+  assert((CommonVL->isImm() || CommonVL->getReg().isVirtual()) &&
+         "Expected VL to be an Imm or virtual Reg");
+
+  if (!RISCV::isVLKnownLE(*CommonVL, VLOp)) {
+    LLVM_DEBUG(dbgs() << "    Abort due to CommonVL not <= VLOp.\n");
+    return false;
+  }
+
+  if (CommonVL->isIdenticalTo(VLOp)) {
+    LLVM_DEBUG(
+        dbgs() << "    Abort due to CommonVL == VLOp, no point in reducing.\n");
+    return false;
+  }
+
+  if (CommonVL->isImm()) {
+    LLVM_DEBUG(dbgs() << "  Reduce VL from " << VLOp << " to "
+                      << CommonVL->getImm() << " for " << MI << "\n");
+    VLOp.ChangeToImmediate(CommonVL->getImm());
+    return true;
+  }
+  const MachineInstr *VLMI = MRI->getVRegDef(CommonVL->getReg());
+  if (!MDT->dominates(VLMI, &MI))
+    return false;
+  LLVM_DEBUG(
+      dbgs() << "  Reduce VL from " << VLOp << " to "
+             << printReg(CommonVL->getReg(), MRI->getTargetRegisterInfo())
+             << " for " << MI << "\n");
+
+  // All our checks passed. We can reduce VL.
+  VLOp.ChangeToRegister(CommonVL->getReg(), false);
+  return true;
 }
 
 bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
@@ -1369,14 +1342,31 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
   if (!ST.hasVInstructions())
     return false;
 
-  bool MadeChange = false;
-  for (MachineBasicBlock &MBB : MF) {
-    // Visit instructions in reverse order.
-    for (auto &MI : make_range(MBB.rbegin(), MBB.rend())) {
+  // For each instruction that defines a vector, compute what VL its
+  // downstream users demand.
+  for (MachineBasicBlock *MBB : post_order(&MF)) {
+    assert(MDT->isReachableFromEntry(MBB));
+    for (MachineInstr &MI : reverse(*MBB)) {
       if (!isCandidate(MI))
         continue;
+      DemandedVLs.insert({&MI, checkUsers(MI)});
+    }
+  }
 
-      MadeChange |= tryReduceVL(MI);
+  // Then go through and see if we can reduce the VL of any instructions to
+  // only what's demanded.
+  bool MadeChange = false;
+  for (MachineBasicBlock &MBB : MF) {
+    // Avoid unreachable blocks as they have degenerate dominance
+    if (!MDT->isReachableFromEntry(&MBB))
+      continue;
+
+    for (auto &MI : reverse(MBB)) {
+      if (!isCandidate(MI))
+        continue;
+      if (!tryReduceVL(MI))
+        continue;
+      MadeChange = true;
     }
   }
 

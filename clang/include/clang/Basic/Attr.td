@@ -713,12 +713,6 @@ class Attr {
   // attribute may be documented under multiple categories, more than one
   // Documentation entry may be listed.
   list<Documentation> Documentation;
-  // Set to true if deserialization of this attribute must be deferred until 
-  // the parent Decl is fully deserialized (during header module file
-  // deserialization). E.g., this is the case for the preferred_name attribute,
-  // since its type deserialization depends on its target Decl type.
-  // (See https://github.com/llvm/llvm-project/issues/56490 for details).
-  bit DeferDeserialization = 0;
 }
 
 /// Used to define a set of mutually exclusive attributes.
@@ -3260,11 +3254,6 @@ def PreferredName : InheritableAttr {
   let InheritEvenIfAlreadyPresent = 1;
   let MeaningfulToClassTemplateDefinition = 1;
   let TemplateDependent = 1;
-  // Type of this attribute depends on the target Decl type.
-  // Therefore, its deserialization must be deferred until
-  // deserialization of the target Decl is complete
-  // (for header modules).
-  let DeferDeserialization = 1;
 }
 
 def PreserveMost : DeclOrTypeAttr {
@@ -3469,18 +3458,16 @@ def DiagnoseIf : InheritableAttr {
   let Spellings = [GNU<"diagnose_if">];
   let Subjects = SubjectList<[Function, ObjCMethod, ObjCProperty]>;
   let Args = [ExprArgument<"Cond">, StringArgument<"Message">,
-              EnumArgument<"DiagnosticType", "DiagnosticType",
+              EnumArgument<"DefaultSeverity",
+                           "DefaultSeverity",
                            /*is_string=*/true,
-                           ["error", "warning"],
-                           ["DT_Error", "DT_Warning"]>,
+                           ["error",    "warning"],
+                           ["DS_error", "DS_warning"]>,
+              StringArgument<"WarningGroup", /*optional*/ 1>,
               BoolArgument<"ArgDependent", 0, /*fake*/ 1>,
               DeclArgument<Named, "Parent", 0, /*fake*/ 1>];
   let InheritEvenIfAlreadyPresent = 1;
   let LateParsed = LateAttrParseStandard;
-  let AdditionalMembers = [{
-    bool isError() const { return diagnosticType == DT_Error; }
-    bool isWarning() const { return diagnosticType == DT_Warning; }
-  }];
   let TemplateDependent = 1;
   let Documentation = [DiagnoseIfDocs];
 }

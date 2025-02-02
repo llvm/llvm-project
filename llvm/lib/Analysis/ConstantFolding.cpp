@@ -3940,6 +3940,9 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
       case LibFunc_log10f:
         return Op.isNaN() || (!Op.isZero() && !Op.isNegative());
 
+      case LibFunc_ilogb:
+        return !Op.isNaN() && !Op.isZero() && !Op.isInfinity();
+
       case LibFunc_expl:
       case LibFunc_exp:
       case LibFunc_expf:
