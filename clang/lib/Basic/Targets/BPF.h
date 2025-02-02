@@ -60,6 +60,8 @@ public:
 
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override;
+
   std::string_view getClobbers() const override { return ""; }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {

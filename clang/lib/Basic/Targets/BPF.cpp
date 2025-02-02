@@ -89,6 +89,14 @@ void BPFTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
   Values.append(std::begin(ValidCPUNames), std::end(ValidCPUNames));
 }
 
+void BPFTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
+  TargetInfo::adjust(Diags, Opts);
+
+  if (Opts.getTrivialAutoVarInit() ==
+      LangOptions::TrivialAutoVarInitKind::Uninitialized)
+    Opts.setTrivialAutoVarInit(LangOptions::TrivialAutoVarInitKind::Zero);
+}
+
 llvm::SmallVector<Builtin::InfosShard>
 BPFTargetInfo::getTargetBuiltins() const {
   return {{&BuiltinStrings, BuiltinInfos}};
