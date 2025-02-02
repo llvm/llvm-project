@@ -1004,7 +1004,7 @@ void JSONNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *RD) {
   VisitRecordDecl(RD);
 
   if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
-    if (CTSD->hasMatchedPackOnParmToNonPackOnArg())
+    if (CTSD->hasStrictPackMatch())
       JOS.attribute("strict-pack-match", true);
   }
 
