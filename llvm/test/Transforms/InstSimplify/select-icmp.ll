@@ -264,3 +264,15 @@ define ptr @icmp_ptr_eq_replace_null(ptr %a) {
   %sel = select i1 %cmp, ptr null, ptr %a
   ret ptr %sel
 }
+
+define ptr @ptr_eq_replace_same_underlying_object(ptr %st, i64 %i, i64 %j) {
+; CHECK-LABEL: @ptr_eq_replace_same_underlying_object(
+; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i8, ptr [[ST:%.*]], i64 [[J:%.*]]
+; CHECK-NEXT:    ret ptr [[B]]
+;
+  %a = getelementptr inbounds i8, ptr %st, i64 %i
+  %b = getelementptr inbounds i8, ptr %st, i64 %j
+  %cmp = icmp eq ptr %a, %b
+  %sel = select i1 %cmp, ptr %a, ptr %b
+  ret ptr %sel
+}
