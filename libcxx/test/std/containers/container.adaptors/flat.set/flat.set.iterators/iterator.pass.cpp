@@ -30,7 +30,7 @@
 #include "min_allocator.h"
 
 template <class KeyContainer>
-void test() {
+void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, std::less<Key>, KeyContainer>;
 
@@ -67,15 +67,15 @@ void test() {
   assert(i == m.begin());
 }
 
-int main(int, char**) {
-  test<std::vector<int>>();
-  test<std::deque<int>>();
-  test<MinSequenceContainer<int>>();
-  test<std::vector<int, min_allocator<int>>>();
+void test() {
+  test_one<std::vector<int>>();
+  test_one<std::deque<int>>();
+  test_one<MinSequenceContainer<int>>();
+  test_one<std::vector<int, min_allocator<int>>>();
 
   {
     // N3644 testing
-    using C = std::flat_set<int, char>;
+    using C = std::flat_set<int>;
     C::iterator ii1{}, ii2{};
     C::iterator ii4 = ii1;
     C::const_iterator cii{};
@@ -88,6 +88,10 @@ int main(int, char**) {
     assert(!(ii1 != cii));
     assert(!(cii != ii1));
   }
+}
+
+int main(int, char**) {
+  test();
 
   return 0;
 }

@@ -19,9 +19,10 @@
 #include <type_traits>
 #include <vector>
 
-#include "test_macros.h"
 #include "min_allocator.h"
+#include "MoveOnly.h"
 #include "test_allocator.h"
+#include "test_macros.h"
 
 struct DefaultCtableComp {
   explicit DefaultCtableComp() { default_constructed_ = true; }
@@ -29,7 +30,12 @@ struct DefaultCtableComp {
   bool default_constructed_ = false;
 };
 
-int main(int, char**) {
+struct ThrowingCtorComp {
+  ThrowingCtorComp() noexcept(false) {}
+  bool operator()(const auto&, const auto&) const { return false; }
+};
+
+void test() {
   {
     std::flat_set<int> m;
     assert(m.empty());
@@ -60,6 +66,32 @@ int main(int, char**) {
       assert(m.key_comp().default_constructed_);
     }
   }
+#if defined(_LIBCPP_VERSION)
+  {
+    using C = std::flat_set<MoveOnly>;
+    static_assert(std::is_nothrow_default_constructible_v<C>);
+    C c;
+  }
+  {
+    using C = std::flat_set<MoveOnly, std::less<MoveOnly>, std::vector<MoveOnly, test_allocator<MoveOnly>>>;
+    static_assert(std::is_nothrow_default_constructible_v<C>);
+    C c;
+  }
+#endif // _LIBCPP_VERSION
+  {
+    using C = std::flat_set<MoveOnly, std::less<MoveOnly>, std::vector<MoveOnly, other_allocator<MoveOnly>>>;
+    static_assert(!std::is_nothrow_default_constructible_v<C>);
+    C c;
+  }
+  {
+    using C = std::flat_set<MoveOnly, ThrowingCtorComp>;
+    static_assert(!std::is_nothrow_default_constructible_v<C>);
+    C c;
+  }
+}
+
+int main(int, char**) {
+  test();
 
   return 0;
 }

@@ -33,10 +33,10 @@
 template <class T>
 std::initializer_list<T> il = {1, 2, 4, 5};
 
-const auto il1 = il<int>;
-const auto il2 = il<short>;
+void test() {
+  const auto il1 = il<int>;
+  const auto il2 = il<short>;
 
-int main(int, char**) {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<container_type, Alloc> is true.
@@ -145,6 +145,10 @@ int main(int, char**) {
     assert((m == M{1, 2, 4, 5}));
     assert(std::move(m).extract().get_allocator() == A1(5));
   }
+}
+
+int main(int, char**) {
+  test();
 
   return 0;
 }

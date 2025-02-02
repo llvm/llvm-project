@@ -24,7 +24,7 @@
 #include "min_allocator.h"
 
 template <class KeyContainer>
-void test() {
+void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, std::less<Key>, KeyContainer>;
   {
@@ -33,7 +33,6 @@ void test() {
     m              = {3, 1, 2, 2, 3, 4, 3, 5, 6, 5};
     int expected[] = {1, 2, 3, 4, 5, 6};
     assert(std::ranges::equal(m, expected));
-    LIBCPP_ASSERT(std::ranges::equal(m, expected));
   }
   {
     M m = {10, 8};
@@ -44,13 +43,17 @@ void test() {
   }
 }
 
+void test() {
+  test_one<std::vector<int>>();
+  test_one<std::vector<int>>();
+  test_one<std::deque<int>>();
+  test_one<MinSequenceContainer<int>>();
+  test_one<std::vector<int, min_allocator<int>>>();
+  test_one<std::vector<int, min_allocator<int>>>();
+}
+
 int main(int, char**) {
-  test<std::vector<int>>();
-  test<std::vector<int>>();
-  test<std::deque<int>>();
-  test<MinSequenceContainer<int>>();
-  test<std::vector<int, min_allocator<int>>>();
-  test<std::vector<int, min_allocator<int>>>();
+  test();
 
   return 0;
 }

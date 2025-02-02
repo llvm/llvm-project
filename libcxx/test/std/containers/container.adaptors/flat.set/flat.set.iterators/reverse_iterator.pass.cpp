@@ -30,7 +30,7 @@
 #include "test_macros.h"
 #include <iostream>
 
-int main(int, char**) {
+void test() {
   {
     using M     = std::flat_set<int, std::less<int>, std::deque<int>>;
     M m         = {1, 2, 3, 4};
@@ -69,7 +69,7 @@ int main(int, char**) {
   }
   {
     // N3644 testing
-    using C = std::flat_set<int, char>;
+    using C = std::flat_set<int>;
     C::reverse_iterator ii1{}, ii2{};
     C::reverse_iterator ii4 = ii1;
     C::const_reverse_iterator cii{};
@@ -82,6 +82,10 @@ int main(int, char**) {
     assert(!(ii1 != cii));
     assert(!(cii != ii1));
   }
+}
+
+int main(int, char**) {
+  test();
 
   return 0;
 }
