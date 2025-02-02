@@ -345,7 +345,7 @@ return:
 ;     }
 ; }
 define void @valid_nested_idiom(ptr %strs, i32 %n) {
-; CHECK-LABEL: define void @nested_idiom(
+; CHECK-LABEL: define void @valid_nested_idiom(
 ; CHECK-SAME: ptr [[STRS:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP9:%.*]] = icmp sgt i32 [[N]], 0
@@ -422,3 +422,193 @@ while.end:
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
+
+define i64 @invalid_strlen_has_side_effects(ptr %str) {
+; CHECK-LABEL: define i64 @invalid_strlen_has_side_effects(
+; CHECK-SAME: ptr [[STR:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[WHILE_COND:.*]]
+; CHECK:       [[WHILE_COND]]:
+; CHECK-NEXT:    [[STR_ADDR_0:%.*]] = phi ptr [ [[STR]], %[[ENTRY]] ], [ [[INCDEC_PTR:%.*]], %[[WHILE_COND]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr [[STR_ADDR_0]], align 1
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i8 [[TMP0]], 0
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr i8, ptr [[STR_ADDR_0]], i64 1
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[WHILE_END:.*]], label %[[WHILE_COND]]
+; CHECK:       [[WHILE_END]]:
+; CHECK-NEXT:    [[STR_ADDR_0_LCSSA:%.*]] = phi ptr [ [[STR_ADDR_0]], %[[WHILE_COND]] ]
+; CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[STR_ADDR_0_LCSSA]] to i64
+; CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[STR]] to i64
+; CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]]
+; CHECK-NEXT:    ret i64 [[SUB_PTR_SUB]]
+;
+entry:
+  br label %while.cond
+
+while.cond:
+  %str.addr.0 = phi ptr [ %str, %entry ], [ %incdec.ptr, %while.cond ]
+  %0 = load volatile i8, ptr %str.addr.0, align 1
+  %cmp.not = icmp eq i8 %0, 0
+  %incdec.ptr = getelementptr i8, ptr %str.addr.0, i64 1
+  br i1 %cmp.not, label %while.end, label %while.cond
+
+while.end:
+  %sub.ptr.lhs.cast = ptrtoint ptr %str.addr.0 to i64
+  %sub.ptr.rhs.cast = ptrtoint ptr %str to i64
+  %sub.ptr.sub = sub i64 %sub.ptr.lhs.cast, %sub.ptr.rhs.cast
+  ret i64 %sub.ptr.sub
+}
+
+
+define i8 @invalid_exit_phi_scev(ptr %str) {
+; CHECK-LABEL: define i8 @invalid_exit_phi_scev(
+; CHECK-SAME: ptr [[STR:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[WHILE_COND:.*]]
+; CHECK:       [[WHILE_COND]]:
+; CHECK-NEXT:    [[STR_ADDR_0:%.*]] = phi ptr [ [[STR]], %[[ENTRY]] ], [ [[INCDEC_PTR:%.*]], %[[WHILE_COND]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[STR_ADDR_0]], align 1
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i8 [[TMP0]], 0
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr i8, ptr [[STR_ADDR_0]], i64 1
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[WHILE_END:.*]], label %[[WHILE_COND]]
+; CHECK:       [[WHILE_END]]:
+; CHECK-NEXT:    [[STR_ADDR_0_LCSSA:%.*]] = phi ptr [ [[STR_ADDR_0]], %[[WHILE_COND]] ]
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i8 [ [[TMP0]], %[[WHILE_COND]] ]
+; CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[STR_ADDR_0_LCSSA]] to i64
+; CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[STR]] to i64
+; CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]]
+; CHECK-NEXT:    ret i8 [[DOTLCSSA]]
+;
+entry:
+  br label %while.cond
+
+while.cond:
+  %str.addr.0 = phi ptr [ %str, %entry ], [ %incdec.ptr, %while.cond ]
+  %0 = load i8, ptr %str.addr.0, align 1
+  %cmp.not = icmp eq i8 %0, 0
+  %incdec.ptr = getelementptr i8, ptr %str.addr.0, i64 1
+  br i1 %cmp.not, label %while.end, label %while.cond
+
+while.end:
+  %sub.ptr.lhs.cast = ptrtoint ptr %str.addr.0 to i64
+  %sub.ptr.rhs.cast = ptrtoint ptr %str to i64
+  %sub.ptr.sub = sub i64 %sub.ptr.lhs.cast, %sub.ptr.rhs.cast
+
+  ; %0.lcssa has invalid scev rec {%0} expected to be {%str,+,constant}
+  ret i8 %0
+}
+
+
+
+define i64 @invalid_branch_cond(ptr %str) {
+; CHECK-LABEL: define i64 @invalid_branch_cond(
+; CHECK-SAME: ptr [[STR:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[WHILE_COND:.*]]
+; CHECK:       [[WHILE_COND]]:
+; CHECK-NEXT:    [[STR_ADDR_0:%.*]] = phi ptr [ [[STR]], %[[ENTRY]] ], [ [[INCDEC_PTR:%.*]], %[[WHILE_COND]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[STR_ADDR_0]], align 1
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i8 [[TMP0]], 10
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr i8, ptr [[STR_ADDR_0]], i64 1
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[WHILE_END:.*]], label %[[WHILE_COND]]
+; CHECK:       [[WHILE_END]]:
+; CHECK-NEXT:    [[STR_ADDR_0_LCSSA:%.*]] = phi ptr [ [[STR_ADDR_0]], %[[WHILE_COND]] ]
+; CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[STR_ADDR_0_LCSSA]] to i64
+; CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[STR]] to i64
+; CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]]
+; CHECK-NEXT:    ret i64 [[SUB_PTR_SUB]]
+;
+entry:
+  br label %while.cond
+
+while.cond:
+  %str.addr.0 = phi ptr [ %str, %entry ], [ %incdec.ptr, %while.cond ]
+  %0 = load i8, ptr %str.addr.0, align 1
+
+  ; We compare against '\n' instead of '\0'
+  %cmp.not = icmp eq i8 %0, 10
+
+  %incdec.ptr = getelementptr i8, ptr %str.addr.0, i64 1
+  br i1 %cmp.not, label %while.end, label %while.cond
+
+while.end:
+  %sub.ptr.lhs.cast = ptrtoint ptr %str.addr.0 to i64
+  %sub.ptr.rhs.cast = ptrtoint ptr %str to i64
+  %sub.ptr.sub = sub i64 %sub.ptr.lhs.cast, %sub.ptr.rhs.cast
+  ret i64 %sub.ptr.sub
+}
+
+define i64 @invalid_unknown_step_size(ptr %str, i64 %step) {
+; CHECK-LABEL: define i64 @invalid_unknown_step_size(
+; CHECK-SAME: ptr [[STR:%.*]], i64 [[STEP:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[WHILE_COND:.*]]
+; CHECK:       [[WHILE_COND]]:
+; CHECK-NEXT:    [[STR_ADDR_0:%.*]] = phi ptr [ [[STR]], %[[ENTRY]] ], [ [[INCDEC_PTR:%.*]], %[[WHILE_COND]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[STR_ADDR_0]], align 1
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i8 [[TMP0]], 0
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr i8, ptr [[STR_ADDR_0]], i64 [[STEP]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[WHILE_END:.*]], label %[[WHILE_COND]]
+; CHECK:       [[WHILE_END]]:
+; CHECK-NEXT:    [[STR_ADDR_0_LCSSA:%.*]] = phi ptr [ [[STR_ADDR_0]], %[[WHILE_COND]] ]
+; CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[STR_ADDR_0_LCSSA]] to i64
+; CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[STR]] to i64
+; CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]]
+; CHECK-NEXT:    ret i64 [[SUB_PTR_SUB]]
+;
+entry:
+  br label %while.cond
+
+while.cond:
+  %str.addr.0 = phi ptr [ %str, %entry ], [ %incdec.ptr, %while.cond ]
+  %0 = load i8, ptr %str.addr.0, align 1
+  %cmp.not = icmp eq i8 %0, 0
+  %incdec.ptr = getelementptr i8, ptr %str.addr.0, i64 %step
+  br i1 %cmp.not, label %while.end, label %while.cond
+
+while.end:
+  %sub.ptr.lhs.cast = ptrtoint ptr %str.addr.0 to i64
+  %sub.ptr.rhs.cast = ptrtoint ptr %str to i64
+  %sub.ptr.sub = sub i64 %sub.ptr.lhs.cast, %sub.ptr.rhs.cast
+  ret i64 %sub.ptr.sub
+}
+
+declare ptr @pure(ptr) #0;
+attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+
+define i64 @invalid_add_rec(ptr %str) {
+; CHECK-LABEL: define i64 @invalid_add_rec(
+; CHECK-SAME: ptr [[STR:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[WHILE_COND:.*]]
+; CHECK:       [[WHILE_COND]]:
+; CHECK-NEXT:    [[STR_ADDR_0:%.*]] = phi ptr [ [[STR]], %[[ENTRY]] ], [ [[INCDEC_PTR:%.*]], %[[WHILE_COND]] ]
+; CHECK-NEXT:    [[INDIRECT:%.*]] = tail call ptr @pure(ptr [[STR_ADDR_0]])
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[INDIRECT]], align 1
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i8 [[TMP0]], 0
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr i8, ptr [[STR_ADDR_0]], i64 1
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[WHILE_END:.*]], label %[[WHILE_COND]]
+; CHECK:       [[WHILE_END]]:
+; CHECK-NEXT:    [[STR_ADDR_0_LCSSA:%.*]] = phi ptr [ [[STR_ADDR_0]], %[[WHILE_COND]] ]
+; CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[STR_ADDR_0_LCSSA]] to i64
+; CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[STR]] to i64
+; CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]]
+; CHECK-NEXT:    ret i64 [[SUB_PTR_SUB]]
+;
+entry:
+  br label %while.cond
+
+while.cond:
+  %str.addr.0 = phi ptr [ %str, %entry ], [ %incdec.ptr, %while.cond ]
+  %indirect = tail call ptr @pure(ptr %str.addr.0)
+  %0 = load i8, ptr %indirect, align 1
+  %cmp.not = icmp eq i8 %0, 0
+  %incdec.ptr = getelementptr i8, ptr %str.addr.0, i64 1
+  br i1 %cmp.not, label %while.end, label %while.cond
+
+while.end:
+  %sub.ptr.lhs.cast = ptrtoint ptr %str.addr.0 to i64
+  %sub.ptr.rhs.cast = ptrtoint ptr %str to i64
+  %sub.ptr.sub = sub i64 %sub.ptr.lhs.cast, %sub.ptr.rhs.cast
+  ret i64 %sub.ptr.sub
+}
+
