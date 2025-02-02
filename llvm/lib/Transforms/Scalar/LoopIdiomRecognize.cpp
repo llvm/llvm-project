@@ -1549,141 +1549,141 @@ static Value *matchCondition(BranchInst *BI, BasicBlock *LoopEntry,
   return nullptr;
 }
 
-struct StrlenIdiom {
-  unsigned IdiomSize;
-  ConstantInt *StepSize;
-  const SCEV *LoadBaseEv;
-  Type *LoadType;
-};
+namespace {
 
-/// Trying to detect strlen idiom that increments a char pointer
-/// with a single loop body bb.
-static bool detectStrLenIdiom(const Loop *CurLoop, ScalarEvolution *SE,
-                              const TargetLibraryInfo *TLI,
-                              StrlenIdiom &Idiom) {
-  /*
-  outs() << "current loop:\n";
-  CurLoop->print(outs());
-  outs() << "\n";
-  */
+class StrlenVerifier {
+public:
+  explicit StrlenVerifier(const Loop *CurLoop, ScalarEvolution *SE,
+                          const TargetLibraryInfo *TLI)
+      : CurLoop(CurLoop), SE(SE), TLI(TLI) {}
 
-  // Give up if the loop has multiple blocks, multiple backedges, or
-  // multiple exit blocks
-  if (CurLoop->getNumBackEdges() != 1 || CurLoop->getNumBlocks() != 1 ||
-      !CurLoop->getUniqueExitBlock())
-    return false;
-
-  // It should have a preheader and a branch instruction.
-  BasicBlock *Preheader = CurLoop->getLoopPreheader();
-  if (!Preheader)
-    return false;
-
-  BranchInst *EntryBI = dyn_cast<BranchInst>(Preheader->getTerminator());
-  if (!EntryBI)
-    return false;
-
-  // The loop exit must be conditioned on an icmp with 0 the null terminator.
-  // The icmp operand has to be a load on some SSA reg that increments
-  // by 1 in the loop.
-  BasicBlock *LoopBody = *CurLoop->block_begin();
-
-  // Skip if the body is too big as it most likely is not a strlen idiom.
-  if (!LoopBody || LoopBody->size() >= 15)
-    return false;
-
-  BranchInst *LoopTerm = dyn_cast<BranchInst>(LoopBody->getTerminator());
-  Value *LoopCond = matchCondition(LoopTerm, LoopBody);
-  if (!LoopCond)
-    return false;
-
-  auto *LoopLoad = dyn_cast<LoadInst>(LoopCond);
-  if (!LoopLoad || LoopLoad->getPointerAddressSpace() != 0)
-    return false;
-
-  Type *OperandType = LoopLoad->getType();
-  if (!OperandType || !OperandType->isIntegerTy())
-    return false;
-
-  // See if the pointer expression is an AddRec with constant step a of form
-  // ({n,+,a}) where a is the width of the char type.
-  auto *IncPtr = LoopLoad->getPointerOperand();
-  const SCEVAddRecExpr *LoadEv = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(IncPtr));
-  if (!LoadEv || LoadEv->getLoop() != CurLoop || !LoadEv->isAffine())
-    return false;
-
-  /*
-  outs() << "pointer load ev: ";
-  LoadEv->print(outs());
-  outs() << "\n";
-  */
-
-  const SCEVConstant *Step =
-      dyn_cast<SCEVConstant>(LoadEv->getStepRecurrence(*SE));
-  if (!Step)
-    return false;
-
-  unsigned StepSize = 0;
-  ConstantInt *StepSizeCI = dyn_cast<ConstantInt>(Step->getValue());
-  if (!StepSizeCI)
-    return false;
-  StepSize = StepSizeCI->getZExtValue();
-
-  // Verify that StepSize is consistent with platform char width.
-  unsigned OpWidth = OperandType->getIntegerBitWidth();
-  unsigned WcharSize = TLI->getWCharSize(*LoopLoad->getModule());
-  if (OpWidth != StepSize * 8)
-    return false;
-  if (OpWidth != 8 && OpWidth != 16 && OpWidth != 32)
-    return false;
-  if (OpWidth >= 16)
-    if (OpWidth != WcharSize * 8)
+  bool isValidStrlenIdiom() {
+    // Give up if the loop has multiple blocks, multiple backedges, or
+    // multiple exit blocks
+    if (CurLoop->getNumBackEdges() != 1 || CurLoop->getNumBlocks() != 1 ||
+        !CurLoop->getUniqueExitBlock())
       return false;
 
-  // Scan every instruction in the loop to ensure there are no side effects.
-  for (auto &I : *LoopBody)
-    if (I.mayHaveSideEffects())
+    // It should have a preheader and a branch instruction.
+    BasicBlock *Preheader = CurLoop->getLoopPreheader();
+    if (!Preheader)
       return false;
 
-  auto *LoopExitBB = CurLoop->getExitBlock();
-  if (!LoopExitBB)
-    return false;
-
-  for (PHINode &PN : LoopExitBB->phis()) {
-    if (!SE->isSCEVable(PN.getType()))
+    BranchInst *EntryBI = dyn_cast<BranchInst>(Preheader->getTerminator());
+    if (!EntryBI)
       return false;
 
-    const SCEV *Ev = SE->getSCEV(&PN);
-    /*
-    outs() << "loop exit block scev exprs: ";
-    PN.print(outs());
-    if (Ev)
-      Ev->print(outs());
-    outs() << "\n";
-    */
+    // The loop exit must be conditioned on an icmp with 0 the null terminator.
+    // The icmp operand has to be a load on some SSA reg that increments
+    // by 1 in the loop.
+    BasicBlock *LoopBody = *CurLoop->block_begin();
 
-    if (!Ev)
+    // Skip if the body is too big as it most likely is not a strlen idiom.
+    if (!LoopBody || LoopBody->size() >= 15)
       return false;
 
-    // Since we verified that the loop trip count will be a valid strlen idiom,
-    // we can expand all lcssa phi with {n,+,1} as (n + strlen) and use
-    // SCEVExpander materialize the loop output.
-    const SCEVAddRecExpr *AddRecEv = dyn_cast<SCEVAddRecExpr>(Ev);
-    if (!AddRecEv || !AddRecEv->isAffine())
+    BranchInst *LoopTerm = dyn_cast<BranchInst>(LoopBody->getTerminator());
+    Value *LoopCond = matchCondition(LoopTerm, LoopBody);
+    if (!LoopCond)
       return false;
 
-    // We only want RecAddExpr with recurrence step that are constant. This
-    // is good enough for all the idioms we want to recognize. Later we expand
-    // the recurrence as {base,+,a} -> (base + a * strlen) and materialize
-    if (!dyn_cast<SCEVConstant>(AddRecEv->getStepRecurrence(*SE)))
+    auto *LoopLoad = dyn_cast<LoadInst>(LoopCond);
+    if (!LoopLoad || LoopLoad->getPointerAddressSpace() != 0)
       return false;
+
+    OperandType = LoopLoad->getType();
+    if (!OperandType || !OperandType->isIntegerTy())
+      return false;
+
+    // See if the pointer expression is an AddRec with constant step a of form
+    // ({n,+,a}) where a is the width of the char type.
+    Value *IncPtr = LoopLoad->getPointerOperand();
+    const SCEVAddRecExpr *LoadEv =
+        dyn_cast<SCEVAddRecExpr>(SE->getSCEV(IncPtr));
+    if (!LoadEv || LoadEv->getLoop() != CurLoop || !LoadEv->isAffine())
+      return false;
+    LoadBaseEv = LoadEv->getStart();
+
+    LLVM_DEBUG({
+      dbgs() << "pointer load scev: ";
+      LoadEv->print(outs());
+      dbgs() << "\n";
+    });
+
+    const SCEVConstant *Step =
+        dyn_cast<SCEVConstant>(LoadEv->getStepRecurrence(*SE));
+    if (!Step)
+      return false;
+
+    unsigned StepSize = 0;
+    StepSizeCI = dyn_cast<ConstantInt>(Step->getValue());
+    if (!StepSizeCI)
+      return false;
+    StepSize = StepSizeCI->getZExtValue();
+
+    // Verify that StepSize is consistent with platform char width.
+    OpWidth = OperandType->getIntegerBitWidth();
+    unsigned WcharSize = TLI->getWCharSize(*LoopLoad->getModule());
+    if (OpWidth != StepSize * 8)
+      return false;
+    if (OpWidth != 8 && OpWidth != 16 && OpWidth != 32)
+      return false;
+    if (OpWidth >= 16)
+      if (OpWidth != WcharSize * 8)
+        return false;
+
+    // Scan every instruction in the loop to ensure there are no side effects.
+    for (auto &I : *LoopBody)
+      if (I.mayHaveSideEffects())
+        return false;
+
+    BasicBlock *LoopExitBB = CurLoop->getExitBlock();
+    if (!LoopExitBB)
+      return false;
+
+    for (PHINode &PN : LoopExitBB->phis()) {
+      if (!SE->isSCEVable(PN.getType()))
+        return false;
+
+      const SCEV *Ev = SE->getSCEV(&PN);
+      if (!Ev)
+        return false;
+
+      LLVM_DEBUG({
+        dbgs() << "loop exit phi scev: ";
+        Ev->print(dbgs());
+        dbgs() << "\n";
+      });
+
+      // Since we verified that the loop trip count will be a valid strlen
+      // idiom, we can expand all lcssa phi with {n,+,1} as (n + strlen) and use
+      // SCEVExpander materialize the loop output.
+      const SCEVAddRecExpr *AddRecEv = dyn_cast<SCEVAddRecExpr>(Ev);
+      if (!AddRecEv || !AddRecEv->isAffine())
+        return false;
+
+      // We only want RecAddExpr with recurrence step that are constant. This
+      // is good enough for all the idioms we want to recognize. Later we expand
+      // the recurrence as {base,+,a} -> (base + a * strlen) and materialize
+      if (!dyn_cast<SCEVConstant>(AddRecEv->getStepRecurrence(*SE)))
+        return false;
+    }
+
+    return true;
   }
 
-  Idiom.LoadBaseEv = LoadEv->getStart();
-  Idiom.IdiomSize = OpWidth;
-  Idiom.StepSize = StepSizeCI;
-  Idiom.LoadType = OperandType;
-  return true;
-}
+public:
+  const Loop *CurLoop;
+  ScalarEvolution *SE;
+  const TargetLibraryInfo *TLI;
+
+  unsigned OpWidth;
+  ConstantInt *StepSizeCI;
+  const SCEV *LoadBaseEv;
+  Type *OperandType;
+};
+
+} // namespace
 
 /// Recognizes a strlen idiom by checking for loops that increment
 /// a char pointer and then subtract with the base pointer.
@@ -1707,21 +1707,13 @@ static bool detectStrLenIdiom(const Loop *CurLoop, ScalarEvolution *SE,
 ///
 /// Later the pointer subtraction will be folded by InstCombine
 bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
-  /*
-  const auto *First = CurLoop->block_begin();
-  if (First != CurLoop->block_end()) {
-    auto *F = (*First)->getParent();
-    outs() << "\n\n\n\n\n========== NEW LOOP ============\n";
-    F->print(outs());
-  }
-  */
-
-  // TODO: check for disable options
-  StrlenIdiom Idiom;
-  if (!detectStrLenIdiom(CurLoop, SE, TLI, Idiom))
+  if (DisableLIRP::All)
     return false;
 
-  // outs() << "idiom is good\n\n";
+  StrlenVerifier Verifier(CurLoop, SE, TLI);
+
+  if (!Verifier.isValidStrlenIdiom())
+    return false;
 
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
   BasicBlock *LoopExitBB = CurLoop->getExitBlock();
@@ -1729,18 +1721,17 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   IRBuilder<> Builder(Preheader->getTerminator());
   SCEVExpander Expander(*SE, Preheader->getModule()->getDataLayout(), "scev");
   Value *MaterialzedBase = Expander.expandCodeFor(
-      Idiom.LoadBaseEv, Idiom.LoadBaseEv->getType(), Builder.GetInsertPoint());
+      Verifier.LoadBaseEv, Verifier.LoadBaseEv->getType(),
+      Builder.GetInsertPoint());
 
   Value *StrLenFunc = nullptr;
-  switch (Idiom.IdiomSize) {
-  case 8:
+  if (Verifier.OpWidth == 8) {
     if (!isLibFuncEmittable(Preheader->getModule(), TLI, LibFunc_strlen))
       return false;
     StrLenFunc = emitStrLen(MaterialzedBase, Builder, *DL, TLI);
-    break;
-  case 16:
-  case 32:
-    if (!isLibFuncEmittable(Preheader->getModule(), TLI, LibFunc_wcslen))
+  } else {
+    if (!isLibFuncEmittable(Preheader->getModule(), TLI, LibFunc_wcslen) &&
+        !DisableLIRP::Wcslen)
       return false;
     StrLenFunc = emitWcsLen(MaterialzedBase, Builder, *DL, TLI);
   }
@@ -1755,39 +1746,21 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
         dyn_cast<SCEVConstant>(AddRecEv->getStepRecurrence(*SE));
     const SCEV *Base = AddRecEv->getStart();
 
-    /*
-    outs() << "creating new mult scev: ";
-    Base->getType()->print(outs());
-    outs() << " ";
-    Step->getType()->print(outs());
-    outs() << " ";
-    StrlenEv->getType()->print(outs());
-    outs() << "\n";
-    */
-
     // It is safe to truncate to base since if base is narrower than size_t
     // the equivalent user code will have to truncate anyways.
     const SCEV *NewEv = SE->getAddExpr(
         Base, SE->getMulExpr(Step, SE->getTruncateOrSignExtend(
                                        StrlenEv, Base->getType())));
 
-    /*
-    outs() << "new ev exprs: ";
-    PN.print(outs());
-    if (NewEv)
-      NewEv->print(outs());
-    outs() << "\n";
-    */
-
-    Expander.clear();
     Value *MaterializedPHI = Expander.expandCodeFor(NewEv, NewEv->getType(),
                                                     Builder.GetInsertPoint());
+    Expander.clear();
     PN.replaceAllUsesWith(MaterializedPHI);
     Cleanup.push_back(&PN);
   }
 
-  // All LCSSA Loop Phi are dead, the left over loop body can be cleaned up by
-  // later passes
+  // All LCSSA Loop Phi are dead, the left over dead loop body can be cleaned 
+  // up by later passes
   for (PHINode *PN : Cleanup) {
     RecursivelyDeleteDeadPHINode(PN);
   }
