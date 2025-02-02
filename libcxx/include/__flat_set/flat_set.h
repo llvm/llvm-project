@@ -838,8 +838,8 @@ template <class _Key, class _Compare, class _KeyContainer, class _Predicate>
 _LIBCPP_HIDE_FROM_ABI typename flat_set<_Key, _Compare, _KeyContainer>::size_type
 erase_if(flat_set<_Key, _Compare, _KeyContainer>& __flat_set, _Predicate __pred) {
   auto __guard = std::__make_exception_guard([&] { __flat_set.clear(); });
-  auto __it    = std::remove_if(__flat_set.__keys_.begin(), __flat_set.__keys_.end(), [&](const auto& e) -> bool {
-    return static_cast<bool>(__pred(e));
+  auto __it    = std::remove_if(__flat_set.__keys_.begin(), __flat_set.__keys_.end(), [&](const auto& __e) -> bool {
+    return static_cast<bool>(__pred(__e));
   });
   auto __res   = __flat_set.__keys_.end() - __it;
   __flat_set.__keys_.erase(__it, __flat_set.__keys_.end());
