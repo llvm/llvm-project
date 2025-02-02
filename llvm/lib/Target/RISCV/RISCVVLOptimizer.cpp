@@ -62,25 +62,6 @@ private:
   DenseMap<const MachineInstr *, std::optional<MachineOperand>> DemandedVLs;
 };
 
-} // end anonymous namespace
-
-char RISCVVLOptimizer::ID = 0;
-INITIALIZE_PASS_BEGIN(RISCVVLOptimizer, DEBUG_TYPE, PASS_NAME, false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(RISCVVLOptimizer, DEBUG_TYPE, PASS_NAME, false, false)
-
-FunctionPass *llvm::createRISCVVLOptimizerPass() {
-  return new RISCVVLOptimizer();
-}
-
-/// Return true if R is a physical or virtual vector register, false otherwise.
-static bool isVectorRegClass(Register R, const MachineRegisterInfo *MRI) {
-  if (R.isPhysical())
-    return RISCV::VRRegClass.contains(R);
-  const TargetRegisterClass *RC = MRI->getRegClass(R);
-  return RISCVRI::isVRegClass(RC->TSFlags);
-}
-
 /// Represents the EMUL and EEW of a MachineOperand.
 struct OperandInfo {
   // Represent as 1,2,4,8, ... and fractional indicator. This is because
@@ -121,6 +102,25 @@ struct OperandInfo {
   }
 };
 
+} // end anonymous namespace
+
+char RISCVVLOptimizer::ID = 0;
+INITIALIZE_PASS_BEGIN(RISCVVLOptimizer, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_END(RISCVVLOptimizer, DEBUG_TYPE, PASS_NAME, false, false)
+
+FunctionPass *llvm::createRISCVVLOptimizerPass() {
+  return new RISCVVLOptimizer();
+}
+
+/// Return true if R is a physical or virtual vector register, false otherwise.
+static bool isVectorRegClass(Register R, const MachineRegisterInfo *MRI) {
+  if (R.isPhysical())
+    return RISCV::VRRegClass.contains(R);
+  const TargetRegisterClass *RC = MRI->getRegClass(R);
+  return RISCVRI::isVRegClass(RC->TSFlags);
+}
+
 LLVM_ATTRIBUTE_UNUSED
 static raw_ostream &operator<<(raw_ostream &OS, const OperandInfo &OI) {
   OI.print(OS);
@@ -137,8 +137,6 @@ static raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-namespace llvm {
-namespace RISCVVType {
 /// Return EMUL = (EEW / SEW) * LMUL where EEW comes from Log2EEW and LMUL and
 /// SEW are from the TSFlags of MI.
 static std::pair<unsigned, bool>
@@ -165,8 +163,6 @@ getEMULEqualsEEWDivSEWTimesLMUL(unsigned Log2EEW, const MachineInstr &MI) {
   Denom = MILMULIsFractional ? Denom * MILMUL / GCD : Denom / GCD;
   return std::make_pair(Num > Denom ? Num : Denom, Denom > Num);
 }
-} // end namespace RISCVVType
-} // end namespace llvm
 
 /// Dest has EEW=SEW. Source EEW=SEW/Factor (i.e. F2 => EEW/2).
 /// SEW comes from TSFlags of MI.
@@ -770,8 +766,7 @@ getOperandInfo(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   };
 
   // All others have EMUL=EEW/SEW*LMUL
-  return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(*Log2EEW, MI),
-                     *Log2EEW);
+  return OperandInfo(getEMULEqualsEEWDivSEWTimesLMUL(*Log2EEW, MI), *Log2EEW);
 }
 
 /// Return true if this optimization should consider MI for VL reduction. This

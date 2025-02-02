@@ -8629,8 +8629,9 @@ void VPRecipeBuilder::fixHeaderPhis() {
   }
 }
 
-VPReplicateRecipe *VPRecipeBuilder::handleReplication(Instruction *I,
-                                                      VFRange &Range) {
+VPReplicateRecipe *
+VPRecipeBuilder::handleReplication(Instruction *I, ArrayRef<VPValue *> Operands,
+                                   VFRange &Range) {
   bool IsUniform = LoopVectorizationPlanner::getDecisionAndClampRange(
       [&](ElementCount VF) { return CM.isUniformAfterVectorization(I, VF); },
       Range);
@@ -8686,8 +8687,8 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(Instruction *I,
   assert((Range.Start.isScalar() || !IsUniform || !IsPredicated ||
           (Range.Start.isScalable() && isa<IntrinsicInst>(I))) &&
          "Should not predicate a uniform recipe");
-  auto *Recipe = new VPReplicateRecipe(I, mapToVPValues(I->operands()),
-                                       IsUniform, BlockInMask);
+  auto *Recipe = new VPReplicateRecipe(
+      I, make_range(Operands.begin(), Operands.end()), IsUniform, BlockInMask);
   return Recipe;
 }
 
@@ -9350,7 +9351,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
         if (!Legal->isInvariantStoreOfReduction(SI))
           continue;
         auto *Recipe = new VPReplicateRecipe(
-            SI, RecipeBuilder.mapToVPValues(Instr->operands()),
+            SI, make_range(Operands.begin(), Operands.end()),
             true /* IsUniform */);
         Recipe->insertBefore(*MiddleVPBB, MBIP);
         continue;
@@ -9359,7 +9360,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
       VPRecipeBase *Recipe =
           RecipeBuilder.tryToCreateWidenRecipe(Instr, Operands, Range, VPBB);
       if (!Recipe)
-        Recipe = RecipeBuilder.handleReplication(Instr, Range);
+        Recipe = RecipeBuilder.handleReplication(Instr, Operands, Range);
 
       RecipeBuilder.setRecipe(Instr, Recipe);
       if (isa<VPHeaderPHIRecipe>(Recipe)) {
@@ -9408,8 +9409,9 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
 
   if (auto *UncountableExitingBlock =
           Legal->getUncountableEarlyExitingBlock()) {
-    VPlanTransforms::handleUncountableEarlyExit(
-        *Plan, *PSE.getSE(), OrigLoop, UncountableExitingBlock, RecipeBuilder);
+    VPlanTransforms::runPass(VPlanTransforms::handleUncountableEarlyExit, *Plan,
+                             *PSE.getSE(), OrigLoop, UncountableExitingBlock,
+                             RecipeBuilder);
   }
   DenseMap<VPValue *, VPValue *> IVEndValues;
   addScalarResumePhis(RecipeBuilder, *Plan, IVEndValues);

@@ -2489,6 +2489,82 @@ are listed below.
 
     $ clang -fuse-ld=lld -Oz -Wl,--icf=safe -fcodegen-data-use code.cc
 
+.. _strict_aliasing:
+
+Strict Aliasing
+---------------
+
+The C and C++ standards require accesses to objects in memory to use l-values of
+an appropriate type for the object. This is called *strict aliasing* or
+*type-based alias analysis*. Strict aliasing enhances a variety of powerful
+memory optimizations, including reordering, combining, and eliminating memory
+accesses. These optimizations can lead to unexpected behavior in code that
+violates the strict aliasing rules. For example:
+
+.. code-block:: c++
+
+    void advance(size_t *index, double *data) {
+      double value = data[*index];
+      /* Clang may assume that this store does not change the contents of `data`. */
+      *index += 1;
+      /* Clang may assume that this store does not change the contents of `index`. */
+      data[*index] = value;
+      /* Either of these facts may create significant optimization opportunities
+       if Clang is able to inline this function. */
+  }
+
+Strict aliasing can be explicitly enabled with ``-fstrict-aliasing`` and
+disabled with ``-fno-strict-aliasing``. ``clang-cl`` defaults to
+``-fno-strict-aliasing``; see . Otherwise, Clang defaults to ``-fstrict-aliasing``.
+
+C and C++ specify slightly different rules for strict aliasing. To improve
+language interoperability, Clang allows two types to alias if either language
+would permit it. This includes applying the C++ similar types rule to C,
+allowing ``int **`` to alias ``int const * const *``. Clang also relaxes the
+standard aliasing rules in the following ways:
+
+* All integer types of the same size are permitted to alias each other,
+  including signed and unsigned types.
+* ``void*`` is permitted to alias any pointer type, ``void**`` is permitted to
+  alias any pointer to pointer type, and so on.
+
+Code which violates strict aliasing has undefined behavior. A program that
+works in one version of Clang may not work in another because of changes to the
+optimizer. Clang provides a :doc:`TypeSanitizer` to help detect
+violations of the strict aliasing rules, but it is currently still experimental.
+Code that is known to violate strict aliasing should generally be built with
+``-fno-strict-aliasing`` if the violation cannot be fixed.
+
+Clang supports several ways to fix a violation of strict aliasing:
+
+* L-values of the character types ``char`` and ``unsigned char`` (as well as
+  other types, depending on the standard) are permitted to access objects of
+  any type.
+
+* Library functions such as ``memcpy`` and ``memset`` are specified as treating
+  memory as characters and therefore are not limited by strict aliasing. If a
+  value of one type must be reinterpreted as another (e.g. to read the bits of a
+  floating-point number), use ``memcpy`` to copy the representation to an object
+  of the destination type. This has no overhead over a direct l-value access
+  because Clang should reliably optimize calls to these functions to use simple
+  loads and stores when they are used with small constant sizes.
+
+* The attribute ``may_alias`` can be added to a ``typedef`` to give l-values of
+  that type the same aliasing power as the character types.
+
+Clang makes a best effort to avoid obvious miscompilations from strict aliasing
+by only considering type information when it cannot prove that two accesses must
+refer to the same memory. However, it is not recommended that programmers
+intentionally rely on this instead of using one of the solutions above because
+it is too easy for the compiler's analysis to be blocked in surprising ways.
+
+In Clang 20, Clang strengthened its implementation of strict aliasing for
+accesses of pointer type. Previously, all accesses of pointer type were
+permitted to alias each other, but Clang now distinguishes different pointers
+by their pointee type, except as limited by the relaxations around qualifiers
+and ``void*`` described above. The previous behavior of treating all pointers as
+aliasing can be restored using ``-fno-pointer-tbaa``.
+
 Profile Guided Optimization
 ---------------------------
 
@@ -5272,12 +5348,6 @@ The Visual C++ Toolset has a slightly more elaborate mechanism for detection.
 Restrictions and Limitations compared to Clang
 ----------------------------------------------
 
-Strict Aliasing
-^^^^^^^^^^^^^^^
-
-Strict aliasing (TBAA) is always off by default in clang-cl. Whereas in clang,
-strict aliasing is turned on by default for all optimization levels.
-
-To enable LLVM optimizations based on strict aliasing rules (e.g., optimizations
-based on type of expressions in C/C++), user will need to explicitly pass
-`-fstrict-aliasing` to clang-cl.
+Strict aliasing (TBAA) is always off by default in clang-cl whereas in clang,
+strict aliasing is turned on by default for all optimization levels. For more
+details, see :ref:`Strict aliasing <strict_aliasing>`.
