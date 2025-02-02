@@ -64,10 +64,6 @@ class CollectUnexpandedParameterPacksVisitor
         Unexpanded.push_back({T, Loc});
     }
 
-    void addUnexpanded(ResolvedUnexpandedPackExpr *E) {
-      Unexpanded.push_back({E, E->getBeginLoc()});
-    }
-
   public:
     explicit CollectUnexpandedParameterPacksVisitor(
         SmallVectorImpl<UnexpandedParameterPack> &Unexpanded)
@@ -107,12 +103,6 @@ class CollectUnexpandedParameterPacksVisitor
       if (E->getDecl()->isParameterPack())
         addUnexpanded(E->getDecl(), E->getLocation());
 
-      return true;
-    }
-
-    bool
-    VisitResolvedUnexpandedPackExpr(ResolvedUnexpandedPackExpr *E) override {
-      addUnexpanded(E);
       return true;
     }
 
@@ -1193,12 +1183,8 @@ ExprResult Sema::ActOnSizeofParameterPackExpr(Scope *S,
 
   MarkAnyDeclReferenced(OpLoc, ParameterPack, true);
 
-  std::optional<unsigned> Length;
-  if (auto *RP = ResolvedUnexpandedPackExpr::getFromDecl(ParameterPack))
-    Length = RP->getNumExprs();
-
   return SizeOfPackExpr::Create(Context, OpLoc, ParameterPack, NameLoc,
-                                RParenLoc, Length);
+                                RParenLoc);
 }
 
 static bool isParameterPack(Expr *PackExpression) {
