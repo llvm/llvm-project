@@ -2683,8 +2683,8 @@ define i16 @add_sub_zext_constant(i8 %x) {
 
 define <vscale x 1 x i32> @add_to_or_scalable(<vscale x 1 x i32> %in) {
 ; CHECK-LABEL: @add_to_or_scalable(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <vscale x 1 x i32> [[IN:%.*]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 1, i64 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
-; CHECK-NEXT:    [[ADD:%.*]] = or disjoint <vscale x 1 x i32> [[SHL]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 1, i64 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
+; CHECK-NEXT:    [[SHL:%.*]] = shl <vscale x 1 x i32> [[IN:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[ADD:%.*]] = or disjoint <vscale x 1 x i32> [[SHL]], splat (i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[ADD]]
 ;
   %shl = shl <vscale x 1 x i32> %in, splat (i32 1)
@@ -3016,6 +3016,32 @@ define i32 @floor_sdiv_wrong_op(i32 %x, i32 %y) {
   %s = zext i1 %i to i32
   %r = add i32 %d, %s
   ret i32 %r
+}
+
+define i32 @floor_sdiv_using_srem_by_8(i32 %x) {
+; CHECK-LABEL: @floor_sdiv_using_srem_by_8(
+; CHECK-NEXT:    [[F:%.*]] = ashr i32 [[X:%.*]], 3
+; CHECK-NEXT:    ret i32 [[F]]
+;
+  %d = sdiv i32 %x, 8
+  %r = srem i32 %x, 8
+  %i = icmp ugt i32 %r, -2147483648
+  %s = sext i1 %i to i32
+  %f = add i32 %d, %s
+  ret i32 %f
+}
+
+define i32 @floor_sdiv_using_srem_by_2(i32 %x) {
+; CHECK-LABEL: @floor_sdiv_using_srem_by_2(
+; CHECK-NEXT:    [[F:%.*]] = ashr i32 [[X:%.*]], 1
+; CHECK-NEXT:    ret i32 [[F]]
+;
+  %d = sdiv i32 %x, 2
+  %r = srem i32 %x, 2
+  %i = icmp ugt i32 %r, -2147483648
+  %s = sext i1 %i to i32
+  %f = add i32 %d, %s
+  ret i32 %f
 }
 
 ; (X s>> (BW - 1)) + (zext (X s> 0)) --> (X s>> (BW - 1)) | (zext (X != 0))

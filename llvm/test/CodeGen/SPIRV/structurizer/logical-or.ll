@@ -17,16 +17,12 @@ define internal spir_func void @main() #3 {
 ; CHECK:                      OpSelectionMerge %[[#merge:]] None
 ; CHECK:                      OpBranchConditional %[[#]] %[[#new_header:]] %[[#unreachable:]]
 
-; CHECK:     %[[#new_header]] = OpLabel
-; CHECK:                        OpSelectionMerge %[[#new_merge:]] None
-; CHECK:                        OpBranchConditional %[[#]] %[[#taint_true_merge:]] %[[#br_false:]]
-
 ; CHECK:       %[[#unreachable]] = OpLabel
 ; CHECK-NEXT:                      OpUnreachable
 
-; CHECK: %[[#taint_true_merge]] = OpLabel
-; CHECK:                          OpStore %[[#switch_0]] %[[#int_1]]
-; CHECK:                          OpBranch %[[#new_merge]]
+; CHECK:     %[[#new_header]] = OpLabel
+; CHECK:                        OpSelectionMerge %[[#new_merge:]] None
+; CHECK:                        OpBranchConditional %[[#]] %[[#taint_true_merge:]] %[[#br_false:]]
 
 ; CHECK:      %[[#br_false]] = OpLabel
 ; CHECK-DAG:                   OpStore %[[#switch_1]] %[[#int_0]]
@@ -44,6 +40,10 @@ define internal spir_func void @main() #3 {
 ; CHECK:                          OpBranchConditional %[[#cond]] %[[#taint_false_true:]] %[[#new_merge]]
 
 ; CHECK: %[[#taint_false_true]] = OpLabel
+; CHECK:                          OpStore %[[#switch_0]] %[[#int_1]]
+; CHECK:                          OpBranch %[[#new_merge]]
+
+; CHECK: %[[#taint_true_merge]] = OpLabel
 ; CHECK:                          OpStore %[[#switch_0]] %[[#int_1]]
 ; CHECK:                          OpBranch %[[#new_merge]]
 

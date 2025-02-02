@@ -83,8 +83,16 @@ end
 
 subroutine f1a(x)
   integer :: x(10)
-!ERROR: Only one iterator-modifier is allowed
+!ERROR: 'iterator' modifier cannot occur multiple times
   !$omp target map(present, iterator(i = 1:2), iterator(j = 1:2), to: x(i + j))
+  x = x + 1
+  !$omp end target
+end
+
+subroutine f23(x)
+  integer :: x(10)
+!ERROR: 'map-type' should be the last modifier
+  !$omp target map(present, from, iterator(i = 1:10): x(i))
   x = x + 1
   !$omp end target
 end

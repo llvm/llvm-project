@@ -1402,7 +1402,7 @@ RegisterContextUnwind::SavedLocationForRegister(
       // it's still live in the actual register. Handle this specially.
 
       if (!have_unwindplan_regloc && return_address_reg.IsValid() &&
-          BehavesLikeZerothFrame()) {
+          IsFrameZero()) {
         if (return_address_reg.GetAsKind(eRegisterKindLLDB) !=
             LLDB_INVALID_REGNUM) {
           lldb_private::UnwindLLDB::ConcreteRegisterLocation new_regloc;

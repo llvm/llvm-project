@@ -254,6 +254,10 @@ SystemZRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   return Regs->getCallPreservedMask(MF, CC);
 }
 
+const uint32_t *SystemZRegisterInfo::getNoPreservedMask() const {
+  return CSR_SystemZ_NoRegs_RegMask;
+}
+
 BitVector
 SystemZRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());

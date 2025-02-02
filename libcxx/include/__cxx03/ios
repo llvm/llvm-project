@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_IOS
-#define _LIBCPP_IOS
+#ifndef _LIBCPP___CXX03_IOS
+#define _LIBCPP___CXX03_IOS
 
 /*
     ios synopsis
@@ -886,4 +886,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/typeinfo>
 #endif
 
-#endif // _LIBCPP_IOS
+#endif // _LIBCPP___CXX03_IOS

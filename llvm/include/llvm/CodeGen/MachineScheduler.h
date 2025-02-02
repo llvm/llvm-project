@@ -99,8 +99,16 @@
 
 namespace llvm {
 
-extern cl::opt<bool> ForceTopDown;
-extern cl::opt<bool> ForceBottomUp;
+namespace MISched {
+enum Direction {
+  Unspecified,
+  TopDown,
+  BottomUp,
+  Bidirectional,
+};
+} // namespace MISched
+
+extern cl::opt<MISched::Direction> PreRADirection;
 extern cl::opt<bool> VerifyScheduling;
 #ifndef NDEBUG
 extern cl::opt<bool> ViewMISchedDAGs;
@@ -517,7 +525,7 @@ protected:
 
   void initRegPressure();
 
-  void updatePressureDiffs(ArrayRef<RegisterMaskPair> LiveUses);
+  void updatePressureDiffs(ArrayRef<VRegMaskOrUnit> LiveUses);
 
   void updateScheduledPressure(const SUnit *SU,
                                const std::vector<unsigned> &NewMaxPressure);
