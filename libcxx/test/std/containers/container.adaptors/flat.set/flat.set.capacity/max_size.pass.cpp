@@ -25,7 +25,6 @@
 #include "test_macros.h"
 
 void test() {
-
   {
     using A1 = limited_allocator<int, 10>;
     using C  = std::flat_set<int, std::less<int>, std::vector<int, A1>>;
