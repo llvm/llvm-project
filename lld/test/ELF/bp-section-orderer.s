@@ -21,9 +21,10 @@
 # RUN: ld.lld a.o --irpgo-profile=a.profdata --bp-startup-sort=function --verbose-bp-section-orderer --icf=all 2>&1 | FileCheck %s --check-prefix=STARTUP-FUNC-ORDER
 
 # STARTUP-FUNC-ORDER: Ordered 3 sections using balanced partitioning
+# STARTUP-FUNC-ORDER: Total area under the page fault curve: 3.
 
-# RUN: ld.lld -o - a.o --symbol-ordering-file a.orderfile --irpgo-profile=a.profdata --bp-startup-sort=function | llvm-nm --numeric-sort --format=just-symbols - | FileCheck %s --check-prefix=ORDERFILE
-# RUN: ld.lld -o - a.o --symbol-ordering-file a.orderfile --bp-compression-sort=both | llvm-nm --numeric-sort --format=just-symbols - | FileCheck %s --check-prefix=ORDERFILE
+# RUN: ld.lld -o - a.o --symbol-ordering-file a.txt --irpgo-profile=a.profdata --bp-startup-sort=function | llvm-nm --numeric-sort --format=just-symbols - | FileCheck %s --check-prefix=ORDERFILE
+# RUN: ld.lld -o - a.o --symbol-ordering-file a.txt --bp-compression-sort=both | llvm-nm --numeric-sort --format=just-symbols - | FileCheck %s --check-prefix=ORDERFILE
 
 ## Rodata
 # ORDERFILE:      s2
@@ -35,8 +36,8 @@
 # ORDERFILE-NEXT: F
 # ORDERFILE-NEXT: E
 # ORDERFILE-NEXT: D
-# ORDERFILE-NEXT: B
-# ORDERFILE-NEXT: C
+# ORDERFILE-DAG: B
+# ORDERFILE-DAG: C
 # ORDERFILE-NEXT: _start
 
 ## Data
@@ -97,7 +98,7 @@ D
 # Counter Values:
 1
 
-#--- a.orderfile
+#--- a.txt
 A
 F
 E
@@ -115,23 +116,17 @@ const char *r1 = s1;
 const char **r2 = &r1;
 const char ***r3 = &r2;
 const char *r4 = s2;
-void A() { return; }
 
-int B(int a) {
-  A();
-  return a + 1;
-}
-
-int C(int a) {
-  A();
-  return a + 2;
-}
-
-int D(int a) { return B(a + 2); }
-
-int E(int a) { return C(a + 2); }
+int C(int a);
+int B(int a);
+void A();
 
 int F(int a) { return C(a + 3); }
+int E(int a) { return C(a + 2); }
+int D(int a) { return B(a + 2); }
+int C(int a) { A(); return a + 2; }
+int B(int a) { A(); return a + 1; }
+void A() {}
 
 int _start() { return 0; }
 
@@ -139,34 +134,24 @@ int _start() { return 0; }
 clang --target=aarch64-linux-gnu -O0 -ffunction-sections -fdata-sections -fno-asynchronous-unwind-tables -S a.c -o -
 ;--- a.s
 	.file	"a.c"
-	.section	.text.A,"ax",@progbits
-	.globl	A                               // -- Begin function A
+	.section	.text.F,"ax",@progbits
+	.globl	F                               // -- Begin function F
 	.p2align	2
-	.type	A,@function
-A:                                      // @A
-// %bb.0:                               // %entry
-	ret
-.Lfunc_end0:
-	.size	A, .Lfunc_end0-A
-                                        // -- End function
-	.section	.text.B,"ax",@progbits
-	.globl	B                               // -- Begin function B
-	.p2align	2
-	.type	B,@function
-B:                                      // @B
+	.type	F,@function
+F:                                      // @F
 // %bb.0:                               // %entry
 	sub	sp, sp, #32
 	stp	x29, x30, [sp, #16]             // 16-byte Folded Spill
 	add	x29, sp, #16
 	stur	w0, [x29, #-4]
-	bl	A
 	ldur	w8, [x29, #-4]
-	add	w0, w8, #1
+	add	w0, w8, #3
+	bl	C
 	ldp	x29, x30, [sp, #16]             // 16-byte Folded Reload
 	add	sp, sp, #32
 	ret
-.Lfunc_end1:
-	.size	B, .Lfunc_end1-B
+.Lfunc_end0:
+	.size	F, .Lfunc_end0-F
                                         // -- End function
 	.section	.text.C,"ax",@progbits
 	.globl	C                               // -- Begin function C
@@ -184,8 +169,27 @@ C:                                      // @C
 	ldp	x29, x30, [sp, #16]             // 16-byte Folded Reload
 	add	sp, sp, #32
 	ret
+.Lfunc_end1:
+	.size	C, .Lfunc_end1-C
+                                        // -- End function
+	.section	.text.E,"ax",@progbits
+	.globl	E                               // -- Begin function E
+	.p2align	2
+	.type	E,@function
+E:                                      // @E
+// %bb.0:                               // %entry
+	sub	sp, sp, #32
+	stp	x29, x30, [sp, #16]             // 16-byte Folded Spill
+	add	x29, sp, #16
+	stur	w0, [x29, #-4]
+	ldur	w8, [x29, #-4]
+	add	w0, w8, #2
+	bl	C
+	ldp	x29, x30, [sp, #16]             // 16-byte Folded Reload
+	add	sp, sp, #32
+	ret
 .Lfunc_end2:
-	.size	C, .Lfunc_end2-C
+	.size	E, .Lfunc_end2-E
                                         // -- End function
 	.section	.text.D,"ax",@progbits
 	.globl	D                               // -- Begin function D
@@ -206,43 +210,34 @@ D:                                      // @D
 .Lfunc_end3:
 	.size	D, .Lfunc_end3-D
                                         // -- End function
-	.section	.text.E,"ax",@progbits
-	.globl	E                               // -- Begin function E
+	.section	.text.B,"ax",@progbits
+	.globl	B                               // -- Begin function B
 	.p2align	2
-	.type	E,@function
-E:                                      // @E
+	.type	B,@function
+B:                                      // @B
 // %bb.0:                               // %entry
 	sub	sp, sp, #32
 	stp	x29, x30, [sp, #16]             // 16-byte Folded Spill
 	add	x29, sp, #16
 	stur	w0, [x29, #-4]
+	bl	A
 	ldur	w8, [x29, #-4]
-	add	w0, w8, #2
-	bl	C
+	add	w0, w8, #1
 	ldp	x29, x30, [sp, #16]             // 16-byte Folded Reload
 	add	sp, sp, #32
 	ret
 .Lfunc_end4:
-	.size	E, .Lfunc_end4-E
+	.size	B, .Lfunc_end4-B
                                         // -- End function
-	.section	.text.F,"ax",@progbits
-	.globl	F                               // -- Begin function F
+	.section	.text.A,"ax",@progbits
+	.globl	A                               // -- Begin function A
 	.p2align	2
-	.type	F,@function
-F:                                      // @F
+	.type	A,@function
+A:                                      // @A
 // %bb.0:                               // %entry
-	sub	sp, sp, #32
-	stp	x29, x30, [sp, #16]             // 16-byte Folded Spill
-	add	x29, sp, #16
-	stur	w0, [x29, #-4]
-	ldur	w8, [x29, #-4]
-	add	w0, w8, #3
-	bl	C
-	ldp	x29, x30, [sp, #16]             // 16-byte Folded Reload
-	add	sp, sp, #32
 	ret
 .Lfunc_end5:
-	.size	F, .Lfunc_end5-F
+	.size	A, .Lfunc_end5-A
                                         // -- End function
 	.section	.text._start,"ax",@progbits
 	.globl	_start                          // -- Begin function _start
@@ -310,9 +305,9 @@ r4:
 
 	.section	".note.GNU-stack","",@progbits
 	.addrsig
-	.addrsig_sym A
-	.addrsig_sym B
 	.addrsig_sym C
+	.addrsig_sym B
+	.addrsig_sym A
 	.addrsig_sym s1
 	.addrsig_sym s2
 	.addrsig_sym r1

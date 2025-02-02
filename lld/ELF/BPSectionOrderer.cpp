@@ -26,17 +26,17 @@ template <> struct lld::BPOrdererTraits<struct BPOrdererELF> {
 };
 namespace {
 struct BPOrdererELF : lld::BPOrderer<BPOrdererELF> {
+  DenseMap<const InputSectionBase *, Defined *> secToSym;
+
   static uint64_t getSize(const Section &sec) { return sec.getSize(); }
   static bool isCodeSection(const Section &sec) {
     return sec.flags & llvm::ELF::SHF_EXECINSTR;
   }
-  static SmallVector<Defined *, 0> getSymbols(const Section &sec) {
-    SmallVector<Defined *, 0> symbols;
-    for (auto *sym : sec.file->getSymbols())
-      if (auto *d = llvm::dyn_cast_or_null<Defined>(sym))
-        if (d->size > 0 && d->section == &sec)
-          symbols.emplace_back(d);
-    return symbols;
+  ArrayRef<Defined *> getSymbols(const Section &sec) {
+    auto it = secToSym.find(&sec);
+    if (it == secToSym.end())
+      return {};
+    return ArrayRef(it->second);
   }
 
   static void
@@ -69,18 +69,18 @@ DenseMap<const InputSectionBase *, int> elf::runBalancedPartitioning(
   // Collect candidate sections and associated symbols.
   SmallVector<InputSectionBase *> sections;
   DenseMap<CachedHashStringRef, DenseSet<unsigned>> rootSymbolToSectionIdxs;
-  DenseSet<const InputSectionBase *> seenSections;
+  BPOrdererELF orderer;
 
   auto addSection = [&](Symbol &sym) {
     auto *d = dyn_cast<Defined>(&sym);
-    if (!d || d->size == 0)
+    if (!d)
       return;
     auto *sec = dyn_cast_or_null<InputSectionBase>(d->section);
-    if (sec && seenSections.insert(sec).second) {
-      rootSymbolToSectionIdxs[CachedHashStringRef(getRootSymbol(sym.getName()))]
-          .insert(sections.size());
-      sections.emplace_back(sec);
-    }
+    if (!sec || sec->size == 0 || !orderer.secToSym.try_emplace(sec, d).second)
+      return;
+    rootSymbolToSectionIdxs[CachedHashStringRef(getRootSymbol(sym.getName()))]
+        .insert(sections.size());
+    sections.emplace_back(sec);
   };
 
   for (Symbol *sym : ctx.symtab->getSymbols())
@@ -88,9 +88,8 @@ DenseMap<const InputSectionBase *, int> elf::runBalancedPartitioning(
   for (ELFFileBase *file : ctx.objectFiles)
     for (Symbol *sym : file->getLocalSymbols())
       addSection(*sym);
-
-  return BPOrdererELF::computeOrder(profilePath, forFunctionCompression,
-                                    forDataCompression,
-                                    compressionSortStartupFunctions, verbose,
-                                    sections, rootSymbolToSectionIdxs);
+  return orderer.computeOrder(profilePath, forFunctionCompression,
+                              forDataCompression,
+                              compressionSortStartupFunctions, verbose,
+                              sections, rootSymbolToSectionIdxs);
 }
