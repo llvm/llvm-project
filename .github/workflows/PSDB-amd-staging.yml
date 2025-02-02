@@ -1,5 +1,4 @@
-# This workflow is used to invoke the PSDB jenkins job for rocm CI. The python script can be used to invoke any jenkins job but input params needs to be configured properly
-name: Compiler CI test on amd-staging branch
+name: Compiler CI PSDB trigger on amd-staging branch
 
 # Controls when the workflow will run
 on:
@@ -10,10 +9,8 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel, below is a single job called invoke jenkins jobs
 jobs:
-  # This workflow contains a single job called "build"
+  # This workflow contains a single job called "invoke_jenkins_PSDB"
   invoke_jenkins_PSDB:
-    # The type of runner that the job will run on. For github hosted runner use (${{ 'ubuntu-latest' }}) or self-hosted for sel-hosted runner.
-    #runs-on: ubuntu-latest    
     if: github.event.pull_request.draft == false
     runs-on: self-hosted
     env:
@@ -89,6 +86,7 @@ jobs:
         run: |
           echo "--Running jenkins_api.py with input sha - $input_sha for pull request - $input_pr_url" 
           docker exec -e JENKINS_URL=${{secrets.CI_JENKINS_URL}} -e GITHUB_PAT=${{secrets.CI_GITHUB_TOKEN}} "${{env.CONTAINER_NAME}}" /bin/bash -c "python3 jenkins_api.py -s \"${JENKINS_URL}\" -jn \"${pipeline_name}\" -ghr \"${GITHUB_REPOSITORY}\" -ghsha \"${input_sha}\" -ghprn \"${input_pr_num}\" -ghpru \"${input_pr_url}\" -ghprt '${input_pr_title}' -ghpat=\"${svc_acc_org_secret}\""
+          
       - name: Stop and remove container
         if: always()
         run: |
