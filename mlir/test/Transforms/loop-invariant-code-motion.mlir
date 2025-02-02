@@ -124,6 +124,64 @@ func.func @invariant_affine_if() {
 
 // -----
 
+func.func @hoist_invariant_affine_if_success(%lb: index, %ub: index, %step: index) -> i32 {
+  %cst_0 = arith.constant 0 : i32
+  %cst_42 = arith.constant 42 : i32
+  %sum_result = affine.for %i = %lb to %ub iter_args(%acc = %cst_0) -> i32 {
+    %conditional_add = affine.if affine_set<() : ()> () -> (i32) {
+      %add = arith.addi %cst_42, %cst_42 : i32
+      affine.yield %add : i32
+    } else {
+      %poison = ub.poison : i32
+      affine.yield %poison : i32
+    }
+    %sum = arith.addi %acc, %conditional_add : i32
+    affine.yield %sum : i32
+  }
+
+  // CHECK-LABEL: hoist_invariant_affine_if_success
+  // CHECK-NEXT: arith.constant 0 : i32
+  // CHECK-NEXT: %[[CST:.*]] = arith.constant 42 : i32
+  // CHECK-NEXT: %[[IF:.*]] = affine.if
+  // CHECK-NEXT: arith.addi %[[CST]], %[[CST]] : i32
+  // CHECK: affine.for
+  // CHECK-NOT: affine.if
+  // CHECK-NEXT: arith.addi %{{.*}}, %[[IF]]
+
+  return %sum_result : i32
+}
+
+// -----
+
+func.func @hoist_variant_affine_if_failure(%lb: index, %ub: index, %step: index) -> i32 {
+  %cst_0 = arith.constant 0 : i32
+  %cst_42 = arith.constant 42 : i32
+  %ind_7 = arith.constant 7 : index
+  %sum_result = affine.for %i = %lb to %ub iter_args(%acc = %cst_0) -> i32 {
+    %conditional_add = affine.if affine_set<(d0, d1) : (d1 - d0 >= 0)> (%i, %ind_7) -> (i32) {
+      %add = arith.addi %cst_42, %cst_42 : i32
+      affine.yield %add : i32
+    } else {
+      %poison = ub.poison : i32
+      affine.yield %poison : i32
+    }
+    %sum = arith.addi %acc, %conditional_add : i32
+    affine.yield %sum : i32
+  }
+
+  // CHECK-LABEL: hoist_variant_affine_if_failure
+  // CHECK-NEXT: arith.constant 0 : i32
+  // CHECK-NEXT: %[[CST:.*]] = arith.constant 42 : i32
+  // CHECK-NEXT: arith.constant 7 : index
+  // CHECK-NEXT: affine.for
+  // CHECK-NEXT: %[[IF:.*]] = affine.if
+  // CHECK: arith.addi %{{.*}}, %[[IF]]
+
+  return %sum_result : i32
+}
+
+// -----
+
 func.func @hoist_affine_for_with_unknown_trip_count(%lb: index, %ub: index) {
   affine.for %arg0 = 0 to 10 {
     affine.for %arg1 = %lb to %ub {
@@ -379,6 +437,69 @@ func.func @parallel_loop_with_invariant() {
   // CHECK-NEXT: return
 
   return
+}
+
+// -----
+
+func.func @hoist_invariant_scf_if_success(%lb: index, %ub: index, %step: index) -> i32 {
+  %cst_0 = arith.constant 0 : i32
+  %cst_42 = arith.constant 42 : i32
+  %true = arith.constant true
+  %sum_result = scf.for %i = %lb to %ub step %step iter_args(%acc = %cst_0) -> i32 {
+    %conditional_add = scf.if %true -> (i32) {
+      %add = arith.addi %cst_42, %cst_42 : i32
+      scf.yield %add : i32
+    } else {
+      %poison = ub.poison : i32
+      scf.yield %poison : i32
+    }
+    %sum = arith.addi %acc, %conditional_add : i32
+    scf.yield %sum : i32
+  }
+
+  // CHECK-LABEL: hoist_invariant_scf_if_success
+  // CHECK-NEXT: arith.constant 0 : i32
+  // CHECK-NEXT: %[[CST:.*]] = arith.constant 42 : i32
+  // CHECK-NEXT: %[[TRUE:.*]] = arith.constant true
+  // CHECK-NEXT: %[[IF:.*]] = scf.if %[[TRUE]]
+  // CHECK-NEXT: arith.addi %[[CST]], %[[CST]] : i32
+  // CHECK: scf.for
+  // CHECK-NOT: scf.if
+  // CHECK-NEXT: arith.addi %{{.*}}, %[[IF]]
+
+  return %sum_result : i32
+}
+
+// -----
+
+func.func @hoist_variant_scf_if_failure(%lb: index, %ub: index, %step: index) -> i32 {
+  %cst_0 = arith.constant 0 : i32
+  %cst_42 = arith.constant 42 : i32
+  %ind_7 = arith.constant 7 : index
+  %sum_result = scf.for %i = %lb to %ub step %step iter_args(%acc = %cst_0) -> i32 {
+    %cond = arith.cmpi ult, %i, %ind_7 : index
+    %conditional_add = scf.if %cond -> (i32) {
+      %add = arith.addi %cst_42, %cst_42 : i32
+      scf.yield %add : i32
+    } else {
+      %poison = ub.poison : i32
+      scf.yield %poison : i32
+    }
+    %sum = arith.addi %acc, %conditional_add : i32
+    scf.yield %sum : i32
+  }
+
+  // CHECK-LABEL: hoist_variant_scf_if_failure
+  // CHECK-NEXT: arith.constant 0 : i32
+  // CHECK-NEXT: %[[CST_42:.*]] = arith.constant 42 : i32
+  // CHECK-NEXT: %[[CST_7:.*]] = arith.constant 7 : index
+  // CHECK-NEXT: scf.for %[[IV:.*]] = %{{.*}} to %{{.*}}
+  // CHECK-NEXT: %[[CMP:.*]] = arith.cmpi ult, %[[IV]], %[[CST_7]]
+  // CHECK-NEXT: %[[IF:.*]] = scf.if %[[CMP]]
+  // CHECK-NEXT: arith.addi %[[CST_42]], %[[CST_42]] : i32
+  // CHECK: arith.addi %{{.*}}, %[[IF]]
+
+  return %sum_result : i32
 }
 
 // -----

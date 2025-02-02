@@ -1,0 +1,60 @@
+header: strings.h
+header_template: strings.h.def
+macros: []
+types:
+  - type_name: size_t
+enums: []
+objects: []
+functions:
+  - name: bcmp
+    standards:
+      - llvm_libc_ext
+    return_type: int
+    arguments:
+      - type: const void *
+      - type: const void *
+      - type: size_t
+  - name: bcopy
+    standards:
+      - llvm_libc_ext
+    return_type: void
+    arguments:
+      - type: const void *
+      - type: void *
+      - type: size_t
+  - name: bzero
+    standards:
+      - llvm_libc_ext
+    return_type: void
+    arguments:
+      - type: void *
+      - type: size_t
+  - name: index
+    standards:
+      - BSDExtensions
+    return_type: char *
+    arguments:
+      - type: const char *
+      - type: int
+  - name: rindex
+    standards:
+      - BSDExtensions
+    return_type: char *
+    arguments:
+      - type: const char *
+      - type: int
+  - name: strcasecmp
+    standards:
+      - BSDExtensions
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: const char *
+  - name: strncasecmp
+    standards:
+      - BSDExtensions
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: const char *
+      - type: size_t

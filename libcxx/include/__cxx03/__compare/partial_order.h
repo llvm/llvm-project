@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COMPARE_PARTIAL_ORDER
-#define _LIBCPP___COMPARE_PARTIAL_ORDER
+#ifndef _LIBCPP___CXX03___COMPARE_PARTIAL_ORDER
+#define _LIBCPP___CXX03___COMPARE_PARTIAL_ORDER
 
 #include <__cxx03/__compare/compare_three_way.h>
 #include <__cxx03/__compare/ordering.h>
@@ -74,4 +74,4 @@ inline constexpr auto partial_order = __partial_order::__fn{};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___COMPARE_PARTIAL_ORDER
+#endif // _LIBCPP___CXX03___COMPARE_PARTIAL_ORDER

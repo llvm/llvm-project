@@ -105,6 +105,13 @@ llvm::raw_fd_ostream Ctx::openAuxiliaryFile(llvm::StringRef filename,
   using namespace llvm::sys::fs;
   OpenFlags flags =
       auxiliaryFiles.insert(filename).second ? OF_None : OF_Append;
+  if (e.disableOutput && filename == "-") {
+#ifdef _WIN32
+    filename = "NUL";
+#else
+    filename = "/dev/null";
+#endif
+  }
   return {filename, ec, flags};
 }
 
@@ -774,11 +781,8 @@ static StringRef getDynamicLinker(Ctx &ctx, opt::InputArgList &args) {
   auto *arg = args.getLastArg(OPT_dynamic_linker, OPT_no_dynamic_linker);
   if (!arg)
     return "";
-  if (arg->getOption().getID() == OPT_no_dynamic_linker) {
-    // --no-dynamic-linker suppresses undefined weak symbols in .dynsym
-    ctx.arg.noDynamicLinker = true;
+  if (arg->getOption().getID() == OPT_no_dynamic_linker)
     return "";
-  }
   return arg->getValue();
 }
 
@@ -1327,15 +1331,13 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
                    OPT_no_lto_validate_all_vtables_have_type_infos, false);
   ctx.arg.ltoo = args::getInteger(args, OPT_lto_O, 2);
   if (ctx.arg.ltoo > 3)
-    ErrAlways(ctx) << "invalid optimization level for LTO: "
-                   << Twine(ctx.arg.ltoo);
+    ErrAlways(ctx) << "invalid optimization level for LTO: " << ctx.arg.ltoo;
   unsigned ltoCgo =
       args::getInteger(args, OPT_lto_CGO, args::getCGOptLevel(ctx.arg.ltoo));
   if (auto level = CodeGenOpt::getLevel(ltoCgo))
     ctx.arg.ltoCgo = *level;
   else
-    ErrAlways(ctx) << "invalid codegen optimization level for LTO: "
-                   << Twine(ltoCgo);
+    ErrAlways(ctx) << "invalid codegen optimization level for LTO: " << ltoCgo;
   ctx.arg.ltoObjPath = args.getLastArgValue(OPT_lto_obj_path_eq);
   ctx.arg.ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
   ctx.arg.ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
@@ -1412,6 +1414,9 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.searchPaths = args::getStrings(args, OPT_library_path);
   ctx.arg.sectionStartMap = getSectionStartMap(ctx, args);
   ctx.arg.shared = args.hasArg(OPT_shared);
+  if (args.hasArg(OPT_randomize_section_padding))
+    ctx.arg.randomizeSectionPadding =
+        args::getInteger(args, OPT_randomize_section_padding, 0);
   ctx.arg.singleRoRx = !args.hasFlag(OPT_rosegment, OPT_no_rosegment, true);
   ctx.arg.soName = args.getLastArgValue(OPT_soname);
   ctx.arg.sortSection = getSortSection(ctx, args);
@@ -1455,7 +1460,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   }
   ctx.arg.thinLTOModulesToCompile =
       args::getStrings(args, OPT_thinlto_single_module_eq);
-  ctx.arg.timeTraceEnabled = args.hasArg(OPT_time_trace_eq);
+  ctx.arg.timeTraceEnabled =
+      args.hasArg(OPT_time_trace_eq) && !ctx.e.disableOutput;
   ctx.arg.timeTraceGranularity =
       args::getInteger(args, OPT_time_trace_granularity, 500);
   ctx.arg.trace = args.hasArg(OPT_trace);
@@ -1486,6 +1492,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
   ctx.arg.zLrodataAfterBss =
       getZFlag(args, "lrodata-after-bss", "nolrodata-after-bss", false);
+  ctx.arg.zNoBtCfi = hasZOption(args, "nobtcfi");
   ctx.arg.zNodefaultlib = hasZOption(args, "nodefaultlib");
   ctx.arg.zNodelete = hasZOption(args, "nodelete");
   ctx.arg.zNodlopen = hasZOption(args, "nodlopen");
@@ -1744,13 +1751,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     if (args.hasArg(OPT_call_graph_ordering_file))
       ErrAlways(ctx) << "--symbol-ordering-file and --call-graph-order-file "
                         "may not be used together";
-    if (std::optional<MemoryBufferRef> buffer =
-            readFile(ctx, arg->getValue())) {
+    if (auto buffer = readFile(ctx, arg->getValue()))
       ctx.arg.symbolOrderingFile = getSymbolOrderingFile(ctx, *buffer);
-      // Also need to disable CallGraphProfileSort to prevent
-      // LLD order symbols with CGProfile
-      ctx.arg.callGraphProfileSort = CGProfileSortKind::None;
-    }
   }
 
   assert(ctx.arg.versionDefinitions.empty());
@@ -2152,9 +2154,12 @@ static void excludeLibs(Ctx &ctx, opt::InputArgList &args) {
     ArrayRef<Symbol *> symbols = file->getSymbols();
     if (isa<ELFFileBase>(file))
       symbols = cast<ELFFileBase>(file)->getGlobalSymbols();
-    for (Symbol *sym : symbols)
-      if (!sym->isUndefined() && sym->file == file)
+    for (Symbol *sym : symbols) {
+      if (!sym->isUndefined() && sym->file == file) {
         sym->versionId = VER_NDX_LOCAL;
+        sym->isExported = false;
+      }
+    }
   };
 
   for (ELFFileBase *file : ctx.objectFiles)
@@ -2375,8 +2380,9 @@ static void markAddrsig(bool icfSafe, Symbol *s) {
   // We don't need to keep text sections unique under --icf=all even if they
   // are address-significant.
   if (auto *d = dyn_cast_or_null<Defined>(s))
-    if (d->section && (icfSafe || !(d->section->flags & SHF_EXECINSTR)))
-      d->section->keepUnique = true;
+    if (auto *sec = dyn_cast_or_null<InputSectionBase>(d->section))
+      if (icfSafe || !(sec->flags & SHF_EXECINSTR))
+        sec->keepUnique = true;
 }
 
 // Record sections that define symbols mentioned in --keep-unique <symbol>
@@ -2391,7 +2397,8 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
       Warn(ctx) << "could not find symbol " << name << " to keep unique";
       continue;
     }
-    d->section->keepUnique = true;
+    if (auto *sec = dyn_cast<InputSectionBase>(d->section))
+      sec->keepUnique = true;
   }
 
   // --icf=all --ignore-data-address-equality means that we can ignore
@@ -2403,7 +2410,7 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
   // or DSOs, so we conservatively mark them as address-significant.
   bool icfSafe = ctx.arg.icf == ICFLevel::Safe;
   for (Symbol *sym : ctx.symtab->getSymbols())
-    if (sym->includeInDynsym(ctx))
+    if (sym->isExported)
       markAddrsig(icfSafe, sym);
 
   // Visit the address-significance table in each object file and mark each
@@ -2419,8 +2426,10 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
         unsigned size;
         const char *err = nullptr;
         uint64_t symIndex = decodeULEB128(cur, &size, contents.end(), &err);
-        if (err)
-          Fatal(ctx) << f << ": could not decode addrsig section: " << err;
+        if (err) {
+          Err(ctx) << f << ": could not decode addrsig section: " << err;
+          break;
+        }
         markAddrsig(icfSafe, syms[symIndex]);
         cur += size;
       }
@@ -2452,7 +2461,7 @@ static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
     sym = readEntry(s->file, rels.rels);
   else
     sym = readEntry(s->file, rels.relas);
-  if (!isa_and_nonnull<Defined>(sym) || !sym->includeInDynsym(ctx))
+  if (!isa_and_nonnull<Defined>(sym) || !sym->isExported)
     return;
 
   StringRef partName = reinterpret_cast<const char *>(s->content().data());
@@ -2536,11 +2545,18 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
     auto *obj = cast<ObjFile<ELFT>>(file.get());
     obj->parse(/*ignoreComdats=*/true);
 
-    // Parse '@' in symbol names for non-relocatable output.
+    // For defined symbols in non-relocatable output,
+    // compute isExported and parse '@'.
     if (!ctx.arg.relocatable)
-      for (Symbol *sym : obj->getGlobalSymbols())
+      for (Symbol *sym : obj->getGlobalSymbols()) {
+        if (!sym->isDefined())
+          continue;
+        if (ctx.hasDynsym && ctx.arg.exportDynamic &&
+            sym->computeBinding(ctx) != STB_LOCAL)
+          sym->isExported = true;
         if (sym->hasVersionSuffix)
           sym->parseSymbolVersion(ctx);
+      }
     ctx.objectFiles.push_back(obj);
   }
 }
@@ -2700,21 +2716,6 @@ static void redirectSymbols(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
     ctx.symtab->wrap(w.sym, w.real, w.wrap);
 }
 
-static void reportMissingFeature(Ctx &ctx, StringRef config,
-                                 const Twine &report) {
-  if (config == "error")
-    ErrAlways(ctx) << report;
-  else if (config == "warning")
-    Warn(ctx) << report;
-}
-
-static void checkAndReportMissingFeature(Ctx &ctx, StringRef config,
-                                         uint32_t features, uint32_t mask,
-                                         const Twine &report) {
-  if (!(features & mask))
-    reportMissingFeature(ctx, config, report);
-}
-
 // To enable CET (x86's hardware-assisted control flow enforcement), each
 // source file must be compiled with -fcf-protection. Object files compiled
 // with the flag contain feature flags indicating that they are compatible
@@ -2747,28 +2748,43 @@ static void readSecurityNotes(Ctx &ctx) {
   bool hasValidPauthAbiCoreInfo = llvm::any_of(
       ctx.aarch64PauthAbiCoreInfo, [](uint8_t c) { return c != 0; });
 
+  auto report = [&](StringRef config) -> ELFSyncStream {
+    if (config == "error")
+      return {ctx, DiagLevel::Err};
+    else if (config == "warning")
+      return {ctx, DiagLevel::Warn};
+    return {ctx, DiagLevel::None};
+  };
+  auto reportUnless = [&](StringRef config, bool cond) -> ELFSyncStream {
+    if (cond)
+      return {ctx, DiagLevel::None};
+    return report(config);
+  };
   for (ELFFileBase *f : ctx.objectFiles) {
     uint32_t features = f->andFeatures;
 
-    checkAndReportMissingFeature(
-        ctx, ctx.arg.zBtiReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_BTI,
-        toStr(ctx, f) + ": -z bti-report: file does not have "
-                        "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property");
+    reportUnless(ctx.arg.zBtiReport,
+                 features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)
+        << f
+        << ": -z bti-report: file does not have "
+           "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property";
 
-    checkAndReportMissingFeature(
-        ctx, ctx.arg.zGcsReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_GCS,
-        toStr(ctx, f) + ": -z gcs-report: file does not have "
-                        "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property");
+    reportUnless(ctx.arg.zGcsReport,
+                 features & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
+        << f
+        << ": -z gcs-report: file does not have "
+           "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property";
 
-    checkAndReportMissingFeature(
-        ctx, ctx.arg.zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_IBT,
-        toStr(ctx, f) + ": -z cet-report: file does not have "
-                        "GNU_PROPERTY_X86_FEATURE_1_IBT property");
+    reportUnless(ctx.arg.zCetReport, features & GNU_PROPERTY_X86_FEATURE_1_IBT)
+        << f
+        << ": -z cet-report: file does not have "
+           "GNU_PROPERTY_X86_FEATURE_1_IBT property";
 
-    checkAndReportMissingFeature(
-        ctx, ctx.arg.zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_SHSTK,
-        toStr(ctx, f) + ": -z cet-report: file does not have "
-                        "GNU_PROPERTY_X86_FEATURE_1_SHSTK property");
+    reportUnless(ctx.arg.zCetReport,
+                 features & GNU_PROPERTY_X86_FEATURE_1_SHSTK)
+        << f
+        << ": -z cet-report: file does not have "
+           "GNU_PROPERTY_X86_FEATURE_1_SHSTK property";
 
     if (ctx.arg.zForceBti && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
@@ -2798,11 +2814,11 @@ static void readSecurityNotes(Ctx &ctx) {
       continue;
 
     if (f->aarch64PauthAbiCoreInfo.empty()) {
-      reportMissingFeature(ctx, ctx.arg.zPauthReport,
-                           toStr(ctx, f) +
-                               ": -z pauth-report: file does not have AArch64 "
-                               "PAuth core info while '" +
-                               referenceFileName + "' has one");
+      report(ctx.arg.zPauthReport)
+          << f
+          << ": -z pauth-report: file does not have AArch64 "
+             "PAuth core info while '"
+          << referenceFileName << "' has one";
       continue;
     }
 
@@ -2882,7 +2898,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   parseFiles(ctx, files);
 
   // Create dynamic sections for dynamic linking and static PIE.
-  ctx.arg.hasDynSymTab = !ctx.sharedFiles.empty() || ctx.arg.isPic;
+  ctx.hasDynsym = !ctx.sharedFiles.empty() || ctx.arg.isPic;
 
   // If an entry symbol is in a static archive, pull out that file now.
   if (Symbol *sym = ctx.symtab->find(ctx.arg.entry))
@@ -2987,6 +3003,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   if (!ctx.arg.relocatable) {
     llvm::TimeTraceScope timeScope("Process symbol versions");
     ctx.symtab->scanVersionScript();
+
+    parseVersionAndComputeIsPreemptible(ctx);
   }
 
   // Skip the normal linked output if some LTO options are specified.
@@ -3050,7 +3068,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Handle --exclude-libs again because lto.tmp may reference additional
   // libcalls symbols defined in an excluded archive. This may override
-  // versionId set by scanVersionScript().
+  // versionId set by scanVersionScript() and isExported.
   if (args.hasArg(OPT_exclude_libs))
     excludeLibs(ctx, args);
 
@@ -3209,11 +3227,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Read the callgraph now that we know what was gced or icfed
   if (ctx.arg.callGraphProfileSort != CGProfileSortKind::None) {
-    if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file))
+    if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file)) {
       if (std::optional<MemoryBufferRef> buffer =
               readFile(ctx, arg->getValue()))
         readCallGraph(ctx, *buffer);
-    readCallGraphsFromObjectFiles<ELFT>(ctx);
+    } else
+      readCallGraphsFromObjectFiles<ELFT>(ctx);
   }
 
   // Write the result to the file.

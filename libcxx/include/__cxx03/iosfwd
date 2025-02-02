@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_IOSFWD
-#define _LIBCPP_IOSFWD
+#ifndef _LIBCPP___CXX03_IOSFWD
+#define _LIBCPP___CXX03_IOSFWD
 
 /*
     iosfwd synopsis
@@ -183,4 +183,4 @@ public:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_IOSFWD
+#endif // _LIBCPP___CXX03_IOSFWD

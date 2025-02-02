@@ -646,7 +646,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   bool HasFP = hasFP(MF);
   bool HasBP = RegInfo->hasBasePointer(MF);
   bool HasRedZone = isPPC64 || !isSVR4ABI;
-  bool HasROPProtect = Subtarget.hasROPProtect();
+  const bool HasROPProtect = Subtarget.hasROPProtect();
   bool HasPrivileged = Subtarget.hasPrivileged();
 
   Register SPReg       = isPPC64 ? PPC::X1  : PPC::R1;
@@ -908,8 +908,10 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   // in ScratchReg.
   // If the offset can not be encoded into the store instruction, we also have
   // to save LR here.
+  // If we are using ROP Protection we need to save the LR here as we cannot
+  // move the hashst instruction past the point where we get the stack frame.
   if (MustSaveLR && !HasFastMFLR &&
-      (HasSTUX || !isInt<16>(FrameSize + LROffset)))
+      (HasSTUX || !isInt<16>(FrameSize + LROffset) || HasROPProtect))
     SaveLR(LROffset);
 
   // If FrameSize <= TLI.getStackProbeSize(MF), as POWER ABI requires backchain
@@ -1100,7 +1102,8 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   // Save the LR now.
-  if (!HasSTUX && MustSaveLR && !HasFastMFLR && isInt<16>(FrameSize + LROffset))
+  if (!HasSTUX && MustSaveLR && !HasFastMFLR &&
+      isInt<16>(FrameSize + LROffset) && !HasROPProtect)
     SaveLR(LROffset + FrameSize);
 
   // Add Call Frame Information for the instructions we generated above.
@@ -2307,7 +2310,7 @@ PPCFrameLowering::addScavengingSpillSlot(MachineFunction &MF,
     const TargetRegisterInfo &TRI = *Subtarget.getRegisterInfo();
     unsigned Size = TRI.getSpillSize(RC);
     Align Alignment = TRI.getSpillAlign(RC);
-    RS->addScavengingFrameIndex(MFI.CreateStackObject(Size, Alignment, false));
+    RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(Size, Alignment));
 
     // Might we have over-aligned allocas?
     bool HasAlVars =
@@ -2315,8 +2318,7 @@ PPCFrameLowering::addScavengingSpillSlot(MachineFunction &MF,
 
     // These kinds of spills might need two registers.
     if (spillsCR(MF) || HasAlVars)
-      RS->addScavengingFrameIndex(
-          MFI.CreateStackObject(Size, Alignment, false));
+      RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(Size, Alignment));
   }
 }
 

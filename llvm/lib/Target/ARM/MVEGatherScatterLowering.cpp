@@ -752,7 +752,7 @@ Instruction *MVEGatherScatterLowering::tryCreateIncrementingGatScat(
   // The gep was in charge of making sure the offsets are scaled correctly
   // - calculate that factor so it can be applied by hand
   int TypeScale =
-      computeScale(DL->getTypeSizeInBits(GEP->getOperand(0)->getType()),
+      computeScale(DL->getTypeSizeInBits(GEP->getSourceElementType()),
                    DL->getTypeSizeInBits(GEP->getType()) /
                        cast<FixedVectorType>(GEP->getType())->getNumElements());
   if (TypeScale == -1)

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_RESOURCE_UNSYNCHRONIZED_POOL_RESOURCE_H
-#define _LIBCPP___MEMORY_RESOURCE_UNSYNCHRONIZED_POOL_RESOURCE_H
+#ifndef _LIBCPP___CXX03___MEMORY_RESOURCE_UNSYNCHRONIZED_POOL_RESOURCE_H
+#define _LIBCPP___CXX03___MEMORY_RESOURCE_UNSYNCHRONIZED_POOL_RESOURCE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__memory_resource/memory_resource.h>
@@ -103,4 +103,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___MEMORY_RESOURCE_UNSYNCHRONIZED_POOL_RESOURCE_H
+#endif // _LIBCPP___CXX03___MEMORY_RESOURCE_UNSYNCHRONIZED_POOL_RESOURCE_H
