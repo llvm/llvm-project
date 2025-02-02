@@ -2252,40 +2252,32 @@ struct FormatStyle {
   /// \version 16
   BreakBeforeInlineASMColonStyle BreakBeforeInlineASMColon;
 
-  /// Different styles for whether to break before a template closer.
-  enum BreakBeforeTemplateCloserStyle : int8_t {
-    /// Never break before a template closer.
-    /// \code
-    ///    template <typename Foo, typename Bar>
-    ///
-    ///    template <typename Foo,
-    ///              typename Bar>
-    ///
-    ///    template <
-    ///        typename Foo,
-    ///        typename Bar>
-    /// \endcode
-    BBTCS_Never,
-    /// Break before a template closer if the template has broken into block
-    /// indent style.
-    /// \code
-    ///    template <typename Foo, typename Bar>
-    ///
-    ///    template <typename Foo,
-    ///              typename Bar>
-    ///
-    ///    template <
-    ///        typename Foo,
-    ///        typename Bar
-    ///    >
-    /// \endcode
-    BBTCS_BlockIndent,
-  };
-
-  /// The style of when a line break will be placed before the ``>`` that closes
-  /// a template.
+  /// If ``true``, a line break will be placed before the ``>`` in a block
+  /// indented template declaration.
+  /// \code
+  ///    true:
+  ///    template <typename Foo, typename Bar>
+  ///
+  ///    template <typename Foo,
+  ///              typename Bar>
+  ///
+  ///    template <
+  ///        typename Foo,
+  ///        typename Bar
+  ///    >
+  ///
+  ///    false:
+  ///    template <typename Foo, typename Bar>
+  ///
+  ///    template <typename Foo,
+  ///              typename Bar>
+  ///
+  ///    template <
+  ///        typename Foo,
+  ///        typename Bar>
+  /// \endcode
   /// \version 21
-  BreakBeforeTemplateCloserStyle BreakBeforeTemplateCloser;
+  bool BreakBeforeTemplateCloser;
 
   /// If ``true``, ternary operators will be placed after line breaks.
   /// \code

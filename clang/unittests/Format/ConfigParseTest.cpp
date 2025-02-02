@@ -170,6 +170,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(BinPackArguments);
   CHECK_PARSE_BOOL(BreakAdjacentStringLiterals);
   CHECK_PARSE_BOOL(BreakAfterJavaFieldAnnotations);
+  CHECK_PARSE_BOOL(BreakBeforeTemplateCloser);
   CHECK_PARSE_BOOL(BreakBeforeTernaryOperators);
   CHECK_PARSE_BOOL(BreakStringLiterals);
   CHECK_PARSE_BOOL(CompactNamespaces);
@@ -434,12 +435,6 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::BOS_None);
   CHECK_PARSE("BreakBeforeBinaryOperators: true", BreakBeforeBinaryOperators,
               FormatStyle::BOS_All);
-
-  Style.BreakBeforeTemplateCloser = FormatStyle::BBTCS_Never;
-  CHECK_PARSE("BreakBeforeTemplateCloser: BlockIndent",
-              BreakBeforeTemplateCloser, FormatStyle::BBTCS_BlockIndent);
-  CHECK_PARSE("BreakBeforeTemplateCloser: Never", BreakBeforeTemplateCloser,
-              FormatStyle::BBTCS_Never);
 
   Style.BreakBinaryOperations = FormatStyle::BBO_Never;
   CHECK_PARSE("BreakBinaryOperations: OnePerLine", BreakBinaryOperations,

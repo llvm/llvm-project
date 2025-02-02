@@ -304,8 +304,8 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
                                    Current.closesBlockOrBlockTypeList(Style))) {
     return false;
   }
-  if (Style.BreakBeforeTemplateCloser == FormatStyle::BBTCS_BlockIndent &&
-      Current.is(TT_TemplateCloser) && !CurrentState.BreakBeforeClosingAngle) {
+  if (Style.BreakBeforeTemplateCloser && Current.is(TT_TemplateCloser) &&
+      !CurrentState.BreakBeforeClosingAngle) {
     return false;
   }
   // The opening "{" of a braced list has to be on the same line as the first
@@ -1249,10 +1249,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
         Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent;
   }
 
-  if (PreviousNonComment && PreviousNonComment->is(TT_TemplateOpener)) {
-    CurrentState.BreakBeforeClosingAngle =
-        Style.BreakBeforeTemplateCloser == FormatStyle::BBTCS_BlockIndent;
-  }
+  if (PreviousNonComment && PreviousNonComment->is(TT_TemplateOpener))
+    CurrentState.BreakBeforeClosingAngle = Style.BreakBeforeTemplateCloser;
 
   if (CurrentState.AvoidBinPacking) {
     // If we are breaking after '(', '{', '<', or this is the break after a ':'
@@ -1390,8 +1388,8 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       State.Stack.size() > 1) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
   }
-  if (Style.BreakBeforeTemplateCloser == FormatStyle::BBTCS_BlockIndent &&
-      Current.is(TT_TemplateCloser) && State.Stack.size() > 1) {
+  if (Style.BreakBeforeTemplateCloser && Current.is(TT_TemplateCloser) &&
+      State.Stack.size() > 1) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
   }
   if (NextNonComment->is(TT_TemplateString) && NextNonComment->closesScope())
