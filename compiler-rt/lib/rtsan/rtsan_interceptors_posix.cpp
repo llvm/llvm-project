@@ -939,7 +939,7 @@ INTERCEPTOR(int, msync, void *addr, size_t length, int flag) {
   return REAL(msync)(addr, length, flag);
 }
 
-#if SANITIZER_APPLE
+#if SANITIZER_APPLE || SANITIZER_FREEBSD
 INTERCEPTOR(int, mincore, const void *addr, size_t length, char *vec) {
 #else
 INTERCEPTOR(int, mincore, void *addr, size_t length, unsigned char *vec) {
@@ -1334,7 +1334,7 @@ INTERCEPTOR(ssize_t, process_vm_writev, pid_t pid,
 // the test. Revisit this in the future, but hopefully intercepting fork/exec is
 // enough to dissuade usage of wait by proxy.
 
-#if SANITIZER_APPLE
+#if SANITIZER_APPLE || SANITIZER_FREEBSD
 #define INT_TYPE_SYSCALL int
 #else
 #define INT_TYPE_SYSCALL long

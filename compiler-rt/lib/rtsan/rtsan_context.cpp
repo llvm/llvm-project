@@ -19,6 +19,7 @@
 using namespace __sanitizer;
 using namespace __rtsan;
 
+#if !SANITIZER_FREEBSD
 static pthread_key_t context_key;
 static pthread_once_t key_once = PTHREAD_ONCE_INIT;
 
@@ -43,6 +44,21 @@ static __rtsan::Context &GetContextForThisThreadImpl() {
 
   return *current_thread_context;
 }
+#else
+
+// On FreeBSD, pthread api cannot be used as calloc is called under the hood
+// at library initialization time.
+static __thread Context *ctx = nullptr;
+
+static __rtsan::Context &GetContextForThisThreadImpl() {
+  if (ctx == nullptr) {
+    ctx = static_cast<Context *>(MmapOrDie(sizeof(Context), "RtsanContext"));
+    new (ctx) Context();
+  }
+
+  return *ctx;
+}
+#endif
 
 __rtsan::Context::Context() = default;
 
