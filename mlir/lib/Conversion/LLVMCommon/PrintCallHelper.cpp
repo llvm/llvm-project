@@ -27,7 +27,7 @@ static std::string ensureSymbolNameIsUnique(ModuleOp moduleOp,
   return uniqueName;
 }
 
-void mlir::LLVM::createPrintStrCall(
+LogicalResult mlir::LLVM::createPrintStrCall(
     OpBuilder &builder, Location loc, ModuleOp moduleOp, StringRef symbolName,
     StringRef string, const LLVMTypeConverter &typeConverter, bool addNewline,
     std::optional<StringRef> runtimeFunctionName) {
@@ -59,8 +59,11 @@ void mlir::LLVM::createPrintStrCall(
   SmallVector<LLVM::GEPArg> indices(1, 0);
   Value gep =
       builder.create<LLVM::GEPOp>(loc, ptrTy, arrayTy, msgAddr, indices);
-  Operation *printer =
+  FailureOr<LLVM::LLVMFuncOp> printer =
       LLVM::lookupOrCreatePrintStringFn(moduleOp, runtimeFunctionName);
-  builder.create<LLVM::CallOp>(loc, TypeRange(), SymbolRefAttr::get(printer),
-                               gep);
+  if (failed(printer))
+    return failure();
+  builder.create<LLVM::CallOp>(loc, TypeRange(),
+                               SymbolRefAttr::get(printer.value()), gep);
+  return success();
 }

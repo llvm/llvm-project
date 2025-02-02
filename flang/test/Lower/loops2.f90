@@ -107,7 +107,7 @@ contains
 ! CHECK:       ^bb4:
 ! CHECK:         %[[VAL_20:.*]] = fir.load %[[VAL_3]] : !fir.ptr<i32>
 ! CHECK:         %[[VAL_21:.*]] = arith.constant 1 : i32
-! CHECK:         %[[VAL_22:.*]] = arith.addi %[[VAL_20]], %[[VAL_21]] : i32
+! CHECK:         %[[VAL_22:.*]] = arith.addi %[[VAL_20]], %[[VAL_21]] overflow<nsw> : i32
 ! CHECK:         fir.store %[[VAL_22]] to %[[VAL_3]] : !fir.ptr<i32>
 ! CHECK:         br ^bb1
 ! CHECK:       ^bb5:

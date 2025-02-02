@@ -190,7 +190,8 @@ public:
   /// inaccessible and it *must* have removeMemoryAccess called on it.
   MemoryAccess *createMemoryAccessInBB(Instruction *I, MemoryAccess *Definition,
                                        const BasicBlock *BB,
-                                       MemorySSA::InsertionPlace Point);
+                                       MemorySSA::InsertionPlace Point,
+                                       bool CreationMustSucceed = true);
 
   /// Create a MemoryAccess in MemorySSA before an existing MemoryAccess.
   ///
@@ -259,23 +260,32 @@ private:
   MemoryAccess *tryRemoveTrivialPhi(MemoryPhi *Phi, RangeType &Operands);
   void tryRemoveTrivialPhis(ArrayRef<WeakVH> UpdatedPHIs);
   void fixupDefs(const SmallVectorImpl<WeakVH> &);
-  // Clone all uses and defs from BB to NewBB given a 1:1 map of all
-  // instructions and blocks cloned, and a map of MemoryPhi : Definition
-  // (MemoryAccess Phi or Def). VMap maps old instructions to cloned
-  // instructions and old blocks to cloned blocks. MPhiMap, is created in the
-  // caller of this private method, and maps existing MemoryPhis to new
-  // definitions that new MemoryAccesses must point to. These definitions may
-  // not necessarily be MemoryPhis themselves, they may be MemoryDefs. As such,
-  // the map is between MemoryPhis and MemoryAccesses, where the MemoryAccesses
-  // may be MemoryPhis or MemoryDefs and not MemoryUses.
-  // If CloneWasSimplified = true, the clone was exact. Otherwise, assume that
-  // the clone involved simplifications that may have: (1) turned a MemoryUse
-  // into an instruction that MemorySSA has no representation for, or (2) turned
-  // a MemoryDef into a MemoryUse or an instruction that MemorySSA has no
-  // representation for. No other cases are supported.
+  /// Clone all uses and defs from BB to NewBB given a 1:1 map of all
+  /// instructions and blocks cloned, and a map of MemoryPhi : Definition
+  /// (MemoryAccess Phi or Def).
+  ///
+  /// \param VMap Maps old instructions to cloned instructions and old blocks
+  ///        to cloned blocks
+  /// \param MPhiMap, is created in the caller of this private method, and maps
+  ///        existing MemoryPhis to new definitions that new MemoryAccesses
+  ///        must point to. These definitions may not necessarily be MemoryPhis
+  ///        themselves, they may be MemoryDefs. As such, the map is between
+  ///        MemoryPhis and MemoryAccesses, where the MemoryAccesses may be
+  ///        MemoryPhis or MemoryDefs and not MemoryUses.
+  /// \param IsInClonedRegion Determines whether a basic block was cloned.
+  ///        References to accesses outside the cloned region will not be
+  ///        remapped.
+  /// \param CloneWasSimplified If false, the clone was exact. Otherwise,
+  ///        assume that the clone involved simplifications that may have:
+  ///        (1) turned a MemoryUse into an instruction that MemorySSA has no
+  ///        representation for, or (2) turned a MemoryDef into a MemoryUse or
+  ///        an instruction that MemorySSA has no representation for. No other
+  ///        cases are supported.
   void cloneUsesAndDefs(BasicBlock *BB, BasicBlock *NewBB,
                         const ValueToValueMapTy &VMap, PhiToDefMap &MPhiMap,
+                        function_ref<bool(BasicBlock *)> IsInClonedRegion,
                         bool CloneWasSimplified = false);
+
   template <typename Iter>
   void privateUpdateExitBlocksForClonedLoop(ArrayRef<BasicBlock *> ExitBlocks,
                                             Iter ValuesBegin, Iter ValuesEnd,

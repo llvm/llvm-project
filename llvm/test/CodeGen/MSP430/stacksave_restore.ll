@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=msp430
+; RUN: llc < %s -mtriple=msp430
 
 target triple = "msp430"
 
