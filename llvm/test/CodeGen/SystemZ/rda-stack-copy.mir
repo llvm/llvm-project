@@ -1,0 +1,30 @@
+# RUN: llc %s -mtriple=s390x-linux-gnu -run-pass=reaching-defs-analysis -print-all-reaching-defs -o - 2>&1 | FileCheck %s
+
+---
+name:            test0
+tracksRegLiveness: true
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  ; CHECK-LABEL: RDA results for test0
+  ; CHECK-NEXT: %stack.1:{ }
+  ; CHECK-NEXT: %stack.0:{ }
+  ; CHECK-NEXT: 0: MVC %stack.1, 0, 4, %stack.0, 0 :: (store (s32) into %stack.1), (load (s32) from %stack.0)
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: %stack.1:{ 0 }
+  ; CHECK-NEXT: 1: $r2l = L %stack.1, 0, $noreg
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: implicit $r2l:{ 1 }
+  ; CHECK-NEXT: 2: Return implicit $r2l
+
+  bb.0:
+    MVC %stack.1, 0 , 4, %stack.0, 0:: (store (s32) into %stack.1), (load (s32) from %stack.0)
+    $r2l = L %stack.1, 0, $noreg
+    Return implicit $r2l
+
+...

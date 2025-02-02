@@ -11,14 +11,12 @@ on:
     paths:
       - 'llvm/**'
       - '.github/workflows/llvm-tests.yml'
-      - '.github/workflows/llvm-project-tests.yml'
   pull_request:
     branches:
       - 'release/**'
     paths:
       - 'llvm/**'
       - '.github/workflows/llvm-tests.yml'
-      - '.github/workflows/llvm-project-tests.yml'
 
 concurrency:
   # Skip intermediate builds: always.
@@ -27,14 +25,6 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
-  check-all:
-    if: github.repository_owner == 'llvm'
-    name: Build and Test
-    uses: ./.github/workflows/llvm-project-tests.yml
-    with:
-      build_target: check-all
-      projects: clang;lld;libclc;lldb
-
   abi-dump-setup:
     if: github.repository_owner == 'llvm'
     runs-on: ubuntu-latest
@@ -137,14 +127,14 @@ jobs:
           # Remove symbol versioning from dumps, so we can compare across major versions.
           sed -i 's/LLVM_${{ matrix.llvm_version_major }}/LLVM_NOVERSION/' ${{ matrix.ref }}.abi
       - name: Upload ABI file
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # 4.6.0
         with:
           name: ${{ matrix.name }}
           path: ${{ matrix.ref }}.abi
 
       - name: Upload symbol list file
         if: matrix.name == 'build-baseline'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # 4.6.0
         with:
           name: symbol-list
           path: llvm.symbols
@@ -157,17 +147,17 @@ jobs:
       - abi-dump
     steps:
       - name: Download baseline
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # 4.1.8
         with:
           name: build-baseline
           path: build-baseline
       - name: Download latest
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # 4.1.8
         with:
           name: build-latest
           path: build-latest
       - name: Download symbol list
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # 4.1.8
         with:
           name: symbol-list
           path: symbol-list
@@ -186,7 +176,7 @@ jobs:
           abi-compliance-checker $EXTRA_ARGS -l libLLVM.so -old build-baseline/*.abi -new build-latest/*.abi || test "${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}" = "llvm-c"
       - name: Upload ABI Comparison
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # 4.6.0
         with:
           name: compat-report-${{ github.sha }}
           path: compat_reports/

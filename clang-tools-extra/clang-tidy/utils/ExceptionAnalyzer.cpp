@@ -320,6 +320,12 @@ bool isQualificationConvertiblePointer(QualType From, QualType To,
 } // namespace
 
 static bool canThrow(const FunctionDecl *Func) {
+  // consteval specifies that every call to the function must produce a
+  // compile-time constant, which cannot evaluate a throw expression without
+  // producing a compilation error.
+  if (Func->isConsteval())
+    return false;
+
   const auto *FunProto = Func->getType()->getAs<FunctionProtoType>();
   if (!FunProto)
     return true;

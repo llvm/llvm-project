@@ -733,7 +733,7 @@ static bool isPromotableLoadFromStore(MachineInstr &MI) {
   }
 }
 
-static bool isMergeableLdStUpdate(MachineInstr &MI) {
+static bool isMergeableLdStUpdate(MachineInstr &MI, AArch64FunctionInfo &AFI) {
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
   default:
@@ -783,6 +783,15 @@ static bool isMergeableLdStUpdate(MachineInstr &MI) {
   case AArch64::STPXi:
     // Make sure this is a reg+imm (as opposed to an address reloc).
     if (!AArch64InstrInfo::getLdStOffsetOp(MI).isImm())
+      return false;
+
+    // When using stack tagging, simple sp+imm loads and stores are not
+    // tag-checked, but pre- and post-indexed versions of them are, so we can't
+    // replace the former with the latter. This transformation would be valid
+    // if the load/store accesses an untagged stack slot, but we don't have
+    // that information available after frame indices have been eliminated.
+    if (AFI.isMTETagged() &&
+        AArch64InstrInfo::getLdStBaseOp(MI).getReg() == AArch64::SP)
       return false;
 
     return true;
@@ -2772,6 +2781,7 @@ bool AArch64LoadStoreOpt::tryToMergeIndexLdSt(MachineBasicBlock::iterator &MBBI,
 
 bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
                                         bool EnableNarrowZeroStOpt) {
+  AArch64FunctionInfo &AFI = *MBB.getParent()->getInfo<AArch64FunctionInfo>();
 
   bool Modified = false;
   // Four tranformations to do here:
@@ -2842,7 +2852,7 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
   //        ldr x0, [x2], #4
   for (MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
        MBBI != E;) {
-    if (isMergeableLdStUpdate(*MBBI) && tryToMergeLdStUpdate(MBBI))
+    if (isMergeableLdStUpdate(*MBBI, AFI) && tryToMergeLdStUpdate(MBBI))
       Modified = true;
     else
       ++MBBI;

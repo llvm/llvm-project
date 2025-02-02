@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_CONCEPTS_H
-#define _LIBCPP___MEMORY_CONCEPTS_H
+#ifndef _LIBCPP___CXX03___MEMORY_CONCEPTS_H
+#define _LIBCPP___CXX03___MEMORY_CONCEPTS_H
 
 #include <__cxx03/__concepts/same_as.h>
 #include <__cxx03/__config>
@@ -60,4 +60,4 @@ concept __nothrow_forward_range = __nothrow_input_range<_Rp> && __nothrow_forwar
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_CONCEPTS_H
+#endif // _LIBCPP___CXX03___MEMORY_CONCEPTS_H

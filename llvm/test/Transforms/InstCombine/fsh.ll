@@ -760,17 +760,17 @@ define i32 @fsh_load_rotate_12(ptr %data) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[DATA:%.*]], align 1
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[CONV]], 24
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[DATA]], i64 1
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[DATA]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
 ; CHECK-NEXT:    [[CONV2:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    [[SHL3:%.*]] = shl nuw nsw i32 [[CONV2]], 16
 ; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[SHL3]], [[SHL]]
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, ptr [[DATA]], i64 2
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[DATA]], i64 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[ARRAYIDX4]], align 1
 ; CHECK-NEXT:    [[CONV5:%.*]] = zext i8 [[TMP2]] to i32
 ; CHECK-NEXT:    [[SHL6:%.*]] = shl nuw nsw i32 [[CONV5]], 8
 ; CHECK-NEXT:    [[OR7:%.*]] = or disjoint i32 [[OR]], [[SHL6]]
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i8, ptr [[DATA]], i64 3
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i8, ptr [[DATA]], i64 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX8]], align 1
 ; CHECK-NEXT:    [[CONV9:%.*]] = zext i8 [[TMP3]] to i32
 ; CHECK-NEXT:    [[OR10:%.*]] = or disjoint i32 [[OR7]], [[CONV9]]
@@ -808,17 +808,17 @@ define i32 @fsh_load_rotate_25(ptr %data) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[DATA:%.*]], align 1
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[CONV]], 24
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[DATA]], i64 1
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[DATA]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
 ; CHECK-NEXT:    [[CONV2:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    [[SHL3:%.*]] = shl nuw nsw i32 [[CONV2]], 16
 ; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[SHL3]], [[SHL]]
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, ptr [[DATA]], i64 2
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[DATA]], i64 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[ARRAYIDX4]], align 1
 ; CHECK-NEXT:    [[CONV5:%.*]] = zext i8 [[TMP2]] to i32
 ; CHECK-NEXT:    [[SHL6:%.*]] = shl nuw nsw i32 [[CONV5]], 8
 ; CHECK-NEXT:    [[OR7:%.*]] = or disjoint i32 [[OR]], [[SHL6]]
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i8, ptr [[DATA]], i64 3
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i8, ptr [[DATA]], i64 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX8]], align 1
 ; CHECK-NEXT:    [[CONV9:%.*]] = zext i8 [[TMP3]] to i32
 ; CHECK-NEXT:    [[OR10:%.*]] = or disjoint i32 [[OR7]], [[CONV9]]
@@ -1009,4 +1009,78 @@ define <2 x i32> @fshr_vec_zero_elem(<2 x i32> %x, <2 x i32> %y) {
 ;
   %fsh = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> <i32 2, i32 0>)
   ret <2 x i32> %fsh
+}
+
+define i16 @fshl_i16_shl(i16 %x, i16 %y) {
+; CHECK-LABEL: @fshl_i16_shl(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i16 [[Y:%.*]], 15
+; CHECK-NEXT:    [[RES:%.*]] = shl i16 [[X:%.*]], [[TMP0]]
+; CHECK-NEXT:    ret i16 [[RES]]
+;
+entry:
+  %res = call i16 @llvm.fshl.i16(i16 %x, i16 0, i16 %y)
+  ret i16 %res
+}
+
+define i32 @fshl_i32_shl(i32 %x, i32 %y) {
+; CHECK-LABEL: @fshl_i32_shl(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[Y:%.*]], 31
+; CHECK-NEXT:    [[RES:%.*]] = shl i32 [[X:%.*]], [[TMP0]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %res = call i32 @llvm.fshl.i32(i32 %x, i32 0, i32 %y)
+  ret i32 %res
+}
+
+define <2 x i16> @fshl_vi16_shl(<2 x i16> %x, <2 x i16> %y) {
+; CHECK-LABEL: @fshl_vi16_shl(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i16> [[Y:%.*]], splat (i16 15)
+; CHECK-NEXT:    [[RES:%.*]] = shl <2 x i16> [[X:%.*]], [[TMP0]]
+; CHECK-NEXT:    ret <2 x i16> [[RES]]
+;
+entry:
+  %res = call <2 x i16> @llvm.fshl.v2i16(<2 x i16> %x, <2 x i16> zeroinitializer, <2 x i16> %y)
+  ret <2 x i16> %res
+}
+
+define i32 @fshr_i32_shl_negative_test(i32 %x, i32 %y) {
+; CHECK-LABEL: @fshr_i32_shl_negative_test(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.fshr.i32(i32 [[X:%.*]], i32 0, i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %res = call i32 @llvm.fshr.i32(i32 %x, i32 0, i32 %y)
+  ret i32 %res
+}
+
+define <2 x i31> @fshl_vi31_shl_negative_test(<2 x i31> %x, <2 x i31> %y) {
+; CHECK-LABEL: @fshl_vi31_shl_negative_test(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> [[X:%.*]], <2 x i31> zeroinitializer, <2 x i31> [[Y:%.*]])
+; CHECK-NEXT:    ret <2 x i31> [[RES]]
+;
+entry:
+  %res = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> %x, <2 x i31> zeroinitializer, <2 x i31>  %y)
+  ret <2 x i31>  %res
+}
+
+;; Issue #124387 Range attribute no longer holds after operands changed.
+define i8 @fshl_range_trunc(i1 %x) {
+; CHECK-LABEL: @fshl_range_trunc(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[X:%.*]] to i32
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[ZEXT]], 126
+; CHECK-NEXT:    [[FSHL:%.*]] = call i32 @llvm.fshl.i32(i32 [[OR]], i32 -2, i32 1)
+; CHECK-NEXT:    [[TR:%.*]] = trunc nuw i32 [[FSHL]] to i8
+; CHECK-NEXT:    ret i8 [[TR]]
+;
+  %zext = zext i1 %x to i32
+  %or = or disjoint i32 %zext, -2
+  %fshl = call range(i32 -4, 2) i32 @llvm.fshl.i32(i32 %or, i32 %or, i32 1)
+  %tr = trunc nsw i32 %fshl to i8
+  ret i8 %tr
 }

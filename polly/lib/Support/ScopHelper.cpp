@@ -315,13 +315,13 @@ private:
     auto *InstClone = Inst->clone();
     for (auto &Op : Inst->operands()) {
       assert(GenSE.isSCEVable(Op->getType()));
-      auto *OpSCEV = GenSE.getSCEV(Op);
+      const SCEV *OpSCEV = GenSE.getSCEV(Op);
       auto *OpClone = expandCodeFor(OpSCEV, Op->getType(), IP);
       InstClone->replaceUsesOfWith(Op, OpClone);
     }
 
     InstClone->setName(Name + Inst->getName());
-    InstClone->insertBefore(IP);
+    InstClone->insertBefore(IP->getIterator());
     return GenSE.getSCEV(InstClone);
   }
 
@@ -330,7 +330,7 @@ private:
     // If a value mapping was given try if the underlying value is remapped.
     Value *NewVal = VMap ? VMap->lookup(E->getValue()) : nullptr;
     if (NewVal) {
-      auto *NewE = GenSE.getSCEV(NewVal);
+      const SCEV *NewE = GenSE.getSCEV(NewVal);
 
       // While the mapped value might be different the SCEV representation might
       // not be. To this end we will check before we go into recursion here.
@@ -456,7 +456,7 @@ private:
 
     // FIXME: This emits a SCEV for GenSE (since GenLRepl will refer to the
     // induction variable of a generated loop), so we should not use SCEVVisitor
-    // with it. Howver, it still contains references to the SCoP region.
+    // with it. However, it still contains references to the SCoP region.
     return visit(Evaluated);
   }
   ///}
@@ -604,7 +604,8 @@ bool polly::isHoistableLoad(LoadInst *LInst, Region &R, LoopInfo &LI,
 
   for (auto *User : Ptr->users()) {
     auto *UserI = dyn_cast<Instruction>(User);
-    if (!UserI || !R.contains(UserI))
+    if (!UserI || UserI->getFunction() != LInst->getFunction() ||
+        !R.contains(UserI))
       continue;
     if (!UserI->mayWriteToMemory())
       continue;
