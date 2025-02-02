@@ -312,9 +312,6 @@ public:
   /// nest would extend.
   SmallVector<llvm::CanonicalLoopInfo *, 4> OMPLoopNestStack;
 
-  /// Stack to track the Logical Operator recursion nest for MC/DC.
-  SmallVector<const BinaryOperator *, 16> MCDCLogOpStack;
-
   /// Stack to track the controlled convergence tokens.
   SmallVector<llvm::ConvergenceControlInst *, 4> ConvergenceTokenStack;
 
@@ -1628,9 +1625,6 @@ private:
 
   CodeGenPGO PGO;
 
-  /// Bitmap used by MC/DC to track condition outcomes of a boolean expression.
-  Address MCDCCondBitmapAddr = Address::invalid();
-
   /// Calculate branch weights appropriate for PGO data
   llvm::MDNode *createProfileWeights(uint64_t TrueCount,
                                      uint64_t FalseCount) const;
@@ -1669,8 +1663,12 @@ public:
   void maybeCreateMCDCCondBitmap() {
     if (isMCDCCoverageEnabled()) {
       PGO.emitMCDCParameters(Builder);
-      MCDCCondBitmapAddr =
-          CreateIRTemp(getContext().UnsignedIntTy, "mcdc.addr");
+
+      // Set up MCDCCondBitmapAddr for each Decision.
+      // Note: This doesn't initialize Addrs in invalidated Decisions.
+      for (auto *MCDCCondBitmapAddr : PGO.getMCDCCondBitmapAddrArray(Builder))
+        *MCDCCondBitmapAddr =
+            CreateIRTemp(getContext().UnsignedIntTy, "mcdc.addr");
     }
   }
 
@@ -1679,10 +1677,15 @@ public:
     return (BOp && BOp->isLogicalOp());
   }
 
+  bool isMCDCDecisionExpr(const Expr *E) const {
+    return PGO.isMCDCDecisionExpr(E);
+  }
+  bool isMCDCBranchExpr(const Expr *E) const { return PGO.isMCDCBranchExpr(E); }
+
   /// Zero-init the MCDC temp value.
   void maybeResetMCDCCondBitmap(const Expr *E) {
     if (isMCDCCoverageEnabled() && isBinaryLogicalOp(E)) {
-      PGO.emitMCDCCondBitmapReset(Builder, E, MCDCCondBitmapAddr);
+      PGO.emitMCDCCondBitmapReset(Builder, E);
       PGO.setCurrentStmt(E);
     }
   }
@@ -1691,7 +1694,7 @@ public:
   /// If \p StepV is null, the default increment is 1.
   void maybeUpdateMCDCTestVectorBitmap(const Expr *E) {
     if (isMCDCCoverageEnabled() && isBinaryLogicalOp(E)) {
-      PGO.emitMCDCTestVectorBitmapUpdate(Builder, E, MCDCCondBitmapAddr, *this);
+      PGO.emitMCDCTestVectorBitmapUpdate(Builder, E, *this);
       PGO.setCurrentStmt(E);
     }
   }
@@ -1699,7 +1702,7 @@ public:
   /// Update the MCDC temp value with the condition's evaluated result.
   void maybeUpdateMCDCCondBitmap(const Expr *E, llvm::Value *Val) {
     if (isMCDCCoverageEnabled()) {
-      PGO.emitMCDCCondBitmapUpdate(Builder, E, MCDCCondBitmapAddr, Val, *this);
+      PGO.emitMCDCCondBitmapUpdate(Builder, E, Val, *this);
       PGO.setCurrentStmt(E);
     }
   }

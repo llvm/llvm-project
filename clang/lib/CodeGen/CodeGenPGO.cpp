@@ -228,10 +228,17 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   /// The stacks are also used to find error cases and notify the user.  A
   /// standard logical operator nest for a boolean expression could be in a form
   /// similar to this: "x = a && b && c && (d || f)"
-  unsigned NumCond = 0;
-  bool SplitNestedLogicalOp = false;
-  SmallVector<const Stmt *, 16> NonLogOpStack;
-  SmallVector<const BinaryOperator *, 16> LogOpStack;
+  struct DecisionState {
+    llvm::DenseSet<const Stmt *> Leaves; // Not BinOp
+    const Expr *DecisionExpr;            // Root
+    bool Split;
+
+    DecisionState() = delete;
+    DecisionState(const Expr *E, bool Split = false)
+        : DecisionExpr(E), Split(Split) {}
+  };
+
+  SmallVector<DecisionState, 1> DecisionStack;
 
   // Hook: dataTraverseStmtPre() is invoked prior to visiting an AST Stmt node.
   bool dataTraverseStmtPre(Stmt *S) {
@@ -239,35 +246,28 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     if (MCDCMaxCond == 0)
       return true;
 
-    /// At the top of the logical operator nest, reset the number of conditions,
-    /// also forget previously seen split nesting cases.
-    if (LogOpStack.empty()) {
-      NumCond = 0;
-      SplitNestedLogicalOp = false;
-    }
-
-    if (const Expr *E = dyn_cast<Expr>(S)) {
-      if (const auto *BinOp =
-              dyn_cast<BinaryOperator>(CodeGenFunction::stripCond(E));
-          BinOp && BinOp->isLogicalOp()) {
-        /// Check for "split-nested" logical operators. This happens when a new
-        /// boolean expression logical-op nest is encountered within an existing
-        /// boolean expression, separated by a non-logical operator.  For
-        /// example, in "x = (a && b && c && foo(d && f))", the "d && f" case
-        /// starts a new boolean expression that is separated from the other
-        /// conditions by the operator foo(). Split-nested cases are not
-        /// supported by MC/DC.
-        SplitNestedLogicalOp = SplitNestedLogicalOp || !NonLogOpStack.empty();
-
-        LogOpStack.push_back(BinOp);
+    /// Mark "in splitting" when a leaf is met.
+    if (!DecisionStack.empty()) {
+      auto &StackTop = DecisionStack.back();
+      if (!StackTop.Split) {
+        if (StackTop.Leaves.contains(S)) {
+          assert(!StackTop.Split);
+          StackTop.Split = true;
+        }
         return true;
       }
+
+      // Split
+      assert(StackTop.Split);
+      assert(!StackTop.Leaves.contains(S));
     }
 
-    /// Keep track of non-logical operators. These are OK as long as we don't
-    /// encounter a new logical operator after seeing one.
-    if (!LogOpStack.empty())
-      NonLogOpStack.push_back(S);
+    if (const auto *E = dyn_cast<Expr>(S)) {
+      if (const auto *BinOp =
+              dyn_cast<BinaryOperator>(CodeGenFunction::stripCond(E));
+          BinOp && BinOp->isLogicalOp())
+        DecisionStack.emplace_back(E);
+    }
 
     return true;
   }
@@ -276,50 +276,57 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   // an AST Stmt node.  MC/DC will use it to to signal when the top of a
   // logical operation (boolean expression) nest is encountered.
   bool dataTraverseStmtPost(Stmt *S) {
-    /// If MC/DC is not enabled, MCDCMaxCond will be set to 0. Do nothing.
-    if (MCDCMaxCond == 0)
+    if (DecisionStack.empty())
       return true;
 
-    if (const Expr *E = dyn_cast<Expr>(S)) {
-      const BinaryOperator *BinOp =
-          dyn_cast<BinaryOperator>(CodeGenFunction::stripCond(E));
-      if (BinOp && BinOp->isLogicalOp()) {
-        assert(LogOpStack.back() == BinOp);
-        LogOpStack.pop_back();
+    /// If MC/DC is not enabled, MCDCMaxCond will be set to 0. Do nothing.
+    assert(MCDCMaxCond > 0);
 
-        /// At the top of logical operator nest:
-        if (LogOpStack.empty()) {
-          /// Was the "split-nested" logical operator case encountered?
-          if (SplitNestedLogicalOp) {
-            unsigned DiagID = Diag.getCustomDiagID(
-                DiagnosticsEngine::Warning,
-                "unsupported MC/DC boolean expression; "
-                "contains an operation with a nested boolean expression. "
-                "Expression will not be covered");
-            Diag.Report(S->getBeginLoc(), DiagID);
-            return true;
-          }
+    auto &StackTop = DecisionStack.back();
 
-          /// Was the maximum number of conditions encountered?
-          if (NumCond > MCDCMaxCond) {
-            unsigned DiagID = Diag.getCustomDiagID(
-                DiagnosticsEngine::Warning,
-                "unsupported MC/DC boolean expression; "
-                "number of conditions (%0) exceeds max (%1). "
-                "Expression will not be covered");
-            Diag.Report(S->getBeginLoc(), DiagID) << NumCond << MCDCMaxCond;
-            return true;
-          }
-
-          // Otherwise, allocate the Decision.
-          MCDCState.DecisionByStmt[BinOp].BitmapIdx = 0;
-        }
-        return true;
+    if (StackTop.DecisionExpr != S) {
+      if (StackTop.Leaves.contains(S)) {
+        assert(StackTop.Split);
+        StackTop.Split = false;
       }
+
+      return true;
     }
 
-    if (!LogOpStack.empty())
-      NonLogOpStack.pop_back();
+    /// Allocate the entry (with Valid=false)
+    auto &DecisionEntry =
+        MCDCState
+            .DecisionByStmt[CodeGenFunction::stripCond(StackTop.DecisionExpr)];
+
+    /// Was the "split-nested" logical operator case encountered?
+    if (false && DecisionStack.size() > 1) {
+      unsigned DiagID = Diag.getCustomDiagID(
+          DiagnosticsEngine::Warning,
+          "unsupported MC/DC boolean expression; "
+          "contains an operation with a nested boolean expression. "
+          "Expression will not be covered");
+      Diag.Report(S->getBeginLoc(), DiagID);
+      DecisionStack.pop_back();
+      return true;
+    }
+
+    /// Was the maximum number of conditions encountered?
+    auto NumCond = StackTop.Leaves.size();
+    if (NumCond > MCDCMaxCond) {
+      unsigned DiagID =
+          Diag.getCustomDiagID(DiagnosticsEngine::Warning,
+                               "unsupported MC/DC boolean expression; "
+                               "number of conditions (%0) exceeds max (%1). "
+                               "Expression will not be covered");
+      Diag.Report(S->getBeginLoc(), DiagID) << NumCond << MCDCMaxCond;
+      DecisionStack.pop_back();
+      return true;
+    }
+
+    // The Decision is validated.
+    DecisionEntry.ID = MCDCState.DecisionByStmt.size() - 1;
+
+    DecisionStack.pop_back();
 
     return true;
   }
@@ -331,14 +338,17 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   /// order to use MC/DC, count the number of total LHS and RHS conditions.
   bool VisitBinaryOperator(BinaryOperator *S) {
     if (S->isLogicalOp()) {
-      if (CodeGenFunction::isInstrumentedCondition(S->getLHS()))
-        NumCond++;
+      if (CodeGenFunction::isInstrumentedCondition(S->getLHS())) {
+        if (!DecisionStack.empty())
+          DecisionStack.back().Leaves.insert(S->getLHS());
+      }
 
       if (CodeGenFunction::isInstrumentedCondition(S->getRHS())) {
         if (ProfileVersion >= llvm::IndexedInstrProf::Version7)
           CounterMap[S->getRHS()] = NextCounter++;
 
-        NumCond++;
+        if (!DecisionStack.empty())
+          DecisionStack.back().Leaves.insert(S->getRHS());
       }
     }
     return Base::VisitBinaryOperator(S);
@@ -1247,9 +1257,29 @@ void CodeGenPGO::emitMCDCParameters(CGBuilderTy &Builder) {
       CGM.getIntrinsic(llvm::Intrinsic::instrprof_mcdc_parameters), Args);
 }
 
+/// Fill mcdc.addr order by ID.
+std::vector<Address *>
+CodeGenPGO::getMCDCCondBitmapAddrArray(CGBuilderTy &Builder) {
+  std::vector<Address *> Result;
+
+  if (!canEmitMCDCCoverage(Builder) || !RegionMCDCState)
+    return Result;
+
+  SmallVector<std::pair<unsigned, Address *>> SortedPair;
+  for (auto &[_, V] : RegionMCDCState->DecisionByStmt)
+    if (V.isValid())
+      SortedPair.emplace_back(V.ID, &V.MCDCCondBitmapAddr);
+
+  llvm::sort(SortedPair);
+
+  for (auto &[_, MCDCCondBitmapAddr] : SortedPair)
+    Result.push_back(MCDCCondBitmapAddr);
+
+  return Result;
+}
+
 void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
                                                 const Expr *S,
-                                                Address MCDCCondBitmapAddr,
                                                 CodeGenFunction &CGF) {
   if (!canEmitMCDCCoverage(Builder) || !RegionMCDCState)
     return;
@@ -1258,6 +1288,10 @@ void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
 
   auto DecisionStateIter = RegionMCDCState->DecisionByStmt.find(S);
   if (DecisionStateIter == RegionMCDCState->DecisionByStmt.end())
+    return;
+
+  auto &MCDCCondBitmapAddr = DecisionStateIter->second.MCDCCondBitmapAddr;
+  if (!MCDCCondBitmapAddr.isValid())
     return;
 
   // Don't create tvbitmap_update if the record is allocated but excluded.
@@ -1282,14 +1316,16 @@ void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
       CGM.getIntrinsic(llvm::Intrinsic::instrprof_mcdc_tvbitmap_update), Args);
 }
 
-void CodeGenPGO::emitMCDCCondBitmapReset(CGBuilderTy &Builder, const Expr *S,
-                                         Address MCDCCondBitmapAddr) {
+void CodeGenPGO::emitMCDCCondBitmapReset(CGBuilderTy &Builder, const Expr *S) {
   if (!canEmitMCDCCoverage(Builder) || !RegionMCDCState)
     return;
 
-  S = S->IgnoreParens();
+  auto I = RegionMCDCState->DecisionByStmt.find(S->IgnoreParens());
+  if (I == RegionMCDCState->DecisionByStmt.end())
+    return;
 
-  if (!RegionMCDCState->DecisionByStmt.contains(S))
+  auto &MCDCCondBitmapAddr = I->second.MCDCCondBitmapAddr;
+  if (!MCDCCondBitmapAddr.isValid())
     return;
 
   // Emit intrinsic that resets a dedicated temporary value on the stack to 0.
@@ -1297,7 +1333,6 @@ void CodeGenPGO::emitMCDCCondBitmapReset(CGBuilderTy &Builder, const Expr *S,
 }
 
 void CodeGenPGO::emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
-                                          Address MCDCCondBitmapAddr,
                                           llvm::Value *Val,
                                           CodeGenFunction &CGF) {
   if (!canEmitMCDCCoverage(Builder) || !RegionMCDCState)
@@ -1325,6 +1360,10 @@ void CodeGenPGO::emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
   const auto DecisionIter =
       RegionMCDCState->DecisionByStmt.find(Branch.DecisionStmt);
   if (DecisionIter == RegionMCDCState->DecisionByStmt.end())
+    return;
+
+  auto &MCDCCondBitmapAddr = DecisionIter->second.MCDCCondBitmapAddr;
+  if (!MCDCCondBitmapAddr.isValid())
     return;
 
   const auto &TVIdxs = DecisionIter->second.Indices[Branch.ID];

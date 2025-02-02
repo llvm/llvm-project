@@ -800,7 +800,7 @@ public:
   std::optional<DecisionAndBranches>
   processBranch(const CounterMappingRegion &Branch) {
     // Seek each Decision and apply Region to it.
-    for (auto DecisionIter = Decisions.begin(), DecisionEnd = Decisions.end();
+    for (auto DecisionIter = Decisions.rbegin(), DecisionEnd = Decisions.rend();
          DecisionIter != DecisionEnd; ++DecisionIter)
       switch (DecisionIter->addBranch(Branch)) {
       case DecisionRecord::NotProcessed:
@@ -811,7 +811,7 @@ public:
         DecisionAndBranches Result =
             std::make_pair(DecisionIter->DecisionRegion,
                            std::move(DecisionIter->MCDCBranches));
-        Decisions.erase(DecisionIter); // No longer used.
+        Decisions.erase(std::next(DecisionIter).base()); // No longer used.
         return Result;
       }
 
