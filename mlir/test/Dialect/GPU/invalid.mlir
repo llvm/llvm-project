@@ -877,3 +877,89 @@ gpu.binary @binary [#gpu.object<#rocdl.target<chip = "gfx900">,
     ]>,
     bin = "BLOB">
   ]
+
+// -----
+
+func.func @warp_wrong_num_outputs(%laneid: index) {
+  // expected-error@+1 {{'gpu.warp_execute_on_lane_0' op expected same number of yield operands and return values.}}
+  %2 = gpu.warp_execute_on_lane_0(%laneid)[64] -> (vector<4xi32>) {
+  }
+  return
+}
+
+// -----
+
+func.func @warp_wrong_num_inputs(%laneid: index) {
+  // expected-error@+1 {{'gpu.warp_execute_on_lane_0' op expected same number op arguments and block arguments.}}
+  gpu.warp_execute_on_lane_0(%laneid)[64] {
+  ^bb0(%arg0 : vector<128xi32>) :
+  }
+  return
+}
+
+// -----
+
+func.func @warp_wrong_return_distribution(%laneid: index) {
+  // expected-error@+1 {{'gpu.warp_execute_on_lane_0' op incompatible distribution dimensions from 'vector<128xi32>' to 'vector<4xi32>'}}
+  %2 = gpu.warp_execute_on_lane_0(%laneid)[64] -> (vector<4xi32>) {
+    %0 = arith.constant dense<2>: vector<128xi32>
+    gpu.yield %0 : vector<128xi32>
+  }
+  return
+}
+
+
+// -----
+
+func.func @warp_wrong_arg_distribution(%laneid: index, %v0 : vector<4xi32>) {
+  // expected-error@+1 {{'gpu.warp_execute_on_lane_0' op incompatible distribution dimensions from 'vector<128xi32>' to 'vector<4xi32>'}}
+  gpu.warp_execute_on_lane_0(%laneid)[64]
+  args(%v0 : vector<4xi32>) {
+   ^bb0(%arg0 : vector<128xi32>) :
+  }
+  return
+}
+
+// -----
+
+func.func @warp_2_distributed_dims(%laneid: index) {
+  // expected-error@+1 {{incompatible distribution dimensions from 'vector<128x128xi32>' to 'vector<4x4xi32>' with warp size = 32}}
+  %2 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<4x4xi32>) {
+    %0 = arith.constant dense<2>: vector<128x128xi32>
+    gpu.yield %0 : vector<128x128xi32>
+  }
+  return
+}
+
+// -----
+
+func.func @warp_2_distributed_dims(%laneid: index) {
+  // expected-error@+1 {{expected expanded vector dimension #1 (8) to be a multipler of the distributed vector dimension (3)}}
+  %2 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<1x3xi32>) {
+    %0 = arith.constant dense<2>: vector<4x8xi32>
+    gpu.yield %0 : vector<4x8xi32>
+  }
+  return
+}
+
+// -----
+
+func.func @warp_mismatch_rank(%laneid: index) {
+  // expected-error@+1 {{'gpu.warp_execute_on_lane_0' op expected distributed vectors to have same rank and element type.}}
+  %2 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<4x4xi32>) {
+    %0 = arith.constant dense<2>: vector<128xi32>
+    gpu.yield %0 : vector<128xi32>
+  }
+  return
+}
+
+// -----
+
+func.func @warp_mismatch_rank(%laneid: index) {
+  // expected-error@+1 {{'gpu.warp_execute_on_lane_0' op expected vector type for distributed operands.}}
+  %2 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (i32) {
+    %0 = arith.constant dense<2>: vector<128xi32>
+    gpu.yield %0 : vector<128xi32>
+  }
+  return
+}

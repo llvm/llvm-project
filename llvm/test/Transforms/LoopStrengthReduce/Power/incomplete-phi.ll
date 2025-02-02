@@ -58,7 +58,7 @@ bb:
 bb3:                                              ; preds = %bb18, %bb
   %i4 = phi i64 [ %i20, %bb18 ], [ 0, %bb ]
   %i5 = phi i64 [ %i21, %bb18 ], [ 1, %bb ]
-  br i1 undef, label %bb22, label %bb9
+  br i1 true, label %bb22, label %bb9
 
 bb9:                                              ; preds = %bb9, %bb3
   %i10 = phi i64 [ 0, %bb3 ], [ %i16, %bb9 ]
@@ -70,7 +70,7 @@ bb9:                                              ; preds = %bb9, %bb3
   br i1 true, label %bb17, label %bb9
 
 bb17:                                             ; preds = %bb9
-  br i1 undef, label %bb18, label %bb22
+  br i1 false, label %bb18, label %bb22
 
 bb18:                                             ; preds = %bb17
   %i19 = add i64 undef, %i4

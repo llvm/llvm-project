@@ -2222,8 +2222,15 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(
     }
   }
 
-  if (SS.isEmpty())
+  if (SS.isEmpty()) {
+    if (getLangOpts().ObjC && !getLangOpts().CPlusPlus &&
+        Tok.is(tok::coloncolon)) {
+      // ObjectiveC does not allow :: as as a scope token.
+      Diag(ConsumeToken(), diag::err_expected_type);
+      return true;
+    }
     return false;
+  }
 
   // A C++ scope specifier that isn't followed by a typename.
   AnnotateScopeToken(SS, IsNewScope);
@@ -2647,10 +2654,10 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
       SeenError = false;
     break;
   }
-  if (SeenError) {
-    ExpectAndConsumeSemi(diag::err_module_expected_semi);
+  ExpectAndConsumeSemi(diag::err_module_expected_semi);
+
+  if (SeenError)
     return nullptr;
-  }
 
   DeclResult Import;
   if (HeaderUnit)
@@ -2659,7 +2666,6 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
   else if (!Path.empty())
     Import = Actions.ActOnModuleImport(StartLoc, ExportLoc, ImportLoc, Path,
                                        IsPartition);
-  ExpectAndConsumeSemi(diag::err_module_expected_semi);
   if (Import.isInvalid())
     return nullptr;
 

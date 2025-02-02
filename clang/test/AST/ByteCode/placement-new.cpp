@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -fexperimental-new-constant-interpreter -verify=expected,both %s
+// RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -fexperimental-new-constant-interpreter -verify=expected,both %s -DBYTECODE
 // RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -verify=ref,both %s
 
 namespace std {
@@ -338,3 +338,17 @@ namespace PR48606 {
   }
   static_assert(f());
 }
+
+#ifdef BYTECODE
+constexpr int N = [] // expected-error {{must be initialized by a constant expression}} \
+                     // expected-note {{assignment to dereferenced one-past-the-end pointer is not allowed in a constant expression}} \
+                     // expected-note {{in call to}}
+{
+    struct S {
+        int a[1];
+    };
+    S s;
+    ::new (s.a) int[1][2][3][4]();
+    return s.a[0];
+}();
+#endif
