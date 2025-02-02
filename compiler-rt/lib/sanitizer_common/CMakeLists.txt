@@ -239,6 +239,9 @@ append_list_if(SANITIZER_LIMIT_FRAME_SIZE -Wframe-larger-than=570
 append_list_if(COMPILER_RT_HAS_WGLOBAL_CONSTRUCTORS_FLAG -Wglobal-constructors
                SANITIZER_CFLAGS)
 
+# Suppress -Watomic-alignment warnings by not treating them as errors
+list(APPEND SANITIZER_CFLAGS "-Wno-error=atomic-alignment")
+
 if(APPLE)
   set(OS_OPTION OS ${SANITIZER_COMMON_SUPPORTED_OS})
 endif()
