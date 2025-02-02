@@ -88,7 +88,7 @@ jobs:
         if: steps.check_changes.outcome != 'failure'
         run: |
           echo "--Running jenkins_api.py with input sha - $input_sha for pull request - $input_pr_url" 
-          docker exec -e JENKINS_URL=${{secrets.CI_JENKINS_URL}} -e GITHUB_PAT=${{secrets.CI_GITHUB_TOKEN}} "${{env.CONTAINER_NAME}}" /bin/bash -c "python3 jenkins_api.py -s \"${JENKINS_URL}\" -jn \"${pipeline_name}\" -ghr \"${GITHUB_REPOSITORY}\" -ghsha \"${input_sha}\" -ghprn \"${input_pr_num}\" -ghpru \"${input_pr_url}\" -ghprt \"${input_pr_title}\" -ghpat=\"${svc_acc_org_secret}\""
+          docker exec -e JENKINS_URL=${{secrets.CI_JENKINS_URL}} -e GITHUB_PAT=${{secrets.CI_GITHUB_TOKEN}} "${{env.CONTAINER_NAME}}" /bin/bash -c "python3 jenkins_api.py -s \"${JENKINS_URL}\" -jn \"${pipeline_name}\" -ghr \"${GITHUB_REPOSITORY}\" -ghsha \"${input_sha}\" -ghprn \"${input_pr_num}\" -ghpru \"${input_pr_url}\" -ghprt '${input_pr_title}' -ghpat=\"${svc_acc_org_secret}\""
       - name: Stop and remove container
         if: always()
         run: |
