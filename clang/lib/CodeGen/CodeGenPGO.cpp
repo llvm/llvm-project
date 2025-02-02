@@ -1245,9 +1245,29 @@ void CodeGenPGO::emitMCDCParameters(CGBuilderTy &Builder) {
       CGM.getIntrinsic(llvm::Intrinsic::instrprof_mcdc_parameters), Args);
 }
 
+/// Fill mcdc.addr order by ID.
+std::vector<Address *>
+CodeGenPGO::getMCDCCondBitmapAddrArray(CGBuilderTy &Builder) {
+  std::vector<Address *> Result;
+
+  if (!canEmitMCDCCoverage(Builder) || !RegionMCDCState)
+    return Result;
+
+  SmallVector<std::pair<unsigned, Address *>> SortedPair;
+  for (auto &[_, V] : RegionMCDCState->DecisionByStmt)
+    if (V.isValid())
+      SortedPair.emplace_back(V.ID, &V.MCDCCondBitmapAddr);
+
+  llvm::sort(SortedPair);
+
+  for (auto &[_, MCDCCondBitmapAddr] : SortedPair)
+    Result.push_back(MCDCCondBitmapAddr);
+
+  return Result;
+}
+
 void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
                                                 const Expr *S,
-                                                Address MCDCCondBitmapAddr,
                                                 CodeGenFunction &CGF) {
   if (!canEmitMCDCCoverage(Builder) || !RegionMCDCState)
     return;
@@ -1256,6 +1276,10 @@ void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
 
   auto DecisionStateIter = RegionMCDCState->DecisionByStmt.find(S);
   if (DecisionStateIter == RegionMCDCState->DecisionByStmt.end())
+    return;
+
+  auto &MCDCCondBitmapAddr = DecisionStateIter->second.MCDCCondBitmapAddr;
+  if (!MCDCCondBitmapAddr.isValid())
     return;
 
   // Don't create tvbitmap_update if the record is allocated but excluded.
@@ -1280,14 +1304,16 @@ void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
       CGM.getIntrinsic(llvm::Intrinsic::instrprof_mcdc_tvbitmap_update), Args);
 }
 
-void CodeGenPGO::emitMCDCCondBitmapReset(CGBuilderTy &Builder, const Expr *S,
-                                         Address MCDCCondBitmapAddr) {
+void CodeGenPGO::emitMCDCCondBitmapReset(CGBuilderTy &Builder, const Expr *S) {
   if (!canEmitMCDCCoverage(Builder) || !RegionMCDCState)
     return;
 
-  S = S->IgnoreParens();
+  auto I = RegionMCDCState->DecisionByStmt.find(S->IgnoreParens());
+  if (I == RegionMCDCState->DecisionByStmt.end())
+    return;
 
-  if (!RegionMCDCState->DecisionByStmt.contains(S))
+  auto &MCDCCondBitmapAddr = I->second.MCDCCondBitmapAddr;
+  if (!MCDCCondBitmapAddr.isValid())
     return;
 
   // Emit intrinsic that resets a dedicated temporary value on the stack to 0.
@@ -1295,7 +1321,6 @@ void CodeGenPGO::emitMCDCCondBitmapReset(CGBuilderTy &Builder, const Expr *S,
 }
 
 void CodeGenPGO::emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
-                                          Address MCDCCondBitmapAddr,
                                           llvm::Value *Val,
                                           CodeGenFunction &CGF) {
   if (!canEmitMCDCCoverage(Builder) || !RegionMCDCState)
@@ -1323,6 +1348,10 @@ void CodeGenPGO::emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
   const auto DecisionIter =
       RegionMCDCState->DecisionByStmt.find(Branch.DecisionStmt);
   if (DecisionIter == RegionMCDCState->DecisionByStmt.end())
+    return;
+
+  auto &MCDCCondBitmapAddr = DecisionIter->second.MCDCCondBitmapAddr;
+  if (!MCDCCondBitmapAddr.isValid())
     return;
 
   const auto &TVIdxs = DecisionIter->second.Indices[Branch.ID];
