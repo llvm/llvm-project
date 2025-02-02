@@ -782,6 +782,27 @@ void VPInstruction::execute(VPTransformState &State) {
             /*IsScalar*/ GeneratesPerFirstLaneOnly);
 }
 
+InstructionCost VPInstruction::computeCost(ElementCount VF,
+                                           VPCostContext &Ctx) const {
+  if (Instruction::isBinaryOp(getOpcode())) {
+    if (!getUnderlyingValue())
+      return 0;
+
+    assert(!doesGeneratePerAllLanes() &&
+           "Should only generate a vector value or single scalar, not scalars "
+           "for all lanes.");
+    Type *ResTy = Ctx.Types.inferScalarType(this);
+    if (!vputils::onlyFirstLaneUsed(this))
+      ResTy = toVectorTy(ResTy, VF);
+
+    return Ctx.TTI.getArithmeticInstrCost(getOpcode(), ResTy, Ctx.CostKind);
+  }
+
+  assert(!getUnderlyingValue() &&
+         "unexpected VPInstruction without underlying value");
+  return 0;
+}
+
 bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   if (Instruction::isBinaryOp(getOpcode()))
     return false;

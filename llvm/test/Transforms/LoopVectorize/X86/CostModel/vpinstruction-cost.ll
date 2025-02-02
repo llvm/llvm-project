@@ -18,7 +18,7 @@ define void @wide_or_replaced_with_add_vpinstruction(ptr %src, ptr noalias %dst)
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%l> = load vp<%5>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%iv.4> = add ir<%iv>, ir<4>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%c> = icmp ule ir<%l>, ir<128>
-; CHECK:  Cost of 0 for VF 2: EMIT ir<%or> = add ir<%iv.4>, ir<1>
+; CHECK:  Cost of 1 for VF 2: EMIT ir<%or> = add ir<%iv.4>, ir<1>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%g.dst> = getelementptr ir<%dst>, ir<%or>
 ; CHECK:  Cost of 0 for VF 2: vp<%6> = vector-pointer ir<%g.dst>
 ; CHECK:  Cost of 1 for VF 2: WIDEN store vp<%6>, ir<%iv.4>, ir<%c>
@@ -36,7 +36,7 @@ define void @wide_or_replaced_with_add_vpinstruction(ptr %src, ptr noalias %dst)
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%l> = load vp<%5>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%iv.4> = add ir<%iv>, ir<4>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%c> = icmp ule ir<%l>, ir<128>
-; CHECK:  Cost of 0 for VF 4: EMIT ir<%or> = add ir<%iv.4>, ir<1>
+; CHECK:  Cost of 1 for VF 4: EMIT ir<%or> = add ir<%iv.4>, ir<1>
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%g.dst> = getelementptr ir<%dst>, ir<%or>
 ; CHECK:  Cost of 0 for VF 4: vp<%6> = vector-pointer ir<%g.dst>
 ; CHECK:  Cost of 1 for VF 4: WIDEN store vp<%6>, ir<%iv.4>, ir<%c>
