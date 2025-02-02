@@ -18,10 +18,10 @@ namespace clang::tidy::readability {
 class UseCppStyleCommentsCheck::CStyleCommentHandler : public CommentHandler {
 public:
   CStyleCommentHandler(UseCppStyleCommentsCheck &Check, bool ExcludeDoxygen)
-      : Check(Check),
+      : Check(Check), ExcludeDoxygen(ExcludeDoxygen),
         CStyleCommentMatch(
-            "^[ \t]*/\\*+[ \t\r\n]*(.*[ \t\r\n]*)*[ \t\r\n]*\\*+/[ \t\r\n]*$"),
-        ExcludeDoxygen(ExcludeDoxygen) {}
+            "^[ \t]*/\\*+[ \t\r\n]*(.*[ \t\r\n]*)*[ \t\r\n]*\\*+/[ \t\r\n]*$") {
+  }
 
   void setExcludeDoxygen(bool Exclude) { ExcludeDoxygen = Exclude; }
 
