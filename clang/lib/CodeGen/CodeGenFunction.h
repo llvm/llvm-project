@@ -312,9 +312,6 @@ public:
   /// nest would extend.
   SmallVector<llvm::CanonicalLoopInfo *, 4> OMPLoopNestStack;
 
-  /// Stack to track the Logical Operator recursion nest for MC/DC.
-  SmallVector<const BinaryOperator *, 16> MCDCLogOpStack;
-
   /// Stack to track the controlled convergence tokens.
   SmallVector<llvm::ConvergenceControlInst *, 4> ConvergenceTokenStack;
 
@@ -1678,6 +1675,11 @@ public:
     const BinaryOperator *BOp = dyn_cast<BinaryOperator>(E->IgnoreParens());
     return (BOp && BOp->isLogicalOp());
   }
+
+  bool isMCDCDecisionExpr(const Expr *E) const {
+    return PGO.isMCDCDecisionExpr(E);
+  }
+  bool isMCDCBranchExpr(const Expr *E) const { return PGO.isMCDCBranchExpr(E); }
 
   /// Zero-init the MCDC temp value.
   void maybeResetMCDCCondBitmap(const Expr *E) {
