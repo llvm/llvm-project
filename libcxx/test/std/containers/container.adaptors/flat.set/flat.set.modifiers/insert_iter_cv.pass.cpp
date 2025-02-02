@@ -56,7 +56,6 @@ void test_one() {
 }
 
 void test() {
-
   test_one<std::vector<int>>();
   test_one<std::deque<int>>();
   test_one<MinSequenceContainer<int>>();
@@ -64,13 +63,13 @@ void test() {
 }
 
 void test_exception() {
-    auto insert_func = [](auto& m, auto key_arg) {
-      using FlatSet    = std::decay_t<decltype(m)>;
-      using value_type = typename FlatSet::value_type;
-      const value_type p(key_arg);
-      m.insert(m.begin(), p);
-    };
-    test_emplace_exception_guarantee(insert_func);
+  auto insert_func = [](auto& m, auto key_arg) {
+    using FlatSet    = std::decay_t<decltype(m)>;
+    using value_type = typename FlatSet::value_type;
+    const value_type p(key_arg);
+    m.insert(m.begin(), p);
+  };
+  test_emplace_exception_guarantee(insert_func);
 }
 
 int main(int, char**) {
