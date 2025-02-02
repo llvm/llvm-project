@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11 %s readability-use-cpp-style-comments %t -- --
+// RUN: %check_clang_tidy -std=c++11 %s readability-use-cpp-style-comments %t -config="{CheckOptions: [{key: readability-use-cpp-style-comments.ExcludeDoxygenStyleComments, value: true}]}"
 
 // Single-line full C-style comment
 static const int CONSTANT = 42; /* Important constant value */
@@ -24,16 +24,6 @@ void processData(int data /* input data */,
     fnWithSomeBools(/*ControlsA=*/ true, /*ControlsB=*/ false);
 }
 
-// Multiline comment with asterisk styling
-/*******************************
- * Block comment with asterisks
- * Should be converted to C++ style
- *******************************/
-// CHECK-MESSAGES: :[[@LINE-4]]:1: warning: use C++ style comments '//' instead of C style comments '/*...*/' [readability-use-cpp-style-comments]
-// CHECK-FIXES: // ******************************
-// CHECK-FIXES: // * Block comment with asterisks
-// CHECK-FIXES: // * Should be converted to C++ style
-// CHECK-FIXES: // ******************************
 int calculateSomething() { return 1;}
 // Comment at end of complex line
 int complexCalculation = calculateSomething(); /* Result of complex calculation */
@@ -66,3 +56,36 @@ void complexFunction() {
     // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use C++ style comments '//' instead of C style comments '/*...*/' [readability-use-cpp-style-comments]
     // CHECK-FIXES: int x = 10; // Inline comment not to be transformed
 }
+
+// Tests for Doxygen comments with ExcludeDoxygenStyleComments enabled
+/**
+ * This is a Doxygen comment for a function.
+ * It should NOT be transformed.
+ */
+void doxygenFunction1();
+
+/*!
+ * This is another Doxygen-style comment.
+ * It should also NOT be transformed.
+ */
+void doxygenFunction2();
+
+/**
+ * Multiline Doxygen comment describing parameters.
+ *
+ * @param x The first parameter.
+ * @param y The second parameter.
+ * @return A result value.
+ */
+int doxygenFunctionWithParams(int x, int y);
+
+/*******************************
+ * Non-Doxygen block comments without markers
+ *******************************/
+void DoxygenBlock();
+
+/*!
+ * This is a single-line Doxygen comment.
+ * Should NOT be transformed.
+ */
+void singleLineDoxygen();

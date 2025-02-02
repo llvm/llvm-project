@@ -15,6 +15,8 @@
 namespace clang::tidy::readability {
 /// Detects C Style comments and suggests to use C++ style comments instead.
 ///
+/// Optionally excludes Doxygen-style comments.
+///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/readability/use-cpp-style-comments.html
 class UseCppStyleCommentsCheck : public ClangTidyCheck {
@@ -32,9 +34,13 @@ public:
 
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
 private:
   class CStyleCommentHandler;
   std::unique_ptr<CStyleCommentHandler> Handler;
+  const bool ExcludeDoxygenStyleComments =
+      Options.get("ExcludeDoxygenStyleComments", false);
 };
 } // namespace clang::tidy::readability
 

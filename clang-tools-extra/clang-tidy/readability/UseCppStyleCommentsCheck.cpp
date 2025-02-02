@@ -17,11 +17,15 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::readability {
 class UseCppStyleCommentsCheck::CStyleCommentHandler : public CommentHandler {
 public:
-  CStyleCommentHandler(UseCppStyleCommentsCheck &Check)
+  CStyleCommentHandler(UseCppStyleCommentsCheck &Check, bool ExcludeDoxygen)
       : Check(Check),
         CStyleCommentMatch(
-            "^[ \t]*/\\*+[ \t\r\n]*(.*[ \t\r\n]*)*[ \t\r\n]*\\*+/[ \t\r\n]*$") {
-  }
+            "^[ \t]*/\\*+[ \t\r\n]*(.*[ \t\r\n]*)*[ \t\r\n]*\\*+/[ \t\r\n]*$"),
+        ExcludeDoxygen(ExcludeDoxygen) {}
+
+  void setExcludeDoxygen(bool Exclude) { ExcludeDoxygen = Exclude; }
+
+  bool isExcludeDoxygen() const { return ExcludeDoxygen; }
 
   std::string convertToCppStyleComment(const SourceManager &SM,
                                        const SourceRange &Range) {
@@ -56,6 +60,14 @@ public:
       Result += "\n// " + Line;
     }
     return Result;
+  }
+
+  bool isDoxygenStyleComment(const StringRef &Text) {
+    StringRef Trimmed = Text.ltrim();
+    return Trimmed.starts_with("/**") || Trimmed.starts_with("/*!") ||
+           Trimmed.starts_with("///") || Trimmed.starts_with("//!") ||
+           (Trimmed.starts_with("/*") &&
+            Trimmed.drop_front(2).starts_with("*"));
   }
 
   bool CheckForInlineComments(Preprocessor &PP, SourceRange Range) {
@@ -100,6 +112,10 @@ public:
     const StringRef Text = Lexer::getSourceText(
         CharSourceRange::getCharRange(Range), SM, PP.getLangOpts());
 
+    if (ExcludeDoxygen && isDoxygenStyleComment(Text)) {
+      return false;
+    }
+
     SmallVector<StringRef> Matches;
     if (!CStyleCommentMatch.match(Text, &Matches)) {
       return false;
@@ -120,13 +136,15 @@ public:
 
 private:
   UseCppStyleCommentsCheck &Check;
+  bool ExcludeDoxygen;
   llvm::Regex CStyleCommentMatch;
 };
 
 UseCppStyleCommentsCheck::UseCppStyleCommentsCheck(StringRef Name,
                                                    ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      Handler(std::make_unique<CStyleCommentHandler>(*this)) {}
+      Handler(std::make_unique<CStyleCommentHandler>(
+          *this, Options.get("ExcludeDoxygenStyleComments", false))) {}
 
 void UseCppStyleCommentsCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
@@ -134,6 +152,11 @@ void UseCppStyleCommentsCheck::registerPPCallbacks(
 }
 
 void UseCppStyleCommentsCheck::check(const MatchFinder::MatchResult &Result) {}
+
+void UseCppStyleCommentsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "ExcludeDoxygenStyleComments",
+                Handler->isExcludeDoxygen());
+}
 
 UseCppStyleCommentsCheck::~UseCppStyleCommentsCheck() = default;
 } // namespace clang::tidy::readability
