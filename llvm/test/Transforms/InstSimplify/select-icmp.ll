@@ -247,7 +247,9 @@ cond.end:                                         ; preds = %entry, %cond.true
 
 define ptr @icmp_ptr_eq_replace(ptr %a, ptr %b) {
 ; CHECK-LABEL: @icmp_ptr_eq_replace(
-; CHECK-NEXT:    ret ptr [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[A:%.*]], [[B1:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = select i1 [[CMP]], ptr [[A]], ptr [[B1]]
+; CHECK-NEXT:    ret ptr [[B]]
 ;
   %cmp = icmp eq ptr %a, %b
   %sel = select i1 %cmp, ptr %a, ptr %b
