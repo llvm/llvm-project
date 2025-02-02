@@ -94,6 +94,16 @@ void test() {
   test_one<std::flat_set<double>>();
 }
 
+void test() {
+  test_one<std::flat_set<int>>();
+  test_one<std::flat_set<int, std::less<int>, std::vector<int, min_allocator<int>>>>();
+  test_one<std::flat_set<int, std::greater<int>, std::vector<int, test_allocator<int>>>>();
+  test_one<std::flat_set<int, std::less<int>, std::deque<int, min_allocator<int>>>>();
+  test_one<std::flat_set<int, std::greater<int>, std::deque<int, test_allocator<int>>>>();
+  test_one<std::flat_set<long>>();
+  test_one<std::flat_set<double>>();
+}
+
 int main(int, char**) {
   test();
 
