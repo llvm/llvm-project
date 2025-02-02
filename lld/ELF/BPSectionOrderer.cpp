@@ -74,7 +74,7 @@ struct BPOrdererELF : lld::BPOrderer<BPOrdererELF> {
 };
 } // namespace
 
-DenseMap<const InputSectionBase *, int> lld::elf::runBalancedPartitioning(
+DenseMap<const InputSectionBase *, int> elf::runBalancedPartitioning(
     Ctx &ctx, StringRef profilePath, bool forFunctionCompression,
     bool forDataCompression, bool compressionSortStartupFunctions,
     bool verbose) {

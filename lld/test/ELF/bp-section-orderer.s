@@ -1,5 +1,4 @@
 # REQUIRES: aarch64
-
 # RUN: rm -rf %t && split-file %s %t && cd %t
 
 ## Check for incompatible cases
@@ -19,7 +18,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64 a.s -o a.o
 # RUN: llvm-profdata merge a.proftext -o a.profdata
-# RUN: ld.lld -o a.out a.o --irpgo-profile=a.profdata --bp-startup-sort=function --verbose-bp-section-orderer --icf=all 2>&1 | FileCheck %s --check-prefix=STARTUP-FUNC-ORDER
+# RUN: ld.lld a.o --irpgo-profile=a.profdata --bp-startup-sort=function --verbose-bp-section-orderer --icf=all 2>&1 | FileCheck %s --check-prefix=STARTUP-FUNC-ORDER
 
 # STARTUP-FUNC-ORDER: Ordered 3 sections using balanced partitioning
 
@@ -27,29 +26,29 @@
 # RUN: ld.lld -o - a.o --symbol-ordering-file a.orderfile --bp-compression-sort=both | llvm-nm --numeric-sort --format=just-symbols - | FileCheck %s --check-prefix=ORDERFILE
 
 ## Rodata
-# ORDERFILE: s2
-# ORDERFILE: s1
-# ORDERFILE-DAG: s3
+# ORDERFILE:      s2
+# ORDERFILE-NEXT: s1
+# ORDERFILE-NEXT: s3
 
 ## Functions
-# ORDERFILE: A
-# ORDERFILE: F
-# ORDERFILE: E
-# ORDERFILE: D
-# ORDERFILE-DAG: _start
-# ORDERFILE-DAG: B
-# ORDERFILE-DAG: C
+# ORDERFILE-NEXT: A
+# ORDERFILE-NEXT: F
+# ORDERFILE-NEXT: E
+# ORDERFILE-NEXT: D
+# ORDERFILE-NEXT: B
+# ORDERFILE-NEXT: C
+# ORDERFILE-NEXT: _start
 
 ## Data
-# ORDERFILE: r3
-# ORDERFILE: r2
-# ORDERFILE-DAG: r1
-# ORDERFILE-DAG: r4
+# ORDERFILE-NEXT: r3
+# ORDERFILE-NEXT: r2
+# ORDERFILE-NEXT: r1
+# ORDERFILE-NEXT: r4
 
-# RUN: ld.lld -o a.out a.o --verbose-bp-section-orderer --bp-compression-sort=function 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-FUNC
-# RUN: ld.lld -o a.out a.o --verbose-bp-section-orderer --bp-compression-sort=data 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-DATA
-# RUN: ld.lld -o a.out a.o --verbose-bp-section-orderer --bp-compression-sort=both 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-BOTH
-# RUN: ld.lld -o a.out a.o --verbose-bp-section-orderer --bp-compression-sort=both --irpgo-profile=a.profdata --bp-startup-sort=function 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-BOTH
+# RUN: ld.lld a.o --verbose-bp-section-orderer --bp-compression-sort=function 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-FUNC
+# RUN: ld.lld a.o --verbose-bp-section-orderer --bp-compression-sort=data 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-DATA
+# RUN: ld.lld a.o --verbose-bp-section-orderer --bp-compression-sort=both 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-BOTH
+# RUN: ld.lld a.o --verbose-bp-section-orderer --bp-compression-sort=both --irpgo-profile=a.profdata --bp-startup-sort=function 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-BOTH
 
 # BP-COMPRESSION-FUNC: Ordered 7 sections using balanced partitioning
 # BP-COMPRESSION-DATA: Ordered 7 sections using balanced partitioning
@@ -137,16 +136,15 @@ int F(int a) { return C(a + 3); }
 int _start() { return 0; }
 
 #--- gen
-clang --target=aarch64-linux-gnu -O0 -ffunction-sections -fdata-sections -fno-exceptions -fno-rtti -fno-asynchronous-unwind-tables -S a.c -o -
+clang --target=aarch64-linux-gnu -O0 -ffunction-sections -fdata-sections -fno-asynchronous-unwind-tables -S a.c -o -
 ;--- a.s
-	.text
 	.file	"a.c"
 	.section	.text.A,"ax",@progbits
 	.globl	A                               // -- Begin function A
 	.p2align	2
 	.type	A,@function
 A:                                      // @A
-// %bb.0:
+// %bb.0:                               // %entry
 	ret
 .Lfunc_end0:
 	.size	A, .Lfunc_end0-A
@@ -156,7 +154,7 @@ A:                                      // @A
 	.p2align	2
 	.type	B,@function
 B:                                      // @B
-// %bb.0:
+// %bb.0:                               // %entry
 	sub	sp, sp, #32
 	stp	x29, x30, [sp, #16]             // 16-byte Folded Spill
 	add	x29, sp, #16
@@ -175,7 +173,7 @@ B:                                      // @B
 	.p2align	2
 	.type	C,@function
 C:                                      // @C
-// %bb.0:
+// %bb.0:                               // %entry
 	sub	sp, sp, #32
 	stp	x29, x30, [sp, #16]             // 16-byte Folded Spill
 	add	x29, sp, #16
@@ -194,7 +192,7 @@ C:                                      // @C
 	.p2align	2
 	.type	D,@function
 D:                                      // @D
-// %bb.0:
+// %bb.0:                               // %entry
 	sub	sp, sp, #32
 	stp	x29, x30, [sp, #16]             // 16-byte Folded Spill
 	add	x29, sp, #16
@@ -213,7 +211,7 @@ D:                                      // @D
 	.p2align	2
 	.type	E,@function
 E:                                      // @E
-// %bb.0:
+// %bb.0:                               // %entry
 	sub	sp, sp, #32
 	stp	x29, x30, [sp, #16]             // 16-byte Folded Spill
 	add	x29, sp, #16
@@ -232,7 +230,7 @@ E:                                      // @E
 	.p2align	2
 	.type	F,@function
 F:                                      // @F
-// %bb.0:
+// %bb.0:                               // %entry
 	sub	sp, sp, #32
 	stp	x29, x30, [sp, #16]             // 16-byte Folded Spill
 	add	x29, sp, #16
@@ -251,7 +249,7 @@ F:                                      // @F
 	.p2align	2
 	.type	_start,@function
 _start:                                 // @_start
-// %bb.0:
+// %bb.0:                               // %entry
 	mov	w0, wzr
 	ret
 .Lfunc_end6:

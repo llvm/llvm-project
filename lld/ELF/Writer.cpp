@@ -1092,9 +1092,9 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder(Ctx &ctx) {
         ctx.arg.bpDataOrderForCompression,
         ctx.arg.bpCompressionSortStartupFunctions,
         ctx.arg.bpVerboseSectionOrderer);
-  }
-  if (!ctx.arg.callGraphProfile.empty())
+  } else if (!ctx.arg.callGraphProfile.empty()) {
     sectionOrder = computeCallGraphProfileOrder(ctx);
+  }
 
   if (ctx.arg.symbolOrderingFile.empty())
     return sectionOrder;
