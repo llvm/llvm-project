@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_WRITE_ESCAPED_H
-#define _LIBCPP___FORMAT_WRITE_ESCAPED_H
+#ifndef _LIBCPP___CXX03___FORMAT_WRITE_ESCAPED_H
+#define _LIBCPP___CXX03___FORMAT_WRITE_ESCAPED_H
 
 #include <__cxx03/__algorithm/ranges_copy.h>
 #include <__cxx03/__algorithm/ranges_for_each.h>
@@ -239,4 +239,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FORMAT_WRITE_ESCAPED_H
+#endif // _LIBCPP___CXX03___FORMAT_WRITE_ESCAPED_H

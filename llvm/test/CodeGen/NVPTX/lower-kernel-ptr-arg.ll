@@ -1,12 +1,12 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
 
 ; Verify that both %input and %output are converted to global pointers and then
 ; addrspacecast'ed back to the original type.
-define void @kernel(ptr %input, ptr %output) {
+define ptx_kernel void @kernel(ptr %input, ptr %output) {
 ; CHECK-LABEL: .visible .entry kernel(
 ; CHECK: cvta.to.global.u64
 ; CHECK: cvta.to.global.u64
@@ -17,7 +17,7 @@ define void @kernel(ptr %input, ptr %output) {
   ret void
 }
 
-define void @kernel2(ptr addrspace(1) %input, ptr addrspace(1) %output) {
+define ptx_kernel void @kernel2(ptr addrspace(1) %input, ptr addrspace(1) %output) {
 ; CHECK-LABEL: .visible .entry kernel2(
 ; CHECK-NOT: cvta.to.global.u64
   %1 = load float, ptr addrspace(1) %input, align 4
@@ -29,7 +29,7 @@ define void @kernel2(ptr addrspace(1) %input, ptr addrspace(1) %output) {
 
 %struct.S = type { ptr, ptr }
 
-define void @ptr_in_byval_kernel(ptr byval(%struct.S) %input, ptr %output) {
+define ptx_kernel void @ptr_in_byval_kernel(ptr byval(%struct.S) %input, ptr %output) {
 ; CHECK-LABEL: .visible .entry ptr_in_byval_kernel(
 ; CHECK: ld.param.u64 	%[[optr:rd.*]], [ptr_in_byval_kernel_param_1]
 ; CHECK: cvta.to.global.u64 %[[optr_g:.*]], %[[optr]];
@@ -60,7 +60,3 @@ define void @ptr_in_byval_func(ptr byval(%struct.S) %input, ptr %output) {
   ret void
 }
 
-!nvvm.annotations = !{!0, !1, !2}
-!0 = !{ptr @kernel, !"kernel", i32 1}
-!1 = !{ptr @kernel2, !"kernel", i32 1}
-!2 = !{ptr @ptr_in_byval_kernel, !"kernel", i32 1}

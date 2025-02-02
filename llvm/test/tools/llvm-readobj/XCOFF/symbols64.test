@@ -145,7 +145,7 @@ Symbols:
 # SYMBOL64-NEXT:     Value (SymbolTableIndex): 0x0
 # SYMBOL64-NEXT:     Section: N_DEBUG
 # SYMBOL64-NEXT:     Source Language ID: TB_C (0x0)
-# SYMBOL64-NEXT:     CPU Version ID: 0x0
+# SYMBOL64-NEXT:     CPU Version ID: TCPU_INVALID (0x0)
 # SYMBOL64-NEXT:     StorageClass: C_FILE (0x67)
 # SYMBOL64-NEXT:     NumberOfAuxEntries: 3
 # SYMBOL64-NEXT:     File Auxiliary Entry {

@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass hexagon-nvj %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-nvj %s -o - | FileCheck %s
 
 # Check that there is no new-value jump:
 # CHECK-LABEL: name: fred

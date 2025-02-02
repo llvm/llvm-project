@@ -22,11 +22,11 @@ static void
 CreateUnsatisfiedConstraintRecord(const ASTContext &C,
                                   const UnsatisfiedConstraintRecord &Detail,
                                   UnsatisfiedConstraintRecord *TrailingObject) {
-  if (Detail.is<Expr *>())
-    new (TrailingObject) UnsatisfiedConstraintRecord(Detail.get<Expr *>());
+  if (auto *E = dyn_cast<Expr *>(Detail))
+    new (TrailingObject) UnsatisfiedConstraintRecord(E);
   else {
     auto &SubstitutionDiagnostic =
-        *Detail.get<std::pair<SourceLocation, StringRef> *>();
+        *cast<std::pair<SourceLocation, StringRef> *>(Detail);
     StringRef Message = C.backupStr(SubstitutionDiagnostic.second);
     auto *NewSubstDiag = new (C) std::pair<SourceLocation, StringRef>(
         SubstitutionDiagnostic.first, Message);

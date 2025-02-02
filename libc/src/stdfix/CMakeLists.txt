@@ -10,7 +10,7 @@ foreach(suffix IN ITEMS hr r lr hk k lk)
     SRCS
       abs${suffix}.cpp
     COMPILE_OPTIONS
-      -O3
+      ${libc_opt_high_flag}
     DEPENDS
       libc.src.__support.fixed_point.fx_bits
   )
@@ -24,7 +24,7 @@ foreach(suffix IN ITEMS uhr ur ulr uhk uk)
     SRCS
       sqrt${suffix}.cpp
     COMPILE_OPTIONS
-      -O3
+      ${libc_opt_high_flag}
     DEPENDS
       libc.src.__support.fixed_point.sqrt
   )
@@ -38,7 +38,7 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
     SRCS
       round${suffix}.cpp
     COMPILE_OPTIONS
-      -O3
+      ${libc_opt_high_flag}
     DEPENDS
       libc.src.__support.fixed_point.fx_bits
   )
@@ -62,7 +62,7 @@ add_entrypoint_object(
   SRCS
     uhksqrtus.cpp
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.fixed_point.sqrt
 )
@@ -74,7 +74,7 @@ add_entrypoint_object(
   SRCS
     uksqrtui.cpp
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.fixed_point.sqrt
 )
@@ -86,7 +86,7 @@ add_entrypoint_object(
   SRCS
     exphk.cpp
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.fixed_point.fx_rep
     libc.src.__support.CPP.bit
@@ -99,7 +99,7 @@ add_entrypoint_object(
   SRCS
     expk.cpp
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
   DEPENDS
     libc.src.__support.fixed_point.fx_rep
     libc.src.__support.CPP.bit

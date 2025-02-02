@@ -21,7 +21,7 @@ services:
       target: android-buildkite-builder
       args:
         BASE_IMAGE: ubuntu:noble
-        ANDROID_CLANG_VERSION: r498229b
-        ANDROID_CLANG_PREBUILTS_COMMIT: 5186d132c99aa75dc25207c392e3ea5b93d0107e
-        ANDROID_SYSROOT_BID: 10957860
+        ANDROID_CLANG_VERSION: r536225
+        ANDROID_CLANG_PREBUILTS_COMMIT: 3f67b93ee7a50ae2a3cb34cc32d0589415cc0a9c
+        ANDROID_SYSROOT_BID: 12644632
         <<: *compiler_versions
