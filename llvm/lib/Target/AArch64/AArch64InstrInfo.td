@@ -1027,9 +1027,9 @@ def add_and_or_is_add : PatFrags<(ops node:$lhs, node:$rhs),
    return CurDAG->isADDLike(SDValue(N,0));
 }]> {
   let GISelPredicateCode = [{
-     // Only handle G_ADD for now. FIXME. build capability to compute whether
-     // operands of G_OR have common bits set or not.
-     return MI.getOpcode() == TargetOpcode::G_ADD;
+     return MI.getOpcode() == TargetOpcode::G_ADD ||
+            (MI.getOpcode() == TargetOpcode::G_OR &&
+             MI.getFlag(MachineInstr::MIFlag::Disjoint));
   }];
 }
 
