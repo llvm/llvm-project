@@ -77,10 +77,10 @@ spirv.func @bf16_to_f32_vec_unsupported(%arg0 : vector<2xi16>) "None" {
 //===----------------------------------------------------------------------===//
 
 spirv.func @split_barrier() "None" {
-  // CHECK: spirv.INTEL.ControlBarrierArrive <Workgroup>, <Device>, <Acquire|UniformMemory>
-  spirv.INTEL.ControlBarrierArrive <Workgroup>, <Device>, <Acquire|UniformMemory>
-  // CHECK: spirv.INTEL.ControlBarrierWait <Workgroup>, <Device>, <Acquire|UniformMemory>
-  spirv.INTEL.ControlBarrierWait <Workgroup>, <Device>, <Acquire|UniformMemory>
+  // CHECK: spirv.INTEL.ControlBarrierArrive <Workgroup> <Device> <Acquire|UniformMemory>
+  spirv.INTEL.ControlBarrierArrive <Workgroup> <Device> <Acquire|UniformMemory>
+  // CHECK: spirv.INTEL.ControlBarrierWait <Workgroup> <Device> <Acquire|UniformMemory>
+  spirv.INTEL.ControlBarrierWait <Workgroup> <Device> <Acquire|UniformMemory>
   spirv.Return
 }
 

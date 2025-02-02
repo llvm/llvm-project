@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_PARSER_STD_FORMAT_SPEC_H
-#define _LIBCPP___FORMAT_PARSER_STD_FORMAT_SPEC_H
+#ifndef _LIBCPP___CXX03___FORMAT_PARSER_STD_FORMAT_SPEC_H
+#define _LIBCPP___CXX03___FORMAT_PARSER_STD_FORMAT_SPEC_H
 
 /// \file Contains the std-format-spec parser.
 ///
@@ -1169,4 +1169,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FORMAT_PARSER_STD_FORMAT_SPEC_H
+#endif // _LIBCPP___CXX03___FORMAT_PARSER_STD_FORMAT_SPEC_H

@@ -58,6 +58,7 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/Utils/ExtraPassManager.h"
 #include <functional>
 
 namespace llvm {
@@ -79,38 +80,6 @@ class TargetTransformInfo;
 
 extern cl::opt<bool> EnableLoopInterleaving;
 extern cl::opt<bool> EnableLoopVectorization;
-
-/// A marker to determine if extra passes after loop vectorization should be
-/// run.
-struct ShouldRunExtraVectorPasses
-    : public AnalysisInfoMixin<ShouldRunExtraVectorPasses> {
-  static AnalysisKey Key;
-  struct Result {
-    bool invalidate(Function &F, const PreservedAnalyses &PA,
-                    FunctionAnalysisManager::Invalidator &) {
-      // Check whether the analysis has been explicitly invalidated. Otherwise,
-      // it remains preserved.
-      auto PAC = PA.getChecker<ShouldRunExtraVectorPasses>();
-      return !PAC.preservedWhenStateless();
-    }
-  };
-
-  Result run(Function &F, FunctionAnalysisManager &FAM) { return Result(); }
-};
-
-/// A pass manager to run a set of extra function simplification passes after
-/// vectorization, if requested. LoopVectorize caches the
-/// ShouldRunExtraVectorPasses analysis to request extra simplifications, if
-/// they could be beneficial.
-struct ExtraVectorPassManager : public FunctionPassManager {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) {
-    auto PA = PreservedAnalyses::all();
-    if (AM.getCachedResult<ShouldRunExtraVectorPasses>(F))
-      PA.intersect(FunctionPassManager::run(F, AM));
-    PA.abandon<ShouldRunExtraVectorPasses>();
-    return PA;
-  }
-};
 
 struct LoopVectorizeOptions {
   /// If false, consider all loops for interleaving.
@@ -201,6 +170,22 @@ void reportVectorizationFailure(const StringRef DebugMsg,
     const StringRef OREMsg, const StringRef ORETag,
     OptimizationRemarkEmitter *ORE, Loop *TheLoop, Instruction *I = nullptr);
 
+/// Same as above, but the debug message and optimization remark are identical
+inline void reportVectorizationFailure(const StringRef DebugMsg,
+                                       const StringRef ORETag,
+                                       OptimizationRemarkEmitter *ORE,
+                                       Loop *TheLoop,
+                                       Instruction *I = nullptr) {
+  reportVectorizationFailure(DebugMsg, DebugMsg, ORETag, ORE, TheLoop, I);
+}
+
+/// A marker analysis to determine if extra passes should be run after loop
+/// vectorization.
+struct ShouldRunExtraVectorPasses
+    : public ShouldRunExtraPasses<ShouldRunExtraVectorPasses>,
+      public AnalysisInfoMixin<ShouldRunExtraVectorPasses> {
+  static AnalysisKey Key;
+};
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZE_H

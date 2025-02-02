@@ -205,12 +205,12 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
   if (!Preheader)
     return false;
   unsigned IVOperIdx = 0;
-  ICmpInst::Predicate Pred = ICmp->getPredicate();
+  CmpPredicate Pred = ICmp->getCmpPredicate();
   if (IVOperand != ICmp->getOperand(0)) {
     // Swapped
     assert(IVOperand == ICmp->getOperand(1) && "Can't find IVOperand");
     IVOperIdx = 1;
-    Pred = ICmpInst::getSwappedPredicate(Pred);
+    Pred = ICmpInst::getSwappedCmpPredicate(Pred);
   }
 
   // Get the SCEVs for the ICmp operands (in the specific context of the
@@ -249,13 +249,13 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
 void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
                                            Instruction *IVOperand) {
   unsigned IVOperIdx = 0;
-  ICmpInst::Predicate Pred = ICmp->getPredicate();
+  CmpPredicate Pred = ICmp->getCmpPredicate();
   ICmpInst::Predicate OriginalPred = Pred;
   if (IVOperand != ICmp->getOperand(0)) {
     // Swapped
     assert(IVOperand == ICmp->getOperand(1) && "Can't find IVOperand");
     IVOperIdx = 1;
-    Pred = ICmpInst::getSwappedPredicate(Pred);
+    Pred = ICmpInst::getSwappedCmpPredicate(Pred);
   }
 
   // Get the SCEVs for the ICmp operands (in the specific context of the
@@ -2164,16 +2164,14 @@ void WidenIV::calculatePostIncRange(Instruction *NarrowDef,
       !NarrowDefRHS->isNonNegative())
     return;
 
-  auto UpdateRangeFromCondition = [&] (Value *Condition,
-                                       bool TrueDest) {
-    CmpInst::Predicate Pred;
+  auto UpdateRangeFromCondition = [&](Value *Condition, bool TrueDest) {
+    CmpPredicate Pred;
     Value *CmpRHS;
     if (!match(Condition, m_ICmp(Pred, m_Specific(NarrowDefLHS),
                                  m_Value(CmpRHS))))
       return;
 
-    CmpInst::Predicate P =
-            TrueDest ? Pred : CmpInst::getInversePredicate(Pred);
+    CmpPredicate P = TrueDest ? Pred : ICmpInst::getInverseCmpPredicate(Pred);
 
     auto CmpRHSRange = SE->getSignedRange(SE->getSCEV(CmpRHS));
     auto CmpConstrainedLHSRange =

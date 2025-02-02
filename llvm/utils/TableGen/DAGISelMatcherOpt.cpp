@@ -135,8 +135,6 @@ static void ContractNodes(std::unique_ptr<Matcher> &MatcherPtr,
       // variants.
     }
 
-  ContractNodes(N->getNextPtr(), CGP);
-
   // If we have a CheckType/CheckChildType/Record node followed by a
   // CheckOpcode, invert the two nodes.  We prefer to do structural checks
   // before type checks, as this opens opportunities for factoring on targets
@@ -155,6 +153,8 @@ static void ContractNodes(std::unique_ptr<Matcher> &MatcherPtr,
     CheckType->setNext(Tail);
     return ContractNodes(MatcherPtr, CGP);
   }
+
+  ContractNodes(N->getNextPtr(), CGP);
 
   // If we have a MoveParent followed by a MoveChild, we convert it to
   // MoveSibling.
@@ -361,8 +361,7 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
   }
 
   // Trim the array to match the updated end.
-  if (E != OptionsToMatch.end())
-    OptionsToMatch.erase(E, OptionsToMatch.end());
+  OptionsToMatch.erase(E, OptionsToMatch.end());
 
   // If we're down to a single pattern to match, then we don't need this scope
   // anymore.
@@ -426,7 +425,7 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
       CheckOpcodeMatcher *COM = cast<CheckOpcodeMatcher>(OptionsToMatch[i]);
       assert(Opcodes.insert(COM->getOpcode().getEnumName()).second &&
              "Duplicate opcodes not factored?");
-      Cases.push_back(std::pair(&COM->getOpcode(), COM->takeNext()));
+      Cases.emplace_back(&COM->getOpcode(), COM->takeNext());
       delete COM;
     }
 
@@ -463,7 +462,7 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
       }
 
       Entry = Cases.size() + 1;
-      Cases.push_back(std::pair(CTMTy, MatcherWithoutCTM));
+      Cases.emplace_back(CTMTy, MatcherWithoutCTM);
     }
 
     // Make sure we recursively factor any scopes we may have created.

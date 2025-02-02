@@ -144,20 +144,20 @@ TemplateName::TemplateName(DeducedTemplateStorage *Deduced)
 bool TemplateName::isNull() const { return Storage.isNull(); }
 
 TemplateName::NameKind TemplateName::getKind() const {
-  if (auto *ND = Storage.dyn_cast<Decl *>()) {
+  if (auto *ND = dyn_cast<Decl *>(Storage)) {
     if (isa<UsingShadowDecl>(ND))
       return UsingTemplate;
     assert(isa<TemplateDecl>(ND));
     return Template;
   }
 
-  if (Storage.is<DependentTemplateName *>())
+  if (isa<DependentTemplateName *>(Storage))
     return DependentTemplate;
-  if (Storage.is<QualifiedTemplateName *>())
+  if (isa<QualifiedTemplateName *>(Storage))
     return QualifiedTemplate;
 
-  UncommonTemplateNameStorage *uncommon
-    = Storage.get<UncommonTemplateNameStorage*>();
+  UncommonTemplateNameStorage *uncommon =
+      cast<UncommonTemplateNameStorage *>(Storage);
   if (uncommon->getAsOverloadedStorage())
     return OverloadedTemplate;
   if (uncommon->getAsAssumedTemplateName())
@@ -182,7 +182,8 @@ TemplateDecl *TemplateName::getAsTemplateDecl(bool IgnoreDeduced) const {
            "Unexpected canonical DeducedTemplateName; Did you mean to use "
            "getTemplateDeclAndDefaultArgs instead?");
 
-  return cast_if_present<TemplateDecl>(Name.Storage.dyn_cast<Decl *>());
+  return cast_if_present<TemplateDecl>(
+      dyn_cast_if_present<Decl *>(Name.Storage));
 }
 
 std::pair<TemplateDecl *, DefaultArguments>
@@ -208,7 +209,7 @@ TemplateName::getTemplateDeclAndDefaultArgs() const {
 }
 
 std::optional<TemplateName> TemplateName::desugar(bool IgnoreDeduced) const {
-  if (Decl *D = Storage.dyn_cast<Decl *>()) {
+  if (Decl *D = dyn_cast_if_present<Decl *>(Storage)) {
     if (auto *USD = dyn_cast<UsingShadowDecl>(D))
       return TemplateName(USD->getTargetDecl());
     return std::nullopt;
@@ -242,7 +243,7 @@ AssumedTemplateStorage *TemplateName::getAsAssumedTemplateName() const {
 SubstTemplateTemplateParmStorage *
 TemplateName::getAsSubstTemplateTemplateParm() const {
   if (UncommonTemplateNameStorage *uncommon =
-          Storage.dyn_cast<UncommonTemplateNameStorage *>())
+          dyn_cast_if_present<UncommonTemplateNameStorage *>(Storage))
     return uncommon->getAsSubstTemplateTemplateParm();
 
   return nullptr;
@@ -258,7 +259,7 @@ TemplateName::getAsSubstTemplateTemplateParmPack() const {
 }
 
 QualifiedTemplateName *TemplateName::getAsQualifiedTemplateName() const {
-  return Storage.dyn_cast<QualifiedTemplateName *>();
+  return dyn_cast_if_present<QualifiedTemplateName *>(Storage);
 }
 
 DependentTemplateName *TemplateName::getAsDependentTemplateName() const {
@@ -276,7 +277,7 @@ UsingShadowDecl *TemplateName::getAsUsingShadowDecl() const {
 
 DeducedTemplateStorage *TemplateName::getAsDeducedTemplateName() const {
   if (UncommonTemplateNameStorage *Uncommon =
-          Storage.dyn_cast<UncommonTemplateNameStorage *>())
+          dyn_cast_if_present<UncommonTemplateNameStorage *>(Storage))
     return Uncommon->getAsDeducedTemplateName();
 
   return nullptr;

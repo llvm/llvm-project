@@ -1,4 +1,4 @@
-; RUN: llc -march=mips -mcpu=mips32r2 < %s -o /dev/null
+; RUN: llc -mtriple=mips -mcpu=mips32r2 < %s -o /dev/null
 
 ; Test that SelectionDAG does not crash during DAGCombine when two pointers
 ; to the stack match with differing bases and offsets when expanding memcpy.

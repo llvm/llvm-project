@@ -40,8 +40,8 @@ define void @vector_reverse_f64(i64 %N, ptr noalias %a, ptr noalias %b) #0{
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds double, ptr [[TMP14]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x double>, ptr [[TMP11]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 8 x double>, ptr [[TMP15]], align 8
-; CHECK-NEXT:    [[TMP16:%.*]] = fadd <vscale x 8 x double> [[WIDE_LOAD]], shufflevector (<vscale x 8 x double> insertelement (<vscale x 8 x double> poison, double 1.000000e+00, i64 0), <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP17:%.*]] = fadd <vscale x 8 x double> [[WIDE_LOAD1]], shufflevector (<vscale x 8 x double> insertelement (<vscale x 8 x double> poison, double 1.000000e+00, i64 0), <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP16:%.*]] = fadd <vscale x 8 x double> [[WIDE_LOAD]], splat (double 1.000000e+00)
+; CHECK-NEXT:    [[TMP17:%.*]] = fadd <vscale x 8 x double> [[WIDE_LOAD1]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = sub i64 1, [[TMP5]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds double, ptr [[TMP18]], i64 [[TMP19]]
@@ -135,8 +135,8 @@ define void @vector_reverse_i64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i64, ptr [[TMP17]], i64 [[TMP16]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i64>, ptr [[TMP14]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 8 x i64>, ptr [[TMP18]], align 8
-; CHECK-NEXT:    [[TMP19:%.*]] = add <vscale x 8 x i64> [[WIDE_LOAD]], shufflevector (<vscale x 8 x i64> insertelement (<vscale x 8 x i64> poison, i64 1, i64 0), <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP20:%.*]] = add <vscale x 8 x i64> [[WIDE_LOAD3]], shufflevector (<vscale x 8 x i64> insertelement (<vscale x 8 x i64> poison, i64 1, i64 0), <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP19:%.*]] = add <vscale x 8 x i64> [[WIDE_LOAD]], splat (i64 1)
+; CHECK-NEXT:    [[TMP20:%.*]] = add <vscale x 8 x i64> [[WIDE_LOAD3]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = sub i64 1, [[TMP8]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i64, ptr [[TMP21]], i64 [[TMP22]]
@@ -153,7 +153,7 @@ define void @vector_reverse_i64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_MOD_VF]], [[MIDDLE_BLOCK]] ], [ [[N]], [[FOR_BODY_PREHEADER]] ], [ [[N]], [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_MOD_VF]], [[MIDDLE_BLOCK]] ], [ [[N]], [[VECTOR_MEMCHECK]] ], [ [[N]], [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]

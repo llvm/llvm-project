@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_REPLACE_IF_H
-#define _LIBCPP___ALGORITHM_REPLACE_IF_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_REPLACE_IF_H
+#define _LIBCPP___CXX03___ALGORITHM_REPLACE_IF_H
 
 #include <__cxx03/__config>
 
@@ -27,4 +27,4 @@ replace_if(_ForwardIterator __first, _ForwardIterator __last, _Predicate __pred,
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_REPLACE_IF_H
+#endif // _LIBCPP___CXX03___ALGORITHM_REPLACE_IF_H
