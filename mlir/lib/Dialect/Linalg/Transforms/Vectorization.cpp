@@ -66,8 +66,7 @@ vectorizeConvolution(RewriterBase &rewriter, LinalgOp convOp,
 ///   * inferred from the static dims in the input and output tensors.
 /// Bails out if:
 ///   * vector sizes are not user-provided, and
-///   * at least one dim is dynamic (in both the input and output tensors),
-///   bails out.
+///   * at least one dim is dynamic (in both the input and output tensors).
 ///
 /// Before:
 ///     !t_in_type = tensor<1x2x3xf32>
@@ -1918,15 +1917,15 @@ vectorizeInsertSliceOpPrecondition(tensor::InsertSliceOp sliceOp,
     return failure();
 
   // Get the pad value.
-  // TransferReadOp (which is used to vectorize InsertSliceOp, requires a scalar
-  // padding value. Note that:
-  //    * for in-bounds access, the value is actually irrelevant.
-  // There are 2 cases in which xfer.read accesses are known to be in-bounds:
+  // TransferReadOp (which is used to vectorize InsertSliceOp), requires a
+  // scalar padding value. Note that:
+  //    * for in-bounds accesses,
+  // the value is actually irrelevant. There are 2 cases in which xfer.read
+  // accesses are known to be in-bounds:
   //  1. The source shape is static (output vector sizes would be based on
   //     the source shape and hence all memory accesses would be in-bounds),
-  //  2. Masking is used (output vector sizes would be user-provided, in which
-  //     case it is assumed that all memory accesses are in-bounds). This
-  //     remains a TODO.
+  //  2. Masking is used, i.e. the output vector sizes are user-provided. In
+  //     this case it is safe to assume that all memory accesses are in-bounds.
   //
   // When the value is not known and not needed, use 0. Otherwise, bail out.
   Value padValue = getStaticPadVal(sliceOp);

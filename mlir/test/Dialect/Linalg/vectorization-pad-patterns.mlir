@@ -228,12 +228,12 @@ module attributes {transform.with_named_sequence} {
 
 func.func private @make_vector() -> tensor<12x13xf32>
 
-// the destination of tensor.insert_slice matches the result of tensor.pad -
+// The destination of tensor.insert_slice matches the result of tensor.pad -
 // not supported.
 
-// check-label:   func.func @pad_and_insert_slice_dest(
-// check-not:     vector.transfer_read
-// check-not:     vector.transfer_write
+// CHECK-LABEL:   func.func @pad_and_insert_slice_dest(
+// CHECK-NOT:     vector.transfer_read
+// CHECK-NOT:     vector.transfer_write
 
 func.func @pad_and_insert_slice_dest(
     %arg0: tensor<1x5x6xf32>) -> tensor<1x12x13xf32> {
