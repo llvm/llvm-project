@@ -97,9 +97,8 @@ public:
 
 struct DataFlowEdge {
   Value value;
-  std::string outPort;
   Node node;
-  std::string inPort;
+  std::string port;
 };
 
 /// This pass generates a Graphviz dataflow visualization of an MLIR operation.
@@ -153,8 +152,7 @@ private:
   void emitAllEdgeStmts() {
     if (printDataFlowEdges) {
       for (const auto &e : dataFlowEdges) {
-        emitEdgeStmt(valueToNode[e.value], e.outPort, e.node, e.inPort,
-                     kLineStyleDataFlow);
+        emitEdgeStmt(valueToNode[e.value], e.node, e.port, kLineStyleDataFlow);
       }
     }
 
@@ -228,8 +226,7 @@ private:
 
   /// Append an edge to the list of edges.
   /// Note: Edges are written to the output stream via `emitAllEdgeStmts`.
-  void emitEdgeStmt(Node n1, std::string outPort, Node n2, std::string inPort,
-                    StringRef style) {
+  void emitEdgeStmt(Node n1, Node n2, std::string port, StringRef style) {
     AttributeMap attrs;
     attrs["style"] = style.str();
     // Use `ltail` and `lhead` to draw edges between clusters.
@@ -240,12 +237,14 @@ private:
 
     edges.push_back(strFromOs([&](raw_ostream &os) {
       os << "v" << n1.id;
-      if (!outPort.empty())
-        os << ":" << outPort << ":s";
+      if (!port.empty())
+        // Attach edge to south compass point of the result
+        os << ":" << port << ":s";
       os << " -> ";
       os << "v" << n2.id;
-      if (!inPort.empty())
-        os << ":" << inPort << ":n";
+      if (!port.empty())
+        // Attach edge to north compass point of the operand
+        os << ":" << port << ":n";
       emitAttrList(os, attrs);
     }));
   }
@@ -353,7 +352,7 @@ private:
       for (Operation &op : block) {
         Node nextNode = processOperation(&op);
         if (printControlFlowEdges && prevNode)
-          emitEdgeStmt(*prevNode, "", nextNode, "", kLineStyleControlFlow);
+          emitEdgeStmt(*prevNode, nextNode, /*port=*/"", kLineStyleControlFlow);
         prevNode = nextNode;
       }
     });
@@ -381,8 +380,7 @@ private:
       unsigned numOperands = op->getNumOperands();
       for (unsigned i = 0; i < numOperands; i++) {
         auto operand = op->getOperand(i);
-        auto inPort = getValuePortName(operand);
-        dataFlowEdges.push_back({operand, inPort, node, inPort});
+        dataFlowEdges.push_back({operand, node, getValuePortName(operand)});
       }
     }
 
