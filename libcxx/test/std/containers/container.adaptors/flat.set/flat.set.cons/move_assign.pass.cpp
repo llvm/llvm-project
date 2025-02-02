@@ -55,6 +55,19 @@ struct MoveClears {
   auto operator<=>(const MoveClears&) const = default;
 };
 
+#if !defined(TEST_HAS_NO_EXCEPTIONS)
+struct MoveAssignThrows : std::vector<int> {
+  using std::vector<int>::vector;
+  MoveAssignThrows& operator=(MoveAssignThrows&& other) {
+    push_back(0);
+    push_back(0);
+    other.push_back(0);
+    other.push_back(0);
+    throw 42;
+  }
+};
+#endif // TEST_HAS_NO_EXCEPTIONS
+
 void test_move_assign_clears() {
   // Preserves the class invariant for the moved-from flat_set.
   {
@@ -101,6 +114,23 @@ void test_move_assign_clears() {
     check_invariant(m1);
     LIBCPP_ASSERT(m1.empty());
   }
+#if !defined(TEST_HAS_NO_EXCEPTIONS)
+  {
+    using M = std::flat_set<int, std::less<>, MoveAssignThrows>;
+    M m1    = {1, 2, 3};
+    M m2    = {1, 2};
+    try {
+      m2 = std::move(m1);
+      assert(false);
+    } catch (int e) {
+      assert(e == 42);
+    }
+    check_invariant(m1);
+    check_invariant(m2);
+    LIBCPP_ASSERT(m1.empty());
+    LIBCPP_ASSERT(m2.empty());
+  }
+#endif // TEST_HAS_NO_EXCEPTIONS
 }
 
 struct MoveSensitiveComp {
@@ -161,12 +191,13 @@ void test_move_assign_no_except() {
 
 void test() {
   {
-    using C  = test_less<int>;
-    using A1 = test_allocator<int>;
-    using M  = std::flat_set<int, C, std::vector<int, A1>>;
-    M mo     = M({1, 2, 3}, C(5), A1(7));
-    M m      = M({}, C(3), A1(7));
-    m        = std::move(mo);
+    using C                           = test_less<int>;
+    using A1                          = test_allocator<int>;
+    using M                           = std::flat_set<int, C, std::vector<int, A1>>;
+    M mo                              = M({1, 2, 3}, C(5), A1(7));
+    M m                               = M({}, C(3), A1(7));
+    std::same_as<M&> decltype(auto) r = m = std::move(mo);
+    assert(&r == &m);
     assert((m == M{1, 2, 3}));
     assert(m.key_comp() == C(5));
     auto ks = std::move(m).extract();
@@ -174,12 +205,13 @@ void test() {
     assert(mo.empty());
   }
   {
-    using C  = test_less<int>;
-    using A1 = other_allocator<int>;
-    using M  = std::flat_set<int, C, std::deque<int, A1>>;
-    M mo     = M({4, 5}, C(5), A1(7));
-    M m      = M({1, 2, 3, 4}, C(3), A1(7));
-    m        = std::move(mo);
+    using C                           = test_less<int>;
+    using A1                          = other_allocator<int>;
+    using M                           = std::flat_set<int, C, std::deque<int, A1>>;
+    M mo                              = M({4, 5}, C(5), A1(7));
+    M m                               = M({1, 2, 3, 4}, C(3), A1(7));
+    std::same_as<M&> decltype(auto) r = m = std::move(mo);
+    assert(&r == &m);
     assert((m == M{4, 5}));
     assert(m.key_comp() == C(5));
     auto ks = std::move(m).extract();
@@ -187,11 +219,12 @@ void test() {
     assert(mo.empty());
   }
   {
-    using A = min_allocator<int>;
-    using M = std::flat_set<int, std::greater<int>, std::vector<int, A>>;
-    M mo    = M({5, 4, 3}, A());
-    M m     = M({4, 3, 2, 1}, A());
-    m       = std::move(mo);
+    using A                           = min_allocator<int>;
+    using M                           = std::flat_set<int, std::greater<int>, std::vector<int, A>>;
+    M mo                              = M({5, 4, 3}, A());
+    M m                               = M({4, 3, 2, 1}, A());
+    std::same_as<M&> decltype(auto) r = m = std::move(mo);
+    assert(&r == &m);
     assert((m == M{5, 4, 3}));
     auto ks = std::move(m).extract();
     assert(ks.get_allocator() == A());
