@@ -35,7 +35,7 @@ struct DefaultCtableComp {
   bool default_constructed_ = false;
 };
 
-int main(int, char**) {
+void test() {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<container_type, Alloc> is true.
@@ -146,6 +146,10 @@ int main(int, char**) {
     M m({5, 2, 2, 3, 1, 3}, {}, a);
     assert(std::equal(m.rbegin(), m.rend(), expected, expected + 4));
   }
+}
+
+int main(int, char**) {
+  test();
 
   return 0;
 }

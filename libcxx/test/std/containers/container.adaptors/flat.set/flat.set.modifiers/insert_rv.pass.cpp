@@ -25,7 +25,7 @@
 #include "../helpers.h"
 
 template <class KeyContainer>
-void test() {
+void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, TransparentComparator, KeyContainer>;
   using R   = std::pair<typename M::iterator, bool>;
@@ -57,24 +57,30 @@ void test() {
   assert(*r.first == V(3));
 }
 
+void test() {
+  test_one<std::vector<int>>();
+  test_one<std::vector<MoveOnly>>();
+  test_one<std::deque<int>>();
+  test_one<std::deque<MoveOnly>>();
+  test_one<MinSequenceContainer<int>>();
+  test_one<MinSequenceContainer<MoveOnly>>();
+  test_one<std::vector<int, min_allocator<int>>>();
+  test_one<std::vector<MoveOnly, min_allocator<MoveOnly>>>();
+}
+
+void test_exception() {
+  auto insert_func = [](auto& m, auto key_arg) {
+    using FlatSet    = std::decay_t<decltype(m)>;
+    using value_type = typename FlatSet::value_type;
+    value_type p(key_arg);
+    m.insert(std::move(p));
+  };
+  test_emplace_exception_guarantee(insert_func);
+}
+
 int main(int, char**) {
-  test<std::vector<int>>();
-  test<std::vector<MoveOnly>>();
-  test<std::deque<int>>();
-  test<std::deque<MoveOnly>>();
-  test<MinSequenceContainer<int>>();
-  test<MinSequenceContainer<MoveOnly>>();
-  test<std::vector<int, min_allocator<int>>>();
-  test<std::vector<MoveOnly, min_allocator<MoveOnly>>>();
-  {
-    auto insert_func = [](auto& m, auto key_arg) {
-      using FlatSet    = std::decay_t<decltype(m)>;
-      using value_type = typename FlatSet::value_type;
-      value_type p(key_arg);
-      m.insert(std::move(p));
-    };
-    test_emplace_exception_guarantee(insert_func);
-  }
+  test();
+  test_exception();
 
   return 0;
 }

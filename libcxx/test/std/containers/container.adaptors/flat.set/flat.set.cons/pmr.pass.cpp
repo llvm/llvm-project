@@ -28,7 +28,7 @@
 #include "test_allocator.h"
 #include "../../../test_compare.h"
 
-int main(int, char**) {
+void test() {
   {
     // flat_set(const Allocator& a);
     using M = std::flat_set<int, std::less<int>, std::pmr::vector<int>>;
@@ -317,6 +317,10 @@ int main(int, char**) {
     assert(vm[0].key_comp() == C(4));
     assert(std::move(vm[0]).extract().get_allocator().resource() == &mr);
   }
+}
+
+int main(int, char**) {
+  test();
 
   return 0;
 }
