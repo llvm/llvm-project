@@ -414,9 +414,14 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
   // The case `const long long volatile int` -> `const volatile long long int`
   // The case `long volatile long int const` -> `const volatile long long int`
   if (TypeToken->isTypeName(LangOpts)) {
-    if (const auto *Prev = TypeToken->getPreviousNonComment();
-        Prev && Prev->endsSequence(tok::coloncolon, tok::identifier)) {
-      TypeToken = Prev->getPreviousNonComment();
+    for (const auto *Prev = TypeToken->getPreviousNonComment();
+         Prev && Prev->is(tok::coloncolon);
+         Prev = Prev->getPreviousNonComment()) {
+      TypeToken = Prev;
+      Prev = Prev->getPreviousNonComment();
+      if (!(Prev && Prev->is(tok::identifier)))
+        break;
+      TypeToken = Prev;
     }
     const FormatToken *LastSimpleTypeSpecifier = TypeToken;
     while (isConfiguredQualifierOrType(

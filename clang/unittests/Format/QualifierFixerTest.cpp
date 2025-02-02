@@ -1296,8 +1296,11 @@ TEST_F(QualifierFixerTest, WithQualifiedTypeName) {
   Style.QualifierAlignment = FormatStyle::QAS_Custom;
   Style.QualifierOrder = {"constexpr", "type", "const"};
 
+  verifyFormat("constexpr ::int64_t x{1};", "::int64_t constexpr x{1};", Style);
   verifyFormat("constexpr std::int64_t x{123};",
                "std::int64_t constexpr x{123};", Style);
+  verifyFormat("constexpr ::std::int64_t x{123};",
+               "::std::int64_t constexpr x{123};", Style);
 
   Style.TypeNames.push_back("bar");
   verifyFormat("constexpr foo::bar x{12};", "foo::bar constexpr x{12};", Style);
