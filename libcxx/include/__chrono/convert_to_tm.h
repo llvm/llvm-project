@@ -100,7 +100,7 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const chrono::sys_time<_Duration> __tp
 }
 
 #  if _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
-#    if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#    if _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 template <class _Tm, class _Duration>
 _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(chrono::utc_time<_Duration> __tp) {
@@ -112,7 +112,7 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(chrono::utc_time<_Duration> __tp) {
   return __result;
 }
 
-#    endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#    endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
 #  endif   // _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
 
 // Convert a chrono (calendar) time point, or dururation to the given _Tm type,
@@ -128,10 +128,10 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoT& __value) {
     if constexpr (same_as<typename _ChronoT::clock, chrono::system_clock>)
       return std::__convert_to_tm<_Tm>(__value);
 #  if _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
-#    if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#    if _LIBCPP_HAS_EXPERIMENTAL_TZDB
     else if constexpr (same_as<typename _ChronoT::clock, chrono::utc_clock>)
       return std::__convert_to_tm<_Tm>(__value);
-#    endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#    endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
 #  endif   // _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
     else if constexpr (same_as<typename _ChronoT::clock, chrono::file_clock>)
       return std::__convert_to_tm<_Tm>(_ChronoT::clock::to_sys(__value));

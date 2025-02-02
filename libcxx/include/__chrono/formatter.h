@@ -721,7 +721,7 @@ public:
 };
 
 #    if _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
-#      if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#      if _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 template <class _Duration, __fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<chrono::utc_time<_Duration>, _CharT> : public __formatter_chrono<_CharT> {
@@ -734,7 +734,7 @@ public:
   }
 };
 
-#      endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#      endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
 #    endif   // _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
 
 template <class _Duration, __fmt_char_type _CharT>

@@ -4573,7 +4573,9 @@ static void TryConstructorInitialization(Sema &S,
 
   CXXConstructorDecl *CtorDecl = cast<CXXConstructorDecl>(Best->Function);
   if (Result != OR_Deleted) {
-    if (!IsListInit && Kind.getKind() == InitializationKind::IK_Default &&
+    if (!IsListInit &&
+        (Kind.getKind() == InitializationKind::IK_Default ||
+         Kind.getKind() == InitializationKind::IK_Direct) &&
         DestRecordDecl != nullptr && DestRecordDecl->isAggregate() &&
         DestRecordDecl->hasUninitializedExplicitInitFields()) {
       S.Diag(Kind.getLocation(), diag::warn_field_requires_explicit_init)

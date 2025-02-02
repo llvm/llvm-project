@@ -8,10 +8,10 @@ define void @cross_bbs(ptr %ptr) {
 ; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr i8, ptr [[PTR]], i32 1
 ; CHECK-NEXT:    [[L0:%.*]] = load i8, ptr [[PTR0]], align 1
 ; CHECK-NEXT:    [[L1:%.*]] = load i8, ptr [[PTR1]], align 1
-; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x i8> poison, i8 [[L0]], i32 0
-; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x i8> [[PACK]], i8 [[L1]], i32 1
 ; CHECK-NEXT:    br label %[[BB:.*]]
 ; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x i8> poison, i8 [[L0]], i32 0
+; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x i8> [[PACK]], i8 [[L1]], i32 1
 ; CHECK-NEXT:    store <2 x i8> [[PACK1]], ptr [[PTR0]], align 1
 ; CHECK-NEXT:    ret void
 ;
