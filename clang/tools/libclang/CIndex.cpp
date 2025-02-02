@@ -7415,11 +7415,11 @@ unsigned clang_getNumOverloadedDecls(CXCursor C) {
     return 0;
 
   OverloadedDeclRefStorage Storage = getCursorOverloadedDeclRef(C).first;
-  if (const OverloadExpr *E = Storage.dyn_cast<const OverloadExpr *>())
+  if (const OverloadExpr *E = dyn_cast<const OverloadExpr *>(Storage))
     return E->getNumDecls();
 
   if (OverloadedTemplateStorage *S =
-          Storage.dyn_cast<OverloadedTemplateStorage *>())
+          dyn_cast<OverloadedTemplateStorage *>(Storage))
     return S->size();
 
   const Decl *D = cast<const Decl *>(Storage);
@@ -7438,11 +7438,11 @@ CXCursor clang_getOverloadedDecl(CXCursor cursor, unsigned index) {
 
   CXTranslationUnit TU = getCursorTU(cursor);
   OverloadedDeclRefStorage Storage = getCursorOverloadedDeclRef(cursor).first;
-  if (const OverloadExpr *E = Storage.dyn_cast<const OverloadExpr *>())
+  if (const OverloadExpr *E = dyn_cast<const OverloadExpr *>(Storage))
     return MakeCXCursor(E->decls_begin()[index], TU);
 
   if (OverloadedTemplateStorage *S =
-          Storage.dyn_cast<OverloadedTemplateStorage *>())
+          dyn_cast<OverloadedTemplateStorage *>(Storage))
     return MakeCXCursor(S->begin()[index], TU);
 
   const Decl *D = cast<const Decl *>(Storage);
