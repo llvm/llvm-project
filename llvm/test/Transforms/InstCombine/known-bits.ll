@@ -487,8 +487,7 @@ define i64 @test_icmp_trunc_nuw(i64 %a) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CAST]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[B:%.*]] = and i64 [[A]], 2147483647
-; CHECK-NEXT:    ret i64 [[B]]
+; CHECK-NEXT:    ret i64 [[A]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i64 0
 ;
