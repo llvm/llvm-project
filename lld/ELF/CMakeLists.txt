@@ -73,6 +73,7 @@ add_lld_library(lldELF
   Object
   Option
   Passes
+  ProfileData
   Support
   TargetParser
   TransformUtils
