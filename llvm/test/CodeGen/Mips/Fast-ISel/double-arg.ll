@@ -1,4 +1,4 @@
-; RUN: not --crash llc -march=mipsel -mcpu=mips32r2 -mattr=+fp64 \
+; RUN: not --crash llc -mtriple=mipsel -mcpu=mips32r2 -mattr=+fp64 \
 ; RUN:         -O0 -relocation-model=pic -fast-isel-abort=3 < %s
 
 ; Check that FastISel aborts when we have 64bit FPU registers. FastISel currently
