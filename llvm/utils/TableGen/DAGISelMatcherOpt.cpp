@@ -193,6 +193,18 @@ static Matcher *FindNodeWithKind(Matcher *M, Matcher::KindTy Kind) {
 
 static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr);
 
+/// Turn matches like this:
+///   Scope
+///     OPC_CheckType i32
+///       ABC
+///     OPC_CheckType i32
+///       XYZ
+/// into:
+///   OPC_CheckType i32
+///     Scope
+///       ABC
+///       XYZ
+///
 static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
   ScopeMatcher *Scope = cast<ScopeMatcher>(MatcherPtr.get());
 
@@ -468,18 +480,7 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
     Scope->resetChild(i, OptionsToMatch[i]);
 }
 
-/// FactorNodes - Turn matches like this:
-///   Scope
-///     OPC_CheckType i32
-///       ABC
-///     OPC_CheckType i32
-///       XYZ
-/// into:
-///   OPC_CheckType i32
-///     Scope
-///       ABC
-///       XYZ
-///
+/// Search a ScopeMatcher to factor with FactorScope.
 static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
   // Look for a scope matcher. Iterates instead of recurses to reduce stack
   // usage.
