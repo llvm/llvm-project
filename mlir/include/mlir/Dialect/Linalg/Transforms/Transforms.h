@@ -1893,6 +1893,34 @@ void populateDecomposeWinogradOpsPatterns(RewritePatternSet &patterns);
 /// convert to a `linalg.dot`.
 void populateContractionOpRankReducingPatterns(RewritePatternSet &patterns);
 
+/// Add patterns to fuse a linalg fill operation with a linalg operation.
+/// Add patterns to fold linalg.fill into linalg.reduce by creating a fused
+/// linalg.generic operation.
+/// The fill operation is expected to happen only on the first index
+/// of the reduction dimension. Currently only one reduction dimension is
+/// supported. Given the pattern:
+///   %empty = tensor.empty() : tensor<i8>
+///   %filled = linalg.fill ins(%c0 : i8) outs(%empty : tensor<i8>) ->
+///   tensor<i8> %reduced = linalg.reduce ins(%0 : tensor<147456xi8>)
+///   outs(%filled : tensor<i8>) dimensions = [0]
+///     (%in: i8, %init: i8) {
+///       %3 = arith.addi %in, %init : i8
+///       linalg.yield %3 : i8
+///   }
+/// The pattern is rewritten into:
+///   %empty = tensor.empty() : tensor<i8>
+///   %reduced = linalg.generic ins(%0 : tensor<147456xi8>) outs(%empty :
+///   tensor<i8>) {
+///     ^bb0(%in: i8, %init: i8):
+///       %cst = arith.constant 0 : index
+///       %index = linalg.index %c0 : index
+///       %cmp = arith.cmpi eq, %cst, %index : i1
+///       %sum = arith.select %cmp, %c0, %init : i8
+///       %res = arith.addi %in, %sum : i8
+///       linalg.yield %res : i8
+///   }
+void populateFuseFillOpWithReduceOpPatterns(RewritePatternSet &patterns);
+
 } // namespace linalg
 } // namespace mlir
 

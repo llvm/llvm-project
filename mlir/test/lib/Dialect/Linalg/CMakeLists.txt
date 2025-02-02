@@ -6,6 +6,7 @@ add_mlir_library(MLIRLinalgTestPasses
   TestLinalgElementwiseFusion.cpp
   TestLinalgFusionTransforms.cpp
   TestLinalgRankReduceContractionOps.cpp
+  TestLinalgFuseFillOpWithReduceOp.cpp
   TestLinalgTransforms.cpp
   TestPadFusion.cpp
 
