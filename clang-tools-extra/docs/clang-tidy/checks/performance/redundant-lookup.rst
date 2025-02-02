@@ -82,7 +82,7 @@ Options
 
    Member function names to consider as **lookup** operation.
    These methods must have exactly 1 argument.
-   Default is ``at;contains;count;find_as;find``.
+   Default is `at;contains;count;find_as;find`.
 
 Limitations
 -----------
