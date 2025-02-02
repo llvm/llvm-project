@@ -644,6 +644,13 @@ static void AddNonNullPointersByInstruction(
     AddNonNullPointer(MI->getRawDest(), PtrSet);
     if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI))
       AddNonNullPointer(MTI->getRawSource(), PtrSet);
+  } else if (auto *CB = dyn_cast<CallBase>(I)) {
+    for (auto &U : CB->args()) {
+      if (U->getType()->isPointerTy() &&
+          CB->paramHasNonNullAttr(CB->getArgOperandNo(&U),
+                                  /*AllowUndefOrPoison=*/false))
+        AddNonNullPointer(U.get(), PtrSet);
+    }
   }
 }
 
@@ -780,25 +787,12 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
   }
 
   if (BBLV.isOverdefined()) {
-    if (PointerType *PTy = dyn_cast<PointerType>(Val->getType())) {
-      // Check whether we're checking at the terminator, and the pointer has
-      // been dereferenced in this block.
-      if (BB->getTerminator() == BBI && isNonNullAtEndOfBlock(Val, BB))
-        BBLV = ValueLatticeElement::getNot(ConstantPointerNull::get(PTy));
-      else {
-        for (Use &U : Val->uses()) {
-          if (auto *CB = dyn_cast<CallBase>(U.getUser())) {
-            if (CB->isArgOperand(&U) &&
-                CB->paramHasNonNullAttr(CB->getArgOperandNo(&U),
-                                        /*AllowUndefOrPoison=*/false) &&
-                isValidAssumeForContext(CB, BBI)) {
-              BBLV = ValueLatticeElement::getNot(ConstantPointerNull::get(PTy));
-              break;
-            }
-          }
-        }
-      }
-    }
+    // Check whether we're checking at the terminator, and the pointer has
+    // been dereferenced in this block.
+    PointerType *PTy = dyn_cast<PointerType>(Val->getType());
+    if (PTy && BB->getTerminator() == BBI &&
+        isNonNullAtEndOfBlock(Val, BB))
+      BBLV = ValueLatticeElement::getNot(ConstantPointerNull::get(PTy));
   }
 }
 
