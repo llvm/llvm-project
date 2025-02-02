@@ -1,0 +1,21 @@
+#ifndef _FUNCTIONAL_
+#define _FUNCTIONAL_
+
+namespace std {
+
+template <class T> struct less {
+  constexpr bool operator()(const T& Lhs, const T& Rhs) const {
+    return Lhs < Rhs;
+  }
+};
+
+template <> struct less<void> {
+  template <typename T, typename U>
+  constexpr bool operator()(T &&Lhs, U &&Rhs) const {
+    return static_cast<T &&>(Lhs) < static_cast<U &&>(Rhs);
+  }
+};
+
+} // namespace std
+
+#endif // _FUNCTIONAL_

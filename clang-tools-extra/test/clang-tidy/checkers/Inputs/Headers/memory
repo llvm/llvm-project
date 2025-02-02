@@ -1,0 +1,10 @@
+#ifndef _MEMORY_
+#define _MEMORY_
+
+namespace std {
+
+template <typename T> class allocator {};
+
+} // namespace std
+
+#endif // _MEMORY_

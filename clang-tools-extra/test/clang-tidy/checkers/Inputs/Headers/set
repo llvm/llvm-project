@@ -1,0 +1,145 @@
+#ifndef _SET_
+#define _SET_
+
+#include <functional> // std::less
+#include <memory>     // std::allocator
+#include <utility>    // std::pair
+
+namespace std {
+
+using size_t = decltype(sizeof(0));
+using ptrdiff_t = decltype(static_cast<int*>(nullptr) - static_cast<int*>(nullptr));
+
+template<
+  class Key,
+  class Compare = std::less<Key>,
+  class Allocator = std::allocator<Key>
+> class set {
+public:
+  using key_type = Key;
+  using value_type = Key;
+  using size_type = size_t;
+  using difference_type = ptrdiff_t;
+  using key_compare = Compare;
+  using value_compare = Compare;
+  using allocator_type = Allocator;
+  using reference = value_type&;
+  using const_reference = const value_type&;
+
+  set();
+  explicit set(const Allocator&);
+  template <class InputIt>
+  set(InputIt, InputIt, const Compare& = Compare(), const Allocator& = Allocator() );
+  template <class InputIt> set(InputIt, InputIt, const Allocator&);
+  set(const set&);
+  set(const set&, const Allocator&);
+  set(set&&);
+  set(set&&, const Allocator&);
+  // missing: init-list ctors
+  // missing: from_range ctors
+
+  ~set();
+
+	set& operator=(const set&);
+  set& operator=(set&&);
+
+  struct iterator{};
+  struct const_iterator{};
+
+  iterator begin();
+  const_iterator begin() const;
+  const_iterator cbegin() const noexcept;
+
+  iterator end();
+  const_iterator end() const;
+  const_iterator cend() const noexcept;
+
+  iterator rbegin();
+  const_iterator rbegin() const;
+  const_iterator crbegin() const noexcept;
+
+  iterator rend();
+  const_iterator rend() const;
+  const_iterator crend() const noexcept;
+
+  bool empty() const;
+  size_type size() const;
+  size_type max_size() const;
+  void clear();
+
+  std::pair<iterator, bool> insert(const value_type&);
+  std::pair<iterator, bool> insert(value_type&&);
+  iterator insert(const_iterator, const value_type&);
+  iterator insert(const_iterator, value_type&&);
+  template <class InputIt> void insert(InputIt, InputIt);
+  // void insert(std::initializer_list<value_type>);
+  // insert_return_type insert(node_type&&);
+  // iterator insert(const_iterator, node_type&&);
+  template <class K> std::pair<iterator, bool> insert(K&&);
+  template <class K> iterator insert(const_iterator, K&&);
+
+  template <class R> void insert_range(R&&);
+
+  template <class... Args> std::pair<iterator, bool> emplace(Args&&...);
+
+  template <class... Args> iterator emplace_hint(const_iterator, Args&&...);
+
+  iterator erase(iterator);
+  //iterator erase(iterator) requires(!std::same_as<iterator, const_iterator>); // C++23
+  iterator erase(const_iterator);
+  iterator erase(const_iterator, const_iterator);
+  size_type erase(const Key&);
+  template <class K> size_type erase(K&&);
+
+  void swap(set&);
+
+  // extract
+  // merge
+
+  size_type count(const Key&) const;
+  template <class K> size_type count(const K&) const;
+
+  iterator find(const Key&);
+  const_iterator find(const Key&) const;
+  template <class K> iterator find(const K&);
+  template <class K> const_iterator find(const K&) const;
+
+  bool contains(const Key&) const;
+  template <class K> bool contains(const K&) const;
+  std::pair<iterator, iterator> equal_range(const Key&);
+  std::pair<const_iterator, const_iterator> equal_range(const Key&) const;
+  template <class K> std::pair<iterator, iterator> equal_range(const K&);
+  template <class K> std::pair<const_iterator, const_iterator> equal_range(const K&) const;
+
+  iterator lower_bound(const Key&);
+  const_iterator lower_bound(const Key&) const;
+  template <class K> iterator lower_bound(const K&);
+  template <class K> const_iterator lower_bound(const K&) const;
+  iterator upper_bound(const Key&);
+  const_iterator upper_bound(const Key&) const;
+  template <class K> iterator upper_bound(const K&);
+  template <class K> const_iterator upper_bound(const K&) const;
+
+  template <class Key2, class Compare2, class Alloc2>
+  friend bool operator==(const std::set<Key2, Compare2, Alloc2>&,
+                         const std::set<Key2, Compare2, Alloc2>&);
+  template <class Key2, class Compare2, class Alloc2>
+  friend bool operator!=(const std::set<Key2, Compare2, Alloc2>&,
+                         const std::set<Key2, Compare2, Alloc2>&);
+  template <class Key2, class Compare2, class Alloc2>
+  friend bool operator<(const std::set<Key2, Compare2, Alloc2>&,
+                        const std::set<Key2, Compare2, Alloc2>&);
+  template <class Key2, class Compare2, class Alloc2>
+  friend bool operator<=(const std::set<Key2, Compare2, Alloc2>&,
+                         const std::set<Key2, Compare2, Alloc2>&);
+  template <class Key2, class Compare2, class Alloc2>
+  friend bool operator>(const std::set<Key2, Compare2, Alloc2>&,
+                        const std::set<Key2, Compare2, Alloc2>&);
+  template <class Key2, class Compare2, class Alloc2>
+  friend bool operator>=(const std::set<Key2, Compare2, Alloc2>&,
+                         const std::set<Key2, Compare2, Alloc2>&);
+};
+
+} // namespace std
+
+#endif // _SET_
