@@ -433,7 +433,7 @@ define i1 @test_known_nonnull_at_callsite_gep_without_inbounds(ptr %src, i64 %x)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 [[X:%.*]]
 ; CHECK-NEXT:    call void @callee(ptr noundef nonnull [[GEP]])
 ; CHECK-NEXT:    [[NONNULL:%.*]] = icmp eq ptr [[SRC]], null
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    ret i1 [[NONNULL]]
 ;
 entry:
   %gep = getelementptr i8, ptr %src, i64 %x
