@@ -189,7 +189,7 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
     if (Entry.Flags == OMP_REGISTER_REQUIRES)
       PM->addRequirements(Entry.Data);
 
-  // Extract the exectuable image and extra information if availible.
+  // Extract the executable image and extra information if available.
   for (int32_t i = 0; i < Desc->NumDeviceImages; ++i)
     PM->addDeviceImage(*Desc, Desc->DeviceImages[i]);
 
@@ -273,7 +273,7 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
 
   // Auto Zero-Copy can only be currently triggered when the system is an
   // homogeneous APU architecture without attached discrete GPUs.
-  // If all devices suggest to use it, change requirment flags to trigger
+  // If all devices suggest to use it, change requirement flags to trigger
   // zero-copy behavior when mapping memory.
   if (UseAutoZeroCopy)
     addRequirements(OMPX_REQ_AUTO_ZERO_COPY);

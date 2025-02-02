@@ -548,9 +548,7 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
   let hasVerifier = 1;
 }
 
-def XeGPU_LoadGatherOp : XeGPU_Op<"load", [AllRanksMatch<["value", "TensorDesc"]>,
-                                    AllElementTypesMatch<["value", "TensorDesc"]>,
-                                   AllElementCountsMatch<["value", "TensorDesc"]>]> {
+def XeGPU_LoadGatherOp : XeGPU_Op<"load", [AllElementTypesMatch<["value", "TensorDesc"]>]> {
   let summary = "load a set of scattered data points from memory.";
 
   let description = [{ It (aka. load) load data per each work-item. The output
@@ -620,8 +618,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [AllRanksMatch<["value", "TensorDesc"]
   let hasVerifier = 1;
 }
 
-def XeGPU_StoreScatterOp : XeGPU_Op<"store", [AllElementCountsMatch<["value", "TensorDesc"]>,
-                                              AllElementTypesMatch<["value", "TensorDesc"]>]> {
+def XeGPU_StoreScatterOp : XeGPU_Op<"store", [AllElementTypesMatch<["value", "TensorDesc"]>]> {
   let summary = "store data to scattered memory locations.";
   let description = [{ It (aka. store) stores data to scattered memory locations. The value is
   typically a 1D vector. But when the chunk size of the TensorDesc is larger than 1, it will be
