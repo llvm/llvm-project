@@ -147,9 +147,9 @@ function(add_ocaml_library name)
   endforeach()
 
   if( APPLE )
-    set(ocaml_rpath "@executable_path/../../../lib${LLVM_LIBDIR_SUFFIX}")
+    set(ocaml_rpath ${LLVM_LIBRARY_DIR})
   elseif( UNIX )
-    set(ocaml_rpath "\\$ORIGIN/../../../lib${LLVM_LIBDIR_SUFFIX}")
+    set(ocaml_rpath ${LLVM_LIBRARY_DIR})
   endif()
   list(APPEND ocaml_flags "-ldopt" "-Wl,-rpath,${ocaml_rpath}")
 

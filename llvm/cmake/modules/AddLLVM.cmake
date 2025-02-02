@@ -974,8 +974,8 @@ macro(add_llvm_library name)
       endif()
       install(TARGETS ${name}
               ${export_to_llvmexports}
-              LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX} COMPONENT ${name}
-              ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX} COMPONENT ${name}
+              LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}${LLVM_LIBDIR_SUFFIX} COMPONENT ${name}
+              ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}${LLVM_LIBDIR_SUFFIX} COMPONENT ${name}
               RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT ${name})
 
       if (NOT LLVM_ENABLE_IDE)
@@ -2258,7 +2258,7 @@ function(llvm_install_library_symlink name dest type)
     set(LLVM_LINK_OR_COPY copy)
   endif()
 
-  set(output_dir lib${LLVM_LIBDIR_SUFFIX})
+  set(output_dir ${CMAKE_INSTALL_FULL_LIBDIR}${LLVM_LIBDIR_SUFFIX})
   if((WIN32 OR CYGWIN) AND "${type}" STREQUAL "SHARED")
     set(output_dir "${CMAKE_INSTALL_BINDIR}")
   endif()
@@ -2534,16 +2534,37 @@ function(llvm_setup_rpath name)
 
   if (APPLE)
     set(_install_name_dir INSTALL_NAME_DIR "@rpath")
-    set(_install_rpath "@loader_path/../lib${LLVM_LIBDIR_SUFFIX}" ${extra_libdir})
+    set(_install_rpath ${extra_libdir})
   elseif(${CMAKE_SYSTEM_NAME} MATCHES "AIX" AND BUILD_SHARED_LIBS)
     # $ORIGIN is not interpreted at link time by aix ld.
     # Since BUILD_SHARED_LIBS is only recommended for use by developers,
     # hardcode the rpath to build/install lib dir first in this mode.
     # FIXME: update this when there is better solution.
-    set(_install_rpath "${LLVM_LIBRARY_OUTPUT_INTDIR}" "${CMAKE_INSTALL_PREFIX}/lib${LLVM_LIBDIR_SUFFIX}" ${extra_libdir})
+    set(_install_rpath "${LLVM_LIBRARY_OUTPUT_INTDIR}" "${CMAKE_INSTALL_FULL_LIBDIR}${LLVM_LIBDIR_SUFFIX}" ${extra_libdir})
   elseif(UNIX)
+    # Note that we add `extra_libdir` (aka `LLVM_LIBRARY_DIR` in our case) back
+    # to `_install_rpath` here.
+    #
+    # In nixpkgs we do not build and install LLVM alongside rdeps of LLVM (i.e.
+    # clang); instead LLVM is its own package and thus lands at its own nix
+    # store path. This makes it so that the default relative rpath (`../lib/`)
+    # does not point at the LLVM shared objects.
+    #
+    # More discussion here:
+    #   - https://github.com/NixOS/nixpkgs/pull/235624#discussion_r1220150329
+    #   - https://reviews.llvm.org/D146918 (16.0.5+)
+    #
+    # Note that we leave `extra_libdir` in `_build_rpath`: without FHS there is
+    # no potential that this will result in us pulling in the "wrong" LLVM.
+    # Adding this to the build rpath means we aren't forced to use
+    # `installCheckPhase` instead of `checkPhase` (i.e. binaries in the build
+    # dir, pre-install, will have the right rpath for LLVM).
+    #
+    # As noted in the differential above, an alternative solution is to have
+    # all rdeps of nixpkgs' LLVM (that use the AddLLVM.cmake machinery) set
+    # `CMAKE_INSTALL_RPATH`.
     set(_build_rpath "\$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}" ${extra_libdir})
-    set(_install_rpath "\$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}")
+    set(_install_rpath ${extra_libdir})
     if(${CMAKE_SYSTEM_NAME} MATCHES "(FreeBSD|DragonFly)")
       set_property(TARGET ${name} APPEND_STRING PROPERTY
                    LINK_FLAGS " -Wl,-z,origin ")
