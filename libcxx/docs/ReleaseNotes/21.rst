@@ -40,6 +40,7 @@ Implemented Papers
 
 - N4258: Cleaning-up noexcept in the Library (`Github <https://github.com/llvm/llvm-project/issues/99937>`__)
 - P1361R2: Integration of chrono with text formatting (`Github <https://github.com/llvm/llvm-project/issues/100014>`__)
+- P1222R4: A Standard ``flat_set`` is partially implemented and ``flat_set`` is provided (`Github <https://github.com/llvm/llvm-project/issues/105193>`__)
 
 Improvements and New Features
 -----------------------------
