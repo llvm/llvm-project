@@ -159,9 +159,9 @@ void test_exception() {
     auto insert_func_iter = [](auto& m, auto key_arg) {
       using FlatSet = std::decay_t<decltype(m)>;
       struct T {
-        typename FlatSet::key_type key;
-        T(typename FlatSet::key_type key) : key(key) {}
-        operator typename FlatSet::value_type() const { return key; }
+        typename FlatSet::key_type key_;
+        T(typename FlatSet::key_type key) : key_(key) {}
+        operator typename FlatSet::value_type() const { return key_; }
       };
       T t(key_arg);
       m.insert(m.begin(), t);
