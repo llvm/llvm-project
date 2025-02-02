@@ -116,8 +116,8 @@ void test_containers_compare() {
 }
 
 void test_iter_iter() {
-  const int arr[]         = {1, 2, 1, INT_MAX, 3};
-  const int sorted_arr[]  = {1, 2, 3, INT_MAX};
+  int arr[]               = {1, 2, 1, INT_MAX, 3};
+  int sorted_arr[]        = {1, 2, 3, INT_MAX};
   const int arrc[]        = {1, 2, 1, INT_MAX, 3};
   const int sorted_arrc[] = {1, 2, 3, INT_MAX};
   {
@@ -155,6 +155,12 @@ void test_iter_iter() {
     ASSERT_SAME_TYPE(decltype(m), decltype(mo));
   }
   {
+    int source[3] = {1, 2, 3};
+    std::flat_set s(source, source + 3);
+    ASSERT_SAME_TYPE(decltype(s), std::flat_set<int>);
+    assert(s.size() == 3);
+  }
+  {
     // This does not deduce to flat_set(InputIterator, InputIterator)
     // But deduces to flat_set(initializer_list<int*>)
     int source[3]   = {1, 2, 3};
@@ -171,140 +177,125 @@ void test_iter_iter() {
 }
 
 void test_iter_iter_compare() {
-  // const P arr[]          = {{1, 1L}, {2, 2L}, {1, 1L}, {INT_MAX, 1L}, {3, 1L}};
-  // const P sorted_arr[]   = {{INT_MAX, 1L}, {3, 1L}, {2, 2L}, {1, 1L}};
-  // const PC arrc[]        = {{1, 1L}, {2, 2L}, {1, 1L}, {INT_MAX, 1L}, {3, 1L}};
-  // const PC sorted_arrc[] = {{INT_MAX, 1L}, {3, 1L}, {2, 2L}, {1, 1L}};
-  // using C                = std::greater<long long>;
-  // {
-  //   std::flat_set m(std::begin(arr), std::end(arr), C());
+  int arr[]               = {1, 2, 1, INT_MAX, 3};
+  int sorted_arr[]        = {INT_MAX, 3, 2, 1};
+  const int arrc[]        = {1, 2, 1, INT_MAX, 3};
+  const int sorted_arrc[] = {INT_MAX, 3, 2, 1};
+  using C                 = std::greater<long>;
+  {
+    std::flat_set m(std::begin(arr), std::end(arr), C());
 
-  //   ASSERT_SAME_TYPE(decltype(m), std::flat_set<int, long, C>);
-  //   assert(std::ranges::equal(m, sorted_arr));
-  // }
-  // {
-  //   std::flat_set m(std::begin(arrc), std::end(arrc), C());
+    ASSERT_SAME_TYPE(decltype(m), std::flat_set<int, C>);
+    assert(std::ranges::equal(m, sorted_arr));
+  }
+  {
+    std::flat_set m(std::begin(arrc), std::end(arrc), C());
 
-  //   ASSERT_SAME_TYPE(decltype(m), std::flat_set<int, long, C>);
-  //   assert(std::ranges::equal(m, sorted_arr));
-  // }
-  // {
-  //   std::flat_set m(std::sorted_unique, std::begin(sorted_arr), std::end(sorted_arr), C());
+    ASSERT_SAME_TYPE(decltype(m), std::flat_set<int, C>);
+    assert(std::ranges::equal(m, sorted_arr));
+  }
+  {
+    std::flat_set m(std::sorted_unique, std::begin(sorted_arr), std::end(sorted_arr), C());
 
-  //   ASSERT_SAME_TYPE(decltype(m), std::flat_set<int, long, C>);
-  //   assert(std::ranges::equal(m, sorted_arr));
-  // }
-  // {
-  //   std::flat_set m(std::sorted_unique, std::begin(sorted_arrc), std::end(sorted_arrc), C());
+    ASSERT_SAME_TYPE(decltype(m), std::flat_set<int, C>);
+    assert(std::ranges::equal(m, sorted_arr));
+  }
+  {
+    std::flat_set m(std::sorted_unique, std::begin(sorted_arrc), std::end(sorted_arrc), C());
 
-  //   ASSERT_SAME_TYPE(decltype(m), std::flat_set<int, long, C>);
-  //   assert(std::ranges::equal(m, sorted_arr));
-  // }
-  // {
-  //   std::flat_set<int, short> mo;
-  //   std::flat_set m(mo.begin(), mo.end(), C());
-  //   ASSERT_SAME_TYPE(decltype(m), std::flat_set<int, short, C>);
-  // }
-  // {
-  //   std::flat_set<int, short> mo;
-  //   std::flat_set m(mo.cbegin(), mo.cend(), C());
-  //   ASSERT_SAME_TYPE(decltype(m), std::flat_set<int, short, C>);
-  // }
+    ASSERT_SAME_TYPE(decltype(m), std::flat_set<int, C>);
+    assert(std::ranges::equal(m, sorted_arr));
+  }
+  {
+    std::flat_set<int> mo;
+    std::flat_set m(mo.begin(), mo.end(), C());
+    ASSERT_SAME_TYPE(decltype(m), std::flat_set<int, C>);
+  }
+  {
+    std::flat_set<int> mo;
+    std::flat_set m(mo.cbegin(), mo.cend(), C());
+    ASSERT_SAME_TYPE(decltype(m), std::flat_set<int, C>);
+  }
 }
 
 void test_initializer_list() {
-  // const P sorted_arr[] = {{1, 1L}, {2, 2L}, {3, 1L}, {INT_MAX, 1L}};
-  // {
-  //   std::flat_set m{std::pair{1, 1L}, {2, 2L}, {1, 1L}, {INT_MAX, 1L}, {3, 1L}};
+  const int sorted_arr[] = {1, 2, 3, INT_MAX};
+  {
+    std::flat_set m{1, 2, 1, INT_MAX, 3};
 
-  //   ASSERT_SAME_TYPE(decltype(m), std::flat_set<int, long>);
-  //   assert(std::ranges::equal(m, sorted_arr));
-  // }
-  // {
-  //   std::flat_set m(std::sorted_unique, {std::pair{1, 1L}, {2, 2L}, {3, 1L}, {INT_MAX, 1L}});
+    ASSERT_SAME_TYPE(decltype(m), std::flat_set<int>);
+    assert(std::ranges::equal(m, sorted_arr));
+  }
+  {
+    std::flat_set m(std::sorted_unique, {1, 2, 3, INT_MAX});
 
-  //   ASSERT_SAME_TYPE(decltype(m), std::flat_set<int, long>);
-  //   assert(std::ranges::equal(m, sorted_arr));
-  // }
-  // {
-  //   std::flat_set s = {std::make_pair(1, 'a')}; // flat_set(initializer_list<pair<int, char>>)
-  //   ASSERT_SAME_TYPE(decltype(s), std::flat_set<int, char>);
-  //   assert(s.size() == 1);
-  // }
-  // {
-  //   using M = std::flat_set<int, short>;
-  //   M m;
-  //   std::flat_set s = {std::make_pair(m, m)}; // flat_set(initializer_list<pair<M, M>>)
-  //   ASSERT_SAME_TYPE(decltype(s), std::flat_set<M, M>);
-  //   assert(s.size() == 1);
-  //   assert(s[m] == m);
-  // }
+    ASSERT_SAME_TYPE(decltype(m), std::flat_set<int>);
+    assert(std::ranges::equal(m, sorted_arr));
+  }
+  {
+    std::flat_set s = {1};
+    ASSERT_SAME_TYPE(decltype(s), std::flat_set<int>);
+    assert(s.size() == 1);
+  }
+  {
+    using M = std::flat_set<int>;
+    M m;
+    std::flat_set s{m, m}; // flat_set(initializer_list<M>)
+    ASSERT_SAME_TYPE(decltype(s), std::flat_set<M>);
+    assert(s.size() == 1);
+  }
 }
 
 void test_initializer_list_compare() {
-  // const P sorted_arr[] = {{INT_MAX, 1L}, {3, 1L}, {2, 2L}, {1, 1L}};
-  // using C              = std::greater<long long>;
-  // {
-  //   std::flat_set m({std::pair{1, 1L}, {2, 2L}, {1, 1L}, {INT_MAX, 1L}, {3, 1L}}, C());
+  const int sorted_arr[] = {INT_MAX, 3, 2, 1};
+  using C                = std::greater<long>;
+  {
+    std::flat_set m({1, 2, 1, INT_MAX, 3}, C());
 
-  //   ASSERT_SAME_TYPE(decltype(m), std::flat_set<int, long, C>);
-  //   assert(std::ranges::equal(m, sorted_arr));
-  // }
-  // {
-  //   std::flat_set m(std::sorted_unique, {std::pair{INT_MAX, 1L}, {3, 1L}, {2, 2L}, {1, 1L}}, C());
+    ASSERT_SAME_TYPE(decltype(m), std::flat_set<int, C>);
+    assert(std::ranges::equal(m, sorted_arr));
+  }
+  {
+    std::flat_set m(std::sorted_unique, {INT_MAX, 3, 2, 1}, C());
 
-  //   ASSERT_SAME_TYPE(decltype(m), std::flat_set<int, long, C>);
-  //   assert(std::ranges::equal(m, sorted_arr));
-  // }
+    ASSERT_SAME_TYPE(decltype(m), std::flat_set<int, C>);
+    assert(std::ranges::equal(m, sorted_arr));
+  }
 }
 
 void test_from_range() {
-  // std::list<std::pair<int, short>> r     = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 4}, {3, 5}};
-  // const std::pair<int, short> expected[] = {{1, 1}, {2, 2}, {3, 5}, {INT_MAX, 4}};
-  // {
-  //   std::flat_set s(std::from_range, r);
-  //   ASSERT_SAME_TYPE(decltype(s), std::flat_set<int, short, std::less<int>>);
-  //   assert(std::ranges::equal(s, expected));
-  // }
-  // {
-  //   std::flat_set s(std::from_range, r, test_allocator<long>(0, 42));
-  //   ASSERT_SAME_TYPE(
-  //       decltype(s),
-  //       std::flat_set<int,
-  //                     short,
-  //                     std::less<int>,
-  //                     std::vector<int, test_allocator<int>>,
-  //                     std::vector<short, test_allocator<short>>>);
-  //   assert(std::ranges::equal(s, expected));
-  //   assert(s.keys().get_allocator().get_id() == 42);
-  //   assert(s.values().get_allocator().get_id() == 42);
-  // }
+  std::list<int> r     = {1, 2, 1, INT_MAX, 3};
+  const int expected[] = {1, 2, 3, INT_MAX};
+  {
+    std::flat_set s(std::from_range, r);
+    ASSERT_SAME_TYPE(decltype(s), std::flat_set<int, std::less<int>>);
+    assert(std::ranges::equal(s, expected));
+  }
+  {
+    std::flat_set s(std::from_range, r, test_allocator<long>(0, 42));
+    ASSERT_SAME_TYPE(decltype(s), std::flat_set<int, std::less<int>, std::vector<int, test_allocator<int>>>);
+    assert(std::ranges::equal(s, expected));
+    assert(std::move(s).extract().get_allocator().get_id() == 42);
+  }
 }
 
 void test_from_range_compare() {
-  // std::list<std::pair<int, short>> r     = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 4}, {3, 5}};
-  // const std::pair<int, short> expected[] = {{INT_MAX, 4}, {3, 5}, {2, 2}, {1, 1}};
-  // {
-  //   std::flat_set s(std::from_range, r, std::greater<int>());
-  //   ASSERT_SAME_TYPE(decltype(s), std::flat_set<int, short, std::greater<int>>);
-  //   assert(std::ranges::equal(s, expected));
-  // }
-  // {
-  //   std::flat_set s(std::from_range, r, std::greater<int>(), test_allocator<long>(0, 42));
-  //   ASSERT_SAME_TYPE(
-  //       decltype(s),
-  //       std::flat_set<int,
-  //                     short,
-  //                     std::greater<int>,
-  //                     std::vector<int, test_allocator<int>>,
-  //                     std::vector<short, test_allocator<short>>>);
-  //   assert(std::ranges::equal(s, expected));
-  //   assert(s.keys().get_allocator().get_id() == 42);
-  //   assert(s.values().get_allocator().get_id() == 42);
-  // }
+  std::list<int> r     = {1, 2, 1, INT_MAX, 3};
+  const int expected[] = {INT_MAX, 3, 2, 1};
+  {
+    std::flat_set s(std::from_range, r, std::greater<int>());
+    ASSERT_SAME_TYPE(decltype(s), std::flat_set<int, std::greater<int>>);
+    assert(std::ranges::equal(s, expected));
+  }
+  {
+    std::flat_set s(std::from_range, r, std::greater<int>(), test_allocator<long>(0, 42));
+    ASSERT_SAME_TYPE(decltype(s), std::flat_set<int, std::greater<int>, std::vector<int, test_allocator<int>>>);
+    assert(std::ranges::equal(s, expected));
+    assert(std::move(s).extract().get_allocator().get_id() == 42);
+  }
 }
 
-int main(int, char**) {
+void test() {
   // Each test function also tests the sorted_unique-prefixed and allocator-suffixed overloads.
   test_copy();
   test_containers();
@@ -317,6 +308,10 @@ int main(int, char**) {
   test_from_range_compare();
 
   AssociativeContainerDeductionGuidesSfinaeAway<std::flat_set, std::flat_set<int>>();
+}
+
+int main(int, char**) {
+  test();
 
   return 0;
 }
