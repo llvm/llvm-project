@@ -53,7 +53,6 @@ void test() {
   }
   {
     using A1 = explicit_allocator<int>;
-    using A2 = explicit_allocator<char*>;
     {
       std::flat_set<int, DefaultCtableComp, std::vector<int, A1>> m;
       assert(m.empty());
