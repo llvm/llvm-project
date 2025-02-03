@@ -308,6 +308,21 @@ v_cvt_scale_pk8_f32_fp8 v[10:17], s[20:21], v8
 // GFX125X-ERR-NEXT:{{^}}v_cvt_scale_pk8_f32_fp8 v[10:17], s[20:21], v8
 // GFX125X-ERR-NEXT:{{^}}                                  ^
 
+v_cvt_scale_pk8_f16_fp4 v[10:13], s20, v8
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_scale_pk8_f16_fp4 v[10:13], s20, v8
+// GFX125X-ERR-NEXT:{{^}}                                  ^
+
+v_cvt_scale_pk8_bf16_fp4 v[10:13], s20, v8
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_scale_pk8_bf16_fp4 v[10:13], s20, v8
+// GFX125X-ERR-NEXT:{{^}}                                   ^
+
+v_cvt_scale_pk8_f32_fp4 v[10:17], s20, v8
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_cvt_scale_pk8_f32_fp4 v[10:17], s20, v8
+// GFX125X-ERR-NEXT:{{^}}                                  ^
+
 v_cvt_scale_pk16_bf16_bf6 v[10:17], s[20:22], 0xcf00
 // GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // GFX125X-ERR-NEXT:{{^}}v_cvt_scale_pk16_bf16_bf6 v[10:17], s[20:22], 0xcf00
