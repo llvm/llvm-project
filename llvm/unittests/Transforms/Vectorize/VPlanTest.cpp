@@ -661,6 +661,8 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
 
 TEST_F(VPBasicBlockTest, reassociateBlocks) {
   {
+    // Ensure that when we reassociate a basic block, we make sure to update any
+    // references to it in VPWidenPHIRecipes' incoming blocks.
     VPlan &Plan = getPlan();
     VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("VPBB1");
     VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("VPBB2");
@@ -679,6 +681,8 @@ TEST_F(VPBasicBlockTest, reassociateBlocks) {
   }
 
   {
+    // Ensure that we update VPWidenPHIRecipes that are nested inside a
+    // VPRegionBlock.
     VPlan &Plan = getPlan();
     VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("VPBB1");
     VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("VPBB2");

@@ -173,10 +173,7 @@ public:
       Succ->replacePredecessor(Old, New);
 
       // Replace any references to Old in widened phi incoming blocks.
-      while (auto *Region = dyn_cast<VPRegionBlock>(Succ))
-        Succ = Region->getEntry();
-
-      for (auto &R : *cast<VPBasicBlock>(Succ))
+      for (auto &R : Succ->getEntryBasicBlock()->phis())
         if (auto *WidenPhiR = dyn_cast<VPWidenPHIRecipe>(&R))
           for (unsigned I = 0; I < WidenPhiR->getNumOperands(); I++)
             if (WidenPhiR->getIncomingBlock(I) == Old)
