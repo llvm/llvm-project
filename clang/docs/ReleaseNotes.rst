@@ -116,6 +116,8 @@ Improvements to Clang's time-trace
 Improvements to Coverage Mapping
 --------------------------------
 
+- [MC/DC] Nested expressions are handled as individual MC/DC expressions.
+
 Bug Fixes in This Version
 -------------------------
 
