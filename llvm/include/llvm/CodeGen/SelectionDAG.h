@@ -871,7 +871,7 @@ public:
   /// for integers, a type wider than) VT's element type.
   SDValue getSplatBuildVector(EVT VT, const SDLoc &DL, SDValue Op) {
     // VerifySDNode (via InsertNode) checks BUILD_VECTOR later.
-    if (Op.getOpcode() == ISD::UNDEF) {
+    if (Op.isUndef()) {
       assert((VT.getVectorElementType() == Op.getValueType() ||
               (VT.isInteger() &&
                VT.getVectorElementType().bitsLE(Op.getValueType()))) &&
@@ -887,7 +887,7 @@ public:
   // Return a splat ISD::SPLAT_VECTOR node, consisting of Op splatted to all
   // elements.
   SDValue getSplatVector(EVT VT, const SDLoc &DL, SDValue Op) {
-    if (Op.getOpcode() == ISD::UNDEF) {
+    if (Op.isUndef()) {
       assert((VT.getVectorElementType() == Op.getValueType() ||
               (VT.isInteger() &&
                VT.getVectorElementType().bitsLE(Op.getValueType()))) &&
@@ -1127,6 +1127,9 @@ public:
   SDValue getUNDEF(EVT VT) {
     return getNode(ISD::UNDEF, SDLoc(), VT);
   }
+
+  /// Return an Poison node. POISON does not have a useful SDLoc.
+  SDValue getPoison(EVT VT) { return getNode(ISD::POISON, SDLoc(), VT); }
 
   /// Return a node that represents the runtime scaling 'MulImm * RuntimeVL'.
   SDValue getVScale(const SDLoc &DL, EVT VT, APInt MulImm,

@@ -5458,6 +5458,9 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   case ISD::CopyFromReg:
     return true;
 
+  case ISD::POISON:
+    return false;
+
   case ISD::UNDEF:
     return PoisonOnly;
 
@@ -6310,6 +6313,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (OpOpcode == ISD::UNDEF)
       // sext(undef) = 0, because the top bits will all be the same.
       return getConstant(0, DL, VT);
+
+    if (OpOpcode == ISD::POISON)
+      return getPoison(VT);
+
     break;
   case ISD::ZERO_EXTEND:
     assert(VT.isInteger() && N1.getValueType().isInteger() &&
@@ -6330,6 +6337,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (OpOpcode == ISD::UNDEF)
       // zext(undef) = 0, because the top bits will be zero.
       return getConstant(0, DL, VT);
+
+    if (OpOpcode == ISD::POISON)
+      return getPoison(VT);
 
     // Skip unnecessary zext_inreg pattern:
     // (zext (trunc x)) -> x iff the upper bits are known zero.
@@ -6371,6 +6381,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     }
     if (OpOpcode == ISD::UNDEF)
       return getUNDEF(VT);
+    if (OpOpcode == ISD::POISON)
+      return getPoison(VT);
 
     // (ext (trunc x)) -> x
     if (OpOpcode == ISD::TRUNCATE) {
@@ -6406,6 +6418,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     }
     if (OpOpcode == ISD::UNDEF)
       return getUNDEF(VT);
+    if (OpOpcode == ISD::POISON)
+      return getPoison(VT);
     if (OpOpcode == ISD::VSCALE && !NewNodesMustHaveLegalTypes)
       return getVScale(DL, VT,
                        N1.getConstantOperandAPInt(0).trunc(VT.getSizeInBits()));
@@ -6424,6 +6438,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(VT.isInteger() && VT == N1.getValueType() && "Invalid ABS!");
     if (OpOpcode == ISD::UNDEF)
       return getConstant(0, DL, VT);
+    if (OpOpcode == ISD::POISON)
+      return getPoison(VT);
     break;
   case ISD::BSWAP:
     assert(VT.isInteger() && VT == N1.getValueType() && "Invalid BSWAP!");
@@ -6431,6 +6447,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            "BSWAP types must be a multiple of 16 bits!");
     if (OpOpcode == ISD::UNDEF)
       return getUNDEF(VT);
+    if (OpOpcode == ISD::POISON)
+      return getPoison(VT);
     // bswap(bswap(X)) -> X.
     if (OpOpcode == ISD::BSWAP)
       return N1.getOperand(0);
@@ -6439,6 +6457,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(VT.isInteger() && VT == N1.getValueType() && "Invalid BITREVERSE!");
     if (OpOpcode == ISD::UNDEF)
       return getUNDEF(VT);
+    if (OpOpcode == ISD::POISON)
+      return getPoison(VT);
     break;
   case ISD::BITCAST:
     assert(VT.getSizeInBits() == N1.getValueSizeInBits() &&
@@ -6448,6 +6468,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return getNode(ISD::BITCAST, DL, VT, N1.getOperand(0));
     if (OpOpcode == ISD::UNDEF)
       return getUNDEF(VT);
+    if (OpOpcode == ISD::POISON)
+      return getPoison(VT);
     break;
   case ISD::SCALAR_TO_VECTOR:
     assert(VT.isVector() && !N1.getValueType().isVector() &&
@@ -6458,6 +6480,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            "Illegal SCALAR_TO_VECTOR node!");
     if (OpOpcode == ISD::UNDEF)
       return getUNDEF(VT);
+    if (OpOpcode == ISD::POISON)
+      return getPoison(VT);
     // scalar_to_vector(extract_vector_elt V, 0) -> V, top bits are undefined.
     if (OpOpcode == ISD::EXTRACT_VECTOR_ELT &&
         isa<ConstantSDNode>(N1.getOperand(1)) &&
@@ -6469,6 +6493,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     // Negation of an unknown bag of bits is still completely undefined.
     if (OpOpcode == ISD::UNDEF)
       return getUNDEF(VT);
+    if (OpOpcode == ISD::POISON)
+      return getPoison(VT);
 
     if (OpOpcode == ISD::FNEG) // --X -> X
       return N1.getOperand(0);
@@ -9237,6 +9263,11 @@ SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
 
   SDVTList VTs = Indexed ?
     getVTList(VT, Ptr.getValueType(), MVT::Other) : getVTList(VT, MVT::Other);
+
+  // FixedMe: lower poison to undef.
+  if (Ptr.getNode()->isPoison())
+    Ptr = getUNDEF(Ptr.getValueType());
+
   SDValue Ops[] = { Chain, Ptr, Offset };
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::LOAD, VTs, Ops);
@@ -13374,7 +13405,7 @@ void BuildVectorSDNode::recastRawBits(bool IsLittleEndian,
 bool BuildVectorSDNode::isConstant() const {
   for (const SDValue &Op : op_values()) {
     unsigned Opc = Op.getOpcode();
-    if (Opc != ISD::UNDEF && Opc != ISD::Constant && Opc != ISD::ConstantFP)
+    if (!Op.isUndef() && Opc != ISD::Constant && Opc != ISD::ConstantFP)
       return false;
   }
   return true;
