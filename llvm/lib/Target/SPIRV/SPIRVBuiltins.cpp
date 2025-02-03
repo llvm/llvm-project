@@ -2919,8 +2919,6 @@ static SPIRVType *getInlineSpirvType(const TargetExtType *ExtensionType,
         }
         return Instr;
       });
-
-  // GR->getOrCreateSPIRVArrayType();
 }
 
 namespace SPIRV {
