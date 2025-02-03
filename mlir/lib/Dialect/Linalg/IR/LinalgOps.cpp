@@ -3533,7 +3533,8 @@ bool MatmulOp::isValidLhsRhsBroadcastMap(AffineMap bcastMap) {
 
 FailureOr<ArrayAttr> parseIndexingMapsAttr(OpAsmParser &parser) {
   if (parser.parseOptionalKeyword("indexing_maps"))
-    return {nullptr}; // Success in case indexing_maps was not provided.
+    return ArrayAttr{
+        nullptr}; // Success in case indexing_maps was not provided.
 
   ArrayAttr arrayAttr;
   if (parser.parseEqual() || parser.parseAttribute(arrayAttr))
