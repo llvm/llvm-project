@@ -1715,7 +1715,42 @@ public:
 ///
 /// When transforming the output of the strlen idiom, the lccsa phi are
 /// expanded using SCEVExpander as {base scev,+,a} -> (base scev + a * strlen)
-/// and all subsequent uses are replaced.
+/// and all subsequent uses are replaced. For example,
+///
+/// \code{.c}
+///     const char* base = str;
+///     while (*str != '\0')
+///         ++str;
+///     size_t result = str - base;
+/// \endcode
+///
+/// will be transformed as as follow: The idiom will be replaced by a strlen
+/// computation to compute the address of the null terminator of the string.
+///
+/// \code{.c}
+///     const char* base = str;
+///     const char* end = base + strlen(str);
+///     size_t result = end - base;
+/// \endcode
+///
+/// In the case we index by an induction variable, as long as the induction
+/// variable has a constant int increment, we can replace all such indvars
+/// with the closed form computation of strlen
+///
+/// \code{.c}
+///     size_t i = 0;
+///     while (str[i] != '\0')
+///         ++i;
+///     size_t result = i;
+/// \endcode
+///
+/// Will be replaced by
+///
+/// \code{.c}
+///     size_t i = 0 + strlen(str);
+///     size_t result = i;
+/// \endcode
+///
 bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   if (DisableLIRP::All)
     return false;
