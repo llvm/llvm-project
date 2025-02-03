@@ -232,12 +232,12 @@ _LIBCPP_HIDE_FROM_ABI __time_zone __convert_to_time_zone([[maybe_unused]] const 
 #    if _LIBCPP_HAS_EXPERIMENTAL_TZDB
   if constexpr (same_as<_Tp, chrono::sys_info>)
     return {__value.abbrev, __value.offset};
+#      if _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
   else if constexpr (__is_time_point<_Tp> && requires { requires same_as<typename _Tp::clock, chrono::tai_clock>; })
     return {"TAI", chrono::seconds{0}};
-#      if _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
   else if constexpr (__is_specialization_v<_Tp, chrono::zoned_time>)
     return __formatter::__convert_to_time_zone(__value.get_info());
-#      endif
+#      endif // _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
   else
 #    endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
     return {"UTC", chrono::seconds{0}};

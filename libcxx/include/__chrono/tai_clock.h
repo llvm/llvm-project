@@ -14,6 +14,7 @@
 // Enable the contents of the header only when libc++ was built with experimental features enabled.
 #if _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
+#  include <__assert>
 #  include <__chrono/duration.h>
 #  include <__chrono/time_point.h>
 #  include <__chrono/utc_clock.h>

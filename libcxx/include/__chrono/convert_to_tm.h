@@ -36,6 +36,7 @@
 #include <__config>
 #include <__format/format_error.h>
 #include <__memory/addressof.h>
+#include <__type_traits/common_type.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_specialization.h>
 #include <cstdint>
