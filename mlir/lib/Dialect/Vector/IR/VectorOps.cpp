@@ -437,6 +437,9 @@ void VectorDialect::initialize() {
 Operation *VectorDialect::materializeConstant(OpBuilder &builder,
                                               Attribute value, Type type,
                                               Location loc) {
+  if (auto poisonAttr = dyn_cast<ub::PoisonAttrInterface>(value))
+    return builder.create<ub::PoisonOp>(loc, type, poisonAttr);
+
   return arith::ConstantOp::materialize(builder, value, type, loc);
 }
 
@@ -2273,20 +2276,6 @@ LogicalResult foldExtractFromFromElements(ExtractOp extractOp,
   return success();
 }
 
-/// Fold an insert or extract operation into an poison value when a poison index
-/// is found at any dimension of the static position.
-template <typename OpTy>
-LogicalResult
-canonicalizePoisonIndexInsertExtractOp(OpTy op, PatternRewriter &rewriter) {
-  if (auto poisonAttr = foldPoisonIndexInsertExtractOp(
-          op.getContext(), op.getStaticPosition(), OpTy::kPoisonIndex)) {
-    rewriter.replaceOpWithNewOp<ub::PoisonOp>(op, op.getType(), poisonAttr);
-    return success();
-  }
-
-  return failure();
-}
-
 } // namespace
 
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
@@ -2295,7 +2284,6 @@ void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
               ExtractOpFromBroadcast, ExtractOpFromCreateMask>(context);
   results.add(foldExtractFromShapeCastToShapeCast);
   results.add(foldExtractFromFromElements);
-  results.add(canonicalizePoisonIndexInsertExtractOp<ExtractOp>);
 }
 
 static void populateFromInt64AttrArray(ArrayAttr arrayAttr,
@@ -3068,7 +3056,6 @@ void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
   results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat,
               InsertOpConstantFolder>(context);
-  results.add(canonicalizePoisonIndexInsertExtractOp<InsertOp>);
 }
 
 OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {

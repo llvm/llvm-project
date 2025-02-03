@@ -1255,8 +1255,8 @@ func.func @extract_poison_idx(%arg0: vector<16xf32>) -> f32 {
   return %0 : f32
 }
 // CHECK-LABEL: @extract_poison_idx
-//       CHECK:   %[[IDX:.*]] = llvm.mlir.constant(-1 : i64) : i64
-//       CHECK:   llvm.extractelement {{.*}}[%[[IDX]] : i64] : vector<16xf32>
+//       CHECK:   %[[UB:.*]] = ub.poison : f32
+//       CHECK:   return %[[UB]] : f32
 
 // -----
 
