@@ -3,7 +3,7 @@ func first() async {
 }
 
 func second() async {
-    try? await Task.sleep(for: .seconds(10))
+    try? await Task.sleep(for: .seconds(300))
 }
 
 @main struct Main {
