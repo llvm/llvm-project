@@ -3143,8 +3143,9 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         mapperNameStr, *varType.declTypeSpec->derivedTypeSpec().GetScope());
   }
 
-  // Save insert point just after the DeclMapperOp.
-  mlir::OpBuilder::InsertPoint insPt = firOpBuilder.saveInsertionPoint();
+  // Save current insertion point before moving to the module scope to create
+  // the DeclareMapperOp
+  mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
 
   firOpBuilder.setInsertionPointToStart(converter.getModuleOp().getBody());
   auto mlirType = converter.genType(varType.declTypeSpec->derivedTypeSpec());
@@ -3164,9 +3165,6 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processMap(loc, stmtCtx, clauseOps);
   firOpBuilder.create<mlir::omp::DeclareMapperInfoOp>(loc, clauseOps.mapVars);
-
-  // Restore the insert point to just after the DeclareMapperOp.
-  firOpBuilder.restoreInsertionPoint(insPt);
 }
 
 static void
