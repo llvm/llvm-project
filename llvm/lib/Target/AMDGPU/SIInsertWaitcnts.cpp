@@ -53,6 +53,11 @@ static cl::opt<bool>
                                "s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)"),
                       cl::init(false), cl::Hidden);
 
+static cl::opt<bool> ForceEmitZeroLoadFlag(
+    "amdgpu-waitcnt-load-forcezero",
+    cl::desc("Force all waitcnt load counters to wait until 0"),
+    cl::init(false), cl::Hidden);
+
 static cl::opt<bool> SoftwareHazardModeFlag(
     "amdgpu-software-hazard-mode",
     cl::desc("Enable expert scheduling mode 2 for all kernel functions (GFX12+ "
@@ -2252,6 +2257,10 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
     if (ScoreBrackets.hasPendingEvent(BVH_CNT))
       Wait.BvhCnt = 0;
   }
+
+  if (ForceEmitZeroLoadFlag && Wait.LoadCnt != ~0u)
+    Wait.LoadCnt = 0;
+
   // We do allow s_waitcnt in bundle, however, it is better to
   // put the s_waitcnt out of bundle when possible.
   auto InsertPt = MI.getIterator();

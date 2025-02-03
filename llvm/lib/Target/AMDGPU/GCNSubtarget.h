@@ -238,6 +238,7 @@ protected:
   bool HasBitOp3Insts = false;
   bool HasTanhInsts = false;
   bool HasTensorCvtLutInsts = false;
+  bool HasTransposeLoadF4F6Insts = false;
   bool HasPrngInst = false;
   bool HasPermlane16Swap = false;
   bool HasPermlane32Swap = false;
@@ -245,6 +246,7 @@ protected:
   bool HasVMEMtoScalarWriteHazard = false;
   bool HasSMEMtoVectorWriteHazard = false;
   bool HasInstFwdPrefetchBug = false;
+  bool HasVmemPrefInsts = false;
   bool HasSafeSmemPrefetch = false;
   bool HasSafeCUPrefetch = false;
   bool HasVcmpxExecWARHazard = false;
@@ -275,6 +277,7 @@ protected:
   bool HasSWC = false;
   bool HasIndexedResources = false;
   bool HasSGPRVMEM = false;
+  bool HasParallelBitInsts = false;
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -1003,7 +1006,7 @@ public:
 
   bool hasPrefetch() const { return GFX12Insts; }
 
-  bool hasVectorPrefetch() const { return GFX1250Insts; }
+  bool hasVmemPrefInsts() const { return HasVmemPrefInsts; }
 
   bool hasSafeSmemPrefetch() const { return HasSafeSmemPrefetch; }
 
@@ -1431,7 +1434,11 @@ public:
 
   bool hasTanhInsts() const { return HasTanhInsts; }
 
+
   bool hasTensorCvtLutInsts() const { return HasTensorCvtLutInsts; }
+
+  bool hasTransposeLoadF4F6Insts() const { return HasTransposeLoadF4F6Insts; }
+
 
   bool hasAddPC64Inst() const { return GFX1250Insts; }
 
@@ -1453,6 +1460,8 @@ public:
   bool hasIndexedResources() const { return HasIndexedResources; }
 
   bool hasSGPRVMEM() const { return HasSGPRVMEM; }
+
+  bool hasParallelBitInsts() const { return HasParallelBitInsts; }
 
   /// \returns true if the target supports using software to avoid hazards
   /// between VMEM and VALU instructions in some instances.

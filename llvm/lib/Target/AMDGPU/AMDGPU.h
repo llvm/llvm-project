@@ -511,8 +511,8 @@ void initializeAMDGPUSetWavePriorityPass(PassRegistry &);
 void initializeGCNRewritePartialRegUsesPass(llvm::PassRegistry &);
 extern char &GCNRewritePartialRegUsesID;
 
-void initializeAMDGPUWaitSGPRHazardsPass(PassRegistry &);
-extern char &AMDGPUWaitSGPRHazardsID;
+void initializeAMDGPUWaitSGPRHazardsLegacyPass(PassRegistry &);
+extern char &AMDGPUWaitSGPRHazardsLegacyID;
 
 namespace AMDGPU {
 enum TargetIndex {
