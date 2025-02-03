@@ -8323,7 +8323,7 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
                                                 : GEPNoWrapFlags::none(),
                                             I->getDebugLoc());
     }
-    Builder.getInsertBlock()->appendRecipe(VectorPtr);
+    Builder.insert(VectorPtr);
     Ptr = VectorPtr;
   }
   if (LoadInst *Load = dyn_cast<LoadInst>(I))
