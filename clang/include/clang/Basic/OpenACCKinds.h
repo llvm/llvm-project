@@ -188,6 +188,7 @@ inline StreamTy &printOpenACCAtomicKind(StreamTy &Out, OpenACCAtomicKind AK) {
   case OpenACCAtomicKind::None:
     return Out << "<none>";
   }
+  llvm_unreachable("unknown atomic kind");
 }
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
                                              OpenACCAtomicKind AK) {
