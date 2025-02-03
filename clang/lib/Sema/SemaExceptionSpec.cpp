@@ -1434,6 +1434,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::OpenACCCombinedConstructClass:
   case Stmt::OpenACCDataConstructClass:
   case Stmt::OpenACCHostDataConstructClass:
+  case Stmt::OpenACCAtomicConstructClass:
   case Stmt::AttributedStmtClass:
   case Stmt::BreakStmtClass:
   case Stmt::CapturedStmtClass:

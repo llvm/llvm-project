@@ -1846,6 +1846,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OpenACCShutdownConstructClass:
     case Stmt::OpenACCSetConstructClass:
     case Stmt::OpenACCUpdateConstructClass:
+    case Stmt::OpenACCAtomicConstructClass:
     case Stmt::OMPUnrollDirectiveClass:
     case Stmt::OMPMetaDirectiveClass:
     case Stmt::HLSLOutArgExprClass: {
