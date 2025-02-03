@@ -2163,6 +2163,9 @@ SDValue NVPTXTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
                          DAG.getBitcast(MVT::i32, BVOp0),
                          DAG.getBitcast(MVT::i32, BVOp1));
     }
+
+    // Otherwise, let SelectionDAG expand the operand
+    return SDValue();
   }
   return Op;
 }
