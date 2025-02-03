@@ -2009,6 +2009,49 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
 double4 rcp(double4);
 
 //===----------------------------------------------------------------------===//
+// reflect builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn T reflect(T I, T N)
+/// \brief Returns a reflection using an incident ray, \a I, and a surface
+/// normal, \a N.
+/// \param I The incident ray.
+/// \param N The surface normal.
+///
+/// The return value is a floating-point vector that represents the reflection
+/// of the incident ray, \a I, off a surface with the normal \a N.
+///
+/// This function calculates the reflection vector using the following formula:
+/// V = I - 2 * N * dot(I N) .
+///
+/// N must already be normalized in order to achieve the desired result.
+///
+/// The operands must all be a scalar or vector whose component type is
+/// floating-point.
+///
+/// Result type and the type of all operands must be the same type.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline half reflect(half I, half N) {
+  return __detail::reflect_impl(I, N);
+}
+
+const inline float reflect(float I, float N) {
+  return __detail::reflect_impl(I, N);
+}
+
+template <int L>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline vector<half, L> reflect(vector<half, L> I, vector<half, L> N) {
+  return __detail::reflect_vec_impl(I, N);
+}
+
+template <int L>
+const inline vector<float, L> reflect(vector<float, L> I, vector<float, L> N) {
+  return __detail::reflect_vec_impl(I, N);
+}
+
+//===----------------------------------------------------------------------===//
 // rsqrt builtins
 //===----------------------------------------------------------------------===//
 
