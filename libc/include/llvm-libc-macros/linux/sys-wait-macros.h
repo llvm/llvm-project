@@ -11,32 +11,17 @@
 
 #include <linux/wait.h>
 
-// Wait status info macros
-#define __WEXITSTATUS(status) (((status) & 0xff00) >> 8)
-#define __WTERMSIG(status) ((status) & 0x7f)
-#define __WIFEXITED(status) (__WTERMSIG(status) == 0)
-#define __WIFSIGNALED(status) ((__WTERMSIG(status) + 1) >= 2)
-#define __WIFSTOPPED(status) (__WTERMSIG(status) == 0x7f)
-#define __WIFCONTINUED(status) ((status) == __W_CONTINUED)
-#define __WCOREDUMP(status) ((status) & __WCOREFLAG)
-
-// Macros for constructing status values.
-#define __W_EXITCODE(ret, sig) ((ret) << 8 | (sig))
-#define __W_STOPCODE(sig) ((sig) << 8 | 0x7f)
-#define __W_CONTINUED 0xffff
-#define __WCOREFLAG 0x80
-
-#define WCOREDUMP(status) ((status) & __WCOREFLAG)
-#define WEXITSTATUS(status) __WEXITSTATUS(status)
-#define WIFCONTINUED(status) __WIFCONTINUED(status)
-#define WIFEXITED(status) __WIFEXITED(status)
-#define WIFSIGNALED(status) __WIFSIGNALED(status)
-#define WIFSTOPPED(status) __WIFSTOPPED(status)
+#define WCOREDUMP(status) ((status) & WCOREFLAG)
+#define WEXITSTATUS(status) (((status) & 0xff00) >> 8)
+#define WIFCONTINUED(status) ((status) == 0xffff)
+#define WIFEXITED(status) (WTERMSIG(status) == 0)
+#define WIFSIGNALED(status) ((WTERMSIG(status) + 1) >= 2)
+#define WIFSTOPPED(status) (WTERMSIG(status) == 0x7f)
 #define WSTOPSIG(status) WEXITSTATUS(status)
-#define WTERMSIG(status) __WTERMSIG(status)
+#define WTERMSIG(status) ((status) & 0x7f)
 
-#define WCOREFLAG __WCOREFLAG
-#define W_EXITCODE(ret, sig) __W_EXITCODE(ret, sig)
-#define W_STOPCODE(sig) __W_STOPCODE(sig)
+#define WCOREFLAG 0x80
+#define W_EXITCODE(ret, sig) ((ret) << 8 | (sig))
+#define W_STOPCODE(sig) ((sig) << 8 | 0x7f)
 
 #endif // LLVM_LIBC_MACROS_LINUX_SYS_WAIT_MACROS_H
