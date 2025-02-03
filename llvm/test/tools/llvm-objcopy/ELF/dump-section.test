@@ -68,5 +68,3 @@ ProgramHeaders:
 # RUN: not llvm-objcopy --dump-section .text=not_exists/text-section %t 2>&1 \
 # RUN:   | FileCheck -DMSG=%errc_ENOENT %s -DINPUT=%t --check-prefix=NO-SUCH-PATH
 # NO-SUCH-PATH: error: 'not_exists/text-section': [[MSG]]
-
-
