@@ -242,8 +242,9 @@ bool SMEPeepholeOpt::optimizeStartStopPairs(
 //   ->  %9:zpr2mul2 = FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO %5:zpr, %8:zpr
 //
 bool SMEPeepholeOpt::visitRegSequence(MachineInstr &MI) {
-  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  assert(MF.getRegInfo().isSSA() && "Expected to be run on SSA form!");
 
+  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   switch (MRI.getRegClass(MI.getOperand(0).getReg())->getID()) {
   case AArch64::ZPR2RegClassID:
   case AArch64::ZPR4RegClassID:
@@ -263,9 +264,6 @@ bool SMEPeepholeOpt::visitRegSequence(MachineInstr &MI) {
   MCRegister SubReg = MCRegister::NoRegister;
   for (unsigned I = 1; I < MI.getNumOperands(); I += 2) {
     MachineOperand &MO = MI.getOperand(I);
-
-    if (!MI.getOperand(I).isReg())
-      return false;
 
     MachineOperand *Def = MRI.getOneDef(MO.getReg());
     if (!Def || !Def->getParent()->isCopy())

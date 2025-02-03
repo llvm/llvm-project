@@ -36,14 +36,15 @@ let WantsRoot = true in
 def am_sme_indexed_b4 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<0, 15>">;
 
 // The FORM_TRANSPOSED_REG_TUPLE pseudos defined below are intended to
-// improve register allocation for intrinsics which use strided and contiguous
-// multi-vector registers, avoiding unnecessary copies.
-// If the operands of the pseudo are copies where the source register is in
-// the StridedOrContiguous class, the pseudo is used to provide a hint to the
-// register allocator suggesting a contigious multi-vector register which
-// matches the subregister sequence used by the operands.
-// If the operands do not match this pattern, the pseudos are expanded
-// to a REG_SEQUENCE using the post-isel hook.
+// improve register allocation for intrinsics which use strided and
+// contiguous multi-vector registers, avoiding unnecessary copies.
+// The SMEPeepholeOpt pass will replace a REG_SEQUENCE instruction with the
+// FORM_TRANSPOSED_REG_TUPLE pseudo if the operands are copies where the
+// source register is in the StridedOrContiguous class. The operands in the
+// sequence must all have the same subreg index.
+// The pseudo is then used to provide a hint to the register allocator
+// suggesting a contigious multi-vector register which matches the
+// subregister sequence used by the operands.
 
 def FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO :
   Pseudo<(outs ZPR2:$tup),
