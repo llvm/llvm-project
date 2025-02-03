@@ -113,6 +113,10 @@ Attribute Changes in Clang
 Improvements to Clang's diagnostics
 -----------------------------------
 
+- Improve the diagnostics for deleted default constructor errors for C++ class
+  initializer lists that don't explicitly list a class member and thus attempt
+  to implicitly default construct that member.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -218,10 +222,6 @@ Code Completion
 
 Static Analyzer
 ---------------
-
-- Clang currently support extending lifetime of object bound to 
-  reference members of aggregates in CFG and ExprEngine, that are
-  created from default member initializer.
 
 New features
 ^^^^^^^^^^^^
