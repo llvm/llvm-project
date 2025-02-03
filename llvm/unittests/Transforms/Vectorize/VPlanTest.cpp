@@ -659,6 +659,45 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
   }
 }
 
+TEST_F(VPBasicBlockTest, reassociateBlocks) {
+  {
+    VPlan &Plan = getPlan();
+    VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("VPBB1");
+    VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("VPBB2");
+    VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+
+    auto *WidenPhi = new VPWidenPHIRecipe(nullptr);
+    IntegerType *Int32 = IntegerType::get(C, 32);
+    VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+    WidenPhi->addIncoming(Val, VPBB1);
+    VPBB2->appendRecipe(WidenPhi);
+
+    VPBasicBlock *VPBBNew = Plan.createVPBasicBlock("VPBBNew");
+    VPBlockUtils::reassociateBlocks(VPBB1, VPBBNew);
+    EXPECT_EQ(VPBB2->getSinglePredecessor(), VPBBNew);
+    EXPECT_EQ(WidenPhi->getIncomingBlock(0), VPBBNew);
+  }
+
+  {
+    VPlan &Plan = getPlan();
+    VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("VPBB1");
+    VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("VPBB2");
+    VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
+    VPBlockUtils::connectBlocks(VPBB1, R1);
+
+    auto *WidenPhi = new VPWidenPHIRecipe(nullptr);
+    IntegerType *Int32 = IntegerType::get(C, 32);
+    VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+    WidenPhi->addIncoming(Val, VPBB1);
+    VPBB2->appendRecipe(WidenPhi);
+
+    VPBasicBlock *VPBBNew = Plan.createVPBasicBlock("VPBBNew");
+    VPBlockUtils::reassociateBlocks(VPBB1, VPBBNew);
+    EXPECT_EQ(R1->getSinglePredecessor(), VPBBNew);
+    EXPECT_EQ(WidenPhi->getIncomingBlock(0), VPBBNew);
+  }
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 TEST_F(VPBasicBlockTest, print) {
   VPInstruction *TC = new VPInstruction(Instruction::Add, {});
