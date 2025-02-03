@@ -402,7 +402,6 @@ namespace UnionInBase {
   static_assert(return_uninit().a.x == 2);
 }
 
-/// FIXME: Our diagnostic here is a little off.
 namespace One {
   struct A { long x; };
 
@@ -421,4 +420,33 @@ namespace One {
                       // both-note {{constinit}}
 }
 
+namespace CopyAssign {
+  union A {
+    int a;
+    int b;
+  };
+
+  constexpr int f() {
+    A a{12};
+    A b{13};
+
+    b.b = 32;
+    b = a ;
+    return b.a;
+  }
+  static_assert(f()== 12);
+
+
+  constexpr int f2() {
+    A a{12};
+    A b{13};
+
+    b.b = 32;
+    b = a ;
+    return b.b; // both-note {{read of member 'b' of union with active member 'a'}}
+  }
+  static_assert(f2() == 12); // both-error {{not an integral constant expression}} \
+                             // both-note {{in call to}}
+
+}
 #endif

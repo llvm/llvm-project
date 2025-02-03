@@ -4676,7 +4676,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       OCE && OCE->isAssignmentOp()) {
     // Just like with regular assignments, we need to special-case assignment
     // operators here and evaluate the RHS (the second arg) before the LHS (the
-    // first arg. We fix this by using a Flip op later.
+    // first arg). We fix this by using a Flip op later.
     assert(Args.size() == 2);
     IsAssignmentOperatorCall = true;
     std::reverse(Args.begin(), Args.end());
@@ -5665,6 +5665,21 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::compileUnionCopyAssignmentOperator(
+    const CXXMethodDecl *MD) {
+  if (!this->emitThis(MD))
+    return false;
+
+  auto PVD = MD->getParamDecl(0);
+  ParamOffset PO = this->Params[PVD]; // Must exist.
+
+  if (!this->emitGetParam(PT_Ptr, PO.Offset, MD))
+    return false;
+
+  return this->emitMemcpy(MD) && this->emitRet(PT_Ptr, MD);
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
   // Classify the return type.
   ReturnType = this->classify(F->getReturnType());
@@ -5675,9 +5690,15 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
     return this->compileDestructor(Dtor);
 
   // Emit custom code if this is a lambda static invoker.
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(F);
-      MD && MD->isLambdaStaticInvoker())
-    return this->emitLambdaStaticInvokerBody(MD);
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(F)) {
+    const RecordDecl *RD = MD->getParent();
+
+    if (RD->isUnion() && MD->isCopyAssignmentOperator())
+      return this->compileUnionCopyAssignmentOperator(MD);
+
+    if (MD->isLambdaStaticInvoker())
+      return this->emitLambdaStaticInvokerBody(MD);
+  }
 
   // Regular functions.
   if (const auto *Body = F->getBody())
