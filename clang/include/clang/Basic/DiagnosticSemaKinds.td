@@ -482,6 +482,8 @@ def ext_use_out_of_scope_declaration : ExtWarn<
   InGroup<DiagGroup<"out-of-scope-function">>;
 def err_inline_non_function : Error<
   "'inline' can only appear on functions%select{| and non-local variables}0">;
+def warn_ms_inline_non_function : ExtWarn<err_inline_non_function.Summary>,
+  InGroup<MicrosoftInlineOnNonFunction>;
 def err_noreturn_non_function : Error<
   "'_Noreturn' can only appear on functions">;
 def warn_qual_return_type : Warning<
@@ -5944,6 +5946,9 @@ def ext_pack_indexing : ExtWarn<
 def warn_cxx23_pack_indexing : Warning<
   "pack indexing is incompatible with C++ standards before C++2c">,
   DefaultIgnore, InGroup<CXXPre26Compat>;
+
+def err_pack_outside_template : Error<
+  "pack declaration outside of template">;
 
 def err_fold_expression_packs_both_sides : Error<
   "binary fold expression has unexpanded parameter packs in both operands">;
@@ -12898,6 +12903,48 @@ def err_acc_update_as_body
     : Error<"OpenACC 'update' construct may not appear in place of the "
             "statement following a%select{n if statement| while statement| do "
             "statement| switch statement| label statement}0">;
+def err_acc_invalid_atomic
+    : Error<"statement associated with OpenACC 'atomic%select{| "
+            "%1}0' directive is invalid">;
+def note_acc_atomic_expr_must_be
+    : Note<"expected "
+           "%enum_select<OACCAtomicExpr>{%Assign{assignment}|%UnaryCompAssign{"
+           "assignment, compound assignment, increment, or decrement}}0 "
+           "expression">;
+def note_acc_atomic_unsupported_unary_operator
+    : Note<"unary operator not supported, only increment and decrement "
+           "operations permitted">;
+def note_acc_atomic_unsupported_binary_operator
+    : Note<"binary operator not supported, only +, *, -, /, &, ^, |, <<, or >> "
+           "are permitted">;
+def note_acc_atomic_unsupported_compound_binary_operator
+    : Note<"compound binary operator not supported, only +=, *=, -=, /=, &=, "
+           "^=, |=, <<=, or >>= are permitted">;
+
+def note_acc_atomic_operand_lvalue_scalar
+    : Note<"%select{left |right |}0operand to "
+           "%enum_select<OACCAtomicOpKind>{%Assign{assignment}|%CompoundAssign{"
+           "compound assignment}|%Inc{increment}|"
+           "%Dec{decrement}}1 "
+           "expression must be "
+           "%enum_select<OACCLValScalar>{%LVal{an l-value}|%Scalar{of scalar "
+           "type (was %3)}}2">;
+def note_acc_atomic_too_many_stmts
+    : Note<"'atomic capture' with a compound statement only supports two "
+           "statements">;
+def note_acc_atomic_expected_binop : Note<"expected binary operation on right "
+                                          "hand side of assignment operator">;
+def note_acc_atomic_mismatch_operand
+    : Note<"left hand side of assignment operation('%0') must match one side "
+           "of the sub-operation on the right hand side('%1' and '%2')">;
+def note_acc_atomic_mismatch_compound_operand
+    : Note<"variable %select{|in unary expression|on right hand side of "
+           "assignment|on left hand side of assignment|on left hand side of "
+           "compound assignment|on left hand side of assignment}2('%3') must "
+           "match variable used %select{|in unary expression|on right hand "
+           "side of assignment|<not possible>|on left hand side of compound "
+           "assignment|on left hand side of assignment}0('%1') from the first "
+           "statement">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
