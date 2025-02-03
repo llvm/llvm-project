@@ -4697,7 +4697,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     // since we can't lower that type.
     unsigned Scale =
         AccumEVT.getScalarSizeInBits() / InputEVT.getScalarSizeInBits();
-    if (VFMinValue / Scale == 1)
+    if (VFMinValue == Scale)
       return Invalid;
   }
   if (VF.isFixed() && (!ST->isNeonAvailable() || !ST->hasDotProd()))
