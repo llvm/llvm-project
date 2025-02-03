@@ -158,35 +158,16 @@ bool ClangCommand::canCache() const {
 
 Error ClangCommand::writeExecuteOutput(StringRef CachedBuffer) {
   StringRef OutputFilename = Command.getOutputFilenames().front();
-  std::error_code EC;
-  raw_fd_ostream Out(OutputFilename, EC);
-  if (EC) {
-    Error E = createStringError(EC, Twine("Failed to open ") + OutputFilename +
-                                        " : " + EC.message() + "\n");
-    return E;
-  }
-
-  Out.write(CachedBuffer.data(), CachedBuffer.size());
-  Out.close();
-  if (Out.has_error()) {
-    Error E = createStringError(EC, Twine("Failed to write ") + OutputFilename +
-                                        " : " + EC.message() + "\n");
-    return E;
-  }
-
-  return Error::success();
+  return CachedCommandAdaptor::writeUniqueExecuteOutput(OutputFilename,
+                                                        CachedBuffer);
 }
 
 Expected<StringRef> ClangCommand::readExecuteOutput() {
-  StringRef OutputFilename = Command.getOutputFilenames().front();
-  ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
-      MemoryBuffer::getFile(OutputFilename);
-  if (!MBOrErr) {
-    std::error_code EC = MBOrErr.getError();
-    return createStringError(EC, Twine("Failed to open ") + OutputFilename +
-                                     " : " + EC.message() + "\n");
-  }
-  Output = std::move(*MBOrErr);
+  auto MaybeBuffer = CachedCommandAdaptor::readUniqueExecuteOutput(
+      Command.getOutputFilenames().front());
+  if (!MaybeBuffer)
+    return MaybeBuffer.takeError();
+  Output = std::move(*MaybeBuffer);
   return Output->getBuffer();
 }
 

@@ -37,6 +37,7 @@
  ******************************************************************************/
 
 #include "comgr-compiler.h"
+#include "comgr-cache-bundler-command.h"
 #include "comgr-cache.h"
 #include "comgr-clang-command.h"
 #include "comgr-device-libs.h"
@@ -1255,6 +1256,7 @@ amd_comgr_status_t AMDGPUCompiler::unbundle() {
   }
 
   // Collect bitcode memory buffers from bitcodes, bundles, and archives
+  auto Cache = CommandCache::get(LogS);
   for (auto *Input : InSet->DataObjects) {
 
     const char *FileExtension;
@@ -1330,29 +1332,15 @@ amd_comgr_status_t AMDGPUCompiler::unbundle() {
       }
     }
 
-    OffloadBundler Bundler(BundlerConfig);
-
-    switch (Input->DataKind) {
-    case AMD_COMGR_DATA_KIND_BC_BUNDLE: {
-      llvm::Error Err = Bundler.UnbundleFiles();
-      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
-                                  "Unbundle Bitcodes Error: ");
-      break;
-    }
-    case AMD_COMGR_DATA_KIND_AR_BUNDLE: {
-      llvm::Error Err = Bundler.UnbundleArchive();
-      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
-                                  "Unbundle Archives Error: ");
-      break;
-    }
-    case AMD_COMGR_DATA_KIND_OBJ_BUNDLE: {
-      llvm::Error Err = Bundler.UnbundleFiles();
-      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
-                                  "Unbundle Objects Error: ");
-      break;
-    }
-    default:
-      llvm_unreachable("invalid bundle type");
+    UnbundleCommand Unbundle(Input->DataKind, BundlerConfig);
+    if (Cache) {
+      if (auto Status = Cache->execute(Unbundle, LogS)) {
+        return Status;
+      }
+    } else {
+      if (auto Status = Unbundle.execute(LogS)) {
+        return Status;
+      }
     }
 
     // Add new bitcodes to OutSetT
