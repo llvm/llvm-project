@@ -135,6 +135,9 @@ static cl::opt<unsigned> SwitchPeelThreshold(
              "switch statement. A value greater than 100 will void this "
              "optimization"));
 
+// FIXME : This is a temporary flag, and is used to help transition to
+// performing lowering the proper way using the new PARTIAL_REDUCE_MLA ISD
+// nodes.
 static cl::opt<bool> NewPartialReduceLowering(
     "new-partial-reduce-lowering", cl::init(false), cl::ReallyHidden,
     cl::desc("Use the new method of lowering partial reductions."));

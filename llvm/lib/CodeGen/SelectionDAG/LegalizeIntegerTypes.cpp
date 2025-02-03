@@ -2106,7 +2106,7 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
     break;
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA:
-    Res = PromoteIntOp_PARTIAL_REDUCE_MLA(N);
+    Res = PromoteIntOp_PARTIAL_REDUCE_MLA(N, OpNo);
     break;
   }
 
@@ -2890,10 +2890,11 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N,
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
-SDValue DAGTypeLegalizer::PromoteIntOp_PARTIAL_REDUCE_MLA(SDNode *N) {
-  SDValue Res = DAG.expandPartialReduceMLA(N);
-  ReplaceValueWith(SDValue(N, 0), Res);
-  return SDValue();
+SDValue DAGTypeLegalizer::PromoteIntOp_PARTIAL_REDUCE_MLA(SDNode *N,
+                                                          unsigned OpNo) {
+  SmallVector<SDValue, 1> NewOps(N->ops());
+  NewOps[OpNo] = GetPromotedInteger(N->getOperand(OpNo));
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
 //===----------------------------------------------------------------------===//
@@ -6212,9 +6213,13 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_FIND_LAST_ACTIVE(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_PARTIAL_REDUCE_MLA(SDNode *N) {
-  SDValue Res = DAG.expandPartialReduceMLA(N);
-  ReplaceValueWith(SDValue(N, 0), Res);
-  return SDValue();
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  SDValue ExtAcc = GetPromotedInteger(N->getOperand(0));
+  SDValue V = DAG.getNode(N->getOpcode(), DL, NVT, ExtAcc, N->getOperand(1),
+                          N->getOperand(2));
+  return V;
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_INSERT_VECTOR_ELT(SDNode *N) {

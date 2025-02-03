@@ -12188,3 +12188,41 @@ SDValue TargetLowering::scalarizeExtractedVectorLoad(EVT ResultVT,
 
   return Load;
 }
+
+SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
+                                               SelectionDAG &DAG) const {
+  SDLoc DL(N);
+  SDValue Acc = N->getOperand(0);
+  SDValue Input1 = N->getOperand(1);
+  SDValue Input2 = N->getOperand(2);
+
+  EVT ReducedTy = Acc.getValueType();
+  EVT FullTy = Input1.getValueType();
+
+  auto ExtendToAccEltVT = [&](SDValue V) {
+    unsigned ExtOpc = N->getOpcode() == ISD::PARTIAL_REDUCE_UMLA
+                          ? ISD::ZERO_EXTEND
+                          : ISD::SIGN_EXTEND;
+    EVT ExtVT = V.getValueType().changeVectorElementType(
+        Acc.getValueType().getVectorElementType());
+    if (ExtVT != FullTy)
+      return DAG.getNode(ExtOpc, DL, ExtVT, V);
+    return V;
+  };
+
+  SDValue Input;
+  APInt ConstantOne;
+  if (!ISD::isConstantSplatVector(Input2.getNode(), ConstantOne) ||
+      !ConstantOne.isOne()) {
+    EVT NewVT =
+        EVT::getVectorVT(*DAG.getContext(), ReducedTy.getVectorElementType(),
+                         FullTy.getVectorElementCount());
+    Input1 = ExtendToAccEltVT(Input1);
+    Input2 = ExtendToAccEltVT(Input2);
+    Input = DAG.getNode(ISD::MUL, DL, NewVT, Input1, Input2);
+  } else {
+    Input = ExtendToAccEltVT(Input1);
+  }
+
+  return DAG.getPartialReduceAdd(DL, ReducedTy, Acc, Input);
+}

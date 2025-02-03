@@ -3186,7 +3186,7 @@ void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
 }
 
 void DAGTypeLegalizer::SplitVecRes_PARTIAL_REDUCE_MLA(SDNode *N) {
-  SDValue Res = DAG.expandPartialReduceMLA(N);
+  SDValue Res = TLI.expandPartialReduceMLA(N, DAG);
   ReplaceValueWith(SDValue(N, 0), Res);
 }
 
@@ -4447,7 +4447,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_HISTOGRAM(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_PARTIAL_REDUCE_MLA(SDNode *N) {
-  SDValue Res = DAG.expandPartialReduceMLA(N);
+  SDValue Res = TLI.expandPartialReduceMLA(N, DAG);
   ReplaceValueWith(SDValue(N, 0), Res);
   return SDValue();
 }

@@ -5634,6 +5634,10 @@ public:
                                        LoadSDNode *OriginalLoad,
                                        SelectionDAG &DAG) const;
 
+  // Expands PARTIAL_REDUCE_S/UMLA nodes to a series of simpler operations,
+  // consisting of zext/sext, extract_subvector, mul and add operations.
+  SDValue expandPartialReduceMLA(SDNode *N, SelectionDAG &DAG) const;
+
 private:
   SDValue foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
                            const SDLoc &DL, DAGCombinerInfo &DCI) const;

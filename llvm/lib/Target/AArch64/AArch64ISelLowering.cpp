@@ -1571,6 +1571,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::MSTORE, VT, Custom);
     }
 
+    for (MVT VT : MVT::scalable_vector_valuetypes()) {
+      setOperationAction(ISD::PARTIAL_REDUCE_UMLA, VT, Expand);
+      setOperationAction(ISD::PARTIAL_REDUCE_SMLA, VT, Expand);
+    }
+
     // Firstly, exclude all scalable vector extending loads/truncating stores,
     // include both integer and floating scalable vector.
     for (MVT VT : MVT::scalable_vector_valuetypes()) {
