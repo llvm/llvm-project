@@ -2256,17 +2256,24 @@ SDValue NVPTXTargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
   }
 
   if (VectorVT == MVT::v2f32) {
+    auto GetOperand = [&DAG, &DL](SDValue Op, SDValue Index) {
+      if (const auto *ConstIdx = dyn_cast<ConstantSDNode>(Index))
+        return Op.getOperand(ConstIdx->getZExtValue());
+      SDValue E0 = Op.getOperand(0);
+      SDValue E1 = Op.getOperand(1);
+      return DAG.getSelectCC(DL, Index, DAG.getIntPtrConstant(0, DL), E0, E1,
+                             ISD::CondCode::SETEQ);
+    };
     if (Vector.getOpcode() == ISD::BITCAST) {
       // peek through v2f32 = bitcast (i64 = build_pair (i32 A, i32 B))
       // where A:i32, B:i32 = CopyFromReg (i64 = F32X2 Operation ...)
       SDValue Pair = Vector.getOperand(0);
       assert(Pair.getOpcode() == ISD::BUILD_PAIR);
-      return DAG.getNode(
-          ISD::BITCAST, DL, Op.getValueType(),
-          Pair.getOperand(cast<ConstantSDNode>(Index)->getZExtValue()));
+      return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(),
+                         GetOperand(Pair, Index));
     }
     if (Vector.getOpcode() == ISD::BUILD_VECTOR)
-      return Vector.getOperand(cast<ConstantSDNode>(Index)->getZExtValue());
+      return GetOperand(Vector, Index);
   }
 
   // Constant index will be matched by tablegen.
