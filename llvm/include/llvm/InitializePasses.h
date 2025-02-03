@@ -266,7 +266,7 @@ void initializeRegionOnlyPrinterPass(PassRegistry &);
 void initializeRegionOnlyViewerPass(PassRegistry &);
 void initializeRegionPrinterPass(PassRegistry &);
 void initializeRegionViewerPass(PassRegistry &);
-void initializeRegisterCoalescerPass(PassRegistry &);
+void initializeRegisterCoalescerLegacyPass(PassRegistry &);
 void initializeRemoveLoadsIntoFakeUsesPass(PassRegistry &);
 void initializeRemoveRedundantDebugValuesPass(PassRegistry &);
 void initializeRenameIndependentSubregsPass(PassRegistry &);
