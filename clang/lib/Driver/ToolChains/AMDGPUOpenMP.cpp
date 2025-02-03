@@ -37,6 +37,16 @@ AMDGPUOpenMPToolChain::AMDGPUOpenMPToolChain(const Driver &D,
   // Lookup binaries into the driver directory, this is used to
   // discover the 'amdgpu-arch' executable.
   getProgramPaths().push_back(getDriver().Dir);
+  // Diagnose unsupported sanitizer options only once.
+  if (!Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
+                    true))
+    return;
+  for (auto *A : Args.filtered(options::OPT_fsanitize_EQ)) {
+    SanitizerMask K = parseSanitizerValue(A->getValue(), /*AllowGroups=*/false);
+    if (K != SanitizerKind::Address)
+      D.getDiags().Report(clang::diag::warn_drv_unsupported_option_for_target)
+          << A->getAsString(Args) << getTriple().str();
+  }
 }
 
 void AMDGPUOpenMPToolChain::addClangTargetOptions(
@@ -70,6 +80,33 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
     DAL = new DerivedArgList(Args.getBaseArgs());
 
   const OptTable &Opts = getDriver().getOpts();
+
+  if (DeviceOffloadKind == Action::OFK_OpenMP) {
+    for (Arg *A : Args) {
+      if (!shouldSkipSanitizeOption(*this, Args, BoundArch, A) &&
+          !llvm::is_contained(*DAL, A))
+        DAL->append(A);
+    }
+
+    if (!DAL->hasArg(options::OPT_march_EQ)) {
+      StringRef Arch = BoundArch;
+      if (Arch.empty()) {
+        auto ArchsOrErr = getSystemGPUArchs(Args);
+        if (!ArchsOrErr) {
+          std::string ErrMsg =
+              llvm::formatv("{0}", llvm::fmt_consume(ArchsOrErr.takeError()));
+          getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
+              << llvm::Triple::getArchTypeName(getArch()) << ErrMsg << "-march";
+          Arch = OffloadArchToString(OffloadArch::HIPDefault);
+        } else {
+          Arch = Args.MakeArgString(ArchsOrErr->front());
+        }
+      }
+      DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ), Arch);
+    }
+
+    return DAL;
+  }
 
   for (Arg *A : Args) {
     if (!llvm::is_contained(*DAL, A))
