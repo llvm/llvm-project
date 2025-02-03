@@ -39,7 +39,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -395,7 +394,6 @@ void flushReports(llvm::Timer *BugReporterTimer, BugReporter &BR) {
     BugReporterTimer->stopTimer();
 }
 } // namespace
-
 
 //===----------------------------------------------------------------------===//
 // AnalysisConsumer implementation.
