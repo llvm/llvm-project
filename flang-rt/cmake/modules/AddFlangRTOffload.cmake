@@ -40,8 +40,7 @@ macro(enable_cuda_compilation name files)
         )
     endif()
     set_source_files_properties(${files} PROPERTIES COMPILE_OPTIONS
-      "${CUDA_COMPILE_OPTIONS}"
-      )
+      "${CUDA_COMPILE_OPTIONS}")
 
     # Create a .a library consisting of CUDA PTX.
     # This is different from a regular static library. The CUDA_PTX_COMPILATION

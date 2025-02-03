@@ -6,11 +6,10 @@
 #
 #===------------------------------------------------------------------------===#
 
-add_subdirectory(FortranFloat128Math)
-add_subdirectory(flang_rt)
-
-if (FLANG_RT_ENABLE_CUF)
-  add_subdirectory(flang_rt/CUDA)
+add_subdirectory(quadmath)
+add_subdirectory(runtime)
+if (FLANG_RT_INCLUDE_CUF)
+  add_subdirectory(cuda)
 endif()
 
 if (FLANG_RT_INCLUDE_TESTS)

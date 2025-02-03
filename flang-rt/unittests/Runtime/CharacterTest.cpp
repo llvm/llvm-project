@@ -11,7 +11,7 @@
 
 #include "flang/Runtime/character.h"
 #include "gtest/gtest.h"
-#include "flang-rt/descriptor.h"
+#include "flang-rt/runtime/descriptor.h"
 #include <cstring>
 #include <functional>
 #include <tuple>

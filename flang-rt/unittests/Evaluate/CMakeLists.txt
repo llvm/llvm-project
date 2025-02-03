@@ -10,12 +10,12 @@ add_flangrt_nongtest_unittest(reshape
   reshape.cpp
 
   LINK_LIBS
-    flang_rt.unittest
+    flang_rt.runtime.unittest
 )
 
 add_flangrt_nongtest_unittest(ISO-Fortran-binding
   ISO-Fortran-binding.cpp
 
   LINK_LIBS
-    flang_rt.unittest
+    flang_rt.runtime.unittest
 )

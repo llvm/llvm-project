@@ -8,8 +8,8 @@
 
 #include "flang/Runtime/random.h"
 #include "gtest/gtest.h"
-#include "flang-rt/descriptor.h"
-#include "flang-rt/type-code.h"
+#include "flang-rt/runtime/descriptor.h"
+#include "flang-rt/runtime/type-code.h"
 #include <cmath>
 
 using namespace Fortran::runtime;

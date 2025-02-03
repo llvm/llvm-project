@@ -9,7 +9,7 @@
 #include "flang/Runtime/support.h"
 #include "tools.h"
 #include "gtest/gtest.h"
-#include "flang-rt/descriptor.h"
+#include "flang-rt/runtime/descriptor.h"
 
 using namespace Fortran::runtime;
 using Fortran::common::TypeCategory;

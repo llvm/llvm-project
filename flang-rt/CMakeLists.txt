@@ -198,8 +198,8 @@ else ()
 endif ()
 
 
-option(FLANG_RT_ENABLE_CUF "Compile CUDA Fortran runtime sources" OFF)
-if (FLANG_RT_ENABLE_CUF)
+option(FLANG_RT_INCLUDE_CUF "Build the CUDA Fortran runtime (libflang_rt.cuda.a)" OFF)
+if (FLANG_RT_INCLUDE_CUF)
   find_package(CUDAToolkit REQUIRED)
 endif()
 
@@ -269,6 +269,10 @@ add_custom_target(flang-rt)
 ###################
 
 add_subdirectory(lib)
+
+if (LLVM_INCLUDE_EXAMPLES)
+  add_subdirectory(examples)
+endif ()
 
 if (FLANG_RT_INCLUDE_TESTS)
   add_subdirectory(unittests)
