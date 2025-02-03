@@ -840,6 +840,20 @@ def ROCDL_CvtF32Bf8Op :
   }];
 }
 
+def ROCDL_CvtScaleF32Bf8Op :
+    ROCDL_IntrOp<"cvt.scalef32.f32.bf8", [], [], [Pure], 1>,
+    Arguments<(ins I32:$src, F32: $scale, I32:$byteSel)> {
+  let summary = "Scale and convert bf8 to f32";
+  let description = [{
+    Scale `src` by the exponent in `scale` then convert 8-bit bf8 value 
+    from the `byteSel`th bit of `src` to fp32.
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `[` $byteSel `]` `,` $scale `:` type($res)
+  }];
+}
+
+
 def ROCDL_CvtF32Fp8Op :
     ROCDL_IntrOp<"cvt.f32.fp8", [], [], [Pure], 1>,
     Arguments<(ins I32:$srcA, I32:$byteSel)> {
@@ -851,6 +865,22 @@ def ROCDL_CvtF32Fp8Op :
     attr-dict $srcA `[` $byteSel `]` `:` type($res)
   }];
 }
+
+
+def ROCDL_CvtScaleF32Fp8Op :
+    ROCDL_IntrOp<"cvt.scalef32.f32.fp8", [], [], [Pure], 1>,
+    Arguments<(ins I32:$src, F32: $scale, I32:$byteSel)> {
+  let summary = "Scale and convert fp8 to f32";
+  let description = [{
+    Scale `src` by the exponent in `scale` then convert 8-bit fp8 value
+    from the `byteSel`th bit of `src` to fp32.
+
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `[` $byteSel `]` `,` $scale `:` type($res)
+  }];
+}
+
 
 def ROCDL_CvtPkBf8F32Op :
     ROCDL_IntrOp<"cvt.pk.bf8.f32", [], [], [Pure], 1>,
