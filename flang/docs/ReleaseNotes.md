@@ -36,7 +36,12 @@ page](https://llvm.org/releases/).
 
 ## Build System Changes
 
- * FortranRuntime has been renamed to `flang_rt`.
+ * The FortranRuntime library has been renamed to `flang_rt.runtime`.
+
+ * The FortranFloat128Math library has been renamed to `flang_rt.quadmath`.
+
+ * The CufRuntime_cuda_${version} library has been renamed to
+   `flang_rt.cuda_${version}`.
 
 ## New Issues Found
 

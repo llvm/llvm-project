@@ -60,14 +60,14 @@ if (FLANG_INCLUDE_RUNTIME)
     NonGTestTesting
     FortranSemantics
     FortranEvaluate
-    flang_rt
+    flang_rt.runtime
   )
 
   add_flang_nongtest_unittest(ISO-Fortran-binding
     NonGTestTesting
     FortranEvaluate
     FortranSemantics
-    flang_rt
+    flang_rt.runtime
   )
 endif ()
 
