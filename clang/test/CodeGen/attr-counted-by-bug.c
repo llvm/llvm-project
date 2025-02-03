@@ -60,22 +60,22 @@ struct {
   char priv[] __attribute__((__counted_by__(priv_len)));
 } x;
 
-// SANITIZE-WITH-ATTR-LABEL: define dso_local i64 @falcon_reconfigure_xmac_core(
+// SANITIZE-WITH-ATTR-LABEL: define dso_local i64 @test2(
 // SANITIZE-WITH-ATTR-SAME: ) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // SANITIZE-WITH-ATTR-NEXT:  [[ENTRY:.*:]]
 // SANITIZE-WITH-ATTR-NEXT:    ret i64 -1
 //
-// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local i64 @falcon_reconfigure_xmac_core(
+// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local i64 @test2(
 // NO-SANITIZE-WITH-ATTR-SAME: ) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  [[ENTRY:.*:]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    ret i64 -1
 //
-// SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i64 @falcon_reconfigure_xmac_core(
+// SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i64 @test2(
 // SANITIZE-WITHOUT-ATTR-SAME: ) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // SANITIZE-WITHOUT-ATTR-NEXT:  [[ENTRY:.*:]]
 // SANITIZE-WITHOUT-ATTR-NEXT:    ret i64 -1
 //
-// NO-SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i64 @falcon_reconfigure_xmac_core(
+// NO-SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i64 @test2(
 // NO-SANITIZE-WITHOUT-ATTR-SAME: ) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:  [[ENTRY:.*:]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    ret i64 -1
