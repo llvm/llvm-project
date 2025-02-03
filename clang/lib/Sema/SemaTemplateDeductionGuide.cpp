@@ -752,8 +752,12 @@ llvm::DenseSet<const NamedDecl *> getSourceDeductionGuides(DeclarationName Name,
     if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
       D = FTD->getTemplatedDecl();
 
-    if (const auto *GD = dyn_cast<CXXDeductionGuideDecl>(D))
+    if (const auto *GD = dyn_cast<CXXDeductionGuideDecl>(D)) {
+      assert(GD->getSourceDeductionGuide() &&
+             "deduction guide for alias template must have a source deduction "
+             "guide");
       Result.insert(GD->getSourceDeductionGuide());
+    }
   }
   return Result;
 }
@@ -1209,14 +1213,14 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
   if (AliasTemplate->isInvalidDecl())
     return;
   auto &Context = SemaRef.Context;
-  auto SourceDeductionGuides = getSourceDeductionGuides(
-      Context.DeclarationNames.getCXXDeductionGuideName(AliasTemplate),
-      AliasTemplate->getDeclContext());
-
   auto [Template, AliasRhsTemplateArgs] =
       getRHSTemplateDeclAndArgs(SemaRef, AliasTemplate);
   if (!Template)
     return;
+  auto SourceDeductionGuides = getSourceDeductionGuides(
+      Context.DeclarationNames.getCXXDeductionGuideName(AliasTemplate),
+      AliasTemplate->getDeclContext());
+
   DeclarationNameInfo NameInfo(
       Context.DeclarationNames.getCXXDeductionGuideName(Template), Loc);
   LookupResult Guides(SemaRef, NameInfo, clang::Sema::LookupOrdinaryName);
