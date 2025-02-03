@@ -880,8 +880,6 @@ public:
     // Extracts the first active lane of a vector, where the first operand is
     // the predicate, and the second operand is the vector to extract.
     ExtractFirstActive,
-    // Splats a scalar value across all lanes.
-    Splat,
   };
 
 private:

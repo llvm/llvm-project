@@ -2089,9 +2089,8 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
 
   // FIXME: The newly created binary instructions should contain nsw/nuw
   // flags, which can be found from the original scalar operations.
-  Init = Builder.createNaryOp(MulOp, {Init, Builder.createSplat(Step)}, FMFs);
-  Init = Builder.createNaryOp(AddOp, {Builder.createSplat(Start), Init}, FMFs,
-                              {}, "induction");
+  Init = Builder.createNaryOp(MulOp, {Init, Step}, FMFs);
+  Init = Builder.createNaryOp(AddOp, {Start, Init}, FMFs, {}, "induction");
 
   // Create the widened phi of the vector IV.
   auto *WidePHI =
@@ -2115,7 +2114,7 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
     else if (Ty != TypeInfo.inferScalarType(VF))
       VF = Builder.createScalarCast(Instruction::CastOps::Trunc, VF, Ty, DL);
 
-    Inc = Builder.createSplat(Builder.createNaryOp(MulOp, {Step, VF}, FMFs));
+    Inc = Builder.createNaryOp(MulOp, {Step, VF}, FMFs);
     Prev = WidePHI;
   }
 

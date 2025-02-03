@@ -758,9 +758,7 @@ define float @fp_postinc_use_fadd(float %init, ptr noalias nocapture %A, i64 %N,
 ; VEC-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <2 x float> poison, float [[INIT]], i64 0
 ; VEC-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x float> [[DOTSPLATINSERT2]], <2 x float> poison, <2 x i32> zeroinitializer
 ; VEC-NEXT:    [[INDUCTION:%.*]] = fadd fast <2 x float> [[DOTSPLAT]], [[TMP2]]
-; VEC-NEXT:    [[TMP3:%.*]] = fmul fast float [[FPINC]], 2.000000e+00
-; VEC-NEXT:    [[DOTSPLATINSERT3:%.*]] = insertelement <2 x float> poison, float [[TMP3]], i64 0
-; VEC-NEXT:    [[DOTSPLAT4:%.*]] = shufflevector <2 x float> [[DOTSPLATINSERT3]], <2 x float> poison, <2 x i32> zeroinitializer
+; VEC-NEXT:    [[DOTSPLAT4:%.*]] = fmul fast <2 x float> [[DOTSPLAT2]], splat (float 2.000000e+00)
 ; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VEC:       [[VECTOR_BODY]]:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -778,11 +776,11 @@ define float @fp_postinc_use_fadd(float %init, ptr noalias nocapture %A, i64 %N,
 ; VEC-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; VEC:       [[SCALAR_PH]]:
 ; VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; VEC-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi float [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
+; VEC-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi float [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
 ; VEC-NEXT:    br label %[[LOOP:.*]]
 ; VEC:       [[LOOP]]:
 ; VEC-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; VEC-NEXT:    [[FP_IV:%.*]] = phi float [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP]] ]
+; VEC-NEXT:    [[FP_IV:%.*]] = phi float [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP]] ]
 ; VEC-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; VEC-NEXT:    store float [[FP_IV]], ptr [[GEP_A]], align 4
 ; VEC-NEXT:    [[ADD]] = fadd fast float [[FP_IV]], [[FPINC]]
@@ -878,9 +876,7 @@ define float @fp_postinc_use_fadd_ops_swapped(float %init, ptr noalias nocapture
 ; VEC-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <2 x float> poison, float [[INIT]], i64 0
 ; VEC-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x float> [[DOTSPLATINSERT2]], <2 x float> poison, <2 x i32> zeroinitializer
 ; VEC-NEXT:    [[INDUCTION:%.*]] = fadd fast <2 x float> [[DOTSPLAT]], [[TMP2]]
-; VEC-NEXT:    [[TMP3:%.*]] = fmul fast float [[FPINC]], 2.000000e+00
-; VEC-NEXT:    [[DOTSPLATINSERT3:%.*]] = insertelement <2 x float> poison, float [[TMP3]], i64 0
-; VEC-NEXT:    [[DOTSPLAT4:%.*]] = shufflevector <2 x float> [[DOTSPLATINSERT3]], <2 x float> poison, <2 x i32> zeroinitializer
+; VEC-NEXT:    [[DOTSPLAT4:%.*]] = fmul fast <2 x float> [[DOTSPLAT2]], splat (float 2.000000e+00)
 ; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VEC:       [[VECTOR_BODY]]:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -898,11 +894,11 @@ define float @fp_postinc_use_fadd_ops_swapped(float %init, ptr noalias nocapture
 ; VEC-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; VEC:       [[SCALAR_PH]]:
 ; VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; VEC-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi float [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
+; VEC-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi float [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
 ; VEC-NEXT:    br label %[[LOOP:.*]]
 ; VEC:       [[LOOP]]:
 ; VEC-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; VEC-NEXT:    [[FP_IV:%.*]] = phi float [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP]] ]
+; VEC-NEXT:    [[FP_IV:%.*]] = phi float [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP]] ]
 ; VEC-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; VEC-NEXT:    store float [[FP_IV]], ptr [[GEP_A]], align 4
 ; VEC-NEXT:    [[ADD]] = fadd fast float [[FPINC]], [[FP_IV]]
@@ -998,9 +994,7 @@ define float @fp_postinc_use_fsub(float %init, ptr noalias nocapture %A, i64 %N,
 ; VEC-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <2 x float> poison, float [[INIT]], i64 0
 ; VEC-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x float> [[DOTSPLATINSERT2]], <2 x float> poison, <2 x i32> zeroinitializer
 ; VEC-NEXT:    [[INDUCTION:%.*]] = fsub fast <2 x float> [[DOTSPLAT]], [[TMP2]]
-; VEC-NEXT:    [[TMP3:%.*]] = fmul fast float [[FPINC]], 2.000000e+00
-; VEC-NEXT:    [[DOTSPLATINSERT3:%.*]] = insertelement <2 x float> poison, float [[TMP3]], i64 0
-; VEC-NEXT:    [[DOTSPLAT4:%.*]] = shufflevector <2 x float> [[DOTSPLATINSERT3]], <2 x float> poison, <2 x i32> zeroinitializer
+; VEC-NEXT:    [[DOTSPLAT4:%.*]] = fmul fast <2 x float> [[DOTSPLAT2]], splat (float 2.000000e+00)
 ; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VEC:       [[VECTOR_BODY]]:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -1018,11 +1012,11 @@ define float @fp_postinc_use_fsub(float %init, ptr noalias nocapture %A, i64 %N,
 ; VEC-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; VEC:       [[SCALAR_PH]]:
 ; VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; VEC-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi float [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
+; VEC-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi float [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
 ; VEC-NEXT:    br label %[[LOOP:.*]]
 ; VEC:       [[LOOP]]:
 ; VEC-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; VEC-NEXT:    [[FP_IV:%.*]] = phi float [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP]] ]
+; VEC-NEXT:    [[FP_IV:%.*]] = phi float [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP]] ]
 ; VEC-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; VEC-NEXT:    store float [[FP_IV]], ptr [[GEP_A]], align 4
 ; VEC-NEXT:    [[ADD]] = fsub fast float [[FP_IV]], [[FPINC]]
