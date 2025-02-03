@@ -3406,6 +3406,13 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_BRACE_KIND(Tokens[7], BK_Block);
   EXPECT_BRACE_KIND(Tokens[8], BK_Block);
 
+  Tokens = annotate("struct Foo<int> : Base::Bar {};");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_ClassHeadName);
+  EXPECT_TOKEN(Tokens[8], tok::identifier, TT_Unknown); // Not TT_ClassHeadName.
+  EXPECT_BRACE_KIND(Tokens[9], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[10], BK_Block);
+
   Tokens = annotate("struct Foo final {};");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_ClassHeadName);

@@ -111,9 +111,7 @@ public:
   // Process Control
   Status WillResume() override;
 
-  bool SupportsReverseDirection() override;
-
-  Status DoResume(lldb::RunDirection direction) override;
+  Status DoResume() override;
 
   Status DoHalt(bool &caused_stop) override;
 
