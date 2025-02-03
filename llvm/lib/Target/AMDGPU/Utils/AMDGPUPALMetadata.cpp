@@ -261,9 +261,10 @@ void AMDGPUPALMetadata::setEntryPoint(unsigned CC, StringRef Name) {
 
   // Set .entry_point which is defined
   // to be _amdgpu_<stage> and _amdgpu_cs for non-shader functions
-  std::string EPName("_amdgpu_");
-  EPName += std::string(getStageName(CC) + 1);
-  getHwStage(CC)[".entry_point"] = MsgPackDoc.getNode(EPName, /*Copy=*/true);
+  SmallString<16> EPName("_amdgpu_");
+  raw_svector_ostream EPNameOS(EPName);
+  EPNameOS << getStageName(CC) + 1;
+  getHwStage(CC)[".entry_point"] = MsgPackDoc.getNode(EPNameOS.str(), /*Copy=*/true);
 }
 
 // Set the number of used vgprs in the metadata. This is an optional
