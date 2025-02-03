@@ -42,6 +42,8 @@ public:
 
   bool IsValid() const;
 
+  const char *GetCommand();
+
   const char *GetOutput();
 
   const char *GetError();
