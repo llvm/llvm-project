@@ -1286,7 +1286,7 @@ LogicalResult ModuleTranslation::convertAliases() {
     if (Block *initializer = op.getInitializerBlock()) {
       llvm::IRBuilder<> builder(llvmModule->getContext());
 
-      for (auto &op : initializer->without_terminator()) {
+      for (mlir::Operation &op : initializer->without_terminator()) {
         if (failed(convertOperation(op, builder)))
           return emitError(op.getLoc(), "fail to convert alias initializer");
         auto *cst = dyn_cast<llvm::Constant>(lookupValue(op.getResult(0)));

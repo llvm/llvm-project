@@ -2544,9 +2544,7 @@ LogicalResult AliasOp::verify() {
                        : llvm::isa<PointerElementTypeInterface>(getType());
   if (!validType)
     return emitOpError(
-        "expects type to be a valid element type for an LLVM global");
-  if ((*this)->getParentOp() && !satisfiesLLVMModule((*this)->getParentOp()))
-    return emitOpError("must appear at the module level");
+        "expects type to be a valid element type for an LLVM global alias");
 
   if (getLinkage() == Linkage::Appending) {
     if (!llvm::isa<LLVMArrayType>(getType())) {
@@ -2566,11 +2564,15 @@ LogicalResult AliasOp::verifyRegions() {
       !isa<LLVM::LLVMPointerType>(ret.getOperand(0).getType()))
     return emitOpError("initializer region must always return a pointer");
 
+  auto ptrTy = cast<LLVM::LLVMPointerType>(ret.getOperand(0).getType());
+  if (ptrTy.getAddressSpace() != getAddrSpace())
+    return emitOpError("address space must match initializer returned one");
+
   for (Operation &op : *b) {
     auto iface = dyn_cast<MemoryEffectOpInterface>(op);
     if (!iface || !iface.hasNoEffect())
       return op.emitError()
-             << "ops with side effects not allowed in aliases initializers";
+             << "ops with side effects are not allowed in alias initializers";
   }
 
   return success();
