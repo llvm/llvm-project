@@ -5127,7 +5127,7 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
     return nullptr;
 
   if (!ConstantExpr::isSupportedGetElementPtr(SrcTy))
-    return ConstantFoldGetElementPtr(SrcTy, cast<Constant>(Ptr), std::nullopt,
+    return ConstantFoldGetElementPtr(cast<Constant>(Ptr), std::nullopt,
                                      Indices);
 
   auto *CE =

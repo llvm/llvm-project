@@ -732,7 +732,7 @@ static bool constantIsDead(const Constant *C, bool RemoveDeadUsers) {
     ReplaceableMetadataImpl::SalvageDebugInfo(*C);
     const_cast<Constant *>(C)->destroyConstant();
   }
-  
+
   return true;
 }
 
@@ -2509,7 +2509,7 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
   assert(Ty && "Must specify element type");
   assert(isSupportedGetElementPtr(Ty) && "Element type is unsupported!");
 
-  if (Constant *FC = ConstantFoldGetElementPtr(Ty, C, InRange, Idxs))
+  if (Constant *FC = ConstantFoldGetElementPtr(C, InRange, Idxs))
     return FC; // Fold a few common cases.
 
   assert(GetElementPtrInst::getIndexedType(Ty, Idxs) && "GEP indices invalid!");

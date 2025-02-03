@@ -1312,7 +1312,7 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
   return nullptr;
 }
 
-Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
+Constant *llvm::ConstantFoldGetElementPtr(Constant *C,
                                           std::optional<ConstantRange> InRange,
                                           ArrayRef<Value *> Idxs) {
   if (Idxs.empty()) return C;
