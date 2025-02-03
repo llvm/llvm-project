@@ -1491,8 +1491,10 @@ private:
   /// All `omp assumes` we encountered so far.
   SmallVector<OMPAssumeAttr *, 4> OMPAssumeGlobal;
 
+  /// Device number specified by the context selector.
   int DeviceNum = -1;
 
+  /// Device number identifier specified by the context selector.
   StringRef DeviceNumID;
 };
 

@@ -27,7 +27,7 @@ using namespace omp;
 OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple,
                        Triple TargetOffloadTriple, int DeviceNum) {
   // Add the appropriate target device kind trait based on the target triple
-  if (!TargetOffloadTriple.getTriple().empty() && DeviceNum > 0) {
+  if (!TargetOffloadTriple.getTriple().empty() && DeviceNum > -1) {
     // If target triple is present, then target device is not a host
     ActiveTraits.set(unsigned(TraitProperty::target_device_kind_nohost));
     switch (TargetOffloadTriple.getArch()) {

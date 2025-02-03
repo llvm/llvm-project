@@ -893,7 +893,7 @@ void Parser::parseOMPTraitPropertyKind(OMPTraitProperty &TIProperty,
     Name = "number";
     TIProperty.Kind = getOpenMPContextTraitPropertyKind(Set, Selector, Name);
     ExprResult DeviceNumExprResult = ParseExpression();
-    if (!DeviceNumExprResult.isInvalid()) {
+    if (DeviceNumExprResult.isUsable()) {
       Expr *DeviceNumExpr = DeviceNumExprResult.get();
       Actions.OpenMP().ActOnOpenMPDeviceNum(DeviceNumExpr);
     }
@@ -2266,7 +2266,8 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     TargetOMPContext OMPCtx(
         ASTCtx, std::move(DiagUnknownTrait),
         /* CurrentFunctionDecl */ nullptr,
-        /* ConstructTraits */ ArrayRef<llvm::omp::TraitProperty>(), -1);
+        /* ConstructTraits */ ArrayRef<llvm::omp::TraitProperty>(),
+        Actions.OpenMP().getOpenMPDeviceNum());
 
     if (isVariantApplicableInContext(VMI, OMPCtx, /* DeviceSetOnly */ true)) {
       Actions.OpenMP().ActOnOpenMPBeginDeclareVariant(Loc, TI);
@@ -2818,7 +2819,8 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
         };
     TargetOMPContext OMPCtx(ASTContext, std::move(DiagUnknownTrait),
                             /* CurrentFunctionDecl */ nullptr,
-                            ArrayRef<llvm::omp::TraitProperty>(), -1);
+                            ArrayRef<llvm::omp::TraitProperty>(),
+                            Actions.OpenMP().getOpenMPDeviceNum());
 
     // A single match is returned for OpenMP 5.0
     int BestIdx = getBestVariantMatchForContext(VMIs, OMPCtx);
