@@ -94,7 +94,8 @@ New checks
 - New :doc:`performance-redundant-lookup
   <clang-tidy/checks/performance/redundant-lookup>` check.
 
-  Detects redundant container lookups.
+  This check warns about potential redundant container lookup operations within
+  a function.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
