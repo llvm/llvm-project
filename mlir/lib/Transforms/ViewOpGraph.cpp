@@ -124,7 +124,7 @@ public:
 private:
   /// Generate a color mapping that will color every operation with the same
   /// name the same way. It'll interpolate the hue in the HSV color-space,
-  /// attempting to keep the contrast suitable for black text.
+  /// using muted colors that provide good contrast for black text.
   template <typename T>
   void initColorMapping(T &irEntity) {
     backgroundColors.clear();
@@ -137,8 +137,10 @@ private:
     });
     for (auto indexedOps : llvm::enumerate(ops)) {
       double hue = ((double)indexedOps.index()) / ops.size();
+      // Use lower saturation (0.3) and higher value (0.95) for better
+      // readability
       backgroundColors[indexedOps.value()->getName()].second =
-          std::to_string(hue) + " 1.0 1.0";
+          std::to_string(hue) + " 0.3 0.95";
     }
   }
 
@@ -263,7 +265,7 @@ private:
     attrs["shape"] = shape.str();
     if (!background.empty()) {
       attrs["style"] = "filled";
-      attrs["fillcolor"] = ("\"" + background + "\"").str();
+      attrs["fillcolor"] = quoteString(background.str());
     }
     os << llvm::format("v%i ", nodeId);
     emitAttrList(os, attrs);
