@@ -740,6 +740,24 @@ bool hasDeclaredDeductionGuides(DeclarationName Name, DeclContext *DC) {
   return false;
 }
 
+// Returns all source deduction guides associated with the declared
+// deduction guides that have the specified deduction guide name.
+llvm::DenseSet<const NamedDecl *> getSourceDeductionGuides(DeclarationName Name,
+                                                           DeclContext *DC) {
+  assert(Name.getNameKind() ==
+             DeclarationName::NameKind::CXXDeductionGuideName &&
+         "name must be a deduction guide name");
+  llvm::DenseSet<const NamedDecl *> Result;
+  for (auto *D : DC->lookup(Name)) {
+    if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
+      D = FTD->getTemplatedDecl();
+
+    if (const auto *GD = dyn_cast<CXXDeductionGuideDecl>(D))
+      Result.insert(GD->getSourceDeductionGuide());
+  }
+  return Result;
+}
+
 // Build the associated constraints for the alias deduction guides.
 // C++ [over.match.class.deduct]p3.3:
 //   The associated constraints ([temp.constr.decl]) are the conjunction of the
@@ -1191,13 +1209,10 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
   if (AliasTemplate->isInvalidDecl())
     return;
   auto &Context = SemaRef.Context;
-  // FIXME: if there is an explicit deduction guide after the first use of the
-  // type alias usage, we will not cover this explicit deduction guide. fix this
-  // case.
-  if (hasDeclaredDeductionGuides(
-          Context.DeclarationNames.getCXXDeductionGuideName(AliasTemplate),
-          AliasTemplate->getDeclContext()))
-    return;
+  auto SourceDeductionGuides = getSourceDeductionGuides(
+      Context.DeclarationNames.getCXXDeductionGuideName(AliasTemplate),
+      AliasTemplate->getDeclContext());
+
   auto [Template, AliasRhsTemplateArgs] =
       getRHSTemplateDeclAndArgs(SemaRef, AliasTemplate);
   if (!Template)
@@ -1210,6 +1225,8 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
 
   for (auto *G : Guides) {
     if (auto *DG = dyn_cast<CXXDeductionGuideDecl>(G)) {
+      if (SourceDeductionGuides.contains(DG))
+        continue;
       // The deduction guide is a non-template function decl, we just clone it.
       auto *FunctionType =
           SemaRef.Context.getTrivialTypeSourceInfo(DG->getType());
@@ -1252,7 +1269,7 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
       continue;
     }
     FunctionTemplateDecl *F = dyn_cast<FunctionTemplateDecl>(G);
-    if (!F)
+    if (!F || SourceDeductionGuides.contains(F->getTemplatedDecl()))
       continue;
     // The **aggregate** deduction guides are handled in a different code path
     // (DeclareAggregateDeductionGuideFromInitList), which involves the tricky
