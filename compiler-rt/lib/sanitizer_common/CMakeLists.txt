@@ -240,7 +240,9 @@ append_list_if(COMPILER_RT_HAS_WGLOBAL_CONSTRUCTORS_FLAG -Wglobal-constructors
                SANITIZER_CFLAGS)
 
 # Suppress -Watomic-alignment warnings by not treating them as errors
-list(APPEND SANITIZER_CFLAGS "-Wno-error=atomic-alignment")
+if (CMAKE_SIZEOF_VOID_P EQUAL 4 AND CMAKE_SYSTEM_NAME STREQUAL "AIX")
+  list(APPEND SANITIZER_CFLAGS "-Wno-error=atomic-alignment")
+endif()
 
 if(APPLE)
   set(OS_OPTION OS ${SANITIZER_COMMON_SUPPORTED_OS})
