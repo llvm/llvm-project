@@ -90,6 +90,17 @@ void AssignmentContext::Analyze(const parser::AssignmentStmt &stmt) {
     if (whereDepth_ > 0) {
       CheckShape(lhsLoc, &lhs);
     }
+    if (context_.foldingContext().languageFeatures().IsEnabled(
+            common::LanguageFeature::CUDA)) {
+      const auto &scope{context_.FindScope(lhsLoc)};
+      const Scope &progUnit{GetProgramUnitContaining(scope)};
+      if (!IsCUDADeviceContext(&progUnit)) {
+        if (Fortran::evaluate::HasCUDADeviceAttrs(lhs) &&
+            Fortran::evaluate::HasCUDAImplicitTransfer(rhs)) {
+          context_.Say(lhsLoc, "Unsupported CUDA data transfer"_err_en_US);
+        }
+      }
+    }
   }
 }
 
