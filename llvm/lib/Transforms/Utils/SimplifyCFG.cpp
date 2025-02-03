@@ -2187,20 +2187,6 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
   return Changed;
 }
 
-// Check lifetime markers.
-static bool isLifeTimeMarker(const Instruction *I) {
-  if (auto II = dyn_cast<IntrinsicInst>(I)) {
-    switch (II->getIntrinsicID()) {
-    default:
-      break;
-    case Intrinsic::lifetime_start:
-    case Intrinsic::lifetime_end:
-      return true;
-    }
-  }
-  return false;
-}
-
 // TODO: Refine this. This should avoid cases like turning constant memcpy sizes
 // into variables.
 static bool replacingOperandWithVariableIsCheap(const Instruction *I,
@@ -2321,7 +2307,7 @@ static bool canSinkInstructions(
       // backend may handle such lifetimes incorrectly as well (#104776).
       // Don't sink lifetimes if it would introduce a phi on the pointer
       // argument.
-      if (isLifeTimeMarker(I0) && OI == 1 &&
+      if (isa<LifetimeIntrinsic>(I0) && OI == 1 &&
           any_of(Insts, [](const Instruction *I) {
             return isa<AllocaInst>(I->getOperand(1)->stripPointerCasts());
           }))
