@@ -168,6 +168,7 @@ void registerTestDialect(DialectRegistry &);
 void registerTestDynDialect(DialectRegistry &);
 void registerTestTilingInterfaceTransformDialectExtension(DialectRegistry &);
 void registerTestTransformDialectExtension(DialectRegistry &);
+void registerIrdlTestDialect(DialectRegistry&);
 } // namespace test
 
 #ifdef MLIR_INCLUDE_TESTS
@@ -321,6 +322,7 @@ int main(int argc, char **argv) {
   ::test::registerTestTransformDialectExtension(registry);
   ::test::registerTestTilingInterfaceTransformDialectExtension(registry);
   ::test::registerTestDynDialect(registry);
+  ::test::registerIrdlTestDialect(registry);
 #endif
   return mlir::asMainReturnCode(mlir::MlirOptMain(
       argc, argv, "MLIR modular optimizer driver\n", registry));

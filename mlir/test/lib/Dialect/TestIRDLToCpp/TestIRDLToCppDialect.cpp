@@ -15,11 +15,25 @@
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
+#include "mlir/Target/LLVMIR/ModuleTranslation.h"
+#include "mlir/Tools/mlir-translate/Translation.h"
+
 
 #include "TestIRDLToCppDialect.h"
 
-// #define GEN_DIALECT_DEF
-// #include "test_irdl_to_cpp.irdl.mlir.cpp.inc"
-// #undef GEN_DIALECT_DEF
+#define GEN_DIALECT_DEF
+#define GET_TYPEDEF_CLASSES
+#define GET_OP_CLASSES
+#include "test_irdl_to_cpp.irdl.mlir.cpp.inc"
+
+namespace test {
+void registerIrdlTestDialect(mlir::DialectRegistry& registry) {
+    registry.insert<mlir::test_irdl_to_cpp::Test_irdl_to_cppDialect>();
+}
+}
