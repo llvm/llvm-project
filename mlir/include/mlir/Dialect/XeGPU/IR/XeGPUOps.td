@@ -277,8 +277,7 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
 
 
 def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
-  AllElementTypesMatch<["value", "TensorDesc"]>,
-  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
+  AllElementTypesMatch<["value", "TensorDesc"]>, MemoryEffects<[MemRead]>
   ]> {
   let summary = "loads a n-D block from memory (represented by TensorDesc)"
                 "to registers (represented by vector)";
@@ -331,7 +330,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
 }
 
 def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
-  AllElementTypesMatch<["value", "TensorDesc"]>, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+  AllElementTypesMatch<["value", "TensorDesc"]>, MemoryEffects<[MemWrite]>
   ]> {
   let summary = "stores a n-D block register region back to memory, currently only supports 2D";
 
@@ -554,8 +553,7 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
 }
 
 def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
-  AllElementTypesMatch<["value", "TensorDesc"]>,
-  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
+  AllElementTypesMatch<["value", "TensorDesc"]>, MemoryEffects<[MemRead]>
   ]> {
   let summary = "load a set of scattered data points from memory.";
 
@@ -627,7 +625,8 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
 }
 
 def XeGPU_StoreScatterOp : XeGPU_Op<"store", [
-  AllElementTypesMatch<["value", "TensorDesc"]>, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  AllElementTypesMatch<["value", "TensorDesc"]>, MemoryEffects<[MemWrite]>
+  ]> {
   let summary = "store data to scattered memory locations.";
   let description = [{ It (aka. store) stores data to scattered memory locations. The value is
   typically a 1D vector. But when the chunk size of the TensorDesc is larger than 1, it will be
