@@ -872,6 +872,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
       setOperationAction(Op, MVT::v2f32, Custom);
     // Handle custom lowering for: i64 = bitcast v2f32
     setOperationAction(ISD::BITCAST, MVT::v2f32, Custom);
+    // Handle custom lowering for: f32 = extract_vector_elt v2f32
+    setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2f32, Custom);
   }
 
   // These map to conversion instructions for scalar FP types.
@@ -2251,6 +2253,20 @@ SDValue NVPTXTargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
                                  DAG.getConstant(8, DL, MVT::i32)),
                      DAG.getConstant(8, DL, MVT::i32)});
     return DAG.getAnyExtOrTrunc(BFE, DL, Op->getValueType(0));
+  }
+
+  if (VectorVT == MVT::v2f32) {
+    if (Vector.getOpcode() == ISD::BITCAST) {
+      // peek through v2f32 = bitcast (i64 = build_pair (i32 A, i32 B))
+      // where A:i32, B:i32 = CopyFromReg (i64 = F32X2 Operation ...)
+      SDValue Pair = Vector.getOperand(0);
+      assert(Pair.getOpcode() == ISD::BUILD_PAIR);
+      return DAG.getNode(
+          ISD::BITCAST, DL, Op.getValueType(),
+          Pair.getOperand(cast<ConstantSDNode>(Index)->getZExtValue()));
+    }
+    if (Vector.getOpcode() == ISD::BUILD_VECTOR)
+      return Vector.getOperand(cast<ConstantSDNode>(Index)->getZExtValue());
   }
 
   // Constant index will be matched by tablegen.
@@ -5565,9 +5581,22 @@ static void ReplaceF32x2Op(SDNode *N, SelectionDAG &DAG,
   for (const SDValue &Op : N->ops())
     NewOps.push_back(DAG.getNode(ISD::BITCAST, DL, MVT::i64, Op));
 
-  // cast i64 result of new op back to <2 x float>
+  SDValue Chain = DAG.getEntryNode();
+
+  // break i64 result into two i32 registers for later instructions that may
+  // access element #0 or #1. otherwise, this code will be eliminated
   SDValue NewValue = DAG.getNode(Opcode, DL, MVT::i64, NewOps);
-  Results.push_back(DAG.getBitcast(OldResultTy, NewValue));
+  MachineRegisterInfo &RegInfo = DAG.getMachineFunction().getRegInfo();
+  Register DestReg = RegInfo.createVirtualRegister(
+      DAG.getTargetLoweringInfo().getRegClassFor(MVT::i64));
+  SDValue RegCopy = DAG.getCopyToReg(Chain, DL, DestReg, NewValue);
+  SDValue Explode = DAG.getNode(ISD::CopyFromReg, DL,
+                                {MVT::i32, MVT::i32, Chain.getValueType()},
+                                {RegCopy, DAG.getRegister(DestReg, MVT::i64)});
+  // cast i64 result of new op back to <2 x float>
+  Results.push_back(DAG.getBitcast(
+      OldResultTy, DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64,
+                               {Explode.getValue(0), Explode.getValue(1)})));
 }
 
 void NVPTXTargetLowering::ReplaceNodeResults(

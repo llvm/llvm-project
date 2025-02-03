@@ -92,6 +92,7 @@ private:
   bool tryEXTRACT_VECTOR_ELEMENT(SDNode *N);
   void SelectV2I64toI128(SDNode *N);
   void SelectI128toV2I64(SDNode *N);
+  void SelectI64ToV2I32(SDNode *N);
   void SelectCpAsyncBulkG2S(SDNode *N);
   void SelectCpAsyncBulkS2G(SDNode *N);
   void SelectCpAsyncBulkPrefetchL2(SDNode *N);

@@ -196,6 +196,10 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
       SelectI128toV2I64(N);
       return;
     }
+    if (N->getOperand(1).getValueType() == MVT::i64 && N->getNumValues() == 3) {
+      SelectI64ToV2I32(N);
+      return;
+    }
     break;
   }
   case ISD::FADD:
@@ -2792,6 +2796,17 @@ void NVPTXDAGToDAGISel::SelectI128toV2I64(SDNode *N) {
       {MVT::i64, MVT::i64, Ch.getValueType(), Glue.getValueType()},
       {Src, Ch, Glue});
 
+  ReplaceNode(N, Mov);
+}
+
+void NVPTXDAGToDAGISel::SelectI64ToV2I32(SDNode *N) {
+  SDValue Ch = N->getOperand(0);
+  SDValue Src = N->getOperand(1);
+  SDLoc DL(N);
+
+  SDNode *Mov = CurDAG->getMachineNode(NVPTX::I64toV2I32, DL,
+                                       {MVT::i32, MVT::i32, Ch.getValueType()},
+                                       {Src, Ch});
   ReplaceNode(N, Mov);
 }
 
