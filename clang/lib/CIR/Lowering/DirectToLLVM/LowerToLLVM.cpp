@@ -24,6 +24,7 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "clang/CIR/Dialect/IR/CIRAttrVisitor.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/IR/Module.h"
@@ -34,6 +35,54 @@ using namespace llvm;
 
 namespace cir {
 namespace direct {
+
+class CIRAttrToValue : public CirAttrVisitor<CIRAttrToValue, mlir::Value> {
+public:
+  mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
+                                  mlir::Attribute attr,
+                                  mlir::ConversionPatternRewriter &rewriter,
+                                  const mlir::TypeConverter *converter,
+                                  mlir::DataLayout const &dataLayout) {
+    return visit(attr, parentOp, rewriter, converter, dataLayout);
+  }
+
+  mlir::Value visitCirIntAttr(cir::IntAttr intAttr, mlir::Operation *parentOp,
+                              mlir::ConversionPatternRewriter &rewriter,
+                              const mlir::TypeConverter *converter,
+                              mlir::DataLayout const &dataLayout) {
+    auto loc = parentOp->getLoc();
+    return rewriter.create<mlir::LLVM::ConstantOp>(
+        loc, converter->convertType(intAttr.getType()), intAttr.getValue());
+  }
+
+  mlir::Value visitCirFPAttr(cir::FPAttr fltAttr, mlir::Operation *parentOp,
+                             mlir::ConversionPatternRewriter &rewriter,
+                             const mlir::TypeConverter *converter,
+                             mlir::DataLayout const &dataLayout) {
+    auto loc = parentOp->getLoc();
+    return rewriter.create<mlir::LLVM::ConstantOp>(
+        loc, converter->convertType(fltAttr.getType()), fltAttr.getValue());
+  }
+
+  mlir::Value visitCirConstPtrAttr(cir::ConstPtrAttr ptrAttr,
+                                   mlir::Operation *parentOp,
+                                   mlir::ConversionPatternRewriter &rewriter,
+                                   const mlir::TypeConverter *converter,
+                                   mlir::DataLayout const &dataLayout) {
+    auto loc = parentOp->getLoc();
+    if (ptrAttr.isNullValue()) {
+      return rewriter.create<mlir::LLVM::ZeroOp>(
+          loc, converter->convertType(ptrAttr.getType()));
+    }
+    mlir::DataLayout layout(parentOp->getParentOfType<mlir::ModuleOp>());
+    mlir::Value ptrVal = rewriter.create<mlir::LLVM::ConstantOp>(
+        loc,
+        rewriter.getIntegerType(layout.getTypeSizeInBits(ptrAttr.getType())),
+        ptrAttr.getValue().getInt());
+    return rewriter.create<mlir::LLVM::IntToPtrOp>(
+        loc, converter->convertType(ptrAttr.getType()), ptrVal);
+  }
+};
 
 // This pass requires the CIR to be in a "flat" state. All blocks in each
 // function must belong to the parent region. Once scopes and control flow
@@ -55,14 +104,19 @@ struct ConvertCIRToLLVMPass
   StringRef getArgument() const override { return "cir-flat-to-llvm"; }
 };
 
+/// Replace CIR global with a region initialized LLVM global and update
+/// insertion point to the end of the initializer block.
+
 mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
     cir::GlobalOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
 
   // Fetch required values to create LLVM op.
   const mlir::Type cirSymType = op.getSymType();
+  const auto loc = op.getLoc();
 
   // This is the LLVM dialect type.
+  assert(!cir::MissingFeatures::convertTypeForMemory());
   const mlir::Type llvmType = getTypeConverter()->convertType(cirSymType);
   // FIXME: These default values are placeholders until the the equivalent
   //        attributes are available on cir.global ops.
@@ -84,6 +138,19 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   SmallVector<mlir::NamedAttribute> attributes;
 
   if (init.has_value()) {
+    auto setupRegionInitializedLLVMGlobalOp = [&]() {
+      assert(!cir::MissingFeatures::convertTypeForMemory());
+      const mlir::Type llvmType =
+          getTypeConverter()->convertType(op.getSymType());
+      SmallVector<mlir::NamedAttribute> attributes;
+      auto newGlobalOp = rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
+          op, llvmType, isConst, linkage, op.getSymName(), nullptr, alignment,
+          addrSpace, isDsoLocal, isThreadLocal,
+          /*comdat=*/mlir::SymbolRefAttr(), attributes);
+      newGlobalOp.getRegion().push_back(new mlir::Block());
+      rewriter.setInsertionPointToEnd(newGlobalOp.getInitializerBlock());
+    };
+
     if (const auto fltAttr = mlir::dyn_cast<cir::FPAttr>(init.value())) {
       // Initializer is a constant floating-point number: convert to MLIR
       // builtin constant.
@@ -92,6 +159,16 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
                    mlir::dyn_cast<cir::IntAttr>(init.value())) {
       // Initializer is a constant array: convert it to a compatible llvm init.
       init = rewriter.getIntegerAttr(llvmType, intAttr.getValue());
+    } else if (isa<cir::ConstPtrAttr>(init.value())) {
+      // TODO(cir): once LLVM's dialect has proper equivalent attributes this
+      // should be updated. For now, we use a custom op to initialize globals
+      // to the appropriate value.
+      setupRegionInitializedLLVMGlobalOp();
+      CIRAttrToValue attrVisitor;
+      mlir::Value value = attrVisitor.lowerCirAttrAsValue(
+          op, init.value(), rewriter, typeConverter, dataLayout);
+      rewriter.create<mlir::LLVM::ReturnOp>(loc, value);
+      return mlir::success();
     } else {
       op.emitError() << "unsupported initializer '" << init.value() << "'";
       return mlir::failure();
@@ -109,6 +186,13 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
 
 static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
                                  mlir::DataLayout &dataLayout) {
+  converter.addConversion([&](cir::PointerType type) -> mlir::Type {
+    // Drop pointee type since LLVM dialect only allows opaque pointers.
+    assert(!cir::MissingFeatures::addressSpace());
+    unsigned targetAS = 0;
+
+    return mlir::LLVM::LLVMPointerType::get(type.getContext(), targetAS);
+  });
   converter.addConversion([&](cir::IntType type) -> mlir::Type {
     // LLVM doesn't work with signed types, so we drop the CIR signs here.
     return mlir::IntegerType::get(type.getContext(), type.getWidth());
