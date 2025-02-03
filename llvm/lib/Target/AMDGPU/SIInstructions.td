@@ -3424,9 +3424,8 @@ def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_16:$a), (Ty VGPR_16:$b))),
   (REG_SEQUENCE VGPR_32, VGPR_16:$a, lo16, VGPR_16:$b, hi16)
 >;
-// GISel ignores this Pat, but the equivalent is done in selectG_BUILD_VECTOR
 def : GCNPat <
-  (vecTy (build_vector (Ty VGPR_16:$src0), (Ty undef))),
+  (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_16:$src0), (Ty undef))),
   (REG_SEQUENCE VGPR_32, $src0, lo16, (IMPLICIT_DEF), hi16)
 >;
 }
@@ -3456,7 +3455,7 @@ def : GCNPat <
 // Take the upper 16 bits from V[0] and the lower 16 bits from V[1]
 // Special case, can use V_ALIGNBIT (always uses encoded literal)
 foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let True16Predicate = p in
+let True16Predicate = p in {
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector>
     (Ty !if(!eq(Ty, i16),
@@ -3477,7 +3476,7 @@ def : GCNPat <
       (Ty (bitconvert (i16 (trunc (srl VGPR_32:$b, (i32 16)))))))))),
   (V_PERM_B32_e64 VGPR_32:$b, VGPR_32:$a, (S_MOV_B32 (i32 0x07060302)))
 >;
-
+}
 
 } // end foreach Ty
 
