@@ -23,6 +23,7 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -92,7 +93,7 @@ static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
     hashes.clear();
   }
 
-  DenseMap<uint64_t, unsigned> hashFrequency;
+  MapVector<uint64_t, unsigned> hashFrequency;
   for (auto &[sectionIdx, hashes] : sectionHashes)
     for (auto hash : hashes)
       ++hashFrequency[hash];
