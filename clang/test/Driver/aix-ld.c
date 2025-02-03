@@ -1121,6 +1121,13 @@
 // RUN:   | FileCheck --check-prefixes=CHECK-K-UNUSED %s
 // CHECK-K-UNUSED: clang: warning: -K: 'linker' input unused [-Wunused-command-line-argument]
 
+
+// This check is only applicable to AIX targets. 
+// AIX-specific link behavior requires `-latomic` for 32-bit sanitizer libraries, 
+// Running this test on non-AIX targets will result in an unrelated error 
+// (e.g., missing atomic support on certain architectures), 
+// which is outside the scope of this bug and is addressed separately.
+
 // Check No Sanitizer on 32-bit AIX
 // RUN: %if target={{.*aix.*}} %{ \
 // RUN:   %clang -target powerpc-ibm-aix -m32 %s -### 2>&1 \
@@ -1134,3 +1141,4 @@
 // RUN:   | FileCheck -check-prefix=CHECK-LD32-ASAN %s \
 // RUN: %}
 // CHECK-LD32-ASAN: "-latomic"
+
