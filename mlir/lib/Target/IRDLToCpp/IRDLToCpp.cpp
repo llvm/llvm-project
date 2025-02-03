@@ -121,11 +121,6 @@ static OpStrings getStrings(irdl::OperationOp op) {
     return names;
   };
 
-  const auto operandCount = operandOp ? operandOp->getNumOperands() : 0;
-
-  const auto resultCount = resultsOp.getNumOperands();
-  const auto resultAttrArray = getNames(resultsOp);
-
   OpStrings strings;
   strings.opName = op.getSymName();
   strings.opCppName = llvm::formatv("{0}Op", capitalize(strings.opName));
@@ -383,7 +378,7 @@ static LogicalResult generateLib(irdl::DialectOp dialect, raw_ostream &output,
 
             const auto buildDefinition = llvm::formatv(
                 R"(
-static void {0}::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, {1} {2} ::llvm::ArrayRef<::mlir::NamedAttribute> attributes) {{
+void {0}::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, {1} {2} ::llvm::ArrayRef<::mlir::NamedAttribute> attributes) {{
 {3}
 {4}
 }
@@ -405,13 +400,13 @@ static void {0}::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &od
                                opStrings.opOperandNames,
                                [](StringRef attr) -> std::string {
                                  return llvm::formatv(
-                                     "  odsBuilder.addOperands({0});", attr);
+                                     "  odsState.addOperands({0});", attr);
                                }),
                            "\n"),
                 llvm::join(llvm::map_range(opStrings.opResultNames,
                                            [](StringRef attr) -> std::string {
                                              return llvm::formatv(
-                                                 "  odsBuilder.addTypes({0});",
+                                                 "  odsState.addTypes({0});",
                                                  attr);
                                            }),
                            "\n"));

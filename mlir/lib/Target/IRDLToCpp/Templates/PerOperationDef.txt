@@ -39,9 +39,9 @@ R"(
 void {1}::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes) {{
   assert(operands.size() == {3});
   assert(resultTypes.size() == {5});
-  odsBuilder.addOperands(operands);
-  odsBuilder.addAttributes(attributes);
-  odsBuilder.addTypes(resultTypes);
+  odsState.addOperands(operands);
+  odsState.addAttributes(attributes);
+  odsState.addTypes(resultTypes);
 }
 
 
