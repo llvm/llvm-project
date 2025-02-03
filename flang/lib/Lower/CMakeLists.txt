@@ -36,6 +36,7 @@ add_flang_library(FortranLower
   Runtime.cpp
   SymbolMap.cpp
   VectorSubscripts.cpp
+  Support/Utils.cpp
   
   DEPENDS
   CUFAttrs
