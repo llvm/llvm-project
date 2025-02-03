@@ -49,11 +49,6 @@ static std::string strFromOs(function_ref<void(raw_ostream &)> func) {
   return buf;
 }
 
-/// Escape special characters such as '\n' and quotation marks.
-static std::string escapeString(std::string str) {
-  return strFromOs([&](raw_ostream &os) { os.write_escaped(str); });
-}
-
 /// Put quotation marks around a given string.
 static std::string quoteString(const std::string &str) {
   return "\"" + str + "\"";
@@ -169,8 +164,7 @@ private:
     os.indent();
     // Emit invisible anchor node from/to which arrows can be drawn.
     Node anchorNode = emitNodeStmt(" ", kShapeNone);
-    os << attrStmt("label", quoteString(escapeString(std::move(label))))
-       << ";\n";
+    os << attrStmt("label", quoteString(label)) << ";\n";
     builder();
     os.unindent();
     os << "}\n";
@@ -288,8 +282,32 @@ private:
     return str;
   }
 
+  std::string getClusterLabel(Operation *op) {
+    return strFromOs([&](raw_ostream &os) {
+      // Print operation name and type.
+      os << op->getName();
+      if (printResultTypes) {
+        os << " : (";
+        std::string buf;
+        llvm::raw_string_ostream ss(buf);
+        interleaveComma(op->getResultTypes(), ss);
+        os << truncateString(buf) << ")";
+      }
+
+      // Print attributes.
+      if (printAttrs) {
+        os << "\\l";
+        for (const NamedAttribute &attr : op->getAttrs()) {
+          os << attr.getName().getValue() << ": ";
+          emitMlirAttr(os, attr.getValue());
+          os << "\\l";
+        }
+      }
+    });
+  }
+
   /// Generate a label for an operation.
-  std::string getLabel(Operation *op) {
+  std::string getRecordLabel(Operation *op) {
     return strFromOs([&](raw_ostream &os) {
       os << "{";
 
@@ -369,9 +387,9 @@ private:
             for (Region &region : op->getRegions())
               processRegion(region);
           },
-          getLabel(op));
+          getClusterLabel(op));
     } else {
-      node = emitNodeStmt(getLabel(op), kShapeNode,
+      node = emitNodeStmt(getRecordLabel(op), kShapeNode,
                           backgroundColors[op->getName()].second);
     }
 
