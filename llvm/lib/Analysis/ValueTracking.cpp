@@ -776,7 +776,7 @@ static void computeKnownBitsFromICmpCond(const Value *V, ICmpInst *Cmp,
   if (match(LHS, m_Trunc(m_Specific(V)))) {
     KnownBits DstKnown(LHS->getType()->getScalarSizeInBits());
     computeKnownBitsFromCmp(LHS, Pred, LHS, RHS, DstKnown, SQ);
-    if (match(LHS, m_NUWTrunc(m_Value())))
+    if (cast<TruncInst>(LHS)->hasNoUnsignedWrap())
       Known = Known.unionWith(DstKnown.zext(Known.getBitWidth()));
     else
       Known = Known.unionWith(DstKnown.anyext(Known.getBitWidth()));
