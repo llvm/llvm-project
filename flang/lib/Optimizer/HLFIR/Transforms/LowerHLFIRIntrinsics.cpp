@@ -123,7 +123,7 @@ protected:
         // rebox can be removed).
         // When taking arguments as descriptors, the runtime expect absent
         // OPTIONAL to be a nullptr to a descriptor, lowering has already
-        // prepared such descriptors        // as needed, hence set
+        // prepared such descriptors as needed, hence set
         // keepScalarOptionalBoxed to avoid building descriptors with a null
         // address for them.
         auto [exv, cleanup] = hlfir::translateToExtendedValue(

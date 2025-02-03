@@ -984,7 +984,7 @@ llvm::SmallVector<mlir::Value> hlfir::genLoopNestWithReductions(
 
 template <typename Lambda>
 static fir::ExtendedValue
-conditionnalyEvaluate(mlir::Location loc, fir::FirOpBuilder &builder,
+conditionallyEvaluate(mlir::Location loc, fir::FirOpBuilder &builder,
                       mlir::Value condition, const Lambda &genIfTrue) {
   mlir::OpBuilder::InsertPoint insertPt = builder.saveInsertionPoint();
 
