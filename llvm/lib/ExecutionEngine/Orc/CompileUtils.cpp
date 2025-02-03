@@ -33,9 +33,6 @@ irManglingOptionsFromTargetOptions(const TargetOptions &Opts) {
 
 /// Compile a Module to an ObjectFile.
 Expected<SimpleCompiler::CompileResult> SimpleCompiler::operator()(Module &M) {
-  if (M.getDataLayout().isDefault())
-    M.setDataLayout(TM.createDataLayout());
-
   CompileResult CachedObject = tryToLoadFromObjectCache(M);
   if (CachedObject)
     return std::move(CachedObject);
