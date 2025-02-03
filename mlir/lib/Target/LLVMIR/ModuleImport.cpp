@@ -971,20 +971,12 @@ LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
     builder.setInsertionPointAfter(aliasInsertionOp);
 
   Type type = convertType(alias->getValueType());
-
-  // Workaround to support LLVM's nameless globals. MLIR, in contrast to LLVM,
-  // always requires a symbol name.
-  StringRef aliasName = alias->getName();
-  if (aliasName.empty())
-    return emitError(UnknownLoc::get(builder.getContext()))
-           << "expects valid name";
-
   AliasOp aliasOp = builder.create<AliasOp>(
       mlirModule.getLoc(), type, convertLinkageFromLLVM(alias->getLinkage()),
-      StringRef(aliasName),
+      alias->getName(),
       /*addr_space=*/alias->getAddressSpace(),
       /*dso_local=*/alias->isDSOLocal(),
-      /*thread_local=*/alias->isThreadLocal(), /*comdat=*/SymbolRefAttr(),
+      /*thread_local=*/alias->isThreadLocal(),
       /*attrs=*/ArrayRef<NamedAttribute>());
   aliasInsertionOp = aliasOp;
 
@@ -1002,9 +994,6 @@ LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
   if (alias->hasSection())
     aliasOp.setSection(alias->getSection());
   aliasOp.setVisibility_(convertVisibilityFromLLVM(alias->getVisibility()));
-
-  if (alias->hasComdat())
-    aliasOp.setComdatAttr(comdatMapping.lookup(alias->getComdat()));
 
   return success();
 }
@@ -2515,5 +2504,6 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
     return {};
   if (failed(moduleImport.convertAliases()))
     return {};
+  moduleImport.convertTargetTriple();
   return module;
 }

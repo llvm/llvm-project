@@ -2423,14 +2423,13 @@ LogicalResult GlobalDtorsOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// Builder, printer and verifier for LLVM::GlobalOp.
+// Builder, printer and verifier for LLVM::AliasOp.
 //===----------------------------------------------------------------------===//
 
 void AliasOp::build(OpBuilder &builder, OperationState &result, Type type,
                     Linkage linkage, StringRef name, unsigned addrSpace,
-                    bool dsoLocal, bool threadLocal, SymbolRefAttr comdat,
-                    ArrayRef<NamedAttribute> attrs,
-                    ArrayRef<Attribute> dbgExprs) {
+                    bool dsoLocal, bool threadLocal,
+                    ArrayRef<NamedAttribute> attrs) {
   result.addAttribute(getSymNameAttrName(result.name),
                       builder.getStringAttr(name));
   result.addAttribute(getAliasTypeAttrName(result.name), TypeAttr::get(type));
@@ -2440,8 +2439,6 @@ void AliasOp::build(OpBuilder &builder, OperationState &result, Type type,
   if (threadLocal)
     result.addAttribute(getThreadLocal_AttrName(result.name),
                         builder.getUnitAttr());
-  if (comdat)
-    result.addAttribute(getComdatAttrName(result.name), comdat);
 
   result.addAttribute(getLinkageAttrName(result.name),
                       LinkageAttr::get(builder.getContext(), linkage));
@@ -2466,8 +2463,6 @@ void AliasOp::print(OpAsmPrinter &p) {
       p << str << ' ';
   }
   p.printSymbolName(getSymName());
-  if (auto comdat = getComdat())
-    p << " comdat(" << *comdat << ')';
 
   // Note that the alignment attribute is printed using the
   // default syntax here, even though it is an inherent attribute
@@ -2476,8 +2471,7 @@ void AliasOp::print(OpAsmPrinter &p) {
                           {SymbolTable::getSymbolAttrName(),
                            getAliasTypeAttrName(), getLinkageAttrName(),
                            getUnnamedAddrAttrName(), getThreadLocal_AttrName(),
-                           getVisibility_AttrName(), getComdatAttrName(),
-                           getUnnamedAddrAttrName()});
+                           getVisibility_AttrName(), getUnnamedAddrAttrName()});
 
   // Print the trailing type
   p << " : " << getType();
@@ -2492,8 +2486,8 @@ void AliasOp::print(OpAsmPrinter &p) {
 // operation ::= `llvm.mlir.alias` linkage? visibility?
 //               (`unnamed_addr` | `local_unnamed_addr`)?
 //               `thread_local`? `@` identifier
-//               `(` attribute? `)` (`comdat(` symbol-ref-id `)`)?
-//               attribute-list? (`:` type)? region
+//               `(` attribute? `)`
+//               attribute-list? `:` type region
 //
 // The type can be omitted for string attributes, in which case it will be
 // inferred from the value of the string as [strlen(value) x i8].
@@ -2525,15 +2519,6 @@ ParseResult AliasOp::parse(OpAsmParser &parser, OperationState &result) {
   if (parser.parseSymbolName(name, getSymNameAttrName(result.name),
                              result.attributes))
     return failure();
-
-  if (succeeded(parser.parseOptionalKeyword("comdat"))) {
-    SymbolRefAttr comdat;
-    if (parser.parseLParen() || parser.parseAttribute(comdat) ||
-        parser.parseRParen())
-      return failure();
-
-    result.addAttribute(getComdatAttrName(result.name), comdat);
-  }
 
   SmallVector<Type, 1> types;
   if (parser.parseOptionalAttrDict(result.attributes) ||
@@ -2571,24 +2556,21 @@ LogicalResult AliasOp::verify() {
     }
   }
 
-  if (failed(verifyComdat(*this, getComdat())))
-    return failure();
-
   return success();
 }
 
 LogicalResult AliasOp::verifyRegions() {
-  if (Block *b = getInitializerBlock()) {
-    ReturnOp ret = cast<ReturnOp>(b->getTerminator());
-    if (ret.operand_type_begin() == ret.operand_type_end())
-      return emitOpError("initializer region cannot return void");
+  Block *b = getInitializerBlock();
+  ReturnOp ret = cast<ReturnOp>(b->getTerminator());
+  if (ret.getNumOperands() == 0 ||
+      !isa<LLVM::LLVMPointerType>(ret.getOperand(0).getType()))
+    return emitOpError("initializer region must always return a pointer");
 
-    for (Operation &op : *b) {
-      auto iface = dyn_cast<MemoryEffectOpInterface>(op);
-      if (!iface || !iface.hasNoEffect())
-        return op.emitError()
-               << "ops with side effects not allowed in aliases initializers";
-    }
+  for (Operation &op : *b) {
+    auto iface = dyn_cast<MemoryEffectOpInterface>(op);
+    if (!iface || !iface.hasNoEffect())
+      return op.emitError()
+             << "ops with side effects not allowed in aliases initializers";
   }
 
   return success();

@@ -1451,11 +1451,9 @@ def LLVM_AliasOp : LLVM_Op<"mlir.alias",
     Linkage:$linkage,
     UnitAttr:$dso_local,
     UnitAttr:$thread_local_,
-    UnitAttr:$externally_initialized,
     DefaultValuedAttr<ConfinedAttr<I32Attr, [IntNonNegative]>, "0">:$addr_space,
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
     OptionalAttr<StrAttr>:$section,
-    OptionalAttr<SymbolRefAttr>:$comdat,
     DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_
   );
   let summary = "LLVM dialect alias.";
@@ -1465,8 +1463,8 @@ def LLVM_AliasOp : LLVM_Op<"mlir.alias",
     using a initializer region which could be a direct map to another global
     value or contain some address computation on top of it.
 
-    It uses an @-identifier for its value, which will be uniqued by the module
-    with respect to other @-identifiers in it.
+    It uses a symbol for its value, which will be uniqued by the module
+    with respect to other symbols in it.
 
     Similarly to functions and globals, they can also have a linkage attribute.
     This attribute is placed between `llvm.mlir.alias` and the symbol name. If
@@ -1501,9 +1499,7 @@ def LLVM_AliasOp : LLVM_Op<"mlir.alias",
       CArg<"unsigned", "0">:$addrSpace,
       CArg<"bool", "false">:$dsoLocal,
       CArg<"bool", "false">:$thread_local_,
-      CArg<"SymbolRefAttr", "{}">:$comdat,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
-      CArg<"ArrayRef<Attribute>", "{}">:$dbgExprs)>
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
 
   let extraClassDeclaration = [{
