@@ -11,36 +11,27 @@ from lldbsuite.test import lldbutil
 
 class LibcxxVectorDataFormatterTestCase(TestBase):
     def check_numbers(self, var_name, show_ptr=False):
+        patterns = []
+        substrs = [
+            "[0] = 1",
+            "[1] = 12",
+            "[2] = 123",
+            "[3] = 1234",
+            "[4] = 12345",
+            "[5] = 123456",
+            "[6] = 1234567",
+            "}",
+        ]
         if show_ptr:
-            self.expect(
-                "frame variable " + var_name,
-                patterns=[var_name + " = 0x.* size=7"],
-                substrs=[
-                    "[0] = 1",
-                    "[1] = 12",
-                    "[2] = 123",
-                    "[3] = 1234",
-                    "[4] = 12345",
-                    "[5] = 123456",
-                    "[6] = 1234567",
-                    "}",
-                ],
-            )
+            patterns = [var_name + " = 0x.* size=7"]
         else:
-            self.expect(
-                "frame variable " + var_name,
-                substrs=[
-                    var_name + " = size=7",
-                    "[0] = 1",
-                    "[1] = 12",
-                    "[2] = 123",
-                    "[3] = 1234",
-                    "[4] = 12345",
-                    "[5] = 123456",
-                    "[6] = 1234567",
-                    "}",
-                ],
-            )
+            substrs.insert(0, var_name + " = size=7")
+
+        self.expect(
+            "frame variable " + var_name,
+            patterns=patterns,
+            substrs=substrs,
+        )
         self.expect_expr(
             var_name,
             result_summary="size=7",
