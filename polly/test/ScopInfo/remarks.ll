@@ -1,5 +1,4 @@
-; RUN: opt %loadNPMPolly -pass-remarks-analysis="polly-scops" '-passes=print<polly-function-scops>' \
-; RUN: -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -pass-remarks-analysis=polly-scops '-passes=polly-custom<scops>' -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK: remark: test/ScopInfo/remarks.c:4:7: SCoP begins here.
 ; CHECK: remark: test/ScopInfo/remarks.c:9:15: Inbounds assumption:    [N, M, Debug] -> {  : M <= 100 }

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-print-scops -disable-output -polly-allow-nonaffine < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output -polly-allow-nonaffine < %s | FileCheck %s
 ;
 ; Verify if reduction spread across multiple blocks in a single scop statement are detected
 ;

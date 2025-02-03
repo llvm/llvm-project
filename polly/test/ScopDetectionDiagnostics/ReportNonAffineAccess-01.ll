@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -pass-remarks-missed="polly-detect" -polly-detect-track-failures '-passes=print<polly-detect>' -disable-output < %s 2>&1| FileCheck %s
+; RUN: opt %loadNPMPolly -pass-remarks-missed=polly-detect -polly-detect-track-failures '-passes=polly-custom<detect>' -polly-print-detect -disable-output < %s 2>&1 | FileCheck %s
 
 ; void f(int A[]) {
 ;   for(int i=0; i<42; ++i)

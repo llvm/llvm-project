@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-print-import-jscop -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop>' -polly-print-import-jscop -disable-output < %s | FileCheck %s
 ;
 ; Check that we allow the new access functions even though they access
 ; different locations than the original ones (but the alignment is the

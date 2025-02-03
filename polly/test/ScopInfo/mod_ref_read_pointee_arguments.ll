@@ -1,7 +1,5 @@
-; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-stmt-granularity=bb '-passes=print<polly-function-scops>' -polly-allow-modref-calls \
-; RUN:     -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -passes=polly-codegen -disable-output \
-; RUN:     -polly-allow-modref-calls < %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-stmt-granularity=bb '-passes=polly-custom<scops>' -polly-print-scops -polly-allow-modref-calls -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa '-passes=polly<no-default-opts>' -disable-output -polly-allow-modref-calls < %s
 ;
 ; Verify that we model the read access of the gcread intrinsic
 ; correctly, thus that A is read by it but B is not.

@@ -1,6 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-reschedule=0 -passes=polly-opt-isl \
-; RUN: -polly-pattern-matching-based-opts=true -polly-tc-opt=true \
-; RUN: -debug -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-reschedule=0 '-passes=polly-custom<opt-isl>' -polly-pattern-matching-based-opts=true -polly-tc-opt=true -debug -disable-output < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 ;
 ;      for (i = 0; i < 1024; i++)

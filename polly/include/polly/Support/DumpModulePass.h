@@ -21,7 +21,7 @@ class ModulePass;
 } // namespace llvm
 
 namespace polly {
-/// Create a pass that prints the module into a file.
+/// A pass that prints the module into a file.
 ///
 /// The meaning of @p Filename depends on @p IsSuffix. If IsSuffix==false, then
 /// the module is written to the @p Filename. If it is true, the filename is
@@ -30,10 +30,6 @@ namespace polly {
 /// The intent of IsSuffix is to avoid the file being overwritten when
 /// processing multiple modules and/or with multiple dump passes in the
 /// pipeline.
-llvm::ModulePass *createDumpModuleWrapperPass(std::string Filename,
-                                              bool IsSuffix);
-
-/// A pass that prints the module into a file.
 struct DumpModulePass final : llvm::PassInfoMixin<DumpModulePass> {
   std::string Filename;
   bool IsSuffix;

@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-ast>' -aa-pipeline=      -disable-output < %s | FileCheck %s --check-prefix=NOAA
-; RUN: opt %loadNPMPolly '-passes=print<polly-ast>' -aa-pipeline=tbaa -disable-output < %s | FileCheck %s --check-prefix=TBAA
+; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' -polly-print-ast -aa-pipeline= -disable-output < %s | FileCheck %s --check-prefix=NOAA
+; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' -polly-print-ast -aa-pipeline=tbaa -disable-output < %s | FileCheck %s --check-prefix=TBAA
 ;
 ;    void jd(int *Int0, int *Int1, float *Float0, float *Float1) {
 ;      for (int i = 0; i < 1024; i++) {
