@@ -1040,7 +1040,7 @@ public:
   // Modifying Enumeration types
   clang::EnumConstantDecl *AddEnumerationValueToEnumerationType(
       const CompilerType &enum_type, const Declaration &decl, const char *name,
-      int64_t enum_value, uint32_t enum_value_bit_size);
+      uint64_t enum_value, uint32_t enum_value_bit_size);
   clang::EnumConstantDecl *AddEnumerationValueToEnumerationType(
       const CompilerType &enum_type, const Declaration &decl, const char *name,
       const llvm::APSInt &value);
