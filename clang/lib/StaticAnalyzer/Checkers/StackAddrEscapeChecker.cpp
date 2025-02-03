@@ -258,8 +258,10 @@ public:
       for (auto Var : BDR->referenced_vars()) {
         SVal Val = Ctxt.getState()->getSVal(Var.getCapturedRegion());
         const MemRegion *Region = Val.getAsRegion();
-        if (Region && isa<StackSpaceRegion>(Region->getMemorySpace()))
+        if (Region && isa<StackSpaceRegion>(Region->getMemorySpace())) {
           EscapingStackRegions.push_back(Region);
+          VisitMemRegion(Region);
+        }
       }
       return false;
     }
@@ -272,21 +274,12 @@ public:
 };
 
 static SmallVector<const MemRegion *>
-FindEscapingStackRegions(CheckerContext &C, SVal SVal) {
-  SmallVector<const MemRegion *> FoundStackRegions;
-
-  FindStackRegionsSymbolVisitor Finder(C, FoundStackRegions);
-  ScanReachableSymbols Scanner(C.getState(), Finder);
-  Scanner.scan(SVal);
-
-  return FoundStackRegions;
-}
-
-static SmallVector<const MemRegion *>
 FilterReturnExpressionLeaks(const SmallVector<const MemRegion *> &MaybeEscaped,
                             CheckerContext &C, const Expr *RetE, SVal &RetVal) {
 
   SmallVector<const MemRegion *> WillEscape;
+
+  const MemRegion *RetRegion = RetVal.getAsRegion();
 
   // Returning a record by value is fine. (In this case, the returned
   // expression will be a copy-constructor, possibly wrapped in an
@@ -295,36 +288,34 @@ FilterReturnExpressionLeaks(const SmallVector<const MemRegion *> &MaybeEscaped,
     RetE = Cleanup->getSubExpr();
   bool IsConstructExpr = isa<CXXConstructExpr>(RetE) && RetE->getType()->isRecordType();
 
-  const MemRegion *RetRegion = RetVal.getAsRegion();
-
   // The CK_CopyAndAutoreleaseBlockObject cast causes the block to be copied
   // so the stack address is not escaping here.
   bool IsCopyAndAutoreleaseBlockObj = false;
   if (const auto *ICE = dyn_cast<ImplicitCastExpr>(RetE)) {
-    IsCopyAndAutoreleaseBlockObj = RetRegion && 
-      isa<BlockDataRegion>(RetRegion) && 
+    IsCopyAndAutoreleaseBlockObj =
+      isa_and_nonnull<BlockDataRegion>(RetRegion) && 
       ICE->getCastKind() == CK_CopyAndAutoreleaseBlockObject;
   }
 
   for (const MemRegion *MR : MaybeEscaped) {
-    // In this case, the block_data region being returned isn't a leak,
-    // and all of its subregions are not leaks
-    if (IsCopyAndAutoreleaseBlockObj) {
-      if (MR == RetRegion)
-        continue;
-
-      // const SubRegion *SR = dyn_cast<SubRegion>(MR);
-      // if (SR && SR->isSubRegionOf(RetRegion))
-        // continue;
-    }
-
-    if (RetRegion == MR && IsConstructExpr)
+    if (RetRegion == MR && (IsCopyAndAutoreleaseBlockObj || IsConstructExpr))
       continue;
 
     WillEscape.push_back(MR);
   }
 
   return WillEscape;
+}
+
+static SmallVector<const MemRegion *>
+FindEscapingStackRegions(CheckerContext &C, const Expr *RetE, SVal RetVal) {
+  SmallVector<const MemRegion *> FoundStackRegions;
+
+  FindStackRegionsSymbolVisitor Finder(C, FoundStackRegions);
+  ScanReachableSymbols Scanner(C.getState(), Finder);
+  Scanner.scan(RetVal);
+
+  return FilterReturnExpressionLeaks(FoundStackRegions, C, RetE, RetVal);
 }
 
 void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const {
@@ -338,13 +329,10 @@ void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS, CheckerContext &
 
   SVal V = C.getSVal(RetE);
 
-  SmallVector<const MemRegion *> MaybeEscapedRegions =
-      FindEscapingStackRegions(C, V);
+  SmallVector<const MemRegion *> EscapedStackRegions =
+      FindEscapingStackRegions(C, RetE, V);
 
-  SmallVector<const MemRegion *> EscapedRegions =
-      FilterReturnExpressionLeaks(MaybeEscapedRegions, C, RetE, V);
-
-  for (const MemRegion *ER : EscapedRegions)
+  for (const MemRegion *ER : EscapedStackRegions)
     EmitReturnLeakError(C, ER, RetE);
 }
 
