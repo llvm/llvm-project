@@ -520,6 +520,8 @@ int GetNumCPUsImpl() {
   }
 #if defined(__alpha__)
   const std::string Key = "cpus detected";
+#elif defined(__sparc__)
+  const std::string Key = "ncpus active";
 #else
   const std::string Key = "processor";
 #endif
