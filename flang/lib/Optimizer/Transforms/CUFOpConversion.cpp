@@ -103,7 +103,7 @@ static mlir::LogicalResult convertOpToCall(OpTy op,
   mlir::Value sourceLine;
   if constexpr (std::is_same_v<OpTy, cuf::AllocateOp>)
     sourceLine = fir::factory::locationToLineNo(
-        builder, loc, op.getSource() ? fTy.getInput(6) : fTy.getInput(5));
+        builder, loc, op.getSource() ? fTy.getInput(7) : fTy.getInput(6));
   else
     sourceLine = fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
 
@@ -119,22 +119,28 @@ static mlir::LogicalResult convertOpToCall(OpTy op,
   }
   llvm::SmallVector<mlir::Value> args;
   if constexpr (std::is_same_v<OpTy, cuf::AllocateOp>) {
+    mlir::Value pinned =
+        op.getPinned()
+            ? op.getPinned()
+            : builder.createNullConstant(
+                  loc, fir::ReferenceType::get(
+                           mlir::IntegerType::get(op.getContext(), 1)));
     if (op.getSource()) {
       mlir::Value stream =
           op.getStream()
               ? op.getStream()
               : builder.createIntegerConstant(loc, fTy.getInput(2), -1);
-      args = fir::runtime::createArguments(builder, loc, fTy, op.getBox(),
-                                           op.getSource(), stream, hasStat,
-                                           errmsg, sourceFile, sourceLine);
+      args = fir::runtime::createArguments(
+          builder, loc, fTy, op.getBox(), op.getSource(), stream, pinned,
+          hasStat, errmsg, sourceFile, sourceLine);
     } else {
       mlir::Value stream =
           op.getStream()
               ? op.getStream()
               : builder.createIntegerConstant(loc, fTy.getInput(1), -1);
       args = fir::runtime::createArguments(builder, loc, fTy, op.getBox(),
-                                           stream, hasStat, errmsg, sourceFile,
-                                           sourceLine);
+                                           stream, pinned, hasStat, errmsg,
+                                           sourceFile, sourceLine);
     }
   } else {
     args =
@@ -153,11 +159,6 @@ struct CUFAllocateOpConversion
   mlir::LogicalResult
   matchAndRewrite(cuf::AllocateOp op,
                   mlir::PatternRewriter &rewriter) const override {
-    // TODO: Pinned is a reference to a logical value that can be set to true
-    // when pinned allocation succeed. This will require a new entry point.
-    if (op.getPinned())
-      return mlir::failure();
-
     auto mod = op->getParentOfType<mlir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
