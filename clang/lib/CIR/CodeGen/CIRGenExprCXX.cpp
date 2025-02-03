@@ -876,11 +876,96 @@ void CIRGenFunction::emitNewArrayInitializer(
   unsigned InitListElements = 0;
 
   const Expr *Init = E->getInitializer();
+  QualType::DestructionKind DtorKind = ElementType.isDestructedType();
   CleanupDeactivationScope deactivation(*this);
 
+  CharUnits ElementSize = getContext().getTypeSizeInChars(ElementType);
+  CharUnits ElementAlign =
+      BeginPtr.getAlignment().alignmentOfArrayElement(ElementSize);
+
+  // Attempt to perform zero-initialization using memset.
+  auto TryMemsetInitialization = [&]() -> bool {
+    auto Loc = NumElements.getLoc();
+
+    // FIXME: If the type is a pointer-to-data-member under the Itanium ABI,
+    // we can initialize with a memset to -1.
+    if (!CGM.getTypes().isZeroInitializable(ElementType))
+      return false;
+
+    // Optimization: since zero initialization will just set the memory
+    // to all zeroes, generate a single memset to do it in one shot.
+
+    // Subtract out the size of any elements we've already initialized.
+    auto RemainingSize = AllocSizeWithoutCookie;
+    if (InitListElements) {
+      llvm_unreachable("NYI");
+    }
+
+    // Create the memset.
+    auto CastOp =
+        builder.createPtrBitcast(CurPtr.getPointer(), builder.getVoidTy());
+    builder.createMemSet(Loc, CastOp, builder.getUInt8(0, Loc), RemainingSize);
+    return true;
+  };
+
   const InitListExpr *ILE = dyn_cast<InitListExpr>(Init);
-  if (ILE) {
-    llvm_unreachable("NYI");
+  const CXXParenListInitExpr *CPLIE = nullptr;
+  const StringLiteral *SL = nullptr;
+  const ObjCEncodeExpr *OCEE = nullptr;
+  const Expr *IgnoreParen = nullptr;
+  if (!ILE) {
+    IgnoreParen = Init->IgnoreParenImpCasts();
+    CPLIE = dyn_cast<CXXParenListInitExpr>(IgnoreParen);
+    SL = dyn_cast<StringLiteral>(IgnoreParen);
+    OCEE = dyn_cast<ObjCEncodeExpr>(IgnoreParen);
+  }
+
+  // If the initializer is an initializer list, first do the explicit elements.
+  if (ILE || CPLIE || SL || OCEE) {
+    // Initializing from a (braced) string literal is a special case; the init
+    // list element does not initialize a (single) array element.
+    if ((ILE && ILE->isStringLiteralInit()) || SL || OCEE) {
+      llvm_unreachable("NYI");
+    }
+
+    ArrayRef<const Expr *> InitExprs =
+        ILE ? ILE->inits() : CPLIE->getInitExprs();
+    InitListElements = InitExprs.size();
+
+    // If this is a multi-dimensional array new, we will initialize multiple
+    // elements with each init list element.
+    QualType AllocType = E->getAllocatedType();
+    if (const ConstantArrayType *CAT = dyn_cast_or_null<ConstantArrayType>(
+            AllocType->getAsArrayTypeUnsafe())) {
+      llvm_unreachable("NYI");
+    }
+
+    // Enter a partial-destruction Cleanup if necessary.
+    if (DtorKind) {
+      llvm_unreachable("NYI");
+    }
+
+    CharUnits StartAlign = CurPtr.getAlignment();
+    for (const Expr *IE : InitExprs) {
+      llvm_unreachable("NYI");
+    }
+
+    // The remaining elements are filled with the array filler expression.
+    Init = ILE ? ILE->getArrayFiller() : CPLIE->getArrayFiller();
+
+    // Extract the initializer for the individual array elements by pulling
+    // out the array filler from all the nested initializer lists. This avoids
+    // generating a nested loop for the initialization.
+    while (Init && Init->getType()->isConstantArrayType()) {
+      auto *SubILE = dyn_cast<InitListExpr>(Init);
+      if (!SubILE)
+        break;
+      assert(SubILE->getNumInits() == 0 && "explicit inits in array filler?");
+      Init = SubILE->getArrayFiller();
+    }
+
+    // Switch back to initializing one base element at a time.
+    CurPtr = CurPtr.withElementType(BeginPtr.getElementType());
   }
 
   // If all elements have already been initialized, skip any further
@@ -911,6 +996,12 @@ void CIRGenFunction::emitNewArrayInitializer(
     llvm_unreachable("NYI");
   }
 
+  // If this is value-initialization, we can usually use memset.
+  if (isa<ImplicitValueInitExpr>(Init)) {
+    if (TryMemsetInitialization())
+      return;
+    llvm_unreachable("NYI");
+  }
   llvm_unreachable("NYI");
 }
 

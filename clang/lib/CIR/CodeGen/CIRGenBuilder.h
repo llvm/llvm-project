@@ -535,6 +535,10 @@ public:
   // Constant creation helpers
   // -------------------------
   //
+  cir::ConstantOp getUInt8(uint8_t c, mlir::Location loc) {
+    auto uInt8Ty = getUInt8Ty();
+    return create<cir::ConstantOp>(loc, uInt8Ty, cir::IntAttr::get(uInt8Ty, c));
+  }
   cir::ConstantOp getSInt32(int32_t c, mlir::Location loc) {
     auto sInt32Ty = getSInt32Ty();
     return create<cir::ConstantOp>(loc, sInt32Ty,

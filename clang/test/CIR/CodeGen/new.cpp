@@ -144,3 +144,20 @@ void t_constant_size_nontrivial2() {
 // CHECK:    cir.store %9, %0 : !cir.ptr<!ty_D>, !cir.ptr<!cir.ptr<!ty_D>>
 // CHECK:    cir.return
 // CHECK:  }
+
+void t_constant_size_memset_init() {
+  auto p = new int[16] {};
+}
+
+// In this test, NUM_ELEMENTS isn't used because no cookie is needed and there
+//   are no constructor calls needed.
+
+// CHECK:  cir.func @_Z27t_constant_size_memset_initv()
+// CHECK:    %[[#NUM_ELEMENTS:]] = cir.const #cir.int<16> : !u64i
+// CHECK:    %[[#ALLOCATION_SIZE:]] = cir.const #cir.int<64> : !u64i
+// CHECK:    %[[#ALLOC_PTR:]] = cir.call @_Znam(%[[#ALLOCATION_SIZE]]) : (!u64i) -> !cir.ptr<!void>
+// CHECK:    %[[#ELEM_PTR:]] = cir.cast(bitcast, %[[#ALLOC_PTR]] : !cir.ptr<!void>), !cir.ptr<!s32i>
+// CHECK:    %[[#VOID_PTR:]] = cir.cast(bitcast, %[[#ELEM_PTR]] : !cir.ptr<!s32i>), !cir.ptr<!void>
+// CHECK:    %[[#ZERO:]] = cir.const #cir.int<0> : !u8i
+// CHECK:    %[[#ZERO_I32:]] = cir.cast(integral, %[[#ZERO]] : !u8i), !s32i
+// CHECK:    cir.libc.memset %[[#ALLOCATION_SIZE]] bytes from %[[#VOID_PTR]] set to %[[#ZERO_I32]] : !cir.ptr<!void>, !s32i, !u64i
