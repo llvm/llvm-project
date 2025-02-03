@@ -1190,6 +1190,23 @@ public:
     return false;
   }
 
+  /// Based on the target and current register pressure information from the
+  /// Scheduler, determine whether to release the node in the pending queue
+  virtual bool
+  needReleasePendingQueue(MachineFunction &MF,
+                          ArrayRef<unsigned> MaxSetPressure) const {
+    return false;
+  }
+
+  /// For each SUnit, determine whether to release it
+  /// from the pending queue based on the register pressure changes
+  /// associated with that SUnit.
+  virtual bool needReleaseSUFromPendingQueue(MachineFunction &MF,
+                                             ArrayRef<unsigned> PSetID,
+                                             ArrayRef<int> UnitInc) const {
+    return false;
+  }
+
   //===--------------------------------------------------------------------===//
   /// Debug information queries.
 
@@ -1232,18 +1249,6 @@ public:
   virtual SmallVector<StringLiteral>
   getVRegFlagsOfReg(Register Reg, const MachineFunction &MF) const {
     return {};
-  }
-
-  virtual bool
-  needReleasePendingQueue(MachineFunction &MF,
-                          ArrayRef<unsigned> MaxSetPressure) const {
-    return false;
-  }
-
-  virtual bool needReleaseSUFromPendingQueue(MachineFunction &MF,
-                                             ArrayRef<unsigned> PSetID,
-                                             ArrayRef<int> UnitInc) const {
-    return false;
   }
 };
 
