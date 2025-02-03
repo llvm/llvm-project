@@ -1013,6 +1013,182 @@ define i1 @isnan_idiom_ppc_fp128(ppc_fp128 %x) {
   ret i1 %ret
 }
 
+define i1 @fpclass_test_normal(float %num) {
+; CHECK-LABEL: define i1 @fpclass_test_normal(
+; CHECK-SAME: float [[NUM:%.*]]) {
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast float [[NUM]] to i32
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[CAST]], 2139095040
+; CHECK-NEXT:    [[TEST1:%.*]] = icmp ne i32 [[MASKED]], 2139095040
+; CHECK-NEXT:    [[TEST2:%.*]] = icmp ne i32 [[MASKED]], 0
+; CHECK-NEXT:    [[RES:%.*]] = and i1 [[TEST1]], [[TEST2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cast = bitcast float %num to i32
+  %masked = and i32 %cast, 2139095040
+  %test1 = icmp ne i32 %masked, 2139095040
+  %test2 = icmp ne i32 %masked, 0
+  %res = and i1 %test1, %test2
+  ret i1 %res
+}
+
+define i1 @fpclass_test_normal_half(half %num) {
+; CHECK-LABEL: define i1 @fpclass_test_normal_half(
+; CHECK-SAME: half [[NUM:%.*]]) {
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast half [[NUM]] to i16
+; CHECK-NEXT:    [[MASKED:%.*]] = and i16 [[CAST]], 31744
+; CHECK-NEXT:    [[TEST1:%.*]] = icmp ne i16 [[MASKED]], 31744
+; CHECK-NEXT:    [[TEST2:%.*]] = icmp ne i16 [[MASKED]], 0
+; CHECK-NEXT:    [[RES:%.*]] = and i1 [[TEST1]], [[TEST2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cast = bitcast half %num to i16
+  %masked = and i16 %cast, 31744
+  %test1 = icmp ne i16 %masked, 31744
+  %test2 = icmp ne i16 %masked, 0
+  %res = and i1 %test1, %test2
+  ret i1 %res
+}
+
+define <2 x i1> @fpclass_test_normal_half_vec(<2 x half> %num) {
+; CHECK-LABEL: define <2 x i1> @fpclass_test_normal_half_vec(
+; CHECK-SAME: <2 x half> [[NUM:%.*]]) {
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast <2 x half> [[NUM]] to <2 x i16>
+; CHECK-NEXT:    [[MASKED:%.*]] = and <2 x i16> [[CAST]], splat (i16 31744)
+; CHECK-NEXT:    [[TEST1:%.*]] = icmp ne <2 x i16> [[MASKED]], splat (i16 31744)
+; CHECK-NEXT:    [[TEST2:%.*]] = icmp ne <2 x i16> [[MASKED]], zeroinitializer
+; CHECK-NEXT:    [[RES:%.*]] = and <2 x i1> [[TEST1]], [[TEST2]]
+; CHECK-NEXT:    ret <2 x i1> [[RES]]
+;
+  %cast = bitcast <2 x half> %num to <2 x i16>
+  %masked = and <2 x i16> %cast, splat(i16 31744)
+  %test1 = icmp ne <2 x i16> %masked, splat(i16 31744)
+  %test2 = icmp ne <2 x i16> %masked, zeroinitializer
+  %res = and <2 x i1> %test1, %test2
+  ret <2 x i1> %res
+}
+
+define i1 @fpclass_test_not_normal(float %num) {
+; CHECK-LABEL: define i1 @fpclass_test_not_normal(
+; CHECK-SAME: float [[NUM:%.*]]) {
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast float [[NUM]] to i32
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[CAST]], 2139095040
+; CHECK-NEXT:    [[TEST1:%.*]] = icmp eq i32 [[MASKED]], 2139095040
+; CHECK-NEXT:    [[TEST2:%.*]] = icmp eq i32 [[MASKED]], 0
+; CHECK-NEXT:    [[RES:%.*]] = or i1 [[TEST1]], [[TEST2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cast = bitcast float %num to i32
+  %masked = and i32 %cast, 2139095040
+  %test1 = icmp eq i32 %masked, 2139095040
+  %test2 = icmp eq i32 %masked, 0
+  %res = or i1 %test1, %test2
+  ret i1 %res
+}
+
+define i1 @fpclass_test_normal_commuted(float %num) {
+; CHECK-LABEL: define i1 @fpclass_test_normal_commuted(
+; CHECK-SAME: float [[NUM:%.*]]) {
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast float [[NUM]] to i32
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[CAST]], 2139095040
+; CHECK-NEXT:    [[TEST1:%.*]] = icmp ne i32 [[MASKED]], 2139095040
+; CHECK-NEXT:    [[TEST2:%.*]] = icmp ne i32 [[MASKED]], 0
+; CHECK-NEXT:    [[RES:%.*]] = and i1 [[TEST2]], [[TEST1]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cast = bitcast float %num to i32
+  %masked = and i32 %cast, 2139095040
+  %test1 = icmp ne i32 %masked, 2139095040
+  %test2 = icmp ne i32 %masked, 0
+  %res = and i1 %test2, %test1
+  ret i1 %res
+}
+
+define i1 @fpclass_test_normal_mismatch_pred(float %num) {
+; CHECK-LABEL: define i1 @fpclass_test_normal_mismatch_pred(
+; CHECK-SAME: float [[NUM:%.*]]) {
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast float [[NUM]] to i32
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[CAST]], 2139095040
+; CHECK-NEXT:    [[TEST2:%.*]] = icmp eq i32 [[MASKED]], 0
+; CHECK-NEXT:    ret i1 [[TEST2]]
+;
+  %cast = bitcast float %num to i32
+  %masked = and i32 %cast, 2139095040
+  %test1 = icmp ne i32 %masked, 2139095040
+  %test2 = icmp eq i32 %masked, 0
+  %res = and i1 %test1, %test2
+  ret i1 %res
+}
+
+define i1 @fpclass_test_normal_no_implicit_fp(float %num) #0 {
+; CHECK-LABEL: define i1 @fpclass_test_normal_no_implicit_fp(
+; CHECK-SAME: float [[NUM:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast float [[NUM]] to i32
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[CAST]], 2139095040
+; CHECK-NEXT:    [[TEST1:%.*]] = icmp ne i32 [[MASKED]], 2139095040
+; CHECK-NEXT:    [[TEST2:%.*]] = icmp ne i32 [[MASKED]], 0
+; CHECK-NEXT:    [[RES:%.*]] = and i1 [[TEST1]], [[TEST2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cast = bitcast float %num to i32
+  %masked = and i32 %cast, 2139095040
+  %test1 = icmp ne i32 %masked, 2139095040
+  %test2 = icmp ne i32 %masked, 0
+  %res = and i1 %test1, %test2
+  ret i1 %res
+}
+
+define i1 @fpclass_test_normal_invalid_constant1(float %num) {
+; CHECK-LABEL: define i1 @fpclass_test_normal_invalid_constant1(
+; CHECK-SAME: float [[NUM:%.*]]) {
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast float [[NUM]] to i32
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[CAST]], 2139095039
+; CHECK-NEXT:    [[TEST1:%.*]] = icmp ne i32 [[MASKED]], 2139095039
+; CHECK-NEXT:    [[TEST2:%.*]] = icmp ne i32 [[MASKED]], 0
+; CHECK-NEXT:    [[RES:%.*]] = and i1 [[TEST1]], [[TEST2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cast = bitcast float %num to i32
+  %masked = and i32 %cast, 2139095039
+  %test1 = icmp ne i32 %masked, 2139095039
+  %test2 = icmp ne i32 %masked, 0
+  %res = and i1 %test1, %test2
+  ret i1 %res
+}
+
+define i1 @fpclass_test_normal_invalid_constant2(float %num) {
+; CHECK-LABEL: define i1 @fpclass_test_normal_invalid_constant2(
+; CHECK-SAME: float [[NUM:%.*]]) {
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast float [[NUM]] to i32
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[CAST]], 2139095040
+; CHECK-NEXT:    [[TEST1:%.*]] = icmp ne i32 [[MASKED]], 2130706432
+; CHECK-NEXT:    [[TEST2:%.*]] = icmp ne i32 [[MASKED]], 0
+; CHECK-NEXT:    [[RES:%.*]] = and i1 [[TEST1]], [[TEST2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cast = bitcast float %num to i32
+  %masked = and i32 %cast, 2139095040
+  %test1 = icmp ne i32 %masked, 2130706432
+  %test2 = icmp ne i32 %masked, 0
+  %res = and i1 %test1, %test2
+  ret i1 %res
+}
+
+define i1 @fpclass_test_normal_invalid_constant3(float %num) {
+; CHECK-LABEL: define i1 @fpclass_test_normal_invalid_constant3(
+; CHECK-SAME: float [[NUM:%.*]]) {
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast float [[NUM]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[CAST]], 2130706432
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne i32 [[TMP1]], 2130706432
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cast = bitcast float %num to i32
+  %masked = and i32 %cast, 2139095040
+  %test1 = icmp ne i32 %masked, 2139095040
+  %test2 = icmp ne i32 %masked, 2130706432
+  %res = and i1 %test1, %test2
+  ret i1 %res
+}
+
 declare void @usei32(i32)
 
 attributes #0 = { noimplicitfloat }
