@@ -31,4 +31,20 @@ def AmdgpuEmulateAtomicsPass : Pass<"amdgpu-emulate-atomics"> {
                         "Chipset that these operations will run on">];
 }
 
+def AmdgpuResolveStridedMetadataPass : Pass<"amdgpu-resolve-strided-metadata"> {
+  let summary = "Resolve memref.extract_strided_metadata on AMDGPU ops";
+  let description = [{
+    This pass rrewrites `memref.extract_strided_metadata` operations
+    targeting the AMDGPU dialect casts.
+
+    It's mainly meant for testing - please incorporate the patterns into your
+    own extract-strided-metadata passes (or run memref's expand-strided-metadata
+    again after this).
+  }];
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "memref::MemRefDialect"
+  ];
+}
+
 #endif // MLIR_DIALECT_AMDGPU_TRANSFORMS_PASSES_TD_
