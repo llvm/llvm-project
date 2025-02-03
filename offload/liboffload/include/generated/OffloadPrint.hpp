@@ -665,6 +665,20 @@ operator<<(std::ostream &os,
   return os;
 }
 
+inline std::ostream &
+operator<<(std::ostream &os,
+           const struct ol_set_kernel_args_data_params_t *params) {
+  os << ".Kernel = ";
+  printPtr(os, *params->pKernel);
+  os << ", ";
+  os << ".ArgsData = ";
+  printPtr(os, *params->pArgsData);
+  os << ", ";
+  os << ".ArgsDataSize = ";
+  os << *params->pArgsDataSize;
+  return os;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // @brief Print pointer value
 template <typename T>

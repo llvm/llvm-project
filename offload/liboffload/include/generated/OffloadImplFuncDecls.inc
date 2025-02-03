@@ -97,3 +97,6 @@ ol_impl_result_t olReleaseKernel_impl(ol_kernel_handle_t Kernel);
 ol_impl_result_t olSetKernelArgValue_impl(ol_kernel_handle_t Kernel,
                                           uint32_t Index, size_t Size,
                                           void *ArgData);
+
+ol_impl_result_t olSetKernelArgsData_impl(ol_kernel_handle_t Kernel,
+                                          void *ArgsData, size_t ArgsDataSize);

@@ -838,7 +838,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olCreateKernel(
     ol_kernel_handle_t *Kernel);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Create a queue for the given device
+/// @brief Increment the reference count of the given kernel
 ///
 /// @details
 ///
@@ -854,7 +854,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olRetainKernel(
     ol_kernel_handle_t Kernel);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Create a queue for the given device
+/// @brief Decrement the reference count of the given kernel
 ///
 /// @details
 ///
@@ -870,9 +870,12 @@ OL_APIEXPORT ol_result_t OL_APICALL olReleaseKernel(
     ol_kernel_handle_t Kernel);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Create a queue for the given device
+/// @brief Set the value of a single kernel argument at the given index
 ///
 /// @details
+///    - The implementation will construct and lay out the backing storage for
+///    the kernel arguments.The effects of calls to this function on a kernel
+///    are lost if olSetKernelArgsData is called.
 ///
 /// @returns
 ///     - ::OL_RESULT_SUCCESS
@@ -891,6 +894,30 @@ OL_APIEXPORT ol_result_t OL_APICALL olSetKernelArgValue(
     size_t Size,
     // [in] pointer to the argument data
     void *ArgData);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Set the entire argument data for a kernel
+///
+/// @details
+///    - Previous calls to olSetKernelArgValue on the same kernel are
+///    invalidated by this functionThe data pointed to by ArgsData is assumed to
+///    be laid out correctly according to the requirements of the backend API
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Kernel`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+///         + `NULL == ArgsData`
+OL_APIEXPORT ol_result_t OL_APICALL olSetKernelArgsData(
+    // [in] handle of the kernel
+    ol_kernel_handle_t Kernel,
+    // [in] pointer to the argument data
+    void *ArgsData,
+    // [in] size of the argument data
+    size_t ArgsDataSize);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for olGetPlatform
@@ -1134,6 +1161,15 @@ typedef struct ol_set_kernel_arg_value_params_t {
 } ol_set_kernel_arg_value_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olSetKernelArgsData
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_set_kernel_args_data_params_t {
+  ol_kernel_handle_t *pKernel;
+  void **pArgsData;
+  size_t *pArgsDataSize;
+} ol_set_kernel_args_data_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of olInit that also sets source code location information
 /// @details See also ::olInit
 OL_APIEXPORT ol_result_t OL_APICALL
@@ -1356,6 +1392,14 @@ OL_APIEXPORT ol_result_t OL_APICALL olReleaseKernelWithCodeLoc(
 /// @details See also ::olSetKernelArgValue
 OL_APIEXPORT ol_result_t OL_APICALL olSetKernelArgValueWithCodeLoc(
     ol_kernel_handle_t Kernel, uint32_t Index, size_t Size, void *ArgData,
+    ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olSetKernelArgsData that also sets source code location
+/// information
+/// @details See also ::olSetKernelArgsData
+OL_APIEXPORT ol_result_t OL_APICALL olSetKernelArgsDataWithCodeLoc(
+    ol_kernel_handle_t Kernel, void *ArgsData, size_t ArgsDataSize,
     ol_code_location_t *CodeLocation);
 
 #if defined(__cplusplus)

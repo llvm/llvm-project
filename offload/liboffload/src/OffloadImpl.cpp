@@ -54,40 +54,20 @@ struct ol_program_handle_t_ {
 };
 
 struct OffloadArguments {
-  static constexpr size_t MaxParamBytes = 4000u;
+  static constexpr size_t MaxParamBytes = 4096u;
   using args_t = std::array<char, MaxParamBytes>;
   using args_size_t = std::vector<size_t>;
-  using args_index_t = std::vector<void *>;
+  using args_ptr_t = std::vector<void *>;
   args_t Storage;
   args_size_t ParamSizes;
-  args_index_t Indices;
-  args_size_t OffsetPerIndex;
+  args_ptr_t Pointers;
 
-  std::uint32_t ImplicitOffsetArgs[3] = {0, 0, 0};
-
-  // NOTE:
-  // This implementation is an exact copy of the CUDA adapter's argument
-  // implementation. Even though it was designed for CUDA, the design of
-  // libomptarget means it should work for other plugins as they will expect
-  // the same argument layout.
-  OffloadArguments() {
-    // Place the implicit offset index at the end of the indicies collection
-    Indices.emplace_back(&ImplicitOffsetArgs);
-  }
-
-  /// Add an argument to the kernel.
-  /// If the argument existed before, it is replaced.
-  /// Otherwise, it is added.
-  /// Gaps are filled with empty arguments.
-  /// Implicit offset argument is kept at the back of the indices collection.
-  void addArg(size_t Index, size_t Size, const void *Arg,
-              size_t LocalSize = 0) {
-    if (Index + 2 > Indices.size()) {
-      // Move implicit offset argument index with the end
-      Indices.resize(Index + 2, Indices.back());
-      // Ensure enough space for the new argument
+  // Add an argument. If it already exists, it is replaced. Gaps are filled with
+  // empty arguments. Previous setArgsData calls are invalidated.
+  void addArg(size_t Index, size_t Size, const void *Arg) {
+    if (Index + 1 > Pointers.size()) {
+      Pointers.resize(Index + 1);
       ParamSizes.resize(Index + 1);
-      OffsetPerIndex.resize(Index + 1);
     }
     ParamSizes[Index] = Size;
     // calculate the insertion point on the array
@@ -95,46 +75,17 @@ struct OffloadArguments {
                                        std::begin(ParamSizes) + Index, 0);
     // Update the stored value for the argument
     std::memcpy(&Storage[InsertPos], Arg, Size);
-    Indices[Index] = &Storage[InsertPos];
-    OffsetPerIndex[Index] = LocalSize;
+    Pointers[Index] = &Storage[InsertPos];
   }
 
-  void addLocalArg(size_t Index, size_t Size) {
-    size_t LocalOffset = this->getLocalSize();
-
-    // maximum required alignment is the size of the largest vector type
-    const size_t MaxAlignment = sizeof(double) * 16;
-
-    // for arguments smaller than the maximum alignment simply align to the
-    // size of the argument
-    const size_t Alignment = std::min(MaxAlignment, Size);
-
-    // align the argument
-    size_t AlignedLocalOffset = LocalOffset;
-    size_t Pad = LocalOffset % Alignment;
-    if (Pad != 0) {
-      AlignedLocalOffset += Alignment - Pad;
-    }
-
-    addArg(Index, sizeof(size_t), (const void *)&(AlignedLocalOffset),
-           Size + (AlignedLocalOffset - LocalOffset));
+  // Set all argument data at once. Previous addArg calls are invalidated.
+  void setArgsData(const void *Data, size_t Size) {
+    std::memcpy(Storage.data(), Data, Size);
+    Pointers.clear();
+    ParamSizes.clear();
   }
 
-  void setImplicitOffset(size_t Size, std::uint32_t *ImplicitOffset) {
-    assert(Size == sizeof(std::uint32_t) * 3);
-    std::memcpy(ImplicitOffsetArgs, ImplicitOffset, Size);
-  }
-
-  void clearLocalSize() {
-    std::fill(std::begin(OffsetPerIndex), std::end(OffsetPerIndex), 0);
-  }
-
-  const args_index_t &getIndices() const noexcept { return Indices; }
-
-  uint32_t getLocalSize() const {
-    return std::accumulate(std::begin(OffsetPerIndex), std::end(OffsetPerIndex),
-                           0);
-  }
+  const args_ptr_t &getPointers() const noexcept { return Pointers; }
 
   const char *getStorage() const noexcept { return Storage.data(); }
 };
@@ -618,7 +569,7 @@ ol_impl_result_t olEnqueueKernelLaunch_impl(ol_queue_handle_t Queue,
   AsyncInfoWrapperTy AsyncInfoWrapper(DeviceImpl, Queue->AsyncInfo);
 
   KernelArgsTy LaunchArgs{};
-  LaunchArgs.NumArgs = Kernel->Args.getIndices().size() - 1; // TODO
+  LaunchArgs.NumArgs = Kernel->Args.getPointers().size();
   LaunchArgs.NumTeams[0] = GlobalWorkSize[0];
   LaunchArgs.NumTeams[1] = 1;
   LaunchArgs.NumTeams[2] = 1;
@@ -628,7 +579,7 @@ ol_impl_result_t olEnqueueKernelLaunch_impl(ol_queue_handle_t Queue,
 
   LaunchArgs.ArgPtrs = (void **)Kernel->Args.getStorage();
 
-  // TODO: Verify this
+  // No offsets needed, arguments are real pointers
   auto ArgOffsets = std::vector<ptrdiff_t>(LaunchArgs.NumArgs, 0ul);
 
   auto Err = Kernel->KernelImpl->launch(
@@ -644,5 +595,11 @@ ol_impl_result_t olEnqueueKernelLaunch_impl(ol_queue_handle_t Queue,
     *EventOut = makeEvent(Queue);
   }
 
+  return OL_SUCCESS;
+}
+
+ol_impl_result_t olSetKernelArgsData_impl(ol_kernel_handle_t Kernel,
+                                          void *ArgsData, size_t ArgsDataSize) {
+  Kernel->Args.setArgsData(ArgsData, ArgsDataSize);
   return OL_SUCCESS;
 }

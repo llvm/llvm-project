@@ -1311,3 +1311,47 @@ ol_result_t olSetKernelArgValueWithCodeLoc(ol_kernel_handle_t Kernel,
   currentCodeLocation() = nullptr;
   return Result;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olSetKernelArgsData_val(ol_kernel_handle_t Kernel,
+                                         void *ArgsData, size_t ArgsDataSize) {
+  if (true /*enableParameterValidation*/) {
+    if (NULL == Kernel) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+
+    if (NULL == ArgsData) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+  }
+
+  return olSetKernelArgsData_impl(Kernel, ArgsData, ArgsDataSize);
+}
+OL_APIEXPORT ol_result_t OL_APICALL olSetKernelArgsData(
+    ol_kernel_handle_t Kernel, void *ArgsData, size_t ArgsDataSize) {
+  if (offloadConfig().TracingEnabled) {
+    std::cout << "---> olSetKernelArgsData";
+  }
+
+  ol_result_t Result = olSetKernelArgsData_val(Kernel, ArgsData, ArgsDataSize);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_set_kernel_args_data_params_t Params = {&Kernel, &ArgsData,
+                                               &ArgsDataSize};
+    std::cout << "(" << &Params << ")";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olSetKernelArgsDataWithCodeLoc(ol_kernel_handle_t Kernel,
+                                           void *ArgsData, size_t ArgsDataSize,
+                                           ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = olSetKernelArgsData(Kernel, ArgsData, ArgsDataSize);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
