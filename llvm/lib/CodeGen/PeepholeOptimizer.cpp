@@ -504,7 +504,7 @@ private:
 
   /// Check whether \p MI is understood by the register coalescer
   /// but may require some rewriting.
-  bool isCoalescableCopy(const MachineInstr &MI) {
+  static bool isCoalescableCopy(const MachineInstr &MI) {
     // SubregToRegs are not interesting, because they are already register
     // coalescer friendly.
     return MI.isCopy() ||
@@ -514,7 +514,7 @@ private:
 
   /// Check whether \p MI is a copy like instruction that is
   /// not recognized by the register coalescer.
-  bool isUncoalescableCopy(const MachineInstr &MI) {
+  static bool isUncoalescableCopy(const MachineInstr &MI) {
     return MI.isBitcast() || (!DisableAdvCopyOpt && (MI.isRegSequenceLike() ||
                                                      MI.isInsertSubregLike() ||
                                                      MI.isExtractSubregLike()));
