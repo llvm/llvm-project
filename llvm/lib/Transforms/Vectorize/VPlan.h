@@ -3623,6 +3623,15 @@ public:
   /// of VPBlockShallowTraversalWrapper.
   auto getExitBlocks();
 
+  /// Returns true if the plan has a region containing an early exit, i.e. the
+  /// loop exits due to a condition other than testing the canonical induction
+  /// variable against the trip count.
+  bool hasRegionWithEarlyExit() {
+    auto *VectorRegion = getVectorLoopRegion();
+    return VectorRegion &&
+           VectorRegion->getSingleSuccessor() != getMiddleBlock();
+  }
+
   /// Returns true if \p VPBB is an exit block.
   bool isExitBlock(VPBlockBase *VPBB);
 

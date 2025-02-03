@@ -715,9 +715,9 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) const {
   switch (getOpcode()) {
   case VPInstruction::AnyOf: {
-    auto *VecI1Ty = VectorType::get(Type::getInt1Ty(Ctx.LLVMCtx), VF);
-    return Ctx.TTI.getArithmeticReductionCost(Instruction::Or, VecI1Ty,
-                                              std::nullopt, Ctx.CostKind);
+    auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
+    return Ctx.TTI.getArithmeticReductionCost(
+        Instruction::Or, cast<VectorType>(VecTy), std::nullopt, Ctx.CostKind);
   }
   default:
     // TODO: Fill out other opcodes!
