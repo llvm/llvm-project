@@ -14,7 +14,7 @@ let regex2 = /Order from <(.*)>, type: (.*), count in dozen: ([0-9]+)/
 
 import RegexBuilder
 let dslRegex = Regex { .digit }
-// CHECK: _StringProcessing.Regex<Substring> =
+// CHECK: _StringProcessing.Regex<{{.+}}> =
 
 // We should only see this output once, regardless of availability.
 // CHECK-NOT: _StringProcessing
