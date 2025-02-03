@@ -338,7 +338,10 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-lpthread");
   }
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
-  
+    
+// Required for 64-bit atomic operations used in sanitizer runtimes 
+// (e.g., sanitizer_common's atomic utilities). On 32-bit AIX, these 
+// are not natively supported, necessitating linkage with -latomic.
   if (Sanitize.hasAnySanitizer() && IsArch32Bit) {
     CmdArgs.push_back("-latomic");
   }
