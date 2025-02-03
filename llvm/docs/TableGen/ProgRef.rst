@@ -268,7 +268,7 @@ high-level types (e.g., ``dag``). This flexibility allows you to describe a
 wide range of records conveniently and compactly.
 
 .. productionlist::
-   Type: "bit" | "int" | "string" | "dag"
+   Type: "bit" | "int" | "string" | "dag" | "code"
        :| "bits" "<" `TokInteger` ">"
        :| "list" "<" `Type` ">"
        :| `ClassID`
@@ -284,6 +284,10 @@ wide range of records conveniently and compactly.
 ``string``
     The ``string`` type represents an ordered sequence of characters of arbitrary
     length.
+
+``code``
+    The keyword ``code`` is an alias for ``string`` which may be used to
+    indicate string values that are code.
 
 ``bits<``\ *n*\ ``>``
     The ``bits`` type is a fixed-sized integer of arbitrary length *n* that
@@ -498,6 +502,8 @@ arguments, producing a value for that bang operator. The ``!cond`` operator
 takes a list of pairs of arguments separated by colons. See `Appendix A:
 Bang Operators`_ for a description of each bang operator.
 
+The `Type` is only accepted for certain bang operators, and must not be
+``code``.
 
 Suffixed values
 ---------------
@@ -670,7 +676,7 @@ arguments.
 
 .. productionlist::
    Body: ";" | "{" `BodyItem`* "}"
-   BodyItem: (`Type` | "code") `TokIdentifier` ["=" `Value`] ";"
+   BodyItem: `Type` `TokIdentifier` ["=" `Value`] ";"
            :| "let" `TokIdentifier` ["{" `RangeList` "}"] "=" `Value` ";"
            :| "defvar" `TokIdentifier` "=" `Value` ";"
            :| `Assert`
@@ -678,8 +684,7 @@ arguments.
 A field definition in the body specifies a field to be included in the class
 or record. If no initial value is specified, then the field's value is
 uninitialized. The type must be specified; TableGen will not infer it from
-the value. The keyword ``code`` may be used to emphasize that the field
-has a string value that is code.
+the value.
 
 The ``let`` form is used to reset a field to a new value. This can be done
 for fields defined directly in the body or fields inherited from parent

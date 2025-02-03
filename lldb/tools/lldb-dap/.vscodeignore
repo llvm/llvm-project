@@ -1,0 +1,9 @@
+// Ignore everything by default
+**/*
+
+// Only include specific files and directories
+!LICENSE.TXT
+!package.json
+!README.md
+!out/**
+!syntaxes/**

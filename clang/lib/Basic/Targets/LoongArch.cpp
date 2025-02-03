@@ -206,7 +206,7 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
       // arch feature set will be used to include all sub-features belonging to
       // the V1.1 ISA version.
       if (HasFeatureFrecipe && HasFeatureLAM_BH && HasFeatureLAMCAS &&
-          HasFeatureLD_SEQ_SA && HasFeatureDiv32)
+          HasFeatureLD_SEQ_SA && HasFeatureDiv32 && HasFeatureSCQ)
         Builder.defineMacro("__loongarch_arch",
                             Twine('"') + "la64v1.1" + Twine('"'));
       else
@@ -248,6 +248,9 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (HasFeatureDiv32)
     Builder.defineMacro("__loongarch_div32", Twine(1));
+
+  if (HasFeatureSCQ)
+    Builder.defineMacro("__loongarch_scq", Twine(1));
 
   StringRef ABI = getABI();
   if (ABI == "lp64d" || ABI == "lp64f" || ABI == "lp64s")
@@ -333,6 +336,8 @@ bool LoongArchTargetInfo::handleTargetFeatures(
       HasFeatureLD_SEQ_SA = true;
     else if (Feature == "+div32")
       HasFeatureDiv32 = true;
+    else if (Feature == "+scq")
+      HasFeatureSCQ = true;
   }
   return true;
 }

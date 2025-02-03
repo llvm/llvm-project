@@ -107,11 +107,11 @@ static Address ResolveAddress(Target &target, const Address &addr) {
     Address resolved_addr;
     // If we weren't passed in a section offset address range, try and resolve
     // it to something
-    bool is_resolved = target.GetSectionLoadList().IsEmpty()
-                           ? target.GetImages().ResolveFileAddress(
-                                 addr.GetOffset(), resolved_addr)
-                           : target.GetSectionLoadList().ResolveLoadAddress(
-                                 addr.GetOffset(), resolved_addr);
+    bool is_resolved =
+        target.HasLoadedSections()
+            ? target.ResolveLoadAddress(addr.GetOffset(), resolved_addr)
+            : target.GetImages().ResolveFileAddress(addr.GetOffset(),
+                                                    resolved_addr);
 
     // We weren't able to resolve the address, just treat it as a raw address
     if (is_resolved && resolved_addr.IsValid())
@@ -123,22 +123,19 @@ static Address ResolveAddress(Target &target, const Address &addr) {
 lldb::DisassemblerSP Disassembler::DisassembleRange(
     const ArchSpec &arch, const char *plugin_name, const char *flavor,
     const char *cpu, const char *features, Target &target,
-    const AddressRange &range, bool force_live_memory) {
-  if (range.GetByteSize() <= 0)
-    return {};
-
-  if (!range.GetBaseAddress().IsValid())
-    return {};
-
+    llvm::ArrayRef<AddressRange> disasm_ranges, bool force_live_memory) {
   lldb::DisassemblerSP disasm_sp = Disassembler::FindPluginForTarget(
       target, arch, flavor, cpu, features, plugin_name);
 
   if (!disasm_sp)
     return {};
 
-  const size_t bytes_disassembled = disasm_sp->ParseInstructions(
-      target, range.GetBaseAddress(), {Limit::Bytes, range.GetByteSize()},
-      nullptr, force_live_memory);
+  size_t bytes_disassembled = 0;
+  for (const AddressRange &range : disasm_ranges) {
+    bytes_disassembled += disasm_sp->AppendInstructions(
+        target, range.GetBaseAddress(), {Limit::Bytes, range.GetByteSize()},
+        nullptr, force_live_memory);
+  }
   if (bytes_disassembled == 0)
     return {};
 
@@ -1092,11 +1089,9 @@ InstructionList::GetIndexOfInstructionAtLoadAddress(lldb::addr_t load_addr,
   return GetIndexOfInstructionAtAddress(address);
 }
 
-size_t Disassembler::ParseInstructions(Target &target, Address start,
-                                       Limit limit, Stream *error_strm_ptr,
-                                       bool force_live_memory) {
-  m_instruction_list.Clear();
-
+size_t Disassembler::AppendInstructions(Target &target, Address start,
+                                        Limit limit, Stream *error_strm_ptr,
+                                        bool force_live_memory) {
   if (!start.IsValid())
     return 0;
 
@@ -1129,7 +1124,7 @@ size_t Disassembler::ParseInstructions(Target &target, Address start,
   return DecodeInstructions(start, data, 0,
                             limit.kind == Limit::Instructions ? limit.value
                                                               : UINT32_MAX,
-                            false, data_from_file);
+                            /*append=*/true, data_from_file);
 }
 
 // Disassembler copy constructor

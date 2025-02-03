@@ -735,6 +735,9 @@ public:
       llvm::APInt dim = getExtentOp.getDim();
       uint64_t dimVal = dim.getLimitedValue(shapeTy.getRank());
       mlir::Value extent = s.getExtents()[dimVal];
+      fir::FirOpBuilder builder(rewriter, getExtentOp.getOperation());
+      extent = builder.createConvert(getExtentOp.getLoc(),
+                                     builder.getIndexType(), extent);
       rewriter.replaceOp(getExtentOp, extent);
       return mlir::success();
     }

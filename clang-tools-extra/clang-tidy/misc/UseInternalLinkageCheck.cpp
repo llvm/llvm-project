@@ -125,7 +125,7 @@ void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
                     exportDecl()))))));
   Finder->addMatcher(
       functionDecl(Common, hasBody(),
-                   unless(anyOf(cxxMethodDecl(),
+                   unless(anyOf(cxxMethodDecl(), isConsteval(),
                                 isAllocationOrDeallocationOverloadedFunction(),
                                 isMain())))
           .bind("fn"),

@@ -48,7 +48,7 @@ public:
     // The calls to checkAST* from AnalysisConsumer don't
     // visit template instantiations or lambda classes. We
     // want to visit those, so we make our own RecursiveASTVisitor.
-    struct LocalVisitor : DynamicRecursiveASTVisitor {
+    struct LocalVisitor : ConstDynamicRecursiveASTVisitor {
       const RawPtrRefMemberChecker *Checker;
       explicit LocalVisitor(const RawPtrRefMemberChecker *Checker)
           : Checker(Checker) {
@@ -57,14 +57,14 @@ public:
         ShouldVisitImplicitCode = false;
       }
 
-      bool VisitRecordDecl(RecordDecl *RD) override {
+      bool VisitRecordDecl(const RecordDecl *RD) override {
         Checker->visitRecordDecl(RD);
         return true;
       }
     };
 
     LocalVisitor visitor(this);
-    visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
+    visitor.TraverseDecl(TUD);
   }
 
   void visitRecordDecl(const RecordDecl *RD) const {

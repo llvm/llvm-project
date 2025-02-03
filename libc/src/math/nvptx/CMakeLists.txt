@@ -9,7 +9,7 @@ if(CUDAToolkit_FOUND)
   if (EXISTS ${libdevice_path})
     message(STATUS "Found the CUDA device library. Implementations falling back "
                    "to the vendor libraries will be resolved statically.")
-    set(bitcode_link_flags 
+    set(bitcode_link_flags
         "SHELL:-Xclang -mlink-builtin-bitcode -Xclang ${libdevice_path}")
   endif()
 else()

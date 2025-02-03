@@ -11,8 +11,8 @@ define void @arm_min_helium_f32(ptr %pSrc, i32 %blockSize, ptr nocapture %pResul
 ; CHECK-NEXT:    vidup.u32 q2, r4, #1
 ; CHECK-NEXT:    movw r5, #54437
 ; CHECK-NEXT:    movt r5, #21352
-; CHECK-NEXT:    vdup.32 q1, r5
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    vdup.32 q1, r5
 ; CHECK-NEXT:    dlstp.32 lr, r1
 ; CHECK-NEXT:  .LBB0_1: @ %do.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1

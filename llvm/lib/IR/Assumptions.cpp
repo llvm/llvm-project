@@ -108,4 +108,5 @@ StringSet<> llvm::KnownAssumptionStrings({
     "omp_no_parallelism",     // OpenMP 5.1
     "ompx_spmd_amenable",     // OpenMPOpt extension
     "ompx_no_call_asm",       // OpenMPOpt extension
+    "ompx_aligned_barrier",   // OpenMPOpt extension
 });

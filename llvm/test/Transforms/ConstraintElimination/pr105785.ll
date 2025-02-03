@@ -15,8 +15,7 @@ define void @pr105785(ptr %p) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[FOR_IND2]], 3
 ; CHECK-NEXT:    br i1 [[CMP2]], label %[[FOR_BODY3]], label %[[FOR_COND]]
 ; CHECK:       [[FOR_BODY3]]:
-; CHECK-NEXT:    [[SCMP:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[FOR_IND]], i32 1)
-; CHECK-NEXT:    store i32 [[SCMP]], ptr [[P]], align 4
+; CHECK-NEXT:    store i32 -1, ptr [[P]], align 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[FOR_IND2]], 1
 ; CHECK-NEXT:    br label %[[FOR_COND1]]
 ; CHECK:       [[FOR_END6]]:

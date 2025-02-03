@@ -205,8 +205,9 @@ struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
     // Make the call.
     llvm::SmallVector<mlir::Value> args{funcPtr};
     args.append(dispatch.getArgs().begin(), dispatch.getArgs().end());
-    rewriter.replaceOpWithNewOp<fir::CallOp>(dispatch, resTypes, nullptr, args,
-                                             dispatch.getProcedureAttrsAttr());
+    rewriter.replaceOpWithNewOp<fir::CallOp>(
+        dispatch, resTypes, nullptr, args, dispatch.getArgAttrsAttr(),
+        dispatch.getResAttrsAttr(), dispatch.getProcedureAttrsAttr());
     return mlir::success();
   }
 

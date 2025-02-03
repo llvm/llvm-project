@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <vector>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -59,6 +60,26 @@ struct TestInIters {
   }
 };
 
+TEST_CONSTEXPR_CXX20 bool test_vector_bool(std::size_t N) {
+  std::vector<bool> in(N, false);
+  for (std::size_t i = 0; i < N; i += 2)
+    in[i] = true;
+
+  { // Test copy with aligned bytes
+    std::vector<bool> out(N);
+    std::copy(in.begin(), in.end(), out.begin());
+    assert(in == out);
+  }
+  { // Test copy with unaligned bytes
+    std::vector<bool> out(N + 8);
+    std::copy(in.begin(), in.end(), out.begin() + 4);
+    for (std::size_t i = 0; i < N; ++i)
+      assert(out[i + 4] == in[i]);
+  }
+
+  return true;
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::cpp17_input_iterator_list<int*>(), TestInIters());
 
@@ -78,13 +99,23 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(std::equal(a, a + 10, expected));
   }
 
+  { // Test vector<bool>::iterator optimization
+    assert(test_vector_bool(8));
+    assert(test_vector_bool(19));
+    assert(test_vector_bool(32));
+    assert(test_vector_bool(49));
+    assert(test_vector_bool(64));
+    assert(test_vector_bool(199));
+    assert(test_vector_bool(256));
+  }
+
   return true;
 }
 
 int main(int, char**) {
   test();
 
-#if TEST_STD_VER > 17
+#if TEST_STD_VER >= 20
   static_assert(test());
 #endif
 

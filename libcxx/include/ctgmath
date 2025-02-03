@@ -30,13 +30,14 @@
 
 #  if _LIBCPP_STD_VER >= 20
 
-using __standard_header_ctgmath _LIBCPP_DEPRECATED_("removed in C++20. Include <cmath> and <complex> instead.") = void;
-using __use_standard_header_ctgmath = __standard_header_ctgmath;
+using __standard_header_ctgmath
+    _LIBCPP_DEPRECATED_("removed in C++20. Include <cmath> and <complex> instead.") _LIBCPP_NODEBUG = void;
+using __use_standard_header_ctgmath _LIBCPP_NODEBUG = __standard_header_ctgmath;
 
 #  elif _LIBCPP_STD_VER >= 17
 
-using __standard_header_ctgmath _LIBCPP_DEPRECATED_("Include <cmath> and <complex> instead.") = void;
-using __use_standard_header_ctgmath = __standard_header_ctgmath;
+using __standard_header_ctgmath _LIBCPP_DEPRECATED_("Include <cmath> and <complex> instead.") _LIBCPP_NODEBUG = void;
+using __use_standard_header_ctgmath _LIBCPP_NODEBUG = __standard_header_ctgmath;
 
 #  endif
 

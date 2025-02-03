@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -mattr=+sme2 -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -mattr=+sme2 -frame-pointer=non-leaf -verify-machineinstrs < %s | FileCheck %s --check-prefix=FP-CHECK
+; RUN: llc -mtriple=aarch64-linux-gnu -aarch64-streaming-hazard-size=0 -mattr=+sve -mattr=+sme2 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -aarch64-streaming-hazard-size=0 -mattr=+sve -mattr=+sme2 -frame-pointer=non-leaf -verify-machineinstrs < %s | FileCheck %s --check-prefix=FP-CHECK
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme2 -frame-pointer=non-leaf -verify-machineinstrs < %s | FileCheck %s --check-prefix=NO-SVE-CHECK
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -mattr=+sme2 -verify-machineinstrs -enable-machine-outliner < %s | FileCheck %s --check-prefix=OUTLINER-CHECK
+; RUN: llc -mtriple=aarch64-linux-gnu -aarch64-streaming-hazard-size=0 -mattr=+sve -mattr=+sme2 -verify-machineinstrs -enable-machine-outliner < %s | FileCheck %s --check-prefix=OUTLINER-CHECK
 
 declare void @callee();
 declare void @fixed_callee(<4 x i32>);

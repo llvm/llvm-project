@@ -280,6 +280,10 @@ private:
   FileIOResult write_unlocked_fbf(const uint8_t *data, size_t len);
   FileIOResult write_unlocked_nbf(const uint8_t *data, size_t len);
 
+  FileIOResult read_unlocked_fbf(uint8_t *data, size_t len);
+  FileIOResult read_unlocked_nbf(uint8_t *data, size_t len);
+  size_t copy_data_from_buf(uint8_t *data, size_t len);
+
   constexpr void adjust_buf() {
     if (read_allowed() && (buf == nullptr || bufsize == 0)) {
       // We should allow atleast one ungetc operation.

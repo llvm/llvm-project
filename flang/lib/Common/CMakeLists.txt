@@ -47,6 +47,6 @@ add_flang_library(FortranCommon
   LINK_COMPONENTS
   Support
 
-  LINK_LIBS
+  MLIR_LIBS
   MLIRIR
 )

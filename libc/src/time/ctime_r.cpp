@@ -6,15 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ctime_r.h"
+#include "src/time/ctime_r.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "time_utils.h"
+#include "src/time/time_constants.h"
+#include "src/time/time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
-using LIBC_NAMESPACE::time_utils::TimeConstants;
 
 LLVM_LIBC_FUNCTION(char *, ctime_r, (const time_t *t_ptr, char *buffer)) {
   if (t_ptr == nullptr || buffer == nullptr ||
@@ -23,7 +22,7 @@ LLVM_LIBC_FUNCTION(char *, ctime_r, (const time_t *t_ptr, char *buffer)) {
   }
 
   return time_utils::asctime(time_utils::localtime(t_ptr), buffer,
-                             TimeConstants::ASCTIME_MAX_BYTES);
+                             time_constants::ASCTIME_MAX_BYTES);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

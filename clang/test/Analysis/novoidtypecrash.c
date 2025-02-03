@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -std=c89 -Wno-int-conversion -analyzer-checker=core %s
+// RUN: %clang_analyze_cc1 -Wno-error=return-type -std=c89 -Wno-int-conversion -analyzer-checker=core %s
 x;
 y(void **z) { // no-crash
   *z = x;

@@ -879,22 +879,38 @@ static void handleDiagnoseIfAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!checkFunctionConditionAttr(S, D, AL, Cond, Msg))
     return;
 
-  StringRef DiagTypeStr;
-  if (!S.checkStringLiteralArgumentAttr(AL, 2, DiagTypeStr))
+  StringRef DefaultSevStr;
+  if (!S.checkStringLiteralArgumentAttr(AL, 2, DefaultSevStr))
     return;
 
-  DiagnoseIfAttr::DiagnosticType DiagType;
-  if (!DiagnoseIfAttr::ConvertStrToDiagnosticType(DiagTypeStr, DiagType)) {
+  DiagnoseIfAttr::DefaultSeverity DefaultSev;
+  if (!DiagnoseIfAttr::ConvertStrToDefaultSeverity(DefaultSevStr, DefaultSev)) {
     S.Diag(AL.getArgAsExpr(2)->getBeginLoc(),
            diag::err_diagnose_if_invalid_diagnostic_type);
     return;
+  }
+
+  StringRef WarningGroup;
+  SmallVector<StringRef, 2> Options;
+  if (AL.getNumArgs() > 3) {
+    if (!S.checkStringLiteralArgumentAttr(AL, 3, WarningGroup))
+      return;
+    if (WarningGroup.empty() ||
+        !S.getDiagnostics().getDiagnosticIDs()->getGroupForWarningOption(
+            WarningGroup)) {
+      S.Diag(AL.getArgAsExpr(3)->getBeginLoc(),
+             diag::err_diagnose_if_unknown_warning)
+          << WarningGroup;
+      return;
+    }
   }
 
   bool ArgDependent = false;
   if (const auto *FD = dyn_cast<FunctionDecl>(D))
     ArgDependent = ArgumentDependenceChecker(FD).referencesArgs(Cond);
   D->addAttr(::new (S.Context) DiagnoseIfAttr(
-      S.Context, AL, Cond, Msg, DiagType, ArgDependent, cast<NamedDecl>(D)));
+      S.Context, AL, Cond, Msg, DefaultSev, WarningGroup, ArgDependent,
+      cast<NamedDecl>(D)));
 }
 
 static void handleNoBuiltinAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -1868,8 +1884,8 @@ static void handleNakedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     // This form is not allowed to be written on a member function (static or
     // nonstatic) when in Microsoft compatibility mode.
     if (S.getLangOpts().MSVCCompat && isa<CXXMethodDecl>(D)) {
-      S.Diag(AL.getLoc(), diag::err_attribute_wrong_decl_type_str)
-          << AL << AL.isRegularKeywordAttribute() << "non-member functions";
+      S.Diag(AL.getLoc(), diag::err_attribute_wrong_decl_type)
+          << AL << AL.isRegularKeywordAttribute() << ExpectedNonMemberFunction;
       return;
     }
   }
@@ -2761,9 +2777,9 @@ static void handleWarnUnusedResult(Sema &S, Decl *D, const ParsedAttr &AL) {
     // The standard attribute cannot be applied to variable declarations such
     // as a function pointer.
     if (isa<VarDecl>(D))
-      S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type_str)
+      S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type)
           << AL << AL.isRegularKeywordAttribute()
-          << "functions, classes, or enumerations";
+          << ExpectedFunctionOrClassOrEnum;
 
     // If this is spelled as the standard C++17 attribute, but not in C++17,
     // warn about using it as an extension. If there are attribute arguments,
@@ -3289,7 +3305,8 @@ bool Sema::checkTargetClonesAttrString(
       } else if (Cur == "default") {
         DefaultIsDupe = HasDefault;
         HasDefault = true;
-      } else if (!Context.getTargetInfo().isValidFeatureName(Cur))
+      } else if (!Context.getTargetInfo().isValidFeatureName(Cur) ||
+                 Context.getTargetInfo().getFMVPriority(Cur) == 0)
         return Diag(CurLoc, diag::warn_unsupported_target_attribute)
                << Unsupported << None << Cur << TargetClones;
       if (llvm::is_contained(StringsBuffer, Cur) || DefaultIsDupe)
@@ -5555,8 +5572,8 @@ static void handleNullableTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   if (auto *CRD = dyn_cast<CXXRecordDecl>(D);
       !CRD || !(CRD->isClass() || CRD->isStruct())) {
-    S.Diag(AL.getRange().getBegin(), diag::err_attribute_wrong_decl_type_str)
-        << AL << AL.isRegularKeywordAttribute() << "classes";
+    S.Diag(AL.getRange().getBegin(), diag::err_attribute_wrong_decl_type)
+        << AL << AL.isRegularKeywordAttribute() << ExpectedClass;
     return;
   }
 

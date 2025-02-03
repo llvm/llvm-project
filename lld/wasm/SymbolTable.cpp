@@ -363,7 +363,7 @@ Symbol *SymbolTable::addSharedFunction(StringRef name, uint32_t flags,
     replaceSymbol<SharedFunctionSymbol>(sym, name, flags, file, sig);
   };
 
-  if (wasInserted) {
+  if (wasInserted || s->isLazy()) {
     replaceSym(s);
     return s;
   }
@@ -408,10 +408,18 @@ Symbol *SymbolTable::addSharedData(StringRef name, uint32_t flags,
   bool wasInserted;
   std::tie(s, wasInserted) = insert(name, file);
 
-  if (wasInserted || s->isUndefined()) {
+  if (wasInserted || s->isLazy()) {
     replaceSymbol<SharedData>(s, name, flags, file);
+    return s;
   }
 
+  // Shared symbols should never replace locally-defined ones
+  if (s->isDefined()) {
+    return s;
+  }
+
+  checkDataType(s, file);
+  replaceSymbol<SharedData>(s, name, flags, file);
   return s;
 }
 
@@ -1009,8 +1017,8 @@ void SymbolTable::handleWeakUndefines() {
 }
 
 DefinedFunction *SymbolTable::createUndefinedStub(const WasmSignature &sig) {
-  if (stubFunctions.count(sig))
-    return stubFunctions[sig];
+  if (auto it = stubFunctions.find(sig); it != stubFunctions.end())
+    return it->second;
   LLVM_DEBUG(dbgs() << "createUndefinedStub: " << toString(sig) << "\n");
   auto *sym = reinterpret_cast<DefinedFunction *>(make<SymbolUnion>());
   sym->isUsedInRegularObj = true;

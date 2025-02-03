@@ -232,7 +232,7 @@ Value *SIAnnotateControlFlow::handleLoopCondition(
     } else if (L->contains(Inst)) {
       Insert = Term;
     } else {
-      Insert = L->getHeader()->getFirstNonPHIOrDbgOrLifetime();
+      Insert = &*L->getHeader()->getFirstNonPHIOrDbgOrLifetime();
     }
 
     return CreateBreak(Insert);
@@ -247,7 +247,7 @@ Value *SIAnnotateControlFlow::handleLoopCondition(
   }
 
   if (isa<Argument>(Cond)) {
-    Instruction *Insert = L->getHeader()->getFirstNonPHIOrDbgOrLifetime();
+    Instruction *Insert = &*L->getHeader()->getFirstNonPHIOrDbgOrLifetime();
     return CreateBreak(Insert);
   }
 

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringTable.h"
 #include "gtest/gtest.h"
 
 #define OPTTABLE_STR_TABLE_CODE
@@ -20,7 +21,7 @@ struct OptionWithMarshallingInfo {
   const char *ImpliedValue;
 
   llvm::StringRef getPrefixedName() const {
-    return &OptionStrTable[PrefixedNameOffset];
+    return OptionStrTable[PrefixedNameOffset];
   }
 };
 

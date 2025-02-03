@@ -112,13 +112,15 @@ SectionLoadHistory::GetSectionLoadAddress(uint32_t stop_id,
 }
 
 bool SectionLoadHistory::ResolveLoadAddress(uint32_t stop_id, addr_t load_addr,
-                                            Address &so_addr) {
+                                            Address &so_addr,
+                                            bool allow_section_end) {
   // First find the top level section that this load address exists in
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   const bool read_only = true;
   SectionLoadList *section_load_list =
       GetSectionLoadListForStopID(stop_id, read_only);
-  return section_load_list->ResolveLoadAddress(load_addr, so_addr);
+  return section_load_list->ResolveLoadAddress(load_addr, so_addr,
+                                               allow_section_end);
 }
 
 bool SectionLoadHistory::SetSectionLoadAddress(

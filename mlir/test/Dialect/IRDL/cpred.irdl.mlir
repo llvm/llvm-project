@@ -7,8 +7,8 @@ module {
     irdl.type @type {
       %0 = irdl.c_pred "::llvm::isa<::mlir::IntegerAttr>($_self)"
       // CHECK: %{{.*}} = irdl.c_pred "::llvm::isa<::mlir::IntegerAttr>($_self)"
-      irdl.parameters(%0)
-      // CHECK: irdl.parameters(%{{.*}})
+      irdl.parameters(foo: %0)
+      // CHECK: irdl.parameters(foo: %{{.*}})
     }
   }
 }

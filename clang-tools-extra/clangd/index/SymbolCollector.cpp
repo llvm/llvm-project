@@ -888,7 +888,7 @@ void SymbolCollector::setIncludeLocation(const Symbol &S, SourceLocation DefLoc,
   // might run while parsing, rather than at the end of a translation unit.
   // Hence we see more and more redecls over time.
   SymbolProviders[S.ID] =
-      include_cleaner::headersForSymbol(Sym, SM, Opts.PragmaIncludes);
+      include_cleaner::headersForSymbol(Sym, *PP, Opts.PragmaIncludes);
 }
 
 llvm::StringRef getStdHeader(const Symbol *S, const LangOptions &LangOpts) {

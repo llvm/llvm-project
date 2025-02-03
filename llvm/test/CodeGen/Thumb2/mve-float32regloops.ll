@@ -1060,12 +1060,12 @@ define void @fir(ptr nocapture readonly %S, ptr nocapture readonly %pSrc, ptr no
 ; CHECK-NEXT:    vfma.f32 q0, q4, r5
 ; CHECK-NEXT:    vldrw.u32 q3, [r4, #-8]
 ; CHECK-NEXT:    vfma.f32 q0, q5, r6
-; CHECK-NEXT:    ldr r0, [sp, #16] @ 4-byte Reload
-; CHECK-NEXT:    vfma.f32 q0, q2, lr
 ; CHECK-NEXT:    vldrw.u32 q1, [r4, #-4]
+; CHECK-NEXT:    vfma.f32 q0, q2, lr
+; CHECK-NEXT:    ldr r0, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    vfma.f32 q0, q3, r11
-; CHECK-NEXT:    cmp r0, #16
 ; CHECK-NEXT:    vfma.f32 q0, q1, r8
+; CHECK-NEXT:    cmp r0, #16
 ; CHECK-NEXT:    blo .LBB16_9
 ; CHECK-NEXT:  @ %bb.7: @ %for.body.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB16_6 Depth=1
@@ -1603,8 +1603,8 @@ define arm_aapcs_vfpcc void @arm_biquad_cascade_df1_f32(ptr nocapture readonly %
 ; CHECK-NEXT:  .LBB19_3: @ %do.body
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB19_5 Depth 2
-; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    ldrd r5, r11, [r9]
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    ldrd r8, r10, [r9, #8]
 ; CHECK-NEXT:    ldr r2, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    str r7, [sp, #12] @ 4-byte Spill

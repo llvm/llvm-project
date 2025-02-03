@@ -1,4 +1,4 @@
-// RUN: not --crash llvm-tblgen -gen-dag-isel -I %p/../../include %s 2>&1 | FileCheck %s
+// RUN: not llvm-tblgen -gen-dag-isel -I %p/../../include %s 2>&1 | FileCheck %s -DFILE=%s
 
 // The HwModeSelect class is intended to serve as a base class for other
 // classes that are then used to select a value based on the HW mode.
@@ -24,7 +24,8 @@ def HasFeat2 : Predicate<"Subtarget->hasFeat2()">;
 def TestMode1 : HwMode<"+feat1", [HasFeat1]>;
 def TestMode2 : HwMode<"+feat2", [HasFeat2]>;
 
+// CHECK: error: assertion failed: The Objects and Modes lists must be the same length
+// CHECK: [[FILE]]:[[@LINE+1]]:5: error: assertion failed in this record
 def BadDef : ValueTypeByHwMode<[TestMode1, TestMode2, DefaultMode],
                                [i8, i16, i32, i64]>;
 
-// CHECK: error: in record BadDef derived from HwModeSelect: the lists Modes and Objects should have the same size

@@ -348,7 +348,7 @@ acc.attach.recipe @attach_ref :
      %offset : index,
      %size : index):
   fir.call _FortranAOpenACCAttachDescriptor(%aug_ptr, %base_addr_val, %offset, %size) :
-      (!fir.ref<none>, !fir.ref<!fir.box<none>>, index, index) -> none
+      (!fir.ref<none>, !fir.ref<!fir.box<none>>, index, index) -> ()
   acc.yield
 }
 

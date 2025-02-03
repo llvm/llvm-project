@@ -99,7 +99,8 @@ void ClangASTSource::StartTranslationUnit(ASTConsumer *Consumer) {
 
 // The core lookup interface.
 bool ClangASTSource::FindExternalVisibleDeclsByName(
-    const DeclContext *decl_ctx, DeclarationName clang_decl_name) {
+    const DeclContext *decl_ctx, DeclarationName clang_decl_name,
+    const clang::DeclContext *original_dc) {
   if (!m_ast_context) {
     SetNoExternalVisibleDeclsForName(decl_ctx, clang_decl_name);
     return false;

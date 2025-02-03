@@ -2,7 +2,7 @@
 // RUN: -one-shot-bufferize="bufferize-function-boundaries" --canonicalize \
 // RUN:   -finalize-memref-to-llvm\
 // RUN:   -convert-func-to-llvm -reconcile-unrealized-casts |\
-// RUN: mlir-cpu-runner \
+// RUN: mlir-runner \
 // RUN:  -e entry -entry-point-result=void  \
 // RUN:  -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils |\
 // RUN: FileCheck %s

@@ -26,6 +26,8 @@ add_mlir_dialect_library(MLIRTensorDialect
   MLIRDestinationStyleOpInterface
   MLIRDialectUtils
   MLIRIR
+  MLIRInferIntRangeCommon
+  MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
   MLIRParallelCombiningOpInterface
   MLIRShapedOpInterfaces

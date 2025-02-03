@@ -465,6 +465,59 @@ template <typename T> int Designator<T>::Rank() const {
       u);
 }
 
+// Corank()
+int BaseObject::Corank() const {
+  return common::visit(common::visitors{
+                           [](SymbolRef symbol) { return symbol->Corank(); },
+                           [](const StaticDataObject::Pointer &) { return 0; },
+                       },
+      u);
+}
+
+int Component::Corank() const {
+  if (int corank{symbol_->Corank()}; corank > 0) {
+    return corank;
+  }
+  return base().Corank();
+}
+
+int NamedEntity::Corank() const {
+  return common::visit(common::visitors{
+                           [](const SymbolRef s) { return s->Corank(); },
+                           [](const Component &c) { return c.Corank(); },
+                       },
+      u_);
+}
+
+int ArrayRef::Corank() const { return base().Corank(); }
+
+int DataRef::Corank() const {
+  return common::visit(common::visitors{
+                           [](SymbolRef symbol) { return symbol->Corank(); },
+                           [](const auto &x) { return x.Corank(); },
+                       },
+      u);
+}
+
+int Substring::Corank() const {
+  return common::visit(
+      common::visitors{
+          [](const DataRef &dataRef) { return dataRef.Corank(); },
+          [](const StaticDataObject::Pointer &) { return 0; },
+      },
+      parent_);
+}
+
+int ComplexPart::Corank() const { return complex_.Corank(); }
+
+template <typename T> int Designator<T>::Corank() const {
+  return common::visit(common::visitors{
+                           [](SymbolRef symbol) { return symbol->Corank(); },
+                           [](const auto &x) { return x.Corank(); },
+                       },
+      u);
+}
+
 // GetBaseObject(), GetFirstSymbol(), GetLastSymbol(), &c.
 const Symbol &Component::GetFirstSymbol() const {
   return base_.value().GetFirstSymbol();

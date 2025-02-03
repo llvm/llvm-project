@@ -5,8 +5,8 @@ add_mlir_library(MLIRMeshTest
   TestSimplifications.cpp
 
   EXCLUDE_FROM_LIBMLIR
-
-  LINK_LIBS PUBLIC
+  )
+mlir_target_link_libraries(MLIRMeshTest PUBLIC
   MLIRMeshDialect
   MLIRMeshTransforms
   MLIRPass

@@ -31,7 +31,7 @@ void markLive(COFFLinkerContext &ctx) {
   // COMDAT section chunks are dead by default. Add non-COMDAT chunks. Do not
   // traverse DWARF sections. They are live, but they should not keep other
   // sections alive.
-  for (Chunk *c : ctx.symtab.getChunks())
+  for (Chunk *c : ctx.driver.getChunks())
     if (auto *sc = dyn_cast<SectionChunk>(c))
       if (sc->live && !sc->isDWARF())
         worklist.push_back(sc);

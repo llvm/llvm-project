@@ -1,4 +1,5 @@
 header: inttypes.h
+header_template: inttypes.h.def
 macros: []
 types:
   - type_name: imaxdiv_t

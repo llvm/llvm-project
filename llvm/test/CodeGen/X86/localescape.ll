@@ -124,7 +124,9 @@ define void @alloc_func_no_frameaddr() {
 ; X64: movl $13, 32(%rsp)
 ; X64: xorl %ecx, %ecx
 ; X64: callq print_framealloc_from_fp
+; X64: .seh_startepilogue
 ; X64: addq $40, %rsp
+; X64: .seh_endepilogue
 ; X64: retq
 
 ; X86-LABEL: alloc_func_no_frameaddr:

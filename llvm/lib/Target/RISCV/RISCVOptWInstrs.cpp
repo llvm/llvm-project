@@ -326,6 +326,7 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
         break;
 
       case RISCV::PseudoCCMOVGPR:
+      case RISCV::PseudoCCMOVGPRNoX0:
         // Either operand 4 or operand 5 is returned by this instruction. If
         // only the lower word of the result is used, then only the lower word
         // of operand 4 and 5 is used.
@@ -538,6 +539,7 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
     case RISCV::MIN:
     case RISCV::MINU:
     case RISCV::PseudoCCMOVGPR:
+    case RISCV::PseudoCCMOVGPRNoX0:
     case RISCV::PseudoCCAND:
     case RISCV::PseudoCCOR:
     case RISCV::PseudoCCXOR:
@@ -546,7 +548,7 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
       // MIN, MAX, or PHI is also sign-extended.
 
       // The input registers for PHI are operand 1, 3, ...
-      // The input registers for PseudoCCMOVGPR are 4 and 5.
+      // The input registers for PseudoCCMOVGPR(NoX0) are 4 and 5.
       // The input registers for PseudoCCAND/OR/XOR are 4, 5, and 6.
       // The input registers for others are operand 1 and 2.
       unsigned B = 1, E = 3, D = 1;
@@ -556,6 +558,7 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
         D = 2;
         break;
       case RISCV::PseudoCCMOVGPR:
+      case RISCV::PseudoCCMOVGPRNoX0:
         B = 4;
         E = 6;
         break;

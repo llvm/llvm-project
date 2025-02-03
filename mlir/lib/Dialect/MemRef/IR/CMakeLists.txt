@@ -16,6 +16,8 @@ add_mlir_dialect_library(MLIRMemRefDialect
   MLIRControlFlowInterfaces
   MLIRDialect
   MLIRDialectUtils
+  MLIRInferIntRangeCommon
+  MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRMemorySlotInterfaces

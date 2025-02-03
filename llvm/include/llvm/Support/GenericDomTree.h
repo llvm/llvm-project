@@ -558,6 +558,22 @@ public:
     return isPostDominator() && !A->getBlock();
   }
 
+  template <typename IteratorTy>
+  NodeT *findNearestCommonDominator(iterator_range<IteratorTy> Nodes) const {
+    assert(!Nodes.empty() && "Nodes list is empty!");
+
+    NodeT *NCD = *Nodes.begin();
+    for (NodeT *Node : llvm::drop_begin(Nodes)) {
+      NCD = findNearestCommonDominator(NCD, Node);
+
+      // Stop when the root is reached.
+      if (isVirtualRoot(getNode(NCD)))
+        return nullptr;
+    }
+
+    return NCD;
+  }
+
   //===--------------------------------------------------------------------===//
   // API to update (Post)DominatorTree information based on modifications to
   // the CFG...

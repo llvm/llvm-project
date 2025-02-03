@@ -46,7 +46,7 @@ define i32 @main(ptr %0, i32 %1) {
 }
 
 ; CHECK-LABEL: define internal void @increment(
-; CHECK-SAME: ptr nocapture [[TMP0:%.*]]) {
+; CHECK-SAME: ptr captures(none) [[TMP0:%.*]]) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 [[TMP2]], 1
 ; CHECK-NEXT:    store i32 [[TMP3]], ptr [[TMP0]], align 4
@@ -54,7 +54,7 @@ define i32 @main(ptr %0, i32 %1) {
 ;
 ;
 ; CHECK-LABEL: define internal void @decrement(
-; CHECK-SAME: ptr nocapture [[TMP0:%.*]]) {
+; CHECK-SAME: ptr captures(none) [[TMP0:%.*]]) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 [[TMP2]], -1
 ; CHECK-NEXT:    store i32 [[TMP3]], ptr [[TMP0]], align 4
@@ -109,7 +109,7 @@ define i32 @main(ptr %0, i32 %1) {
 ;
 ;
 ; ONE-ITER-LABEL: define internal void @increment(
-; ONE-ITER-SAME: ptr nocapture [[TMP0:%.*]]) {
+; ONE-ITER-SAME: ptr captures(none) [[TMP0:%.*]]) {
 ; ONE-ITER-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP0]], align 4
 ; ONE-ITER-NEXT:    [[TMP3:%.*]] = add nsw i32 [[TMP2]], 1
 ; ONE-ITER-NEXT:    store i32 [[TMP3]], ptr [[TMP0]], align 4
@@ -117,7 +117,7 @@ define i32 @main(ptr %0, i32 %1) {
 ;
 ;
 ; ONE-ITER-LABEL: define internal void @decrement(
-; ONE-ITER-SAME: ptr nocapture [[TMP0:%.*]]) {
+; ONE-ITER-SAME: ptr captures(none) [[TMP0:%.*]]) {
 ; ONE-ITER-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP0]], align 4
 ; ONE-ITER-NEXT:    [[TMP3:%.*]] = add nsw i32 [[TMP2]], -1
 ; ONE-ITER-NEXT:    store i32 [[TMP3]], ptr [[TMP0]], align 4
@@ -172,7 +172,7 @@ define i32 @main(ptr %0, i32 %1) {
 ;
 ;
 ; DISABLED-LABEL: define internal void @func(
-; DISABLED-SAME: ptr [[TMP0:%.*]], i32 [[TMP1:%.*]], ptr nocapture [[TMP2:%.*]]) {
+; DISABLED-SAME: ptr [[TMP0:%.*]], i32 [[TMP1:%.*]], ptr captures(none) [[TMP2:%.*]]) {
 ; DISABLED-NEXT:    [[TMP4:%.*]] = alloca i32, align 4
 ; DISABLED-NEXT:    store i32 [[TMP1]], ptr [[TMP4]], align 4
 ; DISABLED-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
@@ -192,7 +192,7 @@ define i32 @main(ptr %0, i32 %1) {
 ;
 ;
 ; DISABLED-LABEL: define internal void @increment(
-; DISABLED-SAME: ptr nocapture [[TMP0:%.*]]) {
+; DISABLED-SAME: ptr captures(none) [[TMP0:%.*]]) {
 ; DISABLED-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP0]], align 4
 ; DISABLED-NEXT:    [[TMP3:%.*]] = add nsw i32 [[TMP2]], 1
 ; DISABLED-NEXT:    store i32 [[TMP3]], ptr [[TMP0]], align 4
@@ -200,7 +200,7 @@ define i32 @main(ptr %0, i32 %1) {
 ;
 ;
 ; DISABLED-LABEL: define internal void @decrement(
-; DISABLED-SAME: ptr nocapture [[TMP0:%.*]]) {
+; DISABLED-SAME: ptr captures(none) [[TMP0:%.*]]) {
 ; DISABLED-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP0]], align 4
 ; DISABLED-NEXT:    [[TMP3:%.*]] = add nsw i32 [[TMP2]], -1
 ; DISABLED-NEXT:    store i32 [[TMP3]], ptr [[TMP0]], align 4

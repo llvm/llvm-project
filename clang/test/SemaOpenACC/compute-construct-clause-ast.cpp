@@ -197,6 +197,7 @@ void TemplFunc() {
   while(true);
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}}serial
   // CHECK-NEXT: self clause
+  // CHECK-NEXT: <<<NULL>>
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: NullStmt
@@ -393,6 +394,7 @@ void TemplFunc() {
 
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}}serial
   // CHECK-NEXT: self clause
+  // CHECK-NEXT: <<<NULL>>
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: NullStmt

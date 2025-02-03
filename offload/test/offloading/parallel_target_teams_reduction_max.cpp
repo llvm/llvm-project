@@ -5,7 +5,7 @@
 // REQUIRES: gpu
 
 // This test validates that the OpenMP target reductions to find a maximum work
-// as indended for a few common data types.
+// as intended for a few common data types.
 
 #include <algorithm>
 #include <cassert>

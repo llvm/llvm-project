@@ -1657,8 +1657,8 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(ptr addrspace(1) noalias %o
 ; GFX10-NEXT:    v_or_b32_sdwa v2, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX10-NEXT:    v_cvt_f32_ubyte3_e32 v3, v0
-; GFX10-NEXT:    v_add_nc_u16 v1, v1, 0x900
-; GFX10-NEXT:    v_add_nc_u16 v5, v2, 0x900
+; GFX10-NEXT:    v_add_nc_u16 v1, 0x900, v1
+; GFX10-NEXT:    v_add_nc_u16 v5, 0x900, v2
 ; GFX10-NEXT:    v_cvt_f32_ubyte2_e32 v2, v0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v6, 16, v1
 ; GFX10-NEXT:    v_cvt_f32_ubyte1_e32 v1, v0
@@ -1723,10 +1723,10 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(ptr addrspace(1) noalias %o
 ; GFX11-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_or_b32_e32 v1, v1, v3
-; GFX11-NEXT:    v_add_nc_u16 v2, v2, 0x900
+; GFX11-NEXT:    v_add_nc_u16 v2, 0x900, v2
 ; GFX11-NEXT:    v_cvt_f32_ubyte3_e32 v3, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_add_nc_u16 v1, v1, 0x900
+; GFX11-NEXT:    v_add_nc_u16 v1, 0x900, v1
 ; GFX11-NEXT:    v_and_b32_e32 v5, 0xffff, v2
 ; GFX11-NEXT:    v_cvt_f32_ubyte2_e32 v2, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_3)

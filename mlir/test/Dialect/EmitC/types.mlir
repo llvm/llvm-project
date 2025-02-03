@@ -17,7 +17,9 @@ func.func @array_types(
   // CHECK-SAME: !emitc.array<30x!emitc.ssize_t>
   %arg5: !emitc.array<30x!emitc.ssize_t>,
   // CHECK-SAME: !emitc.array<30x!emitc.ptrdiff_t>
-  %arg6: !emitc.array<30x!emitc.ptrdiff_t>
+  %arg6: !emitc.array<30x!emitc.ptrdiff_t>,
+  // CHECK-SAME: !emitc.array<0xi64>
+  %arg7: !emitc.array<0xi64>
 ) {
   return
 }

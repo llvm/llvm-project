@@ -2,7 +2,7 @@
 # Invokes config.guess
 
 function( get_host_triple var )
-  if( MSVC OR (CMAKE_SYSTEM_NAME STREQUAL "Windows" AND CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT MINGW AND NOT MSYS))
+  if( MSVC OR CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
     if( CMAKE_C_COMPILER_ARCHITECTURE_ID MATCHES "ARM64.*" )
       set( value "aarch64-pc-windows-msvc" )
     elseif( CMAKE_C_COMPILER_ARCHITECTURE_ID MATCHES "ARM.*" )

@@ -36,7 +36,7 @@ llvm.func @sections_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attributes {fir.in
 }
 
 // CHECK-LABEL: define internal void @sections_..omp_par
-// CHECK:       omp.par.entry:
+// CHECK:       [[PAR_ENTRY:omp.par.entry]]:
 // CHECK:         %[[VAL_9:.*]] = getelementptr { ptr }, ptr %[[VAL_10:.*]], i32 0, i32 0
 // CHECK:         %[[VAL_11:.*]] = load ptr, ptr %[[VAL_9]], align 8
 // CHECK:         %[[VAL_12:.*]] = alloca i32, align 4
@@ -50,14 +50,20 @@ llvm.func @sections_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attributes {fir.in
 // CHECK:         %[[VAL_20:.*]] = alloca float, align 4
 // CHECK:         %[[VAL_21:.*]] = alloca [1 x ptr], align 8
 // CHECK:         br label %[[VAL_22:.*]]
-// CHECK:       omp.reduction.init:                               ; preds = %[[VAL_23:.*]]
+
+// CHECK:       [[VAL_22]]:
+// CHECK:         br label %[[PAR_REG:omp.par.region]]
+
+// CHECK:       [[PAR_REG]]:                                   ; preds = %[[VAL_22]]
+// CHECK:         br label %[[VAL_25:.*]]
+// CHECK:       omp.par.region1:                                  ; preds = %[[PAR_REG]]
+// CHECK:         br label %[[VAL_26:.*]]
+
+// CHECK:       [[RED_INIT:omp.reduction.init]]:
 // CHECK:         store float 0.000000e+00, ptr %[[VAL_20]], align 4
 // CHECK:         br label %[[VAL_24:.*]]
-// CHECK:       omp.par.region:                                   ; preds = %[[VAL_22]]
-// CHECK:         br label %[[VAL_25:.*]]
-// CHECK:       omp.par.region1:                                  ; preds = %[[VAL_24]]
-// CHECK:         br label %[[VAL_26:.*]]
-// CHECK:       omp_section_loop.preheader:                       ; preds = %[[VAL_25]]
+
+// CHECK:       omp_section_loop.preheader:                       ; preds = %[[RED_INIT]]
 // CHECK:         store i32 0, ptr %[[VAL_13]], align 4
 // CHECK:         store i32 1, ptr %[[VAL_14]], align 4
 // CHECK:         store i32 1, ptr %[[VAL_15]], align 4
@@ -68,8 +74,8 @@ llvm.func @sections_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attributes {fir.in
 // CHECK:         %[[VAL_30:.*]] = sub i32 %[[VAL_29]], %[[VAL_28]]
 // CHECK:         %[[VAL_31:.*]] = add i32 %[[VAL_30]], 1
 // CHECK:         br label %[[VAL_32:.*]]
-// CHECK:       omp_section_loop.header:                          ; preds = %[[VAL_33:.*]], %[[VAL_26]]
-// CHECK:         %[[VAL_34:.*]] = phi i32 [ 0, %[[VAL_26]] ], [ %[[VAL_35:.*]], %[[VAL_33]] ]
+// CHECK:       omp_section_loop.header:                          ; preds = %[[VAL_33:.*]], %[[VAL_24]]
+// CHECK:         %[[VAL_34:.*]] = phi i32 [ 0, %[[VAL_24]] ], [ %[[VAL_35:.*]], %[[VAL_33]] ]
 // CHECK:         br label %[[VAL_36:.*]]
 // CHECK:       omp_section_loop.cond:                            ; preds = %[[VAL_32]]
 // CHECK:         %[[VAL_37:.*]] = icmp ult i32 %[[VAL_34]], %[[VAL_31]]

@@ -67,6 +67,3 @@ if.end17:                                         ; preds = %if.else13, %if.then
 
 ; Function Attrs: noduplicate nounwind
 declare void @llvm.nvvm.barrier0() #2
-
-!0 = !{ptr @foo, !"kernel", i32 1}
-!1 = !{null, !"align", i32 8}

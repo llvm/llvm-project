@@ -34,7 +34,7 @@ define float @test2(ptr nocapture %src) {
 ;
 ; FP16-LABEL: test2:
 ; FP16:       # %bb.0:
-; FP16-NEXT:    vmovsh (%rdi), %xmm0
+; FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; FP16-NEXT:    retq
   %1 = load i16, ptr %src, align 2
@@ -77,7 +77,7 @@ define double @test4(ptr nocapture %src) {
 ;
 ; FP16-LABEL: test4:
 ; FP16:       # %bb.0:
-; FP16-NEXT:    vmovsh (%rdi), %xmm0
+; FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; FP16-NEXT:    vcvtsh2sd %xmm0, %xmm0, %xmm0
 ; FP16-NEXT:    retq
   %1 = load i16, ptr %src, align 2
@@ -123,7 +123,7 @@ define x86_fp80 @test6(ptr nocapture %src) {
 ; FP16:       # %bb.0:
 ; FP16-NEXT:    pushq %rax
 ; FP16-NEXT:    .cfi_def_cfa_offset 16
-; FP16-NEXT:    vmovsh (%rdi), %xmm0
+; FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; FP16-NEXT:    callq __extendhfxf2@PLT
 ; FP16-NEXT:    popq %rax
 ; FP16-NEXT:    .cfi_def_cfa_offset 8

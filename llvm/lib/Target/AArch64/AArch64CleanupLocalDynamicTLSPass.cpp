@@ -105,9 +105,9 @@ struct LDTLSCleanup : public MachineFunctionPass {
                                  TII->get(TargetOpcode::COPY), AArch64::X0)
                              .addReg(TLSBaseAddrReg);
 
-    // Update the call site info.
-    if (I.shouldUpdateCallSiteInfo())
-      I.getMF()->eraseCallSiteInfo(&I);
+    // Update the call info.
+    if (I.shouldUpdateAdditionalCallInfo())
+      I.getMF()->eraseAdditionalCallInfo(&I);
 
     // Erase the TLS_base_addr instruction.
     I.eraseFromParent();

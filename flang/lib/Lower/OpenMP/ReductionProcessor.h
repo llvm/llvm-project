@@ -113,7 +113,7 @@ public:
   /// value `initValue`, and the reduction combiner carried over from `reduce`.
   /// TODO: add atomic region.
   static mlir::omp::DeclareReductionOp
-  createDeclareReduction(fir::FirOpBuilder &builder,
+  createDeclareReduction(AbstractConverter &builder,
                          llvm::StringRef reductionOpName,
                          const ReductionIdentifier redId, mlir::Type type,
                          mlir::Location loc, bool isByRef);

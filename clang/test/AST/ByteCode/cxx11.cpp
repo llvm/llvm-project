@@ -174,3 +174,14 @@ void lambdas() {
   int d;
   int a9[1] = {[d = 0] = 1}; // both-error {{not an integral constant expression}}
 }
+
+
+namespace InitLinkToRVO {
+  struct A {
+    int y = 3;
+    int z = 1 + y;
+  };
+
+  constexpr A make() { return A {}; }
+  static_assert(make().z == 4, "");
+}

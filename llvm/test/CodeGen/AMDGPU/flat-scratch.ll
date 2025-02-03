@@ -5249,6 +5249,114 @@ bb:
   ret void
 }
 
+define amdgpu_gs void @sgpr_base_plus_sgpr_plus_vgpr_plus_negative_imm_offset(ptr addrspace(5) inreg %sgpr_base, i32 inreg %sidx, i32 %vidx) {
+; GFX9-LABEL: sgpr_base_plus_sgpr_plus_vgpr_plus_negative_imm_offset:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_add_u32 flat_scratch_lo, s0, s5
+; GFX9-NEXT:    s_addc_u32 flat_scratch_hi, s1, 0
+; GFX9-NEXT:    s_add_i32 s2, s2, s3
+; GFX9-NEXT:    v_add_u32_e32 v0, s2, v0
+; GFX9-NEXT:    v_add_u32_e32 v0, -16, v0
+; GFX9-NEXT:    v_mov_b32_e32 v1, 15
+; GFX9-NEXT:    scratch_store_dword v0, v1, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: sgpr_base_plus_sgpr_plus_vgpr_plus_negative_imm_offset:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_add_u32 s0, s0, s5
+; GFX10-NEXT:    s_addc_u32 s1, s1, 0
+; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
+; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
+; GFX10-NEXT:    v_add3_u32 v0, s2, s3, v0
+; GFX10-NEXT:    v_mov_b32_e32 v1, 15
+; GFX10-NEXT:    scratch_store_dword v0, v1, off offset:-16
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: sgpr_base_plus_sgpr_plus_vgpr_plus_negative_imm_offset:
+; GFX11:       ; %bb.0: ; %bb
+; GFX11-NEXT:    v_add3_u32 v0, s0, s1, v0
+; GFX11-NEXT:    v_mov_b32_e32 v1, 15
+; GFX11-NEXT:    scratch_store_b32 v0, v1, off offset:-16 dlc
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: sgpr_base_plus_sgpr_plus_vgpr_plus_negative_imm_offset:
+; GFX12:       ; %bb.0: ; %bb
+; GFX12-NEXT:    v_mov_b32_e32 v1, 15
+; GFX12-NEXT:    s_add_co_i32 s0, s0, s1
+; GFX12-NEXT:    scratch_store_b32 v0, v1, s0 offset:-16 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    s_endpgm
+;
+; GFX9-PAL-LABEL: sgpr_base_plus_sgpr_plus_vgpr_plus_negative_imm_offset:
+; GFX9-PAL:       ; %bb.0: ; %bb
+; GFX9-PAL-NEXT:    s_getpc_b64 s[2:3]
+; GFX9-PAL-NEXT:    s_mov_b32 s2, s8
+; GFX9-PAL-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
+; GFX9-PAL-NEXT:    v_mov_b32_e32 v1, 15
+; GFX9-PAL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-PAL-NEXT:    s_and_b32 s3, s3, 0xffff
+; GFX9-PAL-NEXT:    s_add_u32 flat_scratch_lo, s2, s5
+; GFX9-PAL-NEXT:    s_addc_u32 flat_scratch_hi, s3, 0
+; GFX9-PAL-NEXT:    s_add_i32 s0, s0, s1
+; GFX9-PAL-NEXT:    v_add_u32_e32 v0, s0, v0
+; GFX9-PAL-NEXT:    v_add_u32_e32 v0, -16, v0
+; GFX9-PAL-NEXT:    scratch_store_dword v0, v1, off
+; GFX9-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-PAL-NEXT:    s_endpgm
+;
+; GFX940-LABEL: sgpr_base_plus_sgpr_plus_vgpr_plus_negative_imm_offset:
+; GFX940:       ; %bb.0: ; %bb
+; GFX940-NEXT:    s_add_i32 s0, s0, s1
+; GFX940-NEXT:    v_add_u32_e32 v0, s0, v0
+; GFX940-NEXT:    v_add_u32_e32 v0, -16, v0
+; GFX940-NEXT:    v_mov_b32_e32 v1, 15
+; GFX940-NEXT:    scratch_store_dword v0, v1, off sc0 sc1
+; GFX940-NEXT:    s_waitcnt vmcnt(0)
+; GFX940-NEXT:    s_endpgm
+;
+; GFX10-PAL-LABEL: sgpr_base_plus_sgpr_plus_vgpr_plus_negative_imm_offset:
+; GFX10-PAL:       ; %bb.0: ; %bb
+; GFX10-PAL-NEXT:    s_getpc_b64 s[2:3]
+; GFX10-PAL-NEXT:    s_mov_b32 s2, s8
+; GFX10-PAL-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
+; GFX10-PAL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-PAL-NEXT:    s_and_b32 s3, s3, 0xffff
+; GFX10-PAL-NEXT:    s_add_u32 s2, s2, s5
+; GFX10-PAL-NEXT:    s_addc_u32 s3, s3, 0
+; GFX10-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
+; GFX10-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
+; GFX10-PAL-NEXT:    v_add3_u32 v0, s0, s1, v0
+; GFX10-PAL-NEXT:    v_mov_b32_e32 v1, 15
+; GFX10-PAL-NEXT:    scratch_store_dword v0, v1, off offset:-16
+; GFX10-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-PAL-NEXT:    s_endpgm
+;
+; GFX11-PAL-LABEL: sgpr_base_plus_sgpr_plus_vgpr_plus_negative_imm_offset:
+; GFX11-PAL:       ; %bb.0: ; %bb
+; GFX11-PAL-NEXT:    v_add3_u32 v0, s0, s1, v0
+; GFX11-PAL-NEXT:    v_mov_b32_e32 v1, 15
+; GFX11-PAL-NEXT:    scratch_store_b32 v0, v1, off offset:-16 dlc
+; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-PAL-NEXT:    s_endpgm
+;
+; GFX12-PAL-LABEL: sgpr_base_plus_sgpr_plus_vgpr_plus_negative_imm_offset:
+; GFX12-PAL:       ; %bb.0: ; %bb
+; GFX12-PAL-NEXT:    v_mov_b32_e32 v1, 15
+; GFX12-PAL-NEXT:    s_add_co_i32 s0, s0, s1
+; GFX12-PAL-NEXT:    scratch_store_b32 v0, v1, s0 offset:-16 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    s_endpgm
+bb:
+  %add1 = add nsw i32 %sidx, %vidx
+  %add2 = add nsw i32 %add1, -16
+  %gep = getelementptr inbounds [16 x i8], ptr addrspace(5) %sgpr_base, i32 0, i32 %add2
+  store volatile i32 15, ptr addrspace(5) %gep, align 4
+  ret void
+}
+
 define amdgpu_gs void @sgpr_base_negative_offset(ptr addrspace(1) %out, ptr addrspace(5) inreg %scevgep) {
 ; GFX9-LABEL: sgpr_base_negative_offset:
 ; GFX9:       ; %bb.0: ; %entry

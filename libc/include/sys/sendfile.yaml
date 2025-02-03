@@ -1,4 +1,5 @@
-header: sys-sendfile.h
+header: sys/sendfile.h
+header_template: sendfile.h.def
 macros: []
 types:
   - type_name: ssize_t

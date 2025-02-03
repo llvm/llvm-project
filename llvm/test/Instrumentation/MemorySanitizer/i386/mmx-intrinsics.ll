@@ -22,7 +22,7 @@ define i64 @test1(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i16> [[TMP12]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP16]], [[TMP8]]
+; CHECK-NEXT:    [[_MSPROP:%.*]] = call <1 x i64> @llvm.x86.ssse3.phadd.w(<1 x i64> [[TMP16]], <1 x i64> [[TMP8]])
 ; CHECK-NEXT:    [[TMP18:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.phadd.w(<1 x i64> [[TMP2]], <1 x i64> [[TMP17]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <1 x i64> [[TMP18]] to <4 x i16>
@@ -3426,7 +3426,7 @@ define i64 @test6(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i16> [[TMP12]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP16]], [[TMP8]]
+; CHECK-NEXT:    [[_MSPROP:%.*]] = call <1 x i64> @llvm.x86.ssse3.phadd.sw(<1 x i64> [[TMP16]], <1 x i64> [[TMP8]])
 ; CHECK-NEXT:    [[TMP18:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.phsub.sw(<1 x i64> [[TMP2]], <1 x i64> [[TMP17]]) #[[ATTR5]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <1 x i64> [[TMP18]] to <4 x i16>
@@ -3467,7 +3467,7 @@ define i64 @test5(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <2 x i32> [[TMP12]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP16]], [[TMP8]]
+; CHECK-NEXT:    [[_MSPROP:%.*]] = call <1 x i64> @llvm.x86.ssse3.phadd.d(<1 x i64> [[TMP16]], <1 x i64> [[TMP8]])
 ; CHECK-NEXT:    [[TMP18:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.phsub.d(<1 x i64> [[TMP2]], <1 x i64> [[TMP17]]) #[[ATTR5]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <1 x i64> [[TMP18]] to <2 x i32>
@@ -3508,7 +3508,7 @@ define i64 @test4(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i16> [[TMP12]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP16]], [[TMP8]]
+; CHECK-NEXT:    [[_MSPROP:%.*]] = call <1 x i64> @llvm.x86.ssse3.phadd.w(<1 x i64> [[TMP16]], <1 x i64> [[TMP8]])
 ; CHECK-NEXT:    [[TMP18:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.phsub.w(<1 x i64> [[TMP2]], <1 x i64> [[TMP17]]) #[[ATTR5]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <1 x i64> [[TMP18]] to <4 x i16>
@@ -3549,7 +3549,7 @@ define i64 @test3(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i16> [[TMP12]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP16]], [[TMP8]]
+; CHECK-NEXT:    [[_MSPROP:%.*]] = call <1 x i64> @llvm.x86.ssse3.phadd.sw(<1 x i64> [[TMP16]], <1 x i64> [[TMP8]])
 ; CHECK-NEXT:    [[TMP18:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.phadd.sw(<1 x i64> [[TMP2]], <1 x i64> [[TMP17]]) #[[ATTR5]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <1 x i64> [[TMP18]] to <4 x i16>
@@ -3590,7 +3590,7 @@ define i64 @test2(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <2 x i32> [[TMP12]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP16]], [[TMP8]]
+; CHECK-NEXT:    [[_MSPROP:%.*]] = call <1 x i64> @llvm.x86.ssse3.phadd.d(<1 x i64> [[TMP16]], <1 x i64> [[TMP8]])
 ; CHECK-NEXT:    [[TMP18:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.phadd.d(<1 x i64> [[TMP2]], <1 x i64> [[TMP17]]) #[[ATTR5]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <1 x i64> [[TMP18]] to <2 x i32>

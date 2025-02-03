@@ -130,9 +130,18 @@ public:
   virtual void
   createHostAssociateVarCloneDealloc(const Fortran::semantics::Symbol &sym) = 0;
 
-  virtual void copyHostAssociateVar(
-      const Fortran::semantics::Symbol &sym,
-      mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) = 0;
+  /// For a host-associated symbol (a symbol associated with another symbol from
+  /// an enclosing scope), either:
+  ///
+  /// * if \p hostIsSource == true: copy \p sym's value *from* its corresponding
+  /// host symbol,
+  ///
+  /// * if \p hostIsSource == false: copy \p sym's value *to* its corresponding
+  /// host symbol.
+  virtual void
+  copyHostAssociateVar(const Fortran::semantics::Symbol &sym,
+                       mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr,
+                       bool hostIsSource = true) = 0;
 
   virtual void copyVar(mlir::Location loc, mlir::Value dst, mlir::Value src,
                        fir::FortranVariableFlagsEnum attrs) = 0;

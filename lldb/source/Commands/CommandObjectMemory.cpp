@@ -1664,6 +1664,9 @@ protected:
     MemoryRegionInfo::OptionalBool memory_tagged = range_info.GetMemoryTagged();
     if (memory_tagged == MemoryRegionInfo::OptionalBool::eYes)
       result.AppendMessage("memory tagging: enabled");
+    MemoryRegionInfo::OptionalBool is_shadow_stack = range_info.IsShadowStack();
+    if (is_shadow_stack == MemoryRegionInfo::OptionalBool::eYes)
+      result.AppendMessage("shadow stack: yes");
 
     const std::optional<std::vector<addr_t>> &dirty_page_list =
         range_info.GetDirtyPageList();
@@ -1737,7 +1740,7 @@ protected:
 
     // It is important that we track the address used to request the region as
     // this will give the correct section name in the case that regions overlap.
-    // On Windows we get mutliple regions that start at the same place but are
+    // On Windows we get multiple regions that start at the same place but are
     // different sizes and refer to different sections.
     std::vector<std::pair<lldb_private::MemoryRegionInfo, lldb::addr_t>>
         region_list;

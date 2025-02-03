@@ -150,7 +150,7 @@ class Tool(TestToolBase):
         """Returns the path to the test results directory for the test denoted
         by test_name.
         """
-        assert self.context.options.results_directory != None
+        assert self.context.options.results_directory is not None
         return os.path.join(
             self.context.options.results_directory,
             self._get_results_basename(test_name),

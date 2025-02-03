@@ -4,13 +4,15 @@ add_mlir_library(MLIRTestOneToNTypeConversionPass
   EXCLUDE_FROM_LIBMLIR
 
   LINK_LIBS PUBLIC
+  MLIRTestDialect
+ )
+mlir_target_link_libraries(MLIRTestOneToNTypeConversionPass PUBLIC
   MLIRFuncDialect
   MLIRFuncTransforms
   MLIRIR
   MLIRPass
   MLIRSCFDialect
   MLIRSCFTransforms
-  MLIRTestDialect
   MLIRTransformUtils
  )
 

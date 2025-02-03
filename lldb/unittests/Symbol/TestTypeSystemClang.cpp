@@ -1040,3 +1040,45 @@ TEST_F(TestTypeSystemClang, GetDeclContextByNameWhenMissingSymbolFile) {
 
   EXPECT_TRUE(decls.empty());
 }
+
+TEST_F(TestTypeSystemClang, AddMethodToCXXRecordType_ParmVarDecls) {
+  // Tests that AddMethodToCXXRecordType creates ParmVarDecl's with
+  // a correct clang::DeclContext.
+
+  llvm::StringRef class_name = "S";
+  CompilerType t = clang_utils::createRecord(*m_ast, class_name);
+  m_ast->StartTagDeclarationDefinition(t);
+
+  CompilerType return_type = m_ast->GetBasicType(lldb::eBasicTypeVoid);
+  const bool is_virtual = false;
+  const bool is_static = false;
+  const bool is_inline = false;
+  const bool is_explicit = true;
+  const bool is_attr_used = false;
+  const bool is_artificial = false;
+
+  llvm::SmallVector<CompilerType> param_types{
+      m_ast->GetBasicType(lldb::eBasicTypeInt),
+      m_ast->GetBasicType(lldb::eBasicTypeShort)};
+  CompilerType function_type = m_ast->CreateFunctionType(
+      return_type, param_types.data(), /*num_params*/ param_types.size(),
+      /*variadic=*/false, /*quals*/ 0U);
+  m_ast->AddMethodToCXXRecordType(
+      t.GetOpaqueQualType(), "myFunc", nullptr, function_type,
+      lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
+      is_explicit, is_attr_used, is_artificial);
+
+  // Complete the definition and check the created record.
+  m_ast->CompleteTagDeclarationDefinition(t);
+
+  auto *record = llvm::cast<CXXRecordDecl>(ClangUtil::GetAsTagDecl(t));
+
+  auto method_it = record->method_begin();
+  ASSERT_NE(method_it, record->method_end());
+
+  EXPECT_EQ(method_it->getNumParams(), param_types.size());
+
+  // DeclContext of each parameter should be the CXXMethodDecl itself.
+  EXPECT_EQ(method_it->getParamDecl(0)->getDeclContext(), *method_it);
+  EXPECT_EQ(method_it->getParamDecl(1)->getDeclContext(), *method_it);
+}

@@ -406,7 +406,7 @@ void use() {
   strings.insert(strings.begin(), std::string());
 
   std::vector<const std::string*> pointers;
-  pointers.push_back(getLifetimeBoundPointer(std::string())); // expected-warning {{object whose reference is captured by 'pointers' will be destroyed at the end of the full-expression}}
+  pointers.push_back(getLifetimeBoundPointer(std::string()));
   pointers.push_back(&local);
 }
 
@@ -451,3 +451,24 @@ void test() {
   T2(1, a); // expected-warning {{object whose reference is captured by}}
 }
 } // namespace on_constructor
+
+namespace GH121391 {
+
+struct Foo {};
+
+template <typename T>
+struct Container {
+  const T& tt() [[clang::lifetimebound]];
+};
+template<typename T>
+struct StatusOr {
+   T* get() [[clang::lifetimebound]];
+};
+StatusOr<Container<const Foo*>> getContainer();
+
+void test() {
+  std::vector<const Foo*> vv;
+  vv.push_back(getContainer().get()->tt()); // OK
+}
+
+} // namespace GH121391

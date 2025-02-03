@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s --pass-pipeline='builtin.module(any(mem2reg))' --split-input-file | FileCheck %s
 
-// Verifies that allocators with mutliple slots are handled properly.
+// Verifies that allocators with multiple slots are handled properly.
 
 // CHECK-LABEL: func.func @multi_slot_alloca
 func.func @multi_slot_alloca() -> (i32, i32) {

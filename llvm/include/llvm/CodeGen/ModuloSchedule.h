@@ -359,8 +359,8 @@ protected:
   MachineBasicBlock *CreateLCSSAExitingBlock();
   /// Helper to get the stage of an instruction in the schedule.
   unsigned getStage(MachineInstr *MI) {
-    if (CanonicalMIs.count(MI))
-      MI = CanonicalMIs[MI];
+    if (auto It = CanonicalMIs.find(MI); It != CanonicalMIs.end())
+      MI = It->second;
     return Schedule.getStage(MI);
   }
   /// Helper function to find the right canonical register for a phi instruction

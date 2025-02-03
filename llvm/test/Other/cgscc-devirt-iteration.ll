@@ -112,7 +112,7 @@ define void @test3(ptr %src, ptr %dest, i64 %size) noinline {
 ; CHECK-NOT: read
 ; CHECK-SAME: noinline
 ; BEFORE-LABEL: define void @test3(ptr %src, ptr %dest, i64 %size)
-; AFTER-LABEL: define void @test3(ptr nocapture readonly %src, ptr nocapture writeonly %dest, i64 %size)
+; AFTER-LABEL: define void @test3(ptr readonly captures(none) %src, ptr writeonly captures(none) %dest, i64 %size)
   %fptr = alloca ptr
   store ptr @memcpy, ptr %fptr
   %f = load ptr, ptr %fptr

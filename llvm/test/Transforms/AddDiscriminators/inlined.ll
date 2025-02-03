@@ -24,11 +24,11 @@ for.cond:                                         ; preds = %for.cond, %entry
 }
 
 ; Function Attrs: nounwind ssp
-define i32 @g() local_unnamed_addr #1 !dbg !12 {
+define i32 @g(i32 %arg) local_unnamed_addr #1 !dbg !12 {
 entry:
   %0 = tail call i64 @llvm.objectsize.i64.p0(ptr inttoptr (i64 1 to ptr), i1 false), !dbg !22
   %call = tail call ptr @__memset_chk(ptr null, i32 0, i64 0, i64 %0) #2, !dbg !23
-  ret i32 undef, !dbg !24
+  ret i32 %arg, !dbg !24
 }
 
 ; Function Attrs: nounwind

@@ -10,6 +10,8 @@ program get_team_test
   type(team_type) :: result_team
   logical wrong_result_type, non_integer
 
+  result_team = team_type()
+
   !___ standard-conforming statement with no optional arguments present ___
   result_team = get_team()
 

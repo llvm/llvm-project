@@ -1,4 +1,5 @@
-header: sys-types.h
+header: sys/types.h
+header_template: types.h.def
 standards: POSIX
 macros: []
 types:

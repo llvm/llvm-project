@@ -23,7 +23,7 @@ target triple = "nvptx64-nvidia-cuda"
 ;                             V
 ;                        if (i3 == 5) // divergent
 ; because sync dependent on (tid / i3).
-define i32 @unstructured_loop(i1 %entry_cond) {
+define ptx_kernel i32 @unstructured_loop(i1 %entry_cond) {
 ; CHECK-LABEL: for function 'unstructured_loop'
 entry:
   %tid = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
@@ -59,5 +59,3 @@ declare i32 @llvm.nvvm.read.ptx.sreg.tid.y()
 declare i32 @llvm.nvvm.read.ptx.sreg.tid.z()
 declare i32 @llvm.nvvm.read.ptx.sreg.laneid()
 
-!nvvm.annotations = !{!0}
-!0 = !{ptr @unstructured_loop, !"kernel", i32 1}

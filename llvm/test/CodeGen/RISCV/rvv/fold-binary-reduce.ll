@@ -18,7 +18,7 @@ entry:
 define i64 @reduce_add2(<4 x i64> %v) {
 ; CHECK-LABEL: reduce_add2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 8
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vredsum.vs v8, v8, v10

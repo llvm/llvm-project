@@ -341,21 +341,6 @@ static bool writtenBetween(MemorySSA *MSSA, BatchAAResults &AA,
   return !MSSA->dominates(Clobber, Start);
 }
 
-// Update AA metadata
-static void combineAAMetadata(Instruction *ReplInst, Instruction *I) {
-  // FIXME: MD_tbaa_struct and MD_mem_parallel_loop_access should also be
-  // handled here, but combineMetadata doesn't support them yet
-  unsigned KnownIDs[] = {
-      LLVMContext::MD_tbaa,         LLVMContext::MD_alias_scope,
-      LLVMContext::MD_noalias,      LLVMContext::MD_invariant_group,
-      LLVMContext::MD_access_group, LLVMContext::MD_prof,
-      LLVMContext::MD_memprof,      LLVMContext::MD_callsite};
-  // FIXME: https://github.com/llvm/llvm-project/issues/121495
-  // Use custom AA metadata combining handling instead of combineMetadata, which
-  // is meant for CSE and will drop any metadata not in the KnownIDs list.
-  combineMetadata(ReplInst, I, KnownIDs, true);
-}
-
 /// When scanning forward over instructions, we look for some other patterns to
 /// fold away. In particular, this looks for stores to neighboring locations of
 /// memory. If it sees enough consecutive ones, it attempts to merge them
@@ -626,7 +611,7 @@ bool MemCpyOptPass::moveUp(StoreInst *SI, Instruction *P, const LoadInst *LI) {
   // We made it, we need to lift.
   for (auto *I : llvm::reverse(ToLift)) {
     LLVM_DEBUG(dbgs() << "Lifting " << *I << " before " << *P << "\n");
-    I->moveBefore(P);
+    I->moveBefore(P->getIterator());
     assert(MemInsertPoint && "Must have found insert point");
     if (MemoryUseOrDef *MA = MSSA->getMemoryAccess(I)) {
       MSSAU->moveAfter(MA, MemInsertPoint);
@@ -1097,11 +1082,11 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
 
   if (NeedMoveGEP) {
     auto *GEP = dyn_cast<GetElementPtrInst>(cpyDest);
-    GEP->moveBefore(C);
+    GEP->moveBefore(C->getIterator());
   }
 
   if (SkippedLifetimeStart) {
-    SkippedLifetimeStart->moveBefore(C);
+    SkippedLifetimeStart->moveBefore(C->getIterator());
     MSSAU->moveBefore(MSSA->getMemoryAccess(SkippedLifetimeStart),
                       MSSA->getMemoryAccess(C));
   }
@@ -2025,7 +2010,7 @@ bool MemCpyOptPass::processImmutArgument(CallBase &CB, unsigned ArgNo) {
   Value *ImmutArg = CB.getArgOperand(ArgNo);
 
   // 1. Ensure passed argument is immutable during call.
-  if (!CB.paramHasAttr(ArgNo, Attribute::NoCapture))
+  if (!CB.doesNotCapture(ArgNo))
     return false;
 
   // We know that the argument is readonly at this point, but the function

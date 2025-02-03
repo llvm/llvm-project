@@ -41,7 +41,7 @@ def :MnemonicAlias<"InstB", "BInst">;
 
 // Check that the matcher lower()s the mnemonics it matches.
 // MATCHER: static const char MnemonicTable[] =
-// MATCHER-NEXT: "\005ainst\005binst";
+// MATCHER-NEXT: "\000\005ainst\005binst";
 
 // Check that aInst appears before BInst in the match table.
 // This shows that the mnemonics are sorted in a case-insensitive way,

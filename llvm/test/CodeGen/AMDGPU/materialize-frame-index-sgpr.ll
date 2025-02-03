@@ -759,7 +759,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs() #0 
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %alloca0 = alloca [4096 x i32], align 64, addrspace(5)
   %alloca1 = alloca i32, align 4, addrspace(5)
@@ -1474,7 +1473,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowe
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %alloca0 = alloca [4096 x i32], align 16, addrspace(5)
 
@@ -2204,7 +2202,6 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %alloca0 = alloca [4096 x i32], align 64, addrspace(5)
   %alloca1 = alloca [4096 x i32], align 4, addrspace(5)

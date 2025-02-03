@@ -343,23 +343,16 @@ struct HasMembersArray {
 void SelfUpdate() {
   struct Members s;
 
-  // expected-error@+2{{expected '('}}
-  // expected-warning@+1{{OpenACC construct 'update' not yet implemented, pragma ignored}}
-#pragma acc update self
+  // expected-error@+1{{expected '('}}
+#pragma acc update host(s) self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+6{{use of undeclared identifier 'zero'}}
-  // expected-error@+5{{expected ','}}
-  // expected-error@+4{{expected expression}}
-  // expected-warning@+3{{OpenACC clause 'self' not yet implemented, clause ignored}}
-  // expected-warning@+2{{OpenACC clause 'if_present' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'update' not yet implemented, pragma ignored}}
+  // expected-error@+3{{use of undeclared identifier 'zero'}}
+  // expected-error@+2{{expected ','}}
+  // expected-error@+1{{expected expression}}
 #pragma acc update self(zero : s.array[s.value : 5], s.value), if_present
   for(int i = 0; i < 5;++i) {}
 
-  // expected-warning@+3{{OpenACC clause 'self' not yet implemented, clause ignored}}
-  // expected-warning@+2{{OpenACC clause 'if_present' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'update' not yet implemented, pragma ignored}}
 #pragma acc update self(s.array[s.value : 5], s.value), if_present
   for(int i = 0; i < 5;++i) {}
 }
@@ -545,22 +538,18 @@ void VarListClauses() {
 #pragma acc serial link(s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'host' not yet implemented, clause ignored}}
-#pragma acc serial host(s.array[s.value] s.array[s.value :5] ), self
+  // expected-error@+1{{expected ','}}
+#pragma acc update host(s.array[s.value] s.array[s.value :5] )
   for(int i = 0; i < 5;++i) {}
 
-  // expected-warning@+1{{OpenACC clause 'host' not yet implemented, clause ignored}}
-#pragma acc serial host(s.array[s.value : 5], s.value), self
+#pragma acc update host(s.array[s.value : 5], s.value)
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'device' not yet implemented, clause ignored}}
-#pragma acc serial device(s.array[s.value] s.array[s.value :5] ), self
+  // expected-error@+1{{expected ','}}
+#pragma acc update device(s.array[s.value] s.array[s.value :5] )
   for(int i = 0; i < 5;++i) {}
 
-  // expected-warning@+1{{OpenACC clause 'device' not yet implemented, clause ignored}}
-#pragma acc serial device(s.array[s.value : 5], s.value), self
+#pragma acc update device(s.array[s.value : 5], s.value)
   for(int i = 0; i < 5;++i) {}
 
   // expected-error@+1{{expected ','}}
@@ -821,28 +810,24 @@ void IntExprParsing() {
 #pragma acc init device_num(returns_int())
 
   // expected-error@+2{{expected '('}}
-  // expected-warning@+1{{OpenACC construct 'set' not yet implemented, pragma ignored}}
+  // expected-error@+1{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', 'device_type' or 'if' clause}}
 #pragma acc set default_async
 
   // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC construct 'set' not yet implemented, pragma ignored}}
+  // expected-error@+1{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', 'device_type' or 'if' clause}}
 #pragma acc set default_async()
 
   // expected-error@+2{{use of undeclared identifier 'invalid'}}
-  // expected-warning@+1{{OpenACC construct 'set' not yet implemented, pragma ignored}}
+  // expected-error@+1{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', 'device_type' or 'if' clause}}
 #pragma acc set default_async(invalid)
 
   // expected-error@+3{{expected ')'}}
   // expected-note@+2{{to match this '('}}
-  // expected-warning@+1{{OpenACC construct 'set' not yet implemented, pragma ignored}}
+  // expected-error@+1{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', 'device_type' or 'if' clause}}
 #pragma acc set default_async(5, 4)
 
-  // expected-warning@+2{{OpenACC clause 'default_async' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'set' not yet implemented, pragma ignored}}
 #pragma acc set default_async(5)
 
-  // expected-warning@+2{{OpenACC clause 'default_async' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'set' not yet implemented, pragma ignored}}
 #pragma acc set default_async(returns_int())
 
 

@@ -1,16 +1,17 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - | FileCheck %s
 ; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-
-; TODO: This test currently fails with LLVM_ENABLE_EXPENSIVE_CHECKS enabled
-; XFAIL: expensive_checks
 
 ; CHECK-DAG: OpName %[[I9:.*]] "_ZN13BaseIncrement9incrementEPi"
 ; CHECK-DAG: OpName %[[I29:.*]] "_ZN12IncrementBy29incrementEPi"
 ; CHECK-DAG: OpName %[[I49:.*]] "_ZN12IncrementBy49incrementEPi"
 ; CHECK-DAG: OpName %[[I89:.*]] "_ZN12IncrementBy89incrementEPi"
+; CHECK-DAG: OpName %[[Foo:.*]] "foo"
 
 ; CHECK-DAG: %[[TyVoid:.*]] = OpTypeVoid
-; CHECK-DAG: %[[TyArr:.*]] = OpTypeArray
+; CHECK-DAG: %[[TyInt32:.*]] = OpTypeInt 32 0
+; CHECK-DAG: %[[TyInt8:.*]] = OpTypeInt 8 0
+; CHECK-DAG: %[[Const8:.*]] = OpConstant %[[TyInt32]] 8
+; CHECK-DAG: %[[TyArr:.*]] = OpTypeArray %[[TyInt8]] %[[Const8]]
 ; CHECK-DAG: %[[TyStruct1:.*]] = OpTypeStruct %[[TyArr]]
 ; CHECK-DAG: %[[TyStruct2:.*]] = OpTypeStruct %[[TyStruct1]]
 ; CHECK-DAG: %[[TyPtrStruct2:.*]] = OpTypePointer Generic %[[TyStruct2]]
@@ -18,15 +19,20 @@
 ; CHECK-DAG: %[[TyPtrFun:.*]] = OpTypePointer Generic %[[TyFun]]
 ; CHECK-DAG: %[[TyPtrPtrFun:.*]] = OpTypePointer Generic %[[TyPtrFun]]
 
-; CHECK: %[[I9]] = OpFunction
-; CHECK: %[[I29]] = OpFunction
-; CHECK: %[[I49]] = OpFunction
-; CHECK: %[[I89]] = OpFunction
+; CHECK-DAG: %[[I9]] = OpFunction
+; CHECK-DAG: %[[I29]] = OpFunction
+; CHECK-DAG: %[[I49]] = OpFunction
+; CHECK-DAG: %[[I89]] = OpFunction
+
+; CHECK: %[[Foo]] = OpFunction
+; CHECK-4: OpFunctionParameter
 
 ; CHECK: %[[Arg1:.*]] = OpPhi %[[TyPtrStruct2]]
 ; CHECK: %[[VTbl:.*]] = OpBitcast %[[TyPtrPtrFun]] %[[#]]
 ; CHECK: %[[FP:.*]] = OpLoad %[[TyPtrFun]] %[[VTbl]]
 ; CHECK: %[[#]] = OpFunctionPointerCallINTEL %[[TyVoid]] %[[FP]] %[[Arg1]] %[[#]]
+
+; CHECK-NO: OpFunction
 
 %"cls::id" = type { %"cls::detail::array" }
 %"cls::detail::array" = type { [1 x i64] }

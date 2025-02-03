@@ -49,7 +49,7 @@ define i256 @add256(i256 %a, i256 %b) nounwind {
 ; CHECK-LABEL: add256:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    addq {{[0-9]+}}(%rsp), %rsi
+; CHECK-NEXT:    addq %r9, %rsi
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %rdx
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %r8

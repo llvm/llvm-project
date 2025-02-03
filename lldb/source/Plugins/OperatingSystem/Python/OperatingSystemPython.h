@@ -60,6 +60,8 @@ public:
   // Method for lazy creation of threads on demand
   lldb::ThreadSP CreateThread(lldb::tid_t tid, lldb::addr_t context) override;
 
+  bool DoesPluginReportAllThreads() override;
+
 protected:
   bool IsValid() const {
     return m_script_object_sp && m_script_object_sp->IsValid();

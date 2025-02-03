@@ -47,7 +47,7 @@ entry:
 
 define internal void @.omp_outlined.willreturn(ptr noalias %.global_tid., ptr noalias %.bound_tid.) {
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined.willreturn
-; CHECK-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @unknown() #[[ATTR15:[0-9]+]]
 ; CHECK-NEXT:    ret void
@@ -69,7 +69,7 @@ entry:
 
 define internal void @.omp_outlined.willreturn.0(ptr noalias %.global_tid., ptr noalias %.bound_tid.) willreturn {
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined.willreturn.0
-; CHECK-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @readonly() #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret void
@@ -91,7 +91,7 @@ entry:
 
 define internal void @.omp_outlined.willreturn.1(ptr noalias %.global_tid., ptr noalias %.bound_tid.) {
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined.willreturn.1
-; CHECK-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @readnone() #[[ATTR16:[0-9]+]]
 ; CHECK-NEXT:    ret void
@@ -113,7 +113,7 @@ entry:
 
 define internal void @.omp_outlined.willreturn.2(ptr noalias %.global_tid., ptr noalias %.bound_tid.) {
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined.willreturn.2
-; CHECK-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret void
 ;
@@ -171,7 +171,7 @@ entry:
 
 define internal void @.omp_outlined.(ptr noalias %.global_tid., ptr noalias %.bound_tid.) {
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined.
-; CHECK-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) {
+; CHECK-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret void
@@ -193,7 +193,7 @@ entry:
 
 define internal void @.omp_outlined..0(ptr noalias %.global_tid., ptr noalias %.bound_tid.) {
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined..0
-; CHECK-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] {
+; CHECK-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @readonly() #[[ATTR4]]
 ; CHECK-NEXT:    ret void
@@ -215,7 +215,7 @@ entry:
 
 define internal void @.omp_outlined..1(ptr noalias %.global_tid., ptr noalias %.bound_tid.) {
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined..1
-; CHECK-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #[[ATTR5:[0-9]+]] {
+; CHECK-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @readnone() #[[ATTR17:[0-9]+]]
 ; CHECK-NEXT:    ret void
@@ -237,7 +237,7 @@ entry:
 
 define internal void @.omp_outlined..2(ptr noalias %.global_tid., ptr noalias %.bound_tid.) {
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined..2
-; CHECK-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret void
 ;
@@ -284,10 +284,10 @@ define void @delete_parallel_2() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noundef nonnull align 4 dereferenceable(4) [[A]]) #[[ATTR18:[0-9]+]]
 ; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
-; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..3, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]])
-; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]])
-; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..5, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]])
-; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..6, ptr nocapture noundef nonnull align 4 dereferenceable(4) [[A]])
+; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..3, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[A]])
+; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..4, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[A]])
+; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..5, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[A]])
+; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..6, ptr noundef nonnull align 4 captures(none) dereferenceable(4) [[A]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ;
@@ -327,7 +327,7 @@ entry:
 
 define internal void @.omp_outlined..3(ptr noalias %.global_tid., ptr noalias %.bound_tid., ptr dereferenceable(4) %a) {
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined..3
-; CHECK-SAME: (ptr noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR6:[0-9]+]] {
+; CHECK-SAME: (ptr noalias nofree readnone captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[A:%.*]]) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @omp_get_thread_num() #[[ATTR19:[0-9]+]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
@@ -383,7 +383,7 @@ if.end:                                           ; preds = %if.then, %entry
 
 define internal void @.omp_outlined..4(ptr noalias %.global_tid., ptr noalias %.bound_tid., ptr dereferenceable(4) %a) {
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined..4
-; CHECK-SAME: (ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK-SAME: (ptr noalias nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_master(ptr noundef nonnull @[[GLOB0]], i32 [[TMP]])
@@ -455,7 +455,7 @@ declare void @__kmpc_end_master(ptr, i32)
 
 define internal void @.omp_outlined..5(ptr noalias %.global_tid., ptr noalias %.bound_tid., ptr dereferenceable(4) %a) {
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined..5
-; CHECK-SAME: (ptr noalias nocapture nofree readonly [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK-SAME: (ptr noalias nofree readonly captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr noundef nonnull @[[GLOB0]]) #[[ATTR19]]
 ; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
@@ -527,7 +527,7 @@ omp_if.end:                                       ; preds = %entry, %omp_if.then
 
 define internal void @.omp_outlined..6(ptr noalias %.global_tid., ptr noalias %.bound_tid., ptr dereferenceable(4) %a) {
 ; CHECK-LABEL: define {{[^@]+}}@.omp_outlined..6
-; CHECK-SAME: (ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) {
+; CHECK-SAME: (ptr noalias nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 captures(none) dereferenceable(4) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A1:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x ptr], align 8
@@ -644,7 +644,7 @@ entry:
 
 define internal void @.omp.reduction.reduction_func(ptr %arg, ptr %arg1) {
 ; CHECK-LABEL: define {{[^@]+}}@.omp.reduction.reduction_func
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[ARG:%.*]], ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[ARG1:%.*]]) #[[ATTR10:[0-9]+]] {
+; CHECK-SAME: (ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[ARG:%.*]], ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[ARG1:%.*]]) #[[ATTR10:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ARG1]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[ARG]], align 8

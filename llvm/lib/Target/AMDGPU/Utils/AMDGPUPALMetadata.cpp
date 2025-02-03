@@ -232,7 +232,8 @@ void AMDGPUPALMetadata::setEntryPoint(unsigned CC, StringRef Name) {
   if (isLegacy())
     return;
   // Msgpack format.
-  getHwStage(CC)[".entry_point"] = MsgPackDoc.getNode(Name, /*Copy=*/true);
+  getHwStage(CC)[".entry_point_symbol"] =
+      MsgPackDoc.getNode(Name, /*Copy=*/true);
 }
 
 // Set the number of used vgprs in the metadata. This is an optional

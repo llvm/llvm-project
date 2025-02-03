@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(HAVE_DLFCN_H) && defined(HAVE_DLOPEN)
+#if defined(HAVE_DLOPEN)
 #include <dlfcn.h>
 
 DynamicLibrary::HandleSet::~HandleSet() {

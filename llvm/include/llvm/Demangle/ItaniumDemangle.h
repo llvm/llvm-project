@@ -4330,9 +4330,12 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
     case 'h':
       First += 2;
       return make<NameType>("half");
-    //                ::= DF <number> _ # ISO/IEC TS 18661 binary floating point (N bits)
+    //       ::= DF16b         # C++23 std::bfloat16_t
+    //       ::= DF <number> _ # ISO/IEC TS 18661 binary floating point (N bits)
     case 'F': {
       First += 2;
+      if (consumeIf("16b"))
+        return make<NameType>("std::bfloat16_t");
       Node *DimensionNumber = make<NameType>(parseNumber());
       if (!DimensionNumber)
         return nullptr;

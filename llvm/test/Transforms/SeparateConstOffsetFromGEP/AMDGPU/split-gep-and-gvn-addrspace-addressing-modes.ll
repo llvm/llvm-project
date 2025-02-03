@@ -7,7 +7,7 @@ target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-p24:
 
 define amdgpu_kernel void @sum_of_array(i32 %x, i32 %y, ptr addrspace(1) nocapture %output) {
 ; IR-LABEL: define amdgpu_kernel void @sum_of_array(
-; IR-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], ptr addrspace(1) nocapture [[OUTPUT:%.*]]) {
+; IR-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], ptr addrspace(1) captures(none) [[OUTPUT:%.*]]) {
 ; IR-NEXT:    [[TMP:%.*]] = sext i32 [[Y]] to i64
 ; IR-NEXT:    [[TMP1:%.*]] = sext i32 [[X]] to i64
 ; IR-NEXT:    [[TMP2:%.*]] = getelementptr [4096 x [32 x float]], ptr addrspace(4) @array, i64 0, i64 [[TMP1]], i64 [[TMP]]
@@ -45,7 +45,7 @@ define amdgpu_kernel void @sum_of_array(i32 %x, i32 %y, ptr addrspace(1) nocaptu
 
 define amdgpu_kernel void @sum_of_array_over_max_mubuf_offset(i32 %x, i32 %y, ptr addrspace(1) nocapture %output) {
 ; IR-LABEL: define amdgpu_kernel void @sum_of_array_over_max_mubuf_offset(
-; IR-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], ptr addrspace(1) nocapture [[OUTPUT:%.*]]) {
+; IR-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], ptr addrspace(1) captures(none) [[OUTPUT:%.*]]) {
 ; IR-NEXT:    [[TMP:%.*]] = sext i32 [[Y]] to i64
 ; IR-NEXT:    [[TMP1:%.*]] = sext i32 [[X]] to i64
 ; IR-NEXT:    [[TMP2:%.*]] = getelementptr [4096 x [4 x float]], ptr addrspace(4) @array2, i64 0, i64 [[TMP1]], i64 [[TMP]]
@@ -87,7 +87,7 @@ define amdgpu_kernel void @sum_of_array_over_max_mubuf_offset(i32 %x, i32 %y, pt
 ; DS instructions have a larger immediate offset, so make sure these are OK.
 define amdgpu_kernel void @sum_of_lds_array_over_max_mubuf_offset(i32 %x, i32 %y, ptr addrspace(1) nocapture %output) {
 ; IR-LABEL: define amdgpu_kernel void @sum_of_lds_array_over_max_mubuf_offset(
-; IR-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], ptr addrspace(1) nocapture [[OUTPUT:%.*]]) {
+; IR-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], ptr addrspace(1) captures(none) [[OUTPUT:%.*]]) {
 ; IR-NEXT:    [[TMP2:%.*]] = getelementptr [4096 x [4 x float]], ptr addrspace(3) @lds_array, i32 0, i32 [[X]], i32 [[Y]]
 ; IR-NEXT:    [[TMP4:%.*]] = load float, ptr addrspace(3) [[TMP2]], align 4
 ; IR-NEXT:    [[TMP5:%.*]] = fadd float [[TMP4]], 0.000000e+00

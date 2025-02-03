@@ -348,7 +348,8 @@ private:
   bool CheckDataRef(const DataRef &); // ditto
   std::optional<Expr<SubscriptInteger>> GetSubstringBound(
       const std::optional<parser::ScalarIntExpr> &);
-  MaybeExpr AnalyzeDefinedOp(const parser::Name &, ActualArguments &&);
+  MaybeExpr AnalyzeDefinedOp(
+      const parser::Name &, ActualArguments &&, const Symbol *&);
   MaybeExpr FixMisparsedSubstring(const parser::Designator &);
 
   struct CalleeAndArguments {

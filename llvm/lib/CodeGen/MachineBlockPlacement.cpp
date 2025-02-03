@@ -149,7 +149,7 @@ static cl::opt<unsigned> JumpInstCost("jump-inst-cost",
 static cl::opt<bool>
     TailDupPlacement("tail-dup-placement",
                      cl::desc("Perform tail duplication during placement. "
-                              "Creates more fallthrough opportunites in "
+                              "Creates more fallthrough opportunities in "
                               "outline branches."),
                      cl::init(true), cl::Hidden);
 
@@ -3178,11 +3178,11 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
     // Conservative default.
     bool InWorkList = true;
     // Remove from the Chain and Chain Map
-    if (BlockToChain.count(RemBB)) {
-      BlockChain *Chain = BlockToChain[RemBB];
+    if (auto It = BlockToChain.find(RemBB); It != BlockToChain.end()) {
+      BlockChain *Chain = It->second;
       InWorkList = Chain->UnscheduledPredecessors == 0;
       Chain->remove(RemBB);
-      BlockToChain.erase(RemBB);
+      BlockToChain.erase(It);
     }
 
     // Handle the unplaced block iterator

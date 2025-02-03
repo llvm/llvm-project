@@ -6,99 +6,82 @@
 ! Privatizers
 
 ! CHECK-LABEL: omp.private
-! CHECK-SAME:      {type = private} @[[TEST6_Y_PRIV:.*]] : !fir.ref<i32>
-! CHECK:         fir.alloca i32 {bindc_name = "y"
-! CHECK-NOT:   } copy {
+! CHECK-SAME:      {type = private} @[[TEST6_Y_PRIV:.*]] : i32
+! CHECK-NOT:   copy {
 
 ! CHECK-LABEL: omp.private
-! CHECK-SAME:      {type = private} @[[TEST6_X_PRIV:.*]] : !fir.ref<i32>
-! CHECK:         fir.alloca i32 {bindc_name = "x"
-! CHECK-NOT:   } copy {
+! CHECK-SAME:      {type = private} @[[TEST6_X_PRIV:.*]] : i32
+! CHECK-NOT:   copy {
 
 ! CHECK-LABEL: omp.private
-! CHECK-SAME:      {type = firstprivate} @[[TEST6_Z_FIRSTPRIV:.*]] : !fir.ref<i32>
-! CHECK:         fir.alloca i32 {bindc_name = "z"
-! CHECK:       } copy {
+! CHECK-SAME:      {type = firstprivate} @[[TEST6_Z_FIRSTPRIV:.*]] : i32
+! CHECK-SAME:  copy {
 ! CHECK:         hlfir.assign
 
 ! CHECK-LABEL: omp.private
-! CHECK-SAME:      {type = firstprivate} @[[TEST6_Y_FIRSTPRIV:.*]] : !fir.ref<i32>
-! CHECK:         fir.alloca i32 {bindc_name = "y"
-! CHECK:       } copy {
+! CHECK-SAME:      {type = firstprivate} @[[TEST6_Y_FIRSTPRIV:.*]] : i32
+! CHECK-SAME:  copy {
 ! CHECK:         hlfir.assign
 
 ! CHECK-LABEL: omp.private
-! CHECK-SAME:      {type = firstprivate} @[[TEST6_X_FIRSTPRIV:.*]] : !fir.ref<i32>
-! CHECK:         fir.alloca i32 {bindc_name = "x"
-! CHECK:       } copy {
+! CHECK-SAME:      {type = firstprivate} @[[TEST6_X_FIRSTPRIV:.*]] : i32
+! CHECK-SAME:  copy {
 ! CHECK:         hlfir.assign
 
 ! CHECK-LABEL: omp.private
-! CHECK-SAME:      {type = firstprivate} @[[TEST5_X_FIRSTPRIV:.*]] : !fir.ref<i32>
-! CHECK:         fir.alloca i32 {bindc_name = "x"
-! CHECK:       } copy {
+! CHECK-SAME:      {type = firstprivate} @[[TEST5_X_FIRSTPRIV:.*]] : i32
+! CHECK-SAME:  copy {
 ! CHECK:         hlfir.assign
 
 ! CHECK-LABEL: omp.private
-! CHECK-SAME:      {type = private} @[[TEST5_X_PRIV:.*]] : !fir.ref<i32>
-! CHECK:         fir.alloca i32 {bindc_name = "x"
-! CHECK-NOT:   } copy {
+! CHECK-SAME:      {type = private} @[[TEST5_X_PRIV:.*]] : i32
+! CHECK-NOT:   copy {
 
 ! CHECK-LABEL: omp.private
-! CHECK-SAME:      {type = firstprivate} @[[TEST4_Y_FIRSTPRIV:.*]] : !fir.ref<i32>
-! CHECK:         fir.alloca i32 {bindc_name = "y"
-! CHECK:       } copy {
+! CHECK-SAME:      {type = firstprivate} @[[TEST4_Y_FIRSTPRIV:.*]] : i32
+! CHECK-SAME:  copy {
 ! CHECK:         hlfir.assign
 
 ! CHECK-LABEL: omp.private
-! CHECK-SAME:      {type = firstprivate} @[[TEST4_Z_FIRSTPRIV:.*]] : !fir.ref<i32>
-! CHECK:         fir.alloca i32 {bindc_name = "z"
-! CHECK:       } copy {
+! CHECK-SAME:      {type = firstprivate} @[[TEST4_Z_FIRSTPRIV:.*]] : i32
+! CHECK-SAME:  copy {
 ! CHECK:         hlfir.assign
 
 ! CHECK-LABEL: omp.private
-! CHECK-SAME:      {type = firstprivate} @[[TEST4_X_FIRSTPRIV:.*]] : !fir.ref<i32>
-! CHECK:         fir.alloca i32 {bindc_name = "x"
-! CHECK:       } copy {
+! CHECK-SAME:      {type = firstprivate} @[[TEST4_X_FIRSTPRIV:.*]] : i32
+! CHECK-SAME:  copy {
 ! CHECK:         hlfir.assign
 
 ! CHECK-LABEL: omp.private
-! CHECK-SAME:      {type = private} @[[TEST4_Y_PRIV:.*]] : !fir.ref<i32>
-! CHECK:         fir.alloca i32 {bindc_name = "y"
-! CHECK-NOT:   } copy {
+! CHECK-SAME:      {type = private} @[[TEST4_Y_PRIV:.*]] : i32
+! CHECK-NOT:   copy {
 
 ! CHECK-LABEL: omp.private
-! CHECK-SAME:      {type = private} @[[TEST4_Z_PRIV:.*]] : !fir.ref<i32>
-! CHECK:         fir.alloca i32 {bindc_name = "z"
-! CHECK-NOT:   } copy {
+! CHECK-SAME:      {type = private} @[[TEST4_Z_PRIV:.*]] : i32
+! CHECK-NOT:   copy {
 
 ! CHECK-LABEL: omp.private
-! CHECK-SAME:      {type = private} @[[TEST4_X_PRIV:.*]] : !fir.ref<i32>
-! CHECK:         fir.alloca i32 {bindc_name = "x"
-! CHECK-NOT:   } copy {
+! CHECK-SAME:      {type = private} @[[TEST4_X_PRIV:.*]] : i32
+! CHECK-NOT:   copy {
 
 ! CHECK-LABEL: omp.private
-! CHECK-SAME:      {type = firstprivate} @[[TEST3_X_FIRSTPRIV:.*]] : !fir.ref<i32>
-! CHECK:         fir.alloca i32 {bindc_name = "x"
-! CHECK:       } copy {
+! CHECK-SAME:      {type = firstprivate} @[[TEST3_X_FIRSTPRIV:.*]] : i32
+! CHECK:       copy {
 ! CHECK:         hlfir.assign
 
 ! CHECK-LABEL: omp.private
-! CHECK-SAME:      {type = firstprivate} @[[TEST2_X_FIRSTPRIV:.*]] : !fir.ref<i32>
-! CHECK:         fir.alloca i32 {bindc_name = "x"
-! CHECK:       } copy {
+! CHECK-SAME:      {type = firstprivate} @[[TEST2_X_FIRSTPRIV:.*]] : i32
+! CHECK:       copy {
 ! CHECK:         hlfir.assign
 
 ! CHECK-LABEL: omp.private
-! CHECK-SAME:      {type = firstprivate} @[[TEST1_X_FIRSTPRIV:.*]] : !fir.ref<i32>
-! CHECK:         fir.alloca i32 {bindc_name = "x"
-! CHECK:       } copy {
+! CHECK-SAME:      {type = firstprivate} @[[TEST1_X_FIRSTPRIV:.*]] : i32
+! CHECK:       copy {
 ! CHECK:         hlfir.assign
 
 ! CHECK-LABEL: omp.private
-! CHECK-SAME:      {type = private} @[[TEST1_Y_PRIV:.*]] : !fir.ref<i32>
-! CHECK:         fir.alloca i32 {bindc_name = "y"
-! CHECK-NOT:   } copy {
+! CHECK-SAME:      {type = private} @[[TEST1_Y_PRIV:.*]] : i32
+! CHECK-NOT:   copy {
 
 ! Basic cases.
 !CHECK-LABEL: func @_QPimplicit_dsa_test1

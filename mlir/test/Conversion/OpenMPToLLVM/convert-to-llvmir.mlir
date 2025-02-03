@@ -507,28 +507,22 @@ llvm.func @_QPtarget_map_with_bounds(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: 
 
 // -----
 
-// CHECK: omp.private {type = private} @x.privatizer : !llvm.struct<{{.*}}> alloc {
-omp.private {type = private} @x.privatizer : memref<?xf32> alloc {
-// CHECK: ^bb0(%arg0: !llvm.struct<{{.*}}>):
-^bb0(%arg0: memref<?xf32>):
+// CHECK: omp.private {type = private} @x.privatizer : !llvm.struct<{{.*}}> init {
+omp.private {type = private} @x.privatizer : memref<?xf32> init {
+// CHECK: ^bb0(%arg0: !llvm.struct<{{.*}}>, %arg1: !llvm.struct<{{.*}}>):
+^bb0(%arg0: memref<?xf32>, %arg1: memref<?xf32>):
   // CHECK: omp.yield(%arg0 : !llvm.struct<{{.*}}>)
   omp.yield(%arg0 : memref<?xf32>)
 }
 
 // -----
 
-// CHECK: omp.private {type = firstprivate} @y.privatizer : i64 alloc {
-omp.private {type = firstprivate} @y.privatizer : index alloc {
-// CHECK: ^bb0(%arg0: i64):
-^bb0(%arg0: index):
-  // CHECK: omp.yield(%arg0 : i64)
-  omp.yield(%arg0 : index)
-// CHECK: } copy {
-} copy {
-// CHECK: ^bb0(%arg0: i64, %arg1: i64):
-^bb0(%arg0: index, %arg1: index):
-  // CHECK: omp.yield(%arg0 : i64)
-  omp.yield(%arg0 : index)
+// CHECK: omp.private {type = firstprivate} @y.privatizer : i64 copy {
+omp.private {type = firstprivate} @y.privatizer : index copy {
+// CHECK: ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  // CHECK: omp.yield(%arg0 : !llvm.ptr)
+  omp.yield(%arg0 : !llvm.ptr)
 }
 
 // -----

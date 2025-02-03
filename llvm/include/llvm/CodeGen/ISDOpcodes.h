@@ -1480,6 +1480,10 @@ enum NodeType {
   // Output: Output Chain
   EXPERIMENTAL_VECTOR_HISTOGRAM,
 
+  // Finds the index of the last active mask element
+  // Operands: Mask
+  VECTOR_FIND_LAST_ACTIVE,
+
   // llvm.clear_cache intrinsic
   // Operands: Input Chain, Start Addres, End Address
   // Outputs: Output Chain

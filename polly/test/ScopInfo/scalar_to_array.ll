@@ -109,7 +109,7 @@ return:                                           ; preds = %for.cond
 ; It is not possible to have a scop which accesses a scalar element that is
 ; a global variable. All global variables are pointers containing possibly
 ; a single element. Hence they do not need to be handled anyways.
-; Please note that this is still required when scalar to array rewritting is
+; Please note that this is still required when scalar to array rewriting is
 ; disabled.
 
 ; CHECK-LABEL: Function: use_after_scop

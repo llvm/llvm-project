@@ -129,7 +129,7 @@ public:
   /// clearly as they both have an integer type.
   struct RegisterMaskPair {
   public:
-    MCPhysReg PhysReg;
+    MCRegister PhysReg;
     LaneBitmask LaneMask;
 
     RegisterMaskPair(MCPhysReg PhysReg, LaneBitmask LaneMask)

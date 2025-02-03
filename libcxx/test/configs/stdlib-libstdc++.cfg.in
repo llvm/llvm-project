@@ -1,15 +1,15 @@
 #
 # This testing configuration runs the test suite using the libstdc++ Standard library.
 #
-# The additional '--param libstdcxx-install-prefix=<PATH>', '--param libstdcxx-triple=<TRIPLE>' and
-# '--param libstdcxx-version=<VERSION>' lit parameters must be provided when invoking lit for the
+# The additional '--param libstdcxx_install_prefix=<PATH>', '--param libstdcxx_triple=<TRIPLE>' and
+# '--param libstdcxx_version=<VERSION>' lit parameters must be provided when invoking lit for the
 # configuration to find the appropriate headers and library.
 #
 # For example:
 #
-#  $ ./libcxx/utils/libcxx-lit <BUILD> -sv libcxx/test/std --param libstdcxx-install-prefix=/opt/homebrew/Cellar/gcc/14.1.0_1 \
-#                                                          --param libstdcxx-version=14 \
-#                                                          --param libstdcxx-triple=aarch64-apple-darwin22
+#  $ ./libcxx/utils/libcxx-lit <BUILD> -sv libcxx/test/std --param libstdcxx_install_prefix=/opt/homebrew/Cellar/gcc/14.1.0_1 \
+#                                                          --param libstdcxx_version=14 \
+#                                                          --param libstdcxx_triple=aarch64-apple-darwin22
 #
 
 lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
@@ -20,19 +20,19 @@ import libcxx.test.params, libcxx.test.config, libcxx.test.dsl
 
 # Additional parameters for libstdc++
 LIBSTDCXX_PARAMETERS = [
-    libcxx.test.dsl.Parameter(name='libstdcxx-install-prefix', type=str,
+    libcxx.test.dsl.Parameter(name='libstdcxx_install_prefix', type=str,
         actions=lambda path: [libcxx.test.dsl.AddSubstitution('%{libstdcxx-install-prefix}', path)],
         help="""
         The installation prefix where libstdc++ was installed. This is used to find the libstdc++ headers,
         link against its built library, etc.
         """),
-    libcxx.test.dsl.Parameter(name='libstdcxx-triple', type=str,
+    libcxx.test.dsl.Parameter(name='libstdcxx_triple', type=str,
         actions=lambda triple: [libcxx.test.dsl.AddSubstitution('%{libstdcxx-triple}', triple)],
         help="""
         The target triple used for the target-specific include directory of libstdc++. This is used to find the
         libstdc++ headers.
         """),
-    libcxx.test.dsl.Parameter(name='libstdcxx-version', type=str,
+    libcxx.test.dsl.Parameter(name='libstdcxx_version', type=str,
         actions=lambda version: [libcxx.test.dsl.AddSubstitution('%{libstdcxx-version}', version)],
         help="""
         The version of libstdc++. This is used to find the libstdc++ headers and library.

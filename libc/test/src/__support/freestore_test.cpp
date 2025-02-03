@@ -24,8 +24,12 @@ TEST(LlvmLibcFreeStore, TooSmall) {
   optional<Block *> maybeBlock = Block::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
   Block *too_small = *maybeBlock;
-  maybeBlock = too_small->split(sizeof(size_t));
+  maybeBlock = too_small->split(Block::PREV_FIELD_SIZE);
   ASSERT_TRUE(maybeBlock.has_value());
+  // On platforms with high alignment the smallest legal block may be large
+  // enough for a node.
+  if (too_small->outer_size() >= sizeof(Block) + sizeof(FreeList::Node))
+    return;
   Block *remainder = *maybeBlock;
 
   FreeStore store;
@@ -43,12 +47,12 @@ TEST(LlvmLibcFreeStore, RemoveBestFit) {
   ASSERT_TRUE(maybeBlock.has_value());
 
   Block *smallest = *maybeBlock;
-  maybeBlock = smallest->split(sizeof(FreeList::Node) + sizeof(size_t));
+  maybeBlock = smallest->split(sizeof(FreeList::Node) + Block::PREV_FIELD_SIZE);
   ASSERT_TRUE(maybeBlock.has_value());
 
   Block *largest_small = *maybeBlock;
-  maybeBlock = largest_small->split(sizeof(FreeTrie::Node) + sizeof(size_t) -
-                                    alignof(max_align_t));
+  maybeBlock = largest_small->split(
+      sizeof(FreeTrie::Node) + Block::PREV_FIELD_SIZE - alignof(max_align_t));
   ASSERT_TRUE(maybeBlock.has_value());
   if (largest_small->inner_size() == smallest->inner_size())
     largest_small = smallest;
@@ -86,7 +90,7 @@ TEST(LlvmLibcFreeStore, Remove) {
   ASSERT_TRUE(maybeBlock.has_value());
 
   Block *small = *maybeBlock;
-  maybeBlock = small->split(sizeof(FreeList::Node) + sizeof(size_t));
+  maybeBlock = small->split(sizeof(FreeList::Node) + Block::PREV_FIELD_SIZE);
   ASSERT_TRUE(maybeBlock.has_value());
 
   Block *remainder = *maybeBlock;

@@ -28,18 +28,10 @@
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/raw_ostream.h"
-#if HAVE_SYS_STAT_H
 #include <sys/stat.h>
-#endif
-#if HAVE_SYS_RESOURCE_H
 #include <sys/resource.h>
-#endif
-#if HAVE_SIGNAL_H
 #include <signal.h>
-#endif
-#if HAVE_FCNTL_H
 #include <fcntl.h>
-#endif
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -146,7 +138,6 @@ static bool RedirectIO_PS(const std::string *Path, int FD, std::string *ErrMsg,
 static void TimeOutHandler(int Sig) {}
 
 static void SetMemoryLimits(unsigned size) {
-#if HAVE_SYS_RESOURCE_H && HAVE_GETRLIMIT && HAVE_SETRLIMIT
   struct rlimit r;
   __typeof__(r.rlim_cur) limit = (__typeof__(r.rlim_cur))(size)*1048576;
 
@@ -159,7 +150,6 @@ static void SetMemoryLimits(unsigned size) {
   getrlimit(RLIMIT_RSS, &r);
   r.rlim_cur = limit;
   setrlimit(RLIMIT_RSS, &r);
-#endif
 #endif
 }
 

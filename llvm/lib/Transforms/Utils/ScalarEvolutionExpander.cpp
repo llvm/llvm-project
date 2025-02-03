@@ -845,7 +845,7 @@ bool SCEVExpander::hoistIVInc(Instruction *IncV, Instruction *InsertPos,
   }
   for (Instruction *I : llvm::reverse(IVIncs)) {
     fixupInsertPoints(I);
-    I->moveBefore(InsertPos);
+    I->moveBefore(InsertPos->getIterator());
     if (RecomputePoisonFlags)
       FixupPoisonFlags(I);
   }

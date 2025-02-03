@@ -1,4 +1,5 @@
 header: fcntl.h
+header_template: fcntl.h.def
 macros: []
 types:
   - type_name: off_t

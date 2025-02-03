@@ -1137,7 +1137,7 @@ void PdbAstBuilder::CreateFunctionParameters(PdbCompilandSymId func_id,
   }
 
   if (!params.empty() && params.size() == param_count)
-    m_clang.SetFunctionParameters(&function_decl, params);
+    function_decl.setParams(params);
 }
 
 clang::QualType PdbAstBuilder::CreateEnumType(PdbTypeSymId id,

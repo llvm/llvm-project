@@ -54,7 +54,7 @@ try.cont:                                         ; preds = %invoke.cont
 eh.resume:                                        ; preds = %invoke.cont2
   %exn3 = load ptr, ptr %exn.slot, align 8, !dbg !20
   %sel = load i32, ptr %ehselector.slot, align 4, !dbg !20
-  %lpad.val = insertvalue { ptr, i32 } undef, ptr %exn3, 0, !dbg !20
+  %lpad.val = insertvalue { ptr, i32 } poison, ptr %exn3, 0, !dbg !20
   %lpad.val4 = insertvalue { ptr, i32 } %lpad.val, i32 %sel, 1, !dbg !20
   resume { ptr, i32 } %lpad.val4, !dbg !20
 

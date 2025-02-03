@@ -204,6 +204,11 @@ struct InstrumentationIRBuilder : IRBuilder<> {
   explicit InstrumentationIRBuilder(Instruction *IP) : IRBuilder<>(IP) {
     ensureDebugInfo(*this, *IP->getFunction());
   }
+
+  explicit InstrumentationIRBuilder(BasicBlock *BB, BasicBlock::iterator It)
+      : IRBuilder<>(BB, It) {
+    ensureDebugInfo(*this, *BB->getParent());
+  }
 };
 } // end namespace llvm
 

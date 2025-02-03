@@ -344,44 +344,62 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
     }
   }
 
-  if (DriverArgs.getLastArg(options::OPT_fwasm_exceptions)) {
-    // '-fwasm-exceptions' is not compatible with '-mno-exception-handling'
+  bool HasBannedIncompatibleOptionsForWasmEHSjLj = false;
+  bool HasEnabledFeaturesForWasmEHSjLj = false;
+
+  // Bans incompatible options for Wasm EH / SjLj. We don't allow using
+  // different modes for EH and SjLj.
+  auto BanIncompatibleOptionsForWasmEHSjLj = [&](StringRef CurOption) {
+    if (HasBannedIncompatibleOptionsForWasmEHSjLj)
+      return;
+    HasBannedIncompatibleOptionsForWasmEHSjLj = true;
     if (DriverArgs.hasFlag(options::OPT_mno_exception_handing,
                            options::OPT_mexception_handing, false))
       getDriver().Diag(diag::err_drv_argument_not_allowed_with)
-          << "-fwasm-exceptions"
-          << "-mno-exception-handling";
-    // '-fwasm-exceptions' is not compatible with
-    // '-mllvm -enable-emscripten-cxx-exceptions'
+          << CurOption << "-mno-exception-handling";
+    // The standardized Wasm EH spec requires multivalue and reference-types.
+    if (DriverArgs.hasFlag(options::OPT_mno_multivalue,
+                           options::OPT_mmultivalue, false))
+      getDriver().Diag(diag::err_drv_argument_not_allowed_with)
+          << CurOption << "-mno-multivalue";
+    if (DriverArgs.hasFlag(options::OPT_mno_reference_types,
+                           options::OPT_mreference_types, false))
+      getDriver().Diag(diag::err_drv_argument_not_allowed_with)
+          << CurOption << "-mno-reference-types";
+
     for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
-      if (StringRef(A->getValue(0)) == "-enable-emscripten-cxx-exceptions")
-        getDriver().Diag(diag::err_drv_argument_not_allowed_with)
-            << "-fwasm-exceptions"
-            << "-mllvm -enable-emscripten-cxx-exceptions";
+      for (const auto *Option :
+           {"-enable-emscripten-cxx-exceptions", "-enable-emscripten-sjlj",
+            "-emscripten-cxx-exceptions-allowed"}) {
+        if (StringRef(A->getValue(0)) == Option)
+          getDriver().Diag(diag::err_drv_argument_not_allowed_with)
+              << CurOption << Option;
+      }
     }
-    // '-fwasm-exceptions' implies exception-handling feature
+  };
+
+  // Enable necessary features for Wasm EH / SjLj in the backend.
+  auto EnableFeaturesForWasmEHSjLj = [&]() {
+    if (HasEnabledFeaturesForWasmEHSjLj)
+      return;
+    HasEnabledFeaturesForWasmEHSjLj = true;
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+exception-handling");
-    // Backend needs -wasm-enable-eh to enable Wasm EH
-    CC1Args.push_back("-mllvm");
-    CC1Args.push_back("-wasm-enable-eh");
-
-    // New Wasm EH spec (adopted in Oct 2023) requires multivalue and
-    // reference-types.
-    if (DriverArgs.hasFlag(options::OPT_mno_multivalue,
-                           options::OPT_mmultivalue, false)) {
-      getDriver().Diag(diag::err_drv_argument_not_allowed_with)
-          << "-fwasm-exceptions" << "-mno-multivalue";
-    }
-    if (DriverArgs.hasFlag(options::OPT_mno_reference_types,
-                           options::OPT_mreference_types, false)) {
-      getDriver().Diag(diag::err_drv_argument_not_allowed_with)
-          << "-fwasm-exceptions" << "-mno-reference-types";
-    }
+    // The standardized Wasm EH spec requires multivalue and reference-types.
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+multivalue");
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+reference-types");
+    // Backend needs '-exception-model=wasm' to use Wasm EH instructions
+    CC1Args.push_back("-exception-model=wasm");
+  };
+
+  if (DriverArgs.getLastArg(options::OPT_fwasm_exceptions)) {
+    BanIncompatibleOptionsForWasmEHSjLj("-fwasm-exceptions");
+    EnableFeaturesForWasmEHSjLj();
+    // Backend needs -wasm-enable-eh to enable Wasm EH
+    CC1Args.push_back("-mllvm");
+    CC1Args.push_back("-wasm-enable-eh");
   }
 
   for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
@@ -413,53 +431,12 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
       }
     }
 
-    if (Opt.starts_with("-wasm-enable-sjlj")) {
-      // '-mllvm -wasm-enable-sjlj' is not compatible with
-      // '-mno-exception-handling'
-      if (DriverArgs.hasFlag(options::OPT_mno_exception_handing,
-                             options::OPT_mexception_handing, false))
-        getDriver().Diag(diag::err_drv_argument_not_allowed_with)
-            << "-mllvm -wasm-enable-sjlj"
-            << "-mno-exception-handling";
-      // '-mllvm -wasm-enable-sjlj' is not compatible with
-      // '-mllvm -enable-emscripten-cxx-exceptions'
-      // because we don't allow Emscripten EH + Wasm SjLj
-      for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
-        if (StringRef(A->getValue(0)) == "-enable-emscripten-cxx-exceptions")
-          getDriver().Diag(diag::err_drv_argument_not_allowed_with)
-              << "-mllvm -wasm-enable-sjlj"
-              << "-mllvm -enable-emscripten-cxx-exceptions";
+    for (const auto *Option :
+         {"-wasm-enable-eh", "-wasm-enable-sjlj", "-wasm-use-legacy-eh"}) {
+      if (Opt.starts_with(Option)) {
+        BanIncompatibleOptionsForWasmEHSjLj(Option);
+        EnableFeaturesForWasmEHSjLj();
       }
-      // '-mllvm -wasm-enable-sjlj' is not compatible with
-      // '-mllvm -enable-emscripten-sjlj'
-      for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
-        if (StringRef(A->getValue(0)) == "-enable-emscripten-sjlj")
-          getDriver().Diag(diag::err_drv_argument_not_allowed_with)
-              << "-mllvm -wasm-enable-sjlj"
-              << "-mllvm -enable-emscripten-sjlj";
-      }
-      // '-mllvm -wasm-enable-sjlj' implies exception-handling feature
-      CC1Args.push_back("-target-feature");
-      CC1Args.push_back("+exception-handling");
-      // Backend needs '-exception-model=wasm' to use Wasm EH instructions
-      CC1Args.push_back("-exception-model=wasm");
-
-      // New Wasm EH spec (adopted in Oct 2023) requires multivalue and
-      // reference-types.
-      if (DriverArgs.hasFlag(options::OPT_mno_multivalue,
-                             options::OPT_mmultivalue, false)) {
-        getDriver().Diag(diag::err_drv_argument_not_allowed_with)
-            << "-mllvm -wasm-enable-sjlj" << "-mno-multivalue";
-      }
-      if (DriverArgs.hasFlag(options::OPT_mno_reference_types,
-                             options::OPT_mreference_types, false)) {
-        getDriver().Diag(diag::err_drv_argument_not_allowed_with)
-            << "-mllvm -wasm-enable-sjlj" << "-mno-reference-types";
-      }
-      CC1Args.push_back("-target-feature");
-      CC1Args.push_back("+multivalue");
-      CC1Args.push_back("-target-feature");
-      CC1Args.push_back("+reference-types");
     }
   }
 }

@@ -4,7 +4,7 @@
 
 define void @foo(ptr nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-LABEL: define void @foo(
-; CHECK-SAME: ptr nocapture [[A:%.*]], ptr nocapture readonly [[B:%.*]]) {
+; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:

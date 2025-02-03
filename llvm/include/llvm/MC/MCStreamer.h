@@ -252,6 +252,12 @@ class MCStreamer {
   bool AllowAutoPadding = false;
 
 protected:
+  // True if we are processing SEH directives in an epilogue.
+  bool InEpilogCFI = false;
+
+  // Symbol of the current epilog for which we are processing SEH directives.
+  MCSymbol *CurrentEpilog = nullptr;
+
   MCFragment *CurFrag = nullptr;
 
   MCStreamer(MCContext &Ctx);
@@ -332,6 +338,10 @@ public:
   ArrayRef<std::unique_ptr<WinEH::FrameInfo>> getWinFrameInfos() const {
     return WinFrameInfos;
   }
+
+  MCSymbol *getCurrentEpilog() const { return CurrentEpilog; }
+
+  bool isInEpilogCFI() const { return InEpilogCFI; }
 
   void generateCompactUnwindEncodings(MCAsmBackend *MAB);
 
@@ -568,6 +578,14 @@ public:
   ///
   /// \param Symbol - Symbol the image relative relocation should point to.
   virtual void emitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset);
+
+  /// Emits the physical number of the section containing the given symbol as
+  /// assigned during object writing (i.e., this is not a runtime relocation).
+  virtual void emitCOFFSecNumber(MCSymbol const *Symbol);
+
+  /// Emits the offset of the symbol from the beginning of the section during
+  /// object writing (i.e., this is not a runtime relocation).
+  virtual void emitCOFFSecOffset(MCSymbol const *Symbol);
 
   /// Emits an lcomm directive with XCOFF csect information.
   ///
@@ -1048,6 +1066,8 @@ public:
                                  SMLoc Loc = SMLoc());
   virtual void emitWinCFIPushFrame(bool Code, SMLoc Loc = SMLoc());
   virtual void emitWinCFIEndProlog(SMLoc Loc = SMLoc());
+  virtual void emitWinCFIBeginEpilogue(SMLoc Loc = SMLoc());
+  virtual void emitWinCFIEndEpilogue(SMLoc Loc = SMLoc());
   virtual void emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
                                 SMLoc Loc = SMLoc());
   virtual void emitWinEHHandlerData(SMLoc Loc = SMLoc());

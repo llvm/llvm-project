@@ -166,6 +166,8 @@ Status SIModeRegister::getInstructionMode(MachineInstr &MI,
   unsigned Opcode = MI.getOpcode();
   if (TII->usesFPDPRounding(MI) ||
       Opcode == AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO ||
+      Opcode == AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO_fake16_e32 ||
+      Opcode == AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64 ||
       Opcode == AMDGPU::FPTRUNC_ROUND_F32_F64_PSEUDO) {
     switch (Opcode) {
     case AMDGPU::V_INTERP_P1LL_F16:
@@ -177,19 +179,19 @@ Status SIModeRegister::getInstructionMode(MachineInstr &MI,
     case AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO: {
       unsigned Mode = MI.getOperand(2).getImm();
       MI.removeOperand(2);
-      // Replacing the pseudo by a real instruction in place
-      if (TII->getSubtarget().hasTrue16BitInsts()) {
-        MachineBasicBlock &MBB = *MI.getParent();
-        MachineInstrBuilder B(*MBB.getParent(), MI);
-        MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_fake16_e64));
-        MachineOperand Src0 = MI.getOperand(1);
-        MI.removeOperand(1);
-        B.addImm(0); // src0_modifiers
-        B.add(Src0); // re-add src0 operand
-        B.addImm(0); // clamp
-        B.addImm(0); // omod
-      } else
-        MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_e32));
+      MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_e32));
+      return Status(FP_ROUND_MODE_DP(3), FP_ROUND_MODE_DP(Mode));
+    }
+    case AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO_fake16_e32: {
+      unsigned Mode = MI.getOperand(2).getImm();
+      MI.removeOperand(2);
+      MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_fake16_e32));
+      return Status(FP_ROUND_MODE_DP(3), FP_ROUND_MODE_DP(Mode));
+    }
+    case AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64: {
+      unsigned Mode = MI.getOperand(6).getImm();
+      MI.removeOperand(6);
+      MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_t16_e64));
       return Status(FP_ROUND_MODE_DP(3), FP_ROUND_MODE_DP(Mode));
     }
     case AMDGPU::FPTRUNC_ROUND_F32_F64_PSEUDO: {

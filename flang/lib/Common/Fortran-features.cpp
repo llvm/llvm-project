@@ -79,7 +79,6 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::ImplicitShared);
   warnUsage_.set(UsageWarning::IndexVarRedefinition);
   warnUsage_.set(UsageWarning::IncompatibleImplicitInterfaces);
-  warnUsage_.set(UsageWarning::BadTypeForTarget);
   warnUsage_.set(UsageWarning::VectorSubscriptFinalization);
   warnUsage_.set(UsageWarning::UndefinedFunctionResult);
   warnUsage_.set(UsageWarning::UselessIomsg);

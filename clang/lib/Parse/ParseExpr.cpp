@@ -248,6 +248,25 @@ ExprResult Parser::ParseArrayBoundExpression() {
   // If we parse the bound of a VLA... we parse a non-constant
   // constant-expression!
   Actions.ExprEvalContexts.back().InConditionallyConstantEvaluateContext = true;
+  // For a VLA type inside an unevaluated operator like:
+  //
+  //   sizeof(typeof(*(int (*)[N])array))
+  //
+  // N and array are supposed to be ODR-used.
+  // Initially when encountering `array`, it is deemed unevaluated and non-ODR
+  // used because that occurs before parsing the type cast. Therefore we use
+  // Sema::TransformToPotentiallyEvaluated() to rebuild the expression to ensure
+  // it's actually ODR-used.
+  //
+  // However, in other unevaluated contexts as in constraint substitution, it
+  // would end up rebuilding the type twice which is unnecessary. So we push up
+  // a flag to help distinguish these cases.
+  for (auto Iter = Actions.ExprEvalContexts.rbegin() + 1;
+       Iter != Actions.ExprEvalContexts.rend(); ++Iter) {
+    if (!Iter->isUnevaluated())
+      break;
+    Iter->InConditionallyConstantEvaluateContext = true;
+  }
   return ParseConstantExpressionInExprEvalContext(NotTypeCast);
 }
 

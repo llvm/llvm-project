@@ -31,22 +31,6 @@ namespace adjust {
 
 using namespace llvm;
 
-static void signed_width(unsigned Width, uint64_t Value,
-                         std::string Description, const MCFixup &Fixup,
-                         MCContext *Ctx) {
-  if (!isIntN(Width, Value)) {
-    std::string Diagnostic = "out of range " + Description;
-
-    int64_t Min = minIntN(Width);
-    int64_t Max = maxIntN(Width);
-
-    Diagnostic += " (expected an integer in the range " + std::to_string(Min) +
-                  " to " + std::to_string(Max) + ")";
-
-    Ctx->reportError(Fixup.getLoc(), Diagnostic);
-  }
-}
-
 static void unsigned_width(unsigned Width, uint64_t Value,
                            std::string Description, const MCFixup &Fixup,
                            MCContext *Ctx) {
@@ -74,8 +58,8 @@ static void adjustBranch(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
 }
 
 /// Adjusts the value of a relative branch target before fixup application.
-static void adjustRelativeBranch(unsigned Size, const MCFixup &Fixup,
-                                 uint64_t &Value, MCContext *Ctx) {
+static bool adjustRelativeBranch(unsigned Size, const MCFixup &Fixup,
+                                 uint64_t &Value, const MCSubtargetInfo *STI) {
   // Jumps are relative to the current instruction.
   Value -= 2;
 
@@ -83,8 +67,9 @@ static void adjustRelativeBranch(unsigned Size, const MCFixup &Fixup,
   // one.
   Size += 1;
 
-  if (!isIntN(Size, Value) &&
-      Ctx->getSubtargetInfo()->hasFeature(AVR::FeatureWrappingRjmp)) {
+  assert(STI && "STI can not be NULL");
+
+  if (!isIntN(Size, Value) && STI->hasFeature(AVR::FeatureWrappingRjmp)) {
     const int32_t FlashSize = 0x2000;
     int32_t SignedValue = Value;
 
@@ -96,10 +81,14 @@ static void adjustRelativeBranch(unsigned Size, const MCFixup &Fixup,
     }
   }
 
-  signed_width(Size, Value, std::string("branch target"), Fixup, Ctx);
+  if (!isIntN(Size, Value)) {
+    return false;
+  }
 
   // Rightshifts the value by one.
   AVR::fixups::adjustBranchTarget(Value);
+
+  return true;
 }
 
 /// 22-bit absolute fixup.
@@ -126,7 +115,9 @@ static void fixup_call(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
 /// Offset of 0 (so the result is left shifted by 3 bits before application).
 static void fixup_7_pcrel(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
                           MCContext *Ctx) {
-  adjustRelativeBranch(Size, Fixup, Value, Ctx);
+  if (!adjustRelativeBranch(Size, Fixup, Value, Ctx->getSubtargetInfo())) {
+    llvm_unreachable("should've been emitted as a relocation");
+  }
 
   // Because the value may be negative, we must mask out the sign bits
   Value &= 0x7f;
@@ -140,7 +131,9 @@ static void fixup_7_pcrel(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
 /// Offset of 0 (so the result isn't left-shifted before application).
 static void fixup_13_pcrel(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
                            MCContext *Ctx) {
-  adjustRelativeBranch(Size, Fixup, Value, Ctx);
+  if (!adjustRelativeBranch(Size, Fixup, Value, Ctx->getSubtargetInfo())) {
+    llvm_unreachable("should've been emitted as a relocation");
+  }
 
   // Because the value may be negative, we must mask out the sign bits
   Value &= 0xfff;
@@ -181,7 +174,7 @@ static void fixup_port5(const MCFixup &Fixup, uint64_t &Value, MCContext *Ctx) {
   Value <<= 3;
 }
 
-/// 6-bit port number fixup on the `IN` family of instructions.
+/// 6-bit port number fixup on the IN family of instructions.
 ///
 /// Resolves to:
 /// 1011 0AAd dddd AAAA
@@ -512,14 +505,25 @@ bool AVRAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
 bool AVRAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                           const MCFixup &Fixup,
                                           const MCValue &Target,
+                                          const uint64_t Value,
                                           const MCSubtargetInfo *STI) {
   switch ((unsigned)Fixup.getKind()) {
   default:
     return Fixup.getKind() >= FirstLiteralRelocationKind;
+
   case AVR::fixup_7_pcrel:
-  case AVR::fixup_13_pcrel:
-    // Always resolve relocations for PC-relative branches
-    return false;
+  case AVR::fixup_13_pcrel: {
+    uint64_t ValueEx = Value;
+    uint64_t Size = AVRAsmBackend::getFixupKindInfo(Fixup.getKind()).TargetSize;
+
+    // If the jump is too large to encode it, fall back to a relocation.
+    //
+    // Note that trying to actually link that relocation *would* fail, but the
+    // hopes are that the module we're currently compiling won't be actually
+    // linked to the final binary.
+    return !adjust::adjustRelativeBranch(Size, Fixup, ValueEx, STI);
+  }
+
   case AVR::fixup_call:
     return true;
   }

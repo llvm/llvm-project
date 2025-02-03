@@ -13,6 +13,8 @@ add_flang_library(FIRAnalysis
   FIRBuilder
   FIRDialect
   HLFIRDialect
+
+  MLIR_LIBS
   MLIRFuncDialect
   MLIRLLVMDialect
   MLIRMathTransforms

@@ -83,7 +83,7 @@ LLVMState::LLVMState(std::unique_ptr<const TargetMachine> TM,
       OpcodeNameToOpcodeIdxMapping(createOpcodeNameToOpcodeIdxMapping()),
       RegNameToRegNoMapping(createRegNameToRegNoMapping()) {
   BitVector ReservedRegs = getFunctionReservedRegs(getTargetMachine());
-  for (const unsigned Reg : TheExegesisTarget->getUnavailableRegisters())
+  for (const MCPhysReg Reg : TheExegesisTarget->getUnavailableRegisters())
     ReservedRegs.set(Reg);
   RATC.reset(
       new RegisterAliasingTrackerCache(getRegInfo(), std::move(ReservedRegs)));

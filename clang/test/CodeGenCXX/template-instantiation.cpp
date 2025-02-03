@@ -140,7 +140,7 @@ namespace test4 {
     B b;
   }
 
-  unsigned test() {
+  void test() {
     A<int>::foo();
   }
 }

@@ -63,7 +63,7 @@ LaneMaskTy activemask();
 /// Return a mask describing all threads with a smaller Id in the warp.
 LaneMaskTy lanemaskLT();
 
-/// Return a mask describing all threads with a larget Id in the warp.
+/// Return a mask describing all threads with a larger Id in the warp.
 LaneMaskTy lanemaskGT();
 
 /// Return the thread Id in the warp, in [0, getWarpSize()).

@@ -226,7 +226,7 @@ void ExplodedNode::NodeGroup::addNode(ExplodedNode *N, ExplodedGraph &G) {
     return;
   }
 
-  ExplodedNodeVector *V = Storage.dyn_cast<ExplodedNodeVector *>();
+  ExplodedNodeVector *V = dyn_cast<ExplodedNodeVector *>(Storage);
 
   if (!V) {
     // Switch from single-node to multi-node representation.
@@ -251,7 +251,7 @@ unsigned ExplodedNode::NodeGroup::size() const {
   const GroupStorage &Storage = reinterpret_cast<const GroupStorage &>(P);
   if (Storage.isNull())
     return 0;
-  if (ExplodedNodeVector *V = Storage.dyn_cast<ExplodedNodeVector *>())
+  if (ExplodedNodeVector *V = dyn_cast<ExplodedNodeVector *>(Storage))
     return V->size();
   return 1;
 }
@@ -263,7 +263,7 @@ ExplodedNode * const *ExplodedNode::NodeGroup::begin() const {
   const GroupStorage &Storage = reinterpret_cast<const GroupStorage &>(P);
   if (Storage.isNull())
     return nullptr;
-  if (ExplodedNodeVector *V = Storage.dyn_cast<ExplodedNodeVector *>())
+  if (ExplodedNodeVector *V = dyn_cast<ExplodedNodeVector *>(Storage))
     return V->begin();
   return Storage.getAddrOfPtr1();
 }
@@ -275,7 +275,7 @@ ExplodedNode * const *ExplodedNode::NodeGroup::end() const {
   const GroupStorage &Storage = reinterpret_cast<const GroupStorage &>(P);
   if (Storage.isNull())
     return nullptr;
-  if (ExplodedNodeVector *V = Storage.dyn_cast<ExplodedNodeVector *>())
+  if (ExplodedNodeVector *V = dyn_cast<ExplodedNodeVector *>(Storage))
     return V->end();
   return Storage.getAddrOfPtr1() + 1;
 }
@@ -488,15 +488,17 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
   while (!WL2.empty()) {
     const ExplodedNode *N = WL2.pop_back_val();
 
+    auto [Place, Inserted] = Pass2.try_emplace(N);
+
     // Skip this node if we have already processed it.
-    if (Pass2.contains(N))
+    if (!Inserted)
       continue;
 
     // Create the corresponding node in the new graph and record the mapping
     // from the old node to the new node.
     ExplodedNode *NewN = G->createUncachedNode(N->getLocation(), N->State,
                                                N->getID(), N->isSink());
-    Pass2[N] = NewN;
+    Place->second = NewN;
 
     // Also record the reverse mapping from the new node to the old node.
     if (InverseMap) (*InverseMap)[NewN] = N;

@@ -1,35 +1,35 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
- 
-! FRACTION
-! CHECK-LABE: fraction_test
-subroutine fraction_test
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-supports-f128-math %{,CHECK-KIND16%}
 
-    real(kind=4) :: x1 = 178.1387e-4
-    real(kind=8) :: x2 = 178.1387e-4
-    real(kind=10) :: x3 = 178.1387e-4
-    real(kind=16) :: x4 = 178.1387e-4
-  ! CHECK: %[[r0:.*]] = fir.address_of(@_QFfraction_testEx1) : !fir.ref<f32>
-  ! CHECK: %[[r1:.*]] = fir.address_of(@_QFfraction_testEx2) : !fir.ref<f64>
-  ! CHECK: %[[r2:.*]] = fir.address_of(@_QFfraction_testEx3) : !fir.ref<f80>
-  ! CHECK: %[[r3:.*]] = fir.address_of(@_QFfraction_testEx4) : !fir.ref<f128>
-  
-    x1 = fraction(x1)
-  ! CHECK: %[[temp0:.*]] = fir.load %[[r0:.*]] : !fir.ref<f32>
-  ! CHECK: %[[result0:.*]] = fir.call @_FortranAFraction4(%[[temp0:.*]]) {{.*}}: (f32) -> f32
-  ! CHECK: fir.store %[[result0:.*]] to %[[r0:.*]] : !fir.ref<f32>
-  
-    x2 = fraction(x2)
-  ! CHECK: %[[temp1:.*]] = fir.load %[[r1:.*]] : !fir.ref<f64>
-  ! CHECK: %[[result1:.*]] = fir.call @_FortranAFraction8(%[[temp1:.*]]) {{.*}}: (f64) -> f64
-  ! CHECK: fir.store %[[result1:.*]] to %[[r1:.*]] : !fir.ref<f64>
-  
-    x3 = fraction(x3)
-  ! CHECK: %[[temp2:.*]] = fir.load %[[r2:.*]] : !fir.ref<f80>
-  ! CHECK: %[[result2:.*]] = fir.call @_FortranAFraction10(%[[temp2:.*]]) {{.*}}: (f80) -> f80
-  ! CHECK: fir.store %[[result2:.*]] to %[[r2:.*]] : !fir.ref<f80>
-  
-    x4 = fraction(x4)
-  ! CHECK: %[[temp3:.*]] = fir.load %[[r3:.*]] : !fir.ref<f128>
-  ! CHECK: %[[result3:.*]] = fir.call @_FortranAFraction16(%[[temp3:.*]]) {{.*}}: (f128) -> f128
-  ! CHECK: fir.store %[[result3:.*]] to %[[r3:.*]] : !fir.ref<f128>
-  end subroutine fraction_test
+! FRACTION
+
+! CHECK-LABEL: fraction_test(
+subroutine fraction_test(res4, res8, x4, x8)
+    real(kind = 4) :: x4, res4
+    real(kind = 8) :: x8, res8
+
+    res4 = fraction(x4)
+  ! CHECK: %[[temp0:.*]] = fir.load %{{.*}} : !fir.ref<f32>
+  ! CHECK: fir.call @_FortranAFraction4(%[[temp0:.*]]) {{.*}}: (f32) -> f32
+
+    res8 = fraction(x8)
+  ! CHECK: %[[temp1:.*]] = fir.load %{{.*}} : !fir.ref<f64>
+  ! CHECK: fir.call @_FortranAFraction8(%[[temp1:.*]]) {{.*}}: (f64) -> f64
+end subroutine fraction_test
+
+! CHECK-KIND10-LABEL: fraction_10(
+subroutine fraction_10(res10, x10)
+    integer, parameter :: kind10 = merge(10, 4, selected_real_kind(p=18).eq.10)
+    real(kind = kind10) :: x10, res10
+    res10 = fraction(x10)
+  ! CHECK-KIND10: %[[temp2:.*]] = fir.load %{{.*}} : !fir.ref<f80>
+  ! CHECK-KIND10: fir.call @_FortranAFraction10(%[[temp2:.*]]) {{.*}}: (f80) -> f80
+end subroutine
+
+! CHECK-KIND16-LABEL: fraction_16(
+subroutine fraction_16(res16, x16)
+    integer, parameter :: kind16 = merge(16, 4, selected_real_kind(p=33).eq.16)
+    real(kind = kind16) :: x16, res16
+    res16 = fraction(x16)
+  ! CHECK-KIND16: %[[temp2:.*]] = fir.load %{{.*}} : !fir.ref<f128>
+  ! CHECK-KIND16: fir.call @_FortranAFraction16(%[[temp2:.*]]) {{.*}}: (f128) -> f128
+end subroutine

@@ -594,7 +594,7 @@ void ElemSection::writeBody() {
   }
   writeInitExpr(os, initExpr);
 
-  if (flags & WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND) {
+  if (flags & WASM_ELEM_SEGMENT_MASK_HAS_ELEM_DESC) {
     // We only write active function table initializers, for which the elem kind
     // is specified to be written as 0x00 and interpreted to mean "funcref".
     const uint8_t elemKind = 0;

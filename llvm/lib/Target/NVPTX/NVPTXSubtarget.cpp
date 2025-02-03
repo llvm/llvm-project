@@ -34,19 +34,18 @@ void NVPTXSubtarget::anchor() {}
 
 NVPTXSubtarget &NVPTXSubtarget::initializeSubtargetDependencies(StringRef CPU,
                                                                 StringRef FS) {
-    // Provide the default CPU if we don't have one.
-    TargetName = std::string(CPU.empty() ? "sm_30" : CPU);
+  TargetName = std::string(CPU);
 
-    ParseSubtargetFeatures(TargetName, /*TuneCPU*/ TargetName, FS);
+  ParseSubtargetFeatures(getTargetName(), /*TuneCPU=*/getTargetName(), FS);
 
-    // Re-map SM version numbers, SmVersion carries the regular SMs which do
-    // have relative order, while FullSmVersion allows distinguishing sm_90 from
-    // sm_90a, which would *not* be a subset of sm_91.
-    SmVersion = getSmVersion();
+  // Re-map SM version numbers, SmVersion carries the regular SMs which do
+  // have relative order, while FullSmVersion allows distinguishing sm_90 from
+  // sm_90a, which would *not* be a subset of sm_91.
+  SmVersion = getSmVersion();
 
-    // Set default to PTX 6.0 (CUDA 9.0)
-    if (PTXVersion == 0) {
-      PTXVersion = 60;
+  // Set default to PTX 6.0 (CUDA 9.0)
+  if (PTXVersion == 0) {
+    PTXVersion = 60;
   }
 
   return *this;
@@ -69,6 +68,38 @@ const SelectionDAGTargetInfo *NVPTXSubtarget::getSelectionDAGInfo() const {
 
 bool NVPTXSubtarget::allowFP16Math() const {
   return hasFP16Math() && NoF16Math == false;
+}
+
+bool NVPTXSubtarget::hasNativeBF16Support(int Opcode) const {
+  if (!hasBF16Math())
+    return false;
+
+  switch (Opcode) {
+  // Several BF16 instructions are available on sm_90 only.
+  case ISD::FADD:
+  case ISD::FMUL:
+  case ISD::FSUB:
+  case ISD::SELECT:
+  case ISD::SELECT_CC:
+  case ISD::SETCC:
+  case ISD::FEXP2:
+  case ISD::FCEIL:
+  case ISD::FFLOOR:
+  case ISD::FNEARBYINT:
+  case ISD::FRINT:
+  case ISD::FROUNDEVEN:
+  case ISD::FTRUNC:
+    return getSmVersion() >= 90 && getPTXVersion() >= 78;
+  // Several BF16 instructions are available on sm_80 only.
+  case ISD::FMINNUM:
+  case ISD::FMAXNUM:
+  case ISD::FMAXNUM_IEEE:
+  case ISD::FMINNUM_IEEE:
+  case ISD::FMAXIMUM:
+  case ISD::FMINIMUM:
+    return getSmVersion() >= 80 && getPTXVersion() >= 70;
+  }
+  return true;
 }
 
 void NVPTXSubtarget::failIfClustersUnsupported(

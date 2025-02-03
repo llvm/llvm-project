@@ -69,9 +69,7 @@ immediately enclosed by the latter),
 3. a value that dominates the `AffineScope` op enclosing the value's
 use,
 4. the result of a constant operation,
-5. the result of an
-[`affine.apply` operation](#affineapply-mliraffineapplyop) that recursively takes as
-arguments any valid symbolic identifiers, or
+5. the result of a `Pure` operation whose operands are valid symbolic identifiers.
 6. the result of a
 [`dim` operation](MemRef.md/#memrefdim-mlirmemrefdimop) on either a memref that
 is an argument to a `AffineScope` op or a memref where the corresponding

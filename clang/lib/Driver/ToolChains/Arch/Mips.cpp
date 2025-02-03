@@ -366,9 +366,6 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   } else if (mips::shouldUseFPXX(Args, Triple, CPUName, ABIName, FloatABI)) {
     Features.push_back("+fpxx");
     Features.push_back("+nooddspreg");
-  } else if (mips::isFP64ADefault(Triple, CPUName)) {
-    Features.push_back("+fp64");
-    Features.push_back("+nooddspreg");
   } else if (Arg *A = Args.getLastArg(options::OPT_mmsa)) {
     if (A->getOption().matches(options::OPT_mmsa))
       Features.push_back("+fp64");
@@ -462,16 +459,6 @@ bool mips::isNaN2008(const Driver &D, const ArgList &Args,
   // NaN2008 is the default for MIPS32r6/MIPS64r6.
   return llvm::StringSwitch<bool>(getCPUName(D, Args, Triple))
       .Cases("mips32r6", "mips64r6", true)
-      .Default(false);
-}
-
-bool mips::isFP64ADefault(const llvm::Triple &Triple, StringRef CPUName) {
-  if (!Triple.isAndroid())
-    return false;
-
-  // Android MIPS32R6 defaults to FP64A.
-  return llvm::StringSwitch<bool>(CPUName)
-      .Case("mips32r6", true)
       .Default(false);
 }
 

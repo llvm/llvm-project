@@ -12,7 +12,7 @@
 ; CHECK-NOT: __local_depot
 
 ; CHECK-32:       ld.param.u32  %r[[SIZE:[0-9]]], [test_dynamic_stackalloc_param_0];
-; CHECK-32-NEXT:  mad.lo.s32 %r[[SIZE2:[0-9]]], %r[[SIZE]], 1, 7;
+; CHECK-32-NEXT:  add.s32 %r[[SIZE2:[0-9]]], %r[[SIZE]], 7;
 ; CHECK-32-NEXT:  and.b32         %r[[SIZE3:[0-9]]], %r[[SIZE2]], -8;
 ; CHECK-32-NEXT:  alloca.u32  %r[[ALLOCA:[0-9]]], %r[[SIZE3]], 16;
 ; CHECK-32-NEXT:  cvta.local.u32  %r[[ALLOCA]], %r[[ALLOCA]];

@@ -27,7 +27,7 @@ void foo(void) {
 }
 
 // CHECK: @f1.l0 = internal global i32 ptrtoint (ptr @f1 to i32)
-int f1(void) { static int l0 = (unsigned) f1; }
+void f1(void) { static int l0 = (unsigned) f1; }
 
 // PR7044
 char *f2(char key) {

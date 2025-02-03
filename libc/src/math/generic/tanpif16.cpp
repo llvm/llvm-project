@@ -79,7 +79,7 @@ LLVM_LIBC_FUNCTION(float16, tanpif16, (float16 x)) {
   //   k = round(x * 32)
   //   y = x * 32 - k
   //
-  // Once k and y are computed, we then deduce the answer by tthe formula:
+  // Once k and y are computed, we then deduce the answer by the formula:
   // tan(x) = sin(x) / cos(x)
   //        = (sin_y * cos_k + cos_y * sin_k) / (cos_y * cos_k - sin_y * sin_k)
   float xf = x;

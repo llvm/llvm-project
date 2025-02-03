@@ -7,9 +7,17 @@ define void @partial_vec_invalid_cost() #0 {
 ; CHECK-LABEL: define void @partial_vec_invalid_cost(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[LSHR_1:%.*]] = lshr i96 0, 0
+; CHECK-NEXT:    [[LSHR_2:%.*]] = lshr i96 0, 0
+; CHECK-NEXT:    [[TRUNC_I96_1:%.*]] = trunc i96 [[LSHR_1]] to i32
+; CHECK-NEXT:    [[TRUNC_I96_2:%.*]] = trunc i96 [[LSHR_2]] to i32
+; CHECK-NEXT:    [[TRUNC_I96_3:%.*]] = trunc i96 0 to i32
+; CHECK-NEXT:    [[TRUNC_I96_4:%.*]] = trunc i96 0 to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> zeroinitializer)
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = or i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or i32 [[TMP1]], [[TRUNC_I96_1]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = or i32 [[TRUNC_I96_2]], [[TRUNC_I96_3]]
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = or i32 [[OP_RDX]], [[OP_RDX1]]
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = or i32 [[OP_RDX2]], [[TRUNC_I96_4]]
 ; CHECK-NEXT:    [[STORE_THIS:%.*]] = zext i32 [[OP_RDX3]] to i96
 ; CHECK-NEXT:    store i96 [[STORE_THIS]], ptr null, align 16
 ; CHECK-NEXT:    ret void

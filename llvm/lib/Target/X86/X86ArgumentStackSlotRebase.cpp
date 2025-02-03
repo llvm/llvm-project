@@ -128,7 +128,7 @@ bool X86ArgumentStackSlotPass::runOnMachineFunction(MachineFunction &MF) {
           if (!MO.isReg())
             continue;
           Register Reg = MO.getReg();
-          if (!Register::isPhysicalRegister(Reg))
+          if (!Reg.isPhysical())
             continue;
           if (TRI->isSuperOrSubRegisterEq(BasePtr, Reg))
             return true;

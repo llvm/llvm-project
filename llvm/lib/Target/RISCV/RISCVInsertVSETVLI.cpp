@@ -1719,8 +1719,7 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
       ToDelete.push_back(VLOpDef);
   };
 
-  for (MachineInstr &MI :
-       make_early_inc_range(make_range(MBB.rbegin(), MBB.rend()))) {
+  for (MachineInstr &MI : make_early_inc_range(reverse(MBB))) {
 
     if (!isVectorConfigInstr(MI)) {
       Used.doUnion(getDemanded(MI, ST));

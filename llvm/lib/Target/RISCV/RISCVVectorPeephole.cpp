@@ -460,13 +460,13 @@ bool RISCVVectorPeephole::convertToUnmasked(MachineInstr &MI) const {
   [[maybe_unused]] const bool HasPolicyOp =
       RISCVII::hasVecPolicyOp(MCID.TSFlags);
   const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MCID);
-#ifndef NDEBUG
   const MCInstrDesc &MaskedMCID = TII->get(MI.getOpcode());
   assert(RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags) ==
              RISCVII::hasVecPolicyOp(MCID.TSFlags) &&
          "Masked and unmasked pseudos are inconsistent");
   assert(HasPolicyOp == HasPassthru && "Unexpected pseudo structure");
-#endif
+  assert(!(HasPassthru && !RISCVII::isFirstDefTiedToFirstUse(MaskedMCID)) &&
+         "Unmasked with passthru but masked with no passthru?");
   (void)HasPolicyOp;
 
   MI.setDesc(MCID);
@@ -478,12 +478,16 @@ bool RISCVVectorPeephole::convertToUnmasked(MachineInstr &MI) const {
   // The unmasked pseudo will no longer be constrained to the vrnov0 reg class,
   // so try and relax it to vr.
   MRI->recomputeRegClass(MI.getOperand(0).getReg());
-  unsigned PassthruOpIdx = MI.getNumExplicitDefs();
-  if (HasPassthru) {
-    if (MI.getOperand(PassthruOpIdx).getReg() != RISCV::NoRegister)
-      MRI->recomputeRegClass(MI.getOperand(PassthruOpIdx).getReg());
-  } else
-    MI.removeOperand(PassthruOpIdx);
+
+  // If the original masked pseudo had a passthru, relax it or remove it.
+  if (RISCVII::isFirstDefTiedToFirstUse(MaskedMCID)) {
+    unsigned PassthruOpIdx = MI.getNumExplicitDefs();
+    if (HasPassthru) {
+      if (MI.getOperand(PassthruOpIdx).getReg() != RISCV::NoRegister)
+        MRI->recomputeRegClass(MI.getOperand(PassthruOpIdx).getReg());
+    } else
+      MI.removeOperand(PassthruOpIdx);
+  }
 
   return true;
 }

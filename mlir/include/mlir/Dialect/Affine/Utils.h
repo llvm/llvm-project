@@ -31,6 +31,7 @@ class FuncOp;
 
 namespace memref {
 class AllocOp;
+class AllocaOp;
 } // namespace memref
 
 namespace affine {
@@ -245,7 +246,12 @@ LogicalResult replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
 /// Rewrites the memref defined by this alloc op to have an identity layout map
 /// and updates all its indexing uses. Returns failure if any of its uses
 /// escape (while leaving the IR in a valid state).
-LogicalResult normalizeMemRef(memref::AllocOp *op);
+template <typename AllocLikeOp>
+LogicalResult normalizeMemRef(AllocLikeOp *op);
+extern template LogicalResult
+normalizeMemRef<memref::AllocaOp>(memref::AllocaOp *op);
+extern template LogicalResult
+normalizeMemRef<memref::AllocOp>(memref::AllocOp *op);
 
 /// Normalizes `memrefType` so that the affine layout map of the memref is
 /// transformed to an identity map with a new shape being computed for the

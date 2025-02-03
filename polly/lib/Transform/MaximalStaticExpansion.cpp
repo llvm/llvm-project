@@ -169,7 +169,7 @@ class MaximalStaticExpansionImpl {
     } else if (SAI->isExitPHIKind()) {
       // For now, we are not able to expand ExitPhi.
       emitRemark(SAI->getName() + " is a ExitPhi node.",
-                 S.getEnteringBlock()->getFirstNonPHI());
+                 &*S.getEnteringBlock()->getFirstNonPHIIt());
       return false;
     }
 
@@ -270,7 +270,7 @@ class MaximalStaticExpansionImpl {
     // No need to expand SAI with no write.
     if (NumberWrites == 0) {
       emitRemark(SAI->getName() + " has 0 write access.",
-                 S.getEnteringBlock()->getFirstNonPHI());
+                 &*S.getEnteringBlock()->getFirstNonPHIIt());
       return false;
     }
 

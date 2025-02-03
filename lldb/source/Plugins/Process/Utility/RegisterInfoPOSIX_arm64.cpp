@@ -97,6 +97,10 @@ static lldb_private::RegisterInfo g_register_infos_sme2[] = {
 static lldb_private::RegisterInfo g_register_infos_fpmr[] = {
     DEFINE_EXTENSION_REG(fpmr)};
 
+static lldb_private::RegisterInfo g_register_infos_gcs[] = {
+    DEFINE_EXTENSION_REG(gcs_features_enabled),
+    DEFINE_EXTENSION_REG(gcs_features_locked), DEFINE_EXTENSION_REG(gcspr_el0)};
+
 // Number of register sets provided by this context.
 enum {
   k_num_gpr_registers = gpr_w28 - gpr_x0 + 1,
@@ -109,6 +113,7 @@ enum {
   // only for SME1 registers.
   k_num_sme_register = 3,
   k_num_fpmr_register = 1,
+  k_num_gcs_register = 3,
   k_num_register_sets_default = 2,
   k_num_register_sets = 3
 };
@@ -221,6 +226,9 @@ static const lldb_private::RegisterSet g_reg_set_sme_arm64 = {
 static const lldb_private::RegisterSet g_reg_set_fpmr_arm64 = {
     "Floating Point Mode Register", "fpmr", k_num_fpmr_register, nullptr};
 
+static const lldb_private::RegisterSet g_reg_set_gcs_arm64 = {
+    "Guarded Control Stack Registers", "gcs", k_num_gcs_register, nullptr};
+
 RegisterInfoPOSIX_arm64::RegisterInfoPOSIX_arm64(
     const lldb_private::ArchSpec &target_arch, lldb_private::Flags opt_regsets)
     : lldb_private::RegisterInfoAndSetInterface(target_arch),
@@ -272,6 +280,9 @@ RegisterInfoPOSIX_arm64::RegisterInfoPOSIX_arm64(
 
       if (m_opt_regsets.AllSet(eRegsetMaskFPMR))
         AddRegSetFPMR();
+
+      if (m_opt_regsets.AllSet(eRegsetMaskGCS))
+        AddRegSetGCS();
 
       m_register_info_count = m_dynamic_reg_infos.size();
       m_register_info_p = m_dynamic_reg_infos.data();
@@ -434,6 +445,24 @@ void RegisterInfoPOSIX_arm64::AddRegSetFPMR() {
   m_dynamic_reg_sets.back().registers = m_fpmr_regnum_collection.data();
 }
 
+void RegisterInfoPOSIX_arm64::AddRegSetGCS() {
+  uint32_t gcs_regnum = m_dynamic_reg_infos.size();
+  for (uint32_t i = 0; i < k_num_gcs_register; i++) {
+    m_gcs_regnum_collection.push_back(gcs_regnum + i);
+    m_dynamic_reg_infos.push_back(g_register_infos_gcs[i]);
+    m_dynamic_reg_infos[gcs_regnum + i].byte_offset =
+        m_dynamic_reg_infos[gcs_regnum + i - 1].byte_offset +
+        m_dynamic_reg_infos[gcs_regnum + i - 1].byte_size;
+    m_dynamic_reg_infos[gcs_regnum + i].kinds[lldb::eRegisterKindLLDB] =
+        gcs_regnum + i;
+  }
+
+  m_per_regset_regnum_range[m_register_set_count] =
+      std::make_pair(gcs_regnum, m_dynamic_reg_infos.size());
+  m_dynamic_reg_sets.push_back(g_reg_set_gcs_arm64);
+  m_dynamic_reg_sets.back().registers = m_gcs_regnum_collection.data();
+}
+
 uint32_t RegisterInfoPOSIX_arm64::ConfigureVectorLengthSVE(uint32_t sve_vq) {
   // sve_vq contains SVE Quad vector length in context of AArch64 SVE.
   // SVE register infos if enabled cannot be disabled by selecting sve_vq = 0.
@@ -561,6 +590,10 @@ bool RegisterInfoPOSIX_arm64::IsFPMRReg(unsigned reg) const {
   return llvm::is_contained(m_fpmr_regnum_collection, reg);
 }
 
+bool RegisterInfoPOSIX_arm64::IsGCSReg(unsigned reg) const {
+  return llvm::is_contained(m_gcs_regnum_collection, reg);
+}
+
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumSVEZ0() const { return sve_z0; }
 
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumSVEFFR() const { return sve_ffr; }
@@ -593,4 +626,8 @@ uint32_t RegisterInfoPOSIX_arm64::GetSMEOffset() const {
 
 uint32_t RegisterInfoPOSIX_arm64::GetFPMROffset() const {
   return m_register_info_p[m_fpmr_regnum_collection[0]].byte_offset;
+}
+
+uint32_t RegisterInfoPOSIX_arm64::GetGCSOffset() const {
+  return m_register_info_p[m_gcs_regnum_collection[0]].byte_offset;
 }

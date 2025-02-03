@@ -71,18 +71,18 @@ hex_hash
 # DETAILED-SUMMARY: Total number of blocks: 10
 # DETAILED-SUMMARY: Total count: 4539628424389557499
 # DETAILED-SUMMARY: Detailed summary:
-# DETAILED-SUMMARY: 3 blocks with count >= 576460752303423488 account for 80 percentage of the total counts.
-# DETAILED-SUMMARY: 4 blocks with count >= 288230376151711744 account for 90 percentage of the total counts.
-# DETAILED-SUMMARY: 4 blocks with count >= 288230376151711744 account for 95 percentage of the total counts.
-# DETAILED-SUMMARY: 6 blocks with count >= 72057594037927936 account for 99 percentage of the total counts.
-# DETAILED-SUMMARY: 6 blocks with count >= 72057594037927936 account for 99.9 percentage of the total counts.
-# DETAILED-SUMMARY: 6 blocks with count >= 72057594037927936 account for 99.99 percentage of the total counts.
-# DETAILED-SUMMARY: 6 blocks with count >= 72057594037927936 account for 99.999 percentage of the total counts.
+# DETAILED-SUMMARY: 3 blocks (30.00%) with count >= 576460752303423488 account for 80% of the total counts.
+# DETAILED-SUMMARY: 4 blocks (40.00%) with count >= 288230376151711744 account for 90% of the total counts.
+# DETAILED-SUMMARY: 4 blocks (40.00%) with count >= 288230376151711744 account for 95% of the total counts.
+# DETAILED-SUMMARY: 6 blocks (60.00%) with count >= 72057594037927936 account for 99% of the total counts.
+# DETAILED-SUMMARY: 6 blocks (60.00%) with count >= 72057594037927936 account for 99.9% of the total counts.
+# DETAILED-SUMMARY: 6 blocks (60.00%) with count >= 72057594037927936 account for 99.99% of the total counts.
+# DETAILED-SUMMARY: 6 blocks (60.00%) with count >= 72057594037927936 account for 99.999% of the total counts.
 
 # RUN: llvm-profdata show --detailed-summary --detailed-summary-cutoffs=600000 %t.profdata | FileCheck %s -check-prefix=DETAILED-SUMMARY-2
-# DETAILED-SUMMARY-2: 2 blocks with count >= 1152921504606846976 account for 60 percentage of the total counts.
+# DETAILED-SUMMARY-2: 2 blocks (28.57%) with count >= 1152921504606846976 account for 60% of the total counts.
 #
 # RUN: llvm-profdata show --detailed-summary --detailed-summary-cutoffs=600000,900000,999999 %t.profdata | FileCheck %s -check-prefix=DETAILED-SUMMARY-3
-# DETAILED-SUMMARY-3: 2 blocks with count >= 1152921504606846976 account for 60 percentage of the total counts.
-# DETAILED-SUMMARY-3: 4 blocks with count >= 288230376151711744 account for 90 percentage of the total counts.
-# DETAILED-SUMMARY-3: 6 blocks with count >= 72057594037927936 account for 99.9999 percentage of the total counts.
+# DETAILED-SUMMARY-3: 2 blocks (28.57%) with count >= 1152921504606846976 account for 60% of the total counts.
+# DETAILED-SUMMARY-3: 4 blocks (57.14%) with count >= 288230376151711744 account for 90% of the total counts.
+# DETAILED-SUMMARY-3: 6 blocks (85.71%) with count >= 72057594037927936 account for 99.9999% of the total counts.

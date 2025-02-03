@@ -245,6 +245,28 @@ bool LoongArchDAGToDAGISel::selectNonFIBaseAddr(SDValue Addr, SDValue &Base) {
   return true;
 }
 
+bool LoongArchDAGToDAGISel::SelectAddrRegImm12(SDValue Addr, SDValue &Base,
+                                               SDValue &Offset) {
+  SDLoc DL(Addr);
+  MVT VT = Addr.getSimpleValueType();
+
+  // The address is the result of an ADD. Here we only consider reg+simm12.
+  if (CurDAG->isBaseWithConstantOffset(Addr)) {
+    int64_t Imm = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
+    if (isInt<12>(Imm)) {
+      Base = Addr.getOperand(0);
+      Offset = CurDAG->getTargetConstant(SignExtend64<12>(Imm), DL, VT);
+      return true;
+    }
+  }
+
+  // Otherwise, we assume Addr as the base address and use constant 0 as the
+  // offset.
+  Base = Addr;
+  Offset = CurDAG->getTargetConstant(0, DL, VT);
+  return true;
+}
+
 bool LoongArchDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
                                             SDValue &ShAmt) {
   // Shift instructions on LoongArch only read the lower 5 or 6 bits of the

@@ -2084,7 +2084,6 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                Style);
 
   Style.PointerAlignment = FormatStyle::PAS_Left;
-  Style.ReferenceAlignment = FormatStyle::RAS_Pointer;
   verifyFormat("int* f1(int* a, int& b, int&& c);", Style);
   verifyFormat("int& f2(int&& c, int* a, int& b);", Style);
   verifyFormat("int&& f3(int& b, int&& c, int* a);", Style);
@@ -2118,6 +2117,7 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
       "function<int(int&)> res1 = [](int& a) { return 0000000000000; },\n"
       "                    res2 = [](int& a) { return 0000000000000; };",
       Style);
+  verifyFormat("[](decltype(foo)& Bar) {}", Style);
 
   Style.AlignConsecutiveDeclarations.Enabled = true;
   Style.AlignConsecutiveDeclarations.AlignFunctionPointers = true;
@@ -5732,23 +5732,12 @@ TEST_F(FormatTest, HashInMacroDefinition) {
 
   verifyFormat("#define A void # ## #", getLLVMStyleWithColumns(22));
 
-#if 0
-  // FIXME: The correct format is:
   verifyFormat("{\n"
                "  {\n"
                "#define GEN_ID(_x) char *_x{#_x}\n"
                "    GEN_ID(one);\n"
                "  }\n"
                "}");
-#endif
-  verifyFormat("{\n"
-               "  {\n"
-               "#define GEN_ID(_x) \\\n"
-               "  char *_x { #_x }\n"
-               "    GEN_ID(one);\n"
-               "  }\n"
-               "}",
-               getGoogleStyle());
 }
 
 TEST_F(FormatTest, RespectWhitespaceInMacroDefinitions) {
@@ -9070,6 +9059,121 @@ TEST_F(FormatTest, AdaptiveOnePerLineFormatting) {
                Style);
 }
 
+TEST_F(FormatTest, IndentExportBlock) {
+  FormatStyle Style = getLLVMStyleWithColumns(80);
+  Style.IndentExportBlock = true;
+  verifyFormat("export {\n"
+               "  int x;\n"
+               "  int y;\n"
+               "}",
+               "export {\n"
+               "int x;\n"
+               "int y;\n"
+               "}",
+               Style);
+
+  Style.IndentExportBlock = false;
+  verifyFormat("export {\n"
+               "int x;\n"
+               "int y;\n"
+               "}",
+               "export {\n"
+               "  int x;\n"
+               "  int y;\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTest, ShortExportBlocks) {
+  FormatStyle Style = getLLVMStyleWithColumns(80);
+  Style.IndentExportBlock = false;
+
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Never;
+  verifyFormat("export {\n"
+               "}",
+               Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               "export\n"
+               "{\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export {\n"
+               "}",
+               "export {}", Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               "export { int x; }", Style);
+
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
+  verifyFormat("export {}",
+               "export {\n"
+               "}",
+               Style);
+
+  verifyFormat("export { int x; }",
+               "export {\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export { int x; }",
+               "export\n"
+               "{\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export {}",
+               "export {\n"
+               "}",
+               Style);
+
+  verifyFormat("export { int x; }",
+               "export {\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Empty;
+  verifyFormat("export {}",
+               "export {\n"
+               "}",
+               Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               "export\n"
+               "{\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export {}", Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               "export { int x; }", Style);
+}
+
 TEST_F(FormatTest, FormatsBuilderPattern) {
   verifyFormat("return llvm::StringSwitch<Reference::Kind>(name)\n"
                "    .StartsWith(\".eh_frame_hdr\", ORDER_EH_FRAMEHDR)\n"
@@ -9509,6 +9613,10 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
                "    [&b](\n"
                "        auto aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "    ) {};",
+               Style);
+  verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaa(\n"
+               "    &bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n"
+               ");",
                Style);
 }
 
@@ -22261,6 +22369,24 @@ TEST_F(FormatTest, BreakPenaltyAfterForLoopLParen) {
                Style);
 }
 
+TEST_F(FormatTest, BreakPenaltyBeforeMemberAccess) {
+  auto Style = getLLVMStyle();
+  EXPECT_EQ(Style.PenaltyBreakBeforeMemberAccess, 150u);
+
+  Style.ColumnLimit = 60;
+  Style.PenaltyBreakBeforeMemberAccess = 110;
+  verifyFormat("aaaaaaaa.aaaaaaaa.bbbbbbbb()\n"
+               "    .ccccccccccccccccccccc(dddddddd);\n"
+               "aaaaaaaa.aaaaaaaa\n"
+               "    .bbbbbbbb(cccccccccccccccccccccccccccccccc);",
+               Style);
+
+  Style.ColumnLimit = 13;
+  verifyFormat("foo->bar\n"
+               "    .b(a);",
+               Style);
+}
+
 TEST_F(FormatTest, BreakPenaltyScopeResolution) {
   FormatStyle Style = getLLVMStyle();
   Style.ColumnLimit = 20;
@@ -26356,6 +26482,9 @@ TEST_F(FormatTest, RequiresClauses) {
                "foo();\n"
                "#endif\n"
                "bar(requires);");
+
+  verifyNoCrash("template <class T>\n"
+                "    requires(requires { std::declval<T>()");
 }
 
 TEST_F(FormatTest, RequiresExpressionIndentation) {
@@ -27987,6 +28116,11 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "    operand1 + operand2 - (operand3 + operand4);",
                Style);
 
+  // Check operator>> special case.
+  verifyFormat("std::cin >> longOperand_1 >> longOperand_2 >>\n"
+               "    longOperand_3_;",
+               Style);
+
   Style.BreakBinaryOperations = FormatStyle::BBO_OnePerLine;
 
   // Logical operations
@@ -28065,6 +28199,13 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "         operand6->member;",
                Style);
 
+  // Check operator>> special case.
+  verifyFormat("std::cin >>\n"
+               "    longOperand_1 >>\n"
+               "    longOperand_2 >>\n"
+               "    longOperand_3_;",
+               Style);
+
   Style.BreakBinaryOperations = FormatStyle::BBO_RespectPrecedence;
   verifyFormat("result = op1 + op2 * op3 - op4;", Style);
 
@@ -28088,6 +28229,13 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "                  byte_buffer[1] << 8 |\n"
                "                  byte_buffer[2] << 16 |\n"
                "                  byte_buffer[3] << 24;",
+               Style);
+
+  // Check operator>> special case.
+  verifyFormat("std::cin >>\n"
+               "    longOperand_1 >>\n"
+               "    longOperand_2 >>\n"
+               "    longOperand_3_;",
                Style);
 
   Style.BreakBinaryOperations = FormatStyle::BBO_OnePerLine;
@@ -28164,6 +28312,13 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "                  << 24;",
                Style);
 
+  // Check operator>> special case.
+  verifyFormat("std::cin\n"
+               "    >> longOperand_1\n"
+               "    >> longOperand_2\n"
+               "    >> longOperand_3_;",
+               Style);
+
   Style.BreakBinaryOperations = FormatStyle::BBO_RespectPrecedence;
   verifyFormat("result = op1 + op2 * op3 - op4;", Style);
 
@@ -28187,6 +28342,13 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "                  | byte_buffer[1] << 8\n"
                "                  | byte_buffer[2] << 16\n"
                "                  | byte_buffer[3] << 24;",
+               Style);
+
+  // Check operator>> special case.
+  verifyFormat("std::cin\n"
+               "    >> longOperand_1\n"
+               "    >> longOperand_2\n"
+               "    >> longOperand_3_;",
                Style);
 }
 

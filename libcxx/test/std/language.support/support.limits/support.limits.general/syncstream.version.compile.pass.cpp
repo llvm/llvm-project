@@ -44,7 +44,7 @@
 
 #elif TEST_STD_VER == 20
 
-# if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 #   ifndef __cpp_lib_syncbuf
 #     error "__cpp_lib_syncbuf should be defined in c++20"
 #   endif
@@ -53,13 +53,13 @@
 #   endif
 # else
 #   ifdef __cpp_lib_syncbuf
-#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)' is not met!"
+#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM' is not met!"
 #   endif
 # endif
 
 #elif TEST_STD_VER == 23
 
-# if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 #   ifndef __cpp_lib_syncbuf
 #     error "__cpp_lib_syncbuf should be defined in c++23"
 #   endif
@@ -68,13 +68,13 @@
 #   endif
 # else
 #   ifdef __cpp_lib_syncbuf
-#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)' is not met!"
+#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM' is not met!"
 #   endif
 # endif
 
 #elif TEST_STD_VER > 23
 
-# if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 #   ifndef __cpp_lib_syncbuf
 #     error "__cpp_lib_syncbuf should be defined in c++26"
 #   endif
@@ -83,7 +83,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_syncbuf
-#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)' is not met!"
+#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM' is not met!"
 #   endif
 # endif
 

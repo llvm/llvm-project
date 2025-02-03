@@ -7,7 +7,7 @@
 
 define double @fmin_double_4_nums_seq(ptr nocapture noundef readonly %x) {
 ; CHECK-LABEL: define double @fmin_double_4_nums_seq(
-; CHECK-SAME: ptr nocapture noundef readonly [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr noundef readonly captures(none) [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[X]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = call fast double @llvm.vector.reduce.fmin.v4f64(<4 x double> [[TMP1]])
 ; CHECK-NEXT:    ret double [[TMP2]]
@@ -27,7 +27,7 @@ define double @fmin_double_4_nums_seq(ptr nocapture noundef readonly %x) {
 
 define double @fmin_double_16_nums_nonseq(ptr nocapture noundef readonly %x) {
 ; CHECK-LABEL: define double @fmin_double_16_nums_nonseq(
-; CHECK-SAME: ptr nocapture noundef readonly [[X:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noundef readonly captures(none) [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds double, ptr [[X]], i64 2
 ; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds double, ptr [[X]], i64 4
 ; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds double, ptr [[X]], i64 6
@@ -129,7 +129,7 @@ define double @fmin_double_16_nums_nonseq(ptr nocapture noundef readonly %x) {
 
 define float @fmin_float_12_nums_nonseq(ptr nocapture noundef readonly %x) {
 ; CHECK-LABEL: define float @fmin_float_12_nums_nonseq(
-; CHECK-SAME: ptr nocapture noundef readonly [[X:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noundef readonly captures(none) [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 2
 ; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds float, ptr [[X]], i64 4
 ; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds float, ptr [[X]], i64 6
@@ -207,7 +207,7 @@ define float @fmin_float_12_nums_nonseq(ptr nocapture noundef readonly %x) {
 
 define double @fmax_double_4_nums_seq(ptr nocapture noundef readonly %x) {
 ; CHECK-LABEL: define double @fmax_double_4_nums_seq(
-; CHECK-SAME: ptr nocapture noundef readonly [[X:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noundef readonly captures(none) [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[X]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = call fast double @llvm.vector.reduce.fmax.v4f64(<4 x double> [[TMP1]])
 ; CHECK-NEXT:    ret double [[TMP2]]
@@ -227,7 +227,7 @@ define double @fmax_double_4_nums_seq(ptr nocapture noundef readonly %x) {
 
 define double @fmax_double_16_nums_nonseq(ptr nocapture noundef readonly %x) {
 ; CHECK-LABEL: define double @fmax_double_16_nums_nonseq(
-; CHECK-SAME: ptr nocapture noundef readonly [[X:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noundef readonly captures(none) [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds double, ptr [[X]], i64 2
 ; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds double, ptr [[X]], i64 4
 ; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds double, ptr [[X]], i64 6
@@ -329,7 +329,7 @@ define double @fmax_double_16_nums_nonseq(ptr nocapture noundef readonly %x) {
 
 define float @fmax_float_12_nums_nonseq(ptr nocapture noundef readonly %x) {
 ; CHECK-LABEL: define float @fmax_float_12_nums_nonseq(
-; CHECK-SAME: ptr nocapture noundef readonly [[X:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noundef readonly captures(none) [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 2
 ; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds float, ptr [[X]], i64 4
 ; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds float, ptr [[X]], i64 6

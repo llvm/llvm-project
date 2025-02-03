@@ -40,4 +40,26 @@ def MPI_Retval : MPI_Type<"Retval", "retval"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// mpi::RequestType
+//===----------------------------------------------------------------------===//
+
+def MPI_Request : MPI_Type<"Request", "request"> {
+  let summary = "MPI asynchronous request handler";
+  let description = [{
+    This type represents a handler to an asynchronous request.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// mpi::StatusType
+//===----------------------------------------------------------------------===//
+
+def MPI_Status : MPI_Type<"Status", "status"> {
+  let summary = "MPI reception operation status type";
+  let description = [{
+    This type represents the status of a reception operation.
+  }];
+}
+
 #endif // MLIR_DIALECT_MPI_IR_MPITYPES_TD

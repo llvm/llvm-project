@@ -2,6 +2,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t
 # RUN: not ld.lld --eh-frame-hdr %t -o /dev/null 2>&1 | FileCheck %s
+# RUN: ld.lld --eh-frame-hdr %t -o /dev/null --noinhibit-exec 2>&1 | FileCheck %s
 
 # CHECK: corrupted .eh_frame: unknown .eh_frame augmentation string:
 

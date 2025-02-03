@@ -46,6 +46,16 @@ __arm_new("zt0") void fn_zt0_out(int (*foo)() __arm_out("zt0")) { foo(); }
 __arm_new("zt0") void fn_zt0_inout(int (*foo)() __arm_inout("zt0")) { foo(); }
 
 //
+// __arm_agnostic("sme_za_state") Attribute
+//
+
+// CHECK: define dso_local void @_Z24fn_sme_za_state_agnosticP11__SME_ATTRSIFvvELj4EE(
+void fn_sme_za_state_agnostic(void (*foo)() __arm_agnostic("sme_za_state")) { foo(); }
+
+// CHECK: define dso_local void @_Z34fn_sme_za_state_streaming_agnosticP11__SME_ATTRSIFvvELj5EE(
+void fn_sme_za_state_streaming_agnostic(void (*foo)() __arm_streaming __arm_agnostic("sme_za_state")) { foo(); }
+
+//
 // Streaming-mode, ZA & ZT0 Attributes
 //
 

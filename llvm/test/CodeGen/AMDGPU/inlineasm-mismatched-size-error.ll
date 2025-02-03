@@ -102,3 +102,54 @@ define <2 x i8> @inline_asm_2xi8_in_s_def() {
   %r = and <2 x i8> %phys, %virt
   ret <2 x i8> %r
 }
+
+
+; The register is wide enough, but it does not satisfy alignment constraints:
+
+; ERR: error: couldn't allocate input reg for constraint '{s[1:2]}'
+define void @misaligned_sgpr_2xi32_in(<2 x i32> inreg %arg0) {
+  call void asm sideeffect "; use $0", "{s[1:2]}"(<2 x i32> %arg0)
+  ret void
+}
+
+; ERR: error: couldn't allocate input reg for constraint '{s[23:24]}'
+define void @misaligned_sgpr_2xi32_in_23(<2 x i32> inreg %arg0) {
+  call void asm sideeffect "; use $0", "{s[23:24]}"(<2 x i32> %arg0)
+  ret void
+}
+
+; ERR: error: couldn't allocate input reg for constraint '{s[1:4]}'
+define void @misaligned_sgpr_4xi32_in(<4 x i32> inreg %arg0) {
+  call void asm sideeffect "; use $0", "{s[1:4]}"(<4 x i32> %arg0)
+  ret void
+}
+
+; ERR: error: couldn't allocate input reg for constraint '{s[2:5]}'
+define void @misaligned_sgpr_4xi32_in_2(<4 x i32> inreg %arg0) {
+  call void asm sideeffect "; use $0", "{s[2:5]}"(<4 x i32> %arg0)
+  ret void
+}
+
+; ERR: error: couldn't allocate output register for constraint '{s[1:2]}'
+define <2 x i32> @misaligned_sgpr_2xi32_out() {
+  %asm = call <2 x i32> asm sideeffect "; def $0", "={s[1:2]}"()
+  ret <2 x i32> %asm
+}
+
+; ERR: error: couldn't allocate output register for constraint '{s[23:24]}'
+define <2 x i32> @misaligned_sgpr_2xi32_out_23() {
+  %asm = call <2 x i32> asm sideeffect "; def $0", "={s[23:24]}"()
+  ret <2 x i32> %asm
+}
+
+; ERR: error: couldn't allocate output register for constraint '{s[1:4]}'
+define <4 x i32> @misaligned_sgpr_4xi32_out() {
+  %asm = call <4 x i32> asm sideeffect "; def $0", "={s[1:4]}"()
+  ret <4 x i32> %asm
+}
+
+; ERR: error: couldn't allocate output register for constraint '{s[2:5]}'
+define <4 x i32> @misaligned_sgpr_4xi32_out_2() {
+  %asm = call <4 x i32> asm sideeffect "; def $0", "={s[2:5]}"()
+  ret <4 x i32> %asm
+}

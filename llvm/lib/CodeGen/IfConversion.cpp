@@ -1834,9 +1834,9 @@ bool IfConverter::IfConvertDiamondCommon(
   }
   while (NumDups1 != 0) {
     // Since this instruction is going to be deleted, update call
-    // site info state if the instruction is call instruction.
-    if (DI2->shouldUpdateCallSiteInfo())
-      MBB2.getParent()->eraseCallSiteInfo(&*DI2);
+    // info state if the instruction is call instruction.
+    if (DI2->shouldUpdateAdditionalCallInfo())
+      MBB2.getParent()->eraseAdditionalCallInfo(&*DI2);
 
     ++DI2;
     if (DI2 == MBB2.end())
@@ -1883,9 +1883,9 @@ bool IfConverter::IfConvertDiamondCommon(
     --DI1;
 
     // Since this instruction is going to be deleted, update call
-    // site info state if the instruction is call instruction.
-    if (DI1->shouldUpdateCallSiteInfo())
-      MBB1.getParent()->eraseCallSiteInfo(&*DI1);
+    // info state if the instruction is call instruction.
+    if (DI1->shouldUpdateAdditionalCallInfo())
+      MBB1.getParent()->eraseAdditionalCallInfo(&*DI1);
 
     // skip dbg_value instructions
     if (!DI1->isDebugInstr())
@@ -2169,9 +2169,9 @@ void IfConverter::CopyAndPredicateBlock(BBInfo &ToBBI, BBInfo &FromBBI,
       break;
 
     MachineInstr *MI = MF.CloneMachineInstr(&I);
-    // Make a copy of the call site info.
-    if (I.isCandidateForCallSiteEntry())
-      MF.copyCallSiteInfo(&I, MI);
+    // Make a copy of the call info.
+    if (I.isCandidateForAdditionalCallInfo())
+      MF.copyAdditionalCallInfo(&I, MI);
 
     ToBBI.BB->insert(ToBBI.BB->end(), MI);
     ToBBI.NonPredSize++;

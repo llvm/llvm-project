@@ -338,11 +338,11 @@ CodeEmitterGen::getInstructionCases(const Record *R,
         Append("      }\n");
       }
       Append("      }\n");
-      return std::pair(std::move(Case), std::move(BitOffsetCase));
+      return {std::move(Case), std::move(BitOffsetCase)};
     }
   }
   addInstructionCasesForEncoding(R, R, Target, Case, BitOffsetCase);
-  return std::pair(std::move(Case), std::move(BitOffsetCase));
+  return {std::move(Case), std::move(BitOffsetCase)};
 }
 
 void CodeEmitterGen::addInstructionCasesForEncoding(

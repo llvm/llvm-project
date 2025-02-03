@@ -4,7 +4,7 @@
 ; and structs. Check also that they are not propagated.
 ;
 ; Generated from the following source with
-; clang -fextend-lifetimes -S -emit-llvm -O2 -mllvm -stop-after=safe-stack -o test.mir test.cpp
+; clang -fextend-variable-liveness -S -emit-llvm -O2 -mllvm -stop-after=safe-stack -o test.mir test.cpp
 ;
 ; int main ()
 ; { int array[0]; }

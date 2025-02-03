@@ -135,6 +135,9 @@ public:
   /// @return The llvm::Value* containing the result of the computation.
   llvm::Value *create(__isl_take isl_ast_expr *Expr);
 
+  /// Create LLVM-IR for an isl_ast_expr[ession] and cast it to i1.
+  llvm::Value *createBool(__isl_take isl_ast_expr *Expr);
+
   /// Return the largest of two types.
   ///
   /// @param T1 The first type.

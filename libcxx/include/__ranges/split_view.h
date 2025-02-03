@@ -52,7 +52,7 @@ class split_view : public view_interface<split_view<_View, _Pattern>> {
 private:
   _LIBCPP_NO_UNIQUE_ADDRESS _View __base_       = _View();
   _LIBCPP_NO_UNIQUE_ADDRESS _Pattern __pattern_ = _Pattern();
-  using _Cache                                  = __non_propagating_cache<subrange<iterator_t<_View>>>;
+  using _Cache _LIBCPP_NODEBUG                  = __non_propagating_cache<subrange<iterator_t<_View>>>;
   _Cache __cached_begin_                        = _Cache();
 
   template <class, class>

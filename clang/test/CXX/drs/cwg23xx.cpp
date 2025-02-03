@@ -365,35 +365,6 @@ struct A {
 #endif
 } // namespace cwg2363
 
-namespace cwg2369 { // cwg2369: partial
-#if __cplusplus >= 202002L
-template <class T> struct Z {
-  typedef typename T::x xx;
-};
-
-template <class T>
-concept C = requires { typename T::A; };
-template <C T> typename Z<T>::xx f(void *, T); // #1
-template <class T> void f(int, T);             // #2
-
-struct A {
-} a;
-
-struct ZZ {
-  template <class T, class = typename Z<T>::xx> operator T *();
-  operator int();
-};
-
-void foo() {
-  ZZ zz;
-  f(1, a); // OK, deduction fails for #1 because there is no conversion from int
-           // to void*
-  f(zz, 42); // OK, deduction fails for #1 because C<int> is not satisfied
-}
-
-#endif
-} // namespace cwg2369
-
 namespace cwg2370 { // cwg2370: no
 namespace N {
 typedef int type;

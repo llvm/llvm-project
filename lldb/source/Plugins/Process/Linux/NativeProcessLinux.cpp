@@ -353,7 +353,7 @@ static std::optional<std::pair<lldb::pid_t, WaitStatus>> WaitPid() {
 
   if (wait_pid == -1) {
     Status error(errno, eErrorTypePOSIX);
-    LLDB_LOG(log, "waitpid(-1, &status, _) failed: {1}", error);
+    LLDB_LOG(log, "waitpid(-1, &status, _) failed: {0}", error);
     return std::nullopt;
   }
 
@@ -874,7 +874,7 @@ void NativeProcessLinux::MonitorSignal(const siginfo_t &info,
   LLDB_LOG(log,
            "received signal {0} ({1}) with code {2}, (siginfo pid = {3}, "
            "waitpid pid = {4})",
-           Host::GetSignalAsCString(signo), signo, info.si_code,
+           Host::GetSignalAsCString(signo), signo, info.si_code, info.si_pid,
            thread.GetID());
 
   // Check for thread stop notification.

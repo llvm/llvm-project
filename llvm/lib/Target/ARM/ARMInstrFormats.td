@@ -686,6 +686,8 @@ class AIstr_ex_or_rel<bits<2> opcod, bits<2> opcod2, dag oops, dag iops, InstrIt
   let Inst{9-8}   = opcod2;
   let Inst{7-4}   = 0b1001;
   let Inst{3-0}   = Rt;
+
+  let mayStore = 1;
 }
 // Atomic load/store instructions
 class AIldrex<bits<2> opcod, dag oops, dag iops, InstrItinClass itin,

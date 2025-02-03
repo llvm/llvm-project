@@ -62,7 +62,7 @@ target triple = "nvptx64"
 
 
 ; Function Attrs: convergent norecurse nounwind
-define weak void @__omp_offloading_2a_d80d3d_test_fallback_l11(ptr %dyn) local_unnamed_addr #0 !dbg !15 {
+define weak ptx_kernel void @__omp_offloading_2a_d80d3d_test_fallback_l11(ptr %dyn) local_unnamed_addr #0 !dbg !15 {
 entry:
   %captured_vars_addrs.i.i = alloca [0 x ptr], align 8
   %0 = call i32 @__kmpc_target_init(ptr nonnull @__omp_offloading_2a_d80d3d_test_fallback_l11_kernel_environment, ptr %dyn) #3, !dbg !18
@@ -107,7 +107,7 @@ declare i32 @__kmpc_global_thread_num(ptr) local_unnamed_addr #3
 declare void @__kmpc_target_deinit() local_unnamed_addr
 
 ; Function Attrs: norecurse nounwind
-define weak void @__omp_offloading_2a_d80d3d_test_no_fallback_l20(ptr %dyn) local_unnamed_addr #4 !dbg !32 {
+define weak ptx_kernel void @__omp_offloading_2a_d80d3d_test_no_fallback_l20(ptr %dyn) local_unnamed_addr #4 !dbg !32 {
 entry:
   %captured_vars_addrs.i2.i = alloca [0 x ptr], align 8
   %0 = call i32 @__kmpc_target_init(ptr nonnull @__omp_offloading_2a_d80d3d_test_no_fallback_l20_kernel_environment, ptr %dyn) #3, !dbg !33
@@ -175,7 +175,6 @@ attributes #7 = { "llvm.assume"="ompx_spmd_amenable" }
 
 !llvm.dbg.cu = !{!0}
 !omp_offload.info = !{!3, !4}
-!nvvm.annotations = !{!5, !6}
 !llvm.module.flags = !{!7, !8, !9, !10, !11, !12, !13}
 !llvm.ident = !{!14}
 
@@ -184,8 +183,6 @@ attributes #7 = { "llvm.assume"="ompx_spmd_amenable" }
 !2 = !{}
 !3 = !{i32 0, i32 42, i32 14159165, !"test_no_fallback", i32 20, i32 1}
 !4 = !{i32 0, i32 42, i32 14159165, !"test_fallback", i32 11, i32 0}
-!5 = !{ptr @__omp_offloading_2a_d80d3d_test_fallback_l11, !"kernel", i32 1}
-!6 = !{ptr @__omp_offloading_2a_d80d3d_test_no_fallback_l20, !"kernel", i32 1}
 !7 = !{i32 7, !"Dwarf Version", i32 2}
 !8 = !{i32 2, !"Debug Info Version", i32 3}
 !9 = !{i32 1, !"wchar_size", i32 4}

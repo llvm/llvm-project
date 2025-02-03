@@ -100,6 +100,11 @@ def riscv_add_tprel : SDNode<"RISCVISD::ADD_TPREL",
                                                   SDTCisSameAs<0, 3>,
                                                   SDTCisInt<0>]>>;
 
+def riscv_probed_alloca : SDNode<"RISCVISD::PROBED_ALLOCA",
+                                 SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
+                                                      SDTCisVT<0, i32>]>,
+                                 [SDNPHasChain, SDNPMayStore]>;
+
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
@@ -393,6 +398,10 @@ def ixlenimm_li_restricted : Operand<XLenVT> {
 }
 
 // Standalone (codegen-only) immleaf patterns.
+
+// A 12-bit signed immediate plus one where the imm range will be -2047~2048.
+def simm12_plus1 : ImmLeaf<XLenVT,
+  [{return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]>;
 
 // A 6-bit constant greater than 32.
 def uimm6gt32 : ImmLeaf<XLenVT, [{
@@ -1424,6 +1433,15 @@ def PROBED_STACKALLOC : Pseudo<(outs GPR:$sp),
                                (ins GPR:$scratch),
                                []>,
                                Sched<[]>;
+def PROBED_STACKALLOC_RVV : Pseudo<(outs GPR:$sp),
+                               (ins GPR:$scratch),
+                               []>,
+                               Sched<[]>;
+let usesCustomInserter = 1 in
+def PROBED_STACKALLOC_DYN : Pseudo<(outs GPR:$rd),
+                               (ins GPR:$scratch),
+                               [(set GPR:$rd, (riscv_probed_alloca GPR:$scratch))]>,
+                               Sched<[]>;
 }
 
 /// HI and ADD_LO address nodes.
@@ -2119,6 +2137,7 @@ include "RISCVInstrInfoSFB.td"
 include "RISCVInstrInfoXCV.td"
 include "RISCVInstrInfoXwch.td"
 include "RISCVInstrInfoXqci.td"
+include "RISCVInstrInfoXMips.td"
 
 //===----------------------------------------------------------------------===//
 // Global ISel

@@ -1,11 +1,7 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
-omp.private {type = private} @simple_var.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x i32 {bindc_name = "simple_var", pinned} : (i64) -> !llvm.ptr
-  omp.yield(%1 : !llvm.ptr)
-}
+omp.private {type = private} @simple_var.privatizer : i32
+
 llvm.func @target_map_single_private() attributes {fir.internal_name = "_QPtarget_map_single_private"} {
   %0 = llvm.mlir.constant(1 : i64) : i64
   %1 = llvm.alloca %0 x i32 {bindc_name = "simple_var"} : (i64) -> !llvm.ptr
@@ -24,16 +20,12 @@ llvm.func @target_map_single_private() attributes {fir.internal_name = "_QPtarge
 }
 // CHECK: define internal void @__omp_offloading_
 // CHECK-NOT: define {{.*}}
-// CHECK: %[[PRIV_ALLOC:.*]] = alloca i32, i64 1, align 4
+// CHECK: %[[PRIV_ALLOC:.*]] = alloca i32, align 4
 // CHECK: %[[ADD:.*]] = add i32 {{.*}}, 10
 // CHECK: store i32 %[[ADD]], ptr %[[PRIV_ALLOC]], align 4
 
-omp.private {type = private} @n.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x f32 {bindc_name = "n", pinned} : (i64) -> !llvm.ptr
-  omp.yield(%1 : !llvm.ptr)
-}
+omp.private {type = private} @n.privatizer : f32
+
 llvm.func @target_map_2_privates() attributes {fir.internal_name = "_QPtarget_map_2_privates"} {
   %0 = llvm.mlir.constant(1 : i64) : i64
   %1 = llvm.alloca %0 x i32 {bindc_name = "simple_var"} : (i64) -> !llvm.ptr
@@ -59,8 +51,8 @@ llvm.func @target_map_2_privates() attributes {fir.internal_name = "_QPtarget_ma
 
 
 // CHECK: define internal void @__omp_offloading_
-// CHECK: %[[PRIV_I32_ALLOC:.*]] = alloca i32, i64 1, align 4
-// CHECK: %[[PRIV_FLOAT_ALLOC:.*]] = alloca float, i64 1, align 4
+// CHECK: %[[PRIV_I32_ALLOC:.*]] = alloca i32, align 4
+// CHECK: %[[PRIV_FLOAT_ALLOC:.*]] = alloca float, align 4
 // CHECK: %[[ADD_I32:.*]] = add i32 {{.*}}, 10
 // CHECK: store i32 %[[ADD_I32]], ptr %[[PRIV_I32_ALLOC]], align 4
 // CHECK: %[[LOAD_I32_AGAIN:.*]] = load i32, ptr %[[PRIV_I32_ALLOC]], align 4
@@ -72,14 +64,12 @@ llvm.func @target_map_2_privates() attributes {fir.internal_name = "_QPtarget_ma
 // privatizers. The idea here is to prove that we set the correct
 // insertion points for the builder when generating, first, LLVM IR for the
 // privatizer and then for the actual target region.
-omp.private {type = private} @multi_block.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %c1 = llvm.mlir.constant(1 : i32) : i32
-  llvm.br ^bb1(%c1 : i32)
+omp.private {type = private} @multi_block.privatizer : f32 init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  llvm.br ^bb1
 
-^bb1(%arg1: i32):
-  %0 = llvm.alloca %arg1 x f32 : (i32) -> !llvm.ptr
-  omp.yield(%0 : !llvm.ptr)
+^bb1:
+  omp.yield(%arg1 : !llvm.ptr)
 }
 
 llvm.func @target_op_private_multi_block(%arg0: !llvm.ptr) {
@@ -90,8 +80,7 @@ llvm.func @target_op_private_multi_block(%arg0: !llvm.ptr) {
   llvm.return
 }
 // CHECK: define internal void @__omp_offloading_
-// CHECK: %[[ONE:.*]] = phi i32 [ 1, {{.*}} ]
-// CHECK: %[[PRIV_ALLOC:.*]] = alloca float, i32 %[[ONE]], align 4
+// CHECK: %[[PRIV_ALLOC:.*]] = alloca float, align 4
 // CHECK: %[[PHI_ALLOCA:.*]]  = phi ptr [ %[[PRIV_ALLOC]], {{.*}} ]
 // CHECK: %[[RESULT:.*]] = load float, ptr %[[PHI_ALLOCA]], align 4
 
@@ -105,8 +94,8 @@ llvm.func @target_op_private_multi_block(%arg0: !llvm.ptr) {
 // mapped by its pointer whereas the privatizer function expects the descriptor
 // by value. So, we have this test to ensure that the compiler correctly loads
 // from the mapped pointer before passing that to the privatizer function.
-omp.private {type = private} @_QFtarget_boxcharEchar_var_private_boxchar_c8xU : !llvm.struct<(ptr, i64)> alloc {
-^bb0(%arg0: !llvm.struct<(ptr, i64)>):
+omp.private {type = private} @_QFtarget_boxcharEchar_var_private_boxchar_c8xU : !llvm.struct<(ptr, i64)> init {
+^bb0(%arg0: !llvm.struct<(ptr, i64)>, %arg1: !llvm.struct<(ptr, i64)>):
   %0 = llvm.extractvalue %arg0[0] : !llvm.struct<(ptr, i64)>
   %1 = llvm.extractvalue %arg0[1] : !llvm.struct<(ptr, i64)>
   %2 = llvm.mlir.constant(1 : i64) : i64

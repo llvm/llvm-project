@@ -2,7 +2,7 @@
 // REQUIRES: asserts
 
 // CHECK: @a.a = internal global ptr blockaddress(@a, %A)
-int a(void) {
+void a(void) {
 A:;static void* a = &&A;
 }
 

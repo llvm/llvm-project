@@ -1,7 +1,7 @@
-! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX,CMPLX-PRECISE"
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s --check-prefixes=CHECK,CMPLX,CMPLX-PRECISE,%if flang-supports-f128-math %{F128%} %else %{F64%}
 ! RUN: bbc -emit-fir -hlfir=false --math-runtime=precise %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-PRECISE"
 ! RUN: bbc --force-mlir-complex -emit-fir -hlfir=false %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-FAST"
-! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX,CMPLX-PRECISE"
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,CMPLX,CMPLX-PRECISE,%if flang-supports-f128-math %{F128%} %else %{F64%}
 ! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -mllvm --math-runtime=precise %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-PRECISE"
 ! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -mllvm --force-mlir-complex %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-FAST"
 ! RUN: %flang_fc1 -fapprox-func -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-APPROX"
@@ -85,13 +85,18 @@ subroutine abs_testd(a, b)
 end subroutine
 
 ! CHECK-LABEL: func @_QPabs_testr16(
-! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<f128>{{.*}}, %[[VAL_1:.*]]: !fir.ref<f128>{{.*}}) {
+! F128-SAME:  %[[VAL_0:.*]]: !fir.ref<f128>{{.*}}, %[[VAL_1:.*]]: !fir.ref<f128>{{.*}}) {
+! F64-SAME:  %[[VAL_0:.*]]: !fir.ref<f64>{{.*}}, %[[VAL_1:.*]]: !fir.ref<f64>{{.*}}) {
 subroutine abs_testr16(a, b)
-! CHECK: %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<f128>
-! CHECK: %[[VAL_3:.*]] = math.absf %[[VAL_2]] {{.*}}: f128
-! CHECK: fir.store %[[VAL_3]] to %[[VAL_1]] : !fir.ref<f128>
+! F128: %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<f128>
+! F64: %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<f64>
+! F128: %[[VAL_3:.*]] = math.absf %[[VAL_2]] {{.*}}: f128
+! F64: %[[VAL_3:.*]] = math.absf %[[VAL_2]] {{.*}}: f64
+! F128: fir.store %[[VAL_3]] to %[[VAL_1]] : !fir.ref<f128>
+! F64: fir.store %[[VAL_3]] to %[[VAL_1]] : !fir.ref<f64>
 ! CHECK: return
-  real(kind=16) :: a, b
+  integer, parameter :: rk = merge(16, 8, selected_real_kind(33, 4931)==16)
+  real(kind=rk) :: a, b
   b = abs(a)
 end subroutine
 

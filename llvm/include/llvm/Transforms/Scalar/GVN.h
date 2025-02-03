@@ -77,6 +77,7 @@ struct GVNOptions {
   std::optional<bool> AllowLoadInLoopPRE;
   std::optional<bool> AllowLoadPRESplitBackedge;
   std::optional<bool> AllowMemDep;
+  std::optional<bool> AllowMemorySSA;
 
   GVNOptions() = default;
 
@@ -106,6 +107,12 @@ struct GVNOptions {
   /// Enables or disables use of MemDepAnalysis.
   GVNOptions &setMemDep(bool MemDep) {
     AllowMemDep = MemDep;
+    return *this;
+  }
+
+  /// Enables or disables use of MemorySSA.
+  GVNOptions &setMemorySSA(bool MemSSA) {
+    AllowMemorySSA = MemSSA;
     return *this;
   }
 };
@@ -144,6 +151,7 @@ public:
   bool isLoadInLoopPREEnabled() const;
   bool isLoadPRESplitBackedgeEnabled() const;
   bool isMemDepEnabled() const;
+  bool isMemorySSAEnabled() const;
 
   /// This class holds the mapping between values and value numbers.  It is used
   /// as an efficient mechanism to determine the expression-wise equivalence of
@@ -383,9 +391,8 @@ private:
   void assignBlockRPONumber(Function &F);
 };
 
-/// Create a legacy GVN pass. This also allows parameterizing whether or not
-/// MemDep is enabled.
-FunctionPass *createGVNPass(bool NoMemDepAnalysis = false);
+/// Create a legacy GVN pass.
+FunctionPass *createGVNPass();
 
 /// A simple and fast domtree-based GVN pass to hoist common expressions
 /// from sibling branches.

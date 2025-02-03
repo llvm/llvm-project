@@ -530,7 +530,7 @@ define i32 @reduce_and_16xi32_prefix5(ptr %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 5, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, -1
 ; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vredand.vs v8, v8, v10
@@ -725,7 +725,7 @@ define i32 @reduce_umin_16xi32_prefix5(ptr %p) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
-; RV32-NEXT:    vsetivli zero, 5, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.i v10, -1
 ; RV32-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; RV32-NEXT:    vredminu.vs v8, v8, v10

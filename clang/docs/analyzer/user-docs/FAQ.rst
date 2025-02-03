@@ -9,7 +9,9 @@ Custom Assertions
 
 Q: How do I tell the analyzer that I do not want the bug being reported here since my custom error handler will safely end the execution before the bug is reached?
 
-You can tell the analyzer that this path is unreachable by teaching it about your `custom assertion handlers <annotations.html#custom_assertions>`_. For example, you can modify the code segment as following:
+.. image:: ../images/example_custom_assert.png
+
+You can tell the analyzer that this path is unreachable by teaching it about your `custom assertion handlers <Annotations.html#custom-assertion-handlers>`__. For example, you can modify the code segment as following:
 
 .. code-block:: c
 
@@ -24,6 +26,8 @@ Null Pointer Dereference
 ------------------------
 
 Q: The analyzer reports a null dereference, but I know that the pointer is never null. How can I tell the analyzer that a pointer can never be null?
+
+.. image:: ../images/example_null_pointer.png
 
 The reason the analyzer often thinks that a pointer can be null is because the preceding code checked compared it against null. If you are absolutely sure that it cannot be null, remove the preceding check and, preferably, add an assertion as well. For example:
 
@@ -143,6 +147,8 @@ Ensuring Loop Body Execution
 
 Q: The analyzer assumes that a loop body is never entered. How can I tell it that the loop body will be entered at least once?
 
+.. image:: ../images/example_use_assert.png
+
 In cases where you know that a loop will always be entered at least once, you can use assertions to inform the analyzer. For example:
 
 .. code-block:: c
@@ -162,7 +168,7 @@ Suppressing Specific Warnings
 
 Q: How can I suppress a specific analyzer warning?
 
-When you encounter an analyzer bug/false positive, check if it's one of the issues discussed above or if the analyzer `annotations <annotations.html#custom_assertions>`_ can resolve the issue by helping the static analyzer understand the code better. Second, please `report it <filing_bugs.html>`_ to help us improve user experience.
+When you encounter an analyzer bug/false positive, check if it's one of the issues discussed above or if the analyzer `annotations <Annotations.html#custom-assertion-handlers>`__ can resolve the issue by helping the static analyzer understand the code better. Second, please `report it <FilingBugs.html>`_ to help us improve user experience.
 
 Sometimes there's really no "good" way to eliminate the issue. In such cases you can "silence" it directly by annotating the problematic line of code with the help of Clang attribute 'suppress':
 
@@ -191,6 +197,8 @@ Sometimes there's really no "good" way to eliminate the issue. In such cases you
 
      return *result;  // as well as this leak path
    }
+
+.. _exclude_code:
 
 Excluding Code from Analysis
 ----------------------------

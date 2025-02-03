@@ -183,7 +183,7 @@ def handle_debugger_tool_options(context, defaults):  # noqa
         if options.debugger == "lldb":
             _warn_meaningless_option(context, "--show-debugger")
 
-    if options.source_root_dir != None:
+    if options.source_root_dir is not None:
         if not os.path.isabs(options.source_root_dir):
             raise ToolArgumentError(
                 f'<d>--source-root-dir: expected absolute path, got</> <r>"{options.source_root_dir}"</>'

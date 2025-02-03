@@ -394,7 +394,7 @@ define <9 x float> @test_mul3x3_f32(<9 x float> %a0, <9 x float> %a1) nounwind {
 ; AVX512F-NEXT:    vaddss %xmm1, %xmm2, %xmm1
 ; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[0,1],xmm1[0],xmm0[3]
 ; AVX512F-NEXT:    vinsertf32x4 $1, %xmm7, %zmm6, %zmm2
-; AVX512F-NEXT:    vmovaps {{.*#+}} zmm0 = [0,1,2,4,5,6,16,17,18,u,u,u,u,u,u,u]
+; AVX512F-NEXT:    vpmovsxbd {{.*#+}} zmm0 = [0,1,2,4,5,6,16,17,18,0,0,0,0,0,0,0]
 ; AVX512F-NEXT:    vpermi2ps %zmm1, %zmm2, %zmm0
 ; AVX512F-NEXT:    retq
 ;
@@ -453,7 +453,7 @@ define <9 x float> @test_mul3x3_f32(<9 x float> %a0, <9 x float> %a1) nounwind {
 ; AVX512VL-NEXT:    vaddss %xmm1, %xmm2, %xmm1
 ; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[0,1],xmm1[0],xmm0[3]
 ; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm5, %zmm3, %zmm2
-; AVX512VL-NEXT:    vmovaps {{.*#+}} zmm0 = [0,1,2,4,5,6,16,17,18,u,u,u,u,u,u,u]
+; AVX512VL-NEXT:    vpmovsxbd {{.*#+}} zmm0 = [0,1,2,4,5,6,16,17,18,0,0,0,0,0,0,0]
 ; AVX512VL-NEXT:    vpermi2ps %zmm1, %zmm2, %zmm0
 ; AVX512VL-NEXT:    retq
 entry:
@@ -762,7 +762,7 @@ define <9 x double> @test_mul3x3_f64(<9 x double> %a0, <9 x double> %a1) nounwin
 ; AVX512F-NEXT:    vmulsd %xmm1, %xmm8, %xmm1
 ; AVX512F-NEXT:    vaddsd %xmm1, %xmm2, %xmm1
 ; AVX512F-NEXT:    vinsertf64x4 $1, %ymm4, %zmm3, %zmm2
-; AVX512F-NEXT:    vmovapd {{.*#+}} zmm3 = [0,1,2,4,5,6,8,9]
+; AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm3 = [0,1,2,4,5,6,8,9]
 ; AVX512F-NEXT:    vpermi2pd %zmm0, %zmm2, %zmm3
 ; AVX512F-NEXT:    vmovsd %xmm1, 64(%rdi)
 ; AVX512F-NEXT:    vmovapd %zmm3, (%rdi)
@@ -818,7 +818,7 @@ define <9 x double> @test_mul3x3_f64(<9 x double> %a0, <9 x double> %a1) nounwin
 ; AVX512VL-NEXT:    vmulsd %xmm3, %xmm8, %xmm3
 ; AVX512VL-NEXT:    vaddsd %xmm3, %xmm2, %xmm2
 ; AVX512VL-NEXT:    vinsertf64x4 $1, %ymm4, %zmm1, %zmm1
-; AVX512VL-NEXT:    vmovapd {{.*#+}} zmm3 = [0,1,2,4,5,6,8,9]
+; AVX512VL-NEXT:    vpmovsxbq {{.*#+}} zmm3 = [0,1,2,4,5,6,8,9]
 ; AVX512VL-NEXT:    vpermi2pd %zmm0, %zmm1, %zmm3
 ; AVX512VL-NEXT:    vmovsd %xmm2, 64(%rdi)
 ; AVX512VL-NEXT:    vmovapd %zmm3, (%rdi)

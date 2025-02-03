@@ -25,6 +25,14 @@
 #error FPR_OFFSET must be defined before including this header file
 #endif
 
+#ifndef LSX_OFFSET
+#error LSX_OFFSET must be defined before including this header file
+#endif
+
+#ifndef LASX_OFFSET
+#error LASX_OFFSET must be defined before including this header file
+#endif
+
 using namespace loongarch_dwarf;
 
 // clang-format off
@@ -72,6 +80,21 @@ using namespace loongarch_dwarf;
     #reg, nullptr, 4, FCSR_OFFSET,                                             \
     lldb::eEncodingUint, lldb::eFormatHex,                                     \
     FPR64_KIND(fpr_##reg, generic_kind), nullptr, nullptr, nullptr,            \
+  }
+
+#define DEFINE_LSX(reg, generic_kind) \
+  {                                                                            \
+    #reg, nullptr, 16, LSX_OFFSET(lsx_##reg##_loongarch - lsx_first_loongarch),\
+    lldb::eEncodingVector, lldb::eFormatVectorOfUInt8,                         \
+    KIND_HELPER(lsx_##reg, generic_kind), nullptr, nullptr, nullptr,           \
+  }
+
+#define DEFINE_LASX(reg, generic_kind) \
+  {                                                                            \
+    #reg, nullptr, 32,                                                         \
+    LASX_OFFSET(lasx_##reg##_loongarch - lasx_first_loongarch),                \
+    lldb::eEncodingVector, lldb::eFormatVectorOfUInt8,                         \
+    KIND_HELPER(lasx_##reg, generic_kind), nullptr, nullptr, nullptr,          \
   }
 
 // clang-format on
@@ -166,6 +189,72 @@ static lldb_private::RegisterInfo g_register_infos_loongarch64[] = {
     DEFINE_FCC(fcc6, LLDB_INVALID_REGNUM),
     DEFINE_FCC(fcc7, LLDB_INVALID_REGNUM),
     DEFINE_FCSR(fcsr, LLDB_INVALID_REGNUM),
+
+    DEFINE_LSX(vr0, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr1, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr2, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr3, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr4, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr5, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr6, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr7, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr8, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr9, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr10, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr11, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr12, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr13, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr14, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr15, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr16, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr17, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr18, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr19, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr20, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr21, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr22, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr23, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr24, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr25, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr26, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr27, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr28, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr29, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr30, LLDB_INVALID_REGNUM),
+    DEFINE_LSX(vr31, LLDB_INVALID_REGNUM),
+
+    DEFINE_LASX(xr0, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr1, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr2, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr3, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr4, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr5, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr6, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr7, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr8, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr9, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr10, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr11, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr12, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr13, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr14, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr15, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr16, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr17, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr18, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr19, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr20, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr21, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr22, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr23, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr24, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr25, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr26, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr27, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr28, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr29, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr30, LLDB_INVALID_REGNUM),
+    DEFINE_LASX(xr31, LLDB_INVALID_REGNUM),
 };
 
 #endif // DECLARE_REGISTER_INFOS_LOONGARCH64_STRUCT

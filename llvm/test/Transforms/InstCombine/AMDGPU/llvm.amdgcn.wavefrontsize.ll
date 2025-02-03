@@ -10,20 +10,20 @@
 
 define amdgpu_kernel void @fold_wavefrontsize(ptr addrspace(1) nocapture %arg) {
 ; OPT-LABEL: define amdgpu_kernel void @fold_wavefrontsize(
-; OPT-SAME: ptr addrspace(1) nocapture [[ARG:%.*]]) {
+; OPT-SAME: ptr addrspace(1) captures(none) [[ARG:%.*]]) {
 ; OPT-NEXT:  [[BB:.*:]]
 ; OPT-NEXT:    [[TMP:%.*]] = tail call i32 @llvm.amdgcn.wavefrontsize() #[[ATTR1:[0-9]+]]
 ; OPT-NEXT:    store i32 [[TMP]], ptr addrspace(1) [[ARG]], align 4
 ; OPT-NEXT:    ret void
 ;
 ; OPT-W32-LABEL: define amdgpu_kernel void @fold_wavefrontsize(
-; OPT-W32-SAME: ptr addrspace(1) nocapture [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
+; OPT-W32-SAME: ptr addrspace(1) captures(none) [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; OPT-W32-NEXT:  [[BB:.*:]]
 ; OPT-W32-NEXT:    store i32 32, ptr addrspace(1) [[ARG]], align 4
 ; OPT-W32-NEXT:    ret void
 ;
 ; OPT-W64-LABEL: define amdgpu_kernel void @fold_wavefrontsize(
-; OPT-W64-SAME: ptr addrspace(1) nocapture [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
+; OPT-W64-SAME: ptr addrspace(1) captures(none) [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; OPT-W64-NEXT:  [[BB:.*:]]
 ; OPT-W64-NEXT:    store i32 64, ptr addrspace(1) [[ARG]], align 4
 ; OPT-W64-NEXT:    ret void
@@ -36,7 +36,7 @@ bb:
 
 define amdgpu_kernel void @fold_and_optimize_wavefrontsize(ptr addrspace(1) nocapture %arg) {
 ; OPT-LABEL: define amdgpu_kernel void @fold_and_optimize_wavefrontsize(
-; OPT-SAME: ptr addrspace(1) nocapture [[ARG:%.*]]) {
+; OPT-SAME: ptr addrspace(1) captures(none) [[ARG:%.*]]) {
 ; OPT-NEXT:  [[BB:.*:]]
 ; OPT-NEXT:    [[TMP:%.*]] = tail call i32 @llvm.amdgcn.wavefrontsize() #[[ATTR1]]
 ; OPT-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP]], 32
@@ -45,13 +45,13 @@ define amdgpu_kernel void @fold_and_optimize_wavefrontsize(ptr addrspace(1) noca
 ; OPT-NEXT:    ret void
 ;
 ; OPT-W32-LABEL: define amdgpu_kernel void @fold_and_optimize_wavefrontsize(
-; OPT-W32-SAME: ptr addrspace(1) nocapture [[ARG:%.*]]) #[[ATTR0]] {
+; OPT-W32-SAME: ptr addrspace(1) captures(none) [[ARG:%.*]]) #[[ATTR0]] {
 ; OPT-W32-NEXT:  [[BB:.*:]]
 ; OPT-W32-NEXT:    store i32 1, ptr addrspace(1) [[ARG]], align 4
 ; OPT-W32-NEXT:    ret void
 ;
 ; OPT-W64-LABEL: define amdgpu_kernel void @fold_and_optimize_wavefrontsize(
-; OPT-W64-SAME: ptr addrspace(1) nocapture [[ARG:%.*]]) #[[ATTR0]] {
+; OPT-W64-SAME: ptr addrspace(1) captures(none) [[ARG:%.*]]) #[[ATTR0]] {
 ; OPT-W64-NEXT:  [[BB:.*:]]
 ; OPT-W64-NEXT:    store i32 2, ptr addrspace(1) [[ARG]], align 4
 ; OPT-W64-NEXT:    ret void
@@ -66,7 +66,7 @@ bb:
 
 define amdgpu_kernel void @fold_and_optimize_if_wavefrontsize(ptr addrspace(1) nocapture %arg) {
 ; OPT-LABEL: define amdgpu_kernel void @fold_and_optimize_if_wavefrontsize(
-; OPT-SAME: ptr addrspace(1) nocapture [[ARG:%.*]]) {
+; OPT-SAME: ptr addrspace(1) captures(none) [[ARG:%.*]]) {
 ; OPT-NEXT:  [[BB:.*:]]
 ; OPT-NEXT:    [[TMP:%.*]] = tail call i32 @llvm.amdgcn.wavefrontsize() #[[ATTR1]]
 ; OPT-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP]], 32
@@ -78,7 +78,7 @@ define amdgpu_kernel void @fold_and_optimize_if_wavefrontsize(ptr addrspace(1) n
 ; OPT-NEXT:    ret void
 ;
 ; OPT-W32-LABEL: define amdgpu_kernel void @fold_and_optimize_if_wavefrontsize(
-; OPT-W32-SAME: ptr addrspace(1) nocapture [[ARG:%.*]]) #[[ATTR0]] {
+; OPT-W32-SAME: ptr addrspace(1) captures(none) [[ARG:%.*]]) #[[ATTR0]] {
 ; OPT-W32-NEXT:  [[BB:.*:]]
 ; OPT-W32-NEXT:    br i1 false, label %[[BB2:.*]], label %[[BB3:.*]]
 ; OPT-W32:       [[BB2]]:
@@ -87,7 +87,7 @@ define amdgpu_kernel void @fold_and_optimize_if_wavefrontsize(ptr addrspace(1) n
 ; OPT-W32-NEXT:    ret void
 ;
 ; OPT-W64-LABEL: define amdgpu_kernel void @fold_and_optimize_if_wavefrontsize(
-; OPT-W64-SAME: ptr addrspace(1) nocapture [[ARG:%.*]]) #[[ATTR0]] {
+; OPT-W64-SAME: ptr addrspace(1) captures(none) [[ARG:%.*]]) #[[ATTR0]] {
 ; OPT-W64-NEXT:  [[BB:.*:]]
 ; OPT-W64-NEXT:    br i1 true, label %[[BB2:.*]], label %[[BB3:.*]]
 ; OPT-W64:       [[BB2]]:

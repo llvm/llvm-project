@@ -4,7 +4,7 @@
 
 ; Test assumed alignment parameter
 
-; CHECK: declare i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) nocapture align 4, i1 immarg) #0
+; CHECK: declare i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) align 4 captures(none), i1 immarg) #0
 
 define i32 @ds_append(ptr addrspace(3) %ptr) {
   %ret = call i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) %ptr, i1 false)
@@ -12,7 +12,7 @@ define i32 @ds_append(ptr addrspace(3) %ptr) {
 }
 
 ; Test assumed alignment parameter
-; CHECK: declare i32 @llvm.amdgcn.ds.consume.p3(ptr addrspace(3) nocapture align 4, i1 immarg) #0
+; CHECK: declare i32 @llvm.amdgcn.ds.consume.p3(ptr addrspace(3) align 4 captures(none), i1 immarg) #0
 define i32 @ds_consume(ptr addrspace(3) %ptr) {
   %ret = call i32 @llvm.amdgcn.ds.consume.p3(ptr addrspace(3) %ptr, i1 false)
   ret i32 %ret

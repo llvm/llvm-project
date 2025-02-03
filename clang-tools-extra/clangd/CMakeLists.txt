@@ -91,7 +91,6 @@ add_clang_library(clangDaemon STATIC
   GlobalCompilationDatabase.cpp
   Headers.cpp
   HeaderSourceSwitch.cpp
-  HeuristicResolver.cpp
   Hover.cpp
   IncludeCleaner.cpp
   IncludeFixer.cpp

@@ -510,6 +510,8 @@ bool AreSameDerivedType(
     const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
 bool AreSameDerivedTypeIgnoringTypeParameters(
     const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
+bool AreSameDerivedTypeIgnoringSequence(
+    const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
 
 // For generating "[extern] template class", &c. boilerplate
 #define EXPAND_FOR_EACH_INTEGER_KIND(M, P, S) \

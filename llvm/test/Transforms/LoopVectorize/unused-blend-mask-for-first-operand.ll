@@ -84,8 +84,6 @@ define void @test_not_first_lane_only_wide_compare(ptr %A, ptr noalias %B, i16 %
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i16> poison, i16 [[X]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT]], <4 x i16> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -94,8 +92,8 @@ define void @test_not_first_lane_only_wide_compare(ptr %A, ptr noalias %B, i16 %
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[A]], i16 [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP2]], align 2
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult <4 x i16> [[WIDE_LOAD]], [[BROADCAST_SPLAT2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i16 [[TMP3]], [[X]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = select i1 [[TMP4]], ptr poison, ptr [[B]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i16, ptr [[TMP12]], align 2
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <4 x i16> poison, i16 [[TMP13]], i64 0

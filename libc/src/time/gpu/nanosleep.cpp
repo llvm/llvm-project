@@ -8,6 +8,7 @@
 
 #include "src/time/nanosleep.h"
 
+#include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/time/gpu/time_utils.h"
 

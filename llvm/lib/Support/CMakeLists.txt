@@ -143,7 +143,8 @@ add_llvm_component_library(LLVMSupport
   APFloat.cpp
   APInt.cpp
   APSInt.cpp
-  ARMBuildAttrs.cpp
+  ARMBuildAttributes.cpp
+  AArch64BuildAttributes.cpp
   ARMAttributeParser.cpp
   ARMWinEH.cpp
   Allocator.cpp

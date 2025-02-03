@@ -107,11 +107,13 @@ MultiplexExternalSemaSource::hasExternalDefinitions(const Decl *D) {
   return EK_ReplyHazy;
 }
 
-bool MultiplexExternalSemaSource::
-FindExternalVisibleDeclsByName(const DeclContext *DC, DeclarationName Name) {
+bool MultiplexExternalSemaSource::FindExternalVisibleDeclsByName(
+    const DeclContext *DC, DeclarationName Name,
+    const DeclContext *OriginalDC) {
   bool AnyDeclsFound = false;
   for (size_t i = 0; i < Sources.size(); ++i)
-    AnyDeclsFound |= Sources[i]->FindExternalVisibleDeclsByName(DC, Name);
+    AnyDeclsFound |=
+        Sources[i]->FindExternalVisibleDeclsByName(DC, Name, OriginalDC);
   return AnyDeclsFound;
 }
 

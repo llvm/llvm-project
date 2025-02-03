@@ -33,7 +33,7 @@ double getWTime();
 
 double getWTick() {
   // The number of ticks per second for the AMDGPU clock varies by card and can
-  // only be retrived by querying the driver. We rely on the device environment
+  // only be retrieved by querying the driver. We rely on the device environment
   // to inform us what the proper frequency is.
   return 1.0 / config::getClockFrequency();
 }
@@ -105,14 +105,8 @@ void *indirectCallLookup(void *HstPtr) {
 }
 
 /// The openmp client instance used to communicate with the server.
-/// FIXME: This is marked as 'retain' so that it is not removed via
-/// `-mlink-builtin-bitcode`
-#ifdef __NVPTX__
-[[gnu::visibility("protected"), gnu::weak,
-  gnu::retain]] rpc::Client Client asm("__llvm_rpc_client");
-#else
-[[gnu::visibility("protected"), gnu::weak]] rpc::Client Client asm("__llvm_rpc_client");
-#endif
+[[gnu::visibility("protected"),
+  gnu::weak]] rpc::Client Client asm("__llvm_rpc_client");
 
 } // namespace impl
 } // namespace ompx

@@ -3,8 +3,8 @@
 
 ; CHECK:       Dependency matrix before interchange:
 ; CHECK-NEXT:  I I
-; CHECK-NEXT:  = S
-; CHECK-NEXT:  < S
+; CHECK-NEXT:  = *
+; CHECK-NEXT:  < *
 ; CHECK-NEXT:  Processing InnerLoopId
 
 ; This example is taken from github issue #54176

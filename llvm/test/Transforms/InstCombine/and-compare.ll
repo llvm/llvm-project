@@ -256,3 +256,27 @@ entry:
   %cmp = icmp ne i8 %and, 11
   ret i1 %cmp
 }
+
+define i1 @test_eq_16_and_15_add_10(i8 %a) {
+; CHECK-LABEL: @test_eq_16_and_15_add_10(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %add = add i8 %a, 10
+  %and = and i8 %add, 15
+  %cmp = icmp eq i8 %and, 16
+  ret i1 %cmp
+}
+
+define i1 @test_ne_16_and_15_add_10(i8 %a) {
+; CHECK-LABEL: @test_ne_16_and_15_add_10(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %add = add i8 %a, 10
+  %and = and i8 %add, 15
+  %cmp = icmp ne i8 %and, 16
+  ret i1 %cmp
+}

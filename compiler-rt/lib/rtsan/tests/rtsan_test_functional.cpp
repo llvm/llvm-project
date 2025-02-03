@@ -145,13 +145,23 @@ TEST(TestRtsan, LaunchingAThreadDiesWhenRealtime) {
 
 namespace {
 void InvokeStdFunction(std::function<void()> &&function) { function(); }
+
+template <typename T> void HideMemoryFromCompiler(T *memory) {
+  // Pass the pointer to an empty assembly block as an input, and inform
+  // the compiler that memory is read to and possibly modified. This should not
+  // be architecture specific, since the asm block is empty.
+  __asm__ __volatile__("" ::"r"(memory) : "memory");
+}
 } // namespace
 
 TEST(TestRtsan, CopyingALambdaWithLargeCaptureDiesWhenRealtime) {
   std::array<float, 16> lots_of_data;
   auto LargeLambda = [lots_of_data]() mutable {
-    // Stop everything getting optimised out
     lots_of_data[3] = 0.25f;
+    // In LTO builds, this lambda can be optimized away, since the compiler can
+    // see through the memory accesses after inlining across TUs. Ensure it can
+    // no longer reason about the memory access, so that won't happen.
+    HideMemoryFromCompiler(&lots_of_data[3]);
     EXPECT_EQ(16u, lots_of_data.size());
     EXPECT_EQ(0.25f, lots_of_data[3]);
   };

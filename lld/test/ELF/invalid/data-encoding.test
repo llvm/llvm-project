@@ -1,4 +1,6 @@
 # REQUIRES: x86
+# This test intentionally checks for fatal errors, and fatal errors aren't supported for testing when main is run twice.
+# XFAIL: main-run-twice
 
 # The object in the archive has invalid data encoding.
 # Check we report this.

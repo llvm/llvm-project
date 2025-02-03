@@ -284,9 +284,8 @@ std::optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
             WorkList.push_back(DstReg);
           continue;
         }
-        LLVM_DEBUG(dbgs() << "[" << ST.FI << ":" << ST.Tag << "] use of %"
-                          << Register::virtReg2Index(UseReg) << " in " << UseI
-                          << "\n");
+        LLVM_DEBUG(dbgs() << "[" << ST.FI << ":" << ST.Tag << "] use of "
+                          << printReg(UseReg) << " in " << UseI << "\n");
         Score++;
       }
     }

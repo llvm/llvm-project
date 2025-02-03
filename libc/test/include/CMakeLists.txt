@@ -422,7 +422,7 @@ add_libc_test(
     -Werror
   DEPENDS
     libc.include.llvm-libc-macros.math_function_macros
-)  
+)
 
 add_libc_test(
   isfinite_c_test
@@ -483,3 +483,70 @@ add_libc_test(
   DEPENDS
     libc.include.llvm-libc-macros.math_function_macros
 )
+
+# Test `#include <...>` of each header in each available language mode.
+# This is gated on -DLLVM_LIBC_BUILD_HEADER_TESTS=ON until all the bugs
+# in headers are fixed so the tests all compile.
+set(TEST_STDC_VERSIONS 89;99;11;17;23)
+set(TEST_STDCXX_VERSIONS 03;11;14;17;20;23;26)
+
+function(add_header_test target_name source_file deps std_mode)
+  if(LLVM_LIBC_BUILD_HEADER_TESTS)
+    add_libc_test(
+      ${target_name}
+      C_TEST
+      HERMETIC_TEST_ONLY
+      SUITE
+	libc_include_tests
+      SRCS
+	${source_file}
+      COMPILE_OPTIONS
+	-Werror
+	-Wsystem-headers
+	-Wall
+	-Wextra
+	-std=${std_mode}
+      DEPENDS
+	${deps}
+    )
+  endif()
+endfunction()
+
+foreach(target ${TARGET_PUBLIC_HEADERS})
+  string(REPLACE "libc.include." "" header ${target})
+  get_target_property(HEADER_NAME ${target} HEADER_NAME)
+
+  set(test_stdc_file "${CMAKE_CURRENT_BINARY_DIR}/${header}_test.c")
+  configure_file(header-test-template.c ${test_stdc_file} @ONLY)
+  foreach(stdc_version ${TEST_STDC_VERSIONS})
+    add_header_test(
+      "${header}_c${stdc_version}_test"
+      ${test_stdc_file}
+      ${target}
+      "c${stdc_version}"
+    )
+    add_header_test(
+      "${header}_gnu${stdc_version}_test"
+      ${test_stdc_file}
+      ${target}
+      "gnu${stdc_version}"
+    )
+  endforeach()
+
+  set(test_stdcxx_file "${CMAKE_CURRENT_BINARY_DIR}/${header}_test.cpp")
+  configure_file(header-test-template.c ${test_stdcxx_file} @ONLY)
+  foreach(stdcxx_version ${TEST_STDCXX_VERSIONS})
+    add_header_test(
+      "${header}_cpp${stdcxx_version}_test"
+      ${test_stdcxx_file}
+      ${target}
+      "c++${stdcxx_version}"
+    )
+    add_header_test(
+      "${header}_gnucpp${stdcxx_version}_test"
+      ${test_stdcxx_file}
+      ${target}
+      "gnu++${stdcxx_version}"
+    )
+  endforeach()
+endforeach()

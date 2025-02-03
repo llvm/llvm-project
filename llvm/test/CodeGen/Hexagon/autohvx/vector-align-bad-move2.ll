@@ -9,7 +9,7 @@
 
 define internal fastcc i32 @f0(ptr noalias nocapture align 64 %a0, ptr noalias nocapture readonly align 64 %a1, ptr noalias nocapture readonly align 64 %a2) unnamed_addr #0 {
 ; CHECK-LABEL: define internal fastcc i32 @f0
-; CHECK-SAME: (ptr noalias nocapture align 64 [[A0:%.*]], ptr noalias nocapture readonly align 64 [[A1:%.*]], ptr noalias nocapture readonly align 64 [[A2:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr noalias align 64 captures(none) [[A0:%.*]], ptr noalias readonly align 64 captures(none) [[A1:%.*]], ptr noalias readonly align 64 captures(none) [[A2:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  b0:
 ; CHECK-NEXT:    [[V0:%.*]] = load <32 x i32>, ptr [[A2]], align 64, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    br label [[B1:%.*]]

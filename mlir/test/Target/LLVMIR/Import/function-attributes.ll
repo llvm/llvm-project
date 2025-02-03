@@ -12,6 +12,15 @@ define internal spir_func void @spir_func_internal() {
 
 ; // -----
 
+; Ensure that we have dso_local.
+; CHECK: llvm.func @dsolocal_func()
+; CHECK-SAME: attributes {dso_local}
+define dso_local void @dsolocal_func() {
+  ret void
+}
+
+; // -----
+
 ; CHECK-LABEL: @func_readnone
 ; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
 ; CHECK:   llvm.return
@@ -58,7 +67,7 @@ define ptr @func_arg_attrs(
     ptr dereferenceable(12) %arg10,
     ptr dereferenceable_or_null(42) %arg11,
     double inreg %arg12,
-    ptr nocapture %arg13,
+    ptr captures(none) %arg13,
     ptr nofree %arg14,
     ptr nonnull %arg15,
     ptr preallocated(double) %arg16,

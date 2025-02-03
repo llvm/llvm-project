@@ -131,7 +131,7 @@ public:
     if (auto *ptr = handler.dyn_cast<mlir::SourceMgrDiagnosticHandler *>()) {
       delete ptr;
     } else {
-      delete handler.get<mlir::SourceMgrDiagnosticVerifierHandler *>();
+      delete cast<mlir::SourceMgrDiagnosticVerifierHandler *>(handler);
     }
   }
 

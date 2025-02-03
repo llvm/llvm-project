@@ -31,20 +31,20 @@
 ; CHECK-DAG: %[[#Const123:]] = OpConstant %[[#Int32Ty]] 123
 ; CHECK-DAG: %[[#Const42:]] = OpConstant %[[#DoubleTy:]] 42
 
-; CHECK: %[[#Dialect:]] = OpAsmTargetINTEL "spirv64-unknown-unknown"
+; CHECK-DAG: %[[#Dialect:]] = OpAsmTargetINTEL "spirv64-unknown-unknown"
 ; CHECK-NO: OpAsmTargetINTEL
 
-; CHECK: %[[#Asm1:]] = OpAsmINTEL %[[#VoidTy]] %[[#Fun1Ty]] %[[#Dialect]] "" ""
-; CHECK: %[[#Asm2:]] = OpAsmINTEL %[[#VoidTy]] %[[#Fun1Ty]] %[[#Dialect]] "nop" ""
-; CHECK: %[[#Asm3:]] = OpAsmINTEL %[[#VoidTy]] %[[#Fun1Ty]] %[[#Dialect]] "" "~{cc},~{memory}"
-; CHECK: %[[#Asm4:]] = OpAsmINTEL %[[#Int32Ty]] %[[#Fun2Ty:]] %[[#Dialect]] "clobber_out $0" "=&r"
-; CHECK: %[[#Asm5:]] = OpAsmINTEL %[[#Int32Ty]] %[[#Fun3Ty]] %[[#Dialect]] "icmd $0 $1" "=r,r"
-; CHECK: %[[#Asm6:]] = OpAsmINTEL %[[#FloatTy]] %[[#Fun4Ty]] %[[#Dialect]] "fcmd $0 $1" "=r,r"
-; CHECK: %[[#Asm7:]] = OpAsmINTEL %[[#HalfTy]] %[[#Fun5Ty]] %[[#Dialect]] "fcmdext $0 $1 $2" "=r,r,r"
-; CHECK: %[[#Asm8:]] = OpAsmINTEL %[[#Int8Ty]] %[[#Fun6Ty]] %[[#Dialect]] "cmdext $0 $3 $1 $2" "=r,r,r,r"
-; CHECK: %[[#Asm9:]] = OpAsmINTEL %[[#Int64Ty]] %[[#Fun7Ty]] %[[#Dialect]] "icmdext $0 $3 $1 $2" "=r,r,r,r"
-; CHECK: %[[#Asm10:]] = OpAsmINTEL %[[#VoidTy]] %[[#Fun8Ty]] %[[#Dialect]] "constcmd $0 $1" "r,r"
-; CHECK: %[[#Asm11:]] = OpAsmINTEL %[[#VoidTy]] %[[#Fun8Ty]] %[[#Dialect]] "constcmd $0 $1" "i,i"
+; CHECK-DAG: %[[#Asm1:]] = OpAsmINTEL %[[#VoidTy]] %[[#Fun1Ty]] %[[#Dialect]] "" ""
+; CHECK-DAG: %[[#Asm2:]] = OpAsmINTEL %[[#VoidTy]] %[[#Fun1Ty]] %[[#Dialect]] "nop" ""
+; CHECK-DAG: %[[#Asm3:]] = OpAsmINTEL %[[#VoidTy]] %[[#Fun1Ty]] %[[#Dialect]] "" "~{cc},~{memory}"
+; CHECK-DAG: %[[#Asm4:]] = OpAsmINTEL %[[#Int32Ty]] %[[#Fun2Ty:]] %[[#Dialect]] "clobber_out $0" "=&r"
+; CHECK-DAG: %[[#Asm5:]] = OpAsmINTEL %[[#Int32Ty]] %[[#Fun3Ty]] %[[#Dialect]] "icmd $0 $1" "=r,r"
+; CHECK-DAG: %[[#Asm6:]] = OpAsmINTEL %[[#FloatTy]] %[[#Fun4Ty]] %[[#Dialect]] "fcmd $0 $1" "=r,r"
+; CHECK-DAG: %[[#Asm7:]] = OpAsmINTEL %[[#HalfTy]] %[[#Fun5Ty]] %[[#Dialect]] "fcmdext $0 $1 $2" "=r,r,r"
+; CHECK-DAG: %[[#Asm8:]] = OpAsmINTEL %[[#Int8Ty]] %[[#Fun6Ty]] %[[#Dialect]] "cmdext $0 $3 $1 $2" "=r,r,r,r"
+; CHECK-DAG: %[[#Asm9:]] = OpAsmINTEL %[[#Int64Ty]] %[[#Fun7Ty]] %[[#Dialect]] "icmdext $0 $3 $1 $2" "=r,r,r,r"
+; CHECK-DAG: %[[#Asm10:]] = OpAsmINTEL %[[#VoidTy]] %[[#Fun8Ty]] %[[#Dialect]] "constcmd $0 $1" "r,r"
+; CHECK-DAG: %[[#Asm11:]] = OpAsmINTEL %[[#VoidTy]] %[[#Fun8Ty]] %[[#Dialect]] "constcmd $0 $1" "i,i"
 ; CHECK-NO: OpAsmINTEL
 
 ; CHECK: OpFunction

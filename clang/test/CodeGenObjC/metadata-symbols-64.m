@@ -116,7 +116,7 @@ id    ID;
    }
 @end
 
-void *f0(id x) {
+void f0(id x) {
    Example* pe;
    double dd = [pe RET_DOUBLE];
    dd = [pe RET_FLOAT];

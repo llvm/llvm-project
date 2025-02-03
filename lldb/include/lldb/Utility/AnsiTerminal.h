@@ -171,7 +171,32 @@ inline std::string FormatAnsiTerminalCodes(llvm::StringRef format,
   }
   return fmt;
 }
+
+inline std::string StripAnsiTerminalCodes(llvm::StringRef str) {
+  std::string stripped;
+  while (!str.empty()) {
+    llvm::StringRef left, right;
+
+    std::tie(left, right) = str.split(ANSI_ESC_START);
+    stripped += left;
+
+    // ANSI_ESC_START not found.
+    if (left == str && right.empty())
+      break;
+
+    size_t end = right.find_first_not_of("0123456789;");
+    if (end < right.size() && (right[end] == 'm' || right[end] == 'G')) {
+      str = right.substr(end + 1);
+    } else {
+      // ANSI_ESC_END not found.
+      stripped += ANSI_ESC_START;
+      str = right;
+    }
+  }
+  return stripped;
 }
+
+} // namespace ansi
 } // namespace lldb_private
 
 #endif

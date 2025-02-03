@@ -19,7 +19,9 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 
 #include "mlir/Dialect/LLVMIR/NVVMOpsEnums.h.inc"

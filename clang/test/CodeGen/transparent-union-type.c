@@ -53,7 +53,7 @@ void ftest0(tu_c_t uc) { }
 void ftest1(tu_s_t uc) { }
 
 // CHECK-LABEL: define{{.*}} void @ftest1b(
-// CHECK-SAME: ptr nocapture noundef readnone [[UC:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readnone captures(none) [[UC:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret void
 //
@@ -94,14 +94,14 @@ typedef union tu_ptr {
 } tu_ptr_t __attribute__((transparent_union));
 
 // CHECK-LABEL: define{{.*}} void @ftest5(
-// CHECK-SAME: ptr nocapture readnone [[UC_COERCE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr readnone captures(none) [[UC_COERCE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret void
 //
 void ftest5(tu_ptr_t uc) { }
 
 // CHECK-LABEL: define{{.*}} void @ftest6(
-// CHECK-SAME: ptr nocapture noundef readnone [[UC:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr noundef readnone captures(none) [[UC:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret void
 //

@@ -8,5 +8,6 @@ add_mlir_upstream_c_api_library(MLIRCAPITarget
   MLIRToLLVMIRTranslationRegistration
   MLIRCAPIIR
   MLIRLLVMToLLVMIRTranslation
+  MLIRLLVMIRToLLVMTranslation
   MLIRSupport
 )

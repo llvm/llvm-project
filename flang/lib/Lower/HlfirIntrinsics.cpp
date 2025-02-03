@@ -170,6 +170,17 @@ protected:
             mlir::Type stmtResultType) override;
 };
 
+class HlfirReshapeLowering : public HlfirTransformationalIntrinsic {
+public:
+  using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
+
+protected:
+  mlir::Value
+  lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
+            const fir::IntrinsicArgumentLoweringRules *argLowering,
+            mlir::Type stmtResultType) override;
+};
+
 } // namespace
 
 mlir::Value HlfirTransformationalIntrinsic::loadBoxAddress(
@@ -419,6 +430,17 @@ mlir::Value HlfirCShiftLowering::lowerImpl(
   return createOp<hlfir::CShiftOp>(resultType, operands);
 }
 
+mlir::Value HlfirReshapeLowering::lowerImpl(
+    const Fortran::lower::PreparedActualArguments &loweredActuals,
+    const fir::IntrinsicArgumentLoweringRules *argLowering,
+    mlir::Type stmtResultType) {
+  auto operands = getOperandVector(loweredActuals, argLowering);
+  assert(operands.size() == 4);
+  mlir::Type resultType = computeResultType(operands[0], stmtResultType);
+  return createOp<hlfir::ReshapeOp>(resultType, operands[0], operands[1],
+                                    operands[2], operands[3]);
+}
+
 std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
     fir::FirOpBuilder &builder, mlir::Location loc, const std::string &name,
     const Fortran::lower::PreparedActualArguments &loweredActuals,
@@ -467,6 +489,9 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
   if (name == "cshift")
     return HlfirCShiftLowering{builder, loc}.lower(loweredActuals, argLowering,
                                                    stmtResultType);
+  if (name == "reshape")
+    return HlfirReshapeLowering{builder, loc}.lower(loweredActuals, argLowering,
+                                                    stmtResultType);
   if (mlir::isa<fir::CharacterType>(stmtResultType)) {
     if (name == "min")
       return HlfirCharExtremumLowering{builder, loc,

@@ -264,7 +264,7 @@ IOHandlerEditline::IOHandlerEditline(
   if (use_editline) {
     m_editline_up = std::make_unique<Editline>(editline_name, GetInputFILE(),
                                                GetOutputFILE(), GetErrorFILE(),
-                                               GetOutputMutex());
+                                               m_color, GetOutputMutex());
     m_editline_up->SetIsInputCompleteCallback(
         [this](Editline *editline, StringList &lines) {
           return this->IsInputCompleteCallback(editline, lines);
@@ -278,12 +278,10 @@ IOHandlerEditline::IOHandlerEditline(
       m_editline_up->SetSuggestionCallback([this](llvm::StringRef line) {
         return this->SuggestionCallback(line);
       });
-      if (m_color) {
-        m_editline_up->SetSuggestionAnsiPrefix(ansi::FormatAnsiTerminalCodes(
-            debugger.GetAutosuggestionAnsiPrefix()));
-        m_editline_up->SetSuggestionAnsiSuffix(ansi::FormatAnsiTerminalCodes(
-            debugger.GetAutosuggestionAnsiSuffix()));
-      }
+      m_editline_up->SetSuggestionAnsiPrefix(ansi::FormatAnsiTerminalCodes(
+          debugger.GetAutosuggestionAnsiPrefix()));
+      m_editline_up->SetSuggestionAnsiSuffix(ansi::FormatAnsiTerminalCodes(
+          debugger.GetAutosuggestionAnsiSuffix()));
     }
     // See if the delegate supports fixing indentation
     const char *indent_chars = delegate.IOHandlerGetFixIndentationCharacters();
@@ -478,12 +476,10 @@ bool IOHandlerEditline::SetPrompt(llvm::StringRef prompt) {
 #if LLDB_ENABLE_LIBEDIT
   if (m_editline_up) {
     m_editline_up->SetPrompt(m_prompt.empty() ? nullptr : m_prompt.c_str());
-    if (m_color) {
-      m_editline_up->SetPromptAnsiPrefix(
-          ansi::FormatAnsiTerminalCodes(m_debugger.GetPromptAnsiPrefix()));
-      m_editline_up->SetPromptAnsiSuffix(
-          ansi::FormatAnsiTerminalCodes(m_debugger.GetPromptAnsiSuffix()));
-    }
+    m_editline_up->SetPromptAnsiPrefix(
+        ansi::FormatAnsiTerminalCodes(m_debugger.GetPromptAnsiPrefix()));
+    m_editline_up->SetPromptAnsiSuffix(
+        ansi::FormatAnsiTerminalCodes(m_debugger.GetPromptAnsiSuffix()));
   }
 #endif
   return true;

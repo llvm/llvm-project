@@ -1052,32 +1052,8 @@ multiclass VPatIntegerSetCCVL_VX_Swappable<VTypeInfo vti, string instruction_nam
 }
 
 multiclass VPatIntegerSetCCVL_VI_Swappable<VTypeInfo vti, string instruction_name,
-                                           CondCode cc, CondCode invcc> {
-  defvar instruction_masked = !cast<Instruction>(instruction_name#"_VI_"#vti.LMul.MX#"_MASK");
-  def : Pat<(vti.Mask (riscv_setcc_vl (vti.Vector vti.RegClass:$rs1),
-                                      (SplatPat_simm5 simm5:$rs2), cc,
-                                      VR:$passthru,
-                                      (vti.Mask V0),
-                                      VLOpFrag)),
-            (instruction_masked VR:$passthru, vti.RegClass:$rs1,
-                                XLenVT:$rs2, (vti.Mask V0), GPR:$vl,
-                                vti.Log2SEW)>;
-
-  // FIXME: Can do some canonicalization to remove these patterns.
-  def : Pat<(vti.Mask (riscv_setcc_vl (SplatPat_simm5 simm5:$rs2),
-                                      (vti.Vector vti.RegClass:$rs1), invcc,
-                                      VR:$passthru,
-                                      (vti.Mask V0),
-                                      VLOpFrag)),
-            (instruction_masked VR:$passthru, vti.RegClass:$rs1,
-                                simm5:$rs2, (vti.Mask V0), GPR:$vl,
-                                vti.Log2SEW)>;
-}
-
-multiclass VPatIntegerSetCCVL_VIPlus1_Swappable<VTypeInfo vti,
-                                                string instruction_name,
-                                                CondCode cc, CondCode invcc,
-                                                ComplexPattern splatpat_kind> {
+                                           CondCode cc, CondCode invcc,
+                                           ComplexPattern splatpat_kind = SplatPat_simm5> {
   defvar instruction_masked = !cast<Instruction>(instruction_name#"_VI_"#vti.LMul.MX#"_MASK");
   def : Pat<(vti.Mask (riscv_setcc_vl (vti.Vector vti.RegClass:$rs1),
                                       (splatpat_kind simm5:$rs2), cc,
@@ -1085,7 +1061,7 @@ multiclass VPatIntegerSetCCVL_VIPlus1_Swappable<VTypeInfo vti,
                                       (vti.Mask V0),
                                       VLOpFrag)),
             (instruction_masked VR:$passthru, vti.RegClass:$rs1,
-                                (DecImm simm5:$rs2), (vti.Mask V0), GPR:$vl,
+                                XLenVT:$rs2, (vti.Mask V0), GPR:$vl,
                                 vti.Log2SEW)>;
 
   // FIXME: Can do some canonicalization to remove these patterns.
@@ -1095,7 +1071,7 @@ multiclass VPatIntegerSetCCVL_VIPlus1_Swappable<VTypeInfo vti,
                                       (vti.Mask V0),
                                       VLOpFrag)),
             (instruction_masked VR:$passthru, vti.RegClass:$rs1,
-                                (DecImm simm5:$rs2), (vti.Mask V0), GPR:$vl,
+                                simm5:$rs2, (vti.Mask V0), GPR:$vl,
                                 vti.Log2SEW)>;
 }
 
@@ -2173,14 +2149,14 @@ foreach vti = AllIntegerVectors in {
     defm : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSGT",  SETGT,  SETLT>;
     defm : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSGTU", SETUGT, SETULT>;
 
-    defm : VPatIntegerSetCCVL_VIPlus1_Swappable<vti, "PseudoVMSLE",  SETLT, SETGT,
-                                                SplatPat_simm5_plus1>;
-    defm : VPatIntegerSetCCVL_VIPlus1_Swappable<vti, "PseudoVMSLEU", SETULT, SETUGT,
-                                                SplatPat_simm5_plus1_nonzero>;
-    defm : VPatIntegerSetCCVL_VIPlus1_Swappable<vti, "PseudoVMSGT",  SETGE, SETLE,
-                                                SplatPat_simm5_plus1>;
-    defm : VPatIntegerSetCCVL_VIPlus1_Swappable<vti, "PseudoVMSGTU", SETUGE, SETULE,
-                                                SplatPat_simm5_plus1_nonzero>;
+    defm : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSLE",  SETLT, SETGT,
+                                           SplatPat_simm5_plus1>;
+    defm : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSLEU", SETULT, SETUGT,
+                                           SplatPat_simm5_plus1_nonzero>;
+    defm : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSGT",  SETGE, SETLE,
+                                           SplatPat_simm5_plus1>;
+    defm : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSGTU", SETUGE, SETULE,
+                                           SplatPat_simm5_plus1_nonzero>;
   }
 } // foreach vti = AllIntegerVectors
 

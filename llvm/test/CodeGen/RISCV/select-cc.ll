@@ -3,6 +3,8 @@
 ; RUN:   | FileCheck -check-prefixes=RV32I %s
 ; RUN: llc -mtriple=riscv64 -disable-block-placement -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64I %s
+; RUN: llc -mtriple=riscv64 -mattr=+xmipscmove -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=RV64I-CCMOV %s
 
 define signext i32 @foo(i32 signext %a, ptr %b) nounwind {
 ; RV32I-LABEL: foo:
@@ -156,6 +158,57 @@ define signext i32 @foo(i32 signext %a, ptr %b) nounwind {
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:  .LBB0_28:
 ; RV64I-NEXT:    ret
+;
+; RV64I-CCMOV-LABEL: foo:
+; RV64I-CCMOV:       # %bb.0:
+; RV64I-CCMOV-NEXT:    lw a2, 0(a1)
+; RV64I-CCMOV-NEXT:    lw a3, 0(a1)
+; RV64I-CCMOV-NEXT:    lw a4, 0(a1)
+; RV64I-CCMOV-NEXT:    lw a5, 0(a1)
+; RV64I-CCMOV-NEXT:    xor a6, a0, a2
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a6, a2, a0
+; RV64I-CCMOV-NEXT:    xor a2, a0, a3
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a2, a0, a3
+; RV64I-CCMOV-NEXT:    lw a2, 0(a1)
+; RV64I-CCMOV-NEXT:    sltu a3, a4, a0
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a3, a0, a4
+; RV64I-CCMOV-NEXT:    lw a3, 0(a1)
+; RV64I-CCMOV-NEXT:    sltu a4, a0, a5
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a4, a5, a0
+; RV64I-CCMOV-NEXT:    lw a4, 0(a1)
+; RV64I-CCMOV-NEXT:    sltu a5, a0, a2
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a0, a2
+; RV64I-CCMOV-NEXT:    lw a2, 0(a1)
+; RV64I-CCMOV-NEXT:    sltu a5, a3, a0
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a3, a0
+; RV64I-CCMOV-NEXT:    lw a3, 0(a1)
+; RV64I-CCMOV-NEXT:    sext.w a5, a0
+; RV64I-CCMOV-NEXT:    slt a5, a4, a5
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a0, a4
+; RV64I-CCMOV-NEXT:    lw a4, 0(a1)
+; RV64I-CCMOV-NEXT:    sext.w a5, a0
+; RV64I-CCMOV-NEXT:    slt a5, a5, a2
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a2, a0
+; RV64I-CCMOV-NEXT:    lw a2, 0(a1)
+; RV64I-CCMOV-NEXT:    sext.w a5, a0
+; RV64I-CCMOV-NEXT:    slt a5, a5, a3
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a0, a3
+; RV64I-CCMOV-NEXT:    lw a3, 0(a1)
+; RV64I-CCMOV-NEXT:    sext.w a5, a0
+; RV64I-CCMOV-NEXT:    slt a5, a4, a5
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a4, a0
+; RV64I-CCMOV-NEXT:    lw a4, 0(a1)
+; RV64I-CCMOV-NEXT:    slti a5, a2, 1
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a0, a2
+; RV64I-CCMOV-NEXT:    slti a5, a2, 0
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a3, a0
+; RV64I-CCMOV-NEXT:    lw a1, 0(a1)
+; RV64I-CCMOV-NEXT:    slti a3, a4, 1025
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a3, a4, a0
+; RV64I-CCMOV-NEXT:    sltiu a2, a2, 2047
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a2, a1, a0
+; RV64I-CCMOV-NEXT:    sext.w a0, a0
+; RV64I-CCMOV-NEXT:    ret
   %val1 = load volatile i32, ptr %b
   %tst1 = icmp eq i32 %a, %val1
   %val2 = select i1 %tst1, i32 %a, i32 %val1
@@ -258,6 +311,23 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
+;
+; RV64I-CCMOV-LABEL: numsignbits:
+; RV64I-CCMOV:       # %bb.0:
+; RV64I-CCMOV-NEXT:    addi sp, sp, -16
+; RV64I-CCMOV-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-CCMOV-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64I-CCMOV-NEXT:    mips.ccmov s0, a0, a2, a3
+; RV64I-CCMOV-NEXT:    beqz a1, .LBB1_2
+; RV64I-CCMOV-NEXT:  # %bb.1:
+; RV64I-CCMOV-NEXT:    mv a0, s0
+; RV64I-CCMOV-NEXT:    call bar
+; RV64I-CCMOV-NEXT:  .LBB1_2:
+; RV64I-CCMOV-NEXT:    mv a0, s0
+; RV64I-CCMOV-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-CCMOV-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-CCMOV-NEXT:    addi sp, sp, 16
+; RV64I-CCMOV-NEXT:    ret
   %5 = icmp eq i16 %0, 0
   %6 = select i1 %5, i16 %3, i16 %2
   %7 = icmp eq i16 %1, 0
@@ -295,6 +365,14 @@ define i32 @select_sge_int16min(i32 signext %x, i32 signext %y, i32 signext %z) 
 ; RV64I-NEXT:  .LBB2_2:
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    ret
+;
+; RV64I-CCMOV-LABEL: select_sge_int16min:
+; RV64I-CCMOV:       # %bb.0:
+; RV64I-CCMOV-NEXT:    lui a3, 1048560
+; RV64I-CCMOV-NEXT:    addiw a3, a3, -1
+; RV64I-CCMOV-NEXT:    slt a0, a3, a0
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a0, a1, a2
+; RV64I-CCMOV-NEXT:    ret
   %a = icmp sge i32 %x, -65536
   %b = select i1 %a, i32 %y, i32 %z
   ret i32 %b
@@ -331,6 +409,14 @@ define i64 @select_sge_int32min(i64 %x, i64 %y, i64 %z) {
 ; RV64I-NEXT:  .LBB3_2:
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    ret
+;
+; RV64I-CCMOV-LABEL: select_sge_int32min:
+; RV64I-CCMOV:       # %bb.0:
+; RV64I-CCMOV-NEXT:    lui a3, 524288
+; RV64I-CCMOV-NEXT:    addi a3, a3, -1
+; RV64I-CCMOV-NEXT:    slt a0, a3, a0
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a0, a1, a2
+; RV64I-CCMOV-NEXT:    ret
   %a = icmp sge i64 %x, -2147483648
   %b = select i1 %a, i64 %y, i64 %z
   ret i64 %b

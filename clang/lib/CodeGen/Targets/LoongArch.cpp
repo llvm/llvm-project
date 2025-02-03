@@ -192,7 +192,7 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
     for (const FieldDecl *FD : RD->fields()) {
       QualType QTy = FD->getType();
       if (FD->isBitField()) {
-        unsigned BitWidth = FD->getBitWidthValue(getContext());
+        unsigned BitWidth = FD->getBitWidthValue();
         // Zero-width bitfields are ignored.
         if (BitWidth == 0)
           continue;

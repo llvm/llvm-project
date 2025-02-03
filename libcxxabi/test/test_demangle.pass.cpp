@@ -33,7 +33,7 @@
 // Is long double fp128?
 #define LDBL_FP128 (__LDBL_MANT_DIG__ == 113)
 
-const char *cases[][2] = {
+const char* cases[][2] = {
     // clang-format off
     {"_Z1A", "A"},
     {"_Z1Av", "A()"},
@@ -30245,6 +30245,8 @@ const char *cases[][2] = {
     {"_Z1fDSDRj", "f(_Sat unsigned _Fract)"},
     {"_Z1fDSDRl", "f(_Sat long _Fract)"},
     {"_Z1fDSDRm", "f(_Sat unsigned long _Fract)"},
+
+    {"_Z11bfloat16addDF16bDF16b", "bfloat16add(std::bfloat16_t, std::bfloat16_t)"},
     // clang-format on
 };
 

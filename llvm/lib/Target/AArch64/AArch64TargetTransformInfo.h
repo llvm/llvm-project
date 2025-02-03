@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/Support/InstructionCost.h"
 #include <cstdint>
 #include <optional>
 
@@ -87,6 +88,10 @@ public:
 
   unsigned getInlineCallPenalty(const Function *F, const CallBase &Call,
                                 unsigned DefaultCallPenalty) const;
+
+  uint64_t getFeatureMask(const Function &F) const;
+
+  bool isMultiversionedFunction(const Function &F) const;
 
   /// \name Scalar TTI Implementations
   /// @{
@@ -356,6 +361,13 @@ public:
       return isLegalNTStoreLoad(DataType, Alignment);
     return BaseT::isLegalNTLoad(DataType, Alignment);
   }
+
+  InstructionCost
+  getPartialReductionCost(unsigned Opcode, Type *InputTypeA, Type *InputTypeB,
+                          Type *AccumType, ElementCount VF,
+                          TTI::PartialReductionExtendKind OpAExtend,
+                          TTI::PartialReductionExtendKind OpBExtend,
+                          std::optional<unsigned> BinOp) const;
 
   bool enableOrderedReductions() const { return true; }
 

@@ -29,10 +29,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
 template <class _Container>
-using __insert_iterator_iter_t = ranges::iterator_t<_Container>;
+using __insert_iterator_iter_t _LIBCPP_NODEBUG = ranges::iterator_t<_Container>;
 #else
 template <class _Container>
-using __insert_iterator_iter_t = typename _Container::iterator;
+using __insert_iterator_iter_t _LIBCPP_NODEBUG = typename _Container::iterator;
 #endif
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH

@@ -21,14 +21,10 @@ define <4 x double> @PR50392(<4 x double> %a, <4 x double> %b) {
 ; SSE2-NEXT:    ret <4 x double> [[SHUFFLE]]
 ;
 ; SSE4-LABEL: @PR50392(
-; SSE4-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B:%.*]], <4 x i32> <i32 0, i32 poison, i32 4, i32 poison>
-; SSE4-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <4 x i32> <i32 1, i32 poison, i32 5, i32 poison>
+; SSE4-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B:%.*]], <4 x i32> <i32 0, i32 poison, i32 4, i32 6>
+; SSE4-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <4 x i32> <i32 1, i32 poison, i32 5, i32 7>
 ; SSE4-NEXT:    [[TMP3:%.*]] = fadd <4 x double> [[TMP1]], [[TMP2]]
-; SSE4-NEXT:    [[VECEXT10:%.*]] = extractelement <4 x double> [[B]], i64 2
-; SSE4-NEXT:    [[VECEXT11:%.*]] = extractelement <4 x double> [[B]], i64 3
-; SSE4-NEXT:    [[ADD12:%.*]] = fadd double [[VECEXT10]], [[VECEXT11]]
-; SSE4-NEXT:    [[SHUFFLE:%.*]] = insertelement <4 x double> [[TMP3]], double [[ADD12]], i64 3
-; SSE4-NEXT:    ret <4 x double> [[SHUFFLE]]
+; SSE4-NEXT:    ret <4 x double> [[TMP3]]
 ;
 ; AVX-LABEL: @PR50392(
 ; AVX-NEXT:    [[B:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B1:%.*]], <4 x i32> <i32 0, i32 poison, i32 4, i32 6>

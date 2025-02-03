@@ -71,7 +71,7 @@ define void @test_vXf32(<2 x float> %a64, <2 x float> %b64, <4 x float> %a128, <
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64 = shufflevector <2 x float> %a64, <2 x float> %b64, <2 x i32> <i32 1, i32 2>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V128 = shufflevector <4 x float> %a128, <4 x float> %b128, <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V256 = shufflevector <8 x float> %a256, <8 x float> %b256, <8 x i32> <i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V512 = shufflevector <16 x float> %a512, <16 x float> %b512, <16 x i32> <i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V512 = shufflevector <16 x float> %a512, <16 x float> %b512, <16 x i32> <i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SSSE3-LABEL: 'test_vXf32'

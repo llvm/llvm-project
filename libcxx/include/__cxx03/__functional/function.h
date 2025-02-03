@@ -853,7 +853,7 @@ public:
 
   // construct/copy/destroy:
   _LIBCPP_HIDE_FROM_ABI function() _NOEXCEPT {}
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDE_FROM_ABI function(nullptr_t) _NOEXCEPT {}
+  _LIBCPP_HIDE_FROM_ABI function(nullptr_t) _NOEXCEPT {}
   _LIBCPP_HIDE_FROM_ABI function(const function&);
   _LIBCPP_HIDE_FROM_ABI function(function&&) _NOEXCEPT;
   template <class _Fp, class = _EnableIfLValueCallable<_Fp>>

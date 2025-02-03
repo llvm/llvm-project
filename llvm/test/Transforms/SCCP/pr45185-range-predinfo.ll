@@ -26,7 +26,7 @@ bb:
 ; Make sure we do not incorrectly eliminate the checks in @blam.
 define internal void @blam(i32 %arg, ptr nocapture %arg1) {
 ; CHECK-LABEL: define internal void @blam(
-; CHECK-SAME: i32 range(i32 0, 3) [[ARG:%.*]], ptr nocapture [[ARG1:%.*]]) {
+; CHECK-SAME: i32 range(i32 0, 3) [[ARG:%.*]], ptr captures(none) [[ARG1:%.*]]) {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[TMP:%.*]] = icmp eq i32 [[ARG]], 0
 ; CHECK-NEXT:    br i1 [[TMP]], label %[[BB2:.*]], label %[[BB3:.*]]

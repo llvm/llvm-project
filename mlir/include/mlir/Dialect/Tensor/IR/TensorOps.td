@@ -13,6 +13,7 @@ include "mlir/Dialect/Tensor/IR/TensorBase.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
+include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/ParallelCombiningOpInterface.td"
 include "mlir/Interfaces/ShapedOpInterfaces.td"
@@ -75,8 +76,10 @@ def Tensor_BitcastOp : Tensor_Op<"bitcast", [
     ```
   }];
 
-  let arguments = (ins AnyTensor:$source);
-  let results = (outs AnyTensor:$dest);
+  let arguments = (ins TensorOf<[AnySignlessInteger, AnyUnsignedInteger, 
+                                 AnySignedInteger, AnyFloat]>:$source);
+  let results = (outs TensorOf<[AnySignlessInteger, AnyUnsignedInteger,
+                                AnySignedInteger, AnyFloat]>:$dest);
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
 
   let hasCanonicalizer = 1;
@@ -195,7 +198,8 @@ def Tensor_ConcatOp : Tensor_Op<"concat",
 def Tensor_DimOp : Tensor_Op<"dim", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
     ConditionallySpeculatable, NoMemoryEffect,
-    ShapedDimOpInterface]> {
+    ShapedDimOpInterface,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRangesFromOptional"]>]> {
   let summary = "dimension index operation";
   let description = [{
     The `tensor.dim` operation takes a tensor and a dimension operand of type
@@ -1162,6 +1166,9 @@ def Tensor_ExpandShapeOp : Tensor_ReassociativeReshapeOp<"expand_shape"> {
 
   let extraClassDeclaration = commonExtraClassDeclaration # [{
     int64_t getCorrespondingSourceDim(int64_t resultDim);
+
+    // Return output shape as mixes static/dynamic shapes.
+    SmallVector<OpFoldResult> getMixedOutputShape();
 
     // Infer the output shape for a tensor.expand_shape when it is possible
     // to do so.

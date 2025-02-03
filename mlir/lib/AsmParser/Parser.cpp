@@ -2162,7 +2162,7 @@ OperationParser::parseTrailingLocationSpecifier(OpOrArgument opOrArgument) {
   if (auto *op = llvm::dyn_cast_if_present<Operation *>(opOrArgument))
     op->setLoc(directLoc);
   else
-    opOrArgument.get<BlockArgument>().setLoc(directLoc);
+    cast<BlockArgument>(opOrArgument).setLoc(directLoc);
   return success();
 }
 

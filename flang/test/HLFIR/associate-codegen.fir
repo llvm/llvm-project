@@ -372,7 +372,7 @@ func.func @_QPtest_multiple_expr_uses_inside_elemental() {
 // CHECK:           return
 // CHECK:         }
 
-// Verify that we properly recognize mutliple consequent hlfir.associate using
+// Verify that we properly recognize multiple consequent hlfir.associate using
 // the same result of hlfir.elemental.
 func.func @_QPtest_multitple_associates_for_same_expr() {
   %c1 = arith.constant 1 : index

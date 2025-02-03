@@ -6,7 +6,7 @@ target triple = "aarch64"
 
 define void @add_a(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %len) #0 {
 ; CHECK-LABEL: define void @add_a
-; CHECK-SAME: (ptr noalias nocapture readonly [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i32 [[LEN:%.*]]) {
+; CHECK-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i32 [[LEN:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[CMP8]], label [[ITER_CHECK:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -109,7 +109,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; working with.
 define void @add_a1(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %len) #0 {
 ; CHECK-LABEL: define void @add_a1
-; CHECK-SAME: (ptr noalias nocapture readonly [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i32 [[LEN:%.*]]) {
+; CHECK-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i32 [[LEN:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[CMP8]], label [[ITER_CHECK:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -206,7 +206,7 @@ for.body:                                         ; preds = %entry, %for.body
 
 define void @add_b(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %len) #0 {
 ; CHECK-LABEL: define void @add_b
-; CHECK-SAME: (ptr noalias nocapture readonly [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i32 [[LEN:%.*]]) {
+; CHECK-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i32 [[LEN:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP9:%.*]] = icmp sgt i32 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[CMP9]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -279,7 +279,7 @@ for.body:                                         ; preds = %entry, %for.body
 
 define void @add_c(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %len) #0 {
 ; CHECK-LABEL: define void @add_c
-; CHECK-SAME: (ptr noalias nocapture readonly [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i32 [[LEN:%.*]]) {
+; CHECK-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i32 [[LEN:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[CMP8]], label [[ITER_CHECK:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -382,7 +382,7 @@ for.body:                                         ; preds = %entry, %for.body
 
 define void @add_d(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %len) #0 {
 ; CHECK-LABEL: define void @add_d
-; CHECK-SAME: (ptr noalias nocapture readonly [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i32 [[LEN:%.*]]) {
+; CHECK-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i32 [[LEN:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp sgt i32 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[CMP7]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -454,7 +454,7 @@ for.body:                                         ; preds = %entry, %for.body
 
 define void @add_e(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 %arg1, i8 %arg2, i32 %len) #0 {
 ; CHECK-LABEL: define void @add_e
-; CHECK-SAME: (ptr noalias nocapture readonly [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i8 [[ARG1:%.*]], i8 [[ARG2:%.*]], i32 [[LEN:%.*]]) {
+; CHECK-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i8 [[ARG1:%.*]], i8 [[ARG2:%.*]], i32 [[LEN:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_32:%.*]] = icmp sgt i32 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[CMP_32]], label [[ITER_CHECK:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -602,7 +602,7 @@ for.body:                                         ; preds = %for.body, %for.body
 
 define void @add_f(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 %arg1, i8 %arg2, i32 %len) #0 {
 ; CHECK-LABEL: define void @add_f
-; CHECK-SAME: (ptr noalias nocapture readonly [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i8 [[ARG1:%.*]], i8 [[ARG2:%.*]], i32 [[LEN:%.*]]) {
+; CHECK-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i8 [[ARG1:%.*]], i8 [[ARG2:%.*]], i32 [[LEN:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_32:%.*]] = icmp sgt i32 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[CMP_32]], label [[ITER_CHECK:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -756,7 +756,7 @@ for.body:                                         ; preds = %for.body, %for.body
 
 define void @add_phifail(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %len) #0 {
 ; CHECK-LABEL: define void @add_phifail
-; CHECK-SAME: (ptr noalias nocapture readonly [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i32 [[LEN:%.*]]) {
+; CHECK-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i32 [[LEN:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[CMP8]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -840,7 +840,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; the correct value a_phi = p[len -2]
 define i8 @add_phifail2(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %len) #0 {
 ; CHECK-LABEL: define i8 @add_phifail2
-; CHECK-SAME: (ptr noalias nocapture readonly [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i32 [[LEN:%.*]]) {
+; CHECK-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i32 [[LEN:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LEN]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64

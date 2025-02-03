@@ -1312,6 +1312,7 @@ public:
   MaterializationTask(std::unique_ptr<MaterializationUnit> MU,
                       std::unique_ptr<MaterializationResponsibility> MR)
       : MU(std::move(MU)), MR(std::move(MR)) {}
+  ~MaterializationTask() override;
   void printDescription(raw_ostream &OS) override;
   void run() override;
 

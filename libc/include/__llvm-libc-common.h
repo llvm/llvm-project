@@ -39,7 +39,11 @@
 #define _Thread_local thread_local
 
 #undef __NOEXCEPT
+#if __cplusplus >= 201103L
 #define __NOEXCEPT noexcept
+#else
+#define __NOEXCEPT throw()
+#endif
 
 #else // not __cplusplus
 
@@ -50,7 +54,14 @@
 #define __END_C_DECLS
 
 #undef __restrict
-#define __restrict restrict // C99 and above support the restrict keyword.
+#if __STDC_VERSION__ >= 199901L
+// C99 and above support the restrict keyword.
+#define __restrict restrict
+#elif !defined(__GNUC__)
+// GNU-compatible compilers accept the __ spelling in all modes.
+// Otherwise, omit the qualifier for pure C89 compatibility.
+#define __restrict
+#endif
 
 #undef _Noreturn
 #if __STDC_VERSION__ >= 201112L

@@ -20,7 +20,6 @@ define void @func1() {
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, 3
 ; GFX12-SDAG-NEXT:    s_barrier_join m0
 ; GFX12-SDAG-NEXT:    s_barrier_wait 1
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: func1:
@@ -35,7 +34,6 @@ define void @func1() {
 ; GFX12-GISEL-NEXT:    s_barrier_signal m0
 ; GFX12-GISEL-NEXT:    s_barrier_join 3
 ; GFX12-GISEL-NEXT:    s_barrier_wait 1
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
     call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar3, i32 7)
     call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar3)
@@ -57,7 +55,6 @@ define void @func2() {
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, 1
 ; GFX12-SDAG-NEXT:    s_barrier_join m0
 ; GFX12-SDAG-NEXT:    s_barrier_wait 1
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: func2:
@@ -72,7 +69,6 @@ define void @func2() {
 ; GFX12-GISEL-NEXT:    s_barrier_signal m0
 ; GFX12-GISEL-NEXT:    s_barrier_join 1
 ; GFX12-GISEL-NEXT:    s_barrier_wait 1
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
     call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar2, i32 7)
     call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar2)
@@ -94,11 +90,10 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX12-SDAG-NEXT:    s_mov_b32 s32, 0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_lshr_b32 s2, s2, 4
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_and_b32 s2, s2, 63
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_or_b32 s3, 0x90000, s2
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, s3
 ; GFX12-SDAG-NEXT:    s_barrier_init m0
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, 0xc0002
@@ -112,25 +107,18 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, 2
 ; GFX12-SDAG-NEXT:    s_barrier_wait 1
 ; GFX12-SDAG-NEXT:    s_barrier_leave
-; GFX12-SDAG-NEXT:    s_wakeup_barrier m0
-; GFX12-SDAG-NEXT:    s_mov_b32 m0, s2
-; GFX12-SDAG-NEXT:    s_wakeup_barrier m0
-; GFX12-SDAG-NEXT:    s_mov_b32 m0, 2
 ; GFX12-SDAG-NEXT:    s_get_barrier_state s3, m0
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, s2
 ; GFX12-SDAG-NEXT:    s_get_barrier_state s2, m0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_getpc_b64 s[2:3]
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_sext_i32_i16 s3, s3
-; GFX12-SDAG-NEXT:    s_add_co_u32 s2, s2, func1@gotpcrel32@lo+12
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
-; GFX12-SDAG-NEXT:    s_add_co_ci_u32 s3, s3, func1@gotpcrel32@hi+24
+; GFX12-SDAG-NEXT:    s_add_co_u32 s2, s2, func1@gotpcrel32@lo+8
+; GFX12-SDAG-NEXT:    s_add_co_ci_u32 s3, s3, func1@gotpcrel32@hi+16
 ; GFX12-SDAG-NEXT:    s_barrier_signal -1
 ; GFX12-SDAG-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; GFX12-SDAG-NEXT:    s_barrier_wait -1
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX12-SDAG-NEXT:    s_getpc_b64 s[2:3]
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
@@ -140,7 +128,6 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX12-SDAG-NEXT:    s_add_co_ci_u32 s3, s3, func2@gotpcrel32@hi+24
 ; GFX12-SDAG-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX12-SDAG-NEXT:    s_get_barrier_state s0, -1
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -158,11 +145,10 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX12-GISEL-NEXT:    s_mov_b32 s32, 0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    s_lshr_b32 s0, s0, 4
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_and_b32 s0, s0, 63
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX12-GISEL-NEXT:    s_or_b32 s1, s0, 0x90000
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_mov_b32 m0, s1
 ; GFX12-GISEL-NEXT:    s_barrier_init m0
 ; GFX12-GISEL-NEXT:    s_mov_b32 m0, 0xc0002
@@ -176,24 +162,19 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX12-GISEL-NEXT:    s_barrier_join m0
 ; GFX12-GISEL-NEXT:    s_barrier_wait 1
 ; GFX12-GISEL-NEXT:    s_barrier_leave
-; GFX12-GISEL-NEXT:    s_wakeup_barrier 2
-; GFX12-GISEL-NEXT:    s_wakeup_barrier m0
 ; GFX12-GISEL-NEXT:    s_get_barrier_state s0, 2
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    s_get_barrier_state s0, m0
 ; GFX12-GISEL-NEXT:    s_add_co_ci_u32 s9, s13, 0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    s_getpc_b64 s[0:1]
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX12-GISEL-NEXT:    s_sext_i32_i16 s1, s1
-; GFX12-GISEL-NEXT:    s_add_co_u32 s0, s0, func1@gotpcrel32@lo+12
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
-; GFX12-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, func1@gotpcrel32@hi+24
+; GFX12-GISEL-NEXT:    s_add_co_u32 s0, s0, func1@gotpcrel32@lo+8
+; GFX12-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, func1@gotpcrel32@hi+16
 ; GFX12-GISEL-NEXT:    s_barrier_signal -1
 ; GFX12-GISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX12-GISEL-NEXT:    s_barrier_wait -1
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX12-GISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX12-GISEL-NEXT:    s_add_co_u32 s8, s12, 48
 ; GFX12-GISEL-NEXT:    s_add_co_ci_u32 s9, s13, 0
@@ -205,7 +186,6 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX12-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, func2@gotpcrel32@hi+24
 ; GFX12-GISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX12-GISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX12-GISEL-NEXT:    s_get_barrier_state s0, -1
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -218,8 +198,6 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
     call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) %in)
     call void @llvm.amdgcn.s.barrier.wait(i16 1)
     call void @llvm.amdgcn.s.barrier.leave(i16 1)
-    call void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(3) @bar)
-    call void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(3) %in)
     %state = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3) @bar)
     %state2 = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3) %in)
     call void @llvm.amdgcn.s.barrier()
@@ -234,11 +212,9 @@ define amdgpu_kernel void @kernel2(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX12-SDAG-NEXT:    s_getpc_b64 s[6:7]
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_sext_i32_i16 s7, s7
-; GFX12-SDAG-NEXT:    s_add_co_u32 s6, s6, func2@gotpcrel32@lo+12
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
-; GFX12-SDAG-NEXT:    s_add_co_ci_u32 s7, s7, func2@gotpcrel32@hi+24
+; GFX12-SDAG-NEXT:    s_add_co_u32 s6, s6, func2@gotpcrel32@lo+8
+; GFX12-SDAG-NEXT:    s_add_co_ci_u32 s7, s7, func2@gotpcrel32@hi+16
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v31, v0
 ; GFX12-SDAG-NEXT:    s_load_b64 s[12:13], s[6:7], 0x0
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, 0x70002
@@ -251,7 +227,6 @@ define amdgpu_kernel void @kernel2(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX12-SDAG-NEXT:    s_mov_b32 s32, 0
 ; GFX12-SDAG-NEXT:    s_barrier_join m0
 ; GFX12-SDAG-NEXT:    s_barrier_wait 1
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_swappc_b64 s[30:31], s[12:13]
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
@@ -260,11 +235,9 @@ define amdgpu_kernel void @kernel2(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX12-GISEL-NEXT:    s_add_co_u32 s8, s4, 48
 ; GFX12-GISEL-NEXT:    s_add_co_ci_u32 s9, s5, 0
 ; GFX12-GISEL-NEXT:    s_getpc_b64 s[4:5]
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX12-GISEL-NEXT:    s_sext_i32_i16 s5, s5
-; GFX12-GISEL-NEXT:    s_add_co_u32 s4, s4, func2@gotpcrel32@lo+12
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
-; GFX12-GISEL-NEXT:    s_add_co_ci_u32 s5, s5, func2@gotpcrel32@hi+24
+; GFX12-GISEL-NEXT:    s_add_co_u32 s4, s4, func2@gotpcrel32@lo+8
+; GFX12-GISEL-NEXT:    s_add_co_ci_u32 s5, s5, func2@gotpcrel32@hi+16
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v31, v0
 ; GFX12-GISEL-NEXT:    s_load_b64 s[12:13], s[4:5], 0x0
 ; GFX12-GISEL-NEXT:    s_mov_b64 s[10:11], s[6:7]
@@ -276,7 +249,6 @@ define amdgpu_kernel void @kernel2(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX12-GISEL-NEXT:    s_barrier_signal m0
 ; GFX12-GISEL-NEXT:    s_barrier_join 2
 ; GFX12-GISEL-NEXT:    s_barrier_wait 1
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX12-GISEL-NEXT:    s_swappc_b64 s[30:31], s[12:13]
 ; GFX12-GISEL-NEXT:    s_endpgm
     call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar, i32 7)
@@ -295,7 +267,6 @@ declare i1 @llvm.amdgcn.s.barrier.signal.isfirst(i32) #1
 declare void @llvm.amdgcn.s.barrier.init(ptr addrspace(3), i32) #1
 declare void @llvm.amdgcn.s.barrier.join(ptr addrspace(3)) #1
 declare void @llvm.amdgcn.s.barrier.leave(i16) #1
-declare void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(3)) #1
 declare i32 @llvm.amdgcn.s.get.barrier.state(i32) #1
 declare i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3)) #1
 

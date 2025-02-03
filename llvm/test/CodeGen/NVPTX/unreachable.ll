@@ -21,7 +21,7 @@ target triple = "nvptx-unknown-cuda"
 declare void @throw() #0
 declare void @llvm.trap() #0
 
-define void @kernel_func() {
+define ptx_kernel void @kernel_func() {
 ; NO-TRAP-UNREACHABLE-LABEL: kernel_func(
 ; NO-TRAP-UNREACHABLE:       {
 ; NO-TRAP-UNREACHABLE-EMPTY:
@@ -102,6 +102,3 @@ define void @kernel_func_2() {
 }
 
 attributes #0 = { noreturn }
-
-!nvvm.annotations = !{!1}
-!1 = !{ptr @kernel_func, !"kernel", i32 1}

@@ -42,3 +42,17 @@ void fir::runtime::genSetUnderflowMode(fir::FirOpBuilder &builder,
       fir::runtime::getRuntimeFunc<mkRTKey(SetUnderflowMode)>(loc, builder)};
   builder.create<fir::CallOp>(loc, func, flag);
 }
+
+mlir::Value fir::runtime::genGetModesTypeSize(fir::FirOpBuilder &builder,
+                                              mlir::Location loc) {
+  mlir::func::FuncOp func{
+      fir::runtime::getRuntimeFunc<mkRTKey(GetModesTypeSize)>(loc, builder)};
+  return builder.create<fir::CallOp>(loc, func).getResult(0);
+}
+
+mlir::Value fir::runtime::genGetStatusTypeSize(fir::FirOpBuilder &builder,
+                                               mlir::Location loc) {
+  mlir::func::FuncOp func{
+      fir::runtime::getRuntimeFunc<mkRTKey(GetStatusTypeSize)>(loc, builder)};
+  return builder.create<fir::CallOp>(loc, func).getResult(0);
+}

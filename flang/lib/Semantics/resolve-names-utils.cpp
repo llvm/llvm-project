@@ -762,7 +762,11 @@ void SymbolMapper::MapSymbolExprs(Symbol &symbol) {
               proc.set_procInterfaces(
                   *mappedSymbol, BypassGeneric(mappedSymbol->GetUltimate()));
             } else if (const DeclTypeSpec * mappedType{MapType(proc.type())}) {
-              proc.set_type(*mappedType);
+              if (proc.type()) {
+                CHECK(*proc.type() == *mappedType);
+              } else {
+                proc.set_type(*mappedType);
+              }
             }
             if (proc.init()) {
               if (const Symbol * mapped{MapSymbol(*proc.init())}) {

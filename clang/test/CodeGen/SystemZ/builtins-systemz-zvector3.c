@@ -12,10 +12,12 @@ volatile vector signed char vsc;
 volatile vector signed short vss;
 volatile vector signed int vsi;
 volatile vector signed long long vsl;
+volatile vector signed __int128 vslll;
 volatile vector unsigned char vuc;
 volatile vector unsigned short vus;
 volatile vector unsigned int vui;
 volatile vector unsigned long long vul;
+volatile vector unsigned __int128 vulll;
 volatile vector bool char vbc;
 volatile vector bool short vbs;
 volatile vector bool int vbi;
@@ -39,10 +41,12 @@ const signed char * volatile cptrsc;
 const signed short * volatile cptrss;
 const signed int * volatile cptrsi;
 const signed long long * volatile cptrsl;
+const signed __int128 * volatile cptrslll;
 const unsigned char * volatile cptruc;
 const unsigned short * volatile cptrus;
 const unsigned int * volatile cptrui;
 const unsigned long long * volatile cptrul;
+const unsigned __int128 * volatile cptrulll;
 const float * volatile cptrf;
 const double * volatile cptrd;
 
@@ -51,10 +55,12 @@ signed char * volatile ptrsc;
 signed short * volatile ptrss;
 signed int * volatile ptrsi;
 signed long long * volatile ptrsl;
+signed __int128 * volatile ptrslll;
 unsigned char * volatile ptruc;
 unsigned short * volatile ptrus;
 unsigned int * volatile ptrui;
 unsigned long long * volatile ptrul;
+unsigned __int128 * volatile ptrulll;
 float * volatile ptrf;
 double * volatile ptrd;
 
@@ -85,6 +91,10 @@ void test_core(void) {
   // CHECK-ASM: vlbrg
   vul += vec_revb(vec_xl(idx, cptrul));
   // CHECK-ASM: vlbrg
+  vslll += vec_revb(vec_xl(idx, cptrslll));
+  // CHECK-ASM: vlbrq
+  vulll += vec_revb(vec_xl(idx, cptrulll));
+  // CHECK-ASM: vlbrq
   vf += vec_revb(vec_xl(idx, cptrf));
   // CHECK-ASM: vlbrf
   vd += vec_revb(vec_xl(idx, cptrd));
@@ -102,6 +112,10 @@ void test_core(void) {
   // CHECK-ASM: vstbrg
   vec_xst(vec_revb(vul), idx, ptrul);
   // CHECK-ASM: vstbrg
+  vec_xst(vec_revb(vslll), idx, ptrslll);
+  // CHECK-ASM: vstbrq
+  vec_xst(vec_revb(vulll), idx, ptrulll);
+  // CHECK-ASM: vstbrq
   vec_xst(vec_revb(vf), idx, ptrf);
   // CHECK-ASM: vstbrf
   vec_xst(vec_revb(vd), idx, ptrd);
@@ -301,6 +315,18 @@ void test_integer(void) {
   vul = vec_sldb(vul, vul, 7);
   // CHECK: call <16 x i8> @llvm.s390.vsld(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 7)
   // CHECK-ASM: vsld
+  vslll = vec_sldb(vslll, vslll, 0);
+  // CHECK: call <16 x i8> @llvm.s390.vsld(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
+  // CHECK-ASM: vsld
+  vslll = vec_sldb(vslll, vslll, 7);
+  // CHECK: call <16 x i8> @llvm.s390.vsld(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 7)
+  // CHECK-ASM: vsld
+  vulll = vec_sldb(vulll, vulll, 0);
+  // CHECK: call <16 x i8> @llvm.s390.vsld(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
+  // CHECK-ASM: vsld
+  vulll = vec_sldb(vulll, vulll, 7);
+  // CHECK: call <16 x i8> @llvm.s390.vsld(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 7)
+  // CHECK-ASM: vsld
   vf = vec_sldb(vf, vf, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsld(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsld
@@ -360,6 +386,18 @@ void test_integer(void) {
   // CHECK: call <16 x i8> @llvm.s390.vsrd(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
   // CHECK-ASM: vsrd
   vul = vec_srdb(vul, vul, 7);
+  // CHECK: call <16 x i8> @llvm.s390.vsrd(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 7)
+  // CHECK-ASM: vsrd
+  vslll = vec_srdb(vslll, vslll, 0);
+  // CHECK: call <16 x i8> @llvm.s390.vsrd(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
+  // CHECK-ASM: vsrd
+  vslll = vec_srdb(vslll, vslll, 7);
+  // CHECK: call <16 x i8> @llvm.s390.vsrd(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 7)
+  // CHECK-ASM: vsrd
+  vulll = vec_srdb(vulll, vulll, 0);
+  // CHECK: call <16 x i8> @llvm.s390.vsrd(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
+  // CHECK-ASM: vsrd
+  vulll = vec_srdb(vulll, vulll, 7);
   // CHECK: call <16 x i8> @llvm.s390.vsrd(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 7)
   // CHECK-ASM: vsrd
   vf = vec_srdb(vf, vf, 0);

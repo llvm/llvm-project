@@ -619,6 +619,7 @@ enum {
   EF_HEXAGON_MACH_V5 = 0x00000004,   // Hexagon V5
   EF_HEXAGON_MACH_V55 = 0x00000005,  // Hexagon V55
   EF_HEXAGON_MACH_V60 = 0x00000060,  // Hexagon V60
+  EF_HEXAGON_MACH_V61 = 0x00000061,  // Hexagon V61
   EF_HEXAGON_MACH_V62 = 0x00000062,  // Hexagon V62
   EF_HEXAGON_MACH_V65 = 0x00000065,  // Hexagon V65
   EF_HEXAGON_MACH_V66 = 0x00000066,  // Hexagon V66
@@ -630,7 +631,11 @@ enum {
   EF_HEXAGON_MACH_V71T = 0x00008071, // Hexagon V71T
   EF_HEXAGON_MACH_V73 = 0x00000073,  // Hexagon V73
   EF_HEXAGON_MACH_V75 = 0x00000075,  // Hexagon V75
+  EF_HEXAGON_MACH_V77 = 0x00000077,  // Hexagon V77
   EF_HEXAGON_MACH_V79 = 0x00000079,  // Hexagon V79
+  EF_HEXAGON_MACH_V81 = 0x00000081,  // Hexagon V81
+  EF_HEXAGON_MACH_V83 = 0x00000083,  // Hexagon V83
+  EF_HEXAGON_MACH_V85 = 0x00000085,  // Hexagon V85
   EF_HEXAGON_MACH = 0x000003ff,      // Hexagon V..
 
   // Highest ISA version flags
@@ -642,6 +647,7 @@ enum {
   EF_HEXAGON_ISA_V5 = 0x00000040,   // Hexagon V5 ISA
   EF_HEXAGON_ISA_V55 = 0x00000050,  // Hexagon V55 ISA
   EF_HEXAGON_ISA_V60 = 0x00000060,  // Hexagon V60 ISA
+  EF_HEXAGON_ISA_V61 = 0x00000061,  // Hexagon V61 ISA
   EF_HEXAGON_ISA_V62 = 0x00000062,  // Hexagon V62 ISA
   EF_HEXAGON_ISA_V65 = 0x00000065,  // Hexagon V65 ISA
   EF_HEXAGON_ISA_V66 = 0x00000066,  // Hexagon V66 ISA
@@ -651,7 +657,11 @@ enum {
   EF_HEXAGON_ISA_V71 = 0x00000071,  // Hexagon V71 ISA
   EF_HEXAGON_ISA_V73 = 0x00000073,  // Hexagon V73 ISA
   EF_HEXAGON_ISA_V75 = 0x00000075,  // Hexagon V75 ISA
+  EF_HEXAGON_ISA_V77 = 0x00000077,  // Hexagon V77 ISA
   EF_HEXAGON_ISA_V79 = 0x00000079,  // Hexagon V79 ISA
+  EF_HEXAGON_ISA_V81 = 0x00000081,  // Hexagon V81 ISA
+  EF_HEXAGON_ISA_V83 = 0x00000083,  // Hexagon V83 ISA
+  EF_HEXAGON_ISA_V85 = 0x00000085,  // Hexagon V85 ISA
   EF_HEXAGON_ISA = 0x000003ff,      // Hexagon V.. ISA
 };
 
@@ -689,6 +699,9 @@ enum : unsigned {
 // ELF Relocation types for RISC-V
 enum {
 #include "ELFRelocs/RISCV.def"
+#define ELF_RISCV_NONSTANDARD_RELOC(_vendor, name, value) name = value,
+#include "ELFRelocs/RISCV_nonstandard.def"
+#undef ELF_RISCV_NONSTANDARD_RELOC
 };
 
 enum {
@@ -1155,6 +1168,8 @@ enum : unsigned {
   SHT_ARM_ATTRIBUTES = 0x70000003U,
   SHT_ARM_DEBUGOVERLAY = 0x70000004U,
   SHT_ARM_OVERLAYSECTION = 0x70000005U,
+  // Support for AArch64 build attributes
+  SHT_AARCH64_ATTRIBUTES = 0x70000003U,
   // Special aarch64-specific section for MTE support, as described in:
   // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#section-types
   SHT_AARCH64_AUTH_RELR = 0x70000004U,

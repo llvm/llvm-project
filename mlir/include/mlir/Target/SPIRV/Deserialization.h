@@ -15,6 +15,7 @@
 
 #include "mlir/IR/OwningOpRef.h"
 #include "mlir/Support/LLVM.h"
+#include <cstdint>
 
 namespace mlir {
 class MLIRContext;

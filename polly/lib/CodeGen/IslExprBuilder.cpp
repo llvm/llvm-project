@@ -790,3 +790,10 @@ Value *IslExprBuilder::create(__isl_take isl_ast_expr *Expr) {
 
   llvm_unreachable("Unexpected enum value");
 }
+
+llvm::Value *IslExprBuilder::createBool(__isl_take isl_ast_expr *Expr) {
+  Value *Result = create(Expr);
+  if (!Result->getType()->isIntegerTy(1))
+    Result = Builder.CreateICmpNE(Result, Builder.getInt1(false));
+  return Result;
+}

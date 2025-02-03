@@ -575,7 +575,7 @@ let Predicates = [HasRCPC3, HasNEON] in {
 }
 
 // v8.4a FEAT_LRCPC2 patterns
-let Predicates = [HasRCPC_IMMO] in {
+let Predicates = [HasRCPC_IMMO, UseLDAPUR] in {
   // Load-Acquire RCpc Register unscaled loads
   def : Pat<(acquiring_load<atomic_load_az_8>
                (am_unscaled8 GPR64sp:$Rn, simm9:$offset)),
@@ -589,7 +589,9 @@ let Predicates = [HasRCPC_IMMO] in {
   def : Pat<(acquiring_load<atomic_load_64>
                (am_unscaled64 GPR64sp:$Rn, simm9:$offset)),
           (LDAPURXi GPR64sp:$Rn, simm9:$offset)>;
+}
 
+let Predicates = [HasRCPC_IMMO] in {
   // Store-Release Register unscaled stores
   def : Pat<(releasing_store<atomic_store_8>
                (am_unscaled8 GPR64sp:$Rn, simm9:$offset), GPR32:$val),

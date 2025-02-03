@@ -22,7 +22,7 @@ The libc can be built and tested in two different modes:
    static archive will be run with the above command.
 
 #. **The full build mode** - In this mode, the libc is used as the only libc
-   for the user's application. See :ref:`fullbuild_mode` for more details on
+   for the user's application. See :ref:`full_host_build` for more details on
    building and using the libc in this mode. Once configured for a full libc
    build, you can run three kinds of tests:
 

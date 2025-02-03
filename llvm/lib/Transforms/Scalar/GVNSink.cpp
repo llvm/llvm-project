@@ -906,7 +906,7 @@ void GVNSink::sinkLastInstruction(ArrayRef<BasicBlock *> Blocks,
   // and move it to the start of the successor block.
   for (unsigned O = 0, E = I0->getNumOperands(); O != E; ++O)
     I0->getOperandUse(O).set(NewOperands[O]);
-  I0->moveBefore(&*BBEnd->getFirstInsertionPt());
+  I0->moveBefore(BBEnd->getFirstInsertionPt());
 
   // Update metadata and IR flags.
   for (auto *I : Insts)

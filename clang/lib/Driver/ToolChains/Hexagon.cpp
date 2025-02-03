@@ -802,9 +802,7 @@ bool HexagonToolChain::isAutoHVXEnabled(const llvm::opt::ArgList &Args) {
 // Returns the default CPU for Hexagon. This is the default compilation target
 // if no Hexagon processor is selected at the command-line.
 //
-StringRef HexagonToolChain::GetDefaultCPU() {
-  return "hexagonv60";
-}
+StringRef HexagonToolChain::GetDefaultCPU() { return "hexagonv68"; }
 
 StringRef HexagonToolChain::GetTargetCPUVersion(const ArgList &Args) {
   Arg *CpuArg = nullptr;

@@ -320,6 +320,19 @@ define i64 @add_shl_moreOneUse_sh3add(i64 %x) {
   ret i64 %add
 }
 
+;; Covers a case which previously crashed (pr119527)
+define i64 @add_shl_sext(i32 %1) {
+; RV64-LABEL: add_shl_sext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi a1, a0, 3
+; RV64-NEXT:    sllw a0, a1, a0
+; RV64-NEXT:    ret
+  %3 = add i32 %1, 3
+  %4 = shl i32 %3, %1
+  %5 = sext i32 %4 to i64
+  ret i64 %5
+}
+
 define i64 @add_shl_moreOneUse_sh4add(i64 %x) {
 ; RV64-LABEL: add_shl_moreOneUse_sh4add:
 ; RV64:       # %bb.0:

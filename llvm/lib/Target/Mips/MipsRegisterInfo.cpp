@@ -37,7 +37,9 @@ using namespace llvm;
 #define GET_REGINFO_TARGET_DESC
 #include "MipsGenRegisterInfo.inc"
 
-MipsRegisterInfo::MipsRegisterInfo() : MipsGenRegisterInfo(Mips::RA) {}
+MipsRegisterInfo::MipsRegisterInfo() : MipsGenRegisterInfo(Mips::RA) {
+  MIPS_MC::initLLVMToCVRegMapping(this);
+}
 
 unsigned MipsRegisterInfo::getPICCallReg() { return Mips::T9; }
 

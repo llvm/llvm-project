@@ -3,21 +3,11 @@
 // tests a wsloop private + firstprivate + reduction to make sure block structure
 // is handled properly.
 
-omp.private {type = private} @_QFwsloop_privateEi_private_ref_i32 : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x i32 {bindc_name = "i", pinned} : (i64) -> !llvm.ptr
-  omp.yield(%1 : !llvm.ptr)
-}
+omp.private {type = private} @_QFwsloop_privateEi_private_ref_i32 : i32
 
 llvm.func @foo_free(!llvm.ptr)
 
-omp.private {type = firstprivate} @_QFwsloop_privateEc_firstprivate_ref_c8 : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x !llvm.array<1 x i8> {bindc_name = "c", pinned} : (i64) -> !llvm.ptr
-  omp.yield(%1 : !llvm.ptr)
-} copy {
+omp.private {type = firstprivate} @_QFwsloop_privateEc_firstprivate_ref_c8 : !llvm.array<1 x i8> copy {
 ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   %0 = llvm.load %arg0 : !llvm.ptr -> !llvm.array<1 x i8>
   llvm.store %0, %arg1 : !llvm.array<1 x i8>, !llvm.ptr
@@ -63,8 +53,8 @@ llvm.func @wsloop_private_(%arg0: !llvm.ptr {fir.bindc_name = "y"}) attributes {
 
 // First, check that all memory for privates and reductions is allocated.
 // CHECK: omp.par.entry:
-// CHECK:   %[[CHR:.*]] = alloca [1 x i8], i64 1, align 1
-// CHECK:   %[[INT:.*]] = alloca i32, i64 1, align 4
+// CHECK:   %[[CHR:.*]] = alloca [1 x i8], align 1
+// CHECK:   %[[INT:.*]] = alloca i32, align 4
 // CHECK:   %[[FLT:.*]] = alloca float, align 4
 // CHECK:   %[[RED_ARR:.*]] = alloca [1 x ptr], align 8
 // CHECK:   br label %[[LATE_ALLOC_BB:.*]]

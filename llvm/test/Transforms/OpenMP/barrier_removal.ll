@@ -28,7 +28,7 @@ declare void @llvm.assume(i1)
 ; CHECK: @G1 = global i32 42
 ; CHECK: @G2 = addrspace(1) global i32 0
 ;.
-define void @pos_empty_1(i1 %c) "kernel" {
+define amdgpu_kernel void @pos_empty_1(i1 %c) "kernel" {
 ; MODULE-LABEL: define {{[^@]+}}@pos_empty_1
 ; MODULE-SAME: (i1 [[C:%.*]]) #[[ATTR4:[0-9]+]] {
 ; MODULE-NEXT:    ret void
@@ -45,7 +45,7 @@ define void @pos_empty_1(i1 %c) "kernel" {
   call void @llvm.assume(i1 %c)
   ret void
 }
-define void @pos_empty_2() "kernel" {
+define amdgpu_kernel void @pos_empty_2() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@pos_empty_2
 ; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -53,7 +53,7 @@ define void @pos_empty_2() "kernel" {
   call void @aligned_barrier()
   ret void
 }
-define void @pos_empty_3() "kernel" {
+define amdgpu_kernel void @pos_empty_3() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@pos_empty_3
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    ret void
@@ -61,7 +61,7 @@ define void @pos_empty_3() "kernel" {
   call void @llvm.nvvm.barrier0()
   ret void
 }
-define void @pos_empty_4() "kernel" {
+define amdgpu_kernel void @pos_empty_4() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@pos_empty_4
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    ret void
@@ -69,7 +69,7 @@ define void @pos_empty_4() "kernel" {
   call i32 @llvm.nvvm.barrier0.and(i32 0)
   ret void
 }
-define void @pos_empty_5() "kernel" {
+define amdgpu_kernel void @pos_empty_5() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@pos_empty_5
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    ret void
@@ -77,7 +77,7 @@ define void @pos_empty_5() "kernel" {
   call i32 @llvm.nvvm.barrier0.or(i32 0)
   ret void
 }
-define void @pos_empty_6() "kernel" {
+define amdgpu_kernel void @pos_empty_6() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@pos_empty_6
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    ret void
@@ -85,7 +85,7 @@ define void @pos_empty_6() "kernel" {
   call i32 @llvm.nvvm.barrier0.popc(i32 0)
   ret void
 }
-define void @pos_empty_7a() "kernel" {
+define amdgpu_kernel void @pos_empty_7a() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@pos_empty_7a
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    call void @unknown()
@@ -96,7 +96,7 @@ define void @pos_empty_7a() "kernel" {
   ret void
 }
 ; FIXME: We should remove the barrier.
-define void @pos_empty_7b() "kernel" {
+define amdgpu_kernel void @pos_empty_7b() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@pos_empty_7b
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    call void @unknown() #[[ATTR5:[0-9]+]]
@@ -109,7 +109,7 @@ define void @pos_empty_7b() "kernel" {
   call void @unknown()
   ret void
 }
-define void @pos_empty_8(i1 %c) "kernel" {
+define amdgpu_kernel void @pos_empty_8(i1 %c) "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@pos_empty_8
 ; CHECK-SAME: (i1 [[C:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
@@ -126,7 +126,7 @@ t:
 f:
   ret void
 }
-define void @neg_empty_8() "kernel" {
+define amdgpu_kernel void @neg_empty_8() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@neg_empty_8
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    call void @unknown()
@@ -137,7 +137,7 @@ define void @neg_empty_8() "kernel" {
   call void @llvm.amdgcn.s.barrier()
   ret void
 }
-define void @neg_empty_9(i1 %c) "kernel" {
+define amdgpu_kernel void @neg_empty_9(i1 %c) "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@neg_empty_9
 ; CHECK-SAME: (i1 [[C:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
@@ -173,7 +173,7 @@ m:
   ret void
 }
 ; FIXME: We should remove the barrier
-define void @pos_empty_10() "kernel" {
+define amdgpu_kernel void @pos_empty_10() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@pos_empty_10
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    br label [[M:%.*]]
@@ -186,7 +186,7 @@ m:
   call void @llvm.amdgcn.s.barrier()
   ret void
 }
-define void @pos_empty_11() "kernel" {
+define amdgpu_kernel void @pos_empty_11() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@pos_empty_11
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    br label [[M:%.*]]
@@ -206,7 +206,7 @@ define void @empty() {
   ret void
 }
 ; FIXME: We should remove the barrier in the end but not the first one.
-define void @neg_empty_12(i1 %c) "kernel" {
+define amdgpu_kernel void @neg_empty_12(i1 %c) "kernel" {
 ; MODULE-LABEL: define {{[^@]+}}@neg_empty_12
 ; MODULE-SAME: (i1 [[C:%.*]]) #[[ATTR4]] {
 ; MODULE-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
@@ -266,7 +266,7 @@ define void @neg_empty_2() "kernel" {
 @GC1 = constant i32 42
 @GC2 = addrspace(4) global i32 0
 @GPtr4 = addrspace(4) global ptr addrspace(4) null
-define void @pos_constant_loads() "kernel" {
+define amdgpu_kernel void @pos_constant_loads() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@pos_constant_loads
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    [[ARG:%.*]] = load ptr addrspace(4), ptr addrspace(4) @GPtr4, align 8
@@ -296,7 +296,7 @@ define void @pos_constant_loads() "kernel" {
 @GS = addrspace(3) global i32 0
 @GPtr = global ptr null
 ; TODO: We could remove some of the barriers due to the lack of write effects.
-define void @neg_loads() "kernel" {
+define amdgpu_kernel void @neg_loads() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@neg_loads
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    [[ARG:%.*]] = load ptr, ptr @GPtr, align 8
@@ -327,7 +327,7 @@ define void @neg_loads() "kernel" {
 @PG1 = thread_local global i32 42
 @PG2 = addrspace(5) global i32 0
 @GPtr5 = global ptr addrspace(5) null
-define void @pos_priv_mem() "kernel" {
+define amdgpu_kernel void @pos_priv_mem() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@pos_priv_mem
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    [[ARG:%.*]] = load ptr addrspace(5), ptr @GPtr5, align 4
@@ -358,7 +358,7 @@ define void @pos_priv_mem() "kernel" {
 }
 @G1 = global i32 42
 @G2 = addrspace(1) global i32 0
-define void @neg_mem() "kernel" {
+define amdgpu_kernel void @neg_mem() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@neg_mem
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    [[ARG:%.*]] = load ptr, ptr @GPtr, align 8
@@ -388,7 +388,7 @@ define void @neg_mem() "kernel" {
   ret void
 }
 
-define void @pos_multiple() "kernel" {
+define amdgpu_kernel void @pos_multiple() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@pos_multiple
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    ret void
@@ -404,7 +404,7 @@ define void @pos_multiple() "kernel" {
   ret void
 }
 
-define void @multiple_blocks_kernel_1(i1 %c0, i1 %c1) "kernel" {
+define amdgpu_kernel void @multiple_blocks_kernel_1(i1 %c0, i1 %c1) "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@multiple_blocks_kernel_1
 ; CHECK-SAME: (i1 [[C0:%.*]], i1 [[C1:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    br i1 [[C0]], label [[T0:%.*]], label [[F0:%.*]]
@@ -461,7 +461,7 @@ m:
   ret void
 }
 
-define void @multiple_blocks_kernel_2(i1 %c0, i1 %c1, ptr %p) "kernel" {
+define amdgpu_kernel void @multiple_blocks_kernel_2(i1 %c0, i1 %c1, ptr %p) "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@multiple_blocks_kernel_2
 ; CHECK-SAME: (i1 [[C0:%.*]], i1 [[C1:%.*]], ptr [[P:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    store i32 4, ptr [[P]], align 4
@@ -727,7 +727,7 @@ define internal void @barrier_then_write_then_barrier0(ptr %p) {
   call void @aligned_barrier()
   ret void
 }
-define void @multiple_blocks_functions_kernel_effects_0(i1 %c0, i1 %c1, ptr %p) "kernel" {
+define amdgpu_kernel void @multiple_blocks_functions_kernel_effects_0(i1 %c0, i1 %c1, ptr %p) "kernel" {
 ; MODULE-LABEL: define {{[^@]+}}@multiple_blocks_functions_kernel_effects_0
 ; MODULE-SAME: (i1 [[C0:%.*]], i1 [[C1:%.*]], ptr [[P:%.*]]) #[[ATTR4]] {
 ; MODULE-NEXT:    call void @barrier_then_write_then_barrier0(ptr [[P]])
@@ -1040,7 +1040,7 @@ define internal void @callee_barrier() {
   call void @aligned_barrier()
   ret void
 }
-define void @caller_barrier1() "kernel" {
+define amdgpu_kernel void @caller_barrier1() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@caller_barrier1
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    call void @callee_barrier()
@@ -1051,7 +1051,7 @@ define void @caller_barrier1() "kernel" {
   call void @aligned_barrier()
   ret void
 }
-define void @caller_barrier2() "kernel" {
+define amdgpu_kernel void @caller_barrier2() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@caller_barrier2
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    call void @unknown()
@@ -1065,7 +1065,7 @@ define void @caller_barrier2() "kernel" {
   ret void
 }
 
-define void @loop_barrier() "kernel" {
+define amdgpu_kernel void @loop_barrier() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@loop_barrier
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
@@ -1095,7 +1095,7 @@ exit:
   ret void
 }
 
-define void @loop_barrier_end_barriers() "kernel" {
+define amdgpu_kernel void @loop_barrier_end_barriers() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@loop_barrier_end_barriers
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
@@ -1129,7 +1129,7 @@ exit:
   ret void
 }
 
-define void @loop_barrier_end_barriers_unknown() "kernel" {
+define amdgpu_kernel void @loop_barrier_end_barriers_unknown() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@loop_barrier_end_barriers_unknown
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
@@ -1165,7 +1165,7 @@ exit:
   ret void
 }
 
-define void @loop_barrier_store() "kernel" {
+define amdgpu_kernel void @loop_barrier_store() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@loop_barrier_store
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
@@ -1195,7 +1195,7 @@ exit:
   ret void
 }
 
-define void @loop_barrier_end_barriers_store() "kernel" {
+define amdgpu_kernel void @loop_barrier_end_barriers_store() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@loop_barrier_end_barriers_store
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
@@ -1232,37 +1232,7 @@ exit:
 }
 
 !llvm.module.flags = !{!16,!15}
-!nvvm.annotations = !{!0,!1,!2,!3,!4,!5,!6,!7,!8,!9,!10,!11,!12,!13,!14,!17,!18,!19,!20,!21,!22,!23,!24,!25,!26,!27,!28,!29,!30}
 
-!0 = !{ptr @pos_empty_1, !"kernel", i32 1}
-!1 = !{ptr @pos_empty_2, !"kernel", i32 1}
-!2 = !{ptr @pos_empty_3, !"kernel", i32 1}
-!3 = !{ptr @pos_empty_4, !"kernel", i32 1}
-!4 = !{ptr @pos_empty_5, !"kernel", i32 1}
-!5 = !{ptr @pos_empty_6, !"kernel", i32 1}
-!17 = !{ptr @pos_empty_7a, !"kernel", i32 1}
-!18 = !{ptr @pos_empty_7b, !"kernel", i32 1}
-!23 = !{ptr @pos_empty_8, !"kernel", i32 1}
-!24 = !{ptr @caller_barrier1, !"kernel", i32 1}
-!25 = !{ptr @caller_barrier2, !"kernel", i32 1}
-!26 = !{ptr @loop_barrier, !"kernel", i32 1}
-!27 = !{ptr @loop_barrier_end_barriers, !"kernel", i32 1}
-!28 = !{ptr @loop_barrier_end_barriers_unknown, !"kernel", i32 1}
-!29 = !{ptr @loop_barrier_store, !"kernel", i32 1}
-!30 = !{ptr @loop_barrier_end_barriers_store, !"kernel", i32 1}
-!6 = !{ptr @neg_empty_8, !"kernel", i32 1}
-!19 = !{ptr @neg_empty_9, !"kernel", i32 1}
-!20 = !{ptr @pos_empty_10, !"kernel", i32 1}
-!21 = !{ptr @pos_empty_11, !"kernel", i32 1}
-!22 = !{ptr @neg_empty_12, !"kernel", i32 1}
-!7 = !{ptr @pos_constant_loads, !"kernel", i32 1}
-!8 = !{ptr @neg_loads, !"kernel", i32 1}
-!9 = !{ptr @pos_priv_mem, !"kernel", i32 1}
-!10 = !{ptr @neg_mem, !"kernel", i32 1}
-!11 = !{ptr @pos_multiple, !"kernel", i32 1}
-!12 = !{ptr @multiple_blocks_kernel_1, !"kernel", i32 1}
-!13 = !{ptr @multiple_blocks_kernel_2, !"kernel", i32 1}
-!14 = !{ptr @multiple_blocks_functions_kernel_effects_0, !"kernel", i32 1}
 !15 = !{i32 7, !"openmp", i32 50}
 !16 = !{i32 7, !"openmp-device", i32 50}
 ;.
@@ -1282,65 +1252,7 @@ exit:
 ;.
 ; MODULE: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 ; MODULE: [[META1:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-; MODULE: [[META2:![0-9]+]] = !{ptr @pos_empty_1, !"kernel", i32 1}
-; MODULE: [[META3:![0-9]+]] = !{ptr @pos_empty_2, !"kernel", i32 1}
-; MODULE: [[META4:![0-9]+]] = !{ptr @pos_empty_3, !"kernel", i32 1}
-; MODULE: [[META5:![0-9]+]] = !{ptr @pos_empty_4, !"kernel", i32 1}
-; MODULE: [[META6:![0-9]+]] = !{ptr @pos_empty_5, !"kernel", i32 1}
-; MODULE: [[META7:![0-9]+]] = !{ptr @pos_empty_6, !"kernel", i32 1}
-; MODULE: [[META8:![0-9]+]] = !{ptr @neg_empty_8, !"kernel", i32 1}
-; MODULE: [[META9:![0-9]+]] = !{ptr @pos_constant_loads, !"kernel", i32 1}
-; MODULE: [[META10:![0-9]+]] = !{ptr @neg_loads, !"kernel", i32 1}
-; MODULE: [[META11:![0-9]+]] = !{ptr @pos_priv_mem, !"kernel", i32 1}
-; MODULE: [[META12:![0-9]+]] = !{ptr @neg_mem, !"kernel", i32 1}
-; MODULE: [[META13:![0-9]+]] = !{ptr @pos_multiple, !"kernel", i32 1}
-; MODULE: [[META14:![0-9]+]] = !{ptr @multiple_blocks_kernel_1, !"kernel", i32 1}
-; MODULE: [[META15:![0-9]+]] = !{ptr @multiple_blocks_kernel_2, !"kernel", i32 1}
-; MODULE: [[META16:![0-9]+]] = !{ptr @multiple_blocks_functions_kernel_effects_0, !"kernel", i32 1}
-; MODULE: [[META17:![0-9]+]] = !{ptr @pos_empty_7a, !"kernel", i32 1}
-; MODULE: [[META18:![0-9]+]] = !{ptr @pos_empty_7b, !"kernel", i32 1}
-; MODULE: [[META19:![0-9]+]] = !{ptr @neg_empty_9, !"kernel", i32 1}
-; MODULE: [[META20:![0-9]+]] = !{ptr @pos_empty_10, !"kernel", i32 1}
-; MODULE: [[META21:![0-9]+]] = !{ptr @pos_empty_11, !"kernel", i32 1}
-; MODULE: [[META22:![0-9]+]] = !{ptr @neg_empty_12, !"kernel", i32 1}
-; MODULE: [[META23:![0-9]+]] = !{ptr @pos_empty_8, !"kernel", i32 1}
-; MODULE: [[META24:![0-9]+]] = !{ptr @caller_barrier1, !"kernel", i32 1}
-; MODULE: [[META25:![0-9]+]] = !{ptr @caller_barrier2, !"kernel", i32 1}
-; MODULE: [[META26:![0-9]+]] = !{ptr @loop_barrier, !"kernel", i32 1}
-; MODULE: [[META27:![0-9]+]] = !{ptr @loop_barrier_end_barriers, !"kernel", i32 1}
-; MODULE: [[META28:![0-9]+]] = !{ptr @loop_barrier_end_barriers_unknown, !"kernel", i32 1}
-; MODULE: [[META29:![0-9]+]] = !{ptr @loop_barrier_store, !"kernel", i32 1}
-; MODULE: [[META30:![0-9]+]] = !{ptr @loop_barrier_end_barriers_store, !"kernel", i32 1}
 ;.
 ; CGSCC: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 ; CGSCC: [[META1:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-; CGSCC: [[META2:![0-9]+]] = !{ptr @pos_empty_1, !"kernel", i32 1}
-; CGSCC: [[META3:![0-9]+]] = !{ptr @pos_empty_2, !"kernel", i32 1}
-; CGSCC: [[META4:![0-9]+]] = !{ptr @pos_empty_3, !"kernel", i32 1}
-; CGSCC: [[META5:![0-9]+]] = !{ptr @pos_empty_4, !"kernel", i32 1}
-; CGSCC: [[META6:![0-9]+]] = !{ptr @pos_empty_5, !"kernel", i32 1}
-; CGSCC: [[META7:![0-9]+]] = !{ptr @pos_empty_6, !"kernel", i32 1}
-; CGSCC: [[META8:![0-9]+]] = !{ptr @neg_empty_8, !"kernel", i32 1}
-; CGSCC: [[META9:![0-9]+]] = !{ptr @pos_constant_loads, !"kernel", i32 1}
-; CGSCC: [[META10:![0-9]+]] = !{ptr @neg_loads, !"kernel", i32 1}
-; CGSCC: [[META11:![0-9]+]] = !{ptr @pos_priv_mem, !"kernel", i32 1}
-; CGSCC: [[META12:![0-9]+]] = !{ptr @neg_mem, !"kernel", i32 1}
-; CGSCC: [[META13:![0-9]+]] = !{ptr @pos_multiple, !"kernel", i32 1}
-; CGSCC: [[META14:![0-9]+]] = !{ptr @multiple_blocks_kernel_1, !"kernel", i32 1}
-; CGSCC: [[META15:![0-9]+]] = !{ptr @multiple_blocks_kernel_2, !"kernel", i32 1}
-; CGSCC: [[META16:![0-9]+]] = !{ptr @multiple_blocks_functions_kernel_effects_0, !"kernel", i32 1}
-; CGSCC: [[META17:![0-9]+]] = !{ptr @pos_empty_7a, !"kernel", i32 1}
-; CGSCC: [[META18:![0-9]+]] = !{ptr @pos_empty_7b, !"kernel", i32 1}
-; CGSCC: [[META19:![0-9]+]] = !{ptr @neg_empty_9, !"kernel", i32 1}
-; CGSCC: [[META20:![0-9]+]] = !{ptr @pos_empty_10, !"kernel", i32 1}
-; CGSCC: [[META21:![0-9]+]] = !{ptr @pos_empty_11, !"kernel", i32 1}
-; CGSCC: [[META22:![0-9]+]] = !{ptr @neg_empty_12, !"kernel", i32 1}
-; CGSCC: [[META23:![0-9]+]] = !{ptr @pos_empty_8, !"kernel", i32 1}
-; CGSCC: [[META24:![0-9]+]] = !{ptr @caller_barrier1, !"kernel", i32 1}
-; CGSCC: [[META25:![0-9]+]] = !{ptr @caller_barrier2, !"kernel", i32 1}
-; CGSCC: [[META26:![0-9]+]] = !{ptr @loop_barrier, !"kernel", i32 1}
-; CGSCC: [[META27:![0-9]+]] = !{ptr @loop_barrier_end_barriers, !"kernel", i32 1}
-; CGSCC: [[META28:![0-9]+]] = !{ptr @loop_barrier_end_barriers_unknown, !"kernel", i32 1}
-; CGSCC: [[META29:![0-9]+]] = !{ptr @loop_barrier_store, !"kernel", i32 1}
-; CGSCC: [[META30:![0-9]+]] = !{ptr @loop_barrier_end_barriers_store, !"kernel", i32 1}
 ;.

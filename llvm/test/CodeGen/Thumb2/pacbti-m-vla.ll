@@ -46,8 +46,8 @@ define hidden i32 @f(i32 %n) local_unnamed_addr #0 {
 ; CHECK-NEXT:    cmp r5, #1
 ; CHECK-NEXT:    blt .LBB0_3
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
-; CHECK-NEXT:    subs r0, r5, #1
 ; CHECK-NEXT:    and r12, r5, #3
+; CHECK-NEXT:    subs r0, r5, #1
 ; CHECK-NEXT:    cmp r0, #3
 ; CHECK-NEXT:    bhs .LBB0_4
 ; CHECK-NEXT:  @ %bb.2:

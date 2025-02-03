@@ -71,12 +71,14 @@
 # DIS-NEXT:   20054: { 	r14 = asr(r14,#2)
 # DIS-NEXT:   20058:   	jumpr r28 }
 # DIS-NEXT:   2005c: { 	trap0(#219) }
-## bar's plt slot
+# DIS-EMPTY:
+# DIS-NEXT: 00020060 <bar@plt>:
 # DIS-NEXT:   20060: { 	immext(#131072)
 # DIS-NEXT:   20064:   	r14 = add(pc,##131096) }
 # DIS-NEXT:   20068: { 	r28 = memw(r14+#0) }
 # DIS-NEXT:   2006c: { 	jumpr r28 }
-## weak's plt slot
+# DIS-EMPTY:
+# DIS-NEXT: 00020070 <weak@plt>:
 # DIS-NEXT:   20070: { 	immext(#131072)
 # DIS-NEXT:   20074:   	r14 = add(pc,##131084) }
 # DIS-NEXT:   20078: { 	r28 = memw(r14+#0) }

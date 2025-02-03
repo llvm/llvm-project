@@ -1537,9 +1537,9 @@ void JSONNodeDumper::VisitExprWithCleanups(const ExprWithCleanups *EWC) {
   if (EWC->getNumObjects()) {
     JOS.attributeArray("cleanups", [this, EWC] {
       for (const ExprWithCleanups::CleanupObject &CO : EWC->getObjects())
-        if (auto *BD = CO.dyn_cast<BlockDecl *>()) {
+        if (auto *BD = dyn_cast<BlockDecl *>(CO)) {
           JOS.value(createBareDeclRef(BD));
-        } else if (auto *CLE = CO.dyn_cast<CompoundLiteralExpr *>()) {
+        } else if (auto *CLE = dyn_cast<CompoundLiteralExpr *>(CO)) {
           llvm::json::Object Obj;
           Obj["id"] = createPointerRepresentation(CLE);
           Obj["kind"] = CLE->getStmtClassName();

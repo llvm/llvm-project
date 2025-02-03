@@ -1195,7 +1195,7 @@ llvm.func @dereferenceableornullattr_decl(!llvm.ptr {llvm.dereferenceable_or_nul
 // CHECK-LABEL: declare void @inregattr_decl(ptr inreg)
 llvm.func @inregattr_decl(!llvm.ptr {llvm.inreg})
 
-// CHECK-LABEL: declare void @nocaptureattr_decl(ptr nocapture)
+// CHECK-LABEL: declare void @nocaptureattr_decl(ptr captures(none))
 llvm.func @nocaptureattr_decl(!llvm.ptr {llvm.nocapture})
 
 // CHECK-LABEL: declare void @nofreeattr_decl(ptr nofree)

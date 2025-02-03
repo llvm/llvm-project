@@ -1097,8 +1097,7 @@ bool PolynomialMultiplyRecognize::promoteTypes(BasicBlock *LoopB,
       promoteTo(In, DestTy, LoopB);
 
   // Fix up the PHI nodes in the exit block.
-  Instruction *EndI = ExitB->getFirstNonPHI();
-  BasicBlock::iterator End = EndI ? EndI->getIterator() : ExitB->end();
+  BasicBlock::iterator End = ExitB->getFirstNonPHIIt();
   for (auto I = ExitB->begin(); I != End; ++I) {
     PHINode *P = dyn_cast<PHINode>(I);
     if (!P)
@@ -1796,6 +1795,8 @@ bool PolynomialMultiplyRecognize::recognize() {
     IterCount = CV->getValue()->getZExtValue() + 1;
 
   Value *CIV = getCountIV(LoopB);
+  if (CIV == nullptr)
+    return false;
   ParsedValues PV;
   Simplifier PreSimp;
   PV.IterCount = IterCount;

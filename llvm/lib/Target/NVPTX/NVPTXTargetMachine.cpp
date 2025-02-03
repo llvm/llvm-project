@@ -21,6 +21,7 @@
 #include "NVPTXTargetObjectFile.h"
 #include "NVPTXTargetTransformInfo.h"
 #include "TargetInfo/NVPTXTargetInfo.h"
+#include "llvm/Analysis/KernelInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -255,7 +256,10 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
   PB.registerPipelineStartEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
         FunctionPassManager FPM;
-        FPM.addPass(NVVMReflectPass(Subtarget.getSmVersion()));
+        // We do not want to fold out calls to nvvm.reflect early if the user
+        // has not provided a target architecture just yet.
+        if (Subtarget.hasTargetName())
+          FPM.addPass(NVVMReflectPass(Subtarget.getSmVersion()));
         // Note: NVVMIntrRangePass was causing numerical discrepancies at one
         // point, if issues crop up, consider disabling.
         FPM.addPass(NVVMIntrRangePass());
@@ -263,6 +267,15 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           FPM.addPass(NVPTXCopyByValArgsPass());
         PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       });
+
+  if (!NoKernelInfoEndLTO) {
+    PB.registerFullLinkTimeOptimizationLastEPCallback(
+        [this](ModulePassManager &PM, OptimizationLevel Level) {
+          FunctionPassManager FPM;
+          FPM.addPass(KernelInfoPrinter(this));
+          PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+        });
+  }
 }
 
 TargetTransformInfo

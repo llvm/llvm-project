@@ -4,7 +4,7 @@
 // CHECK-NEXT:HLSLResourceClassAttr 0x[[CB:[0-9a-f]+]] {{.*}} Implicit CBuffer
 // CHECK-NEXT:HLSLResourceAttr 0x[[CB:[0-9a-f]+]] {{.*}} Implicit CBuffer
 // CHECK-NEXT:HLSLResourceBindingAttr 0x{{[0-9a-f]+}} <col:14> "b3" "space2"
-// CHECK-NEXT:VarDecl 0x[[A:[0-9a-f]+]] {{.*}} col:9 used a 'float'
+// CHECK-NEXT:VarDecl 0x[[A:[0-9a-f]+]] {{.*}} col:9 used a 'hlsl_constant float'
 cbuffer CB : register(b3, space2) {
   float a;
 }
@@ -13,7 +13,7 @@ cbuffer CB : register(b3, space2) {
 // CHECK-NEXT:HLSLResourceClassAttr 0x[[CB:[0-9a-f]+]] {{.*}} Implicit SRV
 // CHECK-NEXT:HLSLResourceAttr 0x[[CB:[0-9a-f]+]] {{.*}} Implicit TBuffer
 // CHECK-NEXT:HLSLResourceBindingAttr 0x{{[0-9a-f]+}} <col:14> "t2" "space1"
-// CHECK-NEXT:VarDecl 0x[[B:[0-9a-f]+]] {{.*}} col:9 used b 'float'
+// CHECK-NEXT:VarDecl 0x[[B:[0-9a-f]+]] {{.*}} col:9 used b 'hlsl_constant float'
 tbuffer TB : register(t2, space1) {
   float b;
 }
@@ -21,9 +21,9 @@ tbuffer TB : register(t2, space1) {
 float foo() {
 // CHECK: BinaryOperator 0x{{[0-9a-f]+}} <col:10, col:14> 'float' '+'
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-f]+}} <col:10> 'float' <LValueToRValue>
-// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-f]+}} <col:10> 'float' lvalue Var 0x[[A]] 'a' 'float'
+// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-f]+}} <col:10> 'hlsl_constant float' lvalue Var 0x[[A]] 'a' 'hlsl_constant float'
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-f]+}} <col:14> 'float' <LValueToRValue>
-// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-f]+}} <col:14> 'float' lvalue Var 0x[[B]] 'b' 'float'
+// CHECK-NEXT: DeclRefExpr 0x{{[0-9a-f]+}} <col:14> 'hlsl_constant float' lvalue Var 0x[[B]] 'b' 'hlsl_constant float'
   return a + b;
 }
 

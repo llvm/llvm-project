@@ -206,10 +206,12 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
     Value base = op.getBase();
 
     // vector.load requires the most minor memref dim to have unit stride
+    // (unless reading exactly 1 element)
     if (auto memType = dyn_cast<MemRefType>(base.getType())) {
       if (auto stridesAttr =
               dyn_cast_if_present<StridedLayoutAttr>(memType.getLayout())) {
-        if (stridesAttr.getStrides().back() != 1)
+        if (stridesAttr.getStrides().back() != 1 &&
+            resultTy.getNumElements() != 1)
           return failure();
       }
     }

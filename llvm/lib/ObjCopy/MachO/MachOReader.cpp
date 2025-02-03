@@ -184,6 +184,10 @@ Error MachOReader::readLoadCommands(Object &O) const {
     case MachO::LC_DYLD_CHAINED_FIXUPS:
       O.ChainedFixupsCommandIndex = O.LoadCommands.size();
       break;
+    case MachO::LC_ENCRYPTION_INFO:
+    case MachO::LC_ENCRYPTION_INFO_64:
+      O.EncryptionInfoCommandIndex = O.LoadCommands.size();
+      break;
     }
 #define HANDLE_LOAD_COMMAND(LCName, LCValue, LCStruct)                         \
   case MachO::LCName:                                                          \

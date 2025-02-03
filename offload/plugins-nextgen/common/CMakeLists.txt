@@ -21,7 +21,7 @@ if (NOT LLVM_LINK_LLVM_DYLIB)
   endforeach()
 endif()
 
-# Include the RPC server from the `libc` project if availible.
+# Include the RPC server from the `libc` project if available.
 include(FindLibcCommonUtils)
 target_link_libraries(PluginCommon PRIVATE llvm-libc-common-utilities)
 if(TARGET llvmlibc_rpc_server AND ${LIBOMPTARGET_GPU_LIBC_SUPPORT})

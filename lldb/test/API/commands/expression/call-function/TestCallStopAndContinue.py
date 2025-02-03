@@ -31,7 +31,7 @@ class ExprCommandCallStopContinueTestCase(TestBase):
         self.expect(
             "expr -i false -- returnsFive()",
             error=True,
-            substrs=["Execution was interrupted, reason: breakpoint"],
+            substrs=["Expression execution hit a breakpoint: breakpoint"],
         )
 
         self.runCmd("continue", "Continue completed")

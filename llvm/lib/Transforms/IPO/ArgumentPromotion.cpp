@@ -259,8 +259,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
             // all promoted loads.
             if (LI->hasMetadata(LLVMContext::MD_noundef))
               LI->copyMetadata(*Pair.second.MustExecInstr,
-                               {LLVMContext::MD_range, LLVMContext::MD_nonnull,
-                                LLVMContext::MD_align});
+                               Metadata::PoisonGeneratingIDs);
           }
           Args.push_back(LI);
           ArgAttrVec.push_back(AttributeSet());

@@ -1,10 +1,11 @@
 ; RUN: opt -S -dxil-op-lower < %s | FileCheck %s
 
 ; Make sure dxil operation function calls for round are generated for float and half.
-; CHECK:call half @dx.op.tertiary.f16(i32 46, half %{{.*}}, half %{{.*}}, half %{{.*}})
-; CHECK:call float @dx.op.tertiary.f32(i32 46, float %{{.*}}, float %{{.*}}, float %{{.*}})
-; CHECK:call double @dx.op.tertiary.f64(i32 46, double %{{.*}}, double %{{.*}}, double %{{.*}})
+; CHECK:call half @dx.op.tertiary.f16(i32 46, half %{{.*}}, half %{{.*}}, half %{{.*}}) #[[#ATTR:]]
+; CHECK:call float @dx.op.tertiary.f32(i32 46, float %{{.*}}, float %{{.*}}, float %{{.*}}) #[[#ATTR]]
+; CHECK:call double @dx.op.tertiary.f64(i32 46, double %{{.*}}, double %{{.*}}, double %{{.*}}) #[[#ATTR]]
 
+; CHECK: attributes #[[#ATTR]] = {{{.*}} memory(none) {{.*}}}
 
 target datalayout = "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:32-f64:64-n8:16:32:64"
 target triple = "dxil-pc-shadermodel6.7-library"

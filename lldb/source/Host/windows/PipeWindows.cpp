@@ -71,9 +71,8 @@ Status PipeWindows::CreateNew(bool child_process_inherit) {
   // cannot get overlapped i/o on Windows without using a named pipe.  So we
   // synthesize a unique name.
   uint32_t serial = g_pipe_serial.fetch_add(1);
-  std::string pipe_name;
-  llvm::raw_string_ostream pipe_name_stream(pipe_name);
-  pipe_name_stream << "lldb.pipe." << ::GetCurrentProcessId() << "." << serial;
+  std::string pipe_name = llvm::formatv(
+      "lldb.pipe.{0}.{1}.{2}", GetCurrentProcessId(), &g_pipe_serial, serial);
 
   return CreateNew(pipe_name.c_str(), child_process_inherit);
 }

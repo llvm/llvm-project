@@ -33,6 +33,7 @@ public:
   RT_API_ATTRS void HasEndLabel() { flags_ |= hasEnd; }
   RT_API_ATTRS void HasEorLabel() { flags_ |= hasEor; }
   RT_API_ATTRS void HasIoMsg() { flags_ |= hasIoMsg; }
+  RT_API_ATTRS void HasRec() { flags_ |= hasRec; }
 
   RT_API_ATTRS bool InError() const {
     return ioStat_ != IostatOk || pendingError_ != IostatOk;
@@ -70,6 +71,7 @@ private:
     hasEnd = 4, // END=
     hasEor = 8, // EOR=
     hasIoMsg = 16, // IOMSG=
+    hasRec = 32, // REC=
   };
   std::uint8_t flags_{0};
   int ioStat_{IostatOk};

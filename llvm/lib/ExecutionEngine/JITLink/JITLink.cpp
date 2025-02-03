@@ -507,32 +507,13 @@ createLinkGraphFromObject(MemoryBufferRef ObjectBuffer,
 }
 
 std::unique_ptr<LinkGraph>
-absoluteSymbolsLinkGraph(const Triple &TT,
-                         std::shared_ptr<orc::SymbolStringPool> SSP,
+absoluteSymbolsLinkGraph(Triple TT, std::shared_ptr<orc::SymbolStringPool> SSP,
                          orc::SymbolMap Symbols) {
-  unsigned PointerSize;
-  endianness Endianness =
-      TT.isLittleEndian() ? endianness::little : endianness::big;
-  switch (TT.getArch()) {
-  case Triple::aarch64:
-  case llvm::Triple::riscv64:
-  case Triple::x86_64:
-    PointerSize = 8;
-    break;
-  case llvm::Triple::arm:
-  case llvm::Triple::riscv32:
-  case llvm::Triple::x86:
-    PointerSize = 4;
-    break;
-  default:
-    llvm::report_fatal_error("unhandled target architecture");
-  }
-
   static std::atomic<uint64_t> Counter = {0};
   auto Index = Counter.fetch_add(1, std::memory_order_relaxed);
   auto G = std::make_unique<LinkGraph>(
-      "<Absolute Symbols " + std::to_string(Index) + ">", std::move(SSP), TT,
-      PointerSize, Endianness, /*GetEdgeKindName=*/nullptr);
+      "<Absolute Symbols " + std::to_string(Index) + ">", std::move(SSP),
+      std::move(TT), SubtargetFeatures(), getGenericEdgeKindName);
   for (auto &[Name, Def] : Symbols) {
     auto &Sym =
         G->addAbsoluteSymbol(*Name, Def.getAddress(), /*Size=*/0,

@@ -1440,15 +1440,20 @@ Error WasmObjectFile::parseExportSection(ReadContext &Ctx) {
     Info.Flags = 0;
     switch (Ex.Kind) {
     case wasm::WASM_EXTERNAL_FUNCTION: {
-      if (!isDefinedFunctionIndex(Ex.Index))
+      if (!isValidFunctionIndex(Ex.Index))
         return make_error<GenericBinaryError>("invalid function export",
                                               object_error::parse_failed);
-      getDefinedFunction(Ex.Index).ExportName = Ex.Name;
       Info.Kind = wasm::WASM_SYMBOL_TYPE_FUNCTION;
       Info.ElementIndex = Ex.Index;
-      unsigned FuncIndex = Info.ElementIndex - NumImportedFunctions;
-      wasm::WasmFunction &Function = Functions[FuncIndex];
-      Signature = &Signatures[Function.SigIndex];
+      if (isDefinedFunctionIndex(Ex.Index)) {
+        getDefinedFunction(Ex.Index).ExportName = Ex.Name;
+        unsigned FuncIndex = Info.ElementIndex - NumImportedFunctions;
+        wasm::WasmFunction &Function = Functions[FuncIndex];
+        Signature = &Signatures[Function.SigIndex];
+      }
+      // Else the function is imported. LLVM object files don't use this
+      // pattern and we still treat this as an undefined symbol, but we want to
+      // parse it without crashing.
       break;
     }
     case wasm::WASM_EXTERNAL_GLOBAL: {
@@ -1645,17 +1650,25 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
       return make_error<GenericBinaryError>(
           "Unsupported flags for element segment", object_error::parse_failed);
 
-    bool IsPassive = (Segment.Flags & wasm::WASM_ELEM_SEGMENT_IS_PASSIVE) != 0;
-    bool IsDeclarative =
-        IsPassive && (Segment.Flags & wasm::WASM_ELEM_SEGMENT_IS_DECLARATIVE);
+    wasm::ElemSegmentMode Mode;
+    if ((Segment.Flags & wasm::WASM_ELEM_SEGMENT_IS_PASSIVE) == 0) {
+      Mode = wasm::ElemSegmentMode::Active;
+    } else if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_IS_DECLARATIVE) {
+      Mode = wasm::ElemSegmentMode::Declarative;
+    } else {
+      Mode = wasm::ElemSegmentMode::Passive;
+    }
     bool HasTableNumber =
-        !IsPassive &&
+        Mode == wasm::ElemSegmentMode::Active &&
         (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER);
+    bool HasElemKind =
+        (Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_DESC) &&
+        !(Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_INIT_EXPRS);
+    bool HasElemType =
+        (Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_DESC) &&
+        (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_INIT_EXPRS);
     bool HasInitExprs =
         (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_INIT_EXPRS);
-    bool HasElemKind =
-        (Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND) &&
-        !HasInitExprs;
 
     if (HasTableNumber)
       Segment.TableNumber = readVaruint32(Ctx);
@@ -1666,7 +1679,7 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
       return make_error<GenericBinaryError>("invalid TableNumber",
                                             object_error::parse_failed);
 
-    if (IsPassive || IsDeclarative) {
+    if (Mode != wasm::ElemSegmentMode::Active) {
       Segment.Offset.Extended = false;
       Segment.Offset.Inst.Opcode = wasm::WASM_OPCODE_I32_CONST;
       Segment.Offset.Inst.Value.Int32 = 0;
@@ -1692,7 +1705,7 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
                                                 object_error::parse_failed);
         Segment.ElemKind = wasm::ValType::FUNCREF;
       }
-    } else if (HasInitExprs) {
+    } else if (HasElemType) {
       auto ElemType = parseValType(Ctx, readVaruint32(Ctx));
       Segment.ElemKind = ElemType;
     } else {

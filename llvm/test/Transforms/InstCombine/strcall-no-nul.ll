@@ -268,7 +268,7 @@ define void @fold_strcspn_past_end(ptr %poff) {
 
 define i32 @fold_atoi_past_end() {
 ; CHECK-LABEL: @fold_atoi_past_end(
-; CHECK-NEXT:    [[I:%.*]] = call i32 @atoi(ptr nocapture nonnull getelementptr inbounds nuw (i8, ptr @a5, i64 5))
+; CHECK-NEXT:    [[I:%.*]] = call i32 @atoi(ptr nonnull getelementptr inbounds nuw (i8, ptr @a5, i64 5))
 ; CHECK-NEXT:    ret i32 [[I]]
 ;
   %p5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
@@ -282,21 +282,21 @@ define i32 @fold_atoi_past_end() {
 
 define void @fold_atol_strtol_past_end(ptr %ps) {
 ; CHECK-LABEL: @fold_atol_strtol_past_end(
-; CHECK-NEXT:    [[I0:%.*]] = call i64 @atol(ptr nocapture nonnull getelementptr inbounds nuw (i8, ptr @a5, i64 5))
+; CHECK-NEXT:    [[I0:%.*]] = call i64 @atol(ptr nonnull getelementptr inbounds nuw (i8, ptr @a5, i64 5))
 ; CHECK-NEXT:    store i64 [[I0]], ptr [[PS:%.*]], align 4
-; CHECK-NEXT:    [[I1:%.*]] = call i64 @atoll(ptr nocapture nonnull getelementptr inbounds nuw (i8, ptr @a5, i64 5))
+; CHECK-NEXT:    [[I1:%.*]] = call i64 @atoll(ptr nonnull getelementptr inbounds nuw (i8, ptr @a5, i64 5))
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[PS]], i64 8
 ; CHECK-NEXT:    store i64 [[I1]], ptr [[P1]], align 4
-; CHECK-NEXT:    [[I2:%.*]] = call i64 @strtol(ptr nocapture nonnull getelementptr inbounds nuw (i8, ptr @a5, i64 5), ptr null, i32 0)
+; CHECK-NEXT:    [[I2:%.*]] = call i64 @strtol(ptr nonnull captures(none) getelementptr inbounds nuw (i8, ptr @a5, i64 5), ptr null, i32 0)
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[PS]], i64 16
 ; CHECK-NEXT:    store i64 [[I2]], ptr [[P2]], align 4
-; CHECK-NEXT:    [[I3:%.*]] = call i64 @strtoul(ptr nocapture nonnull getelementptr inbounds nuw (i8, ptr @a5, i64 5), ptr null, i32 8)
+; CHECK-NEXT:    [[I3:%.*]] = call i64 @strtoul(ptr nonnull captures(none) getelementptr inbounds nuw (i8, ptr @a5, i64 5), ptr null, i32 8)
 ; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[PS]], i64 24
 ; CHECK-NEXT:    store i64 [[I3]], ptr [[P3]], align 4
-; CHECK-NEXT:    [[I4:%.*]] = call i64 @strtoll(ptr nocapture nonnull getelementptr inbounds nuw (i8, ptr @a5, i64 5), ptr null, i32 10)
+; CHECK-NEXT:    [[I4:%.*]] = call i64 @strtoll(ptr nonnull captures(none) getelementptr inbounds nuw (i8, ptr @a5, i64 5), ptr null, i32 10)
 ; CHECK-NEXT:    [[P4:%.*]] = getelementptr i8, ptr [[PS]], i64 32
 ; CHECK-NEXT:    store i64 [[I4]], ptr [[P4]], align 4
-; CHECK-NEXT:    [[I5:%.*]] = call i64 @strtoul(ptr nocapture nonnull getelementptr inbounds nuw (i8, ptr @a5, i64 5), ptr null, i32 16)
+; CHECK-NEXT:    [[I5:%.*]] = call i64 @strtoul(ptr nonnull captures(none) getelementptr inbounds nuw (i8, ptr @a5, i64 5), ptr null, i32 16)
 ; CHECK-NEXT:    [[P5:%.*]] = getelementptr i8, ptr [[PS]], i64 40
 ; CHECK-NEXT:    store i64 [[I5]], ptr [[P5]], align 4
 ; CHECK-NEXT:    ret void

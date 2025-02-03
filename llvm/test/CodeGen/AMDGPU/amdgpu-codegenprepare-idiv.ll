@@ -10041,11 +10041,9 @@ define i64 @udiv_i64_gt_smax(i8 %size) {
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_mov_b32 s6, 0xcccccccc
 ; GFX9-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v5, s4, v[0:1]
-; GFX9-NEXT:    v_mov_b32_e32 v6, v3
-; GFX9-NEXT:    v_mov_b32_e32 v3, v1
-; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v4, s6, v[2:3]
-; GFX9-NEXT:    v_mov_b32_e32 v0, v1
-; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v6, v0
+; GFX9-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v4, s6, v[0:1]
+; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v3, v1
 ; GFX9-NEXT:    v_addc_co_u32_e64 v1, s[4:5], 0, 0, vcc
 ; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v5, s6, v[0:1]
 ; GFX9-NEXT:    v_alignbit_b32 v0, v1, v0, 3

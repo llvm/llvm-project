@@ -25,6 +25,7 @@
 #include <__type_traits/is_trivially_copyable.h>
 #include <__type_traits/is_trivially_lexicographically_comparable.h>
 #include <__type_traits/remove_cv.h>
+#include <__utility/element_count.h>
 #include <__utility/is_pointer_in_range.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -32,10 +33,6 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-// Type used to encode that a function takes an integer that represents a number
-// of elements as opposed to a number of bytes.
-enum class __element_count : size_t {};
 
 template <class _Tp>
 inline const bool __is_char_type = false;

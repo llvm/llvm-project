@@ -1,0 +1,184 @@
+# RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme2 -force-streaming -verify-machineinstrs -enable-subreg-liveness -start-before=greedy %s -o - | FileCheck %s
+
+# No available group of four strided x4 registers, fall back on default allocation order
+---
+name:            form_4x_tuple_many_live
+tracksRegLiveness: true
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 32, alignment: 16,
+      stack-id: scalable-vector, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $z0, $z17
+
+    ; CHECK-LABEL: form_4x_tuple_many_live
+    ; CHECK: stp d11, d10, [sp, #-48]!
+    ; CHECK-NEXT: stp d9, d8, [sp, #16]
+    ; CHECK-NEXT: str x29, [sp, #32]
+    ; CHECK-NEXT: addvl sp, sp, #-2
+    ; CHECK-NEXT: .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x30, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 48 + 16 * VG
+    ; CHECK-NEXT: .cfi_offset w29, -16
+    ; CHECK-NEXT: .cfi_offset b8, -24
+    ; CHECK-NEXT: .cfi_offset b9, -32
+    ; CHECK-NEXT: .cfi_offset b10, -40
+    ; CHECK-NEXT: .cfi_offset b11, -48
+    ; CHECK-NEXT: lsl x9, x1, #1
+    ; CHECK-NEXT: ptrue pn8.b
+    ; CHECK-NEXT: mov w8, wzr
+    ; CHECK-NEXT: ld1b { z16.b, z20.b, z24.b, z28.b }, pn8/z, [x0]
+    ; CHECK-NEXT: ld1b { z18.b, z22.b, z26.b, z30.b }, pn8/z, [x0, x1]
+    ; CHECK-NEXT: ptrue p0.b
+    ; CHECK-NEXT: add x10, x9, x1
+    ; CHECK-NEXT: ld1b { z19.b, z23.b, z27.b, z31.b }, pn8/z, [x0, x9]
+    ; CHECK-NEXT: ld1b { z4.b - z7.b }, pn8/z, [x0, x10]
+    ; CHECK-NEXT: mov z8.d, z16.d
+    ; CHECK-NEXT: mov z9.d, z18.d
+    ; CHECK-NEXT: mov z21.d, z22.d
+    ; CHECK-NEXT: mov z10.d, z19.d
+    ; CHECK-NEXT: mov z22.d, z23.d
+    ; CHECK-NEXT: mov z25.d, z26.d
+    ; CHECK-NEXT: mov z11.d, z4.d
+    ; CHECK-NEXT: mov z23.d, z5.d
+    ; CHECK-NEXT: mov z26.d, z27.d
+    ; CHECK-NEXT: mov z27.d, z6.d
+    ; CHECK-NEXT: mov z29.d, z30.d
+    ; CHECK-NEXT: mov z30.d, z31.d
+    ; CHECK-NEXT: mov z31.d, z7.d
+    ; CHECK-NEXT: udot za.s[w8, 0, vgx4], { z8.b - z11.b }, z0.b[0]
+    ; CHECK-NEXT: udot za.s[w8, 0, vgx4], { z20.b - z23.b }, z0.b[0]
+    ; CHECK-NEXT: udot za.s[w8, 0, vgx4], { z24.b - z27.b }, z0.b[0]
+    ; CHECK-NEXT: udot za.s[w8, 0, vgx4], { z28.b - z31.b }, z0.b[0]
+    ; CHECK-NEXT: st1b { z0.b }, p0, [x0]
+    ; CHECK-NEXT: st1b { z17.b }, p0, [x0]
+    ; CHECK-NEXT: addvl sp, sp, #2
+    ; CHECK-NEXT: ldp d9, d8, [sp, #16]
+    ; CHECK-NEXT: ldr x29, [sp, #32]
+    ; CHECK-NEXT: ldp d11, d10, [sp], #48
+    ; CHECK-NEXT: ret
+
+    %0:gpr64common = COPY $x0
+    %1:gpr64 = COPY $x1
+    %2:zpr = COPY $z0
+    %3:zpr = COPY $z17
+    %5:matrixindexgpr32_8_11 = COPY $wzr
+    %6:gpr64 = UBFMXri %1, 63, 62
+    %pred:pnr_p8to15 = PTRUE_C_B implicit $vg
+    %7:ppr_3b = PTRUE_B 31, implicit $vg
+    %8:gpr64 = ADDXrr %6, %1
+    %9:zpr4stridedorcontiguous  = LD1B_4Z_IMM_PSEUDO %pred, %0, 0
+    %10:zpr4stridedorcontiguous = LD1B_4Z_PSEUDO %pred, %0, %1
+    %11:zpr4stridedorcontiguous = LD1B_4Z_PSEUDO %pred, %0, %6
+    %12:zpr4stridedorcontiguous = LD1B_4Z_PSEUDO %pred, %0, %8
+    %13:zpr4mul4 = FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO %9.zsub0, %10.zsub0, %11.zsub0, %12.zsub0
+    %14:zpr4mul4 = FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO %9.zsub1, %10.zsub1, %11.zsub1, %12.zsub1
+    %15:zpr4mul4 = FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO %9.zsub2, %10.zsub2, %11.zsub2, %12.zsub2
+    %16:zpr4mul4 = FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO %9.zsub3, %10.zsub3, %11.zsub3, %12.zsub3
+    $za = UDOT_VG4_M4ZZI_BtoS $za, %5, 0, %13, undef %28:zpr_4b, 0
+    $za = UDOT_VG4_M4ZZI_BtoS $za, %5, 0, %14, undef %30:zpr_4b, 0
+    $za = UDOT_VG4_M4ZZI_BtoS $za, %5, 0, %15, undef %32:zpr_4b, 0
+    $za = UDOT_VG4_M4ZZI_BtoS $za, %5, 0, %16, undef %34:zpr_4b, 0
+    ST1B_IMM %2, %7, %0, 0 :: (store (<vscale x 1 x s128>) into %stack.0)
+    ST1B_IMM %3, %7, %0, 0 :: (store (<vscale x 1 x s128>) into %stack.0)
+    RET_ReallyLR
+...
+
+# First multi-vector load to be allocated is not the first operand of the FORM_TRANSPOSED pseudo
+---
+name:            form_4x_tuple_allocation_order
+tracksRegLiveness: true
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 32, alignment: 16,
+      stack-id: scalable-vector, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $z0
+
+    ; CHECK: str x29, [sp, #-16]!
+    ; CHECK-NEXT: addvl	sp, sp, #-2
+    ; CHECK-NEXT: .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
+    ; CHECK-NEXT: .cfi_offset w29, -16
+    ; CHECK-NEXT: lsl x9, x1, #1
+    ; CHECK-NEXT: ptrue	pn8.b
+    ; CHECK-NEXT: mov w8, wzr
+    ; CHECK-NEXT: ptrue	p0.b
+    ; CHECK-NEXT: add x10, x9, x1
+    ; CHECK-NEXT: ld1b { z19.b, z23.b, z27.b, z31.b }, pn8/z, [x0, x10]
+    ; CHECK-NEXT: ld1b { z18.b, z22.b, z26.b, z30.b }, pn8/z, [x0, x9]
+    ; CHECK-NEXT: ld1b { z17.b, z21.b, z25.b, z29.b }, pn8/z, [x0, x1]
+    ; CHECK-NEXT: ld1b { z16.b, z20.b, z24.b, z28.b }, pn8/z, [x0]
+    ; CHECK-NEXT: udot za.s[w8, 0, vgx4], { z16.b - z19.b }, z0.b[0]
+    ; CHECK-NEXT: udot za.s[w8, 0, vgx4], { z20.b - z23.b }, z0.b[0]
+    ; CHECK-NEXT: udot za.s[w8, 0, vgx4], { z24.b - z27.b }, z0.b[0]
+    ; CHECK-NEXT: udot za.s[w8, 0, vgx4], { z28.b - z31.b }, z0.b[0]
+    ; CHECK-NEXT: st1b { z0.b }, p0, [x0]
+    ; CHECK-NEXT: addvl	sp, sp, #2
+    ; CHECK-NEXT: ldr x29, [sp], #16
+    ; CHECK-NEXT: ret
+
+    %0:gpr64common = COPY $x0
+    %1:gpr64 = COPY $x1
+    %2:zpr = COPY $z0
+    %5:matrixindexgpr32_8_11 = COPY $wzr
+    %6:gpr64 = UBFMXri %1, 63, 62
+    %pred:pnr_p8to15 = PTRUE_C_B implicit $vg
+    %7:ppr_3b = PTRUE_B 31, implicit $vg
+    %8:gpr64 = ADDXrr %6, %1
+    %9:zpr4stridedorcontiguous = LD1B_4Z_PSEUDO %pred, %0, %8
+    %10:zpr4stridedorcontiguous = LD1B_4Z_PSEUDO %pred, %0, %6
+    %11:zpr4stridedorcontiguous = LD1B_4Z_PSEUDO %pred, %0, %1
+    %12:zpr4stridedorcontiguous  = LD1B_4Z_IMM_PSEUDO %pred, %0, 0
+    %13:zpr4mul4 = FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO %12.zsub0, %11.zsub0, %10.zsub0, %9.zsub0
+    %14:zpr4mul4 = FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO %12.zsub1, %11.zsub1, %10.zsub1, %9.zsub1
+    %15:zpr4mul4 = FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO %12.zsub2, %11.zsub2, %10.zsub2, %9.zsub2
+    %16:zpr4mul4 = FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO %12.zsub3, %11.zsub3, %10.zsub3, %9.zsub3
+    $za = UDOT_VG4_M4ZZI_BtoS $za, %5, 0, %13, undef %28:zpr_4b, 0
+    $za = UDOT_VG4_M4ZZI_BtoS $za, %5, 0, %14, undef %30:zpr_4b, 0
+    $za = UDOT_VG4_M4ZZI_BtoS $za, %5, 0, %15, undef %32:zpr_4b, 0
+    $za = UDOT_VG4_M4ZZI_BtoS $za, %5, 0, %16, undef %34:zpr_4b, 0
+    ST1B_IMM %2, %7, %0, 0 :: (store (<vscale x 1 x s128>) into %stack.0)
+    RET_ReallyLR
+...
+
+# Strided order is [ $z16_z24 $z17_z25 $z18_z26 $z19_z27 $z20_z28 $z21_z29 $z22_z30 $z23_z31 $z0_z8 $z1_z9 $z2_z10 $z3_z11 $z4_z12 $z5_z13 $z6_z14 $z7_z15 ]
+# Ensure we don't allocate $z23_z31 & $z0_z8 although they are consecutive
+---
+ name:            udot_form_2x_tuple_live_reg_order
+ tracksRegLiveness: true
+ body:             |
+   bb.0.entry:
+     liveins: $x0, $x1, $z16, $z17, $z18, $z19, $z20, $z21, $z22
+
+    ; CHECK: stp d9, d8, [sp, #-16]!
+    ; CHECK-NEXT: .cfi_def_cfa_offset 16
+    ; CHECK-NEXT: .cfi_offset b8, -8
+    ; CHECK-NEXT: .cfi_offset b9, -16
+    ; CHECK-NEXT: ptrue	pn8.b
+    ; CHECK-NEXT: mov w8, wzr
+    ; CHECK-NEXT: ld1b { z0.b, z8.b }, pn8/z, [x0]
+    ; CHECK-NEXT: ld1b { z1.b, z9.b }, pn8/z, [x0, x1]
+    ; CHECK-NEXT: udot za.s[w8, 0, vgx2], { z0.b, z1.b }, z0.b
+    ; CHECK-NEXT: udot za.s[w8, 0, vgx2], { z8.b, z9.b }, z0.b
+    ; CHECK-NEXT: ldp d9, d8, [sp], #16
+    ; CHECK-NEXT: ret
+
+     %0:gpr64 = COPY $x1
+     %1:gpr64common = COPY $x0
+     %2:zpr = COPY $z16
+     %3:zpr = COPY $z17
+     %4:zpr = COPY $z18
+     %5:zpr = COPY $z19
+     %6:zpr = COPY $z20
+     %7:zpr = COPY $z21
+     %8:zpr = COPY $z22
+     %9:matrixindexgpr32_8_11 = COPY $wzr
+     %10:pnr_p8to15 = PTRUE_C_B implicit $vg
+     %11:zpr2stridedorcontiguous = LD1B_2Z_IMM_PSEUDO %10, %1, 0
+     %12:zpr2stridedorcontiguous = LD1B_2Z_PSEUDO %10, %1, %0
+     %13:zpr2 = FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO %11.zsub0, %12.zsub0
+     %14:zpr2 = FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO %11.zsub1, %12.zsub1
+     $za = UDOT_VG2_M2ZZ_BtoS $za, %9, 0, %13, undef %15:zpr_4b
+     $za = UDOT_VG2_M2ZZ_BtoS $za, %9, 0, %14, undef %16:zpr_4b
+     RET_ReallyLR
+...

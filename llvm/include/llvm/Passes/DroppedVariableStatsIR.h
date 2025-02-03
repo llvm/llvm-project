@@ -28,12 +28,12 @@ public:
   DroppedVariableStatsIR(bool DroppedVarStatsEnabled)
       : llvm::DroppedVariableStats(DroppedVarStatsEnabled) {}
 
-  void runBeforePass(Any IR) {
+  void runBeforePass(StringRef P, Any IR) {
     setup();
     if (const auto *M = unwrapIR<Module>(IR))
-      return this->runOnModule(M, true);
+      return this->runOnModule(P, M, true);
     if (const auto *F = unwrapIR<Function>(IR))
-      return this->runOnFunction(F, true);
+      return this->runOnFunction(P, F, true);
   }
 
   void runAfterPass(StringRef P, Any IR) {
@@ -50,19 +50,19 @@ private:
   const Function *Func;
 
   void runAfterPassFunction(StringRef PassID, const Function *F) {
-    runOnFunction(F, false);
+    runOnFunction(PassID, F, false);
     calculateDroppedVarStatsOnFunction(F, PassID, F->getName().str(),
                                        "Function");
   }
 
   void runAfterPassModule(StringRef PassID, const Module *M) {
-    runOnModule(M, false);
+    runOnModule(PassID, M, false);
     calculateDroppedVarStatsOnModule(M, PassID, M->getName().str(), "Module");
   }
   /// Populate DebugVariablesBefore, DebugVariablesAfter, InlinedAts before or
   /// after a pass has run to facilitate dropped variable calculation for an
   /// llvm::Function.
-  void runOnFunction(const Function *F, bool Before);
+  void runOnFunction(StringRef PassID, const Function *F, bool Before);
   /// Iterate over all Instructions in a Function and report any dropped debug
   /// information.
   void calculateDroppedVarStatsOnFunction(const Function *F, StringRef PassID,
@@ -71,7 +71,7 @@ private:
   /// Populate DebugVariablesBefore, DebugVariablesAfter, InlinedAts before or
   /// after a pass has run to facilitate dropped variable calculation for an
   /// llvm::Module. Calls runOnFunction on every Function in the Module.
-  void runOnModule(const Module *M, bool Before);
+  void runOnModule(StringRef PassID, const Module *M, bool Before);
   /// Iterate over all Functions in a Module and report any dropped debug
   /// information. Will call calculateDroppedVarStatsOnFunction on every
   /// Function.

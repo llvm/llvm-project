@@ -95,4 +95,13 @@ program main
     real :: x(0)
   end type
 
+  interface
+    subroutine badAssumedLen(x,y,z) bind(c)
+      !ERROR: A BIND(C) object must have an interoperable type
+      character(*), pointer :: x
+      !ERROR: A BIND(C) object must have an interoperable type
+      character(*), allocatable :: y
+      character(*) z ! ok
+    end
+  end interface
 end

@@ -79,7 +79,7 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
     lb = lb + entityId * chunk;
     T inputUb = ub;
     ub = lb + chunk - 1; // Clang uses i <= ub
-    // Say ub' is the begining of the last chunk. Then who ever has a
+    // Say ub' is the beginning of the last chunk. Then who ever has a
     // lower bound plus a multiple of the increment equal to ub' is
     // the last one.
     T beginingLastChunk = inputUb - (inputUb % chunk);
@@ -806,7 +806,7 @@ public:
                                 NumIters, OneIterationPerThread);
   }
 
-  /// Worksharing `distrbute`-loop.
+  /// Worksharing `distribute`-loop.
   static void Distribute(IdentTy *Loc, void (*LoopBody)(Ty, void *), void *Arg,
                          Ty NumIters, Ty BlockChunk) {
     ASSERT(icv::Level == 0, "Bad distribute");
@@ -853,7 +853,7 @@ public:
     ASSERT(state::ParallelTeamSize == 1, "Bad distribute");
   }
 
-  /// Worksharing `distrbute parallel for`-loop.
+  /// Worksharing `distribute parallel for`-loop.
   static void DistributeFor(IdentTy *Loc, void (*LoopBody)(Ty, void *),
                             void *Arg, Ty NumIters, Ty NumThreads,
                             Ty BlockChunk, Ty ThreadChunk) {

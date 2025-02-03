@@ -107,7 +107,7 @@ parallelization. To enable parallelism, necessary transformations must be
 applied before utilizing this pipeline.
 
 It's designed to provide a generic solution for NVVM targets, generating NVVM
-and LLVM dialect code compatible with `mlir-cpu-runner` or execution engine.
+and LLVM dialect code compatible with `mlir-runner` or execution engine.
 
 #### Example:
 
@@ -131,7 +131,7 @@ func.func @main() {
 The `gpu-lower-to-nvvm` pipeline compiles this input code to NVVM format as
 below. It provides customization options like specifying SM capability, PTX
 version, and optimization level. Once compiled, the resulting IR is ready for
-execution using `mlir-cpu-runner`. Alternatively, it can be translated into
+execution using `mlir-runner`. Alternatively, it can be translated into
 LLVM, expanding its utility within the system.
 
 ```

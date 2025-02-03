@@ -18,7 +18,7 @@ function findloc_test_1d(a, v)
   ! CHECK-DAG: %[[mask:.*]] = fir.convert %[[m]] : (!fir.box<i1>) -> !fir.box<none>
   ! CHECK-DAG: %[[kind:.*]] = fir.convert %[[c4]] : (index) -> i32
   findloc_test_1d = findloc(a, v)
-  ! CHECK:  %{{.*}} = fir.call @_FortranAFindloc(%[[res]], %[[arr]], %[[val]], %[[kind]], %{{.*}}, %{{.*}}, %[[mask]], %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+  ! CHECK:  fir.call @_FortranAFindloc(%[[res]], %[[arr]], %[[val]], %[[kind]], %{{.*}}, %{{.*}}, %[[mask]], %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
   ! CHECK: %[[box:.*]] = fir.load %[[r]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   ! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?xi32>>
@@ -41,7 +41,7 @@ function findloc_test_2d(a, v)
   ! CHECK-DAG: %[[mask:.*]] = fir.convert %[[m]] : (!fir.box<i1>) -> !fir.box<none>
   ! CHECK-DAG: %[[kind:.*]] = fir.convert %[[c4]] : (index) -> i32
   findloc_test_2d = findloc(a, v)
-  ! CHECK:  %{{.*}} = fir.call @_FortranAFindloc(%[[res]], %[[arr]], %[[val]], %[[kind]], %{{.*}}, %{{.*}}, %[[mask]], %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+  ! CHECK:  fir.call @_FortranAFindloc(%[[res]], %[[arr]], %[[val]], %[[kind]], %{{.*}}, %{{.*}}, %[[mask]], %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
   ! CHECK: %[[box:.*]] = fir.load %[[r]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   ! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?xi32>>
@@ -66,7 +66,7 @@ function findloc_test_byval(a, v)
   ! CHECK-DAG: %[[mask:.*]] = fir.convert %[[m]] : (!fir.box<i1>) -> !fir.box<none>
   ! CHECK-DAG: %[[kind:.*]] = fir.convert %[[c4]] : (index) -> i32
   findloc_test_byval = findloc(a, v)
-  ! CHECK:  %{{.*}} = fir.call @_FortranAFindloc(%[[res]], %[[arr]], %[[val]], %[[kind]], %{{.*}}, %{{.*}}, %[[mask]], %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+  ! CHECK:  fir.call @_FortranAFindloc(%[[res]], %[[arr]], %[[val]], %[[kind]], %{{.*}}, %{{.*}}, %[[mask]], %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
   ! CHECK: %[[box:.*]] = fir.load %[[r]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   ! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?xi32>>
@@ -89,7 +89,7 @@ function findloc_test_back_true(a, v)
   ! CHECK-DAG: %[[mask:.*]] = fir.convert %[[m]] : (!fir.box<i1>) -> !fir.box<none>
   ! CHECK-DAG: %[[kind:.*]] = fir.convert %[[c4]] : (index) -> i32
   findloc_test_back_true = findloc(a, v, back=.true.)
-  ! CHECK:  %{{.*}} = fir.call @_FortranAFindloc(%[[res]], %[[arr]], %[[val]], %[[kind]], %{{.*}}, %{{.*}}, %[[mask]], %true) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+  ! CHECK:  fir.call @_FortranAFindloc(%[[res]], %[[arr]], %[[val]], %[[kind]], %{{.*}}, %{{.*}}, %[[mask]], %true) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
   ! CHECK: %[[box:.*]] = fir.load %[[r]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   ! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?xi32>>
@@ -114,7 +114,7 @@ function findloc_test_back(a, v, back)
   ! CHECK-DAG: %[[kind:.*]] = fir.convert %[[c4]] : (index) -> i32
   ! CHECK-DAG: %[[back:.*]] = fir.convert %[[b]] : (!fir.logical<4>) -> i1
   findloc_test_back = findloc(a, v, back=back)
-  ! CHECK:  %{{.*}} = fir.call @_FortranAFindloc(%[[res]], %[[arr]], %[[val]], %[[kind]], %{{.*}}, %{{.*}}, %[[mask]], %[[back]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+  ! CHECK:  fir.call @_FortranAFindloc(%[[res]], %[[arr]], %[[val]], %[[kind]], %{{.*}}, %{{.*}}, %[[mask]], %[[back]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
   ! CHECK: %[[box:.*]] = fir.load %[[r]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   ! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?xi32>>
@@ -138,7 +138,7 @@ subroutine findloc_test_dim(a, v, res)
   ! CHECK-DAG: %[[mask:.*]] = fir.convert %[[m]] : (!fir.box<i1>) -> !fir.box<none>
   ! CHECK-DAG: %[[kind:.*]] = fir.convert %[[c4]] : (index) -> i32
   res = findloc(a, v, dim=1)
-  ! CHECK:  %{{.*}} = fir.call @_FortranAFindlocDim(%[[res]], %[[arr]], %[[val]], %[[kind]], %[[c1]], %{{.*}}, %{{.*}}, %[[mask]], %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+  ! CHECK:  fir.call @_FortranAFindlocDim(%[[res]], %[[arr]], %[[val]], %[[kind]], %[[c1]], %{{.*}}, %{{.*}}, %[[mask]], %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
   ! CHECK: %[[box:.*]] = fir.load %[[r]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   ! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?xi32>>
@@ -163,7 +163,7 @@ subroutine findloc_test_dim_unknown(a, v, dim, res)
   ! CHECK-DAG: %[[mask:.*]] = fir.convert %[[m]] : (!fir.box<i1>) -> !fir.box<none>
   ! CHECK-DAG: %[[kind:.*]] = fir.convert %[[c4]] : (index) -> i32
   res = findloc(a, v, dim=dim)
-  ! CHECK:  %{{.*}} = fir.call @_FortranAFindlocDim(%[[res]], %[[arr]], %[[val]], %[[kind]], %[[dim]], %{{.*}}, %{{.*}}, %[[mask]], %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+  ! CHECK:  fir.call @_FortranAFindlocDim(%[[res]], %[[arr]], %[[val]], %[[kind]], %[[dim]], %{{.*}}, %{{.*}}, %[[mask]], %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
   ! CHECK: %[[box:.*]] = fir.load %[[r]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   ! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?xi32>>
@@ -185,7 +185,7 @@ subroutine findloc_test_kind(a, v, res)
   ! CHECK-DAG: %[[val:.*]] = fir.convert %[[v]] : (!fir.box<i32>) -> !fir.box<none>
   ! CHECK-DAG: %[[mask:.*]] = fir.convert %[[m]] : (!fir.box<i1>) -> !fir.box<none>
   res = findloc(a, v, kind=8)
-  ! CHECK:  %{{.*}} = fir.call @_FortranAFindloc(%[[res]], %[[arr]], %[[val]], %[[kind]], %{{.*}}, %{{.*}}, %[[mask]], %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+  ! CHECK:  fir.call @_FortranAFindloc(%[[res]], %[[arr]], %[[val]], %[[kind]], %{{.*}}, %{{.*}}, %[[mask]], %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
   ! CHECK: %[[box:.*]] = fir.load %[[r]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi64>>>>
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.array<?xi64>>>) -> !fir.heap<!fir.array<?xi64>>
   ! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?xi64>>
@@ -208,7 +208,7 @@ subroutine findloc_test_non_scalar_mask(a, v, mask, res)
   ! CHECK-DAG: %[[mask:.*]] = fir.convert %[[arg2]] : (!fir.box<!fir.array<?x?x!fir.logical<4>>>) -> !fir.box<none>
   ! CHECK-DAG: %[[kind:.*]] = fir.convert %[[c4]] : (index) -> i32
   res = findloc(a, v, mask=mask)
-  ! CHECK:  %{{.*}} = fir.call @_FortranAFindloc(%[[res]], %[[arr]], %[[val]], %[[kind]], %{{.*}}, %{{.*}}, %[[mask]], %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+  ! CHECK:  fir.call @_FortranAFindloc(%[[res]], %[[arr]], %[[val]], %[[kind]], %{{.*}}, %{{.*}}, %[[mask]], %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
   ! CHECK: %[[box:.*]] = fir.load %[[r]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   ! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?xi32>>
@@ -232,7 +232,7 @@ subroutine findloc_test_scalar_mask(a, v, mask, res)
   ! CHECK-DAG: %[[mask:.*]] = fir.convert %[[m]] : (!fir.box<!fir.logical<4>>) -> !fir.box<none>
   ! CHECK-DAG: %[[kind:.*]] = fir.convert %[[c4]] : (index) -> i32
   res = findloc(a, v, mask=mask)
-  ! CHECK:  %{{.*}} = fir.call @_FortranAFindloc(%[[res]], %[[arr]], %[[val]], %[[kind]], %{{.*}}, %{{.*}}, %[[mask]], %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+  ! CHECK:  fir.call @_FortranAFindloc(%[[res]], %[[arr]], %[[val]], %[[kind]], %{{.*}}, %{{.*}}, %[[mask]], %false) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
   ! CHECK: %[[box:.*]] = fir.load %[[r]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   ! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?xi32>>
@@ -258,7 +258,7 @@ subroutine findloc_test_all(a, v, dim, mask, back, res)
   ! CHECK-DAG: %[[mask:.*]] = fir.convert %[[arg3]] : (!fir.box<!fir.array<?x?x!fir.logical<4>>>) -> !fir.box<none>
   ! CHECK-DAG: %[[back:.*]] = fir.convert %[[b]] : (!fir.logical<4>) -> i1
   res = findloc(a, v, dim=dim, mask=mask, kind=8, back=back)
-  ! CHECK:  %{{.*}} = fir.call @_FortranAFindlocDim(%[[res]], %[[arr]], %[[val]], %[[kind]], %[[dim]], %{{.*}}, %{{.*}}, %[[mask]], %[[back]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+  ! CHECK:  fir.call @_FortranAFindlocDim(%[[res]], %[[arr]], %[[val]], %[[kind]], %[[dim]], %{{.*}}, %{{.*}}, %[[mask]], %[[back]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
   ! CHECK: %[[box:.*]] = fir.load %[[r]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi64>>>>
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.array<?xi64>>>) -> !fir.heap<!fir.array<?xi64>>
   ! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?xi64>>

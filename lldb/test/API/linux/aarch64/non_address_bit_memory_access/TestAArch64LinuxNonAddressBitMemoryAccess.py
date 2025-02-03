@@ -202,7 +202,7 @@ class AArch64LinuxNonAddressBitMemoryAccessTestCase(TestBase):
             "thread list",
             substrs=[
                 "stopped",
-                "stop reason = SIGSEGV: address not mapped to object (fault address: 0x0)",
+                "stop reason = SIGSEGV: address not mapped to object (fault address=0x0)",
             ],
         )
 

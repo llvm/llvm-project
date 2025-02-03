@@ -385,17 +385,15 @@ define <2 x float> @v_mad_mix_v2f32_shuffle(<2 x half> %src0, <2 x half> %src1, 
 ; SDAG-CI:       ; %bb.0:
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v4, v5
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v5, v1
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v4
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v4, v5
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v5, v0
-; SDAG-CI-NEXT:    v_mad_f32 v0, v4, v2, v1
-; SDAG-CI-NEXT:    v_mac_f32_e32 v1, v5, v3
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v4, v0
+; SDAG-CI-NEXT:    v_mad_f32 v0, v1, v2, v5
+; SDAG-CI-NEXT:    v_mad_f32 v1, v4, v3, v5
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-CI-LABEL: v_mad_mix_v2f32_shuffle:

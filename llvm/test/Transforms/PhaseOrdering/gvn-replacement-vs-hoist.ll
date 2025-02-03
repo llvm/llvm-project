@@ -3,7 +3,7 @@
 
 define void @test(ptr noundef %a, i32 noundef %beam) {
 ; CHECK-LABEL: define void @test
-; CHECK-SAME: (ptr nocapture noundef writeonly [[A:%.*]], i32 noundef [[BEAM:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr noundef writeonly captures(none) [[A:%.*]], i32 noundef [[BEAM:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 [[BEAM]], 1
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext nneg i32 [[MUL]] to i64

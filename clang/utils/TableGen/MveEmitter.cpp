@@ -1955,18 +1955,17 @@ void MveEmitter::EmitBuiltinDef(raw_ostream &OS) {
        << ", \"\", \"n\")\n";
   }
 
-  std::set<std::string> ShortNamesSeen;
+  DenseSet<StringRef> ShortNamesSeen;
 
   for (const auto &kv : ACLEIntrinsics) {
     const ACLEIntrinsic &Int = *kv.second;
     if (Int.polymorphic()) {
       StringRef Name = Int.shortName();
-      if (ShortNamesSeen.find(std::string(Name)) == ShortNamesSeen.end()) {
+      if (ShortNamesSeen.insert(Name).second) {
         OS << "BUILTIN(__builtin_arm_mve_" << Name << ", \"vi.\", \"nt";
         if (Int.nonEvaluating())
           OS << "u"; // indicate that this builtin doesn't evaluate its args
         OS << "\")\n";
-        ShortNamesSeen.insert(std::string(Name));
       }
     }
   }

@@ -4,10 +4,10 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK: %[[#LongTy:]] = OpTypeInt 64 0
-; CHECK: %[[#EventTy:]] = OpTypeEvent
-; CHECK: %[[#LongNull:]] = OpConstantNull %[[#LongTy]]
-; CHECK: %[[#EventNull:]] = OpConstantNull %[[#EventTy]]
+; CHECK-DAG: %[[#LongTy:]] = OpTypeInt 64 0
+; CHECK-DAG: %[[#EventTy:]] = OpTypeEvent
+; CHECK-DAG: %[[#LongNull:]] = OpConstantNull %[[#LongTy]]
+; CHECK-DAG: %[[#EventNull:]] = OpConstantNull %[[#EventTy]]
 ; CHECK: OpFunction
 ; CHECK: OpINotEqual %[[#]] %[[#]] %[[#LongNull]]
 ; CHECK: OpGroupAsyncCopy %[[#EventTy]] %[[#]] %[[#]] %[[#]] %[[#]] %[[#]] %[[#EventNull]]

@@ -67,8 +67,9 @@ TEST(ExternalASTSourceTest, FailedLookupOccursOnce) {
   struct TestSource : ExternalASTSource {
     TestSource(unsigned &Calls) : Calls(Calls) {}
 
-    bool FindExternalVisibleDeclsByName(const DeclContext *,
-                                        DeclarationName Name) override {
+    bool
+    FindExternalVisibleDeclsByName(const DeclContext *, DeclarationName Name,
+                                   const DeclContext *OriginalDC) override {
       if (Name.getAsString() == "j")
         ++Calls;
       return false;

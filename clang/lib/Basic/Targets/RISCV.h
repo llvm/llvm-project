@@ -99,7 +99,8 @@ public:
                  const std::vector<std::string> &FeaturesVec) const override;
 
   std::optional<std::pair<unsigned, unsigned>>
-  getVScaleRange(const LangOptions &LangOpts) const override;
+  getVScaleRange(const LangOptions &LangOpts,
+                 bool IsArmStreamingFunction) const override;
 
   bool hasFeature(StringRef Feature) const override;
 
@@ -122,7 +123,7 @@ public:
   void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const override;
   bool supportsTargetAttributeTune() const override { return true; }
   ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
-  unsigned getFMVPriority(ArrayRef<StringRef> Features) const override;
+  uint64_t getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
     return std::make_pair(32, 32);

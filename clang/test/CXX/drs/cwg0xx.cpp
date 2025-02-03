@@ -521,12 +521,12 @@ namespace example1 {
   namespace A {
     int i;
   }
-  
+
   namespace A1 {
     using A::i;
     using A::i;
   }
-  
+
   void f()
   {
     using A::i;
@@ -1371,7 +1371,7 @@ namespace cwg92 { // cwg92: 4 c++17
   // considered in this context. In C++17, we *do* perform an implicit
   // conversion (which performs initialization), and the exception specification
   // is part of the type of the parameter, so this is invalid.
-  template<void() throw()> struct X {};
+  template<void() throw()> struct X {}; // since-cxx17-note {{template parameter is declared here}}
   X<&f> xp;
   // since-cxx17-error@-1 {{value of type 'void (*)() throw(int, float)' is not implicitly convertible to 'void (*)() throw()'}}
 

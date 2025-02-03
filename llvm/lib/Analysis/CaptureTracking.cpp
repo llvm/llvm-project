@@ -318,8 +318,8 @@ UseCaptureKind llvm::DetermineUseCaptureKind(
       return UseCaptureKind::NO_CAPTURE;
 
     // Not captured if only passed via 'nocapture' arguments.
-    if (Call->isDataOperand(&U) &&
-        !Call->doesNotCapture(Call->getDataOperandNo(&U))) {
+    assert(Call->isDataOperand(&U) && "Non-callee must be data operand");
+    if (!Call->doesNotCapture(Call->getDataOperandNo(&U))) {
       // The parameter is not marked 'nocapture' - captured.
       return UseCaptureKind::MAY_CAPTURE;
     }

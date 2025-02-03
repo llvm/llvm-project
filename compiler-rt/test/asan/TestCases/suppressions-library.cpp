@@ -9,6 +9,7 @@
 // RUN: echo "interceptor_via_lib:"%xdynamiclib_filename > %t.supp
 // RUN: %env_asan_opts=suppressions='"%t.supp"' %run %t 2>&1 | FileCheck --check-prefix=CHECK-IGNORE %s
 
+// FIXME: Upload suppressions to device.
 // XFAIL: android
 
 #include <stdio.h>

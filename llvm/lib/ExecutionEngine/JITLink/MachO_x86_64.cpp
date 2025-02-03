@@ -459,8 +459,8 @@ private:
 };
 
 Error buildGOTAndStubs_MachO_x86_64(LinkGraph &G) {
-  x86_64::GOTTableManager GOT;
-  x86_64::PLTTableManager PLT(GOT);
+  x86_64::GOTTableManager GOT(G);
+  x86_64::PLTTableManager PLT(G, GOT);
   visitExistingEdges(G, GOT, PLT);
   return Error::success();
 }

@@ -28,7 +28,11 @@ add_mlir_library(MLIRTestIR
 
   EXCLUDE_FROM_LIBMLIR
 
-  LINK_LIBS PUBLIC
+  DEPENDS
+  MLIRTestDialect
+  )
+
+mlir_target_link_libraries(MLIRTestIR PUBLIC
   MLIRPass
   MLIRBytecodeReader
   MLIRBytecodeWriter

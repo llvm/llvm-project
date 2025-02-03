@@ -6,8 +6,8 @@ include "GlobalISelEmitterCommon.td"
 def ST_ATOM_B32 : I<(outs), (ins GPR32Op:$val, GPR32Op:$ptr), []>;
 
 // GISEL: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_STORE),
-// GISEL-NEXT: GIM_CheckMemorySizeEqualTo, /*MI*/0, /*MMO*/0, /*Size*/GIMT_Encode4(1),
 // GISEL-NEXT: GIM_CheckAtomicOrderingOrStrongerThan, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::Unordered,
+// GISEL-NEXT: GIM_CheckMemorySizeEqualTo, /*MI*/0, /*MMO*/0, /*Size*/GIMT_Encode4(1),
 // GISEL-NEXT: // MIs[0] val
 // GISEL-NEXT: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
 // GISEL-NEXT: // MIs[0] ptr

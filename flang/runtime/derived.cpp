@@ -129,6 +129,10 @@ RT_API_ATTRS int InitializeClone(const Descriptor &clone,
   std::size_t elements{orig.Elements()};
   int stat{StatOk};
 
+  // Skip pointers and unallocated variables.
+  if (orig.IsPointer() || !orig.IsAllocated()) {
+    return stat;
+  }
   // Initialize each data component.
   std::size_t components{componentDesc.Elements()};
   for (std::size_t i{0}; i < components; ++i) {

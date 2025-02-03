@@ -6,8 +6,8 @@ add_flang_library(FIRDialect
   FIRDialect.cpp
   FIROps.cpp
   FIRType.cpp
-  FortranVariableInterface.cpp
   FirAliasTagOpInterface.cpp
+  FortranVariableInterface.cpp
   Inliner.cpp
 
   DEPENDS
@@ -20,14 +20,16 @@ add_flang_library(FIRDialect
   LINK_LIBS
   CUFAttrs
   FIRDialectSupport
-  MLIRArithDialect
-  MLIRBuiltinToLLVMIRTranslation
-  MLIROpenMPToLLVM
-  MLIRLLVMToLLVMIRTranslation
-  MLIRTargetLLVMIRExport
 
   LINK_COMPONENTS
   AsmParser
   AsmPrinter
   Remarks
+
+  MLIR_LIBS
+  MLIRArithDialect
+  MLIRBuiltinToLLVMIRTranslation
+  MLIROpenMPToLLVM
+  MLIRLLVMToLLVMIRTranslation
+  MLIRTargetLLVMIRExport
 )

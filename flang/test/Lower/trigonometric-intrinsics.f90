@@ -87,6 +87,34 @@ subroutine cos_testcd(z)
   z = cos(z)
 end subroutine
 
+! CHECK-LABEL: acos_testr
+subroutine acos_testr(a, b)
+  real :: a, b
+! CHECK: fir.call @fir.acos.contract.f32.f32
+  b = acos(a)
+end subroutine
+
+! CHECK-LABEL: acos_testd
+subroutine acos_testd(a, b)
+  real(kind=8) :: a, b
+! CHECK: fir.call @fir.acos.contract.f64.f64
+  b = acos(a)
+end subroutine
+
+! CHECK-LABEL: acos_testc
+subroutine acos_testc(z)
+  complex :: z
+! CHECK: fir.call @fir.acos.contract.z32.z32
+  z = acos(z)
+end subroutine
+
+! CHECK-LABEL: acos_testcd
+subroutine acos_testcd(z)
+  complex(kind=8) :: z
+! CHECK: fir.call @fir.acos.contract.z64.z64
+  z = acos(z)
+end subroutine
+
 ! CHECK-LABEL: cosh_testr
 subroutine cosh_testr(a, b)
   real :: a, b
@@ -211,11 +239,23 @@ end subroutine
 ! CMPLX-FAST: complex.cos %{{.*}} : complex<f64>
 ! CMPLX-PRECISE: fir.call @ccos
 
+! CHECK-LABEL: @fir.acos.contract.f32.f32
+! CHECK: math.acos {{.*}} : f32
+
+! CHECK-LABEL: @fir.acos.contract.f64.f64
+! CHECK: math.acos {{.*}} : f64
+
+! CHECK-LABEL: @fir.acos.contract.z32.z32
+! CHECK: fir.call @cacosf
+
+! CHECK-LABEL: @fir.acos.contract.z64.z64
+! CHECK: fir.call @cacos
+
 ! CHECK-LABEL: @fir.cosh.contract.f32.f32
-! CHECK: fir.call {{.*}}cosh
+! CHECK: math.cosh {{.*}} : f32
 
 ! CHECK-LABEL: @fir.cosh.contract.f64.f64
-! CHECK: fir.call {{.*}}cosh
+! CHECK: math.cosh {{.*}} : f64
 
 ! CHECK-LABEL: @fir.cosh.contract.z32.z32
 ! CHECK: fir.call @ccoshf

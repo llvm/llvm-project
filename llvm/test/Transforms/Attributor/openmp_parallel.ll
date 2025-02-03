@@ -21,19 +21,19 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 define dso_local void @func(ptr nocapture %a, ptr %b, i32 %N) local_unnamed_addr #0 {
 ; TUNIT: Function Attrs: nounwind uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@func
-; TUNIT-SAME: (ptr nocapture nofree writeonly [[A:%.*]], ptr nocapture nofree readonly [[B:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; TUNIT-SAME: (ptr nofree writeonly captures(none) [[A:%.*]], ptr nofree readonly captures(none) [[B:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 ; TUNIT-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
 ; TUNIT-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 ; TUNIT-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
-; TUNIT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB2]], i32 noundef 3, ptr noundef nonnull @.omp_outlined., ptr noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) undef, ptr noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[A_ADDR]], ptr noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[B_ADDR]])
+; TUNIT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB2]], i32 noundef 3, ptr noundef nonnull @.omp_outlined., ptr noalias nofree nonnull readnone align 4 captures(none) dereferenceable(4) undef, ptr noalias nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[A_ADDR]], ptr noalias nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[B_ADDR]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nounwind uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@func
-; CGSCC-SAME: (ptr nocapture nofree [[A:%.*]], ptr nofree [[B:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree captures(none) [[A:%.*]], ptr nofree [[B:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 ; CGSCC-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
@@ -41,7 +41,7 @@ define dso_local void @func(ptr nocapture %a, ptr %b, i32 %N) local_unnamed_addr
 ; CGSCC-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 ; CGSCC-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 ; CGSCC-NEXT:    store i32 199, ptr [[N_ADDR]], align 4
-; CGSCC-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB2]], i32 noundef 3, ptr noundef nonnull @.omp_outlined., ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[N_ADDR]], ptr noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[A_ADDR]], ptr noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[B_ADDR]])
+; CGSCC-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB2]], i32 noundef 3, ptr noundef nonnull @.omp_outlined., ptr noalias nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[N_ADDR]], ptr noalias nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[A_ADDR]], ptr noalias nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[B_ADDR]])
 ; CGSCC-NEXT:    ret void
 ;
 entry:
@@ -60,7 +60,7 @@ entry:
 define internal void @.omp_outlined.(ptr noalias nocapture readonly %.global_tid., ptr noalias nocapture readnone %.bound_tid., ptr nocapture nonnull readonly align 4 dereferenceable(4) %N, ptr nocapture nonnull readonly align 8 dereferenceable(8) %a, ptr nocapture nonnull readonly align 8 dereferenceable(8) %b) #1 {
 ; TUNIT: Function Attrs: alwaysinline nofree norecurse nounwind uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@.omp_outlined.
-; TUNIT-SAME: (ptr noalias nocapture nofree readonly [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr noalias nocapture nofree noundef nonnull readnone align 4 dereferenceable(4) [[N:%.*]], ptr noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[A:%.*]], ptr noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[B:%.*]]) #[[ATTR1:[0-9]+]] {
+; TUNIT-SAME: (ptr noalias nofree readonly captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr noalias nofree noundef nonnull readnone align 4 captures(none) dereferenceable(4) [[N:%.*]], ptr noalias nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[A:%.*]], ptr noalias nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[B:%.*]]) #[[ATTR1:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
@@ -68,13 +68,13 @@ define internal void @.omp_outlined.(ptr noalias nocapture readonly %.global_tid
 ; TUNIT-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    br label [[OMP_PRECOND_THEN:%.*]]
 ; TUNIT:       omp.precond.then:
-; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_LB]]) #[[ATTR3:[0-9]+]]
+; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[DOTOMP_LB]]) #[[ATTR3:[0-9]+]]
 ; TUNIT-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
-; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]]) #[[ATTR3]]
+; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[DOTOMP_UB]]) #[[ATTR3]]
 ; TUNIT-NEXT:    store i32 197, ptr [[DOTOMP_UB]], align 4
-; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]]) #[[ATTR3]]
+; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[DOTOMP_STRIDE]]) #[[ATTR3]]
 ; TUNIT-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
-; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]]) #[[ATTR3]]
+; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[DOTOMP_IS_LAST]]) #[[ATTR3]]
 ; TUNIT-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
 ; TUNIT-NEXT:    call void @__kmpc_for_static_init_4(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP0]], i32 noundef 34, ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_LB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]], i32 noundef 1, i32 noundef 1)
@@ -103,17 +103,17 @@ define internal void @.omp_outlined.(ptr noalias nocapture readonly %.global_tid
 ; TUNIT-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY]], label [[OMP_LOOP_EXIT]]
 ; TUNIT:       omp.loop.exit:
 ; TUNIT-NEXT:    call void @__kmpc_for_static_fini(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP0]])
-; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]])
-; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]])
-; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]])
-; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_LB]])
+; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[DOTOMP_IS_LAST]])
+; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[DOTOMP_STRIDE]])
+; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[DOTOMP_UB]])
+; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[DOTOMP_LB]])
 ; TUNIT-NEXT:    br label [[OMP_PRECOND_END:%.*]]
 ; TUNIT:       omp.precond.end:
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: alwaysinline nofree norecurse nounwind uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@.omp_outlined.
-; CGSCC-SAME: (ptr noalias nocapture nofree readonly [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[N:%.*]], ptr noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[A:%.*]], ptr noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[B:%.*]]) #[[ATTR1:[0-9]+]] {
+; CGSCC-SAME: (ptr noalias nofree readonly captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr noalias nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[N:%.*]], ptr noalias nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[A:%.*]], ptr noalias nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[B:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
@@ -124,13 +124,13 @@ define internal void @.omp_outlined.(ptr noalias nocapture readonly %.global_tid
 ; CGSCC-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP0]], 1
 ; CGSCC-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 ; CGSCC:       omp.precond.then:
-; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_LB]]) #[[ATTR3:[0-9]+]]
+; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[DOTOMP_LB]]) #[[ATTR3:[0-9]+]]
 ; CGSCC-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
-; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]]) #[[ATTR3]]
+; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[DOTOMP_UB]]) #[[ATTR3]]
 ; CGSCC-NEXT:    store i32 [[SUB2]], ptr [[DOTOMP_UB]], align 4
-; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]]) #[[ATTR3]]
+; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[DOTOMP_STRIDE]]) #[[ATTR3]]
 ; CGSCC-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
-; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]]) #[[ATTR3]]
+; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[DOTOMP_IS_LAST]]) #[[ATTR3]]
 ; CGSCC-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 ; CGSCC-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
 ; CGSCC-NEXT:    call void @__kmpc_for_static_init_4(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP1]], i32 noundef 34, ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_LB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]], i32 noundef 1, i32 noundef 1)
@@ -159,10 +159,10 @@ define internal void @.omp_outlined.(ptr noalias nocapture readonly %.global_tid
 ; CGSCC-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY]], label [[OMP_LOOP_EXIT]]
 ; CGSCC:       omp.loop.exit:
 ; CGSCC-NEXT:    call void @__kmpc_for_static_fini(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP1]])
-; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]])
-; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]])
-; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]])
-; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[DOTOMP_LB]])
+; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[DOTOMP_IS_LAST]])
+; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[DOTOMP_STRIDE]])
+; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[DOTOMP_UB]])
+; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[DOTOMP_LB]])
 ; CGSCC-NEXT:    br label [[OMP_PRECOND_END]]
 ; CGSCC:       omp.precond.end:
 ; CGSCC-NEXT:    ret void

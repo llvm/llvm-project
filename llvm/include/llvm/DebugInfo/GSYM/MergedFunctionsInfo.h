@@ -31,6 +31,18 @@ struct MergedFunctionsInfo {
   /// \returns A boolean indicating if this FunctionInfo is valid.
   bool isValid() { return !MergedFunctions.empty(); }
 
+  /// Get a vector of DataExtractor objects for the functions in this
+  /// MergedFunctionsInfo object.
+  ///
+  /// \param Data The binary stream to read the data from. This object must have
+  /// the data for the MergedFunctionsInfo object starting at offset zero. The
+  /// data can contain more data than needed.
+  ///
+  /// \returns An llvm::Expected containing a vector of DataExtractor objects on
+  /// success, or an error object if parsing fails.
+  static llvm::Expected<std::vector<DataExtractor>>
+  getFuncsDataExtractors(DataExtractor &Data);
+
   /// Decode an MergedFunctionsInfo object from a binary data stream.
   ///
   /// \param Data The binary stream to read the data from. This object must have

@@ -15,6 +15,7 @@
 #include "clang/Tooling/JSONCompilationDatabase.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
@@ -25,7 +26,7 @@ namespace dependencies {
 
 /// A callback to lookup module outputs for "-fmodule-file=", "-o" etc.
 using LookupModuleOutputCallback =
-    llvm::function_ref<std::string(const ModuleID &, ModuleOutputKind)>;
+    std::function<std::string(const ModuleID &, ModuleOutputKind)>;
 
 /// Graph of modular dependencies.
 using ModuleDepsGraph = std::vector<ModuleDeps>;

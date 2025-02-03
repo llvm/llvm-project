@@ -112,6 +112,9 @@ public:
   bool isPPC() const { return isPPC_; }
   void set_isPPC(bool isPPC = false);
 
+  bool isSPARC() const { return isSPARC_; }
+  void set_isSPARC(bool isSPARC = false);
+
   bool isOSWindows() const { return isOSWindows_; }
   void set_isOSWindows(bool isOSWindows = false) {
     isOSWindows_ = isOSWindows;
@@ -126,6 +129,7 @@ private:
   std::uint8_t align_[common::TypeCategory_enumSize][maxKind + 1]{};
   bool isBigEndian_{false};
   bool isPPC_{false};
+  bool isSPARC_{false};
   bool isOSWindows_{false};
   bool haltingSupportIsUnknownAtCompileTime_{false};
   bool areSubnormalsFlushedToZero_{false};

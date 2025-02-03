@@ -7,3 +7,6 @@
 // CHECK-BOX: Dumping Box:
 // CHECK-BOX-NEXT: ClassTemplateDecl {{.+}} imported in Templates Box
 // CHECK-BOX: SwiftAttrAttr {{.+}} <<invalid sloc>> "import_owned"
+
+// Make sure the attributes aren't duplicated.
+// CHECK-BOX-NOT: SwiftAttrAttr {{.+}} <<invalid sloc>> "import_owned"

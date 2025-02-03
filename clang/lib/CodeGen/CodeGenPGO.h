@@ -35,7 +35,7 @@ private:
   std::array <unsigned, llvm::IPVK_Last + 1> NumValueSites;
   unsigned NumRegionCounters;
   uint64_t FunctionHash;
-  std::unique_ptr<llvm::DenseMap<const Stmt *, unsigned>> RegionCounterMap;
+  std::unique_ptr<llvm::DenseMap<const Stmt *, CounterPair>> RegionCounterMap;
   std::unique_ptr<llvm::DenseMap<const Stmt *, uint64_t>> StmtCountMap;
   std::unique_ptr<llvm::InstrProfRecord> ProfRecord;
   std::unique_ptr<MCDC::State> RegionMCDCState;
@@ -110,6 +110,7 @@ private:
   bool canEmitMCDCCoverage(const CGBuilderTy &Builder);
 
 public:
+  std::pair<bool, bool> getIsCounterPair(const Stmt *S) const;
   void emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
                                  llvm::Value *StepV);
   void emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
@@ -122,6 +123,18 @@ public:
                                 Address MCDCCondBitmapAddr, llvm::Value *Val,
                                 CodeGenFunction &CGF);
 
+  void markStmtAsUsed(bool Skipped, const Stmt *S) {
+    // Do nothing.
+  }
+
+  void markStmtMaybeUsed(const Stmt *S) {
+    // Do nothing.
+  }
+
+  void verifyCounterMap() const {
+    // Do nothing.
+  }
+
   /// Return the region count for the counter at the given index.
   uint64_t getRegionCount(const Stmt *S) {
     if (!RegionCounterMap)
@@ -130,7 +143,7 @@ public:
       return 0;
     // With profiles from a differing version of clang we can have mismatched
     // decl counts. Don't crash in such a case.
-    auto Index = (*RegionCounterMap)[S];
+    auto Index = (*RegionCounterMap)[S].Executed;
     if (Index >= RegionCounts.size())
       return 0;
     return RegionCounts[Index];

@@ -533,6 +533,72 @@ TEST_F(PatternMatchTest, BitWise) {
   EXPECT_FALSE(m_c_BitwiseLogic(m_Zero(), m_Zero()).match(Xor));
 }
 
+TEST_F(PatternMatchTest, XorLike) {
+  Value *AllocaX = IRB.CreateAlloca(IRB.getInt32Ty());
+  Value *X = IRB.CreateLoad(IRB.getInt32Ty(), AllocaX);
+  Value *AllocaY = IRB.CreateAlloca(IRB.getInt32Ty());
+  Value *Y = IRB.CreateLoad(IRB.getInt32Ty(), AllocaY);
+  Value *MaskC = IRB.getInt32(31);
+  Value *NonMaskC = IRB.getInt32(32);
+
+  Value *OpA, *OpB;
+  {
+    Value *Xor = IRB.CreateXor(X, Y);
+    Value *Sub = IRB.CreateNUWSub(X, Y);
+    OpA = nullptr;
+    OpB = nullptr;
+    EXPECT_TRUE(m_c_XorLike(m_Value(OpA), m_Value(OpB)).match(Xor));
+    EXPECT_TRUE(OpA != OpB && (OpA == X || OpB == X) && (OpA == Y || OpB == Y));
+    OpA = nullptr;
+    OpB = nullptr;
+    EXPECT_FALSE(m_c_XorLike(m_Value(OpA), m_Value(OpB)).match(Sub));
+  }
+  {
+    Value *Xor = IRB.CreateXor(X, MaskC);
+    Value *Sub = IRB.CreateNUWSub(MaskC, X);
+    OpA = nullptr;
+    OpB = nullptr;
+    EXPECT_TRUE(m_c_XorLike(m_Value(OpA), m_Value(OpB)).match(Xor));
+    EXPECT_TRUE(OpA != OpB && (OpA == X || OpB == X) &&
+                (OpA == MaskC || OpB == MaskC));
+    OpA = nullptr;
+    OpB = nullptr;
+    EXPECT_TRUE(m_c_XorLike(m_Value(OpA), m_Value(OpB)).match(Sub));
+    EXPECT_TRUE(OpA != OpB && (OpA == X || OpB == X) &&
+                (OpA == MaskC || OpB == MaskC));
+  }
+  {
+    Value *Xor = IRB.CreateXor(X, MaskC);
+    Value *Sub = IRB.CreateNSWSub(MaskC, X);
+    OpA = nullptr;
+    OpB = nullptr;
+    EXPECT_TRUE(m_c_XorLike(m_Value(OpA), m_Value(OpB)).match(Xor));
+    EXPECT_TRUE(OpA != OpB && (OpA == X || OpB == X) &&
+                (OpA == MaskC || OpB == MaskC));
+    OpA = nullptr;
+    OpB = nullptr;
+    EXPECT_FALSE(m_c_XorLike(m_Value(OpA), m_Value(OpB)).match(Sub));
+  }
+  {
+    Value *Sub = IRB.CreateNUWSub(X, MaskC);
+    OpA = nullptr;
+    OpB = nullptr;
+    EXPECT_FALSE(m_c_XorLike(m_Value(OpA), m_Value(OpB)).match(Sub));
+  }
+  {
+    Value *Xor = IRB.CreateXor(X, NonMaskC);
+    Value *Sub = IRB.CreateNUWSub(NonMaskC, X);
+    OpA = nullptr;
+    OpB = nullptr;
+    EXPECT_TRUE(m_c_XorLike(m_Value(OpA), m_Value(OpB)).match(Xor));
+    EXPECT_TRUE(OpA != OpB && (OpA == X || OpB == X) &&
+                (OpA == NonMaskC || OpB == NonMaskC));
+    OpA = nullptr;
+    OpB = nullptr;
+    EXPECT_FALSE(m_c_XorLike(m_Value(OpA), m_Value(OpB)).match(Sub));
+  }
+}
+
 TEST_F(PatternMatchTest, ZExtSExtSelf) {
   LLVMContext &Ctx = IRB.getContext();
 
@@ -2540,8 +2606,7 @@ TYPED_TEST(MutableConstTest, FCmp) {
 }
 
 TEST_F(PatternMatchTest, ConstExpr) {
-  Constant *G =
-      M->getOrInsertGlobal("dummy", PointerType::getUnqual(IRB.getInt32Ty()));
+  Constant *G = M->getOrInsertGlobal("dummy", PointerType::getUnqual(Ctx));
   Constant *S = ConstantExpr::getPtrToInt(G, IRB.getInt32Ty());
   Type *VecTy = FixedVectorType::get(IRB.getInt32Ty(), 2);
   PoisonValue *P = PoisonValue::get(VecTy);

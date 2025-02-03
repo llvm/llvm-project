@@ -101,12 +101,12 @@ namespace clang {
 
   /// NVPTX builtins
   namespace NVPTX {
-    enum {
-        LastTIBuiltin = clang::Builtin::FirstTSBuiltin-1,
+  enum {
+    LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
 #define BUILTIN(ID, TYPE, ATTRS) BI##ID,
-#include "clang/Basic/BuiltinsNVPTX.def"
-        LastTSBuiltin
-    };
+#include "clang/Basic/BuiltinsNVPTX.inc"
+    LastTSBuiltin
+  };
   }
 
   /// AMDGPU builtins
@@ -118,6 +118,16 @@ namespace clang {
     LastTSBuiltin
   };
   }
+
+  /// SPIRV builtins
+  namespace SPIRV {
+  enum {
+    LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
+#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+#include "clang/Basic/BuiltinsSPIRV.inc"
+    LastTSBuiltin
+  };
+  } // namespace SPIRV
 
   /// X86 builtins
   namespace X86 {
@@ -198,7 +208,8 @@ namespace clang {
       Float16,
       Float32,
       Float64,
-      BFloat16
+      BFloat16,
+      MFloat8
     };
 
     NeonTypeFlags(unsigned F) : Flags(F) {}
@@ -220,6 +231,7 @@ namespace clang {
       switch (getEltType()) {
       case Int8:
       case Poly8:
+      case MFloat8:
         return 8;
       case Int16:
       case Float16:
@@ -342,12 +354,12 @@ namespace clang {
 
   /// Hexagon builtins
   namespace Hexagon {
-    enum {
-        LastTIBuiltin = clang::Builtin::FirstTSBuiltin-1,
+  enum {
+    LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
 #define BUILTIN(ID, TYPE, ATTRS) BI##ID,
-#include "clang/Basic/BuiltinsHexagon.def"
-        LastTSBuiltin
-    };
+#include "clang/Basic/BuiltinsHexagon.inc"
+    LastTSBuiltin
+  };
   }
 
   /// MIPS builtins

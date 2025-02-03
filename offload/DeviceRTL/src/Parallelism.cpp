@@ -36,6 +36,7 @@
 #include "DeviceTypes.h"
 #include "DeviceUtils.h"
 #include "Interface.h"
+#include "LibC.h"
 #include "Mapping.h"
 #include "State.h"
 #include "Synchronization.h"
@@ -74,7 +75,7 @@ uint32_t determineNumberOfThreads(int32_t NumThreadsClause) {
   switch (nargs) {
 #include "generated_microtask_cases.gen"
   default:
-    PRINT("Too many arguments in kmp_invoke_microtask, aborting execution.\n");
+    printf("Too many arguments in kmp_invoke_microtask, aborting execution.\n");
     __builtin_trap();
   }
 }

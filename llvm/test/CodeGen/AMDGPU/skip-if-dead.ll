@@ -761,7 +761,7 @@ define amdgpu_ps float @test_kill_control_flow_return(i32 inreg %arg) #0 {
 ; SI-NEXT:    s_cmp_eq_u32 s0, 1
 ; SI-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; SI-NEXT:    s_mov_b64 s[2:3], exec
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], exec
+; SI-NEXT:    s_andn2_b64 s[4:5], exec, s[4:5]
 ; SI-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[4:5]
 ; SI-NEXT:    s_cbranch_scc0 .LBB9_4
 ; SI-NEXT:  ; %bb.1: ; %entry
@@ -798,7 +798,7 @@ define amdgpu_ps float @test_kill_control_flow_return(i32 inreg %arg) #0 {
 ; GFX10-WAVE64-NEXT:    s_cmp_eq_u32 s0, 1
 ; GFX10-WAVE64-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX10-WAVE64-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GFX10-WAVE64-NEXT:    s_xor_b64 s[4:5], s[4:5], exec
+; GFX10-WAVE64-NEXT:    s_andn2_b64 s[4:5], exec, s[4:5]
 ; GFX10-WAVE64-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[4:5]
 ; GFX10-WAVE64-NEXT:    s_cbranch_scc0 .LBB9_4
 ; GFX10-WAVE64-NEXT:  ; %bb.1: ; %entry
@@ -835,7 +835,7 @@ define amdgpu_ps float @test_kill_control_flow_return(i32 inreg %arg) #0 {
 ; GFX10-WAVE32-NEXT:    s_cmp_eq_u32 s0, 1
 ; GFX10-WAVE32-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX10-WAVE32-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX10-WAVE32-NEXT:    s_xor_b32 s2, s2, exec_lo
+; GFX10-WAVE32-NEXT:    s_andn2_b32 s2, exec_lo, s2
 ; GFX10-WAVE32-NEXT:    s_andn2_b32 s1, s1, s2
 ; GFX10-WAVE32-NEXT:    s_cbranch_scc0 .LBB9_4
 ; GFX10-WAVE32-NEXT:  ; %bb.1: ; %entry
@@ -873,7 +873,7 @@ define amdgpu_ps float @test_kill_control_flow_return(i32 inreg %arg) #0 {
 ; GFX11-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX11-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[4:5], s[4:5], exec
+; GFX11-NEXT:    s_and_not1_b64 s[4:5], exec, s[4:5]
 ; GFX11-NEXT:    s_and_not1_b64 s[2:3], s[2:3], s[4:5]
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB9_4
 ; GFX11-NEXT:  ; %bb.1: ; %entry
@@ -1023,8 +1023,8 @@ define amdgpu_ps void @test_kill_divergent_loop(i32 %arg) #0 {
 ;
 ; GFX10-WAVE32-LABEL: test_kill_divergent_loop:
 ; GFX10-WAVE32:       ; %bb.0: ; %entry
-; GFX10-WAVE32-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX10-WAVE32-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
+; GFX10-WAVE32-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX10-WAVE32-NEXT:    s_and_saveexec_b32 s1, vcc_lo
 ; GFX10-WAVE32-NEXT:    s_xor_b32 s1, exec_lo, s1
 ; GFX10-WAVE32-NEXT:    s_cbranch_execz .LBB10_3

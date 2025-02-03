@@ -303,7 +303,7 @@ define void @widen_fsub_v2f32_v16f32(ptr %a0, ptr %b0, ptr %c0) {
 ; AVX512VL-NEXT:    vpermi2pd %zmm6, %zmm4, %zmm5
 ; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm3, %zmm2, %zmm2
 ; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm1, %zmm0, %zmm0
-; AVX512VL-NEXT:    vmovapd {{.*#+}} ymm1 = [0,2,4,6]
+; AVX512VL-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,2,4,6]
 ; AVX512VL-NEXT:    vpermi2pd %ymm2, %ymm0, %ymm1
 ; AVX512VL-NEXT:    vinsertf64x4 $0, %ymm1, %zmm5, %zmm0
 ; AVX512VL-NEXT:    vmovupd %zmm0, (%rdx)

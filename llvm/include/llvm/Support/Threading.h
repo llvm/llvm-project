@@ -18,7 +18,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/Compiler.h"
-#include <ciso646> // So we can check the C++ standard lib macros.
 #include <optional>
 
 #if defined(_MSC_VER)

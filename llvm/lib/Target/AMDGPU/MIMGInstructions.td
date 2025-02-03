@@ -1524,7 +1524,7 @@ class MIMG_IntersectRay_Helper<bit Is64, bit IsA16> {
 
 class MIMG_IntersectRay_gfx10<mimgopc op, string opcode, RegisterClass AddrRC>
     : MIMG_gfx10<op.GFX10M, (outs VReg_128:$vdata), "GFX10"> {
-  let InOperandList = (ins AddrRC:$vaddr0, SReg_128:$srsrc, A16:$a16);
+  let InOperandList = (ins AddrRC:$vaddr0, SReg_128_XNULL:$srsrc, A16:$a16);
   let AsmString = opcode#" $vdata, $vaddr0, $srsrc$a16";
 
   let nsa = 0;
@@ -1532,13 +1532,13 @@ class MIMG_IntersectRay_gfx10<mimgopc op, string opcode, RegisterClass AddrRC>
 
 class MIMG_IntersectRay_nsa_gfx10<mimgopc op, string opcode, int num_addrs>
     : MIMG_nsa_gfx10<op.GFX10M, (outs VReg_128:$vdata), num_addrs, "GFX10"> {
-  let InOperandList = !con(nsah.AddrIns, (ins SReg_128:$srsrc, A16:$a16));
+  let InOperandList = !con(nsah.AddrIns, (ins SReg_128_XNULL:$srsrc, A16:$a16));
   let AsmString = opcode#" $vdata, "#nsah.AddrAsm#", $srsrc$a16";
 }
 
 class MIMG_IntersectRay_gfx11<mimgopc op, string opcode, RegisterClass AddrRC>
     : MIMG_gfx11<op.GFX11, (outs VReg_128:$vdata), "GFX11"> {
-  let InOperandList = (ins AddrRC:$vaddr0, SReg_128:$srsrc, A16:$a16);
+  let InOperandList = (ins AddrRC:$vaddr0, SReg_128_XNULL:$srsrc, A16:$a16);
   let AsmString = opcode#" $vdata, $vaddr0, $srsrc$a16";
 
   let nsa = 0;
@@ -1548,7 +1548,7 @@ class MIMG_IntersectRay_nsa_gfx11<mimgopc op, string opcode, int num_addrs,
                                   list<RegisterClass> addr_types>
     : MIMG_nsa_gfx11<op.GFX11, (outs VReg_128:$vdata), num_addrs, "GFX11",
                      addr_types> {
-  let InOperandList = !con(nsah.AddrIns, (ins SReg_128:$srsrc, A16:$a16));
+  let InOperandList = !con(nsah.AddrIns, (ins SReg_128_XNULL:$srsrc, A16:$a16));
   let AsmString = opcode#" $vdata, "#nsah.AddrAsm#", $srsrc$a16";
 }
 
@@ -1556,7 +1556,7 @@ class VIMAGE_IntersectRay_gfx12<mimgopc op, string opcode, int num_addrs,
                                 list<RegisterClass> addr_types>
     : VIMAGE_gfx12<op.GFX12, (outs VReg_128:$vdata),
                    num_addrs, "GFX12", addr_types> {
-  let InOperandList = !con(nsah.AddrIns, (ins SReg_128:$rsrc, A16:$a16));
+  let InOperandList = !con(nsah.AddrIns, (ins SReg_128_XNULL:$rsrc, A16:$a16));
   let AsmString = opcode#" $vdata, "#nsah.AddrAsm#", $rsrc$a16";
 }
 

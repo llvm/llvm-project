@@ -59,7 +59,7 @@ class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS chunk_by_view : public view_interface
   _LIBCPP_NO_UNIQUE_ADDRESS __movable_box<_Pred> __pred_;
 
   // We cache the result of begin() to allow providing an amortized O(1).
-  using _Cache = __non_propagating_cache<iterator_t<_View>>;
+  using _Cache _LIBCPP_NODEBUG = __non_propagating_cache<iterator_t<_View>>;
   _Cache __cached_begin_;
 
   class __iterator;

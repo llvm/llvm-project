@@ -10,7 +10,7 @@ define float @device_func(float %a) noinline {
 }
 
 ; CHECK: .entry kernel_func
-define void @kernel_func(ptr %a) {
+define ptx_kernel void @kernel_func(ptr %a) {
   %val = load float, ptr %a
 ; CHECK: call.uni (retval0),
 ; CHECK: device_func,
@@ -18,9 +18,3 @@ define void @kernel_func(ptr %a) {
   store float %mul, ptr %a
   ret void
 }
-
-
-
-!nvvm.annotations = !{!1}
-
-!1 = !{ptr @kernel_func, !"kernel", i32 1}

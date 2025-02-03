@@ -105,7 +105,7 @@ bool LoongArchMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi20,
     return false;
 
   const MachineOperand &Hi20Op1 = Hi20.getOperand(1);
-  if (Hi20Op1.getTargetFlags() != LoongArchII::MO_PCREL_HI)
+  if (LoongArchII::getDirectFlags(Hi20Op1) != LoongArchII::MO_PCREL_HI)
     return false;
 
   auto isGlobalOrCPIOrBlockAddress = [](const MachineOperand &Op) {
@@ -157,7 +157,7 @@ bool LoongArchMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi20,
 
   const MachineOperand &Lo12Op2 = Lo12->getOperand(2);
   assert(Hi20.getOpcode() == LoongArch::PCALAU12I);
-  if (Lo12Op2.getTargetFlags() != LoongArchII::MO_PCREL_LO ||
+  if (LoongArchII::getDirectFlags(Lo12Op2) != LoongArchII::MO_PCREL_LO ||
       !(isGlobalOrCPIOrBlockAddress(Lo12Op2) || Lo12Op2.isMCSymbol()) ||
       Lo12Op2.getOffset() != 0)
     return false;
@@ -597,9 +597,28 @@ bool LoongArchMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi20,
   if (!isInt<32>(NewOffset))
     return false;
 
+  // If optimized by this pass successfully, MO_RELAX bitmask target-flag should
+  // be removed from the code sequence.
+  //
+  // For example:
+  //   pcalau12i $a0, %pc_hi20(symbol)
+  //   addi.d $a0, $a0, %pc_lo12(symbol)
+  //   ld.w $a0, $a0, 0
+  //
+  //   =>
+  //
+  //   pcalau12i $a0, %pc_hi20(symbol)
+  //   ld.w $a0, $a0, %pc_lo12(symbol)
+  //
+  // Code sequence optimized before can be relax by linker. But after being
+  // optimized, it cannot be relaxed any more. So MO_RELAX flag should not be
+  // carried by them.
   Hi20.getOperand(1).setOffset(NewOffset);
+  Hi20.getOperand(1).setTargetFlags(
+      LoongArchII::getDirectFlags(Hi20.getOperand(1)));
   MachineOperand &ImmOp = Lo12.getOperand(2);
   ImmOp.setOffset(NewOffset);
+  ImmOp.setTargetFlags(LoongArchII::getDirectFlags(ImmOp));
   if (Lo20 && Hi12) {
     Lo20->getOperand(2).setOffset(NewOffset);
     Hi12->getOperand(2).setOffset(NewOffset);
@@ -617,15 +636,16 @@ bool LoongArchMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi20,
         switch (ImmOp.getType()) {
         case MachineOperand::MO_GlobalAddress:
           MO.ChangeToGA(ImmOp.getGlobal(), ImmOp.getOffset(),
-                        ImmOp.getTargetFlags());
+                        LoongArchII::getDirectFlags(ImmOp));
           break;
         case MachineOperand::MO_MCSymbol:
-          MO.ChangeToMCSymbol(ImmOp.getMCSymbol(), ImmOp.getTargetFlags());
+          MO.ChangeToMCSymbol(ImmOp.getMCSymbol(),
+                              LoongArchII::getDirectFlags(ImmOp));
           MO.setOffset(ImmOp.getOffset());
           break;
         case MachineOperand::MO_BlockAddress:
           MO.ChangeToBA(ImmOp.getBlockAddress(), ImmOp.getOffset(),
-                        ImmOp.getTargetFlags());
+                        LoongArchII::getDirectFlags(ImmOp));
           break;
         default:
           report_fatal_error("unsupported machine operand type");

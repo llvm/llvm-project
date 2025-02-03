@@ -22,10 +22,10 @@
 # CHECK-NOT: DIVERGENT: G_BR %bb.5
 
 # CHECK-LABEL: BLOCK bb.4
-# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_PHI %{{[0-9]*}}:_(s32), %bb.3, %{{[0-9]*}}:_(s32), %bb.2
+# CHECK-NOT: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_PHI %{{[0-9]*}}:_(s32), %bb.3, %{{[0-9]*}}:_(s32), %bb.2
 
 # CHECK-LABEL: BLOCK bb.5
-# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_PHI %{{[0-9]*}}:_(s32), %bb.3, %{{[0-9]*}}:_(s32), %bb.4
+# CHECK-NOT: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_PHI %{{[0-9]*}}:_(s32), %bb.3, %{{[0-9]*}}:_(s32), %bb.4
 
 ---
 name:            hidden_loop_diverge

@@ -195,7 +195,6 @@ TEST(CFG, ElementRefIterator) {
   // Reverse, non-const version
   Index = MainBlockSize;
   for (CFGBlock::CFGElementRef ElementRef : MainBlock->rrefs()) {
-    llvm::errs() << Index << '\n';
     EXPECT_EQ(ElementRef.getParent(), MainBlock);
     EXPECT_EQ(ElementRef.getIndexInBlock(), Index);
     EXPECT_TRUE(ElementRef->getAs<CFGStmt>());

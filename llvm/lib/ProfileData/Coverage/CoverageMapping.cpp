@@ -135,6 +135,31 @@ Counter CounterExpressionBuilder::subtract(Counter LHS, Counter RHS,
   return Simplify ? simplify(Cnt) : Cnt;
 }
 
+Counter CounterExpressionBuilder::subst(Counter C, const SubstMap &Map) {
+  // Replace C with the value found in Map even if C is Expression.
+  if (auto I = Map.find(C); I != Map.end())
+    return I->second;
+
+  if (!C.isExpression())
+    return C;
+
+  auto CE = Expressions[C.getExpressionID()];
+  auto NewLHS = subst(CE.LHS, Map);
+  auto NewRHS = subst(CE.RHS, Map);
+
+  // Reconstruct Expression with induced subexpressions.
+  switch (CE.Kind) {
+  case CounterExpression::Add:
+    C = add(NewLHS, NewRHS);
+    break;
+  case CounterExpression::Subtract:
+    C = subtract(NewLHS, NewRHS);
+    break;
+  }
+
+  return C;
+}
+
 void CounterMappingContext::dump(const Counter &C, raw_ostream &OS) const {
   switch (C.getKind()) {
   case Counter::Zero:
@@ -219,6 +244,40 @@ Expected<int64_t> CounterMappingContext::evaluate(const Counter &C) const {
   }
 
   return LastPoppedValue;
+}
+
+// Find an independence pair for each condition:
+// - The condition is true in one test and false in the other.
+// - The decision outcome is true one test and false in the other.
+// - All other conditions' values must be equal or marked as "don't care".
+void MCDCRecord::findIndependencePairs() {
+  if (IndependencePairs)
+    return;
+
+  IndependencePairs.emplace();
+
+  unsigned NumTVs = TV.size();
+  // Will be replaced to shorter expr.
+  unsigned TVTrueIdx = std::distance(
+      TV.begin(),
+      std::find_if(TV.begin(), TV.end(),
+                   [&](auto I) { return (I.second == MCDCRecord::MCDC_True); })
+
+  );
+  for (unsigned I = TVTrueIdx; I < NumTVs; ++I) {
+    const auto &[A, ACond] = TV[I];
+    assert(ACond == MCDCRecord::MCDC_True);
+    for (unsigned J = 0; J < TVTrueIdx; ++J) {
+      const auto &[B, BCond] = TV[J];
+      assert(BCond == MCDCRecord::MCDC_False);
+      // If the two vectors differ in exactly one condition, ignoring DontCare
+      // conditions, we have found an independence pair.
+      auto AB = A.getDifferences(B);
+      if (AB.count() == 1)
+        IndependencePairs->insert(
+            {AB.find_first(), std::make_pair(J + 1, I + 1)});
+    }
+  }
 }
 
 mcdc::TVIdxBuilder::TVIdxBuilder(const SmallVectorImpl<ConditionIDs> &NextIDs,
@@ -375,9 +434,6 @@ class MCDCRecordProcessor : NextIDsBuilder, mcdc::TVIdxBuilder {
   /// ExecutedTestVectorBitmap.
   MCDCRecord::TestVectors &ExecVectors;
 
-  /// Number of False items in ExecVectors
-  unsigned NumExecVectorsF;
-
 #ifndef NDEBUG
   DenseSet<unsigned> TVIdxs;
 #endif
@@ -447,32 +503,9 @@ private:
     // Fill ExecVectors order by False items and True items.
     // ExecVectors is the alias of ExecVectorsByCond[false], so
     // Append ExecVectorsByCond[true] on it.
-    NumExecVectorsF = ExecVectors.size();
     auto &ExecVectorsT = ExecVectorsByCond[true];
     ExecVectors.append(std::make_move_iterator(ExecVectorsT.begin()),
                        std::make_move_iterator(ExecVectorsT.end()));
-  }
-
-  // Find an independence pair for each condition:
-  // - The condition is true in one test and false in the other.
-  // - The decision outcome is true one test and false in the other.
-  // - All other conditions' values must be equal or marked as "don't care".
-  void findIndependencePairs() {
-    unsigned NumTVs = ExecVectors.size();
-    for (unsigned I = NumExecVectorsF; I < NumTVs; ++I) {
-      const auto &[A, ACond] = ExecVectors[I];
-      assert(ACond == MCDCRecord::MCDC_True);
-      for (unsigned J = 0; J < NumExecVectorsF; ++J) {
-        const auto &[B, BCond] = ExecVectors[J];
-        assert(BCond == MCDCRecord::MCDC_False);
-        // If the two vectors differ in exactly one condition, ignoring DontCare
-        // conditions, we have found an independence pair.
-        auto AB = A.getDifferences(B);
-        if (AB.count() == 1)
-          IndependencePairs.insert(
-              {AB.find_first(), std::make_pair(J + 1, I + 1)});
-      }
-    }
   }
 
 public:
@@ -510,13 +543,8 @@ public:
     // Using Profile Bitmap from runtime, mark the executed test vectors.
     findExecutedTestVectors();
 
-    // Compare executed test vectors against each other to find an independence
-    // pairs for each condition.  This processing takes the most time.
-    findIndependencePairs();
-
     // Record Test vectors, executed vectors, and independence pairs.
-    return MCDCRecord(Region, std::move(ExecVectors),
-                      std::move(IndependencePairs), std::move(Folded),
+    return MCDCRecord(Region, std::move(ExecVectors), std::move(Folded),
                       std::move(PosToID), std::move(CondLoc));
   }
 };
@@ -590,7 +618,7 @@ unsigned CounterMappingContext::getMaxCounterID(const Counter &C) const {
 void FunctionRecordIterator::skipOtherFiles() {
   while (Current != Records.end() && !Filename.empty() &&
          Filename != Current->Filenames[0])
-    ++Current;
+    advanceOne();
   if (Current == Records.end())
     *this = FunctionRecordIterator();
 }

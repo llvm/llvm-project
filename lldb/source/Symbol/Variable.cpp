@@ -221,8 +221,7 @@ bool Variable::LocationIsValidForFrame(StackFrame *frame) {
       TargetSP target_sp(frame->CalculateTarget());
 
       addr_t loclist_base_load_addr =
-          function->GetAddressRange().GetBaseAddress().GetLoadAddress(
-              target_sp.get());
+          function->GetAddress().GetLoadAddress(target_sp.get());
       if (loclist_base_load_addr == LLDB_INVALID_ADDRESS)
         return false;
       // It is a location list. We just need to tell if the location list
@@ -259,7 +258,7 @@ bool Variable::LocationIsValidForAddress(const Address &address) {
 
       if (sc.function) {
         addr_t loclist_base_file_addr =
-            sc.function->GetAddressRange().GetBaseAddress().GetFileAddress();
+            sc.function->GetAddress().GetFileAddress();
         if (loclist_base_file_addr == LLDB_INVALID_ADDRESS)
           return false;
         // It is a location list. We just need to tell if the location list
@@ -450,8 +449,7 @@ bool Variable::DumpLocations(Stream *s, const Address &address) {
 
   const addr_t file_addr = address.GetFileAddress();
   if (sc.function) {
-    addr_t loclist_base_file_addr =
-        sc.function->GetAddressRange().GetBaseAddress().GetFileAddress();
+    addr_t loclist_base_file_addr = sc.function->GetAddress().GetFileAddress();
     if (loclist_base_file_addr == LLDB_INVALID_ADDRESS)
       return false;
     return m_location_list.DumpLocations(s, eDescriptionLevelBrief,

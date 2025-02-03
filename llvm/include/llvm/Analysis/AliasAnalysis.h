@@ -643,6 +643,9 @@ public:
   bool pointsToConstantMemory(const MemoryLocation &Loc, bool OrLocal = false) {
     return isNoModRef(AA.getModRefInfoMask(Loc, AAQI, OrLocal));
   }
+  bool pointsToConstantMemory(const Value *P, bool OrLocal = false) {
+    return pointsToConstantMemory(MemoryLocation::getBeforeOrAfter(P), OrLocal);
+  }
   ModRefInfo getModRefInfoMask(const MemoryLocation &Loc,
                                bool IgnoreLocals = false) {
     return AA.getModRefInfoMask(Loc, AAQI, IgnoreLocals);
@@ -667,6 +670,9 @@ public:
     return alias(MemoryLocation(V1, LocationSize::precise(1)),
                  MemoryLocation(V2, LocationSize::precise(1))) ==
            AliasResult::MustAlias;
+  }
+  bool isNoAlias(const MemoryLocation &LocA, const MemoryLocation &LocB) {
+    return alias(LocA, LocB) == AliasResult::NoAlias;
   }
   ModRefInfo callCapturesBefore(const Instruction *I,
                                 const MemoryLocation &MemLoc,

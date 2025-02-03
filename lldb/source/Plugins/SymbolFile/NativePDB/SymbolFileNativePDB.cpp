@@ -416,8 +416,7 @@ Block *SymbolFileNativePDB::CreateBlock(PdbCompilandSymId block_id) {
     lldbassert(func);
     lldb::addr_t block_base =
         m_index->MakeVirtualAddress(block.Segment, block.CodeOffset);
-    lldb::addr_t func_base =
-        func->GetAddressRange().GetBaseAddress().GetFileAddress();
+    lldb::addr_t func_base = func->GetAddress().GetFileAddress();
     BlockSP child_block = parent_block->CreateChild(opaque_block_uid);
     if (block_base >= func_base)
       child_block->AddRange(Block::Range(block_base - func_base, block.CodeSize));
@@ -484,9 +483,8 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
   if (file_vm_addr == LLDB_INVALID_ADDRESS || file_vm_addr == 0)
     return nullptr;
 
-  AddressRange func_range(file_vm_addr, sol.length,
-                          comp_unit.GetModule()->GetSectionList());
-  if (!func_range.GetBaseAddress().IsValid())
+  Address func_addr(file_vm_addr, comp_unit.GetModule()->GetSectionList());
+  if (!func_addr.IsValid())
     return nullptr;
 
   ProcSym proc(static_cast<SymbolRecordKind>(sym_record.kind()));
@@ -501,7 +499,8 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
   Mangled mangled(proc.Name);
   FunctionSP func_sp = std::make_shared<Function>(
       &comp_unit, toOpaqueUid(func_id), toOpaqueUid(sig_id), mangled,
-      func_type.get(), AddressRanges{func_range});
+      func_type.get(), func_addr,
+      AddressRanges{AddressRange(func_addr, sol.length)});
 
   comp_unit.AddFunction(func_sp);
 
@@ -1113,8 +1112,7 @@ uint32_t SymbolFileNativePDB::ResolveSymbolContext(
         sc.function = GetOrCreateFunction(csid, *sc.comp_unit).get();
         if (sc.function) {
           Block &block = sc.function->GetBlock(true);
-          addr_t func_base =
-              sc.function->GetAddressRange().GetBaseAddress().GetFileAddress();
+          addr_t func_base = sc.function->GetAddress().GetFileAddress();
           addr_t offset = file_addr - func_base;
           sc.block = block.FindInnermostBlockByOffset(offset);
         }
@@ -1127,8 +1125,7 @@ uint32_t SymbolFileNativePDB::ResolveSymbolContext(
         sc.function = block->CalculateSymbolContextFunction();
         if (sc.function) {
           sc.function->GetBlock(true);
-          addr_t func_base =
-              sc.function->GetAddressRange().GetBaseAddress().GetFileAddress();
+          addr_t func_base = sc.function->GetAddress().GetFileAddress();
           addr_t offset = file_addr - func_base;
           sc.block = block->FindInnermostBlockByOffset(offset);
         }
@@ -1282,9 +1279,7 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
     if (file_vm_addr == LLDB_INVALID_ADDRESS)
       continue;
 
-    AddressRange func_range(file_vm_addr, sol.length,
-                            comp_unit.GetModule()->GetSectionList());
-    Address func_base = func_range.GetBaseAddress();
+    Address func_base(file_vm_addr, comp_unit.GetModule()->GetSectionList());
     PdbCompilandSymId func_id{modi, record_offset};
 
     // Iterate all S_INLINESITEs in the function.
@@ -1857,8 +1852,7 @@ VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,
   // when lookuping local variables in this scope.
   if (!var_info.location.IsValid())
     var_info.location = DWARFExpressionList(module, DWARFExpression(), nullptr);
-  var_info.location.SetFuncFileAddress(
-      func->GetAddressRange().GetBaseAddress().GetFileAddress());
+  var_info.location.SetFuncFileAddress(func->GetAddress().GetFileAddress());
   CompilandIndexItem *cii = m_index->compilands().GetCompiland(var_id.modi);
   CompUnitSP comp_unit_sp = GetOrCreateCompileUnit(*cii);
   TypeSP type_sp = GetOrCreateType(var_info.type);

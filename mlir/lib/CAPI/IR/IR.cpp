@@ -264,6 +264,15 @@ MlirLocation mlirLocationFileLineColGet(MlirContext context,
       FileLineColLoc::get(unwrap(context), unwrap(filename), line, col)));
 }
 
+MlirLocation
+mlirLocationFileLineColRangeGet(MlirContext context, MlirStringRef filename,
+                                unsigned startLine, unsigned startCol,
+                                unsigned endLine, unsigned endCol) {
+  return wrap(
+      Location(FileLineColRange::get(unwrap(context), unwrap(filename),
+                                     startLine, startCol, endLine, endCol)));
+}
+
 MlirLocation mlirLocationCallSiteGet(MlirLocation callee, MlirLocation caller) {
   return wrap(Location(CallSiteLoc::get(unwrap(callee), unwrap(caller))));
 }

@@ -3,7 +3,7 @@
 // This tests check that target code nested inside a target data region which
 // has only use_device_ptr mapping corectly generates code on the device pass.
 
-// CHECK:         define weak_odr protected void @__omp_offloading{{.*}}main_
+// CHECK:         define weak_odr protected amdgpu_kernel void @__omp_offloading{{.*}}main_
 // CHECK-NEXT:       entry:
 // CHECK-NEXT:         %[[VAL_3:.*]] = alloca ptr, align 8
 // CHECK-NEXT:         store ptr %[[VAL_4:.*]], ptr %[[VAL_3]], align 8
@@ -12,6 +12,9 @@
 // CHECK-NEXT:         br i1 %[[VAL_7]], label %[[VAL_8:.*]], label %[[VAL_9:.*]]
 // CHECK:            user_code.entry:                                  ; preds = %[[VAL_10:.*]]
 // CHECK-NEXT:         %[[VAL_11:.*]] = load ptr, ptr %[[VAL_3]], align 8
+// CHECK-NEXT:         br label %[[AFTER_ALLOC:.*]]
+
+// CHECK:            [[AFTER_ALLOC]]:
 // CHECK-NEXT:         br label %[[VAL_12:.*]]
 
 // CHECK:            [[VAL_12]]:
@@ -21,7 +24,7 @@
 // CHECK-NEXT:         %[[VAL_13:.*]] = load ptr, ptr %[[VAL_11]], align 8
 // CHECK-NEXT:         store i32 999, ptr %[[VAL_13]], align 4
 // CHECK-NEXT:         br label %[[VAL_14:.*]]
-module attributes {omp.is_target_device = true } {
+module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true } {
   llvm.func @_QQmain() attributes {fir.bindc_name = "main"} {
     %0 = llvm.mlir.constant(1 : i64) : i64
     %a = llvm.alloca %0 x !llvm.ptr : (i64) -> !llvm.ptr

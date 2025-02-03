@@ -2,7 +2,7 @@
 ; PR20188: don't crash when merging sexts.
 
 ; CHECK: foo:
-define void @foo() unnamed_addr align 2 {
+define void @foo(i1 %arg) unnamed_addr align 2 {
 entry:
   br label %invoke.cont145
 
@@ -12,7 +12,7 @@ invoke.cont145:
 
 if.then274:
   %0 = load i32, ptr null, align 4
-  br i1 undef, label %invoke.cont291, label %if.else313
+  br i1 %arg, label %invoke.cont291, label %if.else313
 
 invoke.cont291:
   %idxprom.i.i.i605 = sext i32 %0 to i64
@@ -26,7 +26,7 @@ if.else313:
   br i1 %cmp314, label %invoke.cont317, label %invoke.cont353
 
 invoke.cont317:
-  br i1 undef, label %invoke.cont326, label %invoke.cont334
+  br i1 %arg, label %invoke.cont326, label %invoke.cont334
 
 invoke.cont326:
   %idxprom.i.i.i587 = sext i32 %0 to i64
@@ -36,7 +36,7 @@ invoke.cont326:
 
 invoke.cont334:
   %lo.1 = phi double [ %sub329, %invoke.cont326 ], [ undef, %invoke.cont317 ]
-  br i1 undef, label %invoke.cont342, label %if.end356
+  br i1 %arg, label %invoke.cont342, label %if.end356
 
 invoke.cont342:
   %idxprom.i.i.i578 = sext i32 %0 to i64

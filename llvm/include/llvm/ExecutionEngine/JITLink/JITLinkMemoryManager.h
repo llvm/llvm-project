@@ -25,6 +25,7 @@
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/RecyclingAllocator.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <cassert>
 #include <cstdint>
@@ -322,14 +323,14 @@ public:
       JITLinkMemoryManager::InFlightAlloc::OnFinalizedFunction;
 
   static void Create(JITLinkMemoryManager &MemMgr,
-                     std::shared_ptr<orc::SymbolStringPool> SSP,
+                     std::shared_ptr<orc::SymbolStringPool> SSP, Triple TT,
                      const JITLinkDylib *JD, SegmentMap Segments,
                      OnCreatedFunction OnCreated);
 
   static Expected<SimpleSegmentAlloc>
   Create(JITLinkMemoryManager &MemMgr,
-         std::shared_ptr<orc::SymbolStringPool> SSP, const JITLinkDylib *JD,
-         SegmentMap Segments);
+         std::shared_ptr<orc::SymbolStringPool> SSP, Triple TT,
+         const JITLinkDylib *JD, SegmentMap Segments);
 
   SimpleSegmentAlloc(SimpleSegmentAlloc &&);
   SimpleSegmentAlloc &operator=(SimpleSegmentAlloc &&);

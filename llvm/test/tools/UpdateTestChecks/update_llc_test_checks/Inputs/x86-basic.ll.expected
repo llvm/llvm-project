@@ -58,7 +58,9 @@ define dso_local i32 @dsolocal() {
 ; WIN-NEXT:    .seh_endprologue
 ; WIN-NEXT:    callq ext
 ; WIN-NEXT:    movl $2, %eax
+; WIN-NEXT:    .seh_startepilogue
 ; WIN-NEXT:    addq $40, %rsp
+; WIN-NEXT:    .seh_endepilogue
 ; WIN-NEXT:    retq
 ; WIN-NEXT:    .seh_endproc
 entry:

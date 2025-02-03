@@ -265,6 +265,7 @@ def OMPC_Map : Clause<"map"> {
   let flangClass = "OmpMapClause";
 }
 def OMPC_Match : Clause<"match"> {
+  let flangClass = "OmpMatchClause";
 }
 def OMP_MEMORY_ORDER_SeqCst : ClauseVal<"seq_cst", 1, 1> {}
 def OMP_MEMORY_ORDER_AcqRel : ClauseVal<"acq_rel", 2, 1> {}
@@ -365,6 +366,10 @@ def OMPC_Order : Clause<"order"> {
 def OMPC_Ordered : Clause<"ordered"> {
   let clangClass = "OMPOrderedClause";
   let flangClass = "ScalarIntConstantExpr";
+  let isValueOptional = true;
+}
+def OMPC_Otherwise : Clause<"otherwise"> {
+  let flangClass = "OmpOtherwiseClause";
   let isValueOptional = true;
 }
 def OMPC_Partial: Clause<"partial"> {
@@ -524,6 +529,7 @@ def OMPC_Weak : Clause<"weak"> {
   let clangClass = "OMPWeakClause";
 }
 def OMPC_When: Clause<"when"> {
+  let flangClass = "OmpWhenClause";
 }
 def OMPC_Write : Clause<"write"> {
   let clangClass = "OMPWriteClause";
@@ -845,7 +851,8 @@ def OMP_Metadirective : Directive<"metadirective"> {
     VersionedClause<OMPC_When>,
   ];
   let allowedOnceClauses = [
-    VersionedClause<OMPC_Default>,
+    VersionedClause<OMPC_Otherwise, 52>,
+    VersionedClause<OMPC_Default, 50, 51>,
   ];
   let association = AS_None;
   let category = CA_Meta;

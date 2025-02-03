@@ -67,6 +67,33 @@ getIntrinsicEffects(mlir::Operation *self,
   }
 }
 
+/// Verification helper for checking if two types are the same.
+/// Set \p allowCharacterLenMismatch to true, if character types
+/// of different known lengths should be treated as the same.
+template <typename Op>
+static llvm::LogicalResult areMatchingTypes(Op &op, mlir::Type type1,
+                                            mlir::Type type2,
+                                            bool allowCharacterLenMismatch) {
+  if (auto charType1 = mlir::dyn_cast<fir::CharacterType>(type1))
+    if (auto charType2 = mlir::dyn_cast<fir::CharacterType>(type2)) {
+      // Character kinds must match.
+      if (charType1.getFKind() != charType2.getFKind())
+        return op.emitOpError("character KIND mismatch");
+
+      // Constant propagation can result in mismatching lengths
+      // in the dead code, but we should not fail on this.
+      if (!allowCharacterLenMismatch)
+        if (charType1.getLen() != fir::CharacterType::unknownLen() &&
+            charType2.getLen() != fir::CharacterType::unknownLen() &&
+            charType1.getLen() != charType2.getLen())
+          return op.emitOpError("character LEN mismatch");
+
+      return mlir::success();
+    }
+
+  return type1 == type2 ? mlir::success() : mlir::failure();
+}
+
 //===----------------------------------------------------------------------===//
 // DeclareOp
 //===----------------------------------------------------------------------===//
@@ -1197,7 +1224,8 @@ hlfir::MatmulOp::canonicalize(MatmulOp matmulOp,
       mlir::Location loc = matmulOp.getLoc();
       mlir::Type resultTy = matmulOp.getResult().getType();
       auto matmulTransposeOp = rewriter.create<hlfir::MatmulTransposeOp>(
-          loc, resultTy, transposeOp.getArray(), matmulOp.getRhs());
+          loc, resultTy, transposeOp.getArray(), matmulOp.getRhs(),
+          matmulOp.getFastmathAttr());
 
       // we don't need to remove any hlfir.destroy because it will be needed for
       // the new intrinsic result anyway
@@ -1359,23 +1387,12 @@ llvm::LogicalResult hlfir::CShiftOp::verify() {
   mlir::Value shift = getShift();
   mlir::Type shiftTy = hlfir::getFortranElementOrSequenceType(shift.getType());
 
-  if (eleTy != resultEleTy) {
-    if (mlir::isa<fir::CharacterType>(eleTy) &&
-        mlir::isa<fir::CharacterType>(resultEleTy)) {
-      auto eleCharTy = mlir::cast<fir::CharacterType>(eleTy);
-      auto resultCharTy = mlir::cast<fir::CharacterType>(resultEleTy);
-      if (eleCharTy.getFKind() != resultCharTy.getFKind())
-        return emitOpError("kind mismatch between input and output arrays");
-      if (eleCharTy.getLen() != fir::CharacterType::unknownLen() &&
-          resultCharTy.getLen() != fir::CharacterType::unknownLen() &&
-          eleCharTy.getLen() != resultCharTy.getLen())
-        return emitOpError(
-            "character LEN mismatch between input and output arrays");
-    } else {
-      return emitOpError(
-          "input and output arrays should have the same element type");
-    }
-  }
+  // TODO: turn allowCharacterLenMismatch into true.
+  if (auto match = areMatchingTypes(*this, eleTy, resultEleTy,
+                                    /*allowCharacterLenMismatch=*/false);
+      match.failed())
+    return emitOpError(
+        "input and output arrays should have the same element type");
 
   if (arrayRank != resultRank)
     return emitOpError("input and output arrays should have the same rank");
@@ -1437,6 +1454,67 @@ llvm::LogicalResult hlfir::CShiftOp::verify() {
 }
 
 void hlfir::CShiftOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
+// ReshapeOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult hlfir::ReshapeOp::verify() {
+  auto results = getOperation()->getResultTypes();
+  assert(results.size() == 1);
+  hlfir::ExprType resultType = mlir::cast<hlfir::ExprType>(results[0]);
+  mlir::Value array = getArray();
+  auto arrayType = mlir::cast<fir::SequenceType>(
+      hlfir::getFortranElementOrSequenceType(array.getType()));
+  if (auto match = areMatchingTypes(
+          *this, hlfir::getFortranElementType(resultType),
+          arrayType.getElementType(), /*allowCharacterLenMismatch=*/true);
+      match.failed())
+    return emitOpError("ARRAY and the result must have the same element type");
+  if (hlfir::isPolymorphicType(resultType) !=
+      hlfir::isPolymorphicType(array.getType()))
+    return emitOpError("ARRAY must be polymorphic iff result is polymorphic");
+
+  mlir::Value shape = getShape();
+  auto shapeArrayType = mlir::cast<fir::SequenceType>(
+      hlfir::getFortranElementOrSequenceType(shape.getType()));
+  if (shapeArrayType.getDimension() != 1)
+    return emitOpError("SHAPE must be an array of rank 1");
+  if (!mlir::isa<mlir::IntegerType>(shapeArrayType.getElementType()))
+    return emitOpError("SHAPE must be an integer array");
+  if (shapeArrayType.hasDynamicExtents())
+    return emitOpError("SHAPE must have known size");
+  if (shapeArrayType.getConstantArraySize() != resultType.getRank())
+    return emitOpError("SHAPE's extent must match the result rank");
+
+  if (mlir::Value pad = getPad()) {
+    auto padArrayType = mlir::cast<fir::SequenceType>(
+        hlfir::getFortranElementOrSequenceType(pad.getType()));
+    if (auto match = areMatchingTypes(*this, arrayType.getElementType(),
+                                      padArrayType.getElementType(),
+                                      /*allowCharacterLenMismatch=*/true);
+        match.failed())
+      return emitOpError("ARRAY and PAD must be of the same type");
+  }
+
+  if (mlir::Value order = getOrder()) {
+    auto orderArrayType = mlir::cast<fir::SequenceType>(
+        hlfir::getFortranElementOrSequenceType(order.getType()));
+    if (orderArrayType.getDimension() != 1)
+      return emitOpError("ORDER must be an array of rank 1");
+    if (!mlir::isa<mlir::IntegerType>(orderArrayType.getElementType()))
+      return emitOpError("ORDER must be an integer array");
+  }
+
+  return mlir::success();
+}
+
+void hlfir::ReshapeOp::getEffects(
     llvm::SmallVectorImpl<
         mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
         &effects) {

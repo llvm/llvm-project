@@ -353,12 +353,7 @@ protected:
     addStateConstraints(NewState);
 
     std::optional<bool> res = Solver->check();
-    if (!res)
-      Cached[hash] = ConditionTruthVal();
-    else
-      Cached[hash] = ConditionTruthVal(*res);
-
-    return Cached[hash];
+    return Cached[hash] = res ? ConditionTruthVal(*res) : ConditionTruthVal();
   }
 
   // Cache the result of an SMT query (true, false, unknown). The key is the

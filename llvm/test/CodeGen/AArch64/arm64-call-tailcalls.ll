@@ -36,12 +36,12 @@ define float @t5(float %a) nounwind readonly ssp {
   ret float %tmp
 }
 
-define void @t7() nounwind {
+define void @t7(i1 %arg) nounwind {
 ; CHECK-LABEL: t7:
 ; CHECK: b	_foo
 ; CHECK: b	_bar
 
-  br i1 undef, label %bb, label %bb1.lr.ph
+  br i1 %arg, label %bb, label %bb1.lr.ph
 
 bb1.lr.ph:                                        ; preds = %entry
   tail call void @bar() nounwind

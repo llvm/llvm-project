@@ -260,6 +260,7 @@ private:
   // Note that this holds a handle, which does not imply ownership.
   // Mappings will be removed when the context is destructed.
   using LiveContextMap = llvm::DenseMap<void *, PyMlirContext *>;
+  static nanobind::ft_mutex live_contexts_mutex;
   static LiveContextMap &getLiveContexts();
 
   // Interns all live modules associated with this context. Modules tracked
@@ -276,6 +277,9 @@ private:
   // attempt to access it will raise an error.
   using LiveOperationMap =
       llvm::DenseMap<void *, std::pair<nanobind::handle, PyOperation *>>;
+  nanobind::ft_mutex liveOperationsMutex;
+
+  // Guarded by liveOperationsMutex in free-threading mode.
   LiveOperationMap liveOperations;
 
   bool emitErrorDiagnostics = false;
@@ -681,8 +685,8 @@ public:
 
   /// Creates an operation. See corresponding python docstring.
   static nanobind::object
-  create(const std::string &name, std::optional<std::vector<PyType *>> results,
-         std::optional<std::vector<PyValue *>> operands,
+  create(std::string_view name, std::optional<std::vector<PyType *>> results,
+         llvm::ArrayRef<MlirValue> operands,
          std::optional<nanobind::dict> attributes,
          std::optional<std::vector<PyBlock *>> successors, int regions,
          DefaultingPyLocation location, const nanobind::object &ip,
@@ -701,8 +705,9 @@ public:
   /// Clones this operation.
   nanobind::object clone(const nanobind::object &ip);
 
-private:
   PyOperation(PyMlirContextRef contextRef, MlirOperation operation);
+
+private:
   static PyOperationRef createInstance(PyMlirContextRef contextRef,
                                        MlirOperation operation,
                                        nanobind::object parentKeepAlive);
@@ -735,12 +740,16 @@ public:
 
   nanobind::object getOperationObject() { return operationObject; }
 
-  static nanobind::object buildGeneric(
-      const nanobind::object &cls, std::optional<nanobind::list> resultTypeList,
-      nanobind::list operandList, std::optional<nanobind::dict> attributes,
-      std::optional<std::vector<PyBlock *>> successors,
-      std::optional<int> regions, DefaultingPyLocation location,
-      const nanobind::object &maybeIp);
+  static nanobind::object
+  buildGeneric(std::string_view name, std::tuple<int, bool> opRegionSpec,
+               nanobind::object operandSegmentSpecObj,
+               nanobind::object resultSegmentSpecObj,
+               std::optional<nanobind::list> resultTypeList,
+               nanobind::list operandList,
+               std::optional<nanobind::dict> attributes,
+               std::optional<std::vector<PyBlock *>> successors,
+               std::optional<int> regions, DefaultingPyLocation location,
+               const nanobind::object &maybeIp);
 
   /// Construct an instance of a class deriving from OpView, bypassing its
   /// `__init__` method. The derived class will typically define a constructor

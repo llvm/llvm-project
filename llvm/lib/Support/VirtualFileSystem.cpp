@@ -1708,11 +1708,12 @@ class llvm::vfs::RedirectingFileSystemParser {
   // false on error
   bool checkDuplicateOrUnknownKey(yaml::Node *KeyNode, StringRef Key,
                                   DenseMap<StringRef, KeyStatus> &Keys) {
-    if (!Keys.count(Key)) {
+    auto It = Keys.find(Key);
+    if (It == Keys.end()) {
       error(KeyNode, "unknown key");
       return false;
     }
-    KeyStatus &S = Keys[Key];
+    KeyStatus &S = It->second;
     if (S.Seen) {
       error(KeyNode, Twine("duplicate key '") + Key + "'");
       return false;

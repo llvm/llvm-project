@@ -1,4 +1,4 @@
-; This test checks that we do not accidently mutate the debug info when
+; This test checks that we do not accidentally mutate the debug info when
 ; inserting loop parallel metadata.
 ; RUN: opt %loadNPMPolly < %s  -S -polly -passes=polly-codegen -polly-ast-detect-parallel | FileCheck %s
 ; CHECK-NOT: !7 = !{!7}

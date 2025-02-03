@@ -257,7 +257,7 @@ struct _LIBCPP_TEMPLATE_VIS __format_arg_store {
     }
   }
 
-  using _Storage =
+  using _Storage _LIBCPP_NODEBUG =
       conditional_t<__format::__use_packed_format_arg_store(sizeof...(_Args)),
                     __format::__packed_format_arg_store<_Context, sizeof...(_Args)>,
                     __format::__unpacked_format_arg_store<_Context, sizeof...(_Args)>>;

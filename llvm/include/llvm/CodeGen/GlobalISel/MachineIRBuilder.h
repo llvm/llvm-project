@@ -1073,6 +1073,11 @@ public:
   /// Build and insert an unmerge of \p Res sized pieces to cover \p Op
   MachineInstrBuilder buildUnmerge(LLT Res, const SrcOp &Op);
 
+  /// Build and insert an unmerge of pieces with \p Attrs register attributes to
+  /// cover \p Op
+  MachineInstrBuilder buildUnmerge(MachineRegisterInfo::VRegAttrs Attrs,
+                                   const SrcOp &Op);
+
   /// Build and insert \p Res = G_BUILD_VECTOR \p Op0, ...
   ///
   /// G_BUILD_VECTOR creates a vector value from multiple scalar registers.

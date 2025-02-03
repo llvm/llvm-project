@@ -55,6 +55,9 @@ inline Section &getMachODefaultTextSection(LinkGraph &G) {
                          orc::MemProt::Read | orc::MemProt::Exec);
 }
 
+/// Gets or creates a MachO header for the current LinkGraph.
+Expected<Symbol &> getOrCreateLocalMachOHeader(LinkGraph &G);
+
 } // end namespace jitlink
 } // end namespace llvm
 

@@ -1,5 +1,5 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
-subroutine s(n,m,a,l)
+subroutine s(n,m,a,l,c)
   integer, intent(in) :: n
   integer, device, intent(in) :: m(n)
   real, device, intent(in) :: a(n)
@@ -7,6 +7,8 @@ subroutine s(n,m,a,l)
   integer j, mr
   real ar
   logical lr
+  complex :: cr
+  complex, device, intent(in) :: c(n)
 !$cuf kernel do <<<*,*>>> reduce (+:mr,ar)
   do j=1,n; mr = mr + m(j); ar = ar + a(j); end do
 !ERROR: !$CUF KERNEL DO REDUCE operation is not acceptable for a variable with type LOGICAL(4)
@@ -69,4 +71,6 @@ subroutine s(n,m,a,l)
 !ERROR: !$CUF KERNEL DO REDUCE operation is not acceptable for a variable with type REAL(4)
 !$cuf kernel do <<<*,*>>> reduce (.or.:mr,ar)
   do j=1,n; end do
+!$cuf kernel do <<<*,*>>> reduce (+:cr) ! ok complex type
+  do j=1,n; cr = cr + c(j); end do
 end

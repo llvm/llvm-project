@@ -90,8 +90,10 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; X86_64-NEXT:    # %exit
 ; X86_64-NEXT:  $ehgcr_0_3:
 ; X86_64-NEXT:    nop
+; X86_64-NEXT:    .seh_startepilogue
 ; X86_64-NEXT:    addq $64, %rsp
 ; X86_64-NEXT:    popq %rbp
+; X86_64-NEXT:    .seh_endepilogue
 ; X86_64-NEXT:    retq
 ; X86_64-NEXT:    .seh_handlerdata
 ; X86_64-NEXT:    .long ($cppxdata$pr66984)@IMGREL
@@ -116,8 +118,10 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; X86_64-NEXT:    movq -8(%rbp), %rcx
 ; X86_64-NEXT:    callq cleanup
 ; X86_64-NEXT:    leaq .LBB0_3(%rip), %rax
+; X86_64-NEXT:    .seh_startepilogue
 ; X86_64-NEXT:    addq $32, %rsp
 ; X86_64-NEXT:    popq %rbp
+; X86_64-NEXT:    .seh_endepilogue
 ; X86_64-NEXT:    retq # CATCHRET
 ; X86_64-NEXT:    .seh_handlerdata
 ; X86_64-NEXT:    .long ($cppxdata$pr66984)@IMGREL
@@ -143,8 +147,10 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; X86_64-NEXT:    leaq -32(%rbp), %rcx
 ; X86_64-NEXT:    callq foo
 ; X86_64-NEXT:    nop
+; X86_64-NEXT:    .seh_startepilogue
 ; X86_64-NEXT:    addq $32, %rsp
 ; X86_64-NEXT:    popq %rbp
+; X86_64-NEXT:    .seh_endepilogue
 ; X86_64-NEXT:    retq # CLEANUPRET
 ; X86_64-NEXT:  .Lfunc_end0:
 ; X86_64-NEXT:    .seh_handlerdata

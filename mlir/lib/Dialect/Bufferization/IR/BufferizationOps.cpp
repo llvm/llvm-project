@@ -42,8 +42,8 @@ FailureOr<Value> mlir::bufferization::castOrReallocMemRefValue(
   auto isGuaranteedCastCompatible = [](MemRefType source, MemRefType target) {
     int64_t sourceOffset, targetOffset;
     SmallVector<int64_t, 4> sourceStrides, targetStrides;
-    if (failed(getStridesAndOffset(source, sourceStrides, sourceOffset)) ||
-        failed(getStridesAndOffset(target, targetStrides, targetOffset)))
+    if (failed(source.getStridesAndOffset(sourceStrides, sourceOffset)) ||
+        failed(target.getStridesAndOffset(targetStrides, targetOffset)))
       return false;
     auto dynamicToStatic = [](int64_t a, int64_t b) {
       return ShapedType::isDynamic(a) && !ShapedType::isDynamic(b);

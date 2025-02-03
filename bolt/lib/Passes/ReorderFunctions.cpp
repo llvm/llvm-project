@@ -28,9 +28,8 @@ extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<unsigned> Verbosity;
 extern cl::opt<uint32_t> RandomSeed;
 
-extern size_t padFunction(const cl::list<std::string> &Spec,
-                          const bolt::BinaryFunction &Function);
-extern cl::list<std::string> FunctionPadSpec, FunctionPadBeforeSpec;
+extern size_t padFunctionBefore(const bolt::BinaryFunction &Function);
+extern size_t padFunctionAfter(const bolt::BinaryFunction &Function);
 
 extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
 cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions(
@@ -306,12 +305,10 @@ Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
                           return false;
                         if (B->isIgnored())
                           return true;
-                        const size_t PadA =
-                            opts::padFunction(opts::FunctionPadSpec, *A) +
-                            opts::padFunction(opts::FunctionPadBeforeSpec, *A);
-                        const size_t PadB =
-                            opts::padFunction(opts::FunctionPadSpec, *B) +
-                            opts::padFunction(opts::FunctionPadBeforeSpec, *B);
+                        const size_t PadA = opts::padFunctionBefore(*A) +
+                                            opts::padFunctionAfter(*A);
+                        const size_t PadB = opts::padFunctionBefore(*B) +
+                                            opts::padFunctionAfter(*B);
                         if (!PadA || !PadB) {
                           if (PadA)
                             return true;

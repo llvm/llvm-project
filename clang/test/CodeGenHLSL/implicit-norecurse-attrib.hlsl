@@ -37,7 +37,7 @@ uint Find(Node SortedTree[MAX], uint key) {
 // Imagine the inout works
 export
 bool InitTree(/*inout*/ Node tree[MAX], RWBuffer<uint4> encodedTree, uint maxDepth) {
-  uint size = pow(2.f, maxDepth) - 1;
+  uint size = pow(2.f, (float)maxDepth) - 1;
   if (size > MAX) return false;
   for (uint i = 1; i < size; i++) {
     tree[i].value = encodedTree[i].x;

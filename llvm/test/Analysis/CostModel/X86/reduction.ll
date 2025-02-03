@@ -634,11 +634,11 @@ define fastcc i64 @no_pairwise_reduction4i64(<4 x i64> %rdx, i64 %f1) {
 
 define fastcc i16 @no_pairwise_reduction8i16(<8 x i16> %rdx, i16 %f1) {
 ; SSE2-LABEL: 'no_pairwise_reduction8i16'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %rdx.shuf3 = shufflevector <8 x i16> %rdx, <8 x i16> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %rdx.shuf3 = shufflevector <8 x i16> %rdx, <8 x i16> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bin.rdx4 = add <8 x i16> %rdx, %rdx.shuf3
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %rdx.shuf = shufflevector <8 x i16> %bin.rdx4, <8 x i16> undef, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %rdx.shuf = shufflevector <8 x i16> %bin.rdx4, <8 x i16> undef, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bin.rdx = add <8 x i16> %bin.rdx4, %rdx.shuf
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %rdx.shuf7 = shufflevector <8 x i16> %bin.rdx, <8 x i16> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rdx.shuf7 = shufflevector <8 x i16> %bin.rdx, <8 x i16> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bin.rdx8 = add <8 x i16> %bin.rdx, %rdx.shuf7
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r = extractelement <8 x i16> %bin.rdx8, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i16 %r
@@ -926,8 +926,8 @@ define fastcc double @pairwise_reduction4double(<4 x double> %rdx, double %f1) {
 
 define fastcc float @pairwise_reduction8float(<8 x float> %rdx, float %f1) {
 ; SSE2-LABEL: 'pairwise_reduction8float'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %rdx.shuf.0.0 = shufflevector <8 x float> %rdx, <8 x float> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %rdx.shuf.0.1 = shufflevector <8 x float> %rdx, <8 x float> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rdx.shuf.0.0 = shufflevector <8 x float> %rdx, <8 x float> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rdx.shuf.0.1 = shufflevector <8 x float> %rdx, <8 x float> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bin.rdx = fadd <8 x float> %rdx.shuf.0.0, %rdx.shuf.0.1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rdx.shuf.1.0 = shufflevector <8 x float> %bin.rdx, <8 x float> undef, <8 x i32> <i32 0, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rdx.shuf.1.1 = shufflevector <8 x float> %bin.rdx, <8 x float> undef, <8 x i32> <i32 1, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -939,8 +939,8 @@ define fastcc float @pairwise_reduction8float(<8 x float> %rdx, float %f1) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret float %r
 ;
 ; SSSE3-LABEL: 'pairwise_reduction8float'
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %rdx.shuf.0.0 = shufflevector <8 x float> %rdx, <8 x float> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %rdx.shuf.0.1 = shufflevector <8 x float> %rdx, <8 x float> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rdx.shuf.0.0 = shufflevector <8 x float> %rdx, <8 x float> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rdx.shuf.0.1 = shufflevector <8 x float> %rdx, <8 x float> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bin.rdx = fadd <8 x float> %rdx.shuf.0.0, %rdx.shuf.0.1
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rdx.shuf.1.0 = shufflevector <8 x float> %bin.rdx, <8 x float> undef, <8 x i32> <i32 0, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rdx.shuf.1.1 = shufflevector <8 x float> %bin.rdx, <8 x float> undef, <8 x i32> <i32 1, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -952,8 +952,8 @@ define fastcc float @pairwise_reduction8float(<8 x float> %rdx, float %f1) {
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret float %r
 ;
 ; SSE42-LABEL: 'pairwise_reduction8float'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %rdx.shuf.0.0 = shufflevector <8 x float> %rdx, <8 x float> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %rdx.shuf.0.1 = shufflevector <8 x float> %rdx, <8 x float> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rdx.shuf.0.0 = shufflevector <8 x float> %rdx, <8 x float> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rdx.shuf.0.1 = shufflevector <8 x float> %rdx, <8 x float> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bin.rdx = fadd <8 x float> %rdx.shuf.0.0, %rdx.shuf.0.1
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rdx.shuf.1.0 = shufflevector <8 x float> %bin.rdx, <8 x float> undef, <8 x i32> <i32 0, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rdx.shuf.1.1 = shufflevector <8 x float> %bin.rdx, <8 x float> undef, <8 x i32> <i32 1, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -991,8 +991,8 @@ define fastcc float @pairwise_reduction8float(<8 x float> %rdx, float %f1) {
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret float %r
 ;
 ; SLM-LABEL: 'pairwise_reduction8float'
-; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %rdx.shuf.0.0 = shufflevector <8 x float> %rdx, <8 x float> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %rdx.shuf.0.1 = shufflevector <8 x float> %rdx, <8 x float> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rdx.shuf.0.0 = shufflevector <8 x float> %rdx, <8 x float> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rdx.shuf.0.1 = shufflevector <8 x float> %rdx, <8 x float> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bin.rdx = fadd <8 x float> %rdx.shuf.0.0, %rdx.shuf.0.1
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rdx.shuf.1.0 = shufflevector <8 x float> %bin.rdx, <8 x float> undef, <8 x i32> <i32 0, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rdx.shuf.1.1 = shufflevector <8 x float> %bin.rdx, <8 x float> undef, <8 x i32> <i32 1, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -1126,14 +1126,14 @@ define fastcc i64 @pairwise_reduction4i64(<4 x i64> %rdx, i64 %f1) {
 
 define fastcc i16 @pairwise_reduction8i16(<8 x i16> %rdx, i16 %f1) {
 ; SSE2-LABEL: 'pairwise_reduction8i16'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %rdx.shuf.0.0 = shufflevector <8 x i16> %rdx, <8 x i16> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %rdx.shuf.0.1 = shufflevector <8 x i16> %rdx, <8 x i16> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %rdx.shuf.0.0 = shufflevector <8 x i16> %rdx, <8 x i16> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %rdx.shuf.0.1 = shufflevector <8 x i16> %rdx, <8 x i16> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bin.rdx = add <8 x i16> %rdx.shuf.0.0, %rdx.shuf.0.1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %rdx.shuf.1.0 = shufflevector <8 x i16> %bin.rdx, <8 x i16> undef, <8 x i32> <i32 0, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %rdx.shuf.1.1 = shufflevector <8 x i16> %bin.rdx, <8 x i16> undef, <8 x i32> <i32 1, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %rdx.shuf.1.0 = shufflevector <8 x i16> %bin.rdx, <8 x i16> undef, <8 x i32> <i32 0, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %rdx.shuf.1.1 = shufflevector <8 x i16> %bin.rdx, <8 x i16> undef, <8 x i32> <i32 1, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bin.rdx8 = add <8 x i16> %rdx.shuf.1.0, %rdx.shuf.1.1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %rdx.shuf.2.0 = shufflevector <8 x i16> %bin.rdx8, <8 x i16> undef, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %rdx.shuf.2.1 = shufflevector <8 x i16> %bin.rdx8, <8 x i16> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rdx.shuf.2.1 = shufflevector <8 x i16> %bin.rdx8, <8 x i16> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bin.rdx9 = add <8 x i16> %rdx.shuf.2.0, %rdx.shuf.2.1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r = extractelement <8 x i16> %bin.rdx9, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i16 %r

@@ -48,7 +48,8 @@ public:
   };
 
   /// Scanning the single file specified by \param FilePath.
-  std::optional<ModuleDependencyInfo> scan(PathRef FilePath);
+  std::optional<ModuleDependencyInfo>
+  scan(PathRef FilePath, const ProjectModules::CommandMangler &Mangler);
 
   /// Scanning every source file in the current project to get the
   /// <module-name> to <module-unit-source> map.
@@ -57,7 +58,7 @@ public:
   /// a global module dependency scanner to monitor every file. Or we
   /// can simply require the build systems (or even the end users)
   /// to provide the map.
-  void globalScan();
+  void globalScan(const ProjectModules::CommandMangler &Mangler);
 
   /// Get the source file from the module name. Note that the language
   /// guarantees all the module names are unique in a valid program.
@@ -69,7 +70,9 @@ public:
 
   /// Return the direct required modules. Indirect required modules are not
   /// included.
-  std::vector<std::string> getRequiredModules(PathRef File);
+  std::vector<std::string>
+  getRequiredModules(PathRef File,
+                     const ProjectModules::CommandMangler &Mangler);
 
 private:
   std::shared_ptr<const clang::tooling::CompilationDatabase> CDB;
@@ -87,7 +90,8 @@ private:
 };
 
 std::optional<ModuleDependencyScanner::ModuleDependencyInfo>
-ModuleDependencyScanner::scan(PathRef FilePath) {
+ModuleDependencyScanner::scan(PathRef FilePath,
+                              const ProjectModules::CommandMangler &Mangler) {
   auto Candidates = CDB->getCompileCommands(FilePath);
   if (Candidates.empty())
     return std::nullopt;
@@ -97,10 +101,8 @@ ModuleDependencyScanner::scan(PathRef FilePath) {
   // DirectoryBasedGlobalCompilationDatabase::getCompileCommand.
   tooling::CompileCommand Cmd = std::move(Candidates.front());
 
-  static int StaticForMainAddr; // Just an address in this process.
-  Cmd.CommandLine.push_back("-resource-dir=" +
-                            CompilerInvocation::GetResourcesPath(
-                                "clangd", (void *)&StaticForMainAddr));
+  if (Mangler)
+    Mangler(Cmd, FilePath);
 
   using namespace clang::tooling::dependencies;
 
@@ -130,9 +132,10 @@ ModuleDependencyScanner::scan(PathRef FilePath) {
   return Result;
 }
 
-void ModuleDependencyScanner::globalScan() {
+void ModuleDependencyScanner::globalScan(
+    const ProjectModules::CommandMangler &Mangler) {
   for (auto &File : CDB->getAllFiles())
-    scan(File);
+    scan(File, Mangler);
 
   GlobalScanned = true;
 }
@@ -150,9 +153,9 @@ PathRef ModuleDependencyScanner::getSourceForModuleName(
   return {};
 }
 
-std::vector<std::string>
-ModuleDependencyScanner::getRequiredModules(PathRef File) {
-  auto ScanningResult = scan(File);
+std::vector<std::string> ModuleDependencyScanner::getRequiredModules(
+    PathRef File, const ProjectModules::CommandMangler &Mangler) {
+  auto ScanningResult = scan(File, Mangler);
   if (!ScanningResult)
     return {};
 
@@ -177,7 +180,11 @@ public:
   ~ScanningAllProjectModules() override = default;
 
   std::vector<std::string> getRequiredModules(PathRef File) override {
-    return Scanner.getRequiredModules(File);
+    return Scanner.getRequiredModules(File, Mangler);
+  }
+
+  void setCommandMangler(CommandMangler Mangler) override {
+    this->Mangler = std::move(Mangler);
   }
 
   /// RequiredSourceFile is not used intentionally. See the comments of
@@ -185,12 +192,13 @@ public:
   PathRef
   getSourceForModuleName(llvm::StringRef ModuleName,
                          PathRef RequiredSourceFile = PathRef()) override {
-    Scanner.globalScan();
+    Scanner.globalScan(Mangler);
     return Scanner.getSourceForModuleName(ModuleName);
   }
 
 private:
   ModuleDependencyScanner Scanner;
+  CommandMangler Mangler;
 };
 
 std::unique_ptr<ProjectModules> scanningProjectModules(

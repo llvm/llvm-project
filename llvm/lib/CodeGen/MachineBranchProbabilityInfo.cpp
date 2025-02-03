@@ -29,7 +29,7 @@ namespace llvm {
 cl::opt<unsigned>
     StaticLikelyProb("static-likely-prob",
                      cl::desc("branch probability threshold in percentage"
-                              "to be considered very likely"),
+                              " to be considered very likely"),
                      cl::init(80), cl::Hidden);
 
 cl::opt<unsigned> ProfileLikelyProb(

@@ -2999,9 +2999,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     bool IsZExtLoad = I.getOpcode() == TargetOpcode::G_ZEXTLOAD;
     LLT PtrTy = MRI.getType(LdSt.getPointerReg());
 
+    // Can only handle AddressSpace 0, 64-bit pointers.
     if (PtrTy != LLT::pointer(0, 64)) {
-      LLVM_DEBUG(dbgs() << "Load/Store pointer has type: " << PtrTy
-                        << ", expected: " << LLT::pointer(0, 64) << '\n');
       return false;
     }
 

@@ -67,7 +67,7 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT 0
     ; GCN-NEXT: $vgpr0 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
-    ; GCN-NEXT: CFI_INSTRUCTION offset $vgpr0_lo16, 16
+    ; GCN-NEXT: CFI_INSTRUCTION offset $vgpr0, 16
     $vgpr0 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
     CFI_INSTRUCTION offset $vgpr0, 16
 
