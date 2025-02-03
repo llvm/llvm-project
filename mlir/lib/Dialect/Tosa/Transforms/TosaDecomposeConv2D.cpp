@@ -59,19 +59,17 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
     for (const auto &it : llvm::enumerate(padAttr))
       pad[it.index() + 2] = it.value();
 
+    Type inputETy = inputType.getElementType();
     if (llvm::any_of(pad, [](int64_t p) { return p != 0; })) {
-      Type inputETy = inputType.getElementType();
-      Attribute zeroAttr = rewriter.getZeroAttr(inputETy);
-      if (op.getQuantizationInfo()) {
-        auto quantizationInfo = op.getQuantizationInfo();
-        int64_t iZp = quantizationInfo->getInputZp();
+      auto failureOrMaybeZps = extractConvZpPair(op, rewriter);
+      if (failed(failureOrMaybeZps))
+        return failure();
 
-        if (!validIntegerRange(cast<IntegerType>(inputETy), iZp))
-          return rewriter.notifyMatchFailure(
-              op, "tosa.conv op quantization has zp outside of input range");
+      auto maybeZps = failureOrMaybeZps.value();
 
-        zeroAttr = rewriter.getIntegerAttr(inputETy, iZp);
-      }
+      Attribute zeroAttr =
+          maybeZps ? rewriter.getIntegerAttr(inputETy, maybeZps->inputZp)
+                   : rewriter.getZeroAttr(inputETy);
 
       llvm::SmallVector<int64_t> newShape(inputType.getShape());
 
@@ -125,13 +123,20 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
     auto fullyConnectedShapeType =
         RankedTensorType::get(fullyConnectedShape, resultType.getElementType());
 
+    auto failureOrMaybeZps = extractConvZpPair(op, rewriter);
+    if (failed(failureOrMaybeZps))
+      return failure();
+
+    auto maybeZps = failureOrMaybeZps.value();
     Value fullyConnectedValue;
-    if (op.getQuantizationInfo()) {
+    if (maybeZps) {
+      auto zeroPointAttr = rewriter.getAttr<tosa::ConvOpQuantizationAttr>(
+          maybeZps->inputZp, maybeZps->weightZp);
       fullyConnectedValue =
           rewriter
               .create<tosa::FullyConnectedOp>(
                   op.getLoc(), fullyConnectedShapeType, reshapedInput,
-                  reshapedWeight, op.getBias(), *op.getQuantizationInfo())
+                  reshapedWeight, op.getBias(), zeroPointAttr)
               .getResult();
     } else {
       fullyConnectedValue = rewriter
