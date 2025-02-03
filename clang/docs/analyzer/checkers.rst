@@ -129,6 +129,8 @@ The ``SuppressAddressSpaces`` option suppresses
 warnings for null dereferences of all pointers with address spaces. You can
 disable this behavior with the option
 ``-analyzer-config core.NullDereference:SuppressAddressSpaces=false``.
+Value of this option is used for checker :ref:`_core-FixedAddressDereference`
+too.
 *Defaults to true*.
 
 .. code-block:: objc
@@ -2917,6 +2919,42 @@ Check for assignment of a fixed address to a pointer.
  void test() {
    int *p;
    p = (int *) 0x10000; // warn
+ }
+
+.. _alpha-core-FixedAddressDereference:
+
+alpha.core.FixedAddressDereference (C, C++, ObjC)
+"""""""""""""""""""""""""""""""""""""""""""""""""
+Check for dereferences of fixed values used as pointers.
+
+Similarly as at :ref:`_core-NullDereference`, the checker specifically does
+not report dereferences for x86 and x86-64 targets when the
+address space is 256 (x86 GS Segment), 257 (x86 FS Segment), or 258 (x86 SS
+segment). (See `X86/X86-64 Language Extensions
+<https://clang.llvm.org/docs/LanguageExtensions.html#memory-references-to-specified-segments>`__
+for reference.)
+
+If you want to disable this behavior, set the ``SuppressAddressSpaces`` option
+of checker ``core.NullDereference`` to false, like
+``-analyzer-config core.NullDereference:SuppressAddressSpaces=false``. The value
+of this option is used for both checkers.
+
+.. code-block:: c
+
+ void test1() {
+   int *p = (int *)0x020;
+   int x = p[0]; // warn
+ }
+
+ void test2(int *p) {
+   if (p == (int *)-1)
+     *p = 0; // warn
+ }
+
+ void test3() {
+   int (*p_function)(char, char);
+   p_function = (int (*)(char, char))0x04080;
+   int x = (*p_function)('x', 'y'); // NO warning yet at functon pointer calls
  }
 
 .. _alpha-core-PointerArithm:
