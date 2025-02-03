@@ -1,4 +1,4 @@
-//===- AMDGPUWaitSGPRHazards.cpp - Mitigate SGPR read hazards -------------===//
+//===- AMDGPUWaitSGPRHazards.cpp - Insert waits for SGPR read hazards -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AMDGPUWaitSGPRHazards.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -21,41 +22,39 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-wait-sgpr-hazards"
 
-static cl::opt<bool> EnableSGPRHazardWaits(
+static cl::opt<bool> GlobalEnableSGPRHazardWaits(
     "amdgpu-sgpr-hazard-wait", cl::init(true), cl::Hidden,
     cl::desc("Enable required s_wait_alu on SGPR hazards"));
 
-static cl::opt<bool> CullSGPRHazardsOnFunctionBoundary(
+static cl::opt<bool> GlobalCullSGPRHazardsOnFunctionBoundary(
     "amdgpu-sgpr-hazard-boundary-cull", cl::init(false), cl::Hidden,
     cl::desc("Cull hazards on function boundaries"));
 
 static cl::opt<bool>
-    CullSGPRHazardsAtMemWait("amdgpu-sgpr-hazard-mem-wait-cull",
-                             cl::init(false), cl::Hidden,
-                             cl::desc("Cull hazards on memory waits"));
+    GlobalCullSGPRHazardsAtMemWait("amdgpu-sgpr-hazard-mem-wait-cull",
+                                   cl::init(false), cl::Hidden,
+                                   cl::desc("Cull hazards on memory waits"));
 
-static cl::opt<unsigned> CullSGPRHazardsMemWaitThreshold(
-    "amdgpu-sgpr-hazard-mem-wait-cull-threshold", cl::init(1), cl::Hidden,
+static cl::opt<unsigned> GlobalCullSGPRHazardsMemWaitThreshold(
+    "amdgpu-sgpr-hazard-mem-wait-cull-threshold", cl::init(8), cl::Hidden,
     cl::desc("Number of tracked SGPRs before initiating hazard cull on memory "
              "wait"));
 
 namespace {
 
-class AMDGPUWaitSGPRHazards : public MachineFunctionPass {
+class AMDGPUWaitSGPRHazards {
 public:
-  static char ID;
-
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
   const MachineRegisterInfo *MRI;
-  bool Wave64;
+  unsigned DsNopCount;
 
-  AMDGPUWaitSGPRHazards() : MachineFunctionPass(ID) {}
+  bool EnableSGPRHazardWaits;
+  bool CullSGPRHazardsOnFunctionBoundary;
+  bool CullSGPRHazardsAtMemWait;
+  unsigned CullSGPRHazardsMemWaitThreshold;
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
+  AMDGPUWaitSGPRHazards() {}
 
   // Return the numeric ID 0-127 for a given SGPR.
   static std::optional<unsigned> sgprNumber(Register Reg,
@@ -71,15 +70,14 @@ public:
     default:
       break;
     }
-    unsigned RegN = TRI.getEncodingValue(Reg);
+    unsigned RegN = TRI.getHWRegIndex(Reg);
     if (RegN > 127)
       return {};
     return RegN;
   }
 
-  static inline bool IsVCC(Register Reg) {
-    return (Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO ||
-            Reg == AMDGPU::VCC_HI);
+  static inline bool isVCC(Register Reg) {
+    return Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC_HI;
   }
 
   // Adjust global offsets for instructions bundled with S_GETPC_B64 after
@@ -114,7 +112,6 @@ public:
     }
   }
 
-  // Total order instructions, and use this for VA_SDST?
   struct HazardState {
     static constexpr unsigned None = 0;
     static constexpr unsigned SALU = (1 << 0);
@@ -128,13 +125,7 @@ public:
 
     bool merge(const HazardState &RHS) {
       HazardState Orig(*this);
-
-      Tracked |= RHS.Tracked;
-      SALUHazards |= RHS.SALUHazards;
-      VALUHazards |= RHS.VALUHazards;
-      VCCHazard |= RHS.VCCHazard;
-      ActiveFlat |= RHS.ActiveFlat;
-
+      *this |= RHS;
       return (*this != Orig);
     }
 
@@ -143,7 +134,16 @@ public:
              VALUHazards == RHS.VALUHazards && VCCHazard == RHS.VCCHazard &&
              ActiveFlat == RHS.ActiveFlat;
     }
+
     bool operator!=(const HazardState &RHS) const { return !(*this == RHS); }
+
+    void operator|=(const HazardState &RHS) {
+      Tracked |= RHS.Tracked;
+      SALUHazards |= RHS.SALUHazards;
+      VALUHazards |= RHS.VALUHazards;
+      VCCHazard |= RHS.VCCHazard;
+      ActiveFlat |= RHS.ActiveFlat;
+    }
   };
 
   struct BlockHazardState {
@@ -159,7 +159,7 @@ public:
   void insertHazardCull(MachineBasicBlock &MBB,
                         MachineBasicBlock::instr_iterator &MI) {
     assert(!MI->isBundled());
-    unsigned Count = Wave64 ? WAVE64_NOPS : WAVE32_NOPS;
+    unsigned Count = DsNopCount;
     while (Count--)
       BuildMI(MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::DS_NOP));
   }
@@ -175,9 +175,12 @@ public:
     for (MachineBasicBlock::instr_iterator MI = MBB.instr_begin(),
                                            E = MBB.instr_end();
          MI != E; ++MI) {
+      if (MI->isMetaInstruction())
+        continue;
+
       // Clear tracked SGPRs if sufficient DS_NOPs occur
       if (MI->getOpcode() == AMDGPU::DS_NOP) {
-        if (++DsNops >= (Wave64 ? WAVE64_NOPS : WAVE32_NOPS))
+        if (++DsNops >= DsNopCount)
           State.Tracked.reset();
         continue;
       }
@@ -240,9 +243,6 @@ public:
           return;
         Register Reg = Op.getReg();
         assert(!Op.getSubReg());
-        // Only consider implicit operands of VCC.
-        if (Op.isImplicit() && !IsVCC(Reg))
-          return;
         if (!TRI->isSGPRReg(*MRI, Reg))
           return;
 
@@ -273,7 +273,7 @@ public:
         if (IsUse) {
           // SALU reading SGPR clears VALU hazards
           if (IsSALU) {
-            if (IsVCC(Reg)) {
+            if (isVCC(Reg)) {
               if (State.VCCHazard & HazardState::VALU)
                 State.VCCHazard = HazardState::None;
             } else {
@@ -285,7 +285,7 @@ public:
             Wait |= State.SALUHazards[RegN + RegIdx] ? WA_SALU : 0;
             Wait |= IsVALU && State.VALUHazards[RegN + RegIdx] ? WA_VALU : 0;
           }
-          if (IsVCC(Reg) && State.VCCHazard) {
+          if (isVCC(Reg) && State.VCCHazard) {
             // Note: it's possible for both SALU and VALU to exist if VCC
             // was updated differently by merged predecessors.
             if (State.VCCHazard & HazardState::SALU)
@@ -295,7 +295,7 @@ public:
           }
         } else {
           // Update hazards
-          if (IsVCC(Reg)) {
+          if (isVCC(Reg)) {
             State.VCCHazard = IsSALU ? HazardState::SALU : HazardState::VALU;
           } else {
             for (uint8_t RegIdx = 0; RegIdx < SGPRCount; ++RegIdx) {
@@ -308,10 +308,17 @@ public:
         }
       };
 
-      const bool IsSetPC = (MI->isCall() || MI->isReturn() ||
-                            MI->getOpcode() == AMDGPU::S_SETPC_B64) &&
-                           !(MI->getOpcode() == AMDGPU::S_ENDPGM ||
-                             MI->getOpcode() == AMDGPU::S_ENDPGM_SAVED);
+      const bool IsSetPC =
+          (MI->isCall() || MI->isReturn() || MI->isIndirectBranch()) &&
+          MI->getOpcode() != AMDGPU::S_ENDPGM &&
+          MI->getOpcode() != AMDGPU::S_ENDPGM_SAVED;
+
+      // Only consider implicit VCC specified by instruction descriptor.
+      const bool HasImplicitVCC =
+          llvm::any_of(MI->getDesc().implicit_uses(),
+                       [](MCPhysReg Reg) { return isVCC(Reg); }) ||
+          llvm::any_of(MI->getDesc().implicit_defs(),
+                       [](MCPhysReg Reg) { return isVCC(Reg); });
 
       if (IsSetPC) {
         // All SGPR writes before a call/return must be flushed as the
@@ -330,8 +337,12 @@ public:
       } else {
         // Process uses to determine required wait.
         SeenRegs.clear();
-        for (const MachineOperand &Op : MI->all_uses())
+        for (const MachineOperand &Op : MI->all_uses()) {
+          if (Op.isImplicit() &&
+              (!HasImplicitVCC || !Op.isReg() || !isVCC(Op.getReg())))
+            continue;
           processOperand(Op, true);
+        }
       }
 
       // Apply wait
@@ -365,8 +376,12 @@ public:
 
       // Update hazards based on defs.
       SeenRegs.clear();
-      for (const MachineOperand &Op : MI->all_defs())
+      for (const MachineOperand &Op : MI->all_defs()) {
+        if (Op.isImplicit() &&
+            (!HasImplicitVCC || !Op.isReg() || !isVCC(Op.getReg())))
+          continue;
         processOperand(Op, false);
+      }
     }
 
     bool Changed = State != BlockState[&MBB].Out;
@@ -379,27 +394,43 @@ public:
     return Changed;
   }
 
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    if (skipFunction(MF.getFunction()))
-      return false;
-
+  bool run(MachineFunction &MF) {
     const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
     if (!ST.hasVALUReadSGPRHazard())
       return false;
 
+    // Parse settings
+    EnableSGPRHazardWaits = GlobalEnableSGPRHazardWaits;
+    CullSGPRHazardsOnFunctionBoundary = GlobalCullSGPRHazardsOnFunctionBoundary;
+    CullSGPRHazardsAtMemWait = GlobalCullSGPRHazardsAtMemWait;
+    CullSGPRHazardsMemWaitThreshold = GlobalCullSGPRHazardsMemWaitThreshold;
+
+    if (!GlobalEnableSGPRHazardWaits.getNumOccurrences())
+      EnableSGPRHazardWaits = MF.getFunction().getFnAttributeAsParsedInteger(
+          "amdgpu-sgpr-hazard-wait", EnableSGPRHazardWaits);
+    if (!GlobalCullSGPRHazardsOnFunctionBoundary.getNumOccurrences())
+      CullSGPRHazardsOnFunctionBoundary =
+          MF.getFunction().hasFnAttribute("amdgpu-sgpr-hazard-boundary-cull");
+    if (!GlobalCullSGPRHazardsAtMemWait.getNumOccurrences())
+      CullSGPRHazardsAtMemWait =
+          MF.getFunction().hasFnAttribute("amdgpu-sgpr-hazard-mem-wait-cull");
+    if (!GlobalCullSGPRHazardsMemWaitThreshold.getNumOccurrences())
+      CullSGPRHazardsMemWaitThreshold =
+          MF.getFunction().getFnAttributeAsParsedInteger(
+              "amdgpu-sgpr-hazard-mem-wait-cull-threshold",
+              CullSGPRHazardsMemWaitThreshold);
+
+    // Bail if disabled
     if (!EnableSGPRHazardWaits)
       return false;
 
-    LLVM_DEBUG(dbgs() << "AMDGPUWaitSGPRHazards running on " << MF.getName()
-                      << "\n");
-
     TII = ST.getInstrInfo();
     TRI = ST.getRegisterInfo();
-    MRI = &(MF.getRegInfo());
-    Wave64 = ST.isWave64();
+    MRI = &MF.getRegInfo();
+    DsNopCount = ST.isWave64() ? WAVE64_NOPS : WAVE32_NOPS;
 
     auto CallingConv = MF.getFunction().getCallingConv();
-    if (!AMDGPU::isEntryFunctionCC(CallingConv) && !MF.empty() &&
+    if (!AMDGPU::isEntryFunctionCC(CallingConv) &&
         !CullSGPRHazardsOnFunctionBoundary) {
       // Callee must consider all SGPRs as tracked.
       LLVM_DEBUG(dbgs() << "Is called function, track all SGPRs.\n");
@@ -427,12 +458,13 @@ public:
         // Propagate to all successor blocks
         for (auto Succ : MBB.successors()) {
           // We only need to merge hazards at CFG merge points.
+          auto &SuccState = BlockState[Succ];
           if (Succ->getSinglePredecessor() && !Succ->isEntryBlock()) {
-            if (BlockState[Succ].In != NewState) {
-              BlockState[Succ].In = NewState;
+            if (SuccState.In != NewState) {
+              SuccState.In = NewState;
               Worklist.insert(Succ);
             }
-          } else if (BlockState[Succ].In.merge(NewState)) {
+          } else if (SuccState.In.merge(NewState)) {
             Worklist.insert(Succ);
           }
         }
@@ -451,11 +483,35 @@ public:
   }
 };
 
+class AMDGPUWaitSGPRHazardsLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  AMDGPUWaitSGPRHazardsLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    return AMDGPUWaitSGPRHazards().run(MF);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+
 } // namespace
 
-char AMDGPUWaitSGPRHazards::ID = 0;
+char AMDGPUWaitSGPRHazardsLegacy::ID = 0;
 
-char &llvm::AMDGPUWaitSGPRHazardsID = AMDGPUWaitSGPRHazards::ID;
+char &llvm::AMDGPUWaitSGPRHazardsLegacyID = AMDGPUWaitSGPRHazardsLegacy::ID;
 
-INITIALIZE_PASS(AMDGPUWaitSGPRHazards, DEBUG_TYPE,
-                "AMDGPU Mitigate SGPR Hazards", false, false)
+INITIALIZE_PASS(AMDGPUWaitSGPRHazardsLegacy, DEBUG_TYPE,
+                "AMDGPU Insert waits for SGPR read hazards", false, false)
+
+PreservedAnalyses
+AMDGPUWaitSGPRHazardsPass::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &MFAM) {
+  if (AMDGPUWaitSGPRHazards().run(MF))
+    return PreservedAnalyses::none();
+  return PreservedAnalyses::all();
+}

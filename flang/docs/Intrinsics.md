@@ -1095,3 +1095,14 @@ program chdir_func
   print *, "status: ", status
 end program chdir_func
 ```
+
+### Non-Standard Intrinsics: IERRNO
+
+#### Description
+`IERRNO()` returns the last system error number, as given by the C `errno` variable.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** function
+- **Syntax:** `RESULT = IERRNO()`

@@ -3354,6 +3354,15 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     // use-associating the same symbol again -- ok
     return;
   }
+  if (useUltimate.owner().IsModule() && localUltimate.owner().IsSubmodule() &&
+      DoesScopeContain(&useUltimate.owner(), localUltimate)) {
+    // Within a submodule, USE'ing a symbol that comes indirectly
+    // from the ancestor module, e.g. foo in:
+    //  MODULE m1; INTERFACE; MODULE SUBROUTINE foo; END INTERFACE; END
+    //  MODULE m2; USE m1; END
+    //  SUBMODULE m1(sm); USE m2; CONTAINS; MODULE PROCEDURE foo; END; END
+    return; // ok, ignore it
+  }
 
   if (localUltimate.name() == useUltimate.name() &&
       localUltimate.owner().IsModule() && useUltimate.owner().IsModule() &&
@@ -9737,7 +9746,7 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
       },
       node.stmt());
   Walk(node.spec());
-  bool inDeviceSubprogram = false;
+  bool inDeviceSubprogram{false};
   // If this is a function, convert result to an object. This is to prevent the
   // result from being converted later to a function symbol if it is called
   // inside the function.

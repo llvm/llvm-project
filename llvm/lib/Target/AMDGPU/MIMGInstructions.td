@@ -1798,6 +1798,8 @@ defm IMAGE_BVH8_INTERSECT_RAY      : MIMG_IntersectRay<mimgopc<0x81, MIMG.NOP, M
 let SubtargetPredicate = isGFX12Plus in {
   def : AMDGPUMnemonicAlias<"bvh_intersect_ray", "image_bvh_intersect_ray">;
   def : AMDGPUMnemonicAlias<"bvh64_intersect_ray", "image_bvh64_intersect_ray">;
+  def : AMDGPUMnemonicAlias<"bvh_dual_intersect_ray", "image_bvh_dual_intersect_ray">;
+  def : AMDGPUMnemonicAlias<"bvh8_intersect_ray", "image_bvh8_intersect_ray">;
 }
 
 } // End let OtherPredicates = [HasImageInsts]

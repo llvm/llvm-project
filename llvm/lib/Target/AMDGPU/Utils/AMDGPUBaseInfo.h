@@ -1213,7 +1213,7 @@ unsigned encodeFieldVaSdst(unsigned VaSdst);
 unsigned encodeFieldVaSdst(unsigned Encoded, unsigned VaSdst);
 
 /// \returns \p VaVcc as an encoded Depctr immediate.
-unsigned encodeFieldVaVcc(unsigned VaSdst);
+unsigned encodeFieldVaVcc(unsigned VaVcc);
 
 /// \returns \p Encoded combined with encoded \p VaVcc.
 unsigned encodeFieldVaVcc(unsigned Encoded, unsigned VaVcc);

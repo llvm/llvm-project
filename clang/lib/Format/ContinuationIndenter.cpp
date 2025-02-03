@@ -349,6 +349,13 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
     }
   }
 
+  // Allow breaking before the right parens with block indentation if there was
+  // a break after the left parens, which is tracked by BreakBeforeClosingParen.
+  if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent &&
+      Current.is(tok::r_paren)) {
+    return CurrentState.BreakBeforeClosingParen;
+  }
+
   // Don't allow breaking before a closing brace of a block-indented braced list
   // initializer if there isn't already a break.
   if (Current.is(tok::r_brace) && Current.MatchingParen &&
