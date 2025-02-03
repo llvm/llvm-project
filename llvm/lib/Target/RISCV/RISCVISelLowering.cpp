@@ -5601,6 +5601,23 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
       return V;
 
+    // Match a spread(4,8) which can be done via extend and shift.  Spread(2)
+    // is fully covered in interleave(2) above, so it is ignored here.
+    if (VT.getScalarSizeInBits() < Subtarget.getELen()) {
+      unsigned MaxFactor = Subtarget.getELen() / VT.getScalarSizeInBits();
+      assert(MaxFactor == 2 || MaxFactor == 4 || MaxFactor == 8);
+      for (unsigned Factor = 4; Factor <= MaxFactor; Factor <<= 1) {
+        unsigned Index;
+        if (isSpreadMask(Mask, Factor, Index)) {
+          MVT NarrowVT =
+              MVT::getVectorVT(VT.getVectorElementType(), NumElts / Factor);
+          SDValue Src = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NarrowVT, V1,
+                                    DAG.getVectorIdxConstant(0, DL));
+          return getWideningSpread(Src, Factor, Index, DL, DAG);
+        }
+      }
+    }
+
     // Before hitting generic lowering fallbacks, try to widen the mask
     // to a wider SEW.
     if (SDValue V = tryWidenMaskForShuffle(Op, DAG))
@@ -5623,23 +5640,6 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       SDValue CompressMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
       return DAG.getNode(ISD::VECTOR_COMPRESS, DL, VT, V1, CompressMask,
                          DAG.getUNDEF(VT));
-    }
-
-    // Match a spread(4,8) which can be done via extend and shift.  Spread(2)
-    // is fully covered in interleave(2) above, so it is ignored here.
-    if (VT.getScalarSizeInBits() < Subtarget.getELen()) {
-      unsigned MaxFactor = Subtarget.getELen() / VT.getScalarSizeInBits();
-      assert(MaxFactor == 2 || MaxFactor == 4 || MaxFactor == 8);
-      for (unsigned Factor = 4; Factor <= MaxFactor; Factor <<= 1) {
-        unsigned Index;
-        if (isSpreadMask(Mask, Factor, Index)) {
-          MVT NarrowVT =
-              MVT::getVectorVT(VT.getVectorElementType(), NumElts / Factor);
-          SDValue Src = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NarrowVT, V1,
-                                    DAG.getVectorIdxConstant(0, DL));
-          return getWideningSpread(Src, Factor, Index, DL, DAG);
-        }
-      }
     }
 
     if (VT.getScalarSizeInBits() == 8 &&
