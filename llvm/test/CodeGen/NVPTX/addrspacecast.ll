@@ -99,6 +99,20 @@ define i32 @conv8(ptr %ptr) {
   ret i32 %val
 }
 
+; ALL-LABEL: conv9
+define i32 @conv9(ptr addrspace(1) %ptr) {
+; CLS32: cvta.global.u32
+; CLS32: cvta.to.shared.u32
+; CLS64: cvta.global.u64
+; CLS64: cvta.to.shared.u64
+; PTRCONV: cvt.u32.u64
+; NOPTRCONV-NOT: cvt.u32.u64
+; ALL: ld.shared.u32
+  %specptr = addrspacecast ptr addrspace(1) %ptr to ptr addrspace(3)
+  %val = load i32, ptr addrspace(3) %specptr
+  ret i32 %val
+}
+
 ; Check that we support addrspacecast when splitting the vector
 ; result (<2 x ptr> => 2 x <1 x ptr>).
 ; This also checks that scalarization works for addrspacecast

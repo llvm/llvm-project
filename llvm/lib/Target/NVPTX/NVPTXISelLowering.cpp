@@ -989,6 +989,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(ISD::FLOG2, {MVT::v2f16, MVT::v2bf16}, Expand);
   }
 
+  setOperationAction(ISD::ADDRSPACECAST, {MVT::i32, MVT::i64}, Custom);
+
   // No FPOW or FREM in PTX.
 
   // Now deduce the information based on the above mentioned
@@ -2652,6 +2654,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return SDValue();
   case ISD::FRAMEADDR:
     return SDValue();
+  case ISD::ADDRSPACECAST:
+    return LowerADDRSPACECAST(Op, DAG);
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
   case ISD::INTRINSIC_W_CHAIN:
@@ -2726,7 +2730,6 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FMUL:
     // Used only for bf16 on SM80, where we select fma for non-ftz operation
     return PromoteBinOpIfF32FTZ(Op, DAG);
-
   default:
     llvm_unreachable("Custom lowering not defined for operation");
   }
@@ -2765,6 +2768,22 @@ SDValue NVPTXTargetLowering::LowerBR_JT(SDValue Op, SelectionDAG &DAG) const {
 // This will prevent AsmPrinter from trying to print the jump tables itself.
 unsigned NVPTXTargetLowering::getJumpTableEncoding() const {
   return MachineJumpTableInfo::EK_Inline;
+}
+
+SDValue NVPTXTargetLowering::LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  AddrSpaceCastSDNode *N = cast<AddrSpaceCastSDNode>(Op.getNode());
+
+  EVT OperandVT = Op.getOperand(0).getValueType();
+  unsigned SrcAS = N->getSrcAddressSpace();
+  EVT ResultVT = Op.getValueType();
+  unsigned DestAS = N->getDestAddressSpace();
+
+  if (SrcAS == llvm::ADDRESS_SPACE_GENERIC || DestAS == llvm::ADDRESS_SPACE_GENERIC)
+    return Op;
+
+  SDValue ToGeneric = DAG.getAddrSpaceCast(DL, OperandVT, Op.getOperand(0), SrcAS, llvm::ADDRESS_SPACE_GENERIC);
+  return DAG.getAddrSpaceCast(DL, ResultVT, ToGeneric, llvm::ADDRESS_SPACE_GENERIC, DestAS);
 }
 
 // This function is almost a copy of SelectionDAG::expandVAArg().
