@@ -2730,6 +2730,7 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FMUL:
     // Used only for bf16 on SM80, where we select fma for non-ftz operation
     return PromoteBinOpIfF32FTZ(Op, DAG);
+
   default:
     llvm_unreachable("Custom lowering not defined for operation");
   }
