@@ -488,7 +488,7 @@ public:
   void ClearBackedThread() { m_backed_thread.reset(); }
 
   /// Returns the thread that is backed by this thread, if any.
-  lldb::ThreadSP GetBackedThread() const { return m_backed_thread; }
+  lldb::ThreadSP GetBackedThread() const { return m_backed_thread.lock(); }
 
   virtual bool SetBackingThread(const lldb::ThreadSP &thread_sp) {
     return false;
@@ -1370,7 +1370,7 @@ protected:
   mutable std::unique_ptr<ThreadPlanStack> m_null_plan_stack_up;
 
   /// The Thread backed by this thread, if any.
-  lldb::ThreadSP m_backed_thread;
+  lldb::ThreadWP m_backed_thread;
 
 private:
   bool m_extended_info_fetched; // Have we tried to retrieve the m_extended_info
