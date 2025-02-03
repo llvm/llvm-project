@@ -2193,6 +2193,8 @@ public:
   void VisitOpenACCInitConstruct(const OpenACCInitConstruct *D);
   void VisitOpenACCShutdownConstruct(const OpenACCShutdownConstruct *D);
   void VisitOpenACCSetConstruct(const OpenACCSetConstruct *D);
+  void VisitOpenACCUpdateConstruct(const OpenACCUpdateConstruct *D);
+  void VisitOpenACCAtomicConstruct(const OpenACCAtomicConstruct *D);
   void VisitOMPExecutableDirective(const OMPExecutableDirective *D);
   void VisitOMPLoopBasedDirective(const OMPLoopBasedDirective *D);
   void VisitOMPLoopDirective(const OMPLoopDirective *D);
@@ -3680,6 +3682,18 @@ void EnqueueVisitor::VisitOpenACCSetConstruct(const OpenACCSetConstruct *C) {
   EnqueueChildren(C);
   for (auto *Clause : C->clauses())
     EnqueueChildren(Clause);
+}
+
+void EnqueueVisitor::VisitOpenACCUpdateConstruct(
+    const OpenACCUpdateConstruct *C) {
+  EnqueueChildren(C);
+  for (auto *Clause : C->clauses())
+    EnqueueChildren(Clause);
+}
+
+void EnqueueVisitor::VisitOpenACCAtomicConstruct(
+    const OpenACCAtomicConstruct *C) {
+  EnqueueChildren(C);
 }
 
 void EnqueueVisitor::VisitAnnotateAttr(const AnnotateAttr *A) {
@@ -6454,6 +6468,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OpenACCSetConstruct");
   case CXCursor_OpenACCUpdateConstruct:
     return cxstring::createRef("OpenACCUpdateConstruct");
+  case CXCursor_OpenACCAtomicConstruct:
+    return cxstring::createRef("OpenACCAtomicConstruct");
   }
 
   llvm_unreachable("Unhandled CXCursorKind");
