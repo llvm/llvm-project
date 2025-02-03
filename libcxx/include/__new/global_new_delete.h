@@ -25,7 +25,7 @@
 #  define _THROW_BAD_ALLOC
 #endif
 
-#if defined(__cpp_sized_deallocation) && __cpp_sized_deallocation >= 201309L
+#if _LIBCPP_STD_VER >= 14
 #  define _LIBCPP_HAS_SIZED_DEALLOCATION 1
 #else
 #  define _LIBCPP_HAS_SIZED_DEALLOCATION 0
