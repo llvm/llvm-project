@@ -34,6 +34,7 @@ add_flang_library(FortranLower
   OpenMP/Utils.cpp
   PFTBuilder.cpp
   Runtime.cpp
+  Support/Utils.cpp
   SymbolMap.cpp
   VectorSubscripts.cpp
   
