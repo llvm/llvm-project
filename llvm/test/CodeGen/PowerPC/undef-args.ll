@@ -1,4 +1,4 @@
-;; Test the unused argument are converted to ISD::UNDEF SDNode.
+;; Tests that load 0 into argument registers for unused arguments are eliminated. 
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -debug-only=isel \
 ; RUN:   %s -o - 2>&1 | FileCheck --check-prefix=CHECKSEL32 %s
