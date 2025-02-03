@@ -142,9 +142,9 @@ public:
              std::next(getOperation()->result_begin(), valueRange.first + valueRange.second)};
   }
 
-  ::mlir::TypedValue<::mlir::irdl::AttributeType> getOutput() {{
-    return ::llvm::cast<::mlir::TypedValue<::mlir::irdl::AttributeType>>(*getODSResults(0).begin());
-  }
+  // ::mlir::TypedValue<::mlir::irdl::AttributeType> getOutput() {{
+  //   return ::llvm::cast<::mlir::TypedValue<::mlir::irdl::AttributeType>>(*getODSResults(0).begin());
+  // }
 
   {7}
   static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {{});

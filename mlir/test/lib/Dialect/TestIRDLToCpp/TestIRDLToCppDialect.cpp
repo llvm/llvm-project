@@ -10,11 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/Dialect.h"
+// #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Region.h"
+
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 #include "TestIRDLToCppDialect.h"
 
-#define GEN_DIALECT_DEF
-#include "test_irdl_to_cpp.irdl.mlir.cpp.inc"
-
+// #define GEN_DIALECT_DEF
+// #include "test_irdl_to_cpp.irdl.mlir.cpp.inc"
+// #undef GEN_DIALECT_DEF

@@ -15,5 +15,6 @@
 
 #define GEN_DIALECT_DECL_HEADER
 #include "test_irdl_to_cpp.irdl.mlir.cpp.inc"
+#undef GEN_DIALECT_DECL_HEADER
 
 #endif // MLIR_TEST_LIB_DIALECT_TESTIRDLTOCPP_TESTIRDLTOCPPDIALECT_H

@@ -193,7 +193,7 @@ static LogicalResult generateOperationInclude(irdl::OperationOp op,
 
   const auto operandCount = opStrings.opOperandNames.size();
   const auto operandNames =
-      operandCount ? stringify(opStrings.opOperandNames) : "{}";
+      operandCount ? stringify(opStrings.opOperandNames) : "{\"\"}";
 
   const auto resultCount = opStrings.opResultNames.size();
   const auto resultNames = stringify(opStrings.opResultNames);
@@ -376,7 +376,7 @@ static LogicalResult generateLib(irdl::DialectOp dialect, raw_ostream &output,
 
             const auto operandCount = opStrings.opOperandNames.size();
             const auto operandNames =
-                operandCount ? stringify(opStrings.opOperandNames) : "{}";
+                operandCount ? stringify(opStrings.opOperandNames) : "{\"\"}";
 
             const auto resultCount = opStrings.opResultNames.size();
             const auto resultNames = stringify(opStrings.opResultNames);
