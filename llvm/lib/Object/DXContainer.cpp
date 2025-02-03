@@ -249,7 +249,23 @@ void DXContainer::PartIterator::updateIteratorImpl(const uint32_t Offset) {
 Error DirectX::RootSignature::parse() {
   const char *Current = Data.begin();
 
-  Size = support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  Version = support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  Current += sizeof(uint32_t);
+
+  NumParameters =
+      support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  Current += sizeof(uint32_t);
+
+  RootParametersOffset =
+      support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  Current += sizeof(uint32_t);
+
+  NumStaticSamplers =
+      support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  Current += sizeof(uint32_t);
+
+  StaticSamplersOffset =
+      support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
   Flags = support::endian::read<uint32_t, llvm::endianness::little>(Current);
