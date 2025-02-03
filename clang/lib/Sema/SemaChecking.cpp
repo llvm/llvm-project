@@ -5261,8 +5261,8 @@ ExprResult Sema::ConvertVectorExpr(Expr *E, TypeSourceInfo *TInfo,
                        << E->getSourceRange());
   }
 
-  return new (Context) class ConvertVectorExpr(E, TInfo, DstTy, VK, OK,
-                                               BuiltinLoc, RParenLoc);
+  return ConvertVectorExpr::Create(Context, E, TInfo, DstTy, VK, OK, BuiltinLoc,
+                                   RParenLoc, CurFPFeatureOverrides());
 }
 
 bool Sema::BuiltinPrefetch(CallExpr *TheCall) {

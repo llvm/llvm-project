@@ -1335,11 +1335,15 @@ void ASTStmtWriter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
 
 void ASTStmtWriter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
   VisitExpr(E);
+  bool HasFPFeatures = E->hasStoredFPFeatures();
+  CurrentPackingBits.addBit(HasFPFeatures);
   Record.AddSourceLocation(E->getBuiltinLoc());
   Record.AddSourceLocation(E->getRParenLoc());
   Record.AddTypeSourceInfo(E->getTypeSourceInfo());
   Record.AddStmt(E->getSrcExpr());
   Code = serialization::EXPR_CONVERT_VECTOR;
+  if (HasFPFeatures)
+    Record.push_back(E->getStoredFPFeatures().getAsOpaqueInt());
 }
 
 void ASTStmtWriter::VisitBlockExpr(BlockExpr *E) {

@@ -3899,6 +3899,8 @@ FPOptions Expr::getFPFeaturesInEffect(const LangOptions &LO) const {
     return BO->getFPFeaturesInEffect(LO);
   if (auto Cast = dyn_cast<CastExpr>(this))
     return Cast->getFPFeaturesInEffect(LO);
+  if (auto ConvertVector = dyn_cast<ConvertVectorExpr>(this))
+    return ConvertVector->getFPFeaturesInEffect(LO);
   return FPOptions::defaultWithoutTrailingStorage(LO);
 }
 
@@ -5438,4 +5440,22 @@ OpenACCAsteriskSizeExpr *OpenACCAsteriskSizeExpr::Create(const ASTContext &C,
 OpenACCAsteriskSizeExpr *
 OpenACCAsteriskSizeExpr::CreateEmpty(const ASTContext &C) {
   return new (C) OpenACCAsteriskSizeExpr({}, C.IntTy);
+}
+
+ConvertVectorExpr *ConvertVectorExpr::CreateEmpty(const ASTContext &C,
+                                                  bool hasFPFeatures) {
+  void *Mem = C.Allocate(totalSizeToAlloc<FPOptionsOverride>(hasFPFeatures),
+                         alignof(ConvertVectorExpr));
+  return new (Mem) ConvertVectorExpr(hasFPFeatures, EmptyShell());
+}
+
+ConvertVectorExpr *ConvertVectorExpr::Create(
+    const ASTContext &C, Expr *SrcExpr, TypeSourceInfo *TI, QualType DstType,
+    ExprValueKind VK, ExprObjectKind OK, SourceLocation BuiltinLoc,
+    SourceLocation RParenLoc, FPOptionsOverride FPFeatures) {
+  bool HasFPFeatures = FPFeatures.requiresTrailingStorage();
+  unsigned Size = totalSizeToAlloc<FPOptionsOverride>(HasFPFeatures);
+  void *Mem = C.Allocate(Size, alignof(ConvertVectorExpr));
+  return new (Mem) ConvertVectorExpr(SrcExpr, TI, DstType, VK, OK, BuiltinLoc,
+                                     RParenLoc, FPFeatures);
 }
