@@ -1016,11 +1016,7 @@ define i1 @isnan_idiom_ppc_fp128(ppc_fp128 %x) {
 define i1 @fpclass_test_normal(float %num) {
 ; CHECK-LABEL: define i1 @fpclass_test_normal(
 ; CHECK-SAME: float [[NUM:%.*]]) {
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast float [[NUM]] to i32
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[CAST]], 2139095040
-; CHECK-NEXT:    [[TEST1:%.*]] = icmp ne i32 [[MASKED]], 2139095040
-; CHECK-NEXT:    [[TEST2:%.*]] = icmp ne i32 [[MASKED]], 0
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[TEST1]], [[TEST2]]
+; CHECK-NEXT:    [[RES:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NUM]], i32 264)
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %cast = bitcast float %num to i32
@@ -1034,11 +1030,7 @@ define i1 @fpclass_test_normal(float %num) {
 define i1 @fpclass_test_normal_half(half %num) {
 ; CHECK-LABEL: define i1 @fpclass_test_normal_half(
 ; CHECK-SAME: half [[NUM:%.*]]) {
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast half [[NUM]] to i16
-; CHECK-NEXT:    [[MASKED:%.*]] = and i16 [[CAST]], 31744
-; CHECK-NEXT:    [[TEST1:%.*]] = icmp ne i16 [[MASKED]], 31744
-; CHECK-NEXT:    [[TEST2:%.*]] = icmp ne i16 [[MASKED]], 0
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[TEST1]], [[TEST2]]
+; CHECK-NEXT:    [[RES:%.*]] = call i1 @llvm.is.fpclass.f16(half [[NUM]], i32 264)
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %cast = bitcast half %num to i16
@@ -1052,11 +1044,7 @@ define i1 @fpclass_test_normal_half(half %num) {
 define <2 x i1> @fpclass_test_normal_half_vec(<2 x half> %num) {
 ; CHECK-LABEL: define <2 x i1> @fpclass_test_normal_half_vec(
 ; CHECK-SAME: <2 x half> [[NUM:%.*]]) {
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast <2 x half> [[NUM]] to <2 x i16>
-; CHECK-NEXT:    [[MASKED:%.*]] = and <2 x i16> [[CAST]], splat (i16 31744)
-; CHECK-NEXT:    [[TEST1:%.*]] = icmp ne <2 x i16> [[MASKED]], splat (i16 31744)
-; CHECK-NEXT:    [[TEST2:%.*]] = icmp ne <2 x i16> [[MASKED]], zeroinitializer
-; CHECK-NEXT:    [[RES:%.*]] = and <2 x i1> [[TEST1]], [[TEST2]]
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f16(<2 x half> [[NUM]], i32 264)
 ; CHECK-NEXT:    ret <2 x i1> [[RES]]
 ;
   %cast = bitcast <2 x half> %num to <2 x i16>
@@ -1070,11 +1058,7 @@ define <2 x i1> @fpclass_test_normal_half_vec(<2 x half> %num) {
 define i1 @fpclass_test_not_normal(float %num) {
 ; CHECK-LABEL: define i1 @fpclass_test_not_normal(
 ; CHECK-SAME: float [[NUM:%.*]]) {
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast float [[NUM]] to i32
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[CAST]], 2139095040
-; CHECK-NEXT:    [[TEST1:%.*]] = icmp eq i32 [[MASKED]], 2139095040
-; CHECK-NEXT:    [[TEST2:%.*]] = icmp eq i32 [[MASKED]], 0
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[TEST1]], [[TEST2]]
+; CHECK-NEXT:    [[RES:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NUM]], i32 759)
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %cast = bitcast float %num to i32
@@ -1088,11 +1072,7 @@ define i1 @fpclass_test_not_normal(float %num) {
 define i1 @fpclass_test_normal_commuted(float %num) {
 ; CHECK-LABEL: define i1 @fpclass_test_normal_commuted(
 ; CHECK-SAME: float [[NUM:%.*]]) {
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast float [[NUM]] to i32
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[CAST]], 2139095040
-; CHECK-NEXT:    [[TEST1:%.*]] = icmp ne i32 [[MASKED]], 2139095040
-; CHECK-NEXT:    [[TEST2:%.*]] = icmp ne i32 [[MASKED]], 0
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[TEST2]], [[TEST1]]
+; CHECK-NEXT:    [[RES:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NUM]], i32 264)
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %cast = bitcast float %num to i32
