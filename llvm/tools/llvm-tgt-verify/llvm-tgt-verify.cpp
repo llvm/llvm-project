@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
   PB.registerMachineFunctionAnalyses(MFAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
 
-  SI.registerCallbacks(PIC, &MAM);
+  SI.registerCallbacks(PIC, &MAM, &FAM);
 
   //FAM.registerPass([&] { return TargetLibraryAnalysis(TLII); });
 
