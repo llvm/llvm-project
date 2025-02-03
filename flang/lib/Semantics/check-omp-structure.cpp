@@ -3224,9 +3224,13 @@ void OmpStructureChecker::CheckReductionObjects(
     }
   }
 
+  // Disallowed in standards before 4.0 and in 5.0 and later. Not explicitly
+  // allowed in 4.0. Keep this as an error until/unless structure component
+  // reduction is implemented.
+  // Object cannot be a part of another object (except array elements)
+  CheckStructureComponent(objects, clauseId);
+
   if (version >= 50) {
-    // Object cannot be a part of another object (except array elements)
-    CheckStructureComponent(objects, clauseId);
     // If object is an array section or element, the base expression must be
     // a language identifier.
     for (const parser::OmpObject &object : objects.v) {
