@@ -497,7 +497,7 @@ void collectMemAccessInfo(
       if (CallInst *CI = dyn_cast<CallInst>(&Inst))
         maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
 
-      if (isa<MemIntrinsic>(Inst) || isa<LifetimeIntrinsic>(Inst))
+      if (isa<MemIntrinsic, LifetimeIntrinsic>(Inst))
         MemTypeResetInsts.push_back(&Inst);
     } else if (isa<AllocaInst>(Inst)) {
       MemTypeResetInsts.push_back(&Inst);
