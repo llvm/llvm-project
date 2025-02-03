@@ -169,8 +169,9 @@ template <size_t radix> using Custom = details::Fmt<radix>;
 // by reference, and modified by dividing by 10, so that iterating this
 // function extracts all the digits of the original number one at a time from
 // low to high.
-template <typename T, cpp::enable_if_t<cpp::is_integral_v<T>, int> = 0>
-LIBC_INLINE uint8_t extract_decimal_digit(T &value) {
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<cpp::is_integral_v<T>, uint8_t>
+extract_decimal_digit(T &value) {
   const uint8_t digit(static_cast<uint8_t>(value % 10));
   // For built-in integer types, we assume that an adequately fast division is
   // available. If hardware division isn't implemented, then with a divisor
@@ -182,8 +183,9 @@ LIBC_INLINE uint8_t extract_decimal_digit(T &value) {
 
 // A specialization of extract_decimal_digit for the BigInt type in big_int.h,
 // avoiding the use of general-purpose BigInt division which is very slow.
-template <typename T, cpp::enable_if_t<is_big_int_v<T>, int> = 0>
-LIBC_INLINE uint8_t extract_decimal_digit(T &value) {
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<is_big_int_v<T>, uint8_t>
+extract_decimal_digit(T &value) {
   // There are two essential ways you can turn n into (n/10,n%10). One is
   // ordinary integer division. The other is a modular-arithmetic approach in
   // which you first compute n%10 by bit twiddling, then subtract it off to get
