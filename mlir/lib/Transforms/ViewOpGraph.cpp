@@ -355,7 +355,14 @@ private:
 
   /// Generate a label for a block argument.
   std::string getLabel(BlockArgument arg) {
-    return "arg" + std::to_string(arg.getArgNumber());
+    return strFromOs([&](raw_ostream &os) {
+      os << "<" << getValuePortName(arg) << "> ";
+      arg.printAsOperand(os, OpPrintingFlags());
+      if (printResultTypes)
+        os << " "
+           << truncateString(escapeLabelString(
+                  strFromOs([&](raw_ostream &os) { os << arg.getType(); })));
+    });
   }
 
   /// Process a block. Emit a cluster and one node per block argument and
