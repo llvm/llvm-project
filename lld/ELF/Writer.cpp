@@ -285,7 +285,6 @@ static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("Demote symbols");
   DenseMap<InputFile *, DenseMap<SectionBase *, size_t>> sectionIndexMap;
   bool hasDynsym = ctx.hasDynsym;
-  bool maybePreemptible = ctx.sharedFiles.size() || ctx.arg.shared;
   for (Symbol *sym : ctx.symtab->getSymbols()) {
     if (auto *d = dyn_cast<Defined>(sym)) {
       if (d->section && !d->section->isLive())
@@ -302,8 +301,7 @@ static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
     }
 
     if (hasDynsym)
-      sym->isPreemptible = maybePreemptible &&
-                           (sym->isUndefined() || sym->isExported) &&
+      sym->isPreemptible = (sym->isUndefined() || sym->isExported) &&
                            computeIsPreemptible(ctx, *sym);
   }
 }
@@ -1944,7 +1942,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
       // computeBinding might localize a linker-synthesized hidden symbol
       // (e.g. __global_pointer$) that was considered exported.
-      if ((sym->isExported || sym->isPreemptible) && !sym->isLocal()) {
+      if (ctx.hasDynsym && (sym->isUndefined() || sym->isExported) &&
+          !sym->isLocal()) {
         ctx.partitions[sym->partition - 1].dynSymTab->addSymbol(sym);
         if (auto *file = dyn_cast<SharedFile>(sym->file))
           if (file->isNeeded && !sym->isUndefined())
