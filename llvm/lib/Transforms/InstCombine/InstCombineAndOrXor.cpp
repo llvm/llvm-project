@@ -3529,6 +3529,7 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   if (LHS0 == RHS0 && PredL == PredR &&
       PredL == (IsAnd ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ) &&
       !I.getFunction()->hasFnAttribute(Attribute::NoImplicitFloat) &&
+      LHS->hasOneUse() && RHS->hasOneUse() &&
       match(LHS0, m_And(m_ElementWiseBitCast(m_Value(X)), m_APInt(MaskC))) &&
       X->getType()->getScalarType()->isIEEELikeFPTy() &&
       APFloat(X->getType()->getScalarType()->getFltSemantics(), *MaskC)
