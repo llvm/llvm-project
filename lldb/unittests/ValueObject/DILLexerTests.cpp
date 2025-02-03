@@ -27,13 +27,15 @@ ExtractTokenData(llvm::StringRef input_expr) {
   if (lexer.NumLexedTokens() == 0)
     return llvm::createStringError("No lexed tokens");
 
-  lexer.ResetTokenIdx(UINT_MAX);
+  lexer.ResetTokenIdx(0);
   std::vector<std::pair<Token::Kind, std::string>> data;
   do {
-    lexer.Advance();
     Token tok = lexer.GetCurrentToken();
     data.push_back(std::make_pair(tok.GetKind(), tok.GetSpelling()));
+    lexer.Advance();
   } while (data.back().first != Token::eof);
+  // Don't return the eof token.
+  data.pop_back();
   return data;
 }
 
@@ -42,11 +44,8 @@ TEST(DILLexerTests, SimpleTest) {
   llvm::Expected<DILLexer> maybe_lexer = DILLexer::Create(input_expr);
   ASSERT_THAT_EXPECTED(maybe_lexer, llvm::Succeeded());
   DILLexer lexer(*maybe_lexer);
-  Token token = Token(Token::unknown, "", 0);
-  EXPECT_EQ(token.GetKind(), Token::unknown);
+  Token token = lexer.GetCurrentToken();
 
-  lexer.Advance();
-  token = lexer.GetCurrentToken();
   EXPECT_EQ(token.GetKind(), Token::identifier);
   EXPECT_EQ(token.GetSpelling(), "simple_var");
   lexer.Advance();
@@ -69,9 +68,7 @@ TEST(DILLexerTests, LookAheadTest) {
   llvm::Expected<DILLexer> maybe_lexer = DILLexer::Create(input_expr);
   ASSERT_THAT_EXPECTED(maybe_lexer, llvm::Succeeded());
   DILLexer lexer(*maybe_lexer);
-  Token token = Token(Token::unknown, "", 0);
-  lexer.Advance();
-  token = lexer.GetCurrentToken();
+  Token token = lexer.GetCurrentToken();
 
   // Current token is '('; check the next 4 tokens, to make
   // sure they are the identifier 'anonymous', the identifier 'namespace'
@@ -110,49 +107,54 @@ TEST(DILLexerTests, LookAheadTest) {
 TEST(DILLexerTests, MultiTokenLexTest) {
   EXPECT_THAT_EXPECTED(
       ExtractTokenData("This string has (several ) ::identifiers"),
-      llvm::HasValue(
-          testing::ElementsAre(testing::Pair(Token::identifier, "This"),
-                               testing::Pair(Token::identifier, "string"),
-                               testing::Pair(Token::identifier, "has"),
-                               testing::Pair(Token::l_paren, "("),
-                               testing::Pair(Token::identifier, "several"),
-                               testing::Pair(Token::r_paren, ")"),
-                               testing::Pair(Token::coloncolon, "::"),
-                               testing::Pair(Token::identifier, "identifiers"),
-                               testing::Pair(Token::eof, ""))));
+      llvm::HasValue(testing::ElementsAre(
+          testing::Pair(Token::identifier, "This"),
+          testing::Pair(Token::identifier, "string"),
+          testing::Pair(Token::identifier, "has"),
+          testing::Pair(Token::l_paren, "("),
+          testing::Pair(Token::identifier, "several"),
+          testing::Pair(Token::r_paren, ")"),
+          testing::Pair(Token::coloncolon, "::"),
+          testing::Pair(Token::identifier, "identifiers"))));
 }
 
 TEST(DILLexerTests, IdentifiersTest) {
+  // These strings should lex into identifier tokens.
   std::vector<std::string> valid_identifiers = {
-      "$My_name1", "$pc",  "abcd", "_", "_a",     "_a_",
+      "$My_name1", "$pc",  "abcd", "_", "_a",     "_a_",      "$",
       "a_b",       "this", "self", "a", "MyName", "namespace"};
-  std::vector<std::string> invalid_identifiers = {"234", "2a",      "2",
-                                                  "$",   "1MyName", ""};
+
+  // The lexer can lex these strings, but they should not be identifiers.
+  std::vector<std::string> invalid_identifiers = {"", "::", "(", ")"};
+
+  // The lexer is expected to fail attempting to lex these strings (it cannot
+  // create valid tokens out of them).
+  std::vector<std::string> invalid_tok_strings = {"234", "2a", "2", "1MyName"};
 
   // Verify that all of the valid identifiers come out as identifier tokens.
   for (auto &str : valid_identifiers) {
     SCOPED_TRACE(str);
     EXPECT_THAT_EXPECTED(ExtractTokenData(str),
                          llvm::HasValue(testing::ElementsAre(
-                             testing::Pair(Token::identifier, str),
-                             testing::Pair(Token::eof, ""))));
+                             testing::Pair(Token::identifier, str))));
+  }
+
+  // Verify that the lexer fails on invalid token strings.
+  for (auto &str : invalid_tok_strings) {
+    SCOPED_TRACE(str);
+    auto maybe_lexer = DILLexer::Create(str);
+    EXPECT_THAT_EXPECTED(maybe_lexer, llvm::Failed());
   }
 
   // Verify that none of the invalid identifiers come out as identifier tokens.
   for (auto &str : invalid_identifiers) {
     SCOPED_TRACE(str);
     llvm::Expected<DILLexer> maybe_lexer = DILLexer::Create(str);
-    if (!maybe_lexer) {
-      llvm::consumeError(maybe_lexer.takeError());
-      // In this case, it's ok for lexing to return an error.
-    } else {
-      DILLexer lexer(*maybe_lexer);
-      Token token = Token(Token::unknown, "", 0);
-      // We didn't get an error; make sure we did not get an identifier token.
-      lexer.Advance();
-      token = lexer.GetCurrentToken();
-      EXPECT_TRUE(token.IsNot(Token::identifier));
-      EXPECT_TRUE(token.IsOneOf(Token::unknown, Token::eof));
-    }
+    EXPECT_THAT_EXPECTED(maybe_lexer, llvm::Succeeded());
+    DILLexer lexer(*maybe_lexer);
+    Token token = lexer.GetCurrentToken();
+    EXPECT_TRUE(token.IsNot(Token::identifier));
+    EXPECT_TRUE(token.IsOneOf(Token::eof, Token::coloncolon, Token::l_paren,
+                              Token::r_paren));
   }
 }

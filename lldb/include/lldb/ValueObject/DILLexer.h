@@ -30,7 +30,6 @@ public:
     identifier,
     l_paren,
     r_paren,
-    unknown,
   };
 
   Token(Kind kind, std::string spelling, uint32_t start)
@@ -72,10 +71,7 @@ public:
 
   /// Advance the current token position by N.
   void Advance(uint32_t N = 1) {
-    // UINT_MAX means uninitialized, no "current" position, so move to start.
-    if (m_tokens_idx == UINT_MAX)
-      m_tokens_idx = 0;
-    else if (m_tokens_idx + N >= m_lexed_tokens.size())
+    if (m_tokens_idx + N >= m_lexed_tokens.size())
       // N is too large; advance to the end of the lexed tokens.
       m_tokens_idx = m_lexed_tokens.size() - 1;
     else
@@ -99,7 +95,7 @@ public:
   /// to a particular position. Used for either committing 'look ahead' parsing
   /// or rolling back tentative parsing.
   void ResetTokenIdx(uint32_t new_value) {
-    assert(new_value == UINT_MAX || new_value < m_lexed_tokens.size());
+    assert(new_value < m_lexed_tokens.size());
     m_tokens_idx = new_value;
   }
 
@@ -108,7 +104,7 @@ public:
 private:
   DILLexer(llvm::StringRef dil_expr, std::vector<Token> lexed_tokens)
       : m_expr(dil_expr), m_lexed_tokens(std::move(lexed_tokens)),
-        m_tokens_idx(UINT_MAX), m_eof_token(Token(Token::eof, "", 0)) {}
+        m_tokens_idx(0), m_eof_token(Token(Token::eof, "", 0)) {}
 
   static llvm::Expected<Token> Lex(llvm::StringRef expr,
                                    llvm::StringRef &remainder);

@@ -29,8 +29,6 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "l_paren";
   case Kind::r_paren:
     return "r_paren";
-  case Kind::unknown:
-    return "unknown";
   }
 }
 
@@ -44,43 +42,14 @@ static bool IsDigit(char c) { return '0' <= c && c <= '9'; }
 // letters ('a'..'z','A'..'Z'), digits ('0'..'9'), and/or  underscores.
 static std::optional<llvm::StringRef> IsWord(llvm::StringRef expr,
                                              llvm::StringRef &remainder) {
-  llvm::StringRef::iterator cur_pos = expr.end() - remainder.size();
-  llvm::StringRef::iterator start = cur_pos;
-  bool dollar_start = false;
-
-  // Must not start with a digit.
-  if (cur_pos == expr.end() || IsDigit(*cur_pos))
+  // Find the longest prefix consisting of letters, digits, underscors and
+  // '$'. If it doesn't start with a digit, then it's a word.
+  llvm::StringRef candidate = remainder.take_while(
+      [](char c) { return IsDigit(c) || IsLetter(c) || c == '_' || c == '$'; });
+  if (candidate.empty() || IsDigit(candidate[0]))
     return std::nullopt;
-
-  // First character *may* be a '$', for a register name or convenience
-  // variable.
-  if (*cur_pos == '$') {
-    dollar_start = true;
-    ++cur_pos;
-  }
-
-  // Contains only letters, digits or underscores
-  for (; cur_pos != expr.end(); ++cur_pos) {
-    char c = *cur_pos;
-    if (!IsLetter(c) && !IsDigit(c) && c != '_')
-      break;
-  }
-
-  // If first char is '$', make sure there's at least one mare char, or it's
-  // invalid.
-  if (dollar_start && (cur_pos - start <= 1)) {
-    cur_pos = start;
-    return std::nullopt;
-  }
-
-  if (cur_pos == start)
-    return std::nullopt;
-
-  llvm::StringRef word = expr.substr(start - expr.begin(), cur_pos - start);
-  if (remainder.consume_front(word))
-    return word;
-
-  return std::nullopt;
+  remainder = remainder.drop_front(candidate.size());
+  return candidate;
 }
 
 llvm::Expected<DILLexer> DILLexer::Create(llvm::StringRef expr) {
@@ -100,10 +69,10 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
                                     llvm::StringRef &remainder) {
   // Skip over whitespace (spaces).
   remainder = remainder.ltrim();
-  llvm::StringRef::iterator cur_pos = expr.end() - remainder.size();
+  llvm::StringRef::iterator cur_pos = remainder.begin();
 
   // Check to see if we've reached the end of our input string.
-  if (remainder.empty() || cur_pos == expr.end())
+  if (remainder.empty())
     return Token(Token::eof, "", (uint32_t)expr.size());
 
   uint32_t position = cur_pos - expr.begin();
