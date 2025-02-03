@@ -12238,18 +12238,12 @@ InstructionCost BoUpSLP::getSpillCost() {
           return false;
         if (II->isAssumeLikeIntrinsic())
           return true;
-        FastMathFlags FMF;
-        SmallVector<Type *, 4> Tys;
-        for (auto &ArgOp : II->args())
-          Tys.push_back(ArgOp->getType());
-        if (auto *FPMO = dyn_cast<FPMathOperator>(II))
-          FMF = FPMO->getFastMathFlags();
-        IntrinsicCostAttributes ICA(II->getIntrinsicID(), II->getType(), Tys,
-                                    FMF);
+        IntrinsicCostAttributes ICA(II->getIntrinsicID(), *II);
         InstructionCost IntrCost =
             TTI->getIntrinsicInstrCost(ICA, TTI::TCK_RecipThroughput);
-        InstructionCost CallCost = TTI->getCallInstrCost(
-            nullptr, II->getType(), Tys, TTI::TCK_RecipThroughput);
+        InstructionCost CallCost =
+            TTI->getCallInstrCost(nullptr, II->getType(), ICA.getArgTypes(),
+                                  TTI::TCK_RecipThroughput);
         return IntrCost < CallCost;
       };
 
