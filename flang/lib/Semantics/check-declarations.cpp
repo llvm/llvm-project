@@ -683,20 +683,10 @@ void CheckHelper::CheckObjectEntity(
   const DeclTypeSpec *type{details.type()};
   const DerivedTypeSpec *derived{type ? type->AsDerived() : nullptr};
   bool isComponent{symbol.owner().IsDerivedType()};
-  if (details.coshape().empty()) { // not a coarray
-    if (!isComponent && !IsPointer(symbol) && derived) {
-      if (IsEventTypeOrLockType(derived)) {
-        messages_.Say(
-            "Variable '%s' with EVENT_TYPE or LOCK_TYPE must be a coarray"_err_en_US,
-            symbol.name());
-      } else if (auto component{FindEventOrLockPotentialComponent(
-                     *derived, /*ignoreCoarrays=*/true)}) {
-        messages_.Say(
-            "Variable '%s' with EVENT_TYPE or LOCK_TYPE potential component '%s' must be a coarray"_err_en_US,
-            symbol.name(), component.BuildResultDesignatorName());
-      }
-    }
-  } else { // it's a coarray
+  const Symbol *commonBlock{FindCommonBlockContaining(symbol)};
+  bool isLocalVariable{!commonBlock && !isComponent && !details.isDummy() &&
+      symbol.owner().kind() != Scope::Kind::OtherConstruct};
+  if (int corank{evaluate::GetCorank(symbol)}; corank > 0) { // it's a coarray
     bool isDeferredCoshape{details.coshape().CanBeDeferredShape()};
     if (IsAllocatable(symbol)) {
       if (!isDeferredCoshape) { // C827
@@ -725,6 +715,46 @@ void CheckHelper::CheckObjectEntity(
     if (evaluate::IsAssumedRank(symbol)) {
       messages_.Say("Coarray '%s' may not be an assumed-rank array"_err_en_US,
           symbol.name());
+    }
+    if (IsNamedConstant(symbol)) {
+      messages_.Say(
+          "Coarray '%s' may not be a named constant"_err_en_US, symbol.name());
+    }
+    if (IsFunctionResult(symbol)) {
+      messages_.Say("Function result may not be a coarray"_err_en_US);
+    } else if (commonBlock) {
+      messages_.Say("Coarray '%s' may not be in COMMON block '/%s/'"_err_en_US,
+          symbol.name(), commonBlock->name());
+    } else if (isLocalVariable && !IsAllocatableOrPointer(symbol) &&
+        !IsSaved(symbol)) {
+      messages_.Say("Local coarray must have the SAVE attribute"_err_en_US);
+    }
+    for (int j{0}; j < corank; ++j) {
+      if (auto lcbv{evaluate::ToInt64(evaluate::Fold(
+              context().foldingContext(), evaluate::GetLCOBOUND(symbol, j)))}) {
+        if (auto ucbv{
+                evaluate::ToInt64(evaluate::Fold(context().foldingContext(),
+                    evaluate::GetUCOBOUND(symbol, j)))}) {
+          if (ucbv < lcbv) {
+            messages_.Say(
+                "Cobounds %jd:%jd of codimension %d produce an empty coarray"_err_en_US,
+                std::intmax_t{*lcbv}, std::intmax_t{*ucbv}, j + 1);
+          }
+        }
+      }
+    }
+  } else { // not a coarray
+    if (!isComponent && !IsPointer(symbol) && derived) {
+      if (IsEventTypeOrLockType(derived)) {
+        messages_.Say(
+            "Variable '%s' with EVENT_TYPE or LOCK_TYPE must be a coarray"_err_en_US,
+            symbol.name());
+      } else if (auto component{FindEventOrLockPotentialComponent(
+                     *derived, /*ignoreCoarrays=*/true)}) {
+        messages_.Say(
+            "Variable '%s' with EVENT_TYPE or LOCK_TYPE potential component '%s' must be a coarray"_err_en_US,
+            symbol.name(), component.BuildResultDesignatorName());
+      }
     }
   }
   if (details.isDummy()) {
@@ -924,6 +954,42 @@ void CheckHelper::CheckObjectEntity(
     SayWithDeclaration(symbol,
         "'%s' is a data object and may not be EXTERNAL"_err_en_US,
         symbol.name());
+  }
+
+  if (derived) {
+    bool isUnsavedLocal{
+        isLocalVariable && !IsAllocatable(symbol) && !IsSaved(symbol)};
+    if (IsFunctionResult(symbol) || IsPointer(symbol) ||
+        evaluate::IsCoarray(symbol) || isUnsavedLocal) {
+      if (auto badPotential{FindCoarrayPotentialComponent(*derived)}) {
+        if (IsFunctionResult(symbol)) { // F'2023 C825
+          SayWithDeclaration(*badPotential,
+              "Function result '%s' may not have a coarray potential component '%s'"_err_en_US,
+              symbol.name(), badPotential.BuildResultDesignatorName());
+        } else if (IsPointer(symbol)) { // F'2023 C825
+          SayWithDeclaration(*badPotential,
+              "Pointer '%s' may not have a coarray potential component '%s'"_err_en_US,
+              symbol.name(), badPotential.BuildResultDesignatorName());
+        } else if (evaluate::IsCoarray(symbol)) { // F'2023 C825
+          SayWithDeclaration(*badPotential,
+              "Coarray '%s' may not have a coarray potential component '%s'"_err_en_US,
+              symbol.name(), badPotential.BuildResultDesignatorName());
+        } else if (isUnsavedLocal) { // F'2023 C826
+          SayWithDeclaration(*badPotential,
+              "Local variable '%s' without the SAVE attribute may not have a coarray potential subobject component '%s'"_err_en_US,
+              symbol.name(), badPotential.BuildResultDesignatorName());
+        } else {
+          DIE("caught unexpected bad coarray potential component");
+        }
+      }
+    } else if (isComponent && (IsAllocatable(symbol) || symbol.Rank() > 0)) {
+      if (auto badUltimate{FindCoarrayUltimateComponent(*derived)}) {
+        // TODO: still an error in F'2023?
+        SayWithDeclaration(*badUltimate,
+            "Allocatable or array component '%s' may not have a coarray ultimate component '%s'"_err_en_US,
+            symbol.name(), badUltimate.BuildResultDesignatorName());
+      }
+    }
   }
 
   // Check CUDA attributes and special circumstances of being in device
@@ -3160,10 +3226,6 @@ parser::Messages CheckHelper::WhyNotInteroperableFunctionResult(
   if (symbol.Rank() > 0) {
     msgs.Say(symbol.name(),
         "Interoperable function result must be scalar"_err_en_US);
-  }
-  if (symbol.Corank()) {
-    msgs.Say(symbol.name(),
-        "Interoperable function result may not be a coarray"_err_en_US);
   }
   return msgs;
 }

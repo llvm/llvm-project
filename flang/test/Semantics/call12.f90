@@ -40,7 +40,9 @@ module m
     type(hasHiddenPtr), intent(in) :: hhpd
     type(hasPtr), allocatable :: alloc
     type(hasHiddenPtr), allocatable :: hpAlloc
+    !ERROR: Pointer 'hcp' may not have a coarray potential component '%co'
     type(hasCoarray), pointer :: hcp
+    type(hasCoarray), allocatable :: hca
     integer :: n
     common /block/ y
     external :: extfunc
@@ -60,8 +62,8 @@ module m
     !BECAUSE: 'in' is an INTENT(IN) dummy argument
     in%a = 0. ! C1594(1)
     !ERROR: Left-hand side of assignment is not definable
-    !BECAUSE: A pure subprogram may not define the coindexed object 'hcp%co[1_8]'
-    hcp%co[1] = 0. ! C1594(1)
+    !BECAUSE: A pure subprogram may not define the coindexed object 'hca%co[1_8]'
+    hca%co[1] = 0. ! C1594(1)
     !ERROR: The left-hand side of a pointer assignment is not definable
     !BECAUSE: 'ptr' may not be defined in pure subprogram 'test' because it is a POINTER dummy argument of a pure function
     ptr => z ! C1594(2)

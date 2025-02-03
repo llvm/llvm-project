@@ -1386,6 +1386,13 @@ template class ComponentIterator<ComponentKind::Potential>;
 template class ComponentIterator<ComponentKind::Scope>;
 template class ComponentIterator<ComponentKind::PotentialAndPointer>;
 
+PotentialComponentIterator::const_iterator FindCoarrayPotentialComponent(
+    const DerivedTypeSpec &derived) {
+  PotentialComponentIterator potentials{derived};
+  return std::find_if(potentials.begin(), potentials.end(),
+      [](const Symbol &symbol) { return evaluate::IsCoarray(symbol); });
+}
+
 UltimateComponentIterator::const_iterator FindCoarrayUltimateComponent(
     const DerivedTypeSpec &derived) {
   UltimateComponentIterator ultimates{derived};
