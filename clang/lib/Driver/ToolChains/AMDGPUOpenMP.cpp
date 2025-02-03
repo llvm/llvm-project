@@ -71,37 +71,10 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
 
   const OptTable &Opts = getDriver().getOpts();
 
-  if (DeviceOffloadKind == Action::OFK_OpenMP) {
-    for (Arg *A : Args) {
-      if (!shouldSkipSanitizeOption(*this, Args, BoundArch, A) &&
-          !llvm::is_contained(*DAL, A))
-        DAL->append(A);
-    }
-
-    if (!DAL->hasArg(options::OPT_march_EQ)) {
-      StringRef Arch = BoundArch;
-      if (Arch.empty()) {
-        auto ArchsOrErr = getSystemGPUArchs(Args);
-        if (!ArchsOrErr) {
-          std::string ErrMsg =
-              llvm::formatv("{0}", llvm::fmt_consume(ArchsOrErr.takeError()));
-          getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
-              << llvm::Triple::getArchTypeName(getArch()) << ErrMsg << "-march";
-          Arch = OffloadArchToString(OffloadArch::HIPDefault);
-        } else {
-          Arch = Args.MakeArgString(ArchsOrErr->front());
-        }
-      }
-      DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ), Arch);
-    }
-
-    return DAL;
-  }
-
-  for (Arg *A : Args) {
-    if (!llvm::is_contained(*DAL, A))
+  for (Arg *A : Args)
+    if (!shouldSkipSanitizeOption(*this, Args, BoundArch, A) &&
+        !llvm::is_contained(*DAL, A))
       DAL->append(A);
-  }
 
   if (!BoundArch.empty()) {
     DAL->eraseArg(options::OPT_march_EQ);
