@@ -656,15 +656,21 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             region_one = lldb.SBMemoryRegionInfo()
             process.GetMemoryRegions().GetMemoryRegionAtIndex(0, region_one)
             options.AddMemoryRegionToSave(region_one)
-            empty_region = lldb.SBMemoryRegionInfo("empty region", 0x0, 0x0, 3, True, False)
+            empty_region = lldb.SBMemoryRegionInfo(
+                "empty region", 0x0, 0x0, 3, True, False
+            )
             options.AddMemoryRegionToSave(empty_region)
-            region_with_no_permissions = lldb.SBMemoryRegionInfo("no permissions", 0x2AAA, 0x2BBB, 0, True, False)
+            region_with_no_permissions = lldb.SBMemoryRegionInfo(
+                "no permissions", 0x2AAA, 0x2BBB, 0, True, False
+            )
             options.AddMemoryRegionToSave(region_with_no_permissions)
             error = process.SaveCore(options)
             self.assertTrue(error.Success(), error.GetCString())
             core_target = self.dbg.CreateTarget(None)
             core_process = core_target.LoadCore(output_file)
-            self.assertNotIn(region_with_no_permissions, core_process.GetMemoryRegions())
+            self.assertNotIn(
+                region_with_no_permissions, core_process.GetMemoryRegions()
+            )
             self.assertNotIn(empty_region, core_process.GetMemoryRegions())
         finally:
             if os.path.isfile(output_file):
