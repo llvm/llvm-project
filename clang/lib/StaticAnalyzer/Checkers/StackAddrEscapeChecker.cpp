@@ -253,22 +253,27 @@ public:
 
   bool VisitSymbol(SymbolRef sym) override { return true; }
 
-  bool VisitMemRegion(const MemRegion *MR) override {
-    if (const BlockDataRegion *BDR = MR->getAs<BlockDataRegion>()) {
-      for (auto Var : BDR->referenced_vars()) {
-        SVal Val = Ctxt.getState()->getSVal(Var.getCapturedRegion());
-        const MemRegion *Region = Val.getAsRegion();
-        if (Region && isa<StackSpaceRegion>(Region->getMemorySpace())) {
-          EscapingStackRegions.push_back(Region);
-          VisitMemRegion(Region);
-        }
+  bool VisitBlockDataRegion(const BlockDataRegion *BDR) {
+    for (auto Var : BDR->referenced_vars()) {
+      SVal Val = Ctxt.getState()->getSVal(Var.getCapturedRegion());
+      const MemRegion *Region = Val.getAsRegion();
+      if (Region && isa<StackSpaceRegion>(Region->getMemorySpace())) {
+        EscapingStackRegions.push_back(Region);
+        VisitMemRegion(Region);
       }
-      return false;
     }
 
+    return false;
+  }
+
+  bool VisitMemRegion(const MemRegion *MR) override {
     const StackSpaceRegion *SSR = MR->getMemorySpace()->getAs<StackSpaceRegion>();
     if (SSR && SSR->getStackFrame() == StackFrameContext)
       EscapingStackRegions.push_back(MR);
+    
+    if (const BlockDataRegion *BDR = MR->getAs<BlockDataRegion>())
+      return VisitBlockDataRegion(BDR);
+
     return true;
   }
 };
@@ -330,7 +335,7 @@ void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS, CheckerContext &
   SVal V = C.getSVal(RetE);
 
   SmallVector<const MemRegion *> EscapedStackRegions =
-      FindEscapingStackRegions(C, RetE, V);
+    FindEscapingStackRegions(C, RetE, V);
 
   for (const MemRegion *ER : EscapedStackRegions)
     EmitReturnLeakError(C, ER, RetE);
