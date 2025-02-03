@@ -2944,7 +2944,7 @@ bool X86::isOffsetSuitableForCodeModel(int64_t Offset, CodeModel::Model CM,
 }
 
 /// Return true if the condition is an signed comparison operation.
-static bool isX86CCSigned(unsigned X86CC) {
+static bool isX86CCSigned(X86::CondCode X86CC) {
   switch (X86CC) {
   default:
     llvm_unreachable("Invalid integer condition!");
