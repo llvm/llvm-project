@@ -1155,11 +1155,11 @@ void SelectionDAG::DeallocateNode(SDNode *N) {
 
 #ifndef NDEBUG
 /// VerifySDNode - Check the given SDNode.  Aborts if it is invalid.
-static void VerifySDNode(SDNode *N, const TargetLowering *TLI) {
+static void VerifySDNode(const SelectionDAG &DAG, SDNode *N) {
   switch (N->getOpcode()) {
   default:
-    if (N->getOpcode() > ISD::BUILTIN_OP_END)
-      TLI->verifyTargetSDNode(N);
+    if (N->isTargetOpcode())
+      DAG.getSelectionDAGInfo().verifyTargetNode(DAG, N);
     break;
   case ISD::BUILD_PAIR: {
     EVT VT = N->getValueType(0);
@@ -1203,7 +1203,7 @@ void SelectionDAG::InsertNode(SDNode *N) {
   AllNodes.push_back(N);
 #ifndef NDEBUG
   N->PersistentId = NextPersistentId++;
-  VerifySDNode(N, TLI);
+  VerifySDNode(*this, N);
 #endif
   for (DAGUpdateListener *DUL = UpdateListeners; DUL; DUL = DUL->Next)
     DUL->NodeInserted(N);
@@ -1961,7 +1961,7 @@ SDValue SelectionDAG::getJumpTable(int JTI, EVT VT, bool isTarget,
 SDValue SelectionDAG::getJumpTableDebugInfo(int JTI, SDValue Chain,
                                             const SDLoc &DL) {
   EVT PTy = getTargetLoweringInfo().getPointerTy(getDataLayout());
-  return getNode(ISD::JUMP_TABLE_DEBUG_INFO, DL, MVT::Glue, Chain,
+  return getNode(ISD::JUMP_TABLE_DEBUG_INFO, DL, MVT::Other, Chain,
                  getTargetConstant(static_cast<uint64_t>(JTI), DL, PTy, true));
 }
 

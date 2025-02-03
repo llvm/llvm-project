@@ -867,20 +867,6 @@ MachineBasicBlock *WebAssemblyTargetLowering::EmitInstrWithCustomInserter(
   }
 }
 
-const char *
-WebAssemblyTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch (static_cast<WebAssemblyISD::NodeType>(Opcode)) {
-  case WebAssemblyISD::FIRST_NUMBER:
-    break;
-#define HANDLE_NODETYPE(NODE)                                                  \
-  case WebAssemblyISD::NODE:                                                   \
-    return "WebAssemblyISD::" #NODE;
-#include "WebAssemblyISD.def"
-#undef HANDLE_NODETYPE
-  }
-  return nullptr;
-}
-
 std::pair<unsigned, const TargetRegisterClass *>
 WebAssemblyTargetLowering::getRegForInlineAsmConstraint(
     const TargetRegisterInfo *TRI, StringRef Constraint, MVT VT) const {
@@ -1727,7 +1713,7 @@ SDValue WebAssemblyTargetLowering::LowerLoad(SDValue Op,
     SDValue Idx = DAG.getTargetConstant(*Local, Base, MVT::i32);
     EVT LocalVT = LN->getValueType(0);
     SDValue LocalGet = DAG.getNode(WebAssemblyISD::LOCAL_GET, DL, LocalVT,
-                                   {LN->getChain(), Idx});
+                       {LN->getChain(), Idx});
     SDValue Result = DAG.getMergeValues({LocalGet, LN->getChain()}, DL);
     assert(Result->getNumValues() == 2 && "Loads must carry a chain!");
     return Result;

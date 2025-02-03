@@ -59,12 +59,14 @@ def riscv_fcvt_xu
 def riscv_fmin : SDNode<"RISCVISD::FMIN", SDTFPBinOp>;
 def riscv_fmax : SDNode<"RISCVISD::FMAX", SDTFPBinOp>;
 
-def riscv_strict_fcvt_w_rv64
-    : SDNode<"RISCVISD::STRICT_FCVT_W_RV64", SDT_RISCVFCVT_W_RV64,
-             [SDNPHasChain]>;
-def riscv_strict_fcvt_wu_rv64
-    : SDNode<"RISCVISD::STRICT_FCVT_WU_RV64", SDT_RISCVFCVT_W_RV64,
-             [SDNPHasChain]>;
+let IsStrictFP = true in {
+  def riscv_strict_fcvt_w_rv64
+      : SDNode<"RISCVISD::STRICT_FCVT_W_RV64", SDT_RISCVFCVT_W_RV64,
+               [SDNPHasChain]>;
+  def riscv_strict_fcvt_wu_rv64
+      : SDNode<"RISCVISD::STRICT_FCVT_WU_RV64", SDT_RISCVFCVT_W_RV64,
+               [SDNPHasChain]>;
+}
 
 def riscv_any_fcvt_w_rv64 : PatFrags<(ops node:$src, node:$frm),
                                      [(riscv_strict_fcvt_w_rv64 node:$src, node:$frm),

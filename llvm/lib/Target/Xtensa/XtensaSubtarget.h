@@ -17,7 +17,6 @@
 #include "XtensaISelLowering.h"
 #include "XtensaInstrInfo.h"
 #include "XtensaRegisterInfo.h"
-#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Target/TargetMachine.h"
@@ -33,7 +32,7 @@ private:
   const Triple &TargetTriple;
   XtensaInstrInfo InstrInfo;
   XtensaTargetLowering TLInfo;
-  SelectionDAGTargetInfo TSInfo;
+  std::unique_ptr<const SelectionDAGTargetInfo> TSInfo;
   XtensaFrameLowering FrameLowering;
 
   // Enabled Xtensa Density Option
@@ -48,6 +47,8 @@ public:
   XtensaSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                   const TargetMachine &TM);
 
+  ~XtensaSubtarget() override;
+
   const Triple &getTargetTriple() const { return TargetTriple; }
 
   const TargetFrameLowering *getFrameLowering() const override {
@@ -61,9 +62,8 @@ public:
   const XtensaTargetLowering *getTargetLowering() const override {
     return &TLInfo;
   }
-  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
-    return &TSInfo;
-  }
+
+  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
 
   bool hasDensity() const { return HasDensity; }
 

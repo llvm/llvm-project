@@ -701,26 +701,6 @@ SDValue BPFTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(BPFISD::SELECT_CC, DL, Op.getValueType(), Ops);
 }
 
-const char *BPFTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch ((BPFISD::NodeType)Opcode) {
-  case BPFISD::FIRST_NUMBER:
-    break;
-  case BPFISD::RET_GLUE:
-    return "BPFISD::RET_GLUE";
-  case BPFISD::CALL:
-    return "BPFISD::CALL";
-  case BPFISD::SELECT_CC:
-    return "BPFISD::SELECT_CC";
-  case BPFISD::BR_CC:
-    return "BPFISD::BR_CC";
-  case BPFISD::Wrapper:
-    return "BPFISD::Wrapper";
-  case BPFISD::MEMCPY:
-    return "BPFISD::MEMCPY";
-  }
-  return nullptr;
-}
-
 static SDValue getTargetNode(GlobalAddressSDNode *N, const SDLoc &DL, EVT Ty,
                              SelectionDAG &DAG, unsigned Flags) {
   return DAG.getTargetGlobalAddress(N->getGlobal(), DL, Ty, 0, Flags);
