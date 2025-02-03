@@ -1604,8 +1604,7 @@ ModuleTranslation::convertParameterAttrs(LLVMFuncOp func, int argIdx,
 }
 
 FailureOr<llvm::AttrBuilder>
-ModuleTranslation::convertParameterAttrs(CallOp, int argIdx,
-                                         DictionaryAttr paramAttrs) {
+ModuleTranslation::convertParameterAttrs(CallOp, DictionaryAttr paramAttrs) {
   llvm::AttrBuilder attrBuilder(llvmModule->getContext());
   auto attrNameToKindMapping = getAttrNameToKindMapping();
 

@@ -265,26 +265,28 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     if (callOp.getWillReturnAttr())
       call->addFnAttr(llvm::Attribute::WillReturn);
 
-    if (ArrayAttr argAttrsArray = callOp.getArgAttrsAttr())
+    if (ArrayAttr argAttrsArray = callOp.getArgAttrsAttr()) {
       for (auto [argIdx, argAttrsAttr] : llvm::enumerate(argAttrsArray)) {
         if (auto argAttrs = llvm::cast<DictionaryAttr>(argAttrsAttr)) {
           FailureOr<llvm::AttrBuilder> attrBuilder =
-              moduleTranslation.convertParameterAttrs(callOp, argIdx, argAttrs);
+              moduleTranslation.convertParameterAttrs(callOp, argAttrs);
           if (failed(attrBuilder))
             return failure();
           call->addParamAttrs(argIdx, *attrBuilder);
         }
       }
+    }
 
     ArrayAttr resAttrsArray = callOp.getResAttrsAttr();
-    if (resAttrsArray && resAttrsArray.size() == 1)
+    if (resAttrsArray && resAttrsArray.size() == 1) {
       if (auto resAttrs = llvm::cast<DictionaryAttr>(resAttrsArray[0])) {
         FailureOr<llvm::AttrBuilder> attrBuilder =
-            moduleTranslation.convertParameterAttrs(callOp, -1, resAttrs);
+            moduleTranslation.convertParameterAttrs(callOp, resAttrs);
         if (failed(attrBuilder))
           return failure();
         call->addRetAttrs(*attrBuilder);
       }
+    }
 
     if (MemoryEffectsAttr memAttr = callOp.getMemoryEffectsAttr()) {
       llvm::MemoryEffects memEffects =
