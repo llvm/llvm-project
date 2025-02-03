@@ -535,7 +535,7 @@ void CodeExtractor::findAllocas(const CodeExtractorAnalysisCache &CEAC,
 
       Instruction *Bitcast = cast<Instruction>(U);
       for (User *BU : Bitcast->users()) {
-        IntrinsicInst *IntrInst = dyn_cast<LifetimeIntrinsic>(BU);
+        auto *IntrInst = dyn_cast<LifetimeIntrinsic>(BU);
         if (!IntrInst)
           continue;
 
