@@ -113,6 +113,10 @@ Attribute Changes in Clang
 Improvements to Clang's diagnostics
 -----------------------------------
 
+- The ``-Wunique-object-duplication`` warning has been added to warn about objects
+  which are supposed to only exist once per program, but may get duplicated when
+  built into a shared library.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
