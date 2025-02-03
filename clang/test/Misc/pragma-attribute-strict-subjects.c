@@ -50,8 +50,8 @@ struct testRecoverStrictnessStruct { };
 
 #pragma clang attribute pop
 
-#pragma clang attribute push (__attribute__((abi_tag("a"))), apply_to = any(function, record(unless(is_union)), variable, enum)) // expected-warning {{attribute 'abi_tag' cannot be applied to a 'void' parameter}}
-                                                                                                                                 // expected-error@-1 {{attribute 'abi_tag' cannot be applied to 'enum'}}
+#pragma clang attribute push (__attribute__((abi_tag("a"))), apply_to = any(function, record(unless(is_union)), variable, enum))
+// expected-error@-1 {{attribute 'abi_tag' cannot be applied to 'enum'}}
 
 int testRecoverExtraVar = 0;
 // CHECK-LABEL: VarDecl{{.*}} testRecoverExtraVar
@@ -90,7 +90,7 @@ struct testSubset1Struct { };
 
 #pragma clang attribute pop
 
-#pragma clang attribute push (__attribute__((abi_tag("a"))), apply_to = variable) // expected-warning {{attribute 'abi_tag' cannot be applied to a 'void' parameter}}
+#pragma clang attribute push (__attribute__((abi_tag("a"))), apply_to = variable)
 
 int testSubset2Var;
 // CHECK-LABEL: VarDecl{{.*}} testSubset2Var
@@ -122,7 +122,7 @@ struct testSubset3Struct { };
 
 #pragma clang attribute pop
 
-#pragma clang attribute push (__attribute__((abi_tag("a"))), apply_to = any(function, variable)) // expected-warning {{attribute 'abi_tag' cannot be applied to a 'void' parameter}}
+#pragma clang attribute push (__attribute__((abi_tag("a"))), apply_to = any(function, variable))
 
 int testSubset4Var;
 // CHECK-LABEL: VarDecl{{.*}} testSubset4Var
@@ -138,7 +138,7 @@ struct testSubset4Struct { };
 
 #pragma clang attribute pop
 
-#pragma clang attribute push (__attribute__((abi_tag("a"))), apply_to = any(variable, record(unless(is_union)))) // expected-warning {{attribute 'abi_tag' cannot be applied to a 'void' parameter}}
+#pragma clang attribute push (__attribute__((abi_tag("a"))), apply_to = any(variable, record(unless(is_union))))
 
 int testSubset5Var;
 // CHECK-LABEL: VarDecl{{.*}} testSubset5Var
@@ -170,7 +170,7 @@ struct testSubset6Struct { };
 
 #pragma clang attribute pop
 
-#pragma clang attribute push (__attribute__((abi_tag("a"))), apply_to = any(record(unless(is_union)), function, variable)) // expected-warning {{attribute 'abi_tag' cannot be applied to a 'void' parameter}}
+#pragma clang attribute push (__attribute__((abi_tag("a"))), apply_to = any(record(unless(is_union)), function, variable))
 
 int testSubset7Var;
 // CHECK-LABEL: VarDecl{{.*}} testSubset7Var
@@ -187,8 +187,8 @@ struct testSubset7Struct { };
 #pragma clang attribute pop
 
 
-#pragma clang attribute push (__attribute__((abi_tag("a"))), apply_to = any(record(unless(is_union)), function, variable, enum, enum_constant)) // expected-warning {{attribute 'abi_tag' cannot be applied to a 'void' parameter}}
-                                                                                                                                                // expected-error@-1 {{attribute 'abi_tag' cannot be applied to 'enum_constant', and 'enum'}}
+#pragma clang attribute push (__attribute__((abi_tag("a"))), apply_to = any(record(unless(is_union)), function, variable, enum, enum_constant))
+// expected-error@-1 {{attribute 'abi_tag' cannot be applied to 'enum_constant', and 'enum'}}
 
 int testSubsetRecoverVar;
 // CHECK-LABEL: VarDecl{{.*}} testSubsetRecoverVar
