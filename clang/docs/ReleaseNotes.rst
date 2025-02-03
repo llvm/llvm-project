@@ -654,6 +654,10 @@ Attribute Changes in Clang
 
 - The ``target_version`` attribute is now only supported for AArch64 and RISC-V architectures.
 
+- When targeting AArch64, a function declaration annotated with ``target_version("default")``
+  now generates a mangled default version of the function, whereas before at least one more
+  version other than the default was required to trigger Function Multi Versioning.
+
 - Clang now permits the usage of the placement new operator in ``[[msvc::constexpr]]``
   context outside of the std namespace. (#GH74924)
 
@@ -1187,6 +1191,9 @@ Arm and AArch64 Support
   For AArch64:
 
   * FUJITSU-MONAKA (fujitsu-monaka)
+
+- Runtime detection of depended-on Function Multi Versioning features has been added
+  in accordance with the Arm C Language Extensions (ACLE).
 
 Android Support
 ^^^^^^^^^^^^^^^
