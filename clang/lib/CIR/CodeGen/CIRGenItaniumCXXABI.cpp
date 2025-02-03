@@ -360,6 +360,30 @@ public:
   classifyRTTIUniqueness(QualType CanTy, cir::GlobalLinkageKind Linkage) const;
   friend class CIRGenItaniumRTTIBuilder;
 };
+
+class CIRGenARMCXXABI : public CIRGenItaniumCXXABI {
+public:
+  CIRGenARMCXXABI(CIRGenModule &CGM) : CIRGenItaniumCXXABI(CGM) {
+    // TODO(cir): When implemented, /*UseARMMethodPtrABI=*/true,
+    //                              /*UseARMGuardVarABI=*/true) {}
+    assert(!cir::MissingFeatures::appleArm64CXXABI());
+  }
+  CharUnits getArrayCookieSizeImpl(QualType elementType) override;
+  Address initializeArrayCookie(CIRGenFunction &CGF, Address NewPtr,
+                                mlir::Value NumElements, const CXXNewExpr *E,
+                                QualType ElementType) override;
+};
+
+class CIRGenAppleARM64CXXABI : public CIRGenARMCXXABI {
+public:
+  CIRGenAppleARM64CXXABI(CIRGenModule &CGM) : CIRGenARMCXXABI(CGM) {
+    Use32BitVTableOffsetABI = true;
+  }
+
+  // ARM64 libraries are prepared for non-unique RTTI.
+  bool shouldRTTIBeUnique() const override { return false; }
+};
+
 } // namespace
 
 CIRGenCXXABI::AddedStructorArgs CIRGenItaniumCXXABI::getImplicitConstructorArgs(
@@ -404,11 +428,10 @@ CIRGenCXXABI *clang::CIRGen::CreateCIRGenItaniumCXXABI(CIRGenModule &CGM) {
   switch (CGM.getASTContext().getCXXABIKind()) {
   case TargetCXXABI::GenericItanium:
   case TargetCXXABI::GenericAArch64:
-  case TargetCXXABI::AppleARM64:
-    // TODO: this isn't quite right, clang uses AppleARM64CXXABI which inherits
-    // from ARMCXXABI. We'll have to follow suit.
-    assert(!cir::MissingFeatures::appleArm64CXXABI());
     return new CIRGenItaniumCXXABI(CGM);
+
+  case TargetCXXABI::AppleARM64:
+    return new CIRGenAppleARM64CXXABI(CGM);
 
   default:
     llvm_unreachable("bad or NYI ABI kind");
@@ -2700,4 +2723,56 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &CGF,
   auto OffsetOp = CGF.getBuilder().getSignedInt(Loc, Offset, /*width=*/32);
   auto DataPtr = CGF.getBuilder().createPtrStride(Loc, CastOp, OffsetOp);
   return Address(DataPtr, NewPtr.getType(), NewPtr.getAlignment());
+}
+
+CharUnits CIRGenARMCXXABI::getArrayCookieSizeImpl(QualType elementType) {
+  // ARM says that the cookie is always:
+  //   struct array_cookie {
+  //     std::size_t element_size; // element_size != 0
+  //     std::size_t element_count;
+  //   };
+  // But the base ABI doesn't give anything an alignment greater than
+  // 8, so we can dismiss this as typical ABI-author blindness to
+  // actual language complexity and round up to the element alignment.
+  return std::max(CharUnits::fromQuantity(2 * CGM.SizeSizeInBytes),
+                  getContext().getTypeAlignInChars(elementType));
+}
+
+Address CIRGenARMCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
+                                               Address newPtr,
+                                               mlir::Value numElements,
+                                               const CXXNewExpr *expr,
+                                               QualType elementType) {
+  assert(requiresArrayCookie(expr));
+
+  // The cookie is always at the start of the buffer.
+  auto cookiePtr =
+      cgf.getBuilder().createPtrBitcast(newPtr.getPointer(), cgf.SizeTy);
+  Address cookie = Address(cookiePtr, cgf.SizeTy, newPtr.getAlignment());
+
+  ASTContext &ctx = getContext();
+  CharUnits sizeSize = cgf.getSizeSize();
+  mlir::Location loc = cgf.getLoc(expr->getSourceRange());
+
+  // The first element is the element size.
+  mlir::Value elementSize = cgf.getBuilder().getConstInt(
+      loc, cgf.SizeTy, ctx.getTypeSizeInChars(elementType).getQuantity());
+  cgf.getBuilder().createStore(loc, elementSize, cookie);
+
+  // The second element is the element count.
+  auto offsetOp = cgf.getBuilder().getSignedInt(loc, 1, /*width=*/32);
+  auto dataPtr =
+      cgf.getBuilder().createPtrStride(loc, cookie.getPointer(), offsetOp);
+  cookie = Address(dataPtr, cgf.SizeTy, newPtr.getAlignment());
+  cgf.getBuilder().createStore(loc, numElements, cookie);
+
+  // Finally, compute a pointer to the actual data buffer by skipping
+  // over the cookie completely.
+  CharUnits cookieSize = CIRGenARMCXXABI::getArrayCookieSizeImpl(elementType);
+  offsetOp = cgf.getBuilder().getSignedInt(loc, cookieSize.getQuantity(),
+                                           /*width=*/32);
+  auto castOp = cgf.getBuilder().createPtrBitcast(
+      newPtr.getPointer(), cgf.getBuilder().getUIntNTy(8));
+  dataPtr = cgf.getBuilder().createPtrStride(loc, castOp, offsetOp);
+  return Address(dataPtr, newPtr.getType(), newPtr.getAlignment());
 }
