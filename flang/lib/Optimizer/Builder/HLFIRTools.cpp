@@ -1074,7 +1074,7 @@ static fir::ExtendedValue translateVariableToExtendedValue(
       if (!keepScalarOptionalBoxed && variable.isScalar()) {
         mlir::Value isPresent = builder.create<fir::IsPresentOp>(
             loc, builder.getI1Type(), variable);
-        return conditionnalyEvaluate(
+        return conditionallyEvaluate(
             loc, builder, isPresent, [&]() -> fir::ExtendedValue {
               mlir::Value base = genVariableRawAddress(loc, builder, variable);
               if (variable.isCharacter()) {
