@@ -5665,7 +5665,7 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
 }
 
 template <class Emitter>
-bool Compiler<Emitter>::compileUnionCopyAssignmentOperator(
+bool Compiler<Emitter>::compileUnionAssignmentOperator(
     const CXXMethodDecl *MD) {
   if (!this->emitThis(MD))
     return false;
@@ -5693,8 +5693,9 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
   if (const auto *MD = dyn_cast<CXXMethodDecl>(F)) {
     const RecordDecl *RD = MD->getParent();
 
-    if (RD->isUnion() && MD->isCopyAssignmentOperator())
-      return this->compileUnionCopyAssignmentOperator(MD);
+    if (RD->isUnion() &&
+        (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator()))
+      return this->compileUnionAssignmentOperator(MD);
 
     if (MD->isLambdaStaticInvoker())
       return this->emitLambdaStaticInvokerBody(MD);

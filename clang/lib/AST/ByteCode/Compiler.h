@@ -383,7 +383,7 @@ private:
   bool emitBuiltinBitCast(const CastExpr *E);
   bool compileConstructor(const CXXConstructorDecl *Ctor);
   bool compileDestructor(const CXXDestructorDecl *Dtor);
-  bool compileUnionCopyAssignmentOperator(const CXXMethodDecl *MD);
+  bool compileUnionAssignmentOperator(const CXXMethodDecl *MD);
 
   bool checkLiteralType(const Expr *E);
 
