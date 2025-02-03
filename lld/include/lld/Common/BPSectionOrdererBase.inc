@@ -22,7 +22,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -35,7 +35,6 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
 #include <optional>
-#include <set>
 
 #define DEBUG_TYPE "bp-section-orderer"
 
@@ -61,13 +60,9 @@ template <class D> struct BPOrderer {
                     bool forDataCompression,
                     bool compressionSortStartupFunctions, bool verbose,
                     llvm::ArrayRef<Section *> sections,
-                    const DenseMap<CachedHashStringRef, std::set<unsigned>>
+                    const DenseMap<CachedHashStringRef, DenseSet<unsigned>>
                         &rootSymbolToSectionIdxs)
       -> llvm::DenseMap<const Section *, int>;
-
-  std::optional<StringRef> static getResolvedLinkageName(llvm::StringRef name) {
-    return {};
-  }
 };
 } // namespace lld
 
@@ -78,7 +73,7 @@ static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
     ArrayRef<const typename D::Section *> sections,
     const DenseMap<const void *, uint64_t> &sectionToIdx,
     ArrayRef<unsigned> sectionIdxs,
-    DenseMap<unsigned, SmallVector<unsigned, 0>> *duplicateSectionIdxs,
+    DenseMap<unsigned, SmallVector<unsigned>> *duplicateSectionIdxs,
     BPFunctionNode::UtilityNodeT &maxUN) {
   TimeTraceScope timeScope("Build nodes for compression");
 
@@ -93,7 +88,7 @@ static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
     hashes.clear();
   }
 
-  MapVector<uint64_t, unsigned> hashFrequency;
+  DenseMap<uint64_t, unsigned> hashFrequency;
   for (auto &[sectionIdx, hashes] : sectionHashes)
     for (auto hash : hashes)
       ++hashFrequency[hash];
@@ -102,11 +97,10 @@ static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
     // Merge sections that are nearly identical
     SmallVector<std::pair<unsigned, SmallVector<uint64_t>>> newSectionHashes;
     DenseMap<uint64_t, unsigned> wholeHashToSectionIdx;
-    unsigned threshold = sectionHashes.size() > 10000 ? 5 : 0;
     for (auto &[sectionIdx, hashes] : sectionHashes) {
       uint64_t wholeHash = 0;
       for (auto hash : hashes)
-        if (hashFrequency[hash] > threshold)
+        if (hashFrequency[hash] > 5)
           wholeHash ^= hash;
       auto [it, wasInserted] =
           wholeHashToSectionIdx.insert(std::make_pair(wholeHash, sectionIdx));
@@ -162,7 +156,7 @@ auto BPOrderer<D>::computeOrder(
     StringRef profilePath, bool forFunctionCompression, bool forDataCompression,
     bool compressionSortStartupFunctions, bool verbose,
     ArrayRef<Section *> sections,
-    const DenseMap<CachedHashStringRef, std::set<unsigned>>
+    const DenseMap<CachedHashStringRef, DenseSet<unsigned>>
         &rootSymbolToSectionIdxs) -> DenseMap<const Section *, int> {
   TimeTraceScope timeScope("Setup Balanced Partitioning");
   DenseMap<const void *, uint64_t> sectionToIdx;
@@ -186,7 +180,7 @@ auto BPOrderer<D>::computeOrder(
     }
     auto &traces = reader->getTemporalProfTraces();
 
-    MapVector<unsigned, BPFunctionNode::UtilityNodeT> sectionIdxToFirstUN;
+    DenseMap<unsigned, BPFunctionNode::UtilityNodeT> sectionIdxToFirstUN;
     for (size_t traceIdx = 0; traceIdx < traces.size(); traceIdx++) {
       uint64_t currentSize = 0, cutoffSize = 1;
       size_t cutoffTimestamp = 1;
@@ -263,7 +257,7 @@ auto BPOrderer<D>::computeOrder(
 
   // Map a section index (order directly) to a list of duplicate section indices
   // (not ordered directly).
-  DenseMap<unsigned, SmallVector<unsigned, 0>> duplicateSectionIdxs;
+  DenseMap<unsigned, SmallVector<unsigned>> duplicateSectionIdxs;
   auto unsForFunctionCompression = getUnsForCompression<D>(
       sections, sectionToIdx, sectionIdxsForFunctionCompression,
       &duplicateSectionIdxs, maxUN);
