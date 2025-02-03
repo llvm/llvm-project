@@ -168,6 +168,8 @@ Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
+- Clang now prints the correct instantiation context for diagnostics suppressed
+  by template argument deduction.
 - The initialization kind of elements of structured bindings
   direct-list-initialized from an array is corrected to direct-initialization.
 
@@ -271,7 +273,7 @@ Code Completion
 Static Analyzer
 ---------------
 
-- Clang currently support extending lifetime of object bound to 
+- Clang currently support extending lifetime of object bound to
   reference members of aggregates in CFG and ExprEngine, that are
   created from default member initializer.
 
