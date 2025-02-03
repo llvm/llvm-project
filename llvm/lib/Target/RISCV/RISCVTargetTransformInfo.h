@@ -52,6 +52,9 @@ class RISCVTTIImpl : public BasicTTIImplBase<RISCVTTIImpl> {
   /// on the vtype and the cost kind.
   /// \param Opcodes A list of opcodes of the RVV instruction to evaluate.
   /// \param VT The MVT of vtype associated with the RVV instructions.
+  /// For widening/narrowing instructions where the result and source types
+  /// differ, it is important to check the spec to determine whether the vtype
+  /// refers to the result or source type.
   /// \param CostKind The type of cost to compute.
   InstructionCost getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
                                           TTI::TargetCostKind CostKind);
