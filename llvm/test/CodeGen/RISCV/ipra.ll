@@ -63,7 +63,6 @@ entry:
   ret i32 0
 }
 
-; FIXME: this function calls another function but doesn't save/restore ra
 define internal void @foobar(ptr %live_throughout.0.val) norecurse nounwind {
 ; RV64-LABEL: foobar:
 ; RV64:       # %bb.0: # %entry
