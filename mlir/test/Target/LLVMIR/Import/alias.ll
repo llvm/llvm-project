@@ -25,6 +25,14 @@ entry:
 ; CHECK:   llvm.return %0 : !llvm.ptr
 ; CHECK: }
 
+@v1 = global i32 0
+@a3 = alias i32, addrspacecast (ptr @v1 to ptr addrspace(2))
+; CHECK: llvm.mlir.alias external @a3 {addr_space = 2 : i32} : i32 {
+; CHECK:   %0 = llvm.mlir.addressof @v1 : !llvm.ptr
+; CHECK:   %1 = llvm.addrspacecast %0 : !llvm.ptr to !llvm.ptr<2>
+; CHECK:   llvm.return %1 : !llvm.ptr<2>
+; CHECK: }
+
 @some_name = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr null] }
 @_ZTV1D = alias { [3 x ptr] }, ptr @some_name
 
