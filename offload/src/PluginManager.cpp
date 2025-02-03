@@ -156,6 +156,7 @@ __tgt_bin_desc *PluginManager::upgradeLegacyEntries(__tgt_bin_desc *Desc) {
     NewEntry.Data = Entry.Data;
     NewEntry.Size = Entry.Size;
     NewEntry.SymbolName = Entry.SymbolName;
+    NewEntry.Kind = object::OffloadKind::OFK_OpenMP;
   }
 
   // Create a new image struct so we can update the entries list.
@@ -186,7 +187,8 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   // Add in all the OpenMP requirements associated with this binary.
   for (llvm::offloading::EntryTy &Entry :
        llvm::make_range(Desc->HostEntriesBegin, Desc->HostEntriesEnd))
-    if (Entry.Flags == OMP_REGISTER_REQUIRES)
+    if (Entry.Kind == object::OffloadKind::OFK_OpenMP &&
+        Entry.Flags == OMP_REGISTER_REQUIRES)
       PM->addRequirements(Entry.Data);
 
   // Extract the executable image and extra information if available.

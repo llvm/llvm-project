@@ -161,6 +161,11 @@ AMDGPU Support
 NVPTX Support
 ^^^^^^^^^^^^^^
 
+Hexagon Support
+^^^^^^^^^^^^^^^
+
+-  The default compilation target has been changed from V60 to V68.
+
 X86 Support
 ^^^^^^^^^^^
 
