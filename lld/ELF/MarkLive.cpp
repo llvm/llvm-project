@@ -253,7 +253,6 @@ template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
       if (!it->second)
         break;
       cur = *it->second;
-      msg << "\n>>> referenced by ";
     } else {
       // This object is live merely by being a member of its parent section, so
       // report the parent.
@@ -263,16 +262,15 @@ template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
       assert(parent &&
              "all live objects should have a tracked reason for being live");
       cur = LiveObject{parent};
-      msg << "\n>>> included in ";
     }
 
+    msg << "\n>>> alive because of ";
     if (std::holds_alternative<Symbol *>(*cur)) {
       auto *s = std::get<Symbol *>(*cur);
-      // Match the syntax for sections below.
-      msg << "symbol " << toStr(ctx, s->file) << ":(" << toStr(ctx, *s) << ')';
+      msg << toStr(ctx, *s);
     } else {
       auto *s = std::get<InputSectionBase *>(*cur);
-      msg << "section " << toStr(ctx, s);
+      msg << toStr(ctx, s);
     }
   }
 }
