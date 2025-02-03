@@ -4099,6 +4099,8 @@ DEF_TRAVERSE_STMT(OpenACCSetConstruct,
                   { TRY_TO(VisitOpenACCClauseList(S->clauses())); })
 DEF_TRAVERSE_STMT(OpenACCUpdateConstruct,
                   { TRY_TO(VisitOpenACCClauseList(S->clauses())); })
+DEF_TRAVERSE_STMT(OpenACCAtomicConstruct,
+                  { TRY_TO(TraverseOpenACCAssociatedStmtConstruct(S)); })
 
 // Traverse HLSL: Out argument expression
 DEF_TRAVERSE_STMT(HLSLOutArgExpr, {})

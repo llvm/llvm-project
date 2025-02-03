@@ -324,12 +324,6 @@ LogicalResult LoadNdOp::verify() {
   return success();
 }
 
-void LoadNdOp::getEffects(
-    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects) {
-  effects.emplace_back(MemoryEffects::Read::get());
-}
-
 //===----------------------------------------------------------------------===//
 // XeGPU_StoreNdOp
 //===----------------------------------------------------------------------===//
@@ -365,12 +359,6 @@ LogicalResult StoreNdOp::verify() {
                          << ". But the given shape is "
                          << makeString(valueShape) << ".\n";
   return success();
-}
-
-void StoreNdOp::getEffects(
-    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects) {
-  effects.emplace_back(MemoryEffects::Write::get());
 }
 
 //===----------------------------------------------------------------------===//
@@ -506,7 +494,7 @@ LogicalResult PrefetchOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// XeGPU_jrOp
+// XeGPU_LoadGatherOp
 //===----------------------------------------------------------------------===//
 LogicalResult LoadGatherOp::verify() {
   auto tdescTy = getTensorDescType();
@@ -565,12 +553,6 @@ LogicalResult LoadGatherOp::verify() {
   return success();
 }
 
-void LoadGatherOp::getEffects(
-    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects) {
-  effects.emplace_back(MemoryEffects::Read::get());
-}
-
 //===----------------------------------------------------------------------===//
 // XeGPU_StoreScatterOp
 //===----------------------------------------------------------------------===//
@@ -621,12 +603,6 @@ LogicalResult StoreScatterOp::verify() {
            << ", Given shape: " << makeString(valueShape) << ").\n";
 
   return success();
-}
-
-void StoreScatterOp::getEffects(
-    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects) {
-  effects.emplace_back(MemoryEffects::Write::get());
 }
 
 //===----------------------------------------------------------------------===//
