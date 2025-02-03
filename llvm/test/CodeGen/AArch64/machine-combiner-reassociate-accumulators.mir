@@ -1,0 +1,77 @@
+# RUN: llc -run-pass=machine-combiner -mtriple=arm64-unknown-unknown %s -o - | FileCheck %s
+
+# A chain of UABAL instructions that can be reassociated for better ILP.
+# Before the optimization, we accumulate in a single long chain.
+# CHECK-LABEL:   uabal_accumulation
+# CHECK:          [[START:%.*]]:fpr128 = UABDLv4i16_v4i32
+# CHECK:          [[A:%.*]]:fpr128 = UABALv4i16_v4i32 [[START]]
+# CHECK:          [[B:%.*]]:fpr128 = UABALv4i16_v4i32 [[A]]
+# CHECK:          [[C:%.*]]:fpr128 = UABALv4i16_v4i32 [[B]]
+# CHECK:          [[D:%.*]]:fpr128 = UABALv4i16_v4i32 [[C]]
+# CHECK:          [[E:%.*]]:fpr128 = UABALv4i16_v4i32 [[D]]
+# CHECK:          [[F:%.*]]:fpr128 = UABALv4i16_v4i32 [[E]]
+# CHECK:          [[G:%.*]]:fpr128 = UABALv4i16_v4i32 [[F]]
+# CHECK:          [[H:%.*]]:fpr128 = UABALv4i16_v4i32 [[G]]
+# CHECK:          [[END:%.*]]:fpr32 = ADDVv4i32v killed [[H]]
+
+---
+name:            uabal_accumulation
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2, $x3
+  
+    %3:gpr64 = COPY $x3
+    %2:gpr64common = COPY $x2
+    %1:gpr64 = COPY $x1
+    %0:gpr64common = COPY $x0
+    %4:fpr64 = LDRDui %0, 0 :: (load (s64))
+    %5:fpr64 = LDRDui %2, 0 :: (load (s64))
+    %6:gpr64common = ADDXrr %0, %1
+    %7:gpr64common = ADDXrr %2, %3
+    %8:fpr64 = LDRDui %6, 0 :: (load (s64))
+    %9:fpr64 = LDRDui %7, 0 :: (load (s64))
+    %10:fpr128 = UABDLv4i16_v4i32 killed %8, killed %9
+    %11:fpr128 = UABALv4i16_v4i32 %10, killed %4, killed %5
+    %12:gpr64common = ADDXrr %6, %1
+    %13:gpr64common = ADDXrr %7, %3
+    %14:fpr64 = LDRDui %12, 0 :: (load (s64))
+    %15:fpr64 = LDRDui %13, 0 :: (load (s64))
+    %16:fpr128 = UABALv4i16_v4i32 %11, killed %14, killed %15
+    %17:gpr64common = ADDXrr %12, %1
+    %18:gpr64common = ADDXrr %13, %3
+    %19:fpr64 = LDRDui %17, 0 :: (load (s64))
+    %20:fpr64 = LDRDui %18, 0 :: (load (s64))
+    %21:fpr128 = UABALv4i16_v4i32 %16, killed %19, killed %20
+    %22:gpr64common = ADDXrr %17, %1
+    %23:gpr64common = ADDXrr %18, %3
+    %24:fpr64 = LDRDui %22, 0 :: (load (s64))
+    %25:fpr64 = LDRDui %23, 0 :: (load (s64))
+    %26:fpr128 = UABALv4i16_v4i32 %21, killed %24, killed %25
+    %27:gpr64common = ADDXrr %22, %1
+    %28:gpr64common = ADDXrr %23, %3
+    %29:fpr64 = LDRDui %27, 0 :: (load (s64))
+    %30:fpr64 = LDRDui %28, 0 :: (load (s64))
+    %31:fpr128 = UABALv4i16_v4i32 %26, killed %29, killed %30
+    %32:gpr64common = ADDXrr %27, %1
+    %33:gpr64common = ADDXrr %28, %3
+    %34:fpr64 = LDRDui %32, 0 :: (load (s64))
+    %35:fpr64 = LDRDui %33, 0 :: (load (s64))
+    %36:fpr128 = UABALv4i16_v4i32 %31, killed %34, killed %35
+    %37:gpr64common = ADDXrr %32, %1
+    %38:gpr64common = ADDXrr %33, %3
+    %39:fpr64 = LDRDui %37, 0 :: (load (s64))
+    %40:fpr64 = LDRDui %38, 0 :: (load (s64))
+    %41:fpr128 = UABALv4i16_v4i32 %36, killed %39, killed %40
+    %42:gpr64common = ADDXrr %37, %1
+    %43:gpr64common = ADDXrr %38, %3
+    %44:fpr64 = LDRDui %42, 0 :: (load (s64))
+    %45:fpr64 = LDRDui %43, 0 :: (load (s64))
+    %46:fpr128 = UABALv4i16_v4i32 %41, killed %44, killed %45
+    %47:fpr32 = ADDVv4i32v killed %46
+    %48:fpr128 = IMPLICIT_DEF
+    %49:fpr128 = INSERT_SUBREG %48, killed %47, %subreg.ssub
+    %50:gpr32all = COPY %49.ssub
+    $w0 = COPY %50
+    RET_ReallyLR implicit $w0
+
+...
