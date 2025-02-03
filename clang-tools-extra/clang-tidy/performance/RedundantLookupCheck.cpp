@@ -12,6 +12,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Regex.h"
 
@@ -125,9 +126,7 @@ void RedundantLookupCheck::check(const MatchFinder::MatchResult &Result) {
 
   const unsigned LookupHash =
       hashLookupEvent(*Result.Context, EnclosingFn, ContainerObject, Key);
-  auto &Lookups = RegisteredLookups.try_emplace(LookupHash).first->second;
-  if (!llvm::is_contained(Lookups, LookupCall))
-    Lookups.push_back(LookupCall);
+  RegisteredLookups.try_emplace(LookupHash).first->second.insert(LookupCall);
 }
 
 void RedundantLookupCheck::onEndOfTranslationUnit() {
@@ -137,17 +136,20 @@ void RedundantLookupCheck::onEndOfTranslationUnit() {
   };
 
   // Process the found lookups of each function.
-  for (auto &LookupGroup : llvm::make_second_range(RegisteredLookups)) {
+  for (const auto &LookupGroup : llvm::make_second_range(RegisteredLookups)) {
     if (LookupGroup.size() < 2)
       continue;
 
-    llvm::sort(LookupGroup, ByBeginLoc);
+    llvm::SmallVector<const CallExpr *> SortedGroup;
+    SortedGroup.reserve(LookupGroup.size());
+    llvm::append_range(SortedGroup, LookupGroup);
+    llvm::sort(SortedGroup, ByBeginLoc);
 
-    const CallExpr *FirstLookupCall = LookupGroup.front();
+    const CallExpr *FirstLookupCall = SortedGroup.front();
     diag(FirstLookupCall->getBeginLoc(), "possibly redundant container lookups")
         << FirstLookupCall->getSourceRange();
 
-    for (const CallExpr *LookupCall : llvm::drop_begin(LookupGroup)) {
+    for (const CallExpr *LookupCall : llvm::drop_begin(SortedGroup)) {
       diag(LookupCall->getBeginLoc(), "next lookup here", DiagnosticIDs::Note)
           << LookupCall->getSourceRange();
     }

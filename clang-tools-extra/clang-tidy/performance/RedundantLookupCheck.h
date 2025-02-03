@@ -11,6 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 #include "clang/AST/Expr.h"
+#include "llvm/ADT/SmallPtrSet.h"
 
 namespace clang {
 class SourceManager;
@@ -34,7 +35,7 @@ public:
   }
 
 private:
-  llvm::DenseMap<unsigned, llvm::SmallVector<const CallExpr *>>
+  llvm::DenseMap<unsigned, llvm::SmallPtrSet<const CallExpr *, 2>>
       RegisteredLookups;
   const StringRef ContainerNameRegex;
   const std::vector<StringRef> LookupMethodNames;
