@@ -1016,6 +1016,9 @@
 
 // Cortex-R52 and Cortex-R52Plus correctly enable the `fpv5-sp-d16` FPU when compiling for the SP only version of the CPU.
 // RUN: %clang -target arm-none-eabi -mcpu=cortex-r52+nosimd+nofp.dp -mfloat-abi=hard -x c -E -dM -o - %s | FileCheck -check-prefix=CHECK-R52 %s
+// RUN: %clang -target arm-none-eabi -mcpu=cortex-r52plus+nosimd+nofp.dp -mfloat-abi=hard -x c -E -dM -o - %s | FileCheck -check-prefix=CHECK-R52 %s
+// RUN: %clang -target arm-none-eabi -mcpu=cortex-r52+nofp.dp -mfloat-abi=hard -x c -E -dM -o - %s | FileCheck -check-prefix=CHECK-R52 %s
+// RUN: %clang -target arm-none-eabi -mcpu=cortex-r52plus+nofp.dp -mfloat-abi=hard -x c -E -dM -o - %s | FileCheck -check-prefix=CHECK-R52 %s
 // CHECK-R52: #define __ARM_FEATURE_FMA 1
 // CHECK-R52: #define __ARM_FP 0x6
 // CHECK-R52: #define __ARM_FPV5__ 1
@@ -1024,30 +1027,3 @@
 // CHECK-R52-NEXT: #define __ARM_VFPV4__ 1
 // CHECK-R52-NOT: #define __ARM_NEON 1
 // CHECK-R52-NOT: #define __ARM_NEON__
-// RUN: %clang -target arm-none-eabi -mcpu=cortex-r52plus+nosimd+nofp.dp -mfloat-abi=hard -x c -E -dM -o - %s | FileCheck -check-prefix=CHECK-R52PLUS %s
-// CHECK-R52PLUS: #define __ARM_FEATURE_FMA 1
-// CHECK-R52PLUS: #define __ARM_FP 0x6
-// CHECK-R52PLUS: #define __ARM_FPV5__ 1
-// CHECK-R52PLUS: #define __ARM_VFPV2__ 1
-// CHECK-R52PLUS-NEXT: #define __ARM_VFPV3__ 1
-// CHECK-R52PLUS-NEXT: #define __ARM_VFPV4__ 1
-// CHECK-R52PLUS-NOT: #define __ARM_NEON 1
-// CHECK-R52PLUS-NOT: #define __ARM_NEON__
-// RUN: %clang -target arm-none-eabi -mcpu=cortex-r52+nofp.dp -mfloat-abi=hard -x c -E -dM -o - %s | FileCheck -check-prefix=CHECK-R52-ONLY-NO-FP-DP %s
-// CHECK-R52-ONLY-NO-FP-DP: #define __ARM_FEATURE_FMA 1
-// CHECK-R52-ONLY-NO-FP-DP: #define __ARM_FP 0x6
-// CHECK-R52-ONLY-NO-FP-DP: #define __ARM_FPV5__ 1
-// CHECK-R52-ONLY-NO-FP-DP: #define __ARM_VFPV2__ 1
-// CHECK-R52-NEXT-ONLY-NO-FP-DP: #define __ARM_VFPV3__ 1
-// CHECK-R52-NEXT-ONLY-NO-FP-DP: #define __ARM_VFPV4__ 1
-// CHECK-R52-ONLY-NO-FP-DP-NOT: #define __ARM_NEON 1
-// CHECK-R52-ONLY-NO-FP-DP-NOT: #define __ARM_NEON__
-// RUN: %clang -target arm-none-eabi -mcpu=cortex-r52plus+nofp.dp -mfloat-abi=hard -x c -E -dM -o - %s | FileCheck -check-prefix=CHECK-R52PLUS-ONLY-NO-FP-DP %s
-// CHECK-R52PLUS-ONLY-NO-FP-DP: #define __ARM_FEATURE_FMA 1
-// CHECK-R52PLUS-ONLY-NO-FP-DP: #define __ARM_FP 0x6
-// CHECK-R52PLUS-ONLY-NO-FP-DP: #define __ARM_FPV5__ 1
-// CHECK-R52PLUS-ONLY-NO-FP-DP: #define __ARM_VFPV2__ 1
-// CHECK-R52PLUS-ONLY-NO-FP-DP-NEXT: #define __ARM_VFPV3__ 1
-// CHECK-R52PLUS-ONLY-NO-FP-DP-NEXT: #define __ARM_VFPV4__ 1
-// CHECK-R52PLUS-ONLY-NO-FP-DP-NOT: #define __ARM_NEON 1
-// CHECK-R52PLUS-ONLY-NO-FP-DP-NOT: #define __ARM_NEON__
