@@ -721,9 +721,10 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
                             options::OPT_m_amdgpu_Features_Group);
 }
 
-llvm::SmallVector<std::string, 12> amdgpu::dlr::getCommonDeviceLibNames(
-    const llvm::opt::ArgList &DriverArgs, const Driver &D,
-    const std::string &GPUArch, bool isOpenMP,
+llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
+amdgpu::dlr::getCommonDeviceLibNames(
+    const llvm::opt::ArgList &DriverArgs, const SanitizerArgs &SanArgs,
+    const Driver &D, const std::string &GPUArch, bool isOpenMP,
     const RocmInstallationDetector &RocmInstallation) {
   auto Kind = llvm::AMDGPU::parseArchAMDGCN(GPUArch);
   const StringRef CanonArch = llvm::AMDGPU::getArchNameAMDGCN(Kind);
@@ -732,13 +733,17 @@ llvm::SmallVector<std::string, 12> amdgpu::dlr::getCommonDeviceLibNames(
   auto ABIVer = DeviceLibABIVersion::fromCodeObjectVersion(
       getAMDGPUCodeObjectVersion(D, DriverArgs));
   bool noGPULib = DriverArgs.hasArg(options::OPT_nogpulib);
-  if (!RocmInstallation.checkCommonBitcodeLibs(CanonArch, LibDeviceFile,
-                                               ABIVer, noGPULib))
+  if (!RocmInstallation.checkCommonBitcodeLibs(CanonArch, LibDeviceFile, ABIVer,
+                                               noGPULib))
     return {};
 
   // If --hip-device-lib is not set, add the default bitcode libraries.
   // TODO: There are way too many flags that change this. Do we need to check
   // them all?
+  std::tuple<bool, const SanitizerArgs> GPUSan(
+      DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
+                         options::OPT_fno_gpu_sanitize, true),
+      SanArgs);
   bool DAZ = DriverArgs.hasFlag(
       options::OPT_fgpu_flush_denormals_to_zero,
       options::OPT_fno_gpu_flush_denormals_to_zero,
@@ -757,7 +762,7 @@ llvm::SmallVector<std::string, 12> amdgpu::dlr::getCommonDeviceLibNames(
 
   return RocmInstallation.getCommonBitcodeLibs(
       DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
-      FastRelaxedMath, CorrectSqrt, ABIVer, isOpenMP);
+      FastRelaxedMath, CorrectSqrt, ABIVer, GPUSan, isOpenMP);
 }
 
 /// AMDGPU Toolchain
@@ -1003,6 +1008,11 @@ void ROCMToolChain::addClangTargetOptions(
                                                 ABIVer, noGPULib))
     return;
 
+  std::tuple<bool, const SanitizerArgs> GPUSan(
+      DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
+                         options::OPT_fno_gpu_sanitize, true),
+      getSanitizerArgs((DriverArgs)));
+
   bool Wave64 = isWave64(DriverArgs, Kind);
 
   // TODO: There are way too many flags that change this. Do we need to check
@@ -1018,21 +1028,19 @@ void ROCMToolChain::addClangTargetOptions(
       DriverArgs.hasArg(options::OPT_cl_fp32_correctly_rounded_divide_sqrt);
 
   // Add the OpenCL specific bitcode library.
-  llvm::SmallVector<std::string, 12> BCLibs;
-  BCLibs.push_back(RocmInstallation->getOpenCLPath().str());
+  llvm::SmallVector<BitCodeLibraryInfo, 12> BCLibs;
+  BCLibs.emplace_back(RocmInstallation->getOpenCLPath().str());
 
   // Add the generic set of libraries.
   BCLibs.append(RocmInstallation->getCommonBitcodeLibs(
       DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
-      FastRelaxedMath, CorrectSqrt, ABIVer, false));
+      FastRelaxedMath, CorrectSqrt, ABIVer, GPUSan, false));
 
-  if (getSanitizerArgs(DriverArgs).needsAsanRt()) {
-    CC1Args.push_back("-mlink-bitcode-file");
-    CC1Args.push_back(
-        DriverArgs.MakeArgString(RocmInstallation->getAsanRTLPath()));
-  }
-  for (StringRef BCFile : BCLibs) {
-    CC1Args.push_back("-mlink-builtin-bitcode");
+  for (auto [BCFile, Internalize] : BCLibs) {
+    if (Internalize)
+      CC1Args.push_back("-mlink-builtin-bitcode");
+    else
+      CC1Args.push_back("-mlink-bitcode-file");
     CC1Args.push_back(DriverArgs.MakeArgString(BCFile));
   }
 }
@@ -1058,15 +1066,31 @@ bool RocmInstallationDetector::checkCommonBitcodeLibs(
   return true;
 }
 
-llvm::SmallVector<std::string, 12>
+llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 RocmInstallationDetector::getCommonBitcodeLibs(
     const llvm::opt::ArgList &DriverArgs, StringRef LibDeviceFile, bool Wave64,
     bool DAZ, bool FiniteOnly, bool UnsafeMathOpt, bool FastRelaxedMath,
-    bool CorrectSqrt, DeviceLibABIVersion ABIVer, bool isOpenMP = false) const {
-  llvm::SmallVector<std::string, 12> BCLibs;
+    bool CorrectSqrt, DeviceLibABIVersion ABIVer,
+    const std::tuple<bool, const SanitizerArgs> &GPUSan,
+    bool isOpenMP = false) const {
+  llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> BCLibs;
 
-  auto AddBCLib = [&](StringRef BCFile) { BCLibs.push_back(BCFile.str()); };
+  auto GPUSanEnabled = [GPUSan]() {
+    return std::get<bool>(GPUSan) &&
+           std::get<const SanitizerArgs>(GPUSan).needsAsanRt();
+  };
+  auto AddBCLib = [&](ToolChain::BitCodeLibraryInfo BCLib,
+                      bool Internalize = true) {
+    BCLib.ShouldInternalize = Internalize;
+    BCLibs.push_back(BCLib);
+  };
+  auto AddSanBCLibs = [&]() {
+    if (GPUSanEnabled()) {
+      AddBCLib(getAsanRTLPath(), false);
+    }
+  };
 
+  AddSanBCLibs();
   AddBCLib(getOCMLPath());
   // FIXME: OpenMP has ockl and ocml contained in libomptarget.bc. However,
   // we cannot exclude ocml here because of the crazy always-compile clang
@@ -1076,6 +1100,8 @@ RocmInstallationDetector::getCommonBitcodeLibs(
   // __BUILD_MATH_BUILTINS_LIB__ turning static libm functions to extern.
   if (!isOpenMP)
     AddBCLib(getOCKLPath());
+  else if (GPUSanEnabled() && isOpenMP)
+    AddBCLib(getOCKLPath(), false);
   AddBCLib(getDenormalsAreZeroPath(DAZ));
   AddBCLib(getUnsafeMathPath(UnsafeMathOpt || FastRelaxedMath));
   AddBCLib(getFiniteOnlyPath(FiniteOnly || FastRelaxedMath));
@@ -1096,14 +1122,15 @@ bool AMDGPUToolChain::shouldSkipArgument(const llvm::opt::Arg *A) const {
   return false;
 }
 
-llvm::SmallVector<std::string, 12>
+llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 ROCMToolChain::getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
                                        const std::string &GPUArch,
                                        bool isOpenMP) const {
   RocmInstallationDetector RocmInstallation(getDriver(), getTriple(),
                                             DriverArgs, true, true);
-  return amdgpu::dlr::getCommonDeviceLibNames(DriverArgs, getDriver(), GPUArch,
-                                              isOpenMP, RocmInstallation);
+  return amdgpu::dlr::getCommonDeviceLibNames(
+      DriverArgs, getSanitizerArgs(DriverArgs), getDriver(), GPUArch, isOpenMP,
+      RocmInstallation);
 }
 
 bool AMDGPUToolChain::shouldSkipSanitizeOption(
@@ -1117,7 +1144,7 @@ bool AMDGPUToolChain::shouldSkipSanitizeOption(
     return false;
 
   if (!DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                          options::OPT_fno_gpu_sanitize, false))
+                          options::OPT_fno_gpu_sanitize, true))
     return true;
 
   auto &Diags = TC.getDriver().getDiags();
