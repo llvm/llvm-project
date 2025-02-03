@@ -4167,6 +4167,13 @@ public:
     // but in the future we will implement some sort of IR.
   }
 
+  void EmitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // simply emitting its associated stmt, but in the future we will implement
+    // some sort of IR.
+    EmitStmt(S.getAssociatedStmt());
+  }
+
   //===--------------------------------------------------------------------===//
   //                         LValue Expression Emission
   //===--------------------------------------------------------------------===//

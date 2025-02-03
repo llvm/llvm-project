@@ -7302,6 +7302,9 @@ let Visibility = [CC1Option, FC1Option] in {
 def mlink_builtin_bitcode : Separate<["-"], "mlink-builtin-bitcode">,
   HelpText<"Link and internalize needed symbols from the given bitcode file "
            "before performing optimizations.">;
+def mlink_bitcode_file
+    : Separate<["-"], "mlink-bitcode-file">,
+      HelpText<"Link the given bitcode file before performing optimizations.">;
 } // let Visibility = [CC1Option, FC1Option]
 
 let Visibility = [CC1Option] in {
@@ -7405,14 +7408,13 @@ def msmall_data_limit : Separate<["-"], "msmall-data-limit">,
 def funwind_tables_EQ : Joined<["-"], "funwind-tables=">,
   HelpText<"Generate unwinding tables for all functions">,
   MarshallingInfoInt<CodeGenOpts<"UnwindTables">>;
-defm constructor_aliases : BoolMOption<"constructor-aliases",
-  CodeGenOpts<"CXXCtorDtorAliases">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption], "Enable">,
-  NegFlag<SetFalse, [], [ClangOption], "Disable">,
-  BothFlags<[], [ClangOption, CC1Option],
-          " emitting complete constructors and destructors as aliases when possible">>;
-def mlink_bitcode_file : Separate<["-"], "mlink-bitcode-file">,
-  HelpText<"Link the given bitcode file before performing optimizations.">;
+defm constructor_aliases
+    : BoolMOption<"constructor-aliases", CodeGenOpts<"CXXCtorDtorAliases">,
+                  DefaultFalse, PosFlag<SetTrue, [], [ClangOption], "Enable">,
+                  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+                  BothFlags<[], [ClangOption, CC1Option],
+                            " emitting complete constructors and destructors "
+                            "as aliases when possible">>;
 defm link_builtin_bitcode_postopt: BoolMOption<"link-builtin-bitcode-postopt",
   CodeGenOpts<"LinkBitcodePostopt">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Link builtin bitcodes after the "
