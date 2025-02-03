@@ -187,7 +187,8 @@ public:
   ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
   std::optional<std::pair<unsigned, unsigned>>
-  getVScaleRange(const LangOptions &LangOpts) const override;
+  getVScaleRange(const LangOptions &LangOpts,
+                 bool IsArmStreamingFunction) const override;
   bool doesFeatureAffectCodeGen(StringRef Name) const override;
   bool validateCpuSupports(StringRef FeatureStr) const override;
   bool hasFeature(StringRef Feature) const override;
@@ -230,6 +231,11 @@ public:
   bool validatePointerAuthKey(const llvm::APSInt &value) const override;
 
   const char *getBFloat16Mangling() const override { return "u6__bf16"; };
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(256, 64);
+  }
+
   bool hasInt128Type() const override;
 
   bool hasBitIntType() const override { return true; }

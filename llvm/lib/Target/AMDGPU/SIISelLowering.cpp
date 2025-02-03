@@ -1013,7 +1013,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, MVT::i32, Custom);
 
 #if LLPC_BUILD_NPI
-  if (Subtarget->hasSafeSmemPrefetch() || Subtarget->hasVectorPrefetch())
+  if (Subtarget->hasSafeSmemPrefetch() || Subtarget->hasVmemPrefInsts())
 #else /* LLPC_BUILD_NPI */
   if (Subtarget->hasPrefetch() && Subtarget->hasSafeSmemPrefetch())
 #endif /* LLPC_BUILD_NPI */
@@ -4888,7 +4888,7 @@ SDValue SITargetLowering::lowerSET_ROUNDING(SDValue Op,
 SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
 #if LLPC_BUILD_NPI
   if (Op->isDivergent() &&
-      (!Subtarget->hasVectorPrefetch() || !Op.getConstantOperandVal(4)))
+      (!Subtarget->hasVmemPrefInsts() || !Op.getConstantOperandVal(4)))
     // Cannot do I$ prefetch with divergent pointer.
 #else /* LLPC_BUILD_NPI */
   if (Op->isDivergent())

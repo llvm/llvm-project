@@ -1722,9 +1722,14 @@ let SubtargetPredicate = isGFX13Plus in {
     (ins i16imm:$simm16), "$simm16">;
 } // End SubtargetPredicate = isGFX13Plus
 
-#endif /* LLPC_BUILD_NPI */
+let SubtargetPredicate = isNotGFX1250Plus in {
+  def S_WAITCNT : SOPP_Pseudo <"s_waitcnt" , (ins SWaitCnt:$simm16), "$simm16",
+      [(int_amdgcn_s_waitcnt timm:$simm16)]>;
+}
+#else /* LLPC_BUILD_NPI */
 def S_WAITCNT : SOPP_Pseudo <"s_waitcnt" , (ins SWaitCnt:$simm16), "$simm16",
     [(int_amdgcn_s_waitcnt timm:$simm16)]>;
+#endif /* LLPC_BUILD_NPI */
 
 // "_soft" waitcnts are waitcnts that are either relaxed into their non-soft
 // counterpart, or completely removed.

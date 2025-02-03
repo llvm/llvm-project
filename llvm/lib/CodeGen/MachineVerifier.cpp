@@ -1285,8 +1285,12 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
         if (MMO.getRanges()) {
           ConstantInt *i =
               mdconst::extract<ConstantInt>(MMO.getRanges()->getOperand(0));
-          if (i->getIntegerType()->getBitWidth() !=
-              ValTy.getScalarType().getSizeInBits()) {
+          const LLT RangeTy = LLT::scalar(i->getIntegerType()->getBitWidth());
+          const LLT MemTy = MMO.getMemoryType();
+          if (MemTy.getScalarType() != RangeTy ||
+              ValTy.isScalar() != MemTy.isScalar() ||
+              (ValTy.isVector() &&
+               ValTy.getNumElements() != MemTy.getNumElements())) {
             report("range is incompatible with the result type", MI);
           }
         }
@@ -3193,7 +3197,7 @@ struct VRegFilter {
     for (Register Reg : FromRegSet) {
       if (!Reg.isVirtual())
         continue;
-      unsigned Index = Register::virtReg2Index(Reg);
+      unsigned Index = Reg.virtRegIndex();
       if (Index < SparseUniverseMax) {
         if (Index < SparseUniverse && Sparse.test(Index))
           continue;
@@ -3216,7 +3220,7 @@ struct VRegFilter {
     Dense.reserve(NewDenseSize);
     for (unsigned I = Begin; I < End; ++I) {
       Register Reg = ToVRegs[I];
-      unsigned Index = Register::virtReg2Index(Reg);
+      unsigned Index = Reg.virtRegIndex();
       if (Index < SparseUniverseMax)
         Sparse.set(Index);
       else

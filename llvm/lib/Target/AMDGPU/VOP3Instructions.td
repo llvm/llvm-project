@@ -774,8 +774,8 @@ defm V_ADD_I16 : VOP3Inst_t16 <"v_add_i16", VOP_I16_I16_I16>;
 defm V_SUB_I16 : VOP3Inst_t16 <"v_sub_i16", VOP_I16_I16_I16>;
 
 let isCommutable = 1 in {
-  defm V_MAD_U32_U16 : VOP3Inst <"v_mad_u32_u16", VOP3_Profile<VOP_I32_I16_I16_I32, VOP3_OPSEL>>;
-  defm V_MAD_I32_I16 : VOP3Inst <"v_mad_i32_i16", VOP3_Profile<VOP_I32_I16_I16_I32, VOP3_OPSEL>>;
+  defm V_MAD_U32_U16 : VOP3Inst_t16 <"v_mad_u32_u16", VOP_I32_I16_I16_I32>;
+  defm V_MAD_I32_I16 : VOP3Inst_t16 <"v_mad_i32_i16", VOP_I32_I16_I16_I32>;
 } // End isCommutable = 1
 
 defm V_CVT_PKNORM_I16_F16 : VOP3Inst_t16 <"v_cvt_pknorm_i16_f16", VOP_B32_F16_F16>;
@@ -1932,7 +1932,7 @@ def VOP_PARALLEL_BIT : VOP3_Profile<VOP_I32_I32_I32> {
   let HasExt64BitDPP = 0;
 }
 
-let SubtargetPredicate = isGFX13Plus in {
+let SubtargetPredicate = HasParallelBitInsts in {
   defm V_PDEP_B32 : VOP3Inst<"v_pdep_b32", VOP_PARALLEL_BIT, int_amdgcn_pdep_b32>;
   defm V_PEXT_B32 : VOP3Inst<"v_pext_b32", VOP_PARALLEL_BIT, int_amdgcn_pext_b32>;
 }
@@ -2390,8 +2390,8 @@ defm V_ADD3_U32            : VOP3_Realtriple_gfx11_gfx12_gfx13<0x255, 0x36d>;
 defm V_LSHL_OR_B32         : VOP3_Realtriple_gfx11_gfx12_gfx13<0x256, 0x36f>;
 defm V_AND_OR_B32          : VOP3_Realtriple_gfx11_gfx12_gfx13<0x257, 0x371>;
 defm V_OR3_B32             : VOP3_Realtriple_gfx11_gfx12_gfx13<0x258, 0x372>;
-defm V_MAD_U32_U16         : VOP3_Realtriple_gfx11_gfx12_gfx13<0x259, 0x373>;
-defm V_MAD_I32_I16         : VOP3_Realtriple_gfx11_gfx12_gfx13<0x25a, 0x375>;
+defm V_MAD_U32_U16         : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12_gfx13<0x259, 0x373, "v_mad_u32_u16">;
+defm V_MAD_I32_I16         : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12_gfx13<0x25a, 0x375, "v_mad_i32_i16">;
 defm V_PERMLANE16_B32      : VOP3_Real_Base_gfx11_gfx12_gfx13<0x25b, 0x377>;
 defm V_PERMLANEX16_B32     : VOP3_Real_Base_gfx11_gfx12_gfx13<0x25c, 0x378>;
 #else /* LLPC_BUILD_NPI */
@@ -2403,8 +2403,8 @@ defm V_ADD3_U32            : VOP3_Realtriple_gfx11_gfx12<0x255>;
 defm V_LSHL_OR_B32         : VOP3_Realtriple_gfx11_gfx12<0x256>;
 defm V_AND_OR_B32          : VOP3_Realtriple_gfx11_gfx12<0x257>;
 defm V_OR3_B32             : VOP3_Realtriple_gfx11_gfx12<0x258>;
-defm V_MAD_U32_U16         : VOP3_Realtriple_gfx11_gfx12<0x259>;
-defm V_MAD_I32_I16         : VOP3_Realtriple_gfx11_gfx12<0x25a>;
+defm V_MAD_U32_U16         : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x259, "v_mad_u32_u16">;
+defm V_MAD_I32_I16         : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x25a, "v_mad_i32_i16">;
 defm V_PERMLANE16_B32      : VOP3_Real_Base_gfx11_gfx12<0x25b>;
 defm V_PERMLANEX16_B32     : VOP3_Real_Base_gfx11_gfx12<0x25c>;
 #endif /* LLPC_BUILD_NPI */

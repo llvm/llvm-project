@@ -3680,6 +3680,13 @@ public:
                                            FullySubstituted);
   }
 
+  ExprResult RebuildResolvedUnexpandedPackExpr(SourceLocation BeginLoc,
+                                               QualType T,
+                                               ArrayRef<Expr *> Exprs) {
+    return ResolvedUnexpandedPackExpr::Create(SemaRef.Context, BeginLoc, T,
+                                              Exprs);
+  }
+
   /// Build a new expression representing a call to a source location
   ///  builtin.
   ///
@@ -15427,12 +15434,11 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
         // The transform has determined that we should perform an expansion;
         // transform and capture each of the arguments.
         // expansion of the pattern. Do so.
-        auto *Pack = cast<VarDecl>(C->getCapturedVar());
+        auto *Pack = cast<ValueDecl>(C->getCapturedVar());
         for (unsigned I = 0; I != *NumExpansions; ++I) {
           Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(getSema(), I);
-          VarDecl *CapturedVar
-            = cast_or_null<VarDecl>(getDerived().TransformDecl(C->getLocation(),
-                                                               Pack));
+          ValueDecl *CapturedVar = cast_if_present<ValueDecl>(
+              getDerived().TransformDecl(C->getLocation(), Pack));
           if (!CapturedVar) {
             Invalid = true;
             continue;
@@ -16125,6 +16131,24 @@ ExprResult
 TreeTransform<Derived>::TransformFunctionParmPackExpr(FunctionParmPackExpr *E) {
   // Default behavior is to do nothing with this transformation.
   return E;
+}
+
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformResolvedUnexpandedPackExpr(
+    ResolvedUnexpandedPackExpr *E) {
+  bool ArgumentChanged = false;
+  SmallVector<Expr *, 12> NewExprs;
+  if (TransformExprs(E->getExprs().begin(), E->getNumExprs(),
+                     /*IsCall=*/false, NewExprs, &ArgumentChanged))
+    return ExprError();
+
+  if (!AlwaysRebuild() && !ArgumentChanged)
+    return E;
+
+  // NOTE: The type is just a superficial PackExpansionType
+  //       that needs no substitution.
+  return RebuildResolvedUnexpandedPackExpr(E->getBeginLoc(), E->getType(),
+                                           NewExprs);
 }
 
 template<typename Derived>

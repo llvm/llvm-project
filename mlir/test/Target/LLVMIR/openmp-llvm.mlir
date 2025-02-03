@@ -2801,12 +2801,7 @@ llvm.func @par_task_(%arg0: !llvm.ptr {fir.bindc_name = "a"}) {
 llvm.func @foo(!llvm.ptr) -> ()
 llvm.func @destroy(!llvm.ptr) -> ()
 
-omp.private {type = firstprivate} @privatizer : !llvm.ptr alloc {
-^bb0(%arg0 : !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr
-  omp.yield(%1 : !llvm.ptr)
-} copy {
+omp.private {type = firstprivate} @privatizer : i32 copy {
 ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   %0 = llvm.load %arg0 : !llvm.ptr -> i32
   llvm.store %0, %arg1 : i32, !llvm.ptr
@@ -2829,11 +2824,11 @@ llvm.func @task(%arg0 : !llvm.ptr) {
 // CHECK:         %[[VAL_11:.*]] = load ptr, ptr %[[VAL_12:.*]], align 8
 // CHECK:         %[[VAL_13:.*]] = getelementptr { ptr }, ptr %[[VAL_11]], i32 0, i32 0
 // CHECK:         %[[VAL_14:.*]] = load ptr, ptr %[[VAL_13]], align 8
-// CHECK:         %[[VAL_15:.*]] = alloca i32, i64 1, align 4
-// CHECK:         br label %omp.private.latealloc
-// CHECK:       omp.private.latealloc:                            ; preds = %task.alloca
+// CHECK:         %[[VAL_15:.*]] = alloca i32, align 4
+// CHECK:         br label %omp.private.init
+// CHECK:       omp.private.init:                                 ; preds = %task.alloca
 // CHECK:         br label %omp.private.copy
-// CHECK:       omp.private.copy:                                 ; preds = %omp.private.latealloc
+// CHECK:       omp.private.copy:                                 ; preds = %omp.private.init
 // CHECK:         %[[VAL_19:.*]] = load i32, ptr %[[VAL_14]], align 4
 // CHECK:         store i32 %[[VAL_19]], ptr %[[VAL_15]], align 4
 // CHECK:         br label %[[VAL_20:.*]]

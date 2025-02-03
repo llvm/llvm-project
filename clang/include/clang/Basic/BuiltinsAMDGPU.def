@@ -521,6 +521,8 @@ TARGET_BUILTIN(__builtin_amdgcn_global_load_tr_b128_v4i16, "V4sV4s*1", "nc", "gf
 TARGET_BUILTIN(__builtin_amdgcn_global_load_tr_b128_v4f16, "V4hV4h*1", "nc", "gfx12-insts,wavefrontsize64")
 TARGET_BUILTIN(__builtin_amdgcn_global_load_tr_b128_v4bf16, "V4yV4y*1", "nc", "gfx12-insts,wavefrontsize64")
 
+TARGET_BUILTIN(__builtin_amdgcn_ds_bpermute_fi_b32, "iii", "nc", "gfx12-insts")
+
 //===----------------------------------------------------------------------===//
 // WMMA builtins.
 // Postfix w32 indicates the builtin requires wavefront size of 32.
@@ -644,23 +646,23 @@ TARGET_BUILTIN(__builtin_amdgcn_cvt_sr_f16_f32, "V2hV2hfUiIb", "nc", "f32-to-f16
 //===----------------------------------------------------------------------===//
 TARGET_BUILTIN(__builtin_amdgcn_s_cluster_barrier, "v", "n", "gfx1250-insts")
 
-TARGET_BUILTIN(__builtin_amdgcn_flat_prefetch, "vvC*0Ii", "nc", "gfx1250-insts")
-TARGET_BUILTIN(__builtin_amdgcn_global_prefetch, "vvC*1Ii", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_flat_prefetch, "vvC*0Ii", "nc", "vmem-pref-insts")
+TARGET_BUILTIN(__builtin_amdgcn_global_prefetch, "vvC*1Ii", "nc", "vmem-pref-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_tensor_load_to_lds, "vV4iV8iV4iV4iIi", "nc", "gfx1250-insts")
 TARGET_BUILTIN(__builtin_amdgcn_tensor_load_to_lds_d2, "vV4iV8iIi", "nc", "gfx1250-insts")
 TARGET_BUILTIN(__builtin_amdgcn_tensor_store_from_lds, "vV4iV8iV4iV4iIi", "nc", "gfx1250-insts")
 TARGET_BUILTIN(__builtin_amdgcn_tensor_store_from_lds_d2, "vV4iV8iIi", "nc", "gfx1250-insts")
 
-TARGET_BUILTIN(__builtin_amdgcn_global_load_tr4_b64_v2i32, "V2iV2i*1", "nc", "gfx1250-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_global_load_tr4_b64_v2i32, "V2iV2i*1", "nc", "transpose-load-f4f6-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_global_load_tr8_b64_v2i32, "V2iV2i*1", "nc", "gfx1250-insts,wavefrontsize32")
-TARGET_BUILTIN(__builtin_amdgcn_global_load_tr6_b96_v3i32, "V3iV3i*1", "nc", "gfx1250-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_global_load_tr6_b96_v3i32, "V3iV3i*1", "nc", "transpose-load-f4f6-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_global_load_tr16_b128_v8i16, "V8sV8s*1", "nc", "gfx1250-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_global_load_tr16_b128_v8f16, "V8hV8h*1", "nc", "gfx1250-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_global_load_tr16_b128_v8bf16, "V8yV8y*1", "nc", "gfx1250-insts,wavefrontsize32")
-TARGET_BUILTIN(__builtin_amdgcn_ds_load_tr4_b64_v2i32, "V2iV2i*3", "nc", "gfx1250-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_ds_load_tr4_b64_v2i32, "V2iV2i*3", "nc", "transpose-load-f4f6-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_ds_load_tr8_b64_v2i32, "V2iV2i*3", "nc", "gfx1250-insts,wavefrontsize32")
-TARGET_BUILTIN(__builtin_amdgcn_ds_load_tr6_b96_v3i32, "V3iV3i*3", "nc", "gfx1250-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_ds_load_tr6_b96_v3i32, "V3iV3i*3", "nc", "transpose-load-f4f6-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_ds_load_tr16_b128_v8i16, "V8sV8s*3", "nc", "gfx1250-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_ds_load_tr16_b128_v8f16, "V8hV8h*3", "nc", "gfx1250-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_ds_load_tr16_b128_v8bf16, "V8yV8y*3", "nc", "gfx1250-insts,wavefrontsize32")
@@ -1128,8 +1130,8 @@ TARGET_BUILTIN(__builtin_amdgcn_exclusive_scan_max_i16, "ssi", "nc", "gfx13-inst
 TARGET_BUILTIN(__builtin_amdgcn_exclusive_scan_max_u16, "ssi", "nc", "gfx13-insts")
 TARGET_BUILTIN(__builtin_amdgcn_exclusive_scan_max_i32, "iii", "nc", "gfx13-insts")
 TARGET_BUILTIN(__builtin_amdgcn_exclusive_scan_max_u32, "iii", "nc", "gfx13-insts")
-TARGET_BUILTIN(__builtin_amdgcn_pdep_b32, "UiUiUi", "nc", "gfx13-insts")
-TARGET_BUILTIN(__builtin_amdgcn_pext_b32, "UiUiUi", "nc", "gfx13-insts")
+TARGET_BUILTIN(__builtin_amdgcn_pdep_b32, "UiUiUi", "nc", "parallel-bit-insts")
+TARGET_BUILTIN(__builtin_amdgcn_pext_b32, "UiUiUi", "nc", "parallel-bit-insts")
 #endif /* LLPC_BUILD_NPI */
 
 #undef BUILTIN

@@ -265,6 +265,14 @@ def FeatureInstFwdPrefetchBug : SubtargetFeature<"inst-fwd-prefetch-bug",
   "S_INST_PREFETCH instruction causes shader to hang"
 >;
 
+#ifdef LLPC_BUILD_NPI
+def FeatureVmemPrefInsts : SubtargetFeature<"vmem-pref-insts",
+  "HasVmemPrefInsts",
+  "true",
+  "Has flat_prefect_b8 and global_prefetch_b8 instructions"
+>;
+
+#endif /* LLPC_BUILD_NPI */
 def FeatureSafeSmemPrefetch : SubtargetFeature<"safe-smem-prefetch",
   "HasSafeSmemPrefetch",
   "true",
@@ -1180,6 +1188,12 @@ def FeatureTensorCvtLutInsts : SubtargetFeature<"tensor-cvt-lut-insts",
   "Has v_perm_pk16* instructions"
 >;
 
+def FeatureTransposeLoadF4F6Insts : SubtargetFeature<"transpose-load-f4f6-insts",
+  "HasTransposeLoadF4F6Insts",
+  "true",
+  "Has ds_load_tr4/tr6 and global_load_tr4/tr6 instructions"
+>;
+
 #endif /* LLPC_BUILD_NPI */
 def FeaturePrngInst : SubtargetFeature<"prng-inst",
   "HasPrngInst",
@@ -1434,6 +1448,12 @@ def FeatureSGPRVMEM : SubtargetFeature< "sgpr-vmem",
   "Shader Load/Store/Atomics of SGPRs through VMEM"
 >;
 
+def FeatureParallelBitInsts : SubtargetFeature< "parallel-bit-insts",
+  "HasParallelBitInsts",
+  "true",
+  "Has v_pdep_b32 and v_pext_b32 instructions"
+>;
+
 #endif /* LLPC_BUILD_NPI */
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
@@ -1604,7 +1624,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
-   FeatureExclusiveScanInsts, FeatureSWC
+   FeatureExclusiveScanInsts, FeatureSWC, FeatureParallelBitInsts,
   ]
 >;
 
@@ -2116,6 +2136,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureBitOp3Insts,
    FeatureTanhInsts,
    FeatureTensorCvtLutInsts,
+   FeatureTransposeLoadF4F6Insts,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
    FeatureBF16PackedInsts,
@@ -2134,7 +2155,8 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureFlatBufferGlobalAtomicFaddF64Inst,
    FeatureMemoryAtomicFAddF32DenormalSupport,
    FeatureGloballyAddressableScratch,
-   FeatureKernargPreload
+   FeatureKernargPreload,
+   FeatureVmemPrefInsts,
 ]>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2173,6 +2195,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureShaderCyclesRegister,
    FeatureArchitectedFlatScratch,
    FeatureArchitectedSGPRs,
+   FeatureFlatGVSMode,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
    FeatureAtomicDsPkAdd16Insts,
@@ -2192,6 +2215,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureBitOp3Insts,
    FeatureTanhInsts,
    FeatureTensorCvtLutInsts,
+   FeatureTransposeLoadF4F6Insts,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
    FeatureBF16PackedInsts,
@@ -2209,7 +2233,8 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureFmaMixBF16Insts,
    FeatureVNBREncoding,
    FeatureGloballyAddressableScratch,
-   FeatureIndexedResources
+   FeatureIndexedResources,
+   FeatureVmemPrefInsts
 ]>;
 
 #endif /* LLPC_BUILD_NPI */
@@ -2993,6 +3018,9 @@ def HasNotMADIntraFwdBug : Predicate<"!Subtarget->hasMADIntraFwdBug()">;
 def HasSALUFloatInsts : Predicate<"Subtarget->hasSALUFloatInsts()">,
   AssemblerPredicate<(all_of FeatureSALUFloatInsts)>;
 
+def NotHasSALUFloatInsts : Predicate<"!Subtarget->hasSALUFloatInsts()">,
+  AssemblerPredicate<(all_of (not FeatureSALUFloatInsts))>;
+
 def HasPseudoScalarTrans : Predicate<"Subtarget->hasPseudoScalarTrans()">,
   AssemblerPredicate<(all_of FeaturePseudoScalarTrans)>;
 
@@ -3005,6 +3033,9 @@ def HasTanhInsts : Predicate<"Subtarget->hasTanhInsts()">,
 
 def HasTensorCvtLutInsts : Predicate<"Subtarget->hasTensorCvtLutInsts()">,
   AssemblerPredicate<(all_of FeatureTensorCvtLutInsts)>;
+
+def HasTransposeLoadF4F6Insts : Predicate<"Subtarget->hasTransposeLoadF4F6Insts()">,
+  AssemblerPredicate<(all_of FeatureTransposeLoadF4F6Insts)>;
 
 #endif /* LLPC_BUILD_NPI */
 def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
@@ -3060,9 +3091,8 @@ def HasXF32Insts : Predicate<"Subtarget->hasXF32Insts()">,
    AssemblerPredicate<(all_of FeatureXF32Insts)>;
 
 #ifdef LLPC_BUILD_NPI
-def HasVectorPrefetch :
-  Predicate<"Subtarget->hasVectorPrefetch()">,
-  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
+def HasVmemPrefInsts : Predicate<"Subtarget->hasVmemPrefInsts()">,
+  AssemblerPredicate<(all_of FeatureVmemPrefInsts)>;
 
 #endif /* LLPC_BUILD_NPI */
 def HasAshrPkInsts : Predicate<"Subtarget->hasAshrPkInsts()">,
@@ -3083,6 +3113,9 @@ def HasIndexedResources : Predicate<"Subtarget->hasIndexedResources()">,
 
 def HasSGPRVMEM : Predicate<"Subtarget->hasSGPRVMEM()">,
   AssemblerPredicate<(all_of FeatureSGPRVMEM)>;
+
+def HasParallelBitInsts : Predicate<"Subtarget->hasParallelBitInsts()">,
+  AssemblerPredicate<(all_of FeatureParallelBitInsts)>;
 #endif /* LLPC_BUILD_NPI */
 
 // Include AMDGPU TD files

@@ -10,6 +10,7 @@ on:
   push:
     branches:
       - 'main'
+      - 'release/**'
 
 jobs:
   premerge-checks-linux:
@@ -132,3 +133,72 @@ jobs:
           call C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64
           bash .ci/monolithic-windows.sh "${{ steps.vars.outputs.windows-projects }}" "${{ steps.vars.outputs.windows-check-targets }}"
 
+  permerge-check-macos:
+    runs-on: macos-14
+    concurrency:
+      group: ${{ github.workflow }}-macos-${{ github.event.pull_request.number || github.sha }}
+      cancel-in-progress: true
+    if: >-
+      (startswith(github.ref_name, 'release/') ||
+       startswith(github.base_ref, 'refs/heads/release/'))
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2.14
+        with:
+          max-size: "2000M"
+      - name: Install Ninja
+        uses: llvm/actions/install-ninja@main
+      - name: Build and Test
+        run: |
+          modified_files=$(git diff --name-only HEAD~1...HEAD)
+          modified_dirs=$(echo "$modified_files" | cut -d'/' -f1 | sort -u)
+
+          echo $modified_files
+          echo $modified_dirs
+
+          . ./.ci/compute-projects.sh
+
+          all_projects="clang clang-tools-extra lld lldb llvm mlir"
+          modified_projects="$(keep-modified-projects ${all_projects})"
+
+          # We have to disable the runtimes builds due to https://github.com/llvm/llvm-project/issues/90568
+          # and the lldb tests depend on libcxx, so we need to skip them.
+          mac_check_targets=$(check-targets ${modified_projects} | sort | uniq | tr '\n' ' ' | sed -e 's/check-lldb //g')
+          mac_projects=$(add-dependencies ${modified_projects} | sort | uniq | tr '\n' ' ')
+
+          mac_runtimes_to_test=$(compute-runtimes-to-test ${modified_projects})
+          mac_runtime_check_targets=$(check-targets ${mac_runtimes_to_test} | sort | uniq | tr '\n' ' ')
+          mac_runtimes=$(echo ${mac_runtimes_to_test} | tr ' ' '\n' | sort | uniq | tr '\n' ' ')
+
+          if [[ "${mac_projects}" == "" ]]; then
+            echo "No projects to build"
+            exit 0
+          fi
+
+          echo "Projects to test: ${modified_projects}"
+          echo "Runtimes to test: ${mac_runtimes_to_test}"
+          echo "Building projects: ${mac_projects}"
+          echo "Running project checks targets: ${mac_check_targets}"
+          echo "Building runtimes: ${mac_runtimes}"
+          echo "Running runtimes checks targets: ${mac_runtime_check_targets}"
+
+          # -DLLVM_DISABLE_ASSEMBLY_FILES=ON is for
+          # https://github.com/llvm/llvm-project/issues/81967
+          # Disable sharding in lit so that the LIT_XFAIL environment var works.
+          cmake -G Ninja \
+                -B build \
+                -S llvm \
+                -DLLVM_ENABLE_PROJECTS="$(echo ${mac_projects} | tr ' ' ';')" \
+                -DLLVM_DISABLE_ASSEMBLY_FILES=ON \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DLLDB_INCLUDE_TESTS=OFF \
+                -DLLVM_ENABLE_ASSERTIONS=ON \
+                -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+                -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+          # The libcxx tests fail, so we are skipping the runtime targets.
+          ninja -C build  $mac_check_targets

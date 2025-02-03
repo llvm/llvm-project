@@ -251,6 +251,7 @@ protected:
 #if LLPC_BUILD_NPI
   bool HasTanhInsts = false;
   bool HasTensorCvtLutInsts = false;
+  bool HasTransposeLoadF4F6Insts = false;
 #endif /* LLPC_BUILD_NPI */
   bool HasPrngInst = false;
   bool HasPermlane16Swap = false;
@@ -259,6 +260,9 @@ protected:
   bool HasVMEMtoScalarWriteHazard = false;
   bool HasSMEMtoVectorWriteHazard = false;
   bool HasInstFwdPrefetchBug = false;
+#if LLPC_BUILD_NPI
+  bool HasVmemPrefInsts = false;
+#endif /* LLPC_BUILD_NPI */
   bool HasSafeSmemPrefetch = false;
 #if LLPC_BUILD_NPI
   bool HasSafeCUPrefetch = false;
@@ -298,6 +302,7 @@ protected:
   bool HasSWC = false;
   bool HasIndexedResources = false;
   bool HasSGPRVMEM = false;
+  bool HasParallelBitInsts = false;
 #endif /* LLPC_BUILD_NPI */
 
   bool RequiresCOV6 = false;
@@ -1054,7 +1059,7 @@ public:
   bool hasPrefetch() const { return GFX12Insts; }
 
 #if LLPC_BUILD_NPI
-  bool hasVectorPrefetch() const { return GFX1250Insts; }
+  bool hasVmemPrefInsts() const { return HasVmemPrefInsts; }
 
 #endif /* LLPC_BUILD_NPI */
   bool hasSafeSmemPrefetch() const { return HasSafeSmemPrefetch; }
@@ -1259,13 +1264,13 @@ public:
 
   // Scalar and global loads support scale_offset bit.
   bool hasScaleOffset() const { return GFX1250Insts; }
+
+  bool hasFlatGVSMode() const { return FlatGVSMode; }
 #else /* LLPC_BUILD_NPI */
   bool hasMovB64() const { return GFX940Insts; }
 #endif /* LLPC_BUILD_NPI */
 
 #if LLPC_BUILD_NPI
-  bool hasFlatGVSMode() const { return FlatGVSMode; }
-
   // FLAT GLOBAL VOffset is signed
   bool hasSignedGVSOffset() const { return GFX1250Insts; }
 #else /* LLPC_BUILD_NPI */
@@ -1512,7 +1517,11 @@ public:
 
   bool hasTanhInsts() const { return HasTanhInsts; }
 
+
   bool hasTensorCvtLutInsts() const { return HasTensorCvtLutInsts; }
+
+  bool hasTransposeLoadF4F6Insts() const { return HasTransposeLoadF4F6Insts; }
+
 
   bool hasAddPC64Inst() const { return GFX1250Insts; }
 
@@ -1536,6 +1545,8 @@ public:
   bool hasIndexedResources() const { return HasIndexedResources; }
 
   bool hasSGPRVMEM() const { return HasSGPRVMEM; }
+
+  bool hasParallelBitInsts() const { return HasParallelBitInsts; }
 
 #endif /* LLPC_BUILD_NPI */
   /// \returns true if the target supports using software to avoid hazards

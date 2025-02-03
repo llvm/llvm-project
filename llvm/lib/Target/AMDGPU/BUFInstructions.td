@@ -3952,10 +3952,10 @@ multiclass MTBUF_Real_AllAddr_gfx13<bits<8> op,
     def : Mnem_gfx13<ps.Mnemonic, real_name>;
 }
 
-defm TBUFFER_LOAD_FORMAT_X         : MTBUF_Real_AllAddr_gfx13<0xc0>;
-defm TBUFFER_LOAD_FORMAT_XY        : MTBUF_Real_AllAddr_gfx13<0xc1>;
-defm TBUFFER_LOAD_FORMAT_XYZ       : MTBUF_Real_AllAddr_gfx13<0xc2>;
-defm TBUFFER_LOAD_FORMAT_XYZW      : MTBUF_Real_AllAddr_gfx13<0xc3>;
+defm TBUFFER_LOAD_FORMAT_X         : MTBUF_Real_AllAddr_gfx13<0xe0>;
+defm TBUFFER_LOAD_FORMAT_XY        : MTBUF_Real_AllAddr_gfx13<0xe1>;
+defm TBUFFER_LOAD_FORMAT_XYZ       : MTBUF_Real_AllAddr_gfx13<0xe2>;
+defm TBUFFER_LOAD_FORMAT_XYZW      : MTBUF_Real_AllAddr_gfx13<0xe3>;
 defm TBUFFER_STORE_FORMAT_X        : MTBUF_Real_AllAddr_gfx13<0xe4>;
 defm TBUFFER_STORE_FORMAT_XY       : MTBUF_Real_AllAddr_gfx13<0xe5>;
 defm TBUFFER_STORE_FORMAT_XYZ      : MTBUF_Real_AllAddr_gfx13<0xe6>;

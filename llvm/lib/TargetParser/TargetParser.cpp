@@ -424,6 +424,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     case GK_GFX1301:
     case GK_GFX1300:
       Features["gfx13-insts"] = true;
+      Features["parallel-bit-insts"] = true;
       [[fallthrough]];
     case GK_GFX1251:
       Features["gfx1251-gemm-insts"] = true;
@@ -447,6 +448,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["prng-inst"] = true;
       Features["tanh-insts"] = true;
       Features["tensor-cvt-lut-insts"] = true;
+      Features["transpose-load-f4f6-insts"] = true;
       Features["bf16-trans-insts"] = true;
       Features["bf16-cvt-insts"] = true;
       Features["bf16-pk-insts"] = true;
@@ -454,6 +456,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["permlane16-swap"] = true;
       Features["ashr-pk-insts"] = true;
       Features["atomic-buffer-pk-add-bf16-inst"] = true;
+      Features["vmem-pref-insts"] = true;
       break;
 #endif /* LLPC_BUILD_NPI */
     case GK_GFX120F:

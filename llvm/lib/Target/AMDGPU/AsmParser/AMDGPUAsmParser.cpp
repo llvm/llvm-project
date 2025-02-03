@@ -517,6 +517,10 @@ public:
 #if LLPC_BUILD_NPI
   bool isSCSrc_bf16() const {
     return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::bf16);
+  }
+
+  bool isSCSrc_f16() const {
+    return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::f16);
 #else /* LLPC_BUILD_NPI */
   bool isSCSrcV2B16() const {
     return isSCSrcB16();
@@ -524,10 +528,6 @@ public:
   }
 
 #if LLPC_BUILD_NPI
-  bool isSCSrc_f16() const {
-    return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::f16);
-  }
-
   bool isSCSrcV2B16() const { return isSCSrc_b16(); }
 
 #endif /* LLPC_BUILD_NPI */
@@ -2050,7 +2050,8 @@ private:
   bool validateMIMGD16(const MCInst &Inst);
   bool validateMIMGDim(const MCInst &Inst, const OperandVector &Operands);
 #if LLPC_BUILD_NPI
-  bool validateR128(const MCInst &Inst);
+  bool validateTensorR128(const MCInst &Inst);
+  bool validateRayTracingR128(const MCInst &Inst);
 #endif /* LLPC_BUILD_NPI */
   bool validateMIMGMSAA(const MCInst &Inst);
   bool validateOpSel(const MCInst &Inst);
@@ -4984,16 +4985,30 @@ bool AMDGPUAsmParser::validateMIMGD16(const MCInst &Inst) {
 }
 
 #if LLPC_BUILD_NPI
-bool AMDGPUAsmParser::validateR128(const MCInst &Inst) {
+bool AMDGPUAsmParser::validateTensorR128(const MCInst &Inst) {
   const unsigned Opc = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opc);
 
-  // Only validate tensor_* and rts_* instructions.
-  if (((Desc.TSFlags & SIInstrFlags::TENSOR_CNT) == 0) &&
-      (((Desc.TSFlags & SIInstrFlags::VIMAGE) == 0) ||
+  // Only validate tensor_* instructions.
+  if ((Desc.TSFlags & SIInstrFlags::TENSOR_CNT) == 0)
+    return true;
+
+  int R128Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::r128);
+  if (R128Idx >= 0 && Inst.getOperand(R128Idx).getImm())
+    return false;
+
+  return true;
+}
+
+bool AMDGPUAsmParser::validateRayTracingR128(const MCInst &Inst) {
+  const unsigned Opc = Inst.getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opc);
+
+  // Only validate rts_* instructions.
+  if (((Desc.TSFlags & SIInstrFlags::VIMAGE) == 0) ||
        !AMDGPU::getMIMGBaseOpcodeInfo(AMDGPU::getMIMGInfo(Opc)->BaseOpcode)
             ->BVH ||
-       !isGFX13()))
+       !isGFX13())
     return true;
 
   int R128Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::r128);
@@ -5635,12 +5650,14 @@ bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
       isGFX13())
     return true;
 
+#endif /* LLPC_BUILD_NPI */
   unsigned Opc = Inst.getOpcode();
   // DS_READ_B96_TR_B6 is the only DS instruction in GFX950, that allows
   // unaligned VGPR. All others only allow even aligned VGPRs.
+#if LLPC_BUILD_NPI
   if (FB[AMDGPU::FeatureGFX90AInsts] && Opc == AMDGPU::DS_READ_B96_TR_B6_vi)
 #else /* LLPC_BUILD_NPI */
-  if (!FB[AMDGPU::FeatureGFX90AInsts])
+  if (!(FB[AMDGPU::FeatureGFX90AInsts]) || Opc == AMDGPU::DS_READ_B96_TR_B6_vi)
 #endif /* LLPC_BUILD_NPI */
     return true;
 
@@ -6082,7 +6099,14 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
 #if LLPC_BUILD_NPI
-  if (!validateR128(Inst)) {
+  if (!validateTensorR128(Inst)) {
+    Error(getImmLoc(AMDGPUOperand::ImmTyD16, Operands),
+      "instruction must set modifier r128=0");
+    return false;
+  }
+  //TODO: FIXME:  GFX13 - verify if r128==1 for RayTracing.
+  //MI400 changed R128->0 for Tensor instructions.
+  if (!validateRayTracingR128(Inst)) {
     Error(getImmLoc(AMDGPUOperand::ImmTyD16, Operands),
       "instruction must set modifier r128=1");
     return false;

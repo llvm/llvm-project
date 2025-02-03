@@ -3574,7 +3574,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     return;
   case AMDGPU::G_PREFETCH: {
 #if LLPC_BUILD_NPI
-    if (!Subtarget.hasSafeSmemPrefetch() && !Subtarget.hasVectorPrefetch()) {
+    if (!Subtarget.hasSafeSmemPrefetch() && !Subtarget.hasVmemPrefInsts()) {
 #else /* LLPC_BUILD_NPI */
     if (!Subtarget.hasPrefetch() || !Subtarget.hasSafeSmemPrefetch()) {
 #endif /* LLPC_BUILD_NPI */
@@ -3585,7 +3585,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     unsigned PtrBank = getRegBankID(PtrReg, MRI, AMDGPU::SGPRRegBankID);
 #if LLPC_BUILD_NPI
     if (PtrBank == AMDGPU::VGPRRegBankID &&
-        (!Subtarget.hasVectorPrefetch() || !MI.getOperand(3).getImm())) {
+        (!Subtarget.hasVmemPrefInsts() || !MI.getOperand(3).getImm())) {
       // Cannot do I$ prefetch with divergent pointer.
 #else /* LLPC_BUILD_NPI */
     if (PtrBank == AMDGPU::VGPRRegBankID) {
@@ -5014,6 +5014,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_set_inactive:
     case Intrinsic::amdgcn_set_inactive_chain_arg:
     case Intrinsic::amdgcn_permlane64:
+    case Intrinsic::amdgcn_ds_bpermute_fi_b32:
       return getDefaultMappingAllVGPR(MI);
     case Intrinsic::amdgcn_cvt_pkrtz:
       if (Subtarget.hasSALUFloatInsts() && isSALUMapping(MI))

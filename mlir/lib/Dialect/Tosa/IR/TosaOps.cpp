@@ -891,8 +891,18 @@ LogicalResult tosa::SliceOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     SliceOp::Adaptor adaptor,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  auto start = adaptor.getStart();
-  auto size = adaptor.getSize();
+
+  Type inputType = getElementTypeOrSelf(adaptor.getInput1().getType());
+  SmallVector<int64_t> start;
+  SmallVector<int64_t> size;
+
+  if (!tosa::getConstShapeValue(adaptor.getStart().getDefiningOp(), start) ||
+      !tosa::getConstShapeValue(adaptor.getSize().getDefiningOp(), size)) {
+    auto rank = cast<tosa::shapeType>(adaptor.getSize().getType()).getRank();
+    SmallVector<int64_t> fallback(rank, ShapedType::kDynamic);
+    inferredReturnShapes.push_back(ShapedTypeComponents(fallback, inputType));
+    return success();
+  }
 
   // if size[i] is -1, all remaining elements in dimension i are included
   // in the slice, similar to TF.
@@ -933,14 +943,40 @@ LogicalResult tosa::SliceOp::verify() {
   if (!inputType)
     return success();
 
-  if (static_cast<size_t>(inputType.getRank()) != getStart().size())
+  auto startShapeRank =
+      llvm::cast<tosa::shapeType>(getStart().getType()).getRank();
+  if (inputType.getRank() != startShapeRank)
     return emitOpError(
         "length of start attribute is not equal rank of input shape");
 
-  if (static_cast<size_t>(inputType.getRank()) != getSize().size())
+  auto sizeShapeRank =
+      llvm::cast<tosa::shapeType>(getSize().getType()).getRank();
+  if (inputType.getRank() != sizeShapeRank)
     return emitOpError(
         "length of size attribute is not equal rank of input shape");
 
+  return success();
+}
+
+LogicalResult tosa::MulOp::inferReturnTypeComponents(
+    MLIRContext *context, ::std::optional<Location> location,
+    ValueShapeRange operands, DictionaryAttr attributes,
+    OpaqueProperties properties, RegionRange regions,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  LogicalResult status = success();
+  llvm::SmallVector<int64_t> outShape;
+  if (operands.size() == 2) {
+    status = resolveBroadcastShape(operands, outShape);
+  } else {
+    // mul op's output shape only depend on input1 and input2, not on shift
+    ValueShapeRange two_inputs = operands.drop_back();
+    status = resolveBroadcastShape(two_inputs, outShape);
+  }
+  if (status.failed()) {
+    inferredReturnShapes.push_back(ShapedTypeComponents());
+  } else {
+    inferredReturnShapes.push_back(ShapedTypeComponents(outShape));
+  }
   return success();
 }
 
@@ -1014,6 +1050,20 @@ LogicalResult tosa::MulOp::verify() {
     if (rank != getRank(type)) {
       return emitOpError("result type has different rank than operands");
     }
+  }
+
+  // check for broadcast compatible shapes in first two operands (ignoring
+  // shift)
+
+  // delegate function that returns shape of shaped type
+  auto getShape = [](const Type type) {
+    return mlir::cast<ShapedType>(type).getShape();
+  };
+  SmallVector<int64_t> resultShape;
+  if (!mlir::OpTrait::util::getBroadcastedShape(getShape(rankedOperandTypes[0]),
+                                                getShape(rankedOperandTypes[1]),
+                                                resultShape)) {
+    return emitOpError("operands don't have broadcast-compatible shapes");
   }
 
   return success();
@@ -1656,7 +1706,6 @@ NARY_SHAPE_INFER(tosa::LogicalRightShiftOp)
 NARY_SHAPE_INFER(tosa::LogicalXorOp)
 NARY_SHAPE_INFER(tosa::MaximumOp)
 NARY_SHAPE_INFER(tosa::MinimumOp)
-NARY_SHAPE_INFER(tosa::MulOp)
 NARY_SHAPE_INFER(tosa::NegateOp)
 NARY_SHAPE_INFER(tosa::PowOp)
 NARY_SHAPE_INFER(tosa::ReciprocalOp)
