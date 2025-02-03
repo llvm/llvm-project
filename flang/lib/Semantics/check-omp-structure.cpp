@@ -4605,7 +4605,7 @@ std::optional<llvm::omp::Clause> OmpStructureChecker::GetClauseFromProperty(
 
   // The parser for OmpClause will only succeed if the clause was
   // given with all required arguments.
-  // If this is a string or complex extensiom with a clause name,
+  // If this is a string or complex extension with a clause name,
   // treat it as a clause and let the trait checker deal with it.
 
   auto getClauseFromString{[&](const std::string &s) -> MaybeClause {
