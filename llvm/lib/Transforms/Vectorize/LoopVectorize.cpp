@@ -6615,8 +6615,10 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     // fold away.  We can generalize this for all operations using the notion
     // of neutral elements.  (TODO)
     if (I->getOpcode() == Instruction::Mul &&
-        (PSE.getSCEV(I->getOperand(0))->isOne() ||
-         PSE.getSCEV(I->getOperand(1))->isOne()))
+        ((TheLoop->isLoopInvariant(I->getOperand(0)) &&
+          PSE.getSCEV(I->getOperand(0))->isOne()) ||
+         (TheLoop->isLoopInvariant(I->getOperand(1)) &&
+          PSE.getSCEV(I->getOperand(1))->isOne())))
       return 0;
 
     // Detect reduction patterns
@@ -8566,6 +8568,8 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
       // to replace operands with constants.
       ScalarEvolution &SE = *PSE.getSE();
       auto GetConstantViaSCEV = [this, &SE](VPValue *Op) {
+        if (!Op->isLiveIn())
+          return Op;
         Value *V = Op->getUnderlyingValue();
         if (isa<Constant>(V) || !SE.isSCEVable(V->getType()))
           return Op;
