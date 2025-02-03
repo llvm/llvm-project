@@ -1202,3 +1202,47 @@ void test_builtin_elementwise_fma(int i32, int2 v2i32, short i16,
   c3 = __builtin_elementwise_fma(f32, f32, c3);
   // expected-error@-1 {{3rd argument must be a scalar or vector of floating-point types (was '_Complex float')}}
 }
+
+void test_builtin_elementwise_clz(int i32, int2 v2i32, short i16,
+                                  double f64, double2 v2f64) {
+  f64 = __builtin_elementwise_clz(f64);
+  // expected-error@-1 {{1st argument must be a scalar or vector of integer types (was 'double')}}
+
+  _Complex float c1;
+  c1 = __builtin_elementwise_clz(c1);
+  // expected-error@-1 {{1st argument must be a scalar or vector of integer types (was '_Complex float')}}
+
+  v2i32 = __builtin_elementwise_clz(v2i32, i32);
+  // expected-error@-1 {{arguments are of different types ('int2' (vector of 2 'int' values) vs 'int')}}
+
+  v2i32 = __builtin_elementwise_clz(v2i32, f64);
+  // expected-error@-1 {{arguments are of different types ('int2' (vector of 2 'int' values) vs 'double')}}
+
+  v2i32 = __builtin_elementwise_clz();
+  // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
+
+  v2i32 = __builtin_elementwise_clz(v2i32, v2i32, f64);
+  // expected-error@-1 {{too many arguments to function call, expected 2, have 3}}
+}
+
+void test_builtin_elementwise_ctz(int i32, int2 v2i32, short i16,
+                                  double f64, double2 v2f64) {
+  f64 = __builtin_elementwise_ctz(f64);
+  // expected-error@-1 {{1st argument must be a scalar or vector of integer types (was 'double')}}
+
+  _Complex float c1;
+  c1 = __builtin_elementwise_ctz(c1);
+  // expected-error@-1 {{1st argument must be a scalar or vector of integer types (was '_Complex float')}}
+
+  v2i32 = __builtin_elementwise_ctz(v2i32, i32);
+  // expected-error@-1 {{arguments are of different types ('int2' (vector of 2 'int' values) vs 'int')}}
+
+  v2i32 = __builtin_elementwise_ctz(v2i32, f64);
+  // expected-error@-1 {{arguments are of different types ('int2' (vector of 2 'int' values) vs 'double')}}
+
+  v2i32 = __builtin_elementwise_ctz();
+  // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
+
+  v2i32 = __builtin_elementwise_ctz(v2i32, v2i32, f64);
+  // expected-error@-1 {{too many arguments to function call, expected 2, have 3}}
+}
