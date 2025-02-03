@@ -348,7 +348,7 @@ inline RT_API_ATTRS RESULT ApplyFloatingPointKind(
     if constexpr (HasCppTypeFor<TypeCategory::Real, 16>) {
       // If FUNC implemenation relies on FP math functions,
       // then we should not be here. The compiler should have
-      // generated a call to an entry in FortranFloat128Math
+      // generated a call to an entry in flang_rt.quadmath
       // library.
       if constexpr (!NEEDSMATH) {
         return FUNC<16>{}(std::forward<A>(x)...);
