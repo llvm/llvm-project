@@ -1126,9 +1126,7 @@
 // RUN:   %clang -target powerpc-ibm-aix -m32 %s -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-LD32-NO-SANITIZER %s \
 // RUN: %}
-// %if target={{.*aix.*}} %{ 
 // CHECK-LD32-NO-SANITIZER-NOT: "-latomic"
-// %}
 
 // Check enable AddressSanitizer on 32-bit AIX
 // RUN: %if target={{.*aix.*}} %{ \
