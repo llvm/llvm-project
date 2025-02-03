@@ -153,12 +153,14 @@ static void EmitReturnedAsPartOfError(llvm::raw_ostream &OS,
                                       SVal ReturnedVal, 
                                       const MemRegion *LeakedRegion) {
   if (const MemRegion *ReturnedRegion = ReturnedVal.getAsRegion()) {
-    if (isa<BlockDataRegion>(ReturnedRegion))
+    if (isa<BlockDataRegion>(ReturnedRegion)) {
       OS << " is captured by a returned block";
-  } else {
-    // Generic message
-    OS << " returned to caller";
+      return;
+    }
   }
+
+  // Generic message
+  OS << " returned to caller";
 }
 
 void StackAddrEscapeChecker::EmitReturnLeakError(CheckerContext &C,
@@ -294,6 +296,8 @@ FilterReturnExpressionLeaks(const SmallVector<const MemRegion *> &MaybeEscaped,
   }
 
   for (const MemRegion *MR : MaybeEscaped) {
+    // In this case, the block_data region being returned isn't a leak,
+    // and all of its subregions are not leaks
     if (IsCopyAndAutoreleaseBlockObj) {
       if (MR == RetRegion)
         continue;
@@ -303,11 +307,8 @@ FilterReturnExpressionLeaks(const SmallVector<const MemRegion *> &MaybeEscaped,
         continue;
     }
 
-    // if (RetRegion == MR && (IsConstructExpr || isa<CXXTempObjectRegion>(MR)))
-      // continue;
-
-    // if (isa<CXXTempObjectRegion>(MR->getBaseRegion()))
-      // continue;
+    if (RetRegion == MR && IsConstructExpr)
+      continue;
 
     WillEscape.push_back(MR);
   }
