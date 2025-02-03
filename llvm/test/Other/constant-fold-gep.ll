@@ -24,18 +24,27 @@
 ; PLAIN: @F1 = global ptr getelementptr (i1, ptr inttoptr (i32 1 to ptr), i32 -2)
 ; PLAIN: @H8 = global ptr getelementptr (i8, ptr null, i32 -1)
 ; PLAIN: @H1 = global ptr getelementptr (i1, ptr null, i32 -1)
+; PLAIN: @U8 = global ptr undef
+; PLAIN: @P8 = global ptr poison
+; PLAIN: @Z8 = global ptr inttoptr (i32 1 to ptr)
 ; OPT: @G8 = local_unnamed_addr global ptr null
 ; OPT: @G1 = local_unnamed_addr global ptr null
 ; OPT: @F8 = local_unnamed_addr global ptr inttoptr (i64 -1 to ptr)
 ; OPT: @F1 = local_unnamed_addr global ptr inttoptr (i64 -1 to ptr)
 ; OPT: @H8 = local_unnamed_addr global ptr inttoptr (i64 -1 to ptr)
 ; OPT: @H1 = local_unnamed_addr global ptr inttoptr (i64 -1 to ptr)
+; OPT: @U8 = local_unnamed_addr global ptr undef
+; OPT: @P8 = local_unnamed_addr global ptr poison
+; OPT: @Z8 = local_unnamed_addr global ptr inttoptr (i32 1 to ptr)
 ; TO: @G8 = local_unnamed_addr global ptr null
 ; TO: @G1 = local_unnamed_addr global ptr null
 ; TO: @F8 = local_unnamed_addr global ptr inttoptr (i64 -1 to ptr)
 ; TO: @F1 = local_unnamed_addr global ptr inttoptr (i64 -1 to ptr)
 ; TO: @H8 = local_unnamed_addr global ptr inttoptr (i64 -1 to ptr)
 ; TO: @H1 = local_unnamed_addr global ptr inttoptr (i64 -1 to ptr)
+; TO: @U8 = local_unnamed_addr global ptr undef
+; TO: @P8 = local_unnamed_addr global ptr poison
+; TO: @Z8 = local_unnamed_addr global ptr inttoptr (i32 1 to ptr)
 
 @G8 = global ptr getelementptr (i8, ptr inttoptr (i32 1 to ptr), i32 -1)
 @G1 = global ptr getelementptr (i1, ptr inttoptr (i32 1 to ptr), i32 -1)
@@ -43,6 +52,9 @@
 @F1 = global ptr getelementptr (i1, ptr inttoptr (i32 1 to ptr), i32 -2)
 @H8 = global ptr getelementptr (i8, ptr inttoptr (i32 0 to ptr), i32 -1)
 @H1 = global ptr getelementptr (i1, ptr inttoptr (i32 0 to ptr), i32 -1)
+@U8 = global ptr getelementptr (i8, ptr undef, i32 -1)
+@P8 = global ptr getelementptr (i8, ptr poison, i32 -1)
+@Z8 = global ptr getelementptr (i8, ptr inttoptr (i32 1 to ptr), i32 0)
 
 ; The target-independent folder should be able to do some clever
 ; simplifications on sizeof, alignof, and offsetof expressions. The
