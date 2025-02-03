@@ -123,6 +123,10 @@ public:
     --UnscheduledSuccs;
   }
   void incrUnscheduledSuccs() { ++UnscheduledSuccs; }
+  void resetScheduleState() {
+    UnscheduledSuccs = 0;
+    Scheduled = false;
+  }
   /// \Returns true if all dependent successors have been scheduled.
   bool ready() const { return UnscheduledSuccs == 0; }
   /// \Returns true if this node has been scheduled.
