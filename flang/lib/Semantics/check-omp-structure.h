@@ -105,6 +105,8 @@ public:
   void Enter(const parser::OmpDeclareTargetWithList &);
   void Enter(const parser::OmpDeclareTargetWithClause &);
   void Leave(const parser::OmpDeclareTargetWithClause &);
+  void Enter(const parser::OpenMPDispatchConstruct &);
+  void Leave(const parser::OpenMPDispatchConstruct &);
   void Enter(const parser::OmpErrorDirective &);
   void Leave(const parser::OmpErrorDirective &);
   void Enter(const parser::OpenMPExecutableAllocate &);
@@ -232,6 +234,8 @@ private:
       const parser::CharBlock &source, const parser::OmpObjectList &objList);
   void CheckIntentInPointer(SymbolSourceMap &, const llvm::omp::Clause);
   void CheckProcedurePointer(SymbolSourceMap &, const llvm::omp::Clause);
+  void CheckCrayPointee(const parser::OmpObjectList &objectList,
+      llvm::StringRef clause, bool suggestToUseCrayPointer = true);
   void GetSymbolsInObjectList(const parser::OmpObjectList &, SymbolSourceMap &);
   void CheckDefinableObjects(SymbolSourceMap &, const llvm::omp::Clause);
   void CheckCopyingPolymorphicAllocatable(

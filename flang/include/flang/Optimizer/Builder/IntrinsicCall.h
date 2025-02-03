@@ -185,6 +185,14 @@ struct IntrinsicLibrary {
   mlir::Value genAnint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genAny(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAtanpi(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAtomicAdd(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAtomicAnd(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAtomicOr(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAtomicDec(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAtomicInc(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAtomicMax(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAtomicMin(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAtomicSub(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue
       genCommandArgumentCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAsind(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -202,6 +210,8 @@ struct IntrinsicLibrary {
   mlir::Value genBtest(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genCeiling(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genChar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genChdir(std::optional<mlir::Type> resultType,
+                              llvm::ArrayRef<fir::ExtendedValue>);
   template <mlir::arith::CmpIPredicate pred>
   fir::ExtendedValue genCharacterCompare(mlir::Type,
                                          llvm::ArrayRef<fir::ExtendedValue>);

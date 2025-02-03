@@ -29,6 +29,7 @@
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
 #include "AMDGPUUnifyDivergentExitNodes.h"
+#include "AMDGPUWaitSGPRHazards.h"
 #include "GCNDPPCombine.h"
 #include "GCNIterativeScheduler.h"
 #include "GCNSchedStrategy.h"
@@ -36,12 +37,15 @@
 #include "R600.h"
 #include "R600TargetMachine.h"
 #include "SIFixSGPRCopies.h"
+#include "SIFixVGPRCopies.h"
 #include "SIFoldOperands.h"
 #include "SILoadStoreOptimizer.h"
 #include "SILowerControlFlow.h"
 #include "SILowerSGPRSpills.h"
+#include "SILowerWWMCopies.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
+#include "SIOptimizeExecMasking.h"
 #include "SIOptimizeVGPRLiveRange.h"
 #include "SIPeepholeSDWA.h"
 #include "SIPreAllocateWWMRegs.h"
@@ -50,6 +54,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
+#include "llvm/Analysis/KernelInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
@@ -481,11 +486,11 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUGlobalISelDivergenceLoweringPass(*PR);
   initializeAMDGPURegBankSelectPass(*PR);
   initializeAMDGPURegBankLegalizePass(*PR);
-  initializeSILowerWWMCopiesPass(*PR);
+  initializeSILowerWWMCopiesLegacyPass(*PR);
   initializeAMDGPUMarkLastScratchLoadPass(*PR);
   initializeSILowerSGPRSpillsLegacyPass(*PR);
   initializeSIFixSGPRCopiesLegacyPass(*PR);
-  initializeSIFixVGPRCopiesPass(*PR);
+  initializeSIFixVGPRCopiesLegacyPass(*PR);
   initializeSIFoldOperandsLegacyPass(*PR);
   initializeSIPeepholeSDWALegacyPass(*PR);
   initializeSIShrinkInstructionsLegacyPass(*PR);
@@ -528,7 +533,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIPreEmitPeepholePass(*PR);
   initializeSILateBranchLoweringPass(*PR);
   initializeSIMemoryLegalizerPass(*PR);
-  initializeSIOptimizeExecMaskingPass(*PR);
+  initializeSIOptimizeExecMaskingLegacyPass(*PR);
   initializeSIPreAllocateWWMRegsLegacyPass(*PR);
   initializeSIFormMemoryClausesPass(*PR);
   initializeSIPostRABundlerPass(*PR);
@@ -545,6 +550,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeGCNRewritePartialRegUsesPass(*PR);
   initializeGCNRegPressurePrinterPass(*PR);
   initializeAMDGPUPreloadKernArgPrologLegacyPass(*PR);
+  initializeAMDGPUWaitSGPRHazardsLegacyPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -876,6 +882,11 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
             PM.addPass(AMDGPUAttributorPass(*this, Opt));
           }
         }
+        if (!NoKernelInfoEndLTO) {
+          FunctionPassManager FPM;
+          FPM.addPass(KernelInfoPrinter(this));
+          PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+        }
       });
 
   PB.registerRegClassFilterParsingCallback(
@@ -1072,7 +1083,6 @@ public:
     DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
     if (ST.shouldClusterStores())
       DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
-    DAG->addMutation(ST.createFillMFMAShadowMutation(DAG->TII));
     DAG->addMutation(
         createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PostRA));
     if (isPassEnabled(EnableVOPD, CodeGenOptLevel::Less))
@@ -1580,7 +1590,7 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
   // For allocating other wwm register operands.
   addPass(createWWMRegAllocPass(false));
 
-  addPass(&SILowerWWMCopiesID);
+  addPass(&SILowerWWMCopiesLegacyID);
   addPass(&AMDGPUReserveWWMRegsID);
 
   // For allocating per-thread VGPRs.
@@ -1616,7 +1626,7 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
 
   // For allocating other whole wave mode registers.
   addPass(createWWMRegAllocPass(true));
-  addPass(&SILowerWWMCopiesID);
+  addPass(&SILowerWWMCopiesLegacyID);
   addPass(createVirtRegRewriter(false));
   addPass(&AMDGPUReserveWWMRegsID);
 
@@ -1634,7 +1644,7 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
 void GCNPassConfig::addPostRegAlloc() {
   addPass(&SIFixVGPRCopiesID);
   if (getOptLevel() > CodeGenOptLevel::None)
-    addPass(&SIOptimizeExecMaskingID);
+    addPass(&SIOptimizeExecMaskingLegacyID);
   TargetPassConfig::addPostRegAlloc();
 }
 
@@ -1669,6 +1679,8 @@ void GCNPassConfig::addPreEmitPass() {
   // Here we add a stand-alone hazard recognizer pass which can handle all
   // cases.
   addPass(&PostRAHazardRecognizerID);
+
+  addPass(&AMDGPUWaitSGPRHazardsLegacyID);
 
   if (isPassEnabled(EnableInsertDelayAlu, CodeGenOptLevel::Less))
     addPass(&AMDGPUInsertDelayAluID);
@@ -1719,7 +1731,7 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
 
   if (MFI->Occupancy == 0) {
     // Fixup the subtarget dependent default value.
-    MFI->Occupancy = ST.computeOccupancy(MF.getFunction(), MFI->getLDSSize());
+    MFI->Occupancy = ST.getOccupancyWithWorkGroupSizes(MF).second;
   }
 
   auto parseRegister = [&](const yaml::StringValue &RegName, Register &RegVal) {
@@ -1948,6 +1960,9 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
 
   addPass(AMDGPUOpenCLEnqueuedBlockLoweringPass());
 
+  if (EnableSwLowerLDS)
+    addPass(AMDGPUSwLowerLDSPass(TM));
+
   // Runs before PromoteAlloca so the latter can account for function uses
   if (EnableLowerModuleLDS)
     addPass(AMDGPULowerModuleLDSPass(TM));
@@ -2103,6 +2118,13 @@ void AMDGPUCodeGenPassBuilder::addMachineSSAOptimization(
   }
   addPass(DeadMachineInstructionElimPass());
   addPass(SIShrinkInstructionsPass());
+}
+
+void AMDGPUCodeGenPassBuilder::addPostRegAlloc(AddMachinePass &addPass) const {
+  addPass(SIFixVGPRCopiesPass());
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addPass(SIOptimizeExecMaskingPass());
+  Base::addPostRegAlloc(addPass);
 }
 
 bool AMDGPUCodeGenPassBuilder::isPassEnabled(const cl::opt<bool> &Opt,

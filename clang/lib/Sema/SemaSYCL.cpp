@@ -9,8 +9,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/SemaSYCL.h"
+#include "TreeTransform.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/SYCLKernelInfo.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Sema/Attr.h"
@@ -361,4 +363,95 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
       getASTContext().registerSYCLEntryPointFunction(FD);
     }
   }
+}
+
+namespace {
+
+// The body of a function declared with the [[sycl_kernel_entry_point]]
+// attribute is cloned and transformed to substitute references to the original
+// function parameters with references to replacement variables that stand in
+// for SYCL kernel parameters or local variables that reconstitute a decomposed
+// SYCL kernel argument.
+class OutlinedFunctionDeclBodyInstantiator
+    : public TreeTransform<OutlinedFunctionDeclBodyInstantiator> {
+public:
+  using ParmDeclMap = llvm::DenseMap<ParmVarDecl *, VarDecl *>;
+
+  OutlinedFunctionDeclBodyInstantiator(Sema &S, ParmDeclMap &M)
+      : TreeTransform<OutlinedFunctionDeclBodyInstantiator>(S), SemaRef(S),
+        MapRef(M) {}
+
+  // A new set of AST nodes is always required.
+  bool AlwaysRebuild() { return true; }
+
+  // Transform ParmVarDecl references to the supplied replacement variables.
+  ExprResult TransformDeclRefExpr(DeclRefExpr *DRE) {
+    const ParmVarDecl *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl());
+    if (PVD) {
+      ParmDeclMap::iterator I = MapRef.find(PVD);
+      if (I != MapRef.end()) {
+        VarDecl *VD = I->second;
+        assert(SemaRef.getASTContext().hasSameUnqualifiedType(PVD->getType(),
+                                                              VD->getType()));
+        assert(!VD->getType().isMoreQualifiedThan(PVD->getType(),
+                                                  SemaRef.getASTContext()));
+        VD->setIsUsed();
+        return DeclRefExpr::Create(
+            SemaRef.getASTContext(), DRE->getQualifierLoc(),
+            DRE->getTemplateKeywordLoc(), VD, false, DRE->getNameInfo(),
+            DRE->getType(), DRE->getValueKind());
+      }
+    }
+    return DRE;
+  }
+
+private:
+  Sema &SemaRef;
+  ParmDeclMap &MapRef;
+};
+
+} // unnamed namespace
+
+StmtResult SemaSYCL::BuildSYCLKernelCallStmt(FunctionDecl *FD,
+                                             CompoundStmt *Body) {
+  assert(!FD->isInvalidDecl());
+  assert(!FD->isTemplated());
+  assert(FD->hasPrototype());
+
+  const auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>();
+  assert(SKEPAttr && "Missing sycl_kernel_entry_point attribute");
+  assert(!SKEPAttr->isInvalidAttr() &&
+         "sycl_kernel_entry_point attribute is invalid");
+
+  // Ensure that the kernel name was previously registered and that the
+  // stored declaration matches.
+  const SYCLKernelInfo &SKI =
+      getASTContext().getSYCLKernelInfo(SKEPAttr->getKernelName());
+  assert(declaresSameEntity(SKI.getKernelEntryPointDecl(), FD) &&
+         "SYCL kernel name conflict");
+  (void)SKI;
+
+  using ParmDeclMap = OutlinedFunctionDeclBodyInstantiator::ParmDeclMap;
+  ParmDeclMap ParmMap;
+
+  assert(SemaRef.CurContext == FD);
+  OutlinedFunctionDecl *OFD =
+      OutlinedFunctionDecl::Create(getASTContext(), FD, FD->getNumParams());
+  unsigned i = 0;
+  for (ParmVarDecl *PVD : FD->parameters()) {
+    ImplicitParamDecl *IPD = ImplicitParamDecl::Create(
+        getASTContext(), OFD, SourceLocation(), PVD->getIdentifier(),
+        PVD->getType(), ImplicitParamKind::Other);
+    OFD->setParam(i, IPD);
+    ParmMap[PVD] = IPD;
+    ++i;
+  }
+
+  OutlinedFunctionDeclBodyInstantiator OFDBodyInstantiator(SemaRef, ParmMap);
+  Stmt *OFDBody = OFDBodyInstantiator.TransformStmt(Body).get();
+  OFD->setBody(OFDBody);
+  OFD->setNothrow();
+  Stmt *NewBody = new (getASTContext()) SYCLKernelCallStmt(Body, OFD);
+
+  return NewBody;
 }

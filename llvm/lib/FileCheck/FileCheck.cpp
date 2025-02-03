@@ -1933,8 +1933,8 @@ bool FileCheck::readCheckFile(
     }
 
     // Okay, add the string we captured to the output vector and move on.
-    CheckStrings.emplace_back(P, UsedPrefix, PatternLoc);
-    std::swap(DagNotMatches, CheckStrings.back().DagNotStrings);
+    CheckStrings.emplace_back(std::move(P), UsedPrefix, PatternLoc,
+                              std::move(DagNotMatches));
     DagNotMatches = ImplicitNegativeChecks;
   }
 
@@ -1963,8 +1963,8 @@ bool FileCheck::readCheckFile(
   if (!DagNotMatches.empty()) {
     CheckStrings.emplace_back(
         Pattern(Check::CheckEOF, PatternContext.get(), LineNumber + 1),
-        *Req.CheckPrefixes.begin(), SMLoc::getFromPointer(Buffer.data()));
-    std::swap(DagNotMatches, CheckStrings.back().DagNotStrings);
+        *Req.CheckPrefixes.begin(), SMLoc::getFromPointer(Buffer.data()),
+        std::move(DagNotMatches));
   }
 
   return false;

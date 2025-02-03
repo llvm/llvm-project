@@ -943,24 +943,23 @@ SubtargetEmitter::findWriteResources(const CodeGenSchedRW &SchedWrite,
 
   // Check this processor's list of write resources.
   const Record *ResDef = nullptr;
-  for (const Record *WR : ProcModel.WriteResDefs) {
-    if (!WR->isSubClassOf("WriteRes"))
-      continue;
-    const Record *WRDef = WR->getValueAsDef("WriteType");
-    if (AliasDef == WRDef || SchedWrite.TheDef == WRDef) {
-      if (ResDef) {
-        PrintFatalError(WR->getLoc(), "Resources are defined for both "
-                                      "SchedWrite and its alias on processor " +
-                                          ProcModel.ModelName);
-      }
-      ResDef = WR;
-      // If there is no AliasDef and we find a match, we can early exit since
-      // there is no need to verify whether there are resources defined for both
-      // SchedWrite and its alias.
-      if (!AliasDef)
-        break;
+
+  auto I = ProcModel.WriteResMap.find(SchedWrite.TheDef);
+  if (I != ProcModel.WriteResMap.end())
+    ResDef = I->second;
+
+  if (AliasDef) {
+    I = ProcModel.WriteResMap.find(AliasDef);
+    if (I != ProcModel.WriteResMap.end()) {
+      if (ResDef)
+        PrintFatalError(I->second->getLoc(),
+                        "Resources are defined for both SchedWrite and its "
+                        "alias on processor " +
+                            ProcModel.ModelName);
+      ResDef = I->second;
     }
   }
+
   // TODO: If ProcModel has a base model (previous generation processor),
   // then call FindWriteResources recursively with that model here.
   if (!ResDef) {
@@ -1003,24 +1002,24 @@ SubtargetEmitter::findReadAdvance(const CodeGenSchedRW &SchedRead,
 
   // Check this processor's ReadAdvanceList.
   const Record *ResDef = nullptr;
-  for (const Record *RA : ProcModel.ReadAdvanceDefs) {
-    if (!RA->isSubClassOf("ReadAdvance"))
-      continue;
-    const Record *RADef = RA->getValueAsDef("ReadType");
-    if (AliasDef == RADef || SchedRead.TheDef == RADef) {
-      if (ResDef) {
-        PrintFatalError(RA->getLoc(), "Resources are defined for both "
-                                      "SchedRead and its alias on processor " +
-                                          ProcModel.ModelName);
-      }
-      ResDef = RA;
-      // If there is no AliasDef and we find a match, we can early exit since
-      // there is no need to verify whether there are resources defined for both
-      // SchedRead and its alias.
-      if (!AliasDef)
-        break;
+
+  auto I = ProcModel.ReadAdvanceMap.find(SchedRead.TheDef);
+  if (I != ProcModel.ReadAdvanceMap.end())
+    ResDef = I->second;
+
+  if (AliasDef) {
+    I = ProcModel.ReadAdvanceMap.find(AliasDef);
+    if (I != ProcModel.ReadAdvanceMap.end()) {
+      if (ResDef)
+        PrintFatalError(
+            I->second->getLoc(),
+            "Resources are defined for both SchedRead and its alias on "
+            "processor " +
+                ProcModel.ModelName);
+      ResDef = I->second;
     }
   }
+
   // TODO: If ProcModel has a base model (previous generation processor),
   // then call FindReadAdvance recursively with that model here.
   if (!ResDef && SchedRead.TheDef->getName() != "ReadDefault") {
@@ -1104,8 +1103,7 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
 
     // A Variant SchedClass has no resources of its own.
     bool HasVariants = false;
-    for (const CodeGenSchedTransition &CGT :
-         make_range(SC.Transitions.begin(), SC.Transitions.end())) {
+    for (const CodeGenSchedTransition &CGT : SC.Transitions) {
       if (CGT.ProcIndex == ProcModel.Index) {
         HasVariants = true;
         break;
@@ -2084,6 +2082,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   OS << "\n#ifdef GET_SUBTARGETINFO_TARGET_DESC\n";
   OS << "#undef GET_SUBTARGETINFO_TARGET_DESC\n\n";
 
+  OS << "#include \"llvm/ADT/BitmaskEnum.h\"\n";
   OS << "#include \"llvm/Support/Debug.h\"\n";
   OS << "#include \"llvm/Support/raw_ostream.h\"\n\n";
   if (Target == "AArch64")
@@ -2115,7 +2114,26 @@ void SubtargetEmitter::run(raw_ostream &OS) {
      << " unsigned CPUID) const override;\n"
      << "  DFAPacketizer *createDFAPacketizer(const InstrItineraryData *IID)"
      << " const;\n";
-  if (TGT.getHwModes().getNumModeIds() > 1) {
+
+  const CodeGenHwModes &CGH = TGT.getHwModes();
+  if (CGH.getNumModeIds() > 1) {
+    OS << "  enum class " << Target << "HwModeBits : unsigned {\n";
+    for (unsigned M = 0, NumModes = CGH.getNumModeIds(); M != NumModes; ++M) {
+      StringRef ModeName = CGH.getModeName(M, /*IncludeDefault=*/true);
+      OS << "    " << ModeName << " = ";
+      if (M == 0)
+        OS << "0";
+      else
+        OS << "(1 << " << (M - 1) << ")";
+      OS << ",\n";
+      if (M == NumModes - 1) {
+        OS << "\n";
+        OS << "    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/" << ModeName
+           << "),\n";
+      }
+    }
+    OS << "  };\n";
+
     OS << "  unsigned getHwModeSet() const override;\n";
     OS << "  unsigned getHwMode(enum HwModeType type = HwMode_Default) const "
           "override;\n";

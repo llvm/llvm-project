@@ -401,6 +401,13 @@ constexpr TypeBuilderFunc getModel<bool &>() {
   };
 }
 template <>
+constexpr TypeBuilderFunc getModel<bool *>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    TypeBuilderFunc f{getModel<bool>()};
+    return fir::ReferenceType::get(f(context));
+  };
+}
+template <>
 constexpr TypeBuilderFunc getModel<unsigned short>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return mlir::IntegerType::get(
@@ -674,6 +681,8 @@ struct RuntimeTableKey<RT(ATs...)> {
       llvm::SmallVector<mlir::Type, sizeof...(ATs)> argTys;
       for (auto f : args)
         argTys.push_back(f(ctxt));
+      if (mlir::isa<mlir::NoneType>(retTy))
+        return mlir::FunctionType::get(ctxt, argTys, {});
       return mlir::FunctionType::get(ctxt, argTys, {retTy});
     };
   }

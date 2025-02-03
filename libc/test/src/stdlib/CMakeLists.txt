@@ -420,7 +420,8 @@ if(LLVM_LIBC_FULL_BUILD)
   )
 
   # Only baremetal and GPU has an in-tree 'malloc' implementation.
-  if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU)
+  if((LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU) AND
+      NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     add_libc_test(
       malloc_test
       HERMETIC_TEST_ONLY

@@ -1401,12 +1401,17 @@ static void genComponentByComponentAssignment(fir::FirOpBuilder &builder,
 /// Can the assignment of this record type be implement with a simple memory
 /// copy (it requires no deep copy or user defined assignment of components )?
 static bool recordTypeCanBeMemCopied(fir::RecordType recordType) {
+  // c_devptr type is a special case. It has a nested c_ptr field but we know it
+  // can be copied directly.
+  if (fir::isa_builtin_c_devptr_type(recordType))
+    return true;
   if (fir::hasDynamicSize(recordType))
     return false;
   for (auto [_, fieldType] : recordType.getTypeList()) {
     // Derived type component may have user assignment (so far, we cannot tell
     // in FIR, so assume it is always the case, TODO: get the actual info).
-    if (mlir::isa<fir::RecordType>(fir::unwrapSequenceType(fieldType)))
+    if (mlir::isa<fir::RecordType>(fir::unwrapSequenceType(fieldType)) &&
+        !fir::isa_builtin_c_devptr_type(fir::unwrapSequenceType(fieldType)))
       return false;
     // Allocatable components need deep copy.
     if (auto boxType = mlir::dyn_cast<fir::BaseBoxType>(fieldType))
@@ -1753,4 +1758,30 @@ fir::factory::deduceOptimalExtents(mlir::ValueRange extents1,
       extents.push_back(extent1);
   }
   return extents;
+}
+
+llvm::SmallVector<mlir::Value> fir::factory::updateRuntimeExtentsForEmptyArrays(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::ValueRange extents) {
+  if (extents.size() <= 1)
+    return extents;
+
+  mlir::Type i1Type = builder.getI1Type();
+  mlir::Value isEmpty = createZeroValue(builder, loc, i1Type);
+
+  llvm::SmallVector<mlir::Value, Fortran::common::maxRank> zeroes;
+  for (mlir::Value extent : extents) {
+    mlir::Type type = extent.getType();
+    mlir::Value zero = createZeroValue(builder, loc, type);
+    zeroes.push_back(zero);
+    mlir::Value isZero = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::eq, extent, zero);
+    isEmpty = builder.create<mlir::arith::OrIOp>(loc, isEmpty, isZero);
+  }
+
+  llvm::SmallVector<mlir::Value> newExtents;
+  for (auto [zero, extent] : llvm::zip_equal(zeroes, extents)) {
+    newExtents.push_back(
+        builder.create<mlir::arith::SelectOp>(loc, isEmpty, zero, extent));
+  }
+  return newExtents;
 }
