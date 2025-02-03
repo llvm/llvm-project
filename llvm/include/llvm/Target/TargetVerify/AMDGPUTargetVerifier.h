@@ -22,6 +22,10 @@
 
 #include "llvm/Target/TargetVerifier.h"
 
+#include "llvm/Analysis/UniformityAnalysis.h"
+#include "llvm/Analysis/PostDominators.h"
+#include "llvm/IR/Dominators.h"
+
 namespace llvm {
 
 class Function;
@@ -29,6 +33,20 @@ class Function;
 class AMDGPUTargetVerifierPass : public TargetVerifierPass {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+class AMDGPUTargetVerify : public TargetVerify {
+public:
+  Module *Mod;
+
+  DominatorTree *DT;
+  PostDominatorTree *PDT;
+  UniformityInfo *UA;
+
+  AMDGPUTargetVerify(Module *Mod, DominatorTree *DT, PostDominatorTree *PDT, UniformityInfo *UA)
+    : TargetVerify(Mod), Mod(Mod), DT(DT), PDT(PDT), UA(UA) {}
+
+  void run(Function &F);
 };
 
 } // namespace llvm

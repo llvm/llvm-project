@@ -76,7 +76,7 @@ static LLVMErrorRef runPasses(Module *Mod, Function *Fun, const char *Passes,
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
   StandardInstrumentations SI(Mod->getContext(), Debug, VerifyEach);
-  SI.registerCallbacks(PIC, &MAM);
+  SI.registerCallbacks(PIC, &MAM, &FAM);
 
   // Run the pipeline.
   if (Fun) {

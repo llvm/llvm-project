@@ -126,7 +126,7 @@ int llvm::compileModuleWithNewPM(
   PB.registerLoopAnalyses(LAM);
   PB.registerMachineFunctionAnalyses(MFAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
-  SI.registerCallbacks(PIC, &MAM);
+  SI.registerCallbacks(PIC, &MAM, &FAM);
 
   FAM.registerPass([&] { return TargetLibraryAnalysis(TLII); });
   MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });

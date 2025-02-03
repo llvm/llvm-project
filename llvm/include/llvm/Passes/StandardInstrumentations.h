@@ -478,7 +478,8 @@ class VerifyInstrumentation {
 public:
   VerifyInstrumentation(bool DebugLogging) : DebugLogging(DebugLogging) {}
   LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC,
-                                  ModuleAnalysisManager *MAM);
+                         ModuleAnalysisManager *MAM,
+			 FunctionAnalysisManager *FAM);
 };
 
 /// This class implements --time-trace functionality for new pass manager.
@@ -624,7 +625,8 @@ public:
   // Register all the standard instrumentation callbacks. If \p FAM is nullptr
   // then PreservedCFGChecker is not enabled.
   LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC,
-                                  ModuleAnalysisManager *MAM = nullptr);
+                         ModuleAnalysisManager *MAM,
+			 FunctionAnalysisManager *FAM);
 
   TimePassesHandler &getTimePasses() { return TimePasses; }
 };

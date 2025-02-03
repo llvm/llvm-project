@@ -14,8 +14,8 @@
 
 using namespace llvm;
 
-static cl::opt<bool>
-MarkUniform("mark-uniform", cl::desc("Mark instructions as uniform"), cl::init(false));
+//static cl::opt<bool>
+//MarkUniform("mark-uniform", cl::desc("Mark instructions as uniform"), cl::init(false));
 
 // Check - We know that cond should be true, if not print an error message.
 #define Check(C, ...)                                                          \
@@ -81,7 +81,7 @@ static bool isMFMA(unsigned IID) {
 }
 
 namespace llvm {
-class AMDGPUTargetVerify : public TargetVerify {
+/*class AMDGPUTargetVerify : public TargetVerify {
 public:
   Module *Mod;
 
@@ -93,7 +93,7 @@ public:
     : TargetVerify(Mod), Mod(Mod), DT(DT), PDT(PDT), UA(UA) {}
 
   void run(Function &F);
-};
+};*/
 
 static bool IsValidInt(const Type *Ty) {
   return Ty->isIntegerTy(1) ||
@@ -129,8 +129,8 @@ void AMDGPUTargetVerify::run(Function &F) {
   for (auto &BB : F) {
 
     for (auto &I : BB) {
-      if (MarkUniform)
-        outs() << UA->isUniform(&I) << ' ' << I << '\n';
+      //if (MarkUniform)
+        //outs() << UA->isUniform(&I) << ' ' << I << '\n';
 
       // Ensure integral types are valid: i8, i16, i32, i64, i128
       if (I.getType()->isIntegerTy())
