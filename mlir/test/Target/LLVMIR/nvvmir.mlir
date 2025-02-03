@@ -757,3 +757,29 @@ llvm.func @nvvm_wgmma_wait_group_aligned() {
   nvvm.wgmma.wait.group.sync.aligned 20
   llvm.return
 }
+
+// -----
+// CHECK-LABEL: @nvvm_griddepcontrol_wait
+llvm.func @nvvm_griddepcontrol_wait() {
+  // CHECK: call void @llvm.nvvm.griddepcontrol.wait()
+  nvvm.griddepcontrol.wait
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_griddepcontrol_launch_dependents
+llvm.func @nvvm_griddepcontrol_launch_dependents() {
+  // CHECK: call void @llvm.nvvm.griddepcontrol.launch.dependents()
+  nvvm.griddepcontrol.launch.dependents
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_mapa
+llvm.func @nvvm_mapa(%a: !llvm.ptr, %a_shared: !llvm.ptr<3>, %b : i32) {
+  // CHECK-LLVM: call ptr @llvm.nvvm.mapa(ptr %{{.*}}, i32 %{{.*}})
+  %0 = nvvm.mapa %a, %b: !llvm.ptr -> !llvm.ptr
+  // CHECK-LLVM: call ptr addrspace(3) @llvm.nvvm.mapa.shared.cluster(ptr addrspace(3) %{{.*}}, i32 %{{.*}})
+  %1 = nvvm.mapa %a_shared, %b: !llvm.ptr<3> -> !llvm.ptr<3>
+  llvm.return
+}

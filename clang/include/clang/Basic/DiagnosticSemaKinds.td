@@ -82,11 +82,11 @@ def err_typecheck_converted_constant_expression_indirect : Error<
   "conversion from %0 to %1 in converted constant expression would "
   "bind reference to a temporary">;
 def err_expr_not_cce : Error<
-  "%select{case value|enumerator value|non-type template argument|"
+  "%select{case value|enumerator value|non-type template argument|non-type parameter of template template parameter|"
   "array size|explicit specifier argument|noexcept specifier argument|"
   "call to 'size()'|call to 'data()'}0 is not a constant expression">;
 def ext_cce_narrowing : ExtWarn<
-  "%select{case value|enumerator value|non-type template argument|"
+  "%select{case value|enumerator value|non-type template argument|non-type parameter of template template parameter|"
   "array size|explicit specifier argument|noexcept specifier argument|"
   "call to 'size()'|call to 'data()'}0 %select{cannot be narrowed from "
   "type %2 to %3|evaluates to %2, which cannot be narrowed to type %3}1">,
@@ -482,6 +482,8 @@ def ext_use_out_of_scope_declaration : ExtWarn<
   InGroup<DiagGroup<"out-of-scope-function">>;
 def err_inline_non_function : Error<
   "'inline' can only appear on functions%select{| and non-local variables}0">;
+def warn_ms_inline_non_function : ExtWarn<err_inline_non_function.Summary>,
+  InGroup<MicrosoftInlineOnNonFunction>;
 def err_noreturn_non_function : Error<
   "'_Noreturn' can only appear on functions">;
 def warn_qual_return_type : Warning<
@@ -5944,6 +5946,9 @@ def ext_pack_indexing : ExtWarn<
 def warn_cxx23_pack_indexing : Warning<
   "pack indexing is incompatible with C++ standards before C++2c">,
   DefaultIgnore, InGroup<CXXPre26Compat>;
+
+def err_pack_outside_template : Error<
+  "pack declaration outside of template">;
 
 def err_fold_expression_packs_both_sides : Error<
   "binary fold expression has unexpanded parameter packs in both operands">;
