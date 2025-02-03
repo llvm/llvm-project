@@ -1684,7 +1684,7 @@ public:
 
   /// Zero-init the MCDC temp value.
   void maybeResetMCDCCondBitmap(const Expr *E) {
-    if (isMCDCCoverageEnabled() && isBinaryLogicalOp(E)) {
+    if (isMCDCCoverageEnabled()) {
       PGO.emitMCDCCondBitmapReset(Builder, E);
       PGO.setCurrentStmt(E);
     }
@@ -1693,7 +1693,7 @@ public:
   /// Increment the profiler's counter for the given expression by \p StepV.
   /// If \p StepV is null, the default increment is 1.
   void maybeUpdateMCDCTestVectorBitmap(const Expr *E) {
-    if (isMCDCCoverageEnabled() && isBinaryLogicalOp(E)) {
+    if (isMCDCCoverageEnabled()) {
       PGO.emitMCDCTestVectorBitmapUpdate(Builder, E, *this);
       PGO.setCurrentStmt(E);
     }
