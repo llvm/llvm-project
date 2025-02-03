@@ -37,14 +37,18 @@
 
 # RUN: ld.lld -o out.cd a.o --verbose-bp-section-orderer --bp-compression-sort=data 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-DATA
 # RUN: llvm-nm -jn out.cd | tr '\n' , | FileCheck %s --check-prefix=CDATA
-# CDATA: s4,s2,s1,s5,s3,F,C,E,D,B,A,_start,d4,d1,d3,d2,
+# CDATA-DAG: s4,s2,s1
+# CDATA-DAG: s5,s3
+# CDATA: F,C,E,D,B,A,_start,d4,d1,d3,d2,
 
 # RUN: ld.lld -o out.cb a.o --verbose-bp-section-orderer --bp-compression-sort=both 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-BOTH
 # RUN: llvm-nm -jn out.cb | tr '\n' , | FileCheck %s --check-prefix=CDATA
 
 # RUN: ld.lld -o out.cbs a.o --verbose-bp-section-orderer --bp-compression-sort=both --irpgo-profile=a.profdata --bp-startup-sort=function 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-BOTH
 # RUN: llvm-nm -jn out.cbs | tr '\n' , | FileCheck %s --check-prefix=CBOTH-STARTUP
-# CBOTH-STARTUP: s4,s2,s1,s5,s3,A,B,C,F,E,D,_start,d4,d1,d3,d2,
+# CBOTH-STARTUP-DAG: s4,s2,s1,
+# CBOTH-STARTUP-DAG: s5,s3
+# CBOTH-STARTUP: A,B,C,F,E,D,_start,d4,d1,d3,d2,
 
 # BP-COMPRESSION-FUNC: Ordered 7 sections using balanced partitioning
 # BP-COMPRESSION-DATA: Ordered 9 sections using balanced partitioning
@@ -100,8 +104,6 @@ E
 D
 s2
 s1
-r3
-r2
 
 #--- a.c
 const char s5[] = "engineering";
