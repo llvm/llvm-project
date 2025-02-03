@@ -237,7 +237,7 @@ bool PlainCFGBuilder::isExternalDef(Value *Val) {
     // Instruction definition is in outermost loop PH.
     return false;
 
-  // Check whether Instruction definition is in the loop exit.
+  // Check whether Instruction definition is in a loop exit.
   SmallVector<BasicBlock *> ExitBlocks;
   TheLoop->getExitBlocks(ExitBlocks);
   if (is_contained(ExitBlocks, InstParent)) {
@@ -283,6 +283,7 @@ VPValue *PlainCFGBuilder::getOrCreateVPOperand(Value *IRVal) {
 void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
                                                   BasicBlock *BB) {
   VPIRBuilder.setInsertPoint(VPBB);
+  // TODO: Model and preserve debug intrinsics in VPlan.
   for (Instruction &InstRef : BB->instructionsWithoutDebug(false)) {
     Instruction *Inst = &InstRef;
 

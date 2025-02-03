@@ -589,17 +589,19 @@ static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
   }
 
   const VPRecipeBase *R = &VPBB->back();
-  bool IsCondBranch =
-      isa<VPBranchOnMaskRecipe>(R) || match(R, m_BranchOnCond(m_VPValue())) ||
-      match(R, m_BranchOnCount(m_VPValue(), m_VPValue())) ||
-      (isa<VPInstruction>(R) &&
-       cast<VPInstruction>(R)->getOpcode() == Instruction::Switch);
+  bool IsCondBranch = isa<VPBranchOnMaskRecipe>(R) ||
+                      match(R, m_BranchOnCond(m_VPValue())) ||
+                      match(R, m_BranchOnCount(m_VPValue(), m_VPValue()));
+  bool IsSwitch = isa<VPInstruction>(R) &&
+                  cast<VPInstruction>(R)->getOpcode() == Instruction::Switch;
   (void)IsCondBranch;
+  (void)IsSwitch;
 
   if (VPBB->getNumSuccessors() >= 2 ||
       (VPBB->isExiting() && !VPBB->getParent()->isReplicator())) {
-    assert(IsCondBranch && "block with multiple successors not terminated by "
-                           "conditional branch recipe");
+    assert((IsCondBranch || IsSwitch) &&
+           "block with multiple successors not terminated by "
+           "conditional branch nor switch recipe");
 
     return true;
   }
