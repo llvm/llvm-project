@@ -121,7 +121,7 @@ public:
 
   /// Creates a reduction declaration and associates it with an OpenMP block
   /// directive.
-  static void addDeclareReduction(
+  static void processReductionArguments(
       mlir::Location currentLocation, lower::AbstractConverter &converter,
       const omp::clause::Reduction &reduction,
       llvm::SmallVectorImpl<mlir::Value> &reductionVars,

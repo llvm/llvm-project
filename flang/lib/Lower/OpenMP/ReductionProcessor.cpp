@@ -529,7 +529,7 @@ mlir::omp::ReductionModifier translateReductionModifier(ReductionModifier mod) {
   return mlir::omp::ReductionModifier::defaultmod;
 }
 
-void ReductionProcessor::addDeclareReduction(
+void ReductionProcessor::processReductionArguments(
     mlir::Location currentLocation, lower::AbstractConverter &converter,
     const omp::clause::Reduction &reduction,
     llvm::SmallVectorImpl<mlir::Value> &reductionVars,

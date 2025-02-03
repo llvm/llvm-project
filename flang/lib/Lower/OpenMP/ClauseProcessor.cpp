@@ -1163,7 +1163,7 @@ bool ClauseProcessor::processReduction(
         llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
         llvm::SmallVector<const semantics::Symbol *> reductionSyms;
         ReductionProcessor rp;
-        rp.addDeclareReduction(
+        rp.processReductionArguments(
             currentLocation, converter, clause, reductionVars, reduceVarByRef,
             reductionDeclSymbols, reductionSyms, result.reductionMod);
         // Copy local lists into the output.
