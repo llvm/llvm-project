@@ -2579,9 +2579,9 @@ checkDeclareOperands(Op &op, const mlir::ValueRange &operands,
           "expect valid declare data entry operation or acc.getdeviceptr "
           "as defining op");
 
-    mlir::Value varPtr{getVarPtr(operand.getDefiningOp())};
-    assert(varPtr && "declare operands can only be data entry operations which "
-                     "must have varPtr");
+    mlir::Value var{getVar(operand.getDefiningOp())};
+    assert(var && "declare operands can only be data entry operations which "
+                  "must have var");
     std::optional<mlir::acc::DataClause> dataClauseOptional{
         getDataClause(operand.getDefiningOp())};
     assert(dataClauseOptional.has_value() &&
@@ -2589,12 +2589,12 @@ checkDeclareOperands(Op &op, const mlir::ValueRange &operands,
            "dataClause");
 
     // If varPtr has no defining op - there is nothing to check further.
-    if (!varPtr.getDefiningOp())
+    if (!var.getDefiningOp())
       continue;
 
     // Check that the varPtr has a declare attribute.
     auto declareAttribute{
-        varPtr.getDefiningOp()->getAttr(mlir::acc::getDeclareAttrName())};
+        var.getDefiningOp()->getAttr(mlir::acc::getDeclareAttrName())};
     if (!declareAttribute)
       return op.emitError(
           "expect declare attribute on variable in declare operation");
