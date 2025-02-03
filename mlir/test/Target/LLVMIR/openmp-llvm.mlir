@@ -2822,6 +2822,23 @@ llvm.func @task(%arg0 : !llvm.ptr) {
   }
   llvm.return
 }
+// CHECK-LABEL: @task
+// CHECK-SAME:      (ptr %[[ARG:.*]])
+// CHECK:         %[[STRUCT_ARG:.*]] = alloca { ptr }, align 8
+// CHECK:         %[[OMP_PRIVATE_ALLOC:.*]] = alloca i32, align 4
+//                ...
+// CHECK:         br label %omp.private.init
+// CHECK:       omp.private.init:
+// CHECK:         br label %omp.private.copy1
+// CHECK:       omp.private.copy1:
+// CHECK:         %[[LOADED:.*]] = load i32, ptr %[[ARG]], align 4
+// CHECK:         store i32 %[[LOADED]], ptr %[[OMP_PRIVATE_ALLOC]], align 4
+//                ...
+// CHECK:         br label %omp.task.start
+// CHECK:       omp.task.start:
+// CHECK:         br label %[[CODEREPL:.*]]
+// CHECK:       [[CODEREPL]]:
+
 // CHECK-LABEL: @task..omp_par
 // CHECK:      task.alloca:
 // CHECK:         %[[VAL_12:.*]] = load ptr, ptr %[[STRUCT_ARG:.*]], align 8
