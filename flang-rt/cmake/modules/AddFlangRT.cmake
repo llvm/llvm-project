@@ -6,7 +6,7 @@
 #
 #===------------------------------------------------------------------------===#
 
-# Builds a library with common options for flang-rt.
+# Builds a library with common options for Flang-RT.
 #
 # Usage:
 #
@@ -108,11 +108,11 @@ function (add_flangrt_library name)
   endif ()
 
   # Flang-RT's public headers
-  target_include_directories(${name} PRIVATE "${FLANG_RT_SOURCE_DIR}/include")
+  target_include_directories(${name} PUBLIC "${FLANG_RT_SOURCE_DIR}/include")
 
   # For ISO_Fortran_binding.h to be found by the runtime itself (Accessed as #include "flang/ISO_Fortran_binding.h")
   # User applications can use #include <ISO_Fortran_binding.h>
-  target_include_directories(${name} PRIVATE "${FLANG_SOURCE_DIR}/include")
+  target_include_directories(${name} PUBLIC "${FLANG_SOURCE_DIR}/include")
 
   # For Flang-RT's configured config.h to be found
   target_include_directories(${name} PRIVATE "${FLANG_RT_BINARY_DIR}")

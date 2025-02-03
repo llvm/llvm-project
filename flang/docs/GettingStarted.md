@@ -317,7 +317,7 @@ The same set of CMake variables works for Flang in-tree build.
 One may provide optional CMake variables to customize the build. Available options:
 
 * `-DFLANG_RUNTIME_F128_MATH_LIB=libquadmath`: enables build of
-  `FortranFloat128Math` library that provides `REAL(16)` math APIs
+  `flang_rt.quadmath` library that provides `REAL(16)` math APIs
   for intrinsics such as `SIN`, `COS`, etc. GCC `libquadmath`'s header file
   `quadmath.h` must be available to the build compiler.
   [More details](Real16MathSupport.md).

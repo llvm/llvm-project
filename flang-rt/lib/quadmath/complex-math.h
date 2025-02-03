@@ -59,4 +59,4 @@
 #error "Float128Math build with glibc>=2.26 is unsupported yet"
 #endif
 
-#endif // FLANG_RT_QUADMATH_COMPLEX_MATH_H_
+#endif /* FLANG_RT_QUADMATH_COMPLEX_MATH_H_ */

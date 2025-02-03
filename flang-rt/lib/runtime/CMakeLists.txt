@@ -99,7 +99,7 @@ file(GLOB_RECURSE private_headers
   )
 
 
-# Import changes from sibling FortranFloat128Math
+# Import changes from flang_rt.quadmath
 get_target_property(f128_sources
   FortranFloat128MathILib INTERFACE_SOURCES
   )
@@ -170,7 +170,7 @@ else()
 
     enable_cuda_compilation(${name} "${supported_sources}")
     enable_omp_offload_compilation(${name} "${supported_sources}")
-    add_dependencies(flang_rt ${name})
+    add_dependencies(flang_rt.runtime ${name})
   endfunction ()
 
   # Variants of the static flang_rt for different versions of the msvc runtime.

@@ -1330,7 +1330,7 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
     F128LibName.consume_front_insensitive("lib");
     if (!F128LibName.empty()) {
       bool AsNeeded = !TC.getTriple().isOSAIX();
-      CmdArgs.push_back("-lFortranFloat128Math");
+      CmdArgs.push_back("-lflang_rt.quadmath");
       if (AsNeeded)
         addAsNeededOption(TC, Args, CmdArgs, /*as_needed=*/true);
       CmdArgs.push_back(Args.MakeArgString("-l" + F128LibName));

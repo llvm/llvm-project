@@ -39,7 +39,7 @@ add_flangrt_unittest(RuntimeTests
   Transformational.cpp
 
   LINK_LIBS
-    flang_rt.unittest
+    flang_rt.runtime.unittest
 )
 target_compile_definitions(RuntimeTests PRIVATE NOT_EXE="${LLVM_TOOLS_DIR}/not${CMAKE_EXECUTABLE_SUFFIX}")
 

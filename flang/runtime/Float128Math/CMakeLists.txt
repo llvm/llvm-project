@@ -12,62 +12,63 @@
 # It is distributed as a static library only.
 # Fortran programs/libraries that end up linking any of the provided
 # will have a dependency on the third-party library that is being
-# used for building this FortranFloat128Math library.
+# used for building this flang_rt.quadmath library.
 
 include(CheckLibraryExists)
 
 set(sources
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/acos.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/acosh.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/asin.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/asinh.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/atan.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/atan2.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/atanh.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/ceil.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/complex-math.c
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/cos.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/cosh.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/erf.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/erfc.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/exp.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/exponent.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/floor.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/fma.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/fraction.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/hypot.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/j0.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/j1.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/jn.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/lgamma.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/llround.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/log.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/log10.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/lround.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/mod-real.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/modulo-real.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/nearest.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/nearbyint.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/norm2.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/pow.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/random.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/remainder.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/round.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/rrspacing.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/scale.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/set-exponent.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/sin.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/sinh.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/spacing.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/sqrt.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/tan.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/tanh.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/tgamma.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/trunc.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/y0.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/y1.cpp
-  ${FLANG_RT_SOURCE_DIR}/lib/FortranFloat128Math/yn.cpp
+  acos.cpp
+  acosh.cpp
+  asin.cpp
+  asinh.cpp
+  atan.cpp
+  atan2.cpp
+  atanh.cpp
+  ceil.cpp
+  complex-math.c
+  cos.cpp
+  cosh.cpp
+  erf.cpp
+  erfc.cpp
+  exp.cpp
+  exponent.cpp
+  floor.cpp
+  fma.cpp
+  fraction.cpp
+  hypot.cpp
+  j0.cpp
+  j1.cpp
+  jn.cpp
+  lgamma.cpp
+  llround.cpp
+  log.cpp
+  log10.cpp
+  lround.cpp
+  mod-real.cpp
+  modulo-real.cpp
+  nearest.cpp
+  nearbyint.cpp
+  norm2.cpp
+  pow.cpp
+  random.cpp
+  remainder.cpp
+  round.cpp
+  rrspacing.cpp
+  scale.cpp
+  set-exponent.cpp
+  sin.cpp
+  sinh.cpp
+  spacing.cpp
+  sqrt.cpp
+  tan.cpp
+  tanh.cpp
+  tgamma.cpp
+  trunc.cpp
+  y0.cpp
+  y1.cpp
+  yn.cpp
   )
+runtime_source_files(sources SUBDIR "quadmath")
 
 include_directories(AFTER "${CMAKE_CURRENT_SOURCE_DIR}/..")
 add_library(FortranFloat128MathILib INTERFACE)
@@ -93,20 +94,20 @@ if (FLANG_RUNTIME_F128_MATH_LIB)
       )
   endif()
 
-  add_flang_library(FortranFloat128Math STATIC INSTALL_WITH_TOOLCHAIN
+  add_flang_library(flang_rt.quadmath STATIC INSTALL_WITH_TOOLCHAIN
     ${sources})
 
   if (DEFINED MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
-    add_flang_library(FortranFloat128Math.static STATIC INSTALL_WITH_TOOLCHAIN
+    add_flang_library(flang_rt.quadmath.static STATIC INSTALL_WITH_TOOLCHAIN
       ${sources}
       )
     set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
-    add_flang_library(FortranFloat128Math.static_dbg STATIC INSTALL_WITH_TOOLCHAIN
+    add_flang_library(flang_rt.quadmath.static_dbg STATIC INSTALL_WITH_TOOLCHAIN
       ${sources}
       )
-    add_dependencies(FortranFloat128Math FortranFloat128Math.static
-      FortranFloat128Math.static_dbg
+    add_dependencies(flang_rt.quadmath flang_rt.quadmath.static
+      flang_rt.quadmath.static_dbg
       )
   endif()
 elseif (HAVE_LDBL_MANT_DIG_113)
@@ -118,7 +119,7 @@ elseif (HAVE_LDBL_MANT_DIG_113)
       )
     target_sources(FortranFloat128MathILib INTERFACE ${sources})
   else()
-    message(FATAL_ERROR "flang_rt cannot build without libm")
+    message(FATAL_ERROR "flang_rt.quadmath cannot build without libm")
   endif()
 else()
   # We can use '__float128' version from libc, if it has them.

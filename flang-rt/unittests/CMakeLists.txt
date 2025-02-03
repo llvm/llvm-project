@@ -64,8 +64,6 @@ function(add_flangrt_unittest test_dirname)
 
   add_unittest(FlangRTUnitTests ${test_dirname} ${ARG_UNPARSED_ARGUMENTS})
 
-  target_include_directories(${test_dirname} PRIVATE "${FLANG_RT_SOURCE_DIR}/include")
-  target_include_directories(${test_dirname} PRIVATE "${FLANG_SOURCE_DIR}/include")
   target_link_libraries(${test_dirname} PRIVATE ${ARG_LINK_LIBS})
   add_flangrt_unittest_offload_properties(${test_dirname})
 
@@ -94,10 +92,6 @@ function(add_flangrt_nongtest_unittest test_name)
   add_executable(${test_name}${suffix} EXCLUDE_FROM_ALL ${ARG_UNPARSED_ARGUMENTS})
   set_target_properties(${test_name}${suffix} PROPERTIES FOLDER "Flang-RT/Tests/Unit")
 
-  target_include_directories(${test_name}${suffix} PRIVATE
-      "${FLANG_RT_SOURCE_DIR}/include"
-      "${FLANG_SOURCE_DIR}/include"
-    )
   target_link_libraries(${test_name}${suffix} PRIVATE NonGTestTesting ${ARG_LINK_LIBS})
 
   if(NOT ARG_SLOW_TEST)

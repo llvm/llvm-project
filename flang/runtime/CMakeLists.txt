@@ -259,14 +259,14 @@ set(supported_files
   unit.cpp
   utf.cpp
   )
-
 runtime_source_files(supported_files SUBDIR "runtime")
+
 enable_cuda_compilation(flang_rt "${supported_files}")
 enable_omp_offload_compilation("${supported_files}")
 
-if (NOT TARGET FortranFloat128Math)
-  # If FortranFloat128Math is not defined, then we are not building
-  # standalone FortranFloat128Math library. Instead, include
+if (NOT TARGET flang_rt.quadmath)
+  # If flang_rt.quadmath is not defined, then we are not building
+  # standalone flang_rt.quadmath library. Instead, include
   # the relevant sources into flang_rt itself.
   # The information is provided via FortranFloat128MathILib
   # interface library.
@@ -293,7 +293,6 @@ if (NOT TARGET FortranFloat128Math)
     list(APPEND sources ${f128_sources})
   endif()
 endif()
-
 runtime_source_files(sources SUBDIR "runtime")
 
 
@@ -349,5 +348,11 @@ endif()
 # Compatibility targets.
 add_custom_target(flang-rt)
 add_dependencies(flang-rt flang_rt.runtime)
+if (TARGET flang_rt.quadmath)
+  add_dependencies(flang-rt flang_rt.quadmath)
+endif ()
+if (TARGET flang_rt.cuda_${CUDAToolkit_VERSION_MAJOR})
+  add_dependencies(flang-rt flang_rt.cuda_${CUDAToolkit_VERSION_MAJOR})
+endif ()
 add_custom_target(FortranRuntime)
 add_dependencies(FortranRuntime flang_rt.runtime)

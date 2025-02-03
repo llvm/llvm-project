@@ -12,7 +12,7 @@
 # It is distributed as a static library only.
 # Fortran programs/libraries that end up linking any of the provided
 # will have a dependency on the third-party library that is being
-# used for building this FortranFloat128Math library.
+# used for building this libflang_rt.quadmath library.
 
 include(CheckLibraryExists)
 include(CheckIncludeFile)
@@ -95,7 +95,7 @@ if (FLANG_RUNTIME_F128_MATH_LIB)
   endif()
 
   if (WIN32)
-    # Do not create a FortranFloat128Math library under Windows, the Flang
+    # Do not create a flang_rt.quadmath library under Windows, the Flang
     # driver never links it. Instead, add the sources to flang_rt.runtime.
     target_sources(FortranFloat128MathILib INTERFACE ${sources})
     target_compile_definitions(FortranFloat128MathILib INTERFACE HAS_QUADMATHLIB)
