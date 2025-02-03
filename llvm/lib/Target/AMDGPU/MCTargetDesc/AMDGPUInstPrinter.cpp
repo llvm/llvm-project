@@ -356,9 +356,10 @@ static MCPhysReg getRegFromMIA(MCPhysReg Reg, unsigned OpNo,
   unsigned Opc = Desc.getOpcode();
   unsigned I;
   for (I = 0; I < 4; ++I) {
-    if ((unsigned)AMDGPU::getNamedOperandIdx(Opc, Ops.first[I]) == OpNo)
+    if (Ops.first[I] != AMDGPU::OpName::OPERAND_LAST &&
+        (unsigned)AMDGPU::getNamedOperandIdx(Opc, Ops.first[I]) == OpNo)
       break;
-    if (Ops.second &&
+    if (Ops.second && Ops.second[I] != AMDGPU::OpName::OPERAND_LAST &&
         (unsigned)AMDGPU::getNamedOperandIdx(Opc, Ops.second[I]) == OpNo)
       break;
   }
