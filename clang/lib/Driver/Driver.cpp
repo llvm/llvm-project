@@ -879,8 +879,80 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                    }) ||
       C.getInputArgs().hasArg(options::OPT_hip_link) ||
       C.getInputArgs().hasArg(options::OPT_hipstdpar);
+  bool IsOpenMP =
+      C.getInputArgs().hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                               options::OPT_fno_openmp, false);
+  bool IsSYCL = C.getInputArgs().hasFlag(options::OPT_fsycl,
+                                         options::OPT_fno_sycl, false);
+
   bool UseLLVMOffload = C.getInputArgs().hasArg(
       options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
+
+  llvm::DenseSet<Action::OffloadKind> Kinds;
+  const std::pair<bool, Action::OffloadKind> ActiveKinds[] = {
+      {IsCuda, Action::OFK_Cuda},
+      {IsHIP, Action::OFK_HIP},
+      {IsOpenMP, Action::OFK_OpenMP},
+      {IsSYCL, Action::OFK_SYCL}};
+  for (const auto &[Active, Kind] : ActiveKinds)
+    if (Active)
+      Kinds.insert(Kind);
+
+  // Build an offloading toolchain for every requested target and kind.
+  for (StringRef Targets :
+       C.getInputArgs().getAllArgValues(options::OPT_offload_targets_EQ)) {
+    // We currently don't support any kind of mixed offloading.
+    if (Kinds.size() > 1) {
+      Diag(clang::diag::err_drv_mix_offload)
+          << Action::GetOffloadKindName(*Kinds.begin())
+          << Action::GetOffloadKindName(*Kinds.end());
+      return;
+    }
+
+    // OpenMP offloading requires a compatible libomp.
+    if (Kinds.contains(Action::OFK_OpenMP)) {
+      OpenMPRuntimeKind RuntimeKind = getOpenMPRuntime(C.getInputArgs());
+      if (RuntimeKind != OMPRT_OMP && RuntimeKind != OMPRT_IOMP5) {
+        Diag(clang::diag::err_drv_expecting_fopenmp_with_fopenmp_targets);
+        return;
+      }
+    }
+
+    // Certain options are not allowed when combined with SYCL compilation.
+    if (Kinds.contains(Action::OFK_SYCL)) {
+      for (auto ID :
+           {options::OPT_static_libstdcxx, options::OPT_ffreestanding})
+        if (Arg *IncompatArg = C.getInputArgs().getLastArg(ID))
+          Diag(clang::diag::err_drv_argument_not_allowed_with)
+              << IncompatArg->getSpelling() << "-fsycl";
+    }
+
+    // Create a device toolchain for every specified triple.
+    for (StringRef Target : llvm::split(Targets, ",")) {
+      llvm::Triple TT(Target);
+      for (Action::OffloadKind Kind : Kinds) {
+        auto &TC = getOffloadToolChain(C.getInputArgs(), Kind, TT,
+                                       C.getDefaultToolChain().getTriple());
+
+        // Emit a warning if the detected CUDA version is too new.
+        if (Kind == Action::OFK_Cuda) {
+          auto &CudaInstallation =
+              static_cast<const toolchains::CudaToolChain &>(TC)
+                  .CudaInstallation;
+          if (CudaInstallation.isValid())
+            CudaInstallation.WarnIfUnsupportedVersion();
+        }
+
+        C.addOffloadDeviceToolChain(&TC, Kind);
+      }
+    }
+  }
+
+  // If the user did not specify the toolchains specifically we will infer them
+  // based on the usage of `--offloard-arch=`.
+  if (C.getInputArgs().hasArg(options::OPT_offload_targets_EQ))
+    return;
+
   if (IsCuda && IsHIP) {
     Diag(clang::diag::err_drv_mix_cuda_hip);
     return;
@@ -929,10 +1001,8 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
   // the -fopenmp-targets option or used --offload-arch with OpenMP enabled.
   bool IsOpenMPOffloading =
       ((IsCuda || IsHIP) && UseLLVMOffload) ||
-      (C.getInputArgs().hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
-                                options::OPT_fno_openmp, false) &&
-       (C.getInputArgs().hasArg(options::OPT_fopenmp_targets_EQ) ||
-        C.getInputArgs().hasArg(options::OPT_offload_arch_EQ)));
+      (IsOpenMP && (C.getInputArgs().hasArg(options::OPT_fopenmp_targets_EQ) ||
+                    C.getInputArgs().hasArg(options::OPT_offload_arch_EQ)));
   if (IsOpenMPOffloading) {
     // We expect that -fopenmp-targets is always used in conjunction with the
     // option -fopenmp specifying a valid runtime with offloading support, i.e.
@@ -1049,10 +1119,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
     Diag(clang::diag::err_drv_expecting_fopenmp_with_fopenmp_targets);
     return;
   }
-
-  // We need to generate a SYCL toolchain if the user specified -fsycl.
-  bool IsSYCL = C.getInputArgs().hasFlag(options::OPT_fsycl,
-                                         options::OPT_fno_sycl, false);
 
   auto argSYCLIncompatible = [&](OptSpecifier OptId) {
     if (!IsSYCL)
@@ -3381,7 +3447,8 @@ class OffloadingActionBuilder final {
       // Collect all offload arch parameters, removing duplicates.
       std::set<StringRef> GpuArchs;
       bool Error = false;
-      for (Arg *A : Args) {
+      const ToolChain &TC = *ToolChains.front();
+      for (Arg *A : C.getArgsForToolChain(&TC, "", AssociatedOffloadKind)) {
         if (!(A->getOption().matches(options::OPT_offload_arch_EQ) ||
               A->getOption().matches(options::OPT_no_offload_arch_EQ)))
           continue;
@@ -3392,7 +3459,6 @@ class OffloadingActionBuilder final {
               ArchStr == "all") {
             GpuArchs.clear();
           } else if (ArchStr == "native") {
-            const ToolChain &TC = *ToolChains.front();
             auto GPUsOrErr = ToolChains.front()->getSystemGPUArchs(Args);
             if (!GPUsOrErr) {
               TC.getDriver().Diag(diag::err_drv_undetermined_gpu_arch)

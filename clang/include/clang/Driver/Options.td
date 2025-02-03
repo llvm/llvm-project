@@ -1117,6 +1117,10 @@ def fno_convergent_functions : Flag<["-"], "fno-convergent-functions">,
 
 // Common offloading options
 let Group = offload_Group in {
+def offload_targets_EQ : Joined<["--"], "offload-targets=">,
+  Visibility<[ClangOption, FlangOption]>, Flags<[NoXarchOption]>,
+  HelpText<"Specify a list of target architectures to use for offloading.">;
+
 def offload_arch_EQ : Joined<["--"], "offload-arch=">,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Specify an offloading device architecture for CUDA, HIP, or OpenMP. (e.g. sm_35). "
