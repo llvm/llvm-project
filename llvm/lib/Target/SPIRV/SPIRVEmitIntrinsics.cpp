@@ -18,12 +18,15 @@
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/TypedPointerType.h"
+#include "llvm/Support/Casting.h"
 
+#include <iostream>
 #include <queue>
 #include <unordered_set>
 
@@ -1337,6 +1340,24 @@ static void createSaturatedConversionDecoration(Instruction *I,
   createDecorationIntrinsic(I, SaturatedConversionNode, B);
 }
 
+static void addSaturatedDecorationToIntrinsic(Instruction *I, IRBuilder<> &B) {
+  // llvm::errs() << "this function is running successfully";
+  if (auto *CI = dyn_cast<CallInst>(I)) {
+    Function *F = CI->getCalledFunction();
+    if (F->isIntrinsic()) {
+      StringRef S = F->getName();
+      SmallVector<StringRef, 8> Parts;
+      S.split(Parts, ".", -1, false);
+
+      if (Parts.size() > 1) {
+        if (std::find(Parts.begin(), Parts.end(), "sat") != Parts.end()) {
+          createSaturatedConversionDecoration(I, B);
+        }
+      }
+    }
+  }
+}
+
 Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
   if (!Call.isInlineAsm())
     return &Call;
@@ -2400,6 +2421,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     if (isConvergenceIntrinsic(I))
       continue;
 
+    addSaturatedDecorationToIntrinsic(I, B);
     processInstrAfterVisit(I, B);
   }
 

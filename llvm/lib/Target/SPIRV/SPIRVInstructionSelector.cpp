@@ -602,6 +602,10 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return selectUnOp(ResVReg, ResType, I, SPIRV::OpConvertFToS);
   case TargetOpcode::G_FPTOUI:
     return selectUnOp(ResVReg, ResType, I, SPIRV::OpConvertFToU);
+  case TargetOpcode::G_FPTOSI_SAT:
+    return selectUnOp(ResVReg, ResType, I, SPIRV::OpConvertFToS);
+  case TargetOpcode::G_FPTOUI_SAT:
+    return selectUnOp(ResVReg, ResType, I, SPIRV::OpConvertFToU);
 
   case TargetOpcode::G_SITOFP:
     return selectIToF(ResVReg, ResType, I, true, SPIRV::OpConvertSToF);
