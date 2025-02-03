@@ -17,6 +17,9 @@ __attribute__((target("branch-protection=standard"))) void f3() {}
 /// Supported with pauthtest, no warning emitted
 __attribute__((target("branch-protection=bti"))) void f4() {}
 
+/// Supported with pauthtest, no warning emitted
+__attribute__((target("branch-protection=none"))) void f5() {}
+
 /// Check there are no branch protection function attributes which are unsupported with pauthtest
 
 // CHECK-NOT:  attributes {{.*}} "sign-return-address"
