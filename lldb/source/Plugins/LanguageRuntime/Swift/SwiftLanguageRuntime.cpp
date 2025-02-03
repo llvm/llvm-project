@@ -43,6 +43,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/OptionParsing.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectCast.h"
@@ -52,8 +53,9 @@
 #include "lldb/lldb-enumerations.h"
 #include "swift/AST/ASTMangler.h"
 #include "swift/Demangling/Demangle.h"
-#include "swift/RemoteInspection/ReflectionContext.h"
 #include "swift/RemoteAST/RemoteAST.h"
+#include "swift/RemoteInspection/ReflectionContext.h"
+#include "swift/Threading/ThreadLocalStorage.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
@@ -2653,5 +2655,32 @@ std::optional<lldb::addr_t> SwiftLanguageRuntime::TrySkipVirtualParentProlog(
   auto prologue_size = sc.symbol ? sc.symbol->GetPrologueByteSize()
                                  : sc.function->GetPrologueByteSize();
   return pc_value + prologue_size;
+}
+
+std::optional<lldb::addr_t> GetTaskAddrFromThreadLocalStorage(Thread &thread) {
+  // Compute the thread local storage address for this thread.
+  StructuredData::ObjectSP info_root_sp = thread.GetExtendedInfo();
+  if (!info_root_sp)
+    return {};
+  StructuredData::ObjectSP node =
+      info_root_sp->GetObjectForDotSeparatedPath("tsd_address");
+  if (!node)
+    return {};
+  StructuredData::UnsignedInteger *raw_tsd_addr = node->GetAsUnsignedInteger();
+  if (!raw_tsd_addr)
+    return {};
+  addr_t tsd_addr = raw_tsd_addr->GetUnsignedIntegerValue();
+
+  // Offset of the Task pointer in a Thread's local storage.
+  Process &process = *thread.GetProcess();
+  size_t ptr_size = process.GetAddressByteSize();
+  uint64_t task_ptr_offset_in_tls =
+      swift::tls_get_key(swift::tls_key::concurrency_task) * ptr_size;
+  addr_t task_addr_location = tsd_addr + task_ptr_offset_in_tls;
+  Status error;
+  addr_t task_addr = process.ReadPointerFromMemory(task_addr_location, error);
+  if (error.Fail())
+    return {};
+  return task_addr;
 }
 } // namespace lldb_private
