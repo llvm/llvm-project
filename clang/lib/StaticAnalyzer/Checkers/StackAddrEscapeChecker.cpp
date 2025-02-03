@@ -244,16 +244,27 @@ void StackAddrEscapeChecker::checkPreCall(const CallEvent &Call,
 }
 
 class FindStackRegionsSymbolVisitor final : public SymbolVisitor {
+  CheckerContext &Ctxt;
   const StackFrameContext *StackFrameContext;
   SmallVector<const MemRegion *> &EscapingStackRegions;
 public:
   explicit FindStackRegionsSymbolVisitor(CheckerContext &Ctxt, SmallVector<const MemRegion *> &StorageForStackRegions)
-    : StackFrameContext(Ctxt.getStackFrame()), EscapingStackRegions(StorageForStackRegions) {}
+    : Ctxt(Ctxt), StackFrameContext(Ctxt.getStackFrame()), EscapingStackRegions(StorageForStackRegions) {}
 
   bool VisitSymbol(SymbolRef sym) override { return true; }
 
   bool VisitMemRegion(const MemRegion *MR) override {
-    const StackSpaceRegion *SSR = dyn_cast<StackSpaceRegion>(MR->getMemorySpace());
+    if (const BlockDataRegion *BDR = MR->getAs<BlockDataRegion>()) {
+      for (auto Var : BDR->referenced_vars()) {
+        SVal Val = Ctxt.getState()->getSVal(Var.getCapturedRegion());
+        const MemRegion *Region = Val.getAsRegion();
+        if (Region && isa<StackSpaceRegion>(Region->getMemorySpace()))
+          EscapingStackRegions.push_back(Region);
+      }
+      return false;
+    }
+
+    const StackSpaceRegion *SSR = MR->getMemorySpace()->getAs<StackSpaceRegion>();
     if (SSR && SSR->getStackFrame() == StackFrameContext)
       EscapingStackRegions.push_back(MR);
     return true;
@@ -302,9 +313,9 @@ FilterReturnExpressionLeaks(const SmallVector<const MemRegion *> &MaybeEscaped,
       if (MR == RetRegion)
         continue;
 
-      const SubRegion *SR = dyn_cast<SubRegion>(MR);
-      if (SR && SR->isSubRegionOf(RetRegion))
-        continue;
+      // const SubRegion *SR = dyn_cast<SubRegion>(MR);
+      // if (SR && SR->isSubRegionOf(RetRegion))
+        // continue;
     }
 
     if (RetRegion == MR && IsConstructExpr)
