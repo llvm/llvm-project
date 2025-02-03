@@ -1133,6 +1133,4 @@
 // RUN:   %clang -target powerpc-ibm-aix -m32 -fsanitize=address %s -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-LD32-ASAN %s \
 // RUN: %}
-// %if target={{.*aix.*}} %{ 
 // CHECK-LD32-ASAN: "-latomic"
-// %}
