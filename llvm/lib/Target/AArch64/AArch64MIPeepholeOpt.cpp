@@ -71,6 +71,7 @@
 
 #include "AArch64ExpandImm.h"
 #include "AArch64InstrInfo.h"
+#include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -137,6 +138,7 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   bool visitFMOVDr(MachineInstr &MI);
   bool visitUBFMXri(MachineInstr &MI);
   bool visitCopy(MachineInstr &MI);
+  bool visitRegSequence(MachineInstr &MI);
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
@@ -835,6 +837,85 @@ bool AArch64MIPeepholeOpt::visitCopy(MachineInstr &MI) {
   return true;
 }
 
+// Using the FORM_TRANSPOSED_REG_TUPLE pseudo can improve register allocation
+// of multi-vector intrinsics. However, the psuedo should only be emitted if
+// the input registers of the REG_SEQUENCE are copy nodes where the source
+// register is in a StridedOrContiguous class. For example:
+//
+//   %3:zpr2stridedorcontiguous = LD1B_2Z_IMM_PSEUDO ..
+//   %4:zpr = COPY %3.zsub1:zpr2stridedorcontiguous
+//   %5:zpr = COPY %3.zsub0:zpr2stridedorcontiguous
+//   %6:zpr2stridedorcontiguous = LD1B_2Z_PSEUDO ..
+//   %7:zpr = COPY %6.zsub1:zpr2stridedorcontiguous
+//   %8:zpr = COPY %6.zsub0:zpr2stridedorcontiguous
+//   %9:zpr2mul2 = REG_SEQUENCE %5:zpr, %subreg.zsub0, %8:zpr, %subreg.zsub1
+//
+//   ->  %9:zpr2mul2 = FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO %5:zpr, %8:zpr
+//
+bool AArch64MIPeepholeOpt::visitRegSequence(MachineInstr &MI) {
+  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+
+  auto &ST = MI.getMF()->getSubtarget<AArch64Subtarget>();
+  if (!ST.hasSME() || !ST.isStreaming())
+    return false;
+
+  switch (MRI.getRegClass(MI.getOperand(0).getReg())->getID()) {
+  case AArch64::ZPR2RegClassID:
+  case AArch64::ZPR4RegClassID:
+  case AArch64::ZPR2Mul2RegClassID:
+  case AArch64::ZPR4Mul4RegClassID:
+    break;
+  default:
+    return false;
+  }
+
+  // The first operand is the register class created by the REG_SEQUENCE.
+  // Each operand pair after this consists of a vreg + subreg index, so
+  // for example a sequence of 2 registers will have a total of 5 operands.
+  if (MI.getNumOperands() != 5 && MI.getNumOperands() != 9)
+    return false;
+
+  MCRegister SubReg = MCRegister::NoRegister;
+  for (unsigned I = 1; I < MI.getNumOperands(); I += 2) {
+    MachineOperand &MO = MI.getOperand(I);
+
+    if (!MI.getOperand(I).isReg())
+      return false;
+
+    MachineOperand *Def = MRI.getOneDef(MO.getReg());
+    if (!Def || !Def->getParent()->isCopy())
+      return false;
+
+    const MachineOperand &CopySrc = Def->getParent()->getOperand(1);
+    unsigned OpSubReg = CopySrc.getSubReg();
+    if (SubReg == MCRegister::NoRegister)
+      SubReg = OpSubReg;
+
+    MachineOperand *CopySrcOp = MRI.getOneDef(CopySrc.getReg());
+    if (!CopySrcOp || !CopySrcOp->isReg() || OpSubReg != SubReg ||
+        CopySrcOp->getReg().isPhysical())
+      return false;
+
+    const TargetRegisterClass *CopySrcClass =
+        MRI.getRegClass(CopySrcOp->getReg());
+    if (CopySrcClass != &AArch64::ZPR2StridedOrContiguousRegClass &&
+        CopySrcClass != &AArch64::ZPR4StridedOrContiguousRegClass)
+      return false;
+  }
+
+  unsigned Opc = MI.getNumOperands() == 5
+                     ? AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO
+                     : AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO;
+
+  MachineInstrBuilder MIB = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                                    TII->get(Opc), MI.getOperand(0).getReg());
+  for (unsigned I = 1; I < MI.getNumOperands(); I += 2)
+    MIB.addReg(MI.getOperand(I).getReg());
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -925,6 +1006,9 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
         break;
       case AArch64::COPY:
         Changed |= visitCopy(MI);
+        break;
+      case AArch64::REG_SEQUENCE:
+        Changed |= visitRegSequence(MI);
         break;
       }
     }

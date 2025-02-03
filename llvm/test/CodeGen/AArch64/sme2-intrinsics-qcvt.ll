@@ -50,45 +50,37 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-9
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str z15, [sp, #1, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    str z14, [sp, #2, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    str z13, [sp, #3, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    str z12, [sp, #4, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    str z11, [sp, #5, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    str z10, [sp, #6, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    str z9, [sp, #7, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    str z8, [sp, #8, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0xc8, 0x00, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 72 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
-; CHECK-NEXT:    .cfi_escape 0x10, 0x49, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 16 - 16 * VG
-; CHECK-NEXT:    .cfi_escape 0x10, 0x4a, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 16 - 24 * VG
-; CHECK-NEXT:    .cfi_escape 0x10, 0x4b, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 16 - 32 * VG
-; CHECK-NEXT:    .cfi_escape 0x10, 0x4c, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 16 - 40 * VG
-; CHECK-NEXT:    .cfi_escape 0x10, 0x4d, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 16 - 48 * VG
-; CHECK-NEXT:    .cfi_escape 0x10, 0x4e, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 16 - 56 * VG
-; CHECK-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 16 - 64 * VG
 ; CHECK-NEXT:    lsl x8, x0, #1
 ; CHECK-NEXT:    add x9, x1, x0
 ; CHECK-NEXT:    ptrue pn8.b
-; CHECK-NEXT:    ld1d { z0.d, z4.d, z8.d, z12.d }, pn8/z, [x1]
-; CHECK-NEXT:    ld1d { z1.d, z5.d, z9.d, z13.d }, pn8/z, [x9]
+; CHECK-NEXT:    ld1d { z16.d, z20.d, z24.d, z28.d }, pn8/z, [x1]
+; CHECK-NEXT:    ld1d { z17.d, z21.d, z25.d, z29.d }, pn8/z, [x9]
 ; CHECK-NEXT:    add x10, x1, x8
 ; CHECK-NEXT:    add x8, x9, x8
-; CHECK-NEXT:    ld1d { z2.d, z6.d, z10.d, z14.d }, pn8/z, [x10]
-; CHECK-NEXT:    ld1d { z3.d, z7.d, z11.d, z15.d }, pn8/z, [x8]
-; CHECK-NEXT:    sqcvt z0.h, { z0.d - z3.d }
-; CHECK-NEXT:    sqcvt z1.h, { z4.d - z7.d }
-; CHECK-NEXT:    sqcvt z2.h, { z8.d - z11.d }
-; CHECK-NEXT:    sqcvt z3.h, { z12.d - z15.d }
-; CHECK-NEXT:    ldr z15, [sp, #1, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr z14, [sp, #2, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr z13, [sp, #3, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr z12, [sp, #4, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr z11, [sp, #5, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr z10, [sp, #6, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr z9, [sp, #7, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr z8, [sp, #8, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ld1d { z18.d, z22.d, z26.d, z30.d }, pn8/z, [x10]
+; CHECK-NEXT:    ld1d { z19.d, z23.d, z27.d, z31.d }, pn8/z, [x8]
+; CHECK-NEXT:    sqcvt z0.h, { z16.d - z19.d }
+; CHECK-NEXT:    sqcvt z1.h, { z20.d - z23.d }
+; CHECK-NEXT:    sqcvt z2.h, { z24.d - z27.d }
+; CHECK-NEXT:    sqcvt z3.h, { z28.d - z31.d }
+; CHECK-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    addvl sp, sp, #9
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
