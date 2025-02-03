@@ -83,6 +83,9 @@ Resolutions to C++ Defect Reports
 C Language Changes
 ------------------
 
+- Clang now allows an ``inline`` specifier on a typedef declaration of a
+  function type in Microsoft compatibility mode. #GH124869
+
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
@@ -215,6 +218,10 @@ Code Completion
 
 Static Analyzer
 ---------------
+
+- Clang currently support extending lifetime of object bound to 
+  reference members of aggregates in CFG and ExprEngine, that are
+  created from default member initializer.
 
 New features
 ^^^^^^^^^^^^

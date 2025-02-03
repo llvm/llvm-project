@@ -414,3 +414,42 @@ void tautological_compare(bool x, int y) {
     calledFun();
 
 }
+
+namespace test_rebuilt_default_arg {
+struct A {
+  explicit A(int = __builtin_LINE());
+};
+
+int h(int a) {
+  return 3;
+  A();  // expected-warning {{will never be executed}}
+}
+
+struct Temp {
+  Temp();
+  ~Temp();
+};
+
+struct B {
+  explicit B(const Temp &t = Temp());
+};
+int f(int a) {
+  return 3;
+  B();  // expected-warning {{will never be executed}}
+}
+} // namespace test_rebuilt_default_arg
+namespace test_rebuilt_default_init {
+
+struct A {
+  A();
+  ~A();
+};
+
+struct B {
+  const A &t = A();
+};
+int f(int a) {
+  return 3;
+  A{};  // expected-warning {{will never be executed}}
+}
+} // namespace test_rebuilt_default_init
