@@ -88,7 +88,8 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
       // Initializer is a constant floating-point number: convert to MLIR
       // builtin constant.
       init = rewriter.getFloatAttr(llvmType, fltAttr.getValue());
-    } else if (const auto intAttr = mlir::dyn_cast<cir::IntAttr>(init.value())) {
+    } else if (const auto intAttr =
+                   mlir::dyn_cast<cir::IntAttr>(init.value())) {
       // Initializer is a constant array: convert it to a compatible llvm init.
       init = rewriter.getIntegerAttr(llvmType, intAttr.getValue());
     } else {
@@ -101,7 +102,7 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
       op, llvmType, isConst, linkage, symbol, init.value_or(mlir::Attribute()),
       alignment, addrSpace, isDsoLocal, isThreadLocal,
-      /*comdat=*/ mlir::SymbolRefAttr(), attributes);
+      /*comdat=*/mlir::SymbolRefAttr(), attributes);
 
   return mlir::success();
 }
@@ -186,8 +187,8 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx) {
   llvm::TimeTraceScope translateScope("translateModuleToLLVMIR");
 
   StringRef moduleName = mlirModule.getName().value_or("CIRToLLVMModule");
-  std::unique_ptr<llvm::Module> llvmModule = mlir::translateModuleToLLVMIR(
-      mlirModule, llvmCtx, moduleName);
+  std::unique_ptr<llvm::Module> llvmModule =
+      mlir::translateModuleToLLVMIR(mlirModule, llvmCtx, moduleName);
 
   if (!llvmModule) {
     // FIXME: Handle any errors where they occurs and return a nullptr here.
