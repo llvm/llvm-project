@@ -880,6 +880,9 @@ public:
     // Extracts the first active lane of a vector, where the first operand is
     // the predicate, and the second operand is the vector to extract.
     ExtractFirstActive,
+    // Creates a step vector starting from 0 with a step of 1. The first operand
+    // is a dummy constant that should be used to specify the element type.
+    StepVector,
   };
 
 private:
@@ -1234,41 +1237,6 @@ public:
            "Op must be an operand of the recipe");
     return true;
   }
-};
-
-/// A recipe for generating a step vector.
-class VPStepVectorRecipe : public VPSingleDefRecipe {
-  /// Scalar return type of the intrinsic.
-  Type *ScalarTy;
-
-public:
-  VPStepVectorRecipe(Type *Ty)
-      : VPSingleDefRecipe(VPDef::VPStepVectorSC, {}), ScalarTy(Ty) {}
-
-  ~VPStepVectorRecipe() override = default;
-
-  VPStepVectorRecipe *clone() override {
-    return new VPStepVectorRecipe(ScalarTy);
-  }
-
-  VP_CLASSOF_IMPL(VPDef::VPStepVectorSC)
-
-  void execute(VPTransformState &State) override;
-
-  /// Return the cost of this VPStepVectorRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override {
-    // TODO: Compute accurate cost after retiring the legacy cost model.
-    return 0;
-  }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
-  /// Return the scalar return type of the intrinsic.
-  Type *getScalarType() const { return ScalarTy; }
 };
 
 /// A recipe for widening vector intrinsics.

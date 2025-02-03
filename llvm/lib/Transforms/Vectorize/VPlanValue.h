@@ -354,7 +354,6 @@ public:
     VPWidenSelectSC,
     VPBlendSC,
     VPHistogramSC,
-    VPStepVectorSC,
     // START: Phi-like recipes. Need to be kept together.
     VPWidenPHISC,
     VPPredInstPHISC,

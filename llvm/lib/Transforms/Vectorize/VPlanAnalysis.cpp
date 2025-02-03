@@ -77,6 +77,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::AnyOf:
+  case VPInstruction::StepVector:
     return SetResultTyFromOp();
   case VPInstruction::ExtractFirstActive:
   case VPInstruction::ExtractFromEnd: {
@@ -243,8 +244,7 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
             // backedge value, here and in cases below.
             return inferScalarType(R->getStartValue());
           })
-          .Case<VPWidenIntOrFpInductionRecipe, VPDerivedIVRecipe,
-                VPStepVectorRecipe>(
+          .Case<VPWidenIntOrFpInductionRecipe, VPDerivedIVRecipe>(
               [](const auto *R) { return R->getScalarType(); })
           .Case<VPReductionRecipe, VPPredInstPHIRecipe, VPWidenPHIRecipe,
                 VPScalarIVStepsRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,

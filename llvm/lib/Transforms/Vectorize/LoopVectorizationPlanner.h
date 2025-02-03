@@ -265,8 +265,10 @@ public:
         FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags()));
   }
 
-  VPStepVectorRecipe *createStepVector(Type *Ty) {
-    return tryInsertInstruction(new VPStepVectorRecipe(Ty));
+  VPInstruction *createStepVector(Type *Ty) {
+    VPValue *TyVal = BB->getPlan()->getOrAddLiveIn(Constant::getNullValue(Ty));
+    return tryInsertInstruction(
+        new VPInstruction(VPInstruction::StepVector, {TyVal}));
   }
 
   //===--------------------------------------------------------------------===//
