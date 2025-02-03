@@ -1,4 +1,6 @@
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
+! Specifying v5.0 because this is implicitly allowed in some older and newer
+! versions of the standard
+! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp -fopenmp-version=50
 subroutine intrinsic_reduction
   type local
      integer alpha
