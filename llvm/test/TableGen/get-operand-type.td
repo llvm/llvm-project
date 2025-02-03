@@ -1,4 +1,5 @@
-// RUN: llvm-tblgen -gen-instr-info -I %p/../../include %s | FileCheck %s
+// RUN: llvm-tblgen -gen-instr-info -emit-operand-types \
+// RUN:      -I %p/../../include %s | FileCheck %s
 
 // Check that getOperandType has the expected info in it
 

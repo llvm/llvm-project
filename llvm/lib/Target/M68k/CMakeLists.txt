@@ -5,7 +5,9 @@ set(LLVM_TARGET_DEFINITIONS M68k.td)
 tablegen(LLVM M68kGenGlobalISel.inc       -gen-global-isel)
 tablegen(LLVM M68kGenRegisterInfo.inc     -gen-register-info)
 tablegen(LLVM M68kGenRegisterBank.inc     -gen-register-bank)
-tablegen(LLVM M68kGenInstrInfo.inc        -gen-instr-info)
+tablegen(LLVM M68kGenInstrInfo.inc        -gen-instr-info
+                                          -emit-operand-types
+                                          -emit-logical-operand-size)
 tablegen(LLVM M68kGenSubtargetInfo.inc    -gen-subtarget)
 tablegen(LLVM M68kGenMCCodeEmitter.inc    -gen-emitter)
 tablegen(LLVM M68kGenMCPseudoLowering.inc -gen-pseudo-lowering)

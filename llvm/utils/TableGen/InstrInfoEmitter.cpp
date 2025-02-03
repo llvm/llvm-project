@@ -41,6 +41,16 @@
 using namespace llvm;
 
 static cl::OptionCategory InstrInfoEmitterCat("Options for -gen-instr-info");
+
+static cl::opt<bool>
+    EnableOperandTypeMappings("emit-operand-types",
+                              cl::desc("Emit operand type mappings"),
+                              cl::cat(InstrInfoEmitterCat), cl::init(false));
+
+static cl::opt<bool> EnableLogicalOperandSizeMappings(
+    "emit-logical-operand-size", cl::desc("Emit logical operand size mappings"),
+    cl::cat(InstrInfoEmitterCat), cl::init(false));
+
 static cl::opt<bool> ExpandMIOperandInfo(
     "instr-info-expand-mi-operand-info",
     cl::desc("Expand operand's MIOperandInfo DAG into suboperands"),
@@ -338,8 +348,8 @@ void InstrInfoEmitter::emitOperandNameMappings(
 void InstrInfoEmitter::emitOperandTypeMappings(
     raw_ostream &OS, const CodeGenTarget &Target,
     ArrayRef<const CodeGenInstruction *> NumberedInstructions) {
-
   StringRef Namespace = Target.getInstNamespace();
+
   ArrayRef<const Record *> Operands =
       Records.getAllDerivedDefinitions("Operand");
   ArrayRef<const Record *> RegisterOperands =
@@ -461,10 +471,10 @@ void InstrInfoEmitter::emitOperandTypeMappings(
       SizeToOperandName[Size].push_back(Op->getName());
   }
   OS << "  default: return 0;\n";
-  for (const auto &KV : SizeToOperandName) {
-    for (const StringRef &OperandName : KV.second)
+  for (const auto &[Size, Names] : SizeToOperandName) {
+    for (const StringRef &OperandName : Names)
       OS << "  case OpTypes::" << OperandName << ":\n";
-    OS << "    return " << KV.first << ";\n\n";
+    OS << "    return " << Size << ";\n\n";
   }
   OS << "  }\n}\n";
   OS << "} // end namespace llvm::" << Namespace << "\n";
@@ -1124,11 +1134,15 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   Timer.startTimer("Emit operand name mappings");
   emitOperandNameMappings(OS, Target, NumberedInstructions);
 
-  Timer.startTimer("Emit operand type mappings");
-  emitOperandTypeMappings(OS, Target, NumberedInstructions);
+  if (EnableOperandTypeMappings) {
+    Timer.startTimer("Emit operand type mappings");
+    emitOperandTypeMappings(OS, Target, NumberedInstructions);
+  }
 
-  Timer.startTimer("Emit logical operand size mappings");
-  emitLogicalOperandSizeMappings(OS, TargetName, NumberedInstructions);
+  if (EnableLogicalOperandSizeMappings) {
+    Timer.startTimer("Emit logical operand size mappings");
+    emitLogicalOperandSizeMappings(OS, TargetName, NumberedInstructions);
+  }
 
   Timer.startTimer("Emit logical operand type mappings");
   emitLogicalOperandTypeMappings(OS, TargetName, NumberedInstructions);

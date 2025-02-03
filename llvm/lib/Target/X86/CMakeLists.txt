@@ -13,7 +13,8 @@ tablegen(LLVM X86GenExegesis.inc -gen-exegesis)
 tablegen(LLVM X86GenFastISel.inc -gen-fast-isel)
 tablegen(LLVM X86GenGlobalISel.inc -gen-global-isel)
 tablegen(LLVM X86GenInstrInfo.inc -gen-instr-info
-                                  -instr-info-expand-mi-operand-info=0)
+                                  -instr-info-expand-mi-operand-info=0
+                                  -emit-operand-types)
 tablegen(LLVM X86GenMnemonicTables.inc -gen-x86-mnemonic-tables -asmwriternum=1)
 tablegen(LLVM X86GenRegisterBank.inc -gen-register-bank)
 tablegen(LLVM X86GenRegisterInfo.inc -gen-register-info)
