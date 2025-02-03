@@ -251,7 +251,7 @@ void* lambda_to_context_direct_pointer_uncalled() {
     int local = 42;
     p = &local; // no-warning: analyzed only as top-level, ignored explicitly by the checker
   };
-  return new MyFunction(&lambda);
+  return new MyFunction(&lambda); // expected-warning{{Address of stack memory associated with local variable 'lambda' returned to caller}}
 }
 
 void lambda_to_context_direct_pointer_lifetime_extended() {
