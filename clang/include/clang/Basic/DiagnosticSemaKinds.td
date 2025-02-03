@@ -6113,6 +6113,8 @@ def note_deleted_special_member_class_subobject : Note<
   "destructor}5"
   "%select{||s||}4"
   "|is an ObjC pointer}6">;
+def note_default_constructed_field
+    : Note<"default constructed field %0 declared here">;
 def note_deleted_default_ctor_uninit_field : Note<
   "%select{default constructor of|constructor inherited by}0 "
   "%1 is implicitly deleted because field %2 of "
