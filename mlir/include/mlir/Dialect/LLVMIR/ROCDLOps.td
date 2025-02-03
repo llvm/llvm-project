@@ -736,6 +736,20 @@ def ROCDL_CvtPkRtz:
   }];
 }
 
+def ROCDL_CvtScalePkF32Fp8 :
+    ROCDL_IntrOp<"cvt.scalef32.pk.f32.fp8", [], [], [Pure], 1>,
+    Arguments<(ins I32:$src, F32: $scale, I1:$wordSel)> {
+  let summary = "Scale and convert packed fp8 to packed f32";
+  let description = [{
+    Scale `src` by the exponent in `scale` then convert to packed fp32.
+    Store the result in low/high word based on $wordSel, preserving the other word.
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `[` $wordSel `]` `,` $scale `:` type($res)
+  }];
+}
+	
+
 //===---------------------------------------------------------------------===//
 // 8-bit float scale intrinsics
 //===---------------------------------------------------------------------===//
