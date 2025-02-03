@@ -2679,6 +2679,41 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsAbsoluteSymbol) {
   EXPECT_EQ(0u, Known_0_256_Align8.countMinTrailingOnes());
 }
 
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPExtendBeforeMul) {
+  // FIXME: The index should be extended before multiplying with the scale.
+  parseAssembly(R"(
+    target datalayout = "p:16:16:16"
+
+    define void @test(i16 %arg) {
+      %and = and i16 %arg, u0x8000
+      %base = inttoptr i16 %and to ptr
+      %A = getelementptr i32, ptr %base, i8 80
+      ret void
+    }
+    )");
+  KnownBits Known = computeKnownBits(A, M->getDataLayout());
+  EXPECT_EQ(~64 & 0x7fff, Known.Zero);
+  EXPECT_EQ(64, Known.One);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPOnlyIndexBits) {
+  // FIXME: GEP should only affect the index width.
+  parseAssembly(R"(
+    target datalayout = "p:16:16:16:8"
+
+    define void @test(i16 %arg) {
+      %and = and i16 %arg, u0x8000
+      %or = or i16 %and, u0x00ff
+      %base = inttoptr i16 %or to ptr
+      %A = getelementptr i8, ptr %base, i8 1
+      ret void
+    }
+    )");
+  KnownBits Known = computeKnownBits(A, M->getDataLayout());
+  EXPECT_EQ(0x7eff, Known.Zero);
+  EXPECT_EQ(0x100, Known.One);
+}
+
 TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
   {
     // Check for an inverted mask: (X & ~M) op (Y & M).
