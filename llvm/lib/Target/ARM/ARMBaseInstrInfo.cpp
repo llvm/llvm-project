@@ -227,7 +227,7 @@ ARMBaseInstrInfo::convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
         return nullptr;
       UpdateMI = BuildMI(MF, MI.getDebugLoc(),
                          get(isSub ? ARM::SUBri : ARM::ADDri), WBReg)
-                     .addReg(BaseReg)
+                     .addReg(BaseReg, 0, Base.getSubReg())
                      .addImm(Amt)
                      .add(predOps(Pred))
                      .add(condCodeOp());
@@ -236,8 +236,8 @@ ARMBaseInstrInfo::convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
       unsigned SOOpc = ARM_AM::getSORegOpc(ShOpc, Amt);
       UpdateMI = BuildMI(MF, MI.getDebugLoc(),
                          get(isSub ? ARM::SUBrsi : ARM::ADDrsi), WBReg)
-                     .addReg(BaseReg)
-                     .addReg(OffReg)
+                     .addReg(BaseReg, 0, Base.getSubReg())
+                     .addReg(OffReg, 0, Offset.getSubReg())
                      .addReg(0)
                      .addImm(SOOpc)
                      .add(predOps(Pred))
@@ -245,8 +245,8 @@ ARMBaseInstrInfo::convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
     } else
       UpdateMI = BuildMI(MF, MI.getDebugLoc(),
                          get(isSub ? ARM::SUBrr : ARM::ADDrr), WBReg)
-                     .addReg(BaseReg)
-                     .addReg(OffReg)
+                     .addReg(BaseReg, 0, Base.getSubReg())
+                     .addReg(OffReg, 0, Offset.getSubReg())
                      .add(predOps(Pred))
                      .add(condCodeOp());
     break;
@@ -258,15 +258,15 @@ ARMBaseInstrInfo::convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
       // Immediate is 8-bits. It's guaranteed to fit in a so_imm operand.
       UpdateMI = BuildMI(MF, MI.getDebugLoc(),
                          get(isSub ? ARM::SUBri : ARM::ADDri), WBReg)
-                     .addReg(BaseReg)
+                     .addReg(BaseReg, 0, Base.getSubReg())
                      .addImm(Amt)
                      .add(predOps(Pred))
                      .add(condCodeOp());
     else
       UpdateMI = BuildMI(MF, MI.getDebugLoc(),
                          get(isSub ? ARM::SUBrr : ARM::ADDrr), WBReg)
-                     .addReg(BaseReg)
-                     .addReg(OffReg)
+                     .addReg(BaseReg, 0, Base.getSubReg())
+                     .addReg(OffReg, 0, Offset.getSubReg())
                      .add(predOps(Pred))
                      .add(condCodeOp());
     break;
@@ -278,13 +278,13 @@ ARMBaseInstrInfo::convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
     if (isLoad)
       MemMI =
           BuildMI(MF, MI.getDebugLoc(), get(MemOpc), MI.getOperand(0).getReg())
-              .addReg(WBReg)
+              .addReg(WBReg, 0, WB.getSubReg())
               .addImm(0)
               .addImm(Pred);
     else
       MemMI = BuildMI(MF, MI.getDebugLoc(), get(MemOpc))
                   .addReg(MI.getOperand(1).getReg())
-                  .addReg(WBReg)
+                  .addReg(WBReg, 0, WB.getSubReg())
                   .addReg(0)
                   .addImm(0)
                   .addImm(Pred);
@@ -294,13 +294,13 @@ ARMBaseInstrInfo::convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
     if (isLoad)
       MemMI =
           BuildMI(MF, MI.getDebugLoc(), get(MemOpc), MI.getOperand(0).getReg())
-              .addReg(BaseReg)
+              .addReg(BaseReg, 0, Base.getSubReg())
               .addImm(0)
               .addImm(Pred);
     else
       MemMI = BuildMI(MF, MI.getDebugLoc(), get(MemOpc))
                   .addReg(MI.getOperand(1).getReg())
-                  .addReg(BaseReg)
+                  .addReg(BaseReg, 0, Base.getSubReg())
                   .addReg(0)
                   .addImm(0)
                   .addImm(Pred);
