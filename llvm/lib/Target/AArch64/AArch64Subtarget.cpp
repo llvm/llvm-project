@@ -86,6 +86,11 @@ static cl::alias AArch64StreamingStackHazardSize(
     cl::desc("alias for -aarch64-streaming-hazard-size"),
     cl::aliasopt(AArch64StreamingHazardSize));
 
+static cl::opt<bool> EnableZPRPredicateSpills(
+    "aarch64-enable-zpr-predicate-spills", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Enables spilling/reloading SVE predicates as data vectors (ZPRs)"));
+
 // Subreg liveness tracking is disabled by default for now until all issues
 // are ironed out. This option allows the feature to be used in tests.
 static cl::opt<bool>
@@ -403,6 +408,20 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
     ReserveXRegisterForRA.set(29);
 
   EnableSubregLiveness = EnableSubregLivenessTracking.getValue();
+}
+
+unsigned AArch64Subtarget::getHwModeSet() const {
+  AArch64HwModeBits Modes = AArch64HwModeBits::DefaultMode;
+
+  // Use a special hardware mode in streaming[-compatible] functions with
+  // aarch64-enable-zpr-predicate-spills. This changes the spill size (and
+  // alignment) for the predicate register class.
+  if (EnableZPRPredicateSpills.getValue() &&
+      (isStreaming() || isStreamingCompatible())) {
+    Modes |= AArch64HwModeBits::SMEWithZPRPredicateSpills;
+  }
+
+  return to_underlying(Modes);
 }
 
 const CallLowering *AArch64Subtarget::getCallLowering() const {

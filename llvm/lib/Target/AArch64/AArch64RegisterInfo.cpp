@@ -38,8 +38,8 @@ using namespace llvm;
 #define GET_REGINFO_TARGET_DESC
 #include "AArch64GenRegisterInfo.inc"
 
-AArch64RegisterInfo::AArch64RegisterInfo(const Triple &TT)
-    : AArch64GenRegisterInfo(AArch64::LR), TT(TT) {
+AArch64RegisterInfo::AArch64RegisterInfo(const Triple &TT, unsigned HwMode)
+    : AArch64GenRegisterInfo(AArch64::LR, 0, 0, 0, HwMode), TT(TT) {
   AArch64_MC::initLLVMToCVRegMapping(this);
 }
 
