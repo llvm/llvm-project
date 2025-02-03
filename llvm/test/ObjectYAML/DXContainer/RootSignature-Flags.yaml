@@ -11,13 +11,21 @@ Header:
   PartOffsets:     [ 60 ]
 Parts:
   - Name:            RTS0
-    Size:            8
+    Size:            24
     RootSignature:
-      Size: 8
+      Version: 2
+      NumParameters: 0
+      RootParametersOffset: 0
+      NumStaticSamplers: 0
+      StaticSamplersOffset: 0
       AllowInputAssemblerInputLayout: true
 
-#CHECK:    - Name: RTS0
-#CHECK-NEXT: Size: 8
-#CHECK-NEXT: RootSignature:
-#CHECK-NEXT:   Size: 8
-#CHECK-NEXT:   AllowInputAssemblerInputLayout: true
+# CHECK:  - Name:            RTS0
+# CHECK-NEXT:    Size:            24
+# CHECK-NEXT:    RootSignature:
+# CHECK-NEXT:      Version: 2
+# CHECK-NEXT:      NumParameters: 0
+# CHECK-NEXT:      RootParametersOffset: 0
+# CHECK-NEXT:      NumStaticSamplers: 0
+# CHECK-NEXT:      StaticSamplersOffset: 0
+# CHECK-NEXT:      AllowInputAssemblerInputLayout: true

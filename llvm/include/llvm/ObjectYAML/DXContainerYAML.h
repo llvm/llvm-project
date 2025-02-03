@@ -79,7 +79,11 @@ struct RootSignatureDesc {
   RootSignatureDesc(const object::DirectX::RootSignature &Data);
 
   uint32_t getEncodedFlags();
-  uint32_t Size;
+  uint32_t Version;
+  uint32_t NumParameters;
+  uint32_t RootParametersOffset;
+  uint32_t NumStaticSamplers;
+  uint32_t StaticSamplersOffset;
 
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 };
