@@ -27,7 +27,7 @@ add_flangrt_library(flang_rt.cuda STATIC SHARED
 
 # For the static library, link-in the static dependencies as well.
 if (TARGET flang_rt.cuda.static)
-  target_link_libraries(flang.cuda.static PUBLIC
+  target_link_libraries(flang_rt.cuda.static PUBLIC
     flang_rt.runtime.static
     CUDA::cudart_static
   )
@@ -35,8 +35,8 @@ endif ()
 
 # For the shared library, use the shared versions of the dependencies.
 if (TARGET flang_rt.cuda.shared)
-  target_link_libraries(CufRuntime.shared PUBLIC
-    flang_rt.shared
+  target_link_libraries(flang_rt.cuda.shared PUBLIC
+    flang_rt.runtime.shared
     CUDA::cudart
   )
 endif ()

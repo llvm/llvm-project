@@ -142,8 +142,8 @@ function (add_flangrt_library name)
     add_library("${name_shared}" SHARED ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
   endif ()
 
-  # Provide a default target if building both and which exists in either setting.
   if (libtargets)
+    # Provide a default alias which exists in either setting.
     if (BUILD_SHARED_LIBS)
       if (build_shared)
         set(default_target "${name_shared}")
@@ -158,8 +158,14 @@ function (add_flangrt_library name)
       endif ()
     endif ()
     add_library(${name}.default ALIAS "${default_target}")
+
+    # Provide a build target that builds any enabled library.
+    # Not intended for target_link_libraries. Either use the ${name}.static,
+    # ${name}.shared variants, or ${name}.default to let BUILD_SHARED_LIBS
+    # decide.
     if (NOT TARGET ${name})
-      add_library(${name} ALIAS "${default_target}")
+      add_custom_target(${name})
+      add_dependencies(${name} ${libtargets})
     endif ()
   endif ()
 
