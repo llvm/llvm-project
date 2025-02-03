@@ -322,6 +322,31 @@ public:
   }
 };
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+/// Read serialized BoundsSafetyInfo.
+void ReadBoundsSafetyInfo(const uint8_t *&Data, BoundsSafetyInfo &Info) {
+  uint8_t Payload = endian::readNext<uint8_t, llvm::endianness::little>(Data);
+
+  if (Payload & 0x01) {
+    uint8_t Level = (Payload >> 1) & 0x7;
+    Info.setLevelAudited(Level);
+  }
+  Payload >>= 4;
+
+  if (Payload & 0x01) {
+    uint8_t Kind = (Payload >> 1) & 0x7;
+    assert(Kind >= (uint8_t)BoundsSafetyInfo::BoundsSafetyKind::CountedBy);
+    assert(Kind <= (uint8_t)BoundsSafetyInfo::BoundsSafetyKind::EndedBy);
+    Info.setKindAudited((BoundsSafetyInfo::BoundsSafetyKind)Kind);
+  }
+
+  uint16_t ExternalBoundsLen =
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
+  Info.ExternalBounds = std::string(Data, Data + ExternalBoundsLen);
+  Data += ExternalBoundsLen;
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 /// Read serialized ParamInfo.
 void ReadParamInfo(const uint8_t *&Data, ParamInfo &Info) {
   ReadVariableInfo(Data, Info);
@@ -338,7 +363,13 @@ void ReadParamInfo(const uint8_t *&Data, ParamInfo &Info) {
   if (Payload & 0x01)
     Info.setNoEscape(Payload & 0x02);
   Payload >>= 2;
-  assert(Payload == 0 && "Bad API notes");
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  if (Payload & 0x01) {
+    BoundsSafetyInfo BSI;
+    ReadBoundsSafetyInfo(Data, BSI);
+    Info.BoundsSafety = BSI;
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 }
 
 /// Read serialized FunctionInfo.

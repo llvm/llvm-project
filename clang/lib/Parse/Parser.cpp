@@ -81,6 +81,14 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
       [this](StringRef TypeStr, StringRef Context, SourceLocation IncludeLoc) {
         return this->ParseTypeFromString(TypeStr, Context, IncludeLoc);
       };
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  Actions.ParseBoundsAttributeArgFromStringCallback =
+      [this](StringRef ExprStr, StringRef Context, Decl *Parent,
+             SourceLocation IncludeLoc) {
+        return this->ParseBoundsAttributeArgFromString(ExprStr, Context, Parent,
+                                                       IncludeLoc);
+      };
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 }
 
 DiagnosticBuilder Parser::Diag(SourceLocation Loc, unsigned DiagID) {
@@ -464,8 +472,9 @@ Parser::ParseScopeFlags::~ParseScopeFlags() {
 //===----------------------------------------------------------------------===//
 
 Parser::~Parser() {
-  // Clear out the parse-type-from-string callback.
+  // Clear out the parse-*-from-string callbacks.
   Actions.ParseTypeFromStringCallback = nullptr;
+  Actions.ParseBoundsAttributeArgFromStringCallback = nullptr;
 
   // If we still have scopes active, delete the scope tree.
   delete getCurScope();

@@ -408,6 +408,56 @@ static void ProcessAPINotes(Sema &S, Decl *D,
                   Metadata);
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+static void applyBoundsSafety(Sema &S, ValueDecl *D,
+                              const api_notes::BoundsSafetyInfo &Info,
+                              VersionedInfoMetadata Metadata) {
+  using BoundsSafetyKind = api_notes::BoundsSafetyInfo::BoundsSafetyKind;
+  if (Metadata.IsActive && !Info.ExternalBounds.empty() &&
+      S.ParseBoundsAttributeArgFromStringCallback) {
+    Decl *ScopeDecl = D;
+    if (auto ParmDecl = dyn_cast<ParmVarDecl>(ScopeDecl)) {
+      ScopeDecl = dyn_cast<FunctionDecl>(ParmDecl->getDeclContext());
+    }
+    auto ParsedExpr = S.ParseBoundsAttributeArgFromStringCallback(
+        Info.ExternalBounds, "<API Notes>", ScopeDecl, D->getLocation());
+    if (ParsedExpr.isInvalid())
+      return;
+
+    std::string AttrName;
+    AttributeCommonInfo::Kind Kind;
+    assert(*Info.getKind() >= BoundsSafetyKind::CountedBy);
+    assert(*Info.getKind() <= BoundsSafetyKind::EndedBy);
+    switch (*Info.getKind()) {
+    case BoundsSafetyKind::CountedBy:
+      AttrName = "__counted_by";
+      Kind = AttributeCommonInfo::AT_CountedBy;
+      break;
+    case BoundsSafetyKind::CountedByOrNull:
+      AttrName = "__counted_by_or_null";
+      Kind = AttributeCommonInfo::AT_CountedByOrNull;
+      break;
+    case BoundsSafetyKind::SizedBy:
+      AttrName = "__sized_by";
+      Kind = AttributeCommonInfo::AT_SizedBy;
+      break;
+    case BoundsSafetyKind::SizedByOrNull:
+      AttrName = "__sized_by_or_null";
+      Kind = AttributeCommonInfo::AT_SizedByOrNull;
+      break;
+    case BoundsSafetyKind::EndedBy:
+      AttrName = "__ended_by";
+      Kind = AttributeCommonInfo::AT_PtrEndedBy;
+      break;
+    }
+
+    S.applyPtrCountedByEndedByAttr(
+        D, *Info.getLevel(), Kind, ParsedExpr.get(), D->getLocation(),
+        D->getSourceRange(), AttrName, /* originates in API notes */ true);
+  }
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 /// Process API notes for a parameter.
 static void ProcessAPINotes(Sema &S, ParmVarDecl *D,
                             const api_notes::ParamInfo &Info,
@@ -424,6 +474,11 @@ static void ProcessAPINotes(Sema &S, ParmVarDecl *D,
           return new (S.Context)
               LifetimeBoundAttr(S.Context, getPlaceholderAttrInfo());
         });
+
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  if (Info.BoundsSafety.has_value())
+    applyBoundsSafety(S, D, *Info.BoundsSafety, Metadata);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   // Retain count convention
   handleAPINotedRetainCountConvention(S, D, Metadata,

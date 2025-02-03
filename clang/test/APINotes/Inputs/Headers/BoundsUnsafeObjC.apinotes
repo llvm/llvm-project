@@ -1,0 +1,92 @@
+---
+Name: BoundsUnsafe
+Classes:
+  - Name: Foo
+    Methods:
+      - Selector:              "asdf_counted:len:"
+        MethodKind: Instance
+        Parameters:
+          - Position:      0
+            BoundsSafety:
+                Kind: counted_by
+                Level: 0
+                BoundedBy: len
+      - Selector:              "asdf_sized:size:"
+        MethodKind: Instance
+        Parameters:
+          - Position:      0
+            BoundsSafety:
+                Kind: sized_by
+                Level: 0
+                BoundedBy: size
+      - Selector:              "asdf_counted_n:len:"
+        MethodKind: Instance
+        Parameters:
+          - Position:      0
+            BoundsSafety:
+                Kind: counted_by_or_null
+                Level: 0
+                BoundedBy: len
+      - Selector:              "asdf_sized_n:size:"
+        MethodKind: Instance
+        Parameters:
+          - Position:      0
+            BoundsSafety:
+                Kind: sized_by_or_null
+                Level: 0
+                BoundedBy: size
+      - Selector:              "asdf_ended:end:"
+        MethodKind: Instance
+        Parameters:
+          - Position:      0
+            BoundsSafety:
+                Kind: ended_by
+                Level: 0
+                BoundedBy: end
+      - Selector:              "asdf_sized_mul:size:count:"
+        MethodKind: Instance
+        Parameters:
+          - Position:      0
+            BoundsSafety:
+                Kind: sized_by
+                Level: 0
+                BoundedBy: "size * count"
+      - Selector:              "asdf_counted_out:len:"
+        MethodKind: Instance
+        Parameters:
+          - Position:      0
+            BoundsSafety:
+                Kind: counted_by
+                Level: 1
+                BoundedBy: "*len"
+      - Selector:              "asdf_counted_const:"
+        MethodKind: Instance
+        Parameters:
+          - Position:      0
+            BoundsSafety:
+                Kind: counted_by
+                Level: 0
+                BoundedBy: 7
+      - Selector:             "asdf_counted_nullable:buf:"
+        MethodKind: Instance
+        Parameters:
+          - Position:      1
+            BoundsSafety:
+                Kind: counted_by
+                Level: 0
+                BoundedBy: len
+      - Selector:              "asdf_counted_noescape:len:"
+        MethodKind: Instance
+        Parameters:
+          - Position:      0
+            NoEscape:      true
+            BoundsSafety:
+                Kind: counted_by
+                Level: 0
+                BoundedBy: len
+      - Selector:              "asdf_nterm:"
+        MethodKind: Instance
+        Parameters:
+          - Position:      0
+            Type: "int * __attribute__((__terminated_by__(0)))"
+

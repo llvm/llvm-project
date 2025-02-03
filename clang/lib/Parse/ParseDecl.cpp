@@ -8548,6 +8548,90 @@ TypeResult Parser::ParseTypeFromString(StringRef TypeStr, StringRef Context,
   return Result;
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+ExprResult
+Parser::ParseBoundsAttributeArgFromString(StringRef ExprStr, StringRef Context,
+                                          Decl *ParentDecl,
+                                          SourceLocation IncludeLoc) {
+  // Consume (unexpanded) tokens up to the end-of-directive.
+  SmallVector<Token, 4> Tokens;
+  {
+    // Create a new buffer from which we will parse the type.
+    auto &SourceMgr = PP.getSourceManager();
+    FileID FID = SourceMgr.createFileID(
+        llvm::MemoryBuffer::getMemBufferCopy(ExprStr, Context), SrcMgr::C_User,
+        0, 0, IncludeLoc);
+
+    // Form a new lexer that references the buffer.
+    Lexer L(FID, SourceMgr.getBufferOrFake(FID), PP);
+    L.setParsingPreprocessorDirective(true);
+    L.setIsPragmaLexer(true);
+
+    // Lex the tokens from that buffer.
+    Token Tok;
+    do {
+      L.Lex(Tok);
+      Tokens.push_back(Tok);
+    } while (Tok.isNot(tok::eod));
+  }
+
+  // Replace the "eod" token with an "eof" token identifying the end of
+  // the provided string.
+  Token &EndToken = Tokens.back();
+  EndToken.startToken();
+  EndToken.setKind(tok::eof);
+  EndToken.setLocation(Tok.getLocation());
+  EndToken.setEofData(ExprStr.data());
+
+  // Add the current token back.
+  Tokens.push_back(Tok);
+
+  // Enter the tokens into the token stream.
+  PP.EnterTokenStream(Tokens, /*DisableMacroExpansion=*/false,
+                      /*IsReinject=*/false);
+
+  // Consume the current token so that we'll start parsing the tokens we
+  // added to the stream.
+  ConsumeAnyToken();
+
+  // Enter a new scope.
+  std::unique_ptr<ParseScope> LocalScope;
+  bool EnterScope = ParentDecl && ParentDecl->isFunctionOrFunctionTemplate();
+  if (EnterScope) {
+    LocalScope.reset(new ParseScope(this, Scope::FnScope | Scope::DeclScope));
+    Actions.ActOnReenterFunctionContext(Actions.CurScope, ParentDecl);
+  }
+
+  // Parse the expr.
+  using ExpressionKind =
+      Sema::ExpressionEvaluationContextRecord::ExpressionKind;
+  EnterExpressionEvaluationContext EC(
+      Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, nullptr,
+      ExpressionKind::EK_AttrArgument);
+
+  ExprResult Result(
+      Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression()));
+
+  // Check if we parsed the whole thing.
+  if (Result.isUsable() &&
+      (Tok.isNot(tok::eof) || Tok.getEofData() != ExprStr.data())) {
+    Diag(Tok.getLocation(), diag::err_type_unparsed);
+  }
+
+  // There could be leftover tokens (e.g. because of an error).
+  // Skip through until we reach the 'end of directive' token.
+  while (Tok.isNot(tok::eof))
+    ConsumeAnyToken();
+
+  // Consume the end token.
+  if (Tok.is(tok::eof) && Tok.getEofData() == ExprStr.data())
+    ConsumeAnyToken();
+  if (EnterScope)
+    Actions.ActOnExitFunctionContext();
+  return Result;
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 void Parser::DiagnoseBitIntUse(const Token &Tok) {
   // If the token is for _ExtInt, diagnose it as being deprecated. Otherwise,
   // the token is about _BitInt and gets (potentially) diagnosed as use of an

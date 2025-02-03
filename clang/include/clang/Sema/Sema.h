@@ -1529,6 +1529,12 @@ public:
   std::function<TypeResult(StringRef, StringRef, SourceLocation)>
       ParseTypeFromStringCallback;
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  /// Callback to the parser to parse a type expressed as a string.
+  std::function<ExprResult(StringRef, StringRef, Decl *, SourceLocation)>
+      ParseBoundsAttributeArgFromStringCallback;
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   /// VAListTagName - The declaration name corresponding to __va_list_tag.
   /// This is used as part of a hack to omit that class from ADL results.
   DeclarationName VAListTagName;
@@ -2781,6 +2787,12 @@ public:
   ///
   bool BoundsSafetyFixItWasEmittedFor(const DeclaratorDecl *DD,
                                       bool Set = false);
+
+  void applyPtrCountedByEndedByAttr(Decl *D, unsigned Level,
+                                    AttributeCommonInfo::Kind Kind,
+                                    Expr *AttrArg, SourceLocation Loc,
+                                    SourceRange Range, StringRef DiagName,
+                                    bool OriginatesInAPINotes = false);
   /* TO_UPSTREAM(BoundsSafety) OFF*/
 
 
