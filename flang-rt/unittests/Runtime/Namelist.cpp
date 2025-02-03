@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang-rt/namelist.h"
+#include "flang-rt/runtime/namelist.h"
 #include "CrashHandlerFixture.h"
 #include "tools.h"
-#include "flang-rt/descriptor.h"
+#include "flang-rt/runtime/descriptor.h"
 #include "flang/Runtime/io-api-consts.h"
 #include <algorithm>
 #include <cinttypes>

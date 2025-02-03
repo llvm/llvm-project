@@ -24,7 +24,7 @@ set(sources
   pointer.cpp
   registration.cpp
 )
-runtime_source_files(sources SUBDIR "CUDA")
+runtime_source_files(sources SUBDIR "cuda")
 
 add_flang_library(${CUFRT_LIBNAME}
   ${sources}
