@@ -1278,8 +1278,7 @@ MachOPlatform::MachOPlatformPlugin::findUnwindSectionInfo(
   if (Section *EHFrameSec = G.findSectionByName(MachOEHFrameSectionName))
     ScanUnwindInfoSection(*EHFrameSec, US.DwarfSection);
 
-  if (Section *CUInfoSec =
-          G.findSectionByName(MachOCompactUnwindInfoSectionName))
+  if (Section *CUInfoSec = G.findSectionByName(MachOCompactUnwindSectionName))
     ScanUnwindInfoSection(*CUInfoSec, US.CompactUnwindSection);
 
   // If we didn't find any pointed-to code-blocks then there's no need to

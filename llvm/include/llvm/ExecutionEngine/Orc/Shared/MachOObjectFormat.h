@@ -25,7 +25,7 @@ namespace orc {
 extern StringRef MachODataCommonSectionName;
 extern StringRef MachODataDataSectionName;
 extern StringRef MachOEHFrameSectionName;
-extern StringRef MachOCompactUnwindInfoSectionName;
+extern StringRef MachOCompactUnwindSectionName;
 extern StringRef MachOCStringSectionName;
 extern StringRef MachOModInitFuncSectionName;
 extern StringRef MachOObjCCatListSectionName;
