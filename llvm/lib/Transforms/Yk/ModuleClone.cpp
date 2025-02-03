@@ -79,7 +79,7 @@ struct YkModuleClone : public ModulePass {
         continue;
       }
       // Skip already cloned functions or functions with address taken.
-      if (F.hasAddressTaken() || F.getName().startswith(YK_CLONE_PREFIX)) {
+      if (F.hasAddressTaken() || F.getName().startswith(YK_UNOPT_PREFIX)) {
         continue;
       }
       ValueToValueMapTy VMap;
@@ -96,7 +96,7 @@ struct YkModuleClone : public ModulePass {
       }
       // Rename function
       auto originalName = F.getName().str();
-      auto cloneName = Twine(YK_CLONE_PREFIX) + originalName;
+      auto cloneName = Twine(YK_UNOPT_PREFIX) + originalName;
       ClonedFunc->setName(cloneName);
       ClonedFuncs[originalName] = ClonedFunc;
     }
