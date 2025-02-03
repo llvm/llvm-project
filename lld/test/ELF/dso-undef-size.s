@@ -7,12 +7,12 @@
 
 # CHECK:      Symbols [
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: foo
-# CHECK-NEXT:     Value:
+# CHECK-NEXT:     Name: foo (1)
+# CHECK-NEXT:     Value: 0x0
 # CHECK-NEXT:     Size: 0
-# CHECK-NEXT:     Binding:
-# CHECK-NEXT:     Type:
-# CHECK-NEXT:     Other:
+# CHECK-NEXT:     Binding: Global (0x1)
+# CHECK-NEXT:     Type: None (0x0)
+# CHECK-NEXT:     Other: 0
 # CHECK-NEXT:     Section: Undefined
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
