@@ -46,7 +46,7 @@ template <class D> struct BPOrdererTraits;
 
 template <class D> struct BPOrderer {
   using Section = typename BPOrdererTraits<D>::Section;
-  using Symbol = typename BPOrdererTraits<D>::Symbol;
+  using Defined = typename BPOrdererTraits<D>::Defined;
 
   // Compute a section order using the Balanced Partitioning algorithm.
   //
@@ -56,12 +56,12 @@ template <class D> struct BPOrderer {
   //   program startup.
   // * compressionSortStartupFunctions: if profilePath is specified, allocate
   //   extra utility vertices to prioritize nearby function similarity.
-  static auto
-  computeOrder(llvm::StringRef profilePath, bool forFunctionCompression,
-               bool forDataCompression, bool compressionSortStartupFunctions,
-               bool verbose, llvm::ArrayRef<Section *> sections,
-               const DenseMap<CachedHashStringRef, DenseSet<unsigned>>
-                   &rootSymbolToSectionIdxs)
+  auto computeOrder(llvm::StringRef profilePath, bool forFunctionCompression,
+                    bool forDataCompression,
+                    bool compressionSortStartupFunctions, bool verbose,
+                    llvm::ArrayRef<Section *> sections,
+                    const DenseMap<CachedHashStringRef, DenseSet<unsigned>>
+                        &rootSymbolToSectionIdxs)
       -> llvm::DenseMap<const Section *, int>;
 };
 } // namespace lld
@@ -357,7 +357,7 @@ auto BPOrderer<D>::computeOrder(
       const uint64_t pageSize = (1 << 14);
       uint64_t currentAddress = 0;
       for (const auto *isec : orderedSections) {
-        for (auto *sym : D::getSymbols(*isec)) {
+        for (auto *sym : static_cast<D *>(this)->getSymbols(*isec)) {
           uint64_t startAddress = currentAddress + D::getSymValue(*sym);
           uint64_t endAddress = startAddress + D::getSymSize(*sym);
           uint64_t firstPage = startAddress / pageSize;
