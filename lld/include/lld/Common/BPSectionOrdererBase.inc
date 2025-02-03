@@ -63,6 +63,10 @@ template <class D> struct BPOrderer {
                     const DenseMap<CachedHashStringRef, DenseSet<unsigned>>
                         &rootSymbolToSectionIdxs)
       -> llvm::DenseMap<const Section *, int>;
+
+  std::optional<StringRef> static getResolvedLinkageName(llvm::StringRef name) {
+    return {};
+  }
 };
 } // namespace lld
 
@@ -97,10 +101,11 @@ static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
     // Merge sections that are nearly identical
     SmallVector<std::pair<unsigned, SmallVector<uint64_t>>> newSectionHashes;
     DenseMap<uint64_t, unsigned> wholeHashToSectionIdx;
+    unsigned threshold = sectionHashes.size() > 10000 ? 5 : 0;
     for (auto &[sectionIdx, hashes] : sectionHashes) {
       uint64_t wholeHash = 0;
       for (auto hash : hashes)
-        if (hashFrequency[hash] > 5)
+        if (hashFrequency[hash] > threshold)
           wholeHash ^= hash;
       auto [it, wasInserted] =
           wholeHashToSectionIdx.insert(std::make_pair(wholeHash, sectionIdx));
