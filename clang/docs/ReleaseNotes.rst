@@ -83,6 +83,9 @@ Resolutions to C++ Defect Reports
 C Language Changes
 ------------------
 
+- Clang now allows an ``inline`` specifier on a typedef declaration of a
+  function type in Microsoft compatibility mode. #GH124869
+
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
@@ -111,6 +114,10 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+
+- Improve the diagnostics for deleted default constructor errors for C++ class
+  initializer lists that don't explicitly list a class member and thus attempt
+  to implicitly default construct that member.
 
 Improvements to Clang's time-trace
 ----------------------------------
