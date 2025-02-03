@@ -12,14 +12,14 @@
 
 // Macro for defining mad_sat variants for char/uchar/short/ushort
 // FIXME: Once using __clc_convert_ty, can easily unify scalar and vector defs
-#define _CLC_DEFINE_SIMPLE_MAD_SAT(TYPE, UP_TYPE, LIT_PREFIX)                  \
+#define __CLC_DEFINE_SIMPLE_MAD_SAT(TYPE, UP_TYPE, LIT_PREFIX)                 \
   _CLC_OVERLOAD _CLC_DEF TYPE __clc_mad_sat(TYPE x, TYPE y, TYPE z) {          \
     return __clc_clamp(                                                        \
         (UP_TYPE)__clc_mad24((UP_TYPE)x, (UP_TYPE)y, (UP_TYPE)z),              \
         (UP_TYPE)LIT_PREFIX##_MIN, (UP_TYPE)LIT_PREFIX##_MAX);                 \
   }
 
-#define _CLC_DEFINE_SIMPLE_MAD_SAT_VEC(TYPE, UP_TYPE, LIT_PREFIX)              \
+#define __CLC_DEFINE_SIMPLE_MAD_SAT_VEC(TYPE, UP_TYPE, LIT_PREFIX)             \
   _CLC_OVERLOAD _CLC_DEF TYPE __clc_mad_sat(TYPE x, TYPE y, TYPE z) {          \
     UP_TYPE upscaled_mad = __clc_mad24(__CLC_CONVERT_TY(x, UP_TYPE),           \
                                        __CLC_CONVERT_TY(y, UP_TYPE),           \
@@ -29,18 +29,18 @@
     return __CLC_CONVERT_TY(clamped_mad, TYPE);                                \
   }
 
-#define _CLC_DEFINE_SIMPLE_MAD_SAT_ALL_TYS(TYPE, UP_TYPE, LIT_PREFIX)          \
-  _CLC_DEFINE_SIMPLE_MAD_SAT(TYPE, UP_TYPE, LIT_PREFIX)                        \
-  _CLC_DEFINE_SIMPLE_MAD_SAT_VEC(TYPE##2, UP_TYPE##2, LIT_PREFIX)              \
-  _CLC_DEFINE_SIMPLE_MAD_SAT_VEC(TYPE##3, UP_TYPE##3, LIT_PREFIX)              \
-  _CLC_DEFINE_SIMPLE_MAD_SAT_VEC(TYPE##4, UP_TYPE##4, LIT_PREFIX)              \
-  _CLC_DEFINE_SIMPLE_MAD_SAT_VEC(TYPE##8, UP_TYPE##8, LIT_PREFIX)              \
-  _CLC_DEFINE_SIMPLE_MAD_SAT_VEC(TYPE##16, UP_TYPE##16, LIT_PREFIX)
+#define __CLC_DEFINE_SIMPLE_MAD_SAT_ALL_TYS(TYPE, UP_TYPE, LIT_PREFIX)         \
+  __CLC_DEFINE_SIMPLE_MAD_SAT(TYPE, UP_TYPE, LIT_PREFIX)                       \
+  __CLC_DEFINE_SIMPLE_MAD_SAT_VEC(TYPE##2, UP_TYPE##2, LIT_PREFIX)             \
+  __CLC_DEFINE_SIMPLE_MAD_SAT_VEC(TYPE##3, UP_TYPE##3, LIT_PREFIX)             \
+  __CLC_DEFINE_SIMPLE_MAD_SAT_VEC(TYPE##4, UP_TYPE##4, LIT_PREFIX)             \
+  __CLC_DEFINE_SIMPLE_MAD_SAT_VEC(TYPE##8, UP_TYPE##8, LIT_PREFIX)             \
+  __CLC_DEFINE_SIMPLE_MAD_SAT_VEC(TYPE##16, UP_TYPE##16, LIT_PREFIX)
 
-_CLC_DEFINE_SIMPLE_MAD_SAT_ALL_TYS(char, int, CHAR)
-_CLC_DEFINE_SIMPLE_MAD_SAT_ALL_TYS(uchar, uint, UCHAR)
-_CLC_DEFINE_SIMPLE_MAD_SAT_ALL_TYS(short, int, SHRT)
-_CLC_DEFINE_SIMPLE_MAD_SAT_ALL_TYS(ushort, uint, USHRT)
+__CLC_DEFINE_SIMPLE_MAD_SAT_ALL_TYS(char, int, CHAR)
+__CLC_DEFINE_SIMPLE_MAD_SAT_ALL_TYS(uchar, uint, UCHAR)
+__CLC_DEFINE_SIMPLE_MAD_SAT_ALL_TYS(short, int, SHRT)
+__CLC_DEFINE_SIMPLE_MAD_SAT_ALL_TYS(ushort, uint, USHRT)
 
 // Macro for defining mad_sat variants for uint/ulong
 #define __CLC_DEFINE_UINTLONG_MAD_SAT(UTYPE, STYPE, ULIT_PREFIX)               \
