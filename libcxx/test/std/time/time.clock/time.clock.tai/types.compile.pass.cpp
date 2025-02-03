@@ -29,8 +29,9 @@
 // using tai_time  = time_point<tai_clock, Duration>;
 // using tai_seconds = tai_time<seconds>;
 
-#include <concepts>
 #include <chrono>
+#include <concepts>
+#include <ratio>
 
 #include "test_macros.h"
 

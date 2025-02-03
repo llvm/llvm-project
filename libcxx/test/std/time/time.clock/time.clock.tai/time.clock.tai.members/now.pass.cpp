@@ -19,6 +19,7 @@
 // static time_point now();
 
 #include <chrono>
+#include <concepts>
 #include <cassert>
 
 int main(int, const char**) {
