@@ -35,6 +35,16 @@ LLVM_LIBC_FUNCTION(float16, asinf16, (float16 x)) {
 
   // |x| <= 0x1p-1, |x| <= 0.5
   if (x_abs <= 0x3800) {
+    //asinf16(NaN) = NaN
+    if (xbits.is_nan()) {
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+	return FPBits::quiet_nan().get_val();
+      }
+
+      return x;
+    }
+    
     // asinf16(+/-0) = +/-0
     if (LIBC_UNLIKELY(x_abs == 0))
       return x;
@@ -67,9 +77,7 @@ LLVM_LIBC_FUNCTION(float16, asinf16, (float16 x)) {
   if (LIBC_UNLIKELY(x_abs > 0x3c00)) {
     // |x| <= +/-inf
     if (LIBC_UNLIKELY(x_abs <= 0x7c00)) {
-      if (!xbits.is_signaling_nan())
-        fputil::set_errno_if_required(EDOM);
-
+      fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
     }
 
