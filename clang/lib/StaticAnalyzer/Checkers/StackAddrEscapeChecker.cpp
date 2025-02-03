@@ -212,7 +212,6 @@ void StackAddrEscapeChecker::checkAsyncExecutedBlockCaptures(
   }
 }
 
-
 // void StackAddrEscapeChecker::checkReturnedBlockCaptures(
 //     const BlockDataRegion &B, CheckerContext &C) const {
 //   for (const MemRegion *Region : getCapturedStackRegions(B, C)) {
@@ -229,7 +228,8 @@ void StackAddrEscapeChecker::checkAsyncExecutedBlockCaptures(
 //     llvm::raw_svector_ostream Out(Buf);
 //     SourceRange Range = genName(Out, Region, C.getASTContext());
 //     Out << " is captured by a returned block";
-//     auto Report = std::make_unique<PathSensitiveBugReport>(*BT_capturedstackret,
+//     auto Report =
+//     std::make_unique<PathSensitiveBugReport>(*BT_capturedstackret,
 //                                                            Out.str(), N);
 //     if (Range.isValid())
 //       Report->addRange(Range);
@@ -268,20 +268,20 @@ public:
   }
 };
 
-static SmallVector<const MemRegion *> FindEscapingStackRegions(CheckerContext &C, SVal SVal) {
+static SmallVector<const MemRegion *>
+FindEscapingStackRegions(CheckerContext &C, SVal SVal) {
   SmallVector<const MemRegion *> FoundStackRegions;
 
   FindStackRegionsSymbolVisitor Finder(C, FoundStackRegions);
-  ScanReachableSymbols Scanner(C.getState(), Finder);  
+  ScanReachableSymbols Scanner(C.getState(), Finder);
   Scanner.scan(SVal);
 
   return FoundStackRegions;
 }
 
-static SmallVector<const MemRegion *> FilterReturnExpressionLeaks(const SmallVector<const MemRegion *> &MaybeEscaped, 
-  CheckerContext &C, 
-  const Expr *RetE,
-  SVal &RetVal) {
+static SmallVector<const MemRegion *>
+FilterReturnExpressionLeaks(const SmallVector<const MemRegion *> &MaybeEscaped,
+                            CheckerContext &C, const Expr *RetE, SVal &RetVal) {
 
   SmallVector<const MemRegion *> WillEscape;
 
@@ -351,9 +351,11 @@ static SmallVector<const MemRegion *> FilterReturnExpressionLeaks(const SmallVec
   //   return false;
   // };
 
-  // const auto NewEndIter = std::remove_if(MaybeEscaped.begin(), MaybeEscaped.end(), ShouldNotEmitError);
+  // const auto NewEndIter = std::remove_if(MaybeEscaped.begin(),
+  // MaybeEscaped.end(), ShouldNotEmitError);
 
-  // llvm::dbgs() << "New num escaped regions: " << std::distance(MaybeEscaped.begin(), NewEndIter) << '\n';
+  // llvm::dbgs() << "New num escaped regions: " <<
+  // std::distance(MaybeEscaped.begin(), NewEndIter) << '\n';
 
   // return SmallVector<const MemRegion *>()
 }
@@ -369,9 +371,11 @@ void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS, CheckerContext &
 
   SVal V = C.getSVal(RetE);
 
-  SmallVector<const MemRegion *> MaybeEscapedRegions = FindEscapingStackRegions(C, V);
+  SmallVector<const MemRegion *> MaybeEscapedRegions =
+      FindEscapingStackRegions(C, V);
 
-  SmallVector<const MemRegion *> EscapedRegions = FilterReturnExpressionLeaks(MaybeEscapedRegions, C, RetE, V);
+  SmallVector<const MemRegion *> EscapedRegions =
+      FilterReturnExpressionLeaks(MaybeEscapedRegions, C, RetE, V);
 
   for (const MemRegion *ER : EscapedRegions) {
     EmitStackError(C, ER, RetE);
@@ -544,14 +548,16 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
     CallBack(CheckerContext &CC, bool TopFrame)
         : Ctx(CC), PoppedFrame(CC.getStackFrame()), TopFrame(TopFrame) {}
 
-    bool HandleBinding(StoreManager &SMgr, Store S, const MemRegion *Referrer, SVal Val) override {
+    bool HandleBinding(StoreManager &SMgr, Store S, const MemRegion *Referrer,
+                       SVal Val) override {
       recordInInvalidatedRegions(Referrer);
 
       const MemSpaceRegion *ReferrerMS = getStackOrGlobalSpaceRegion(Referrer);
       if (!ReferrerMS)
         return true;
 
-      SmallVector<const MemRegion *> PotentialEscapingAddrs = FindEscapingStackRegions(Ctx, Val);
+      SmallVector<const MemRegion *> PotentialEscapingAddrs =
+          FindEscapingStackRegions(Ctx, Val);
 
       for (const MemRegion *Escapee : PotentialEscapingAddrs) {
         if (isDanglingStackVariable(Referrer, ReferrerMS, Escapee))
