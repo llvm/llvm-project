@@ -75,6 +75,7 @@ public:
         MessagesStr(Messages) {}
 
   void run(Function &F) {};
+  void run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // namespace llvm

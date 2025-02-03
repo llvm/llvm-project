@@ -45,6 +45,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
+#include "llvm/Target/TargetVerifier.h"
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -1461,9 +1462,10 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
 }
 
 void VerifyInstrumentation::registerCallbacks(PassInstrumentationCallbacks &PIC,
-                                              ModuleAnalysisManager *MAM) {
+                                              ModuleAnalysisManager *MAM,
+					      FunctionAnalysisManager *FAM) {
   PIC.registerAfterPassCallback(
-      [this, MAM](StringRef P, Any IR, const PreservedAnalyses &PassPA) {
+      [this, MAM, FAM](StringRef P, Any IR, const PreservedAnalyses &PassPA) {
         if (isIgnored(P) || P == "VerifierPass")
           return;
         const auto *F = unwrapIR<Function>(IR);
@@ -1480,6 +1482,11 @@ void VerifyInstrumentation::registerCallbacks(PassInstrumentationCallbacks &PIC,
             report_fatal_error(formatv("Broken function found after pass "
                                        "\"{0}\", compilation aborted!",
                                        P));
+
+          if (FAM) {
+            TargetVerify TV(const_cast<Module*>(F->getParent()));
+            TV.run(*const_cast<Function*>(F), *FAM);
+          }
         } else {
           const auto *M = unwrapIR<Module>(IR);
           if (!M) {
@@ -2524,7 +2531,7 @@ void PrintCrashIRInstrumentation::registerCallbacks(
 }
 
 void StandardInstrumentations::registerCallbacks(
-    PassInstrumentationCallbacks &PIC, ModuleAnalysisManager *MAM) {
+    PassInstrumentationCallbacks &PIC, ModuleAnalysisManager *MAM, FunctionAnalysisManager *FAM) {
   PrintIR.registerCallbacks(PIC);
   PrintPass.registerCallbacks(PIC);
   TimePasses.registerCallbacks(PIC);
@@ -2533,7 +2540,7 @@ void StandardInstrumentations::registerCallbacks(
   PrintChangedIR.registerCallbacks(PIC);
   PseudoProbeVerification.registerCallbacks(PIC);
   if (VerifyEach)
-    Verify.registerCallbacks(PIC, MAM);
+    Verify.registerCallbacks(PIC, MAM, FAM);
   PrintChangedDiff.registerCallbacks(PIC);
   WebsiteChangeReporter.registerCallbacks(PIC);
   ChangeTester.registerCallbacks(PIC);
