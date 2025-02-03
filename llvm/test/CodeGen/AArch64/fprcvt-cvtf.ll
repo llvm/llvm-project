@@ -44,6 +44,23 @@ define half @scvtf_f16i32_neg(<4 x i32> %x) {
  ret half %conv
 }
 
+define <1 x half> @scvtf_f16i32_simple(<1 x i32> %x) {
+; CHECK-LABEL: scvtf_f16i32_simple:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    scvtf h0, s0
+; CHECK-NEXT:    ret
+;
+; CHECK-NO-FPRCVT-LABEL: scvtf_f16i32_simple:
+; CHECK-NO-FPRCVT:       // %bb.0:
+; CHECK-NO-FPRCVT-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NO-FPRCVT-NEXT:    scvtf s0, s0
+; CHECK-NO-FPRCVT-NEXT:    fcvt h0, s0
+; CHECK-NO-FPRCVT-NEXT:    ret
+ %conv = sitofp <1 x i32> %x to <1 x half>
+ ret <1 x half> %conv
+}
+
 define double @scvtf_f64i32(<4 x i32> %x) {
 ; CHECK-LABEL: scvtf_f64i32:
 ; CHECK:       // %bb.0:
@@ -75,6 +92,28 @@ define double @scvtf_f64i32_neg(<4 x i32> %x) {
  %extract = extractelement <4 x i32> %x, i64 1
  %conv = sitofp i32 %extract to double
  ret double %conv
+}
+
+; This test does not give the indended result of scvtf d0, s0
+; This is due to the input being loaded as a 2 item vector and
+; therefore using vector inputs that do not match the pattern
+; This test will be fixed in a future revision
+define <1 x double> @scvtf_f64i32_simple(<1 x i32> %x) {
+; CHECK-LABEL: scvtf_f64i32_simple:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+;
+; CHECK-NO-FPRCVT-LABEL: scvtf_f64i32_simple:
+; CHECK-NO-FPRCVT:       // %bb.0:
+; CHECK-NO-FPRCVT-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-NO-FPRCVT-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-NO-FPRCVT-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NO-FPRCVT-NEXT:    ret
+ %conv = sitofp <1 x i32> %x to <1 x double>
+ ret <1 x double> %conv
 }
 
 define half @scvtf_f16i64(<2 x i64> %x) {
@@ -112,6 +151,24 @@ define half @scvtf_f16i64_neg(<2 x i64> %x) {
  ret half %conv
 }
 
+define <1 x half> @scvtf_f16i64_simple(<1 x i64> %x) {
+; CHECK-LABEL: scvtf_f16i64_simple:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    scvtf h0, d0
+; CHECK-NEXT:    ret
+;
+; CHECK-NO-FPRCVT-LABEL: scvtf_f16i64_simple:
+; CHECK-NO-FPRCVT:       // %bb.0:
+; CHECK-NO-FPRCVT-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NO-FPRCVT-NEXT:    fmov x8, d0
+; CHECK-NO-FPRCVT-NEXT:    scvtf s0, x8
+; CHECK-NO-FPRCVT-NEXT:    fcvt h0, s0
+; CHECK-NO-FPRCVT-NEXT:    ret
+ %conv = sitofp <1 x i64> %x to <1 x half>
+ ret <1 x half> %conv
+}
+
 define float @scvtf_f32i64(<2 x i64> %x) {
 ; CHECK-LABEL: scvtf_f32i64:
 ; CHECK:       // %bb.0:
@@ -143,6 +200,28 @@ define float @scvtf_f32i64_neg(<2 x i64> %x) {
  %extract = extractelement <2 x i64> %x, i64 1
  %conv = sitofp i64 %extract to float
  ret float %conv
+}
+
+; This test does not give the indended result of scvtf s0, d0
+; This is due to the input being loaded as a 2 item vector and
+; therefore using vector inputs that do not match the pattern
+; This test will be fixed in a future revision
+define <1 x float> @scvtf_f32i64_simple(<1 x i64> %x) {
+; CHECK-LABEL: scvtf_f32i64_simple:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NEXT:    ret
+;
+; CHECK-NO-FPRCVT-LABEL: scvtf_f32i64_simple:
+; CHECK-NO-FPRCVT:       // %bb.0:
+; CHECK-NO-FPRCVT-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NO-FPRCVT-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-NO-FPRCVT-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NO-FPRCVT-NEXT:    ret
+ %conv = sitofp <1 x i64> %x to <1 x float>
+ ret <1 x float> %conv
 }
 
 ; UCVTF
@@ -181,6 +260,23 @@ define half @ucvtf_f16i32_neg(<4 x i32> %x) {
  ret half %conv
 }
 
+define <1 x half> @ucvtf_f16i32_simple(<1 x i32> %x) {
+; CHECK-LABEL: ucvtf_f16i32_simple:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    ucvtf h0, s0
+; CHECK-NEXT:    ret
+;
+; CHECK-NO-FPRCVT-LABEL: ucvtf_f16i32_simple:
+; CHECK-NO-FPRCVT:       // %bb.0:
+; CHECK-NO-FPRCVT-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NO-FPRCVT-NEXT:    ucvtf s0, s0
+; CHECK-NO-FPRCVT-NEXT:    fcvt h0, s0
+; CHECK-NO-FPRCVT-NEXT:    ret
+ %conv = uitofp <1 x i32> %x to <1 x half>
+ ret <1 x half> %conv
+}
+
 define double @ucvtf_f64i32(<4 x i32> %x) {
 ; CHECK-LABEL: ucvtf_f64i32:
 ; CHECK:       // %bb.0:
@@ -212,6 +308,28 @@ define double @ucvtf_f64i32_neg(<4 x i32> %x) {
  %extract = extractelement <4 x i32> %x, i64 1
  %conv = uitofp i32 %extract to double
  ret double %conv
+}
+
+; This test does not give the indended result of ucvtf d0, s0
+; This is due to the input being loaded as a 2 item vector and
+; therefore using vector inputs that do not match the pattern
+; This test will be fixed in a future revision
+define <1 x double> @ucvtf_f64i32_simple(<1 x i32> %x) {
+; CHECK-LABEL: ucvtf_f64i32_simple:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+;
+; CHECK-NO-FPRCVT-LABEL: ucvtf_f64i32_simple:
+; CHECK-NO-FPRCVT:       // %bb.0:
+; CHECK-NO-FPRCVT-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NO-FPRCVT-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NO-FPRCVT-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NO-FPRCVT-NEXT:    ret
+ %conv = uitofp <1 x i32> %x to <1 x double>
+ ret <1 x double> %conv
 }
 
 define half @ucvtf_f16i64(<2 x i64> %x) {
@@ -249,6 +367,24 @@ define half @ucvtf_f16i64_neg(<2 x i64> %x) {
  ret half %conv
 }
 
+define <1 x half> @ucvtf_f16i64_simple(<1 x i64> %x) {
+; CHECK-LABEL: ucvtf_f16i64_simple:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    ucvtf h0, d0
+; CHECK-NEXT:    ret
+;
+; CHECK-NO-FPRCVT-LABEL: ucvtf_f16i64_simple:
+; CHECK-NO-FPRCVT:       // %bb.0:
+; CHECK-NO-FPRCVT-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NO-FPRCVT-NEXT:    fmov x8, d0
+; CHECK-NO-FPRCVT-NEXT:    ucvtf s0, x8
+; CHECK-NO-FPRCVT-NEXT:    fcvt h0, s0
+; CHECK-NO-FPRCVT-NEXT:    ret
+ %conv = uitofp <1 x i64> %x to <1 x half>
+ ret <1 x half> %conv
+}
+
 define float @ucvtf_f32i64(<2 x i64> %x) {
 ; CHECK-LABEL: ucvtf_f32i64:
 ; CHECK:       // %bb.0:
@@ -280,4 +416,26 @@ define float @ucvtf_f32i64_neg(<2 x i64> %x) {
  %extract = extractelement <2 x i64> %x, i64 1
  %conv = uitofp i64 %extract to float
  ret float %conv
+}
+
+; This test does not give the indended result of ucvtf s0, d0
+; This is due to the input being loaded as a 2 item vector and
+; therefore using vector inputs that do not match the pattern
+; This test will be fixed in a future revision
+define <1 x float> @ucvtf_f32i64_simple(<1 x i64> %x) {
+; CHECK-LABEL: ucvtf_f32i64_simple:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NEXT:    ret
+;
+; CHECK-NO-FPRCVT-LABEL: ucvtf_f32i64_simple:
+; CHECK-NO-FPRCVT:       // %bb.0:
+; CHECK-NO-FPRCVT-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NO-FPRCVT-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NO-FPRCVT-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NO-FPRCVT-NEXT:    ret
+ %conv = uitofp <1 x i64> %x to <1 x float>
+ ret <1 x float> %conv
 }
