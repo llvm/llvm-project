@@ -323,9 +323,8 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
       }
     }
 
-  Error E = createStringError(object_error::parse_failed,
-                              "section '%s' not found", SecName.str().c_str());
-  return createFileError(InputFilename, std::move(E));
+  return createFileError(InputFilename, object_error::parse_failed,
+                         "section '%s' not found", SecName.str().c_str());
 }
 
 static Error addSection(const NewSectionInfo &NewSection, Object &Obj) {

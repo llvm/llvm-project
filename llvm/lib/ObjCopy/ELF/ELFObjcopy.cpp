@@ -189,13 +189,10 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
                                StringRef InputFilename, Object &Obj) {
   for (auto &Sec : Obj.sections()) {
     if (Sec.Name == SecName) {
-      if (Sec.Type == SHT_NOBITS) {
-        Error E =
-            createStringError(object_error::parse_failed,
-                              "cannot dump section '%s': it has no contents",
-                              SecName.str().c_str());
-        return createFileError(InputFilename, std::move(E));
-      }
+      if (Sec.Type == SHT_NOBITS)
+        return createFileError(InputFilename, object_error::parse_failed,
+                               "cannot dump section '%s': it has no contents",
+                               SecName.str().c_str());
       Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
           FileOutputBuffer::create(Filename, Sec.OriginalData.size());
       if (!BufferOrErr)
@@ -208,10 +205,9 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
       return Error::success();
     }
   }
-  Error E = createStringError(object_error::parse_failed,
-                              "section '%s' not found", SecName.str().c_str());
 
-  return createFileError(InputFilename, std::move(E));
+  return createFileError(InputFilename, object_error::parse_failed,
+                         "section '%s' not found", SecName.str().c_str());
 }
 
 Error Object::compressOrDecompressSections(const CommonConfig &Config) {
@@ -832,24 +828,21 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
         if (Config.ChangeSectionLMAValAll > 0 &&
             Seg.PAddr > std::numeric_limits<uint64_t>::max() -
                             Config.ChangeSectionLMAValAll) {
-          Error E = createStringError(
-              errc::invalid_argument,
+          return createFileError(
+              Config.InputFilename, errc::invalid_argument,
               "address 0x" + Twine::utohexstr(Seg.PAddr) +
                   " cannot be increased by 0x" +
                   Twine::utohexstr(Config.ChangeSectionLMAValAll) +
                   ". The result would overflow");
-          return createFileError(Config.InputFilename, std::move(E));
         } else if (Config.ChangeSectionLMAValAll < 0 &&
                    Seg.PAddr < std::numeric_limits<uint64_t>::min() -
                                    Config.ChangeSectionLMAValAll) {
-          Error E = createStringError(
-              errc::invalid_argument,
+          return createFileError(
+              Config.InputFilename, errc::invalid_argument,
               "address 0x" + Twine::utohexstr(Seg.PAddr) +
                   " cannot be decreased by 0x" +
                   Twine::utohexstr(std::abs(Config.ChangeSectionLMAValAll)) +
                   ". The result would underflow");
-
-          return createFileError(Config.InputFilename, std::move(E));
         }
         Seg.PAddr += Config.ChangeSectionLMAValAll;
       }
@@ -857,12 +850,10 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
   }
 
   if (!Config.ChangeSectionAddress.empty()) {
-    if (Obj.Type != ELF::ET_REL) {
-      Error E = createStringError(
-          object_error::invalid_file_type,
+    if (Obj.Type != ELF::ET_REL)
+      return createFileError(
+          Config.InputFilename, object_error::invalid_file_type,
           "cannot change section address in a non-relocatable file");
-      return createFileError(Config.InputFilename, std::move(E));
-    }
     StringMap<AddressUpdate> SectionsToUpdateAddress;
     for (const SectionPatternAddressUpdate &PatternUpdate :
          make_range(Config.ChangeSectionAddress.rbegin(),
@@ -873,26 +864,22 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
                 .second) {
           if (PatternUpdate.Update.Kind == AdjustKind::Subtract &&
               Sec.Addr < PatternUpdate.Update.Value) {
-            Error E = createStringError(
-                errc::invalid_argument,
+            return createFileError(
+                Config.InputFilename, errc::invalid_argument,
                 "address 0x" + Twine::utohexstr(Sec.Addr) +
                     " cannot be decreased by 0x" +
                     Twine::utohexstr(PatternUpdate.Update.Value) +
                     ". The result would underflow");
-
-            return createFileError(Config.InputFilename, std::move(E));
           }
           if (PatternUpdate.Update.Kind == AdjustKind::Add &&
               Sec.Addr > std::numeric_limits<uint64_t>::max() -
                              PatternUpdate.Update.Value) {
-            Error E = createStringError(
-                errc::invalid_argument,
+            return createFileError(
+                Config.InputFilename, errc::invalid_argument,
                 "address 0x" + Twine::utohexstr(Sec.Addr) +
                     " cannot be increased by 0x" +
                     Twine::utohexstr(PatternUpdate.Update.Value) +
                     ". The result would overflow");
-
-            return createFileError(Config.InputFilename, std::move(E));
           }
 
           switch (PatternUpdate.Update.Kind) {

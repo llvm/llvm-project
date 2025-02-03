@@ -53,9 +53,8 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
       return Error::success();
     }
   }
-  Error E = createStringError(errc::invalid_argument, "section '%s' not found",
-                              SecName.str().c_str());
-  return createFileError(Filename, std::move(E));
+  return createFileError(Filename, errc::invalid_argument,
+                         "section '%s' not found", SecName.str().c_str());
 }
 
 static void removeSections(const CommonConfig &Config, Object &Obj) {
