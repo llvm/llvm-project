@@ -34,7 +34,7 @@ public:
   };
 
   Token(Kind kind, std::string spelling, uint32_t start)
-      : m_kind(kind), m_spelling(spelling), m_start_pos(start) {}
+      : m_kind(kind), m_spelling(std::move(spelling)), m_start_pos(start) {}
 
   Kind GetKind() const { return m_kind; }
 
@@ -88,7 +88,8 @@ public:
     if (m_tokens_idx + N < m_lexed_tokens.size())
       return m_lexed_tokens[m_tokens_idx + N];
 
-    return m_eof_token;
+    // Last token should be an 'eof' token.
+    return m_lexed_tokens.back();
   }
 
   /// Return the index for the 'current' token being handled by the DIL parser.
@@ -106,8 +107,8 @@ public:
 
 private:
   DILLexer(llvm::StringRef dil_expr, std::vector<Token> lexed_tokens)
-      : m_expr(dil_expr), m_lexed_tokens(lexed_tokens), m_tokens_idx(UINT_MAX),
-        m_eof_token(Token(Token::eof, "", 0)) {}
+      : m_expr(dil_expr), m_lexed_tokens(std::move(lexed_tokens)),
+        m_tokens_idx(UINT_MAX), m_eof_token(Token(Token::eof, "", 0)) {}
 
   static llvm::Expected<Token> Lex(llvm::StringRef expr,
                                    llvm::StringRef &remainder);

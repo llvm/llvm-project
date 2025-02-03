@@ -108,10 +108,8 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
 
   uint32_t position = cur_pos - expr.begin();
   std::optional<llvm::StringRef> maybe_word = IsWord(expr, remainder);
-  if (maybe_word) {
-    llvm::StringRef word = *maybe_word;
-    return Token(Token::identifier, word.str(), position);
-  }
+  if (maybe_word)
+    return Token(Token::identifier, maybe_word->str(), position);
 
   constexpr std::pair<Token::Kind, const char *> operators[] = {
       {Token::l_paren, "("},
@@ -119,10 +117,8 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
       {Token::coloncolon, "::"},
   };
   for (auto [kind, str] : operators) {
-    if (remainder.consume_front(str)) {
-      cur_pos += strlen(str);
+    if (remainder.consume_front(str))
       return Token(kind, str, position);
-    }
   }
 
   // Unrecognized character(s) in string; unable to lex it.
