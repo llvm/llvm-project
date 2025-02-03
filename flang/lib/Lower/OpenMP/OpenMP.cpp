@@ -416,6 +416,9 @@ extractOmpDirective(const parser::OpenMPConstruct &ompConstruct) {
                     [](const parser::OpenMPCancellationPointConstruct &c) {
                       return llvm::omp::OMPD_cancellation_point;
                     },
+                    [](const parser::OmpMetadirectiveDirective &c) {
+                      return llvm::omp::OMPD_metadirective;
+                    },
                     [](const parser::OpenMPDepobjConstruct &c) {
                       return llvm::omp::OMPD_depobj;
                     }},
@@ -3137,6 +3140,13 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    const parser::OpenMPThreadprivate &threadprivate) {
   // The directive is lowered when instantiating the variable to
   // support the case of threadprivate variable declared in module.
+}
+
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OmpMetadirectiveDirective &meta) {
+  TODO(converter.getCurrentLocation(), "METADIRECTIVE");
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

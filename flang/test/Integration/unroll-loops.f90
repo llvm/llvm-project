@@ -13,7 +13,7 @@
 ! RUN: %if x86-registered-target %{ %{check-nounroll} %}
 !
 ! CHECK-LABEL: @unroll
-! CHECK-SAME: (ptr nocapture writeonly %[[ARG0:.*]])
+! CHECK-SAME: (ptr writeonly captures(none) %[[ARG0:.*]])
 subroutine unroll(a)
   integer(kind=8), intent(out) :: a(1000)
   integer(kind=8) :: i
