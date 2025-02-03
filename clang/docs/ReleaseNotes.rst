@@ -116,6 +116,9 @@ Improvements to Clang's diagnostics
 - Improve the diagnostics for deleted default constructor errors for C++ class
   initializer lists that don't explicitly list a class member and thus attempt
   to implicitly default construct that member.
+- The ``-Wunique-object-duplication`` warning has been added to warn about objects
+  which are supposed to only exist once per program, but may get duplicated when
+  built into a shared library.
 
 Improvements to Clang's time-trace
 ----------------------------------
