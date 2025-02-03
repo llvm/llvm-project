@@ -1477,8 +1477,11 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // that this is a multiple of the minimum size.
         ScalingFactor.Zero.setLowBits(llvm::countr_zero(TypeSizeInBytes));
       } else if (IndexBits.isConstant()) {
-        APInt IndexConst = IndexBits.getConstant();
-        APInt ScalingFactor(IndexBitWidth, TypeSizeInBytes);
+        // i1 is a valid GEP index, ensure we have enough space to do the
+        // computation in that case.
+        unsigned CalcBitWidth = std::max(IndexBitWidth, 8u);
+        APInt IndexConst = IndexBits.getConstant().zext(CalcBitWidth);
+        APInt ScalingFactor(CalcBitWidth, TypeSizeInBytes);
         IndexConst *= ScalingFactor;
         AccConstIndices += IndexConst.sextOrTrunc(BitWidth);
         continue;
