@@ -2488,6 +2488,9 @@ bool AMDGPUDAGToDAGISel::isCBranchSCC(const SDNode *N) const {
            Subtarget->hasScalarCompareEq64();
   }
 
+  if ((VT == MVT::f16 || VT == MVT::f32) && Subtarget->hasSALUFloatInsts())
+    return true;
+
   return false;
 }
 
