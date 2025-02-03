@@ -1340,8 +1340,7 @@ class X86_64ABIInfo : public ABIInfo {
         LangOptions::ClangABI::Ver20)
       return false;
 
-    const llvm::Triple &T = getTarget().getTriple();
-    return T.isOSLinux() || T.isOSNetBSD();
+    return true;
   }
 
   X86AVXABILevel AVXLevel;
