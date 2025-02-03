@@ -464,7 +464,8 @@ class VerifyInstrumentation {
 public:
   VerifyInstrumentation(bool DebugLogging) : DebugLogging(DebugLogging) {}
   void registerCallbacks(PassInstrumentationCallbacks &PIC,
-                         ModuleAnalysisManager *MAM);
+                         ModuleAnalysisManager *MAM,
+			 FunctionAnalysisManager *FAM);
 };
 
 /// This class implements --time-trace functionality for new pass manager.
@@ -609,7 +610,8 @@ public:
   // Register all the standard instrumentation callbacks. If \p FAM is nullptr
   // then PreservedCFGChecker is not enabled.
   void registerCallbacks(PassInstrumentationCallbacks &PIC,
-                         ModuleAnalysisManager *MAM = nullptr);
+                         ModuleAnalysisManager *MAM,
+			 FunctionAnalysisManager *FAM);
 
   TimePassesHandler &getTimePasses() { return TimePasses; }
 };
