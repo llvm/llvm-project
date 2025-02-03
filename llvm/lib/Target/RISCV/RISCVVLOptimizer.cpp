@@ -1334,6 +1334,7 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) {
 }
 
 bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
+  assert(DemandedVLs.size() == 0);
   if (skipFunction(MF.getFunction()))
     return false;
 
@@ -1372,5 +1373,6 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
+  DemandedVLs.clear();
   return MadeChange;
 }

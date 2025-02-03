@@ -834,8 +834,9 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
         return replaceInstUsesWith(
             I, // No comparison is needed here.
             ConstantInt::get(I.getType(), ICmpInst::isTrueWhenEqual(Cond)));
-
-      else if (NumDifferences == 1 && CanFold(NW)) {
+      // If two GEPs only differ by an index, compare them.
+      // Note that nowrap flags are always needed when comparing two indices.
+      else if (NumDifferences == 1 && NW != GEPNoWrapFlags::none()) {
         Value *LHSV = GEPLHS->getOperand(DiffOperand);
         Value *RHSV = GEPRHS->getOperand(DiffOperand);
         return NewICmp(NW, LHSV, RHSV);
@@ -1883,17 +1884,23 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
   // llvm.is.fpclass(X, fcInf|fcNan)
   // (icmp ne (and (bitcast X to int), ExponentMask), ExponentMask) -->
   // llvm.is.fpclass(X, ~(fcInf|fcNan))
+  // (icmp eq (and (bitcast X to int), ExponentMask), 0) -->
+  // llvm.is.fpclass(X, fcSubnormal|fcZero)
+  // (icmp ne (and (bitcast X to int), ExponentMask), 0) -->
+  // llvm.is.fpclass(X, ~(fcSubnormal|fcZero))
   Value *V;
   if (!Cmp.getParent()->getParent()->hasFnAttribute(
           Attribute::NoImplicitFloat) &&
       Cmp.isEquality() &&
       match(X, m_OneUse(m_ElementWiseBitCast(m_Value(V))))) {
     Type *FPType = V->getType()->getScalarType();
-    if (FPType->isIEEELikeFPTy() && C1 == *C2) {
+    if (FPType->isIEEELikeFPTy() && (C1.isZero() || C1 == *C2)) {
       APInt ExponentMask =
           APFloat::getInf(FPType->getFltSemantics()).bitcastToAPInt();
-      if (C1 == ExponentMask) {
-        unsigned Mask = FPClassTest::fcNan | FPClassTest::fcInf;
+      if (*C2 == ExponentMask) {
+        unsigned Mask = C1.isZero()
+                            ? FPClassTest::fcZero | FPClassTest::fcSubnormal
+                            : FPClassTest::fcNan | FPClassTest::fcInf;
         if (isICMP_NE)
           Mask = ~Mask & fcAllFlags;
         return replaceInstUsesWith(Cmp, Builder.createIsFPClass(V, Mask));
@@ -5411,7 +5418,7 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
         if (ICmpInst::isEquality(Pred)) {
           // If X != Y, fold (X *nw Z) eq/ne (Y *nw Z) -> Z eq/ne 0
           if (((Op0HasNSW && Op1HasNSW) || (Op0HasNUW && Op1HasNUW)) &&
-              isKnownNonEqual(X, Y, DL, &AC, &I, &DT))
+              isKnownNonEqual(X, Y, SQ))
             return new ICmpInst(Pred, Z, Constant::getNullValue(Z->getType()));
 
           KnownBits ZKnown = computeKnownBits(Z, 0, &I);

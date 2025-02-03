@@ -1329,6 +1329,53 @@ findAssociatedValue(Value privateVar, llvm::IRBuilderBase &builder,
   return moduleTranslation.lookupValue(privateVar);
 }
 
+/// Initialize a single (first)private variable. You probably want to use
+/// allocateAndInitPrivateVars instead of this.
+static llvm::Error
+initPrivateVar(llvm::IRBuilderBase &builder,
+               LLVM::ModuleTranslation &moduleTranslation,
+               omp::PrivateClauseOp &privDecl, Value mlirPrivVar,
+               BlockArgument &blockArg, llvm::Value *llvmPrivateVar,
+               llvm::SmallVectorImpl<llvm::Value *> &llvmPrivateVars,
+               llvm::BasicBlock *privInitBlock,
+               llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
+  Region &initRegion = privDecl.getInitRegion();
+  if (initRegion.empty()) {
+    moduleTranslation.mapValue(blockArg, llvmPrivateVar);
+    llvmPrivateVars.push_back(llvmPrivateVar);
+    return llvm::Error::success();
+  }
+
+  // map initialization region block arguments
+  llvm::Value *nonPrivateVar = findAssociatedValue(
+      mlirPrivVar, builder, moduleTranslation, mappedPrivateVars);
+  assert(nonPrivateVar);
+  moduleTranslation.mapValue(privDecl.getInitMoldArg(), nonPrivateVar);
+  moduleTranslation.mapValue(privDecl.getInitPrivateArg(), llvmPrivateVar);
+
+  // in-place convert the private initialization region
+  SmallVector<llvm::Value *, 1> phis;
+  builder.SetInsertPoint(privInitBlock->getTerminator());
+  if (failed(inlineConvertOmpRegions(initRegion, "omp.private.init", builder,
+                                     moduleTranslation, &phis)))
+    return llvm::createStringError(
+        "failed to inline `init` region of `omp.private`");
+
+  assert(phis.size() == 1 && "expected one allocation to be yielded");
+
+  // prefer the value yielded from the init region to the allocated private
+  // variable in case the region is operating on arguments by-value (e.g.
+  // Fortran character boxes).
+  moduleTranslation.mapValue(blockArg, phis[0]);
+  llvmPrivateVars.push_back(phis[0]);
+
+  // clear init region block argument mapping in case it needs to be
+  // re-created with a different source for another use of the same
+  // reduction decl
+  moduleTranslation.forgetMapping(initRegion);
+  return llvm::Error::success();
+}
+
 /// Allocate and initialize delayed private variables. Returns the basic block
 /// which comes after all of these allocations. llvm::Value * for each of these
 /// private variables are populated in llvmPrivateVars.
@@ -1368,40 +1415,11 @@ static llvm::Expected<llvm::BasicBlock *> allocateAndInitPrivateVars(
     llvm::Value *llvmPrivateVar = builder.CreateAlloca(
         llvmAllocType, /*ArraySize=*/nullptr, "omp.private.alloc");
 
-    Region &initRegion = privDecl.getInitRegion();
-    if (initRegion.empty()) {
-      moduleTranslation.mapValue(blockArg, llvmPrivateVar);
-      llvmPrivateVars.push_back(llvmPrivateVar);
-      continue;
-    }
-
-    // map initialization region block arguments
-    llvm::Value *nonPrivateVar = findAssociatedValue(
-        mlirPrivVar, builder, moduleTranslation, mappedPrivateVars);
-    assert(nonPrivateVar);
-    moduleTranslation.mapValue(privDecl.getInitMoldArg(), nonPrivateVar);
-    moduleTranslation.mapValue(privDecl.getInitPrivateArg(), llvmPrivateVar);
-
-    // in-place convert the private initialization region
-    SmallVector<llvm::Value *, 1> phis;
-    builder.SetInsertPoint(privInitBlock->getTerminator());
-    if (failed(inlineConvertOmpRegions(initRegion, "omp.private.init", builder,
-                                       moduleTranslation, &phis)))
-      return llvm::createStringError(
-          "failed to inline `init` region of `omp.private`");
-
-    assert(phis.size() == 1 && "expected one allocation to be yielded");
-
-    // prefer the value yielded from the init region to the allocated private
-    // variable in case the region is operating on arguments by-value (e.g.
-    // Fortran character boxes).
-    moduleTranslation.mapValue(blockArg, phis[0]);
-    llvmPrivateVars.push_back(phis[0]);
-
-    // clear init region block argument mapping in case it needs to be
-    // re-created with a different source for another use of the same
-    // reduction decl
-    moduleTranslation.forgetMapping(initRegion);
+    llvm::Error err = initPrivateVar(
+        builder, moduleTranslation, privDecl, mlirPrivVar, blockArg,
+        llvmPrivateVar, llvmPrivateVars, privInitBlock, mappedPrivateVars);
+    if (err)
+      return err;
   }
   return afterAllocas;
 }
