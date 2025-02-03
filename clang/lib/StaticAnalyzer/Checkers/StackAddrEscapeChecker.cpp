@@ -313,51 +313,16 @@ FilterReturnExpressionLeaks(const SmallVector<const MemRegion *> &MaybeEscaped,
         continue;
     }
 
-    if (RetRegion == MR && (IsConstructExpr || isa<CXXTempObjectRegion>(MR)))
-      continue;
+    // if (RetRegion == MR && (IsConstructExpr || isa<CXXTempObjectRegion>(MR)))
+      // continue;
 
-    if (isa<CXXTempObjectRegion>(MR->getBaseRegion()))
-      continue;
+    // if (isa<CXXTempObjectRegion>(MR->getBaseRegion()))
+      // continue;
 
     WillEscape.push_back(MR);
   }
 
   return WillEscape;
-
-  // // Assuming MR is never nullptr
-  // auto ShouldNotEmitError = [=](const MemRegion *MR) -> bool {
-  //   // If we are checking the region that is returned (compared to
-  //   // a region stored somewhere deeper in the return value), then
-  //   // there are some potential false positives with reporting this
-  //   // returned region:
-  //   // 1. If we are returning a temp obj in an inlined call, back to this
-  //   //    same stack frame context:
-  //   if (IsCopyAndAutoreleaseBlockObj) {
-  //     if (MR == RetRegion)
-  //       return true;
-
-  //     const SubRegion *SR = dyn_cast<SubRegion>(MR);
-  //     if (SR && SR->isSubRegionOf(RetRegion))
-  //       return true;
-  //   }
-
-  //   if (RetRegion == MR) {
-  //     return IsConstructExpr || isa<CXXTempObjectRegion>(MR);
-  //   }
-
-  //   if (isa<CXXTempObjectRegion>(MR->getBaseRegion()))
-  //     return true;
-
-  //   return false;
-  // };
-
-  // const auto NewEndIter = std::remove_if(MaybeEscaped.begin(),
-  // MaybeEscaped.end(), ShouldNotEmitError);
-
-  // llvm::dbgs() << "New num escaped regions: " <<
-  // std::distance(MaybeEscaped.begin(), NewEndIter) << '\n';
-
-  // return SmallVector<const MemRegion *>()
 }
 
 void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const {
@@ -595,7 +560,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
 
     // Generate a report for this bug.
     const StringRef CommonSuffix =
-        " upon returning to the caller.  This will be a dangling reference";
+        " upon returning to the caller. This will be a dangling reference";
     SmallString<128> Buf;
     llvm::raw_svector_ostream Out(Buf);
     const SourceRange Range = genName(Out, Referred, Ctx.getASTContext());
