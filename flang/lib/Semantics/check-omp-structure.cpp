@@ -4718,7 +4718,12 @@ void OmpStructureChecker::CheckTraitSetSelector(
     CheckTraitSelectorList(traits);
 
     for (const parser::OmpTraitSelector &trait : traits) {
-      auto &[traitName, maybeProps]{trait.t};
+      // Don't use structured bindings here, because they cannot be captured
+      // before C++20.
+      auto &traitName = std::get<parser::OmpTraitSelectorName>(trait.t);
+      auto &maybeProps =
+          std::get<std::optional<parser::OmpTraitSelector::Properties>>(
+              trait.t);
 
       // Check allowed traits
       common::visit( //
