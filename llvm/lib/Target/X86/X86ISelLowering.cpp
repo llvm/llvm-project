@@ -23163,7 +23163,7 @@ static SDValue EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
   if ((X86CC == X86::COND_E || X86CC == X86::COND_NE) &&
       (DAG.doesNodeExist(ISD::XOR, DAG.getVTList({CmpVT}), {Op0, Op1}) ||
        DAG.doesNodeExist(ISD::XOR, DAG.getVTList({CmpVT}), {Op1, Op0})))
-    X86Opc = X86ISD::XOR; 
+    X86Opc = X86ISD::XOR;
 
   SDVTList VTs = DAG.getVTList(CmpVT, MVT::i32);
   SDValue CmpOp = DAG.getNode(X86Opc, dl, VTs, Op0, Op1);
