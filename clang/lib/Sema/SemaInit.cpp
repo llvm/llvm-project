@@ -9148,6 +9148,17 @@ bool InitializationSequence::Diagnose(Sema &S,
               << (Msg ? Msg->getString() : StringRef()) << ArgsRange;
         }
 
+        // If it's a default constructed member, but it's not in the
+        // constructor's initializer list, explicitly note where the member is
+        // declared so the user can see which member is erroneously initialized
+        // with a deleted default constructor.
+        if (Kind.getKind() == InitializationKind::IK_Default &&
+            (Entity.getKind() == InitializedEntity::EK_Member ||
+             Entity.getKind() == InitializedEntity::EK_ParenAggInitMember)) {
+          S.Diag(Entity.getDecl()->getLocation(),
+                 diag::note_default_constructed_field)
+              << Entity.getDecl();
+        }
         S.NoteDeletedFunction(Best->Function);
         break;
       }
