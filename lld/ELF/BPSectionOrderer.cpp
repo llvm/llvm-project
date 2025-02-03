@@ -68,7 +68,7 @@ DenseMap<const InputSectionBase *, int> elf::runBalancedPartitioning(
     bool verbose) {
   // Collect candidate sections and associated symbols.
   SmallVector<InputSectionBase *> sections;
-  DenseMap<CachedHashStringRef, DenseSet<unsigned>> rootSymbolToSectionIdxs;
+  DenseMap<CachedHashStringRef, std::set<unsigned>> rootSymbolToSectionIdxs;
   BPOrdererELF orderer;
 
   auto addSection = [&](Symbol &sym) {
