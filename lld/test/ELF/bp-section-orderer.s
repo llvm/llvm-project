@@ -23,37 +23,32 @@
 # STARTUP-FUNC-ORDER: Ordered 3 sections using balanced partitioning
 # STARTUP-FUNC-ORDER: Total area under the page fault curve: 3.
 
-# RUN: ld.lld -o - a.o --symbol-ordering-file a.txt --irpgo-profile=a.profdata --bp-startup-sort=function | llvm-nm --numeric-sort --format=just-symbols - | FileCheck %s --check-prefix=ORDERFILE
-# RUN: ld.lld -o - a.o --symbol-ordering-file a.txt --bp-compression-sort=both | llvm-nm --numeric-sort --format=just-symbols - | FileCheck %s --check-prefix=ORDERFILE
+# RUN: ld.lld -o out.s a.o --irpgo-profile=a.profdata --bp-startup-sort=function
+# RUN: llvm-nm -jn out.s | tr '\n' , | FileCheck %s --check-prefix=STARTUP
+# STARTUP: s5,s4,s3,s2,s1,A,B,C,F,E,D,_start,d4,d3,d2,d1,
 
-## Rodata
-# ORDERFILE:      s2
-# ORDERFILE-NEXT: s1
-# ORDERFILE-NEXT: s3
+# RUN: ld.lld -o out.os a.o --irpgo-profile=a.profdata --bp-startup-sort=function --symbol-ordering-file a.txt
+# RUN: llvm-nm -jn out.os | tr '\n' , | FileCheck %s --check-prefix=ORDER-STARTUP
+# ORDER-STARTUP: s2,s1,s5,s4,s3,A,F,E,D,B,C,_start,d4,d3,d2,d1,
 
-## Functions
-# ORDERFILE-NEXT: A
-# ORDERFILE-NEXT: F
-# ORDERFILE-NEXT: E
-# ORDERFILE-NEXT: D
-# ORDERFILE-DAG: B
-# ORDERFILE-DAG: C
-# ORDERFILE-NEXT: _start
+# RUN: ld.lld -o out.cf a.o --verbose-bp-section-orderer --bp-compression-sort=function 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-FUNC
+# RUN: llvm-nm -jn out.cf | tr '\n' , | FileCheck %s --check-prefix=CFUNC
+# CFUNC: s5,s4,s3,s2,s1,F,C,E,D,B,A,_start,d4,d3,d2,d1,
 
-## Data
-# ORDERFILE-NEXT: r3
-# ORDERFILE-NEXT: r2
-# ORDERFILE-NEXT: r1
-# ORDERFILE-NEXT: r4
+# RUN: ld.lld -o out.cd a.o --verbose-bp-section-orderer --bp-compression-sort=data 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-DATA
+# RUN: llvm-nm -jn out.cd | tr '\n' , | FileCheck %s --check-prefix=CDATA
+# CDATA: s4,s2,s1,s5,s3,F,C,E,D,B,A,_start,d4,d1,d3,d2,
 
-# RUN: ld.lld a.o --verbose-bp-section-orderer --bp-compression-sort=function 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-FUNC
-# RUN: ld.lld a.o --verbose-bp-section-orderer --bp-compression-sort=data 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-DATA
-# RUN: ld.lld a.o --verbose-bp-section-orderer --bp-compression-sort=both 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-BOTH
-# RUN: ld.lld a.o --verbose-bp-section-orderer --bp-compression-sort=both --irpgo-profile=a.profdata --bp-startup-sort=function 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-BOTH
+# RUN: ld.lld -o out.cb a.o --verbose-bp-section-orderer --bp-compression-sort=both 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-BOTH
+# RUN: llvm-nm -jn out.cb | tr '\n' , | FileCheck %s --check-prefix=CDATA
+
+# RUN: ld.lld -o out.cbs a.o --verbose-bp-section-orderer --bp-compression-sort=both --irpgo-profile=a.profdata --bp-startup-sort=function 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-BOTH
+# RUN: llvm-nm -jn out.cbs | tr '\n' , | FileCheck %s --check-prefix=CBOTH-STARTUP
+# CBOTH-STARTUP: s4,s2,s1,s5,s3,A,B,C,F,E,D,_start,d4,d1,d3,d2,
 
 # BP-COMPRESSION-FUNC: Ordered 7 sections using balanced partitioning
-# BP-COMPRESSION-DATA: Ordered 7 sections using balanced partitioning
-# BP-COMPRESSION-BOTH: Ordered 14 sections using balanced partitioning
+# BP-COMPRESSION-DATA: Ordered 9 sections using balanced partitioning
+# BP-COMPRESSION-BOTH: Ordered 16 sections using balanced partitioning
 
 #--- a.proftext
 :ir
@@ -109,13 +104,15 @@ r3
 r2
 
 #--- a.c
-const char s1[] = "hello world";
-const char s2[] = "i am a string";
-const char s3[] = "this is s3";
-const char *r1 = s1;
-const char **r2 = &r1;
-const char ***r3 = &r2;
-const char *r4 = s2;
+const char s5[] = "engineering";
+const char s4[] = "computer program";
+const char s3[] = "hardware engineer";
+const char s2[] = "computer software";
+const char s1[] = "hello world program";
+int d4[] = {1,2,3,4,5,6};
+int d3[] = {5,6,7,8};
+int d2[] = {7,8,9,10};
+int d1[] = {3,4,5,6};
 
 int C(int a);
 int B(int a);
@@ -250,65 +247,89 @@ _start:                                 // @_start
 .Lfunc_end6:
 	.size	_start, .Lfunc_end6-_start
                                         // -- End function
-	.type	s1,@object                      // @s1
-	.section	.rodata.s1,"a",@progbits
-	.globl	s1
-s1:
-	.asciz	"hello world"
-	.size	s1, 12
+	.type	s5,@object                      // @s5
+	.section	.rodata.s5,"a",@progbits
+	.globl	s5
+s5:
+	.asciz	"engineering"
+	.size	s5, 12
 
-	.type	s2,@object                      // @s2
-	.section	.rodata.s2,"a",@progbits
-	.globl	s2
-s2:
-	.asciz	"i am a string"
-	.size	s2, 14
+	.type	s4,@object                      // @s4
+	.section	.rodata.s4,"a",@progbits
+	.globl	s4
+s4:
+	.asciz	"computer program"
+	.size	s4, 17
 
 	.type	s3,@object                      // @s3
 	.section	.rodata.s3,"a",@progbits
 	.globl	s3
 s3:
-	.asciz	"this is s3"
-	.size	s3, 11
+	.asciz	"hardware engineer"
+	.size	s3, 18
 
-	.type	r1,@object                      // @r1
-	.section	.data.r1,"aw",@progbits
-	.globl	r1
-	.p2align	3, 0x0
-r1:
-	.xword	s1
-	.size	r1, 8
+	.type	s2,@object                      // @s2
+	.section	.rodata.s2,"a",@progbits
+	.globl	s2
+s2:
+	.asciz	"computer software"
+	.size	s2, 18
 
-	.type	r2,@object                      // @r2
-	.section	.data.r2,"aw",@progbits
-	.globl	r2
-	.p2align	3, 0x0
-r2:
-	.xword	r1
-	.size	r2, 8
+	.type	s1,@object                      // @s1
+	.section	.rodata.s1,"a",@progbits
+	.globl	s1
+s1:
+	.asciz	"hello world program"
+	.size	s1, 20
 
-	.type	r3,@object                      // @r3
-	.section	.data.r3,"aw",@progbits
-	.globl	r3
-	.p2align	3, 0x0
-r3:
-	.xword	r2
-	.size	r3, 8
+	.type	d4,@object                      // @d4
+	.section	.data.d4,"aw",@progbits
+	.globl	d4
+	.p2align	2, 0x0
+d4:
+	.word	1                               // 0x1
+	.word	2                               // 0x2
+	.word	3                               // 0x3
+	.word	4                               // 0x4
+	.word	5                               // 0x5
+	.word	6                               // 0x6
+	.size	d4, 24
 
-	.type	r4,@object                      // @r4
-	.section	.data.r4,"aw",@progbits
-	.globl	r4
-	.p2align	3, 0x0
-r4:
-	.xword	s2
-	.size	r4, 8
+	.type	d3,@object                      // @d3
+	.section	.data.d3,"aw",@progbits
+	.globl	d3
+	.p2align	2, 0x0
+d3:
+	.word	5                               // 0x5
+	.word	6                               // 0x6
+	.word	7                               // 0x7
+	.word	8                               // 0x8
+	.size	d3, 16
+
+	.type	d2,@object                      // @d2
+	.section	.data.d2,"aw",@progbits
+	.globl	d2
+	.p2align	2, 0x0
+d2:
+	.word	7                               // 0x7
+	.word	8                               // 0x8
+	.word	9                               // 0x9
+	.word	10                              // 0xa
+	.size	d2, 16
+
+	.type	d1,@object                      // @d1
+	.section	.data.d1,"aw",@progbits
+	.globl	d1
+	.p2align	2, 0x0
+d1:
+	.word	3                               // 0x3
+	.word	4                               // 0x4
+	.word	5                               // 0x5
+	.word	6                               // 0x6
+	.size	d1, 16
 
 	.section	".note.GNU-stack","",@progbits
 	.addrsig
 	.addrsig_sym C
 	.addrsig_sym B
 	.addrsig_sym A
-	.addrsig_sym s1
-	.addrsig_sym s2
-	.addrsig_sym r1
-	.addrsig_sym r2
