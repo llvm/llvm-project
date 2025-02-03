@@ -2274,6 +2274,9 @@ SDValue NVPTXTargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
     }
     if (Vector.getOpcode() == ISD::BUILD_VECTOR)
       return GetOperand(Vector, Index);
+
+    // Otherwise, let SelectionDAG expand the operand.
+    return SDValue();
   }
 
   // Constant index will be matched by tablegen.
