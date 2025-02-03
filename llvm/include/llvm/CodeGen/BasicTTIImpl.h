@@ -1472,8 +1472,10 @@ public:
   InstructionCost getExpandCompressMemoryOpCost(
       unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
       TTI::TargetCostKind CostKind, const Instruction *I = nullptr) {
+    // Treat expand load/compress store as gather/scatter operation.
+    // TODO: implement more precise cost estimation for these intrinsics.
     return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment, VariableMask,
-                                       true, CostKind);
+                                       /*IsGatherScatter*/ true, CostKind);
   }
 
   InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,

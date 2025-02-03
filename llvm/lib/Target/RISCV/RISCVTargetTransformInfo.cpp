@@ -862,7 +862,8 @@ InstructionCost RISCVTTIImpl::getExpandCompressMemoryOpCost(
   // vsetivli        zero, 8, e32, m2, ta, ma
   // viota.m v12, v0
   // vrgather.vv     v8, v10, v12, v0.t
-  auto MemOpCost = getMemoryOpCost(Opcode, DataTy, Alignment, 0, CostKind);
+  auto MemOpCost =
+      getMemoryOpCost(Opcode, DataTy, Alignment, /*AddressSpace*/ 0, CostKind);
   auto LT = getTypeLegalizationCost(DataTy);
   SmallVector<unsigned, 4> Opcodes{RISCV::VSETVLI};
   if (VariableMask)
