@@ -958,9 +958,8 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
   Fortran::lower::StatementContext stmtCtx;
   // isUnusedEntryDummy must be computed before mapSymbolAttributes.
   const bool isUnusedEntryDummy =
-      var.hasSymbol() ? Fortran::semantics::IsDummy(var.getSymbol()) &&
-                            !symMap.lookupSymbol(var.getSymbol()).getAddr()
-                      : false;
+      var.hasSymbol() && Fortran::semantics::IsDummy(var.getSymbol()) &&
+      !symMap.lookupSymbol(var.getSymbol()).getAddr();
   mapSymbolAttributes(converter, var, symMap, stmtCtx);
   // Do not generate code to initialize/finalize/destroy dummy arguments that
   // are nor part of the current ENTRY. They do not have backing storage.
@@ -1008,7 +1007,6 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
                "trying to deallocate entity not lowered as allocatable");
         Fortran::lower::genDeallocateIfAllocated(*converterPtr, *mutableBox,
                                                  loc, sym);
-        
       });
     }
   }
