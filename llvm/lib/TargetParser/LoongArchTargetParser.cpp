@@ -56,6 +56,7 @@ bool LoongArch::getArchFeatures(StringRef Arch,
       Features.push_back("+lamcas");
       Features.push_back("+ld-seq-sa");
       Features.push_back("+div32");
+      Features.push_back("+scq");
     }
     return true;
   }

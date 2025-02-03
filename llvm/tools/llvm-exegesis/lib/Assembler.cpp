@@ -136,8 +136,8 @@ MachineFunction &createVoidVoidPtrMachineFunction(StringRef FunctionName,
                                                   Module *Module,
                                                   MachineModuleInfo *MMI) {
   Type *const ReturnType = Type::getInt32Ty(Module->getContext());
-  Type *const MemParamType = PointerType::get(
-      Type::getInt8Ty(Module->getContext()), 0 /*default address space*/);
+  Type *const MemParamType =
+      PointerType::get(Module->getContext(), 0 /*default address space*/);
   FunctionType *FunctionType =
       FunctionType::get(ReturnType, {MemParamType}, false);
   Function *const F = Function::Create(

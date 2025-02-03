@@ -1847,6 +1847,10 @@ public:
             [&](const std::list<CompilerDirective::NameValue> &names) {
               Walk("!DIR$ ", names, " ");
             },
+            [&](const CompilerDirective::Unroll &unroll) {
+              Word("!DIR$ UNROLL");
+              Walk(" ", unroll.v);
+            },
             [&](const CompilerDirective::Unrecognized &) {
               Word("!DIR$ ");
               Word(x.source.ToString());
@@ -2734,6 +2738,15 @@ public:
   bool Pre(const OmpMessageClause &x) {
     Walk(x.v);
     return false;
+  }
+  void Unparse(const OmpDispatchDirective &x) {
+    Word("!$OMP DISPATCH");
+    Walk(x.t);
+    Put("\n");
+  }
+  void Unparse(const OmpEndDispatchDirective &) {
+    Word("!$OMP END DISPATCH");
+    Put("\n");
   }
   void Unparse(const OmpErrorDirective &x) {
     Word("!$OMP ERROR ");

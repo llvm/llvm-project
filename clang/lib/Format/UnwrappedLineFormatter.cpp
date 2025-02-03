@@ -432,8 +432,9 @@ private:
 
     // Try to merge a control statement block with left brace unwrapped.
     if (TheLine->Last->is(tok::l_brace) && FirstNonComment != TheLine->Last &&
-        FirstNonComment->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for,
-                                 TT_ForEachMacro)) {
+        (FirstNonComment->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for,
+                                  TT_ForEachMacro) ||
+         TheLine->startsWithExportBlock())) {
       return Style.AllowShortBlocksOnASingleLine != FormatStyle::SBS_Never
                  ? tryMergeSimpleBlock(I, E, Limit)
                  : 0;
@@ -832,7 +833,8 @@ private:
     if (IsCtrlStmt(Line) ||
         Line.First->isOneOf(tok::kw_try, tok::kw___try, tok::kw_catch,
                             tok::kw___finally, tok::r_brace,
-                            Keywords.kw___except)) {
+                            Keywords.kw___except) ||
+        Line.startsWithExportBlock()) {
       if (IsSplitBlock)
         return 0;
       // Don't merge when we can't except the case when
