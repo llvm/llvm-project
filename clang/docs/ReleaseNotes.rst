@@ -118,6 +118,9 @@ Improvements to Coverage Mapping
 
 - [MC/DC] Nested expressions are handled as individual MC/DC expressions.
 
+- [MC/DC] Non-boolean expressions on conditions can be included with
+  `-fmcdc-single-conditions`. (#GH95336)
+
 Bug Fixes in This Version
 -------------------------
 
