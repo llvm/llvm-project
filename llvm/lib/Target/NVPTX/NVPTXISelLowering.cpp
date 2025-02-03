@@ -2133,12 +2133,10 @@ SDValue NVPTXTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
   }
 
   if (FromVT == MVT::v2f32) {
-    assert(ToVT == MVT::i64);
-
     // A bitcast to i64 from v2f32.
     // See if we can legalize the operand.
     const SDValue &Operand = Op->getOperand(0);
-    if (Operand.getOpcode() == ISD::BUILD_VECTOR) {
+    if (ToVT == MVT::i64 && Operand.getOpcode() == ISD::BUILD_VECTOR) {
       const SDValue &BVOp0 = Operand.getOperand(0);
       const SDValue &BVOp1 = Operand.getOperand(1);
 
@@ -2267,11 +2265,11 @@ SDValue NVPTXTargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
       return DAG.getSelectCC(DL, Index, DAG.getIntPtrConstant(0, DL), E0, E1,
                              ISD::CondCode::SETEQ);
     };
-    if (Vector.getOpcode() == ISD::BITCAST) {
+    if (SDValue Pair = Vector.getOperand(0);
+        Vector.getOpcode() == ISD::BITCAST &&
+        Pair.getOpcode() == ISD::BUILD_PAIR) {
       // peek through v2f32 = bitcast (i64 = build_pair (i32 A, i32 B))
       // where A:i32, B:i32 = CopyFromReg (i64 = F32X2 Operation ...)
-      SDValue Pair = Vector.getOperand(0);
-      assert(Pair.getOpcode() == ISD::BUILD_PAIR);
       return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(),
                          GetOperand(Pair, Index));
     }
