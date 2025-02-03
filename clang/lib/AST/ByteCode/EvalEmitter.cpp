@@ -17,10 +17,7 @@ using namespace clang::interp;
 
 EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
                          InterpStack &Stk)
-    : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx),
-      BottomFrame(S) {
-  S.Current = &BottomFrame;
-}
+    : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx) {}
 
 EvalEmitter::~EvalEmitter() {
   for (auto &[K, V] : Locals) {

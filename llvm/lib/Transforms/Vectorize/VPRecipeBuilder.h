@@ -23,6 +23,7 @@ class LoopVectorizationCostModel;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 struct HistogramInfo;
+struct VFRange;
 
 /// A chain of instructions that form a partial reduction.
 /// Designed to match: reduction_bin_op (bin_op (extend (A), (extend (B))),
@@ -218,10 +219,12 @@ public:
     return Ingredient2Recipe[I];
   }
 
-  /// Build a VPReplicationRecipe for \p I. If it is predicated, add the mask as
-  /// last operand. Range.End may be decreased to ensure same recipe behavior
-  /// from \p Range.Start to \p Range.End.
-  VPReplicateRecipe *handleReplication(Instruction *I, VFRange &Range);
+  /// Build a VPReplicationRecipe for \p I using \p Operands. If it is
+  /// predicated, add the mask as last operand. Range.End may be decreased to
+  /// ensure same recipe behavior from \p Range.Start to \p Range.End.
+  VPReplicateRecipe *handleReplication(Instruction *I,
+                                       ArrayRef<VPValue *> Operands,
+                                       VFRange &Range);
 
   /// Add the incoming values from the backedge to reduction & first-order
   /// recurrence cross-iteration phis.
