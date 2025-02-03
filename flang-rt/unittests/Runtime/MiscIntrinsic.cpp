@@ -8,7 +8,7 @@
 
 #include "tools.h"
 #include "gtest/gtest.h"
-#include "flang-rt/descriptor.h"
+#include "flang-rt/runtime/descriptor.h"
 #include "flang/Runtime/allocatable.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/misc-intrinsic.h"

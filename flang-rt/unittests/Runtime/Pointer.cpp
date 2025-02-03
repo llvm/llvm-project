@@ -8,8 +8,8 @@
 
 #include "flang/Runtime/pointer.h"
 #include "gtest/gtest.h"
-#include "flang-rt/descriptor.h"
-#include "flang-rt/tools.h"
+#include "flang-rt/runtime/descriptor.h"
+#include "flang-rt/runtime/tools.h"
 
 using namespace Fortran::runtime;
 

@@ -12,7 +12,7 @@
 
 #include "flang/Runtime/stop.h"
 #include "CrashHandlerFixture.h"
-#include "flang-rt/environment.h"
+#include "flang-rt/runtime/environment.h"
 #include <cstdlib>
 #include <gtest/gtest.h>
 

@@ -72,7 +72,7 @@ function (runtime_source_files outvar)
 
   set(new_sources "")
   foreach (source IN LISTS "${outvar}")
-    set(new_source "${FLANG_RT_SOURCE_DIR}/lib/flang_rt")
+    set(new_source "${FLANG_RT_SOURCE_DIR}/lib")
     cmake_path(APPEND new_source "${ARG_SUBDIR}")
     cmake_path(APPEND new_source "${source}")
     list(APPEND new_sources "${new_source}")
@@ -260,7 +260,7 @@ set(supported_files
   utf.cpp
   )
 
-runtime_source_files(supported_files)
+runtime_source_files(supported_files SUBDIR "runtime")
 enable_cuda_compilation(flang_rt "${supported_files}")
 enable_omp_offload_compilation("${supported_files}")
 
@@ -294,39 +294,42 @@ if (NOT TARGET FortranFloat128Math)
   endif()
 endif()
 
-runtime_source_files(sources)
+runtime_source_files(sources SUBDIR "runtime")
 
 
 if (NOT DEFINED MSVC)
-  add_flang_library(flang_rt
+  add_flang_library(flang_rt.runtime
     ${sources}
 
     INSTALL_WITH_TOOLCHAIN
   )
 else()
-  add_flang_library(flang_rt
+  add_flang_library(flang_rt.runtime
     ${sources}
   )
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
-  add_flang_library(flang_rt.static ${sources}
+  add_flang_library(flang_rt.runtime.static ${sources}
     INSTALL_WITH_TOOLCHAIN)
-  set_target_properties(flang_rt.static PROPERTIES FOLDER "Flang/Runtime Libraries")
+  set_target_properties(flang_rt.runtime.static PROPERTIES FOLDER "Flang/Runtime Libraries")
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
-  add_flang_library(flang_rt.dynamic ${sources}
+  add_flang_library(flang_rt.runtime.dynamic ${sources}
     INSTALL_WITH_TOOLCHAIN)
-  set_target_properties(flang_rt.dynamic PROPERTIES FOLDER "Flang/Runtime Libraries")
+  set_target_properties(flang_rt.runtime.dynamic PROPERTIES FOLDER "Flang/Runtime Libraries")
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
-  add_flang_library(flang_rt.static_dbg ${sources}
+  add_flang_library(flang_rt.runtime.static_dbg ${sources}
     INSTALL_WITH_TOOLCHAIN)
-  set_target_properties(flang_rt.static_dbg PROPERTIES FOLDER "Flang/Runtime Libraries")
+  set_target_properties(flang_rt.runtime.static_dbg PROPERTIES FOLDER "Flang/Runtime Libraries")
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebugDLL)
-  add_flang_library(flang_rt.dynamic_dbg ${sources}
+  add_flang_library(flang_rt.runtime.dynamic_dbg ${sources}
     INSTALL_WITH_TOOLCHAIN)
-  set_target_properties(flang_rt.dynamic_dbg PROPERTIES FOLDER "Flang/Runtime Libraries")
-  add_dependencies(flang_rt flang_rt.static flang_rt.dynamic
-    flang_rt.static_dbg flang_rt.dynamic_dbg)
+  set_target_properties(flang_rt.runtime.dynamic_dbg PROPERTIES FOLDER "Flang/Runtime Libraries")
+  add_dependencies(flang_rt.runtime
+    flang_rt.runtime.static
+    flang_rt.runtime.dynamic
+    flang_rt.runtime.static_dbg
+    flang_rt.runtime.dynamic_dbg)
 endif()
-set_target_properties(flang_rt PROPERTIES FOLDER "Flang/Runtime Libraries")
+set_target_properties(flang_rt.runtime PROPERTIES FOLDER "Flang/Runtime Libraries")
 
 # If flang_rt is part of a Flang build (and not a separate build) then
 # add dependency to make sure that Fortran runtime library is being built after
@@ -336,7 +339,7 @@ set_target_properties(flang_rt PROPERTIES FOLDER "Flang/Runtime Libraries")
 # TODO: This is a workaround and should be updated when runtime build procedure
 # is changed to a regular runtime build.  See discussion in PR #95388.
 if (TARGET flang AND TARGET module_files)
-  add_dependencies(flang_rt flang module_files)
+  add_dependencies(flang_rt.runtime flang module_files)
 endif()
 
 if (FLANG_CUF_RUNTIME)
@@ -345,6 +348,6 @@ endif()
 
 # Compatibility targets.
 add_custom_target(flang-rt)
-add_dependencies(flang-rt flang_rt)
+add_dependencies(flang-rt flang_rt.runtime)
 add_custom_target(FortranRuntime)
-add_dependencies(FortranRuntime flang_rt)
+add_dependencies(FortranRuntime flang_rt.runtime)

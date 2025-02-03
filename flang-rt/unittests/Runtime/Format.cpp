@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "CrashHandlerFixture.h"
-#include "flang-rt/connection.h"
-#include "flang-rt/format-implementation.h"
-#include "flang-rt/io-error.h"
+#include "flang-rt/runtime/connection.h"
+#include "flang-rt/runtime/format-implementation.h"
+#include "flang-rt/runtime/io-error.h"
 #include <optional>
 #include <string>
 #include <tuple>

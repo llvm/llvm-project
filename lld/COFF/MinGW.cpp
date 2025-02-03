@@ -50,7 +50,7 @@ AutoExporter::AutoExporter(
       "libclang_rt.profile-x86_64",
       "libc++",
       "libc++abi",
-      "libflang_rt",
+      "libflang_rt.runtime",
       "libunwind",
       "libmsvcrt",
       "libucrtbase",

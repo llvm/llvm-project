@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CrashHandlerFixture.h"
-#include "flang-rt/terminator.h"
+#include "flang-rt/runtime/terminator.h"
 #include <cstdarg>
 #include <cstdlib>
 

@@ -10,8 +10,8 @@
 #define FLANG_RT_UNITTESTS_RUNTIME_TOOLS_H_
 
 #include "gtest/gtest.h"
-#include "flang-rt/descriptor.h"
-#include "flang-rt/type-code.h"
+#include "flang-rt/runtime/descriptor.h"
+#include "flang-rt/runtime/type-code.h"
 #include "flang/Runtime/allocatable.h"
 #include "flang/Runtime/cpp-type.h"
 #include <cstdint>

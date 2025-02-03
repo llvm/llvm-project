@@ -9,7 +9,7 @@
 #include "flang/Runtime/command.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "flang-rt/descriptor.h"
+#include "flang-rt/runtime/descriptor.h"
 #include "flang/Runtime/execute.h"
 #include "flang/Runtime/extensions.h"
 #include "flang/Runtime/main.h"

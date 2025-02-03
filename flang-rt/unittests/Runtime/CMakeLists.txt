@@ -43,6 +43,6 @@ add_flangrt_unittest(RuntimeTests
 )
 target_compile_definitions(RuntimeTests PRIVATE NOT_EXE="${LLVM_TOOLS_DIR}/not${CMAKE_EXECUTABLE_SUFFIX}")
 
-if (FLANG_RT_ENABLE_CUF)
+if (FLANG_RT_INCLUDE_CUF)
   add_subdirectory(CUDA)
 endif ()

@@ -82,7 +82,7 @@ cmake \
   -DLLVM_TARGETS_TO_BUILD=host \
   -DLLVM_LIT_ARGS=-v \
   -DLLVM_ENABLE_PROJECTS="clang;mlir;flang;openmp" \
-  -DLLVM_ENABLE_RUNTIMES="compiler-rt;flang_rt" \
+  -DLLVM_ENABLE_RUNTIMES="compiler-rt;flang-rt" \
   ../llvm-project/llvm
 
 ninja
@@ -194,7 +194,7 @@ Flang runtime can be built for accelerators in experimental mode, i.e.
 complete enabling is WIP.  CUDA and OpenMP target offload builds
 are currently supported.
 
-#### Bootstrapping Build of Flang-RT
+#### Building out-of-tree
 
 ##### CUDA build
 Clang with NVPTX backend and NVCC compilers are supported.
@@ -250,7 +250,7 @@ code.  Note that the packaging of the libraries is different
 between [Clang](https://clang.llvm.org/docs/OffloadingDesign.html#linking-target-device-code) and NVCC, so the library must be linked using
 compatible compiler drivers.
 
-#### Building in-tree (bootstrap build)
+#### Building in-tree (bootstrapping build)
 One may build Flang runtime library along with building Flang itself
 by providing these additional CMake variables on top of the Flang in-tree
 build config:
@@ -281,9 +281,9 @@ Or:
 
 Normal `make check-flang` will work with such CMake configuration.
 Consider building in parallel using the `-j<jobs>` flag, where `<jobs>` is a
-number low enough for all build jobs to fit into the available RAM. Using
+number sufficiently low for all build jobs to fit into the available RAM. Using
 the number of harware threads (`nprocs`) is likely too much for most
-commodity computers.
+commodity machines.
 
 ##### OpenMP target offload build
 Only Clang compiler is currently supported.

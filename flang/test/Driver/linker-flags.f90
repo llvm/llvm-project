@@ -33,26 +33,26 @@
 ! SOLARIS-F128NONE-NOT: FortranFloat128Math
 ! UNIX-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "--as-needed" "-lquadmath" "--no-as-needed"
 ! SOLARIS-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "-z" "ignore" "-lquadmath" "-z" "record"
-! UNIX-SAME: "-lflang_rt" "-lm"
+! UNIX-SAME: "-lflang_rt.runtime" "-lm"
 ! COMPILER-RT: "{{.*}}{{\\|/}}libclang_rt.builtins.a"
 
 ! DARWIN-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! DARWIN-SAME: "[[object_file]]"
 ! DARWIN-F128NONE-NOT: FortranFloat128Math
 ! DARWIN-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "--as-needed" "-lquadmath" "--no-as-needed"
-! DARWIN-SAME: -lflang_rt
+! DARWIN-SAME: -lflang_rt.runtime
 
 ! HAIKU-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! HAIKU-SAME: "[[object_file]]"
 ! HAIKU-F128NONE-NOT: FortranFloat128Math
 ! HAIKU-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "--as-needed" "-lquadmath" "--no-as-needed"
-! HAIKU-SAME: "-lflang_rt"
+! HAIKU-SAME: "-lflang_rt.runtime"
 
 ! MINGW-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! MINGW-SAME: "[[object_file]]"
 ! MINGW-F128NONE-NOT: FortranFloat128Math
 ! MINGW-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "--as-needed" "-lquadmath" "--no-as-needed"
-! MINGW-SAME: -lflang_rt
+! MINGW-SAME: -lflang_rt.runtime
 
 ! NOTE: This also matches lld-link (when CLANG_DEFAULT_LINKER=lld) and
 !       any .exe suffix that is added when resolving to the full path of

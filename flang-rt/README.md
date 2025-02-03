@@ -151,9 +151,9 @@ CMake itself provide.
    GPU accelerators using OpenMP offloading. Only Clang is supported for
    `CMAKE_C_COMPILER` and `CMAKE_CXX_COMPILER`.
 
- * `FLANG_RT_ENABLE_CUF` (bool, default: `OFF`)
+ * `FLANG_RT_INCLUDE_CUF` (bool, default: `OFF`)
 
-   Compiles the `libCufRuntime_cuda_<CUDA-version>.a/.so` library. This is
+   Compiles the `libflang_rt.cuda_<CUDA-version>.a/.so` library. This is
    independent of `FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA` and only
    requires a
    [CUDA Toolkit installation](https://cmake.org/cmake/help/latest/module/FindCUDAToolkit.html)

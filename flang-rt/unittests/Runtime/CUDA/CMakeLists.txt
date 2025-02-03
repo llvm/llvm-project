@@ -14,5 +14,5 @@ add_flangrt_unittest(FlangCufRuntimeTests
 
 target_link_libraries(FlangCufRuntimeTests
   PRIVATE
-  CufRuntime
+  flang_rt.cuda
 )
