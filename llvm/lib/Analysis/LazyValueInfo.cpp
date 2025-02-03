@@ -624,10 +624,12 @@ LazyValueInfoImpl::solveBlockValueImpl(Value *Val, BasicBlock *BB) {
   return getFromRangeMetadata(BBI);
 }
 
-static void AddNonNullPointer(Value *Ptr, NonNullPointerSet &PtrSet) {
+static void AddNonNullPointer(Value *Ptr, NonNullPointerSet &PtrSet,
+                              bool IsDereferenced = true) {
   // TODO: Use NullPointerIsDefined instead.
   if (Ptr->getType()->getPointerAddressSpace() == 0)
-    PtrSet.insert(getUnderlyingObject(Ptr));
+    PtrSet.insert(IsDereferenced ? getUnderlyingObject(Ptr)
+                                 : Ptr->stripInBoundsOffsets());
 }
 
 static void AddNonNullPointersByInstruction(
@@ -646,6 +648,13 @@ static void AddNonNullPointersByInstruction(
     AddNonNullPointer(MI->getRawDest(), PtrSet);
     if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI))
       AddNonNullPointer(MTI->getRawSource(), PtrSet);
+  } else if (auto *CB = dyn_cast<CallBase>(I)) {
+    for (auto &U : CB->args()) {
+      if (U->getType()->isPointerTy() &&
+          CB->paramHasNonNullAttr(CB->getArgOperandNo(&U),
+                                  /*AllowUndefOrPoison=*/false))
+        AddNonNullPointer(U.get(), PtrSet, /*IsDereferenced=*/false);
+    }
   }
 }
 
