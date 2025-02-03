@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -triple aarch64 -verify=expected,unsupported -fsyntax-only %s
-// RUN: %clang_cc1 -triple loongarch64 -verify=expected,loongarch64 -fsyntax-only %s
-// RUN: %clang_cc1 -triple mips64 -verify=expected,unsupported -fsyntax-only %s
-// RUN: %clang_cc1 -triple powerpc64 -verify=expected,unsupported -fsyntax-only %s
-// RUN: %clang_cc1 -triple riscv64 -verify=expected,unsupported -fsyntax-only %s
-// RUN: %clang_cc1 -triple x86_64 -verify=expected,x86_64 -fsyntax-only %s
-// RUN: %clang_cc1 -triple nvptx64-unknown-cuda -fcuda-is-device -x cuda -verify=expected,unsupported -fsyntax-only %s
+// RUN: %clang_cc1 -triple aarch64 -verify=unsupported -fsyntax-only %s
+// RUN: %clang_cc1 -triple loongarch64 -verify=loongarch64 -fsyntax-only %s
+// RUN: %clang_cc1 -triple mips64 -verify=unsupported -fsyntax-only %s
+// RUN: %clang_cc1 -triple powerpc64 -verify=unsupported -fsyntax-only %s
+// RUN: %clang_cc1 -triple riscv64 -verify=unsupported -fsyntax-only %s
+// RUN: %clang_cc1 -triple x86_64 -verify=x86_64 -fsyntax-only %s
+// RUN: %clang_cc1 -triple nvptx64-unknown-cuda -fcuda-is-device -x cuda -verify=ignored -fsyntax-only %s
 
 #if (defined(__loongarch__) || defined(__x86_64__)) && !__has_attribute(model)
 #error "Should support model attribute"
@@ -28,6 +28,7 @@ int g __attribute((model("extreme"))); // unsupported-warning {{unknown attribut
                                        // x86_64-error {{code model 'extreme' is not supported on this target}}
 
 void __attribute((model("extreme"))) h() {} // unsupported-warning {{unknown attribute 'model' ignored}} \
+                                            // ignored-error {{'model' attribute only applies to non-TLS global variables}} \
                                             // loongarch64-error {{'model' attribute only applies to non-TLS global variables}} \
                                             // x86_64-error {{'model' attribute only applies to non-TLS global variables}}
 

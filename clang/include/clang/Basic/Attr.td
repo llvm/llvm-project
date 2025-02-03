@@ -3118,9 +3118,13 @@ def PragmaClangTextSection : InheritableAttr {
   let Documentation = [InternalOnly];
 }
 
-def CodeModel : InheritableAttr,
-                TargetSpecificAttr<TargetArch<!listconcat(
-                    TargetLoongArch.Arches, TargetX86_64.Arches)>> {
+// The code model attribute only applies to LoongArch and x86-64, but for NVPTX
+// compilations that share code with the host, we want to ignore the attribute
+// rather than warn on it.
+def CodeModel
+    : InheritableAttr,
+      TargetSpecificAttr<TargetArch<!listconcat(
+          TargetLoongArch.Arches, TargetX86_64.Arches, TargetNVPTX.Arches)>> {
   let Spellings = [GCC<"model">];
   let Args = [EnumArgument<
       "Model", "llvm::CodeModel::Model",

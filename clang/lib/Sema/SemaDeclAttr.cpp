@@ -2968,6 +2968,11 @@ static void handleCodeModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &LiteralLoc))
     return;
 
+  // Ignore the attribute for NVPTX compiles since it only applies to host
+  // globals.
+  if (S.Context.getTargetInfo().getTriple().isNVPTX())
+    return;
+
   llvm::CodeModel::Model CM;
   if (!CodeModelAttr::ConvertStrToModel(Str, CM) ||
       !isValidCodeModelAttr(S, Str)) {
