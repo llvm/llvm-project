@@ -266,9 +266,13 @@ void ReachingDefAnalysis::printAllReachingDefs(MachineFunction &MF) {
         Defs.clear();
         getGlobalReachingDefs(&MI, Reg, Defs);
         MO.print(dbgs(), TRI);
-        dbgs() << ":{ ";
+        SmallVector<int, 0> Nums;
         for (MachineInstr *Def : Defs)
-          dbgs() << InstToNumMap[Def] << " ";
+          Nums.push_back(InstToNumMap[Def]);
+        llvm::sort(Nums);
+        dbgs() << ":{ ";
+        for (int Num : Nums)
+          dbgs() << Num << " ";
         dbgs() << "}\n";
       }
       dbgs() << Num << ": " << MI << "\n";
