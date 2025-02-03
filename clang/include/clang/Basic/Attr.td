@@ -198,7 +198,7 @@ def OpenCLKernelFunction
 // inclusive nature of subject testing).
 def HasFunctionProto : SubsetSubject<DeclBase,
                                      [{(S->getFunctionType(true) != nullptr &&
-                              isa<FunctionProtoType>(S->getFunctionType())) ||
+                                       isa<FunctionProtoType>(S->getFunctionType())) ||
                                        isa<ObjCMethodDecl>(S) ||
                                        isa<BlockDecl>(S)}],
                                      "non-K&R-style functions">;
