@@ -736,6 +736,9 @@ def ROCDL_CvtPkRtz:
   }];
 }
 
+//===---------------------------------------------------------------------===//
+// 32-bit float intrinsics
+//===---------------------------------------------------------------------===//
 def ROCDL_CvtScalePkF32Fp8 :
     ROCDL_IntrOp<"cvt.scalef32.pk.f32.fp8", [], [], [Pure], 1>,
     Arguments<(ins I32:$src, F32: $scale, I1:$wordSel)> {
@@ -748,6 +751,20 @@ def ROCDL_CvtScalePkF32Fp8 :
     attr-dict $src `[` $wordSel `]` `,` $scale `:` type($res)
   }];
 }
+def ROCDL_CvtScalePkF32Bf8 :
+    ROCDL_IntrOp<"cvt.scalef32.pk.f32.bf8", [], [], [Pure], 1>,
+    Arguments<(ins I32:$src, F32: $scale, I1:$wordSel)> {
+  let summary = "Scale and convert packed bf8 to packed f32";
+  let description = [{
+    Scale `src` by the exponent in `scale` then convert to packed fp32.
+    Store the result in low/high word based on $wordSel, preserving the other word.
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `[` $wordSel `]` `,` $scale `:` type($res)
+  }];
+}
+
+
 	
 
 //===---------------------------------------------------------------------===//
