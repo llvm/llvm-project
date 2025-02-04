@@ -151,7 +151,6 @@ void RegAllocPriorityAdvisorAnalysis::initializeProvider(LLVMContext &Ctx) {
     Provider.reset(
         new DefaultPriorityAdvisorProvider(/*NotAsRequested=*/true, Ctx));
 #endif
-    assert(Provider && "PriorityAdvisorProvider cannot be null");
     return;
   case RegAllocPriorityAdvisorProvider::AdvisorMode::Release:
     Provider.reset(createReleaseModePriorityAdvisorProvider());
