@@ -397,11 +397,11 @@ namespace {
     }
   };
 
-  llvm::TimeTraceMetadata getTimeTraceBindMetadata(SVal val) {
+  llvm::TimeTraceMetadata getTimeTraceBindMetadata(SVal Val) {
     assert(llvm::timeTraceProfilerEnabled());
-    std::string name;
-    llvm::raw_string_ostream OS(name);
-    val.dumpToStream(OS);
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
+    Val.dumpToStream(OS);
     return llvm::TimeTraceMetadata{OS.str(), ""};
   }
 

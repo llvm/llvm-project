@@ -194,20 +194,20 @@ static llvm::TimeTraceMetadata timeTraceMetadata(const ExplodedNode *Pred,
                                                  const ProgramPoint &Loc) {
   // If time-trace profiler is not enabled, this function is never called.
   assert(llvm::timeTraceProfilerEnabled());
-  std::string str;
-  llvm::raw_string_ostream rso(str);
-  Loc.printJson(rso);
+  std::string Str;
+  llvm::raw_string_ostream Rso(Str);
+  Loc.printJson(Rso);
   if (auto SLoc = Loc.getSourceLocation()) {
     const auto &SM = Pred->getLocationContext()
                          ->getAnalysisDeclContext()
                          ->getASTContext()
                          .getSourceManager();
-    auto line = SM.getPresumedLineNumber(*SLoc);
-    auto fname = SM.getFilename(*SLoc);
-    return llvm::TimeTraceMetadata{rso.str(), fname.str(),
-                                   static_cast<int>(line)};
+    auto Line = SM.getPresumedLineNumber(*SLoc);
+    auto Fname = SM.getFilename(*SLoc);
+    return llvm::TimeTraceMetadata{Rso.str(), Fname.str(),
+                                   static_cast<int>(Line)};
   }
-  return llvm::TimeTraceMetadata{rso.str(), ""};
+  return llvm::TimeTraceMetadata{Rso.str(), ""};
 }
 
 void CoreEngine::dispatchWorkItem(ExplodedNode *Pred, ProgramPoint Loc,
