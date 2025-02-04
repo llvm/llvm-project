@@ -1429,7 +1429,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
     unsigned IndexWidth = Q.DL.getIndexTypeSizeInBits(I->getType());
     APInt AccConstIndices(IndexWidth, 0);
 
-    auto AddIndex = [&](KnownBits IndexBits) {
+    auto AddIndexToKnown = [&](KnownBits IndexBits) {
       if (IndexWidth == BitWidth) {
         // Note that inbounds does *not* guarantee nsw for the addition, as only
         // the offset is signed, while the base address is unsigned.
@@ -1503,10 +1503,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
         ScalingFactor =
             KnownBits::makeConstant(APInt(IndexWidth, StrideInBytes));
       }
-      AddIndex(KnownBits::mul(IndexBits, ScalingFactor));
+      AddIndexToKnown(KnownBits::mul(IndexBits, ScalingFactor));
     }
     if (!Known.isUnknown() && !AccConstIndices.isZero())
-      AddIndex(KnownBits::makeConstant(AccConstIndices));
+      AddIndexToKnown(KnownBits::makeConstant(AccConstIndices));
     break;
   }
   case Instruction::PHI: {
