@@ -1482,8 +1482,8 @@ func.func @extract_scalar_from_vec_2d_f32_dynamic_idxs_compile_time_const(%arg :
   return %1 : i32
 }
 
-// Compile-time if the indices of extractOp if constants, the constants will be collapsed,
-// the constants are folded away, hence the lowering works.
+// At compile time, since the indices of extractOp are constants,
+// they will be collapsed and folded away; therefore, the lowering works.
 
 // CHECK-LABEL: @extract_scalar_from_vec_2d_f32_dynamic_idxs_compile_time_const
 //  CHECK-SAME:   %[[ARG:.*]]: vector<32x1xi32>) -> i32 {
@@ -1753,8 +1753,8 @@ func.func @insert_scalar_from_vec_2d_f32_dynamic_idxs_compile_time_const(%arg : 
   return %res : vector<4x1xi32>
 }
 
-// Compile-time if the indices of insertOp if constants, the constants will be collapsed,
-// the constants are folded away, hence the lowering works.
+// At compile time, since the indices of insertOp are constants,
+// they will be collapsed and folded away; therefore, the lowering works.
 
 // CHECK-LABEL: @insert_scalar_from_vec_2d_f32_dynamic_idxs_compile_time_const
 //  CHECK-SAME:   %[[ARG:.*]]: vector<4x1xi32>) -> vector<4x1xi32> {
