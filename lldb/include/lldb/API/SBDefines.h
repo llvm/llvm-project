@@ -144,6 +144,9 @@ typedef bool (*SBBreakpointHitCallback)(void *baton, lldb::SBProcess &process,
 typedef void (*SBDebuggerDestroyCallback)(lldb::user_id_t debugger_id,
                                           void *baton);
 
+typedef CommandReturnObjectCallbackResult (*SBCommandPrintCallback)(
+    lldb::SBCommandReturnObject &result, void *baton);
+
 typedef lldb::SBError (*SBPlatformLocateModuleCallback)(
     void *baton, const lldb::SBModuleSpec &module_spec,
     lldb::SBFileSpec &module_file_spec, lldb::SBFileSpec &symbol_file_spec);
