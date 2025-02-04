@@ -14,9 +14,12 @@
 #include "DirectX.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
-#include <cstdint>
+#include "llvm/InitializePasses.h"
+#include "llvm/Pass.h"
 
 using namespace llvm;
 using namespace llvm::dxil;
@@ -80,7 +83,7 @@ static bool parseRootSignatureElement(ModuleRootSignature *MRS,
   return true;
 }
 
-bool ModuleRootSignature::parse(NamedMDNode *Root) {
+bool ModuleRootSignature::parse(NamedMDNode *Root, const Function *EF) {
   bool HasError = false;
 
   /** Root Signature are specified as following in the metadata:
@@ -96,10 +99,24 @@ bool ModuleRootSignature::parse(NamedMDNode *Root) {
    */
 
   for (const MDNode *Node : Root->operands()) {
-
     if (Node->getNumOperands() != 2)
       return reportError("Invalid format for Root Signature Definition. Pairs "
                          "of function, root signature expected.");
+
+    Metadata *MD = Node->getOperand(0).get();
+    if (auto *VAM = llvm::dyn_cast<llvm::ValueAsMetadata>(MD)) {
+      llvm::Value *V = VAM->getValue();
+      if (Function *F = dyn_cast<Function>(V)) {
+        if (F != EF)
+          continue;
+      } else {
+        return reportError(
+            "Root Signature MD node, first element is not a function.");
+      }
+    } else {
+      return reportError(
+          "Root Signature MD node, first element is not a function.");
+    }
 
     // Get the Root Signature Description from the function signature pair.
     MDNode *RS = dyn_cast<MDNode>(Node->getOperand(1).get());
@@ -120,12 +137,13 @@ bool ModuleRootSignature::parse(NamedMDNode *Root) {
   return HasError;
 }
 
-ModuleRootSignature ModuleRootSignature::analyzeModule(Module &M) {
+ModuleRootSignature ModuleRootSignature::analyzeModule(Module &M,
+                                                       const Function *F) {
   ModuleRootSignature MRS;
 
   NamedMDNode *RootSignatureNode = M.getNamedMetadata("dx.rootsignatures");
   if (RootSignatureNode) {
-    if (MRS.parse(RootSignatureNode))
+    if (MRS.parse(RootSignatureNode, F))
       llvm_unreachable("Invalid Root Signature Metadata.");
   }
 
@@ -136,22 +154,43 @@ AnalysisKey RootSignatureAnalysis::Key;
 
 ModuleRootSignature RootSignatureAnalysis::run(Module &M,
                                                ModuleAnalysisManager &AM) {
-  return ModuleRootSignature::analyzeModule(M);
+  auto MMI = AM.getResult<DXILMetadataAnalysis>(M);
+
+  if (MMI.ShaderProfile == Triple::Library)
+    return ModuleRootSignature();
+
+  assert(MMI.EntryPropertyVec.size() == 1);
+
+  const Function *EntryFunction = MMI.EntryPropertyVec[0].Entry;
+  return ModuleRootSignature::analyzeModule(M, EntryFunction);
 }
 
 //===----------------------------------------------------------------------===//
 bool RootSignatureAnalysisWrapper::runOnModule(Module &M) {
 
-  this->MRS = MRS = ModuleRootSignature::analyzeModule(M);
+  dxil::ModuleMetadataInfo &MMI =
+      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
+
+  if (MMI.ShaderProfile == Triple::Library)
+    return false;
+  assert(MMI.EntryPropertyVec.size() == 1);
+
+  const Function *EntryFunction = MMI.EntryPropertyVec[0].Entry;
+  this->MRS = MRS = ModuleRootSignature::analyzeModule(M, EntryFunction);
 
   return false;
 }
 
 void RootSignatureAnalysisWrapper::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
+  AU.addRequired<DXILMetadataAnalysisWrapperPass>();
 }
 
 char RootSignatureAnalysisWrapper::ID = 0;
 
-INITIALIZE_PASS(RootSignatureAnalysisWrapper, "dx-root-signature-analysis",
-                "DXIL Root Signature Analysis", true, true)
+INITIALIZE_PASS_BEGIN(RootSignatureAnalysisWrapper,
+                      "dx-root-signature-analysis",
+                      "DXIL Root Signature Analysis", true, true)
+INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
+INITIALIZE_PASS_END(RootSignatureAnalysisWrapper, "dx-root-signature-analysis",
+                    "DXIL Root Signature Analysis", true, true)

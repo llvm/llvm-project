@@ -5,7 +5,6 @@ target triple = "dxil-unknown-shadermodel6.0-compute"
 
 ; CHECK: @dx.rts0 = private constant [24 x i8]  c"{{.*}}", section "RTS0", align 4
 
-
 define void @main() #0 {
 entry:
   ret void
