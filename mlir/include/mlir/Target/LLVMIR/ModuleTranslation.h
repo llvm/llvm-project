@@ -327,6 +327,12 @@ private:
   LogicalResult convertFunctionSignatures();
   LogicalResult convertFunctions();
   LogicalResult convertComdats();
+
+  /// Handle conversion for both globals and global aliases.
+  ///
+  /// - Create named global variables that correspond to llvm.mlir.global
+  /// definitions, similarly Convert llvm.global_ctors and global_dtors ops.
+  /// - Create global alias that correspond to llvm.mlir.alias.
   LogicalResult convertGlobalsAndAliases();
   LogicalResult convertOneFunction(LLVMFuncOp func);
   LogicalResult convertBlockImpl(Block &bb, bool ignoreArguments,

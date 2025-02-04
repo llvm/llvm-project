@@ -2195,6 +2195,8 @@ static LogicalResult verifyComdat(Operation *op,
   return success();
 }
 
+/// Parse common attributes that might show up in the same order in both
+/// GlobalOp and AliasOp.
 template <typename OpType>
 static ParseResult parseCommonGlobalAndAlias(OpAsmParser &parser,
                                              OperationState &result) {
@@ -2474,7 +2476,7 @@ void AliasOp::print(OpAsmPrinter &p) {
     p << visibility << ' ';
   if (getThreadLocal_())
     p << "thread_local ";
-  if (auto unnamedAddr = getUnnamedAddr()) {
+  if (std::optional<mlir::LLVM::UnnamedAddr> unnamedAddr = getUnnamedAddr()) {
     StringRef str = stringifyUnnamedAddr(*unnamedAddr);
     if (!str.empty())
       p << str << ' ';
@@ -2486,14 +2488,10 @@ void AliasOp::print(OpAsmPrinter &p) {
                            getUnnamedAddrAttrName(), getThreadLocal_AttrName(),
                            getVisibility_AttrName(), getUnnamedAddrAttrName()});
 
-  // Print the trailing type
-  p << " : " << getType();
-
-  Region &initializer = getInitializerRegion();
-  if (!initializer.empty()) {
-    p << ' ';
-    p.printRegion(initializer, /*printEntryBlockArgs=*/false);
-  }
+  // Print the trailing type.
+  p << " : " << getType() << ' ';
+  // Print the initializer region.
+  p.printRegion(getInitializerRegion(), /*printEntryBlockArgs=*/false);
 }
 
 // operation ::= `llvm.mlir.alias` linkage? visibility?
@@ -2539,18 +2537,21 @@ LogicalResult AliasOp::verify() {
         "expects type to be a valid element type for an LLVM global alias");
 
   // This matches LLVM IR verification logic, see llvm/lib/IR/Verifier.cpp
-  bool validAliasLinkage =
-      getLinkage() == Linkage::External || getLinkage() == Linkage::Internal ||
-      getLinkage() == Linkage::Private || getLinkage() == Linkage::Weak ||
-      getLinkage() == Linkage::Linkonce ||
-      getLinkage() == Linkage::LinkonceODR ||
-      getLinkage() == Linkage::AvailableExternally;
-
-  if (!validAliasLinkage) {
+  switch (getLinkage()) {
+  case Linkage::External:
+  case Linkage::Internal:
+  case Linkage::Private:
+  case Linkage::Weak:
+  case Linkage::Linkonce:
+  case Linkage::LinkonceODR:
+  case Linkage::AvailableExternally:
+    break;
+  default:
     return emitOpError()
-           << "linkage must be private, internal, linkonce, weak, "
-              "linkonce_odr, "
-              "weak_odr, external or available_externally linkage!";
+           << "'" << stringifyLinkage(getLinkage())
+           << "' linkage not supported in aliases, available options: private, "
+              "internal, linkonce, weak, linkonce_odr, weak_odr, external or "
+              "available_externally";
   }
 
   return success();

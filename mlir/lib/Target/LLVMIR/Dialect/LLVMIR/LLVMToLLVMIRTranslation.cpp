@@ -451,7 +451,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
 
     // The verifier should not have allowed this.
     assert((global || function || alias) &&
-           "referencing an undefined global, function or alias");
+           "referencing an undefined global, function, or alias");
 
     llvm::Value *llvmValue = nullptr;
     if (global)

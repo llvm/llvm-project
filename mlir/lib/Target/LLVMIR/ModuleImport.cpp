@@ -991,8 +991,6 @@ LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
   if (alias->hasAtLeastLocalUnnamedAddr()) {
     aliasOp.setUnnamedAddr(convertUnnamedAddrFromLLVM(alias->getUnnamedAddr()));
   }
-  if (alias->hasSection())
-    aliasOp.setSection(alias->getSection());
   aliasOp.setVisibility_(convertVisibilityFromLLVM(alias->getVisibility()));
 
   return success();

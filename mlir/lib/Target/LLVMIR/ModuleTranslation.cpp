@@ -1028,11 +1028,6 @@ static void addRuntimePreemptionSpecifier(bool dsoLocalRequested,
     gv->setDSOLocal(true);
 }
 
-/// Handle conversion for both globals and global aliases.
-///
-/// - Create named global variables that correspond to llvm.mlir.global
-/// definitions, similarly Convert llvm.global_ctors and global_dtors ops.
-/// - Create global alias that correspond to llvm.mlir.alias.
 LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
   // Mapping from compile unit to its respective set of global variables.
   DenseMap<llvm::DICompileUnit *, SmallVector<llvm::Metadata *>> allGVars;
@@ -1149,7 +1144,8 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::AliasOp>()) {
     llvm::Type *type = convertType(op.getType());
     llvm::Constant *cst = nullptr;
-    auto linkage = convertLinkageToLLVM(op.getLinkage());
+    llvm::GlobalValue::LinkageTypes linkage =
+        convertLinkageToLLVM(op.getLinkage());
     llvm::Module &llvmMod = *llvmModule;
 
     llvm::GlobalAlias *var = llvm::GlobalAlias::create(
@@ -1289,13 +1285,12 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
     for (mlir::Operation &op : initializer.without_terminator()) {
       if (failed(convertOperation(op, builder)))
         return emitError(op.getLoc(), "fail to convert alias initializer");
-      auto *cst = dyn_cast<llvm::Constant>(lookupValue(op.getResult(0)));
-      if (!cst)
+      if (!isa<llvm::Constant>(lookupValue(op.getResult(0))))
         return emitError(op.getLoc(), "unemittable constant value");
     }
 
-    ReturnOp ret = cast<ReturnOp>(initializer.getTerminator());
-    llvm::Constant *cst = cast<llvm::Constant>(lookupValue(ret.getOperand(0)));
+    auto ret = cast<ReturnOp>(initializer.getTerminator());
+    auto *cst = cast<llvm::Constant>(lookupValue(ret.getOperand(0)));
     assert(aliasesMapping.count(op));
     auto *alias = cast<llvm::GlobalAlias>(aliasesMapping[op]);
     alias->setAliasee(cst);

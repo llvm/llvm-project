@@ -1465,7 +1465,7 @@ def LLVM_GlobalDtorsOp : LLVM_Op<"mlir.global_dtors", [
 }
 
 def LLVM_AliasOp : LLVM_Op<"mlir.alias",
-    [IsolatedFromAbove, SingleBlockWithTerminator<"ReturnOp">, Symbol]> {
+    [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, Symbol]> {
   let arguments = (ins
     TypeAttr:$alias_type,
     StrAttr:$sym_name,
