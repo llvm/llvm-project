@@ -159,7 +159,7 @@ class LifetimeIterator {
       assert(!rhs.moved_from_);
       rhs.moved_from_ = true;
 
-      *v_ = *rhs.v_;
+      *v_ = std::move(*rhs.v_);
       moved_from_ = false;
 
       return *this;
@@ -368,7 +368,7 @@ class ConstexprIterator {
     constexpr Reference(const Reference& rhs) = default;
     constexpr Reference& operator=(const Reference& rhs) {
       assert(!rhs.moved_from_);
-      v_ = rhs.v_;
+      *v_ = *rhs.v_;
       moved_from_ = false;
 
       return *this;
@@ -384,7 +384,7 @@ class ConstexprIterator {
       rhs.moved_from_ = true;
       moved_from_ = false;
 
-      v_ = rhs.v_;
+      *v_ = std::move(*rhs.v_);
       return *this;
     }
 
