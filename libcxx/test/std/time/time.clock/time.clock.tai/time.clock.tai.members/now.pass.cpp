@@ -28,4 +28,6 @@ int main(int, const char**) {
 
   assert(t >= clock::time_point::min());
   assert(t <= clock::time_point::max());
+
+  return 0;
 }

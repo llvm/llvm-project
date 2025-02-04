@@ -156,4 +156,6 @@ int main(int, const char**) {
   test_known_values();
   test_transitions();
   test_return_type();
+
+  return 0;
 }

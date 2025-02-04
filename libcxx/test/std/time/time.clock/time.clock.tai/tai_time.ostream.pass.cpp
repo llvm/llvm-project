@@ -21,7 +21,7 @@
 
 // <chrono>
 
-// class taitem_clock;
+// class tai_clock;
 
 // template<class charT, class traits, class Duration>
 //   basic_ostream<charT, traits>&

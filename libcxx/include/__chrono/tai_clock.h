@@ -48,7 +48,11 @@ using tai_seconds = tai_time<seconds>;
 //    initial 10s offset).
 //
 // Note this does not specify what the UTC offset before 1958-01-01 00:00:00
-// TAI is. However the member functions are fully specified in the standard.
+// TAI is, nor does it follow the "real" TAI clock between 1958-01-01 and the
+// start of the UTC epoch. So while the member functions are fully specified in
+// the standard, they do not technically follow the "real-world" TAI clock with
+// 100% accuracy.
+//
 // https://koka-lang.github.io/koka/doc/std_time_utc.html contains more
 // information and references.
 class tai_clock {
