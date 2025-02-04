@@ -45,7 +45,7 @@ void test_builtin_elementwise_abs(int i, double d, float4 v, int3 iv, unsigned u
 
 void test_builtin_elementwise_add_sat(int i, short s, double d, float4 v, int3 iv, unsigned3 uv, int *p) {
   i = __builtin_elementwise_add_sat(p, d);
-  // expected-error@-1 {{arguments are of different types ('int *' vs 'double')}}
+  // expected-error@-1 {{1st argument must be an integer or vector of integers (was 'int *')}}
 
   struct Foo foo = __builtin_elementwise_add_sat(i, i);
   // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'int'}}
@@ -60,13 +60,16 @@ void test_builtin_elementwise_add_sat(int i, short s, double d, float4 v, int3 i
   // expected-error@-1 {{too many arguments to function call, expected 2, have 3}}
 
   i = __builtin_elementwise_add_sat(v, iv);
-  // expected-error@-1 {{arguments are of different types ('float4' (vector of 4 'float' values) vs 'int3' (vector of 3 'int' values))}}
+  // expected-error@-1 {{1st argument must be an integer or vector of integers (was 'float4' (vector of 4 'float' values))}}
+
+  i = __builtin_elementwise_add_sat(iv, v);
+  // expected-error@-1 {{arguments are of different types ('int3' (vector of 3 'int' values) vs 'float4' (vector of 4 'float' values))}}
 
   i = __builtin_elementwise_add_sat(uv, iv);
   // expected-error@-1 {{arguments are of different types ('unsigned3' (vector of 3 'unsigned int' values) vs 'int3' (vector of 3 'int' values))}}
 
   v = __builtin_elementwise_add_sat(v, v);
-  // expected-error@-1 {{1st argument must be a vector of integers (was 'float4' (vector of 4 'float' values))}}
+  // expected-error@-1 {{1st argument must be an integer or vector of integers (was 'float4' (vector of 4 'float' values))}}
 
   s = __builtin_elementwise_add_sat(i, s);
   // expected-error@-1 {{arguments are of different types ('int' vs 'short')}}
@@ -95,7 +98,7 @@ void test_builtin_elementwise_add_sat(int i, short s, double d, float4 v, int3 i
 
   int A[10];
   A = __builtin_elementwise_add_sat(A, A);
-  // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was 'int *')}}
+  // expected-error@-1 {{1st argument must be an integer or vector of integers (was 'int *')}}
 
   int(ii);
   int j;
@@ -103,12 +106,12 @@ void test_builtin_elementwise_add_sat(int i, short s, double d, float4 v, int3 i
 
   _Complex float c1, c2;
   c1 = __builtin_elementwise_add_sat(c1, c2);
-  // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was '_Complex float')}}
+  // expected-error@-1 {{1st argument must be an integer or vector of integers (was '_Complex float')}}
 }
 
 void test_builtin_elementwise_sub_sat(int i, short s, double d, float4 v, int3 iv, unsigned3 uv, int *p) {
   i = __builtin_elementwise_sub_sat(p, d);
-  // expected-error@-1 {{arguments are of different types ('int *' vs 'double')}}
+  // expected-error@-1 {{1st argument must be an integer or vector of integers (was 'int *')}}
 
   struct Foo foo = __builtin_elementwise_sub_sat(i, i);
   // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'int'}}
@@ -123,13 +126,16 @@ void test_builtin_elementwise_sub_sat(int i, short s, double d, float4 v, int3 i
   // expected-error@-1 {{too many arguments to function call, expected 2, have 3}}
 
   i = __builtin_elementwise_sub_sat(v, iv);
-  // expected-error@-1 {{arguments are of different types ('float4' (vector of 4 'float' values) vs 'int3' (vector of 3 'int' values))}}
+  // expected-error@-1 {{1st argument must be an integer or vector of integers (was 'float4' (vector of 4 'float' values))}}
+
+  i = __builtin_elementwise_sub_sat(iv, v);
+  // expected-error@-1 {{arguments are of different types ('int3' (vector of 3 'int' values) vs 'float4' (vector of 4 'float' values))}}
 
   i = __builtin_elementwise_sub_sat(uv, iv);
   // expected-error@-1 {{arguments are of different types ('unsigned3' (vector of 3 'unsigned int' values) vs 'int3' (vector of 3 'int' values))}}
 
   v = __builtin_elementwise_sub_sat(v, v);
-  // expected-error@-1 {{1st argument must be a vector of integers (was 'float4' (vector of 4 'float' values))}}
+  // expected-error@-1 {{1st argument must be an integer or vector of integers (was 'float4' (vector of 4 'float' values))}}
 
   s = __builtin_elementwise_sub_sat(i, s);
   // expected-error@-1 {{arguments are of different types ('int' vs 'short')}}
@@ -158,7 +164,7 @@ void test_builtin_elementwise_sub_sat(int i, short s, double d, float4 v, int3 i
 
   int A[10];
   A = __builtin_elementwise_sub_sat(A, A);
-  // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was 'int *')}}
+  // expected-error@-1 {{1st argument must be an integer or vector of integers (was 'int *')}}
 
   int(ii);
   int j;
@@ -166,12 +172,12 @@ void test_builtin_elementwise_sub_sat(int i, short s, double d, float4 v, int3 i
 
   _Complex float c1, c2;
   c1 = __builtin_elementwise_sub_sat(c1, c2);
-  // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was '_Complex float')}}
+  // expected-error@-1 {{1st argument must be an integer or vector of integers (was '_Complex float')}}
 }
 
 void test_builtin_elementwise_max(int i, short s, double d, float4 v, int3 iv, unsigned3 uv, int *p) {
   i = __builtin_elementwise_max(p, d);
-  // expected-error@-1 {{arguments are of different types ('int *' vs 'double')}}
+  // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was 'int *')}}
 
   struct Foo foo = __builtin_elementwise_max(i, i);
   // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'int'}}
@@ -231,7 +237,7 @@ void test_builtin_elementwise_max(int i, short s, double d, float4 v, int3 iv, u
 
 void test_builtin_elementwise_min(int i, short s, double d, float4 v, int3 iv, unsigned3 uv, int *p) {
   i = __builtin_elementwise_min(p, d);
-  // expected-error@-1 {{arguments are of different types ('int *' vs 'double')}}
+  // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was 'int *')}}
 
   struct Foo foo = __builtin_elementwise_min(i, i);
   // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'int'}}
@@ -291,7 +297,7 @@ void test_builtin_elementwise_min(int i, short s, double d, float4 v, int3 iv, u
 
 void test_builtin_elementwise_maximum(int i, short s, float f, double d, float4 fv, double4 dv, int3 iv, unsigned3 uv, int *p) {
   i = __builtin_elementwise_maximum(p, d);
-  // expected-error@-1 {{arguments are of different types ('int *' vs 'double')}}
+  // expected-error@-1 {{1st argument must be a floating point type (was 'int *')}}
 
   struct Foo foo = __builtin_elementwise_maximum(d, d);
   // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'double'}}
@@ -309,7 +315,7 @@ void test_builtin_elementwise_maximum(int i, short s, float f, double d, float4 
   // expected-error@-1 {{arguments are of different types ('float4' (vector of 4 'float' values) vs 'int3' (vector of 3 'int' values))}}
 
   i = __builtin_elementwise_maximum(uv, iv);
-  // expected-error@-1 {{arguments are of different types ('unsigned3' (vector of 3 'unsigned int' values) vs 'int3' (vector of 3 'int' values))}}
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned3' (vector of 3 'unsigned int' values))}}
 
   dv = __builtin_elementwise_maximum(fv, dv);
   // expected-error@-1 {{arguments are of different types ('float4' (vector of 4 'float' values) vs 'double4' (vector of 4 'double' values))}}
@@ -336,7 +342,7 @@ void test_builtin_elementwise_maximum(int i, short s, float f, double d, float4 
 
 void test_builtin_elementwise_minimum(int i, short s, float f, double d, float4 fv, double4 dv, int3 iv, unsigned3 uv, int *p) {
   i = __builtin_elementwise_minimum(p, d);
-  // expected-error@-1 {{arguments are of different types ('int *' vs 'double')}}
+  // expected-error@-1 {{1st argument must be a floating point type (was 'int *')}}
 
   struct Foo foo = __builtin_elementwise_minimum(d, d);
   // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'double'}}
@@ -354,7 +360,7 @@ void test_builtin_elementwise_minimum(int i, short s, float f, double d, float4 
   // expected-error@-1 {{arguments are of different types ('float4' (vector of 4 'float' values) vs 'int3' (vector of 3 'int' values))}}
 
   i = __builtin_elementwise_minimum(uv, iv);
-  // expected-error@-1 {{arguments are of different types ('unsigned3' (vector of 3 'unsigned int' values) vs 'int3' (vector of 3 'int' values))}}
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned3' (vector of 3 'unsigned int' values))}}
 
   dv = __builtin_elementwise_minimum(fv, dv);
   // expected-error@-1 {{arguments are of different types ('float4' (vector of 4 'float' values) vs 'double4' (vector of 4 'double' values))}}
@@ -388,16 +394,16 @@ void test_builtin_elementwise_bitreverse(int i, float f, double d, float4 v, int
   // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
 
   i = __builtin_elementwise_bitreverse(f);
-  // expected-error@-1 {{1st argument must be a vector of integers (was 'float')}}
+  // expected-error@-1 {{1st argument must be an integer or vector of integers (was 'float')}}
   
   i = __builtin_elementwise_bitreverse(f, f);
   // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
 
   u = __builtin_elementwise_bitreverse(d);
-  // expected-error@-1 {{1st argument must be a vector of integers (was 'double')}}
+  // expected-error@-1 {{1st argument must be an integer or vector of integers (was 'double')}}
 
   v = __builtin_elementwise_bitreverse(v);
-  // expected-error@-1 {{1st argument must be a vector of integers (was 'float4' (vector of 4 'float' values))}}
+  // expected-error@-1 {{1st argument must be an integer or vector of integers (was 'float4' (vector of 4 'float' values))}}
 }
 
 void test_builtin_elementwise_ceil(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
@@ -620,16 +626,16 @@ void test_builtin_elementwise_popcount(int i, float f, double d, float4 v, int3 
   // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
 
   i = __builtin_elementwise_popcount(f);
-  // expected-error@-1 {{1st argument must be a vector of integers (was 'float')}}
+  // expected-error@-1 {{1st argument must be an integer or vector of integers (was 'float')}}
 
   i = __builtin_elementwise_popcount(f, f);
   // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
 
   u = __builtin_elementwise_popcount(d);
-  // expected-error@-1 {{1st argument must be a vector of integers (was 'double')}}
+  // expected-error@-1 {{1st argument must be an integer or vector of integers (was 'double')}}
 
   v = __builtin_elementwise_popcount(v);
-  // expected-error@-1 {{1st argument must be a vector of integers (was 'float4' (vector of 4 'float' values))}}
+  // expected-error@-1 {{1st argument must be an integer or vector of integers (was 'float4' (vector of 4 'float' values))}}
 
   int2 i2 = __builtin_elementwise_popcount(iv);
   // expected-error@-1 {{initializing 'int2' (vector of 2 'int' values) with an expression of incompatible type 'int3' (vector of 3 'int' values)}}
@@ -646,7 +652,7 @@ void test_builtin_elementwise_popcount(int i, float f, double d, float4 v, int3 
 
 void test_builtin_elementwise_fmod(int i, short s, double d, float4 v, int3 iv, unsigned3 uv, int *p) {
   i = __builtin_elementwise_fmod(p, d);
-  // expected-error@-1 {{arguments are of different types ('int *' vs 'double')}}
+  // expected-error@-1 {{1st argument must be a floating point type (was 'int *')}}
 
   struct Foo foo = __builtin_elementwise_fmod(i, i);
   // expected-error@-1 {{1st argument must be a floating point type (was 'int')}}
@@ -664,7 +670,7 @@ void test_builtin_elementwise_fmod(int i, short s, double d, float4 v, int3 iv, 
   // expected-error@-1 {{arguments are of different types ('float4' (vector of 4 'float' values) vs 'int3' (vector of 3 'int' values))}}
 
   i = __builtin_elementwise_fmod(uv, iv);
-  // expected-error@-1 {{arguments are of different types ('unsigned3' (vector of 3 'unsigned int' values) vs 'int3' (vector of 3 'int' values))}}
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned3' (vector of 3 'unsigned int' values))}}
 
   i = __builtin_elementwise_fmod(d, v);
   // expected-error@-1 {{arguments are of different types ('double' vs 'float4' (vector of 4 'float' values))}}
@@ -672,7 +678,7 @@ void test_builtin_elementwise_fmod(int i, short s, double d, float4 v, int3 iv, 
 
 void test_builtin_elementwise_pow(int i, short s, double d, float4 v, int3 iv, unsigned3 uv, int *p) {
   i = __builtin_elementwise_pow(p, d);
-  // expected-error@-1 {{arguments are of different types ('int *' vs 'double')}}
+  // expected-error@-1 {{1st argument must be a floating point type (was 'int *')}}
 
   struct Foo foo = __builtin_elementwise_pow(i, i);
   // expected-error@-1 {{1st argument must be a floating point type (was 'int')}}
@@ -690,7 +696,7 @@ void test_builtin_elementwise_pow(int i, short s, double d, float4 v, int3 iv, u
   // expected-error@-1 {{arguments are of different types ('float4' (vector of 4 'float' values) vs 'int3' (vector of 3 'int' values))}}
 
   i = __builtin_elementwise_pow(uv, iv);
-  // expected-error@-1 {{arguments are of different types ('unsigned3' (vector of 3 'unsigned int' values) vs 'int3' (vector of 3 'int' values))}}
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned3' (vector of 3 'unsigned int' values))}}
   
 }
 
@@ -734,10 +740,9 @@ void test_builtin_elementwise_round(int i, float f, double d, float4 v, int3 iv,
   uv = __builtin_elementwise_round(uv);
   // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
 
-  // FIXME: Error should not mention integer
   _Complex float c1, c2;
   c1 = __builtin_elementwise_round(c1);
-  // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was '_Complex float')}}
+  // expected-error@-1 {{1st argument must be a floating point type (was '_Complex float')}}
 }
 
 void test_builtin_elementwise_rint(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
@@ -759,10 +764,9 @@ void test_builtin_elementwise_rint(int i, float f, double d, float4 v, int3 iv, 
   uv = __builtin_elementwise_rint(uv);
   // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
 
-  // FIXME: Error should not mention integer
   _Complex float c1, c2;
   c1 = __builtin_elementwise_rint(c1);
-  // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was '_Complex float')}}
+  // expected-error@-1 {{1st argument must be a floating point type (was '_Complex float')}}
 }
 
 void test_builtin_elementwise_nearbyint(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
@@ -784,10 +788,9 @@ void test_builtin_elementwise_nearbyint(int i, float f, double d, float4 v, int3
   uv = __builtin_elementwise_nearbyint(uv);
   // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
 
-  // FIXME: Error should not mention integer
   _Complex float c1, c2;
   c1 = __builtin_elementwise_nearbyint(c1);
-  // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was '_Complex float')}}
+  // expected-error@-1 {{1st argument must be a floating point type (was '_Complex float')}}
 }
 
 void test_builtin_elementwise_asin(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {

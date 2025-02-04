@@ -9,11 +9,11 @@
 vfloat32mf2_t test_exp_vv_i8mf8(vfloat32mf2_t v) {
 
   return __builtin_elementwise_exp(v);
-  // expected-error@-1 {{1st argument must be a vector, integer or floating point type}}
+  // expected-error@-1 {{1st argument must be a floating point type}}
 }
 
 vfloat32mf2_t test_exp2_vv_i8mf8(vfloat32mf2_t v) {
 
   return __builtin_elementwise_exp2(v);
-  // expected-error@-1 {{1st argument must be a vector, integer or floating point type}}
+  // expected-error@-1 {{1st argument must be a floating point type}}
 }

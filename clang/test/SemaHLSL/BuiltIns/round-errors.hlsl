@@ -13,7 +13,7 @@ float2 test_too_many_arg(float2 p0) {
 
 float builtin_bool_to_float_type_promotion(bool p1) {
   return __builtin_elementwise_round(p1);
-  // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was 'bool')}}
+  // expected-error@-1 {{1st argument must be a floating point type (was 'bool')}}
 }
 
 float builtin_round_int_to_float_promotion(int p1) {
