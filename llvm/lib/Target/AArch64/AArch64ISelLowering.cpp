@@ -1358,6 +1358,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BSWAP, VT, Expand);
       setOperationAction(ISD::CTTZ, VT, Expand);
 
+      setOperationAction(ISD::PARTIAL_REDUCE_UMLA, VT, Expand);
+      setOperationAction(ISD::PARTIAL_REDUCE_SMLA, VT, Expand);
+
       for (MVT InnerVT : MVT::fixedlen_vector_valuetypes()) {
         setTruncStoreAction(VT, InnerVT, Expand);
         setLoadExtAction(ISD::SEXTLOAD, VT, InnerVT, Expand);
@@ -22015,8 +22018,10 @@ static SDValue performIntrinsicCombine(SDNode *N,
       return Dot;
     if (SDValue WideAdd = tryLowerPartialReductionToWideAdd(N, Subtarget, DAG))
       return WideAdd;
-    return DAG.getPartialReduceAdd(SDLoc(N), N->getValueType(0),
-                                   N->getOperand(1), N->getOperand(2));
+    SDValue Input = N->getOperand(2);
+    return TargetLowering::getPartialReduceAdd(SDLoc(N), N->getValueType(0),
+                                               Input.getValueType(),
+                                               N->getOperand(1), Input, DAG);
   }
   case Intrinsic::aarch64_neon_vcvtfxs2fp:
   case Intrinsic::aarch64_neon_vcvtfxu2fp:

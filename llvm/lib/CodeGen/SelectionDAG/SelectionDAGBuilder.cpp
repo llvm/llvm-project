@@ -8125,21 +8125,19 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::experimental_vector_partial_reduce_add: {
+    SDValue Acc = getValue(I.getOperand(0));
+    EVT AccVT = Acc.getValueType();
+    SDValue Input = getValue(I.getOperand(1));
+    EVT InputVT = Input.getValueType();
+
+    assert(AccVT.getVectorElementType() == InputVT.getVectorElementType() &&
+           "Expected operands to have the same vector element type!");
+    assert(InputVT.getVectorElementCount().getKnownMinValue() %
+                   AccVT.getVectorElementCount().getKnownMinValue() ==
+               0 &&
+           "Expected the element count of the Input operand to be a positive "
+           "integer multiple of the element count of the Accumulator operand!");
     if (NewPartialReduceLowering) {
-      SDValue Acc = getValue(I.getOperand(0));
-      EVT AccVT = Acc.getValueType();
-      SDValue Input = getValue(I.getOperand(1));
-      EVT InputVT = Input.getValueType();
-
-      assert(AccVT.getVectorElementType() == InputVT.getVectorElementType() &&
-             "Expected operands to have the same vector element type!");
-      assert(
-          InputVT.getVectorElementCount().getKnownMinValue() %
-                  AccVT.getVectorElementCount().getKnownMinValue() ==
-              0 &&
-          "Expected the element count of the Input operand to be a positive "
-          "integer multiple of the element count of the Accumulator operand!");
-
       // ISD::PARTIAL_REDUCE_UMLA is chosen arbitrarily and would function the
       // same if ISD::PARTIAL_REDUCE_SMLA was chosen instead. It should be
       // changed to its correct signedness when combining or expanding,
@@ -8154,9 +8152,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       return;
     }
 
-    setValue(&I, DAG.getPartialReduceAdd(sdl, EVT::getEVT(I.getType()),
-                                         getValue(I.getOperand(0)),
-                                         getValue(I.getOperand(1))));
+    setValue(&I, TLI.expandPartialReduceMLA(
+                     sdl, Acc, Input, DAG.getConstant(1, sdl, InputVT), DAG));
     return;
   }
   case Intrinsic::experimental_cttz_elts: {

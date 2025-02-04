@@ -34,6 +34,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cctype>
+#include <deque>
 using namespace llvm;
 
 /// NOTE: The TargetMachine owns TLOF.
@@ -12189,20 +12190,15 @@ SDValue TargetLowering::scalarizeExtractedVectorLoad(EVT ResultVT,
   return Load;
 }
 
-SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
+SDValue TargetLowering::expandPartialReduceMLA(SDLoc DL, SDValue Acc,
+                                               SDValue Input1, SDValue Input2,
                                                SelectionDAG &DAG) const {
-  SDLoc DL(N);
-  SDValue Acc = N->getOperand(0);
-  SDValue Input1 = N->getOperand(1);
-  SDValue Input2 = N->getOperand(2);
-
   EVT ReducedTy = Acc.getValueType();
   EVT FullTy = Input1.getValueType();
 
   auto ExtendToAccEltVT = [&](SDValue V) {
-    unsigned ExtOpc = N->getOpcode() == ISD::PARTIAL_REDUCE_UMLA
-                          ? ISD::ZERO_EXTEND
-                          : ISD::SIGN_EXTEND;
+    unsigned ExtOpc = V->getOpcode() == ISD::SIGN_EXTEND ? ISD::SIGN_EXTEND
+                                                         : ISD::ZERO_EXTEND;
     EVT ExtVT = V.getValueType().changeVectorElementType(
         Acc.getValueType().getVectorElementType());
     if (ExtVT != FullTy)
@@ -12224,5 +12220,34 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
     Input = ExtendToAccEltVT(Input1);
   }
 
-  return DAG.getPartialReduceAdd(DL, ReducedTy, Acc, Input);
+  return TargetLowering::getPartialReduceAdd(DL, ReducedTy, FullTy, Acc, Input,
+                                             DAG);
+}
+
+SDValue TargetLowering::getPartialReduceAdd(SDLoc DL, EVT ReducedTy, EVT FullTy,
+                                            SDValue Op1, SDValue Op2,
+                                            SelectionDAG &DAG) {
+  unsigned Stride = ReducedTy.getVectorMinNumElements();
+  unsigned ScaleFactor = FullTy.getVectorMinNumElements() / Stride;
+
+  // Collect all of the subvectors
+  std::deque<SDValue> Subvectors = {Op1};
+  for (unsigned I = 0; I < ScaleFactor; I++) {
+    auto SourceIndex = DAG.getVectorIdxConstant(I * Stride, DL);
+    Subvectors.push_back(
+        DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ReducedTy, {Op2, SourceIndex}));
+  }
+
+  // Flatten the subvector tree
+  while (Subvectors.size() > 1) {
+    Subvectors.push_back(
+        DAG.getNode(ISD::ADD, DL, ReducedTy, {Subvectors[0], Subvectors[1]}));
+    Subvectors.pop_front();
+    Subvectors.pop_front();
+  }
+
+  assert(Subvectors.size() == 1 &&
+         "There should only be one subvector after tree flattening");
+
+  return Subvectors[0];
 }
