@@ -779,7 +779,7 @@ def ROCDL_CvtScaleF32PkFp8F32:
     and store into the low/high word of `old`, preserving the other word.
   }];
   let assemblyFormat = [{
-    attr-dict $old `[` $wordSel `]` `,` $srcA `,` $srcB `,` $scale `:` type($res)
+    attr-dict $srcA `,` $srcB `,` $scale `->` $old `[` $wordSel `]` `:` type($res)
   }];
 }
     
