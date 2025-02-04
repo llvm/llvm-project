@@ -141,12 +141,14 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
     return;
   }
 
+#if 0
   if (auto *ss = dyn_cast<SharedSymbol>(&sym)) {
     if (!ss->isWeak()) {
       cast<SharedFile>(ss->file)->isNeeded = true;
       whyLive.try_emplace(&sym, parent);
     }
   }
+#endif
 
   for (InputSectionBase *sec : cNamedSections.lookup(sym.getName()))
     enqueue(sec, 0, nullptr, parent);
@@ -229,7 +231,7 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset,
     whyLive.try_emplace(sec, sym);
   } else {
     // Otherwise, the parent generically makes the section itself live.
-    whyLive.try_emplace(sec, parent);
+    //whyLive.try_emplace(sec, parent);
   }
 
   // Add input section to the queue.
@@ -256,12 +258,14 @@ template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
     } else {
       // This object is live merely by being a member of its parent section, so
       // report the parent.
+#if 0
       InputSectionBase *parent = nullptr;
       if (auto *d = dyn_cast<Defined>(s))
         parent = dyn_cast<InputSectionBase>(d->section);
       assert(parent &&
              "all live objects should have a tracked reason for being live");
       cur = LiveObject{parent};
+#endif
     }
 
     msg << "\n>>> alive because of ";
