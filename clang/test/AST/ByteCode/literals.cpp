@@ -914,12 +914,18 @@ namespace TypeTraits {
 }
 
 #if __cplusplus >= 201402L
+namespace SomeNS {
+  using MyInt = int;
+}
+
 constexpr int ignoredDecls() {
   static_assert(true, "");
   struct F { int a; };
   enum E { b };
   using A = int;
   typedef int Z;
+  namespace NewNS = SomeNS;
+  using NewNS::MyInt;
 
   return F{12}.a;
 }
@@ -1315,3 +1321,12 @@ namespace {
   }
 }
 #endif
+
+void localConstexpr() {
+  constexpr int a = 1/0; // both-error {{must be initialized by a constant expression}} \
+                         // both-note {{division by zero}} \
+                         // both-warning {{division by zero is undefined}} \
+                         // both-note {{declared here}}
+  static_assert(a == 0, ""); // both-error {{not an integral constant expression}} \
+                             // both-note {{initializer of 'a' is not a constant expression}}
+}

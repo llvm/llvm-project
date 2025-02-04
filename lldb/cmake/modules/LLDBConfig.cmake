@@ -306,9 +306,4 @@ else()
     set(LLDB_CAN_USE_DEBUGSERVER OFF)
 endif()
 
-if ((CMAKE_SYSTEM_NAME MATCHES "Android") AND LLVM_BUILD_STATIC AND
-    ((ANDROID_ABI MATCHES "armeabi") OR (ANDROID_ABI MATCHES "mips")))
-  add_definitions(-DANDROID_USE_ACCEPT_WORKAROUND)
-endif()
-
 include(LLDBGenerateConfig)

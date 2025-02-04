@@ -24,7 +24,6 @@ add_llvm_target(XtensaCodeGen
   XtensaRegisterInfo.cpp
   XtensaSubtarget.cpp
   XtensaTargetMachine.cpp
-  XtensaUtils.cpp
 
   LINK_COMPONENTS
   AsmPrinter

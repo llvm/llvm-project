@@ -31,7 +31,7 @@ entry:
   ret void
 }
 
-; CHECK:      define dso_local void @bar(ptr nocapture noundef %[[p:.*]])
+; CHECK:      define dso_local void @bar(ptr noundef captures(none) %[[p:.*]])
 ; CHECK:        tail call void (i32, ptr, i1, i8, i8, i8, i1, ...)
 ; CHECK-SAME:     @llvm.bpf.getelementptr.and.store.i32
 ; CHECK-SAME:       (i32 7,

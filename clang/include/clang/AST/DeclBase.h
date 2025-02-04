@@ -1257,8 +1257,11 @@ public:
   int64_t getID() const;
 
   /// Looks through the Decl's underlying type to extract a FunctionType
-  /// when possible. Will return null if the type underlying the Decl does not
-  /// have a FunctionType.
+  /// when possible. This includes direct FunctionDecls, along with various
+  /// function types and typedefs. This includes function pointers/references,
+  /// member function pointers, and optionally if \p BlocksToo is set
+  /// Objective-C block pointers. Returns nullptr if the type underlying the
+  /// Decl does not have a FunctionType.
   const FunctionType *getFunctionType(bool BlocksToo = true) const;
 
   // Looks through the Decl's underlying type to determine if it's a
@@ -1391,7 +1394,7 @@ public:
   const_iterator end() const { return iterator(); }
 
   bool empty() const { return Result.isNull();  }
-  bool isSingleResult() const { return Result.dyn_cast<NamedDecl*>(); }
+  bool isSingleResult() const { return isa_and_present<NamedDecl *>(Result); }
   reference front() const { return *begin(); }
 
   // Find the first declaration of the given type in the list. Note that this

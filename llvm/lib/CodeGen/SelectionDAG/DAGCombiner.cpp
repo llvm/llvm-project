@@ -191,8 +191,8 @@ namespace {
     /// candidate again.
     DenseMap<SDNode *, std::pair<SDNode *, unsigned>> StoreRootCountMap;
 
-    // AA - Used for DAG load/store alias analysis.
-    AliasAnalysis *AA;
+    // BatchAA - Used for DAG load/store alias analysis.
+    BatchAAResults *BatchAA;
 
     /// This caches all chains that have already been processed in
     /// DAGCombiner::getStoreMergeCandidates() and found to have no mergeable
@@ -247,9 +247,10 @@ namespace {
     SDValue visit(SDNode *N);
 
   public:
-    DAGCombiner(SelectionDAG &D, AliasAnalysis *AA, CodeGenOptLevel OL)
+    DAGCombiner(SelectionDAG &D, BatchAAResults *BatchAA, CodeGenOptLevel OL)
         : DAG(D), TLI(D.getTargetLoweringInfo()),
-          STI(D.getSubtarget().getSelectionDAGInfo()), OptLevel(OL), AA(AA) {
+          STI(D.getSubtarget().getSelectionDAGInfo()), OptLevel(OL),
+          BatchAA(BatchAA) {
       ForCodeSize = DAG.shouldOptForSize();
       DisableGenericCombines = STI && STI->disableGenericCombines(OptLevel);
 
@@ -11004,8 +11005,8 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
       auto *RHS = dyn_cast<LoadSDNode>(N1);
       if (LHS && RHS && LHS->isSimple() && RHS->isSimple() &&
           LHS->getAddressSpace() == RHS->getAddressSpace() &&
-          (LHS->hasOneUse() || RHS->hasOneUse()) && ISD::isNON_EXTLoad(RHS) &&
-          ISD::isNON_EXTLoad(LHS)) {
+          (LHS->hasNUsesOfValue(1, 0) || RHS->hasNUsesOfValue(1, 0)) &&
+          ISD::isNON_EXTLoad(RHS) && ISD::isNON_EXTLoad(LHS)) {
         if (DAG.areNonVolatileConsecutiveLoads(LHS, RHS, BitWidth / 8, 1)) {
           SDLoc DL(RHS);
           uint64_t PtrOff =
@@ -11023,9 +11024,8 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
                 VT, DL, RHS->getChain(), NewPtr,
                 RHS->getPointerInfo().getWithOffset(PtrOff), NewAlign,
                 RHS->getMemOperand()->getFlags(), RHS->getAAInfo());
-            // Replace the old load's chain with the new load's chain.
-            WorklistRemover DeadNodes(*this);
-            DAG.ReplaceAllUsesOfValueWith(N1.getValue(1), Load.getValue(1));
+            DAG.makeEquivalentMemoryOrdering(LHS, Load.getValue(1));
+            DAG.makeEquivalentMemoryOrdering(RHS, Load.getValue(1));
             return Load;
           }
         }
@@ -22807,13 +22807,13 @@ static SDValue scalarizeExtractedBinOp(SDNode *ExtElt, SelectionDAG &DAG,
       Vec->getNumValues() != 1)
     return SDValue();
 
+  // Targets may want to avoid this to prevent an expensive register transfer.
+  if (!TLI.shouldScalarizeBinop(Vec))
+    return SDValue();
+
   EVT ResVT = ExtElt->getValueType(0);
   if (Opc == ISD::SETCC &&
       (ResVT != Vec.getValueType().getVectorElementType() || LegalTypes))
-    return SDValue();
-
-  // Targets may want to avoid this to prevent an expensive register transfer.
-  if (!TLI.shouldScalarizeBinop(Vec))
     return SDValue();
 
   // Extracting an element of a vector constant is constant-folded, so this
@@ -22834,8 +22834,21 @@ static SDValue scalarizeExtractedBinOp(SDNode *ExtElt, SelectionDAG &DAG,
     EVT OpVT = Op0.getValueType().getVectorElementType();
     Op0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT, Op0, Index);
     Op1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT, Op1, Index);
-    return DAG.getSetCC(DL, ResVT, Op0, Op1,
-                        cast<CondCodeSDNode>(Vec->getOperand(2))->get());
+    SDValue NewVal = DAG.getSetCC(
+        DL, ResVT, Op0, Op1, cast<CondCodeSDNode>(Vec->getOperand(2))->get());
+    // We may need to sign- or zero-extend the result to match the same
+    // behaviour as the vector version of SETCC.
+    unsigned VecBoolContents = TLI.getBooleanContents(Vec.getValueType());
+    if (ResVT != MVT::i1 &&
+        VecBoolContents != TargetLowering::UndefinedBooleanContent &&
+        VecBoolContents != TLI.getBooleanContents(ResVT)) {
+      if (VecBoolContents == TargetLowering::ZeroOrNegativeOneBooleanContent)
+        NewVal = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, ResVT, NewVal,
+                             DAG.getValueType(MVT::i1));
+      else
+        NewVal = DAG.getZeroExtendInReg(NewVal, DL, MVT::i1);
+    }
+    return NewVal;
   }
   Op0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ResVT, Op0, Index);
   Op1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ResVT, Op1, Index);
@@ -23172,6 +23185,11 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     }
 
     if (SVInVec.getOpcode() == ISD::BUILD_VECTOR) {
+      // TODO: Check if shuffle mask is legal?
+      if (LegalOperations && TLI.isOperationLegal(ISD::VECTOR_SHUFFLE, VecVT) &&
+          !VecOp.hasOneUse())
+        return SDValue();
+
       SDValue InOp = SVInVec.getOperand(OrigElt);
       if (InOp.getValueType() != ScalarVT) {
         assert(InOp.getValueType().isInteger() && ScalarVT.isInteger());
@@ -26373,9 +26391,17 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
       if (AllSame)
         return N0;
 
-      // Canonicalize any other splat as a build_vector.
+      // Canonicalize any other splat as a build_vector, but avoid defining any
+      // undefined elements in the mask.
       SDValue Splatted = V->getOperand(SplatIndex);
       SmallVector<SDValue, 8> Ops(NumElts, Splatted);
+      EVT EltVT = Splatted.getValueType();
+
+      for (unsigned i = 0; i != NumElts; ++i) {
+        if (SVN->getMaskElt(i) < 0)
+          Ops[i] = DAG.getUNDEF(EltVT);
+      }
+
       SDValue NewBV = DAG.getBuildVector(V->getValueType(0), SDLoc(N), Ops);
 
       // We may have jumped through bitcasts, so the type of the
@@ -28897,7 +28923,7 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
     UseAA = false;
 #endif
 
-  if (UseAA && AA && MUC0.MMO->getValue() && MUC1.MMO->getValue() &&
+  if (UseAA && BatchAA && MUC0.MMO->getValue() && MUC1.MMO->getValue() &&
       Size0.hasValue() && Size1.hasValue() &&
       // Can't represent a scalable size + fixed offset in LocationSize
       (!Size0.isScalable() || SrcValOffset0 == 0) &&
@@ -28912,7 +28938,7 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
         Size0.isScalable() ? Size0 : LocationSize::precise(Overlap0);
     LocationSize Loc1 =
         Size1.isScalable() ? Size1 : LocationSize::precise(Overlap1);
-    if (AA->isNoAlias(
+    if (BatchAA->isNoAlias(
             MemoryLocation(MUC0.MMO->getValue(), Loc0,
                            UseTBAA ? MUC0.MMO->getAAInfo() : AAMDNodes()),
             MemoryLocation(MUC1.MMO->getValue(), Loc1,
@@ -29218,8 +29244,8 @@ bool DAGCombiner::findBetterNeighborChains(StoreSDNode *St) {
 }
 
 /// This is the entry point for the file.
-void SelectionDAG::Combine(CombineLevel Level, AliasAnalysis *AA,
+void SelectionDAG::Combine(CombineLevel Level, BatchAAResults *BatchAA,
                            CodeGenOptLevel OptLevel) {
   /// This is the main entry point to this class.
-  DAGCombiner(*this, AA, OptLevel).Run(Level);
+  DAGCombiner(*this, BatchAA, OptLevel).Run(Level);
 }

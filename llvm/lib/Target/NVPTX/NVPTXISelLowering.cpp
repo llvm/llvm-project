@@ -286,7 +286,7 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
     if (VT.isVector()) {
       unsigned NumElts = VT.getVectorNumElements();
       EVT EltVT = VT.getVectorElementType();
-      // We require power-of-2 sized vectors becuase
+      // We require power-of-2 sized vectors because
       // TargetLoweringBase::getVectorTypeBreakdown() which is invoked in
       // ComputePTXValueVTs() cannot currently break down non-power-of-2 sized
       // vectors.
@@ -995,7 +995,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // actions
   computeRegisterProperties(STI.getRegisterInfo());
 
-  setMinCmpXchgSizeInBits(STI.hasAtomCas16() ? 16 : 32);
+  setMinCmpXchgSizeInBits(STI.getMinCmpXchgSizeInBits());
   setMaxAtomicSizeInBitsSupported(64);
   setMaxDivRemBitWidthSupported(64);
 }
@@ -2804,8 +2804,8 @@ SDValue NVPTXTargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
   Tmp1 = DAG.getStore(VAListLoad.getValue(1), DL, Tmp1, Tmp2,
                       MachinePointerInfo(V));
 
-  const Value *SrcV =
-      Constant::getNullValue(PointerType::get(Ty, ADDRESS_SPACE_LOCAL));
+  const Value *SrcV = Constant::getNullValue(
+      PointerType::get(*DAG.getContext(), ADDRESS_SPACE_LOCAL));
 
   // Load the actual argument out of the pointer VAList
   return DAG.getLoad(VT, DL, Tmp1, VAList, MachinePointerInfo(SrcV));
@@ -3194,8 +3194,8 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
           SDValue VecAddr =
               DAG.getNode(ISD::ADD, dl, PtrVT, Arg,
                           DAG.getConstant(Offsets[VecIdx], dl, PtrVT));
-          Value *srcValue = Constant::getNullValue(PointerType::get(
-              EltVT.getTypeForEVT(F->getContext()), ADDRESS_SPACE_PARAM));
+          Value *srcValue = Constant::getNullValue(
+              PointerType::get(F->getContext(), ADDRESS_SPACE_PARAM));
 
           const MaybeAlign PartAlign = [&]() -> MaybeAlign {
             if (aggregateIsPacked)
