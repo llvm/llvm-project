@@ -4501,7 +4501,7 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
   // an address inside an alloca.
   AllocSize = DAG.getMemBasePlusOffset(
       AllocSize, DAG.getConstant(StackAlignMask, dl, IntPtr), dl,
-      SDNodeFlags::NoUnsignedWrap, true);
+      SDNodeFlags::NoUnsignedWrap);
 
   // Mask out the low bits for alignment purposes.
   AllocSize = DAG.getNode(ISD::AND, dl, AllocSize.getValueType(), AllocSize,

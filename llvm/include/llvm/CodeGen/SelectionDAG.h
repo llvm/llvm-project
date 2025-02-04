@@ -1073,8 +1073,7 @@ public:
   SDValue getMemBasePlusOffset(SDValue Base, TypeSize Offset, const SDLoc &DL,
                                const SDNodeFlags Flags = SDNodeFlags());
   SDValue getMemBasePlusOffset(SDValue Base, SDValue Offset, const SDLoc &DL,
-                               const SDNodeFlags Flags = SDNodeFlags(),
-                               const bool Inverted = false);
+                               const SDNodeFlags Flags = SDNodeFlags());
 
   /// Create an add instruction with appropriate flags when used for
   /// addressing some offset of an object. i.e. if a load is split into multiple
