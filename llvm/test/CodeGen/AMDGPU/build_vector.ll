@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga | FileCheck %s --check-prefixes=GFX8,GCN
 ; RUN: llc < %s -mtriple=amdgcn-amd-amdpal -mcpu=gfx1030 | FileCheck %s --check-prefixes=GFX10,GCN
 ; RUN: llc < %s -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 -amdgpu-enable-vopd=0 | FileCheck %s --check-prefixes=GFX11,GCN
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx940 | FileCheck %s --check-prefixes=GFX940,GCN
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx942 | FileCheck %s --check-prefixes=GFX942,GCN
 
 define amdgpu_kernel void @build_vector2 (ptr addrspace(1) %out) {
 ; GFX6-LABEL: build_vector2:
@@ -48,15 +48,15 @@ define amdgpu_kernel void @build_vector2 (ptr addrspace(1) %out) {
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX940-LABEL: build_vector2:
-; GFX940:       ; %bb.0: ; %entry
-; GFX940-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX940-NEXT:    v_mov_b32_e32 v2, 0
-; GFX940-NEXT:    v_mov_b32_e32 v0, 5
-; GFX940-NEXT:    v_mov_b32_e32 v1, 6
-; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1] sc0 sc1
-; GFX940-NEXT:    s_endpgm
+; GFX942-LABEL: build_vector2:
+; GFX942:       ; %bb.0: ; %entry
+; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX942-NEXT:    v_mov_b32_e32 v2, 0
+; GFX942-NEXT:    v_mov_b32_e32 v0, 5
+; GFX942-NEXT:    v_mov_b32_e32 v1, 6
+; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1] sc0 sc1
+; GFX942-NEXT:    s_endpgm
 entry:
   store <2 x i32> <i32 5, i32 6>, ptr addrspace(1) %out
   ret void
@@ -113,17 +113,17 @@ define amdgpu_kernel void @build_vector4 (ptr addrspace(1) %out) {
 ; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX940-LABEL: build_vector4:
-; GFX940:       ; %bb.0: ; %entry
-; GFX940-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX940-NEXT:    v_mov_b32_e32 v4, 0
-; GFX940-NEXT:    v_mov_b32_e32 v0, 5
-; GFX940-NEXT:    v_mov_b32_e32 v1, 6
-; GFX940-NEXT:    v_mov_b32_e32 v2, 7
-; GFX940-NEXT:    v_mov_b32_e32 v3, 8
-; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
-; GFX940-NEXT:    s_endpgm
+; GFX942-LABEL: build_vector4:
+; GFX942:       ; %bb.0: ; %entry
+; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX942-NEXT:    v_mov_b32_e32 v4, 0
+; GFX942-NEXT:    v_mov_b32_e32 v0, 5
+; GFX942-NEXT:    v_mov_b32_e32 v1, 6
+; GFX942-NEXT:    v_mov_b32_e32 v2, 7
+; GFX942-NEXT:    v_mov_b32_e32 v3, 8
+; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    s_endpgm
 entry:
   store <4 x i32> <i32 5, i32 6, i32 7, i32 8>, ptr addrspace(1) %out
   ret void
@@ -168,14 +168,14 @@ define amdgpu_kernel void @build_vector_v2i16 (ptr addrspace(1) %out) {
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX940-LABEL: build_vector_v2i16:
-; GFX940:       ; %bb.0: ; %entry
-; GFX940-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX940-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-NEXT:    v_mov_b32_e32 v1, 0x60005
-; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
-; GFX940-NEXT:    s_endpgm
+; GFX942-LABEL: build_vector_v2i16:
+; GFX942:       ; %bb.0: ; %entry
+; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX942-NEXT:    v_mov_b32_e32 v0, 0
+; GFX942-NEXT:    v_mov_b32_e32 v1, 0x60005
+; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX942-NEXT:    s_endpgm
 entry:
   store <2 x i16> <i16 5, i16 6>, ptr addrspace(1) %out
   ret void
@@ -232,17 +232,17 @@ define amdgpu_kernel void @build_vector_v2i16_trunc (ptr addrspace(1) %out, i32 
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX940-LABEL: build_vector_v2i16_trunc:
-; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX940-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX940-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NEXT:    s_lshr_b32 s2, s2, 16
-; GFX940-NEXT:    s_pack_ll_b32_b16 s2, s2, 5
-; GFX940-NEXT:    v_mov_b32_e32 v1, s2
-; GFX940-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
-; GFX940-NEXT:    s_endpgm
+; GFX942-LABEL: build_vector_v2i16_trunc:
+; GFX942:       ; %bb.0:
+; GFX942-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX942-NEXT:    v_mov_b32_e32 v0, 0
+; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    s_lshr_b32 s2, s2, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s2, s2, 5
+; GFX942-NEXT:    v_mov_b32_e32 v1, s2
+; GFX942-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX942-NEXT:    s_endpgm
   %srl = lshr i32 %a, 16
   %trunc = trunc i32 %srl to i16
   %ins.0 = insertelement <2 x i16> undef, i16 %trunc, i32 0
@@ -304,17 +304,17 @@ define amdgpu_kernel void @build_v2i32_from_v4i16_shuffle(ptr addrspace(1) %out,
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX940-LABEL: build_v2i32_from_v4i16_shuffle:
-; GFX940:       ; %bb.0: ; %entry
-; GFX940-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX940-NEXT:    v_mov_b32_e32 v2, 0
-; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NEXT:    s_lshl_b32 s3, s3, 16
-; GFX940-NEXT:    s_lshl_b32 s2, s2, 16
-; GFX940-NEXT:    v_mov_b32_e32 v0, s2
-; GFX940-NEXT:    v_mov_b32_e32 v1, s3
-; GFX940-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1] sc0 sc1
-; GFX940-NEXT:    s_endpgm
+; GFX942-LABEL: build_v2i32_from_v4i16_shuffle:
+; GFX942:       ; %bb.0: ; %entry
+; GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-NEXT:    v_mov_b32_e32 v2, 0
+; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    s_lshl_b32 s3, s3, 16
+; GFX942-NEXT:    s_lshl_b32 s2, s2, 16
+; GFX942-NEXT:    v_mov_b32_e32 v0, s2
+; GFX942-NEXT:    v_mov_b32_e32 v1, s3
+; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1] sc0 sc1
+; GFX942-NEXT:    s_endpgm
 entry:
   %shuf = shufflevector <4 x i16> %in, <4 x i16> zeroinitializer, <2 x i32> <i32 0, i32 2>
   %zextended = zext <2 x i16> %shuf to <2 x i32>

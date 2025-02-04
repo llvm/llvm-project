@@ -9,8 +9,8 @@
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx90a < %s | llvm-readobj --file-header - | FileCheck --check-prefix=SRAM-ECC-GFX90A %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx90a < %s | llvm-readobj --file-header - | FileCheck --check-prefix=SRAM-ECC-GFX90A %s
 
-; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx940 < %s | llvm-readobj --file-header - | FileCheck --check-prefix=SRAM-ECC-GFX940 %s
-; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx940 -mattr=+sramecc < %s | llvm-readobj --file-header - | FileCheck --check-prefix=SRAM-ECC-GFX940 %s
+; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx942 < %s | llvm-readobj --file-header - | FileCheck --check-prefix=SRAM-ECC-GFX942 %s
+; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx942 -mattr=+sramecc < %s | llvm-readobj --file-header - | FileCheck --check-prefix=SRAM-ECC-GFX942 %s
 
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx950 < %s | llvm-readobj --file-header - | FileCheck --check-prefix=SRAM-ECC-GFX950 %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx950 -mattr=+sramecc < %s | llvm-readobj --file-header - | FileCheck --check-prefix=SRAM-ECC-GFX950 %s
@@ -42,10 +42,10 @@
 ; SRAM-ECC-GFX90A:    EF_AMDGPU_MACH_AMDGCN_GFX90A (0x3F)
 ; SRAM-ECC-GFX90A:  ]
 
-; SRAM-ECC-GFX940: Flags [
-; SRAM-ECC-GFX940:    EF_AMDGPU_FEATURE_SRAMECC_V3 (0x200)
-; SRAM-ECC-GFX940:    EF_AMDGPU_MACH_AMDGCN_GFX940 (0x40)
-; SRAM-ECC-GFX940:  ]
+; SRAM-ECC-GFX942: Flags [
+; SRAM-ECC-GFX942:    EF_AMDGPU_FEATURE_SRAMECC_V3 (0x200)
+; SRAM-ECC-GFX942:    EF_AMDGPU_MACH_AMDGCN_GFX942 (0x40)
+; SRAM-ECC-GFX942:  ]
 
 ; SRAM-ECC-GFX950: Flags [
 ; SRAM-ECC-GFX950:    EF_AMDGPU_FEATURE_SRAMECC_V3 (0x200)

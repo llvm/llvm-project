@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10-MAD %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11-MAD %s
 
-; RUN: llc -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefixes=GFX940-FMA %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefixes=GFX942-FMA %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefixes=GFX10-FMA %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefixes=GFX11-FMA %s
 
@@ -101,19 +101,19 @@ define amdgpu_kernel void @madak_f32(ptr addrspace(1) noalias %out, ptr addrspac
 ; GFX11-MAD-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-MAD-NEXT:    s_endpgm
 ;
-; GFX940-FMA-LABEL: madak_f32:
-; GFX940-FMA:       ; %bb.0:
-; GFX940-FMA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX940-FMA-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX940-FMA-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX940-FMA-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX940-FMA-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-FMA-NEXT:    global_load_dword v1, v0, s[2:3]
-; GFX940-FMA-NEXT:    global_load_dword v2, v0, s[6:7]
-; GFX940-FMA-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-FMA-NEXT:    v_fmaak_f32 v1, v1, v2, 0x41200000
-; GFX940-FMA-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
-; GFX940-FMA-NEXT:    s_endpgm
+; GFX942-FMA-LABEL: madak_f32:
+; GFX942-FMA:       ; %bb.0:
+; GFX942-FMA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-FMA-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX942-FMA-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX942-FMA-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX942-FMA-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-FMA-NEXT:    global_load_dword v1, v0, s[2:3]
+; GFX942-FMA-NEXT:    global_load_dword v2, v0, s[6:7]
+; GFX942-FMA-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-FMA-NEXT:    v_fmaak_f32 v1, v1, v2, 0x41200000
+; GFX942-FMA-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX942-FMA-NEXT:    s_endpgm
 ;
 ; GFX10-FMA-LABEL: madak_f32:
 ; GFX10-FMA:       ; %bb.0:
@@ -281,26 +281,26 @@ define amdgpu_kernel void @madak_2_use_f32(ptr addrspace(1) noalias %out, ptr ad
 ; GFX11-MAD-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-MAD-NEXT:    s_endpgm
 ;
-; GFX940-FMA-LABEL: madak_2_use_f32:
-; GFX940-FMA:       ; %bb.0:
-; GFX940-FMA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX940-FMA-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX940-FMA-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX940-FMA-NEXT:    v_mov_b32_e32 v4, 0x41200000
-; GFX940-FMA-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-FMA-NEXT:    global_load_dword v1, v0, s[2:3] sc0 sc1
-; GFX940-FMA-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-FMA-NEXT:    global_load_dword v2, v0, s[2:3] offset:4 sc0 sc1
-; GFX940-FMA-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-FMA-NEXT:    global_load_dword v3, v0, s[2:3] offset:8 sc0 sc1
-; GFX940-FMA-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-FMA-NEXT:    v_fmaak_f32 v2, v1, v2, 0x41200000
-; GFX940-FMA-NEXT:    v_fmac_f32_e32 v4, v1, v3
-; GFX940-FMA-NEXT:    global_store_dword v0, v2, s[0:1] sc0 sc1
-; GFX940-FMA-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-FMA-NEXT:    global_store_dword v0, v4, s[2:3] offset:4 sc0 sc1
-; GFX940-FMA-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-FMA-NEXT:    s_endpgm
+; GFX942-FMA-LABEL: madak_2_use_f32:
+; GFX942-FMA:       ; %bb.0:
+; GFX942-FMA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-FMA-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX942-FMA-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX942-FMA-NEXT:    v_mov_b32_e32 v4, 0x41200000
+; GFX942-FMA-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-FMA-NEXT:    global_load_dword v1, v0, s[2:3] sc0 sc1
+; GFX942-FMA-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-FMA-NEXT:    global_load_dword v2, v0, s[2:3] offset:4 sc0 sc1
+; GFX942-FMA-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-FMA-NEXT:    global_load_dword v3, v0, s[2:3] offset:8 sc0 sc1
+; GFX942-FMA-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-FMA-NEXT:    v_fmaak_f32 v2, v1, v2, 0x41200000
+; GFX942-FMA-NEXT:    v_fmac_f32_e32 v4, v1, v3
+; GFX942-FMA-NEXT:    global_store_dword v0, v2, s[0:1] sc0 sc1
+; GFX942-FMA-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-FMA-NEXT:    global_store_dword v0, v4, s[2:3] offset:4 sc0 sc1
+; GFX942-FMA-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-FMA-NEXT:    s_endpgm
 ;
 ; GFX10-FMA-LABEL: madak_2_use_f32:
 ; GFX10-FMA:       ; %bb.0:
@@ -434,17 +434,17 @@ define amdgpu_kernel void @madak_m_inline_imm_f32(ptr addrspace(1) noalias %out,
 ; GFX11-MAD-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-MAD-NEXT:    s_endpgm
 ;
-; GFX940-FMA-LABEL: madak_m_inline_imm_f32:
-; GFX940-FMA:       ; %bb.0:
-; GFX940-FMA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX940-FMA-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX940-FMA-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX940-FMA-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-FMA-NEXT:    global_load_dword v1, v0, s[2:3]
-; GFX940-FMA-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-FMA-NEXT:    v_fmaak_f32 v1, 4.0, v1, 0x41200000
-; GFX940-FMA-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
-; GFX940-FMA-NEXT:    s_endpgm
+; GFX942-FMA-LABEL: madak_m_inline_imm_f32:
+; GFX942-FMA:       ; %bb.0:
+; GFX942-FMA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-FMA-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX942-FMA-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX942-FMA-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-FMA-NEXT:    global_load_dword v1, v0, s[2:3]
+; GFX942-FMA-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-FMA-NEXT:    v_fmaak_f32 v1, 4.0, v1, 0x41200000
+; GFX942-FMA-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX942-FMA-NEXT:    s_endpgm
 ;
 ; GFX10-FMA-LABEL: madak_m_inline_imm_f32:
 ; GFX10-FMA:       ; %bb.0:
@@ -572,19 +572,19 @@ define amdgpu_kernel void @madak_inline_imm_f32(ptr addrspace(1) noalias %out, p
 ; GFX11-MAD-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-MAD-NEXT:    s_endpgm
 ;
-; GFX940-FMA-LABEL: madak_inline_imm_f32:
-; GFX940-FMA:       ; %bb.0:
-; GFX940-FMA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX940-FMA-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX940-FMA-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX940-FMA-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX940-FMA-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-FMA-NEXT:    global_load_dword v1, v0, s[2:3]
-; GFX940-FMA-NEXT:    global_load_dword v2, v0, s[6:7]
-; GFX940-FMA-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-FMA-NEXT:    v_fma_f32 v1, v1, v2, 4.0
-; GFX940-FMA-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
-; GFX940-FMA-NEXT:    s_endpgm
+; GFX942-FMA-LABEL: madak_inline_imm_f32:
+; GFX942-FMA:       ; %bb.0:
+; GFX942-FMA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-FMA-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX942-FMA-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX942-FMA-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX942-FMA-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-FMA-NEXT:    global_load_dword v1, v0, s[2:3]
+; GFX942-FMA-NEXT:    global_load_dword v2, v0, s[6:7]
+; GFX942-FMA-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-FMA-NEXT:    v_fma_f32 v1, v1, v2, 4.0
+; GFX942-FMA-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX942-FMA-NEXT:    s_endpgm
 ;
 ; GFX10-FMA-LABEL: madak_inline_imm_f32:
 ; GFX10-FMA:       ; %bb.0:
@@ -711,19 +711,19 @@ define amdgpu_kernel void @s_v_madak_f32(ptr addrspace(1) noalias %out, ptr addr
 ; GFX11-MAD-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-MAD-NEXT:    s_endpgm
 ;
-; GFX940-FMA-LABEL: s_v_madak_f32:
-; GFX940-FMA:       ; %bb.0:
-; GFX940-FMA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX940-FMA-NEXT:    s_load_dword s6, s[4:5], 0x34
-; GFX940-FMA-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX940-FMA-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX940-FMA-NEXT:    v_mov_b32_e32 v2, 0x41200000
-; GFX940-FMA-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-FMA-NEXT:    global_load_dword v1, v0, s[2:3]
-; GFX940-FMA-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-FMA-NEXT:    v_fmac_f32_e32 v2, s6, v1
-; GFX940-FMA-NEXT:    global_store_dword v0, v2, s[0:1] sc0 sc1
-; GFX940-FMA-NEXT:    s_endpgm
+; GFX942-FMA-LABEL: s_v_madak_f32:
+; GFX942-FMA:       ; %bb.0:
+; GFX942-FMA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-FMA-NEXT:    s_load_dword s6, s[4:5], 0x34
+; GFX942-FMA-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX942-FMA-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX942-FMA-NEXT:    v_mov_b32_e32 v2, 0x41200000
+; GFX942-FMA-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-FMA-NEXT:    global_load_dword v1, v0, s[2:3]
+; GFX942-FMA-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-FMA-NEXT:    v_fmac_f32_e32 v2, s6, v1
+; GFX942-FMA-NEXT:    global_store_dword v0, v2, s[0:1] sc0 sc1
+; GFX942-FMA-NEXT:    s_endpgm
 ;
 ; GFX10-FMA-LABEL: s_v_madak_f32:
 ; GFX10-FMA:       ; %bb.0:
@@ -848,20 +848,20 @@ define amdgpu_kernel void @v_s_madak_f32(ptr addrspace(1) noalias %out, float %a
 ; GFX11-MAD-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-MAD-NEXT:    s_endpgm
 ;
-; GFX940-FMA-LABEL: v_s_madak_f32:
-; GFX940-FMA:       ; %bb.0:
-; GFX940-FMA-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x34
-; GFX940-FMA-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX940-FMA-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX940-FMA-NEXT:    v_mov_b32_e32 v2, 0x41200000
-; GFX940-FMA-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-FMA-NEXT:    global_load_dword v1, v0, s[0:1]
-; GFX940-FMA-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX940-FMA-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX940-FMA-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-FMA-NEXT:    v_fmac_f32_e32 v2, s2, v1
-; GFX940-FMA-NEXT:    global_store_dword v0, v2, s[0:1] sc0 sc1
-; GFX940-FMA-NEXT:    s_endpgm
+; GFX942-FMA-LABEL: v_s_madak_f32:
+; GFX942-FMA:       ; %bb.0:
+; GFX942-FMA-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x34
+; GFX942-FMA-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX942-FMA-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX942-FMA-NEXT:    v_mov_b32_e32 v2, 0x41200000
+; GFX942-FMA-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-FMA-NEXT:    global_load_dword v1, v0, s[0:1]
+; GFX942-FMA-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX942-FMA-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX942-FMA-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX942-FMA-NEXT:    v_fmac_f32_e32 v2, s2, v1
+; GFX942-FMA-NEXT:    global_store_dword v0, v2, s[0:1] sc0 sc1
+; GFX942-FMA-NEXT:    s_endpgm
 ;
 ; GFX10-FMA-LABEL: v_s_madak_f32:
 ; GFX10-FMA:       ; %bb.0:
@@ -963,16 +963,16 @@ define amdgpu_kernel void @s_s_madak_f32(ptr addrspace(1) %out, float %a, float 
 ; GFX11-MAD-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-MAD-NEXT:    s_endpgm
 ;
-; GFX940-FMA-LABEL: s_s_madak_f32:
-; GFX940-FMA:       ; %bb.0:
-; GFX940-FMA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX940-FMA-NEXT:    v_mov_b32_e32 v1, 0x41200000
-; GFX940-FMA-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-FMA-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-FMA-NEXT:    v_mov_b32_e32 v2, s3
-; GFX940-FMA-NEXT:    v_fmac_f32_e32 v1, s2, v2
-; GFX940-FMA-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
-; GFX940-FMA-NEXT:    s_endpgm
+; GFX942-FMA-LABEL: s_s_madak_f32:
+; GFX942-FMA:       ; %bb.0:
+; GFX942-FMA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-FMA-NEXT:    v_mov_b32_e32 v1, 0x41200000
+; GFX942-FMA-NEXT:    v_mov_b32_e32 v0, 0
+; GFX942-FMA-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-FMA-NEXT:    v_mov_b32_e32 v2, s3
+; GFX942-FMA-NEXT:    v_fmac_f32_e32 v1, s2, v2
+; GFX942-FMA-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX942-FMA-NEXT:    s_endpgm
 ;
 ; GFX10-FMA-LABEL: s_s_madak_f32:
 ; GFX10-FMA:       ; %bb.0:
@@ -1091,20 +1091,20 @@ define amdgpu_kernel void @no_madak_src0_modifier_f32(ptr addrspace(1) noalias %
 ; GFX11-MAD-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-MAD-NEXT:    s_endpgm
 ;
-; GFX940-FMA-LABEL: no_madak_src0_modifier_f32:
-; GFX940-FMA:       ; %bb.0:
-; GFX940-FMA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX940-FMA-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX940-FMA-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX940-FMA-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX940-FMA-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-FMA-NEXT:    global_load_dword v1, v0, s[2:3]
-; GFX940-FMA-NEXT:    global_load_dword v2, v0, s[6:7]
-; GFX940-FMA-NEXT:    s_mov_b32 s2, 0x41200000
-; GFX940-FMA-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-FMA-NEXT:    v_fma_f32 v1, |v1|, v2, s2
-; GFX940-FMA-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
-; GFX940-FMA-NEXT:    s_endpgm
+; GFX942-FMA-LABEL: no_madak_src0_modifier_f32:
+; GFX942-FMA:       ; %bb.0:
+; GFX942-FMA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-FMA-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX942-FMA-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX942-FMA-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX942-FMA-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-FMA-NEXT:    global_load_dword v1, v0, s[2:3]
+; GFX942-FMA-NEXT:    global_load_dword v2, v0, s[6:7]
+; GFX942-FMA-NEXT:    s_mov_b32 s2, 0x41200000
+; GFX942-FMA-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-FMA-NEXT:    v_fma_f32 v1, |v1|, v2, s2
+; GFX942-FMA-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX942-FMA-NEXT:    s_endpgm
 ;
 ; GFX10-FMA-LABEL: no_madak_src0_modifier_f32:
 ; GFX10-FMA:       ; %bb.0:
@@ -1245,20 +1245,20 @@ define amdgpu_kernel void @no_madak_src1_modifier_f32(ptr addrspace(1) noalias %
 ; GFX11-MAD-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-MAD-NEXT:    s_endpgm
 ;
-; GFX940-FMA-LABEL: no_madak_src1_modifier_f32:
-; GFX940-FMA:       ; %bb.0:
-; GFX940-FMA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX940-FMA-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX940-FMA-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX940-FMA-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX940-FMA-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-FMA-NEXT:    global_load_dword v1, v0, s[2:3]
-; GFX940-FMA-NEXT:    global_load_dword v2, v0, s[6:7]
-; GFX940-FMA-NEXT:    s_mov_b32 s2, 0x41200000
-; GFX940-FMA-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-FMA-NEXT:    v_fma_f32 v1, v1, |v2|, s2
-; GFX940-FMA-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
-; GFX940-FMA-NEXT:    s_endpgm
+; GFX942-FMA-LABEL: no_madak_src1_modifier_f32:
+; GFX942-FMA:       ; %bb.0:
+; GFX942-FMA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-FMA-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX942-FMA-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX942-FMA-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX942-FMA-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-FMA-NEXT:    global_load_dword v1, v0, s[2:3]
+; GFX942-FMA-NEXT:    global_load_dword v2, v0, s[6:7]
+; GFX942-FMA-NEXT:    s_mov_b32 s2, 0x41200000
+; GFX942-FMA-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-FMA-NEXT:    v_fma_f32 v1, v1, |v2|, s2
+; GFX942-FMA-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX942-FMA-NEXT:    s_endpgm
 ;
 ; GFX10-FMA-LABEL: no_madak_src1_modifier_f32:
 ; GFX10-FMA:       ; %bb.0:
@@ -1427,27 +1427,27 @@ define amdgpu_kernel void @madak_constant_bus_violation(i32 %arg1, [8 x i32], fl
 ; GFX11-MAD-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-MAD-NEXT:    s_endpgm
 ;
-; GFX940-FMA-LABEL: madak_constant_bus_violation:
-; GFX940-FMA:       ; %bb.0: ; %bb
-; GFX940-FMA-NEXT:    s_load_dword s0, s[4:5], 0x24
-; GFX940-FMA-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-FMA-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX940-FMA-NEXT:    s_cbranch_scc1 .LBB9_2
-; GFX940-FMA-NEXT:  ; %bb.1: ; %bb3
-; GFX940-FMA-NEXT:    v_mov_b32_e32 v0, 0
-; GFX940-FMA-NEXT:    global_store_dword v[0:1], v0, off sc0 sc1
-; GFX940-FMA-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-FMA-NEXT:  .LBB9_2: ; %bb4
-; GFX940-FMA-NEXT:    global_load_dword v0, v[0:1], off sc0 sc1
-; GFX940-FMA-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-FMA-NEXT:    s_load_dword s0, s[4:5], 0x48
-; GFX940-FMA-NEXT:    v_mov_b32_e32 v1, 0x42280000
-; GFX940-FMA-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-FMA-NEXT:    v_fmac_f32_e64 v1, s0, 0.5
-; GFX940-FMA-NEXT:    v_mul_f32_e32 v0, v1, v0
-; GFX940-FMA-NEXT:    global_store_dword v[0:1], v0, off sc0 sc1
-; GFX940-FMA-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-FMA-NEXT:    s_endpgm
+; GFX942-FMA-LABEL: madak_constant_bus_violation:
+; GFX942-FMA:       ; %bb.0: ; %bb
+; GFX942-FMA-NEXT:    s_load_dword s0, s[4:5], 0x24
+; GFX942-FMA-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-FMA-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX942-FMA-NEXT:    s_cbranch_scc1 .LBB9_2
+; GFX942-FMA-NEXT:  ; %bb.1: ; %bb3
+; GFX942-FMA-NEXT:    v_mov_b32_e32 v0, 0
+; GFX942-FMA-NEXT:    global_store_dword v[0:1], v0, off sc0 sc1
+; GFX942-FMA-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-FMA-NEXT:  .LBB9_2: ; %bb4
+; GFX942-FMA-NEXT:    global_load_dword v0, v[0:1], off sc0 sc1
+; GFX942-FMA-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-FMA-NEXT:    s_load_dword s0, s[4:5], 0x48
+; GFX942-FMA-NEXT:    v_mov_b32_e32 v1, 0x42280000
+; GFX942-FMA-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-FMA-NEXT:    v_fmac_f32_e64 v1, s0, 0.5
+; GFX942-FMA-NEXT:    v_mul_f32_e32 v0, v1, v0
+; GFX942-FMA-NEXT:    global_store_dword v[0:1], v0, off sc0 sc1
+; GFX942-FMA-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-FMA-NEXT:    s_endpgm
 ;
 ; GFX10-FMA-LABEL: madak_constant_bus_violation:
 ; GFX10-FMA:       ; %bb.0: ; %bb
