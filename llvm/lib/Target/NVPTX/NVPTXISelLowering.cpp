@@ -878,6 +878,9 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     // i64 = or (i64 = zero_extend X, i64 = shl (i64 = any_extend Y, 32))
     // -> i64 = build_pair (X, Y)
     setTargetDAGCombine(ISD::OR);
+    // i32 = truncate (i64 = srl (i64 = build_pair (X, Y), 32))
+    // -> i32 Y
+    setTargetDAGCombine(ISD::TRUNCATE);
   }
 
   // These map to conversion instructions for scalar FP types.
@@ -5297,6 +5300,28 @@ static SDValue PerformORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   return SDValue();
 }
 
+static SDValue PerformTRUNCATECombine(SDNode *N,
+                                      TargetLowering::DAGCombinerInfo &DCI,
+                                      CodeGenOptLevel OptLevel) {
+  if (OptLevel == CodeGenOptLevel::None)
+    return SDValue();
+
+  SDValue Op = N->getOperand(0);
+  if (Op.getOpcode() == ISD::SRL) {
+    SDValue SrlOp = Op.getOperand(0);
+    SDValue SrlSh = Op.getOperand(1);
+    // i32 = truncate (i64 = srl (i64 build_pair (A, B), 32))
+    // -> i32 A
+    if (const auto *Const = dyn_cast<ConstantSDNode>(SrlSh);
+        Const && Const->getZExtValue() == 32) {
+      if (SrlOp.getOpcode() == ISD::BUILD_PAIR)
+        return SrlOp.getOperand(1);
+    }
+  }
+
+  return SDValue();
+}
+
 SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   CodeGenOptLevel OptLevel = getTargetMachine().getOptLevel();
@@ -5333,6 +5358,8 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
       return PerformBUILD_VECTORCombine(N, DCI);
     case ISD::OR:
       return PerformORCombine(N, DCI, OptLevel);
+    case ISD::TRUNCATE:
+      return PerformTRUNCATECombine(N, DCI, OptLevel);
   }
   return SDValue();
 }
