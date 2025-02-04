@@ -334,9 +334,9 @@ static Value downcastSelectAndUpcast(OpBuilder &builder, Location loc,
 ///
 /// Result:
 ///   linearizedMemref = |2|2|3|3| : <4xi2> (<1xi8>)
-static void atomicStore(OpBuilder &builder, Location loc,
-                        MemRefValue linearizedMemref, Value storeIdx,
-                        VectorValue valueToStore, Value mask) {
+static void atomicRMWStore(OpBuilder &builder, Location loc,
+                           MemRefValue linearizedMemref, Value storeIdx,
+                           VectorValue valueToStore, Value mask) {
   assert(valueToStore.getType().getRank() == 1 && "expected 1-D vector");
 
   // Create an atomic load-modify-write region using
@@ -364,10 +364,11 @@ static void atomicStore(OpBuilder &builder, Location loc,
 }
 
 /// Generate a non-atomic read-modify-write sequence for subbyte storing.
-/// It has similar logic to `atomicStore`, but without atomicity.
-static void rmwStore(OpBuilder &builder, Location loc,
-                     MemRefValue linearizedMemref, Value linearizedIndex,
-                     VectorValue valueToStore, Value mask) {
+/// It has similar logic to `atomicRMWStore`, but without atomicity.
+static void nonAtomicRMWStore(OpBuilder &builder, Location loc,
+                              MemRefValue linearizedMemref,
+                              Value linearizedIndex, VectorValue valueToStore,
+                              Value mask) {
   assert(valueToStore.getType().getRank() == 1 && "expected 1-D vector");
 
   auto oneElemVecType =
@@ -580,8 +581,10 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
           extractSliceIntoByte(rewriter, loc, valueToStore, 0,
                                frontSubWidthStoreElem, *foldedNumFrontPadElems);
 
-      subEmulatedWidthStore(rewriter, loc, memrefBase, currentDestIndex,
-                            cast<VectorValue>(value), frontMask.getResult());
+      auto storeFunc = useAtomicWrites_ ? atomicRMWStore : nonAtomicRMWStore;
+
+      storeFunc(rewriter, loc, memrefBase, currentDestIndex,
+                cast<VectorValue>(value), frontMask.getResult());
     }
 
     if (currentSourceIndex >= origElements) {
@@ -643,20 +646,6 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
 
     rewriter.eraseOp(op);
     return success();
-  }
-
-  /// Store a subbyte-sized value to memory, with a mask. Depending on the
-  /// configuration, it could be an atomic store or a non-atomic RMW sequence.
-  template <typename... Args>
-  void subEmulatedWidthStore(Args &&...args) const {
-    static_assert(
-        std::is_same_v<decltype(atomicStore), decltype(rmwStore)> &&
-        "`atomicStore` and `rmwStore` must have same signature, as per "
-        "the design to keep the code clean, which one to call is "
-        "determined by the `useAtomicWrites` flag.");
-    std::function<decltype(atomicStore)> storeFunc =
-        useAtomicWrites_ ? atomicStore : rmwStore;
-    storeFunc(std::forward<Args>(args)...);
   }
 
 private:
