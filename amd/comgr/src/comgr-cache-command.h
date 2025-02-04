@@ -73,6 +73,13 @@ public:
 
   // helper to work around the comgr-xxxxx string appearing in files
   static void addFileContents(HashAlgorithm &H, llvm::StringRef Buf);
+  static void addString(HashAlgorithm &H, llvm::StringRef Buf);
+
+  // helper since several command types just write to a single output file
+  static llvm::Error writeUniqueExecuteOutput(llvm::StringRef OutputFilename,
+                                              llvm::StringRef CachedBuffer);
+  static llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  readUniqueExecuteOutput(llvm::StringRef OutputFilename);
 
 protected:
   virtual ActionClass getClass() const = 0;
