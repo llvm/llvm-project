@@ -3341,8 +3341,6 @@ FinishTemplateArgumentDeduction(
     return ConstraintsNotSatisfied
                ? TemplateDeductionResult::ConstraintsNotSatisfied
                : TemplateDeductionResult::SubstitutionFailure;
-  if (InstCTAI.MatchedPackOnParmToNonPackOnArg)
-    Info.setMatchedPackOnParmToNonPackOnArg();
 
   TemplateParameterList *TemplateParams = Template->getTemplateParameters();
   for (unsigned I = 0, E = TemplateParams->size(); I != E; ++I) {
