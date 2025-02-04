@@ -6580,8 +6580,9 @@ std::string Driver::GetClPchPath(Compilation &C, StringRef BaseName) const {
 const ToolChain &Driver::getOffloadToolChain(
     const llvm::opt::ArgList &Args, const Action::OffloadKind Kind,
     const llvm::Triple &Target, const llvm::Triple &AuxTarget) const {
-  auto &TC = ToolChains[Target.str() + "/" + AuxTarget.str()];
-  auto &HostTC = ToolChains[AuxTarget.str()];
+  std::unique_ptr<ToolChain> &TC =
+      ToolChains[Target.str() + "/" + AuxTarget.str()];
+  std::unique_ptr<ToolChain> &HostTC = ToolChains[AuxTarget.str()];
 
   assert(HostTC && "Host toolchain for offloading doesn't exit?");
   if (!TC) {
