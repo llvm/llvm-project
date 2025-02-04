@@ -60,6 +60,7 @@ protected:
 
   lldb_private::ExecutionContextRef *get() const;
 
+  friend class SBDebugger;
   SBExecutionContext(lldb::ExecutionContextRefSP exe_ctx_ref_sp);
 
 private:

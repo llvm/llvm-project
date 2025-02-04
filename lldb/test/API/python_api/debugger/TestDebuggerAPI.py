@@ -286,3 +286,50 @@ class DebuggerAPITestCase(TestBase):
             ('remove bar ret', False), # remove_bar should fail, because it's already invoked and removed
             ('foo called', original_dbg_id), # foo should be called
         ])
+
+    def test_AddRemoveNotificationCallback(self):
+        """
+        Test SBDebugger::AddNotificationCallback and SBDebugger::RemoveNotificationCallback
+        """
+        created_debuggers = []
+
+        def debugger_create_notification_callback(type, debugger, exe_ctx):
+            created_debuggers.append(debugger)
+
+        destroyed_debugger_ids = []
+
+        def debugger_destroy_notification_callback(type, debugger, exe_ctx):
+            destroyed_debugger_ids.append(debugger.GetID())
+
+        create_callback_token = lldb.SBDebugger.AddNotificationCallback(
+            lldb.eDebuggerWillBeCreated, debugger_create_notification_callback
+        )
+        debugger1 = lldb.SBDebugger.Create()
+        debugger2 = lldb.SBDebugger.Create()
+
+        # Remove create callback before creating 3rd debugger
+        lldb.SBDebugger.RemoveNotificationCallback(create_callback_token)
+
+        debugger3 = lldb.SBDebugger.Create()
+
+        self.assertNotEqual(debugger1.GetID(), debugger2.GetID())
+        self.assertNotEqual(debugger1.GetID(), debugger3.GetID())
+
+        self.assertEqual(len(created_debuggers), 2)
+        self.assertEqual(debugger1.GetID(), created_debuggers[0].GetID())
+        self.assertEqual(debugger2.GetID(), created_debuggers[1].GetID())
+
+        lldb.SBDebugger.Destroy(debugger1)
+        lldb.SBDebugger.Destroy(debugger2)
+
+        # Add destroy callback after destroying the first two debuggers but
+        # before creating 3rd debugger
+        lldb.SBDebugger.AddNotificationCallback(
+            lldb.eDebuggerWillBeDestroyed, debugger_destroy_notification_callback
+        )
+
+        self.assertEqual(len(destroyed_debugger_ids), 0)
+        debugger3_id = debugger3.GetID()
+        lldb.SBDebugger.Destroy(debugger3)
+        self.assertEqual(len(destroyed_debugger_ids), 1)
+        self.assertEqual(debugger3_id, destroyed_debugger_ids[0])
