@@ -1133,7 +1133,7 @@ ModuleImport::getConstantsToConvert(llvm::Constant *constant) {
     llvm::Constant *current = workList.back();
     // References of global objects are just pointers to the object. Avoid
     // walking the elements of these here.
-    if (isa<llvm::GlobalObject>(current)) {
+    if (isa<llvm::GlobalObject>(current) || isa<llvm::GlobalAlias>(current)) {
       orderedSet.insert(current);
       workList.pop_back();
       continue;
