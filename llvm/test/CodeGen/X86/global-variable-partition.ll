@@ -50,8 +50,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SYM: .section	.bss.unlikely.cold_bss,"aw",@nobits
 ; SYM: .section	.data.unlikely.cold_data,"aw",@progbits
 ; SYM: .section	.data.rel.ro.unlikely.cold_relro_array,"aw",@progbits
-; SYM: .section	.bss.unlikely._ZL4bss2,"aw",@nobits
-; SYM: .section	.data.unlikely._ZL5data3,"aw",@progbits
+; SYM: .section	.bss.unlikely.bss2,"aw",@nobits
+; SYM: .section	.data.unlikely.data3,"aw",@progbits
 
 ; UNIQ: .section	.bss.unlikely.,"aw",@nobits,unique,6
 ; UNIQ: .section	.data.unlikely.,"aw",@progbits,unique,7
@@ -67,15 +67,21 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @.str = private unnamed_addr constant [5 x i8] c"hot\09\00", align 1
 @.str.1 = private unnamed_addr constant [10 x i8] c"%d\09%d\09%d\0A\00", align 1
-@hot_relro_array = internal constant [2 x ptr] [ptr @_ZL4bss2, ptr @_ZL5data3]
+@hot_relro_array = internal constant [2 x ptr] [ptr @bss2, ptr @data3]
 @hot_data = internal global i32 5
 @hot_bss = internal global i32 0
 @.str.2 = private unnamed_addr constant [14 x i8] c"cold%d\09%d\09%d\0A\00", align 1
 @cold_bss = internal global i32 0
 @cold_data = internal global i32 4
-@cold_relro_array = internal constant [2 x ptr] [ptr @_ZL5data3, ptr @_ZL4bss2]
-@_ZL4bss2 = internal global i32 0
-@_ZL5data3 = internal global i32 3
+@cold_relro_array = internal constant [2 x ptr] [ptr @data3, ptr @bss2]
+
+; COM: Currently static-data-splitter only analyzes access from code.
+; COM: @bss2 and @data3 are indirectly accessed by code through @hot_relro_array
+; COM: and @cold_relro_array.
+; COM: A follow-up item is to analyze access from data and prune the unlikely
+; COM: list.
+@bss2 = internal global i32 0
+@data3 = internal global i32 3
 
 define void @hot_callee(i32 %0) !prof !51 {
   %2 = call i32 (ptr, ...) @printf(ptr @.str)
@@ -112,8 +118,8 @@ define i32 @main(i32 %0, ptr %1) !prof !52 {
   %6 = call i32 @rand()
   store i32 %6, ptr @cold_bss
   store i32 %6, ptr @cold_data
-  store i32 %6, ptr @_ZL4bss2
-  store i32 %6, ptr @_ZL5data3
+  store i32 %6, ptr @bss2
+  store i32 %6, ptr @data3
   call void @cold_callee(i32 %6)
   ret i32 0
 
