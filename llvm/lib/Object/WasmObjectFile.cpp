@@ -201,10 +201,10 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
   Expr.Inst.Opcode = readOpcode(Ctx);
   switch (Expr.Inst.Opcode) {
   case wasm::WASM_OPCODE_I32_CONST:
-    Expr.Inst.Value.Int32 = readVarint32(Ctx);
+    Expr.Inst.Value.Int32 = readVaruint32(Ctx);
     break;
   case wasm::WASM_OPCODE_I64_CONST:
-    Expr.Inst.Value.Int64 = readVarint64(Ctx);
+    Expr.Inst.Value.Int64 = readVaruint64(Ctx);
     break;
   case wasm::WASM_OPCODE_F32_CONST:
     Expr.Inst.Value.Float32 = readFloat32(Ctx);
