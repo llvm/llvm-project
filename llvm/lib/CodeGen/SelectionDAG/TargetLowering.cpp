@@ -12206,36 +12206,22 @@ SDValue TargetLowering::expandPartialReduceMLA(SDLoc DL, SDValue Acc,
     return V;
   };
 
-  SDValue Input;
-  APInt ConstantOne;
-  if (!ISD::isConstantSplatVector(Input2.getNode(), ConstantOne) ||
-      !ConstantOne.isOne()) {
-    EVT NewVT =
-        EVT::getVectorVT(*DAG.getContext(), ReducedTy.getVectorElementType(),
-                         FullTy.getVectorElementCount());
-    Input1 = ExtendToAccEltVT(Input1);
-    Input2 = ExtendToAccEltVT(Input2);
-    Input = DAG.getNode(ISD::MUL, DL, NewVT, Input1, Input2);
-  } else {
-    Input = ExtendToAccEltVT(Input1);
-  }
+  EVT NewVT =
+      EVT::getVectorVT(*DAG.getContext(), ReducedTy.getVectorElementType(),
+                       FullTy.getVectorElementCount());
+  Input1 = ExtendToAccEltVT(Input1);
+  Input2 = ExtendToAccEltVT(Input2);
+  SDValue Input = DAG.getNode(ISD::MUL, DL, NewVT, Input1, Input2);
 
-  return TargetLowering::getPartialReduceAdd(DL, ReducedTy, FullTy, Acc, Input,
-                                             DAG);
-}
-
-SDValue TargetLowering::getPartialReduceAdd(SDLoc DL, EVT ReducedTy, EVT FullTy,
-                                            SDValue Op1, SDValue Op2,
-                                            SelectionDAG &DAG) {
   unsigned Stride = ReducedTy.getVectorMinNumElements();
   unsigned ScaleFactor = FullTy.getVectorMinNumElements() / Stride;
 
   // Collect all of the subvectors
-  std::deque<SDValue> Subvectors = {Op1};
+  std::deque<SDValue> Subvectors = {Acc};
   for (unsigned I = 0; I < ScaleFactor; I++) {
     auto SourceIndex = DAG.getVectorIdxConstant(I * Stride, DL);
-    Subvectors.push_back(
-        DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ReducedTy, {Op2, SourceIndex}));
+    Subvectors.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ReducedTy,
+                                     {Input, SourceIndex}));
   }
 
   // Flatten the subvector tree

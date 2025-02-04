@@ -22018,10 +22018,12 @@ static SDValue performIntrinsicCombine(SDNode *N,
       return Dot;
     if (SDValue WideAdd = tryLowerPartialReductionToWideAdd(N, Subtarget, DAG))
       return WideAdd;
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    SDLoc DL(N);
     SDValue Input = N->getOperand(2);
-    return TargetLowering::getPartialReduceAdd(SDLoc(N), N->getValueType(0),
-                                               Input.getValueType(),
-                                               N->getOperand(1), Input, DAG);
+    return TLI.expandPartialReduceMLA(
+        DL, N->getOperand(1), Input,
+        DAG.getConstant(1, DL, Input.getValueType()), DAG);
   }
   case Intrinsic::aarch64_neon_vcvtfxs2fp:
   case Intrinsic::aarch64_neon_vcvtfxu2fp:

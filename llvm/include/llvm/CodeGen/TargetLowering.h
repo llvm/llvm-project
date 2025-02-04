@@ -5639,12 +5639,6 @@ public:
   SDValue expandPartialReduceMLA(SDLoc DL, SDValue Acc, SDValue Input1,
                                  SDValue Input2, SelectionDAG &DAG) const;
 
-  // Create the DAG equivalent of vector_partial_reduce where Op1 and Op2 are
-  // its operands and ReducedTY is the return type.
-  static SDValue getPartialReduceAdd(SDLoc DL, EVT ReducedTy, EVT FullTy,
-                                     SDValue Op1, SDValue Op2,
-                                     SelectionDAG &DAG);
-
 private:
   SDValue foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
                            const SDLoc &DL, DAGCombinerInfo &DCI) const;
