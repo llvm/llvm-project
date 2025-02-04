@@ -32,11 +32,13 @@ using namespace ompx;
     [[clang::address_space(3)]] DynamicSharedBuffer[];
 
 /// The kernel environment passed to the init method by the compiler.
-static KernelEnvironmentTy *SHARED(KernelEnvironmentPtr);
+[[clang::loader_uninitialized]] static KernelEnvironmentTy *__gpu_local
+    KernelEnvironmentPtr;
 
 /// The kernel launch environment passed as argument to the kernel by the
 /// runtime.
-static KernelLaunchEnvironmentTy *SHARED(KernelLaunchEnvironmentPtr);
+[[clang::loader_uninitialized]] static KernelLaunchEnvironmentTy *__gpu_local
+    KernelLaunchEnvironmentPtr;
 
 ///}
 
@@ -108,7 +110,8 @@ static_assert(state::SharedScratchpadSize / mapping::MaxThreadsPerTeam <= 256,
               "Shared scratchpad of this size not supported yet.");
 
 /// The allocation of a single shared memory scratchpad.
-static SharedMemorySmartStackTy SHARED(SharedMemorySmartStack);
+[[clang::loader_uninitialized]] static SharedMemorySmartStackTy __gpu_local
+    SharedMemorySmartStack;
 
 void SharedMemorySmartStackTy::init(bool IsSPMD) {
   Usage[mapping::getThreadIdInBlock()] = 0;
@@ -220,8 +223,10 @@ void state::TeamStateTy::assertEqual(TeamStateTy &Other) const {
   ASSERT(HasThreadState == Other.HasThreadState, nullptr);
 }
 
-state::TeamStateTy SHARED(ompx::state::TeamState);
-state::ThreadStateTy **SHARED(ompx::state::ThreadStates);
+[[clang::loader_uninitialized]] state::TeamStateTy __gpu_local
+    ompx::state::TeamState;
+[[clang::loader_uninitialized]] state::ThreadStateTy **__gpu_local
+    ompx::state::ThreadStates;
 
 namespace {
 

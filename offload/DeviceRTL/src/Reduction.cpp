@@ -196,8 +196,8 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   uint32_t NumThreads = omp_get_num_threads();
   uint32_t TeamId = omp_get_team_num();
   uint32_t NumTeams = omp_get_num_teams();
-  static unsigned SHARED(Bound);
-  static unsigned SHARED(ChunkTeamCount);
+  static unsigned __gpu_local Bound;
+  static unsigned __gpu_local ChunkTeamCount;
 
   // Block progress for teams greater than the current upper
   // limit. We always only allow a number of teams less or equal
