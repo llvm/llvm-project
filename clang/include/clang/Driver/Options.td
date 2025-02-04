@@ -6341,15 +6341,13 @@ def mno_avx : Flag<["-"], "mno-avx">, Group<m_x86_Features_Group>;
 def mavx10_1_256 : Flag<["-"], "mavx10.1-256">, Group<m_x86_AVX10_Features_Group>;
 def mno_avx10_1_256 : Flag<["-"], "mno-avx10.1-256">, Group<m_x86_AVX10_Features_Group>;
 def mavx10_1_512 : Flag<["-"], "mavx10.1-512">, Group<m_x86_AVX10_Features_Group>;
-def mno_avx10_1_512 : Flag<["-"], "mno-avx10.1-512">, Group<m_x86_AVX10_Features_Group>;
-def mavx10_1 : Flag<["-"], "mavx10.1">, Alias<mavx10_1_256>;
-def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Alias<mno_avx10_1_256>;
+def mno_avx10_1_512 : Flag<["-"], "mno-avx10.1-512">, Alias<mno_avx10_1_256>;
+def mavx10_1 : Flag<["-"], "mavx10.1">, Flags<[Unsupported]>;
+def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Flags<[Unsupported]>;
 def mavx10_2_256 : Flag<["-"], "mavx10.2-256">, Group<m_x86_AVX10_Features_Group>;
-def mno_avx10_2_256 : Flag<["-"], "mno-avx10.2-256">, Group<m_x86_AVX10_Features_Group>;
 def mavx10_2_512 : Flag<["-"], "mavx10.2-512">, Group<m_x86_AVX10_Features_Group>;
-def mno_avx10_2_512 : Flag<["-"], "mno-avx10.2-512">, Group<m_x86_AVX10_Features_Group>;
-def mavx10_2 : Flag<["-"], "mavx10.2">, Alias<mavx10_2_256>;
-def mno_avx10_2 : Flag<["-"], "mno-avx10.2">, Alias<mno_avx10_2_256>;
+def mavx10_2 : Flag<["-"], "mavx10.2">, Alias<mavx10_2_512>;
+def mno_avx10_2 : Flag<["-"], "mno-avx10.2">, Group<m_x86_AVX10_Features_Group>;
 def mavx2 : Flag<["-"], "mavx2">, Group<m_x86_Features_Group>;
 def mno_avx2 : Flag<["-"], "mno-avx2">, Group<m_x86_Features_Group>;
 def mavx512f : Flag<["-"], "mavx512f">, Group<m_x86_Features_Group>;
@@ -7304,6 +7302,9 @@ let Visibility = [CC1Option, FC1Option] in {
 def mlink_builtin_bitcode : Separate<["-"], "mlink-builtin-bitcode">,
   HelpText<"Link and internalize needed symbols from the given bitcode file "
            "before performing optimizations.">;
+def mlink_bitcode_file
+    : Separate<["-"], "mlink-bitcode-file">,
+      HelpText<"Link the given bitcode file before performing optimizations.">;
 } // let Visibility = [CC1Option, FC1Option]
 
 let Visibility = [CC1Option] in {
@@ -7407,14 +7408,13 @@ def msmall_data_limit : Separate<["-"], "msmall-data-limit">,
 def funwind_tables_EQ : Joined<["-"], "funwind-tables=">,
   HelpText<"Generate unwinding tables for all functions">,
   MarshallingInfoInt<CodeGenOpts<"UnwindTables">>;
-defm constructor_aliases : BoolMOption<"constructor-aliases",
-  CodeGenOpts<"CXXCtorDtorAliases">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption], "Enable">,
-  NegFlag<SetFalse, [], [ClangOption], "Disable">,
-  BothFlags<[], [ClangOption, CC1Option],
-          " emitting complete constructors and destructors as aliases when possible">>;
-def mlink_bitcode_file : Separate<["-"], "mlink-bitcode-file">,
-  HelpText<"Link the given bitcode file before performing optimizations.">;
+defm constructor_aliases
+    : BoolMOption<"constructor-aliases", CodeGenOpts<"CXXCtorDtorAliases">,
+                  DefaultFalse, PosFlag<SetTrue, [], [ClangOption], "Enable">,
+                  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+                  BothFlags<[], [ClangOption, CC1Option],
+                            " emitting complete constructors and destructors "
+                            "as aliases when possible">>;
 defm link_builtin_bitcode_postopt: BoolMOption<"link-builtin-bitcode-postopt",
   CodeGenOpts<"LinkBitcodePostopt">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Link builtin bitcodes after the "
@@ -7588,6 +7588,11 @@ def fexperimental_assignment_tracking_EQ : Joined<["-"], "fexperimental-assignme
 
 def enable_tlsdesc : Flag<["-"], "enable-tlsdesc">,
   MarshallingInfoFlag<CodeGenOpts<"EnableTLSDESC">>;
+
+def import_call_optimization : Flag<["-"], "import-call-optimization">,
+    HelpText<"Emit Import Call sections on supported targets that can be used "
+             "by the Windows kernel to enable import call optimization">,
+    MarshallingInfoFlag<CodeGenOpts<"ImportCallOptimization">>;
 
 } // let Visibility = [CC1Option]
 
