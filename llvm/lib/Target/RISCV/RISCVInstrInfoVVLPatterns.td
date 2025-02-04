@@ -554,6 +554,12 @@ def riscv_fpextend_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
   return N->hasOneUse();
 }]>;
 
+def riscv_fpextend_oneuse : PatFrags<(ops node:$A),
+                                     [(riscv_fpextend_vl node:$A, true_mask, (XLenVT srcvalue)),
+                                      (fpextend node:$A)], [{
+  return N->hasOneUse();
+}]>;
+
 def riscv_vfmadd_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
                                           node:$E),
                                      (riscv_vfmadd_vl node:$A, node:$B,
