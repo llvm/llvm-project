@@ -138,10 +138,21 @@ struct FactOrCheck {
       : Cond(Pred, Op0, Op1), DoesHold(Precond), NumIn(DTN->getDFSNumIn()),
         NumOut(DTN->getDFSNumOut()), Ty(EntryTy::ConditionFact) {}
 
+  FactOrCheck(unsigned NumIn, unsigned NumOut, CmpPredicate Pred, Value *Op0,
+              Value *Op1, ConditionTy Precond = {})
+      : Cond(Pred, Op0, Op1), DoesHold(Precond), NumIn(NumIn), NumOut(NumOut),
+        Ty(EntryTy::ConditionFact) {}
+
   static FactOrCheck getConditionFact(DomTreeNode *DTN, CmpPredicate Pred,
                                       Value *Op0, Value *Op1,
                                       ConditionTy Precond = {}) {
     return FactOrCheck(DTN, Pred, Op0, Op1, Precond);
+  }
+
+  static FactOrCheck getConditionFact(unsigned NumIn, unsigned NumOut,
+                                      CmpPredicate Pred, Value *Op0, Value *Op1,
+                                      ConditionTy Precond = {}) {
+    return FactOrCheck(NumIn, NumOut, Pred, Op0, Op1, Precond);
   }
 
   static FactOrCheck getInstFact(DomTreeNode *DTN, Instruction *Inst) {
@@ -194,6 +205,7 @@ struct State {
   /// Try to add facts for loop inductions (AddRecs) in EQ/NE compares
   /// controlling the loop header.
   void addInfoForInductions(BasicBlock &BB);
+  void addInfoForInductions2(BasicBlock &BB);
 
   /// Returns true if we can add a known condition from BB to its successor
   /// block Succ.
@@ -1083,9 +1095,128 @@ void State::addInfoForInductions(BasicBlock &BB) {
   }
 }
 
+static bool hasLoopCmpUser(Instruction *I, Loop *L) {
+  SetVector<Instruction *> WorkList;
+  WorkList.insert(I);
+
+  for (unsigned I = 0; I != WorkList.size(); ++I) {
+    Instruction *Curr = WorkList[I];
+    if (isa<LoadInst, StoreInst>(Curr))
+      continue;
+    if (!L->contains(Curr))
+      continue;
+    if (WorkList.size() > 16)
+      return false;
+    if (isa<ICmpInst>(Curr) && Curr->getParent() != L->getLoopLatch())
+      return true;
+    for (User *U : Curr->users())
+      WorkList.insert(cast<Instruction>(U));
+  }
+  return false;
+}
+
+void State::addInfoForInductions2(BasicBlock &BB) {
+  auto *L = LI.getLoopFor(&BB);
+  Value *A;
+  Value *B;
+  CmpPredicate Pred;
+
+  if (!L)
+    return;
+  BasicBlock *Latch = L->getLoopLatch();
+  if (&BB != Latch || !L->isLoopExiting(Latch) || Latch == L->getHeader())
+    return;
+
+  auto *Term = Latch->getTerminator();
+  BasicBlock *TrueSucc;
+  if (!match(Term, m_Br(m_ICmp(Pred, m_Add(m_Value(A), m_Value()), m_Value(B)),
+                        m_BasicBlock(TrueSucc), m_Value())) ||
+      Pred != CmpInst::ICMP_EQ || L->contains(TrueSucc))
+    return;
+
+  PHINode *PN = dyn_cast<PHINode>(A);
+  if (!PN || PN->getParent() != L->getHeader() ||
+      PN->getNumIncomingValues() != 2 || !hasLoopCmpUser(PN, L) ||
+      !SE.isSCEVable(PN->getType()))
+    return;
+
+  auto *Val =
+      cast<Instruction>(cast<Instruction>(Term)->getOperand(0))->getOperand(0);
+  auto *AR = dyn_cast_or_null<SCEVAddRecExpr>(SE.getSCEV(Val));
+  BasicBlock *LoopPred = L->getLoopPredecessor();
+  if (!AR || AR->getLoop() != L || !LoopPred || !isa<SCEVConstant>(AR->getStart())|| !isa<SCEVConstant>(AR->getStepRecurrence(SE)))
+    return;
+
+  auto *PNAR = cast<SCEVAddRecExpr>(SE.getSCEV(PN));
+  const SCEV *StartSCEV = PNAR->getStart();
+  Value *StartValue = nullptr;
+  if (auto *C = dyn_cast<SCEVConstant>(StartSCEV)) {
+    StartValue = C->getValue();
+  } else {
+    return;
+  }
+
+  DomTreeNode *DTN = DT.getNode(L->getHeader());
+  DomTreeNode *DTNLatch = DT.getNode(&BB);
+  auto IncUnsigned = SE.getMonotonicPredicateType(PNAR, CmpInst::ICMP_UGT);
+  auto IncSigned = SE.getMonotonicPredicateType(PNAR, CmpInst::ICMP_SGT);
+  bool MonotonicallyIncreasingUnsigned =
+      IncUnsigned && *IncUnsigned == ScalarEvolution::MonotonicallyIncreasing;
+  bool MonotonicallyIncreasingSigned =
+      IncSigned && *IncSigned == ScalarEvolution::MonotonicallyIncreasing;
+  if (!MonotonicallyIncreasingSigned || !MonotonicallyIncreasingUnsigned)
+    return;
+  // If SCEV guarantees that AR does not wrap, PN >= StartValue can be added
+  // unconditionally.
+  if (MonotonicallyIncreasingUnsigned)
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN->getDFSNumIn(), DTNLatch->getDFSNumIn(), CmpInst::ICMP_UGE, PN,
+        StartValue));
+  if (MonotonicallyIncreasingSigned)
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN->getDFSNumIn(), DTNLatch->getDFSNumIn(), CmpInst::ICMP_SGE, PN,
+        StartValue));
+
+  APInt StepOffset;
+  if (auto *C = dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE)))
+    StepOffset = C->getAPInt();
+  else
+    return;
+
+  // Make sure the bound B is loop-invariant.
+  if (!L->isLoopInvariant(B))
+    return;
+
+  // Make sure AR either steps by 1 or that the value we compare against is a
+  // GEP based on the same start value and all offsets are a multiple of the
+  // step size, to guarantee that the induction will reach the value.
+  if (StepOffset.isZero() || StepOffset.isNegative())
+    return;
+
+  if (!StepOffset.isOne()) {
+    // Check whether B-Start is known to be a multiple of StepOffset.
+    const SCEV *BMinusStart = SE.getMinusSCEV(SE.getSCEV(B), StartSCEV);
+    if (isa<SCEVCouldNotCompute>(BMinusStart) ||
+        !SE.getConstantMultiple(BMinusStart).urem(StepOffset).isZero())
+      return;
+  }
+
+  StartValue = cast<SCEVConstant>(SE.getAddExpr(SE.getSCEV(StartValue), AR->getStepRecurrence(SE)))->getValue();
+  if (MonotonicallyIncreasingUnsigned) {
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN->getDFSNumIn(), DTNLatch->getDFSNumIn(), CmpInst::ICMP_ULT, PN, B,
+        ConditionTy(CmpInst::ICMP_ULE, StartValue, B)));
+  }
+  if (MonotonicallyIncreasingSigned) {
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN->getDFSNumIn(), DTNLatch->getDFSNumIn(), CmpInst::ICMP_SLT, PN, B,
+        ConditionTy(CmpInst::ICMP_SLE, StartValue, B)));
+  }
+}
 
 void State::addInfoFor(BasicBlock &BB) {
   addInfoForInductions(BB);
+  addInfoForInductions2(BB);
 
   // True as long as long as the current instruction is guaranteed to execute.
   bool GuaranteedToExecute = true;
