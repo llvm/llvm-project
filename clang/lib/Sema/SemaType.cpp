@@ -1608,11 +1608,12 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
       if (!EltTy->isIncompleteOrObjectType())
         DiagID = diag::err_typecheck_invalid_restrict_invalid_pointee;
 
-    } else if (!isDependentOrGNUAutoType(EltTy)) {
+    } else if (!isDependentOrGNUAutoType(T)) {
       // For an __auto_type variable, we may not have seen the initializer yet
       // and so have no idea whether the underlying type is a pointer type or
       // not.
       DiagID = diag::err_typecheck_invalid_restrict_not_pointer;
+      EltTy = T;
     }
 
     if (DiagID) {

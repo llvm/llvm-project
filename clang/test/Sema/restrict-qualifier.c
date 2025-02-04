@@ -17,4 +17,4 @@ typedef t4 t5[2];
 typedef t5 restrict t6; // expected-error {{pointer to function type 'int (void)' may not be 'restrict' qualified}}
 
 typedef int t7[2];
-typedef t7 restrict t8; // expected-error {{restrict requires a pointer or reference ('int' is invalid)}}
+typedef t7 restrict t8; // expected-error {{restrict requires a pointer or reference ('t7' (aka 'int[2]')}}
