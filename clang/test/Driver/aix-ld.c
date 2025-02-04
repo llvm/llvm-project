@@ -1125,8 +1125,8 @@
 // This check is only applicable to AIX targets. 
 // AIX-specific link behavior requires `-latomic` for 32-bit sanitizer libraries, 
 // Running this test on non-AIX targets will result in an unrelated error 
-// (e.g., missing atomic support on certain architectures), 
-// which is outside the scope of this bug and is addressed separately.
+// (e.g., missing atomic support on certain architectures).
+// FIXME: Address issues with non-AIX environments/configurations.
 
 // Check No Sanitizer on 32-bit AIX
 // RUN: %if target={{.*aix.*}} %{ \
