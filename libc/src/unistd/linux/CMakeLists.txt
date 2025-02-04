@@ -467,8 +467,6 @@ add_entrypoint_object(
     ../setsid.h
   DEPENDS
     libc.hdr.types.pid_t
-    libc.hdr.fcntl_macros
-    libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
 )
