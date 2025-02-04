@@ -14,6 +14,8 @@
 #include <vector>
 #include <cassert>
 #include <cstddef>
+#include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 
