@@ -231,7 +231,7 @@ static const char *const opCommentHeader = R"(
 )";
 
 //===----------------------------------------------------------------------===//
-// Utility structs and functions
+// CL Options
 //===----------------------------------------------------------------------===//
 
 static llvm::cl::OptionCategory clOpDefs("Options for op definitions");

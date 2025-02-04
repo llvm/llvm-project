@@ -27,7 +27,7 @@ using llvm::Record;
 using llvm::RecordKeeper;
 
 //===----------------------------------------------------------------------===//
-// Utility structs and functions
+// CL Options
 //===----------------------------------------------------------------------===//
 
 static llvm::cl::OptionCategory clAttrOrTypeDefs("Options for -gen-*def-*");
