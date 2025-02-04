@@ -97,3 +97,30 @@ define void @add_aggregate_store(<2 x float> %a0, <2 x float> %a1, <2 x float> %
   store float %add10, ptr %r3, align 4
   ret void
 }
+
+; PR58139
+define <2 x double> @_mm_complexmult_pd_naive(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: @_mm_complexmult_pd_naive(
+; CHECK-NEXT:    [[B1:%.*]] = extractelement <2 x double> [[B:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg double [[B1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[A:%.*]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[B]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[A]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = tail call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP6]], <2 x double> [[B]], <2 x double> [[TMP5]])
+; CHECK-NEXT:    ret <2 x double> [[TMP7]]
+;
+  %a0 = extractelement <2 x double> %a, i32 0
+  %a1 = extractelement <2 x double> %a, i32 1
+  %b0 = extractelement <2 x double> %b, i32 0
+  %b1 = extractelement <2 x double> %b, i32 1
+  %mul10 = fmul double %a1, %b0
+  %mul11 = fmul double %a1, %b1
+  %neg11 = fneg double %mul11
+  %madd0 = call double @llvm.fmuladd.f64(double %a0, double %b0, double %neg11)
+  %madd1 = call double @llvm.fmuladd.f64(double %a0, double %b1, double %mul10)
+  %res0 = insertelement <2 x double> poison, double %madd0, i32 0
+  %res1 = insertelement <2 x double> %res0, double %madd1, i32 1
+  ret <2 x double> %res1
+}
