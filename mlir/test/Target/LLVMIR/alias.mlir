@@ -101,3 +101,51 @@ llvm.mlir.alias external @a3 {addr_space = 2 : i32} : i32 {
 // ROUNDTRIP:   %1 = llvm.addrspacecast %0 : !llvm.ptr to !llvm.ptr<2>
 // ROUNDTRIP:   llvm.return %1 : !llvm.ptr<2>
 // ROUNDTRIP: }
+
+// -----
+
+llvm.mlir.global private @g1(0 : i32) {addr_space = 0 : i32, dso_local} : i32
+
+llvm.mlir.alias private @a1 {addr_space = 0 : i32, dso_local} : i32 {
+  %0 = llvm.mlir.addressof @g1 : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+llvm.mlir.global internal constant @g2() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
+  %0 = llvm.mlir.addressof @a1 : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+llvm.mlir.alias private @a2 {addr_space = 0 : i32, dso_local} : !llvm.ptr {
+  %0 = llvm.mlir.addressof @a1 : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+llvm.mlir.global internal constant @g3() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
+  %0 = llvm.mlir.addressof @a2 : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// CHECK: @g1 = private global i32 0
+// CHECK: @g2 = internal constant ptr @a1
+// CHECK: @g3 = internal constant ptr @a2
+// CHECK: @a1 = private alias i32, ptr @g1
+// CHECK: @a2 = private alias ptr, ptr @a1
+
+// ROUNDTRIP: llvm.mlir.global private @g1(0 : i32) {addr_space = 0 : i32, dso_local} : i32
+// ROUNDTRIP: llvm.mlir.alias private @a1 {addr_space = 0 : i32, dso_local} : i32 {
+// ROUNDTRIP:   %0 = llvm.mlir.addressof @g1 : !llvm.ptr
+// ROUNDTRIP:   llvm.return %0 : !llvm.ptr
+// ROUNDTRIP: }
+// ROUNDTRIP: llvm.mlir.global internal constant @g2() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
+// ROUNDTRIP:   %0 = llvm.mlir.addressof @a1 : !llvm.ptr
+// ROUNDTRIP:   llvm.return %0 : !llvm.ptr
+// ROUNDTRIP: }
+// ROUNDTRIP: llvm.mlir.alias private @a2 {addr_space = 0 : i32, dso_local} : !llvm.ptr {
+// ROUNDTRIP:   %0 = llvm.mlir.addressof @a1 : !llvm.ptr
+// ROUNDTRIP:   llvm.return %0 : !llvm.ptr
+// ROUNDTRIP: }
+// ROUNDTRIP: llvm.mlir.global internal constant @g3() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
+// ROUNDTRIP:   %0 = llvm.mlir.addressof @a2 : !llvm.ptr
+// ROUNDTRIP:   llvm.return %0 : !llvm.ptr
+// ROUNDTRIP: }

@@ -2036,6 +2036,11 @@ LLVMFuncOp AddressOfOp::getFunction(SymbolTableCollection &symbolTable) {
       symbolTable.lookupSymbolIn(parentLLVMModule(*this), getGlobalNameAttr()));
 }
 
+AliasOp AddressOfOp::getAlias(SymbolTableCollection &symbolTable) {
+  return dyn_cast_or_null<AliasOp>(
+      symbolTable.lookupSymbolIn(parentLLVMModule(*this), getGlobalNameAttr()));
+}
+
 LogicalResult
 AddressOfOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   Operation *symbol =
@@ -2043,15 +2048,17 @@ AddressOfOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
   auto global = dyn_cast_or_null<GlobalOp>(symbol);
   auto function = dyn_cast_or_null<LLVMFuncOp>(symbol);
+  auto alias = dyn_cast_or_null<AliasOp>(symbol);
 
-  if (!global && !function)
-    return emitOpError(
-        "must reference a global defined by 'llvm.mlir.global' or 'llvm.func'");
+  if (!global && !function && !alias)
+    return emitOpError("must reference a global defined by 'llvm.mlir.global', "
+                       "'llvm.mlir.alias' or 'llvm.func'");
 
   LLVMPointerType type = getType();
-  if (global && global.getAddrSpace() != type.getAddressSpace())
+  if ((global && global.getAddrSpace() != type.getAddressSpace()) ||
+      (alias && alias.getAddrSpace() != type.getAddressSpace()))
     return emitOpError("pointer address space must match address space of the "
-                       "referenced global");
+                       "referenced global or alias");
 
   return success();
 }

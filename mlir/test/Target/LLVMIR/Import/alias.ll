@@ -51,3 +51,31 @@ entry:
 ; CHECK: %3 = llvm.add %2, %0 : i64
 ; CHECK: %4 = llvm.inttoptr %3 : i64 to !llvm.ptr
 ; CHECK: llvm.return %4 : !llvm.ptr
+
+@g1 = private global i32 0
+@g2 = internal constant ptr @a1
+@g3 = internal constant ptr @a2
+@a1 = private alias i32, ptr @g1
+@a2 = private alias ptr, ptr @a1
+
+; CHECK: llvm.mlir.alias private @a1 {addr_space = 0 : i32, dso_local} : i32 {
+; CHECK:   %0 = llvm.mlir.addressof @g1 : !llvm.ptr
+; CHECK:   llvm.return %0 : !llvm.ptr
+; CHECK: }
+; CHECK: llvm.mlir.alias private @a2 {addr_space = 0 : i32, dso_local} : !llvm.ptr {
+; CHECK:   %0 = llvm.mlir.addressof @g1 : !llvm.ptr
+; CHECK:   %1 = llvm.mlir.addressof @a1 : !llvm.ptr
+; CHECK:   llvm.return %1 : !llvm.ptr
+; CHECK: }
+
+; CHECK: llvm.mlir.global internal constant @g2() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
+; CHECK:   %0 = llvm.mlir.addressof @g1 : !llvm.ptr
+; CHECK:   %1 = llvm.mlir.addressof @a1 : !llvm.ptr
+; CHECK:   llvm.return %1 : !llvm.ptr
+; CHECK: }
+; CHECK: llvm.mlir.global internal constant @g3() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
+; CHECK:   %0 = llvm.mlir.addressof @g1 : !llvm.ptr
+; CHECK:   %1 = llvm.mlir.addressof @a1 : !llvm.ptr
+; CHECK:   %2 = llvm.mlir.addressof @a2 : !llvm.ptr
+; CHECK:   llvm.return %2 : !llvm.ptr
+; CHECK: }

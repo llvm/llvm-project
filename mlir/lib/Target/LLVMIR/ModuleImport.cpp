@@ -1231,6 +1231,14 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     return builder.create<AddressOfOp>(loc, type, symbolRef).getResult();
   }
 
+  // Convert global alias accesses.
+  if (auto *globalAliasObj = dyn_cast<llvm::GlobalAlias>(constant)) {
+    Type type = convertType(globalAliasObj->getType());
+    StringRef aliaseeName = globalAliasObj->getName();
+    FlatSymbolRefAttr symbolRef = FlatSymbolRefAttr::get(context, aliaseeName);
+    return builder.create<AddressOfOp>(loc, type, symbolRef).getResult();
+  }
+
   // Convert constant expressions.
   if (auto *constExpr = dyn_cast<llvm::ConstantExpr>(constant)) {
     // Convert the constant expression to a temporary LLVM instruction and

@@ -1163,7 +1163,7 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
   let arguments = (ins FlatSymbolRefAttr:$global_name);
   let results = (outs LLVM_AnyPointer:$res);
 
-  let summary = "Creates a pointer pointing to a global or a function";
+  let summary = "Creates a pointer pointing to a global, alias or a function";
 
   let description = [{
     Creates an SSA value containing a pointer to a global variable or constant
@@ -1208,6 +1208,14 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
       build($_builder, $_state,
             LLVM::LLVMPointerType::get($_builder.getContext()), func.getName());
       $_state.addAttributes(attrs);
+    }]>,
+    OpBuilder<(ins "AliasOp":$alias,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
+    [{
+      build($_builder, $_state,
+            LLVM::LLVMPointerType::get($_builder.getContext(), alias.getAddrSpace()),
+            alias.getSymName());
+      $_state.addAttributes(attrs);
     }]>
   ];
 
@@ -1218,6 +1226,10 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
 
     /// Return the llvm.func operation that is referenced here.
     LLVMFuncOp getFunction(SymbolTableCollection &symbolTable);
+
+    /// Return the llvm.mlir.alias operation that defined the value referenced
+    /// here.
+    AliasOp getAlias(SymbolTableCollection &symbolTable);
   }];
 
   let assemblyFormat = "$global_name attr-dict `:` qualified(type($res))";
