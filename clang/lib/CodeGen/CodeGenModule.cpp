@@ -5589,7 +5589,10 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
       if (D->getType()->isReferenceType())
         T = D->getType();
 
-      if (getLangOpts().CPlusPlus) {
+      if (getLangOpts().HLSL && getHLSLRuntime().isResource(D)) {
+        Init = llvm::UndefValue::get(getTypes().ConvertType(ASTTy));
+        NeedsGlobalCtor = true;
+      } else if (getLangOpts().CPlusPlus) {
         Init = EmitNullConstant(T);
         if (!IsDefinitionAvailableExternally)
           NeedsGlobalCtor = true;
@@ -5733,6 +5736,11 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
       Linkage == llvm::GlobalValue::ExternalLinkage &&
       Context.getTargetInfo().getTriple().isOSDarwin() &&
       !D->hasAttr<ConstInitAttr>())
+    Linkage = llvm::GlobalValue::InternalLinkage;
+
+  // For HLSL resources, the GV is an internal wrapper containing a handle to
+  // external resource.
+  if (getLangOpts().HLSL && getHLSLRuntime().isResource(D))
     Linkage = llvm::GlobalValue::InternalLinkage;
 
   GV->setLinkage(Linkage);

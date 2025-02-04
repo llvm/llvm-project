@@ -11,9 +11,9 @@ RasterizerOrderedByteAddressBuffer Buffer2: register(u3, space4);
 // CHECK: "class.hlsl::RWByteAddressBuffer" = type { target("dx.RawBuffer", i8, 1, 0) }
 // CHECK: "class.hlsl::RasterizerOrderedByteAddressBuffer" = type { target("dx.RawBuffer", i8, 1, 1) }
 
-// CHECK: @Buffer0 = global %"class.hlsl::ByteAddressBuffer" zeroinitializer, align 4
-// CHECK: @Buffer1 = global %"class.hlsl::RWByteAddressBuffer" zeroinitializer, align 4
-// CHECK: @Buffer2 = global %"class.hlsl::RasterizerOrderedByteAddressBuffer" zeroinitializer, align 4
+// CHECK: @Buffer0 = internal global %"class.hlsl::ByteAddressBuffer" undef, align 4
+// CHECK: @Buffer1 = internal global %"class.hlsl::RWByteAddressBuffer" undef, align 4
+// CHECK: @Buffer2 = internal global %"class.hlsl::RasterizerOrderedByteAddressBuffer" undef, align 4
 
 // CHECK; define internal void @_init_resource_Buffer0()
 // CHECK-DXIL: %Buffer0_h = call target("dx.RawBuffer", i8, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false)
