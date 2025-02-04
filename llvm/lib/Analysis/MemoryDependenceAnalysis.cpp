@@ -1391,7 +1391,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
     // results from the set".  Clear out the indicator for this.
     CacheInfo->Pair = BBSkipFirstBlockPair();
 
-    // If *nothing* works, mark the pointer as unknown.
+    // If *nothing* works, mark the pointer as invalid.
     //
     // If this is the magic first block, return this as a clobber of the whole
     // incoming value.  Since we can't phi translate to one of the predecessors,
@@ -1410,7 +1410,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
                 !DT.isReachableFromEntry(BB)) &&
                "Should only be here with transparent block");
 
-        I.setResult(MemDepResult::getUnknown());
+        I.setResult(MemDepResult::getDirty(I.getResult().getInst()));
 
 
         break;

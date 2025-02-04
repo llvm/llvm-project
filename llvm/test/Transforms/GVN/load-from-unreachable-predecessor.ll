@@ -45,9 +45,7 @@ define i32 @invalidate_and_reuse_dep(ptr %base_pp, i1 %cmp0) {
 ; CHECK-NEXT:    [[NULL_OR_SELECT_PP:%.*]] = phi ptr [ null, %[[ENTRY]] ], [ [[BASE_PP]], %[[L0]] ]
 ; CHECK-NEXT:    br i1 [[CMP0]], label %[[THEN:.*]], label %[[END:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[THEN_NODE_P:%.*]] = load ptr, ptr [[BASE_PP]], align 8
-; CHECK-NEXT:    [[THEN_VAL:%.*]] = load i32, ptr [[THEN_NODE_P]], align 4
-; CHECK-NEXT:    ret i32 [[THEN_VAL]]
+; CHECK-NEXT:    ret i32 [[VAL]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    [[END_SELECT_P:%.*]] = load ptr, ptr [[NULL_OR_SELECT_PP]], align 8
 ; CHECK-NEXT:    call void @use.ptr(ptr [[END_SELECT_P]])
