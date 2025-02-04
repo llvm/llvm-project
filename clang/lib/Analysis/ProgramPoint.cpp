@@ -104,14 +104,18 @@ StringRef ProgramPoint::getProgramPointKindName(Kind K) {
 std::optional<SourceLocation> ProgramPoint::getSourceLocation() const {
   switch (getKind()) {
   case BlockEdgeKind:
-    // return castAs<BlockEdge>().getSrc()->getTerminatorStmt()->getBeginLoc();
+    // If needed, the source and or destination beginning can be used to get
+    // source location.
     return std::nullopt;
   case BlockEntranceKind:
-    // return castAs<BlockEntrance>().getBlock()->getLabel()->getBeginLoc();
+    // If needed, first statement of the block can be used.
     return std::nullopt;
   case BlockExitKind:
-    // return
-    // castAs<BlockExit>().getBlock()->getTerminatorStmt()->getBeginLoc();
+    if (const auto *B = castAs<BlockExit>().getBlock()) {
+      if (const auto *T = B->getTerminatorStmt()) {
+        return T->getBeginLoc();
+      }
+    }
     return std::nullopt;
   case PreStmtKind:
   case PreStmtPurgeDeadSymbolsKind:
