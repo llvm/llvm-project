@@ -3888,6 +3888,9 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   case LangOptions::ClangABI::Ver19:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "19.0");
     break;
+  case LangOptions::ClangABI::Ver20:
+    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "20.0");
+    break;
   case LangOptions::ClangABI::Latest:
     break;
   }

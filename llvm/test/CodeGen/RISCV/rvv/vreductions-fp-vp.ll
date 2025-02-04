@@ -465,3 +465,131 @@ define float @vreduce_fmaximum_v4f32(float %start, <4 x float> %val, <4 x i1> %m
   %s = call float @llvm.vp.reduce.fmaximum.v4f32(float %start, <4 x float> %val, <4 x i1> %m, i32 %evl)
   ret float %s
 }
+
+define float @vpreduce_fadd_fpext_vp_nxv1f16_nxv1f32(float %s, <vscale x 1 x half> %v, <vscale x 1 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_fadd_fpext_vp_nxv1f16_nxv1f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-NEXT:    vfwcvt.f.f.v v9, v8, v0.t
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vfmv.s.f v8, fa0
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vfredusum.vs v8, v9, v8, v0.t
+; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    ret
+  %w = call <vscale x 1 x float> @llvm.vp.fpext(<vscale x 1 x half> %v, <vscale x 1 x i1> %m, i32 %evl)
+  %r = call reassoc float @llvm.vp.reduce.fadd(float %s, <vscale x 1 x float> %w, <vscale x 1 x i1> %m, i32 %evl)
+  ret float %r
+}
+
+define float @vpreduce_ord_fadd_fpext_vp_fpext_nxv1f16_nxv1f32(float %s, <vscale x 1 x half> %v, <vscale x 1 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_ord_fadd_fpext_vp_fpext_nxv1f16_nxv1f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-NEXT:    vfwcvt.f.f.v v9, v8, v0.t
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vfmv.s.f v8, fa0
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vfredosum.vs v8, v9, v8, v0.t
+; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    ret
+  %w = call <vscale x 1 x float> @llvm.vp.fpext(<vscale x 1 x half> %v, <vscale x 1 x i1> %m, i32 %evl)
+  %r = call float @llvm.vp.reduce.fadd(float %s, <vscale x 1 x float> %w, <vscale x 1 x i1> %m, i32 %evl)
+  ret float %r
+}
+
+define double @vpreduce_fadd_fpext_vp_nxv1f32_nxv1f64(double %s, <vscale x 1 x float> %v, <vscale x 1 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_fadd_fpext_vp_nxv1f32_nxv1f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vfwcvt.f.f.v v9, v8, v0.t
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; CHECK-NEXT:    vfmv.s.f v8, fa0
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    vfredusum.vs v8, v9, v8, v0.t
+; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    ret
+  %w = call <vscale x 1 x double> @llvm.vp.fpext(<vscale x 1 x float> %v, <vscale x 1 x i1> %m, i32 %evl)
+  %r = call reassoc double @llvm.vp.reduce.fadd(double %s, <vscale x 1 x double> %w, <vscale x 1 x i1> %m, i32 %evl)
+  ret double %r
+}
+
+define double @vpreduce_ord_fadd_fpext_vp_fpext_nxv1f32_nxv1f64(double %s, <vscale x 1 x float> %v, <vscale x 1 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_ord_fadd_fpext_vp_fpext_nxv1f32_nxv1f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vfwcvt.f.f.v v9, v8, v0.t
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; CHECK-NEXT:    vfmv.s.f v8, fa0
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    vfredosum.vs v8, v9, v8, v0.t
+; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    ret
+  %w = call <vscale x 1 x double> @llvm.vp.fpext(<vscale x 1 x float> %v, <vscale x 1 x i1> %m, i32 %evl)
+  %r = call double @llvm.vp.reduce.fadd(double %s, <vscale x 1 x double> %w, <vscale x 1 x i1> %m, i32 %evl)
+  ret double %r
+}
+
+define float @vpreduce_fadd_fpext_nxv1f16_nxv1f32(float %s, <vscale x 1 x half> %v, <vscale x 1 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_fadd_fpext_nxv1f16_nxv1f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vfmv.s.f v8, fa0
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vfredusum.vs v8, v9, v8, v0.t
+; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    ret
+  %w = fpext <vscale x 1 x half> %v to <vscale x 1 x float>
+  %r = call reassoc float @llvm.vp.reduce.fadd(float %s, <vscale x 1 x float> %w, <vscale x 1 x i1> %m, i32 %evl)
+  ret float %r
+}
+
+define float @vpreduce_ord_fadd_fpext_nxv1f16_nxv1f32(float %s, <vscale x 1 x half> %v, <vscale x 1 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_ord_fadd_fpext_nxv1f16_nxv1f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vfmv.s.f v8, fa0
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vfredosum.vs v8, v9, v8, v0.t
+; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    ret
+  %w = fpext <vscale x 1 x half> %v to <vscale x 1 x float>
+  %r = call float @llvm.vp.reduce.fadd(float %s, <vscale x 1 x float> %w, <vscale x 1 x i1> %m, i32 %evl)
+  ret float %r
+}
+
+define double @vpreduce_fadd_fpext_nxv1f32_nxv1f64(double %s, <vscale x 1 x float> %v, <vscale x 1 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_fadd_fpext_nxv1f32_nxv1f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; CHECK-NEXT:    vfmv.s.f v8, fa0
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    vfredusum.vs v8, v9, v8, v0.t
+; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    ret
+  %w = fpext <vscale x 1 x float> %v to <vscale x 1 x double>
+  %r = call reassoc double @llvm.vp.reduce.fadd(double %s, <vscale x 1 x double> %w, <vscale x 1 x i1> %m, i32 %evl)
+  ret double %r
+}
+
+define double @vpreduce_ord_fadd_fpext_nxv1f32_nxv1f64(double %s, <vscale x 1 x float> %v, <vscale x 1 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_ord_fadd_fpext_nxv1f32_nxv1f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; CHECK-NEXT:    vfmv.s.f v8, fa0
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    vfredosum.vs v8, v9, v8, v0.t
+; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    ret
+  %w = fpext <vscale x 1 x float> %v to <vscale x 1 x double>
+  %r = call double @llvm.vp.reduce.fadd(double %s, <vscale x 1 x double> %w, <vscale x 1 x i1> %m, i32 %evl)
+  ret double %r
+}
