@@ -424,7 +424,8 @@ namespace D50526 {
   template<typename T, T (__stdcall f)()> void g();
   void h() { g<void, h>(); }
 #if !_M_X64
-  // expected-error@-2 {{no matching function for call to}}
-  // expected-note@-4 {{invalid explicitly-specified argument}}
+  // expected-note@-3 {{template parameter is declared here}}
+  // expected-error@-3 {{no matching function for call to}}
+  // expected-note@-5 {{candidate template ignored: invalid explicitly-specified argument: could not convert 'h' from 'void ()' to 'T (*)() __attribute__((stdcall))}}
 #endif
 }

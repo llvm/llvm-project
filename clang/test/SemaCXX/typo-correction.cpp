@@ -613,7 +613,7 @@ int bar() {
 }
 
 namespace testIncludeTypeInTemplateArgument {
-template <typename T, typename U>
+template <typename T, typename U> // expected-note {{template parameter is declared here}}
 void foo(T t = {}, U = {}); // expected-note {{candidate template ignored}}
 
 class AddObservation {}; // expected-note {{declared here}}

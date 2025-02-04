@@ -3572,6 +3572,10 @@ TemplateDeductionResult Sema::SubstituteExplicitTemplateArguments(
                                 SugaredBuilder, CanonicalBuilder,
                                 /*UpdateArgsWithConversions=*/false) ||
       Trap.hasErrorOccurred()) {
+
+    // FIXME: decide if ill formed const expr or regular
+    // InvalidExplicitArguments?
+
     unsigned Index = SugaredBuilder.size();
     if (Index >= TemplateParams->size())
       return TemplateDeductionResult::SubstitutionFailure;

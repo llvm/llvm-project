@@ -11716,39 +11716,46 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
 
   case TemplateDeductionResult::InvalidExplicitArguments: {
     assert(ParamD && "no parameter found for invalid explicit arguments");
-    int Which = 0;
-    int Index = 0;
     TemplateArgument FirstArg = *DeductionFailure.getFirstArg();
     TemplateArgument SecondArg = *DeductionFailure.getSecondArg();
-    QualType Type;
-    SourceRange SrcRange;
 
-    if (auto *TTPD = dyn_cast<TemplateTypeParmDecl>(ParamD)) {
-      Which = 1;
-      Index = TTPD->getIndex();
-      SrcRange = TTPD->getSourceRange();
-    } else if (auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(ParamD)) {
-      if (SecondArg.isNull())
-        Which = 2;
-      else
-        Which = 3;
-      Index = NTTPD->getIndex();
-      Type = NTTPD->getType();
-      SrcRange = NTTPD->getSourceRange();
-    } else if (auto *TTempPD = dyn_cast<TemplateTemplateParmDecl>(ParamD)) {
-      Which = 4;
-      Index = TTempPD->getIndex();
-      SrcRange = TTempPD->getSourceRange();
-    } else
-      llvm_unreachable("unexpected param decl kind");
-
+    auto TupleResult = [&]() -> std::tuple<int, int, QualType> {
+      switch (ParamD->getKind()) {
+      case Decl::TemplateTypeParm: {
+        auto *TTPD = cast<TemplateTypeParmDecl>(ParamD);
+        return {1, TTPD->getIndex(), QualType()};
+      }
+      case Decl::NonTypeTemplateParm: {
+        auto *NTTPD = cast<NonTypeTemplateParmDecl>(ParamD);
+        if (SecondArg.isNull())
+          return {2, NTTPD->getIndex(), NTTPD->getType()};
+        else {
+          // FIXME: this is a hack, we should do this in SemaTempalteDeduction
+          // or even ExprConstant. Perhaps an InvalidExplicitArguments error
+          // is not what we want
+          QualType qt = NTTPD->getType();
+          if (qt.getCanonicalType() !=
+              SecondArg.getAsType().getCanonicalType()) {
+            return {3, NTTPD->getIndex(), NTTPD->getType()};
+          } else {
+            return {5, NTTPD->getIndex(), NTTPD->getType()};
+          }
+        }
+      }
+      case Decl::TemplateTemplateParm: {
+        auto *TTempPD = cast<TemplateTemplateParmDecl>(ParamD);
+        return {4, TTempPD->getIndex(), QualType()};
+      }
+      default:
+        llvm_unreachable("unexpected param decl kind");
+      }
+    };
+    auto [Which, Index, Type] = TupleResult();
+    S.NoteTemplateParameterLocation(*ParamD);
     S.Diag(Templated->getLocation(),
-           diag::note_ovl_candidate_explicit_arg_mismatch)
-        << (Index + 1) << SrcRange;
-    if (ParamD->getDeclName() && Which != 4)
-      S.Diag(Templated->getLocation(),
-             diag::note_ovl_candidate_explicit_arg_mismatch_detail)
-          << Which << FirstArg << SecondArg << Type;
+           diag::note_ovl_candidate_explicit_arg_mismatch_detail)
+        << Which << FirstArg << SecondArg << Type << (Index + 1);
+
     MaybeEmitInheritedConstructorNote(S, Found);
     return;
   }

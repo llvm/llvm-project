@@ -750,8 +750,8 @@ namespace FailingDestructor {
         throw "oh no";
     }
   };
-  template<D d>
-  void f() {} // both-note {{invalid explicitly-specified argument}}
+  template<D d> // both-note{{template parameter is declared here}}
+  void f() {} // both-note{{candidate template ignored: invalid explicitly-specified argument: expr is not a valid const expr in the expected context}}
 
   void g() {
     f<D{0, false}>(); // both-error {{no matching function}}

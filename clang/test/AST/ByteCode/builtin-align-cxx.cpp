@@ -3,8 +3,8 @@
 // RUN: %clang_cc1 -triple=x86_64-unknown-unknown -std=c++11 %s -fsyntax-only -verify=ref,both
 
 // Check that we don't crash when using dependent types in __builtin_align:
-template <typename a, a b>
-void *c(void *d) { // both-note{{candidate template ignored}}
+template <typename a, a b> // both-note{{template parameter is declared here}}
+void *c(void *d) { // both-note{{candidate template ignored: invalid explicitly-specified argument: could not convert 'foo' from 'x' to 'a'}}
   return __builtin_align_down(d, b);
 }
 

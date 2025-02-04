@@ -113,21 +113,21 @@ namespace test3 {
 
   struct Derived1 : Base {
     using Base::foo;
-    template <int n> Opaque<2> foo() { return Opaque<2>(); } // expected-note {{invalid explicitly-specified argument for template parameter 'n'}}
+    template <int n> Opaque<2> foo() { return Opaque<2>(); } // expected-note{{template parameter is declared here}} // expected-note {{candidate template ignored: invalid explicitly-specified argument: expected constant of type 'int' but got type 'int'}}
   };
 
   struct Derived2 : Base {
-    template <int n> Opaque<2> foo() { return Opaque<2>(); } // expected-note {{invalid explicitly-specified argument for template parameter 'n'}}
+    template <int n> Opaque<2> foo() { return Opaque<2>(); } // expected-note{{template parameter is declared here}} // expected-note {{candidate template ignored: invalid explicitly-specified argument: expected constant of type 'int' but got type 'int'}}
     using Base::foo;
   };
 
   struct Derived3 : Base {
     using Base::foo;
-    template <class T> Opaque<3> foo() { return Opaque<3>(); } // expected-note {{invalid explicitly-specified argument for template parameter 'T'}}
+    template <class T> Opaque<3> foo() { return Opaque<3>(); } // expected-note{{template parameter is declared here}} // expected-note {{candidate template ignored: invalid explicitly-specified argument: expected a type, but got value '0'}}
   };
 
   struct Derived4 : Base {
-    template <class T> Opaque<3> foo() { return Opaque<3>(); } // expected-note {{invalid explicitly-specified argument for template parameter 'T'}}
+    template <class T> Opaque<3> foo() { return Opaque<3>(); } // expected-note{{template parameter is declared here}} // expected-note {{candidate template ignored: invalid explicitly-specified argument: expected a type, but got value '0'}}
     using Base::foo;
   };
 

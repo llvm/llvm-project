@@ -138,7 +138,8 @@ namespace ttp_defaults {
 
   template <template <class T2> class TT2> void f(A<TT2>);
   // new-note@-1 {{explicit instantiation candidate}}
-  // old-note@-2 {{invalid explicitly-specified argument for template parameter 'TT2'}}
+  // old-note@-2 {{template parameter is declared here}}
+  // old-note@-3 {{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
 
   // FIXME: The default arguments on the TTP are not available during partial ordering.
   template <template <class T3, class T4 = float> class TT3> void f(A<TT3>) {};
