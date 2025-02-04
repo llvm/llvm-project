@@ -163,6 +163,7 @@ def do_SQRTF32_RN : Predicate<"usePrecSqrtF32()">;
 def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
 def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
 def hasDotInstructions : Predicate<"Subtarget->hasDotInstructions()">;
+def hasTcgen05Instructions : Predicate<"Subtarget->hasTcgen05Instructions()">;
 
 def True : Predicate<"true">;
 def False : Predicate<"false">;
