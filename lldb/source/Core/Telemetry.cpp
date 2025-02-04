@@ -35,7 +35,7 @@ using ::llvm::telemetry::Destination;
 using ::llvm::telemetry::TelemetryInfo;
 
 static uint64_t ToNanosec(const SteadyTimePoint Point) {
-  return nanoseconds(Point.value().time_since_epoch()).count();
+  return std::chrono::nanoseconds(Point.time_since_epoch()).count();
 }
 
 void LldbBaseTelemetryInfo::serialize(Serializer &serializer) const {
@@ -68,25 +68,13 @@ static std::string MakeUUID(lldb_private::Debugger *debugger) {
 }
 
 TelemetryManager::TelemetryManager(
-    std::unique_ptr<llvm::telemetry::Config> config,
-    lldb_private::Debugger *debugger)
-    : m_config(std::move(config)), m_debugger(debugger),
-      m_session_uuid(MakeUUID(debugger)) {}
+    std::unique_ptr<llvm::telemetry::Config> config)
+    : m_config(std::move(config)) {}
 
-llvm::Error TelemetryManager::dispatch(TelemetryInfo *entry) {
-  entry->SessionId = m_session_uuid;
-
-  llvm::Error defferedErrs = llvm::Error::success();
-  for (auto &destination : m_destinations)
-    deferredErrs = llvm::joinErrors(std::move(deferredErrs),
-                                    destination->receiveEntry(entry));
-
-  return std::move(deferredErrs);
-}
-
-void TelemetryManager::addDestination(
-    std::unique_ptr<Destination> destination) {
-  m_destinations.push_back(std::move(destination));
+llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
+  // Do nothing for now.
+  // In up-coming patch, this would be where the manager
+  // attach the session_uuid to the entry.
 }
 
 } // namespace lldb_private

@@ -86,14 +86,10 @@ class TelemetryManager : public llvm::telemetry::Manager {
 public:
   TelemetryManager(std::unique_ptr<llvm::telemetry::Config> config);
 
-  llvm::Error dispatch(TelemetryInfo *entry) override;
-
-  void addDestination(std::unique_ptr<Destination> destination) override;
+  llvm::Error preDispatch(TelemetryInfo *entry) override;
 
 private:
   std::unique_ptr<llvm::telemetry::Config> m_config;
-  const std::string m_session_uuid;
-  std::vector<std::unique_ptr<Destination>> m_destinations;
 };
 
 } // namespace lldb_private
