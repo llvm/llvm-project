@@ -1200,10 +1200,12 @@ Decl *TemplateDeclInstantiator::VisitDecompositionDecl(DecompositionDecl *D) {
   if (OldBindingPack) {
     // Mark the bindings in the pack as instantiated.
     auto Bindings = NewDD->bindings();
-    auto NewBindingPack = *llvm::find_if(
+    BindingDecl *NewBindingPack = *llvm::find_if(
         Bindings, [](BindingDecl *D) -> bool { return D->isParameterPack(); });
-    auto OldDecls = OldBindingPack->getBindingPackDecls();
-    auto NewDecls = NewBindingPack->getBindingPackDecls();
+    llvm::ArrayRef<BindingDecl *> OldDecls =
+        OldBindingPack->getBindingPackDecls();
+    llvm::ArrayRef<BindingDecl *> NewDecls =
+        NewBindingPack->getBindingPackDecls();
     assert(OldDecls.size() == NewDecls.size());
     for (unsigned I = 0; I < OldDecls.size(); I++)
       SemaRef.CurrentInstantiationScope->InstantiatedLocal(OldDecls[I],

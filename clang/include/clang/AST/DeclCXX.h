@@ -4279,7 +4279,7 @@ public:
     llvm::ArrayRef<BindingDecl *> PackBindings;
 
     // Split the bindings into subranges split by the pack.
-    auto BeforePackBindings = Bindings.take_until(
+    llvm::ArrayRef<BindingDecl *> BeforePackBindings = Bindings.take_until(
         [](BindingDecl *BD) { return BD->isParameterPack(); });
 
     Bindings = Bindings.drop_front(BeforePackBindings.size());
