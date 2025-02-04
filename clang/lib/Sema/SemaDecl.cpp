@@ -10329,13 +10329,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       }
     }
 
-    if (FTIHasSingleVoidParameter(FTI)) {
-      const auto *Param = cast<ParmVarDecl>(FTI.Params[0].Param);
-      for (const auto *A : Param->attrs())
-        Diag(A->getLoc(), diag::warn_attribute_on_void_param)
-            << A << A->getRange();
-    }
-
     if (!getLangOpts().CPlusPlus) {
       // In C, find all the tag declarations from the prototype and move them
       // into the function DeclContext. Remove them from the surrounding tag
