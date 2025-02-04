@@ -73,120 +73,120 @@ DebugMod("postra-sched-debugmod",
 AntiDepBreaker::~AntiDepBreaker() = default;
 
 namespace {
-  class PostRAScheduler : public MachineFunctionPass {
-    const TargetInstrInfo *TII = nullptr;
-    RegisterClassInfo RegClassInfo;
+class PostRAScheduler : public MachineFunctionPass {
+  const TargetInstrInfo *TII = nullptr;
+  RegisterClassInfo RegClassInfo;
 
-  public:
-    static char ID;
-    PostRAScheduler() : MachineFunctionPass(ID) {}
+public:
+  static char ID;
+  PostRAScheduler() : MachineFunctionPass(ID) {}
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesCFG();
-      AU.addRequired<AAResultsWrapperPass>();
-      AU.addRequired<TargetPassConfig>();
-      AU.addRequired<MachineDominatorTreeWrapperPass>();
-      AU.addPreserved<MachineDominatorTreeWrapperPass>();
-      AU.addRequired<MachineLoopInfoWrapperPass>();
-      AU.addPreserved<MachineLoopInfoWrapperPass>();
-      MachineFunctionPass::getAnalysisUsage(AU);
-    }
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<AAResultsWrapperPass>();
+    AU.addRequired<TargetPassConfig>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
-    MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
-    }
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::NoVRegs);
+  }
 
-    bool runOnMachineFunction(MachineFunction &Fn) override;
-  };
-  char PostRAScheduler::ID = 0;
+  bool runOnMachineFunction(MachineFunction &Fn) override;
+};
 
-  class SchedulePostRATDList : public ScheduleDAGInstrs {
-    /// AvailableQueue - The priority queue to use for the available SUnits.
-    ///
-    LatencyPriorityQueue AvailableQueue;
+char PostRAScheduler::ID = 0;
 
-    /// PendingQueue - This contains all of the instructions whose operands have
-    /// been issued, but their results are not ready yet (due to the latency of
-    /// the operation).  Once the operands becomes available, the instruction is
-    /// added to the AvailableQueue.
-    std::vector<SUnit*> PendingQueue;
+class SchedulePostRATDList : public ScheduleDAGInstrs {
+  /// AvailableQueue - The priority queue to use for the available SUnits.
+  ///
+  LatencyPriorityQueue AvailableQueue;
 
-    /// HazardRec - The hazard recognizer to use.
-    ScheduleHazardRecognizer *HazardRec;
+  /// PendingQueue - This contains all of the instructions whose operands have
+  /// been issued, but their results are not ready yet (due to the latency of
+  /// the operation).  Once the operands becomes available, the instruction is
+  /// added to the AvailableQueue.
+  std::vector<SUnit *> PendingQueue;
 
-    /// AntiDepBreak - Anti-dependence breaking object, or NULL if none
-    AntiDepBreaker *AntiDepBreak;
+  /// HazardRec - The hazard recognizer to use.
+  ScheduleHazardRecognizer *HazardRec;
 
-    /// AA - AliasAnalysis for making memory reference queries.
-    AliasAnalysis *AA;
+  /// AntiDepBreak - Anti-dependence breaking object, or NULL if none
+  AntiDepBreaker *AntiDepBreak;
 
-    /// The schedule. Null SUnit*'s represent noop instructions.
-    std::vector<SUnit*> Sequence;
+  /// AA - AliasAnalysis for making memory reference queries.
+  AliasAnalysis *AA;
 
-    /// Ordered list of DAG postprocessing steps.
-    std::vector<std::unique_ptr<ScheduleDAGMutation>> Mutations;
+  /// The schedule. Null SUnit*'s represent noop instructions.
+  std::vector<SUnit *> Sequence;
 
-    /// The index in BB of RegionEnd.
-    ///
-    /// This is the instruction number from the top of the current block, not
-    /// the SlotIndex. It is only used by the AntiDepBreaker.
-    unsigned EndIndex = 0;
+  /// Ordered list of DAG postprocessing steps.
+  std::vector<std::unique_ptr<ScheduleDAGMutation>> Mutations;
 
-  public:
-    SchedulePostRATDList(
-        MachineFunction &MF, MachineLoopInfo &MLI, AliasAnalysis *AA,
-        const RegisterClassInfo &,
-        TargetSubtargetInfo::AntiDepBreakMode AntiDepMode,
-        SmallVectorImpl<const TargetRegisterClass *> &CriticalPathRCs);
+  /// The index in BB of RegionEnd.
+  ///
+  /// This is the instruction number from the top of the current block, not
+  /// the SlotIndex. It is only used by the AntiDepBreaker.
+  unsigned EndIndex = 0;
 
-    ~SchedulePostRATDList() override;
+public:
+  SchedulePostRATDList(
+      MachineFunction &MF, MachineLoopInfo &MLI, AliasAnalysis *AA,
+      const RegisterClassInfo &,
+      TargetSubtargetInfo::AntiDepBreakMode AntiDepMode,
+      SmallVectorImpl<const TargetRegisterClass *> &CriticalPathRCs);
 
-    /// startBlock - Initialize register live-range state for scheduling in
-    /// this block.
-    ///
-    void startBlock(MachineBasicBlock *BB) override;
+  ~SchedulePostRATDList() override;
 
-    // Set the index of RegionEnd within the current BB.
-    void setEndIndex(unsigned EndIdx) { EndIndex = EndIdx; }
+  /// startBlock - Initialize register live-range state for scheduling in
+  /// this block.
+  ///
+  void startBlock(MachineBasicBlock *BB) override;
 
-    /// Initialize the scheduler state for the next scheduling region.
-    void enterRegion(MachineBasicBlock *bb,
-                     MachineBasicBlock::iterator begin,
-                     MachineBasicBlock::iterator end,
-                     unsigned regioninstrs) override;
+  // Set the index of RegionEnd within the current BB.
+  void setEndIndex(unsigned EndIdx) { EndIndex = EndIdx; }
 
-    /// Notify that the scheduler has finished scheduling the current region.
-    void exitRegion() override;
+  /// Initialize the scheduler state for the next scheduling region.
+  void enterRegion(MachineBasicBlock *bb, MachineBasicBlock::iterator begin,
+                   MachineBasicBlock::iterator end,
+                   unsigned regioninstrs) override;
 
-    /// Schedule - Schedule the instruction range using list scheduling.
-    ///
-    void schedule() override;
+  /// Notify that the scheduler has finished scheduling the current region.
+  void exitRegion() override;
 
-    void EmitSchedule();
+  /// Schedule - Schedule the instruction range using list scheduling.
+  ///
+  void schedule() override;
 
-    /// Observe - Update liveness information to account for the current
-    /// instruction, which will not be scheduled.
-    ///
-    void Observe(MachineInstr &MI, unsigned Count);
+  void EmitSchedule();
 
-    /// finishBlock - Clean up register live-range state.
-    ///
-    void finishBlock() override;
+  /// Observe - Update liveness information to account for the current
+  /// instruction, which will not be scheduled.
+  ///
+  void Observe(MachineInstr &MI, unsigned Count);
 
-  private:
-    /// Apply each ScheduleDAGMutation step in order.
-    void postProcessDAG();
+  /// finishBlock - Clean up register live-range state.
+  ///
+  void finishBlock() override;
 
-    void ReleaseSucc(SUnit *SU, SDep *SuccEdge);
-    void ReleaseSuccessors(SUnit *SU);
-    void ScheduleNodeTopDown(SUnit *SU, unsigned CurCycle);
-    void ListScheduleTopDown();
+private:
+  /// Apply each ScheduleDAGMutation step in order.
+  void postProcessDAG();
 
-    void dumpSchedule() const;
-    void emitNoop(unsigned CurCycle);
-  };
-}
+  void ReleaseSucc(SUnit *SU, SDep *SuccEdge);
+  void ReleaseSuccessors(SUnit *SU);
+  void ScheduleNodeTopDown(SUnit *SU, unsigned CurCycle);
+  void ListScheduleTopDown();
+
+  void dumpSchedule() const;
+  void emitNoop(unsigned CurCycle);
+};
+} // namespace
 
 char &llvm::PostRASchedulerID = PostRAScheduler::ID;
 
