@@ -1627,10 +1627,14 @@ bool PreRARematStage::allUsesAvailableAt(const MachineInstr *InstToRemat,
     if (!MO.isReg() || !MO.getReg() || !MO.readsReg())
       continue;
 
-    // Do not attempt to reason about PhysRegs
     if (!MO.getReg().isVirtual()) {
-      assert(DAG.MRI.isConstantPhysReg(MO.getReg()) ||
-             DAG.TII->isIgnorableUse(MO));
+      // Do not attempt to reason about PhysRegs
+      // TODO: better analysis of PhysReg livness
+      if (!DAG.MRI.isConstantPhysReg(MO.getReg()) &&
+          !DAG.TII->isIgnorableUse(MO))
+        return false;
+
+      // Constant PhysRegs and IgnorableUses are okay
       continue;
     }
 
@@ -1664,7 +1668,6 @@ bool PreRARematStage::allUsesAvailableAt(const MachineInstr *InstToRemat,
         if (LM.none())
           break;
       }
-      assert(LM.none());
     }
   }
   return true;
@@ -1856,10 +1859,7 @@ bool PreRARematStage::sinkTriviallyRematInsts(const GCNSubtarget &ST,
       MachineBasicBlock::iterator InsertPos =
           MachineBasicBlock::iterator(It.second);
       Register Reg = Def->getOperand(0).getReg();
-      // Rematerialize MI to its use block. Since we are only rematerializing
-      // instructions that do not have any virtual reg uses, we do not need to
-      // call LiveRangeEdit::allUsesAvailableAt() and
-      // LiveRangeEdit::canRematerializeAt().
+      // Rematerialize MI to its use block.
       TII->reMaterialize(*InsertPos->getParent(), InsertPos, Reg,
                          Def->getOperand(0).getSubReg(), *Def, *DAG.TRI);
       MachineInstr *NewMI = &*std::prev(InsertPos);
