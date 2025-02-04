@@ -34,7 +34,6 @@ def main():
             "zmodem",
             "androm3da",
             "tru",
-            "rovka",
             "rorth",
             "quinnlp",
             "kamaub",
