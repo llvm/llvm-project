@@ -1587,7 +1587,7 @@ void SemaObjC::actOnObjCTypeArgsOrProtocolQualifiers(
     const char* prevSpec; // unused
     unsigned diagID; // unused
     QualType type;
-    if (auto *actualTypeDecl = typeDecl.dyn_cast<TypeDecl *>())
+    if (auto *actualTypeDecl = dyn_cast<TypeDecl *>(typeDecl))
       type = Context.getTypeDeclType(actualTypeDecl);
     else
       type = Context.getObjCInterfaceType(cast<ObjCInterfaceDecl *>(typeDecl));
