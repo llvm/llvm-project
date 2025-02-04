@@ -566,7 +566,9 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITCAST(SDNode *N) {
     }
   }
 
-  if (!NOutVT.isVector() && InOp.getValueType().isVector()) {
+  // TODO: Handle big endian
+  if (!NOutVT.isVector() && InOp.getValueType().isVector() &&
+      DAG.getDataLayout().isLittleEndian()) {
     // Pad the vector operand with undef and cast to a wider integer.
     EVT EltVT = InOp.getValueType().getVectorElementType();
     TypeSize EltSize = EltVT.getSizeInBits();
