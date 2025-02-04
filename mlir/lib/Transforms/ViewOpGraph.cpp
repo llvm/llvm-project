@@ -385,9 +385,8 @@ private:
   /// operation inside the cluster.
   void processBlock(Block &block) {
     emitClusterStmt([&]() {
-      for (BlockArgument &blockArg : block.getArguments()) {
+      for (BlockArgument &blockArg : block.getArguments())
         valueToNode[blockArg] = emitNodeStmt(getLabel(blockArg));
-      }
       // Emit a node for each operation.
       std::optional<Node> prevNode;
       for (Operation &op : block) {
