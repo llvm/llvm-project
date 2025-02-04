@@ -232,6 +232,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setTruncStoreAction(MVT::f128, MVT::f16, Expand);
   setOperationAction(ISD::FP_TO_FP16, MVT::f128, Expand);
 
+  setOperationAction(ISD::BR_CC, MVT::f16, Custom);
   if (Subtarget.isISA3_0()) {
     setLoadExtAction(ISD::EXTLOAD, MVT::f128, MVT::f16, Legal);
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Legal);
@@ -1312,7 +1313,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::SETCC, MVT::f128, Custom);
       setOperationAction(ISD::STRICT_FSETCC, MVT::f128, Custom);
       setOperationAction(ISD::STRICT_FSETCCS, MVT::f128, Custom);
-      setOperationAction(ISD::BR_CC, MVT::f128, Expand);
+      setOperationAction(ISD::BR_CC, MVT::f128, Custom);
 
       // Lower following f128 select_cc pattern:
       // select_cc x, y, tv, fv, cc -> select_cc (setcc x, y, cc), 0, tv, fv, NE
@@ -8236,6 +8237,36 @@ SDValue PPCTargetLowering::LowerTRUNCATEVector(SDValue Op,
   return DAG.getVectorShuffle(WideVT, DL, Op1, Op2, ShuffV);
 }
 
+SDValue PPCTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
+  SDValue Chain = Op.getOperand(0);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
+  SDValue LHS = Op.getOperand(2);
+  SDValue RHS = Op.getOperand(3);
+  SDValue Dest = Op.getOperand(4);
+  EVT LHSVT = LHS.getValueType();
+  SDLoc dl(Op);
+
+  // Soften the cc condition with libcall if it is fp128.
+  if (LHSVT == MVT::f128) {
+    assert(!Subtarget.hasP9Vector() &&
+           "BR_CC for f128 is already legal under Power9!");
+    softenSetCCOperands(DAG, LHSVT, LHS, RHS, CC, dl, LHS, RHS, Chain);
+    if (RHS.getNode())
+      LHS = DAG.getNode(ISD::BR_CC, dl, Op.getValueType(), Chain,
+                        DAG.getCondCode(CC), LHS, RHS, Dest);
+    return LHS;
+  }
+
+  if (LHSVT == MVT::f16) {
+    LHS = DAG.getFPExtendOrRound(LHS, dl, MVT::f32);
+    RHS = DAG.getFPExtendOrRound(RHS, dl, MVT::f32);
+    return DAG.getNode(ISD::BR_CC, dl, Op.getValueType(), Chain,
+                       DAG.getCondCode(CC), LHS, RHS, Dest);
+  }
+
+  assert(false && "Only f16 and f128 BR_CC lowering is handled here!");
+}
+
 /// LowerSELECT_CC - Lower floating point select_cc's into fsel instruction when
 /// possible.
 SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
@@ -12493,6 +12524,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STORE:              return LowerSTORE(Op, DAG);
   case ISD::TRUNCATE:           return LowerTRUNCATE(Op, DAG);
   case ISD::SELECT_CC:          return LowerSELECT_CC(Op, DAG);
+  case ISD::BR_CC:
+    return LowerBR_CC(Op, DAG);
   case ISD::STRICT_FP_TO_UINT:
   case ISD::STRICT_FP_TO_SINT:
   case ISD::FP_TO_UINT:
