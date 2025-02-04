@@ -12,7 +12,9 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -250,13 +252,19 @@ void DXContainer::PartIterator::updateIteratorImpl(const uint32_t Offset) {
 Error DirectX::RootSignature::parse(StringRef Data) {
   const char *Current = Data.begin();
 
+
   // Root Signature headers expects 6 integers to be present.
   if (Data.size() < 6 * sizeof(uint32_t)) {
     return parseFailed("Invalid data. Too small.");
   }
 
-  Version = support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  uint32_t VValue = support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
+
+  Expected<uint32_t> MaybeVersion = dxbc::RootSignatureValidations::validateVersion(VValue);
+  if(Error E = MaybeVersion.takeError())
+    return E;
+  Version = MaybeVersion.get();
 
   NumParameters =
       support::endian::read<uint32_t, llvm::endianness::little>(Current);
@@ -274,8 +282,13 @@ Error DirectX::RootSignature::parse(StringRef Data) {
       support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
-  Flags = support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  uint32_t FValue = support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
+
+  Expected<uint32_t> MaybeFlag = dxbc::RootSignatureValidations::validateRootFlag(FValue);
+  if(Error E = MaybeFlag.takeError())
+    return E;
+  Flags = MaybeFlag.get();
 
   return Error::success();
 }
