@@ -5213,13 +5213,27 @@ static SDValue lowerShuffleViaVRegSplitting(ShuffleVectorSDNode *SVN,
     for (unsigned I : seq<unsigned>(Data.size())) {
       const auto &[Idx1, Idx2, _] = Data[I];
       if (Values.contains(Idx1)) {
-        assert(Idx2 != UINT_MAX && Values.contains(Idx2) &&
-               "Expected both indices to be extracted already.");
-        break;
+        // If the shuffle contains permutation of odd number of elements,
+        // Idx1 might be used already in the first iteration.
+        //
+        // Idx1 = shuffle Idx1, Idx2
+        // Idx1 = shuffle Idx1, Idx3
+        if (const auto It = Values.find(Idx1);
+            I > 0 && std::get<0>(Data[I - 1]) == Idx1) {
+          assert(Idx2 != UINT_MAX && It != Values.end() &&
+                 !Values.contains(Idx2) &&
+                 "Expected only first index to be extracted already.");
+          ;
+        } else {
+          assert(Idx2 != UINT_MAX && Values.contains(Idx2) &&
+                 "Expected both indices to be extracted already.");
+          break;
+        }
+      } else {
+        SDValue V = ExtractValue(Idx1 >= NumOfSrcRegs ? V2 : V1,
+                         (Idx1 % NumOfSrcRegs) * NumOpElts);
+        Values[Idx1] = V;
       }
-      SDValue V = ExtractValue(Idx1 >= NumOfSrcRegs ? V2 : V1,
-                               (Idx1 % NumOfSrcRegs) * NumOpElts);
-      Values[Idx1] = V;
       if (Idx2 != UINT_MAX)
         Values[Idx2] = ExtractValue(Idx2 >= NumOfSrcRegs ? V2 : V1,
                                     (Idx2 % NumOfSrcRegs) * NumOpElts);
