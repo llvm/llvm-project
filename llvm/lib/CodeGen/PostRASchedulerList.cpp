@@ -17,6 +17,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/AntiDepBreaker.h"
@@ -39,6 +40,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "post-RA-sched"
@@ -73,13 +75,24 @@ DebugMod("postra-sched-debugmod",
 AntiDepBreaker::~AntiDepBreaker() = default;
 
 namespace {
-class PostRAScheduler : public MachineFunctionPass {
+class PostRAScheduler {
   const TargetInstrInfo *TII = nullptr;
+  MachineLoopInfo *MLI = nullptr;
+  AliasAnalysis *AA = nullptr;
+  const TargetMachine *TM = nullptr;
   RegisterClassInfo RegClassInfo;
 
 public:
+  PostRAScheduler(MachineFunction &MF, MachineLoopInfo *MLI, AliasAnalysis *AA,
+                  const TargetMachine *TM)
+      : TII(MF.getSubtarget().getInstrInfo()), MLI(MLI), AA(AA), TM(TM) {}
+  bool run(MachineFunction &MF);
+};
+
+class PostRASchedulerLegacy : public MachineFunctionPass {
+public:
   static char ID;
-  PostRAScheduler() : MachineFunctionPass(ID) {}
+  PostRASchedulerLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -99,8 +112,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 };
-
-char PostRAScheduler::ID = 0;
+char PostRASchedulerLegacy::ID = 0;
 
 class SchedulePostRATDList : public ScheduleDAGInstrs {
   /// AvailableQueue - The priority queue to use for the available SUnits.
@@ -188,9 +200,9 @@ private:
 };
 } // namespace
 
-char &llvm::PostRASchedulerID = PostRAScheduler::ID;
+char &llvm::PostRASchedulerID = PostRASchedulerLegacy::ID;
 
-INITIALIZE_PASS(PostRAScheduler, DEBUG_TYPE,
+INITIALIZE_PASS(PostRASchedulerLegacy, DEBUG_TYPE,
                 "Post RA top-down list latency scheduler", false, false)
 
 SchedulePostRATDList::SchedulePostRATDList(
@@ -263,19 +275,12 @@ static bool enablePostRAScheduler(const TargetSubtargetInfo &ST,
          OptLevel >= ST.getOptLevelToEnablePostRAScheduler();
 }
 
-bool PostRAScheduler::runOnMachineFunction(MachineFunction &Fn) {
-  if (skipFunction(Fn.getFunction()))
-    return false;
-
-  const auto &Subtarget = Fn.getSubtarget();
-  TargetPassConfig *PassConfig = &getAnalysis<TargetPassConfig>();
+bool PostRAScheduler::run(MachineFunction &MF) {
+  const auto &Subtarget = MF.getSubtarget();
   // Check that post-RA scheduling is enabled for this target.
-  if (!enablePostRAScheduler(Subtarget, PassConfig->getOptLevel()))
+  if (!enablePostRAScheduler(Subtarget, TM->getOptLevel()))
     return false;
 
-  TII = Subtarget.getInstrInfo();
-  MachineLoopInfo &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  AliasAnalysis *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   TargetSubtargetInfo::AntiDepBreakMode AntiDepMode =
       Subtarget.getAntiDepBreakMode();
   if (EnableAntiDepBreaking.getPosition() > 0) {
@@ -287,22 +292,22 @@ bool PostRAScheduler::runOnMachineFunction(MachineFunction &Fn) {
   }
   SmallVector<const TargetRegisterClass *, 4> CriticalPathRCs;
   Subtarget.getCriticalPathRCs(CriticalPathRCs);
-  RegClassInfo.runOnMachineFunction(Fn);
+  RegClassInfo.runOnMachineFunction(MF);
 
   LLVM_DEBUG(dbgs() << "PostRAScheduler\n");
 
-  SchedulePostRATDList Scheduler(Fn, MLI, AA, RegClassInfo, AntiDepMode,
+  SchedulePostRATDList Scheduler(MF, *MLI, AA, RegClassInfo, AntiDepMode,
                                  CriticalPathRCs);
 
   // Loop over all of the basic blocks
-  for (auto &MBB : Fn) {
+  for (auto &MBB : MF) {
 #ifndef NDEBUG
     // If DebugDiv > 0 then only schedule MBB with (ID % DebugDiv) == DebugMod
     if (DebugDiv > 0) {
       static int bbcnt = 0;
       if (bbcnt++ % DebugDiv != DebugMod)
         continue;
-      dbgs() << "*** DEBUG scheduling " << Fn.getName() << ":"
+      dbgs() << "*** DEBUG scheduling " << MF.getName() << ":"
              << printMBBReference(MBB) << " ***\n";
     }
 #endif
@@ -320,7 +325,7 @@ bool PostRAScheduler::runOnMachineFunction(MachineFunction &Fn) {
       // Calls are not scheduling boundaries before register allocation, but
       // post-ra we don't gain anything by scheduling across calls since we
       // don't need to worry about register pressure.
-      if (MI.isCall() || TII->isSchedulingBoundary(MI, &MBB, Fn)) {
+      if (MI.isCall() || TII->isSchedulingBoundary(MI, &MBB, MF)) {
         Scheduler.enterRegion(&MBB, I, Current, CurrentCount - Count);
         Scheduler.setEndIndex(CurrentCount);
         Scheduler.schedule();
@@ -351,6 +356,39 @@ bool PostRAScheduler::runOnMachineFunction(MachineFunction &Fn) {
   }
 
   return true;
+}
+
+bool PostRASchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  MachineLoopInfo *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  AliasAnalysis *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  const TargetMachine *TM =
+      &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+  PostRAScheduler Impl(MF, MLI, AA, TM);
+  return Impl.run(MF);
+}
+
+PreservedAnalyses
+PostRASchedulerPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+
+  MachineLoopInfo *MLI = &MFAM.getResult<MachineLoopAnalysis>(MF);
+  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                  .getManager();
+  AliasAnalysis *AA = &FAM.getResult<AAManager>(MF.getFunction());
+  PostRAScheduler Impl(MF, MLI, AA, TM);
+  bool Changed = Impl.run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<MachineDominatorTreeAnalysis>();
+  PA.preserve<MachineLoopAnalysis>();
+  return PA;
 }
 
 /// StartBlock - Initialize register live-range state for scheduling in
