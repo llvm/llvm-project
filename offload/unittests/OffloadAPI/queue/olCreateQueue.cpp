@@ -17,3 +17,12 @@ TEST_F(olCreateQueueTest, Success) {
   ASSERT_SUCCESS(olCreateQueue(Device, &Queue));
   ASSERT_NE(Queue, nullptr);
 }
+
+TEST_F(olCreateQueueTest, InvalidNullHandleDevice) {
+  ol_queue_handle_t Queue = nullptr;
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olCreateQueue(nullptr, &Queue));
+}
+
+TEST_F(olCreateQueueTest, InvalidNullPointerQueue) {
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER, olCreateQueue(Device, nullptr));
+}

@@ -60,5 +60,21 @@ struct offloadDeviceTest : offloadPlatformTest {
     ASSERT_SUCCESS(olGetDevice(Platform, 1, &Device));
   }
 
-  ol_device_handle_t Device;
+  ol_device_handle_t Device = nullptr;
+};
+
+struct offloadQueueTest : offloadDeviceTest {
+  void SetUp() override {
+    RETURN_ON_FATAL_FAILURE(offloadDeviceTest::SetUp());
+    ASSERT_SUCCESS(olCreateQueue(Device, &Queue));
+  }
+
+  void TearDown() override {
+    if (Queue) {
+      olReleaseQueue(Queue);
+    }
+    RETURN_ON_FATAL_FAILURE(offloadDeviceTest::TearDown());
+  }
+
+  ol_queue_handle_t Queue = nullptr;
 };
