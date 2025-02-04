@@ -33,10 +33,15 @@ struct ModuleRootSignature {
   uint32_t Flags = 0;
 
   ModuleRootSignature() = default;
-
-  bool parse(NamedMDNode *Root, const Function *F);
-
   static ModuleRootSignature analyzeModule(Module &M, const Function *F);
+
+private:
+  bool parse(NamedMDNode *Root, const Function *F);
+  bool parseRootSignatureElement(MDNode *Element);
+  bool parseRootFlags(MDNode *RootFlagNode);
+
+  bool validate();
+  bool validateRootFlag();
 };
 
 class RootSignatureAnalysis : public AnalysisInfoMixin<RootSignatureAnalysis> {
