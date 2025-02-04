@@ -18,8 +18,12 @@
 #include <netdb.h>
 #include <pwd.h>
 #include <sys/stat.h>
+
+#ifndef _AIX
 #include <sys/syscall.h>
 #include <sys/wait.h>
+#endif
+
 #include <unistd.h>
 #include <spawn.h>
 #endif
