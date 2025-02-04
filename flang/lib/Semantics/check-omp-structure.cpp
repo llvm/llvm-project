@@ -3224,10 +3224,9 @@ void OmpStructureChecker::CheckReductionObjects(
     }
   }
 
-  // Disallowed in standards before 4.0 and in 5.0 and later. Not explicitly
-  // allowed in 4.0. Keep this as an error until/unless structure component
-  // reduction is implemented.
-  // Object cannot be a part of another object (except array elements)
+  // Denied in all current versions of the standard because structure components
+  // are not definable (i.e. they are expressions not variables).
+  // Object cannot be a part of another object (except array elements).
   CheckStructureComponent(objects, clauseId);
 
   if (version >= 50) {
