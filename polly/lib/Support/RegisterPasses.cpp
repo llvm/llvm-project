@@ -773,12 +773,6 @@ void registerPollyPasses(PassBuilder &PB) {
         return Err(parseFunctionPipeline(Name, FPM, PIC, Pipeline));
       });
   PB.registerPipelineParsingCallback(
-      [PIC](StringRef Name, ModulePassManager &MPM,
-            ArrayRef<PassBuilder::PipelineElement> Pipeline) -> bool {
-        ExitOnError Err("Unable to parse Polly module pass: ");
-        return Err(parseModulePipeline(Name, MPM, PIC, Pipeline));
-      });
-  PB.registerPipelineParsingCallback(
       [PIC](StringRef Name, FunctionPassManager &FPM,
             ArrayRef<PassBuilder::PipelineElement> Pipeline) -> bool {
         return parseScopPipeline(Name, FPM, PIC, Pipeline);
@@ -788,6 +782,12 @@ void registerPollyPasses(PassBuilder &PB) {
             ArrayRef<PassBuilder::PipelineElement> Pipeline) -> bool {
         ExitOnError Err("Unable to parse Polly call graph pass: ");
         return Err(parseCGPipeline(Name, CGPM, PIC, Pipeline));
+      });
+  PB.registerPipelineParsingCallback(
+      [PIC](StringRef Name, ModulePassManager &MPM,
+            ArrayRef<PassBuilder::PipelineElement> Pipeline) -> bool {
+        ExitOnError Err("Unable to parse Polly module pass: ");
+        return Err(parseModulePipeline(Name, MPM, PIC, Pipeline));
       });
   PB.registerParseTopLevelPipelineCallback(
       [PIC](llvm::ModulePassManager &MPM,
