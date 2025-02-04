@@ -25,7 +25,6 @@ end
 ! CHECK: acc.set default_async(%[[C1]] : i32)
 
 ! CHECK: %[[C1:.*]] = arith.constant 1 : i32
-! HLFIR: %[[LOAD_L:.*]] = fir.load %[[L]] : !fir.ref<!fir.logical<4>>
 ! HLFIR: %[[LOAD_L:.*]] = fir.load %[[DECLL]]#0 : !fir.ref<!fir.logical<4>>
 ! CHECK: %[[CONV_L:.*]] = fir.convert %[[LOAD_L]] : (!fir.logical<4>) -> i1
 ! CHECK: acc.set default_async(%[[C1]] : i32) if(%[[CONV_L]])

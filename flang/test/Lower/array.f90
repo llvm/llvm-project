@@ -114,6 +114,29 @@ subroutine range()
   data c1/6 * (0.0, 0.0)/
 end subroutine range
 
+! CHECK-LABEL: rangeglobal
+subroutine rangeGlobal()
+  integer, dimension(6) :: a0 = (/ 1, 1, 2, 2, 3, 3 /)
+
+end subroutine rangeGlobal
+
+! CHECK-LABEL: hugeglobal
+subroutine hugeGlobal()
+  integer, parameter :: D = 500
+  integer, dimension(D, D) :: a
+
+  a = reshape((/(i, i = 1, D * D)/), shape(a))
+end subroutine hugeGlobal
+
+block data
+  real(selected_real_kind(6)) :: x(5,5)
+  common /block/ x
+  data x(1,1), x(2,1), x(3,1) / 1, 1, 0 /
+  data x(1,2), x(2,2), x(4,2) / 1, 1, 2.4 /
+  data x(1,3), x(2,3), x(4,3) / 1, 1, 2.4 /
+  data x(4,4) / 2.4 /
+end
+
 ! c1 data
 ! CHECK: fir.global internal @_QFrangeEc1(dense<(0.000000e+00,0.000000e+00)> : tensor<3x2xcomplex<f32>>) : !fir.array<2x3xcomplex<f32>>
 
@@ -132,27 +155,6 @@ end subroutine range
 ! c0 array constructor
 ! CHECK: fir.global internal @_QQro.2x3xz4.{{.*}}(dense<{{\[}}[(1.000000e+00,1.500000e+00), (2.000000e+00,2.500000e+00)], [(3.000000e+00,3.500000e+00), (4.000000e+00,4.500000e+00)], [(5.000000e+00,5.500000e+00), (6.000000e+00,6.500000e+00)]]> : tensor<3x2xcomplex<f32>>) constant : !fir.array<2x3xcomplex<f32>>
 
-! CHECK-LABEL: rangeGlobal
-subroutine rangeGlobal()
 ! CHECK: fir.global internal @_QFrangeglobal{{.*}}(dense<[1, 1, 2, 2, 3, 3]> : tensor<6xi32>) : !fir.array<6xi32>
-  integer, dimension(6) :: a0 = (/ 1, 1, 2, 2, 3, 3 /)
-
-end subroutine rangeGlobal
-
-! CHECK-LABEL: hugeGlobal
-subroutine hugeGlobal()
-  integer, parameter :: D = 500
-  integer, dimension(D, D) :: a
 
 ! CHECK: fir.global internal @_QQro.500x500xi4.{{.*}}(dense<{{.*}}> : tensor<500x500xi32>) constant : !fir.array<500x500xi32>
-  a = reshape((/(i, i = 1, D * D)/), shape(a))
-end subroutine hugeGlobal
-
-block data
-  real(selected_real_kind(6)) :: x(5,5)
-  common /block/ x
-  data x(1,1), x(2,1), x(3,1) / 1, 1, 0 /
-  data x(1,2), x(2,2), x(4,2) / 1, 1, 2.4 /
-  data x(1,3), x(2,3), x(4,3) / 1, 1, 2.4 /
-  data x(4,4) / 2.4 /
-end
