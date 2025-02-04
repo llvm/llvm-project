@@ -1498,8 +1498,9 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
     if (!dem_array_type || dem_array_type->getNumChildren() != 2)
       return llvm::createStringError("Expected fixed array, but found: " +
                                      type.GetMangledTypeName().GetString());
-    return ts->RemangleAsType(dem, dem_array_type->getChild(1),
-                              ts->GetManglingFlavor());
+    auto flavor = SwiftLanguageRuntime::GetManglingFlavor(
+        type.GetMangledTypeName().GetStringRef());
+    return ts->RemangleAsType(dem, dem_array_type->getChild(1), flavor);
   }
   if (llvm::dyn_cast_or_null<swift::reflection::BuiltinTypeInfo>(ti)) {
     // Clang enums have an artificial rawValue property. We could
