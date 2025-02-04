@@ -363,9 +363,8 @@ private:
 
 std::string timeTraceScopeDeclName(StringRef FunName, const Decl *D) {
   if (llvm::timeTraceProfilerEnabled()) {
-    if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
+    if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))
       return (FunName + " " + ND->getQualifiedNameAsString()).str();
-    }
     return (FunName + " <anonymous> ").str();
   }
   return "";
