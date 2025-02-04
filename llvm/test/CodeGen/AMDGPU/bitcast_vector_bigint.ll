@@ -80,15 +80,6 @@ define <5 x i32> @bitcast_i160_to_v5i32(i160 %int) {
 ; GFX9-LABEL: bitcast_i160_to_v5i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s4, s33
-; GFX9-NEXT:    s_add_i32 s33, s32, 0x7c0
-; GFX9-NEXT:    s_and_b32 s33, s33, 0xfffff800
-; GFX9-NEXT:    s_mov_b32 s5, s34
-; GFX9-NEXT:    s_mov_b32 s34, s32
-; GFX9-NEXT:    s_addk_i32 s32, 0x1000
-; GFX9-NEXT:    s_mov_b32 s32, s34
-; GFX9-NEXT:    s_mov_b32 s34, s5
-; GFX9-NEXT:    s_mov_b32 s33, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: bitcast_i160_to_v5i32:
@@ -98,23 +89,6 @@ define <5 x i32> @bitcast_i160_to_v5i32(i160 %int) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s0, s33
-; GFX12-NEXT:    s_add_co_i32 s33, s32, 31
-; GFX12-NEXT:    s_mov_b32 s1, s34
-; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_and_not1_b32 s33, s33, 31
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s33 offset:8
-; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s33
-; GFX12-NEXT:    scratch_load_b128 v[0:3], off, s33
-; GFX12-NEXT:    s_mov_b32 s34, s32
-; GFX12-NEXT:    s_add_co_i32 s32, s32, 64
-; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_mov_b32 s32, s34
-; GFX12-NEXT:    s_mov_b32 s34, s1
-; GFX12-NEXT:    s_mov_b32 s33, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %bitcast = bitcast i160 %int to <5 x i32>
   ret <5 x i32> %bitcast
@@ -124,15 +98,6 @@ define <6 x i32> @bitcast_i192_to_v6i32(i192 %int) {
 ; GFX9-LABEL: bitcast_i192_to_v6i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s4, s33
-; GFX9-NEXT:    s_add_i32 s33, s32, 0x7c0
-; GFX9-NEXT:    s_and_b32 s33, s33, 0xfffff800
-; GFX9-NEXT:    s_mov_b32 s5, s34
-; GFX9-NEXT:    s_mov_b32 s34, s32
-; GFX9-NEXT:    s_addk_i32 s32, 0x1000
-; GFX9-NEXT:    s_mov_b32 s32, s34
-; GFX9-NEXT:    s_mov_b32 s34, s5
-; GFX9-NEXT:    s_mov_b32 s33, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: bitcast_i192_to_v6i32:
@@ -142,23 +107,6 @@ define <6 x i32> @bitcast_i192_to_v6i32(i192 %int) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s0, s33
-; GFX12-NEXT:    s_add_co_i32 s33, s32, 31
-; GFX12-NEXT:    s_mov_b32 s1, s34
-; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_and_not1_b32 s33, s33, 31
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s33 offset:8
-; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s33
-; GFX12-NEXT:    scratch_load_b128 v[0:3], off, s33
-; GFX12-NEXT:    s_mov_b32 s34, s32
-; GFX12-NEXT:    s_add_co_i32 s32, s32, 64
-; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_mov_b32 s32, s34
-; GFX12-NEXT:    s_mov_b32 s34, s1
-; GFX12-NEXT:    s_mov_b32 s33, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %bitcast = bitcast i192 %int to <6 x i32>
   ret <6 x i32> %bitcast
@@ -168,15 +116,6 @@ define <7 x i32> @bitcast_i224_to_v7i32(i224 %int) {
 ; GFX9-LABEL: bitcast_i224_to_v7i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s4, s33
-; GFX9-NEXT:    s_add_i32 s33, s32, 0x7c0
-; GFX9-NEXT:    s_and_b32 s33, s33, 0xfffff800
-; GFX9-NEXT:    s_mov_b32 s5, s34
-; GFX9-NEXT:    s_mov_b32 s34, s32
-; GFX9-NEXT:    s_addk_i32 s32, 0x1000
-; GFX9-NEXT:    s_mov_b32 s32, s34
-; GFX9-NEXT:    s_mov_b32 s34, s5
-; GFX9-NEXT:    s_mov_b32 s33, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: bitcast_i224_to_v7i32:
@@ -186,27 +125,6 @@ define <7 x i32> @bitcast_i224_to_v7i32(i224 %int) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s0, s33
-; GFX12-NEXT:    s_add_co_i32 s33, s32, 31
-; GFX12-NEXT:    s_mov_b32 s1, s34
-; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_and_not1_b32 s33, s33, 31
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s33 offset:8
-; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s33
-; GFX12-NEXT:    scratch_load_b128 v[0:3], off, s33
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    scratch_store_b32 off, v6, s33 offset:24
-; GFX12-NEXT:    scratch_store_b64 off, v[4:5], s33 offset:16
-; GFX12-NEXT:    scratch_load_b96 v[4:6], off, s33 offset:16
-; GFX12-NEXT:    s_mov_b32 s34, s32
-; GFX12-NEXT:    s_add_co_i32 s32, s32, 64
-; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_mov_b32 s32, s34
-; GFX12-NEXT:    s_mov_b32 s34, s1
-; GFX12-NEXT:    s_mov_b32 s33, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %bitcast = bitcast i224 %int to <7 x i32>
   ret <7 x i32> %bitcast
@@ -252,15 +170,6 @@ define <3 x i64> @bitcast_i192_to_v3i64(i192 %int) {
 ; GFX9-LABEL: bitcast_i192_to_v3i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s4, s33
-; GFX9-NEXT:    s_add_i32 s33, s32, 0x7c0
-; GFX9-NEXT:    s_and_b32 s33, s33, 0xfffff800
-; GFX9-NEXT:    s_mov_b32 s5, s34
-; GFX9-NEXT:    s_mov_b32 s34, s32
-; GFX9-NEXT:    s_addk_i32 s32, 0x1000
-; GFX9-NEXT:    s_mov_b32 s32, s34
-; GFX9-NEXT:    s_mov_b32 s34, s5
-; GFX9-NEXT:    s_mov_b32 s33, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: bitcast_i192_to_v3i64:
@@ -270,23 +179,6 @@ define <3 x i64> @bitcast_i192_to_v3i64(i192 %int) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s0, s33
-; GFX12-NEXT:    s_add_co_i32 s33, s32, 31
-; GFX12-NEXT:    s_mov_b32 s1, s34
-; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_and_not1_b32 s33, s33, 31
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s33 offset:8
-; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s33
-; GFX12-NEXT:    scratch_load_b128 v[0:3], off, s33
-; GFX12-NEXT:    s_mov_b32 s34, s32
-; GFX12-NEXT:    s_add_co_i32 s32, s32, 64
-; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_mov_b32 s32, s34
-; GFX12-NEXT:    s_mov_b32 s34, s1
-; GFX12-NEXT:    s_mov_b32 s33, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %bitcast = bitcast i192 %int to <3 x i64>
   ret <3 x i64> %bitcast
@@ -408,15 +300,6 @@ define <5 x float> @bitcast_i160_to_v5f32(i160 %int) {
 ; GFX9-LABEL: bitcast_i160_to_v5f32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s4, s33
-; GFX9-NEXT:    s_add_i32 s33, s32, 0x7c0
-; GFX9-NEXT:    s_and_b32 s33, s33, 0xfffff800
-; GFX9-NEXT:    s_mov_b32 s5, s34
-; GFX9-NEXT:    s_mov_b32 s34, s32
-; GFX9-NEXT:    s_addk_i32 s32, 0x1000
-; GFX9-NEXT:    s_mov_b32 s32, s34
-; GFX9-NEXT:    s_mov_b32 s34, s5
-; GFX9-NEXT:    s_mov_b32 s33, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: bitcast_i160_to_v5f32:
@@ -426,23 +309,6 @@ define <5 x float> @bitcast_i160_to_v5f32(i160 %int) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s0, s33
-; GFX12-NEXT:    s_add_co_i32 s33, s32, 31
-; GFX12-NEXT:    s_mov_b32 s1, s34
-; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_and_not1_b32 s33, s33, 31
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s33 offset:8
-; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s33
-; GFX12-NEXT:    scratch_load_b128 v[0:3], off, s33
-; GFX12-NEXT:    s_mov_b32 s34, s32
-; GFX12-NEXT:    s_add_co_i32 s32, s32, 64
-; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_mov_b32 s32, s34
-; GFX12-NEXT:    s_mov_b32 s34, s1
-; GFX12-NEXT:    s_mov_b32 s33, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %bitcast = bitcast i160 %int to <5 x float>
   ret <5 x float> %bitcast
@@ -452,15 +318,6 @@ define <6 x float> @bitcast_i192_to_v6f32(i192 %int) {
 ; GFX9-LABEL: bitcast_i192_to_v6f32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s4, s33
-; GFX9-NEXT:    s_add_i32 s33, s32, 0x7c0
-; GFX9-NEXT:    s_and_b32 s33, s33, 0xfffff800
-; GFX9-NEXT:    s_mov_b32 s5, s34
-; GFX9-NEXT:    s_mov_b32 s34, s32
-; GFX9-NEXT:    s_addk_i32 s32, 0x1000
-; GFX9-NEXT:    s_mov_b32 s32, s34
-; GFX9-NEXT:    s_mov_b32 s34, s5
-; GFX9-NEXT:    s_mov_b32 s33, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: bitcast_i192_to_v6f32:
@@ -470,23 +327,6 @@ define <6 x float> @bitcast_i192_to_v6f32(i192 %int) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s0, s33
-; GFX12-NEXT:    s_add_co_i32 s33, s32, 31
-; GFX12-NEXT:    s_mov_b32 s1, s34
-; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_and_not1_b32 s33, s33, 31
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s33 offset:8
-; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s33
-; GFX12-NEXT:    scratch_load_b128 v[0:3], off, s33
-; GFX12-NEXT:    s_mov_b32 s34, s32
-; GFX12-NEXT:    s_add_co_i32 s32, s32, 64
-; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_mov_b32 s32, s34
-; GFX12-NEXT:    s_mov_b32 s34, s1
-; GFX12-NEXT:    s_mov_b32 s33, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %bitcast = bitcast i192 %int to <6 x float>
   ret <6 x float> %bitcast

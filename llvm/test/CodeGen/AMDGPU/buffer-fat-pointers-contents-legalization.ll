@@ -3110,17 +3110,8 @@ define void @store_i160(i160 %data, ptr addrspace(8) inreg %buf) {
 ; SDAG-LABEL: store_i160:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    s_mov_b32 s4, s33
-; SDAG-NEXT:    s_add_i32 s33, s32, 0x7c0
-; SDAG-NEXT:    s_and_b32 s33, s33, 0xfffff800
-; SDAG-NEXT:    s_mov_b32 s5, s34
-; SDAG-NEXT:    s_mov_b32 s34, s32
-; SDAG-NEXT:    s_addk_i32 s32, 0x1000
 ; SDAG-NEXT:    buffer_store_dwordx4 v[0:3], off, s[16:19], 0
 ; SDAG-NEXT:    buffer_store_dword v4, off, s[16:19], 0 offset:16
-; SDAG-NEXT:    s_mov_b32 s32, s34
-; SDAG-NEXT:    s_mov_b32 s34, s5
-; SDAG-NEXT:    s_mov_b32 s33, s4
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
