@@ -936,7 +936,7 @@ public:
 };
 
 Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromELFObject_riscv(MemoryBufferRef ObjectBuffer,
+createLinkGraphFromELFObject_riscv(const MemoryBufferRef &ObjectBuffer,
                                    std::shared_ptr<orc::SymbolStringPool> SSP) {
   LLVM_DEBUG({
     dbgs() << "Building jitlink graph for new input "

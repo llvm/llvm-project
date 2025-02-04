@@ -268,7 +268,7 @@ StringRef computeDefaultTargetABI(const Triple &TT, StringRef CPU);
 /// string then the triple's arch name is used.
 StringRef getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch = {});
 
-void PrintSupportedExtensions(StringMap<StringRef> DescMap);
+void PrintSupportedExtensions(StringMap<StringRef> &DescMap);
 
 } // namespace ARM
 } // namespace llvm

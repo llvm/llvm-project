@@ -122,7 +122,7 @@ public:
                        sys::path::Style Style = sys::path::Style::native) const;
 
     void clear();
-    void dump(raw_ostream &OS, DIDumpOptions DumpOptions) const;
+    void dump(raw_ostream &OS, const DIDumpOptions &DumpOptions) const;
     Error parse(DWARFDataExtractor Data, uint64_t *OffsetPtr,
                 function_ref<void(Error)> RecoverableErrorHandler,
                 const DWARFContext &Ctx, const DWARFUnit *U = nullptr);
@@ -277,7 +277,7 @@ public:
     bool getDirectoryForEntry(const FileNameEntry &Entry,
                               std::string &Directory) const;
 
-    void dump(raw_ostream &OS, DIDumpOptions DumpOptions) const;
+    void dump(raw_ostream &OS, const DIDumpOptions &DumpOptions) const;
     void clear();
 
     /// Parse prologue and all rows.

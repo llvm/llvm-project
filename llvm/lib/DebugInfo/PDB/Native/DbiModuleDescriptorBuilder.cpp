@@ -162,7 +162,7 @@ Error DbiModuleDescriptorBuilder::commit(BinaryStreamWriter &ModiWriter) {
 }
 
 Error DbiModuleDescriptorBuilder::commitSymbolStream(
-    const msf::MSFLayout &MsfLayout, WritableBinaryStreamRef MsfBuffer) {
+    const msf::MSFLayout &MsfLayout, const WritableBinaryStreamRef &MsfBuffer) {
   if (Layout.ModDiStream == kInvalidStreamIndex)
     return Error::success();
 

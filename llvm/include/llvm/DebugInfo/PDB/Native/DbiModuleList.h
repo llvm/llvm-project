@@ -68,7 +68,7 @@ class DbiModuleList {
   friend DbiModuleSourceFilesIterator;
 
 public:
-  Error initialize(BinaryStreamRef ModInfo, BinaryStreamRef FileInfo);
+  Error initialize(const BinaryStreamRef &ModInfo, const BinaryStreamRef &FileInfo);
 
   Expected<StringRef> getFileName(uint32_t Index) const;
   uint32_t getModuleCount() const;

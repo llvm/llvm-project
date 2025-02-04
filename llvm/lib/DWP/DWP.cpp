@@ -28,7 +28,7 @@ using namespace llvm::object;
 static mc::RegisterMCTargetOptionsFlags MCTargetOptionsFlags;
 
 // Returns the size of debug_str_offsets section headers in bytes.
-static uint64_t debugStrOffsetsHeaderSize(DataExtractor StrOffsetsData,
+static uint64_t debugStrOffsetsHeaderSize(const DataExtractor &StrOffsetsData,
                                           uint16_t DwarfVersion) {
   if (DwarfVersion <= 4)
     return 0; // There is no header before dwarf 5.
@@ -55,7 +55,7 @@ static uint64_t getCUAbbrev(StringRef Abbrev, uint64_t AbbrCode) {
 }
 
 static Expected<const char *>
-getIndexedString(dwarf::Form Form, DataExtractor InfoData, uint64_t &InfoOffset,
+getIndexedString(dwarf::Form Form, const DataExtractor &InfoData, uint64_t &InfoOffset,
                  StringRef StrOffsets, StringRef Str, uint16_t Version) {
   if (Form == dwarf::DW_FORM_string)
     return InfoData.getCStr(&InfoOffset);

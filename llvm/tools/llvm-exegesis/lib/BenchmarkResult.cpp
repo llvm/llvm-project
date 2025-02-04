@@ -346,7 +346,7 @@ template <> struct MappingTraits<exegesis::Benchmark::TripleAndCpu> {
 namespace exegesis {
 
 Expected<std::set<Benchmark::TripleAndCpu>>
-Benchmark::readTriplesAndCpusFromYamls(MemoryBufferRef Buffer) {
+Benchmark::readTriplesAndCpusFromYamls(const MemoryBufferRef &Buffer) {
   // We're only mapping a field, drop other fields and silence the corresponding
   // warnings.
   yaml::Input Yin(Buffer, nullptr, +[](const SMDiagnostic &, void *Context) {});
@@ -365,7 +365,7 @@ Benchmark::readTriplesAndCpusFromYamls(MemoryBufferRef Buffer) {
 }
 
 Expected<Benchmark> Benchmark::readYaml(const LLVMState &State,
-                                        MemoryBufferRef Buffer) {
+                                        const MemoryBufferRef &Buffer) {
   yaml::Input Yin(Buffer);
   YamlContext Context(State);
   Benchmark Benchmark;
@@ -377,7 +377,7 @@ Expected<Benchmark> Benchmark::readYaml(const LLVMState &State,
 }
 
 Expected<std::vector<Benchmark>> Benchmark::readYamls(const LLVMState &State,
-                                                      MemoryBufferRef Buffer) {
+                                                      const MemoryBufferRef &Buffer) {
   yaml::Input Yin(Buffer);
   YamlContext Context(State);
   std::vector<Benchmark> Benchmarks;

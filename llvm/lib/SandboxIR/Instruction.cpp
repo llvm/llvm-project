@@ -285,7 +285,7 @@ void Instruction::dumpOS(raw_ostream &OS) const {
 }
 #endif // NDEBUG
 
-VAArgInst *VAArgInst::create(Value *List, Type *Ty, InsertPosition Pos,
+VAArgInst *VAArgInst::create(Value *List, Type *Ty, const InsertPosition &Pos,
                              Context &Ctx, const Twine &Name) {
   auto &Builder = setInsertPos(Pos);
   auto *LLVMI =
@@ -297,14 +297,14 @@ Value *VAArgInst::getPointerOperand() {
   return Ctx.getValue(cast<llvm::VAArgInst>(Val)->getPointerOperand());
 }
 
-FreezeInst *FreezeInst::create(Value *V, InsertPosition Pos, Context &Ctx,
+FreezeInst *FreezeInst::create(Value *V, const InsertPosition &Pos, Context &Ctx,
                                const Twine &Name) {
   auto &Builder = setInsertPos(Pos);
   auto *LLVMI = cast<llvm::FreezeInst>(Builder.CreateFreeze(V->Val, Name));
   return Ctx.createFreezeInst(LLVMI);
 }
 
-FenceInst *FenceInst::create(AtomicOrdering Ordering, InsertPosition Pos,
+FenceInst *FenceInst::create(AtomicOrdering Ordering, const InsertPosition &Pos,
                              Context &Ctx, SyncScope::ID SSID) {
   auto &Builder = Instruction::setInsertPos(Pos);
   llvm::FenceInst *LLVMI = Builder.CreateFence(Ordering, SSID);
@@ -327,7 +327,7 @@ void FenceInst::setSyncScopeID(SyncScope::ID SSID) {
 }
 
 Value *SelectInst::create(Value *Cond, Value *True, Value *False,
-                          InsertPosition Pos, Context &Ctx, const Twine &Name) {
+                          const InsertPosition &Pos, Context &Ctx, const Twine &Name) {
   auto &Builder = Instruction::setInsertPos(Pos);
   llvm::Value *NewV =
       Builder.CreateSelect(Cond->Val, True->Val, False->Val, Name);
@@ -347,7 +347,7 @@ bool SelectInst::classof(const Value *From) {
   return From->getSubclassID() == ClassID::Select;
 }
 
-BranchInst *BranchInst::create(BasicBlock *IfTrue, InsertPosition Pos,
+BranchInst *BranchInst::create(BasicBlock *IfTrue, const InsertPosition &Pos,
                                Context &Ctx) {
   auto &Builder = setInsertPos(Pos);
   llvm::BranchInst *NewBr =
@@ -356,7 +356,7 @@ BranchInst *BranchInst::create(BasicBlock *IfTrue, InsertPosition Pos,
 }
 
 BranchInst *BranchInst::create(BasicBlock *IfTrue, BasicBlock *IfFalse,
-                               Value *Cond, InsertPosition Pos, Context &Ctx) {
+                               Value *Cond, const InsertPosition &Pos, Context &Ctx) {
   auto &Builder = setInsertPos(Pos);
   llvm::BranchInst *NewBr =
       Builder.CreateCondBr(Cond->Val, cast<llvm::BasicBlock>(IfTrue->Val),
@@ -401,7 +401,7 @@ void LoadInst::setVolatile(bool V) {
 }
 
 LoadInst *LoadInst::create(Type *Ty, Value *Ptr, MaybeAlign Align,
-                           InsertPosition Pos, bool IsVolatile, Context &Ctx,
+                           const InsertPosition &Pos, bool IsVolatile, Context &Ctx,
                            const Twine &Name) {
   auto &Builder = setInsertPos(Pos);
   auto *NewLI =
@@ -426,7 +426,7 @@ void StoreInst::setVolatile(bool V) {
 }
 
 StoreInst *StoreInst::create(Value *V, Value *Ptr, MaybeAlign Align,
-                             InsertPosition Pos, bool IsVolatile,
+                             const InsertPosition &Pos, bool IsVolatile,
                              Context &Ctx) {
   auto &Builder = setInsertPos(Pos);
   auto *NewSI = Builder.CreateAlignedStore(V->Val, Ptr->Val, Align, IsVolatile);
@@ -446,7 +446,7 @@ Value *StoreInst::getPointerOperand() const {
   return Ctx.getValue(cast<llvm::StoreInst>(Val)->getPointerOperand());
 }
 
-UnreachableInst *UnreachableInst::create(InsertPosition Pos, Context &Ctx) {
+UnreachableInst *UnreachableInst::create(const InsertPosition &Pos, Context &Ctx) {
   auto &Builder = setInsertPos(Pos);
   llvm::UnreachableInst *NewUI = Builder.CreateUnreachable();
   return Ctx.createUnreachableInst(NewUI);
@@ -466,7 +466,7 @@ ReturnInst *ReturnInst::createCommon(Value *RetVal, IRBuilder<> &Builder,
   return Ctx.createReturnInst(NewRI);
 }
 
-ReturnInst *ReturnInst::create(Value *RetVal, InsertPosition Pos,
+ReturnInst *ReturnInst::create(Value *RetVal, const InsertPosition &Pos,
                                Context &Ctx) {
   auto &Builder = setInsertPos(Pos);
   return createCommon(RetVal, Builder, Ctx);
@@ -513,7 +513,7 @@ void CallBase::setCalledFunction(Function *F) {
 }
 
 CallInst *CallInst::create(FunctionType *FTy, Value *Func,
-                           ArrayRef<Value *> Args, InsertPosition Pos,
+                           ArrayRef<Value *> Args, const InsertPosition &Pos,
                            Context &Ctx, const Twine &NameStr) {
   auto &Builder = setInsertPos(Pos);
   SmallVector<llvm::Value *> LLVMArgs;
@@ -527,7 +527,7 @@ CallInst *CallInst::create(FunctionType *FTy, Value *Func,
 
 InvokeInst *InvokeInst::create(FunctionType *FTy, Value *Func,
                                BasicBlock *IfNormal, BasicBlock *IfException,
-                               ArrayRef<Value *> Args, InsertPosition Pos,
+                               ArrayRef<Value *> Args, const InsertPosition &Pos,
                                Context &Ctx, const Twine &NameStr) {
   auto &Builder = setInsertPos(Pos);
   SmallVector<llvm::Value *> LLVMArgs;
@@ -570,7 +570,7 @@ BasicBlock *InvokeInst::getSuccessor(unsigned SuccIdx) const {
 CallBrInst *CallBrInst::create(FunctionType *FTy, Value *Func,
                                BasicBlock *DefaultDest,
                                ArrayRef<BasicBlock *> IndirectDests,
-                               ArrayRef<Value *> Args, InsertPosition Pos,
+                               ArrayRef<Value *> Args, const InsertPosition &Pos,
                                Context &Ctx, const Twine &NameStr) {
   auto &Builder = setInsertPos(Pos);
   SmallVector<llvm::BasicBlock *> LLVMIndirectDests;
@@ -632,7 +632,7 @@ BasicBlock *CallBrInst::getSuccessor(unsigned Idx) const {
 }
 
 LandingPadInst *LandingPadInst::create(Type *RetTy, unsigned NumReservedClauses,
-                                       InsertPosition Pos, Context &Ctx,
+                                       const InsertPosition &Pos, Context &Ctx,
                                        const Twine &Name) {
   auto &Builder = setInsertPos(Pos);
   llvm::LandingPadInst *LLVMI =
@@ -681,7 +681,7 @@ CatchSwitchInst *CatchPadInst::getCatchSwitch() const {
 }
 
 CatchPadInst *CatchPadInst::create(Value *ParentPad, ArrayRef<Value *> Args,
-                                   InsertPosition Pos, Context &Ctx,
+                                   const InsertPosition &Pos, Context &Ctx,
                                    const Twine &Name) {
   auto &Builder = setInsertPos(Pos);
   SmallVector<llvm::Value *> LLVMArgs;
@@ -694,7 +694,7 @@ CatchPadInst *CatchPadInst::create(Value *ParentPad, ArrayRef<Value *> Args,
 }
 
 CleanupPadInst *CleanupPadInst::create(Value *ParentPad, ArrayRef<Value *> Args,
-                                       InsertPosition Pos, Context &Ctx,
+                                       const InsertPosition &Pos, Context &Ctx,
                                        const Twine &Name) {
   auto &Builder = setInsertPos(Pos);
   SmallVector<llvm::Value *> LLVMArgs;
@@ -707,7 +707,7 @@ CleanupPadInst *CleanupPadInst::create(Value *ParentPad, ArrayRef<Value *> Args,
 }
 
 CatchReturnInst *CatchReturnInst::create(CatchPadInst *CatchPad, BasicBlock *BB,
-                                         InsertPosition Pos, Context &Ctx) {
+                                         const InsertPosition &Pos, Context &Ctx) {
   auto &Builder = setInsertPos(Pos);
   llvm::CatchReturnInst *LLVMI = Builder.CreateCatchRet(
       cast<llvm::CatchPadInst>(CatchPad->Val), cast<llvm::BasicBlock>(BB->Val));
@@ -747,7 +747,7 @@ Value *CatchReturnInst::getCatchSwitchParentPad() const {
 
 CleanupReturnInst *CleanupReturnInst::create(CleanupPadInst *CleanupPad,
                                              BasicBlock *UnwindBB,
-                                             InsertPosition Pos, Context &Ctx) {
+                                             const InsertPosition &Pos, Context &Ctx) {
   auto &Builder = setInsertPos(Pos);
   auto *LLVMUnwindBB =
       UnwindBB != nullptr ? cast<llvm::BasicBlock>(UnwindBB->Val) : nullptr;
@@ -785,7 +785,7 @@ void CleanupReturnInst::setUnwindDest(BasicBlock *NewDest) {
 }
 
 Value *GetElementPtrInst::create(Type *Ty, Value *Ptr,
-                                 ArrayRef<Value *> IdxList, InsertPosition Pos,
+                                 ArrayRef<Value *> IdxList, const InsertPosition &Pos,
                                  Context &Ctx, const Twine &NameStr) {
   auto &Builder = setInsertPos(Pos);
   SmallVector<llvm::Value *> LLVMIdxList;
@@ -824,7 +824,7 @@ BasicBlock *PHINode::LLVMBBToBB::operator()(llvm::BasicBlock *LLVMBB) const {
 }
 
 PHINode *PHINode::create(Type *Ty, unsigned NumReservedValues,
-                         InsertPosition Pos, Context &Ctx, const Twine &Name) {
+                         const InsertPosition &Pos, Context &Ctx, const Twine &Name) {
   auto &Builder = setInsertPos(Pos);
   llvm::PHINode *NewPHI =
       Builder.CreatePHI(Ty->LLVMTy, NumReservedValues, Name);
@@ -926,7 +926,7 @@ void PHINode::removeIncomingValueIf(function_ref<bool(unsigned)> Predicate) {
   }
 }
 
-Value *CmpInst::create(Predicate P, Value *S1, Value *S2, InsertPosition Pos,
+Value *CmpInst::create(Predicate P, Value *S1, Value *S2, const InsertPosition &Pos,
                        Context &Ctx, const Twine &Name) {
   auto &Builder = setInsertPos(Pos);
   auto *LLVMV = Builder.CreateCmp(P, S1->Val, S2->Val, Name);
@@ -939,7 +939,7 @@ Value *CmpInst::create(Predicate P, Value *S1, Value *S2, InsertPosition Pos,
 }
 
 Value *CmpInst::createWithCopiedFlags(Predicate P, Value *S1, Value *S2,
-                                      const Instruction *F, InsertPosition Pos,
+                                      const Instruction *F, const InsertPosition &Pos,
                                       Context &Ctx, const Twine &Name) {
   Value *V = create(P, S1, S2, Pos, Ctx, Name);
   if (auto *C = dyn_cast<Constant>(V))
@@ -1041,7 +1041,7 @@ static llvm::Instruction::UnaryOps getLLVMUnaryOp(Instruction::Opcode Opc) {
 
 CatchSwitchInst *CatchSwitchInst::create(Value *ParentPad, BasicBlock *UnwindBB,
                                          unsigned NumHandlers,
-                                         InsertPosition Pos, Context &Ctx,
+                                         const InsertPosition &Pos, Context &Ctx,
                                          const Twine &Name) {
   auto &Builder = setInsertPos(Pos);
   llvm::CatchSwitchInst *LLVMCSI = Builder.CreateCatchSwitch(
@@ -1079,7 +1079,7 @@ void CatchSwitchInst::addHandler(BasicBlock *Dest) {
       cast<llvm::BasicBlock>(Dest->Val));
 }
 
-ResumeInst *ResumeInst::create(Value *Exn, InsertPosition Pos, Context &Ctx) {
+ResumeInst *ResumeInst::create(Value *Exn, const InsertPosition &Pos, Context &Ctx) {
   auto &Builder = setInsertPos(Pos);
   auto *LLVMI = cast<llvm::ResumeInst>(Builder.CreateResume(Exn->Val));
   return Ctx.createResumeInst(LLVMI);
@@ -1090,7 +1090,7 @@ Value *ResumeInst::getValue() const {
 }
 
 SwitchInst *SwitchInst::create(Value *V, BasicBlock *Dest, unsigned NumCases,
-                               InsertPosition Pos, Context &Ctx,
+                               const InsertPosition &Pos, Context &Ctx,
                                const Twine &Name) {
   auto &Builder = setInsertPos(Pos);
   llvm::SwitchInst *LLVMSwitch =
@@ -1161,7 +1161,7 @@ void SwitchInst::setSuccessor(unsigned Idx, BasicBlock *NewSucc) {
 }
 
 Value *UnaryOperator::create(Instruction::Opcode Op, Value *OpV,
-                             InsertPosition Pos, Context &Ctx,
+                             const InsertPosition &Pos, Context &Ctx,
                              const Twine &Name) {
   auto &Builder = setInsertPos(Pos);
   auto *NewLLVMV = Builder.CreateUnOp(getLLVMUnaryOp(Op), OpV->Val, Name);
@@ -1173,7 +1173,7 @@ Value *UnaryOperator::create(Instruction::Opcode Op, Value *OpV,
 }
 
 Value *UnaryOperator::createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
-                                            Value *CopyFrom, InsertPosition Pos,
+                                            Value *CopyFrom, const InsertPosition &Pos,
                                             Context &Ctx, const Twine &Name) {
   auto *NewV = create(Op, OpV, Pos, Ctx, Name);
   if (auto *UnI = dyn_cast<llvm::UnaryOperator>(NewV->Val))
@@ -1225,7 +1225,7 @@ static llvm::Instruction::BinaryOps getLLVMBinaryOp(Instruction::Opcode Opc) {
   }
 }
 Value *BinaryOperator::create(Instruction::Opcode Op, Value *LHS, Value *RHS,
-                              InsertPosition Pos, Context &Ctx,
+                              const InsertPosition &Pos, Context &Ctx,
                               const Twine &Name) {
   auto &Builder = setInsertPos(Pos);
   llvm::Value *NewV =
@@ -1238,7 +1238,7 @@ Value *BinaryOperator::create(Instruction::Opcode Op, Value *LHS, Value *RHS,
 
 Value *BinaryOperator::createWithCopiedFlags(Instruction::Opcode Op, Value *LHS,
                                              Value *RHS, Value *CopyFrom,
-                                             InsertPosition Pos, Context &Ctx,
+                                             const InsertPosition &Pos, Context &Ctx,
                                              const Twine &Name) {
 
   Value *NewV = create(Op, LHS, RHS, Pos, Ctx, Name);
@@ -1293,7 +1293,7 @@ Value *AtomicRMWInst::getValOperand() {
 
 AtomicRMWInst *AtomicRMWInst::create(BinOp Op, Value *Ptr, Value *Val,
                                      MaybeAlign Align, AtomicOrdering Ordering,
-                                     InsertPosition Pos, Context &Ctx,
+                                     const InsertPosition &Pos, Context &Ctx,
                                      SyncScope::ID SSID, const Twine &Name) {
   auto &Builder = setInsertPos(Pos);
   auto *LLVMAtomicRMW =
@@ -1325,7 +1325,7 @@ Value *AtomicCmpXchgInst::getNewValOperand() {
 AtomicCmpXchgInst *
 AtomicCmpXchgInst::create(Value *Ptr, Value *Cmp, Value *New, MaybeAlign Align,
                           AtomicOrdering SuccessOrdering,
-                          AtomicOrdering FailureOrdering, InsertPosition Pos,
+                          AtomicOrdering FailureOrdering, const InsertPosition &Pos,
                           Context &Ctx, SyncScope::ID SSID, const Twine &Name) {
   auto &Builder = setInsertPos(Pos);
   auto *LLVMAtomicCmpXchg =
@@ -1372,7 +1372,7 @@ void AtomicCmpXchgInst::setFailureOrdering(AtomicOrdering Ordering) {
   cast<llvm::AtomicCmpXchgInst>(Val)->setFailureOrdering(Ordering);
 }
 
-AllocaInst *AllocaInst::create(Type *Ty, unsigned AddrSpace, InsertPosition Pos,
+AllocaInst *AllocaInst::create(Type *Ty, unsigned AddrSpace, const InsertPosition &Pos,
                                Context &Ctx, Value *ArraySize,
                                const Twine &Name) {
   auto &Builder = setInsertPos(Pos);
@@ -1416,7 +1416,7 @@ PointerType *AllocaInst::getType() const {
 }
 
 Value *CastInst::create(Type *DestTy, Opcode Op, Value *Operand,
-                        InsertPosition Pos, Context &Ctx, const Twine &Name) {
+                        const InsertPosition &Pos, Context &Ctx, const Twine &Name) {
   assert(getLLVMCastOp(Op) && "Opcode not suitable for CastInst!");
   auto &Builder = setInsertPos(Pos);
   auto *NewV =
@@ -1447,7 +1447,7 @@ void PossiblyNonNegInst::setNonNeg(bool B) {
 }
 
 Value *InsertElementInst::create(Value *Vec, Value *NewElt, Value *Idx,
-                                 InsertPosition Pos, Context &Ctx,
+                                 const InsertPosition &Pos, Context &Ctx,
                                  const Twine &Name) {
   auto &Builder = Instruction::setInsertPos(Pos);
   llvm::Value *NewV =
@@ -1458,7 +1458,7 @@ Value *InsertElementInst::create(Value *Vec, Value *NewElt, Value *Idx,
   return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
 }
 
-Value *ExtractElementInst::create(Value *Vec, Value *Idx, InsertPosition Pos,
+Value *ExtractElementInst::create(Value *Vec, Value *Idx, const InsertPosition &Pos,
                                   Context &Ctx, const Twine &Name) {
   auto &Builder = setInsertPos(Pos);
   llvm::Value *NewV = Builder.CreateExtractElement(Vec->Val, Idx->Val, Name);
@@ -1469,7 +1469,7 @@ Value *ExtractElementInst::create(Value *Vec, Value *Idx, InsertPosition Pos,
 }
 
 Value *ShuffleVectorInst::create(Value *V1, Value *V2, Value *Mask,
-                                 InsertPosition Pos, Context &Ctx,
+                                 const InsertPosition &Pos, Context &Ctx,
                                  const Twine &Name) {
   auto &Builder = setInsertPos(Pos);
   llvm::Value *NewV =
@@ -1481,7 +1481,7 @@ Value *ShuffleVectorInst::create(Value *V1, Value *V2, Value *Mask,
 }
 
 Value *ShuffleVectorInst::create(Value *V1, Value *V2, ArrayRef<int> Mask,
-                                 InsertPosition Pos, Context &Ctx,
+                                 const InsertPosition &Pos, Context &Ctx,
                                  const Twine &Name) {
   auto &Builder = setInsertPos(Pos);
   llvm::Value *NewV = Builder.CreateShuffleVector(V1->Val, V2->Val, Mask, Name);
@@ -1525,7 +1525,7 @@ VectorType *ExtractElementInst::getVectorOperandType() const {
 }
 
 Value *ExtractValueInst::create(Value *Agg, ArrayRef<unsigned> Idxs,
-                                InsertPosition Pos, Context &Ctx,
+                                const InsertPosition &Pos, Context &Ctx,
                                 const Twine &Name) {
   auto &Builder = setInsertPos(Pos);
   llvm::Value *NewV = Builder.CreateExtractValue(Agg->Val, Idxs, Name);
@@ -1541,7 +1541,7 @@ Type *ExtractValueInst::getIndexedType(Type *Agg, ArrayRef<unsigned> Idxs) {
 }
 
 Value *InsertValueInst::create(Value *Agg, Value *Val, ArrayRef<unsigned> Idxs,
-                               InsertPosition Pos, Context &Ctx,
+                               const InsertPosition &Pos, Context &Ctx,
                                const Twine &Name) {
   auto &Builder = setInsertPos(Pos);
   llvm::Value *NewV = Builder.CreateInsertValue(Agg->Val, Val->Val, Idxs, Name);

@@ -1666,7 +1666,7 @@ JITDylib &ExecutionSession::createBareJITDylib(std::string Name) {
   });
 }
 
-Expected<JITDylib &> ExecutionSession::createJITDylib(std::string Name) {
+Expected<JITDylib &> ExecutionSession::createJITDylib(const std::string &Name) {
   auto &JD = createBareJITDylib(Name);
   if (P)
     if (auto Err = P->setupJITDylib(JD))

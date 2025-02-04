@@ -173,7 +173,7 @@ public:
   getAttributeValueFromOffset(uint32_t AttrIndex, uint64_t Offset,
                               const DWARFUnit &U) const;
 
-  llvm::Expected<ExtractState> extract(DataExtractor Data, uint64_t *OffsetPtr);
+  llvm::Expected<ExtractState> extract(const DataExtractor &Data, uint64_t *OffsetPtr);
   void dump(raw_ostream &OS) const;
 
   // Return an optional byte size of all attribute data in this abbreviation

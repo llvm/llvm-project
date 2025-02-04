@@ -1408,7 +1408,7 @@ public:
                   const MDNode *Ranges = nullptr);
   inline SDValue getLoad(
       ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT, const SDLoc &dl,
-      SDValue Chain, SDValue Ptr, SDValue Offset, MachinePointerInfo PtrInfo,
+      SDValue Chain, SDValue Ptr, SDValue Offset, const MachinePointerInfo &PtrInfo,
       EVT MemVT, MaybeAlign Alignment = MaybeAlign(),
       MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
       const AAMDNodes &AAInfo = AAMDNodes(), const MDNode *Ranges = nullptr) {

@@ -186,7 +186,7 @@ void DebugObject::finalizeAsync(FinalizeContinuation OnFinalize) {
 class ELFDebugObject : public DebugObject {
 public:
   static Expected<std::unique_ptr<DebugObject>>
-  Create(MemoryBufferRef Buffer, JITLinkContext &Ctx, ExecutionSession &ES);
+  Create(const MemoryBufferRef &Buffer, JITLinkContext &Ctx, ExecutionSession &ES);
 
   void reportSectionTargetMemoryRange(StringRef Name,
                                       SectionRange TargetMem) override;
@@ -208,7 +208,7 @@ private:
                  const JITLinkDylib *JD, ExecutionSession &ES);
 
   static std::unique_ptr<WritableMemoryBuffer>
-  CopyBuffer(MemoryBufferRef Buffer, Error &Err);
+  CopyBuffer(const MemoryBufferRef &Buffer, Error &Err);
 
   ELFDebugObject(std::unique_ptr<WritableMemoryBuffer> Buffer,
                  JITLinkMemoryManager &MemMgr, const JITLinkDylib *JD,
@@ -233,7 +233,7 @@ static bool isDwarfSection(StringRef SectionName) {
 }
 
 std::unique_ptr<WritableMemoryBuffer>
-ELFDebugObject::CopyBuffer(MemoryBufferRef Buffer, Error &Err) {
+ELFDebugObject::CopyBuffer(const MemoryBufferRef &Buffer, Error &Err) {
   ErrorAsOutParameter _(Err);
   size_t Size = Buffer.getBufferSize();
   StringRef Name = Buffer.getBufferIdentifier();
@@ -292,7 +292,7 @@ ELFDebugObject::CreateArchType(MemoryBufferRef Buffer,
 }
 
 Expected<std::unique_ptr<DebugObject>>
-ELFDebugObject::Create(MemoryBufferRef Buffer, JITLinkContext &Ctx,
+ELFDebugObject::Create(const MemoryBufferRef &Buffer, JITLinkContext &Ctx,
                        ExecutionSession &ES) {
   unsigned char Class, Endian;
   std::tie(Class, Endian) = getElfArchType(Buffer.getBuffer());
@@ -374,7 +374,7 @@ DebugObjectSection *ELFDebugObject::getSection(StringRef Name) {
 ///
 static Expected<std::unique_ptr<DebugObject>>
 createDebugObjectFromBuffer(ExecutionSession &ES, LinkGraph &G,
-                            JITLinkContext &Ctx, MemoryBufferRef ObjBuffer) {
+                            JITLinkContext &Ctx, const MemoryBufferRef &ObjBuffer) {
   switch (G.getTargetTriple().getObjectFormat()) {
   case Triple::ELF:
     return ELFDebugObject::Create(ObjBuffer, Ctx, ES);

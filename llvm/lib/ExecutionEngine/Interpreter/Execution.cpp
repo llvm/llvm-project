@@ -38,7 +38,7 @@ static cl::opt<bool> PrintVolatile("interpreter-print-volatile", cl::Hidden,
 //                     Various Helper Functions
 //===----------------------------------------------------------------------===//
 
-static void SetValue(Value *V, GenericValue Val, ExecutionContext &SF) {
+static void SetValue(Value *V, const GenericValue &Val, ExecutionContext &SF) {
   SF.Values[V] = Val;
 }
 
@@ -46,7 +46,7 @@ static void SetValue(Value *V, GenericValue Val, ExecutionContext &SF) {
 //                    Unary Instruction Implementations
 //===----------------------------------------------------------------------===//
 
-static void executeFNegInst(GenericValue &Dest, GenericValue Src, Type *Ty) {
+static void executeFNegInst(GenericValue &Dest, const GenericValue &Src, Type *Ty) {
   switch (Ty->getTypeID()) {
   case Type::FloatTyID:
     Dest.FloatVal = -Src.FloatVal;
@@ -105,8 +105,8 @@ void Interpreter::visitUnaryOperator(UnaryOperator &I) {
      Dest.TY##Val = Src1.TY##Val OP Src2.TY##Val; \
      break
 
-static void executeFAddInst(GenericValue &Dest, GenericValue Src1,
-                            GenericValue Src2, Type *Ty) {
+static void executeFAddInst(GenericValue &Dest, const GenericValue &Src1,
+                            const GenericValue &Src2, Type *Ty) {
   switch (Ty->getTypeID()) {
     IMPLEMENT_BINARY_OPERATOR(+, Float);
     IMPLEMENT_BINARY_OPERATOR(+, Double);
@@ -116,8 +116,8 @@ static void executeFAddInst(GenericValue &Dest, GenericValue Src1,
   }
 }
 
-static void executeFSubInst(GenericValue &Dest, GenericValue Src1,
-                            GenericValue Src2, Type *Ty) {
+static void executeFSubInst(GenericValue &Dest, const GenericValue &Src1,
+                            const GenericValue &Src2, Type *Ty) {
   switch (Ty->getTypeID()) {
     IMPLEMENT_BINARY_OPERATOR(-, Float);
     IMPLEMENT_BINARY_OPERATOR(-, Double);
@@ -127,8 +127,8 @@ static void executeFSubInst(GenericValue &Dest, GenericValue Src1,
   }
 }
 
-static void executeFMulInst(GenericValue &Dest, GenericValue Src1,
-                            GenericValue Src2, Type *Ty) {
+static void executeFMulInst(GenericValue &Dest, const GenericValue &Src1,
+                            const GenericValue &Src2, Type *Ty) {
   switch (Ty->getTypeID()) {
     IMPLEMENT_BINARY_OPERATOR(*, Float);
     IMPLEMENT_BINARY_OPERATOR(*, Double);
@@ -138,8 +138,8 @@ static void executeFMulInst(GenericValue &Dest, GenericValue Src1,
   }
 }
 
-static void executeFDivInst(GenericValue &Dest, GenericValue Src1,
-                            GenericValue Src2, Type *Ty) {
+static void executeFDivInst(GenericValue &Dest, const GenericValue &Src1,
+                            const GenericValue &Src2, Type *Ty) {
   switch (Ty->getTypeID()) {
     IMPLEMENT_BINARY_OPERATOR(/, Float);
     IMPLEMENT_BINARY_OPERATOR(/, Double);
@@ -149,8 +149,8 @@ static void executeFDivInst(GenericValue &Dest, GenericValue Src1,
   }
 }
 
-static void executeFRemInst(GenericValue &Dest, GenericValue Src1,
-                            GenericValue Src2, Type *Ty) {
+static void executeFRemInst(GenericValue &Dest, const GenericValue &Src1,
+                            const GenericValue &Src2, Type *Ty) {
   switch (Ty->getTypeID()) {
   case Type::FloatTyID:
     Dest.FloatVal = fmod(Src1.FloatVal, Src2.FloatVal);
@@ -377,7 +377,7 @@ void Interpreter::visitICmpInst(ICmpInst &I) {
       IMPLEMENT_VECTOR_FCMP_T(OP, Double);                                     \
     }
 
-static GenericValue executeFCMP_OEQ(GenericValue Src1, GenericValue Src2,
+static GenericValue executeFCMP_OEQ(const GenericValue &Src1, const GenericValue &Src2,
                                    Type *Ty) {
   GenericValue Dest;
   switch (Ty->getTypeID()) {
@@ -427,7 +427,7 @@ static GenericValue executeFCMP_OEQ(GenericValue Src1, GenericValue Src2,
 
 
 
-static GenericValue executeFCMP_ONE(GenericValue Src1, GenericValue Src2,
+static GenericValue executeFCMP_ONE(const GenericValue &Src1, const GenericValue &Src2,
                                     Type *Ty)
 {
   GenericValue Dest;
@@ -453,7 +453,7 @@ static GenericValue executeFCMP_ONE(GenericValue Src1, GenericValue Src2,
   return Dest;
 }
 
-static GenericValue executeFCMP_OLE(GenericValue Src1, GenericValue Src2,
+static GenericValue executeFCMP_OLE(const GenericValue &Src1, const GenericValue &Src2,
                                    Type *Ty) {
   GenericValue Dest;
   switch (Ty->getTypeID()) {
@@ -467,7 +467,7 @@ static GenericValue executeFCMP_OLE(GenericValue Src1, GenericValue Src2,
   return Dest;
 }
 
-static GenericValue executeFCMP_OGE(GenericValue Src1, GenericValue Src2,
+static GenericValue executeFCMP_OGE(const GenericValue &Src1, const GenericValue &Src2,
                                    Type *Ty) {
   GenericValue Dest;
   switch (Ty->getTypeID()) {
@@ -481,7 +481,7 @@ static GenericValue executeFCMP_OGE(GenericValue Src1, GenericValue Src2,
   return Dest;
 }
 
-static GenericValue executeFCMP_OLT(GenericValue Src1, GenericValue Src2,
+static GenericValue executeFCMP_OLT(const GenericValue &Src1, const GenericValue &Src2,
                                    Type *Ty) {
   GenericValue Dest;
   switch (Ty->getTypeID()) {
@@ -495,7 +495,7 @@ static GenericValue executeFCMP_OLT(GenericValue Src1, GenericValue Src2,
   return Dest;
 }
 
-static GenericValue executeFCMP_OGT(GenericValue Src1, GenericValue Src2,
+static GenericValue executeFCMP_OGT(const GenericValue &Src1, const GenericValue &Src2,
                                      Type *Ty) {
   GenericValue Dest;
   switch (Ty->getTypeID()) {
@@ -530,7 +530,7 @@ static GenericValue executeFCMP_OGT(GenericValue Src1, GenericValue Src2,
     return Dest;                                                               \
   }
 
-static GenericValue executeFCMP_UEQ(GenericValue Src1, GenericValue Src2,
+static GenericValue executeFCMP_UEQ(const GenericValue &Src1, const GenericValue &Src2,
                                    Type *Ty) {
   GenericValue Dest;
   IMPLEMENT_UNORDERED(Ty, Src1, Src2)
@@ -540,7 +540,7 @@ static GenericValue executeFCMP_UEQ(GenericValue Src1, GenericValue Src2,
 
 }
 
-static GenericValue executeFCMP_UNE(GenericValue Src1, GenericValue Src2,
+static GenericValue executeFCMP_UNE(const GenericValue &Src1, const GenericValue &Src2,
                                    Type *Ty) {
   GenericValue Dest;
   IMPLEMENT_UNORDERED(Ty, Src1, Src2)
@@ -549,7 +549,7 @@ static GenericValue executeFCMP_UNE(GenericValue Src1, GenericValue Src2,
   return executeFCMP_ONE(Src1, Src2, Ty);
 }
 
-static GenericValue executeFCMP_ULE(GenericValue Src1, GenericValue Src2,
+static GenericValue executeFCMP_ULE(const GenericValue &Src1, const GenericValue &Src2,
                                    Type *Ty) {
   GenericValue Dest;
   IMPLEMENT_UNORDERED(Ty, Src1, Src2)
@@ -558,7 +558,7 @@ static GenericValue executeFCMP_ULE(GenericValue Src1, GenericValue Src2,
   return executeFCMP_OLE(Src1, Src2, Ty);
 }
 
-static GenericValue executeFCMP_UGE(GenericValue Src1, GenericValue Src2,
+static GenericValue executeFCMP_UGE(const GenericValue &Src1, const GenericValue &Src2,
                                    Type *Ty) {
   GenericValue Dest;
   IMPLEMENT_UNORDERED(Ty, Src1, Src2)
@@ -567,7 +567,7 @@ static GenericValue executeFCMP_UGE(GenericValue Src1, GenericValue Src2,
   return executeFCMP_OGE(Src1, Src2, Ty);
 }
 
-static GenericValue executeFCMP_ULT(GenericValue Src1, GenericValue Src2,
+static GenericValue executeFCMP_ULT(const GenericValue &Src1, const GenericValue &Src2,
                                    Type *Ty) {
   GenericValue Dest;
   IMPLEMENT_UNORDERED(Ty, Src1, Src2)
@@ -576,7 +576,7 @@ static GenericValue executeFCMP_ULT(GenericValue Src1, GenericValue Src2,
   return executeFCMP_OLT(Src1, Src2, Ty);
 }
 
-static GenericValue executeFCMP_UGT(GenericValue Src1, GenericValue Src2,
+static GenericValue executeFCMP_UGT(const GenericValue &Src1, const GenericValue &Src2,
                                      Type *Ty) {
   GenericValue Dest;
   IMPLEMENT_UNORDERED(Ty, Src1, Src2)
@@ -585,7 +585,7 @@ static GenericValue executeFCMP_UGT(GenericValue Src1, GenericValue Src2,
   return executeFCMP_OGT(Src1, Src2, Ty);
 }
 
-static GenericValue executeFCMP_ORD(GenericValue Src1, GenericValue Src2,
+static GenericValue executeFCMP_ORD(const GenericValue &Src1, const GenericValue &Src2,
                                      Type *Ty) {
   GenericValue Dest;
   if(Ty->isVectorTy()) {
@@ -616,7 +616,7 @@ static GenericValue executeFCMP_ORD(GenericValue Src1, GenericValue Src2,
   return Dest;
 }
 
-static GenericValue executeFCMP_UNO(GenericValue Src1, GenericValue Src2,
+static GenericValue executeFCMP_UNO(const GenericValue &Src1, const GenericValue &Src2,
                                      Type *Ty) {
   GenericValue Dest;
   if(Ty->isVectorTy()) {
@@ -647,7 +647,7 @@ static GenericValue executeFCMP_UNO(GenericValue Src1, GenericValue Src2,
   return Dest;
 }
 
-static GenericValue executeFCMP_BOOL(GenericValue Src1, GenericValue Src2,
+static GenericValue executeFCMP_BOOL(const GenericValue &Src1, const GenericValue &Src2,
                                      Type *Ty, const bool val) {
   GenericValue Dest;
     if(Ty->isVectorTy()) {
@@ -806,8 +806,8 @@ void Interpreter::visitBinaryOperator(BinaryOperator &I) {
   SetValue(&I, R, SF);
 }
 
-static GenericValue executeSelectInst(GenericValue Src1, GenericValue Src2,
-                                      GenericValue Src3, Type *Ty) {
+static GenericValue executeSelectInst(const GenericValue &Src1, const GenericValue &Src2,
+                                      const GenericValue &Src3, Type *Ty) {
     GenericValue Dest;
     if(Ty->isVectorTy()) {
       assert(Src1.AggregateVal.size() == Src2.AggregateVal.size());
@@ -836,7 +836,7 @@ void Interpreter::visitSelectInst(SelectInst &I) {
 //                     Terminator Instruction Implementations
 //===----------------------------------------------------------------------===//
 
-void Interpreter::exitCalled(GenericValue GV) {
+void Interpreter::exitCalled(const GenericValue &GV) {
   // runAtExitHandlers() assumes there are no stack frames, but
   // if exit() was called, then it had a stack frame. Blow away
   // the stack before interpreting atexit handlers.
@@ -854,7 +854,7 @@ void Interpreter::exitCalled(GenericValue GV) {
 /// from an invoke.
 ///
 void Interpreter::popStackAndReturnValueToCaller(Type *RetTy,
-                                                 GenericValue Result) {
+                                                 const GenericValue &Result) {
   // Pop the current stack frame.
   ECStack.pop_back();
 

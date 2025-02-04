@@ -673,7 +673,7 @@ namespace llvm {
 namespace jitlink {
 
 Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_aarch64(
-    MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP) {
+    const MemoryBufferRef &ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP) {
   LLVM_DEBUG({
     dbgs() << "Building jitlink graph for new input "
            << ObjectBuffer.getBufferIdentifier() << "...\n";

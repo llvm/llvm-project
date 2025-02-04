@@ -124,8 +124,8 @@ public:
   /// Create a location whose value is the result of evaluating a DWARF
   /// expression. This allows complex expressions to be evaluated in order to
   /// unwind a register or CFA value.
-  static UnwindLocation createIsDWARFExpression(DWARFExpression Expr);
-  static UnwindLocation createAtDWARFExpression(DWARFExpression Expr);
+  static UnwindLocation createIsDWARFExpression(const DWARFExpression &Expr);
+  static UnwindLocation createAtDWARFExpression(const DWARFExpression &Expr);
   static UnwindLocation createIsConstant(int32_t Value);
 
   Location getLocation() const { return Kind; }
@@ -164,7 +164,7 @@ public:
   /// instead of from .debug_frame. This is needed for register number
   /// conversion because some register numbers differ between the two sections
   /// for certain architectures like x86.
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const;
+  void dump(raw_ostream &OS, const DIDumpOptions &DumpOpts) const;
 
   bool operator==(const UnwindLocation &RHS) const;
 };
@@ -303,7 +303,7 @@ public:
   ///
   /// \param IndentLevel specify the indent level as an integer. The UnwindRow
   /// will be output to the stream preceded by 2 * IndentLevel number of spaces.
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+  void dump(raw_ostream &OS, const DIDumpOptions &DumpOpts,
             unsigned IndentLevel = 0) const;
 };
 
@@ -348,7 +348,7 @@ public:
   ///
   /// \param IndentLevel specify the indent level as an integer. The UnwindRow
   /// will be output to the stream preceded by 2 * IndentLevel number of spaces.
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+  void dump(raw_ostream &OS, const DIDumpOptions &DumpOpts,
             unsigned IndentLevel = 0) const;
 
   /// Create an UnwindTable from a Common Information Entry (CIE).
@@ -454,7 +454,7 @@ public:
   /// where a problem occurred in case an error is returned.
   Error parse(DWARFDataExtractor Data, uint64_t *Offset, uint64_t EndOffset);
 
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts, unsigned IndentLevel,
+  void dump(raw_ostream &OS, const DIDumpOptions &DumpOpts, unsigned IndentLevel,
             std::optional<uint64_t> InitialLocation) const;
 
   void addInstruction(const Instruction &I) { Instructions.push_back(I); }
@@ -522,7 +522,7 @@ private:
   static ArrayRef<OperandType[MaxOperands]> getOperandTypes();
 
   /// Print \p Opcode's operand number \p OperandIdx which has value \p Operand.
-  void printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
+  void printOperand(raw_ostream &OS, const DIDumpOptions &DumpOpts,
                     const Instruction &Instr, unsigned OperandIdx,
                     uint64_t Operand, std::optional<uint64_t> &Address) const;
 };

@@ -126,7 +126,7 @@ public:
   /// in parallel on different DbiModuleDescriptorBuilder objects. Only modifies
   /// the pre-allocated stream in question.
   Error commitSymbolStream(const msf::MSFLayout &MsfLayout,
-                           WritableBinaryStreamRef MsfBuffer);
+                           const WritableBinaryStreamRef &MsfBuffer);
 
 private:
   uint32_t calculateC13DebugInfoSize() const;

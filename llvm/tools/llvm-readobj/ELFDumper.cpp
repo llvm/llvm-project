@@ -5840,7 +5840,7 @@ struct CoreNote {
   std::vector<CoreFileMapping> Mappings;
 };
 
-static Expected<CoreNote> readCoreNote(DataExtractor Desc) {
+static Expected<CoreNote> readCoreNote(const DataExtractor &Desc) {
   // Expected format of the NT_FILE note description:
   // 1. # of file mappings (call it N)
   // 2. Page size

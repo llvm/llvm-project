@@ -98,14 +98,14 @@ public:
     }
     uint64_t getEndOffset() const { return EndOffset; }
     bool isError() const { return Error; }
-    bool print(raw_ostream &OS, DIDumpOptions DumpOpts,
+    bool print(raw_ostream &OS, const DIDumpOptions &DumpOpts,
                const DWARFExpression *Expr, DWARFUnit *U) const;
 
     /// Verify \p Op. Does not affect the return of \a isError().
     static bool verify(const Operation &Op, DWARFUnit *U);
 
   private:
-    bool extract(DataExtractor Data, uint8_t AddressSize, uint64_t Offset,
+    bool extract(const DataExtractor &Data, uint8_t AddressSize, uint64_t Offset,
                  std::optional<dwarf::DwarfFormat> Format);
   };
 

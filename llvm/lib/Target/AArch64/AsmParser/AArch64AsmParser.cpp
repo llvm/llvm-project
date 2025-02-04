@@ -2455,7 +2455,7 @@ public:
   }
 
   static std::unique_ptr<AArch64Operand>
-  CreateFPImm(APFloat Val, bool IsExact, SMLoc S, MCContext &Ctx) {
+  CreateFPImm(const APFloat &Val, bool IsExact, SMLoc S, MCContext &Ctx) {
     auto Op = std::make_unique<AArch64Operand>(k_FPImm, Ctx);
     Op->FPImm.Val = Val.bitcastToAPInt().getSExtValue();
     Op->FPImm.IsExact = IsExact;
@@ -3837,7 +3837,7 @@ static const struct Extension {
     {"sme-tmop", {AArch64::FeatureSME_TMOP}},
 };
 
-static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
+static void setRequiredFeatureString(const FeatureBitset &FBS, std::string &Str) {
   if (FBS[AArch64::HasV8_0aOps])
     Str += "ARMv8a";
   if (FBS[AArch64::HasV8_1aOps])

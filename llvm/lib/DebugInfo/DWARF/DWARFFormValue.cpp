@@ -107,7 +107,7 @@ DWARFFormValue DWARFFormValue::createFromUnit(dwarf::Form F, const DWARFUnit *U,
   return FormValue;
 }
 
-bool DWARFFormValue::skipValue(dwarf::Form Form, DataExtractor DebugInfoData,
+bool DWARFFormValue::skipValue(dwarf::Form Form, const DataExtractor &DebugInfoData,
                                uint64_t *OffsetPtr,
                                const dwarf::FormParams Params) {
   bool Indirect = false;
@@ -357,7 +357,7 @@ void DWARFFormValue::dumpAddress(raw_ostream &OS, uint8_t AddressSize,
 }
 
 void DWARFFormValue::dumpSectionedAddress(raw_ostream &OS,
-                                          DIDumpOptions DumpOpts,
+                                          const DIDumpOptions &DumpOpts,
                                           object::SectionedAddress SA) const {
   dumpAddress(OS, U->getAddressByteSize(), SA.Address);
   dumpAddressSection(U->getContext().getDWARFObj(), OS, DumpOpts,
@@ -365,7 +365,7 @@ void DWARFFormValue::dumpSectionedAddress(raw_ostream &OS,
 }
 
 void DWARFFormValue::dumpAddressSection(const DWARFObject &Obj, raw_ostream &OS,
-                                        DIDumpOptions DumpOpts,
+                                        const DIDumpOptions &DumpOpts,
                                         uint64_t SectionIndex) {
   if (!DumpOpts.Verbose || SectionIndex == -1ULL)
     return;
@@ -379,7 +379,7 @@ void DWARFFormValue::dumpAddressSection(const DWARFObject &Obj, raw_ostream &OS,
     OS << format(" [%" PRIu64 "]", SectionIndex);
 }
 
-void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
+void DWARFFormValue::dump(raw_ostream &OS, const DIDumpOptions &DumpOpts) const {
   uint64_t UValue = Value.uval;
   bool CURelativeOffset = false;
   raw_ostream &AddrOS = DumpOpts.ShowAddresses

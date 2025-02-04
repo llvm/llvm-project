@@ -227,25 +227,25 @@ private:
   /// Emit piece of .debug_ranges for \p LinkedRanges.
   void emitDwarfDebugRangesTableFragment(const CompileUnit &Unit,
                                          const AddressRanges &LinkedRanges,
-                                         PatchLocation Patch);
+                                         const PatchLocation &Patch);
 
   /// Emit piece of .debug_rnglists for \p LinkedRanges.
   void emitDwarfDebugRngListsTableFragment(const CompileUnit &Unit,
                                            const AddressRanges &LinkedRanges,
-                                           PatchLocation Patch,
+                                           const PatchLocation &Patch,
                                            DebugDieValuePool &AddrPool);
 
   /// Emit piece of .debug_loc for \p LinkedRanges.
   void emitDwarfDebugLocTableFragment(
       const CompileUnit &Unit,
       const DWARFLocationExpressionsVector &LinkedLocationExpression,
-      PatchLocation Patch);
+      const PatchLocation &Patch);
 
   /// Emit piece of .debug_loclists for \p LinkedRanges.
   void emitDwarfDebugLocListsTableFragment(
       const CompileUnit &Unit,
       const DWARFLocationExpressionsVector &LinkedLocationExpression,
-      PatchLocation Patch, DebugDieValuePool &AddrPool);
+      const PatchLocation &Patch, DebugDieValuePool &AddrPool);
 
   /// \defgroup Line table emission
   /// @{

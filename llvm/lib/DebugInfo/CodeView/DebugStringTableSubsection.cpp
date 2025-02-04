@@ -21,7 +21,7 @@ using namespace llvm::codeview;
 DebugStringTableSubsectionRef::DebugStringTableSubsectionRef()
     : DebugSubsectionRef(DebugSubsectionKind::StringTable) {}
 
-Error DebugStringTableSubsectionRef::initialize(BinaryStreamRef Contents) {
+Error DebugStringTableSubsectionRef::initialize(const BinaryStreamRef &Contents) {
   Stream = Contents;
   return Error::success();
 }

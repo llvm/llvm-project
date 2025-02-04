@@ -37,12 +37,12 @@ struct ParseOption {
 /// \param Buffer Data that points to dylib.
 /// \param Options Determines which attributes to extract.
 /// \return List of record slices.
-Expected<Records> readFile(MemoryBufferRef Buffer, const ParseOption &Opt);
+Expected<Records> readFile(const MemoryBufferRef &Buffer, const ParseOption &Opt);
 
 /// Get TAPI file representation of binary dylib.
 ///
 /// \param Buffer Data that points to dylib.
-Expected<std::unique_ptr<InterfaceFile>> get(MemoryBufferRef Buffer);
+Expected<std::unique_ptr<InterfaceFile>> get(const MemoryBufferRef &Buffer);
 
 using SymbolToSourceLocMap = llvm::StringMap<RecordLoc>;
 /// Get the source location for each symbol from dylib.

@@ -159,8 +159,8 @@ bool DbiModuleSourceFilesIterator::isCompatible(
   return Modi == R.Modi;
 }
 
-Error DbiModuleList::initialize(BinaryStreamRef ModInfo,
-                                BinaryStreamRef FileInfo) {
+Error DbiModuleList::initialize(const BinaryStreamRef &ModInfo,
+                                const BinaryStreamRef &FileInfo) {
   if (auto EC = initializeModInfo(ModInfo))
     return EC;
   if (auto EC = initializeFileInfo(FileInfo))

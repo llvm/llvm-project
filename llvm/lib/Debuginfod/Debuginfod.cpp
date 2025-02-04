@@ -324,7 +324,7 @@ void DebuginfodLog::push(const Twine &Message) {
   push(DebuginfodLogEntry(Message));
 }
 
-void DebuginfodLog::push(DebuginfodLogEntry Entry) {
+void DebuginfodLog::push(const DebuginfodLogEntry &Entry) {
   {
     std::lock_guard<std::mutex> Guard(QueueMutex);
     LogEntryQueue.push(Entry);

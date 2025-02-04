@@ -163,7 +163,7 @@ void writeIndexToFile(
 /// If EmbedCmdline is set, the command line is also exported in
 /// the corresponding section (__LLVM,_cmdline / .llvmcmd) - even if CmdArgs
 /// were empty.
-void embedBitcodeInModule(Module &M, MemoryBufferRef Buf, bool EmbedBitcode,
+void embedBitcodeInModule(Module &M, const MemoryBufferRef &Buf, bool EmbedBitcode,
                           bool EmbedCmdline,
                           const std::vector<uint8_t> &CmdArgs);
 

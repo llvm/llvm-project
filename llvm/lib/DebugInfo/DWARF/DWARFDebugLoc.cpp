@@ -109,7 +109,7 @@ DWARFLocationInterpreter::Interpret(const DWARFLocationEntry &E) {
   }
 }
 
-static void dumpExpression(raw_ostream &OS, DIDumpOptions DumpOpts,
+static void dumpExpression(raw_ostream &OS, const DIDumpOptions &DumpOpts,
                            ArrayRef<uint8_t> Data, bool IsLittleEndian,
                            unsigned AddressSize, DWARFUnit *U) {
   DWARFDataExtractor Extractor(Data, IsLittleEndian, AddressSize);
@@ -182,7 +182,7 @@ Error DWARFLocationTable::visitAbsoluteLocationList(
 }
 
 void DWARFDebugLoc::dump(raw_ostream &OS, const DWARFObject &Obj,
-                         DIDumpOptions DumpOpts,
+                         const DIDumpOptions &DumpOpts,
                          std::optional<uint64_t> DumpOffset) const {
   auto BaseAddr = std::nullopt;
   unsigned Indent = 12;
@@ -385,7 +385,7 @@ void DWARFDebugLoclists::dumpRawEntry(const DWARFLocationEntry &Entry,
 
 void DWARFDebugLoclists::dumpRange(uint64_t StartOffset, uint64_t Size,
                                    raw_ostream &OS, const DWARFObject &Obj,
-                                   DIDumpOptions DumpOpts) {
+                                   const DIDumpOptions &DumpOpts) {
   if (!Data.isValidOffsetForDataOfSize(StartOffset, Size))  {
     OS << "Invalid dump range\n";
     return;

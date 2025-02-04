@@ -268,7 +268,7 @@ Expected<DataLayout> DataLayout::parse(StringRef LayoutString) {
   return Layout;
 }
 
-static Error createSpecFormatError(Twine Format) {
+static Error createSpecFormatError(const Twine &Format) {
   return createStringError("malformed specification, must be of the form \"" +
                            Format + "\"");
 }

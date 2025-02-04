@@ -478,7 +478,7 @@ Error GSIStreamBuilder::commitGlobalsHashStream(
 }
 
 Error GSIStreamBuilder::commit(const msf::MSFLayout &Layout,
-                               WritableBinaryStreamRef Buffer) {
+                               const WritableBinaryStreamRef &Buffer) {
   llvm::TimeTraceScope timeScope("Commit GSI stream");
   auto GS = WritableMappedBlockStream::createIndexedStream(
       Layout, Buffer, getGlobalsStreamIndex(), Msf.getAllocator());

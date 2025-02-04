@@ -113,7 +113,7 @@ void DebugInlineeLinesSubsection::addExtraFile(StringRef FileName) {
   ++ExtraFileCount;
 }
 
-void DebugInlineeLinesSubsection::addInlineSite(TypeIndex FuncId,
+void DebugInlineeLinesSubsection::addInlineSite(const TypeIndex &FuncId,
                                                 StringRef FileName,
                                                 uint32_t SourceLine) {
   uint32_t Offset = Checksums.mapChecksumOffset(FileName);
