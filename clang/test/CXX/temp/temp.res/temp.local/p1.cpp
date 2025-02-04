@@ -10,9 +10,9 @@ template<typename> char id;
 template<typename> struct TempType {};
 template<template<typename> class> struct TempTemp {};
 
-template<typename> void use(int&); // expected-note {{invalid explicitly-specified argument}} expected-note {{no known conversion}}
+template<typename> void use(int&); // expected-note{{template parameter is declared here}} // expected-note {{invalid explicitly-specified argument}} expected-note {{no known conversion}}
 template<template<typename> class> void use(float&); // expected-note 2{{no known conversion}}
-template<int> void use(char&); // expected-note 2{{invalid explicitly-specified argument}}
+template<int> void use(char&); // expected-note 2{{template parameter is declared here}} // expected-note 2{{invalid explicitly-specified argument}}
 
 template<typename T> struct A {
   template<typename> struct C {};

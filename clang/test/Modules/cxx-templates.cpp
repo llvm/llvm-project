@@ -42,10 +42,12 @@ void g() {
   template_param_kinds_1<int>(); // ok, from cxx-templates-b.h
 
   template_param_kinds_2<Tmpl_T_C>(); // expected-error {{no matching function}}
+  // expected-note@Inputs/cxx-templates-a.h:11 {{template parameter is declared here}}
   // expected-note@Inputs/cxx-templates-a.h:11 {{invalid explicitly-specified argument}}
   // expected-note@Inputs/cxx-templates-b.h:11 {{invalid explicitly-specified argument}}
 
   template_param_kinds_2<Tmpl_T_I_I>(); // expected-error {{ambiguous}}
+  // expected-note@Inputs/cxx-templates-b.h:11 {{template parameter is declared here}}
   // expected-note@Inputs/cxx-templates-a.h:11 {{candidate}}
   // expected-note@Inputs/cxx-templates-b.h:11 {{candidate}}
 

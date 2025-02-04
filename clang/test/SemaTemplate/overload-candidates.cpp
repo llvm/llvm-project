@@ -16,12 +16,11 @@ void test_dyn_cast(int* ptr) {
   (void)dyn_cast(ptr); // expected-error{{no matching function for call to 'dyn_cast'}}
 }
 
-template<int I, typename T> 
+template<int I, typename T> // expected-note {{template parameter is declared here}}
   void get(const T&); // #get-int-typename
-  // expected-note@#get-int-typename {{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
-  // expected-note@#get-int-typename {{expected constant of type 'int' but got type 'int'}}
-template<template<class T> class, typename T> 
-  void get(const T&); // expected-note{{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
+  // expected-note@#get-int-typename {{candidate template ignored: invalid explicitly-specified argument: expected constant of type 'int' but got type 'int'}}
+template<template<class T> class, typename T> // expected-note {{template parameter is declared here}}
+  void get(const T&); // expected-note {{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
 
 void test_get(void *ptr) {
   get<int>(ptr); // expected-error{{no matching function for call to 'get'}}
