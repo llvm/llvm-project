@@ -5231,7 +5231,7 @@ static SDValue lowerShuffleViaVRegSplitting(ShuffleVectorSDNode *SVN,
         }
       } else {
         SDValue V = ExtractValue(Idx1 >= NumOfSrcRegs ? V2 : V1,
-                         (Idx1 % NumOfSrcRegs) * NumOpElts);
+                                 (Idx1 % NumOfSrcRegs) * NumOpElts);
         Values[Idx1] = V;
       }
       if (Idx2 != UINT_MAX)
