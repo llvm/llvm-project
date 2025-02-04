@@ -99,29 +99,44 @@ extern template void CheckSpecificationExpr(
     FoldingContext &, bool forElementalFunctionResult);
 
 // Contiguity & "simple contiguity" (9.5.4)
+// Named constant sections are expressions, and as such their evaluation is
+// considered to be contiguous. This avoids funny situations where
+// IS_CONTIGUOUS(cst(1:10:2)) would fold to true because `cst(1:10:2)` is
+// folded into an array constructor literal, but IS_CONTIGUOUS(cst(i:i+9:2))
+// folds to false because the named constant reference cannot be folded.
+// Note that these IS_CONTIGUOUS usages are not portable (can probably be
+// considered to fall into F2023 8.5.7 (4)), and existing compilers are not
+// consistent here.
+// However, the compiler may very well decide to create a descriptor over
+// `cst(i:i+9:2)` when it can to avoid copies, and as such it needs internally
+// to be able to tell the actual contiguity of that array section over the
+// read-only data.
 template <typename A>
-std::optional<bool> IsContiguous(const A &, FoldingContext &);
-extern template std::optional<bool> IsContiguous(
-    const Expr<SomeType> &, FoldingContext &);
-extern template std::optional<bool> IsContiguous(
-    const ArrayRef &, FoldingContext &);
-extern template std::optional<bool> IsContiguous(
-    const Substring &, FoldingContext &);
-extern template std::optional<bool> IsContiguous(
-    const Component &, FoldingContext &);
-extern template std::optional<bool> IsContiguous(
-    const ComplexPart &, FoldingContext &);
-extern template std::optional<bool> IsContiguous(
-    const CoarrayRef &, FoldingContext &);
-extern template std::optional<bool> IsContiguous(
-    const Symbol &, FoldingContext &);
-static inline std::optional<bool> IsContiguous(
-    const SymbolRef &s, FoldingContext &c) {
-  return IsContiguous(s.get(), c);
+std::optional<bool> IsContiguous(const A &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous = true);
+extern template std::optional<bool> IsContiguous(const Expr<SomeType> &,
+    FoldingContext &, bool namedConstantSectionsAreContiguous = true);
+extern template std::optional<bool> IsContiguous(const ArrayRef &,
+    FoldingContext &, bool namedConstantSectionsAreContiguous = true);
+extern template std::optional<bool> IsContiguous(const Substring &,
+    FoldingContext &, bool namedConstantSectionsAreContiguous = true);
+extern template std::optional<bool> IsContiguous(const Component &,
+    FoldingContext &, bool namedConstantSectionsAreContiguous = true);
+extern template std::optional<bool> IsContiguous(const ComplexPart &,
+    FoldingContext &, bool namedConstantSectionsAreContiguous = true);
+extern template std::optional<bool> IsContiguous(const CoarrayRef &,
+    FoldingContext &, bool namedConstantSectionsAreContiguous = true);
+extern template std::optional<bool> IsContiguous(const Symbol &,
+    FoldingContext &, bool namedConstantSectionsAreContiguous = true);
+static inline std::optional<bool> IsContiguous(const SymbolRef &s,
+    FoldingContext &c, bool namedConstantSectionsAreContiguous = true) {
+  return IsContiguous(s.get(), c, namedConstantSectionsAreContiguous);
 }
 template <typename A>
-bool IsSimplyContiguous(const A &x, FoldingContext &context) {
-  return IsContiguous(x, context).value_or(false);
+bool IsSimplyContiguous(const A &x, FoldingContext &context,
+    bool namedConstantSectionsAreContiguous = true) {
+  return IsContiguous(x, context, namedConstantSectionsAreContiguous)
+      .value_or(false);
 }
 
 template <typename A> bool IsErrorExpr(const A &);
