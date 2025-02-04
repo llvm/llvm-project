@@ -53,6 +53,8 @@ SHADER_FEATURE_FLAG(31, 36, NextUnusedBit, "Next reserved shader flag bit (not a
 #undef SHADER_FEATURE_FLAG
 #endif // SHADER_FEATURE_FLAG
 
+
+// ROOT_ELEMENT_FLAG(bit offset for the flag, name).
 #ifdef ROOT_ELEMENT_FLAG
 
 ROOT_ELEMENT_FLAG(0, AllowInputAssemblerInputLayout)
