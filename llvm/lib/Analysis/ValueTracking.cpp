@@ -873,10 +873,9 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
 
     Value *Arg = I->getArgOperand(0);
 
-    if (Arg == V && isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
-      assert(BitWidth == 1 && "assume operand is not i1?");
-      (void)BitWidth;
-      Known.setAllOnes();
+    if (match(Arg, m_TruncOrSelf(m_Specific(V))) &&
+        isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+      Known.One.setBit(0);
       return;
     }
     if (match(Arg, m_Not(m_Specific(V))) &&
