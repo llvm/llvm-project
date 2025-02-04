@@ -437,8 +437,8 @@ void VectorDialect::initialize() {
 Operation *VectorDialect::materializeConstant(OpBuilder &builder,
                                               Attribute value, Type type,
                                               Location loc) {
-  if (auto poisonAttr = dyn_cast<ub::PoisonAttrInterface>(value))
-    return builder.create<ub::PoisonOp>(loc, type, poisonAttr);
+  if (isa<ub::PoisonAttrInterface>(value))
+    return value.getDialect().materializeConstant(builder, value, type, loc);
 
   return arith::ConstantOp::materialize(builder, value, type, loc);
 }
