@@ -37,3 +37,7 @@ Ron
 revert: need clean patch from Amit
 b68b4f64a2bd [Driver][ASan] Refactor Clang-Driver "Sanitizer
 ---
+revert: needs flang-new merge help
+[mlir][OpenMP][flang] make private variable allocation implicit in omp.private (#124019)
+9ad4ebd82b60 [mlir][OpenMP][NFC] break out priv var init into hel
+---
