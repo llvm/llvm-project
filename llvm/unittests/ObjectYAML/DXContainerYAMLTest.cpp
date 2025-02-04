@@ -128,9 +128,9 @@ TEST(RootSignature, ParseRootFlags) {
       RootSignature:
         Version:         2
         NumParameters:   0
-        RootParametersOffset: 24
+        RootParametersOffset: 0
         NumStaticSamplers: 0
-        StaticSamplersOffset: 24
+        StaticSamplersOffset: 0
         AllowInputAssemblerInputLayout: true
     )"));
 
