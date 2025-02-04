@@ -45,7 +45,6 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
   this->DylibMgr = this;
   this->JDI = {ExecutorAddr::fromPtr(jitDispatchViaWrapperFunctionManager),
                ExecutorAddr::fromPtr(this)};
-
   if (this->TargetTriple.isOSBinFormatMachO())
     GlobalManglingPrefix = '_';
 
@@ -53,12 +52,6 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
       ExecutorAddr::fromPtr(&llvm_orc_registerEHFrameSectionWrapper);
   this->BootstrapSymbols[rt::DeregisterEHFrameSectionWrapperName] =
       ExecutorAddr::fromPtr(&llvm_orc_deregisterEHFrameSectionWrapper);
-
-#ifdef __APPLE__
-  this->UnwindInfoMgr = UnwindInfoManager::TryCreate();
-  if (this->UnwindInfoMgr)
-    this->UnwindInfoMgr->addBootstrapSymbols(this->BootstrapSymbols);
-#endif // __APPLE__
 }
 
 Expected<std::unique_ptr<SelfExecutorProcessControl>>
