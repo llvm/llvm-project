@@ -93,6 +93,21 @@ public:
   bool hasDotInstructions() const {
     return SmVersion >= 61 && PTXVersion >= 50;
   }
+  // Tcgen05 instructions in Blackwell family
+  bool hasTcgen05Instructions() const {
+    bool HasTcgen05 = false;
+    switch (FullSmVersion) {
+    default:
+      break;
+    case 1001: // sm_100a
+    case 1011: // sm_101a
+      HasTcgen05 = true;
+      break;
+    }
+
+    return HasTcgen05 && PTXVersion >= 86;
+  }
+
   // Prior to CUDA 12.3 ptxas did not recognize that the trap instruction
   // terminates a basic block. Instead, it would assume that control flow
   // continued to the next instruction. The next instruction could be in the
