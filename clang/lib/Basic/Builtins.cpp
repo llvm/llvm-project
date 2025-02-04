@@ -29,23 +29,19 @@ const char *HeaderDesc::getName() const {
   llvm_unreachable("Unknown HeaderDesc::HeaderID enum");
 }
 
-static constexpr llvm::StringTable BuiltinStrings =
-    CLANG_BUILTIN_STR_TABLE_START
-        // We inject a non-builtin string into the table.
-        CLANG_BUILTIN_STR_TABLE("not a builtin function", "", "")
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#include "clang/Basic/Builtins.inc"
-    ;
-static_assert(BuiltinStrings.size() < 100'000);
+static constexpr unsigned NumBuiltins = Builtin::FirstTSBuiltin;
 
-static constexpr auto BuiltinInfos =
-    Builtin::MakeInfos<Builtin::FirstTSBuiltin>(
-        {CLANG_BUILTIN_ENTRY("not a builtin function", "", "")
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define LANGBUILTIN CLANG_LANGBUILTIN_ENTRY
-#define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
+#define GET_BUILTIN_STR_TABLE
 #include "clang/Basic/Builtins.inc"
-        });
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+    Builtin::Info{}, // No-builtin info entry.
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/Builtins.inc"
+#undef GET_BUILTIN_INFOS
+};
+static_assert(std::size(BuiltinInfos) == NumBuiltins);
 
 std::pair<const Builtin::InfosShard &, const Builtin::Info &>
 Builtin::Context::getShardAndInfo(unsigned ID) const {
