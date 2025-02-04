@@ -7,13 +7,13 @@ define void @s311() {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[TMP0]], 4
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 0, [[TMP1]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 1200, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP2]], 4
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 0, [[TMP3]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 0, [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 1200, [[TMP3]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 1200, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP4]], 4
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -25,7 +25,7 @@ define void @s311() {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 0, [[N_VEC]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 1200, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
@@ -36,7 +36,7 @@ define void @s311() {
 ; CHECK-NEXT:    [[RED:%.*]] = phi float [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[RED_NEXT]] = fadd float 0.000000e+00, [[RED]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[IV_NEXT]], 0
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[IV_NEXT]], 1200
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RED_LCSSA:%.*]] = phi float [ [[RED_NEXT]], %[[LOOP]] ], [ [[TMP6]], %[[MIDDLE_BLOCK]] ]
@@ -50,7 +50,7 @@ loop:
   %red = phi float [ 0.000000e+00, %entry ], [ %red.next, %loop ]
   %red.next = fadd float 0.000000e+00, %red
   %iv.next = add i32 %iv, 1
-  %exitcond = icmp eq i32 %iv.next, 0
+  %exitcond = icmp eq i32 %iv.next, 1200
   br i1 %exitcond, label %exit, label %loop
 
 exit:
