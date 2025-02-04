@@ -3994,6 +3994,15 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
             &CI);
     }
 #endif
+    Check(CI.getIntrinsicID() != Intrinsic::ret_popless,
+          "llvm.ret.popless call must be musttail", &CI);
+    return;
+  }
+
+  // Some musttail intrinsic calls are special, and don't have all the rules.
+  if (CI.getIntrinsicID() == Intrinsic::ret_popless) {
+    ReturnInst *Ret = dyn_cast_or_null<ReturnInst>(CI.getNextNode());
+    Check(Ret, "musttail intrinsic call must precede a ret", &CI);
     return;
   }
 

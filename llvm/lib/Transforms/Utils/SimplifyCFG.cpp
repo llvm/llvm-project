@@ -1505,6 +1505,12 @@ static bool isSafeToHoistInstr(Instruction *I, unsigned Flags) {
     if (CB->getIntrinsicID() == Intrinsic::experimental_deoptimize)
       return false;
 
+  // Similarly for llvm.ret.popless (and likely generalizable to all musttail
+  // intrinsics).
+  if (auto *CB = dyn_cast<CallBase>(I))
+    if (CB->getIntrinsicID() == Intrinsic::ret_popless)
+      return false;
+
   // It's also unsafe/illegal to hoist an instruction above its instruction
   // operands
   BasicBlock *BB = I->getParent();

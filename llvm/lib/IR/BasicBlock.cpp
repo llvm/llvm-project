@@ -311,6 +311,14 @@ const CallInst *BasicBlock::getTerminatingMustTailCall() const {
   if (!Prev)
     return nullptr;
 
+  // Some musttail intrinsic calls are special in being really simply ret
+  // annotations, and only need to be the last instruction before the ret.
+  // We don't need to look through the return value in those cases.
+  // FIXME: we should generalize getTerminatingDeoptimizeCall for this case.
+  if (auto *CI = dyn_cast<CallInst>(Prev))
+    if (CI->isMustTailCall() && CI->getIntrinsicID() == Intrinsic::ret_popless)
+      return CI;
+
   if (Value *RV = RI->getReturnValue()) {
     if (RV != Prev)
       return nullptr;
