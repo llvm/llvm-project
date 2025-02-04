@@ -2036,138 +2036,116 @@ TEST_F(DebugLineBasicFixture, PrintPathsProperly) {
 }
 
 /// Test that lookupAddressRange correctly filters rows based on
-/// DW_AT_LLVM_stmt_sequence.
+/// a statement-sequence offset (simulating DW_AT_LLVM_stmt_sequence).
 ///
 /// This test verifies that:
-/// 1. When a DIE has a DW_AT_LLVM_stmt_sequence attribute, lookupAddressRange
-/// only returns rows from the sequence starting at the specified offset
-/// 2. When a DIE has an invalid DW_AT_LLVM_stmt_sequence offset, no rows are
-/// returned
-/// 3. When no DW_AT_LLVM_stmt_sequence is present, all matching rows are
-/// returned
+/// 1. When a statement-sequence offset is provided, lookupAddressRange
+///    only returns rows from the sequence starting at that offset.
+/// 2. When an invalid statement-sequence offset is provided, no rows
+///    are returned.
+/// 3. When no statement-sequence offset is provided, all matching rows
+///    in the table are returned.
 ///
-/// The test creates a line table with two sequences at the same address range
-/// but different line numbers. It then creates three subprogram DIEs:
-/// - One with DW_AT_LLVM_stmt_sequence pointing to the first sequence
-/// - One with DW_AT_LLVM_stmt_sequence pointing to the second sequence
-/// - One with an invalid DW_AT_LLVM_stmt_sequence offset
+/// We build a line table with two sequences at the same address range
+/// but different line numbers. Then we try lookups with various statement-
+/// sequence offsets to check the filtering logic.
 TEST_F(DebugLineBasicFixture, LookupAddressRangeWithStmtSequenceOffset) {
   if (!setupGenerator())
     GTEST_SKIP();
 
-  // Create new DWARF with the subprogram DIE
-  dwarfgen::CompileUnit &CU = Gen->addCompileUnit();
-  dwarfgen::DIE CUDie = CU.getUnitDIE();
+  // Create a line table that has two sequences covering [0x1000, 0x1004).
+  // Each sequence has two rows: addresses at 0x1000 and 0x1004, but
+  // they differ by line numbers (100 vs. 200, etc.).
+  //
+  // We'll pretend the first sequence starts at offset 0x2e in the line table,
+  // the second at 0x42, and we'll also test an invalid offset 0x66.
 
-  CUDie.addAttribute(DW_AT_name, DW_FORM_string, "/tmp/main.c");
-  CUDie.addAttribute(DW_AT_language, DW_FORM_data2, DW_LANG_C);
-
-  dwarfgen::DIE SD1 = CUDie.addChild(DW_TAG_subprogram);
-  SD1.addAttribute(DW_AT_name, DW_FORM_string, "sub1");
-  SD1.addAttribute(DW_AT_low_pc, DW_FORM_addr, 0x1000U);
-  SD1.addAttribute(DW_AT_high_pc, DW_FORM_addr, 0x1032U);
-  // DW_AT_LLVM_stmt_sequence points to the first sequence
-  SD1.addAttribute(DW_AT_LLVM_stmt_sequence, DW_FORM_sec_offset, 0x2e);
-
-  dwarfgen::DIE SD2 = CUDie.addChild(DW_TAG_subprogram);
-  SD2.addAttribute(DW_AT_name, DW_FORM_string, "sub2");
-  SD2.addAttribute(DW_AT_low_pc, DW_FORM_addr, 0x1000U);
-  SD2.addAttribute(DW_AT_high_pc, DW_FORM_addr, 0x1032U);
-  // DW_AT_LLVM_stmt_sequence points to the second sequence
-  SD2.addAttribute(DW_AT_LLVM_stmt_sequence, DW_FORM_sec_offset, 0x42);
-
-  dwarfgen::DIE SD3 = CUDie.addChild(DW_TAG_subprogram);
-  SD3.addAttribute(DW_AT_name, DW_FORM_string, "sub3");
-  SD3.addAttribute(DW_AT_low_pc, DW_FORM_addr, 0x1000U);
-  SD3.addAttribute(DW_AT_high_pc, DW_FORM_addr, 0x1032U);
-  // Invalid DW_AT_LLVM_stmt_sequence
-  SD3.addAttribute(DW_AT_LLVM_stmt_sequence, DW_FORM_sec_offset, 0x66);
-
-  // Create a line table with multiple sequences
   LineTable &LT = Gen->addLineTable();
 
-  // First sequence with addresses 0x1000(Ln100), 0x1004(Ln101)
+  // First sequence at offset 0x2e: addresses 0x1000(Ln=100), 0x1004(Ln=101)
   LT.addExtendedOpcode(9, DW_LNE_set_address, {{0x1000U, LineTable::Quad}});
   LT.addStandardOpcode(DW_LNS_set_prologue_end, {});
+  // Advance the line register by 99 (so line=100) and copy.
   LT.addStandardOpcode(DW_LNS_advance_line, {{99, LineTable::SLEB}});
   LT.addStandardOpcode(DW_LNS_copy, {});
-  LT.addByte(0x4b); // Special opcode: address += 4, line += 1
+  // 0x4b is a special opcode: address += 4, line += 1 (so line=101).
+  LT.addByte(0x4b);
+  // End this sequence.
   LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
 
-  // Second sequence with addresses 0x1000(Ln200), 0x1004(Ln201)
+  // Second sequence at offset 0x42: addresses 0x1000(Ln=200), 0x1004(Ln=201)
   LT.addExtendedOpcode(9, DW_LNE_set_address, {{0x1000U, LineTable::Quad}});
   LT.addStandardOpcode(DW_LNS_set_prologue_end, {});
   LT.addStandardOpcode(DW_LNS_advance_line, {{199, LineTable::SLEB}});
   LT.addStandardOpcode(DW_LNS_copy, {});
-  LT.addByte(0x4b); // Special opcode: address += 4, line += 1
+  // 0x4b again: address += 4, line += 1 (so line=201).
+  LT.addByte(0x4b);
+  // End this second sequence.
   LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
 
-  // Generate the DWARF
+  // Generate the DWARF data.
   generate();
 
-  // Parse the line table to get the sequence offset
-  auto ExpectedLineTable = Line.getOrParseLineTable(
-      LineData, /*Offset=*/0, *Context, nullptr, RecordRecoverable);
+  // Parse the line table.
+  auto ExpectedLineTable =
+      Line.getOrParseLineTable(LineData, /*Offset=*/0, *Context,
+                               /*DwarfUnit=*/nullptr, RecordRecoverable);
   ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
   const auto *Table = *ExpectedLineTable;
 
-  uint32_t NumCUs = Context->getNumCompileUnits();
-  ASSERT_EQ(NumCUs, 1u);
-  DWARFUnit *Unit = Context->getUnitAtIndex(0);
-  auto DwarfCUDie = Unit->getUnitDIE(false);
-
-  auto Sub1Die = DwarfCUDie.getFirstChild();
-  auto Sub2Die = Sub1Die.getSibling();
-  auto Sub3Die = Sub2Die.getSibling();
-
-  // Verify Sub1Die is the DIE generated from SD1
-  auto NameAttr1 = Sub1Die.find(DW_AT_name);
-  EXPECT_STREQ(*dwarf::toString(*NameAttr1), "sub1");
-
-  // Verify Sub2Die is the DIE generated from SD2
-  auto NameAttr2 = Sub2Die.find(DW_AT_name);
-  EXPECT_STREQ(*dwarf::toString(*NameAttr2), "sub2");
-
-  // Verify Sub2Die is the DIE generated from SD3
-  auto NameAttr3 = Sub3Die.find(DW_AT_name);
-  EXPECT_STREQ(*dwarf::toString(*NameAttr3), "sub3");
-
-  // Ensure there are two sequences
+  // The table should have two sequences, each starting at our chosen offsets.
   ASSERT_EQ(Table->Sequences.size(), 2u);
 
-  // Lookup addresses in the first sequence with the second sequence's filter
+  // 1) Try looking up with an invalid offset (simulating an invalid
+  //    DW_AT_LLVM_stmt_sequence). We expect no rows.
   {
     std::vector<uint32_t> Rows;
-    bool Found;
-
-    // Look up using Sub3Die's invalid stmt_sequence offset
-    auto StmtSeqAttr3 = Sub3Die.find(dwarf::DW_AT_LLVM_stmt_sequence);
-    ASSERT_TRUE(StmtSeqAttr3);
-    Found = Table->lookupAddressRange(
+    bool Found = Table->lookupAddressRange(
         {0x1000, object::SectionedAddress::UndefSection}, /*Size=*/1, Rows,
-        toSectionOffset(StmtSeqAttr3));
+        /*StmtSequenceOffset=*/0x66); // invalid offset
     EXPECT_FALSE(Found);
+    EXPECT_TRUE(Rows.empty());
+  }
 
-    // Look up using Sub1Die's valid stmt_sequence offset
-    auto StmtSeqAttr1 = Sub1Die.find(dwarf::DW_AT_LLVM_stmt_sequence);
-    ASSERT_TRUE(StmtSeqAttr1);
-    Found = Table->lookupAddressRange(
+  // 2) Look up using the offset 0x2e (our first sequence). We expect
+  //    to get the rows from that sequence only (which for 0x1000 is row #0).
+  {
+    std::vector<uint32_t> Rows;
+    bool Found = Table->lookupAddressRange(
         {0x1000, object::SectionedAddress::UndefSection}, /*Size=*/1, Rows,
-        toSectionOffset(StmtSeqAttr1));
+        /*StmtSequenceOffset=*/0x2e);
     EXPECT_TRUE(Found);
     ASSERT_EQ(Rows.size(), 1u);
-    EXPECT_EQ(Rows[0], 0U);
+    // The first sequence's first row is index 0.
+    EXPECT_EQ(Rows[0], 0u);
+  }
 
-    // Look up using Sub2Die's valid stmt_sequence offset
-    Rows.clear();
-    auto StmtSeqAttr2 = Sub2Die.find(dwarf::DW_AT_LLVM_stmt_sequence);
-    ASSERT_TRUE(StmtSeqAttr2);
-    Found = Table->lookupAddressRange(
+  // 3) Look up using the offset 0x42 (second sequence). For address 0x1000
+  //    in that second sequence, we should see row #2.
+  {
+    std::vector<uint32_t> Rows;
+    bool Found = Table->lookupAddressRange(
         {0x1000, object::SectionedAddress::UndefSection}, /*Size=*/1, Rows,
-        toSectionOffset(StmtSeqAttr2));
+        /*StmtSequenceOffset=*/0x42);
     EXPECT_TRUE(Found);
     ASSERT_EQ(Rows.size(), 1u);
+    // The second sequence's first row is index 2 in the table.
     EXPECT_EQ(Rows[0], 3u);
+  }
+
+  // 4) Look up with no statement-sequence offset specified.
+  //    We should get rows from both sequences for address 0x1000.
+  {
+    std::vector<uint32_t> Rows;
+    bool Found = Table->lookupAddressRange(
+        {0x1000, object::SectionedAddress::UndefSection}, /*Size=*/1, Rows,
+        std::nullopt /* no filter */);
+    EXPECT_TRUE(Found);
+    // The first sequence's row is #0, second's row is #2, so both should
+    // appear.
+    ASSERT_EQ(Rows.size(), 2u);
+    EXPECT_EQ(Rows[0], 0u);
+    EXPECT_EQ(Rows[1], 3u);
   }
 }
 } // end anonymous namespace

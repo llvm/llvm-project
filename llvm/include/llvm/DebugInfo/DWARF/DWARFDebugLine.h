@@ -227,8 +227,6 @@ public:
       return SectionIndex == PC.SectionIndex &&
              (LowPC <= PC.Address && PC.Address < HighPC);
     }
-
-    void SetSequenceOffset(uint64_t Offset) { StmtSeqOffset = Offset; }
   };
 
   struct LineTable {
