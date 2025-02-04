@@ -233,6 +233,14 @@ EVT X86TargetLowering::getSetCCResultType(const DataLayout &DL,
   return VT.changeVectorElementTypeToInteger();
 }
 
+bool X86TargetLowering::functionArgumentNeedsConsecutiveRegisters(
+    Type *Ty, CallingConv::ID CallConv, bool isVarArg,
+    const DataLayout &DL) const {
+  // i128 split into i64 needs to be allocated to two consecutive registers,
+  // or spilled to the stack as a whole.
+  return Ty->isIntegerTy(128);
+}
+
 /// Helper for getByValTypeAlignment to determine
 /// the desired ByVal argument alignment.
 static void getMaxByValAlign(Type *Ty, Align &MaxAlign) {
@@ -659,7 +667,8 @@ X86TargetLowering::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
 
 bool X86TargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC_X86);
@@ -1415,13 +1424,13 @@ static ArrayRef<MCPhysReg> get64BitArgumentGPRs(CallingConv::ID CallConv,
     static const MCPhysReg GPR64ArgRegsWin64[] = {
       X86::RCX, X86::RDX, X86::R8,  X86::R9
     };
-    return ArrayRef(std::begin(GPR64ArgRegsWin64), std::end(GPR64ArgRegsWin64));
+    return GPR64ArgRegsWin64;
   }
 
   static const MCPhysReg GPR64ArgRegs64Bit[] = {
     X86::RDI, X86::RSI, X86::RDX, X86::RCX, X86::R8, X86::R9
   };
-  return ArrayRef(std::begin(GPR64ArgRegs64Bit), std::end(GPR64ArgRegs64Bit));
+  return GPR64ArgRegs64Bit;
 }
 
 // FIXME: Get this from tablegen.
@@ -1447,7 +1456,7 @@ static ArrayRef<MCPhysReg> get64BitArgumentXMMs(MachineFunction &MF,
     X86::XMM0, X86::XMM1, X86::XMM2, X86::XMM3,
     X86::XMM4, X86::XMM5, X86::XMM6, X86::XMM7
   };
-  return ArrayRef(std::begin(XMMArgRegs64Bit), std::end(XMMArgRegs64Bit));
+  return XMMArgRegs64Bit;
 }
 
 #ifndef NDEBUG

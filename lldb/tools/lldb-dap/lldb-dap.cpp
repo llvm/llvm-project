@@ -10,10 +10,10 @@
 #include "FifoFiles.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
-#include "OutputRedirector.h"
 #include "RunInTerminal.h"
 #include "Watchpoint.h"
 #include "lldb/API/SBDeclaration.h"
+#include "lldb/API/SBEvent.h"
 #include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
@@ -41,9 +41,11 @@
 #include <cassert>
 #include <climits>
 #include <cstdarg>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fcntl.h>
 #include <map>
 #include <memory>
 #include <optional>
@@ -140,15 +142,14 @@ lldb::SBValueList *GetTopLevelScope(DAP &dap, int64_t variablesReference) {
   }
 }
 
-SOCKET AcceptConnection(DAP &dap, int portno) {
+SOCKET AcceptConnection(std::ofstream *log, int portno) {
   // Accept a socket connection from any host on "portno".
   SOCKET newsockfd = -1;
   struct sockaddr_in serv_addr, cli_addr;
   SOCKET sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd < 0) {
-    if (dap.log)
-      *dap.log << "error: opening socket (" << strerror(errno) << ")"
-               << std::endl;
+    if (log)
+      *log << "error: opening socket (" << strerror(errno) << ")" << std::endl;
   } else {
     memset((char *)&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
@@ -156,9 +157,9 @@ SOCKET AcceptConnection(DAP &dap, int portno) {
     serv_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     serv_addr.sin_port = htons(portno);
     if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-      if (dap.log)
-        *dap.log << "error: binding socket (" << strerror(errno) << ")"
-                 << std::endl;
+      if (log)
+        *log << "error: binding socket (" << strerror(errno) << ")"
+             << std::endl;
     } else {
       listen(sockfd, 5);
       socklen_t clilen = sizeof(cli_addr);
@@ -166,8 +167,8 @@ SOCKET AcceptConnection(DAP &dap, int portno) {
           llvm::sys::RetryAfterSignal(static_cast<SOCKET>(-1), accept, sockfd,
                                       (struct sockaddr *)&cli_addr, &clilen);
       if (newsockfd < 0)
-        if (dap.log)
-          *dap.log << "error: accept (" << strerror(errno) << ")" << std::endl;
+        if (log)
+          *log << "error: accept (" << strerror(errno) << ")" << std::endl;
     }
 #if defined(_WIN32)
     closesocket(sockfd);
@@ -414,7 +415,8 @@ void SendStdOutStdErr(DAP &dap, lldb::SBProcess &process) {
 void ProgressEventThreadFunction(DAP &dap) {
   lldb::SBListener listener("lldb-dap.progress.listener");
   dap.debugger.GetBroadcaster().AddListener(
-      listener, lldb::SBDebugger::eBroadcastBitProgress);
+      listener, lldb::SBDebugger::eBroadcastBitProgress |
+                    lldb::SBDebugger::eBroadcastBitExternalProgress);
   dap.broadcaster.AddListener(listener, eBroadcastBitStopProgressThread);
   lldb::SBEvent event;
   bool done = false;
@@ -910,6 +912,196 @@ void request_attach(DAP &dap, const llvm::json::Object &request) {
   }
 }
 
+// "BreakpointLocationsRequest": {
+//   "allOf": [ { "$ref": "#/definitions/Request" }, {
+//     "type": "object",
+//     "description": "The `breakpointLocations` request returns all possible
+//     locations for source breakpoints in a given range.\nClients should only
+//     call this request if the corresponding capability
+//     `supportsBreakpointLocationsRequest` is true.",
+//     "properties": {
+//       "command": {
+//         "type": "string",
+//         "enum": [ "breakpointLocations" ]
+//       },
+//       "arguments": {
+//         "$ref": "#/definitions/BreakpointLocationsArguments"
+//       }
+//     },
+//     "required": [ "command" ]
+//   }]
+// },
+// "BreakpointLocationsArguments": {
+//   "type": "object",
+//   "description": "Arguments for `breakpointLocations` request.",
+//   "properties": {
+//     "source": {
+//       "$ref": "#/definitions/Source",
+//       "description": "The source location of the breakpoints; either
+//       `source.path` or `source.sourceReference` must be specified."
+//     },
+//     "line": {
+//       "type": "integer",
+//       "description": "Start line of range to search possible breakpoint
+//       locations in. If only the line is specified, the request returns all
+//       possible locations in that line."
+//     },
+//     "column": {
+//       "type": "integer",
+//       "description": "Start position within `line` to search possible
+//       breakpoint locations in. It is measured in UTF-16 code units and the
+//       client capability `columnsStartAt1` determines whether it is 0- or
+//       1-based. If no column is given, the first position in the start line is
+//       assumed."
+//     },
+//     "endLine": {
+//       "type": "integer",
+//       "description": "End line of range to search possible breakpoint
+//       locations in. If no end line is given, then the end line is assumed to
+//       be the start line."
+//     },
+//     "endColumn": {
+//       "type": "integer",
+//       "description": "End position within `endLine` to search possible
+//       breakpoint locations in. It is measured in UTF-16 code units and the
+//       client capability `columnsStartAt1` determines whether it is 0- or
+//       1-based. If no end column is given, the last position in the end line
+//       is assumed."
+//     }
+//   },
+//   "required": [ "source", "line" ]
+// },
+// "BreakpointLocationsResponse": {
+//   "allOf": [ { "$ref": "#/definitions/Response" }, {
+//     "type": "object",
+//     "description": "Response to `breakpointLocations` request.\nContains
+//     possible locations for source breakpoints.",
+//     "properties": {
+//       "body": {
+//         "type": "object",
+//         "properties": {
+//           "breakpoints": {
+//             "type": "array",
+//             "items": {
+//               "$ref": "#/definitions/BreakpointLocation"
+//             },
+//             "description": "Sorted set of possible breakpoint locations."
+//           }
+//         },
+//         "required": [ "breakpoints" ]
+//       }
+//     },
+//     "required": [ "body" ]
+//   }]
+// },
+// "BreakpointLocation": {
+//   "type": "object",
+//   "description": "Properties of a breakpoint location returned from the
+//   `breakpointLocations` request.",
+//   "properties": {
+//     "line": {
+//       "type": "integer",
+//       "description": "Start line of breakpoint location."
+//     },
+//     "column": {
+//       "type": "integer",
+//       "description": "The start position of a breakpoint location. Position
+//       is measured in UTF-16 code units and the client capability
+//       `columnsStartAt1` determines whether it is 0- or 1-based."
+//     },
+//     "endLine": {
+//       "type": "integer",
+//       "description": "The end line of breakpoint location if the location
+//       covers a range."
+//     },
+//     "endColumn": {
+//       "type": "integer",
+//       "description": "The end position of a breakpoint location (if the
+//       location covers a range). Position is measured in UTF-16 code units and
+//       the client capability `columnsStartAt1` determines whether it is 0- or
+//       1-based."
+//     }
+//   },
+//   "required": [ "line" ]
+// },
+void request_breakpointLocations(DAP &dap, const llvm::json::Object &request) {
+  llvm::json::Object response;
+  FillResponse(request, response);
+  auto *arguments = request.getObject("arguments");
+  auto *source = arguments->getObject("source");
+  std::string path = GetString(source, "path").str();
+  uint64_t start_line = GetUnsigned(arguments, "line", 0);
+  uint64_t start_column = GetUnsigned(arguments, "column", 0);
+  uint64_t end_line = GetUnsigned(arguments, "endLine", start_line);
+  uint64_t end_column =
+      GetUnsigned(arguments, "endColumn", std::numeric_limits<uint64_t>::max());
+
+  lldb::SBFileSpec file_spec(path.c_str(), true);
+  lldb::SBSymbolContextList compile_units =
+      dap.target.FindCompileUnits(file_spec);
+
+  // Find all relevant lines & columns
+  llvm::SmallVector<std::pair<uint32_t, uint32_t>, 8> locations;
+  for (uint32_t c_idx = 0, c_limit = compile_units.GetSize(); c_idx < c_limit;
+       ++c_idx) {
+    const lldb::SBCompileUnit &compile_unit =
+        compile_units.GetContextAtIndex(c_idx).GetCompileUnit();
+    if (!compile_unit.IsValid())
+      continue;
+    lldb::SBFileSpec primary_file_spec = compile_unit.GetFileSpec();
+
+    // Go through the line table and find all matching lines / columns
+    for (uint32_t l_idx = 0, l_limit = compile_unit.GetNumLineEntries();
+         l_idx < l_limit; ++l_idx) {
+      lldb::SBLineEntry line_entry = compile_unit.GetLineEntryAtIndex(l_idx);
+
+      // Filter by line / column
+      uint32_t line = line_entry.GetLine();
+      if (line < start_line || line > end_line)
+        continue;
+      uint32_t column = line_entry.GetColumn();
+      if (column == LLDB_INVALID_COLUMN_NUMBER)
+        continue;
+      if (line == start_line && column < start_column)
+        continue;
+      if (line == end_line && column > end_column)
+        continue;
+
+      // Make sure we are in the right file.
+      // We might have a match on line & column range and still
+      // be in the wrong file, e.g. for included files.
+      // Given that the involved pointers point into LLDB's string pool,
+      // we can directly compare the `const char*` pointers.
+      if (line_entry.GetFileSpec().GetFilename() !=
+              primary_file_spec.GetFilename() ||
+          line_entry.GetFileSpec().GetDirectory() !=
+              primary_file_spec.GetDirectory())
+        continue;
+
+      locations.emplace_back(line, column);
+    }
+  }
+
+  // The line entries are sorted by addresses, but we must return the list
+  // ordered by line / column position.
+  std::sort(locations.begin(), locations.end());
+  locations.erase(std::unique(locations.begin(), locations.end()),
+                  locations.end());
+
+  llvm::json::Array locations_json;
+  for (auto &l : locations) {
+    llvm::json::Object location;
+    location.try_emplace("line", l.first);
+    location.try_emplace("column", l.second);
+    locations_json.emplace_back(std::move(location));
+  }
+
+  llvm::json::Object body;
+  body.try_emplace("breakpoints", std::move(locations_json));
+  response.try_emplace("body", std::move(body));
+  dap.SendJSON(llvm::json::Value(std::move(response)));
+}
+
 // "ContinueRequest": {
 //   "allOf": [ { "$ref": "#/definitions/Request" }, {
 //     "type": "object",
@@ -1102,6 +1294,7 @@ void request_disconnect(DAP &dap, const llvm::json::Object &request) {
     dap.broadcaster.BroadcastEventByType(eBroadcastBitStopProgressThread);
     dap.progress_event_thread.join();
   }
+  dap.StopIO();
   dap.disconnecting = true;
 }
 
@@ -1871,7 +2064,36 @@ void request_initialize(DAP &dap, const llvm::json::Object &request) {
   // which may affect the outcome of tests.
   bool source_init_file = GetBoolean(arguments, "sourceInitFile", true);
 
-  dap.debugger = lldb::SBDebugger::Create(source_init_file);
+  // Do not source init files until in/out/err are configured.
+  dap.debugger = lldb::SBDebugger::Create(false);
+  dap.debugger.SetInputFile(dap.in);
+  auto out_fd = dap.out.GetWriteFileDescriptor();
+  if (llvm::Error err = out_fd.takeError()) {
+    response["success"] = false;
+    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
+    dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+  dap.debugger.SetOutputFile(lldb::SBFile(*out_fd, "w", false));
+  auto err_fd = dap.err.GetWriteFileDescriptor();
+  if (llvm::Error err = err_fd.takeError()) {
+    response["success"] = false;
+    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
+    dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+  dap.debugger.SetErrorFile(lldb::SBFile(*err_fd, "w", false));
+
+  auto interp = dap.debugger.GetCommandInterpreter();
+
+  if (source_init_file) {
+    dap.debugger.SkipLLDBInitFiles(false);
+    dap.debugger.SkipAppInitFiles(false);
+    lldb::SBCommandReturnObject init;
+    interp.SourceInitFileInGlobalDirectory(init);
+    interp.SourceInitFileInHomeDirectory(init);
+  }
+
   if (llvm::Error err = dap.RunPreInitCommands()) {
     response["success"] = false;
     EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
@@ -1937,6 +2159,8 @@ void request_initialize(DAP &dap, const llvm::json::Object &request) {
   body.try_emplace("supportsCompletionsRequest", true);
   // The debug adapter supports the disassembly request.
   body.try_emplace("supportsDisassembleRequest", true);
+  // The debug adapter supports the `breakpointLocations` request.
+  body.try_emplace("supportsBreakpointLocationsRequest", true);
   // The debug adapter supports stepping granularities (argument `granularity`)
   // for the stepping requests.
   body.try_emplace("supportsSteppingGranularity", true);
@@ -2701,9 +2925,10 @@ void request_setBreakpoints(DAP &dap, const llvm::json::Object &request) {
       const auto *bp_obj = bp.getAsObject();
       if (bp_obj) {
         SourceBreakpoint src_bp(dap, *bp_obj);
-        request_bps.try_emplace(src_bp.line, src_bp);
+        std::pair<uint32_t, uint32_t> bp_pos(src_bp.line, src_bp.column);
+        request_bps.try_emplace(bp_pos, src_bp);
         const auto [iv, inserted] =
-            dap.source_breakpoints[path].try_emplace(src_bp.line, src_bp);
+            dap.source_breakpoints[path].try_emplace(bp_pos, src_bp);
         // We check if this breakpoint already exists to update it
         if (inserted)
           iv->getSecond().SetBreakpoint(path.data());
@@ -4774,6 +4999,8 @@ void request_setInstructionBreakpoints(DAP &dap,
 
 void RegisterRequestCallbacks(DAP &dap) {
   dap.RegisterRequestCallback("attach", request_attach);
+  dap.RegisterRequestCallback("breakpointLocations",
+                              request_breakpointLocations);
   dap.RegisterRequestCallback("completions", request_completions);
   dap.RegisterRequestCallback("continue", request_continue);
   dap.RegisterRequestCallback("configurationDone", request_configurationDone);
@@ -4910,36 +5137,14 @@ static void redirection_test() {
   fflush(stderr);
 }
 
-/// Redirect stdout and stderr fo the IDE's console output.
-///
-/// Errors in this operation will be printed to the log file and the IDE's
-/// console output as well.
-///
-/// \return
-///     A fd pointing to the original stdout.
-static int SetupStdoutStderrRedirection(DAP &dap) {
-  int stdoutfd = fileno(stdout);
-  int new_stdout_fd = dup(stdoutfd);
-  auto output_callback_stderr = [&dap](llvm::StringRef data) {
-    dap.SendOutput(OutputType::Stderr, data);
-  };
-  auto output_callback_stdout = [&dap](llvm::StringRef data) {
-    dap.SendOutput(OutputType::Stdout, data);
-  };
-  if (llvm::Error err = RedirectFd(stdoutfd, output_callback_stdout)) {
-    std::string error_message = llvm::toString(std::move(err));
-    if (dap.log)
-      *dap.log << error_message << std::endl;
-    output_callback_stderr(error_message);
-  }
-  if (llvm::Error err = RedirectFd(fileno(stderr), output_callback_stderr)) {
-    std::string error_message = llvm::toString(std::move(err));
-    if (dap.log)
-      *dap.log << error_message << std::endl;
-    output_callback_stderr(error_message);
-  }
-
-  return new_stdout_fd;
+/// Duplicates a file descriptor, setting FD_CLOEXEC if applicable.
+static int DuplicateFileDescriptor(int fd) {
+#if defined(F_DUPFD_CLOEXEC)
+  // Ensure FD_CLOEXEC is set.
+  return ::fcntl(fd, F_DUPFD_CLOEXEC, 0);
+#else
+  return ::dup(fd);
+#endif
 }
 
 int main(int argc, char *argv[]) {
@@ -5030,47 +5235,88 @@ int main(int argc, char *argv[]) {
   }
 #endif
 
+  std::unique_ptr<std::ofstream> log = nullptr;
+  const char *log_file_path = getenv("LLDBDAP_LOG");
+  if (log_file_path)
+    log = std::make_unique<std::ofstream>(log_file_path);
+
   // Initialize LLDB first before we do anything.
-  lldb::SBDebugger::Initialize();
+  lldb::SBError error = lldb::SBDebugger::InitializeWithErrorHandling();
+  if (error.Fail()) {
+    lldb::SBStream os;
+    error.GetDescription(os);
+    llvm::errs() << "lldb initialize failed: " << os.GetData() << "\n";
+    return EXIT_FAILURE;
+  }
 
   // Terminate the debugger before the C++ destructor chain kicks in.
   auto terminate_debugger =
       llvm::make_scope_exit([] { lldb::SBDebugger::Terminate(); });
 
-  DAP dap = DAP(program_path.str(), default_repl_mode);
-
-  RegisterRequestCallbacks(dap);
-
-  // stdout/stderr redirection to the IDE's console
-  int new_stdout_fd = SetupStdoutStderrRedirection(dap);
-
+  StreamDescriptor input;
+  StreamDescriptor output;
+  std::FILE *redirectOut = nullptr;
+  std::FILE *redirectErr = nullptr;
   if (portno != -1) {
     printf("Listening on port %i...\n", portno);
-    SOCKET socket_fd = AcceptConnection(dap, portno);
-    if (socket_fd >= 0) {
-      dap.input.descriptor = StreamDescriptor::from_socket(socket_fd, true);
-      dap.output.descriptor = StreamDescriptor::from_socket(socket_fd, false);
-    } else {
+    SOCKET socket_fd = AcceptConnection(log.get(), portno);
+    if (socket_fd < 0)
+      return EXIT_FAILURE;
+
+    input = StreamDescriptor::from_socket(socket_fd, true);
+    output = StreamDescriptor::from_socket(socket_fd, false);
+  } else {
+#if defined(_WIN32)
+    // Windows opens stdout and stdin in text mode which converts \n to 13,10
+    // while the value is just 10 on Darwin/Linux. Setting the file mode to
+    // binary fixes this.
+    int result = _setmode(fileno(stdout), _O_BINARY);
+    assert(result);
+    result = _setmode(fileno(stdin), _O_BINARY);
+    UNUSED_IF_ASSERT_DISABLED(result);
+    assert(result);
+#endif
+
+    int stdout_fd = DuplicateFileDescriptor(fileno(stdout));
+    if (stdout_fd == -1) {
+      llvm::logAllUnhandledErrors(
+          llvm::errorCodeToError(llvm::errnoAsErrorCode()), llvm::errs(),
+          "Failed to configure stdout redirect: ");
       return EXIT_FAILURE;
     }
-  } else {
-    dap.input.descriptor = StreamDescriptor::from_file(fileno(stdin), false);
-    dap.output.descriptor = StreamDescriptor::from_file(new_stdout_fd, false);
 
-    /// used only by TestVSCode_redirection_to_console.py
-    if (getenv("LLDB_DAP_TEST_STDOUT_STDERR_REDIRECTION") != nullptr)
-      redirection_test();
+    redirectOut = stdout;
+    redirectErr = stderr;
+
+    input = StreamDescriptor::from_file(fileno(stdin), false);
+    output = StreamDescriptor::from_file(stdout_fd, false);
   }
+
+  DAP dap = DAP(program_path.str(), log.get(), default_repl_mode,
+                std::move(input), std::move(output));
+
+  // stdout/stderr redirection to the IDE's console
+  if (auto Err = dap.ConfigureIO(redirectOut, redirectErr)) {
+    llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                "Failed to configure lldb-dap IO operations: ");
+    return EXIT_FAILURE;
+  }
+
+  RegisterRequestCallbacks(dap);
 
   for (const std::string &arg :
        input_args.getAllArgValues(OPT_pre_init_command)) {
     dap.pre_init_commands.push_back(arg);
   }
 
+  // used only by TestVSCode_redirection_to_console.py
+  if (getenv("LLDB_DAP_TEST_STDOUT_STDERR_REDIRECTION") != nullptr)
+    redirection_test();
+
   bool CleanExit = true;
   if (auto Err = dap.Loop()) {
-    if (dap.log)
-      *dap.log << "Transport Error: " << llvm::toString(std::move(Err)) << "\n";
+    if (log)
+      *log << "Transport Error: " << llvm::toString(std::move(Err)) << "\n";
     CleanExit = false;
   }
 

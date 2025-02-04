@@ -181,6 +181,8 @@ class Intrinsic {
 
   SmallVector<ImmCheck, 2> ImmChecks;
 
+  bool SetsFPMR;
+
 public:
   Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
             StringRef MergeSuffix, uint64_t MemoryElementTy, StringRef LLVMName,
@@ -278,6 +280,7 @@ public:
 
 private:
   std::string getMergeSuffix() const { return MergeSuffix; }
+  StringRef getFPMSuffix() const { return SetsFPMR ? "_fpm" : ""; }
   std::string mangleName(ClassKind LocalCK) const;
   std::string mangleLLVMName() const;
   std::string replaceTemplatedArgs(std::string Name, TypeSpec TS,
@@ -295,7 +298,7 @@ private:
     const char *Suffix;
   };
 
-  static const std::array<ReinterpretTypeInfo, 12> Reinterprets;
+  static const std::array<ReinterpretTypeInfo, 13> Reinterprets;
 
   const RecordKeeper &Records;
   StringMap<uint64_t> EltTypes;
@@ -418,9 +421,10 @@ public:
                        SmallVectorImpl<std::unique_ptr<Intrinsic>> &Out);
 };
 
-const std::array<SVEEmitter::ReinterpretTypeInfo, 12> SVEEmitter::Reinterprets =
+const std::array<SVEEmitter::ReinterpretTypeInfo, 13> SVEEmitter::Reinterprets =
     {{{SVEType("c", 'd'), "s8"},
       {SVEType("Uc", 'd'), "u8"},
+      {SVEType("m", 'd'), "mf8"},
       {SVEType("s", 'd'), "s16"},
       {SVEType("Us", 'd'), "u16"},
       {SVEType("i", 'd'), "s32"},
@@ -448,7 +452,7 @@ std::string SVEType::builtinBaseType() const {
   case TypeKind::PredicatePattern:
     return "i";
   case TypeKind::Fpm:
-    return "Wi";
+    return "UWi";
   case TypeKind::Predicate:
     return "b";
   case TypeKind::BFloat16:
@@ -456,7 +460,7 @@ std::string SVEType::builtinBaseType() const {
     return "y";
   case TypeKind::MFloat8:
     assert(ElementBitwidth == 8 && "Invalid MFloat8!");
-    return "c";
+    return "m";
   case TypeKind::Float:
     switch (ElementBitwidth) {
     case 16:
@@ -982,6 +986,7 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
     std::tie(Mod, NumVectors) = getProtoModifier(Proto, I);
     SVEType T(BaseTypeSpec, Mod, NumVectors);
     Types.push_back(T);
+    SetsFPMR = T.isFpm();
 
     // Add range checks for immediates
     if (I > 0) {
@@ -1000,6 +1005,8 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
   this->Flags |= Emitter.encodeMergeType(MergeTy);
   if (hasSplat())
     this->Flags |= Emitter.encodeSplatOperand(getSplatIdx());
+  if (SetsFPMR)
+    this->Flags |= Emitter.getEnumValueForFlag("SetsFPMR");
 }
 
 std::string Intrinsic::getBuiltinTypeStr() {
@@ -1049,7 +1056,7 @@ std::string Intrinsic::replaceTemplatedArgs(std::string Name, TypeSpec TS,
     else if (T.isBFloat())
       TypeCode = "bf";
     else if (T.isMFloat())
-      TypeCode = "mfp";
+      TypeCode = "mf";
     else
       TypeCode = 'f';
     Ret.replace(Pos, NumChars, TypeCode + utostr(T.getElementSizeInBits()));
@@ -1088,8 +1095,9 @@ std::string Intrinsic::mangleName(ClassKind LocalCK) const {
   }
 
   // Replace all {d} like expressions with e.g. 'u32'
-  return replaceTemplatedArgs(S, getBaseTypeSpec(), getProto()) +
-         getMergeSuffix();
+  return replaceTemplatedArgs(S, getBaseTypeSpec(), getProto())
+      .append(getMergeSuffix())
+      .append(getFPMSuffix());
 }
 
 void Intrinsic::emitIntrinsic(raw_ostream &OS, SVEEmitter &Emitter,
@@ -1638,13 +1646,6 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "  uint64_t x0, x1;\n";
   OS << "  __builtin_arm_get_sme_state(&x0, &x1);\n";
   OS << "  return x0 & (1ULL << 63);\n";
-  OS << "}\n\n";
-
-  OS << "__ai bool __arm_in_streaming_mode(void) __arm_streaming_compatible "
-        "{\n";
-  OS << "  uint64_t x0, x1;\n";
-  OS << "  __builtin_arm_get_sme_state(&x0, &x1);\n";
-  OS << "  return x0 & 1;\n";
   OS << "}\n\n";
 
   OS << "void *__arm_sc_memcpy(void *dest, const void *src, size_t n) __arm_streaming_compatible;\n";

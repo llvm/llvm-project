@@ -23,9 +23,6 @@ static constexpr unsigned kHostToDevice = 0;
 static constexpr unsigned kDeviceToHost = 1;
 static constexpr unsigned kDeviceToDevice = 2;
 
-/// Value used for asyncId when no specific stream is specified.
-static constexpr std::int64_t kCudaNoStream = -1;
-
 #define CUDA_REPORT_IF_ERROR(expr) \
   [](cudaError_t err) { \
     if (err == cudaSuccess) \

@@ -367,12 +367,11 @@ public:
     if (!isSet())
       ValueOrInherited = InheritedFrom;
     else if ([[maybe_unused]] auto *D =
-                 ValueOrInherited.template dyn_cast<ParmDecl *>()) {
+                 dyn_cast<ParmDecl *>(ValueOrInherited)) {
       assert(C.isSameDefaultTemplateArgument(D, InheritedFrom));
       ValueOrInherited =
           new (allocateDefaultArgStorageChain(C)) Chain{InheritedFrom, get()};
-    } else if (auto *Inherited =
-                   ValueOrInherited.template dyn_cast<Chain *>()) {
+    } else if (auto *Inherited = dyn_cast<Chain *>(ValueOrInherited)) {
       assert(C.isSameDefaultTemplateArgument(Inherited->PrevDeclWithDefaultArg,
                                              InheritedFrom));
       Inherited->PrevDeclWithDefaultArg = InheritedFrom;
@@ -1842,15 +1841,23 @@ class ClassTemplateSpecializationDecl : public CXXRecordDecl,
   LLVM_PREFERRED_TYPE(TemplateSpecializationKind)
   unsigned SpecializationKind : 3;
 
+  /// Indicate that we have matched a parameter pack with a non pack
+  /// argument, when the opposite match is also allowed (strict pack match).
+  /// This needs to be cached as deduction is performed during declaration,
+  /// and we need the information to be preserved so that it is consistent
+  /// during instantiation.
+  bool MatchedPackOnParmToNonPackOnArg : 1;
+
 protected:
   ClassTemplateSpecializationDecl(ASTContext &Context, Kind DK, TagKind TK,
                                   DeclContext *DC, SourceLocation StartLoc,
                                   SourceLocation IdLoc,
                                   ClassTemplateDecl *SpecializedTemplate,
                                   ArrayRef<TemplateArgument> Args,
+                                  bool MatchedPackOnParmToNonPackOnArg,
                                   ClassTemplateSpecializationDecl *PrevDecl);
 
-  explicit ClassTemplateSpecializationDecl(ASTContext &C, Kind DK);
+  ClassTemplateSpecializationDecl(ASTContext &C, Kind DK);
 
 public:
   friend class ASTDeclReader;
@@ -1860,7 +1867,7 @@ public:
   Create(ASTContext &Context, TagKind TK, DeclContext *DC,
          SourceLocation StartLoc, SourceLocation IdLoc,
          ClassTemplateDecl *SpecializedTemplate,
-         ArrayRef<TemplateArgument> Args,
+         ArrayRef<TemplateArgument> Args, bool MatchedPackOnParmToNonPackOnArg,
          ClassTemplateSpecializationDecl *PrevDecl);
   static ClassTemplateSpecializationDecl *CreateDeserialized(ASTContext &C,
                                                              GlobalDeclID ID);
@@ -1929,6 +1936,10 @@ public:
 
   void setSpecializationKind(TemplateSpecializationKind TSK) {
     SpecializationKind = TSK;
+  }
+
+  bool hasMatchedPackOnParmToNonPackOnArg() const {
+    return MatchedPackOnParmToNonPackOnArg;
   }
 
   /// Get the point of instantiation (if any), or null if none.
@@ -2010,7 +2021,8 @@ public:
   /// Retrieve the template argument list as written in the sources,
   /// if any.
   const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
-    if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
+    if (auto *Info =
+            dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo))
       return Info->TemplateArgsAsWritten;
     return cast<const ASTTemplateArgumentListInfo *>(ExplicitInfo);
   }
@@ -2018,7 +2030,8 @@ public:
   /// Set the template argument list as written in the sources.
   void
   setTemplateArgsAsWritten(const ASTTemplateArgumentListInfo *ArgsWritten) {
-    if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
+    if (auto *Info =
+            dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo))
       Info->TemplateArgsAsWritten = ArgsWritten;
     else
       ExplicitInfo = ArgsWritten;
@@ -2032,7 +2045,8 @@ public:
 
   /// Gets the location of the extern keyword, if present.
   SourceLocation getExternKeywordLoc() const {
-    if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
+    if (auto *Info =
+            dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo))
       return Info->ExternKeywordLoc;
     return SourceLocation();
   }
@@ -2042,7 +2056,8 @@ public:
 
   /// Gets the location of the template keyword, if present.
   SourceLocation getTemplateKeywordLoc() const {
-    if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
+    if (auto *Info =
+            dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo))
       return Info->TemplateKeywordLoc;
     return SourceLocation();
   }
@@ -2779,7 +2794,8 @@ public:
   /// Retrieve the template argument list as written in the sources,
   /// if any.
   const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
-    if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
+    if (auto *Info =
+            dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo))
       return Info->TemplateArgsAsWritten;
     return cast<const ASTTemplateArgumentListInfo *>(ExplicitInfo);
   }
@@ -2787,7 +2803,8 @@ public:
   /// Set the template argument list as written in the sources.
   void
   setTemplateArgsAsWritten(const ASTTemplateArgumentListInfo *ArgsWritten) {
-    if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
+    if (auto *Info =
+            dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo))
       Info->TemplateArgsAsWritten = ArgsWritten;
     else
       ExplicitInfo = ArgsWritten;
@@ -2801,7 +2818,8 @@ public:
 
   /// Gets the location of the extern keyword, if present.
   SourceLocation getExternKeywordLoc() const {
-    if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
+    if (auto *Info =
+            dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo))
       return Info->ExternKeywordLoc;
     return SourceLocation();
   }
@@ -2811,7 +2829,8 @@ public:
 
   /// Gets the location of the template keyword, if present.
   SourceLocation getTemplateKeywordLoc() const {
-    if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
+    if (auto *Info =
+            dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo))
       return Info->TemplateKeywordLoc;
     return SourceLocation();
   }

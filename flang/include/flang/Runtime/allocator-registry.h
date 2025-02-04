@@ -11,7 +11,6 @@
 
 #include "flang/Common/api-attrs.h"
 #include "flang/Runtime/allocator-registry-consts.h"
-#include <cstdint>
 #include <cstdlib>
 #include <vector>
 
@@ -19,7 +18,7 @@
 
 namespace Fortran::runtime {
 
-using AllocFct = void *(*)(std::size_t, std::int64_t);
+using AllocFct = void *(*)(std::size_t);
 using FreeFct = void (*)(void *);
 
 typedef struct Allocator_t {
@@ -27,11 +26,10 @@ typedef struct Allocator_t {
   FreeFct free{nullptr};
 } Allocator_t;
 
-static RT_API_ATTRS void *MallocWrapper(
-    std::size_t size, [[maybe_unused]] std::int64_t) {
+#ifdef RT_DEVICE_COMPILATION
+static RT_API_ATTRS void *MallocWrapper(std::size_t size) {
   return std::malloc(size);
 }
-#ifdef RT_DEVICE_COMPILATION
 static RT_API_ATTRS void FreeWrapper(void *p) { return std::free(p); }
 #endif
 
@@ -41,7 +39,7 @@ struct AllocatorRegistry {
       : allocators{{&MallocWrapper, &FreeWrapper}} {}
 #else
   constexpr AllocatorRegistry() {
-    allocators[kDefaultAllocator] = {&MallocWrapper, &std::free};
+    allocators[kDefaultAllocator] = {&std::malloc, &std::free};
   };
 #endif
   RT_API_ATTRS void Register(int, Allocator_t);

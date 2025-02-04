@@ -672,5 +672,129 @@ public:
          SourceLocation End, ArrayRef<const OpenACCClause *> Clauses);
 };
 
+// This class represents a 'set' construct, which has just a clause list.
+class OpenACCSetConstruct final
+    : public OpenACCConstructStmt,
+      private llvm::TrailingObjects<OpenACCSetConstruct,
+                                    const OpenACCClause *> {
+  friend TrailingObjects;
+  OpenACCSetConstruct(unsigned NumClauses)
+      : OpenACCConstructStmt(OpenACCSetConstructClass,
+                             OpenACCDirectiveKind::Set, SourceLocation{},
+                             SourceLocation{}, SourceLocation{}) {
+    std::uninitialized_value_construct(
+        getTrailingObjects<const OpenACCClause *>(),
+        getTrailingObjects<const OpenACCClause *>() + NumClauses);
+    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
+                                  NumClauses));
+  }
+
+  OpenACCSetConstruct(SourceLocation Start, SourceLocation DirectiveLoc,
+                      SourceLocation End,
+                      ArrayRef<const OpenACCClause *> Clauses)
+      : OpenACCConstructStmt(OpenACCSetConstructClass,
+                             OpenACCDirectiveKind::Set, Start, DirectiveLoc,
+                             End) {
+    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
+                            getTrailingObjects<const OpenACCClause *>());
+    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
+                                  Clauses.size()));
+  }
+
+public:
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OpenACCSetConstructClass;
+  }
+  static OpenACCSetConstruct *CreateEmpty(const ASTContext &C,
+                                          unsigned NumClauses);
+  static OpenACCSetConstruct *Create(const ASTContext &C, SourceLocation Start,
+                                     SourceLocation DirectiveLoc,
+                                     SourceLocation End,
+                                     ArrayRef<const OpenACCClause *> Clauses);
+};
+// This class represents an 'update' construct, which has just a clause list.
+class OpenACCUpdateConstruct final
+    : public OpenACCConstructStmt,
+      private llvm::TrailingObjects<OpenACCUpdateConstruct,
+                                    const OpenACCClause *> {
+  friend TrailingObjects;
+  OpenACCUpdateConstruct(unsigned NumClauses)
+      : OpenACCConstructStmt(OpenACCUpdateConstructClass,
+                             OpenACCDirectiveKind::Update, SourceLocation{},
+                             SourceLocation{}, SourceLocation{}) {
+    std::uninitialized_value_construct(
+        getTrailingObjects<const OpenACCClause *>(),
+        getTrailingObjects<const OpenACCClause *>() + NumClauses);
+    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
+                                  NumClauses));
+  }
+
+  OpenACCUpdateConstruct(SourceLocation Start, SourceLocation DirectiveLoc,
+                         SourceLocation End,
+                         ArrayRef<const OpenACCClause *> Clauses)
+      : OpenACCConstructStmt(OpenACCUpdateConstructClass,
+                             OpenACCDirectiveKind::Update, Start, DirectiveLoc,
+                             End) {
+    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
+                            getTrailingObjects<const OpenACCClause *>());
+    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
+                                  Clauses.size()));
+  }
+
+public:
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OpenACCUpdateConstructClass;
+  }
+  static OpenACCUpdateConstruct *CreateEmpty(const ASTContext &C,
+                                             unsigned NumClauses);
+  static OpenACCUpdateConstruct *
+  Create(const ASTContext &C, SourceLocation Start, SourceLocation DirectiveLoc,
+         SourceLocation End, ArrayRef<const OpenACCClause *> Clauses);
+};
+
+// This class represents the 'atomic' construct, which has an associated
+// statement, but no clauses.
+class OpenACCAtomicConstruct final : public OpenACCAssociatedStmtConstruct {
+
+  friend class ASTStmtReader;
+  OpenACCAtomicKind AtomicKind = OpenACCAtomicKind::None;
+
+  OpenACCAtomicConstruct(EmptyShell)
+      : OpenACCAssociatedStmtConstruct(
+            OpenACCAtomicConstructClass, OpenACCDirectiveKind::Atomic,
+            SourceLocation{}, SourceLocation{}, SourceLocation{},
+            /*AssociatedStmt=*/nullptr) {}
+
+  OpenACCAtomicConstruct(SourceLocation Start, SourceLocation DirectiveLoc,
+                         OpenACCAtomicKind AtKind, SourceLocation End,
+                         Stmt *AssociatedStmt)
+      : OpenACCAssociatedStmtConstruct(OpenACCAtomicConstructClass,
+                                       OpenACCDirectiveKind::Atomic, Start,
+                                       DirectiveLoc, End, AssociatedStmt),
+        AtomicKind(AtKind) {}
+
+  void setAssociatedStmt(Stmt *S) {
+    OpenACCAssociatedStmtConstruct::setAssociatedStmt(S);
+  }
+
+public:
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OpenACCAtomicConstructClass;
+  }
+
+  static OpenACCAtomicConstruct *CreateEmpty(const ASTContext &C);
+  static OpenACCAtomicConstruct *
+  Create(const ASTContext &C, SourceLocation Start, SourceLocation DirectiveLoc,
+         OpenACCAtomicKind AtKind, SourceLocation End, Stmt *AssociatedStmt);
+
+  OpenACCAtomicKind getAtomicKind() const { return AtomicKind; }
+  const Stmt *getAssociatedStmt() const {
+    return OpenACCAssociatedStmtConstruct::getAssociatedStmt();
+  }
+  Stmt *getAssociatedStmt() {
+    return OpenACCAssociatedStmtConstruct::getAssociatedStmt();
+  }
+};
+
 } // namespace clang
 #endif // LLVM_CLANG_AST_STMTOPENACC_H

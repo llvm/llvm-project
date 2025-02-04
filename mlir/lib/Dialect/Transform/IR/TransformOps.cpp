@@ -2840,6 +2840,7 @@ transform::PrintOp::apply(transform::TransformRewriter &rewriter,
     llvm::outs() << "top-level ]]]\n";
     state.getTopLevel()->print(llvm::outs(), printFlags);
     llvm::outs() << "\n";
+    llvm::outs().flush();
     return DiagnosedSilenceableFailure::success();
   }
 
@@ -2849,6 +2850,7 @@ transform::PrintOp::apply(transform::TransformRewriter &rewriter,
     llvm::outs() << "\n";
   }
 
+  llvm::outs().flush();
   return DiagnosedSilenceableFailure::success();
 }
 

@@ -30,6 +30,8 @@ namespace telemetry {
 
 class Serializer {
 public:
+  virtual ~Serializer() = default;
+
   virtual Error init() = 0;
   virtual void write(StringRef KeyName, bool Value) = 0;
   virtual void write(StringRef KeyName, StringRef Value) = 0;
@@ -62,6 +64,8 @@ public:
 /// This struct can be extended as needed to add additional configuration
 /// points specific to a vendor's implementation.
 struct Config {
+  virtual ~Config() = default;
+
   // If true, telemetry will be enabled.
   const bool EnableTelemetry;
   Config(bool E) : EnableTelemetry(E) {}
@@ -132,6 +136,8 @@ public:
 /// monitored and transmitting the data elsewhere.
 class Manager {
 public:
+  virtual ~Manager() = default;
+
   // Optional callback for subclasses to perform additional tasks before
   // dispatching to Destinations.
   virtual Error preDispatch(TelemetryInfo *Entry) = 0;

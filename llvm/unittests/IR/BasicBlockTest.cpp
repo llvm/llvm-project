@@ -225,7 +225,7 @@ TEST_F(InstrOrderInvalidationTest, SpliceInvalidation) {
   EXPECT_TRUE(BB->isInstrOrderValid());
 
   // Use Instruction::moveBefore, which uses splice.
-  I2->moveBefore(I1);
+  I2->moveBefore(I1->getIterator());
   EXPECT_FALSE(BB->isInstrOrderValid());
 
   EXPECT_TRUE(I2->comesBefore(I1));
