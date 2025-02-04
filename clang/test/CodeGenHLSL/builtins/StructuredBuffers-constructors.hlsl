@@ -15,11 +15,11 @@ RasterizerOrderedStructuredBuffer<float> Buf5 : register(u1, space2);
 // CHECK: %"class.hlsl::ConsumeStructuredBuffer" = type { target("dx.RawBuffer", float, 1, 0) }
 // CHECK: %"class.hlsl::RasterizerOrderedStructuredBuffer" = type { target("dx.RawBuffer", float, 1, 1) }
 
-// CHECK: @Buf = internal global %"class.hlsl::StructuredBuffer" undef, align 4
-// CHECK: @Buf2 = internal global %"class.hlsl::RWStructuredBuffer" undef, align 4
-// CHECK: @Buf3 = internal global %"class.hlsl::AppendStructuredBuffer" undef, align 4
-// CHECK: @Buf4 = internal global %"class.hlsl::ConsumeStructuredBuffer" undef, align 4
-// CHECK: @Buf5 = internal global %"class.hlsl::RasterizerOrderedStructuredBuffer" undef, align 4
+// CHECK: @Buf = internal global %"class.hlsl::StructuredBuffer" poison, align 4
+// CHECK: @Buf2 = internal global %"class.hlsl::RWStructuredBuffer" poison, align 4
+// CHECK: @Buf3 = internal global %"class.hlsl::AppendStructuredBuffer" poison, align 4
+// CHECK: @Buf4 = internal global %"class.hlsl::ConsumeStructuredBuffer" poison, align 4
+// CHECK: @Buf5 = internal global %"class.hlsl::RasterizerOrderedStructuredBuffer" poison, align 4
 
 // CHECK: define internal void @_init_resource_Buf()
 // CHECK-DXIL: %Buf_h = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_0_0t(i32 0, i32 10, i32 1, i32 0, i1 false)

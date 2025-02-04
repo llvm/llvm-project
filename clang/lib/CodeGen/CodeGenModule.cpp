@@ -5590,7 +5590,7 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
         T = D->getType();
 
       if (getLangOpts().HLSL && getHLSLRuntime().isResource(D)) {
-        Init = llvm::UndefValue::get(getTypes().ConvertType(ASTTy));
+        Init = llvm::PoisonValue::get(getTypes().ConvertType(ASTTy));
         NeedsGlobalCtor = true;
       } else if (getLangOpts().CPlusPlus) {
         Init = EmitNullConstant(T);
