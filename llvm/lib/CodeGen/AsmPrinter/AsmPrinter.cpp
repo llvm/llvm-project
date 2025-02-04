@@ -464,6 +464,36 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
 }
 
+void AsmPrinter::emitFuncMapStart() {
+  MCSection *TextSection =
+      OutStreamer->getContext().getObjectFileInfo()->getTextSection();
+  MCSection *FuncMapSection =
+      getObjFileLowering().getFuncMapSection(*TextSection);
+  assert(FuncMapSection && ".llvm_func_map section is not initialized.");
+  OutStreamer->pushSection();
+  OutStreamer->switchSection(FuncMapSection);
+  FMapStart = OutStreamer->getContext().createTempSymbol("func_map_start");
+  FMapEnd = OutStreamer->getContext().createTempSymbol("func_map_end");
+  OutStreamer->emitAbsoluteSymbolDiff(FMapEnd, FMapStart, 4);
+  OutStreamer->emitLabel(FMapStart);
+  OutStreamer->AddComment("version");
+  uint8_t FuncMapVersion = OutStreamer->getContext().getFuncMapVersion();
+  OutStreamer->emitInt8(FuncMapVersion);
+  OutStreamer->popSection();
+}
+
+void AsmPrinter::emitFuncMapEnd() {
+  MCSection *TextSection =
+      OutStreamer->getContext().getObjectFileInfo()->getTextSection();
+  MCSection *FuncMapSection =
+      getObjFileLowering().getFuncMapSection(*TextSection);
+  assert(FuncMapSection && ".llvm_func_map section is not initialized.");
+  OutStreamer->pushSection();
+  OutStreamer->switchSection(FuncMapSection);
+  OutStreamer->emitLabel(FMapEnd);
+  OutStreamer->popSection();
+}
+
 bool AsmPrinter::doInitialization(Module &M) {
   auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
   MMI = MMIWP ? &MMIWP->getMMI() : nullptr;
@@ -647,6 +677,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   for (auto &Handler : EHHandlers)
     Handler->beginModule(&M);
 
+  emitFuncMapStart();
   return false;
 }
 
@@ -1566,9 +1597,6 @@ void AsmPrinter::emitFuncMapSection(const MachineFunction &MF) {
   const MCSymbol *FunctionSymbol = getFunctionBegin();
   OutStreamer->pushSection();
   OutStreamer->switchSection(FuncMapSection);
-  OutStreamer->AddComment("version");
-  uint8_t FuncMapVersion = OutStreamer->getContext().getFuncMapVersion();
-  OutStreamer->emitInt8(FuncMapVersion);
 
   OutStreamer->AddComment("function address");
   OutStreamer->emitSymbolValue(FunctionSymbol, getPointerSize());
@@ -2599,6 +2627,8 @@ bool AsmPrinter::doFinalization(Module &M) {
   // stack maps as they are arbitrary data, and may even have a custom format
   // through user plugins.
   emitStackMaps();
+
+  emitFuncMapEnd();
 
   // Print aliases in topological order, that is, for each alias a = b,
   // b must be printed before a.
