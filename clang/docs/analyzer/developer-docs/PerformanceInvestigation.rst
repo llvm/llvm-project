@@ -16,7 +16,7 @@ If the ``ProgramPoint`` is associated with a location, you can see it on the sco
 
 .. image:: ../images/speedscope.png
 
-On the screenshot above, under the first time ruler is the birds-eye view of the entire trace that spans a little over 8 seconds.
+On the speedscope screenshot above, under the first time ruler is the birds-eye view of the entire trace that spans a little over 8 seconds.
 Under the second ruler (focused on the 4.27s time point) you can see a narrowed-down portion.
 The second box (of light-green color) that spans entire screen (and actually extends beyond it) corresponds to the analysis of ``get_global_options()`` entry point that is defined in the "options.cc" file on line 303646
 (the line number is huge because the file was preprocessed).
