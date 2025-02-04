@@ -115,7 +115,7 @@ protected:
 TEST_F(ParseHLSLRootSignatureTest, ValidLexNumbersTest) {
   // This test will check that we can lex different number tokens
   const llvm::StringLiteral Source = R"cc(
-    -42 42 +42
+    -42 42 +42 +2147483648
   )cc";
 
   TrivialModuleLoader ModLoader;
@@ -135,8 +135,30 @@ TEST_F(ParseHLSLRootSignatureTest, ValidLexNumbersTest) {
       hlsl::TokenKind::int_literal,
       hlsl::TokenKind::int_literal,
       hlsl::TokenKind::int_literal,
+      hlsl::TokenKind::int_literal,
   };
   CheckTokens(Tokens, Expected);
+
+  // Sample negative int
+  hlsl::RootSignatureToken IntToken = Tokens[0];
+  ASSERT_TRUE(IntToken.NumLiteral.getInt().isSigned());
+  ASSERT_EQ(IntToken.NumLiteral.getInt().getExtValue(), -42);
+
+  // Sample unsigned int
+  IntToken = Tokens[1];
+  ASSERT_FALSE(IntToken.NumLiteral.getInt().isSigned());
+  ASSERT_EQ(IntToken.NumLiteral.getInt().getExtValue(), 42);
+
+  // Sample positive int that is treated as unsigned
+  IntToken = Tokens[2];
+  ASSERT_FALSE(IntToken.NumLiteral.getInt().isSigned());
+  ASSERT_EQ(IntToken.NumLiteral.getInt().getExtValue(), 42);
+
+  // Sample positive int that would overflow the signed representation but
+  // is treated as an unsigned integer instead
+  IntToken = Tokens[3];
+  ASSERT_FALSE(IntToken.NumLiteral.getInt().isSigned());
+  ASSERT_EQ(IntToken.NumLiteral.getInt().getExtValue(), 2147483648);
 }
 
 TEST_F(ParseHLSLRootSignatureTest, ValidLexAllTokensTest) {

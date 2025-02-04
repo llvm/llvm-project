@@ -41,7 +41,9 @@ bool RootSignatureLexer::LexNumber(RootSignatureToken &Result) {
   // Retrieve the number value to store into the token
   Result.Kind = TokenKind::int_literal;
 
-  llvm::APSInt X = llvm::APSInt(32, !Signed);
+  // NOTE: for compabibility with DXC, we will treat any integer with '+' as an
+  // unsigned integer
+  llvm::APSInt X = llvm::APSInt(32, !Negative);
   if (Literal.GetIntegerValue(X)) {
     // Report that the value has overflowed
     PP.getDiagnostics().Report(Result.TokLoc,
