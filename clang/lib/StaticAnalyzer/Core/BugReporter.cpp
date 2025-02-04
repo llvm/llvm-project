@@ -3152,7 +3152,7 @@ BugReport *PathSensitiveBugReporter::findReportInEquivalenceClass(
 void BugReporter::FlushReport(BugReportEquivClass &EQ) {
   llvm::TimeTraceScope TCS{timeTraceName(EQ),
                            [&EQ]() { return timeTraceMetadata(EQ); }};
-  SmallVector<BugReport *, 10> bugReports;
+  SmallVector<BugReport*, 10> bugReports;
   BugReport *report = findReportInEquivalenceClass(EQ, bugReports);
   if (!report)
     return;
