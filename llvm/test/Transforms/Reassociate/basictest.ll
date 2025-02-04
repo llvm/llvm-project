@@ -293,3 +293,40 @@ define i32 @test17(i32 %X1, i32 %X2, i32 %X3, i32 %X4) {
   ret i32 %E
 }
 
+define i32 @test18(i32 %X1, i32 %X2) {
+; CHECK-LABEL: @test18(
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = add i32 [[X2:%.*]], [[X1:%.*]]
+; CHECK-NEXT:    [[REASS_MUL:%.*]] = mul i32 [[REASS_ADD]], 47
+; CHECK-NEXT:    ret i32 [[REASS_MUL]]
+;
+  %B = mul nsw i32 %X1, 47
+  %C = mul nsw i32 %X2, 47
+  %D = add nsw i32 %B, %C
+  ret i32 %D
+}
+
+define i32 @test19(i32 %X1, i32 %X2) {
+; CHECK-LABEL: @test19(
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = add i32 [[X1:%.*]], 67
+; CHECK-NEXT:    [[REASS_MUL:%.*]] = mul i32 [[REASS_ADD]], [[X2:%.*]]
+; CHECK-NEXT:    ret i32 [[REASS_MUL]]
+;
+  %A = add i32 %X1, 20
+  %B = mul nsw i32 %X2, 47
+  %C = mul nsw i32 %X2, %A
+  %D = add nsw i32 %B, %C
+  ret i32 %D
+}
+
+define i32 @test20(i32 %X1, i32 %X2) {
+; CHECK-LABEL: @test20(
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = add i32 [[X1:%.*]], 67
+; CHECK-NEXT:    [[REASS_MUL:%.*]] = mul i32 [[REASS_ADD]], [[X2:%.*]]
+; CHECK-NEXT:    ret i32 [[REASS_MUL]]
+;
+  %A = add i32 %X1, 20
+  %B = mul nuw i32 %X2, 47
+  %C = mul nsw i32 %X2, %A
+  %D = add nsw i32 %B, %C
+  ret i32 %D
+}
