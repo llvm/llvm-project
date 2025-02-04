@@ -4300,6 +4300,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::abs:
       handleAbsIntrinsic(I);
       break;
+    case Intrinsic::bitreverse:
+      handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
+                                        /*trailingVerbatimArgs*/ 0);
+      break;
     case Intrinsic::is_fpclass:
       handleIsFpClass(I);
       break;

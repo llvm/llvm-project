@@ -1436,6 +1436,8 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OpenACCUpdateConstructClass:
     EmitOpenACCUpdateConstruct(cast<OpenACCUpdateConstruct>(*S));
     break;
+  case Stmt::OpenACCAtomicConstructClass:
+    EmitOpenACCAtomicConstruct(cast<OpenACCAtomicConstruct>(*S));
   }
 }
 

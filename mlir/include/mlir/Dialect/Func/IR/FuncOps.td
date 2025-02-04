@@ -49,8 +49,14 @@ def CallOp : Func_Op<"call",
     ```
   }];
 
-  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<AnyType>:$operands,
-                       UnitAttr:$no_inline);
+  let arguments = (ins
+    FlatSymbolRefAttr:$callee,
+    Variadic<AnyType>:$operands,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs, 
+    UnitAttr:$no_inline
+  );
+
   let results = (outs Variadic<AnyType>);
 
   let builders = [
@@ -73,6 +79,18 @@ def CallOp : Func_Op<"call",
       CArg<"ValueRange", "{}">:$operands), [{
       build($_builder, $_state, StringAttr::get($_builder.getContext(), callee),
             results, operands);
+    }]>,
+    OpBuilder<(ins "TypeRange":$results, "FlatSymbolRefAttr":$callee,
+      CArg<"ValueRange", "{}">:$operands), [{
+      build($_builder, $_state, callee, results, operands);
+    }]>,
+    OpBuilder<(ins "TypeRange":$results, "StringAttr":$callee,
+      CArg<"ValueRange", "{}">:$operands), [{
+      build($_builder, $_state, callee, results, operands);
+    }]>,
+    OpBuilder<(ins "TypeRange":$results, "StringRef":$callee,
+      CArg<"ValueRange", "{}">:$operands), [{
+      build($_builder, $_state, callee, results, operands);
     }]>];
 
   let extraClassDeclaration = [{
@@ -136,8 +154,13 @@ def CallIndirectOp : Func_Op<"call_indirect", [
     ```
   }];
 
-  let arguments = (ins FunctionType:$callee,
-                       Variadic<AnyType>:$callee_operands);
+  let arguments = (ins
+    FunctionType:$callee,
+    Variadic<AnyType>:$callee_operands,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
+  );
+
   let results = (outs Variadic<AnyType>:$results);
 
   let builders = [

@@ -130,12 +130,22 @@ let Attributes = [Const, NoThrow, RequiredVectorWidth<128>] in {
   }
 }
 
+let Features = "sse", Header = "xmmintrin.h", Attributes = [NoThrow, Const] in {
+  def _mm_prefetch : X86LibBuiltin<"void(void const *, int)">;
+}
+
 // AVX
 let Attributes = [Const, NoThrow, RequiredVectorWidth<256>], Features = "avx" in {
   foreach Op = ["addsub", "hadd", "hsub", "max", "min"] in {
     def Op#pd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, double>)">;
     def Op#ps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>)">;
   }
+}
+
+// PRFCHW
+let Features = "prfchw", Header = "intrin.h", Attributes = [NoThrow, Const] in {
+  def _m_prefetch : X86LibBuiltin<"void(void *)">;
+  def _m_prefetchw : X86LibBuiltin<"void(void volatile const *)">;
 }
 
 
@@ -145,10 +155,6 @@ let Attributes = [Const, NoThrow, RequiredVectorWidth<256>], Features = "avx" in
 // organization of the builtins below this point (and move them above it). The
 // current formulation is based on what was easiest to recognize from the
 // pre-TableGen version.
-
-let Features = "mmx", Attributes = [NoThrow, Const] in {
-  def _mm_prefetch : X86NoPrefixBuiltin<"void(char const *, int)">;
-}
 
 let Features = "sse", Attributes = [NoThrow] in {
   def ldmxcsr : X86Builtin<"void(unsigned int)">;
