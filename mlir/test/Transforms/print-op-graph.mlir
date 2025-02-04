@@ -20,8 +20,8 @@
 //       DFG:         v[[TEST_RET:.*]] [{{.*}}label = "{{.*}}test.return
 //       DFG:   v[[ARG0]]:res_arg0:s -> v[[TEST_BR]]:arg_arg0:n
 //       DFG:   v[[CONST10]]:res_c10_i32:s -> v[[TEST_BR]]
-//       DFG:   v[[ANCHOR]]:res_1_0:s -> v[[TEST_RET]]:arg_1_0:n[ltail = [[CLUSTER_MERGE_BLOCKS]], style = solid];
-//       DFG:   v[[ANCHOR]]:res_1_1:s -> v[[TEST_RET]]:arg_1_1:n[ltail = [[CLUSTER_MERGE_BLOCKS]], style = solid];
+//       DFG:   v[[ANCHOR]] -> v[[TEST_RET]]:arg_1_0:n[ltail = [[CLUSTER_MERGE_BLOCKS]], style = solid];
+//       DFG:   v[[ANCHOR]] -> v[[TEST_RET]]:arg_1_1:n[ltail = [[CLUSTER_MERGE_BLOCKS]], style = solid];
 
 // CFG-LABEL: digraph G {
 //       CFG:   subgraph {{.*}} {

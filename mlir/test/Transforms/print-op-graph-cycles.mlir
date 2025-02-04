@@ -33,7 +33,7 @@
 //       DFG:   v9:res_0:s -> v9:arg_0:n[style = solid];
 //       DFG:   v15:res_2:s -> v9:arg_2:n[style = solid];
 //       DFG:   v9:res_0:s -> v14:arg_0:n[style = solid];
-//       DFG:   v11:res_1:s -> v14:arg_1:n[ltail = cluster_10, style = solid];
+//       DFG:   v11 -> v14:arg_1:n[ltail = cluster_10, style = solid];
 //       DFG:   v15:res_2:s -> v14:arg_2:n[style = solid];
 //       DFG:   v16:res_3:s -> v14:arg_3:n[style = solid];
 //       DFG:   v9:res_0:s -> v15:arg_0:n[style = solid];

@@ -247,12 +247,12 @@ private:
 
     edges.push_back(strFromOs([&](raw_ostream &os) {
       os << "v" << n1.id;
-      if (!port.empty())
+      if (!port.empty() && !n1.clusterId)
         // Attach edge to south compass point of the result
         os << ":res" << port << ":s";
       os << " -> ";
       os << "v" << n2.id;
-      if (!port.empty())
+      if (!port.empty() && !n2.clusterId)
         // Attach edge to north compass point of the operand
         os << ":arg" << port << ":n";
       emitAttrList(os, attrs);
