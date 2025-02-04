@@ -1896,13 +1896,15 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   } else {
     Opts.setInlining(CodeGenOptions::NormalInlining);
   }
-
- // -mcmodel option.
-  if (const llvm::opt::Arg *A = Args.getLastArg(clang::driver::options::OPT_mcmodel_EQ)){
+ 
+  // -mcmodel option.
+  if (const llvm::opt::Arg *A =
+          Args.getLastArg(clang::driver::options::OPT_mcmodel_EQ)) {
     llvm::StringRef modelName = A->getValue();
-    if(modelName=="tiny" && !T.isARM())
+    if (modelName == "tiny" && !T.isARM()) {
       Diags.Report(diag::err_drv_unsupported_option_argument_for_target)
-          << A->getSpelling() << modelName << T.getTriple();  
+          << A->getSpelling() << modelName << T.getTriple();
+    }
   }
 
   // PIC defaults to -fno-direct-access-external-data while non-PIC defaults to
