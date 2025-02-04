@@ -1027,6 +1027,14 @@ struct PGOAnalysisMap {
   }
 };
 
+// Struct representing the FuncMap for one function.
+struct FuncMap {
+  uint64_t FunctionAddress = 0;  // Function entry address.
+  uint64_t DynamicInstCount = 0; // Dynamic instruction count for this function.
+
+  uint64_t getFunctionAddress() const { return FunctionAddress; }
+};
+
 } // end namespace object.
 } // end namespace llvm.
 
