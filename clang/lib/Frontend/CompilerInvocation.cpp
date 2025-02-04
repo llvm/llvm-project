@@ -1896,7 +1896,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   } else {
     Opts.setInlining(CodeGenOptions::NormalInlining);
   }
- 
+
   // -mcmodel option.
   if (const llvm::opt::Arg *A =
           Args.getLastArg(clang::driver::options::OPT_mcmodel_EQ)) {
