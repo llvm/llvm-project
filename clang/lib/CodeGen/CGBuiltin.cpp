@@ -15374,17 +15374,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::prefetch, Address->getType());
     return Builder.CreateCall(F, {Address, RW, Locality, Data});
   }
-  case X86::BI_m_prefetch:
-  case X86::BI_m_prefetchw: {
-    Value *Address = Ops[0];
-    // The 'w' suffix implies write.
-    Value *RW =
-        ConstantInt::get(Int32Ty, BuiltinID == X86::BI_m_prefetchw ? 1 : 0);
-    Value *Locality = ConstantInt::get(Int32Ty, 0x3);
-    Value *Data = ConstantInt::get(Int32Ty, 1);
-    Function *F = CGM.getIntrinsic(Intrinsic::prefetch, Address->getType());
-    return Builder.CreateCall(F, {Address, RW, Locality, Data});
-  }
   case X86::BI_mm_clflush: {
     return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::x86_sse2_clflush),
                               Ops[0]);
