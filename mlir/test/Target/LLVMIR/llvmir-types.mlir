@@ -85,7 +85,7 @@ llvm.func @return_vs_4_i32() -> !llvm.vec<?x4 x i32>
 // CHECK: declare <vscale x 8 x half> @return_vs_8_half()
 llvm.func @return_vs_8_half() -> !llvm.vec<?x8 x f16>
 // CHECK: declare <4 x ptr> @return_v_4_pi8()
-llvm.func @return_v_4_pi8() -> !llvm.vec<4xptr>
+llvm.func @return_v_4_pi8() -> vector<4x!llvm.ptr>
 
 //
 // Arrays.

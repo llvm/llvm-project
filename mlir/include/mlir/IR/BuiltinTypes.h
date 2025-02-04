@@ -43,6 +43,10 @@ template <typename ConcreteType>
 class ValueSemantics
     : public TypeTrait::TraitBase<ConcreteType, ValueSemantics> {};
 
+/// Type trait indicating that the type is a pointer-like type.
+template <typename ConcreteType>
+class PointerLike : public TypeTrait::TraitBase<ConcreteType, PointerLike> {};
+
 //===----------------------------------------------------------------------===//
 // TensorType
 //===----------------------------------------------------------------------===//
