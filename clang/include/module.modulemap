@@ -45,7 +45,6 @@ module Clang_Basic {
   textual header "clang/Basic/BuiltinsAMDGPU.def"
   textual header "clang/Basic/BuiltinsARM.def"
   textual header "clang/Basic/BuiltinsHexagonMapCustomDep.def"
-  textual header "clang/Basic/BuiltinsLoongArch.def"
   textual header "clang/Basic/BuiltinsLoongArchBase.def"
   textual header "clang/Basic/BuiltinsLoongArchLASX.def"
   textual header "clang/Basic/BuiltinsLoongArchLSX.def"
