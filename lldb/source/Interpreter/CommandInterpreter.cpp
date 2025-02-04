@@ -1887,11 +1887,12 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   std::string real_original_command_string(command_string);
 
   Log *log = GetLog(LLDBLog::Commands);
-  llvm::PrettyStackTraceFormat stack_trace("HandleCommand(command = \"%s\")",
-                                           command_line);
-
   LLDB_LOGF(log, "Processing command: %s", command_line);
   LLDB_SCOPED_TIMERF("Processing command: %s.", command_line);
+
+  // Set the command in the CommandReturnObject here so that it's there even if
+  // the command is interrupted.
+  result.SetCommand(command_line);
 
   if (INTERRUPT_REQUESTED(GetDebugger(), "Interrupted initiating command")) {
     result.AppendError("... Interrupted");
@@ -2644,7 +2645,8 @@ void CommandInterpreter::HandleCommands(
                                       (uint64_t)idx, cmd, error_msg);
         m_debugger.SetAsyncExecution(old_async_execution);
         return;
-      } else if (options.GetPrintResults()) {
+      }
+      if (options.GetPrintResults()) {
         result.AppendMessageWithFormatv("Command #{0} '{1}' failed with {2}",
                                         (uint64_t)idx + 1, cmd, error_msg);
       }
