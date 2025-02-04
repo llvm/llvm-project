@@ -702,11 +702,6 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
       Known.Zero |= ~*C;
       if (match(Y, m_APInt(Mask)))
         Known.One |= *C & ~*Mask;
-      // assume(V ^ Mask = C)
-    } else if (match(LHS, m_Xor(m_V, m_APInt(Mask))) &&
-               match(RHS, m_APInt(C))) {
-      // Equivalent to assume(V == Mask ^ C)
-      Known = Known.unionWith(KnownBits::makeConstant(*C ^ *Mask));
       // assume(V << ShAmt = C)
     } else if (match(LHS, m_Shl(m_V, m_ConstantInt(ShAmt))) &&
                match(RHS, m_APInt(C)) && ShAmt < BitWidth) {
@@ -10217,10 +10212,9 @@ void llvm::findValuesAffectedByCondition(
       if (ICmpInst::isEquality(Pred)) {
         if (HasRHSC) {
           Value *Y;
-          // (X & C) or (X | C) or (X ^ C).
+          // (X & C) or (X | C).
           // (X << C) or (X >>_s C) or (X >>_u C).
-          if (match(A, m_BitwiseLogic(m_Value(X), m_ConstantInt())) ||
-              match(A, m_Shift(m_Value(X), m_ConstantInt())))
+          if (match(A, m_Shift(m_Value(X), m_ConstantInt())))
             AddAffected(X);
           else if (match(A, m_And(m_Value(X), m_Value(Y))) ||
                    match(A, m_Or(m_Value(X), m_Value(Y)))) {
