@@ -3224,12 +3224,11 @@ void OmpStructureChecker::CheckReductionObjects(
     }
   }
 
-  // Disallowed in standards before 4.0 and in 5.0 and 5.1. Not explicitly
-  // allowed in 4.0 and 5.2+ but the clause which forbids this is removed.
+  // Disallowed in standards before 4.0 and in 5.0 and later. Not explicitly
+  // allowed in 4.0. Keep this as an error until/unless structure component
+  // reduction is implemented.
   // Object cannot be a part of another object (except array elements)
-  if (version < 52 || (version >= 40 && version < 50)) {
-    CheckStructureComponent(objects, clauseId);
-  }
+  CheckStructureComponent(objects, clauseId);
 
   if (version >= 50) {
     // If object is an array section or element, the base expression must be

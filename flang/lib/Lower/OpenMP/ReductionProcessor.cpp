@@ -557,9 +557,6 @@ void ReductionProcessor::addDeclareReduction(
     const semantics::Symbol *symbol = object.sym();
     reductionSymbols.push_back(symbol);
     mlir::Value symVal = converter.getSymbolAddress(*symbol);
-    if (!symVal)
-      TODO(currentLocation,
-           "Reduction symbol has no definition (e.g. derived type compnent)");
     mlir::Type eleType;
     auto refType = mlir::dyn_cast_or_null<fir::ReferenceType>(symVal.getType());
     if (refType)
