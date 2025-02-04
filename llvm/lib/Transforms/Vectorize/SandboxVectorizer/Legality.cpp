@@ -116,7 +116,15 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
       return std::nullopt;
     return ResultReason::DiffOpcodes;
   }
-  case Instruction::Opcode::Select:
+  case Instruction::Opcode::Select: {
+    auto *Sel0 = cast<SelectInst>(Bndl[0]);
+    auto *Cond0 = Sel0->getCondition();
+    if (VecUtils::getNumLanes(Cond0) != VecUtils::getNumLanes(Sel0))
+      // TODO: For now we don't vectorize if the lanes in the condition don't
+      // match those of the select instruction.
+      return ResultReason::Unimplemented;
+    return std::nullopt;
+  }
   case Instruction::Opcode::FNeg:
   case Instruction::Opcode::Add:
   case Instruction::Opcode::FAdd:
@@ -219,6 +227,10 @@ const LegalityResult &LegalityAnalysis::canVectorize(ArrayRef<Value *> Bndl,
   if (any_of(drop_begin(Bndl),
              [BB](auto *V) { return cast<Instruction>(V)->getParent() != BB; }))
     return createLegalityResult<Pack>(ResultReason::DiffBBs);
+  // Pack if instructions repeat, i.e., require some sort of broadcast.
+  SmallPtrSet<Value *, 8> Unique(Bndl.begin(), Bndl.end());
+  if (Unique.size() != Bndl.size())
+    return createLegalityResult<Pack>(ResultReason::RepeatedInstrs);
 
   auto CollectDescrs = getHowToCollectValues(Bndl);
   if (CollectDescrs.hasVectorInputs()) {

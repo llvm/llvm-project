@@ -1035,6 +1035,20 @@ multiclass VOPCClassPat64<string inst_name> {
   >;
 }
 
+multiclass VOPCClassPat64_t16<string inst_name> {
+  defvar inst = !cast<VOP_Pseudo>(inst_name#"_t16_e64");
+  defvar P = inst.Pfl;
+  def : GCNPat <
+    (i1:$sdst
+      (AMDGPUfp_class
+        (P.Src0VT (VOP3ModsNonCanonicalizing P.Src0VT:$src0, i32:$src0_modifiers)),
+        i32:$src1)),
+    (inst i32:$src0_modifiers, VSrcT_f16:$src0,
+          0 /* src1_modifiers */, (f16 (EXTRACT_SUBREG VGPR_32:$src1, lo16)),
+          0) /* op_sel */
+  >;
+}
+
 multiclass VOPCClassPat64_fake16<string inst_name> {
   defvar inst = !cast<VOP_Pseudo>(inst_name#"_fake16_e64");
   defvar P = inst.Pfl;
@@ -1158,6 +1172,7 @@ multiclass VOPC_CLASS_F16 <string opName> {
   }
   let True16Predicate = UseRealTrue16Insts in {
     defm _t16 : VOPC_Class_Pseudos <opName#"_t16", VOPC_I1_F16_I16_t16, 0>;
+    defm : VOPCClassPat64_t16<NAME>;
   }
   let True16Predicate = UseFakeTrue16Insts in {
     defm _fake16 : VOPC_Class_Pseudos <opName#"_fake16", VOPC_I1_F16_I16_fake16, 0>;
@@ -1207,26 +1222,29 @@ defm V_CMPX_CLASS_F16 : VOPCX_CLASS_F16 <"v_cmpx_class_f16">;
 
 // We need to use COPY_TO_REGCLASS to w/a the problem when ReplaceAllUsesWith()
 // complaints it cannot replace i1 <-> i64/i32 if node was not morphed in place.
-multiclass ICMP_Pattern <PatFrags cond, Instruction inst, ValueType vt> {
+multiclass ICMP_Pattern <PatFrags cond, Instruction inst, ValueType vt, dag dstInst = (inst $src0, $src1)> {
   let WaveSizePredicate = isWave64 in
   def : GCNPat <
     (i64 (AMDGPUsetcc vt:$src0, vt:$src1, cond)),
-    (i64 (COPY_TO_REGCLASS (inst $src0, $src1), SReg_64))
+    (i64 (COPY_TO_REGCLASS dstInst, SReg_64))
   >;
 
   let WaveSizePredicate = isWave32 in {
     def : GCNPat <
       (i32 (AMDGPUsetcc vt:$src0, vt:$src1, cond)),
-      (i32 (COPY_TO_REGCLASS (inst $src0, $src1), SReg_32))
+      (i32 (COPY_TO_REGCLASS dstInst, SReg_32))
     >;
 
     // Support codegen of i64 setcc in wave32 mode.
     def : GCNPat <
       (i64 (AMDGPUsetcc vt:$src0, vt:$src1, cond)),
-      (i64 (REG_SEQUENCE SReg_64, (inst $src0, $src1), sub0, (S_MOV_B32 (i32 0)), sub1))
+      (i64 (REG_SEQUENCE SReg_64, dstInst, sub0, (S_MOV_B32 (i32 0)), sub1))
     >;
   }
 }
+
+multiclass ICMP_Pattern_t16<PatFrags cond, Instruction inst, ValueType vt>
+    : ICMP_Pattern<cond, inst, vt, (inst 0, $src0, 0, $src1)>;
 
 defm : ICMP_Pattern <COND_EQ, V_CMP_EQ_U32_e64, i32>;
 defm : ICMP_Pattern <COND_NE, V_CMP_NE_U32_e64, i32>;
@@ -1249,6 +1267,19 @@ defm : ICMP_Pattern <COND_SGT, V_CMP_GT_I64_e64, i64>;
 defm : ICMP_Pattern <COND_SGE, V_CMP_GE_I64_e64, i64>;
 defm : ICMP_Pattern <COND_SLT, V_CMP_LT_I64_e64, i64>;
 defm : ICMP_Pattern <COND_SLE, V_CMP_LE_I64_e64, i64>;
+
+let True16Predicate = UseRealTrue16Insts in {
+defm : ICMP_Pattern_t16 <COND_EQ, V_CMP_EQ_U16_t16_e64, i16>;
+defm : ICMP_Pattern_t16 <COND_NE, V_CMP_NE_U16_t16_e64, i16>;
+defm : ICMP_Pattern_t16 <COND_UGT, V_CMP_GT_U16_t16_e64, i16>;
+defm : ICMP_Pattern_t16 <COND_UGE, V_CMP_GE_U16_t16_e64, i16>;
+defm : ICMP_Pattern_t16 <COND_ULT, V_CMP_LT_U16_t16_e64, i16>;
+defm : ICMP_Pattern_t16 <COND_ULE, V_CMP_LE_U16_t16_e64, i16>;
+defm : ICMP_Pattern_t16 <COND_SGT, V_CMP_GT_I16_t16_e64, i16>;
+defm : ICMP_Pattern_t16 <COND_SGE, V_CMP_GE_I16_t16_e64, i16>;
+defm : ICMP_Pattern_t16 <COND_SLT, V_CMP_LT_I16_t16_e64, i16>;
+defm : ICMP_Pattern_t16 <COND_SLE, V_CMP_LE_I16_t16_e64, i16>;
+} // End True16Predicate = UseRealTrue16Insts
 
 let True16Predicate = UseFakeTrue16Insts in {
 defm : ICMP_Pattern <COND_EQ, V_CMP_EQ_U16_fake16_e64, i16>;
@@ -1334,6 +1365,24 @@ defm : FCMP_Pattern <COND_UGT, V_CMP_NLE_F64_e64, f64>;
 defm : FCMP_Pattern <COND_UGE, V_CMP_NLT_F64_e64, f64>;
 defm : FCMP_Pattern <COND_ULT, V_CMP_NGE_F64_e64, f64>;
 defm : FCMP_Pattern <COND_ULE, V_CMP_NGT_F64_e64, f64>;
+
+let True16Predicate = UseRealTrue16Insts in {
+defm : FCMP_Pattern <COND_O, V_CMP_O_F16_t16_e64, f16>;
+defm : FCMP_Pattern <COND_UO, V_CMP_U_F16_t16_e64, f16>;
+defm : FCMP_Pattern <COND_OEQ, V_CMP_EQ_F16_t16_e64, f16>;
+defm : FCMP_Pattern <COND_ONE, V_CMP_NEQ_F16_t16_e64, f16>;
+defm : FCMP_Pattern <COND_OGT, V_CMP_GT_F16_t16_e64, f16>;
+defm : FCMP_Pattern <COND_OGE, V_CMP_GE_F16_t16_e64, f16>;
+defm : FCMP_Pattern <COND_OLT, V_CMP_LT_F16_t16_e64, f16>;
+defm : FCMP_Pattern <COND_OLE, V_CMP_LE_F16_t16_e64, f16>;
+
+defm : FCMP_Pattern <COND_UEQ, V_CMP_NLG_F16_t16_e64, f16>;
+defm : FCMP_Pattern <COND_UNE, V_CMP_NEQ_F16_t16_e64, f16>;
+defm : FCMP_Pattern <COND_UGT, V_CMP_NLE_F16_t16_e64, f16>;
+defm : FCMP_Pattern <COND_UGE, V_CMP_NLT_F16_t16_e64, f16>;
+defm : FCMP_Pattern <COND_ULT, V_CMP_NGE_F16_t16_e64, f16>;
+defm : FCMP_Pattern <COND_ULE, V_CMP_NGT_F16_t16_e64, f16>;
+} // End True16Predicate = UseRealTrue16Insts
 
 let True16Predicate = UseFakeTrue16Insts in {
 defm : FCMP_Pattern <COND_O, V_CMP_O_F16_fake16_e64, f16>;

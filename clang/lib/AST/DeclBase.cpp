@@ -245,7 +245,7 @@ bool Decl::isTemplateParameterPack() const {
 }
 
 bool Decl::isParameterPack() const {
-  if (const auto *Var = dyn_cast<VarDecl>(this))
+  if (const auto *Var = dyn_cast<ValueDecl>(this))
     return Var->isParameterPack();
 
   return isTemplateParameterPack();
@@ -1203,6 +1203,8 @@ const FunctionType *Decl::getFunctionType(bool BlocksToo) const {
 
   if (Ty->isFunctionPointerType())
     Ty = Ty->castAs<PointerType>()->getPointeeType();
+  else if (Ty->isMemberFunctionPointerType())
+    Ty = Ty->castAs<MemberPointerType>()->getPointeeType();
   else if (Ty->isFunctionReferenceType())
     Ty = Ty->castAs<ReferenceType>()->getPointeeType();
   else if (BlocksToo && Ty->isBlockPointerType())

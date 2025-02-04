@@ -401,6 +401,13 @@ constexpr TypeBuilderFunc getModel<bool &>() {
   };
 }
 template <>
+constexpr TypeBuilderFunc getModel<bool *>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    TypeBuilderFunc f{getModel<bool>()};
+    return fir::ReferenceType::get(f(context));
+  };
+}
+template <>
 constexpr TypeBuilderFunc getModel<unsigned short>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return mlir::IntegerType::get(
