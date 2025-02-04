@@ -48,6 +48,24 @@ struct LinkerCLOptions : public LinkerConfig {
   }
   bool shouldShowDialects() const { return showDialectsFlag; }
 
+  /// Set the marker on which to split the input into chunks and process each
+  /// chunk independently. Input is not split if empty.
+  LinkerCLOptions &
+  splitInputFile(std::string splitMarker = kDefaultSplitMarker) {
+    splitInputFileFlag = std::move(splitMarker);
+    return *this;
+  }
+  StringRef inputSplitMarker() const { return splitInputFileFlag; }
+
+  /// Set whether to merge the output chunks into one file using the given
+  /// marker.
+  LinkerCLOptions &
+  outputSplitMarker(std::string splitMarker = kDefaultSplitMarker) {
+    outputSplitMarkerFlag = std::move(splitMarker);
+    return *this;
+  }
+  StringRef outputSplitMarker() const { return outputSplitMarkerFlag; }
+
   /// Creates and initializes a LinkerConfig from command line options.
   /// These options are static but use ExternalStorage to initialize the
   /// members of the LinkerConfig class.
@@ -77,6 +95,23 @@ struct LinkerCLOptions : public LinkerConfig {
         cl::location(showDialectsFlag), cl::init(false),
         cl::cat(getCategory()));
 
+    static cl::opt<std::string, /*ExternalStorage=*/true> clSplitInputFile(
+        "split-input-file", llvm::cl::ValueOptional,
+        cl::desc("Split the input file into chunks using the given or "
+                 "default marker and process each chunk independently"),
+        cl::callback([&](const std::string &str) {
+          // Implicit value: use default marker if flag was used without value.
+          if (str.empty())
+            clSplitInputFile.setValue(kDefaultSplitMarker);
+        }),
+        cl::location(splitInputFileFlag), cl::init(""), cl::cat(getCategory()));
+
+    static cl::opt<std::string, /*ExternalStorage=*/true> clOutputSplitMarker(
+        "output-split-marker",
+        cl::desc("Split marker to use for merging the ouput"),
+        cl::location(outputSplitMarkerFlag), cl::init(""),
+        cl::cat(getCategory()));
+
     static cl::list<std::string> clInputFiles(
         cl::Positional, cl::OneOrMore, cl::desc("<input MLIR files>"),
         cl::cat(getCategory()), cl::callback([this](const std::string &val) {
@@ -102,6 +137,13 @@ struct LinkerCLOptions : public LinkerConfig {
 
   /// Show the registered dialects before trying to load the input file.
   bool showDialectsFlag = false;
+
+  /// Split the input file based on the given marker into chunks and process
+  /// each chunk independently. Input is not split if empty.
+  std::string splitInputFileFlag = "";
+
+  /// Merge output chunks into one file using the given marker.
+  std::string outputSplitMarkerFlag = "";
 };
 
 ManagedStatic<LinkerCLOptions> clOptionsConfig;
@@ -116,22 +158,34 @@ public:
   explicit FileProcessor(Linker &linker) : linker(linker) {}
 
   using FileConfig = Linker::LinkFileConfig;
+  using OwningMemoryBuffer = std::unique_ptr<MemoryBuffer>;
 
   /// Process and link multiple input files
-  LogicalResult linkFiles(const std::vector<std::string> &fileNames,
-                          raw_ostream &os) {
+  LogicalResult linkFiles(const std::vector<std::string> inputs,
+                          raw_ostream &os, StringRef inMarker,
+                          StringRef outMarker) {
+
     unsigned flags = linker.getFlags();
     FileConfig config = linker.firstLinkFileConfig(flags);
 
-    for (const auto &fileName : fileNames) {
+    auto splitAndProcess = [&](OwningMemoryBuffer input) {
+      return splitAndProcessBuffer(
+          std::move(input),
+          [&](OwningMemoryBuffer chunk, raw_ostream &os) {
+            return processInputChunk(std::move(chunk), config, os);
+          },
+          os, inMarker, outMarker);
+    };
+
+    for (const auto &file : inputs) {
       std::string errorMessage;
-      auto input = openInputFile(fileName, &errorMessage);
+      auto input = openInputFile(file, &errorMessage);
 
       if (!input)
-        return emitFileError(fileName, errorMessage);
+        return emitFileError(file, errorMessage);
 
-      if (failed(processInputFile(std::move(input), config, os)))
-        return emitFileError(fileName, "Failed to process input file");
+      if (failed(splitAndProcess(std::move(input))))
+        return emitFileError(file, "Failed to process input file");
 
       // Update config for subsequent files
       config = linker.linkFileConfig(flags);
@@ -142,12 +196,12 @@ public:
 
 private:
   /// Process a single input file, potentially containing multiple modules
-  LogicalResult processInputFile(std::unique_ptr<MemoryBuffer> buffer,
-                                 FileConfig config, raw_ostream &os) {
+  LogicalResult processInputChunk(OwningMemoryBuffer buffer, FileConfig config,
+                                  raw_ostream &os) {
     auto sourceMgr = std::make_shared<SourceMgr>();
     sourceMgr->AddNewSourceBuffer(std::move(buffer), SMLoc());
 
-    auto ctx = linker.getContext();
+    MLIRContext *ctx = linker.getContext();
     bool wasThreadingEnabled = ctx->isMultithreadingEnabled();
     ctx->disableMultithreading();
 
@@ -201,7 +255,7 @@ LogicalResult mlir::MlirLinkMain(int argc, char **argv,
   context.allowUnregisteredDialects(config.shouldAllowUnregisteredDialects());
 
   // Create composite module
-  auto composite = [&context]() {
+  OwningOpRef<ModuleOp> composite = [&context]() {
     OpBuilder builder(&context);
     return OwningOpRef<ModuleOp>(builder.create<ModuleOp>(
         FileLineColLoc::get(&context, "mlir-link", 0, 0)));
@@ -214,23 +268,26 @@ LogicalResult mlir::MlirLinkMain(int argc, char **argv,
         "LinkableModuleOpInterface.");
 
   Linker linker(dst, config);
-  FileProcessor processor(linker);
+  FileProcessor proc(linker);
 
   // Prepare output file
   std::string errorMessage;
-  auto output = openOutputFile(clOptionsConfig->outputFile, &errorMessage);
+  auto out = openOutputFile(config.outputFile, &errorMessage);
 
-  if (!output) {
+  if (!out) {
     errs() << errorMessage;
     return failure();
   }
 
+  StringRef inMarker = config.inputSplitMarker();
+  StringRef outMarker = config.outputSplitMarker();
+
   // First add all the regular input files
-  if (failed(processor.linkFiles(clOptionsConfig->inputFiles, output->os())))
+  if (failed(proc.linkFiles(config.inputFiles, out->os(), inMarker, outMarker)))
     return failure();
 
-  composite.get()->print(output->os());
-  output->keep();
+  composite.get()->print(out->os());
+  out->keep();
 
   return success();
 }
