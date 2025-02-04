@@ -220,6 +220,19 @@ private:
     os << escapeLabelString(truncateString(buf));
   }
 
+  // Print a truncated and escaped MLIR type to `os`.
+  void emitMlirType(raw_ostream &os, Type type) {
+    std::string buf;
+    llvm::raw_string_ostream ss(buf);
+    type.print(ss);
+    os << escapeLabelString(truncateString(buf));
+  }
+
+  // Print a truncated and escaped MLIR operand to `os`.
+  void emitMlirOperand(raw_ostream &os, Value operand) {
+    operand.printAsOperand(os, OpPrintingFlags());
+  }
+
   /// Append an edge to the list of edges.
   /// Note: Edges are written to the output stream via `emitAllEdgeStmts`.
   void emitEdgeStmt(Node n1, Node n2, std::string port, StringRef style) {
@@ -318,7 +331,7 @@ private:
         os << "{";
         auto operandToPort = [&](Value operand) {
           os << "<" << getValuePortName(operand) << "> ";
-          operand.printAsOperand(os, OpPrintingFlags());
+          emitMlirOperand(os, operand);
         };
         interleave(op->getOperands(), os, operandToPort, "|");
         os << "}|";
@@ -341,11 +354,11 @@ private:
         os << "|{";
         auto resultToPort = [&](Value result) {
           os << "<" << getValuePortName(result) << "> ";
-          result.printAsOperand(os, OpPrintingFlags());
-          if (printResultTypes)
-            os << " "
-               << truncateString(escapeLabelString(strFromOs(
-                      [&](raw_ostream &os) { os << result.getType(); })));
+          emitMlirOperand(os, result);
+          if (printResultTypes) {
+            os << " ";
+            emitMlirType(os, result.getType());
+          }
         };
         interleave(op->getResults(), os, resultToPort, "|");
         os << "}";
@@ -360,10 +373,10 @@ private:
     return strFromOs([&](raw_ostream &os) {
       os << "<" << getValuePortName(arg) << "> ";
       arg.printAsOperand(os, OpPrintingFlags());
-      if (printResultTypes)
-        os << " "
-           << truncateString(escapeLabelString(
-                  strFromOs([&](raw_ostream &os) { os << arg.getType(); })));
+      if (printResultTypes) {
+        os << " ";
+        emitMlirType(os, arg.getType());
+      }
     });
   }
 
