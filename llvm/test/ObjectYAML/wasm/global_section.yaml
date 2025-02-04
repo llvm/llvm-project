@@ -10,7 +10,7 @@ Sections:
         Mutable:     false
         InitExpr:
           Opcode:          I64_CONST
-          Value:           -5
+          Value:           5
 ...
 # CHECK: --- !WASM
 # CHECK: FileHeader:
@@ -23,5 +23,5 @@ Sections:
 # CHECK:        Mutable:     false
 # CHECK:        InitExpr:
 # CHECK:          Opcode:          I64_CONST
-# CHECK:          Value:           -5
+# CHECK:          Value:           5
 # CHECK: ...
