@@ -134,6 +134,8 @@ public:
     BufferResBinding(HLSLResourceBindingAttr *Attr);
   };
 
+  static bool isResourceRecordType(const clang::Type *Ty);
+
 protected:
   CodeGenModule &CGM;
 

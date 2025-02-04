@@ -3065,6 +3065,13 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
     if (VD->getType()->isHLSLIntangibleType())
       collectResourceBindingsOnVarDecl(VD);
 
+    if (VD->getType()->isHLSLResourceWrapper()) {
+      // Make the variable for resources static. The global externally visible
+      // storage is accessed through the handle, which is a member. The variable
+      // itself is not externally visible.
+      VD->setStorageClass(StorageClass::SC_Static);
+    }
+
     // process explicit bindings
     processExplicitBindingsOnDecl(VD);
   }
