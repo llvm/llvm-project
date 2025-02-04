@@ -34,12 +34,9 @@ bool RootSignatureLexer::LexNumber(RootSignatureToken &Result) {
   if (Literal.hadError)
     return true; // Error has already been reported so just return
 
-  if (!Literal.isIntegerLiteral()) {
-    // Note: if IsNumberChar allows for hexidecimal we will need to turn this
-    // into a diagnostics for potential fixed-point literals
-    llvm_unreachable("IsNumberChar will only support digits");
-    return true;
-  }
+  // Note: if IsNumberChar allows for hexidecimal we will need to turn this
+  // into a diagnostics for potential fixed-point literals
+  assert(Literal.isIntegerLiteral() && "IsNumberChar will only support digits");
 
   // Retrieve the number value to store into the token
   Result.Kind = TokenKind::int_literal;
@@ -142,7 +139,6 @@ bool RootSignatureLexer::LexToken(RootSignatureToken &Result) {
       break;
     default:
       llvm_unreachable("Switch for an expected token was not provided");
-      return true;
     }
     return false;
   }
