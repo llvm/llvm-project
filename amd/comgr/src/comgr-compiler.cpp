@@ -1257,7 +1257,7 @@ amd_comgr_status_t AMDGPUCompiler::unbundle() {
   // Collect bitcode memory buffers from bitcodes, bundles, and archives
   for (auto *Input : InSet->DataObjects) {
 
-    std::string FileExtension;
+    const char *FileExtension;
     amd_comgr_data_kind_t UnbundledDataKind;
     switch (Input->DataKind) {
     case AMD_COMGR_DATA_KIND_BC_BUNDLE:
@@ -1288,22 +1288,22 @@ amd_comgr_status_t AMDGPUCompiler::unbundle() {
       const size_t BufSize = sizeof(char) * 30;
       char *Buf = (char *)malloc(BufSize);
       snprintf(Buf, BufSize, "comgr-bundle-%d.%s", std::rand() % 10000,
-               FileExtension.c_str());
+               FileExtension);
       Input->Name = Buf;
     }
 
     // Write input file system so that OffloadBundler API can process
     // TODO: Switch write to VFS
-    std::string InputFilePath = getFilePath(Input, InputDir).str().str();
+    SmallString<128> InputFilePath = getFilePath(Input, InputDir);
     if (auto Status = outputToFile(Input, InputFilePath)) {
       return Status;
     }
 
     // Bundler input name
-    BundlerConfig.InputFileNames.push_back(InputFilePath);
+    BundlerConfig.InputFileNames.emplace_back(InputFilePath);
 
     // Generate prefix for output files
-    std::string OutputPrefix = std::string(Input->Name);
+    StringRef OutputPrefix = Input->Name;
     size_t Index = OutputPrefix.find_last_of(".");
     OutputPrefix = OutputPrefix.substr(0, Index);
 
@@ -1314,22 +1314,18 @@ amd_comgr_status_t AMDGPUCompiler::unbundle() {
            << "   Unbundled Files Extension: ." << FileExtension << "\n";
     }
 
-    for (size_t I = 0; I < ActionInfo->BundleEntryIDs.size(); I++) {
-      auto Entry = ActionInfo->BundleEntryIDs[I];
-      BundlerConfig.TargetNames.push_back(Entry);
-
+    for (StringRef Entry : ActionInfo->BundleEntryIDs) {
       // Add an output file for each target
-      std::string OutputFileName =
-          OutputPrefix + '-' + Entry + "." + FileExtension;
+      SmallString<128> OutputFilePath = OutputDir;
+      sys::path::append(OutputFilePath,
+                        OutputPrefix + "-" + Entry + "." + FileExtension);
 
-      // TODO: Switch this to LLVM path APIs
-      std::string OutputFilePath = OutputDir.str().str() + "/" + OutputFileName;
-      BundlerConfig.OutputFileNames.push_back(OutputFilePath);
+      BundlerConfig.TargetNames.emplace_back(Entry);
+      BundlerConfig.OutputFileNames.emplace_back(OutputFilePath);
 
       if (env::shouldEmitVerboseLogs()) {
-        LogS << "\tBundle Entry ID: " << BundlerConfig.TargetNames[I] << "\n"
-             << "\tOutput Filename: " << BundlerConfig.OutputFileNames[I]
-             << "\n";
+        LogS << "\tBundle Entry ID: " << Entry << "\n"
+             << "\tOutput Filename: " << OutputFilePath << "\n";
         LogS.flush();
       }
     }
@@ -1360,7 +1356,7 @@ amd_comgr_status_t AMDGPUCompiler::unbundle() {
     }
 
     // Add new bitcodes to OutSetT
-    for (auto OutputFilePath : BundlerConfig.OutputFileNames) {
+    for (StringRef OutputFilePath : BundlerConfig.OutputFileNames) {
 
       amd_comgr_data_t ResultT;
 
@@ -1371,11 +1367,10 @@ amd_comgr_status_t AMDGPUCompiler::unbundle() {
       ScopedDataObjectReleaser SDOR(ResultT);
 
       DataObject *Result = DataObject::convert(ResultT);
-      if (auto Status = inputFromFile(Result, StringRef(OutputFilePath)))
+      if (auto Status = inputFromFile(Result, OutputFilePath))
         return Status;
 
-      StringRef OutputFileName =
-          llvm::sys::path::filename(StringRef(OutputFilePath));
+      StringRef OutputFileName = sys::path::filename(OutputFilePath);
       Result->setName(OutputFileName);
 
       if (auto Status = amd_comgr_data_set_add(OutSetT, ResultT)) {
