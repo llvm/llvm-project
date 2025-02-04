@@ -164,7 +164,7 @@ static std::string getAnnotation(Value *AnnoVal, Value *OptAnnoVal) {
   std::string Anno;
   if (auto *C = dyn_cast_or_null<Constant>(AnnoVal)) {
     StringRef Str;
-    if (getConstantStringInfo(C, Str))
+    if (getConstantStringInfo(C, Str, /*CharWidth=*/8))
       Anno = Str;
   }
   // handle optional annotation parameter in a way that Khronos Translator do
