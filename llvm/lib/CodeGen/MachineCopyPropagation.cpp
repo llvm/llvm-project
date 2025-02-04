@@ -459,8 +459,6 @@ class MachineCopyPropagation {
   bool UseCopyInstr;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
-
   MachineCopyPropagation(bool CopyInstr = false)
       : UseCopyInstr(CopyInstr || MCPUseCopyInstr) {}
 
