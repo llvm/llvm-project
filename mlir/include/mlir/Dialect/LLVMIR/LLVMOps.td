@@ -1507,14 +1507,11 @@ def LLVM_AliasOp : LLVM_Op<"mlir.alias",
     Type getType() {
       return getAliasType();
     }
-    /// Return the initializer region. This may be empty, but if it is not it
-    /// terminates in an `llvm.return` op with the initializer value.
+    /// Return the initializer region. It's always present and terminates
+    /// with an `llvm.return` op with the initializer value.
     Region &getInitializerRegion() {
       return getOperation()->getRegion(0);
     }
-    /// Return the initializer block. The initializer region always exists
-    /// (differently from llvm.global) and it terminates with an `llvm.return`
-    /// op with the aliasee value.
     Block &getInitializerBlock() {
       return getInitializerRegion().front();
     }
