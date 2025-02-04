@@ -232,6 +232,42 @@ void DwarfUnit::addUInt(DIEValueList &Block, dwarf::Form Form,
   addUInt(Block, (dwarf::Attribute)0, Form, Integer);
 }
 
+void DwarfUnit::addIntAsBlock(DIE &Die, dwarf::Attribute Attribute, const APInt &Val) {
+  DIEBlock *Block = new (DIEValueAllocator) DIEBlock;
+
+  // Get the raw data form of the large APInt.
+  const uint64_t *Ptr64 = Val.getRawData();
+
+  int NumBytes = Val.getBitWidth() / 8; // 8 bits per byte.
+  bool LittleEndian = Asm->getDataLayout().isLittleEndian();
+
+  // Output the constant to DWARF one byte at a time.
+  for (int i = 0; i < NumBytes; i++) {
+    uint8_t c;
+    if (LittleEndian)
+      c = Ptr64[i / 8] >> (8 * (i & 7));
+    else
+      c = Ptr64[(NumBytes - 1 - i) / 8] >> (8 * ((NumBytes - 1 - i) & 7));
+    addUInt(*Block, dwarf::DW_FORM_data1, c);
+  }
+
+  addBlock(Die, Attribute, Block);
+}
+
+void DwarfUnit::addInt(DIE &Die, dwarf::Attribute Attribute,
+		       const APInt &Val, bool Unsigned) {
+  unsigned CIBitWidth = Val.getBitWidth();
+  if (CIBitWidth <= 64) {
+    if (Unsigned)
+      addUInt(Die, Attribute, std::nullopt, Val.getZExtValue());
+    else
+      addSInt(Die, Attribute, std::nullopt, Val.getSExtValue());
+    return;
+  }
+
+  addIntAsBlock(Die, Attribute, Val);
+}
+
 void DwarfUnit::addSInt(DIEValueList &Die, dwarf::Attribute Attribute,
                         std::optional<dwarf::Form> Form, int64_t Integer) {
   if (!Form)
@@ -484,25 +520,7 @@ void DwarfUnit::addConstantValue(DIE &Die, const APInt &Val, bool Unsigned) {
     return;
   }
 
-  DIEBlock *Block = new (DIEValueAllocator) DIEBlock;
-
-  // Get the raw data form of the large APInt.
-  const uint64_t *Ptr64 = Val.getRawData();
-
-  int NumBytes = Val.getBitWidth() / 8; // 8 bits per byte.
-  bool LittleEndian = Asm->getDataLayout().isLittleEndian();
-
-  // Output the constant to DWARF one byte at a time.
-  for (int i = 0; i < NumBytes; i++) {
-    uint8_t c;
-    if (LittleEndian)
-      c = Ptr64[i / 8] >> (8 * (i & 7));
-    else
-      c = Ptr64[(NumBytes - 1 - i) / 8] >> (8 * ((NumBytes - 1 - i) & 7));
-    addUInt(*Block, dwarf::DW_FORM_data1, c);
-  }
-
-  addBlock(Die, dwarf::DW_AT_const_value, Block);
+  addIntAsBlock(Die, dwarf::DW_AT_const_value, Val);
 }
 
 void DwarfUnit::addLinkageName(DIE &Die, StringRef LinkageName) {
@@ -980,12 +998,8 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
           DIE &Variant = createAndAddDIE(dwarf::DW_TAG_variant, Buffer);
           if (const ConstantInt *CI =
               dyn_cast_or_null<ConstantInt>(DDTy->getDiscriminantValue())) {
-            if (DD->isUnsignedDIType(Discriminator->getBaseType()))
-              addUInt(Variant, dwarf::DW_AT_discr_value, std::nullopt,
-                      CI->getZExtValue());
-            else
-              addSInt(Variant, dwarf::DW_AT_discr_value, std::nullopt,
-                      CI->getSExtValue());
+	    addInt(Variant, dwarf::DW_AT_discr_value, CI->getValue(),
+		   DD->isUnsignedDIType(Discriminator->getBaseType()));
           }
           constructMemberDIE(Variant, DDTy);
         } else {

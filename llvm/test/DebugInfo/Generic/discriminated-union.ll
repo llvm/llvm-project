@@ -22,7 +22,7 @@
 ;         CHECK: DW_AT_alignment
 ;         CHECK: DW_AT_data_member_location [DW_FORM_data1]	(0x00)
 ;     CHECK: DW_TAG_variant
-;       CHECK: DW_AT_discr_value [DW_FORM_data1]	(0x00)
+;       CHECK: DW_AT_discr_value [DW_FORM_block1]	(<0x10> 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 )
 ;       CHECK: DW_TAG_member
 ;         CHECK: DW_AT_type
 ;         CHECK: DW_AT_alignment
@@ -71,7 +71,7 @@ attributes #0 = { nounwind uwtable }
 !21 = !DIBasicType(name: "u8", size: 8, encoding: DW_ATE_unsigned)
 !22 = !DIDerivedType(tag: DW_TAG_member, name: "__1", scope: !18, file: !7, baseType: !23, size: 64, align: 64)
 !23 = !DIDerivedType(tag: DW_TAG_pointer_type, name: "&u8", baseType: !21, size: 64, align: 64)
-!24 = !DIDerivedType(tag: DW_TAG_member, scope: !14, file: !7, baseType: !25, size: 128, align: 64, extraData: i64 0)
+!24 = !DIDerivedType(tag: DW_TAG_member, scope: !14, file: !7, baseType: !25, size: 128, align: 64, extraData: i128 18446744073709551616)
 !25 = !DICompositeType(tag: DW_TAG_structure_type, name: "Nope", scope: !12, file: !7, size: 128, align: 64, elements: !4, identifier: "7ce1efff6b82281ab9ceb730566e7e20::Nope")
 !27 = !DIBasicType(name: "u64", size: 64, encoding: DW_ATE_unsigned)
 !28 = !DIExpression()

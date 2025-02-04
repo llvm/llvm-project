@@ -167,6 +167,10 @@ public:
 
   void addSInt(DIELoc &Die, std::optional<dwarf::Form> Form, int64_t Integer);
 
+  /// Add an integer attribute data and value; value may be any width.
+  void addInt(DIE &Die, dwarf::Attribute Attribute, const APInt &Integer,
+	      bool Unsigned);
+
   /// Add a string attribute data and value.
   ///
   /// We always emit a reference to the string pool instead of immediate
@@ -336,6 +340,10 @@ protected:
   void emitCommonHeader(bool UseOffsets, dwarf::UnitType UT);
 
 private:
+  /// A helper to add a wide integer constant to a DIE using a block
+  /// form.
+  void addIntAsBlock(DIE &Die, dwarf::Attribute Attribute, const APInt &Val);
+
   void constructTypeDIE(DIE &Buffer, const DIBasicType *BTy);
   void constructTypeDIE(DIE &Buffer, const DIStringType *BTy);
   void constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy);
