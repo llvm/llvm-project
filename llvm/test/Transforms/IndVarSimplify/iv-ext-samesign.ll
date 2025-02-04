@@ -79,8 +79,7 @@ define i32 @iv_zext_zext_gt_slt(i32 %iter.count, ptr %ptr) {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT2]] = add nsw i64 [[INDVARS_IV1]], -1
 ; CHECK-NEXT:    [[GEP_OUTER:%.*]] = getelementptr double, ptr [[PTR]], i64 [[INDVARS_IV_NEXT2]]
 ; CHECK-NEXT:    store double poison, ptr [[GEP_OUTER]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i64 [[INDVARS_IV1]] to i32
-; CHECK-NEXT:    [[EXIT_COND_OUTER:%.*]] = icmp samesign ugt i32 [[TMP1]], 1
+; CHECK-NEXT:    [[EXIT_COND_OUTER:%.*]] = icmp samesign ugt i64 [[INDVARS_IV1]], 1
 ; CHECK-NEXT:    br i1 [[EXIT_COND_OUTER]], label %[[INNER_LOOP_PREHEADER:.*]], label %[[PH]]
 ; CHECK:       [[INNER_LOOP_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[INNER_LOOP:.*]]
@@ -127,6 +126,7 @@ define i32 @iv_zext_zext_gt_slt_exitlimit(i32 %iter.count, i32 %exit.limit, ptr 
 ; CHECK-SAME: i32 [[ITER_COUNT:%.*]], i32 [[EXIT_LIMIT:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[ITER_COUNT]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[EXIT_LIMIT]] to i64
 ; CHECK-NEXT:    br label %[[OUTER_LOOP:.*]]
 ; CHECK:       [[PH_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    br label %[[PH:.*]]
@@ -137,8 +137,7 @@ define i32 @iv_zext_zext_gt_slt_exitlimit(i32 %iter.count, i32 %exit.limit, ptr 
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT2]] = add nsw i64 [[INDVARS_IV1]], -1
 ; CHECK-NEXT:    [[GEP_OUTER:%.*]] = getelementptr double, ptr [[PTR]], i64 [[INDVARS_IV_NEXT2]]
 ; CHECK-NEXT:    store double poison, ptr [[GEP_OUTER]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i64 [[INDVARS_IV1]] to i32
-; CHECK-NEXT:    [[EXIT_COND_OUTER:%.*]] = icmp samesign ugt i32 [[TMP1]], [[EXIT_LIMIT]]
+; CHECK-NEXT:    [[EXIT_COND_OUTER:%.*]] = icmp samesign ugt i64 [[INDVARS_IV1]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[EXIT_COND_OUTER]], label %[[INNER_LOOP_PREHEADER:.*]], label %[[PH]]
 ; CHECK:       [[INNER_LOOP_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[INNER_LOOP:.*]]
@@ -436,8 +435,7 @@ define i32 @iv_sext_sext_gt_slt(i32 %iter.count, ptr %ptr) {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT2]] = add nsw i64 [[INDVARS_IV1]], -1
 ; CHECK-NEXT:    [[GEP_OUTER:%.*]] = getelementptr double, ptr [[PTR]], i64 [[INDVARS_IV_NEXT2]]
 ; CHECK-NEXT:    store double poison, ptr [[GEP_OUTER]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i64 [[INDVARS_IV1]] to i32
-; CHECK-NEXT:    [[EXIT_COND_OUTER:%.*]] = icmp samesign ugt i32 [[TMP1]], 1
+; CHECK-NEXT:    [[EXIT_COND_OUTER:%.*]] = icmp samesign ugt i64 [[INDVARS_IV1]], 1
 ; CHECK-NEXT:    br i1 [[EXIT_COND_OUTER]], label %[[INNER_LOOP_PREHEADER:.*]], label %[[PH]]
 ; CHECK:       [[INNER_LOOP_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[INNER_LOOP:.*]]
@@ -484,6 +482,7 @@ define i32 @iv_sext_sext_gt_slt_exitlimit(i32 %iter.count, i32 %exit.limit, ptr 
 ; CHECK-SAME: i32 [[ITER_COUNT:%.*]], i32 [[EXIT_LIMIT:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[ITER_COUNT]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[EXIT_LIMIT]] to i64
 ; CHECK-NEXT:    br label %[[OUTER_LOOP:.*]]
 ; CHECK:       [[PH_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    br label %[[PH:.*]]
@@ -494,8 +493,7 @@ define i32 @iv_sext_sext_gt_slt_exitlimit(i32 %iter.count, i32 %exit.limit, ptr 
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT2]] = add nsw i64 [[INDVARS_IV1]], -1
 ; CHECK-NEXT:    [[GEP_OUTER:%.*]] = getelementptr double, ptr [[PTR]], i64 [[INDVARS_IV_NEXT2]]
 ; CHECK-NEXT:    store double poison, ptr [[GEP_OUTER]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i64 [[INDVARS_IV1]] to i32
-; CHECK-NEXT:    [[EXIT_COND_OUTER:%.*]] = icmp samesign ugt i32 [[TMP1]], [[EXIT_LIMIT]]
+; CHECK-NEXT:    [[EXIT_COND_OUTER:%.*]] = icmp samesign ugt i64 [[INDVARS_IV1]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[EXIT_COND_OUTER]], label %[[INNER_LOOP_PREHEADER:.*]], label %[[PH]]
 ; CHECK:       [[INNER_LOOP_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[INNER_LOOP:.*]]
@@ -617,15 +615,13 @@ define i32 @iv_sext_sext_sgt_lt_exitlimit(i32 %iter.count, i32 %exit.limit, ptr 
 ; CHECK-NEXT:    [[EXIT_COND_OUTER:%.*]] = icmp sgt i64 [[INDVARS_IV1]], [[TMP4]]
 ; CHECK-NEXT:    br i1 [[EXIT_COND_OUTER]], label %[[INNER_LOOP_PREHEADER:.*]], label %[[PH]]
 ; CHECK:       [[INNER_LOOP_PREHEADER]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc nsw i64 [[INDVARS_IV_NEXT2]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
 ; CHECK-NEXT:    br label %[[INNER_LOOP:.*]]
 ; CHECK:       [[INNER_LOOP]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[INNER_LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[INNER_LOOP]] ]
 ; CHECK-NEXT:    [[GEP_INNER:%.*]] = getelementptr double, ptr [[PTR]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store double poison, ptr [[GEP_INNER]], align 8
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXIT_COND_INNER:%.*]] = icmp samesign ult i64 [[INDVARS_IV_NEXT]], [[TMP3]]
+; CHECK-NEXT:    [[EXIT_COND_INNER:%.*]] = icmp samesign ult i64 [[INDVARS_IV_NEXT]], [[INDVARS_IV_NEXT2]]
 ; CHECK-NEXT:    br i1 [[EXIT_COND_INNER]], label %[[INNER_LOOP]], label %[[PH_LOOPEXIT]]
 ; CHECK:       [[EXIT:.*:]]
 ; CHECK-NEXT:    ret i32 0
@@ -676,8 +672,7 @@ define i32 @iv_sext_sext_gt_lt(i32 %iter.count, ptr %ptr) {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT4]] = add nsw i64 [[INDVARS_IV3]], -1
 ; CHECK-NEXT:    [[GEP_OUTER:%.*]] = getelementptr double, ptr [[PTR]], i64 [[INDVARS_IV_NEXT4]]
 ; CHECK-NEXT:    store double poison, ptr [[GEP_OUTER]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc nsw i64 [[INDVARS_IV3]] to i32
-; CHECK-NEXT:    [[EXIT_COND_OUTER:%.*]] = icmp samesign ugt i32 [[TMP2]], 1
+; CHECK-NEXT:    [[EXIT_COND_OUTER:%.*]] = icmp samesign ugt i64 [[INDVARS_IV3]], 1
 ; CHECK-NEXT:    br i1 [[EXIT_COND_OUTER]], label %[[INNER_LOOP_PREHEADER:.*]], label %[[PH]]
 ; CHECK:       [[INNER_LOOP_PREHEADER]]:
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[INDVARS_IV1]] to i64
