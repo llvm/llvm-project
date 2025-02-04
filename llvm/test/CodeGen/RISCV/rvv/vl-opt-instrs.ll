@@ -4046,9 +4046,9 @@ define <vscale x 4 x float> @vfmacc_vv(<vscale x 4 x float> %a, <vscale x 4 x fl
 ; VLOPT-LABEL: vfmacc_vv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    fsrmi a1, 3
-; VLOPT-NEXT:    vsetvli a2, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfmacc.vv v8, v10, v12
-; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v12
 ; VLOPT-NEXT:    fsrm a1
 ; VLOPT-NEXT:    ret
@@ -4071,9 +4071,9 @@ define <vscale x 4 x float> @vfmacc_vf(<vscale x 4 x float> %a, float %b, <vscal
 ; VLOPT-LABEL: vfmacc_vf:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    fsrmi a1, 3
-; VLOPT-NEXT:    vsetvli a2, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfmacc.vf v8, fa0, v10
-; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v10
 ; VLOPT-NEXT:    fsrm a1
 ; VLOPT-NEXT:    ret
@@ -4096,9 +4096,9 @@ define <vscale x 4 x float> @vfnmacc_vv(<vscale x 4 x float> %a, <vscale x 4 x f
 ; VLOPT-LABEL: vfnmacc_vv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    fsrmi a1, 3
-; VLOPT-NEXT:    vsetvli a2, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfnmacc.vv v8, v10, v12
-; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v12
 ; VLOPT-NEXT:    fsrm a1
 ; VLOPT-NEXT:    ret
@@ -4121,9 +4121,9 @@ define <vscale x 4 x float> @vfnmacc_vf(<vscale x 4 x float> %a, float %b, <vsca
 ; VLOPT-LABEL: vfnmacc_vf:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    fsrmi a1, 3
-; VLOPT-NEXT:    vsetvli a2, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfnmacc.vf v8, fa0, v10
-; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v10
 ; VLOPT-NEXT:    fsrm a1
 ; VLOPT-NEXT:    ret
@@ -4146,9 +4146,9 @@ define <vscale x 4 x float> @vfmsac_vv(<vscale x 4 x float> %a, <vscale x 4 x fl
 ; VLOPT-LABEL: vfmsac_vv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    fsrmi a1, 3
-; VLOPT-NEXT:    vsetvli a2, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfmsac.vv v8, v10, v12
-; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v12
 ; VLOPT-NEXT:    fsrm a1
 ; VLOPT-NEXT:    ret
@@ -4171,9 +4171,9 @@ define <vscale x 4 x float> @vfmsac_vf(<vscale x 4 x float> %a, float %b, <vscal
 ; VLOPT-LABEL: vfmsac_vf:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    fsrmi a1, 3
-; VLOPT-NEXT:    vsetvli a2, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfmsac.vf v8, fa0, v10
-; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v10
 ; VLOPT-NEXT:    fsrm a1
 ; VLOPT-NEXT:    ret
@@ -4196,9 +4196,9 @@ define <vscale x 4 x float> @vfnmsac_vv(<vscale x 4 x float> %a, <vscale x 4 x f
 ; VLOPT-LABEL: vfnmsac_vv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    fsrmi a1, 3
-; VLOPT-NEXT:    vsetvli a2, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfnmsac.vv v8, v10, v12
-; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v12
 ; VLOPT-NEXT:    fsrm a1
 ; VLOPT-NEXT:    ret
@@ -4221,9 +4221,9 @@ define <vscale x 4 x float> @vfnmsac_vf(<vscale x 4 x float> %a, float %b, <vsca
 ; VLOPT-LABEL: vfnmsac_vf:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    fsrmi a1, 3
-; VLOPT-NEXT:    vsetvli a2, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfnmsac.vf v8, fa0, v10
-; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v10
 ; VLOPT-NEXT:    fsrm a1
 ; VLOPT-NEXT:    ret
@@ -4246,9 +4246,9 @@ define <vscale x 4 x float> @vfmadd_vv(<vscale x 4 x float> %a, <vscale x 4 x fl
 ; VLOPT-LABEL: vfmadd_vv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    fsrmi a1, 3
-; VLOPT-NEXT:    vsetvli a2, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfmadd.vv v8, v10, v12
-; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v12
 ; VLOPT-NEXT:    fsrm a1
 ; VLOPT-NEXT:    ret
@@ -4271,9 +4271,9 @@ define <vscale x 4 x float> @vfmadd_vf(<vscale x 4 x float> %a, float %b, <vscal
 ; VLOPT-LABEL: vfmadd_vf:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    fsrmi a1, 3
-; VLOPT-NEXT:    vsetvli a2, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfmadd.vf v8, fa0, v10
-; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v10
 ; VLOPT-NEXT:    fsrm a1
 ; VLOPT-NEXT:    ret
@@ -4296,9 +4296,9 @@ define <vscale x 4 x float> @vfnmadd_vv(<vscale x 4 x float> %a, <vscale x 4 x f
 ; VLOPT-LABEL: vfnmadd_vv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    fsrmi a1, 3
-; VLOPT-NEXT:    vsetvli a2, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfnmadd.vv v8, v10, v12
-; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v12
 ; VLOPT-NEXT:    fsrm a1
 ; VLOPT-NEXT:    ret
@@ -4321,9 +4321,9 @@ define <vscale x 4 x float> @vfnmadd_vf(<vscale x 4 x float> %a, float %b, <vsca
 ; VLOPT-LABEL: vfnmadd_vf:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    fsrmi a1, 3
-; VLOPT-NEXT:    vsetvli a2, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfnmadd.vf v8, fa0, v10
-; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v10
 ; VLOPT-NEXT:    fsrm a1
 ; VLOPT-NEXT:    ret
@@ -4346,9 +4346,9 @@ define <vscale x 4 x float> @vfmsub_vv(<vscale x 4 x float> %a, <vscale x 4 x fl
 ; VLOPT-LABEL: vfmsub_vv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    fsrmi a1, 3
-; VLOPT-NEXT:    vsetvli a2, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfmsub.vv v8, v10, v12
-; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v12
 ; VLOPT-NEXT:    fsrm a1
 ; VLOPT-NEXT:    ret
@@ -4371,9 +4371,9 @@ define <vscale x 4 x float> @vfmsub_vf(<vscale x 4 x float> %a, float %b, <vscal
 ; VLOPT-LABEL: vfmsub_vf:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    fsrmi a1, 3
-; VLOPT-NEXT:    vsetvli a2, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfmsub.vf v8, fa0, v10
-; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v10
 ; VLOPT-NEXT:    fsrm a1
 ; VLOPT-NEXT:    ret
@@ -4396,9 +4396,9 @@ define <vscale x 4 x float> @vfnmsub_vv(<vscale x 4 x float> %a, <vscale x 4 x f
 ; VLOPT-LABEL: vfnmsub_vv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    fsrmi a1, 3
-; VLOPT-NEXT:    vsetvli a2, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfnmsub.vv v8, v10, v12
-; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v12
 ; VLOPT-NEXT:    fsrm a1
 ; VLOPT-NEXT:    ret
@@ -4421,9 +4421,9 @@ define <vscale x 4 x float> @vfnmsub_vf(<vscale x 4 x float> %a, float %b, <vsca
 ; VLOPT-LABEL: vfnmsub_vf:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    fsrmi a1, 3
-; VLOPT-NEXT:    vsetvli a2, zero, e32, m2, tu, ma
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; VLOPT-NEXT:    vfnmsub.vf v8, fa0, v10
-; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfadd.vv v8, v8, v10
 ; VLOPT-NEXT:    fsrm a1
 ; VLOPT-NEXT:    ret
