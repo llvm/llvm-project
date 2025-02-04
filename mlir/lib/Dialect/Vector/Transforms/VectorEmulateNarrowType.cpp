@@ -334,9 +334,9 @@ static Value downcastSelectAndUpcast(OpBuilder &builder, Location loc,
 ///
 /// Result:
 ///   linearizedMemref = |2|2|3|3| : <4xi2> (<1xi8>)
-static void atomicRMWStore(OpBuilder &builder, Location loc,
-                           MemRefValue linearizedMemref, Value storeIdx,
-                           VectorValue valueToStore, Value mask) {
+static void atomicRMW(OpBuilder &builder, Location loc,
+                      MemRefValue linearizedMemref, Value storeIdx,
+                      VectorValue valueToStore, Value mask) {
   assert(valueToStore.getType().getRank() == 1 && "expected 1-D vector");
 
   // Create an atomic load-modify-write region using
@@ -363,12 +363,11 @@ static void atomicRMWStore(OpBuilder &builder, Location loc,
   builder.create<memref::AtomicYieldOp>(loc, scalarMaskedValue);
 }
 
-/// Generate a non-atomic read-modify-write sequence for subbyte storing.
-/// It has similar logic to `atomicRMWStore`, but without atomicity.
-static void nonAtomicRMWStore(OpBuilder &builder, Location loc,
-                              MemRefValue linearizedMemref,
-                              Value linearizedIndex, VectorValue valueToStore,
-                              Value mask) {
+/// Generate a non-atomic read-modify-write sequence for storing to the emulated
+/// type. It has similar logic to `atomicRMWStore`, but without atomicity.
+static void nonAtomicRMW(OpBuilder &builder, Location loc,
+                         MemRefValue linearizedMemref, Value linearizedIndex,
+                         VectorValue valueToStore, Value mask) {
   assert(valueToStore.getType().getRank() == 1 && "expected 1-D vector");
 
   auto oneElemVecType =
@@ -427,9 +426,9 @@ namespace {
 struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
   using OpConversionPattern::OpConversionPattern;
 
-  ConvertVectorStore(MLIRContext *context, bool useAtomicWrites)
+  ConvertVectorStore(MLIRContext *context, bool disableAtomicRMW)
       : OpConversionPattern<vector::StoreOp>(context),
-        useAtomicWrites_(useAtomicWrites) {}
+        disableAtomicRMW(disableAtomicRMW) {}
 
   LogicalResult
   matchAndRewrite(vector::StoreOp op, OpAdaptor adaptor,
@@ -557,6 +556,8 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
     auto subWidthStoreMaskType =
         VectorType::get({numSrcElemsPerDest}, rewriter.getI1Type());
 
+    auto storeFunc = disableAtomicRMW ? nonAtomicRMW : atomicRMW;
+
     // 1. Partial width store for the leading byte.
     // When the store address is not aligned to emulated width boundary, deal
     // with the unaligned part so that the rest elements are aligned to width
@@ -580,8 +581,6 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
       auto value =
           extractSliceIntoByte(rewriter, loc, valueToStore, 0,
                                frontSubWidthStoreElem, *foldedNumFrontPadElems);
-
-      auto storeFunc = useAtomicWrites_ ? atomicRMWStore : nonAtomicRMWStore;
 
       storeFunc(rewriter, loc, memrefBase, currentDestIndex,
                 cast<VectorValue>(value), frontMask.getResult());
@@ -639,9 +638,8 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
       auto backMask = rewriter.create<arith::ConstantOp>(
           loc, DenseElementsAttr::get(subWidthStoreMaskType, maskValues));
 
-      subEmulatedWidthStore(rewriter, loc, memrefBase, currentDestIndex,
-                            cast<VectorValue>(subWidthStorePart),
-                            backMask.getResult());
+      storeFunc(rewriter, loc, memrefBase, currentDestIndex,
+                cast<VectorValue>(subWidthStorePart), backMask.getResult());
     }
 
     rewriter.eraseOp(op);
@@ -649,7 +647,7 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
   }
 
 private:
-  const bool useAtomicWrites_;
+  const bool disableAtomicRMW;
 };
 
 //===----------------------------------------------------------------------===//
@@ -1962,7 +1960,7 @@ struct RewriteVectorTranspose : OpRewritePattern<vector::TransposeOp> {
 
 void vector::populateVectorNarrowTypeEmulationPatterns(
     const arith::NarrowTypeEmulationConverter &typeConverter,
-    RewritePatternSet &patterns, bool useAtomicWrites) {
+    RewritePatternSet &patterns, bool disableAtomicRMW) {
 
   // Populate `vector.*` conversion patterns.
   // TODO: #119553 support atomicity
@@ -1973,7 +1971,7 @@ void vector::populateVectorNarrowTypeEmulationPatterns(
   // Populate `vector.*` store conversion patterns. The caller can choose
   // to avoid emitting atomic operations and reduce it to load-modify-write
   // sequence for stores if it is known there are no thread contentions.
-  patterns.insert<ConvertVectorStore>(patterns.getContext(), useAtomicWrites);
+  patterns.insert<ConvertVectorStore>(patterns.getContext(), disableAtomicRMW);
 }
 
 void vector::populateVectorNarrowTypeRewritePatterns(
