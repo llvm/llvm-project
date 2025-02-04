@@ -1049,7 +1049,7 @@ ClassTemplateSpecializationDecl::getSourceRange() const {
     assert(!Pattern.isNull() &&
            "Class template specialization without pattern?");
     if (const auto *CTPSD =
-            Pattern.dyn_cast<ClassTemplatePartialSpecializationDecl *>())
+            dyn_cast<ClassTemplatePartialSpecializationDecl *>(Pattern))
       return CTPSD->getSourceRange();
     return cast<ClassTemplateDecl *>(Pattern)->getSourceRange();
   }
@@ -1077,7 +1077,7 @@ ClassTemplateSpecializationDecl::getSourceRange() const {
 }
 
 void ClassTemplateSpecializationDecl::setExternKeywordLoc(SourceLocation Loc) {
-  auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>();
+  auto *Info = dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo);
   if (!Info) {
     // Don't allocate if the location is invalid.
     if (Loc.isInvalid())
@@ -1091,7 +1091,7 @@ void ClassTemplateSpecializationDecl::setExternKeywordLoc(SourceLocation Loc) {
 
 void ClassTemplateSpecializationDecl::setTemplateKeywordLoc(
     SourceLocation Loc) {
-  auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>();
+  auto *Info = dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo);
   if (!Info) {
     // Don't allocate if the location is invalid.
     if (Loc.isInvalid())
@@ -1463,7 +1463,7 @@ SourceRange VarTemplateSpecializationDecl::getSourceRange() const {
     assert(!Pattern.isNull() &&
            "Variable template specialization without pattern?");
     if (const auto *VTPSD =
-            Pattern.dyn_cast<VarTemplatePartialSpecializationDecl *>())
+            dyn_cast<VarTemplatePartialSpecializationDecl *>(Pattern))
       return VTPSD->getSourceRange();
     VarTemplateDecl *VTD = cast<VarTemplateDecl *>(Pattern);
     if (hasInit()) {
@@ -1496,7 +1496,7 @@ SourceRange VarTemplateSpecializationDecl::getSourceRange() const {
 }
 
 void VarTemplateSpecializationDecl::setExternKeywordLoc(SourceLocation Loc) {
-  auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>();
+  auto *Info = dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo);
   if (!Info) {
     // Don't allocate if the location is invalid.
     if (Loc.isInvalid())
@@ -1509,7 +1509,7 @@ void VarTemplateSpecializationDecl::setExternKeywordLoc(SourceLocation Loc) {
 }
 
 void VarTemplateSpecializationDecl::setTemplateKeywordLoc(SourceLocation Loc) {
-  auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>();
+  auto *Info = dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo);
   if (!Info) {
     // Don't allocate if the location is invalid.
     if (Loc.isInvalid())
@@ -1773,7 +1773,7 @@ TemplateParameterList *clang::getReplacedTemplateParameterList(Decl *D) {
     const auto *CTSD = cast<ClassTemplateSpecializationDecl>(D);
     auto P = CTSD->getSpecializedTemplateOrPartial();
     if (const auto *CTPSD =
-            P.dyn_cast<ClassTemplatePartialSpecializationDecl *>())
+            dyn_cast<ClassTemplatePartialSpecializationDecl *>(P))
       return CTPSD->getTemplateParameters();
     return cast<ClassTemplateDecl *>(P)->getTemplateParameters();
   }
@@ -1801,8 +1801,7 @@ TemplateParameterList *clang::getReplacedTemplateParameterList(Decl *D) {
   case Decl::Kind::VarTemplateSpecialization: {
     const auto *VTSD = cast<VarTemplateSpecializationDecl>(D);
     auto P = VTSD->getSpecializedTemplateOrPartial();
-    if (const auto *VTPSD =
-            P.dyn_cast<VarTemplatePartialSpecializationDecl *>())
+    if (const auto *VTPSD = dyn_cast<VarTemplatePartialSpecializationDecl *>(P))
       return VTPSD->getTemplateParameters();
     return cast<VarTemplateDecl *>(P)->getTemplateParameters();
   }

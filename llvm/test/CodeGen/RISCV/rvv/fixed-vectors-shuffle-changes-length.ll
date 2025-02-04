@@ -97,8 +97,9 @@ define <4 x i32> @v4i32_v8i32(<8 x i32>) {
 define <4 x i32> @v4i32_v16i32(<16 x i32>) {
 ; RV32-LABEL: v4i32_v16i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
 ; RV32-NEXT:    vmv.v.i v12, 1
+; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; RV32-NEXT:    vmv.v.i v14, 6
 ; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    vmv.v.i v0, 10

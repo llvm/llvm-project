@@ -17,12 +17,14 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
+; CHECK-NEXT:  vp<[[END1:%.+]]> = DERIVED-IV ir<%start.1> + vp<[[VEC_TC]]> * ir<8>
+; CHECK-NEXT:  vp<[[END2:%.+]]> = DERIVED-IV ir<%start.2> + vp<[[VEC_TC]]> * ir<1>
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:     EMIT ir<%ptr.iv.2> = WIDEN-POINTER-INDUCTION ir<%start.2>, 1
+; CHECK-NEXT:     EMIT ir<%ptr.iv.2> = WIDEN-POINTER-INDUCTION ir<%start.2>, ir<1>
 ; CHECK-NEXT:     vp<[[PTR_IDX:%.+]]> = DERIVED-IV ir<0> + vp<[[CAN_IV]]> * ir<8>
 ; CHECK-NEXT:     vp<[[PTR_IDX_STEPS:%.+]]> = SCALAR-STEPS vp<[[PTR_IDX]]>, ir<8>
 ; CHECK-NEXT:     EMIT vp<[[PTR_IV_1:%.+]]> = ptradd ir<%start.1>, vp<[[PTR_IDX_STEPS]]>
@@ -55,11 +57,12 @@ define void @pointer_induction_used_as_vector(ptr noalias %start.1, ptr noalias 
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 8
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START_1:%.*]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[IND_END2:%.*]] = getelementptr i8, ptr [[START_2:%.*]], i64 [[N_VEC]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 2
+
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START_2]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
@@ -150,9 +153,9 @@ define void @pointer_induction(ptr noalias %start, i64 %N) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP4]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START:%.*]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 2
+; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START:%.*]], i64 [[N_VEC]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]

@@ -28,7 +28,7 @@ template <typename DesiredTypeName> inline StringRef getTypeNameImpl() {
 #elif defined(_MSC_VER)
   StringRef Name = __FUNCSIG__;
 
-  StringRef Key = "getTypeName<";
+  StringRef Key = "getTypeNameImpl<";
   Name = Name.substr(Name.find(Key));
   assert(!Name.empty() && "Unable to find the function name!");
   Name = Name.drop_front(Key.size());

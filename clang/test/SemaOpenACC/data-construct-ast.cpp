@@ -36,6 +36,8 @@ void NormalFunc() {
 #pragma acc host_data use_device(Var)
   while (Var);
   // CHECK-NEXT: OpenACCHostDataConstruct{{.*}} host_data
+  // CHECK-NEXT: use_device clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Var' 'int'
   // CHECK-NEXT: WhileStmt
   // CHECK: NullStmt
 }
@@ -68,6 +70,8 @@ void TemplFunc() {
 #pragma acc host_data use_device(Var)
   while (Var);
   // CHECK-NEXT: OpenACCHostDataConstruct{{.*}} host_data
+  // CHECK-NEXT: use_device clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Var' 'T'
   // CHECK-NEXT: WhileStmt
   // CHECK: NullStmt
 
@@ -94,6 +98,8 @@ void TemplFunc() {
   // CHECK-NEXT: DeclRefExpr{{.*}}'Var' 'int'
 
   // CHECK-NEXT: OpenACCHostDataConstruct{{.*}} host_data
+  // CHECK-NEXT: use_device clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Var' 'int'
   // CHECK-NEXT: WhileStmt
   // CHECK: NullStmt
 }

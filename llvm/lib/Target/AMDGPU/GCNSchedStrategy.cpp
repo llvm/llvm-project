@@ -188,6 +188,12 @@ static void getRegisterPressures(
   Pressure[AMDGPU::RegisterPressureSets::AGPR_32] = NewPressure.getAGPRNum();
 }
 
+// Return true if the instruction is mutually exclusive with all non-IGLP DAG
+// mutations, requiring all other mutations to be disabled.
+static bool isIGLPMutationOnly(unsigned Opcode) {
+  return Opcode == AMDGPU::SCHED_GROUP_BARRIER || Opcode == AMDGPU::IGLP_OPT;
+}
+
 void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
                                      bool AtTop,
                                      const RegPressureTracker &RPTracker,
@@ -1083,9 +1089,8 @@ bool PreRARematStage::initGCNSchedStage() {
     return false;
 
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  // Check maximum occupancy
-  if (ST.computeOccupancy(MF.getFunction(), MFI.getLDSSize()) ==
-      DAG.MinOccupancy)
+  // Rematerialization will not help if occupancy is not limited by reg usage.
+  if (ST.getOccupancyWithWorkGroupSizes(MF).second == DAG.MinOccupancy)
     return false;
 
   // FIXME: This pass will invalidate cached MBBLiveIns for regions
@@ -1152,8 +1157,7 @@ bool GCNSchedStage::initGCNRegion() {
       StageID == GCNSchedStageID::ILPInitialSchedule) {
     for (auto &I : DAG) {
       Unsched.push_back(&I);
-      if (I.getOpcode() == AMDGPU::SCHED_GROUP_BARRIER ||
-          I.getOpcode() == AMDGPU::IGLP_OPT)
+      if (isIGLPMutationOnly(I.getOpcode()))
         DAG.RegionsWithIGLPInstrs[RegionIdx] = true;
     }
   } else {
@@ -1267,8 +1271,8 @@ void GCNSchedStage::checkScheduling() {
     return;
   }
 
-  unsigned TargetOccupancy =
-      std::min(S.getTargetOccupancy(), ST.getOccupancyWithLocalMemSize(MF));
+  unsigned TargetOccupancy = std::min(
+      S.getTargetOccupancy(), ST.getOccupancyWithWorkGroupSizes(MF).second);
   unsigned WavesAfter =
       std::min(TargetOccupancy, PressureAfter.getOccupancy(ST));
   unsigned WavesBefore =
@@ -1838,14 +1842,22 @@ bool PreRARematStage::sinkTriviallyRematInsts(const GCNSubtarget &ST,
   return true;
 }
 
-// Copied from MachineLICM
 bool PreRARematStage::isTriviallyReMaterializable(const MachineInstr &MI) {
   if (!DAG.TII->isTriviallyReMaterializable(MI))
     return false;
 
-  for (const MachineOperand &MO : MI.all_uses())
+  for (const MachineOperand &MO : MI.all_uses()) {
     if (MO.getReg().isVirtual())
       return false;
+
+    // We can't remat physreg uses, unless it is a constant or an ignorable
+    // use (e.g. implicit exec use on VALU instructions)
+    if (MO.getReg().isPhysical()) {
+      if (DAG.MRI.isConstantPhysReg(MO.getReg()) || DAG.TII->isIgnorableUse(MO))
+        continue;
+      return false;
+    }
+  }
 
   return true;
 }
@@ -1894,8 +1906,7 @@ void GCNScheduleDAGMILive::updateRegionBoundaries(
 
 static bool hasIGLPInstrs(ScheduleDAGInstrs *DAG) {
   return any_of(*DAG, [](MachineBasicBlock::iterator MI) {
-    unsigned Opc = MI->getOpcode();
-    return Opc == AMDGPU::SCHED_GROUP_BARRIER || Opc == AMDGPU::IGLP_OPT;
+    return isIGLPMutationOnly(MI->getOpcode());
   });
 }
 

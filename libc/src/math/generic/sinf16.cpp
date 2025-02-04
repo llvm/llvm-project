@@ -54,13 +54,10 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   //   	        sin(y * pi/32) * cos(k * pi/32)
 
   // Handle exceptional values
-  if (LIBC_UNLIKELY(x_abs == 0x585c || x_abs == 0x5cb0 || x_abs == 0x51f5 ||
-                    x_abs == 0x2b45)) {
-    bool x_sign = x_u >> 15;
-    if (auto r = SINF16_EXCEPTS.lookup_odd(x_abs, x_sign);
-        LIBC_UNLIKELY(r.has_value()))
-      return r.value();
-  }
+  bool x_sign = x_u >> 15;
+  if (auto r = SINF16_EXCEPTS.lookup_odd(x_abs, x_sign);
+      LIBC_UNLIKELY(r.has_value()))
+    return r.value();
 
   int rounding = fputil::quick_get_round();
 
@@ -99,8 +96,8 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   if (LIBC_UNLIKELY(sin_y == 0 && sin_k == 0))
     return FPBits::zero(xbits.sign()).get_val();
 
-  // Since, cosm1_y = cos_y - 1, therfore:
-  //    sin(x) = cos_k * sin_y + sin_k + (cosm1_y * sin_k)
+  // Since, cosm1_y = cos_y - 1, therefore:
+  //   sin(x) = cos_k * sin_y + sin_k + (cosm1_y * sin_k)
   return fputil::cast<float16>(fputil::multiply_add(
       sin_y, cos_k, fputil::multiply_add(cosm1_y, sin_k, sin_k)));
 }

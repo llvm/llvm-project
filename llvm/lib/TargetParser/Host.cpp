@@ -173,7 +173,7 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
   // Read 32 lines from /proc/cpuinfo, which should contain the CPU part line
   // in all cases.
   SmallVector<StringRef, 32> Lines;
-  ProcCpuinfoContent.split(Lines, "\n");
+  ProcCpuinfoContent.split(Lines, '\n');
 
   // Look for the CPU implementer line.
   StringRef Implementer;
@@ -424,8 +424,11 @@ StringRef getCPUNameFromS390Model(unsigned int Id, bool HaveVectorSupport) {
       return HaveVectorSupport? "z15" : "zEC12";
     case 3931:
     case 3932:
-    default:
       return HaveVectorSupport? "z16" : "zEC12";
+    case 9175:
+    case 9176:
+    default:
+      return HaveVectorSupport? "arch15" : "zEC12";
   }
 }
 } // end anonymous namespace
@@ -436,7 +439,7 @@ StringRef sys::detail::getHostCPUNameForS390x(StringRef ProcCpuinfoContent) {
   // The "processor 0:" line comes after a fair amount of other information,
   // including a cache breakdown, but this should be plenty.
   SmallVector<StringRef, 32> Lines;
-  ProcCpuinfoContent.split(Lines, "\n");
+  ProcCpuinfoContent.split(Lines, '\n');
 
   // Look for the CPU features.
   SmallVector<StringRef, 32> CPUFeatures;
@@ -478,7 +481,7 @@ StringRef sys::detail::getHostCPUNameForS390x(StringRef ProcCpuinfoContent) {
 StringRef sys::detail::getHostCPUNameForRISCV(StringRef ProcCpuinfoContent) {
   // There are 24 lines in /proc/cpuinfo
   SmallVector<StringRef> Lines;
-  ProcCpuinfoContent.split(Lines, "\n");
+  ProcCpuinfoContent.split(Lines, '\n');
 
   // Look for uarch line to determine cpu name
   StringRef UArch;
@@ -490,6 +493,7 @@ StringRef sys::detail::getHostCPUNameForRISCV(StringRef ProcCpuinfoContent) {
   }
 
   return StringSwitch<const char *>(UArch)
+      .Case("eswin,eic770x", "sifive-p550")
       .Case("sifive,u74-mc", "sifive-u74")
       .Case("sifive,bullet0", "sifive-u74")
       .Default("");
@@ -1509,6 +1513,18 @@ StringRef sys::getHostCPUName() {
   return getCPUNameFromS390Model(Id, HaveVectorSupport);
 }
 #elif defined(__APPLE__) && (defined(__arm__) || defined(__aarch64__))
+// Copied from <mach/machine.h> in the macOS SDK.
+//
+// Also available here, though usually not as up-to-date:
+// https://github.com/apple-oss-distributions/xnu/blob/xnu-11215.41.3/osfmk/mach/machine.h#L403-L452.
+#define CPUFAMILY_UNKNOWN 0
+#define CPUFAMILY_ARM_9 0xe73283ae
+#define CPUFAMILY_ARM_11 0x8ff620d8
+#define CPUFAMILY_ARM_XSCALE 0x53b005f5
+#define CPUFAMILY_ARM_12 0xbd1b0ae9
+#define CPUFAMILY_ARM_13 0x0cc90e64
+#define CPUFAMILY_ARM_14 0x96077ef1
+#define CPUFAMILY_ARM_15 0xa8511bca
 #define CPUFAMILY_ARM_SWIFT 0x1e2d6381
 #define CPUFAMILY_ARM_CYCLONE 0x37a09642
 #define CPUFAMILY_ARM_TYPHOON 0x2c91a47e
@@ -1520,13 +1536,46 @@ StringRef sys::getHostCPUName() {
 #define CPUFAMILY_ARM_FIRESTORM_ICESTORM 0x1b588bb3
 #define CPUFAMILY_ARM_BLIZZARD_AVALANCHE 0xda33d83d
 #define CPUFAMILY_ARM_EVEREST_SAWTOOTH 0x8765edea
+#define CPUFAMILY_ARM_IBIZA 0xfa33415e
+#define CPUFAMILY_ARM_PALMA 0x72015832
+#define CPUFAMILY_ARM_COLL 0x2876f5b5
+#define CPUFAMILY_ARM_LOBOS 0x5f4dea93
+#define CPUFAMILY_ARM_DONAN 0x6f5129ac
+#define CPUFAMILY_ARM_BRAVA 0x17d5b93a
+#define CPUFAMILY_ARM_TAHITI 0x75d4acb9
+#define CPUFAMILY_ARM_TUPAI 0x204526d0
 
 StringRef sys::getHostCPUName() {
   uint32_t Family;
   size_t Length = sizeof(Family);
   sysctlbyname("hw.cpufamily", &Family, &Length, NULL, 0);
 
+  // This is found by testing on actual hardware, and by looking at:
+  // https://github.com/apple-oss-distributions/xnu/blob/xnu-11215.41.3/osfmk/arm/cpuid.c#L109-L231.
+  //
+  // Another great resource is
+  // https://github.com/AsahiLinux/docs/wiki/Codenames.
+  //
+  // NOTE: We choose to return `apple-mX` instead of `apple-aX`, since the M1,
+  // M2, M3 etc. aliases are more widely known to users than A14, A15, A16 etc.
+  // (and this code is basically only used on host macOS anyways).
   switch (Family) {
+  case CPUFAMILY_UNKNOWN:
+    return "generic";
+  case CPUFAMILY_ARM_9:
+    return "arm920t"; // or arm926ej-s
+  case CPUFAMILY_ARM_11:
+    return "arm1136jf-s";
+  case CPUFAMILY_ARM_XSCALE:
+    return "xscale";
+  case CPUFAMILY_ARM_12: // Seems unused by the kernel
+    return "generic";
+  case CPUFAMILY_ARM_13:
+    return "cortex-a8";
+  case CPUFAMILY_ARM_14:
+    return "cortex-a9";
+  case CPUFAMILY_ARM_15:
+    return "cortex-a7";
   case CPUFAMILY_ARM_SWIFT:
     return "swift";
   case CPUFAMILY_ARM_CYCLONE:
@@ -1543,15 +1592,25 @@ StringRef sys::getHostCPUName() {
     return "apple-a12";
   case CPUFAMILY_ARM_LIGHTNING_THUNDER:
     return "apple-a13";
-  case CPUFAMILY_ARM_FIRESTORM_ICESTORM:
+  case CPUFAMILY_ARM_FIRESTORM_ICESTORM: // A14 / M1
     return "apple-m1";
-  case CPUFAMILY_ARM_BLIZZARD_AVALANCHE:
+  case CPUFAMILY_ARM_BLIZZARD_AVALANCHE: // A15 / M2
     return "apple-m2";
-  case CPUFAMILY_ARM_EVEREST_SAWTOOTH:
+  case CPUFAMILY_ARM_EVEREST_SAWTOOTH: // A16
+  case CPUFAMILY_ARM_IBIZA:            // M3
+  case CPUFAMILY_ARM_PALMA:            // M3 Max
+  case CPUFAMILY_ARM_LOBOS:            // M3 Pro
     return "apple-m3";
+  case CPUFAMILY_ARM_COLL: // A17 Pro
+    return "apple-a17";
+  case CPUFAMILY_ARM_DONAN:  // M4
+  case CPUFAMILY_ARM_BRAVA:  // M4 Max
+  case CPUFAMILY_ARM_TAHITI: // A18 Pro
+  case CPUFAMILY_ARM_TUPAI:  // A18
+    return "apple-m4";
   default:
     // Default to the newest CPU we know about.
-    return "apple-m3";
+    return "apple-m4";
   }
 }
 #elif defined(_AIX)
@@ -1630,7 +1689,7 @@ StringRef sys::getHostCPUName() {
 #if defined(__linux__)
 StringRef sys::detail::getHostCPUNameForSPARC(StringRef ProcCpuinfoContent) {
   SmallVector<StringRef> Lines;
-  ProcCpuinfoContent.split(Lines, "\n");
+  ProcCpuinfoContent.split(Lines, '\n');
 
   // Look for cpu line to determine cpu name
   StringRef Cpu;
@@ -1970,7 +2029,7 @@ const StringMap<bool> sys::getHostCPUFeatures() {
     return Features;
 
   SmallVector<StringRef, 32> Lines;
-  P->getBuffer().split(Lines, "\n");
+  P->getBuffer().split(Lines, '\n');
 
   SmallVector<StringRef, 32> CPUFeatures;
 
@@ -2077,12 +2136,12 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["div32"] = cpucfg2 & (1U << 26);   // CPUCFG.2.DIV32
   Features["lam-bh"] = cpucfg2 & (1U << 27);  // CPUCFG.2.LAM_BH
   Features["lamcas"] = cpucfg2 & (1U << 28);  // CPUCFG.2.LAMCAS
+  Features["scq"] = cpucfg2 & (1U << 30);     // CPUCFG.2.SCQ
 
   Features["ld-seq-sa"] = cpucfg3 & (1U << 23); // CPUCFG.3.LD_SEQ_SA
 
   // TODO: Need to complete.
   // Features["llacq-screl"] = cpucfg2 & (1U << 29); // CPUCFG.2.LLACQ_SCREL
-  // Features["scq"] = cpucfg2 & (1U << 30);         // CPUCFG.2.SCQ
   return Features;
 }
 #elif defined(__linux__) && defined(__riscv)

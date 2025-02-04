@@ -3,7 +3,7 @@
 
 define void @clamped_tc_8(ptr nocapture %dst, i32 %n, i64 %val) vscale_range(1,16) {
 ; CHECK-LABEL: define void @clamped_tc_8(
-; CHECK-SAME: ptr nocapture [[DST:%.*]], i32 [[N:%.*]], i64 [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr captures(none) [[DST:%.*]], i32 [[N:%.*]], i64 [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -13,13 +13,12 @@ define void @clamped_tc_8(ptr nocapture %dst, i32 %n, i64 %val) vscale_range(1,1
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 8, [[TMP4]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[DST]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 8
+; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[DST]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 8)
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x i64> @llvm.stepvector.nxv8i64()
-; CHECK-NEXT:    [[TMP9:%.*]] = add <vscale x 8 x i64> [[TMP8]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = mul <vscale x 8 x i64> [[TMP9]], splat (i64 1)
+; CHECK-NEXT:    [[TMP7:%.*]] = mul <vscale x 8 x i64> [[TMP8]], splat (i64 1)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 8 x i64> zeroinitializer, [[TMP7]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = mul i64 1, [[TMP6]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[TMP12]], i64 0
@@ -83,7 +82,7 @@ for.cond.cleanup:                                 ; preds = %for.body
 
 define void @clamped_tc_max_8(ptr nocapture %dst, i32 %n, i64 %val) vscale_range(1,16) {
 ; CHECK-LABEL: define void @clamped_tc_max_8(
-; CHECK-SAME: ptr nocapture [[DST:%.*]], i32 [[N:%.*]], i64 [[VAL:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr captures(none) [[DST:%.*]], i32 [[N:%.*]], i64 [[VAL:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[REM:%.*]] = and i32 [[N]], 63
 ; CHECK-NEXT:    [[CMP8_NOT:%.*]] = icmp eq i32 [[REM]], 0
@@ -100,13 +99,12 @@ define void @clamped_tc_max_8(ptr nocapture %dst, i32 %n, i64 %val) vscale_range
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[WIDE_TRIP_COUNT]], [[TMP4]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[DST]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 8
+; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[DST]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 [[WIDE_TRIP_COUNT]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x i64> @llvm.stepvector.nxv8i64()
-; CHECK-NEXT:    [[TMP9:%.*]] = add <vscale x 8 x i64> [[TMP8]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = mul <vscale x 8 x i64> [[TMP9]], splat (i64 1)
+; CHECK-NEXT:    [[TMP7:%.*]] = mul <vscale x 8 x i64> [[TMP8]], splat (i64 1)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 8 x i64> zeroinitializer, [[TMP7]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = mul i64 1, [[TMP6]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[TMP12]], i64 0

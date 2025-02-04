@@ -131,7 +131,7 @@ public:
   }
 
   void addVar(StringRef Name, const Init *I) {
-    bool Ins = Vars.insert(std::make_pair(std::string(Name), I)).second;
+    bool Ins = Vars.try_emplace(std::string(Name), I).second;
     (void)Ins;
     assert(Ins && "Local variable already exists");
   }
@@ -296,6 +296,7 @@ private:  // Parser methods.
   void ParseValueList(SmallVectorImpl<const Init *> &Result, Record *CurRec,
                       const RecTy *ItemType = nullptr);
   bool ParseTemplateArgValueList(SmallVectorImpl<const ArgumentInit *> &Result,
+                                 SmallVectorImpl<SMLoc> &ArgLocs,
                                  Record *CurRec, const Record *ArgsRec);
   void ParseDagArgList(
       SmallVectorImpl<std::pair<const Init *, const StringInit *>> &Result,
@@ -321,7 +322,8 @@ private:  // Parser methods.
   bool ApplyLetStack(Record *CurRec);
   bool ApplyLetStack(RecordsEntry &Entry);
   bool CheckTemplateArgValues(SmallVectorImpl<const ArgumentInit *> &Values,
-                              SMLoc Loc, const Record *ArgsRec);
+                              ArrayRef<SMLoc> ValuesLocs,
+                              const Record *ArgsRec);
 };
 
 } // end namespace llvm

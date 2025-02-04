@@ -290,7 +290,8 @@ static unsigned getHashValueImpl(SimpleValue Val) {
       Pred = CmpInst::getInversePredicate(Pred);
       std::swap(A, B);
     }
-    return hash_combine(Inst->getOpcode(), Pred, X, Y, A, B);
+    return hash_combine(Inst->getOpcode(),
+                        static_cast<CmpInst::Predicate>(Pred), X, Y, A, B);
   }
 
   if (CastInst *CI = dyn_cast<CastInst>(Inst))

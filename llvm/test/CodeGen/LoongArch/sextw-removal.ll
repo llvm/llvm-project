@@ -1322,7 +1322,6 @@ define signext i32 @test20(<4 x i32> %v) {
 ; CHECK-LABEL: test20:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 3
-; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    ret
 ;
 ; NORMV-LABEL: test20:
@@ -1358,7 +1357,7 @@ define fastcc ptr @test21(ptr %B, ptr %Op0, ptr %Op1, ptr %P, ptr %M, i1 zeroext
 ; CHECK-NEXT:    .cfi_offset 27, -56
 ; CHECK-NEXT:    .cfi_offset 28, -64
 ; CHECK-NEXT:    .cfi_offset 29, -72
-; CHECK-NEXT:    ld.d $s6, $sp, 80
+; CHECK-NEXT:    ld.w $s6, $sp, 80
 ; CHECK-NEXT:    move $s2, $a7
 ; CHECK-NEXT:    move $s4, $a5
 ; CHECK-NEXT:    move $s0, $a4
@@ -1379,8 +1378,7 @@ define fastcc ptr @test21(ptr %B, ptr %Op0, ptr %Op1, ptr %P, ptr %M, i1 zeroext
 ; CHECK-NEXT:  .LBB24_3: # %for.cond32.preheader.preheader
 ; CHECK-NEXT:    ld.d $a0, $sp, 96
 ; CHECK-NEXT:    ld.d $a1, $sp, 88
-; CHECK-NEXT:    addi.w $a2, $s6, 0
-; CHECK-NEXT:    sltui $a2, $a2, 1
+; CHECK-NEXT:    sltui $a2, $s6, 1
 ; CHECK-NEXT:    masknez $a0, $a0, $a2
 ; CHECK-NEXT:    vreplgr2vr.w $vr0, $s6
 ; CHECK-NEXT:    andi $a1, $a1, 1
@@ -1452,7 +1450,7 @@ define fastcc ptr @test21(ptr %B, ptr %Op0, ptr %Op1, ptr %P, ptr %M, i1 zeroext
 ; NORMV-NEXT:    beqz $s4, .LBB24_2
 ; NORMV-NEXT:  # %bb.1: # %if.then26
 ; NORMV-NEXT:    addi.d $a0, $s6, 1
-; NORMV-NEXT:    addi.w $s6, $a0, 0
+; NORMV-NEXT:    addi.d $s6, $a0, 0
 ; NORMV-NEXT:    beqz $s4, .LBB24_3
 ; NORMV-NEXT:    b .LBB24_6
 ; NORMV-NEXT:  .LBB24_2:

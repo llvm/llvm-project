@@ -83,7 +83,7 @@ add_header_library(
     .string_view
     libc.hdr.func.free
     libc.hdr.func.malloc
-    libc.hdr.func.realloc 
+    libc.hdr.func.realloc
     libc.src.__support.common
     libc.src.__support.integer_to_string
     libc.src.string.memory_utils.inline_memcpy
@@ -203,7 +203,7 @@ add_object_library(
   DEPENDS
     libc.hdr.func.free
     libc.hdr.func.malloc
-    libc.hdr.func.aligned_alloc 
+    libc.hdr.func.aligned_alloc
     libc.src.__support.common
     libc.src.__support.macros.properties.os
 )

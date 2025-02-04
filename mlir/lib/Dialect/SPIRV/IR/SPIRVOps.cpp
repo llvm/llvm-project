@@ -917,7 +917,7 @@ ParseResult spirv::FuncOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // Parse the function signature.
   bool isVariadic = false;
-  if (function_interface_impl::parseFunctionSignature(
+  if (function_interface_impl::parseFunctionSignatureWithArguments(
           parser, /*allowVariadic=*/false, entryArgs, isVariadic, resultTypes,
           resultAttrs))
     return failure();
@@ -940,7 +940,7 @@ ParseResult spirv::FuncOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // Add the attributes to the function arguments.
   assert(resultAttrs.size() == resultTypes.size());
-  function_interface_impl::addArgAndResultAttrs(
+  call_interface_impl::addArgAndResultAttrs(
       builder, result, entryArgs, resultAttrs, getArgAttrsAttrName(result.name),
       getResAttrsAttrName(result.name));
 
@@ -1694,6 +1694,55 @@ LogicalResult spirv::TransposeOp::verify() {
   if (inputMatrix.getElementType() != resultMatrix.getElementType())
     return emitError("input and output matrices must have the same "
                      "component type");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.MatrixTimesVector
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::MatrixTimesVectorOp::verify() {
+  auto matrixType = llvm::cast<spirv::MatrixType>(getMatrix().getType());
+  auto vectorType = llvm::cast<VectorType>(getVector().getType());
+  auto resultType = llvm::cast<VectorType>(getType());
+
+  if (matrixType.getNumColumns() != vectorType.getNumElements())
+    return emitOpError("matrix columns (")
+           << matrixType.getNumColumns() << ") must match vector operand size ("
+           << vectorType.getNumElements() << ")";
+
+  if (resultType.getNumElements() != matrixType.getNumRows())
+    return emitOpError("result size (")
+           << resultType.getNumElements() << ") must match the matrix rows ("
+           << matrixType.getNumRows() << ")";
+
+  if (matrixType.getElementType() != resultType.getElementType())
+    return emitOpError("matrix and result element types must match");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.VectorTimesMatrix
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::VectorTimesMatrixOp::verify() {
+  auto vectorType = llvm::cast<VectorType>(getVector().getType());
+  auto matrixType = llvm::cast<spirv::MatrixType>(getMatrix().getType());
+  auto resultType = llvm::cast<VectorType>(getType());
+
+  if (matrixType.getNumRows() != vectorType.getNumElements())
+    return emitOpError("number of components in vector must equal the number "
+                       "of components in each column in matrix");
+
+  if (resultType.getNumElements() != matrixType.getNumColumns())
+    return emitOpError("number of columns in matrix must equal the number of "
+                       "components in result");
+
+  if (matrixType.getElementType() != resultType.getElementType())
+    return emitOpError("matrix must be a matrix with the same component type "
+                       "as the component type in result");
 
   return success();
 }

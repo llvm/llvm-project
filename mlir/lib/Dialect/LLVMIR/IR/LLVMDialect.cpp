@@ -716,7 +716,7 @@ static void destructureIndices(Type currType, ArrayRef<GEPArg> indices,
         dynamicIndices.push_back(val);
       }
     } else {
-      rawConstantIndices.push_back(iter.get<GEPConstantIndex>());
+      rawConstantIndices.push_back(cast<GEPConstantIndex>(iter));
     }
 
     // Skip for very first iteration of this loop. First index does not index
@@ -805,7 +805,7 @@ static void printGEPIndices(OpAsmPrinter &printer, LLVM::GEPOp gepOp,
         if (Value val = llvm::dyn_cast_if_present<Value>(cst))
           printer.printOperand(val);
         else
-          printer << cst.get<IntegerAttr>().getInt();
+          printer << cast<IntegerAttr>(cst).getInt();
       });
 }
 
@@ -821,11 +821,12 @@ verifyStructIndices(Type baseGEPType, unsigned indexPos,
 
   return TypeSwitch<Type, LogicalResult>(baseGEPType)
       .Case<LLVMStructType>([&](LLVMStructType structType) -> LogicalResult {
-        if (!indices[indexPos].is<IntegerAttr>())
+        auto attr = dyn_cast<IntegerAttr>(indices[indexPos]);
+        if (!attr)
           return emitOpError() << "expected index " << indexPos
                                << " indexing a struct to be constant";
 
-        int32_t gepIndex = indices[indexPos].get<IntegerAttr>().getInt();
+        int32_t gepIndex = attr.getInt();
         ArrayRef<Type> elementTypes = structType.getBody();
         if (gepIndex < 0 ||
             static_cast<size_t>(gepIndex) >= elementTypes.size())
@@ -1032,6 +1033,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
         /*memory_effects=*/nullptr,
         /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
+        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -1059,6 +1061,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*convergent=*/nullptr,
         /*no_unwind=*/nullptr, /*will_return=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
+        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -1072,6 +1075,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*CConv=*/nullptr, /*TailCallKind=*/nullptr, /*memory_effects=*/nullptr,
         /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
+        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
@@ -1086,6 +1090,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
         /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
+        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
 
@@ -1100,11 +1105,11 @@ CallInterfaceCallable CallOp::getCallableForCallee() {
 void CallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
   // Direct call.
   if (FlatSymbolRefAttr calleeAttr = getCalleeAttr()) {
-    auto symRef = callee.get<SymbolRefAttr>();
+    auto symRef = cast<SymbolRefAttr>(callee);
     return setCalleeAttr(cast<FlatSymbolRefAttr>(symRef));
   }
   // Indirect call, callee Value is the first operand.
-  return setOperand(0, callee.get<Value>());
+  return setOperand(0, cast<Value>(callee));
 }
 
 Operation::operand_range CallOp::getArgOperands() {
@@ -1526,7 +1531,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
   auto calleeType = func.getFunctionType();
   build(builder, state, getCallOpResultTypes(calleeType),
         getCallOpVarCalleeType(calleeType), SymbolRefAttr::get(func), ops,
-        normalOps, unwindOps, nullptr, nullptr, {}, {}, normal, unwind);
+        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, normalOps, unwindOps,
+        nullptr, nullptr, {}, {}, normal, unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
@@ -1534,8 +1540,9 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
                      ValueRange normalOps, Block *unwind,
                      ValueRange unwindOps) {
   build(builder, state, tys,
-        /*var_callee_type=*/nullptr, callee, ops, normalOps, unwindOps, nullptr,
-        nullptr, {}, {}, normal, unwind);
+        /*var_callee_type=*/nullptr, callee, ops, /*arg_attrs=*/nullptr,
+        /*res_attrs=*/nullptr, normalOps, unwindOps, nullptr, nullptr, {}, {},
+        normal, unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state,
@@ -1543,7 +1550,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state,
                      ValueRange ops, Block *normal, ValueRange normalOps,
                      Block *unwind, ValueRange unwindOps) {
   build(builder, state, getCallOpResultTypes(calleeType),
-        getCallOpVarCalleeType(calleeType), callee, ops, normalOps, unwindOps,
+        getCallOpVarCalleeType(calleeType), callee, ops,
+        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, normalOps, unwindOps,
         nullptr, nullptr, {}, {}, normal, unwind);
 }
 
@@ -1564,11 +1572,11 @@ CallInterfaceCallable InvokeOp::getCallableForCallee() {
 void InvokeOp::setCalleeFromCallable(CallInterfaceCallable callee) {
   // Direct call.
   if (FlatSymbolRefAttr calleeAttr = getCalleeAttr()) {
-    auto symRef = callee.get<SymbolRefAttr>();
+    auto symRef = cast<SymbolRefAttr>(callee);
     return setCalleeAttr(cast<FlatSymbolRefAttr>(symRef));
   }
   // Indirect call, callee Value is the first operand.
-  return setOperand(0, callee.get<Value>());
+  return setOperand(0, cast<Value>(callee));
 }
 
 Operation::operand_range InvokeOp::getArgOperands() {
@@ -2509,7 +2517,7 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
 
   assert(llvm::cast<LLVMFunctionType>(type).getNumParams() == argAttrs.size() &&
          "expected as many argument attribute lists as arguments");
-  function_interface_impl::addArgAndResultAttrs(
+  call_interface_impl::addArgAndResultAttrs(
       builder, result, argAttrs, /*resultAttrs=*/std::nullopt,
       getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
 }
@@ -2594,7 +2602,7 @@ ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
   auto signatureLocation = parser.getCurrentLocation();
   if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
                              result.attributes) ||
-      function_interface_impl::parseFunctionSignature(
+      function_interface_impl::parseFunctionSignatureWithArguments(
           parser, /*allowVariadic=*/true, entryArgs, isVariadic, resultTypes,
           resultAttrs))
     return failure();
@@ -2635,7 +2643,7 @@ ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
 
   if (failed(parser.parseOptionalAttrDictWithKeyword(result.attributes)))
     return failure();
-  function_interface_impl::addArgAndResultAttrs(
+  call_interface_impl::addArgAndResultAttrs(
       parser.getBuilder(), result, entryArgs, resultAttrs,
       getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
 
@@ -3259,7 +3267,7 @@ OpFoldResult LLVM::GEPOp::fold(FoldAdaptor adaptor) {
       if (Value val = llvm::dyn_cast_if_present<Value>(existing))
         gepArgs.emplace_back(val);
       else
-        gepArgs.emplace_back(existing.get<IntegerAttr>().getInt());
+        gepArgs.emplace_back(cast<IntegerAttr>(existing).getInt());
 
       continue;
     }

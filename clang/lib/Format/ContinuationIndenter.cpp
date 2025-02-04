@@ -148,6 +148,7 @@ static bool startsNextOperand(const FormatToken &Current) {
 static bool mustBreakBinaryOperation(const FormatToken &Current,
                                      const FormatStyle &Style) {
   return Style.BreakBinaryOperations != FormatStyle::BBO_Never &&
+         Current.CanBreakBefore &&
          (Style.BreakBeforeBinaryOperators == FormatStyle::BOS_None
               ? startsNextOperand
               : isAlignableBinaryOperator)(Current);
@@ -348,6 +349,13 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
     }
   }
 
+  // Allow breaking before the right parens with block indentation if there was
+  // a break after the left parens, which is tracked by BreakBeforeClosingParen.
+  if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent &&
+      Current.is(tok::r_paren)) {
+    return CurrentState.BreakBeforeClosingParen;
+  }
+
   // Don't allow breaking before a closing brace of a block-indented braced list
   // initializer if there isn't already a break.
   if (Current.is(tok::r_brace) && Current.MatchingParen &&
@@ -461,9 +469,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
            getColumnLimit(State) ||
        CurrentState.BreakBeforeParameter) &&
       (!Current.isTrailingComment() || Current.NewlinesBefore > 0) &&
-      (Style.AllowShortFunctionsOnASingleLine != FormatStyle::SFS_All ||
-       Style.BreakConstructorInitializers != FormatStyle::BCIS_BeforeColon ||
-       Style.ColumnLimit != 0)) {
+      (Style.BreakConstructorInitializers != FormatStyle::BCIS_BeforeColon ||
+       Style.ColumnLimit > 0 || Current.NewlinesBefore > 0)) {
     return true;
   }
 
@@ -826,8 +833,10 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     for (const auto *Prev = &Tok; Prev; Prev = Prev->Previous) {
       if (Prev->is(TT_TemplateString) && Prev->opensScope())
         return true;
-      if (Prev->is(TT_TemplateString) && Prev->closesScope())
+      if (Prev->opensScope() ||
+          (Prev->is(TT_TemplateString) && Prev->closesScope())) {
         break;
+      }
     }
     return false;
   };

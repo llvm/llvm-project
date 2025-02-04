@@ -1522,8 +1522,8 @@ static bool LookupAddressInModule(CommandInterpreter &interpreter, Stream &strm,
     Address so_addr;
     SymbolContext sc;
     Target *target = interpreter.GetExecutionContext().GetTargetPtr();
-    if (target && !target->GetSectionLoadList().IsEmpty()) {
-      if (!target->GetSectionLoadList().ResolveLoadAddress(addr, so_addr))
+    if (target && target->HasLoadedSections()) {
+      if (!target->ResolveLoadAddress(addr, so_addr))
         return false;
       else if (so_addr.GetModule().get() != module)
         return false;
@@ -2974,8 +2974,8 @@ protected:
                               sect_name);
                           break;
                         } else {
-                          if (target.GetSectionLoadList().SetSectionLoadAddress(
-                                  section_sp, load_addr))
+                          if (target.SetSectionLoadAddress(section_sp,
+                                                           load_addr))
                             changed = true;
                           result.AppendMessageWithFormat(
                               "section '%s' loaded at 0x%" PRIx64 "\n",
@@ -3329,7 +3329,7 @@ protected:
           if (objfile) {
             Address base_addr(objfile->GetBaseAddress());
             if (base_addr.IsValid()) {
-              if (!target.GetSectionLoadList().IsEmpty()) {
+              if (target.HasLoadedSections()) {
                 lldb::addr_t load_addr = base_addr.GetLoadAddress(&target);
                 if (load_addr == LLDB_INVALID_ADDRESS) {
                   base_addr.Dump(&strm, &target,
@@ -3544,8 +3544,7 @@ protected:
                                         function_options, sc_list);
     } else if (m_options.m_type == eLookupTypeAddress && target) {
       Address addr;
-      if (target->GetSectionLoadList().ResolveLoadAddress(m_options.m_addr,
-                                                          addr)) {
+      if (target->ResolveLoadAddress(m_options.m_addr, addr)) {
         SymbolContext sc;
         ModuleSP module_sp(addr.GetModule());
         module_sp->ResolveSymbolContextForAddress(addr,
@@ -5270,7 +5269,7 @@ public:
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target = GetTarget();
-    target.GetSectionLoadList().Dump(result.GetOutputStream(), &target);
+    target.DumpSectionLoadList(result.GetOutputStream());
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 };

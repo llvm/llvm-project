@@ -171,6 +171,7 @@ static Expected<COFF::MachineTypes> getCOFFFileMachine(MemoryBufferRef MB) {
   uint16_t Machine = (*Obj)->getMachine();
   if (Machine != COFF::IMAGE_FILE_MACHINE_I386 &&
       Machine != COFF::IMAGE_FILE_MACHINE_AMD64 &&
+      Machine != COFF::IMAGE_FILE_MACHINE_R4000 &&
       Machine != COFF::IMAGE_FILE_MACHINE_ARMNT && !COFF::isAnyArm64(Machine)) {
     return createStringError(inconvertibleErrorCode(),
                              "unknown machine: " + std::to_string(Machine));
@@ -195,6 +196,8 @@ static Expected<COFF::MachineTypes> getBitcodeFileMachine(MemoryBufferRef MB) {
   case Triple::aarch64:
     return T.isWindowsArm64EC() ? COFF::IMAGE_FILE_MACHINE_ARM64EC
                                 : COFF::IMAGE_FILE_MACHINE_ARM64;
+  case Triple::mipsel:
+    return COFF::IMAGE_FILE_MACHINE_R4000;
   default:
     return createStringError(inconvertibleErrorCode(),
                              "unknown arch in target triple: " + *TripleStr);
@@ -500,24 +503,29 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
       return 1;
     }
   }
-  // llvm-lib uses relative paths for both regular and thin archives, unlike
-  // standard GNU ar, which only uses relative paths for thin archives and
-  // basenames for regular archives.
-  for (NewArchiveMember &Member : Members) {
-    if (sys::path::is_relative(Member.MemberName)) {
-      Expected<std::string> PathOrErr =
-          computeArchiveRelativePath(OutputPath, Member.MemberName);
-      if (PathOrErr)
-        Member.MemberName = Saver.save(*PathOrErr);
+
+  bool Thin = Args.hasArg(OPT_llvmlibthin);
+  if (Thin) {
+    for (NewArchiveMember &Member : Members) {
+      if (sys::path::is_relative(Member.MemberName)) {
+        Expected<std::string> PathOrErr =
+            computeArchiveRelativePath(OutputPath, Member.MemberName);
+        if (PathOrErr)
+          Member.MemberName = Saver.save(*PathOrErr);
+      }
     }
   }
 
   // For compatibility with MSVC, reverse member vector after de-duplication.
   std::reverse(Members.begin(), Members.end());
 
-  bool Thin = Args.hasArg(OPT_llvmlibthin);
+  auto Symtab = Args.hasFlag(OPT_llvmlibindex, OPT_llvmlibindex_no,
+                             /*default=*/true)
+                    ? SymtabWritingMode::NormalSymtab
+                    : SymtabWritingMode::NoSymtab;
+
   if (Error E = writeArchive(
-          OutputPath, Members, SymtabWritingMode::NormalSymtab,
+          OutputPath, Members, Symtab,
           Thin ? object::Archive::K_GNU : object::Archive::K_COFF,
           /*Deterministic=*/true, Thin, nullptr, COFF::isArm64EC(LibMachine))) {
     handleAllErrors(std::move(E), [&](const ErrorInfoBase &EI) {
