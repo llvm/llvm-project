@@ -684,6 +684,7 @@ cc_library(
     srcs = glob(["lib/Conversion/ConvertToSPIRV/*.cpp"]),
     deps = [
         "//mlir:ArithDialect",
+        "//mlir:UBDialect",
         "//mlir:FuncDialect",
         "//mlir:Pass",
         "//mlir:SPIRVConversion",
