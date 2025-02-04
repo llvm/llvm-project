@@ -89,7 +89,7 @@ public:
 
   virtual std::unique_ptr<RegAllocPriorityAdvisor>
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
-             SlotIndexes *SI) = 0;
+             SlotIndexes &SI) = 0;
 
   AdvisorMode getAdvisorMode() const { return Mode; }
 

@@ -128,7 +128,7 @@ public:
       : RegAllocPriorityAdvisorProvider(AdvisorMode::Release) {}
   std::unique_ptr<RegAllocPriorityAdvisor>
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
-             SlotIndexes *SI) override {
+             SlotIndexes &SI) override {
     if (!Runner) {
       if (InteractiveChannelBaseName.empty())
         Runner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
@@ -139,8 +139,7 @@ public:
             InteractiveChannelBaseName + ".out",
             InteractiveChannelBaseName + ".in");
     }
-    assert(SI && "SlotIndexes result must be set");
-    return std::make_unique<MLPriorityAdvisor>(MF, RA, SI, Runner.get());
+    return std::make_unique<MLPriorityAdvisor>(MF, RA, &SI, Runner.get());
   }
 
 private:
@@ -259,15 +258,14 @@ public:
 
   std::unique_ptr<RegAllocPriorityAdvisor>
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
-             SlotIndexes *SI) override {
+             SlotIndexes &SI) override {
     if (!Runner)
       return nullptr;
     if (Log) {
       Log->switchContext(MF.getName());
     }
-    assert(SI && "SlotIndexes result must be set");
     return std::make_unique<DevelopmentModePriorityAdvisor>(
-        MF, RA, SI, Runner.get(), Log.get());
+        MF, RA, &SI, Runner.get(), Log.get());
   }
 
   std::unique_ptr<MLModelRunner> Runner;

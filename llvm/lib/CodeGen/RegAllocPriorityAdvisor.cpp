@@ -58,9 +58,8 @@ public:
 
   std::unique_ptr<RegAllocPriorityAdvisor>
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
-             SlotIndexes *SI) override {
-    assert(SI && "SlotIndexes result must be set");
-    return std::make_unique<DefaultPriorityAdvisor>(MF, RA, SI);
+             SlotIndexes &SI) override {
+    return std::make_unique<DefaultPriorityAdvisor>(MF, RA, &SI);
   }
 };
 
@@ -76,9 +75,8 @@ public:
 
   std::unique_ptr<RegAllocPriorityAdvisor>
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
-             SlotIndexes *SI) override {
-    assert(SI && "SlotIndexes result must be set");
-    return std::make_unique<DummyPriorityAdvisor>(MF, RA, SI);
+             SlotIndexes &SI) override {
+    return std::make_unique<DummyPriorityAdvisor>(MF, RA, &SI);
   }
 };
 
