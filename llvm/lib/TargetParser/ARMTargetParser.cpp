@@ -403,13 +403,12 @@ static ARM::FPUKind findSinglePrecisionFPU(ARM::FPUKind InputFPUKind) {
   if (!ARM::isDoublePrecision(InputFPU.Restriction))
     return InputFPUKind;
 
-  // Otherwise, look for an FPU entry with all the same fields, except
-  // that it does not support double precision.
+  // Otherwise, look for an FPU entry that has the same FPUVer
+  // and is not Double Precision. We want to allow for changing of
+  // NEON Support and Restrictions so CPU's such as Cortex-R52 can
+  // select between SP Only and Full DP modes.
   for (const ARM::FPUName &CandidateFPU : ARM::FPUNames) {
     if (CandidateFPU.FPUVer == InputFPU.FPUVer &&
-        CandidateFPU.NeonSupport == InputFPU.NeonSupport &&
-        ARM::has32Regs(CandidateFPU.Restriction) ==
-            ARM::has32Regs(InputFPU.Restriction) &&
         !ARM::isDoublePrecision(CandidateFPU.Restriction)) {
       return CandidateFPU.ID;
     }
