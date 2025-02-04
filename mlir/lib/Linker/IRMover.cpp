@@ -75,8 +75,8 @@ class MLIRLinker {
 
     auto SrcSym = *SrcSymOpt;
 
-    if (auto srcGVL = dyn_cast<GlobalValueLinkageOpInterface>(srcOp)) {
-      if (srcGVL.hasLocalLinkage())
+    if (auto sgv = dyn_cast<GlobalValueLinkageOpInterface>(srcOp)) {
+      if (sgv.hasLocalLinkage())
         return nullptr;
     }
 
@@ -89,12 +89,12 @@ class MLIRLinker {
       return nullptr;
 
     // If the dst-operation has local linkage, it shouldn't be linked
-    if (auto dstGVL = dyn_cast<GlobalValueLinkageOpInterface>(DstOp)) {
-      if (dstGVL.hasLocalLinkage())
+    if (auto dgv = dyn_cast<GlobalValueLinkageOpInterface>(DstOp)) {
+      if (dgv.hasLocalLinkage())
         return nullptr;
 
       // TODO: Do a check on instrinsic function mismatch?
-      return dstGVL;
+      return dgv;
     }
 
     return nullptr;
@@ -113,21 +113,21 @@ public:
 };
 
 bool MLIRLinker::shouldLink(Operation *dst, Operation *src) {
-  auto srcGVL = dyn_cast<GlobalValueLinkageOpInterface>(src);
-  if (!srcGVL)
+  auto sgv = dyn_cast<GlobalValueLinkageOpInterface>(src);
+  if (!sgv)
     return false;
 
-  if (valuesToLink.count(src) || srcGVL.hasLocalLinkage()) {
+  if (valuesToLink.count(src) || sgv.hasLocalLinkage()) {
     return true;
   }
 
   if (dst) {
-    if (auto dstGVL = dyn_cast<GlobalValueLinkageOpInterface>(dst))
-      if (!dstGVL.isDeclarationForLinkage())
+    if (auto dgv = dyn_cast<GlobalValueLinkageOpInterface>(dst))
+      if (!dgv.isDeclarationForLinkage())
         return false;
   }
 
-  if (srcGVL.isDeclarationForLinkage()) // TODO: DoneLinkingBodies??
+  if (sgv.isDeclarationForLinkage()) // TODO: DoneLinkingBodies??
     return false;
 
   // Callback to the client to give a chance to lazily add the Global to the
@@ -265,8 +265,8 @@ Error MLIRLinker::linkFunctionBody(Operation *dst,
                                    FunctionLinkageOpInterface src) {
 
   // TODO: Not exactly like this
-  if (auto dstGVL = dyn_cast<GlobalValueLinkageOpInterface>(dst))
-    assert(dstGVL.isDeclarationForLinkage());
+  if (auto dgv = dyn_cast<GlobalValueLinkageOpInterface>(dst))
+    assert(dgv.isDeclarationForLinkage());
 
   assert(!src.isDeclarationForLinkage());
 

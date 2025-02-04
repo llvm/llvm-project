@@ -354,9 +354,9 @@ LogicalResult ModuleLinker::run() {
   });
 
   std::vector<Operation *> gvToClone;
-  bool nothingToLink = false;
+  bool nothingToLink = true;
   src->walk([&](GlobalValueLinkageOpInterface gv) {
-    nothingToLink |= linkIfNeeded(gv, gvToClone);
+    nothingToLink &= linkIfNeeded(gv, gvToClone);
     return WalkResult::skip();
   });
 
