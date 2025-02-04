@@ -133,14 +133,14 @@ std::string timeScopeName(const Decl *DeclWithIssue) {
 llvm::TimeTraceMetadata getDeclTimeTraceMetadata(const Decl *DeclWithIssue) {
   assert(DeclWithIssue);
   assert(llvm::timeTraceProfilerEnabled());
-  std::string name = "<noname>";
+  std::string Name = "<noname>";
   if (auto ND = dyn_cast<NamedDecl>(DeclWithIssue)) {
-    name = ND->getNameAsString();
+    Name = ND->getNameAsString();
   }
   const auto &SM = DeclWithIssue->getASTContext().getSourceManager();
-  auto line = SM.getPresumedLineNumber(DeclWithIssue->getBeginLoc());
-  auto fname = SM.getFilename(DeclWithIssue->getBeginLoc());
-  return llvm::TimeTraceMetadata{name, fname.str(), static_cast<int>(line)};
+  auto Line = SM.getPresumedLineNumber(DeclWithIssue->getBeginLoc());
+  auto Fname = SM.getFilename(DeclWithIssue->getBeginLoc());
+  return llvm::TimeTraceMetadata{Name, Fname.str(), static_cast<int>(Line)};
 }
 
 } // end anonymous namespace

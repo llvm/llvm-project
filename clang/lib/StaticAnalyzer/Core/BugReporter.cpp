@@ -291,10 +291,10 @@ private:
 std::string timeTraceName(const BugReportEquivClass &EQ) {
   if (!llvm::timeTraceProfilerEnabled())
     return "";
-  const auto &bugReports = EQ.getReports();
-  if (bugReports.empty())
+  const auto &BugReports = EQ.getReports();
+  if (BugReports.empty())
     return "Empty Equivalence Class";
-  const BugReport *R = bugReports.front().get();
+  const BugReport *R = BugReports.front().get();
   const auto &BT = R->getBugType();
   return ("Flushing EQC " + BT.getDescription()).str();
 }
@@ -303,10 +303,10 @@ llvm::TimeTraceMetadata timeTraceMetadata(const BugReportEquivClass &EQ) {
   // Must be called only when constructing non-bogus TimeTraceScope
   assert(llvm::timeTraceProfilerEnabled());
 
-  const auto &bugReports = EQ.getReports();
-  if (bugReports.empty())
+  const auto &BugReports = EQ.getReports();
+  if (BugReports.empty())
     return {};
-  const BugReport *R = bugReports.front().get();
+  const BugReport *R = BugReports.front().get();
   const auto &BT = R->getBugType();
   auto Loc = R->getLocation().asLocation();
   std::string File = "";

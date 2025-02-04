@@ -135,12 +135,12 @@ static void expandGraphWithCheckers(CHECK_CTX checkCtx,
 
 namespace {
 
-std::string checkerScopeName(StringRef name, const CheckerBase *checker) {
+std::string checkerScopeName(StringRef Name, const CheckerBase *Checker) {
   if (!llvm::timeTraceProfilerEnabled())
     return "";
-  std::string checkerName =
-      checker ? checker->getCheckerName().getName().str() : "<unknown>";
-  return (name + ":" + checkerName).str();
+  StringRef CheckerName =
+      Checker ? Checker->getCheckerName().getName() : "<unknown>";
+  return (Name + ":" + CheckerName).str();
 }
 
   struct CheckStmtContext {
