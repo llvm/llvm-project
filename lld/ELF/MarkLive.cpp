@@ -245,37 +245,35 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset,
 
 template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
   if (!whyLive.contains(s))
-   return;
+    return;
 
   auto msg = Msg(ctx);
 
   msg << "live symbol: " << toStr(ctx, *s);
 
-  std::optional<LiveObject> cur = s;
+  LiveObject cur = s;
   while (true) {
-    auto it = whyLive.find(*cur);
+    auto it = whyLive.find(cur);
     if (it != whyLive.end()) {
       // If there is a specific reason this object is live, report it.
       if (!it->second)
         break;
       cur = *it->second;
     } else {
-      // This object is live merely by being a member of its parent section, so
-      // report the parent.
-      InputSectionBase *parent = nullptr;
-      if (auto *d = dyn_cast<Defined>(s))
-        parent = dyn_cast<InputSectionBase>(d->section);
-      assert(parent &&
-             "all live objects should have a tracked reason for being live");
+      // This object made something else live, but it has no direct reason to be
+      // live. That means it a symbol made alive merely by being a member of its
+      // parent section, so report that section.
+      auto *d = cast<Defined>(std::get<Symbol *>(cur));
+      auto *parent = cast<InputSectionBase>(d->section);
       cur = LiveObject{parent};
     }
 
     msg << "\n>>> kept alive by ";
-    if (std::holds_alternative<Symbol *>(*cur)) {
-      auto *s = std::get<Symbol *>(*cur);
+    if (std::holds_alternative<Symbol *>(cur)) {
+      auto *s = std::get<Symbol *>(cur);
       msg << toStr(ctx, *s);
     } else {
-      auto *s = std::get<InputSectionBase *>(*cur);
+      auto *s = std::get<InputSectionBase *>(cur);
       msg << toStr(ctx, s);
     }
   }
