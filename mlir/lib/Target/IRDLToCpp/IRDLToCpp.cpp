@@ -115,12 +115,6 @@ static OpStrings getStrings(irdl::OperationOp op) {
 
   auto resultsOp = *block.getOps<irdl::ResultsOp>().begin();
 
-  constexpr auto getNames = [](auto op) {
-    auto names = llvm::map_range(
-        op.getNames(), [](auto &attr) { return mlir::cast<StringAttr>(attr); });
-    return names;
-  };
-
   OpStrings strings;
   strings.opName = op.getSymName();
   strings.opCppName = llvm::formatv("{0}Op", capitalize(strings.opName));
@@ -411,9 +405,8 @@ void {0}::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState,
                                            }),
                            "\n"));
             return llvm::formatv(
-                perOpDefTemplateText, opStrings.opName, opStrings.opCppName,
-                dialectStrings.dialectName, operandCount, operandNames,
-                resultCount, resultNames, buildDefinition,
+                perOpDefTemplateText, opStrings.opCppName, operandCount, 
+                resultCount, buildDefinition,
                 dialectStrings.namespaceOpen, dialectStrings.namespaceClose,
                 dialectStrings.namespacePath);
           }),
