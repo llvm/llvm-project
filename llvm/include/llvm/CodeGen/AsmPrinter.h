@@ -132,6 +132,9 @@ public:
   /// default, this is equal to CurrentFnSym.
   MCSymbol *CurrentFnSymForSize = nullptr;
 
+  MCSymbol *FMapEnd = nullptr;
+  MCSymbol *FMapStart = nullptr;
+
   /// Map a basic block section ID to the begin and end symbols of that section
   ///  which determine the section's range.
   struct MBBSectionRange {
@@ -413,6 +416,12 @@ public:
   void emitStackUsage(const MachineFunction &MF);
 
   void emitBBAddrMapSection(const MachineFunction &MF);
+
+  void emitFuncMapStart();
+  
+  void emitFuncMapEnd();
+
+  void emitFuncMapSection(const MachineFunction &MF);
 
   void emitKCFITrapEntry(const MachineFunction &MF, const MCSymbol *Symbol);
   virtual void emitKCFITypeId(const MachineFunction &MF);

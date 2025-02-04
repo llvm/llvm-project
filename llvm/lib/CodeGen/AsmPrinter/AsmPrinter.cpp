@@ -147,6 +147,7 @@ enum class PGOMapFeaturesEnum {
   BrProb,
   All,
 };
+
 static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
     "pgo-analysis-map", cl::Hidden, cl::CommaSeparated,
     cl::values(
@@ -160,6 +161,13 @@ static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
     cl::desc(
         "Enable extended information within the SHT_LLVM_BB_ADDR_MAP that is "
         "extracted from PGO related analysis."));
+
+static cl::opt<bool> EmitFuncMap(
+    "func-map",
+    cl::desc(
+        "Emit features of function address map in SHT_LLVM_FUNC_MAP "
+        "section(Currently only support dynamic instruction count feature)."),
+    cl::Hidden, cl::init(false));
 
 static cl::opt<bool> BBAddrMapSkipEmitBBEntries(
     "basic-block-address-map-skip-bb-entries",
@@ -456,6 +464,36 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
 }
 
+void AsmPrinter::emitFuncMapStart() {
+  MCSection *TextSection =
+      OutStreamer->getContext().getObjectFileInfo()->getTextSection();
+  MCSection *FuncMapSection =
+      getObjFileLowering().getFuncMapSection(*TextSection);
+  assert(FuncMapSection && ".llvm_func_map section is not initialized.");
+  OutStreamer->pushSection();
+  OutStreamer->switchSection(FuncMapSection);
+  FMapStart = OutStreamer->getContext().createTempSymbol("func_map_start");
+  FMapEnd = OutStreamer->getContext().createTempSymbol("func_map_end");
+  OutStreamer->emitAbsoluteSymbolDiff(FMapEnd, FMapStart, 4);
+  OutStreamer->emitLabel(FMapStart);
+  OutStreamer->AddComment("version");
+  uint8_t FuncMapVersion = OutStreamer->getContext().getFuncMapVersion();
+  OutStreamer->emitInt8(FuncMapVersion);
+  OutStreamer->popSection();
+}
+
+void AsmPrinter::emitFuncMapEnd() {
+  MCSection *TextSection =
+      OutStreamer->getContext().getObjectFileInfo()->getTextSection();
+  MCSection *FuncMapSection =
+      getObjFileLowering().getFuncMapSection(*TextSection);
+  assert(FuncMapSection && ".llvm_func_map section is not initialized.");
+  OutStreamer->pushSection();
+  OutStreamer->switchSection(FuncMapSection);
+  OutStreamer->emitLabel(FMapEnd);
+  OutStreamer->popSection();
+}
+
 bool AsmPrinter::doInitialization(Module &M) {
   auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
   MMI = MMIWP ? &MMIWP->getMMI() : nullptr;
@@ -639,6 +677,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   for (auto &Handler : EHHandlers)
     Handler->beginModule(&M);
 
+  emitFuncMapStart();
   return false;
 }
 
@@ -1548,6 +1587,36 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   OutStreamer->popSection();
 }
 
+void AsmPrinter::emitFuncMapSection(const MachineFunction &MF) {
+  if (!EmitFuncMap)
+    return;
+
+  MCSection *FuncMapSection =
+      getObjFileLowering().getFuncMapSection(*MF.getSection());
+  assert(FuncMapSection && ".llvm_func_map section is not initialized.");
+  const MCSymbol *FunctionSymbol = getFunctionBegin();
+  OutStreamer->pushSection();
+  OutStreamer->switchSection(FuncMapSection);
+
+  OutStreamer->AddComment("function address");
+  OutStreamer->emitSymbolValue(FunctionSymbol, getPointerSize());
+
+  const MachineBlockFrequencyInfo *MBFI =
+      &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI();
+  uint64_t DynInstCount = 0;
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB) {
+      if (MI.isDebugValue() || MI.isPseudoProbe())
+        continue;
+      DynInstCount += MBFI->getBlockProfileCount(&MBB).value_or(0);
+    }
+  }
+
+  OutStreamer->AddComment("dynamic instruction count");
+  OutStreamer->emitULEB128IntValue(DynInstCount);
+  OutStreamer->popSection();
+}
+
 void AsmPrinter::emitKCFITrapEntry(const MachineFunction &MF,
                                    const MCSymbol *Symbol) {
   MCSection *Section =
@@ -2119,6 +2188,7 @@ void AsmPrinter::emitFunctionBody() {
       MF->getContext().reportWarning(
           SMLoc(), "pgo-analysis-map is enabled for function " + MF->getName() +
                        " but it does not have labels");
+    emitFuncMapSection(*MF);
   }
 
   // Emit sections containing instruction and function PCs.
@@ -2558,6 +2628,8 @@ bool AsmPrinter::doFinalization(Module &M) {
   // through user plugins.
   emitStackMaps();
 
+  emitFuncMapEnd();
+
   // Print aliases in topological order, that is, for each alias a = b,
   // b must be printed before a.
   // This is because on some targets (e.g. PowerPC) linker expects aliases in
@@ -2749,7 +2821,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
       F.hasFnAttribute("xray-instruction-threshold") ||
       needFuncLabels(MF, *this) || NeedsLocalForSize ||
       MF.getTarget().Options.EmitStackSizeSection ||
-      MF.getTarget().Options.BBAddrMap) {
+      MF.getTarget().Options.BBAddrMap || EmitFuncMap) {
     CurrentFnBegin = createTempSymbol("func_begin");
     if (NeedsLocalForSize)
       CurrentFnSymForSize = CurrentFnBegin;
