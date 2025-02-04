@@ -25,7 +25,7 @@ void main() {
 }
 
 // This test makes a probably safe assumption that HLSL 202x includes operator overloading for assignment operators.
-// CHECK:     define linkonce_odr noundef i32 @_ZN4Pair8getFirstEv(ptr noundef nonnull align 4 dereferenceable(8) %this) #0 align 2 {
+// CHECK:     define linkonce_odr noundef i32 @_ZN4Pair8getFirstEv(ptr noundef nonnull align 4 dereferenceable(8) %this) [[Attr:\#[0-9]+]] align 2 {
 // CHECK-NEXT:entry:
 // CHECK-NEXT:%this.addr = alloca ptr, align 4
 // CHECK-NEXT:%Another = alloca %struct.Pair, align 4
@@ -42,7 +42,7 @@ void main() {
 // CHECK-NEXT:%0 = load i32, ptr %First2, align 4
 // CHECK-NEXT:ret i32 %0
 
-// CHECK:     define linkonce_odr noundef i32 @_ZN4Pair9getSecondEv(ptr noundef nonnull align 4 dereferenceable(8) %this) #0 align 2 {
+// CHECK:     define linkonce_odr noundef i32 @_ZN4Pair9getSecondEv(ptr noundef nonnull align 4 dereferenceable(8) %this) [[Attr]] align 2 {
 // CHECK-NEXT:entry:
 // CHECK-NEXT:%this.addr = alloca ptr, align 4
 // CHECK-NEXT:%agg.tmp = alloca %struct.Pair, align 4
@@ -53,3 +53,5 @@ void main() {
 // CHECK-NEXT:%Second = getelementptr inbounds nuw %struct.Pair, ptr %this1, i32 0, i32 1
 // CHECK-NEXT:%0 = load i32, ptr %Second, align 4
 // CHECK-NEXT:ret i32 %0
+
+// CHECK: attributes [[Attr]] = {{.*}}alwaysinline
