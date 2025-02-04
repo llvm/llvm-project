@@ -141,6 +141,9 @@ public:
     InsertPt = IP->getIterator();
   }
 
+  /// Insert \p R at the current insertion point.
+  void insert(VPRecipeBase *R) { BB->insert(R, InsertPt); }
+
   /// Create an N-ary operation with \p Opcode, \p Operands and set \p Inst as
   /// its underlying Instruction.
   VPInstruction *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
