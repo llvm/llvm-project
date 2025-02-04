@@ -18,18 +18,12 @@ TEST(LlvmLibcStackChkFail, Death) {
   EXPECT_DEATH([] { __stack_chk_fail(); }, WITH_SIGNAL(SIGABRT));
 }
 
-// When https://github.com/llvm/llvm-project/issues/125760 is fixed,
-// this can use the `gnu::` spelling unconditionally.
-#ifdef __clang__
-#define SANITIZER_ATTR_NS clang
-#else
-#define SANITIZER_ATTR_NS gnu
-#endif
-
 // Disable sanitizers such as asan and hwasan that would catch the buffer
 // overrun before it clobbered the stack canary word.  Function attributes
-// can't be applied to lambdas before C++23, so this has to be separate.
-[[SANITIZER_ATTR_NS::no_sanitize("all")]] void smash_stack() {
+// can't be applied to lambdas before C++23, so this has to be separate.  When
+// https://github.com/llvm/llvm-project/issues/125760 is fixed, this can use
+// the modern spelling [[gnu::no_sanitize(...)]] without conditionalization.
+__attribute__((no_sanitize("all"))) void smash_stack() {
   int arr[20];
   LIBC_NAMESPACE::memset(arr, 0xAA, 2001);
 }
