@@ -36,12 +36,11 @@ llvm.func @task_privatization_test() {
 // CHECK:         br label %omp.private.init
 // CHECK:       omp.private.init:
 // CHECK:         %[[VAL_5:.*]] = tail call ptr @malloc(i64 ptrtoint (ptr getelementptr ([[STRUCT_KMP_PRIVATES_T:.*]], ptr null, i32 1) to i64))
-// CHECK:         %[[VAL_7:.*]] = getelementptr { i32, i32 }, ptr %[[VAL_5]], i32 0, i32 0
-// CHECK:         %[[VAL_8:.*]] = getelementptr { i32, i32 }, ptr %[[VAL_5]], i32 0, i32 1
+// CHECK:         %[[VAL_7:.*]] = getelementptr { i32 }, ptr %[[VAL_5]], i32 0, i32 0
 // CHECK:         br label %omp.private.copy
 // CHECK:       omp.private.copy:
 // CHECK:         %[[VAL_10:.*]] = load i32, ptr %[[VAL_1]], align 4
-// CHECK:         store i32 %[[VAL_10]], ptr %[[VAL_8]], align 4
+// CHECK:         store i32 %[[VAL_10]], ptr %[[VAL_7]], align 4
 // CHECK:         br label %omp.task.start
 // CHECK:       omp.task.start:
 // CHECK:         br label %codeRepl
@@ -63,14 +62,14 @@ llvm.func @task_privatization_test() {
 // CHECK:         %[[OMP_TASK_CONEXT_PTR_PTR_PTR:.*]] = load ptr, ptr %[[OMP_TASK_CONTEXT_PTR_PTR_PTR_PTR]], align 8
 // CHECK:         %[[OMP_TASK_CONTEXT_PTR_PTR:.*]] = getelementptr { ptr }, ptr %[[OMP_TASK_CONTEXT_PTR_PTR_PTR:.*]], i32 0, i32 0
 // CHECK:         %[[OMP_TASK_CONTEXT_PTR:.*]] = load ptr, ptr %[[OMP_TASK_CONTEXT_PTR_PTR:.*]], align 8
+// CHECK:         %[[OMP_PRIVATE_ALLOC:.*]] = alloca i32, align 4
 // CHECK:         br label %[[VAL_18:.*]]
 // CHECK:       task.body:                                        ; preds = %[[VAL_19:.*]]
-// CHECK:         %[[VAL_20:.*]] = getelementptr { i32, i32 }, ptr %[[OMP_TASK_CONTEXT_PTR]], i32 0, i32 0
-// CHECK:         %[[VAL_22:.*]] = getelementptr { i32, i32 }, ptr %[[OMP_TASK_CONTEXT_PTR]], i32 0, i32 1
+// CHECK:         %[[VAL_20:.*]] = getelementptr { i32 }, ptr %[[OMP_TASK_CONTEXT_PTR]], i32 0, i32 0
 // CHECK:         br label %[[VAL_23:.*]]
 // CHECK:       omp.task.region:                                  ; preds = %[[VAL_18]]
-// CHECK:         %[[VAL_24:.*]] = load i32, ptr %[[VAL_22]], align 4
-// CHECK:         store i32 %[[VAL_24]], ptr %[[VAL_20]], align 4
+// CHECK:         %[[VAL_24:.*]] = load i32, ptr %[[VAL_20]], align 4
+// CHECK:         store i32 %[[VAL_24]], ptr %[[OMP_PRIVATE_ALLOC]], align 4
 // CHECK:         br label %[[VAL_25:.*]]
 // CHECK:       omp.region.cont:                                  ; preds = %[[VAL_23]]
 // CHECK:         tail call void @free(ptr %[[OMP_TASK_CONTEXT_PTR]])
