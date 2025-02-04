@@ -243,6 +243,13 @@ void StackAddrEscapeChecker::checkPreCall(const CallEvent &Call,
   }
 }
 
+/// A visitor made for use with a ScanReachableSymbols scanner, used 
+/// for finding stack regions within an SVal that live on the current
+/// stack frame of the given checker context. This visitor excludes
+/// NonParamVarRegion that data is bound to in a BlockDataRegion's
+/// bindings, since these are likely uninteresting, e.g., in case a
+/// temporary is constructed on the stack, but it captures values
+/// that would leak. 
 class FindStackRegionsSymbolVisitor final : public SymbolVisitor {
   CheckerContext &Ctxt;
   const StackFrameContext *StackFrameContext;
@@ -283,6 +290,11 @@ private:
   }
 };
 
+/// Given some memory regions that are flagged by FindStackRegionsSymbolVisitor,
+/// this function filters out memory regions that are being returned that are
+/// likely not true leaks:
+/// 1. If returning a block data region that has stack memory space
+/// 2. If returning a constructed object that has stack memory space
 static SmallVector<const MemRegion *>
 FilterReturnExpressionLeaks(const SmallVector<const MemRegion *> &MaybeEscaped,
                             CheckerContext &C, const Expr *RetE, SVal &RetVal) {
@@ -311,9 +323,10 @@ FilterReturnExpressionLeaks(const SmallVector<const MemRegion *> &MaybeEscaped,
     if (RetRegion == MR && (IsCopyAndAutoreleaseBlockObj || IsConstructExpr))
       continue;
 
-    if (const StackSpaceRegion *SSR = MR->getMemorySpace()->getAs<StackSpaceRegion>())
-      if (SSR->getStackFrame() != C.getStackFrame())
-        continue;
+    // If this is a construct expr of an unelided return value copy, then don't
+    // warn about returning a region that currently lives on the stack.
+    if (IsConstructExpr && RetVal.getAs<nonloc::LazyCompoundVal>() && isa<CXXTempObjectRegion>(MR))
+      continue;
 
     WillEscape.push_back(MR);
   }
@@ -321,6 +334,8 @@ FilterReturnExpressionLeaks(const SmallVector<const MemRegion *> &MaybeEscaped,
   return WillEscape;
 }
 
+/// For use in finding regions that live on the checker context's current
+/// stack frame, deep in the SVal representing the return value.
 static SmallVector<const MemRegion *>
 FindEscapingStackRegions(CheckerContext &C, const Expr *RetE, SVal RetVal) {
   SmallVector<const MemRegion *> FoundStackRegions;
