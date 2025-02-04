@@ -73,17 +73,18 @@ struct ShaderHash {
   std::vector<llvm::yaml::Hex8> Digest;
 };
 
-#define ROOT_ELEMENT_FLAG(Num, Val, Str) bool Val = false;
+#define ROOT_ELEMENT_FLAG(Num, Val) bool Val = false;
 struct RootSignatureDesc {
   RootSignatureDesc() = default;
   RootSignatureDesc(const object::DirectX::RootSignature &Data);
 
-  uint32_t getEncodedFlags();
   uint32_t Version;
   uint32_t NumParameters;
   uint32_t RootParametersOffset;
   uint32_t NumStaticSamplers;
   uint32_t StaticSamplersOffset;
+
+  uint32_t getEncodedFlags();
 
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 };

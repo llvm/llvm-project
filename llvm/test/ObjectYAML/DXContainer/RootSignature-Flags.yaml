@@ -14,18 +14,20 @@ Parts:
     Size:            24
     RootSignature:
       Version: 2
-      NumParameters: 0
-      RootParametersOffset: 0
-      NumStaticSamplers: 0
-      StaticSamplersOffset: 0
+      NumParameters: 1
+      RootParametersOffset: 3
+      NumStaticSamplers: 4
+      StaticSamplersOffset: 5
       AllowInputAssemblerInputLayout: true
+      DenyGeometryShaderRootAccess: true
 
 # CHECK:  - Name:            RTS0
 # CHECK-NEXT:    Size:            24
 # CHECK-NEXT:    RootSignature:
 # CHECK-NEXT:      Version: 2
-# CHECK-NEXT:      NumParameters: 0
-# CHECK-NEXT:      RootParametersOffset: 0
-# CHECK-NEXT:      NumStaticSamplers: 0
-# CHECK-NEXT:      StaticSamplersOffset: 0
+# CHECK-NEXT:      NumParameters: 1
+# CHECK-NEXT:      RootParametersOffset: 3
+# CHECK-NEXT:      NumStaticSamplers: 4
+# CHECK-NEXT:      StaticSamplersOffset: 5
 # CHECK-NEXT:      AllowInputAssemblerInputLayout: true
+# CHECK-NEXT:      DenyGeometryShaderRootAccess: true
