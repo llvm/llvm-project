@@ -225,6 +225,17 @@ def LLVM_FCmpOp : LLVM_ArithmeticCmpOp<"fcmp", [
   // Set the $predicate index to -1 to indicate there is no matching operand
   // and decrement the following indices.
   list<int> llvmArgIndices = [-1, 0, 1, 2];
+
+  let extraClassDeclaration = [{
+    /// Always allow FastmathFlags on llvm.fcmp.
+    /// It does not produce a floating point result, but
+    /// LLVM is currently relying on fast-math flags attached
+    /// to floating point comparison.
+    /// This can be removed whenever LLVM stops doing it.
+    bool isFastmathApplicable() {
+      return true;
+    }
+  }];
 }
 
 // Floating point binary operations.

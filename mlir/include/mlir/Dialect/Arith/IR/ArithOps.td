@@ -1211,6 +1211,9 @@ def Arith_ExtFOp : Arith_FToFCastOp<"extf", [DeclareOpInterfaceMethods<ArithFast
     The destination type must to be strictly wider than the source type.
     When operating on vectors, casts elementwise.
   }];
+  let extraClassDeclaration = [{
+    bool isApplicable() { return true; }
+  }];
   let hasVerifier = 1;
   let hasFolder = 1;
 
@@ -1545,6 +1548,17 @@ def Arith_CmpFOp : Arith_CompareOp<"cmpf",
   let hasCanonicalizer = 1;
   let assemblyFormat = [{ $predicate `,` $lhs `,` $rhs (`fastmath` `` $fastmath^)?
                           attr-dict `:` type($lhs)}];
+
+  let extraClassDeclaration = [{
+    /// Always allow FastMathFlags on arith.cmpf.
+    /// It does not produce a floating point result, but
+    /// LLVM is currently relying on fast-math flags attached
+    /// to floating point comparison.
+    /// This can be removed whenever LLVM stops doing it.
+    bool isArithFastMathApplicable() {
+      return true;
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//

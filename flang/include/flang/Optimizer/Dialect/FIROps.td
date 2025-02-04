@@ -2494,6 +2494,21 @@ def fir_CallOp : fir_Op<"call",
                          llvm::cast<mlir::SymbolRefAttr>(callee));
       setOperand(0, llvm::cast<mlir::Value>(callee));
     }
+
+    /// Always allow FastMathFlags for fir.call's.
+    /// It is required to be able to propagate the call site's
+    /// FastMathFlags to the operations resulting from inlining
+    /// (if any) of a fir.call (see SimplifyIntrinsics pass).
+    /// We could analyze the arguments' data types to see if there are
+    /// any floating point types, but this is unreliable. For example,
+    /// the runtime calls mostly take !fir.box<none> arguments,
+    /// and tracking them to the definitions may be not easy.
+    /// TODO: this should be restricted to fir.runtime calls,
+    /// because FastMathFlags for the user calls must come
+    /// from the function body, not the call site.
+    bool isArithFastMathApplicable() {
+      return true;
+    }
   }];
 }
 
@@ -2672,6 +2687,15 @@ def fir_CmpcOp : fir_Op<"cmpc",
     }
 
     static mlir::arith::CmpFPredicate getPredicateByName(llvm::StringRef name);
+
+    /// Always allow FastMathFlags on fir.cmpc.
+    /// It does not produce a floating point result, but
+    /// LLVM is currently relying on fast-math flags attached
+    /// to floating point comparison.
+    /// This can be removed whenever LLVM stops doing it.
+    bool isArithFastMathApplicable() {
+      return true;
+    }
   }];
 }
 
@@ -2735,6 +2759,8 @@ def fir_ConvertOp : fir_SimpleOneResultOp<"convert", [NoMemoryEffect]> {
     static bool isPointerCompatible(mlir::Type ty);
     static bool canBeConverted(mlir::Type inType, mlir::Type outType);
     static bool areVectorsCompatible(mlir::Type inTy, mlir::Type outTy);
+
+    // FIXME: fir.convert should support ArithFastMathInterface.
   }];
   let hasCanonicalizer = 1;
 }

@@ -22,30 +22,60 @@ def FastmathFlagsInterface : OpInterface<"FastmathFlagsInterface"> {
 
   let cppNamespace = "::mlir::LLVM";
 
-  let methods = [
-    InterfaceMethod<
-      /*desc=*/        "Returns a FastmathFlagsAttr attribute for the operation",
-      /*returnType=*/  "::mlir::LLVM::FastmathFlagsAttr",
-      /*methodName=*/  "getFastmathAttr",
-      /*args=*/        (ins),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{
+  let methods =
+      [InterfaceMethod<
+           /*desc=*/"Returns a FastmathFlagsAttr attribute for the operation",
+           /*returnType=*/"::mlir::LLVM::FastmathFlagsAttr",
+           /*methodName=*/"getFastmathAttr",
+           /*args=*/(ins),
+           /*methodBody=*/[{}],
+           /*defaultImpl=*/[{
         auto op = cast<ConcreteOp>(this->getOperation());
         return op.getFastmathFlagsAttr();
-      }]
-      >,
-    StaticInterfaceMethod<
-      /*desc=*/        [{Returns the name of the FastmathFlagsAttr attribute
+      }]>,
+       StaticInterfaceMethod<
+           /*desc=*/[{Returns the name of the FastmathFlagsAttr attribute
                          for the operation}],
-      /*returnType=*/  "::llvm::StringRef",
-      /*methodName=*/  "getFastmathAttrName",
-      /*args=*/        (ins),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{
+           /*returnType=*/"::llvm::StringRef",
+           /*methodName=*/"getFastmathAttrName",
+           /*args=*/(ins),
+           /*methodBody=*/[{}],
+           /*defaultImpl=*/[{
         return "fastmathFlags";
-      }]
-      >
-  ];
+      }]>,
+       InterfaceMethod<
+           /*desc=*/[{Returns true iff FastmathFlagsAttr attribute
+                         is applicable to the operation that supports
+                         FastmathInterface. If it returns false,
+                         then the FastmathFlagsAttr of the operation
+                         must be nullptr or have 'none' value}],
+           /*returnType=*/"bool",
+           /*methodName=*/"isFastmathApplicable",
+           /*args=*/(ins),
+           /*methodBody=*/[{}],
+           /*defaultImpl=*/[{
+        return ::mlir::cast<::mlir::LLVM::FastmathFlagsInterface>(this->getOperation()).isApplicableImpl();
+      }]>];
+
+  let extraClassDeclaration = [{
+    /// Returns true iff the given type is a floating point type
+    /// or contains one.
+    static bool isCompatibleType(::mlir::Type);
+
+    /// Default implementation of isFastmathApplicable().
+    /// It returns true iff any of the results of the operations
+    /// has a type that is compatible with fast-math.
+    bool isApplicableImpl();
+  }];
+
+  let verify = [{
+    auto fmi = ::mlir::cast<::mlir::LLVM::FastmathFlagsInterface>($_op);
+    auto attr = fmi.getFastmathAttr();
+    if (attr && attr.getValue() != ::mlir::LLVM::FastmathFlags::none &&
+        !fmi.isFastmathApplicable())
+      return $_op->emitOpError() << "FastmathFlagsAttr is not applicable";
+    return ::mlir::success();
+  }];
 }
 
 def IntegerOverflowFlagsInterface : OpInterface<"IntegerOverflowFlagsInterface"> {

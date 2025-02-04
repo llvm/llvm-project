@@ -237,3 +237,20 @@ bool hlfir::isFortranIntegerScalarOrArrayObject(mlir::Type type) {
   mlir::Type elementType = getFortranElementType(unwrappedType);
   return mlir::isa<mlir::IntegerType>(elementType);
 }
+
+bool hlfir::isArithFastMathApplicable(mlir::Operation *op) {
+  if (llvm::any_of(op->getResults(), [](mlir::Value v) {
+        mlir::Type elementType = getFortranElementType(v.getType());
+        return mlir::arith::ArithFastMathInterface::isCompatibleType(
+            elementType);
+      }))
+    return true;
+  if (llvm::any_of(op->getOperands(), [](mlir::Value v) {
+        mlir::Type elementType = getFortranElementType(v.getType());
+        return mlir::arith::ArithFastMathInterface::isCompatibleType(
+            elementType);
+      }))
+    return true;
+
+  return true;
+}

@@ -113,9 +113,9 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
   llvm.func @main(%arg0: i32, %arg1: !llvm.ptr, %arg2: !llvm.ptr) -> i32 {
     %0 = llvm.mlir.constant(0 : i32) : i32
     %1 = llvm.mlir.zero : !llvm.ptr
-    llvm.call @_FortranAProgramStart(%arg0, %arg1, %arg2, %1) {fastmathFlags = #llvm.fastmath<contract>} : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
-    llvm.call @_QQmain() {fastmathFlags = #llvm.fastmath<contract>} : () -> ()
-    llvm.call @_FortranAProgramEndStatement() {fastmathFlags = #llvm.fastmath<contract>} : () -> ()
+    llvm.call @_FortranAProgramStart(%arg0, %arg1, %arg2, %1) : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
+    llvm.call @_QQmain() : () -> ()
+    llvm.call @_FortranAProgramEndStatement() : () -> ()
     llvm.return %0 : i32
   }
 }

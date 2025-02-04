@@ -3783,3 +3783,43 @@ bool mlir::LLVM::satisfiesLLVMModule(Operation *op) {
   return op->hasTrait<OpTrait::SymbolTable>() &&
          op->hasTrait<OpTrait::IsIsolatedFromAbove>();
 }
+
+/// Return true if the type is compatible with fast math, i.e.
+/// it is a float type or contains a float type.
+bool mlir::LLVM::FastmathFlagsInterface::isCompatibleType(Type type) {
+  if (auto structType = dyn_cast<LLVMStructType>(type)) {
+    if (structType.isIdentified())
+      return false;
+    ArrayRef<Type> elementTypes = structType.getBody();
+    if (elementTypes.empty() || !llvm::all_equal(elementTypes))
+      return false;
+
+    type = elementTypes[0];
+  } else if (auto arrayType = dyn_cast<LLVMArrayType>(type)) {
+    do {
+      type = arrayType.getElementType();
+    } while (arrayType = dyn_cast<LLVMArrayType>(type));
+  }
+
+  if (isa<FloatType>(type))
+    return true;
+
+  type =
+      TypeSwitch<Type, Type>(type)
+          .Case<VectorType, LLVMScalableVectorType, LLVMFixedVectorType>(
+              [](auto containerType) { return containerType.getElementType(); })
+          .Default(type);
+
+  return isa<FloatType>(type);
+}
+
+/// Return true if any of the results of the operation
+/// has a type compatible with fast math, i.e. it is a float type
+/// or contains a float type.
+bool mlir::LLVM::FastmathFlagsInterface::isApplicableImpl() {
+  Operation *op = getOperation();
+  if (llvm::any_of(op->getResults(),
+                   [](Value v) { return isCompatibleType(v.getType()); }))
+    return true;
+  return false;
+}

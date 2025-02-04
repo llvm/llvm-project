@@ -74,18 +74,18 @@ func.func @llvm_ret(%arg0 : i32) -> i32 {
 // -----
 
 // Include all function attributes that don't prevent inlining
-llvm.func internal fastcc @callee() -> (i32) attributes { function_entry_count = 42 : i64, dso_local } {
-  %0 = llvm.mlir.constant(42 : i32) : i32
-  llvm.return %0 : i32
+llvm.func internal fastcc @callee() -> (f32) attributes { function_entry_count = 42 : i64, dso_local } {
+  %0 = llvm.mlir.constant(42.0 : f32) : f32
+  llvm.return %0 : f32
 }
 
 // CHECK-LABEL: llvm.func @caller
 // CHECK-NEXT: %[[CST:.+]] = llvm.mlir.constant
 // CHECK-NEXT: llvm.return %[[CST]]
-llvm.func @caller() -> (i32) {
+llvm.func @caller() -> (f32) {
   // Include all call attributes that don't prevent inlining.
-  %0 = llvm.call fastcc @callee() { fastmathFlags = #llvm.fastmath<nnan, ninf>, branch_weights = dense<42> : vector<1xi32> } : () -> (i32)
-  llvm.return %0 : i32
+  %0 = llvm.call fastcc @callee() { fastmathFlags = #llvm.fastmath<nnan, ninf>, branch_weights = dense<42> : vector<1xi32> } : () -> (f32)
+  llvm.return %0 : f32
 }
 
 // -----
