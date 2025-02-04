@@ -13399,8 +13399,11 @@ bool Sema::GloballyUniqueObjectMightBeAccidentallyDuplicated(
   // about the properties of the function containing it.
   const ValueDecl *Target = Dcl;
   // VarDecls and FunctionDecls have different functions for checking
-  // inline-ness, so we have to do it manually.
+  // inline-ness, and whether they were originally templated, so we have to
+  // call the appropriate functions manually.
   bool TargetIsInline = Dcl->isInline();
+  bool TargetWasTemplated =
+      Dcl->getTemplateSpecializationKind() != TSK_Undeclared;
 
   // Update the Target and TargetIsInline property if necessary
   if (Dcl->isStaticLocal()) {
@@ -13416,12 +13419,13 @@ bool Sema::GloballyUniqueObjectMightBeAccidentallyDuplicated(
     Target = FunDcl;
     // IsInlined() checks for the C++ inline property
     TargetIsInline = FunDcl->isInlined();
+    TargetWasTemplated =
+        FunDcl->getTemplateSpecializationKind() != TSK_Undeclared;
   }
 
-  // Non-inline variables can only legally appear in one TU
-  // FIXME: This also applies to templated variables, but that can rarely lead
-  // to false positives so templates are disabled for now.
-  if (!TargetIsInline)
+  // Non-inline functions/variables can only legally appear in one TU,
+  // unless they were part of a template.
+  if (!TargetIsInline && !TargetWasTemplated)
     return false;
 
   // If the object isn't hidden, the dynamic linker will prevent duplication.
@@ -13436,18 +13440,20 @@ bool Sema::GloballyUniqueObjectMightBeAccidentallyDuplicated(
   return true;
 }
 
-void Sema::DiagnoseDangerousUniqueObjectDuplication(const VarDecl* VD) {
+void Sema::DiagnoseDangerousUniqueObjectDuplication(const VarDecl *VD) {
   // If this object has external linkage and hidden visibility, it might be
   // duplicated when built into a shared library, which causes problems if it's
   // mutable (since the copies won't be in sync) or its initialization has side
-  // effects (since it will run once per copy instead of once globally)
+  // effects (since it will run once per copy instead of once globally).
   // FIXME: Windows uses dllexport/dllimport instead of visibility, and we don't
   // handle that yet. Disable the warning on Windows for now.
-  // FIXME: Checking templates can cause false positives if the template in
-  // question is never instantiated (e.g. only specialized templates are used).
+
+  // Don't diagnose if we're inside a template;
+  // we'll diagnose during instantiation instead.
   if (!Context.getTargetInfo().shouldDLLImportComdatSymbols() &&
       !VD->isTemplated() &&
       GloballyUniqueObjectMightBeAccidentallyDuplicated(VD)) {
+
     // Check mutability. For pointers, ensure that both the pointer and the
     // pointee are (recursively) const.
     QualType Type = VD->getType().getNonReferenceType();
