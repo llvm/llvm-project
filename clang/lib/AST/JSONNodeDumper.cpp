@@ -1003,6 +1003,11 @@ void JSONNodeDumper::VisitRecordDecl(const RecordDecl *RD) {
 void JSONNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *RD) {
   VisitRecordDecl(RD);
 
+  if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
+    if (CTSD->hasMatchedPackOnParmToNonPackOnArg())
+      JOS.attribute("strict-pack-match", true);
+  }
+
   // All other information requires a complete definition.
   if (!RD->isCompleteDefinition())
     return;
