@@ -21,7 +21,6 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
-#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
@@ -2024,7 +2023,7 @@ static bool CheckAllArgsHaveFloatRepresentation(Sema *S, CallExpr *TheCall) {
                                     checkAllFloatTypes);
 }
 
-static bool CheckUnsignedIntegerRepresentation(Sema *S, CallExpr *TheCall) {
+static bool CheckUnsignedIntRepresentations(Sema *S, CallExpr *TheCall) {
   auto checkUnsignedInteger = [](clang::QualType PassedType) -> bool {
     clang::QualType BaseType =
         PassedType->isVectorType()
@@ -2232,7 +2231,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     if (CheckVectorElementCallArgs(&SemaRef, TheCall))
       return true;
-    if (CheckUnsignedIntegerRepresentation(&SemaRef, TheCall))
+    if (CheckUnsignedIntRepresentations(&SemaRef, TheCall))
       return true;
 
     // CheckVectorElementCallArgs(...) guarantees both args are the same type.
@@ -2242,18 +2241,17 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     // ensure both args are vectors
     auto *VTy = TheCall->getArg(0)->getType()->getAs<VectorType>();
     if (!VTy) {
-      SemaRef.Diag(TheCall->getBeginLoc(),
-                   diag::err_vector_incorrect_num_elements)
-          << 2 << "2 or 4" << 1 << /*operand*/ 1;
+      SemaRef.Diag(TheCall->getBeginLoc(), diag::err_vec_builtin_non_vector)
+          << "AddUint64" << /*all*/ 1;
       return true;
     }
 
     // ensure both args have 2 elements, or both args have 4 elements
-    int NumElementsArg1 = VTy->getNumElements();
-    if (NumElementsArg1 != 2 && NumElementsArg1 != 4) {
+    int NumElementsArg = VTy->getNumElements();
+    if (NumElementsArg != 2 && NumElementsArg != 4) {
       SemaRef.Diag(TheCall->getBeginLoc(),
                    diag::err_vector_incorrect_num_elements)
-          << 2 << "2 or 4" << NumElementsArg1 << /*operand*/ 1;
+          << 2 << "2 or 4" << NumElementsArg << /*operand*/ 1;
       return true;
     }
 

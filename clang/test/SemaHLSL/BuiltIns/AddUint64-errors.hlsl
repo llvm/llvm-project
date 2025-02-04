@@ -15,19 +15,14 @@ uint2 test_mismatched_arg_types(uint2 a, uint4 b) {
   // expected-error@-1 {{all arguments to '__builtin_hlsl_adduint64' must have the same type}}
 }
 
-uint2 test_too_many_arg_elements(uint3 a, uint3 b) {
-  return __builtin_hlsl_adduint64(a, b);
-  // expected-error@-1 {{incorrect number of elements in vector operand (expected 2 or 4 elements, have 3)}}
-}
-
-uint4 test_too_few_arg_elements(uint3 a, uint3 b) {
+uint2 test_bad_num_arg_elements(uint3 a, uint3 b) {
   return __builtin_hlsl_adduint64(a, b);
   // expected-error@-1 {{incorrect number of elements in vector operand (expected 2 or 4 elements, have 3)}}
 }
 
 uint2 test_scalar_arg_type(uint a) {
   return __builtin_hlsl_adduint64(a, a);
-  // expected-error@-1 {{incorrect number of elements in vector operand (expected 2 or 4 elements, have 1)}}
+  // expected-error@-1 {{all arguments to AddUint64 must be vectors}}
 }
 
 uint2 test_signed_integer_args(int2 a, int2 b) {
