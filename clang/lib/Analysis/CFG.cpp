@@ -433,7 +433,7 @@ class reverse_children {
   ArrayRef<Stmt *> children;
 
 public:
-  reverse_children(Stmt *S);
+  reverse_children(Stmt *S, ASTContext &Ctx);
 
   using iterator = ArrayRef<Stmt *>::reverse_iterator;
 
@@ -443,21 +443,44 @@ public:
 
 } // namespace
 
-reverse_children::reverse_children(Stmt *S) {
-  if (CallExpr *CE = dyn_cast<CallExpr>(S)) {
-    children = CE->getRawSubExprs();
+reverse_children::reverse_children(Stmt *S, ASTContext &Ctx) {
+  switch (S->getStmtClass()) {
+  case Stmt::CallExprClass: {
+    children = cast<CallExpr>(S)->getRawSubExprs();
     return;
   }
-  switch (S->getStmtClass()) {
-    // Note: Fill in this switch with more cases we want to optimize.
-    case Stmt::InitListExprClass: {
-      InitListExpr *IE = cast<InitListExpr>(S);
-      children = llvm::ArrayRef(reinterpret_cast<Stmt **>(IE->getInits()),
-                                IE->getNumInits());
-      return;
+
+  // Note: Fill in this switch with more cases we want to optimize.
+  case Stmt::InitListExprClass: {
+    InitListExpr *IE = cast<InitListExpr>(S);
+    children = llvm::ArrayRef(reinterpret_cast<Stmt **>(IE->getInits()),
+                              IE->getNumInits());
+    return;
+  }
+
+  case Stmt::AttributedStmtClass: {
+    // for an attributed stmt, the "children()" returns only the NullStmt
+    // (;) but semantically the "children" are supposed to be the
+    // expressions _within_ i.e. the two square brackets i.e. [[ HERE ]]
+    // so we add the subexpressions first, _then_ add the "children"
+    auto *AS = cast<AttributedStmt>(S);
+    for (const auto *Attr : AS->getAttrs()) {
+      if (const auto *AssumeAttr = dyn_cast<CXXAssumeAttr>(Attr)) {
+        Expr *AssumeExpr = AssumeAttr->getAssumption();
+        if (!AssumeExpr->HasSideEffects(Ctx)) {
+          childrenBuf.push_back(AssumeExpr);
+        }
+      }
     }
-    default:
-      break;
+
+    // Visit the actual children AST nodes.
+    // For CXXAssumeAttrs, this is always a NullStmt.
+    llvm::append_range(childrenBuf, AS->children());
+    children = childrenBuf;
+    return;
+  }
+  default:
+    break;
   }
 
   // Default case for all other statements.
@@ -2431,7 +2454,7 @@ CFGBlock *CFGBuilder::VisitChildren(Stmt *S) {
 
   // Visit the children in their reverse order so that they appear in
   // left-to-right (natural) order in the CFG.
-  reverse_children RChildren(S);
+  reverse_children RChildren(S, *Context);
   for (Stmt *Child : RChildren) {
     if (Child)
       if (CFGBlock *R = Visit(Child))
@@ -2447,7 +2470,7 @@ CFGBlock *CFGBuilder::VisitInitListExpr(InitListExpr *ILE, AddStmtChoice asc) {
   }
   CFGBlock *B = Block;
 
-  reverse_children RChildren(ILE);
+  reverse_children RChildren(ILE, *Context);
   for (Stmt *Child : RChildren) {
     if (!Child)
       continue;
@@ -2482,6 +2505,14 @@ static bool isFallthroughStatement(const AttributedStmt *A) {
   return isFallthrough;
 }
 
+static bool isCXXAssumeAttr(const AttributedStmt *A) {
+  bool hasAssumeAttr = hasSpecificAttr<CXXAssumeAttr>(A->getAttrs());
+
+  assert((!hasAssumeAttr || isa<NullStmt>(A->getSubStmt())) &&
+         "expected [[assume]] not to have children");
+  return hasAssumeAttr;
+}
+
 CFGBlock *CFGBuilder::VisitAttributedStmt(AttributedStmt *A,
                                           AddStmtChoice asc) {
   // AttributedStmts for [[likely]] can have arbitrary statements as children,
@@ -2492,7 +2523,8 @@ CFGBlock *CFGBuilder::VisitAttributedStmt(AttributedStmt *A,
   // So only add the AttributedStmt for FallThrough, which has CFG effects and
   // also no children, and omit the others. None of the other current StmtAttrs
   // have semantic meaning for the CFG.
-  if (isFallthroughStatement(A) && asc.alwaysAdd(*this, A)) {
+  bool isInterestingAttribute = isFallthroughStatement(A) || isCXXAssumeAttr(A);
+  if (isInterestingAttribute && asc.alwaysAdd(*this, A)) {
     autoCreateBlock();
     appendStmt(Block, A);
   }
