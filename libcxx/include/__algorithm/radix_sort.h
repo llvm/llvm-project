@@ -33,6 +33,7 @@
 #include <__bit/countl.h>
 #include <__config>
 #include <__functional/identity.h>
+#include <__iterator/access.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/move_iterator.h>
