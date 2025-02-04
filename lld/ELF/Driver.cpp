@@ -461,6 +461,27 @@ static void checkOptions(Ctx &ctx) {
 
   if (ctx.arg.zRetpolineplt && ctx.arg.zForceIbt)
     ErrAlways(ctx) << "-z force-ibt may not be used with -z retpolineplt";
+
+  if (ctx.arg.emachine != EM_AARCH64) {
+    if (ctx.arg.zPacPlt)
+      ErrAlways(ctx) << "-z pac-plt only supported on AArch64";
+    if (ctx.arg.zForceBti)
+      ErrAlways(ctx) << "-z force-bti only supported on AArch64";
+    if (ctx.arg.zBtiReport != "none")
+      ErrAlways(ctx) << "-z bti-report only supported on AArch64";
+    if (ctx.arg.zPauthReport != "none")
+      ErrAlways(ctx) << "-z pauth-report only supported on AArch64";
+    if (ctx.arg.zGcsReport != "none")
+      ErrAlways(ctx) << "-z gcs-report only supported on AArch64";
+    if (ctx.arg.zGcs != GcsPolicy::Implicit)
+      ErrAlways(ctx) << "-z gcs only supported on AArch64";
+    if (ctx.arg.zExecuteOnlyReport != "none")
+      ErrAlways(ctx) << "-z execute-only-report only supported on AArch64";
+  }
+
+  if (ctx.arg.emachine != EM_386 && ctx.arg.emachine != EM_X86_64 &&
+      ctx.arg.zCetReport != "none")
+    ErrAlways(ctx) << "-z cet-report only supported on X86 and X86_64";
 }
 
 static const char *getReproduceOption(opt::InputArgList &args) {
@@ -1620,10 +1641,12 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
 
-  auto reports = {std::make_pair("bti-report", &ctx.arg.zBtiReport),
-                  std::make_pair("cet-report", &ctx.arg.zCetReport),
-                  std::make_pair("gcs-report", &ctx.arg.zGcsReport),
-                  std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
+  auto reports = {
+      std::make_pair("bti-report", &ctx.arg.zBtiReport),
+      std::make_pair("cet-report", &ctx.arg.zCetReport),
+      std::make_pair("gcs-report", &ctx.arg.zGcsReport),
+      std::make_pair("pauth-report", &ctx.arg.zPauthReport),
+      std::make_pair("execute-only-report", &ctx.arg.zExecuteOnlyReport)};
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
@@ -2906,6 +2929,40 @@ static void readSecurityNotes(Ctx &ctx) {
     ctx.arg.andFeatures &= ~GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
 }
 
+static void checkExecuteOnly(Ctx &ctx) {
+  if (ctx.arg.emachine != EM_AARCH64)
+    return;
+
+  auto report = [&](StringRef config) -> ELFSyncStream {
+    if (config == "error")
+      return {ctx, DiagLevel::Err};
+    if (config == "warning")
+      return {ctx, DiagLevel::Warn};
+    return {ctx, DiagLevel::None};
+  };
+  auto reportUnless = [&](StringRef config, bool cond) -> ELFSyncStream {
+    if (cond)
+      return {ctx, DiagLevel::None};
+    return report(config);
+  };
+
+  for (ELFFileBase *file : ctx.objectFiles) {
+    for (InputSectionBase *section : file->getSections()) {
+      // Only check for executable sections.
+      if (!(section && section->flags & SHF_EXECINSTR))
+        continue;
+
+      OutputSection *outputSection = section->getOutputSection();
+      if (outputSection && outputSection->name == ".text") {
+        reportUnless(ctx.arg.zExecuteOnlyReport,
+                     section->flags & SHF_AARCH64_PURECODE)
+            << file << ": -z execute-only-report: section " << section->name
+            << " does not have SHF_AARCH64_PURECODE flag set";
+      }
+    }
+  }
+}
+
 static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {
   switch (file->ekind) {
   case ELF32LEKind:
@@ -3271,6 +3328,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     // Process that.
     ctx.script->addOrphanSections();
   }
+
+  checkExecuteOnly(ctx);
 
   {
     llvm::TimeTraceScope timeScope("Merge/finalize input sections");
