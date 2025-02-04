@@ -7553,7 +7553,9 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
                         CM.CostKind);
   precomputeCosts(BestPlan, BestFactor.Width, CostCtx);
   assert((BestFactor.Width == LegacyVF.Width ||
-          BestPlan.hasRegionWithEarlyExit() ||
+          (BestPlan.getVectorLoopRegion() &&
+           BestPlan.getVectorLoopRegion()->getSingleSuccessor() !=
+               BestPlan.getMiddleBlock()) ||
           planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
                                                 CostCtx, OrigLoop) ||
           planContainsAdditionalSimplifications(getPlanFor(LegacyVF.Width),
