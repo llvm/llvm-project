@@ -43,22 +43,15 @@ define i32 @test_rotl_var(i32 %x, i32 %y) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    shll %cl, %edx
-; X86-NEXT:    negb %cl
-; X86-NEXT:    shrl %cl, %eax
-; X86-NEXT:    addl %edx, %eax
+; X86-NEXT:    roll %cl, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_rotl_var:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shll %cl, %eax
-; X64-NEXT:    negb %cl
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    shrl %cl, %edi
-; X64-NEXT:    addl %edi, %eax
+; X64-NEXT:    roll %cl, %eax
 ; X64-NEXT:    retq
   %shl = shl i32 %x, %y
   %sub = sub i32 32, %y
@@ -72,22 +65,15 @@ define i32 @test_rotr_var(i32 %x, i32 %y) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    shrl %cl, %edx
-; X86-NEXT:    negb %cl
-; X86-NEXT:    shll %cl, %eax
-; X86-NEXT:    addl %edx, %eax
+; X86-NEXT:    rorl %cl, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_rotr_var:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shrl %cl, %eax
-; X64-NEXT:    negb %cl
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    shll %cl, %edi
-; X64-NEXT:    addl %edi, %eax
+; X64-NEXT:    rorl %cl, %eax
 ; X64-NEXT:    retq
   %shr = lshr i32 %x, %y
   %sub = sub i32 32, %y
@@ -159,27 +145,18 @@ define i32 @test_invalid_rotr_var_and(i32 %x, i32 %y) {
 define i32 @test_fshl_special_case(i32 %x0, i32 %x1, i32 %y) {
 ; X86-LABEL: test_fshl_special_case:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    shll %cl, %edx
-; X86-NEXT:    shrl %eax
-; X86-NEXT:    notb %cl
-; X86-NEXT:    shrl %cl, %eax
-; X86-NEXT:    addl %edx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shldl %cl, %edx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_fshl_special_case:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edx, %ecx
-; X64-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    shll %cl, %edi
-; X64-NEXT:    shrl %esi
-; X64-NEXT:    notb %cl
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    shrl %cl, %esi
-; X64-NEXT:    leal (%rsi,%rdi), %eax
+; X64-NEXT:    shldl %cl, %esi, %eax
 ; X64-NEXT:    retq
   %shl = shl i32 %x0, %y
   %srli = lshr i32 %x1, 1
@@ -192,26 +169,18 @@ define i32 @test_fshl_special_case(i32 %x0, i32 %x1, i32 %y) {
 define i32 @test_fshr_special_case(i32 %x0, i32 %x1, i32 %y) {
 ; X86-LABEL: test_fshr_special_case:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    shrl %cl, %edx
-; X86-NEXT:    addl %eax, %eax
-; X86-NEXT:    notb %cl
-; X86-NEXT:    shll %cl, %eax
-; X86-NEXT:    addl %edx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shrdl %cl, %edx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_fshr_special_case:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edx, %ecx
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    shrl %cl, %esi
-; X64-NEXT:    leal (%rdi,%rdi), %eax
-; X64-NEXT:    notb %cl
+; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    shll %cl, %eax
-; X64-NEXT:    addl %esi, %eax
+; X64-NEXT:    shrdl %cl, %edi, %eax
 ; X64-NEXT:    retq
   %shl = lshr i32 %x1, %y
   %srli = shl i32 %x0, 1
