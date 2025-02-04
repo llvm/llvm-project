@@ -114,25 +114,15 @@ std::optional<SourceLocation> ProgramPoint::getSourceLocation() const {
     // castAs<BlockExit>().getBlock()->getTerminatorStmt()->getBeginLoc();
     return std::nullopt;
   case PreStmtKind:
-    [[fallthrough]];
   case PreStmtPurgeDeadSymbolsKind:
-    [[fallthrough]];
   case PostStmtPurgeDeadSymbolsKind:
-    [[fallthrough]];
   case PostStmtKind:
-    [[fallthrough]];
   case PreLoadKind:
-    [[fallthrough]];
   case PostLoadKind:
-    [[fallthrough]];
   case PreStoreKind:
-    [[fallthrough]];
   case PostStoreKind:
-    [[fallthrough]];
   case PostConditionKind:
-    [[fallthrough]];
   case PostLValueKind:
-    [[fallthrough]];
   case PostAllocatorCallKind:
     if (const Stmt *S = castAs<StmtPoint>().getStmt())
       return S->getBeginLoc();
