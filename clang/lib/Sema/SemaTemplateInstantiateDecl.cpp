@@ -12,7 +12,6 @@
 #include "TreeTransform.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DependentDiagnostic.h"
@@ -5277,26 +5276,9 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     RebuildTypeSourceInfoForDefaultSpecialMembers();
     SetDeclDefaulted(Function, PatternDecl->getLocation());
   } else {
-    NamedDecl *ND = Function;
-    DeclContext *DC = ND->getLexicalDeclContext();
-    std::optional<ArrayRef<TemplateArgument>> Innermost;
-    if (auto *Primary = Function->getPrimaryTemplate();
-        Primary &&
-        !isGenericLambdaCallOperatorOrStaticInvokerSpecialization(Function) &&
-        Function->getTemplateSpecializationKind() !=
-            TSK_ExplicitSpecialization) {
-      auto It = llvm::find_if(Primary->redecls(),
-                              [](const RedeclarableTemplateDecl *RTD) {
-                                return cast<FunctionTemplateDecl>(RTD)
-                                    ->isCompatibleWithDefinition();
-                              });
-      assert(It != Primary->redecls().end() &&
-             "Should't get here without a definition");
-      DC = (*It)->getLexicalDeclContext();
-      Innermost.emplace(Function->getTemplateSpecializationArgs()->asArray());
-    }
     MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
-        Function, DC, /*Final=*/false, Innermost, false, PatternDecl);
+        Function, Function->getLexicalDeclContext(), /*Final=*/false,
+        /*Innermost=*/std::nullopt, false, PatternDecl);
 
     // Substitute into the qualifier; we can get a substitution failure here
     // through evil use of alias templates.
