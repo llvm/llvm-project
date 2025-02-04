@@ -874,6 +874,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::v2f32, Custom);
     // Handle custom lowering for: f32 = extract_vector_elt v2f32
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2f32, Custom);
+    // Combine:
+    // i64 = or (i64 = zero_extend X, i64 = shl (i64 = any_extend Y, 32))
+    // -> i64 = build_pair (X, Y)
+    setTargetDAGCombine(ISD::OR);
   }
 
   // These map to conversion instructions for scalar FP types.
@@ -5268,6 +5272,31 @@ PerformBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   return DAG.getNode(ISD::BITCAST, DL, VT, PRMT);
 }
 
+static SDValue PerformORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                                CodeGenOptLevel OptLevel) {
+  if (OptLevel == CodeGenOptLevel::None)
+    return SDValue();
+
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+
+  // i64 = or (i64 = zero_extend A, i64 = shl (i64 = any_extend B, 32))
+  // -> i64 = build_pair (A, B)
+  if (N->getValueType(0) == MVT::i64 && Op0.getOpcode() == ISD::ZERO_EXTEND &&
+      Op1.getOpcode() == ISD::SHL) {
+    SDValue SHLOp0 = Op1.getOperand(0);
+    SDValue SHLOp1 = Op1.getOperand(1);
+    if (const auto *Const = dyn_cast<ConstantSDNode>(SHLOp1);
+        Const && Const->getZExtValue() == 32 &&
+        SHLOp0.getOpcode() == ISD::ANY_EXTEND) {
+      SDLoc DL(N);
+      return DCI.DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64,
+                             {Op0.getOperand(0), SHLOp0.getOperand(0)});
+    }
+  }
+  return SDValue();
+}
+
 SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   CodeGenOptLevel OptLevel = getTargetMachine().getOptLevel();
@@ -5302,6 +5331,8 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
       return PerformVSELECTCombine(N, DCI);
     case ISD::BUILD_VECTOR:
       return PerformBUILD_VECTORCombine(N, DCI);
+    case ISD::OR:
+      return PerformORCombine(N, DCI, OptLevel);
   }
   return SDValue();
 }
