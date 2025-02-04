@@ -785,8 +785,11 @@ void VPInstruction::execute(VPTransformState &State) {
 InstructionCost VPInstruction::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) const {
   if (Instruction::isBinaryOp(getOpcode())) {
-    if (!getUnderlyingValue())
+    if (!getUnderlyingValue()) {
+      // TODO: Compute cost for VPInstructions without underlying values once
+      // the legacy cost model has been retired.
       return 0;
+    }
 
     assert(!doesGeneratePerAllLanes() &&
            "Should only generate a vector value or single scalar, not scalars "
@@ -798,8 +801,10 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getArithmeticInstrCost(getOpcode(), ResTy, Ctx.CostKind);
   }
 
+  // TODO: Compute cost other VPInstructions once the legacy cost model has
+  // been retired.
   assert(!getUnderlyingValue() &&
-         "unexpected VPInstruction without underlying value");
+         "unexpected VPInstruction witht underlying value");
   return 0;
 }
 
