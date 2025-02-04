@@ -415,8 +415,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
   // The case `long volatile long int const` -> `const volatile long long int`
   if (TypeToken->isTypeName(LangOpts)) {
     for (const auto *Prev = TypeToken->Previous;
-         Prev && Prev->is(tok::coloncolon);
-         Prev = Prev->Previous) {
+         Prev && Prev->is(tok::coloncolon); Prev = Prev->Previous) {
       TypeToken = Prev;
       Prev = Prev->Previous;
       if (!(Prev && Prev->is(tok::identifier)))
