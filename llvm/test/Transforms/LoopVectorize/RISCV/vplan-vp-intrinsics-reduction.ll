@@ -3,13 +3,13 @@
 ; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize \
 ; RUN: -force-tail-folding-style=data-with-evl \
 ; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
-; RUN: -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-max=128 -disable-output < %s 2>&1 | FileCheck --check-prefixes=IF-EVL-OUTLOOP %s
+; RUN: -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-max=128 -disable-output < %s 2>&1 | FileCheck --check-prefixes=IF-EVL-OUTLOOP,IF-EVL %s
 
 ; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize \
 ; RUN: -prefer-inloop-reductions \
 ; RUN: -force-tail-folding-style=data-with-evl \
 ; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
-; RUN: -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-max=128 -disable-output < %s 2>&1 | FileCheck --check-prefixes=IF-EVL-INLOOP %s
+; RUN: -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-max=128 -disable-output < %s 2>&1 | FileCheck --check-prefixes=IF-EVL-INLOOP,IF-EVL %s
 
 ; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize \
 ; RUN: -force-tail-folding-style=none \
@@ -24,6 +24,9 @@
 
 
 define i32 @reduction(ptr %a, i64 %n, i32 %start) {
+; IF-EVL: VPlan 'Initial VPlan for VF={1},UF={1}'
+; IF-EVL: EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI
+
 ; IF-EVL-OUTLOOP: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}' {
 ; IF-EVL-OUTLOOP-NEXT: Live-in vp<[[VFUF:%[0-9]+]]> = VF * UF
 ; IF-EVL-OUTLOOP-NEXT: Live-in vp<[[VTC:%[0-9]+]]> = vector-trip-count
