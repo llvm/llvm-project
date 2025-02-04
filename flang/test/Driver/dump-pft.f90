@@ -5,7 +5,7 @@
 ! PFT: 1 Subroutine test_routine: subroutine test_routine(a, b, n)
 ! PFT-NEXT:  1 EndSubroutineStmt: end subroutine
 ! PRF-NEXT: End Subroutine test_routine
-! PFT-NO: Program -> ProgramUnit -> SubroutineSubprogram
+! PFT-NOT: Program -> ProgramUnit -> SubroutineSubprogram
 
 ! PARSE_TREE: Program -> ProgramUnit -> SubroutineSubprogram
 ! PARSE_TREE-NEXT: | SubroutineStmt
@@ -17,7 +17,7 @@
 ! PARSE_TREE-NEXT: | | ImplicitPart ->
 ! PARSE_TREE-NEXT: | ExecutionPart -> Block
 ! PARSE_TREE-NEXT: | EndSubroutineStmt ->
-! PARSE_TREE-NO: Subroutine test_routine: subroutine test_routine(a, b, n)
+! PARSE_TREE-NOT: Subroutine test_routine: subroutine test_routine(a, b, n)
 
 subroutine test_routine(a, b, n)
 end subroutine

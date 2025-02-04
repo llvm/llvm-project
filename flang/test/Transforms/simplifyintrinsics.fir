@@ -428,7 +428,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 }
 
 // Just check that SOMETHING is being output.
-// CHECK-LABEL @sum_dim() {
+// CHECK-LABEL: @sum_dim() {
 // CHECK: return
 
 
@@ -459,7 +459,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 }
 
 // Just check that SOMETHING is being output.
-// CHECK-LABEL @sum_1d_unknown() {
+// CHECK-LABEL: @sum_1d_unknown(
 // CHECK: return
 
 // -----

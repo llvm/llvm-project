@@ -96,7 +96,7 @@ subroutine s(i,j,k,ii,jj,kk,a1,a2,a3,a4,a5,a6,a7)
   
 end subroutine s
 
-! CHECK-LABEL range
+! CHECK-LABEL: range
 subroutine range()
   ! Compile-time initalized arrays
   integer, dimension(10) :: a0
@@ -132,14 +132,14 @@ end subroutine range
 ! c0 array constructor
 ! CHECK: fir.global internal @_QQro.2x3xz4.{{.*}}(dense<{{\[}}[(1.000000e+00,1.500000e+00), (2.000000e+00,2.500000e+00)], [(3.000000e+00,3.500000e+00), (4.000000e+00,4.500000e+00)], [(5.000000e+00,5.500000e+00), (6.000000e+00,6.500000e+00)]]> : tensor<3x2xcomplex<f32>>) constant : !fir.array<2x3xcomplex<f32>>
 
-! CHECK-LABEL rangeGlobal
+! CHECK-LABEL: rangeGlobal
 subroutine rangeGlobal()
 ! CHECK: fir.global internal @_QFrangeglobal{{.*}}(dense<[1, 1, 2, 2, 3, 3]> : tensor<6xi32>) : !fir.array<6xi32>
   integer, dimension(6) :: a0 = (/ 1, 1, 2, 2, 3, 3 /)
 
 end subroutine rangeGlobal
 
-! CHECK-LABEL hugeGlobal
+! CHECK-LABEL: hugeGlobal
 subroutine hugeGlobal()
   integer, parameter :: D = 500
   integer, dimension(D, D) :: a
