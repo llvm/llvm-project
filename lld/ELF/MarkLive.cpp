@@ -258,14 +258,12 @@ template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
     } else {
       // This object is live merely by being a member of its parent section, so
       // report the parent.
-#if 0
       InputSectionBase *parent = nullptr;
       if (auto *d = dyn_cast<Defined>(s))
         parent = dyn_cast<InputSectionBase>(d->section);
       assert(parent &&
              "all live objects should have a tracked reason for being live");
       cur = LiveObject{parent};
-#endif
     }
 
     msg << "\n>>> alive because of ";
