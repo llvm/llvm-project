@@ -237,7 +237,9 @@ static const char *const opCommentHeader = R"(
 static llvm::cl::OptionCategory clOpDefs("Options for op definitions");
 
 static llvm::cl::opt<bool> clUseFallbackTypeIDs(
-    "gen-op-use-fallback-type-ids", llvm::cl::desc("Don't generate static TypeID decls; fall back to string comparison."),
+    "gen-op-use-fallback-type-ids",
+    llvm::cl::desc(
+        "Don't generate static TypeID decls; fall back to string comparison."),
     llvm::cl::init(false), llvm::cl::cat(clOpDefs));
 
 //===----------------------------------------------------------------------===//
