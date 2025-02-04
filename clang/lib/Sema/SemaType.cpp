@@ -1593,38 +1593,30 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
   // object or incomplete types shall not be restrict-qualified."
   if (Qs.hasRestrict()) {
     unsigned DiagID = 0;
-    QualType ProblemTy;
+    QualType EltTy = Context.getBaseElementType(T);
 
-    if (T->isAnyPointerType() || T->isReferenceType() ||
-        T->isMemberPointerType() || T->isArrayType()) {
-      QualType EltTy;
-      ProblemTy = Context.getBaseElementType(T);
+    if (EltTy->isAnyPointerType() || EltTy->isReferenceType() ||
+        EltTy->isMemberPointerType() || EltTy->isArrayType()) {
 
-      if (T->isObjCObjectPointerType())
-        EltTy = T;
-      else if (const MemberPointerType *PTy = T->getAs<MemberPointerType>())
+      if (const MemberPointerType *PTy = EltTy->getAs<MemberPointerType>())
         EltTy = PTy->getPointeeType();
-      else if (T->isArrayType())
-        EltTy = BuildQualifiedType(ProblemTy, Loc, Qs);
       else
-        EltTy = T->getPointeeType();
+        EltTy = EltTy->getPointeeType();
 
       // If we have a pointer or reference, the pointee must have an object
       // incomplete type.
-      if (!EltTy->isIncompleteOrObjectType()) {
+      if (!EltTy->isIncompleteOrObjectType())
         DiagID = diag::err_typecheck_invalid_restrict_invalid_pointee;
-        ProblemTy = EltTy;
-      }
-    } else if (!isDependentOrGNUAutoType(T)) {
+
+    } else if (!isDependentOrGNUAutoType(EltTy)) {
       // For an __auto_type variable, we may not have seen the initializer yet
       // and so have no idea whether the underlying type is a pointer type or
       // not.
       DiagID = diag::err_typecheck_invalid_restrict_not_pointer;
-      ProblemTy = T;
     }
 
     if (DiagID) {
-      Diag(DS ? DS->getRestrictSpecLoc() : Loc, DiagID) << ProblemTy;
+      Diag(DS ? DS->getRestrictSpecLoc() : Loc, DiagID) << EltTy;
       Qs.removeRestrict();
     }
   }
