@@ -711,3 +711,8 @@ void CGHLSLRuntime::emitInitListOpaqueValues(CodeGenFunction &CGF,
     }
   }
 }
+
+// Returns true if the type is an HLSL resource class
+bool CGHLSLRuntime::isResourceRecordType(const clang::Type *Ty) {
+  return HLSLAttributedResourceType::findHandleTypeOnResource(Ty) != nullptr;
+}
