@@ -35,4 +35,4 @@ In addition to the ``-ftime-trace`` option, you can use ``-ftime-trace-granulari
 Note: Both Chrome-tracing and speedscope tools might struggle with time traces above 100 MB in size.
 Luckily, in most cases the default max-steps boundary of 225 000 produces the traces of approximately that size
 for a single entry point.
-You should use ``-analyze-function=get_global_options`` together with ``-ftime-trace`` to narrow down analysis to a specific entry point.
+You can use ``-analyze-function=get_global_options`` together with ``-ftime-trace`` to narrow down analysis to a specific entry point.
