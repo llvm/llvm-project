@@ -7634,6 +7634,60 @@ bool BoUpSLP::areAltOperandsProfitable(const InstructionsState &S,
            NumAltInsts) < S.getMainOp()->getNumOperands() * VL.size());
 }
 
+/// Builds the arguments types vector for the given call instruction with the
+/// given \p ID for the specified vector factor.
+static SmallVector<Type *>
+buildIntrinsicArgTypes(const CallInst *CI, const Intrinsic::ID ID,
+                       const unsigned VF, unsigned MinBW,
+                       const TargetTransformInfo *TTI) {
+  SmallVector<Type *> ArgTys;
+  for (auto [Idx, Arg] : enumerate(CI->args())) {
+    if (ID != Intrinsic::not_intrinsic) {
+      if (isVectorIntrinsicWithScalarOpAtArg(ID, Idx, TTI)) {
+        ArgTys.push_back(Arg->getType());
+        continue;
+      }
+      if (MinBW > 0) {
+        ArgTys.push_back(
+            getWidenedType(IntegerType::get(CI->getContext(), MinBW), VF));
+        continue;
+      }
+    }
+    ArgTys.push_back(getWidenedType(Arg->getType(), VF));
+  }
+  return ArgTys;
+}
+
+/// Calculates the costs of vectorized intrinsic (if possible) and vectorized
+/// function (if possible) calls.
+static std::pair<InstructionCost, InstructionCost>
+getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
+                   TargetTransformInfo *TTI, TargetLibraryInfo *TLI,
+                   ArrayRef<Type *> ArgTys) {
+  Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
+
+  // Calculate the cost of the scalar and vector calls.
+  FastMathFlags FMF;
+  if (auto *FPCI = dyn_cast<FPMathOperator>(CI))
+    FMF = FPCI->getFastMathFlags();
+  IntrinsicCostAttributes CostAttrs(ID, VecTy, ArgTys, FMF);
+  auto IntrinsicCost =
+    TTI->getIntrinsicInstrCost(CostAttrs, TTI::TCK_RecipThroughput);
+
+  auto Shape = VFShape::get(CI->getFunctionType(),
+                            ElementCount::getFixed(VecTy->getNumElements()),
+                            false /*HasGlobalPred*/);
+  Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
+  auto LibCost = IntrinsicCost;
+  if (!CI->isNoBuiltin() && VecFunc) {
+    // Calculate the cost of the vector library call.
+    // If the corresponding vector call is cheaper, return its cost.
+    LibCost =
+        TTI->getCallInstrCost(nullptr, VecTy, ArgTys, TTI::TCK_RecipThroughput);
+  }
+  return {IntrinsicCost, LibCost};
+}
+
 BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     const InstructionsState &S, ArrayRef<Value *> VL,
     bool IsScatterVectorizeUserTE, OrdersType &CurrentOrder,
@@ -9015,34 +9069,6 @@ bool BoUpSLP::areAllUsersVectorized(
            return isVectorized(U) || isVectorLikeInstWithConstOps(U) ||
                   (isa<ExtractElementInst>(U) && MustGather.contains(U));
          });
-}
-
-static std::pair<InstructionCost, InstructionCost>
-getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
-                   TargetTransformInfo *TTI, TargetLibraryInfo *TLI,
-                   ArrayRef<Type *> ArgTys) {
-  Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
-
-  // Calculate the cost of the scalar and vector calls.
-  FastMathFlags FMF;
-  if (auto *FPCI = dyn_cast<FPMathOperator>(CI))
-    FMF = FPCI->getFastMathFlags();
-  IntrinsicCostAttributes CostAttrs(ID, VecTy, ArgTys, FMF);
-  auto IntrinsicCost =
-    TTI->getIntrinsicInstrCost(CostAttrs, TTI::TCK_RecipThroughput);
-
-  auto Shape = VFShape::get(CI->getFunctionType(),
-                            ElementCount::getFixed(VecTy->getNumElements()),
-                            false /*HasGlobalPred*/);
-  Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
-  auto LibCost = IntrinsicCost;
-  if (!CI->isNoBuiltin() && VecFunc) {
-    // Calculate the cost of the vector library call.
-    // If the corresponding vector call is cheaper, return its cost.
-    LibCost =
-        TTI->getCallInstrCost(nullptr, VecTy, ArgTys, TTI::TCK_RecipThroughput);
-  }
-  return {IntrinsicCost, LibCost};
 }
 
 void BoUpSLP::TreeEntry::buildAltOpShuffleMask(
@@ -11043,30 +11069,6 @@ TTI::CastContextHint BoUpSLP::getCastContextHint(const TreeEntry &TE) const {
       return TTI::CastContextHint::Reversed;
   }
   return TTI::CastContextHint::None;
-}
-
-/// Builds the arguments types vector for the given call instruction with the
-/// given \p ID for the specified vector factor.
-static SmallVector<Type *>
-buildIntrinsicArgTypes(const CallInst *CI, const Intrinsic::ID ID,
-                       const unsigned VF, unsigned MinBW,
-                       const TargetTransformInfo *TTI) {
-  SmallVector<Type *> ArgTys;
-  for (auto [Idx, Arg] : enumerate(CI->args())) {
-    if (ID != Intrinsic::not_intrinsic) {
-      if (isVectorIntrinsicWithScalarOpAtArg(ID, Idx, TTI)) {
-        ArgTys.push_back(Arg->getType());
-        continue;
-      }
-      if (MinBW > 0) {
-        ArgTys.push_back(
-            getWidenedType(IntegerType::get(CI->getContext(), MinBW), VF));
-        continue;
-      }
-    }
-    ArgTys.push_back(getWidenedType(Arg->getType(), VF));
-  }
-  return ArgTys;
 }
 
 InstructionCost
