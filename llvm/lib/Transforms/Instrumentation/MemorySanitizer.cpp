@@ -3501,7 +3501,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   // Similar to handleVectorReduceIntrinsic but with an initial starting value.
-  // e.g., call float @llvm.vector.reduce.fadd.f32.v2f32(float %a0, <2 x float> %a1)
+  // e.g., call float @llvm.vector.reduce.fadd.f32.v2f32(float %a0, <2 x float>
+  // %a1)
   //       shadow = shadow[a0] | shadow[a1.0] | shadow[a1.1]
   void handleVectorReduceWithStarterIntrinsic(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
