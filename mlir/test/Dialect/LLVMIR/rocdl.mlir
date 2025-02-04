@@ -758,7 +758,6 @@ llvm.func @rocdl_8bit_floats(%source: i32, %stoch: i32) -> i32 {
 // CHECK: rocdl.cvt.scalef32.f32.fp8
 // CHECK: rocdl.cvt.pk.bf8.f32
 // CHECK: rocdl.cvt.pk.fp8.f32
-// CHECK: rocdl.cvt.scalef32.pk.fp8.f32
 // CHECK: rocdl.cvt.sr.bf8.f32
 // CHECK: rocdl.cvt.sr.fp8.f32
 // CHECK: rocdl.cvt.scalef32.sr.fp8.f32
@@ -777,7 +776,6 @@ llvm.func @rocdl_8bit_floats(%source: i32, %stoch: i32) -> i32 {
   %v2_scaled = rocdl.cvt.scalef32.f32.fp8 %source[%c0], %c4 : f32
   %source2 = rocdl.cvt.pk.bf8.f32 %v1, %v2 -> %source[%false] : i32
   %source3 = rocdl.cvt.pk.fp8.f32 %v1, %v2 -> %source2[%false] : i32
-  %source3_scaled = rocdl.cvt.scalef32.pk.fp8.f32 %v1, %v2, %c4 -> %source2[%false] : i32
   %source4 = rocdl.cvt.sr.bf8.f32 %v1, %stoch -> %source3[%c2] : i32
   %source4_scaled = rocdl.cvt.scalef32.pk.bf8.f32 %v1, %v2, %c4 -> %source2[%false] : i32
   %source5 = rocdl.cvt.sr.fp8.f32 %v2, %stoch -> %source4[%c3] : i32
@@ -788,6 +786,16 @@ llvm.func @rocdl_8bit_floats(%source: i32, %stoch: i32) -> i32 {
   %source8_scaled = rocdl.cvt.scalef32.pk.f32.bf8 %source[%false], %c4 : f32
   llvm.return %source5 : i32
 }
+
+llvm.func @rocdl_8bit_packed_floats(%sourceA: f32, %sourceB: f32, %old: vector<2xi16>) -> vector<2xi16> {
+// CHECK-LABEL: @rocdl_8bit_packed_floats
+// CHECK: rocdl.cvt.scalef32.pk.fp8.f32
+  %c0 = llvm.mlir.constant(1.0 : f32) : f32
+  %false = llvm.mlir.constant(false) : i1
+  %source_scaled = rocdl.cvt.scalef32.pk.fp8.f32 %old[%false], %sourceA, %sourceB, %c0 : vector<2xi16>
+  llvm.return %source_scaled : vector<2xi16>
+}
+
 
 llvm.func @rocdl.waitcnt() {
   // CHECK-LABEL: rocdl.waitcnt

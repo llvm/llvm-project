@@ -763,23 +763,23 @@ def ROCDL_CvtScalePkF32Bf8 :
     attr-dict $src `[` $wordSel `]` `,` $scale `:` type($res)
   }];
 }
-
-
-	
-
 //===---------------------------------------------------------------------===//
 // 8-bit float scale intrinsics
 //===---------------------------------------------------------------------===//
+def ROCDL_V2I16Type : FixedVectorOfLengthAndType<[2], [I16]>,
+                        BuildableType<"::mlir::VectorType::get("
+                          "{2},$_builder.getI16Type())">;
+
 def ROCDL_CvtScaleF32PkFp8F32:
     ROCDL_IntrOp<"cvt.scalef32.pk.fp8.f32", [], [], [Pure], 1>,
-    Arguments<(ins I32:$old, F32:$srcA, F32:$srcB, F32: $scale, I1:$wordSel)> {
+    Arguments<(ins ROCDL_V2I16Type:$old, F32:$srcA, F32:$srcB, F32:$scale, I1:$wordSel)> {
   let summary = "Scale and convert two f32's to packed fp8";
   let description = [{
     Scale `srcA` and `srcB` by the exponent in `scale` then convert to packed fp8
     and store into the low/high word of `old`, preserving the other word.
   }];
   let assemblyFormat = [{
-    attr-dict $srcA `,` $srcB `,` $scale `->` $old `[` $wordSel `]` `:` type($res)
+    attr-dict $old `[` $wordSel `]` `,` $srcA `,` $srcB `,` $scale `:` type($res)
   }];
 }
     
