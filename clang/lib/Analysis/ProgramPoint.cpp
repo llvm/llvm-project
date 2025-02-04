@@ -49,7 +49,7 @@ LLVM_DUMP_METHOD void ProgramPoint::dump() const {
   return printJson(llvm::errs());
 }
 
-const char *ProgramPoint::kindToStr(Kind K) {
+const char *ProgramPoint::getProgramPointKindName(Kind K) {
   switch (K) {
   case BlockEdgeKind:
     return "BlockEdge";

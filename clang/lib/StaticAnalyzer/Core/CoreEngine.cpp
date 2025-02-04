@@ -183,7 +183,8 @@ bool CoreEngine::ExecuteWorkList(const LocationContext *L, unsigned MaxSteps,
 
 static std::string timeTraceScopeName(const ProgramPoint &Loc) {
   if (llvm::timeTraceProfilerEnabled()) {
-    return llvm::formatv("Loc {0}", ProgramPoint::kindToStr(Loc.getKind()))
+    return llvm::formatv("Loc {0}",
+                         ProgramPoint::getProgramPointKindName(Loc.getKind()))
         .str();
   }
   return "";
