@@ -232,7 +232,8 @@ void threadSafetyCleanup(BeforeSet *Cache);
 
 // FIXME: No way to easily map from TemplateTypeParmTypes to
 // TemplateTypeParmDecls, so we have this horrible PointerUnion.
-typedef std::pair<llvm::PointerUnion<const TemplateTypeParmType *, NamedDecl *>,
+typedef std::pair<llvm::PointerUnion<const TemplateTypeParmType *, NamedDecl *,
+                                     ResolvedUnexpandedPackExpr *>,
                   SourceLocation>
     UnexpandedParameterPack;
 
@@ -3663,6 +3664,12 @@ public:
                              NonTrivialCUnionContext UseContext,
                              unsigned NonTrivialKind);
 
+  /// Certain globally-unique variables might be accidentally duplicated if
+  /// built into multiple shared libraries with hidden visibility. This can
+  /// cause problems if the variable is mutable, its initialization is
+  /// effectful, or its address is taken.
+  bool GloballyUniqueObjectMightBeAccidentallyDuplicated(const VarDecl *Dcl);
+
   /// AddInitializerToDecl - Adds the initializer Init to the
   /// declaration dcl. If DirectInit is true, this is C++ direct
   /// initialization rather than copy initialization.
@@ -6021,6 +6028,7 @@ public:
                                          RecordDecl *ClassDecl,
                                          const IdentifierInfo *Name);
 
+  unsigned GetDecompositionElementCount(QualType DecompType);
   void CheckCompleteDecompositionDeclaration(DecompositionDecl *DD);
 
   /// Stack containing information needed when in C++2a an 'auto' is encountered
@@ -11836,17 +11844,6 @@ public:
     /// template<template<int Value> class Other> struct X;
     /// \endcode
     TPL_TemplateTemplateParmMatch,
-
-    /// We are matching the template parameter lists of a template
-    /// template argument against the template parameter lists of a template
-    /// template parameter.
-    ///
-    /// \code
-    /// template<template<int Value> class Metafun> struct X;
-    /// template<int Value> struct integer_c;
-    /// X<integer_c> xic;
-    /// \endcode
-    TPL_TemplateTemplateArgumentMatch,
 
     /// We are determining whether the template-parameters are equivalent
     /// according to C++ [temp.over.link]/6. This comparison does not consider

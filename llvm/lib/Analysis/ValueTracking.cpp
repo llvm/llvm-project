@@ -113,24 +113,6 @@ static const Instruction *safeCxtI(const Value *V, const Instruction *CxtI) {
   return nullptr;
 }
 
-static const Instruction *safeCxtI(const Value *V1, const Value *V2, const Instruction *CxtI) {
-  // If we've been provided with a context instruction, then use that (provided
-  // it has been inserted).
-  if (CxtI && CxtI->getParent())
-    return CxtI;
-
-  // If the value is really an already-inserted instruction, then use that.
-  CxtI = dyn_cast<Instruction>(V1);
-  if (CxtI && CxtI->getParent())
-    return CxtI;
-
-  CxtI = dyn_cast<Instruction>(V2);
-  if (CxtI && CxtI->getParent())
-    return CxtI;
-
-  return nullptr;
-}
-
 static bool getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
                                    const APInt &DemandedElts,
                                    APInt &DemandedLHS, APInt &DemandedRHS) {
@@ -316,18 +298,14 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2,
                             const SimplifyQuery &Q);
 
 bool llvm::isKnownNonEqual(const Value *V1, const Value *V2,
-                           const DataLayout &DL, AssumptionCache *AC,
-                           const Instruction *CxtI, const DominatorTree *DT,
-                           bool UseInstrInfo) {
+                           const SimplifyQuery &Q, unsigned Depth) {
   // We don't support looking through casts.
   if (V1 == V2 || V1->getType() != V2->getType())
     return false;
   auto *FVTy = dyn_cast<FixedVectorType>(V1->getType());
   APInt DemandedElts =
       FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
-  return ::isKnownNonEqual(
-      V1, V2, DemandedElts, 0,
-      SimplifyQuery(DL, DT, AC, safeCxtI(V2, V1, CxtI), UseInstrInfo));
+  return ::isKnownNonEqual(V1, V2, DemandedElts, Depth, Q);
 }
 
 bool llvm::MaskedValueIsZero(const Value *V, const APInt &Mask,
@@ -798,7 +776,10 @@ static void computeKnownBitsFromICmpCond(const Value *V, ICmpInst *Cmp,
   if (match(LHS, m_Trunc(m_Specific(V)))) {
     KnownBits DstKnown(LHS->getType()->getScalarSizeInBits());
     computeKnownBitsFromCmp(LHS, Pred, LHS, RHS, DstKnown, SQ);
-    Known = Known.unionWith(DstKnown.anyext(Known.getBitWidth()));
+    if (cast<TruncInst>(LHS)->hasNoUnsignedWrap())
+      Known = Known.unionWith(DstKnown.zext(Known.getBitWidth()));
+    else
+      Known = Known.unionWith(DstKnown.anyext(Known.getBitWidth()));
     return;
   }
 
@@ -2652,40 +2633,42 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
     return false;
 
   unsigned NumUsesExplored = 0;
-  for (const auto *U : V->users()) {
+  for (auto &U : V->uses()) {
     // Avoid massive lists
     if (NumUsesExplored >= DomConditionsMaxUses)
       break;
     NumUsesExplored++;
 
+    const Instruction *UI = cast<Instruction>(U.getUser());
     // If the value is used as an argument to a call or invoke, then argument
     // attributes may provide an answer about null-ness.
-    if (const auto *CB = dyn_cast<CallBase>(U))
-      if (auto *CalledFunc = CB->getCalledFunction())
-        for (const Argument &Arg : CalledFunc->args())
-          if (CB->getArgOperand(Arg.getArgNo()) == V &&
-              Arg.hasNonNullAttr(/* AllowUndefOrPoison */ false) &&
-              DT->dominates(CB, CtxI))
-            return true;
+    if (V->getType()->isPointerTy()) {
+      if (const auto *CB = dyn_cast<CallBase>(UI)) {
+        if (CB->isArgOperand(&U) &&
+            CB->paramHasNonNullAttr(CB->getArgOperandNo(&U),
+                                    /*AllowUndefOrPoison=*/false) &&
+            DT->dominates(CB, CtxI))
+          return true;
+      }
+    }
 
     // If the value is used as a load/store, then the pointer must be non null.
-    if (V == getLoadStorePointerOperand(U)) {
-      const Instruction *I = cast<Instruction>(U);
-      if (!NullPointerIsDefined(I->getFunction(),
+    if (V == getLoadStorePointerOperand(UI)) {
+      if (!NullPointerIsDefined(UI->getFunction(),
                                 V->getType()->getPointerAddressSpace()) &&
-          DT->dominates(I, CtxI))
+          DT->dominates(UI, CtxI))
         return true;
     }
 
-    if ((match(U, m_IDiv(m_Value(), m_Specific(V))) ||
-         match(U, m_IRem(m_Value(), m_Specific(V)))) &&
-        isValidAssumeForContext(cast<Instruction>(U), CtxI, DT))
+    if ((match(UI, m_IDiv(m_Value(), m_Specific(V))) ||
+         match(UI, m_IRem(m_Value(), m_Specific(V)))) &&
+        isValidAssumeForContext(UI, CtxI, DT))
       return true;
 
     // Consider only compare instructions uniquely controlling a branch
     Value *RHS;
     CmpPredicate Pred;
-    if (!match(U, m_c_ICmp(Pred, m_Specific(V), m_Value(RHS))))
+    if (!match(UI, m_c_ICmp(Pred, m_Specific(V), m_Value(RHS))))
       continue;
 
     bool NonNullIfTrue;
@@ -2698,7 +2681,7 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
 
     SmallVector<const User *, 4> WorkList;
     SmallPtrSet<const User *, 4> Visited;
-    for (const auto *CmpU : U->users()) {
+    for (const auto *CmpU : UI->users()) {
       assert(WorkList.empty() && "Should be!");
       if (Visited.insert(CmpU).second)
         WorkList.push_back(CmpU);

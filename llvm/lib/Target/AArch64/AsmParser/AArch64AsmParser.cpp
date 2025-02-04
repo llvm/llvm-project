@@ -4621,7 +4621,7 @@ ParseStatus AArch64AsmParser::tryParseVectorList(OperandVector &Operands,
     return ParseStatus::NoMatch;
   };
 
-  int NumRegs = getNumRegsForRegKind(VectorKind);
+  unsigned NumRegs = getNumRegsForRegKind(VectorKind);
   SMLoc S = getLoc();
   auto LCurly = getTok();
   Lex(); // Eat left bracket token.
@@ -4638,10 +4638,10 @@ ParseStatus AArch64AsmParser::tryParseVectorList(OperandVector &Operands,
   if (!ParseRes.isSuccess())
     return ParseRes;
 
-  int64_t PrevReg = FirstReg;
+  MCRegister PrevReg = FirstReg;
   unsigned Count = 1;
 
-  int Stride = 1;
+  unsigned Stride = 1;
   if (parseOptionalToken(AsmToken::Minus)) {
     SMLoc Loc = getLoc();
     StringRef NextKind;
@@ -4656,7 +4656,7 @@ ParseStatus AArch64AsmParser::tryParseVectorList(OperandVector &Operands,
       return Error(Loc, "mismatched register size suffix");
 
     unsigned Space =
-        (PrevReg < Reg) ? (Reg - PrevReg) : (Reg + NumRegs - PrevReg);
+        (PrevReg < Reg) ? (Reg - PrevReg) : (NumRegs - (PrevReg - Reg));
 
     if (Space == 0 || Space > 3)
       return Error(Loc, "invalid number of vectors");
@@ -4682,7 +4682,7 @@ ParseStatus AArch64AsmParser::tryParseVectorList(OperandVector &Operands,
           getContext().getRegisterInfo()->getEncodingValue(PrevReg);
       if (!HasCalculatedStride) {
         Stride = (PrevRegVal < RegVal) ? (RegVal - PrevRegVal)
-                                       : (RegVal + NumRegs - PrevRegVal);
+                                       : (NumRegs - (PrevRegVal - RegVal));
         HasCalculatedStride = true;
       }
 
