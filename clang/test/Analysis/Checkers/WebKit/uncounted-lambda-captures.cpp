@@ -252,13 +252,23 @@ struct RefCountableWithLambdaCapturingThis {
     call(lambda);
   }
 
-  void method_captures_this_with_guardian_refPtr() {
+  void method_captures_this_with_guardian_refptr() {
     auto lambda = [this, protectedThis = RefPtr { &*this }]() {
       nonTrivial();
     };
     call(lambda);
   }
 
+
+  void forEach(const WTF::Function<void(RefCountable&)>&);
+  void method_captures_this_with_lambda_with_no_escape() {
+    auto run = [&]([[clang::noescape]] const WTF::Function<void(RefCountable&)>& func) {
+      forEach(func);
+    };
+    run([&](RefCountable&) {
+      nonTrivial();
+    });
+  }
 };
 
 struct NonRefCountableWithLambdaCapturingThis {
