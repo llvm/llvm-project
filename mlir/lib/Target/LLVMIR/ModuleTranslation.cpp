@@ -1028,12 +1028,20 @@ static void addRuntimePreemptionSpecifier(bool dsoLocalRequested,
     gv->setDSOLocal(true);
 }
 
-/// Create named global variables that correspond to llvm.mlir.global
-/// definitions. Convert llvm.global_ctors and global_dtors ops.
-LogicalResult ModuleTranslation::convertGlobals() {
+/// Handle conversion for both globals and global aliases.
+///
+/// - Create named global variables that correspond to llvm.mlir.global
+/// definitions, similarly Convert llvm.global_ctors and global_dtors ops.
+/// - Create global alias that correspond to llvm.mlir.alias.
+LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
   // Mapping from compile unit to its respective set of global variables.
   DenseMap<llvm::DICompileUnit *, SmallVector<llvm::Metadata *>> allGVars;
 
+  // First, create all global variables and global aliases in LLVM IR. A global
+  // or alias body may refer to another global/alias or itself, so all the
+  // mapping needs to happen prior to body conversion.
+
+  // Create all llvm::GlobalVariable
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>()) {
     llvm::Type *type = convertType(op.getType());
     llvm::Constant *cst = nullptr;
@@ -1137,9 +1145,32 @@ LogicalResult ModuleTranslation::convertGlobals() {
     }
   }
 
-  // Convert global variable bodies. This is done after all global variables
-  // have been created in LLVM IR because a global body may refer to another
-  // global or itself. So all global variables need to be mapped first.
+  // Create all llvm::GlobalAlias
+  for (auto op : getModuleBody(mlirModule).getOps<LLVM::AliasOp>()) {
+    llvm::Type *type = convertType(op.getType());
+    llvm::Constant *cst = nullptr;
+    auto linkage = convertLinkageToLLVM(op.getLinkage());
+    llvm::Module &llvmMod = *llvmModule;
+
+    llvm::GlobalAlias *var = llvm::GlobalAlias::create(
+        type, op.getAddrSpace(), linkage, op.getSymName(), cst, &llvmMod);
+
+    var->setThreadLocalMode(op.getThreadLocal_()
+                                ? llvm::GlobalAlias::GeneralDynamicTLSModel
+                                : llvm::GlobalAlias::NotThreadLocal);
+
+    // Note there is no need to setup the comdat because GlobalAlias calls into
+    // the aliasee comdat information automatically.
+
+    if (op.getUnnamedAddr().has_value())
+      var->setUnnamedAddr(convertUnnamedAddrToLLVM(*op.getUnnamedAddr()));
+
+    var->setVisibility(convertVisibilityToLLVM(op.getVisibility_()));
+
+    aliasesMapping.try_emplace(op, var);
+  }
+
+  // Convert global variable bodies.
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>()) {
     if (Block *initializer = op.getInitializerBlock()) {
       llvm::IRBuilder<> builder(llvmModule->getContext());
@@ -1250,38 +1281,7 @@ LogicalResult ModuleTranslation::convertGlobals() {
         llvm::MDTuple::get(getLLVMContext(), globals));
   }
 
-  return success();
-}
-
-/// Convert aliases.
-LogicalResult ModuleTranslation::convertAliases() {
-  for (auto op : getModuleBody(mlirModule).getOps<LLVM::AliasOp>()) {
-    llvm::Type *type = convertType(op.getType());
-    llvm::Constant *cst = nullptr;
-    auto linkage = convertLinkageToLLVM(op.getLinkage());
-    llvm::Module &llvmMod = *llvmModule;
-
-    llvm::GlobalAlias *var = llvm::GlobalAlias::create(
-        type, op.getAddrSpace(), linkage, op.getSymName(), cst, &llvmMod);
-
-    var->setThreadLocalMode(op.getThreadLocal_()
-                                ? llvm::GlobalAlias::GeneralDynamicTLSModel
-                                : llvm::GlobalAlias::NotThreadLocal);
-
-    // Note there is no need to setup the comdat because GlobalAlias calls into
-    // the aliasee comdat information automatically.
-
-    if (op.getUnnamedAddr().has_value())
-      var->setUnnamedAddr(convertUnnamedAddrToLLVM(*op.getUnnamedAddr()));
-
-    var->setVisibility(convertVisibilityToLLVM(op.getVisibility_()));
-
-    aliasesMapping.try_emplace(op, var);
-  }
-
-  // Convert global aliases. This is done after all global aliases
-  // have been created in LLVM IR because a global body may refer to another
-  // global alias. So all aliases need to be mapped first.
+  // Convert global alias bodies.
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::AliasOp>()) {
     Block &initializer = op.getInitializerBlock();
     llvm::IRBuilder<> builder(llvmModule->getContext());
@@ -2112,9 +2112,7 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
     return nullptr;
   if (failed(translator.convertFunctionSignatures()))
     return nullptr;
-  if (failed(translator.convertGlobals()))
-    return nullptr;
-  if (failed(translator.convertAliases()))
+  if (failed(translator.convertGlobalsAndAliases()))
     return nullptr;
   if (failed(translator.createTBAAMetadata()))
     return nullptr;

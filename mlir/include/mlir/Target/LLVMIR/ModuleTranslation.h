@@ -327,8 +327,7 @@ private:
   LogicalResult convertFunctionSignatures();
   LogicalResult convertFunctions();
   LogicalResult convertComdats();
-  LogicalResult convertGlobals();
-  LogicalResult convertAliases();
+  LogicalResult convertGlobalsAndAliases();
   LogicalResult convertOneFunction(LLVMFuncOp func);
   LogicalResult convertBlockImpl(Block &bb, bool ignoreArguments,
                                  llvm::IRBuilderBase &builder,
