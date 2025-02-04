@@ -3790,6 +3790,13 @@ def : FPMinCanonMaxPat<V_MINMAX_F32_e64, f32, fmaxnum_like, fminnum_like_oneuse>
 def : FPMinCanonMaxPat<V_MAXMIN_F32_e64, f32, fminnum_like, fmaxnum_like_oneuse>;
 }
 
+let True16Predicate = UseRealTrue16Insts in {
+def : FPMinMaxPat<V_MINMAX_F16_t16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
+def : FPMinMaxPat<V_MAXMIN_F16_t16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
+def : FPMinCanonMaxPat<V_MINMAX_F16_t16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
+def : FPMinCanonMaxPat<V_MAXMIN_F16_t16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
+}
+
 let True16Predicate = UseFakeTrue16Insts in {
 def : FPMinMaxPat<V_MINMAX_F16_fake16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
 def : FPMinMaxPat<V_MAXMIN_F16_fake16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
@@ -3817,6 +3824,13 @@ def : FPMinMaxPat<V_MINIMUMMAXIMUM_F32_e64, f32, DivergentBinFrag<fmaximum>, fmi
 def : FPMinMaxPat<V_MAXIMUMMINIMUM_F32_e64, f32, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
 def : FPMinCanonMaxPat<V_MINIMUMMAXIMUM_F32_e64, f32, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
 def : FPMinCanonMaxPat<V_MAXIMUMMINIMUM_F32_e64, f32, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
+}
+
+let True16Predicate = UseRealTrue16Insts, SubtargetPredicate = isGFX12Plus in {
+def : FPMinMaxPat<V_MINIMUMMAXIMUM_F16_t16_e64, f16, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
+def : FPMinMaxPat<V_MAXIMUMMINIMUM_F16_t16_e64, f16, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
+def : FPMinCanonMaxPat<V_MINIMUMMAXIMUM_F16_t16_e64, f16, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
+def : FPMinCanonMaxPat<V_MAXIMUMMINIMUM_F16_t16_e64, f16, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
 }
 
 let True16Predicate = UseFakeTrue16Insts, SubtargetPredicate = isGFX12Plus in {
