@@ -5619,6 +5619,31 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       }
     }
 
+    // If only a prefix of the source elements influence a prefix of the
+    // destination elements, try to see if we can reduce the required LMUL
+    unsigned MinVLen = Subtarget.getRealMinVLen();
+    unsigned MinVLMAX = MinVLen / VT.getScalarSizeInBits();
+    if (NumElts > MinVLMAX) {
+      unsigned MaxIdx = 0;
+      for (auto [I, M] : enumerate(Mask)) {
+        if (M == -1)
+          continue;
+        MaxIdx = std::max(std::max((unsigned)I,(unsigned)M), MaxIdx);
+      }
+      unsigned NewNumElts = NumElts;
+      while (MaxIdx < NewNumElts / 2 && NewNumElts != MinVLMAX)
+        NewNumElts /= 2;
+      if (NewNumElts != NumElts) {
+        MVT NewVT = MVT::getVectorVT(VT.getVectorElementType(), NewNumElts);
+        SDValue ZeroIdx = DAG.getVectorIdxConstant(0, DL);
+        V1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewVT, V1, ZeroIdx);
+        SDValue Res = DAG.getVectorShuffle(NewVT, DL, V1, DAG.getUNDEF(NewVT),
+                                           Mask.take_front(NewNumElts));
+        return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT),
+                           Res, ZeroIdx);
+      }
+    }
+
     // Before hitting generic lowering fallbacks, try to widen the mask
     // to a wider SEW.
     if (SDValue V = tryWidenMaskForShuffle(Op, DAG))
