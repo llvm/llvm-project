@@ -9,7 +9,7 @@
 // The pass uses branch profile data to assign hotness based section qualifiers
 // for the following types of static data:
 // - Jump tables
-// - Other module-internal data
+// - Module-internal global variables
 // - Constant pools (TODO)
 //
 // For the original RFC of this pass please see
