@@ -17351,9 +17351,6 @@ static SDValue performSHLCombine(SDNode *N,
   // (shl (sext x), C) -> (vwmulsu x, 1u << C)
   // (shl (zext x), C) -> (vwmulu  x, 1u << C)
 
-  if (!Subtarget.hasCheapVWMul())
-    return SDValue();
-
   if (!DCI.isAfterLegalizeDAG())
     return SDValue();
 
