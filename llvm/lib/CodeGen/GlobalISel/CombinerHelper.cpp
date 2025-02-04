@@ -6595,8 +6595,9 @@ bool CombinerHelper::matchRedundantBinOpInEquality(MachineInstr &MI,
 static std::optional<unsigned>
 getMinUselessShift(KnownBits ValueKB, unsigned Opcode,
                    std::optional<int64_t> &Result) {
-  assert(Opcode == TargetOpcode::G_SHL || Opcode == TargetOpcode::G_LSHR ||
-         Opcode == TargetOpcode::G_ASHR && "Expect G_SHL, G_LSHR or G_ASHR.");
+  assert((Opcode == TargetOpcode::G_SHL || Opcode == TargetOpcode::G_LSHR ||
+          Opcode == TargetOpcode::G_ASHR) &&
+         "Expect G_SHL, G_LSHR or G_ASHR.");
   auto SignificantBits = 0;
   switch (Opcode) {
   case TargetOpcode::G_SHL:

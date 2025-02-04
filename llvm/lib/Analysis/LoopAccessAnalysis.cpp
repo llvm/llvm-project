@@ -2859,7 +2859,7 @@ static Value *stripGetElementPtr(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
 /// strides "a[i*stride]". Returns the symbolic stride, or null otherwise.
 static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
   auto *PtrTy = dyn_cast<PointerType>(Ptr->getType());
-  if (!PtrTy || PtrTy->isAggregateType())
+  if (!PtrTy)
     return nullptr;
 
   // Try to remove a gep instruction to make the pointer (actually index at this
@@ -2867,18 +2867,15 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
   // pointer, otherwise, we are analyzing the index.
   Value *OrigPtr = Ptr;
 
-  // The size of the pointer access.
-  int64_t PtrAccessSize = 1;
-
   Ptr = stripGetElementPtr(Ptr, SE, Lp);
   const SCEV *V = SE->getSCEV(Ptr);
 
   if (Ptr != OrigPtr)
     // Strip off casts.
-    while (const SCEVIntegralCastExpr *C = dyn_cast<SCEVIntegralCastExpr>(V))
+    while (auto *C = dyn_cast<SCEVIntegralCastExpr>(V))
       V = C->getOperand();
 
-  const SCEVAddRecExpr *S = dyn_cast<SCEVAddRecExpr>(V);
+  auto *S = dyn_cast<SCEVAddRecExpr>(V);
   if (!S)
     return nullptr;
 
@@ -2888,25 +2885,20 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
     return nullptr;
 
   V = S->getStepRecurrence(*SE);
-  if (!V)
-    return nullptr;
 
   // Strip off the size of access multiplication if we are still analyzing the
   // pointer.
   if (OrigPtr == Ptr) {
-    if (const SCEVMulExpr *M = dyn_cast<SCEVMulExpr>(V)) {
-      if (M->getOperand(0)->getSCEVType() != scConstant)
+    if (auto *M = dyn_cast<SCEVMulExpr>(V)) {
+      auto *StepConst = dyn_cast<SCEVConstant>(M->getOperand(0));
+      if (!StepConst)
         return nullptr;
 
-      const APInt &APStepVal = cast<SCEVConstant>(M->getOperand(0))->getAPInt();
-
-      // Huge step value - give up.
-      if (APStepVal.getBitWidth() > 64)
+      auto StepVal = StepConst->getAPInt().trySExtValue();
+      // Bail out on a non-unit pointer access size.
+      if (!StepVal || StepVal != 1)
         return nullptr;
 
-      int64_t StepVal = APStepVal.getSExtValue();
-      if (PtrAccessSize != StepVal)
-        return nullptr;
       V = M->getOperand(1);
     }
   }
@@ -2920,7 +2912,7 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
   if (isa<SCEVUnknown>(V))
     return V;
 
-  if (const auto *C = dyn_cast<SCEVIntegralCastExpr>(V))
+  if (auto *C = dyn_cast<SCEVIntegralCastExpr>(V))
     if (isa<SCEVUnknown>(C->getOperand()))
       return V;
 
@@ -3086,7 +3078,6 @@ const LoopAccessInfo &LoopAccessInfoManager::getInfo(Loop &L) {
   return *It->second;
 }
 void LoopAccessInfoManager::clear() {
-  SmallVector<Loop *> ToRemove;
   // Collect LoopAccessInfo entries that may keep references to IR outside the
   // analyzed loop or SCEVs that may have been modified or invalidated. At the
   // moment, that is loops requiring memory or SCEV runtime checks, as those cache
@@ -3095,11 +3086,8 @@ void LoopAccessInfoManager::clear() {
     if (LAI->getRuntimePointerChecking()->getChecks().empty() &&
         LAI->getPSE().getPredicate().isAlwaysTrue())
       continue;
-    ToRemove.push_back(L);
-  }
-
-  for (Loop *L : ToRemove)
     LoopAccessInfoMap.erase(L);
+  }
 }
 
 bool LoopAccessInfoManager::invalidate(
