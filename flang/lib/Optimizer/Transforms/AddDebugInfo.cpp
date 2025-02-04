@@ -183,14 +183,14 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
     return;
 
   // If this DeclareOp actually represents a global then treat it as such.
-  if (auto global = symbolTable->lookup<fir::GlobalOp>(declOp.getUniqName())) {
-    handleGlobalOp(global, fileAttr, scopeAttr, typeGen, symbolTable, declOp);
-    return;
+  mlir::Operation *defOp = declOp.getMemref().getDefiningOp();
+  if (defOp && llvm::isa<fir::AddrOfOp>(defOp)) {
+    if (auto global =
+            symbolTable->lookup<fir::GlobalOp>(declOp.getUniqName())) {
+      handleGlobalOp(global, fileAttr, scopeAttr, typeGen, symbolTable, declOp);
+      return;
+    }
   }
-
-  // Only accept local variables.
-  if (result.second.procs.empty())
-    return;
 
   // FIXME: There may be cases where an argument is processed a bit before
   // DeclareOp is generated. In that case, DeclareOp may point to an
@@ -523,7 +523,7 @@ void AddDebugInfoPass::runOnOperation() {
   llvm::StringRef fileName;
   std::string filePath;
   std::optional<mlir::DataLayout> dl =
-      fir::support::getOrSetDataLayout(module, /*allowDefaultLayout=*/true);
+      fir::support::getOrSetMLIRDataLayout(module, /*allowDefaultLayout=*/true);
   if (!dl) {
     mlir::emitError(module.getLoc(), "Missing data layout attribute in module");
     signalPassFailure();
