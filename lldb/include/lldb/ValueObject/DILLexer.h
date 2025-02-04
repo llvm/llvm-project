@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_VALUEOBJECT_DILLEXER_H_
-#define LLDB_VALUEOBJECT_DILLEXER_H_
+#ifndef LLDB_VALUEOBJECT_DILLEXER_H
+#define LLDB_VALUEOBJECT_DILLEXER_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <limits.h>
@@ -125,4 +124,4 @@ private:
 
 } // namespace lldb_private::dil
 
-#endif // LLDB_VALUEOBJECT_DILLEXER_H_
+#endif // LLDB_VALUEOBJECT_DILLEXER_H
