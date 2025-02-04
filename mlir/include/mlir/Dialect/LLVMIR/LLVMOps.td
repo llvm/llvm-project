@@ -1166,9 +1166,9 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
   let summary = "Creates a pointer pointing to a global, alias or a function";
 
   let description = [{
-    Creates an SSA value containing a pointer to a global variable or constant
-    defined by `llvm.mlir.global`. The global value can be defined after its
-    first referenced. If the global value is a constant, storing into it is not
+    Creates an SSA value containing a pointer to a global value (function,
+    variable or alias). The global value can be defined after its first
+    referenced. If the global value is a constant, storing into it is not
     allowed.
 
     Examples:
@@ -1186,10 +1186,19 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
 
       // The function address can be used for indirect calls.
       llvm.call %2() : !llvm.ptr, () -> ()
+
+      // Get the address of an aliased global.
+      %3 = llvm.mlir.addressof @const_alias : !llvm.ptr
     }
 
     // Define the global.
     llvm.mlir.global @const(42 : i32) : i32
+
+    // Define an alias.
+    llvm.mlir.alias @const_alias : i32 {
+      %0 = llvm.mlir.addressof @const : !llvm.ptr
+      llvm.return %0 : !llvm.ptr
+    }
     ```
   }];
 
