@@ -1901,7 +1901,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   if (const llvm::opt::Arg *A =
           Args.getLastArg(clang::driver::options::OPT_mcmodel_EQ)) {
     llvm::StringRef modelName = A->getValue();
-    if (modelName == "tiny" && !T.isARM()) {
+    if (modelName == "tiny" && !(T.isARM() || T.isAArch64())) {
       Diags.Report(diag::err_drv_unsupported_option_argument_for_target)
           << A->getSpelling() << modelName << T.getTriple();
     }
