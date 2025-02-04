@@ -242,7 +242,7 @@ bool SMEPeepholeOpt::optimizeStartStopPairs(
 //   ->  %9:zpr2mul2 = FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO %5:zpr, %8:zpr
 //
 bool SMEPeepholeOpt::visitRegSequence(MachineInstr &MI) {
-  assert(MF.getRegInfo().isSSA() && "Expected to be run on SSA form!");
+  assert(MI.getMF()->getRegInfo().isSSA() && "Expected to be run on SSA form!");
 
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   switch (MRI.getRegClass(MI.getOperand(0).getReg())->getID()) {
