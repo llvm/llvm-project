@@ -1970,26 +1970,40 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
 // Check if \p Ty is a valid type for the elementwise math builtins. If it is
 // not a valid type, emit an error message and return true. Otherwise return
 // false.
-static bool checkMathBuiltinElementType(Sema &S, SourceLocation Loc,
-                                        QualType ArgTy, int ArgIndex) {
-  if (!ArgTy->getAs<VectorType>() &&
-      !ConstantMatrixType::isValidElementType(ArgTy)) {
-    return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
-           << ArgIndex << /* vector, integer or float ty*/ 0 << ArgTy;
-  }
-
-  return false;
-}
-
-static bool checkFPMathBuiltinElementType(Sema &S, SourceLocation Loc,
-                                          QualType ArgTy, int ArgIndex) {
+static bool
+checkMathBuiltinElementType(Sema &S, SourceLocation Loc, QualType ArgTy,
+                            Sema::EltwiseBuiltinArgTyRestriction ArgTyRestr,
+                            int ArgOrdinal) {
   QualType EltTy = ArgTy;
   if (auto *VecTy = EltTy->getAs<VectorType>())
     EltTy = VecTy->getElementType();
 
-  if (!EltTy->isRealFloatingType()) {
-    return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
-           << ArgIndex << /* vector or float ty*/ 5 << ArgTy;
+  switch (ArgTyRestr) {
+  case Sema::EltwiseBuiltinArgTyRestriction::None:
+    if (!ArgTy->getAs<VectorType>() &&
+        !ConstantMatrixType::isValidElementType(ArgTy)) {
+      return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
+             << ArgOrdinal << /* vector, integer or float ty*/ 0 << ArgTy;
+    }
+    break;
+  case Sema::EltwiseBuiltinArgTyRestriction::FloatTy:
+    if (!EltTy->isRealFloatingType()) {
+      return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
+             << ArgOrdinal << /* vector or float ty*/ 5 << ArgTy;
+    }
+    break;
+  case Sema::EltwiseBuiltinArgTyRestriction::IntegerTy:
+    if (!EltTy->isIntegerType()) {
+      return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
+             << ArgOrdinal << /* vector or int ty*/ 10 << ArgTy;
+    }
+    break;
+  case Sema::EltwiseBuiltinArgTyRestriction::SignedIntOrFloatTy:
+    if (EltTy->isUnsignedIntegerType()) {
+      return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
+             << 1 << /* signed integer or float ty*/ 3 << ArgTy;
+    }
+    break;
   }
 
   return false;
@@ -2696,23 +2710,11 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   // __builtin_elementwise_abs restricts the element type to signed integers or
   // floating point types only.
-  case Builtin::BI__builtin_elementwise_abs: {
-    if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
+  case Builtin::BI__builtin_elementwise_abs:
+    if (PrepareBuiltinElementwiseMathOneArgCall(
+            TheCall, EltwiseBuiltinArgTyRestriction::SignedIntOrFloatTy))
       return ExprError();
-
-    QualType ArgTy = TheCall->getArg(0)->getType();
-    QualType EltTy = ArgTy;
-
-    if (auto *VecTy = EltTy->getAs<VectorType>())
-      EltTy = VecTy->getElementType();
-    if (EltTy->isUnsignedIntegerType()) {
-      Diag(TheCall->getArg(0)->getBeginLoc(),
-           diag::err_builtin_invalid_arg_type)
-          << 1 << /* signed integer or float ty*/ 3 << ArgTy;
-      return ExprError();
-    }
     break;
-  }
 
   // These builtins restrict the element type to floating point
   // types only.
@@ -2739,21 +2741,15 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_tan:
   case Builtin::BI__builtin_elementwise_tanh:
   case Builtin::BI__builtin_elementwise_trunc:
-  case Builtin::BI__builtin_elementwise_canonicalize: {
-    if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
-      return ExprError();
-
-    QualType ArgTy = TheCall->getArg(0)->getType();
-    if (checkFPMathBuiltinElementType(*this, TheCall->getArg(0)->getBeginLoc(),
-                                      ArgTy, 1))
+  case Builtin::BI__builtin_elementwise_canonicalize:
+    if (PrepareBuiltinElementwiseMathOneArgCall(
+            TheCall, EltwiseBuiltinArgTyRestriction::FloatTy))
       return ExprError();
     break;
-  }
-  case Builtin::BI__builtin_elementwise_fma: {
+  case Builtin::BI__builtin_elementwise_fma:
     if (BuiltinElementwiseTernaryMath(TheCall))
       return ExprError();
     break;
-  }
 
   // These builtins restrict the element type to floating point
   // types only, and take in two arguments.
@@ -2761,59 +2757,30 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_maximum:
   case Builtin::BI__builtin_elementwise_atan2:
   case Builtin::BI__builtin_elementwise_fmod:
-  case Builtin::BI__builtin_elementwise_pow: {
-    if (BuiltinElementwiseMath(TheCall, /*FPOnly=*/true))
+  case Builtin::BI__builtin_elementwise_pow:
+    if (BuiltinElementwiseMath(TheCall,
+                               EltwiseBuiltinArgTyRestriction::FloatTy))
       return ExprError();
     break;
-  }
-
   // These builtins restrict the element type to integer
   // types only.
   case Builtin::BI__builtin_elementwise_add_sat:
-  case Builtin::BI__builtin_elementwise_sub_sat: {
-    if (BuiltinElementwiseMath(TheCall))
+  case Builtin::BI__builtin_elementwise_sub_sat:
+    if (BuiltinElementwiseMath(TheCall,
+                               EltwiseBuiltinArgTyRestriction::IntegerTy))
       return ExprError();
-
-    const Expr *Arg = TheCall->getArg(0);
-    QualType ArgTy = Arg->getType();
-    QualType EltTy = ArgTy;
-
-    if (auto *VecTy = EltTy->getAs<VectorType>())
-      EltTy = VecTy->getElementType();
-
-    if (!EltTy->isIntegerType()) {
-      Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << 1 << /* integer ty */ 6 << ArgTy;
-      return ExprError();
-    }
     break;
-  }
-
   case Builtin::BI__builtin_elementwise_min:
   case Builtin::BI__builtin_elementwise_max:
     if (BuiltinElementwiseMath(TheCall))
       return ExprError();
     break;
   case Builtin::BI__builtin_elementwise_popcount:
-  case Builtin::BI__builtin_elementwise_bitreverse: {
-    if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
+  case Builtin::BI__builtin_elementwise_bitreverse:
+    if (PrepareBuiltinElementwiseMathOneArgCall(
+            TheCall, EltwiseBuiltinArgTyRestriction::IntegerTy))
       return ExprError();
-
-    const Expr *Arg = TheCall->getArg(0);
-    QualType ArgTy = Arg->getType();
-    QualType EltTy = ArgTy;
-
-    if (auto *VecTy = EltTy->getAs<VectorType>())
-      EltTy = VecTy->getElementType();
-
-    if (!EltTy->isIntegerType()) {
-      Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << 1 << /* integer ty */ 6 << ArgTy;
-      return ExprError();
-    }
     break;
-  }
-
   case Builtin::BI__builtin_elementwise_copysign: {
     if (checkArgCount(TheCall, 2))
       return ExprError();
@@ -2825,10 +2792,12 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
     QualType MagnitudeTy = Magnitude.get()->getType();
     QualType SignTy = Sign.get()->getType();
-    if (checkFPMathBuiltinElementType(*this, TheCall->getArg(0)->getBeginLoc(),
-                                      MagnitudeTy, 1) ||
-        checkFPMathBuiltinElementType(*this, TheCall->getArg(1)->getBeginLoc(),
-                                      SignTy, 2)) {
+    if (checkMathBuiltinElementType(
+            *this, TheCall->getArg(0)->getBeginLoc(), MagnitudeTy,
+            EltwiseBuiltinArgTyRestriction::FloatTy, 1) ||
+        checkMathBuiltinElementType(
+            *this, TheCall->getArg(1)->getBeginLoc(), SignTy,
+            EltwiseBuiltinArgTyRestriction::FloatTy, 2)) {
       return ExprError();
     }
 
@@ -15278,7 +15247,8 @@ static ExprResult BuiltinVectorMathConversions(Sema &S, Expr *E) {
   return S.UsualUnaryFPConversions(Res.get());
 }
 
-bool Sema::PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall) {
+bool Sema::PrepareBuiltinElementwiseMathOneArgCall(
+    CallExpr *TheCall, EltwiseBuiltinArgTyRestriction ArgTyRestr) {
   if (checkArgCount(TheCall, 1))
     return true;
 
@@ -15289,15 +15259,17 @@ bool Sema::PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall) {
   TheCall->setArg(0, A.get());
   QualType TyA = A.get()->getType();
 
-  if (checkMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA, 1))
+  if (checkMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA,
+                                  ArgTyRestr, 1))
     return true;
 
   TheCall->setType(TyA);
   return false;
 }
 
-bool Sema::BuiltinElementwiseMath(CallExpr *TheCall, bool FPOnly) {
-  if (auto Res = BuiltinVectorMath(TheCall, FPOnly); Res.has_value()) {
+bool Sema::BuiltinElementwiseMath(CallExpr *TheCall,
+                                  EltwiseBuiltinArgTyRestriction ArgTyRestr) {
+  if (auto Res = BuiltinVectorMath(TheCall, ArgTyRestr); Res.has_value()) {
     TheCall->setType(*Res);
     return false;
   }
@@ -15330,8 +15302,9 @@ static bool checkBuiltinVectorMathMixedEnums(Sema &S, Expr *LHS, Expr *RHS,
   return false;
 }
 
-std::optional<QualType> Sema::BuiltinVectorMath(CallExpr *TheCall,
-                                                bool FPOnly) {
+std::optional<QualType>
+Sema::BuiltinVectorMath(CallExpr *TheCall,
+                        EltwiseBuiltinArgTyRestriction ArgTyRestr) {
   if (checkArgCount(TheCall, 2))
     return std::nullopt;
 
@@ -15352,17 +15325,12 @@ std::optional<QualType> Sema::BuiltinVectorMath(CallExpr *TheCall,
   QualType TyA = Args[0]->getType();
   QualType TyB = Args[1]->getType();
 
+  if (checkMathBuiltinElementType(*this, LocA, TyA, ArgTyRestr, 1))
+    return std::nullopt;
+
   if (TyA.getCanonicalType() != TyB.getCanonicalType()) {
     Diag(LocA, diag::err_typecheck_call_different_arg_types) << TyA << TyB;
     return std::nullopt;
-  }
-
-  if (FPOnly) {
-    if (checkFPMathBuiltinElementType(*this, LocA, TyA, 1))
-      return std::nullopt;
-  } else {
-    if (checkMathBuiltinElementType(*this, LocA, TyA, 1))
-      return std::nullopt;
   }
 
   TheCall->setArg(0, Args[0]);
@@ -15370,8 +15338,8 @@ std::optional<QualType> Sema::BuiltinVectorMath(CallExpr *TheCall,
   return TyA;
 }
 
-bool Sema::BuiltinElementwiseTernaryMath(CallExpr *TheCall,
-                                         bool CheckForFloatArgs) {
+bool Sema::BuiltinElementwiseTernaryMath(
+    CallExpr *TheCall, EltwiseBuiltinArgTyRestriction ArgTyRestr) {
   if (checkArgCount(TheCall, 3))
     return true;
 
@@ -15391,20 +15359,11 @@ bool Sema::BuiltinElementwiseTernaryMath(CallExpr *TheCall,
     Args[I] = Converted.get();
   }
 
-  if (CheckForFloatArgs) {
-    int ArgOrdinal = 1;
-    for (Expr *Arg : Args) {
-      if (checkFPMathBuiltinElementType(*this, Arg->getBeginLoc(),
-                                        Arg->getType(), ArgOrdinal++))
-        return true;
-    }
-  } else {
-    int ArgOrdinal = 1;
-    for (Expr *Arg : Args) {
-      if (checkMathBuiltinElementType(*this, Arg->getBeginLoc(), Arg->getType(),
-                                      ArgOrdinal++))
-        return true;
-    }
+  int ArgOrdinal = 1;
+  for (Expr *Arg : Args) {
+    if (checkMathBuiltinElementType(*this, Arg->getBeginLoc(), Arg->getType(),
+                                    ArgTyRestr, ArgOrdinal++))
+      return true;
   }
 
   for (int I = 1; I < 3; ++I) {
