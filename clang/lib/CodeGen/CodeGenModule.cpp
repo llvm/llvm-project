@@ -3778,7 +3778,7 @@ ConstantAddress CodeGenModule::GetAddrOfTemplateParamObject(
   auto *GV = new llvm::GlobalVariable(getModule(), Init->getType(),
                                       /*isConstant=*/true, Linkage, Init, Name);
   setGVProperties(GV, TPO);
-  if (supportsCOMDAT())
+  if (supportsCOMDAT() && Linkage == llvm::GlobalValue::LinkOnceODRLinkage)
     GV->setComdat(TheModule.getOrInsertComdat(GV->getName()));
   Emitter.finalize(GV);
 
