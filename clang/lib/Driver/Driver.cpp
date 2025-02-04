@@ -301,6 +301,7 @@ void Driver::setDriverMode(StringRef Value) {
                    .Case("cl", CLMode)
                    .Case("flang", FlangMode)
                    .Case("dxc", DXCMode)
+				           .Case("cl2000", C2000Mode)
                    .Default(std::nullopt))
     Mode = *M;
   else
@@ -1571,6 +1572,13 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     } else {
       Diag(diag::err_drv_dxc_missing_target_profile);
     }
+  } else if (IsC2000Mode()) {
+    llvm::Triple T(TargetTriple);
+    T.setArch(llvm::Triple::c2000);
+    T.setVendor(llvm::Triple::UnknownVendor);
+    T.setOS(llvm::Triple::UnknownOS);
+    T.setEnvironment(llvm::Triple::EABI);
+    TargetTriple = T.str();
   }
 
   if (const Arg *A = Args.getLastArg(options::OPT_target))
@@ -6942,6 +6950,9 @@ Driver::getOptionVisibilityMask(bool UseDriverMode) const {
   if (IsFlangMode())  {
     return llvm::opt::Visibility(options::FlangOption);
   }
+  if (IsC2000Mode()) {
+    return llvm::opt::Visibility(options::CL2000Option);
+  }
   return llvm::opt::Visibility(options::ClangOption);
 }
 
@@ -6959,6 +6970,8 @@ const char *Driver::getExecutableForDriverMode(DriverMode Mode) {
     return "flang";
   case DXCMode:
     return "clang-dxc";
+  case C2000Mode:
+  return "cl2000";
   }
 
   llvm_unreachable("Unhandled Mode");

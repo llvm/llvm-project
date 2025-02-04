@@ -430,6 +430,7 @@ static const DriverSuffix *FindDriverSuffix(StringRef ProgName, size_t &Pos) {
       // `flang-new`. This will be removed in the future.
       {"flang-new", "--driver-mode=flang"},
       {"clang-dxc", "--driver-mode=dxc"},
+      {"cl2000", "--driver-mode=cl2000"},
   };
 
   for (const auto &DS : DriverSuffixes) {

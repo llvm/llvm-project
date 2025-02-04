@@ -97,6 +97,10 @@ def FC1Option : OptionVisibility;
 // are made available when the driver is running in DXC compatibility mode.
 def DXCOption : OptionVisibility;
 
+// CL2000Option - This is a cl2000.exe compatibility option. Options with this flag
+// are made available when the driver is running in cl2000 compatibility mode.
+def CL2000Option : OptionVisibility;
+
 /////////
 // Docs
 
@@ -200,6 +204,9 @@ def m_Group : OptionGroup<"<m group>">, Group<CompileOnly_Group>,
 def hlsl_Group : OptionGroup<"<HLSL group>">, Group<f_Group>,
                    DocName<"HLSL options">,
                    Visibility<[ClangOption]>;
+
+def cl2000_group : OptionGroup<"<cl2000 group>">,
+                    Visibility<[CL2000Option]>;
 
 // Feature groups - these take command line options that correspond directly to
 // target specific features and can be translated directly from command line
@@ -672,7 +679,7 @@ class InternalDriverOpt : Group<internal_driver_Group>,
   Flags<[NoXarchOption, HelpHidden]>;
 def driver_mode : Joined<["--"], "driver-mode=">, Group<internal_driver_Group>,
   Flags<[NoXarchOption, HelpHidden]>,
-  Visibility<[ClangOption, FlangOption, CLOption, DXCOption]>,
+  Visibility<[ClangOption, FlangOption, CLOption, DXCOption, CL2000Option]>,
   HelpText<"Set the driver mode to either 'gcc', 'g++', 'cpp', 'cl' or 'flang'">;
 def rsp_quoting : Joined<["--"], "rsp-quoting=">, Group<internal_driver_Group>,
   Flags<[NoXarchOption, HelpHidden]>,
@@ -843,7 +850,7 @@ def C : Flag<["-"], "C">, Visibility<[ClangOption, CC1Option]>,
     HelpText<"Include comments in preprocessed output">,
     MarshallingInfoFlag<PreprocessorOutputOpts<"ShowComments">>;
 def D : JoinedOrSeparate<["-"], "D">, Group<Preprocessor_Group>,
-    Visibility<[ClangOption, CC1Option, FlangOption, FC1Option, DXCOption]>,
+    Visibility<[ClangOption, CC1Option, FlangOption, FC1Option, DXCOption, CL2000Option]>,
     MetaVarName<"<macro>=<value>">,
     HelpText<"Define <macro> to <value> (or 1 if <value> omitted)">;
 def E : Flag<["-"], "E">, Flags<[NoXarchOption]>,
@@ -929,7 +936,7 @@ def ObjCXX : Flag<["-"], "ObjC++">, Flags<[NoXarchOption]>,
 def ObjC : Flag<["-"], "ObjC">, Flags<[NoXarchOption]>,
   HelpText<"Treat source input files as Objective-C inputs">;
 def O : Joined<["-"], "O">, Group<O_Group>,
-  Visibility<[ClangOption, CC1Option, FC1Option, FlangOption]>;
+  Visibility<[ClangOption, CC1Option, FC1Option, FlangOption, CL2000Option]>;
 def O_flag : Flag<["-"], "O">, Visibility<[ClangOption, CC1Option, FC1Option]>,
   Alias<O>, AliasArgs<["1"]>;
 def Ofast : Joined<["-"], "Ofast">, Group<O_Group>,
@@ -1035,10 +1042,10 @@ def Xassembler : Separate<["-"], "Xassembler">,
   Group<CompileOnly_Group>;
 def Xclang : Separate<["-"], "Xclang">,
   HelpText<"Pass <arg> to clang -cc1">, MetaVarName<"<arg>">,
-  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption, CL2000Option]>,
   Group<CompileOnly_Group>;
 def : Joined<["-"], "Xclang=">, Group<CompileOnly_Group>,
-  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption, CL2000Option]>,
   Alias<Xclang>,
   HelpText<"Alias for -Xclang">, MetaVarName<"<arg>">;
 def Xcuda_fatbinary : Separate<["-"], "Xcuda-fatbinary">,
@@ -4023,7 +4030,7 @@ def fdriver_only : Flag<["-"], "fdriver-only">, Flags<[NoXarchOption]>,
   Group<Action_Group>, HelpText<"Only run the driver.">;
 def fsyntax_only : Flag<["-"], "fsyntax-only">,
   Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CLOption, DXCOption, CC1Option, FC1Option, FlangOption]>,
+  Visibility<[ClangOption, CLOption, DXCOption, CC1Option, FC1Option, FlangOption, CL2000Option]>,
   Group<Action_Group>,
   HelpText<"Run the preprocessor, parser and semantic analysis stages">;
 def ftabstop_EQ : Joined<["-"], "ftabstop=">, Group<f_Group>;
@@ -4470,7 +4477,7 @@ defm emit_compact_unwind_non_canonical : BoolFOption<"emit-compact-unwind-non-ca
           "Try emitting Compact-Unwind for non-canonical entries. Maybe overridden by other constraints">,
   NegFlag<SetFalse>>;
 def g_Flag : Flag<["-"], "g">, Group<g_Group>,
-    Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
+    Visibility<[ClangOption, CLOption, DXCOption, FlangOption, CL2000Option]>,
     HelpText<"Generate source-level debug information">;
 def gline_tables_only : Flag<["-"], "gline-tables-only">, Group<gN_Group>,
   Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
@@ -5817,11 +5824,11 @@ def rdynamic : Flag<["-"], "rdynamic">, Group<Link_Group>,
   Visibility<[ClangOption, FlangOption]>;
 def resource_dir : Separate<["-"], "resource-dir">,
   Flags<[NoXarchOption, HelpHidden]>,
-  Visibility<[ClangOption, CC1Option, CLOption, DXCOption, FlangOption, FC1Option]>,
+  Visibility<[ClangOption, CC1Option, CLOption, DXCOption, FlangOption, FC1Option, CL2000Option]>,
   HelpText<"The directory which holds the compiler resource files">,
   MarshallingInfoString<HeaderSearchOpts<"ResourceDir">>;
 def resource_dir_EQ : Joined<["-"], "resource-dir=">, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption, CL2000Option]>,
   Alias<resource_dir>;
 def rpath : Separate<["-"], "rpath">, Flags<[LinkerInput]>, Group<Link_Group>,
   Visibility<[ClangOption, FlangOption]>;
@@ -6020,7 +6027,7 @@ def w : Flag<["-"], "w">, HelpText<"Suppress all warnings">,
   MarshallingInfoFlag<DiagnosticOpts<"IgnoreWarnings">>;
 def x : JoinedOrSeparate<["-"], "x">,
 Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option, CLOption]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option, CLOption, CL2000Option]>,
   HelpText<"Treat subsequent input files as having type <language>">,
   MetaVarName<"<language>">;
 def y : Joined<["-"], "y">;
@@ -9111,3 +9118,50 @@ def wasm_opt : Flag<["--"], "wasm-opt">,
   Group<m_Group>,
   HelpText<"Enable the wasm-opt optimizer (default)">,
   MarshallingInfoNegativeFlag<LangOpts<"NoWasmOpt">>;
+
+
+
+//===----------------------------------------------------------------------===//
+// cl2000 Options
+//===----------------------------------------------------------------------===//
+
+
+
+
+def cl2000_include_path : Joined<["--"], "include_path=">, Group<cl2000_group>,
+                    HelpText<"specify include search paths for cl2000 driver mode">, Alias<isystem>;
+
+def eabi :        Joined<["--"], "abi=">, Group<cl2000_group>,
+                  HelpText<"abi">;
+def strict_ansi : Joined<["--"], "strict_ansi">, Group<cl2000_group>,
+                  HelpText<"strict ANSI/ISO Mode">;
+def fp_mode :     Joined<["--"], "fp_mode=">, Group<cl2000_group>,
+                  HelpText<"fp mode">;
+def cla_support : Joined<["--"], "cla_support=">, Group<cl2000_group>,
+                  HelpText<"cla Support">;
+def float_support :   Joined<["--"], "float_support=">, Group<cl2000_group>,
+                      HelpText<"Float Support">;
+def idiv_support  :   Joined<["--"], "idiv_support=">, Group<cl2000_group>,
+                      HelpText<"idiv Support">;
+def tmu_support   :   Joined<["--"], "tmu_support=">, Group<cl2000_group>,
+                      HelpText<"tmu Support">;
+def vcu_support   :   Joined<["--"], "vcu_support=">, Group<cl2000_group>,
+                      HelpText<"vcu Support">;
+def opt_level   :   Joined<["--"], "opt_level=">, Group<cl2000_group>,
+                      HelpText<"opt level">, Alias<O>;
+def silicon_version     :   Joined<["-"], "v28">, Group<cl2000_group>,
+                    HelpText<"silicon version">;
+def large_model    :   Joined<["-"], "ml">, Group<cl2000_group>,
+                    HelpText<"large model">;
+def unified_memory     :   Joined<["-"], "mt">, Group<cl2000_group>,
+                    HelpText<"unified memory">;
+def output_file     :   Joined<["--"], "output_file=">, Group<cl2000_group>,
+                      HelpText<"output file">, Alias<o>;
+def source_file     :   Joined<["--"], "">, Group<cl2000_group>,
+                      HelpText<"source file">;
+def symdebug_dwarf     :   Joined<["--"], "symdebug:dwarf">, Group<cl2000_group>,
+                      HelpText<"Alias for -g">, Alias<g_Flag>;
+def relaxed_ansi     :   Joined<["--"], "relaxed_ansi">, Group<cl2000_group>,
+                      HelpText<"relaxed ansi mode">;
+def compile_only   :   Joined<["--"], "compile_only">, Group<cl2000_group>,
+                      HelpText<"compile only">, Alias<c>;
