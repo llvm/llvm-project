@@ -4789,14 +4789,14 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
   OpenMPDirectiveKind EnclosingConstruct = ParentLOC.back();
 
   if (Stack->isParentOrderConcurrent()) {
-    bool InvalidOrderNesting = false; 
+    bool InvalidOrderNesting = false;
     if ((SemaRef.LangOpts.OpenMP == 51 || SemaRef.LangOpts.OpenMP == 52) &&
-        CurrentRegion != OMPD_simd &&
-        CurrentRegion != OMPD_loop && CurrentRegion != OMPD_parallel &&
+        CurrentRegion != OMPD_simd && CurrentRegion != OMPD_loop &&
+        CurrentRegion != OMPD_parallel &&
         !isOpenMPCombinedParallelADirective(CurrentRegion)) {
       InvalidOrderNesting = true;
     } else if (SemaRef.LangOpts.OpenMP >= 60 &&
-        !isOpenMPOrderConcurrentNestableDirective(CurrentRegion)) {
+               !isOpenMPOrderConcurrentNestableDirective(CurrentRegion)) {
       // OpenMP 6.0 [12.3 order Clause, Restrictions]
       // Only regions that correspond to order-concurrent-nestable constructs
       // or order-concurrent-nestable routines may be strictly nested regions
