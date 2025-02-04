@@ -992,8 +992,10 @@ bool PeepholeOptimizer::optimizeCondBranch(MachineInstr &MI) {
   return TII->optimizeCondBranch(MI);
 }
 
-/// Try to find the next source that share the same register file
-/// for the value defined by \p Reg and \p SubReg.
+/// Try to find a better source value that shares the same register file to
+/// replace \p RegSubReg in an instruction like
+/// `DefRC.DefSubReg = COPY RegSubReg`
+///
 /// When true is returned, the \p RewriteMap can be used by the client to
 /// retrieve all Def -> Use along the way up to the next source. Any found
 /// Use that is not itself a key for another entry, is the next source to
