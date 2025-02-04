@@ -17,7 +17,8 @@ namespace LIBC_NAMESPACE_DECL {
 // Our LLVM_LIBC_FUNCTION macro doesn't handle function pointer return types.
 using signal_handler = void (*)(int);
 
-LLVM_LIBC_FUNCTION(signal_handler, signal, (int signum, signal_handler handler)) {
+LLVM_LIBC_FUNCTION(signal_handler, signal,
+                   (int signum, signal_handler handler)) {
   struct sigaction action, old;
   action.sa_handler = handler;
   action.sa_flags = SA_RESTART;
