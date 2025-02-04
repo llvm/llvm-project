@@ -253,29 +253,33 @@ public:
 
   bool VisitSymbol(SymbolRef sym) override { return true; }
 
-  /// Visits the captured region values
-  bool VisitBlockDataRegionCaptures(const BlockDataRegion *BDR) {
-    for (auto Var : BDR->referenced_vars()) {
-      SVal Val = Ctxt.getState()->getSVal(Var.getCapturedRegion());
-      const MemRegion *Region = Val.getAsRegion();
-      if (Region && isa<StackSpaceRegion>(Region->getMemorySpace())) {
-        EscapingStackRegions.push_back(Region);
-        VisitMemRegion(Region);
-      }
-    }
-
-    return false;
-  }
-
   bool VisitMemRegion(const MemRegion *MR) override {
-    const StackSpaceRegion *SSR = MR->getMemorySpace()->getAs<StackSpaceRegion>();
-    if (SSR && SSR->getStackFrame() == StackFrameContext)
-      EscapingStackRegions.push_back(MR);
+    SaveIfEscapes(MR);
     
     if (const BlockDataRegion *BDR = MR->getAs<BlockDataRegion>())
       return VisitBlockDataRegionCaptures(BDR);
 
     return true;
+  }
+
+private:
+  void SaveIfEscapes(const MemRegion *MR) {
+    const StackSpaceRegion *SSR = MR->getMemorySpace()->getAs<StackSpaceRegion>();
+    if (SSR && SSR->getStackFrame() == StackFrameContext)
+      EscapingStackRegions.push_back(MR);
+  }
+
+  bool VisitBlockDataRegionCaptures(const BlockDataRegion *BDR) {
+    for (auto Var : BDR->referenced_vars()) {
+      SVal Val = Ctxt.getState()->getSVal(Var.getCapturedRegion());
+      const MemRegion *Region = Val.getAsRegion();
+      if (Region) {
+        SaveIfEscapes(Region);
+        VisitMemRegion(Region);
+      }
+    }
+
+    return false;
   }
 };
 
