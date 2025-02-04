@@ -1,8 +1,8 @@
 #include <stdio.h>
-void done() { }
+void done() {}
 int main() {
-  puts ("in main");
+  puts("in main");
   done();
-  puts ("leaving main");
+  puts("leaving main");
   return 0;
 }
