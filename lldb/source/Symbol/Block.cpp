@@ -248,8 +248,10 @@ bool Block::GetRangeContainingAddress(const Address &addr,
       const Range *range_ptr = m_ranges.GetEntryAtIndex(idx);
       assert(range_ptr);
 
-      range.GetBaseAddress() = function->GetAddress();
-      range.GetBaseAddress().Slide(range_ptr->GetRangeBase());
+      Address func_addr = function->GetAddress();
+      range.GetBaseAddress() =
+          Address(func_addr.GetFileAddress() + range_ptr->GetRangeBase(),
+                  func_addr.GetModule()->GetSectionList());
       range.SetByteSize(range_ptr->GetByteSize());
       return true;
     }
