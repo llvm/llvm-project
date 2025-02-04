@@ -46,9 +46,10 @@ class StaticDataSplitter : public MachineFunctionPass {
   const MachineBlockFrequencyInfo *MBFI = nullptr;
   const ProfileSummaryInfo *PSI = nullptr;
 
-  void updateStats(bool ProfileAvailable, const MachineJumpTableInfo *MJTI);
-  void updateJumpTableStats(bool ProfileAvailable,
-                            const MachineJumpTableInfo &MJTI);
+  // Update LLVM statistics for a machine function without profiles.
+  void updateStatsWithoutProfiles(const MachineFunction &MF);
+  // Update LLVM statistics for a machine function with profiles.
+  void updateStatsWithProfiles(const MachineFunction &MF);
 
   // Use profiles to partition static data.
   bool partitionStaticDataWithProfiles(MachineFunction &MF);
@@ -79,12 +80,15 @@ bool StaticDataSplitter::runOnMachineFunction(MachineFunction &MF) {
 
   const bool ProfileAvailable = PSI && PSI->hasProfileSummary() && MBFI &&
                                 MF.getFunction().hasProfileData();
-  bool Changed = false;
 
-  if (ProfileAvailable)
-    Changed |= partitionStaticDataWithProfiles(MF);
+  if (!ProfileAvailable) {
+    updateStatsWithoutProfiles(MF);
+    return false;
+  }
 
-  updateStats(ProfileAvailable, MF.getJumpTableInfo());
+  bool Changed = partitionStaticDataWithProfiles(MF);
+
+  updateStatsWithProfiles(MF);
   return Changed;
 }
 
@@ -125,34 +129,31 @@ bool StaticDataSplitter::partitionStaticDataWithProfiles(MachineFunction &MF) {
   return NumChangedJumpTables > 0;
 }
 
-void StaticDataSplitter::updateJumpTableStats(
-    bool ProfileAvailable, const MachineJumpTableInfo &MJTI) {
-
-  if (!ProfileAvailable) {
-    NumUnknownJumpTables += MJTI.getJumpTables().size();
+void StaticDataSplitter::updateStatsWithProfiles(const MachineFunction &MF) {
+  if (!AreStatisticsEnabled())
     return;
-  }
 
-  for (size_t JTI = 0; JTI < MJTI.getJumpTables().size(); JTI++) {
-    auto Hotness = MJTI.getJumpTables()[JTI].Hotness;
-    if (Hotness == MachineFunctionDataHotness::Hot) {
-      ++NumHotJumpTables;
-    } else {
-      assert(Hotness == MachineFunctionDataHotness::Cold &&
-             "A jump table is either hot or cold when profile information is "
-             "available.");
-      ++NumColdJumpTables;
+  if (const MachineJumpTableInfo *MJTI = MF.getJumpTableInfo()) {
+    for (const auto &JumpTable : MJTI->getJumpTables()) {
+      if (JumpTable.Hotness == MachineFunctionDataHotness::Hot) {
+        ++NumHotJumpTables;
+      } else {
+        assert(JumpTable.Hotness == MachineFunctionDataHotness::Cold &&
+               "A jump table is either hot or cold when profile information is "
+               "available.");
+        ++NumColdJumpTables;
+      }
     }
   }
 }
 
-void StaticDataSplitter::updateStats(bool ProfileAvailable,
-                                     const MachineJumpTableInfo *MJTI) {
+void StaticDataSplitter::updateStatsWithoutProfiles(const MachineFunction &MF) {
   if (!AreStatisticsEnabled())
     return;
 
-  if (MJTI)
-    updateJumpTableStats(ProfileAvailable, *MJTI);
+  if (const MachineJumpTableInfo *MJTI = MF.getJumpTableInfo()) {
+    NumUnknownJumpTables += MJTI->getJumpTables().size();
+  }
 }
 
 char StaticDataSplitter::ID = 0;
