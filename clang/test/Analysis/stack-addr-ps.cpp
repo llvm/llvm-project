@@ -96,6 +96,12 @@ int *return_assign_expr_leak() {
   return y = &x; // expected-warning{{Address of stack memory associated with local variable 'x' returned}}
 }
 
+// Additional diagnostic from -Wreturn-stack-address in the simple case?
+int *return_comma_separated_expressions_leak() {
+  int x = 1;
+  return (x=14), &x; // expected-warning{{Address of stack memory associated with local variable 'x' returned to caller}} expected-warning{{address of stack memory associated with local variable 'x' returned}}
+}
+
 void *lf() {
     label:
     void *const &x = &&label; // expected-note {{binding reference variable 'x' here}}
@@ -920,12 +926,26 @@ void top_malloc_no_crash_fn() {
 } // namespace alloca_region_pointer
 
 namespace true_negatives_return_expressions {
+struct Container { int *x; };
+
 void return_void() {
   return void(); // no-warning
 }
 
-int return_safe_assign_expr() {
+int return_assign_expr_safe() {
   int y, x = 14;
   return y = x; // no-warning
+}
+
+int return_comma_separated_expressions_safe() {
+  int x = 1;
+  int *y;
+  return (y=&x), (x=15); // no-warning
+}
+
+int return_comma_separated_expressions_container_safe() {
+  int x = 1;
+  Container Other;
+  return Other = Container{&x}, x = 14; // no-warning
 }
 }
