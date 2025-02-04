@@ -58,11 +58,11 @@ Error BinaryStreamWriter::writeFixedString(StringRef Str) {
   return writeBytes(arrayRefFromStringRef(Str));
 }
 
-Error BinaryStreamWriter::writeStreamRef(BinaryStreamRef Ref) {
+Error BinaryStreamWriter::writeStreamRef(const BinaryStreamRef &Ref) {
   return writeStreamRef(Ref, Ref.getLength());
 }
 
-Error BinaryStreamWriter::writeStreamRef(BinaryStreamRef Ref, uint64_t Length) {
+Error BinaryStreamWriter::writeStreamRef(const BinaryStreamRef &Ref, uint64_t Length) {
   BinaryStreamReader SrcReader(Ref.slice(0, Length));
   // This is a bit tricky.  If we just call readBytes, we are requiring that it
   // return us the entire stream as a contiguous buffer.  There is no guarantee

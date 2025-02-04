@@ -48,7 +48,7 @@ class DependencyGraph;
 /// While OpIt points to a Value that is not an Instruction keep incrementing
 /// it. \Returns the first iterator that points to an Instruction, or end.
 [[nodiscard]] static User::op_iterator skipNonInstr(User::op_iterator OpIt,
-                                                    User::op_iterator OpItE) {
+                                                    const User::op_iterator &OpItE) {
   while (OpIt != OpItE && !isa<Instruction>((*OpIt).get()))
     ++OpIt;
   return OpIt;

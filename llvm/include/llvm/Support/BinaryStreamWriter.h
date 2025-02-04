@@ -109,7 +109,7 @@ public:
   ///
   /// \returns a success error code if the data was successfully written,
   /// otherwise returns an appropriate error code.
-  Error writeStreamRef(BinaryStreamRef Ref);
+  Error writeStreamRef(const BinaryStreamRef &Ref);
 
   /// Efficiently reads \p Size bytes from \p Ref, and writes it to this stream.
   /// This operation will not invoke any copies of the source data, regardless
@@ -117,7 +117,7 @@ public:
   ///
   /// \returns a success error code if the data was successfully written,
   /// otherwise returns an appropriate error code.
-  Error writeStreamRef(BinaryStreamRef Ref, uint64_t Size);
+  Error writeStreamRef(const BinaryStreamRef &Ref, uint64_t Size);
 
   /// Writes the object \p Obj to the underlying stream, as if by using memcpy.
   /// It is up to the caller to ensure that type of \p Obj can be safely copied

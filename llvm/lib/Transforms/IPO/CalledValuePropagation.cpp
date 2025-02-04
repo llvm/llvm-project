@@ -190,7 +190,7 @@ public:
   }
 
   /// Print the given CVPLatticeVal to the specified stream.
-  void PrintLatticeVal(CVPLatticeVal LV, raw_ostream &OS) override {
+  void PrintLatticeVal(const CVPLatticeVal &LV, raw_ostream &OS) override {
     if (LV == getUndefVal())
       OS << "Undefined  ";
     else if (LV == getOverdefinedVal())
