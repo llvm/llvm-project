@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=nvptx64 | FileCheck %s
+; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s
 
 ; Test that translateToNVVMDWARFAddrSpace() function translates NVVM IR address space
 ; value `Shared` (3) to the corresponding DWARF DW_AT_address_class attribute for PTX.
