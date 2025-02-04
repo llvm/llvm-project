@@ -132,8 +132,8 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
     // discarded, marking the LSDA will unnecessarily retain the text section.
     if (!(fromFDE && ((relSec->flags & (SHF_EXECINSTR | SHF_LINK_ORDER)) ||
                       relSec->nextInSectionGroup))) {
-// TODO: Test
       Symbol *canonicalSym = d;
+// TODO: Test
 #if 0
       if (d->isSection())
         if (Symbol *s = relSec->getEnclosingSymbol(offset))
@@ -144,6 +144,7 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
     return;
   }
 
+// TODO: Test
 #if 0
   if (auto *ss = dyn_cast<SharedSymbol>(&sym)) {
     if (!ss->isWeak()) {
@@ -234,7 +235,7 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset,
     whyLive.try_emplace(sec, sym);
   } else {
     // Otherwise, the parent generically makes the section itself live.
-    //whyLive.try_emplace(sec, parent);
+    // whyLive.try_emplace(sec, parent);
   }
 
   // Add input section to the queue.
@@ -243,8 +244,9 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset,
 }
 
 template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
-  //if (!whyLive.contains(s))
-    //return;
+  // TODO: Test
+  // if (!whyLive.contains(s))
+  // return;
 
   auto msg = Msg(ctx);
 
@@ -269,7 +271,7 @@ template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
       cur = LiveObject{parent};
     }
 
-    msg << "\n>>> alive because of ";
+    msg << "\n>>> kept alive by ";
     if (std::holds_alternative<Symbol *>(*cur)) {
       auto *s = std::get<Symbol *>(*cur);
       msg << toStr(ctx, *s);

@@ -4,14 +4,14 @@
 # RUN: ld.lld %t.o -o /dev/null --gc-sections --why-live=test_* | FileCheck %s
 
 # CHECK:      live symbol: test_a
-# CHECK-NEXT: >>> alive because of {{.*}}.o:(._start)
-# CHECK-NEXT: >>> alive because of _start
+# CHECK-NEXT: >>> kept alive by {{.*}}.o:(._start)
+# CHECK-NEXT: >>> kept alive by _start
 
 # CHECK:      live symbol: test_b
-# CHECK-NEXT: >>> alive because of {{.*}}.o:(.test_a)
-# CHECK-NEXT: >>> alive because of test_a
-# CHECK-NEXT: >>> alive because of {{.*}}.o:(._start)
-# CHECK-NEXT: >>> alive because of _start
+# CHECK-NEXT: >>> kept alive by {{.*}}.o:(.test_a)
+# CHECK-NEXT: >>> kept alive by test_a
+# CHECK-NEXT: >>> kept alive by {{.*}}.o:(._start)
+# CHECK-NEXT: >>> kept alive by _start
 
 .globl _start
 .section ._start,"ax",@progbits
