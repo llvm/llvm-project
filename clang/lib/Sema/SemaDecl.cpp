@@ -13436,6 +13436,53 @@ bool Sema::GloballyUniqueObjectMightBeAccidentallyDuplicated(
   return true;
 }
 
+void Sema::DiagnoseDangerousUniqueObjectDuplication(const VarDecl* VD) {
+  // If this object has external linkage and hidden visibility, it might be
+  // duplicated when built into a shared library, which causes problems if it's
+  // mutable (since the copies won't be in sync) or its initialization has side
+  // effects (since it will run once per copy instead of once globally)
+  // FIXME: Windows uses dllexport/dllimport instead of visibility, and we don't
+  // handle that yet. Disable the warning on Windows for now.
+  // FIXME: Checking templates can cause false positives if the template in
+  // question is never instantiated (e.g. only specialized templates are used).
+  if (!Context.getTargetInfo().shouldDLLImportComdatSymbols() &&
+      !VD->isTemplated() &&
+      GloballyUniqueObjectMightBeAccidentallyDuplicated(VD)) {
+    // Check mutability. For pointers, ensure that both the pointer and the
+    // pointee are (recursively) const.
+    QualType Type = VD->getType().getNonReferenceType();
+    if (!Type.isConstant(VD->getASTContext())) {
+      Diag(VD->getLocation(), diag::warn_possible_object_duplication_mutable)
+          << VD;
+    } else {
+      while (Type->isPointerType()) {
+        Type = Type->getPointeeType();
+        if (Type->isFunctionType())
+          break;
+        if (!Type.isConstant(VD->getASTContext())) {
+          Diag(VD->getLocation(),
+               diag::warn_possible_object_duplication_mutable)
+              << VD;
+          break;
+        }
+      }
+    }
+
+    // To keep false positives low, only warn if we're certain that the
+    // initializer has side effects. Don't warn on operator new, since a mutable
+    // pointer will trigger the previous warning, and an immutable pointer
+    // getting duplicated just results in a little extra memory usage.
+    const Expr *Init = VD->getAnyInitializer();
+    if (Init &&
+        Init->HasSideEffects(VD->getASTContext(),
+                             /*IncludePossibleEffects=*/false) &&
+        !isa<CXXNewExpr>(Init->IgnoreParenImpCasts())) {
+      Diag(Init->getExprLoc(), diag::warn_possible_object_duplication_init)
+          << VD;
+    }
+  }
+}
+
 void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   // If there is no declaration, there was an error parsing it.  Just ignore
   // the initializer.
@@ -14655,6 +14702,8 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
     return;
   }
 
+  DiagnoseDangerousUniqueObjectDuplication(var);
+
   // Require the destructor.
   if (!type->isDependentType())
     if (const RecordType *recordType = baseType->getAs<RecordType>())
@@ -14841,51 +14890,6 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
   // member, set the visibility of this variable.
   if (DC->getRedeclContext()->isFileContext() && VD->isExternallyVisible())
     AddPushedVisibilityAttribute(VD);
-
-  // If this object has external linkage and hidden visibility, it might be
-  // duplicated when built into a shared library, which causes problems if it's
-  // mutable (since the copies won't be in sync) or its initialization has side
-  // effects (since it will run once per copy instead of once globally)
-  // FIXME: Windows uses dllexport/dllimport instead of visibility, and we don't
-  // handle that yet. Disable the warning on Windows for now.
-  // FIXME: Checking templates can cause false positives if the template in
-  // question is never instantiated (e.g. only specialized templates are used).
-  if (!Context.getTargetInfo().shouldDLLImportComdatSymbols() &&
-      !VD->isTemplated() &&
-      GloballyUniqueObjectMightBeAccidentallyDuplicated(VD)) {
-    // Check mutability. For pointers, ensure that both the pointer and the
-    // pointee are (recursively) const.
-    QualType Type = VD->getType().getNonReferenceType();
-    if (!Type.isConstant(VD->getASTContext())) {
-      Diag(VD->getLocation(), diag::warn_possible_object_duplication_mutable)
-          << VD;
-    } else {
-      while (Type->isPointerType()) {
-        Type = Type->getPointeeType();
-        if (Type->isFunctionType())
-          break;
-        if (!Type.isConstant(VD->getASTContext())) {
-          Diag(VD->getLocation(),
-               diag::warn_possible_object_duplication_mutable)
-              << VD;
-          break;
-        }
-      }
-    }
-
-    // To keep false positives low, only warn if we're certain that the
-    // initializer has side effects. Don't warn on operator new, since a mutable
-    // pointer will trigger the previous warning, and an immutable pointer
-    // getting duplicated just results in a little extra memory usage.
-    const Expr *Init = VD->getAnyInitializer();
-    if (Init &&
-        Init->HasSideEffects(VD->getASTContext(),
-                             /*IncludePossibleEffects=*/false) &&
-        !isa<CXXNewExpr>(Init->IgnoreParenImpCasts())) {
-      Diag(Init->getExprLoc(), diag::warn_possible_object_duplication_init)
-          << VD;
-    }
-  }
 
   // FIXME: Warn on unused var template partial specializations.
   if (VD->isFileVarDecl() && !isa<VarTemplatePartialSpecializationDecl>(VD))
