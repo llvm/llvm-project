@@ -603,3 +603,91 @@ exit:
 
   ret i1 %r.10
 }
+
+define void @test_decompose_bitwise_and(i4 %x, i4 %y) {
+; CHECK-LABEL: @test_decompose_bitwise_and(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i4 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = icmp slt i4 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[AND]], label [[BB1:%.*]], label [[EXIT:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[F_1:%.*]] = icmp sge i4 [[X]], 0
+; CHECK-NEXT:    [[F_2:%.*]] = icmp sge i4 [[Y]], 0
+; CHECK-NEXT:    [[F_AND:%.*]] = and i1 [[F_1]], [[F_2]]
+; CHECK-NEXT:    call void @use(i1 [[F_AND]])
+; CHECK-NEXT:    ret void
+; CHECK:       exit:
+; CHECK-NEXT:    [[F_3:%.*]] = icmp slt i4 [[X]], 0
+; CHECK-NEXT:    [[F_4:%.*]] = icmp slt i4 [[Y]], 0
+; CHECK-NEXT:    [[F_AND_2:%.*]] = and i1 [[F_3]], [[F_4]]
+; CHECK-NEXT:    call void @use(i1 [[F_AND_2]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %1 = and i4 %y, %x
+  %and = icmp slt i4 %1, 0
+  br i1 %and, label %bb1, label %exit
+
+bb1:
+  %f.1 = icmp sge i4 %x, 0
+  %f.2 = icmp sge i4 %y, 0
+  %f.and = and i1 %f.1, %f.2
+  call void @use(i1 %f.and)
+  ret void
+
+exit:
+  %f.3 = icmp slt i4 %x, 0
+  %f.4 = icmp slt i4 %y, 0
+  %f.and.2 = and i1 %f.3, %f.4
+  call void @use(i1 %f.and.2)
+  ret void
+}
+
+define void @test_decompose_nested_bitwise_and(i4 %x, i4 %y, i4 %z) {
+; CHECK-LABEL: @test_decompose_nested_bitwise_and(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i4 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i4 [[TMP0]], [[Z:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = icmp slt i4 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[AND]], label [[BB1:%.*]], label [[EXIT:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[F_1:%.*]] = icmp sge i4 [[X]], 0
+; CHECK-NEXT:    [[F_2:%.*]] = icmp sge i4 [[Y]], 0
+; CHECK-NEXT:    [[F_3:%.*]] = icmp sge i4 [[Z]], 0
+; CHECK-NEXT:    [[F_AND:%.*]] = and i1 [[F_1]], [[F_2]]
+; CHECK-NEXT:    [[F_AND_2:%.*]] = and i1 [[F_AND]], [[F_3]]
+; CHECK-NEXT:    call void @use(i1 [[F_AND]])
+; CHECK-NEXT:    ret void
+; CHECK:       exit:
+; CHECK-NEXT:    [[F_4:%.*]] = icmp slt i4 [[X]], 0
+; CHECK-NEXT:    [[F_5:%.*]] = icmp slt i4 [[Y]], 0
+; CHECK-NEXT:    [[F_6:%.*]] = icmp slt i4 [[Z]], 0
+; CHECK-NEXT:    [[F_AND_3:%.*]] = and i1 [[F_4]], [[F_5]]
+; CHECK-NEXT:    [[F_AND_4:%.*]] = and i1 [[F_AND_3]], [[F_6]]
+; CHECK-NEXT:    call void @use(i1 [[F_AND_4]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %1 = and i4 %y, %x
+  %2 = and i4 %1, %z
+  %and = icmp slt i4 %2, 0
+  br i1 %and, label %bb1, label %exit
+
+bb1:
+  %f.1 = icmp sge i4 %x, 0
+  %f.2 = icmp sge i4 %y, 0
+  %f.3 = icmp sge i4 %z, 0
+  %f.and = and i1 %f.1, %f.2
+  %f.and.2 = and i1 %f.and, %f.3
+  call void @use(i1 %f.and)
+  ret void
+
+exit:
+  %f.4 = icmp slt i4 %x, 0
+  %f.5 = icmp slt i4 %y, 0
+  %f.6 = icmp slt i4 %z, 0
+  %f.and.3 = and i1 %f.4, %f.5
+  %f.and.4 = and i1 %f.and.3, %f.6
+  call void @use(i1 %f.and.4)
+  ret void
+}

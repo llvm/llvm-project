@@ -808,3 +808,91 @@ end:                                           ; preds = %entry
 
   ret void
 }
+
+define void @test_decompose_bitwise_or(i4 %x, i4 %y) {
+; CHECK-LABEL: @test_decompose_bitwise_or(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = or i4 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = icmp slt i4 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[OR]], label [[BB1:%.*]], label [[EXIT:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[F_1:%.*]] = icmp slt i4 [[X]], 0
+; CHECK-NEXT:    [[F_2:%.*]] = icmp slt i4 [[Y]], 0
+; CHECK-NEXT:    [[F_OR:%.*]] = or i1 [[F_1]], [[F_2]]
+; CHECK-NEXT:    call void @use(i1 [[F_OR]])
+; CHECK-NEXT:    ret void
+; CHECK:       exit:
+; CHECK-NEXT:    [[F_3:%.*]] = icmp sge i4 [[X]], 0
+; CHECK-NEXT:    [[F_4:%.*]] = icmp sge i4 [[Y]], 0
+; CHECK-NEXT:    [[F_OR_2:%.*]] = or i1 [[F_3]], [[F_4]]
+; CHECK-NEXT:    call void @use(i1 [[F_OR_2]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %1 = or i4 %y, %x
+  %or = icmp slt i4 %1, 0
+  br i1 %or, label %bb1, label %exit
+
+bb1:
+  %f.1 = icmp slt i4 %x, 0
+  %f.2 = icmp slt i4 %y, 0
+  %f.or = or i1 %f.1, %f.2
+  call void @use(i1 %f.or)
+  ret void
+
+exit:
+  %f.3 = icmp sge i4 %x, 0
+  %f.4 = icmp sge i4 %y, 0
+  %f.or.2 = or i1 %f.3, %f.4
+  call void @use(i1 %f.or.2)
+  ret void
+}
+
+define void @test_decompose_nested_bitwise_or(i4 %x, i4 %y, i4 %z) {
+; CHECK-LABEL: @test_decompose_nested_bitwise_or(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = or i4 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i4 [[TMP0]], [[Z:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = icmp slt i4 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[OR]], label [[BB1:%.*]], label [[EXIT:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[F_1:%.*]] = icmp slt i4 [[X]], 0
+; CHECK-NEXT:    [[F_2:%.*]] = icmp slt i4 [[Y]], 0
+; CHECK-NEXT:    [[F_3:%.*]] = icmp slt i4 [[Z]], 0
+; CHECK-NEXT:    [[F_OR:%.*]] = or i1 [[F_1]], [[F_2]]
+; CHECK-NEXT:    [[F_OR_2:%.*]] = or i1 [[F_OR]], [[F_3]]
+; CHECK-NEXT:    call void @use(i1 [[F_OR_2]])
+; CHECK-NEXT:    ret void
+; CHECK:       exit:
+; CHECK-NEXT:    [[F_4:%.*]] = icmp sge i4 [[X]], 0
+; CHECK-NEXT:    [[F_5:%.*]] = icmp sge i4 [[Y]], 0
+; CHECK-NEXT:    [[F_6:%.*]] = icmp sge i4 [[Z]], 0
+; CHECK-NEXT:    [[F_OR_3:%.*]] = or i1 [[F_4]], [[F_5]]
+; CHECK-NEXT:    [[F_OR_4:%.*]] = or i1 [[F_OR_3]], [[F_6]]
+; CHECK-NEXT:    call void @use(i1 [[F_OR_4]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %1 = or i4 %y, %x
+  %2 = or i4 %1, %z
+  %or = icmp slt i4 %2, 0
+  br i1 %or, label %bb1, label %exit
+
+bb1:
+  %f.1 = icmp slt i4 %x, 0
+  %f.2 = icmp slt i4 %y, 0
+  %f.3 = icmp slt i4 %z, 0
+  %f.or = or i1 %f.1, %f.2
+  %f.or.2 = or i1 %f.or, %f.3
+  call void @use(i1 %f.or.2)
+  ret void
+
+exit:
+  %f.4 = icmp sge i4 %x, 0
+  %f.5 = icmp sge i4 %y, 0
+  %f.6 = icmp sge i4 %z, 0
+  %f.or.3 = or i1 %f.4, %f.5
+  %f.or.4 = or i1 %f.or.3, %f.6
+  call void @use(i1 %f.or.4)
+  ret void
+}
