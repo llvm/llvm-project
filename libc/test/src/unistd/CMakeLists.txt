@@ -292,7 +292,7 @@ add_libc_unittest(
   SUITE
     libc_unistd_unittests
   SRCS
-    getpid_test.cpp
+    setsid_test.cpp
   DEPENDS
     libc.src.unistd.setsid
 )
