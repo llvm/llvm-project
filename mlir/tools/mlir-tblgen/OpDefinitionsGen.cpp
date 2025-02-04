@@ -31,6 +31,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Signals.h"
@@ -228,6 +229,16 @@ static const char *const opCommentHeader = R"(
 //===----------------------------------------------------------------------===//
 
 )";
+
+//===----------------------------------------------------------------------===//
+// Utility structs and functions
+//===----------------------------------------------------------------------===//
+
+static llvm::cl::OptionCategory clOpDefs("Options for op definitions");
+
+static llvm::cl::opt<bool> clUseFallbackTypeIDs(
+    "gen-op-use-fallback-type-ids", llvm::cl::desc("Don't generate static TypeID decls; fall back to string comparison."),
+    llvm::cl::init(false), llvm::cl::cat(clOpDefs));
 
 //===----------------------------------------------------------------------===//
 // Utility structs and functions
@@ -4625,7 +4636,7 @@ emitOpClasses(const RecordKeeper &records,
         OpEmitter::emitDecl(op, os, staticVerifierEmitter);
       }
       // Emit the TypeID explicit specialization to have a single definition.
-      if (!op.getCppNamespace().empty())
+      if (!clUseFallbackTypeIDs && !op.getCppNamespace().empty())
         os << "MLIR_DECLARE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
            << "::" << op.getCppClassName() << ")\n\n";
     } else {
@@ -4636,7 +4647,7 @@ emitOpClasses(const RecordKeeper &records,
         OpEmitter::emitDef(op, os, staticVerifierEmitter);
       }
       // Emit the TypeID explicit specialization to have a single definition.
-      if (!op.getCppNamespace().empty())
+      if (!clUseFallbackTypeIDs && !op.getCppNamespace().empty())
         os << "MLIR_DEFINE_EXPLICIT_TYPE_ID(" << op.getCppNamespace()
            << "::" << op.getCppClassName() << ")\n\n";
     }

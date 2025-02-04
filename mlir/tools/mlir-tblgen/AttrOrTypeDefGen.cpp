@@ -4,6 +4,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//
 //===----------------------------------------------------------------------===//
 
 #include "AttrOrTypeFormatGen.h"
@@ -24,6 +25,16 @@ using namespace mlir;
 using namespace mlir::tblgen;
 using llvm::Record;
 using llvm::RecordKeeper;
+
+//===----------------------------------------------------------------------===//
+// Utility structs and functions
+//===----------------------------------------------------------------------===//
+
+static llvm::cl::OptionCategory clAttrOrTypeDefs("Options for -gen-*def-*");
+
+static llvm::cl::opt<bool> clUseFallbackTypeIDs(
+    "gen-attr-or-type-use-fallback-type-ids", llvm::cl::desc("Don't generate static TypeID decls; fall back to string comparison."),
+    llvm::cl::init(false), llvm::cl::cat(clAttrOrTypeDefs));
 
 //===----------------------------------------------------------------------===//
 // Utility Functions
@@ -773,7 +784,7 @@ bool DefGenerator::emitDecls(StringRef selectedDialect) {
   // Emit the TypeID explicit specializations to have a single definition for
   // each of these.
   for (const AttrOrTypeDef &def : defs)
-    if (!def.getDialect().getCppNamespace().empty())
+    if (!clUseFallbackTypeIDs && !def.getDialect().getCppNamespace().empty())
       os << "MLIR_DECLARE_EXPLICIT_TYPE_ID("
          << def.getDialect().getCppNamespace() << "::" << def.getCppClassName()
          << ")\n";
@@ -986,7 +997,7 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
       gen.emitDef(os);
     }
     // Emit the TypeID explicit specializations to have a single symbol def.
-    if (!def.getDialect().getCppNamespace().empty())
+    if (!clUseFallbackTypeIDs && !def.getDialect().getCppNamespace().empty())
       os << "MLIR_DEFINE_EXPLICIT_TYPE_ID("
          << def.getDialect().getCppNamespace() << "::" << def.getCppClassName()
          << ")\n";
