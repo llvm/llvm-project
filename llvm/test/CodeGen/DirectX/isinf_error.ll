@@ -1,7 +1,8 @@
-; RUN: not opt -S -dxil-op-lower %s 2>&1 | FileCheck %s
+; RUN: not opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s 2>&1 | FileCheck %s
 
 ; DXIL operation isinf does not support double overload type
-; CHECK: LLVM ERROR: Invalid Overload Type
+; CHECK: in function isinf_double
+; CHECK-SAME: Cannot create IsInf operation: Invalid overload type
 
 define noundef i1 @isinf_double(double noundef %a) #0 {
 entry:

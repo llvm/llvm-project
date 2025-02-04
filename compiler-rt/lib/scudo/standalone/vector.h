@@ -21,7 +21,7 @@ namespace scudo {
 // implementation supports only POD types.
 //
 // NOTE: This class is not meant to be used directly, use Vector<T> instead.
-template <typename T> class VectorNoCtor {
+template <typename T, size_t StaticNumEntries> class VectorNoCtor {
 public:
   T &operator[](uptr I) {
     DCHECK_LT(I, Size);
@@ -86,8 +86,7 @@ protected:
   }
   void destroy() {
     if (Data != &LocalData[0])
-      ExternalBuffer.unmap(ExternalBuffer.getBase(),
-                           ExternalBuffer.getCapacity());
+      ExternalBuffer.unmap();
   }
 
 private:
@@ -116,18 +115,21 @@ private:
   uptr CapacityBytes = 0;
   uptr Size = 0;
 
-  T LocalData[256 / sizeof(T)] = {};
+  T LocalData[StaticNumEntries] = {};
   MemMapT ExternalBuffer;
 };
 
-template <typename T> class Vector : public VectorNoCtor<T> {
+template <typename T, size_t StaticNumEntries>
+class Vector : public VectorNoCtor<T, StaticNumEntries> {
 public:
-  constexpr Vector() { VectorNoCtor<T>::init(); }
+  static_assert(StaticNumEntries > 0U,
+                "Vector must have a non-zero number of static entries.");
+  constexpr Vector() { VectorNoCtor<T, StaticNumEntries>::init(); }
   explicit Vector(uptr Count) {
-    VectorNoCtor<T>::init(Count);
+    VectorNoCtor<T, StaticNumEntries>::init(Count);
     this->resize(Count);
   }
-  ~Vector() { VectorNoCtor<T>::destroy(); }
+  ~Vector() { VectorNoCtor<T, StaticNumEntries>::destroy(); }
   // Disallow copies and moves.
   Vector(const Vector &) = delete;
   Vector &operator=(const Vector &) = delete;

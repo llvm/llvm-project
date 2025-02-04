@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true -polly-parallel \
+; RUN: opt %loadNPMPolly -passes=polly-codegen -polly-invariant-load-hoisting=true -polly-parallel \
 ; RUN: -polly-parallel-force -S < %s | FileCheck %s
 ;
 ; Test to verify that we hand down the preloaded A[0] to the OpenMP subfunction.
@@ -8,7 +8,7 @@
 ;        A[i] += A[0];
 ;    }
 ;
-; CHECK:  %polly.subfn.storeaddr.polly.access.A.load = getelementptr inbounds { float, ptr }, ptr %polly.par.userContext, i32 0
+; CHECK:  %polly.subfn.storeaddr.polly.access.A.load = getelementptr inbounds nuw { float, ptr }, ptr %polly.par.userContext, i32 0
 ; CHECK:  store float %polly.access.A.load, ptr %polly.subfn.storeaddr.polly.access.A.load
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

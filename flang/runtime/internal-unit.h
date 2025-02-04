@@ -31,6 +31,7 @@ public:
 
   RT_API_ATTRS bool Emit(const char *, std::size_t, IoErrorHandler &);
   RT_API_ATTRS std::size_t GetNextInputBytes(const char *&, IoErrorHandler &);
+  RT_API_ATTRS std::size_t ViewBytesInRecord(const char *&, bool forward) const;
   RT_API_ATTRS bool AdvanceRecord(IoErrorHandler &);
   RT_API_ATTRS void BackspaceRecord(IoErrorHandler &);
   RT_API_ATTRS std::int64_t InquirePos();

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonBitTracker.h"
-#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
@@ -24,7 +23,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstddef>
@@ -1287,7 +1285,7 @@ unsigned HexagonEvaluator::getNextPhysReg(unsigned PReg, unsigned Width) const {
 }
 
 unsigned HexagonEvaluator::getVirtRegFor(unsigned PReg) const {
-  for (std::pair<unsigned,unsigned> P : MRI.liveins())
+  for (std::pair<MCRegister, Register> P : MRI.liveins())
     if (P.first == PReg)
       return P.second;
   return 0;

@@ -7,12 +7,11 @@ declare void @llvm.memset.p1.i32(ptr addrspace(1), i8, i32, i1)
 define amdgpu_cs void @memset_p1i8(ptr addrspace(1) %dst, i8 %val) {
 ; LOOP-LABEL: memset_p1i8:
 ; LOOP:       ; %bb.0: ; %loadstoreloop.preheader
-; LOOP-NEXT:    s_mov_b64 s[4:5], 0
+; LOOP-NEXT:    s_mov_b64 s[0:1], 0
 ; LOOP-NEXT:    s_mov_b32 s2, 0
 ; LOOP-NEXT:    s_mov_b32 s3, 0xf000
-; LOOP-NEXT:    s_mov_b64 s[0:1], 0
-; LOOP-NEXT:    v_mov_b32_e32 v3, s4
-; LOOP-NEXT:    v_mov_b32_e32 v4, s5
+; LOOP-NEXT:    v_mov_b32_e32 v4, s1
+; LOOP-NEXT:    v_mov_b32_e32 v3, s0
 ; LOOP-NEXT:  .LBB0_1: ; %loadstoreloop
 ; LOOP-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; LOOP-NEXT:    v_add_i32_e32 v5, vcc, v0, v3

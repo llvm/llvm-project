@@ -1,6 +1,6 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s 2>&1 | FileCheck --check-prefixes=W64-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -show-encoding %s 2>&1 | FileCheck --check-prefixes=W64-ERR --implicit-check-not=error: %s
 
 v_dual_add_f32 v255, v4, v2 :: v_dual_add_f32 v6, v1, v3
 // GFX11: encoding: [0x04,0x05,0x08,0xc9,0x01,0x07,0x06,0xff]
@@ -14816,4 +14816,220 @@ v_dual_subrev_f32 v255, -1, v4 :: v_dual_subrev_f32 v6, src_scc, v5
 
 v_dual_subrev_f32 v6, null, v5 :: v_dual_subrev_f32 v255, 0xaf123456, v4
 // GFX11: encoding: [0x7c,0x0a,0x8c,0xc9,0xff,0x08,0xfe,0x06,0x56,0x34,0x12,0xaf]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_add_f32 v255, v4, v2 :: v_dual_dot2acc_f32_bf16 v6, v1, v3
+// GFX11: encoding: [0x04,0x05,0x1a,0xc9,0x01,0x07,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_add_f32 v255, v1, v2 :: v_dual_dot2acc_f32_bf16 v6, v255, v3
+// GFX11: encoding: [0x01,0x05,0x1a,0xc9,0xff,0x07,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_add_f32 v255, v255, v2 :: v_dual_dot2acc_f32_bf16 v6, v2, v3
+// GFX11: encoding: [0xff,0x05,0x1a,0xc9,0x02,0x07,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_add_f32 v255, v2, v2 :: v_dual_dot2acc_f32_bf16 v6, v3, v3
+// GFX11: encoding: [0x02,0x05,0x1a,0xc9,0x03,0x07,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_add_f32 v255, v3, v2 :: v_dual_dot2acc_f32_bf16 v6, v4, v3
+// GFX11: encoding: [0x03,0x05,0x1a,0xc9,0x04,0x07,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_add_f32 v255, s105, v2 :: v_dual_dot2acc_f32_bf16 v6, s1, v3
+// GFX11: encoding: [0x69,0x04,0x1a,0xc9,0x01,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_add_f32 v255, s1, v2 :: v_dual_dot2acc_f32_bf16 v6, s105, v3
+// GFX11: encoding: [0x01,0x04,0x1a,0xc9,0x69,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_add_f32 v255, ttmp15, v2 :: v_dual_dot2acc_f32_bf16 v6, vcc_lo, v3
+// GFX11: encoding: [0x7b,0x04,0x1a,0xc9,0x6a,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_add_f32 v255, exec_hi, v2 :: v_dual_dot2acc_f32_bf16 v6, vcc_hi, v3
+// GFX11: encoding: [0x7f,0x04,0x1a,0xc9,0x6b,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_add_f32 v255, exec_lo, v2 :: v_dual_dot2acc_f32_bf16 v6, ttmp15, v3
+// GFX11: encoding: [0x7e,0x04,0x1a,0xc9,0x7b,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_add_f32 v255, m0, v2 :: v_dual_dot2acc_f32_bf16 v6, m0, v3
+// GFX11: encoding: [0x7d,0x04,0x1a,0xc9,0x7d,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_add_f32 v255, vcc_hi, v2 :: v_dual_dot2acc_f32_bf16 v6, exec_lo, v3
+// GFX11: encoding: [0x6b,0x04,0x1a,0xc9,0x7e,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_add_f32 v255, vcc_lo, v2 :: v_dual_dot2acc_f32_bf16 v6, exec_hi, v3
+// GFX11: encoding: [0x6a,0x04,0x1a,0xc9,0x7f,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_add_f32 v255, 0xaf123456, v2 :: v_dual_dot2acc_f32_bf16 v6, null, v3
+// GFX11: encoding: [0xff,0x04,0x1a,0xc9,0x7c,0x06,0x06,0xff,0x56,0x34,0x12,0xaf]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_add_f32 v255, src_scc, v2 :: v_dual_dot2acc_f32_bf16 v6, -1, v3
+// GFX11: encoding: [0xfd,0x04,0x1a,0xc9,0xc1,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_add_f32 v255, 0.5, v3 :: v_dual_dot2acc_f32_bf16 v6, 0.5, v2
+// GFX11: encoding: [0xf0,0x06,0x1a,0xc9,0xf0,0x04,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_add_f32 v255, -1, v4 :: v_dual_dot2acc_f32_bf16 v6, src_scc, v5
+// GFX11: encoding: [0xc1,0x08,0x1a,0xc9,0xfd,0x0a,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_add_f32 v6, null, v5 :: v_dual_dot2acc_f32_bf16 v255, 0xfe0b, v4
+// GFX11: encoding: [0x7c,0x0a,0x1a,0xc9,0xff,0x08,0xfe,0x06,0x0b,0xfe,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, v4, v2 :: v_dual_add_f32 v6, v1, v3
+// GFX11: encoding: [0x04,0x05,0x48,0xcb,0x01,0x07,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, v1, v2 :: v_dual_add_f32 v6, v255, v3
+// GFX11: encoding: [0x01,0x05,0x48,0xcb,0xff,0x07,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, v255, v2 :: v_dual_add_f32 v6, v2, v3
+// GFX11: encoding: [0xff,0x05,0x48,0xcb,0x02,0x07,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, v2, v2 :: v_dual_add_f32 v6, v3, v3
+// GFX11: encoding: [0x02,0x05,0x48,0xcb,0x03,0x07,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, v3, v2 :: v_dual_add_f32 v6, v4, v3
+// GFX11: encoding: [0x03,0x05,0x48,0xcb,0x04,0x07,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, s105, v2 :: v_dual_add_f32 v6, s1, v3
+// GFX11: encoding: [0x69,0x04,0x48,0xcb,0x01,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, s1, v2 :: v_dual_add_f32 v6, s105, v3
+// GFX11: encoding: [0x01,0x04,0x48,0xcb,0x69,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, ttmp15, v2 :: v_dual_add_f32 v6, vcc_lo, v3
+// GFX11: encoding: [0x7b,0x04,0x48,0xcb,0x6a,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, exec_hi, v2 :: v_dual_add_f32 v6, vcc_hi, v3
+// GFX11: encoding: [0x7f,0x04,0x48,0xcb,0x6b,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, exec_lo, v2 :: v_dual_add_f32 v6, ttmp15, v3
+// GFX11: encoding: [0x7e,0x04,0x48,0xcb,0x7b,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, m0, v2 :: v_dual_add_f32 v6, m0, v3
+// GFX11: encoding: [0x7d,0x04,0x48,0xcb,0x7d,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, vcc_hi, v2 :: v_dual_add_f32 v6, exec_lo, v3
+// GFX11: encoding: [0x6b,0x04,0x48,0xcb,0x7e,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, vcc_lo, v2 :: v_dual_add_f32 v6, exec_hi, v3
+// GFX11: encoding: [0x6a,0x04,0x48,0xcb,0x7f,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, 0xfe0b, v2 :: v_dual_add_f32 v6, null, v3
+// GFX11: encoding: [0xff,0x04,0x48,0xcb,0x7c,0x06,0x06,0xff,0x0b,0xfe,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, src_scc, v2 :: v_dual_add_f32 v6, -1, v3
+// GFX11: encoding: [0xfd,0x04,0x48,0xcb,0xc1,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, 0.5, v3 :: v_dual_add_f32 v6, 0.5, v2
+// GFX11: encoding: [0xf0,0x06,0x48,0xcb,0xf0,0x04,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, -1, v4 :: v_dual_add_f32 v6, src_scc, v5
+// GFX11: encoding: [0xc1,0x08,0x48,0xcb,0xfd,0x0a,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v6, null, v5 :: v_dual_add_f32 v255, 0xaf123456, v4
+// GFX11: encoding: [0x7c,0x0a,0x48,0xcb,0xff,0x08,0xfe,0x06,0x56,0x34,0x12,0xaf]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, v4, v2 :: v_dual_add_nc_u32 v6, v1, v3
+// GFX11: encoding: [0x04,0x05,0x60,0xcb,0x01,0x07,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, v1, v2 :: v_dual_add_nc_u32 v6, v255, v3
+// GFX11: encoding: [0x01,0x05,0x60,0xcb,0xff,0x07,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, v255, v2 :: v_dual_add_nc_u32 v6, v2, v3
+// GFX11: encoding: [0xff,0x05,0x60,0xcb,0x02,0x07,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, v2, v2 :: v_dual_add_nc_u32 v6, v3, v3
+// GFX11: encoding: [0x02,0x05,0x60,0xcb,0x03,0x07,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, v3, v2 :: v_dual_add_nc_u32 v6, v4, v3
+// GFX11: encoding: [0x03,0x05,0x60,0xcb,0x04,0x07,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, s105, v2 :: v_dual_add_nc_u32 v6, s1, v3
+// GFX11: encoding: [0x69,0x04,0x60,0xcb,0x01,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, s1, v2 :: v_dual_add_nc_u32 v6, s105, v3
+// GFX11: encoding: [0x01,0x04,0x60,0xcb,0x69,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, ttmp15, v2 :: v_dual_add_nc_u32 v6, vcc_lo, v3
+// GFX11: encoding: [0x7b,0x04,0x60,0xcb,0x6a,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, exec_hi, v2 :: v_dual_add_nc_u32 v6, vcc_hi, v3
+// GFX11: encoding: [0x7f,0x04,0x60,0xcb,0x6b,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, exec_lo, v2 :: v_dual_add_nc_u32 v6, ttmp15, v3
+// GFX11: encoding: [0x7e,0x04,0x60,0xcb,0x7b,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, m0, v2 :: v_dual_add_nc_u32 v6, m0, v3
+// GFX11: encoding: [0x7d,0x04,0x60,0xcb,0x7d,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, vcc_hi, v2 :: v_dual_add_nc_u32 v6, exec_lo, v3
+// GFX11: encoding: [0x6b,0x04,0x60,0xcb,0x7e,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, vcc_lo, v2 :: v_dual_add_nc_u32 v6, exec_hi, v3
+// GFX11: encoding: [0x6a,0x04,0x60,0xcb,0x7f,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, 0xfe0b, v2 :: v_dual_add_nc_u32 v6, null, v3
+// GFX11: encoding: [0xff,0x04,0x60,0xcb,0x7c,0x06,0x06,0xff,0x0b,0xfe,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, src_scc, v2 :: v_dual_add_nc_u32 v6, -1, v3
+// GFX11: encoding: [0xfd,0x04,0x60,0xcb,0xc1,0x06,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, 0.5, v3 :: v_dual_add_nc_u32 v6, 0.5, v2
+// GFX11: encoding: [0xf0,0x06,0x60,0xcb,0xf0,0x04,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v255, -1, v4 :: v_dual_add_nc_u32 v6, src_scc, v5
+// GFX11: encoding: [0xc1,0x08,0x60,0xcb,0xfd,0x0a,0x06,0xff]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32
+
+v_dual_dot2acc_f32_bf16 v6, null, v5 :: v_dual_add_nc_u32 v255, 0xaf123456, v4
+// GFX11: encoding: [0x7c,0x0a,0x60,0xcb,0xff,0x08,0xfe,0x06,0x56,0x34,0x12,0xaf]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction requires wavesize=32

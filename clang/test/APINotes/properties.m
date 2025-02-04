@@ -1,7 +1,7 @@
 // RUN: rm -rf %t && mkdir -p %t
 
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fapinotes-modules  -fblocks -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter 'TestProperties::' | FileCheck -check-prefix=CHECK -check-prefix=CHECK-4 %s
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fapinotes-modules  -fblocks -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter 'TestProperties::' -fapinotes-swift-version=3 | FileCheck -check-prefix=CHECK -check-prefix=CHECK-3 %s
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fapinotes-modules  -fblocks -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter 'TestProperties::' | FileCheck -check-prefix=CHECK -check-prefix=CHECK-4 %s
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fapinotes-modules  -fblocks -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter 'TestProperties::' -fapinotes-swift-version=3 | FileCheck -check-prefix=CHECK -check-prefix=CHECK-3 %s
 
 @import VersionedKit;
 

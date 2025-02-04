@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Stream -verify %s
 
 typedef struct _IO_FILE FILE;
 extern FILE *fopen(const char *path, const char *mode);

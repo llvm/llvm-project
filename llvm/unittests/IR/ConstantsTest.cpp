@@ -56,11 +56,11 @@ TEST(ConstantsTest, Integer_i1) {
 
   // @h = constant i1 shl(i1 1 , i1 1)  ; poison
   // @h = constant i1 poison
-  EXPECT_EQ(Poison, ConstantExpr::getShl(One, One));
+  EXPECT_EQ(Poison, ConstantFoldBinaryInstruction(Instruction::Shl, One, One));
 
   // @i = constant i1 shl(i1 1 , i1 0)
   // @i = constant i1 true
-  EXPECT_EQ(One, ConstantExpr::getShl(One, Zero));
+  EXPECT_EQ(One, ConstantFoldBinaryInstruction(Instruction::Shl, One, Zero));
 
   // @n = constant i1 mul(i1 -1, i1 1)
   // @n = constant i1 true
@@ -172,7 +172,6 @@ TEST(ConstantsTest, PointerCast) {
     Instruction *__I = cast<ConstantExpr>(x)->getAsInstruction();              \
     __I->print(__o);                                                           \
     __I->deleteValue();                                                        \
-    __o.flush();                                                               \
     EXPECT_EQ(std::string("  <badref> = " y), __s);                            \
   }
 
@@ -185,9 +184,9 @@ TEST(ConstantsTest, AsInstructionsTest) {
   Type *Int16Ty = Type::getInt16Ty(Context);
 
   Constant *Global =
-      M->getOrInsertGlobal("dummy", PointerType::getUnqual(Int32Ty));
+      M->getOrInsertGlobal("dummy", PointerType::getUnqual(Context));
   Constant *Global2 =
-      M->getOrInsertGlobal("dummy2", PointerType::getUnqual(Int32Ty));
+      M->getOrInsertGlobal("dummy2", PointerType::getUnqual(Context));
 
   Constant *P0 = ConstantExpr::getPtrToInt(Global, Int32Ty);
   Constant *P4 = ConstantExpr::getPtrToInt(Global2, Int32Ty);
@@ -216,13 +215,6 @@ TEST(ConstantsTest, AsInstructionsTest) {
   CHECK(ConstantExpr::getSub(P0, P0), "sub i32 " P0STR ", " P0STR);
   CHECK(ConstantExpr::getMul(P0, P0), "mul i32 " P0STR ", " P0STR);
   CHECK(ConstantExpr::getXor(P0, P0), "xor i32 " P0STR ", " P0STR);
-  CHECK(ConstantExpr::getShl(P0, P0), "shl i32 " P0STR ", " P0STR);
-  CHECK(ConstantExpr::getShl(P0, P0, true), "shl nuw i32 " P0STR ", " P0STR);
-  CHECK(ConstantExpr::getShl(P0, P0, false, true),
-        "shl nsw i32 " P0STR ", " P0STR);
-
-  CHECK(ConstantExpr::getICmp(CmpInst::ICMP_EQ, P0, P4),
-        "icmp eq i32 " P0STR ", " P4STR);
 
   std::vector<Constant *> V;
   V.push_back(One);
@@ -230,7 +222,7 @@ TEST(ConstantsTest, AsInstructionsTest) {
   //        not a normal one!
   // CHECK(ConstantExpr::getGetElementPtr(Global, V, false),
   //      "getelementptr i32*, i32** @dummy, i32 1");
-  CHECK(ConstantExpr::getInBoundsGetElementPtr(PointerType::getUnqual(Int32Ty),
+  CHECK(ConstantExpr::getInBoundsGetElementPtr(PointerType::getUnqual(Context),
                                                Global, V),
         "getelementptr inbounds ptr, ptr @dummy, i32 1");
 
@@ -258,9 +250,9 @@ TEST(ConstantsTest, ReplaceWithConstantTest) {
   Constant *One = ConstantInt::get(Int32Ty, 1);
 
   Constant *Global =
-      M->getOrInsertGlobal("dummy", PointerType::getUnqual(Int32Ty));
+      M->getOrInsertGlobal("dummy", PointerType::getUnqual(Context));
   Constant *GEP = ConstantExpr::getGetElementPtr(
-      PointerType::getUnqual(Int32Ty), Global, One);
+      PointerType::getUnqual(Context), Global, One);
   EXPECT_DEATH(Global->replaceAllUsesWith(GEP),
                "this->replaceAllUsesWith\\(expr\\(this\\)\\) is NOT valid!");
 }
@@ -323,7 +315,7 @@ TEST(ConstantsTest, GEPReplaceWithConstant) {
   std::unique_ptr<Module> M(new Module("MyModule", Context));
 
   Type *IntTy = Type::getInt32Ty(Context);
-  Type *PtrTy = PointerType::get(IntTy, 0);
+  Type *PtrTy = PointerType::get(Context, 0);
   auto *C1 = ConstantInt::get(IntTy, 1);
   auto *Placeholder = new GlobalVariable(
       *M, IntTy, false, GlobalValue::ExternalWeakLinkage, nullptr);
@@ -350,7 +342,7 @@ TEST(ConstantsTest, AliasCAPI) {
       parseAssemblyString("@g = global i32 42", Error, Context);
   GlobalVariable *G = M->getGlobalVariable("g");
   Type *I16Ty = Type::getInt16Ty(Context);
-  Type *I16PTy = PointerType::get(I16Ty, 0);
+  Type *I16PTy = PointerType::get(Context, 0);
   Constant *Aliasee = ConstantExpr::getBitCast(G, I16PTy);
   LLVMValueRef AliasRef =
       LLVMAddAlias2(wrap(M.get()), wrap(I16Ty), 0, wrap(Aliasee), "a");
@@ -429,7 +421,7 @@ TEST(ConstantsTest, BitcastToGEP) {
 
   auto *G =
       new GlobalVariable(*M, S, false, GlobalValue::ExternalLinkage, nullptr);
-  auto *PtrTy = PointerType::get(i32, 0);
+  auto *PtrTy = PointerType::get(Context, 0);
   auto *C = ConstantExpr::getBitCast(G, PtrTy);
   /* With opaque pointers, no cast is necessary. */
   EXPECT_EQ(C, G);

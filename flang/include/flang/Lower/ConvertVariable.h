@@ -23,6 +23,10 @@
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/DenseMap.h"
 
+namespace cuf {
+class DataAttributeAttr;
+}
+
 namespace fir {
 class ExtendedValue;
 class FirOpBuilder;
@@ -57,6 +61,19 @@ using AggregateStoreMap = llvm::DenseMap<AggregateStoreKey, mlir::Value>;
 /// instantiation and can be different form \p symMap.
 void instantiateVariable(AbstractConverter &, const pft::Variable &var,
                          SymMap &symMap, AggregateStoreMap &storeMap);
+
+/// Does this variable have a default initialization?
+bool hasDefaultInitialization(const Fortran::semantics::Symbol &sym);
+
+/// Call default initialization runtime routine to initialize \p var.
+void defaultInitializeAtRuntime(Fortran::lower::AbstractConverter &converter,
+                                const Fortran::semantics::Symbol &sym,
+                                Fortran::lower::SymMap &symMap);
+
+/// Call clone initialization runtime routine to initialize \p sym's value.
+void initializeCloneAtRuntime(Fortran::lower::AbstractConverter &converter,
+                              const Fortran::semantics::Symbol &sym,
+                              Fortran::lower::SymMap &symMap);
 
 /// Create a fir::GlobalOp given a module variable definition. This is intended
 /// to be used when lowering a module definition, not when lowering variables
@@ -146,9 +163,9 @@ translateSymbolAttributes(mlir::MLIRContext *mlirContext,
 
 /// Translate the CUDA Fortran attributes of \p sym into the FIR CUDA attribute
 /// representation.
-fir::CUDADataAttributeAttr
-translateSymbolCUDADataAttribute(mlir::MLIRContext *mlirContext,
-                                 const Fortran::semantics::Symbol &sym);
+cuf::DataAttributeAttr
+translateSymbolCUFDataAttribute(mlir::MLIRContext *mlirContext,
+                                const Fortran::semantics::Symbol &sym);
 
 /// Map a symbol to a given fir::ExtendedValue. This will generate an
 /// hlfir.declare when lowering to HLFIR and map the hlfir.declare result to the

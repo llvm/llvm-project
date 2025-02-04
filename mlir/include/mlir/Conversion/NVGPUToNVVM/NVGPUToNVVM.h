@@ -34,7 +34,7 @@ MemRefType getMBarrierMemrefType(MLIRContext *context,
                                  MBarrierGroupType barrierType);
 } // namespace nvgpu
 
-void populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
+void populateNVGPUToNVVMConversionPatterns(const LLVMTypeConverter &converter,
                                            RewritePatternSet &patterns);
 } // namespace mlir
 

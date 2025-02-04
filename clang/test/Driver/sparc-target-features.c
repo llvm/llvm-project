@@ -32,3 +32,6 @@
 // RUN: %clang --target=sparc -msoft-quad-float %s -### 2>&1 | FileCheck -check-prefix=SOFT-QUAD-FLOAT %s
 // HARD-QUAD-FLOAT: "-target-feature" "+hard-quad-float"
 // SOFT-QUAD-FLOAT: "-target-feature" "-hard-quad-float"
+
+// RUN: %clang --target=sparc -mv8plus %s -### 2>&1 | FileCheck -check-prefix=V8PLUS %s
+// V8PLUS: "-target-feature" "+v8plus"

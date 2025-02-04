@@ -870,7 +870,7 @@ Identifier Demangler::parseIdentifier() {
 // Parses optional base 62 number. The presence of a number is determined using
 // Tag. Returns 0 when tag is absent and parsed value + 1 otherwise
 //
-// This function is indended for parsing disambiguators and binders which when
+// This function is intended for parsing disambiguators and binders which when
 // not present have their value interpreted as 0, and otherwise as decoded
 // value + 1. For example for binders, value for "G_" is 1, for "G0_" value is
 // 2. When "G" is absent value is 0.

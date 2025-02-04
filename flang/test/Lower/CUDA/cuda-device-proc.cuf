@@ -1,0 +1,89 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Test CUDA Fortran procedures available in cudadevice module
+
+attributes(global) subroutine devsub()
+  implicit none
+  integer :: ret
+  real(4) :: af
+  real(8) :: ad
+  integer(4) :: ai
+  integer(8) :: al
+
+  call syncthreads()
+  call syncwarp(1)
+  call threadfence()
+  call threadfence_block()
+  call threadfence_system()
+  ret = syncthreads_and(1)
+  ret = syncthreads_count(1)
+  ret = syncthreads_or(1)
+
+  ai = atomicadd(ai, 1_4)
+  al = atomicadd(al, 1_8)
+  af = atomicadd(af, 1.0_4)
+  ad = atomicadd(ad, 1.0_8)
+  
+  ai = atomicsub(ai, 1_4)
+  al = atomicsub(al, 1_8)
+  af = atomicsub(af, 1.0_4)
+  ad = atomicsub(ad, 1.0_8)
+  
+  ai = atomicmax(ai, 1_4)
+  al = atomicmax(al, 1_8)
+  af = atomicmax(af, 1.0_4)
+  ad = atomicmax(ad, 1.0_8)
+  
+  ai = atomicmin(ai, 1_4)
+  al = atomicmin(al, 1_8)
+  af = atomicmin(af, 1.0_4)
+  ad = atomicmin(ad, 1.0_8)
+  
+  ai = atomicand(ai, 1_4)
+  ai = atomicor(ai, 1_4)
+  ai = atomicinc(ai, 1_4)
+  ai = atomicdec(ai, 1_4)
+end
+
+! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
+! CHECK: fir.call @llvm.nvvm.barrier0() fastmath<contract> : () -> ()
+! CHECK: fir.call @__syncwarp(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (!fir.ref<i32>) -> ()
+! CHECK: fir.call @llvm.nvvm.membar.gl() fastmath<contract> : () -> ()
+! CHECK: fir.call @llvm.nvvm.membar.cta() fastmath<contract> : () -> ()
+! CHECK: fir.call @llvm.nvvm.membar.sys() fastmath<contract> : () -> ()
+! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.and(%c1_i32_0) fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.popc(%c1_i32_1) fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.or(%c1_i32_2) fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = llvm.atomicrmw add  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
+! CHECK: %{{.*}} = llvm.atomicrmw add  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i64
+! CHECK: %{{.*}} = llvm.atomicrmw fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f32
+! CHECK: %{{.*}} = llvm.atomicrmw fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f64
+
+! CHECK: %{{.*}} = llvm.atomicrmw sub  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
+! CHECK: %{{.*}} = llvm.atomicrmw sub  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i64
+! CHECK: %{{.*}} = llvm.atomicrmw fsub %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f32
+! CHECK: %{{.*}} = llvm.atomicrmw fsub %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f64
+
+! CHECK: %{{.*}} = llvm.atomicrmw max  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
+! CHECK: %{{.*}} = llvm.atomicrmw max  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i64
+! CHECK: %{{.*}} = llvm.atomicrmw fmax %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f32
+! CHECK: %{{.*}} = llvm.atomicrmw fmax %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f64
+
+! CHECK: %{{.*}} = llvm.atomicrmw min  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
+! CHECK: %{{.*}} = llvm.atomicrmw min  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i64
+! CHECK: %{{.*}} = llvm.atomicrmw fmin %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f32
+! CHECK: %{{.*}} = llvm.atomicrmw fmin %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f64
+
+! CHECK: %{{.*}} = llvm.atomicrmw _and  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
+! CHECK: %{{.*}} = llvm.atomicrmw _or  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
+! CHECK: %{{.*}} = llvm.atomicrmw uinc_wrap  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
+! CHECK: %{{.*}} = llvm.atomicrmw udec_wrap  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
+
+! CHECK: func.func private @llvm.nvvm.barrier0()
+! CHECK: func.func private @__syncwarp(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncwarp", fir.proc_attrs = #fir.proc_attrs<bind_c>}
+! CHECK: func.func private @llvm.nvvm.membar.gl()
+! CHECK: func.func private @llvm.nvvm.membar.cta()
+! CHECK: func.func private @llvm.nvvm.membar.sys()
+! CHECK: func.func private @llvm.nvvm.barrier0.and(i32) -> i32
+! CHECK: func.func private @llvm.nvvm.barrier0.popc(i32) -> i32
+! CHECK: func.func private @llvm.nvvm.barrier0.or(i32) -> i32

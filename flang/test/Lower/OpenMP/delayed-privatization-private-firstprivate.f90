@@ -17,13 +17,11 @@ subroutine delayed_privatization_private_firstprivate
 end subroutine
 
 ! CHECK-LABEL: omp.private {type = firstprivate}
-! CHECK-SAME: @[[VAR2_PRIVATIZER_SYM:.*]] : !fir.ref<i32> alloc {
-! CHECK: } copy {
+! CHECK-SAME: @[[VAR2_PRIVATIZER_SYM:.*]] : i32 copy {
 ! CHECK: }
 
 ! CHECK-LABEL: omp.private {type = private}
-! CHECK-SAME: @[[VAR1_PRIVATIZER_SYM:.*]] : !fir.ref<i32> alloc {
-! CHECK: }
+! CHECK-SAME: @[[VAR1_PRIVATIZER_SYM:.*]] : i32
 
 ! CHECK-LABEL: func.func @_QPdelayed_privatization_private_firstprivate() {
 ! CHECK:  %[[VAR1_ALLOC:.*]] = fir.alloca i32 {bindc_name = "var1"
@@ -33,5 +31,6 @@ end subroutine
 ! CHECK:  %[[VAR2_DECL:.*]]:2 = hlfir.declare %[[VAR2_ALLOC]]
 
 ! CHECK:  omp.parallel private(
-! CHECK-SAME: @[[VAR1_PRIVATIZER_SYM]] %[[VAR1_DECL]]#0 -> %{{.*}} : !fir.ref<i32>, 
-! CHECK-SAME: @[[VAR2_PRIVATIZER_SYM]] %[[VAR2_DECL]]#0 -> %{{.*}} : !fir.ref<i32>) {
+! CHECK-SAME: @[[VAR1_PRIVATIZER_SYM]] %[[VAR1_DECL]]#0 -> %{{[^,]+}}, 
+! CHECK-SAME: @[[VAR2_PRIVATIZER_SYM]] %[[VAR2_DECL]]#0 -> %{{.*}} :
+! CHECK-SAME: !fir.ref<i32>, !fir.ref<i32>) {

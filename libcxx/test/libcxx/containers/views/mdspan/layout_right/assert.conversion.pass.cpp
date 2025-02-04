@@ -42,17 +42,20 @@ int main(int, char**) {
   }
   // non-representability of extents itself
   {
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::layout_right::mapping<std::extents<char, D>> m(
-                                 std::layout_right::mapping<std::extents<int, D>>(std::extents<int, D>(500))); }()),
-                               "extents ctor: arguments must be representable as index_type and nonnegative");
+    TEST_LIBCPP_ASSERT_FAILURE(
+        ([=] {
+          std::layout_right::mapping<std::extents<signed char, D>> m(
+              std::layout_right::mapping<std::extents<int, D>>(std::extents<int, D>(500)));
+        }()),
+        "extents ctor: arguments must be representable as index_type and nonnegative");
   }
   // required_span_size not representable, while individual extents are
   {
     // check extents would be constructible
-    [[maybe_unused]] std::extents<char, D, 5> e(arg_exts);
+    [[maybe_unused]] std::extents<signed char, D, 5> e(arg_exts);
     // but the product is not, so we can't use it for layout_right
     TEST_LIBCPP_ASSERT_FAILURE(
-        ([=] { std::layout_right::mapping<std::extents<char, D, 5>> m(arg); }()),
+        ([=] { std::layout_right::mapping<std::extents<signed char, D, 5>> m(arg); }()),
         "layout_right::mapping converting ctor: other.required_span_size() must be representable as index_type.");
   }
   return 0;

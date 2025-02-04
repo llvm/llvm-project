@@ -68,7 +68,7 @@ define void @commute(i32 %test_case, i32 %scale) nounwind ssp {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    callq printf@PLT
 ; CHECK-NEXT:    addq $8, %rsp
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_3: # %for.body53.us
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jmp .LBB1_3
@@ -141,7 +141,7 @@ define ptr @bsd_memchr(ptr %s, i32 %a, i32 %c, i64 %n) nounwind ssp {
 ; CHECK-NEXT:  # %bb.1: # %preheader
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    movzbl %dl, %edx
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB3_2: # %do.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    cmpl %edx, %esi

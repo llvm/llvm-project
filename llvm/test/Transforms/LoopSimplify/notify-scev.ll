@@ -17,12 +17,12 @@ target triple = "x86_64-apple-darwin"
 ; CHECK-LABEL: for.cond127.preheader:
 ; CHECK-NOT: for.cond127:
 ; CHECK-LABEL: for.body129:
-define void @t() {
+define void @t(i1 %arg) {
 entry:
   br label %for.body102
 
 for.body102:
-  br i1 undef, label %for.cond127.preheader, label %for.inc203
+  br i1 %arg, label %for.cond127.preheader, label %for.inc203
 
 for.cond127.preheader:
   br label %for.body129
@@ -34,10 +34,10 @@ for.cond127:
 for.body129:
   %uv.013 = phi i32 [ 0, %for.cond127.preheader ], [ %inc191, %for.cond127 ]
   %idxprom130 = sext i32 %uv.013 to i64
-  br i1 undef, label %for.cond135.preheader.lr.ph, label %for.end185
+  br i1 %arg, label %for.cond135.preheader.lr.ph, label %for.end185
 
 for.cond135.preheader.lr.ph:
-  br i1 undef, label %for.cond135.preheader.lr.ph.split.us, label %for.cond135.preheader.lr.ph.split_crit_edge
+  br i1 %arg, label %for.cond135.preheader.lr.ph.split.us, label %for.cond135.preheader.lr.ph.split_crit_edge
 
 for.cond135.preheader.lr.ph.split_crit_edge:
   br label %for.cond135.preheader.lr.ph.split
@@ -51,17 +51,17 @@ for.cond135.preheader.us:
 
 for.end178.us:
   %add184.us = add nsw i32 %block_y.09.us, 4
-  br i1 undef, label %for.end185split.us-lcssa.us, label %for.cond132.us
+  br i1 %arg, label %for.end185split.us-lcssa.us, label %for.cond132.us
 
 for.end174.us:
-  br i1 undef, label %for.cond138.preheader.us, label %for.cond135.for.end178_crit_edge.us
+  br i1 %arg, label %for.cond138.preheader.us, label %for.cond135.for.end178_crit_edge.us
 
 for.inc172.us:
-  br i1 undef, label %for.cond142.preheader.us, label %for.end174.us
+  br i1 %arg, label %for.cond142.preheader.us, label %for.end174.us
 
 for.body145.us:
   %arrayidx163.us = getelementptr inbounds %struct.Params, ptr undef, i64 0, i32 0, i64 %idxprom130, i64 %idxprom146.us
-  br i1 undef, label %for.body145.us, label %for.inc172.us
+  br i1 %arg, label %for.body145.us, label %for.inc172.us
 
 for.cond142.preheader.us:
   %j.04.us = phi i32 [ %block_y.09.us, %for.cond138.preheader.us ], [ undef, %for.inc172.us ]
@@ -72,7 +72,7 @@ for.cond138.preheader.us:
   br label %for.cond142.preheader.us
 
 for.cond132.us:
-  br i1 undef, label %for.cond135.preheader.us, label %for.cond132.for.end185_crit_edge.us-lcssa.us
+  br i1 %arg, label %for.cond135.preheader.us, label %for.cond132.for.end185_crit_edge.us-lcssa.us
 
 for.cond138.preheader.lr.ph.us:
   br label %for.cond138.preheader.us

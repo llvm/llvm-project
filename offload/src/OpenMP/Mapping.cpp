@@ -149,7 +149,7 @@ LookupResult MappingInfoTy::lookupMapping(HDTTMapAccessorTy &HDTTMap,
     //   std::prev(upper)->HDTT.HstPtrBegin <= hp < upper->HDTT.HstPtrBegin
     if (Upper != HDTTMap->begin()) {
       LR.TPR.setEntry(std::prev(Upper)->HDTT, OwnedTPR);
-      // the left side of extended address range is satisified.
+      // the left side of extended address range is satisfied.
       // hp >= LR.TPR.getEntry()->HstPtrBegin || hp >=
       // LR.TPR.getEntry()->HstPtrBase
       LR.Flags.IsContained = HP < LR.TPR.getEntry()->HstPtrEnd ||
@@ -158,7 +158,7 @@ LookupResult MappingInfoTy::lookupMapping(HDTTMapAccessorTy &HDTTMap,
 
     if (!LR.Flags.IsContained && Upper != HDTTMap->end()) {
       LR.TPR.setEntry(Upper->HDTT, OwnedTPR);
-      // the right side of extended address range is satisified.
+      // the right side of extended address range is satisfied.
       // hp < LR.TPR.getEntry()->HstPtrEnd || hp < LR.TPR.getEntry()->HstPtrBase
       LR.Flags.IsContained = HP >= LR.TPR.getEntry()->HstPtrBase;
     }
@@ -314,9 +314,7 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
 
     // Notify the plugin about the new mapping.
     if (Device.notifyDataMapped(HstPtrBegin, Size))
-      return {{false /*IsNewEntry=*/, false /*IsHostPointer=*/},
-              nullptr /*Entry=*/,
-              nullptr /*TargetPointer=*/};
+      return TargetPointerResultTy{};
   } else {
     // This entry is not present and we did not create a new entry for it.
     LR.TPR.Flags.IsPresent = false;
@@ -344,9 +342,7 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
       LR.TPR.TargetPointer = nullptr;
     } else if (LR.TPR.getEntry()->addEventIfNecessary(Device, AsyncInfo) !=
                OFFLOAD_SUCCESS)
-      return {{false /*IsNewEntry=*/, false /*IsHostPointer=*/},
-              nullptr /*Entry=*/,
-              nullptr /*TargetPointer=*/};
+      return TargetPointerResultTy{};
   } else {
     // If not a host pointer and no present modifier, we need to wait for the
     // event if it exists.
@@ -360,9 +356,7 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
           // If it fails to wait for the event, we need to return nullptr in
           // case of any data race.
           REPORT("Failed to wait for event " DPxMOD ".\n", DPxPTR(Event));
-          return {{false /*IsNewEntry=*/, false /*IsHostPointer=*/},
-                  nullptr /*Entry=*/,
-                  nullptr /*TargetPointer=*/};
+          return TargetPointerResultTy{};
         }
       }
     }

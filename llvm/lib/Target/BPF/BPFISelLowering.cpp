@@ -14,7 +14,6 @@
 #include "BPFISelLowering.h"
 #include "BPF.h"
 #include "BPFSubtarget.h"
-#include "BPFTargetMachine.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -402,6 +401,21 @@ SDValue BPFTargetLowering::LowerFormalArguments(
 
 const size_t BPFTargetLowering::MaxArgs = 5;
 
+static void resetRegMaskBit(const TargetRegisterInfo *TRI, uint32_t *RegMask,
+                            MCRegister Reg) {
+  for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
+    RegMask[SubReg / 32] &= ~(1u << (SubReg % 32));
+}
+
+static uint32_t *regMaskFromTemplate(const TargetRegisterInfo *TRI,
+                                     MachineFunction &MF,
+                                     const uint32_t *BaseRegMask) {
+  uint32_t *RegMask = MF.allocateRegMask();
+  unsigned RegMaskSize = MachineOperand::getRegMaskSize(TRI->getNumRegs());
+  memcpy(RegMask, BaseRegMask, sizeof(RegMask[0]) * RegMaskSize);
+  return RegMask;
+}
+
 SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                      SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG = CLI.DAG;
@@ -512,6 +526,22 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // known live into the call.
   for (auto &Reg : RegsToPass)
     Ops.push_back(DAG.getRegister(Reg.first, Reg.second.getValueType()));
+
+  bool HasFastCall =
+      (CLI.CB && isa<CallInst>(CLI.CB) && CLI.CB->hasFnAttr("bpf_fastcall"));
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  if (HasFastCall) {
+    uint32_t *RegMask = regMaskFromTemplate(
+        TRI, MF, TRI->getCallPreservedMask(MF, CallingConv::PreserveAll));
+    for (auto const &RegPair : RegsToPass)
+      resetRegMaskBit(TRI, RegMask, RegPair.first);
+    if (!CLI.CB->getType()->isVoidTy())
+      resetRegMaskBit(TRI, RegMask, BPF::R0);
+    Ops.push_back(DAG.getRegisterMask(RegMask));
+  } else {
+    Ops.push_back(
+        DAG.getRegisterMask(TRI->getCallPreservedMask(MF, CLI.CallConv)));
+  }
 
   if (InGlue.getNode())
     Ops.push_back(InGlue);
@@ -666,10 +696,9 @@ SDValue BPFTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
     NegateCC(LHS, RHS, CC);
 
   SDValue TargetCC = DAG.getConstant(CC, DL, LHS.getValueType());
-  SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Glue);
   SDValue Ops[] = {LHS, RHS, TargetCC, TrueV, FalseV};
 
-  return DAG.getNode(BPFISD::SELECT_CC, DL, VTs, Ops);
+  return DAG.getNode(BPFISD::SELECT_CC, DL, Op.getValueType(), Ops);
 }
 
 const char *BPFTargetLowering::getTargetNodeName(unsigned Opcode) const {

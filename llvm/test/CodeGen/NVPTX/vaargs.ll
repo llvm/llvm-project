@@ -16,56 +16,56 @@ entry:
 
 ; Test va_start
 ; CHECK:         .param .align 8 .b8 foo_vararg[]
-; CHECK:         mov.u[[BITS]] [[VA_PTR:%(r|rd)[0-9]+]], foo_vararg;
-; CHECK-NEXT:    st.u[[BITS]] [%SP+0], [[VA_PTR]];
+; CHECK:         mov.b[[BITS]] [[VA_PTR:%(r|rd)[0-9]+]], foo_vararg;
+; CHECK-NEXT:    st.u[[BITS]] [%SP], [[VA_PTR]];
 
   call void @llvm.va_start(ptr %al)
 
 ; Test va_copy()
-; CHECK-NEXT:	 ld.u[[BITS]] [[VA_PTR:%(r|rd)[0-9]+]], [%SP+0];
+; CHECK-NEXT:	 ld.u[[BITS]] [[VA_PTR:%(r|rd)[0-9]+]], [%SP];
 ; CHECK-NEXT:	 st.u[[BITS]] [%SP+{{[0-9]+}}], [[VA_PTR]];
 
   call void @llvm.va_copy(ptr %al2, ptr %al)
 
 ; Test va_arg(ap, int32_t)
-; CHECK-NEXT:    ld.u[[BITS]] [[VA_PTR:%(r|rd)[0-9]+]], [%SP+0];
+; CHECK-NEXT:    ld.u[[BITS]] [[VA_PTR:%(r|rd)[0-9]+]], [%SP];
 ; CHECK-NEXT:    add.s[[BITS]] [[VA_PTR_TMP:%(r|rd)[0-9]+]], [[VA_PTR]], 3;
 ; CHECK-NEXT:    and.b[[BITS]] [[VA_PTR_ALIGN:%(r|rd)[0-9]+]], [[VA_PTR_TMP]], -4;
 ; CHECK-NEXT:    add.s[[BITS]] [[VA_PTR_NEXT:%(r|rd)[0-9]+]], [[VA_PTR_ALIGN]], 4;
-; CHECK-NEXT:    st.u[[BITS]] [%SP+0], [[VA_PTR_NEXT]];
+; CHECK-NEXT:    st.u[[BITS]] [%SP], [[VA_PTR_NEXT]];
 ; CHECK-NEXT:    ld.local.u32 %r{{[0-9]+}}, [[[VA_PTR_ALIGN]]];
 
   %0 = va_arg ptr %al, i32
 
 ; Test va_arg(ap, int64_t)
-; CHECK-NEXT:    ld.u[[BITS]] [[VA_PTR:%(r|rd)[0-9]+]], [%SP+0];
+; CHECK-NEXT:    ld.u[[BITS]] [[VA_PTR:%(r|rd)[0-9]+]], [%SP];
 ; CHECK-NEXT:    add.s[[BITS]] [[VA_PTR_TMP:%(r|rd)[0-9]+]], [[VA_PTR]], 7;
 ; CHECK-NEXT:    and.b[[BITS]] [[VA_PTR_ALIGN:%(r|rd)[0-9]+]], [[VA_PTR_TMP]], -8;
 ; CHECK-NEXT:    add.s[[BITS]] [[VA_PTR_NEXT:%(r|rd)[0-9]+]], [[VA_PTR_ALIGN]], 8;
-; CHECK-NEXT:    st.u[[BITS]] [%SP+0], [[VA_PTR_NEXT]];
+; CHECK-NEXT:    st.u[[BITS]] [%SP], [[VA_PTR_NEXT]];
 ; CHECK-NEXT:    ld.local.u64 %rd{{[0-9]+}}, [[[VA_PTR_ALIGN]]];
 
   %1 = va_arg ptr %al, i64
 
 ; Test va_arg(ap, double)
-; CHECK-NEXT:    ld.u[[BITS]] [[VA_PTR:%(r|rd)[0-9]+]], [%SP+0];
+; CHECK-NEXT:    ld.u[[BITS]] [[VA_PTR:%(r|rd)[0-9]+]], [%SP];
 ; CHECK-NEXT:    add.s[[BITS]] [[VA_PTR_TMP:%(r|rd)[0-9]+]], [[VA_PTR]], 7;
 ; CHECK-NEXT:    and.b[[BITS]] [[VA_PTR_ALIGN:%(r|rd)[0-9]+]], [[VA_PTR_TMP]], -8;
 ; CHECK-NEXT:    add.s[[BITS]] [[VA_PTR_NEXT:%(r|rd)[0-9]+]], [[VA_PTR_ALIGN]], 8;
-; CHECK-NEXT:    st.u[[BITS]] [%SP+0], [[VA_PTR_NEXT]];
+; CHECK-NEXT:    st.u[[BITS]] [%SP], [[VA_PTR_NEXT]];
 ; CHECK-NEXT:    ld.local.f64 %fd{{[0-9]+}}, [[[VA_PTR_ALIGN]]];
 
   %2 = va_arg ptr %al, double
 
 ; Test va_arg(ap, ptr)
-; CHECK-NEXT:    ld.u[[BITS]] [[VA_PTR:%(r|rd)[0-9]+]], [%SP+0];
+; CHECK-NEXT:    ld.u[[BITS]] [[VA_PTR:%(r|rd)[0-9]+]], [%SP];
 ; CHECK32-NEXT:  add.s32 [[VA_PTR_TMP:%r[0-9]+]], [[VA_PTR]], 3;
 ; CHECK64-NEXT:  add.s64 [[VA_PTR_TMP:%rd[0-9]+]], [[VA_PTR]], 7;
 ; CHECK32-NEXT:  and.b32 [[VA_PTR_ALIGN:%r[0-9]+]], [[VA_PTR_TMP]], -4;
 ; CHECK64-NEXT:  and.b64 [[VA_PTR_ALIGN:%rd[0-9]+]], [[VA_PTR_TMP]], -8;
 ; CHECK32-NEXT:  add.s32 [[VA_PTR_NEXT:%r[0-9]+]], [[VA_PTR_ALIGN]], 4;
 ; CHECK64-NEXT:  add.s64 [[VA_PTR_NEXT:%rd[0-9]+]], [[VA_PTR_ALIGN]], 8;
-; CHECK-NEXT:    st.u[[BITS]] [%SP+0], [[VA_PTR_NEXT]];
+; CHECK-NEXT:    st.u[[BITS]] [%SP], [[VA_PTR_NEXT]];
 ; CHECK-NEXT:    ld.local.u[[BITS]] %{{(r|rd)[0-9]+}}, [[[VA_PTR_ALIGN]]];
 
   %3 = va_arg ptr %al, ptr
@@ -91,7 +91,7 @@ define i32 @test_foo(i32 %i, i64 %l, double %d, ptr %p) {
 ; Store arguments to an array
 ; CHECK32:  .param .align 8 .b8 param1[24];
 ; CHECK64:  .param .align 8 .b8 param1[28];
-; CHECK-NEXT:    st.param.b32 [param1+0], [[ARG_I32]];
+; CHECK-NEXT:    st.param.b32 [param1], [[ARG_I32]];
 ; CHECK-NEXT:    st.param.b64 [param1+4], [[ARG_I64]];
 ; CHECK-NEXT:    st.param.f64 [param1+12], [[ARG_DOUBLE]];
 ; CHECK-NEXT:    st.param.b[[BITS]] [param1+20], [[ARG_VOID_PTR]];

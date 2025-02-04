@@ -23,9 +23,9 @@ define dso_local void @g(ptr %agg.result) local_unnamed_addr #0 {
 ; CHECK-NEXT:    ld r7, 24(r5)
 ; CHECK-NEXT:    std r7, 24(r3)
 ; CHECK-NEXT:    ld r5, 32(r5)
-; CHECK-NEXT:    std r5, 32(r3)
 ; CHECK-NEXT:    stwbrx r4, 0, r3
 ; CHECK-NEXT:    li r4, 20
+; CHECK-NEXT:    std r5, 32(r3)
 ; CHECK-NEXT:    stwbrx r6, r3, r4
 ; CHECK-NEXT:    addi r1, r1, 112
 ; CHECK-NEXT:    ld r0, 16(r1)

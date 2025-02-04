@@ -15,7 +15,6 @@
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
-#include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
@@ -42,7 +41,7 @@ static SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
     return false;
   };
   // Compute 'sliceIndices' by adding 'sliceOffsets[i]' to 'indices[i]'.
-  SmallVector<Value> slicedIndices(indices.begin(), indices.end());
+  SmallVector<Value> slicedIndices(indices);
   for (const auto &dim : llvm::enumerate(permutationMap.getResults())) {
     if (isBroadcast(dim.value()))
       continue;

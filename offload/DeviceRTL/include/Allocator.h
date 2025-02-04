@@ -12,7 +12,7 @@
 #ifndef OMPTARGET_ALLOCATOR_H
 #define OMPTARGET_ALLOCATOR_H
 
-#include "Types.h"
+#include "DeviceTypes.h"
 
 // Forward declaration.
 struct KernelEnvironmentTy;
@@ -38,6 +38,11 @@ void free(void *Ptr);
 } // namespace allocator
 
 } // namespace ompx
+
+extern "C" {
+[[gnu::weak]] void *malloc(size_t Size);
+[[gnu::weak]] void free(void *Ptr);
+}
 
 #pragma omp end declare target
 

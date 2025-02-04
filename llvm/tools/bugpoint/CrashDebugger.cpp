@@ -72,7 +72,7 @@ cl::opt<bool> VerboseErrors("verbose-errors",
 
 static bool isValidModule(std::unique_ptr<Module> &M,
                           bool ExitOnFailure = true) {
-  if (!llvm::verifyModule(*M.get(), &llvm::errs()))
+  if (!llvm::verifyModule(*M, &llvm::errs()))
     return true;
 
   if (ExitOnFailure) {
@@ -245,7 +245,7 @@ static void RemoveFunctionReferences(Module *M, const char *Name) {
   auto *NewValElemTy = OldUsedVal->getType()->getElementType();
   auto *NewValTy = ArrayType::get(NewValElemTy, Used.size());
   auto *NewUsedVal = ConstantArray::get(NewValTy, Used);
-  UsedVar->mutateType(NewUsedVal->getType()->getPointerTo());
+  UsedVar->mutateType(PointerType::getUnqual(M->getContext()));
   UsedVar->setInitializer(NewUsedVal);
 }
 

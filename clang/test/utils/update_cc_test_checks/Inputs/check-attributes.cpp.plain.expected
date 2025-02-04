@@ -17,8 +17,8 @@ struct ST {
 // CHECK-NEXT:    store ptr [[S:%.*]], ptr [[S_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_ST:%.*]], ptr [[TMP0]], i64 1
-// CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[ARRAYIDX]], i32 0, i32 2
-// CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_RT:%.*]], ptr [[Z]], i32 0, i32 1
+// CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[ARRAYIDX]], i32 0, i32 2
+// CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_RT:%.*]], ptr [[Z]], i32 0, i32 1
 // CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [10 x [20 x i32]], ptr [[B]], i64 0, i64 5
 // CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [20 x i32], ptr [[ARRAYIDX1]], i64 0, i64 13
 // CHECK-NEXT:    ret ptr [[ARRAYIDX2]]

@@ -72,7 +72,7 @@ Error TraceIntelPTBundleLoader::CreateJSONError(json::Path::Root &root,
   root.printErrorContext(value, os);
   return createStringError(
       std::errc::invalid_argument, "%s\n\nContext:\n%s\n\nSchema:\n%s",
-      toString(root.getError()).c_str(), os.str().c_str(), GetSchema().data());
+      toString(root.getError()).c_str(), err.c_str(), GetSchema().data());
 }
 
 ThreadPostMortemTraceSP

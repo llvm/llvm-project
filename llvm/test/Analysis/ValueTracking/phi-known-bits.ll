@@ -375,10 +375,13 @@ F:
 define i8 @phi_ugt_high_bits_and_known(i8 %xx) {
 ; CHECK-LABEL: @phi_ugt_high_bits_and_known(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[XX:%.*]], -65
+; CHECK-NEXT:    [[X:%.*]] = or i8 [[XX:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[XX]], -65
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       T:
-; CHECK-NEXT:    ret i8 65
+; CHECK-NEXT:    [[V:%.*]] = phi i8 [ [[X]], [[ENTRY:%.*]] ], [ -1, [[F]] ]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 65
+; CHECK-NEXT:    ret i8 [[R]]
 ; CHECK:       F:
 ; CHECK-NEXT:    br label [[T]]
 ;
@@ -398,7 +401,7 @@ define i8 @phi_ugt_high_bits_and_known_todo_high_depths(i8 %xx, i8 %y, i8 %z) {
 ; CHECK-LABEL: @phi_ugt_high_bits_and_known_todo_high_depths(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[YY:%.*]] = and i8 [[Y:%.*]], -2
-; CHECK-NEXT:    [[XXX:%.*]] = and i8 [[YY]], [[XX:%.*]]
+; CHECK-NEXT:    [[XXX:%.*]] = and i8 [[XX:%.*]], [[YY]]
 ; CHECK-NEXT:    [[ZZ:%.*]] = or i8 [[Z:%.*]], 1
 ; CHECK-NEXT:    [[X:%.*]] = add i8 [[XXX]], [[ZZ]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X]], -65
@@ -433,7 +436,7 @@ define i1 @recursiveGEP_withPtrSub1(ptr %val1) {
 ; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[VAL1:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 1
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds nuw i8, ptr [[A_PN_I]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TEST_0_I]], align 2
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
@@ -464,7 +467,7 @@ define i1 @recursiveGEP_withPtrSub1_PhiOperandsCommuted(ptr %val1) {
 ; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[VAL1:%.*]], [[ENTRY:%.*]] ], [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ]
-; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 1
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds nuw i8, ptr [[A_PN_I]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TEST_0_I]], align 2
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
@@ -495,7 +498,7 @@ define i1 @recursiveGEP_withPtrSub1_SubOperandsCommuted(ptr %val1) {
 ; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[VAL1:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 1
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds nuw i8, ptr [[A_PN_I]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TEST_0_I]], align 2
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
@@ -554,11 +557,11 @@ while.end.i:
 define i1 @recursiveGEP_withPtrSub3(ptr %val1) {
 ; CHECK-LABEL: @recursiveGEP_withPtrSub3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TEST_VAL1:%.*]] = getelementptr inbounds i8, ptr [[VAL1:%.*]], i64 7
+; CHECK-NEXT:    [[TEST_VAL1:%.*]] = getelementptr inbounds nuw i8, ptr [[VAL1:%.*]], i64 7
 ; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[TEST_VAL1]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 1
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds nuw i8, ptr [[A_PN_I]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TEST_0_I]], align 2
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
@@ -591,7 +594,7 @@ define i1 @recursiveGEP_withPtrSub1_notKnownNonEqual1(ptr %val1, i64 %val2) {
 ; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[VAL1:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 1
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds nuw i8, ptr [[A_PN_I]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TEST_0_I]], align 2
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
@@ -626,7 +629,7 @@ define i1 @recursiveGEP_withPtrSub1_notKnownNonEqual2(ptr %val1) {
 ; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[TEST_VAL1]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 1
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds nuw i8, ptr [[A_PN_I]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TEST_0_I]], align 2
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
@@ -656,7 +659,7 @@ while.end.i:
 define i1 @recursiveGEP_withPtrSub1_notKnownNonEqual3(ptr %val1) {
 ; CHECK-LABEL: @recursiveGEP_withPtrSub1_notKnownNonEqual3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TEST_VAL1:%.*]] = getelementptr inbounds i8, ptr [[VAL1:%.*]], i64 5
+; CHECK-NEXT:    [[TEST_VAL1:%.*]] = getelementptr inbounds nuw i8, ptr [[VAL1:%.*]], i64 5
 ; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[TEST_VAL1]], [[ENTRY:%.*]] ]
@@ -694,7 +697,7 @@ define i1 @recursiveGEP_withPtrSub_maybeZero(ptr %val1) {
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[VAL1:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[A_PN_I]], align 2
-; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 1
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds nuw i8, ptr [[A_PN_I]], i64 1
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
 ; CHECK:       while.end.i:
@@ -789,7 +792,7 @@ while.end.i:
 define i1 @recursiveGEP_withPtrSub_noninboundStepAndB(ptr %val1) {
 ; CHECK-LABEL: @recursiveGEP_withPtrSub_noninboundStepAndB(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TEST:%.*]] = getelementptr inbounds i8, ptr [[VAL1:%.*]], i64 2
+; CHECK-NEXT:    [[TEST:%.*]] = getelementptr inbounds nuw i8, ptr [[VAL1:%.*]], i64 2
 ; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[TEST]], [[ENTRY:%.*]] ]
@@ -864,7 +867,7 @@ define i1 @recursiveGEP_withPtrSub_noninboundSameDefStartAndB(ptr %val1) {
 ; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[TEST]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 1
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds nuw i8, ptr [[A_PN_I]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TEST_0_I]], align 2
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
@@ -900,7 +903,7 @@ define i1 @recursiveGEP_withPtrSub_noninboundSameStartAndB(ptr %val1) {
 ; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[TEST]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 1
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds nuw i8, ptr [[A_PN_I]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TEST_0_I]], align 2
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
@@ -932,9 +935,11 @@ define i1 @recursiveGEP_withPtrSub_scalableGEP(ptr %val1) {
 ; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[VAL1:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TEST_0_I]] = getelementptr <vscale x 16 x i8>, ptr [[A_PN_I]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TEST_0_I]], align 1
-; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr i8, ptr [[A_PN_I]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TEST_0_I]], align 1
+; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
 ; CHECK:       while.end.i:
 ; CHECK-NEXT:    [[BOOL:%.*]] = icmp eq ptr [[TEST_0_I]], [[VAL1]]
@@ -964,9 +969,11 @@ define i1 @recursiveGEP_withPtrSub_scalableGEP_inbounds(ptr %val1) {
 ; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[VAL1:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds <vscale x 16 x i8>, ptr [[A_PN_I]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TEST_0_I]], align 1
-; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TEST_0_I]], align 1
+; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
 ; CHECK:       while.end.i:
 ; CHECK-NEXT:    [[BOOL:%.*]] = icmp eq ptr [[TEST_0_I]], [[VAL1]]
@@ -997,7 +1004,7 @@ define i1 @recursiveGEP_orcmp(ptr %val1, i64 %val2) {
 ; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[VAL1:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 1
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds nuw i8, ptr [[A_PN_I]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TEST_0_I]], align 2
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
@@ -1029,7 +1036,7 @@ define i1 @recursiveGEP_orcmp_orOperandsCommuted(ptr %val1, i64 %val2) {
 ; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[VAL1:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 1
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds nuw i8, ptr [[A_PN_I]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TEST_0_I]], align 2
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
@@ -1062,7 +1069,7 @@ define i1 @recursiveGEP_orcmpMultiUse(ptr %val1, i64 %val2, ptr %dv1, ptr %dv2) 
 ; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[VAL1:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 1
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds nuw i8, ptr [[A_PN_I]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TEST_0_I]], align 2
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
@@ -1104,4 +1111,42 @@ if.end4:
 cleanup:
   %retval.0 = phi i1 [ %cmp, %if.then ], [ %tobool, %if.end4 ]
   ret i1 %retval.0
+}
+
+
+define i32 @issue_124275_wrong_br_direction(i32 noundef %inp) {
+; CHECK-LABEL: @issue_124275_wrong_br_direction(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i32 [[INP:%.*]], -2
+; CHECK-NEXT:    [[XOR_INP_NEG:%.*]] = add i32 [[TMP0]], 1
+; CHECK-NEXT:    [[CMP_NE_NOT:%.*]] = icmp eq i32 [[XOR_INP_NEG]], 0
+; CHECK-NEXT:    br i1 [[CMP_NE_NOT]], label [[B1:%.*]], label [[B0:%.*]]
+; CHECK:       B0:
+; CHECK-NEXT:    [[PHI_B0:%.*]] = phi i32 [ [[PHI_B1:%.*]], [[B1]] ], [ [[XOR_INP_NEG]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br label [[B1]]
+; CHECK:       B1:
+; CHECK-NEXT:    [[PHI_B1]] = phi i32 [ [[PHI_B0]], [[B0]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[CMP_NE_B1_NOT:%.*]] = icmp eq i32 [[PHI_B1]], 0
+; CHECK-NEXT:    br i1 [[CMP_NE_B1_NOT]], label [[B0]], label [[END:%.*]]
+; CHECK:       end:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %xor_inp = xor i32 %inp, 1
+  %sub = sub i32 0, %xor_inp
+  %cmp_ne = icmp ne i32 %sub, 0
+  br i1 %cmp_ne, label %B0, label %B1
+
+B0:
+  %phi_B0 = phi i32 [ %phi_B1, %B1 ], [ %sub, %entry ]
+  br label %B1
+
+B1:
+  %phi_B1 = phi i32 [ %phi_B0, %B0 ], [ 0, %entry ]
+  %cmp_ne_B1 = icmp ne i32 %phi_B1, 0
+  %cmp_eq_B1 = xor i1 %cmp_ne_B1, true
+  br i1 %cmp_eq_B1, label %B0, label %end
+
+end:
+  ret i32 0
 }

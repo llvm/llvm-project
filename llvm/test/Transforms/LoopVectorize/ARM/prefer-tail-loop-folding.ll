@@ -345,7 +345,7 @@ define void @float(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, 
 ; PREFER-FOLDING: call <4 x float> @llvm.masked.load.v4f32.p0({{.*}}%active.lane.mask
 ; PREFER-FOLDING: call <4 x float> @llvm.masked.load.v4f32.p0({{.*}}%active.lane.mask
 ; PREFER-FOLDING: call void @llvm.masked.store.v4f32.p0({{.*}}%active.lane.mask
-; PREFER-FOLDING: %index.next = add i32 %index, 4
+; PREFER-FOLDING: %index.next = add nuw i32 %index, 4
 ; PREFER-FOLDING: br i1 %{{.*}}, label %{{.*}}, label %vector.body
 entry:
   br label %for.body

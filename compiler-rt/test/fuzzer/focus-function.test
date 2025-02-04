@@ -1,7 +1,8 @@
 # Tests -focus_function
 #
 # TODO: don't require linux.
-# REQUIRES: linux
+# Requires full shell support for the `for` loop syntax.
+# REQUIRES: shell, linux
 UNSUPPORTED: target=aarch64{{.*}}
 
 RUN: %cpp_compiler %S/OnlySomeBytesTest.cpp -o %t-exe

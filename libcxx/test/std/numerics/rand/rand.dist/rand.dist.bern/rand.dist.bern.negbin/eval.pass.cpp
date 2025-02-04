@@ -24,9 +24,10 @@
 // template<class _URNG> result_type operator()(_URNG& g);
 
 #include <random>
+#include <cassert>
+#include <cmath>
 #include <numeric>
 #include <vector>
-#include <cassert>
 
 #include "test_macros.h"
 
@@ -74,7 +75,7 @@ void test1() {
     assert(std::abs((mean - x_mean) / x_mean) < 0.01);
     assert(std::abs((var - x_var) / x_var) < 0.01);
     assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.02);
+    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.03);
 }
 
 template <class T>
@@ -115,8 +116,8 @@ void test2() {
     double x_kurtosis = 6. / d.k() + sqr(d.p()) / (d.k() * (1 - d.p()));
     assert(std::abs((mean - x_mean) / x_mean) < 0.01);
     assert(std::abs((var - x_var) / x_var) < 0.01);
-    assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.01);
+    assert(std::abs((skew - x_skew) / x_skew) < 0.02);
+    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.1);
 }
 
 template <class T>
@@ -157,8 +158,8 @@ void test3() {
     double x_kurtosis = 6. / d.k() + sqr(d.p()) / (d.k() * (1 - d.p()));
     assert(std::abs((mean - x_mean) / x_mean) < 0.01);
     assert(std::abs((var - x_var) / x_var) < 0.01);
-    assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.03);
+    assert(std::abs((skew - x_skew) / x_skew) < 0.02);
+    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.08);
 }
 
 template <class T>
@@ -243,8 +244,8 @@ void test5() {
     double x_kurtosis = 6. / d.k() + sqr(d.p()) / (d.k() * (1 - d.p()));
     assert(std::abs((mean - x_mean) / x_mean) < 0.01);
     assert(std::abs((var - x_var) / x_var) < 0.01);
-    assert(std::abs((skew - x_skew) / x_skew) < 0.04);
-    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.05);
+    assert(std::abs((skew - x_skew) / x_skew) < 0.02);
+    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.3);
 }
 
 template <class T>

@@ -176,11 +176,15 @@ class BreakpointConditionsTestCase(TestBase):
             thread.IsValid(),
             "There should be a thread stopped due to breakpoint condition",
         )
+
         frame0 = thread.GetFrameAtIndex(0)
         var = frame0.FindValue("val", lldb.eValueTypeVariableArgument)
-        self.assertTrue(
-            frame0.GetLineEntry().GetLine() == self.line1 and var.GetValue() == "3"
+        self.assertEqual(
+            frame0.GetLineEntry().GetLine(),
+            self.line1,
+            "The debugger stopped on the correct line",
         )
+        self.assertEqual(var.GetValue(), "3")
 
         # The hit count for the breakpoint should be 1.
         self.assertEqual(breakpoint.GetHitCount(), 1)

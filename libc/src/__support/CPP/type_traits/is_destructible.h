@@ -16,8 +16,10 @@
 #include "src/__support/CPP/type_traits/true_type.h"
 #include "src/__support/CPP/type_traits/type_identity.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 // is_destructible
 #if __has_builtin(__is_destructible)
@@ -60,6 +62,7 @@ template <> struct is_destructible<void> : public false_type {};
 template <class T>
 LIBC_INLINE_VAR constexpr bool is_destructible_v = is_destructible<T>::value;
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_DESTRUCTIBLE_H

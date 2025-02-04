@@ -16,6 +16,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -24,6 +25,11 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 using namespace llvm;
+
+cl::opt<bool> NoKernelInfoEndLTO(
+    "no-kernel-info-end-lto",
+    cl::desc("remove the kernel-info pass at the end of the full LTO pipeline"),
+    cl::init(false), cl::Hidden);
 
 //---------------------------------------------------------------------------
 // TargetMachine Class
@@ -105,7 +111,7 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
                                 GV->getName().starts_with("__start_") ||
                                 GV->getName().starts_with("__stop_")))
       return true;
-    const DataLayout &DL = GV->getParent()->getDataLayout();
+    const DataLayout &DL = GV->getDataLayout();
     uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
     return Size == 0 || Size > LargeDataThreshold;
   }
@@ -203,7 +209,7 @@ bool TargetMachine::shouldAssumeDSOLocal(const GlobalValue *GV) const {
     // don't assume the variables to be DSO local unless we actually know
     // that for sure. This only has to be done for variables; for functions
     // the linker can insert thunks for calling functions from another DLL.
-    if (TT.isWindowsGNUEnvironment() && GV->isDeclarationForLinker() &&
+    if (TT.isOSCygMing() && GV->isDeclarationForLinker() &&
         isa<GlobalVariable>(GV))
       return false;
 
@@ -261,14 +267,9 @@ TLSModel::Model TargetMachine::getTLSModel(const GlobalValue *GV) const {
   return Model;
 }
 
-/// Returns the optimization level: None, Less, Default, or Aggressive.
-CodeGenOptLevel TargetMachine::getOptLevel() const { return OptLevel; }
-
-void TargetMachine::setOptLevel(CodeGenOptLevel Level) { OptLevel = Level; }
-
 TargetTransformInfo
 TargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(F.getParent()->getDataLayout());
+  return TargetTransformInfo(F.getDataLayout());
 }
 
 void TargetMachine::getNameWithPrefix(SmallVectorImpl<char> &Name,

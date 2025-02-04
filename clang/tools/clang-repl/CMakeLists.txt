@@ -9,6 +9,8 @@ set( LLVM_LINK_COMPONENTS
 
 add_clang_tool(clang-repl
   ClangRepl.cpp
+
+  EXPORT_SYMBOLS
   )
 
 if(MSVC)
@@ -33,14 +35,6 @@ if(MSVC)
       ??_U@YAPEAX_K@Z
       ??_V@YAXPEAX@Z
       ??3@YAXPEAX_K@Z
-      ??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QEAAAEAV01@H@Z
-      ??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QEAAAEAV01@M@Z
-      ??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QEAAAEAV01@N@Z
-      ??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QEAAAEAV01@PEBX@Z
-      ??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QEAAAEAV01@P6AAEAV01@AEAV01@@Z@Z
-      ??$?6U?$char_traits@D@std@@@std@@YAAEAV?$basic_ostream@DU?$char_traits@D@std@@@0@AEAV10@D@Z
-      ??$?6U?$char_traits@D@std@@@std@@YAAEAV?$basic_ostream@DU?$char_traits@D@std@@@0@AEAV10@PEBD@Z
-      ?_Facet_Register@std@@YAXPEAV_Facet_base@1@@Z
     )
   else()
     set(clang_repl_exports ${clang_repl_exports}
@@ -50,23 +44,13 @@ if(MSVC)
       ??_U@YAPAXI@Z
       ??_V@YAXPAX@Z
       ??_V@YAXPAXI@Z
-      ??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QAEAAV01@H@Z
-      ??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QAEAAV01@M@Z
-      ??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QAEAAV01@N@Z
-      ??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QAEAAV01@PBX@Z
-      ??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QAEAAV01@P6AAAV01@AAV01@@Z@Z
-      ??$?6U?$char_traits@D@std@@@std@@YAAAV?$basic_ostream@DU?$char_traits@D@std@@@0@AAV10@D@Z
-      ??$?6U?$char_traits@D@std@@@std@@YAAAV?$basic_ostream@DU?$char_traits@D@std@@@0@AAV10@PBD@Z
-      ?_Facet_Register@std@@YAXPAV_Facet_base@1@@Z
     )
   endif()
 
   # List to '/EXPORT:sym0 /EXPORT:sym1 /EXPORT:sym2 ...'
-  foreach(sym ${clang_repl_exports})
-    set(clang_repl_link_str "${clang_repl_link_str} /EXPORT:${sym}")
-  endforeach(sym ${clang_repl_exports})
+  list(TRANSFORM clang_repl_exports PREPEND "LINKER:/EXPORT:")
 
-  set_property(TARGET clang-repl APPEND_STRING PROPERTY LINK_FLAGS ${clang_repl_link_str})
+  set_property(TARGET clang-repl APPEND PROPERTY LINK_OPTIONS ${clang_repl_exports})
 
 endif(MSVC)
 
@@ -77,18 +61,13 @@ clang_target_link_libraries(clang-repl PRIVATE
   clangInterpreter
   )
 
-# Support plugins.
-if(CLANG_PLUGIN_SUPPORT)
-  export_executable_symbols_for_plugins(clang-repl)
-endif()
-
 # The clang-repl binary can get huge with static linking in debug mode.
 # Some 32-bit targets use PLT slots with limited branch range by default and we
 # start to exceed this limit, e.g. when linking for arm-linux-gnueabihf with
 # gold. This flag tells the linker to build a PLT for the full address range.
 # Linkers without this flag are assumed to support proper PLTs by default.
-set(flag_long_plt "-Wl,--long-plt")
-llvm_check_linker_flag(CXX ${flag_long_plt} HAVE_LINKER_FLAG_LONG_PLT)
+set(flag_long_plt "LINKER:--long-plt")
+check_linker_flag(CXX ${flag_long_plt} HAVE_LINKER_FLAG_LONG_PLT)
 if(HAVE_LINKER_FLAG_LONG_PLT)
   target_link_options(clang-repl PRIVATE ${flag_long_plt})
 endif()

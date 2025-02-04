@@ -317,10 +317,10 @@ subroutine sub1(i, j, k)
 end subroutine
 
 ! CHECK: func.func @_QPsub1
+! CHECK: acc.parallel
 ! CHECK: %[[DC_K:.*]] = fir.alloca i32 {bindc_name = "k"}
 ! CHECK: %[[DC_J:.*]] = fir.alloca i32 {bindc_name = "j"}
 ! CHECK: %[[DC_I:.*]] = fir.alloca i32 {bindc_name = "i"}
-! CHECK: acc.parallel
 ! CHECK: %[[P_I:.*]] = acc.private varPtr(%[[DC_I]] : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = ""}
 ! CHECK: %[[P_J:.*]] = acc.private varPtr(%[[DC_J]] : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = ""}
 ! CHECK: %[[P_K:.*]] = acc.private varPtr(%[[DC_K]] : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = ""}

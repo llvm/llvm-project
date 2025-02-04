@@ -19,7 +19,6 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/CommandLine.h"
@@ -415,7 +414,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
     bool runOnMachineFunction(MachineFunction &MF) override {
       // If the user wants to set the DSCR using command-line options,
       // load in the specified value at the start of main.
-      if (DSCRValue.getNumOccurrences() > 0 && MF.getName().equals("main") &&
+      if (DSCRValue.getNumOccurrences() > 0 && MF.getName() == "main" &&
           MF.getFunction().hasExternalLinkage()) {
         DSCRValue = (uint32_t)(DSCRValue & 0x01FFFFFF); // 25-bit DSCR mask
         RegScavenger RS;

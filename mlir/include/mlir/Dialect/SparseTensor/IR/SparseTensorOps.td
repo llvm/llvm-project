@@ -15,6 +15,8 @@ include "mlir/Dialect/SparseTensor/IR/SparseTensorTypes.td"
 include "mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/LoopLikeInterface.td"
 
 //===----------------------------------------------------------------------===//
 // Base class.
@@ -90,8 +92,8 @@ def SparseTensor_AssembleOp : SparseTensor_Op<"assemble", [Pure]> {
     ```
   }];
 
-  let arguments = (ins Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$levels,
-                   TensorOf<[AnyType]>:$values);
+  let arguments = (ins Variadic<RankedTensorOf<[AnySignlessIntegerOrIndex]>>:$levels,
+                       RankedTensorOf<[AnyType]>:$values);
   let results = (outs AnySparseTensor: $result);
   let assemblyFormat =
     "` ` `(` $levels       `)` `,` $values attr-dict `:`"
@@ -136,12 +138,12 @@ def SparseTensor_DisassembleOp : SparseTensor_Op<"disassemble", [Pure, SameVaria
   }];
 
   let arguments = (ins AnySparseTensor:$tensor,
-                   Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$out_levels,
-                   TensorOf<[AnyType]>:$out_values);
-  let results = (outs Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$ret_levels,
-                  TensorOf<[AnyType]>:$ret_values,
-                  Variadic<AnyIndexingScalarLike>:$lvl_lens,
-                  AnyIndexingScalarLike:$val_len);
+                       Variadic<RankedTensorOf<[AnySignlessIntegerOrIndex]>>:$out_levels,
+                       RankedTensorOf<[AnyType]>:$out_values);
+  let results = (outs Variadic<RankedTensorOf<[AnySignlessIntegerOrIndex]>>:$ret_levels,
+                      RankedTensorOf<[AnyType]>:$ret_values,
+                      Variadic<AnyIndexingScalarLike>:$lvl_lens,
+                      AnyIndexingScalarLike:$val_len);
   let assemblyFormat =
     "$tensor attr-dict `:` type($tensor)"
     "`out_lvls` `(` $out_levels `:` type($out_levels) `)` "
@@ -194,8 +196,8 @@ def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
 
   }];
 
-  let arguments = (ins AnyTensor:$source);
-  let results = (outs AnyTensor:$dest);
+  let arguments = (ins AnyRankedTensor:$source);
+  let results = (outs AnyRankedTensor:$dest);
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
 
   let extraClassDeclaration = [{
@@ -1304,7 +1306,7 @@ def SparseTensor_SelectOp : SparseTensor_Op<"select", [Pure, SameOperandsAndResu
 
 def SparseTensor_YieldOp : SparseTensor_Op<"yield", [Pure, Terminator,
     ParentOneOf<["BinaryOp", "UnaryOp", "ReduceOp", "SelectOp",
-                 "ForeachOp"]>]> {
+                 "ForeachOp", "IterateOp", "CoIterateOp"]>]> {
   let summary = "Yield from sparse_tensor set-like operations";
   let description = [{
       Yields a value from within a `binary`, `unary`, `reduce`,
@@ -1445,7 +1447,7 @@ def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
   ];
 
   let regions = (region SizedRegion<1>:$region);
-  let arguments = (ins AnyTensor:$tensor,
+  let arguments = (ins AnyRankedTensor:$tensor,
                        Variadic<AnyType>:$initArgs,
                        OptionalAttr<AffineMapAttr>:$order);
   let results = (outs Variadic<AnyType>:$results);
@@ -1476,7 +1478,7 @@ def ExtractIterSpaceOp : SparseTensor_Op<"extract_iteration_space",
       the returned iteration space covers. `hiLvl - loLvl` defines the dimension of the
       iteration space.
 
-      The type of returned the value is automatically inferred to
+      The type of returned the value is must be
       `!sparse_tensor.iter_space<#INPUT_ENCODING, lvls = $loLvl to $hiLvl>`.
       The returned iteration space can then be iterated over by
       `sparse_tensor.iterate` operations to visit every stored element
@@ -1487,9 +1489,14 @@ def ExtractIterSpaceOp : SparseTensor_Op<"extract_iteration_space",
       // Extracts a 1-D iteration space from a COO tensor at level 1.
       %space = sparse_tensor.iteration.extract_space %sp at %it1 lvls = 1
         : tensor<4x8xf32, #COO>, !sparse_tensor.iterator<#COO, lvls = 0>
+       ->!sparse_tensor.iter_space<#COO, lvls = 1>
       ```
   }];
 
+  let arguments = (ins AnySparseTensor:$tensor,
+                       Optional<AnySparseIterator>:$parentIter,
+                       LevelAttr:$loLvl, LevelAttr:$hiLvl);
+  let results = (outs AnySparseIterSpace:$extractedSpace);
 
   let extraClassDeclaration = [{
     std::pair<Level, Level> getLvlRange() {
@@ -1499,18 +1506,295 @@ def ExtractIterSpaceOp : SparseTensor_Op<"extract_iteration_space",
       return getHiLvl() - getLoLvl();
     }
     ArrayRef<::mlir::sparse_tensor::LevelType> getSpaceLvlTypes() {
-      return getResultSpace().getType().getLvlTypes();
+      return getExtractedSpace().getType().getLvlTypes();
     }
   }];
 
-  let arguments = (ins AnySparseTensor:$tensor,
-                       Optional<AnySparseIterator>:$parentIter,
-                       LevelAttr:$loLvl, LevelAttr:$hiLvl);
-  let results = (outs AnySparseIterSpace:$resultSpace);
+  let builders = [
+    // Construct a 1-D iteration space.
+    OpBuilder<(ins "Value":$tensor, "Value":$parentIter,
+                   "sparse_tensor::Level":$loLvl),
+    [{
+      build($_builder, $_state, tensor, parentIter, loLvl, loLvl + 1);
+    }]>,
+    // Construct a 1-D root iteration space
+    OpBuilder<(ins "Value":$tensor),
+    [{
+      build($_builder, $_state, tensor, nullptr, 0);
+    }]>
+  ];
+
   let assemblyFormat = "$tensor (`at` $parentIter^)? `lvls` `=` custom<LevelRange>($loLvl, $hiLvl) "
-                       " attr-dict `:` type($tensor) (`,` type($parentIter)^)?";
+                       " attr-dict `:` type($tensor) (`,` type($parentIter)^)? "
+                       "`->` qualified(type($extractedSpace))";
 
   let hasVerifier = 1;
+}
+
+def ExtractValOp : SparseTensor_Op<"extract_value", [
+    Pure,
+    TypesMatchWith<"result type matches element type of tensor",
+                   "tensor", "result",
+                   "::llvm::cast<TensorType>($_self).getElementType()">]> {
+  let summary = "Extracts a value from a sparse tensor using an iterator.";
+  let description = [{
+      The `sparse_tensor.extract_value` operation extracts the value
+      pointed to by a sparse iterator from a sparse tensor.
+
+      Example:
+
+      ```mlir
+      %val = sparse_tensor.extract_value %sp at %it
+           : tensor<?x?xf32, #CSR>, !sparse_tensor.iterator<#CSR, lvl = 1>
+      ```
+  }];
+
+  let arguments = (ins AnySparseTensor:$tensor, AnySparseIterator:$iterator);
+  let results = (outs AnyType:$result);
+
+  let assemblyFormat = "$tensor `at` $iterator attr-dict `:` type($tensor)`,` qualified(type($iterator))";
+  let hasVerifier = 1;
+}
+
+def IterateOp : SparseTensor_Op<"iterate",
+    [RecursiveMemoryEffects, RecursivelySpeculatable,
+     DeclareOpInterfaceMethods<LoopLikeOpInterface,
+      ["getInitsMutable", "getLoopResults", "getRegionIterArgs",
+       "getYieldedValuesMutable"]>,
+     DeclareOpInterfaceMethods<RegionBranchOpInterface,
+      ["getEntrySuccessorOperands"]>,
+     SingleBlockImplicitTerminator<"sparse_tensor::YieldOp">]> {
+
+  let summary = "Iterates over a sparse iteration space";
+  let description = [{
+      The `sparse_tensor.iterate` operation represents a loop (nest) over
+      the provided iteration space extracted from a specific sparse tensor.
+      The operation defines an SSA value for a sparse iterator that points
+      to the current stored element in the sparse tensor and SSA values
+      for coordinates of the stored element. The coordinates are always
+      converted to `index` type despite of the underlying sparse tensor
+      storage. When coordinates are not used, the SSA values can be skipped
+      by `_` symbols, which usually leads to simpler generated code after
+      sparsification. For example:
+
+      ```mlir
+      // The coordinate for level 0 is not used when iterating over a 2-D
+      // iteration space.
+      %sparse_tensor.iterate %iterator in %space at(_, %crd_1)
+        : !sparse_tensor.iter_space<#CSR, lvls = 0 to 2>
+      ```
+
+      `sparse_tensor.iterate` can also operate on loop-carried variables.
+      It returns the final values after loop termination.
+      The initial values of the variables are passed as additional SSA operands
+      to the iterator SSA value and used coordinate SSA values mentioned
+      above. The operation region has an argument for the iterator, variadic
+      arguments for specified (used) coordiates and followed by one argument
+      for each loop-carried variable, representing the value of the variable
+      at the current iteration.
+      The body region must contain exactly one block that terminates with
+      `sparse_tensor.yield`.
+
+      The results of an `sparse_tensor.iterate` hold the final values after
+      the last iteration. If the `sparse_tensor.iterate` defines any values,
+      a yield must be explicitly present.
+      The number and types of the `sparse_tensor.iterate` results must match
+      the initial values in the iter_args binding and the yield operands.
+
+
+      A nested `sparse_tensor.iterate` example that prints all the coordinates
+      stored in the sparse input:
+
+      ```mlir
+      func.func @nested_iterate(%sp : tensor<4x8xf32, #COO>) {
+        // Iterates over the first level of %sp
+        %l1 = sparse_tensor.extract_iteration_space %sp lvls = 0
+            : tensor<4x8xf32, #COO> -> !sparse_tensor.iter_space<#COO, lvls = 0 to 1>
+        %r1 = sparse_tensor.iterate %it1 in %l1 at (%coord0)
+            : !sparse_tensor.iter_space<#COO, lvls = 0 to 1>  {
+          // Iterates over the second level of %sp
+          %l2 = sparse_tensor.extract_iteration_space %sp at %it1 lvls = 1
+              : tensor<4x8xf32, #COO>, !sparse_tensor.iterator<#COO, lvls = 0 to 1>
+             -> !sparse_tensor.iter_space<#COO, lvls = 1 to 2>
+          %r2 = sparse_tensor.iterate %it2 in %l2 at (coord1)
+              : !sparse_tensor.iter_space<#COO, lvls = 1 to 2>  {
+             vector.print %coord0 : index
+             vector.print %coord1 : index
+          }
+        }
+      }
+
+      ```
+  }];
+
+  let arguments = (ins AnySparseIterSpace:$iterSpace,
+                       Variadic<AnyType>:$initArgs,
+                       I64BitSetAttr:$crdUsedLvls);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$region);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "Value":$iterSpace, "ValueRange":$initArgs)>,
+    OpBuilder<(ins "Value":$iterSpace, "ValueRange":$initArgs, "I64BitSet" :$crdUsedLvls)>
+  ];
+
+  let extraClassDeclaration = [{
+    unsigned getSpaceDim() {
+      return getIterSpace().getType().getSpaceDim();
+    }
+    BlockArgument getIterator() {
+      return getRegion().getArguments().back();
+    }
+    std::optional<BlockArgument> getLvlCrd(Level lvl) {
+      if (getCrdUsedLvls()[lvl]) {
+        uint64_t mask = (static_cast<uint64_t>(0x01u) << lvl) - 1;
+        return getCrds()[llvm::popcount(mask & getCrdUsedLvls())];
+      }
+      return std::nullopt;
+    }
+    Block::BlockArgListType getCrds() {
+      // User-provided iteration arguments -> coords -> iterator.
+      return getRegion().getArguments().slice(getNumRegionIterArgs(), getCrdUsedLvls().count());
+    }
+    unsigned getNumRegionIterArgs() {
+      return getRegion().getArguments().size() - 1 - getCrdUsedLvls().count();
+    }
+  }];
+
+  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
+  let hasCanonicalizer = 1;
+  let hasCustomAssemblyFormat = 1;
+}
+
+def SparseTensor_CoIterateOp : SparseTensor_Op<"coiterate",
+    [AttrSizedOperandSegments,
+     SingleBlockImplicitTerminator<"sparse_tensor::YieldOp">,
+     RecursiveMemoryEffects]> {
+  let summary = "Co-iterates over a set of sparse iteration spaces";
+  let description = [{
+      The `sparse_tensor.coiterate` operation represents a loop (nest) over
+      a set of iteration spaces. The operation can have multiple regions,
+      with each of them defining a case to compute a result at the current iterations.
+      The case condition is defined solely based on the pattern of specified iterators.
+      For example:
+      ```mlir
+      %ret = sparse_tensor.coiterate (%sp1, %sp2) at(%coord) iter_args(%arg = %init)
+           : (!sparse_tensor.iter_space<#CSR, lvls = 0>,
+              !sparse_tensor.iter_space<#COO, lvls = 0>)
+           -> index
+      case %it1, _ {
+        // %coord is specifed in space %sp1 but *NOT* specified in space %sp2.
+      }
+      case %it1, %it2 {
+        // %coord is specifed in *BOTH* spaces %sp1 and %sp2.
+      }
+      ```
+
+      `sparse_tensor.coiterate` can also operate on loop-carried variables.
+      It returns the final value for each loop-carried variable after loop termination.
+      The initial values of the variables are passed as additional SSA operands
+      to the iterator SSA value and used coordinate SSA values.
+      Each operation region has variadic arguments for specified (used), one argument
+      for each loop-carried variable, representing the value of the variable
+      at the current iteration, followed by a list of arguments for iterators.
+      The body region must contain exactly one block that terminates with
+      `sparse_tensor.yield`.
+
+      The results of an `sparse_tensor.coiterate` hold the final values after
+      the last iteration. If the `sparse_tensor.coiterate` defines any values,
+      a yield must be explicitly present in every region defined in the operation.
+      The number and types of the `sparse_tensor.coiterate` results must match
+      the initial values in the iter_args binding and the yield operands.
+
+
+      A `sparse_tensor.coiterate` example that does elementwise addition between two
+      sparse vectors.
+
+
+      ```mlir
+      %ret = sparse_tensor.coiterate (%sp1, %sp2) at(%coord) iter_args(%arg = %init)
+           : (!sparse_tensor.iter_space<#CSR, lvls = 0>,
+              !sparse_tensor.iter_space<#CSR, lvls = 0>)
+           -> tensor<?xindex, #CSR>
+      case %it1, _ {
+         // v = v1 + 0 = v1
+         %v1 = sparse_tensor.extract_value %t1 at %it1 : index
+         %yield = sparse_tensor.insert %v1 into %arg[%coord]
+         sparse_tensor.yield %yield
+      }
+      case _, %it2 {
+         // v = v2 + 0 = v2
+         %v2 = sparse_tensor.extract_value %t2 at %it2 : index
+         %yield = sparse_tensor.insert %v1 into %arg[%coord]
+         sparse_tensor.yield %yield
+      }
+      case %it1, %it2 {
+         // v = v1 + v2
+         %v1 = sparse_tensor.extract_value %t1 at %it1 : index
+         %v2 = sparse_tensor.extract_value %t2 at %it2 : index
+         %v = arith.addi %v1, %v2 : index
+         %yield = sparse_tensor.insert %v into %arg[%coord]
+         sparse_tensor.yield %yield
+      }
+      ```
+  }];
+
+  let arguments = (ins Variadic<AnySparseIterSpace>:$iterSpaces,
+                       Variadic<AnyType>:$initArgs,
+                       I64BitSetAttr:$crdUsedLvls,
+                       I64BitSetArrayAttr:$cases);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region VariadicRegion<SizedRegion<1>>:$caseRegions);
+
+  let builders = [
+    OpBuilder<(ins "ValueRange":$iterSpace, "ValueRange":$initArgs, "unsigned":$numCases)>,
+  ];
+
+  let extraClassDeclaration = [{
+    unsigned getSpaceDim() {
+      return llvm::cast<::mlir::sparse_tensor::IterSpaceType>(
+                 getIterSpaces().front().getType())
+          .getSpaceDim();
+    }
+    I64BitSet getRegionDefinedSpace(unsigned regionIdx) {
+      return I64BitSet(llvm::cast<IntegerAttr>(getCases()[regionIdx])
+                           .getValue().getZExtValue());
+    }
+    auto getRegionDefinedSpaces() {
+      return llvm::map_range(getCases().getValue(), [](Attribute attr) {
+        return I64BitSet(llvm::cast<IntegerAttr>(attr).getValue().getZExtValue());
+      });
+    }
+
+    // The block arguments starts with user-provided iteration arguments,
+    // follows by referenced coordinates and ends with iterators.
+    Block::BlockArgListType getCrds(unsigned regionIdx) {
+      return getRegion(regionIdx).getArguments()
+          .slice(getNumRegionIterArgs(), getCrdUsedLvls().count());
+    }
+    unsigned getNumRegionIterArgs() {
+      return getInitArgs().size();
+    }
+    Block::BlockArgListType getRegionIterArgs(unsigned regionIdx) {
+      return getRegion(regionIdx).getArguments()
+          .take_front(getNumRegionIterArgs());
+    }
+    Block::BlockArgListType getRegionIterators(unsigned regionIdx) {
+      return getRegion(regionIdx).getArguments()
+          .take_back(getRegionDefinedSpace(regionIdx).count());
+    }
+    ValueRange getYieldedValues(unsigned regionIdx);
+
+    // Returns a vector of regions that are the `sub-cases` of the given case region.
+    // E.g., `case %it1, _, %it3` is a subcase of `case %it1, %it2, %it3`.
+    SmallVector<Region *> getSubCasesOf(unsigned regionIdx);
+  }];
+
+  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//

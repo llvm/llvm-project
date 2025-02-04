@@ -22,9 +22,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
-#include "clang/AST/StmtCXX.h"
 #include "clang/Basic/CodeGenOptions.h"
-#include "llvm/ADT/StringExtras.h"
 using namespace clang;
 using namespace CodeGen;
 
@@ -263,7 +261,16 @@ static CGCallee BuildAppleKextVirtualCall(CodeGenFunction &CGF,
     CGF.Builder.CreateConstInBoundsGEP1_64(Ty, VTable, VTableIndex, "vfnkxt");
   llvm::Value *VFunc = CGF.Builder.CreateAlignedLoad(
       Ty, VFuncPtr, llvm::Align(CGF.PointerAlignInBytes));
-  CGCallee Callee(GD, VFunc);
+
+  CGPointerAuthInfo PointerAuth;
+  if (auto &Schema =
+          CGM.getCodeGenOpts().PointerAuth.CXXVirtualFunctionPointers) {
+    GlobalDecl OrigMD =
+        CGM.getItaniumVTableContext().findOriginalMethod(GD.getCanonicalDecl());
+    PointerAuth = CGF.EmitPointerAuthInfo(Schema, VFuncPtr, OrigMD, QualType());
+  }
+
+  CGCallee Callee(GD, VFunc, PointerAuth);
   return Callee;
 }
 

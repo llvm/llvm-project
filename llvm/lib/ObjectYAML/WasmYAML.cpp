@@ -342,7 +342,6 @@ void ScalarEnumerationTraits<WasmYAML::FeaturePolicyPrefix>::enumeration(
     IO &IO, WasmYAML::FeaturePolicyPrefix &Kind) {
 #define ECase(X) IO.enumCase(Kind, #X, wasm::WASM_FEATURE_PREFIX_##X);
   ECase(USED);
-  ECase(REQUIRED);
   ECase(DISALLOWED);
 #undef ECase
 }
@@ -382,7 +381,7 @@ void MappingTraits<WasmYAML::ElemSegment>::mapping(
       Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER)
     IO.mapOptional("TableNumber", Segment.TableNumber);
   if (!IO.outputting() ||
-      Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND)
+      Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_DESC)
     IO.mapOptional("ElemKind", Segment.ElemKind);
   // TODO: Omit "offset" for passive segments? It's neither meaningful nor
   // encoded.
@@ -606,6 +605,7 @@ void ScalarEnumerationTraits<WasmYAML::ValueType>::enumeration(
   ECase(V128);
   ECase(FUNCREF);
   ECase(EXTERNREF);
+  ECase(EXNREF);
   ECase(OTHERREF);
 #undef ECase
 }
@@ -640,6 +640,7 @@ void ScalarEnumerationTraits<WasmYAML::TableType>::enumeration(
 #define ECase(X) IO.enumCase(Type, #X, CONCAT(X));
   ECase(FUNCREF);
   ECase(EXTERNREF);
+  ECase(EXNREF);
   ECase(OTHERREF);
 #undef ECase
 }

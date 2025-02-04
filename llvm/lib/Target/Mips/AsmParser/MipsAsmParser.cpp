@@ -14,7 +14,6 @@
 #include "MipsTargetStreamer.h"
 #include "TargetInfo/MipsTargetInfo.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -174,7 +173,7 @@ class MipsAsmParser : public MCTargetAsmParser {
                                  const OperandVector &Operands) override;
   unsigned checkTargetMatchPredicate(MCInst &Inst) override;
 
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
@@ -190,7 +189,7 @@ class MipsAsmParser : public MCTargetAsmParser {
 
   bool mnemonicIsValid(StringRef Mnemonic, unsigned VariantID);
 
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
   bool ParseDirective(AsmToken DirectiveID) override;
@@ -2108,6 +2107,10 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   // because the pseudo-instruction doesn't have a distinct opcode.
   if ((Opcode == Mips::JAL || Opcode == Mips::JAL_MM) && inPicMode()) {
     warnIfNoMacro(IDLoc);
+
+    if (!Inst.getOperand(0).isExpr()) {
+      return Error(IDLoc, "unsupported constant in relocation");
+    }
 
     const MCExpr *JalExpr = Inst.getOperand(0).getExpr();
 
@@ -5782,9 +5785,9 @@ bool MipsAsmParser::expandMXTRAlias(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
       sel = 3;
       break;
   }
-  unsigned Op0 = IsMFTR ? Inst.getOperand(0).getReg() : rd;
-  unsigned Op1 =
-      IsMFTR ? rd
+  MCRegister Op0 = IsMFTR ? Inst.getOperand(0).getReg() : MCRegister(rd);
+  MCRegister Op1 =
+      IsMFTR ? MCRegister(rd)
              : (Inst.getOpcode() != Mips::MTTDSP ? Inst.getOperand(1).getReg()
                                                  : Inst.getOperand(0).getReg());
 
@@ -5992,7 +5995,7 @@ static SMLoc RefineErrorLoc(const SMLoc Loc, const OperandVector &Operands,
   return Loc;
 }
 
-bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+bool MipsAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                             OperandVector &Operands,
                                             MCStreamer &Out,
                                             uint64_t &ErrorInfo,
@@ -6410,7 +6413,12 @@ bool MipsAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
 
   // Check if the current operand has a custom associated parser, if so, try to
   // custom parse the operand, or fallback to the general approach.
-  ParseStatus Res = MatchOperandParserImpl(Operands, Mnemonic);
+  // Setting the third parameter to true tells the parser to keep parsing even
+  // if the operands are not supported with the current feature set. In this
+  // case, the instruction matcher will output a "instruction requires a CPU
+  // feature not currently enabled" error. If this were false, the parser would
+  // stop here and output a less useful "invalid operand" error.
+  ParseStatus Res = MatchOperandParserImpl(Operands, Mnemonic, true);
   if (Res.isSuccess())
     return false;
   // If there wasn't a custom match, try the generic matcher below. Otherwise,
@@ -6992,10 +7000,10 @@ bool MipsAsmParser::areEqualRegs(const MCParsedAsmOperand &Op1,
   return Op1.getReg() == Op2.getReg();
 }
 
-bool MipsAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+bool MipsAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                      SMLoc NameLoc, OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
-  LLVM_DEBUG(dbgs() << "ParseInstruction\n");
+  LLVM_DEBUG(dbgs() << "parseInstruction\n");
 
   // We have reached first instruction, module directive are now forbidden.
   getTargetStreamer().forbidModuleDirective();

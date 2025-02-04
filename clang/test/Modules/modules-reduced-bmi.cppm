@@ -4,7 +4,7 @@
 //
 // RUN: %clang_cc1 -std=c++20 %t/a.cppm -emit-reduced-module-interface -o %t/a.reduced.pcm
 // RUN: %clang_cc1 -std=c++20 %t/a.cppm -fexperimental-modules-reduced-bmi -fmodule-output=%t/a.pcm \
-// RUN:     -S -emit-llvm -o %t/a.ll
+// RUN:     -emit-llvm -o %t/a.ll
 //
 // Test that the generated BMI from `-fexperimental-modules-reduced-bmi -fmodule-output=` is same with
 // `-emit-reduced-module-interface`.

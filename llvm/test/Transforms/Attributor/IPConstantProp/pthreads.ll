@@ -29,18 +29,18 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; FIXME: nocapture & noalias for %alloc2 in %call3
 
 ;.
-; CHECK: @[[GLOBALVPTR:[a-zA-Z0-9_$"\\.-]+]] = common dso_local global ptr null, align 8
+; CHECK: @GlobalVPtr = common dso_local global ptr null, align 8
 ;.
 define dso_local i32 @main() {
 ; TUNIT-LABEL: define {{[^@]+}}@main() {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[ALLOC11:%.*]] = alloca i8, i32 0, align 8
-; TUNIT-NEXT:    [[ALLOC22:%.*]] = alloca i8, i32 0, align 8
+; TUNIT-NEXT:    [[ALLOC1:%.*]] = alloca i8, align 8
+; TUNIT-NEXT:    [[ALLOC2:%.*]] = alloca i8, align 8
 ; TUNIT-NEXT:    [[THREAD:%.*]] = alloca i64, align 8
 ; TUNIT-NEXT:    [[CALL:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @foo, ptr nofree readnone align 4294967296 undef)
-; TUNIT-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @bar, ptr noalias nocapture nofree nonnull readnone align 8 dereferenceable(8) undef)
-; TUNIT-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @baz, ptr noalias nocapture nofree noundef nonnull readnone align 8 dereferenceable(1) [[ALLOC11]])
-; TUNIT-NEXT:    [[CALL3:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @buz, ptr noalias nofree noundef nonnull readnone align 8 dereferenceable(1) "no-capture-maybe-returned" [[ALLOC22]])
+; TUNIT-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @bar, ptr noalias nofree nonnull readnone align 8 captures(none) dereferenceable(8) undef)
+; TUNIT-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @baz, ptr noalias nofree noundef nonnull readnone align 8 captures(none) dereferenceable(1) [[ALLOC1]])
+; TUNIT-NEXT:    [[CALL3:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @buz, ptr noalias nofree noundef nonnull readnone align 8 dereferenceable(1) "no-capture-maybe-returned" [[ALLOC2]])
 ; TUNIT-NEXT:    ret i32 0
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@main() {
@@ -49,8 +49,8 @@ define dso_local i32 @main() {
 ; CGSCC-NEXT:    [[ALLOC2:%.*]] = alloca i8, align 8
 ; CGSCC-NEXT:    [[THREAD:%.*]] = alloca i64, align 8
 ; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @foo, ptr nofree noundef readnone align 4294967296 null)
-; CGSCC-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @bar, ptr noalias nocapture nofree noundef nonnull readnone align 8 dereferenceable(8) @GlobalVPtr)
-; CGSCC-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @baz, ptr noalias nocapture nofree noundef nonnull readnone align 8 dereferenceable(1) [[ALLOC1]])
+; CGSCC-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @bar, ptr noalias nofree noundef nonnull readnone align 8 captures(none) dereferenceable(8) @GlobalVPtr)
+; CGSCC-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @baz, ptr noalias nofree noundef nonnull readnone align 8 captures(none) dereferenceable(1) [[ALLOC1]])
 ; CGSCC-NEXT:    [[CALL3:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @buz, ptr noalias nofree noundef nonnull readnone align 8 dereferenceable(1) [[ALLOC2]])
 ; CGSCC-NEXT:    ret i32 0
 ;
@@ -70,7 +70,7 @@ declare !callback !0 dso_local i32 @pthread_create(ptr, ptr, ptr, ptr)
 define internal ptr @foo(ptr %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@foo
-; CHECK-SAME: (ptr noalias nocapture nofree readnone align 4294967296 [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr noalias nofree readnone align 4294967296 captures(none) [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret ptr null
 ;
@@ -81,7 +81,7 @@ entry:
 define internal ptr @bar(ptr %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@bar
-; CHECK-SAME: (ptr noalias nocapture nofree nonnull readnone align 8 dereferenceable(8) [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (ptr noalias nofree nonnull readnone align 8 captures(none) dereferenceable(8) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret ptr @GlobalVPtr
 ;
@@ -114,8 +114,13 @@ entry:
 !1 = !{i64 2, i64 3, i1 false}
 !0 = !{!1}
 ;.
-; CHECK: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
-; CHECK: [[META0:![0-9]+]] = !{!1}
-; CHECK: [[META1:![0-9]+]] = !{i64 2, i64 3, i1 false}
+; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+;.
+; TUNIT: [[META0:![0-9]+]] = !{[[META1:![0-9]+]]}
+; TUNIT: [[META1]] = !{i64 2, i64 3, i1 false}
+;.
+; CGSCC: [[META0:![0-9]+]] = !{[[META1:![0-9]+]]}
+; CGSCC: [[META1]] = !{i64 2, i64 3, i1 false}
 ;.

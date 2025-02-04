@@ -23,7 +23,7 @@ import numpy as np
 @NVDSL.mlir_func
 def saxpy(x, y, alpha):
     # 1. Use MLIR GPU dialect to allocate and copy memory
-    token_ty = ir.Type.parse("!gpu.async.token")
+    token_ty = gpu.AsyncTokenType.get()
     t1 = gpu.wait(token_ty, [])
     x_dev, t2 = gpu.alloc(x.type, token_ty, [t1], [], [])
     y_dev, t3 = gpu.alloc(y.type, token_ty, [t2], [], [])

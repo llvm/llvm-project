@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/integer_literals.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/math_extras.h"
 #include "src/__support/uint128.h" // UInt<128>
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // TODO: add UInt<128> support.
 using UnsignedTypesNoBigInt = testing::TypeList<
@@ -102,7 +103,7 @@ TYPED_TEST(LlvmLibcBitTest, CountZeros, UnsignedTypesNoBigInt) {
 }
 
 using UnsignedTypes = testing::TypeList<
-#if defined(__SIZEOF_INT128__)
+#if defined(LIBC_TYPES_HAS_INT128)
     __uint128_t,
 #endif
     unsigned char, unsigned short, unsigned int, unsigned long,
@@ -158,4 +159,4 @@ TYPED_TEST(LlvmLibcBlockMathExtrasTest, sub_overflow, UnsignedTypes) {
   }
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

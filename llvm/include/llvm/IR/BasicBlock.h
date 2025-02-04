@@ -32,6 +32,7 @@ namespace llvm {
 
 class AssemblyAnnotationWriter;
 class CallInst;
+class DataLayout;
 class Function;
 class LandingPadInst;
 class LLVMContext;
@@ -59,12 +60,18 @@ class DbgMarker;
 class BasicBlock final : public Value, // Basic blocks are data objects also
                          public ilist_node_with_parent<BasicBlock, Function> {
 public:
-  using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>>;
+  using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>,
+                                       ilist_parent<BasicBlock>>;
   /// Flag recording whether or not this block stores debug-info in the form
   /// of intrinsic instructions (false) or non-instruction records (true).
   bool IsNewDbgInfoFormat;
 
 private:
+  // Allow Function to renumber blocks.
+  friend class Function;
+  /// Per-function unique number.
+  unsigned Number = -1u;
+
   friend class BlockAddress;
   friend class SymbolTableListTraits<BasicBlock>;
 
@@ -93,6 +100,11 @@ public:
   /// if necessary.
   void setIsNewDbgInfoFormat(bool NewFlag);
   void setNewDbgInfoFormatFlag(bool NewFlag);
+
+  unsigned getNumber() const {
+    assert(getParent() && "only basic blocks in functions have valid numbers");
+    return Number;
+  }
 
   /// Record that the collection of DbgRecords in \p M "trails" after the last
   /// instruction of this block. These are equivalent to dbg.value intrinsics
@@ -172,15 +184,17 @@ public:
   friend BasicBlock::iterator Instruction::eraseFromParent();
   friend BasicBlock::iterator Instruction::insertInto(BasicBlock *BB,
                                                       BasicBlock::iterator It);
-  friend class llvm::SymbolTableListTraits<llvm::Instruction,
-                                           ilist_iterator_bits<true>>;
+  friend class llvm::SymbolTableListTraits<
+      llvm::Instruction, ilist_iterator_bits<true>, ilist_parent<BasicBlock>>;
   friend class llvm::ilist_node_with_parent<llvm::Instruction, llvm::BasicBlock,
-                                            ilist_iterator_bits<true>>;
+                                            ilist_iterator_bits<true>,
+                                            ilist_parent<BasicBlock>>;
 
   // Friendly methods that need to access us for the maintenence of
   // debug-info attachments.
   friend void Instruction::insertBefore(BasicBlock::iterator InsertPos);
   friend void Instruction::insertAfter(Instruction *InsertPos);
+  friend void Instruction::insertAfter(BasicBlock::iterator InsertPos);
   friend void Instruction::insertBefore(BasicBlock &BB,
                                         InstListType::iterator InsertPos);
   friend void Instruction::moveBeforeImpl(BasicBlock &BB,
@@ -215,6 +229,11 @@ public:
     return const_cast<Module *>(
                             static_cast<const BasicBlock *>(this)->getModule());
   }
+
+  /// Get the data layout of the module this basic block belongs to.
+  ///
+  /// Requires the basic block to have a parent module.
+  const DataLayout &getDataLayout() const;
 
   /// Returns the terminator instruction if the block is well formed or null
   /// if the block is not well formed.
@@ -261,14 +280,24 @@ public:
   /// When adding instructions to the beginning of the basic block, they should
   /// be added before the returned value, not before the first instruction,
   /// which might be PHI. Returns 0 is there's no non-PHI instruction.
-  const Instruction* getFirstNonPHI() const;
-  Instruction* getFirstNonPHI() {
-    return const_cast<Instruction *>(
-                       static_cast<const BasicBlock *>(this)->getFirstNonPHI());
-  }
+  ///
+  /// Deprecated in favour of getFirstNonPHIIt, which returns an iterator that
+  /// preserves some debugging information.
+  LLVM_DEPRECATED("Use iterators as instruction positions", "getFirstNonPHIIt")
+  const Instruction *getFirstNonPHI() const;
+  LLVM_DEPRECATED("Use iterators as instruction positions instead",
+                  "getFirstNonPHIIt")
+  Instruction *getFirstNonPHI();
 
-  /// Iterator returning form of getFirstNonPHI. Installed as a placeholder for
-  /// the RemoveDIs project that will eventually remove debug intrinsics.
+  /// Returns an iterator to the first instruction in this block that is not a
+  /// PHINode instruction.
+  ///
+  /// When adding instructions to the beginning of the basic block, they should
+  /// be added before the returned value, not before the first instruction,
+  /// which might be PHI. Returns end() if there's no non-PHI instruction.
+  ///
+  /// Avoid unwrapping the iterator to an Instruction* before inserting here,
+  /// as important debug-info is preserved in the iterator.
   InstListType::const_iterator getFirstNonPHIIt() const;
   InstListType::iterator getFirstNonPHIIt() {
     BasicBlock::iterator It =
@@ -280,22 +309,24 @@ public:
   /// Returns a pointer to the first instruction in this block that is not a
   /// PHINode or a debug intrinsic, or any pseudo operation if \c SkipPseudoOp
   /// is true.
-  const Instruction *getFirstNonPHIOrDbg(bool SkipPseudoOp = true) const;
-  Instruction *getFirstNonPHIOrDbg(bool SkipPseudoOp = true) {
-    return const_cast<Instruction *>(
-        static_cast<const BasicBlock *>(this)->getFirstNonPHIOrDbg(
-            SkipPseudoOp));
+  InstListType::const_iterator
+  getFirstNonPHIOrDbg(bool SkipPseudoOp = true) const;
+  InstListType::iterator getFirstNonPHIOrDbg(bool SkipPseudoOp = true) {
+    return static_cast<const BasicBlock *>(this)
+        ->getFirstNonPHIOrDbg(SkipPseudoOp)
+        .getNonConst();
   }
 
   /// Returns a pointer to the first instruction in this block that is not a
   /// PHINode, a debug intrinsic, or a lifetime intrinsic, or any pseudo
   /// operation if \c SkipPseudoOp is true.
-  const Instruction *
+  InstListType::const_iterator
   getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp = true) const;
-  Instruction *getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp = true) {
-    return const_cast<Instruction *>(
-        static_cast<const BasicBlock *>(this)->getFirstNonPHIOrDbgOrLifetime(
-            SkipPseudoOp));
+  InstListType::iterator
+  getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp = true) {
+    return static_cast<const BasicBlock *>(this)
+        ->getFirstNonPHIOrDbgOrLifetime(SkipPseudoOp)
+        .getNonConst();
   }
 
   /// Returns an iterator to the first instruction in this block that is
@@ -654,7 +685,7 @@ public:
   void replaceSuccessorsPhiUsesWith(BasicBlock *New);
 
   /// Return true if this basic block is an exception handling block.
-  bool isEHPad() const { return getFirstNonPHI()->isEHPad(); }
+  bool isEHPad() const { return getFirstNonPHIIt()->isEHPad(); }
 
   /// Return true if this basic block is a landing pad.
   ///

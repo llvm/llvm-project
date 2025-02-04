@@ -14,14 +14,16 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
+// TODO: fix this unguarded linux dep
 #include <linux/param.h> // for exec_pagesize.
 
 #include <stddef.h> // For size_t
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using ThreadRunnerPosix = void *(void *);
 using ThreadRunnerStdc = int(void *);
@@ -43,6 +45,9 @@ union ThreadReturnValue {
      defined(LIBC_TARGET_ARCH_IS_X86_64) ||                                    \
      defined(LIBC_TARGET_ARCH_IS_ANY_RISCV))
 constexpr unsigned int STACK_ALIGNMENT = 16;
+#elif defined(LIBC_TARGET_ARCH_IS_ARM)
+// See Section 6.2.1.2 Stack constraints at a public interface of AAPCS32.
+constexpr unsigned int STACK_ALIGNMENT = 8;
 #endif
 // TODO: Provide stack alignment requirements for other architectures.
 
@@ -93,11 +98,11 @@ struct alignas(STACK_ALIGNMENT) ThreadAttributes {
   //          exits. It will clean up the thread resources once the thread
   //          exits.
   cpp::Atomic<uint32_t> detach_state;
-  void *stack;                  // Pointer to the thread stack
-  unsigned long long stacksize; // Size of the stack
-  unsigned long long guardsize; // Guard size on stack
-  uintptr_t tls;                // Address to the thread TLS memory
-  uintptr_t tls_size;           // The size of area pointed to by |tls|.
+  void *stack;               // Pointer to the thread stack
+  size_t stacksize;          // Size of the stack
+  size_t guardsize;          // Guard size on stack
+  uintptr_t tls;             // Address to the thread TLS memory
+  uintptr_t tls_size;        // The size of area pointed to by |tls|.
   unsigned char owned_stack; // Indicates if the thread owns this stack memory
   int tid;
   ThreadStyle style;
@@ -226,7 +231,7 @@ struct Thread {
   int get_name(cpp::StringStream &name) const;
 };
 
-extern LIBC_THREAD_LOCAL Thread self;
+LIBC_INLINE_VAR LIBC_THREAD_LOCAL Thread self;
 
 // Platforms should implement this function.
 [[noreturn]] void thread_exit(ThreadReturnValue retval, ThreadStyle style);
@@ -247,6 +252,6 @@ void call_atexit_callbacks(ThreadAttributes *attrib);
 
 } // namespace internal
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_THREAD_H

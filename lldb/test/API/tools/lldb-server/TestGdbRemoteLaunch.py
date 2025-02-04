@@ -12,13 +12,13 @@ class GdbRemoteLaunchTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     @add_test_categories(["llgs"])
     def test_launch_via_A(self):
         self.build()
-        exe_path = self.getBuildArtifact("a.out")
-        args = [exe_path, "stderr:arg1", "stderr:arg2", "stderr:arg3"]
-        hex_args = [seven.hexlify(x) for x in args]
-
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)
         self.do_handshake()
+        exe_path = lldbutil.install_to_target(self, self.getBuildArtifact("a.out"))
+        args = [exe_path, "stderr:arg1", "stderr:arg2", "stderr:arg3"]
+        hex_args = [seven.hexlify(x) for x in args]
+
         # NB: strictly speaking we should use %x here but this packet
         # is deprecated, so no point in changing lldb-server's expectations
         self.test_sequence.add_log_lines(
@@ -38,13 +38,13 @@ class GdbRemoteLaunchTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     @add_test_categories(["llgs"])
     def test_launch_via_vRun(self):
         self.build()
-        exe_path = self.getBuildArtifact("a.out")
-        args = [exe_path, "stderr:arg1", "stderr:arg2", "stderr:arg3"]
-        hex_args = [seven.hexlify(x) for x in args]
-
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)
         self.do_handshake()
+        exe_path = lldbutil.install_to_target(self, self.getBuildArtifact("a.out"))
+        args = [exe_path, "stderr:arg1", "stderr:arg2", "stderr:arg3"]
+        hex_args = [seven.hexlify(x) for x in args]
+
         self.test_sequence.add_log_lines(
             [
                 "read packet: $vRun;%s;%s;%s;%s#00" % tuple(hex_args),
@@ -58,14 +58,15 @@ class GdbRemoteLaunchTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertEqual(context["O_content"], b"arg1\r\narg2\r\narg3\r\n")
 
     @add_test_categories(["llgs"])
+    @skipIfWindows  # Sometimes returns '$E1f'.
     def test_launch_via_vRun_no_args(self):
         self.build()
-        exe_path = self.getBuildArtifact("a.out")
-        hex_path = seven.hexlify(exe_path)
-
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)
         self.do_handshake()
+        exe_path = lldbutil.install_to_target(self, self.getBuildArtifact("a.out"))
+        hex_path = seven.hexlify(exe_path)
+
         self.test_sequence.add_log_lines(
             [
                 "read packet: $vRun;%s#00" % (hex_path,),
@@ -78,6 +79,7 @@ class GdbRemoteLaunchTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.expect_gdbremote_sequence()
 
     @add_test_categories(["llgs"])
+    @skipIfRemote
     def test_launch_failure_via_vRun(self):
         self.build()
         exe_path = self.getBuildArtifact("a.out")
@@ -110,14 +112,13 @@ class GdbRemoteLaunchTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     @add_test_categories(["llgs"])
     def test_QEnvironment(self):
         self.build()
-        exe_path = self.getBuildArtifact("a.out")
-        env = {"FOO": "test", "BAR": "a=z"}
-        args = [exe_path, "print-env:FOO", "print-env:BAR"]
-        hex_args = [seven.hexlify(x) for x in args]
-
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)
         self.do_handshake()
+        exe_path = lldbutil.install_to_target(self, self.getBuildArtifact("a.out"))
+        env = {"FOO": "test", "BAR": "a=z"}
+        args = [exe_path, "print-env:FOO", "print-env:BAR"]
+        hex_args = [seven.hexlify(x) for x in args]
 
         for key, value in env.items():
             self.test_sequence.add_log_lines(
@@ -143,14 +144,13 @@ class GdbRemoteLaunchTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     @add_test_categories(["llgs"])
     def test_QEnvironmentHexEncoded(self):
         self.build()
-        exe_path = self.getBuildArtifact("a.out")
-        env = {"FOO": "test", "BAR": "a=z", "BAZ": "a*}#z"}
-        args = [exe_path, "print-env:FOO", "print-env:BAR", "print-env:BAZ"]
-        hex_args = [seven.hexlify(x) for x in args]
-
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)
         self.do_handshake()
+        exe_path = lldbutil.install_to_target(self, self.getBuildArtifact("a.out"))
+        env = {"FOO": "test", "BAR": "a=z", "BAZ": "a*}#z"}
+        args = [exe_path, "print-env:FOO", "print-env:BAR", "print-env:BAZ"]
+        hex_args = [seven.hexlify(x) for x in args]
 
         for key, value in env.items():
             hex_enc = seven.hexlify("%s=%s" % (key, value))

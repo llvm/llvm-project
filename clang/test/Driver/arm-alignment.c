@@ -37,6 +37,12 @@
 // RUN: %clang -target thumbv8m.base-none-gnueabi -### %s 2> %t
 // RUN: FileCheck --check-prefix CHECK-ALIGNED-ARM <%t %s
 
+// RUN: %clang -target armv7em-apple-unknown-macho -mthumb -### %s 2> %t
+// RUN: FileCheck --check-prefix CHECK-ALIGNED-ARM <%t %s
+
+// RUN: %clang -target armv7em-apple-darwin -mthumb -### %s 2> %t
+// RUN: FileCheck --check-prefix CHECK-ALIGNED-ARM <%t %s
+
 // RUN: %clang --target=aarch64 -munaligned-access -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-UNALIGNED-AARCH64 < %t %s
 

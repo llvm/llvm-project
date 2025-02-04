@@ -7,10 +7,9 @@ define i32 @test() {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i64> @llvm.experimental.vp.strided.load.v4i64.p0.i64(ptr align 8 @c, i64 24, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, i32 4)
+; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i64> @llvm.experimental.vp.strided.load.v4i64.p0.i64(ptr align 8 @c, i64 24, <4 x i1> splat (i1 true), i32 4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i64> [[TMP0]] to <4 x i16>
-; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i16> [[TMP1]], <i16 -1, i16 -1, i16 -1, i16 -1>
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i16> [[TMP2]], <i16 -1, i16 -1, i16 -1, i16 -1>
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i16> [[TMP1]], splat (i16 -1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i16 @llvm.vector.reduce.umax.v4i16(<4 x i16> [[TMP3]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i16 [[TMP4]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP5]], i32 1)

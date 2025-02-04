@@ -18,6 +18,7 @@ using namespace llvm::wasm;
 Expected<std::unique_ptr<Object>> Reader::create() const {
   auto Obj = std::make_unique<Object>();
   Obj->Header = WasmObj.getHeader();
+  Obj->isRelocatableObject = WasmObj.isRelocatableObject();
   std::vector<Section> Sections;
   Obj->Sections.reserve(WasmObj.getNumSections());
   for (const SectionRef &Sec : WasmObj.sections()) {

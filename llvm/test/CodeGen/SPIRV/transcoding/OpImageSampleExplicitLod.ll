@@ -1,4 +1,5 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 ; CHECK-SPIRV-DAG: %[[#RetID:]] = OpImageSampleExplicitLod %[[#RetType:]] %[[#]] %[[#]] Lod %[[#]]
 ; CHECK-SPIRV-DAG: %[[#RetType]] = OpTypeVector %[[#]] 4

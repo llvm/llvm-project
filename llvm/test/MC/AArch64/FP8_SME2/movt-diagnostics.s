@@ -1,5 +1,5 @@
 
-// RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=+sme2,+sme-lutv2  2>&1 < %s | FileCheck %s
+// RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=+sme-lutv2  2>&1 < %s | FileCheck %s
 // --------------------------------------------------------------------------//
 // Invalid vector select register
 movt   z0, z31

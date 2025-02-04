@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
 ! OpenMP Version 5.0
 ! 2.11.3 allocate Directive
 ! Only the allocator clause is allowed on the allocate directive

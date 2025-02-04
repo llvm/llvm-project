@@ -21,25 +21,21 @@
  */
 
 #include <clc/clc.h>
+#include <clc/clcmacro.h>
+#include <clc/common/clc_degrees.h>
 
-#include "../clcmacro.h"
-
-_CLC_OVERLOAD _CLC_DEF float degrees(float radians) {
-  // 180/pi = ~57.29577951308232087685 or 0x1.ca5dc1a63c1f8p+5 or 0x1.ca5dc2p+5F
-  return 0x1.ca5dc2p+5F * radians;
-}
-
-_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, degrees, float);
-
+_CLC_DEFINE_UNARY_BUILTIN(float, degrees, __clc_degrees, float)
 
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-_CLC_OVERLOAD _CLC_DEF double degrees(double radians) {
-  // 180/pi = ~57.29577951308232087685 or 0x1.ca5dc1a63c1f8p+5 or 0x1.ca5dc2p+5F
-  return 0x1.ca5dc1a63c1f8p+5 * radians;
-}
+_CLC_DEFINE_UNARY_BUILTIN(double, degrees, __clc_degrees, double)
 
-_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, degrees, double);
+#endif
+
+#ifdef cl_khr_fp16
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+_CLC_DEFINE_UNARY_BUILTIN(half, degrees, __clc_degrees, half)
 
 #endif

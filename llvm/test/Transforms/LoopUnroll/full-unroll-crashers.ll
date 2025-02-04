@@ -5,7 +5,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 @known_constant = internal unnamed_addr constant [10 x i32] [i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1], align 16
 
-define void @foo1() {
+define void @foo1(i1 %arg) {
 entry:
   br label %for.body
 
@@ -21,7 +21,7 @@ for.exit:
   ret void
 }
 
-define void @foo2() {
+define void @foo2(i1 %arg) {
 entry:
   br label %for.body
 
@@ -36,7 +36,7 @@ for.exit:
   ret void
 }
 
-define void @cmp_undef() {
+define void @cmp_undef(i1 %arg) {
 entry:
   br label %for.body
 
@@ -59,7 +59,7 @@ for.end:                                          ; preds = %for.inc
   ret void
 }
 
-define void @switch() {
+define void @switch(i1 %arg) {
 entry:
   br label %for.body
 
@@ -83,7 +83,7 @@ for.end:
   ret void
 }
 
-define <4 x i32> @vec_load() {
+define <4 x i32> @vec_load(i1 %arg) {
 entry:
   br label %for.body
 
@@ -101,7 +101,7 @@ for.exit:
   ret <4 x i32> %r
 }
 
-define void @ptrtoint_cast() optsize {
+define void @ptrtoint_cast(i1 %arg) optsize {
 entry:
   br label %for.body
 
@@ -119,7 +119,7 @@ for.cond.cleanup:
   ret void
 }
 
-define void @ptrtoint_cast2() {
+define void @ptrtoint_cast2(i1 %arg) {
 entry:
   br i1 false, label %for.body.lr.ph, label %exit
 
@@ -138,14 +138,14 @@ exit:
 
 @i = external global i32, align 4
 
-define void @folded_not_to_constantint() {
+define void @folded_not_to_constantint(i1 %arg) {
 entry:
   br label %for.body
 
 for.body:
   %iv = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
   %m = phi ptr [ @i, %entry ], [ %m, %for.inc ]
-  br i1 undef, label %if.else, label %if.then
+  br i1 %arg, label %if.else, label %if.then
 
 if.then:
   unreachable
@@ -166,13 +166,13 @@ for.end:
   ret void
 }
 
-define void @index_too_large() {
+define void @index_too_large(i1 %arg) {
 entry:
   br label %for.body
 
 for.body:
   %iv = phi i64 [ -73631599, %entry ], [ %iv.next, %for.inc ]
-  br i1 undef, label %for.body2, label %for.inc
+  br i1 %arg, label %for.body2, label %for.inc
 
 for.body2:
   %idx = getelementptr inbounds [10 x i32], ptr @known_constant, i64 0, i64 %iv
@@ -181,13 +181,13 @@ for.body2:
 
 for.inc:
   %iv.next = add nsw i64 %iv, -1
-  br i1 undef, label %for.body, label %for.end
+  br i1 %arg, label %for.body, label %for.end
 
 for.end:
   ret void
 }
 
-define void @cmp_type_mismatch() {
+define void @cmp_type_mismatch(i1 %arg) {
 entry:
   br label %for.header
 
@@ -197,7 +197,7 @@ for.header:
 for.body:
   %d = phi ptr [ null, %for.header ]
   %cmp = icmp eq ptr %d, null
-  br i1 undef, label %for.end, label %for.header
+  br i1 %arg, label %for.end, label %for.header
 
 for.end:
   ret void

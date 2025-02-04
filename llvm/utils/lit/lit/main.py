@@ -124,7 +124,8 @@ def main(builtin_params={}):
     run_tests(selected_tests, lit_config, opts, len(discovered_tests))
     elapsed = time.time() - start
 
-    record_test_times(selected_tests, lit_config)
+    if not opts.skip_test_time_recording:
+        record_test_times(selected_tests, lit_config)
 
     selected_tests, discovered_tests = GoogleTest.post_process_shard_results(
         selected_tests, discovered_tests
@@ -136,6 +137,10 @@ def main(builtin_params={}):
     print_results(discovered_tests, elapsed, opts)
 
     tests_for_report = selected_tests if opts.shard else discovered_tests
+    if opts.report_failures_only:
+        # Only report tests that failed.
+        tests_for_report = [t for t in tests_for_report if t.isFailure()]
+
     for report in opts.reports:
         report.write_results(tests_for_report, elapsed)
 

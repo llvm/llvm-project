@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_MACHINEBLOCKFREQUENCYINFO_H
 
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/Support/BlockFrequency.h"
 #include <cstdint>
 #include <memory>
@@ -30,29 +31,30 @@ class raw_ostream;
 
 /// MachineBlockFrequencyInfo pass uses BlockFrequencyInfoImpl implementation
 /// to estimate machine basic block frequencies.
-class MachineBlockFrequencyInfo : public MachineFunctionPass {
+class MachineBlockFrequencyInfo {
   using ImplType = BlockFrequencyInfoImpl<MachineBasicBlock>;
   std::unique_ptr<ImplType> MBFI;
 
 public:
-  static char ID;
-
-  MachineBlockFrequencyInfo();
+  MachineBlockFrequencyInfo(); // Legacy pass manager only.
   explicit MachineBlockFrequencyInfo(MachineFunction &F,
                                      MachineBranchProbabilityInfo &MBPI,
                                      MachineLoopInfo &MLI);
-  ~MachineBlockFrequencyInfo() override;
+  MachineBlockFrequencyInfo(MachineBlockFrequencyInfo &&);
+  ~MachineBlockFrequencyInfo();
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  bool runOnMachineFunction(MachineFunction &F) override;
+  /// Handle invalidation explicitly.
+  bool invalidate(MachineFunction &F, const PreservedAnalyses &PA,
+                  MachineFunctionAnalysisManager::Invalidator &);
 
   /// calculate - compute block frequency info for the given function.
   void calculate(const MachineFunction &F,
                  const MachineBranchProbabilityInfo &MBPI,
                  const MachineLoopInfo &MLI);
 
-  void releaseMemory() override;
+  void print(raw_ostream &OS);
+
+  void releaseMemory();
 
   /// getblockFreq - Return block frequency. Return 0 if we don't have the
   /// information. Please note that initial frequency is equal to 1024. It means
@@ -107,6 +109,49 @@ Printable printBlockFreq(const MachineBlockFrequencyInfo &MBFI,
 Printable printBlockFreq(const MachineBlockFrequencyInfo &MBFI,
                          const MachineBasicBlock &MBB);
 
+class MachineBlockFrequencyAnalysis
+    : public AnalysisInfoMixin<MachineBlockFrequencyAnalysis> {
+  friend AnalysisInfoMixin<MachineBlockFrequencyAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = MachineBlockFrequencyInfo;
+
+  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+};
+
+/// Printer pass for the \c MachineBlockFrequencyInfo results.
+class MachineBlockFrequencyPrinterPass
+    : public PassInfoMixin<MachineBlockFrequencyPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit MachineBlockFrequencyPrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  static bool isRequired() { return true; }
+};
+
+class MachineBlockFrequencyInfoWrapperPass : public MachineFunctionPass {
+  MachineBlockFrequencyInfo MBFI;
+
+public:
+  static char ID;
+
+  MachineBlockFrequencyInfoWrapperPass();
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  bool runOnMachineFunction(MachineFunction &F) override;
+
+  void releaseMemory() override { MBFI.releaseMemory(); }
+
+  MachineBlockFrequencyInfo &getMBFI() { return MBFI; }
+
+  const MachineBlockFrequencyInfo &getMBFI() const { return MBFI; }
+};
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_MACHINEBLOCKFREQUENCYINFO_H

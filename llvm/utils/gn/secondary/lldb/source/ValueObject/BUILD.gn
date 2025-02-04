@@ -1,0 +1,43 @@
+static_library("ValueObject") {
+  output_name = "lldbValueObject"
+  configs += [ "//llvm/utils/gn/build:lldb_code" ]
+  deps = [
+    # FIXME: 3-hop dependency cycle
+    #"//lldb/source/Breakpoint",
+    # FIXME: 3-hop dependency cycle
+    #"//lldb/source/DataFormatters",
+    # FIXME: 3-hop dependency cycle
+    #"//lldb/source/Expression",
+    # FIXME: 3-hop dependency cycle
+    #"//lldb/source/Symbol",
+    # FIXME: 3-hop dependency cycle
+    #"//lldb/source/Target",
+    "//lldb/source/Utility",
+
+    # FIXME: 3-hop dependency cycle
+    #"//lldb/source/Plugins/Language/CPlusPlus",
+    # FIXME: 3-hop dependency cycle
+    #"//lldb/source/Plugins/Language/ObjC",
+    "//llvm/lib/Demangle",
+    "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
+  ]
+  include_dirs = [ ".." ]
+  sources = [
+    "ValueObject.cpp",
+    "ValueObjectCast.cpp",
+    "ValueObjectChild.cpp",
+    "ValueObjectConstResult.cpp",
+    "ValueObjectConstResultCast.cpp",
+    "ValueObjectConstResultChild.cpp",
+    "ValueObjectConstResultImpl.cpp",
+    "ValueObjectDynamicValue.cpp",
+    "ValueObjectList.cpp",
+    "ValueObjectMemory.cpp",
+    "ValueObjectRegister.cpp",
+    "ValueObjectSyntheticFilter.cpp",
+    "ValueObjectUpdater.cpp",
+    "ValueObjectVariable.cpp",
+    "ValueObjectVTable.cpp",
+  ]
+}

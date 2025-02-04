@@ -30,6 +30,7 @@ sub [eax], 1
 // gas assumes these instructions are pointer-sized by default, and we follow
 // suit.
 push [eax]
+pop [eax]
 call [eax]
 jmp [eax]
 // CHECK-NOT: error:

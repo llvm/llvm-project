@@ -47,7 +47,7 @@ define <4 x i32> @neg_or_lshr_i32_vec(<4 x i32> %x) {
 
 define <4 x i32> @neg_or_lshr_i32_vec_commute(<4 x i32> %x0) {
 ; CHECK-LABEL: @neg_or_lshr_i32_vec_commute(
-; CHECK-NEXT:    [[X:%.*]] = sdiv <4 x i32> <i32 42, i32 42, i32 42, i32 42>, [[X0:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = sdiv <4 x i32> splat (i32 42), [[X0:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[X]], zeroinitializer
 ; CHECK-NEXT:    [[SHR:%.*]] = zext <4 x i1> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[SHR]]
@@ -81,7 +81,7 @@ define i32 @neg_extra_use_or_lshr_i32(i32 %x, ptr %p) {
 define i32 @neg_or_extra_use_lshr_i32(i32 %x, ptr %p) {
 ; CHECK-LABEL: @neg_or_extra_use_lshr_i32(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NEG]], [[X]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X]], [[NEG]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[OR]], 31
 ; CHECK-NEXT:    store i32 [[OR]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[SHR]]

@@ -100,8 +100,8 @@ func.func @all_reduce_arith_addf_no_endomorphism_wrong_reduction_kind(
     %arg0: tensor<5xf32>,
     // CHECK-SAME: %[[ARG1:[A-Za-z0-9_]*]]: tensor<5xf32>
     %arg1: tensor<5xf32>) -> tensor<5xf32> {
-  // CHECK: %[[ALL_REDUCE0:[A-Za-z0-9_]*]] = mesh.all_reduce %[[ARG0]] on @mesh0 mesh_axes = [0] reduction = <max>
-  %0 = mesh.all_reduce %arg0 on @mesh0 mesh_axes = [0] reduction = <max>
+  // CHECK: %[[ALL_REDUCE0:[A-Za-z0-9_]*]] = mesh.all_reduce %[[ARG0]] on @mesh0 mesh_axes = [0] reduction = max
+  %0 = mesh.all_reduce %arg0 on @mesh0 mesh_axes = [0] reduction = max
     : tensor<5xf32> -> tensor<5xf32>
   // CHECK: %[[ALL_REDUCE1:[A-Za-z0-9_]*]] = mesh.all_reduce %[[ARG1]] on @mesh0 mesh_axes = [0]
   %1 = mesh.all_reduce %arg1 on @mesh0 mesh_axes = [0]
@@ -138,13 +138,13 @@ func.func @all_reduce_arith_minimumf_endomorphism(
     %arg0: tensor<5xf32>,
     // CHECK-SAME: %[[ARG1:[A-Za-z0-9_]*]]: tensor<5xf32>
     %arg1: tensor<5xf32>) -> tensor<5xf32> {
-  %0 = mesh.all_reduce %arg0 on @mesh0 mesh_axes = [0] reduction = <min>
+  %0 = mesh.all_reduce %arg0 on @mesh0 mesh_axes = [0] reduction = min
     : tensor<5xf32> -> tensor<5xf32>
-  %1 = mesh.all_reduce %arg1 on @mesh0 mesh_axes = [0] reduction = <min>
+  %1 = mesh.all_reduce %arg1 on @mesh0 mesh_axes = [0] reduction = min
     : tensor<5xf32> -> tensor<5xf32>
   // CHECK: %[[ADD_RES:[A-Za-z0-9_]*]] = arith.minimumf %[[ARG0]], %[[ARG1]]
   %2 = arith.minimumf %0, %1 : tensor<5xf32>
-  // CHECK: %[[ALL_REDUCE_RES:[A-Za-z0-9_]*]] = mesh.all_reduce %[[ADD_RES]] on @mesh0 mesh_axes = [0] reduction = <min>
+  // CHECK: %[[ALL_REDUCE_RES:[A-Za-z0-9_]*]] = mesh.all_reduce %[[ADD_RES]] on @mesh0 mesh_axes = [0] reduction = min
   // CHECK: return %[[ALL_REDUCE_RES]]
   return %2 : tensor<5xf32>
 }
@@ -155,13 +155,13 @@ func.func @all_reduce_arith_minsi_endomorphism(
     %arg0: tensor<5xi32>,
     // CHECK-SAME: %[[ARG1:[A-Za-z0-9_]*]]: tensor<5xi32>
     %arg1: tensor<5xi32>) -> tensor<5xi32> {
-  %0 = mesh.all_reduce %arg0 on @mesh0 mesh_axes = [0] reduction = <min>
+  %0 = mesh.all_reduce %arg0 on @mesh0 mesh_axes = [0] reduction = min
     : tensor<5xi32> -> tensor<5xi32>
-  %1 = mesh.all_reduce %arg1 on @mesh0 mesh_axes = [0] reduction = <min>
+  %1 = mesh.all_reduce %arg1 on @mesh0 mesh_axes = [0] reduction = min
     : tensor<5xi32> -> tensor<5xi32>
   // CHECK: %[[ADD_RES:[A-Za-z0-9_]*]] = arith.minsi %[[ARG0]], %[[ARG1]]
   %2 = arith.minsi %0, %1 : tensor<5xi32>
-  // CHECK: %[[ALL_REDUCE_RES:[A-Za-z0-9_]*]] = mesh.all_reduce %[[ADD_RES]] on @mesh0 mesh_axes = [0] reduction = <min>
+  // CHECK: %[[ALL_REDUCE_RES:[A-Za-z0-9_]*]] = mesh.all_reduce %[[ADD_RES]] on @mesh0 mesh_axes = [0] reduction = min
   // CHECK: return %[[ALL_REDUCE_RES]]
   return %2 : tensor<5xi32>
 }

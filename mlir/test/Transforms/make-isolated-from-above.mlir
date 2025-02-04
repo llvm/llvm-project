@@ -78,9 +78,9 @@ func.func @make_isolated_from_above_multiple_blocks(%arg0 : index, %arg1 : index
 //   CHECK-DAG:   %[[D1:.+]] = tensor.dim %[[EMPTY]], %[[C1]]
 //       CHECK:   test.isolated_one_region_op %[[ARG2]], %[[C0]], %[[C1]], %[[D0]], %[[D1]]
 //  CHECK-NEXT:     ^bb0(%[[B0:[a-zA-Z0-9]+]]: index, %[[B1:[a-zA-Z0-9]+]]: index, %[[B2:[a-zA-Z0-9]+]]: index, %[[B3:[a-zA-Z0-9]+]]: index, %[[B4:[a-zA-Z0-9]+]]: index)
-//  CHECK-NEXT:       cf.br ^bb1(%[[B0]] : index)
-//       CHECK:     ^bb1(%[[B5:.+]]: index)
-//       CHECK:       "foo.yield"(%[[B1]], %[[B2]], %[[B3]], %[[B4]], %[[B5]])
+//  CHECK-NEXT:       cf.br ^bb1
+//       CHECK:     ^bb1:
+//       CHECK:       "foo.yield"(%[[B1]], %[[B2]], %[[B3]], %[[B4]], %[[B0]])
 
 // CLONE1-LABEL: func @make_isolated_from_above_multiple_blocks(
 //  CLONE1-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index
@@ -95,9 +95,9 @@ func.func @make_isolated_from_above_multiple_blocks(%arg0 : index, %arg1 : index
 //  CLONE1-NEXT:     ^bb0(%[[B0:[a-zA-Z0-9]+]]: index, %[[B1:[a-zA-Z0-9]+]]: index, %[[B2:[a-zA-Z0-9]+]]: index)
 //   CLONE1-DAG:       %[[C0_0:.+]] = arith.constant 0 : index
 //   CLONE1-DAG:       %[[C1_0:.+]] = arith.constant 1 : index
-//  CLONE1-NEXT:       cf.br ^bb1(%[[B0]] : index)
-//       CLONE1:     ^bb1(%[[B3:.+]]: index)
-//       CLONE1:       "foo.yield"(%[[C0_0]], %[[C1_0]], %[[B1]], %[[B2]], %[[B3]])
+//  CLONE1-NEXT:       cf.br ^bb1
+//       CLONE1:     ^bb1:
+//       CLONE1:       "foo.yield"(%[[C0_0]], %[[C1_0]], %[[B1]], %[[B2]], %[[B0]])
 
 // CLONE2-LABEL: func @make_isolated_from_above_multiple_blocks(
 //  CLONE2-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index
@@ -110,6 +110,6 @@ func.func @make_isolated_from_above_multiple_blocks(%arg0 : index, %arg1 : index
 //   CLONE2-DAG:       %[[EMPTY:.+]] = tensor.empty(%[[B1]], %[[B2]])
 //   CLONE2-DAG:       %[[D0:.+]] = tensor.dim %[[EMPTY]], %[[C0]]
 //   CLONE2-DAG:       %[[D1:.+]] = tensor.dim %[[EMPTY]], %[[C1]]
-//  CLONE2-NEXT:       cf.br ^bb1(%[[B0]] : index)
-//       CLONE2:     ^bb1(%[[B3:.+]]: index)
-//       CLONE2:       "foo.yield"(%[[C0]], %[[C1]], %[[D0]], %[[D1]], %[[B3]])
+//  CLONE2-NEXT:       cf.br ^bb1
+//       CLONE2:     ^bb1:
+//       CLONE2:       "foo.yield"(%[[C0]], %[[C1]], %[[D0]], %[[D1]], %[[B0]])

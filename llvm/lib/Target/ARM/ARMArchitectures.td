@@ -285,7 +285,18 @@ def ARMv95a   : Architecture<"armv9.5-a", "ARMv95a",  [HasV9_5aOps,
                                                        FeatureCRC,
                                                        FeatureRAS,
                                                        FeatureDotProd]>;
-
+def ARMv96a   : Architecture<"armv9.6-a", "ARMv96a",  [HasV9_6aOps,
+                                                       FeatureAClass,
+                                                       FeatureDB,
+                                                       FeatureFPARMv8,
+                                                       FeatureNEON,
+                                                       FeatureDSP,
+                                                       FeatureTrustZone,
+                                                       FeatureMP,
+                                                       FeatureVirtualization,
+                                                       FeatureCRC,
+                                                       FeatureRAS,
+                                                       FeatureDotProd]>;
 def ARMv8r    : Architecture<"armv8-r",   "ARMv8r",   [HasV8Ops,
                                                        FeatureRClass,
                                                        FeatureDB,
@@ -293,9 +304,8 @@ def ARMv8r    : Architecture<"armv8-r",   "ARMv8r",   [HasV8Ops,
                                                        FeatureDSP,
                                                        FeatureCRC,
                                                        FeatureMP,
-                                                       FeatureVirtualization,
-                                                       FeatureFPARMv8,
-                                                       FeatureNEON]>;
+                                                       FeatureFPARMv8_D16_SP,
+                                                       FeatureVirtualization]>;
 
 def ARMv8mBaseline : Architecture<"armv8-m.base", "ARMv8mBaseline",
                                                       [HasV8MBaselineOps,

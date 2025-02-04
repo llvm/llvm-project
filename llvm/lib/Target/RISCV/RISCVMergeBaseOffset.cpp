@@ -84,7 +84,8 @@ INITIALIZE_PASS(RISCVMergeBaseOffsetOpt, DEBUG_TYPE,
 //    3) The offset value in the Global Address or Constant Pool is 0.
 bool RISCVMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi,
                                              MachineInstr *&Lo) {
-  if (Hi.getOpcode() != RISCV::LUI && Hi.getOpcode() != RISCV::AUIPC)
+  if (Hi.getOpcode() != RISCV::LUI && Hi.getOpcode() != RISCV::AUIPC &&
+      Hi.getOpcode() != RISCV::PseudoMovAddr)
     return false;
 
   const MachineOperand &HiOp1 = Hi.getOperand(1);
@@ -97,16 +98,22 @@ bool RISCVMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi,
       HiOp1.getOffset() != 0)
     return false;
 
-  Register HiDestReg = Hi.getOperand(0).getReg();
-  if (!MRI->hasOneUse(HiDestReg))
-    return false;
+  if (Hi.getOpcode() == RISCV::PseudoMovAddr) {
+    // Most of the code should handle it correctly without modification by
+    // setting Lo and Hi both point to PseudoMovAddr
+    Lo = &Hi;
+  } else {
+    Register HiDestReg = Hi.getOperand(0).getReg();
+    if (!MRI->hasOneUse(HiDestReg))
+      return false;
 
-  Lo = &*MRI->use_instr_begin(HiDestReg);
-  if (Lo->getOpcode() != RISCV::ADDI)
-    return false;
+    Lo = &*MRI->use_instr_begin(HiDestReg);
+    if (Lo->getOpcode() != RISCV::ADDI)
+      return false;
+  }
 
   const MachineOperand &LoOp2 = Lo->getOperand(2);
-  if (Hi.getOpcode() == RISCV::LUI) {
+  if (Hi.getOpcode() == RISCV::LUI || Hi.getOpcode() == RISCV::PseudoMovAddr) {
     if (LoOp2.getTargetFlags() != RISCVII::MO_LO ||
         !(LoOp2.isGlobal() || LoOp2.isCPI() || LoOp2.isBlockAddress()) ||
         LoOp2.getOffset() != 0)
@@ -378,7 +385,9 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
       return false;
     case RISCV::LB:
     case RISCV::LH:
+    case RISCV::LH_INX:
     case RISCV::LW:
+    case RISCV::LW_INX:
     case RISCV::LBU:
     case RISCV::LHU:
     case RISCV::LWU:
@@ -388,7 +397,9 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
     case RISCV::FLD:
     case RISCV::SB:
     case RISCV::SH:
+    case RISCV::SH_INX:
     case RISCV::SW:
+    case RISCV::SW_INX:
     case RISCV::SD:
     case RISCV::FSH:
     case RISCV::FSW:
@@ -422,8 +433,16 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
         NumOps = Flags.getNumOperandRegisters();
 
         // Memory constraints have two operands.
-        if (NumOps != 2 || !Flags.isMemKind())
+        if (NumOps != 2 || !Flags.isMemKind()) {
+          // If the register is used by something other than a memory contraint,
+          // we should not fold.
+          for (unsigned J = 0; J < NumOps; ++J) {
+            const MachineOperand &MO = UseMI.getOperand(I + 1 + J);
+            if (MO.isReg() && MO.getReg() == DestReg)
+              return false;
+          }
           continue;
+        }
 
         // We can't do this for constraint A because AMO instructions don't have
         // an immediate offset field.
@@ -466,6 +485,13 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
 
   Hi.getOperand(1).setOffset(NewOffset);
   MachineOperand &ImmOp = Lo.getOperand(2);
+  // Expand PseudoMovAddr into LUI
+  if (Hi.getOpcode() == RISCV::PseudoMovAddr) {
+    auto *TII = ST->getInstrInfo();
+    Hi.setDesc(TII->get(RISCV::LUI));
+    Hi.removeOperand(2);
+  }
+
   if (Hi.getOpcode() != RISCV::AUIPC)
     ImmOp.setOffset(NewOffset);
 
@@ -500,6 +526,11 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
       UseMI.addOperand(ImmOp);
     }
   }
+
+  // Prevent Lo (originally PseudoMovAddr, which is also pointed by Hi) from
+  // being erased
+  if (&Lo == &Hi)
+    return true;
 
   MRI->replaceRegWith(Lo.getOperand(0).getReg(), Hi.getOperand(0).getReg());
   Lo.eraseFromParent();

@@ -26,7 +26,7 @@ using namespace llvm;
 #define GET_INSTRUCTION_NAME
 #include "HexagonGenAsmWriter.inc"
 
-void HexagonInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) const {
+void HexagonInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) {
   O << getRegisterName(Reg);
 }
 

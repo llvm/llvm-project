@@ -4,7 +4,7 @@
 // DEFINE:    -buffer-deallocation-pipeline="private-function-dynamic-ownership" \
 // DEFINE:    -cse -canonicalize -test-lower-to-llvm
 // DEFINE: %{entry_point} = main
-// DEFINE: %{run} = mlir-cpu-runner -e %{entry_point} -entry-point-result=void \
+// DEFINE: %{run} = mlir-runner -e %{entry_point} -entry-point-result=void \
 // DEFINE:    -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
 
 // RUN: %{compile} | %{run} | FileCheck %s
@@ -107,10 +107,10 @@ module @transforms attributes { transform.with_named_sequence } {
 
    // Step 1: Tile
    // Tile parallel dims
-   %tiled_linalg_op_p, %loops:4 = transform.structured.tile_using_for %mmt4d[1, 1, 0, 8, 8, 0]
+   %tiled_linalg_op_p, %loops:4 = transform.structured.tile_using_for %mmt4d tile_sizes [1, 1, 0, 8, 8, 0]
      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
    // Tile reduction dims
-   %tiled_linalg_op_r, %loops2:2 = transform.structured.tile_using_for %tiled_linalg_op_p[0, 0, 1, 0, 0, 1]
+   %tiled_linalg_op_r, %loops2:2 = transform.structured.tile_using_for %tiled_linalg_op_p tile_sizes [0, 0, 1, 0, 0, 1]
      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
    // Step 2: Vectorize

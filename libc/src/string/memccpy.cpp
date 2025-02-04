@@ -9,9 +9,10 @@
 #include "src/string/memccpy.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include <stddef.h> // For size_t.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void *, memccpy,
                    (void *__restrict dest, const void *__restrict src, int c,
@@ -32,4 +33,4 @@ LLVM_LIBC_FUNCTION(void *, memccpy,
   return nullptr;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

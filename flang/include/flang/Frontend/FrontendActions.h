@@ -19,6 +19,7 @@
 #include "flang/Semantics/semantics.h"
 
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/OwningOpRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
 #include <memory>
@@ -105,6 +106,10 @@ class PrescanAndSemaAction : public FrontendAction {
 };
 
 class DebugUnparseWithSymbolsAction : public PrescanAndSemaAction {
+  void executeAction() override;
+};
+
+class DebugUnparseWithModulesAction : public PrescanAndSemaAction {
   void executeAction() override;
 };
 
@@ -211,16 +216,19 @@ protected:
   CodeGenAction(BackendActionTy act) : action{act} {};
   /// @name MLIR
   /// {
-  std::unique_ptr<mlir::ModuleOp> mlirModule;
   std::unique_ptr<mlir::MLIRContext> mlirCtx;
+  mlir::OwningOpRef<mlir::ModuleOp> mlirModule;
   /// }
 
   /// @name LLVM IR
   std::unique_ptr<llvm::LLVMContext> llvmCtx;
   std::unique_ptr<llvm::Module> llvmModule;
 
-  /// Embeds offload objects given with specified with -fembed-offload-object
+  /// Embeds offload objects specified with -fembed-offload-object
   void embedOffloadObjects();
+
+  /// Links in BC libraries spefified with -mlink-builtin-bitcode
+  void linkBuiltinBCLibs();
 
   /// Runs pass pipeline to lower HLFIR into FIR
   void lowerHLFIRToFIR();

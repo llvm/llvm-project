@@ -55,8 +55,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
@@ -66,7 +64,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -357,17 +354,20 @@ bool IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
   // Insert new integer induction variable.
   PHINode *NewPHI =
       PHINode::Create(Int32Ty, 2, PN->getName() + ".int", PN->getIterator());
-  NewPHI->addIncoming(ConstantInt::get(Int32Ty, InitValue),
+  NewPHI->addIncoming(ConstantInt::getSigned(Int32Ty, InitValue),
                       PN->getIncomingBlock(IncomingEdge));
+  NewPHI->setDebugLoc(PN->getDebugLoc());
 
-  Value *NewAdd =
-      BinaryOperator::CreateAdd(NewPHI, ConstantInt::get(Int32Ty, IncValue),
-                                Incr->getName() + ".int", Incr->getIterator());
+  Instruction *NewAdd = BinaryOperator::CreateAdd(
+      NewPHI, ConstantInt::getSigned(Int32Ty, IncValue),
+      Incr->getName() + ".int", Incr->getIterator());
+  NewAdd->setDebugLoc(Incr->getDebugLoc());
   NewPHI->addIncoming(NewAdd, PN->getIncomingBlock(BackEdge));
 
-  ICmpInst *NewCompare =
-      new ICmpInst(TheBr->getIterator(), NewPred, NewAdd,
-                   ConstantInt::get(Int32Ty, ExitValue), Compare->getName());
+  ICmpInst *NewCompare = new ICmpInst(
+      TheBr->getIterator(), NewPred, NewAdd,
+      ConstantInt::getSigned(Int32Ty, ExitValue), Compare->getName());
+  NewCompare->setDebugLoc(Compare->getDebugLoc());
 
   // In the following deletions, PN may become dead and may be deleted.
   // Use a WeakTrackingVH to observe whether this happens.
@@ -391,8 +391,9 @@ bool IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
   // We give preference to sitofp over uitofp because it is faster on most
   // platforms.
   if (WeakPH) {
-    Value *Conv = new SIToFPInst(NewPHI, PN->getType(), "indvar.conv",
-                                 PN->getParent()->getFirstInsertionPt());
+    Instruction *Conv = new SIToFPInst(NewPHI, PN->getType(), "indvar.conv",
+                                       PN->getParent()->getFirstInsertionPt());
+    Conv->setDebugLoc(PN->getDebugLoc());
     PN->replaceAllUsesWith(Conv);
     RecursivelyDeleteTriviallyDeadInstructions(PN, TLI, MSSAU.get());
   }
@@ -514,7 +515,7 @@ static void visitIVCast(CastInst *Cast, WideIVInfo &WI,
 
   Type *Ty = Cast->getType();
   uint64_t Width = SE->getTypeSizeInBits(Ty);
-  if (!Cast->getModule()->getDataLayout().isLegalInteger(Width))
+  if (!Cast->getDataLayout().isLegalInteger(Width))
     return;
 
   // Check that `Cast` actually extends the induction variable (we rely on this
@@ -594,8 +595,8 @@ bool IndVarSimplify::simplifyAndExtend(Loop *L,
                                        LoopInfo *LI) {
   SmallVector<WideIVInfo, 8> WideIVs;
 
-  auto *GuardDecl = L->getBlocks()[0]->getModule()->getFunction(
-          Intrinsic::getName(Intrinsic::experimental_guard));
+  auto *GuardDecl = Intrinsic::getDeclarationIfExists(
+      L->getBlocks()[0]->getModule(), Intrinsic::experimental_guard);
   bool HasGuards = GuardDecl && !GuardDecl->use_empty();
 
   SmallVector<PHINode *, 8> LoopPhis;
@@ -841,7 +842,7 @@ static PHINode *FindLoopCounter(Loop *L, BasicBlock *ExitingBB,
   const SCEV *BestInit = nullptr;
   BasicBlock *LatchBlock = L->getLoopLatch();
   assert(LatchBlock && "Must be in simplified form");
-  const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
+  const DataLayout &DL = L->getHeader()->getDataLayout();
 
   for (BasicBlock::iterator I = L->getHeader()->begin(); isa<PHINode>(I); ++I) {
     PHINode *Phi = cast<PHINode>(I);
@@ -1228,7 +1229,7 @@ static void replaceLoopPHINodesWithPreheaderValues(
     if (!L->contains(I))
       continue;
 
-    Value *Res = simplifyInstruction(I, I->getModule()->getDataLayout());
+    Value *Res = simplifyInstruction(I, I->getDataLayout());
     if (Res && LI->replacementPreservesLCSSAForm(I, Res)) {
       for (User *U : I->users())
         Worklist.push_back(cast<Instruction>(U));
@@ -1261,14 +1262,14 @@ static std::optional<Value *>
 createReplacement(ICmpInst *ICmp, const Loop *L, BasicBlock *ExitingBB,
                   const SCEV *MaxIter, bool Inverted, bool SkipLastIter,
                   ScalarEvolution *SE, SCEVExpander &Rewriter) {
-  ICmpInst::Predicate Pred = ICmp->getPredicate();
+  CmpPredicate Pred = ICmp->getCmpPredicate();
   Value *LHS = ICmp->getOperand(0);
   Value *RHS = ICmp->getOperand(1);
 
   // 'LHS pred RHS' should now mean that we stay in loop.
   auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
   if (Inverted)
-    Pred = CmpInst::getInversePredicate(Pred);
+    Pred = ICmpInst::getInverseCmpPredicate(Pred);
 
   const SCEV *LHSS = SE->getSCEVAtScope(LHS, L);
   const SCEV *RHSS = SE->getSCEVAtScope(RHS, L);
@@ -1283,7 +1284,7 @@ createReplacement(ICmpInst *ICmp, const Loop *L, BasicBlock *ExitingBB,
     MaxIter = SE->getZeroExtendExpr(MaxIter, ARTy);
   else if (SE->getTypeSizeInBits(ARTy) < SE->getTypeSizeInBits(MaxIterTy)) {
     const SCEV *MinusOne = SE->getMinusOne(ARTy);
-    auto *MaxAllowedIter = SE->getZeroExtendExpr(MinusOne, MaxIterTy);
+    const SCEV *MaxAllowedIter = SE->getZeroExtendExpr(MinusOne, MaxIterTy);
     if (SE->isKnownPredicateAt(ICmpInst::ICMP_ULE, MaxIter, MaxAllowedIter, BI))
       MaxIter = SE->getTruncateExpr(MaxIter, ARTy);
   }
@@ -1295,7 +1296,7 @@ createReplacement(ICmpInst *ICmp, const Loop *L, BasicBlock *ExitingBB,
     // So we manually construct umin(a - 1, b - 1).
     SmallVector<const SCEV *, 4> Elements;
     if (auto *UMin = dyn_cast<SCEVUMinExpr>(MaxIter)) {
-      for (auto *Op : UMin->operands())
+      for (const SCEV *Op : UMin->operands())
         Elements.push_back(SE->getMinusSCEV(Op, SE->getOne(Op->getType())));
       MaxIter = SE->getUMinFromMismatchedTypes(Elements);
     } else
@@ -1372,15 +1373,15 @@ static bool optimizeLoopExitWithUnknownExitCount(
     for (auto *ICmp : LeafConditions) {
       auto EL = SE->computeExitLimitFromCond(L, ICmp, Inverted,
                                              /*ControlsExit*/ false);
-      auto *ExitMax = EL.SymbolicMaxNotTaken;
+      const SCEV *ExitMax = EL.SymbolicMaxNotTaken;
       if (isa<SCEVCouldNotCompute>(ExitMax))
         continue;
       // They could be of different types (specifically this happens after
       // IV widening).
       auto *WiderType =
           SE->getWiderType(ExitMax->getType(), MaxIter->getType());
-      auto *WideExitMax = SE->getNoopOrZeroExtend(ExitMax, WiderType);
-      auto *WideMaxIter = SE->getNoopOrZeroExtend(MaxIter, WiderType);
+      const SCEV *WideExitMax = SE->getNoopOrZeroExtend(ExitMax, WiderType);
+      const SCEV *WideMaxIter = SE->getNoopOrZeroExtend(MaxIter, WiderType);
       if (WideExitMax == WideMaxIter)
         ICmpsFailingOnLastIter.insert(ICmp);
     }
@@ -1459,7 +1460,6 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
     if (!match(LHS, m_ZExt(m_Value(LHSOp))) || !ICmp->isSigned())
       continue;
 
-    const DataLayout &DL = ExitingBB->getModule()->getDataLayout();
     const unsigned InnerBitWidth = DL.getTypeSizeInBits(LHSOp->getType());
     const unsigned OuterBitWidth = DL.getTypeSizeInBits(RHS->getType());
     auto FullCR = ConstantRange::getFull(InnerBitWidth);
@@ -1529,12 +1529,12 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
           L->getLoopPreheader()->getTerminator()->getIterator());
       ICmp->setOperand(Swapped ? 1 : 0, LHSOp);
       ICmp->setOperand(Swapped ? 0 : 1, NewRHS);
+      // Samesign flag cannot be preserved after narrowing the compare.
+      ICmp->setSameSign(false);
       if (LHS->use_empty())
         DeadInsts.push_back(LHS);
     };
 
-
-    const DataLayout &DL = ExitingBB->getModule()->getDataLayout();
     const unsigned InnerBitWidth = DL.getTypeSizeInBits(LHSOp->getType());
     const unsigned OuterBitWidth = DL.getTypeSizeInBits(RHS->getType());
     auto FullCR = ConstantRange::getFull(InnerBitWidth);
@@ -1784,6 +1784,13 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     return false;
   };
 
+  // Make sure all exits dominate the latch. This means there is a linear chain
+  // of exits. We check this before sorting so we have a total order.
+  BasicBlock *Latch = L->getLoopLatch();
+  for (BasicBlock *ExitingBB : ExitingBlocks)
+    if (!DT->dominates(ExitingBB, Latch))
+      return false;
+
   // If we have any exits which can't be predicated themselves, than we can't
   // predicate any exit which isn't guaranteed to execute before it.  Consider
   // two exits (a) and (b) which would both exit on the same iteration.  If we
@@ -1791,21 +1798,23 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   // we could convert a loop from exiting through (a) to one exiting through
   // (b).  Note that this problem exists only for exits with the same exit
   // count, and we could be more aggressive when exit counts are known inequal.
-  llvm::sort(ExitingBlocks,
-            [&](BasicBlock *A, BasicBlock *B) {
-              // std::sort sorts in ascending order, so we want the inverse of
-              // the normal dominance relation, plus a tie breaker for blocks
-              // unordered by dominance.
-              if (DT->properlyDominates(A, B)) return true;
-              if (DT->properlyDominates(B, A)) return false;
-              return A->getName() < B->getName();
-            });
-  // Check to see if our exit blocks are a total order (i.e. a linear chain of
-  // exits before the backedge).  If they aren't, reasoning about reachability
-  // is complicated and we choose not to for now.
-  for (unsigned i = 1; i < ExitingBlocks.size(); i++)
-    if (!DT->dominates(ExitingBlocks[i-1], ExitingBlocks[i]))
+  llvm::sort(ExitingBlocks, [&](BasicBlock *A, BasicBlock *B) {
+    // llvm::sort sorts in ascending order, so we want the inverse of
+    // the normal dominance relation.
+    if (A == B)
       return false;
+    if (DT->properlyDominates(A, B))
+      return true;
+    if (DT->properlyDominates(B, A))
+      return false;
+    llvm_unreachable("Should have total dominance order");
+  });
+
+  // Make sure our exit blocks are really a total order (i.e. a linear chain of
+  // exits before the backedge).
+  for (unsigned i = 1; i < ExitingBlocks.size(); i++)
+    assert(DT->dominates(ExitingBlocks[i - 1], ExitingBlocks[i]) &&
+           "Not sorted by dominance");
 
   // Given our sorted total order, we know that exit[j] must be evaluated
   // after all exit[i] such j > i.
@@ -1817,14 +1826,6 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
 
   if (ExitingBlocks.empty())
     return false;
-
-  // We rely on not being able to reach an exiting block on a later iteration
-  // then it's statically compute exit count.  The implementaton of
-  // getExitCount currently has this invariant, but assert it here so that
-  // breakage is obvious if this ever changes..
-  assert(llvm::all_of(ExitingBlocks, [&](BasicBlock *ExitingBB) {
-        return DT->dominates(ExitingBB, L->getLoopLatch());
-      }));
 
   // At this point, ExitingBlocks consists of only those blocks which are
   // predicatable.  Given that, we know we have at least one exit we can
@@ -1915,7 +1916,7 @@ bool IndVarSimplify::run(Loop *L) {
 
   // Create a rewriter object which we'll use to transform the code with.
   SCEVExpander Rewriter(*SE, DL, "indvars");
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   Rewriter.setDebugType(DEBUG_TYPE);
 #endif
 
@@ -2058,7 +2059,7 @@ PreservedAnalyses IndVarSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
                                           LoopStandardAnalysisResults &AR,
                                           LPMUpdater &) {
   Function *F = L.getHeader()->getParent();
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
 
   IndVarSimplify IVS(&AR.LI, &AR.SE, &AR.DT, DL, &AR.TLI, &AR.TTI, AR.MSSA,
                      WidenIndVars && AllowIVWidening);

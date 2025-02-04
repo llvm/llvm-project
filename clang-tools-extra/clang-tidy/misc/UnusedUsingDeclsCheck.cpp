@@ -10,6 +10,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
@@ -22,6 +23,13 @@ AST_MATCHER_P(DeducedTemplateSpecializationType, refsToTemplatedDecl,
               clang::ast_matchers::internal::Matcher<NamedDecl>, DeclMatcher) {
   if (const auto *TD = Node.getTemplateName().getAsTemplateDecl())
     return DeclMatcher.matches(*TD, Finder, Builder);
+  return false;
+}
+
+AST_MATCHER_P(Type, asTagDecl, clang::ast_matchers::internal::Matcher<TagDecl>,
+              DeclMatcher) {
+  if (const TagDecl *ND = Node.getAsTagDecl())
+    return DeclMatcher.matches(*ND, Finder, Builder);
   return false;
 }
 
@@ -43,6 +51,10 @@ UnusedUsingDeclsCheck::UnusedUsingDeclsCheck(StringRef Name,
       HeaderFileExtensions(Context->getHeaderFileExtensions()) {}
 
 void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
+  // We don't emit warnings on unused-using-decls from headers, so bail out if
+  // the main file is a header.
+  if (utils::isFileExtension(getCurrentMainFile(), HeaderFileExtensions))
+    return;
   Finder->addMatcher(usingDecl(isExpansionInMainFile()).bind("using"), this);
   auto DeclMatcher = hasDeclaration(namedDecl().bind("used"));
   Finder->addMatcher(loc(templateSpecializationType(DeclMatcher)), this);
@@ -61,7 +73,8 @@ void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(userDefinedLiteral().bind("used"), this);
   Finder->addMatcher(
       loc(elaboratedType(unless(hasQualifier(nestedNameSpecifier())),
-                         hasUnqualifiedDesugaredType(type().bind("usedType")))),
+                         hasUnqualifiedDesugaredType(
+                             type(asTagDecl(tagDecl().bind("used")))))),
       this);
   // Cases where we can identify the UsingShadowDecl directly, rather than
   // just its target.
@@ -73,12 +86,6 @@ void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
 
 void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
   if (Result.Context->getDiagnostics().hasUncompilableErrorOccurred())
-    return;
-  // We don't emit warnings on unused-using-decls from headers, so bail out if
-  // the main file is a header.
-  if (auto MainFile = Result.SourceManager->getFileEntryRefForID(
-          Result.SourceManager->getMainFileID());
-      utils::isFileExtension(MainFile->getName(), HeaderFileExtensions))
     return;
 
   if (const auto *Using = Result.Nodes.getNodeAs<UsingDecl>("using")) {
@@ -136,12 +143,6 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
   // marked after a corresponding using decl has been found.
   if (const auto *Used = Result.Nodes.getNodeAs<NamedDecl>("used")) {
     RemoveNamedDecl(Used);
-    return;
-  }
-
-  if (const auto *T = Result.Nodes.getNodeAs<Type>("usedType")) {
-    if (const auto *ND = T->getAsTagDecl())
-      RemoveNamedDecl(ND);
     return;
   }
 

@@ -630,8 +630,8 @@ void LiveRange::join(LiveRange &Other,
                      const int *LHSValNoAssignments,
                      const int *RHSValNoAssignments,
                      SmallVectorImpl<VNInfo *> &NewVNInfo) {
-  verify();
-  Other.verify();
+  assert(verify());
+  assert(Other.verify());
 
   // Determine if any of our values are mapped.  This is uncommon, so we want
   // to avoid the range scan if not.
@@ -797,7 +797,7 @@ void LiveRange::flushSegmentSet() {
       "segment set can be used only initially before switching to the array");
   segments.append(segmentSet->begin(), segmentSet->end());
   segmentSet = nullptr;
-  verify();
+  assert(verify());
 }
 
 bool LiveRange::isLiveAtIndexes(ArrayRef<SlotIndex> Slots) const {
@@ -1055,24 +1055,36 @@ LLVM_DUMP_METHOD void LiveInterval::dump() const {
 #endif
 
 #ifndef NDEBUG
-void LiveRange::verify() const {
+bool LiveRange::verify() const {
   for (const_iterator I = begin(), E = end(); I != E; ++I) {
-    assert(I->start.isValid());
-    assert(I->end.isValid());
-    assert(I->start < I->end);
-    assert(I->valno != nullptr);
-    assert(I->valno->id < valnos.size());
-    assert(I->valno == valnos[I->valno->id]);
+    if (!I->start.isValid())
+      return false;
+    if (!I->end.isValid())
+      return false;
+    if (I->start >= I->end)
+      return false;
+    if (I->valno == nullptr)
+      return false;
+    if (I->valno->id >= valnos.size())
+      return false;
+    if (I->valno != valnos[I->valno->id])
+      return false;
     if (std::next(I) != E) {
-      assert(I->end <= std::next(I)->start);
-      if (I->end == std::next(I)->start)
-        assert(I->valno != std::next(I)->valno);
+      if (I->end > std::next(I)->start)
+        return false;
+      if (I->end == std::next(I)->start) {
+        if (I->valno == std::next(I)->valno)
+          return false;
+      }
     }
   }
+
+  return true;
 }
 
-void LiveInterval::verify(const MachineRegisterInfo *MRI) const {
-  super::verify();
+bool LiveInterval::verify(const MachineRegisterInfo *MRI) const {
+  if (!super::verify())
+    return false;
 
   // Make sure SubRanges are fine and LaneMasks are disjunct.
   LaneBitmask Mask;
@@ -1080,18 +1092,28 @@ void LiveInterval::verify(const MachineRegisterInfo *MRI) const {
                                        : LaneBitmask::getAll();
   for (const SubRange &SR : subranges()) {
     // Subrange lanemask should be disjunct to any previous subrange masks.
-    assert((Mask & SR.LaneMask).none());
+    if ((Mask & SR.LaneMask).any())
+      return false;
+
     Mask |= SR.LaneMask;
 
     // subrange mask should not contained in maximum lane mask for the vreg.
-    assert((Mask & ~MaxMask).none());
-    // empty subranges must be removed.
-    assert(!SR.empty());
+    if ((Mask & ~MaxMask).any())
+      return false;
 
-    SR.verify();
+    // empty subranges must be removed.
+    if (SR.empty())
+      return false;
+
+    if (!SR.verify())
+      return false;
+
     // Main liverange should cover subrange.
-    assert(covers(SR));
+    if (!covers(SR))
+      return false;
   }
+
+  return true;
 }
 #endif
 
@@ -1283,7 +1305,7 @@ void LiveRangeUpdater::flush() {
   // Nothing to merge?
   if (Spills.empty()) {
     LR->segments.erase(WriteI, ReadI);
-    LR->verify();
+    assert(LR->verify());
     return;
   }
 
@@ -1301,7 +1323,7 @@ void LiveRangeUpdater::flush() {
   }
   ReadI = WriteI + Spills.size();
   mergeSpills();
-  LR->verify();
+  assert(LR->verify());
 }
 
 unsigned ConnectedVNInfoEqClasses::Classify(const LiveRange &LR) {

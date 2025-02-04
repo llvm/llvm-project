@@ -410,7 +410,7 @@ SDValue VECustomDAG::getConstantMask(Packing Packing, bool AllTrue) const {
   auto MaskVT = getLegalVectorType(Packing, MVT::i1);
 
   // VEISelDAGtoDAG will replace this pattern with the constant-true VM.
-  auto TrueVal = DAG.getConstant(-1, DL, MVT::i32);
+  auto TrueVal = DAG.getAllOnesConstant(DL, MVT::i32);
   auto AVL = getConstant(MaskVT.getVectorNumElements(), MVT::i32);
   auto Res = getNode(VEISD::VEC_BROADCAST, MaskVT, {TrueVal, AVL});
   if (AllTrue)

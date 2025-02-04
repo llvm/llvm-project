@@ -15,15 +15,12 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/Archive.h"
-#include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/Binary.h"
-#include "llvm/Object/COFF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Alignment.h"
-#include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 
 using namespace llvm;
@@ -359,7 +356,7 @@ bool object::areTargetsCompatible(const OffloadFile::TargetID &LHS,
     return false;
 
   // If the architecture is "all" we assume it is always compatible.
-  if (LHS.second.equals("generic") || RHS.second.equals("generic"))
+  if (LHS.second == "generic" || RHS.second == "generic")
     return true;
 
   // Only The AMDGPU target requires additional checks.

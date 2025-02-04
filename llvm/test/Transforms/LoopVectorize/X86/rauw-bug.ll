@@ -13,9 +13,9 @@ target triple = "x86_64-apple-macosx"
 ; radar://15498655
 
 ; CHECK: reduced
-define void @reduced()  {
+define void @reduced(i1 %arg)  {
 entry:
-  br i1 undef, label %while.body, label %while.cond63.preheader.while.end76_crit_edge
+  br i1 %arg, label %while.body, label %while.cond63.preheader.while.end76_crit_edge
 
 while.cond63.preheader.while.end76_crit_edge:
   ret void

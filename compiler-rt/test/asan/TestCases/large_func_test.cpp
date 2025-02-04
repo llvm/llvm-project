@@ -4,6 +4,9 @@
 // RUN: %clangxx_asan -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-%os --check-prefix=CHECK
 // REQUIRES: stable-runtime
 
+// Issue #108194: Incomplete .debug_line at -O1 and above.
+// XFAIL: target={{.*sparc.*}}
+
 #include <stdlib.h>
 __attribute__((noinline))
 static void LargeFunction(int *x, int zero) {

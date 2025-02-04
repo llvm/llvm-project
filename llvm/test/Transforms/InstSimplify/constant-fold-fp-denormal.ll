@@ -2,7 +2,7 @@
 ; RUN: opt -S -passes=instsimplify < %s | FileCheck %s
 
 ; Test cases for denormal handling mode when constant folding floating point
-; operations. Input and output modes are checked seperately.
+; operations. Input and output modes are checked separately.
 
 ; ============================================================================ ;
 ; fadd tests

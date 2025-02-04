@@ -6,6 +6,14 @@
 # Common flags that apply to all configurations.
 # Use sparingly for things common to all compilers and platforms.
 ###############################################################################
+
+# Flip off to disable MODULE.bazel until we're ready.
+# https://github.com/llvm/llvm-project/issues/55924
+common --enable_bzlmod=false --enable_workspace
+
+# TODO: Remove lit test reliance on this
+common --legacy_external_runfiles
+
 # Prevent invalid caching if input files are modified during a build.
 build --experimental_guard_against_concurrent_changes
 
@@ -43,6 +51,13 @@ common --incompatible_disallow_empty_glob
 # TODO: Remove once we move to bazel 7.x
 build --experimental_cc_shared_library
 
+# Disabling runfiles links drastically increases performance in slow disk IO
+# situations Do not build runfile trees by default. If an execution strategy
+# relies on runfile symlink tree, the tree is created on-demand. See:
+# https://github.com/bazelbuild/bazel/issues/6627 and
+# https://github.com/bazelbuild/bazel/commit/03246077f948f2790a83520e7dccc2625650e6df
+build --build_runfile_links=false
+
 ###############################################################################
 # Options to select different strategies for linking potential dependent
 # libraries. The default leaves it disabled.
@@ -50,9 +65,6 @@ build --experimental_cc_shared_library
 
 build:zlib_external --repo_env=BAZEL_LLVM_ZLIB_STRATEGY=external
 build:zlib_system --repo_env=BAZEL_LLVM_ZLIB_STRATEGY=system
-
-build:terminfo_external --repo_env=BAZEL_LLVM_TERMINFO_STRATEGY=external
-build:terminfo_system --repo_env=BAZEL_LLVM_TERMINFO_STRATEGY=system
 
 ###############################################################################
 # Options for "generic_clang" builds: these options should generally apply to
@@ -203,6 +215,13 @@ build:ci --keep_going
 
 # Show test errors.
 build:ci --test_output=errors
+
+# Only show failing tests to reduce output
+build:ci --test_summary=terse
+
+# Attempt to work around intermittent issue while trying to fetch remote blob.
+# See e.g. https://github.com/bazelbuild/bazel/issues/18694.
+build:ci --remote_default_exec_properties=cache-silo-key=CleverPeafowl
 
 ###############################################################################
 

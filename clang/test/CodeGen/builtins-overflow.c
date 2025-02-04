@@ -42,11 +42,13 @@ int test_add_overflow_int_int_int(int x, int y) {
 
 int test_add_overflow_xint31_xint31_xint31(_BitInt(31) x, _BitInt(31) y) {
   // CHECK-LABEL: define {{(dso_local )?}}i32 @test_add_overflow_xint31_xint31_xint31({{.+}})
+  // CHECK: %loadedv = trunc i32 %{{.*}} to i31
   // CHECK-NOT: ext
   // CHECK: [[S:%.+]] = call { i31, i1 } @llvm.sadd.with.overflow.i31(i31 %{{.+}}, i31 %{{.+}})
   // CHECK-DAG: [[C:%.+]] = extractvalue { i31, i1 } [[S]], 1
   // CHECK-DAG: [[Q:%.+]] = extractvalue { i31, i1 } [[S]], 0
-  // CHECK: store i31 [[Q]], ptr
+  // CHECK: [[STOREDV:%.+]] = sext i31 [[Q]] to i32
+  // CHECK: store i32 [[STOREDV]], ptr
   // CHECK: br i1 [[C]]
   _BitInt(31) r;
   if (__builtin_add_overflow(x, y, &r))
@@ -84,11 +86,13 @@ int test_sub_overflow_int_int_int(int x, int y) {
 
 int test_sub_overflow_xint31_xint31_xint31(_BitInt(31) x, _BitInt(31) y) {
   // CHECK-LABEL: define {{(dso_local )?}}i32 @test_sub_overflow_xint31_xint31_xint31({{.+}})
+  // CHECK: %loadedv = trunc i32 %{{.*}} to i31
   // CHECK-NOT: ext
   // CHECK: [[S:%.+]] = call { i31, i1 } @llvm.ssub.with.overflow.i31(i31 %{{.+}}, i31 %{{.+}})
   // CHECK-DAG: [[C:%.+]] = extractvalue { i31, i1 } [[S]], 1
   // CHECK-DAG: [[Q:%.+]] = extractvalue { i31, i1 } [[S]], 0
-  // CHECK: store i31 [[Q]], ptr
+  // CHECK: [[STOREDV:%.+]] = sext i31 [[Q]] to i32
+  // CHECK: store i32 [[STOREDV]], ptr
   // CHECK: br i1 [[C]]
   _BitInt(31) r;
   if (__builtin_sub_overflow(x, y, &r))
@@ -171,11 +175,13 @@ int test_mul_overflow_int_int_int(int x, int y) {
 
 int test_mul_overflow_xint31_xint31_xint31(_BitInt(31) x, _BitInt(31) y) {
   // CHECK-LABEL: define {{(dso_local )?}}i32 @test_mul_overflow_xint31_xint31_xint31({{.+}})
+  // CHECK: %loadedv = trunc i32 %{{.*}} to i31
   // CHECK-NOT: ext
   // CHECK: [[S:%.+]] = call { i31, i1 } @llvm.smul.with.overflow.i31(i31 %{{.+}}, i31 %{{.+}})
   // CHECK-DAG: [[C:%.+]] = extractvalue { i31, i1 } [[S]], 1
   // CHECK-DAG: [[Q:%.+]] = extractvalue { i31, i1 } [[S]], 0
-  // CHECK: store i31 [[Q]], ptr
+  // CHECK: [[STOREDV:%.+]] = sext i31 [[Q]] to i32
+  // CHECK: store i32 [[STOREDV]], ptr
   // CHECK: br i1 [[C]]
   _BitInt(31) r;
   if (__builtin_mul_overflow(x, y, &r))
@@ -185,11 +191,13 @@ int test_mul_overflow_xint31_xint31_xint31(_BitInt(31) x, _BitInt(31) y) {
 
 int test_mul_overflow_xint127_xint127_xint127(_BitInt(127) x, _BitInt(127) y) {
   // CHECK-LABEL: define {{(dso_local )?}}i32 @test_mul_overflow_xint127_xint127_xint127({{.+}})
+  // CHECK: %loadedv = trunc i128 %{{.*}} to i127
   // CHECK-NOT: ext
   // CHECK: [[S:%.+]] = call { i127, i1 } @llvm.smul.with.overflow.i127(i127 %{{.+}}, i127 %{{.+}})
   // CHECK-DAG: [[C:%.+]] = extractvalue { i127, i1 } [[S]], 1
   // CHECK-DAG: [[Q:%.+]] = extractvalue { i127, i1 } [[S]], 0
-  // CHECK: store i127 [[Q]], ptr
+  // CHECK: [[STOREDV:%.+]] = sext i127 [[Q]] to i128
+  // CHECK: store i128 [[STOREDV]], ptr
   // CHECK: br i1 [[C]]
   _BitInt(127) r;
   if (__builtin_mul_overflow(x, y, &r))

@@ -9,6 +9,6 @@
 #ifndef LLVM_LIBC_TYPES_FSBLKCNT_T_H
 #define LLVM_LIBC_TYPES_FSBLKCNT_T_H
 
-typedef __SIZE_TYPE__ fsblkcnt_t;
+typedef __UINT64_TYPE__ fsblkcnt_t;
 
 #endif // LLVM_LIBC_TYPES_FSBLKCNT_T_H

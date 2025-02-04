@@ -59,7 +59,7 @@ struct MapInfoOpConversion
     : public OpenMPFIROpConversion<mlir::omp::MapInfoOp> {
   using OpenMPFIROpConversion::OpenMPFIROpConversion;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(mlir::omp::MapInfoOp curOp, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     const mlir::TypeConverter *converter = getTypeConverter();
@@ -90,9 +90,45 @@ struct MapInfoOpConversion
     return mlir::success();
   }
 };
+
+// FIR op specific conversion for PrivateClauseOp that overwrites the default
+// OpenMP Dialect lowering, this allows FIR-aware lowering of types, required
+// for boxes because the OpenMP dialect conversion doesn't know anything about
+// FIR types.
+struct PrivateClauseOpConversion
+    : public OpenMPFIROpConversion<mlir::omp::PrivateClauseOp> {
+  using OpenMPFIROpConversion::OpenMPFIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(mlir::omp::PrivateClauseOp curOp, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    const fir::LLVMTypeConverter &converter = lowerTy();
+    mlir::Type convertedAllocType;
+    if (auto box = mlir::dyn_cast<fir::BaseBoxType>(curOp.getType())) {
+      // In LLVM codegen fir.box<> == fir.ref<fir.box<>> == llvm.ptr
+      // Here we really do want the actual structure
+      if (box.isAssumedRank())
+        TODO(curOp->getLoc(), "Privatize an assumed rank array");
+      unsigned rank = 0;
+      if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(
+              fir::unwrapRefType(box.getEleTy())))
+        rank = seqTy.getShape().size();
+      convertedAllocType = converter.convertBoxTypeAsStruct(box, rank);
+    } else {
+      convertedAllocType = converter.convertType(adaptor.getType());
+    }
+    if (!convertedAllocType)
+      return mlir::failure();
+    rewriter.startOpModification(curOp);
+    curOp.setType(convertedAllocType);
+    rewriter.finalizeOpModification(curOp);
+    return mlir::success();
+  }
+};
 } // namespace
 
 void fir::populateOpenMPFIRToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns) {
+    const LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns) {
   patterns.add<MapInfoOpConversion>(converter);
+  patterns.add<PrivateClauseOpConversion>(converter);
 }

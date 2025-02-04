@@ -95,7 +95,7 @@ define i19 @test10(i19 %X) {
 
 define <2 x i19> @lshr_lshr_splat_vec(<2 x i19> %X) {
 ; CHECK-LABEL: @lshr_lshr_splat_vec(
-; CHECK-NEXT:    [[SH1:%.*]] = lshr <2 x i19> [[X:%.*]], <i19 5, i19 5>
+; CHECK-NEXT:    [[SH1:%.*]] = lshr <2 x i19> [[X:%.*]], splat (i19 5)
 ; CHECK-NEXT:    ret <2 x i19> [[SH1]]
 ;
   %sh1 = lshr <2 x i19> %X, <i19 3, i19 3>
@@ -118,8 +118,8 @@ define i9 @multiuse_lshr_lshr(i9 %x) {
 
 define <2 x i9> @multiuse_lshr_lshr_splat(<2 x i9> %x) {
 ; CHECK-LABEL: @multiuse_lshr_lshr_splat(
-; CHECK-NEXT:    [[SH1:%.*]] = lshr <2 x i9> [[X:%.*]], <i9 2, i9 2>
-; CHECK-NEXT:    [[SH2:%.*]] = lshr <2 x i9> [[X]], <i9 5, i9 5>
+; CHECK-NEXT:    [[SH1:%.*]] = lshr <2 x i9> [[X:%.*]], splat (i9 2)
+; CHECK-NEXT:    [[SH2:%.*]] = lshr <2 x i9> [[X]], splat (i9 5)
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i9> [[SH1]], [[SH2]]
 ; CHECK-NEXT:    ret <2 x i9> [[MUL]]
 ;
@@ -134,7 +134,7 @@ define <2 x i9> @multiuse_lshr_lshr_splat(<2 x i9> %x) {
 
 define <2 x i19> @shl_shl_splat_vec(<2 x i19> %X) {
 ; CHECK-LABEL: @shl_shl_splat_vec(
-; CHECK-NEXT:    [[SH1:%.*]] = shl <2 x i19> [[X:%.*]], <i19 5, i19 5>
+; CHECK-NEXT:    [[SH1:%.*]] = shl <2 x i19> [[X:%.*]], splat (i19 5)
 ; CHECK-NEXT:    ret <2 x i19> [[SH1]]
 ;
   %sh1 = shl <2 x i19> %X, <i19 3, i19 3>
@@ -157,8 +157,8 @@ define i42 @multiuse_shl_shl(i42 %x) {
 
 define <2 x i42> @multiuse_shl_shl_splat(<2 x i42> %x) {
 ; CHECK-LABEL: @multiuse_shl_shl_splat(
-; CHECK-NEXT:    [[SH1:%.*]] = shl <2 x i42> [[X:%.*]], <i42 8, i42 8>
-; CHECK-NEXT:    [[SH2:%.*]] = shl <2 x i42> [[X]], <i42 17, i42 17>
+; CHECK-NEXT:    [[SH1:%.*]] = shl <2 x i42> [[X:%.*]], splat (i42 8)
+; CHECK-NEXT:    [[SH2:%.*]] = shl <2 x i42> [[X]], splat (i42 17)
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i42> [[SH1]], [[SH2]]
 ; CHECK-NEXT:    ret <2 x i42> [[MUL]]
 ;
@@ -173,7 +173,7 @@ define <2 x i42> @multiuse_shl_shl_splat(<2 x i42> %x) {
 
 define <2 x i19> @eq_shl_lshr_splat_vec(<2 x i19> %X) {
 ; CHECK-LABEL: @eq_shl_lshr_splat_vec(
-; CHECK-NEXT:    [[SH1:%.*]] = and <2 x i19> [[X:%.*]], <i19 65535, i19 65535>
+; CHECK-NEXT:    [[SH1:%.*]] = and <2 x i19> [[X:%.*]], splat (i19 65535)
 ; CHECK-NEXT:    ret <2 x i19> [[SH1]]
 ;
   %sh1 = shl <2 x i19> %X, <i19 3, i19 3>
@@ -186,7 +186,7 @@ define <2 x i19> @eq_shl_lshr_splat_vec(<2 x i19> %X) {
 
 define <2 x i19> @eq_lshr_shl_splat_vec(<2 x i19> %X) {
 ; CHECK-LABEL: @eq_lshr_shl_splat_vec(
-; CHECK-NEXT:    [[SH1:%.*]] = and <2 x i19> [[X:%.*]], <i19 -8, i19 -8>
+; CHECK-NEXT:    [[SH1:%.*]] = and <2 x i19> [[X:%.*]], splat (i19 -8)
 ; CHECK-NEXT:    ret <2 x i19> [[SH1]]
 ;
   %sh1 = lshr <2 x i19> %X, <i19 3, i19 3>
@@ -199,8 +199,8 @@ define <2 x i19> @eq_lshr_shl_splat_vec(<2 x i19> %X) {
 
 define <2 x i7> @lshr_shl_splat_vec(<2 x i7> %X) {
 ; CHECK-LABEL: @lshr_shl_splat_vec(
-; CHECK-NEXT:    [[DOTNEG:%.*]] = mul <2 x i7> [[X:%.*]], <i7 60, i7 60>
-; CHECK-NEXT:    [[SH2:%.*]] = and <2 x i7> [[DOTNEG]], <i7 60, i7 60>
+; CHECK-NEXT:    [[DOTNEG:%.*]] = mul <2 x i7> [[X:%.*]], splat (i7 60)
+; CHECK-NEXT:    [[SH2:%.*]] = and <2 x i7> [[DOTNEG]], splat (i7 60)
 ; CHECK-NEXT:    ret <2 x i7> [[SH2]]
 ;
   %mul = mul <2 x i7> %X, <i7 -8, i7 -8>
@@ -214,8 +214,8 @@ define <2 x i7> @lshr_shl_splat_vec(<2 x i7> %X) {
 
 define <2 x i7> @shl_lshr_splat_vec(<2 x i7> %X) {
 ; CHECK-LABEL: @shl_lshr_splat_vec(
-; CHECK-NEXT:    [[DIV:%.*]] = udiv <2 x i7> [[X:%.*]], <i7 9, i7 9>
-; CHECK-NEXT:    [[SH1:%.*]] = shl nuw nsw <2 x i7> [[DIV]], <i7 1, i7 1>
+; CHECK-NEXT:    [[DIV:%.*]] = udiv <2 x i7> [[X:%.*]], splat (i7 9)
+; CHECK-NEXT:    [[SH1:%.*]] = shl nuw nsw <2 x i7> [[DIV]], splat (i7 1)
 ; CHECK-NEXT:    ret <2 x i7> [[SH1]]
 ;
   %div = udiv <2 x i7> %X, <i7 9, i7 9>
@@ -240,8 +240,8 @@ define i23 @test11(i23 %x) {
 
 define i47 @test12(i47 %X) {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    [[SH2:%.*]] = and i47 [[X:%.*]], -256
-; CHECK-NEXT:    ret i47 [[SH2]]
+; CHECK-NEXT:    [[SH1:%.*]] = and i47 [[X:%.*]], -256
+; CHECK-NEXT:    ret i47 [[SH1]]
 ;
   %sh1 = ashr i47 %X, 8
   %sh2 = shl i47 %sh1, 8
@@ -250,8 +250,8 @@ define i47 @test12(i47 %X) {
 
 define <2 x i47> @test12_splat_vec(<2 x i47> %X) {
 ; CHECK-LABEL: @test12_splat_vec(
-; CHECK-NEXT:    [[SH2:%.*]] = and <2 x i47> [[X:%.*]], <i47 -256, i47 -256>
-; CHECK-NEXT:    ret <2 x i47> [[SH2]]
+; CHECK-NEXT:    [[SH1:%.*]] = and <2 x i47> [[X:%.*]], splat (i47 -256)
+; CHECK-NEXT:    ret <2 x i47> [[SH1]]
 ;
   %sh1 = ashr <2 x i47> %X, <i47 8, i47 8>
   %sh2 = shl <2 x i47> %sh1, <i47 8, i47 8>
@@ -328,7 +328,7 @@ define i1 @test16(i84 %X) {
 
 define <2 x i1> @test16vec(<2 x i84> %X) {
 ; CHECK-LABEL: @test16vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i84> [[X:%.*]], <i84 16, i84 16>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i84> [[X:%.*]], splat (i84 16)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i84> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
@@ -375,8 +375,8 @@ define i1 @test17(i106 %A) {
 
 define <2 x i1> @test17vec(<2 x i106> %A) {
 ; CHECK-LABEL: @test17vec(
-; CHECK-NEXT:    [[B_MASK:%.*]] = and <2 x i106> [[A:%.*]], <i106 -8, i106 -8>
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i106> [[B_MASK]], <i106 9872, i106 9872>
+; CHECK-NEXT:    [[B_MASK:%.*]] = and <2 x i106> [[A:%.*]], splat (i106 -8)
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i106> [[B_MASK]], splat (i106 9872)
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %B = lshr <2 x i106> %A, <i106 3, i106 3>
@@ -405,7 +405,7 @@ define i1 @test19(i37 %A) {
 
 define <2 x i1> @test19vec(<2 x i37> %A) {
 ; CHECK-LABEL: @test19vec(
-; CHECK-NEXT:    [[C:%.*]] = icmp ult <2 x i37> [[A:%.*]], <i37 4, i37 4>
+; CHECK-NEXT:    [[C:%.*]] = icmp ult <2 x i37> [[A:%.*]], splat (i37 4)
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %B = ashr <2 x i37> %A, <i37 2, i37 2>
@@ -425,7 +425,7 @@ define i1 @test19a(i39 %A) {
 
 define <2 x i1> @test19a_vec(<2 x i39> %A) {
 ; CHECK-LABEL: @test19a_vec(
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt <2 x i39> [[A:%.*]], <i39 -5, i39 -5>
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt <2 x i39> [[A:%.*]], splat (i39 -5)
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %B = ashr <2 x i39> %A, <i39 2, i39 2>
@@ -494,8 +494,8 @@ define i44 @shl_lshr_eq_amt_multi_use(i44 %A) {
 
 define <2 x i44> @shl_lshr_eq_amt_multi_use_splat_vec(<2 x i44> %A) {
 ; CHECK-LABEL: @shl_lshr_eq_amt_multi_use_splat_vec(
-; CHECK-NEXT:    [[B:%.*]] = shl <2 x i44> [[A:%.*]], <i44 33, i44 33>
-; CHECK-NEXT:    [[C:%.*]] = and <2 x i44> [[A]], <i44 2047, i44 2047>
+; CHECK-NEXT:    [[B:%.*]] = shl <2 x i44> [[A:%.*]], splat (i44 33)
+; CHECK-NEXT:    [[C:%.*]] = and <2 x i44> [[A]], splat (i44 2047)
 ; CHECK-NEXT:    [[D:%.*]] = or disjoint <2 x i44> [[B]], [[C]]
 ; CHECK-NEXT:    ret <2 x i44> [[D]]
 ;
@@ -524,8 +524,8 @@ define i43 @lshr_shl_eq_amt_multi_use(i43 %A) {
 
 define <2 x i43> @lshr_shl_eq_amt_multi_use_splat_vec(<2 x i43> %A) {
 ; CHECK-LABEL: @lshr_shl_eq_amt_multi_use_splat_vec(
-; CHECK-NEXT:    [[B:%.*]] = lshr <2 x i43> [[A:%.*]], <i43 23, i43 23>
-; CHECK-NEXT:    [[C:%.*]] = and <2 x i43> [[A]], <i43 -8388608, i43 -8388608>
+; CHECK-NEXT:    [[B:%.*]] = lshr <2 x i43> [[A:%.*]], splat (i43 23)
+; CHECK-NEXT:    [[C:%.*]] = and <2 x i43> [[A]], splat (i43 -8388608)
 ; CHECK-NEXT:    [[D:%.*]] = mul <2 x i43> [[B]], [[C]]
 ; CHECK-NEXT:    ret <2 x i43> [[D]]
 ;
@@ -538,7 +538,7 @@ define <2 x i43> @lshr_shl_eq_amt_multi_use_splat_vec(<2 x i43> %A) {
 define i37 @test25(i37 %AA, i37 %BB) {
 ; CHECK-LABEL: @test25(
 ; CHECK-NEXT:    [[D:%.*]] = and i37 [[AA:%.*]], -131072
-; CHECK-NEXT:    [[C2:%.*]] = add i37 [[D]], [[BB:%.*]]
+; CHECK-NEXT:    [[C2:%.*]] = add i37 [[BB:%.*]], [[D]]
 ; CHECK-NEXT:    [[F:%.*]] = and i37 [[C2]], -131072
 ; CHECK-NEXT:    ret i37 [[F]]
 ;
@@ -564,14 +564,7 @@ define i40 @test26(i40 %A) {
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=9880
 define i177 @ossfuzz_9880(i177 %X) {
 ; CHECK-LABEL: @ossfuzz_9880(
-; CHECK-NEXT:    [[A:%.*]] = alloca i177, align 8
-; CHECK-NEXT:    [[L1:%.*]] = load i177, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i177 [[L1]], -1
-; CHECK-NEXT:    [[B5_NEG:%.*]] = sext i1 [[TMP1]] to i177
-; CHECK-NEXT:    [[B14:%.*]] = add i177 [[L1]], [[B5_NEG]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i177 [[B14]], -1
-; CHECK-NEXT:    [[B1:%.*]] = zext i1 [[TMP2]] to i177
-; CHECK-NEXT:    ret i177 [[B1]]
+; CHECK-NEXT:    ret i177 0
 ;
   %A = alloca i177
   %L1 = load i177, ptr %A

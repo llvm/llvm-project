@@ -30,8 +30,10 @@ module m
     contiguous r2
     !PORTABILITY: CONTIGUOUS entity 'e' should be an array pointer, assumed-shape, or assumed-rank
     entry e() result(r2)
+    r2 = 0
   end
   function fp()
     real, pointer, contiguous :: fp(:) ! ok
+    nullify(fp)
   end
 end

@@ -109,9 +109,8 @@ static bool hasAArch64ExclusiveMemop(
     BinaryBasicBlock *BB = BBQueue.front().first;
     bool IsLoad = BBQueue.front().second;
     BBQueue.pop();
-    if (Visited.find(BB) != Visited.end())
+    if (!Visited.insert(BB).second)
       continue;
-    Visited.insert(BB);
 
     for (const MCInst &Inst : *BB) {
       // Two loads one after another - skip whole function
@@ -126,8 +125,7 @@ static bool hasAArch64ExclusiveMemop(
       if (BC.MIB->isAArch64ExclusiveLoad(Inst))
         IsLoad = true;
 
-      if (IsLoad && BBToSkip.find(BB) == BBToSkip.end()) {
-        BBToSkip.insert(BB);
+      if (IsLoad && BBToSkip.insert(BB).second) {
         if (opts::Verbosity >= 2) {
           outs() << "BOLT-INSTRUMENTER: skip BB " << BB->getName()
                  << " due to exclusive instruction in function "
@@ -479,8 +477,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
         HasJumpTable = true;
       else if (BC.MIB->isUnconditionalBranch(Inst))
         HasUnconditionalBranch = true;
-      else if ((!BC.MIB->isCall(Inst) && !BC.MIB->isConditionalBranch(Inst)) ||
-               BC.MIB->isUnsupportedBranch(Inst))
+      else if (!(BC.MIB->isCall(Inst) || BC.MIB->isConditionalBranch(Inst)))
         continue;
 
       const uint32_t FromOffset = *BC.MIB->getOffset(Inst);
@@ -755,7 +752,7 @@ void Instrumentation::createAuxiliaryFunctions(BinaryContext &BC) {
       // with unknown symbol in runtime library. E.g. for static PIE
       // executable
       createSimpleFunction("__bolt_fini_trampoline",
-                           BC.MIB->createDummyReturnFunction(BC.Ctx.get()));
+                           BC.MIB->createReturnInstructionList(BC.Ctx.get()));
     }
   }
 }

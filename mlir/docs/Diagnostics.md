@@ -77,7 +77,7 @@ InFlightDiagnostic Operation::emitOpError();
 ## Diagnostic
 
 A `Diagnostic` in MLIR contains all of the necessary information for reporting a
-message to the user. A `Diagnostic` essentially boils down to three main
+message to the user. A `Diagnostic` essentially boils down to four main
 components:
 
 *   [Source Location](#source-locations)
@@ -85,6 +85,11 @@ components:
     -   Error, Note, Remark, Warning
 *   Diagnostic Arguments
     -   The diagnostic arguments are used when constructing the output message.
+*   Metadata
+    -   Some additional information attached that can be used to identify 
+        this diagnostic other than source location and severity level 
+        (e.g. for diagnostic handlers to do some filtering). 
+        Metadata is not part of the output message.
 
 ### Appending arguments
 
@@ -142,6 +147,11 @@ op->emitError("...").attachNote(noteLoc) << "...";
 // Emit a note that inherits the parent location.
 op->emitError("...").attachNote() << "...";
 ```
+
+### Managing Metadata
+Metadata is a mutable vector of DiagnosticArguments. 
+It can be accessed and modified as a vector. 
+
 
 ## InFlight Diagnostic
 

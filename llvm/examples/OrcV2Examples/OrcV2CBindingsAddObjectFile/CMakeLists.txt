@@ -13,5 +13,3 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_example(OrcV2CBindingsAddObjectFile
   OrcV2CBindingsAddObjectFile.c
   )
-
-export_executable_symbols(OrcV2CBindingsAddObjectFile)

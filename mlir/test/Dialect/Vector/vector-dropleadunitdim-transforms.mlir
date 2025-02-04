@@ -241,7 +241,7 @@ func.func @cast_away_contraction_leading_one_dims_nonleadingunitdim_rank4_acctra
 // -----
 
 // CHECK-LABEL:   func.func @cast_away_contraction_does_not_transpose_leading_unit_dims
-// CHECK-NOT   vector.transpose
+// CHECK-NOT:  vector.transpose
 // CHECK:           vector.contract
 func.func @cast_away_contraction_does_not_transpose_leading_unit_dims(%lhs: vector<1x1x8xi32>,
                           %rhs: vector<1x8x8xi32>,

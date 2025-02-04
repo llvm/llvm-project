@@ -1,9 +1,11 @@
 // RUN: %clang_cc1 -triple x86_64-windows -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple x86_64-linux -fsyntax-only -verify -emit-llvm-only -DCHECK_ALIASES %s
-// RUN: %clang_cc1 -triple x86_64-linux -fsyntax-only -verify -emit-llvm-only %s
-// RUN: %clang_cc1 -triple x86_64-apple-macosx -fsyntax-only -verify -emit-llvm-only %s
+// RUN: %clang_cc1 -triple x86_64-linux -verify -emit-llvm-only -DCHECK_ALIASES %s
+// RUN: %clang_cc1 -triple x86_64-linux -verify -emit-llvm-only %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx -verify -emit-llvm-only %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -verify -emit-llvm-only %s
+// RUN: %clang_cc1 -triple aarch64-pc-windows-msvcu -verify -emit-llvm-only %s
 
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(__aarch64__)
 void foo(void) {}
 void bar(void) __attribute__((ifunc("foo")));
 // expected-warning@-1 {{unknown attribute 'ifunc' ignored}}

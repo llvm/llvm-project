@@ -155,11 +155,6 @@ def parse_args():
         default=[],
     )
     execution_group.add_argument(
-        "--time-tests",
-        help="Track elapsed wall time for each test",
-        action="store_true",
-    )
-    execution_group.add_argument(
         "--no-execute",
         dest="noExecute",
         help="Don't execute any tests (assume PASS)",
@@ -171,14 +166,31 @@ def parse_args():
         help="Write XUnit-compatible XML test reports to the specified file",
     )
     execution_group.add_argument(
+        "--report-failures-only",
+        help="Only include unresolved, timed out, failed"
+        " and unexpectedly passed tests in the report",
+        action="store_true",
+    )
+    execution_group.add_argument(
         "--resultdb-output",
         type=lit.reports.ResultDBReport,
-        help="Write LuCI ResuldDB compatible JSON to the specified file",
+        help="Write LuCI ResultDB compatible JSON to the specified file",
     )
     execution_group.add_argument(
         "--time-trace-output",
         type=lit.reports.TimeTraceReport,
         help="Write Chrome tracing compatible JSON to the specified file",
+    )
+    # This option only exists for the benefit of LLVM's Buildkite CI pipelines.
+    # As soon as it is not needed, it should be removed. Its help text would be:
+    # When enabled, lit will add a unique element to the output file name,
+    # before the extension. For example "results.xml" will become
+    # "results.<something>.xml". The "<something>" is not ordered in any
+    # way and is chosen so that existing files are not overwritten. [Default: Off]
+    execution_group.add_argument(
+        "--use-unique-output-file-name",
+        help=argparse.SUPPRESS,
+        action="store_true",
     )
     execution_group.add_argument(
         "--timeout",
@@ -208,6 +220,17 @@ def parse_args():
         dest="ignoreFail",
         action="store_true",
         help="Exit with status zero even if some tests fail",
+    )
+    execution_test_time_group = execution_group.add_mutually_exclusive_group()
+    execution_test_time_group.add_argument(
+        "--skip-test-time-recording",
+        help="Do not track elapsed wall time for each test",
+        action="store_true",
+    )
+    execution_test_time_group.add_argument(
+        "--time-tests",
+        help="Track elapsed wall time for each test printed in a histogram",
+        action="store_true",
     )
 
     selection_group = parser.add_argument_group("Test Selection")
@@ -326,15 +349,20 @@ def parse_args():
     else:
         opts.shard = None
 
-    opts.reports = filter(
-        None,
-        [
-            opts.output,
-            opts.xunit_xml_output,
-            opts.resultdb_output,
-            opts.time_trace_output,
-        ],
+    opts.reports = list(
+        filter(
+            None,
+            [
+                opts.output,
+                opts.xunit_xml_output,
+                opts.resultdb_output,
+                opts.time_trace_output,
+            ],
+        )
     )
+
+    for report in opts.reports:
+        report.use_unique_output_file_name = opts.use_unique_output_file_name
 
     return opts
 

@@ -57,7 +57,7 @@ class TestAArch64AdrpAdd(TestBase):
                 found_hi_string = True
             if "foo" in i.GetComment(target):
                 found_foo = True
-        if found_hi_string == False or found_foo == False:
+        if not found_hi_string or not found_foo:
             print(
                 'Did not find "HI" string or "foo" in disassembly symbolication in %s'
                 % binaryname

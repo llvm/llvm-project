@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fno-rtti -emit-llvm-only -triple i686-pc-win32 -fdump-record-layouts -fsyntax-only -mms-bitfields -verify %s 2>&1
+// RUN: %clang_cc1 -fno-rtti -triple i686-pc-win32 -fdump-record-layouts -fsyntax-only -mms-bitfields -verify %s 2>&1
 
 struct A {
   char a : 9; // expected-error{{width of bit-field 'a' (9 bits) exceeds the size of its type (8 bits)}}

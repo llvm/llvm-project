@@ -408,7 +408,7 @@ define dso_local void @PR42880(i32 %t0) {
   %x = ptrtoint ptr %add.ptr.i94 to i32
   %sub2 = sub i32 %x, 0
   %div = sdiv exact i32 %sub2, 24
-  br i1 undef, label %if, label %then
+  br i1 poison, label %if, label %then
 
 then:
   %t1 = xor i32 %div, -1
@@ -444,12 +444,10 @@ define i64 @ashr_add_neg_shl_i32(i64 %r) nounwind {
 define i64 @ashr_add_neg_shl_i8(i64 %r) nounwind {
 ; X86-LABEL: ashr_add_neg_shl_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shll $24, %eax
-; X86-NEXT:    movl $33554432, %edx # imm = 0x2000000
-; X86-NEXT:    subl %eax, %edx
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    sarl $24, %eax
+; X86-NEXT:    movb $2, %al
+; X86-NEXT:    subb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movsbl %al, %eax
+; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    sarl $31, %edx
 ; X86-NEXT:    retl
 ;

@@ -50,22 +50,16 @@
 #ifdef HAVE_BACKTRACE
 #include BACKTRACE_HEADER // For backtrace().
 #endif
-#if HAVE_SIGNAL_H
 #include <signal.h>
-#endif
-#if HAVE_SYS_STAT_H
 #include <sys/stat.h>
-#endif
-#if HAVE_DLFCN_H
 #include <dlfcn.h>
-#endif
 #if HAVE_MACH_MACH_H
 #include <mach/mach.h>
 #endif
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
 #endif
-#if HAVE_LINK_H
+#if __has_include(<link.h>)
 #include <link.h>
 #endif
 #ifdef HAVE__UNWIND_BACKTRACE
@@ -78,6 +72,10 @@
 #else
 #undef HAVE__UNWIND_BACKTRACE
 #endif
+#endif
+#if ENABLE_BACKTRACES && defined(__MVS__)
+#include "llvm/Support/ConvertEBCDIC.h"
+#include <__le_cwi.h>
 #endif
 
 using namespace llvm;
@@ -151,6 +149,24 @@ public:
     }
   }
 
+  static void removeFile(char *path) {
+    // Get the status so we can determine if it's a file or directory. If we
+    // can't stat the file, ignore it.
+    struct stat buf;
+    if (stat(path, &buf) != 0)
+      return;
+
+    // If this is not a regular file, ignore it. We want to prevent removal
+    // of special files like /dev/null, even if the compiler is being run
+    // with the super-user permissions.
+    if (!S_ISREG(buf.st_mode))
+      return;
+
+    // Otherwise, remove the file. We ignore any errors here as there is
+    // nothing else we can do.
+    unlink(path);
+  }
+
   // Signal-safe.
   static void removeAllFiles(std::atomic<FileToRemoveList *> &Head) {
     // If cleanup were to occur while we're removing files we'd have a bad time.
@@ -164,21 +180,7 @@ public:
       // If erasing was occuring while we're trying to remove files we'd look
       // at free'd data. Take away the path and put it back when done.
       if (char *path = currentFile->Filename.exchange(nullptr)) {
-        // Get the status so we can determine if it's a file or directory. If we
-        // can't stat the file, ignore it.
-        struct stat buf;
-        if (stat(path, &buf) != 0)
-          continue;
-
-        // If this is not a regular file, ignore it. We want to prevent removal
-        // of special files like /dev/null, even if the compiler is being run
-        // with the super-user permissions.
-        if (!S_ISREG(buf.st_mode))
-          continue;
-
-        // Otherwise, remove the file. We ignore any errors here as there is
-        // nothing else we can do.
-        unlink(path);
+        removeFile(path);
 
         // We're done removing the file, erasing can safely proceed.
         currentFile->Filename.exchange(path);
@@ -289,7 +291,7 @@ static void CreateSigAltStack() {}
 static void RegisterHandlers() { // Not signal-safe.
   // The mutex prevents other threads from registering handlers while we're
   // doing it. We also have to protect the handlers and their count because
-  // a signal handler could fire while we're registeting handlers.
+  // a signal handler could fire while we're registering handlers.
   static ManagedStatic<sys::SmartMutex<true>> SignalHandlerRegistrationMutex;
   sys::SmartScopedLock<true> Guard(*SignalHandlerRegistrationMutex);
 
@@ -464,9 +466,10 @@ void llvm::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr,
   RegisterHandlers();
 }
 
-#if ENABLE_BACKTRACES && defined(HAVE_BACKTRACE) && HAVE_LINK_H &&             \
+#if ENABLE_BACKTRACES && defined(HAVE_BACKTRACE) &&                            \
     (defined(__linux__) || defined(__FreeBSD__) ||                             \
-     defined(__FreeBSD_kernel__) || defined(__NetBSD__))
+     defined(__FreeBSD_kernel__) || defined(__NetBSD__) ||                     \
+     defined(__OpenBSD__) || defined(__DragonFly__))
 struct DlIteratePhdrData {
   void **StackTrace;
   int depth;
@@ -708,6 +711,76 @@ static int unwindBacktrace(void **StackTrace, int MaxEntries) {
 }
 #endif
 
+#if ENABLE_BACKTRACES && defined(__MVS__)
+static void zosbacktrace(raw_ostream &OS) {
+  // A function name in the PPA1 can have length 16k.
+  constexpr size_t MAX_ENTRY_NAME = UINT16_MAX;
+  // Limit all other strings to 8 byte.
+  constexpr size_t MAX_OTHER = 8;
+  int32_t dsa_format = -1;                  // Input/Output
+  void *caaptr = _gtca();                   // Input
+  int32_t member_id;                        // Output
+  char compile_unit_name[MAX_OTHER];        // Output
+  void *compile_unit_address;               // Output
+  void *call_instruction_address = nullptr; // Input/Output
+  char entry_name[MAX_ENTRY_NAME];          // Output
+  void *entry_address;                      // Output
+  void *callers_instruction_address;        // Output
+  void *callers_dsaptr;                     // Output
+  int32_t callers_dsa_format;               // Output
+  char statement_id[MAX_OTHER];             // Output
+  void *cibptr;                             // Output
+  int32_t main_program;                     // Output
+  _FEEDBACK fc;                             // Output
+
+  // The DSA pointer is the value of the stack pointer r4.
+  // __builtin_frame_address() returns a pointer to the stack frame, so the
+  // stack bias has to be considered to get the expected DSA value.
+  void *dsaptr = static_cast<char *>(__builtin_frame_address(0)) - 2048;
+  int count = 0;
+  OS << " DSA  Adr                EP                 +EP         DSA           "
+        "     Entry\n";
+  while (1) {
+    // After the call, these variables contain the length of the string.
+    int32_t compile_unit_name_length = sizeof(compile_unit_name);
+    int32_t entry_name_length = sizeof(entry_name);
+    int32_t statement_id_length = sizeof(statement_id);
+    // See
+    // https://www.ibm.com/docs/en/zos/3.1.0?topic=cwicsa6a-celqtbck-also-known-as-celqtbck-64-bit-traceback-service
+    // for documentation of the parameters.
+    __CELQTBCK(&dsaptr, &dsa_format, &caaptr, &member_id, &compile_unit_name[0],
+               &compile_unit_name_length, &compile_unit_address,
+               &call_instruction_address, &entry_name[0], &entry_name_length,
+               &entry_address, &callers_instruction_address, &callers_dsaptr,
+               &callers_dsa_format, &statement_id[0], &statement_id_length,
+               &cibptr, &main_program, &fc);
+    if (fc.tok_sev) {
+      OS << format("error: CELQTBCK returned severity %d message %d\n",
+                   fc.tok_sev, fc.tok_msgno);
+      break;
+    }
+
+    if (count) { // Omit first entry.
+      uintptr_t diff = reinterpret_cast<uintptr_t>(call_instruction_address) -
+                       reinterpret_cast<uintptr_t>(entry_address);
+      OS << format(" %3d. 0x%016lX", count, call_instruction_address);
+      OS << format(" 0x%016lX +0x%08lX 0x%016lX", entry_address, diff, dsaptr);
+      SmallString<256> Str;
+      ConverterEBCDIC::convertToUTF8(StringRef(entry_name, entry_name_length),
+                                     Str);
+      OS << ' ' << Str << '\n';
+    }
+    ++count;
+    if (callers_dsaptr) {
+      dsaptr = callers_dsaptr;
+      dsa_format = callers_dsa_format;
+      call_instruction_address = callers_instruction_address;
+    } else
+      break;
+  }
+}
+#endif
+
 // In the case of a program crash or fault, print out a stack trace so that the
 // user has an indication of why and where we died.
 //
@@ -715,6 +788,9 @@ static int unwindBacktrace(void **StackTrace, int MaxEntries) {
 // doesn't demangle symbols.
 void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
 #if ENABLE_BACKTRACES
+#ifdef __MVS__
+  zosbacktrace(OS);
+#else
   static void *StackTrace[256];
   int depth = 0;
 #if defined(HAVE_BACKTRACE)
@@ -741,7 +817,7 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
   OS << "Stack dump without symbol names (ensure you have llvm-symbolizer in "
         "your PATH or set the environment var `LLVM_SYMBOLIZER_PATH` to point "
         "to it):\n";
-#if HAVE_DLFCN_H && HAVE_DLADDR
+#if HAVE_DLOPEN && !defined(_AIX)
   int width = 0;
   for (int i = 0; i < depth; ++i) {
     Dl_info dlinfo;
@@ -789,6 +865,7 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
   }
 #elif defined(HAVE_BACKTRACE)
   backtrace_symbols_fd(StackTrace, Depth, STDERR_FILENO);
+#endif
 #endif
 #endif
 }

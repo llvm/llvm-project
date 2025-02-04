@@ -27,9 +27,9 @@ int main() {
 // stored in the return register.
 
 // CHECK: %[[RESULT:.*]] = alloca ptr, align 8
-// CHECK: call void @llvm.dbg.declare(metadata ptr %[[RESULT]],
-// CHECK-SAME: metadata !DIExpression(DW_OP_deref)
+// CHECK: #dbg_declare(ptr %[[RESULT]],
+// CHECK-SAME: !DIExpression(DW_OP_deref)
 
 // NOELIDE: %[[FOO:.*]] = alloca %struct.Foo, align 4
-// NOELIDE: call void @llvm.dbg.declare(metadata ptr %[[FOO]],
-// NOELIDE-SAME:                        metadata !DIExpression()
+// NOELIDE: #dbg_declare(ptr %[[FOO]],
+// NOELIDE-SAME:                        !DIExpression()

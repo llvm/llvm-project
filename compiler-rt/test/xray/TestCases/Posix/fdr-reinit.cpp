@@ -2,7 +2,7 @@
 // UNSUPPORTED: target={{(aarch64|arm).*}}
 // RUN: %clangxx_xray -g -std=c++11 %s -o %t
 // RUN: rm xray-log.fdr-reinit* || true
-// RUN: XRAY_OPTIONS="verbosity=1" %run %t
+// RUN: env XRAY_OPTIONS="verbosity=1" %run %t
 // RUN: rm xray-log.fdr-reinit* || true
 #include "xray/xray_log_interface.h"
 #include <atomic>

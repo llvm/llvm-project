@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Support/FileUtilities.h"
-#include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -62,6 +62,16 @@ int main(int argc, char **argv) {
       "write-if-changed",
       llvm::cl::desc("Only write to the output file if it changed"));
 
+  // `ResetCommandLineParser` at the above unregistered the "D" option
+  // of `llvm-tblgen`, which caused `TestOps.cpp` to fail due to
+  // "Unknnown command line argument '-D...`" when a macros name is
+  // present. The following is a workaround to re-register it again.
+  llvm::cl::list<std::string> macroNames(
+      "D",
+      llvm::cl::desc(
+          "Name of the macro to be defined -- ignored by mlir-src-sharder"),
+      llvm::cl::value_desc("macro name"), llvm::cl::Prefix);
+
   llvm::InitLLVM y(argc, argv);
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
@@ -88,7 +98,7 @@ int main(int argc, char **argv) {
     // any.
     if (auto existingOrErr =
             llvm::MemoryBuffer::getFile(outputFilename, /*IsText=*/true))
-      if (std::move(existingOrErr.get())->getBuffer() == os.str())
+      if (std::move(existingOrErr.get())->getBuffer() == outputStr)
         shouldWriteOutput = false;
   }
 

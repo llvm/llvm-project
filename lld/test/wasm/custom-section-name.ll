@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj %s -o %t.o
+; RUN: llc -filetype=obj -mattr=-bulk-memory %s -o %t.o
 ; RUN: wasm-ld -no-gc-sections --no-entry -o %t.wasm %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s --check-prefixes=CHECK,NO-BSS
 ; RUN: wasm-ld -no-gc-sections --no-entry --import-memory -o %t.bss.wasm %t.o

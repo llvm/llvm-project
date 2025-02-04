@@ -211,6 +211,34 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
           // are part of the variable value.
           printOpConstantVarOps(MI, NumFixedOps - 1, OS);
           break;
+        case SPIRV::OpCooperativeMatrixMulAddKHR: {
+          const unsigned NumOps = MI->getNumOperands();
+          if (NumFixedOps == NumOps)
+            break;
+
+          OS << ' ';
+          const unsigned MulAddOp = MI->getOperand(FirstVariableIndex).getImm();
+          if (MulAddOp == 0) {
+            printSymbolicOperand<
+                OperandCategory::CooperativeMatrixOperandsOperand>(
+                MI, FirstVariableIndex, OS);
+          } else {
+            std::string Buffer;
+            for (unsigned Mask = 0x1;
+                 Mask != SPIRV::CooperativeMatrixOperands::
+                             MatrixResultBFloat16ComponentsINTEL;
+                 Mask <<= 1) {
+              if (MulAddOp & Mask) {
+                if (!Buffer.empty())
+                  Buffer += '|';
+                Buffer += getSymbolicOperandMnemonic(
+                    OperandCategory::CooperativeMatrixOperandsOperand, Mask);
+              }
+            }
+            OS << Buffer;
+          }
+          break;
+        }
         default:
           printRemainingVariableOps(MI, NumFixedOps, OS);
           break;
@@ -272,6 +300,13 @@ void SPIRVInstPrinter::printOpDecorate(const MCInst *MI, raw_ostream &O) {
     case Decoration::UserSemantic:
       printStringImm(MI, NumFixedOps, O);
       break;
+    case Decoration::HostAccessINTEL:
+      printOperand(MI, NumFixedOps, O);
+      if (NumFixedOps + 1 < MI->getNumOperands()) {
+        O << ' ';
+        printStringImm(MI, NumFixedOps + 1, O);
+      }
+      break;
     default:
       printRemainingVariableOps(MI, NumFixedOps, O, true);
       break;
@@ -321,14 +356,19 @@ void SPIRVInstPrinter::printStringImm(const MCInst *MI, unsigned OpNo,
     if (MI->getOperand(StrStartIndex).isReg())
       break;
 
-    std::string Str = getSPIRVStringOperand(*MI, OpNo);
+    std::string Str = getSPIRVStringOperand(*MI, StrStartIndex);
     if (StrStartIndex != OpNo)
       O << ' '; // Add a space if we're starting a new string/argument.
     O << '"';
     for (char c : Str) {
-      if (c == '"')
-        O.write('\\'); // Escape " characters (might break for complex UTF-8).
-      O.write(c);
+      // Escape ", \n characters (might break for complex UTF-8).
+      if (c == '\n') {
+        O.write("\\n", 2);
+      } else {
+        if (c == '"')
+          O.write('\\');
+        O.write(c);
+      }
     }
     O << '"';
 

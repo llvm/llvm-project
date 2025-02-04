@@ -10,9 +10,10 @@
 #define LLVM_LIBC_SRC_STDIO_SCANF_CORE_READER_H
 
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
 
 using StreamGetc = int (*)(void *);
@@ -21,7 +22,7 @@ using StreamUngetc = void (*)(int, void *);
 // This is intended to be either a raw string or a buffer syncronized with the
 // file's internal buffer.
 struct ReadBuffer {
-  char *buffer;
+  const char *buffer;
   size_t buff_len;
   size_t buff_cur = 0;
 };
@@ -31,6 +32,7 @@ class Reader {
 
   void *input_stream = nullptr;
 
+  // TODO: Remove these unnecessary function pointers
   StreamGetc stream_getc = nullptr;
   StreamUngetc stream_ungetc = nullptr;
 
@@ -68,6 +70,6 @@ public:
 };
 
 } // namespace scanf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_SCANF_CORE_READER_H

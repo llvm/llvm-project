@@ -1,0 +1,36 @@
+# REQUIRES: shell, aarch64-registered-target
+# UNSUPPORTED: system-windows
+
+# Test merge a single object file into a cgdata
+
+RUN: split-file %s %t
+
+# Synthesize raw cgdata without the header (32 byte) from the indexed cgdata.
+RUN: llvm-cgdata --convert --format binary %t/raw-single.cgtext -o %t/raw-single.cgdata
+RUN: od -t x1 -j 32 -An %t/raw-single.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' > %t/raw-single-bytes.txt
+
+RUN: sed "s/<RAW_1_BYTES>/$(cat %t/raw-single-bytes.txt)/g" %t/merge-single-template.ll > %t/merge-single.ll
+RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-single.ll -o %t/merge-single.o
+
+# Merge an object file having cgdata (__llvm_merge)
+RUN: llvm-cgdata -m --skip-trim %t/merge-single.o -o %t/merge-single.cgdata
+RUN: llvm-cgdata -s %t/merge-single.cgdata | FileCheck %s
+CHECK: Stable function map:
+CHECK-NEXT:  Unique hash Count: 1
+CHECK-NEXT:  Total function Count: 1
+CHECK-NEXT:  Mergeable function Count: 0
+
+;--- raw-single.cgtext
+:stable_function_map
+- Hash:            1
+  FunctionName:    Func1
+  ModuleName:      Mod1
+  InstCount:       2
+  IndexOperandHashes:
+    - InstIndex:       0
+      OpndIndex:       1
+      OpndHash:        3
+...
+
+;--- merge-single-template.ll
+@.data = private unnamed_addr constant [60 x i8] c"<RAW_1_BYTES>", section "__DATA,__llvm_merge"

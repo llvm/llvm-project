@@ -12,13 +12,13 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -104,15 +104,17 @@ GNUstepObjCRuntime::GNUstepObjCRuntime(Process *process)
   ReadObjCLibraryIfNeeded(process->GetTarget().GetImages());
 }
 
-bool GNUstepObjCRuntime::GetObjectDescription(Stream &str,
-                                              ValueObject &valobj) {
-  // TODO: ObjC has a generic way to do this
-  return false;
+llvm::Error GNUstepObjCRuntime::GetObjectDescription(Stream &str,
+                                                     ValueObject &valobj) {
+  return llvm::createStringError(
+      "LLDB's GNUStep runtime does not support object description");
 }
-bool GNUstepObjCRuntime::GetObjectDescription(
-    Stream &strm, Value &value, ExecutionContextScope *exe_scope) {
-  // TODO: ObjC has a generic way to do this
-  return false;
+
+llvm::Error
+GNUstepObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
+                                         ExecutionContextScope *exe_scope) {
+  return llvm::createStringError(
+      "LLDB's GNUStep runtime does not support object description");
 }
 
 bool GNUstepObjCRuntime::CouldHaveDynamicValue(ValueObject &in_value) {

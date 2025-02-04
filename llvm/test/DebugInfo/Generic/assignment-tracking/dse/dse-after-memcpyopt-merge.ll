@@ -14,11 +14,11 @@
 ;; Check that there's an unlinked dbg.assign inserted after each overlapping
 ;; fragment of the shortened store.
 ;;
-; CHECK: llvm.dbg.assign({{.*}}, metadata ptr %g, metadata !DIExpression())
-; CHECK: llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 32), metadata ![[ID:[0-9]+]], metadata ptr %arrayidx.i, metadata !DIExpression())
-; CHECK: llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata ![[ID]], metadata ptr %arrayidx3.i, metadata !DIExpression())
-; CHECK: llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32), metadata ![[UniqueID1:[0-9]+]], metadata ptr undef, metadata !DIExpression())
-; CHECK: llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32), metadata ![[UniqueID2:[0-9]+]], metadata ptr undef, metadata !DIExpression())
+; CHECK: #dbg_assign({{.*}}, ptr %g, !DIExpression(),
+; CHECK: #dbg_assign(float 0.000000e+00, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 64, 32), ![[ID:[0-9]+]], ptr %arrayidx.i, !DIExpression(),
+; CHECK: #dbg_assign(float 0.000000e+00, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 32, 32), ![[ID]], ptr %arrayidx3.i, !DIExpression(),
+; CHECK: #dbg_assign(float 0.000000e+00, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 0, 32), ![[UniqueID1:[0-9]+]], ptr poison, !DIExpression(),
+; CHECK: #dbg_assign(float 0.000000e+00, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 96, 32), ![[UniqueID2:[0-9]+]], ptr poison, !DIExpression(),
 ; CHECK: call void @llvm.memset{{.*}}, !DIAssignID ![[ID]]
 
 ; CHECK-DAG: ![[ID]] = distinct !DIAssignID()
@@ -32,7 +32,7 @@ $_ZN1vC2Ef = comdat any
 define dso_local void @_Z1fv() local_unnamed_addr !dbg !7 {
 entry:
   %g = alloca %struct.v, align 4, !DIAssignID !23
-  call void @llvm.dbg.assign(metadata i1 undef, metadata !11, metadata !DIExpression(), metadata !23, metadata ptr %g, metadata !DIExpression()), !dbg !24
+  call void @llvm.dbg.assign(metadata i1 poison, metadata !11, metadata !DIExpression(), metadata !23, metadata ptr %g, metadata !DIExpression()), !dbg !24
    %arrayidx.i = getelementptr inbounds %struct.v, ptr %g, i64 0, i32 0, i64 2, !dbg !37
   call void @llvm.dbg.assign(metadata float 0.000000e+00, metadata !11, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 32), metadata !39, metadata ptr %arrayidx.i, metadata !DIExpression()), !dbg !24
   %arrayidx3.i = getelementptr inbounds %struct.v, ptr %g, i64 0, i32 0, i64 1, !dbg !40

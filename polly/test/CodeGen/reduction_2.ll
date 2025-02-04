@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-invariant-load-hoisting=true -polly-print-ast -disable-output < %s | FileCheck %s --allow-empty
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-invariant-load-hoisting=true '-passes=print<polly-ast>' -disable-output < %s | FileCheck %s --allow-empty
 
 ;#include <string.h>
 ;#include <stdio.h>
@@ -88,7 +88,7 @@ if.end:                                           ; preds = %if.then, %for.end
 declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i32, i1) nounwind
 
 ; This is a negative test. We can prove that RED[0] in the conditional after
-; the loop is dereferencable and consequently expand the SCoP from the
+; the loop is dereferenceable and consequently expand the SCoP from the
 ; loop to include the conditional. However, during SCoP generation we realize
 ; that, while RED[0] is invariant, it is written to as part of the same scop
 ; and can consequently not be hoisted. Hence, we invalidate the scop.

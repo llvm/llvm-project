@@ -25,6 +25,8 @@ class SanitizerArgs {
   SanitizerSet Sanitizers;
   SanitizerSet RecoverableSanitizers;
   SanitizerSet TrapSanitizers;
+  SanitizerSet MergeHandlers;
+  SanitizerMaskCutoffs SkipHotCutoffs;
 
   std::vector<std::string> UserIgnorelistFiles;
   std::vector<std::string> SystemIgnorelistFiles;
@@ -33,6 +35,7 @@ class SanitizerArgs {
   std::vector<std::string> BinaryMetadataIgnorelistFiles;
   int CoverageFeatures = 0;
   int BinaryMetadataFeatures = 0;
+  int OverflowPatternExclusions = 0;
   int MsanTrackOrigins = 0;
   bool MsanUseAfterDtor = true;
   bool MsanParamRetval = true;
@@ -86,6 +89,7 @@ public:
   bool needsHwasanAliasesRt() const {
     return needsHwasanRt() && HwasanUseAliases;
   }
+  bool needsTysanRt() const { return Sanitizers.has(SanitizerKind::Type); }
   bool needsTsanRt() const { return Sanitizers.has(SanitizerKind::Thread); }
   bool needsMsanRt() const { return Sanitizers.has(SanitizerKind::Memory); }
   bool needsFuzzer() const { return Sanitizers.has(SanitizerKind::Fuzzer); }
@@ -96,6 +100,7 @@ public:
   }
   bool needsFuzzerInterceptors() const;
   bool needsUbsanRt() const;
+  bool needsUbsanCXXRt() const;
   bool requiresMinimalRuntime() const { return MinimalRuntime; }
   bool needsDfsanRt() const { return Sanitizers.has(SanitizerKind::DataFlow); }
   bool needsSafeStackRt() const { return SafeStackRuntime; }
@@ -103,6 +108,10 @@ public:
   bool needsCfiDiagRt() const;
   bool needsStatsRt() const { return Stats; }
   bool needsScudoRt() const { return Sanitizers.has(SanitizerKind::Scudo); }
+  bool needsNsanRt() const {
+    return Sanitizers.has(SanitizerKind::NumericalStability);
+  }
+  bool needsRtsanRt() const { return Sanitizers.has(SanitizerKind::Realtime); }
 
   bool hasMemTag() const {
     return hasMemtagHeap() || hasMemtagStack() || hasMemtagGlobals();

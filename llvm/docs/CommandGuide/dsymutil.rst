@@ -83,6 +83,10 @@ OPTIONS
  used in conjunction with ``--update`` option, this option will cause redundant
  accelerator tables to be removed.
 
+.. option:: --no-object-timestamp
+
+ Don't check timestamp for object files.
+
 .. option:: --no-odr
 
  Do not use ODR (One Definition Rule) for uniquing C++ types.
@@ -114,6 +118,10 @@ OPTIONS
 
  Specifies an alternate ``path`` to place the dSYM bundle. The default dSYM
  bundle path is created by appending ``.dSYM`` to the executable name.
+
+.. option:: -q, --quiet
+
+ Enable quiet mode and limit output.
 
 .. option:: --remarks-drop-without-debug
 

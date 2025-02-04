@@ -327,7 +327,7 @@ void MappingTraits<std::unique_ptr<XCOFFYAML::AuxSymbolEnt>>::mapping(
 
   XCOFFYAML::AuxSymbolType AuxType;
   if (IO.outputting())
-    AuxType = AuxSym.get()->Type;
+    AuxType = AuxSym->Type;
   IO.mapRequired("Type", AuxType);
   switch (AuxType) {
   case XCOFFYAML::AUX_EXCEPT:

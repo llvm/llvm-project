@@ -48,6 +48,7 @@ TEST_F(ScriptInterpreterTest, ExecuteOneLine) {
   CommandReturnObject result(/*colors*/ false);
   EXPECT_TRUE(script_interpreter.ExecuteOneLine("foo = 1", &result));
   EXPECT_FALSE(script_interpreter.ExecuteOneLine("nil = foo", &result));
-  EXPECT_TRUE(result.GetErrorData().starts_with(
-      "error: lua failed attempting to evaluate 'nil = foo'"));
+  EXPECT_EQ(result.GetErrorString().find(
+                "error: lua failed attempting to evaluate 'nil = foo'"),
+            0U);
 }

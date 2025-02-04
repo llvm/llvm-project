@@ -10,8 +10,8 @@
 .attribute stack_align, 16
 # CHECK: attribute      4, 16
 
-.attribute arch, "rv32i2p1_m2p0_a2p1_c2p0"
-# CHECK: attribute      5, "rv32i2p1_m2p0_a2p1_c2p0"
+.attribute arch, "rv32i2p1_m2p0_a2p1_c2p0_zmmul1p0_zaamo1p0_zalrsc1p0"
+# CHECK: attribute      5, "rv32i2p1_m2p0_a2p1_c2p0_zmmul1p0_zaamo1p0_zalrsc1p0"
 
 .attribute unaligned_access, 0
 # CHECK: attribute      6, 0
@@ -24,3 +24,6 @@
 
 .attribute priv_spec_revision, 0
 # CHECK: attribute      12, 0
+
+.attribute atomic_abi, 0
+# CHECK: attribute      14, 0

@@ -927,9 +927,9 @@ define void @br_fcmp_ord(half %a, half %b) nounwind {
 ; RV32IZFHMIN-LABEL: br_fcmp_ord:
 ; RV32IZFHMIN:       # %bb.0:
 ; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa1
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa4, fa0
 ; RV32IZFHMIN-NEXT:    feq.s a0, fa5, fa5
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; RV32IZFHMIN-NEXT:    feq.s a1, fa5, fa5
+; RV32IZFHMIN-NEXT:    feq.s a1, fa4, fa4
 ; RV32IZFHMIN-NEXT:    and a0, a1, a0
 ; RV32IZFHMIN-NEXT:    bnez a0, .LBB8_2
 ; RV32IZFHMIN-NEXT:  # %bb.1: # %if.else
@@ -942,9 +942,9 @@ define void @br_fcmp_ord(half %a, half %b) nounwind {
 ; RV64IZFHMIN-LABEL: br_fcmp_ord:
 ; RV64IZFHMIN:       # %bb.0:
 ; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa1
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa4, fa0
 ; RV64IZFHMIN-NEXT:    feq.s a0, fa5, fa5
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; RV64IZFHMIN-NEXT:    feq.s a1, fa5, fa5
+; RV64IZFHMIN-NEXT:    feq.s a1, fa4, fa4
 ; RV64IZFHMIN-NEXT:    and a0, a1, a0
 ; RV64IZFHMIN-NEXT:    bnez a0, .LBB8_2
 ; RV64IZFHMIN-NEXT:  # %bb.1: # %if.else
@@ -957,8 +957,8 @@ define void @br_fcmp_ord(half %a, half %b) nounwind {
 ; RV32IZHINXMIN-LABEL: br_fcmp_ord:
 ; RV32IZHINXMIN:       # %bb.0:
 ; RV32IZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; RV32IZHINXMIN-NEXT:    feq.s a1, a1, a1
 ; RV32IZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV32IZHINXMIN-NEXT:    feq.s a1, a1, a1
 ; RV32IZHINXMIN-NEXT:    feq.s a0, a0, a0
 ; RV32IZHINXMIN-NEXT:    and a0, a0, a1
 ; RV32IZHINXMIN-NEXT:    bnez a0, .LBB8_2
@@ -972,8 +972,8 @@ define void @br_fcmp_ord(half %a, half %b) nounwind {
 ; RV64IZHINXMIN-LABEL: br_fcmp_ord:
 ; RV64IZHINXMIN:       # %bb.0:
 ; RV64IZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; RV64IZHINXMIN-NEXT:    feq.s a1, a1, a1
 ; RV64IZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV64IZHINXMIN-NEXT:    feq.s a1, a1, a1
 ; RV64IZHINXMIN-NEXT:    feq.s a0, a0, a0
 ; RV64IZHINXMIN-NEXT:    and a0, a0, a1
 ; RV64IZHINXMIN-NEXT:    bnez a0, .LBB8_2
@@ -1694,9 +1694,9 @@ define void @br_fcmp_uno(half %a, half %b) nounwind {
 ; RV32IZFHMIN-LABEL: br_fcmp_uno:
 ; RV32IZFHMIN:       # %bb.0:
 ; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa1
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa4, fa0
 ; RV32IZFHMIN-NEXT:    feq.s a0, fa5, fa5
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; RV32IZFHMIN-NEXT:    feq.s a1, fa5, fa5
+; RV32IZFHMIN-NEXT:    feq.s a1, fa4, fa4
 ; RV32IZFHMIN-NEXT:    and a0, a1, a0
 ; RV32IZFHMIN-NEXT:    beqz a0, .LBB15_2
 ; RV32IZFHMIN-NEXT:  # %bb.1: # %if.else
@@ -1709,9 +1709,9 @@ define void @br_fcmp_uno(half %a, half %b) nounwind {
 ; RV64IZFHMIN-LABEL: br_fcmp_uno:
 ; RV64IZFHMIN:       # %bb.0:
 ; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa1
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa4, fa0
 ; RV64IZFHMIN-NEXT:    feq.s a0, fa5, fa5
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; RV64IZFHMIN-NEXT:    feq.s a1, fa5, fa5
+; RV64IZFHMIN-NEXT:    feq.s a1, fa4, fa4
 ; RV64IZFHMIN-NEXT:    and a0, a1, a0
 ; RV64IZFHMIN-NEXT:    beqz a0, .LBB15_2
 ; RV64IZFHMIN-NEXT:  # %bb.1: # %if.else
@@ -1724,8 +1724,8 @@ define void @br_fcmp_uno(half %a, half %b) nounwind {
 ; RV32IZHINXMIN-LABEL: br_fcmp_uno:
 ; RV32IZHINXMIN:       # %bb.0:
 ; RV32IZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; RV32IZHINXMIN-NEXT:    feq.s a1, a1, a1
 ; RV32IZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV32IZHINXMIN-NEXT:    feq.s a1, a1, a1
 ; RV32IZHINXMIN-NEXT:    feq.s a0, a0, a0
 ; RV32IZHINXMIN-NEXT:    and a0, a0, a1
 ; RV32IZHINXMIN-NEXT:    beqz a0, .LBB15_2
@@ -1739,8 +1739,8 @@ define void @br_fcmp_uno(half %a, half %b) nounwind {
 ; RV64IZHINXMIN-LABEL: br_fcmp_uno:
 ; RV64IZHINXMIN:       # %bb.0:
 ; RV64IZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; RV64IZHINXMIN-NEXT:    feq.s a1, a1, a1
 ; RV64IZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV64IZHINXMIN-NEXT:    feq.s a1, a1, a1
 ; RV64IZHINXMIN-NEXT:    feq.s a0, a0, a0
 ; RV64IZHINXMIN-NEXT:    and a0, a0, a1
 ; RV64IZHINXMIN-NEXT:    beqz a0, .LBB15_2

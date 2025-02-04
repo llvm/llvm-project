@@ -3,7 +3,7 @@
 cppcoreguidelines-pro-type-member-init
 ======================================
 
-The check flags user-defined constructor definitions that do not
+The check flags user-provided constructor definitions that do not
 initialize all fields that would be left in an undefined state by
 default construction, e.g. builtins, pointers and record types without
 user-provided default constructors containing at least one such

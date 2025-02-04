@@ -64,7 +64,6 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -236,7 +235,7 @@ static ArrayRef<Use> GetDeoptBundleOperands(const CallBase *Call) {
   if (!DeoptBundle) {
     assert(AllowStatepointWithNoDeoptInfo &&
            "Found non-leaf call without deopt info!");
-    return std::nullopt;
+    return {};
   }
 
   return DeoptBundle->Inputs;
@@ -578,8 +577,15 @@ static Value *findBaseDefiningValue(Value *I, DefiningValueMapTy &Cache,
     return I;
   }
 
-  assert(!isa<AtomicRMWInst>(I) && "Xchg handled above, all others are "
-                                   "binary ops which don't apply to pointers");
+  if (isa<AtomicRMWInst>(I)) {
+    assert(cast<AtomicRMWInst>(I)->getOperation() == AtomicRMWInst::Xchg &&
+           "Only Xchg is allowed for pointer values");
+    // A RMW Xchg is a combined atomic load and store, so we can treat the
+    // loaded value as a base pointer.
+    Cache[I] = I;
+    setKnownBase(I, /* IsKnownBase */ true, KnownBases);
+    return I;
+  }
 
   // The aggregate ops.  Aggregates can either be in the heap or on the
   // stack, but in either case, this is simply a field load.  As a result,
@@ -1109,7 +1115,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
     };
 
     Instruction *BaseInst = I->clone();
-    BaseInst->insertBefore(I);
+    BaseInst->insertBefore(I->getIterator());
     BaseInst->setName(getMangledName(I));
     // Add metadata marking this as a base value
     BaseInst->setMetadata("is_base_value", MDNode::get(I->getContext(), {}));
@@ -1252,7 +1258,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
 
   // get the data layout to compare the sizes of base/derived pointer values
   [[maybe_unused]] auto &DL =
-      cast<llvm::Instruction>(Def)->getModule()->getDataLayout();
+      cast<llvm::Instruction>(Def)->getDataLayout();
   // Cache all of our results so we can cheaply reuse them
   // NOTE: This is actually two caches: one of the base defining value
   // relation and one of the base pointer relation!  FIXME
@@ -1323,7 +1329,7 @@ static void findBasePointers(DominatorTree &DT, DefiningValueMapTy &DVCache,
                              IsKnownBaseMapTy &KnownBases) {
   StatepointLiveSetTy PotentiallyDerivedPointers = result.LiveSet;
   // We assume that all pointers passed to deopt are base pointers; as an
-  // optimization, we can use this to avoid seperately materializing the base
+  // optimization, we can use this to avoid separately materializing the base
   // pointer graph.  This is only relevant since we're very conservative about
   // generating new conflict nodes during base pointer insertion.  If we were
   // smarter there, this would be irrelevant.
@@ -1365,7 +1371,7 @@ static void recomputeLiveInValues(
 // and inserts them before "InsertBefore". Returns rematerialized value
 // which should be used after statepoint.
 static Instruction *rematerializeChain(ArrayRef<Instruction *> ChainToBase,
-                                       Instruction *InsertBefore,
+                                       BasicBlock::iterator InsertBefore,
                                        Value *RootOfChain,
                                        Value *AlternateLiveBase) {
   Instruction *LastClonedValue = nullptr;
@@ -1525,8 +1531,8 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
     if (auto *VT = dyn_cast<VectorType>(Ty))
       NewTy = FixedVectorType::get(NewTy,
                                    cast<FixedVectorType>(VT)->getNumElements());
-    return Intrinsic::getDeclaration(M, Intrinsic::experimental_gc_relocate,
-                                     {NewTy});
+    return Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::experimental_gc_relocate, {NewTy});
   };
 
   // Lazily populated map from input types to the canonicalized form mentioned
@@ -1654,7 +1660,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
   // be replacing a terminator.
   IRBuilder<> Builder(Call);
 
-  ArrayRef<Value *> GCArgs(LiveVariables);
+  ArrayRef<Value *> GCLive(LiveVariables);
   uint64_t StatepointID = StatepointDirectives::DefaultStatepointID;
   uint32_t NumPatchBytes = 0;
   uint32_t Flags = uint32_t(StatepointFlags::None);
@@ -1685,10 +1691,10 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
 
   // Pass through the requested lowering if any.  The default is live-through.
   StringRef DeoptLowering = getDeoptLowering(Call);
-  if (DeoptLowering.equals("live-in"))
+  if (DeoptLowering == "live-in")
     Flags |= uint32_t(StatepointFlags::DeoptLiveIn);
   else {
-    assert(DeoptLowering.equals("live-through") && "Unsupported value!");
+    assert(DeoptLowering == "live-through" && "Unsupported value!");
   }
 
   FunctionCallee CallTarget(Call->getFunctionType(), Call->getCalledOperand());
@@ -1734,7 +1740,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
       //   memcpy(dest_derived, source_derived, ...) =>
       //   memcpy(dest_base, dest_offset, source_base, source_offset, ...)
       auto &Context = Call->getContext();
-      auto &DL = Call->getModule()->getDataLayout();
+      auto &DL = Call->getDataLayout();
       auto GetBaseAndOffset = [&](Value *Derived) {
         Value *Base = nullptr;
         // Optimizations in unreachable code might substitute the real pointer
@@ -1827,7 +1833,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
   if (auto *CI = dyn_cast<CallInst>(Call)) {
     CallInst *SPCall = Builder.CreateGCStatepointCall(
         StatepointID, NumPatchBytes, CallTarget, Flags, CallArgs,
-        TransitionArgs, DeoptArgs, GCArgs, "safepoint_token");
+        TransitionArgs, DeoptArgs, GCLive, "safepoint_token");
 
     SPCall->setTailCallKind(CI->getTailCallKind());
     SPCall->setCallingConv(CI->getCallingConv());
@@ -1852,8 +1858,8 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
     // original block.
     InvokeInst *SPInvoke = Builder.CreateGCStatepointInvoke(
         StatepointID, NumPatchBytes, CallTarget, II->getNormalDest(),
-        II->getUnwindDest(), Flags, CallArgs, TransitionArgs, DeoptArgs, GCArgs,
-        "statepoint_token");
+        II->getUnwindDest(), Flags, CallArgs, TransitionArgs, DeoptArgs,
+        GCLive, "statepoint_token");
 
     SPInvoke->setCallingConv(II->getCallingConv());
 
@@ -2030,7 +2036,7 @@ static void relocationViaAlloca(
 
   // Emit alloca for "LiveValue" and record it in "allocaMap" and
   // "PromotableAllocas"
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   auto emitAllocaFor = [&](Value *LiveValue) {
     AllocaInst *Alloca =
         new AllocaInst(LiveValue->getType(), DL.getAllocaAddrSpace(), "",
@@ -2148,7 +2154,7 @@ static void relocationViaAlloca(
     }
 
     llvm::sort(Uses);
-    auto Last = std::unique(Uses.begin(), Uses.end());
+    auto Last = llvm::unique(Uses);
     Uses.erase(Last, Uses.end());
 
     for (Instruction *Use : Uses) {
@@ -2179,16 +2185,16 @@ static void relocationViaAlloca(
         // InvokeInst is a terminator so the store need to be inserted into its
         // normal destination block.
         BasicBlock *NormalDest = Invoke->getNormalDest();
-        Store->insertBefore(NormalDest->getFirstNonPHI());
+        Store->insertBefore(NormalDest->getFirstNonPHIIt());
       } else {
         assert(!Inst->isTerminator() &&
                "The only terminator that can produce a value is "
                "InvokeInst which is handled above.");
-        Store->insertAfter(Inst);
+        Store->insertAfter(Inst->getIterator());
       }
     } else {
       assert(isa<Argument>(Def));
-      Store->insertAfter(cast<Instruction>(Alloca));
+      Store->insertAfter(cast<Instruction>(Alloca)->getIterator());
     }
   }
 
@@ -2271,7 +2277,7 @@ static Value* findRematerializableChainToBasePointer(
   }
 
   if (CastInst *CI = dyn_cast<CastInst>(CurrentValue)) {
-    if (!CI->isNoopCast(CI->getModule()->getDataLayout()))
+    if (!CI->isNoopCast(CI->getDataLayout()))
       return CI;
 
     ChainToBase.push_back(CI);
@@ -2293,7 +2299,7 @@ chainToBasePointerCost(SmallVectorImpl<Instruction *> &Chain,
 
   for (Instruction *Instr : Chain) {
     if (CastInst *CI = dyn_cast<CastInst>(Instr)) {
-      assert(CI->isNoopCast(CI->getModule()->getDataLayout()) &&
+      assert(CI->isNoopCast(CI->getDataLayout()) &&
              "non noop cast is found during rematerialization");
 
       Type *SrcTy = CI->getOperand(0)->getType();
@@ -2493,8 +2499,9 @@ static void rematerializeLiveValuesAtUses(
     //   statepoint between uses in the block.
     while (!Cand->user_empty()) {
       Instruction *UserI = cast<Instruction>(*Cand->user_begin());
-      Instruction *RematChain = rematerializeChain(
-          Record.ChainToBase, UserI, Record.RootOfChain, PointerToBase[Cand]);
+      Instruction *RematChain =
+          rematerializeChain(Record.ChainToBase, UserI->getIterator(),
+                             Record.RootOfChain, PointerToBase[Cand]);
       UserI->replaceUsesOfWith(Cand, RematChain);
       PointerToBase[RematChain] = PointerToBase[Cand];
     }
@@ -2567,16 +2574,16 @@ static void rematerializeLiveValues(CallBase *Call,
       Instruction *InsertBefore = Call->getNextNode();
       assert(InsertBefore);
       Instruction *RematerializedValue =
-          rematerializeChain(Record.ChainToBase, InsertBefore,
+          rematerializeChain(Record.ChainToBase, InsertBefore->getIterator(),
                              Record.RootOfChain, PointerToBase[LiveValue]);
       Info.RematerializedValues[RematerializedValue] = LiveValue;
     } else {
       auto *Invoke = cast<InvokeInst>(Call);
 
-      Instruction *NormalInsertBefore =
-          &*Invoke->getNormalDest()->getFirstInsertionPt();
-      Instruction *UnwindInsertBefore =
-          &*Invoke->getUnwindDest()->getFirstInsertionPt();
+      BasicBlock::iterator NormalInsertBefore =
+          Invoke->getNormalDest()->getFirstInsertionPt();
+      BasicBlock::iterator UnwindInsertBefore =
+          Invoke->getUnwindDest()->getFirstInsertionPt();
 
       Instruction *NormalRematerializedValue =
           rematerializeChain(Record.ChainToBase, NormalInsertBefore,
@@ -2601,7 +2608,7 @@ static bool inlineGetBaseAndOffset(Function &F,
                                    DefiningValueMapTy &DVCache,
                                    IsKnownBaseMapTy &KnownBases) {
   auto &Context = F.getContext();
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
   bool Changed = false;
 
   for (auto *Callsite : Intrinsics)
@@ -2839,7 +2846,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
     // That Value* no longer exists and we need to use the new gc_result.
     // Thankfully, the live set is embedded in the statepoint (and updated), so
     // we just grab that.
-    llvm::append_range(Live, Info.StatepointToken->gc_args());
+    llvm::append_range(Live, Info.StatepointToken->gc_live());
 #ifndef NDEBUG
     // Do some basic validation checking on our liveness results before
     // performing relocation.  Relocation can and will turn mistakes in liveness
@@ -2847,7 +2854,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
     // TODO: It would be nice to test consistency as well
     assert(DT.isReachableFromEntry(Info.StatepointToken->getParent()) &&
            "statepoint must be reachable or liveness is meaningless");
-    for (Value *V : Info.StatepointToken->gc_args()) {
+    for (Value *V : Info.StatepointToken->gc_live()) {
       if (!isa<Instruction>(V))
         // Non-instruction values trivial dominate all possible uses
         continue;
@@ -3046,8 +3053,7 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
       // which doesn't know how to produce a proper deopt state. So if we see a
       // non-leaf memcpy/memmove without deopt state just treat it as a leaf
       // copy and don't produce a statepoint.
-      if (!AllowStatepointWithNoDeoptInfo &&
-          !Call->getOperandBundle(LLVMContext::OB_deopt)) {
+      if (!AllowStatepointWithNoDeoptInfo && !Call->hasDeoptState()) {
         assert((isa<AtomicMemCpyInst>(Call) || isa<AtomicMemMoveInst>(Call)) &&
                "Don't expect any other calls here!");
         return false;
@@ -3126,7 +3132,7 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
       // most instructions without side effects or memory access.
       if (isa<ICmpInst>(Cond) && Cond->hasOneUse()) {
         MadeChange = true;
-        Cond->moveBefore(TI);
+        Cond->moveBefore(TI->getIterator());
       }
   }
 

@@ -13,19 +13,19 @@
 ;; the expression uses more than one location operand (DW_OP_arg n).
 
 ; CHECK: if.then:
-; CHECK: dbg.value(metadata i32 poison, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32))
+; CHECK: #dbg_value(i32 poison, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 0, 32),
 ;; FIXME: The value below should be poison. See https://reviews.llvm.org/D147431#4245260.
-; CHECK: dbg.value(metadata i32 %{{.*}}, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32))
+; CHECK: #dbg_value(i32 %{{.*}}, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 32, 32),
 
 ; CHECK: if.else:
-; CHECK: dbg.value(metadata i32 2, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32))
-; CHECK: dbg.value(metadata i32 0, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32))
+; CHECK: #dbg_value(i32 2, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 0, 32),
+; CHECK: #dbg_value(i32 0, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 32, 32),
 
 ; CHECK: if.inner:
-; CHECK: call void @llvm.dbg.value(metadata i32 poison, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value))
+; CHECK: #dbg_value(i32 poison, ![[#]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value),
 
 ; CHECK: end:
-; CHECK: dbg.value(metadata i32 %{{.*}}, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32))
+; CHECK: #dbg_value(i32 %{{.*}}, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 0, 32),
 
 declare i64 @get_i64()
 

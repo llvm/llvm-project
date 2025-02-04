@@ -14,6 +14,7 @@
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h"
 
@@ -49,7 +50,7 @@
 // USA, January 16-22, 2022.
 // https://people.cs.rutgers.edu/~sn349/papers/rlibmall-popl-2022.pdf
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, logf, (float x)) {
   constexpr double LOG_2 = 0x1.62e42fefa39efp-1;
@@ -81,7 +82,7 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
     }
     // Subnormal inputs.
     if (LIBC_UNLIKELY(x_u < FPBits::min_normal().uintval())) {
-      if (x_u == 0) {
+      if (x == 0.0f) {
         // Return -inf and raise FE_DIVBYZERO
         fputil::set_errno_if_required(ERANGE);
         fputil::raise_except_if_required(FE_DIVBYZERO);
@@ -170,4 +171,4 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
   return static_cast<float>(r);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -876,22 +876,22 @@ public:
 
   /// Best-effort check if the expression operand refers to a most derived
   /// object. This is not a strong guarantee.
-  bool isMostDerived(ASTContext &Context) const;
+  bool isMostDerived(const ASTContext &Context) const;
 
-  bool isTypeOperand() const { return Operand.is<TypeSourceInfo *>(); }
+  bool isTypeOperand() const { return isa<TypeSourceInfo *>(Operand); }
 
   /// Retrieves the type operand of this typeid() expression after
   /// various required adjustments (removing reference types, cv-qualifiers).
-  QualType getTypeOperand(ASTContext &Context) const;
+  QualType getTypeOperand(const ASTContext &Context) const;
 
   /// Retrieve source information for the type operand.
   TypeSourceInfo *getTypeOperandSourceInfo() const {
     assert(isTypeOperand() && "Cannot call getTypeOperand for typeid(expr)");
-    return Operand.get<TypeSourceInfo *>();
+    return cast<TypeSourceInfo *>(Operand);
   }
   Expr *getExprOperand() const {
     assert(!isTypeOperand() && "Cannot call getExprOperand for typeid(type)");
-    return static_cast<Expr*>(Operand.get<Stmt *>());
+    return static_cast<Expr *>(cast<Stmt *>(Operand));
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return Range.getBegin(); }
@@ -919,6 +919,10 @@ public:
         reinterpret_cast<Stmt **>(&const_cast<CXXTypeidExpr *>(this)->Operand);
     return const_child_range(begin, begin + 1);
   }
+
+  /// Whether this is of a form like "typeid(*ptr)" that can throw a
+  /// std::bad_typeid if a pointer is a null pointer ([expr.typeid]p2)
+  bool hasNullCheck() const;
 };
 
 /// A member reference to an MSPropertyDecl.
@@ -1089,7 +1093,7 @@ public:
       Operand = (TypeSourceInfo*)nullptr;
   }
 
-  bool isTypeOperand() const { return Operand.is<TypeSourceInfo *>(); }
+  bool isTypeOperand() const { return isa<TypeSourceInfo *>(Operand); }
 
   /// Retrieves the type operand of this __uuidof() expression after
   /// various required adjustments (removing reference types, cv-qualifiers).
@@ -1098,11 +1102,11 @@ public:
   /// Retrieve source information for the type operand.
   TypeSourceInfo *getTypeOperandSourceInfo() const {
     assert(isTypeOperand() && "Cannot call getTypeOperand for __uuidof(expr)");
-    return Operand.get<TypeSourceInfo *>();
+    return cast<TypeSourceInfo *>(Operand);
   }
   Expr *getExprOperand() const {
     assert(!isTypeOperand() && "Cannot call getExprOperand for __uuidof(type)");
-    return static_cast<Expr*>(Operand.get<Stmt *>());
+    return static_cast<Expr *>(cast<Stmt *>(Operand));
   }
 
   MSGuidDecl *getGuidDecl() const { return Guid; }
@@ -1482,6 +1486,8 @@ public:
 ///     const S &s_ref = S(); // Requires a CXXBindTemporaryExpr.
 ///   }
 /// \endcode
+///
+/// Destructor might be null if destructor declaration is not valid.
 class CXXBindTemporaryExpr : public Expr {
   CXXTemporary *Temp = nullptr;
   Stmt *SubExpr = nullptr;
@@ -2170,8 +2176,9 @@ public:
   const_child_range children() const;
 };
 
-/// An expression "T()" which creates a value-initialized rvalue of type
-/// T, which is a non-class type.  See (C++98 [5.2.3p2]).
+/// An expression "T()" which creates an rvalue of a non-class type T.
+/// For non-void T, the rvalue is value-initialized.
+/// See (C++98 [5.2.3p2]).
 class CXXScalarValueInitExpr : public Expr {
   friend class ASTStmtReader;
 
@@ -2840,8 +2847,8 @@ public:
 ///
 /// Example:
 /// \code
-///   __array_rank(int[10][20]) == 2
-///   __array_extent(int, 1)    == 20
+///   __array_rank(int[10][20])      == 2
+///   __array_extent(int[10][20], 1) == 20
 /// \endcode
 class ArrayTypeTraitExpr : public Expr {
   /// The trait. An ArrayTypeTrait enum in MSVC compat unsigned.
@@ -3023,9 +3030,10 @@ protected:
 
 public:
   struct FindResult {
-    OverloadExpr *Expression;
-    bool IsAddressOfOperand;
-    bool HasFormOfMemberPointer;
+    OverloadExpr *Expression = nullptr;
+    bool IsAddressOfOperand = false;
+    bool IsAddressOfOperandWithParen = false;
+    bool HasFormOfMemberPointer = false;
   };
 
   /// Finds the overloaded expression in the given expression \p E of
@@ -3037,6 +3045,7 @@ public:
     assert(E->getType()->isSpecificBuiltinType(BuiltinType::Overload));
 
     FindResult Result;
+    bool HasParen = isa<ParenExpr>(E);
 
     E = E->IgnoreParens();
     if (isa<UnaryOperator>(E)) {
@@ -3046,10 +3055,9 @@ public:
 
       Result.HasFormOfMemberPointer = (E == Ovl && Ovl->getQualifier());
       Result.IsAddressOfOperand = true;
+      Result.IsAddressOfOperandWithParen = HasParen;
       Result.Expression = Ovl;
     } else {
-      Result.HasFormOfMemberPointer = false;
-      Result.IsAddressOfOperand = false;
       Result.Expression = cast<OverloadExpr>(E);
     }
 
@@ -3161,8 +3169,30 @@ public:
 /// This arises in several ways:
 ///   * we might be waiting for argument-dependent lookup;
 ///   * the name might resolve to an overloaded function;
+///   * the name might resolve to a non-function template; for example, in the
+///   following snippet, the return expression of the member function
+///   'foo()' might remain unresolved until instantiation:
+///
+/// \code
+/// struct P {
+///   template <class T> using I = T;
+/// };
+///
+/// struct Q {
+///   template <class T> int foo() {
+///     return T::template I<int>;
+///   }
+/// };
+/// \endcode
+///
+/// ...which is distinct from modeling function overloads, and therefore we use
+/// a different builtin type 'UnresolvedTemplate' to avoid confusion. This is
+/// done in Sema::BuildTemplateIdExpr.
+///
 /// and eventually:
 ///   * the lookup might have included a function template.
+///   * the unresolved template gets transformed in an instantiation or gets
+///   diagnosed for its direct use.
 ///
 /// These never include UnresolvedUsingValueDecls, which are always class
 /// members and therefore appear only in UnresolvedMemberLookupExprs.
@@ -3200,7 +3230,7 @@ class UnresolvedLookupExpr final
                        const DeclarationNameInfo &NameInfo, bool RequiresADL,
                        const TemplateArgumentListInfo *TemplateArgs,
                        UnresolvedSetIterator Begin, UnresolvedSetIterator End,
-                       bool KnownDependent);
+                       bool KnownDependent, bool KnownInstantiationDependent);
 
   UnresolvedLookupExpr(EmptyShell Empty, unsigned NumResults,
                        bool HasTemplateKWAndArgsInfo);
@@ -3219,7 +3249,7 @@ public:
          NestedNameSpecifierLoc QualifierLoc,
          const DeclarationNameInfo &NameInfo, bool RequiresADL,
          UnresolvedSetIterator Begin, UnresolvedSetIterator End,
-         bool KnownDependent);
+         bool KnownDependent, bool KnownInstantiationDependent);
 
   // After canonicalization, there may be dependent template arguments in
   // CanonicalConverted But none of Args is dependent. When any of
@@ -3229,7 +3259,8 @@ public:
          NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKWLoc,
          const DeclarationNameInfo &NameInfo, bool RequiresADL,
          const TemplateArgumentListInfo *Args, UnresolvedSetIterator Begin,
-         UnresolvedSetIterator End, bool KnownDependent);
+         UnresolvedSetIterator End, bool KnownDependent,
+         bool KnownInstantiationDependent);
 
   static UnresolvedLookupExpr *CreateEmpty(const ASTContext &Context,
                                            unsigned NumResults,
@@ -4275,11 +4306,11 @@ class SizeOfPackExpr final
       : Expr(SizeOfPackExprClass, Empty), Length(NumPartialArgs) {}
 
 public:
-  static SizeOfPackExpr *
-  Create(ASTContext &Context, SourceLocation OperatorLoc, NamedDecl *Pack,
-         SourceLocation PackLoc, SourceLocation RParenLoc,
-         std::optional<unsigned> Length = std::nullopt,
-         ArrayRef<TemplateArgument> PartialArgs = std::nullopt);
+  static SizeOfPackExpr *Create(ASTContext &Context, SourceLocation OperatorLoc,
+                                NamedDecl *Pack, SourceLocation PackLoc,
+                                SourceLocation RParenLoc,
+                                std::optional<unsigned> Length = std::nullopt,
+                                ArrayRef<TemplateArgument> PartialArgs = {});
   static SizeOfPackExpr *CreateDeserialized(ASTContext &Context,
                                             unsigned NumPartialArgs);
 
@@ -4353,15 +4384,21 @@ class PackIndexingExpr final
   // The pack being indexed, followed by the index
   Stmt *SubExprs[2];
 
-  size_t TransformedExpressions;
+  // The size of the trailing expressions.
+  unsigned TransformedExpressions : 31;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned FullySubstituted : 1;
 
   PackIndexingExpr(QualType Type, SourceLocation EllipsisLoc,
                    SourceLocation RSquareLoc, Expr *PackIdExpr, Expr *IndexExpr,
-                   ArrayRef<Expr *> SubstitutedExprs = {})
+                   ArrayRef<Expr *> SubstitutedExprs = {},
+                   bool FullySubstituted = false)
       : Expr(PackIndexingExprClass, Type, VK_LValue, OK_Ordinary),
         EllipsisLoc(EllipsisLoc), RSquareLoc(RSquareLoc),
         SubExprs{PackIdExpr, IndexExpr},
-        TransformedExpressions(SubstitutedExprs.size()) {
+        TransformedExpressions(SubstitutedExprs.size()),
+        FullySubstituted(FullySubstituted) {
 
     auto *Exprs = getTrailingObjects<Expr *>();
     std::uninitialized_copy(SubstitutedExprs.begin(), SubstitutedExprs.end(),
@@ -4384,9 +4421,17 @@ public:
                                   SourceLocation EllipsisLoc,
                                   SourceLocation RSquareLoc, Expr *PackIdExpr,
                                   Expr *IndexExpr, std::optional<int64_t> Index,
-                                  ArrayRef<Expr *> SubstitutedExprs = {});
+                                  ArrayRef<Expr *> SubstitutedExprs = {},
+                                  bool FullySubstituted = false);
   static PackIndexingExpr *CreateDeserialized(ASTContext &Context,
                                               unsigned NumTransformedExprs);
+
+  bool isFullySubstituted() const { return FullySubstituted; }
+
+  /// Determine if the expression was expanded to empty.
+  bool expandsToEmptyPack() const {
+    return isFullySubstituted() && TransformedExpressions == 0;
+  }
 
   /// Determine the location of the 'sizeof' keyword.
   SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
@@ -4421,6 +4466,7 @@ public:
     return getTrailingObjects<Expr *>()[*Index];
   }
 
+  /// Return the trailing expressions, regardless of the expansion.
   ArrayRef<Expr *> getExpressions() const {
     return {getTrailingObjects<Expr *>(), TransformedExpressions};
   }
@@ -4702,24 +4748,24 @@ public:
   /// be materialized into a glvalue.
   Expr *getSubExpr() const {
     return cast<Expr>(
-        State.is<Stmt *>()
-            ? State.get<Stmt *>()
-            : State.get<LifetimeExtendedTemporaryDecl *>()->getTemporaryExpr());
+        isa<Stmt *>(State)
+            ? cast<Stmt *>(State)
+            : cast<LifetimeExtendedTemporaryDecl *>(State)->getTemporaryExpr());
   }
 
   /// Retrieve the storage duration for the materialized temporary.
   StorageDuration getStorageDuration() const {
-    return State.is<Stmt *>() ? SD_FullExpression
-                              : State.get<LifetimeExtendedTemporaryDecl *>()
+    return isa<Stmt *>(State) ? SD_FullExpression
+                              : cast<LifetimeExtendedTemporaryDecl *>(State)
                                     ->getStorageDuration();
   }
 
   /// Get the storage for the constant value of a materialized temporary
   /// of static storage duration.
   APValue *getOrCreateValue(bool MayCreate) const {
-    assert(State.is<LifetimeExtendedTemporaryDecl *>() &&
+    assert(isa<LifetimeExtendedTemporaryDecl *>(State) &&
            "the temporary has not been lifetime extended");
-    return State.get<LifetimeExtendedTemporaryDecl *>()->getOrCreateValue(
+    return cast<LifetimeExtendedTemporaryDecl *>(State)->getOrCreateValue(
         MayCreate);
   }
 
@@ -4734,8 +4780,8 @@ public:
   /// Get the declaration which triggered the lifetime-extension of this
   /// temporary, if any.
   ValueDecl *getExtendingDecl() {
-    return State.is<Stmt *>() ? nullptr
-                              : State.get<LifetimeExtendedTemporaryDecl *>()
+    return isa<Stmt *>(State) ? nullptr
+                              : cast<LifetimeExtendedTemporaryDecl *>(State)
                                     ->getExtendingDecl();
   }
   const ValueDecl *getExtendingDecl() const {
@@ -4745,8 +4791,8 @@ public:
   void setExtendingDecl(ValueDecl *ExtendedBy, unsigned ManglingNumber);
 
   unsigned getManglingNumber() const {
-    return State.is<Stmt *>() ? 0
-                              : State.get<LifetimeExtendedTemporaryDecl *>()
+    return isa<Stmt *>(State) ? 0
+                              : cast<LifetimeExtendedTemporaryDecl *>(State)
                                     ->getManglingNumber();
   }
 
@@ -4772,17 +4818,17 @@ public:
 
   // Iterators
   child_range children() {
-    return State.is<Stmt *>()
+    return isa<Stmt *>(State)
                ? child_range(State.getAddrOfPtr1(), State.getAddrOfPtr1() + 1)
-               : State.get<LifetimeExtendedTemporaryDecl *>()->childrenExpr();
+               : cast<LifetimeExtendedTemporaryDecl *>(State)->childrenExpr();
   }
 
   const_child_range children() const {
-    return State.is<Stmt *>()
+    return isa<Stmt *>(State)
                ? const_child_range(State.getAddrOfPtr1(),
                                    State.getAddrOfPtr1() + 1)
                : const_cast<const LifetimeExtendedTemporaryDecl *>(
-                     State.get<LifetimeExtendedTemporaryDecl *>())
+                     cast<LifetimeExtendedTemporaryDecl *>(State))
                      ->childrenExpr();
   }
 };
@@ -4814,15 +4860,7 @@ public:
   CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
               SourceLocation LParenLoc, Expr *LHS, BinaryOperatorKind Opcode,
               SourceLocation EllipsisLoc, Expr *RHS, SourceLocation RParenLoc,
-              std::optional<unsigned> NumExpansions)
-      : Expr(CXXFoldExprClass, T, VK_PRValue, OK_Ordinary),
-        LParenLoc(LParenLoc), EllipsisLoc(EllipsisLoc), RParenLoc(RParenLoc),
-        NumExpansions(NumExpansions ? *NumExpansions + 1 : 0), Opcode(Opcode) {
-    SubExprs[SubExpr::Callee] = Callee;
-    SubExprs[SubExpr::LHS] = LHS;
-    SubExprs[SubExpr::RHS] = RHS;
-    setDependence(computeDependence(this));
-  }
+              std::optional<unsigned> NumExpansions);
 
   CXXFoldExpr(EmptyShell Empty) : Expr(CXXFoldExprClass, Empty) {}
 
@@ -4986,11 +5024,11 @@ public:
   void setArrayFiller(Expr *E) { ArrayFillerOrUnionFieldInit = E; }
 
   Expr *getArrayFiller() {
-    return ArrayFillerOrUnionFieldInit.dyn_cast<Expr *>();
+    return dyn_cast_if_present<Expr *>(ArrayFillerOrUnionFieldInit);
   }
 
   const Expr *getArrayFiller() const {
-    return ArrayFillerOrUnionFieldInit.dyn_cast<Expr *>();
+    return dyn_cast_if_present<Expr *>(ArrayFillerOrUnionFieldInit);
   }
 
   void setInitializedFieldInUnion(FieldDecl *FD) {
@@ -4998,11 +5036,11 @@ public:
   }
 
   FieldDecl *getInitializedFieldInUnion() {
-    return ArrayFillerOrUnionFieldInit.dyn_cast<FieldDecl *>();
+    return dyn_cast_if_present<FieldDecl *>(ArrayFillerOrUnionFieldInit);
   }
 
   const FieldDecl *getInitializedFieldInUnion() const {
-    return ArrayFillerOrUnionFieldInit.dyn_cast<FieldDecl *>();
+    return dyn_cast_if_present<FieldDecl *>(ArrayFillerOrUnionFieldInit);
   }
 
   child_range children() {
@@ -5278,6 +5316,59 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == BuiltinBitCastExprClass;
+  }
+};
+
+// Represents an unexpanded pack where the list of expressions are
+// known. These are used when structured bindings introduce a pack.
+class ResolvedUnexpandedPackExpr final
+    : public Expr,
+      private llvm::TrailingObjects<ResolvedUnexpandedPackExpr, Expr *> {
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
+  friend TrailingObjects;
+
+  SourceLocation BeginLoc;
+  unsigned NumExprs;
+
+  ResolvedUnexpandedPackExpr(SourceLocation BL, QualType QT, unsigned NumExprs);
+
+public:
+  static ResolvedUnexpandedPackExpr *CreateDeserialized(ASTContext &C,
+                                                        unsigned NumExprs);
+  static ResolvedUnexpandedPackExpr *
+  Create(ASTContext &C, SourceLocation BeginLoc, QualType T, unsigned NumExprs);
+  static ResolvedUnexpandedPackExpr *Create(ASTContext &C,
+                                            SourceLocation BeginLoc, QualType T,
+                                            llvm::ArrayRef<Expr *> Exprs);
+
+  unsigned getNumExprs() const { return NumExprs; }
+
+  llvm::MutableArrayRef<Expr *> getExprs() {
+    return {getTrailingObjects<Expr *>(), NumExprs};
+  }
+
+  llvm::ArrayRef<Expr *> getExprs() const {
+    return {getTrailingObjects<Expr *>(), NumExprs};
+  }
+
+  Expr *getExpansion(unsigned Idx) { return getExprs()[Idx]; }
+  Expr *getExpansion(unsigned Idx) const { return getExprs()[Idx]; }
+
+  // Iterators
+  child_range children() {
+    return child_range((Stmt **)getTrailingObjects<Expr *>(),
+                       (Stmt **)getTrailingObjects<Expr *>() + getNumExprs());
+  }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY { return BeginLoc; }
+  SourceLocation getEndLoc() const LLVM_READONLY { return BeginLoc; }
+
+  // Returns the resolved pack of a decl or nullptr
+  static ResolvedUnexpandedPackExpr *getFromDecl(Decl *);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == ResolvedUnexpandedPackExprClass;
   }
 };
 

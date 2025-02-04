@@ -1,26 +1,75 @@
+if(NOT DEFINED LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
+  if(CMAKE_COMPILER_IS_GNUCXX)
+    set(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE ON)
+  elseif( MSVC )
+    set(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE OFF)
+  elseif( "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" )
+    set(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE ON)
+  elseif( "${CMAKE_CXX_COMPILER_ID}" MATCHES "Intel" )
+    set(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE ON)
+  endif()
+endif()
+
 function(_get_compile_options_from_flags output_var)
   set(compile_options "")
 
   if(LIBC_TARGET_ARCHITECTURE_IS_RISCV64 OR(LIBC_CPU_FEATURES MATCHES "FMA"))
     check_flag(ADD_FMA_FLAG ${FMA_OPT_FLAG} ${ARGN})
   endif()
-  check_flag(ADD_SSE4_2_FLAG ${ROUND_OPT_FLAG} ${ARGN})
+  check_flag(ADD_ROUND_OPT_FLAG ${ROUND_OPT_FLAG} ${ARGN})
   check_flag(ADD_EXPLICIT_SIMD_OPT_FLAG ${EXPLICIT_SIMD_OPT_FLAG} ${ARGN})
+  check_flag(ADD_MISC_MATH_BASIC_OPS_OPT_FLAG ${MISC_MATH_BASIC_OPS_OPT_FLAG} ${ARGN})
 
-  if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
+  if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
     if(ADD_FMA_FLAG)
-      if(LIBC_TARGET_ARCHITECTURE_IS_X86)
+      if(LIBC_TARGET_ARCHITECTURE_IS_X86_64)
         list(APPEND compile_options "-mavx2")
         list(APPEND compile_options "-mfma")
       elseif(LIBC_TARGET_ARCHITECTURE_IS_RISCV64)
         list(APPEND compile_options "-D__LIBC_RISCV_USE_FMA")
       endif()
+      # For clang, we will build the math functions with `-fno-math-errno` so that
+      # __builtin_fma* will generate the fused-mutliply-add instructions.  We
+      # don't put the control flag to the public config yet, and see if it makes
+      # sense to just enable this flag by default.
+      if(LIBC_ADD_FNO_MATH_ERRNO)
+        list(APPEND compile_options "-fno-math-errno")
+      endif()
     endif()
-    if(ADD_SSE4_2_FLAG)
-      list(APPEND compile_options "-msse4.2")
+    if(ADD_ROUND_OPT_FLAG)
+      if(LIBC_TARGET_ARCHITECTURE_IS_X86_64)
+        # ROUND_OPT_FLAG is only enabled if SSE4.2 is detected, not just SSE4.1,
+        # because there was code to check for SSE4.2 already, and few CPUs only
+        # have SSE4.1.
+        list(APPEND compile_options "-msse4.2")
+      endif()
+      if(LIBC_COMPILER_HAS_BUILTIN_CEIL_FLOOR_RINT_TRUNC)
+        list(APPEND compile_options
+             "-D__LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC")
+      endif()
+      if(LIBC_COMPILER_HAS_BUILTIN_ROUND)
+        list(APPEND compile_options "-D__LIBC_USE_BUILTIN_ROUND")
+      endif()
+      if(LIBC_COMPILER_HAS_BUILTIN_ROUNDEVEN)
+        list(APPEND compile_options "-D__LIBC_USE_BUILTIN_ROUNDEVEN")
+      endif()
     endif()
     if(ADD_EXPLICIT_SIMD_OPT_FLAG)
       list(APPEND compile_options "-D__LIBC_EXPLICIT_SIMD_OPT")
+    endif()
+    if(ADD_MISC_MATH_BASIC_OPS_OPT_FLAG)
+      list(APPEND compile_options "-D__LIBC_MISC_MATH_BASIC_OPS_OPT")
+      if(LIBC_COMPILER_HAS_BUILTIN_FMAX_FMIN)
+        list(APPEND compile_options "-D__LIBC_USE_BUILTIN_FMAX_FMIN")
+      endif()
+      if(LIBC_COMPILER_HAS_BUILTIN_FMAXF16_FMINF16)
+        list(APPEND compile_options "-D__LIBC_USE_BUILTIN_FMAXF16_FMINF16")
+      endif()
+      if("FullFP16" IN_LIST LIBC_CPU_FEATURES AND
+         CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        list(APPEND compile_options
+             "SHELL:-Xclang -target-feature -Xclang +fullfp16")
+      endif()
     endif()
   elseif(MSVC)
     if(ADD_FMA_FLAG)
@@ -34,25 +83,77 @@ function(_get_compile_options_from_flags output_var)
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction(_get_compile_options_from_flags)
 
+function(_get_compile_options_from_config output_var)
+  set(config_options "")
+
+  if(LIBC_CONF_QSORT_IMPL)
+    list(APPEND config_options "-DLIBC_QSORT_IMPL=${LIBC_CONF_QSORT_IMPL}")
+  endif()
+
+  if(LIBC_TYPES_TIME_T_IS_32_BIT AND LLVM_LIBC_FULL_BUILD)
+    list(APPEND config_options "-DLIBC_TYPES_TIME_T_IS_32_BIT")
+  endif()
+
+  if(LIBC_ADD_NULL_CHECKS)
+    list(APPEND config_options "-DLIBC_ADD_NULL_CHECKS")
+  endif()
+
+  if(NOT "${LIBC_CONF_FREXP_INF_NAN_EXPONENT}" STREQUAL "")
+    list(APPEND config_options "-DLIBC_FREXP_INF_NAN_EXPONENT=${LIBC_CONF_FREXP_INF_NAN_EXPONENT}")
+  endif()
+
+  if(LIBC_CONF_MATH_OPTIMIZATIONS)
+    list(APPEND config_options "-DLIBC_MATH=${LIBC_CONF_MATH_OPTIMIZATIONS}")
+  endif()
+
+  set(${output_var} ${config_options} PARENT_SCOPE)
+endfunction(_get_compile_options_from_config)
+
 function(_get_common_compile_options output_var flags)
   _get_compile_options_from_flags(compile_flags ${flags})
+  _get_compile_options_from_config(config_flags)
 
-  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags})
+  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags} ${config_flags})
 
-  if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
+  if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
 
     if(LLVM_LIBC_FULL_BUILD)
+      # Only add -ffreestanding flag in non-GPU full build mode.
+      if(NOT LIBC_TARGET_OS_IS_GPU)
+        list(APPEND compile_options "-ffreestanding")
+      endif()
       list(APPEND compile_options "-DLIBC_FULL_BUILD")
-      # Only add -ffreestanding flag in full build mode.
-      list(APPEND compile_options "-ffreestanding")
+      # Manually disable standard include paths to prevent system headers from
+      # being included.
+      if(LIBC_CC_SUPPORTS_NOSTDLIBINC)
+        list(APPEND compile_options "-nostdlibinc")
+      elseif(COMPILER_RESOURCE_DIR)
+        # TODO: We should require COMPILER_RESOURCE_DIR to be set.
+        list(APPEND compile_options "-isystem${COMPILER_RESOURCE_DIR}/include")
+        list(APPEND compile_options "-nostdinc")
+      endif()
+      # TODO: We should set this unconditionally on Linux.
+      if(LIBC_TARGET_OS_IS_LINUX AND
+         (LIBC_CC_SUPPORTS_NOSTDLIBINC OR COMPILER_RESOURCE_DIR))
+        # We use -idirafter to avoid preempting libc's own headers in case the
+        # directory (e.g. /usr/include) contains other headers.
+        if(CMAKE_CROSSCOMPILING)
+          list(APPEND compile_options "-idirafter=${LIBC_KERNEL_HEADERS}")
+        else()
+          list(APPEND compile_options "-idirafter${LIBC_KERNEL_HEADERS}")
+        endif()
+      endif()
     endif()
 
     if(LIBC_COMPILER_HAS_FIXED_POINT)
       list(APPEND compile_options "-ffixed-point")
     endif()
 
-    list(APPEND compile_options "-fno-builtin")
+    if(NOT LIBC_TARGET_OS_IS_GPU)
+      list(APPEND compile_options "-fno-builtin")
+    endif()
+
     list(APPEND compile_options "-fno-exceptions")
     list(APPEND compile_options "-fno-lax-vector-conversions")
     list(APPEND compile_options "-fno-unwind-tables")
@@ -63,7 +164,7 @@ function(_get_common_compile_options output_var flags)
     endif()
     if (LIBC_CONF_KEEP_FRAME_POINTER)
       list(APPEND compile_options "-fno-omit-frame-pointer")
-      if (LIBC_TARGET_ARCHITECTURE_IS_X86)
+      if (LIBC_TARGET_ARCHITECTURE_IS_X86_64)
         list(APPEND compile_options "-mno-omit-leaf-frame-pointer")
       endif()
     endif()
@@ -78,6 +179,15 @@ function(_get_common_compile_options output_var flags)
     endif()
     list(APPEND compile_options "-Wconversion")
     list(APPEND compile_options "-Wno-sign-conversion")
+    list(APPEND compile_options "-Wdeprecated")
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+      # Silence this warning because _Complex is a part of C99.
+      list(APPEND compile_options "-fext-numeric-literals")
+    else()
+      list(APPEND compile_options "-Wno-c99-extensions")
+      list(APPEND compile_options "-Wno-gnu-imaginary-constant")
+    endif()
+    list(APPEND compile_options "-Wno-pedantic")
     list(APPEND compile_options "-Wimplicit-fallthrough")
     list(APPEND compile_options "-Wwrite-strings")
     list(APPEND compile_options "-Wextra-semi")
@@ -101,7 +211,6 @@ function(_get_common_compile_options output_var flags)
 
     if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
       list(APPEND compile_options "-Wno-unknown-cuda-version")
-      list(APPEND compile_options "SHELL:-mllvm -nvptx-emit-init-fini-kernel=false")
       list(APPEND compile_options "--cuda-feature=+ptx63")
       if(LIBC_CUDA_ROOT)
         list(APPEND compile_options "--cuda-path=${LIBC_CUDA_ROOT}")
@@ -109,81 +218,6 @@ function(_get_common_compile_options output_var flags)
     elseif(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
       list(APPEND compile_options "SHELL:-Xclang -mcode-object-version=none")
     endif()
-
-    # Manually disable all standard include paths and include the resource
-    # directory to prevent system headers from being included.
-    list(APPEND compile_options "-isystem${COMPILER_RESOURCE_DIR}/include")
-    list(APPEND compile_options "-nostdinc")
   endif()
-  set(${output_var} ${compile_options} PARENT_SCOPE)
-endfunction()
-
-function(_get_common_test_compile_options output_var c_test flags)
-  _get_compile_options_from_flags(compile_flags ${flags})
-
-  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags})
-
-  if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
-    list(APPEND compile_options "-fpie")
-
-    if(LLVM_LIBC_FULL_BUILD)
-      list(APPEND compile_options "-DLIBC_FULL_BUILD")
-      # Only add -ffreestanding flag in full build mode.
-      list(APPEND compile_options "-ffreestanding")
-      list(APPEND compile_options "-fno-exceptions")
-      list(APPEND compile_options "-fno-unwind-tables")
-      list(APPEND compile_options "-fno-asynchronous-unwind-tables")
-      if(NOT ${c_test})
-        list(APPEND compile_options "-fno-rtti")
-      endif()
-    endif()
-
-    if(LIBC_COMPILER_HAS_FIXED_POINT)
-      list(APPEND compile_options "-ffixed-point")
-    endif()
-
-    # list(APPEND compile_options "-Wall")
-    # list(APPEND compile_options "-Wextra")
-    # -DLIBC_WNO_ERROR=ON if you can't build cleanly with -Werror.
-    if(NOT LIBC_WNO_ERROR)
-      # list(APPEND compile_options "-Werror")
-    endif()
-    # list(APPEND compile_options "-Wconversion")
-    # list(APPEND compile_options "-Wno-sign-conversion")
-    # list(APPEND compile_options "-Wimplicit-fallthrough")
-    # list(APPEND compile_options "-Wwrite-strings")
-    # list(APPEND compile_options "-Wextra-semi")
-    # if(NOT CMAKE_COMPILER_IS_GNUCXX)
-    #   list(APPEND compile_options "-Wnewline-eof")
-    #   list(APPEND compile_options "-Wnonportable-system-include-path")
-    #   list(APPEND compile_options "-Wstrict-prototypes")
-    #   list(APPEND compile_options "-Wthread-safety")
-    #   list(APPEND compile_options "-Wglobal-constructors")
-    # endif()
-  endif()
-  set(${output_var} ${compile_options} PARENT_SCOPE)
-endfunction()
-
-function(_get_hermetic_test_compile_options output_var flags)
-  _get_compile_options_from_flags(compile_flags ${flags})
-  list(APPEND compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags}
-       ${flags} -fpie -ffreestanding -fno-exceptions -fno-rtti)
-
-  # The GPU build requires overriding the default CMake triple and architecture.
-  if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
-    list(APPEND compile_options
-         -Wno-multi-gpu -nogpulib -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
-         -mcode-object-version=${LIBC_GPU_CODE_OBJECT_VERSION})
-  elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-    list(APPEND compile_options
-         "SHELL:-mllvm -nvptx-emit-init-fini-kernel=false"
-         -Wno-multi-gpu --cuda-path=${LIBC_CUDA_ROOT}
-         -nogpulib -march=${LIBC_GPU_TARGET_ARCHITECTURE} -fno-use-cxa-atexit)
-  endif()
-
-  if(LLVM_LIBC_FULL_BUILD)
-    list(APPEND compile_options "-DLIBC_FULL_BUILD")
-  endif()
-  
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()

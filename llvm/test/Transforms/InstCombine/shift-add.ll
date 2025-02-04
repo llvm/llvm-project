@@ -289,7 +289,7 @@ define i8 @lshr_exact_add_negative_shift_positive_extra_use(i8 %x) {
 
 define <2 x i9> @lshr_exact_add_negative_shift_positive_vec(<2 x i9> %x) {
 ; CHECK-LABEL: @lshr_exact_add_negative_shift_positive_vec(
-; CHECK-NEXT:    [[R:%.*]] = lshr exact <2 x i9> <i9 -256, i9 -256>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact <2 x i9> splat (i9 -256), [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i9> [[R]]
 ;
   %a = add <2 x i9> %x, <i9 -7, i9 -7>
@@ -301,8 +301,8 @@ define <2 x i9> @lshr_exact_add_negative_shift_positive_vec(<2 x i9> %x) {
 
 define <2 x i9> @lshr_exact_add_negative_shift_lzcnt(<2 x i9> %x) {
 ; CHECK-LABEL: @lshr_exact_add_negative_shift_lzcnt(
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i9> [[X:%.*]], <i9 -7, i9 -7>
-; CHECK-NEXT:    [[R:%.*]] = lshr exact <2 x i9> <i9 4, i9 4>, [[A]]
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i9> [[X:%.*]], splat (i9 -7)
+; CHECK-NEXT:    [[R:%.*]] = lshr exact <2 x i9> splat (i9 4), [[A]]
 ; CHECK-NEXT:    ret <2 x i9> [[R]]
 ;
   %a = add <2 x i9> %x, <i9 -7, i9 -7>
@@ -372,7 +372,7 @@ define i8 @ashr_exact_add_negative_shift_negative_extra_use(i8 %x) {
 
 define <2 x i7> @ashr_exact_add_negative_shift_negative_vec(<2 x i7> %x) {
 ; CHECK-LABEL: @ashr_exact_add_negative_shift_negative_vec(
-; CHECK-NEXT:    [[R:%.*]] = ashr exact <2 x i7> <i7 -64, i7 -64>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = ashr exact <2 x i7> splat (i7 -64), [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i7> [[R]]
 ;
   %a = add <2 x i7> %x, <i7 -5, i7 -5>
@@ -384,8 +384,8 @@ define <2 x i7> @ashr_exact_add_negative_shift_negative_vec(<2 x i7> %x) {
 
 define <2 x i7> @ashr_exact_add_negative_leading_ones_vec(<2 x i7> %x) {
 ; CHECK-LABEL: @ashr_exact_add_negative_leading_ones_vec(
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i7> [[X:%.*]], <i7 -5, i7 -5>
-; CHECK-NEXT:    [[R:%.*]] = ashr exact <2 x i7> <i7 -4, i7 -4>, [[A]]
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i7> [[X:%.*]], splat (i7 -5)
+; CHECK-NEXT:    [[R:%.*]] = ashr exact <2 x i7> splat (i7 -4), [[A]]
 ; CHECK-NEXT:    ret <2 x i7> [[R]]
 ;
   %a = add <2 x i7> %x, <i7 -5, i7 -5>
@@ -410,9 +410,9 @@ define i32 @shl_nsw_add_negative(i32 %x) {
 
 define <2 x i8> @shl_nuw_add_negative_splat_uses(<2 x i8> %x, ptr %p) {
 ; CHECK-LABEL: @shl_nuw_add_negative_splat_uses(
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], <i8 -2, i8 -2>
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], splat (i8 -2)
 ; CHECK-NEXT:    store <2 x i8> [[A]], ptr [[P:%.*]], align 2
-; CHECK-NEXT:    [[R:%.*]] = shl nuw <2 x i8> <i8 3, i8 3>, [[X]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw <2 x i8> splat (i8 3), [[X]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = add <2 x i8> %x, <i8 -2, i8 -2>
@@ -505,7 +505,7 @@ define i2 @ashr_2_add_zext_basic(i1 %a, i1 %b) {
 define i32 @lshr_16_add_zext_basic(i16 %a, i16 %b) {
 ; CHECK-LABEL: @lshr_16_add_zext_basic(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i16 [[A:%.*]], -1
-; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i16 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ugt i16 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i32
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
@@ -566,7 +566,7 @@ define i32 @lshr_16_add_not_known_16_leading_zeroes(i32 %a, i32 %b) {
 define i64 @lshr_32_add_zext_basic(i32 %a, i32 %b) {
 ; CHECK-LABEL: @lshr_32_add_zext_basic(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ugt i32 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i64
 ; CHECK-NEXT:    ret i64 [[LSHR]]
 ;
@@ -623,7 +623,7 @@ define i64 @lshr_33_i32_add_zext_basic(i32 %a, i32 %b) {
 define i64 @lshr_16_to_64_add_zext_basic(i16 %a, i16 %b) {
 ; CHECK-LABEL: @lshr_16_to_64_add_zext_basic(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i16 [[A:%.*]], -1
-; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i16 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ugt i16 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i64
 ; CHECK-NEXT:    ret i64 [[LSHR]]
 ;
@@ -668,7 +668,7 @@ define i64 @lshr_32_add_not_known_32_leading_zeroes(i64 %a, i64 %b) {
 define i32 @ashr_16_add_zext_basic(i16 %a, i16 %b) {
 ; CHECK-LABEL: @ashr_16_add_zext_basic(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i16 [[A:%.*]], -1
-; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i16 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ugt i16 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i32
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
@@ -682,7 +682,7 @@ define i32 @ashr_16_add_zext_basic(i16 %a, i16 %b) {
 define i64 @ashr_32_add_zext_basic(i32 %a, i32 %b) {
 ; CHECK-LABEL: @ashr_32_add_zext_basic(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ugt i32 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i64
 ; CHECK-NEXT:    ret i64 [[LSHR]]
 ;
@@ -696,7 +696,7 @@ define i64 @ashr_32_add_zext_basic(i32 %a, i32 %b) {
 define i64 @ashr_16_to_64_add_zext_basic(i16 %a, i16 %b) {
 ; CHECK-LABEL: @ashr_16_to_64_add_zext_basic(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i16 [[A:%.*]], -1
-; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i16 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ugt i16 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i64
 ; CHECK-NEXT:    ret i64 [[LSHR]]
 ;

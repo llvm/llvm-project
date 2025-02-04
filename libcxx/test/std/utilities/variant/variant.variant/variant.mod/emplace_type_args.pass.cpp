@@ -25,8 +25,8 @@
 #include "variant_test_helpers.h"
 
 template <class Var, class T, class... Args>
-constexpr auto test_emplace_exists_imp(int) -> decltype(
-    std::declval<Var>().template emplace<T>(std::declval<Args>()...), true) {
+constexpr auto test_emplace_exists_imp(int)
+    -> decltype(std::declval<Var>().template emplace<T>(std::declval<Args>()...), true) {
   return true;
 }
 
@@ -35,28 +35,32 @@ constexpr auto test_emplace_exists_imp(long) -> bool {
   return false;
 }
 
-template <class... Args> constexpr bool emplace_exists() {
+template <class... Args>
+constexpr bool emplace_exists() {
   return test_emplace_exists_imp<Args...>(0);
 }
 
-void test_emplace_sfinae() {
+constexpr void test_emplace_sfinae() {
   {
-    using V = std::variant<int, void *, const void *, TestTypes::NoCtors>;
+    using V = std::variant<int, void*, const void*, TestTypes::NoCtors>;
     static_assert(emplace_exists<V, int>(), "");
     static_assert(emplace_exists<V, int, int>(), "");
-    static_assert(!emplace_exists<V, int, decltype(nullptr)>(),
-                  "cannot construct");
-    static_assert(emplace_exists<V, void *, decltype(nullptr)>(), "");
-    static_assert(!emplace_exists<V, void *, int>(), "cannot construct");
-    static_assert(emplace_exists<V, void *, int *>(), "");
-    static_assert(!emplace_exists<V, void *, const int *>(), "");
-    static_assert(emplace_exists<V, const void *, const int *>(), "");
-    static_assert(emplace_exists<V, const void *, int *>(), "");
+    static_assert(!emplace_exists<V, int, decltype(nullptr)>(), "cannot construct");
+    static_assert(emplace_exists<V, void*, decltype(nullptr)>(), "");
+    static_assert(!emplace_exists<V, void*, int>(), "cannot construct");
+    static_assert(emplace_exists<V, void*, int*>(), "");
+    static_assert(!emplace_exists<V, void*, const int*>(), "");
+    static_assert(emplace_exists<V, const void*, const int*>(), "");
+    static_assert(emplace_exists<V, const void*, int*>(), "");
     static_assert(!emplace_exists<V, TestTypes::NoCtors>(), "cannot construct");
   }
 }
 
-void test_basic() {
+struct NoCtor {
+  NoCtor() = delete;
+};
+
+TEST_CONSTEXPR_CXX20 void test_basic() {
   {
     using V = std::variant<int>;
     V v(42);
@@ -70,8 +74,7 @@ void test_basic() {
     assert(&ref2 == &std::get<0>(v));
   }
   {
-    using V =
-        std::variant<int, long, const void *, TestTypes::NoCtors, std::string>;
+    using V     = std::variant<int, long, const void*, NoCtor, std::string>;
     const int x = 100;
     V v(std::in_place_type<int>, -1);
     // default emplace a value
@@ -79,8 +82,8 @@ void test_basic() {
     static_assert(std::is_same_v<long&, decltype(ref1)>, "");
     assert(std::get<1>(v) == 0);
     assert(&ref1 == &std::get<1>(v));
-    auto& ref2 = v.emplace<const void *>(&x);
-    static_assert(std::is_same_v<const void *&, decltype(ref2)>, "");
+    auto& ref2 = v.emplace<const void*>(&x);
+    static_assert(std::is_same_v<const void*&, decltype(ref2)>, "");
     assert(std::get<2>(v) == &x);
     assert(&ref2 == &std::get<2>(v));
     // emplace with multiple args
@@ -91,9 +94,19 @@ void test_basic() {
   }
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX20 bool test() {
   test_basic();
   test_emplace_sfinae();
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+
+#if TEST_STD_VER >= 20
+  static_assert(test());
+#endif
 
   return 0;
 }

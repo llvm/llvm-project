@@ -85,6 +85,20 @@ public:
   /// Whether LLDB feels confident importing Clang modules from this SDK.
   static bool SDKSupportsModules(Type type, llvm::VersionTuple version);
   static bool SDKSupportsModules(Type desired_type, const FileSpec &sdk_path);
+
+  /// Returns true if the SDK for the specified triple supports
+  /// builtin modules in system headers.
+  ///
+  /// NOTE: should be kept in sync with sdkSupportsBuiltinModules in
+  /// Toolchains/Darwin.cpp
+  ///
+  /// FIXME: this function will be removed once LLDB's ClangExpressionParser
+  /// constructs the compiler instance through the driver/toolchain. See \ref
+  /// SetupImportStdModuleLangOpts
+  ///
+  static bool SDKSupportsBuiltinModules(const llvm::Triple &target_triple,
+                                        llvm::VersionTuple sdk_version);
+
   /// Return the canonical SDK name, such as "macosx" for the macOS SDK.
   static std::string GetCanonicalName(Info info);
   /// Return the best-matching SDK type for a specific triple.

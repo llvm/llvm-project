@@ -21,17 +21,20 @@ include "flang/Optimizer/Dialect/FIROps.td"
 
 def IdenticalTypePred : Constraint<CPred<"$0.getType() == $1.getType()">>;
 def IntegerTypePred : Constraint<CPred<"fir::isa_integer($0.getType())">>;
-def IndexTypePred : Constraint<CPred<"$0.getType().isa<mlir::IndexType>()">>;
+def IndexTypePred : Constraint<CPred<
+                       "mlir::isa<mlir::IndexType>($0.getType())">>;
 
 // Widths are monotonic.
 //   $0.bits >= $1.bits >= $2.bits or $0.bits <= $1.bits <= $2.bits
 def MonotonicTypePred
-    : Constraint<CPred<"(($0.getType().isa<mlir::IntegerType>() && "
-                       "  $1.getType().isa<mlir::IntegerType>() && "
-                       "  $2.getType().isa<mlir::IntegerType>()) || "
-                       " ($0.getType().isa<mlir::FloatType>() && "
-                       "  $1.getType().isa<mlir::FloatType>() && "
-                       "  $2.getType().isa<mlir::FloatType>())) && "
+    : Constraint<CPred<"((mlir::isa<mlir::IntegerType>($0.getType()) && "
+                       "  mlir::isa<mlir::IntegerType>($1.getType()) && "
+                       "  mlir::isa<mlir::IntegerType>($2.getType()) && "
+                       "  $0.getType().isUnsignedInteger() == $1.getType().isUnsignedInteger() && "
+                       "  $1.getType().isUnsignedInteger() == $2.getType().isUnsignedInteger()) || "
+                       " (mlir::isa<mlir::FloatType>($0.getType()) && "
+                       "  mlir::isa<mlir::FloatType>($1.getType()) && "
+                       "  mlir::isa<mlir::FloatType>($2.getType()))) && "
                        "(($0.getType().getIntOrFloatBitWidth() <= "
                        "  $1.getType().getIntOrFloatBitWidth() && "
                        "  $1.getType().getIntOrFloatBitWidth() <= "
@@ -42,8 +45,8 @@ def MonotonicTypePred
                        "  $2.getType().getIntOrFloatBitWidth()))">>;
 
 def IntPred : Constraint<CPred<
-                       "$0.getType().isa<mlir::IntegerType>() && "
-                       "$1.getType().isa<mlir::IntegerType>()">>;
+                       "mlir::isa<mlir::IntegerType>($0.getType()) && "
+                       "mlir::isa<mlir::IntegerType>($1.getType())">>;
                        
 // If both are int type and the first is smaller than the second.
 //   $0.bits <= $1.bits
@@ -53,6 +56,9 @@ def SmallerWidthPred : Constraint<CPred<
 def StrictSmallerWidthPred : Constraint<CPred<
                        "$0.getType().getIntOrFloatBitWidth() < "
                        "$1.getType().getIntOrFloatBitWidth()">>;
+
+def PointerCompatiblePred
+    : Constraint<CPred<"fir::ConvertOp::isPointerCompatible($0.getType())">>;
 
 // floats or ints that undergo successive extensions or successive truncations.
 def ConvertConvertOptPattern
@@ -101,12 +107,26 @@ def CombineConvertTruncOptPattern
 def createConstantOp
     : NativeCodeCall<"$_builder.create<mlir::arith::ConstantOp>"
                      "($_loc, $_builder.getIndexType(), "
-                     "rewriter.getIndexAttr($1.dyn_cast<mlir::IntegerAttr>()"
-                     ".getInt()))">;
+                     "rewriter.getIndexAttr("
+                     "mlir::dyn_cast<mlir::IntegerAttr>($1).getInt()))">;
 
 def ForwardConstantConvertPattern
     : Pat<(fir_ConvertOp:$res (Arith_ConstantOp:$cnt $attr)),
           (createConstantOp $res, $attr),
           [(IndexTypePred $res), (IntegerTypePred $cnt)]>;
+
+// Optimize redundant pointer conversions, e.g.:
+// %1 = fir.convert %0 :
+//     (!fir.heap<!fir.array<2xf32>>) -> !fir.ref<!fir.array<2xf32>>
+// %2 = fir.convert %1 :
+//     (!fir.ref<!fir.array<2xf32>>) -> !fir.heap<!fir.array<2xf32>>
+// Will be optimized into:
+// %2 = fir.convert %0 :
+//     (!fir.heap<!fir.array<2xf32>>) -> !fir.heap<!fir.array<2xf32>>
+// which is redundant due to RedundantConvertOptPattern.
+def ChainedPointerConvertsPattern
+    : Pat<(fir_ConvertOp:$res(fir_ConvertOp:$irm $arg)), (fir_ConvertOp $arg),
+          [(PointerCompatiblePred $arg), (PointerCompatiblePred $irm),
+           (PointerCompatiblePred $res)]>;
 
 #endif // FORTRAN_FIR_REWRITE_PATTERNS

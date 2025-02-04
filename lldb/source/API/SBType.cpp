@@ -13,7 +13,6 @@
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBTypeEnumMember.h"
 #include "lldb/Core/Mangled.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Type.h"
@@ -23,8 +22,10 @@
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "llvm/ADT/APSInt.h"
+#include "llvm/Support/MathExtras.h"
 
 #include <memory>
 #include <optional>
@@ -130,6 +131,18 @@ uint64_t SBType::GetByteSize() {
             m_opaque_sp->GetCompilerType(false).GetByteSize(nullptr))
       return *size;
   return 0;
+}
+
+uint64_t SBType::GetByteAlign() {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (!IsValid())
+    return 0;
+
+  std::optional<uint64_t> bit_align =
+      m_opaque_sp->GetCompilerType(/*prefer_dynamic=*/false)
+          .GetTypeBitAlign(nullptr);
+  return llvm::divideCeil(bit_align.value_or(0), 8);
 }
 
 bool SBType::IsPointerType() {

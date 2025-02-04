@@ -99,6 +99,15 @@ template <int KIND> struct StoreIntegerAt {
   }
 };
 
+// Helper to store floating value in result[at].
+template <int KIND> struct StoreFloatingPointAt {
+  RT_API_ATTRS void operator()(const Fortran::runtime::Descriptor &result,
+      std::size_t at, std::double_t value) const {
+    *result.ZeroBasedIndexedElement<Fortran::runtime::CppTypeFor<
+        Fortran::common::TypeCategory::Real, KIND>>(at) = value;
+  }
+};
+
 // Validate a KIND= argument
 RT_API_ATTRS void CheckIntegerKind(
     Terminator &, int kind, const char *intrinsic);
@@ -197,6 +206,23 @@ inline RT_API_ATTRS RESULT ApplyType(
     default:
       terminator.Crash("not yet implemented: INTEGER(KIND=%d)", kind);
     }
+  case TypeCategory::Unsigned:
+    switch (kind) {
+    case 1:
+      return FUNC<TypeCategory::Unsigned, 1>{}(std::forward<A>(x)...);
+    case 2:
+      return FUNC<TypeCategory::Unsigned, 2>{}(std::forward<A>(x)...);
+    case 4:
+      return FUNC<TypeCategory::Unsigned, 4>{}(std::forward<A>(x)...);
+    case 8:
+      return FUNC<TypeCategory::Unsigned, 8>{}(std::forward<A>(x)...);
+#if defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T
+    case 16:
+      return FUNC<TypeCategory::Unsigned, 16>{}(std::forward<A>(x)...);
+#endif
+    default:
+      terminator.Crash("not yet implemented: UNSIGNED(KIND=%d)", kind);
+    }
   case TypeCategory::Real:
     switch (kind) {
 #if 0 // TODO: REAL(2 & 3)
@@ -294,7 +320,7 @@ inline RT_API_ATTRS RESULT ApplyIntegerKind(
     return FUNC<16>{}(std::forward<A>(x)...);
 #endif
   default:
-    terminator.Crash("not yet implemented: INTEGER(KIND=%d)", kind);
+    terminator.Crash("not yet implemented: INTEGER/UNSIGNED(KIND=%d)", kind);
   }
 }
 
@@ -387,9 +413,26 @@ GetResultType(TypeCategory xCat, int xKind, TypeCategory yCat, int yKind) {
       break;
     }
     break;
+  case TypeCategory::Unsigned:
+    switch (yCat) {
+    case TypeCategory::Unsigned:
+      return std::make_pair(TypeCategory::Unsigned, maxKind);
+    case TypeCategory::Real:
+    case TypeCategory::Complex:
+#if !(defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T)
+      if (xKind == 16) {
+        break;
+      }
+#endif
+      return std::make_pair(yCat, yKind);
+    default:
+      break;
+    }
+    break;
   case TypeCategory::Real:
     switch (yCat) {
     case TypeCategory::Integer:
+    case TypeCategory::Unsigned:
 #if !(defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T)
       if (yKind == 16) {
         break;
@@ -406,6 +449,7 @@ GetResultType(TypeCategory xCat, int xKind, TypeCategory yCat, int yKind) {
   case TypeCategory::Complex:
     switch (yCat) {
     case TypeCategory::Integer:
+    case TypeCategory::Unsigned:
 #if !(defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T)
       if (yKind == 16) {
         break;

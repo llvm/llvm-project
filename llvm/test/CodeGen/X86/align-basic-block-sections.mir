@@ -132,5 +132,5 @@ body:             |
 ...
 
 # CHECK: .section	.text.test,"ax",@progbits,unique,2
-# CHECK-NEXT: .p2align	8, 0x90
+# CHECK-NEXT: .p2align	8
 # CHECK-NEXT: test.__part.2: # %entry

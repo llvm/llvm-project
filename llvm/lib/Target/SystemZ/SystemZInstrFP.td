@@ -430,8 +430,10 @@ let Uses = [FPC], mayRaiseFPException = 1,
     def ADBR : BinaryRRE<"adbr", 0xB31A, any_fadd, FP64,  FP64>;
     def AXBR : BinaryRRE<"axbr", 0xB34A, any_fadd, FP128, FP128>;
   }
-  defm AEB : BinaryRXEAndPseudo<"aeb", 0xED0A, any_fadd, FP32, z_load, 4>;
-  defm ADB : BinaryRXEAndPseudo<"adb", 0xED1A, any_fadd, FP64, z_load, 8>;
+  defm AEB : BinaryRXEAndPseudo<"aeb", 0xED0A, z_any_fadd_noreassoc, FP32,
+                                z_load, 4>;
+  defm ADB : BinaryRXEAndPseudo<"adb", 0xED1A, z_any_fadd_noreassoc, FP64,
+                                z_load, 8>;
 }
 
 // Subtraction.
@@ -441,8 +443,10 @@ let Uses = [FPC], mayRaiseFPException = 1,
   def SDBR : BinaryRRE<"sdbr", 0xB31B, any_fsub, FP64,  FP64>;
   def SXBR : BinaryRRE<"sxbr", 0xB34B, any_fsub, FP128, FP128>;
 
-  defm SEB : BinaryRXEAndPseudo<"seb",  0xED0B, any_fsub, FP32, z_load, 4>;
-  defm SDB : BinaryRXEAndPseudo<"sdb",  0xED1B, any_fsub, FP64, z_load, 8>;
+  defm SEB : BinaryRXEAndPseudo<"seb",  0xED0B, z_any_fsub_noreassoc, FP32,
+                                z_load, 4>;
+  defm SDB : BinaryRXEAndPseudo<"sdb",  0xED1B, z_any_fsub_noreassoc, FP64,
+                                z_load, 8>;
 }
 
 // Multiplication.
@@ -452,8 +456,10 @@ let Uses = [FPC], mayRaiseFPException = 1 in {
     def MDBR  : BinaryRRE<"mdbr",  0xB31C, any_fmul, FP64,  FP64>;
     def MXBR  : BinaryRRE<"mxbr",  0xB34C, any_fmul, FP128, FP128>;
   }
-  defm MEEB : BinaryRXEAndPseudo<"meeb", 0xED17, any_fmul, FP32, z_load, 4>;
-  defm MDB  : BinaryRXEAndPseudo<"mdb",  0xED1C, any_fmul, FP64, z_load, 8>;
+  defm MEEB : BinaryRXEAndPseudo<"meeb", 0xED17, z_any_fmul_noreassoc, FP32,
+                                  z_load, 4>;
+  defm MDB  : BinaryRXEAndPseudo<"mdb",  0xED1C, z_any_fmul_noreassoc, FP64,
+                                  z_load, 8>;
 }
 
 // f64 multiplication of two FP32 registers.

@@ -200,7 +200,7 @@ private:
     CHECK_RANKS_FOR(BitwiseAnd);
     CHECK_RANKS_FOR(BitwiseOr);
     CHECK_RANKS_FOR(BitwiseXor);
-    CHECK_RANKS_FOR(Div);
+    CHECK_RANKS_FOR(IntDiv);
     CHECK_RANKS_FOR(LogicalAnd);
     CHECK_RANKS_FOR(LogicalLeftShift);
     CHECK_RANKS_FOR(LogicalRightShift);
@@ -357,7 +357,7 @@ private:
   bool levelCheckTransposeConv2d(Operation *op) {
     if (auto transpose = dyn_cast<tosa::TransposeConv2DOp>(op)) {
       if (ShapedType filterType =
-              dyn_cast<ShapedType>(transpose.getFilter().getType())) {
+              dyn_cast<ShapedType>(transpose.getWeight().getType())) {
         auto shape = filterType.getShape();
         assert(shape.size() == 4);
         // level check kernel sizes for kH and KW
@@ -405,14 +405,28 @@ private:
     if (level == TosaLevelEnum::EightK) {
       tosaLevel = TOSA_LEVEL_EIGHTK;
     }
+
+    if (!profile.empty()) {
+      for (std::string &prof : profile) {
+        auto profSymbol = symbolizeTosaProfileEnum(prof);
+        if (profSymbol) {
+          enabled_profiles.push_back(profSymbol.value());
+        }
+      }
+    }
   }
 
   bool CheckVariable(Operation *op);
   bool CheckVariableReadOrWrite(Operation *op);
 
   bool isValidElementType(Type type);
+  bool isEnabledProfile(TosaProfileEnum prof) {
+    return std::find(enabled_profiles.begin(), enabled_profiles.end(), prof) !=
+           std::end(enabled_profiles);
+  }
 
   SmallVector<std::function<LogicalResult(Operation *)>> constCheckers;
+  SmallVector<TosaProfileEnum, 3> enabled_profiles;
   TosaLevel tosaLevel;
   DenseMap<StringAttr, mlir::Type> variablesMap;
 };
@@ -506,23 +520,12 @@ LogicalResult TosaValidation::applyVariableCheck(Operation *op) {
 }
 
 bool TosaValidation::isValidElementType(Type type) {
-  if ((profile == TosaProfileEnum::BaseInference) && isa<FloatType>(type)) {
-    return false;
-  }
-  if (type.isF64()) {
-    return false;
-  }
-  if (auto intTy = dyn_cast<IntegerType>(type)) {
-    if (intTy.isUnsigned()) {
-      switch (intTy.getWidth()) {
-      case 8:
-      case 16:
-        return true;
-      default:
-        return false;
-      }
-    } else {
-      // Signless - treated as signed.
+  if (isa<FloatType>(type)) {
+    if (!isEnabledProfile(TosaProfileEnum::MainInference))
+      return false;
+    return type.isF32() || type.isF16() || type.isBF16();
+  } else if (auto intTy = dyn_cast<IntegerType>(type)) {
+    if (intTy.isSignless()) {
       switch (intTy.getWidth()) {
       case 1:
       case 4:
@@ -530,20 +533,26 @@ bool TosaValidation::isValidElementType(Type type) {
       case 16:
       case 32:
       case 48:
-      case 64:
         return true;
-      default:
-        return false;
       }
     }
-    return false;
+  } else if (mlir::isa<tosa::shapeType>(type)) {
+    return true;
   }
-  return true;
+  return false;
 }
 
 void TosaValidation::runOnOperation() {
   configLevelAndProfile();
+
+  TosaDialect *tosaDialect = getContext().getLoadedDialect<TosaDialect>();
+  if (!tosaDialect)
+    return;
+
   getOperation().walk([&](Operation *op) {
+    if (op->getDialect() != tosaDialect)
+      return;
+
     for (Value operand : op->getOperands()) {
       auto elementTy = getElementTypeOrSelf(operand);
       if (!isValidElementType(elementTy)) {

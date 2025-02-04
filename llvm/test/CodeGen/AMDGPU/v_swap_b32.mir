@@ -1,4 +1,5 @@
 # RUN: llc -simplify-mir -mtriple=amdgcn -mcpu=gfx900 -run-pass=si-shrink-instructions -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -simplify-mir -mtriple=amdgcn -mcpu=gfx900 -passes=si-shrink-instructions -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: swap_phys_condensed
 # GCN: bb.0:

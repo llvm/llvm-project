@@ -589,6 +589,12 @@ TEST(SelectionTest, CommonAncestor) {
         auto x = [[ns::^C<int>]];
       )cpp",
        "ConceptReference"},
+      {R"cpp(
+        template <typename T, typename K>
+        concept D = true;
+        template <typename T> void g(D<[[^T]]> auto abc) {}
+      )cpp",
+       "TemplateTypeParmTypeLoc"},
   };
 
   for (const Case &C : Cases) {

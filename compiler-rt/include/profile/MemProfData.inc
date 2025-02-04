@@ -33,7 +33,13 @@
    (uint64_t)'o' << 24 | (uint64_t)'f' << 16 | (uint64_t)'r' << 8 | (uint64_t)129)
 
 // The version number of the raw binary format.
-#define MEMPROF_RAW_VERSION 3ULL
+#define MEMPROF_RAW_VERSION 4ULL
+
+// Currently supported versions.
+#define MEMPROF_RAW_SUPPORTED_VERSIONS                                         \
+  { 3ULL, 4ULL }
+
+#define MEMPROF_V3_MIB_SIZE 132ULL;
 
 #define MEMPROF_BUILDID_MAX_SIZE 32ULL
 
@@ -119,7 +125,8 @@ MemInfoBlock() {
 }
 
 MemInfoBlock(uint32_t Size, uint64_t AccessCount, uint32_t AllocTs,
-             uint32_t DeallocTs, uint32_t AllocCpu, uint32_t DeallocCpu)
+             uint32_t DeallocTs, uint32_t AllocCpu, uint32_t DeallocCpu,
+             uintptr_t Histogram, uint32_t HistogramSize)
     : MemInfoBlock() {
   AllocCount = 1U;
   TotalAccessCount = AccessCount;
@@ -149,6 +156,8 @@ MemInfoBlock(uint32_t Size, uint64_t AccessCount, uint32_t AllocTs,
   AllocCpuId = AllocCpu;
   DeallocCpuId = DeallocCpu;
   NumMigratedCpu = AllocCpuId != DeallocCpuId;
+  AccessHistogramSize = HistogramSize;
+  AccessHistogram = Histogram;
 }
 
 void Merge(const MemInfoBlock &newMIB) {
@@ -194,6 +203,24 @@ void Merge(const MemInfoBlock &newMIB) {
   NumSameDeallocCpu += DeallocCpuId == newMIB.DeallocCpuId;
   AllocCpuId = newMIB.AllocCpuId;
   DeallocCpuId = newMIB.DeallocCpuId;
+
+  // For merging histograms, we always keep the longer histogram, and add
+  // values of shorter histogram to larger one.
+  uintptr_t ShorterHistogram;
+  uint32_t ShorterHistogramSize;
+  if (newMIB.AccessHistogramSize > AccessHistogramSize) {
+    ShorterHistogram = AccessHistogram;
+    ShorterHistogramSize = AccessHistogramSize;
+    // Swap histogram of current to larger histogram
+    AccessHistogram = newMIB.AccessHistogram;
+    AccessHistogramSize = newMIB.AccessHistogramSize;
+  } else {
+    ShorterHistogram = newMIB.AccessHistogram;
+    ShorterHistogramSize = newMIB.AccessHistogramSize;
+  }
+  for (size_t i = 0; i < ShorterHistogramSize; ++i) {
+    ((uint64_t *)AccessHistogram)[i] += ((uint64_t *)ShorterHistogram)[i];
+  }
 }
 
 #ifdef _MSC_VER

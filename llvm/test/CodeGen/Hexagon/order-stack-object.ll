@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mattr=+hvxv68,+hvx-length128b < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mattr=+hvxv68,+hvx-length128b < %s | FileCheck %s
 
 ; Check that ordering objects on the stack from the largest to the smallest has
 ; decreased the space allocated on the stack by 512 Bytes.

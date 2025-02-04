@@ -1583,7 +1583,7 @@ define i65 @v_shl_i65(i65 %value, i65 %amount) {
 ; GFX6-NEXT:    v_sub_i32_e32 v4, vcc, 64, v3
 ; GFX6-NEXT:    v_lshr_b64 v[4:5], v[0:1], v4
 ; GFX6-NEXT:    v_lshl_b64 v[5:6], v[2:3], v3
-; GFX6-NEXT:    v_subrev_i32_e32 v8, vcc, 64, v3
+; GFX6-NEXT:    v_add_i32_e32 v8, vcc, 0xffffffc0, v3
 ; GFX6-NEXT:    v_lshl_b64 v[6:7], v[0:1], v3
 ; GFX6-NEXT:    v_or_b32_e32 v9, v4, v5
 ; GFX6-NEXT:    v_lshl_b64 v[4:5], v[0:1], v8
@@ -1601,7 +1601,7 @@ define i65 @v_shl_i65(i65 %value, i65 %amount) {
 ; GFX8-NEXT:    v_sub_u32_e32 v4, vcc, 64, v3
 ; GFX8-NEXT:    v_lshrrev_b64 v[4:5], v4, v[0:1]
 ; GFX8-NEXT:    v_lshlrev_b64 v[5:6], v3, v[2:3]
-; GFX8-NEXT:    v_subrev_u32_e32 v8, vcc, 64, v3
+; GFX8-NEXT:    v_add_u32_e32 v8, vcc, 0xffffffc0, v3
 ; GFX8-NEXT:    v_lshlrev_b64 v[6:7], v3, v[0:1]
 ; GFX8-NEXT:    v_or_b32_e32 v9, v4, v5
 ; GFX8-NEXT:    v_lshlrev_b64 v[4:5], v8, v[0:1]
@@ -1619,7 +1619,7 @@ define i65 @v_shl_i65(i65 %value, i65 %amount) {
 ; GFX9-NEXT:    v_sub_u32_e32 v4, 64, v3
 ; GFX9-NEXT:    v_lshrrev_b64 v[4:5], v4, v[0:1]
 ; GFX9-NEXT:    v_lshlrev_b64 v[5:6], v3, v[2:3]
-; GFX9-NEXT:    v_subrev_u32_e32 v8, 64, v3
+; GFX9-NEXT:    v_add_u32_e32 v8, 0xffffffc0, v3
 ; GFX9-NEXT:    v_lshlrev_b64 v[6:7], v3, v[0:1]
 ; GFX9-NEXT:    v_or_b32_e32 v9, v4, v5
 ; GFX9-NEXT:    v_lshlrev_b64 v[4:5], v8, v[0:1]
@@ -1636,7 +1636,7 @@ define i65 @v_shl_i65(i65 %value, i65 %amount) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_sub_nc_u32_e32 v6, 64, v3
 ; GFX10-NEXT:    v_lshlrev_b64 v[4:5], v3, v[2:3]
-; GFX10-NEXT:    v_subrev_nc_u32_e32 v8, 64, v3
+; GFX10-NEXT:    v_add_nc_u32_e32 v8, 0xffffffc0, v3
 ; GFX10-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 64, v3
 ; GFX10-NEXT:    v_lshrrev_b64 v[5:6], v6, v[0:1]
 ; GFX10-NEXT:    v_lshlrev_b64 v[6:7], v3, v[0:1]
@@ -1654,7 +1654,7 @@ define i65 @v_shl_i65(i65 %value, i65 %amount) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v6, 64, v3
 ; GFX11-NEXT:    v_lshlrev_b64 v[4:5], v3, v[2:3]
-; GFX11-NEXT:    v_subrev_nc_u32_e32 v8, 64, v3
+; GFX11-NEXT:    v_add_nc_u32_e32 v8, 0xffffffc0, v3
 ; GFX11-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 64, v3
 ; GFX11-NEXT:    v_lshrrev_b64 v[5:6], v6, v[0:1]
 ; GFX11-NEXT:    v_lshlrev_b64 v[6:7], v3, v[0:1]
@@ -1733,9 +1733,9 @@ define amdgpu_ps i65 @s_shl_i65(i65 inreg %value, i65 inreg %amount) {
 ; GCN-NEXT:    s_lshl_b64 s[8:9], s[0:1], s10
 ; GCN-NEXT:    s_cmp_lg_u32 s11, 0
 ; GCN-NEXT:    s_cselect_b64 s[0:1], s[4:5], 0
-; GCN-NEXT:    s_cselect_b64 s[4:5], s[6:7], s[8:9]
+; GCN-NEXT:    s_cselect_b32 s3, s6, s8
 ; GCN-NEXT:    s_cmp_lg_u32 s12, 0
-; GCN-NEXT:    s_cselect_b64 s[2:3], s[2:3], s[4:5]
+; GCN-NEXT:    s_cselect_b32 s2, s2, s3
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_shl_i65:
@@ -1753,9 +1753,9 @@ define amdgpu_ps i65 @s_shl_i65(i65 inreg %value, i65 inreg %amount) {
 ; GFX10PLUS-NEXT:    s_lshl_b64 s[6:7], s[0:1], s10
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s11, 0
 ; GFX10PLUS-NEXT:    s_cselect_b64 s[0:1], s[8:9], 0
-; GFX10PLUS-NEXT:    s_cselect_b64 s[4:5], s[4:5], s[6:7]
+; GFX10PLUS-NEXT:    s_cselect_b32 s3, s4, s6
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s12, 0
-; GFX10PLUS-NEXT:    s_cselect_b64 s[2:3], s[2:3], s[4:5]
+; GFX10PLUS-NEXT:    s_cselect_b32 s2, s2, s3
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %result = shl i65 %value, %amount
   ret i65 %result

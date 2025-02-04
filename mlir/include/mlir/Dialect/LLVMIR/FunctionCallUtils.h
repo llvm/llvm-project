@@ -16,7 +16,6 @@
 
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LLVM.h"
-#include <optional>
 
 namespace mlir {
 class Location;
@@ -29,42 +28,47 @@ class ValueRange;
 namespace LLVM {
 class LLVMFuncOp;
 
-/// Helper functions to lookup or create the declaration for commonly used
+/// Helper functions to look up or create the declaration for commonly used
 /// external C function calls. The list of functions provided here must be
 /// implemented separately (e.g. as part of a support runtime library or as part
 /// of the libc).
-LLVM::LLVMFuncOp lookupOrCreatePrintI64Fn(ModuleOp moduleOp);
-LLVM::LLVMFuncOp lookupOrCreatePrintU64Fn(ModuleOp moduleOp);
-LLVM::LLVMFuncOp lookupOrCreatePrintF16Fn(ModuleOp moduleOp);
-LLVM::LLVMFuncOp lookupOrCreatePrintBF16Fn(ModuleOp moduleOp);
-LLVM::LLVMFuncOp lookupOrCreatePrintF32Fn(ModuleOp moduleOp);
-LLVM::LLVMFuncOp lookupOrCreatePrintF64Fn(ModuleOp moduleOp);
+/// Failure if an unexpected version of function is found.
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintI64Fn(Operation *moduleOp);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintU64Fn(Operation *moduleOp);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintF16Fn(Operation *moduleOp);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintBF16Fn(Operation *moduleOp);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintF32Fn(Operation *moduleOp);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintF64Fn(Operation *moduleOp);
 /// Declares a function to print a C-string.
 /// If a custom runtime function is defined via `runtimeFunctionName`, it must
 /// have the signature void(char const*). The default function is `printString`.
-LLVM::LLVMFuncOp
-lookupOrCreatePrintStringFn(ModuleOp moduleOp,
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreatePrintStringFn(Operation *moduleOp,
                             std::optional<StringRef> runtimeFunctionName = {});
-LLVM::LLVMFuncOp lookupOrCreatePrintOpenFn(ModuleOp moduleOp);
-LLVM::LLVMFuncOp lookupOrCreatePrintCloseFn(ModuleOp moduleOp);
-LLVM::LLVMFuncOp lookupOrCreatePrintCommaFn(ModuleOp moduleOp);
-LLVM::LLVMFuncOp lookupOrCreatePrintNewlineFn(ModuleOp moduleOp);
-LLVM::LLVMFuncOp lookupOrCreateMallocFn(ModuleOp moduleOp, Type indexType);
-LLVM::LLVMFuncOp lookupOrCreateAlignedAllocFn(ModuleOp moduleOp,
-                                              Type indexType);
-LLVM::LLVMFuncOp lookupOrCreateFreeFn(ModuleOp moduleOp);
-LLVM::LLVMFuncOp lookupOrCreateGenericAllocFn(ModuleOp moduleOp,
-                                              Type indexType);
-LLVM::LLVMFuncOp lookupOrCreateGenericAlignedAllocFn(ModuleOp moduleOp,
-                                                     Type indexType);
-LLVM::LLVMFuncOp lookupOrCreateGenericFreeFn(ModuleOp moduleOp);
-LLVM::LLVMFuncOp lookupOrCreateMemRefCopyFn(ModuleOp moduleOp, Type indexType,
-                                            Type unrankedDescriptorType);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintOpenFn(Operation *moduleOp);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintCloseFn(Operation *moduleOp);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintCommaFn(Operation *moduleOp);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintNewlineFn(Operation *moduleOp);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreateMallocFn(Operation *moduleOp,
+                                                   Type indexType);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreateAlignedAllocFn(Operation *moduleOp,
+                                                         Type indexType);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreateFreeFn(Operation *moduleOp);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreateGenericAllocFn(Operation *moduleOp,
+                                                         Type indexType);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreateGenericAlignedAllocFn(Operation *moduleOp, Type indexType);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreateGenericFreeFn(Operation *moduleOp);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreateMemRefCopyFn(Operation *moduleOp, Type indexType,
+                           Type unrankedDescriptorType);
 
 /// Create a FuncOp with signature `resultType`(`paramTypes`)` and name `name`.
-LLVM::LLVMFuncOp lookupOrCreateFn(ModuleOp moduleOp, StringRef name,
-                                  ArrayRef<Type> paramTypes = {},
-                                  Type resultType = {}, bool isVarArg = false);
+/// Return a failure if the FuncOp found has unexpected signature.
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreateFn(Operation *moduleOp, StringRef name,
+                 ArrayRef<Type> paramTypes = {}, Type resultType = {},
+                 bool isVarArg = false, bool isReserved = false);
 
 } // namespace LLVM
 } // namespace mlir

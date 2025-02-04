@@ -13,7 +13,6 @@
 
 namespace mlir {
 class Location;
-struct LogicalResult;
 class OpBuilder;
 class Pass;
 class RewritePattern;

@@ -12,6 +12,7 @@
 #include "flang/Common/optional.h"
 #include "flang/Runtime/descriptor.h"
 #include <algorithm>
+#include <cstdio>
 #include <cstring>
 
 namespace Fortran::runtime {
@@ -54,6 +55,39 @@ static RT_API_ATTRS void TransferImpl(Descriptor &result,
 
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
+
+void RTDEF(Rename)(const Descriptor &path1, const Descriptor &path2,
+    const Descriptor *status, const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+#if !defined(RT_DEVICE_COMPILATION)
+  char *pathSrc{EnsureNullTerminated(
+      path1.OffsetElement(), path1.ElementBytes(), terminator)};
+  char *pathDst{EnsureNullTerminated(
+      path2.OffsetElement(), path2.ElementBytes(), terminator)};
+
+  // We simply call rename(2) from POSIX
+  int result{rename(pathSrc, pathDst)};
+  if (status) {
+    // When an error has happened,
+    int errorCode{0}; // Assume success
+    if (result != 0) {
+      // The rename operation has failed, so return the error code as status.
+      errorCode = errno;
+    }
+    StoreIntToDescriptor(status, errorCode, terminator);
+  }
+
+  // Deallocate memory if EnsureNullTerminated dynamically allocated memory
+  if (pathSrc != path1.OffsetElement()) {
+    FreeMemory(pathSrc);
+  }
+  if (pathDst != path2.OffsetElement()) {
+    FreeMemory(pathDst);
+  }
+#else // !defined(RT_DEVICE_COMPILATION)
+  terminator.Crash("RENAME intrinsic is only supported on host devices");
+#endif // !defined(RT_DEVICE_COMPILATION)
+}
 
 void RTDEF(Transfer)(Descriptor &result, const Descriptor &source,
     const Descriptor &mold, const char *sourceFile, int line) {

@@ -7,6 +7,8 @@ add_llvm_component_library(LLVMProfileData
   ItaniumManglingCanonicalizer.cpp
   MemProf.cpp
   MemProfReader.cpp
+  PGOCtxProfReader.cpp
+  PGOCtxProfWriter.cpp
   ProfileSummaryBuilder.cpp
   SampleProf.cpp
   SampleProfReader.cpp
@@ -20,6 +22,7 @@ add_llvm_component_library(LLVMProfileData
   intrinsics_gen
 
   LINK_COMPONENTS
+  BitstreamReader
   Core
   Object
   Support

@@ -28,10 +28,9 @@ class Pass;
 /// for use with the legacy pass manager.
 class LinkInModulesPass : public PassInfoMixin<LinkInModulesPass> {
   clang::BackendConsumer *BC;
-  bool ShouldLinkFiles;
 
 public:
-  LinkInModulesPass(clang::BackendConsumer *BC, bool ShouldLinkFiles = true);
+  LinkInModulesPass(clang::BackendConsumer *BC);
 
   PreservedAnalyses run(Module &M, AnalysisManager<Module> &);
   static bool isRequired() { return true; }

@@ -1,4 +1,4 @@
-FROM ubuntu:20.04 AS builder
+FROM ubuntu:24.04 AS builder
 
 ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
@@ -26,6 +26,6 @@ RUN mkdir build && \
     ninja install-llvm-bolt install-perf2bolt install-merge-fdata \
       install-llvm-boltdiff install-bolt_rt
 
-FROM ubuntu:20.04
+FROM ubuntu:24.04
 
 COPY --from=builder /home/bolt/install /usr/local

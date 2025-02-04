@@ -23,7 +23,8 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
-#include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaRISCV.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include <set>
@@ -159,8 +160,8 @@ namespace {
       assert(Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers());
 
       Expr *src = SrcExpr.get();
-      if (Self.CheckObjCConversion(OpRange, DestType, src, CCK) ==
-          Sema::ACR_unbridged)
+      if (Self.ObjC().CheckObjCConversion(OpRange, DestType, src, CCK) ==
+          SemaObjC::ACR_unbridged)
         IsARCUnbridgedCast = true;
       SrcExpr = src;
     }
@@ -268,8 +269,6 @@ static TryCastResult TryAddressSpaceCast(Sema &Self, ExprResult &SrcExpr,
                                          QualType DestType, bool CStyle,
                                          unsigned &msg, CastKind &Kind);
 
-/// ActOnCXXNamedCast - Parse
-/// {dynamic,static,reinterpret,const,addrspace}_cast's.
 ExprResult
 Sema::ActOnCXXNamedCast(SourceLocation OpLoc, tok::TokenKind Kind,
                         SourceLocation LAngleBracketLoc, Declarator &D,
@@ -446,7 +445,12 @@ static bool tryDiagnoseOverloadedCast(Sema &S, CastType CT,
     : InitializationKind::CreateCast(/*type range?*/ range);
   InitializationSequence sequence(S, entity, initKind, src);
 
-  assert(sequence.Failed() && "initialization succeeded on second try?");
+  // It could happen that a constructor failed to be used because
+  // it requires a temporary of a broken type. Still, it will be found when
+  // looking for a match.
+  if (!sequence.Failed())
+    return false;
+
   switch (sequence.getFailureKind()) {
   default: return false;
 
@@ -726,7 +730,8 @@ CastsAwayConstness(Sema &Self, QualType SrcType, QualType DestType,
           *CastAwayQualifiers = SrcCvrQuals - DestCvrQuals;
 
         // If we removed a cvr-qualifier, this is casting away 'constness'.
-        if (!DestCvrQuals.compatiblyIncludes(SrcCvrQuals)) {
+        if (!DestCvrQuals.compatiblyIncludes(SrcCvrQuals,
+                                             Self.getASTContext())) {
           if (TheOffendingSrcType)
             *TheOffendingSrcType = PrevUnwrappedSrcType;
           if (TheOffendingDestType)
@@ -884,7 +889,7 @@ void CastOperation::CheckDynamicCast() {
   assert(SrcRecord && "Bad source pointee slipped through.");
 
   // C++ 5.2.7p1: The dynamic_cast operator shall not cast away constness.
-  if (!DestPointee.isAtLeastAsQualifiedAs(SrcPointee)) {
+  if (!DestPointee.isAtLeastAsQualifiedAs(SrcPointee, Self.getASTContext())) {
     Self.Diag(OpRange.getBegin(), diag::err_bad_cxx_cast_qualifiers_away)
       << CT_Dynamic << OrigSrcType << this->DestType << OpRange;
     SrcExpr = ExprError();
@@ -1091,9 +1096,10 @@ static bool argTypeIsABIEquivalent(QualType SrcType, QualType DestType,
     return true;
 
   // Allow integral type mismatch if their size are equal.
-  if (SrcType->isIntegralType(Context) && DestType->isIntegralType(Context))
-    if (Context.getTypeInfoInChars(SrcType).Width ==
-        Context.getTypeInfoInChars(DestType).Width)
+  if ((SrcType->isIntegralType(Context) || SrcType->isEnumeralType()) &&
+      (DestType->isIntegralType(Context) || DestType->isEnumeralType()))
+    if (Context.getTypeSizeInChars(SrcType) ==
+        Context.getTypeSizeInChars(DestType))
       return true;
 
   return Context.hasSameUnqualifiedType(SrcType, DestType);
@@ -1457,7 +1463,8 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
             SrcPointeeQuals.removeObjCGCAttr();
             SrcPointeeQuals.removeObjCLifetime();
             if (DestPointeeQuals != SrcPointeeQuals &&
-                !DestPointeeQuals.compatiblyIncludes(SrcPointeeQuals)) {
+                !DestPointeeQuals.compatiblyIncludes(SrcPointeeQuals,
+                                                     Self.getASTContext())) {
               msg = diag::err_bad_cxx_cast_qualifiers_away;
               return TC_Failed;
             }
@@ -1499,7 +1506,7 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
   // Allow ns-pointer to cf-pointer conversion in either direction
   // with static casts.
   if (!CStyle &&
-      Self.CheckTollFreeBridgeStaticCast(DestType, SrcExpr.get(), Kind))
+      Self.ObjC().CheckTollFreeBridgeStaticCast(DestType, SrcExpr.get(), Kind))
     return TC_Success;
 
   // See if it looks like the user is trying to convert between
@@ -1689,7 +1696,8 @@ TryStaticDowncast(Sema &Self, CanQualType SrcType, CanQualType DestType,
   // FIXME: Being 100% compliant here would be nice to have.
 
   // Must preserve cv, as always, unless we're in C-style mode.
-  if (!CStyle && !DestType.isAtLeastAsQualifiedAs(SrcType)) {
+  if (!CStyle &&
+      !DestType.isAtLeastAsQualifiedAs(SrcType, Self.getASTContext())) {
     msg = diag::err_bad_cxx_cast_qualifiers_away;
     return TC_Failed;
   }
@@ -2086,6 +2094,10 @@ void Sema::CheckCompatibleReinterpretCast(QualType SrcType, QualType DestType,
     }
   }
 
+  if (SrcTy->isDependentType() || DestTy->isDependentType()) {
+    return;
+  }
+
   Diag(Range.getBegin(), DiagID) << SrcType << DestType << Range;
 }
 
@@ -2390,7 +2402,7 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
     }
 
     // Allow bitcasting between SVE VLATs and VLSTs, and vice-versa.
-    if (Self.isValidRVVBitcast(SrcType, DestType)) {
+    if (Self.RISCV().isValidRVVBitcast(SrcType, DestType)) {
       Kind = CK_BitCast;
       return TC_Success;
     }
@@ -2518,13 +2530,13 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
     assert(SrcType->isPointerType() && DestType->isPointerType());
     if (!CStyle &&
         !DestType->getPointeeType().getQualifiers().isAddressSpaceSupersetOf(
-            SrcType->getPointeeType().getQualifiers())) {
+            SrcType->getPointeeType().getQualifiers(), Self.getASTContext())) {
       SuccessResult = TC_Failed;
     }
   } else if (IsLValueCast) {
     Kind = CK_LValueBitCast;
   } else if (DestType->isObjCObjectPointerType()) {
-    Kind = Self.PrepareCastToObjCObjectPointer(SrcExpr);
+    Kind = Self.ObjC().PrepareCastToObjCObjectPointer(SrcExpr);
   } else if (DestType->isBlockPointerType()) {
     if (!SrcType->isBlockPointerType()) {
       Kind = CK_AnyPointerToBlockPointerCast;
@@ -2625,7 +2637,8 @@ static TryCastResult TryAddressSpaceCast(Sema &Self, ExprResult &SrcExpr,
     return TC_NotApplicable;
   auto SrcPointeeType = SrcPtrType->getPointeeType();
   auto DestPointeeType = DestPtrType->getPointeeType();
-  if (!DestPointeeType.isAddressSpaceOverlapping(SrcPointeeType)) {
+  if (!DestPointeeType.isAddressSpaceOverlapping(SrcPointeeType,
+                                                 Self.getASTContext())) {
     msg = diag::err_bad_cxx_cast_addr_space_mismatch;
     return TC_Failed;
   }
@@ -2670,9 +2683,10 @@ void CastOperation::checkAddressSpaceCast(QualType SrcType, QualType DestType) {
       QualType SrcPPointee = SrcPPtr->getPointeeType();
       if (Nested
               ? DestPPointee.getAddressSpace() != SrcPPointee.getAddressSpace()
-              : !DestPPointee.isAddressSpaceOverlapping(SrcPPointee)) {
+              : !DestPPointee.isAddressSpaceOverlapping(SrcPPointee,
+                                                        Self.getASTContext())) {
         Self.Diag(OpRange.getBegin(), DiagID)
-            << SrcType << DestType << Sema::AA_Casting
+            << SrcType << DestType << AssignmentAction::Casting
             << SrcExpr.get()->getSourceRange();
         if (!Nested)
           SrcExpr = ExprError();
@@ -3001,7 +3015,7 @@ void CastOperation::CheckCStyleCast() {
 
   // Allow bitcasting between compatible RVV vector types.
   if ((SrcType->isVectorType() || DestType->isVectorType()) &&
-      Self.isValidRVVBitcast(SrcType, DestType)) {
+      Self.RISCV().isValidRVVBitcast(SrcType, DestType)) {
     Kind = CK_BitCast;
     return;
   }
@@ -3212,13 +3226,13 @@ void CastOperation::CheckCStyleCast() {
             !CastQuals.compatiblyIncludesObjCLifetime(ExprQuals)) {
           Self.Diag(SrcExpr.get()->getBeginLoc(),
                     diag::err_typecheck_incompatible_ownership)
-              << SrcType << DestType << Sema::AA_Casting
+              << SrcType << DestType << AssignmentAction::Casting
               << SrcExpr.get()->getSourceRange();
           return;
         }
       }
-    }
-    else if (!Self.CheckObjCARCUnavailableWeakConversion(DestType, SrcType)) {
+    } else if (!Self.ObjC().CheckObjCARCUnavailableWeakConversion(DestType,
+                                                                  SrcType)) {
       Self.Diag(SrcExpr.get()->getBeginLoc(),
                 diag::err_arc_convesion_of_weak_unavailable)
           << 1 << SrcType << DestType << SrcExpr.get()->getSourceRange();
@@ -3277,7 +3291,8 @@ void CastOperation::CheckBuiltinBitCast() {
   CharUnits SourceSize = Self.Context.getTypeSizeInChars(SrcType);
   if (DestSize != SourceSize) {
     Self.Diag(OpRange.getBegin(), diag::err_bit_cast_type_size_mismatch)
-        << (int)SourceSize.getQuantity() << (int)DestSize.getQuantity();
+        << SrcType << DestType << (int)SourceSize.getQuantity()
+        << (int)DestSize.getQuantity();
     SrcExpr = ExprError();
     return;
   }

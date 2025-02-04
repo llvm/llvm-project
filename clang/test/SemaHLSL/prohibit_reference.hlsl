@@ -3,7 +3,6 @@
 int& bark(int); // expected-error {{references are unsupported in HLSL}}
 void meow(int&); // expected-error {{references are unsupported in HLSL}}
 void chirp(int &&); // expected-error {{references are unsupported in HLSL}}
-// expected-warning@-1 {{rvalue references are a C++11 extension}}
 
 struct Foo {
   int X;

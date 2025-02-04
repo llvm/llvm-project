@@ -1,7 +1,7 @@
-# RUN: llvm-mc -triple riscv32 -show-encoding < %s \
+# RUN: llvm-mc -triple riscv32 -mattr=+experimental -show-encoding < %s \
 # RUN:   | FileCheck -check-prefixes=CHECK %s
-# RUN: llvm-mc -triple riscv32 -filetype=obj < %s \
-# RUN:   | llvm-objdump  --triple=riscv32 --mattr=+c,+m,+a,+f,+zba -d -M no-aliases - \
+# RUN: llvm-mc -triple riscv32 -mattr=+experimental -filetype=obj < %s \
+# RUN:   | llvm-objdump  --triple=riscv32 --mattr=+c,+m,+a,+f,+zba,+experimental-zicfiss -d -M no-aliases - \
 # RUN:   | FileCheck -check-prefixes=CHECK-INST %s
 
 # Test '.option arch, +' and '.option arch, -' directive
@@ -77,6 +77,13 @@ lr.w t0, (t1)
 # CHECK-INST: sh1add t0, t1, t2
 # CHECK: encoding: [0xb3,0x22,0x73,0x20]
 sh1add t0, t1, t2
+
+# Test experimental extension
+# CHECK: .option arch, +zicfiss
+.option arch, +zicfiss
+# CHECK-INST: sspopchk ra
+# CHECK: encoding: [0x73,0xc0,0xc0,0xcd]
+sspopchk ra
 
 # Test '.option arch, <arch-string>' directive
 # CHECK: .option arch, rv32i2p1_m2p0_a2p1_c2p0

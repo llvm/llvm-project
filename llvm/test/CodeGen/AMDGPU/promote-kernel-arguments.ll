@@ -11,9 +11,9 @@ define amdgpu_kernel void @ptr_nest_3(ptr addrspace(1) nocapture readonly %Arg) 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds ptr, ptr addrspace(1) [[ARG:%.*]], i32 [[I]]
-; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr addrspace(1) [[P1]], align 8, !amdgpu.noclobber !0
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr addrspace(1) [[P1]], align 8, !amdgpu.noclobber [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[P2_GLOBAL:%.*]] = addrspacecast ptr [[P2]] to ptr addrspace(1)
-; CHECK-NEXT:    [[P3:%.*]] = load ptr, ptr addrspace(1) [[P2_GLOBAL]], align 8, !amdgpu.noclobber !0
+; CHECK-NEXT:    [[P3:%.*]] = load ptr, ptr addrspace(1) [[P2_GLOBAL]], align 8, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[P3_GLOBAL:%.*]] = addrspacecast ptr [[P3]] to ptr addrspace(1)
 ; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(1) [[P3_GLOBAL]], align 4
 ; CHECK-NEXT:    ret void
@@ -36,7 +36,7 @@ define amdgpu_kernel void @ptr_bitcast(ptr nocapture readonly %Arg) {
 ; CHECK-NEXT:    [[ARG_GLOBAL:%.*]] = addrspacecast ptr [[ARG:%.*]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[I:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds ptr, ptr addrspace(1) [[ARG_GLOBAL]], i32 [[I]]
-; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr addrspace(1) [[P1]], align 8, !amdgpu.noclobber !0
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr addrspace(1) [[P1]], align 8, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[P2_GLOBAL:%.*]] = addrspacecast ptr [[P2]] to ptr addrspace(1)
 ; CHECK-NEXT:    store i32 0, ptr addrspace(1) [[P2_GLOBAL]], align 4
 ; CHECK-NEXT:    ret void
@@ -57,7 +57,7 @@ entry:
 define amdgpu_kernel void @ptr_in_struct(ptr addrspace(1) nocapture readonly %Arg) {
 ; CHECK-LABEL: @ptr_in_struct(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P1:%.*]] = load ptr, ptr addrspace(1) [[ARG:%.*]], align 8, !amdgpu.noclobber !0
+; CHECK-NEXT:    [[P1:%.*]] = load ptr, ptr addrspace(1) [[ARG:%.*]], align 8, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[P1_GLOBAL:%.*]] = addrspacecast ptr [[P1]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[ID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[P1_GLOBAL]], i32 [[ID]]
@@ -86,9 +86,9 @@ define amdgpu_kernel void @flat_ptr_arg(ptr nocapture readonly noalias %Arg, ptr
 ; CHECK-NEXT:    [[I:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds ptr, ptr addrspace(1) [[ARG_GLOBAL]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[I1:%.*]] = load ptr, ptr addrspace(1) [[ARRAYIDX10]], align 8, !amdgpu.noclobber !0
+; CHECK-NEXT:    [[I1:%.*]] = load ptr, ptr addrspace(1) [[ARRAYIDX10]], align 8, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[I1_GLOBAL:%.*]] = addrspacecast ptr [[I1]] to ptr addrspace(1)
-; CHECK-NEXT:    [[I2:%.*]] = load float, ptr addrspace(1) [[I1_GLOBAL]], align 4, !amdgpu.noclobber !0
+; CHECK-NEXT:    [[I2:%.*]] = load float, ptr addrspace(1) [[I1_GLOBAL]], align 4, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[ARRAYIDX512:%.*]] = getelementptr inbounds [4 x float], ptr addrspace(3) @LDS, i32 0, i32 [[X:%.*]]
 ; CHECK-NEXT:    store float [[I2]], ptr addrspace(3) [[ARRAYIDX512]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX3_1:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[I1_GLOBAL]], i64 1
@@ -110,7 +110,7 @@ define amdgpu_kernel void @flat_ptr_arg(ptr nocapture readonly noalias %Arg, ptr
 ; CHECK-NEXT:    [[ARRAYIDX711:%.*]] = getelementptr inbounds [4 x float], ptr addrspace(3) @LDS, i32 0, i32 [[SUB]]
 ; CHECK-NEXT:    [[I6:%.*]] = load float, ptr addrspace(3) [[ARRAYIDX711]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds ptr, ptr addrspace(1) [[OUT_GLOBAL]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[I7:%.*]] = load ptr, ptr addrspace(1) [[ARRAYIDX11]], align 8, !amdgpu.noclobber !0
+; CHECK-NEXT:    [[I7:%.*]] = load ptr, ptr addrspace(1) [[ARRAYIDX11]], align 8, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[I7_GLOBAL:%.*]] = addrspacecast ptr [[I7]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[IDXPROM8:%.*]] = sext i32 [[X]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[I7_GLOBAL]], i64 [[IDXPROM8]]
@@ -161,9 +161,9 @@ define amdgpu_kernel void @global_ptr_arg(ptr addrspace(1) nocapture readonly %A
 ; CHECK-NEXT:    [[I:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds ptr, ptr addrspace(1) [[ARG:%.*]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[I1:%.*]] = load ptr, ptr addrspace(1) [[ARRAYIDX10]], align 8, !amdgpu.noclobber !0
+; CHECK-NEXT:    [[I1:%.*]] = load ptr, ptr addrspace(1) [[ARRAYIDX10]], align 8, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[I1_GLOBAL:%.*]] = addrspacecast ptr [[I1]] to ptr addrspace(1)
-; CHECK-NEXT:    [[I2:%.*]] = load float, ptr addrspace(1) [[I1_GLOBAL]], align 4, !amdgpu.noclobber !0
+; CHECK-NEXT:    [[I2:%.*]] = load float, ptr addrspace(1) [[I1_GLOBAL]], align 4, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[ARRAYIDX512:%.*]] = getelementptr inbounds [4 x float], ptr addrspace(3) @LDS, i32 0, i32 [[X:%.*]]
 ; CHECK-NEXT:    store float [[I2]], ptr addrspace(3) [[ARRAYIDX512]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX3_1:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[I1_GLOBAL]], i64 1
@@ -276,7 +276,7 @@ define amdgpu_kernel void @global_ptr_arg_clobbered_after_load(ptr addrspace(1) 
 ; CHECK-NEXT:    [[I:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds ptr, ptr addrspace(1) [[ARG:%.*]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[I1:%.*]] = load ptr, ptr addrspace(1) [[ARRAYIDX10]], align 8, !amdgpu.noclobber !0
+; CHECK-NEXT:    [[I1:%.*]] = load ptr, ptr addrspace(1) [[ARRAYIDX10]], align 8, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[I1_GLOBAL:%.*]] = addrspacecast ptr [[I1]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds ptr, ptr addrspace(1) [[ARRAYIDX10]], i32 [[X:%.*]]
 ; CHECK-NEXT:    store ptr null, ptr addrspace(1) [[ARRAYIDX11]], align 4
@@ -319,9 +319,9 @@ define amdgpu_kernel void @ptr_nest_3_barrier(ptr addrspace(1) nocapture readonl
 ; CHECK-NEXT:    [[I:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds ptr, ptr addrspace(1) [[ARG:%.*]], i32 [[I]]
 ; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
-; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr addrspace(1) [[P1]], align 8, !amdgpu.noclobber !0
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr addrspace(1) [[P1]], align 8, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[P2_GLOBAL:%.*]] = addrspacecast ptr [[P2]] to ptr addrspace(1)
-; CHECK-NEXT:    [[P3:%.*]] = load ptr, ptr addrspace(1) [[P2_GLOBAL]], align 8, !amdgpu.noclobber !0
+; CHECK-NEXT:    [[P3:%.*]] = load ptr, ptr addrspace(1) [[P2_GLOBAL]], align 8, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[P3_GLOBAL:%.*]] = addrspacecast ptr [[P3]] to ptr addrspace(1)
 ; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(1) [[P3_GLOBAL]], align 4
 ; CHECK-NEXT:    ret void
@@ -345,7 +345,7 @@ define amdgpu_kernel void @flat_ptr_nest_2(ptr nocapture readonly %Arg, i32 %i) 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARG_GLOBAL:%.*]] = addrspacecast ptr [[ARG:%.*]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds ptr, ptr addrspace(1) [[ARG_GLOBAL]], i32 [[I:%.*]]
-; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr addrspace(1) [[P1]], align 8, !amdgpu.noclobber !0
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr addrspace(1) [[P1]], align 8, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[P2_GLOBAL:%.*]] = addrspacecast ptr [[P2]] to ptr addrspace(1)
 ; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(1) [[P2_GLOBAL]], align 4
 ; CHECK-NEXT:    ret void
@@ -366,8 +366,8 @@ define amdgpu_kernel void @const_ptr_nest_3(ptr addrspace(4) nocapture readonly 
 ; CHECK-LABEL: @const_ptr_nest_3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds ptr addrspace(4), ptr addrspace(4) [[ARG:%.*]], i32 [[I:%.*]]
-; CHECK-NEXT:    [[P2:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[P1]], align 8, !amdgpu.noclobber !0
-; CHECK-NEXT:    [[P3:%.*]] = load ptr, ptr addrspace(4) [[P2]], align 8, !amdgpu.noclobber !0
+; CHECK-NEXT:    [[P2:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[P1]], align 8, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    [[P3:%.*]] = load ptr, ptr addrspace(4) [[P2]], align 8, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[P3]] to ptr addrspace(1)
 ; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(1) [[TMP0]], align 4
 ; CHECK-NEXT:    ret void
@@ -389,8 +389,8 @@ define amdgpu_kernel void @cast_from_const_const_ptr_nest_3(ptr addrspace(4) noc
 ; CHECK-LABEL: @cast_from_const_const_ptr_nest_3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds ptr addrspace(4), ptr addrspace(4) [[ARG:%.*]], i32 [[I:%.*]]
-; CHECK-NEXT:    [[P2:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[P1]], align 8, !amdgpu.noclobber !0
-; CHECK-NEXT:    [[P3:%.*]] = load ptr, ptr addrspace(4) [[P2]], align 8, !amdgpu.noclobber !0
+; CHECK-NEXT:    [[P2:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[P1]], align 8, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    [[P3:%.*]] = load ptr, ptr addrspace(4) [[P2]], align 8, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[P3_GLOBAL:%.*]] = addrspacecast ptr [[P3]] to ptr addrspace(1)
 ; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(1) [[P3_GLOBAL]], align 4
 ; CHECK-NEXT:    ret void
@@ -457,8 +457,8 @@ define amdgpu_kernel void @cast_changing_pointee_type(ptr addrspace(1) nocapture
 ; CHECK-LABEL: @cast_changing_pointee_type(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds ptr addrspace(1), ptr addrspace(1) [[ARG:%.*]], i32 [[I:%.*]]
-; CHECK-NEXT:    [[P2:%.*]] = load ptr addrspace(1), ptr addrspace(1) [[P1]], align 8, !amdgpu.noclobber !0
-; CHECK-NEXT:    [[P3:%.*]] = load ptr, ptr addrspace(1) [[P2]], align 8, !amdgpu.noclobber !0
+; CHECK-NEXT:    [[P2:%.*]] = load ptr addrspace(1), ptr addrspace(1) [[P1]], align 8, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    [[P3:%.*]] = load ptr, ptr addrspace(1) [[P2]], align 8, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[P3_GLOBAL:%.*]] = addrspacecast ptr [[P3]] to ptr addrspace(1)
 ; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(1) [[P3_GLOBAL]], align 4
 ; CHECK-NEXT:    ret void

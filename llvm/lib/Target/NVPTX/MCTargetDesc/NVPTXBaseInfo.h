@@ -16,18 +16,10 @@
 #ifndef LLVM_LIB_TARGET_NVPTX_MCTARGETDESC_NVPTXBASEINFO_H
 #define LLVM_LIB_TARGET_NVPTX_MCTARGETDESC_NVPTXBASEINFO_H
 
+#include "llvm/Support/NVPTXAddrSpace.h"
 namespace llvm {
 
-enum AddressSpace {
-  ADDRESS_SPACE_GENERIC = 0,
-  ADDRESS_SPACE_GLOBAL = 1,
-  ADDRESS_SPACE_SHARED = 3,
-  ADDRESS_SPACE_CONST = 4,
-  ADDRESS_SPACE_LOCAL = 5,
-
-  // NVVM Internal
-  ADDRESS_SPACE_PARAM = 101
-};
+using namespace NVPTXAS;
 
 namespace NVPTXII {
 enum {

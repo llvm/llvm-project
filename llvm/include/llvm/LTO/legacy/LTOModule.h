@@ -195,7 +195,7 @@ private:
 
   /// Add a function symbol as defined to the list.
   void addDefinedFunctionSymbol(ModuleSymbolTable::Symbol Sym);
-  void addDefinedFunctionSymbol(StringRef Name, const Function *F);
+  void addDefinedFunctionSymbol(StringRef Name, const GlobalValue *F);
 
   /// Add a global symbol from module-level ASM to the defined list.
   void addAsmGlobalSymbol(StringRef, lto_symbol_attributes scope);

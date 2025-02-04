@@ -124,7 +124,7 @@ static MagnitudeBits calcMagnitudeBits(const ASTContext &Context,
   unsigned SignedBits = IntExprType->isUnsignedIntegerType() ? 0U : 1U;
 
   if (const auto *BitField = IntExpr->getSourceBitField()) {
-    unsigned BitFieldWidth = BitField->getBitWidthValue(Context);
+    unsigned BitFieldWidth = BitField->getBitWidthValue();
     return {BitFieldWidth - SignedBits, BitFieldWidth};
   }
 

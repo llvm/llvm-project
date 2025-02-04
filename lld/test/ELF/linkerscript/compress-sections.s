@@ -10,10 +10,11 @@
 # CHECK-NEXT: str      PROGBITS 0000000000000000 [[#%x,]] [[#%x,]] 01 MSC   0   0  1
 
 # CHECK:      0000000000000000  0 NOTYPE  GLOBAL DEFAULT [[#]] (nonalloc) nonalloc_start
-# CHECK:      0000000000000023  0 NOTYPE  GLOBAL DEFAULT [[#]] (nonalloc) nonalloc_end
+# CHECK:      0000000000000063  0 NOTYPE  GLOBAL DEFAULT [[#]] (nonalloc) nonalloc_end
 # CHECK:      String dump of section 'str':
 # CHECK-NEXT: [     0] AAA
-# CHECK-NEXT: [     4] BBB
+# CHECK-NEXT: [     4] {{a+}}
+# CHECK-NEXT: [    45] BBB
 
 ## TODO The uncompressed size of 'nonalloc' is dependent on linker script
 ## commands, which is not handled. We should report an error.
@@ -28,6 +29,7 @@ _start:
 .balign 8
 .quad .text
 .quad .text
+.space 64
 .section nonalloc1,""
 .balign 8
 .quad 42
@@ -35,6 +37,8 @@ _start:
 .section str,"MS",@progbits,1
   .asciz "AAA"
   .asciz "BBB"
+  .fill 64,1,0x61
+  .byte 0
 
 #--- a.lds
 SECTIONS {

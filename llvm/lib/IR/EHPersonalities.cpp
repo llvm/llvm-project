@@ -129,7 +129,7 @@ DenseMap<BasicBlock *, ColorVector> llvm::colorEHFunclets(Function &F) {
     DEBUG_WITH_TYPE("win-eh-prepare-coloring",
                     dbgs() << "Visiting " << Visiting->getName() << ", "
                            << Color->getName() << "\n");
-    Instruction *VisitingHead = Visiting->getFirstNonPHI();
+    BasicBlock::iterator VisitingHead = Visiting->getFirstNonPHIIt();
     if (VisitingHead->isEHPad()) {
       // Mark this funclet head as a member of itself.
       Color = Visiting;

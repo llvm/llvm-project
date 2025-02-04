@@ -182,8 +182,7 @@ define i32 @convert_float_to_u32(float %a) nounwind {
 ; LA32F-LABEL: convert_float_to_u32:
 ; LA32F:       # %bb.0:
 ; LA32F-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI6_0)
-; LA32F-NEXT:    addi.w $a0, $a0, %pc_lo12(.LCPI6_0)
-; LA32F-NEXT:    fld.s $fa1, $a0, 0
+; LA32F-NEXT:    fld.s $fa1, $a0, %pc_lo12(.LCPI6_0)
 ; LA32F-NEXT:    fcmp.clt.s $fcc0, $fa0, $fa1
 ; LA32F-NEXT:    fsub.s $fa1, $fa0, $fa1
 ; LA32F-NEXT:    ftintrz.w.s $fa1, $fa1
@@ -201,8 +200,7 @@ define i32 @convert_float_to_u32(float %a) nounwind {
 ; LA32D-LABEL: convert_float_to_u32:
 ; LA32D:       # %bb.0:
 ; LA32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI6_0)
-; LA32D-NEXT:    addi.w $a0, $a0, %pc_lo12(.LCPI6_0)
-; LA32D-NEXT:    fld.s $fa1, $a0, 0
+; LA32D-NEXT:    fld.s $fa1, $a0, %pc_lo12(.LCPI6_0)
 ; LA32D-NEXT:    fcmp.clt.s $fcc0, $fa0, $fa1
 ; LA32D-NEXT:    fsub.s $fa1, $fa0, $fa1
 ; LA32D-NEXT:    ftintrz.w.s $fa1, $fa1
@@ -220,8 +218,7 @@ define i32 @convert_float_to_u32(float %a) nounwind {
 ; LA64F-LABEL: convert_float_to_u32:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI6_0)
-; LA64F-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI6_0)
-; LA64F-NEXT:    fld.s $fa1, $a0, 0
+; LA64F-NEXT:    fld.s $fa1, $a0, %pc_lo12(.LCPI6_0)
 ; LA64F-NEXT:    fcmp.clt.s $fcc0, $fa0, $fa1
 ; LA64F-NEXT:    fsub.s $fa1, $fa0, $fa1
 ; LA64F-NEXT:    ftintrz.w.s $fa1, $fa1
@@ -267,8 +264,7 @@ define i64 @convert_float_to_u64(float %a) nounwind {
 ; LA64F-LABEL: convert_float_to_u64:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI7_0)
-; LA64F-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI7_0)
-; LA64F-NEXT:    fld.s $fa1, $a0, 0
+; LA64F-NEXT:    fld.s $fa1, $a0, %pc_lo12(.LCPI7_0)
 ; LA64F-NEXT:    fcmp.clt.s $fcc0, $fa0, $fa1
 ; LA64F-NEXT:    fsub.s $fa1, $fa0, $fa1
 ; LA64F-NEXT:    ftintrz.w.s $fa1, $fa1
@@ -286,8 +282,7 @@ define i64 @convert_float_to_u64(float %a) nounwind {
 ; LA64D-LABEL: convert_float_to_u64:
 ; LA64D:       # %bb.0:
 ; LA64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI7_0)
-; LA64D-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI7_0)
-; LA64D-NEXT:    fld.s $fa1, $a0, 0
+; LA64D-NEXT:    fld.s $fa1, $a0, %pc_lo12(.LCPI7_0)
 ; LA64D-NEXT:    fcmp.clt.s $fcc0, $fa0, $fa1
 ; LA64D-NEXT:    fsub.s $fa1, $fa0, $fa1
 ; LA64D-NEXT:    ftintrz.l.s $fa1, $fa1
@@ -506,8 +501,7 @@ define float @convert_u32_to_float(i32 %a) nounwind {
 ; LA32D-NEXT:    st.w $a0, $sp, 8
 ; LA32D-NEXT:    fld.d $fa0, $sp, 8
 ; LA32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI14_0)
-; LA32D-NEXT:    addi.w $a0, $a0, %pc_lo12(.LCPI14_0)
-; LA32D-NEXT:    fld.d $fa1, $a0, 0
+; LA32D-NEXT:    fld.d $fa1, $a0, %pc_lo12(.LCPI14_0)
 ; LA32D-NEXT:    fsub.d $fa0, $fa0, $fa1
 ; LA32D-NEXT:    fcvt.s.d $fa0, $fa0
 ; LA32D-NEXT:    addi.w $sp, $sp, 16

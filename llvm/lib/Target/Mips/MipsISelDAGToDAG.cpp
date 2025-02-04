@@ -11,30 +11,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsISelDAGToDAG.h"
-#include "MCTargetDesc/MipsBaseInfo.h"
 #include "Mips.h"
-#include "Mips16ISelDAGToDAG.h"
 #include "MipsMachineFunction.h"
-#include "MipsRegisterInfo.h"
-#include "MipsSEISelDAGToDAG.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/StackProtector.h"
-#include "llvm/IR/CFG.h"
-#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "mips-isel"
@@ -49,11 +39,11 @@ using namespace llvm;
 // instructions for SelectionDAG operations.
 //===----------------------------------------------------------------------===//
 
-void MipsDAGToDAGISel::getAnalysisUsage(AnalysisUsage &AU) const {
+void MipsDAGToDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   // There are multiple MipsDAGToDAGISel instances added to the pass pipeline.
   // We need to preserve StackProtector for the next one.
   AU.addPreserved<StackProtector>();
-  SelectionDAGISel::getAnalysisUsage(AU);
+  SelectionDAGISelLegacy::getAnalysisUsage(AU);
 }
 
 bool MipsDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
@@ -160,44 +150,9 @@ bool MipsDAGToDAGISel::selectVSplat(SDNode *N, APInt &Imm,
   return false;
 }
 
-bool MipsDAGToDAGISel::selectVSplatUimm1(SDValue N, SDValue &Imm) const {
+bool MipsDAGToDAGISel::selectVSplatCommon(SDValue N, SDValue &Imm, bool Signed,
+                                          unsigned ImmBitSize) const {
   llvm_unreachable("Unimplemented function.");
-  return false;
-}
-
-bool MipsDAGToDAGISel::selectVSplatUimm2(SDValue N, SDValue &Imm) const {
-  llvm_unreachable("Unimplemented function.");
-  return false;
-}
-
-bool MipsDAGToDAGISel::selectVSplatUimm3(SDValue N, SDValue &Imm) const {
-  llvm_unreachable("Unimplemented function.");
-  return false;
-}
-
-bool MipsDAGToDAGISel::selectVSplatUimm4(SDValue N, SDValue &Imm) const {
-  llvm_unreachable("Unimplemented function.");
-  return false;
-}
-
-bool MipsDAGToDAGISel::selectVSplatUimm5(SDValue N, SDValue &Imm) const {
-  llvm_unreachable("Unimplemented function.");
-  return false;
-}
-
-bool MipsDAGToDAGISel::selectVSplatUimm6(SDValue N, SDValue &Imm) const {
-  llvm_unreachable("Unimplemented function.");
-  return false;
-}
-
-bool MipsDAGToDAGISel::selectVSplatUimm8(SDValue N, SDValue &Imm) const {
-  llvm_unreachable("Unimplemented function.");
-  return false;
-}
-
-bool MipsDAGToDAGISel::selectVSplatSimm5(SDValue N, SDValue &Imm) const {
-  llvm_unreachable("Unimplemented function.");
-  return false;
 }
 
 bool MipsDAGToDAGISel::selectVSplatUimmPow2(SDValue N, SDValue &Imm) const {
@@ -218,6 +173,10 @@ bool MipsDAGToDAGISel::selectVSplatMaskL(SDValue N, SDValue &Imm) const {
 bool MipsDAGToDAGISel::selectVSplatMaskR(SDValue N, SDValue &Imm) const {
   llvm_unreachable("Unimplemented function.");
   return false;
+}
+
+bool MipsDAGToDAGISel::selectVSplatImmEq1(SDValue N) const {
+  llvm_unreachable("Unimplemented function.");
 }
 
 /// Convert vector addition with vector subtraction if that allows to encode
@@ -344,6 +303,10 @@ bool MipsDAGToDAGISel::isUnneededShiftMask(SDNode *N,
   return (Known.Zero | RHS).countr_one() >= ShAmtBits;
 }
 
-char MipsDAGToDAGISel::ID = 0;
+char MipsDAGToDAGISelLegacy::ID = 0;
 
-INITIALIZE_PASS(MipsDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+MipsDAGToDAGISelLegacy::MipsDAGToDAGISelLegacy(
+    std::unique_ptr<SelectionDAGISel> S)
+    : SelectionDAGISelLegacy(ID, std::move(S)) {}
+
+INITIALIZE_PASS(MipsDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)

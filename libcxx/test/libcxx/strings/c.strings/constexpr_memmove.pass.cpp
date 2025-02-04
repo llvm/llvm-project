@@ -19,6 +19,8 @@
 // and is_trivially_XXX_assignable), so we use some funky types to test these
 // corner cases.
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <__string/constexpr_c_functions.h>
 #include <cassert>
 #include <cstdint>

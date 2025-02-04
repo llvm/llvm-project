@@ -34,7 +34,8 @@ define i1 @PR28011(i16 %a) {
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %conv = sext i16 %a to i32
-  %ext = zext i1 icmp ne (ptr @b, ptr @a) to i32
+  %cmp2 = icmp ne ptr @b, @a
+  %ext = zext i1 %cmp2 to i32
   %or = or i32 %ext, 1
   %cmp = icmp ne i32 %conv, %or
   ret i1 %cmp
@@ -271,7 +272,7 @@ define i1 @gt_unsigned_to_small_negative(i8 %SB) {
 define i1 @different_size_zext_zext_ugt(i7 %x, i4 %y) {
 ; CHECK-LABEL: @different_size_zext_zext_ugt(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[Y:%.*]] to i7
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i7 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i7 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zx = zext i7 %x to i25
@@ -283,7 +284,7 @@ define i1 @different_size_zext_zext_ugt(i7 %x, i4 %y) {
 define <2 x i1> @different_size_zext_zext_ugt_commute(<2 x i4> %x, <2 x i7> %y) {
 ; CHECK-LABEL: @different_size_zext_zext_ugt_commute(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i4> [[X:%.*]] to <2 x i7>
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt <2 x i7> [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i7> [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %zx = zext <2 x i4> %x to <2 x i25>
@@ -295,7 +296,7 @@ define <2 x i1> @different_size_zext_zext_ugt_commute(<2 x i4> %x, <2 x i7> %y) 
 define i1 @different_size_zext_zext_ult(i4 %x, i7 %y) {
 ; CHECK-LABEL: @different_size_zext_zext_ult(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[X:%.*]] to i7
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i7 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i7 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zx = zext i4 %x to i25
@@ -307,7 +308,7 @@ define i1 @different_size_zext_zext_ult(i4 %x, i7 %y) {
 define i1 @different_size_zext_zext_eq(i4 %x, i7 %y) {
 ; CHECK-LABEL: @different_size_zext_zext_eq(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[X:%.*]] to i7
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i7 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i7 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zx = zext i4 %x to i25
@@ -319,7 +320,7 @@ define i1 @different_size_zext_zext_eq(i4 %x, i7 %y) {
 define i1 @different_size_zext_zext_ne_commute(i7 %x, i4 %y) {
 ; CHECK-LABEL: @different_size_zext_zext_ne_commute(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[Y:%.*]] to i7
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i7 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i7 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zx = zext i7 %x to i25
@@ -331,7 +332,7 @@ define i1 @different_size_zext_zext_ne_commute(i7 %x, i4 %y) {
 define i1 @different_size_zext_zext_slt(i7 %x, i4 %y) {
 ; CHECK-LABEL: @different_size_zext_zext_slt(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[Y:%.*]] to i7
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i7 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i7 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zx = zext i7 %x to i25
@@ -343,7 +344,7 @@ define i1 @different_size_zext_zext_slt(i7 %x, i4 %y) {
 define i1 @different_size_zext_zext_sgt(i7 %x, i4 %y) {
 ; CHECK-LABEL: @different_size_zext_zext_sgt(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[Y:%.*]] to i7
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i7 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i7 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zx = zext i7 %x to i25
@@ -355,7 +356,7 @@ define i1 @different_size_zext_zext_sgt(i7 %x, i4 %y) {
 define i1 @different_size_sext_sext_sgt(i7 %x, i4 %y) {
 ; CHECK-LABEL: @different_size_sext_sext_sgt(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i4 [[Y:%.*]] to i7
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i7 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i7 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %sx = sext i7 %x to i25
@@ -367,7 +368,7 @@ define i1 @different_size_sext_sext_sgt(i7 %x, i4 %y) {
 define i1 @different_size_sext_sext_sle(i7 %x, i4 %y) {
 ; CHECK-LABEL: @different_size_sext_sext_sle(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i4 [[Y:%.*]] to i7
-; CHECK-NEXT:    [[R:%.*]] = icmp sge i7 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sle i7 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %sx = sext i7 %x to i25
@@ -379,7 +380,7 @@ define i1 @different_size_sext_sext_sle(i7 %x, i4 %y) {
 define i1 @different_size_sext_sext_eq(i7 %x, i4 %y) {
 ; CHECK-LABEL: @different_size_sext_sext_eq(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i4 [[Y:%.*]] to i7
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i7 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i7 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %sx = sext i7 %x to i25
@@ -391,7 +392,7 @@ define i1 @different_size_sext_sext_eq(i7 %x, i4 %y) {
 define i1 @different_size_sext_sext_ule(i7 %x, i4 %y) {
 ; CHECK-LABEL: @different_size_sext_sext_ule(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i4 [[Y:%.*]] to i7
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i7 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i7 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %sx = sext i7 %x to i25
@@ -422,7 +423,7 @@ define i1 @different_size_sext_sext_ule_extra_use1(i7 %x, i4 %y) {
 ; CHECK-NEXT:    [[SY:%.*]] = sext i4 [[Y:%.*]] to i25
 ; CHECK-NEXT:    call void @use(i25 [[SY]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i4 [[Y]] to i7
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i7 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i7 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %sx = sext i7 %x to i25
@@ -437,7 +438,7 @@ define i1 @different_size_sext_sext_ule_extra_use2(i7 %x, i4 %y) {
 ; CHECK-NEXT:    [[SX:%.*]] = sext i7 [[X:%.*]] to i25
 ; CHECK-NEXT:    call void @use(i25 [[SX]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i4 [[Y:%.*]] to i7
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i7 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i7 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %sx = sext i7 %x to i25

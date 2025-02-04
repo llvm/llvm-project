@@ -10,6 +10,7 @@
 # RUN:         | FileCheck --check-prefixes=ALL,64 %s
 
 # ALL:  .text
+.text
   ld $8, 0($5)
 # 32:   lw  $8, 0($5)      # encoding: [0x8c,0xa8,0x00,0x00]
 # 32:   lw  $9, 4($5)      # encoding: [0x8c,0xa9,0x00,0x04]

@@ -1,0 +1,75 @@
+# RUN: llc -mtriple=riscv32 -verify-machineinstrs -start-before=riscv-expand-pseudo -simplify-mir -o /dev/null -pass-remarks-analysis=asm-printer %s 2>&1 | FileCheck %s
+---
+name: instrs
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $x0 = ADDI $x0, 0
+    $x0 = ADDI $x0, 0
+    $x0 = ADDI $x0, 0
+    $x0 = LW $x0, 0
+    $x0 = LW $x0, 0
+    $x0 = XORI $x0, 0
+    ; CHECK: addi : 3
+    ; CHECK-NEXT: lw : 2
+    ; CHECK-NEXT: xori : 1
+    ; CHECK: 6 instructions in function
+...
+---
+name: bundles
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $x0 = ADDI $x0, 0
+    BUNDLE {
+    $x0 = ADDI $x0, 0
+    $x0 = ADDI $x0, 0
+    $x0 = LW $x0, 0
+    }
+    $x0 = LW $x0, 0
+    $x0 = XORI $x0, 0
+    ; CHECK: addi : 3
+    ; CHECK-NEXT: lw : 2
+    ; CHECK-NEXT: xori : 1
+    ; CHECK: 6 instructions in function
+...
+---
+name: metainstrs
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $x0 = ADDI $x0, 0
+    $x0 = ADDI $x0, 0
+    $x0 = ADDI $x0, 0
+    $x0 = IMPLICIT_DEF
+    $x0 = LW $x0, 0
+    $x0 = LW $x0, 0
+    CFI_INSTRUCTION adjust_cfa_offset 4
+    $x0 = XORI $x0, 0
+    DBG_VALUE $x0, 0
+    ; CHECK: addi : 3
+    ; CHECK-NEXT: lw : 2
+    ; CHECK-NEXT: xori : 1
+    ; CHECK: 6 instructions in function
+...
+---
+name: metabundles
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $x0 = ADDI $x0, 0
+    BUNDLE {
+    CFI_INSTRUCTION adjust_cfa_offset 4
+    $x0 = ADDI $x0, 0
+    $x0 = ADDI $x0, 0
+    DBG_VALUE $x0, 0
+    $x0 = LW $x0, 0
+    }
+    $x0 = LW $x0, 0
+    $x0 = IMPLICIT_DEF
+    $x0 = XORI $x0, 0
+    ; CHECK: addi : 3
+    ; CHECK-NEXT: lw : 2
+    ; CHECK-NEXT: xori : 1
+    ; CHECK: 6 instructions in function
+...

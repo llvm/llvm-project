@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-static-accessed-through-instance %t -- -- -isystem %S/Inputs/static-accessed-through-instance
+// RUN: %check_clang_tidy %s readability-static-accessed-through-instance %t -- --fix-notes -- -isystem %S/Inputs/static-accessed-through-instance
 #include <__clang_cuda_builtin_vars.h>
 
 enum OutEnum {
@@ -47,7 +47,8 @@ C &f(int, int, int, int);
 void g() {
   f(1, 2, 3, 4).x;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: static member accessed through instance  [readability-static-accessed-through-instance]
-  // CHECK-FIXES: {{^}}  f(1, 2, 3, 4).x;{{$}}
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: note: member base expression may carry some side effects
+  // CHECK-FIXES: {{^}}  C::x;{{$}}
 }
 
 int i(int &);
@@ -59,12 +60,14 @@ int k(bool);
 void f(C c) {
   j(i(h().x));
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: static member
-  // CHECK-FIXES: {{^}}  j(i(h().x));{{$}}
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: note: member base expression may carry some side effects
+  // CHECK-FIXES: {{^}}  j(i(C::x));{{$}}
 
   // The execution of h() depends on the return value of a().
   j(k(a() && h().x));
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: static member
-  // CHECK-FIXES: {{^}}  j(k(a() && h().x));{{$}}
+  // CHECK-MESSAGES: :[[@LINE-2]]:14: note: member base expression may carry some side effects
+  // CHECK-FIXES: {{^}}  j(k(a() && C::x));{{$}}
 
   if ([c]() {
         c.ns();
@@ -72,7 +75,8 @@ void f(C c) {
       }().x == 15)
     ;
   // CHECK-MESSAGES: :[[@LINE-5]]:7: warning: static member
-  // CHECK-FIXES: {{^}}  if ([c]() {{{$}}
+  // CHECK-MESSAGES: :[[@LINE-6]]:7: note: member base expression may carry some side effects
+  // CHECK-FIXES: {{^}}  if (C::x == 15){{$}}
 }
 
 // Nested specifiers
@@ -261,8 +265,11 @@ struct Qptr {
 };
 
 int func(Qptr qp) {
-  qp->y = 10; // OK, the overloaded operator might have side-effects.
-  qp->K = 10; //
+  qp->y = 10;
+  qp->K = 10;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: static member accessed through instance [readability-static-accessed-through-instance]
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: note: member base expression may carry some side effects
+  // CHECK-FIXES: {{^}}  Q::K = 10;
 }
 
 namespace {
@@ -378,5 +385,22 @@ namespace PR51861 {
     params.getBar();
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: static member accessed through instance [readability-static-accessed-through-instance]
     // CHECK-FIXES: {{^}}    PR51861::Foo::getBar();{{$}}
+  }
+}
+
+namespace PR75163 {
+  struct Static {
+    static void call();
+  };
+
+  struct Ptr {
+    Static* operator->();
+  };
+
+  void test(Ptr& ptr) {
+    ptr->call();
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: static member accessed through instance [readability-static-accessed-through-instance]
+    // CHECK-MESSAGES: :[[@LINE-2]]:5: note: member base expression may carry some side effects
+    // CHECK-FIXES: {{^}}    PR75163::Static::call();{{$}}
   }
 }

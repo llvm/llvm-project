@@ -8,6 +8,7 @@ import("//llvm/utils/gn/build/toolchain/compiler.gni")
 # COMPILER_RT_TEST_COMPILER_CFLAGS).
 
 target_flags = []
+target_cflags = []
 target_ldflags = []
 
 if (current_os == "android") {
@@ -44,10 +45,11 @@ if (current_os == "android") {
   if (current_os == "mac") {
     target_flags += [
       "-isysroot",
-      mac_sdk_path,
+      rebase_path(mac_sdk_path, root_build_dir),
+
       # TODO(lgrey): We should be getting this from `compiler_defaults`. Why
       # aren't we?
-    "-mmacos-version-min=10.10",
+      "-mmacos-version-min=$mac_deployment_target",
     ]
   }
 } else if (current_os == "baremetal") {
@@ -55,5 +57,9 @@ if (current_os == "android") {
 }
 
 if (current_cpu == "x86") {
-  target_flags += [ "-m32" ]
+  if (current_os == "win") {
+    target_cflags += [ "-m32" ]
+  } else {
+    target_flags += [ "-m32" ]
+  }
 }

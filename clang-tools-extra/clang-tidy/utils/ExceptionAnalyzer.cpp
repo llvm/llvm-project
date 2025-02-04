@@ -141,7 +141,10 @@ bool isStandardPointerConvertible(QualType From, QualType To) {
     if (RD->isCompleteDefinition() &&
         isBaseOf(From->getPointeeType().getTypePtr(),
                  To->getPointeeType().getTypePtr())) {
-      return true;
+      // If B is an inaccessible or ambiguous base class of D, a program
+      // that necessitates this conversion is ill-formed
+      return isUnambiguousPublicBaseClass(From->getPointeeType().getTypePtr(),
+                                          To->getPointeeType().getTypePtr());
     }
   }
 
@@ -317,6 +320,12 @@ bool isQualificationConvertiblePointer(QualType From, QualType To,
 } // namespace
 
 static bool canThrow(const FunctionDecl *Func) {
+  // consteval specifies that every call to the function must produce a
+  // compile-time constant, which cannot evaluate a throw expression without
+  // producing a compilation error.
+  if (Func->isConsteval())
+    return false;
+
   const auto *FunProto = Func->getType()->getAs<FunctionProtoType>();
   if (!FunProto)
     return true;
@@ -375,10 +384,7 @@ bool ExceptionAnalyzer::ExceptionInfo::filterByCatch(
         isPointerOrPointerToMember(ExceptionCanTy->getTypePtr())) {
       // A standard pointer conversion not involving conversions to pointers to
       // private or protected or ambiguous classes ...
-      if (isStandardPointerConvertible(ExceptionCanTy, HandlerCanTy) &&
-          isUnambiguousPublicBaseClass(
-              ExceptionCanTy->getTypePtr()->getPointeeType().getTypePtr(),
-              HandlerCanTy->getTypePtr()->getPointeeType().getTypePtr())) {
+      if (isStandardPointerConvertible(ExceptionCanTy, HandlerCanTy)) {
         TypesToDelete.push_back(ExceptionTy);
       }
       // A function pointer conversion ...
@@ -418,7 +424,7 @@ ExceptionAnalyzer::ExceptionInfo::filterIgnoredExceptions(
       if (TD->getDeclName().isIdentifier()) {
         if ((IgnoreBadAlloc &&
              (TD->getName() == "bad_alloc" && TD->isInStdNamespace())) ||
-            (IgnoredTypes.count(TD->getName()) > 0))
+            (IgnoredTypes.contains(TD->getName())))
           TypesToDelete.push_back(T);
       }
     }
@@ -449,7 +455,8 @@ void ExceptionAnalyzer::ExceptionInfo::reevaluateBehaviour() {
 ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     const FunctionDecl *Func, const ExceptionInfo::Throwables &Caught,
     llvm::SmallSet<const FunctionDecl *, 32> &CallStack) {
-  if (!Func || CallStack.count(Func) || (!CallStack.empty() && !canThrow(Func)))
+  if (!Func || CallStack.contains(Func) ||
+      (!CallStack.empty() && !canThrow(Func)))
     return ExceptionInfo::createNonThrowing();
 
   if (const Stmt *Body = Func->getBody()) {
@@ -507,7 +514,7 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     for (unsigned I = 0; I < Try->getNumHandlers(); ++I) {
       const CXXCatchStmt *Catch = Try->getHandler(I);
 
-      // Everything is catched through 'catch(...)'.
+      // Everything is caught through 'catch(...)'.
       if (!Catch->getExceptionDecl()) {
         ExceptionInfo Rethrown = throwsException(
             Catch->getHandlerBlock(), Uncaught.getExceptionTypes(), CallStack);

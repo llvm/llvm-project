@@ -1,10 +1,10 @@
-; RUN: opt %loadPolly -polly-print-scops -polly-print-delicm -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>,scop(print<polly-delicm>)' -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; llvm.org/PR48783
 ;
 ; PHI predecessors of statement instances can only be reliably derived in defined behaviour situations. In this case, the inner loop's counter would overflow when its upper bound (%call24) is lower than its lower bound (2). However, due to the nsw flag, this would be undefined behavior and therefore not added to any runtime-check context, but to the defined-behaviour context.
 ;
-; Dereived from test case pr41656.ll
+; Derived from test case pr41656.ll
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

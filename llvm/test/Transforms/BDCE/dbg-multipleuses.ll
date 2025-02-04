@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: tail call void (...) @h()
 ; CHECK-NEXT: %[[CALL:.*]] = tail call i32 (...) @g()
-; CHECK-NEXT: tail call void @llvm.dbg.value(metadata i32 %[[CALL:.*]]
+; CHECK-NEXT: #dbg_value(i32 %[[CALL:.*]]
 
 define void @f() !dbg !6 {
 entry:

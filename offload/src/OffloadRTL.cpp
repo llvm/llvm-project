@@ -50,6 +50,7 @@ void deinitRuntime() {
 
   if (RefCount == 1) {
     DP("Deinit offload library!\n");
+    PM->deinit();
     delete PM;
     PM = nullptr;
   }

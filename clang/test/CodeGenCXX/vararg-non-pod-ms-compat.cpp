@@ -18,7 +18,7 @@ void test(X x) {
   // X64: alloca %struct.X
 
   // X64: %[[agg:[^ ]*]] = alloca %struct.X
-  // X64: %[[valptr:[^ ]*]] = getelementptr inbounds %struct.X, ptr %[[agg]], i32 0, i32 0
+  // X64: %[[valptr:[^ ]*]] = getelementptr inbounds nuw %struct.X, ptr %[[agg]], i32 0, i32 0
   // X64: %[[val:[^ ]*]] = load i32, ptr %[[valptr]]
   // X64: call void (...) @"?vararg@@YAXZZ"(i32 %[[val]])
 

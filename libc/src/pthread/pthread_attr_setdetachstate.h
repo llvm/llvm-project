@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATTR_SETDETACHSTATE_H
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATTR_SETDETACHSTATE_H
 
+#include "src/__support/macros/config.h"
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int pthread_attr_setdetachstate(pthread_attr_t *attr, int detach_state);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATTR_SETDETACHSTATE_H

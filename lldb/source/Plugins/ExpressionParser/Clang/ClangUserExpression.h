@@ -106,8 +106,8 @@ public:
   ///     definitions to be included when the expression is parsed.
   ///
   /// \param[in] language
-  ///     If not eLanguageTypeUnknown, a language to use when parsing
-  ///     the expression.  Currently restricted to those languages
+  ///     If not unknown, a language to use when parsing the
+  ///     expression.  Currently restricted to those languages
   ///     supported by Clang.
   ///
   /// \param[in] desired_type
@@ -122,7 +122,7 @@ public:
   ///     must be evaluated. For details see the comment to
   ///     `UserExpression::Evaluate`.
   ClangUserExpression(ExecutionContextScope &exe_scope, llvm::StringRef expr,
-                      llvm::StringRef prefix, lldb::LanguageType language,
+                      llvm::StringRef prefix, SourceLanguage language,
                       ResultType desired_type,
                       const EvaluateExpressionOptions &options,
                       ValueObject *ctx_obj);
@@ -176,6 +176,8 @@ public:
 
   /// Returns true iff this expression is using any imported C++ modules.
   bool DidImportCxxModules() const { return !m_imported_cpp_modules.empty(); }
+
+  llvm::StringRef GetFilename() const { return m_filename; }
 
 private:
   /// Populate m_in_cplusplus_method and m_in_objectivec_method based on the

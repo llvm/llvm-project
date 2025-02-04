@@ -79,8 +79,8 @@ struct A {
 B<true> b_true;
 B<false> b_false;
 #else
-//expected-note@-8 {{candidate template ignored}}
-//expected-note@-8 {{explicit constructor declared here}}
+//expected-note@-8 {{candidate template ignored}} expected-note@-8 {{implicit deduction guide declared as 'template <bool b> A(A<b>) -> A<b>'}}
+//expected-note@-8 {{explicit constructor declared here}} expected-note@-8 {{implicit deduction guide declared as 'template <bool b> explicit(b) A(B<b>) -> A<b>'}}
 //expected-note@-15+ {{candidate constructor}}
 //expected-note@-8+ {{explicit conversion function is not a candidate (explicit specifier}}
 //expected-note@-11 {{explicit constructor is not a candidate (explicit specifier}}

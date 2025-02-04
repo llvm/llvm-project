@@ -1,0 +1,56 @@
+# REQUIRES: aarch64, x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-lib -machine:arm64ec -out:libtest.a -def:test.def
+RUN: llvm-mc -triple=arm64ec-windows-gnu arm64ec.s -filetype=obj -o arm64ec.obj
+RUN: llvm-mc -triple=arm64ec-windows-gnu x86_64.s -filetype=obj -o x86_64.obj
+
+RUN: lld-link -machine:arm64ec -out:out.dll -dll -noentry x86_64.obj arm64ec.obj libtest.a -lldmingw
+
+RUN: llvm-readobj --coff-imports out.dll | FileCheck -check-prefix=IMPORTS %s
+RUN: llvm-objdump -s out.dll | FileCheck --check-prefix=CONTENTS %s
+
+IMPORTS:      Import {
+IMPORTS-NEXT:   Name: test.dll
+IMPORTS-NEXT:   ImportLookupTableRVA: 0x40E0
+IMPORTS-NEXT:   ImportAddressTableRVA: 0x3000
+IMPORTS-NEXT:   Symbol: variable (0)
+IMPORTS-NEXT: }
+
+Runtime pseudo relocation list header at 0x401c, consisting of 0x0, 0x0, 0x1.
+The first runtime pseudo relocation is from an x86_64 object file, with import
+from 0x3000, applied at 0x7000 with a size of 32 bits. The second pseudo
+relocation is from an ARM64EC object file, with import from 0x3000, applied
+at 0x7008 with a size of 32 bits.
+
+CONTENTS: Contents of section .rdata:
+CONTENTS:  180004010 00200000 10200000 00200000 00000000
+CONTENTS:  180004020 00000000 01000000 00300000 00700000
+CONTENTS:  180004030 40000000 00300000 08700000 40000000
+
+CONTENTS:      Contents of section .test:
+CONTENTS-NEXT:  180007000 00300080 01000000 00300080 01000000
+CONTENTS-NEXT:  180007010 1c400080 01000000 40400080 01000000
+
+#--- arm64ec.s
+    .text
+    .global "#_pei386_runtime_relocator"
+"#_pei386_runtime_relocator":
+    ret
+
+    .weak_anti_dep _pei386_runtime_relocator
+.set _pei386_runtime_relocator,"#_pei386_runtime_relocator"
+
+    .section .test,"dr"
+    .quad variable
+    .quad __RUNTIME_PSEUDO_RELOC_LIST__
+    .quad __RUNTIME_PSEUDO_RELOC_LIST_END__
+
+#--- x86_64.s
+    .section .test,"dr"
+    .quad variable
+
+#--- test.def
+LIBRARY test.dll
+EXPORTS
+    variable DATA

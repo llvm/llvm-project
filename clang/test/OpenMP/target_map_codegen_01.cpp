@@ -108,6 +108,6 @@ void implicit_maps_reference (int a, int *b){
 // CK2: store ptr [[ADDR]], ptr [[REF]],
 // CK2: [[T:%.+]] = load ptr, ptr [[REF]],
 // CK2: [[TT:%.+]] = load ptr, ptr [[T]],
-// CK2: getelementptr inbounds i32, ptr [[TT]], i32 1
+// CK2: getelementptr inbounds nuw i32, ptr [[TT]], i32 1
 #endif // CK2
 #endif

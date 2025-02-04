@@ -9,9 +9,10 @@
 #ifndef LLVM_LIBC_TEST_UNITTEST_ROUNDINGMODEUTILS_H
 #define LLVM_LIBC_TEST_UNITTEST_ROUNDINGMODEUTILS_H
 
+#include "src/__support/macros/config.h"
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 namespace testing {
 
@@ -32,6 +33,6 @@ template <RoundingMode R> struct ForceRoundingModeTest : ForceRoundingMode {
 
 } // namespace testing
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_TEST_UNITTEST_ROUNDINGMODEUTILS_H

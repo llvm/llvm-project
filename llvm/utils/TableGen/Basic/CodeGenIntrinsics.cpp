@@ -25,26 +25,47 @@ using namespace llvm;
 // CodeGenIntrinsic Implementation
 //===----------------------------------------------------------------------===//
 
-CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
-  std::vector<Record *> IntrProperties =
-      RC.getAllDerivedDefinitions("IntrinsicProperty");
-
-  std::vector<Record *> DefaultProperties;
-  for (Record *Rec : IntrProperties)
+CodeGenIntrinsicContext::CodeGenIntrinsicContext(const RecordKeeper &RC) {
+  for (const Record *Rec : RC.getAllDerivedDefinitions("IntrinsicProperty"))
     if (Rec->getValueAsBit("IsDefault"))
       DefaultProperties.push_back(Rec);
 
-  std::vector<Record *> Defs = RC.getAllDerivedDefinitions("Intrinsic");
+  // The maximum number of values that an intrinsic can return is the size of
+  // of `IIT_RetNumbers` list - 1 (since we index into this list using the
+  // number of return values as the index).
+  const auto *IIT_RetNumbers =
+      dyn_cast_or_null<ListInit>(RC.getGlobal("IIT_RetNumbers"));
+  if (!IIT_RetNumbers)
+    PrintFatalError("unable to find 'IIT_RetNumbers' list");
+  MaxNumReturn = IIT_RetNumbers->size() - 1;
+}
+
+CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
+  CodeGenIntrinsicContext Ctx(RC);
+
+  ArrayRef<const Record *> Defs = RC.getAllDerivedDefinitions("Intrinsic");
   Intrinsics.reserve(Defs.size());
 
-  for (unsigned I = 0, e = Defs.size(); I != e; ++I)
-    Intrinsics.push_back(CodeGenIntrinsic(Defs[I], DefaultProperties));
+  for (const Record *Def : Defs)
+    Intrinsics.emplace_back(CodeGenIntrinsic(Def, Ctx));
 
   llvm::sort(Intrinsics,
              [](const CodeGenIntrinsic &LHS, const CodeGenIntrinsic &RHS) {
-               return std::tie(LHS.TargetPrefix, LHS.Name) <
-                      std::tie(RHS.TargetPrefix, RHS.Name);
+               // Order target independent intrinsics before target dependent
+               // ones.
+               bool LHSHasTarget = !LHS.TargetPrefix.empty();
+               bool RHSHasTarget = !RHS.TargetPrefix.empty();
+
+               // To ensure deterministic sorted order when duplicates are
+               // present, use record ID as a tie-breaker similar to
+               // sortAndReportDuplicates in Utils.cpp.
+               unsigned LhsID = LHS.TheDef->getID();
+               unsigned RhsID = RHS.TheDef->getID();
+
+               return std::tie(LHSHasTarget, LHS.Name, LhsID) <
+                      std::tie(RHSHasTarget, RHS.Name, RhsID);
              });
+
   Targets.push_back({"", 0, 0});
   for (size_t I = 0, E = Intrinsics.size(); I < E; ++I)
     if (Intrinsics[I].TargetPrefix != Targets.back().Name) {
@@ -52,54 +73,220 @@ CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
       Targets.push_back({Intrinsics[I].TargetPrefix, I, 0});
     }
   Targets.back().Count = Intrinsics.size() - Targets.back().Offset;
+
+  CheckDuplicateIntrinsics();
+  CheckTargetIndependentIntrinsics();
+  CheckOverloadSuffixConflicts();
 }
 
-CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
-                                   std::vector<Record *> DefaultProperties) {
-  TheDef = R;
-  std::string DefName = std::string(R->getName());
-  ArrayRef<SMLoc> DefLoc = R->getLoc();
-  Properties = 0;
-  isOverloaded = false;
-  isCommutative = false;
-  canThrow = false;
-  isNoReturn = false;
-  isNoCallback = false;
-  isNoSync = false;
-  isNoFree = false;
-  isWillReturn = false;
-  isCold = false;
-  isNoDuplicate = false;
-  isNoMerge = false;
-  isConvergent = false;
-  isSpeculatable = false;
-  hasSideEffects = false;
-  isStrictFP = false;
+// Check for duplicate intrinsic names.
+void CodeGenIntrinsicTable::CheckDuplicateIntrinsics() const {
+  // Since the Intrinsics vector is already sorted by name, if there are 2 or
+  // more intrinsics with duplicate names, they will appear adjacent in sorted
+  // order. Note that if the intrinsic name was derived from the record name
+  // there cannot be be duplicate as TableGen parser would have flagged that.
+  // However, if the name was specified in the intrinsic definition, then its
+  // possible to have duplicate names.
+  auto I = std::adjacent_find(
+      Intrinsics.begin(), Intrinsics.end(),
+      [](const CodeGenIntrinsic &Int1, const CodeGenIntrinsic &Int2) {
+        return Int1.Name == Int2.Name;
+      });
+  if (I == Intrinsics.end())
+    return;
 
-  if (DefName.size() <= 4 || DefName.substr(0, 4) != "int_")
+  // Found a duplicate intrinsics.
+  const CodeGenIntrinsic &First = *I;
+  const CodeGenIntrinsic &Second = *(I + 1);
+  PrintError(Second.TheDef,
+             Twine("Intrinsic `") + First.Name + "` is already defined");
+  PrintFatalNote(First.TheDef, "Previous definition here");
+}
+
+// For target independent intrinsics, check that their second dotted component
+// does not match any target name.
+void CodeGenIntrinsicTable::CheckTargetIndependentIntrinsics() const {
+  SmallDenseSet<StringRef> TargetNames;
+  for (const auto &Target : ArrayRef(Targets).drop_front())
+    TargetNames.insert(Target.Name);
+
+  // Set of target independent intrinsics.
+  const auto &Set = Targets[0];
+  for (const auto &Int : ArrayRef(&Intrinsics[Set.Offset], Set.Count)) {
+    StringRef Name = Int.Name;
+    StringRef Prefix = Name.drop_front(5).split('.').first;
+    if (!TargetNames.contains(Prefix))
+      continue;
+    PrintFatalError(Int.TheDef,
+                    "target independent intrinsic `" + Name +
+                        "' has prefix `llvm." + Prefix +
+                        "` that conflicts with intrinsics for target `" +
+                        Prefix + "`");
+  }
+}
+
+// Return true if the given Suffix looks like a mangled type. Note that this
+// check is conservative, but allows all existing LLVM intrinsic suffixes to be
+// considered as not looking like a mangling suffix.
+static bool doesSuffixLookLikeMangledType(StringRef Suffix) {
+  // Try to match against possible mangling suffixes for various types.
+  // See getMangledTypeStr() for the mangling suffixes possible. It includes
+  //  pointer       : p[0-9]+
+  //  array         : a[0-9]+.+
+  //  struct:       : s_/sl_.+
+  //  function      : f_.+
+  //  vector        : v/nxv[0-9]+.+
+  //  target type   : t.+
+  //  integer       : i[0-9]+
+  //  named types   : See `NamedTypes` below.
+
+  // Match anything with an _, so match function and struct types.
+  if (Suffix.contains('_'))
+    return true;
+
+  // [av][0-9]+.+, simplified to [av][0-9].+
+  if (Suffix.size() >= 2 && is_contained("av", Suffix[0]) && isDigit(Suffix[1]))
+    return true;
+
+  // nxv[0-9]+.+, simplified to nxv[0-9].+
+  if (Suffix.size() >= 4 && Suffix.starts_with("nxv") && isDigit(Suffix[3]))
+    return true;
+
+  // t.+
+  if (Suffix.size() > 1 && Suffix.starts_with('t'))
+    return false;
+
+  // [pi][0-9]+
+  if (Suffix.size() > 1 && is_contained("pi", Suffix[0]) &&
+      all_of(Suffix.drop_front(), isDigit))
+    return true;
+
+  // Match one of the named types.
+  static constexpr StringLiteral NamedTypes[] = {
+      "isVoid", "Metadata", "f16",  "f32",     "f64",
+      "f80",    "f128",     "bf16", "ppcf128", "x86amx"};
+  return is_contained(NamedTypes, Suffix);
+}
+
+// Check for conflicts with overloaded intrinsics. If there exists an overloaded
+// intrinsic with base name `llvm.target.foo`, LLVM will add a mangling suffix
+// to it to encode the overload types. This mangling suffix is 1 or more .
+// prefixed mangled type string as defined in `getMangledTypeStr`. If there
+// exists another intrinsic `llvm.target.foo[.<suffixN>]+`, which has the same
+// prefix as the overloaded intrinsic, its possible that there may be a name
+// conflict with the overloaded intrinsic and either one may interfere with name
+// lookup for the other, leading to wrong intrinsic ID being assigned.
+//
+// The actual name lookup in the intrinsic name table is done by a search
+// on each successive '.' separted component of the intrinsic name (see
+// `lookupLLVMIntrinsicByName`). Consider first the case where there exists a
+// non-overloaded intrinsic `llvm.target.foo[.suffix]+`. For the non-overloaded
+// intrinsics, the name lookup is an exact match, so the presence of the
+// overloaded intrinsic with the same prefix will not interfere with the
+// search. However, a lookup intended to match the overloaded intrinsic might be
+// affected by the presence of another entry in the name table with the same
+// prefix.
+//
+// Since LLVM's name lookup first selects the target specific (or target
+// independent) slice of the name table to look into, intrinsics in 2 different
+// targets cannot conflict with each other. Within a specific target,
+// if we have an overloaded intrinsic with name `llvm.target.foo` and another
+// one with same prefix and one or more suffixes `llvm.target.foo[.<suffixN>]+`,
+// then the name search will try to first match against suffix0, then suffix1
+// etc. If suffix0 can match a mangled type, then the search for an
+// `llvm.target.foo` with a mangling suffix can match against suffix0,
+// preventing a match with `llvm.target.foo`. If suffix0 cannot match a mangled
+// type, then that cannot happen, so we do not need to check for later suffixes.
+//
+// Generalizing, the `llvm.target.foo[.suffixN]+` will cause a conflict if the
+// first suffix (.suffix0) can match a mangled type (and then we do not need to
+// check later suffixes) and will not cause a conflict if it cannot (and then
+// again, we do not need to check for later suffixes).
+void CodeGenIntrinsicTable::CheckOverloadSuffixConflicts() const {
+  for (const TargetSet &Set : Targets) {
+    const CodeGenIntrinsic *Overloaded = nullptr;
+    for (const CodeGenIntrinsic &Int : (*this)[Set]) {
+      // If we do not have an overloaded intrinsic to check against, nothing
+      // to do except potentially identifying this as a candidate for checking
+      // against in future iteration.
+      if (!Overloaded) {
+        if (Int.isOverloaded)
+          Overloaded = &Int;
+        continue;
+      }
+
+      StringRef Name = Int.Name;
+      StringRef OverloadName = Overloaded->Name;
+      // If we have an overloaded intrinsic to check again, check if its name is
+      // a proper prefix of this intrinsic.
+      if (Name.starts_with(OverloadName) && Name[OverloadName.size()] == '.') {
+        // If yes, verify suffixes and flag an error.
+        StringRef Suffixes = Name.drop_front(OverloadName.size() + 1);
+
+        // Only need to look at the first suffix.
+        StringRef Suffix0 = Suffixes.split('.').first;
+
+        if (!doesSuffixLookLikeMangledType(Suffix0))
+          continue;
+
+        unsigned SuffixSize = OverloadName.size() + 1 + Suffix0.size();
+        // If suffix looks like mangling suffix, flag it as an error.
+        PrintError(Int.TheDef->getLoc(),
+                   "intrinsic `" + Name + "` cannot share prefix `" +
+                       Name.take_front(SuffixSize) +
+                       "` with another overloaded intrinsic `" + OverloadName +
+                       "`");
+        PrintNote(Overloaded->TheDef->getLoc(),
+                  "Overloaded intrinsic `" + OverloadName + "` defined here");
+        continue;
+      }
+
+      // If we find an intrinsic that is not a proper prefix, any later
+      // intrinsic is also not going to be a proper prefix, so invalidate the
+      // overloaded to check against.
+      Overloaded = nullptr;
+    }
+  }
+}
+
+const CodeGenIntrinsic &CodeGenIntrinsicMap::operator[](const Record *Record) {
+  if (!Record->isSubClassOf("Intrinsic"))
+    PrintFatalError("Intrinsic defs should be subclass of 'Intrinsic' class");
+
+  auto [Iter, Inserted] = Map.try_emplace(Record);
+  if (Inserted)
+    Iter->second = std::make_unique<CodeGenIntrinsic>(Record, Ctx);
+  return *Iter->second;
+}
+
+CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
+                                   const CodeGenIntrinsicContext &Ctx)
+    : TheDef(R) {
+  StringRef DefName = TheDef->getName();
+  ArrayRef<SMLoc> DefLoc = R->getLoc();
+
+  if (!DefName.starts_with("int_"))
     PrintFatalError(DefLoc,
                     "Intrinsic '" + DefName + "' does not start with 'int_'!");
 
   EnumName = DefName.substr(4);
 
-  if (R->getValue(
-          "ClangBuiltinName")) // Ignore a missing ClangBuiltinName field.
-    ClangBuiltinName = std::string(R->getValueAsString("ClangBuiltinName"));
-  if (R->getValue("MSBuiltinName")) // Ignore a missing MSBuiltinName field.
-    MSBuiltinName = std::string(R->getValueAsString("MSBuiltinName"));
+  // Ignore a missing ClangBuiltinName field.
+  ClangBuiltinName =
+      R->getValueAsOptionalString("ClangBuiltinName").value_or("");
+  // Ignore a missing MSBuiltinName field.
+  MSBuiltinName = R->getValueAsOptionalString("MSBuiltinName").value_or("");
 
-  TargetPrefix = std::string(R->getValueAsString("TargetPrefix"));
-  Name = std::string(R->getValueAsString("LLVMName"));
+  TargetPrefix = R->getValueAsString("TargetPrefix");
+  Name = R->getValueAsString("LLVMName").str();
 
   if (Name == "") {
     // If an explicit name isn't specified, derive one from the DefName.
-    Name = "llvm.";
-
-    for (unsigned i = 0, e = EnumName.size(); i != e; ++i)
-      Name += (EnumName[i] == '_') ? '.' : EnumName[i];
+    Name = "llvm." + EnumName.str();
+    llvm::replace(Name, '_', '.');
   } else {
     // Verify it starts with "llvm.".
-    if (Name.size() <= 5 || Name.substr(0, 5) != "llvm.")
+    if (!StringRef(Name).starts_with("llvm."))
       PrintFatalError(DefLoc, "Intrinsic '" + DefName +
                                   "'s name does not start with 'llvm.'!");
   }
@@ -107,29 +294,40 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
   // If TargetPrefix is specified, make sure that Name starts with
   // "llvm.<targetprefix>.".
   if (!TargetPrefix.empty()) {
-    if (Name.size() < 6 + TargetPrefix.size() ||
-        Name.substr(5, 1 + TargetPrefix.size()) != (TargetPrefix + "."))
+    StringRef Prefix = StringRef(Name).drop_front(5); // Drop llvm.
+    if (!Prefix.consume_front(TargetPrefix) || !Prefix.starts_with('.'))
       PrintFatalError(DefLoc, "Intrinsic '" + DefName +
                                   "' does not start with 'llvm." +
                                   TargetPrefix + ".'!");
   }
 
-  if (auto *Types = R->getValue("Types")) {
-    auto *TypeList = cast<ListInit>(Types->getValue());
-    isOverloaded = R->getValueAsBit("isOverloaded");
+  unsigned NumRet = R->getValueAsListInit("RetTypes")->size();
+  if (NumRet > Ctx.MaxNumReturn)
+    PrintFatalError(DefLoc, "intrinsics can only return upto " +
+                                Twine(Ctx.MaxNumReturn) + " values, '" +
+                                DefName + "' returns " + Twine(NumRet) +
+                                " values");
 
-    unsigned I = 0;
-    for (unsigned E = R->getValueAsListInit("RetTypes")->size(); I < E; ++I)
-      IS.RetTys.push_back(TypeList->getElementAsRecord(I));
+  const Record *TypeInfo = R->getValueAsDef("TypeInfo");
+  if (!TypeInfo->isSubClassOf("TypeInfoGen"))
+    PrintFatalError(DefLoc, "TypeInfo field in " + DefName +
+                                " should be of subclass of TypeInfoGen!");
 
-    for (unsigned E = TypeList->size(); I < E; ++I)
-      IS.ParamTys.push_back(TypeList->getElementAsRecord(I));
-  }
+  isOverloaded = TypeInfo->getValueAsBit("isOverloaded");
+  const ListInit *TypeList = TypeInfo->getValueAsListInit("Types");
+
+  // Types field is a concatenation of Return types followed by Param types.
+  unsigned Idx = 0;
+  for (; Idx < NumRet; ++Idx)
+    IS.RetTys.push_back(TypeList->getElementAsRecord(Idx));
+
+  for (unsigned E = TypeList->size(); Idx < E; ++Idx)
+    IS.ParamTys.push_back(TypeList->getElementAsRecord(Idx));
 
   // Parse the intrinsic properties.
-  ListInit *PropList = R->getValueAsListInit("IntrProperties");
+  const ListInit *PropList = R->getValueAsListInit("IntrProperties");
   for (unsigned i = 0, e = PropList->size(); i != e; ++i) {
-    Record *Property = PropList->getElementAsRecord(i);
+    const Record *Property = PropList->getElementAsRecord(i);
     assert(Property->isSubClassOf("IntrinsicProperty") &&
            "Expected a property!");
 
@@ -137,7 +335,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
   }
 
   // Set default properties to true.
-  setDefaultProperties(R, DefaultProperties);
+  setDefaultProperties(Ctx.DefaultProperties);
 
   // Also record the SDPatternOperator Properties.
   Properties = parseSDPatternOperatorProperties(R);
@@ -148,16 +346,16 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
 }
 
 void CodeGenIntrinsic::setDefaultProperties(
-    Record *R, std::vector<Record *> DefaultProperties) {
+    ArrayRef<const Record *> DefaultProperties) {
   // opt-out of using default attributes.
-  if (R->getValueAsBit("DisableDefaultAttributes"))
+  if (TheDef->getValueAsBit("DisableDefaultAttributes"))
     return;
 
-  for (Record *Rec : DefaultProperties)
+  for (const Record *Rec : DefaultProperties)
     setProperty(Rec);
 }
 
-void CodeGenIntrinsic::setProperty(Record *R) {
+void CodeGenIntrinsic::setProperty(const Record *R) {
   if (R->getName() == "IntrNoMem")
     ME = MemoryEffects::none();
   else if (R->getName() == "IntrReadMem") {

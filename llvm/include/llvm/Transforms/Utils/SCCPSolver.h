@@ -104,6 +104,8 @@ public:
   /// argument-tracked functions.
   bool isArgumentTrackedFunction(Function *F);
 
+  const SmallPtrSetImpl<Function *> &getArgumentTrackedFunctions() const;
+
   /// Solve - Solve for constants and executable blocks.
   void solve();
 
@@ -137,7 +139,7 @@ public:
   const ValueLatticeElement &getLatticeValueFor(Value *V) const;
 
   /// getTrackedRetVals - Get the inferred return value map.
-  const MapVector<Function *, ValueLatticeElement> &getTrackedRetVals();
+  const MapVector<Function *, ValueLatticeElement> &getTrackedRetVals() const;
 
   /// getTrackedGlobals - Get and return the set of inferred initializers for
   /// global variables.
@@ -167,9 +169,6 @@ public:
   /// Return either a Constant or nullptr for a given Value.
   Constant *getConstantOrNull(Value *V) const;
 
-  /// Return a reference to the set of argument tracked functions.
-  SmallPtrSetImpl<Function *> &getArgumentTrackedFunctions();
-
   /// Set the Lattice Value for the arguments of a specialization \p F.
   /// If an argument is Constant then its lattice value is marked with the
   /// corresponding actual argument in \p Args. Otherwise, its lattice value
@@ -192,6 +191,9 @@ public:
 
   bool removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
                               BasicBlock *&NewUnreachableBB) const;
+
+  void inferReturnAttributes() const;
+  void inferArgAttributes() const;
 
   bool tryToReplaceWithConstant(Value *V);
 

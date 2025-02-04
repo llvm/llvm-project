@@ -7,11 +7,15 @@ EXPORTS
 CdeclFunction
 StdcallFunction@4
 @FastcallFunction@4
-StdcallAlias@4==StdcallFunction@4
+StdcallAlias@4==StdcallFunction
 ??_7exception@@6B@
 StdcallExportName@4=StdcallInternalFunction@4
 OtherStdcallExportName@4=CdeclInternalFunction
 CdeclExportName=StdcallInternalFunction@4
+
+NoprefixStdcall@4 == NoprefixStdcall@4
+DecoratedStdcall@4 == _DecoratedStdcall@4
+UndecoratedStdcall@4 == UndecoratedStdcall
 
 ; CHECK:      Name type: noprefix
 ; CHECK-NEXT: Export name: CdeclFunction
@@ -43,3 +47,15 @@ CdeclExportName=StdcallInternalFunction@4
 ; CHECK-NEXT: Export name: CdeclExportName
 ; CHECK-NEXT: Symbol: __imp__CdeclExportName
 ; CHECK-NEXT: Symbol: _CdeclExportName
+; CHECK:      Name type: noprefix
+; CHECK-NEXT: Export name: NoprefixStdcall@4
+; CHECK-NEXT: Symbol: __imp__NoprefixStdcall@4
+; CHECK-NEXT: Symbol: _NoprefixStdcall@4
+; CHECK:      Name type: name
+; CHECK-NEXT: Export name: _DecoratedStdcall@4
+; CHECK-NEXT: Symbol: __imp__DecoratedStdcall@4
+; CHECK-NEXT: Symbol: _DecoratedStdcall@4
+; CHECK:      Name type: undecorate
+; CHECK-NEXT: Export name: UndecoratedStdcall
+; CHECK-NEXT: Symbol: __imp__UndecoratedStdcall@4
+; CHECK-NEXT: Symbol: _UndecoratedStdcall@4

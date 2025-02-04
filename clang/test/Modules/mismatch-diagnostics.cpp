@@ -29,5 +29,5 @@ export module mismatching_module;
 
 //--- use.cpp
 import mismatching_module;
-// CHECK: error: POSIX thread support was enabled in PCH file but is currently disabled
+// CHECK: error: POSIX thread support was enabled in AST file '{{.*[/|\\\\]}}mismatching_module.pcm' but is currently disabled
 // CHECK-NEXT: module file {{.*[/|\\\\]}}mismatching_module.pcm cannot be loaded due to a configuration mismatch with the current compilation

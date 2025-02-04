@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -pass-remarks-analysis="polly-scops" \
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -pass-remarks-analysis="polly-scops" \
 ; RUN:                -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK: Signed-unsigned restriction: [p] -> {  : p <= -129 or p >= 128 }

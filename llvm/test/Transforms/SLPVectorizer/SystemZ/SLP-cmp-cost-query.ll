@@ -31,6 +31,6 @@ define void @fun(ptr nocapture, i32 zeroext) local_unnamed_addr #0 {
 ._crit_edge:                                      ; preds = %.lr.ph
   ret void
 
-; CHECK: SLP: Adding cost -1 for bundle n=2 [  %4 = icmp ult i32 %2, %1, ..]
+; CHECK: SLP: Adding cost -1 for bundle Idx: 3, n=2 [  %4 = icmp ult i32 %2, %1, ..]
 }
 

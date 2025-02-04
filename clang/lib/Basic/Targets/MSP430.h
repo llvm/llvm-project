@@ -52,7 +52,7 @@ public:
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override {
     // FIXME: Implement.
-    return std::nullopt;
+    return {};
   }
 
   bool allowsLargerPreferedTypeAlignment() const override { return false; }

@@ -9,16 +9,15 @@
 #include "llvm/ObjCopy/ObjCopy.h"
 #include "llvm/ObjCopy/COFF/COFFConfig.h"
 #include "llvm/ObjCopy/COFF/COFFObjcopy.h"
-#include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/ObjCopy/ELF/ELFConfig.h"
 #include "llvm/ObjCopy/ELF/ELFObjcopy.h"
 #include "llvm/ObjCopy/MachO/MachOConfig.h"
 #include "llvm/ObjCopy/MachO/MachOObjcopy.h"
 #include "llvm/ObjCopy/MultiFormatConfig.h"
-#include "llvm/ObjCopy/wasm/WasmConfig.h"
-#include "llvm/ObjCopy/wasm/WasmObjcopy.h"
 #include "llvm/ObjCopy/XCOFF/XCOFFConfig.h"
 #include "llvm/ObjCopy/XCOFF/XCOFFObjcopy.h"
+#include "llvm/ObjCopy/wasm/WasmConfig.h"
+#include "llvm/ObjCopy/wasm/WasmObjcopy.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/Error.h"
@@ -26,7 +25,6 @@
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/Wasm.h"
 #include "llvm/Object/XCOFFObjectFile.h"
-#include "llvm/Support/SmallVectorMemoryBuffer.h"
 
 namespace llvm {
 namespace objcopy {

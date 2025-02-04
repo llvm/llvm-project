@@ -31,7 +31,9 @@ int main(int, char**) {
   {
     // the extents are representable but the product is not, so we can't use it for layout_right
     TEST_LIBCPP_ASSERT_FAILURE(
-        ([=] { std::layout_right::mapping<std::extents<char, D, 5>> m(std::extents<char, D, 5>(100)); }()),
+        ([=] {
+          std::layout_right::mapping<std::extents<signed char, D, 5>> m(std::extents<signed char, D, 5>(100));
+        }()),
         "layout_right::mapping extents ctor: product of extents must be representable as index_type.");
   }
   return 0;

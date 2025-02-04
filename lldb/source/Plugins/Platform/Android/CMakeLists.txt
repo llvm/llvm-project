@@ -14,6 +14,7 @@ add_lldb_library(lldbPluginPlatformAndroid PLUGIN
   LINK_LIBS
     lldbCore
     lldbHost
+    lldbValueObject
     lldbPluginPlatformLinux
     lldbPluginPlatformGDB
   LINK_COMPONENTS

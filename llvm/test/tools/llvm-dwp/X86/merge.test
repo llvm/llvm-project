@@ -44,3 +44,8 @@ CHECK:    Index  Signature INFO                                        ABBREV   
 CHECK-DAG:       [[DWOC]]  [0x00000000[[#COFF]], 0x00000000[[#AOFF]]) [0x0000[[CAOFF]], 0x0000[[AAOFF]]) [0x00000000, 0x00000011) [0x00000000, 0x00000018)
 CHECK-DAG:       [[DWOA]]  [0x00000000[[#AOFF]], 0x00000000[[#BOFF]]) [0x0000[[AAOFF]], 0x0000[[BAOFF]]) [0x00000011, 0x00000022) [0x00000018, 0x00000028)
 CHECK-DAG:       [[DWOB]]  [0x00000000[[#BOFF]], 0x00000000[[#XOFF]]) [0x0000[[BAOFF]], 0x000000c3)      [0x00000022, 0x00000033) [0x00000028, 0x0000003c)
+
+CHECK-LABEL: .debug_str_offsets.dwo contents:
+CHECK: Contribution size = 24, Format = DWARF32, Version = 4
+CHECK: Contribution size = 16, Format = DWARF32, Version = 4
+CHECK: Contribution size = 20, Format = DWARF32, Version = 4

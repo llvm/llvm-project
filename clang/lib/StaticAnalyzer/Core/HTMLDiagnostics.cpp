@@ -27,6 +27,7 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/RewriteBuffer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallString.h"
@@ -52,6 +53,7 @@
 
 using namespace clang;
 using namespace ento;
+using llvm::RewriteBuffer;
 
 //===----------------------------------------------------------------------===//
 // Boilerplate.
@@ -1209,18 +1211,19 @@ const arrowIndices = )<<<";
                      OS.str());
 }
 
-std::string getSpanBeginForControl(const char *ClassName, unsigned Index) {
+static std::string getSpanBeginForControl(const char *ClassName,
+                                          unsigned Index) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   OS << "<span id=\"" << ClassName << Index << "\">";
   return Result;
 }
 
-std::string getSpanBeginForControlStart(unsigned Index) {
+static std::string getSpanBeginForControlStart(unsigned Index) {
   return getSpanBeginForControl("start", Index);
 }
 
-std::string getSpanBeginForControlEnd(unsigned Index) {
+static std::string getSpanBeginForControlEnd(unsigned Index) {
   return getSpanBeginForControl("end", Index);
 }
 

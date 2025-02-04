@@ -34,27 +34,7 @@
 // CHECK-STABLE: OPTIONS:
 //
 // CHECK-STABLE:   cplusplus.Move:WarnOn
-// CHECK-STABLE-SAME:          (string) In non-aggressive mode, only warn
-// CHECK-STABLLE:              on use-after-move of local variables (or
-// CHECK-STABLLE:              local rvalue references) and of STL objects.
-// CHECK-STABLLE:              The former is possible because local variables
-// CHECK-STABLLE:              (or local rvalue references) are not tempting
-// CHECK-STABLLE:              their user to re-use the storage. The latter
-// CHECK-STABLLE:              is possible because STL objects are known
-// CHECK-STABLLE:              to end up in a valid but unspecified state
-// CHECK-STABLLE:              after the move and their state-reset methods
-// CHECK-STABLLE:              are also known, which allows us to predict
-// CHECK-STABLLE:              precisely when use-after-move is invalid.
-// CHECK-STABLLE:              Some STL objects are known to conform to
-// CHECK-STABLLE:              additional contracts after move, so they
-// CHECK-STABLLE:              are not tracked. However, smart pointers
-// CHECK-STABLLE:              specifically are tracked because we can
-// CHECK-STABLLE:              perform extra checking over them. In aggressive
-// CHECK-STABLLE:              mode, warn on any use-after-move because
-// CHECK-STABLLE:              the user has intentionally asked us to completely
-// CHECK-STABLLE:              eliminate use-after-move in his code. Values:
-// CHECK-STABLLE:              "KnownsOnly", "KnownsAndLocals", "All".
-// CHECK-STABLLE:              (default: KnownsAndLocals)
+// CHECK-STABLE-SAME:         (string) With setting "KnownsOnly" warn
 
 // CHECK-STABLE-NOT: debug.AnalysisOrder:*
 // CHECK-DEVELOPER:  debug.AnalysisOrder:*

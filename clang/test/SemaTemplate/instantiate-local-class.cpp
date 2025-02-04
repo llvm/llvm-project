@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -verify -std=c++11 %s
 // RUN: %clang_cc1 -verify -std=c++11 -fdelayed-template-parsing %s
+// RUN: %clang_cc1 -verify -std=c++20 -fsyntax-only %s
 
 template<typename T>
 void f0() {
@@ -509,3 +510,28 @@ namespace LambdaInDefaultMemberInitializer {
   }
   template void f<int>();
 }
+
+#if __cplusplus >= 201703L
+
+// Reduced from https://github.com/llvm/llvm-project/issues/98526
+// This relies on the deferral instantiation of the local lambda, otherwise we would fail in DeduceReturnType().
+namespace local_recursive_lambda {
+
+template <typename F> struct recursive_lambda {
+  template <typename... Args> auto operator()(Args &&...args) const {
+    return fn(*this, args...);
+  }
+  F fn;
+};
+
+template <typename F> recursive_lambda(F) -> recursive_lambda<F>;
+
+void foo() {
+  recursive_lambda{[&](auto &self_fn, int) -> int {
+    return self_fn(0);
+  }}(0);
+}
+
+} // namespace local_recursive_lambda
+
+#endif

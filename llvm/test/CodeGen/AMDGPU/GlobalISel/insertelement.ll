@@ -715,27 +715,27 @@ define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
 ; GPRIDX-NEXT:    v_mov_b32_e32 v16, s17
 ; GPRIDX-NEXT:    v_mov_b32_e32 v17, s18
 ; GPRIDX-NEXT:    v_mov_b32_e32 v18, s19
-; GPRIDX-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
-; GPRIDX-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v2
-; GPRIDX-NEXT:    v_cndmask_b32_e32 v3, v3, v0, vcc
-; GPRIDX-NEXT:    v_cndmask_b32_e64 v5, v5, v0, s[4:5]
-; GPRIDX-NEXT:    v_cmp_eq_u32_e64 s[6:7], 2, v2
-; GPRIDX-NEXT:    v_cmp_eq_u32_e64 s[8:9], 3, v2
+; GPRIDX-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
+; GPRIDX-NEXT:    v_cmp_eq_u32_e64 s[16:17], 0, v2
+; GPRIDX-NEXT:    v_cmp_eq_u32_e64 s[4:5], 2, v2
+; GPRIDX-NEXT:    v_cmp_eq_u32_e64 s[6:7], 3, v2
+; GPRIDX-NEXT:    v_cmp_eq_u32_e64 s[8:9], 4, v2
 ; GPRIDX-NEXT:    v_cmp_eq_u32_e64 s[10:11], 5, v2
 ; GPRIDX-NEXT:    v_cmp_eq_u32_e64 s[12:13], 6, v2
 ; GPRIDX-NEXT:    v_cmp_eq_u32_e64 s[14:15], 7, v2
-; GPRIDX-NEXT:    v_cmp_eq_u32_e64 s[16:17], 4, v2
-; GPRIDX-NEXT:    v_cndmask_b32_e32 v4, v4, v1, vcc
-; GPRIDX-NEXT:    v_cndmask_b32_e64 v6, v6, v1, s[4:5]
-; GPRIDX-NEXT:    v_cndmask_b32_e64 v7, v7, v0, s[6:7]
-; GPRIDX-NEXT:    v_cndmask_b32_e64 v9, v9, v0, s[8:9]
-; GPRIDX-NEXT:    v_cndmask_b32_e64 v11, v11, v0, s[16:17]
+; GPRIDX-NEXT:    v_cndmask_b32_e64 v3, v3, v0, s[16:17]
+; GPRIDX-NEXT:    v_cndmask_b32_e32 v5, v5, v0, vcc
+; GPRIDX-NEXT:    v_cndmask_b32_e64 v4, v4, v1, s[16:17]
+; GPRIDX-NEXT:    v_cndmask_b32_e32 v6, v6, v1, vcc
+; GPRIDX-NEXT:    v_cndmask_b32_e64 v7, v7, v0, s[4:5]
+; GPRIDX-NEXT:    v_cndmask_b32_e64 v9, v9, v0, s[6:7]
+; GPRIDX-NEXT:    v_cndmask_b32_e64 v11, v11, v0, s[8:9]
 ; GPRIDX-NEXT:    v_cndmask_b32_e64 v13, v13, v0, s[10:11]
 ; GPRIDX-NEXT:    v_cndmask_b32_e64 v15, v15, v0, s[12:13]
 ; GPRIDX-NEXT:    v_cndmask_b32_e64 v17, v17, v0, s[14:15]
-; GPRIDX-NEXT:    v_cndmask_b32_e64 v8, v8, v1, s[6:7]
-; GPRIDX-NEXT:    v_cndmask_b32_e64 v10, v10, v1, s[8:9]
-; GPRIDX-NEXT:    v_cndmask_b32_e64 v12, v12, v1, s[16:17]
+; GPRIDX-NEXT:    v_cndmask_b32_e64 v8, v8, v1, s[4:5]
+; GPRIDX-NEXT:    v_cndmask_b32_e64 v10, v10, v1, s[6:7]
+; GPRIDX-NEXT:    v_cndmask_b32_e64 v12, v12, v1, s[8:9]
 ; GPRIDX-NEXT:    v_cndmask_b32_e64 v14, v14, v1, s[10:11]
 ; GPRIDX-NEXT:    v_cndmask_b32_e64 v16, v16, v1, s[12:13]
 ; GPRIDX-NEXT:    v_cndmask_b32_e64 v18, v18, v1, s[14:15]
@@ -1078,8 +1078,6 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_s_v(<8 x double> inreg %vec, do
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[13:16], off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
@@ -1228,8 +1226,6 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_v_s(<8 x double> inreg %vec, do
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[14:17], off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
@@ -1290,8 +1286,6 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_s_s(<8 x double> %vec, double i
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
@@ -1497,8 +1491,6 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_v_v(<8 x double> inreg %vec, do
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[15:18], off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
@@ -1622,8 +1614,6 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_s_v(<8 x double> %vec, double i
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
@@ -1684,8 +1674,6 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_s(<8 x double> %vec, double %
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
@@ -1803,8 +1791,6 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_v(<8 x double> %vec, double %
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
@@ -2411,8 +2397,6 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_s_s_add_1(<8 x double> inreg %v
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %idx.add = add i32 %idx, 1
@@ -2537,8 +2521,6 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_v_add_1(<8 x double> %vec, do
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %idx.add = add i32 %idx, 1

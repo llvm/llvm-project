@@ -38,7 +38,7 @@ void foo(void) {
 // CHECK-INDEX: [indexEntityReference]: kind: function | name: erroneous
 
 // RUN: not %clang -fsyntax-only %s -include %t.h 2>&1 | FileCheck -check-prefix=PCH-ERR %s
-// PCH-ERR: error: PCH file contains compiler errors
+// PCH-ERR: error: PCH file '{{.*}}' contains compiler errors
 
 // RUN: not c-index-test -write-pch %t.pch foobar.c 2>&1 | FileCheck -check-prefix=NONEXISTENT %s
 // NONEXISTENT: Unable to load translation unit

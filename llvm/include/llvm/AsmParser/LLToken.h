@@ -109,10 +109,12 @@ enum Kind {
   kw_fast,
   kw_nuw,
   kw_nsw,
+  kw_nusw,
   kw_exact,
   kw_disjoint,
   kw_inbounds,
   kw_nneg,
+  kw_samesign,
   kw_inrange,
   kw_addrspace,
   kw_section,
@@ -146,6 +148,7 @@ enum Kind {
   kw_aarch64_vector_pcs,
   kw_aarch64_sve_vector_pcs,
   kw_aarch64_sme_preservemost_from_x0,
+  kw_aarch64_sme_preservemost_from_x1,
   kw_aarch64_sme_preservemost_from_x2,
   kw_msp430_intrcc,
   kw_avr_intrcc,
@@ -199,10 +202,17 @@ enum Kind {
   kw_argmem,
   kw_inaccessiblemem,
 
-  // Legacy memory attributes:
+  // Legacy attributes:
   kw_argmemonly,
   kw_inaccessiblememonly,
   kw_inaccessiblemem_or_argmemonly,
+  kw_nocapture,
+
+  // Captures attribute:
+  kw_address,
+  kw_address_is_null,
+  kw_provenance,
+  kw_read_provenance,
 
   // nofpclass attribute:
   kw_all,
@@ -266,6 +276,8 @@ enum Kind {
   kw_fmin,
   kw_uinc_wrap,
   kw_udec_wrap,
+  kw_usub_cond,
+  kw_usub_sat,
 
   // Instruction Opcodes (Opcode in UIntVal).
   kw_fneg,
@@ -345,6 +357,7 @@ enum Kind {
   kw_blockaddress,
   kw_dso_local_equivalent,
   kw_no_cfi,
+  kw_ptrauth,
 
   kw_freeze,
 

@@ -616,7 +616,7 @@ func.func @loop_nest_non_trivial_multiple_upper_bound_alt(%M : index, %N : index
   // UNROLL-BY-4-NEXT: "foo"
   // UNROLL-BY-4-NEXT: "foo"
   // UNROLL-BY-4-NEXT: "foo"
-  // UNROLL-BY-4-NOT for
+  // UNROLL-BY-4-NOT: for
   // UNROLL-BY-4: return
   return
 }

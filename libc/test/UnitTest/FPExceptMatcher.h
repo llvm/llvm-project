@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_TEST_UNITTEST_FPEXCEPTMATCHER_H
 #define LLVM_LIBC_TEST_UNITTEST_FPEXCEPTMATCHER_H
 
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
 #include "test/UnitTest/TestLogger.h"
 
 #if LIBC_TEST_HAS_MATCHERS()
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 // TODO: Make the matcher match specific exceptions instead of just identifying
@@ -51,7 +52,7 @@ public:
 };
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #define ASSERT_RAISES_FP_EXCEPT(func)                                          \
   ASSERT_THAT(                                                                 \

@@ -8,241 +8,241 @@
 //===----------------------------------------------------------------------===//
 
 export {
-  using ::double_t;
-  using ::float_t;
+  using ::double_t _LIBCPP_USING_IF_EXISTS;
+  using ::float_t _LIBCPP_USING_IF_EXISTS;
 
-  using ::acos;
-  using ::acosf;
-  using ::acosl;
+  using ::acos _LIBCPP_USING_IF_EXISTS;
+  using ::acosf _LIBCPP_USING_IF_EXISTS;
+  using ::acosl _LIBCPP_USING_IF_EXISTS;
 
-  using ::asin;
-  using ::asinf;
-  using ::asinl;
+  using ::asin _LIBCPP_USING_IF_EXISTS;
+  using ::asinf _LIBCPP_USING_IF_EXISTS;
+  using ::asinl _LIBCPP_USING_IF_EXISTS;
 
-  using ::atan;
-  using ::atanf;
-  using ::atanl;
+  using ::atan _LIBCPP_USING_IF_EXISTS;
+  using ::atanf _LIBCPP_USING_IF_EXISTS;
+  using ::atanl _LIBCPP_USING_IF_EXISTS;
 
-  using ::atan2;
-  using ::atan2f;
-  using ::atan2l;
+  using ::atan2 _LIBCPP_USING_IF_EXISTS;
+  using ::atan2f _LIBCPP_USING_IF_EXISTS;
+  using ::atan2l _LIBCPP_USING_IF_EXISTS;
 
-  using ::cos;
-  using ::cosf;
-  using ::cosl;
+  using ::cos _LIBCPP_USING_IF_EXISTS;
+  using ::cosf _LIBCPP_USING_IF_EXISTS;
+  using ::cosl _LIBCPP_USING_IF_EXISTS;
 
-  using ::sin;
-  using ::sinf;
-  using ::sinl;
+  using ::sin _LIBCPP_USING_IF_EXISTS;
+  using ::sinf _LIBCPP_USING_IF_EXISTS;
+  using ::sinl _LIBCPP_USING_IF_EXISTS;
 
-  using ::tan;
-  using ::tanf;
-  using ::tanl;
+  using ::tan _LIBCPP_USING_IF_EXISTS;
+  using ::tanf _LIBCPP_USING_IF_EXISTS;
+  using ::tanl _LIBCPP_USING_IF_EXISTS;
 
-  using ::acosh;
-  using ::acoshf;
-  using ::acoshl;
+  using ::acosh _LIBCPP_USING_IF_EXISTS;
+  using ::acoshf _LIBCPP_USING_IF_EXISTS;
+  using ::acoshl _LIBCPP_USING_IF_EXISTS;
 
-  using ::asinh;
-  using ::asinhf;
-  using ::asinhl;
+  using ::asinh _LIBCPP_USING_IF_EXISTS;
+  using ::asinhf _LIBCPP_USING_IF_EXISTS;
+  using ::asinhl _LIBCPP_USING_IF_EXISTS;
 
-  using ::atanh;
-  using ::atanhf;
-  using ::atanhl;
+  using ::atanh _LIBCPP_USING_IF_EXISTS;
+  using ::atanhf _LIBCPP_USING_IF_EXISTS;
+  using ::atanhl _LIBCPP_USING_IF_EXISTS;
 
-  using ::cosh;
-  using ::coshf;
-  using ::coshl;
+  using ::cosh _LIBCPP_USING_IF_EXISTS;
+  using ::coshf _LIBCPP_USING_IF_EXISTS;
+  using ::coshl _LIBCPP_USING_IF_EXISTS;
 
-  using ::sinh;
-  using ::sinhf;
-  using ::sinhl;
+  using ::sinh _LIBCPP_USING_IF_EXISTS;
+  using ::sinhf _LIBCPP_USING_IF_EXISTS;
+  using ::sinhl _LIBCPP_USING_IF_EXISTS;
 
-  using ::tanh;
-  using ::tanhf;
-  using ::tanhl;
+  using ::tanh _LIBCPP_USING_IF_EXISTS;
+  using ::tanhf _LIBCPP_USING_IF_EXISTS;
+  using ::tanhl _LIBCPP_USING_IF_EXISTS;
 
-  using ::exp;
-  using ::expf;
-  using ::expl;
+  using ::exp _LIBCPP_USING_IF_EXISTS;
+  using ::expf _LIBCPP_USING_IF_EXISTS;
+  using ::expl _LIBCPP_USING_IF_EXISTS;
 
-  using ::exp2;
-  using ::exp2f;
-  using ::exp2l;
+  using ::exp2 _LIBCPP_USING_IF_EXISTS;
+  using ::exp2f _LIBCPP_USING_IF_EXISTS;
+  using ::exp2l _LIBCPP_USING_IF_EXISTS;
 
-  using ::expm1;
-  using ::expm1f;
-  using ::expm1l;
+  using ::expm1 _LIBCPP_USING_IF_EXISTS;
+  using ::expm1f _LIBCPP_USING_IF_EXISTS;
+  using ::expm1l _LIBCPP_USING_IF_EXISTS;
 
-  using ::frexp;
-  using ::frexpf;
-  using ::frexpl;
+  using ::frexp _LIBCPP_USING_IF_EXISTS;
+  using ::frexpf _LIBCPP_USING_IF_EXISTS;
+  using ::frexpl _LIBCPP_USING_IF_EXISTS;
 
-  using ::ilogb;
-  using ::ilogbf;
-  using ::ilogbl;
+  using ::ilogb _LIBCPP_USING_IF_EXISTS;
+  using ::ilogbf _LIBCPP_USING_IF_EXISTS;
+  using ::ilogbl _LIBCPP_USING_IF_EXISTS;
 
-  using ::ldexp;
-  using ::ldexpf;
-  using ::ldexpl;
+  using ::ldexp _LIBCPP_USING_IF_EXISTS;
+  using ::ldexpf _LIBCPP_USING_IF_EXISTS;
+  using ::ldexpl _LIBCPP_USING_IF_EXISTS;
 
-  using ::log;
-  using ::logf;
-  using ::logl;
+  using ::log _LIBCPP_USING_IF_EXISTS;
+  using ::logf _LIBCPP_USING_IF_EXISTS;
+  using ::logl _LIBCPP_USING_IF_EXISTS;
 
-  using ::log10;
-  using ::log10f;
-  using ::log10l;
+  using ::log10 _LIBCPP_USING_IF_EXISTS;
+  using ::log10f _LIBCPP_USING_IF_EXISTS;
+  using ::log10l _LIBCPP_USING_IF_EXISTS;
 
-  using ::log1p;
-  using ::log1pf;
-  using ::log1pl;
+  using ::log1p _LIBCPP_USING_IF_EXISTS;
+  using ::log1pf _LIBCPP_USING_IF_EXISTS;
+  using ::log1pl _LIBCPP_USING_IF_EXISTS;
 
-  using ::log2;
-  using ::log2f;
-  using ::log2l;
+  using ::log2 _LIBCPP_USING_IF_EXISTS;
+  using ::log2f _LIBCPP_USING_IF_EXISTS;
+  using ::log2l _LIBCPP_USING_IF_EXISTS;
 
-  using ::logb;
-  using ::logbf;
-  using ::logbl;
+  using ::logb _LIBCPP_USING_IF_EXISTS;
+  using ::logbf _LIBCPP_USING_IF_EXISTS;
+  using ::logbl _LIBCPP_USING_IF_EXISTS;
 
-  using ::modf;
-  using ::modff;
-  using ::modfl;
+  using ::modf _LIBCPP_USING_IF_EXISTS;
+  using ::modff _LIBCPP_USING_IF_EXISTS;
+  using ::modfl _LIBCPP_USING_IF_EXISTS;
 
-  using ::scalbn;
-  using ::scalbnf;
-  using ::scalbnl;
+  using ::scalbn _LIBCPP_USING_IF_EXISTS;
+  using ::scalbnf _LIBCPP_USING_IF_EXISTS;
+  using ::scalbnl _LIBCPP_USING_IF_EXISTS;
 
-  using ::scalbln;
-  using ::scalblnf;
-  using ::scalblnl;
+  using ::scalbln _LIBCPP_USING_IF_EXISTS;
+  using ::scalblnf _LIBCPP_USING_IF_EXISTS;
+  using ::scalblnl _LIBCPP_USING_IF_EXISTS;
 
-  using ::cbrt;
-  using ::cbrtf;
-  using ::cbrtl;
+  using ::cbrt _LIBCPP_USING_IF_EXISTS;
+  using ::cbrtf _LIBCPP_USING_IF_EXISTS;
+  using ::cbrtl _LIBCPP_USING_IF_EXISTS;
 
   // [c.math.abs], absolute values
-  using ::abs;
+  using ::abs _LIBCPP_USING_IF_EXISTS;
 
-  using ::fabs;
-  using ::fabsf;
-  using ::fabsl;
+  using ::fabs _LIBCPP_USING_IF_EXISTS;
+  using ::fabsf _LIBCPP_USING_IF_EXISTS;
+  using ::fabsl _LIBCPP_USING_IF_EXISTS;
 
-  using ::hypot;
-  using ::hypotf;
-  using ::hypotl;
+  using ::hypot _LIBCPP_USING_IF_EXISTS;
+  using ::hypotf _LIBCPP_USING_IF_EXISTS;
+  using ::hypotl _LIBCPP_USING_IF_EXISTS;
 
   // [c.math.hypot3], three-dimensional hypotenuse
 
-  using ::pow;
-  using ::powf;
-  using ::powl;
+  using ::pow _LIBCPP_USING_IF_EXISTS;
+  using ::powf _LIBCPP_USING_IF_EXISTS;
+  using ::powl _LIBCPP_USING_IF_EXISTS;
 
-  using ::sqrt;
-  using ::sqrtf;
-  using ::sqrtl;
+  using ::sqrt _LIBCPP_USING_IF_EXISTS;
+  using ::sqrtf _LIBCPP_USING_IF_EXISTS;
+  using ::sqrtl _LIBCPP_USING_IF_EXISTS;
 
-  using ::erf;
-  using ::erff;
-  using ::erfl;
+  using ::erf _LIBCPP_USING_IF_EXISTS;
+  using ::erff _LIBCPP_USING_IF_EXISTS;
+  using ::erfl _LIBCPP_USING_IF_EXISTS;
 
-  using ::erfc;
-  using ::erfcf;
-  using ::erfcl;
+  using ::erfc _LIBCPP_USING_IF_EXISTS;
+  using ::erfcf _LIBCPP_USING_IF_EXISTS;
+  using ::erfcl _LIBCPP_USING_IF_EXISTS;
 
-  using ::lgamma;
-  using ::lgammaf;
-  using ::lgammal;
+  using ::lgamma _LIBCPP_USING_IF_EXISTS;
+  using ::lgammaf _LIBCPP_USING_IF_EXISTS;
+  using ::lgammal _LIBCPP_USING_IF_EXISTS;
 
-  using ::tgamma;
-  using ::tgammaf;
-  using ::tgammal;
+  using ::tgamma _LIBCPP_USING_IF_EXISTS;
+  using ::tgammaf _LIBCPP_USING_IF_EXISTS;
+  using ::tgammal _LIBCPP_USING_IF_EXISTS;
 
-  using ::ceil;
-  using ::ceilf;
-  using ::ceill;
+  using ::ceil _LIBCPP_USING_IF_EXISTS;
+  using ::ceilf _LIBCPP_USING_IF_EXISTS;
+  using ::ceill _LIBCPP_USING_IF_EXISTS;
 
-  using ::floor;
-  using ::floorf;
-  using ::floorl;
+  using ::floor _LIBCPP_USING_IF_EXISTS;
+  using ::floorf _LIBCPP_USING_IF_EXISTS;
+  using ::floorl _LIBCPP_USING_IF_EXISTS;
 
-  using ::nearbyint;
-  using ::nearbyintf;
-  using ::nearbyintl;
+  using ::nearbyint _LIBCPP_USING_IF_EXISTS;
+  using ::nearbyintf _LIBCPP_USING_IF_EXISTS;
+  using ::nearbyintl _LIBCPP_USING_IF_EXISTS;
 
-  using ::rint;
-  using ::rintf;
-  using ::rintl;
+  using ::rint _LIBCPP_USING_IF_EXISTS;
+  using ::rintf _LIBCPP_USING_IF_EXISTS;
+  using ::rintl _LIBCPP_USING_IF_EXISTS;
 
-  using ::lrint;
-  using ::lrintf;
-  using ::lrintl;
+  using ::lrint _LIBCPP_USING_IF_EXISTS;
+  using ::lrintf _LIBCPP_USING_IF_EXISTS;
+  using ::lrintl _LIBCPP_USING_IF_EXISTS;
 
-  using ::llrint;
-  using ::llrintf;
-  using ::llrintl;
+  using ::llrint _LIBCPP_USING_IF_EXISTS;
+  using ::llrintf _LIBCPP_USING_IF_EXISTS;
+  using ::llrintl _LIBCPP_USING_IF_EXISTS;
 
-  using ::round;
-  using ::roundf;
-  using ::roundl;
+  using ::round _LIBCPP_USING_IF_EXISTS;
+  using ::roundf _LIBCPP_USING_IF_EXISTS;
+  using ::roundl _LIBCPP_USING_IF_EXISTS;
 
-  using ::lround;
-  using ::lroundf;
-  using ::lroundl;
+  using ::lround _LIBCPP_USING_IF_EXISTS;
+  using ::lroundf _LIBCPP_USING_IF_EXISTS;
+  using ::lroundl _LIBCPP_USING_IF_EXISTS;
 
-  using ::llround;
-  using ::llroundf;
-  using ::llroundl;
+  using ::llround _LIBCPP_USING_IF_EXISTS;
+  using ::llroundf _LIBCPP_USING_IF_EXISTS;
+  using ::llroundl _LIBCPP_USING_IF_EXISTS;
 
-  using ::trunc;
-  using ::truncf;
-  using ::truncl;
+  using ::trunc _LIBCPP_USING_IF_EXISTS;
+  using ::truncf _LIBCPP_USING_IF_EXISTS;
+  using ::truncl _LIBCPP_USING_IF_EXISTS;
 
-  using ::fmod;
-  using ::fmodf;
-  using ::fmodl;
+  using ::fmod _LIBCPP_USING_IF_EXISTS;
+  using ::fmodf _LIBCPP_USING_IF_EXISTS;
+  using ::fmodl _LIBCPP_USING_IF_EXISTS;
 
-  using ::remainder;
-  using ::remainderf;
-  using ::remainderl;
+  using ::remainder _LIBCPP_USING_IF_EXISTS;
+  using ::remainderf _LIBCPP_USING_IF_EXISTS;
+  using ::remainderl _LIBCPP_USING_IF_EXISTS;
 
-  using ::remquo;
-  using ::remquof;
-  using ::remquol;
+  using ::remquo _LIBCPP_USING_IF_EXISTS;
+  using ::remquof _LIBCPP_USING_IF_EXISTS;
+  using ::remquol _LIBCPP_USING_IF_EXISTS;
 
-  using ::copysign;
-  using ::copysignf;
-  using ::copysignl;
+  using ::copysign _LIBCPP_USING_IF_EXISTS;
+  using ::copysignf _LIBCPP_USING_IF_EXISTS;
+  using ::copysignl _LIBCPP_USING_IF_EXISTS;
 
-  using ::nan;
-  using ::nanf;
-  using ::nanl;
+  using ::nan _LIBCPP_USING_IF_EXISTS;
+  using ::nanf _LIBCPP_USING_IF_EXISTS;
+  using ::nanl _LIBCPP_USING_IF_EXISTS;
 
-  using ::nextafter;
-  using ::nextafterf;
-  using ::nextafterl;
+  using ::nextafter _LIBCPP_USING_IF_EXISTS;
+  using ::nextafterf _LIBCPP_USING_IF_EXISTS;
+  using ::nextafterl _LIBCPP_USING_IF_EXISTS;
 
-  using ::nexttoward;
-  using ::nexttowardf;
-  using ::nexttowardl;
+  using ::nexttoward _LIBCPP_USING_IF_EXISTS;
+  using ::nexttowardf _LIBCPP_USING_IF_EXISTS;
+  using ::nexttowardl _LIBCPP_USING_IF_EXISTS;
 
-  using ::fdim;
-  using ::fdimf;
-  using ::fdiml;
+  using ::fdim _LIBCPP_USING_IF_EXISTS;
+  using ::fdimf _LIBCPP_USING_IF_EXISTS;
+  using ::fdiml _LIBCPP_USING_IF_EXISTS;
 
-  using ::fmax;
-  using ::fmaxf;
-  using ::fmaxl;
+  using ::fmax _LIBCPP_USING_IF_EXISTS;
+  using ::fmaxf _LIBCPP_USING_IF_EXISTS;
+  using ::fmaxl _LIBCPP_USING_IF_EXISTS;
 
-  using ::fmin;
-  using ::fminf;
-  using ::fminl;
+  using ::fmin _LIBCPP_USING_IF_EXISTS;
+  using ::fminf _LIBCPP_USING_IF_EXISTS;
+  using ::fminl _LIBCPP_USING_IF_EXISTS;
 
-  using ::fma;
-  using ::fmaf;
-  using ::fmal;
+  using ::fma _LIBCPP_USING_IF_EXISTS;
+  using ::fmaf _LIBCPP_USING_IF_EXISTS;
+  using ::fmal _LIBCPP_USING_IF_EXISTS;
 
   // [c.math.lerp], linear interpolation
   // [support.c.headers.other]/1
@@ -251,18 +251,18 @@ export {
   // ...
 
   // [c.math.fpclass], classification / comparison functions
-  using ::fpclassify;
-  using ::isfinite;
-  using ::isgreater;
-  using ::isgreaterequal;
-  using ::isinf;
-  using ::isless;
-  using ::islessequal;
-  using ::islessgreater;
-  using ::isnan;
-  using ::isnormal;
-  using ::isunordered;
-  using ::signbit;
+  using ::fpclassify _LIBCPP_USING_IF_EXISTS;
+  using ::isfinite _LIBCPP_USING_IF_EXISTS;
+  using ::isgreater _LIBCPP_USING_IF_EXISTS;
+  using ::isgreaterequal _LIBCPP_USING_IF_EXISTS;
+  using ::isinf _LIBCPP_USING_IF_EXISTS;
+  using ::isless _LIBCPP_USING_IF_EXISTS;
+  using ::islessequal _LIBCPP_USING_IF_EXISTS;
+  using ::islessgreater _LIBCPP_USING_IF_EXISTS;
+  using ::isnan _LIBCPP_USING_IF_EXISTS;
+  using ::isnormal _LIBCPP_USING_IF_EXISTS;
+  using ::isunordered _LIBCPP_USING_IF_EXISTS;
+  using ::signbit _LIBCPP_USING_IF_EXISTS;
 
   // [sf.cmath], mathematical special functions
 } // export

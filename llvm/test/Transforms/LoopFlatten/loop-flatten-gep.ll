@@ -15,7 +15,7 @@ for.outer.preheader:
   br label %for.inner.preheader
 
 ; CHECK-LABEL: for.inner.preheader:
-; CHECK: %flatten.arrayidx = getelementptr i32, ptr %A, i32 %i
+; CHECK: %flatten.arrayidx = getelementptr inbounds i32, ptr %A, i32 %i
 for.inner.preheader:
   %i = phi i32 [ 0, %for.outer.preheader ], [ %inc2, %for.outer ]
   br label %for.inner
@@ -61,13 +61,13 @@ for.outer.preheader:
   br label %for.inner.preheader
 
 ; CHECK-LABEL: for.inner.preheader:
-; CHECK-NOT: getelementptr i32, ptr %ptr, i32 %i
+; CHECK-NOT: getelementptr inbounds i32, ptr %ptr, i32 %i
 for.inner.preheader:
   %i = phi i32 [ 0, %for.outer.preheader ], [ %inc2, %for.outer ]
   br label %for.inner
 
 ; CHECK-LABEL: for.inner:
-; CHECK: %flatten.arrayidx = getelementptr i32, ptr %ptr, i32 %i
+; CHECK: %flatten.arrayidx = getelementptr inbounds i32, ptr %ptr, i32 %i
 ; CHECK: store i32 0, ptr %flatten.arrayidx, align 4
 ; CHECK: br label %for.outer
 for.inner:

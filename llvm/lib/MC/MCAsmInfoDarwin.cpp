@@ -19,7 +19,7 @@
 using namespace llvm;
 
 bool MCAsmInfoDarwin::isSectionAtomizableBySymbols(
-    const MCSection &Section) const {
+    const MCSection &Section) {
   const MCSectionMachO &SMO = static_cast<const MCSectionMachO &>(Section);
 
   // Sections holding 1 byte strings are atomized based on the data they
@@ -69,15 +69,9 @@ MCAsmInfoDarwin::MCAsmInfoDarwin() {
   InlineAsmEnd = " InlineAsm End";
 
   // Directives:
-  HasWeakDefDirective = true;
   HasWeakDefCanBeHiddenDirective = true;
   WeakRefDirective = "\t.weak_reference ";
   ZeroDirective = "\t.space\t";  // ".space N" emits N zeros.
-  HasMachoZeroFillDirective = true;  // Uses .zerofill
-  HasMachoTBSSDirective = true; // Uses .tbss
-
-  // FIXME: Change this once MC is the system assembler.
-  HasAggressiveSymbolFolding = false;
 
   HiddenVisibilityAttr = MCSA_PrivateExtern;
   HiddenDeclarationVisibilityAttr = MCSA_Invalid;
@@ -87,7 +81,6 @@ MCAsmInfoDarwin::MCAsmInfoDarwin() {
 
   HasDotTypeDotSizeDirective = false;
   HasNoDeadStrip = true;
-  HasAltEntry = true;
 
   DwarfUsesRelocationsAcrossSections = false;
   SetDirectiveSuppressesReloc = true;

@@ -176,15 +176,9 @@ typedef vbool1_t fixed_bool1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fi
 typedef vbool2_t fixed_bool2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen/2)));
 typedef vbool4_t fixed_bool4_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen/4)));
 typedef vbool8_t fixed_bool8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen/8)));
-#if __riscv_v_fixed_vlen >= 128
 typedef vbool16_t fixed_bool16_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen/16)));
-#endif
-#if __riscv_v_fixed_vlen >= 256
 typedef vbool32_t fixed_bool32_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen/32)));
-#endif
-#if __riscv_v_fixed_vlen >= 512
 typedef vbool64_t fixed_bool64_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen/64)));
-#endif
 
 template <typename T> struct S {};
 
@@ -629,24 +623,24 @@ void bool4(S<fixed_bool4_t>) {}
 // CHECK-1024: _Z5bool81SI9__RVV_VLSIu13__rvv_bool8_tLj128EEE
 void bool8(S<fixed_bool8_t>) {}
 
-#if __riscv_v_fixed_vlen >= 128
+// CHECK-64: _Z6bool161SI9__RVV_VLSIu14__rvv_bool16_tLj4EEE
 // CHECK-128: _Z6bool161SI9__RVV_VLSIu14__rvv_bool16_tLj8EEE
 // CHECK-256: _Z6bool161SI9__RVV_VLSIu14__rvv_bool16_tLj16EEE
 // CHECK-512: _Z6bool161SI9__RVV_VLSIu14__rvv_bool16_tLj32EEE
 // CHECK-1024: _Z6bool161SI9__RVV_VLSIu14__rvv_bool16_tLj64EEE
 //
 void bool16(S<fixed_bool16_t>) {}
-#endif
 
-#if __riscv_v_fixed_vlen >= 256
+// CHECK-64: _Z6bool321SI9__RVV_VLSIu14__rvv_bool32_tLj2EEE
+// CHECK-128: _Z6bool321SI9__RVV_VLSIu14__rvv_bool32_tLj4EEE
 // CHECK-256: _Z6bool321SI9__RVV_VLSIu14__rvv_bool32_tLj8EEE
 // CHECK-512: _Z6bool321SI9__RVV_VLSIu14__rvv_bool32_tLj16EEE
 // CHECK-1024: _Z6bool321SI9__RVV_VLSIu14__rvv_bool32_tLj32EEE
 void bool32(S<fixed_bool32_t>) {}
-#endif
 
-#if __riscv_v_fixed_vlen >= 512
+// CHECK-64: _Z6bool641SI9__RVV_VLSIu14__rvv_bool64_tLj1EEE
+// CHECK-128: _Z6bool641SI9__RVV_VLSIu14__rvv_bool64_tLj2EEE
+// CHECK-256: _Z6bool641SI9__RVV_VLSIu14__rvv_bool64_tLj4EEE
 // CHECK-512: _Z6bool641SI9__RVV_VLSIu14__rvv_bool64_tLj8EEE
 // CHECK-1024: _Z6bool641SI9__RVV_VLSIu14__rvv_bool64_tLj16EEE
 void bool64(S<fixed_bool64_t>) {}
-#endif

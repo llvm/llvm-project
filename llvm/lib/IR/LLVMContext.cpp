@@ -31,6 +31,35 @@
 
 using namespace llvm;
 
+static StringRef knownBundleName(unsigned BundleTagID) {
+  switch (BundleTagID) {
+  case LLVMContext::OB_deopt:
+    return "deopt";
+  case LLVMContext::OB_funclet:
+    return "funclet";
+  case LLVMContext::OB_gc_transition:
+    return "gc-transition";
+  case LLVMContext::OB_cfguardtarget:
+    return "cfguardtarget";
+  case LLVMContext::OB_preallocated:
+    return "preallocated";
+  case LLVMContext::OB_gc_live:
+    return "gc-live";
+  case LLVMContext::OB_clang_arc_attachedcall:
+    return "clang.arc.attachedcall";
+  case LLVMContext::OB_ptrauth:
+    return "ptrauth";
+  case LLVMContext::OB_kcfi:
+    return "kcfi";
+  case LLVMContext::OB_convergencectrl:
+    return "convergencectrl";
+  default:
+    llvm_unreachable("unknown bundle id");
+  }
+
+  llvm_unreachable("covered switch");
+}
+
 LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
   // Create the fixed metadata kinds. This is done in the same order as the
   // MD_* enum values so that they correspond.
@@ -46,56 +75,12 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
     (void)ID;
   }
 
-  auto *DeoptEntry = pImpl->getOrInsertBundleTag("deopt");
-  assert(DeoptEntry->second == LLVMContext::OB_deopt &&
-         "deopt operand bundle id drifted!");
-  (void)DeoptEntry;
-
-  auto *FuncletEntry = pImpl->getOrInsertBundleTag("funclet");
-  assert(FuncletEntry->second == LLVMContext::OB_funclet &&
-         "funclet operand bundle id drifted!");
-  (void)FuncletEntry;
-
-  auto *GCTransitionEntry = pImpl->getOrInsertBundleTag("gc-transition");
-  assert(GCTransitionEntry->second == LLVMContext::OB_gc_transition &&
-         "gc-transition operand bundle id drifted!");
-  (void)GCTransitionEntry;
-
-  auto *CFGuardTargetEntry = pImpl->getOrInsertBundleTag("cfguardtarget");
-  assert(CFGuardTargetEntry->second == LLVMContext::OB_cfguardtarget &&
-         "cfguardtarget operand bundle id drifted!");
-  (void)CFGuardTargetEntry;
-
-  auto *PreallocatedEntry = pImpl->getOrInsertBundleTag("preallocated");
-  assert(PreallocatedEntry->second == LLVMContext::OB_preallocated &&
-         "preallocated operand bundle id drifted!");
-  (void)PreallocatedEntry;
-
-  auto *GCLiveEntry = pImpl->getOrInsertBundleTag("gc-live");
-  assert(GCLiveEntry->second == LLVMContext::OB_gc_live &&
-         "gc-transition operand bundle id drifted!");
-  (void)GCLiveEntry;
-
-  auto *ClangAttachedCall =
-      pImpl->getOrInsertBundleTag("clang.arc.attachedcall");
-  assert(ClangAttachedCall->second == LLVMContext::OB_clang_arc_attachedcall &&
-         "clang.arc.attachedcall operand bundle id drifted!");
-  (void)ClangAttachedCall;
-
-  auto *PtrauthEntry = pImpl->getOrInsertBundleTag("ptrauth");
-  assert(PtrauthEntry->second == LLVMContext::OB_ptrauth &&
-         "ptrauth operand bundle id drifted!");
-  (void)PtrauthEntry;
-
-  auto *KCFIEntry = pImpl->getOrInsertBundleTag("kcfi");
-  assert(KCFIEntry->second == LLVMContext::OB_kcfi &&
-         "kcfi operand bundle id drifted!");
-  (void)KCFIEntry;
-
-  auto *ConvergenceCtrlEntry = pImpl->getOrInsertBundleTag("convergencectrl");
-  assert(ConvergenceCtrlEntry->second == LLVMContext::OB_convergencectrl &&
-         "convergencectrl operand bundle id drifted!");
-  (void)ConvergenceCtrlEntry;
+  for (unsigned BundleTagID = LLVMContext::OB_deopt;
+       BundleTagID <= LLVMContext::OB_convergencectrl; ++BundleTagID) {
+    [[maybe_unused]] const auto *Entry =
+        pImpl->getOrInsertBundleTag(knownBundleName(BundleTagID));
+    assert(Entry->second == BundleTagID && "operand bundle id drifted!");
+  }
 
   SyncScope::ID SingleThreadSSID =
       pImpl->getOrInsertSyncScopeID("singlethread");
@@ -118,6 +103,13 @@ void LLVMContext::addModule(Module *M) {
 
 void LLVMContext::removeModule(Module *M) {
   pImpl->OwnedModules.erase(M);
+  pImpl->MachineFunctionNums.erase(M);
+}
+
+unsigned LLVMContext::generateMachineFunctionNum(Function &F) {
+  Module *M = F.getParent();
+  assert(pImpl->OwnedModules.contains(M) && "Unexpected module!");
+  return pImpl->MachineFunctionNums[M]++;
 }
 
 //===----------------------------------------------------------------------===//
@@ -212,12 +204,12 @@ void LLVMContext::yield() {
 }
 
 void LLVMContext::emitError(const Twine &ErrorStr) {
-  diagnose(DiagnosticInfoInlineAsm(ErrorStr));
+  diagnose(DiagnosticInfoGeneric(ErrorStr));
 }
 
 void LLVMContext::emitError(const Instruction *I, const Twine &ErrorStr) {
-  assert (I && "Invalid instruction");
-  diagnose(DiagnosticInfoInlineAsm(*I, ErrorStr));
+  assert(I && "Invalid instruction");
+  diagnose(DiagnosticInfoGeneric(I, ErrorStr));
 }
 
 static bool isDiagnosticEnabled(const DiagnosticInfo &DI) {
@@ -276,10 +268,6 @@ void LLVMContext::diagnose(const DiagnosticInfo &DI) {
     exit(1);
 }
 
-void LLVMContext::emitError(uint64_t LocCookie, const Twine &ErrorStr) {
-  diagnose(DiagnosticInfoInlineAsm(LocCookie, ErrorStr));
-}
-
 //===----------------------------------------------------------------------===//
 // Metadata Kind Uniquing
 //===----------------------------------------------------------------------===//
@@ -323,14 +311,12 @@ void LLVMContext::getSyncScopeNames(SmallVectorImpl<StringRef> &SSNs) const {
   pImpl->getSyncScopeNames(SSNs);
 }
 
-void LLVMContext::setGC(const Function &Fn, std::string GCName) {
-  auto It = pImpl->GCNames.find(&Fn);
+std::optional<StringRef> LLVMContext::getSyncScopeName(SyncScope::ID Id) const {
+  return pImpl->getSyncScopeName(Id);
+}
 
-  if (It == pImpl->GCNames.end()) {
-    pImpl->GCNames.insert(std::make_pair(&Fn, std::move(GCName)));
-    return;
-  }
-  It->second = std::move(GCName);
+void LLVMContext::setGC(const Function &Fn, std::string GCName) {
+  pImpl->GCNames[&Fn] = std::move(GCName);
 }
 
 const std::string &LLVMContext::getGC(const Function &Fn) {
@@ -376,10 +362,18 @@ std::unique_ptr<DiagnosticHandler> LLVMContext::getDiagnosticHandler() {
   return std::move(pImpl->DiagHandler);
 }
 
-void LLVMContext::setOpaquePointers(bool Enable) const {
-  assert(Enable && "Cannot disable opaque pointers");
+StringRef LLVMContext::getDefaultTargetCPU() {
+  return pImpl->DefaultTargetCPU;
 }
 
-bool LLVMContext::supportsTypedPointers() const {
-  return false;
+void LLVMContext::setDefaultTargetCPU(StringRef CPU) {
+  pImpl->DefaultTargetCPU = CPU;
+}
+
+StringRef LLVMContext::getDefaultTargetFeatures() {
+  return pImpl->DefaultTargetFeatures;
+}
+
+void LLVMContext::setDefaultTargetFeatures(StringRef Features) {
+  pImpl->DefaultTargetFeatures = Features;
 }

@@ -13,11 +13,11 @@
 // The fix for bug 51497 and bug 51499 require and updated dylib due to
 // explicit instantiations. That means Apple backdeployment targets remain
 // broken.
-// TODO(#82107) Enable XFAIL.
-// UNSUPPORTED: using-built-library-before-llvm-19
+// XFAIL: using-built-library-before-llvm-19
 
 #include <istream>
 #include <cassert>
+#include <streambuf>
 
 #include "test_macros.h"
 

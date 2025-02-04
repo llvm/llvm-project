@@ -66,7 +66,7 @@ Status OptionValueEnumeration::SetValueFromString(llvm::StringRef value,
                             m_enumerations.GetCStringAtIndex(i).GetCString());
         }
       }
-      error.SetErrorString(error_strm.GetString());
+      error = Status(error_strm.GetString().str());
     }
     break;
   }

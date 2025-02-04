@@ -100,7 +100,7 @@ FunctionPass *llvm::createIndirectBrExpandPass() {
 }
 
 bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU) {
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
 
   SmallVector<IndirectBrInst *, 1> IndirectBrs;
 

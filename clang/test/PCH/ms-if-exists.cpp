@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -x c++ -fms-extensions -fsyntax-only -emit-pch -o %t %s
+// RUN: %clang_cc1 -x c++ -fms-extensions -emit-pch -o %t %s
 // RUN: %clang_cc1 -x c++ -fms-extensions -fsyntax-only -include-pch %t %s -verify
 
-// RUN: %clang_cc1 -x c++ -fms-extensions -fsyntax-only -emit-pch -fpch-instantiate-templates -o %t %s
+// RUN: %clang_cc1 -x c++ -fms-extensions -emit-pch -fpch-instantiate-templates -o %t %s
 // RUN: %clang_cc1 -x c++ -fms-extensions -fsyntax-only -include-pch %t %s -verify
 
 #ifndef HEADER

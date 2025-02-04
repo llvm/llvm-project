@@ -45,7 +45,7 @@ out:
 define void @hoist_both_noundef(i1 %c, ptr %p) {
 ; CHECK-LABEL: @hoist_both_noundef(
 ; CHECK-NEXT:  if:
-; CHECK-NEXT:    [[T:%.*]] = load i8, ptr [[P:%.*]], align 1, !noundef !2
+; CHECK-NEXT:    [[T:%.*]] = load i8, ptr [[P:%.*]], align 1, !noundef [[META2:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 if:
@@ -67,7 +67,7 @@ out:
 define void @hoist_both_noundef_switch(i64 %i, ptr %p) {
 ; CHECK-LABEL: @hoist_both_noundef_switch(
 ; CHECK-NEXT:  out:
-; CHECK-NEXT:    [[T:%.*]] = load i8, ptr [[P:%.*]], align 1, !noundef !2
+; CHECK-NEXT:    [[T:%.*]] = load i8, ptr [[P:%.*]], align 1, !noundef [[META2]]
 ; CHECK-NEXT:    ret void
 ;
   switch i64 %i, label %bb0 [
@@ -134,7 +134,7 @@ out:
 define void @hoist_dereferenceable(i1 %c, ptr %p) {
 ; CHECK-LABEL: @hoist_dereferenceable(
 ; CHECK-NEXT:  if:
-; CHECK-NEXT:    [[T:%.*]] = load ptr, ptr [[P:%.*]], align 8, !dereferenceable !3
+; CHECK-NEXT:    [[T:%.*]] = load ptr, ptr [[P:%.*]], align 8, !dereferenceable [[META3:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 if:
@@ -152,7 +152,7 @@ out:
 define void @hoist_dereferenceable_switch(i64 %i, ptr %p) {
 ; CHECK-LABEL: @hoist_dereferenceable_switch(
 ; CHECK-NEXT:  out:
-; CHECK-NEXT:    [[T:%.*]] = load ptr, ptr [[P:%.*]], align 8, !dereferenceable !3
+; CHECK-NEXT:    [[T:%.*]] = load ptr, ptr [[P:%.*]], align 8, !dereferenceable [[META3]]
 ; CHECK-NEXT:    ret void
 ;
   switch i64 %i, label %bb0 [
@@ -175,7 +175,7 @@ out:
 define void @hoist_dereferenceable_or_null(i1 %c, ptr %p) {
 ; CHECK-LABEL: @hoist_dereferenceable_or_null(
 ; CHECK-NEXT:  if:
-; CHECK-NEXT:    [[T:%.*]] = load ptr, ptr [[P:%.*]], align 8, !dereferenceable_or_null !3
+; CHECK-NEXT:    [[T:%.*]] = load ptr, ptr [[P:%.*]], align 8, !dereferenceable_or_null [[META3]]
 ; CHECK-NEXT:    ret void
 ;
 if:
@@ -193,7 +193,7 @@ out:
 define void @hoist_dereferenceable_or_null_switch(i64 %i, ptr %p) {
 ; CHECK-LABEL: @hoist_dereferenceable_or_null_switch(
 ; CHECK-NEXT:  out:
-; CHECK-NEXT:    [[T:%.*]] = load ptr, ptr [[P:%.*]], align 8, !dereferenceable_or_null !3
+; CHECK-NEXT:    [[T:%.*]] = load ptr, ptr [[P:%.*]], align 8, !dereferenceable_or_null [[META3]]
 ; CHECK-NEXT:    ret void
 ;
   switch i64 %i, label %bb0 [
@@ -238,7 +238,7 @@ join:
 define ptr @speculate_nonnull(i1 %c, ptr dereferenceable(8) align 8 %p) {
 ; CHECK-LABEL: @speculate_nonnull(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[P:%.*]], align 8, !nonnull !2
+; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[P:%.*]], align 8, !nonnull [[META2]]
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C:%.*]], ptr [[V]], ptr null
 ; CHECK-NEXT:    ret ptr [[SPEC_SELECT]]
 ;
@@ -259,7 +259,7 @@ join:
 define ptr @speculate_align(i1 %c, ptr dereferenceable(8) align 8 %p) {
 ; CHECK-LABEL: @speculate_align(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[P:%.*]], align 8, !align !5
+; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[P:%.*]], align 8, !align [[META5:![0-9]+]]
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C:%.*]], ptr [[V]], ptr null
 ; CHECK-NEXT:    ret ptr [[SPEC_SELECT]]
 ;
@@ -278,7 +278,7 @@ join:
 define void @hoist_fpmath(i1 %c, double %x) {
 ; CHECK-LABEL: @hoist_fpmath(
 ; CHECK-NEXT:  if:
-; CHECK-NEXT:    [[T:%.*]] = fadd double [[X:%.*]], 1.000000e+00, !fpmath !6
+; CHECK-NEXT:    [[T:%.*]] = fadd double [[X:%.*]], 1.000000e+00, !fpmath [[META6:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 if:
@@ -296,7 +296,7 @@ out:
 define void @hoist_fpmath_switch(i64 %i, double %x) {
 ; CHECK-LABEL: @hoist_fpmath_switch(
 ; CHECK-NEXT:  out:
-; CHECK-NEXT:    [[T:%.*]] = fadd double [[X:%.*]], 1.000000e+00, !fpmath !6
+; CHECK-NEXT:    [[T:%.*]] = fadd double [[X:%.*]], 1.000000e+00, !fpmath [[META6]]
 ; CHECK-NEXT:    ret void
 ;
   switch i64 %i, label %bb0 [
@@ -316,16 +316,133 @@ out:
   ret void
 }
 
+define void @hoist_noalias_addrspace_both(i1 %c, ptr %p, i64 %val) {
+; CHECK-LABEL: @hoist_noalias_addrspace_both(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    [[T:%.*]] = atomicrmw add ptr [[P:%.*]], i64 [[VAL:%.*]] seq_cst, align 8, !noalias.addrspace [[META7:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  %t = atomicrmw add ptr %p, i64 %val seq_cst, !noalias.addrspace !4
+  br label %out
+
+else:
+  %e = atomicrmw add ptr %p, i64 %val seq_cst, !noalias.addrspace !4
+  br label %out
+
+out:
+  ret void
+}
+
+define void @hoist_noalias_addrspace_one(i1 %c, ptr %p, i64 %val) {
+; CHECK-LABEL: @hoist_noalias_addrspace_one(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    [[T:%.*]] = atomicrmw add ptr [[P:%.*]], i64 [[VAL:%.*]] seq_cst, align 8
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  %t = atomicrmw add ptr %p, i64 %val seq_cst, !noalias.addrspace !4
+  br label %out
+
+else:
+  %e = atomicrmw add ptr %p, i64 %val seq_cst
+  br label %out
+
+out:
+  ret void
+}
+
+define void @hoist_noalias_addrspace_switch(i64 %i, ptr %p, i64 %val) {
+; CHECK-LABEL: @hoist_noalias_addrspace_switch(
+; CHECK-NEXT:  out:
+; CHECK-NEXT:    [[T:%.*]] = atomicrmw add ptr [[P:%.*]], i64 [[VAL:%.*]] seq_cst, align 8, !noalias.addrspace [[META7]]
+; CHECK-NEXT:    ret void
+;
+  switch i64 %i, label %bb0 [
+  i64 1, label %bb1
+  i64 2, label %bb2
+  ]
+bb0:
+  %t = atomicrmw add ptr %p, i64 %val seq_cst, !noalias.addrspace !4
+  br label %out
+bb1:
+  %e = atomicrmw add ptr %p, i64 %val seq_cst, !noalias.addrspace !5
+  br label %out
+bb2:
+  %f = atomicrmw add ptr %p, i64 %val seq_cst, !noalias.addrspace !6
+  br label %out
+out:
+  ret void
+}
+
+define void @hoist_noalias_addrspace_switch_multiple(i64 %i, ptr %p, i64 %val) {
+; CHECK-LABEL: @hoist_noalias_addrspace_switch_multiple(
+; CHECK-NEXT:  out:
+; CHECK-NEXT:    [[T:%.*]] = atomicrmw add ptr [[P:%.*]], i64 [[VAL:%.*]] seq_cst, align 8, !noalias.addrspace [[META8:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+  switch i64 %i, label %bb0 [
+  i64 1, label %bb1
+  i64 2, label %bb2
+  ]
+bb0:
+  %t = atomicrmw add ptr %p, i64 %val seq_cst, !noalias.addrspace !7
+  br label %out
+bb1:
+  %e = atomicrmw add ptr %p, i64 %val seq_cst, !noalias.addrspace !8
+  br label %out
+bb2:
+  %f = atomicrmw add ptr %p, i64 %val seq_cst, !noalias.addrspace !9
+  br label %out
+out:
+  ret void
+}
+
+; !noalias_addrspace is not safe to speculate as it causes immediate undefined behavior.
+define ptr @speculate_noalias_addrspace(i1 %c, ptr dereferenceable(8) align 8 %p) {
+; CHECK-LABEL: @speculate_noalias_addrspace(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[P:%.*]], align 8, !nonnull [[META2]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C:%.*]], ptr [[V]], ptr null
+; CHECK-NEXT:    ret ptr [[SPEC_SELECT]]
+;
+entry:
+  br i1 %c, label %if, label %join
+
+if:
+  %v = load ptr, ptr %p, !nonnull !{}, !noundef !{}, !noalias.addrspace !4
+  br label %join
+
+join:
+  %phi = phi ptr [ %v, %if ], [ null, %entry ]
+  ret ptr %phi
+}
+
 !0 = !{ i8 0, i8 1 }
 !1 = !{ i8 3, i8 5 }
 !2 = !{}
 !3 = !{ i8 7, i8 9 }
+!4 = !{i32 5, i32 6}
+!5 = !{i32 5, i32 7}
+!6 = !{i32 4, i32 8}
+!7 = !{i32 4, i32 8, i32 20, i32 31}
+!8 = !{i32 2, i32 5}
+!9 = !{i32 2, i32 5, i32 22, i32 42, i32 45, i32 50}
+
 ;.
 ; CHECK: [[RNG0]] = !{i8 0, i8 1, i8 3, i8 5}
 ; CHECK: [[RNG1]] = !{i8 0, i8 1, i8 3, i8 5, i8 7, i8 9}
-; CHECK: [[META2:![0-9]+]] = !{}
-; CHECK: [[META3:![0-9]+]] = !{i64 10}
+; CHECK: [[META2]] = !{}
+; CHECK: [[META3]] = !{i64 10}
 ; CHECK: [[RNG4]] = !{i32 0, i32 10}
-; CHECK: [[META5:![0-9]+]] = !{i64 4}
-; CHECK: [[META6:![0-9]+]] = !{float 2.500000e+00}
+; CHECK: [[META5]] = !{i64 4}
+; CHECK: [[META6]] = !{float 2.500000e+00}
+; CHECK: [[META7]] = !{i32 5, i32 6}
+; CHECK: [[META8]] = !{i32 4, i32 5}
 ;.

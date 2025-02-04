@@ -12,10 +12,23 @@
 
 #include "SparcTargetStreamer.h"
 #include "SparcInstPrinter.h"
+#include "SparcMCTargetDesc.h"
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCRegister.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/FormattedStream.h"
 
 using namespace llvm;
+
+static unsigned getEFlagsForFeatureSet(const MCSubtargetInfo &STI) {
+  unsigned EFlags = 0;
+
+  if (STI.hasFeature(Sparc::FeatureV8Plus))
+    EFlags |= ELF::EF_SPARC_32PLUS;
+
+  return EFlags;
+}
 
 // pin vtable to this file
 SparcTargetStreamer::SparcTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
@@ -38,8 +51,16 @@ void SparcTargetAsmStreamer::emitSparcRegisterScratch(unsigned reg) {
      << ", #scratch\n";
 }
 
-SparcTargetELFStreamer::SparcTargetELFStreamer(MCStreamer &S)
-    : SparcTargetStreamer(S) {}
+SparcTargetELFStreamer::SparcTargetELFStreamer(MCStreamer &S,
+                                               const MCSubtargetInfo &STI)
+    : SparcTargetStreamer(S) {
+  ELFObjectWriter &W = getStreamer().getWriter();
+  unsigned EFlags = W.getELFHeaderEFlags();
+
+  EFlags |= getEFlagsForFeatureSet(STI);
+
+  W.setELFHeaderEFlags(EFlags);
+}
 
 MCELFStreamer &SparcTargetELFStreamer::getStreamer() {
   return static_cast<MCELFStreamer &>(Streamer);

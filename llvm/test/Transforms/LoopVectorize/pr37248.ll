@@ -41,26 +41,26 @@ define void @f1(ptr noalias %b, i1 %c, i32 %start) {
 ; CHECK-NEXT:    [[IND_END:%.*]] = sub i32 [[START]], [[N_VEC]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[C]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE3:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[START]], [[INDEX]]
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc i32 [[OFFSET_IDX]] to i16
-; CHECK-NEXT:    [[TMP11:%.*]] = add i16 [[TMP10]], 0
-; CHECK-NEXT:    [[TMP12:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT]], <i1 true, i1 true>
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP12]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = trunc i32 [[OFFSET_IDX]] to i16
+; CHECK-NEXT:    [[TMP12:%.*]] = add i16 [[TMP11]], 0
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP10]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
 ; CHECK-NEXT:    store i32 10, ptr [[B]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP12]], i32 1
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP10]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[PRED_STORE_IF2:%.*]], label [[PRED_STORE_CONTINUE3]]
 ; CHECK:       pred.store.if2:
 ; CHECK-NEXT:    store i32 10, ptr [[B]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE3]]
 ; CHECK:       pred.store.continue3:
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [2 x i16], ptr @a, i16 0, i16 [[TMP11]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [2 x i16], ptr @a, i16 0, i16 [[TMP12]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i16, ptr [[TMP15]], i32 0
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i16, ptr [[TMP16]], i32 -1
 ; CHECK-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP17]], align 1
@@ -71,7 +71,7 @@ define void @f1(ptr noalias %b, i1 %c, i32 %start) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY:%.*]] ], [ [[START]], [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[START]], [[VECTOR_SCEVCHECK]] ], [ [[START]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[TMP19:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[DEC:%.*]], [[LAND_END:%.*]] ]
@@ -156,7 +156,7 @@ define void @f2(ptr noalias %b, i1 %c, i32 %start) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY:%.*]] ], [ [[START]], [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[START]], [[VECTOR_SCEVCHECK]] ], [ [[START]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[TMP16:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[DEC:%.*]], [[LAND_END:%.*]] ]

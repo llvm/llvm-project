@@ -45,6 +45,8 @@ typedef N::C<float> c2;
 // PR5655
 template<typename T> struct Foo { }; // precxx17-note {{template is declared here}} \
                                         cxx17-note {{candidate template ignored: couldn't infer template argument 'T'}} \
+                                        cxx17-note {{implicit deduction guide declared as 'template <typename T> Foo() -> Foo<T>'}} \
+                                        cxx17-note {{implicit deduction guide declared as 'template <typename T> Foo(Foo<T>) -> Foo<T>'}} \
                                         cxx17-note {{candidate function template not viable: requires 1 argument, but 0 were provided}}
 
 void f(void) { Foo bar; } // precxx17-error {{use of class template 'Foo' requires template arguments}} \

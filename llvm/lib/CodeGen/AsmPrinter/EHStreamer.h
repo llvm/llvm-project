@@ -150,11 +150,6 @@ public:
   EHStreamer(AsmPrinter *A);
   ~EHStreamer() override;
 
-  // Unused.
-  void setSymbolSize(const MCSymbol *Sym, uint64_t Size) override {}
-  void beginInstruction(const MachineInstr *MI) override {}
-  void endInstruction() override {}
-
   /// Return `true' if this is a call to a function marked `nounwind'. Return
   /// `false' otherwise.
   static bool callToNoUnwindFunction(const MachineInstr *MI);

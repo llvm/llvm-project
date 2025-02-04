@@ -58,6 +58,9 @@ define i32 @nvvm_special_regs() {
   %27 = call i32 @llvm.nvvm.read.ptx.sreg.cluster.ctarank()
   ; CHECK: = nvvm.read.ptx.sreg.cluster.nctarank : i32
   %28 = call i32 @llvm.nvvm.read.ptx.sreg.cluster.nctarank()
+
+  ; CHECK = nvvm.read.ptx.sreg.tid.x range <0 : i32, 64 : i32> : i32
+  %29 = call range(i32 0, 64) i32 @llvm.nvvm.read.ptx.sreg.tid.x()
   ret i32 %1
 }
 
@@ -68,12 +71,15 @@ define float @nvvm_rcp(float %0) {
   ret float %2
 }
 
-; TODO: Support the intrinsics below once they derive from NVVM_IntrOp rather than from NVVM_Op.
+; CHECK-LABEL: @llvm_nvvm_barrier0()
+define void @llvm_nvvm_barrier0() {
+  ; CHECK: nvvm.barrier0
+  call void @llvm.nvvm.barrier0()
+  ret void
+}
 
-; define void @llvm_nvvm_barrier0() {
-;   call void @llvm.nvvm.barrier0()
-;   ret void
-; }
+
+; TODO: Support the intrinsics below once they derive from NVVM_IntrOp rather than from NVVM_Op.
 ;
 ; define i32 @nvvm_shfl(i32 %0, i32 %1, i32 %2, i32 %3, float %4) {
 ;   %6 = call i32 @llvm.nvvm.shfl.sync.bfly.i32(i32 %0, i32 %3, i32 %1, i32 %2)

@@ -151,12 +151,12 @@ declare <vscale x 32 x i32> @llvm.vp.zext.nxv32i32.nxv32i8(<vscale x 32 x i8>, <
 define <vscale x 32 x i32> @vzext_nxv32i8_nxv32i32(<vscale x 32 x i8> %a, <vscale x 32 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vzext_nxv32i8_nxv32i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v12, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 2
-; CHECK-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    sub a2, a0, a1
 ; CHECK-NEXT:    sltu a3, a0, a2
 ; CHECK-NEXT:    addi a3, a3, -1
@@ -167,8 +167,8 @@ define <vscale x 32 x i32> @vzext_nxv32i8_nxv32i32(<vscale x 32 x i8> %a, <vscal
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB12_2:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v12
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vzext.vf4 v24, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v24
 ; CHECK-NEXT:    ret

@@ -169,7 +169,7 @@ ValueUnion GetSysctlImp(std::string const& name) {
       mib[1] = HW_CPUSPEED;
     }
 
-    if (sysctl(mib, 2, buff.data(), &buff.Size, nullptr, 0) == -1) {
+    if (sysctl(mib, 2, buff.data(), &buff.size, nullptr, 0) == -1) {
       return ValueUnion();
     }
     return buff;
@@ -495,14 +495,14 @@ int GetNumCPUsImpl() {
   return sysinfo.dwNumberOfProcessors;  // number of logical
                                         // processors in the current
                                         // group
-#elif defined(BENCHMARK_OS_SOLARIS)
+#elif defined(__linux__) || defined(BENCHMARK_OS_SOLARIS)
   // Returns -1 in case of a failure.
-  long num_cpu = sysconf(_SC_NPROCESSORS_ONLN);
+  int num_cpu = static_cast<int>(sysconf(_SC_NPROCESSORS_ONLN));
   if (num_cpu < 0) {
     PrintErrorAndDie("sysconf(_SC_NPROCESSORS_ONLN) failed with error: ",
                      strerror(errno));
   }
-  return (int)num_cpu;
+  return num_cpu;
 #elif defined(BENCHMARK_OS_QNX)
   return static_cast<int>(_syspage_ptr->num_cpu);
 #elif defined(BENCHMARK_OS_QURT)
@@ -511,53 +511,6 @@ int GetNumCPUsImpl() {
     hardware_threads.max_hthreads = 1;
   }
   return hardware_threads.max_hthreads;
-#else
-  int num_cpus = 0;
-  int max_id = -1;
-  std::ifstream f("/proc/cpuinfo");
-  if (!f.is_open()) {
-    PrintErrorAndDie("Failed to open /proc/cpuinfo");
-  }
-#if defined(__alpha__)
-  const std::string Key = "cpus detected";
-#else
-  const std::string Key = "processor";
-#endif
-  std::string ln;
-  while (std::getline(f, ln)) {
-    if (ln.empty()) continue;
-    std::size_t split_idx = ln.find(':');
-    std::string value;
-#if defined(__s390__)
-    // s390 has another format in /proc/cpuinfo
-    // it needs to be parsed differently
-    if (split_idx != std::string::npos)
-      value = ln.substr(Key.size() + 1, split_idx - Key.size() - 1);
-#else
-    if (split_idx != std::string::npos) value = ln.substr(split_idx + 1);
-#endif
-    if (ln.size() >= Key.size() && ln.compare(0, Key.size(), Key) == 0) {
-      num_cpus++;
-      if (!value.empty()) {
-        const int cur_id = benchmark::stoi(value);
-        max_id = std::max(cur_id, max_id);
-      }
-    }
-  }
-  if (f.bad()) {
-    PrintErrorAndDie("Failure reading /proc/cpuinfo");
-  }
-  if (!f.eof()) {
-    PrintErrorAndDie("Failed to read to end of /proc/cpuinfo");
-  }
-  f.close();
-
-  if ((max_id + 1) != num_cpus) {
-    fprintf(stderr,
-            "CPU ID assignments in /proc/cpuinfo seem messed up."
-            " This is usually caused by a bad BIOS.\n");
-  }
-  return num_cpus;
 #endif
   BENCHMARK_UNREACHABLE();
 }
@@ -742,7 +695,7 @@ double GetCPUCyclesPerSecond(CPUInfo::Scaling scaling) {
 #endif
   unsigned long long hz = 0;
 #if defined BENCHMARK_OS_OPENBSD
-  if (GetSysctl(freqStr, &hz)) return hz * 1000000;
+  if (GetSysctl(freqStr, &hz)) return static_cast<double>(hz * 1000000);
 #else
   if (GetSysctl(freqStr, &hz)) return hz;
 #endif

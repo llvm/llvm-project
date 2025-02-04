@@ -56,9 +56,9 @@ subroutine acc_exit_data
 !CHECK: acc.detach accPtr(%[[DEVPTR_D]] : !fir.ptr<f32>) {name = "d", structured = false}
 
   !$acc exit data delete(a) async
-!CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_delete>, name = "a", structured = false}
+!CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<10x10xf32>> {asyncOnly = [#acc.device_type<none>], dataClause = #acc<data_clause acc_delete>, name = "a", structured = false}
 !CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !fir.ref<!fir.array<10x10xf32>>) attributes {async}
-!CHECK: acc.delete accPtr(%[[DEVPTR]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) {name = "a", structured = false}
+!CHECK: acc.delete accPtr(%[[DEVPTR]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) {asyncOnly = [#acc.device_type<none>], name = "a", structured = false}
 
   !$acc exit data delete(a) wait
 !CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_delete>, name = "a", structured = false}
@@ -66,22 +66,22 @@ subroutine acc_exit_data
 !CHECK: acc.delete accPtr(%[[DEVPTR]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) {name = "a", structured = false}
 
   !$acc exit data delete(a) async wait
-!CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_delete>, name = "a", structured = false}
+!CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<10x10xf32>> {asyncOnly = [#acc.device_type<none>], dataClause = #acc<data_clause acc_delete>, name = "a", structured = false}
 !CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !fir.ref<!fir.array<10x10xf32>>) attributes {async, wait}
-!CHECK: acc.delete accPtr(%[[DEVPTR]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) {name = "a", structured = false}
+!CHECK: acc.delete accPtr(%[[DEVPTR]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) {asyncOnly = [#acc.device_type<none>], name = "a", structured = false}
 
   !$acc exit data delete(a) async(1)
-!CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_delete>, name = "a", structured = false}
 !CHECK: %[[ASYNC1:.*]] = arith.constant 1 : i32
+!CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) async(%[[ASYNC1]] : i32) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_delete>, name = "a", structured = false}
 !CHECK: acc.exit_data async(%[[ASYNC1]] : i32) dataOperands(%[[DEVPTR]] : !fir.ref<!fir.array<10x10xf32>>)
-!CHECK: acc.delete accPtr(%[[DEVPTR]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) {name = "a", structured = false}
+!CHECK: acc.delete accPtr(%[[DEVPTR]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) async(%[[ASYNC1]] : i32) {name = "a", structured = false}
 
 
   !$acc exit data delete(a) async(async)
-!CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_delete>, name = "a", structured = false}
 !CHECK: %[[ASYNC2:.*]] = fir.load %{{.*}} : !fir.ref<i32>
+!CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) async(%[[ASYNC2]] : i32) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_delete>, name = "a", structured = false}
 !CHECK: acc.exit_data async(%[[ASYNC2]] : i32) dataOperands(%[[DEVPTR]] : !fir.ref<!fir.array<10x10xf32>>)
-!CHECK: acc.delete accPtr(%[[DEVPTR]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) {name = "a", structured = false}
+!CHECK: acc.delete accPtr(%[[DEVPTR]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) async(%[[ASYNC2]] : i32) {name = "a", structured = false}
 
   !$acc exit data delete(a) wait(1)
 !CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_delete>, name = "a", structured = false}

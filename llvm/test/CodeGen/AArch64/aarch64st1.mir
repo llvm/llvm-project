@@ -1,5 +1,6 @@
 # Check that it doesn't crash with unhandled opcode error, see pr52249
 # RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass localstackalloc -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -passes=localstackalloc -o - %s | FileCheck %s
 --- |
 
   define void @test_st1_to_sp(<2 x i32> %a, <4 x i16> %b, <8 x i8> %c, <2 x i64> %d) gc "statepoint-example" { entry: ret void }

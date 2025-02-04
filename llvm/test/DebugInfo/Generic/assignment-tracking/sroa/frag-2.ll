@@ -40,8 +40,8 @@
 
 ; CHECK: store <2 x float> %agg.tmp.sroa.0.0.copyload.i, ptr %4, align 4,{{.+}}!DIAssignID ![[id1:[0-9]+]]
 ; CHECK: store <2 x float> %agg.tmp.sroa.2.0.copyload.i, ptr %n.sroa.2.4..sroa_idx, align 4,{{.+}}!DIAssignID ![[id2:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata <2 x float> %agg.tmp.sroa.0.0.copyload.i, metadata ![[var:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64), metadata ![[id1]], metadata ptr %4, metadata !DIExpression()), !dbg
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata <2 x float> %agg.tmp.sroa.2.0.copyload.i, metadata ![[var]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata ![[id2]], metadata ptr %n.sroa.2.4..sroa_idx, metadata !DIExpression()), !dbg
+; CHECK-NEXT: #dbg_assign(<2 x float> %agg.tmp.sroa.0.0.copyload.i, ![[var:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 64), ![[id1]], ptr %4, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(<2 x float> %agg.tmp.sroa.2.0.copyload.i, ![[var]], !DIExpression(DW_OP_LLVM_fragment, 64, 64), ![[id2]], ptr %n.sroa.2.4..sroa_idx, !DIExpression(),
 
 ; CHECK: ret
 

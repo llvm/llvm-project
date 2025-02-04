@@ -36,6 +36,15 @@ entry:
   ret half %c
 }
 
+define fp128 @sin_fp128(fp128 %a) {
+; CHECK-LABEL: sin_fp128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    b sinl
+entry:
+  %c = call fp128 @llvm.sin.fp128(fp128 %a)
+  ret fp128 %c
+}
+
 define <1 x double> @sin_v1f64(<1 x double> %x) {
 ; CHECK-LABEL: sin_v1f64:
 ; CHECK:       // %bb.0:
@@ -678,12 +687,12 @@ define <7 x half> @sin_v7f16(<7 x half> %a) {
 ; CHECK-GI-NEXT:    bl sinf
 ; CHECK-GI-NEXT:    fcvt s1, h9
 ; CHECK-GI-NEXT:    fcvt h0, s0
-; CHECK-GI-NEXT:    str q0, [sp, #64] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q0, [sp, #48] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl sinf
 ; CHECK-GI-NEXT:    fcvt s1, h10
 ; CHECK-GI-NEXT:    fcvt h0, s0
-; CHECK-GI-NEXT:    str q0, [sp, #48] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q0, [sp, #64] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl sinf
 ; CHECK-GI-NEXT:    fcvt s1, h11
@@ -701,18 +710,19 @@ define <7 x half> @sin_v7f16(<7 x half> %a) {
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl sinf
-; CHECK-GI-NEXT:    ldp q2, q1, [sp, #64] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q3, q2, [sp, #48] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    fcvt h0, s0
+; CHECK-GI-NEXT:    ldr q1, [sp, #80] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #128] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    ldr x30, [sp, #144] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d11, d10, [sp, #112] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-GI-NEXT:    ldp q2, q3, [sp, #32] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #144] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-GI-NEXT:    ldp d13, d12, [sp, #96] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[2], v3.h[0]
-; CHECK-GI-NEXT:    mov v1.h[3], v2.h[0]
-; CHECK-GI-NEXT:    ldp q2, q3, [sp] // 32-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[4], v3.h[0]
+; CHECK-GI-NEXT:    mov v1.h[2], v2.h[0]
+; CHECK-GI-NEXT:    ldp q2, q3, [sp, #16] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[3], v3.h[0]
+; CHECK-GI-NEXT:    mov v1.h[4], v2.h[0]
+; CHECK-GI-NEXT:    ldr q2, [sp] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.h[5], v2.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[6], v0.h[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
@@ -789,21 +799,21 @@ define <4 x half> @sin_v4f16(<4 x half> %a) {
 ; CHECK-GI-NEXT:    bl sinf
 ; CHECK-GI-NEXT:    fcvt s1, h9
 ; CHECK-GI-NEXT:    fcvt h0, s0
-; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl sinf
 ; CHECK-GI-NEXT:    fcvt s1, h10
 ; CHECK-GI-NEXT:    fcvt h0, s0
-; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl sinf
-; CHECK-GI-NEXT:    ldp q2, q1, [sp, #16] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q3, q2, [sp] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    fcvt h0, s0
+; CHECK-GI-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #56] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldr x30, [sp, #72] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    ldr d10, [sp, #48] // 8-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[3], v0.h[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
@@ -919,12 +929,12 @@ define <8 x half> @sin_v8f16(<8 x half> %a) {
 ; CHECK-GI-NEXT:    bl sinf
 ; CHECK-GI-NEXT:    fcvt s1, h9
 ; CHECK-GI-NEXT:    fcvt h0, s0
-; CHECK-GI-NEXT:    str q0, [sp, #80] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q0, [sp, #64] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl sinf
 ; CHECK-GI-NEXT:    fcvt s1, h10
 ; CHECK-GI-NEXT:    fcvt h0, s0
-; CHECK-GI-NEXT:    str q0, [sp, #64] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q0, [sp, #80] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl sinf
 ; CHECK-GI-NEXT:    fcvt s1, h11
@@ -947,21 +957,21 @@ define <8 x half> @sin_v8f16(<8 x half> %a) {
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl sinf
-; CHECK-GI-NEXT:    ldp q2, q1, [sp, #80] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q3, q2, [sp, #64] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    fcvt h0, s0
+; CHECK-GI-NEXT:    ldr q1, [sp, #96] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #152] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    ldr x30, [sp, #168] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d11, d10, [sp, #136] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #168] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-GI-NEXT:    ldr d14, [sp, #112] // 8-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-GI-NEXT:    ldp q2, q3, [sp, #48] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d13, d12, [sp, #120] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[2], v3.h[0]
-; CHECK-GI-NEXT:    mov v1.h[3], v2.h[0]
-; CHECK-GI-NEXT:    ldp q2, q3, [sp, #16] // 32-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[4], v3.h[0]
-; CHECK-GI-NEXT:    mov v1.h[5], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[2], v2.h[0]
+; CHECK-GI-NEXT:    ldp q2, q3, [sp, #32] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[3], v3.h[0]
+; CHECK-GI-NEXT:    mov v1.h[4], v2.h[0]
+; CHECK-GI-NEXT:    ldp q2, q3, [sp] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[5], v3.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[6], v2.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[7], v0.h[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
@@ -1155,7 +1165,7 @@ define <16 x half> @sin_v16f16(<16 x half> %a) {
 ; CHECK-GI-NEXT:    bl sinf
 ; CHECK-GI-NEXT:    fcvt s1, h8
 ; CHECK-GI-NEXT:    fcvt h0, s0
-; CHECK-GI-NEXT:    str q0, [sp, #128] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q0, [sp, #112] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl sinf
 ; CHECK-GI-NEXT:    fcvt s1, h9
@@ -1180,7 +1190,7 @@ define <16 x half> @sin_v16f16(<16 x half> %a) {
 ; CHECK-GI-NEXT:    bl sinf
 ; CHECK-GI-NEXT:    fcvt s1, h13
 ; CHECK-GI-NEXT:    fcvt h0, s0
-; CHECK-GI-NEXT:    str q0, [sp, #112] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q0, [sp, #128] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl sinf
 ; CHECK-GI-NEXT:    ldr q1, [sp, #80] // 16-byte Folded Reload
@@ -1231,7 +1241,7 @@ define <16 x half> @sin_v16f16(<16 x half> %a) {
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl sinf
 ; CHECK-GI-NEXT:    ldr q3, [sp, #192] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    ldr q2, [sp, #128] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr q2, [sp, #112] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp x29, x30, [sp, #304] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v3.h[1], v2.h[0]
 ; CHECK-GI-NEXT:    ldp q1, q2, [sp] // 32-byte Folded Reload
@@ -1257,7 +1267,7 @@ define <16 x half> @sin_v16f16(<16 x half> %a) {
 ; CHECK-GI-NEXT:    ldr q2, [sp, #96] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.h[5], v2.h[0]
 ; CHECK-GI-NEXT:    fcvt h2, s0
-; CHECK-GI-NEXT:    ldr q0, [sp, #112] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr q0, [sp, #128] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v3.h[6], v0.h[0]
 ; CHECK-GI-NEXT:    ldr q0, [sp, #160] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.h[6], v0.h[0]
@@ -1270,6 +1280,28 @@ define <16 x half> @sin_v16f16(<16 x half> %a) {
 entry:
   %c = call <16 x half> @llvm.sin.v16f16(<16 x half> %a)
   ret <16 x half> %c
+}
+
+define <2 x fp128> @sin_v2fp128(<2 x fp128> %a) {
+; CHECK-LABEL: sin_v2fp128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    bl sinl
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    bl sinl
+; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+entry:
+  %c = call <2 x fp128> @llvm.sin.v2fp128(<2 x fp128> %a)
+  ret <2 x fp128> %c
 }
 
 define double @cos_f64(double %a) {
@@ -1304,6 +1336,15 @@ define half @cos_f16(half %a) {
 entry:
   %c = call half @llvm.cos.f16(half %a)
   ret half %c
+}
+
+define fp128 @cos_fp128(fp128 %a) {
+; CHECK-LABEL: cos_fp128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    b cosl
+entry:
+  %c = call fp128 @llvm.cos.fp128(fp128 %a)
+  ret fp128 %c
 }
 
 define <1 x double> @cos_v1f64(<1 x double> %x) {
@@ -1948,12 +1989,12 @@ define <7 x half> @cos_v7f16(<7 x half> %a) {
 ; CHECK-GI-NEXT:    bl cosf
 ; CHECK-GI-NEXT:    fcvt s1, h9
 ; CHECK-GI-NEXT:    fcvt h0, s0
-; CHECK-GI-NEXT:    str q0, [sp, #64] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q0, [sp, #48] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl cosf
 ; CHECK-GI-NEXT:    fcvt s1, h10
 ; CHECK-GI-NEXT:    fcvt h0, s0
-; CHECK-GI-NEXT:    str q0, [sp, #48] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q0, [sp, #64] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl cosf
 ; CHECK-GI-NEXT:    fcvt s1, h11
@@ -1971,18 +2012,19 @@ define <7 x half> @cos_v7f16(<7 x half> %a) {
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl cosf
-; CHECK-GI-NEXT:    ldp q2, q1, [sp, #64] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q3, q2, [sp, #48] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    fcvt h0, s0
+; CHECK-GI-NEXT:    ldr q1, [sp, #80] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #128] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    ldr x30, [sp, #144] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d11, d10, [sp, #112] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-GI-NEXT:    ldp q2, q3, [sp, #32] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #144] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-GI-NEXT:    ldp d13, d12, [sp, #96] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[2], v3.h[0]
-; CHECK-GI-NEXT:    mov v1.h[3], v2.h[0]
-; CHECK-GI-NEXT:    ldp q2, q3, [sp] // 32-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[4], v3.h[0]
+; CHECK-GI-NEXT:    mov v1.h[2], v2.h[0]
+; CHECK-GI-NEXT:    ldp q2, q3, [sp, #16] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[3], v3.h[0]
+; CHECK-GI-NEXT:    mov v1.h[4], v2.h[0]
+; CHECK-GI-NEXT:    ldr q2, [sp] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.h[5], v2.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[6], v0.h[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
@@ -2059,21 +2101,21 @@ define <4 x half> @cos_v4f16(<4 x half> %a) {
 ; CHECK-GI-NEXT:    bl cosf
 ; CHECK-GI-NEXT:    fcvt s1, h9
 ; CHECK-GI-NEXT:    fcvt h0, s0
-; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl cosf
 ; CHECK-GI-NEXT:    fcvt s1, h10
 ; CHECK-GI-NEXT:    fcvt h0, s0
-; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl cosf
-; CHECK-GI-NEXT:    ldp q2, q1, [sp, #16] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q3, q2, [sp] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    fcvt h0, s0
+; CHECK-GI-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #56] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldr x30, [sp, #72] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    ldr d10, [sp, #48] // 8-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[3], v0.h[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
@@ -2189,12 +2231,12 @@ define <8 x half> @cos_v8f16(<8 x half> %a) {
 ; CHECK-GI-NEXT:    bl cosf
 ; CHECK-GI-NEXT:    fcvt s1, h9
 ; CHECK-GI-NEXT:    fcvt h0, s0
-; CHECK-GI-NEXT:    str q0, [sp, #80] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q0, [sp, #64] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl cosf
 ; CHECK-GI-NEXT:    fcvt s1, h10
 ; CHECK-GI-NEXT:    fcvt h0, s0
-; CHECK-GI-NEXT:    str q0, [sp, #64] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q0, [sp, #80] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl cosf
 ; CHECK-GI-NEXT:    fcvt s1, h11
@@ -2217,21 +2259,21 @@ define <8 x half> @cos_v8f16(<8 x half> %a) {
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl cosf
-; CHECK-GI-NEXT:    ldp q2, q1, [sp, #80] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q3, q2, [sp, #64] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    fcvt h0, s0
+; CHECK-GI-NEXT:    ldr q1, [sp, #96] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #152] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    ldr x30, [sp, #168] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d11, d10, [sp, #136] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #168] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-GI-NEXT:    ldr d14, [sp, #112] // 8-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-GI-NEXT:    ldp q2, q3, [sp, #48] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d13, d12, [sp, #120] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[2], v3.h[0]
-; CHECK-GI-NEXT:    mov v1.h[3], v2.h[0]
-; CHECK-GI-NEXT:    ldp q2, q3, [sp, #16] // 32-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[4], v3.h[0]
-; CHECK-GI-NEXT:    mov v1.h[5], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[2], v2.h[0]
+; CHECK-GI-NEXT:    ldp q2, q3, [sp, #32] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[3], v3.h[0]
+; CHECK-GI-NEXT:    mov v1.h[4], v2.h[0]
+; CHECK-GI-NEXT:    ldp q2, q3, [sp] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[5], v3.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[6], v2.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[7], v0.h[0]
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b
@@ -2425,7 +2467,7 @@ define <16 x half> @cos_v16f16(<16 x half> %a) {
 ; CHECK-GI-NEXT:    bl cosf
 ; CHECK-GI-NEXT:    fcvt s1, h8
 ; CHECK-GI-NEXT:    fcvt h0, s0
-; CHECK-GI-NEXT:    str q0, [sp, #128] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q0, [sp, #112] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl cosf
 ; CHECK-GI-NEXT:    fcvt s1, h9
@@ -2450,7 +2492,7 @@ define <16 x half> @cos_v16f16(<16 x half> %a) {
 ; CHECK-GI-NEXT:    bl cosf
 ; CHECK-GI-NEXT:    fcvt s1, h13
 ; CHECK-GI-NEXT:    fcvt h0, s0
-; CHECK-GI-NEXT:    str q0, [sp, #112] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q0, [sp, #128] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl cosf
 ; CHECK-GI-NEXT:    ldr q1, [sp, #80] // 16-byte Folded Reload
@@ -2501,7 +2543,7 @@ define <16 x half> @cos_v16f16(<16 x half> %a) {
 ; CHECK-GI-NEXT:    fmov s0, s1
 ; CHECK-GI-NEXT:    bl cosf
 ; CHECK-GI-NEXT:    ldr q3, [sp, #192] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    ldr q2, [sp, #128] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr q2, [sp, #112] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp x29, x30, [sp, #304] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v3.h[1], v2.h[0]
 ; CHECK-GI-NEXT:    ldp q1, q2, [sp] // 32-byte Folded Reload
@@ -2527,7 +2569,7 @@ define <16 x half> @cos_v16f16(<16 x half> %a) {
 ; CHECK-GI-NEXT:    ldr q2, [sp, #96] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.h[5], v2.h[0]
 ; CHECK-GI-NEXT:    fcvt h2, s0
-; CHECK-GI-NEXT:    ldr q0, [sp, #112] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr q0, [sp, #128] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v3.h[6], v0.h[0]
 ; CHECK-GI-NEXT:    ldr q0, [sp, #160] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.h[6], v0.h[0]
@@ -2540,6 +2582,28 @@ define <16 x half> @cos_v16f16(<16 x half> %a) {
 entry:
   %c = call <16 x half> @llvm.cos.v16f16(<16 x half> %a)
   ret <16 x half> %c
+}
+
+define <2 x fp128> @cos_v2fp128(<2 x fp128> %a) {
+; CHECK-LABEL: cos_v2fp128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    bl cosl
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    bl cosl
+; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+entry:
+  %c = call <2 x fp128> @llvm.cos.v2fp128(<2 x fp128> %a)
+  ret <2 x fp128> %c
 }
 
 ; This is testing that we do not produce incorrect tailcall lowerings
@@ -2566,6 +2630,8 @@ declare <2 x double> @llvm.cos.v2f64(<2 x double>)
 declare <2 x double> @llvm.sin.v2f64(<2 x double>)
 declare <2 x float> @llvm.cos.v2f32(<2 x float>)
 declare <2 x float> @llvm.sin.v2f32(<2 x float>)
+declare <2 x fp128> @llvm.cos.v2fp128(<2 x fp128>)
+declare <2 x fp128> @llvm.sin.v2fp128(<2 x fp128>)
 declare <3 x double> @llvm.cos.v3f64(<3 x double>)
 declare <3 x double> @llvm.sin.v3f64(<3 x double>)
 declare <3 x float> @llvm.cos.v3f32(<3 x float>)
@@ -2586,5 +2652,7 @@ declare double @llvm.cos.f64(double)
 declare double @llvm.sin.f64(double)
 declare float @llvm.cos.f32(float)
 declare float @llvm.sin.f32(float)
+declare fp128 @llvm.cos.fp128(fp128)
+declare fp128 @llvm.sin.fp128(fp128)
 declare half @llvm.cos.f16(half)
 declare half @llvm.sin.f16(half)

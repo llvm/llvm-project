@@ -58,10 +58,10 @@ struct D0 : B0, B1 {
 // CHECK-LABEL: define{{.*}} i64 @_ZThn8_N2D02m0Ev(
 // CHECK: %[[RETVAL:.*]] = alloca %[[STRUCT_SMALL]], align 8
 // CHECK: %[[CALL:.*]] = tail call i64 @_ZN2D02m0Ev(
-// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_SMALL]], ptr %[[RETVAL]], i32 0, i32 0
+// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds nuw %[[STRUCT_SMALL]], ptr %[[RETVAL]], i32 0, i32 0
 // CHECK: %[[COERCE_VAL_IP:.*]] = inttoptr i64 %[[CALL]] to ptr
 // CHECK: store ptr %[[COERCE_VAL_IP]], ptr %[[COERCE_DIVE]], align 8
-// CHECK: %[[COERCE_DIVE2:.*]] = getelementptr inbounds %[[STRUCT_SMALL]], ptr %[[RETVAL]], i32 0, i32 0
+// CHECK: %[[COERCE_DIVE2:.*]] = getelementptr inbounds nuw %[[STRUCT_SMALL]], ptr %[[RETVAL]], i32 0, i32 0
 // CHECK: %[[V3:.*]] = load ptr, ptr %[[COERCE_DIVE2]], align 8
 // CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint ptr %[[V3]] to i64
 // CHECK: ret i64 %[[COERCE_VAL_PI]]
@@ -70,7 +70,7 @@ Small D0::m0() { return {}; }
 
 // CHECK: define{{.*}} void @_Z14testParamSmall5Small(i64 %[[A_COERCE:.*]])
 // CHECK: %[[A:.*]] = alloca %[[STRUCT_SMALL]], align 8
-// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_SMALL]], ptr %[[A]], i32 0, i32 0
+// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds nuw %[[STRUCT_SMALL]], ptr %[[A]], i32 0, i32 0
 // CHECK: %[[COERCE_VAL_IP:.*]] = inttoptr i64 %[[A_COERCE]] to ptr
 // CHECK: store ptr %[[COERCE_VAL_IP]], ptr %[[COERCE_DIVE]], align 8
 // CHECK: %[[CALL:.*]] = call noundef ptr @_ZN5SmallD1Ev(ptr {{[^,]*}} %[[A]])
@@ -83,7 +83,7 @@ void testParamSmall(Small a) noexcept {
 // CHECK: define{{.*}} i64 @_Z15testReturnSmallv()
 // CHECK: %[[RETVAL:.*]] = alloca %[[STRUCT_SMALL:.*]], align 8
 // CHECK: %[[CALL:.*]] = call noundef ptr @_ZN5SmallC1Ev(ptr {{[^,]*}} %[[RETVAL]])
-// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_SMALL]], ptr %[[RETVAL]], i32 0, i32 0
+// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds nuw %[[STRUCT_SMALL]], ptr %[[RETVAL]], i32 0, i32 0
 // CHECK: %[[V0:.*]] = load ptr, ptr %[[COERCE_DIVE]], align 8
 // CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint ptr %[[V0]] to i64
 // CHECK: ret i64 %[[COERCE_VAL_PI]]
@@ -99,7 +99,7 @@ Small testReturnSmall() {
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_SMALL]], align 8
 // CHECK: %[[CALL:.*]] = call noundef ptr @_ZN5SmallC1Ev(ptr {{[^,]*}} %[[T]])
 // CHECK: %[[CALL1:.*]] = call noundef ptr @_ZN5SmallC1ERKS_(ptr {{[^,]*}} %[[AGG_TMP]], ptr noundef nonnull align 8 dereferenceable(8) %[[T]])
-// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_SMALL]], ptr %[[AGG_TMP]], i32 0, i32 0
+// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds nuw %[[STRUCT_SMALL]], ptr %[[AGG_TMP]], i32 0, i32 0
 // CHECK: %[[V0:.*]] = load ptr, ptr %[[COERCE_DIVE]], align 8
 // CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint ptr %[[V0]] to i64
 // CHECK: call void @_Z14testParamSmall5Small(i64 %[[COERCE_VAL_PI]])
@@ -115,10 +115,10 @@ void testCallSmall0() {
 // CHECK: define{{.*}} void @_Z14testCallSmall1v()
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_SMALL:.*]], align 8
 // CHECK: %[[CALL:.*]] = call i64 @_Z15testReturnSmallv()
-// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_SMALL]], ptr %[[AGG_TMP]], i32 0, i32 0
+// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds nuw %[[STRUCT_SMALL]], ptr %[[AGG_TMP]], i32 0, i32 0
 // CHECK: %[[COERCE_VAL_IP:.*]] = inttoptr i64 %[[CALL]] to ptr
 // CHECK: store ptr %[[COERCE_VAL_IP]], ptr %[[COERCE_DIVE]], align 8
-// CHECK: %[[COERCE_DIVE1:.*]] = getelementptr inbounds %[[STRUCT_SMALL]], ptr %[[AGG_TMP]], i32 0, i32 0
+// CHECK: %[[COERCE_DIVE1:.*]] = getelementptr inbounds nuw %[[STRUCT_SMALL]], ptr %[[AGG_TMP]], i32 0, i32 0
 // CHECK: %[[V0:.*]] = load ptr, ptr %[[COERCE_DIVE1]], align 8
 // CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint ptr %[[V0]] to i64
 // CHECK: call void @_Z14testParamSmall5Small(i64 %[[COERCE_VAL_PI]])
@@ -132,7 +132,7 @@ void testCallSmall1() {
 // CHECK: define{{.*}} void @_Z16testIgnoredSmallv()
 // CHECK: %[[AGG_TMP_ENSURED:.*]] = alloca %[[STRUCT_SMALL:.*]], align 8
 // CHECK: %[[CALL:.*]] = call i64 @_Z15testReturnSmallv()
-// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_SMALL]], ptr %[[AGG_TMP_ENSURED]], i32 0, i32 0
+// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds nuw %[[STRUCT_SMALL]], ptr %[[AGG_TMP_ENSURED]], i32 0, i32 0
 // CHECK: %[[COERCE_VAL_IP:.*]] = inttoptr i64 %[[CALL]] to ptr
 // CHECK: store ptr %[[COERCE_VAL_IP]], ptr %[[COERCE_DIVE]], align 8
 // CHECK: %[[CALL1:.*]] = call noundef ptr @_ZN5SmallD1Ev(ptr {{[^,]*}} %[[AGG_TMP_ENSURED]])
@@ -200,7 +200,7 @@ void testIgnoredLarge() {
 
 // CHECK: define{{.*}} i32 @_Z20testReturnHasTrivialv()
 // CHECK: %[[RETVAL:.*]] = alloca %[[STRUCT_TRIVIAL:.*]], align 4
-// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_TRIVIAL]], ptr %[[RETVAL]], i32 0, i32 0
+// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds nuw %[[STRUCT_TRIVIAL]], ptr %[[RETVAL]], i32 0, i32 0
 // CHECK: %[[V0:.*]] = load i32, ptr %[[COERCE_DIVE]], align 4
 // CHECK: ret i32 %[[V0]]
 // CHECK: }
@@ -261,6 +261,26 @@ void calleeExceptionLarge(Large, Large);
 void testExceptionLarge() {
   calleeExceptionLarge(Large(), Large());
 }
+
+// CHECK: define void @_ZN7GH930401gEPNS_1SE
+// CHECK: [[CALL:%.*]] = call i64 @_ZN7GH930401fEv
+// CHECK-NEXT: [[TRUNC:%.*]] = trunc i64 [[CALL]] to i56
+// CHECK-NEXT: store i56 [[TRUNC]]
+// CHECK-NEXT: ret void
+void* operator new(unsigned long, void*);
+namespace GH93040 {
+struct [[clang::trivial_abi]] S {
+  char a;
+  int x;
+  __attribute((aligned(2))) char y;
+  S();
+} __attribute((packed));
+S f();
+void g(S* s) { new(s) S(f()); }
+struct S2 { [[no_unique_address]] S s; char c;};
+static_assert(sizeof(S) == 8 && sizeof(S2) == 8, "");
+}
+
 
 // PR42961
 

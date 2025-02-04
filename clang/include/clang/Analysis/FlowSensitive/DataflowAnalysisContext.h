@@ -67,7 +67,19 @@ public:
   DataflowAnalysisContext(std::unique_ptr<Solver> S,
                           Options Opts = Options{
                               /*ContextSensitiveOpts=*/std::nullopt,
-                              /*Logger=*/nullptr});
+                              /*Logger=*/nullptr})
+      : DataflowAnalysisContext(*S, std::move(S), Opts) {}
+
+  /// Constructs a dataflow analysis context.
+  ///
+  /// Requirements:
+  ///
+  ///  `S` must outlive the `DataflowAnalysisContext`.
+  DataflowAnalysisContext(Solver &S, Options Opts = Options{
+                                         /*ContextSensitiveOpts=*/std::nullopt,
+                                         /*Logger=*/nullptr})
+      : DataflowAnalysisContext(S, nullptr, Opts) {}
+
   ~DataflowAnalysisContext();
 
   /// Sets a callback that returns the names and types of the synthetic fields
@@ -209,6 +221,13 @@ private:
     using DenseMapInfo::isEqual;
   };
 
+  /// `S` is the solver to use. `OwnedSolver` may be:
+  /// *  Null (in which case `S` is non-onwed and must outlive this object), or
+  /// *  Non-null (in which case it must refer to `S`, and the
+  ///    `DataflowAnalysisContext will take ownership of `OwnedSolver`).
+  DataflowAnalysisContext(Solver &S, std::unique_ptr<Solver> &&OwnedSolver,
+                          Options Opts);
+
   // Extends the set of modeled field declarations.
   void addModeledFields(const FieldSet &Fields);
 
@@ -232,7 +251,8 @@ private:
            Solver::Result::Status::Unsatisfiable;
   }
 
-  std::unique_ptr<Solver> S;
+  Solver &S;
+  std::unique_ptr<Solver> OwnedSolver;
   std::unique_ptr<Arena> A;
 
   // Maps from program declarations and statements to storage locations that are

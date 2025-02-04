@@ -92,6 +92,7 @@ protected:
   void finishRun() override;
 
   FormatStyle Style;
+  LangOptions LangOpts;
   // Stores Style, FileID and SourceManager etc.
   const Environment &Env;
   // AffectedRangeMgr stores ranges to be fixed.

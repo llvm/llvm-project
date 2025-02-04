@@ -15,8 +15,8 @@
 
 namespace llvm {
 
-template <bool EnableSentinelTracking> class ilist_node_base;
-template <bool EnableSentinelTracking> class ilist_base;
+template <bool EnableSentinelTracking, class ParentTy> class ilist_node_base;
+template <bool EnableSentinelTracking, class ParentTy> class ilist_base;
 
 /// Option to choose whether to track sentinels.
 ///
@@ -38,6 +38,19 @@ template <class Tag> struct ilist_tag {};
 /// adjacent debug-info in an operation. This option adds two bits to the
 /// iterator class to store that information.
 template <bool ExtraIteratorBits> struct ilist_iterator_bits {};
+
+/// Option to add a pointer to this list's owner in every node.
+///
+/// This option causes the \a ilist_base_node for this list to contain a pointer
+/// ParentTy *Parent, returned by \a ilist_base_node::getNodeBaseParent() and
+/// set by \a ilist_base_node::setNodeBaseParent(ParentTy *Parent). The parent
+/// value is not set automatically; the ilist owner should set itself as the
+/// parent of the list sentinel, and the parent should be set on each node
+/// inserted into the list. This value is also not used by
+/// \a ilist_node_with_parent::getNodeParent(), but is used by \a
+/// ilist_iterator::getNodeParent(), which allows the parent to be fetched from
+/// any valid (non-null) iterator to this list, including the sentinel.
+template <class ParentTy> struct ilist_parent {};
 
 namespace ilist_detail {
 
@@ -114,6 +127,21 @@ template <> struct extract_iterator_bits<> : std::false_type, is_implicit {};
 template <bool IteratorBits>
 struct is_valid_option<ilist_iterator_bits<IteratorBits>> : std::true_type {};
 
+/// Extract node parent option.
+///
+/// Look through \p Options for the \a ilist_parent option, pulling out the
+/// custom parent type, using void as a default.
+template <class... Options> struct extract_parent;
+template <class ParentTy, class... Options>
+struct extract_parent<ilist_parent<ParentTy>, Options...> {
+  typedef ParentTy type;
+};
+template <class Option1, class... Options>
+struct extract_parent<Option1, Options...> : extract_parent<Options...> {};
+template <> struct extract_parent<> { typedef void type; };
+template <class ParentTy>
+struct is_valid_option<ilist_parent<ParentTy>> : std::true_type {};
+
 /// Check whether options are valid.
 ///
 /// The conjunction of \a is_valid_option on each individual option.
@@ -128,7 +156,7 @@ struct check_options<Option1, Options...>
 ///
 /// This is usually computed via \a compute_node_options.
 template <class T, bool EnableSentinelTracking, bool IsSentinelTrackingExplicit,
-          class TagT, bool HasIteratorBits>
+          class TagT, bool HasIteratorBits, class ParentTy>
 struct node_options {
   typedef T value_type;
   typedef T *pointer;
@@ -140,15 +168,17 @@ struct node_options {
   static const bool is_sentinel_tracking_explicit = IsSentinelTrackingExplicit;
   static const bool has_iterator_bits = HasIteratorBits;
   typedef TagT tag;
-  typedef ilist_node_base<enable_sentinel_tracking> node_base_type;
-  typedef ilist_base<enable_sentinel_tracking> list_base_type;
+  typedef ParentTy parent_ty;
+  typedef ilist_node_base<enable_sentinel_tracking, parent_ty> node_base_type;
+  typedef ilist_base<enable_sentinel_tracking, parent_ty> list_base_type;
 };
 
 template <class T, class... Options> struct compute_node_options {
   typedef node_options<T, extract_sentinel_tracking<Options...>::value,
                        extract_sentinel_tracking<Options...>::is_explicit,
                        typename extract_tag<Options...>::type,
-                       extract_iterator_bits<Options...>::value>
+                       extract_iterator_bits<Options...>::value,
+                       typename extract_parent<Options...>::type>
       type;
 };
 

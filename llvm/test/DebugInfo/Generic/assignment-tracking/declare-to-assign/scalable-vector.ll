@@ -4,7 +4,7 @@
 ;; Check declare-to-assign skips scalable vectors for now. i.e. do not replace
 ;; the dbg.declare with a dbg.assign intrinsic.
 
-; CHECK: call void @llvm.dbg.declare(metadata ptr %c
+; CHECK: #dbg_declare(ptr %c
 
 define dso_local void @b() !dbg !9 {
 entry:

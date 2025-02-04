@@ -1,10 +1,11 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety -Wthread-safety-beta %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety -Wthread-safety-beta -fexperimental-late-parse-attributes -DLATE_PARSING %s
 
 #define LOCKABLE            __attribute__ ((lockable))
 #define SCOPED_LOCKABLE     __attribute__ ((scoped_lockable))
-#define GUARDED_BY(x)       __attribute__ ((guarded_by(x)))
+#define GUARDED_BY(...)     __attribute__ ((guarded_by(__VA_ARGS__)))
 #define GUARDED_VAR         __attribute__ ((guarded_var))
-#define PT_GUARDED_BY(x)    __attribute__ ((pt_guarded_by(x)))
+#define PT_GUARDED_BY(...)  __attribute__ ((pt_guarded_by(__VA_ARGS__)))
 #define PT_GUARDED_VAR      __attribute__ ((pt_guarded_var))
 #define ACQUIRED_AFTER(...) __attribute__ ((acquired_after(__VA_ARGS__)))
 #define ACQUIRED_BEFORE(...) __attribute__ ((acquired_before(__VA_ARGS__)))
@@ -29,6 +30,22 @@ struct LOCKABLE Mutex {};
 
 struct Foo {
   struct Mutex *mu_;
+  int  a_value GUARDED_BY(mu_);
+
+  struct Bar {
+    struct Mutex *other_mu ACQUIRED_AFTER(mu_); // Note: referencing the parent structure is convenient here, but this should probably be disallowed if the child structure is re-used outside of the parent.
+    struct Mutex *third_mu ACQUIRED_BEFORE(other_mu);
+  } bar;
+
+  int* a_ptr PT_GUARDED_BY(bar.other_mu);
+};
+
+struct LOCKABLE Lock {};
+struct A {
+        struct Lock lock;
+        union {
+                int b __attribute__((guarded_by(lock))); // Note: referencing the parent structure is convenient here, but this should probably be disallowed if the child is re-used outside of the parent.
+        };
 };
 
 // Declare mutex lock/unlock functions.
@@ -73,6 +90,19 @@ int get_value(int *p) SHARED_LOCKS_REQUIRED(foo_.mu_){
 }
 
 void unlock_scope(struct Mutex *const *mu) __attribute__((release_capability(**mu)));
+
+// Verify late parsing:
+#ifdef LATE_PARSING
+struct LateParsing {
+  int a_value_defined_before GUARDED_BY(a_mutex_defined_late);
+  int *a_ptr_defined_before PT_GUARDED_BY(a_mutex_defined_late);
+  struct Mutex *a_mutex_defined_early
+    ACQUIRED_BEFORE(a_mutex_defined_late);
+  struct Mutex *a_mutex_defined_late
+    ACQUIRED_AFTER(a_mutex_defined_very_late);
+  struct Mutex *a_mutex_defined_very_late;
+} late_parsing;
+#endif
 
 int main(void) {
 
@@ -136,9 +166,51 @@ int main(void) {
     // Cleanup happens automatically -> no warning.
   }
 
+  foo_.a_value = 0; // expected-warning {{writing variable 'a_value' requires holding mutex 'mu_' exclusively}}
+  *foo_.a_ptr = 1; // expected-warning {{writing the value pointed to by 'a_ptr' requires holding mutex 'bar.other_mu' exclusively}}
+
+
+  mutex_exclusive_lock(foo_.bar.other_mu);
+  mutex_exclusive_lock(foo_.bar.third_mu); // expected-warning{{mutex 'third_mu' must be acquired before 'other_mu'}}
+  mutex_exclusive_lock(foo_.mu_); // expected-warning{{mutex 'mu_' must be acquired before 'other_mu'}}
+  mutex_exclusive_unlock(foo_.mu_);
+  mutex_exclusive_unlock(foo_.bar.other_mu);
+  mutex_exclusive_unlock(foo_.bar.third_mu);
+
+#ifdef LATE_PARSING
+  late_parsing.a_value_defined_before = 1; // expected-warning{{writing variable 'a_value_defined_before' requires holding mutex 'a_mutex_defined_late' exclusively}}
+  late_parsing.a_ptr_defined_before = 0;
+  mutex_exclusive_lock(late_parsing.a_mutex_defined_late);
+  mutex_exclusive_lock(late_parsing.a_mutex_defined_early); // expected-warning{{mutex 'a_mutex_defined_early' must be acquired before 'a_mutex_defined_late'}}
+  mutex_exclusive_unlock(late_parsing.a_mutex_defined_early);
+  mutex_exclusive_unlock(late_parsing.a_mutex_defined_late);
+  mutex_exclusive_lock(late_parsing.a_mutex_defined_late);
+  mutex_exclusive_lock(late_parsing.a_mutex_defined_very_late); // expected-warning{{mutex 'a_mutex_defined_very_late' must be acquired before 'a_mutex_defined_late'}}
+  mutex_exclusive_unlock(late_parsing.a_mutex_defined_very_late);
+  mutex_exclusive_unlock(late_parsing.a_mutex_defined_late);
+#endif
+
   return 0;
 }
 
 // We had a problem where we'd skip all attributes that follow a late-parsed
 // attribute in a single __attribute__.
 void run(void) __attribute__((guarded_by(mu1), guarded_by(mu1))); // expected-warning 2{{only applies to non-static data members and global variables}}
+
+int value_with_wrong_number_of_args GUARDED_BY(mu1, mu2); // expected-error{{'guarded_by' attribute takes one argument}}
+
+int *ptr_with_wrong_number_of_args PT_GUARDED_BY(mu1, mu2); // expected-error{{'pt_guarded_by' attribute takes one argument}}
+
+int value_with_no_open_brace __attribute__((guarded_by)); // expected-error{{'guarded_by' attribute takes one argument}}
+int *ptr_with_no_open_brace __attribute__((pt_guarded_by)); // expected-error{{'pt_guarded_by' attribute takes one argument}}
+
+int value_with_no_open_brace_on_acquire_after __attribute__((acquired_after)); // expected-error{{'acquired_after' attribute takes at least 1 argument}}
+int value_with_no_open_brace_on_acquire_before __attribute__((acquired_before)); // expected-error{{'acquired_before' attribute takes at least 1 argument}}
+
+int value_with_bad_expr GUARDED_BY(bad_expr); // expected-error{{use of undeclared identifier 'bad_expr'}}
+int *ptr_with_bad_expr PT_GUARDED_BY(bad_expr); // expected-error{{use of undeclared identifier 'bad_expr'}}
+
+int value_with_bad_expr_on_acquire_after __attribute__((acquired_after(other_bad_expr))); //  expected-error{{use of undeclared identifier 'other_bad_expr'}}
+int value_with_bad_expr_on_acquire_before __attribute__((acquired_before(other_bad_expr))); //  expected-error{{use of undeclared identifier 'other_bad_expr'}}
+
+int a_final_expression = 0;

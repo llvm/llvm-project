@@ -12,6 +12,18 @@ def SDTX86CmpTest : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisInt<1>,
 def SDTX86FCmp    : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisFP<1>,
                                          SDTCisSameAs<1, 2>]>;
 
+def SDTX86Ccmp    : SDTypeProfile<1, 5,
+                                  [SDTCisVT<3, i8>, SDTCisVT<4, i8>, SDTCisVT<5, i32>]>;
+
+// RES = op PTR, PASSTHRU, COND, EFLAGS
+def SDTX86Cload    : SDTypeProfile<1, 4,
+                                  [SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisSameAs<0, 2>,
+                                   SDTCisVT<3, i8>, SDTCisVT<4, i32>]>;
+// op VAL, PTR, COND, EFLAGS
+def SDTX86Cstore    : SDTypeProfile<0, 4,
+                                  [SDTCisInt<0>, SDTCisPtrTy<1>,
+                                   SDTCisVT<2, i8>, SDTCisVT<3, i32>]>;
+
 def SDTX86Cmov    : SDTypeProfile<1, 4,
                                   [SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>,
                                    SDTCisVT<3, i8>, SDTCisVT<4, i32>]>;
@@ -33,12 +45,7 @@ def SDTBinaryArithWithFlagsInOut : SDTypeProfile<2, 3,
                                              SDTCisInt<0>,
                                              SDTCisVT<1, i32>,
                                              SDTCisVT<4, i32>]>;
-// RES1, RES2, FLAGS = op LHS, RHS
-def SDT2ResultBinaryArithWithFlags : SDTypeProfile<3, 2,
-                                            [SDTCisSameAs<0, 1>,
-                                             SDTCisSameAs<0, 2>,
-                                             SDTCisSameAs<0, 3>,
-                                             SDTCisInt<0>, SDTCisVT<1, i32>]>;
+
 def SDTX86BrCond  : SDTypeProfile<0, 3,
                                   [SDTCisVT<0, OtherVT>,
                                    SDTCisVT<1, i8>, SDTCisVT<2, i32>]>;
@@ -127,8 +134,8 @@ def SDTX86Cmpccxadd : SDTypeProfile<1, 4, [SDTCisSameAs<0, 2>,
 def X86MFence : SDNode<"X86ISD::MFENCE", SDTNone, [SDNPHasChain]>;
 
 
-def X86bsf     : SDNode<"X86ISD::BSF",      SDTUnaryArithWithFlags>;
-def X86bsr     : SDNode<"X86ISD::BSR",      SDTUnaryArithWithFlags>;
+def X86bsf     : SDNode<"X86ISD::BSF",      SDTBinaryArithWithFlags>;
+def X86bsr     : SDNode<"X86ISD::BSR",      SDTBinaryArithWithFlags>;
 def X86fshl    : SDNode<"X86ISD::FSHL",     SDTIntShiftDOp>;
 def X86fshr    : SDNode<"X86ISD::FSHR",     SDTIntShiftDOp>;
 
@@ -137,6 +144,12 @@ def X86fcmp    : SDNode<"X86ISD::FCMP",     SDTX86FCmp>;
 def X86strict_fcmp : SDNode<"X86ISD::STRICT_FCMP", SDTX86FCmp, [SDNPHasChain]>;
 def X86strict_fcmps : SDNode<"X86ISD::STRICT_FCMPS", SDTX86FCmp, [SDNPHasChain]>;
 def X86bt      : SDNode<"X86ISD::BT",       SDTX86CmpTest>;
+
+def X86ccmp    : SDNode<"X86ISD::CCMP",     SDTX86Ccmp>;
+def X86ctest   : SDNode<"X86ISD::CTEST",    SDTX86Ccmp>;
+
+def X86cload    : SDNode<"X86ISD::CLOAD",   SDTX86Cload, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def X86cstore   : SDNode<"X86ISD::CSTORE",  SDTX86Cstore, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def X86cmov    : SDNode<"X86ISD::CMOV",     SDTX86Cmov>;
 def X86brcond  : SDNode<"X86ISD::BRCOND",   SDTX86BrCond,
@@ -248,7 +261,7 @@ def X86add_flag  : SDNode<"X86ISD::ADD",  SDTBinaryArithWithFlags,
 def X86sub_flag  : SDNode<"X86ISD::SUB",  SDTBinaryArithWithFlags>;
 def X86smul_flag : SDNode<"X86ISD::SMUL", SDTBinaryArithWithFlags,
                           [SDNPCommutative]>;
-def X86umul_flag : SDNode<"X86ISD::UMUL", SDT2ResultBinaryArithWithFlags,
+def X86umul_flag : SDNode<"X86ISD::UMUL", SDTBinaryArithWithFlags,
                           [SDNPCommutative]>;
 def X86adc_flag  : SDNode<"X86ISD::ADC",  SDTBinaryArithWithFlagsInOut>;
 def X86sbb_flag  : SDNode<"X86ISD::SBB",  SDTBinaryArithWithFlagsInOut>;
@@ -339,7 +352,8 @@ def X86cmpccxadd : SDNode<"X86ISD::CMPCCXADD", SDTX86Cmpccxadd,
                            SDNPMemOperand]>;
 
 // Define X86-specific addressing mode.
-def addr      : ComplexPattern<iPTR, 5, "selectAddr", [], [SDNPWantParent]>;
+let WantsParent = true in
+def addr      : ComplexPattern<iPTR, 5, "selectAddr">;
 def lea32addr : ComplexPattern<i32, 5, "selectLEAAddr",
                                [add, sub, mul, X86mul_imm, shl, or, xor, frameindex],
                                []>;
@@ -365,7 +379,8 @@ def tls64addr : ComplexPattern<i64, 5, "selectTLSADDRAddr",
 def tls64baseaddr : ComplexPattern<i64, 5, "selectTLSADDRAddr",
                                [tglobaltlsaddr], []>;
 
-def vectoraddr : ComplexPattern<iPTR, 5, "selectVectorAddr", [],[SDNPWantParent]>;
+let WantsParent = true in
+def vectoraddr : ComplexPattern<iPTR, 5, "selectVectorAddr">;
 
 // A relocatable immediate is an operand that can be relocated by the linker to
 // an immediate, such as a regular symbol in non-PIC code.
@@ -577,6 +592,14 @@ def add_su : binop_oneuse<add>;
 def and_su : binop_oneuse<and>;
 def srl_su : binop_oneuse<srl>;
 
+class binop_twouses<SDPatternOperator operator>
+    : PatFrag<(ops node:$A, node:$B),
+              (operator node:$A, node:$B), [{
+  return N->hasNUsesOfValue(2, 0);
+}]>;
+
+def and_du : binop_twouses<and>;
+
 // unary op with only one user
 class unop_oneuse<SDPatternOperator operator>
     : PatFrag<(ops node:$A),
@@ -601,20 +624,17 @@ def X86sub_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
 
 def X86testpat : PatFrag<(ops node:$lhs, node:$rhs),
                          (X86cmp (and_su node:$lhs, node:$rhs), 0)>;
-
+def X86ctestpat : PatFrag<(ops node:$lhs, node:$rhs, node:$dcf, node:$cond),
+                          (X86ctest (and_du node:$lhs, node:$rhs),
+                            (and_du node:$lhs, node:$rhs), node:$dcf,
+                            node:$cond, EFLAGS)>;
 
 def X86any_fcmp : PatFrags<(ops node:$lhs, node:$rhs),
                           [(X86strict_fcmp node:$lhs, node:$rhs),
                            (X86fcmp node:$lhs, node:$rhs)]>;
 
-// PREFETCHWT1 is supported we want to use it for everything but T0.
 def PrefetchWLevel : PatFrag<(ops), (i32 timm), [{
-  return N->getSExtValue() == 3 || !Subtarget->hasPREFETCHWT1();
-}]>;
-
-// Use PREFETCHWT1 for NTA, T2, T1.
-def PrefetchWT1Level : TImmLeaf<i32, [{
-  return Imm < 3;
+  return N->getSExtValue() <= 3;
 }]>;
 
 def X86lock_add_nocf : PatFrag<(ops node:$lhs, node:$rhs),
@@ -665,8 +685,9 @@ def anyext_sdiv : PatFrag<(ops node:$lhs), (anyext node:$lhs),[{
 // register. Truncate can be lowered to EXTRACT_SUBREG. CopyFromReg may
 // be copying from a truncate. AssertSext/AssertZext/AssertAlign aren't saying
 // anything about the upper 32 bits, they're probably just qualifying a
-// CopyFromReg. FREEZE may be coming from a a truncate. Any other 32-bit
-// operation will zero-extend up to 64 bits.
+// CopyFromReg. FREEZE may be coming from a a truncate. BitScan fall through
+// values may not zero the upper bits correctly.
+// Any other 32-bit operation will zero-extend up to 64 bits.
 def def32 : PatLeaf<(i32 GR32:$src), [{
   return N->getOpcode() != ISD::TRUNCATE &&
          N->getOpcode() != TargetOpcode::EXTRACT_SUBREG &&
@@ -674,7 +695,9 @@ def def32 : PatLeaf<(i32 GR32:$src), [{
          N->getOpcode() != ISD::AssertSext &&
          N->getOpcode() != ISD::AssertZext &&
          N->getOpcode() != ISD::AssertAlign &&
-         N->getOpcode() != ISD::FREEZE;
+         N->getOpcode() != ISD::FREEZE &&
+         !((N->getOpcode() == X86ISD::BSF || N->getOpcode() == X86ISD::BSR) &&
+           (!N->getOperand(0).isUndef() && !isa<ConstantSDNode>(N->getOperand(0))));
 }]>;
 
 // Treat an 'or' node is as an 'add' if the or'ed bits are known to be zero.

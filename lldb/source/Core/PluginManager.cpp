@@ -12,6 +12,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
+#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
@@ -205,10 +206,9 @@ public:
     if (!callback)
       return false;
     assert(!name.empty());
-    Instance instance =
-        Instance(name, description, callback, std::forward<Args>(args)...);
-    m_instances.push_back(instance);
-    return false;
+    m_instances.emplace_back(name, description, callback,
+                             std::forward<Args>(args)...);
+    return true;
   }
 
   bool UnregisterPlugin(typename Instance::CallbackType callback) {
@@ -639,6 +639,18 @@ static ObjectFileInstances &GetObjectFileInstances() {
   return g_instances;
 }
 
+bool PluginManager::IsRegisteredObjectFilePluginName(llvm::StringRef name) {
+  if (name.empty())
+    return false;
+
+  const auto &instances = GetObjectFileInstances().GetInstances();
+  for (auto &instance : instances) {
+    if (instance.name == name)
+      return true;
+  }
+  return false;
+}
+
 bool PluginManager::RegisterPlugin(
     llvm::StringRef name, llvm::StringRef description,
     ObjectFileCreateInstance create_callback,
@@ -689,30 +701,47 @@ PluginManager::GetObjectFileCreateMemoryCallbackForPluginName(
 }
 
 Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
-                               const FileSpec &outfile,
-                               lldb::SaveCoreStyle &core_style,
-                               llvm::StringRef plugin_name) {
-  if (plugin_name.empty()) {
+                               lldb_private::SaveCoreOptions &options) {
+  Status error;
+  if (!options.GetOutputFile()) {
+    error = Status::FromErrorString("No output file specified");
+    return error;
+  }
+
+  if (!process_sp) {
+    error = Status::FromErrorString("Invalid process");
+    return error;
+  }
+
+  error = options.EnsureValidConfiguration(process_sp);
+  if (error.Fail())
+    return error;
+
+  if (!options.GetPluginName().has_value()) {
     // Try saving core directly from the process plugin first.
-    llvm::Expected<bool> ret = process_sp->SaveCore(outfile.GetPath());
+    llvm::Expected<bool> ret =
+        process_sp->SaveCore(options.GetOutputFile()->GetPath());
     if (!ret)
-      return Status(ret.takeError());
+      return Status::FromError(ret.takeError());
     if (ret.get())
       return Status();
   }
 
   // Fall back to object plugins.
-  Status error;
+  const auto &plugin_name = options.GetPluginName().value_or("");
   auto &instances = GetObjectFileInstances().GetInstances();
   for (auto &instance : instances) {
     if (plugin_name.empty() || instance.name == plugin_name) {
-      if (instance.save_core &&
-          instance.save_core(process_sp, outfile, core_style, error))
+      if (instance.save_core && instance.save_core(process_sp, options, error))
         return error;
     }
   }
-  error.SetErrorString(
-      "no ObjectFile plugins were able to save a core for this process");
+
+  // Check to see if any of the object file plugins tried and failed to save.
+  // If none ran, set the error message.
+  if (error.Success())
+    error = Status::FromErrorString(
+        "no ObjectFile plugins were able to save a core for this process");
   return error;
 }
 
@@ -1479,6 +1508,70 @@ LanguageSet PluginManager::GetAllTypeSystemSupportedLanguagesForExpressions() {
   return all;
 }
 
+#pragma mark ScriptedInterfaces
+
+struct ScriptedInterfaceInstance
+    : public PluginInstance<ScriptedInterfaceCreateInstance> {
+  ScriptedInterfaceInstance(llvm::StringRef name, llvm::StringRef description,
+                            ScriptedInterfaceCreateInstance create_callback,
+                            lldb::ScriptLanguage language,
+                            ScriptedInterfaceUsages usages)
+      : PluginInstance<ScriptedInterfaceCreateInstance>(name, description,
+                                                        create_callback),
+        language(language), usages(usages) {}
+
+  lldb::ScriptLanguage language;
+  ScriptedInterfaceUsages usages;
+};
+
+typedef PluginInstances<ScriptedInterfaceInstance> ScriptedInterfaceInstances;
+
+static ScriptedInterfaceInstances &GetScriptedInterfaceInstances() {
+  static ScriptedInterfaceInstances g_instances;
+  return g_instances;
+}
+
+bool PluginManager::RegisterPlugin(
+    llvm::StringRef name, llvm::StringRef description,
+    ScriptedInterfaceCreateInstance create_callback,
+    lldb::ScriptLanguage language, ScriptedInterfaceUsages usages) {
+  return GetScriptedInterfaceInstances().RegisterPlugin(
+      name, description, create_callback, language, usages);
+}
+
+bool PluginManager::UnregisterPlugin(
+    ScriptedInterfaceCreateInstance create_callback) {
+  return GetScriptedInterfaceInstances().UnregisterPlugin(create_callback);
+}
+
+uint32_t PluginManager::GetNumScriptedInterfaces() {
+  return GetScriptedInterfaceInstances().GetInstances().size();
+}
+
+llvm::StringRef PluginManager::GetScriptedInterfaceNameAtIndex(uint32_t index) {
+  return GetScriptedInterfaceInstances().GetNameAtIndex(index);
+}
+
+llvm::StringRef
+PluginManager::GetScriptedInterfaceDescriptionAtIndex(uint32_t index) {
+  return GetScriptedInterfaceInstances().GetDescriptionAtIndex(index);
+}
+
+lldb::ScriptLanguage
+PluginManager::GetScriptedInterfaceLanguageAtIndex(uint32_t idx) {
+  const auto &instances = GetScriptedInterfaceInstances().GetInstances();
+  return idx < instances.size() ? instances[idx].language
+                                : ScriptLanguage::eScriptLanguageNone;
+}
+
+ScriptedInterfaceUsages
+PluginManager::GetScriptedInterfaceUsagesAtIndex(uint32_t idx) {
+  const auto &instances = GetScriptedInterfaceInstances().GetInstances();
+  if (idx >= instances.size())
+    return {};
+  return instances[idx].usages;
+}
+
 #pragma mark REPL
 
 struct REPLInstance : public PluginInstance<REPLCreateInstance> {
@@ -1539,6 +1632,7 @@ void PluginManager::DebuggerInitialize(Debugger &debugger) {
   GetOperatingSystemInstances().PerformDebuggerCallback(debugger);
   GetStructuredDataPluginInstances().PerformDebuggerCallback(debugger);
   GetTracePluginInstances().PerformDebuggerCallback(debugger);
+  GetScriptedInterfaceInstances().PerformDebuggerCallback(debugger);
 }
 
 // This is the preferred new way to register plugin specific settings.  e.g.

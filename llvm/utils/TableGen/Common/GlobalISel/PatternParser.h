@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_GLOBALISEL_PATTERNPARSER_H
-#define LLVM_UTILS_GLOBALISEL_PATTERNPARSER_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_PATTERNPARSER_H
+#define LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_PATTERNPARSER_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
@@ -115,4 +115,4 @@ private:
 } // namespace gi
 } // namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_PATTERNPARSER_H

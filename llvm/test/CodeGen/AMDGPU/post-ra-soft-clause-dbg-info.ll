@@ -8,7 +8,7 @@
 define amdgpu_kernel void @dbg_clause(ptr addrspace(1) %out, ptr addrspace(1) %aptr) !dbg !4 {
 ; GCN-LABEL: dbg_clause:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dword v1, v0, s[2:3]

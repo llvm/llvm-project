@@ -141,7 +141,7 @@ collect the values that they return.
 * `applyLambda([](&&x){}, p1, p2, ...)` is the same thing, but for lambdas
   and other function objects.
 * `applyMem(mf, p1, p2, ...)` is the same thing, but invokes a member
-  function of the result of the first parser for updates in place.
+  function of the result of the first parser.
 
 ### Token Parsers
 Last, we have these basic parsers on which the actual grammar of the Fortran
@@ -178,3 +178,16 @@ is built.  All of the following parsers consume characters acquired from
 Last, a string literal `"..."_debug` denotes a parser that emits the string to
 `llvm::errs` and succeeds.  It is useful for tracing while debugging a parser but should
 obviously not be committed for production code.
+
+### Messages
+A list of generated error and warning messages is maintained in the `ParseState`.
+The parser combinator that handles alternatives (`||` and `first()`) will
+discard the messages from alternatives that fail when there is an alternative
+that succeeds.
+But when no alternative succeeds, and the alternative parser as a whole is
+failing, the messages that survive are chosen from the alternative that
+recognized any input tokens, if only one alternative did so;
+and when multiple alternatives recognized tokens, the messages from the
+alternative that proceeded the furthest into the input are retained.
+This strategy tends to show the most useful error messages to the user
+in situations where a statement fails to parse.

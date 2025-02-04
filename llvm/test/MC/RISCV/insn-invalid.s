@@ -23,3 +23,36 @@
 
 # Make fake mnemonics we use to match these in the tablegened asm match table isn't exposed.
 .insn_i  0x13,  0,  a0, a1, 13, 14 # CHECK: :[[@LINE]]:1: error: unknown directive
+
+.insn . # CHECK: :[[@LINE]]:7: error: expected absolute expression
+.insn 0x2, # CHECK: :[[@LINE]]:12: error: unknown token in expression
+
+.insn 0x4, 0x13, 0 # CHECK: :[[@LINE]]:16: error: invalid operand for instruction
+
+.insn 0x2, 0xffff # CHECK: :[[@LINE]]:7: error: instruction length does not match the encoding
+.insn 0x2, 0xffffffff # CHECK: :[[@LINE]]:7: error: instruction length does not match the encoding
+.insn 0xffffffffff # CHECK: :[[@LINE]]:7: error: encoding value does not fit into instruction
+
+.insn 0x0, 0x0 # CHECK: :[[@LINE]]:7: error: instruction lengths must be a non-zero multiple of two
+.insn 0x1, 0xff # CHECK: :[[@LINE]]:7: error: instruction lengths must be a non-zero multiple of two
+.insn 10, 0x000007f # CHECK: :[[@LINE]]:7: error: instruction lengths over 64 bits are not supported
+
+.insn 0x2, 0x03 # CHECK: :[[@LINE]]:7: error: instruction length does not match the encoding
+.insn 0x2, 0x1f # CHECK: :[[@LINE]]:7: error: instruction length does not match the encoding
+.insn 0x2, 0x3f # CHECK: :[[@LINE]]:7: error: instruction length does not match the encoding
+
+.insn 0x4, 0x00000001 # CHECK: :[[@LINE]]:7: error: instruction length does not match the encoding
+
+.insn 0x6, 0x000000000001 # CHECK: :[[@LINE]]:7: error: compressed instructions are not allowed
+.insn 0x8, 0x0000000000000001 # CHECK: :[[@LINE]]:7: error: compressed instructions are not allowed
+
+.insn 0x2, 0x10001 # CHECK: :[[@LINE]]:7: error: encoding value does not fit into instruction
+.insn 0x4, 0x100000003 # CHECK: :[[@LINE]]:7: error: encoding value does not fit into instruction
+.insn 0x6, 0x100000000001f # CHECK: :[[@LINE]]:7: error: encoding value does not fit into instruction
+.insn 0x8, 0x1000000000000003f # CHECK: :[[@LINE]]:12: error: literal value out of range for directive
+
+.insn 0x0010 # CHECK: :[[@LINE]]:7: error: compressed instructions are not allowed
+.insn 0x2, 0x0001 # CHECK: :[[@LINE]]:7: error: compressed instructions are not allowed
+
+.insn 0x2 + 0x2, 0x3 | (31 # CHECK: :[[@LINE]]:28: error: expected ')'
+.insn 0x4 * , 0xbf | (31 << 59) # CHECK: :[[@LINE]]:13: error: unknown token in expression

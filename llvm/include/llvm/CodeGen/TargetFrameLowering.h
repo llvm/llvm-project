@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/Support/TypeSize.h"
 #include <vector>
 
@@ -51,7 +52,7 @@ public:
   // Maps a callee saved register to a stack slot with a fixed offset.
   struct SpillSlot {
     unsigned Reg;
-    int Offset; // Offset relative to stack pointer on function entry.
+    int64_t Offset; // Offset relative to stack pointer on function entry.
   };
 
   struct DwarfFrameBase {
@@ -66,7 +67,7 @@ public:
       // Used with FrameBaseKind::Register.
       unsigned Reg;
       // Used with FrameBaseKind::CFA.
-      int Offset;
+      int64_t Offset;
       struct WasmFrameBase WasmLoc;
     } Location;
   };
@@ -276,16 +277,14 @@ public:
     return false;
   }
 
-  /// Return true if the target wants to keep the frame pointer regardless of
-  /// the function attribute "frame-pointer".
-  virtual bool keepFramePointer(const MachineFunction &MF) const {
-    return false;
-  }
-
   /// hasFP - Return true if the specified function should have a dedicated
   /// frame pointer register. For most targets this is true only if the function
   /// has variable sized allocas or if frame pointer elimination is disabled.
-  virtual bool hasFP(const MachineFunction &MF) const = 0;
+  /// For all targets, this is false if the function has the naked attribute
+  /// since there is no prologue to set up the frame pointer.
+  bool hasFP(const MachineFunction &MF) const {
+    return !MF.getFunction().hasFnAttribute(Attribute::Naked) && hasFPImpl(MF);
+  }
 
   /// hasReservedCallFrame - Under normal circumstances, when a frame pointer is
   /// not required, we reserve argument space for call sites in the function
@@ -342,6 +341,13 @@ public:
     Register FrameReg;
     return getFrameIndexReference(MF, FI, FrameReg);
   }
+
+  /// getFrameIndexReferenceFromSP - This method returns the offset from the
+  /// stack pointer to the slot of the specified index. This function serves to
+  /// provide a comparable offset from a single reference point (the value of
+  /// the stack-pointer at function entry) that can be used for analysis.
+  virtual StackOffset getFrameIndexReferenceFromSP(const MachineFunction &MF,
+                                                   int FI) const;
 
   /// Returns the callee-saved registers as computed by determineCalleeSaves
   /// in the BitVector \p SavedRegs.
@@ -466,6 +472,18 @@ public:
   /// Return the frame base information to be encoded in the DWARF subprogram
   /// debug info.
   virtual DwarfFrameBase getDwarfFrameBase(const MachineFunction &MF) const;
+
+  /// If frame pointer or base pointer is clobbered by an instruction, we should
+  /// spill/restore it around that instruction.
+  virtual void spillFPBP(MachineFunction &MF) const {}
+
+  /// This method is called at the end of prolog/epilog code insertion, so
+  /// targets can emit remarks based on the final frame layout.
+  virtual void emitRemarks(const MachineFunction &MF,
+                           MachineOptimizationRemarkEmitter *ORE) const {};
+
+protected:
+  virtual bool hasFPImpl(const MachineFunction &MF) const = 0;
 };
 
 } // End llvm namespace

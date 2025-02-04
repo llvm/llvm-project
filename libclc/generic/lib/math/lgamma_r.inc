@@ -21,12 +21,9 @@
  * THE SOFTWARE.
  */
 
-// TODO: Enable half precision when the base version is implemented.
-#if __CLC_FPSIZE > 16
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE lgamma_r(__CLC_GENTYPE x, __CLC_ADDRSPACE __CLC_INTN *iptr) {
     __CLC_INTN private_iptr;
     __CLC_GENTYPE ret = lgamma_r(x, &private_iptr);
     *iptr = private_iptr;
     return ret;
 }
-#endif

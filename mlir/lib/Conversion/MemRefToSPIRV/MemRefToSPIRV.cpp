@@ -21,7 +21,6 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Visitors.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/Support/Debug.h"
 #include <cassert>
 #include <optional>
@@ -166,8 +165,8 @@ static Value castIntNToBool(Location loc, Value srcInt, OpBuilder &builder) {
   if (srcInt.getType().isInteger(1))
     return srcInt;
 
-  auto one = spirv::ConstantOp::getOne(srcInt.getType(), loc, builder);
-  return builder.createOrFold<spirv::IEqualOp>(loc, srcInt, one);
+  auto one = spirv::ConstantOp::getZero(srcInt.getType(), loc, builder);
+  return builder.createOrFold<spirv::INotEqualOp>(loc, srcInt, one);
 }
 
 //===----------------------------------------------------------------------===//
@@ -912,7 +911,7 @@ LogicalResult ReinterpretCastPattern::matchAndRewrite(
     if (auto val = dyn_cast<Value>(offset))
       return val;
 
-    int64_t attrVal = cast<IntegerAttr>(offset.get<Attribute>()).getInt();
+    int64_t attrVal = cast<IntegerAttr>(cast<Attribute>(offset)).getInt();
     Attribute attr = rewriter.getIntegerAttr(intType, attrVal);
     return rewriter.createOrFold<spirv::ConstantOp>(loc, intType, attr);
   }();
@@ -927,7 +926,7 @@ LogicalResult ReinterpretCastPattern::matchAndRewrite(
 //===----------------------------------------------------------------------===//
 
 namespace mlir {
-void populateMemRefToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+void populateMemRefToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                    RewritePatternSet &patterns) {
   patterns.add<AllocaOpPattern, AllocOpPattern, AtomicRMWOpPattern,
                DeallocOpPattern, IntLoadOpPattern, IntStoreOpPattern,

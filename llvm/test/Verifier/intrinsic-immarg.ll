@@ -36,14 +36,6 @@ define void @memcpy_inline_is_volatile(ptr %dest, ptr %src, i1 %is.volatile) {
   ret void
 }
 
-define void @memcpy_inline_variable_size(ptr %dest, ptr %src, i32 %size) {
-  ; CHECK: immarg operand has non-immediate parameter
-  ; CHECK-NEXT: i32 %size
-  ; CHECK-NEXT: call void @llvm.memcpy.inline.p0.p0.i32(ptr %dest, ptr %src, i32 %size, i1 true)
-  call void @llvm.memcpy.inline.p0.p0.i32(ptr %dest, ptr %src, i32 %size, i1 true)
-  ret void
-}
-
 declare void @llvm.memmove.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1)
 define void @memmove(ptr %dest, ptr %src, i1 %is.volatile) {
   ; CHECK: immarg operand has non-immediate parameter
@@ -71,14 +63,14 @@ define void @memset_inline_is_volatile(ptr %dest, i8 %value, i1 %is.volatile) {
   ret void
 }
 
-define void @memset_inline_variable_size(ptr %dest, i8 %value, i32 %size) {
+declare void @llvm.experimental.memset.pattern.p0.i32.i32(ptr nocapture, i32, i32, i1)
+define void @memset_pattern_is_volatile(ptr %dest, i32 %value, i1 %is.volatile) {
   ; CHECK: immarg operand has non-immediate parameter
-  ; CHECK-NEXT: i32 %size
-  ; CHECK-NEXT: call void @llvm.memset.inline.p0.i32(ptr %dest, i8 %value, i32 %size, i1 true)
-  call void @llvm.memset.inline.p0.i32(ptr %dest, i8 %value, i32 %size, i1 true)
+  ; CHECK-NEXT: i1 %is.volatile
+  ; CHECK-NEXT: call void @llvm.experimental.memset.pattern.p0.i32.i32(ptr %dest, i32 %value, i32 8, i1 %is.volatile)
+  call void @llvm.experimental.memset.pattern.p0.i32.i32(ptr %dest, i32 %value, i32 8, i1 %is.volatile)
   ret void
 }
-
 
 declare i64 @llvm.objectsize.i64.p0(ptr, i1, i1, i1)
 define void @objectsize(ptr %ptr, i1 %a, i1 %b, i1 %c) {
@@ -251,6 +243,37 @@ define void @calls_statepoint(ptr addrspace(1) %arg0, i64 %arg1, i32 %arg2, i32 
   %safepoint1 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 %arg2, ptr @f, i32 0, i32 0, i32 0, i32 5, i32 0, i32 0, i32 0, i32 10, i32 0, ptr addrspace(1) %arg0, ptr addrspace(1) %arg0, ptr addrspace(1) %arg0, ptr addrspace(1) %arg0)
   %safepoint2 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr @f, i32 %arg4, i32 0, i32 0, i32 5, i32 0, i32 0, i32 0, i32 10, i32 0, ptr addrspace(1) %arg0, ptr addrspace(1) %arg0, ptr addrspace(1) %arg0, ptr addrspace(1) %arg0)
   %safepoint3 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr @f, i32 0, i32 %arg5, i32 0, i32 5, i32 0, i32 0, i32 0, i32 10, i32 0, ptr addrspace(1) %arg0, ptr addrspace(1) %arg0, ptr addrspace(1) %arg0, ptr addrspace(1) %arg0)
+  ret void
+}
+
+declare void @llvm.experimental.patchpoint.void(i64, i32, ptr, i32, ...)
+declare i64 @llvm.experimental.patchpoint.i64(i64, i32, ptr, i32, ...)
+
+define void @test_patchpoint(i64 %arg0, i32 %arg1, i32 %arg2) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i64 %arg0
+  ; CHECK-NEXT: call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 %arg0, i32 4, ptr null, i32 0)
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %arg1
+  ; CHECK-NEXT: call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 0, i32 %arg1, ptr null, i32 0)
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %arg2
+  ; CHECK-NEXT: call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 0, i32 4, ptr null, i32 %arg2)
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i64 %arg0
+  ; CHECK-NEXT: %patchpoint0 = call i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 %arg0, i32 4, ptr null, i32 0)
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %arg1
+  ; CHECK-NEXT: %patchpoint1 = call i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 0, i32 %arg1, ptr null, i32 0)
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %arg2
+  ; CHECK-NEXT: %patchpoint2 = call i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 0, i32 4, ptr null, i32 %arg2)
+  call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 %arg0, i32 4, ptr null, i32 0)
+  call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 0, i32 %arg1, ptr null, i32 0)
+  call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 0, i32 4, ptr null, i32 %arg2)
+  %patchpoint0 = call i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 %arg0, i32 4, ptr null, i32 0)
+  %patchpoint1 = call i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 0, i32 %arg1, ptr null, i32 0)
+  %patchpoint2 = call i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 0, i32 4, ptr null, i32 %arg2)
   ret void
 }
 

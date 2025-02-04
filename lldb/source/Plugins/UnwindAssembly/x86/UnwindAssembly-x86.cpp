@@ -97,7 +97,7 @@ bool UnwindAssembly_x86::AugmentUnwindPlanFromCallSite(
       first_row->GetCFAValue().GetOffset() != wordsize) {
     return false;
   }
-  UnwindPlan::Row::RegisterLocation first_row_pc_loc;
+  UnwindPlan::Row::AbstractRegisterLocation first_row_pc_loc;
   if (!first_row->GetRegisterInfo(
           pc_regnum.GetAsKind(unwind_plan.GetRegisterKind()),
           first_row_pc_loc) ||
@@ -126,7 +126,7 @@ bool UnwindAssembly_x86::AugmentUnwindPlanFromCallSite(
       // Get the register locations for eip/rip from the first & last rows. Are
       // they both CFA plus an offset?  Is it the same offset?
 
-      UnwindPlan::Row::RegisterLocation last_row_pc_loc;
+      UnwindPlan::Row::AbstractRegisterLocation last_row_pc_loc;
       if (last_row->GetRegisterInfo(
               pc_regnum.GetAsKind(unwind_plan.GetRegisterKind()),
               last_row_pc_loc)) {

@@ -5,6 +5,7 @@
 // CHECK-DAG: [[$MAP2:#map[0-9]*]] = affine_map<(d0, d1) -> (d1)>
 // CHECK-DAG: [[$MAP3:#map[0-9]*]] = affine_map<(d0, d1) -> (d0 - 1)>
 // CHECK-DAG: [[$MAP4:#map[0-9]*]] = affine_map<(d0) -> (d0 + 1)>
+// CHECK-DAG: [[$IDENT:#map[0-9]*]] = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL: func @simple_store_load() {
 func.func @simple_store_load() {
@@ -682,6 +683,24 @@ func.func @redundant_store_elim(%out : memref<512xf32>) {
 // CHECK-NEXT:   affine.store
 // CHECK-NEXT: }
 
+// CHECK-LABEL: func @redundant_store_elim_nonintervening
+
+func.func @redundant_store_elim_nonintervening(%in : memref<512xf32>) {
+  %cf1 = arith.constant 1.0 : f32
+  %out = memref.alloc() :  memref<512xf32>
+  affine.for %i = 0 to 16 {
+    affine.store %cf1, %out[32*%i] : memref<512xf32>
+    %0 = affine.load %in[32*%i] : memref<512xf32>
+    affine.store %0, %out[32*%i] : memref<512xf32>
+  }
+  return
+}
+
+// CHECK: affine.for
+// CHECK-NEXT:   affine.load
+// CHECK-NEXT:   affine.store
+// CHECK-NEXT: }
+
 // CHECK-LABEL: func @redundant_store_elim_fail
 
 func.func @redundant_store_elim_fail(%out : memref<512xf32>) {
@@ -911,5 +930,25 @@ func.func @cross_block() {
 ^bb1(%35: memref<1x13xf32>):
   // CHECK: affine.load
   %69 = affine.load %alloc_99[%c10] : memref<13xi1>
+  return
+}
+
+#map1 = affine_map<(d0) -> (d0)>
+
+// CHECK-LABEL: func @consecutive_store
+func.func @consecutive_store() {
+  // CHECK: %[[CST:.*]] = arith.constant
+  %tmp = arith.constant 1.1 : f16
+  // CHECK: %[[ALLOC:.*]] = memref.alloc
+  %alloc_66 = memref.alloc() : memref<f16, 1>
+  affine.for %arg2 = 4 to 6 {
+    affine.for %arg3 = #map1(%arg2) to #map1(%arg2) step 4 {
+      // CHECK: affine.store %[[CST]], %[[ALLOC]][]
+      affine.store %tmp, %alloc_66[] : memref<f16, 1>
+      // CHECK-NOT: affine.store %[[CST]], %[[ALLOC]][]
+      affine.store %tmp, %alloc_66[] : memref<f16, 1>
+      %270 = affine.load %alloc_66[] : memref<f16, 1>
+    }
+  }
   return
 }

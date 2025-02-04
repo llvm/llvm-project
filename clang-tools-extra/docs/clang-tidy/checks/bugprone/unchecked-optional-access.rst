@@ -8,9 +8,10 @@ results. Therefore, it may be more resource intensive (RAM, CPU) than the
 average clang-tidy check.
 
 This check identifies unsafe accesses to values contained in
-``std::optional<T>``, ``absl::optional<T>``, ``base::Optional<T>``, or
-``folly::Optional<T>`` objects. Below we will refer to all these types
-collectively as ``optional<T>``.
+``std::optional<T>``, ``absl::optional<T>``, ``base::Optional<T>``,
+``folly::Optional<T>``, ``bsl::optional``, or
+``BloombergLP::bdlb::NullableValue`` objects. Below we will refer to all these
+types collectively as ``optional<T>``.
 
 An access to the value of an ``optional<T>`` occurs when one of its ``value``,
 ``operator*``, or ``operator->`` member functions is invoked.  To align with
@@ -74,6 +75,16 @@ For example:
        use(*foo.opt()); // unsafe: it is unclear whether `foo.opt()` has a value.
      }
    }
+
+Exception: accessor methods
+```````````````````````````
+
+The check assumes *accessor* methods of a class are stable, with a heuristic to
+determine which methods are accessors. Specifically, parameter-free ``const``
+methods are treated as accessors. Note that this is not guaranteed to be safe
+-- but, it is widely used (safely) in practice, and so we have chosen to treat
+it as generally safe. Calls to non ``const`` methods are assumed to modify
+the state of the object and affect the stability of earlier accessor calls.
 
 Rely on invariants of uncommon APIs
 -----------------------------------

@@ -1,0 +1,33 @@
+# XFAIL: target-windows
+# RUN: echo quit | %lldb -o "expression a+b" \
+# RUN:   | FileCheck %s --strict-whitespace --check-prefix=CHECK1
+#            (lldb) expression a+b
+# CHECK1:{{^                  \^ \^}}
+# CHECK1: {{^                  | error: use of undeclared identifier 'b'}}
+# CHECK1: {{^                  error: use of undeclared identifier 'a'}}
+
+# RUN: echo quit | %lldb -o "expr a" \
+# RUN:   | FileCheck %s --strict-whitespace --check-prefix=CHECK2
+#            (lldb) expr a 
+# CHECK2:{{^            \^}}
+
+# RUN: echo quit | %lldb -o "expr -i 0 -o 0 -- a" \
+# RUN:   | FileCheck %s --strict-whitespace --check-prefix=CHECK3
+#            (lldb) expr -i 0 -o 0 -- a
+# CHECK3:{{^                         \^}}
+# CHECK3: {{^                         error: use of undeclared identifier 'a'}}
+
+# RUN: echo "int main(){return 0;}">%t.c
+# RUN: %clang_host %t.c -o %t.exe
+# RUN: echo quit | %lldb %t.exe -o "b main" -o r -o \
+# RUN: "expr --top-level -- template<typename T> T FOO(T x) { return x/2;}" -o \
+# RUN: "expression -- FOO(\"\")" 2>&1 | FileCheck %s --check-prefix=CHECK4
+#            (lldb) expression -- FOO("")
+# CHECK4:{{^                     \^}}
+# CHECK4: {{^                     note: in instantiation of function template}}
+# CHECK4: error: <user expression
+
+# RUN: echo expression --\na\n+\nb
+# RUN: cat %S/Inputs/multiline-expr.txt | %lldb 2>&1 | FileCheck %s --strict-whitespace --check-prefix=CHECK5
+# CHECK5: error: <user{{.*}}a
+# CHECK5: error: <user{{.*}}b

@@ -1,3 +1,4 @@
+import("//llvm/utils/gn/build/libs/curl/enable.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("libedit.gni")
@@ -52,6 +53,12 @@ write_cmake_config("Config") {
       "LLDB_ENABLE_POSIX=1",
       "LLDB_ENABLE_TERMIOS=1",
     ]
+  }
+
+  if (llvm_enable_libcurl) {
+    values += [ "LLVM_ENABLE_CURL=1" ]
+  } else {
+    values += [ "LLVM_ENABLE_CURL=" ]
   }
 
   if (current_os == "win" || current_os == "linux" || current_os == "android") {

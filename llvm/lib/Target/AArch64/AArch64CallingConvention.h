@@ -52,6 +52,9 @@ bool CC_AArch64_Arm64EC_CFGuard_Check(unsigned ValNo, MVT ValVT, MVT LocVT,
 bool CC_AArch64_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
                     CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
                     CCState &State);
+bool CC_AArch64_Preserve_None(unsigned ValNo, MVT ValVT, MVT LocVT,
+                              CCValAssign::LocInfo LocInfo,
+                              ISD::ArgFlagsTy ArgFlags, CCState &State);
 bool RetCC_AArch64_AAPCS(unsigned ValNo, MVT ValVT, MVT LocVT,
                          CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
                          CCState &State);

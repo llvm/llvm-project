@@ -133,5 +133,5 @@ void test_kfree_ZERO_SIZE_PTR(void) {
 
 void test_kfree_other_constant_value(void) {
   void *ptr = (void *)1;
-  kfree(ptr); // expected-warning{{Argument to kfree() is a constant address (1)}}
+  kfree(ptr); // expected-warning{{Argument to 'kfree()' is a constant address (1)}}
 }

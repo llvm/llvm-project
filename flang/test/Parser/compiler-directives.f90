@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fdebug-unparse %s 2>&1
+! RUN: %flang_fc1 -fdebug-unparse %s 2>&1 | FileCheck %s
 
 ! Test that compiler directives can appear in various places.
 
@@ -28,3 +28,21 @@ module m
      !dir$  align : 1024 :: d
   end type stuff
 end
+
+subroutine vector_always
+  !dir$ vector always
+  ! CHECK: !DIR$ VECTOR ALWAYS
+  do i=1,10
+  enddo
+end subroutine
+
+subroutine unroll
+  !dir$ unroll
+  ! CHECK: !DIR$ UNROLL
+  do i=1,10
+  enddo
+  !dir$ unroll 2
+  ! CHECK: !DIR$ UNROLL 2
+  do i=1,10
+  enddo
+end subroutine

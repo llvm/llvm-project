@@ -9,13 +9,14 @@
 #ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_RWLOCKATTR_GETPSHARED_H
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_RWLOCKATTR_GETPSHARED_H
 
+#include "src/__support/macros/config.h"
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int pthread_rwlockattr_getpshared(const pthread_rwlockattr_t *attr,
                                   int *pshared);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_RWLOCKATTR_GETPSHARED_H

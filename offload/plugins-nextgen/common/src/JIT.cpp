@@ -51,31 +51,9 @@ namespace {
 
 bool isImageBitcode(const __tgt_device_image &Image) {
   StringRef Binary(reinterpret_cast<const char *>(Image.ImageStart),
-                   target::getPtrDiff(Image.ImageEnd, Image.ImageStart));
+                   utils::getPtrDiff(Image.ImageEnd, Image.ImageStart));
 
   return identify_magic(Binary) == file_magic::bitcode;
-}
-
-std::once_flag InitFlag;
-
-void init(Triple TT) {
-  codegen::RegisterCodeGenFlags();
-#ifdef LIBOMPTARGET_JIT_NVPTX
-  if (TT.isNVPTX()) {
-    LLVMInitializeNVPTXTargetInfo();
-    LLVMInitializeNVPTXTarget();
-    LLVMInitializeNVPTXTargetMC();
-    LLVMInitializeNVPTXAsmPrinter();
-  }
-#endif
-#ifdef LIBOMPTARGET_JIT_AMDGPU
-  if (TT.isAMDGPU()) {
-    LLVMInitializeAMDGPUTargetInfo();
-    LLVMInitializeAMDGPUTarget();
-    LLVMInitializeAMDGPUTargetMC();
-    LLVMInitializeAMDGPUAsmPrinter();
-  }
-#endif
 }
 
 Expected<std::unique_ptr<Module>>
@@ -91,7 +69,7 @@ createModuleFromMemoryBuffer(std::unique_ptr<MemoryBuffer> &MB,
 Expected<std::unique_ptr<Module>>
 createModuleFromImage(const __tgt_device_image &Image, LLVMContext &Context) {
   StringRef Data((const char *)Image.ImageStart,
-                 target::getPtrDiff(Image.ImageEnd, Image.ImageStart));
+                 utils::getPtrDiff(Image.ImageEnd, Image.ImageStart));
   std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(
       Data, /*BufferName=*/"", /*RequiresNullTerminator=*/false);
   return createModuleFromMemoryBuffer(MB, Context);
@@ -148,7 +126,23 @@ createTargetMachine(Module &M, std::string CPU, unsigned OptLevel) {
 } // namespace
 
 JITEngine::JITEngine(Triple::ArchType TA) : TT(Triple::getArchTypeName(TA)) {
-  std::call_once(InitFlag, init, TT);
+  codegen::RegisterCodeGenFlags();
+#ifdef LIBOMPTARGET_JIT_NVPTX
+  if (TT.isNVPTX()) {
+    LLVMInitializeNVPTXTargetInfo();
+    LLVMInitializeNVPTXTarget();
+    LLVMInitializeNVPTXTargetMC();
+    LLVMInitializeNVPTXAsmPrinter();
+  }
+#endif
+#ifdef LIBOMPTARGET_JIT_AMDGPU
+  if (TT.isAMDGPU()) {
+    LLVMInitializeAMDGPUTargetInfo();
+    LLVMInitializeAMDGPUTarget();
+    LLVMInitializeAMDGPUTargetMC();
+    LLVMInitializeAMDGPUAsmPrinter();
+  }
+#endif
 }
 
 void JITEngine::opt(TargetMachine *TM, TargetLibraryInfoImpl *TLII, Module &M,
@@ -181,8 +175,7 @@ void JITEngine::codegen(TargetMachine *TM, TargetLibraryInfoImpl *TLII,
                         Module &M, raw_pwrite_stream &OS) {
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(*TLII));
-  MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(
-      reinterpret_cast<LLVMTargetMachine *>(TM));
+  MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(TM);
   TM->addPassesToEmitFile(PM, OS, nullptr,
                           TT.isNVPTX() ? CodeGenFileType::AssemblyFile
                                        : CodeGenFileType::ObjectFile,
@@ -229,7 +222,7 @@ JITEngine::backend(Module &M, const std::string &ComputeUnitKind,
     if (EC)
       return createStringError(
           EC, "Could not open %s to write the post-opt IR module\n",
-          PreOptIRModuleFileName.get().c_str());
+          PostOptIRModuleFileName.get().c_str());
     M.print(FD, nullptr);
   }
 
@@ -328,20 +321,4 @@ JITEngine::process(const __tgt_device_image &Image,
     return compile(Image, ComputeUnitKind, PostProcessing);
 
   return &Image;
-}
-
-Expected<bool> JITEngine::checkBitcodeImage(StringRef Buffer) const {
-  TimeTraceScope TimeScope("Check bitcode image");
-
-  assert(identify_magic(Buffer) == file_magic::bitcode &&
-         "Input is not bitcode");
-
-  LLVMContext Context;
-  auto ModuleOrErr = getLazyBitcodeModule(MemoryBufferRef(Buffer, ""), Context,
-                                          /*ShouldLazyLoadMetadata=*/true);
-  if (!ModuleOrErr)
-    return ModuleOrErr.takeError();
-  Module &M = **ModuleOrErr;
-
-  return Triple(M.getTargetTriple()).getArch() == TT.getArch();
 }

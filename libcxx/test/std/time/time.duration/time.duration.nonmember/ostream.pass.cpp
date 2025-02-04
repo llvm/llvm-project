@@ -217,9 +217,34 @@ static void test_units() {
 }
 
 template <class CharT>
+static void test_unsigned_types() {
+  // Reported in https://github.com/llvm/llvm-project/issues/96820
+  using namespace std::literals::chrono_literals;
+
+  // C locale
+  assert(stream_c_locale<CharT>(std::chrono::duration<unsigned short, std::atto>(0)) == SV("0as"));
+  assert(stream_c_locale<CharT>(std::chrono::duration<unsigned, std::femto>(0)) == SV("0fs"));
+  assert(stream_c_locale<CharT>(std::chrono::duration<unsigned long, std::pico>(0)) == SV("0ps"));
+  assert(stream_c_locale<CharT>(std::chrono::duration<unsigned long long, std::nano>(0)) == SV("0ns"));
+
+  // fr_FR locale
+  assert(stream_fr_FR_locale<CharT>(std::chrono::duration<unsigned short, std::atto>(0)) == SV("0as"));
+  assert(stream_fr_FR_locale<CharT>(std::chrono::duration<unsigned, std::femto>(0)) == SV("0fs"));
+  assert(stream_fr_FR_locale<CharT>(std::chrono::duration<unsigned long, std::pico>(0)) == SV("0ps"));
+  assert(stream_fr_FR_locale<CharT>(std::chrono::duration<unsigned long long, std::nano>(0)) == SV("0ns"));
+
+  // ja_JP locale
+  assert(stream_ja_JP_locale<CharT>(std::chrono::duration<unsigned short, std::atto>(0)) == SV("0as"));
+  assert(stream_ja_JP_locale<CharT>(std::chrono::duration<unsigned, std::femto>(0)) == SV("0fs"));
+  assert(stream_ja_JP_locale<CharT>(std::chrono::duration<unsigned long, std::pico>(0)) == SV("0ps"));
+  assert(stream_ja_JP_locale<CharT>(std::chrono::duration<unsigned long long, std::nano>(0)) == SV("0ns"));
+}
+
+template <class CharT>
 static void test() {
   test_values<CharT>();
   test_units<CharT>();
+  test_unsigned_types<CharT>();
 }
 
 int main(int, char**) {

@@ -58,7 +58,8 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK: namespace detail {
 // CHECK: class AOpGenericAdaptorBase {
 // CHECK: public:
-// CHECK:   AOpGenericAdaptorBase(AOp{{[[:space:]]}}
+// CHECK:   AOpGenericAdaptorBase(::mlir::DictionaryAttr attrs = {}, const ::mlir::EmptyProperties &properties = {}, ::mlir::RegionRange regions = {}) : odsAttrs(attrs), odsRegions(regions)
+// CHECK:   AOpGenericAdaptorBase(::mlir::Operation *op) : odsAttrs(op->getRawDictionaryAttrs()), odsOpName(op->getName()), odsRegions(op->getRegions()) {}
 // CHECK:   ::mlir::IntegerAttr getAttr1Attr();
 // CHECK:   uint32_t getAttr1();
 // CHECK:   ::mlir::FloatAttr getSomeAttr2Attr();
@@ -71,8 +72,9 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK: template <typename RangeT>
 // CHECK: class AOpGenericAdaptor : public detail::AOpGenericAdaptorBase {
 // CHECK: public:
-// CHECK:   AOpGenericAdaptor(RangeT values,
-// CHECK-SAME: odsOperands(values)
+// CHECK:   AOpGenericAdaptor(RangeT values, ::mlir::DictionaryAttr attrs = {}, const ::mlir::EmptyProperties &properties = {}, ::mlir::RegionRange regions = {}) : Base(attrs, properties, regions), odsOperands(values) {}
+// CHECK:   AOpGenericAdaptor(RangeT values, ::mlir::DictionaryAttr attrs, ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions = {}) : AOpGenericAdaptor(values, attrs, (properties ? *properties.as<::mlir::EmptyProperties *>() : ::mlir::EmptyProperties{}), regions) {}
+// CHECK:   AOpGenericAdaptor(RangeT values, const AOpGenericAdaptorBase &base) : Base(base), odsOperands(values) {}
 // CHECK:   RangeT getODSOperands(unsigned index) {
 // CHECK:   ValueT getA() {
 // CHECK:   RangeT getB() {
@@ -83,7 +85,7 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK: class AOpAdaptor : public AOpGenericAdaptor<::mlir::ValueRange> {
 // CHECK: public:
 // CHECK:   AOpAdaptor(AOp
-// CHECK:   ::mlir::LogicalResult verify(
+// CHECK:   ::llvm::LogicalResult verify(
 // CHECK: };
 
 // CHECK: class AOp : public ::mlir::Op<AOp, ::mlir::OpTrait::AtLeastNRegions<1>::Impl, ::mlir::OpTrait::AtLeastNResults<1>::Impl, ::mlir::OpTrait::ZeroSuccessors, ::mlir::OpTrait::AtLeastNOperands<1>::Impl, ::mlir::OpTrait::OpInvariants, ::mlir::OpTrait::IsIsolatedFromAbove
@@ -119,23 +121,16 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:   static void build(::mlir::OpBuilder &, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes, unsigned numRegions)
 // CHECK:   static ::mlir::ParseResult parse(::mlir::OpAsmParser &parser, ::mlir::OperationState &result);
 // CHECK:   void print(::mlir::OpAsmPrinter &p);
-// CHECK:   ::mlir::LogicalResult verifyInvariants();
+// CHECK:   ::llvm::LogicalResult verifyInvariants();
 // CHECK:   static void getCanonicalizationPatterns(::mlir::RewritePatternSet &results, ::mlir::MLIRContext *context);
-// CHECK:   ::mlir::LogicalResult fold(FoldAdaptor adaptor, ::llvm::SmallVectorImpl<::mlir::OpFoldResult> &results);
+// CHECK:   ::llvm::LogicalResult fold(FoldAdaptor adaptor, ::llvm::SmallVectorImpl<::mlir::OpFoldResult> &results);
 // CHECK:   // Display a graph for debugging purposes.
 // CHECK:   void displayGraph();
 // CHECK: };
 
 // DEFS-LABEL: NS::AOp definitions
 
-// DEFS: AOpGenericAdaptorBase::AOpGenericAdaptorBase(::mlir::DictionaryAttr attrs, const ::mlir::EmptyProperties &properties, ::mlir::RegionRange regions) : odsAttrs(attrs), odsRegions(regions)
-
 // Check that `getAttrDictionary()` is used when not using properties.
-
-// DEFS: AOpGenericAdaptorBase::AOpGenericAdaptorBase(AOp op)
-// DEFS-SAME: op->getAttrDictionary()
-// DEFS-SAME: p.getProperties()
-// DEFS-SAME: op->getRegions()
 
 // DECLS: ::mlir::RegionRange AOpGenericAdaptorBase::getSomeRegions()
 // DECLS-NEXT: return odsRegions.drop_front(1);
@@ -211,7 +206,12 @@ def NS_FOp : NS_Op<"op_with_all_types_constraint",
 }
 
 // CHECK-LABEL: class FOp :
-// CHECK: static ::mlir::LogicalResult inferReturnTypes
+// CHECK: static ::llvm::LogicalResult inferReturnTypes
+
+// DEFS: void FOp::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::Value a) {
+// DEFS:   if (::mlir::succeeded(FOp::inferReturnTypes(odsBuilder.getContext(),
+// DEFS:   else
+// DEFS:     ::mlir::detail::reportFatalInferReturnTypesError(odsState);
 
 def NS_GOp : NS_Op<"op_with_fixed_return_type", []> {
   let arguments = (ins AnyType:$a);
@@ -219,7 +219,7 @@ def NS_GOp : NS_Op<"op_with_fixed_return_type", []> {
 }
 
 // CHECK-LABEL: class GOp :
-// CHECK: static ::mlir::LogicalResult inferReturnTypes
+// CHECK: static ::llvm::LogicalResult inferReturnTypes
 
 // Check default value for collective params builder. Check that other builders
 // are generated as well.
@@ -344,12 +344,11 @@ def NS_NOp : NS_Op<"op_with_properties", []> {
   let arguments = (ins Property<"unsigned">:$value);
 }
 
-// Check that `getDiscardableAttrDictionary()` is used with properties.
-
-// DEFS: NOpGenericAdaptorBase::NOpGenericAdaptorBase(NOp op) : NOpGenericAdaptorBase(
-// DEFS-SAME: op->getDiscardableAttrDictionary()
-// DEFS-SAME: op.getProperties()
-// DEFS-SAME: op->getRegions()
+// DEFS: NOpGenericAdaptorBase::NOpGenericAdaptorBase(NOp op) :
+// DEFS-SAME: odsAttrs(op->getRawDictionaryAttrs())
+// DEFS-SAME: odsOpName(op->getName())
+// DEFS-SAME: properties(op.getProperties())
+// DEFS-SAME: odsRegions(op->getRegions())
 
 // Test that type defs have the proper namespaces when used as a constraint.
 // ---

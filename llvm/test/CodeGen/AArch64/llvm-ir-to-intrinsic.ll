@@ -1165,9 +1165,7 @@ define <vscale x 2 x i64> @fshl_rot_const_i64(<vscale x 2 x i64> %a){
 ; CHECK-NEXT:    lsl z0.d, z0.d, #3
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %insert = insertelement <vscale x 2 x i64> poison, i64 3, i32 0
-  %shuf = shufflevector <vscale x 2 x i64> %insert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-  %fshl = call <vscale x 2 x i64> @llvm.fshl.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %a, <vscale x 2 x i64> %shuf)
+  %fshl = call <vscale x 2 x i64> @llvm.fshl.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %a, <vscale x 2 x i64> splat(i64 3))
   ret <vscale x 2 x i64> %fshl
 }
 

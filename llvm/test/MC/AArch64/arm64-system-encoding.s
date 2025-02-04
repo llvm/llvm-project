@@ -1,5 +1,5 @@
 ; RUN: not llvm-mc -triple arm64-apple-darwin -show-encoding < %s 2> %t | FileCheck %s
-; RUN: not llvm-mc -triple arm64-apple-darwin -mattr=+v8.3a -show-encoding < %s 2> %t | FileCheck %s --check-prefix=CHECK-V83
+; RUN: not llvm-mc -triple arm64-apple-darwin -mattr=+ccidx -show-encoding < %s 2> %t | FileCheck %s --check-prefix=CHECK-V83
 ; RUN: FileCheck --check-prefix=CHECK-ERRORS < %t %s
 
 foo:
@@ -59,6 +59,7 @@ foo:
 ; MSR/MRS instructions
 ;-----------------------------------------------------------------------------
   msr ACTLR_EL1, x3
+  msr ACTLR_EL12, x3
   msr ACTLR_EL2, x3
   msr ACTLR_EL3, x3
   msr AFSR0_EL1, x3
@@ -167,6 +168,7 @@ foo:
   msr  S0_0_C0_C0_0, x0
   msr  S1_2_C3_C4_5, x2
 ; CHECK: msr ACTLR_EL1, x3              ; encoding: [0x23,0x10,0x18,0xd5]
+; CHECK: msr ACTLR_EL12, x3             ; encoding: [0x23,0x10,0x1d,0xd5]
 ; CHECK: msr ACTLR_EL2, x3              ; encoding: [0x23,0x10,0x1c,0xd5]
 ; CHECK: msr ACTLR_EL3, x3              ; encoding: [0x23,0x10,0x1e,0xd5]
 ; CHECK: msr AFSR0_EL1, x3              ; encoding: [0x03,0x51,0x18,0xd5]
@@ -280,6 +282,7 @@ foo:
 ; CHECK-ERRORS: :[[@LINE-1]]:7: error: expected writable system register or pstate
 
   mrs x3, ACTLR_EL1
+  mrs x3, ACTLR_EL12
   mrs x3, ACTLR_EL2
   mrs x3, ACTLR_EL3
   mrs x3, AFSR0_EL1
@@ -501,6 +504,7 @@ foo:
   mrs x3, S3_3_c11_c1_4
 
 ; CHECK: mrs x3, ACTLR_EL1              ; encoding: [0x23,0x10,0x38,0xd5]
+; CHECK: mrs x3, ACTLR_EL12             ; encoding: [0x23,0x10,0x3d,0xd5]
 ; CHECK: mrs x3, ACTLR_EL2              ; encoding: [0x23,0x10,0x3c,0xd5]
 ; CHECK: mrs x3, ACTLR_EL3              ; encoding: [0x23,0x10,0x3e,0xd5]
 ; CHECK: mrs x3, AFSR0_EL1              ; encoding: [0x03,0x51,0x38,0xd5]

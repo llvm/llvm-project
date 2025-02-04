@@ -11,7 +11,7 @@
 ! RUN: %flang -### --target=x86_64-unknown-dragonfly %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,UNIX,UNIX-F128%f128-lib
 ! RUN: %flang -### --target=x86_64-unknown-haiku %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,HAIKU,HAIKU-F128%f128-lib
 ! RUN: %flang -### --target=x86_64-windows-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MINGW,MINGW-F128%f128-lib
-! RUN: %flang -### --target=aarch64-unknown-linux-gnu %S/Inputs/hello.f90 -lFortran_main 2>&1 | FileCheck %s --check-prefixes=DEPRECATED
+! RUN: %flang -### -rtlib=compiler-rt --target=aarch64-linux-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,UNIX,COMPILER-RT
 
 ! NOTE: Clang's driver library, clangDriver, usually adds 'oldnames' on Windows,
 !       but it is not needed when compiling Fortran code and they might bring in
@@ -29,16 +29,15 @@
 !       executable and may find the GNU linker from MinGW or Cygwin.
 ! UNIX-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! UNIX-SAME: "[[object_file]]"
-! UNIX-SAME: "--whole-archive" "-lFortran_main" "--no-whole-archive"
 ! UNIX-F128NONE-NOT: FortranFloat128Math
 ! SOLARIS-F128NONE-NOT: FortranFloat128Math
 ! UNIX-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "--as-needed" "-lquadmath" "--no-as-needed"
 ! SOLARIS-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "-z" "ignore" "-lquadmath" "-z" "record"
 ! UNIX-SAME: "-lFortranRuntime" "-lFortranDecimal" "-lm"
+! COMPILER-RT: "{{.*}}{{\\|/}}libclang_rt.builtins.a"
 
 ! DARWIN-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! DARWIN-SAME: "[[object_file]]"
-! DARWIN-SAME: -lFortran_main
 ! DARWIN-F128NONE-NOT: FortranFloat128Math
 ! DARWIN-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "--as-needed" "-lquadmath" "--no-as-needed"
 ! DARWIN-SAME: -lFortranRuntime
@@ -46,14 +45,12 @@
 
 ! HAIKU-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! HAIKU-SAME: "[[object_file]]"
-! HAIKU-SAME: "--whole-archive" "-lFortran_main" "--no-whole-archive"
 ! HAIKU-F128NONE-NOT: FortranFloat128Math
 ! HAIKU-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "--as-needed" "-lquadmath" "--no-as-needed"
 ! HAIKU-SAME: "-lFortranRuntime" "-lFortranDecimal"
 
 ! MINGW-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! MINGW-SAME: "[[object_file]]"
-! MINGW-SAME: -lFortran_main
 ! MINGW-F128NONE-NOT: FortranFloat128Math
 ! MINGW-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "--as-needed" "-lquadmath" "--no-as-needed"
 ! MINGW-SAME: -lFortranRuntime
@@ -67,5 +64,5 @@
 ! MSVC-SAME: /subsystem:console
 ! MSVC-SAME: "[[object_file]]"
 
-! Check that we warn when using -lFortran_main
-! DEPRECATED: warning: argument '-lFortran_main' is deprecated, see the Flang driver documentation for correct usage [-Wdeprecated]
+! COMPILER-RT-NOT: "-lgcc"
+! COMPILER-RT-NOT: "-lgcc_s"

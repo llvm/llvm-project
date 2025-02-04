@@ -227,14 +227,17 @@ contains
   real function f1(x, y)
     real, intent(in) :: x
     logical, intent(in) :: y
+    f1 = 0.
   end
   integer function f2(x, y)
     integer, intent(in) :: x
     logical, intent(in) :: y
+    f2 = 0.
   end
   real function f3(x, y)
     real, value :: x
     logical, value :: y
+    f3 = 0.
   end
 end module
 
@@ -447,12 +450,15 @@ module m19
 contains
   integer function f1(i)
     integer, intent(in) :: i
+    f1 = 0
   end
   integer function f2(i, j)
     integer, value :: i, j
+    f2 = 0
   end
   integer function f3(i, j)
     integer, intent(in) :: i, j
+    f3 = 0
   end
 end
 

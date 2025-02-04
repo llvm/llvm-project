@@ -36,6 +36,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <optional>
 
 namespace clang {
   class ASTContext;
@@ -268,7 +269,7 @@ public:
 
   enum TSC {
     TSC_unspecified,
-    TSC_imaginary,
+    TSC_imaginary, // Unsupported
     TSC_complex
   };
 
@@ -321,6 +322,9 @@ public:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) \
   static const TST TST_##ImgType##_t = clang::TST_##ImgType##_t;
 #include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  static const TST TST_##Name = clang::TST_##Name;
+#include "clang/Basic/HLSLIntangibleTypes.def"
   static const TST TST_error = clang::TST_error;
 
   // type-qualifiers
@@ -874,7 +878,7 @@ public:
   }
 
   /// Finish - This does final analysis of the declspec, issuing diagnostics for
-  /// things like "_Imaginary" (lacking an FP type).  After calling this method,
+  /// things like "_Complex" (lacking an FP type).  After calling this method,
   /// DeclSpec is guaranteed self-consistent, even if an error occurred.
   void Finish(Sema &S, const PrintingPolicy &Policy);
 
@@ -1790,6 +1794,8 @@ public:
   struct Binding {
     IdentifierInfo *Name;
     SourceLocation NameLoc;
+    std::optional<ParsedAttributes> Attrs;
+    SourceLocation EllipsisLoc;
   };
 
 private:
@@ -1809,15 +1815,15 @@ public:
       : Bindings(nullptr), NumBindings(0), DeleteBindings(false) {}
   DecompositionDeclarator(const DecompositionDeclarator &G) = delete;
   DecompositionDeclarator &operator=(const DecompositionDeclarator &G) = delete;
-  ~DecompositionDeclarator() {
-    if (DeleteBindings)
-      delete[] Bindings;
-  }
+  ~DecompositionDeclarator() { clear(); }
 
   void clear() {
     LSquareLoc = RSquareLoc = SourceLocation();
     if (DeleteBindings)
       delete[] Bindings;
+    else
+      llvm::for_each(llvm::MutableArrayRef(Bindings, NumBindings),
+                     [](Binding &B) { B.Attrs.reset(); });
     Bindings = nullptr;
     NumBindings = 0;
     DeleteBindings = false;
@@ -2339,10 +2345,10 @@ public:
   }
 
   /// Set the decomposition bindings for this declarator.
-  void
-  setDecompositionBindings(SourceLocation LSquareLoc,
-                           ArrayRef<DecompositionDeclarator::Binding> Bindings,
-                           SourceLocation RSquareLoc);
+  void setDecompositionBindings(
+      SourceLocation LSquareLoc,
+      MutableArrayRef<DecompositionDeclarator::Binding> Bindings,
+      SourceLocation RSquareLoc);
 
   /// AddTypeInfo - Add a chunk to this declarator. Also extend the range to
   /// EndLoc, which should be the last token of the chunk.

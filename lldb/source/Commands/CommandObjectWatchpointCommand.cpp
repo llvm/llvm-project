@@ -309,9 +309,8 @@ are no syntax errors may indicate that a function was declared but never called.
         m_stop_on_error =
             OptionArgParser::ToBoolean(option_arg, false, &success);
         if (!success)
-          error.SetErrorStringWithFormat(
-              "invalid value for stop-on-error: \"%s\"",
-              option_arg.str().c_str());
+          return Status::FromErrorStringWithFormatv(
+              "invalid value for stop-on-error: \"{0}\"", option_arg);
       } break;
 
       case 'F':
@@ -355,9 +354,9 @@ are no syntax errors may indicate that a function was declared but never called.
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = &GetSelectedTarget();
+    Target &target = GetTarget();
 
-    const WatchpointList &watchpoints = target->GetWatchpointList();
+    const WatchpointList &watchpoints = target.GetWatchpointList();
     size_t num_watchpoints = watchpoints.GetSize();
 
     if (num_watchpoints == 0) {
@@ -384,7 +383,7 @@ protected:
     for (size_t i = 0; i < count; ++i) {
       uint32_t cur_wp_id = valid_wp_ids.at(i);
       if (cur_wp_id != LLDB_INVALID_WATCH_ID) {
-        Watchpoint *wp = target->GetWatchpointList().FindByID(cur_wp_id).get();
+        Watchpoint *wp = target.GetWatchpointList().FindByID(cur_wp_id).get();
         // Sanity check wp first.
         if (wp == nullptr)
           continue;
@@ -450,9 +449,9 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = &GetSelectedTarget();
+    Target &target = GetTarget();
 
-    const WatchpointList &watchpoints = target->GetWatchpointList();
+    const WatchpointList &watchpoints = target.GetWatchpointList();
     size_t num_watchpoints = watchpoints.GetSize();
 
     if (num_watchpoints == 0) {
@@ -478,7 +477,7 @@ protected:
     for (size_t i = 0; i < count; ++i) {
       uint32_t cur_wp_id = valid_wp_ids.at(i);
       if (cur_wp_id != LLDB_INVALID_WATCH_ID) {
-        Watchpoint *wp = target->GetWatchpointList().FindByID(cur_wp_id).get();
+        Watchpoint *wp = target.GetWatchpointList().FindByID(cur_wp_id).get();
         if (wp)
           wp->ClearCallback();
       } else {
@@ -505,9 +504,9 @@ public:
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = &GetSelectedTarget();
+    Target &target = GetTarget();
 
-    const WatchpointList &watchpoints = target->GetWatchpointList();
+    const WatchpointList &watchpoints = target.GetWatchpointList();
     size_t num_watchpoints = watchpoints.GetSize();
 
     if (num_watchpoints == 0) {
@@ -533,7 +532,7 @@ protected:
     for (size_t i = 0; i < count; ++i) {
       uint32_t cur_wp_id = valid_wp_ids.at(i);
       if (cur_wp_id != LLDB_INVALID_WATCH_ID) {
-        Watchpoint *wp = target->GetWatchpointList().FindByID(cur_wp_id).get();
+        Watchpoint *wp = target.GetWatchpointList().FindByID(cur_wp_id).get();
 
         if (wp) {
           const WatchpointOptions *wp_options = wp->GetOptions();

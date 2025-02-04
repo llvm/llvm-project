@@ -1,5 +1,5 @@
-# Check that llvm-bolt is able to parse DWARF expressions in CFI instructions,
-# store them in memory and correctly write them back to the output binary.
+## Check that llvm-bolt is able to parse DWARF expressions in CFI instructions,
+## store them in memory and correctly write them back to the output binary.
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe

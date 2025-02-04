@@ -13,8 +13,8 @@ int main() {
   // CHECK: [[ADDR]] is located 0 bytes inside of 42-byte region
   // CHECK: freed by thread T0 here:
   // CHECK-NEXT: {{#0 .* free }}
-  // CHECK: {{ #[1-2] .* main .*malloc_uaf.cpp}}:[[@LINE-8]]
+  // CHECK: {{ #[1-3] .* main .*malloc_uaf.cpp}}:[[@LINE-8]]
   // CHECK: previously allocated by thread T0 here:
   // CHECK-NEXT: {{#0 .* malloc }}
-  // CHECK: {{ #[1-2] .* main .*malloc_uaf.cpp}}:[[@LINE-12]]
+  // CHECK: {{ #[1-3] .* main .*malloc_uaf.cpp}}:[[@LINE-12]]
 }

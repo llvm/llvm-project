@@ -195,21 +195,20 @@ void xxx(int argc) {
 #pragma omp single
   argc = x;
 // CHECK-NEXT:  [[#TARGET:]]:
-// CHECK-SAME:  [B1.[[#TARGET+10]]]
-// CHECK-NEXT:  [[#TARGET+1]]: [B1.[[#TARGET+10]]] (ImplicitCastExpr, LValueToRValue, int)
-// CHECK-NEXT:  [[#TARGET+2]]: [B1.[[#TARGET+9]]]
-// CHECK-NEXT:  [[#TARGET+3]]: [B1.[[#TARGET+9]]] = [B1.[[#TARGET+1]]]
+// CHECK-SAME:  [B1.[[#TARGET+9]]]
+// CHECK-NEXT:  [[#TARGET+1]]: [B1.[[#TARGET+9]]] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-NEXT:  [[#TARGET+2]]: [B1.[[#TARGET+8]]]
+// CHECK-NEXT:  [[#TARGET+3]]: [B1.[[#TARGET+8]]] = [B1.[[#TARGET+1]]]
 // CHECK-NEXT:  [[#TARGET+4]]: cond
 // CHECK-NEXT:  [[#TARGET+5]]: [B1.[[#TARGET+4]]] (ImplicitCastExpr, LValueToRValue, int)
 // CHECK-NEXT:  [[#TARGET+6]]: [B1.[[#TARGET+5]]] (ImplicitCastExpr, IntegralToBoolean, _Bool)
 // CHECK-NEXT:  [[#TARGET+7]]: fp
-// CHECK-NEXT:  [[#TARGET+8]]: rd
-// CHECK-NEXT:  [[#TARGET+9]]: argc
-// CHECK-NEXT:  [[#TARGET+10]]: x
-// CHECK-NEXT:  [[#TARGET+11]]: #pragma omp target depend(in : argc) if(cond) firstprivate(fp) reduction(-: rd)
+// CHECK-NEXT:  [[#TARGET+8]]: argc
+// CHECK-NEXT:  [[#TARGET+9]]: x
+// CHECK-NEXT:  [[#TARGET+10]]: #pragma omp target depend(in : argc) if(cond) firstprivate(fp)
 // CHECK-NEXT:    [B1.[[#TARGET+3]]];
 #pragma omp target depend(in \
-                          : argc) if(cond) firstprivate(fp) reduction(-:rd)
+                          : argc) if(cond) firstprivate(fp)
   argc = x;
 // CHECK-NEXT:  [[#TP:]]:
 // CHECK-SAME:  [B1.[[#TP+11]]]

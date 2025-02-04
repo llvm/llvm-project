@@ -75,8 +75,6 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple m68k
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple m68k-linux
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple m68k-netbsd
-// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple le32-nacl
-// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple le64
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple ppc
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple ppc-freebsd
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple ppc-netbsd
@@ -173,6 +171,7 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple spir64
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple spirv32
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple spirv64
+// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple spirv64-amd-amdhsa
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple wasm32
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple wasm32-wasi
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple wasm32-emscripten
@@ -180,8 +179,6 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple wasm64-wasi
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple wasm64-emscripten
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple dxil
-// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple renderscript32
-// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple renderscript64
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple ve
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple csky
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple csky-linux

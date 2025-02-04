@@ -51,13 +51,13 @@ void test0(NSArray *array) {
 // CHECK-LP64-NEXT: [[T0:%.*]] = icmp eq i64 [[SIZE]], 0
 // CHECK-LP64-NEXT: br i1 [[T0]]
 
-// CHECK-LP64:      [[T0:%.*]] = getelementptr inbounds [[STATE_T]], ptr [[STATE]], i32 0, i32 1
+// CHECK-LP64:      [[T0:%.*]] = getelementptr inbounds nuw [[STATE_T]], ptr [[STATE]], i32 0, i32 1
 // CHECK-LP64-NEXT: [[T1:%.*]] = load ptr, ptr [[T0]]
-// CHECK-LP64-NEXT: [[T2:%.*]] = getelementptr ptr, ptr [[T1]], i64
+// CHECK-LP64-NEXT: [[T2:%.*]] = getelementptr inbounds ptr, ptr [[T1]], i64
 // CHECK-LP64-NEXT: [[T3:%.*]] = load ptr, ptr [[T2]]
 // CHECK-LP64-NEXT: store ptr [[T3]], ptr [[X]]
 
-// CHECK-LP64:      [[CAPTURED:%.*]] = getelementptr inbounds [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
+// CHECK-LP64:      [[CAPTURED:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
 // CHECK-LP64-NEXT: [[T1:%.*]] = load ptr, ptr [[X]]
 // CHECK-LP64-NEXT: [[T2:%.*]] = call ptr @llvm.objc.retain(ptr [[T1]])
 // CHECK-LP64-NEXT: store ptr [[T2]], ptr [[CAPTURED]]
@@ -65,7 +65,7 @@ void test0(NSArray *array) {
 // CHECK-LP64-NEXT: call void @llvm.objc.storeStrong(ptr [[CAPTURED]], ptr null)
 // CHECK-LP64-NOT:  call void (...) @llvm.objc.clang.arc.use(
 
-// CHECK-LP64-OPT: [[D0:%.*]] = getelementptr inbounds i8, ptr [[BLOCK]], i64 32
+// CHECK-LP64-OPT: [[D0:%.*]] = getelementptr inbounds nuw i8, ptr [[BLOCK]], i64 32
 // CHECK-LP64-OPT: [[CAPTURE:%.*]] = load ptr, ptr [[D0]]
 // CHECK-LP64-OPT: call void (...) @llvm.objc.clang.arc.use(ptr [[CAPTURE]])
 
@@ -81,7 +81,7 @@ void test0(NSArray *array) {
 
 // CHECK-LP64-LABEL:    define internal void @__test0_block_invoke
 // CHECK-LP64-NOT:  ret
-// CHECK-LP64:      [[T0:%.*]] = getelementptr inbounds [[BLOCK_T]], ptr {{%.*}}, i32 0, i32 5
+// CHECK-LP64:      [[T0:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr {{%.*}}, i32 0, i32 5
 // CHECK-LP64-NEXT: [[T2:%.*]] = load ptr, ptr [[T0]], align 8 
 // CHECK-LP64-NEXT: call void @use(ptr [[T2]])
 
@@ -98,13 +98,13 @@ void test1(NSArray *array) {
 // CHECK-LP64-NEXT: alloca [16 x ptr], align 8
 // CHECK-LP64-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
 
-// CHECK-LP64:      [[T0:%.*]] = getelementptr inbounds [[STATE_T]], ptr [[STATE]], i32 0, i32 1
+// CHECK-LP64:      [[T0:%.*]] = getelementptr inbounds nuw [[STATE_T]], ptr [[STATE]], i32 0, i32 1
 // CHECK-LP64-NEXT: [[T1:%.*]] = load ptr, ptr [[T0]]
-// CHECK-LP64-NEXT: [[T2:%.*]] = getelementptr ptr, ptr [[T1]], i64
+// CHECK-LP64-NEXT: [[T2:%.*]] = getelementptr inbounds ptr, ptr [[T1]], i64
 // CHECK-LP64-NEXT: [[T3:%.*]] = load ptr, ptr [[T2]]
 // CHECK-LP64-NEXT: call ptr @llvm.objc.initWeak(ptr [[X]], ptr [[T3]])
 
-// CHECK-LP64:      [[T0:%.*]] = getelementptr inbounds [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
+// CHECK-LP64:      [[T0:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
 // CHECK-LP64: call void @llvm.objc.copyWeak(ptr [[T0]], ptr [[X]])
 // CHECK-LP64: call void @use_block
 // CHECK-LP64-NEXT: call void @llvm.objc.destroyWeak(ptr [[T0]])
@@ -182,14 +182,14 @@ NSArray *array4;
 // CHECK-LP64:         [[SELF_ADDR:%.*]] = alloca ptr,
 // CHECK-LP64:         [[BLOCK:%.*]] = alloca <{ ptr, i32, i32, ptr, ptr, ptr }>,
 // CHECK-LP64:         store ptr %self, ptr [[SELF_ADDR]]
-// CHECK-LP64:         [[BC:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr [[BLOCK]], i32 0, i32 5
+// CHECK-LP64:         [[BC:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr [[BLOCK]], i32 0, i32 5
 // CHECK-LP64:         [[T1:%.*]] = load ptr, ptr [[SELF_ADDR]]
 // CHECK-LP64:         call ptr @llvm.objc.retain(ptr [[T1]])
 
 // CHECK-LP64-OPT-LABEL: define internal void @"\01-[I1 foo2]"(
 // CHECK-LP64-OPT: ptr %self
 // CHECK-LP64-OPT: [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
-// CHECK-LP64-OPT: [[T0:%.*]] = getelementptr inbounds i8, ptr [[BLOCK]], i64 32
+// CHECK-LP64-OPT: [[T0:%.*]] = getelementptr inbounds nuw i8, ptr [[BLOCK]], i64 32
 
 // CHECK-LP64:         call void @llvm.objc.storeStrong(ptr [[BC]], ptr null)
 // CHECK-LP64-NOT:     call void (...) @llvm.objc.clang.arc.use(ptr [[BC]])

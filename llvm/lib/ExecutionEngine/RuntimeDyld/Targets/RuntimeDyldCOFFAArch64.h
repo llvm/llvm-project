@@ -1,5 +1,4 @@
-//===-- RuntimeDyldCOFFAArch64.h --- COFF/AArch64 specific code ---*- C++
-//-*-===//
+//===-- RuntimeDyldCOFFAArch64.h --- COFF/AArch64 specific code ---*- C++*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,8 +21,6 @@
 
 #define DEBUG_TYPE "dyld"
 
-using namespace llvm::support::endian;
-
 namespace llvm {
 
 // This relocation type is used for handling long branch instruction
@@ -32,16 +29,28 @@ enum InternalRelocationType : unsigned {
   INTERNAL_REL_ARM64_LONG_BRANCH26 = 0x111,
 };
 
-static void add16(uint8_t *p, int16_t v) { write16le(p, read16le(p) + v); }
-static void or32le(void *P, int32_t V) { write32le(P, read32le(P) | V); }
+static void add16(uint8_t *p, int16_t v) {
+  using namespace llvm::support::endian;
+  write16le(p, read16le(p) + v);
+}
+
+static void or32le(void *P, int32_t V) {
+  using namespace llvm::support::endian;
+
+  write32le(P, read32le(P) | V);
+}
 
 static void write32AArch64Imm(uint8_t *T, uint64_t imm, uint32_t rangeLimit) {
+  using namespace llvm::support::endian;
+
   uint32_t orig = read32le(T);
   orig &= ~(0xFFF << 10);
   write32le(T, orig | ((imm & (0xFFF >> rangeLimit)) << 10));
 }
 
 static void write32AArch64Ldr(uint8_t *T, uint64_t imm) {
+  using namespace llvm::support::endian;
+
   uint32_t orig = read32le(T);
   uint32_t size = orig >> 30;
   // 0x04000000 indicates SIMD/FP registers
@@ -54,6 +63,8 @@ static void write32AArch64Ldr(uint8_t *T, uint64_t imm) {
 }
 
 static void write32AArch64Addr(void *T, uint64_t s, uint64_t p, int shift) {
+  using namespace llvm::support::endian;
+
   uint64_t Imm = (s >> shift) - (p >> shift);
   uint32_t ImmLo = (Imm & 0x3) << 29;
   uint32_t ImmHi = (Imm & 0x1FFFFC) << 3;
@@ -144,6 +155,7 @@ public:
                        const object::ObjectFile &Obj,
                        ObjSectionToIDMap &ObjSectionToID,
                        StubMap &Stubs) override {
+    using namespace llvm::support::endian;
 
     auto Symbol = RelI->getSymbol();
     if (Symbol == Obj.symbol_end())
@@ -255,6 +267,8 @@ public:
   }
 
   void resolveRelocation(const RelocationEntry &RE, uint64_t Value) override {
+    using namespace llvm::support::endian;
+
     const auto Section = Sections[RE.SectionID];
     uint8_t *Target = Section.getAddressWithOffset(RE.Offset);
     uint64_t FinalAddress = Section.getLoadAddressWithOffset(RE.Offset);
@@ -374,4 +388,6 @@ public:
 
 } // End namespace llvm
 
-#endif
+#undef DEBUG_TYPE
+
+#endif // LLVM_LIB_EXECUTIONENGINE_RUNTIMEDYLD_TARGETS_RUNTIMEDYLDCOFFAARCH64_H

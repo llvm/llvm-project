@@ -64,12 +64,15 @@ intermediate LLVM representation.
    Remarks
    RemoveDIsDebugInfo
    RISCVUsage
+   RISCV/RISCVVectorExtension
    SourceLevelDebugging
    SPIRVUsage
+   SandboxIR
    StackSafetyAnalysis
    SupportLibrary
    TableGen/index
    TableGenFundamentals
+   Telemetry
    Vectorizers
    WritingAnLLVMPass
    WritingAnLLVMNewPMPass
@@ -191,6 +194,7 @@ Optimizations
    This document specifies guidelines for contributions for InstCombine and
    related passes.
 
+
 Code Generation
 ---------------
 
@@ -283,4 +287,13 @@ Additional Topics
    DirectX runtime.
 
 :doc:`RISCVUsage`
-   This document describes using the RISCV-V target.
+   This document describes using the RISC-V target.
+
+:doc:`RISCV/RISCVVectorExtension`
+   This document describes how the RISC-V Vector extension can be expressed in LLVM IR and how code is generated for it in the backend.
+
+:doc:`Sandbox IR <SandboxIR>`
+   This document describes the design and usage of Sandbox IR, a transactional layer over LLVM IR.
+
+:doc:`Telemetry`
+   This document describes the Telemetry framework in LLVM.

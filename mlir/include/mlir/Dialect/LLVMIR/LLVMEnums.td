@@ -106,6 +106,10 @@ def AtomicBinOpUIncWrap : LLVM_EnumAttrCase<"uinc_wrap",
                                             "uinc_wrap", "UIncWrap", 15>;
 def AtomicBinOpUDecWrap : LLVM_EnumAttrCase<"udec_wrap",
                                             "udec_wrap", "UDecWrap", 16>;
+def AtomicBinOpUSubCond : LLVM_EnumAttrCase<"usub_cond",
+                                            "usub_cond", "USubCond", 17>;
+def AtomicBinOpUSubSat : LLVM_EnumAttrCase<"usub_sat",
+                                           "usub_sat", "USubSat", 18>;
 
 // A sentinel value that has no MLIR counterpart.
 def AtomicBadBinOp : LLVM_EnumAttrCase<"", "", "BAD_BINOP", 0>;
@@ -118,7 +122,7 @@ def AtomicBinOp : LLVM_EnumAttr<
      AtomicBinOpNand, AtomicBinOpOr, AtomicBinOpXor, AtomicBinOpMax,
      AtomicBinOpMin, AtomicBinOpUMax, AtomicBinOpUMin, AtomicBinOpFAdd,
      AtomicBinOpFSub, AtomicBinOpFMax, AtomicBinOpFMin, AtomicBinOpUIncWrap,
-     AtomicBinOpUDecWrap],
+     AtomicBinOpUDecWrap, AtomicBinOpUSubCond, AtomicBinOpUSubSat],
     [AtomicBadBinOp]> {
   let cppNamespace = "::mlir::LLVM";
 }
@@ -277,6 +281,35 @@ def CConv : DialectAttr<
   let convertFromStorage = "$_self.getCallingConv()";
   let constBuilderCall =
           "::mlir::LLVM::CConvAttr::get($_builder.getContext(), $0)";
+}
+
+//===----------------------------------------------------------------------===//
+// TailCallKind
+//===----------------------------------------------------------------------===//
+
+def TailCallKindNone : LLVM_EnumAttrCase<"None", "none", "TCK_None", 0>;
+def TailCallKindTail : LLVM_EnumAttrCase<"Tail", "tail", "TCK_Tail", 1>;
+def TailCallKindMustTail : LLVM_EnumAttrCase<"MustTail", "musttail", "TCK_MustTail", 2>;
+def TailCallKindNoTailCall : LLVM_EnumAttrCase<"NoTail", "notail", "TCK_NoTail", 3>;
+
+def TailCallKindEnum : LLVM_EnumAttr<
+    "TailCallKind",
+    "::llvm::CallInst::TailCallKind",
+    "Tail Call Kind",
+    [TailCallKindNone, TailCallKindNoTailCall,
+    TailCallKindMustTail, TailCallKindTail]> {
+  let cppNamespace = "::mlir::LLVM::tailcallkind";
+}
+
+def TailCallKind : DialectAttr<
+    LLVM_Dialect,
+    CPred<"::llvm::isa<::mlir::LLVM::TailCallKindAttr>($_self)">,
+    "LLVM Calling Convention specification"> {
+  let storageType = "::mlir::LLVM::TailCallKindAttr";
+  let returnType = "::mlir::LLVM::tailcallkind::TailCallKind";
+  let convertFromStorage = "$_self.getTailCallKind()";
+  let constBuilderCall =
+          "::mlir::LLVM::TailCallKindAttr::get($_builder.getContext(), $0)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -582,40 +615,40 @@ def ICmpPredicate : LLVM_EnumAttr<
 //===----------------------------------------------------------------------===//
 
 // Linkage attribute is used on functions and globals. The order follows that of
-// https://llvm.org/docs/LangRef.html#linkage-types. The names are equivalent to
-// visible names in the IR rather than to enum values names in llvm::GlobalValue
-// since the latter is easier to change.
-def LinkagePrivate
-    : LLVM_EnumAttrCase<"Private", "private", "PrivateLinkage", 0>;
-def LinkageInternal
-    : LLVM_EnumAttrCase<"Internal", "internal", "InternalLinkage", 1>;
+// llvm::GlobalValue::LinkageTypes from llvm/IR/GlobalValue.h. The names are
+// equivalent to visible names in the IR rather than to enum values names in
+// llvm::GlobalValue since the latter is easier to change.
+def LinkageExternal
+    : LLVM_EnumAttrCase<"External", "external", "ExternalLinkage", 0>;
 def LinkageAvailableExternally
     : LLVM_EnumAttrCase<"AvailableExternally", "available_externally",
-                        "AvailableExternallyLinkage", 2>;
+                        "AvailableExternallyLinkage", 1>;
 def LinkageLinkonce
-    : LLVM_EnumAttrCase<"Linkonce", "linkonce", "LinkOnceAnyLinkage", 3>;
+    : LLVM_EnumAttrCase<"Linkonce", "linkonce", "LinkOnceAnyLinkage", 2>;
+def LinkageLinkonceODR
+    : LLVM_EnumAttrCase<"LinkonceODR", "linkonce_odr", "LinkOnceODRLinkage", 3>;
 def LinkageWeak
     : LLVM_EnumAttrCase<"Weak", "weak", "WeakAnyLinkage", 4>;
-def LinkageCommon
-    : LLVM_EnumAttrCase<"Common", "common", "CommonLinkage", 5>;
+def LinkageWeakODR
+    : LLVM_EnumAttrCase<"WeakODR", "weak_odr", "WeakODRLinkage", 5>;
 def LinkageAppending
     : LLVM_EnumAttrCase<"Appending", "appending", "AppendingLinkage", 6>;
+def LinkageInternal
+    : LLVM_EnumAttrCase<"Internal", "internal", "InternalLinkage", 7>;
+def LinkagePrivate
+    : LLVM_EnumAttrCase<"Private", "private", "PrivateLinkage", 8>;
 def LinkageExternWeak
-   : LLVM_EnumAttrCase<"ExternWeak", "extern_weak", "ExternalWeakLinkage", 7>;
-def LinkageLinkonceODR
-    : LLVM_EnumAttrCase<"LinkonceODR", "linkonce_odr", "LinkOnceODRLinkage", 8>;
-def LinkageWeakODR
-    : LLVM_EnumAttrCase<"WeakODR", "weak_odr", "WeakODRLinkage", 9>;
-def LinkageExternal
-    : LLVM_EnumAttrCase<"External", "external", "ExternalLinkage", 10>;
+   : LLVM_EnumAttrCase<"ExternWeak", "extern_weak", "ExternalWeakLinkage", 9>;
+def LinkageCommon
+    : LLVM_EnumAttrCase<"Common", "common", "CommonLinkage", 10>;
 
 def LinkageEnum : LLVM_EnumAttr<
     "Linkage",
     "::llvm::GlobalValue::LinkageTypes",
     "LLVM linkage types",
-    [LinkagePrivate, LinkageInternal, LinkageAvailableExternally,
-     LinkageLinkonce, LinkageWeak, LinkageCommon, LinkageAppending,
-     LinkageExternWeak, LinkageLinkonceODR, LinkageWeakODR, LinkageExternal]> {
+    [LinkageExternal, LinkageAvailableExternally, LinkageLinkonce,
+      LinkageLinkonceODR, LinkageWeak, LinkageWeakODR, LinkageAppending,
+      LinkageInternal, LinkagePrivate, LinkageExternWeak, LinkageCommon]> {
   let cppNamespace = "::mlir::LLVM::linkage";
 }
 
@@ -716,12 +749,15 @@ def FramePointerKindNonLeaf
     : LLVM_EnumAttrCase<"NonLeaf", "non-leaf", "NonLeaf", 1>;
 def FramePointerKindAll
     : LLVM_EnumAttrCase<"All", "all", "All", 2>;
+def FramePointerKindReserved
+    : LLVM_EnumAttrCase<"Reserved", "reserved", "Reserved", 3>;
 
 def FramePointerKindEnum : LLVM_EnumAttr<
     "FramePointerKind",
     "::llvm::FramePointerKind",
     "LLVM FramePointerKind",
-    [FramePointerKindNone, FramePointerKindNonLeaf, FramePointerKindAll]> {
+    [FramePointerKindNone, FramePointerKindNonLeaf,
+     FramePointerKindAll, FramePointerKindReserved]> {
   let cppNamespace = "::mlir::LLVM::framePointerKind";
 }
 

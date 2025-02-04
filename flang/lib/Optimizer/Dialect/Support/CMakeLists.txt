@@ -8,6 +8,6 @@ add_flang_library(FIRDialectSupport
   MLIRIR
   intrinsics_gen
 
-  LINK_LIBS
+  MLIR_LIBS
   ${dialect_libs}
 )

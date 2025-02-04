@@ -1,5 +1,5 @@
-! RUN: %flang_fc1 -fdebug-unparse -fopenmp %s | FileCheck --ignore-case %s
-! RUN: %flang_fc1 -fdebug-dump-parse-tree -fopenmp %s | FileCheck --check-prefix="PARSE-TREE" %s
+! RUN: %flang_fc1 -fdebug-unparse -fopenmp -fopenmp-version=52 %s | FileCheck --ignore-case %s
+! RUN: %flang_fc1 -fdebug-dump-parse-tree -fopenmp -fopenmp-version=52 %s | FileCheck --check-prefix="PARSE-TREE" %s
 
 subroutine openmp_declare_target
     integer, save :: x, y
@@ -31,7 +31,7 @@ subroutine openmp_declare_target
     end do
 
 !PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct
-!PARSE-TREE: OmpDeclareTargetSpecifier -> OmpDeclareTargetWithClause -> OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> Type = Host
-!PARSE-TREE: OmpDeclareTargetSpecifier -> OmpDeclareTargetWithClause -> OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> Type = Nohost
-!PARSE-TREE: OmpDeclareTargetSpecifier -> OmpDeclareTargetWithClause -> OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> Type = Any
+!PARSE-TREE: OmpDeclareTargetSpecifier -> OmpDeclareTargetWithClause -> OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> DeviceTypeDescription = Host
+!PARSE-TREE: OmpDeclareTargetSpecifier -> OmpDeclareTargetWithClause -> OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> DeviceTypeDescription = Nohost
+!PARSE-TREE: OmpDeclareTargetSpecifier -> OmpDeclareTargetWithClause -> OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> DeviceTypeDescription = Any
 END subroutine openmp_declare_target

@@ -52,11 +52,11 @@ subroutine test_real_value(x) bind(c)
   call internal_call2(x)
 end
 ! CHECK-LABEL:   func.func @test_complex_value(
-! CHECK-SAME:                                  %[[VAL_0:.*]]: !fir.complex<4>
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.complex<4>
-! CHECK:           fir.store %[[VAL_0]] to %[[VAL_1]] : !fir.ref<!fir.complex<4>>
+! CHECK-SAME:                                  %[[VAL_0:.*]]: complex<f32>
+! CHECK:           %[[VAL_1:.*]] = fir.alloca complex<f32>
+! CHECK:           fir.store %[[VAL_0]] to %[[VAL_1]] : !fir.ref<complex<f32>>
 ! CHECK:           %[[VAL_2:.*]] = fir.declare %[[VAL_1]]
-! CHECK:           fir.call @_QPinternal_call3(%[[VAL_2]]) {{.*}}: (!fir.ref<!fir.complex<4>>) -> ()
+! CHECK:           fir.call @_QPinternal_call3(%[[VAL_2]]) {{.*}}: (!fir.ref<complex<f32>>) -> ()
 ! CHECK:           return
 ! CHECK:         }
 

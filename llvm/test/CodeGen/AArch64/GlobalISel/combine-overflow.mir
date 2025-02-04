@@ -76,9 +76,9 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %o_wide:_(s32) = G_CONSTANT i32 0
     ; CHECK-NEXT: $w0 = COPY [[COPY]](s32)
-    ; CHECK-NEXT: $w1 = COPY [[C]](s32)
+    ; CHECK-NEXT: $w1 = COPY %o_wide(s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
@@ -101,10 +101,10 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: %const:_(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %o_wide:_(s32) = G_CONSTANT i32 0
     ; CHECK-NEXT: $w0 = COPY [[COPY]](s32)
     ; CHECK-NEXT: $w1 = COPY [[COPY]](s32)
-    ; CHECK-NEXT: $w2 = COPY %const(s32)
+    ; CHECK-NEXT: $w2 = COPY %o_wide(s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = COPY $w0
     %const:_(s32) = G_CONSTANT i32 0
@@ -173,6 +173,107 @@ body:             |
     %add:_(<4 x s32>), %o:_(<4 x s1>) = G_SADDO %bv0, %bv1
     %o_wide:_(<4 x s32>) = G_ZEXT %o(<4 x s1>)
     $q0 = COPY %add(<4 x s32>)
+    $q1 = COPY %o_wide
+    RET_ReallyLR implicit $w0
+...
+---
+name:            sub_may
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+    ; CHECK-LABEL: name: sub_may
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: %const:_(s32) = G_CONSTANT i32 512
+    ; CHECK-NEXT: %sub:_(s32), %o:_(s1) = G_SSUBO [[COPY]], %const
+    ; CHECK-NEXT: %o_wide:_(s32) = G_ZEXT %o(s1)
+    ; CHECK-NEXT: $w0 = COPY %sub(s32)
+    ; CHECK-NEXT: $w1 = COPY %o_wide(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:_(s32) = COPY $w0
+    %const:_(s32) = G_CONSTANT i32 512
+    %sub:_(s32), %o:_(s1) = G_SSUBO %0, %const
+    %o_wide:_(s32) = G_ZEXT %o(s1)
+    $w0 = COPY %sub(s32)
+    $w1 = COPY %o_wide
+    RET_ReallyLR implicit $w0
+...
+---
+name:            usub_may
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+    ; CHECK-LABEL: name: usub_may
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: %const:_(s32) = G_CONSTANT i32 512
+    ; CHECK-NEXT: %sub:_(s32), %o:_(s1) = G_USUBO [[COPY]], %const
+    ; CHECK-NEXT: %o_wide:_(s32) = G_ZEXT %o(s1)
+    ; CHECK-NEXT: $w0 = COPY %sub(s32)
+    ; CHECK-NEXT: $w1 = COPY %o_wide(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:_(s32) = COPY $w0
+    %const:_(s32) = G_CONSTANT i32 512
+    %sub:_(s32), %o:_(s1) = G_USUBO %0, %const
+    %o_wide:_(s32) = G_ZEXT %o(s1)
+    $w0 = COPY %sub(s32)
+    $w1 = COPY %o_wide
+    RET_ReallyLR implicit $w0
+...
+---
+name:            usub_may_carry_s11
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+    ; CHECK-LABEL: name: usub_may_carry_s11
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: %const:_(s32) = G_CONSTANT i32 512
+    ; CHECK-NEXT: %sub:_(s32), %o:_(s11) = G_USUBO [[COPY]], %const
+    ; CHECK-NEXT: %o_wide:_(s32) = G_ZEXT %o(s11)
+    ; CHECK-NEXT: $w0 = COPY %sub(s32)
+    ; CHECK-NEXT: $w1 = COPY %o_wide(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:_(s32) = COPY $w0
+    %const:_(s32) = G_CONSTANT i32 512
+    %sub:_(s32), %o:_(s11) = G_USUBO %0, %const
+    %o_wide:_(s32) = G_ZEXT %o(s11)
+    $w0 = COPY %sub(s32)
+    $w1 = COPY %o_wide
+    RET_ReallyLR implicit $w0
+...
+---
+name:            usub_may_carry_s11_vector
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+    ; CHECK-LABEL: name: usub_may_carry_s11_vector
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: %const:_(s32) = G_CONSTANT i32 512
+    ; CHECK-NEXT: %bv:_(<4 x s32>) = G_BUILD_VECTOR %const(s32), [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
+    ; CHECK-NEXT: %bv1:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), %const(s32)
+    ; CHECK-NEXT: %sub:_(<4 x s32>), %o:_(<4 x s11>) = G_USUBO %bv, %bv1
+    ; CHECK-NEXT: %o_wide:_(<4 x s32>) = G_ZEXT %o(<4 x s11>)
+    ; CHECK-NEXT: $q0 = COPY %sub(<4 x s32>)
+    ; CHECK-NEXT: $q1 = COPY %o_wide(<4 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:_(s32) = COPY $w0
+    %1:_(s32) = COPY $w0
+    %2:_(s32) = COPY $w0
+    %3:_(s32) = COPY $w0
+    %const:_(s32) = G_CONSTANT i32 512
+    %bv:_(<4 x s32>) = G_BUILD_VECTOR %const(s32), %0(s32), %1(s32), %2(s32)
+    %bv1:_(<4 x s32>) = G_BUILD_VECTOR %0(s32), %1(s32), %2(s32), %const(s32)
+    %sub:_(<4 x s32>), %o:_(<4 x s11>) = G_USUBO %bv, %bv1
+    %o_wide:_(<4 x s32>) = G_ZEXT %o(<4 x s11>)
+    $q0 = COPY %sub(<4 x s32>)
     $q1 = COPY %o_wide
     RET_ReallyLR implicit $w0
 ...

@@ -124,7 +124,7 @@ public:
 private:
   MatchResult badMapString(const llvm::Twine &ptr);
   MatchResult parse(llvm::StringRef kindMap);
-  mlir::LogicalResult setDefaultKinds(llvm::ArrayRef<KindTy> defs);
+  llvm::LogicalResult setDefaultKinds(llvm::ArrayRef<KindTy> defs);
 
   mlir::MLIRContext *context;
   llvm::DenseMap<std::pair<char, KindTy>, Bitsize> intMap;

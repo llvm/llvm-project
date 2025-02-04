@@ -19,7 +19,7 @@
 ;; component is correct.
 
 ; CHECK:      store i64 0, ptr %local, align 16{{.*}}, !DIAssignID ![[ID:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i64 0, metadata !{{.*}}, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64), metadata ![[ID]], metadata ptr %local, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(i64 0, !{{.*}}, !DIExpression(DW_OP_LLVM_fragment, 0, 64), ![[ID]], ptr %local, !DIExpression(),
 
 define dso_local void @_Z3funv() local_unnamed_addr #0 !dbg !7 {
 entry:

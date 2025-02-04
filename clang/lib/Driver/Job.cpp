@@ -9,7 +9,6 @@
 #include "clang/Driver/Job.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
@@ -26,7 +25,6 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <string>
@@ -343,7 +341,6 @@ int Command::Execute(ArrayRef<std::optional<StringRef>> Redirects,
     writeResponseFile(SS);
     buildArgvForResponseFile(Argv);
     Argv.push_back(nullptr);
-    SS.flush();
 
     // Save the response file in the appropriate encoding
     if (std::error_code EC = writeFileWithEncoding(

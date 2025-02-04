@@ -11,7 +11,6 @@
 
 #include "mlir/Dialect/Mesh/IR/MeshOps.h"
 #include "mlir/IR/DialectRegistry.h"
-#include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
 namespace mesh {

@@ -36,11 +36,21 @@
 //      CHECK:  %[[mm5:.*]] = vector.insert %[[mm4]], %[[mm3]] [1] : vector<3xf32> into vector<2x3xf32>
 //      CHECK:  %[[mm6:.*]] = arith.addf %[[C]], %[[mm5]] : vector<2x3xf32>
 func.func @matmul(%arg0: vector<2x4xf32>,
-                          %arg1: vector<4x3xf32>,
-                          %arg2: vector<2x3xf32>) -> vector<2x3xf32> {
+                  %arg1: vector<4x3xf32>,
+                  %arg2: vector<2x3xf32>) -> vector<2x3xf32> {
   %0 = vector.contract #matmat_trait %arg0, %arg1, %arg2
     : vector<2x4xf32>, vector<4x3xf32> into vector<2x3xf32>
   return %0 : vector<2x3xf32>
+}
+
+// CHECK-LABEL: func @matmul_scalable
+// CHECK-NOT: vector.matrix_multiply
+func.func @matmul_scalable(%arg0: vector<2x4xf32>,
+                           %arg1: vector<4x[3]xf32>,
+                           %arg2: vector<2x[3]xf32>) -> vector<2x[3]xf32> {
+  %0 = vector.contract #matmat_trait %arg0, %arg1, %arg2
+    : vector<2x4xf32>, vector<4x[3]xf32> into vector<2x[3]xf32>
+  return %0 : vector<2x[3]xf32>
 }
 
 module attributes {transform.with_named_sequence} {

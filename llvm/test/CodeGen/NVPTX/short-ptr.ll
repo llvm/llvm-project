@@ -1,10 +1,10 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefix CHECK-DEFAULT
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s --check-prefix CHECK-DEFAULT-32
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -nvptx-short-ptr | FileCheck %s --check-prefixes CHECK-SHORT-SHARED,CHECK-SHORT-CONST,CHECK-SHORT-LOCAL
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefix CHECK-DEFAULT
+; RUN: llc < %s -mtriple=nvptx -mcpu=sm_20 | FileCheck %s --check-prefix CHECK-DEFAULT-32
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 -nvptx-short-ptr | FileCheck %s --check-prefixes CHECK-SHORT-SHARED,CHECK-SHORT-CONST,CHECK-SHORT-LOCAL
 
-; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -nvptx-short-ptr | %ptxas-verify %}
+; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 -nvptx-short-ptr | %ptxas-verify %}
 
 ; CHECK-DEFAULT: .visible .shared .align 8 .u64 s
 ; CHECK-DEFAULT-32: .visible .shared .align 8 .u32 s

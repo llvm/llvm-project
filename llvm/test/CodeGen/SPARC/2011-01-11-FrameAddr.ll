@@ -1,8 +1,8 @@
-;RUN: llc -march=sparc -show-mc-encoding < %s | FileCheck %s -check-prefix=V8
-;RUN: llc -march=sparc -mattr=v9 < %s | FileCheck %s -check-prefix=V9
-;RUN: llc -march=sparc -show-mc-encoding -regalloc=basic < %s | FileCheck %s -check-prefix=V8
-;RUN: llc -march=sparc -regalloc=basic -mattr=v9 < %s | FileCheck %s -check-prefix=V9
-;RUN: llc -march=sparcv9  < %s | FileCheck %s -check-prefix=SPARC64
+;RUN: llc -mtriple=sparc -show-mc-encoding < %s | FileCheck %s -check-prefix=V8
+;RUN: llc -mtriple=sparc -mattr=v9 < %s | FileCheck %s -check-prefix=V9
+;RUN: llc -mtriple=sparc -show-mc-encoding -regalloc=basic < %s | FileCheck %s -check-prefix=V8
+;RUN: llc -mtriple=sparc -regalloc=basic -mattr=v9 < %s | FileCheck %s -check-prefix=V9
+;RUN: llc -mtriple=sparcv9 < %s | FileCheck %s -check-prefix=SPARC64
 
 
 define ptr @frameaddr() nounwind readnone {

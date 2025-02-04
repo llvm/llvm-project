@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h"
-#include "mlir/Support/LogicalResult.h"
 
 #define DEBUG_TYPE "ptx-builder"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
@@ -65,7 +64,7 @@ void PtxBuilder::insertValue(Value v, PTXRegisterMod itype) {
   auto getModifier = [&]() -> const char * {
     if (itype == PTXRegisterMod::ReadWrite) {
       assert(false && "Read-Write modifier is not supported. Try setting the "
-                      "same value as Write and Read seperately.");
+                      "same value as Write and Read separately.");
       return "+";
     }
     if (itype == PTXRegisterMod::Write) {
@@ -100,14 +99,12 @@ void PtxBuilder::insertValue(Value v, PTXRegisterMod itype) {
       } else {
         ss << getModifier() << getRegisterType(t) << ",";
       }
-      ss.flush();
     }
     return;
   }
   // Handle Scalars
   addValue(v);
   ss << getModifier() << getRegisterType(v) << ",";
-  ss.flush();
 }
 
 LLVM::InlineAsmOp PtxBuilder::build() {

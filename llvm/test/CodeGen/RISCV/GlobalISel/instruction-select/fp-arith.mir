@@ -193,30 +193,6 @@ body:             |
 
 ...
 ---
-name:            fadd_f64
-legalized:       true
-regBankSelected: true
-tracksRegLiveness: true
-body:             |
-  bb.0:
-    liveins: $f10_d, $f11_d
-
-    ; CHECK-LABEL: name: fadd_f64
-    ; CHECK: liveins: $f10_d, $f11_d
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $f10_d
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $f11_d
-    ; CHECK-NEXT: [[FADD_D:%[0-9]+]]:fpr64 = nofpexcept FADD_D [[COPY]], [[COPY1]], 7
-    ; CHECK-NEXT: $f10_d = COPY [[FADD_D]]
-    ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = COPY $f11_d
-    %2:fprb(s64) = G_FADD %0, %1
-    $f10_d = COPY %2(s64)
-    PseudoRET implicit $f10_d
-
-...
----
 name:            fmaxnum_f32
 legalized:       true
 regBankSelected: true
@@ -265,7 +241,7 @@ body:             |
 
 ...
 ---
-name:            fcopysign_f32
+name:            fcopysign_f32_f32
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -273,7 +249,7 @@ body:             |
   bb.0:
     liveins: $f10_f, $f11_f
 
-    ; CHECK-LABEL: name: fcopysign_f32
+    ; CHECK-LABEL: name: fcopysign_f32_f32
     ; CHECK: liveins: $f10_f, $f11_f
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $f10_f
@@ -286,6 +262,55 @@ body:             |
     %2:fprb(s32) = G_FCOPYSIGN %0, %1
     $f10_f = COPY %2(s32)
     PseudoRET implicit $f10_f
+
+...
+---
+name:            fcopysign_f32_f64
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $f10_f, $f11_d
+
+    ; CHECK-LABEL: name: fcopysign_f32_f64
+    ; CHECK: liveins: $f10_f, $f11_d
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $f10_f
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $f11_d
+    ; CHECK-NEXT: [[FCVT_S_D:%[0-9]+]]:fpr32 = nofpexcept FCVT_S_D [[COPY1]], 7
+    ; CHECK-NEXT: [[FSGNJ_S:%[0-9]+]]:fpr32 = FSGNJ_S [[COPY]], [[FCVT_S_D]]
+    ; CHECK-NEXT: $f10_f = COPY [[FSGNJ_S]]
+    ; CHECK-NEXT: PseudoRET implicit $f10_f
+    %0:fprb(s32) = COPY $f10_f
+    %1:fprb(s64) = COPY $f11_d
+    %2:fprb(s32) = G_FCOPYSIGN %0, %1
+    $f10_f = COPY %2(s32)
+    PseudoRET implicit $f10_f
+
+...
+---
+name:            fadd_f64
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $f10_d, $f11_d
+
+    ; CHECK-LABEL: name: fadd_f64
+    ; CHECK: liveins: $f10_d, $f11_d
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $f10_d
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $f11_d
+    ; CHECK-NEXT: [[FADD_D:%[0-9]+]]:fpr64 = nofpexcept FADD_D [[COPY]], [[COPY1]], 7
+    ; CHECK-NEXT: $f10_d = COPY [[FADD_D]]
+    ; CHECK-NEXT: PseudoRET implicit $f10_d
+    %0:fprb(s64) = COPY $f10_d
+    %1:fprb(s64) = COPY $f11_d
+    %2:fprb(s64) = G_FADD %0, %1
+    $f10_d = COPY %2(s64)
+    PseudoRET implicit $f10_d
 
 ...
 ---
@@ -501,7 +526,7 @@ body:             |
 
 ...
 ---
-name:            fcopysign_f64
+name:            fcopysign_f64_f64
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
@@ -509,7 +534,7 @@ body:             |
   bb.0:
     liveins: $f10_d, $f11_d
 
-    ; CHECK-LABEL: name: fcopysign_f64
+    ; CHECK-LABEL: name: fcopysign_f64_f64
     ; CHECK: liveins: $f10_d, $f11_d
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $f10_d
@@ -519,6 +544,31 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $f10_d
     %0:fprb(s64) = COPY $f10_d
     %1:fprb(s64) = COPY $f11_d
+    %2:fprb(s64) = G_FCOPYSIGN %0, %1
+    $f10_d = COPY %2(s64)
+    PseudoRET implicit $f10_d
+
+...
+---
+name:            fcopysign_f64_f32
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $f10_d, $f11_f
+
+    ; CHECK-LABEL: name: fcopysign_f64_f32
+    ; CHECK: liveins: $f10_d, $f11_f
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $f10_d
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $f11_f
+    ; CHECK-NEXT: [[FCVT_D_S:%[0-9]+]]:fpr64 = nofpexcept FCVT_D_S [[COPY1]], 0
+    ; CHECK-NEXT: [[FSGNJ_D:%[0-9]+]]:fpr64 = FSGNJ_D [[COPY]], [[FCVT_D_S]]
+    ; CHECK-NEXT: $f10_d = COPY [[FSGNJ_D]]
+    ; CHECK-NEXT: PseudoRET implicit $f10_d
+    %0:fprb(s64) = COPY $f10_d
+    %1:fprb(s32) = COPY $f11_f
     %2:fprb(s64) = G_FCOPYSIGN %0, %1
     $f10_d = COPY %2(s64)
     PseudoRET implicit $f10_d

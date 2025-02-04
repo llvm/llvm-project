@@ -23,9 +23,10 @@
 // Returns: true if x.extents() == y.extents() is true, OFFSET(y) == 0 is true, and each of x.stride(r) == y.stride(r) is true for r in the range [0, x.extents().rank()). Otherwise, false.
 
 #include <mdspan>
-#include <type_traits>
-#include <concepts>
 #include <cassert>
+#include <concepts>
+#include <span> // dynamic_extent
+#include <type_traits>
 
 #include "test_macros.h"
 

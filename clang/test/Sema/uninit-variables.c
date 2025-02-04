@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -Wuninitialized -Wconditional-uninitialized -fsyntax-only -fblocks %s -verify
-// RUN: %clang_cc1 -fsyntax-only -Wuninitialized -Wconditional-uninitialized -ftrivial-auto-var-init=pattern -fsyntax-only -fblocks %s -verify
+// RUN: %clang_cc1 -Wuninitialized -Wconditional-uninitialized -fsyntax-only -fblocks %s -verify
+// RUN: %clang_cc1 -Wuninitialized -Wconditional-uninitialized -ftrivial-auto-var-init=pattern -fsyntax-only -fblocks %s -verify
 
 typedef __typeof(sizeof(int)) size_t;
 void *malloc(size_t);
@@ -550,4 +550,34 @@ struct empty empty_test_1(void) {
 struct full_of_empty empty_test_2(void) {
   struct full_of_empty e;
   return e; // no-warning
+}
+
+struct with_explicit_field {
+  int x;
+  int y [[clang::require_explicit_initialization]]; // #FIELD_Y
+};
+
+struct with_explicit_array {
+  [[clang::require_explicit_initialization]] int arr[2]; // #FIELD_ARR
+};
+
+struct with_explicit_flex_array {
+  int x;
+  [[clang::require_explicit_initialization]] int flex_arr[]; // #FIELD_FLEX_ARR
+};
+
+void aggregate() {
+  struct with_explicit_field a; // expected-warning {{field in 'with_explicit_field' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_Y {{'y' declared here}}
+  struct with_explicit_field b = {1}; // expected-warning {{field 'y' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_Y {{'y' declared here}}
+  (void)(&a != &b);
+
+  struct with_explicit_field c = {1, 2};
+  struct with_explicit_field d = {.y = 3};
+  (void)(&c != &d);
+
+  struct with_explicit_array e = {{1}};  // OK -- part of array is still initialized
+  (void)e;
+
+  struct with_explicit_flex_array f = {2}; // expected-warning {{field 'flex_arr' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_FLEX_ARR {{'flex_arr' declared here}}
+  (void)f;
 }

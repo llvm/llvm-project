@@ -35,16 +35,14 @@
 #include "Common/GlobalISel/CombinerUtils.h"
 #include "Common/GlobalISel/GlobalISelMatchTable.h"
 #include "Common/GlobalISel/GlobalISelMatchTableExecutorEmitter.h"
-#include "Common/GlobalISel/MatchDataInfo.h"
 #include "Common/GlobalISel/PatternParser.h"
 #include "Common/GlobalISel/Patterns.h"
 #include "Common/SubtargetFeatureInfo.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/EquivalenceClasses.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -53,6 +51,7 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringMatcher.h"
+#include "llvm/TableGen/TGTimer.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cstdint>
 
@@ -79,8 +78,9 @@ cl::opt<bool> DebugTypeInfer("gicombiner-debug-typeinfer",
                              cl::desc("Print type inference debug logs"),
                              cl::cat(GICombinerEmitterCat));
 
-constexpr StringLiteral CXXApplyPrefix = "GICXXCustomAction_CombineApply";
+constexpr StringLiteral CXXCustomActionPrefix = "GICXXCustomAction_";
 constexpr StringLiteral CXXPredPrefix = "GICXXPred_MI_Predicate_";
+constexpr StringLiteral MatchDataClassName = "GIDefMatchData";
 
 //===- CodeExpansions Helpers  --------------------------------------------===//
 
@@ -98,8 +98,14 @@ void declareInstExpansion(CodeExpansions &CE, const BuildMIAction &A,
 
 void declareOperandExpansion(CodeExpansions &CE, const OperandMatcher &OM,
                              StringRef Name) {
-  CE.declare(Name, "State.MIs[" + to_string(OM.getInsnVarID()) +
-                       "]->getOperand(" + to_string(OM.getOpIdx()) + ")");
+  if (OM.isVariadic()) {
+    CE.declare(Name, "getRemainingOperands(*State.MIs[" +
+                         to_string(OM.getInsnVarID()) + "], " +
+                         to_string(OM.getOpIdx()) + ")");
+  } else {
+    CE.declare(Name, "State.MIs[" + to_string(OM.getInsnVarID()) +
+                         "]->getOperand(" + to_string(OM.getOpIdx()) + ")");
+  }
 }
 
 void declareTempRegExpansion(CodeExpansions &CE, unsigned TempRegID,
@@ -125,18 +131,6 @@ std::string getIsEnabledPredicateEnumName(unsigned CombinerRuleID) {
 
 LLTCodeGen getLLTCodeGen(const PatternType &PT) {
   return *MVTToLLT(getValueType(PT.getLLTRecord()));
-}
-
-LLTCodeGenOrTempType getLLTCodeGenOrTempType(const PatternType &PT,
-                                             RuleMatcher &RM) {
-  assert(!PT.isNone());
-
-  if (PT.isLLT())
-    return getLLTCodeGen(PT);
-
-  assert(PT.isTypeOf());
-  auto &OM = RM.getOperandMatcher(PT.getTypeOfOpName());
-  return OM.getTempTypeIdx(RM);
 }
 
 //===- PrettyStackTrace Helpers  ------------------------------------------===//
@@ -466,9 +460,10 @@ std::vector<std::string> CombineRuleOperandTypeChecker::getMCOIOperandTypes(
 
   std::vector<std::string> OpTypes;
   auto &CGI = CGP.getInst();
-  Record *VarArgsTy = CGI.TheDef->isSubClassOf("GenericInstruction")
-                          ? CGI.TheDef->getValueAsOptionalDef("variadicOpsType")
-                          : nullptr;
+  const Record *VarArgsTy =
+      CGI.TheDef->isSubClassOf("GenericInstruction")
+          ? CGI.TheDef->getValueAsOptionalDef("variadicOpsType")
+          : nullptr;
   std::string VarArgsTyName =
       VarArgsTy ? ("MCOI::" + VarArgsTy->getValueAsString("OperandType")).str()
                 : ("unknown_type_" + Twine(UnknownTypeIdx++)).str();
@@ -528,7 +523,7 @@ void CombineRuleOperandTypeChecker::getInstEqClasses(
   const auto MCOITypes = getMCOIOperandTypes(*CGP);
   assert(MCOITypes.size() == P.operands_size());
 
-  DenseMap<StringRef, std::vector<unsigned>> TyToOpIdx;
+  MapVector<StringRef, SmallVector<unsigned, 0>> TyToOpIdx;
   for (const auto &[Idx, Ty] : enumerate(MCOITypes))
     TyToOpIdx[Ty].push_back(Idx);
 
@@ -605,6 +600,21 @@ CombineRuleOperandTypeChecker::getRuleEqClasses() const {
   return TECs;
 }
 
+//===- MatchData Handling -------------------------------------------------===//
+struct MatchDataDef {
+  MatchDataDef(StringRef Symbol, StringRef Type) : Symbol(Symbol), Type(Type) {}
+
+  StringRef Symbol;
+  StringRef Type;
+
+  /// \returns the desired variable name for this MatchData.
+  std::string getVarName() const {
+    // Add a prefix in case the symbol name is very generic and conflicts with
+    // something else.
+    return "GIMatchData_" + Symbol.str();
+  }
+};
+
 //===- CombineRuleBuilder -------------------------------------------------===//
 
 /// Parses combine rule and builds a small intermediate representation to tie
@@ -626,7 +636,7 @@ public:
 
   CombineRuleBuilder(const CodeGenTarget &CGT,
                      SubtargetFeatureInfoMap &SubtargetFeatures,
-                     Record &RuleDef, unsigned ID,
+                     const Record &RuleDef, unsigned ID,
                      std::vector<RuleMatcher> &OutRMs)
       : Parser(CGT, RuleDef.getLoc()), CGT(CGT),
         SubtargetFeatures(SubtargetFeatures), RuleDef(RuleDef), RuleID(ID),
@@ -652,6 +662,9 @@ private:
     return CGT.getInstruction(RuleDef.getRecords().getDef("G_CONSTANT"));
   }
 
+  std::optional<LLTCodeGenOrTempType>
+  getLLTCodeGenOrTempType(const PatternType &PT, RuleMatcher &RM);
+
   void PrintError(Twine Msg) const { ::PrintError(&RuleDef, Msg); }
   void PrintWarning(Twine Msg) const { ::PrintWarning(RuleDef.getLoc(), Msg); }
   void PrintNote(Twine Msg) const { ::PrintNote(RuleDef.getLoc(), Msg); }
@@ -670,10 +683,6 @@ private:
   /// \p Alts is only used if DebugCXXPreds is enabled.
   void addCXXPredicate(RuleMatcher &M, const CodeExpansions &CE,
                        const CXXPattern &P, const PatternAlternatives &Alts);
-
-  /// Adds an apply \p P to \p IM, expanding its code using \p CE.
-  void addCXXAction(RuleMatcher &M, const CodeExpansions &CE,
-                    const CXXPattern &P);
 
   bool hasOnlyCXXApplyPatterns() const;
   bool hasEraseRoot() const;
@@ -721,6 +730,8 @@ private:
                                DenseSet<const Pattern *> &SeenPats);
 
   bool emitApplyPatterns(CodeExpansions &CE, RuleMatcher &M);
+  bool emitCXXMatchApply(CodeExpansions &CE, RuleMatcher &M,
+                         ArrayRef<CXXPattern *> Matchers);
 
   // Recursively visits InstructionPatterns from P to build up the
   // RuleMatcher actions.
@@ -754,7 +765,7 @@ private:
   PatternParser Parser;
   const CodeGenTarget &CGT;
   SubtargetFeatureInfoMap &SubtargetFeatures;
-  Record &RuleDef;
+  const Record &RuleDef;
   const unsigned RuleID;
   std::vector<RuleMatcher> &OutRMs;
 
@@ -777,7 +788,7 @@ private:
   Pattern *MatchRoot = nullptr;
   SmallDenseSet<InstructionPattern *, 2> ApplyRoots;
 
-  SmallVector<MatchDataInfo, 2> MatchDatas;
+  SmallVector<MatchDataDef, 2> MatchDatas;
   SmallVector<PatternAlternatives, 1> PermutationsToEmit;
 };
 
@@ -811,7 +822,6 @@ bool CombineRuleBuilder::emitRuleMatchers() {
 
   assert(MatchRoot);
   CodeExpansions CE;
-  declareAllMatchDatasExpansions(CE);
 
   assert(!PermutationsToEmit.empty());
   for (const auto &Alts : PermutationsToEmit) {
@@ -845,9 +855,8 @@ void CombineRuleBuilder::print(raw_ostream &OS) const {
   if (!MatchDatas.empty()) {
     OS << "  (MatchDatas\n";
     for (const auto &MD : MatchDatas) {
-      OS << "    ";
-      MD.print(OS);
-      OS << '\n';
+      OS << "    (MatchDataDef symbol:" << MD.Symbol << " type:" << MD.Type
+         << ")\n";
     }
     OS << "  )\n";
   }
@@ -948,6 +957,24 @@ void CombineRuleBuilder::verify() const {
 }
 #endif
 
+std::optional<LLTCodeGenOrTempType>
+CombineRuleBuilder::getLLTCodeGenOrTempType(const PatternType &PT,
+                                            RuleMatcher &RM) {
+  assert(!PT.isNone());
+
+  if (PT.isLLT())
+    return getLLTCodeGen(PT);
+
+  assert(PT.isTypeOf());
+  auto &OM = RM.getOperandMatcher(PT.getTypeOfOpName());
+  if (OM.isVariadic()) {
+    PrintError("type '" + PT.str() + "' is ill-formed: '" +
+               OM.getSymbolicName() + "' is a variadic pack operand");
+    return std::nullopt;
+  }
+  return OM.getTempTypeIdx(RM);
+}
+
 void CombineRuleBuilder::print(raw_ostream &OS,
                                const PatternAlternatives &Alts) const {
   SmallVector<std::string, 1> Strings(
@@ -1008,7 +1035,7 @@ bool CombineRuleBuilder::addMatchPattern(std::unique_ptr<Pattern> Pat) {
 void CombineRuleBuilder::declareAllMatchDatasExpansions(
     CodeExpansions &CE) const {
   for (const auto &MD : MatchDatas)
-    CE.declare(MD.getPatternSymbol(), MD.getQualifiedVariableName());
+    CE.declare(MD.Symbol, MD.getVarName());
 }
 
 void CombineRuleBuilder::addCXXPredicate(RuleMatcher &M,
@@ -1028,13 +1055,6 @@ void CombineRuleBuilder::addCXXPredicate(RuleMatcher &M,
       DebugCXXPreds ? P.expandCode(CE, Loc, AddComment) : P.expandCode(CE, Loc);
   IM->addPredicate<GenericInstructionPredicateMatcher>(
       ExpandedCode.getEnumNameWithPrefix(CXXPredPrefix));
-}
-
-void CombineRuleBuilder::addCXXAction(RuleMatcher &M, const CodeExpansions &CE,
-                                      const CXXPattern &P) {
-  const auto &ExpandedCode = P.expandCode(CE, RuleDef.getLoc());
-  M.addAction<CustomCXXAction>(
-      ExpandedCode.getEnumNameWithPrefix(CXXApplyPrefix));
 }
 
 bool CombineRuleBuilder::hasOnlyCXXApplyPatterns() const {
@@ -1074,11 +1094,18 @@ bool CombineRuleBuilder::typecheckPatterns() {
   // match patterns.
   for (auto &Pat : values(MatchPats)) {
     if (auto *IP = dyn_cast<InstructionPattern>(Pat.get())) {
-      if (IP->diagnoseAllSpecialTypes(
-              RuleDef.getLoc(), PatternType::SpecialTyClassName +
-                                    " is not supported in 'match' patterns")) {
-        return false;
+      bool HasDiag = false;
+      for (const auto &[Idx, Op] : enumerate(IP->operands())) {
+        if (Op.getType().isTypeOf()) {
+          PrintError(PatternType::TypeOfClassName +
+                     " is not supported in 'match' patterns");
+          PrintNote("operand " + Twine(Idx) + " of '" + IP->getName() +
+                    "' has type '" + Op.getType().str() + "'");
+          HasDiag = true;
+        }
       }
+      if (HasDiag)
+        return false;
     }
   }
   return true;
@@ -1140,6 +1167,39 @@ bool CombineRuleBuilder::buildPermutationsToEmit() {
 bool CombineRuleBuilder::checkSemantics() {
   assert(MatchRoot && "Cannot call this before findRoots()");
 
+  const auto CheckVariadicOperands = [&](const InstructionPattern &IP,
+                                         bool IsMatch) {
+    bool HasVariadic = false;
+    for (auto &Op : IP.operands()) {
+      if (!Op.getType().isVariadicPack())
+        continue;
+
+      HasVariadic = true;
+
+      if (IsMatch && &Op != &IP.operands_back()) {
+        PrintError("'" + IP.getInstName() +
+                   "': " + PatternType::VariadicClassName +
+                   " can only be used on the last operand");
+        return false;
+      }
+
+      if (Op.isDef()) {
+        PrintError("'" + IP.getInstName() + "': " +
+                   PatternType::VariadicClassName + " cannot be used on defs");
+        return false;
+      }
+    }
+
+    if (HasVariadic && !IP.isVariadic()) {
+      PrintError("cannot use a " + PatternType::VariadicClassName +
+                 " operand on non-variadic instruction '" + IP.getInstName() +
+                 "'");
+      return false;
+    }
+
+    return true;
+  };
+
   bool UsesWipMatchOpcode = false;
   for (const auto &Match : MatchPats) {
     const auto *Pat = Match.second.get();
@@ -1150,17 +1210,23 @@ bool CombineRuleBuilder::checkSemantics() {
       continue;
     }
 
-    // MIFlags in match cannot use the following syntax: (MIFlags $mi)
-    if (const auto *CGP = dyn_cast<CodeGenInstructionPattern>(Pat)) {
-      if (auto *FI = CGP->getMIFlagsInfo()) {
-        if (!FI->copy_flags().empty()) {
-          PrintError(
-              "'match' patterns cannot refer to flags from other instructions");
-          PrintNote("MIFlags in '" + CGP->getName() +
-                    "' refer to: " + join(FI->copy_flags(), ", "));
-          return false;
+    if (const auto IP = dyn_cast<InstructionPattern>(Pat)) {
+      if (!CheckVariadicOperands(*IP, /*IsMatch=*/true))
+        return false;
+
+      // MIFlags in match cannot use the following syntax: (MIFlags $mi)
+      if (const auto *CGP = dyn_cast<CodeGenInstructionPattern>(Pat)) {
+        if (auto *FI = CGP->getMIFlagsInfo()) {
+          if (!FI->copy_flags().empty()) {
+            PrintError("'match' patterns cannot refer to flags from other "
+                       "instructions");
+            PrintNote("MIFlags in '" + CGP->getName() +
+                      "' refer to: " + join(FI->copy_flags(), ", "));
+            return false;
+          }
         }
       }
+      continue;
     }
 
     const auto *AOP = dyn_cast<AnyOpcodePattern>(Pat);
@@ -1175,11 +1241,25 @@ bool CombineRuleBuilder::checkSemantics() {
     UsesWipMatchOpcode = true;
   }
 
+  std::optional<bool> IsUsingCXXPatterns;
   for (const auto &Apply : ApplyPats) {
-    assert(Apply.second.get());
-    const auto *IP = dyn_cast<InstructionPattern>(Apply.second.get());
+    Pattern *Pat = Apply.second.get();
+    if (IsUsingCXXPatterns) {
+      if (*IsUsingCXXPatterns != isa<CXXPattern>(Pat)) {
+        PrintError("'apply' patterns cannot mix C++ code with other types of "
+                   "patterns");
+        return false;
+      }
+    } else
+      IsUsingCXXPatterns = isa<CXXPattern>(Pat);
+
+    assert(Pat);
+    const auto *IP = dyn_cast<InstructionPattern>(Pat);
     if (!IP)
       continue;
+
+    if (!CheckVariadicOperands(*IP, /*IsMatch=*/false))
+      return false;
 
     if (UsesWipMatchOpcode) {
       PrintError("cannot use wip_match_opcode in combination with apply "
@@ -1260,6 +1340,12 @@ bool CombineRuleBuilder::checkSemantics() {
     }
   }
 
+  if (!hasOnlyCXXApplyPatterns() && !MatchDatas.empty()) {
+    PrintError(MatchDataClassName +
+               " can only be used if 'apply' in entirely written in C++");
+    return false;
+  }
+
   return true;
 }
 
@@ -1287,13 +1373,13 @@ bool CombineRuleBuilder::addFeaturePredicates(RuleMatcher &M) {
   if (!RuleDef.getValue("Predicates"))
     return true;
 
-  ListInit *Preds = RuleDef.getValueAsListInit("Predicates");
-  for (Init *PI : Preds->getValues()) {
-    DefInit *Pred = dyn_cast<DefInit>(PI);
+  const ListInit *Preds = RuleDef.getValueAsListInit("Predicates");
+  for (const Init *PI : Preds->getValues()) {
+    const DefInit *Pred = dyn_cast<DefInit>(PI);
     if (!Pred)
       continue;
 
-    Record *Def = Pred->getDef();
+    const Record *Def = Pred->getDef();
     if (!Def->isSubClassOf("Predicate")) {
       ::PrintError(Def, "Unknown 'Predicate' Type");
       return false;
@@ -1439,8 +1525,8 @@ bool CombineRuleBuilder::parseDefs(const DagInit &Def) {
     // Subclasses of GIDefMatchData should declare that this rule needs to pass
     // data from the match stage to the apply stage, and ensure that the
     // generated matcher has a suitable variable for it to do so.
-    if (Record *MatchDataRec =
-            getDefOfSubClass(*Def.getArg(I), "GIDefMatchData")) {
+    if (const Record *MatchDataRec =
+            getDefOfSubClass(*Def.getArg(I), MatchDataClassName)) {
       MatchDatas.emplace_back(Def.getArgNameStr(I),
                               MatchDataRec->getValueAsString("Type"));
       continue;
@@ -1463,9 +1549,6 @@ bool CombineRuleBuilder::parseDefs(const DagInit &Def) {
   }
 
   RootName = Roots.front();
-
-  // Assign variables to all MatchDatas.
-  AssignMatchDataVariables(MatchDatas);
   return true;
 }
 
@@ -1502,6 +1585,8 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
     llvm_unreachable("Unknown kind of InstructionPattern!");
 
   // Emit remaining patterns
+  const bool IsUsingCustomCXXAction = hasOnlyCXXApplyPatterns();
+  SmallVector<CXXPattern *, 2> CXXMatchers;
   for (auto &Pat : values(MatchPats)) {
     if (SeenPats.contains(Pat.get()))
       continue;
@@ -1523,7 +1608,11 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
       cast<InstructionPattern>(Pat.get())->reportUnreachable(RuleDef.getLoc());
       return false;
     case Pattern::K_CXX: {
-      addCXXPredicate(M, CE, *cast<CXXPattern>(Pat.get()), Alts);
+      // Delay emission for top-level C++ matchers (which can use MatchDatas).
+      if (IsUsingCustomCXXAction)
+        CXXMatchers.push_back(cast<CXXPattern>(Pat.get()));
+      else
+        addCXXPredicate(M, CE, *cast<CXXPattern>(Pat.get()), Alts);
       continue;
     }
     default:
@@ -1531,7 +1620,8 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
     }
   }
 
-  return emitApplyPatterns(CE, M);
+  return IsUsingCustomCXXAction ? emitCXXMatchApply(CE, M, CXXMatchers)
+                                : emitApplyPatterns(CE, M);
 }
 
 bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
@@ -1539,6 +1629,7 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
                                           const AnyOpcodePattern &AOP) {
   auto StackTrace = PrettyStackTraceEmit(RuleDef, &AOP);
 
+  const bool IsUsingCustomCXXAction = hasOnlyCXXApplyPatterns();
   for (const CodeGenInstruction *CGI : AOP.insts()) {
     auto &M = addRuleMatcher(Alts, "wip_match_opcode '" +
                                        CGI->TheDef->getName() + "'");
@@ -1552,6 +1643,7 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
     IM.addPredicate<InstructionOpcodeMatcher>(CGI);
 
     // Emit remaining patterns.
+    SmallVector<CXXPattern *, 2> CXXMatchers;
     for (auto &Pat : values(MatchPats)) {
       if (Pat.get() == &AOP)
         continue;
@@ -1576,7 +1668,11 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
             RuleDef.getLoc());
         return false;
       case Pattern::K_CXX: {
-        addCXXPredicate(M, CE, *cast<CXXPattern>(Pat.get()), Alts);
+        // Delay emission for top-level C++ matchers (which can use MatchDatas).
+        if (IsUsingCustomCXXAction)
+          CXXMatchers.push_back(cast<CXXPattern>(Pat.get()));
+        else
+          addCXXPredicate(M, CE, *cast<CXXPattern>(Pat.get()), Alts);
         break;
       }
       default:
@@ -1584,7 +1680,10 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
       }
     }
 
-    if (!emitApplyPatterns(CE, M))
+    const bool Res = IsUsingCustomCXXAction
+                         ? emitCXXMatchApply(CE, M, CXXMatchers)
+                         : emitApplyPatterns(CE, M);
+    if (!Res)
       return false;
   }
 
@@ -1597,9 +1696,8 @@ bool CombineRuleBuilder::emitPatFragMatchPattern(
     DenseSet<const Pattern *> &SeenPats) {
   auto StackTrace = PrettyStackTraceEmit(RuleDef, &PFP);
 
-  if (SeenPats.contains(&PFP))
+  if (!SeenPats.insert(&PFP).second)
     return true;
-  SeenPats.insert(&PFP);
 
   const auto &PF = PFP.getPatFrag();
 
@@ -1727,11 +1825,7 @@ bool CombineRuleBuilder::emitPatFragMatchPattern(
 }
 
 bool CombineRuleBuilder::emitApplyPatterns(CodeExpansions &CE, RuleMatcher &M) {
-  if (hasOnlyCXXApplyPatterns()) {
-    for (auto &Pat : values(ApplyPats))
-      addCXXAction(M, CE, *cast<CXXPattern>(Pat.get()));
-    return true;
-  }
+  assert(MatchDatas.empty());
 
   DenseSet<const Pattern *> SeenPats;
   StringMap<unsigned> OperandToTempRegID;
@@ -1764,8 +1858,8 @@ bool CombineRuleBuilder::emitApplyPatterns(CodeExpansions &CE, RuleMatcher &M) {
       cast<CodeGenInstructionPattern>(*Pat).reportUnreachable(RuleDef.getLoc());
       return false;
     case Pattern::K_CXX: {
-      addCXXAction(M, CE, *cast<CXXPattern>(Pat.get()));
-      continue;
+      llvm_unreachable(
+          "CXX Pattern Emission should have been handled earlier!");
     }
     default:
       llvm_unreachable("unknown pattern kind!");
@@ -1780,16 +1874,52 @@ bool CombineRuleBuilder::emitApplyPatterns(CodeExpansions &CE, RuleMatcher &M) {
   return true;
 }
 
+bool CombineRuleBuilder::emitCXXMatchApply(CodeExpansions &CE, RuleMatcher &M,
+                                           ArrayRef<CXXPattern *> Matchers) {
+  assert(hasOnlyCXXApplyPatterns());
+  declareAllMatchDatasExpansions(CE);
+
+  std::string CodeStr;
+  raw_string_ostream OS(CodeStr);
+
+  for (auto &MD : MatchDatas)
+    OS << MD.Type << " " << MD.getVarName() << ";\n";
+
+  if (!Matchers.empty()) {
+    OS << "// Match Patterns\n";
+    for (auto *M : Matchers) {
+      OS << "if(![&](){";
+      CodeExpander Expander(M->getRawCode(), CE, RuleDef.getLoc(),
+                            /*ShowExpansions=*/false);
+      Expander.emit(OS);
+      OS << "}()) {\n"
+         << "  return false;\n}\n";
+    }
+  }
+
+  OS << "// Apply Patterns\n";
+  ListSeparator LS("\n");
+  for (auto &Pat : ApplyPats) {
+    auto *CXXPat = cast<CXXPattern>(Pat.second.get());
+    CodeExpander Expander(CXXPat->getRawCode(), CE, RuleDef.getLoc(),
+                          /*ShowExpansions=*/false);
+    OS << LS;
+    Expander.emit(OS);
+  }
+
+  const auto &Code = CXXPredicateCode::getCustomActionCode(CodeStr);
+  M.setCustomCXXAction(Code.getEnumNameWithPrefix(CXXCustomActionPrefix));
+  return true;
+}
+
 bool CombineRuleBuilder::emitInstructionApplyPattern(
     CodeExpansions &CE, RuleMatcher &M, const InstructionPattern &P,
     DenseSet<const Pattern *> &SeenPats,
     StringMap<unsigned> &OperandToTempRegID) {
   auto StackTrace = PrettyStackTraceEmit(RuleDef, &P);
 
-  if (SeenPats.contains(&P))
+  if (!SeenPats.insert(&P).second)
     return true;
-
-  SeenPats.insert(&P);
 
   // First, render the uses.
   for (auto &Op : P.named_operands()) {
@@ -1870,8 +2000,8 @@ bool CombineRuleBuilder::emitInstructionApplyPattern(
       continue;
     }
 
-    // Determine what we're dealing with. Are we replace a matched instruction?
-    // Creating a new one?
+    // Determine what we're dealing with. Are we replacing a matched
+    // instruction? Creating a new one?
     auto OpLookupRes = MatchOpTable.lookup(OpName);
     if (OpLookupRes.Found) {
       if (OpLookupRes.isLiveIn()) {
@@ -1917,8 +2047,11 @@ bool CombineRuleBuilder::emitInstructionApplyPattern(
       declareTempRegExpansion(CE, TempRegID, OpName);
       // Always insert the action at the beginning, otherwise we may end up
       // using the temp reg before it's available.
-      M.insertAction<MakeTempRegisterAction>(
-          M.actions_begin(), getLLTCodeGenOrTempType(Ty, M), TempRegID);
+      auto Result = getLLTCodeGenOrTempType(Ty, M);
+      if (!Result)
+        return false;
+      M.insertAction<MakeTempRegisterAction>(M.actions_begin(), *Result,
+                                             TempRegID);
     }
 
     DstMI.addRenderer<TempRegRenderer>(TempRegID, /*IsDef=*/true);
@@ -1975,16 +2108,18 @@ bool CombineRuleBuilder::emitCodeGenInstructionApplyImmOperand(
   }
 
   auto ImmTy = getLLTCodeGenOrTempType(Ty, M);
+  if (!ImmTy)
+    return false;
 
   if (isGConstant) {
-    DstMI.addRenderer<ImmRenderer>(O.getImmValue(), ImmTy);
+    DstMI.addRenderer<ImmRenderer>(O.getImmValue(), *ImmTy);
     return true;
   }
 
   unsigned TempRegID = M.allocateTempRegID();
   // Ensure MakeTempReg & the BuildConstantAction occur at the beginning.
   auto InsertIt = M.insertAction<MakeTempRegisterAction>(M.actions_begin(),
-                                                         ImmTy, TempRegID);
+                                                         *ImmTy, TempRegID);
   M.insertAction<BuildConstantAction>(++InsertIt, TempRegID, O.getImmValue());
   DstMI.addRenderer<TempRegRenderer>(TempRegID);
   return true;
@@ -2050,10 +2185,8 @@ bool CombineRuleBuilder::emitCodeGenInstructionMatchPattern(
     OperandMapperFnRef OperandMapper) {
   auto StackTrace = PrettyStackTraceEmit(RuleDef, &P);
 
-  if (SeenPats.contains(&P))
+  if (!SeenPats.insert(&P).second)
     return true;
-
-  SeenPats.insert(&P);
 
   IM.addPredicate<InstructionOpcodeMatcher>(&P.getInst());
   declareInstExpansion(CE, IM, P.getName());
@@ -2090,6 +2223,8 @@ bool CombineRuleBuilder::emitCodeGenInstructionMatchPattern(
     assert(RemappedO.isNamedOperand() == OriginalO.isNamedOperand() &&
            "Cannot remap an unnamed operand to a named one!");
 
+    const auto Ty = RemappedO.getType();
+
     const auto OpName =
         RemappedO.isNamedOperand() ? RemappedO.getOperandName().str() : "";
 
@@ -2101,10 +2236,40 @@ bool CombineRuleBuilder::emitCodeGenInstructionMatchPattern(
     //    RealIdx = expected index in the MachineInstr.
     const unsigned RealIdx =
         (P.isIntrinsic() && !OriginalO.isDef()) ? (Idx + 1) : Idx;
+
+    if (Ty.isVariadicPack() && M.hasOperand(OpName)) {
+      // TODO: We could add some CheckIsSameOperand opcode variant that checks
+      // all operands. We could also just emit a C++ code snippet lazily to do
+      // the check since it's probably fairly rare that we need to do it.
+      //
+      // I'm just not sure it's worth the effort at this stage.
+      PrintError("each instance of a " + PatternType::VariadicClassName +
+                 " operand must have a unique name within the match patterns");
+      PrintNote("'" + OpName + "' is used multiple times");
+      return false;
+    }
+
     OperandMatcher &OM =
-        IM.addOperand(RealIdx, OpName, AllocatedTemporariesBaseID++);
+        IM.addOperand(RealIdx, OpName, AllocatedTemporariesBaseID++,
+                      /*IsVariadic=*/Ty.isVariadicPack());
     if (!OpName.empty())
       declareOperandExpansion(CE, OM, OriginalO.getOperandName());
+
+    if (Ty.isVariadicPack()) {
+      // In the presence of variadics, the InstructionMatcher won't insert a
+      // InstructionNumOperandsMatcher implicitly, so we have to emit our own.
+      assert((Idx + 1) == P.operands_size() &&
+             "VariadicPack isn't last operand!");
+      auto VPTI = Ty.getVariadicPackTypeInfo();
+      assert(VPTI.Min > 0 && (VPTI.Max == 0 || VPTI.Max > VPTI.Min));
+      IM.addPredicate<InstructionNumOperandsMatcher>(
+          RealIdx + VPTI.Min, InstructionNumOperandsMatcher::CheckKind::GE);
+      if (VPTI.Max) {
+        IM.addPredicate<InstructionNumOperandsMatcher>(
+            RealIdx + VPTI.Max, InstructionNumOperandsMatcher::CheckKind::LE);
+      }
+      break;
+    }
 
     // Handle immediates.
     if (RemappedO.hasImmValue()) {
@@ -2121,16 +2286,14 @@ bool CombineRuleBuilder::emitCodeGenInstructionMatchPattern(
     // for that Operand. "OM" here is always a new OperandMatcher.
     //
     // Always emit a check for unnamed operands.
-    if (OpName.empty() ||
-        !M.getOperandMatcher(OpName).contains<LLTOperandMatcher>()) {
-      if (const auto Ty = RemappedO.getType()) {
-        // TODO: We could support GITypeOf here on the condition that the
-        // OperandMatcher exists already. Though it's clunky to make this work
-        // and isn't all that useful so it's just rejected in typecheckPatterns
-        // at this time.
-        assert(Ty.isLLT() && "Only LLTs are supported in match patterns!");
-        OM.addPredicate<LLTOperandMatcher>(getLLTCodeGen(Ty));
-      }
+    if (Ty && (OpName.empty() ||
+               !M.getOperandMatcher(OpName).contains<LLTOperandMatcher>())) {
+      // TODO: We could support GITypeOf here on the condition that the
+      // OperandMatcher exists already. Though it's clunky to make this work
+      // and isn't all that useful so it's just rejected in typecheckPatterns
+      // at this time.
+      assert(Ty.isLLT());
+      OM.addPredicate<LLTOperandMatcher>(getLLTCodeGen(Ty));
     }
 
     // Stop here if the operand is a def, or if it had no name.
@@ -2197,10 +2360,10 @@ bool CombineRuleBuilder::emitCodeGenInstructionMatchPattern(
 /// static storage pools and wires them together to emit the match table &
 /// associated function/data structures.
 class GICombinerEmitter final : public GlobalISelMatchTableExecutorEmitter {
-  RecordKeeper &Records;
+  const RecordKeeper &Records;
   StringRef Name;
   const CodeGenTarget &Target;
-  Record *Combiner;
+  const Record *Combiner;
   unsigned NextRuleID = 0;
 
   // List all combine rules (ID, name) imported.
@@ -2226,9 +2389,6 @@ class GICombinerEmitter final : public GlobalISelMatchTableExecutorEmitter {
   void emitTestSimplePredicate(raw_ostream &OS) override;
   void emitRunCustomAction(raw_ostream &OS) override;
 
-  void emitAdditionalTemporariesDecl(raw_ostream &OS,
-                                     StringRef Indent) override;
-
   const CodeGenTarget &getTarget() const override { return Target; }
   StringRef getClassName() const override {
     return Combiner->getValueAsString("Classname");
@@ -2243,11 +2403,12 @@ class GICombinerEmitter final : public GlobalISelMatchTableExecutorEmitter {
   }
 
   void gatherRules(std::vector<RuleMatcher> &Rules,
-                   const std::vector<Record *> &&RulesAndGroups);
+                   ArrayRef<const Record *> RulesAndGroups);
 
 public:
-  explicit GICombinerEmitter(RecordKeeper &RK, const CodeGenTarget &Target,
-                             StringRef Name, Record *Combiner);
+  explicit GICombinerEmitter(const RecordKeeper &RK,
+                             const CodeGenTarget &Target, StringRef Name,
+                             const Record *Combiner);
   ~GICombinerEmitter() {}
 
   void run(raw_ostream &OS);
@@ -2371,8 +2532,6 @@ void GICombinerEmitter::emitAdditionalImpl(raw_ostream &OS) {
      << "  B.setInstrAndDebugLoc(I);\n"
      << "  State.MIs.clear();\n"
      << "  State.MIs.push_back(&I);\n"
-     << "  " << MatchDataInfo::StructName << " = "
-     << MatchDataInfo::StructTypeName << "();\n\n"
      << "  if (executeMatchTable(*this, State, ExecInfo, B"
      << ", getMatchTable(), *ST.getInstrInfo(), MRI, "
         "*MRI.getTargetRegisterInfo(), *ST.getRegBankInfo(), AvailableFeatures"
@@ -2438,53 +2597,41 @@ void GICombinerEmitter::emitTestSimplePredicate(raw_ostream &OS) {
 }
 
 void GICombinerEmitter::emitRunCustomAction(raw_ostream &OS) {
-  const auto ApplyCode = CXXPredicateCode::getAllApplyCode();
+  const auto CustomActionsCode = CXXPredicateCode::getAllCustomActionsCode();
 
-  if (!ApplyCode.empty()) {
+  if (!CustomActionsCode.empty()) {
     OS << "enum {\n";
     std::string EnumeratorSeparator = " = GICXXCustomAction_Invalid + 1,\n";
-    for (const auto &Apply : ApplyCode) {
-      OS << "  " << Apply->getEnumNameWithPrefix(CXXApplyPrefix)
+    for (const auto &CA : CustomActionsCode) {
+      OS << "  " << CA->getEnumNameWithPrefix(CXXCustomActionPrefix)
          << EnumeratorSeparator;
       EnumeratorSeparator = ",\n";
     }
     OS << "};\n";
   }
 
-  OS << "void " << getClassName()
+  OS << "bool " << getClassName()
      << "::runCustomAction(unsigned ApplyID, const MatcherState &State, "
         "NewMIVector &OutMIs) const "
-        "{\n";
-  if (!ApplyCode.empty()) {
+        "{\n  Helper.getBuilder().setInstrAndDebugLoc(*State.MIs[0]);\n";
+  if (!CustomActionsCode.empty()) {
     OS << "  switch(ApplyID) {\n";
-    for (const auto &Apply : ApplyCode) {
-      OS << "  case " << Apply->getEnumNameWithPrefix(CXXApplyPrefix) << ":{\n"
-         << "    Helper.getBuilder().setInstrAndDebugLoc(*State.MIs[0]);\n"
-         << "    " << join(split(Apply->Code, '\n'), "\n    ") << '\n'
-         << "    return;\n";
+    for (const auto &CA : CustomActionsCode) {
+      OS << "  case " << CA->getEnumNameWithPrefix(CXXCustomActionPrefix)
+         << ":{\n"
+         << "    " << join(split(CA->Code, '\n'), "\n    ") << '\n'
+         << "    return true;\n";
       OS << "  }\n";
     }
-    OS << "}\n";
+    OS << "  }\n";
   }
   OS << "  llvm_unreachable(\"Unknown Apply Action\");\n"
      << "}\n";
 }
 
-void GICombinerEmitter::emitAdditionalTemporariesDecl(raw_ostream &OS,
-                                                      StringRef Indent) {
-  OS << Indent << "struct " << MatchDataInfo::StructTypeName << " {\n";
-  for (const auto &[Type, VarNames] : AllMatchDataVars) {
-    assert(!VarNames.empty() && "Cannot have no vars for this type!");
-    OS << Indent << "  " << Type << " " << join(VarNames, ", ") << ";\n";
-  }
-  OS << Indent << "};\n"
-     << Indent << "mutable " << MatchDataInfo::StructTypeName << " "
-     << MatchDataInfo::StructName << ";\n\n";
-}
-
-GICombinerEmitter::GICombinerEmitter(RecordKeeper &RK,
+GICombinerEmitter::GICombinerEmitter(const RecordKeeper &RK,
                                      const CodeGenTarget &Target,
-                                     StringRef Name, Record *Combiner)
+                                     StringRef Name, const Record *Combiner)
     : Records(RK), Name(Name), Target(Target), Combiner(Combiner) {}
 
 MatchTable
@@ -2498,16 +2645,18 @@ GICombinerEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules) {
   for (RuleMatcher &Rule : Rules) {
     const StringRef Opcode = Rule.getOpcode();
     assert(!Opcode.empty() && "Didn't expect an undefined opcode");
-    if (OpcodeOrder.count(Opcode) == 0)
-      OpcodeOrder[Opcode] = CurrentOrdering++;
+    if (OpcodeOrder.try_emplace(Opcode, CurrentOrdering).second)
+      ++CurrentOrdering;
   }
 
   llvm::stable_sort(InputRules, [&OpcodeOrder](const Matcher *A,
                                                const Matcher *B) {
     auto *L = static_cast<const RuleMatcher *>(A);
     auto *R = static_cast<const RuleMatcher *>(B);
-    return std::make_tuple(OpcodeOrder[L->getOpcode()], L->getNumOperands()) <
-           std::make_tuple(OpcodeOrder[R->getOpcode()], R->getNumOperands());
+    return std::tuple(OpcodeOrder[L->getOpcode()],
+                      L->insnmatchers_front().getNumOperandMatchers()) <
+           std::tuple(OpcodeOrder[R->getOpcode()],
+                      R->insnmatchers_front().getNumOperandMatchers());
   });
 
   for (Matcher *Rule : InputRules)
@@ -2527,10 +2676,9 @@ GICombinerEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules) {
 }
 
 /// Recurse into GICombineGroup's and flatten the ruleset into a simple list.
-void GICombinerEmitter::gatherRules(
-    std::vector<RuleMatcher> &ActiveRules,
-    const std::vector<Record *> &&RulesAndGroups) {
-  for (Record *Rec : RulesAndGroups) {
+void GICombinerEmitter::gatherRules(std::vector<RuleMatcher> &ActiveRules,
+                                    ArrayRef<const Record *> RulesAndGroups) {
+  for (const Record *Rec : RulesAndGroups) {
     if (!Rec->isValueUnset("Rules")) {
       gatherRules(ActiveRules, Rec->getValueAsListOfDefs("Rules"));
       continue;
@@ -2569,7 +2717,8 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   InstructionOpcodeMatcher::initOpcodeValuesMap(Target);
   LLTOperandMatcher::initTypeIDValuesMap();
 
-  Records.startTimer("Gather rules");
+  TGTimer &Timer = Records.getTimer();
+  Timer.startTimer("Gather rules");
   std::vector<RuleMatcher> Rules;
   gatherRules(Rules, Combiner->getValueAsListOfDefs("Rules"));
   if (ErrorsPrinted)
@@ -2578,7 +2727,7 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   if (StopAfterParse)
     return;
 
-  Records.startTimer("Creating Match Table");
+  Timer.startTimer("Creating Match Table");
   unsigned MaxTemporaries = 0;
   for (const auto &Rule : Rules)
     MaxTemporaries = std::max(MaxTemporaries, Rule.countRendererFns());
@@ -2595,14 +2744,9 @@ void GICombinerEmitter::run(raw_ostream &OS) {
 
   const MatchTable Table = buildMatchTable(Rules);
 
-  Records.startTimer("Emit combiner");
+  Timer.startTimer("Emit combiner");
 
   emitSourceFileHeader(getClassName().str() + " Combiner Match Table", OS);
-
-  // Unused
-  std::vector<StringRef> CustomRendererFns;
-  // Unused
-  std::vector<Record *> ComplexPredicates;
 
   SmallVector<LLTCodeGen, 16> TypeObjects;
   append_range(TypeObjects, KnownTypes);
@@ -2632,8 +2776,8 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   emitTemporariesDecl(OS, "GET_GICOMBINER_CLASS_MEMBERS");
 
   // GET_GICOMBINER_IMPL, which needs to be included outside the class.
-  emitExecutorImpl(OS, Table, TypeObjects, Rules, ComplexPredicates,
-                   CustomRendererFns, "GET_GICOMBINER_IMPL");
+  emitExecutorImpl(OS, Table, TypeObjects, Rules, {}, {},
+                   "GET_GICOMBINER_IMPL");
 
   // GET_GICOMBINER_CONSTRUCTOR_INITS, which are in the constructor's
   // initializer list.
@@ -2645,14 +2789,14 @@ void GICombinerEmitter::run(raw_ostream &OS) {
 
 //===----------------------------------------------------------------------===//
 
-static void EmitGICombiner(RecordKeeper &RK, raw_ostream &OS) {
+static void EmitGICombiner(const RecordKeeper &RK, raw_ostream &OS) {
   EnablePrettyStackTrace();
-  CodeGenTarget Target(RK);
+  const CodeGenTarget Target(RK);
 
   if (SelectedCombiners.empty())
     PrintFatalError("No combiners selected with -combiners");
   for (const auto &Combiner : SelectedCombiners) {
-    Record *CombinerDef = RK.getDef(Combiner);
+    const Record *CombinerDef = RK.getDef(Combiner);
     if (!CombinerDef)
       PrintFatalError("Could not find " + Combiner);
     GICombinerEmitter(RK, Target, Combiner, CombinerDef).run(OS);

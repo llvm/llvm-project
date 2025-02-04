@@ -1,4 +1,3 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-process-unprofitable=false -polly-unprofitable-scalar-accs=false -polly-prune-unprofitable -disable-output -stats < %s 2>&1 | FileCheck -match-full-lines %s
 ; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb -polly-process-unprofitable=false -polly-unprofitable-scalar-accs=false "-passes=scop(polly-prune-unprofitable)" -disable-output -stats < %s 2>&1 | FileCheck -match-full-lines %s
 ; REQUIRES: asserts
 ;

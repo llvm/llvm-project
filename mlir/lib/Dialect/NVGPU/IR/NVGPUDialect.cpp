@@ -70,9 +70,9 @@ LogicalResult DeviceAsyncCopyOp::verify() {
   auto srcMemref = llvm::cast<MemRefType>(getSrc().getType());
   auto dstMemref = llvm::cast<MemRefType>(getDst().getType());
 
-  if (!isLastMemrefDimUnitStride(srcMemref))
+  if (!srcMemref.isLastDimUnitStride())
     return emitError("source memref most minor dim must have unit stride");
-  if (!isLastMemrefDimUnitStride(dstMemref))
+  if (!dstMemref.isLastDimUnitStride())
     return emitError("destination memref most minor dim must have unit stride");
   if (!NVGPUDialect::hasSharedMemoryAddressSpace(dstMemref))
     return emitError()
@@ -202,6 +202,18 @@ static LogicalResult verifyMmaSyncOp(Operation *op,
   //
   // Basic verification
   //
+
+  if (aShape.size() != 2) {
+    return op->emitError() << "matrixA must be 2 dimensional vector";
+  }
+
+  if (bShape.size() != 2) {
+    return op->emitError() << "matrixB must be 2 dimensional vector";
+  }
+
+  if (cShape.size() != 2) {
+    return op->emitError() << "matrixC must be 2 dimensional vector";
+  }
 
   auto [m, n, k] = mmaShape;
 
@@ -513,8 +525,8 @@ LogicalResult isAllowedWGMMADataType(Type typeD, Type typeA, Type typeB) {
     return success();
   // F16 += f8 + f8
   // F32 += f8 + f8
-  if ((typeA.isFloat8E5M2() || typeA.isFloat8E4M3FN()) &&
-      (typeB.isFloat8E5M2() || typeB.isFloat8E4M3FN()) &&
+  if (isa<Float8E5M2Type, Float8E4M3FNType>(typeA) &&
+      isa<Float8E5M2Type, Float8E4M3FNType>(typeB) &&
       (typeD.isF32() || typeD.isF16()))
     return success();
 
@@ -536,7 +548,7 @@ LogicalResult isAllowedSizeN(int sizeN, Type typeA) {
                                     80,  96,  112, 128, 144, 160,
                                     176, 192, 208, 224, 240, 256};
   if (typeA.isBF16() || typeA.isF16() || typeA.isF32() || typeA.isTF32() ||
-      typeA.isFloat8E4M3FN() || typeA.isFloat8E5M2())
+      isa<Float8E5M2Type, Float8E4M3FNType>(typeA))
     if (llvm::is_contained(allowedN, sizeN))
       return success();
 
@@ -640,6 +652,21 @@ LogicalResult WarpgroupMmaInitAccumulatorOp::verify() {
                          << ". It does not fit into warp-group "
                             "level (wgmma) matrix multiplication instruction "
                             "(or not supported yet)";
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// RcpOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult RcpOp::verify() {
+  RcpRoundingModeAttr rounding = getRoundingAttr();
+  bool ftz = getFtz();
+  // Currently, only `rcp_approx` and `ftz` is supported.
+  if (rounding.getValue() != RcpRoundingMode::APPROX || !ftz) {
+    return emitOpError() << "has a limitation. " << rounding
+                         << " or non-ftz is not supported yet.";
   }
   return success();
 }

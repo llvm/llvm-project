@@ -69,6 +69,14 @@ struct VectorTransferToSCFOptions {
     unroll = u;
     return *this;
   }
+  /// Enable scalable vector specific lowerings (which introduce loops). These
+  /// work alongside fullUnroll (which unrolls until the first scalable
+  /// dimension).
+  bool lowerScalable = false;
+  VectorTransferToSCFOptions enableLowerScalable(bool enable = true) {
+    lowerScalable = enable;
+    return *this;
+  }
 };
 
 /// Collect a set of patterns to convert from the Vector dialect to SCF + func.

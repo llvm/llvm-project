@@ -16,6 +16,7 @@
 #include <cassert>
 #include <climits>
 #include <cstdint>
+#include <limits>
 #include <type_traits>
 #include "test_macros.h"
 
@@ -89,6 +90,13 @@ constexpr bool do_test(int = 0)
     return accumulate;
 }
 
+template <class T>
+constexpr bool test_limits() {
+    assert(std::lcm(std::numeric_limits<T>::max() - 1, std::numeric_limits<T>::max() - 1) == std::numeric_limits<T>::max() - 1);
+    assert(std::lcm(std::numeric_limits<T>::max(), std::numeric_limits<T>::max()) == std::numeric_limits<T>::max());
+    return true;
+}
+
 int main(int argc, char**)
 {
     int non_cce = argc; // a value that can't possibly be constexpr
@@ -141,5 +149,22 @@ int main(int argc, char**)
     assert(res1 == 1324997410816LL);
     }
 
-  return 0;
+    // https://github.com/llvm/llvm-project/issues/96196
+    {
+        assert(test_limits<unsigned int>());
+        assert(test_limits<std::uint32_t>());
+        assert(test_limits<std::uint64_t>());
+        assert(test_limits<int>());
+        assert(test_limits<std::int32_t>());
+        assert(test_limits<std::int64_t>());
+
+        static_assert(test_limits<unsigned int>(), "");
+        static_assert(test_limits<std::uint32_t>(), "");
+        static_assert(test_limits<std::uint64_t>(), "");
+        static_assert(test_limits<int>(), "");
+        static_assert(test_limits<std::int32_t>(), "");
+        static_assert(test_limits<std::int64_t>(), "");
+    }
+
+    return 0;
 }

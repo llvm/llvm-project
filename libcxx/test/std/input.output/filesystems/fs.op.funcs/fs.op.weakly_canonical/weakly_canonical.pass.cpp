@@ -74,11 +74,23 @@ int main(int, char**) {
     fs::path p      = TC.input;
     fs::path expect = TC.expect;
     expect.make_preferred();
-    const fs::path output = fs::weakly_canonical(p);
 
-    TEST_REQUIRE(PathEq(output, expect),
-                 TEST_WRITE_CONCATENATED(
-                     "Input: ", TC.input.string(), "\nExpected: ", expect.string(), "\nOutput: ", output.string()));
+    {
+      const fs::path output = fs::weakly_canonical(p);
+      TEST_REQUIRE(PathEq(output, expect),
+                   TEST_WRITE_CONCATENATED(
+                       "Input: ", TC.input.string(), "\nExpected: ", expect.string(), "\nOutput: ", output.string()));
+    }
+
+    // Test the error_code variant
+    {
+      std::error_code ec;
+      const fs::path output_c = fs::weakly_canonical(p, ec);
+
+      TEST_REQUIRE(PathEq(output_c, expect),
+                   TEST_WRITE_CONCATENATED(
+                       "Input: ", TC.input.string(), "\nExpected: ", expect.string(), "\nOutput: ", output_c.string()));
+    }
   }
   return 0;
 }

@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_CODEGEN_MCDCSTATE_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ProfileData/Coverage/MCDCTypes.h"
 
 namespace clang {
@@ -26,16 +27,18 @@ using namespace llvm::coverage::mcdc;
 
 /// Per-Function MC/DC state
 struct State {
-  unsigned BitmapBytes = 0;
+  unsigned BitmapBits = 0;
 
   struct Decision {
     unsigned BitmapIdx;
+    llvm::SmallVector<std::array<int, 2>> Indices;
   };
 
   llvm::DenseMap<const Stmt *, Decision> DecisionByStmt;
 
   struct Branch {
     ConditionID ID;
+    const Stmt *DecisionStmt;
   };
 
   llvm::DenseMap<const Stmt *, Branch> BranchByStmt;

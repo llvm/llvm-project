@@ -9,11 +9,12 @@
 #include "src/math/fmaximum_magf.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, fmaximum_magf, (float x, float y)) {
   return fputil::fmaximum_mag(x, y);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

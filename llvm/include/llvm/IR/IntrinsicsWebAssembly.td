@@ -31,12 +31,17 @@ def int_wasm_ref_null_extern :
   DefaultAttrsIntrinsic<[llvm_externref_ty], [], [IntrNoMem]>;
 def int_wasm_ref_null_func :
   DefaultAttrsIntrinsic<[llvm_funcref_ty], [], [IntrNoMem]>;
+def int_wasm_ref_null_exn:
+  DefaultAttrsIntrinsic<[llvm_exnref_ty], [], [IntrNoMem]>;
 def int_wasm_ref_is_null_extern :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_externref_ty], [IntrNoMem],
                         "llvm.wasm.ref.is_null.extern">;
 def int_wasm_ref_is_null_func :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_funcref_ty],
                         [IntrNoMem], "llvm.wasm.ref.is_null.func">;
+def int_wasm_ref_is_null_exn :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_exnref_ty], [IntrNoMem],
+                        "llvm.wasm.ref.is_null.exn">;
 
 //===----------------------------------------------------------------------===//
 // Table intrinsics
@@ -47,12 +52,18 @@ def int_wasm_table_set_externref :
 def int_wasm_table_set_funcref :
   DefaultAttrsIntrinsic<[], [llvm_table_ty, llvm_i32_ty, llvm_funcref_ty],
                         [IntrWriteMem]>;
+def int_wasm_table_set_exnref :
+  DefaultAttrsIntrinsic<[], [llvm_table_ty, llvm_i32_ty, llvm_exnref_ty],
+                        [IntrWriteMem]>;
 
 def int_wasm_table_get_externref :
   DefaultAttrsIntrinsic<[llvm_externref_ty], [llvm_table_ty, llvm_i32_ty],
                         [IntrReadMem]>;
 def int_wasm_table_get_funcref :
   DefaultAttrsIntrinsic<[llvm_funcref_ty], [llvm_table_ty, llvm_i32_ty],
+                        [IntrReadMem]>;
+def int_wasm_table_get_exnref :
+  DefaultAttrsIntrinsic<[llvm_exnref_ty], [llvm_table_ty, llvm_i32_ty],
                         [IntrReadMem]>;
 
 // Query the current table size, and increase the current table size.
@@ -68,6 +79,9 @@ def int_wasm_table_grow_externref :
 def int_wasm_table_grow_funcref :
   DefaultAttrsIntrinsic<[llvm_i32_ty],
                         [llvm_table_ty, llvm_funcref_ty, llvm_i32_ty], []>;
+def int_wasm_table_grow_exnref :
+  DefaultAttrsIntrinsic<[llvm_i32_ty],
+                        [llvm_table_ty, llvm_exnref_ty, llvm_i32_ty], []>;
 def int_wasm_table_fill_externref :
   DefaultAttrsIntrinsic<[],
                         [llvm_table_ty, llvm_i32_ty, llvm_externref_ty,
@@ -75,6 +89,10 @@ def int_wasm_table_fill_externref :
 def int_wasm_table_fill_funcref :
   DefaultAttrsIntrinsic<[],
                         [llvm_table_ty, llvm_i32_ty, llvm_funcref_ty,
+                         llvm_i32_ty], []>;
+def int_wasm_table_fill_exnref :
+  DefaultAttrsIntrinsic<[],
+                        [llvm_table_ty, llvm_i32_ty, llvm_exnref_ty,
                          llvm_i32_ty], []>;
 
 //===----------------------------------------------------------------------===//
@@ -184,14 +202,6 @@ def int_wasm_shuffle :
                          ImmArg<ArgIndex<12>>, ImmArg<ArgIndex<13>>,
                          ImmArg<ArgIndex<14>>, ImmArg<ArgIndex<15>>,
                          ImmArg<ArgIndex<16>>, ImmArg<ArgIndex<17>>]>;
-def int_wasm_sub_sat_signed :
-  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                        [LLVMMatchType<0>, LLVMMatchType<0>],
-                        [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_sub_sat_unsigned :
-  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                        [LLVMMatchType<0>, LLVMMatchType<0>],
-                        [IntrNoMem, IntrSpeculatable]>;
 def int_wasm_avgr_unsigned :
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                         [LLVMMatchType<0>, LLVMMatchType<0>],
@@ -319,6 +329,35 @@ def int_wasm_relaxed_dot_i8x16_i7x16_add_signed:
 def int_wasm_relaxed_dot_bf16x8_add_f32:
   DefaultAttrsIntrinsic<[llvm_v4f32_ty],
                         [llvm_v8i16_ty, llvm_v8i16_ty, llvm_v4f32_ty],
+                        [IntrNoMem, IntrSpeculatable]>;
+
+//===----------------------------------------------------------------------===//
+// Half-precision intrinsics (experimental)
+//===----------------------------------------------------------------------===//
+
+// TODO: Replace these intrinsic with normal ISel patterns once the XXX
+// instructions are merged to the proposal.
+def int_wasm_loadf16_f32:
+  DefaultAttrsIntrinsic<[llvm_float_ty],
+            [llvm_ptr_ty],
+            [IntrReadMem, IntrArgMemOnly],
+             "", [SDNPMemOperand]>;
+def int_wasm_storef16_f32:
+  Intrinsic<[],
+            [llvm_float_ty, llvm_ptr_ty],
+            [IntrWriteMem, IntrArgMemOnly],
+             "", [SDNPMemOperand]>;
+def int_wasm_splat_f16x8:
+  DefaultAttrsIntrinsic<[llvm_v8f16_ty],
+                        [llvm_float_ty],
+                        [IntrNoMem, IntrSpeculatable]>;
+def int_wasm_extract_lane_f16x8:
+  DefaultAttrsIntrinsic<[llvm_float_ty],
+                        [llvm_v8f16_ty, llvm_i32_ty],
+                        [IntrNoMem, IntrSpeculatable]>;
+def int_wasm_replace_lane_f16x8:
+  DefaultAttrsIntrinsic<[llvm_v8f16_ty],
+                        [llvm_v8f16_ty, llvm_i32_ty, llvm_float_ty],
                         [IntrNoMem, IntrSpeculatable]>;
 
 

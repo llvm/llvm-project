@@ -7,20 +7,22 @@
 //===----------------------------------------------------------------------===//
 //
 // Standalone string utility functions. Utilities requiring memory allocations
-// should be placed in allocating_string_utils.h intead.
+// should be placed in allocating_string_utils.h instead.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC_STRING_STRING_UTILS_H
 #define LLVM_LIBC_SRC_STRING_STRING_UTILS_H
 
+#include "hdr/types/size_t.h"
 #include "src/__support/CPP/bitset.h"
+#include "src/__support/CPP/type_traits.h" // cpp::is_same_v
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/string/memory_utils/inline_bzero.h"
 #include "src/string/memory_utils/inline_memcpy.h"
-#include <stddef.h> // For size_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 template <typename Word> LIBC_INLINE constexpr Word repeat_byte(Word byte) {
@@ -78,24 +80,21 @@ LIBC_INLINE size_t string_length_wide_read(const char *src) {
   return char_ptr - src;
 }
 
-LIBC_INLINE size_t string_length_byte_read(const char *src) {
-  size_t length;
-  for (length = 0; *src; ++src, ++length)
-    ;
-  return length;
-}
-
 // Returns the length of a string, denoted by the first occurrence
 // of a null terminator.
-LIBC_INLINE size_t string_length(const char *src) {
+template <typename T> LIBC_INLINE size_t string_length(const T *src) {
 #ifdef LIBC_COPT_STRING_UNSAFE_WIDE_READ
   // Unsigned int is the default size for most processors, and on x86-64 it
   // performs better than larger sizes when the src pointer can't be assumed to
   // be aligned to a word boundary, so it's the size we use for reading the
   // string a block at a time.
-  return string_length_wide_read<unsigned int>(src);
+  if constexpr (cpp::is_same_v<T, char>)
+    return string_length_wide_read<unsigned int>(src);
 #else
-  return string_length_byte_read(src);
+  size_t length;
+  for (length = 0; *src; ++src, ++length)
+    ;
+  return length;
 #endif
 }
 
@@ -220,7 +219,7 @@ LIBC_INLINE size_t strlcpy(char *__restrict dst, const char *__restrict src,
     return len;
   size_t n = len < size - 1 ? len : size - 1;
   inline_memcpy(dst, src, n);
-  inline_bzero(dst + n, size - n);
+  dst[n] = '\0';
   return len;
 }
 
@@ -238,14 +237,16 @@ LIBC_INLINE constexpr static char *strrchr_implementation(const char *src,
                                                           int c) {
   char ch = static_cast<char>(c);
   char *last_occurrence = nullptr;
-  for (; *src; ++src) {
+  while (true) {
     if (*src == ch)
       last_occurrence = const_cast<char *>(src);
+    if (!*src)
+      return last_occurrence;
+    ++src;
   }
-  return last_occurrence;
 }
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif //  LLVM_LIBC_SRC_STRING_STRING_UTILS_H

@@ -1,18 +1,18 @@
-; RUN: rm -rf %t && mkdir %t && cd %t
+; RUN: rm -rf %t && mkdir %t
 
 ; Generate indexed profiles from text profiles
-RUN: llvm-profdata merge %S/Inputs/vtable-value-prof.proftext -o indexed.profdata
+RUN: llvm-profdata merge --keep-vtable-symbols %S/Inputs/vtable-value-prof.proftext -o %t/indexed.profdata
 
 ; Show indexed profiles
-RUN: llvm-profdata show --function=main --ic-targets --show-vtables indexed.profdata | FileCheck %s --check-prefix=INDEXED
+RUN: llvm-profdata show --function=main --ic-targets --show-vtables %t/indexed.profdata | FileCheck %s --check-prefix=INDEXED
 
 ; Show text profiles
 RUN: llvm-profdata show --function=main --ic-targets --show-vtables --text %S/Inputs/vtable-value-prof.proftext | FileCheck %s --check-prefix=ICTEXT
 
 ; Convert indexed profiles to its textual output and show it.
-RUN: llvm-profdata merge --text -o text-from-indexed.proftext indexed.profdata
-RUN: llvm-profdata show --function=main --ic-targets --show-vtables text-from-indexed.proftext | FileCheck %s --check-prefix=INDEXED
-RUN: llvm-profdata show --function=main --ic-targets --show-vtables --text text-from-indexed.proftext | FileCheck %s --check-prefix=ICTEXT
+RUN: llvm-profdata merge --keep-vtable-symbols --text -o %t/text-from-indexed.proftext %t/indexed.profdata
+RUN: llvm-profdata show --function=main --ic-targets --show-vtables %t/text-from-indexed.proftext | FileCheck %s --check-prefix=INDEXED
+RUN: llvm-profdata show --function=main --ic-targets --show-vtables --text %t/text-from-indexed.proftext | FileCheck %s --check-prefix=ICTEXT
 
 INDEXED:      Counters:
 INDEXED-NEXT:   main:
@@ -35,6 +35,8 @@ INDEXED-NEXT: Functions shown: 1
 INDEXED-NEXT: Total functions: 6
 INDEXED-NEXT: Maximum function count: 1000
 INDEXED-NEXT: Maximum internal block count: 250
+INDEXED-NEXT: Total number of blocks: 8
+INDEXED-NEXT: Total count: 4001
 INDEXED-NEXT: Statistics for indirect call sites profile:
 INDEXED-NEXT:   Total number of sites: 2
 INDEXED-NEXT:   Total number of sites with values: 2

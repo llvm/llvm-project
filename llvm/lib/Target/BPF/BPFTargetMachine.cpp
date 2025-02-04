@@ -26,7 +26,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Support/FormattedStream.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
@@ -48,7 +47,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
   initializeGlobalISel(PR);
   initializeBPFCheckAndAdjustIRPass(PR);
   initializeBPFMIPeepholePass(PR);
-  initializeBPFDAGToDAGISelPass(PR);
+  initializeBPFDAGToDAGISelLegacyPass(PR);
 }
 
 // DataLayout: little or big endian
@@ -69,9 +68,9 @@ BPFTargetMachine::BPFTargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
-                        getEffectiveRelocModel(RM),
-                        getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT), TT, CPU, FS, Options,
+                               getEffectiveRelocModel(RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<TargetLoweringObjectFileELF>()),
       Subtarget(TT, std::string(CPU), std::string(FS), *this) {
   initAsmInfo();
@@ -113,8 +112,7 @@ static Expected<bool> parseBPFPreserveStaticOffsetOptions(StringRef Params) {
                                             "BPFPreserveStaticOffsetPass");
 }
 
-void BPFTargetMachine::registerPassBuilderCallbacks(
-    PassBuilder &PB, bool PopulateClassToPassNames) {
+void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "BPFPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 
@@ -139,7 +137,7 @@ void BPFTargetMachine::registerPassBuilderCallbacks(
         FPM.addPass(BPFPreserveStaticOffsetPass(false));
       });
   PB.registerPipelineEarlySimplificationEPCallback(
-      [=](ModulePassManager &MPM, OptimizationLevel) {
+      [=](ModulePassManager &MPM, OptimizationLevel, ThinOrFullLTOPhase) {
         MPM.addPass(BPFAdjustOptPass());
       });
 }

@@ -189,7 +189,7 @@ public:
   /// is only a shallow clone that lacks any contents.
   void SetDeclOrigin(const clang::Decl *decl, clang::Decl *original_decl);
 
-  ClangASTMetadata *GetDeclMetadata(const clang::Decl *decl);
+  std::optional<ClangASTMetadata> GetDeclMetadata(const clang::Decl *decl);
 
   //
   // Namespace maps

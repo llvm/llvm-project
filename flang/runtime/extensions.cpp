@@ -23,6 +23,12 @@
 #include <thread>
 
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+
+#include <synchapi.h>
+
 inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
     Fortran::runtime::Terminator terminator) {
   int error{ctime_s(buffer, bufsize, &cur_time)};
@@ -45,12 +51,32 @@ inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
 
 #ifndef _WIN32
 // posix-compliant and has getlogin_r and F_OK
-#include <unistd.h> 
+#include <unistd.h>
+#else
+#include <direct.h>
 #endif
 
 extern "C" {
 
 namespace Fortran::runtime {
+
+gid_t RTNAME(GetGID)() {
+#ifdef _WIN32
+  // Group IDs don't exist on Windows, return 1 to avoid errors
+  return 1;
+#else
+  return getgid();
+#endif
+}
+
+uid_t RTNAME(GetUID)() {
+#ifdef _WIN32
+  // User IDs don't exist on Windows, return 1 to avoid errors
+  return 1;
+#else
+  return getuid();
+#endif
+}
 
 void GetUsernameEnvVar(const char *envName, char *arg, std::int64_t length) {
   Descriptor name{*Descriptor::Create(
@@ -60,6 +86,7 @@ void GetUsernameEnvVar(const char *envName, char *arg, std::int64_t length) {
   RTNAME(GetEnvVariable)
   (name, &value, nullptr, false, nullptr, __FILE__, __LINE__);
 }
+
 namespace io {
 // SUBROUTINE FLUSH(N)
 //   FLUSH N
@@ -90,6 +117,10 @@ void FORTRAN_PROCEDURE_NAME(fdate)(char *arg, std::int64_t length) {
   CopyAndPad(arg, str, length, 24);
 }
 
+std::intptr_t RTNAME(Malloc)(std::size_t size) {
+  return reinterpret_cast<std::intptr_t>(std::malloc(size));
+}
+
 // RESULT = IARGC()
 std::int32_t FORTRAN_PROCEDURE_NAME(iargc)() { return RTNAME(ArgumentCount)(); }
 
@@ -118,6 +149,10 @@ void FORTRAN_PROCEDURE_NAME(getlog)(char *arg, std::int64_t length) {
 #endif
 }
 
+void RTNAME(Free)(std::intptr_t ptr) {
+  std::free(reinterpret_cast<void *>(ptr));
+}
+
 std::int64_t RTNAME(Signal)(std::int64_t number, void (*handler)(int)) {
   // using auto for portability:
   // on Windows, this is a void *
@@ -136,7 +171,11 @@ void RTNAME(Sleep)(std::int64_t seconds) {
   if (seconds < 1) {
     return;
   }
-  std::this_thread::sleep_for(std::chrono::seconds(seconds));
+#if _WIN32
+  Sleep(seconds * 1000);
+#else
+  sleep(seconds);
+#endif
 }
 
 // TODO: not supported on Windows
@@ -210,6 +249,18 @@ cleanup:
   return ret;
 }
 #endif
+
+// CHDIR(DIR)
+int RTNAME(Chdir)(const char *name) {
+// chdir alias seems to be deprecated on Windows.
+#ifndef _WIN32
+  return chdir(name);
+#else
+  return _chdir(name);
+#endif
+}
+
+int FORTRAN_PROCEDURE_NAME(ierrno)() { return errno; }
 
 } // namespace Fortran::runtime
 } // extern "C"

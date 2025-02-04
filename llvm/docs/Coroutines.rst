@@ -312,6 +312,7 @@ lowered to a constant representing the size required for the coroutine frame.
 The `coro.begin`_ intrinsic initializes the coroutine frame and returns the
 coroutine handle. The second parameter of `coro.begin` is given a block of memory
 to be used if the coroutine frame needs to be allocated dynamically.
+
 The `coro.id`_ intrinsic serves as coroutine identity useful in cases when the
 `coro.begin`_ intrinsic get duplicated by optimization passes such as
 jump-threading.
@@ -749,6 +750,87 @@ and python iterator `__next__` would look like:
     return *(int*)coro.promise(hdl, 4, false);
   }
 
+Custom ABIs and Plugin Libraries
+--------------------------------
+
+Plugin libraries can extend coroutine lowering enabling a wide variety of users
+to utilize the coroutine transformation passes. An existing coroutine lowering
+is extended by:
+
+#. defining custom ABIs that inherit from the existing ABIs,
+#. give a list of generators for the custom ABIs when constructing the `CoroSplit`_ pass, and
+#. use `coro.begin.custom.abi`_ in place of `coro.begin`_ that has an additional parameter for the index of the generator/ABI to be used for the coroutine.
+
+A custom ABI overriding the SwitchABI's materialization looks like:
+
+.. code-block:: c++
+
+  class CustomSwitchABI : public coro::SwitchABI {
+  public:
+    CustomSwitchABI(Function &F, coro::Shape &S)
+      : coro::SwitchABI(F, S, ExtraMaterializable) {}
+  };
+
+Giving a list of custom ABI generators while constructing the `CoroSplit`
+pass looks like:
+
+.. code-block:: c++
+
+  CoroSplitPass::BaseABITy GenCustomABI = [](Function &F, coro::Shape &S) {
+    return std::make_unique<CustomSwitchABI>(F, S);
+  };
+
+  CGSCCPassManager CGPM;
+  CGPM.addPass(CoroSplitPass({GenCustomABI}));
+
+The LLVM IR for a coroutine using a Coroutine with a custom ABI looks like:
+
+.. code-block:: llvm
+
+  define ptr @f(i32 %n) presplitcoroutine_custom_abi {
+  entry:
+    %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+    %size = call i32 @llvm.coro.size.i32()
+    %alloc = call ptr @malloc(i32 %size)
+    %hdl = call noalias ptr @llvm.coro.begin.custom.abi(token %id, ptr %alloc, i32 0)
+    br label %loop
+  loop:
+    %n.val = phi i32 [ %n, %entry ], [ %inc, %loop ]
+    %inc = add nsw i32 %n.val, 1
+    call void @print(i32 %n.val)
+    %0 = call i8 @llvm.coro.suspend(token none, i1 false)
+    switch i8 %0, label %suspend [i8 0, label %loop
+                                  i8 1, label %cleanup]
+  cleanup:
+    %mem = call ptr @llvm.coro.free(token %id, ptr %hdl)
+    call void @free(ptr %mem)
+    br label %suspend
+  suspend:
+    %unused = call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+    ret ptr %hdl
+  }
+
+Parameter Attributes
+====================
+Some parameter attributes, used to communicate additional information about the result or parameters of a function, require special handling.
+
+ByVal
+-----
+A ByVal parameter on an argument indicates that the pointee should be treated as being passed by value to the function.
+Prior to the coroutine transforms loads and stores to/from the pointer are generated where the value is needed.
+Consequently, a ByVal argument is treated much like an alloca.
+Space is allocated for it on the coroutine frame and the uses of the argument pointer are replaced with a pointer to the coroutine frame.
+
+Swift Error
+-----------
+Clang supports the swiftcall calling convention in many common targets, and a user could call a function that takes a swifterror argument from a C++ coroutine.
+The swifterror parameter attribute exists to model and optimize Swift error handling.
+A swifterror alloca or parameter can only be loaded, stored, or passed as a swifterror call argument, and a swifterror call argument can only be a direct reference to a swifterror alloca or parameter. 
+These rules, not coincidentally, mean that you can always perfectly model the data flow in the alloca, and LLVM CodeGen actually has to do that in order to emit code.
+
+For coroutine lowering the default treatment of allocas breaks those rules — splitting will try to replace the alloca with an entry in the coro frame, which can lead to trying to pass that as a swifterror argument.
+To pass a swifterror argument in a split function, we need to still have the alloca around; but we also potentially need the coro frame slot, since useful data can (in theory) be stored in the swifterror alloca slot across suspensions in the presplit coroutine. 
+When split a coroutine it is consequently necessary to keep both the frame slot as well as the alloca itself and then keep them in sync.
 
 Intrinsics
 ==========
@@ -1006,6 +1088,36 @@ instructions that express relative access to data can be more compactly encoded
 with small positive and negative offsets).
 
 A frontend should emit exactly one `coro.begin` intrinsic per coroutine.
+
+.. _coro.begin.custom.abi:
+
+'llvm.coro.begin.custom.abi' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+  declare ptr @llvm.coro.begin.custom.abi(token <id>, ptr <mem>, i32)
+
+Overview:
+"""""""""
+
+The '``llvm.coro.begin.custom.abi``' intrinsic is used in place of the
+`coro.begin` intrinsic that has an additional parameter to specify the custom
+ABI for the coroutine. The return is identical to that of the `coro.begin`
+intrinsic.
+
+Arguments:
+""""""""""
+
+The first and second arguments are identical to those of the `coro.begin`
+intrinsic.
+
+The third argument is an i32 index of the generator list given to the
+`CoroSplit` pass specifying the custom ABI generator for this coroutine.
+
+Semantics:
+""""""""""
+
+The semantics are identical to those of the `coro.begin` intrinsic.
 
 .. _coro.free:
 
@@ -1922,7 +2034,7 @@ Example:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
 
-  declare ptr @llvm.coro.await.suspend.handle(
+  declare void @llvm.coro.await.suspend.handle(
                 ptr <awaiter>,
                 ptr <handle>,
                 ptr <await_suspend_function>)
@@ -1967,7 +2079,9 @@ The intrinsic must be used between corresponding `coro.save`_ and
 `await_suspend_function` call during `CoroSplit`_ pass.
 
 `await_suspend_function` must return a pointer to a valid
-coroutine frame, which is immediately resumed
+coroutine frame. The intrinsic will be lowered to a tail call resuming the
+returned coroutine frame. It will be marked `musttail` on targets that support
+that. Instructions following the intrinsic will become unreachable.
 
 Example:
 """"""""
@@ -1977,11 +2091,10 @@ Example:
   ; before lowering
   await.suspend:
     %save = call token @llvm.coro.save(ptr %hdl)
-    %next = call ptr @llvm.coro.await.suspend.handle(
-                ptr %awaiter,
-                ptr %hdl,
-                ptr @await_suspend_function)
-    call void @llvm.coro.resume(%next)
+    call void @llvm.coro.await.suspend.handle(
+        ptr %awaiter,
+        ptr %hdl,
+        ptr @await_suspend_function)
     %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
     ...
 
@@ -1992,8 +2105,8 @@ Example:
     %next = call ptr @await_suspend_function(
                 ptr %awaiter,
                 ptr %hdl)
-    call void @llvm.coro.resume(%next)
-    %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
+    musttail call void @llvm.coro.resume(%next)
+    ret void
     ...
 
   ; wrapper function example
@@ -2021,6 +2134,12 @@ The pass CoroSplit builds coroutine frame and outlines resume and destroy parts
 into separate functions. This pass also lowers `coro.await.suspend.void`_,
 `coro.await.suspend.bool`_ and `coro.await.suspend.handle`_ intrinsics.
 
+CoroAnnotationElide
+-------------------
+This pass finds all usages of coroutines that are "must elide" and replaces
+`coro.begin` intrinsic with an address of a coroutine frame placed on its caller
+and replaces `coro.alloc` and `coro.free` intrinsics with `false` and `null`
+respectively to remove the deallocation code.
 
 CoroElide
 ---------
@@ -2047,6 +2166,18 @@ When the coroutine are marked with coro_only_destroy_when_complete, it indicates
 the coroutine must reach the final suspend point when it get destroyed.
 
 This attribute only works for switched-resume coroutines now.
+
+coro_elide_safe
+---------------
+
+When a Call or Invoke instruction to switch ABI coroutine `f` is marked with
+`coro_elide_safe`, CoroSplitPass generates a `f.noalloc` ramp function.
+`f.noalloc` has one more argument than its original ramp function `f`, which is
+the pointer to the allocated frame. `f.noalloc` also suppressed any allocations
+or deallocations that may be guarded by `@llvm.coro.alloc` and `@llvm.coro.free`.
+
+CoroAnnotationElidePass performs the heap elision when possible. Note that for
+recursive or mutually recursive functions this elision is usually not possible.
 
 Metadata
 ========

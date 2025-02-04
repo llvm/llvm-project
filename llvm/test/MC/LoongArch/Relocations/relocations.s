@@ -223,3 +223,88 @@ pcaddu18i $t1, %call36(foo)
 # RELOC: R_LARCH_CALL36 foo 0x0
 # INSTR: pcaddu18i $t1, %call36(foo)
 # FIXUP: fixup A - offset: 0, value: %call36(foo), kind: FK_NONE
+
+pcalau12i $t1, %desc_pc_hi20(foo)
+# RELOC: R_LARCH_TLS_DESC_PC_HI20 foo 0x0
+# INSTR: pcalau12i $t1, %desc_pc_hi20(foo)
+# FIXUP: fixup A - offset: 0, value: %desc_pc_hi20(foo), kind: FK_NONE
+
+addi.d $t1, $t1, %desc_pc_lo12(foo)
+# RELOC: R_LARCH_TLS_DESC_PC_LO12 foo 0x0
+# INSTR: addi.d $t1, $t1, %desc_pc_lo12(foo)
+# FIXUP: fixup A - offset: 0, value: %desc_pc_lo12(foo), kind: FK_NONE
+
+lu32i.d $t1, %desc64_pc_lo20(foo)
+# RELOC: R_LARCH_TLS_DESC64_PC_LO20 foo 0x0
+# INSTR: lu32i.d $t1, %desc64_pc_lo20(foo)
+# FIXUP: fixup A - offset: 0, value: %desc64_pc_lo20(foo), kind: FK_NONE
+
+lu52i.d $t1, $t1, %desc64_pc_hi12(foo)
+# RELOC: R_LARCH_TLS_DESC64_PC_HI12 foo 0x0
+# INSTR: lu52i.d $t1, $t1, %desc64_pc_hi12(foo)
+# FIXUP: fixup A - offset: 0, value: %desc64_pc_hi12(foo), kind: FK_NONE
+
+ld.d $ra, $t1, %desc_ld(foo)
+# RELOC: R_LARCH_TLS_DESC_LD foo 0x0
+# INSTR: ld.d $ra, $t1, %desc_ld(foo)
+# FIXUP: fixup A - offset: 0, value: %desc_ld(foo), kind: FK_NONE
+
+jirl $ra, $ra, %desc_call(foo)
+# RELOC: R_LARCH_TLS_DESC_CALL foo 0x0
+# INSTR: jirl $ra, $ra, %desc_call(foo)
+# FIXUP: fixup A - offset: 0, value: %desc_call(foo), kind: FK_NONE
+
+lu12i.w $t1, %desc_hi20(foo)
+# RELOC: R_LARCH_TLS_DESC_HI20 foo 0x0
+# INSTR: lu12i.w $t1, %desc_hi20(foo)
+# FIXUP: fixup A - offset: 0, value: %desc_hi20(foo), kind: FK_NONE
+
+ori $t1, $t1, %desc_lo12(foo)
+# RELOC: R_LARCH_TLS_DESC_LO12 foo 0x0
+# INSTR: ori $t1, $t1, %desc_lo12(foo)
+# FIXUP: fixup A - offset: 0, value: %desc_lo12(foo), kind: FK_NONE
+
+lu32i.d $t1, %desc64_lo20(foo)
+# RELOC: R_LARCH_TLS_DESC64_LO20 foo 0x0
+# INSTR: lu32i.d $t1, %desc64_lo20(foo)
+# FIXUP: fixup A - offset: 0, value: %desc64_lo20(foo), kind: FK_NONE
+
+lu52i.d $t1, $t1, %desc64_hi12(foo)
+# RELOC: R_LARCH_TLS_DESC64_HI12 foo 0x0
+# INSTR: lu52i.d $t1, $t1, %desc64_hi12(foo)
+# FIXUP: fixup A - offset: 0, value: %desc64_hi12(foo), kind: FK_NONE
+
+lu12i.w $t1, %le_hi20_r(foo)
+# RELOC: R_LARCH_TLS_LE_HI20_R foo 0x0
+# INSTR: lu12i.w $t1, %le_hi20_r(foo)
+# FIXUP: fixup A - offset: 0, value: %le_hi20_r(foo), kind: FK_NONE
+
+add.d $t1, $t2, $tp, %le_add_r(foo)
+# RELOC: R_LARCH_TLS_LE_ADD_R foo 0x0
+# INSTR: add.d $t1, $t2, $tp, %le_add_r(foo)
+# FIXUP: fixup A - offset: 0, value: %le_add_r(foo), kind: FK_NONE
+
+addi.d $t1, $a2, %le_lo12_r(foo)
+# RELOC: R_LARCH_TLS_LE_LO12_R foo 0x0
+# INSTR: addi.d $t1, $a2, %le_lo12_r(foo)
+# FIXUP: fixup A - offset: 0, value: %le_lo12_r(foo), kind: FK_NONE
+
+pcaddi $t1, %pcrel_20(foo)
+# RELOC: R_LARCH_PCREL20_S2 foo 0x0
+# INSTR: pcaddi $t1, %pcrel_20(foo)
+# FIXUP: fixup A - offset: 0, value: %pcrel_20(foo), kind: FK_NONE
+
+pcaddi $t1, %ld_pcrel_20(foo)
+# RELOC: R_LARCH_TLS_LD_PCREL20_S2 foo 0x0
+# INSTR: pcaddi $t1, %ld_pcrel_20(foo)
+# FIXUP: fixup A - offset: 0, value: %ld_pcrel_20(foo), kind: FK_NONE
+
+pcaddi $t1, %gd_pcrel_20(foo)
+# RELOC: R_LARCH_TLS_GD_PCREL20_S2 foo 0x0
+# INSTR: pcaddi $t1, %gd_pcrel_20(foo)
+# FIXUP: fixup A - offset: 0, value: %gd_pcrel_20(foo), kind: FK_NONE
+
+pcaddi $t1, %desc_pcrel_20(foo)
+# RELOC: R_LARCH_TLS_DESC_PCREL20_S2 foo 0x0
+# INSTR: pcaddi $t1, %desc_pcrel_20(foo)
+# FIXUP: fixup A - offset: 0, value: %desc_pcrel_20(foo), kind: FK_NONE

@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -no-enable-noundef-analysis -x objective-c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=bool %s -o - -w | FileCheck %s -check-prefixes=SHARED,OBJC
-// RUN: %clang_cc1 -no-enable-noundef-analysis -x objective-c++ -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=bool %s -o - -w | FileCheck %s -check-prefixes=SHARED,OBJC
-// RUN: %clang_cc1 -no-enable-noundef-analysis -x c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=bool %s -o - | FileCheck %s -check-prefixes=SHARED,C
+// RUN: %clang_cc1 -no-enable-noundef-analysis -x objective-c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=bool -o - -w < %s | FileCheck %s -check-prefixes=SHARED,OBJC
+// RUN: %clang_cc1 -no-enable-noundef-analysis -x objective-c++ -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=bool -o - -w < %s | FileCheck %s -check-prefixes=SHARED,OBJC
+// RUN: %clang_cc1 -no-enable-noundef-analysis -x c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=bool -o - < %s | FileCheck %s -check-prefixes=SHARED,C
 
 typedef signed char BOOL;
 
-// SHARED-LABEL: f1
+// SHARED-LABEL: define{{.*}}f1
 BOOL f1(void) {
   // OBJC: call void @__ubsan_handle_load_invalid_value
   // C-NOT: call void @__ubsan_handle_load_invalid_value
@@ -17,7 +17,7 @@ struct S1 {
   BOOL b1 : 1;
 };
 
-// SHARED-LABEL: f2
+// SHARED-LABEL: define{{.*}}f2
 BOOL f2(struct S1 *s) {
   // OBJC: [[LOAD:%.*]] = load i8, ptr {{.*}}
   // OBJC: [[SHL:%.*]] = shl i8 [[LOAD]], 7
@@ -52,7 +52,7 @@ BOOL f2(struct S1 *s) {
 // OBJC: call void @__ubsan_handle_load_invalid_value
 
 // Also check direct accesses to the ivar.
-// OBJC-LABEL: f3
+// OBJC-LABEL: define{{.*}}f3
 BOOL f3(I1 *i) {
   // OBJC: [[LOAD:%.*]] = load i8, ptr {{.*}}
   // OBJC: [[SHL:%.*]] = shl i8 [[LOAD]], 7

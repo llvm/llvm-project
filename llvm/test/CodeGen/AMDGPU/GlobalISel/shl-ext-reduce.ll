@@ -238,7 +238,7 @@ define i64 @v_shl_i64_sext_i32_overflow(i32 %x) {
 define amdgpu_kernel void @mulu24_shl64(ptr addrspace(1) nocapture %arg) {
 ; GFX7-LABEL: mulu24_shl64:
 ; GFX7:       ; %bb.0: ; %bb
-; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
+; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX7-NEXT:    v_and_b32_e32 v0, 6, v0
 ; GFX7-NEXT:    v_mul_u32_u24_e32 v0, 7, v0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, 0
@@ -251,7 +251,7 @@ define amdgpu_kernel void @mulu24_shl64(ptr addrspace(1) nocapture %arg) {
 ;
 ; GFX8-LABEL: mulu24_shl64:
 ; GFX8:       ; %bb.0: ; %bb
-; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
+; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX8-NEXT:    v_and_b32_e32 v0, 6, v0
 ; GFX8-NEXT:    v_mul_u32_u24_e32 v0, 7, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, 0
@@ -266,7 +266,7 @@ define amdgpu_kernel void @mulu24_shl64(ptr addrspace(1) nocapture %arg) {
 ;
 ; GFX9-LABEL: mulu24_shl64:
 ; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX9-NEXT:    v_and_b32_e32 v0, 6, v0
 ; GFX9-NEXT:    v_mul_u32_u24_e32 v0, 7, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
@@ -281,7 +281,7 @@ define amdgpu_kernel void @mulu24_shl64(ptr addrspace(1) nocapture %arg) {
 ;
 ; GFX10-LABEL: mulu24_shl64:
 ; GFX10:       ; %bb.0: ; %bb
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX10-NEXT:    v_and_b32_e32 v0, 6, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    v_mul_u32_u24_e32 v0, 7, v0
@@ -296,7 +296,7 @@ define amdgpu_kernel void @mulu24_shl64(ptr addrspace(1) nocapture %arg) {
 ;
 ; GFX11-LABEL: mulu24_shl64:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 6, v0
 ; GFX11-NEXT:    v_mul_u32_u24_e32 v0, 7, v0
 ; GFX11-NEXT:    v_lshlrev_b64 v[2:3], 2, v[0:1]
@@ -305,8 +305,6 @@ define amdgpu_kernel void @mulu24_shl64(ptr addrspace(1) nocapture %arg) {
 ; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, v4, v2
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v5, v3, vcc_lo
 ; GFX11-NEXT:    global_store_b32 v[2:3], v1, off
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -321,7 +319,7 @@ bb:
 define amdgpu_kernel void @muli24_shl64(ptr addrspace(1) nocapture %arg, ptr addrspace(1) nocapture readonly %arg1) {
 ; GFX7-LABEL: muli24_shl64:
 ; GFX7:       ; %bb.0: ; %bb
-; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
+; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; GFX7-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX7-NEXT:    s_mov_b32 s6, 0
@@ -340,7 +338,7 @@ define amdgpu_kernel void @muli24_shl64(ptr addrspace(1) nocapture %arg, ptr add
 ;
 ; GFX8-LABEL: muli24_shl64:
 ; GFX8:       ; %bb.0: ; %bb
-; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
+; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v5, 3, v0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
@@ -363,7 +361,7 @@ define amdgpu_kernel void @muli24_shl64(ptr addrspace(1) nocapture %arg, ptr add
 ;
 ; GFX9-LABEL: muli24_shl64:
 ; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
@@ -378,7 +376,7 @@ define amdgpu_kernel void @muli24_shl64(ptr addrspace(1) nocapture %arg, ptr add
 ;
 ; GFX10-LABEL: muli24_shl64:
 ; GFX10:       ; %bb.0: ; %bb
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
@@ -393,18 +391,17 @@ define amdgpu_kernel void @muli24_shl64(ptr addrspace(1) nocapture %arg, ptr add
 ;
 ; GFX11-LABEL: muli24_shl64:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
-; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v1, 2, v0
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v2, 0x3ff, v0
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v2
+; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 3, v2
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    global_load_b32 v1, v1, s[2:3]
+; GFX11-NEXT:    global_load_b32 v0, v0, s[2:3]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_or_b32_e32 v1, 0xff800000, v1
-; GFX11-NEXT:    v_mul_i32_i24_e32 v1, -7, v1
-; GFX11-NEXT:    v_lshlrev_b64 v[1:2], 3, v[1:2]
-; GFX11-NEXT:    global_store_b64 v0, v[1:2], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    v_or_b32_e32 v0, 0xff800000, v0
+; GFX11-NEXT:    v_mul_i32_i24_e32 v0, -7, v0
+; GFX11-NEXT:    v_lshlrev_b64 v[0:1], 3, v[0:1]
+; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -562,18 +559,21 @@ define amdgpu_ps i32 @s_shl_i32_zext_i16(i16 inreg %x) {
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_and_b32 s0, s0, 0x3fff
 ; GFX8-NEXT:    s_lshl_b32 s0, s0, 2
+; GFX8-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_shl_i32_zext_i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_and_b32 s0, s0, 0x3fff
 ; GFX9-NEXT:    s_lshl_b32 s0, s0, 2
+; GFX9-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_shl_i32_zext_i16:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_and_b32 s0, s0, 0x3fff
 ; GFX10PLUS-NEXT:    s_lshl_b32 s0, s0, 2
+; GFX10PLUS-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %and = and i16 %x, 16383
   %ext = zext i16 %and to i32

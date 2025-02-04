@@ -18,7 +18,7 @@
 
 #include <atomic>
 #include <fcntl.h>
-#include <thread>
+#include <functional>
 
 #ifndef _WIN32
 #include <poll.h>
@@ -177,67 +177,89 @@ Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath,
 #endif // _WIN32
 }
 
-Expected<std::unique_ptr<raw_socket_stream>>
-ListeningSocket::accept(std::chrono::milliseconds Timeout) {
-
-  struct pollfd FDs[2];
-  FDs[0].events = POLLIN;
+// If a file descriptor being monitored by ::poll is closed by another thread,
+// the result is unspecified. In the case ::poll does not unblock and return,
+// when ActiveFD is closed, you can provide another file descriptor via CancelFD
+// that when written to will cause poll to return. Typically CancelFD is the
+// read end of a unidirectional pipe.
+//
+// Timeout should be -1 to block indefinitly
+//
+// getActiveFD is a callback to handle ActiveFD's of std::atomic<int> and int
+static std::error_code
+manageTimeout(const std::chrono::milliseconds &Timeout,
+              const std::function<int()> &getActiveFD,
+              const std::optional<int> &CancelFD = std::nullopt) {
+  struct pollfd FD[2];
+  FD[0].events = POLLIN;
 #ifdef _WIN32
-  SOCKET WinServerSock = _get_osfhandle(FD);
-  FDs[0].fd = WinServerSock;
+  SOCKET WinServerSock = _get_osfhandle(getActiveFD());
+  FD[0].fd = WinServerSock;
 #else
-  FDs[0].fd = FD;
+  FD[0].fd = getActiveFD();
 #endif
-  FDs[1].events = POLLIN;
-  FDs[1].fd = PipeFD[0];
-
-  // Keep track of how much time has passed in case poll is interupted by a
-  // signal and needs to be recalled
-  int RemainingTime = Timeout.count();
-  std::chrono::milliseconds ElapsedTime = std::chrono::milliseconds(0);
-  int PollStatus = -1;
-
-  while (PollStatus == -1 && (Timeout.count() == -1 || ElapsedTime < Timeout)) {
-    if (Timeout.count() != -1)
-      RemainingTime -= ElapsedTime.count();
-
-    auto Start = std::chrono::steady_clock::now();
-#ifdef _WIN32
-    PollStatus = WSAPoll(FDs, 2, RemainingTime);
-    if (PollStatus == SOCKET_ERROR) {
-#else
-    PollStatus = ::poll(FDs, 2, RemainingTime);
-    if (PollStatus == -1) {
-#endif
-      // Ignore error if caused by interupting signal
-      std::error_code PollErrCode = getLastSocketErrorCode();
-      if (PollErrCode != std::errc::interrupted)
-        return llvm::make_error<StringError>(PollErrCode, "FD poll failed");
-    }
-
-    if (PollStatus == 0)
-      return llvm::make_error<StringError>(
-          std::make_error_code(std::errc::timed_out),
-          "No client requests within timeout window");
-
-    if (FDs[0].revents & POLLNVAL)
-      return llvm::make_error<StringError>(
-          std::make_error_code(std::errc::bad_file_descriptor),
-          "File descriptor closed by another thread");
-
-    if (FDs[1].revents & POLLIN)
-      return llvm::make_error<StringError>(
-          std::make_error_code(std::errc::operation_canceled),
-          "Accept canceled");
-
-    auto Stop = std::chrono::steady_clock::now();
-    ElapsedTime +=
-        std::chrono::duration_cast<std::chrono::milliseconds>(Stop - Start);
+  uint8_t FDCount = 1;
+  if (CancelFD.has_value()) {
+    FD[1].events = POLLIN;
+    FD[1].fd = CancelFD.value();
+    FDCount++;
   }
+
+  // Keep track of how much time has passed in case ::poll or WSAPoll are
+  // interupted by a signal and need to be recalled
+  auto Start = std::chrono::steady_clock::now();
+  auto RemainingTimeout = Timeout;
+  int PollStatus = 0;
+  do {
+    // If Timeout is -1 then poll should block and RemainingTimeout does not
+    // need to be recalculated
+    if (PollStatus != 0 && Timeout != std::chrono::milliseconds(-1)) {
+      auto TotalElapsedTime =
+          std::chrono::duration_cast<std::chrono::milliseconds>(
+              std::chrono::steady_clock::now() - Start);
+
+      if (TotalElapsedTime >= Timeout)
+        return std::make_error_code(std::errc::operation_would_block);
+
+      RemainingTimeout = Timeout - TotalElapsedTime;
+    }
+#ifdef _WIN32
+    PollStatus = WSAPoll(FD, FDCount, RemainingTimeout.count());
+  } while (PollStatus == SOCKET_ERROR &&
+           getLastSocketErrorCode() == std::errc::interrupted);
+#else
+    PollStatus = ::poll(FD, FDCount, RemainingTimeout.count());
+  } while (PollStatus == -1 &&
+           getLastSocketErrorCode() == std::errc::interrupted);
+#endif
+
+  // If ActiveFD equals -1 or CancelFD has data to be read then the operation
+  // has been canceled by another thread
+  if (getActiveFD() == -1 || (CancelFD.has_value() && FD[1].revents & POLLIN))
+    return std::make_error_code(std::errc::operation_canceled);
+#if _WIN32
+  if (PollStatus == SOCKET_ERROR)
+#else
+  if (PollStatus == -1)
+#endif
+    return getLastSocketErrorCode();
+  if (PollStatus == 0)
+    return std::make_error_code(std::errc::timed_out);
+  if (FD[0].revents & POLLNVAL)
+    return std::make_error_code(std::errc::bad_file_descriptor);
+  return std::error_code();
+}
+
+Expected<std::unique_ptr<raw_socket_stream>>
+ListeningSocket::accept(const std::chrono::milliseconds &Timeout) {
+  auto getActiveFD = [this]() -> int { return FD; };
+  std::error_code TimeoutErr = manageTimeout(Timeout, getActiveFD, PipeFD[0]);
+  if (TimeoutErr)
+    return llvm::make_error<StringError>(TimeoutErr, "Timeout error");
 
   int AcceptFD;
 #ifdef _WIN32
-  SOCKET WinAcceptSock = ::accept(WinServerSock, NULL, NULL);
+  SOCKET WinAcceptSock = ::accept(_get_osfhandle(FD), NULL, NULL);
   AcceptFD = _open_osfhandle(WinAcceptSock, 0);
 #else
   AcceptFD = ::accept(FD, NULL, NULL);
@@ -263,7 +285,7 @@ void ListeningSocket::shutdown() {
   ::close(ObservedFD);
   ::unlink(SocketPath.c_str());
 
-  // Ensure ::poll returns if shutdown is called by a seperate thread
+  // Ensure ::poll returns if shutdown is called by a separate thread
   char Byte = 'A';
   ssize_t written = ::write(PipeFD[1], &Byte, 1);
 
@@ -292,6 +314,8 @@ ListeningSocket::~ListeningSocket() {
 raw_socket_stream::raw_socket_stream(int SocketFD)
     : raw_fd_stream(SocketFD, true) {}
 
+raw_socket_stream::~raw_socket_stream() {}
+
 Expected<std::unique_ptr<raw_socket_stream>>
 raw_socket_stream::createConnectedUnix(StringRef SocketPath) {
 #ifdef _WIN32
@@ -303,4 +327,14 @@ raw_socket_stream::createConnectedUnix(StringRef SocketPath) {
   return std::make_unique<raw_socket_stream>(*FD);
 }
 
-raw_socket_stream::~raw_socket_stream() {}
+ssize_t raw_socket_stream::read(char *Ptr, size_t Size,
+                                const std::chrono::milliseconds &Timeout) {
+  auto getActiveFD = [this]() -> int { return this->get_fd(); };
+  std::error_code Err = manageTimeout(Timeout, getActiveFD);
+  // Mimic raw_fd_stream::read error handling behavior
+  if (Err) {
+    raw_fd_stream::error_detected(Err);
+    return -1;
+  }
+  return raw_fd_stream::read(Ptr, Size);
+}

@@ -2,10 +2,10 @@
 // disassembled by BOLT.
 
 // RUN: %clang++ %cxxflags -O3 -no-pie -c %s -o %t.o
-// RUN: %clang++ %cxxflags -no-pie -fuse-ld=lld %t.o -o %t.exe \
-// RUN:   -Wl,-q -Wl,--script=%S/Inputs/lsda.ldscript
-// RUN: llvm-readelf -SW %t.exe | FileCheck %s
-// RUN: llvm-bolt %t.exe -o %t.bolt
+// RUN: %clang++ %cxxflags -O3 -no-pie -fuse-ld=lld %t.o -o %t
+// RUN: llvm-objcopy --rename-section .gcc_except_table=.gcc_except_table.main %t
+// RUN: llvm-readelf -SW %t | FileCheck %s
+// RUN: llvm-bolt %t -o %t.bolt
 
 // CHECK: .gcc_except_table.main
 

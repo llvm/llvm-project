@@ -72,7 +72,7 @@ exit:
 ;; TMB-NEXT:     Section: [[MIXED_SECT:[^ ]+]]
 
 ;; TMB:        Symbol {
-;; TMB:          Name: $d.1
+;; TMB:          Name: $d
 ;; TMB-NEXT:     Value: 0x{{[0-9A-F]+}}
 ;; TMB-NEXT:     Size: 0
 ;; TMB-NEXT:     Binding: Local

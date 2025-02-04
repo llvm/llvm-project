@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 \
-// RUN:   -analyzer-checker=alpha.unix.BlockInCriticalSection \
+// RUN:   -analyzer-checker=unix.BlockInCriticalSection \
 // RUN:   -std=c++11 \
 // RUN:   -analyzer-output text \
 // RUN:   -verify %s
@@ -36,15 +36,15 @@ ssize_t read(int fd, void *buf, size_t count);
 ssize_t recv(int sockfd, void *buf, size_t len, int flags);
 
 struct pthread_mutex_t;
-void pthread_mutex_lock(pthread_mutex_t *mutex);
-void pthread_mutex_trylock(pthread_mutex_t *mutex);
-void pthread_mutex_unlock(pthread_mutex_t *mutex);
+int pthread_mutex_lock(pthread_mutex_t *mutex);
+int pthread_mutex_trylock(pthread_mutex_t *mutex);
+int pthread_mutex_unlock(pthread_mutex_t *mutex);
 
 struct mtx_t;
-void mtx_lock(mtx_t *mutex);
-void mtx_timedlock(mtx_t *mutex);
-void mtx_trylock(mtx_t *mutex);
-void mtx_unlock(mtx_t *mutex);
+int mtx_lock(mtx_t *mutex);
+int mtx_timedlock(mtx_t *mutex);
+int mtx_trylock(mtx_t *mutex);
+int mtx_unlock(mtx_t *mutex);
 
 // global params for dummy function calls
 FILE *stream;
@@ -291,4 +291,21 @@ void testBlockInCriticalSectionUniqueLock() {
 void testBlockInCriticalSectionUniqueLockNested() {
   testBlockInCriticalSectionUniqueLock(); // expected-note {{Calling 'testBlockInCriticalSectionUniqueLock'}}
   sleep(1); // no-warning
+}
+
+void testTrylockCurrentlyFalsePositive(pthread_mutex_t *m) {
+                                       // expected-note@+4 {{Assuming the condition is true}}
+                                       // expected-note@+3 {{Taking true branch}}
+                                       // expected-note@+2 {{Assuming the condition is false}}
+                                       // expected-note@+1 {{Taking false branch}}
+  if (pthread_mutex_trylock(m) == 0) { // expected-note 2 {{Entering critical section here}}
+                                       // FIXME: we are entering the critical section only in the true branch
+    sleep(10); // expected-warning {{Call to blocking function 'sleep' inside of critical section}}
+               // expected-note@-1 {{Call to blocking function 'sleep' inside of critical section}}
+    pthread_mutex_unlock(m);
+  } else {
+    sleep(10); // expected-warning {{Call to blocking function 'sleep' inside of critical section}}
+               // expected-note@-1 {{Call to blocking function 'sleep' inside of critical section}}
+               // FIXME: this is a false positive, the lock was not acquired
+  }
 }

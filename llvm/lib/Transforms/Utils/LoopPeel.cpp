@@ -206,13 +206,11 @@ PhiAnalyzer::PhiAnalyzer(const Loop &L, unsigned MaxIterations)
 //   G(%y) = Unknown otherwise (including phi not in header block)
 PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(const Value &V) {
   // If we already know the answer, take it from the map.
-  auto I = IterationsToInvariance.find(&V);
-  if (I != IterationsToInvariance.end())
-    return I->second;
-
-  // Place Unknown to map to avoid infinite recursion. Such
+  // Otherwise, place Unknown to map to avoid infinite recursion. Such
   // cycles can never stop on an invariant.
-  IterationsToInvariance[&V] = Unknown;
+  auto [I, Inserted] = IterationsToInvariance.try_emplace(&V, Unknown);
+  if (!Inserted)
+    return I->second;
 
   if (L.isLoopInvariant(&V))
     // Loop invariant so known at start.
@@ -298,7 +296,7 @@ static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
   BasicBlock *Header = L.getHeader();
   BasicBlock *Latch = L.getLoopLatch();
   SmallPtrSet<Value *, 8> LoadUsers;
-  const DataLayout &DL = L.getHeader()->getModule()->getDataLayout();
+  const DataLayout &DL = L.getHeader()->getDataLayout();
   for (BasicBlock *BB : L.blocks()) {
     for (Instruction &I : *BB) {
       if (I.mayWriteToMemory())
@@ -351,6 +349,21 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     MaxPeelCount =
         std::min((unsigned)SC->getAPInt().getLimitedValue() - 1, MaxPeelCount);
 
+  // Increase PeelCount while (IterVal Pred BoundSCEV) condition is satisfied;
+  // return true if inversed condition become known before reaching the
+  // MaxPeelCount limit.
+  auto PeelWhilePredicateIsKnown =
+      [&](unsigned &PeelCount, const SCEV *&IterVal, const SCEV *BoundSCEV,
+          const SCEV *Step, ICmpInst::Predicate Pred) {
+        while (PeelCount < MaxPeelCount &&
+               SE.isKnownPredicate(Pred, IterVal, BoundSCEV)) {
+          IterVal = SE.getAddExpr(IterVal, Step);
+          ++PeelCount;
+        }
+        return SE.isKnownPredicate(ICmpInst::getInversePredicate(Pred), IterVal,
+                                   BoundSCEV);
+      };
+
   const unsigned MaxDepth = 4;
   std::function<void(Value *, unsigned)> ComputePeelCount =
       [&](Value *Condition, unsigned Depth) -> void {
@@ -365,7 +378,7 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
       return;
     }
 
-    CmpInst::Predicate Pred;
+    CmpPredicate Pred;
     if (!match(Condition, m_ICmp(Pred, m_Value(LeftVal), m_Value(RightVal))))
       return;
 
@@ -411,48 +424,73 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
       Pred = ICmpInst::getInversePredicate(Pred);
 
     const SCEV *Step = LeftAR->getStepRecurrence(SE);
-    const SCEV *NextIterVal = SE.getAddExpr(IterVal, Step);
-    auto PeelOneMoreIteration = [&IterVal, &NextIterVal, &SE, Step,
-                                 &NewPeelCount]() {
-      IterVal = NextIterVal;
-      NextIterVal = SE.getAddExpr(IterVal, Step);
-      NewPeelCount++;
-    };
-
-    auto CanPeelOneMoreIteration = [&NewPeelCount, &MaxPeelCount]() {
-      return NewPeelCount < MaxPeelCount;
-    };
-
-    while (CanPeelOneMoreIteration() &&
-           SE.isKnownPredicate(Pred, IterVal, RightSCEV))
-      PeelOneMoreIteration();
-
-    // With *that* peel count, does the predicate !Pred become known in the
-    // first iteration of the loop body after peeling?
-    if (!SE.isKnownPredicate(ICmpInst::getInversePredicate(Pred), IterVal,
-                             RightSCEV))
-      return; // If not, give up.
+    if (!PeelWhilePredicateIsKnown(NewPeelCount, IterVal, RightSCEV, Step,
+                                   Pred))
+      return;
 
     // However, for equality comparisons, that isn't always sufficient to
     // eliminate the comparsion in loop body, we may need to peel one more
     // iteration. See if that makes !Pred become unknown again.
+    const SCEV *NextIterVal = SE.getAddExpr(IterVal, Step);
     if (ICmpInst::isEquality(Pred) &&
         !SE.isKnownPredicate(ICmpInst::getInversePredicate(Pred), NextIterVal,
                              RightSCEV) &&
         !SE.isKnownPredicate(Pred, IterVal, RightSCEV) &&
         SE.isKnownPredicate(Pred, NextIterVal, RightSCEV)) {
-      if (!CanPeelOneMoreIteration())
+      if (NewPeelCount >= MaxPeelCount)
         return; // Need to peel one more iteration, but can't. Give up.
-      PeelOneMoreIteration(); // Great!
+      ++NewPeelCount; // Great!
     }
 
     DesiredPeelCount = std::max(DesiredPeelCount, NewPeelCount);
+  };
+
+  auto ComputePeelCountMinMax = [&](MinMaxIntrinsic *MinMax) {
+    if (!MinMax->getType()->isIntegerTy())
+      return;
+    Value *LHS = MinMax->getLHS(), *RHS = MinMax->getRHS();
+    const SCEV *BoundSCEV, *IterSCEV;
+    if (L.isLoopInvariant(LHS)) {
+      BoundSCEV = SE.getSCEV(LHS);
+      IterSCEV = SE.getSCEV(RHS);
+    } else if (L.isLoopInvariant(RHS)) {
+      BoundSCEV = SE.getSCEV(RHS);
+      IterSCEV = SE.getSCEV(LHS);
+    } else
+      return;
+    const auto *AddRec = dyn_cast<SCEVAddRecExpr>(IterSCEV);
+    // For simplicity, we support only affine recurrences.
+    if (!AddRec || !AddRec->isAffine() || AddRec->getLoop() != &L)
+      return;
+    const SCEV *Step = AddRec->getStepRecurrence(SE);
+    bool IsSigned = MinMax->isSigned();
+    // To minimize number of peeled iterations, we use strict relational
+    // predicates here.
+    ICmpInst::Predicate Pred;
+    if (SE.isKnownPositive(Step))
+      Pred = IsSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
+    else if (SE.isKnownNegative(Step))
+      Pred = IsSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
+    else
+      return;
+    // Check that AddRec is not wrapping.
+    if (!(IsSigned ? AddRec->hasNoSignedWrap() : AddRec->hasNoUnsignedWrap()))
+      return;
+    unsigned NewPeelCount = DesiredPeelCount;
+    const SCEV *IterVal = AddRec->evaluateAtIteration(
+        SE.getConstant(AddRec->getType(), NewPeelCount), SE);
+    if (!PeelWhilePredicateIsKnown(NewPeelCount, IterVal, BoundSCEV, Step,
+                                   Pred))
+      return;
+    DesiredPeelCount = NewPeelCount;
   };
 
   for (BasicBlock *BB : L.blocks()) {
     for (Instruction &I : *BB) {
       if (SelectInst *SI = dyn_cast<SelectInst>(&I))
         ComputePeelCount(SI->getCondition(), 0);
+      if (MinMaxIntrinsic *MinMax = dyn_cast<MinMaxIntrinsic>(&I))
+        ComputePeelCountMinMax(MinMax);
     }
 
     auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
@@ -640,7 +678,7 @@ struct WeightInfo {
 /// To avoid dealing with division rounding we can just multiple both part
 /// of weights to E and use weight as (F - I * E, E).
 static void updateBranchWeights(Instruction *Term, WeightInfo &Info) {
-  setBranchWeights(*Term, Info.Weights);
+  setBranchWeights(*Term, Info.Weights, /*IsExpected=*/false);
   for (auto [Idx, SubWeight] : enumerate(Info.SubWeights))
     if (SubWeight != 0)
       // Don't set the probability of taking the edge from latch to loop header
@@ -819,7 +857,7 @@ static void cloneLoopBlocks(
       if (LatchInst && L->contains(LatchInst))
         LatchVal = VMap[LatchVal];
       PHI.addIncoming(LatchVal, cast<BasicBlock>(VMap[Edge.first]));
-      SE.forgetValue(&PHI);
+      SE.forgetLcssaPhiWithNewPredecessor(L, &PHI);
     }
 
   // LastValueMap is updated with the values for the current loop
@@ -1033,7 +1071,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   }
 
   for (const auto &[Term, Info] : Weights) {
-    setBranchWeights(*Term, Info.Weights);
+    setBranchWeights(*Term, Info.Weights, /*IsExpected=*/false);
   }
 
   // Update Metadata for count of peeled off iterations.

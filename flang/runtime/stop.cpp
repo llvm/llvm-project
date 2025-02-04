@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/stop.h"
+#include "config.h"
 #include "environment.h"
 #include "file.h"
 #include "io-error.h"
@@ -15,6 +16,10 @@
 #include <cfenv>
 #include <cstdio>
 #include <cstdlib>
+
+#ifdef HAVE_BACKTRACE
+#include BACKTRACE_HEADER
+#endif
 
 extern "C" {
 
@@ -26,21 +31,31 @@ static void DescribeIEEESignaledExceptions() {
 #endif
   if (excepts) {
     std::fputs("IEEE arithmetic exceptions signaled:", stderr);
+#ifdef FE_DIVBYZERO
     if (excepts & FE_DIVBYZERO) {
       std::fputs(" DIVBYZERO", stderr);
     }
+#endif
+#ifdef FE_INEXACT
     if (excepts & FE_INEXACT) {
       std::fputs(" INEXACT", stderr);
     }
+#endif
+#ifdef FE_INVALID
     if (excepts & FE_INVALID) {
       std::fputs(" INVALID", stderr);
     }
+#endif
+#ifdef FE_OVERFLOW
     if (excepts & FE_OVERFLOW) {
       std::fputs(" OVERFLOW", stderr);
     }
+#endif
+#ifdef FE_UNDERFLOW
     if (excepts & FE_UNDERFLOW) {
       std::fputs(" UNDERFLOW", stderr);
     }
+#endif
     std::fputc('\n', stderr);
   }
 }
@@ -142,10 +157,40 @@ void RTNAME(PauseStatementText)(const char *code, std::size_t length) {
   std::exit(status);
 }
 
-[[noreturn]] void RTNAME(Abort)() {
-  // TODO: Add backtrace call, unless with `-fno-backtrace`.
+static RT_NOINLINE_ATTR void PrintBacktrace() {
+#ifdef HAVE_BACKTRACE
+  // TODO: Need to parse DWARF information to print function line numbers
+  constexpr int MAX_CALL_STACK{999};
+  void *buffer[MAX_CALL_STACK];
+  int nptrs{(int)backtrace(buffer, MAX_CALL_STACK)};
+
+  if (char **symbols{backtrace_symbols(buffer, nptrs)}) {
+    // Skip the PrintBacktrace() frame, as it is just a utility.
+    // It makes sense to start printing the backtrace
+    // from Abort() or backtrace().
+    for (int i = 1; i < nptrs; i++) {
+      Fortran::runtime::Terminator{}.PrintCrashArgs(
+          "#%d %s\n", i - 1, symbols[i]);
+    }
+    free(symbols);
+  }
+
+#else
+
+  // TODO: Need to implement the version for other platforms.
+  Fortran::runtime::Terminator{}.PrintCrashArgs("backtrace is not supported.");
+
+#endif
+}
+
+[[noreturn]] RT_OPTNONE_ATTR void RTNAME(Abort)() {
+#ifdef HAVE_BACKTRACE
+  PrintBacktrace();
+#endif
   std::abort();
 }
+
+RT_OPTNONE_ATTR void FORTRAN_PROCEDURE_NAME(backtrace)() { PrintBacktrace(); }
 
 [[noreturn]] void RTNAME(ReportFatalUserError)(
     const char *message, const char *source, int line) {

@@ -372,7 +372,7 @@ static uint64_t scanCortexA53Errata843419(InputSection *isec, uint64_t &off,
 
 class elf::Patch843419Section final : public SyntheticSection {
 public:
-  Patch843419Section(InputSection *p, uint64_t off);
+  Patch843419Section(Ctx &, InputSection *p, uint64_t off);
 
   void writeTo(uint8_t *buf) override;
 
@@ -392,15 +392,15 @@ public:
   Symbol *patchSym;
 };
 
-Patch843419Section::Patch843419Section(InputSection *p, uint64_t off)
-    : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 4,
-                       ".text.patch"),
+Patch843419Section::Patch843419Section(Ctx &ctx, InputSection *p, uint64_t off)
+    : SyntheticSection(ctx, ".text.patch", SHT_PROGBITS,
+                       SHF_ALLOC | SHF_EXECINSTR, 4),
       patchee(p), patcheeOffset(off) {
   this->parent = p->getParent();
   patchSym = addSyntheticLocal(
-      saver().save("__CortexA53843419_" + utohexstr(getLDSTAddr())), STT_FUNC,
-      0, getSize(), *this);
-  addSyntheticLocal(saver().save("$x"), STT_NOTYPE, 0, 0, *this);
+      ctx, ctx.saver.save("__CortexA53843419_" + utohexstr(getLDSTAddr())),
+      STT_FUNC, 0, getSize(), *this);
+  addSyntheticLocal(ctx, ctx.saver.save("$x"), STT_NOTYPE, 0, 0, *this);
 }
 
 uint64_t Patch843419Section::getLDSTAddr() const {
@@ -413,12 +413,12 @@ void Patch843419Section::writeTo(uint8_t *buf) {
   write32le(buf, read32le(patchee->content().begin() + patcheeOffset));
 
   // Apply any relocation transferred from the original patchee section.
-  target->relocateAlloc(*this, buf);
+  ctx.target->relocateAlloc(*this, buf);
 
   // Return address is the next instruction after the one we have just copied.
   uint64_t s = getLDSTAddr() + 4;
-  uint64_t p = patchSym->getVA() + 4;
-  target->relocateNoSym(buf + 4, R_AARCH64_JUMP26, s - p);
+  uint64_t p = patchSym->getVA(ctx) + 4;
+  ctx.target->relocateNoSym(buf + 4, R_AARCH64_JUMP26, s - p);
 }
 
 void AArch64Err843419Patcher::init() {
@@ -483,7 +483,8 @@ void AArch64Err843419Patcher::insertPatches(
     InputSectionDescription &isd, std::vector<Patch843419Section *> &patches) {
   uint64_t isecLimit;
   uint64_t prevIsecLimit = isd.sections.front()->outSecOff;
-  uint64_t patchUpperBound = prevIsecLimit + target->getThunkSectionSpacing();
+  uint64_t patchUpperBound =
+      prevIsecLimit + ctx.target->getThunkSectionSpacing();
   uint64_t outSecAddr = isd.sections.front()->getParent()->addr;
 
   // Set the outSecOff of patches to the place where we want to insert them.
@@ -500,7 +501,7 @@ void AArch64Err843419Patcher::insertPatches(
         (*patchIt)->outSecOff = prevIsecLimit;
         ++patchIt;
       }
-      patchUpperBound = prevIsecLimit + target->getThunkSectionSpacing();
+      patchUpperBound = prevIsecLimit + ctx.target->getThunkSectionSpacing();
     }
     prevIsecLimit = isecLimit;
   }
@@ -528,7 +529,7 @@ void AArch64Err843419Patcher::insertPatches(
 // instruction that we need to patch at patcheeOffset from the start of
 // InputSection isec, create a Patch843419 Section and add it to the
 // Patches that we need to insert.
-static void implementPatch(uint64_t adrpAddr, uint64_t patcheeOffset,
+static void implementPatch(Ctx &ctx, uint64_t adrpAddr, uint64_t patcheeOffset,
                            InputSection *isec,
                            std::vector<Patch843419Section *> &patches) {
   // There may be a relocation at the same offset that we are patching. There
@@ -552,10 +553,10 @@ static void implementPatch(uint64_t adrpAddr, uint64_t patcheeOffset,
       (relIt->type == R_AARCH64_JUMP26 || relIt->expr == R_RELAX_TLS_IE_TO_LE))
     return;
 
-  log("detected cortex-a53-843419 erratum sequence starting at " +
-      utohexstr(adrpAddr) + " in unpatched output.");
+  Log(ctx) << "detected cortex-a53-843419 erratum sequence starting at " <<
+      utohexstr(adrpAddr) << " in unpatched output.";
 
-  auto *ps = make<Patch843419Section>(isec, patcheeOffset);
+  auto *ps = make<Patch843419Section>(ctx, isec, patcheeOffset);
   patches.push_back(ps);
 
   auto makeRelToPatch = [](uint64_t offset, Symbol *patchSym) {
@@ -598,7 +599,7 @@ AArch64Err843419Patcher::patchInputSectionDescription(
         uint64_t startAddr = isec->getVA(off);
         if (uint64_t patcheeOffset =
                 scanCortexA53Errata843419(isec, off, limit))
-          implementPatch(startAddr, patcheeOffset, isec, patches);
+          implementPatch(ctx, startAddr, patcheeOffset, isec, patches);
       }
       if (dataSym == mapSyms.end())
         break;
@@ -625,7 +626,7 @@ bool AArch64Err843419Patcher::createFixes() {
     init();
 
   bool addressesChanged = false;
-  for (OutputSection *os : outputSections) {
+  for (OutputSection *os : ctx.outputSections) {
     if (!(os->flags & SHF_ALLOC) || !(os->flags & SHF_EXECINSTR))
       continue;
     for (SectionCommand *cmd : os->commands)

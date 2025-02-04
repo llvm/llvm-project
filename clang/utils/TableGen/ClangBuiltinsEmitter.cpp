@@ -1,4 +1,4 @@
-//=- ClangBuiltinsEmitter.cpp - Generate Clang builtins tables -*- C++ -*-====//
+//===-- ClangBuiltinsEmitter.cpp - Generate Clang builtins tables ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TableGenBackends.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -25,18 +26,28 @@ enum class BuiltinType {
   LibBuiltin,
   LangBuiltin,
   TargetBuiltin,
+  TargetLibBuiltin,
 };
 
 class PrototypeParser {
 public:
   PrototypeParser(StringRef Substitution, const Record *Builtin)
-      : Loc(Builtin->getFieldLoc("Prototype")), Substitution(Substitution) {
+      : Loc(Builtin->getFieldLoc("Prototype")), Substitution(Substitution),
+        EnableOpenCLLong(Builtin->getValueAsBit("EnableOpenCLLong")) {
     ParsePrototype(Builtin->getValueAsString("Prototype"));
   }
 
 private:
   void ParsePrototype(StringRef Prototype) {
     Prototype = Prototype.trim();
+
+    // Some builtins don't have an expressible prototype, simply emit an empty
+    // string for them.
+    if (Prototype.empty()) {
+      Type = "";
+      return;
+    }
+
     ParseTypes(Prototype);
   }
 
@@ -64,7 +75,8 @@ private:
       // detecting the comma of the template class as a separator for
       // the parameters of the prototype. Note: the assumption is that
       // we cannot have nested _ExtVector.
-      if (Current.starts_with("_ExtVector<")) {
+      if (Current.starts_with("_ExtVector<") ||
+          Current.starts_with("_Vector<")) {
         const size_t EndTemplate = Current.find('>', 0);
         ParseType(Current.substr(0, EndTemplate + 1));
         // Move the prototype beyond _ExtVector<...>
@@ -92,9 +104,39 @@ private:
 
   void ParseType(StringRef T) {
     T = T.trim();
+
+    auto ConsumeAddrSpace = [&]() -> std::optional<unsigned> {
+      T = T.trim();
+      if (!T.consume_back(">"))
+        return std::nullopt;
+
+      auto Open = T.find_last_of('<');
+      if (Open == StringRef::npos)
+        PrintFatalError(Loc, "Mismatched angle-brackets in type");
+
+      StringRef ArgStr = T.substr(Open + 1);
+      T = T.slice(0, Open);
+      if (!T.consume_back("address_space"))
+        PrintFatalError(Loc,
+                        "Only `address_space<N>` supported as a parameterized "
+                        "pointer or reference type qualifier");
+
+      unsigned Number = 0;
+      if (ArgStr.getAsInteger(10, Number))
+        PrintFatalError(
+            Loc, "Expected an integer argument to the address_space qualifier");
+      if (Number == 0)
+        PrintFatalError(Loc, "No need for a qualifier for address space `0`");
+      return Number;
+    };
+
     if (T.consume_back("*")) {
+      // Pointers may have an address space qualifier immediately before them.
+      std::optional<unsigned> AS = ConsumeAddrSpace();
       ParseType(T);
       Type += "*";
+      if (AS)
+        Type += std::to_string(*AS);
     } else if (T.consume_back("const")) {
       ParseType(T);
       Type += "C";
@@ -105,10 +147,23 @@ private:
       ParseType(T);
       Type += "R";
     } else if (T.consume_back("&")) {
+      // References may have an address space qualifier immediately before them.
+      std::optional<unsigned> AS = ConsumeAddrSpace();
       ParseType(T);
       Type += "&";
+      if (AS)
+        Type += std::to_string(*AS);
+    } else if (T.consume_back(")")) {
+      ParseType(T);
+      Type += "&";
+    } else if (EnableOpenCLLong && T.consume_front("long long")) {
+      Type += "O";
+      ParseType(T);
     } else if (T.consume_front("long")) {
       Type += "L";
+      ParseType(T);
+    } else if (T.consume_front("signed")) {
+      Type += "S";
       ParseType(T);
     } else if (T.consume_front("unsigned")) {
       Type += "U";
@@ -123,7 +178,8 @@ private:
       if (Substitution.empty())
         PrintFatalError(Loc, "Not a template");
       ParseType(Substitution);
-    } else if (T.consume_front("_ExtVector")) {
+    } else if (auto IsExt = T.consume_front("_ExtVector");
+               IsExt || T.consume_front("_Vector")) {
       // Clang extended vector types are mangled as follows:
       //
       // '_ExtVector<' <lanes> ',' <scalar type> '>'
@@ -133,9 +189,9 @@ private:
       if (!T.consume_front("<"))
         PrintFatalError(Loc, "Expected '<' after '_ExtVector'");
       unsigned long long Lanes;
-      if (llvm::consumeUnsignedInteger(T, 10, Lanes))
+      if (consumeUnsignedInteger(T, 10, Lanes))
         PrintFatalError(Loc, "Expected number of lanes after '_ExtVector<'");
-      Type += "E" + std::to_string(Lanes);
+      Type += (IsExt ? "E" : "V") + std::to_string(Lanes);
       if (!T.consume_front(","))
         PrintFatalError(Loc,
                         "Expected ',' after number of lanes in '_ExtVector<'");
@@ -153,6 +209,7 @@ private:
                                .Case("__fp16", "h")
                                .Case("__int128_t", "LLLi")
                                .Case("_Float16", "x")
+                               .Case("__bf16", "y")
                                .Case("bool", "b")
                                .Case("char", "c")
                                .Case("constant_CFString", "F")
@@ -187,11 +244,12 @@ private:
   }
 
 public:
-  void Print(llvm::raw_ostream &OS) const { OS << ", \"" << Type << '\"'; }
+  void Print(raw_ostream &OS) const { OS << ", \"" << Type << '\"'; }
 
 private:
   SMLoc Loc;
   StringRef Substitution;
+  bool EnableOpenCLLong;
   std::string Type;
 };
 
@@ -208,14 +266,13 @@ public:
     }
   }
 
-  void Print(llvm::raw_ostream &OS) const { OS << HeaderName; }
+  void Print(raw_ostream &OS) const { OS << HeaderName; }
 
 private:
   std::string HeaderName;
 };
 
-void PrintAttributes(const Record *Builtin, BuiltinType BT,
-                     llvm::raw_ostream &OS) {
+void PrintAttributes(const Record *Builtin, BuiltinType BT, raw_ostream &OS) {
   OS << '\"';
   if (Builtin->isSubClassOf("LibBuiltin")) {
     if (BT == BuiltinType::LibBuiltin) {
@@ -235,13 +292,20 @@ void PrintAttributes(const Record *Builtin, BuiltinType BT,
 
   for (const auto *Attr : Builtin->getValueAsListOfDefs("Attributes")) {
     OS << Attr->getValueAsString("Mangling");
-    if (Attr->isSubClassOf("IndexedAttribute"))
+    if (Attr->isSubClassOf("IndexedAttribute")) {
       OS << ':' << Attr->getValueAsInt("Index") << ':';
+    } else if (Attr->isSubClassOf("MultiIndexAttribute")) {
+      OS << '<';
+      llvm::ListSeparator Sep(",");
+      for (int64_t Index : Attr->getValueAsListOfInts("Indices"))
+        OS << Sep << Index;
+      OS << '>';
+    }
   }
   OS << '\"';
 }
 
-void EmitBuiltinDef(llvm::raw_ostream &OS, StringRef Substitution,
+void EmitBuiltinDef(raw_ostream &OS, StringRef Substitution,
                     const Record *Builtin, Twine Spelling, BuiltinType BT) {
   if (Builtin->getValueAsBit("RequiresUndef"))
     OS << "#undef " << Spelling << '\n';
@@ -261,6 +325,9 @@ void EmitBuiltinDef(llvm::raw_ostream &OS, StringRef Substitution,
   case BuiltinType::TargetBuiltin:
     OS << "TARGET_BUILTIN";
     break;
+  case BuiltinType::TargetLibBuiltin:
+    OS << "TARGET_HEADER_BUILTIN";
+    break;
   }
 
   OS << "(" << Spelling;
@@ -277,6 +344,12 @@ void EmitBuiltinDef(llvm::raw_ostream &OS, StringRef Substitution,
   case BuiltinType::LangBuiltin: {
     OS << ", " << Builtin->getValueAsString("Languages");
     break;
+  }
+  case BuiltinType::TargetLibBuiltin: {
+    OS << ", ";
+    HeaderNameParser{Builtin}.Print(OS);
+    OS << ", " << Builtin->getValueAsString("Languages");
+    [[fallthrough]];
   }
   case BuiltinType::TargetBuiltin:
     OS << ", \"" << Builtin->getValueAsString("Features") << "\"";
@@ -304,14 +377,14 @@ TemplateInsts getTemplateInsts(const Record *R) {
     PrintFatalError(R->getLoc(), "Substitutions and affixes "
                                  "don't have the same lengths");
 
-  for (auto [Affix, Substitution] : llvm::zip(Affixes, Substitutions)) {
+  for (auto [Affix, Substitution] : zip(Affixes, Substitutions)) {
     temp.Substitution.emplace_back(Substitution);
     temp.Affix.emplace_back(Affix);
   }
   return temp;
 }
 
-void EmitBuiltin(llvm::raw_ostream &OS, const Record *Builtin) {
+void EmitBuiltin(raw_ostream &OS, const Record *Builtin) {
   TemplateInsts Templates = {};
   if (Builtin->isSubClassOf("Template")) {
     Templates = getTemplateInsts(Builtin);
@@ -321,7 +394,7 @@ void EmitBuiltin(llvm::raw_ostream &OS, const Record *Builtin) {
   }
 
   for (auto [Substitution, Affix] :
-       llvm::zip(Templates.Substitution, Templates.Affix)) {
+       zip(Templates.Substitution, Templates.Affix)) {
     for (StringRef Spelling : Builtin->getValueAsListOfStrings("Spellings")) {
       auto FullSpelling =
           (Templates.IsPrefix ? Affix + Spelling : Spelling + Affix).str();
@@ -330,6 +403,8 @@ void EmitBuiltin(llvm::raw_ostream &OS, const Record *Builtin) {
         BT = BuiltinType::AtomicBuiltin;
       } else if (Builtin->isSubClassOf("LangBuiltin")) {
         BT = BuiltinType::LangBuiltin;
+      } else if (Builtin->isSubClassOf("TargetLibBuiltin")) {
+        BT = BuiltinType::TargetLibBuiltin;
       } else if (Builtin->isSubClassOf("TargetBuiltin")) {
         BT = BuiltinType::TargetBuiltin;
       } else if (Builtin->isSubClassOf("LibBuiltin")) {
@@ -345,8 +420,7 @@ void EmitBuiltin(llvm::raw_ostream &OS, const Record *Builtin) {
 }
 } // namespace
 
-void clang::EmitClangBuiltins(llvm::RecordKeeper &Records,
-                              llvm::raw_ostream &OS) {
+void clang::EmitClangBuiltins(const RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("List of builtins that Clang recognizes", OS);
 
   OS << R"c++(
@@ -367,6 +441,10 @@ void clang::EmitClangBuiltins(llvm::RecordKeeper &Records,
 #if defined(BUILTIN) && !defined(TARGET_BUILTIN)
 #  define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BUILTIN(ID, TYPE, ATTRS)
 #endif
+
+#if defined(BUILTIN) && !defined(TARGET_HEADER_BUILTIN)
+#  define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANG, FEATURE) BUILTIN(ID, TYPE, ATTRS)
+#endif
 )c++";
 
   // AtomicBuiltins are order dependent
@@ -380,15 +458,12 @@ void clang::EmitClangBuiltins(llvm::RecordKeeper &Records,
     EmitBuiltin(OS, Builtin);
   }
 
-  for (const auto *Entry : Records.getAllDerivedDefinitions("CustomEntry")) {
-    OS << Entry->getValueAsString("Entry") << '\n';
-  }
-
   OS << R"c++(
 #undef ATOMIC_BUILTIN
 #undef BUILTIN
 #undef LIBBUILTIN
 #undef LANGBUILTIN
 #undef TARGET_BUILTIN
+#undef TARGET_HEADER_BUILTIN
 )c++";
 }

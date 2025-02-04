@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -polly-parallel -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -polly-parallel -S < %s | FileCheck %s
 ;
 ;    void foo(float *A, float *B) {
 ;      for (long i = 0; i < 1000; i++)
@@ -32,8 +32,8 @@ bb5:                                              ; preds = %bb4
   %tmp7 = getelementptr inbounds float, ptr %A, i64 %i.0
   %tmp6 = load float, ptr %tmp, align 4
   store float %tmp6, ptr %tmp7, align 4
-; CHECK: %tmp6_p_scalar_ = load float, ptr %scevgep, align 4, !alias.scope !0, !noalias !3
-; CHECK: store float %tmp6_p_scalar_, ptr %scevgep7, align 4, !alias.scope !3, !noalias !0
+; CHECK: %tmp6_p_scalar_ = load float, ptr %scevgep, align 4, !alias.scope !3, !noalias !6
+; CHECK: store float %tmp6_p_scalar_, ptr %scevgep7, align 4, !alias.scope !6, !noalias !3
   br label %bb8
 
 bb8:                                              ; preds = %bb5

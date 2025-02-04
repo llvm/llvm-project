@@ -1,10 +1,20 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
+; CHECK: OpFunction
+; CHECK: OpBranchConditional %[[#]] %[[#if_then:]] %[[#if_end:]]
+; CHECK: %[[#if_then]] = OpLabel
+; CHECK: OpBranch %[[#if_end]]
+; CHECK: %[[#if_end]] = OpLabel
 ; CHECK: %[[#Var:]] = OpPhi
 ; CHECK: OpSwitch %[[#Var]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]] [[#]] %[[#]]
-; CHECK-COUNT-11: OpBranch
-; CHECK-NOT: OpBranch
+; CHECK-COUNT-10: OpLabel
+; CHECK: %[[#epilog:]] = OpLabel
+; CHECK:                 OpBranch %[[#exit:]]
+; CHECK:    %[[#exit]] = OpLabel
+; CHECK:                 OpReturn
+; CHECK-NOT: OpLabel
+; CHECK-NEXT: OpFunctionEnd
 
 define spir_func void @foo(i64 noundef %addr, i64 noundef %as) {
 entry:

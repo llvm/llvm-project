@@ -88,8 +88,7 @@ determineIncludeKind(StringRef CanonicalFile, StringRef IncludeFile,
     if (FileCopy.consume_front(Parts.first) &&
         FileCopy.consume_back(Parts.second)) {
       // Determine the kind of this inclusion.
-      if (FileCopy.equals("/internal/") ||
-          FileCopy.equals("/proto/")) {
+      if (FileCopy == "/internal/" || FileCopy == "/proto/") {
         return IncludeSorter::IK_MainTUInclude;
       }
     }

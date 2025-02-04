@@ -1,5 +1,5 @@
-# RUN: llvm-mc -triple=riscv32 -filetype=obj < %s | llvm-readelf -Ss - | FileCheck %s
-# RUN: llvm-mc -triple=riscv64 -filetype=obj < %s | llvm-readelf -Ss - | FileCheck %s
+# RUN: llvm-mc -triple=riscv32 -filetype=obj %s | llvm-readelf -Ss - | FileCheck %s
+# RUN: llvm-mc -triple=riscv64 -filetype=obj %s | llvm-readelf -Ss - | FileCheck %s
 
         .text
         nop
@@ -28,6 +28,6 @@
 # CHECK: [[#STARTS_DATA:]]] .starts_data
 
 # CHECK:    Value  Size Type    Bind   Vis     Ndx              Name
-# CHECK: 00000000     0 NOTYPE  LOCAL  DEFAULT [[#TEXT]]        $x
-# CHECK: 00000000     0 NOTYPE  LOCAL  DEFAULT [[#WIBBLE]]      $x
-# CHECK: 00000000     0 NOTYPE  LOCAL  DEFAULT [[#STARTS_DATA]] $d
+# CHECK: 00000000     0 NOTYPE  LOCAL  DEFAULT [[#TEXT]]        $x{{$}}
+# CHECK: 00000000     0 NOTYPE  LOCAL  DEFAULT [[#WIBBLE]]      $x{{$}}
+# CHECK: 00000000     0 NOTYPE  LOCAL  DEFAULT [[#STARTS_DATA]] $d{{$}}

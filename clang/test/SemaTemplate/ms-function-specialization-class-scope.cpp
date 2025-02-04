@@ -156,7 +156,13 @@ namespace UsesThis {
     auto h<int>() -> decltype(this); // expected-error {{'this' cannot be used in a static member function declaration}}
   };
 
-  template struct A<int>; // expected-note 3{{in instantiation of}}
+  template struct A<int>; // expected-note {{in instantiation of}}
+  template<> template<> void A<int>::f<int>();
+  template<> template<> void A<int>::g<int>();
+  void test1() {
+    A<int>().f<int>(); // expected-note {{in instantiation of}}
+    A<int>().g<int>(); // expected-note {{in instantiation of}}
+  }
 
   template <typename T>
   struct Foo {
@@ -390,7 +396,12 @@ namespace UsesThis {
     }
   };
 
-  template struct D<int>; // expected-note 2{{in instantiation of}}
+  template struct D<int>;
+
+  void test2() {
+    D<int>().non_static_spec(0); // expected-note {{in instantiation of}}
+    D<int>().static_spec(0); // expected-note {{in instantiation of}}
+  }
 
   template<typename T>
   struct E : T {
@@ -464,6 +475,32 @@ namespace UsesThis {
       g1(x1);
       g1(y0);
       g1(y1);
+
+      T::f0(0);
+      T::f0(z);
+      T::f0(x0);
+      T::f0(x1);
+      T::f0(y0);
+      T::f0(y1);
+      T::g0(0);
+      T::g0(z);
+      T::g0(x0);
+      T::g0(x1);
+      T::g0(y0);
+      T::g0(y1);
+
+      E::f1(0);
+      E::f1(z);
+      E::f1(x0);
+      E::f1(x1);
+      E::f1(y0);
+      E::f1(y1);
+      E::g1(0);
+      E::g1(z);
+      E::g1(x0);
+      E::g1(x1);
+      E::g1(y0);
+      E::g1(y1);
     }
 
     template<>
@@ -519,9 +556,52 @@ namespace UsesThis {
       g1(x1); // expected-error {{invalid use of member 'x1' in static member function}}
       g1(y0);
       g1(y1);
+
+      T::f0(0); // expected-error {{call to non-static member function without an object argument}}
+      T::f0(z); // expected-error {{call to non-static member function without an object argument}}
+      T::f0(x0); // expected-error {{call to non-static member function without an object argument}}
+      T::f0(x1); // expected-error {{call to non-static member function without an object argument}}
+      T::f0(y0); // expected-error {{call to non-static member function without an object argument}}
+      T::f0(y1); // expected-error {{call to non-static member function without an object argument}}
+      T::g0(0);
+      T::g0(z);
+      T::g0(x0); // expected-error {{invalid use of member 'x0' in static member function}}
+      T::g0(x1); // expected-error {{invalid use of member 'x1' in static member function}}
+      T::g0(y0);
+      T::g0(y1);
+
+      E::f1(0); // expected-error {{call to non-static member function without an object argument}}
+      E::f1(z); // expected-error {{call to non-static member function without an object argument}}
+      E::f1(x0); // expected-error {{call to non-static member function without an object argument}}
+      E::f1(x1); // expected-error {{call to non-static member function without an object argument}}
+      E::f1(y0); // expected-error {{call to non-static member function without an object argument}}
+      E::f1(y1); // expected-error {{call to non-static member function without an object argument}}
+      E::g1(0);
+      E::g1(z);
+      E::g1(x0); // expected-error {{invalid use of member 'x0' in static member function}}
+      E::g1(x1); // expected-error {{invalid use of member 'x1' in static member function}}
+      E::g1(y0);
+      E::g1(y1);
     }
   };
 
-  template struct E<B>; // expected-note 2{{in instantiation of}}
+  template struct E<B>;
 
+  void test3() {
+    E<B>().non_static_spec(0); // expected-note {{in instantiation of}}
+    E<B>().static_spec(0); // expected-note {{in instantiation of}}
+  }
 }
+
+namespace GH111266 {
+  template<class T> struct S {
+    template<int> auto foo();
+    template<> auto foo<1>() {
+      return [](auto x) { return x; };
+    }
+  };
+  template struct S<void>;
+  void test() {
+    S<void>().foo<1>();
+  }
+} // namespace GH111266

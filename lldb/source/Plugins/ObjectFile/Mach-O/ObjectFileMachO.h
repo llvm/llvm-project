@@ -12,6 +12,7 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Host/SafeMachO.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/RangeMap.h"
@@ -62,8 +63,7 @@ public:
                                         lldb_private::ModuleSpecList &specs);
 
   static bool SaveCore(const lldb::ProcessSP &process_sp,
-                       const lldb_private::FileSpec &outfile,
-                       lldb::SaveCoreStyle &core_style,
+                       lldb_private::SaveCoreOptions &options,
                        lldb_private::Status &error);
 
   static bool MagicBytesMatch(lldb::DataBufferSP data_sp, lldb::addr_t offset,
@@ -254,6 +254,19 @@ protected:
   struct MachOCorefileAllImageInfos {
     std::vector<MachOCorefileImageEntry> all_image_infos;
     bool IsValid() { return all_image_infos.size() > 0; }
+  };
+
+  // The LC_SYMTAB's symtab_command structure uses 32-bit file offsets
+  // for two fields, but ObjectFileMachO needs to calculate the offsets
+  // in virtual address layout from the start of the TEXT segment, and
+  // that span may be larger than 4GB.
+  struct SymtabCommandLargeOffsets {
+    uint32_t cmd = 0;          /* LC_SYMTAB */
+    uint32_t cmdsize = 0;      /* sizeof(struct symtab_command) */
+    lldb::offset_t symoff = 0; /* symbol table offset */
+    uint32_t nsyms = 0;        /* number of symbol table entries */
+    lldb::offset_t stroff = 0; /* string table offset */
+    uint32_t strsize = 0;      /* string table size in bytes */
   };
 
   /// Get the list of binary images that were present in the process

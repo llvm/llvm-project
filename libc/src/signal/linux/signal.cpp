@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/signal/signal.h"
+#include "hdr/signal_macros.h"
+#include "hdr/types/sighandler_t.h"
+#include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/signal/sigaction.h"
 
-#include "src/__support/common.h"
-
-#include <signal.h>
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(sighandler_t, signal, (int signum, sighandler_t handler)) {
   struct sigaction action, old;
@@ -25,4 +25,4 @@ LLVM_LIBC_FUNCTION(sighandler_t, signal, (int signum, sighandler_t handler)) {
              : old.sa_handler;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

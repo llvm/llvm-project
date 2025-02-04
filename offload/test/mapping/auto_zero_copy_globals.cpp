@@ -3,15 +3,7 @@
 // RUN: env OMPX_APU_MAPS=1 HSA_XNACK=1 LIBOMPTARGET_INFO=60 %libomptarget-run-generic 2>&1 \
 // RUN: | %fcheck-generic -check-prefix=CHECK
 
-// UNSUPPORTED: aarch64-unknown-linux-gnu
-// UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
-// UNSUPPORTED: nvptx64-nvidia-cuda
-// UNSUPPORTED: nvptx64-nvidia-cuda-LTO
-// UNSUPPORTED: x86_64-pc-linux-gnu
-// UNSUPPORTED: x86_64-pc-linux-gnu-LTO
-// UNSUPPORTED: s390x-ibm-linux-gnu
-// UNSUPPORTED: s390x-ibm-linux-gnu-LTO
-
+// REQUIRES: amdgpu
 // REQUIRES: unified_shared_memory
 
 // clang-format on

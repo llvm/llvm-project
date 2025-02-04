@@ -812,7 +812,6 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
     std::string stats;
     llvm::raw_string_ostream os(stats);
     llvm::PrintStatisticsJSON(os);
-    os.flush();
     EmitString(o, html::EscapeText(stats)) << '\n';
   }
 

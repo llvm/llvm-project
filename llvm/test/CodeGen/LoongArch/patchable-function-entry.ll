@@ -1,7 +1,7 @@
 ;; Test the function attribute "patchable-function-entry".
 ;; Adapted from the RISCV test case.
-; RUN: llc --mtriple=loongarch32 < %s | FileCheck %s --check-prefixes=CHECK,LA32
-; RUN: llc --mtriple=loongarch64 < %s | FileCheck %s --check-prefixes=CHECK,LA64
+; RUN: llc --mtriple=loongarch32 -mattr=+d < %s | FileCheck %s --check-prefixes=CHECK,LA32
+; RUN: llc --mtriple=loongarch64 -mattr=+d < %s | FileCheck %s --check-prefixes=CHECK,LA64
 
 define void @f0() "patchable-function-entry"="0" {
 ; CHECK-LABEL: f0:

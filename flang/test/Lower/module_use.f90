@@ -1,3 +1,4 @@
+! RUN: rm -fr %t && mkdir -p %t && cd %t
 ! RUN: bbc -emit-fir %S/module_definition.f90
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s
 
@@ -5,9 +6,9 @@
 ! The modules are defined in module_definition.f90
 ! The first runs ensures the module file is generated.
 
-! CHECK: fir.global common @__BLNK__(dense<0> : vector<4xi8>) : !fir.array<4xi8>
-! CHECK-NEXT: fir.global common @named1_(dense<0> : vector<4xi8>) : !fir.array<4xi8>
-! CHECK-NEXT: fir.global common @named2_(dense<0> : vector<4xi8>) : !fir.array<4xi8>
+! CHECK: fir.global common @__BLNK__(dense<0> : vector<4xi8>) {alignment = 4 : i64} : !fir.array<4xi8>
+! CHECK-NEXT: fir.global common @named1_(dense<0> : vector<4xi8>) {alignment = 4 : i64} : !fir.array<4xi8>
+! CHECK-NEXT: fir.global common @named2_(dense<0> : vector<4xi8>) {alignment = 4 : i64} : !fir.array<4xi8>
 
 ! CHECK-LABEL: func @_QPm1use()
 real function m1use()

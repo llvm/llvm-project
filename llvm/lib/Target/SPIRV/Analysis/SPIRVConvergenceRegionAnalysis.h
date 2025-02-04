@@ -130,6 +130,9 @@ public:
   }
 
   const ConvergenceRegion *getTopLevelRegion() const { return TopLevelRegion; }
+  ConvergenceRegion *getWritableTopLevelRegion() const {
+    return TopLevelRegion;
+  }
 };
 
 } // namespace SPIRV

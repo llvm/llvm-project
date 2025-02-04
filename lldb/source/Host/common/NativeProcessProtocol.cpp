@@ -34,7 +34,7 @@ NativeProcessProtocol::NativeProcessProtocol(lldb::pid_t pid, int terminal_fd,
 lldb_private::Status NativeProcessProtocol::Interrupt() {
   Status error;
 #if !defined(SIGSTOP)
-  error.SetErrorString("local host does not support signaling");
+  error = Status::FromErrorString("local host does not support signaling");
   return error;
 #else
   return Signal(SIGSTOP);
@@ -51,20 +51,20 @@ lldb_private::Status
 NativeProcessProtocol::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                            MemoryRegionInfo &range_info) {
   // Default: not implemented.
-  return Status("not implemented");
+  return Status::FromErrorString("not implemented");
 }
 
 lldb_private::Status
 NativeProcessProtocol::ReadMemoryTags(int32_t type, lldb::addr_t addr,
                                       size_t len, std::vector<uint8_t> &tags) {
-  return Status("not implemented");
+  return Status::FromErrorString("not implemented");
 }
 
 lldb_private::Status
 NativeProcessProtocol::WriteMemoryTags(int32_t type, lldb::addr_t addr,
                                        size_t len,
                                        const std::vector<uint8_t> &tags) {
-  return Status("not implemented");
+  return Status::FromErrorString("not implemented");
 }
 
 std::optional<WaitStatus> NativeProcessProtocol::GetExitStatus() {
@@ -215,17 +215,17 @@ Status NativeProcessProtocol::RemoveWatchpoint(lldb::addr_t addr) {
   for (const auto &thread : m_threads) {
     assert(thread && "thread list should not have a NULL thread!");
 
-    const Status thread_error = thread->RemoveWatchpoint(addr);
+    Status thread_error = thread->RemoveWatchpoint(addr);
     if (thread_error.Fail()) {
       // Keep track of the first thread error if any threads fail. We want to
       // try to remove the watchpoint from every thread, though, even if one or
       // more have errors.
       if (!overall_error.Fail())
-        overall_error = thread_error;
+        overall_error = std::move(thread_error);
     }
   }
-  const Status error = m_watchpoint_list.Remove(addr);
-  return overall_error.Fail() ? overall_error : error;
+  Status error = m_watchpoint_list.Remove(addr);
+  return overall_error.Fail() ? std::move(overall_error) : std::move(error);
 }
 
 const HardwareBreakpointMap &
@@ -248,7 +248,8 @@ Status NativeProcessProtocol::SetHardwareBreakpoint(lldb::addr_t addr,
 
   if (hw_debug_cap == std::nullopt || hw_debug_cap->first == 0 ||
       hw_debug_cap->first <= m_hw_breakpoints_map.size())
-    return Status("Target does not have required no of hardware breakpoints");
+    return Status::FromErrorString(
+        "Target does not have required no of hardware breakpoints");
 
   // Vector below stores all thread pointer for which we have we successfully
   // set this hardware breakpoint. If any of the current process threads fails
@@ -349,7 +350,7 @@ Status NativeProcessProtocol::SetSoftwareBreakpoint(lldb::addr_t addr,
   }
   auto expected_bkpt = EnableSoftwareBreakpoint(addr, size_hint);
   if (!expected_bkpt)
-    return Status(expected_bkpt.takeError());
+    return Status::FromError(expected_bkpt.takeError());
 
   m_software_breakpoints.emplace(addr, std::move(*expected_bkpt));
   return Status();
@@ -360,7 +361,7 @@ Status NativeProcessProtocol::RemoveSoftwareBreakpoint(lldb::addr_t addr) {
   LLDB_LOG(log, "addr = {0:x}", addr);
   auto it = m_software_breakpoints.find(addr);
   if (it == m_software_breakpoints.end())
-    return Status("Breakpoint not found.");
+    return Status::FromErrorString("Breakpoint not found.");
   assert(it->second.ref_count > 0);
   if (--it->second.ref_count > 0)
     return Status();
@@ -377,15 +378,16 @@ Status NativeProcessProtocol::RemoveSoftwareBreakpoint(lldb::addr_t addr) {
   error =
       ReadMemory(addr, curr_break_op.data(), curr_break_op.size(), bytes_read);
   if (error.Fail() || bytes_read < curr_break_op.size()) {
-    return Status("addr=0x%" PRIx64
-                  ": tried to read %zu bytes but only read %zu",
-                  addr, curr_break_op.size(), bytes_read);
+    return Status::FromErrorStringWithFormat(
+        "addr=0x%" PRIx64 ": tried to read %zu bytes but only read %zu", addr,
+        curr_break_op.size(), bytes_read);
   }
   const auto &saved = it->second.saved_opcodes;
   // Make sure the breakpoint opcode exists at this address
   if (llvm::ArrayRef(curr_break_op) != it->second.breakpoint_opcodes) {
     if (curr_break_op != it->second.saved_opcodes)
-      return Status("Original breakpoint trap is no longer in memory.");
+      return Status::FromErrorString(
+          "Original breakpoint trap is no longer in memory.");
     LLDB_LOG(log,
              "Saved opcodes ({0:@[x]}) have already been restored at {1:x}.",
              llvm::make_range(saved.begin(), saved.end()), addr);
@@ -395,9 +397,9 @@ Status NativeProcessProtocol::RemoveSoftwareBreakpoint(lldb::addr_t addr) {
     size_t bytes_written = 0;
     error = WriteMemory(addr, saved.data(), saved.size(), bytes_written);
     if (error.Fail() || bytes_written < saved.size()) {
-      return Status("addr=0x%" PRIx64
-                    ": tried to write %zu bytes but only wrote %zu",
-                    addr, saved.size(), bytes_written);
+      return Status::FromErrorStringWithFormat(
+          "addr=0x%" PRIx64 ": tried to write %zu bytes but only wrote %zu",
+          addr, saved.size(), bytes_written);
     }
 
     // Verify that our original opcode made it back to the inferior
@@ -406,9 +408,10 @@ Status NativeProcessProtocol::RemoveSoftwareBreakpoint(lldb::addr_t addr) {
     error = ReadMemory(addr, verify_opcode.data(), verify_opcode.size(),
                        verify_bytes_read);
     if (error.Fail() || verify_bytes_read < verify_opcode.size()) {
-      return Status("addr=0x%" PRIx64
-                    ": tried to read %zu verification bytes but only read %zu",
-                    addr, verify_opcode.size(), verify_bytes_read);
+      return Status::FromErrorStringWithFormat(
+          "addr=0x%" PRIx64
+          ": tried to read %zu verification bytes but only read %zu",
+          addr, verify_opcode.size(), verify_bytes_read);
     }
     if (verify_opcode != saved)
       LLDB_LOG(log, "Restoring bytes at {0:x}: {1:@[x]}", addr,

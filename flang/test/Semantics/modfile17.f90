@@ -97,10 +97,10 @@ end module
 !integer(k8)::j8
 !end type
 !type::defaulted(n1,n2,n4,n8)
-!integer(1),kind::n1=1_1
-!integer(2),kind::n2=int(2_4*int(int(n1,kind=1),kind=4),kind=2)
+!integer(1),kind::n1=1_4
+!integer(2),kind::n2=2_4*int(int(n1,kind=1),kind=4)
 !integer(4),kind::n4=2_4*int(int(n2,kind=2),kind=4)
-!integer(8),kind::n8=int(12_4-int(n4,kind=4),kind=8)
+!integer(8),kind::n8=12_4-int(n4,kind=4)
 !type(capture(k1=int(n1,kind=1),k2=int(n2,kind=2),k4=int(n4,kind=4),k8=n8))::cap
 !end type
 !type,extends(defaulted)::extension(k5)

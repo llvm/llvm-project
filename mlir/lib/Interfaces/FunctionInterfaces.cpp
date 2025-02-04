@@ -146,7 +146,7 @@ static void setArgResAttrDict(FunctionOpInterface op, unsigned numTotalIndices,
     return removeArgResAttrs<isArg>(op);
 
   // Otherwise, create a new attribute array with the updated dictionary.
-  SmallVector<Attribute, 8> newAttrs(rawAttrArray.begin(), rawAttrArray.end());
+  SmallVector<Attribute, 8> newAttrs(rawAttrArray);
   newAttrs[index] = attrs;
   setArgResAttrs<isArg>(op, ArrayAttr::get(op->getContext(), newAttrs));
 }

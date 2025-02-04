@@ -31,6 +31,7 @@ EOF
 #ifdef BAR_H
 // ---------------------------------------------------------------------
 // CHECK:            DW_TAG_compile_unit
+// CHECK-NOT:          DW_AT_GNU_dwo_id
 // CHECK-NOT:        DW_TAG
 // CHECK:              DW_TAG_module
 // CHECK-NEXT:           DW_AT_name{{.*}}"Bar"
@@ -55,6 +56,7 @@ struct PruneMeNot;
 #ifdef FOO_H
 // ---------------------------------------------------------------------
 // CHECK:               DW_TAG_compile_unit
+// CHECK-NOT:             DW_AT_GNU_dwo_id
 // CHECK-NOT:             DW_TAG
 // CHECK: 0x0[[FOO:.*]]:  DW_TAG_module
 // CHECK-NEXT:              DW_AT_name{{.*}}"Foo"
@@ -92,8 +94,9 @@ Bar odr_violation = { 42 };
 #else
 // ---------------------------------------------------------------------
 
-// CHECK:  DW_TAG_compile_unit
-// CHECK:    DW_AT_low_pc
+// CHECK:    DW_TAG_compile_unit
+// CHECK-NOT:  DW_AT_GNU_dwo_id
+// CHECK:      DW_AT_low_pc
 // CHECK-NOT:  DW_TAG_module
 // CHECK-NOT:  DW_TAG_typedef
 //
@@ -130,8 +133,9 @@ int main(int argc, char **argv) {
 #endif
 #endif
 
-// CHECK: DW_TAG_compile_unit
-// CHECK:   DW_AT_name {{.*}}"odr_violation.c"
+// CHECK:     DW_TAG_compile_unit
+// CHECK-NOT:   DW_AT_GNU_dwo_id
+// CHECK:       DW_AT_name {{.*}}"odr_violation.c"
 // CHECK: DW_TAG_variable
 // CHECK:   DW_AT_name {{.*}}"odr_violation"
 // CHECK:   DW_AT_type [DW_FORM_ref4] ({{.*}}{0x{{0*}}[[BAR2:.*]]}

@@ -4,7 +4,7 @@
 # This test performs a logical AND operation on the results of the `stat -c %a
 # %t.bolt` and `umask` commands (both results are displayed in octal), and
 # checks whether the result is equal to 0.
-REQUIRES: system-linux
+REQUIRES: shell, system-linux
 
 RUN: %clang %cflags %p/Inputs/hello.c -o %t -Wl,-q
 RUN: llvm-bolt %t -o %t.bolt

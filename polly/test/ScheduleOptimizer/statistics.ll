@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-opt-isl -stats -disable-output < %s 2>&1 | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly -passes=polly-opt-isl -stats -disable-output < %s 2>&1 | FileCheck %s -match-full-lines
 
 ; REQUIRES: asserts
 

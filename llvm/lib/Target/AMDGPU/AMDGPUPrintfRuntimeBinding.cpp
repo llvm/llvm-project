@@ -25,6 +25,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/TargetParser/Triple.h"
@@ -33,7 +34,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "printfToRuntime"
-#define DWORD_ALIGN 4
+enum { DWORD_ALIGN = 4 };
 
 namespace {
 class AMDGPUPrintfRuntimeBinding final : public ModulePass {
@@ -49,7 +50,7 @@ private:
 
 class AMDGPUPrintfRuntimeBindingImpl {
 public:
-  AMDGPUPrintfRuntimeBindingImpl() {}
+  AMDGPUPrintfRuntimeBindingImpl() = default;
   bool run(Module &M);
 
 private:
@@ -276,7 +277,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
 
     Type *Tys_alloc[1] = {SizetTy};
     Type *I8Ty = Type::getInt8Ty(Ctx);
-    Type *I8Ptr = PointerType::get(I8Ty, 1);
+    Type *I8Ptr = PointerType::get(Ctx, 1);
     FunctionType *FTy_alloc = FunctionType::get(I8Ptr, Tys_alloc, false);
     FunctionCallee PrintfAllocFn =
         M.getOrInsertFunction(StringRef("__printf_alloc"), FTy_alloc, Attr);
@@ -299,7 +300,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
     // basicblock splits after buffer overflow check
     //
     ConstantPointerNull *zeroIntPtr =
-        ConstantPointerNull::get(PointerType::get(I8Ty, 1));
+        ConstantPointerNull::get(PointerType::get(Ctx, 1));
     auto *cmp = cast<ICmpInst>(Builder.CreateICmpNE(pcall, zeroIntPtr, ""));
     if (!CI->use_empty()) {
       Value *result =
@@ -319,7 +320,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
         I8Ty, pcall, ConstantInt::get(Ctx, APInt(32, 0)), "PrintBuffID",
         BrnchPoint);
 
-    Type *idPointer = PointerType::get(I32Ty, AMDGPUAS::GLOBAL_ADDRESS);
+    Type *idPointer = PointerType::get(Ctx, AMDGPUAS::GLOBAL_ADDRESS);
     Value *id_gep_cast =
         new BitCastInst(BufferIdx, idPointer, "PrintBuffIdCast", BrnchPoint);
 
@@ -435,8 +436,9 @@ bool AMDGPUPrintfRuntimeBindingImpl::run(Module &M) {
   if (TT.getArch() == Triple::r600)
     return false;
 
-  auto PrintfFunction = M.getFunction("printf");
-  if (!PrintfFunction || !PrintfFunction->isDeclaration())
+  auto *PrintfFunction = M.getFunction("printf");
+  if (!PrintfFunction || !PrintfFunction->isDeclaration() ||
+      M.getModuleFlag("openmp"))
     return false;
 
   for (auto &U : PrintfFunction->uses()) {

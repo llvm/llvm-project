@@ -625,7 +625,7 @@ template <typename PDLFnT, std::size_t... I>
 void assertArgs(PatternRewriter &rewriter, ArrayRef<PDLValue> values,
                 std::index_sequence<I...>) {
   // We only want to do verification in debug builds, same as with `assert`.
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+#ifndef NDEBUG
   using FnTraitsT = llvm::function_traits<PDLFnT>;
   auto errorFn = [&](const Twine &msg) -> LogicalResult {
     llvm::report_fatal_error(msg);

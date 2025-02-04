@@ -109,9 +109,7 @@ define void @store_nxv2f32(ptr %out) {
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    st1w { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 2 x float> undef, float 1.0, i32 0
-  %splat = shufflevector <vscale x 2 x float> %ins, <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
-  store <vscale x 2 x float> %splat, ptr %out
+  store <vscale x 2 x float> splat(float 1.0), ptr %out
   ret void
 }
 
@@ -122,9 +120,7 @@ define void @store_nxv4f16(ptr %out) {
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 4 x half> undef, half 1.0, i32 0
-  %splat = shufflevector <vscale x 4 x half> %ins, <vscale x 4 x half> undef, <vscale x 4 x i32> zeroinitializer
-  store <vscale x 4 x half> %splat, ptr %out
+  store <vscale x 4 x half> splat(half 1.0), ptr %out
   ret void
 }
 
@@ -139,9 +135,7 @@ define void @store_nxv6f32(ptr %out) {
 ; CHECK-NEXT:    st1w { z0.d }, p0, [x0, #2, mul vl]
 ; CHECK-NEXT:    st1w { z0.s }, p1, [x0]
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 6 x float> undef, float 1.0, i32 0
-  %splat = shufflevector <vscale x 6 x float> %ins, <vscale x 6 x float> undef, <vscale x 6 x i32> zeroinitializer
-  store <vscale x 6 x float> %splat, ptr %out
+  store <vscale x 6 x float> splat(float 1.0), ptr %out
   ret void
 }
 
@@ -154,8 +148,6 @@ define void @store_nxv12f16(ptr %out) {
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0, #2, mul vl]
 ; CHECK-NEXT:    st1h { z0.h }, p1, [x0]
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 12 x half> undef, half 1.0, i32 0
-  %splat = shufflevector <vscale x 12 x half> %ins, <vscale x 12 x half> undef, <vscale x 12 x i32> zeroinitializer
-  store <vscale x 12 x half> %splat, ptr %out
+  store <vscale x 12 x half> splat(half 1.0), ptr %out
   ret void
 }

@@ -52,11 +52,11 @@ contains
 ! CHECK:  %[[VAL_15:.*]] = arith.constant true
 ! CHECK:  %[[VAL_16:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.array<10xi64>>) -> !fir.llvm_ptr<i8>
 ! CHECK:  %[[VAL_20:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<2x!fir.char<1,?>>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK:  %[[VAL_22:.*]] = fir.call @_FortranAInitArrayConstructorVector(%[[VAL_16]], %[[VAL_20]], %[[VAL_15]], %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.llvm_ptr<i8>, !fir.ref<!fir.box<none>>, i1, i32, !fir.ref<i8>, i32) -> none
+! CHECK:  fir.call @_FortranAInitArrayConstructorVector(%[[VAL_16]], %[[VAL_20]], %[[VAL_15]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.llvm_ptr<i8>, !fir.ref<!fir.box<none>>, i1, !fir.ref<i8>, i32) -> ()
 ! CHECK:  fir.call @_QMchararrayctorPchar_pointer(
-! CHECK:  fir.call @_FortranAPushArrayConstructorValue(%[[VAL_16]], %{{.*}}) {{.*}}: (!fir.llvm_ptr<i8>, !fir.box<none>) -> none
+! CHECK:  fir.call @_FortranAPushArrayConstructorValue(%[[VAL_16]], %{{.*}}) {{.*}}: (!fir.llvm_ptr<i8>, !fir.box<none>) -> ()
 ! CHECK:  fir.call @_QMchararrayctorPchar_pointer(
-! CHECK:  fir.call @_FortranAPushArrayConstructorValue(%[[VAL_16]], %{{.*}}) {{.*}}: (!fir.llvm_ptr<i8>, !fir.box<none>) -> none
+! CHECK:  fir.call @_FortranAPushArrayConstructorValue(%[[VAL_16]], %{{.*}}) {{.*}}: (!fir.llvm_ptr<i8>, !fir.box<none>) -> ()
 ! CHECK:  %[[VAL_45:.*]] = arith.constant true
 ! CHECK:  %[[VAL_46:.*]] = fir.load %[[VAL_3]] : !fir.ref<!fir.box<!fir.heap<!fir.array<2x!fir.char<1,?>>>>>
 ! CHECK:  %[[VAL_47:.*]] = hlfir.as_expr %[[VAL_46]] move %[[VAL_45]] : (!fir.box<!fir.heap<!fir.array<2x!fir.char<1,?>>>>, i1) -> !hlfir.expr<2x!fir.char<1,?>>
@@ -93,10 +93,11 @@ subroutine test_set_length_sanitize(i, c1)
   call takes_char([character(len=i):: c1])
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_set_length_sanitize(
-! CHECK:   %[[VAL_6:.*]]:2 = hlfir.declare {{.*}}Ec1
-! CHECK:   %[[VAL_9:.*]]:2 = hlfir.declare {{.*}}Ei
-! CHECK:   %[[VAL_25:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<i64>
+! CHECK:   %[[VAL_2:.*]]:2 = hlfir.declare {{.*}}Ec1
+! CHECK:   %[[VAL_3:.*]]:2 = hlfir.declare %arg0
+! CHECK:   %[[VAL_4:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i64>
+! CHECK:   %[[VAL_25:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i64>
 ! CHECK:   %[[VAL_26:.*]] = arith.constant 0 : i64
 ! CHECK:   %[[VAL_27:.*]] = arith.cmpi sgt, %[[VAL_25]], %[[VAL_26]] : i64
 ! CHECK:   %[[VAL_28:.*]] = arith.select %[[VAL_27]], %[[VAL_25]], %[[VAL_26]] : i64
-! CHECK:   %[[VAL_29:.*]] = hlfir.set_length %[[VAL_6]]#0 len %[[VAL_28]] : (!fir.boxchar<1>, i64) -> !hlfir.expr<!fir.char<1,?>>
+! CHECK:   %[[VAL_29:.*]] = hlfir.set_length %[[VAL_2]]#0 len %[[VAL_28]] : (!fir.boxchar<1>, i64) -> !hlfir.expr<!fir.char<1,?>>

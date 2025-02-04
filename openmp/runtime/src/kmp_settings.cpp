@@ -6420,6 +6420,8 @@ void __kmp_env_initialize(char const *string) {
         }
         if ((__kmp_nested_proc_bind.bind_types[0] != proc_bind_intel) &&
             (__kmp_nested_proc_bind.bind_types[0] != proc_bind_default)) {
+          if (__kmp_nested_proc_bind.bind_types[0] == proc_bind_false)
+            __kmp_affinity.type = affinity_none;
           if (__kmp_affinity.type == affinity_default) {
             __kmp_affinity.type = affinity_compact;
             __kmp_affinity.flags.dups = FALSE;

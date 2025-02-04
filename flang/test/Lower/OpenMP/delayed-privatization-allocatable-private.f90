@@ -15,29 +15,38 @@ subroutine delayed_privatization_allocatable
 end subroutine
 
 ! CHECK-LABEL: omp.private {type = private}
-! CHECK-SAME: @[[PRIVATIZER_SYM:.*]] : [[TYPE:!fir.ref<!fir.box<!fir.heap<i32>>>]] alloc {
+! CHECK-SAME: @[[PRIVATIZER_SYM:.*]] : [[BOX_TYPE:!fir.box<!fir.heap<i32>>]] init {
 
-! CHECK-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE]]):
-
-! CHECK-NEXT:   %[[PRIV_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<i32>> {bindc_name = "var1", pinned, uniq_name = "_QFdelayed_privatization_allocatableEvar1"}
+! CHECK-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE:!fir.ref<!fir.box<!fir.heap<i32>>>]], %[[PRIV_ALLOC:.*]]: [[TYPE]]):
 
 ! CHECK-NEXT:   %[[PRIV_ARG_VAL:.*]] = fir.load %[[PRIV_ARG]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK-NEXT:   %[[PRIV_ARG_BOX:.*]] = fir.box_addr %[[PRIV_ARG_VAL]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
 ! CHECK-NEXT:   %[[PRIV_ARG_ADDR:.*]] = fir.convert %[[PRIV_ARG_BOX]] : (!fir.heap<i32>) -> i64
 ! CHECK-NEXT:   %[[C0:.*]] = arith.constant 0 : i64
-! CHECK-NEXT:   %[[ALLOC_COND:.*]] = arith.cmpi ne, %[[PRIV_ARG_ADDR]], %[[C0]] : i64
+! CHECK-NEXT:   %[[ALLOC_COND:.*]] = arith.cmpi eq, %[[PRIV_ARG_ADDR]], %[[C0]] : i64
 
 ! CHECK-NEXT:   fir.if %[[ALLOC_COND]] {
-! CHECK-NEXT:     %[[PRIV_ALLOCMEM:.*]] = fir.allocmem i32 {fir.must_be_heap = true, uniq_name = "_QFdelayed_privatization_allocatableEvar1.alloc"}
+! CHECK-NEXT:     %[[ZERO_BOX:.*]] = fir.embox %[[PRIV_ARG_BOX]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
+! CHECK-NEXT:     fir.store %[[ZERO_BOX]] to %[[PRIV_ALLOC]] : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK-NEXT:   } else {
+! CHECK-NEXT:     %[[PRIV_ALLOCMEM:.*]] = fir.allocmem i32
 ! CHECK-NEXT:     %[[PRIV_ALLOCMEM_BOX:.*]] = fir.embox %[[PRIV_ALLOCMEM]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
 ! CHECK-NEXT:     fir.store %[[PRIV_ALLOCMEM_BOX]] to %[[PRIV_ALLOC]] : !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK-NEXT:   } else {
-! CHECK-NEXT:     %[[ZERO_BITS:.*]] = fir.zero_bits !fir.heap<i32>
-! CHECK-NEXT:     %[[ZERO_BOX:.*]] = fir.embox %[[ZERO_BITS]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
-! CHECK-NEXT:     fir.store %[[ZERO_BOX]] to %[[PRIV_ALLOC]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK-NEXT:   }
 
-! CHECK-NEXT:   %[[PRIV_DECL:.*]]:2 = hlfir.declare %[[PRIV_ALLOC]]
-! CHECK-NEXT:   omp.yield(%[[PRIV_DECL]]#0 : [[TYPE]])
+! CHECK-NEXT:   omp.yield(%[[PRIV_ALLOC]] : [[TYPE]])
 
-! CHECK-NEXT: }
+! CHECK-NEXT: } dealloc {
+! CHECK-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE]]):
+
+! CHECK-NEXT:   %[[PRIV_VAL:.*]] = fir.load %[[PRIV_ARG]]
+! CHECK-NEXT:   %[[PRIV_ADDR:.*]] = fir.box_addr %[[PRIV_VAL]]
+! CHECK-NEXT:   %[[PRIV_ADDR_I64:.*]] = fir.convert %[[PRIV_ADDR]]
+! CHECK-NEXT:   %[[C0:.*]] = arith.constant 0 : i64
+! CHECK-NEXT:   %[[PRIV_NULL_COND:.*]] = arith.cmpi ne, %[[PRIV_ADDR_I64]], %[[C0]] : i64
+
+! CHECK-NEXT:   fir.if %[[PRIV_NULL_COND]] {
+! CHECK-NEXT:     fir.freemem %[[PRIV_ADDR]]
+! CHECK-NEXT:   }
+
+! CHECK-NEXT:   omp.yield

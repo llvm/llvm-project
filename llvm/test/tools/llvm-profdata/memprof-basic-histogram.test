@@ -1,0 +1,244 @@
+REQUIRES: x86_64-linux
+
+To update the inputs used below run Inputs/update_memprof_inputs.sh /path/to/updated/clang
+RUN: llvm-profdata show --memory %p/Inputs/basic-histogram.memprofraw --profiled-binary %p/Inputs/basic-histogram.memprofexe -o - | FileCheck %s
+
+We expect 5 MIBs, each with different AccessHistogramValues.
+
+CHECK: MemprofProfile:
+CHECK-NEXT:   Summary:
+CHECK-NEXT:     Version: 4
+CHECK-NEXT:     NumSegments: {{[0-9]+}}
+CHECK-NEXT:     NumMibInfo: 5
+CHECK-NEXT:     NumAllocFunctions: 3
+CHECK-NEXT:     NumStackOffsets: 5
+CHECK-NEXT:   Segments:
+CHECK-NEXT:   -
+CHECK-NEXT:     BuildId: {{[[:xdigit:]]+}}
+CHECK-NEXT:     Start: 0x{{[[:xdigit:]]+}}
+CHECK-NEXT:     End: 0x{{[[:xdigit:]]+}}
+CHECK-NEXT:     Offset: 0x{{[[:xdigit:]]+}}
+CHECK-NEXT:   -
+
+CHECK:   Records:
+CHECK-NEXT:   -
+CHECK-NEXT:     FunctionGUID: {{[0-9]+}}
+CHECK-NEXT:     AllocSites:
+CHECK-NEXT:     -
+CHECK-NEXT:       Callstack:
+CHECK-NEXT:       -
+CHECK-NEXT:         Function: {{[0-9]+}}
+CHECK-NEXT:         SymbolName: main
+CHECK-NEXT:         LineOffset: 2
+CHECK-NEXT:         Column: 10
+CHECK-NEXT:         Inline: 0
+CHECK-NEXT:       MemInfoBlock:
+CHECK-NEXT:         AllocCount: 1
+CHECK-NEXT:         TotalAccessCount: 8
+CHECK-NEXT:         MinAccessCount: 8
+CHECK-NEXT:         MaxAccessCount: 8
+CHECK-NEXT:         TotalSize: 64
+CHECK-NEXT:         MinSize: 64
+CHECK-NEXT:         MaxSize: 64
+CHECK-NEXT:         AllocTimestamp: {{[0-9]+}}
+CHECK-NEXT:         DeallocTimestamp: {{[0-9]+}}
+CHECK-NEXT:         TotalLifetime: 0
+CHECK-NEXT:         MinLifetime: 0
+CHECK-NEXT:         MaxLifetime: 0
+CHECK-NEXT:         AllocCpuId: {{[0-9]+}}
+CHECK-NEXT:         DeallocCpuId: {{[0-9]+}}
+CHECK-NEXT:         NumMigratedCpu: 0
+CHECK-NEXT:         NumLifetimeOverlaps: 0
+CHECK-NEXT:         NumSameAllocCpu: 0
+CHECK-NEXT:         NumSameDeallocCpu: 0
+CHECK-NEXT:         DataTypeId: {{[0-9]+}}
+CHECK-NEXT:         TotalAccessDensity: 12
+CHECK-NEXT:         MinAccessDensity: 12
+CHECK-NEXT:         MaxAccessDensity: 12
+CHECK-NEXT:         TotalLifetimeAccessDensity: 12000
+CHECK-NEXT:         MinLifetimeAccessDensity: 12000
+CHECK-NEXT:         MaxLifetimeAccessDensity: 12000
+CHECK-NEXT:         AccessHistogramSize: 8
+CHECK-NEXT:         AccessHistogram: {{[0-9]+}}
+CHECK-NEXT:         AccessHistogramValues: 1 1 1 1 1 1 1 1
+CHECK-NEXT:     -
+CHECK-NEXT:       Callstack:
+CHECK-NEXT:       -
+CHECK-NEXT:         Function: {{[0-9]+}}
+CHECK-NEXT:         SymbolName: main
+CHECK-NEXT:         LineOffset: 14
+CHECK-NEXT:         Column: 10
+CHECK-NEXT:         Inline: 0
+CHECK-NEXT:       MemInfoBlock:
+CHECK-NEXT:         AllocCount: 1
+CHECK-NEXT:         TotalAccessCount: 36
+CHECK-NEXT:         MinAccessCount: 36
+CHECK-NEXT:         MaxAccessCount: 36
+CHECK-NEXT:         TotalSize: 64
+CHECK-NEXT:         MinSize: 64
+CHECK-NEXT:         MaxSize: 64
+CHECK-NEXT:         AllocTimestamp: {{[0-9]+}}
+CHECK-NEXT:         DeallocTimestamp: {{[0-9]+}}
+CHECK-NEXT:         TotalLifetime: 0
+CHECK-NEXT:         MinLifetime: 0
+CHECK-NEXT:         MaxLifetime: 0
+CHECK-NEXT:         AllocCpuId: {{[0-9]+}}
+CHECK-NEXT:         DeallocCpuId: {{[0-9]+}}
+CHECK-NEXT:         NumMigratedCpu: 0
+CHECK-NEXT:         NumLifetimeOverlaps: 0
+CHECK-NEXT:         NumSameAllocCpu: 0
+CHECK-NEXT:         NumSameDeallocCpu: 0
+CHECK-NEXT:         DataTypeId: {{[0-9]+}}
+CHECK-NEXT:         TotalAccessDensity: 56
+CHECK-NEXT:         MinAccessDensity: 56
+CHECK-NEXT:         MaxAccessDensity: 56
+CHECK-NEXT:         TotalLifetimeAccessDensity: 56000
+CHECK-NEXT:         MinLifetimeAccessDensity: 56000
+CHECK-NEXT:         MaxLifetimeAccessDensity: 56000
+CHECK-NEXT:         AccessHistogramSize: 8
+CHECK-NEXT:         AccessHistogram: {{[0-9]+}}
+CHECK-NEXT:         AccessHistogramValues: 8 7 6 5 4 3 2 1
+CHECK-NEXT:     -
+CHECK-NEXT:       Callstack:
+CHECK-NEXT:       -
+CHECK-NEXT:         Function: {{[0-9]+}}
+CHECK-NEXT:         SymbolName: main
+CHECK-NEXT:         LineOffset: 54
+CHECK-NEXT:         Column: 10
+CHECK-NEXT:         Inline: 0
+CHECK-NEXT:       MemInfoBlock:
+CHECK-NEXT:         AllocCount: 1
+CHECK-NEXT:         TotalAccessCount: 1
+CHECK-NEXT:         MinAccessCount: 1
+CHECK-NEXT:         MaxAccessCount: 1
+CHECK-NEXT:         TotalSize: 64
+CHECK-NEXT:         MinSize: 64
+CHECK-NEXT:         MaxSize: 64
+CHECK-NEXT:         AllocTimestamp: {{[0-9]+}}
+CHECK-NEXT:         DeallocTimestamp: {{[0-9]+}}
+CHECK-NEXT:         TotalLifetime: 0
+CHECK-NEXT:         MinLifetime: 0
+CHECK-NEXT:         MaxLifetime: 0
+CHECK-NEXT:         AllocCpuId: {{[0-9]+}}
+CHECK-NEXT:         DeallocCpuId: {{[0-9]+}}
+CHECK-NEXT:         NumMigratedCpu: 0
+CHECK-NEXT:         NumLifetimeOverlaps: 0
+CHECK-NEXT:         NumSameAllocCpu: 0
+CHECK-NEXT:         NumSameDeallocCpu: 0
+CHECK-NEXT:         DataTypeId: {{[0-9]+}}
+CHECK-NEXT:         TotalAccessDensity: 1
+CHECK-NEXT:         MinAccessDensity: 1
+CHECK-NEXT:         MaxAccessDensity: 1
+CHECK-NEXT:         TotalLifetimeAccessDensity: 1000
+CHECK-NEXT:         MinLifetimeAccessDensity: 1000
+CHECK-NEXT:         MaxLifetimeAccessDensity: 1000
+CHECK-NEXT:         AccessHistogramSize: 8
+CHECK-NEXT:         AccessHistogram: {{[0-9]+}}
+CHECK-NEXT:         AccessHistogramValues: 1 0 0 0 0 0 0 0
+CHECK-NEXT:     CallSites:
+CHECK-NEXT:     -
+CHECK-NEXT:       -
+CHECK-NEXT:         Function: {{[0-9]+}}
+CHECK-NEXT:         SymbolName: main
+CHECK-NEXT:         LineOffset: 59
+CHECK-NEXT:         Column: 5
+CHECK-NEXT:         Inline: 0
+CHECK-NEXT:     -
+CHECK-NEXT:       -
+CHECK-NEXT:         Function: {{[0-9]+}}
+CHECK-NEXT:         SymbolName: main
+CHECK-NEXT:         LineOffset: 64
+CHECK-NEXT:         Column: 5
+CHECK-NEXT:         Inline: 0
+CHECK-NEXT:   -
+CHECK-NEXT:     FunctionGUID: {{[0-9]+}}
+CHECK-NEXT:     AllocSites:
+CHECK-NEXT:     -
+CHECK-NEXT:       Callstack:
+CHECK-NEXT:       -
+CHECK-NEXT:         Function: {{[0-9]+}}
+CHECK-NEXT:         SymbolName: _Z3foov
+CHECK-NEXT:         LineOffset: 2
+CHECK-NEXT:         Column: 10
+CHECK-NEXT:         Inline: 0
+CHECK-NEXT:       -
+CHECK-NEXT:         Function: {{[0-9]+}}
+CHECK-NEXT:         SymbolName: main
+CHECK-NEXT:         LineOffset: 59
+CHECK-NEXT:         Column: 5
+CHECK-NEXT:         Inline: 0
+CHECK-NEXT:       MemInfoBlock:
+CHECK-NEXT:         AllocCount: 21
+CHECK-NEXT:         TotalAccessCount: 168
+CHECK-NEXT:         MinAccessCount: 8
+CHECK-NEXT:         MaxAccessCount: 8
+CHECK-NEXT:         TotalSize: 1344
+CHECK-NEXT:         MinSize: 64
+CHECK-NEXT:         MaxSize: 64
+CHECK-NEXT:         AllocTimestamp: {{[0-9]+}}
+CHECK-NEXT:         DeallocTimestamp: {{[0-9]+}}
+CHECK-NEXT:         TotalLifetime: 0
+CHECK-NEXT:         MinLifetime: 0
+CHECK-NEXT:         MaxLifetime: 0
+CHECK-NEXT:         AllocCpuId: {{[0-9]+}}
+CHECK-NEXT:         DeallocCpuId: {{[0-9]+}}
+CHECK-NEXT:         NumMigratedCpu: 0
+CHECK-NEXT:         NumLifetimeOverlaps: 0
+CHECK-NEXT:         NumSameAllocCpu: 20
+CHECK-NEXT:         NumSameDeallocCpu: 20
+CHECK-NEXT:         DataTypeId: {{[0-9]+}}
+CHECK-NEXT:         TotalAccessDensity: 252
+CHECK-NEXT:         MinAccessDensity: 12
+CHECK-NEXT:         MaxAccessDensity: 12
+CHECK-NEXT:         TotalLifetimeAccessDensity: 252000
+CHECK-NEXT:         MinLifetimeAccessDensity: 12000
+CHECK-NEXT:         MaxLifetimeAccessDensity: 12000
+CHECK-NEXT:         AccessHistogramSize: 8
+CHECK-NEXT:         AccessHistogram: {{[0-9]+}}
+CHECK-NEXT:         AccessHistogramValues: 21 21 21 21 21 21 21 21
+CHECK-NEXT:   -
+CHECK-NEXT:     FunctionGUID: {{[0-9]+}}
+CHECK-NEXT:     AllocSites:
+CHECK-NEXT:     -
+CHECK-NEXT:       Callstack:
+CHECK-NEXT:       -
+CHECK-NEXT:         Function: {{[0-9]+}}
+CHECK-NEXT:         SymbolName: _Z3barv
+CHECK-NEXT:         LineOffset: 2
+CHECK-NEXT:         Column: 10
+CHECK-NEXT:         Inline: 0
+CHECK-NEXT:       -
+CHECK-NEXT:         Function: {{[0-9]+}}
+CHECK-NEXT:         SymbolName: main
+CHECK-NEXT:         LineOffset: 64
+CHECK-NEXT:         Column: 5
+CHECK-NEXT:         Inline: 0
+CHECK-NEXT:       MemInfoBlock:
+CHECK-NEXT:         AllocCount: 21
+CHECK-NEXT:         TotalAccessCount: 756
+CHECK-NEXT:         MinAccessCount: 36
+CHECK-NEXT:         MaxAccessCount: 36
+CHECK-NEXT:         TotalSize: 1344
+CHECK-NEXT:         MinSize: 64
+CHECK-NEXT:         MaxSize: 64
+CHECK-NEXT:         AllocTimestamp: {{[0-9]+}}
+CHECK-NEXT:         DeallocTimestamp: {{[0-9]+}}
+CHECK-NEXT:         TotalLifetime: 0
+CHECK-NEXT:         MinLifetime: 0
+CHECK-NEXT:         MaxLifetime: 0
+CHECK-NEXT:         AllocCpuId: {{[0-9]+}}
+CHECK-NEXT:         DeallocCpuId: {{[0-9]+}}
+CHECK-NEXT:         NumMigratedCpu: 0
+CHECK-NEXT:         NumLifetimeOverlaps: 0
+CHECK-NEXT:         NumSameAllocCpu: 20
+CHECK-NEXT:         NumSameDeallocCpu: 20
+CHECK-NEXT:         DataTypeId: {{[0-9]+}}
+CHECK-NEXT:         TotalAccessDensity: 1176
+CHECK-NEXT:         MinAccessDensity: 56
+CHECK-NEXT:         MaxAccessDensity: 56
+CHECK-NEXT:         TotalLifetimeAccessDensity: 1176000
+CHECK-NEXT:         MinLifetimeAccessDensity: 56000
+CHECK-NEXT:         MaxLifetimeAccessDensity: 56000
+CHECK-NEXT:         AccessHistogramSize: 8
+CHECK-NEXT:         AccessHistogram: {{[0-9]+}}
+CHECK-NEXT:         AccessHistogramValues: 168 147 126 105 84 63 42 21

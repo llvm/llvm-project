@@ -14,7 +14,6 @@
 #define MLIR_IR_VISITORS_H
 
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
 
 namespace mlir {

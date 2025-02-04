@@ -18,7 +18,6 @@
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -794,7 +793,7 @@ bool XCOFFWriter::writeSymbols() {
       }
       W.write<int16_t>(SectionIndexMap[*YamlSym.SectionName]);
     } else {
-      W.write<int16_t>(YamlSym.SectionIndex ? *YamlSym.SectionIndex : 0);
+      W.write<int16_t>(YamlSym.SectionIndex.value_or(0));
     }
     W.write<uint16_t>(YamlSym.Type);
     W.write<uint8_t>(YamlSym.StorageClass);

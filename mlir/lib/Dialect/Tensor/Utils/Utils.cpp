@@ -16,28 +16,48 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 using namespace mlir;
 using namespace mlir::tensor;
 
-PadOp mlir::tensor::createPadHighOp(RankedTensorType type, Value source,
+PadOp mlir::tensor::createPadHighOp(RankedTensorType resType, Value source,
                                     Value pad, bool nofold, Location loc,
-                                    OpBuilder &b) {
-  SmallVector<OpFoldResult> low(type.getRank(), b.getIndexAttr(0));
-  SmallVector<OpFoldResult> high(type.getRank(), b.getIndexAttr(0));
-  for (const auto &en : enumerate(type.getShape())) {
-    // Pad only the static dimensions of the result tensor type.
-    if (ShapedType::isDynamic(en.value()))
+                                    OpBuilder &b,
+                                    SmallVector<Value> dynOutDims) {
+
+  assert(((resType.getNumDynamicDims() == dynOutDims.size()) ||
+          dynOutDims.empty()) &&
+         "Either none or all output dynamic dims must be specified!");
+
+  // Init "low" and "high" padding values ("low" is kept as is, "high" is
+  // computed below).
+  SmallVector<OpFoldResult> low(resType.getRank(), b.getIndexAttr(0));
+  SmallVector<OpFoldResult> high(resType.getRank(), b.getIndexAttr(0));
+
+  size_t outDimIdx = 0;
+
+  for (const auto [idx, val] : enumerate(resType.getShape())) {
+    bool isDimDynamic = ShapedType::isDynamic(val);
+    bool updatePadHigh = !isDimDynamic || !dynOutDims.empty();
+
+    // Keep the default padding width (i.e. "0") when the output dim is dynamic
+    // and no actual output sizes have been provided.
+    if (!updatePadHigh)
       continue;
-    // Compute the padding width.
-    AffineExpr d0;
-    bindDims(b.getContext(), d0);
-    OpFoldResult sz = tensor::getMixedSize(b, loc, source, en.index());
-    high[en.index()] =
-        affine::makeComposedFoldedAffineApply(b, loc, en.value() - d0, {sz});
+
+    // Compute the padding width: resDim - sourceDim.
+    AffineExpr d0, d1;
+    bindDims(b.getContext(), d0, d1);
+    OpFoldResult sourceDim = tensor::getMixedSize(b, loc, source, idx);
+    OpFoldResult outDim = isDimDynamic ? OpFoldResult(dynOutDims[outDimIdx++])
+                                       : OpFoldResult(b.getIndexAttr(val));
+
+    high[idx] = affine::makeComposedFoldedAffineApply(b, loc, d0 - d1,
+                                                      {outDim, sourceDim});
   }
-  return b.create<PadOp>(loc, type, source, low, high, pad, nofold);
+  return b.create<PadOp>(loc, resType, source, low, high, pad, nofold);
 }
 
 SmallVector<Value> mlir::tensor::createDynamicDimValues(OpBuilder &b,
@@ -63,8 +83,7 @@ mlir::tensor::computeTransposedType(RankedTensorType rankedTensorType,
       transposeVector.size() != static_cast<size_t>(rankedTensorType.getRank()))
     return failure();
 
-  SmallVector<int64_t> transposedShape(rankedTensorType.getShape().begin(),
-                                       rankedTensorType.getShape().end());
+  SmallVector<int64_t> transposedShape(rankedTensorType.getShape());
   applyPermutationToVector(transposedShape, transposeVector);
 
   using RTTBuilder = RankedTensorType::Builder;
@@ -72,6 +91,7 @@ mlir::tensor::computeTransposedType(RankedTensorType rankedTensorType,
       RTTBuilder(rankedTensorType).setShape(transposedShape);
   return transposedTensorType;
 }
+
 /// The permutation can be obtained from two permutations:
 ///   a) Compute the permutation vector to move the last `numPackedDims` into
 ///      the `innerPosDims` of a shape of rank `rank`.
@@ -100,10 +120,6 @@ computePackUnPackPerm(int64_t rank, ArrayRef<int64_t> &innerDimsPos,
   return packInverseDestPermutation;
 }
 
-/// Shell function to compute the Destination Permutation of PackOp
-/// This function uses the helper function `computePackUnPackPerm` to get
-/// the permutation vector. Only major difference between UnPack and Pack is
-/// that packOp uses destination rank whereas unpack Uses source rank.
 SmallVector<int64_t> mlir::tensor::getPackInverseDestPerm(PackOp packOp) {
 
   PackingMetadata pMetadata;
@@ -115,19 +131,11 @@ SmallVector<int64_t> mlir::tensor::getPackInverseDestPerm(PackOp packOp) {
   return packInvDestPerm;
 }
 
-/// Shell function to compute the Source Permutation of unPackOp.
-/// This function, like the getPackInverseDestPerm uses the helper function
-/// computePackUnPackPerm` to get the permutation vector.
-/// Only major difference between UnPack and Pack is that packOp uses
-/// destination rank whereas unpack Uses source rank.
 SmallVector<int64_t> mlir::tensor::getUnPackInverseSrcPerm(UnPackOp unpackOp) {
   PackingMetadata metadata;
   return mlir::tensor::getUnPackInverseSrcPerm(unpackOp, metadata);
 }
 
-/// Shell function to compute the Source rank permutation for unpackOp
-/// Unpack requires some packing metadata data information, so created
-/// another function where this value is passed by reference.
 SmallVector<int64_t>
 mlir::tensor::getUnPackInverseSrcPerm(UnPackOp unpackOp,
                                       PackingMetadata &metadata) {

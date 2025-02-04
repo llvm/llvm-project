@@ -103,13 +103,13 @@ uint32_t BPFCoreSharedInfo::SeqNum;
 Instruction *BPFCoreSharedInfo::insertPassThrough(Module *M, BasicBlock *BB,
                                                   Instruction *Input,
                                                   Instruction *Before) {
-  Function *Fn = Intrinsic::getDeclaration(
+  Function *Fn = Intrinsic::getOrInsertDeclaration(
       M, Intrinsic::bpf_passthrough, {Input->getType(), Input->getType()});
   Constant *SeqNumVal = ConstantInt::get(Type::getInt32Ty(BB->getContext()),
                                          BPFCoreSharedInfo::SeqNum++);
 
   auto *NewInst = CallInst::Create(Fn, {SeqNumVal, Input});
-  NewInst->insertBefore(Before);
+  NewInst->insertBefore(Before->getIterator());
   return NewInst;
 }
 } // namespace llvm
@@ -221,10 +221,9 @@ bool BPFAbstractMemberAccess::run(Function &F) {
 
 void BPFAbstractMemberAccess::ResetMetadata(struct CallInfo &CInfo) {
   if (auto Ty = dyn_cast<DICompositeType>(CInfo.Metadata)) {
-    if (AnonRecords.find(Ty) != AnonRecords.end()) {
-      if (AnonRecords[Ty] != nullptr)
-        CInfo.Metadata = AnonRecords[Ty];
-    }
+    auto It = AnonRecords.find(Ty);
+    if (It != AnonRecords.end() && It->second != nullptr)
+      CInfo.Metadata = It->second;
   }
 }
 
@@ -234,18 +233,12 @@ void BPFAbstractMemberAccess::CheckCompositeType(DIDerivedType *ParentTy,
       ParentTy->getTag() != dwarf::DW_TAG_typedef)
     return;
 
-  if (AnonRecords.find(CTy) == AnonRecords.end()) {
-    AnonRecords[CTy] = ParentTy;
-    return;
-  }
-
+  auto [It, Inserted] = AnonRecords.try_emplace(CTy, ParentTy);
   // Two or more typedef's may point to the same anon record.
   // If this is the case, set the typedef DIType to be nullptr
   // to indicate the duplication case.
-  DIDerivedType *CurrTy = AnonRecords[CTy];
-  if (CurrTy == ParentTy)
-    return;
-  AnonRecords[CTy] = nullptr;
+  if (!Inserted && It->second != ParentTy)
+    It->second = nullptr;
 }
 
 void BPFAbstractMemberAccess::CheckDerivedType(DIDerivedType *ParentTy,
@@ -310,7 +303,7 @@ static uint32_t calcArraySize(const DICompositeType *CTy, uint32_t StartDim) {
     if (auto *Element = dyn_cast_or_null<DINode>(Elements[I]))
       if (Element->getTag() == dwarf::DW_TAG_subrange_type) {
         const DISubrange *SR = cast<DISubrange>(Element);
-        auto *CI = SR->getCount().dyn_cast<ConstantInt *>();
+        auto *CI = dyn_cast<ConstantInt *>(SR->getCount());
         DimSize *= CI->getSExtValue();
       }
   }
@@ -1122,16 +1115,16 @@ bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
   // Generate a BitCast
   auto *BCInst =
       new BitCastInst(Base, PointerType::getUnqual(BB->getContext()));
-  BCInst->insertBefore(Call);
+  BCInst->insertBefore(Call->getIterator());
 
   // Generate a GetElementPtr
   auto *GEP = GetElementPtrInst::Create(Type::getInt8Ty(BB->getContext()),
                                         BCInst, LDInst);
-  GEP->insertBefore(Call);
+  GEP->insertBefore(Call->getIterator());
 
   // Generate a BitCast
   auto *BCInst2 = new BitCastInst(GEP, Call->getType());
-  BCInst2->insertBefore(Call);
+  BCInst2->insertBefore(Call->getIterator());
 
   // For the following code,
   //    Block0:

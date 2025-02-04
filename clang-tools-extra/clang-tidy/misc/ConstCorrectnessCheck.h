@@ -32,10 +32,10 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  void registerScope(const CompoundStmt *LocalScope, ASTContext *Context);
+  void registerScope(const Stmt *LocalScope, ASTContext *Context);
 
   using MutationAnalyzer = std::unique_ptr<ExprMutationAnalyzer>;
-  llvm::DenseMap<const CompoundStmt *, MutationAnalyzer> ScopesCache;
+  llvm::DenseMap<const Stmt *, MutationAnalyzer> ScopesCache;
   llvm::DenseSet<SourceLocation> TemplateDiagnosticsCache;
 
   const bool AnalyzeValues;

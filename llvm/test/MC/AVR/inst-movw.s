@@ -1,9 +1,7 @@
 ; RUN: llvm-mc -triple avr -mattr=movw -show-encoding < %s | FileCheck %s
-; RUN: llvm-mc -filetype=obj -triple avr -mattr=movw < %s | llvm-objdump -d --mattr=movw - | FileCheck -check-prefix=CHECK-INST %s
-
+; RUN: llvm-mc -filetype=obj -triple avr -mattr=movw < %s | llvm-objdump -dr --mattr=movw - | FileCheck -check-prefix=CHECK-INST %s
 
 foo:
-
   movw r10, r8
   movw r12, r16
   movw r20, r22

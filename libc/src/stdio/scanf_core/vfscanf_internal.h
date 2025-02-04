@@ -11,16 +11,44 @@
 
 #include "src/__support/File/file.h"
 #include "src/__support/arg_list.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "src/stdio/scanf_core/reader.h"
 #include "src/stdio/scanf_core/scanf_main.h"
 
-#include <stdio.h>
+#if defined(LIBC_TARGET_ARCH_IS_GPU)
+#include "src/stdio/ferror.h"
+#include "src/stdio/getc.h"
+#include "src/stdio/ungetc.h"
+#endif
 
-namespace LIBC_NAMESPACE {
+#include "hdr/types/FILE.h"
+#include <stddef.h>
+
+namespace LIBC_NAMESPACE_DECL {
 
 namespace internal {
 
-#ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
+#if defined(LIBC_TARGET_ARCH_IS_GPU)
+// The GPU build provides FILE access through the host operating system's
+// library. So here we simply use the public entrypoints like in the SYSTEM_FILE
+// interface. Entrypoints should normally not call others, this is an exception.
+// FIXME: We do not acquire any locks here, so this is not thread safe.
+LIBC_INLINE void flockfile(::FILE *) { return; }
+
+LIBC_INLINE void funlockfile(::FILE *) { return; }
+
+LIBC_INLINE int getc(void *f) {
+  return LIBC_NAMESPACE::getc(reinterpret_cast<::FILE *>(f));
+}
+
+LIBC_INLINE void ungetc(int c, void *f) {
+  LIBC_NAMESPACE::ungetc(c, reinterpret_cast<::FILE *>(f));
+}
+
+LIBC_INLINE int ferror_unlocked(::FILE *f) { return LIBC_NAMESPACE::ferror(f); }
+
+#elif !defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
 
 LIBC_INLINE void flockfile(FILE *f) {
   reinterpret_cast<LIBC_NAMESPACE::File *>(f)->lock();
@@ -84,6 +112,6 @@ LIBC_INLINE int vfscanf_internal(::FILE *__restrict stream,
   return retval;
 }
 } // namespace scanf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_SCANF_CORE_VFSCANF_INTERNAL_H

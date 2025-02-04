@@ -126,8 +126,7 @@ bool DWARFExpressionList::MatchesOperand(
     if (!sc.function)
       return false;
 
-    addr_t load_function_start =
-        sc.function->GetAddressRange().GetBaseAddress().GetFileAddress();
+    addr_t load_function_start = sc.function->GetAddress().GetFileAddress();
     if (load_function_start == LLDB_INVALID_ADDRESS)
       return false;
 
@@ -198,12 +197,10 @@ void DWARFExpressionList::GetDescription(Stream *s,
   }
 }
 
-bool DWARFExpressionList::Evaluate(ExecutionContext *exe_ctx,
-                                   RegisterContext *reg_ctx,
-                                   lldb::addr_t func_load_addr,
-                                   const Value *initial_value_ptr,
-                                   const Value *object_address_ptr,
-                                   Value &result, Status *error_ptr) const {
+llvm::Expected<Value> DWARFExpressionList::Evaluate(
+    ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
+    lldb::addr_t func_load_addr, const Value *initial_value_ptr,
+    const Value *object_address_ptr) const {
   ModuleSP module_sp = m_module_wp.lock();
   DataExtractor data;
   RegisterKind reg_kind;
@@ -217,32 +214,26 @@ bool DWARFExpressionList::Evaluate(ExecutionContext *exe_ctx,
       if (exe_ctx)
         frame = exe_ctx->GetFramePtr();
       if (!frame)
-        return false;
+        return llvm::createStringError("no frame");
       RegisterContextSP reg_ctx_sp = frame->GetRegisterContext();
       if (!reg_ctx_sp)
-        return false;
+        return llvm::createStringError("no register context");
       reg_ctx_sp->GetPCForSymbolication(pc);
     }
 
     if (!pc.IsValid()) {
-      if (error_ptr)
-        error_ptr->SetErrorString("Invalid PC in frame.");
-      return false;
+      return llvm::createStringError("Invalid PC in frame.");
     }
     addr_t pc_load_addr = pc.GetLoadAddress(exe_ctx->GetTargetPtr());
     const DWARFExpression *entry =
         GetExpressionAtAddress(func_load_addr, pc_load_addr);
-    if (!entry) {
-      if (error_ptr) {
-        error_ptr->SetErrorString("variable not available");
-      }
-      return false;
-    }
+    if (!entry)
+      return llvm::createStringError("variable not available");
     expr = *entry;
   }
   expr.GetExpressionData(data);
   reg_kind = expr.GetRegisterKind();
   return DWARFExpression::Evaluate(exe_ctx, reg_ctx, module_sp, data,
                                    m_dwarf_cu, reg_kind, initial_value_ptr,
-                                   object_address_ptr, result, error_ptr);
+                                   object_address_ptr);
 }

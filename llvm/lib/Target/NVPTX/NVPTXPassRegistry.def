@@ -37,4 +37,5 @@ FUNCTION_ALIAS_ANALYSIS("nvptx-aa", NVPTXAA())
 #endif
 FUNCTION_PASS("nvvm-intr-range", NVVMIntrRangePass())
 FUNCTION_PASS("nvvm-reflect", NVVMReflectPass())
+FUNCTION_PASS("nvptx-copy-byval-args", NVPTXCopyByValArgsPass())
 #undef FUNCTION_PASS

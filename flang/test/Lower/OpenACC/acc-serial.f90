@@ -60,7 +60,7 @@ subroutine acc_serial
   !$acc serial async
   !$acc end serial
 
-! CHECK:      acc.serial {
+! CHECK: acc.serial {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>]} 
 
@@ -76,7 +76,7 @@ subroutine acc_serial
   !$acc end serial
 
 ! CHECK:      [[ASYNC2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK:      acc.serial async([[ASYNC2]] : i32) {
+! CHECK-NEXT:      acc.serial async([[ASYNC2]] : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -188,6 +188,9 @@ subroutine acc_serial
 ! CHECK:      acc.serial dataOperands(%[[COPYIN_A]], %[[COPYIN_B]], %[[COPYIN_C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
+! CHECK: acc.delete accPtr(%[[COPYIN_A]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) {dataClause = #acc<data_clause acc_copyin>, name = "a"}
+! CHECK: acc.delete accPtr(%[[COPYIN_B]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) {dataClause = #acc<data_clause acc_copyin_readonly>, name = "b"}
+! CHECK: acc.delete accPtr(%[[COPYIN_C]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) {dataClause = #acc<data_clause acc_copyin_readonly>, name = "c"}
 
   !$acc serial copyout(a) copyout(zero: b) copyout(c)
   !$acc end serial

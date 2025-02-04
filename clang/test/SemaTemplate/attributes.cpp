@@ -33,11 +33,11 @@ namespace attribute_aligned {
       static_assert(sizeof(t) == sizeof(T), "my_aligned_storage size wrong");
       static_assert(alignof(t) == alignof(T), "my_aligned_storage align wrong"); // expected-warning{{'alignof' applied to an expression is a GNU extension}}
     }
-    
+
   private:
     my_aligned_storage<sizeof(T), alignof(T)> t;
   };
-  
+
   C<double> cd;
 }
 
@@ -65,6 +65,17 @@ namespace attribute_annotate {
 template<typename T> [[clang::annotate("ANNOTATE_FOO"), clang::annotate("ANNOTATE_BAR")]] void HasAnnotations();
 void UseAnnotations() { HasAnnotations<int>(); }
 
+// CHECK: FunctionTemplateDecl {{.*}} HasStmtAnnotations
+// CHECK:   AnnotateAttr {{.*}} "ANNOTATE_BAZ"
+// CHECK: FunctionDecl {{.*}} HasStmtAnnotations
+// CHECK:   TemplateArgument type 'int'
+// CHECK:   AnnotateAttr {{.*}} "ANNOTATE_BAZ"
+template<typename T> void HasStmtAnnotations() {
+  int x = 0;
+  [[clang::annotate("ANNOTATE_BAZ")]] x++;
+}
+void UseStmtAnnotations() { HasStmtAnnotations<int>(); }
+
 // CHECK:      FunctionTemplateDecl {{.*}} HasPackAnnotations
 // CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
 // CHECK-NEXT:   FunctionDecl {{.*}} HasPackAnnotations 'void ()'
@@ -73,9 +84,9 @@ void UseAnnotations() { HasAnnotations<int>(); }
 // CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
 // CHECK-NEXT:   FunctionDecl {{.*}} used HasPackAnnotations 'void ()'
 // CHECK-NEXT:     TemplateArgument{{.*}} pack
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 1
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 2
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 3
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '1'
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '2'
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '3'
 // CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_BAZ"
 // CHECK-NEXT:       ConstantExpr {{.*}} 'int'
 // CHECK-NEXT:         value: Int 1
@@ -94,6 +105,33 @@ void UseAnnotations() { HasAnnotations<int>(); }
 // CHECK-NEXT:           IntegerLiteral {{.*}} 'int' 3
 template <int... Is> [[clang::annotate("ANNOTATE_BAZ", Is...)]] void HasPackAnnotations();
 void UsePackAnnotations() { HasPackAnnotations<1, 2, 3>(); }
+
+// CHECK:      FunctionTemplateDecl {{.*}} HasStmtPackAnnotations
+// CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:   FunctionDecl {{.*}} HasStmtPackAnnotations 'void ()'
+// CHECK:          AttributedStmt {{.*}}
+// CHECK-NEXT:       AnnotateAttr {{.*}} "ANNOTATE_QUUX"
+// CHECK-NEXT:         PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:           DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
+// CHECK:        FunctionDecl {{.*}} used HasStmtPackAnnotations 'void ()'
+// CHECK-NEXT:     TemplateArgument{{.*}} pack
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '1'
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '2'
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '3'
+// CHECK:          AttributedStmt {{.*}}
+// CHECK-NEXT:       AnnotateAttr {{.*}} "ANNOTATE_QUUX"
+// CHECK-NEXT:         PackExpansionExpr {{.*}}
+// CHECK-NEXT:         SubstNonTypeTemplateParmPackExpr {{.*}}
+// CHECK-NEXT:         NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
+// CHECK-NEXT:           TemplateArgument pack '<1, 2, 3>'
+// CHECK-NEXT:             TemplateArgument integral '1'
+// CHECK-NEXT:             TemplateArgument integral '2'
+// CHECK-NEXT:             TemplateArgument integral '3'
+template <int... Is> void HasStmtPackAnnotations() {
+  int x = 0;
+  [[clang::annotate("ANNOTATE_QUUX", Is...)]] x++;
+}
+void UseStmtPackAnnotations() { HasStmtPackAnnotations<1, 2, 3>(); }
 
 template <int... Is> [[clang::annotate(Is...)]] void HasOnlyPackAnnotation() {} // expected-error {{expected string literal as argument of 'annotate' attribute}}
 
@@ -128,9 +166,9 @@ void UseOnlyPackAnnotations() {
 // CHECK-NEXT:     TemplateArgument{{.*}} type 'int'
 // CHECK-NEXT:       BuiltinType {{.*}} 'int'
 // CHECK-NEXT:     TemplateArgument{{.*}} pack
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 1
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 2
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 3
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '1'
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '2'
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '3'
 // CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_BOO"
 // CHECK-NEXT:       ConstantExpr {{.*}} 'int'
 // CHECK-NEXT:         value: Int 1
@@ -159,9 +197,9 @@ void UseOnlyPackAnnotations() {
 // CHECK-NEXT:     TemplateArgument type 'float'
 // CHECK-NEXT:       BuiltinType {{.*}} 'float'
 // CHECK-NEXT:     TemplateArgument{{.*}} pack
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 3
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 2
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 1
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '3'
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '2'
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '1'
 // CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_FOZ"
 // CHECK-NEXT:       ConstantExpr {{.*}} 'int'
 // CHECK-NEXT:         value: Int 4
@@ -184,9 +222,9 @@ void UseOnlyPackAnnotations() {
 // CHECK-NEXT:     TemplateArgument type 'bool'
 // CHECK-NEXT:       BuiltinType {{.*}} 'bool'
 // CHECK-NEXT:     TemplateArgument{{.*}} pack
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 7
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 8
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 9
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '7'
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '8'
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '9'
 // CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_FOZ"
 // CHECK-NEXT:       ConstantExpr {{.*}} 'int'
 // CHECK-NEXT:         value: Int 7
@@ -215,9 +253,9 @@ void UseOnlyPackAnnotations() {
 // CHECK-NEXT:     TemplateArgument type 'char'
 // CHECK-NEXT:       BuiltinType {{.*}} 'char'
 // CHECK-NEXT:     TemplateArgument{{.*}} pack
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 1
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 2
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 3
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '1'
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '2'
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '3'
 // CHECK-NEXT:     CXXRecordDecl {{.*}} implicit struct AnnotatedPackTemplateStruct
 // CHECK-NEXT:   ClassTemplateSpecializationDecl {{.*}} struct AnnotatedPackTemplateStruct definition
 // CHECK-NEXT:     DefinitionData
@@ -312,9 +350,9 @@ void UseAnnotatedPackTemplateStructSpecializations() {
 // CHECK-NEXT:     TemplateArgument{{.*}} type 'int'
 // CHECK-NEXT:       BuiltinType {{.*}} 'int'
 // CHECK-NEXT:     TemplateArgument{{.*}} pack
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 1
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 2
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 3
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '1'
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '2'
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '3'
 // CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_BIR"
 // CHECK-NEXT:       ConstantExpr {{.*}} 'int'
 // CHECK-NEXT:         value: Int 1
@@ -343,9 +381,9 @@ void UseAnnotatedPackTemplateStructSpecializations() {
 // CHECK-NEXT:     TemplateArgument{{.*}} type 'float'
 // CHECK-NEXT:       BuiltinType {{.*}} 'float'
 // CHECK-NEXT:     TemplateArgument{{.*}} pack
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 3
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 2
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 1
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '3'
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '2'
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '1'
 // CHECK-NEXT:     CXXRecordDecl {{.*}} implicit struct InvalidAnnotatedPackTemplateStruct
 // CHECK-NEXT:   ClassTemplateSpecializationDecl {{.*}} struct InvalidAnnotatedPackTemplateStruct definition
 // CHECK-NEXT:     DefinitionData
@@ -358,9 +396,9 @@ void UseAnnotatedPackTemplateStructSpecializations() {
 // CHECK-NEXT:     TemplateArgument{{.*}} type 'bool'
 // CHECK-NEXT:       BuiltinType {{.*}} 'bool'
 // CHECK-NEXT:     TemplateArgument{{.*}} pack
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 7
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 8
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 9
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '7'
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '8'
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '9'
 // CHECK-NEXT:     CXXRecordDecl {{.*}} implicit struct InvalidAnnotatedPackTemplateStruct
 // CHECK-NEXT:   ClassTemplateSpecializationDecl {{.*}} struct InvalidAnnotatedPackTemplateStruct definition
 // CHECK-NEXT:     DefinitionData
@@ -420,9 +458,9 @@ void UseAnnotatedPackTemplateStructSpecializations() {
 // CHECK-NEXT:   TemplateArgument{{.*}} type 'char'
 // CHECK-NEXT:     BuiltinType {{.*}} 'char'
 // CHECK-NEXT:   TemplateArgument{{.*}} pack
-// CHECK-NEXT:     TemplateArgument{{.*}} integral 5
-// CHECK-NEXT:     TemplateArgument{{.*}} integral 6
-// CHECK-NEXT:     TemplateArgument{{.*}} integral 7
+// CHECK-NEXT:     TemplateArgument{{.*}} integral '5'
+// CHECK-NEXT:     TemplateArgument{{.*}} integral '6'
+// CHECK-NEXT:     TemplateArgument{{.*}} integral '7'
 // CHECK-NEXT:   CXXRecordDecl {{.*}} implicit struct InvalidAnnotatedPackTemplateStruct
 template <typename T, int... Is> struct InvalidAnnotatedPackTemplateStruct{};
 template <int... Is> struct [[clang::annotate("ANNOTATE_BIR", Is...)]] InvalidAnnotatedPackTemplateStruct<int, Is...>{};
@@ -444,9 +482,9 @@ void UseInvalidAnnotatedPackTemplateStruct() {
 // CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
 // CHECK-NEXT:   FunctionDecl {{.*}} used RedeclaredAnnotatedFunc 'void ()'
 // CHECK-NEXT:     TemplateArgument{{.*}} pack
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 1
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 2
-// CHECK-NEXT:       TemplateArgument{{.*}} integral 3
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '1'
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '2'
+// CHECK-NEXT:       TemplateArgument{{.*}} integral '3'
 // CHECK-NEXT:     CompoundStmt
 // CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_FAR"
 // CHECK-NEXT:       ConstantExpr {{.*}} 'int'

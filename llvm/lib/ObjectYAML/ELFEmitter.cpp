@@ -17,7 +17,6 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/StringTableBuilder.h"
-#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
@@ -27,12 +26,10 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
-#include <variant>
 
 using namespace llvm;
 
@@ -121,6 +118,12 @@ public:
     if (!checkLimit(sizeof(uint64_t)))
       return 0;
     return encodeULEB128(Val, OS);
+  }
+
+  unsigned writeSLEB128(int64_t Val) {
+    if (!checkLimit(10))
+      return 0;
+    return encodeSLEB128(Val, OS);
   }
 
   template <typename T> void write(T Val, llvm::endianness E) {
@@ -533,15 +536,11 @@ void ELFState<ELFT>::writeELFHeader(raw_ostream &OS) {
 
 template <class ELFT>
 void ELFState<ELFT>::initProgramHeaders(std::vector<Elf_Phdr> &PHeaders) {
-  DenseMap<StringRef, ELFYAML::Fill *> NameToFill;
   DenseMap<StringRef, size_t> NameToIndex;
   for (size_t I = 0, E = Doc.Chunks.size(); I != E; ++I) {
-    if (auto S = dyn_cast<ELFYAML::Fill>(Doc.Chunks[I].get()))
-      NameToFill[S->Name] = S;
     NameToIndex[Doc.Chunks[I]->Name] = I + 1;
   }
 
-  std::vector<ELFYAML::Section *> Sections = Doc.getSections();
   for (size_t I = 0, E = Doc.ProgramHeaders.size(); I != E; ++I) {
     ELFYAML::ProgramHeader &YamlPhdr = Doc.ProgramHeaders[I];
     Elf_Phdr Phdr;
@@ -960,7 +959,7 @@ ELFState<ELFT>::toELFSymbols(ArrayRef<ELFYAML::Symbol> Symbols,
       Symbol.st_shndx = *Sym.Index;
 
     Symbol.st_value = Sym.Value.value_or(yaml::Hex64(0));
-    Symbol.st_other = Sym.Other ? *Sym.Other : 0;
+    Symbol.st_other = Sym.Other.value_or(0);
     Symbol.st_size = Sym.Size.value_or(yaml::Hex64(0));
   }
 
@@ -1269,7 +1268,8 @@ void ELFState<ELFT>::writeSectionContent(
     Elf_Shdr &SHeader, const ELFYAML::RelocationSection &Section,
     ContiguousBlobAccumulator &CBA) {
   assert((Section.Type == llvm::ELF::SHT_REL ||
-          Section.Type == llvm::ELF::SHT_RELA) &&
+          Section.Type == llvm::ELF::SHT_RELA ||
+          Section.Type == llvm::ELF::SHT_CREL) &&
          "Section type is not SHT_REL nor SHT_RELA");
 
   if (!Section.RelocatableSec.empty())
@@ -1278,29 +1278,70 @@ void ELFState<ELFT>::writeSectionContent(
   if (!Section.Relocations)
     return;
 
+  const bool IsCrel = Section.Type == llvm::ELF::SHT_CREL;
   const bool IsRela = Section.Type == llvm::ELF::SHT_RELA;
+  typename ELFT::uint OffsetMask = 8, Offset = 0, Addend = 0;
+  uint32_t SymIdx = 0, Type = 0;
+  uint64_t CurrentOffset = CBA.getOffset();
+  if (IsCrel)
+    for (const ELFYAML::Relocation &Rel : *Section.Relocations)
+      OffsetMask |= Rel.Offset;
+  const int Shift = llvm::countr_zero(OffsetMask);
+  if (IsCrel)
+    CBA.writeULEB128(Section.Relocations->size() * 8 + ELF::CREL_HDR_ADDEND +
+                     Shift);
   for (const ELFYAML::Relocation &Rel : *Section.Relocations) {
     const bool IsDynamic = Section.Link && (*Section.Link == ".dynsym");
-    unsigned SymIdx =
+    uint32_t CurSymIdx =
         Rel.Symbol ? toSymbolIndex(*Rel.Symbol, Section.Name, IsDynamic) : 0;
-    if (IsRela) {
+    if (IsCrel) {
+      // The delta offset and flags member may be larger than uint64_t. Special
+      // case the first byte (3 flag bits and 4 offset bits). Other ULEB128
+      // bytes encode the remaining delta offset bits.
+      auto DeltaOffset =
+          (static_cast<typename ELFT::uint>(Rel.Offset) - Offset) >> Shift;
+      Offset = Rel.Offset;
+      uint8_t B =
+          DeltaOffset * 8 + (SymIdx != CurSymIdx) + (Type != Rel.Type ? 2 : 0) +
+          (Addend != static_cast<typename ELFT::uint>(Rel.Addend) ? 4 : 0);
+      if (DeltaOffset < 0x10) {
+        CBA.write(B);
+      } else {
+        CBA.write(B | 0x80);
+        CBA.writeULEB128(DeltaOffset >> 4);
+      }
+      // Delta symidx/type/addend members (SLEB128).
+      if (B & 1) {
+        CBA.writeSLEB128(
+            std::make_signed_t<typename ELFT::uint>(CurSymIdx - SymIdx));
+        SymIdx = CurSymIdx;
+      }
+      if (B & 2) {
+        CBA.writeSLEB128(static_cast<int32_t>(Rel.Type - Type));
+        Type = Rel.Type;
+      }
+      if (B & 4) {
+        CBA.writeSLEB128(
+            std::make_signed_t<typename ELFT::uint>(Rel.Addend - Addend));
+        Addend = Rel.Addend;
+      }
+    } else if (IsRela) {
       Elf_Rela REntry;
       zero(REntry);
       REntry.r_offset = Rel.Offset;
       REntry.r_addend = Rel.Addend;
-      REntry.setSymbolAndType(SymIdx, Rel.Type, isMips64EL(Doc));
+      REntry.setSymbolAndType(CurSymIdx, Rel.Type, isMips64EL(Doc));
       CBA.write((const char *)&REntry, sizeof(REntry));
     } else {
       Elf_Rel REntry;
       zero(REntry);
       REntry.r_offset = Rel.Offset;
-      REntry.setSymbolAndType(SymIdx, Rel.Type, isMips64EL(Doc));
+      REntry.setSymbolAndType(CurSymIdx, Rel.Type, isMips64EL(Doc));
       CBA.write((const char *)&REntry, sizeof(REntry));
     }
   }
 
-  SHeader.sh_size = (IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel)) *
-                    Section.Relocations->size();
+  SHeader.sh_size = CBA.getOffset() - CurrentOffset;
 }
 
 template <class ELFT>
@@ -1452,7 +1493,7 @@ void ELFState<ELFT>::writeSectionContent(
           BBR.NumBlocks.value_or(BBR.BBEntries ? BBR.BBEntries->size() : 0);
       SHeader.sh_size += sizeof(uintX_t) + CBA.writeULEB128(NumBlocks);
       // Write all BBEntries in this BBRange.
-      if (!BBR.BBEntries)
+      if (!BBR.BBEntries || FeatureOrErr->OmitBBEntries)
         continue;
       for (const ELFYAML::BBAddrMapEntry::BBEntry &BBE : *BBR.BBEntries) {
         ++TotalNumBlocks;
@@ -1607,7 +1648,7 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     VerDef.vd_flags = E.Flags.value_or(0);
     VerDef.vd_ndx = E.VersionNdx.value_or(0);
     VerDef.vd_hash = E.Hash.value_or(0);
-    VerDef.vd_aux = sizeof(Elf_Verdef);
+    VerDef.vd_aux = E.VDAux.value_or(sizeof(Elf_Verdef));
     VerDef.vd_cnt = E.VerNames.size();
     if (I == Section.Entries->size() - 1)
       VerDef.vd_next = 0;
@@ -1617,13 +1658,13 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     CBA.write((const char *)&VerDef, sizeof(Elf_Verdef));
 
     for (size_t J = 0; J < E.VerNames.size(); ++J, ++AuxCnt) {
-      Elf_Verdaux VernAux;
-      VernAux.vda_name = DotDynstr.getOffset(E.VerNames[J]);
+      Elf_Verdaux VerdAux;
+      VerdAux.vda_name = DotDynstr.getOffset(E.VerNames[J]);
       if (J == E.VerNames.size() - 1)
-        VernAux.vda_next = 0;
+        VerdAux.vda_next = 0;
       else
-        VernAux.vda_next = sizeof(Elf_Verdaux);
-      CBA.write((const char *)&VernAux, sizeof(Elf_Verdaux));
+        VerdAux.vda_next = sizeof(Elf_Verdaux);
+      CBA.write((const char *)&VerdAux, sizeof(Elf_Verdaux));
     }
   }
 
@@ -1751,8 +1792,30 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::NoteSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
-  if (!Section.Notes)
+  if (!Section.Notes || Section.Notes->empty())
     return;
+
+  unsigned Align;
+  switch (Section.AddressAlign) {
+  case 0:
+  case 4:
+    Align = 4;
+    break;
+  case 8:
+    Align = 8;
+    break;
+  default:
+    reportError(Section.Name + ": invalid alignment for a note section: 0x" +
+                Twine::utohexstr(Section.AddressAlign));
+    return;
+  }
+
+  if (CBA.getOffset() != alignTo(CBA.getOffset(), Align)) {
+    reportError(Section.Name + ": invalid offset of a note section: 0x" +
+                Twine::utohexstr(CBA.getOffset()) + ", should be aligned to " +
+                Twine(Align));
+    return;
+  }
 
   uint64_t Offset = CBA.tell();
   for (const ELFYAML::NoteEntry &NE : *Section.Notes) {
@@ -1775,14 +1838,15 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     if (!NE.Name.empty()) {
       CBA.write(NE.Name.data(), NE.Name.size());
       CBA.write('\0');
-      CBA.padToAlignment(4);
     }
 
     // Write description and padding.
     if (NE.Desc.binary_size() != 0) {
+      CBA.padToAlignment(Align);
       CBA.writeAsBinary(NE.Desc);
-      CBA.padToAlignment(4);
     }
+
+    CBA.padToAlignment(Align);
   }
 
   SHeader.sh_size = CBA.tell() - Offset;

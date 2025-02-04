@@ -13,13 +13,13 @@ func.func @test_call_i16(%0 : !fir.ref<!fir.type<ti16{i:i16}>>) {
 // CHECK-LABEL:   func.func @test_call_i16(
 // CHECK-SAME:                             %[[VAL_0:.*]]: !fir.ref<!fir.type<ti16{i:i16}>>) {
 // CHECK:           %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.type<ti16{i:i16}>>
-// CHECK:           %[[VAL_2:.*]] = fir.call @llvm.stacksave.p0() : () -> !fir.ref<i8>
+// CHECK:           %[[VAL_2:.*]] = llvm.intr.stacksave : !llvm.ptr
 // CHECK:           %[[VAL_3:.*]] = fir.alloca i16
 // CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i16>) -> !fir.ref<!fir.type<ti16{i:i16}>>
 // CHECK:           fir.store %[[VAL_1]] to %[[VAL_4]] : !fir.ref<!fir.type<ti16{i:i16}>>
 // CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_3]] : !fir.ref<i16>
 // CHECK:           fir.call @test_func_i16(%[[VAL_5]]) : (i16) -> ()
-// CHECK:           fir.call @llvm.stackrestore.p0(%[[VAL_2]]) : (!fir.ref<i8>) -> ()
+// CHECK:           llvm.intr.stackrestore %[[VAL_2]] : !llvm.ptr
 
 func.func private @test_func_i16(%0 : !fir.type<ti16{i:i16}>) -> () {
   return

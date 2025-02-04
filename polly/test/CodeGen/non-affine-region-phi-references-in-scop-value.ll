@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -polly-allow-nonaffine-loops \
+; RUN: opt %loadNPMPolly -passes=polly-codegen -polly-allow-nonaffine-loops \
 ; RUN: -S < %s | FileCheck %s
 
 ; This test verifies that values defined in another scop statement and used by

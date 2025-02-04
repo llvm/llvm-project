@@ -69,7 +69,7 @@ namespace {
         MF.reset();
         MF.initTargetMachineFunctionInfo(MF.getSubtarget());
 
-        const LLVMTargetMachine &TM = MF.getTarget();
+        const TargetMachine &TM = MF.getTarget();
         // MRI callback for target specific initializations.
         TM.registerMachineRegisterInfoCallback(MF);
 

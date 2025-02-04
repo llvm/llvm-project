@@ -1,4 +1,4 @@
-/* RUN: %clang_cc1 -fsyntax-only -ast-dump %s | FileCheck %s
+/* RUN: %clang_cc1 -ast-dump %s | FileCheck %s
  */
 
 /* WG14 DR290: no

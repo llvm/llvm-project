@@ -71,6 +71,7 @@ class ArmSME_IntrOp<string mnemonic,
           /*bit requiresAccessGroup=*/0,
           /*bit requiresAliasAnalysis=*/0,
           /*bit requiresFastmath=*/0,
+          /*bit requiresOpBundles=*/0,
           /*list<int> immArgPositions=*/immArgPositions,
           /*list<string> immArgAttrNames=*/immArgAttrNames>;
 
@@ -115,7 +116,7 @@ class ArmSME_IntrLoadStoreOp<string mnemonic>
                     /*immArgPositions=*/[2],
                     /*immArgAttrNames=*/["tile_id"]>;
 
-// Loads
+// Loads (from memory to ZA tile slice)
 class ArmSME_IntrLoadOp<string mnemonic>
     : ArmSME_IntrLoadStoreOp<mnemonic>,
       Arguments<(ins Arg<SVEPredicate, "Vector predicate">:$predicate,
@@ -134,7 +135,7 @@ def LLVM_aarch64_sme_ld1w_vert : ArmSME_IntrLoadOp<"ld1w.vert">;
 def LLVM_aarch64_sme_ld1d_vert : ArmSME_IntrLoadOp<"ld1d.vert">;
 def LLVM_aarch64_sme_ld1q_vert : ArmSME_IntrLoadOp<"ld1q.vert">;
 
-// Stores
+// Stores (ZA tile slice to memory)
 class ArmSME_IntrStoreOp<string mnemonic>
     : ArmSME_IntrLoadStoreOp<mnemonic>,
       Arguments<(ins Arg<SVEPredicate, "Vector predicate">:$predicate,

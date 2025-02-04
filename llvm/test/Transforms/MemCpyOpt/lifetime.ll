@@ -124,7 +124,7 @@ define void @call_slot_lifetime_bitcast(ptr %ptr) {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP2]], ptr align 4 [[PTR:%.*]], i64 4, i1 false)
 ; CHECK-NEXT:    [[TMP1_CAST:%.*]] = bitcast ptr [[TMP1]] to ptr
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[TMP1_CAST]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP1_CAST]], ptr align 4 [[PTR]], i64 4, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP1]], ptr align 4 [[PTR]], i64 4, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %tmp1 = alloca i32

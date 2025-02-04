@@ -15,9 +15,7 @@ entry:
 define i16 @sar16m1(ptr %ptr) {
 ; CHECK-LABEL: sar16m1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movswl (%rdi), %eax # encoding: [0x0f,0xbf,0x07]
-; CHECK-NEXT:    shrl %eax # EVEX TO LEGACY Compression encoding: [0xd1,0xe8]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    sarw (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd1,0x3f]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i16, ptr %ptr
@@ -78,10 +76,8 @@ define i16 @sar16mcl(ptr %ptr, i16 %cl) {
 ; CHECK-LABEL: sar16mcl:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %esi, %ecx # encoding: [0x89,0xf1]
-; CHECK-NEXT:    movswl (%rdi), %eax # encoding: [0x0f,0xbf,0x07]
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    sarl %cl, %eax # EVEX TO LEGACY Compression encoding: [0xd3,0xf8]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    sarw %cl, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd3,0x3f]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i16, ptr %ptr
@@ -93,10 +89,8 @@ define i16 @sar16mcl_mask(ptr %ptr, i16 %cl) {
 ; CHECK-LABEL: sar16mcl_mask:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %esi, %ecx # encoding: [0x89,0xf1]
-; CHECK-NEXT:    movswl (%rdi), %eax # encoding: [0x0f,0xbf,0x07]
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    sarl %cl, %eax # EVEX TO LEGACY Compression encoding: [0xd3,0xf8]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    sarw %cl, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd3,0x3f]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i16, ptr %ptr
@@ -173,9 +167,7 @@ entry:
 define i16 @sar16mi(ptr %ptr) {
 ; CHECK-LABEL: sar16mi:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movswl (%rdi), %eax # encoding: [0x0f,0xbf,0x07]
-; CHECK-NEXT:    shrl $4, %eax # EVEX TO LEGACY Compression encoding: [0xc1,0xe8,0x04]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    sarw $4, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0xc1,0x3f,0x04]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i16, ptr %ptr
@@ -218,9 +210,7 @@ entry:
 define i16 @sar16r1(i16 noundef %a) {
 ; CHECK-LABEL: sar16r1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movswl %di, %eax # encoding: [0x0f,0xbf,0xc7]
-; CHECK-NEXT:    shrl %eax # EVEX TO LEGACY Compression encoding: [0xd1,0xe8]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    sarw %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd1,0xff]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %sar = ashr i16 %a, 1
@@ -276,10 +266,8 @@ define i16 @sar16rcl(i16 noundef %a, i16 %cl) {
 ; CHECK-LABEL: sar16rcl:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %esi, %ecx # encoding: [0x89,0xf1]
-; CHECK-NEXT:    movswl %di, %eax # encoding: [0x0f,0xbf,0xc7]
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    sarl %cl, %eax # EVEX TO LEGACY Compression encoding: [0xd3,0xf8]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    sarw %cl, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd3,0xff]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %sar = ashr i16 %a, %cl
@@ -290,10 +278,8 @@ define i16 @sar16rcl_mask(i16 noundef %a, i16 %cl) {
 ; CHECK-LABEL: sar16rcl_mask:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %esi, %ecx # encoding: [0x89,0xf1]
-; CHECK-NEXT:    movswl %di, %eax # encoding: [0x0f,0xbf,0xc7]
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    sarl %cl, %eax # EVEX TO LEGACY Compression encoding: [0xd3,0xf8]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    sarw %cl, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd3,0xff]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %shamt = and i16 %cl, 31
@@ -364,9 +350,7 @@ entry:
 define i16 @sar16ri(i16 noundef %a) {
 ; CHECK-LABEL: sar16ri:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movswl %di, %eax # encoding: [0x0f,0xbf,0xc7]
-; CHECK-NEXT:    shrl $4, %eax # EVEX TO LEGACY Compression encoding: [0xc1,0xe8,0x04]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    sarw $4, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xc1,0xff,0x04]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %sar = ashr i16 %a, 4

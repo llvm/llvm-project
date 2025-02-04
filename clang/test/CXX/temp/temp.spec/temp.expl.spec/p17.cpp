@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-template<class T1> 
+template<class T1>
 class A {
   template<class T2> class B {
     void mf();
   };
 };
 
-template<> template<> class A<int>::B<double>; 
+template<> template<> class A<int>::B<double>;
 template<> template<> void A<char>::B<char>::mf();
 
 template<> void A<char>::B<int>::mf(); // expected-error{{requires 'template<>'}}
@@ -17,15 +17,15 @@ namespace test1 {
     static int bar;
   };
   typedef A<int> AA;
-  
-  template <> int AA::foo = 0; 
+
+  template <> int AA::foo = 0;
   int AA::bar = 1; // expected-error {{template specialization requires 'template<>'}}
   int A<float>::bar = 2; // expected-error {{template specialization requires 'template<>'}}
 
-  template <> class A<double> { 
+  template <> class A<double> {
   public:
     static int foo;
-    static int bar;    
+    static int bar;
   };
 
   typedef A<double> AB;
@@ -40,7 +40,8 @@ struct S {
   int j<int>; // expected-error  {{member 'j' cannot have template arguments}}
 
   static int k<12>; // expected-error {{template specialization requires 'template<>'}} \
-                       expected-error{{no variable template matches specialization}}
+                       expected-error {{no variable template matches specialization}} \
+                       expected-warning {{explicit specialization cannot have a storage class}}
   void f<12>();     // expected-error {{template specialization requires 'template<>'}} \
                     // expected-error {{no function template matches function template specialization 'f'}}
 };

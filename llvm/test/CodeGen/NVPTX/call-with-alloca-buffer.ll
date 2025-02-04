@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 ; Checks how NVPTX lowers alloca buffers and their passing to functions.
 ;
@@ -16,7 +16,7 @@
 ;  }
 
 ; CHECK: .visible .entry kernel_func
-define void @kernel_func(ptr %a) {
+define ptx_kernel void @kernel_func(ptr %a) {
 entry:
   %buf = alloca [16 x i8], align 4
 
@@ -45,9 +45,9 @@ entry:
   store float %3, ptr %arrayidx7, align 4
 
 ; CHECK:        .param .b64 param0;
-; CHECK-NEXT:   st.param.b64  [param0+0], %rd[[A_REG]]
+; CHECK-NEXT:   st.param.b64  [param0], %rd[[A_REG]]
 ; CHECK-NEXT:   .param .b64 param1;
-; CHECK-NEXT:   st.param.b64  [param1+0], %rd[[SP_REG]]
+; CHECK-NEXT:   st.param.b64  [param1], %rd[[SP_REG]]
 ; CHECK-NEXT:   call.uni
 ; CHECK-NEXT:   callee,
 
@@ -56,7 +56,3 @@ entry:
 }
 
 declare void @callee(ptr, ptr)
-
-!nvvm.annotations = !{!0}
-
-!0 = !{ptr @kernel_func, !"kernel", i32 1}

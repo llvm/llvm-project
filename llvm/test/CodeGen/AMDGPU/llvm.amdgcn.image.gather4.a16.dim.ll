@@ -56,9 +56,9 @@ define amdgpu_ps <4 x float> @gather4_cube(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    s_mov_b32 s12, exec_lo
 ; GFX10-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX10-NEXT:    v_perm_b32 v1, v1, v0, 0x5040100
+; GFX10-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s12
-; GFX10-NEXT:    image_gather4 v[0:3], v[1:2], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_CUBE a16
+; GFX10-NEXT:    image_gather4 v[0:3], [v0, v2], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_CUBE a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -92,9 +92,9 @@ define amdgpu_ps <4 x float> @gather4_2darray(<8 x i32> inreg %rsrc, <4 x i32> i
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    s_mov_b32 s12, exec_lo
 ; GFX10-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX10-NEXT:    v_perm_b32 v1, v1, v0, 0x5040100
+; GFX10-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s12
-; GFX10-NEXT:    image_gather4 v[0:3], v[1:2], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY a16
+; GFX10-NEXT:    image_gather4 v[0:3], [v0, v2], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -164,9 +164,9 @@ define amdgpu_ps <4 x float> @gather4_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    s_mov_b32 s12, exec_lo
 ; GFX10-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX10-NEXT:    v_perm_b32 v1, v1, v0, 0x5040100
+; GFX10-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s12
-; GFX10-NEXT:    image_gather4_cl v[0:3], v[1:2], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D a16
+; GFX10-NEXT:    image_gather4_cl v[0:3], [v0, v2], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -382,8 +382,8 @@ define amdgpu_ps <4 x float> @gather4_l_2d(<8 x i32> inreg %rsrc, <4 x i32> inre
 ;
 ; GFX10-LABEL: gather4_l_2d:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    v_perm_b32 v1, v1, v0, 0x5040100
-; GFX10-NEXT:    image_gather4_l v[0:3], v[1:2], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D a16
+; GFX10-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX10-NEXT:    image_gather4_l v[0:3], [v0, v2], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;

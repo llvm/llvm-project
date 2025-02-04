@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_INTTYPES_IMAXABS_H
 #define LLVM_LIBC_SRC_INTTYPES_IMAXABS_H
 
+#include "src/__support/macros/config.h"
 #include <inttypes.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 intmax_t imaxabs(intmax_t j);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_INTTYPES_IMAXABS_H

@@ -60,7 +60,7 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LiveIntervals>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -70,7 +70,7 @@ public:
 
 INITIALIZE_PASS_BEGIN(GCNPreRAOptimizations, DEBUG_TYPE,
                       "AMDGPU Pre-RA optimizations", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(GCNPreRAOptimizations, DEBUG_TYPE, "Pre-RA optimizations",
                     false, false)
 
@@ -159,7 +159,7 @@ bool GCNPreRAOptimizations::processReg(Register Reg) {
         if (Def0)
           return false;
         Def0 = &I;
-        Init |= I.getOperand(1).getImm() & 0xffffffff;
+        Init |= Lo_32(I.getOperand(1).getImm());
         break;
       case AMDGPU::sub1:
         if (Def1)
@@ -219,7 +219,7 @@ bool GCNPreRAOptimizations::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   MRI = &MF.getRegInfo();
-  LIS = &getAnalysis<LiveIntervals>();
+  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   TRI = ST.getRegisterInfo();
 
   bool Changed = false;

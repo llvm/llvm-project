@@ -1,10 +1,10 @@
-# Check that llvm-bolt is able to read a file with DWARF Exception CFI
-# information and annotate this into a disassembled function.
+## Check that llvm-bolt is able to read a file with DWARF Exception CFI
+## information and annotate this into a disassembled function.
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe
 # RUN: llvm-bolt %t.exe -o %t.null --print-cfg 2>&1 | FileCheck %s
-# 
+#
 # CHECK:  Binary Function "_Z7catchitv" after building cfg {
 # CHECK:    CFI Instrs  : 6
 # CHECK:  }
@@ -23,7 +23,7 @@
 main:
 # FDATA: 0 [unknown] 0 1 main 0 0 0
 	.cfi_startproc
-.LBB000: 
+.LBB000:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -49,7 +49,7 @@ main:
 _Z7catchitv:
 # FDATA: 0 [unknown] 0 1 _Z7catchitv 0 0 0
 	.cfi_startproc
-.LBB00: 
+.LBB00:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -64,18 +64,18 @@ _Z7catchitv:
 .LBB00_br: 	jmp	.Ltmp0
 # FDATA: 1 _Z7catchitv #.LBB00_br# 1 _Z7catchitv #.Ltmp0# 0 0
 
-.LLP0: 
+.LLP0:
 	cmpq	$0x1, %rdx
 .LLP0_br: 	je	.Ltmp1
 # FDATA: 1 _Z7catchitv #.LLP0_br# 1 _Z7catchitv #.Ltmp1# 0 0
 # FDATA: 1 _Z7catchitv #.LLP0_br# 1 _Z7catchitv #.LFT0# 0 0
 
-.LFT0: 
+.LFT0:
 	movq	%rax, %rdi
 .LFT0_br: 	callq	_Unwind_Resume@PLT
 # FDATA: 1 _Z7catchitv #.LFT0_br# 1 _Z7catchitv #.Ltmp1# 0 0
 
-.Ltmp1: 
+.Ltmp1:
 	movq	%rax, %rdi
 	callq	__cxa_begin_catch@PLT
 	movq	%rax, -0x18(%rbp)
@@ -85,7 +85,7 @@ _Z7catchitv:
 .Ltmp1_br: 	jmp	.Ltmp2
 # FDATA: 1 _Z7catchitv #.Ltmp1_br# 1 _Z7catchitv #.Ltmp2# 0 0
 
-.LLP1: 
+.LLP1:
 	movl	%edx, %ebx
 	movq	%rax, %r12
 	callq	__cxa_end_catch@PLT
@@ -95,11 +95,11 @@ _Z7catchitv:
 .LLP1_br: 	callq	_Unwind_Resume@PLT
 # FDATA: 1 _Z7catchitv #.LLP1_br# 1 _Z7catchitv #.Ltmp2# 0 0
 
-.Ltmp2: 
+.Ltmp2:
 .Ltmp2_br: 	callq	__cxa_end_catch@PLT
 # FDATA: 1 _Z7catchitv #.Ltmp2_br# 1 _Z7catchitv #.Ltmp0# 0 0
 
-.Ltmp0: 
+.Ltmp0:
 	addq	$0x10, %rsp
 	popq	%rbx
 	popq	%r12

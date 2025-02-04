@@ -18,8 +18,7 @@
 #include <cstdlib>
 #include <cstring>
 
-
-namespace __orc_rt {
+namespace orc_rt {
 
 #ifndef NDEBUG
 
@@ -80,4 +79,4 @@ void printdbg(const char *format, ...) {
 
 #endif // !NDEBUG
 
-} // end namespace __orc_rt
+} // namespace orc_rt

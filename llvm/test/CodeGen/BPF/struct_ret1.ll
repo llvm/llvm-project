@@ -1,4 +1,4 @@
-; RUN: not llc -march=bpf < %s 2> %t1
+; RUN: not llc -mtriple=bpf < %s 2> %t1
 ; RUN: FileCheck %s < %t1
 ; CHECK: error: <unknown>:0:0: in function bar { i64, i32 } (i32, i32, i32, i32, i32): aggregate returns are not supported
 

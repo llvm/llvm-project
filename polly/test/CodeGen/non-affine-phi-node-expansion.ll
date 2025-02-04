@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen \
+; RUN: opt %loadNPMPolly -passes=polly-codegen \
 ; RUN:     -S < %s | FileCheck %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -31,7 +31,7 @@ bb1:                                              ; preds = %bb
   br label %bb2
 
 bb2:                                              ; preds = %bb1, %bb
-  %tmp = phi i1 [ true, %bb ], [ undef, %bb1 ]
+  %tmp = phi i1 [ true, %bb ], [ poison, %bb1 ]
   br label %bb3
 
 bb3:                                              ; preds = %bb13, %bb2

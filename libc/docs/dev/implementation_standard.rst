@@ -26,17 +26,17 @@ example. The ``isalpha`` function will be declared in an internal header file
     #ifndef LLVM_LIBC_SRC_CTYPE_ISALPHA_H
     #define LLVM_LIBC_SRC_CTYPE_ISALPHA_H
 
-    namespace LIBC_NAMESPACE {
+    namespace LIBC_NAMESPACE_DECL {
 
     int isalpha(int c);
 
-    } // namespace LIBC_NAMESPACE
+    } // namespace LIBC_NAMESPACE_DECL
 
     #endif LLVM_LIBC_SRC_CTYPE_ISALPHA_H
 
 Notice that the ``isalpha`` function declaration is nested inside the namespace
-``LIBC_NAMESPACE``. All implementation constructs in LLVM-libc are declared
-within the namespace ``LIBC_NAMESPACE``.
+``LIBC_NAMESPACE_DECL``. All implementation constructs in LLVM-libc are declared
+within the namespace ``LIBC_NAMESPACE_DECL``.
 
 ``.cpp`` File Structure
 -----------------------
@@ -49,13 +49,13 @@ which must be defined with the ``LLVM_LIBC_FUNCTION`` macro. For example, the
 
     // --- isalpha.cpp --- //
 
-    namespace LIBC_NAMESPACE {
+    namespace LIBC_NAMESPACE_DECL {
 
     LLVM_LIBC_FUNCTION(int, isalpha, (int c)) {
       // ... implementation goes here.
     }
 
-    } // namespace LIBC_NAMESPACE
+    } // namespace LIBC_NAMESPACE_DECL
 
 Notice the use of the macro ``LLVM_LIBC_FUNCTION``. This macro helps us define
 a C alias symbol for the C++ implementation. For example, for a library build,

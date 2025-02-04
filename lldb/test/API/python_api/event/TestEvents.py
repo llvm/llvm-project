@@ -7,7 +7,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
-
+import random
 
 @skipIfLinux  # llvm.org/pr25924, sometimes generating SIGSEGV
 class EventAPITestCase(TestBase):
@@ -20,6 +20,7 @@ class EventAPITestCase(TestBase):
         self.line = line_number(
             "main.c", '// Find the line number of function "c" here.'
         )
+        random.seed()
 
     @expectedFailureAll(
         oslist=["linux"], bugnumber="llvm.org/pr23730 Flaky, fails ~1/10 cases"
@@ -318,6 +319,7 @@ class EventAPITestCase(TestBase):
         """Wait for an event from self.primary & self.shadow listener.
         If test_shadow is true, we also check that the shadow listener only
         receives events AFTER the primary listener does."""
+        import stop_hook
         # Waiting on the shadow listener shouldn't have events yet because
         # we haven't fetched them for the primary listener yet:
         event = lldb.SBEvent()
@@ -328,14 +330,25 @@ class EventAPITestCase(TestBase):
 
         # But there should be an event for the primary listener:
         success = self.primary_listener.WaitForEvent(5, event)
+
         self.assertTrue(success, "Primary listener got the event")
 
         state = lldb.SBProcess.GetStateFromEvent(event)
+        primary_event_type = event.GetType()
         restart = False
         if state == lldb.eStateStopped:
             restart = lldb.SBProcess.GetRestartedFromEvent(event)
+            # This counter is matching the stop hooks, which don't get run
+            # for auto-restarting stops.
+            if not restart:
+                self.stop_counter += 1
+                self.assertEqual(
+                    stop_hook.StopHook.counter[self.instance],
+                    self.stop_counter,
+                    "matching stop hook",
+                )
 
-        if expected_state != None:
+        if expected_state is not None:
             self.assertEqual(
                 state, expected_state, "Primary thread got the correct event"
             )
@@ -344,15 +357,18 @@ class EventAPITestCase(TestBase):
         # listener:
         success = self.shadow_listener.WaitForEvent(5, event)
         self.assertTrue(success, "Shadow listener got event too")
+        shadow_event_type = event.GetType()
         self.assertEqual(
-            state, lldb.SBProcess.GetStateFromEvent(event), "It was the same event"
+            primary_event_type, shadow_event_type, "It was the same event type"
+        )
+        self.assertEqual(
+            state, lldb.SBProcess.GetStateFromEvent(event), "It was the same state"
         )
         self.assertEqual(
             restart,
             lldb.SBProcess.GetRestartedFromEvent(event),
             "It was the same restarted",
         )
-
         return state, restart
 
     @expectedFlakeyLinux("llvm.org/pr23730")  # Flaky, fails ~1/100 cases
@@ -386,6 +402,20 @@ class EventAPITestCase(TestBase):
         )
         self.dbg.SetAsync(True)
 
+        # Now make our stop hook - we want to ensure it stays up to date with
+        # the events.  We can't get our hands on the stop-hook instance directly,
+        # so we'll pass in an instance key, and use that to retrieve the data from
+        # this instance of the stop hook:
+        self.instance = f"Key{random.randint(0,10000)}"
+        stop_hook_path = os.path.join(self.getSourceDir(), "stop_hook.py")
+        self.runCmd(f"command script import {stop_hook_path}")
+        import stop_hook
+
+        self.runCmd(
+            f"target stop-hook add -P stop_hook.StopHook -k instance -v {self.instance}"
+        )
+        self.stop_counter = 0
+
         self.process = target.Launch(launch_info, error)
         self.assertSuccess(error, "Process launched successfully")
 
@@ -395,6 +425,7 @@ class EventAPITestCase(TestBase):
         # Events in the launch sequence might be platform dependent, so don't
         # expect any particular event till we get the stopped:
         state = lldb.eStateInvalid
+
         while state != lldb.eStateStopped:
             state, restart = self.wait_for_next_event(None, False)
 
@@ -412,8 +443,6 @@ class EventAPITestCase(TestBase):
             self.cur_thread.GetStopReasonDataAtIndex(0),
             "Hit the right breakpoint",
         )
-        # Disable the first breakpoint so it doesn't get in the way...
-        bkpt1.SetEnabled(False)
 
         self.cur_thread.StepOver()
         # We'll run the test for "shadow listener blocked by primary listener
@@ -450,4 +479,9 @@ class EventAPITestCase(TestBase):
             )
             if state == lldb.eStateStopped and not restarted:
                 self.process.Continue()
+
             state, restarted = self.wait_for_next_event(None, False)
+
+        # Now make sure we agree with the stop hook counter:
+        self.assertEqual(self.stop_counter, stop_hook.StopHook.counter[self.instance])
+        self.assertEqual(stop_hook.StopHook.non_stops[self.instance], 0, "No non stops")

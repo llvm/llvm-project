@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple aarch64-none-linux-gnu -mattr=+sme2 -stop-after=finalize-isel | FileCheck %s
+; RUN: llc < %s -mtriple aarch64-none-linux-gnu -mattr=+sme2 -force-streaming -stop-after=finalize-isel | FileCheck %s
 
 define void @UphPNR(target("aarch64.svcount") %predcnt) {
 entry:

@@ -1,4 +1,3 @@
-import("//clang/lib/ARCMigrate/enable.gni")
 import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
@@ -32,12 +31,6 @@ write_cmake_config("Config") {
     "PPC_LINUX_DEFAULT_IEEELONGDOUBLE=",
   ]
 
-  if (clang_enable_arcmt) {
-    values += [ "CLANG_ENABLE_ARCMT=1" ]
-  } else {
-    values += [ "CLANG_ENABLE_ARCMT=" ]
-  }
-
   if (clang_enable_static_analyzer) {
     values += [ "CLANG_ENABLE_STATIC_ANALYZER=1" ]
   } else {
@@ -68,7 +61,7 @@ write_cmake_config("Config") {
     # FIXME: Hardcoding this isn't great, but assuming that the host ld version
     # has anything to do with the ld version where the built clang will run
     # isn't either. Probably want to make this a declare_args.
-    values += [ "HOST_LINK_VERSION=305" ]
+    values += [ "HOST_LINK_VERSION=520" ]
   } else {
     values += [ "HOST_LINK_VERSION=" ]
   }

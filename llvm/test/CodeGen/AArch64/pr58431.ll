@@ -4,7 +4,7 @@
 define i32 @f(i64 %0) {
 ; CHECK-LABEL: f:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #10
+; CHECK-NEXT:    mov w8, #10 // =0xa
 ; CHECK-NEXT:    mov w9, w0
 ; CHECK-NEXT:    udiv x10, x9, x8
 ; CHECK-NEXT:    msub x0, x10, x8, x9

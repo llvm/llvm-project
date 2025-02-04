@@ -115,9 +115,9 @@ DiagnosedSilenceableFailure transform::MatchStructuredOp::matchOperation(
 
 void transform::MatchStructuredOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getCurrent(), effects);
+  onlyReadsHandle(getCurrentMutable(), effects);
   onlyReadsPayload(effects);
-  producesHandle(getOutputs(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
 }
 
 LogicalResult transform::MatchStructuredOp::verify() {
@@ -209,7 +209,7 @@ DiagnosedSilenceableFailure transform::MatchStructuredBodyOp::matchOperation(
         os);
     if (result)
       return DiagnosedSilenceableFailure::success();
-    return emitSilenceableError() << "contraction: " << os.str();
+    return emitSilenceableError() << "contraction: " << message;
   }
   return emitDefiniteFailure() << "unknown body condition";
 }
@@ -226,7 +226,7 @@ LogicalResult transform::MatchStructuredBodyOp::verify() {
                                                getElementwiseAttrName(),
                                                getContractionAttrName()},
                           os);
-    return emitOpError() << "only one of {" << os.str() << "} is allowed";
+    return emitOpError() << "only one of {" << attributeNames << "} is allowed";
   }
 
   if (std::optional<ArrayAttr> contractionAttr = getContraction()) {
@@ -707,7 +707,7 @@ LogicalResult transform::MatchStructuredResultOp::verify() {
 
 void transform::MatchStructuredYieldOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getHandles(), effects);
+  onlyReadsHandle(getHandlesMutable(), effects);
   onlyReadsPayload(effects);
 }
 

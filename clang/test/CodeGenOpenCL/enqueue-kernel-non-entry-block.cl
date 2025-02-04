@@ -18,7 +18,7 @@ kernel void test(int i) {
 // SPIR64: %block_sizes = alloca [1 x i64]
 // COMMON-LABEL: if.then:
 // COMMON-NOT: alloca
-// CHECK-DEBUG: getelementptr {{.*}} %block_sizes, {{.*}} !dbg ![[TEMPLOCATION:[0-9]+]]
+// CHECK-DEBUG: getelementptr {{.*}} %block_sizes{{.*}}, {{.*}} !dbg ![[TEMPLOCATION:[0-9]+]]
 // COMMON-LABEL: if.end
   queue_t default_queue;
   unsigned flags = 0;

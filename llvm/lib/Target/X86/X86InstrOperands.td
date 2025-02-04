@@ -25,20 +25,18 @@ let RenderMethod = "addMemOperands", SuperClasses = [X86MemAsmOperand] in {
   def X86Mem256AsmOperand : AsmOperandClass { let Name = "Mem256"; }
   def X86Mem512AsmOperand : AsmOperandClass { let Name = "Mem512"; }
   // Gather mem operands
+  def X86Mem32_RC128Operand  : AsmOperandClass { let Name = "Mem32_RC128"; }
   def X86Mem64_RC128Operand  : AsmOperandClass { let Name = "Mem64_RC128"; }
-  def X86Mem128_RC128Operand : AsmOperandClass { let Name = "Mem128_RC128"; }
-  def X86Mem256_RC128Operand : AsmOperandClass { let Name = "Mem256_RC128"; }
-  def X86Mem128_RC256Operand : AsmOperandClass { let Name = "Mem128_RC256"; }
-  def X86Mem256_RC256Operand : AsmOperandClass { let Name = "Mem256_RC256"; }
+  def X86Mem32_RC256Operand  : AsmOperandClass { let Name = "Mem32_RC256"; }
+  def X86Mem64_RC256Operand  : AsmOperandClass { let Name = "Mem64_RC256"; }
 
+  def X86Mem32_RC128XOperand  : AsmOperandClass { let Name = "Mem32_RC128X"; }
   def X86Mem64_RC128XOperand  : AsmOperandClass { let Name = "Mem64_RC128X"; }
-  def X86Mem128_RC128XOperand : AsmOperandClass { let Name = "Mem128_RC128X"; }
-  def X86Mem256_RC128XOperand : AsmOperandClass { let Name = "Mem256_RC128X"; }
-  def X86Mem128_RC256XOperand : AsmOperandClass { let Name = "Mem128_RC256X"; }
-  def X86Mem256_RC256XOperand : AsmOperandClass { let Name = "Mem256_RC256X"; }
-  def X86Mem512_RC256XOperand : AsmOperandClass { let Name = "Mem512_RC256X"; }
-  def X86Mem256_RC512Operand  : AsmOperandClass { let Name = "Mem256_RC512"; }
-  def X86Mem512_RC512Operand  : AsmOperandClass { let Name = "Mem512_RC512"; }
+  def X86Mem32_RC256XOperand  : AsmOperandClass { let Name = "Mem32_RC256X"; }
+  def X86Mem64_RC256XOperand  : AsmOperandClass { let Name = "Mem64_RC256X"; }
+  def X86Mem32_RC512Operand   : AsmOperandClass { let Name = "Mem32_RC512"; }
+  def X86Mem64_RC512Operand   : AsmOperandClass { let Name = "Mem64_RC512"; }
+
   def X86Mem512_GR16Operand : AsmOperandClass { let Name = "Mem512_GR16"; }
   def X86Mem512_GR32Operand : AsmOperandClass { let Name = "Mem512_GR32"; }
   def X86Mem512_GR64Operand : AsmOperandClass { let Name = "Mem512_GR64"; }
@@ -97,20 +95,17 @@ def i512mem_GR32 : X86MemOperand<"printzmmwordmem", X86Mem512_GR32Operand, 512>;
 def i512mem_GR64 : X86MemOperand<"printzmmwordmem", X86Mem512_GR64Operand, 512>;
 
 // Gather mem operands
+def vx32mem  : X86VMemOperand<VR128,  "printdwordmem",  X86Mem32_RC128Operand, 32>;
 def vx64mem  : X86VMemOperand<VR128,  "printqwordmem",  X86Mem64_RC128Operand, 64>;
-def vx128mem : X86VMemOperand<VR128,  "printxmmwordmem", X86Mem128_RC128Operand, 128>;
-def vx256mem : X86VMemOperand<VR128,  "printymmwordmem", X86Mem256_RC128Operand, 256>;
-def vy128mem : X86VMemOperand<VR256,  "printxmmwordmem", X86Mem128_RC256Operand, 128>;
-def vy256mem : X86VMemOperand<VR256,  "printymmwordmem", X86Mem256_RC256Operand, 256>;
+def vy32mem  : X86VMemOperand<VR256,  "printdwordmem",  X86Mem32_RC256Operand, 32>;
+def vy64mem  : X86VMemOperand<VR256,  "printqwordmem",  X86Mem64_RC256Operand, 64>;
 
+def vx32xmem  : X86VMemOperand<VR128X, "printdwordmem",  X86Mem32_RC128XOperand, 32>;
 def vx64xmem  : X86VMemOperand<VR128X, "printqwordmem",  X86Mem64_RC128XOperand, 64>;
-def vx128xmem : X86VMemOperand<VR128X, "printxmmwordmem", X86Mem128_RC128XOperand, 128>;
-def vx256xmem : X86VMemOperand<VR128X, "printymmwordmem", X86Mem256_RC128XOperand, 256>;
-def vy128xmem : X86VMemOperand<VR256X, "printxmmwordmem", X86Mem128_RC256XOperand, 128>;
-def vy256xmem : X86VMemOperand<VR256X, "printymmwordmem", X86Mem256_RC256XOperand, 256>;
-def vy512xmem : X86VMemOperand<VR256X, "printzmmwordmem", X86Mem512_RC256XOperand, 512>;
-def vz256mem  : X86VMemOperand<VR512,  "printymmwordmem", X86Mem256_RC512Operand, 256>;
-def vz512mem  : X86VMemOperand<VR512,  "printzmmwordmem", X86Mem512_RC512Operand, 512>;
+def vy32xmem  : X86VMemOperand<VR256X, "printdwordmem",  X86Mem32_RC256XOperand, 32>;
+def vy64xmem  : X86VMemOperand<VR256X, "printqwordmem",  X86Mem64_RC256XOperand, 64>;
+def vz32mem   : X86VMemOperand<VR512,  "printdwordmem",  X86Mem32_RC512Operand,  32>;
+def vz64mem   : X86VMemOperand<VR512,  "printqwordmem",  X86Mem64_RC512Operand,  64>;
 
 def shmem : X86MemOperand<"printwordmem", X86Mem16AsmOperand>;
 def ssmem : X86MemOperand<"printdwordmem", X86Mem32AsmOperand>;
@@ -500,4 +495,11 @@ def VK8Pair : RegisterOperand<VK8PAIR, "printVKPair"> {
 
 def VK16Pair : RegisterOperand<VK16PAIR, "printVKPair"> {
   let ParserMatchClass = VK16PairAsmOperand;
+}
+
+let RenderMethod = "addTILEPairOperands" in
+  def TILEPairAsmOperand : AsmOperandClass { let Name = "TILEPair"; }
+
+def TILEPair : RegisterOperand<TILEPAIR, "printTILEPair"> {
+  let ParserMatchClass = TILEPairAsmOperand;
 }

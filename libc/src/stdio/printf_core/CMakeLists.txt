@@ -10,8 +10,20 @@ endif()
 if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE)
   list(APPEND printf_config_copts "-DLIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE")
 endif()
+if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT)
+  list(APPEND printf_config_copts "-DLIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT")
+endif()
+if(LIBC_CONF_PRINTF_FLOAT_TO_STR_NO_SPECIALIZE_LD)
+  list(APPEND printf_config_copts "-DLIBC_COPT_FLOAT_TO_STR_NO_SPECIALIZE_LD")
+endif()
+if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
+  list(APPEND printf_config_copts "-DLIBC_COPT_FLOAT_TO_STR_USE_FLOAT320")
+endif()
 if(LIBC_CONF_PRINTF_DISABLE_FIXED_POINT)
   list(APPEND printf_config_copts "-DLIBC_COPT_PRINTF_DISABLE_FIXED_POINT")
+endif()
+if(LIBC_CONF_PRINTF_DISABLE_STRERROR)
+  list(APPEND printf_config_copts "-DLIBC_COPT_PRINTF_DISABLE_STRERROR")
 endif()
 if(printf_config_copts)
   list(PREPEND printf_config_copts "COMPILE_OPTIONS")
@@ -81,6 +93,7 @@ add_object_library(
     float_hex_converter.h
     float_dec_converter.h
     fixed_converter.h #TODO: Check if this should be disabled when fixed unavail
+    strerror_converter.h
   DEPENDS
     .core_structs
     .printf_config
@@ -97,8 +110,8 @@ add_object_library(
     libc.src.__support.integer_to_string
     libc.src.__support.libc_assert
     libc.src.__support.uint128
+    libc.src.__support.StringUtil.error_to_string
 )
-
 
 add_object_library(
   printf_main
@@ -114,6 +127,19 @@ add_object_library(
     libc.src.__support.arg_list
 )
 
+add_header_library(
+  vasprintf_internal
+  HDRS
+    vasprintf_internal.h
+  DEPENDS
+    libc.hdr.func.malloc
+    libc.hdr.func.free
+    libc.hdr.func.realloc
+    libc.src.__support.arg_list
+    libc.src.stdio.printf_core.printf_main
+    libc.src.stdio.printf_core.writer
+)
+
 if(NOT (TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD)
   # Not all platforms have a file implementation. If file is unvailable, and a
   # full build is requested, then we must skip all file based printf sections.
@@ -125,7 +151,6 @@ add_header_library(
   HDRS
     vfprintf_internal.h
   DEPENDS
-    libc.include.stdio
     libc.src.__support.File.file
     libc.src.__support.arg_list
     libc.src.stdio.printf_core.printf_main

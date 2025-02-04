@@ -34,13 +34,13 @@ typedef NSInteger Enum3;
 
 int main(void) {
   Enum0 e0 = Enum0One;
-  // CHECK: call void @llvm.dbg.declare(metadata {{.*}}, metadata ![[ENUM0:[0-9]+]], metadata !{{.*}})
+  // CHECK: #dbg_declare({{.*}}, ![[ENUM0:[0-9]+]], !{{.*}})
   Enum1 e1 = Enum1One;
-  // CHECK: call void @llvm.dbg.declare(metadata {{.*}}, metadata ![[ENUM1:[0-9]+]], metadata !{{.*}})
+  // CHECK: #dbg_declare({{.*}}, ![[ENUM1:[0-9]+]], !{{.*}})
   Enum2 e2 = Enum2One;
-  // CHECK: call void @llvm.dbg.declare(metadata {{.*}}, metadata ![[ENUM2:[0-9]+]], metadata !{{.*}})
+  // CHECK: #dbg_declare({{.*}}, ![[ENUM2:[0-9]+]], !{{.*}})
   Enum3 e3 = Enum3One;
-  // CHECK: call void @llvm.dbg.declare(metadata {{.*}}, metadata ![[ENUM3:[0-9]+]], metadata !{{.*}})
+  // CHECK: #dbg_declare({{.*}}, ![[ENUM3:[0-9]+]], !{{.*}})
 
   // -Werror and the following line ensures that these enums are not
   // -treated as C++11 strongly typed enums.

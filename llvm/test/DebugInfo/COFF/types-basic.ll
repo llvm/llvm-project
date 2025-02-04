@@ -525,10 +525,10 @@
 ; ASM: .short	0x1603                  # Record kind: LF_BUILDINFO
 ; ASM: .short	0x5                     # NumArgs
 ; ASM: .long	0x1013                  # Argument: D:\src\llvm\build
-; ASM: .long	0x0                     # Argument
+; ASM: .long	0x1015                  # Argument
 ; ASM: .long	0x1014                  # Argument: t.cpp
 ; ASM: .long	0x1015                  # Argument
-; ASM: .long	0x0                     # Argument
+; ASM: .long	0x1015                  # Argument
 ; ASM: .byte	242
 ; ASM: .byte	241
 

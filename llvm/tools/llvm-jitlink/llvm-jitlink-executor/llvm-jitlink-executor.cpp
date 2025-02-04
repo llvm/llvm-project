@@ -11,11 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX, LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorSharedMemoryMapperService.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleExecutorMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleRemoteEPCServer.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
@@ -116,7 +118,7 @@ int openListener(std::string Host, std::string PortStr) {
 
 // JITLink debug support plugins put information about JITed code in this GDB
 // JIT Interface global from OrcTargetProcess.
-extern "C" struct jit_descriptor __jit_debug_descriptor;
+extern "C" LLVM_ABI struct jit_descriptor __jit_debug_descriptor;
 
 static void *findLastDebugDescriptorEntryPtr() {
   struct jit_code_entry *Last = __jit_debug_descriptor.first_entry;

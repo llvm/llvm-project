@@ -49,7 +49,7 @@ void DXILAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   SectionKind GVKind = TargetLoweringObjectFile::getKindForGlobal(GV, TM);
   MCSection *TheSection = getObjFileLowering().SectionForGlobal(GV, GVKind, TM);
   OutStreamer->switchSection(TheSection);
-  emitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer());
+  emitGlobalConstant(GV->getDataLayout(), GV->getInitializer());
 }
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXAsmPrinter() {

@@ -1,4 +1,4 @@
-! Test that flang-new forwards the -moutline-atomics and -mno-outline-atomics.
+! Test that flang forwards the -moutline-atomics and -mno-outline-atomics.
 ! RUN: %flang -moutline-atomics --target=aarch64-none-none -### %s -o %t 2>&1  | FileCheck %s
 ! CHECK: "-target-feature" "+outline-atomics"
 

@@ -317,7 +317,7 @@ TEST(MatrixTest, intInverse) {
 
   mat = makeIntMatrix(2, 2, {{0, 0}, {1, 2}});
 
-  MPInt det = mat.determinant(&inv);
+  DynamicAPInt det = mat.determinant(&inv);
 
   EXPECT_EQ(det, 0);
 }

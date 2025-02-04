@@ -16,7 +16,6 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectInterface.h"
-#include "mlir/Support/LogicalResult.h"
 
 namespace llvm {
 class Instruction;

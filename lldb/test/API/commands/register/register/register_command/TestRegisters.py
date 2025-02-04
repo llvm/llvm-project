@@ -21,6 +21,24 @@ class RegisterCommandsTestCase(TestBase):
         self.dbg.GetSelectedTarget().GetProcess().Destroy()
         TestBase.tearDown(self)
 
+    # on macOS, detect if the current machine is arm64 and supports SME
+    def get_sme_available(self):
+        if self.getArchitecture() != "arm64":
+            return None
+        try:
+            sysctl_output = subprocess.check_output(
+                ["sysctl", "hw.optional.arm.FEAT_SME"]
+            ).decode("utf-8")
+        except subprocess.CalledProcessError:
+            return None
+        m = re.match(r"hw\.optional\.arm\.FEAT_SME: (\w+)", sysctl_output)
+        if m:
+            if int(m.group(1)) == 1:
+                return True
+            else:
+                return False
+        return None
+
     @skipIfiOSSimulator
     @skipIf(archs=no_match(["amd64", "arm", "i386", "x86_64"]))
     @expectedFailureAll(oslist=["freebsd", "netbsd"], bugnumber="llvm.org/pr48371")
@@ -32,11 +50,26 @@ class RegisterCommandsTestCase(TestBase):
         # verify that logging does not assert
         self.log_enable("registers")
 
+        error_str_matched = False
+        if self.get_sme_available() and self.platformIsDarwin():
+            # On Darwin AArch64 SME machines, we will have unavailable
+            # registers when not in Streaming SVE Mode/SME, so
+            # `register read -a` will report that some registers
+            # could not be read.  This is expected.
+            error_str_matched = True
+
+        if self.getArchitecture() == "x86_64" and self.platformIsDarwin():
+            # debugserver on x86 will provide ds/es/ss/gsbase when the
+            # kernel provides them, but most of the time they will be
+            # unavailable.  So "register read -a" will report that
+            # 4 registers were unavailable, it is expected.
+            error_str_matched = True
+
         self.expect(
             "register read -a",
             MISSING_EXPECTED_REGISTERS,
             substrs=["registers were unavailable"],
-            matching=False,
+            matching=error_str_matched,
         )
 
         all_registers = self.res.GetOutput()
@@ -60,7 +93,7 @@ class RegisterCommandsTestCase(TestBase):
                 self.runCmd("register read q15")  # may be available
 
         self.expect(
-            "register read -s 4", substrs=["invalid register set index: 4"], error=True
+            "register read -s 8", substrs=["invalid register set index: 8"], error=True
         )
 
     @skipIfiOSSimulator
@@ -619,7 +652,7 @@ class RegisterCommandsTestCase(TestBase):
         self.expect("register info x30", substrs=["Name: lr (x30)"])
 
     @skipIfXmlSupportMissing
-    @skipUnlessPlatform(["linux"])
+    @skipUnlessPlatform(["linux", "freebsd"])
     @skipIf(archs=no_match(["aarch64"]))
     def test_register_read_fields(self):
         """Test that when debugging a live process, we see the fields of certain
@@ -628,11 +661,22 @@ class RegisterCommandsTestCase(TestBase):
         self.common_setup()
 
         # N/Z/C/V bits will always be present, so check only for those.
-        self.expect("register read cpsr", substrs=["= (N = 0, Z = 1, C = 1, V = 0"])
-        self.expect("register read fpsr", substrs=["= (QC = 0, IDC = 0, IXC = 0"])
-        # AHP/DN/FZ/RMode always present, others may vary.
         self.expect(
-            "register read fpcr", substrs=["= (AHP = 0, DN = 0, FZ = 0, RMode = 0"]
+            "register read cpsr",
+            patterns=["= \(N = [0|1], Z = [0|1], C = [0|1], V = [0|1]"],
+        )
+        self.expect(
+            "register read fpsr", patterns=["= \(QC = [0|1], IDC = [0|1], IXC = [0|1]"]
+        )
+        # AHP/DN/FZ always present, others may vary.
+        self.expect(
+            "register read fpcr", patterns=["= \(AHP = [0|1], DN = [0|1], FZ = [0|1]"]
+        )
+
+        # Should get enumerator descriptions for RMode.
+        self.expect(
+            "register info fpcr",
+            substrs=["RMode: 0 = RN, 1 = RP, 2 = RM, 3 = RZ"],
         )
 
     @skipUnlessPlatform(["linux"])

@@ -888,15 +888,15 @@ define i64 @imm64_8() nounwind {
 ; RV32I-LABEL: imm64_8:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 633806
-; RV32I-NEXT:    addi a0, a0, -272
 ; RV32I-NEXT:    lui a1, 74565
+; RV32I-NEXT:    addi a0, a0, -272
 ; RV32I-NEXT:    addi a1, a1, 1656
 ; RV32I-NEXT:    ret
 ;
 ; RV64-NOPOOL-LABEL: imm64_8:
 ; RV64-NOPOOL:       # %bb.0:
 ; RV64-NOPOOL-NEXT:    lui a0, 583
-; RV64-NOPOOL-NEXT:    addiw a0, a0, -1875
+; RV64-NOPOOL-NEXT:    addi a0, a0, -1875
 ; RV64-NOPOOL-NEXT:    slli a0, a0, 14
 ; RV64-NOPOOL-NEXT:    addi a0, a0, -947
 ; RV64-NOPOOL-NEXT:    slli a0, a0, 12
@@ -925,7 +925,7 @@ define i64 @imm64_8() nounwind {
 ; RV64IZBB-LABEL: imm64_8:
 ; RV64IZBB:       # %bb.0:
 ; RV64IZBB-NEXT:    lui a0, 583
-; RV64IZBB-NEXT:    addiw a0, a0, -1875
+; RV64IZBB-NEXT:    addi a0, a0, -1875
 ; RV64IZBB-NEXT:    slli a0, a0, 14
 ; RV64IZBB-NEXT:    addi a0, a0, -947
 ; RV64IZBB-NEXT:    slli a0, a0, 12
@@ -937,7 +937,7 @@ define i64 @imm64_8() nounwind {
 ; RV64IZBS-LABEL: imm64_8:
 ; RV64IZBS:       # %bb.0:
 ; RV64IZBS-NEXT:    lui a0, 583
-; RV64IZBS-NEXT:    addiw a0, a0, -1875
+; RV64IZBS-NEXT:    addi a0, a0, -1875
 ; RV64IZBS-NEXT:    slli a0, a0, 14
 ; RV64IZBS-NEXT:    addi a0, a0, -947
 ; RV64IZBS-NEXT:    slli a0, a0, 12
@@ -949,7 +949,7 @@ define i64 @imm64_8() nounwind {
 ; RV64IXTHEADBB-LABEL: imm64_8:
 ; RV64IXTHEADBB:       # %bb.0:
 ; RV64IXTHEADBB-NEXT:    lui a0, 583
-; RV64IXTHEADBB-NEXT:    addiw a0, a0, -1875
+; RV64IXTHEADBB-NEXT:    addi a0, a0, -1875
 ; RV64IXTHEADBB-NEXT:    slli a0, a0, 14
 ; RV64IXTHEADBB-NEXT:    addi a0, a0, -947
 ; RV64IXTHEADBB-NEXT:    slli a0, a0, 12
@@ -969,7 +969,7 @@ define i64 @imm64_8() nounwind {
 ; RV64-REMAT-LABEL: imm64_8:
 ; RV64-REMAT:       # %bb.0:
 ; RV64-REMAT-NEXT:    lui a0, 583
-; RV64-REMAT-NEXT:    addiw a0, a0, -1875
+; RV64-REMAT-NEXT:    addi a0, a0, -1875
 ; RV64-REMAT-NEXT:    slli a0, a0, 14
 ; RV64-REMAT-NEXT:    addi a0, a0, -947
 ; RV64-REMAT-NEXT:    slli a0, a0, 12
@@ -1190,8 +1190,8 @@ define i64 @imm_right_shifted_lui_1() nounwind {
 ; RV32I-LABEL: imm_right_shifted_lui_1:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 1048575
-; RV32I-NEXT:    addi a0, a0, 1
 ; RV32I-NEXT:    lui a1, 16
+; RV32I-NEXT:    addi a0, a0, 1
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    ret
 ;
@@ -1427,8 +1427,8 @@ define i64 @imm_end_2addi_1() nounwind {
 ; RV32I-LABEL: imm_end_2addi_1:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 1048575
-; RV32I-NEXT:    addi a0, a0, 2047
 ; RV32I-NEXT:    lui a1, 1048512
+; RV32I-NEXT:    addi a0, a0, 2047
 ; RV32I-NEXT:    addi a1, a1, 127
 ; RV32I-NEXT:    ret
 ;
@@ -1556,6 +1556,58 @@ define i64 @imm_2reg_1() nounwind {
 ; RV64-REMAT-NEXT:    add a0, a0, a1
 ; RV64-REMAT-NEXT:    ret
   ret i64 -1152921504301427080 ; 0xF000_0000_1234_5678
+}
+
+define void @imm_store_i8_neg1(ptr %p) nounwind {
+; RV32I-LABEL: imm_store_i8_neg1:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, -1
+; RV32I-NEXT:    sb a1, 0(a0)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: imm_store_i8_neg1:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, -1
+; RV64I-NEXT:    sb a1, 0(a0)
+; RV64I-NEXT:    ret
+;
+; RV64IZBA-LABEL: imm_store_i8_neg1:
+; RV64IZBA:       # %bb.0:
+; RV64IZBA-NEXT:    li a1, -1
+; RV64IZBA-NEXT:    sb a1, 0(a0)
+; RV64IZBA-NEXT:    ret
+;
+; RV64IZBB-LABEL: imm_store_i8_neg1:
+; RV64IZBB:       # %bb.0:
+; RV64IZBB-NEXT:    li a1, -1
+; RV64IZBB-NEXT:    sb a1, 0(a0)
+; RV64IZBB-NEXT:    ret
+;
+; RV64IZBS-LABEL: imm_store_i8_neg1:
+; RV64IZBS:       # %bb.0:
+; RV64IZBS-NEXT:    li a1, -1
+; RV64IZBS-NEXT:    sb a1, 0(a0)
+; RV64IZBS-NEXT:    ret
+;
+; RV64IXTHEADBB-LABEL: imm_store_i8_neg1:
+; RV64IXTHEADBB:       # %bb.0:
+; RV64IXTHEADBB-NEXT:    li a1, -1
+; RV64IXTHEADBB-NEXT:    sb a1, 0(a0)
+; RV64IXTHEADBB-NEXT:    ret
+;
+; RV32-REMAT-LABEL: imm_store_i8_neg1:
+; RV32-REMAT:       # %bb.0:
+; RV32-REMAT-NEXT:    li a1, -1
+; RV32-REMAT-NEXT:    sb a1, 0(a0)
+; RV32-REMAT-NEXT:    ret
+;
+; RV64-REMAT-LABEL: imm_store_i8_neg1:
+; RV64-REMAT:       # %bb.0:
+; RV64-REMAT-NEXT:    li a1, -1
+; RV64-REMAT-NEXT:    sb a1, 0(a0)
+; RV64-REMAT-NEXT:    ret
+  store i8 -1, ptr %p
+  ret void
 }
 
 define void @imm_store_i16_neg1(ptr %p) nounwind {
@@ -2121,8 +2173,8 @@ define i64 @imm_70370820078523() {
 ;
 ; RV64I-POOL-LABEL: imm_70370820078523:
 ; RV64I-POOL:       # %bb.0:
-; RV64I-POOL-NEXT:    lui a0, %hi(.LCPI37_0)
-; RV64I-POOL-NEXT:    ld a0, %lo(.LCPI37_0)(a0)
+; RV64I-POOL-NEXT:    lui a0, %hi(.LCPI38_0)
+; RV64I-POOL-NEXT:    ld a0, %lo(.LCPI38_0)(a0)
 ; RV64I-POOL-NEXT:    ret
 ;
 ; RV64IZBA-LABEL: imm_70370820078523:
@@ -2266,8 +2318,8 @@ define i64 @imm_neg_9223301666034697285() {
 ;
 ; RV64I-POOL-LABEL: imm_neg_9223301666034697285:
 ; RV64I-POOL:       # %bb.0:
-; RV64I-POOL-NEXT:    lui a0, %hi(.LCPI39_0)
-; RV64I-POOL-NEXT:    ld a0, %lo(.LCPI39_0)(a0)
+; RV64I-POOL-NEXT:    lui a0, %hi(.LCPI40_0)
+; RV64I-POOL-NEXT:    ld a0, %lo(.LCPI40_0)(a0)
 ; RV64I-POOL-NEXT:    ret
 ;
 ; RV64IZBA-LABEL: imm_neg_9223301666034697285:
@@ -2394,8 +2446,8 @@ define i64 @imm_neg_8798043653189() {
 ; RV32I-LABEL: imm_neg_8798043653189:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 572348
-; RV32I-NEXT:    addi a0, a0, -1093
 ; RV32I-NEXT:    lui a1, 1048575
+; RV32I-NEXT:    addi a0, a0, -1093
 ; RV32I-NEXT:    addi a1, a1, 2047
 ; RV32I-NEXT:    ret
 ;
@@ -2460,8 +2512,8 @@ define i64 @imm_9223372034904144827() {
 ; RV32I-LABEL: imm_9223372034904144827:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 572348
-; RV32I-NEXT:    addi a0, a0, -1093
 ; RV32I-NEXT:    lui a1, 524288
+; RV32I-NEXT:    addi a0, a0, -1093
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    ret
 ;
@@ -2526,8 +2578,8 @@ define i64 @imm_neg_9223354442718100411() {
 ; RV32I-LABEL: imm_neg_9223354442718100411:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 572348
-; RV32I-NEXT:    addi a0, a0, -1093
 ; RV32I-NEXT:    lui a1, 524287
+; RV32I-NEXT:    addi a0, a0, -1093
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    ret
 ;
@@ -2544,8 +2596,8 @@ define i64 @imm_neg_9223354442718100411() {
 ;
 ; RV64I-POOL-LABEL: imm_neg_9223354442718100411:
 ; RV64I-POOL:       # %bb.0:
-; RV64I-POOL-NEXT:    lui a0, %hi(.LCPI43_0)
-; RV64I-POOL-NEXT:    ld a0, %lo(.LCPI43_0)(a0)
+; RV64I-POOL-NEXT:    lui a0, %hi(.LCPI44_0)
+; RV64I-POOL-NEXT:    ld a0, %lo(.LCPI44_0)(a0)
 ; RV64I-POOL-NEXT:    ret
 ;
 ; RV64IZBA-LABEL: imm_neg_9223354442718100411:
@@ -2843,8 +2895,8 @@ define i64 @imm_12900924131259() {
 ; RV32I-LABEL: imm_12900924131259:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 765952
-; RV32I-NEXT:    addi a0, a0, 1979
 ; RV32I-NEXT:    lui a1, 1
+; RV32I-NEXT:    addi a0, a0, 1979
 ; RV32I-NEXT:    addi a1, a1, -1093
 ; RV32I-NEXT:    ret
 ;
@@ -2965,8 +3017,8 @@ define i64 @imm_12900936431479() {
 ; RV32I-LABEL: imm_12900936431479:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 768955
-; RV32I-NEXT:    addi a0, a0, 1911
 ; RV32I-NEXT:    lui a1, 1
+; RV32I-NEXT:    addi a0, a0, 1911
 ; RV32I-NEXT:    addi a1, a1, -1093
 ; RV32I-NEXT:    ret
 ;
@@ -3037,8 +3089,8 @@ define i64 @imm_12900918536874() {
 ; RV32I-LABEL: imm_12900918536874:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 764587
-; RV32I-NEXT:    addi a0, a0, -1366
 ; RV32I-NEXT:    lui a1, 1
+; RV32I-NEXT:    addi a0, a0, -1366
 ; RV32I-NEXT:    addi a1, a1, -1093
 ; RV32I-NEXT:    ret
 ;
@@ -3109,8 +3161,8 @@ define i64 @imm_12900925247761() {
 ; RV32I-LABEL: imm_12900925247761:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 766225
-; RV32I-NEXT:    addi a0, a0, 273
 ; RV32I-NEXT:    lui a1, 1
+; RV32I-NEXT:    addi a0, a0, 273
 ; RV32I-NEXT:    addi a1, a1, -1093
 ; RV32I-NEXT:    ret
 ;
@@ -3855,8 +3907,8 @@ define i64 @imm64_same_lo_hi_optsize() nounwind optsize {
 ;
 ; RV64I-POOL-LABEL: imm64_same_lo_hi_optsize:
 ; RV64I-POOL:       # %bb.0:
-; RV64I-POOL-NEXT:    lui a0, %hi(.LCPI64_0)
-; RV64I-POOL-NEXT:    ld a0, %lo(.LCPI64_0)(a0)
+; RV64I-POOL-NEXT:    lui a0, %hi(.LCPI65_0)
+; RV64I-POOL-NEXT:    ld a0, %lo(.LCPI65_0)(a0)
 ; RV64I-POOL-NEXT:    ret
 ;
 ; RV64IZBA-LABEL: imm64_same_lo_hi_optsize:
@@ -3930,8 +3982,8 @@ define i64 @imm64_same_lo_hi_negative() nounwind {
 ;
 ; RV64I-POOL-LABEL: imm64_same_lo_hi_negative:
 ; RV64I-POOL:       # %bb.0:
-; RV64I-POOL-NEXT:    lui a0, %hi(.LCPI65_0)
-; RV64I-POOL-NEXT:    ld a0, %lo(.LCPI65_0)(a0)
+; RV64I-POOL-NEXT:    lui a0, %hi(.LCPI66_0)
+; RV64I-POOL-NEXT:    ld a0, %lo(.LCPI66_0)(a0)
 ; RV64I-POOL-NEXT:    ret
 ;
 ; RV64IZBA-LABEL: imm64_same_lo_hi_negative:
@@ -3993,4 +4045,184 @@ define i64 @imm64_same_lo_hi_negative() nounwind {
 ; RV64-REMAT-NEXT:    addi a0, a0, 128
 ; RV64-REMAT-NEXT:    ret
   ret i64 9259542123273814144 ; 0x8080808080808080
+}
+
+define i64 @imm64_0x8000080000000() {
+; RV32I-LABEL: imm64_0x8000080000000:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a0, 524288
+; RV32I-NEXT:    lui a1, 128
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: imm64_0x8000080000000:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a0, 256
+; RV64I-NEXT:    addiw a0, a0, 1
+; RV64I-NEXT:    slli a0, a0, 31
+; RV64I-NEXT:    ret
+;
+; RV64IZBA-LABEL: imm64_0x8000080000000:
+; RV64IZBA:       # %bb.0:
+; RV64IZBA-NEXT:    lui a0, 256
+; RV64IZBA-NEXT:    addiw a0, a0, 1
+; RV64IZBA-NEXT:    slli a0, a0, 31
+; RV64IZBA-NEXT:    ret
+;
+; RV64IZBB-LABEL: imm64_0x8000080000000:
+; RV64IZBB:       # %bb.0:
+; RV64IZBB-NEXT:    lui a0, 256
+; RV64IZBB-NEXT:    addiw a0, a0, 1
+; RV64IZBB-NEXT:    slli a0, a0, 31
+; RV64IZBB-NEXT:    ret
+;
+; RV64IZBS-LABEL: imm64_0x8000080000000:
+; RV64IZBS:       # %bb.0:
+; RV64IZBS-NEXT:    bseti a0, zero, 31
+; RV64IZBS-NEXT:    bseti a0, a0, 51
+; RV64IZBS-NEXT:    ret
+;
+; RV64IXTHEADBB-LABEL: imm64_0x8000080000000:
+; RV64IXTHEADBB:       # %bb.0:
+; RV64IXTHEADBB-NEXT:    lui a0, 256
+; RV64IXTHEADBB-NEXT:    addiw a0, a0, 1
+; RV64IXTHEADBB-NEXT:    slli a0, a0, 31
+; RV64IXTHEADBB-NEXT:    ret
+;
+; RV32-REMAT-LABEL: imm64_0x8000080000000:
+; RV32-REMAT:       # %bb.0:
+; RV32-REMAT-NEXT:    lui a0, 524288
+; RV32-REMAT-NEXT:    lui a1, 128
+; RV32-REMAT-NEXT:    ret
+;
+; RV64-REMAT-LABEL: imm64_0x8000080000000:
+; RV64-REMAT:       # %bb.0:
+; RV64-REMAT-NEXT:    lui a0, 256
+; RV64-REMAT-NEXT:    addiw a0, a0, 1
+; RV64-REMAT-NEXT:    slli a0, a0, 31
+; RV64-REMAT-NEXT:    ret
+  ret i64 2251801961168896 ; 0x8000080000000
+}
+
+define i64 @imm64_0x10000100000000() {
+; RV32I-LABEL: imm64_0x10000100000000:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 256
+; RV32I-NEXT:    addi a1, a1, 1
+; RV32I-NEXT:    li a0, 0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: imm64_0x10000100000000:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a0, 256
+; RV64I-NEXT:    addi a0, a0, 1
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    ret
+;
+; RV64IZBA-LABEL: imm64_0x10000100000000:
+; RV64IZBA:       # %bb.0:
+; RV64IZBA-NEXT:    lui a0, 256
+; RV64IZBA-NEXT:    addi a0, a0, 1
+; RV64IZBA-NEXT:    slli a0, a0, 32
+; RV64IZBA-NEXT:    ret
+;
+; RV64IZBB-LABEL: imm64_0x10000100000000:
+; RV64IZBB:       # %bb.0:
+; RV64IZBB-NEXT:    lui a0, 256
+; RV64IZBB-NEXT:    addi a0, a0, 1
+; RV64IZBB-NEXT:    slli a0, a0, 32
+; RV64IZBB-NEXT:    ret
+;
+; RV64IZBS-LABEL: imm64_0x10000100000000:
+; RV64IZBS:       # %bb.0:
+; RV64IZBS-NEXT:    bseti a0, zero, 32
+; RV64IZBS-NEXT:    bseti a0, a0, 52
+; RV64IZBS-NEXT:    ret
+;
+; RV64IXTHEADBB-LABEL: imm64_0x10000100000000:
+; RV64IXTHEADBB:       # %bb.0:
+; RV64IXTHEADBB-NEXT:    lui a0, 256
+; RV64IXTHEADBB-NEXT:    addi a0, a0, 1
+; RV64IXTHEADBB-NEXT:    slli a0, a0, 32
+; RV64IXTHEADBB-NEXT:    ret
+;
+; RV32-REMAT-LABEL: imm64_0x10000100000000:
+; RV32-REMAT:       # %bb.0:
+; RV32-REMAT-NEXT:    lui a1, 256
+; RV32-REMAT-NEXT:    addi a1, a1, 1
+; RV32-REMAT-NEXT:    li a0, 0
+; RV32-REMAT-NEXT:    ret
+;
+; RV64-REMAT-LABEL: imm64_0x10000100000000:
+; RV64-REMAT:       # %bb.0:
+; RV64-REMAT-NEXT:    lui a0, 256
+; RV64-REMAT-NEXT:    addi a0, a0, 1
+; RV64-REMAT-NEXT:    slli a0, a0, 32
+; RV64-REMAT-NEXT:    ret
+  ret i64 4503603922337792 ; 0x10000100000000
+}
+
+define i64 @imm64_0xFF7FFFFF7FFFFFFE() {
+; RV32I-LABEL: imm64_0xFF7FFFFF7FFFFFFE:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a0, 524288
+; RV32I-NEXT:    lui a1, 1046528
+; RV32I-NEXT:    addi a0, a0, -1
+; RV32I-NEXT:    addi a1, a1, -1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: imm64_0xFF7FFFFF7FFFFFFE:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a0, 1044480
+; RV64I-NEXT:    addiw a0, a0, -1
+; RV64I-NEXT:    slli a0, a0, 31
+; RV64I-NEXT:    addi a0, a0, -1
+; RV64I-NEXT:    ret
+;
+; RV64IZBA-LABEL: imm64_0xFF7FFFFF7FFFFFFE:
+; RV64IZBA:       # %bb.0:
+; RV64IZBA-NEXT:    lui a0, 1044480
+; RV64IZBA-NEXT:    addiw a0, a0, -1
+; RV64IZBA-NEXT:    slli a0, a0, 31
+; RV64IZBA-NEXT:    addi a0, a0, -1
+; RV64IZBA-NEXT:    ret
+;
+; RV64IZBB-LABEL: imm64_0xFF7FFFFF7FFFFFFE:
+; RV64IZBB:       # %bb.0:
+; RV64IZBB-NEXT:    lui a0, 1044480
+; RV64IZBB-NEXT:    addiw a0, a0, -1
+; RV64IZBB-NEXT:    slli a0, a0, 31
+; RV64IZBB-NEXT:    addi a0, a0, -1
+; RV64IZBB-NEXT:    ret
+;
+; RV64IZBS-LABEL: imm64_0xFF7FFFFF7FFFFFFE:
+; RV64IZBS:       # %bb.0:
+; RV64IZBS-NEXT:    li a0, -1
+; RV64IZBS-NEXT:    bclri a0, a0, 31
+; RV64IZBS-NEXT:    bclri a0, a0, 55
+; RV64IZBS-NEXT:    ret
+;
+; RV64IXTHEADBB-LABEL: imm64_0xFF7FFFFF7FFFFFFE:
+; RV64IXTHEADBB:       # %bb.0:
+; RV64IXTHEADBB-NEXT:    lui a0, 1044480
+; RV64IXTHEADBB-NEXT:    addiw a0, a0, -1
+; RV64IXTHEADBB-NEXT:    slli a0, a0, 31
+; RV64IXTHEADBB-NEXT:    addi a0, a0, -1
+; RV64IXTHEADBB-NEXT:    ret
+;
+; RV32-REMAT-LABEL: imm64_0xFF7FFFFF7FFFFFFE:
+; RV32-REMAT:       # %bb.0:
+; RV32-REMAT-NEXT:    lui a0, 524288
+; RV32-REMAT-NEXT:    addi a0, a0, -1
+; RV32-REMAT-NEXT:    lui a1, 1046528
+; RV32-REMAT-NEXT:    addi a1, a1, -1
+; RV32-REMAT-NEXT:    ret
+;
+; RV64-REMAT-LABEL: imm64_0xFF7FFFFF7FFFFFFE:
+; RV64-REMAT:       # %bb.0:
+; RV64-REMAT-NEXT:    lui a0, 1044480
+; RV64-REMAT-NEXT:    addiw a0, a0, -1
+; RV64-REMAT-NEXT:    slli a0, a0, 31
+; RV64-REMAT-NEXT:    addi a0, a0, -1
+; RV64-REMAT-NEXT:    ret
+  ret i64 -36028799166447617 ; 0xFF7FFFFF7FFFFFFE
 }

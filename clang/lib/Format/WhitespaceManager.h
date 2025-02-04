@@ -233,7 +233,7 @@ private:
   void alignChainedConditionals();
 
   /// Align consecutive short case statements over all \c Changes.
-  void alignConsecutiveShortCaseStatements();
+  void alignConsecutiveShortCaseStatements(bool IsExpr);
 
   /// Align consecutive TableGen DAGArg colon over all \c Changes.
   void alignConsecutiveTableGenBreakingDAGArgColons();
@@ -349,7 +349,7 @@ private:
 
   /// Stores \p Text as the replacement for the whitespace in \p Range.
   void storeReplacement(SourceRange Range, StringRef Text);
-  void appendNewlineText(std::string &Text, unsigned Newlines);
+  void appendNewlineText(std::string &Text, const Change &C);
   void appendEscapedNewlineText(std::string &Text, unsigned Newlines,
                                 unsigned PreviousEndOfTokenColumn,
                                 unsigned EscapedNewlineColumn);

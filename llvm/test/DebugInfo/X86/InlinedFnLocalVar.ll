@@ -2,7 +2,7 @@
 ; RUN: llc --try-experimental-debuginfo-iterators -mtriple i686-pc-cygwin -O2 %s -o - | FileCheck %s
 ; Check struct X for dead variable xyz from inlined function foo.
 
-; CHECK: Lsection_info
+; CHECK: .section .debug_info,"dr"
 ; CHECK:	DW_TAG_structure_type
 ; CHECK-NEXT:	info_string
 

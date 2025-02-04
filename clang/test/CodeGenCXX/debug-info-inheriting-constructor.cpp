@@ -10,10 +10,10 @@ struct B : A {
 A::A(int i, ...) {}
 // CHECK: define{{.*}} void @{{.*}}foo
 // CHECK-NOT: ret void
-// CHECK: call void @llvm.dbg.declare
+// CHECK: #dbg_declare
 // CHECK-NOT: ret void
-// CHECK: call void @llvm.dbg.declare(metadata ptr %{{[^,]+}},
-// CHECK-SAME: metadata ![[THIS:[0-9]+]], metadata !DIExpression()), !dbg ![[LOC:[0-9]+]]
+// CHECK: #dbg_declare(ptr %{{[^,]+}},
+// CHECK-SAME: ![[THIS:[0-9]+]], !DIExpression(), ![[LOC:[0-9]+]]
 // CHECK: ret void, !dbg ![[NOINL:[0-9]+]]
 // CHECK: ![[FOO:.*]] = distinct !DISubprogram(name: "foo"
 // CHECK-DAG: ![[A:.*]] = distinct !DISubprogram(name: "A", linkageName: "_ZN1BCI11AEiz"

@@ -428,7 +428,7 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
-//       CHECK: #[[MAP:.+]] = affine_map<(d0)[s0] -> (10, -d0 + s0)>
+//       CHECK: #[[MAP:.+]] = affine_map<(d0)[s0] -> (-d0 + s0, 10)>
 //       CHECK: func @matmul_sequence_fusion(
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
@@ -542,3 +542,95 @@ module attributes {transform.with_named_sequence} {
 //   CHECK-DAG:     %[[INSERTSLICE:.+]] = tensor.insert_slice %[[GENERIC2]] into %[[ITERARG0]][%[[IV]], 0]
 //       CHECK:     scf.yield %[[INSERTSLICE]]
 //       CHECK:   return %[[RESULT]]
+
+// -----
+
+func.func @pad_producer_fusion(%arg0 : tensor<10xf32>) -> tensor<16xf32> {
+  %0 = tensor.empty() : tensor<10xf32>
+  %1 = linalg.generic {
+      indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>],
+      iterator_types = ["parallel"]}
+      ins(%arg0 : tensor<10xf32>) outs(%0 : tensor<10xf32>) {
+    ^bb0(%b0 : f32, %b1 : f32):
+      %2 = arith.addf %b0, %b0: f32
+      linalg.yield %2 : f32
+  } -> tensor<10xf32>
+  %cst = arith.constant 0.0 : f32
+  %2 = tensor.pad %1 low[4] high[2] {
+    ^bb0(%arg1 : index):
+      tensor.yield %cst : f32
+  } : tensor<10xf32> to tensor<16xf32>
+  return %2 : tensor<16xf32>
+}
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %pad = transform.structured.match ops{["tensor.pad"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %b = transform.structured.fuse %pad [8]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+// CHECK-LABEL: func @pad_producer_fusion
+//  CHECK-SAME:     %[[ARG0:.+]]: tensor<10xf32>
+//       CHECK:   %[[FOR_RESULT:.+]] = scf.for
+//       CHECK:     %[[IF_RESULT:.+]] = scf.if
+//       CHECK:     else
+//       CHECK:       %[[SLICE:.+]] = tensor.extract_slice %[[ARG0]]
+//       CHECK:       %[[GENERIC:.+]] = linalg.generic
+//  CHECK-SAME:           ins(%[[SLICE]] :
+//       CHECK:       %[[PAD:.+]] = tensor.pad %[[GENERIC]]
+//       CHECK:       %[[CAST:.+]] = tensor.cast %[[PAD]]
+//       CHECK:       scf.yield %[[CAST]]
+//       CHECK:     %[[INSERT_SLICE:.+]] = tensor.insert_slice %[[IF_RESULT]]
+//       CHECK:     scf.yield %[[INSERT_SLICE]]
+//       CHECK:   return %[[FOR_RESULT]]
+
+// -----
+
+func.func @imperfect_unpack_producer_fusion(%source: tensor<1x1x288x8x4xf32>, %dest: tensor<1x2x1152xf32>) -> tensor<1x2x1152xf32> {
+  %0 = tensor.unpack %source
+      outer_dims_perm = [0, 1, 2]
+      inner_dims_pos = [1, 2]
+      inner_tiles = [8, 4] into %dest
+      : tensor<1x1x288x8x4xf32> -> tensor<1x2x1152xf32>
+  %1 = tensor.empty() : tensor<1x2x1152xf32>
+  %cst = arith.constant 1.0 : f32
+  %2 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+                                        affine_map<(d0, d1, d2) -> (d0, d1, d2)>],
+                       iterator_types = ["parallel", "parallel", "parallel"]}
+                       ins(%0 : tensor<1x2x1152xf32>)
+                       outs(%1 : tensor<1x2x1152xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %7 = arith.addf %in, %cst : f32
+    linalg.yield %7 : f32
+  } -> tensor<1x2x1152xf32>
+  return %2 : tensor<1x2x1152xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %b = transform.structured.fuse %matmul [0, 1, 0]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// CHECK-LABEL: func @imperfect_unpack_producer_fusion
+//  CHECK-SAME:     %[[ARG0:.+]]: tensor<1x1x288x8x4xf32>
+//  CHECK-SAME:     %[[ARG1:.+]]: tensor<1x2x1152xf32>
+//       CHECK:   %[[FOR_RESULT:.+]] = scf.for{{.*}}iter_args(%[[ITER_ARG:.+]] = {{.*}})
+//       CHECK:     %[[SLICE:.+]] = tensor.extract_slice %[[ARG0]]
+//       CHECK:     %[[UNPACK:.+]] = tensor.unpack %[[SLICE]]
+//   CHECK-DAG:     %[[UNPACK_SLICE:.+]] = tensor.extract_slice %[[UNPACK]]
+//   CHECK-DAG:     %[[INIT_SLICE:.+]] = tensor.extract_slice %[[ITER_ARG]]
+//       CHECK:     %[[GENERIC:.+]] = linalg.generic
+//  CHECK-SAME:         ins(%[[UNPACK_SLICE]]
+//  CHECK-SAME:         outs(%[[INIT_SLICE]]
+//       CHECK:     %[[INSERT_SLICE:.+]] = tensor.insert_slice %[[GENERIC]] into %[[ITER_ARG]]
+//       CHECK:     scf.yield %[[INSERT_SLICE]]
+//       CHECK:   return %[[FOR_RESULT]]

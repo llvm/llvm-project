@@ -28,7 +28,7 @@ define void @test1(i32 %i) {
 ; CHECK:       Out:
 ; CHECK-NEXT:    [[X2_LCSSA:%.*]] = phi i32 [ [[X2]], [[LOOP]] ]
 ; CHECK-NEXT:    store i32 [[X2_LCSSA]], ptr @X, align 4, !dbg [[DBG5]]
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 0, metadata [[META12:![0-9]+]], metadata !DIExpression()), !dbg [[DBG5]]
+; CHECK-NEXT:      #dbg_value(i32 0, [[META12:![0-9]+]], !DIExpression(), [[DBG5]])
 ; CHECK-NEXT:    ret void, !dbg [[DBG5]]
 ;
 Entry:

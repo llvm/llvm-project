@@ -29,6 +29,10 @@ struct SideEffectsPass
       effects.clear();
       op.getEffects(effects);
 
+      if (op->hasTrait<OpTrait::IsTerminator>()) {
+        return;
+      }
+
       // Check to see if this operation has any memory effects.
       if (effects.empty()) {
         op.emitRemark() << "operation has no memory effects";
@@ -47,9 +51,14 @@ struct SideEffectsPass
         else if (isa<MemoryEffects::Write>(instance.getEffect()))
           diag << "'write'";
 
-        if (instance.getValue())
-          diag << " on a value,";
-        else if (SymbolRefAttr symbolRef = instance.getSymbolRef())
+        if (instance.getValue()) {
+          if (instance.getEffectValue<OpOperand *>())
+            diag << " on a op operand,";
+          else if (instance.getEffectValue<OpResult>())
+            diag << " on a op result,";
+          else if (instance.getEffectValue<BlockArgument>())
+            diag << " on a block argument,";
+        } else if (SymbolRefAttr symbolRef = instance.getSymbolRef())
           diag << " on a symbol '" << symbolRef << "',";
 
         diag << " on resource '" << instance.getResource()->getName() << "'";

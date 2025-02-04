@@ -69,4 +69,38 @@ exit:
   ret void
 }
 
+declare void @use(i32)
+
+define void @rewrite_preserve_add_nsw(i32 %a) {
+; CHECK-LABEL: 'rewrite_preserve_add_nsw'
+; CHECK-NEXT:  Classifying expressions for: @rewrite_preserve_add_nsw
+; CHECK-NEXT:    %add = add nsw i32 %a, 4
+; CHECK-NEXT:    --> (4 + %a)<nsw> U: [-2147483644,-2147483648) S: [-2147483644,-2147483648)
+; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,-2147483648) S: [0,-2147483648) Exits: (4 + %a)<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add i32 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,-2147483647) S: [1,-2147483647) Exits: (5 + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @rewrite_preserve_add_nsw
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (4 + %a)<nsw>
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 2147483647
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (4 + %a)<nsw>
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %add = add nsw i32 %a, 4
+  call void @use(i32 noundef %add)
+  %pre = icmp sgt i32 %a, -4
+  br i1 %pre, label %loop, label %exit
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  call void @clobber()
+  %iv.next = add i32 %iv, 1
+  %ec = icmp slt i32 %iv, %add
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 declare void @clobber()

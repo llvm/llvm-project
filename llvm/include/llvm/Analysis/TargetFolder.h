@@ -99,11 +99,11 @@ public:
     return FoldBinOp(Opc, LHS, RHS);
   }
 
-  Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
+  Value *FoldCmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
     if (LC && RC)
-      return Fold(ConstantExpr::getCompare(P, LC, RC));
+      return ConstantFoldCompareInstOperands(P, LC, RC, DL);
     return nullptr;
   }
 
@@ -115,7 +115,7 @@ public:
   }
 
   Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                 bool IsInBounds = false) const override {
+                 GEPNoWrapFlags NW) const override {
     if (!ConstantExpr::isSupportedGetElementPtr(Ty))
       return nullptr;
 
@@ -123,10 +123,7 @@ public:
       // Every index must be constant.
       if (any_of(IdxList, [](Value *V) { return !isa<Constant>(V); }))
         return nullptr;
-      if (IsInBounds)
-        return Fold(ConstantExpr::getInBoundsGetElementPtr(Ty, PC, IdxList));
-      else
-        return Fold(ConstantExpr::getGetElementPtr(Ty, PC, IdxList));
+      return Fold(ConstantExpr::getGetElementPtr(Ty, PC, IdxList, NW));
     }
     return nullptr;
   }
@@ -215,15 +212,6 @@ public:
     if (C->getType() == DestTy)
       return C; // avoid calling Fold
     return Fold(ConstantExpr::getPointerBitCastOrAddrSpaceCast(C, DestTy));
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Compare Instructions
-  //===--------------------------------------------------------------------===//
-
-  Constant *CreateFCmp(CmpInst::Predicate P, Constant *LHS,
-                       Constant *RHS) const override {
-    return Fold(ConstantExpr::getCompare(P, LHS, RHS));
   }
 };
 

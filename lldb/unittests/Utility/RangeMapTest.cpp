@@ -12,6 +12,29 @@
 
 using namespace lldb_private;
 
+TEST(RangeVector, SignedBaseType) {
+  using RangeVector = RangeVector<int32_t, uint32_t>;
+  using Entry = RangeVector::Entry;
+
+  RangeVector V;
+  V.Append(10, 5);
+  V.Append(-3, 6);
+  V.Append(-10, 3);
+  V.Sort();
+  EXPECT_THAT(V,
+              testing::ElementsAre(Entry(-10, 3), Entry(-3, 6), Entry(10, 5)));
+  Entry e = *V.begin();
+  EXPECT_EQ(e.GetRangeBase(), -10);
+  EXPECT_EQ(e.GetByteSize(), 3u);
+  EXPECT_EQ(e.GetRangeEnd(), -7);
+  EXPECT_TRUE(e.Contains(-10));
+  EXPECT_TRUE(e.Contains(-8));
+  EXPECT_FALSE(e.Contains(-7));
+  EXPECT_TRUE(e.Union(Entry(-8, 2)));
+  EXPECT_EQ(e, Entry(-10, 4));
+  EXPECT_EQ(e.Intersect(Entry(-7, 3)), Entry(-7, 1));
+}
+
 TEST(RangeVector, CombineConsecutiveRanges) {
   using RangeVector = RangeVector<uint32_t, uint32_t>;
   using Entry = RangeVector::Entry;

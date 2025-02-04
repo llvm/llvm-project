@@ -68,7 +68,7 @@ struct J : I {
 // DEV:  %coerce = alloca %struct.C, align 4, addrspace(5)
 // DEV:  %c = addrspacecast ptr addrspace(5) %coerce to ptr
 // DEV:  call void @llvm.memcpy.p0.p4.i64(ptr align 4 %c, ptr addrspace(4) align 4 %0, i64 8, i1 false)
-// DEV:  %i = getelementptr inbounds %struct.C, ptr %c, i32 0, i32 1
+// DEV:  %i = getelementptr inbounds nuw %struct.C, ptr %c, i32 0, i32 1
 // DEV:  store i32 1, ptr %i, align 4
 
 __global__ void C_kernel(C c)
@@ -78,7 +78,7 @@ __global__ void C_kernel(C c)
 
 // HOST-LABEL: define dso_local void @"?test_C@@YAXXZ"()
 // HOST:  %c = alloca %struct.C, align 4
-// HOST:  %i = getelementptr inbounds %struct.C, ptr %c, i32 0, i32 1
+// HOST:  %i = getelementptr inbounds nuw %struct.C, ptr %c, i32 0, i32 1
 // HOST:  store i32 11, ptr %i, align 4
 
 void test_C() {
@@ -92,10 +92,10 @@ void test_C() {
 // DEV:  %j.addr.ascast = addrspacecast ptr addrspace(5) %j.addr to ptr
 // DEV:  store ptr %j, ptr %j.addr.ascast, align 8
 // DEV:  %0 = load ptr, ptr %j.addr.ascast, align 8
-// DEV:  %i = getelementptr inbounds %struct.I, ptr %0, i32 0, i32 1
+// DEV:  %i = getelementptr inbounds nuw %struct.I, ptr %0, i32 0, i32 1
 // DEV:  store i32 2, ptr %i, align 8
 // DEV:  %1 = load ptr, ptr %j.addr.ascast, align 8
-// DEV:  %j1 = getelementptr inbounds %struct.J, ptr %1, i32 0, i32 1
+// DEV:  %j1 = getelementptr inbounds nuw %struct.J, ptr %1, i32 0, i32 1
 // DEV:  store i32 3, ptr %j1, align 8
 // DEV:  %2 = load ptr, ptr %j.addr.ascast, align 8
 // DEV:  %vtable = load ptr addrspace(1), ptr %2, align 8
@@ -128,10 +128,10 @@ __global__ void J_kernel() {
 
 // HOST-LABEL: define dso_local void @"?J_host@@YAXPEAUJ@@@Z"(ptr noundef %j)
 // HOST:  %0 = load ptr, ptr %j.addr, align 8
-// HOST:  %i = getelementptr inbounds %struct.I, ptr %0, i32 0, i32 1
+// HOST:  %i = getelementptr inbounds nuw %struct.I, ptr %0, i32 0, i32 1
 // HOST:  store i32 12, ptr %i, align 8
 // HOST:  %1 = load ptr, ptr %j.addr, align 8
-// HOST:  %j1 = getelementptr inbounds %struct.J, ptr %1, i32 0, i32 1
+// HOST:  %j1 = getelementptr inbounds nuw %struct.J, ptr %1, i32 0, i32 1
 // HOST:  store i32 13, ptr %j1, align 8
 // HOST:  %2 = load ptr, ptr %j.addr, align 8
 // HOST:  %vtable = load ptr, ptr %2, align 8

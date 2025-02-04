@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_DUP3_H
 #define LLVM_LIBC_SRC_UNISTD_DUP3_H
 
-#include <unistd.h>
+#include "hdr/unistd_macros.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int dup3(int oldfd, int newfd, int flags);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_UNISTD_DUP3_H

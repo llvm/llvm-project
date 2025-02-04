@@ -25,14 +25,10 @@ struct Key {
   bool operator== (const Key&) const { return true; }
 };
 
-namespace std
-{
-    template <>
-    struct hash<Key>
-    {
-        std::size_t operator()(Key const &) const {return 0;}
-    };
-}
+template <>
+struct std::hash<Key> {
+  std::size_t operator()(Key const&) const { return 0; }
+};
 
 int main(int, char**)
 {

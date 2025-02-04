@@ -32,14 +32,17 @@ def FIRpointer      : I32BitEnumAttrCaseBit<"pointer", 9>;
 def FIRtarget       : I32BitEnumAttrCaseBit<"target", 10>;
 def FIRvalue        : I32BitEnumAttrCaseBit<"value", 11>;
 def FIRvolatile     : I32BitEnumAttrCaseBit<"fortran_volatile", 12, "volatile">;
+// Used inside internal procedure to flag variables host associated from parent procedure.
 def FIRHostAssoc    : I32BitEnumAttrCaseBit<"host_assoc", 13>;
+// Used inside parent procedure to flag variables host associated in internal procedure.
+def FIRInternalAssoc    : I32BitEnumAttrCaseBit<"internal_assoc", 14>;
 
 def fir_FortranVariableFlagsEnum : I32BitEnumAttr<
     "FortranVariableFlagsEnum",
     "Fortran variable attributes",
     [FIRnoAttributes, FIRallocatable, FIRasynchronous, FIRbind_c, FIRcontiguous,
      FIRintent_in, FIRintent_inout, FIRintent_out, FIRoptional, FIRparameter,
-     FIRpointer, FIRtarget, FIRvalue, FIRvolatile, FIRHostAssoc]> {
+     FIRpointer, FIRtarget, FIRvalue, FIRvolatile, FIRHostAssoc, FIRInternalAssoc]> {
   let separator = ", ";
   let cppNamespace = "::fir";
   let printBitEnumPrimaryGroups = 1;
@@ -58,6 +61,35 @@ def fir_FortranVariableFlagsAttr : fir_Attr<"FortranVariableFlags"> {
         "::fir::FortranVariableFlagsAttr::get($_builder.getContext(), $0)";
 }
 
+
+/// Fortran procedure attributes (F2023 15.6.2.1). BIND attribute (18.3.7)
+/// is also tracked in the same enum. Recursive (resp. Impure) attribute
+/// is implied by the absence of opposite NonRecursive (resp. Pure) attribute.
+/// Beware that "elemental" does not implicitly imply "pure" as it does in
+/// Fortran, "pure" must be made explicit when generating the FIR attribute.
+def FIRfuncNoAttributes  : I32BitEnumAttrCaseNone<"none">;
+def FIRfuncElemental     : I32BitEnumAttrCaseBit<"elemental", 0>;
+def FIRfuncPure          : I32BitEnumAttrCaseBit<"pure", 1>;
+def FIRfuncNonRecursive  : I32BitEnumAttrCaseBit<"non_recursive", 2>;
+def FIRfuncSimple        : I32BitEnumAttrCaseBit<"simple", 3>;
+def FIRfuncBind_c        : I32BitEnumAttrCaseBit<"bind_c", 4>;
+
+def fir_FortranProcedureFlagsEnum : I32BitEnumAttr<
+    "FortranProcedureFlagsEnum",
+    "Fortran procedure attributes",
+    [FIRfuncNoAttributes, FIRfuncElemental, FIRfuncPure, FIRfuncNonRecursive,
+     FIRfuncSimple, FIRfuncBind_c]> {
+  let separator = ", ";
+  let cppNamespace = "::fir";
+  let genSpecializedAttr = 0;
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def fir_FortranProcedureFlagsAttr :
+    EnumAttr<FIROpsDialect, fir_FortranProcedureFlagsEnum, "proc_attrs"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
 def fir_BoxFieldAttr : I32EnumAttr<
     "BoxFieldAttr", "",
     [
@@ -67,90 +99,61 @@ def fir_BoxFieldAttr : I32EnumAttr<
   let cppNamespace = "fir";
 }
 
+def fir_ReduceOperationEnum : I32BitEnumAttr<"ReduceOperationEnum",
+    "intrinsic operations and functions supported by DO CONCURRENT REDUCE",
+    [
+      I32BitEnumAttrCaseBit<"Add", 0, "add">,
+      I32BitEnumAttrCaseBit<"Multiply", 1, "multiply">,
+      I32BitEnumAttrCaseBit<"AND", 2, "and">,
+      I32BitEnumAttrCaseBit<"OR", 3, "or">,
+      I32BitEnumAttrCaseBit<"EQV", 4, "eqv">,
+      I32BitEnumAttrCaseBit<"NEQV", 5, "neqv">,
+      I32BitEnumAttrCaseBit<"MAX", 6, "max">,
+      I32BitEnumAttrCaseBit<"MIN", 7, "min">,
+      I32BitEnumAttrCaseBit<"IAND", 8, "iand">,
+      I32BitEnumAttrCaseBit<"IOR", 9, "ior">,
+      I32BitEnumAttrCaseBit<"EIOR", 10, "eior">
+    ]> {
+  let separator = ", ";
+  let cppNamespace = "::fir";
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def fir_ReduceAttr : fir_Attr<"Reduce"> {
+  let mnemonic = "reduce_attr";
+
+  let parameters = (ins
+    "ReduceOperationEnum":$reduce_operation
+  );
+
+  let assemblyFormat = "`<` $reduce_operation `>`";
+}
+
 // mlir::SideEffects::Resource for modelling operations which add debugging information
 def DebuggingResource : Resource<"::fir::DebuggingResource">;
 
-//===----------------------------------------------------------------------===//
-// CUDA Fortran specific attributes
-//===----------------------------------------------------------------------===//
-
-def fir_CUDADataAttribute : I32EnumAttr<
-    "CUDADataAttribute",
-    "CUDA Fortran variable attributes",
+def fir_LowerBoundModifierAttribute : I32EnumAttr<
+    "LowerBoundModifierAttribute",
+    "Describes how to modify lower bounds",
     [
-      I32EnumAttrCase<"Constant", 0, "constant">,
-      I32EnumAttrCase<"Device", 1, "device">,
-      I32EnumAttrCase<"Managed", 2, "managed">,
-      I32EnumAttrCase<"Pinned", 3, "pinned">,
-      I32EnumAttrCase<"Shared", 4, "shared">,
-      I32EnumAttrCase<"Unified", 5, "unified">,
-      // Texture is omitted since it is obsolete and rejected by semantic.
+      I32EnumAttrCase<"Preserve", 0, "preserve">,
+      I32EnumAttrCase<"SetToOnes", 1, "ones">,
+      I32EnumAttrCase<"SetToZeroes", 2, "zeroes">,
     ]> {
-  let genSpecializedAttr = 0;
   let cppNamespace = "::fir";
 }
 
-def fir_CUDADataAttributeAttr :
-    EnumAttr<FIROpsDialect, fir_CUDADataAttribute, "cuda"> {
-  let assemblyFormat = [{ ```<` $value `>` }];
-}
-
-def fir_CUDAProcAttribute : I32EnumAttr<
-    "CUDAProcAttribute", "CUDA Fortran procedure attributes",
-    [
-      I32EnumAttrCase<"Host", 0, "host">,
-      I32EnumAttrCase<"Device", 1, "device">,
-      I32EnumAttrCase<"HostDevice", 2, "host_device">,
-      I32EnumAttrCase<"Global", 3, "global">,
-      I32EnumAttrCase<"GridGlobal", 4, "grid_global">,
-    ]> {
+def fir_LocationKind : I32EnumAttr<"LocationKind", "Flang location kind",
+  [
+    I32EnumAttrCase<"Base", 0, "base">,
+    I32EnumAttrCase<"Inclusion", 1, "inclusion">,
+  ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::fir";
 }
+def fir_LocationKindAttr : EnumAttr<FIROpsDialect, fir_LocationKind, "loc_kind">;
 
-def fir_CUDAProcAttributeAttr :
-    EnumAttr<FIROpsDialect, fir_CUDAProcAttribute, "cuda_proc"> {
-  let assemblyFormat = [{ ```<` $value `>` }];
-}
-
-def fir_CUDALaunchBoundsAttr : fir_Attr<"CUDALaunchBounds"> {
-  let mnemonic = "launch_bounds";
-
-  let parameters = (ins
-    "mlir::IntegerAttr":$maxTPB,
-    "mlir::IntegerAttr":$minBPM,
-    OptionalParameter<"mlir::IntegerAttr">:$upperBoundClusterSize
-  );
-
-  let assemblyFormat = "`<` struct(params) `>`";
-}
-
-def fir_CUDAClusterDimsAttr : fir_Attr<"CUDAClusterDims"> {
-  let mnemonic = "cluster_dims";
-
-  let parameters = (ins
-    "mlir::IntegerAttr":$x,
-    "mlir::IntegerAttr":$y,
-    "mlir::IntegerAttr":$z
-  );
-
-  let assemblyFormat = "`<` struct(params) `>`";
-}
-
-def fir_CUDADataTransferKind : I32EnumAttr<
-    "CUDADataTransferKind", "CUDA Fortran data transfer kind",
-    [
-      I32EnumAttrCase<"DeviceHost", 0, "device_host">,
-      I32EnumAttrCase<"HostDevice", 1, "host_device">,
-      I32EnumAttrCase<"DeviceDevice", 2, "device_device">,
-    ]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::fir";
-}
-
-def fir_CUDADataTransferKindAttr :
-    EnumAttr<FIROpsDialect, fir_CUDADataTransferKind, "cuda_transfer"> {
-  let assemblyFormat = [{ ```<` $value `>` }];
-}
+def LocationKindArrayAttr : ArrayOfAttr<FIROpsDialect, "LocationKindArray",
+    "loc_kind_array", "LocationKindAttr">;
 
 #endif // FIR_DIALECT_FIR_ATTRS

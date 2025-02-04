@@ -99,6 +99,7 @@ class CheckRunner:
         self.has_check_fixes = False
         self.has_check_messages = False
         self.has_check_notes = False
+        self.expect_no_diagnosis = False
         self.export_fixes = args.export_fixes
         self.fixes = MessagePrefix("CHECK-FIXES")
         self.messages = MessagePrefix("CHECK-MESSAGES")
@@ -172,12 +173,21 @@ class CheckRunner:
                 )
 
             if not has_check_fix and not has_check_message and not has_check_note:
-                sys.exit(
-                    "%s, %s or %s not found in the input"
-                    % (self.fixes.prefix, self.messages.prefix, self.notes.prefix)
-                )
+                self.expect_no_diagnosis = True
 
-        assert self.has_check_fixes or self.has_check_messages or self.has_check_notes
+        expect_diagnosis = (
+            self.has_check_fixes or self.has_check_messages or self.has_check_notes
+        )
+        if self.expect_no_diagnosis and expect_diagnosis:
+            sys.exit(
+                "%s, %s or %s not found in the input"
+                % (
+                    self.fixes.prefix,
+                    self.messages.prefix,
+                    self.notes.prefix,
+                )
+            )
+        assert expect_diagnosis or self.expect_no_diagnosis
 
     def prepare_test_inputs(self):
         # Remove the contents of the CHECK lines to avoid CHECKs matching on
@@ -195,9 +205,11 @@ class CheckRunner:
                 self.temp_file_name,
             ]
             + [
-                "-fix"
-                if self.export_fixes is None
-                else "--export-fixes=" + self.export_fixes
+                (
+                    "-fix"
+                    if self.export_fixes is None
+                    else "--export-fixes=" + self.export_fixes
+                )
             ]
             + [
                 "--checks=-*," + self.check_name,
@@ -225,6 +237,10 @@ class CheckRunner:
         print(diff_output)
         print("------------------------------------------------------------------")
         return clang_tidy_output
+
+    def check_no_diagnosis(self, clang_tidy_output):
+        if clang_tidy_output != "":
+            sys.exit("No diagnostics were expected, but found the ones above")
 
     def check_fixes(self):
         if self.has_check_fixes:
@@ -277,25 +293,45 @@ class CheckRunner:
             self.get_prefixes()
         self.prepare_test_inputs()
         clang_tidy_output = self.run_clang_tidy()
-        if self.export_fixes is None:
+        if self.expect_no_diagnosis:
+            self.check_no_diagnosis(clang_tidy_output)
+        elif self.export_fixes is None:
             self.check_fixes()
             self.check_messages(clang_tidy_output)
             self.check_notes(clang_tidy_output)
 
 
+CPP_STANDARDS = [
+    "c++98",
+    "c++11",
+    ("c++14", "c++1y"),
+    ("c++17", "c++1z"),
+    ("c++20", "c++2a"),
+    ("c++23", "c++2b"),
+    ("c++26", "c++2c"),
+]
+C_STANDARDS = ["c99", ("c11", "c1x"), "c17", ("c23", "c2x"), "c2y"]
+
+
 def expand_std(std):
-    if std == "c++98-or-later":
-        return ["c++98", "c++11", "c++14", "c++17", "c++20", "c++23", "c++2c"]
-    if std == "c++11-or-later":
-        return ["c++11", "c++14", "c++17", "c++20", "c++23", "c++2c"]
-    if std == "c++14-or-later":
-        return ["c++14", "c++17", "c++20", "c++23", "c++2c"]
-    if std == "c++17-or-later":
-        return ["c++17", "c++20", "c++23", "c++2c"]
-    if std == "c++20-or-later":
-        return ["c++20", "c++23", "c++2c"]
-    if std == "c++23-or-later":
-        return ["c++23", "c++2c"]
+    split_std, or_later, _ = std.partition("-or-later")
+
+    if not or_later:
+        return [split_std]
+
+    for standard_list in (CPP_STANDARDS, C_STANDARDS):
+        item = next(
+            (
+                i
+                for i, v in enumerate(standard_list)
+                if (split_std in v if isinstance(v, (list, tuple)) else split_std == v)
+            ),
+            None,
+        )
+        if item is not None:
+            return [split_std] + [
+                x if isinstance(x, str) else x[0] for x in standard_list[item + 1 :]
+            ]
     return [std]
 
 

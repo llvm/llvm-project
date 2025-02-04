@@ -1,5 +1,5 @@
 ; RUN: opt -mtriple=amdgcn-- -mcpu=gfx600 -S -lowerswitch -amdgpu-unify-divergent-exit-nodes -verify -structurizecfg -verify -si-annotate-control-flow -simplifycfg-require-and-preserve-domtree=1 %s | FileCheck -check-prefix=IR %s
-; RUN: opt -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -S -lowerswitch -amdgpu-unify-divergent-exit-nodes -verify -structurizecfg -verify -si-annotate-control-flow -simplifycfg-require-and-preserve-domtree=1 %s | FileCheck -check-prefix=IR %s
+; RUN: opt -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=+wavefrontsize64 -S -lowerswitch -amdgpu-unify-divergent-exit-nodes -verify -structurizecfg -verify -si-annotate-control-flow -simplifycfg-require-and-preserve-domtree=1 %s | FileCheck -check-prefix=IR %s
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefix=GCN %s
 
 ; Add an extra verifier runs. There were some cases where invalid IR
@@ -728,7 +728,7 @@ bb5:                                              ; preds = %bb3
 ; IR-NEXT: br i1 false, label %DummyReturnBlock, label %[[LOOP]]
 
 ; IR: [[EXP]]:
-; IR-NEXT: call void @llvm.amdgcn.exp.compr.v2f16(i32 immarg 0, i32 immarg 15, <2 x half> <half 0xH3C00, half 0xH0000>, <2 x half> <half 0xH0000, half 0xH3C00>, i1 immarg true, i1 immarg true)
+; IR-NEXT: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> <half 0xH3C00, half 0xH0000>, <2 x half> <half 0xH0000, half 0xH3C00>, i1 true, i1 true)
 ; IR-NEXT: ret void
 
 ; IR: DummyReturnBlock:
@@ -743,7 +743,7 @@ loop:                                               ; preds = %loop, %.entry
   br label %loop
 
 bb27:                                             ; preds = %.entry
-  call void @llvm.amdgcn.exp.compr.v2f16(i32 immarg 0, i32 immarg 15, <2 x half> <half 0xH3C00, half 0xH0000>, <2 x half> <half 0xH0000, half 0xH3C00>, i1 immarg true, i1 immarg true)
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> <half 0xH3C00, half 0xH0000>, <2 x half> <half 0xH0000, half 0xH3C00>, i1 true, i1 true)
   ret void
 }
 

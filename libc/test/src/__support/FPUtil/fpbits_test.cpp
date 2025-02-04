@@ -8,10 +8,14 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
+#include "src/__support/big_int.h"
 #include "src/__support/integer_literals.h"
+#include "src/__support/macros/properties/types.h"
 #include "src/__support/sign.h" // Sign
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::Sign;
+using LIBC_NAMESPACE::UInt;
 using LIBC_NAMESPACE::fputil::FPBits;
 using LIBC_NAMESPACE::fputil::FPType;
 using LIBC_NAMESPACE::fputil::internal::FPRep;
@@ -19,6 +23,7 @@ using LIBC_NAMESPACE::fputil::internal::FPRep;
 using LIBC_NAMESPACE::operator""_u16;
 using LIBC_NAMESPACE::operator""_u32;
 using LIBC_NAMESPACE::operator""_u64;
+using LIBC_NAMESPACE::operator""_u96;
 using LIBC_NAMESPACE::operator""_u128;
 
 TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary16) {
@@ -119,9 +124,11 @@ TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary128) {
       UInt128(Rep::quiet_nan()));
 }
 
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 TEST(LlvmLibcFPBitsTest, FPType_X86_Binary80) {
   using Rep = FPRep<FPType::X86_Binary80>;
 
+#if __SIZEOF_LONG_DOUBLE__ == 16
   EXPECT_EQ(
       0b0'0000000000000000000000000000000000000000000000000000000000000000000000000000000_u128,
       UInt128(Rep::zero()));
@@ -149,11 +156,43 @@ TEST(LlvmLibcFPBitsTest, FPType_X86_Binary80) {
   EXPECT_EQ(
       0b0'1111111111111111100000000000000000000000000000000000000000000000000000000000000_u128,
       UInt128(Rep::quiet_nan()));
+#elif __SIZEOF_LONG_DOUBLE__ == 12
+  EXPECT_EQ(
+      0b0'0000000000000000000000000000000000000000000000000000000000000000000000000000000_u96,
+      UInt<96>(Rep::zero()));
+  EXPECT_EQ(
+      0b0'0111111111111111000000000000000000000000000000000000000000000000000000000000000_u96,
+      UInt<96>(Rep::one()));
+  EXPECT_EQ(
+      0b0'0000000000000000000000000000000000000000000000000000000000000000000000000000001_u96,
+      UInt<96>(Rep::min_subnormal()));
+  EXPECT_EQ(
+      0b0'0000000000000000111111111111111111111111111111111111111111111111111111111111111_u96,
+      UInt<96>(Rep::max_subnormal()));
+  EXPECT_EQ(
+      0b0'0000000000000011000000000000000000000000000000000000000000000000000000000000000_u96,
+      UInt<96>(Rep::min_normal()));
+  EXPECT_EQ(
+      0b0'1111111111111101111111111111111111111111111111111111111111111111111111111111111_u96,
+      UInt<96>(Rep::max_normal()));
+  EXPECT_EQ(
+      0b0'1111111111111111000000000000000000000000000000000000000000000000000000000000000_u96,
+      UInt<96>(Rep::inf()));
+  EXPECT_EQ(
+      0b0'1111111111111111010000000000000000000000000000000000000000000000000000000000000_u96,
+      UInt<96>(Rep::signaling_nan()));
+  EXPECT_EQ(
+      0b0'1111111111111111100000000000000000000000000000000000000000000000000000000000000_u96,
+      UInt<96>(Rep::quiet_nan()));
+#else
+#error "unhandled long double type"
+#endif
 }
 
 TEST(LlvmLibcFPBitsTest, FPType_X86_Binary80_IsNan) {
   using Rep = FPRep<FPType::X86_Binary80>;
 
+#if __SIZEOF_LONG_DOUBLE__ == 16
   EXPECT_TRUE( // NAN : Pseudo-Infinity
       Rep(0b0'111111111111111'0000000000000000000000000000000000000000000000000000000000000000_u128)
           .is_nan());
@@ -190,7 +229,48 @@ TEST(LlvmLibcFPBitsTest, FPType_X86_Binary80_IsNan) {
   EXPECT_FALSE( // Normalized
       Rep(0b0'111111111111110'1000000000000000000000000000000000000000000000000000000000000000_u128)
           .is_nan());
+#elif __SIZEOF_LONG_DOUBLE__ == 12
+  EXPECT_TRUE( // NAN : Pseudo-Infinity
+      Rep(0b0'111111111111111'0000000000000000000000000000000000000000000000000000000000000000_u96)
+          .is_nan());
+  EXPECT_TRUE( // NAN : Pseudo Not a Number
+      Rep(0b0'111111111111111'0000000000000000000000000000000000000000000000000000000000000001_u96)
+          .is_nan());
+  EXPECT_TRUE( // NAN : Pseudo Not a Number
+      Rep(0b0'111111111111111'0100000000000000000000000000000000000000000000000000000000000000_u96)
+          .is_nan());
+  EXPECT_TRUE( // NAN : Signalling Not a Number
+      Rep(0b0'111111111111111'1000000000000000000000000000000000000000000000000000000000000001_u96)
+          .is_nan());
+  EXPECT_TRUE( // NAN : Floating-point Indefinite
+      Rep(0b0'111111111111111'1100000000000000000000000000000000000000000000000000000000000000_u96)
+          .is_nan());
+  EXPECT_TRUE( // NAN : Quiet Not a Number
+      Rep(0b0'111111111111111'1100000000000000000000000000000000000000000000000000000000000001_u96)
+          .is_nan());
+  EXPECT_TRUE( // NAN : Unnormal
+      Rep(0b0'111111111111110'0000000000000000000000000000000000000000000000000000000000000000_u96)
+          .is_nan());
+  EXPECT_FALSE( // Zero
+      Rep(0b0'000000000000000'0000000000000000000000000000000000000000000000000000000000000000_u96)
+          .is_nan());
+  EXPECT_FALSE( // Subnormal
+      Rep(0b0'000000000000000'0000000000000000000000000000000000000000000000000000000000000001_u96)
+          .is_nan());
+  EXPECT_FALSE( // Pseudo Denormal
+      Rep(0b0'000000000000000'1000000000000000000000000000000000000000000000000000000000000001_u96)
+          .is_nan());
+  EXPECT_FALSE( // Infinity
+      Rep(0b0'111111111111111'1000000000000000000000000000000000000000000000000000000000000000_u96)
+          .is_nan());
+  EXPECT_FALSE( // Normalized
+      Rep(0b0'111111111111110'1000000000000000000000000000000000000000000000000000000000000000_u96)
+          .is_nan());
+#else
+#error "unhandled long double type"
+#endif
 }
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 enum class FP {
   ZERO,
@@ -238,6 +318,7 @@ template <typename T> constexpr auto make(Sign sign, FP fp) {
   case FP::QUIET_NAN:
     return T::quiet_nan(sign);
   }
+  __builtin_unreachable();
 }
 
 // Tests all properties for all types of float.
@@ -424,12 +505,10 @@ TEST(LlvmLibcFPBitsTest, DoubleType) {
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 }
 
-#ifdef LIBC_TARGET_ARCH_IS_X86
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 TEST(LlvmLibcFPBitsTest, X86LongDoubleType) {
   using LongDoubleBits = FPBits<long double>;
-
-  if constexpr (sizeof(long double) == sizeof(double))
-    return; // The tests for the "double" type cover for this case.
+  using Rep = FPRep<FPType::X86_Binary80>;
 
   EXPECT_STREQ(LIBC_NAMESPACE::str(LongDoubleBits::inf(Sign::POS)).c_str(),
                "(+Infinity)");
@@ -441,62 +520,117 @@ TEST(LlvmLibcFPBitsTest, X86LongDoubleType) {
   LongDoubleBits zero(0.0l);
   EXPECT_TRUE(zero.is_pos());
   EXPECT_EQ(zero.get_biased_exponent(), 0_u16);
-  EXPECT_EQ(zero.get_mantissa(), 0_u128);
-  EXPECT_EQ(zero.uintval(), 0_u128);
+  EXPECT_EQ(zero.get_mantissa(), LongDoubleBits::StorageType(Rep::zero()));
+  EXPECT_EQ(zero.uintval(), LongDoubleBits::StorageType(Rep::zero()));
+#if __SIZEOF_LONG_DOUBLE__ == 16
   EXPECT_STREQ(
       LIBC_NAMESPACE::str(zero).c_str(),
       "0x00000000000000000000000000000000 = "
       "(S: 0, E: 0x0000, I: 0, M: 0x00000000000000000000000000000000)");
+#elif __SIZEOF_LONG_DOUBLE__ == 12
+  EXPECT_STREQ(LIBC_NAMESPACE::str(zero).c_str(),
+               "0x000000000000000000000000 = "
+               "(S: 0, E: 0x0000, I: 0, M: 0x000000000000000000000000)");
+#else
+#error "unhandled long double type"
+#endif
 
   LongDoubleBits negzero(-0.0l);
   EXPECT_TRUE(negzero.is_neg());
   EXPECT_EQ(negzero.get_biased_exponent(), 0_u16);
-  EXPECT_EQ(negzero.get_mantissa(), 0_u128);
+  EXPECT_EQ(negzero.get_mantissa(), LongDoubleBits::StorageType(Rep::zero()));
+#if __SIZEOF_LONG_DOUBLE__ == 16
   EXPECT_EQ(negzero.uintval(), 0x8000'00000000'00000000_u128);
   EXPECT_STREQ(
       LIBC_NAMESPACE::str(negzero).c_str(),
       "0x00000000000080000000000000000000 = "
       "(S: 1, E: 0x0000, I: 0, M: 0x00000000000000000000000000000000)");
+#elif __SIZEOF_LONG_DOUBLE__ == 12
+  EXPECT_EQ(negzero.uintval(), 0x8000'00000000'00000000_u96);
+  EXPECT_STREQ(LIBC_NAMESPACE::str(negzero).c_str(),
+               "0x000080000000000000000000 = "
+               "(S: 1, E: 0x0000, I: 0, M: 0x000000000000000000000000)");
+#else
+#error "unhandled long double type"
+#endif
 
   LongDoubleBits one(1.0l);
   EXPECT_TRUE(one.is_pos());
   EXPECT_EQ(one.get_biased_exponent(), 0x3FFF_u16);
-  EXPECT_EQ(one.get_mantissa(), 0_u128);
+  EXPECT_EQ(one.get_mantissa(), LongDoubleBits::StorageType(Rep::zero()));
+#if __SIZEOF_LONG_DOUBLE__ == 16
   EXPECT_EQ(one.uintval(), 0x3FFF'80000000'00000000_u128);
   EXPECT_STREQ(
       LIBC_NAMESPACE::str(one).c_str(),
       "0x0000000000003FFF8000000000000000 = "
       "(S: 0, E: 0x3FFF, I: 1, M: 0x00000000000000000000000000000000)");
+#elif __SIZEOF_LONG_DOUBLE__ == 12
+  EXPECT_EQ(one.uintval(), 0x3FFF'80000000'00000000_u96);
+  EXPECT_STREQ(LIBC_NAMESPACE::str(one).c_str(),
+               "0x00003FFF8000000000000000 = "
+               "(S: 0, E: 0x3FFF, I: 1, M: 0x000000000000000000000000)");
+#else
+#error "unhandled long double type"
+#endif
 
   LongDoubleBits negone(-1.0l);
   EXPECT_TRUE(negone.is_neg());
   EXPECT_EQ(negone.get_biased_exponent(), 0x3FFF_u16);
-  EXPECT_EQ(negone.get_mantissa(), 0_u128);
+  EXPECT_EQ(negone.get_mantissa(), LongDoubleBits::StorageType(Rep::zero()));
+#if __SIZEOF_LONG_DOUBLE__ == 16
   EXPECT_EQ(negone.uintval(), 0xBFFF'80000000'00000000_u128);
   EXPECT_STREQ(
       LIBC_NAMESPACE::str(negone).c_str(),
       "0x000000000000BFFF8000000000000000 = "
       "(S: 1, E: 0x3FFF, I: 1, M: 0x00000000000000000000000000000000)");
+#elif __SIZEOF_LONG_DOUBLE__ == 12
+  EXPECT_EQ(negone.uintval(), 0xBFFF'80000000'00000000_u96);
+  EXPECT_STREQ(LIBC_NAMESPACE::str(negone).c_str(),
+               "0x0000BFFF8000000000000000 = "
+               "(S: 1, E: 0x3FFF, I: 1, M: 0x000000000000000000000000)");
+#else
+#error "unhandled long double type"
+#endif
 
   LongDoubleBits num(1.125l);
   EXPECT_TRUE(num.is_pos());
   EXPECT_EQ(num.get_biased_exponent(), 0x3FFF_u16);
+#if __SIZEOF_LONG_DOUBLE__ == 16
   EXPECT_EQ(num.get_mantissa(), 0x10000000'00000000_u128);
   EXPECT_EQ(num.uintval(), 0x3FFF'90000000'00000000_u128);
   EXPECT_STREQ(
       LIBC_NAMESPACE::str(num).c_str(),
       "0x0000000000003FFF9000000000000000 = "
       "(S: 0, E: 0x3FFF, I: 1, M: 0x00000000000000001000000000000000)");
+#elif __SIZEOF_LONG_DOUBLE__ == 12
+  EXPECT_EQ(num.get_mantissa(), 0x10000000'00000000_u96);
+  EXPECT_EQ(num.uintval(), 0x3FFF'90000000'00000000_u96);
+  EXPECT_STREQ(LIBC_NAMESPACE::str(num).c_str(),
+               "0x00003FFF9000000000000000 = "
+               "(S: 0, E: 0x3FFF, I: 1, M: 0x000000001000000000000000)");
+#else
+#error "unhandled long double type"
+#endif
 
   LongDoubleBits negnum(-1.125l);
   EXPECT_TRUE(negnum.is_neg());
   EXPECT_EQ(negnum.get_biased_exponent(), 0x3FFF_u16);
+#if __SIZEOF_LONG_DOUBLE__ == 16
   EXPECT_EQ(negnum.get_mantissa(), 0x10000000'00000000_u128);
   EXPECT_EQ(negnum.uintval(), 0xBFFF'90000000'00000000_u128);
   EXPECT_STREQ(
       LIBC_NAMESPACE::str(negnum).c_str(),
       "0x000000000000BFFF9000000000000000 = "
       "(S: 1, E: 0x3FFF, I: 1, M: 0x00000000000000001000000000000000)");
+#elif __SIZEOF_LONG_DOUBLE__ == 12
+  EXPECT_EQ(negnum.get_mantissa(), 0x10000000'00000000_u96);
+  EXPECT_EQ(negnum.uintval(), 0xBFFF'90000000'00000000_u96);
+  EXPECT_STREQ(LIBC_NAMESPACE::str(negnum).c_str(),
+               "0x0000BFFF9000000000000000 = "
+               "(S: 1, E: 0x3FFF, I: 1, M: 0x000000001000000000000000)");
+#else
+#error "unhandled long double type"
+#endif
 
   LongDoubleBits quiet_nan = LongDoubleBits::quiet_nan();
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);

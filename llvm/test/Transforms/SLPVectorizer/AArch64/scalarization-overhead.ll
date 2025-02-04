@@ -3,39 +3,41 @@
 
 ; Test case reported on D134605 where the vectorization was causing a slowdown due to an underestimation in the cost of the extractions.
 
+; NOTE: cost of shuffle <4 x float>,  <4 x float>, <2 x i32> <i32 2, i32 5> is 12!
+
 define fastcc i64 @zot(float %arg, float %arg1, float %arg2, float %arg3, float %arg4, ptr %arg5, i1 %arg6, i1 %arg7, i1 %arg8) {
 ; CHECK-LABEL: @zot(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> <float 0.000000e+00, float poison, float poison, float poison>, float [[ARG:%.*]], i32 1
+; CHECK-NEXT:    [[VAL9:%.*]] = fmul fast float 0.000000e+00, [[ARG:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> <float 0.000000e+00, float poison, float poison, float poison>, float [[ARG]], i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[ARG3:%.*]], i32 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <4 x float> <float 0.000000e+00, float 0.000000e+00, float 1.000000e+00, float 1.000000e+00>, [[TMP2]]
-; CHECK-NEXT:    [[VAL12:%.*]] = fadd fast float [[ARG3]], 1.000000e+00
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP2]], float [[VAL12]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float 0.000000e+00, i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd fast <4 x float> [[TMP5]], <float 2.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> <float poison, float 0.000000e+00>, float [[ARG3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast <2 x float> [[TMP4]], <float 1.000000e+00, float 0.000000e+00>
+; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> [[TMP2]], <2 x float> [[TMP5]], i64 0)
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <4 x float> [[TMP6]], <float 2.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
 ; CHECK-NEXT:    br i1 [[ARG6:%.*]], label [[BB18:%.*]], label [[BB57:%.*]]
 ; CHECK:       bb18:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x float> [ [[TMP6]], [[BB:%.*]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[TMP6]], i32 2
-; CHECK-NEXT:    [[VAL23:%.*]] = fmul fast float [[TMP8]], 2.000000e+00
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x float> [[TMP6]], i32 3
-; CHECK-NEXT:    [[VAL24:%.*]] = fmul fast float [[TMP9]], 3.000000e+00
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <4 x float> [ [[TMP7]], [[BB:%.*]] ]
+; CHECK-NEXT:    [[VAL16:%.*]] = extractelement <4 x float> [[TMP7]], i32 2
+; CHECK-NEXT:    [[VAL23:%.*]] = fmul fast float [[VAL16]], 2.000000e+00
+; CHECK-NEXT:    [[VAL17:%.*]] = extractelement <4 x float> [[TMP7]], i32 3
+; CHECK-NEXT:    [[VAL24:%.*]] = fmul fast float [[VAL17]], 3.000000e+00
 ; CHECK-NEXT:    br i1 [[ARG7:%.*]], label [[BB25:%.*]], label [[BB57]]
 ; CHECK:       bb25:
-; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x float> [ [[TMP7]], [[BB18]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x float> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = phi <4 x float> [ [[TMP8]], [[BB18]] ]
 ; CHECK-NEXT:    br label [[BB30:%.*]]
 ; CHECK:       bb30:
 ; CHECK-NEXT:    [[VAL31:%.*]] = phi float [ [[VAL55:%.*]], [[BB30]] ], [ 0.000000e+00, [[BB25]] ]
-; CHECK-NEXT:    [[VAL32:%.*]] = phi float [ [[TMP11]], [[BB30]] ], [ 0.000000e+00, [[BB25]] ]
+; CHECK-NEXT:    [[VAL32:%.*]] = phi float [ [[VAL9]], [[BB30]] ], [ 0.000000e+00, [[BB25]] ]
 ; CHECK-NEXT:    [[TMP12:%.*]] = load <4 x i8>, ptr [[ARG5:%.*]], align 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = uitofp <4 x i8> [[TMP12]] to <4 x float>
 ; CHECK-NEXT:    [[TMP14:%.*]] = fsub fast <4 x float> [[TMP13]], [[TMP3]]
-; CHECK-NEXT:    [[TMP15:%.*]] = fmul fast <4 x float> [[TMP14]], [[TMP10]]
-; CHECK-NEXT:    [[TMP16:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP15]])
+; CHECK-NEXT:    [[TMP15:%.*]] = fmul fast <4 x float> [[TMP14]], [[TMP11]]
+; CHECK-NEXT:    [[VAL54:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP15]])
 ; CHECK-NEXT:    [[VAL55]] = tail call fast float @llvm.minnum.f32(float [[VAL31]], float [[ARG1:%.*]])
-; CHECK-NEXT:    [[VAL56:%.*]] = tail call fast float @llvm.maxnum.f32(float [[ARG2:%.*]], float [[TMP16]])
+; CHECK-NEXT:    [[VAL56:%.*]] = tail call fast float @llvm.maxnum.f32(float [[ARG2:%.*]], float [[VAL54]])
 ; CHECK-NEXT:    call void @ham(float [[VAL55]], float [[VAL56]])
 ; CHECK-NEXT:    br i1 [[ARG8:%.*]], label [[BB30]], label [[BB57]]
 ; CHECK:       bb57:

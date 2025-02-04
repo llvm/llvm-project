@@ -43,7 +43,7 @@ Type matchContainerType(Type element, Type container) {
 TypedAttr getConstantAttr(Type type, int64_t value, PatternRewriter &rewriter) {
   if (auto shapedTy = dyn_cast<ShapedType>(type)) {
     Type eTy = shapedTy.getElementType();
-    APInt valueInt(eTy.getIntOrFloatBitWidth(), value);
+    APInt valueInt(eTy.getIntOrFloatBitWidth(), value, /*isSigned=*/true);
     return DenseIntElementsAttr::get(shapedTy, valueInt);
   }
 

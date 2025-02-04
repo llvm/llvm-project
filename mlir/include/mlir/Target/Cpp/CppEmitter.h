@@ -16,7 +16,6 @@
 #include "mlir/Support/LLVM.h"
 
 namespace mlir {
-struct LogicalResult;
 class Operation;
 namespace emitc {
 

@@ -35,7 +35,6 @@ program wsloop_variable
 !CHECK:          hlfir.assign %[[TMP11]] to %{{.*}} : f32, !fir.ref<f32>
 !CHECK:          omp.yield
 !CHECK:        }
-!CHECK:        omp.terminator
 !CHECK:      }
 
   !$omp do collapse(2)
@@ -58,7 +57,6 @@ program wsloop_variable
 !CHECK:          hlfir.assign %[[TMP16]] to %{{.*}} : f32, !fir.ref<f32>
 !CHECK:          omp.yield
 !CHECK:        }
-!CHECK:        omp.terminator
 !CHECK:      }
 
   !$omp do
@@ -79,7 +77,6 @@ program wsloop_variable
 !CHECK:          hlfir.assign %[[TMP21]] to %{{.*}} : f32, !fir.ref<f32>
 !CHECK:          omp.yield
 !CHECK:        }
-!CHECK:        omp.terminator
 !CHECK:      }
 
   !$omp do
@@ -91,26 +88,30 @@ program wsloop_variable
 end program wsloop_variable
 
 !CHECK-LABEL: func.func @_QPwsloop_variable_sub() {
-!CHECK:           %[[VAL_0:.*]] = fir.alloca i8 {adapt.valuebyref, pinned}
-!CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFwsloop_variable_subEi1"} : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
-!CHECK:           %[[VAL_2:.*]] = fir.alloca i16 {adapt.valuebyref, pinned}
-!CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFwsloop_variable_subEi2"} : (!fir.ref<i16>) -> (!fir.ref<i16>, !fir.ref<i16>)
 !CHECK:           %[[VAL_4:.*]] = fir.alloca i8 {bindc_name = "i1", uniq_name = "_QFwsloop_variable_subEi1"}
 !CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFwsloop_variable_subEi1"} : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
+
 !CHECK:           %[[VAL_6:.*]] = fir.alloca i128 {bindc_name = "i16_lb", uniq_name = "_QFwsloop_variable_subEi16_lb"}
 !CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFwsloop_variable_subEi16_lb"} : (!fir.ref<i128>) -> (!fir.ref<i128>, !fir.ref<i128>)
+
 !CHECK:           %[[VAL_8:.*]] = fir.alloca i8 {bindc_name = "i1_ub", uniq_name = "_QFwsloop_variable_subEi1_ub"}
 !CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {uniq_name = "_QFwsloop_variable_subEi1_ub"} : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
+
 !CHECK:           %[[VAL_10:.*]] = fir.alloca i16 {bindc_name = "i2", uniq_name = "_QFwsloop_variable_subEi2"}
 !CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] {uniq_name = "_QFwsloop_variable_subEi2"} : (!fir.ref<i16>) -> (!fir.ref<i16>, !fir.ref<i16>)
+
 !CHECK:           %[[VAL_12:.*]] = fir.alloca i16 {bindc_name = "i2_s", uniq_name = "_QFwsloop_variable_subEi2_s"}
 !CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QFwsloop_variable_subEi2_s"} : (!fir.ref<i16>) -> (!fir.ref<i16>, !fir.ref<i16>)
+
 !CHECK:           %[[VAL_14:.*]] = fir.alloca i32 {bindc_name = "i4_s", uniq_name = "_QFwsloop_variable_subEi4_s"}
 !CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_14]] {uniq_name = "_QFwsloop_variable_subEi4_s"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
 !CHECK:           %[[VAL_16:.*]] = fir.alloca i64 {bindc_name = "i8", uniq_name = "_QFwsloop_variable_subEi8"}
 !CHECK:           %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_16]] {uniq_name = "_QFwsloop_variable_subEi8"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+
 !CHECK:           %[[VAL_18:.*]] = fir.alloca i8 {bindc_name = "j1", uniq_name = "_QFwsloop_variable_subEj1"}
 !CHECK:           %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_18]] {uniq_name = "_QFwsloop_variable_subEj1"} : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
+
 !CHECK:           %[[VAL_20:.*]] = fir.alloca f32 {bindc_name = "x", uniq_name = "_QFwsloop_variable_subEx"}
 !CHECK:           %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_20]] {uniq_name = "_QFwsloop_variable_subEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 
@@ -121,6 +122,9 @@ subroutine wsloop_variable_sub
   integer(kind=8) :: i8
   integer(kind=16) :: i16_lb
   real :: x
+
+!CHECK:           %[[VAL_2:.*]] = fir.alloca i16 {bindc_name = "i2", pinned, {{.*}}}
+!CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFwsloop_variable_subEi2"} : (!fir.ref<i16>) -> (!fir.ref<i16>, !fir.ref<i16>)
 
 !CHECK:           %[[VAL_22:.*]] = arith.constant 1 : i32
 !CHECK:           %[[VAL_23:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<i8>
@@ -146,16 +150,15 @@ subroutine wsloop_variable_sub
 !CHECK:                 %[[VAL_42:.*]] = arith.addi %[[VAL_40]], %[[VAL_41]] : i64
 !CHECK:                 %[[VAL_43:.*]] = fir.convert %[[VAL_42]] : (i64) -> f32
 !CHECK:                 hlfir.assign %[[VAL_43]] to %[[VAL_21]]#0 : f32, !fir.ref<f32>
-!CHECK:                 %[[VAL_44:.*]] = arith.addi %[[VAL_37]], %[[VAL_34]] : index
+!CHECK:                 %[[VAL_44:.*]] = arith.addi %[[VAL_37]], %[[VAL_34]] overflow<nsw> : index
 !CHECK:                 %[[VAL_45:.*]] = fir.convert %[[VAL_34]] : (index) -> i64
 !CHECK:                 %[[VAL_46:.*]] = fir.load %[[VAL_17]]#1 : !fir.ref<i64>
-!CHECK:                 %[[VAL_47:.*]] = arith.addi %[[VAL_46]], %[[VAL_45]] : i64
+!CHECK:                 %[[VAL_47:.*]] = arith.addi %[[VAL_46]], %[[VAL_45]] overflow<nsw> : i64
 !CHECK:                 fir.result %[[VAL_44]], %[[VAL_47]] : index, i64
 !CHECK:               }
 !CHECK:               fir.store %[[VAL_48:.*]]#1 to %[[VAL_17]]#1 : !fir.ref<i64>
 !CHECK:               omp.yield
 !CHECK:             }
-!CHECK:             omp.terminator
 !CHECK:           }
 
   !$omp do
@@ -166,9 +169,12 @@ subroutine wsloop_variable_sub
   end do
   !$omp end do
 
-
 !CHECK:           %[[VAL_49:.*]] = arith.constant 5 : i8
 !CHECK:           hlfir.assign %[[VAL_49]] to %[[VAL_19]]#0 : i8, !fir.ref<i8>
+
+!CHECK:           %[[VAL_0:.*]] = fir.alloca i8 {bindc_name = "i1", pinned, {{.*}}}
+!CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFwsloop_variable_subEi1"} : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
+
 !CHECK:           %[[VAL_50:.*]] = arith.constant 1 : i32
 !CHECK:           %[[VAL_51:.*]] = arith.constant 10 : i32
 !CHECK:           %[[VAL_52:.*]] = arith.constant 1 : i32
@@ -180,11 +186,9 @@ subroutine wsloop_variable_sub
 !CHECK:               %[[VAL_56:.*]] = fir.load %[[VAL_19]]#0 : !fir.ref<i8>
 !CHECK:               %[[VAL_57:.*]] = arith.cmpi eq, %[[VAL_55]], %[[VAL_56]] : i8
 !CHECK:               fir.if %[[VAL_57]] {
-!CHECK:               } else {
 !CHECK:               }
 !CHECK:               omp.yield
 !CHECK:             }
-!CHECK:             omp.terminator
 !CHECK:           }
   j1 = 5
   !$omp do

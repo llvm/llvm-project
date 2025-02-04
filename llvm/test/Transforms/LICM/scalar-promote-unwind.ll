@@ -304,7 +304,7 @@ define void @loop_within_tryblock() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i32 } [[TMP0]], 1
 ; CHECK-NEXT:    br label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       catch.dispatch:
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.eh.typeid.for(ptr @_ZTIi)
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi)
 ; CHECK-NEXT:    [[MATCHES:%.*]] = icmp eq i32 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    br i1 [[MATCHES]], label [[CATCH:%.*]], label [[EH_RESUME:%.*]]
 ; CHECK:       catch:
@@ -355,7 +355,7 @@ lpad:
   br label %catch.dispatch
 
 catch.dispatch:
-  %4 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #3
+  %4 = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi) #3
   %matches = icmp eq i32 %3, %4
   br i1 %matches, label %catch, label %eh.resume
 
@@ -564,6 +564,6 @@ declare ptr @__cxa_begin_catch(ptr)
 
 declare void @__cxa_end_catch()
 
-declare i32 @llvm.eh.typeid.for(ptr)
+declare i32 @llvm.eh.typeid.for.p0(ptr)
 
 declare void @f() uwtable

@@ -88,6 +88,7 @@ def OneShotBufferizeOp
       DefaultValuedAttr<BoolAttr, "false">:$dump_alias_sets,
       DefaultValuedAttr<BoolAttr, "false">:$test_analysis_only,
       DefaultValuedAttr<BoolAttr, "false">:$print_conflicts,
+      DefaultValuedAttr<BoolAttr, "true">:$check_parallel_regions,
       DefaultValuedAttr<StrAttr, "\"memref.copy\"">:$memcpy_op);
 
   let results = (outs TransformHandleTypeInterface:$transformed);

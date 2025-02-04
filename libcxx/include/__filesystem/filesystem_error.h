@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___FILESYSTEM_FILESYSTEM_ERROR_H
 #define _LIBCPP___FILESYSTEM_FILESYSTEM_ERROR_H
 
-#include <__availability>
 #include <__config>
 #include <__filesystem/path.h>
 #include <__memory/shared_ptr.h>
@@ -68,15 +67,15 @@ private:
   shared_ptr<_Storage> __storage_;
 };
 
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
 template <class... _Args>
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY void
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY void
 __throw_filesystem_error(_Args&&... __args) {
   throw filesystem_error(std::forward<_Args>(__args)...);
 }
 #  else
 template <class... _Args>
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY void
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY void
 __throw_filesystem_error(_Args&&...) {
   _LIBCPP_VERBOSE_ABORT("filesystem_error was thrown in -fno-exceptions mode");
 }

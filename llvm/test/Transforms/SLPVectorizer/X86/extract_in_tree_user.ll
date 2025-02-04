@@ -6,17 +6,17 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 @a = common global ptr null, align 8
 
 ; Function Attrs: nounwind ssp uwtable
-define i32 @fn1() {
+define void @fn1() {
 ; CHECK-LABEL: @fn1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr @a, align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x ptr> [[TMP1]], <2 x ptr> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, <2 x ptr> [[TMP2]], <2 x i64> <i64 11, i64 56>
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 11
-; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint <2 x ptr> [[TMP3]] to <2 x i64>
-; CHECK-NEXT:    store <2 x i64> [[TMP5]], ptr [[TMP4]], align 8
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 11
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint <2 x ptr> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    store <2 x i64> [[TMP4]], ptr [[ADD_PTR]], align 8
+; CHECK-NEXT:    ret void
 ;
 entry:
   %0 = load ptr, ptr @a, align 8
@@ -27,7 +27,7 @@ entry:
   %2 = ptrtoint ptr %add.ptr1 to i64
   %arrayidx2 = getelementptr inbounds i64, ptr %0, i64 12
   store i64 %2, ptr %arrayidx2, align 8
-  ret i32 undef
+  ret void
 }
 
 declare float @llvm.powi.f32.i32(float, i32)
@@ -89,14 +89,14 @@ define void @externally_used_ptrs() {
 ; CHECK-LABEL: @externally_used_ptrs(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr @a, align 8
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 11
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x ptr> [[TMP1]], <2 x ptr> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, <2 x ptr> [[TMP2]], <2 x i64> <i64 56, i64 11>
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 11
-; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint <2 x ptr> [[TMP3]] to <2 x i64>
-; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x i64>, ptr [[TMP4]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i64> [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint <2 x ptr> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i64>, ptr [[ADD_PTR]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i64> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    store <2 x i64> [[TMP6]], ptr [[ADD_PTR]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

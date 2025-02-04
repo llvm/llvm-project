@@ -14,5 +14,3 @@ add_llvm_unittest(CoroTests
   )
 
 target_link_libraries(CoroTests PRIVATE LLVMTestingSupport)
-
-set_property(TARGET CoroTests PROPERTY FOLDER "Tests/UnitTests/TransformTests")

@@ -27,7 +27,7 @@ define <2 x float> @canonicalize_zero_vector() {
 
 define <2 x float> @canonicalize_negzero_vector() {
 ; CHECK-LABEL: @canonicalize_negzero_vector(
-; CHECK-NEXT:    ret <2 x float> <float -0.000000e+00, float -0.000000e+00>
+; CHECK-NEXT:    ret <2 x float> splat (float -0.000000e+00)
 ;
   %ret = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> <float -0.0, float -0.0>)
   ret <2 x float> %ret

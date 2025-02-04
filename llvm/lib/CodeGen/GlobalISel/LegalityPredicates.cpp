@@ -49,6 +49,17 @@ LegalityPredicate LegalityPredicates::typePairInSet(
   };
 }
 
+LegalityPredicate LegalityPredicates::typeTupleInSet(
+    unsigned TypeIdx0, unsigned TypeIdx1, unsigned TypeIdx2,
+    std::initializer_list<std::tuple<LLT, LLT, LLT>> TypesInit) {
+  SmallVector<std::tuple<LLT, LLT, LLT>, 4> Types = TypesInit;
+  return [=](const LegalityQuery &Query) {
+    std::tuple<LLT, LLT, LLT> Match = {
+        Query.Types[TypeIdx0], Query.Types[TypeIdx1], Query.Types[TypeIdx2]};
+    return llvm::is_contained(Types, Match);
+  };
+}
+
 LegalityPredicate LegalityPredicates::typePairAndMemDescInSet(
     unsigned TypeIdx0, unsigned TypeIdx1, unsigned MMOIdx,
     std::initializer_list<TypePairAndMemDesc> TypesAndMemDescInit) {
@@ -87,6 +98,12 @@ LegalityPredicate LegalityPredicates::isPointer(unsigned TypeIdx,
   return [=](const LegalityQuery &Query) {
     LLT Ty = Query.Types[TypeIdx];
     return Ty.isPointer() && Ty.getAddressSpace() == AddrSpace;
+  };
+}
+
+LegalityPredicate LegalityPredicates::isPointerVector(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    return Query.Types[TypeIdx].isPointerVector();
   };
 }
 
@@ -194,14 +211,15 @@ LegalityPredicate LegalityPredicates::memSizeNotByteSizePow2(unsigned MMOIdx) {
   return [=](const LegalityQuery &Query) {
     const LLT MemTy = Query.MMODescrs[MMOIdx].MemoryTy;
     return !MemTy.isByteSized() ||
-           !llvm::has_single_bit<uint32_t>(MemTy.getSizeInBytes());
+           !llvm::has_single_bit<uint32_t>(
+               MemTy.getSizeInBytes().getKnownMinValue());
   };
 }
 
 LegalityPredicate LegalityPredicates::numElementsNotPow2(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     const LLT QueryTy = Query.Types[TypeIdx];
-    return QueryTy.isVector() && !isPowerOf2_32(QueryTy.getNumElements());
+    return QueryTy.isFixedVector() && !isPowerOf2_32(QueryTy.getNumElements());
   };
 }
 

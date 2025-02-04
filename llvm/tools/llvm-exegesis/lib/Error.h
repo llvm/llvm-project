@@ -52,15 +52,15 @@ public:
 class SnippetSegmentationFault : public SnippetExecutionFailure {
 public:
   static char ID;
-  SnippetSegmentationFault(intptr_t SegFaultAddress)
-      : Address(SegFaultAddress){};
+  SnippetSegmentationFault(uintptr_t SegFaultAddress)
+      : Address(SegFaultAddress) {};
 
-  intptr_t getAddress() { return Address; }
+  uintptr_t getAddress() { return Address; }
 
   void log(raw_ostream &OS) const override;
 
 private:
-  intptr_t Address;
+  uintptr_t Address;
 };
 
 // A class representing all other non-specific failures that happen during

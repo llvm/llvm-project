@@ -23,9 +23,11 @@ extern char **environ;
 
 namespace Fortran::runtime {
 
+#ifndef FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
 RT_OFFLOAD_VAR_GROUP_BEGIN
 RT_VAR_ATTRS ExecutionEnvironment executionEnvironment;
 RT_OFFLOAD_VAR_GROUP_END
+#endif // FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
 
 static void SetEnvironmentDefaults(const EnvironmentDefaultList *envDefaults) {
   if (!envDefaults) {
@@ -137,6 +139,18 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
       std::fprintf(stderr,
           "Fortran runtime: FORT_CHECK_POINTER_DEALLOCATION=%s is invalid; "
           "ignored\n",
+          x);
+    }
+  }
+
+  if (auto *x{std::getenv("ACC_OFFLOAD_STACK_SIZE")}) {
+    char *end;
+    auto n{std::strtoul(x, &end, 10)};
+    if (n > 0 && n < std::numeric_limits<std::size_t>::max() && *end == '\0') {
+      cudaStackLimit = n;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: ACC_OFFLOAD_STACK_SIZE=%s is invalid; ignored\n",
           x);
     }
   }

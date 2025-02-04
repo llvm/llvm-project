@@ -17,17 +17,11 @@ entry:
 }
 
 define <8 x i8> @i8_off1(<16 x i8> %arg1, <16 x i8> %arg2) {
-; CHECK-SD-LABEL: i8_off1:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #1
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: i8_off1:
-; CHECK-GISEL:       // %bb.0: // %entry
-; CHECK-GISEL-NEXT:    ext v0.16b, v0.16b, v1.16b, #1
-; CHECK-GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: i8_off1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <16 x i8> %arg1, <16 x i8> %arg2, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
   ret <8 x i8> %shuffle
@@ -42,8 +36,7 @@ define <8 x i8> @i8_off8(<16 x i8> %arg1, <16 x i8> %arg2) {
 ;
 ; CHECK-GISEL-LABEL: i8_off8:
 ; CHECK-GISEL:       // %bb.0: // %entry
-; CHECK-GISEL-NEXT:    ext v0.16b, v0.16b, v1.16b, #8
-; CHECK-GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GISEL-NEXT:    mov d0, v0.d[1]
 ; CHECK-GISEL-NEXT:    ret
 entry:
   %shuffle = shufflevector <16 x i8> %arg1, <16 x i8> %arg2, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -90,17 +83,11 @@ entry:
 }
 
 define <4 x i16> @i16_off1(<8 x i16> %arg1, <8 x i16> %arg2) {
-; CHECK-SD-LABEL: i16_off1:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #2
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: i16_off1:
-; CHECK-GISEL:       // %bb.0: // %entry
-; CHECK-GISEL-NEXT:    ext v0.16b, v0.16b, v1.16b, #2
-; CHECK-GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: i16_off1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %arg1, <8 x i16> %arg2, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
   ret <4 x i16> %shuffle
@@ -140,17 +127,11 @@ entry:
 }
 
 define <2 x i32> @i32_off1(<4 x i32> %arg1, <4 x i32> %arg2) {
-; CHECK-SD-LABEL: i32_off1:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #4
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: i32_off1:
-; CHECK-GISEL:       // %bb.0: // %entry
-; CHECK-GISEL-NEXT:    ext v0.16b, v0.16b, v1.16b, #4
-; CHECK-GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: i32_off1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %arg1, <4 x i32> %arg2, <2 x i32> <i32 1, i32 2>
   ret <2 x i32> %shuffle
@@ -228,18 +209,11 @@ entry:
 }
 
 define <8 x i8> @i8_zero_off1(<16 x i8> %arg1) {
-; CHECK-SD-LABEL: i8_zero_off1:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #1
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: i8_zero_off1:
-; CHECK-GISEL:       // %bb.0: // %entry
-; CHECK-GISEL-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-GISEL-NEXT:    ext v0.16b, v0.16b, v1.16b, #1
-; CHECK-GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: i8_zero_off1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <16 x i8> %arg1, <16 x i8> zeroinitializer, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
   ret <8 x i8> %shuffle
@@ -254,9 +228,7 @@ define <8 x i8> @i8_zero_off8(<16 x i8> %arg1) {
 ;
 ; CHECK-GISEL-LABEL: i8_zero_off8:
 ; CHECK-GISEL:       // %bb.0: // %entry
-; CHECK-GISEL-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-GISEL-NEXT:    ext v0.16b, v0.16b, v1.16b, #8
-; CHECK-GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GISEL-NEXT:    mov d0, v0.d[1]
 ; CHECK-GISEL-NEXT:    ret
 entry:
   %shuffle = shufflevector <16 x i8> %arg1, <16 x i8> zeroinitializer, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -283,8 +255,8 @@ define <8 x i8> @i8_zero_off22(<16 x i8> %arg1) {
 ;
 ; CHECK-GISEL-LABEL: i8_zero_off22:
 ; CHECK-GISEL:       // %bb.0: // %entry
-; CHECK-GISEL-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-GISEL-NEXT:    ext v0.16b, v1.16b, v0.16b, #6
+; CHECK-GISEL-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-GISEL-NEXT:    ext v0.16b, v0.16b, v0.16b, #6
 ; CHECK-GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GISEL-NEXT:    ret
 entry:
@@ -304,18 +276,11 @@ entry:
 }
 
 define <4 x i16> @i16_zero_off1(<8 x i16> %arg1) {
-; CHECK-SD-LABEL: i16_zero_off1:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #2
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: i16_zero_off1:
-; CHECK-GISEL:       // %bb.0: // %entry
-; CHECK-GISEL-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-GISEL-NEXT:    ext v0.16b, v0.16b, v1.16b, #2
-; CHECK-GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: i16_zero_off1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %arg1, <8 x i16> zeroinitializer, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
   ret <4 x i16> %shuffle
@@ -355,18 +320,11 @@ entry:
 }
 
 define <2 x i32> @i32_zero_off1(<4 x i32> %arg1) {
-; CHECK-SD-LABEL: i32_zero_off1:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #4
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: i32_zero_off1:
-; CHECK-GISEL:       // %bb.0: // %entry
-; CHECK-GISEL-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-GISEL-NEXT:    ext v0.16b, v0.16b, v1.16b, #4
-; CHECK-GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: i32_zero_off1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %arg1, <4 x i32> zeroinitializer, <2 x i32> <i32 1, i32 2>
   ret <2 x i32> %shuffle

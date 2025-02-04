@@ -1,0 +1,36 @@
+# Test definition DIE searching is delayed until complete type is required.
+
+# UNSUPPORTED: system-windows
+
+# RUN: split-file %s %t
+# RUN: %clangxx_host %t/main.cpp %t/t1_def.cpp -gdwarf -o %t.out
+# RUN: %lldb -b %t.out -s %t/lldb.cmd | FileCheck %s
+
+# CHECK: (lldb) p v1
+# CHECK: DWARFASTParserClang::ParseTypeFromDWARF{{.*}}DW_TAG_structure_type (DW_TAG_structure_type) name = 't2<t1>'
+# CHECK: DWARFASTParserClang::ParseTypeFromDWARF{{.*}}DW_TAG_structure_type (DW_TAG_structure_type) name = 't1'
+# CHECK: DW_TAG_structure_type (DW_TAG_structure_type) 't2<t1>' resolving forward declaration...
+# CHECK: (t2<t1>)  {}
+# CHECK: (lldb) p v2
+# CHECK: DWARFASTParserClang::ParseTypeFromDWARF{{.*}}DW_TAG_structure_type (DW_TAG_structure_type) name = 't1'
+# CHECK: DW_TAG_structure_type (DW_TAG_structure_type) 't1' resolving forward declaration...
+
+#--- lldb.cmd
+log enable dwarf comp
+p v1
+p v2
+
+#--- main.cpp
+template<typename T>
+struct t2 {
+};
+struct t1;
+t2<t1> v1; // this CU doesn't have definition DIE for t1, but only declaration DIE for it.
+int main() {
+}
+
+#--- t1_def.cpp
+struct t1 { // this CU contains definition DIE for t1.
+  int x;
+};
+t1 v2;

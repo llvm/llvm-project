@@ -1,16 +1,16 @@
 # RUN: llvm-mc < %s -filetype obj -triple x86_64 -o - \
 # RUN:   | llvm-dwarfdump - | FileCheck %s
 
-# Generated from:
-#
-#   struct t1 { };
-#   t1 v1;
-#
-# $ clang++ -S -g -fdebug-types-section -gsplit-dwarf -o test.5.split.s -gdwarf-5 -g
-
 # CHECK: DW_TAG_variable
 # CHECK:   DW_AT_type ({{.*}} "t1")
 
+.ifdef GEN
+#--- test.cpp
+struct t1 { };
+t1 v1;
+#--- gen
+clang++ --target=x86_64-linux -S -g -fdebug-types-section -gsplit-dwarf -gdwarf-5 test.cpp -o -
+.endif
 	.text
 	.file	"test.cpp"
 	.section	.debug_types.dwo,"e",@progbits

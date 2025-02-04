@@ -81,7 +81,7 @@ define amdgpu_kernel void @extract_vector_elt_v3i16(ptr addrspace(1) %out, <3 x 
 ; SI: buffer_store_short
 ; SI: buffer_store_short
 
-; GFX89-DAG: s_load_dwordx4 s[[[#LOAD:]]:[[#END:]]], s[0:1], 0x24
+; GFX89-DAG: s_load_dwordx4 s[[[#LOAD:]]:[[#END:]]], s[4:5], 0x24
 ; GFX89-DAG: v_mov_b32_e32 [[VLOAD0:v[0-9]+]], s[[#LOAD + 2]]
 ; GFX89-DAG: buffer_store_short [[VLOAD0]], off
 ; GFX89-DAG: v_mov_b32_e32 [[VLOAD1:v[0-9]+]], s[[#LOAD + 3]]
@@ -100,9 +100,9 @@ define amdgpu_kernel void @extract_vector_elt_v4i16(ptr addrspace(1) %out, <4 x 
 ; SI: s_load_dwordx2 s
 ; SI: s_load_dwordx2 s
 
-; GFX89-DAG: s_load_dwordx2 s[[[LOAD0:[0-9]+]]:[[LOAD1:[0-9]+]]], s[0:1], 0x24
-; GFX89-DAG: s_load_dwordx2 s[[[LOAD0:[0-9]+]]:[[LOAD1:[0-9]+]]], s[0:1], 0x4c
-; GFX89-DAG: s_load_dword s{{[0-9]+}}, s[0:1], 0x54
+; GFX89-DAG: s_load_dwordx2 s[[[LOAD0:[0-9]+]]:[[LOAD1:[0-9]+]]], s[4:5], 0x24
+; GFX89-DAG: s_load_dwordx2 s[[[LOAD0:[0-9]+]]:[[LOAD1:[0-9]+]]], s[4:5], 0x4c
+; GFX89-DAG: s_load_dword s{{[0-9]+}}, s[4:5], 0x54
 
 ; GCN-NOT: {{buffer|flat|global}}
 

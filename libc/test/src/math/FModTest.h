@@ -18,10 +18,10 @@
 #include "hdr/math_macros.h"
 
 #define TEST_SPECIAL(x, y, expected, dom_err, expected_exception)              \
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                         \
   EXPECT_FP_EQ(expected, f(x, y));                                             \
   EXPECT_MATH_ERRNO((dom_err) ? EDOM : 0);                                     \
-  EXPECT_FP_EXCEPTION(expected_exception);                                     \
-  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT)
+  EXPECT_FP_EXCEPTION(expected_exception)
 
 #define TEST_REGULAR(x, y, expected) TEST_SPECIAL(x, y, expected, false, 0)
 

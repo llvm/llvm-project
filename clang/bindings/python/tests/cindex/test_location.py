@@ -1,19 +1,20 @@
 import os
-from clang.cindex import Config
+
+from clang.cindex import (
+    Config,
+    Cursor,
+    File,
+    SourceLocation,
+    SourceRange,
+    TranslationUnit,
+)
 
 if "CLANG_LIBRARY_PATH" in os.environ:
     Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
-from clang.cindex import Cursor
-from clang.cindex import File
-from clang.cindex import SourceLocation
-from clang.cindex import SourceRange
-from clang.cindex import TranslationUnit
-from .util import get_cursor
-from .util import get_tu
-
 import unittest
 
+from .util import get_cursor, get_tu
 
 baseInput = "int one;\nint two;\n"
 
@@ -130,3 +131,23 @@ int one;
         two = get_cursor(tu, "two")
         self.assertFalse(one.location.is_in_system_header)
         self.assertTrue(two.location.is_in_system_header)
+
+    def test_operator_lt(self):
+        tu = get_tu("aaaaa")
+        t1_f = tu.get_file(tu.spelling)
+        tu2 = get_tu("aaaaa")
+
+        l_t1_12 = SourceLocation.from_position(tu, t1_f, 1, 2)
+        l_t1_13 = SourceLocation.from_position(tu, t1_f, 1, 3)
+        l_t1_14 = SourceLocation.from_position(tu, t1_f, 1, 4)
+
+        l_t2_13 = SourceLocation.from_position(tu2, tu2.get_file(tu2.spelling), 1, 3)
+
+        # In same file
+        assert l_t1_12 < l_t1_13 < l_t1_14
+        assert not l_t1_13 < l_t1_12
+
+        # In same file, different TU
+        assert l_t1_12 < l_t2_13 < l_t1_14
+        assert not l_t2_13 < l_t1_12
+        assert not l_t1_14 < l_t2_13

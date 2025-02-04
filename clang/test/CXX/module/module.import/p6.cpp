@@ -67,3 +67,13 @@ void* tmpl_fn_ok
 inline int foo (int a) {
   return tmpl_OK (a);
 }
+
+template <typename T> struct S2 { static int v; };
+template <typename T> int S2<T>::v = 10;
+
+template <typename T> bool b() {
+    bool b1 = S2<T>::v == 10;
+    return b1 && true;
+}
+
+inline bool B = b<int>();

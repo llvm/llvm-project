@@ -17,7 +17,7 @@ define i32 @test_icmp_constant_op_zext(ptr %dst) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DST]], i16 [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    store <4 x i8> <i8 109, i8 109, i8 109, i8 109>, ptr [[TMP2]], align 1
+; CHECK-NEXT:    store <4 x i8> splat (i8 109), ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 996
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -69,16 +69,16 @@ define i32 @test_icmp_and_op_zext(ptr %dst, i64 %a) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[AND]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i64> [[BROADCAST_SPLAT]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i1> [[TMP1]] to <4 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i64> [[BROADCAST_SPLAT]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i64> [[TMP3]] to <4 x i8>
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[INDEX]] to i16
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i16 1, [[DOTCAST]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i64> [[BROADCAST_SPLAT]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i1> [[TMP1]] to <4 x i64>
-; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i64> [[BROADCAST_SPLAT]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i64> [[TMP3]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DST]], i16 [[TMP0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP5]], i32 0
 ; CHECK-NEXT:    store <4 x i8> [[TMP4]], ptr [[TMP6]], align 1

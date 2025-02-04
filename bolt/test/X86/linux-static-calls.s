@@ -9,11 +9,11 @@
 ## Verify static calls bindings to instructions.
 
 # RUN: llvm-bolt %t.exe --print-normalized -o %t.out --keep-nops=0 \
-# RUN:   --bolt-info=0 |& FileCheck %s
+# RUN:   --bolt-info=0 2>&1 | FileCheck %s
 
 ## Verify the bindings again on the rewritten binary with nops removed.
 
-# RUN: llvm-bolt %t.out -o %t.out.1 --print-normalized |& FileCheck %s
+# RUN: llvm-bolt %t.out -o %t.out.1 --print-normalized 2>&1 | FileCheck %s
 
 # CHECK:      BOLT-INFO: Linux kernel binary detected
 # CHECK:      BOLT-INFO: parsed 2 static call entries
@@ -53,6 +53,15 @@ __start_static_call_sites:
   .globl __stop_static_call_sites
   .type __stop_static_call_sites, %object
 __stop_static_call_sites:
+
+## Linux kernel version
+  .rodata
+  .align 16
+  .globl linux_banner
+  .type linux_banner, @object
+linux_banner:
+  .string "Linux version 6.6.61\n"
+  .size linux_banner, . - linux_banner
 
 ## Fake Linux Kernel sections.
   .section __ksymtab,"a",@progbits

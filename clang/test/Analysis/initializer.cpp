@@ -366,3 +366,29 @@ void testI() {
   clang_analyzer_eval(B::b == 2); // expected-warning{{TRUE}}
 }
 } // namespace dont_skip_vbase_initializers_in_most_derived_class
+
+namespace elementwise_copy_small_array_from_post_initializer_of_cctor {
+struct String {
+  String(const String &) {}
+};
+
+struct MatchComponent {
+  unsigned numbers[2];
+  String prerelease;
+  MatchComponent(MatchComponent const &) = default;
+};
+
+MatchComponent get();
+void consume(MatchComponent const &);
+
+MatchComponent parseMatchComponent() {
+  MatchComponent component = get();
+  component.numbers[0] = 10;
+  component.numbers[1] = 20;
+  return component; // We should have no stack addr escape warning here.
+}
+
+void top() {
+  consume(parseMatchComponent());
+}
+} // namespace elementwise_copy_small_array_from_post_initializer_of_cctor

@@ -10,7 +10,7 @@ declare void @use(ptr)
 
 define void @f() {
 ; CHECK-LABEL: define void @f() {
-; CHECK-NEXT:    call void @use(ptr getelementptr (i8, ptr @buffer, i64 add (i64 sub (i64 0, i64 ptrtoint (ptr @buffer to i64)), i64 127)))
+; CHECK-NEXT:    call void @use(ptr getelementptr (i8, ptr getelementptr (i8, ptr @buffer, i64 add (i64 sub (i64 0, i64 ptrtoint (ptr @buffer to i64)), i64 63)), i64 64))
 ; CHECK-NEXT:    ret void
 ;
   call void @use(ptr getelementptr (i8, ptr getelementptr (i8, ptr @buffer, i64 add (i64 sub (i64 0, i64 ptrtoint (ptr @buffer to i64)), i64 63)), i64 64))

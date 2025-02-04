@@ -4,7 +4,7 @@
 #   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
 #   2011 Free Software Foundation, Inc.
 
-timestamp='2011-08-20'
+timestamp='2024-06-07'
 
 # This file is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by
@@ -1028,7 +1028,7 @@ EOF
 	echo ${UNAME_MACHINE}-unknown-linux-${LIBC}
 	exit ;;
     s390:Linux:*:* | s390x:Linux:*:*)
-	echo ${UNAME_MACHINE}-ibm-linux
+	echo ${UNAME_MACHINE}-unknown-linux-gnu
 	exit ;;
     sh64*:Linux:*:*)
 	echo ${UNAME_MACHINE}-unknown-linux-gnu

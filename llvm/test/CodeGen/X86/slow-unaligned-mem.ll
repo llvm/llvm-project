@@ -50,6 +50,7 @@
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=znver2        2>&1 | FileCheck %s --check-prefixes=FAST,FAST-AVX256
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=znver3        2>&1 | FileCheck %s --check-prefixes=FAST,FAST-AVX256
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=znver4        2>&1 | FileCheck %s --check-prefixes=FAST,FAST-AVX512
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=znver5        2>&1 | FileCheck %s --check-prefixes=FAST,FAST-AVX512
 
 ; Other chips with slow unaligned memory accesses
 

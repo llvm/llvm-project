@@ -41,7 +41,7 @@ class IncrementalSourceMgr : public SourceMgr {
   bool EOS = false;
 
   /// Called when an instruction is no longer needed.
-  using InstFreedCallback = llvm::function_ref<void(Instruction *)>;
+  using InstFreedCallback = std::function<void(Instruction *)>;
   InstFreedCallback InstFreedCB;
 
 public:

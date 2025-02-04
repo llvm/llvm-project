@@ -17,6 +17,7 @@
 
 /*  Constant                     Value
     __cpp_lib_generate_random    202403L [C++26]
+    __cpp_lib_philox_engine      202406L [C++26]
 */
 
 #include <random>
@@ -28,10 +29,18 @@
 #   error "__cpp_lib_generate_random should not be defined before c++26"
 # endif
 
+# ifdef __cpp_lib_philox_engine
+#   error "__cpp_lib_philox_engine should not be defined before c++26"
+# endif
+
 #elif TEST_STD_VER == 14
 
 # ifdef __cpp_lib_generate_random
 #   error "__cpp_lib_generate_random should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_philox_engine
+#   error "__cpp_lib_philox_engine should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 17
@@ -40,16 +49,28 @@
 #   error "__cpp_lib_generate_random should not be defined before c++26"
 # endif
 
+# ifdef __cpp_lib_philox_engine
+#   error "__cpp_lib_philox_engine should not be defined before c++26"
+# endif
+
 #elif TEST_STD_VER == 20
 
 # ifdef __cpp_lib_generate_random
 #   error "__cpp_lib_generate_random should not be defined before c++26"
 # endif
 
+# ifdef __cpp_lib_philox_engine
+#   error "__cpp_lib_philox_engine should not be defined before c++26"
+# endif
+
 #elif TEST_STD_VER == 23
 
 # ifdef __cpp_lib_generate_random
 #   error "__cpp_lib_generate_random should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_philox_engine
+#   error "__cpp_lib_philox_engine should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER > 23
@@ -64,6 +85,19 @@
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_generate_random
 #     error "__cpp_lib_generate_random should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_philox_engine
+#     error "__cpp_lib_philox_engine should be defined in c++26"
+#   endif
+#   if __cpp_lib_philox_engine != 202406L
+#     error "__cpp_lib_philox_engine should have the value 202406L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_philox_engine
+#     error "__cpp_lib_philox_engine should not be defined because it is unimplemented in libc++!"
 #   endif
 # endif
 

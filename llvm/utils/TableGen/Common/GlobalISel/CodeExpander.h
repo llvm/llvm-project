@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_CODEEXPANDER_H
-#define LLVM_UTILS_TABLEGEN_CODEEXPANDER_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_CODEEXPANDER_H
+#define LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_CODEEXPANDER_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
@@ -32,7 +32,7 @@ class raw_ostream;
 class CodeExpander {
   StringRef Code;
   const CodeExpansions &Expansions;
-  const ArrayRef<SMLoc> &Loc;
+  ArrayRef<SMLoc> Loc;
   bool ShowExpansions;
   StringRef Indent;
 
@@ -52,4 +52,4 @@ inline raw_ostream &operator<<(raw_ostream &OS, const CodeExpander &Expander) {
 }
 } // end namespace llvm
 
-#endif // ifndef LLVM_UTILS_TABLEGEN_CODEEXPANDER_H
+#endif // LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_CODEEXPANDER_H

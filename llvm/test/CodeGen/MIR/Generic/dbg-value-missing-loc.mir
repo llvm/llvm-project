@@ -1,4 +1,5 @@
 # RUN: not --crash llc -run-pass machineverifier -o - %s 2>&1 | FileCheck %s
+# RUN: not --crash llc --passes='machine-function(verify)' -o - %s 2>&1 | FileCheck %s
 
 # CHECK: Bad machine code: Missing DebugLoc for debug instruction
 # CHECK: - instruction: DBG_VALUE 1, 2, 3, 4

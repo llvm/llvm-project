@@ -36,6 +36,7 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple) {
   case Triple::aarch64:
   case Triple::aarch64_be:
   case Triple::aarch64_32:
+  case Triple::loongarch64:
   case Triple::mips:
   case Triple::mipsel:
   case Triple::mips64:
@@ -63,7 +64,7 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple) {
   if (TraitSelector::TraitSelectorEnum == TraitSelector::device_arch) {        \
     if (TargetTriple.getArch() == TargetTriple.getArchTypeForLLVMName(Str))    \
       ActiveTraits.set(unsigned(TraitProperty::Enum));                         \
-    if (StringRef(Str) == StringRef("x86_64") &&                               \
+    if (StringRef(Str) == "x86_64" &&                                          \
         TargetTriple.getArch() == Triple::x86_64)                              \
       ActiveTraits.set(unsigned(TraitProperty::Enum));                         \
   }

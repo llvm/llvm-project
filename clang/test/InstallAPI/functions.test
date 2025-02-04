@@ -3,7 +3,7 @@
 // RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
 
 // RUN: clang-installapi -target arm64-apple-macos13.1 \
-// RUN: -I%t/usr/include -I%t/usr/local/include \
+// RUN: -I%t/usr/include -I%t/usr/local/include -dynamiclib \
 // RUN: -install_name @rpath/lib/libfunctions.dylib --filetype=tbd-v4 \
 // RUN: %t/inputs.json -o %t/outputs.tbd 2>&1 | FileCheck %s --allow-empty
 // RUN: llvm-readtapi -compare %t/outputs.tbd %t/expected.tbd 2>&1 | FileCheck %s --allow-empty

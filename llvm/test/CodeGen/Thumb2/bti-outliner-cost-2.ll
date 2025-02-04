@@ -44,8 +44,4 @@ entry:
 
 ; CHECK-NOT: OUTLINED_FUNCTION
 
-attributes #0 = { minsize nofree norecurse nounwind optsize  }
-
-!llvm.module.flags = !{!0}
-
-!0 = !{i32 8, !"branch-target-enforcement", i32 1}
+attributes #0 = { minsize nofree norecurse nounwind optsize "branch-target-enforcement" }

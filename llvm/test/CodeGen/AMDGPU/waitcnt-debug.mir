@@ -1,8 +1,8 @@
 # REQUIRES: asserts
-# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-insert-waitcnts -debug-counter=si-insert-waitcnts-forcelgkm-count=1 -o - %s | FileCheck -check-prefixes=GCN,LGKM %s
-# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-insert-waitcnts -debug-counter=si-insert-waitcnts-forceexp-count=2 -o - %s | FileCheck -check-prefixes=GCN,EXP %s
-# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-insert-waitcnts -debug-counter=si-insert-waitcnts-forcevm-count=3 -o - %s | FileCheck -check-prefixes=GCN,VM %s
-# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-insert-waitcnts -amdgpu-waitcnt-forcezero=1 -debug-counter=si-insert-waitcnts-forcevm-count=2 -o - %s | FileCheck -check-prefixes=GCN,ZERO %s
+# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-insert-waitcnts -debug-counter=si-insert-waitcnts-forcelgkm=0 -o - %s | FileCheck -check-prefixes=GCN,LGKM %s
+# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-insert-waitcnts -debug-counter=si-insert-waitcnts-forceexp=0-1 -o - %s | FileCheck -check-prefixes=GCN,EXP %s
+# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-insert-waitcnts -debug-counter=si-insert-waitcnts-forcevm=0-2 -o - %s | FileCheck -check-prefixes=GCN,VM %s
+# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-insert-waitcnts -amdgpu-waitcnt-forcezero=1 -debug-counter=si-insert-waitcnts-forcevm=0-1 -o - %s | FileCheck -check-prefixes=GCN,ZERO %s
 
 # check that the waitcnt pass options that force insertion of waitcnt instructions are working as expected
 

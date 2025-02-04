@@ -20,8 +20,8 @@
 
 ; CHECK: define dso_local void @fun(i32 %param)
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %param, metadata ![[PARAM:[0-9]+]], metadata !DIExpression())
-; CHECK-NOT: call void @llvm.dbg.value({{.*}}, metadata ![[PARAM]]
+; CHECK-NEXT: #dbg_value(i32 %param, ![[PARAM:[0-9]+]], !DIExpression(),
+; CHECK-NEXT: #dbg_value(i32 %param, ![[PARAM]], !DIExpression(),
 ; CHECK: ![[PARAM]] = !DILocalVariable(name: "param",
 
 @g = dso_local global i32 0, align 4, !dbg !0

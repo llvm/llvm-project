@@ -30,6 +30,7 @@
 ; CHECK-NEXT: workItemIDX:     { reg: '$vgpr0' }
 ; CHECK-NEXT: psInputAddr:     0
 ; CHECK-NEXT: psInputEnable:   0
+; CHECK-NEXT: maxMemoryClusterDWords: 8
 ; CHECK-NEXT: mode:
 ; CHECK-NEXT: ieee:            true
 ; CHECK-NEXT: dx10-clamp:      true
@@ -38,10 +39,11 @@
 ; CHECK-NEXT: fp64-fp16-input-denormals: true
 ; CHECK-NEXT: fp64-fp16-output-denormals: true
 ; CHECK-NEXT: BitsOf32BitAddress: 0
-; CHECK-NEXT: occupancy:       8
+; CHECK-NEXT: occupancy:       10
 ; CHECK-NEXT: vgprForAGPRCopy: ''
 ; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT: longBranchReservedReg: '$sgpr2_sgpr3'
+; CHECK-NEXT: hasInitWholeWave: false
 ; CHECK-NEXT: body:
   define amdgpu_kernel void @uniform_long_forward_branch_debug(ptr addrspace(1) %arg, i32 %arg1) #0 !dbg !5 {
   bb0:

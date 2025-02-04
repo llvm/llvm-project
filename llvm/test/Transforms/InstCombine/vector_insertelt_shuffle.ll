@@ -90,4 +90,26 @@ define <4 x float> @bazzzzzz(<4 x float> %x, i32 %a) {
   ret <4 x float> %ins1
 }
 
+; test that foldBitcastExtElt doesn't interfere with shuffle folding
+
+define <4 x half> @bitcast_extract_insert_to_shuffle(i32 %a, i32 %b) {
+; CHECK-LABEL: @bitcast_extract_insert_to_shuffle(
+; CHECK-NEXT:    [[AVEC:%.*]] = bitcast i32 [[A:%.*]] to <2 x half>
+; CHECK-NEXT:    [[BVEC:%.*]] = bitcast i32 [[B:%.*]] to <2 x half>
+; CHECK-NEXT:    [[INS3:%.*]] = shufflevector <2 x half> [[AVEC]], <2 x half> [[BVEC]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x half> [[INS3]]
+;
+  %avec = bitcast i32 %a to <2 x half>
+  %a0 = extractelement <2 x half> %avec, i32 0
+  %a1 = extractelement <2 x half> %avec, i32 1
+  %bvec = bitcast i32 %b to <2 x half>
+  %b0 = extractelement <2 x half> %bvec, i32 0
+  %b1 = extractelement <2 x half> %bvec, i32 1
+  %ins0 = insertelement <4 x half> undef, half %a0, i32 0
+  %ins1 = insertelement <4 x half> %ins0, half %a1, i32 1
+  %ins2 = insertelement <4 x half> %ins1, half %b0, i32 2
+  %ins3 = insertelement <4 x half> %ins2, half %b1, i32 3
+  ret <4 x half> %ins3
+}
+
 

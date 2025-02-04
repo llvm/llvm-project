@@ -78,6 +78,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -92,6 +93,9 @@ using namespace PatternMatch;
 
 static const unsigned UnknownAddressSpace =
     std::numeric_limits<unsigned>::max();
+
+DEBUG_COUNTER(StraightLineStrengthReduceCounter, "slsr-counter",
+              "Controls whether rewriteCandidateWithBasis is executed.");
 
 namespace {
 
@@ -268,8 +272,8 @@ FunctionPass *llvm::createStraightLineStrengthReducePass() {
 bool StraightLineStrengthReduce::isBasisFor(const Candidate &Basis,
                                             const Candidate &C) {
   return (Basis.Ins != C.Ins && // skip the same instruction
-          // They must have the same type too. Basis.Base == C.Base doesn't
-          // guarantee their types are the same (PR23975).
+          // They must have the same type too. Basis.Base == C.Base
+          // doesn't guarantee their types are the same (PR23975).
           Basis.Ins->getType() == C.Ins->getType() &&
           // Basis must dominate C in order to rewrite C with respect to Basis.
           DT->dominates(Basis.Ins->getParent(), C.Ins->getParent()) &&
@@ -425,14 +429,12 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasisForAdd(
 
 // Returns true if A matches B + C where C is constant.
 static bool matchesAdd(Value *A, Value *&B, ConstantInt *&C) {
-  return (match(A, m_Add(m_Value(B), m_ConstantInt(C))) ||
-          match(A, m_Add(m_ConstantInt(C), m_Value(B))));
+  return match(A, m_c_Add(m_Value(B), m_ConstantInt(C)));
 }
 
 // Returns true if A matches B | C where C is constant.
 static bool matchesOr(Value *A, Value *&B, ConstantInt *&C) {
-  return (match(A, m_Or(m_Value(B), m_ConstantInt(C))) ||
-          match(A, m_Or(m_ConstantInt(C), m_Value(B))));
+  return match(A, m_c_Or(m_Value(B), m_ConstantInt(C)));
 }
 
 void StraightLineStrengthReduce::allocateCandidatesAndFindBasisForMul(
@@ -612,6 +614,9 @@ Value *StraightLineStrengthReduce::emitBump(const Candidate &Basis,
 
 void StraightLineStrengthReduce::rewriteCandidateWithBasis(
     const Candidate &C, const Candidate &Basis) {
+  if (!DebugCounter::shouldExecute(StraightLineStrengthReduceCounter))
+    return;
+
   assert(C.CandidateKind == Basis.CandidateKind && C.Base == Basis.Base &&
          C.Stride == Basis.Stride);
   // We run rewriteCandidateWithBasis on all candidates in a post-order, so the
@@ -715,7 +720,7 @@ namespace llvm {
 
 PreservedAnalyses
 StraightLineStrengthReducePass::run(Function &F, FunctionAnalysisManager &AM) {
-  const DataLayout *DL = &F.getParent()->getDataLayout();
+  const DataLayout *DL = &F.getDataLayout();
   auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
   auto *SE = &AM.getResult<ScalarEvolutionAnalysis>(F);
   auto *TTI = &AM.getResult<TargetIRAnalysis>(F);

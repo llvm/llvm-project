@@ -19,6 +19,6 @@ int main() {
   // the compiler is free to choose the order. As a result, the address is
   // either 0x4, 0xc or 0x14. The pc is still in main() because it has not
   // actually made the call when the faulting access occurs.
-  // CHECK: {{AddressSanitizer: (SEGV|access-violation).*(address|pc) 0x0*[4c]}}
+  // CHECK: {{AddressSanitizer: (SEGV|access-violation).*(address|pc) 0x0*[45c]}}
   return 0;
 }

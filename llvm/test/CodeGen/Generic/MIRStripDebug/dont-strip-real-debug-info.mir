@@ -13,9 +13,9 @@
   }
   ; CHECK-LABEL: define i32 @test(i32 %a, i32 %b) {{(addrspace\([0-9]+\) )?}}!dbg !4 {
   ; CHECK-NEXT:    %add = add i32 %a, 2, !dbg !10
-  ; CHECK-NEXT:    call{{( addrspace\([0-9]+\))?}} void @llvm.dbg.value(metadata i32 %add, metadata !7, metadata !DIExpression()), !dbg !10
+  ; CHECK-NEXT:    #dbg_value(i32 %add, !7, !DIExpression(), !10
   ; CHECK-NEXT:    %sub = sub i32 %add, %b, !dbg !11
-  ; CHECK-NEXT:    call{{( addrspace\([0-9]+\))?}} void @llvm.dbg.value(metadata i32 %sub, metadata !9, metadata !DIExpression()), !dbg !11
+  ; CHECK-NEXT:    #dbg_value(i32 %sub, !9, !DIExpression(), !11
   ; CHECK-NEXT:    ret i32 %sub, !dbg !12
   ; CHECK-NEXT:  }
   

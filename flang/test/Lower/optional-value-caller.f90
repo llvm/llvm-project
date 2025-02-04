@@ -298,8 +298,8 @@ subroutine test_dyn_array_from_assumed(i, n)
 ! CHECK:  %[[VAL_25:.*]] = fir.convert %[[VAL_8]] : (!fir.heap<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
 ! CHECK:  fir.call @_QPdyn_array(%[[VAL_25]], %[[VAL_1]]) {{.*}}: (!fir.ref<!fir.array<?xi32>>, !fir.ref<i64>) -> ()
 ! CHECK:  fir.if %[[and]] {
-! CHECK-NOT: fir.call @_FortranACopyOutAssign
-! CHECK:    fir.freemem %[[VAL_8]] : !fir.heap<!fir.array<?xi32>>
+! CHECK:    fir.zero
+! CHECK:    fir.call @_FortranACopyOutAssign
 ! CHECK:  }
 end subroutine
 
@@ -333,7 +333,7 @@ subroutine test_array_ptr(i)
 ! CHECK:             %[[VAL_20:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:             %[[VAL_21:.*]] = fir.convert %[[VAL_7]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.box<none>
 ! CHECK:             %[[VAL_22:.*]] = fir.convert %[[VAL_18]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-! CHECK:             %[[VAL_23:.*]] = fir.call @_FortranAAssignTemporary(%[[VAL_20]], %[[VAL_21]], %[[VAL_22]], %[[VAL_19]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:             fir.call @_FortranAAssignTemporary(%[[VAL_20]], %[[VAL_21]], %[[VAL_22]], %[[VAL_19]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 ! CHECK:             fir.result %[[VAL_15]] : !fir.heap<!fir.array<?xi32>>
 ! CHECK:           }
 ! CHECK:           fir.result %[[VAL_24:.*]] : !fir.heap<!fir.array<?xi32>>
@@ -347,7 +347,8 @@ subroutine test_array_ptr(i)
 ! CHECK:         %[[VAL_29:.*]] = fir.convert %[[VAL_30:.*]] : (!fir.heap<!fir.array<?xi32>>) -> !fir.ref<!fir.array<100xi32>>
 ! CHECK:         fir.call @_QParray(%[[VAL_29]]) fastmath<contract> : (!fir.ref<!fir.array<100xi32>>) -> ()
 ! CHECK:         fir.if %[[VAL_28]] {
-! CHECK:           fir.freemem %[[VAL_30]] : !fir.heap<!fir.array<?xi32>>
+! CHECK:           fir.zero
+! CHECK:           fir.call @_FortranACopyOutAssign
 ! CHECK:         }
 ! CHECK:         return
 ! CHECK:       }
@@ -439,7 +440,7 @@ subroutine test_char_array(c)
 ! CHECK:             %[[VAL_23:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.array<?x!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:             %[[VAL_24:.*]] = fir.convert %[[VAL_9]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.box<none>
 ! CHECK:             %[[VAL_25:.*]] = fir.convert %[[VAL_21]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-! CHECK:             %[[VAL_26:.*]] = fir.call @_FortranAAssignTemporary(%[[VAL_23]], %[[VAL_24]], %[[VAL_25]], %[[VAL_22]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:             fir.call @_FortranAAssignTemporary(%[[VAL_23]], %[[VAL_24]], %[[VAL_25]], %[[VAL_22]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 ! CHECK:             fir.result %[[VAL_18]] : !fir.heap<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           }
 ! CHECK:           fir.result %[[VAL_27:.*]] : !fir.heap<!fir.array<?x!fir.char<1,?>>>
@@ -455,7 +456,8 @@ subroutine test_char_array(c)
 ! CHECK:         %[[VAL_35:.*]] = fir.emboxchar %[[VAL_33]], %[[VAL_29]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
 ! CHECK:         fir.call @_QPdyn_char_array(%[[VAL_35]], %[[VAL_2]]) fastmath<contract> : (!fir.boxchar<1>, !fir.ref<i64>) -> ()
 ! CHECK:         fir.if %[[VAL_32]] {
-! CHECK:           fir.freemem %[[VAL_34]] : !fir.heap<!fir.array<?x!fir.char<1,?>>>
+! CHECK:          fir.zero
+! CHECK:          fir.call @_FortranACopyOutAssign
 ! CHECK:         }
 ! CHECK:         return
 ! CHECK:       }

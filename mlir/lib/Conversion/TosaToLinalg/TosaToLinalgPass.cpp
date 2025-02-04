@@ -55,6 +55,7 @@ public:
     target.addLegalOp<tosa::ApplyScaleOp>();
     target.addLegalOp<tosa::IfOp>();
     target.addLegalOp<tosa::ConstOp>();
+    target.addLegalOp<tosa::ConstShapeOp>();
     target.addLegalOp<tosa::WhileOp>();
     target.addLegalOp<tosa::ConcatOp>();
     target.addLegalOp<tosa::SliceOp>();
@@ -63,8 +64,11 @@ public:
 
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
+    TypeConverter converter;
+    tosa::populateTosaTypeConversion(converter);
+
     FunctionOpInterface func = getOperation();
-    mlir::tosa::populateTosaToLinalgConversionPatterns(&patterns);
+    mlir::tosa::populateTosaToLinalgConversionPatterns(converter, &patterns);
     if (failed(applyFullConversion(func, target, std::move(patterns))))
       signalPassFailure();
   }
@@ -78,7 +82,7 @@ std::unique_ptr<Pass> mlir::tosa::createTosaToLinalg() {
 void mlir::tosa::addTosaToLinalgPasses(
     OpPassManager &pm, const TosaToLinalgOptions &options,
     const TosaToLinalgNamedOptions &tosaToLinalgNamedOptions,
-    tosa::TosaValidationOptions const &validationOptions) {
+    std::optional<tosa::TosaValidationOptions> validationOptions) {
   // Optional decompositions are designed to benefit linalg.
   if (!options.disableTosaDecompositions)
     pm.addNestedPass<func::FuncOp>(tosa::createTosaOptionalDecompositions());
@@ -93,7 +97,8 @@ void mlir::tosa::addTosaToLinalgPasses(
   pm.addNestedPass<func::FuncOp>(tosa::createTosaLayerwiseConstantFoldPass(
       {options.aggressiveReduceConstant}));
   pm.addNestedPass<func::FuncOp>(tosa::createTosaMakeBroadcastablePass());
-  pm.addPass(tosa::createTosaValidation(validationOptions));
+  if (validationOptions)
+    pm.addPass(tosa::createTosaValidation(*validationOptions));
   pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());
 }
 
@@ -110,11 +115,12 @@ void mlir::tosa::registerTosaToLinalgPipelines() {
       [](OpPassManager &pm) {
         TosaToLinalgOptions tosaToLinalgOptions;
         TosaToLinalgNamedOptions tosaToLinalgNamedOptions;
+        TosaValidationOptions validationOptions;
+        validationOptions.profile = {"none"};
+        validationOptions.StrictOperationSpecAlignment = true;
+        validationOptions.level = tosa::TosaLevelEnum::EightK;
         tosa::addTosaToLinalgPasses(pm, tosaToLinalgOptions,
                                     tosaToLinalgNamedOptions,
-                                    /* validationOptions = */
-                                    {tosa::TosaProfileEnum::BaseInference,
-                                     /* StrictOperationSpecAlignment = */ true,
-                                     tosa::TosaLevelEnum::EightK});
+                                    validationOptions);
       });
 }

@@ -13,6 +13,10 @@ set(LLVM_TARGET_DEFINITIONS MeshBase.td)
 mlir_tablegen(MeshEnums.h.inc -gen-enum-decls)
 mlir_tablegen(MeshEnums.cpp.inc -gen-enum-defs)
 
+set(LLVM_TARGET_DEFINITIONS MeshBase.td)
+mlir_tablegen(MeshTypes.h.inc -gen-typedef-decls)
+mlir_tablegen(MeshTypes.cpp.inc -gen-typedef-defs)
+
 set(LLVM_TARGET_DEFINITIONS MeshOps.td)
 mlir_tablegen(MeshOps.h.inc -gen-op-decls)
 mlir_tablegen(MeshOps.cpp.inc -gen-op-defs)

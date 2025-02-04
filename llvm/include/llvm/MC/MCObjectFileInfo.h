@@ -73,6 +73,10 @@ protected:
   /// to emit them into.
   MCSection *CompactUnwindSection = nullptr;
 
+  /// If import call optimization is supported by the target, this is the
+  /// section to emit import call data to.
+  MCSection *ImportCallSection = nullptr;
+
   // Dwarf sections for debug info.  If a target supports debug info, these must
   // be set.
   MCSection *DwarfAbbrevSection = nullptr;
@@ -269,6 +273,7 @@ public:
   MCSection *getBSSSection() const { return BSSSection; }
   MCSection *getReadOnlySection() const { return ReadOnlySection; }
   MCSection *getLSDASection() const { return LSDASection; }
+  MCSection *getImportCallSection() const { return ImportCallSection; }
   MCSection *getCompactUnwindSection() const { return CompactUnwindSection; }
   MCSection *getDwarfAbbrevSection() const { return DwarfAbbrevSection; }
   MCSection *getDwarfInfoSection() const { return DwarfInfoSection; }
@@ -458,9 +463,6 @@ public:
 private:
   bool PositionIndependent = false;
   MCContext *Ctx = nullptr;
-  VersionTuple SDKVersion;
-  std::optional<Triple> DarwinTargetVariantTriple;
-  VersionTuple DarwinTargetVariantSDKVersion;
 
   void initMachOMCObjectFileInfo(const Triple &T);
   void initELFMCObjectFileInfo(const Triple &T, bool Large);
@@ -471,29 +473,6 @@ private:
   void initXCOFFMCObjectFileInfo(const Triple &T);
   void initDXContainerObjectFileInfo(const Triple &T);
   MCSection *getDwarfComdatSection(const char *Name, uint64_t Hash) const;
-
-public:
-  void setSDKVersion(const VersionTuple &TheSDKVersion) {
-    SDKVersion = TheSDKVersion;
-  }
-
-  const VersionTuple &getSDKVersion() const { return SDKVersion; }
-
-  void setDarwinTargetVariantTriple(const Triple &T) {
-    DarwinTargetVariantTriple = T;
-  }
-
-  const Triple *getDarwinTargetVariantTriple() const {
-    return DarwinTargetVariantTriple ? &*DarwinTargetVariantTriple : nullptr;
-  }
-
-  void setDarwinTargetVariantSDKVersion(const VersionTuple &TheSDKVersion) {
-    DarwinTargetVariantSDKVersion = TheSDKVersion;
-  }
-
-  const VersionTuple &getDarwinTargetVariantSDKVersion() const {
-    return DarwinTargetVariantSDKVersion;
-  }
 };
 
 } // end namespace llvm

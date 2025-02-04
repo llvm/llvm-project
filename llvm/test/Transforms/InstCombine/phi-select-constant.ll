@@ -8,7 +8,8 @@ define i32 @foo(i1 %which) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[WHICH:%.*]], label [[FINAL:%.*]], label [[DELAY:%.*]]
 ; CHECK:       delay:
-; CHECK-NEXT:    [[TMP0:%.*]] = select i1 icmp eq (ptr @A, ptr @B), i32 2, i32 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr @A, @B
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[CMP]], i32 2, i32 1
 ; CHECK-NEXT:    br label [[FINAL]]
 ; CHECK:       final:
 ; CHECK-NEXT:    [[USE2:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[TMP0]], [[DELAY]] ]
@@ -18,10 +19,11 @@ entry:
   br i1 %which, label %final, label %delay
 
 delay:
+  %cmp = icmp eq ptr @A, @B
   br label %final
 
 final:
-  %use2 = phi i1 [ false, %entry ], [ icmp eq (ptr @A, ptr @B), %delay ]
+  %use2 = phi i1 [ false, %entry ], [ %cmp, %delay ]
   %value = select i1 %use2, i32 2, i32 1
   ret i32 %value
 }
@@ -192,4 +194,90 @@ join:
   %phi3 = phi i32 [ %v4, %if ], [ %v5, %else ]
   %sel = select i1 %phi1, i32 %phi2, i32 %phi3
   ret i32 %sel
+}
+
+define i32 @dominating_values_select_same_block(i1 %c1, i1 %c2, ptr %p, ptr %p2) {
+; CHECK-LABEL: @dominating_values_select_same_block(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[P2:%.*]], align 4
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[FINAL:%.*]], label [[DELAY:%.*]]
+; CHECK:       delay:
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[C2:%.*]], i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    br label [[FINAL]]
+; CHECK:       final:
+; CHECK-NEXT:    [[USE2:%.*]] = phi i32 [ [[B]], [[ENTRY:%.*]] ], [ [[TMP0]], [[DELAY]] ]
+; CHECK-NEXT:    ret i32 [[USE2]]
+;
+entry:
+  %a = load i32, ptr %p
+  %b = load i32, ptr %p2
+  br i1 %c1, label %final, label %delay
+
+delay:
+  br label %final
+
+final:
+  %use2 = phi i1 [ false, %entry ], [ %c2, %delay ]
+  %value = select i1 %use2, i32 %a, i32 %b
+  ret i32 %value
+}
+
+define i32 @dominating_values_select_not_same_block(i1 %c1, i1 %c2, ptr %p, ptr %p2) {
+; CHECK-LABEL: @dominating_values_select_not_same_block(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[P2:%.*]], align 4
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[FINAL:%.*]], label [[DELAY:%.*]]
+; CHECK:       delay:
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[C2:%.*]], i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    br label [[FINAL]]
+; CHECK:       final:
+; CHECK-NEXT:    [[USE2:%.*]] = phi i32 [ [[B]], [[ENTRY:%.*]] ], [ [[TMP0]], [[DELAY]] ]
+; CHECK-NEXT:    br label [[SPLIT:%.*]]
+; CHECK:       split:
+; CHECK-NEXT:    ret i32 [[USE2]]
+;
+entry:
+  %a = load i32, ptr %p
+  %b = load i32, ptr %p2
+  br i1 %c1, label %final, label %delay
+
+delay:
+  br label %final
+
+final:
+  %use2 = phi i1 [ false, %entry ], [ %c2, %delay ]
+  br label %split
+
+split:
+  %value = select i1 %use2, i32 %a, i32 %b
+  ret i32 %value
+}
+
+define i32 @not_dominating_values(i1 %c1, i1 %c2, ptr %p, ptr %p2) {
+; CHECK-LABEL: @not_dominating_values(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[FINAL:%.*]], label [[DELAY:%.*]]
+; CHECK:       delay:
+; CHECK-NEXT:    br label [[FINAL]]
+; CHECK:       final:
+; CHECK-NEXT:    [[USE2:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[C2:%.*]], [[DELAY]] ]
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[P2:%.*]], align 4
+; CHECK-NEXT:    [[VALUE:%.*]] = select i1 [[USE2]], i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    ret i32 [[VALUE]]
+;
+entry:
+  %a = load i32, ptr %p
+  br i1 %c1, label %final, label %delay
+
+delay:
+  br label %final
+
+final:
+  %use2 = phi i1 [ false, %entry ], [ %c2, %delay ]
+  %b = load i32, ptr %p2
+  %value = select i1 %use2, i32 %a, i32 %b
+  ret i32 %value
 }

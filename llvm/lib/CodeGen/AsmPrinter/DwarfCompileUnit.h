@@ -152,6 +152,8 @@ public:
 
   bool includeMinimalInlineScopes() const;
 
+  bool emitFuncLineTableOffsets() const;
+
   void initStmtList();
 
   /// Apply the DW_AT_stmt_list from this compile unit to the specified DIE.
@@ -207,10 +209,10 @@ public:
   void attachLowHighPC(DIE &D, const MCSymbol *Begin, const MCSymbol *End);
 
   /// Find DIE for the given subprogram and attach appropriate
-  /// DW_AT_low_pc and DW_AT_high_pc attributes. If there are global
-  /// variables in this scope then create and insert DIEs for these
-  /// variables.
-  DIE &updateSubprogramScopeDIE(const DISubprogram *SP);
+  /// DW_AT_low_pc, DW_AT_high_pc and DW_AT_LLVM_stmt_sequence attributes.
+  /// If there are global variables in this scope then create and insert DIEs
+  /// for these variables.
+  DIE &updateSubprogramScopeDIE(const DISubprogram *SP, MCSymbol *LineTableSym);
 
   void constructScopeDIE(LexicalScope *Scope, DIE &ParentScopeDIE);
 
@@ -254,8 +256,8 @@ public:
   DIE *getOrCreateContextDIE(const DIScope *Ty) override;
 
   /// Construct a DIE for this subprogram scope.
-  DIE &constructSubprogramScopeDIE(const DISubprogram *Sub,
-                                   LexicalScope *Scope);
+  DIE &constructSubprogramScopeDIE(const DISubprogram *Sub, LexicalScope *Scope,
+                                   MCSymbol *LineTableSym);
 
   DIE *createAndAddScopeChildren(LexicalScope *Scope, DIE &ScopeDIE);
 
@@ -335,8 +337,8 @@ public:
   void addGlobalNameForTypeUnit(StringRef Name, const DIScope *Context);
 
   /// Add a new global type to the compile unit.
-  void addGlobalType(const DIType *Ty, const DIE &Die,
-                     const DIScope *Context) override;
+  void addGlobalTypeImpl(const DIType *Ty, const DIE &Die,
+                         const DIScope *Context) override;
 
   /// Add a new global type present in a type unit to this compile unit.
   void addGlobalTypeUnitType(const DIType *Ty, const DIScope *Context);

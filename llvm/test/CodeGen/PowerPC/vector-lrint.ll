@@ -4476,9 +4476,8 @@ define <2 x i64> @lrint_v2f64(<2 x double> %x) {
 ; BE-NEXT:    xxlor f1, v31, v31
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
-; BE-NEXT:    std r3, 128(r1)
 ; BE-NEXT:    xxswapd vs1, v31
-; BE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
+; BE-NEXT:    std r3, 128(r1)
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
 ; BE-NEXT:    std r3, 136(r1)
@@ -4507,7 +4506,6 @@ define <2 x i64> @lrint_v2f64(<2 x double> %x) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    xxswapd vs1, v31
 ; CHECK-NEXT:    mtvsrd v31, r3
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    bl lrint
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3
@@ -4555,18 +4553,16 @@ define <4 x i64> @lrint_v4f64(<4 x double> %x) {
 ; BE-NEXT:    vmr v31, v3
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
-; BE-NEXT:    std r3, 128(r1)
 ; BE-NEXT:    xxswapd vs1, v30
-; BE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
+; BE-NEXT:    std r3, 128(r1)
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
 ; BE-NEXT:    xxlor f1, v31, v31
 ; BE-NEXT:    std r3, 136(r1)
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
-; BE-NEXT:    std r3, 144(r1)
 ; BE-NEXT:    xxswapd vs1, v31
-; BE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
+; BE-NEXT:    std r3, 144(r1)
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
 ; BE-NEXT:    std r3, 152(r1)
@@ -4603,7 +4599,6 @@ define <4 x i64> @lrint_v4f64(<4 x double> %x) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    xxswapd vs1, v30
 ; CHECK-NEXT:    mtvsrd v30, r3
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    bl lrint
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3
@@ -4613,7 +4608,6 @@ define <4 x i64> @lrint_v4f64(<4 x double> %x) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    xxswapd vs1, v31
 ; CHECK-NEXT:    mtvsrd v31, r3
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    bl lrint
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3
@@ -4681,36 +4675,32 @@ define <8 x i64> @lrint_v8f64(<8 x double> %x) {
 ; BE-NEXT:    vmr v31, v5
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
-; BE-NEXT:    std r3, 128(r1)
 ; BE-NEXT:    xxswapd vs1, v28
-; BE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
+; BE-NEXT:    std r3, 128(r1)
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
 ; BE-NEXT:    xxlor f1, v29, v29
 ; BE-NEXT:    std r3, 136(r1)
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
-; BE-NEXT:    std r3, 144(r1)
 ; BE-NEXT:    xxswapd vs1, v29
-; BE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
+; BE-NEXT:    std r3, 144(r1)
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
 ; BE-NEXT:    xxlor f1, v30, v30
 ; BE-NEXT:    std r3, 152(r1)
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
-; BE-NEXT:    std r3, 160(r1)
 ; BE-NEXT:    xxswapd vs1, v30
-; BE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
+; BE-NEXT:    std r3, 160(r1)
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
 ; BE-NEXT:    xxlor f1, v31, v31
 ; BE-NEXT:    std r3, 168(r1)
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
-; BE-NEXT:    std r3, 176(r1)
 ; BE-NEXT:    xxswapd vs1, v31
-; BE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
+; BE-NEXT:    std r3, 176(r1)
 ; BE-NEXT:    bl lrint
 ; BE-NEXT:    nop
 ; BE-NEXT:    std r3, 184(r1)
@@ -4763,7 +4753,6 @@ define <8 x i64> @lrint_v8f64(<8 x double> %x) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    xxswapd vs1, v28
 ; CHECK-NEXT:    mtvsrd v28, r3
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    bl lrint
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3
@@ -4773,7 +4762,6 @@ define <8 x i64> @lrint_v8f64(<8 x double> %x) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    xxswapd vs1, v29
 ; CHECK-NEXT:    mtvsrd v29, r3
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    bl lrint
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3
@@ -4783,7 +4771,6 @@ define <8 x i64> @lrint_v8f64(<8 x double> %x) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    xxswapd vs1, v30
 ; CHECK-NEXT:    mtvsrd v30, r3
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    bl lrint
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3
@@ -4793,7 +4780,6 @@ define <8 x i64> @lrint_v8f64(<8 x double> %x) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    xxswapd vs1, v31
 ; CHECK-NEXT:    mtvsrd v31, r3
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    bl lrint
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3

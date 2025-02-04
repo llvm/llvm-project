@@ -80,7 +80,7 @@ void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
     }
   }
 
-  if (ABIName.empty() && (Triple.getEnvironment() == llvm::Triple::GNUABIN32))
+  if (ABIName.empty() && Triple.isABIN32())
     ABIName = "n32";
 
   if (ABIName.empty() &&
@@ -366,9 +366,9 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   } else if (mips::shouldUseFPXX(Args, Triple, CPUName, ABIName, FloatABI)) {
     Features.push_back("+fpxx");
     Features.push_back("+nooddspreg");
-  } else if (mips::isFP64ADefault(Triple, CPUName)) {
-    Features.push_back("+fp64");
-    Features.push_back("+nooddspreg");
+  } else if (Arg *A = Args.getLastArg(options::OPT_mmsa)) {
+    if (A->getOption().matches(options::OPT_mmsa))
+      Features.push_back("+fp64");
   }
 
   AddTargetFeature(Args, Features, options::OPT_mno_odd_spreg,
@@ -462,16 +462,6 @@ bool mips::isNaN2008(const Driver &D, const ArgList &Args,
       .Default(false);
 }
 
-bool mips::isFP64ADefault(const llvm::Triple &Triple, StringRef CPUName) {
-  if (!Triple.isAndroid())
-    return false;
-
-  // Android MIPS32R6 defaults to FP64A.
-  return llvm::StringSwitch<bool>(CPUName)
-      .Case("mips32r6", true)
-      .Default(false);
-}
-
 bool mips::isFPXXDefault(const llvm::Triple &Triple, StringRef CPUName,
                          StringRef ABIName, mips::FloatABI FloatABI) {
   if (ABIName != "32")
@@ -499,6 +489,13 @@ bool mips::shouldUseFPXX(const ArgList &Args, const llvm::Triple &Triple,
                                options::OPT_mdouble_float))
     if (A->getOption().matches(options::OPT_msingle_float))
       UseFPXX = false;
+  // FP64 should be used for MSA.
+  if (Arg *A = Args.getLastArg(options::OPT_mmsa))
+    if (A->getOption().matches(options::OPT_mmsa))
+      UseFPXX = llvm::StringSwitch<bool>(CPUName)
+                    .Cases("mips32r2", "mips32r3", "mips32r5", false)
+                    .Cases("mips64r2", "mips64r3", "mips64r5", false)
+                    .Default(UseFPXX);
 
   return UseFPXX;
 }

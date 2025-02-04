@@ -16,6 +16,8 @@
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 
 namespace llvm {
+class GISelObserverWrapper;
+
 class InstructionSelector : public GIMatchTableExecutor {
 public:
   virtual ~InstructionSelector();
@@ -32,13 +34,15 @@ public:
   ///       !isPreISelGenericOpcode(I.getOpcode())
   virtual bool select(MachineInstr &I) = 0;
 
-  void setTargetPassConfig(const TargetPassConfig *T) { TPC = T; }
-
-  void setRemarkEmitter(MachineOptimizationRemarkEmitter *M) { MORE = M; }
-
-protected:
+  // FIXME: Eliminate dependency on TargetPassConfig for NewPM transition
   const TargetPassConfig *TPC = nullptr;
+
   MachineOptimizationRemarkEmitter *MORE = nullptr;
+
+  /// Note: InstructionSelect does not track changed instructions.
+  /// changingInstr() and changedInstr() will never be called on these
+  /// observers.
+  GISelObserverWrapper *AllObservers = nullptr;
 };
 } // namespace llvm
 

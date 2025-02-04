@@ -35,6 +35,9 @@ class PassBuilderCTest : public testing::Test {
     LLVMDisposeMessage(Triple);
     Context = LLVMContextCreate();
     Module = LLVMModuleCreateWithNameInContext("test", Context);
+    LLVMTypeRef FT =
+        LLVMFunctionType(LLVMVoidTypeInContext(Context), nullptr, 0, 0);
+    Function = LLVMAddFunction(Module, "test", FT);
   }
 
   void TearDown() override {
@@ -52,6 +55,7 @@ class PassBuilderCTest : public testing::Test {
 public:
   LLVMTargetMachineRef TM;
   LLVMModuleRef Module;
+  LLVMValueRef Function;
   LLVMContextRef Context;
 };
 
@@ -60,9 +64,9 @@ TEST_F(PassBuilderCTest, Basic) {
   LLVMPassBuilderOptionsSetLoopUnrolling(Options, 1);
   LLVMPassBuilderOptionsSetVerifyEach(Options, 1);
   LLVMPassBuilderOptionsSetDebugLogging(Options, 0);
+  LLVMPassBuilderOptionsSetAAPipeline(Options, "basic-aa");
   if (LLVMErrorRef E = LLVMRunPasses(Module, "default<O2>", TM, Options)) {
     char *Msg = LLVMGetErrorMessage(E);
-    LLVMConsumeError(E);
     LLVMDisposePassBuilderOptions(Options);
     FAIL() << "Failed to run passes: " << Msg;
   }
@@ -77,5 +81,16 @@ TEST_F(PassBuilderCTest, InvalidPassIsError) {
   ASSERT_TRUE(E2);
   LLVMConsumeError(E1);
   LLVMConsumeError(E2);
+  LLVMDisposePassBuilderOptions(Options);
+}
+
+TEST_F(PassBuilderCTest, Function) {
+  LLVMPassBuilderOptionsRef Options = LLVMCreatePassBuilderOptions();
+  if (LLVMErrorRef E =
+          LLVMRunPassesOnFunction(Function, "no-op-function", TM, Options)) {
+    char *Msg = LLVMGetErrorMessage(E);
+    LLVMDisposePassBuilderOptions(Options);
+    FAIL() << "Failed to run passes on function: " << Msg;
+  }
   LLVMDisposePassBuilderOptions(Options);
 }

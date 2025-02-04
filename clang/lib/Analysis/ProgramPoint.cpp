@@ -13,6 +13,7 @@
 
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/JsonSupport.h"
 
 using namespace clang;
@@ -81,7 +82,10 @@ void ProgramPoint::printJson(llvm::raw_ostream &Out, const char *NL) const {
     llvm_unreachable("BlockExitKind");
     break;
   case ProgramPoint::CallEnterKind:
-    Out << "CallEnter\"";
+    Out << "CallEnter\", \"callee_decl\": \"";
+    Out << AnalysisDeclContext::getFunctionName(
+               castAs<CallEnter>().getCalleeContext()->getDecl())
+        << '\"';
     break;
   case ProgramPoint::CallExitBeginKind:
     Out << "CallExitBegin\"";
@@ -157,7 +161,7 @@ void ProgramPoint::printJson(llvm::raw_ostream &Out, const char *NL) const {
             LHS->printJson(Out, nullptr, PP, AddQuotes);
           } else {
             Out << "null";
-	  }
+          }
 
           Out << ", \"rhs\": ";
           if (const Stmt *RHS = C->getRHS()) {

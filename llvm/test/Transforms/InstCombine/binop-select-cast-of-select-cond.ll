@@ -130,7 +130,7 @@ define i64 @select_zext_different_condition(i1 %c, i1 %d) {
 define <2 x i64> @vector_test(i1 %c) {
 ; CHECK-LABEL: define <2 x i64> @vector_test
 ; CHECK-SAME: (i1 [[C:%.*]]) {
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], <2 x i64> <i64 64, i64 64>, <2 x i64> <i64 1, i64 1>
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], <2 x i64> splat (i64 64), <2 x i64> splat (i64 1)
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[C]] to i64
 ; CHECK-NEXT:    [[VEC0:%.*]] = insertelement <2 x i64> poison, i64 [[EXT]], i64 0
 ; CHECK-NEXT:    [[VEC1:%.*]] = shufflevector <2 x i64> [[VEC0]], <2 x i64> poison, <2 x i32> zeroinitializer
@@ -215,8 +215,8 @@ define i6 @sub_select_zext_op_swapped_non_const_args(i1 %c, i6 %argT, i6 %argF) 
 define <2 x i8> @vectorized_add(<2 x i1> %c, <2 x i8> %arg) {
 ; CHECK-LABEL: define <2 x i8> @vectorized_add
 ; CHECK-SAME: (<2 x i1> [[C:%.*]], <2 x i8> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[ARG]], <i8 1, i8 1>
-; CHECK-NEXT:    [[ADD:%.*]] = select <2 x i1> [[C]], <2 x i8> [[TMP1]], <2 x i8> <i8 1, i8 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[ARG]], splat (i8 1)
+; CHECK-NEXT:    [[ADD:%.*]] = select <2 x i1> [[C]], <2 x i8> [[TMP1]], <2 x i8> splat (i8 1)
 ; CHECK-NEXT:    ret <2 x i8> [[ADD]]
 ;
   %zext = zext <2 x i1> %c to <2 x i8>
@@ -231,12 +231,14 @@ define <2 x i8> @vectorized_add(<2 x i1> %c, <2 x i8> %arg) {
 define i64 @pr64669(i64 %a) {
 ; CHECK-LABEL: define i64 @pr64669
 ; CHECK-SAME: (i64 [[A:%.*]]) {
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq ptr getelementptr inbounds nuw (i8, ptr @b, i64 100), @c
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[A]], 1
-; CHECK-NEXT:    [[ADD:%.*]] = select i1 icmp ne (ptr getelementptr inbounds ([72 x i32], ptr @b, i64 0, i64 25), ptr @c), i64 [[TMP1]], i64 0
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[CMP_NOT]], i64 0, i64 [[TMP1]]
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;
-  %mul = select i1 icmp ne (ptr getelementptr inbounds ([72 x i32], ptr @b, i64 0, i64 25), ptr @c), i64 %a, i64 0
-  %conv3 = zext i1 icmp ne (ptr getelementptr inbounds ([72 x i32], ptr @b, i64 0, i64 25), ptr @c) to i64
+  %cmp = icmp ne ptr getelementptr inbounds ([72 x i32], ptr @b, i64 0, i64 25), @c
+  %mul = select i1 %cmp, i64 %a, i64 0
+  %conv3 = zext i1 %cmp to i64
   %add = add nsw i64 %mul, %conv3
   ret i64 %add
 }

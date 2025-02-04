@@ -18,12 +18,10 @@
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
-#include "WebAssembly.h"
 #include "WebAssemblyMCInstLower.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyRegisterInfo.h"
 #include "WebAssemblyRuntimeLibcallSignatures.h"
-#include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
@@ -39,6 +37,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCStreamer.h"
@@ -62,7 +61,7 @@ MVT WebAssemblyAsmPrinter::getRegType(unsigned RegNo) const {
   const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
   const TargetRegisterClass *TRC = MRI->getRegClass(RegNo);
   for (MVT T : {MVT::i32, MVT::i64, MVT::f32, MVT::f64, MVT::v16i8, MVT::v8i16,
-                MVT::v4i32, MVT::v2i64, MVT::v4f32, MVT::v2f64})
+                MVT::v4i32, MVT::v2i64, MVT::v4f32, MVT::v2f64, MVT::v8f16})
     if (TRI->isTypeLegalForClass(*TRC, T))
       return T;
   LLVM_DEBUG(errs() << "Unknown type for register number: " << RegNo);
@@ -125,6 +124,8 @@ static char getInvokeSig(wasm::ValType VT) {
     return 'F';
   case wasm::ValType::EXTERNREF:
     return 'X';
+  case wasm::ValType::EXNREF:
+    return 'E';
   default:
     llvm_unreachable("Unhandled wasm::ValType enum");
   }
@@ -193,7 +194,7 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
       // can actually calculate the legal VTs.
       const WebAssemblyTargetLowering &TLI = *Subtarget->getTargetLowering();
       computeLegalValueVTs(TLI, GV->getParent()->getContext(),
-                           GV->getParent()->getDataLayout(), GlobalVT, VTs);
+                           GV->getDataLayout(), GlobalVT, VTs);
     }
     WebAssembly::wasmSymbolSetType(Sym, GlobalVT, VTs);
   }
@@ -317,8 +318,8 @@ void WebAssemblyAsmPrinter::emitDecls(const Module &M) {
     // Emit .globaltype, .tagtype, or .tabletype declarations for extern
     // declarations, i.e. those that have only been declared (but not defined)
     // in the current module
-    auto Sym = cast<MCSymbolWasm>(It.getValue());
-    if (!Sym->isDefined())
+    auto Sym = cast_or_null<MCSymbolWasm>(It.getValue().Symbol);
+    if (Sym && !Sym->isDefined())
       emitSymbolType(Sym);
   }
 
@@ -515,7 +516,6 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
 
     // Silently ignore invalid metadata
     if (Entry.Prefix != wasm::WASM_FEATURE_PREFIX_USED &&
-        Entry.Prefix != wasm::WASM_FEATURE_PREFIX_REQUIRED &&
         Entry.Prefix != wasm::WASM_FEATURE_PREFIX_DISALLOWED)
       return;
 
@@ -662,6 +662,8 @@ void WebAssemblyAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case WebAssembly::ARGUMENT_v4f32_S:
   case WebAssembly::ARGUMENT_v2f64:
   case WebAssembly::ARGUMENT_v2f64_S:
+  case WebAssembly::ARGUMENT_v8f16:
+  case WebAssembly::ARGUMENT_v8f16_S:
     // These represent values which are live into the function entry, so there's
     // no instruction to emit.
     break;
@@ -677,6 +679,17 @@ void WebAssemblyAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case WebAssembly::COMPILER_FENCE:
     // This is a compiler barrier that prevents instruction reordering during
     // backend compilation, and should not be emitted.
+    break;
+  case WebAssembly::CATCH:
+  case WebAssembly::CATCH_S:
+  case WebAssembly::CATCH_REF:
+  case WebAssembly::CATCH_REF_S:
+  case WebAssembly::CATCH_ALL:
+  case WebAssembly::CATCH_ALL_S:
+  case WebAssembly::CATCH_ALL_REF:
+  case WebAssembly::CATCH_ALL_REF_S:
+    // These are pseudo instructions to represent catch clauses in try_table
+    // instruction to simulate block return values.
     break;
   default: {
     WebAssemblyMCInstLower MCInstLowering(OutContext, *this);

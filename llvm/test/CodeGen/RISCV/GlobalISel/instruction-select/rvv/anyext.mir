@@ -395,10 +395,10 @@ regBankSelected: true
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    liveins: $v8
+    liveins: $v8m2
 
     ; RV32I-LABEL: name: anyext_nxv16i16_nxv16i8
-    ; RV32I: liveins: $v8
+    ; RV32I: liveins: $v8m2
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
@@ -407,7 +407,7 @@ body:             |
     ; RV32I-NEXT: PseudoRET implicit $v8m4
     ;
     ; RV64I-LABEL: name: anyext_nxv16i16_nxv16i8
-    ; RV64I: liveins: $v8
+    ; RV64I: liveins: $v8m2
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
@@ -427,26 +427,26 @@ regBankSelected: true
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    liveins: $v8
+    liveins: $v8m2
 
     ; RV32I-LABEL: name: anyext_nxv16i32_nxv16i8
-    ; RV32I: liveins: $v8
+    ; RV32I: liveins: $v8m2
     ; RV32I-NEXT: {{  $}}
-    ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m4
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
     ; RV32I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF4_M8 [[DEF]], [[COPY]], -1, 5 /* e32 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m8 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8m8
     ;
     ; RV64I-LABEL: name: anyext_nxv16i32_nxv16i8
-    ; RV64I: liveins: $v8
+    ; RV64I: liveins: $v8m2
     ; RV64I-NEXT: {{  $}}
-    ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m4
+    ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
     ; RV64I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF4_M8 [[DEF]], [[COPY]], -1, 5 /* e32 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8m8
-    %0:vrb(<vscale x 16 x s8>) = COPY $v8m4
+    %0:vrb(<vscale x 16 x s8>) = COPY $v8m2
     %1:vrb(<vscale x 16 x s32>) = G_ANYEXT %0(<vscale x 16 x s8>)
     $v8m8 = COPY %1(<vscale x 16 x s32>)
     PseudoRET implicit $v8m8
@@ -459,10 +459,10 @@ regBankSelected: true
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    liveins: $v8
+    liveins: $v8m4
 
     ; RV32I-LABEL: name: anyext_nxv32i16_nxv32i8
-    ; RV32I: liveins: $v8
+    ; RV32I: liveins: $v8m4
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm4 = COPY $v8m4
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
@@ -471,7 +471,7 @@ body:             |
     ; RV32I-NEXT: PseudoRET implicit $v8m8
     ;
     ; RV64I-LABEL: name: anyext_nxv32i16_nxv32i8
-    ; RV64I: liveins: $v8
+    ; RV64I: liveins: $v8m4
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm4 = COPY $v8m4
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
@@ -683,10 +683,10 @@ regBankSelected: true
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    liveins: $v8
+    liveins: $v8m2
 
     ; RV32I-LABEL: name: anyext_nxv8i32_nxv8i16
-    ; RV32I: liveins: $v8
+    ; RV32I: liveins: $v8m2
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
@@ -695,7 +695,7 @@ body:             |
     ; RV32I-NEXT: PseudoRET implicit $v8m4
     ;
     ; RV64I-LABEL: name: anyext_nxv8i32_nxv8i16
-    ; RV64I: liveins: $v8
+    ; RV64I: liveins: $v8m2
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
@@ -715,10 +715,10 @@ regBankSelected: true
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    liveins: $v8
+    liveins: $v8m2
 
     ; RV32I-LABEL: name: anyext_nxv8i64_nxv8i16
-    ; RV32I: liveins: $v8
+    ; RV32I: liveins: $v8m2
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
@@ -727,7 +727,7 @@ body:             |
     ; RV32I-NEXT: PseudoRET implicit $v8m8
     ;
     ; RV64I-LABEL: name: anyext_nxv8i64_nxv8i16
-    ; RV64I: liveins: $v8
+    ; RV64I: liveins: $v8m2
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
@@ -747,10 +747,10 @@ regBankSelected: true
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    liveins: $v8
+    liveins: $v8m4
 
     ; RV32I-LABEL: name: anyext_nxv16i32_nxv16i16
-    ; RV32I: liveins: $v8
+    ; RV32I: liveins: $v8m4
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm4 = COPY $v8m4
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
@@ -759,7 +759,7 @@ body:             |
     ; RV32I-NEXT: PseudoRET implicit $v8m8
     ;
     ; RV64I-LABEL: name: anyext_nxv16i32_nxv16i16
-    ; RV64I: liveins: $v8
+    ; RV64I: liveins: $v8m4
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm4 = COPY $v8m4
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
@@ -843,10 +843,10 @@ regBankSelected: true
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    liveins: $v8
+    liveins: $v8m2
 
     ; RV32I-LABEL: name: anyext_nxv4i64_nxv4i32
-    ; RV32I: liveins: $v8
+    ; RV32I: liveins: $v8m2
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
@@ -855,7 +855,7 @@ body:             |
     ; RV32I-NEXT: PseudoRET implicit $v8m4
     ;
     ; RV64I-LABEL: name: anyext_nxv4i64_nxv4i32
-    ; RV64I: liveins: $v8
+    ; RV64I: liveins: $v8m2
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
@@ -875,10 +875,10 @@ regBankSelected: true
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    liveins: $v8
+    liveins: $v8m4
 
     ; RV32I-LABEL: name: anyext_nxv8i64_nxv8i32
-    ; RV32I: liveins: $v8
+    ; RV32I: liveins: $v8m4
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm4 = COPY $v8m4
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
@@ -887,7 +887,7 @@ body:             |
     ; RV32I-NEXT: PseudoRET implicit $v8m8
     ;
     ; RV64I-LABEL: name: anyext_nxv8i64_nxv8i32
-    ; RV64I: liveins: $v8
+    ; RV64I: liveins: $v8m4
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm4 = COPY $v8m4
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF

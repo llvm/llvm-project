@@ -43,23 +43,34 @@ ValueSymbolTable::~ValueSymbolTable() {
 ValueName *ValueSymbolTable::makeUniqueName(Value *V,
                                             SmallString<256> &UniqueName) {
   unsigned BaseSize = UniqueName.size();
+  bool AppenDot = false;
+  if (auto *GV = dyn_cast<GlobalValue>(V)) {
+    // A dot is appended to mark it as clone during ABI demangling so that
+    // for example "_Z1fv" and "_Z1fv.1" both demangle to "f()", the second
+    // one being a clone.
+    // On NVPTX we cannot use a dot because PTX only allows [A-Za-z0-9_$] for
+    // identifiers. This breaks ABI demangling but at least ptxas accepts and
+    // compiles the program.
+    const Module *M = GV->getParent();
+    if (!(M && Triple(M->getTargetTriple()).isNVPTX()))
+      AppenDot = true;
+  }
+
   while (true) {
     // Trim any suffix off and append the next number.
     UniqueName.resize(BaseSize);
     raw_svector_ostream S(UniqueName);
-    if (auto *GV = dyn_cast<GlobalValue>(V)) {
-      // A dot is appended to mark it as clone during ABI demangling so that
-      // for example "_Z1fv" and "_Z1fv.1" both demangle to "f()", the second
-      // one being a clone.
-      // On NVPTX we cannot use a dot because PTX only allows [A-Za-z0-9_$] for
-      // identifiers. This breaks ABI demangling but at least ptxas accepts and
-      // compiles the program.
-      const Module *M = GV->getParent();
-      if (!(M && Triple(M->getTargetTriple()).isNVPTX()))
-        S << ".";
-    }
+    if (AppenDot)
+      S << ".";
     S << ++LastUnique;
 
+    // Retry if MaxNameSize has been exceeded.
+    if (MaxNameSize > -1 && UniqueName.size() > (size_t)MaxNameSize) {
+      assert(BaseSize >= UniqueName.size() - (size_t)MaxNameSize &&
+             "Can't generate unique name: MaxNameSize is too small.");
+      BaseSize -= UniqueName.size() - (size_t)MaxNameSize;
+      continue;
+    }
     // Try insert the vmap entry with this suffix.
     auto IterBool = vmap.insert(std::make_pair(UniqueName.str(), V));
     if (IterBool.second)

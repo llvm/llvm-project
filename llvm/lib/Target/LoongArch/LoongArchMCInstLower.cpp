@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArch.h"
-#include "LoongArchSubtarget.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchMCExpr.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -20,7 +19,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -29,7 +27,7 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
   MCContext &Ctx = AP.OutContext;
   LoongArchMCExpr::VariantKind Kind;
 
-  switch (MO.getTargetFlags()) {
+  switch (LoongArchII::getDirectFlags(MO)) {
   default:
     llvm_unreachable("Unknown target flag on GV operand");
   case LoongArchII::MO_None:
@@ -98,6 +96,33 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
   case LoongArchII::MO_CALL36:
     Kind = LoongArchMCExpr::VK_LoongArch_CALL36;
     break;
+  case LoongArchII::MO_DESC_PC_HI:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_HI20;
+    break;
+  case LoongArchII::MO_DESC_PC_LO:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_LO12;
+    break;
+  case LoongArchII::MO_DESC64_PC_LO:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC64_PC_LO20;
+    break;
+  case LoongArchII::MO_DESC64_PC_HI:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC64_PC_HI12;
+    break;
+  case LoongArchII::MO_DESC_LD:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC_LD;
+    break;
+  case LoongArchII::MO_DESC_CALL:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC_CALL;
+    break;
+  case LoongArchII::MO_LE_HI_R:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_LE_HI20_R;
+    break;
+  case LoongArchII::MO_LE_ADD_R:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_LE_ADD_R;
+    break;
+  case LoongArchII::MO_LE_LO_R:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_LE_LO12_R;
+    break;
     // TODO: Handle more target-flags.
   }
 
@@ -109,7 +134,7 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
         ME, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
 
   if (Kind != LoongArchMCExpr::VK_LoongArch_None)
-    ME = LoongArchMCExpr::create(ME, Kind, Ctx);
+    ME = LoongArchMCExpr::create(ME, Kind, Ctx, LoongArchII::hasRelaxFlag(MO));
   return MCOperand::createExpr(ME);
 }
 

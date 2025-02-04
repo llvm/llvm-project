@@ -45,6 +45,7 @@ StringRef ARM::getArchSynonym(StringRef Arch) {
       .Case("v9.3a", "v9.3-a")
       .Case("v9.4a", "v9.4-a")
       .Case("v9.5a", "v9.5-a")
+      .Case("v9.6a", "v9.6-a")
       .Case("v8m.base", "v8-m.base")
       .Case("v8m.main", "v8-m.main")
       .Case("v8.1m.main", "v8.1-m.main")
@@ -139,7 +140,7 @@ ARM::EndianKind ARM::parseArchEndian(StringRef Arch) {
 // returned in `PBP`. Returns false in error, with `Err` containing
 // an erroneous part of the spec.
 bool ARM::parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
-                                StringRef &Err) {
+                                StringRef &Err, bool EnablePAuthLR) {
   PBP = {"none", "a_key", false, false, false};
   if (Spec == "none")
     return true; // defaults are ok
@@ -148,6 +149,7 @@ bool ARM::parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
     PBP.Scope = "non-leaf";
     PBP.BranchTargetEnforcement = true;
     PBP.GuardedControlStack = true;
+    PBP.BranchProtectionPAuthLR = EnablePAuthLR;
     return true;
   }
 

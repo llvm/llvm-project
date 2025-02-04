@@ -116,6 +116,11 @@ constexpr bool test_all() {
   dangling_1st(std::ranges::find, in, x);
   dangling_1st(std::ranges::find_if, in, unary_pred);
   dangling_1st(std::ranges::find_if_not, in, unary_pred);
+#if TEST_STD_VER >= 23
+  dangling_1st(std::ranges::find_last, in, x);
+  dangling_1st(std::ranges::find_last_if, in, unary_pred);
+  dangling_1st(std::ranges::find_last_if_not, in, unary_pred);
+#endif
   dangling_1st(std::ranges::find_first_of, in, in2);
   dangling_1st(std::ranges::adjacent_find, in);
   dangling_1st<mismatch_result<dangling, InIter>>(std::ranges::mismatch, in, in2);

@@ -13,13 +13,13 @@
 #include "Allocator.h"
 #include "Configuration.h"
 #include "Debug.h"
+#include "DeviceTypes.h"
+#include "DeviceUtils.h"
 #include "Interface.h"
 #include "LibC.h"
 #include "Mapping.h"
 #include "State.h"
 #include "Synchronization.h"
-#include "Types.h"
-#include "Utils.h"
 
 using namespace ompx;
 
@@ -53,12 +53,12 @@ namespace {
 extern "C" {
 #ifdef __AMDGPU__
 
-[[gnu::weak]] void *malloc(uint64_t Size) { return allocator::alloc(Size); }
+[[gnu::weak]] void *malloc(size_t Size) { return allocator::alloc(Size); }
 [[gnu::weak]] void free(void *Ptr) { allocator::free(Ptr); }
 
 #else
 
-[[gnu::weak, gnu::leaf]] void *malloc(uint64_t Size);
+[[gnu::weak, gnu::leaf]] void *malloc(size_t Size);
 [[gnu::weak, gnu::leaf]] void free(void *Ptr);
 
 #endif
@@ -84,14 +84,14 @@ struct SharedMemorySmartStackTy {
 
   /// Deallocate the last allocation made by the encountering thread and pointed
   /// to by \p Ptr from the stack. Each thread can call this function.
-  void pop(void *Ptr, uint32_t Bytes);
+  void pop(void *Ptr, uint64_t Bytes);
 
 private:
   /// Compute the size of the storage space reserved for a thread.
   uint32_t computeThreadStorageTotal() {
     uint32_t NumLanesInBlock = mapping::getNumberOfThreadsInBlock();
-    return utils::align_down((state::SharedScratchpadSize / NumLanesInBlock),
-                             allocator::ALIGNMENT);
+    return utils::alignDown((state::SharedScratchpadSize / NumLanesInBlock),
+                            allocator::ALIGNMENT);
   }
 
   /// Return the top address of the warp data stack, that is the first address
@@ -121,7 +121,7 @@ void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
   // First align the number of requested bytes.
   /// FIXME: The stack shouldn't require worst-case padding. Alignment needs to
   /// be passed in as an argument and the stack rewritten to support it.
-  uint64_t AlignedBytes = utils::align_up(Bytes, allocator::ALIGNMENT);
+  uint64_t AlignedBytes = utils::alignPtr(Bytes, allocator::ALIGNMENT);
 
   uint32_t StorageTotal = computeThreadStorageTotal();
 
@@ -138,8 +138,8 @@ void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
   }
 
   if (config::isDebugMode(DeviceDebugKind::CommonIssues))
-    PRINT("Shared memory stack full, fallback to dynamic allocation of global "
-          "memory will negatively impact performance.\n");
+    printf("Shared memory stack full, fallback to dynamic allocation of global "
+           "memory will negatively impact performance.\n");
   void *GlobalMemory = memory::allocGlobal(
       AlignedBytes, "Slow path shared memory allocation, insufficient "
                     "shared memory stack memory!");
@@ -148,8 +148,8 @@ void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
   return GlobalMemory;
 }
 
-void SharedMemorySmartStackTy::pop(void *Ptr, uint32_t Bytes) {
-  uint64_t AlignedBytes = utils::align_up(Bytes, allocator::ALIGNMENT);
+void SharedMemorySmartStackTy::pop(void *Ptr, uint64_t Bytes) {
+  uint64_t AlignedBytes = utils::alignPtr(Bytes, allocator::ALIGNMENT);
   if (utils::isSharedMemPtr(Ptr)) {
     int TId = mapping::getThreadIdInBlock();
     Usage[TId] -= AlignedBytes;
@@ -173,7 +173,7 @@ void memory::freeShared(void *Ptr, uint64_t Bytes, const char *Reason) {
 void *memory::allocGlobal(uint64_t Bytes, const char *Reason) {
   void *Ptr = malloc(Bytes);
   if (config::isDebugMode(DeviceDebugKind::CommonIssues) && Ptr == nullptr)
-    PRINT("nullptr returned by malloc!\n");
+    printf("nullptr returned by malloc!\n");
   return Ptr;
 }
 
@@ -277,7 +277,7 @@ void state::enterDataEnvironment(IdentTy *Ident) {
         sizeof(ThreadStates[0]) * mapping::getNumberOfThreadsInBlock();
     void *ThreadStatesPtr =
         memory::allocGlobal(Bytes, "Thread state array allocation");
-    memset(ThreadStatesPtr, 0, Bytes);
+    __builtin_memset(ThreadStatesPtr, 0, Bytes);
     if (!atomic::cas(ThreadStatesBitsPtr, uintptr_t(0),
                      reinterpret_cast<uintptr_t>(ThreadStatesPtr),
                      atomic::seq_cst, atomic::seq_cst))

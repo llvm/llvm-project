@@ -26,10 +26,9 @@
 using llvm::formatv;
 using llvm::isDigit;
 using llvm::PrintFatalError;
-using llvm::raw_ostream;
 using llvm::Record;
 using llvm::RecordKeeper;
-using llvm::StringRef;
+using namespace mlir;
 using mlir::tblgen::Attribute;
 using mlir::tblgen::EnumAttr;
 using mlir::tblgen::EnumAttrCase;
@@ -102,6 +101,27 @@ struct FieldParser<{0}, {0}> {{
     return parser.emitError(loc, "invalid {2} specification: ") << enumKeyword;
   }
 };
+
+/// Support for std::optional, useful in attribute/type definition where the enum is
+/// used as:
+///
+///    let parameters = (ins OptionalParameter<"std::optional<TheEnumName>">:$value);
+template<>
+struct FieldParser<std::optional<{0}>, std::optional<{0}>> {{
+  template <typename ParserT>
+  static FailureOr<std::optional<{0}>> parse(ParserT &parser) {{
+    // Parse the keyword/string containing the enum.
+    std::string enumKeyword;
+    auto loc = parser.getCurrentLocation();
+    if (failed(parser.parseOptionalKeywordOrString(&enumKeyword)))
+      return std::optional<{0}>{{};
+
+    // Symbolize the keyword.
+    if (::std::optional<{0}> attr = {1}::symbolizeEnum<{0}>(enumKeyword))
+      return attr;
+    return parser.emitError(loc, "invalid {2} specification: ") << enumKeyword;
+  }
+};
 } // namespace mlir
 
 namespace llvm {
@@ -139,7 +159,7 @@ inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
     // is not a power of two (i.e. not a single bit case) and not a known case.
   } else if (enumAttr.isBitEnum()) {
     // Process the known multi-bit cases that use valid keywords.
-    llvm::SmallVector<EnumAttrCase *> validMultiBitCases;
+    SmallVector<EnumAttrCase *> validMultiBitCases;
     for (auto [index, caseVal] : llvm::enumerate(cases)) {
       uint64_t value = caseVal.getValue();
       if (value && !llvm::has_single_bit(value) && !nonKeywordCases.test(index))
@@ -476,7 +496,7 @@ static void emitSpecializedAttrDef(const Record &enumDef, raw_ostream &os) {
   EnumAttr enumAttr(enumDef);
   StringRef enumName = enumAttr.getEnumClassName();
   StringRef attrClassName = enumAttr.getSpecializedAttrClassName();
-  llvm::Record *baseAttrDef = enumAttr.getBaseAttrClass();
+  const Record *baseAttrDef = enumAttr.getBaseAttrClass();
   Attribute baseAttr(baseAttrDef);
 
   // Emit classof method
@@ -565,7 +585,7 @@ static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
   StringRef underlyingToSymFnName = enumAttr.getUnderlyingToSymbolFnName();
   auto enumerants = enumAttr.getAllCases();
 
-  llvm::SmallVector<StringRef, 2> namespaces;
+  SmallVector<StringRef, 2> namespaces;
   llvm::SplitString(cppNamespace, namespaces, "::");
 
   for (auto ns : namespaces)
@@ -642,11 +662,11 @@ public:
   emitDenseMapInfo(qualName, underlyingType, cppNamespace, os);
 }
 
-static bool emitEnumDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
-  llvm::emitSourceFileHeader("Enum Utility Declarations", os, recordKeeper);
+static bool emitEnumDecls(const RecordKeeper &records, raw_ostream &os) {
+  llvm::emitSourceFileHeader("Enum Utility Declarations", os, records);
 
-  auto defs = recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttrInfo");
-  for (const auto *def : defs)
+  for (const Record *def :
+       records.getAllDerivedDefinitionsIfDefined("EnumAttrInfo"))
     emitEnumDecl(*def, os);
 
   return false;
@@ -656,7 +676,7 @@ static void emitEnumDef(const Record &enumDef, raw_ostream &os) {
   EnumAttr enumAttr(enumDef);
   StringRef cppNamespace = enumAttr.getCppNamespace();
 
-  llvm::SmallVector<StringRef, 2> namespaces;
+  SmallVector<StringRef, 2> namespaces;
   llvm::SplitString(cppNamespace, namespaces, "::");
 
   for (auto ns : namespaces)
@@ -680,11 +700,11 @@ static void emitEnumDef(const Record &enumDef, raw_ostream &os) {
   os << "\n";
 }
 
-static bool emitEnumDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
-  llvm::emitSourceFileHeader("Enum Utility Definitions", os, recordKeeper);
+static bool emitEnumDefs(const RecordKeeper &records, raw_ostream &os) {
+  llvm::emitSourceFileHeader("Enum Utility Definitions", os, records);
 
-  auto defs = recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttrInfo");
-  for (const auto *def : defs)
+  for (const Record *def :
+       records.getAllDerivedDefinitionsIfDefined("EnumAttrInfo"))
     emitEnumDef(*def, os);
 
   return false;

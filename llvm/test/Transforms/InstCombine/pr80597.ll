@@ -11,7 +11,7 @@ define i64 @pr80597(i1 %cond) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[SEXT2:%.*]] = ashr exact i64 [[ADD]], 1
-; CHECK-NEXT:    [[ASHR:%.*]] = or i64 [[SEXT2]], 4418419761487020032
+; CHECK-NEXT:    [[ASHR:%.*]] = or disjoint i64 [[SEXT2]], 4418419761487020032
 ; CHECK-NEXT:    ret i64 [[ASHR]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i64 0

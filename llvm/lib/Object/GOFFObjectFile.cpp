@@ -35,7 +35,7 @@ ObjectFile::createGOFFObjectFile(MemoryBufferRef Object) {
 
 GOFFObjectFile::GOFFObjectFile(MemoryBufferRef Object, Error &Err)
     : ObjectFile(Binary::ID_GOFF, Object) {
-  ErrorAsOutParameter ErrAsOutParam(&Err);
+  ErrorAsOutParameter ErrAsOutParam(Err);
   // Object file isn't the right size, bail out early.
   if ((Object.getBufferSize() % GOFF::RecordLength) != 0) {
     Err = createStringError(
@@ -190,8 +190,8 @@ const uint8_t *GOFFObjectFile::getSymbolEsdRecord(DataRefImpl Symb) const {
 }
 
 Expected<StringRef> GOFFObjectFile::getSymbolName(DataRefImpl Symb) const {
-  if (EsdNamesCache.count(Symb.d.a)) {
-    auto &StrPtr = EsdNamesCache[Symb.d.a];
+  if (auto It = EsdNamesCache.find(Symb.d.a); It != EsdNamesCache.end()) {
+    auto &StrPtr = It->second;
     return StringRef(StrPtr.second.get(), StrPtr.first);
   }
 
@@ -459,8 +459,8 @@ uint64_t GOFFObjectFile::getSectionSize(DataRefImpl Sec) const {
 // a contiguous sequence of bytes.
 Expected<ArrayRef<uint8_t>>
 GOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
-  if (SectionDataCache.count(Sec.d.a)) {
-    auto &Buf = SectionDataCache[Sec.d.a];
+  if (auto It = SectionDataCache.find(Sec.d.a); It != SectionDataCache.end()) {
+    auto &Buf = It->second;
     return ArrayRef<uint8_t>(Buf);
   }
   uint64_t SectionSize = getSectionSize(Sec);

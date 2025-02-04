@@ -162,7 +162,7 @@ define i64 @ext_lane0_from_stepvec() {
 ; CHECK-NEXT:    ret i64 0
 ;
 entry:
-  %0 = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+  %0 = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
   %1 = extractelement <vscale x 4 x i64> %0, i32 0
   ret i64 %1
 }
@@ -173,7 +173,7 @@ define i32 @ext_lane3_from_stepvec() {
 ; CHECK-NEXT:    ret i32 3
 ;
 entry:
-  %0 = call <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32()
+  %0 = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
   %1 = extractelement <vscale x 4 x i32> %0, i64 3
   ret i32 %1
 }
@@ -181,12 +181,12 @@ entry:
 define i64 @ext_lane_out_of_range_from_stepvec() {
 ; CHECK-LABEL: @ext_lane_out_of_range_from_stepvec(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <vscale x 4 x i64> [[TMP0]], i64 4
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
 entry:
-  %0 = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+  %0 = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
   %1 = extractelement <vscale x 4 x i64> %0, i32 4
   ret i64 %1
 }
@@ -194,12 +194,12 @@ entry:
 define i64 @ext_lane_invalid_from_stepvec() {
 ; CHECK-LABEL: @ext_lane_invalid_from_stepvec(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <vscale x 4 x i64> [[TMP0]], i64 4294967295
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
 entry:
-  %0 = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+  %0 = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
   %1 = extractelement <vscale x 4 x i64> %0, i32 -1
   ret i64 %1
 }
@@ -207,12 +207,12 @@ entry:
 define i64 @ext_lane_unknown_from_stepvec(i32 %v) {
 ; CHECK-LABEL: @ext_lane_unknown_from_stepvec(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <vscale x 4 x i64> [[TMP0]], i32 [[V:%.*]]
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
 entry:
-  %0 = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+  %0 = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
   %1 = extractelement <vscale x 4 x i64> %0, i32 %v
   ret i64 %1
 }
@@ -225,7 +225,7 @@ define i8 @ext_lane256_from_stepvec() {
 ; CHECK-NEXT:    ret i8 poison
 ;
 entry:
-  %0 = call <vscale x 512 x i8> @llvm.experimental.stepvector.nxv512i8()
+  %0 = call <vscale x 512 x i8> @llvm.stepvector.nxv512i8()
   %1 = extractelement <vscale x 512 x i8> %0, i64 256
   ret i8 %1
 }
@@ -236,7 +236,7 @@ define i8 @ext_lane255_from_stepvec() {
 ; CHECK-NEXT:    ret i8 -1
 ;
 entry:
-  %0 = call <vscale x 512 x i8> @llvm.experimental.stepvector.nxv512i8()
+  %0 = call <vscale x 512 x i8> @llvm.stepvector.nxv512i8()
   %1 = extractelement <vscale x 512 x i8> %0, i64 255
   ret i8 %1
 }
@@ -250,7 +250,7 @@ define i64 @ext_lane0_from_add_with_stepvec(i64 %i) {
 ;
   %tmp = insertelement <vscale x 2 x i64> poison, i64 %i, i32 0
   %splatofi = shufflevector <vscale x 2 x i64> %tmp, <vscale x 2 x i64> poison, <vscale x  2 x i32> zeroinitializer
-  %stepvec = call <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()
+  %stepvec = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
   %add = add <vscale x 2 x i64> %splatofi, %stepvec
   %res = extractelement <vscale x 2 x i64> %add, i32 0
   ret i64 %res
@@ -263,7 +263,7 @@ define i1 @ext_lane1_from_cmp_with_stepvec(i64 %i) {
 ;
   %tmp = insertelement <vscale x 2 x i64> poison, i64 %i, i32 0
   %splatofi = shufflevector <vscale x 2 x i64> %tmp, <vscale x 2 x i64> poison, <vscale x  2 x i32> zeroinitializer
-  %stepvec = call <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()
+  %stepvec = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
   %cmp = icmp eq <vscale x 2 x i64> %splatofi, %stepvec
   %res = extractelement <vscale x 2 x i1> %cmp, i32 1
   ret i1 %res
@@ -282,7 +282,7 @@ entry:
   ret ptr %r
 }
 
-declare <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()
-declare <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
-declare <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32()
-declare <vscale x 512 x i8> @llvm.experimental.stepvector.nxv512i8()
+declare <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+declare <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
+declare <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
+declare <vscale x 512 x i8> @llvm.stepvector.nxv512i8()

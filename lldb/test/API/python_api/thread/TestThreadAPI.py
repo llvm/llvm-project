@@ -51,6 +51,11 @@ class ThreadAPITestCase(TestBase):
         """Test SBThread.frame with negative indexes."""
         self.build()
         self.validate_negative_indexing()
+ 
+    def test_StepInstruction(self):
+        """Test that StepInstruction preserves the plan stack."""
+        self.build()
+        self.step_instruction_in_called_function()
 
     def setUp(self):
         # Call super's setUp().
@@ -303,3 +308,55 @@ class ThreadAPITestCase(TestBase):
         neg_range = range(thread.num_frames, 0, -1)
         for pos, neg in zip(pos_range, neg_range):
             self.assertEqual(thread.frame[pos].idx, thread.frame[-neg].idx)
+
+    def step_instruction_in_called_function(self):
+        main_file_spec = lldb.SBFileSpec("main.cpp")
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "Set break point at this line", main_file_spec
+        )
+        options = lldb.SBExpressionOptions()
+        options.SetIgnoreBreakpoints(False)
+
+        call_me_bkpt = target.BreakpointCreateBySourceRegex(
+            "Set a breakpoint in call_me", main_file_spec
+        )
+        self.assertGreater(
+            call_me_bkpt.GetNumLocations(), 0, "Got at least one location in call_me"
+        )
+
+        # On Windows this may be the full name "void __cdecl call_me(bool)",
+        # elsewhere it's just "call_me(bool)".
+        expected_name = r".*call_me\(bool\)$"
+
+        # Now run the expression, this will fail because we stopped at a breakpoint:
+        self.runCmd("expr -i 0 -- call_me(true)", check=False)
+        # Now we should be stopped in call_me:
+        self.assertRegex(
+            thread.frames[0].name, expected_name, "Stopped in call_me(bool)"
+        )
+
+        # Now do a various API steps.  These should not cause the expression context to get unshipped:
+        thread.StepInstruction(False)
+        self.assertRegex(
+            thread.frames[0].name,
+            expected_name,
+            "Still in call_me(bool) after StepInstruction",
+        )
+        thread.StepInstruction(True)
+        self.assertRegex(
+            thread.frames[0].name,
+            expected_name,
+            "Still in call_me(bool) after NextInstruction",
+        )
+        thread.StepInto()
+        self.assertRegex(
+            thread.frames[0].name,
+            expected_name,
+            "Still in call_me(bool) after StepInto",
+        )
+        thread.StepOver(False)
+        self.assertRegex(
+            thread.frames[0].name,
+            expected_name,
+            "Still in call_me(bool) after StepOver",
+        )

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../../lib/Driver/ToolChains/Gnu.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_BUILD_LLVM_DYLIB, LLVM_BUILD_SHARED_LIBS
 #include "gtest/gtest.h"
 
 // The Generic_GCC class is hidden in dylib/shared library builds, so

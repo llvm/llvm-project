@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++1z %s -emit-llvm -fblocks -triple x86_64-apple-darwin10 -o - | FileCheck %s --implicit-check-not=should_not_be_used
+// RUN: %clang_cc1 -std=c++1z %s -emit-llvm -fblocks -triple x86_64-apple-darwin10 -o - -fexperimental-new-constant-interpreter | FileCheck %s --implicit-check-not=should_not_be_used
 
 void should_be_used_1();
 void should_be_used_2();

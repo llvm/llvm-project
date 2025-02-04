@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_SRC_STDBIT_STDC_FIRST_TRAILING_ZERO_ULL_H
 #define LLVM_LIBC_SRC_STDBIT_STDC_FIRST_TRAILING_ZERO_ULL_H
 
-namespace LIBC_NAMESPACE {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 unsigned stdc_first_trailing_zero_ull(unsigned long long value);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDBIT_STDC_FIRST_TRAILING_ZERO_ULL_H

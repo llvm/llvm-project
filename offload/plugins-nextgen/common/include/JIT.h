@@ -55,15 +55,11 @@ struct JITEngine {
   process(const __tgt_device_image &Image,
           target::plugin::GenericDeviceTy &Device);
 
-  /// Return true if \p Image is a bitcode image that can be JITed for the given
-  /// architecture.
-  Expected<bool> checkBitcodeImage(StringRef Buffer) const;
-
 private:
   /// Compile the bitcode image \p Image and generate the binary image that can
   /// be loaded to the target device of the triple \p Triple architecture \p
   /// MCpu. \p PostProcessing will be called after codegen to handle cases such
-  /// as assember as an external tool.
+  /// as assembler as an external tool.
   Expected<const __tgt_device_image *>
   compile(const __tgt_device_image &Image, const std::string &ComputeUnitKind,
           PostProcessingFn PostProcessing);

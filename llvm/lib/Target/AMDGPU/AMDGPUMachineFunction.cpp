@@ -8,7 +8,7 @@
 
 #include "AMDGPUMachineFunction.h"
 #include "AMDGPU.h"
-#include "AMDGPUPerfHintAnalysis.h"
+#include "AMDGPUMemoryUtils.h"
 #include "AMDGPUSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -31,7 +31,7 @@ getKernelDynLDSGlobalFromFunction(const Function &F) {
 static bool hasLDSKernelArgument(const Function &F) {
   for (const Argument &Arg : F.args()) {
     Type *ArgTy = Arg.getType();
-    if (auto PtrTy = dyn_cast<PointerType>(ArgTy)) {
+    if (auto *PtrTy = dyn_cast<PointerType>(ArgTy)) {
       if (PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
         return true;
     }
@@ -44,8 +44,7 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const Function &F,
     : IsEntryFunction(AMDGPU::isEntryFunctionCC(F.getCallingConv())),
       IsModuleEntryFunction(
           AMDGPU::isModuleEntryFunctionCC(F.getCallingConv())),
-      IsChainFunction(AMDGPU::isChainCC(F.getCallingConv())),
-      NoSignedZerosFPMath(false) {
+      IsChainFunction(AMDGPU::isChainCC(F.getCallingConv())) {
 
   // FIXME: Should initialize KernArgSize based on ExplicitKernelArgOffset,
   // except reserved size is not correctly aligned.
@@ -103,6 +102,13 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
 
   unsigned Offset;
   if (GV.getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+    if (AMDGPU::isNamedBarrier(GV)) {
+      std::optional<unsigned> BarAddr = getLDSAbsoluteAddress(GV);
+      if (!BarAddr)
+        llvm_unreachable("named barrier should have an assigned address");
+      Entry.first->second = BarAddr.value();
+      return BarAddr.value();
+    }
 
     std::optional<uint32_t> MaybeAbs = getLDSAbsoluteAddress(GV);
     if (MaybeAbs) {

@@ -15,7 +15,11 @@ TEST(LlvmLibcStdcBitfloorUiTest, Zero) {
 }
 
 TEST(LlvmLibcStdcBitfloorUiTest, Ones) {
-  for (unsigned i = 0U; i != INT_WIDTH; ++i)
-    EXPECT_EQ(LIBC_NAMESPACE::stdc_bit_floor_ui(UINT_MAX >> i),
-              1U << (UINT_WIDTH - i - 1));
+  for (unsigned i = 0U; i != LIBC_NAMESPACE::cpp::numeric_limits<int>::digits;
+       ++i)
+    EXPECT_EQ(
+        LIBC_NAMESPACE::stdc_bit_floor_ui(
+            LIBC_NAMESPACE::cpp::numeric_limits<unsigned int>::max() >> i),
+        1U << (LIBC_NAMESPACE::cpp::numeric_limits<unsigned int>::digits - i -
+               1));
 }

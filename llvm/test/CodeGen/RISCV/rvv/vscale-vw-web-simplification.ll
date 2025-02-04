@@ -156,6 +156,7 @@ define <vscale x 2 x i32> @vwop_vscale_sext_i1i32_multiple_users(ptr %x, ptr %y,
 ; NO_FOLDING-NEXT:    vlm.v v9, (a1)
 ; NO_FOLDING-NEXT:    vlm.v v10, (a2)
 ; NO_FOLDING-NEXT:    vmv.v.i v11, 0
+; NO_FOLDING-NEXT:    li a0, 1
 ; NO_FOLDING-NEXT:    vmv.v.v v0, v8
 ; NO_FOLDING-NEXT:    vmerge.vim v12, v11, -1, v0
 ; NO_FOLDING-NEXT:    vmv.v.v v0, v9
@@ -163,7 +164,6 @@ define <vscale x 2 x i32> @vwop_vscale_sext_i1i32_multiple_users(ptr %x, ptr %y,
 ; NO_FOLDING-NEXT:    vmv.v.v v0, v10
 ; NO_FOLDING-NEXT:    vmerge.vim v10, v11, -1, v0
 ; NO_FOLDING-NEXT:    vmul.vv v9, v12, v9
-; NO_FOLDING-NEXT:    li a0, 1
 ; NO_FOLDING-NEXT:    vsub.vv v11, v12, v10
 ; NO_FOLDING-NEXT:    vmv.v.v v0, v8
 ; NO_FOLDING-NEXT:    vsub.vx v10, v10, a0, v0.t
@@ -178,6 +178,7 @@ define <vscale x 2 x i32> @vwop_vscale_sext_i1i32_multiple_users(ptr %x, ptr %y,
 ; FOLDING-NEXT:    vlm.v v9, (a1)
 ; FOLDING-NEXT:    vlm.v v10, (a2)
 ; FOLDING-NEXT:    vmv.v.i v11, 0
+; FOLDING-NEXT:    li a0, 1
 ; FOLDING-NEXT:    vmv.v.v v0, v8
 ; FOLDING-NEXT:    vmerge.vim v12, v11, -1, v0
 ; FOLDING-NEXT:    vmv.v.v v0, v9
@@ -185,7 +186,6 @@ define <vscale x 2 x i32> @vwop_vscale_sext_i1i32_multiple_users(ptr %x, ptr %y,
 ; FOLDING-NEXT:    vmv.v.v v0, v10
 ; FOLDING-NEXT:    vmerge.vim v10, v11, -1, v0
 ; FOLDING-NEXT:    vmul.vv v9, v12, v9
-; FOLDING-NEXT:    li a0, 1
 ; FOLDING-NEXT:    vsub.vv v11, v12, v10
 ; FOLDING-NEXT:    vmv.v.v v0, v8
 ; FOLDING-NEXT:    vsub.vx v10, v10, a0, v0.t
@@ -214,6 +214,7 @@ define <vscale x 2 x i8> @vwop_vscale_sext_i1i8_multiple_users(ptr %x, ptr %y, p
 ; NO_FOLDING-NEXT:    vlm.v v9, (a1)
 ; NO_FOLDING-NEXT:    vlm.v v10, (a2)
 ; NO_FOLDING-NEXT:    vmv.v.i v11, 0
+; NO_FOLDING-NEXT:    li a0, 1
 ; NO_FOLDING-NEXT:    vmv1r.v v0, v8
 ; NO_FOLDING-NEXT:    vmerge.vim v12, v11, -1, v0
 ; NO_FOLDING-NEXT:    vmv1r.v v0, v9
@@ -221,7 +222,6 @@ define <vscale x 2 x i8> @vwop_vscale_sext_i1i8_multiple_users(ptr %x, ptr %y, p
 ; NO_FOLDING-NEXT:    vmv1r.v v0, v10
 ; NO_FOLDING-NEXT:    vmerge.vim v10, v11, -1, v0
 ; NO_FOLDING-NEXT:    vmul.vv v9, v12, v9
-; NO_FOLDING-NEXT:    li a0, 1
 ; NO_FOLDING-NEXT:    vsub.vv v11, v12, v10
 ; NO_FOLDING-NEXT:    vmv1r.v v0, v8
 ; NO_FOLDING-NEXT:    vsub.vx v10, v10, a0, v0.t
@@ -236,6 +236,7 @@ define <vscale x 2 x i8> @vwop_vscale_sext_i1i8_multiple_users(ptr %x, ptr %y, p
 ; FOLDING-NEXT:    vlm.v v9, (a1)
 ; FOLDING-NEXT:    vlm.v v10, (a2)
 ; FOLDING-NEXT:    vmv.v.i v11, 0
+; FOLDING-NEXT:    li a0, 1
 ; FOLDING-NEXT:    vmv1r.v v0, v8
 ; FOLDING-NEXT:    vmerge.vim v12, v11, -1, v0
 ; FOLDING-NEXT:    vmv1r.v v0, v9
@@ -243,7 +244,6 @@ define <vscale x 2 x i8> @vwop_vscale_sext_i1i8_multiple_users(ptr %x, ptr %y, p
 ; FOLDING-NEXT:    vmv1r.v v0, v10
 ; FOLDING-NEXT:    vmerge.vim v10, v11, -1, v0
 ; FOLDING-NEXT:    vmul.vv v9, v12, v9
-; FOLDING-NEXT:    li a0, 1
 ; FOLDING-NEXT:    vsub.vv v11, v12, v10
 ; FOLDING-NEXT:    vmv1r.v v0, v8
 ; FOLDING-NEXT:    vsub.vx v10, v10, a0, v0.t

@@ -40,6 +40,89 @@ void NormalFunc(int i, float f) {
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: NullStmt
+
+#pragma acc parallel reduction(+: i)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: reduction clause Operator: +
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'int' lvalue ParmVar{{.*}} 'i' 'int'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+#pragma acc serial reduction(*: f)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}serial
+  // CHECK-NEXT: reduction clause Operator: *
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'float' lvalue ParmVar{{.*}} 'f' 'float'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+#pragma acc parallel reduction(max: i)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: reduction clause Operator: max
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'int' lvalue ParmVar{{.*}} 'i' 'int'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+#pragma acc serial reduction(min: f)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}serial
+  // CHECK-NEXT: reduction clause Operator: min
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'float' lvalue ParmVar{{.*}} 'f' 'float'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+#pragma acc parallel reduction(&: i)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: reduction clause Operator: &
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'int' lvalue ParmVar{{.*}} 'i' 'int'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+#pragma acc serial reduction(|: f)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}serial
+  // CHECK-NEXT: reduction clause Operator: |
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'float' lvalue ParmVar{{.*}} 'f' 'float'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+
+#pragma acc parallel reduction(^: i)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: reduction clause Operator: ^
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'int' lvalue ParmVar{{.*}} 'i' 'int'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+#pragma acc serial reduction(&&: f)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}serial
+  // CHECK-NEXT: reduction clause Operator: &&
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'float' lvalue ParmVar{{.*}} 'f' 'float'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+
+#pragma acc parallel reduction(||: i)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: reduction clause Operator: ||
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'int' lvalue ParmVar{{.*}} 'i' 'int'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
 }
 
 template<typename T>
@@ -114,6 +197,7 @@ void TemplFunc() {
   while(true);
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}}serial
   // CHECK-NEXT: self clause
+  // CHECK-NEXT: <<<NULL>>
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: NullStmt
@@ -150,6 +234,98 @@ void TemplFunc() {
   // CHECK-NEXT: self clause
   // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
   // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+  T t;
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} t 'T'
+
+#pragma acc parallel reduction(+: t)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: reduction clause Operator: +
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'T' lvalue Var{{.*}} 't' 'T'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+#pragma acc serial reduction(*: T::SomeFloat)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}serial
+  // CHECK-NEXT: reduction clause Operator: *
+  // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+  typename T::IntTy i;
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'typename T::IntTy'
+
+#pragma acc parallel reduction(max: i)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: reduction clause Operator: max
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'typename T::IntTy' lvalue Var{{.*}} 'i' 'typename T::IntTy'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+#pragma acc serial reduction(min: t)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}serial
+  // CHECK-NEXT: reduction clause Operator: min
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'T' lvalue Var{{.*}} 't' 'T'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+#pragma acc parallel reduction(&: T::SomeFloat)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: reduction clause Operator: &
+  // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+#pragma acc serial reduction(|: i)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}serial
+  // CHECK-NEXT: reduction clause Operator: |
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'typename T::IntTy' lvalue Var{{.*}} 'i' 'typename T::IntTy'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+#pragma acc parallel reduction(^: t)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: reduction clause Operator: ^
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'T' lvalue Var{{.*}} 't' 'T'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+#pragma acc serial reduction(&&: T::SomeFloat)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}serial
+  // CHECK-NEXT: reduction clause Operator: &&
+  // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+#pragma acc parallel reduction(||: i)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: reduction clause Operator: ||
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'typename T::IntTy' lvalue Var{{.*}} 'i' 'typename T::IntTy'
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: NullStmt
@@ -218,6 +394,7 @@ void TemplFunc() {
 
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}}serial
   // CHECK-NEXT: self clause
+  // CHECK-NEXT: <<<NULL>>
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: NullStmt
@@ -258,6 +435,79 @@ void TemplFunc() {
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'float' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}} 'const float' lvalue Var{{.*}} 'SomeFloat' 'const float'
   // CHECK-NEXT: NestedNameSpecifier TypeSpec 'InstTy'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} t 'InstTy'
+  // CHECK-NEXT: CXXConstructExpr
+
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: reduction clause Operator: +
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'InstTy' lvalue Var{{.*}} 't' 'InstTy'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}serial
+  // CHECK-NEXT: reduction clause Operator: *
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'const float' lvalue Var{{.*}} 'SomeFloat' 'const float'
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'InstTy'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'typename InstTy::IntTy':'int'
+
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: reduction clause Operator: max
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'typename InstTy::IntTy':'int' lvalue Var{{.*}} 'i' 'typename InstTy::IntTy':'int'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}serial
+  // CHECK-NEXT: reduction clause Operator: min
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'InstTy' lvalue Var{{.*}} 't' 'InstTy'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: reduction clause Operator: &
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'const float' lvalue Var{{.*}} 'SomeFloat' 'const float'
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'InstTy'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}serial
+  // CHECK-NEXT: reduction clause Operator: |
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'typename InstTy::IntTy':'int' lvalue Var{{.*}} 'i' 'typename InstTy::IntTy':'int'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: reduction clause Operator: ^
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'InstTy' lvalue Var{{.*}} 't' 'InstTy'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}serial
+  // CHECK-NEXT: reduction clause Operator: &&
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'const float' lvalue Var{{.*}} 'SomeFloat' 'const float'
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'InstTy'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: reduction clause Operator: ||
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'typename InstTy::IntTy':'int' lvalue Var{{.*}} 'i' 'typename InstTy::IntTy':'int'
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: NullStmt

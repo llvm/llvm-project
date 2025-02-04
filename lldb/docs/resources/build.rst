@@ -51,21 +51,21 @@ CMake flag to ``On`` or ``Off`` to force the dependency to be enabled or
 disabled. When a dependency is set to ``On`` and can't be found it will cause a
 CMake configuration error.
 
-+-------------------+------------------------------------------------------+--------------------------+
-| Feature           | Description                                          | CMake Flag               |
-+===================+======================================================+==========================+
-| Editline          | Generic line editing, history, Emacs and Vi bindings | ``LLDB_ENABLE_LIBEDIT``  |
-+-------------------+------------------------------------------------------+--------------------------+
-| Curses            | Text user interface                                  | ``LLDB_ENABLE_CURSES``   |
-+-------------------+------------------------------------------------------+--------------------------+
-| LZMA              | Lossless data compression                            | ``LLDB_ENABLE_LZMA``     |
-+-------------------+------------------------------------------------------+--------------------------+
-| Libxml2           | XML                                                  | ``LLDB_ENABLE_LIBXML2``  |
-+-------------------+------------------------------------------------------+--------------------------+
-| Python            | Python scripting                                     | ``LLDB_ENABLE_PYTHON``   |
-+-------------------+------------------------------------------------------+--------------------------+
-| Lua               | Lua scripting                                        | ``LLDB_ENABLE_LUA``      |
-+-------------------+------------------------------------------------------+--------------------------+
++-------------------+--------------------------------------------------------------+--------------------------+
+| Feature           | Description                                                  | CMake Flag               |
++===================+==============================================================+==========================+
+| Editline          | Generic line editing, history, Emacs and Vi bindings         | ``LLDB_ENABLE_LIBEDIT``  |
++-------------------+--------------------------------------------------------------+--------------------------+
+| Curses            | Text user interface                                          | ``LLDB_ENABLE_CURSES``   |
++-------------------+--------------------------------------------------------------+--------------------------+
+| LZMA              | Lossless data compression                                    | ``LLDB_ENABLE_LZMA``     |
++-------------------+--------------------------------------------------------------+--------------------------+
+| Libxml2           | XML                                                          | ``LLDB_ENABLE_LIBXML2``  |
++-------------------+--------------------------------------------------------------+--------------------------+
+| Python            | Python scripting. >= 3.8 is required.                        | ``LLDB_ENABLE_PYTHON``   |
++-------------------+--------------------------------------------------------------+--------------------------+
+| Lua               | Lua scripting. Lua 5.3 and 5.4 are supported.                | ``LLDB_ENABLE_LUA``      |
++-------------------+--------------------------------------------------------------+--------------------------+
 
 Depending on your platform and package manager, one might run any of the
 commands below.
@@ -75,7 +75,7 @@ commands below.
   $ yum install libedit-devel libxml2-devel ncurses-devel python-devel swig
   $ sudo apt-get install build-essential swig python3-dev libedit-dev libncurses5-dev libxml2-dev
   $ pkg install swig python libxml2
-  $ pkgin install swig python36 cmake ninja-build
+  $ pkgin install swig python38 cmake ninja-build
   $ brew install swig cmake ninja
 
 .. note::
@@ -477,7 +477,6 @@ further by passing the appropriate cmake options, such as:
   -DLLDB_ENABLE_PYTHON=0
   -DLLDB_ENABLE_LIBEDIT=0
   -DLLDB_ENABLE_CURSES=0
-  -DLLVM_ENABLE_TERMINFO=0
 
 (see :ref:`Optional Dependencies` for more)
 

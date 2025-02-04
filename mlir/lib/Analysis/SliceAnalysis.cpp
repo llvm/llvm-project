@@ -11,10 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/IR/BuiltinOps.h"
+#include "mlir/Analysis/TopologicalSortUtils.h"
+#include "mlir/IR/Block.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
@@ -90,14 +92,13 @@ static void getBackwardSliceImpl(Operation *op,
   if (options.filter && !options.filter(op))
     return;
 
-  for (const auto &en : llvm::enumerate(op->getOperands())) {
-    auto operand = en.value();
-    if (auto *definingOp = operand.getDefiningOp()) {
+  auto processValue = [&](Value value) {
+    if (auto *definingOp = value.getDefiningOp()) {
       if (backwardSlice->count(definingOp) == 0)
         getBackwardSliceImpl(definingOp, backwardSlice, options);
-    } else if (auto blockArg = dyn_cast<BlockArgument>(operand)) {
+    } else if (auto blockArg = dyn_cast<BlockArgument>(value)) {
       if (options.omitBlockArguments)
-        continue;
+        return;
 
       Block *block = blockArg.getOwner();
       Operation *parentOp = block->getParentOp();
@@ -112,7 +113,24 @@ static void getBackwardSliceImpl(Operation *op,
     } else {
       llvm_unreachable("No definingOp and not a block argument.");
     }
+  };
+
+  if (!options.omitUsesFromAbove) {
+    llvm::for_each(op->getRegions(), [&](Region &region) {
+      // Walk this region recursively to collect the regions that descend from
+      // this op's nested regions (inclusive).
+      SmallPtrSet<Region *, 4> descendents;
+      region.walk(
+          [&](Region *childRegion) { descendents.insert(childRegion); });
+      region.walk([&](Operation *op) {
+        for (OpOperand &operand : op->getOpOperands()) {
+          if (!descendents.contains(operand.get().getParentRegion()))
+            processValue(operand.get());
+        }
+      });
+    });
   }
+  llvm::for_each(op->getOperands(), processValue);
 
   backwardSlice->insert(op);
 }
@@ -162,62 +180,6 @@ mlir::getSlice(Operation *op, const BackwardSliceOptions &backwardSliceOptions,
     ++currentIndex;
   }
   return topologicalSort(slice);
-}
-
-namespace {
-/// DFS post-order implementation that maintains a global count to work across
-/// multiple invocations, to help implement topological sort on multi-root DAGs.
-/// We traverse all operations but only record the ones that appear in
-/// `toSort` for the final result.
-struct DFSState {
-  DFSState(const SetVector<Operation *> &set) : toSort(set), seen() {}
-  const SetVector<Operation *> &toSort;
-  SmallVector<Operation *, 16> topologicalCounts;
-  DenseSet<Operation *> seen;
-};
-} // namespace
-
-static void dfsPostorder(Operation *root, DFSState *state) {
-  SmallVector<Operation *> queue(1, root);
-  std::vector<Operation *> ops;
-  while (!queue.empty()) {
-    Operation *current = queue.pop_back_val();
-    ops.push_back(current);
-    for (Operation *op : current->getUsers())
-      queue.push_back(op);
-    for (Region &region : current->getRegions()) {
-      for (Operation &op : region.getOps())
-        queue.push_back(&op);
-    }
-  }
-
-  for (Operation *op : llvm::reverse(ops)) {
-    if (state->seen.insert(op).second && state->toSort.count(op) > 0)
-      state->topologicalCounts.push_back(op);
-  }
-}
-
-SetVector<Operation *>
-mlir::topologicalSort(const SetVector<Operation *> &toSort) {
-  if (toSort.empty()) {
-    return toSort;
-  }
-
-  // Run from each root with global count and `seen` set.
-  DFSState state(toSort);
-  for (auto *s : toSort) {
-    assert(toSort.count(s) == 1 && "NYI: multi-sets not supported");
-    dfsPostorder(s, &state);
-  }
-
-  // Reorder and return.
-  SetVector<Operation *> res;
-  for (auto it = state.topologicalCounts.rbegin(),
-            eit = state.topologicalCounts.rend();
-       it != eit; ++it) {
-    res.insert(*it);
-  }
-  return res;
 }
 
 /// Returns true if `value` (transitively) depends on iteration-carried values
