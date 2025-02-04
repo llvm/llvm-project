@@ -41,6 +41,13 @@ struct LinkerCLOptions : public LinkerConfig {
   std::vector<std::string> inputFiles;
   std::string outputFile = "-";
 
+  /// Show the registered dialects before trying to load the input file.
+  LinkerCLOptions &showDialects(bool show) {
+    showDialectsFlag = show;
+    return *this;
+  }
+  bool shouldShowDialects() const { return showDialectsFlag; }
+
   /// Creates and initializes a LinkerConfig from command line options.
   /// These options are static but use ExternalStorage to initialize the
   /// members of the LinkerConfig class.
@@ -64,6 +71,12 @@ struct LinkerCLOptions : public LinkerConfig {
         cl::location(linkOnlyNeededFlag), cl::init(false),
         cl::cat(getCategory()));
 
+    static cl::opt<bool, /*ExternalStorage=*/true> clShowDialects(
+        "show-dialects",
+        cl::desc("Print the list of registered dialects and exit"),
+        cl::location(showDialectsFlag), cl::init(false),
+        cl::cat(getCategory()));
+
     static cl::list<std::string> clInputFiles(
         cl::Positional, cl::OneOrMore, cl::desc("<input MLIR files>"),
         cl::cat(getCategory()), cl::callback([this](const std::string &val) {
@@ -75,15 +88,26 @@ struct LinkerCLOptions : public LinkerConfig {
         cl::callback([this](const std::string &val) { outputFile = val; }));
   }
 
+  LinkerCLOptions(const LinkerCLOptions &) = delete;
+  LinkerCLOptions(LinkerCLOptions &&) = delete;
+
+  LinkerCLOptions &operator=(const LinkerCLOptions &) = delete;
+  LinkerCLOptions &operator=(LinkerCLOptions &&) = delete;
+
   static void setupAndParse(int argc, char **argv) {
     // Parse command line
     cl::HideUnrelatedOptions({&getCategory(), &getColorCategory()});
     cl::ParseCommandLineOptions(argc, argv, "mlir-link");
   }
+
+  /// Show the registered dialects before trying to load the input file.
+  bool showDialectsFlag = false;
 };
 
 ManagedStatic<LinkerCLOptions> clOptionsConfig;
-LinkerConfig createLinkerConfigFromCLOptions() { return *clOptionsConfig; }
+const LinkerCLOptions &createLinkerConfigFromCLOptions() {
+  return *clOptionsConfig;
+}
 
 /// Handles the processing of input files for the linker.
 /// This class encapsulates all the file handling logic for linker.
@@ -103,11 +127,9 @@ public:
       std::string errorMessage;
       auto input = openInputFile(fileName, &errorMessage);
 
-      if (!input) {
+      if (!input)
         return emitFileError(fileName, errorMessage);
-      }
 
-      // Process file with potentially multiple modules
       if (failed(processInputFile(std::move(input), config, os)))
         return emitFileError(fileName, "Failed to process input file");
 
@@ -157,14 +179,23 @@ private:
   Linker &linker;
 };
 
+static LogicalResult printRegisteredDialects(DialectRegistry &registry) {
+  llvm::outs() << "Available Dialects: ";
+  interleave(registry.getDialectNames(), llvm::outs(), ",");
+  llvm::outs() << "\n";
+  return success();
+}
+
 LogicalResult mlir::MlirLinkMain(int argc, char **argv,
                                  DialectRegistry &registry) {
   // Initialize LLVM infrastructure
   InitLLVM initLLVM(argc, argv);
 
-  auto config = createLinkerConfigFromCLOptions();
-
+  const LinkerCLOptions &config = createLinkerConfigFromCLOptions();
   LinkerCLOptions::setupAndParse(argc, argv);
+
+  if (config.shouldShowDialects())
+    return printRegisteredDialects(registry);
 
   MLIRContext context(registry);
   context.allowUnregisteredDialects(config.shouldAllowUnregisteredDialects());
