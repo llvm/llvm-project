@@ -684,7 +684,7 @@ struct ConstantDataArraySlice {
 /// If successful \p Slice will point to a ConstantDataArray info object
 /// with an appropriate offset.
 bool getConstantDataArrayInfo(const Value *V, ConstantDataArraySlice &Slice,
-                              unsigned ElementSize, uint64_t Offset = 0);
+                              unsigned ElementBitWidth, uint64_t Offset = 0);
 
 /// This function computes the length of a null-terminated C string pointed to
 /// by V. If successful, it returns true and returns the string in Str. If
@@ -697,7 +697,7 @@ bool getConstantStringInfo(const Value *V, StringRef &Str, unsigned CharWidth,
 
 /// If we can compute the length of the string pointed to by the specified
 /// pointer, return 'len+1'.  If we can't, return 0.
-uint64_t GetStringLength(const Value *V, unsigned CharSize = 8);
+uint64_t getStringLength(const Value *V, unsigned CharWidth);
 
 /// This function returns call pointer argument that is considered the same by
 /// aliasing rules. You CAN'T use it to replace one value with another. If

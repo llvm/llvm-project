@@ -156,7 +156,8 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
   uint64_t Size = MemOpLength->getLimitedValue();
   assert(Size && "0-sized memory transferring should be removed already.");
 
-  if (Size > 8 || (Size&(Size-1)))
+  uint64_t MemOpWidth = Size * DL.getByteWidth();
+  if (MemOpWidth > 64 || (Size & (Size - 1)))
     return nullptr;  // If not 1/2/4/8 bytes, exit.
 
   // If it is an atomic and alignment is less than the size then we will
@@ -168,7 +169,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
       return nullptr;
 
   // Use an integer load+store unless we can find something better.
-  IntegerType* IntType = IntegerType::get(MI->getContext(), Size<<3);
+  IntegerType *IntType = IntegerType::get(MI->getContext(), MemOpWidth);
 
   // If the memcpy has metadata describing the members, see if we can get the
   // TBAA, scope and noalias tags describing our copy.
@@ -244,7 +245,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
   // Extract the length and alignment and fill if they are constant.
   ConstantInt *LenC = dyn_cast<ConstantInt>(MI->getLength());
   ConstantInt *FillC = dyn_cast<ConstantInt>(MI->getValue());
-  if (!LenC || !FillC || !FillC->getType()->isIntegerTy(8))
+  if (!LenC || !FillC || !FillC->getType()->isIntegerTy(DL.getByteWidth()))
     return nullptr;
   const uint64_t Len = LenC->getLimitedValue();
   assert(Len && "0-sized memory setting should be removed already.");
@@ -259,12 +260,13 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
       return nullptr;
 
   // memset(s,c,n) -> store s, c (for n=1,2,4,8)
-  if (Len <= 8 && isPowerOf2_32((uint32_t)Len)) {
+  uint64_t MemOpWidth = Len * DL.getByteWidth();
+  if (MemOpWidth <= 64 && isPowerOf2_32((uint32_t)Len)) {
     Value *Dest = MI->getDest();
 
     // Extract the fill value and store.
     Constant *FillVal = ConstantInt::get(
-        MI->getContext(), APInt::getSplat(Len * 8, FillC->getValue()));
+        MI->getContext(), APInt::getSplat(MemOpWidth, FillC->getValue()));
     StoreInst *S = Builder.CreateStore(FillVal, Dest, MI->isVolatile());
     S->copyMetadata(*MI, LLVMContext::MD_DIAssignID);
     auto replaceOpForAssignmentMarkers = [FillC, FillVal](auto *DbgAssign) {
