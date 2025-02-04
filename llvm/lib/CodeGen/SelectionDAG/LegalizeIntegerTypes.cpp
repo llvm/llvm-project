@@ -566,6 +566,29 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITCAST(SDNode *N) {
     }
   }
 
+  // TODO: Handle big endian
+  if (!NOutVT.isVector() && InOp.getValueType().isVector() &&
+      DAG.getDataLayout().isLittleEndian()) {
+    // Pad the vector operand with undef and cast to a wider integer.
+    EVT EltVT = InOp.getValueType().getVectorElementType();
+    TypeSize EltSize = EltVT.getSizeInBits();
+    TypeSize OutSize = NOutVT.getSizeInBits();
+
+    if (OutSize.hasKnownScalarFactor(EltSize)) {
+      unsigned NumEltsWithPadding = OutSize.getKnownScalarFactor(EltSize);
+      EVT WideVecVT =
+          EVT::getVectorVT(*DAG.getContext(), EltVT, NumEltsWithPadding);
+
+      if (isTypeLegal(WideVecVT)) {
+        SDValue Inserted = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, WideVecVT,
+                                       DAG.getUNDEF(WideVecVT), InOp,
+                                       DAG.getVectorIdxConstant(0, dl));
+
+        return DAG.getNode(ISD::BITCAST, dl, NOutVT, Inserted);
+      }
+    }
+  }
+
   return DAG.getNode(ISD::ANY_EXTEND, dl, NOutVT,
                      CreateStackStoreLoad(InOp, OutVT));
 }
@@ -2181,9 +2204,43 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ATOMIC_STORE(AtomicSDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_BITCAST(SDNode *N) {
+  EVT OutVT = N->getValueType(0);
+  SDValue InOp = N->getOperand(0);
+  EVT InVT = InOp.getValueType();
+  EVT NInVT = TLI.getTypeToTransformTo(*DAG.getContext(), InVT);
+  SDLoc dl(N);
+
+  switch (getTypeAction(InVT)) {
+  case TargetLowering::TypePromoteInteger: {
+    // TODO: Handle big endian
+    if (OutVT.isVector() && DAG.getDataLayout().isLittleEndian()) {
+      EVT EltVT = OutVT.getVectorElementType();
+      TypeSize EltSize = EltVT.getSizeInBits();
+      TypeSize NInSize = NInVT.getSizeInBits();
+
+      if (NInSize.hasKnownScalarFactor(EltSize)) {
+        unsigned NumEltsWithPadding = NInSize.getKnownScalarFactor(EltSize);
+        EVT WideVecVT =
+            EVT::getVectorVT(*DAG.getContext(), EltVT, NumEltsWithPadding);
+
+        if (isTypeLegal(WideVecVT)) {
+          SDValue Promoted = GetPromotedInteger(InOp);
+          SDValue Cast = DAG.getNode(ISD::BITCAST, dl, WideVecVT, Promoted);
+          return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OutVT, Cast,
+                             DAG.getVectorIdxConstant(0, dl));
+        }
+      }
+    }
+
+    break;
+  }
+  default:
+    break;
+  }
+
   // This should only occur in unusual situations like bitcasting to an
   // x86_fp80, so just turn it into a store+load
-  return CreateStackStoreLoad(N->getOperand(0), N->getValueType(0));
+  return CreateStackStoreLoad(InOp, OutVT);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_BR_CC(SDNode *N, unsigned OpNo) {
