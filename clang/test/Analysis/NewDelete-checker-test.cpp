@@ -457,7 +457,7 @@ namespace optional_union {
     unique_ptr<int> present;
     char notpresent;
     custom_union_t() : present(unique_ptr<int>()) {}
-    ~custom_union_t() {};
+    ~custom_union_t() {}
   };
 
   void testUnionCorrect() {
