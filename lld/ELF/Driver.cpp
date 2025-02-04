@@ -2933,22 +2933,18 @@ static void checkExecuteOnly(Ctx &ctx) {
   if (ctx.arg.emachine != EM_AARCH64)
     return;
 
-  auto report = [&](StringRef config) -> ELFSyncStream {
+  auto reportUnless = [&](StringRef config, bool cond) -> ELFSyncStream {
+    if (cond)
+      return {ctx, DiagLevel::None};
     if (config == "error")
       return {ctx, DiagLevel::Err};
     if (config == "warning")
       return {ctx, DiagLevel::Warn};
     return {ctx, DiagLevel::None};
   };
-  auto reportUnless = [&](StringRef config, bool cond) -> ELFSyncStream {
-    if (cond)
-      return {ctx, DiagLevel::None};
-    return report(config);
-  };
 
   for (ELFFileBase *file : ctx.objectFiles) {
     for (InputSectionBase *section : file->getSections()) {
-      // Only check for executable sections.
       if (!(section && section->flags & SHF_EXECINSTR))
         continue;
 
