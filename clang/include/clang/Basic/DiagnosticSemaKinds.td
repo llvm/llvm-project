@@ -6113,6 +6113,8 @@ def note_deleted_special_member_class_subobject : Note<
   "destructor}5"
   "%select{||s||}4"
   "|is an ObjC pointer}6">;
+def note_default_constructed_field
+    : Note<"default constructed field %0 declared here">;
 def note_deleted_default_ctor_uninit_field : Note<
   "%select{default constructor of|constructor inherited by}0 "
   "%1 is implicitly deleted because field %2 of "
@@ -6166,6 +6168,15 @@ def warn_static_local_in_extern_inline : Warning<
   "in different files">, InGroup<StaticLocalInInline>;
 def note_convert_inline_to_static : Note<
   "use 'static' to give inline function %0 internal linkage">;
+
+def warn_possible_object_duplication_mutable : Warning<
+  "%0 may be duplicated when built into a shared library: "
+  "it is mutable, has hidden visibility, and external linkage">,
+  InGroup<UniqueObjectDuplication>, DefaultIgnore;
+def warn_possible_object_duplication_init : Warning<
+  "initializeation of %0 may run twice when built into a shared library: "
+  "it has hidden visibility and external linkage">,
+  InGroup<UniqueObjectDuplication>, DefaultIgnore;
 
 def ext_redefinition_of_typedef : ExtWarn<
   "redefinition of typedef %0 is a C11 feature">,

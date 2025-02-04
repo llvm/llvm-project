@@ -1640,7 +1640,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclareMapperConstruct &x) {
   const auto &dir{std::get<parser::Verbatim>(x.t)};
   PushContextAndClauseSets(
       dir.source, llvm::omp::Directive::OMPD_declare_mapper);
-  const auto &spec{std::get<parser::OmpDeclareMapperSpecifier>(x.t)};
+  const auto &spec{std::get<parser::OmpMapperSpecifier>(x.t)};
   const auto &type = std::get<parser::TypeSpec>(spec.t);
   if (!std::get_if<parser::DerivedTypeSpec>(&type.u)) {
     context_.Say(dir.source, "Type is not a derived type"_err_en_US);
@@ -4718,7 +4718,12 @@ void OmpStructureChecker::CheckTraitSetSelector(
     CheckTraitSelectorList(traits);
 
     for (const parser::OmpTraitSelector &trait : traits) {
-      auto &[traitName, maybeProps]{trait.t};
+      // Don't use structured bindings here, because they cannot be captured
+      // before C++20.
+      auto &traitName = std::get<parser::OmpTraitSelectorName>(trait.t);
+      auto &maybeProps =
+          std::get<std::optional<parser::OmpTraitSelector::Properties>>(
+              trait.t);
 
       // Check allowed traits
       common::visit( //

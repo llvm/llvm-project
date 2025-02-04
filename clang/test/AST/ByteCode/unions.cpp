@@ -447,6 +447,20 @@ namespace CopyAssign {
   }
   static_assert(f2() == 12); // both-error {{not an integral constant expression}} \
                              // both-note {{in call to}}
+}
 
+namespace MoveAssign {
+  union A {
+    int a;
+    int b;
+  };
+
+  constexpr int f() {
+    A b{13};
+
+    b = A{12} ;
+    return b.a;
+  }
+  static_assert(f()== 12);
 }
 #endif
