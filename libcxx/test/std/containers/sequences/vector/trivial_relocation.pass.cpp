@@ -44,16 +44,18 @@ TEST_CONSTEXPR_CXX20 bool tests() {
 
   // Fill the vector at its capacity, such that any subsequent push_back would require growing.
   v.reserve(5);
-  for (std::size_t i = 0; i != 5; ++i) {
+  std::size_t const capacity = v.capacity(); // could technically be more than 5
+  while (v.size() < v.capacity()) {
     v.emplace_back(&track);
   }
   assert(track.move_constructs == 0);
-  assert(v.size() == 5);
+  assert(v.capacity() == capacity);
+  assert(v.size() == capacity);
 
   // Force a reallocation of the buffer + relocalization of the elements.
   // All the existing elements of the vector should be move-constructed to their new location.
   v.emplace_back(&track);
-  assert(track.move_constructs == 5);
+  assert(track.move_constructs == capacity);
 
   return true;
 }
