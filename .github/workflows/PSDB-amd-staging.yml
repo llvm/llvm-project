@@ -40,7 +40,18 @@ jobs:
       - name: Pull container image
         run: docker pull "${{env.CONTAINER_IMAGE}}"      
 
-          
+      - name: Escape pull request title
+        run: |
+          import json
+          import os
+          import shlex
+          with open('${{ github.event_path }}') as fh:
+              event = json.load(fh)         
+          escaped = event['pull_request']['title']
+          with open(os.environ['GITHUB_ENV'], 'a') as fh:
+              print(f'PR_TITLE={escaped}', file=fh)
+        shell: python3 {0}
+        
       - name: Run container
         run: |
           docker run -d --name "${{env.CONTAINER_NAME}}" $CONTAINER_IMAGE sleep infinity
@@ -85,7 +96,7 @@ jobs:
         if: steps.check_changes.outcome != 'failure'
         run: |
           echo "--Running jenkins_api.py with input sha - $input_sha for pull request - $input_pr_url" 
-          docker exec -e JENKINS_URL=${{secrets.CI_JENKINS_URL}} -e GITHUB_PAT=${{secrets.CI_GITHUB_TOKEN}} "${{env.CONTAINER_NAME}}" /bin/bash -c "python3 jenkins_api.py -s \"${JENKINS_URL}\" -jn \"${pipeline_name}\" -ghr \"${GITHUB_REPOSITORY}\" -ghsha \"${input_sha}\" -ghprn \"${input_pr_num}\" -ghpru \"${input_pr_url}\" -ghprt '${input_pr_title}' -ghpat=\"${svc_acc_org_secret}\""
+          docker exec -e JENKINS_URL=${{secrets.CI_JENKINS_URL}} -e GITHUB_PAT=${{secrets.CI_GITHUB_TOKEN}} "${{env.CONTAINER_NAME}}" /bin/bash -c "python3 jenkins_api.py -s \"${JENKINS_URL}\" -jn \"${pipeline_name}\" -ghr \"${GITHUB_REPOSITORY}\" -ghsha \"${input_sha}\" -ghprn \"${input_pr_num}\" -ghpru \"${input_pr_url}\" -ghprt '${PR_TITLE}' -ghpat=\"${svc_acc_org_secret}\""
           
       - name: Stop and remove container
         if: always()
