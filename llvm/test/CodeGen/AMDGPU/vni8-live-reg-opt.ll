@@ -27,7 +27,7 @@ define amdgpu_kernel void @v3i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; GFX906-NEXT:    ret void
 ;
 ; FEATURE-LABEL: define amdgpu_kernel void @v3i8_liveout(
-; FEATURE-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) nocapture [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
+; FEATURE-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) captures(none) [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FEATURE-NEXT:  entry:
 ; FEATURE-NEXT:    [[IDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; FEATURE-NEXT:    [[GEP1:%.*]] = getelementptr <3 x i8>, ptr addrspace(1) [[SRC1]], i32 [[IDX]]
@@ -50,7 +50,7 @@ define amdgpu_kernel void @v3i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; FEATURE-NEXT:    ret void
 ;
 ; DEFAULT-LABEL: define amdgpu_kernel void @v3i8_liveout(
-; DEFAULT-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) nocapture [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
+; DEFAULT-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) captures(none) [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
 ; DEFAULT-NEXT:  entry:
 ; DEFAULT-NEXT:    [[IDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; DEFAULT-NEXT:    [[GEP1:%.*]] = getelementptr <3 x i8>, ptr addrspace(1) [[SRC1]], i32 [[IDX]]
@@ -111,7 +111,7 @@ define amdgpu_kernel void @v4i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; GFX906-NEXT:    ret void
 ;
 ; FEATURE-LABEL: define amdgpu_kernel void @v4i8_liveout(
-; FEATURE-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) nocapture [[DST:%.*]]) #[[ATTR0]] {
+; FEATURE-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) captures(none) [[DST:%.*]]) #[[ATTR0]] {
 ; FEATURE-NEXT:  entry:
 ; FEATURE-NEXT:    [[IDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; FEATURE-NEXT:    [[GEP1:%.*]] = getelementptr <4 x i8>, ptr addrspace(1) [[SRC1]], i32 [[IDX]]
@@ -131,7 +131,7 @@ define amdgpu_kernel void @v4i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; FEATURE-NEXT:    ret void
 ;
 ; DEFAULT-LABEL: define amdgpu_kernel void @v4i8_liveout(
-; DEFAULT-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) nocapture [[DST:%.*]]) #[[ATTR0]] {
+; DEFAULT-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) captures(none) [[DST:%.*]]) #[[ATTR0]] {
 ; DEFAULT-NEXT:  entry:
 ; DEFAULT-NEXT:    [[IDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; DEFAULT-NEXT:    [[GEP1:%.*]] = getelementptr <4 x i8>, ptr addrspace(1) [[SRC1]], i32 [[IDX]]
@@ -192,7 +192,7 @@ define amdgpu_kernel void @v5i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; GFX906-NEXT:    ret void
 ;
 ; FEATURE-LABEL: define amdgpu_kernel void @v5i8_liveout(
-; FEATURE-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) nocapture [[DST:%.*]]) #[[ATTR0]] {
+; FEATURE-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) captures(none) [[DST:%.*]]) #[[ATTR0]] {
 ; FEATURE-NEXT:  entry:
 ; FEATURE-NEXT:    [[IDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; FEATURE-NEXT:    [[GEP1:%.*]] = getelementptr <5 x i8>, ptr addrspace(1) [[SRC1]], i32 [[IDX]]
@@ -215,7 +215,7 @@ define amdgpu_kernel void @v5i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; FEATURE-NEXT:    ret void
 ;
 ; DEFAULT-LABEL: define amdgpu_kernel void @v5i8_liveout(
-; DEFAULT-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) nocapture [[DST:%.*]]) #[[ATTR0]] {
+; DEFAULT-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) captures(none) [[DST:%.*]]) #[[ATTR0]] {
 ; DEFAULT-NEXT:  entry:
 ; DEFAULT-NEXT:    [[IDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; DEFAULT-NEXT:    [[GEP1:%.*]] = getelementptr <5 x i8>, ptr addrspace(1) [[SRC1]], i32 [[IDX]]
@@ -276,7 +276,7 @@ define amdgpu_kernel void @v8i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; GFX906-NEXT:    ret void
 ;
 ; FEATURE-LABEL: define amdgpu_kernel void @v8i8_liveout(
-; FEATURE-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) nocapture [[DST:%.*]]) #[[ATTR0]] {
+; FEATURE-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) captures(none) [[DST:%.*]]) #[[ATTR0]] {
 ; FEATURE-NEXT:  entry:
 ; FEATURE-NEXT:    [[IDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; FEATURE-NEXT:    [[GEP1:%.*]] = getelementptr <8 x i8>, ptr addrspace(1) [[SRC1]], i32 [[IDX]]
@@ -296,7 +296,7 @@ define amdgpu_kernel void @v8i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; FEATURE-NEXT:    ret void
 ;
 ; DEFAULT-LABEL: define amdgpu_kernel void @v8i8_liveout(
-; DEFAULT-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) nocapture [[DST:%.*]]) #[[ATTR0]] {
+; DEFAULT-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) captures(none) [[DST:%.*]]) #[[ATTR0]] {
 ; DEFAULT-NEXT:  entry:
 ; DEFAULT-NEXT:    [[IDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; DEFAULT-NEXT:    [[GEP1:%.*]] = getelementptr <8 x i8>, ptr addrspace(1) [[SRC1]], i32 [[IDX]]
@@ -359,7 +359,7 @@ define amdgpu_kernel void @repeat_successor(i32 %in, ptr addrspace(1) %src1, ptr
 ; GFX906-NEXT:    ret void
 ;
 ; FEATURE-LABEL: define amdgpu_kernel void @repeat_successor(
-; FEATURE-SAME: i32 [[IN:%.*]], ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) nocapture [[DST:%.*]]) #[[ATTR0]] {
+; FEATURE-SAME: i32 [[IN:%.*]], ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) captures(none) [[DST:%.*]]) #[[ATTR0]] {
 ; FEATURE-NEXT:  entry:
 ; FEATURE-NEXT:    [[IDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; FEATURE-NEXT:    [[GEP1:%.*]] = getelementptr <4 x i8>, ptr addrspace(1) [[SRC1]], i32 [[IDX]]
@@ -384,7 +384,7 @@ define amdgpu_kernel void @repeat_successor(i32 %in, ptr addrspace(1) %src1, ptr
 ; FEATURE-NEXT:    ret void
 ;
 ; DEFAULT-LABEL: define amdgpu_kernel void @repeat_successor(
-; DEFAULT-SAME: i32 [[IN:%.*]], ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) nocapture [[DST:%.*]]) #[[ATTR0]] {
+; DEFAULT-SAME: i32 [[IN:%.*]], ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) captures(none) [[DST:%.*]]) #[[ATTR0]] {
 ; DEFAULT-NEXT:  entry:
 ; DEFAULT-NEXT:    [[IDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; DEFAULT-NEXT:    [[GEP1:%.*]] = getelementptr <4 x i8>, ptr addrspace(1) [[SRC1]], i32 [[IDX]]
@@ -460,7 +460,7 @@ define amdgpu_kernel void @v8i8_phi_chain(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    ret void
 ;
 ; FEATURE-LABEL: define amdgpu_kernel void @v8i8_phi_chain(
-; FEATURE-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) nocapture [[DST0:%.*]], ptr addrspace(1) nocapture [[DST1:%.*]]) #[[ATTR0]] {
+; FEATURE-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) captures(none) [[DST0:%.*]], ptr addrspace(1) captures(none) [[DST1:%.*]]) #[[ATTR0]] {
 ; FEATURE-NEXT:  entry:
 ; FEATURE-NEXT:    [[IDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; FEATURE-NEXT:    [[GEP1:%.*]] = getelementptr <8 x i8>, ptr addrspace(1) [[SRC1]], i32 [[IDX]]
@@ -486,7 +486,7 @@ define amdgpu_kernel void @v8i8_phi_chain(ptr addrspace(1) %src1, ptr addrspace(
 ; FEATURE-NEXT:    ret void
 ;
 ; DEFAULT-LABEL: define amdgpu_kernel void @v8i8_phi_chain(
-; DEFAULT-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) nocapture [[DST0:%.*]], ptr addrspace(1) nocapture [[DST1:%.*]]) #[[ATTR0]] {
+; DEFAULT-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) captures(none) [[DST0:%.*]], ptr addrspace(1) captures(none) [[DST1:%.*]]) #[[ATTR0]] {
 ; DEFAULT-NEXT:  entry:
 ; DEFAULT-NEXT:    [[IDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; DEFAULT-NEXT:    [[GEP1:%.*]] = getelementptr <8 x i8>, ptr addrspace(1) [[SRC1]], i32 [[IDX]]
@@ -561,7 +561,7 @@ define amdgpu_kernel void @v8i8_multi_block(ptr addrspace(1) %src1, ptr addrspac
 ; GFX906-NEXT:    ret void
 ;
 ; FEATURE-LABEL: define amdgpu_kernel void @v8i8_multi_block(
-; FEATURE-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) nocapture [[DST0:%.*]], ptr addrspace(1) nocapture [[DST1:%.*]]) #[[ATTR0]] {
+; FEATURE-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) captures(none) [[DST0:%.*]], ptr addrspace(1) captures(none) [[DST1:%.*]]) #[[ATTR0]] {
 ; FEATURE-NEXT:  entry:
 ; FEATURE-NEXT:    [[IDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; FEATURE-NEXT:    [[GEP1:%.*]] = getelementptr <8 x i8>, ptr addrspace(1) [[SRC1]], i32 [[IDX]]
@@ -586,7 +586,7 @@ define amdgpu_kernel void @v8i8_multi_block(ptr addrspace(1) %src1, ptr addrspac
 ; FEATURE-NEXT:    ret void
 ;
 ; DEFAULT-LABEL: define amdgpu_kernel void @v8i8_multi_block(
-; DEFAULT-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) nocapture [[DST0:%.*]], ptr addrspace(1) nocapture [[DST1:%.*]]) #[[ATTR0]] {
+; DEFAULT-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) captures(none) [[DST0:%.*]], ptr addrspace(1) captures(none) [[DST1:%.*]]) #[[ATTR0]] {
 ; DEFAULT-NEXT:  entry:
 ; DEFAULT-NEXT:    [[IDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; DEFAULT-NEXT:    [[GEP1:%.*]] = getelementptr <8 x i8>, ptr addrspace(1) [[SRC1]], i32 [[IDX]]
@@ -657,7 +657,7 @@ define amdgpu_kernel void @v32i8_loop_carried(ptr addrspace(1) %src1, ptr addrsp
 ; GFX906-NEXT:    ret void
 ;
 ; FEATURE-LABEL: define amdgpu_kernel void @v32i8_loop_carried(
-; FEATURE-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) nocapture [[DST:%.*]]) #[[ATTR0]] {
+; FEATURE-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) captures(none) [[DST:%.*]]) #[[ATTR0]] {
 ; FEATURE-NEXT:  entry:
 ; FEATURE-NEXT:    [[IDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; FEATURE-NEXT:    [[GEP1:%.*]] = getelementptr <32 x i8>, ptr addrspace(1) [[SRC1]], i32 [[IDX]]
@@ -680,7 +680,7 @@ define amdgpu_kernel void @v32i8_loop_carried(ptr addrspace(1) %src1, ptr addrsp
 ; FEATURE-NEXT:    ret void
 ;
 ; DEFAULT-LABEL: define amdgpu_kernel void @v32i8_loop_carried(
-; DEFAULT-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) nocapture [[DST:%.*]]) #[[ATTR0]] {
+; DEFAULT-SAME: ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(1) [[SRC2:%.*]], ptr addrspace(1) captures(none) [[DST:%.*]]) #[[ATTR0]] {
 ; DEFAULT-NEXT:  entry:
 ; DEFAULT-NEXT:    [[IDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; DEFAULT-NEXT:    [[GEP1:%.*]] = getelementptr <32 x i8>, ptr addrspace(1) [[SRC1]], i32 [[IDX]]
