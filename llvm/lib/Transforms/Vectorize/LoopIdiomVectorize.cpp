@@ -1158,6 +1158,12 @@ bool LoopIdiomVectorize::recognizeFindFirstByte() {
                   m_BasicBlock(ExitFail), m_Specific(Header))))
     return false;
 
+  if (!CurLoop->isLoopInvariant(SearchStart) ||
+      !CurLoop->isLoopInvariant(SearchEnd) ||
+      !CurLoop->isLoopInvariant(NeedleStart) ||
+      !CurLoop->isLoopInvariant(NeedleEnd))
+    return false;
+
   LLVM_DEBUG(dbgs() << "Found idiom in loop: \n" << *CurLoop << "\n\n");
 
   transformFindFirstByte(IndPhi, VF, CharTy, ExitSucc, ExitFail, SearchStart,
