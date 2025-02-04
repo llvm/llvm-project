@@ -868,7 +868,7 @@ TEST(RootSignature, ParseRootFlags) {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
     };
-        EXPECT_THAT_EXPECTED(DXContainer::create(getMemoryBuffer<68>(Buffer)),
+    EXPECT_THAT_EXPECTED(DXContainer::create(getMemoryBuffer<68>(Buffer)),
                          FailedWithMessage("Invalid Version"));
   }
   {
@@ -881,7 +881,7 @@ TEST(RootSignature, ParseRootFlags) {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0xFF,
     };
-        EXPECT_THAT_EXPECTED(DXContainer::create(getMemoryBuffer<68>(Buffer)),
+    EXPECT_THAT_EXPECTED(DXContainer::create(getMemoryBuffer<68>(Buffer)),
                          FailedWithMessage("Invalid flag"));
   }
 }

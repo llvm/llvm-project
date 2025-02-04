@@ -66,7 +66,6 @@ struct ShaderHash {
   void swapBytes() { sys::swapByteOrder(Flags); }
 };
 
-
 struct ContainerVersion {
   uint16_t Major;
   uint16_t Minor;
@@ -552,17 +551,17 @@ static_assert(sizeof(ProgramSignatureElement) == 32,
 
 struct RootSignatureValidations {
 
-    static Expected<uint32_t> validateRootFlag(uint32_t Flags) {
-      if ((Flags & ~0x80000fff) != 0)
-        return llvm::make_error<object::GenericBinaryError>("Invalid flag");
-      return Flags;
-    }
+  static Expected<uint32_t> validateRootFlag(uint32_t Flags) {
+    if ((Flags & ~0x80000fff) != 0)
+      return llvm::make_error<object::GenericBinaryError>("Invalid flag");
+    return Flags;
+  }
 
-    static Expected<uint32_t> validateVersion(uint32_t Version) {
-      if (Version < 1 || Version > 2)
-        return llvm::make_error<object::GenericBinaryError>("Invalid Version");
-      return Version;
-    }
+  static Expected<uint32_t> validateVersion(uint32_t Version) {
+    if (Version < 1 || Version > 2)
+      return llvm::make_error<object::GenericBinaryError>("Invalid Version");
+    return Version;
+  }
 };
 
 } // namespace dxbc
