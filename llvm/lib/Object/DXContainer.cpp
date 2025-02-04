@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/DXContainer.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Alignment.h"
@@ -100,8 +101,8 @@ Error DXContainer::parseHash(StringRef Part) {
 Error DXContainer::parseRootSignature(StringRef Part) {
   if (RootSignature)
     return parseFailed("More than one RTS0 part is present in the file");
-  RootSignature = DirectX::RootSignature(Part);
-  if (Error Err = RootSignature->parse())
+  RootSignature = DirectX::RootSignature();
+  if (Error Err = RootSignature->parse(Part))
     return Err;
   return Error::success();
 }
@@ -246,8 +247,13 @@ void DXContainer::PartIterator::updateIteratorImpl(const uint32_t Offset) {
   IteratorState.Offset = Offset;
 }
 
-Error DirectX::RootSignature::parse() {
+Error DirectX::RootSignature::parse(StringRef Data) {
   const char *Current = Data.begin();
+
+  // Root Signature headers expects 6 integers to be present.
+  if (Data.size() < 6 * sizeof(uint32_t)) {
+    return parseFailed("Invalid data. Too small.");
+  }
 
   Version = support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);

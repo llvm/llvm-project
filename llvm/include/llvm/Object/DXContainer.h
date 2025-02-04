@@ -119,7 +119,6 @@ namespace DirectX {
 
 class RootSignature {
 private:
-  StringRef Data;
   uint32_t Version;
   uint32_t NumParameters;
   uint32_t RootParametersOffset;
@@ -128,9 +127,9 @@ private:
   uint32_t Flags;
 
 public:
-  RootSignature(StringRef Data) : Data(Data) {}
+  RootSignature() {}
 
-  Error parse();
+  Error parse(StringRef Data);
   uint32_t getVersion() const { return Version; }
   uint32_t getNumParameters() const { return NumParameters; }
   uint32_t getRootParametersOffset() const { return RootParametersOffset; }
