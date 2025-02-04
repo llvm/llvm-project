@@ -194,7 +194,8 @@ private:
 
     // Always emit splat attributes.
     if (isa<SplatElementsAttr>(attr)) {
-      attr.print(os);
+      os << escapeLabelString(
+          strFromOs([&](raw_ostream &os) { attr.print(os); }));
       return;
     }
 
@@ -202,8 +203,8 @@ private:
     auto elements = dyn_cast<ElementsAttr>(attr);
     if (elements && elements.getNumElements() > largeAttrLimit) {
       os << std::string(elements.getShapedType().getRank(), '[') << "..."
-         << std::string(elements.getShapedType().getRank(), ']') << " : "
-         << elements.getType();
+         << std::string(elements.getShapedType().getRank(), ']') << " : ";
+      emitMlirType(os, elements.getType());
       return;
     }
 
@@ -313,7 +314,7 @@ private:
       if (printAttrs) {
         os << "\\l";
         for (const NamedAttribute &attr : op->getAttrs()) {
-          os << attr.getName().getValue() << ": ";
+          os << escapeLabelString(attr.getName().getValue().str()) << ": ";
           emitMlirAttr(os, attr.getValue());
           os << "\\l";
         }
