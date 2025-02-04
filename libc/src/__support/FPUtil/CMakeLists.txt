@@ -122,6 +122,10 @@ add_header_library(
     libc.src.__support.FPUtil.generic.fma
   FLAGS
     FMA_OPT
+  COMPILE_OPTIONS
+    # We need to set -fno-math-errno so __builtin_fma* generate
+    # the fused-mutliply-add instructions rather than an fma call.
+    -fno-math-errno
 )
 
 add_header_library(
@@ -132,6 +136,10 @@ add_header_library(
     libc.src.__support.common
   FLAGS
     FMA_OPT
+  COMPILE_OPTIONS
+    # We need to set -fno-math-errno so __builtin_fma* generate
+    # the fused-mutliply-add instructions rather than an fma call.
+    -fno-math-errno
 )
 
 add_header_library(
