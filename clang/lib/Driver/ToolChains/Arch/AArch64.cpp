@@ -332,6 +332,17 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
   } else if (Triple.isOSOpenBSD())
     Features.push_back("+strict-align");
 
+  // Generate execute-only output (no data access to code sections).
+  // This only makes sense for the compiler, not for the assembler.
+  if (!ForAS) {
+    if (Arg *A = Args.getLastArg(options::OPT_mexecute_only,
+                                 options::OPT_mno_execute_only)) {
+      if (A->getOption().matches(options::OPT_mexecute_only)) {
+        Features.push_back("+execute-only");
+      }
+    }
+  }
+
   if (Args.hasArg(options::OPT_ffixed_x1))
     Features.push_back("+reserve-x1");
 
