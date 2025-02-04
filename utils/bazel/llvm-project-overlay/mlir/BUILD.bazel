@@ -678,6 +678,7 @@ mlir_c_api_cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":FromLLVMIRTranslation",
         ":LLVMToLLVMIRTranslation",
         ":Support",
         ":ToLLVMIRTranslation",
@@ -10409,7 +10410,7 @@ gentbl_cc_library(
     ],
     tblgen = ":mlir-tblgen",
     td_file = "//llvm:include/llvm/Frontend/OpenACC/ACC.td",
-    deps = ["//llvm:acc_td_files"],
+    deps = ["//llvm:AccTdFiles"],
 )
 
 td_library(
@@ -10656,7 +10657,7 @@ gentbl_cc_library(
     td_file = "//llvm:include/llvm/Frontend/OpenMP/OMP.td",
     deps = [
         ":OpBaseTdFiles",
-        "//llvm:omp_td_files",
+        "//llvm:OmpTdFiles",
     ],
 )
 
