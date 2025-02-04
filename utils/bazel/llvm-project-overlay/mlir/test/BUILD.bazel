@@ -691,6 +691,7 @@ cc_library(
         "//mlir:SPIRVDialect",
         "//mlir:TransformUtils",
         "//mlir:Transforms",
+        "//mlir:UBDialect",
         "//mlir:VectorDialect",
         "//mlir:VectorTransforms",
     ],
