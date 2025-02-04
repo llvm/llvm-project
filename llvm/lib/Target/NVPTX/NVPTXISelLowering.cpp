@@ -881,6 +881,9 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     // i32 = truncate (i64 = srl (i64 = build_pair (X, Y), 32))
     // -> i32 Y
     setTargetDAGCombine(ISD::TRUNCATE);
+    // i64 = build_pair ({i32, i32} = CopyFromReg (CopyToReg (i64 X)))
+    // -> i64 X
+    setTargetDAGCombine(ISD::BUILD_PAIR);
   }
 
   // These map to conversion instructions for scalar FP types.
@@ -5322,6 +5325,31 @@ static SDValue PerformTRUNCATECombine(SDNode *N,
   return SDValue();
 }
 
+static SDValue PerformBUILD_PAIRCombine(SDNode *N,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        CodeGenOptLevel OptLevel) {
+  if (OptLevel == CodeGenOptLevel::None)
+    return SDValue();
+
+  EVT ToVT = N->getValueType(0);
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  // i64 = build_pair ({i32, i32} = CopyFromReg (CopyToReg (i64 X)))
+  // -> i64 X
+  if (ToVT == MVT::i64 && Op0.getOpcode() == ISD::CopyFromReg &&
+      Op1.getNode() == Op0.getNode() && Op0 != Op1) {
+    SDValue CFRChain = Op0.getOperand(0);
+    Register Reg = cast<RegisterSDNode>(Op0.getOperand(1))->getReg();
+    if (CFRChain.getOpcode() == ISD::CopyToReg &&
+        cast<RegisterSDNode>(CFRChain.getOperand(1))->getReg() == Reg) {
+      SDValue Value = CFRChain.getOperand(2);
+      return Value;
+    }
+  }
+
+  return SDValue();
+}
+
 SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   CodeGenOptLevel OptLevel = getTargetMachine().getOptLevel();
@@ -5360,6 +5388,8 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
       return PerformORCombine(N, DCI, OptLevel);
     case ISD::TRUNCATE:
       return PerformTRUNCATECombine(N, DCI, OptLevel);
+    case ISD::BUILD_PAIR:
+      return PerformBUILD_PAIRCombine(N, DCI, OptLevel);
   }
   return SDValue();
 }
