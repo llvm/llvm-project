@@ -73,7 +73,10 @@ def ArithFastMathInterface : OpInterface<"ArithFastMathInterface"> {
     auto attr = fmi.getFastMathFlagsAttr();
     if (attr && attr.getValue() != ::mlir::arith::FastMathFlags::none &&
         !fmi.isArithFastMathApplicable())
-      return $_op->emitOpError() << "FastMathFlagsAttr is not applicable";
+      return $_op->emitOpError()
+          << "has flag(s) `" << stringifyEnum(attr.getValue())
+          << "`, but fast-math flags are not applicable "
+             "(`isArithFastMathApplicable()` returns false)";
     return ::mlir::success();
   }];
 }

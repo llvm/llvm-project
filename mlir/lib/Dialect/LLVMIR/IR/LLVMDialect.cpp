@@ -3798,7 +3798,7 @@ bool mlir::LLVM::FastmathFlagsInterface::isCompatibleType(Type type) {
   } else if (auto arrayType = dyn_cast<LLVMArrayType>(type)) {
     do {
       type = arrayType.getElementType();
-    } while (arrayType = dyn_cast<LLVMArrayType>(type));
+    } while ((arrayType = dyn_cast<LLVMArrayType>(type)));
   }
 
   if (isa<FloatType>(type))

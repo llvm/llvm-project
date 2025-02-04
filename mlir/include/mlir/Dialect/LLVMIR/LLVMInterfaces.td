@@ -73,7 +73,10 @@ def FastmathFlagsInterface : OpInterface<"FastmathFlagsInterface"> {
     auto attr = fmi.getFastmathAttr();
     if (attr && attr.getValue() != ::mlir::LLVM::FastmathFlags::none &&
         !fmi.isFastmathApplicable())
-      return $_op->emitOpError() << "FastmathFlagsAttr is not applicable";
+      return $_op->emitOpError()
+          << "has flag(s) `" << stringifyEnum(attr.getValue())
+          << "`, but fast-math flags are not applicable "
+             "(`isFastmathApplicable()` returns false)";
     return ::mlir::success();
   }];
 }

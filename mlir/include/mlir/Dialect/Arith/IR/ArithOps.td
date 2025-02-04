@@ -1211,9 +1211,6 @@ def Arith_ExtFOp : Arith_FToFCastOp<"extf", [DeclareOpInterfaceMethods<ArithFast
     The destination type must to be strictly wider than the source type.
     When operating on vectors, casts elementwise.
   }];
-  let extraClassDeclaration = [{
-    bool isApplicable() { return true; }
-  }];
   let hasVerifier = 1;
   let hasFolder = 1;
 

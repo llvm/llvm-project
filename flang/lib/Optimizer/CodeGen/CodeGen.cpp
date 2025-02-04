@@ -596,10 +596,7 @@ struct CallOpConversion : public fir::FIROpConversion<fir::CallOp> {
     auto fmi =
         mlir::cast<mlir::LLVM::FastmathFlagsInterface>(llvmCall.getOperation());
     if (!fmi.isFastmathApplicable())
-      llvmCall->setAttr(
-          mlir::LLVM::CallOp::getFastmathAttrName(),
-          mlir::LLVM::FastmathFlagsAttr::get(call.getContext(),
-                                             mlir::LLVM::FastmathFlags::none));
+      llvmCall.setFastmathFlags(mlir::LLVM::FastmathFlags::none);
     rewriter.replaceOp(call, llvmCall);
     return mlir::success();
   }

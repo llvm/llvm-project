@@ -1703,3 +1703,11 @@ llvm.func @wrong_number_of_bundle_tags() {
   } : (i32, i32) -> ()
   llvm.return
 }
+
+// -----
+
+func.func @call_invalid_fastmath(%callee : !llvm.ptr) {
+  // expected-error@+1 {{has flag(s) `nsz, afn`, but fast-math flags are not applicable (`isFastmathApplicable()` returns false)}}
+  llvm.call %callee() {fastmathFlags = #llvm.fastmath<nsz,afn>} : !llvm.ptr, () -> i32
+  llvm.return
+}
