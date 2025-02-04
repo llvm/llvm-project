@@ -2968,9 +2968,11 @@ static void handleCodeModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &LiteralLoc))
     return;
 
-  // Ignore the attribute for NVPTX compiles since it only applies to host
+  // Ignore the attribute for GPU device compiles since it only applies to host
   // globals.
-  if (S.Context.getTargetInfo().getTriple().isNVPTX())
+  if (S.Context.getTargetInfo().getTriple().isNVPTX() ||
+      S.Context.getTargetInfo().getTriple().isAMDGPU() ||
+      S.Context.getTargetInfo().getTriple().isSPIRV())
     return;
 
   llvm::CodeModel::Model CM;

@@ -5,6 +5,11 @@
 // RUN: %clang_cc1 -triple riscv64 -verify=unsupported -fsyntax-only %s
 // RUN: %clang_cc1 -triple x86_64 -verify=x86_64 -fsyntax-only %s
 // RUN: %clang_cc1 -triple nvptx64-unknown-cuda -fcuda-is-device -x cuda -verify=ignored -fsyntax-only %s
+// RUN: %clang_cc1 -triple amdgcn -verify=ignored -fsyntax-only %s
+// RUN: %clang_cc1 -triple r600 -verify=ignored -fsyntax-only %s
+// RUN: %clang_cc1 -triple spirv-linux-vulkan-library -verify=ignored -fsyntax-only %s
+// RUN: %clang_cc1 -triple spirv32-unknown-unknown -verify=ignored -fsyntax-only %s
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown -verify=ignored -fsyntax-only %s
 
 #if (defined(__loongarch__) || defined(__x86_64__)) && !__has_attribute(model)
 #error "Should support model attribute"
@@ -33,7 +38,7 @@ void __attribute((model("extreme"))) h() {} // unsupported-warning {{unknown att
                                             // x86_64-error {{'model' attribute only applies to non-TLS global variables}}
 
 // NVPTX doesn't support thread_local at all.
-#ifndef __NVPTX__
+#if !defined(__NVPTX__) && !defined(__AMDGCN__) && !defined(__R600__) && !defined(__SPIRV__)
 thread_local
 #endif
 int i __attribute((model("extreme"))); // unsupported-warning {{unknown attribute 'model' ignored}} \

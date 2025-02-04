@@ -452,6 +452,7 @@ class TargetArch<list<string> arches> : TargetSpec {
 }
 def TargetARM : TargetArch<["arm", "thumb", "armeb", "thumbeb"]>;
 def TargetAArch64 : TargetArch<["aarch64", "aarch64_be", "aarch64_32"]>;
+def TargetAMDGPU : TargetArch<["amdgcn", "r600"]>;
 def TargetAnyArm : TargetArch<!listconcat(TargetARM.Arches, TargetAArch64.Arches)>;
 def TargetAVR : TargetArch<["avr"]>;
 def TargetBPF : TargetArch<["bpfel", "bpfeb"]>;
@@ -464,6 +465,7 @@ def TargetRISCV : TargetArch<["riscv32", "riscv64"]>;
 def TargetX86 : TargetArch<["x86"]>;
 def TargetX86_64 : TargetArch<["x86_64"]>;
 def TargetAnyX86 : TargetArch<["x86", "x86_64"]>;
+def TargetSPIRV : TargetArch<["spirv", "spirv32", "spirv64"]>;
 def TargetWebAssembly : TargetArch<["wasm32", "wasm64"]>;
 def TargetNVPTX : TargetArch<["nvptx", "nvptx64"]>;
 def TargetWindows : TargetSpec {
@@ -3124,7 +3126,8 @@ def PragmaClangTextSection : InheritableAttr {
 def CodeModel
     : InheritableAttr,
       TargetSpecificAttr<TargetArch<!listconcat(
-          TargetLoongArch.Arches, TargetX86_64.Arches, TargetNVPTX.Arches)>> {
+          TargetLoongArch.Arches, TargetX86_64.Arches, TargetNVPTX.Arches,
+          TargetAMDGPU.Arches, TargetSPIRV.Arches)>> {
   let Spellings = [GCC<"model">];
   let Args = [EnumArgument<
       "Model", "llvm::CodeModel::Model",
