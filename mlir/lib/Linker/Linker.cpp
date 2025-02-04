@@ -24,7 +24,7 @@ class ModuleLinker {
   IRMover &mover;
   OwningOpRef<Operation *> src;
 
-  SetVector<Operation *> valuesToLink;
+  SetVector<GlobalValueLinkageOpInterface> valuesToLink;
 
   /// For symbol clashes, prefer those from src.
   unsigned flags;
@@ -314,7 +314,7 @@ bool ModuleLinker::linkIfNeeded(GlobalValueLinkageOpInterface gv,
   if (dgv && comdatFrom == LinkFrom::Both)
     gvToClone.push_back(linkFromSrc ? dgv.getOperation() : gv.getOperation());
   if (linkFromSrc)
-    valuesToLink.insert(gv.getOperation());
+    valuesToLink.insert(gv);
   return false;
 }
 
@@ -376,8 +376,7 @@ LogicalResult ModuleLinker::run() {
   // }
 
   if (internalizeCallback) {
-    for (auto gv : valuesToLink) {
-      auto gvl = cast<GlobalValueLinkageOpInterface>(gv);
+    for (auto gvl : valuesToLink) {
       internalize.insert(gvl.getLinkedName());
     }
   }

@@ -18,6 +18,7 @@
 
 using namespace mlir;
 using llvm::Error;
+using llvm::Expected;
 
 namespace {
 
@@ -29,12 +30,14 @@ class MLIRLinker {
   // the equivalent in mlir.
   IRMapping valueMap;
 
-  DenseSet<Operation *> valuesToLink;
-  std::vector<Operation *> worklist;
+  DenseSet<GlobalValueLinkageOpInterface> valuesToLink;
+  std::vector<GlobalValueLinkageOpInterface> worklist;
   // Replace-all-uses-with worklist
   std::vector<std::pair<Operation *, Operation *>> rauwWorklist;
 
-  void maybeAdd(Operation *val) {
+  bool doneLinkingBodies;
+
+  void maybeAdd(GlobalValueLinkageOpInterface val) {
     if (valuesToLink.insert(val).second)
       worklist.push_back(val);
   }
@@ -46,70 +49,67 @@ class MLIRLinker {
   }
 
   Error linkFunctionBody(Operation *dst, FunctionLinkageOpInterface src);
-  Error linkGlobalValueBody(Operation *dst, Operation *src);
+  Error linkGlobalValueBody(Operation *dst, GlobalValueLinkageOpInterface src);
   bool shouldLink(Operation *dst, Operation *src);
   Operation *copyGlobalVariableProto(Operation *src, bool forDefinition);
   Operation *copyFunctionProto(Operation *src);
   Operation *copyGlobalValueProto(Operation *src, bool forIndirectSymbol);
-  Operation *linkGlobalValueProto(Operation *src, bool forIndirectSymbol);
+  Expected<Operation *> linkGlobalValueProto(GlobalValueLinkageOpInterface sgv,
+                                             bool forIndirectSymbol);
   void flushRAUWorklist();
 
-  // TODO: Consider sharing with linker
-  std::optional<StringRef> getSymbol(Operation *op) {
-    if (auto symbolOp = dyn_cast<SymbolOpInterface>(op)) {
-      return {symbolOp.getName()};
-    }
-    return {};
-  }
-
-  // TODO: Probably rename to something like getLinkedToOperation
-  // TODO: COnsider if it should be shared with the linker instead of copying
-  // it.
-  Operation *getLinkedToGlobal(Operation *srcOp) {
+  /// Given a global in the source module, return the global in the
+  /// destination module that is being linked to, if any.
+  GlobalValueLinkageOpInterface
+  getLinkedToGlobal(GlobalValueLinkageOpInterface sgv) {
 
     // If the source has no name it can't link.  If it has local linkage,
     // there is no name match-up going on.
-    auto SrcSymOpt = getSymbol(srcOp);
-    if (!SrcSymOpt)
+    auto symOp = dyn_cast<SymbolOpInterface>(sgv.getOperation());
+    if (!symOp)
       return nullptr;
 
-    auto SrcSym = *SrcSymOpt;
+    auto sgvName = symOp.getName();
+    if (sgvName.empty() || sgv.hasLocalLinkage())
+      return nullptr;
 
-    if (auto sgv = dyn_cast<GlobalValueLinkageOpInterface>(srcOp)) {
-      if (sgv.hasLocalLinkage())
-        return nullptr;
-    }
-
-    // Is there a match in the destination symbol table?
+    // Otherwise see if we have a match in the destination module's symtab.
     // TODO: Should the SymbolTable be a member instead?
     SymbolTable syms(composite);
-    Operation *DstOp = syms.lookup(SrcSym);
-
-    if (!DstOp)
+    Operation *dstOp = syms.lookup(sgvName);
+    if (!dstOp)
       return nullptr;
 
-    // If the dst-operation has local linkage, it shouldn't be linked
-    if (auto dgv = dyn_cast<GlobalValueLinkageOpInterface>(DstOp)) {
-      if (dgv.hasLocalLinkage())
-        return nullptr;
+    auto dgv = dyn_cast<GlobalValueLinkageOpInterface>(dstOp);
+    if (!dgv)
+      return nullptr;
 
-      // TODO: Do a check on instrinsic function mismatch?
-      return dgv;
+    // If we found a global with the same name in the dest module, but it has
+    // internal linkage, we are really not doing any linkage here.
+    if (dgv.hasLocalLinkage())
+      return nullptr;
+
+    // If we found an intrinsic declaration with mismatching prototypes, we
+    // probably had a nameclash. Don't use that version.
+    if (auto fdgv = dyn_cast<FunctionLinkageOpInterface>(sgv.getOperation())) {
+      // TODO: Can we check for intrinsic functions?
     }
 
-    return nullptr;
+    // Otherwise, we do in fact link to the destination global.
+    return dgv;
   }
 
 public:
   MLIRLinker(Operation *composite, OwningOpRef<Operation *> srcOp,
-             ArrayRef<Operation *> valuesToLink)
+             ArrayRef<GlobalValueLinkageOpInterface> valuesToLink)
       : composite{composite}, src{std::move(srcOp)} {
-    for (Operation *op : valuesToLink)
-      maybeAdd(op);
+    for (GlobalValueLinkageOpInterface gvl : valuesToLink)
+      maybeAdd(gvl);
   }
   Error run();
 
-  Operation *materialize(Operation *op);
+  Operation *materialize(GlobalValueLinkageOpInterface v,
+                         bool forIndirectSymbol);
 };
 
 bool MLIRLinker::shouldLink(Operation *dst, Operation *src) {
@@ -117,7 +117,7 @@ bool MLIRLinker::shouldLink(Operation *dst, Operation *src) {
   if (!sgv)
     return false;
 
-  if (valuesToLink.count(src) || sgv.hasLocalLinkage()) {
+  if (valuesToLink.count(sgv) || sgv.hasLocalLinkage()) {
     return true;
   }
 
@@ -169,34 +169,38 @@ Operation *MLIRLinker::copyGlobalValueProto(Operation *src,
   return nullptr;
 }
 
-Operation *MLIRLinker::linkGlobalValueProto(Operation *src,
-                                            bool forIndirectSymbol) {
-  auto dst = getLinkedToGlobal(src);
-  bool shouldLinkOps = shouldLink(dst, src);
+Expected<Operation *>
+MLIRLinker::linkGlobalValueProto(GlobalValueLinkageOpInterface sgv,
+                                 bool forIndirectSymbol) {
+  auto dgv = getLinkedToGlobal(sgv);
+
+  bool shouldLinkOps = shouldLink(dgv.getOperation(), sgv.getOperation());
+
+  // just missing from map
   if (shouldLinkOps) {
-    if (auto existing_dst = valueMap.lookupOrNull(src))
+    if (auto existing_dst = valueMap.lookupOrNull(sgv.getOperation()))
       return existing_dst;
     // TODO: Check indicrect symbol value map, if needed.
   }
 
   if (!shouldLinkOps && forIndirectSymbol)
-    dst = nullptr;
+    dgv = nullptr;
 
+  // Handle the ultra special appending linkage case first.
   // TODO: Appending linkage
-  // special case ,appending linkage
   //   if (src->hasAppendingLinkage() | (dst && dst->hasAppendingLinkage())) {
   // return liAppendingVarProto()
   //   }
 
   bool needsRenaming = false;
   Operation *newDst;
-  if (dst && !shouldLinkOps) {
-    newDst = dst;
+  if (dgv && !shouldLinkOps) {
+    newDst = dgv.getOperation();
   } else {
     // TODO: Done linking bodies?
 
     newDst =
-        copyGlobalValueProto(src, shouldLinkOps); // TODO: || ForIndirectSymbol?
+        copyGlobalValueProto(sgv.getOperation(), shouldLinkOps); // TODO: || ForIndirectSymbol?
     if (shouldLinkOps) // TODO: || !ForIndirectSymbol?
       needsRenaming = true;
   }
@@ -215,50 +219,68 @@ Operation *MLIRLinker::linkGlobalValueProto(Operation *src,
 
   // TODO: bitcasts needed??
 
-  if (dst && newDst != dst) {
+  if (dgv && newDst != dgv.getOperation()) {
     // Schedule "replace all uses with"
     rauwWorklist.push_back(
-        std::make_pair(dst, newDst)); // TODO: This is simplified
+        std::make_pair(dgv.getOperation(), newDst)); // TODO: This is simplified
   }
 
   return newDst;
 }
 
-Operation *MLIRLinker::materialize(Operation *op) {
-  // TODO: This is an argument to the materialize in llvm-link
-  bool forIndirectSymbol = false;
+Operation *MLIRLinker::materialize(GlobalValueLinkageOpInterface v,
+                                   bool forIndirectSymbol) {
+  Operation *op = v.getOperation();
 
-  // If the op is already part of composite no need to do anything
+  // If v is from dest, it was already materialized when dest was loaded.
   if (op->getParentOp() == composite)
     return nullptr;
 
-  // If the op is not part of src, it will be materialized later
+  // When linking a global from other modules than source & dest, skip
+  // materializing it because it would be mapped later when its containing
+  // module is linked. Linking it now would potentially pull in many types that
+  // may not be mapped properly.
   if (op->getParentOp() != src.get())
     return nullptr;
 
-  // TODO: The return value of linkGlobalValueProto should be an Expected type
-  auto newProto = linkGlobalValueProto(op, false);
+  auto newProto = linkGlobalValueProto(v, false);
   if (!newProto) {
-    // TODO: call setError
+    setError(newProto.takeError());
     return nullptr;
   }
-  // TOOD: Extra check for the new value
 
-  // TODO: Lots of if cases for Function, global variable, global alias.
-  // for now, just check if it is a declaration, if so, not much more to do.
-  if (auto gvl = dyn_cast<GlobalValueLinkageOpInterface>(newProto)) {
-    if (!gvl.isDeclarationForLinkage()) {
-      return newProto;
+  if (!*newProto)
+    return nullptr;
+
+  GlobalValueLinkageOpInterface newGvl =
+      dyn_cast<GlobalValueLinkageOpInterface>(*newProto);
+  if (!newGvl)
+    return *newProto;
+
+  // If we already created the body, just return.
+  if (auto f = dyn_cast<GlobalFuncLinkageOpInterface>(newGvl.getOperation())) {
+    if (!f.isDeclarationForLinkage()) {
+      return *newProto;
     }
   }
+  // TODO: Lots of if cases for Function, global variable, global alias.
+  // for now, just check if it is a declaration, if so, not much more to do.
 
+  // If the global is being linked for an indirect symbol, it may have already
+  // been scheduled to satisfy a regular symbol. Similarly, a global being
+  // linked for a regular symbol may have already been scheduled for an indirect
+  // symbol. Check for these cases by looking in the other value map and
+  // confirming the same value has been scheduled.  If there is an entry in the
+  // ValueMap but the value is different, it means that the value already had a
+  // definition in the destination module (linkonce for instance), but we need a
+  // new definition for the indirect symbol ("New" will be different).
   // TODO: Some indirect symbol thing
 
-  if (forIndirectSymbol || shouldLink(newProto, op))
-    setError(linkGlobalValueBody(newProto, op));
+  if (forIndirectSymbol || shouldLink(newGvl.getOperation(), v.getOperation()))
+    setError(linkGlobalValueBody(newGvl.getOperation(), v));
 
   // TODO: Update attributes
-  return newProto;
+  return newGvl.getOperation();
 }
 
 Error MLIRLinker::linkFunctionBody(Operation *dst,
@@ -287,10 +309,11 @@ Error MLIRLinker::linkFunctionBody(Operation *dst,
   return Error::success();
 }
 
-Error MLIRLinker::linkGlobalValueBody(Operation *dst, Operation *src) {
+Error MLIRLinker::linkGlobalValueBody(Operation *dst,
+                                      GlobalValueLinkageOpInterface src) {
   // TODO: Switch on what type of thing it is. For now just assume it is a
   // function-like thing
-  if (auto f = dyn_cast<FunctionLinkageOpInterface>(src))
+  if (auto f = dyn_cast<FunctionLinkageOpInterface>(src.getOperation()))
     return linkFunctionBody(dst, f);
 
   return Error::success();
@@ -319,19 +342,18 @@ Error MLIRLinker::run() {
   // reverse the worklist and  process all values
   std::reverse(worklist.begin(), worklist.end());
   while (!worklist.empty()) {
-    auto op = worklist.back();
+    auto gvl = worklist.back();
     worklist.pop_back();
 
-    if (valueMap.contains(op)) // TODO: There is an indirect symbol value map,
-                               // do we need that?
+    if (valueMap.contains(gvl.getOperation())) // TODO: There is an indirect symbol value map,
+                                // do we need that?
       continue;
 
-    auto gvl = dyn_cast<GlobalValueLinkageOpInterface>(op);
-    if (gvl)
-      assert(!gvl.isDeclarationForLinkage());
+    assert(!gvl.isDeclarationForLinkage());
 
     // TODO: Is this the equivalent of Mapper.mapValue?
-    materialize(op);
+    auto newGvl = materialize(gvl, false);
+    valueMap.map(gvl.getOperation(), newGvl);
 
     if (foundError)
       return std::move(*foundError);
@@ -347,7 +369,7 @@ Error MLIRLinker::run() {
 IRMover::IRMover(Operation *composite) : composite(composite) {}
 
 Error IRMover::move(OwningOpRef<Operation *> src,
-                    ArrayRef<Operation *> valuesToLink) {
+                    ArrayRef<GlobalValueLinkageOpInterface> valuesToLink) {
 
   MLIRLinker linker(composite, std::move(src), valuesToLink);
   Error e = linker.run();

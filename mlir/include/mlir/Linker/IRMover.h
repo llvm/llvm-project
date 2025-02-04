@@ -28,7 +28,7 @@ public:
   MLIRContext *getContext() { return composite->getContext(); }
 
   Error move(OwningOpRef<Operation *> src,
-                    ArrayRef<Operation *> valuesToLink);
+                    ArrayRef<GlobalValueLinkageOpInterface> valuesToLink);
 
   private:
     LinkableModuleOpInterface composite;
