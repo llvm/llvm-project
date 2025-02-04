@@ -483,6 +483,21 @@ bool AArch64CallLowering::canLowerReturn(MachineFunction &MF,
   return checkReturn(CCInfo, Outs, TLI.CCAssignFnForReturn(CallConv));
 }
 
+bool AArch64CallLowering::adjustReturnToPopless(
+    MachineIRBuilder &MIRBuilder) const {
+  MachineFunction &MF = MIRBuilder.getMF();
+
+  auto MBBI = std::prev(MIRBuilder.getMBB().end());
+  assert(MBBI->getOpcode() == AArch64::RET_ReallyLR);
+
+  auto *TII = MF.getSubtarget().getInstrInfo();
+  MBBI->setDesc(TII->get(AArch64::RET_POPLESS));
+
+  AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
+  FuncInfo->setHasPoplessEpilogue();
+  return true;
+}
+
 /// Helper function to compute forwarded registers for musttail calls. Computes
 /// the forwarded registers, sets MBB liveness, and emits COPY instructions that
 /// can be used to save + restore registers later.

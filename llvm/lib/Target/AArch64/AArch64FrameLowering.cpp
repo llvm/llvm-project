@@ -507,6 +507,11 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
       MFI.hasStackMap() || MFI.hasPatchPoint() ||
       RegInfo->hasStackRealignment(MF))
     return true;
+
+  const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  if (AFI->hasPoplessEpilogue())
+    return true;
+
   // With large callframes around we may need to use FP to access the scavenging
   // emergency spillslot.
   //
@@ -1125,6 +1130,12 @@ bool AArch64FrameLowering::canUseAsPrologue(
       return false;
   }
 
+  // If we have some return path that's popless, it needs its own very-special
+  // epilogue, so we can't shrink-wrap it away.
+  // FIXME: this and some of the below checks belong in enableShrinkWrapping.
+  if (AFI->hasPoplessEpilogue())
+    return false;
+
   // Certain stack probing sequences might clobber flags, then we can't use
   // the block as a prologue if the flags register is a live-in.
   if (MF->getInfo<AArch64FunctionInfo>()->hasStackProbing() &&
@@ -1210,6 +1221,12 @@ bool AArch64FrameLowering::shouldCombineCSRLocalStackBump(
 
 bool AArch64FrameLowering::shouldCombineCSRLocalStackBumpInEpilogue(
     MachineBasicBlock &MBB, uint64_t StackBumpBytes) const {
+
+  MachineFunction &MF = *MBB.getParent();
+  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  if (AFI->hasPoplessEpilogue())
+    return false;
+
   if (!shouldCombineCSRLocalStackBump(*MBB.getParent(), StackBumpBytes))
     return false;
   if (MBB.empty())
@@ -1575,6 +1592,47 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
   }
 
   return std::prev(MBB.erase(MBBI));
+}
+
+static void fixupCalleeSaveRestoreToFPBased(MachineInstr &MI,
+                                            uint64_t FPSPOffset) {
+  assert(!AArch64InstrInfo::isSEHInstruction(MI));
+
+  unsigned Opc = MI.getOpcode();
+  unsigned Scale;
+  switch (Opc) {
+  case AArch64::STPXi:
+  case AArch64::STRXui:
+  case AArch64::STPDi:
+  case AArch64::STRDui:
+  case AArch64::LDPXi:
+  case AArch64::LDRXui:
+  case AArch64::LDPDi:
+  case AArch64::LDRDui:
+    Scale = 8;
+    break;
+  case AArch64::STPQi:
+  case AArch64::STRQui:
+  case AArch64::LDPQi:
+  case AArch64::LDRQui:
+    Scale = 16;
+    break;
+  default:
+    llvm_unreachable("Unexpected callee-save save/restore opcode!");
+  }
+
+  unsigned OffsetIdx = MI.getNumExplicitOperands() - 1;
+
+  MachineOperand &BaseRegOpnd = MI.getOperand(OffsetIdx - 1);
+  assert(BaseRegOpnd.getReg() == AArch64::SP &&
+         "Unexpected base register in callee-save save/restore instruction!");
+  BaseRegOpnd.setReg(AArch64::FP); // XXX TRI
+
+  // Last operand is immediate offset that needs fixing.
+  MachineOperand &OffsetOpnd = MI.getOperand(OffsetIdx);
+  // All generated opcodes have scaled offsets.
+  assert(FPSPOffset % Scale == 0);
+  OffsetOpnd.setImm(OffsetOpnd.getImm() - FPSPOffset / Scale);
 }
 
 // Fixup callee-save register save/restore instructions to take into account
@@ -2319,10 +2377,22 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   bool EmitCFI = AFI->needsAsyncDwarfUnwindInfo(MF);
   bool HasWinCFI = false;
   bool IsFunclet = false;
+  bool IsSwiftCoroPartialReturn = false;
 
   if (MBB.end() != MBBI) {
     DL = MBBI->getDebugLoc();
     IsFunclet = isFuncletReturnInstr(*MBBI);
+    IsSwiftCoroPartialReturn = MBBI->getOpcode() == AArch64::RET_POPLESS;
+  }
+
+  if (IsSwiftCoroPartialReturn) {
+    // The partial-return intrin/instr requires the swiftcoro cc
+    if (MF.getFunction().getCallingConv() != CallingConv::SwiftCoro)
+      report_fatal_error("llvm.ret.popless requires swiftcorocc");
+    assert(MBBI->getOpcode() == AArch64::RET_POPLESS);
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::RET_ReallyLR))
+        .setMIFlag(MachineInstr::FrameDestroy);
+    MBB.erase(MBBI);
   }
 
   MachineBasicBlock::iterator EpilogStartI = MBB.end();
@@ -2371,6 +2441,39 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
         if (Info.getReg() != AArch64::LR)
           continue;
         MachineBasicBlock::iterator TI = MBB.getFirstTerminator();
+
+        // When we're doing a popless ret (i.e., that doesn't restore SP), we
+        // can't rely on the exit SP being the same as the entry, but they need
+        // to match for the LR auth to succeed.  Instead, derive the entry SP
+        // from our FP (using a -16 static offset for the size of the frame
+        // record itself), save that into X16, and use that as the discriminator
+        // in an AUTIB.
+        if (IsSwiftCoroPartialReturn) {
+          const auto *TRI = Subtarget.getRegisterInfo();
+
+          MachineBasicBlock::iterator EpilogStartI = MBB.getFirstTerminator();
+          MachineBasicBlock::iterator Begin = MBB.begin();
+          while (EpilogStartI != Begin) {
+            --EpilogStartI;
+            if (!EpilogStartI->getFlag(MachineInstr::FrameDestroy)) {
+              ++EpilogStartI;
+              break;
+            }
+            if (EpilogStartI->readsRegister(AArch64::X16, TRI) ||
+                EpilogStartI->modifiesRegister(AArch64::X16, TRI))
+              report_fatal_error("unable to use x16 for popless ret LR auth");
+          }
+
+          emitFrameOffset(MBB, EpilogStartI, DL, AArch64::X16, AArch64::FP,
+                          StackOffset::getFixed(16), TII,
+                          MachineInstr::FrameDestroy);
+          BuildMI(MBB, TI, DL, TII->get(AArch64::AUTIB), AArch64::LR)
+              .addUse(AArch64::LR)
+              .addUse(AArch64::X16)
+              .setMIFlag(MachineInstr::FrameDestroy);
+          return;
+        }
+
         if (TI != MBB.end() && TI->getOpcode() == AArch64::RET_ReallyLR) {
           // If there is a terminator and it's a RET, we can fold AUTH into it.
           // Be careful to keep the implicitly returned registers.
@@ -2404,6 +2507,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     AFI->setLocalStackSize(NumBytes - PrologueSaveSize);
   if (homogeneousPrologEpilog(MF, &MBB)) {
     assert(!NeedsWinCFI);
+    assert(!IsSwiftCoroPartialReturn);
     auto LastPopI = MBB.getFirstTerminator();
     if (LastPopI != MBB.begin()) {
       auto HomogeneousEpilog = std::prev(LastPopI);
@@ -2424,7 +2528,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   bool CombineSPBump = shouldCombineCSRLocalStackBumpInEpilogue(MBB, NumBytes);
   // Assume we can't combine the last pop with the sp restore.
   bool CombineAfterCSRBump = false;
-  if (!CombineSPBump && PrologueSaveSize != 0) {
+  if (!CombineSPBump && PrologueSaveSize != 0 && !IsSwiftCoroPartialReturn) {
     MachineBasicBlock::iterator Pop = std::prev(MBB.getFirstTerminator());
     while (Pop->getOpcode() == TargetOpcode::CFI_INSTRUCTION ||
            AArch64InstrInfo::isSEHInstruction(*Pop))
@@ -2460,6 +2564,14 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
         IsSVECalleeSave(LastPopI)) {
       ++LastPopI;
       break;
+    } else if (IsSwiftCoroPartialReturn) {
+      assert(!EmitCFI);
+      assert(hasFP(MF));
+      fixupCalleeSaveRestoreStackOffset(*LastPopI, AFI->getLocalStackSize(),
+                                        NeedsWinCFI, &HasWinCFI);
+      // if FP-based addressing, rewrite CSR restores from SP to FP
+      fixupCalleeSaveRestoreToFPBased(
+          *LastPopI, AFI->getCalleeSaveBaseToFrameRecordOffset());
     } else if (CombineSPBump)
       fixupCalleeSaveRestoreStackOffset(*LastPopI, AFI->getLocalStackSize(),
                                         NeedsWinCFI, &HasWinCFI);
@@ -2479,6 +2591,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   if (hasFP(MF) && AFI->hasSwiftAsyncContext()) {
+    assert(!IsSwiftCoroPartialReturn);
     switch (MF.getTarget().Options.SwiftAsyncFramePointer) {
     case SwiftAsyncFramePointerMode::DeploymentBased:
       // Avoid the reload as it is GOT relative, and instead fall back to the
@@ -2512,6 +2625,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // If there is a single SP update, insert it before the ret and we're done.
   if (CombineSPBump) {
     assert(!SVEStackSize && "Cannot combine SP bump with SVE");
+    assert(!IsSwiftCoroPartialReturn);
 
     // When we are about to restore the CSRs, the CFA register is SP again.
     if (EmitCFI && hasFP(MF)) {
@@ -2597,6 +2711,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   if (!hasFP(MF)) {
+    assert(!IsSwiftCoroPartialReturn);
     bool RedZone = canUseRedZone(MF);
     // If this was a redzone leaf function, we don't need to restore the
     // stack pointer (but we may need to pop stack args for fastcc).
@@ -2626,6 +2741,9 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
 
     NumBytes = 0;
   }
+
+  if (IsSwiftCoroPartialReturn)
+    return;
 
   // Restore the original stack pointer.
   // FIXME: Rather than doing the math here, we should instead just use
@@ -3504,9 +3622,17 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
   DebugLoc DL;
   SmallVector<RegPairInfo, 8> RegPairs;
   bool NeedsWinCFI = needsWinCFI(MF);
+  bool IsSwiftCoroPartialReturn = false;
 
-  if (MBBI != MBB.end())
+  if (MBBI != MBB.end()) {
     DL = MBBI->getDebugLoc();
+    IsSwiftCoroPartialReturn = MBBI->getOpcode() == AArch64::RET_POPLESS;
+  }
+
+  // The partial-return intrin/instr requires the swiftcoro cc
+  if (IsSwiftCoroPartialReturn &&
+      MF.getFunction().getCallingConv() != CallingConv::SwiftCoro)
+    report_fatal_error("llvm.ret.popless requires swiftcorocc");
 
   computeCalleeSaveRegisterPairs(MF, CSI, TRI, RegPairs, hasFP(MF));
   if (homogeneousPrologEpilog(MF, &MBB)) {
@@ -3517,6 +3643,17 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       MIB.addReg(RPI.Reg2, RegState::Define);
     }
     return true;
+  }
+
+  // If doing a partial/popless return, CSR restores are from FP, so do it last.
+  if (IsSwiftCoroPartialReturn) {
+    auto IsFPLR = [](const RegPairInfo &c) {
+      return c.Reg1 == AArch64::LR && c.Reg2 == AArch64::FP;
+    };
+    auto FPLRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsFPLR);
+    const RegPairInfo FPLRRPI = *FPLRBegin;
+    FPLRBegin = std::remove_if(RegPairs.begin(), RegPairs.end(), IsFPLR);
+    *FPLRBegin = FPLRRPI;
   }
 
   // For performance reasons restore SVE register in increasing order
@@ -5199,6 +5336,10 @@ void AArch64FrameLowering::orderFrameObjects(
 
   const AArch64FunctionInfo &AFI = *MF.getInfo<AArch64FunctionInfo>();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  if (AFI.hasPoplessEpilogue())
+    return;
+
   std::vector<FrameObject> FrameObjects(MFI.getObjectIndexEnd());
   for (auto &Obj : ObjectsToAllocate) {
     FrameObjects[Obj].IsValid = true;

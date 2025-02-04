@@ -2714,6 +2714,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::AUTH_CALL_RVMARKER)
     MAKE_CASE(AArch64ISD::LOADgot)
     MAKE_CASE(AArch64ISD::RET_GLUE)
+    MAKE_CASE(AArch64ISD::RET_POPLESS)
     MAKE_CASE(AArch64ISD::BRCOND)
     MAKE_CASE(AArch64ISD::CSEL)
     MAKE_CASE(AArch64ISD::CSINV)
@@ -8854,6 +8855,18 @@ bool AArch64TargetLowering::DoesCalleeRestoreStack(CallingConv::ID CallCC,
                                                    bool TailCallOpt) const {
   return (CallCC == CallingConv::Fast && TailCallOpt) ||
          CallCC == CallingConv::Tail || CallCC == CallingConv::SwiftTail;
+}
+
+SDValue AArch64TargetLowering::adjustReturnPopless(SDValue RetChain,
+                                                   SelectionDAG &DAG) const {
+  if (RetChain.getOpcode() != AArch64ISD::RET_GLUE)
+    report_fatal_error("Unsupported aarch64 return for popless ret lowering");
+
+  auto *AFI = DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
+  AFI->setHasPoplessEpilogue();
+
+  return DAG.getNode(AArch64ISD::RET_POPLESS, SDLoc(RetChain),
+                     MVT::Other, RetChain->ops());
 }
 
 // Check if the value is zero-extended from i1 to i8

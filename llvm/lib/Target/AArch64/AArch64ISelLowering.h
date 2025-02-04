@@ -90,6 +90,7 @@ enum NodeType : unsigned {
   LOADgot,  // Load from automatically generated descriptor (e.g. Global
             // Offset Table, TLS record).
   RET_GLUE, // Return with a glue operand. Operand 0 is the chain operand.
+  RET_POPLESS, // Same as RET_GLUE, though "popless", = doesn't clean the stack.
   BRCOND,   // Conditional branch instruction; "b.cond".
   CSEL,
   CSINV, // Conditional select invert.
@@ -1103,6 +1104,9 @@ private:
 
   void saveVarArgRegisters(CCState &CCInfo, SelectionDAG &DAG, const SDLoc &DL,
                            SDValue &Chain) const;
+
+  SDValue adjustReturnPopless(SDValue RetChain,
+                              SelectionDAG &DAG) const override;
 
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                       bool isVarArg,

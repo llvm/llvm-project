@@ -205,6 +205,10 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// The stack slot where the Swift asynchronous context is stored.
   int SwiftAsyncContextFrameIdx = std::numeric_limits<int>::max();
 
+  /// Whether this function has a swift coro return that doesn't restore
+  /// the stack.
+  bool HasPoplessEpilogue = false;
+
   bool IsMTETagged = false;
 
   /// The function has Scalable Vector or Scalable Predicate register argument
@@ -548,6 +552,13 @@ public:
     SwiftAsyncContextFrameIdx = FI;
   }
   int getSwiftAsyncContextFrameIdx() const { return SwiftAsyncContextFrameIdx; }
+
+  bool hasPoplessEpilogue() const {
+    return HasPoplessEpilogue;
+  }
+  void setHasPoplessEpilogue(bool PE = true) {
+    HasPoplessEpilogue = PE;
+  }
 
   bool needsDwarfUnwindInfo(const MachineFunction &MF) const;
   bool needsAsyncDwarfUnwindInfo(const MachineFunction &MF) const;

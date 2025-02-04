@@ -391,7 +391,14 @@ bool IRTranslator::translateRet(const User &U, MachineIRBuilder &MIRBuilder) {
   // The target may mess up with the insertion point, but
   // this is not important as a return is the last instruction
   // of the block anyway.
-  return CLI->lowerReturn(MIRBuilder, Ret, VRegs, FuncInfo, SwiftErrorVReg);
+  bool Success =
+      CLI->lowerReturn(MIRBuilder, Ret, VRegs, FuncInfo, SwiftErrorVReg);
+
+  if (auto *MustTailCI = RI.getParent()->getTerminatingMustTailCall())
+    if (MustTailCI->getIntrinsicID() == Intrinsic::ret_popless)
+      Success &= CLI->adjustReturnToPopless(MIRBuilder);
+
+  return Success;
 }
 
 void IRTranslator::emitBranchForMergedCondition(

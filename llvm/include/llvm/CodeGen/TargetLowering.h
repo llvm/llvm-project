@@ -4890,6 +4890,10 @@ public:
     llvm_unreachable("Not Implemented");
   }
 
+  virtual SDValue adjustReturnPopless(SDValue Chain, SelectionDAG &DAG) const {
+    report_fatal_error("Popless returns not implemented for this target");
+  }
+
   /// Return true if result of the specified node is used by a return node
   /// only. It also compute and return the input chain for the tail call.
   ///

@@ -2153,6 +2153,13 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
     return;
   }
 
+  // Musttail calls to @llvm.ret.popless are used to annotate the ret as
+  // "popless".  Keep track of it here, and ask the target to do so later.
+  bool IsPoplessReturn = false;
+  if (auto *MustTailCI = I.getParent()->getTerminatingMustTailCall())
+    if (MustTailCI->getIntrinsicID() == Intrinsic::ret_popless)
+      IsPoplessReturn = true;
+
   if (!FuncInfo.CanLowerReturn) {
     Register DemoteReg = FuncInfo.DemoteRegister;
 
@@ -2286,6 +2293,18 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
     DAG.getMachineFunction().getFunction().getCallingConv();
   Chain = DAG.getTargetLoweringInfo().LowerReturn(
       Chain, CallConv, isVarArg, Outs, OutVals, getCurSDLoc(), DAG);
+
+  // If we did find this return instruction to be popless, make it so now.
+  // It's still a normal return in almost all regards, we just need to remember
+  // it's popless, for when we lower the return and emit the epilogue later.
+  // Ideally we'd ask LowerReturn to do that, but the API is enough of a pain
+  // as it is, and all targets would have to learn about that.
+  if (IsPoplessReturn) {
+    SDValue NewChain =
+        DAG.getTargetLoweringInfo().adjustReturnPopless(Chain, DAG);
+    DAG.RemoveDeadNode(Chain.getNode());
+    Chain = NewChain;
+  }
 
   // Verify that the target's LowerReturn behaved as expected.
   assert(Chain.getNode() && Chain.getValueType() == MVT::Other &&
@@ -8018,6 +8037,11 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, DAG.getNode(ISD::AND, sdl, PtrVT, Ptr, Mask));
     return;
   }
+
+  case Intrinsic::ret_popless:
+    // We're handling this on the associated ret itself.
+    return;
+
   case Intrinsic::threadlocal_address: {
     setValue(&I, getValue(I.getOperand(0)));
     return;

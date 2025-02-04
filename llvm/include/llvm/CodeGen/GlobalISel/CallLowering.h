@@ -538,6 +538,15 @@ public:
     return false;
   }
 
+  /// This hook must be implemented to lower @llvm.ret.popless intrinsics,
+  /// which are required to be musttail, and are effectively annotating a
+  /// return instruction to mark it "popless", i.e., not restoring SP.
+  /// This "adjustment" step runs after lowerReturn, and is only meant to make
+  /// it a little less painful to maintain before we add this to the main hook.
+  virtual bool adjustReturnToPopless(MachineIRBuilder &MIRBuilder) const {
+    report_fatal_error("Popless returns not implemented for this target");
+  }
+
   virtual bool fallBackToDAGISel(const MachineFunction &MF) const {
     return false;
   }
