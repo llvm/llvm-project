@@ -748,15 +748,10 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
     if (II && II->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
       auto *ImageType = cast<TargetExtType>(II->getOperand(0)->getType());
       assert(ImageType->getTargetExtName() == "spirv.Image");
-      for (auto U : II->users()) {
-        if (auto *LD = dyn_cast<LoadInst>(U)) {
-          Ty = LD->getType();
-        } else if (auto *ST = dyn_cast<StoreInst>(U)) {
-          Ty = ST->getAccessType();
-        } else {
-          llvm_unreachable("Unexpected user. The only expect users of a "
-                           "resource pointer to an image are loads and stores");
-        }
+      if (II->hasOneUse()) {
+        auto *U = *II->users().begin();
+        Ty = cast<Instruction>(U)->getAccessType();
+        assert(Ty && "Unable to get type for resource pointer.");
       }
     } else if (Function *CalledF = CI->getCalledFunction()) {
       std::string DemangledName =
