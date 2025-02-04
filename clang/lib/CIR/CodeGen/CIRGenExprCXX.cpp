@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/CharUnits.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/MissingFeatures.h"
 #include <CIRGenCXXABI.h>
@@ -876,6 +877,7 @@ void CIRGenFunction::emitNewArrayInitializer(
   unsigned InitListElements = 0;
 
   const Expr *Init = E->getInitializer();
+  Address EndOfInit = Address::invalid();
   QualType::DestructionKind DtorKind = ElementType.isDestructedType();
   CleanupDeactivationScope deactivation(*this);
 
@@ -898,7 +900,13 @@ void CIRGenFunction::emitNewArrayInitializer(
     // Subtract out the size of any elements we've already initialized.
     auto RemainingSize = AllocSizeWithoutCookie;
     if (InitListElements) {
-      llvm_unreachable("NYI");
+      // We know this can't overflow; we check this when doing the allocation.
+      unsigned InitializedSize =
+          getContext().getTypeSizeInChars(ElementType).getQuantity() *
+          InitListElements;
+      auto InitSizeOp =
+          builder.getConstInt(Loc, RemainingSize.getType(), InitializedSize);
+      RemainingSize = builder.createSub(RemainingSize, InitSizeOp);
     }
 
     // Create the memset.
@@ -946,8 +954,24 @@ void CIRGenFunction::emitNewArrayInitializer(
     }
 
     CharUnits StartAlign = CurPtr.getAlignment();
+    unsigned i = 0;
     for (const Expr *IE : InitExprs) {
-      llvm_unreachable("NYI");
+      if (EndOfInit.isValid()) {
+        // This will involve DTor handling.
+        llvm_unreachable("NYI");
+      }
+      // FIXME: If the last initializer is an incomplete initializer list for
+      // an array, and we have an array filler, we can fold together the two
+      // initialization loops.
+      StoreAnyExprIntoOneUnit(*this, IE, IE->getType(), CurPtr,
+                              AggValueSlot::DoesNotOverlap);
+      auto Loc = getLoc(IE->getExprLoc());
+      auto CastOp = builder.createPtrBitcast(CurPtr.getPointer(),
+                                             convertTypeForMem(AllocType));
+      auto OffsetOp = builder.getSignedInt(Loc, 1, /*width=*/32);
+      auto DataPtr = builder.createPtrStride(Loc, CastOp, OffsetOp);
+      CurPtr = Address(DataPtr, CurPtr.getType(),
+                       StartAlign.alignmentAtOffset((++i) * ElementSize));
     }
 
     // The remaining elements are filled with the array filler expression.

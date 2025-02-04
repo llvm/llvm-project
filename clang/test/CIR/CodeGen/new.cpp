@@ -161,3 +161,31 @@ void t_constant_size_memset_init() {
 // CHECK:    %[[#ZERO:]] = cir.const #cir.int<0> : !u8i
 // CHECK:    %[[#ZERO_I32:]] = cir.cast(integral, %[[#ZERO]] : !u8i), !s32i
 // CHECK:    cir.libc.memset %[[#ALLOCATION_SIZE]] bytes from %[[#VOID_PTR]] set to %[[#ZERO_I32]] : !cir.ptr<!void>, !s32i, !u64i
+
+void t_constant_size_partial_init() {
+  auto p = new int[16] { 1, 2, 3 };
+}
+
+// CHECK:  cir.func @_Z28t_constant_size_partial_initv()
+// CHECK:    %[[#NUM_ELEMENTS:]] = cir.const #cir.int<16> : !u64i
+// CHECK:    %[[#ALLOCATION_SIZE:]] = cir.const #cir.int<64> : !u64i
+// CHECK:    %[[#ALLOC_PTR:]] = cir.call @_Znam(%[[#ALLOCATION_SIZE]]) : (!u64i) -> !cir.ptr<!void>
+// CHECK:    %[[#ELEM_0_PTR:]] = cir.cast(bitcast, %[[#ALLOC_PTR]] : !cir.ptr<!void>), !cir.ptr<!s32i>
+// CHECK:    %[[#CONST_ONE:]] = cir.const #cir.int<1> : !s32i
+// CHECK:    cir.store %[[#CONST_ONE]], %[[#ELEM_0_PTR]] : !s32i, !cir.ptr<!s32i>
+// CHECK:    %[[#OFFSET:]] = cir.const #cir.int<1> : !s32i
+// CHECK:    %[[#ELEM_1_PTR:]] = cir.ptr_stride(%[[#ELEM_0_PTR]] : !cir.ptr<!s32i>, %[[#OFFSET]] : !s32i), !cir.ptr<!s32i>
+// CHECK:    %[[#CONST_TWO:]] = cir.const #cir.int<2> : !s32i
+// CHECK:    cir.store %[[#CONST_TWO]], %[[#ELEM_1_PTR]] : !s32i, !cir.ptr<!s32i>
+// CHECK:    %[[#OFFSET1:]] = cir.const #cir.int<1> : !s32i
+// CHECK:    %[[#ELEM_2_PTR:]] = cir.ptr_stride(%[[#ELEM_1_PTR]] : !cir.ptr<!s32i>, %[[#OFFSET1]] : !s32i), !cir.ptr<!s32i>
+// CHECK:    %[[#CONST_THREE:]] = cir.const #cir.int<3> : !s32i
+// CHECK:    cir.store %[[#CONST_THREE]], %[[#ELEM_2_PTR]] : !s32i, !cir.ptr<!s32i>
+// CHECK:    %[[#OFFSET2:]] = cir.const #cir.int<1> : !s32i
+// CHECK:    %[[#ELEM_3_PTR:]] = cir.ptr_stride(%[[#ELEM_2_PTR]] : !cir.ptr<!s32i>, %[[#OFFSET2]] : !s32i), !cir.ptr<!s32i>
+// CHECK:    %[[#INIT_SIZE:]] = cir.const #cir.int<12> : !u64i
+// CHECK:    %[[#REMAINING_SIZE:]] = cir.binop(sub, %[[#ALLOCATION_SIZE]], %[[#INIT_SIZE]]) : !u64i
+// CHECK:    %[[#VOID_PTR:]] = cir.cast(bitcast, %[[#ELEM_3_PTR]] : !cir.ptr<!s32i>), !cir.ptr<!void>
+// CHECK:    %[[#ZERO:]] = cir.const #cir.int<0> : !u8i
+// CHECK:    %[[#ZERO_I32:]] = cir.cast(integral, %[[#ZERO]] : !u8i), !s32i
+// CHECK:    cir.libc.memset %[[#REMAINING_SIZE]] bytes from %[[#VOID_PTR]] set to %[[#ZERO_I32]] : !cir.ptr<!void>, !s32i, !u64i
