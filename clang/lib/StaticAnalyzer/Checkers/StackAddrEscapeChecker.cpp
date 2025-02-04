@@ -253,7 +253,8 @@ public:
 
   bool VisitSymbol(SymbolRef sym) override { return true; }
 
-  bool VisitBlockDataRegion(const BlockDataRegion *BDR) {
+  /// Visits the captured region values
+  bool VisitBlockDataRegionCaptures(const BlockDataRegion *BDR) {
     for (auto Var : BDR->referenced_vars()) {
       SVal Val = Ctxt.getState()->getSVal(Var.getCapturedRegion());
       const MemRegion *Region = Val.getAsRegion();
@@ -272,7 +273,7 @@ public:
       EscapingStackRegions.push_back(MR);
     
     if (const BlockDataRegion *BDR = MR->getAs<BlockDataRegion>())
-      return VisitBlockDataRegion(BDR);
+      return VisitBlockDataRegionCaptures(BDR);
 
     return true;
   }
@@ -305,6 +306,10 @@ FilterReturnExpressionLeaks(const SmallVector<const MemRegion *> &MaybeEscaped,
   for (const MemRegion *MR : MaybeEscaped) {
     if (RetRegion == MR && (IsCopyAndAutoreleaseBlockObj || IsConstructExpr))
       continue;
+
+    if (const StackSpaceRegion *SSR = MR->getMemorySpace()->getAs<StackSpaceRegion>())
+      if (SSR->getStackFrame() != C.getStackFrame())
+        continue;
 
     WillEscape.push_back(MR);
   }
