@@ -300,8 +300,8 @@ void InstrInfoEmitter::emitOperandNameMappings(
     assert(MaxOperandNo <= INT16_MAX &&
            "Too many operands for the operand name -> index table");
     StringRef Type = MaxOperandNo <= INT8_MAX ? "int8_t" : "int16_t";
-    OS << "  static constexpr " << Type << " OperandMap[]["
-       << NumOperandNames + 1 << "] = {\n";
+    OS << "  static constexpr " << Type << " OperandMap[][" << NumOperandNames
+       << "] = {\n";
     for (const auto &Entry : OperandMap) {
       const std::map<unsigned, unsigned> &OpList = Entry.first;
 
@@ -311,7 +311,7 @@ void InstrInfoEmitter::emitOperandNameMappings(
         auto Iter = OpList.find(ID);
         OS << (Iter != OpList.end() ? (int)Iter->second : -1) << ", ";
       }
-      OS << "-1 },\n";
+      OS << "},\n";
     }
     OS << "  };\n";
 
