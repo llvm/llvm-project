@@ -1468,6 +1468,15 @@ public:
                                        true, CostKind);
   }
 
+  InstructionCost getExpandCompressMemoryOpCost(
+      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+      TTI::TargetCostKind CostKind, const Instruction *I = nullptr) {
+    // Treat expand load/compress store as gather/scatter operation.
+    // TODO: implement more precise cost estimation for these intrinsics.
+    return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment, VariableMask,
+                                       /*IsGatherScatter*/ true, CostKind);
+  }
+
   InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,
                                          Align Alignment,
@@ -1775,6 +1784,21 @@ public:
       Align Alignment = cast<ConstantInt>(Args[1])->getAlignValue();
       return thisT()->getGatherScatterOpCost(Instruction::Load, RetTy, Args[0],
                                              VarMask, Alignment, CostKind, I);
+    }
+    case Intrinsic::masked_compressstore: {
+      const Value *Data = Args[0];
+      const Value *Mask = Args[2];
+      Align Alignment = I->getParamAlign(1).valueOrOne();
+      return thisT()->getExpandCompressMemoryOpCost(
+          Instruction::Store, Data->getType(), !isa<Constant>(Mask), Alignment,
+          CostKind, I);
+    }
+    case Intrinsic::masked_expandload: {
+      const Value *Mask = Args[1];
+      Align Alignment = I->getParamAlign(0).valueOrOne();
+      return thisT()->getExpandCompressMemoryOpCost(Instruction::Load, RetTy,
+                                                    !isa<Constant>(Mask),
+                                                    Alignment, CostKind, I);
     }
     case Intrinsic::experimental_vp_strided_store: {
       const Value *Data = Args[0];

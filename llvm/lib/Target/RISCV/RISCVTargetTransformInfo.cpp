@@ -940,6 +940,44 @@ InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
   return NumLoads * MemOpCost;
 }
 
+InstructionCost RISCVTTIImpl::getExpandCompressMemoryOpCost(
+    unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+    TTI::TargetCostKind CostKind, const Instruction *I) {
+  bool IsLegal = (Opcode == Instruction::Store &&
+                  isLegalMaskedCompressStore(DataTy, Alignment)) ||
+                 (Opcode == Instruction::Load &&
+                  isLegalMaskedExpandLoad(DataTy, Alignment));
+  if (!IsLegal || CostKind != TTI::TCK_RecipThroughput)
+    return BaseT::getExpandCompressMemoryOpCost(Opcode, DataTy, VariableMask,
+                                                Alignment, CostKind, I);
+  // Example compressstore sequence:
+  // vsetivli        zero, 8, e32, m2, ta, ma (ignored)
+  // vcompress.vm    v10, v8, v0
+  // vcpop.m a1, v0
+  // vsetvli zero, a1, e32, m2, ta, ma
+  // vse32.v v10, (a0)
+  // Example expandload sequence:
+  // vsetivli        zero, 8, e8, mf2, ta, ma (ignored)
+  // vcpop.m a1, v0
+  // vsetvli zero, a1, e32, m2, ta, ma
+  // vle32.v v10, (a0)
+  // vsetivli        zero, 8, e32, m2, ta, ma
+  // viota.m v12, v0
+  // vrgather.vv     v8, v10, v12, v0.t
+  auto MemOpCost =
+      getMemoryOpCost(Opcode, DataTy, Alignment, /*AddressSpace*/ 0, CostKind);
+  auto LT = getTypeLegalizationCost(DataTy);
+  SmallVector<unsigned, 4> Opcodes{RISCV::VSETVLI};
+  if (VariableMask)
+    Opcodes.push_back(RISCV::VCPOP_M);
+  if (Opcode == Instruction::Store)
+    Opcodes.append({RISCV::VCOMPRESS_VM});
+  else
+    Opcodes.append({RISCV::VSETIVLI, RISCV::VIOTA_M, RISCV::VRGATHER_VV});
+  return MemOpCost +
+         LT.first * getRISCVInstructionCost(Opcodes, LT.second, CostKind);
+}
+
 InstructionCost RISCVTTIImpl::getStridedMemoryOpCost(
     unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
     Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
