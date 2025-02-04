@@ -5628,7 +5628,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       for (auto [I, M] : enumerate(Mask)) {
         if (M == -1)
           continue;
-        MaxIdx = std::max(std::max((unsigned)I,(unsigned)M), MaxIdx);
+        MaxIdx = std::max(std::max((unsigned)I, (unsigned)M), MaxIdx);
       }
       unsigned NewNumElts = NumElts;
       while (MaxIdx < NewNumElts / 2 && NewNumElts != MinVLMAX)
@@ -5639,8 +5639,8 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
         V1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewVT, V1, ZeroIdx);
         SDValue Res = DAG.getVectorShuffle(NewVT, DL, V1, DAG.getUNDEF(NewVT),
                                            Mask.take_front(NewNumElts));
-        return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT),
-                           Res, ZeroIdx);
+        return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT), Res,
+                           ZeroIdx);
       }
     }
 
