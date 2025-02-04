@@ -81,7 +81,8 @@ inline AddrAndBoundsInfo getDataOperandBaseAddr(fir::FirOpBuilder &builder,
     // all address/dimension retrievals. For Fortran optional though, leave
     // the load generation for later so it can be done in the appropriate
     // if branches.
-    if (unwrapFirBox && mlir::isa<fir::ReferenceType>(symAddr.getType()) && !isOptional) {
+    if (unwrapFirBox && mlir::isa<fir::ReferenceType>(symAddr.getType()) &&
+        !isOptional) {
       mlir::Value addr = builder.create<fir::LoadOp>(loc, symAddr);
       return AddrAndBoundsInfo(addr, rawInput, isPresent, boxTy);
     }

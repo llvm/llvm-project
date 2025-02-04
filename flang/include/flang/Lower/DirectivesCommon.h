@@ -951,7 +951,8 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
         converter.genExprAddr(operandLocation, designator, stmtCtx);
     info.addr = fir::getBase(compExv);
     info.rawInput = info.addr;
-    if (genDefaultBounds && mlir::isa<fir::SequenceType>(fir::unwrapRefType(info.addr.getType())))
+    if (genDefaultBounds &&
+        mlir::isa<fir::SequenceType>(fir::unwrapRefType(info.addr.getType())))
       bounds = fir::factory::genBaseBoundsOps<BoundsOp, BoundsType>(
           builder, operandLocation, compExv,
           /*isAssumedSize=*/false);

@@ -1331,7 +1331,8 @@ static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
     } else if (allConstantBound) {
       // Use the constant bound directly in the combiner region so they do not
       // need to be passed as block argument.
-      assert(!bounds.empty() && "seq type with constant bounds cannot have empty bounds");
+      assert(!bounds.empty() &&
+             "seq type with constant bounds cannot have empty bounds");
       for (auto bound : llvm::reverse(bounds)) {
         auto dataBound =
             mlir::dyn_cast<mlir::acc::DataBoundsOp>(bound.getDefiningOp());
@@ -1402,12 +1403,14 @@ static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
           getSubscriptsFromArgs(recipe.getCombinerRegion().getArguments());
       auto leftEntity = hlfir::Entity{value1};
       if (fir::isBoxAddress(value1.getType()))
-        leftEntity = hlfir::Entity{builder.create<fir::LoadOp>(loc, value1).getResult()};
+        leftEntity =
+            hlfir::Entity{builder.create<fir::LoadOp>(loc, value1).getResult()};
       auto left =
           genDesignateWithTriplets(builder, loc, leftEntity, triplets, shape);
       auto rightEntity = hlfir::Entity{value2};
       if (fir::isBoxAddress(value2.getType()))
-        rightEntity = hlfir::Entity{builder.create<fir::LoadOp>(loc, value2).getResult()};
+        rightEntity =
+            hlfir::Entity{builder.create<fir::LoadOp>(loc, value2).getResult()};
       auto right =
           genDesignateWithTriplets(builder, loc, rightEntity, triplets, shape);
 
