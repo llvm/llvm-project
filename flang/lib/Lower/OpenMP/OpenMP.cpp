@@ -2089,7 +2089,13 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       const auto &objList = std::get<ObjectList>(lastp->t);
       for (const Object &object : objList) {
         semantics::Symbol *sym = object.sym();
-        converter.copyHostAssociateVar(*sym, &insp, /*hostIsSource=*/false);
+        if (const auto *common =
+                sym->detailsIf<semantics::CommonBlockDetails>()) {
+          for (const auto &obj : common->objects())
+            converter.copyHostAssociateVar(*obj, &insp, /*hostIsSource=*/false);
+        } else {
+          converter.copyHostAssociateVar(*sym, &insp, /*hostIsSource=*/false);
+        }
       }
     }
   }
