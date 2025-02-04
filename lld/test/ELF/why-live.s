@@ -5,7 +5,6 @@
 .globl _start
 .section ._start,"ax",@progbits
 _start:
-# DO NOT SUBMIT: If this reads, "jmp a", then LLD hangs.
 jmp test_simple
 .size _start, .-_start
 
@@ -28,14 +27,18 @@ jmp test_from_unsized
 test_incidental:
 jmp test_incidental
 
-## Since test_simple is unsized, the reference to test_from_unsized is accounted to its parent section.
-# RUN: ld.lld %t.o -o /dev/null --gc-sections --why-live=test_from_unsized | FileCheck %s --check-prefix=FROM_UNSIZED
-# FROM_UNSIZED:          live symbol: test_from_unsized
-# FROM_UNSIZED-NEXT: >>> kept alive by /usr/local/google/home/dthorn/llvm-project/build/tools/lld/test/ELF/Output/why-live.s.tmp.o:(.test_simple)
-# FROM_UNSIZED-NEXT: >>> kept alive by test_simple
-# FROM_UNSIZED-NEXT: >>> kept alive by _start
+# RUN: ld.lld %t.o -o /dev/null --gc-sections --why-live=test_from_unsized | FileCheck %s --check-prefix=FROM-UNSIZED
+# FROM-UNSIZED:          live symbol: test_from_unsized
+# FROM-UNSIZED-NEXT: >>> kept alive by /usr/local/google/home/dthorn/llvm-project/build/tools/lld/test/ELF/Output/why-live.s.tmp.o:(.test_simple)
+# FROM-UNSIZED-NEXT: >>> kept alive by test_simple
+# FROM-UNSIZED-NEXT: >>> kept alive by _start
 .globl test_from_unsized
 .section .test_from_unsized,"ax",@progbits
 test_from_unsized:
 jmp test_from_unsized
 
+# RUN: ld.lld %t.o -o /dev/null --gc-sections --why-live=test_dead | count 0
+.globl test_dead
+.section .test_dead,"ax",@progbits
+test_dead:
+jmp test_dead

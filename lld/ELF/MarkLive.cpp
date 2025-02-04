@@ -244,9 +244,8 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset,
 }
 
 template <class ELFT> void MarkLive<ELFT>::printWhyLive(Symbol *s) const {
-  // TODO: Test
-  // if (!whyLive.contains(s))
-  // return;
+  if (!whyLive.contains(s))
+   return;
 
   auto msg = Msg(ctx);
 
