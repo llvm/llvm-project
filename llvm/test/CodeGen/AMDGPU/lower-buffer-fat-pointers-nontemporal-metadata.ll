@@ -98,7 +98,7 @@ define amdgpu_kernel void @buffer_nontemporal_load_store(ptr addrspace(7) %in, p
 ; GFX942-SDAG-NEXT:    s_or_b64 s[4:5], s[2:3], s[12:13]
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-SDAG-NEXT:    buffer_store_dword v0, v1, s[4:7], 0 offen sc0 nt sc1
+; GFX942-SDAG-NEXT:    buffer_store_dword v0, v1, s[4:7], 0 offen nt
 ; GFX942-SDAG-NEXT:    s_endpgm
 ;
 ; GFX942-GISEL-LABEL: buffer_nontemporal_load_store:
@@ -128,7 +128,7 @@ define amdgpu_kernel void @buffer_nontemporal_load_store(ptr addrspace(7) %in, p
 ; GFX942-GISEL-NEXT:    s_or_b64 s[6:7], s[6:7], s[8:9]
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-GISEL-NEXT:    buffer_store_dword v0, v1, s[4:7], 0 offen sc0 nt sc1
+; GFX942-GISEL-NEXT:    buffer_store_dword v0, v1, s[4:7], 0 offen nt
 ; GFX942-GISEL-NEXT:    s_endpgm
 ;
 ; GFX10-SDAG-LABEL: buffer_nontemporal_load_store:

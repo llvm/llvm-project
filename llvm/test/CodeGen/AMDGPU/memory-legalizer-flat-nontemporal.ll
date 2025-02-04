@@ -102,7 +102,7 @@ define amdgpu_kernel void @flat_nontemporal_load_0(
 ; GFX942-NOTTGSPLIT-NEXT:    flat_load_dword v2, v[0:1] nt
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX942-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
+; GFX942-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX942-TGSPLIT-LABEL: flat_nontemporal_load_0:
@@ -114,7 +114,7 @@ define amdgpu_kernel void @flat_nontemporal_load_0(
 ; GFX942-TGSPLIT-NEXT:    flat_load_dword v2, v[0:1] nt
 ; GFX942-TGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
+; GFX942-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_nontemporal_load_0:
@@ -376,7 +376,7 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX942-NOTTGSPLIT-NEXT:    flat_load_dword v2, v[0:1] nt
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX942-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
+; GFX942-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX942-TGSPLIT-LABEL: flat_nontemporal_load_1:
@@ -397,7 +397,7 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX942-TGSPLIT-NEXT:    flat_load_dword v2, v[0:1] nt
 ; GFX942-TGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
+; GFX942-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_nontemporal_load_1:
@@ -624,7 +624,7 @@ define amdgpu_kernel void @flat_nontemporal_store_0(
 ; GFX942-NOTTGSPLIT-NEXT:    flat_load_dword v2, v[0:1]
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX942-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 nt sc1
+; GFX942-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 nt
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX942-TGSPLIT-LABEL: flat_nontemporal_store_0:
@@ -636,7 +636,7 @@ define amdgpu_kernel void @flat_nontemporal_store_0(
 ; GFX942-TGSPLIT-NEXT:    flat_load_dword v2, v[0:1]
 ; GFX942-TGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 nt sc1
+; GFX942-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 nt
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_nontemporal_store_0:
@@ -888,7 +888,7 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, v3
 ; GFX942-NOTTGSPLIT-NEXT:    v_lshl_add_u64 v[0:1], s[0:1], 0, v[0:1]
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX942-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 nt sc1
+; GFX942-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 nt
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX942-TGSPLIT-LABEL: flat_nontemporal_store_1:
@@ -909,7 +909,7 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, v3
 ; GFX942-TGSPLIT-NEXT:    v_lshl_add_u64 v[0:1], s[0:1], 0, v[0:1]
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 nt sc1
+; GFX942-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 nt
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_nontemporal_store_1:
@@ -1140,7 +1140,7 @@ define amdgpu_kernel void @flat_nontemporal_volatile_load(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
+; GFX942-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX942-TGSPLIT-LABEL: flat_nontemporal_volatile_load:
@@ -1152,7 +1152,7 @@ define amdgpu_kernel void @flat_nontemporal_volatile_load(
 ; GFX942-TGSPLIT-NEXT:    flat_load_dword v2, v[0:1] sc0 sc1
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX942-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
+; GFX942-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_nontemporal_volatile_load:

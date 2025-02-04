@@ -24,7 +24,7 @@ define protected amdgpu_kernel void @test(ptr addrspace(1) %in, ptr addrspace(1)
 ; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_smfmac_i32_16x16x64_i8 v[8:11], v[12:13], v[4:7], v13
 ; GFX942-NEXT:    s_nop 6
-; GFX942-NEXT:    global_store_dword v0, v11, s[2:3] offset:12 sc0 sc1
+; GFX942-NEXT:    global_store_dword v0, v11, s[2:3] offset:12
 ; GFX942-NEXT:    s_endpgm
 entry:
   %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 0

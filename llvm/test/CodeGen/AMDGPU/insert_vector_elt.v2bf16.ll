@@ -56,7 +56,7 @@ define amdgpu_kernel void @s_insertelement_v2bf16_0(ptr addrspace(1) %out, ptr a
 ; GFX942-NEXT:    s_lshr_b32 s2, s2, 16
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s2, 0x40a0, s2
 ; GFX942-NEXT:    v_mov_b32_e32 v1, s2
-; GFX942-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX942-NEXT:    s_endpgm
   %vec = load <2 x bfloat>, ptr addrspace(4) %vec.ptr
   %vecins = insertelement <2 x bfloat> %vec, bfloat 5.000000e+00, i32 0
@@ -114,7 +114,7 @@ define amdgpu_kernel void @s_insertelement_v2bf16_1(ptr addrspace(1) %out, ptr a
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s2, s2, 0x40a0
 ; GFX942-NEXT:    v_mov_b32_e32 v1, s2
-; GFX942-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX942-NEXT:    s_endpgm
   %vec = load <2 x bfloat>, ptr addrspace(4) %vec.ptr
   %vecins = insertelement <2 x bfloat> %vec, bfloat 5.000000e+00, i32 1
@@ -182,7 +182,7 @@ define amdgpu_kernel void @v_insertelement_v2bf16_0(ptr addrspace(1) %out, ptr a
 ; GFX942-NEXT:    s_mov_b32 s2, 0xffff
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_bfi_b32 v1, s2, v2, v1
-; GFX942-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX942-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -252,7 +252,7 @@ define amdgpu_kernel void @v_insertelement_v2bf16_0_inlineimm(ptr addrspace(1) %
 ; GFX942-NEXT:    s_mov_b32 s2, 0xffff
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_bfi_b32 v1, s2, 53, v1
-; GFX942-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX942-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -324,7 +324,7 @@ define amdgpu_kernel void @v_insertelement_v2bf16_1(ptr addrspace(1) %out, ptr a
 ; GFX942-NEXT:    s_movk_i32 s2, 0x40a0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_perm_b32 v1, s2, v1, v2
-; GFX942-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX942-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -394,7 +394,7 @@ define amdgpu_kernel void @v_insertelement_v2bf16_1_inlineimm(ptr addrspace(1) %
 ; GFX942-NEXT:    global_load_dword v1, v0, s[2:3]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_perm_b32 v1, 35, v1, v2
-; GFX942-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX942-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -491,7 +491,7 @@ define amdgpu_kernel void @v_insertelement_v2bf16_dynamic_vgpr(ptr addrspace(1) 
 ; GFX942-NEXT:    s_mov_b32 s2, 0x12341234
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_bfi_b32 v1, v1, s2, v2
-; GFX942-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX942-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -571,7 +571,7 @@ define amdgpu_kernel void @v_insertelement_v4bf16_0(ptr addrspace(1) %out, ptr a
 ; GFX942-NEXT:    v_mov_b32_e32 v3, s6
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_bfi_b32 v0, s2, v3, v0
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX942-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -649,7 +649,7 @@ define amdgpu_kernel void @v_insertelement_v4bf16_1(ptr addrspace(1) %out, ptr a
 ; GFX942-NEXT:    global_load_dwordx2 v[0:1], v2, s[2:3]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_perm_b32 v0, s6, v0, v3
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX942-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -729,7 +729,7 @@ define amdgpu_kernel void @v_insertelement_v4bf16_2(ptr addrspace(1) %out, ptr a
 ; GFX942-NEXT:    v_mov_b32_e32 v3, s6
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_bfi_b32 v1, s2, v3, v1
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX942-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -807,7 +807,7 @@ define amdgpu_kernel void @v_insertelement_v4bf16_3(ptr addrspace(1) %out, ptr a
 ; GFX942-NEXT:    global_load_dwordx2 v[0:1], v2, s[2:3]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_perm_b32 v1, s6, v1, v3
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX942-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -908,7 +908,7 @@ define amdgpu_kernel void @v_insertelement_v4bf16_dynamic_sgpr(ptr addrspace(1) 
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_bfi_b32 v1, s3, v3, v1
 ; GFX942-NEXT:    v_bfi_b32 v0, s2, v4, v0
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX942-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -987,7 +987,7 @@ define amdgpu_kernel void @v_insertelement_v8bf16_3(ptr addrspace(1) %out, ptr a
 ; GFX942-NEXT:    global_load_dwordx4 v[0:3], v4, s[2:3]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_perm_b32 v1, s6, v1, v5
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -1202,7 +1202,7 @@ define amdgpu_kernel void @v_insertelement_v8bf16_dynamic(ptr addrspace(1) %out,
 ; GFX942-NEXT:    v_cndmask_b32_e32 v5, v9, v5, vcc
 ; GFX942-NEXT:    v_perm_b32 v1, v6, v1, s2
 ; GFX942-NEXT:    v_perm_b32 v0, v5, v0, s2
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -1296,8 +1296,8 @@ define amdgpu_kernel void @v_insertelement_v16bf16_3(ptr addrspace(1) %out, ptr 
 ; GFX942-NEXT:    s_waitcnt vmcnt(1)
 ; GFX942-NEXT:    v_perm_b32 v1, s6, v1, v9
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16 sc0 sc1
-; GFX942-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
+; GFX942-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -1666,8 +1666,8 @@ define amdgpu_kernel void @v_insertelement_v16bf16_dynamic(ptr addrspace(1) %out
 ; GFX942-NEXT:    v_cndmask_b32_e32 v9, v17, v9, vcc
 ; GFX942-NEXT:    v_perm_b32 v5, v10, v5, s2
 ; GFX942-NEXT:    v_perm_b32 v4, v9, v4, s2
-; GFX942-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16 sc0 sc1
-; GFX942-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
+; GFX942-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64

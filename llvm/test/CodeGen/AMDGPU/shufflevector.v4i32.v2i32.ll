@@ -45,7 +45,7 @@ define void @v_shuffle_v4i32_v2i32__0_u_u_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def v[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    global_store_dwordx4 v2, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v2, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -87,7 +87,7 @@ define void @v_shuffle_v4i32_v2i32__1_u_u_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v1
-; GFX942-NEXT:    global_store_dwordx4 v2, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v2, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -140,7 +140,7 @@ define void @v_shuffle_v4i32_v2i32__3_u_u_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v1
-; GFX942-NEXT:    global_store_dwordx4 v2, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v2, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -193,7 +193,7 @@ define void @v_shuffle_v4i32_v2i32__3_0_u_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_pk_mov_b32 v[0:1], v[2:3], v[0:1] op_sel:[1,0]
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -246,7 +246,7 @@ define void @v_shuffle_v4i32_v2i32__3_1_u_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v3
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -292,7 +292,7 @@ define void @v_shuffle_v4i32_v2i32__3_2_u_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX942-NEXT:    v_mov_b32_e32 v1, v2
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -335,7 +335,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_u_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v1
-; GFX942-NEXT:    global_store_dwordx4 v2, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v2, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -387,7 +387,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_0_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def v[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -441,7 +441,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_1_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v3
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -488,7 +488,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_2_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX942-NEXT:    v_mov_b32_e32 v1, v3
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -534,7 +534,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_3_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v1
-; GFX942-NEXT:    global_store_dwordx4 v3, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v3, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -589,7 +589,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_3_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v1
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -644,7 +644,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_3_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v1
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -691,7 +691,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_3_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[0:1] op_sel:[1,0]
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v1
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -740,7 +740,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_3_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v1
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -789,7 +789,7 @@ define void @v_shuffle_v4i32_v2i32__u_0_0_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v0
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -837,7 +837,7 @@ define void @v_shuffle_v4i32_v2i32__0_0_0_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v0
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -883,7 +883,7 @@ define void @v_shuffle_v4i32_v2i32__1_0_0_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_pk_mov_b32 v[0:1], v[2:3], v[2:3] op_sel:[1,0]
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v2
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -931,7 +931,7 @@ define void @v_shuffle_v4i32_v2i32__2_0_0_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v0
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -986,7 +986,7 @@ define void @v_shuffle_v4i32_v2i32__3_0_0_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_pk_mov_b32 v[0:1], v[0:1], v[2:3] op_sel:[1,0]
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v2
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -1041,7 +1041,7 @@ define void @v_shuffle_v4i32_v2i32__3_u_0_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v2
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -1099,7 +1099,7 @@ define void @v_shuffle_v4i32_v2i32__3_1_0_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v1, v3
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v2
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -1154,7 +1154,7 @@ define void @v_shuffle_v4i32_v2i32__3_2_0_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_pk_mov_b32 v[0:1], v[0:1], v[0:1] op_sel:[1,0]
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v2
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -1209,7 +1209,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_0_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v2
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -1264,7 +1264,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_u_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v2
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -1319,7 +1319,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_1_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_pk_mov_b32 v[2:3], v[2:3], v[2:3] op_sel:[1,0]
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v1
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -1377,7 +1377,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_2_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX942-NEXT:    v_mov_b32_e32 v1, v3
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v4
-; GFX942-NEXT:    global_store_dwordx4 v6, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v6, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -1424,7 +1424,7 @@ define void @v_shuffle_v4i32_v2i32__u_1_1_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v1
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -1470,7 +1470,7 @@ define void @v_shuffle_v4i32_v2i32__0_1_1_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v1
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -1518,7 +1518,7 @@ define void @v_shuffle_v4i32_v2i32__1_1_1_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v1
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -1564,7 +1564,7 @@ define void @v_shuffle_v4i32_v2i32__2_1_1_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v1
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -1621,7 +1621,7 @@ define void @v_shuffle_v4i32_v2i32__3_1_1_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v1
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -1676,7 +1676,7 @@ define void @v_shuffle_v4i32_v2i32__3_u_1_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v3
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -1731,7 +1731,7 @@ define void @v_shuffle_v4i32_v2i32__3_0_1_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_pk_mov_b32 v[0:1], v[0:1], v[2:3] op_sel:[1,0]
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v3
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -1786,7 +1786,7 @@ define void @v_shuffle_v4i32_v2i32__3_2_1_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_pk_mov_b32 v[0:1], v[0:1], v[0:1] op_sel:[1,0]
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v3
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -1841,7 +1841,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_1_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v3
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -1893,7 +1893,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_u_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def v[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -1945,7 +1945,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_0_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def v[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -2003,7 +2003,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_2_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX942-NEXT:    v_mov_b32_e32 v1, v3
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v5
-; GFX942-NEXT:    global_store_dwordx4 v6, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v6, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -2054,7 +2054,7 @@ define void @v_shuffle_v4i32_v2i32__0_2_2_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def v[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    global_store_dwordx4 v2, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v2, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -2096,7 +2096,7 @@ define void @v_shuffle_v4i32_v2i32__1_2_2_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v1
-; GFX942-NEXT:    global_store_dwordx4 v2, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v2, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -2153,7 +2153,7 @@ define void @v_shuffle_v4i32_v2i32__3_2_2_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_pk_mov_b32 v[0:1], v[2:3], v[2:3] op_sel:[1,0]
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v2
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -2199,7 +2199,7 @@ define void @v_shuffle_v4i32_v2i32__3_u_2_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v2
-; GFX942-NEXT:    global_store_dwordx4 v1, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v1, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -2254,7 +2254,7 @@ define void @v_shuffle_v4i32_v2i32__3_0_2_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_pk_mov_b32 v[0:1], v[2:3], v[0:1] op_sel:[1,0]
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v2
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -2309,7 +2309,7 @@ define void @v_shuffle_v4i32_v2i32__3_1_2_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v2
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -2358,7 +2358,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_2_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX942-NEXT:    v_mov_b32_e32 v1, v3
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v2
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -2407,7 +2407,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_u_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX942-NEXT:    v_mov_b32_e32 v1, v3
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v2
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -2465,7 +2465,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_0_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v5
 ; GFX942-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v4
-; GFX942-NEXT:    global_store_dwordx4 v6, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v6, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -2520,7 +2520,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_1_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_pk_mov_b32 v[2:3], v[2:3], v[0:1] op_sel:[1,0]
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v1
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -2567,7 +2567,7 @@ define void @v_shuffle_v4i32_v2i32__u_3_3_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v1
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -2622,7 +2622,7 @@ define void @v_shuffle_v4i32_v2i32__0_3_3_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v1, v3
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v3
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -2680,7 +2680,7 @@ define void @v_shuffle_v4i32_v2i32__1_3_3_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v1
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -2727,7 +2727,7 @@ define void @v_shuffle_v4i32_v2i32__2_3_3_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v1
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -2773,7 +2773,7 @@ define void @v_shuffle_v4i32_v2i32__3_u_3_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v3
-; GFX942-NEXT:    global_store_dwordx4 v1, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v1, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -2828,7 +2828,7 @@ define void @v_shuffle_v4i32_v2i32__3_0_3_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_pk_mov_b32 v[0:1], v[2:3], v[0:1] op_sel:[1,0]
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v3
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -2883,7 +2883,7 @@ define void @v_shuffle_v4i32_v2i32__3_1_3_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v3
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -2929,7 +2929,7 @@ define void @v_shuffle_v4i32_v2i32__3_2_3_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_pk_mov_b32 v[0:1], v[2:3], v[2:3] op_sel:[1,0]
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v3
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -2975,7 +2975,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_u_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v1
-; GFX942-NEXT:    global_store_dwordx4 v2, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v2, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -3030,7 +3030,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_0_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v1
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -3087,7 +3087,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_1_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v3
 ; GFX942-NEXT:    v_mov_b32_e32 v3, v1
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()
@@ -3134,7 +3134,7 @@ define void @v_shuffle_v4i32_v2i32__3_3_2_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX942-NEXT:    v_mov_b32_e32 v1, v3
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <2 x i32> asm "; def $0", "=v"()

@@ -36,7 +36,7 @@ define void @back_off_barrier_no_fence(ptr %in, ptr %out) #0 {
 ; GFX942-BACKOFF-NEXT:    flat_load_dword v0, v[0:1]
 ; GFX942-BACKOFF-NEXT:    s_barrier
 ; GFX942-BACKOFF-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX942-BACKOFF-NEXT:    flat_store_dword v[2:3], v0 sc0 sc1
+; GFX942-BACKOFF-NEXT:    flat_store_dword v[2:3], v0
 ; GFX942-BACKOFF-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-BACKOFF-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -95,7 +95,7 @@ define void @back_off_barrier_with_fence(ptr %in, ptr %out) #0 {
 ; GFX942-BACKOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-BACKOFF-NEXT:    s_barrier
 ; GFX942-BACKOFF-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-BACKOFF-NEXT:    flat_store_dword v[2:3], v0 sc0 sc1
+; GFX942-BACKOFF-NEXT:    flat_store_dword v[2:3], v0
 ; GFX942-BACKOFF-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-BACKOFF-NEXT:    s_setpc_b64 s[30:31]
 ;

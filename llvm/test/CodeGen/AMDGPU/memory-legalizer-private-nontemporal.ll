@@ -141,7 +141,7 @@ define amdgpu_kernel void @private_nontemporal_load_0(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_load_dword v1, off, s2 nt
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NOTTGSPLIT-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX942-NOTTGSPLIT-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX942-TGSPLIT-LABEL: private_nontemporal_load_0:
@@ -152,7 +152,7 @@ define amdgpu_kernel void @private_nontemporal_load_0(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    scratch_load_dword v1, off, s2 nt
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-TGSPLIT-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX942-TGSPLIT-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: private_nontemporal_load_0:
@@ -359,7 +359,7 @@ define amdgpu_kernel void @private_nontemporal_load_1(
 ; GFX942-NOTTGSPLIT-NEXT:    v_lshl_add_u32 v1, v1, s2, v2
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_load_dword v1, v1, off nt
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NOTTGSPLIT-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX942-NOTTGSPLIT-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX942-TGSPLIT-LABEL: private_nontemporal_load_1:
@@ -376,7 +376,7 @@ define amdgpu_kernel void @private_nontemporal_load_1(
 ; GFX942-TGSPLIT-NEXT:    v_lshl_add_u32 v1, v1, s2, v2
 ; GFX942-TGSPLIT-NEXT:    scratch_load_dword v1, v1, off nt
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-TGSPLIT-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX942-TGSPLIT-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: private_nontemporal_load_1:
@@ -564,7 +564,7 @@ define amdgpu_kernel void @private_nontemporal_store_0(
 ; GFX942-NOTTGSPLIT-NEXT:    s_load_dword s1, s[2:3], 0x0
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v0, s1
-; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0 sc0 nt sc1
+; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0 nt
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX942-TGSPLIT-LABEL: private_nontemporal_store_0:
@@ -575,7 +575,7 @@ define amdgpu_kernel void @private_nontemporal_store_0(
 ; GFX942-TGSPLIT-NEXT:    s_load_dword s1, s[2:3], 0x0
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v0, s1
-; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0 sc0 nt sc1
+; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0 nt
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: private_nontemporal_store_0:
@@ -760,7 +760,7 @@ define amdgpu_kernel void @private_nontemporal_store_1(
 ; GFX942-NOTTGSPLIT-NEXT:    v_lshl_add_u32 v1, v0, s1, v1
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v0, s0
-; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword v1, v0, off sc0 nt sc1
+; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword v1, v0, off nt
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX942-TGSPLIT-LABEL: private_nontemporal_store_1:
@@ -776,7 +776,7 @@ define amdgpu_kernel void @private_nontemporal_store_1(
 ; GFX942-TGSPLIT-NEXT:    v_lshl_add_u32 v1, v0, s1, v1
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v0, s0
-; GFX942-TGSPLIT-NEXT:    scratch_store_dword v1, v0, off sc0 nt sc1
+; GFX942-TGSPLIT-NEXT:    scratch_store_dword v1, v0, off nt
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: private_nontemporal_store_1:
@@ -977,7 +977,7 @@ define amdgpu_kernel void @private_nontemporal_volatile_load(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_load_dword v1, off, s2 sc0 sc1
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NOTTGSPLIT-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX942-NOTTGSPLIT-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX942-TGSPLIT-LABEL: private_nontemporal_volatile_load:
@@ -988,7 +988,7 @@ define amdgpu_kernel void @private_nontemporal_volatile_load(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    scratch_load_dword v1, off, s2 sc0 sc1
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-TGSPLIT-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX942-TGSPLIT-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: private_nontemporal_volatile_load:

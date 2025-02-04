@@ -244,7 +244,7 @@ define amdgpu_ps void @fptrunc_f32_to_bf16(float %a, ptr %out) {
 ; GFX-942-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
 ; GFX-942-NEXT:    s_nop 1
 ; GFX-942-NEXT:    v_cndmask_b32_e32 v0, v1, v4, vcc
-; GFX-942-NEXT:    flat_store_short_d16_hi v[2:3], v0 sc0 sc1
+; GFX-942-NEXT:    flat_store_short_d16_hi v[2:3], v0
 ; GFX-942-NEXT:    s_endpgm
 ;
 ; GFX-950-LABEL: fptrunc_f32_to_bf16:
@@ -273,7 +273,7 @@ define amdgpu_ps void @fptrunc_f32_to_bf16_abs(float %a, ptr %out) {
 ; GFX-942-NEXT:    v_cmp_u_f32_e64 vcc, |v0|, |v0|
 ; GFX-942-NEXT:    s_nop 1
 ; GFX-942-NEXT:    v_cndmask_b32_e32 v0, v4, v1, vcc
-; GFX-942-NEXT:    flat_store_short_d16_hi v[2:3], v0 sc0 sc1
+; GFX-942-NEXT:    flat_store_short_d16_hi v[2:3], v0
 ; GFX-942-NEXT:    s_endpgm
 ;
 ; GFX-950-LABEL: fptrunc_f32_to_bf16_abs:
@@ -303,7 +303,7 @@ define amdgpu_ps void @fptrunc_f32_to_bf16_neg(float %a, ptr %out) {
 ; GFX-942-NEXT:    v_cmp_u_f32_e64 vcc, -v0, -v0
 ; GFX-942-NEXT:    s_nop 1
 ; GFX-942-NEXT:    v_cndmask_b32_e32 v0, v4, v1, vcc
-; GFX-942-NEXT:    flat_store_short_d16_hi v[2:3], v0 sc0 sc1
+; GFX-942-NEXT:    flat_store_short_d16_hi v[2:3], v0
 ; GFX-942-NEXT:    s_endpgm
 ;
 ; GFX-950-LABEL: fptrunc_f32_to_bf16_neg:
@@ -342,7 +342,7 @@ define amdgpu_ps void @fptrunc_f64_to_bf16(double %a, ptr %out) {
 ; GFX-942-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[0:1]
 ; GFX-942-NEXT:    s_nop 1
 ; GFX-942-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
-; GFX-942-NEXT:    flat_store_short_d16_hi v[2:3], v0 sc0 sc1
+; GFX-942-NEXT:    flat_store_short_d16_hi v[2:3], v0
 ; GFX-942-NEXT:    s_endpgm
 ;
 ; GFX-950-LABEL: fptrunc_f64_to_bf16:
@@ -380,7 +380,7 @@ define amdgpu_ps void @fptrunc_f64_to_bf16_neg(double %a, ptr %out) {
 ; GFX-942-NEXT:    v_cmp_u_f64_e64 vcc, -v[0:1], -v[0:1]
 ; GFX-942-NEXT:    s_nop 1
 ; GFX-942-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
-; GFX-942-NEXT:    flat_store_short_d16_hi v[2:3], v0 sc0 sc1
+; GFX-942-NEXT:    flat_store_short_d16_hi v[2:3], v0
 ; GFX-942-NEXT:    s_endpgm
 ;
 ; GFX-950-LABEL: fptrunc_f64_to_bf16_neg:
@@ -419,7 +419,7 @@ define amdgpu_ps void @fptrunc_f64_to_bf16_abs(double %a, ptr %out) {
 ; GFX-942-NEXT:    v_cmp_u_f64_e64 vcc, |v[0:1]|, |v[0:1]|
 ; GFX-942-NEXT:    s_nop 1
 ; GFX-942-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
-; GFX-942-NEXT:    flat_store_short_d16_hi v[2:3], v0 sc0 sc1
+; GFX-942-NEXT:    flat_store_short_d16_hi v[2:3], v0
 ; GFX-942-NEXT:    s_endpgm
 ;
 ; GFX-950-LABEL: fptrunc_f64_to_bf16_abs:

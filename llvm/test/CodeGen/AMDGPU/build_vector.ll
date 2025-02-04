@@ -55,7 +55,7 @@ define amdgpu_kernel void @build_vector2 (ptr addrspace(1) %out) {
 ; GFX942-NEXT:    v_mov_b32_e32 v0, 5
 ; GFX942-NEXT:    v_mov_b32_e32 v1, 6
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX942-NEXT:    s_endpgm
 entry:
   store <2 x i32> <i32 5, i32 6>, ptr addrspace(1) %out
@@ -122,7 +122,7 @@ define amdgpu_kernel void @build_vector4 (ptr addrspace(1) %out) {
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 7
 ; GFX942-NEXT:    v_mov_b32_e32 v3, 8
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_endpgm
 entry:
   store <4 x i32> <i32 5, i32 6, i32 7, i32 8>, ptr addrspace(1) %out
@@ -174,7 +174,7 @@ define amdgpu_kernel void @build_vector_v2i16 (ptr addrspace(1) %out) {
 ; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v1, 0x60005
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX942-NEXT:    s_endpgm
 entry:
   store <2 x i16> <i16 5, i16 6>, ptr addrspace(1) %out
@@ -241,7 +241,7 @@ define amdgpu_kernel void @build_vector_v2i16_trunc (ptr addrspace(1) %out, i32 
 ; GFX942-NEXT:    s_lshr_b32 s2, s2, 16
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s2, s2, 5
 ; GFX942-NEXT:    v_mov_b32_e32 v1, s2
-; GFX942-NEXT:    global_store_dword v0, v1, s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX942-NEXT:    s_endpgm
   %srl = lshr i32 %a, 16
   %trunc = trunc i32 %srl to i16
@@ -313,7 +313,7 @@ define amdgpu_kernel void @build_v2i32_from_v4i16_shuffle(ptr addrspace(1) %out,
 ; GFX942-NEXT:    s_lshl_b32 s2, s2, 16
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX942-NEXT:    v_mov_b32_e32 v1, s3
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX942-NEXT:    s_endpgm
 entry:
   %shuf = shufflevector <4 x i16> %in, <4 x i16> zeroinitializer, <2 x i32> <i32 0, i32 2>

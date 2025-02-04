@@ -3305,7 +3305,7 @@ define double @flat_agent_atomic_fsub_ret_f64(ptr %ptr, double %val) #0 {
 ; GFX942-NEXT:    scratch_load_dwordx2 v[4:5], v6, off
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_add_f64 v[0:1], v[4:5], -v[2:3]
-; GFX942-NEXT:    scratch_store_dwordx2 v6, v[0:1], off sc0 sc1
+; GFX942-NEXT:    scratch_store_dwordx2 v6, v[0:1], off
 ; GFX942-NEXT:  .LBB16_6: ; %atomicrmw.phi
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v4
@@ -3728,7 +3728,7 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX942-NEXT:    scratch_load_dwordx2 v[0:1], v4, off
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_add_f64 v[2:3], v[0:1], -v[2:3]
-; GFX942-NEXT:    scratch_store_dwordx2 v4, v[2:3], off sc0 sc1
+; GFX942-NEXT:    scratch_store_dwordx2 v4, v[2:3], off
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
@@ -4176,7 +4176,7 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX942-NEXT:    scratch_load_dwordx2 v[0:1], v4, off
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_add_f64 v[2:3], v[0:1], -v[2:3]
-; GFX942-NEXT:    scratch_store_dwordx2 v4, v[2:3], off sc0 sc1
+; GFX942-NEXT:    scratch_store_dwordx2 v4, v[2:3], off
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
@@ -4613,7 +4613,7 @@ define void @flat_agent_atomic_fsub_noret_f64(ptr %ptr, double %val) #0 {
 ; GFX942-NEXT:    scratch_load_dwordx2 v[0:1], v4, off
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_add_f64 v[0:1], v[0:1], -v[2:3]
-; GFX942-NEXT:    scratch_store_dwordx2 v4, v[0:1], off sc0 sc1
+; GFX942-NEXT:    scratch_store_dwordx2 v4, v[0:1], off
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
@@ -5036,7 +5036,7 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX942-NEXT:    scratch_load_dwordx2 v[0:1], v4, off
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_add_f64 v[0:1], v[0:1], -v[2:3]
-; GFX942-NEXT:    scratch_store_dwordx2 v4, v[0:1], off sc0 sc1
+; GFX942-NEXT:    scratch_store_dwordx2 v4, v[0:1], off
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
@@ -5474,7 +5474,7 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX942-NEXT:    scratch_load_dwordx2 v[0:1], v4, off
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_add_f64 v[0:1], v[0:1], -v[2:3]
-; GFX942-NEXT:    scratch_store_dwordx2 v4, v[0:1], off sc0 sc1
+; GFX942-NEXT:    scratch_store_dwordx2 v4, v[0:1], off
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]

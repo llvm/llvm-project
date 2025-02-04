@@ -307,7 +307,7 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs() #0 
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    s_add_i32 s2, s32, 0x4044
-; GFX942-NEXT:    scratch_store_dword off, v23, s2 sc0 sc1 ; 4-byte Folded Spill
+; GFX942-NEXT:    scratch_store_dword off, v23, s2 ; 4-byte Folded Spill
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX942-NEXT:    v_writelane_b32 v23, s30, 0
 ; GFX942-NEXT:    v_writelane_b32 v23, s31, 1
@@ -1054,7 +1054,7 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowe
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    s_add_i32 s2, s32, 0x4010
-; GFX942-NEXT:    scratch_store_dword off, v21, s2 sc0 sc1 ; 4-byte Folded Spill
+; GFX942-NEXT:    scratch_store_dword off, v21, s2 ; 4-byte Folded Spill
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX942-NEXT:    v_writelane_b32 v21, s30, 0
 ; GFX942-NEXT:    v_writelane_b32 v21, s31, 1
@@ -1782,7 +1782,7 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-NEXT:    s_add_i32 s2, s32, 0x8040
-; GFX942-NEXT:    scratch_store_dword off, v22, s2 sc0 sc1 ; 4-byte Folded Spill
+; GFX942-NEXT:    scratch_store_dword off, v22, s2 ; 4-byte Folded Spill
 ; GFX942-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX942-NEXT:    v_writelane_b32 v22, s30, 0
 ; GFX942-NEXT:    v_writelane_b32 v22, s31, 1

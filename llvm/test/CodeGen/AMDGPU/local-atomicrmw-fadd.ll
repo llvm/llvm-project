@@ -7184,7 +7184,7 @@ define amdgpu_kernel void @local_ds_fadd(ptr addrspace(1) %out, ptr addrspace(3)
 ; GFX942-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX942-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    global_store_dword v1, v0, s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX942-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: local_ds_fadd:
@@ -8044,7 +8044,7 @@ define amdgpu_kernel void @local_ds_fadd_one_as(ptr addrspace(1) %out, ptr addrs
 ; GFX942-NEXT:    v_add_f32_e32 v0, s2, v0
 ; GFX942-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX942-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
-; GFX942-NEXT:    global_store_dword v1, v0, s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX942-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: local_ds_fadd_one_as:

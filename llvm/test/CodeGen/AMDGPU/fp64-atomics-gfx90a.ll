@@ -55,7 +55,7 @@ define amdgpu_ps void @raw_buffer_atomic_add_rtn_f64(<4 x i32> inreg %rsrc, doub
 ; GFX942:       ; %bb.0: ; %main_body
 ; GFX942-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[0:3], 0 offen sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1] sc0 sc1
+; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.buffer.atomic.fadd.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0)
@@ -91,7 +91,7 @@ define amdgpu_kernel void @raw_buffer_atomic_add_rtn_f64_off4_slc(<4 x i32> %rsr
 ; GFX942-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[0:3], 4 offen sc0 nt
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.buffer.atomic.fadd.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 4, i32 2)
@@ -138,7 +138,7 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_add_rtn_f64(ptr addrspace(8) inreg 
 ; GFX942:       ; %bb.0: ; %main_body
 ; GFX942-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[0:3], 0 offen sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1] sc0 sc1
+; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 0)
@@ -174,7 +174,7 @@ define amdgpu_kernel void @raw_ptr_buffer_atomic_add_rtn_f64_off4_slc(ptr addrsp
 ; GFX942-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[0:3], 4 offen sc0 nt
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 4, i32 2)
@@ -221,7 +221,7 @@ define amdgpu_ps void @struct_buffer_atomic_add_rtn_f64(<4 x i32> inreg %rsrc, d
 ; GFX942:       ; %bb.0: ; %main_body
 ; GFX942-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[0:3], 0 idxen sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1] sc0 sc1
+; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.buffer.atomic.fadd.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0, i32 0)
@@ -257,7 +257,7 @@ define amdgpu_kernel void @struct_buffer_atomic_add_rtn_f64_off4_slc(<4 x i32> %
 ; GFX942-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[0:3], 0 idxen offset:4 sc0 nt
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.buffer.atomic.fadd.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 4, i32 0, i32 2)
@@ -304,7 +304,7 @@ define amdgpu_ps void @struct_ptr_buffer_atomic_add_rtn_f64(ptr addrspace(8) inr
 ; GFX942:       ; %bb.0: ; %main_body
 ; GFX942-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[0:3], 0 idxen sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1] sc0 sc1
+; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 0, i32 0)
@@ -340,7 +340,7 @@ define amdgpu_kernel void @struct_ptr_buffer_atomic_add_rtn_f64_off4_slc(ptr add
 ; GFX942-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[0:3], 0 idxen offset:4 sc0 nt
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 4, i32 0, i32 2)
@@ -387,7 +387,7 @@ define amdgpu_ps void @raw_buffer_atomic_min_rtn_f64(<4 x i32> inreg %rsrc, doub
 ; GFX942:       ; %bb.0: ; %main_body
 ; GFX942-NEXT:    buffer_atomic_min_f64 v[0:1], v2, s[0:3], 0 offen sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1] sc0 sc1
+; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.buffer.atomic.fmin.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0)
@@ -423,7 +423,7 @@ define amdgpu_kernel void @raw_buffer_atomic_min_rtn_f64_off4_slc(<4 x i32> %rsr
 ; GFX942-NEXT:    buffer_atomic_min_f64 v[0:1], v2, s[0:3], 4 offen sc0 nt
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.buffer.atomic.fmin.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 4, i32 2)
@@ -470,7 +470,7 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_min_rtn_f64(ptr addrspace(8) inreg 
 ; GFX942:       ; %bb.0: ; %main_body
 ; GFX942-NEXT:    buffer_atomic_min_f64 v[0:1], v2, s[0:3], 0 offen sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1] sc0 sc1
+; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.ptr.buffer.atomic.fmin.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 0)
@@ -506,7 +506,7 @@ define amdgpu_kernel void @raw_ptr_buffer_atomic_min_rtn_f64_off4_slc(ptr addrsp
 ; GFX942-NEXT:    buffer_atomic_min_f64 v[0:1], v2, s[0:3], 4 offen sc0 nt
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.ptr.buffer.atomic.fmin.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 4, i32 2)
@@ -553,7 +553,7 @@ define amdgpu_ps void @struct_buffer_atomic_min_rtn_f64(<4 x i32> inreg %rsrc, d
 ; GFX942:       ; %bb.0: ; %main_body
 ; GFX942-NEXT:    buffer_atomic_min_f64 v[0:1], v2, s[0:3], 0 idxen sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1] sc0 sc1
+; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.buffer.atomic.fmin.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0, i32 0)
@@ -589,7 +589,7 @@ define amdgpu_kernel void @struct_buffer_atomic_min_rtn_f64_off4_slc(<4 x i32> %
 ; GFX942-NEXT:    buffer_atomic_min_f64 v[0:1], v2, s[0:3], 0 idxen offset:4 sc0 nt
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.buffer.atomic.fmin.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 4, i32 0, i32 2)
@@ -636,7 +636,7 @@ define amdgpu_ps void @struct_ptr_buffer_atomic_min_rtn_f64(ptr addrspace(8) inr
 ; GFX942:       ; %bb.0: ; %main_body
 ; GFX942-NEXT:    buffer_atomic_min_f64 v[0:1], v2, s[0:3], 0 idxen sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1] sc0 sc1
+; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.ptr.buffer.atomic.fmin.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 0, i32 0)
@@ -672,7 +672,7 @@ define amdgpu_kernel void @struct_ptr_buffer_atomic_min_rtn_f64_off4_slc(ptr add
 ; GFX942-NEXT:    buffer_atomic_min_f64 v[0:1], v2, s[0:3], 0 idxen offset:4 sc0 nt
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.ptr.buffer.atomic.fmin.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 4, i32 0, i32 2)
@@ -719,7 +719,7 @@ define amdgpu_ps void @raw_buffer_atomic_max_rtn_f64(<4 x i32> inreg %rsrc, doub
 ; GFX942:       ; %bb.0: ; %main_body
 ; GFX942-NEXT:    buffer_atomic_max_f64 v[0:1], v2, s[0:3], 0 offen sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1] sc0 sc1
+; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.buffer.atomic.fmax.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0)
@@ -755,7 +755,7 @@ define amdgpu_kernel void @raw_buffer_atomic_max_rtn_f64_off4_slc(<4 x i32> %rsr
 ; GFX942-NEXT:    buffer_atomic_max_f64 v[0:1], v2, s[0:3], 4 offen sc0 nt
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.buffer.atomic.fmax.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 4, i32 2)
@@ -802,7 +802,7 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_max_rtn_f64(ptr addrspace(8) inreg 
 ; GFX942:       ; %bb.0: ; %main_body
 ; GFX942-NEXT:    buffer_atomic_max_f64 v[0:1], v2, s[0:3], 0 offen sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1] sc0 sc1
+; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 0)
@@ -838,7 +838,7 @@ define amdgpu_kernel void @raw_ptr_buffer_atomic_max_rtn_f64_off4_slc(ptr addrsp
 ; GFX942-NEXT:    buffer_atomic_max_f64 v[0:1], v2, s[0:3], 4 offen sc0 nt
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 4, i32 2)
@@ -885,7 +885,7 @@ define amdgpu_ps void @struct_buffer_atomic_max_rtn_f64(<4 x i32> inreg %rsrc, d
 ; GFX942:       ; %bb.0: ; %main_body
 ; GFX942-NEXT:    buffer_atomic_max_f64 v[0:1], v2, s[0:3], 0 idxen sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1] sc0 sc1
+; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.buffer.atomic.fmax.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0, i32 0)
@@ -921,7 +921,7 @@ define amdgpu_kernel void @struct_buffer_atomic_max_rtn_f64_off4_slc(<4 x i32> %
 ; GFX942-NEXT:    buffer_atomic_max_f64 v[0:1], v2, s[0:3], 0 idxen offset:4 sc0 nt
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.buffer.atomic.fmax.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 4, i32 0, i32 2)
@@ -968,7 +968,7 @@ define amdgpu_ps void @struct_ptr_buffer_atomic_max_rtn_f64(ptr addrspace(8) inr
 ; GFX942:       ; %bb.0: ; %main_body
 ; GFX942-NEXT:    buffer_atomic_max_f64 v[0:1], v2, s[0:3], 0 idxen sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1] sc0 sc1
+; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.ptr.buffer.atomic.fmax.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 0, i32 0)
@@ -1004,7 +1004,7 @@ define amdgpu_kernel void @struct_ptr_buffer_atomic_max_rtn_f64_off4_slc(ptr add
 ; GFX942-NEXT:    buffer_atomic_max_f64 v[0:1], v2, s[0:3], 0 idxen offset:4 sc0 nt
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.ptr.buffer.atomic.fmax.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 4, i32 0, i32 2)
