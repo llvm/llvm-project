@@ -2,7 +2,6 @@ header: signal.h
 header_template: signal.h.def
 macros: []
 types:
-  - type_name: __sighandler_t
   - type_name: pid_t
   - type_name: sig_atomic_t
   - type_name: siginfo_t

@@ -9,6 +9,10 @@
 #ifndef LLVM_LIBC_TYPES___SIGHANDLER_T_H
 #define LLVM_LIBC_TYPES___SIGHANDLER_T_H
 
+#ifndef __linux__
+#error "sighandler_t only available on linux"
+#endif
+
 typedef void (*__sighandler_t)(int);
 typedef __sighandler_t sighandler_t;
 
