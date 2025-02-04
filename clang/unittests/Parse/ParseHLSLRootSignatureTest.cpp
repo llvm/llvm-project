@@ -68,7 +68,8 @@ protected:
         Consumer(new ExpectedDiagConsumer()),
         Diags(DiagID, new DiagnosticOptions, Consumer),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
-    TargetOpts->Triple = "x86_64-apple-darwin11.1.0";
+    // This is an arbitrarily chosen target triple to create the target info.
+    TargetOpts->Triple = "dxil";
     Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
   }
 
