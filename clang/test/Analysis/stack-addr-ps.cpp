@@ -90,6 +90,12 @@ int *mf() {
   return &x; // expected-warning{{Address of stack memory associated with local variable 's1' returned}} expected-warning {{address of stack memory associated with local variable 's1' returned}}
 }
 
+int *return_assign_expr_leak() {
+  int x = 1;
+  int *y;
+  return y = &x; // expected-warning{{Address of stack memory associated with local variable 'x' returned}}
+}
+
 void *lf() {
     label:
     void *const &x = &&label; // expected-note {{binding reference variable 'x' here}}
@@ -912,3 +918,14 @@ void top_malloc_no_crash_fn() {
   free(pptr);
 }
 } // namespace alloca_region_pointer
+
+namespace true_negatives_return_expressions {
+void return_void() {
+  return void(); // no-warning
+}
+
+int return_safe_assign_expr() {
+  int y, x = 14;
+  return y = x; // no-warning
+}
+}
