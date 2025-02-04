@@ -1184,7 +1184,7 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
   // Split block in the original loop preheader.
   // SPH is the new preheader to the old scalar loop.
   BasicBlock *SPH = SplitBlock(Preheader, Preheader->getTerminator(), DT, LI,
-                               nullptr, "scalar_ph");
+                               nullptr, "scalar_preheader");
 
   // Create the blocks that we're going to use.
   //
@@ -1206,12 +1206,17 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
   //     (1), otherwise exit.
   // Blocks (0,3) are not part of any loop. Blocks (1,5) and (2,4) belong to
   // the outer and inner loops, respectively.
-  BasicBlock *BB0 = BasicBlock::Create(Ctx, "", SPH->getParent(), SPH);
-  BasicBlock *BB1 = BasicBlock::Create(Ctx, "", SPH->getParent(), SPH);
-  BasicBlock *BB2 = BasicBlock::Create(Ctx, "", SPH->getParent(), SPH);
-  BasicBlock *BB3 = BasicBlock::Create(Ctx, "", SPH->getParent(), SPH);
-  BasicBlock *BB4 = BasicBlock::Create(Ctx, "", SPH->getParent(), SPH);
-  BasicBlock *BB5 = BasicBlock::Create(Ctx, "", SPH->getParent(), SPH);
+  BasicBlock *BB0 = BasicBlock::Create(Ctx, "mem_check", SPH->getParent(), SPH);
+  BasicBlock *BB1 =
+      BasicBlock::Create(Ctx, "find_first_vec_header", SPH->getParent(), SPH);
+  BasicBlock *BB2 =
+      BasicBlock::Create(Ctx, "match_check_vec", SPH->getParent(), SPH);
+  BasicBlock *BB3 =
+      BasicBlock::Create(Ctx, "calculate_match", SPH->getParent(), SPH);
+  BasicBlock *BB4 =
+      BasicBlock::Create(Ctx, "needle_check_vec", SPH->getParent(), SPH);
+  BasicBlock *BB5 =
+      BasicBlock::Create(Ctx, "search_check_vec", SPH->getParent(), SPH);
 
   // Update LoopInfo with the new loops.
   auto OuterLoop = LI->AllocateLoop();
@@ -1243,24 +1248,35 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
   // old scalar loops. Also create a predicate of VF elements to be used in the
   // vector loops.
   Builder.SetInsertPoint(BB0);
-  Value *ISearchStart = Builder.CreatePtrToInt(SearchStart, I64Ty);
-  Value *ISearchEnd = Builder.CreatePtrToInt(SearchEnd, I64Ty);
-  Value *INeedleStart = Builder.CreatePtrToInt(NeedleStart, I64Ty);
-  Value *INeedleEnd = Builder.CreatePtrToInt(NeedleEnd, I64Ty);
+  Value *ISearchStart =
+      Builder.CreatePtrToInt(SearchStart, I64Ty, "search_start_int");
+  Value *ISearchEnd =
+      Builder.CreatePtrToInt(SearchEnd, I64Ty, "search_end_int");
+  Value *INeedleStart =
+      Builder.CreatePtrToInt(NeedleStart, I64Ty, "needle_start_int");
+  Value *INeedleEnd =
+      Builder.CreatePtrToInt(NeedleEnd, I64Ty, "needle_end_int");
   Value *PredVF =
       Builder.CreateIntrinsic(Intrinsic::get_active_lane_mask, {PredVTy, I64Ty},
                               {ConstantInt::get(I64Ty, 0), ConstVF});
 
   const uint64_t MinPageSize = TTI->getMinPageSize().value();
   const uint64_t AddrShiftAmt = llvm::Log2_64(MinPageSize);
-  Value *SearchStartPage = Builder.CreateLShr(ISearchStart, AddrShiftAmt);
-  Value *SearchEndPage = Builder.CreateLShr(ISearchEnd, AddrShiftAmt);
-  Value *NeedleStartPage = Builder.CreateLShr(INeedleStart, AddrShiftAmt);
-  Value *NeedleEndPage = Builder.CreateLShr(INeedleEnd, AddrShiftAmt);
-  Value *SearchPageCmp = Builder.CreateICmpNE(SearchStartPage, SearchEndPage);
-  Value *NeedlePageCmp = Builder.CreateICmpNE(NeedleStartPage, NeedleEndPage);
+  Value *SearchStartPage =
+      Builder.CreateLShr(ISearchStart, AddrShiftAmt, "search_start_page");
+  Value *SearchEndPage =
+      Builder.CreateLShr(ISearchEnd, AddrShiftAmt, "search_end_page");
+  Value *NeedleStartPage =
+      Builder.CreateLShr(INeedleStart, AddrShiftAmt, "needle_start_page");
+  Value *NeedleEndPage =
+      Builder.CreateLShr(INeedleEnd, AddrShiftAmt, "needle_end_page");
+  Value *SearchPageCmp =
+      Builder.CreateICmpNE(SearchStartPage, SearchEndPage, "search_page_cmp");
+  Value *NeedlePageCmp =
+      Builder.CreateICmpNE(NeedleStartPage, NeedleEndPage, "needle_page_cmp");
 
-  Value *CombinedPageCmp = Builder.CreateOr(SearchPageCmp, NeedlePageCmp);
+  Value *CombinedPageCmp =
+      Builder.CreateOr(SearchPageCmp, NeedlePageCmp, "combined_page_cmp");
   BranchInst *CombinedPageBr = Builder.CreateCondBr(CombinedPageCmp, SPH, BB1);
   CombinedPageBr->setMetadata(LLVMContext::MD_prof,
                               MDBuilder(Ctx).createBranchWeights(10, 90));
@@ -1272,10 +1288,11 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
   PHINode *Search = Builder.CreatePHI(PtrTy, 2, "psearch");
   Value *PredSearch = Builder.CreateIntrinsic(
       Intrinsic::get_active_lane_mask, {PredVTy, I64Ty},
-      {Builder.CreatePtrToInt(Search, I64Ty), ISearchEnd});
-  PredSearch = Builder.CreateAnd(PredVF, PredSearch);
-  Value *LoadSearch =
-      Builder.CreateMaskedLoad(CharVTy, Search, Align(1), PredSearch, Passthru);
+      {Builder.CreatePtrToInt(Search, I64Ty), ISearchEnd}, nullptr,
+      "search_pred");
+  PredSearch = Builder.CreateAnd(PredVF, PredSearch, "search_masked");
+  Value *LoadSearch = Builder.CreateMaskedLoad(
+      CharVTy, Search, Align(1), PredSearch, Passthru, "search_load_vec");
   Builder.CreateBr(BB2);
   DTU.applyUpdates({{DominatorTree::Insert, BB1, BB2}});
 
@@ -1286,23 +1303,27 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
   // (2.a) Load the needle array.
   Value *PredNeedle = Builder.CreateIntrinsic(
       Intrinsic::get_active_lane_mask, {PredVTy, I64Ty},
-      {Builder.CreatePtrToInt(Needle, I64Ty), INeedleEnd});
-  PredNeedle = Builder.CreateAnd(PredVF, PredNeedle);
-  Value *LoadNeedle =
-      Builder.CreateMaskedLoad(CharVTy, Needle, Align(1), PredNeedle, Passthru);
+      {Builder.CreatePtrToInt(Needle, I64Ty), INeedleEnd}, nullptr,
+      "needle_pred");
+  PredNeedle = Builder.CreateAnd(PredVF, PredNeedle, "needle_masked");
+  Value *LoadNeedle = Builder.CreateMaskedLoad(
+      CharVTy, Needle, Align(1), PredNeedle, Passthru, "needle_load_vec");
 
   // (2.b) Splat the first element to the inactive lanes.
-  Value *Needle0 = Builder.CreateExtractElement(LoadNeedle, uint64_t(0));
-  Value *Needle0Splat =
-      Builder.CreateVectorSplat(ElementCount::getScalable(VF), Needle0);
-  LoadNeedle = Builder.CreateSelect(PredNeedle, LoadNeedle, Needle0Splat);
-  LoadNeedle = Builder.CreateExtractVector(
-      FixedVectorType::get(CharTy, VF), LoadNeedle, ConstantInt::get(I64Ty, 0));
+  Value *Needle0 =
+      Builder.CreateExtractElement(LoadNeedle, uint64_t(0), "needle0");
+  Value *Needle0Splat = Builder.CreateVectorSplat(ElementCount::getScalable(VF),
+                                                  Needle0, "needle0");
+  LoadNeedle = Builder.CreateSelect(PredNeedle, LoadNeedle, Needle0Splat,
+                                    "needle_splat");
+  LoadNeedle =
+      Builder.CreateExtractVector(FixedVectorType::get(CharTy, VF), LoadNeedle,
+                                  ConstantInt::get(I64Ty, 0), "needle_vec");
 
   // (2.c) Test if there's a match.
   Value *MatchPred = Builder.CreateIntrinsic(
       Intrinsic::experimental_vector_match, {CharVTy, LoadNeedle->getType()},
-      {LoadSearch, LoadNeedle, PredSearch});
+      {LoadSearch, LoadNeedle, PredSearch}, nullptr, "match_pred");
   Value *IfAnyMatch = Builder.CreateOrReduce(MatchPred);
   Builder.CreateCondBr(IfAnyMatch, BB3, BB4);
   DTU.applyUpdates(
@@ -1310,25 +1331,30 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
 
   // (3) We found a match. Compute the index of its location and exit.
   Builder.SetInsertPoint(BB3);
-  PHINode *MatchLCSSA = Builder.CreatePHI(PtrTy, 1);
-  PHINode *MatchPredLCSSA = Builder.CreatePHI(MatchPred->getType(), 1);
+  PHINode *MatchLCSSA = Builder.CreatePHI(PtrTy, 1, "match_start");
+  PHINode *MatchPredLCSSA =
+      Builder.CreatePHI(MatchPred->getType(), 1, "match_vec");
   Value *MatchCnt = Builder.CreateIntrinsic(
       Intrinsic::experimental_cttz_elts, {I64Ty, MatchPred->getType()},
-      {MatchPredLCSSA, /*ZeroIsPoison=*/Builder.getInt1(true)});
-  Value *MatchVal = Builder.CreateGEP(CharTy, MatchLCSSA, MatchCnt);
+      {MatchPredLCSSA, /*ZeroIsPoison=*/Builder.getInt1(true)}, nullptr,
+      "match_idx");
+  Value *MatchVal =
+      Builder.CreateGEP(CharTy, MatchLCSSA, MatchCnt, "match_res");
   Builder.CreateBr(ExitSucc);
   DTU.applyUpdates({{DominatorTree::Insert, BB3, ExitSucc}});
 
   // (4) Check if we've reached the end of the needle array.
   Builder.SetInsertPoint(BB4);
-  Value *NextNeedle = Builder.CreateGEP(CharTy, Needle, ConstVF);
+  Value *NextNeedle =
+      Builder.CreateGEP(CharTy, Needle, ConstVF, "needle_next_vec");
   Builder.CreateCondBr(Builder.CreateICmpULT(NextNeedle, NeedleEnd), BB2, BB5);
   DTU.applyUpdates(
       {{DominatorTree::Insert, BB4, BB2}, {DominatorTree::Insert, BB4, BB5}});
 
   // (5) Check if we've reached the end of the search array.
   Builder.SetInsertPoint(BB5);
-  Value *NextSearch = Builder.CreateGEP(CharTy, Search, ConstVF);
+  Value *NextSearch =
+      Builder.CreateGEP(CharTy, Search, ConstVF, "search_next_vec");
   Builder.CreateCondBr(Builder.CreateICmpULT(NextSearch, SearchEnd), BB1,
                        ExitFail);
   DTU.applyUpdates({{DominatorTree::Insert, BB5, BB1},
