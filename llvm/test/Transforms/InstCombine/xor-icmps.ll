@@ -322,12 +322,10 @@ define i1 @xor_icmp_to_icmp_add_multiuse2(i32 %a) {
 
 define i1 @test_xor_of_bittest_ne_ne(i8 %x, i8 %y) {
 ; CHECK-LABEL: @test_xor_of_bittest_ne_ne(
-; CHECK-NEXT:    [[MASK1:%.*]] = and i8 [[X:%.*]], 2
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[MASK1]], 0
-; CHECK-NEXT:    [[MASK2:%.*]] = and i8 [[Y:%.*]], 2
+; CHECK-NEXT:    [[Y:%.*]] = xor i8 [[X:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    [[MASK2:%.*]] = and i8 [[Y]], 2
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[MASK2]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[XOR]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %mask1 = and i8 %x, 2
   %cmp1 = icmp ne i8 %mask1, 0
@@ -339,11 +337,9 @@ define i1 @test_xor_of_bittest_ne_ne(i8 %x, i8 %y) {
 
 define i1 @test_xor_of_bittest_eq_eq(i8 %x, i8 %y) {
 ; CHECK-LABEL: @test_xor_of_bittest_eq_eq(
-; CHECK-NEXT:    [[MASK1:%.*]] = and i8 [[X:%.*]], 2
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[MASK1]], 0
-; CHECK-NEXT:    [[MASK2:%.*]] = and i8 [[Y:%.*]], 2
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[MASK2]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[Y:%.*]] = xor i8 [[X:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    [[MASK2:%.*]] = and i8 [[Y]], 2
+; CHECK-NEXT:    [[XOR:%.*]] = icmp ne i8 [[MASK2]], 0
 ; CHECK-NEXT:    ret i1 [[XOR]]
 ;
   %mask1 = and i8 %x, 2
@@ -356,12 +352,10 @@ define i1 @test_xor_of_bittest_eq_eq(i8 %x, i8 %y) {
 
 define i1 @test_xor_of_bittest_ne_eq(i8 %x, i8 %y) {
 ; CHECK-LABEL: @test_xor_of_bittest_ne_eq(
-; CHECK-NEXT:    [[MASK1:%.*]] = and i8 [[X:%.*]], 2
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[MASK1]], 0
-; CHECK-NEXT:    [[MASK2:%.*]] = and i8 [[Y:%.*]], 2
+; CHECK-NEXT:    [[Y:%.*]] = xor i8 [[X:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    [[MASK2:%.*]] = and i8 [[Y]], 2
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[MASK2]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[XOR]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %mask1 = and i8 %x, 2
   %cmp1 = icmp ne i8 %mask1, 0
@@ -373,12 +367,10 @@ define i1 @test_xor_of_bittest_ne_eq(i8 %x, i8 %y) {
 
 define i1 @test_xor_of_bittest_eq_ne(i8 %x, i8 %y) {
 ; CHECK-LABEL: @test_xor_of_bittest_eq_ne(
-; CHECK-NEXT:    [[MASK1:%.*]] = and i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[X:%.*]] = xor i8 [[X1:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MASK1:%.*]] = and i8 [[X]], 2
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[MASK1]], 0
-; CHECK-NEXT:    [[MASK2:%.*]] = and i8 [[Y:%.*]], 2
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[MASK2]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[XOR]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %mask1 = and i8 %x, 2
   %cmp1 = icmp eq i8 %mask1, 0
@@ -392,11 +384,11 @@ define i1 @test_xor_of_bittest_ne_ne_multiuse1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @test_xor_of_bittest_ne_ne_multiuse1(
 ; CHECK-NEXT:    [[MASK1:%.*]] = and i8 [[X:%.*]], 2
 ; CHECK-NEXT:    call void @usei8(i8 [[MASK1]])
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[MASK1]], 0
 ; CHECK-NEXT:    [[MASK2:%.*]] = and i8 [[Y:%.*]], 2
 ; CHECK-NEXT:    call void @usei8(i8 [[MASK2]])
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[MASK2]], 0
-; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 2
+; CHECK-NEXT:    [[XOR:%.*]] = icmp ne i8 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[XOR]]
 ;
   %mask1 = and i8 %x, 2
