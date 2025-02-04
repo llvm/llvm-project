@@ -137,7 +137,7 @@
 ! RUN: -fopenmp-targets=nvptx64-nvidia-cuda \
 ! RUN: -fopenmp-target-debug \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-TARGET-DEBUG
-! CHECK-TARGET-DEBUG-EQ: "{{[^"]*}}flang" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-target-debug=111" {{.*}}.f90"
+! CHECK-TARGET-DEBUG: "{{[^"]*}}flang" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-target-debug=111" {{.*}}.f90"
 
 ! RUN: %flang -S -### %s -o %t 2>&1 \
 ! RUN: -fopenmp --offload-arch=gfx90a \

@@ -4,7 +4,7 @@
 
 ! PFT: 1 Subroutine test_routine: subroutine test_routine(a, b, n)
 ! PFT-NEXT:  1 EndSubroutineStmt: end subroutine
-! PRF-NEXT: End Subroutine test_routine
+! PFT-NEXT: End Subroutine test_routine
 ! PFT-NOT: Program -> ProgramUnit -> SubroutineSubprogram
 
 ! PARSE_TREE: Program -> ProgramUnit -> SubroutineSubprogram
