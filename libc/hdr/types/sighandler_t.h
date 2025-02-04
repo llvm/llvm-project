@@ -13,8 +13,6 @@
 
 #include "include/llvm-libc-types/__sighandler_t.h"
 
-using sighandler_t = __sighandler_t;
-
 #else // overlay mode
 
 #include <signal.h>

@@ -10,5 +10,6 @@
 #define LLVM_LIBC_TYPES___SIGHANDLER_T_H
 
 typedef void (*__sighandler_t)(int);
+typedef __sighandler_t sighandler_t;
 
 #endif // LLVM_LIBC_TYPES___SIGHANDLER_T_H

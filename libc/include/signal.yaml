@@ -2,13 +2,14 @@ header: signal.h
 header_template: signal.h.def
 macros: []
 types:
+  - type_name: __sighandler_t
   - type_name: pid_t
-  - type_name: stack_t
-  - type_name: siginfo_t
-  - type_name: struct_sigaction
-  - type_name: sigset_t
-  - type_name: union_sigval
   - type_name: sig_atomic_t
+  - type_name: siginfo_t
+  - type_name: sigset_t
+  - type_name: stack_t
+  - type_name: struct_sigaction
+  - type_name: union_sigval
 enums: []
 objects: []
 functions:
@@ -69,10 +70,10 @@ functions:
   - name: signal
     standards:
       - stdc
-    return_type: __sighandler_t
+    return_type: sighandler_t
     arguments:
       - type: int
-      - type: __sighandler_t
+      - type: sighandler_t
   - name: sigprocmask
     standards:
       - POSIX
