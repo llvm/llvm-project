@@ -4894,6 +4894,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     }
 
+    // Saturating extract narrow
+    case Intrinsic::aarch64_neon_sqxtn:
+    case Intrinsic::aarch64_neon_sqxtun:
+    case Intrinsic::aarch64_neon_uqxtn:
+      handleVectorReduceIntrinsic(I);
+      break;
+
     case Intrinsic::aarch64_neon_st1x2:
     case Intrinsic::aarch64_neon_st1x3:
     case Intrinsic::aarch64_neon_st1x4:
