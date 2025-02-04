@@ -360,9 +360,7 @@ void elf::parseVersionAndComputeIsPreemptible(Ctx &ctx) {
   // Symbol themselves might know their versions because symbols
   // can contain versions in the form of <name>@<version>.
   // Let them parse and update their names to exclude version suffix.
-  // In addition, compute isExported and isPreemptible.
   bool hasDynsym = ctx.hasDynsym;
-  bool maybePreemptible = ctx.sharedFiles.size() || ctx.arg.shared;
   for (Symbol *sym : ctx.symtab->getSymbols()) {
     if (sym->hasVersionSuffix)
       sym->parseSymbolVersion(ctx);
@@ -373,7 +371,7 @@ void elf::parseVersionAndComputeIsPreemptible(Ctx &ctx) {
       continue;
     }
     if (!sym->isDefined() && !sym->isCommon()) {
-      sym->isPreemptible = maybePreemptible && computeIsPreemptible(ctx, *sym);
+      sym->isPreemptible = computeIsPreemptible(ctx, *sym);
     } else if (ctx.arg.exportDynamic &&
                (sym->isUsedInRegularObj || !sym->ltoCanOmit)) {
       sym->isExported = true;
