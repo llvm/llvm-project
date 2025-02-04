@@ -134,13 +134,14 @@ llvm::TimeTraceMetadata getDeclTimeTraceMetadata(const Decl *DeclWithIssue) {
   assert(DeclWithIssue);
   assert(llvm::timeTraceProfilerEnabled());
   std::string Name = "<noname>";
-  if (auto ND = dyn_cast<NamedDecl>(DeclWithIssue)) {
+  if (const auto *ND = dyn_cast<NamedDecl>(DeclWithIssue)) {
     Name = ND->getNameAsString();
   }
   const auto &SM = DeclWithIssue->getASTContext().getSourceManager();
   auto Line = SM.getPresumedLineNumber(DeclWithIssue->getBeginLoc());
   auto Fname = SM.getFilename(DeclWithIssue->getBeginLoc());
-  return llvm::TimeTraceMetadata{Name, Fname.str(), static_cast<int>(Line)};
+  return llvm::TimeTraceMetadata{std::move(Name), Fname.str(),
+                                 static_cast<int>(Line)};
 }
 
 } // end anonymous namespace

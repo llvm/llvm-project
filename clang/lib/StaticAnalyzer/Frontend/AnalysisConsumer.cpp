@@ -377,7 +377,7 @@ llvm::TimeTraceMetadata timeTraceScopeDeclMetadata(const Decl *D) {
     const auto &SM = D->getASTContext().getSourceManager();
     std::string DeclName = AnalysisDeclContext::getFunctionName(D);
     return llvm::TimeTraceMetadata{
-        DeclName, SM.getFilename(Loc).str(),
+        std::move(DeclName), SM.getFilename(Loc).str(),
         static_cast<int>(SM.getExpansionLineNumber(Loc))};
   }
   return llvm::TimeTraceMetadata{"", ""};

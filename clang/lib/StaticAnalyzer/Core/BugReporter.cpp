@@ -312,7 +312,7 @@ llvm::TimeTraceMetadata timeTraceMetadata(const BugReportEquivClass &EQ) {
   std::string File = "";
   if (const auto *Entry = Loc.getFileEntry())
     File = Entry->tryGetRealPathName().str();
-  return {BT.getCheckerName().str(), File,
+  return {BT.getCheckerName().str(), std::move(File),
           static_cast<int>(Loc.getLineNumber())};
 }
 
