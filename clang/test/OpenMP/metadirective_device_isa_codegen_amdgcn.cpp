@@ -15,7 +15,7 @@ int amdgcn_device_isa_selected() {
   {
 #pragma omp metadirective                     \
     when(device = {isa("dpp")} \
-         : parallel) default(single)
+         : parallel) otherwise(single)
     threadCount++;
   }
 
@@ -38,7 +38,7 @@ int amdgcn_device_isa_not_selected() {
     when(device = {isa("sse")}                                 \
          : parallel)                                           \
         when(device = {isa("another-unsupported-gpu-feature")} \
-             : parallel) default(single)
+             : parallel) otherwise(single)
     threadCount++;
   }
 
