@@ -2525,11 +2525,8 @@ void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
     OS << " instantiated_from";
     dumpPointer(Instance);
   }
-  if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
+  if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D))
     dumpTemplateSpecializationKind(CTSD->getSpecializationKind());
-    if (CTSD->hasMatchedPackOnParmToNonPackOnArg())
-      OS << " strict-pack-match";
-  }
 
   dumpNestedNameSpecifier(D->getQualifier());
 
