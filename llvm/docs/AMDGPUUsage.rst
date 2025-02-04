@@ -583,11 +583,11 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                   - ``v_dot2_f32_f16``
 
 
-     ``gfx9-4-generic``   ``amdgcn``     - ``gfx940``      - xnack            - Architected     FP8 and BF8 instructions,
-                                         - ``gfx941``      - sramecc            flat scratch    FP8 and BF8 conversion instructions,
-                                         - ``gfx942``                                           as well as instructions with XF32 format support
-                                         - ``gfx950``                                           are not available.
-
+     ``gfx9-4-generic``   ``amdgcn``     - ``gfx940``      - sramecc          - Architected     FP8 and BF8 instructions,
+                                         - ``gfx941``      - tgsplit            flat scratch    FP8 and BF8 conversion instructions,
+                                         - ``gfx942``      - xnack            - Packed          as well as instructions with XF32 format support
+                                         - ``gfx950``      - kernarg preload    work-item        are not available.
+                                                                                IDs
 
      ``gfx10-1-generic``  ``amdgcn``     - ``gfx1010``     - xnack            - Absolute flat   - The following instructions are
                                          - ``gfx1011``     - wavefrontsize64    scratch           not available on ``gfx1011``
