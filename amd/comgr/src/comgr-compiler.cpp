@@ -1350,12 +1350,6 @@ amd_comgr_status_t AMDGPUCompiler::unbundle() {
       if (auto Status = amd_comgr_data_set_add(OutSetT, ResultT)) {
         return Status;
       }
-
-      // Remove input and output file after reading back into Comgr data
-      if (!env::shouldEmitVerboseLogs()) {
-        sys::fs::remove(InputFilePath);
-        sys::fs::remove(OutputFilePath);
-      }
     }
   }
 
