@@ -121,12 +121,15 @@ DILocation *DILocation::getMergedLocations(ArrayRef<DILocation *> Locs) {
 /// Merge two locations that may be nested as textual inclusions,
 /// e.g. via inlinedAt or nested LexicalBlocks.
 ///
-/// \param GetLocationKey   Function to determine whether locations/scopes are considered matching.
-/// \param ShouldStop       Function that determines if include chain of a location has ended.
+/// \param GetLocationKey   Function to determine whether locations/scopes are
+/// considered matching.
+/// \param ShouldStop       Function that determines if include chain of
+/// location has ended.
 /// \param NextLoc          Should return next location/object in include chain.
-/// \param MergeLocPair     Function to merge two possibly matching locations from
-///                         include chain.
-/// \param DefaultLocation  Function that returns location of the first matching nested object.
+/// \param MergeLocPair     Function to merge two possibly matching locations
+/// from include chain.
+/// \param DefaultLocation  Function that returns location of the first matching
+/// nested object.
 /// \param LocA             First incoming location.
 /// \param LocA             Second incoming location.
 template <typename LocationKey, typename GetLocationKeyFn,
@@ -302,10 +305,12 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
 
   LLVMContext &C = LocA->getContext();
 
+  auto IsChainOver = [](MDNode *L) -> bool { return L; };
   // Merge the two locations if possible, using the supplied
   // inlined-at location for the created location.
-  auto MergeInlinedLocations = [&C](MDNode *N1, MDNode *N2,
-                                    DILocation *InlinedAt) -> DILocation * {
+  auto MergeInlinedLocations =
+      [&C, IsChainOver](MDNode *N1, MDNode *N2,
+                        DILocation *InlinedAt) -> DILocation * {
     auto *L1 = cast<DILocation>(N1);
     auto *L2 = cast<DILocation>(N2);
 
@@ -374,12 +379,8 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
     };
 
     return MergeNestedLocations<NestedLexicalBlocksMatchKey>(
-        GetLocOrScopeMatchKey,
-        [](MDNode *L) -> bool { return L; },
-        NextScopeWithDifferentFile,
-        MergeTextualInclusions,
-        [](MDNode *N) { return nullptr; },
-        L1, L2);
+        GetLocOrScopeMatchKey, IsChainOver, NextScopeWithDifferentFile,
+        MergeTextualInclusions, [](MDNode *N) { return nullptr; }, L1, L2);
   };
 
   // When traversing inlinedAt chain, we consider locations within the same
@@ -395,12 +396,9 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
     return L->getInlinedAt();
   };
   return MergeNestedLocations<InlinedAtLookupKey>(
-      GetInlinedAtKey,
-      [](MDNode *N) { return N; },
-      NextInlinedAt,
-      MergeInlinedLocations,
-      [GetInlinedAtKey](MDNode *N) { return GetInlinedAtKey(N).second; },
-      LocA, LocB);
+      GetInlinedAtKey, IsChainOver, NextInlinedAt, MergeInlinedLocations,
+      [GetInlinedAtKey](MDNode *N) { return GetInlinedAtKey(N).second; }, LocA,
+      LocB);
 }
 
 std::optional<unsigned>
