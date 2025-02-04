@@ -312,7 +312,8 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
 
   EmbedBitcode(getModule(), CodeGenOpts, llvm::MemoryBufferRef());
 
-  emitBackendOutput(CI, C.getTargetInfo().getDataLayoutString(), getModule(),
+  emitBackendOutput(CI, CI.getCodeGenOpts(),
+                    C.getTargetInfo().getDataLayoutString(), getModule(),
                     Action, FS, std::move(AsmOutStream), this);
 
   Ctx.setDiagnosticHandler(std::move(OldDiagnosticHandler));
@@ -1173,8 +1174,9 @@ void CodeGenAction::ExecuteAction() {
   std::unique_ptr<llvm::ToolOutputFile> OptRecordFile =
       std::move(*OptRecordFileOrErr);
 
-  emitBackendOutput(CI, CI.getTarget().getDataLayoutString(), TheModule.get(),
-                    BA, CI.getFileManager().getVirtualFileSystemPtr(),
+  emitBackendOutput(CI, CI.getCodeGenOpts(),
+                    CI.getTarget().getDataLayoutString(), TheModule.get(), BA,
+                    CI.getFileManager().getVirtualFileSystemPtr(),
                     std::move(OS));
   if (OptRecordFile)
     OptRecordFile->keep();

@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -45,6 +46,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstring>
+#include <numeric>
 
 using namespace llvm;
 
@@ -828,6 +830,13 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
           return true;
         }
       }
+
+      // Changed in 20.0: bfcvt/bfcvtn/bcvtn2 have been replaced with fptrunc.
+      if (Name.starts_with("bfcvt")) {
+        NewFn = nullptr;
+        return true;
+      }
+
       return false; // No other 'aarch64.neon.*'.
     }
     if (Name.consume_front("sve.")) {
@@ -4028,31 +4037,59 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
 
 static Value *upgradeAArch64IntrinsicCall(StringRef Name, CallBase *CI,
                                           Function *F, IRBuilder<> &Builder) {
-  Intrinsic::ID NewID =
-      StringSwitch<Intrinsic::ID>(Name)
-          .Case("sve.fcvt.bf16f32", Intrinsic::aarch64_sve_fcvt_bf16f32_v2)
-          .Case("sve.fcvtnt.bf16f32", Intrinsic::aarch64_sve_fcvtnt_bf16f32_v2)
-          .Default(Intrinsic::not_intrinsic);
-  if (NewID == Intrinsic::not_intrinsic)
-    llvm_unreachable("Unhandled Intrinsic!");
+  if (Name.starts_with("neon.bfcvt")) {
+    if (Name.starts_with("neon.bfcvtn2")) {
+      SmallVector<int, 32> LoMask(4);
+      std::iota(LoMask.begin(), LoMask.end(), 0);
+      SmallVector<int, 32> ConcatMask(8);
+      std::iota(ConcatMask.begin(), ConcatMask.end(), 0);
+      Value *Inactive = Builder.CreateShuffleVector(CI->getOperand(0), LoMask);
+      Value *Trunc =
+          Builder.CreateFPTrunc(CI->getOperand(1), Inactive->getType());
+      return Builder.CreateShuffleVector(Inactive, Trunc, ConcatMask);
+    } else if (Name.starts_with("neon.bfcvtn")) {
+      SmallVector<int, 32> ConcatMask(8);
+      std::iota(ConcatMask.begin(), ConcatMask.end(), 0);
+      Type *V4BF16 =
+          FixedVectorType::get(Type::getBFloatTy(F->getContext()), 4);
+      Value *Trunc = Builder.CreateFPTrunc(CI->getOperand(0), V4BF16);
+      dbgs() << "Trunc: " << *Trunc << "\n";
+      return Builder.CreateShuffleVector(
+          Trunc, ConstantAggregateZero::get(V4BF16), ConcatMask);
+    } else {
+      return Builder.CreateFPTrunc(CI->getOperand(0),
+                                   Type::getBFloatTy(F->getContext()));
+    }
+  } else if (Name.starts_with("sve.fcvt")) {
+    Intrinsic::ID NewID =
+        StringSwitch<Intrinsic::ID>(Name)
+            .Case("sve.fcvt.bf16f32", Intrinsic::aarch64_sve_fcvt_bf16f32_v2)
+            .Case("sve.fcvtnt.bf16f32",
+                  Intrinsic::aarch64_sve_fcvtnt_bf16f32_v2)
+            .Default(Intrinsic::not_intrinsic);
+    if (NewID == Intrinsic::not_intrinsic)
+      llvm_unreachable("Unhandled Intrinsic!");
 
-  SmallVector<Value *, 3> Args(CI->args());
+    SmallVector<Value *, 3> Args(CI->args());
 
-  // The original intrinsics incorrectly used a predicate based on the smallest
-  // element type rather than the largest.
-  Type *BadPredTy = ScalableVectorType::get(Builder.getInt1Ty(), 8);
-  Type *GoodPredTy = ScalableVectorType::get(Builder.getInt1Ty(), 4);
+    // The original intrinsics incorrectly used a predicate based on the
+    // smallest element type rather than the largest.
+    Type *BadPredTy = ScalableVectorType::get(Builder.getInt1Ty(), 8);
+    Type *GoodPredTy = ScalableVectorType::get(Builder.getInt1Ty(), 4);
 
-  if (Args[1]->getType() != BadPredTy)
-    llvm_unreachable("Unexpected predicate type!");
+    if (Args[1]->getType() != BadPredTy)
+      llvm_unreachable("Unexpected predicate type!");
 
-  Args[1] = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_to_svbool,
-                                    BadPredTy, Args[1]);
-  Args[1] = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool,
-                                    GoodPredTy, Args[1]);
+    Args[1] = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_to_svbool,
+                                      BadPredTy, Args[1]);
+    Args[1] = Builder.CreateIntrinsic(
+        Intrinsic::aarch64_sve_convert_from_svbool, GoodPredTy, Args[1]);
 
-  return Builder.CreateIntrinsic(NewID, {}, Args, /*FMFSource=*/nullptr,
-                                 CI->getName());
+    return Builder.CreateIntrinsic(NewID, {}, Args, /*FMFSource=*/nullptr,
+                                   CI->getName());
+  }
+
+  llvm_unreachable("Unhandled Intrinsic!");
 }
 
 static Value *upgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
@@ -4981,6 +5018,72 @@ bool llvm::UpgradeDebugInfo(Module &M) {
     M.getContext().diagnose(DiagVersion);
   }
   return Modified;
+}
+
+bool static upgradeSingleNVVMAnnotation(GlobalValue *GV, StringRef K,
+                                        const Metadata *V) {
+  if (K == "kernel") {
+    if (!mdconst::extract<ConstantInt>(V)->isZero())
+      cast<Function>(GV)->setCallingConv(CallingConv::PTX_Kernel);
+    return true;
+  }
+  if (K == "align") {
+    // V is a bitfeild specifying two 16-bit values. The alignment value is
+    // specfied in low 16-bits, The index is specified in the high bits. For the
+    // index, 0 indicates the return value while higher values correspond to
+    // each parameter (idx = param + 1).
+    const uint64_t AlignIdxValuePair =
+        mdconst::extract<ConstantInt>(V)->getZExtValue();
+    const unsigned Idx = (AlignIdxValuePair >> 16);
+    const Align StackAlign = Align(AlignIdxValuePair & 0xFFFF);
+    // TODO: Skip adding the stackalign attribute for returns, for now.
+    if (!Idx)
+      return false;
+    cast<Function>(GV)->addAttributeAtIndex(
+        Idx, Attribute::getWithStackAlignment(GV->getContext(), StackAlign));
+    return true;
+  }
+
+  return false;
+}
+
+void llvm::UpgradeNVVMAnnotations(Module &M) {
+  NamedMDNode *NamedMD = M.getNamedMetadata("nvvm.annotations");
+  if (!NamedMD)
+    return;
+
+  SmallVector<MDNode *, 8> NewNodes;
+  SmallSet<const MDNode *, 8> SeenNodes;
+  for (MDNode *MD : NamedMD->operands()) {
+    if (!SeenNodes.insert(MD).second)
+      continue;
+
+    auto *GV = mdconst::dyn_extract_or_null<GlobalValue>(MD->getOperand(0));
+    if (!GV)
+      continue;
+
+    assert((MD->getNumOperands() % 2) == 1 && "Invalid number of operands");
+
+    SmallVector<Metadata *, 8> NewOperands{MD->getOperand(0)};
+    // Each nvvm.annotations metadata entry will be of the following form:
+    //   !{ ptr @gv, !"key1", value1, !"key2", value2, ... }
+    // start index = 1, to skip the global variable key
+    // increment = 2, to skip the value for each property-value pairs
+    for (unsigned j = 1, je = MD->getNumOperands(); j < je; j += 2) {
+      MDString *K = cast<MDString>(MD->getOperand(j));
+      const MDOperand &V = MD->getOperand(j + 1);
+      bool Upgraded = upgradeSingleNVVMAnnotation(GV, K->getString(), V);
+      if (!Upgraded)
+        NewOperands.append({K, V});
+    }
+
+    if (NewOperands.size() > 1)
+      NewNodes.push_back(MDNode::get(M.getContext(), NewOperands));
+  }
+
+  NamedMD->clearOperands();
+  for (MDNode *N : NewNodes)
+    NamedMD->addOperand(N);
 }
 
 /// This checks for objc retain release marker which should be upgraded. It

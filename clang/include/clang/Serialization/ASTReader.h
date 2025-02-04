@@ -546,11 +546,18 @@ private:
 
   /// Mapping from main decl ID to the related decls IDs.
   ///
-  /// These related decls have to be loaded right after the main decl.
-  /// It is required to have canonical declaration for related decls from the
-  /// same module as the enclosing main decl. Without this, due to lazy
-  /// deserialization, canonical declarations for the main decl and related can
-  /// be selected from different modules.
+  /// The key is the main decl ID, and the value is a vector of related decls
+  /// that must be loaded immediately after the main decl. This is necessary
+  /// to ensure that the definition for related decls comes from the same module
+  /// as the enclosing main decl. Without this, due to lazy deserialization,
+  /// the definition for the main decl and related decls may come from different
+  /// modules. It is used for the following cases:
+  /// - Lambda inside a template function definition: The main declaration is
+  ///   the enclosing function, and the related declarations are the lambda
+  ///   declarations.
+  /// - Friend function defined inside a template CXXRecord declaration: The
+  ///   main declaration is the enclosing record, and the related declarations
+  ///   are the friend functions.
   llvm::DenseMap<GlobalDeclID, SmallVector<GlobalDeclID, 4>> RelatedDeclsMap;
 
   struct PendingUpdateRecord {
@@ -1236,24 +1243,6 @@ private:
   /// been completed.
   std::deque<PendingDeclContextInfo> PendingDeclContextInfos;
 
-  /// Deserialization of some attributes must be deferred since they refer
-  /// to themselves in their type (e.g., preferred_name attribute refers to the
-  /// typedef that refers back to the template specialization of the template
-  /// that the attribute is attached to).
-  /// More attributes that store TypeSourceInfo might be potentially affected,
-  /// see https://github.com/llvm/llvm-project/issues/56490 for details.
-  struct DeferredAttribute {
-    // Index of the deferred attribute in the Record of the TargetedDecl.
-    uint64_t RecordIdx;
-    // Decl to attach a deferred attribute to.
-    Decl *TargetedDecl;
-  };
-
-  /// The collection of Decls that have been loaded but some of their attributes
-  /// have been deferred, paired with the index inside the record pointing
-  /// at the skipped attribute.
-  SmallVector<DeferredAttribute> PendingDeferredAttributes;
-
   template <typename DeclTy>
   using DuplicateObjCDecls = std::pair<DeclTy *, DeclTy *>;
 
@@ -1606,7 +1595,6 @@ private:
   void loadPendingDeclChain(Decl *D, uint64_t LocalOffset);
   void loadObjCCategories(GlobalDeclID ID, ObjCInterfaceDecl *D,
                           unsigned PreviousGeneration = 0);
-  void loadDeferredAttribute(const DeferredAttribute &DA);
 
   RecordLocation getLocalBitOffset(uint64_t GlobalOffset);
   uint64_t getGlobalBitOffset(ModuleFile &M, uint64_t LocalOffset);

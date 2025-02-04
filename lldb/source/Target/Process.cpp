@@ -1292,17 +1292,12 @@ bool Process::HasAssignedIndexIDToThread(uint64_t thread_id) {
 }
 
 uint32_t Process::AssignIndexIDToThread(uint64_t thread_id) {
-  uint32_t result = 0;
-  std::map<uint64_t, uint32_t>::iterator iterator =
-      m_thread_id_to_index_id_map.find(thread_id);
-  if (iterator == m_thread_id_to_index_id_map.end()) {
-    result = ++m_thread_index_id;
-    m_thread_id_to_index_id_map[thread_id] = result;
-  } else {
-    result = iterator->second;
-  }
+  auto [iterator, inserted] =
+      m_thread_id_to_index_id_map.try_emplace(thread_id, m_thread_index_id + 1);
+  if (inserted)
+    ++m_thread_index_id;
 
-  return result;
+  return iterator->second;
 }
 
 StateType Process::GetState() {
@@ -6682,11 +6677,8 @@ static void GetUserSpecifiedCoreFileSaveRanges(Process &process,
 
   for (const auto &range : regions) {
     auto entry = option_ranges.FindEntryThatContains(range.GetRange());
-    if (entry) {
-      ranges.Append(range.GetRange().GetRangeBase(),
-                    range.GetRange().GetByteSize(),
-                    CreateCoreFileMemoryRange(range));
-    }
+    if (entry)
+      AddRegion(range, true, ranges);
   }
 }
 

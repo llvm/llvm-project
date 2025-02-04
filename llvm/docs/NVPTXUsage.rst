@@ -553,6 +553,34 @@ it must be a multiple of 16.
 For more information, refer PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
 
+'``llvm.nvvm.cp.async.bulk.prefetch.L2``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.prefetch.L2(ptr addrspace(1) %src, i32 %size, i64 %ch, i1 %flag_ch)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.prefetch.L2``' intrinsic
+corresponds to the ``cp.async.bulk.prefetch.L2.*`` family
+of PTX instructions. These instructions initiate an asynchronous
+prefetch of bulk data from global memory to the L2 cache.
+The 32-bit operand ``%size`` specifies the amount of memory to be
+prefetched in terms of bytes and it must be a multiple of 16.
+
+* The last argument to these intrinsics is boolean flag indicating
+  support for cache_hint. These flag argument must be compile-time
+  constant. When set, it indicates a valid cache_hint (``i64 %ch``)
+  and generates the ``.L2::cache_hint`` variant of the PTX instruction.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch>`_.
+
 '``llvm.nvvm.cp.async.bulk.tensor.g2s.tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -910,6 +938,127 @@ including that ``wgmma.mma_async`` instruction is undefined behavior.
 
 For more information, refer PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-wait-group>`_.
+
+'``llvm.nvvm.griddepcontrol.*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.griddepcontrol.launch_dependents()
+  declare void @llvm.nvvm.griddepcontrol.wait()
+
+Overview:
+"""""""""
+
+The ``griddepcontrol`` intrinsics allows the dependent grids and prerequisite grids as defined by the runtime, to control execution in the following way:
+
+``griddepcontrol.launch_dependents`` intrinsic signals that the dependents can be scheduled, before the current grid completes. The intrinsic can be invoked by multiple threads in the current CTA and repeated invocations of the intrinsic will have no additional side effects past that of the first invocation.
+
+``griddepcontrol.wait`` intrinsic causes the executing thread to wait until all prerequisite grids in flight have completed and all the memory operations from the prerequisite grids are performed and made visible to the current grid.
+
+For more information, refer 
+`PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-griddepcontrol>`__.
+
+TCGEN05 family of Intrinsics
+----------------------------
+
+The llvm.nvvm.tcgen05.* intrinsics model the TCGEN05 family of instructions
+exposed by PTX. These intrinsics use 'Tensor Memory' (henceforth ``tmem``).
+NVPTX represents this memory using ``addrspace(6)`` and is always 32-bits.
+
+For more information, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory>`_.
+
+The tensor-memory pointers may only be used with the tcgen05 intrinsics.
+There are specialized load/store instructions provided (tcgen05.ld/st) to
+work with tensor-memory.
+
+See the PTX ISA for more information on tensor-memory load/store instructions
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-and-register-load-store-instructions>`_.
+
+'``llvm.nvvm.tcgen05.alloc``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tcgen05.alloc.cg1(ptr %dst, i32 %ncols)
+  declare void @llvm.nvvm.tcgen05.alloc.cg2(ptr %dst, i32 %ncols)
+  declare void @llvm.nvvm.tcgen05.alloc.shared.cg1(ptr addrspace(3) %dst, i32 %ncols)
+  declare void @llvm.nvvm.tcgen05.alloc.shared.cg2(ptr addrspace(3) %dst, i32 %ncols)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tcgen05.alloc.*``' intrinsics correspond to the
+``tcgen05.alloc.cta_group*.sync.aligned.b32`` family of PTX instructions.
+The ``tcgen05.alloc`` is a potentially blocking instruction which dynamically
+allocates the specified number of columns in the Tensor Memory and writes
+the address of the allocated Tensor Memory into shared memory at the
+location specified by ``%dst``. The 32-bit operand ``%ncols`` specifies
+the number of columns to be allocated and it must be a power-of-two.
+The ``.shared`` variant explicitly uses shared memory address space for
+the ``%dst`` operand. The ``.cg1`` and ``.cg2`` variants generate
+``cta_group::1`` and ``cta_group::2`` variants of the instruction respectively.
+
+For more information, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`_.
+
+'``llvm.nvvm.tcgen05.dealloc``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tcgen05.dealloc.cg1(ptr addrspace(6) %tmem_addr, i32 %ncols)
+  declare void @llvm.nvvm.tcgen05.dealloc.cg2(ptr addrspace(6) %tmem_addr, i32 %ncols)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tcgen05.dealloc.*``' intrinsics correspond to the
+``tcgen05.dealloc.*`` set of PTX instructions. The ``tcgen05.dealloc``
+instructions deallocates the Tensor Memory specified by the Tensor Memory
+address ``%tmem_addr``. The operand ``%tmem_addr`` must point to a previous
+Tensor Memory allocation. The 32-bit operand ``%ncols`` specifies the number
+of columns to be de-allocated. The ``.cg1`` and ``.cg2`` variants generate
+``cta_group::1`` and ``cta_group::2`` variants of the instruction respectively.
+
+For more information, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`_.
+
+'``llvm.nvvm.tcgen05.relinq.alloc.permit``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tcgen05.relinq.alloc.permit.cg1()
+  declare void @llvm.nvvm.tcgen05.relinq.alloc.permit.cg2()
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tcgen05.relinq.alloc.permit.*``' intrinsics correspond
+to the ``tcgen05.relinquish_alloc_permit.*`` set of PTX instructions.
+This instruction specifies that the CTA of the executing thread is
+relinquishing the right to allocate Tensor Memory. So, it is illegal
+for a CTA to perform ``tcgen05.alloc`` after any of its constituent
+threads execute ``tcgen05.relinquish_alloc_permit``. The ``.cg1``
+and ``.cg2`` variants generate ``cta_group::1`` and ``cta_group::2``
+flavors of the instruction respectively.
+
+For more information, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`_.
 
 Other Intrinsics
 ----------------

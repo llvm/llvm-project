@@ -471,6 +471,12 @@ if (FLANG_INCLUDE_TESTS)
   add_compile_definitions(FLANG_INCLUDE_TESTS=1)
 endif()
 
+option(FLANG_CUF_RUNTIME
+  "Compile CUDA Fortran runtime sources" OFF)
+if (FLANG_CUF_RUNTIME)
+  find_package(CUDAToolkit REQUIRED)
+endif()
+
 add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(cmake/modules)
@@ -479,12 +485,6 @@ option(FLANG_BUILD_TOOLS
   "Build the Flang tools. If OFF, just generate build targets." ON)
 if (FLANG_BUILD_TOOLS)
   add_subdirectory(tools)
-endif()
-
-option(FLANG_CUF_RUNTIME
-  "Compile CUDA Fortran runtime sources" OFF)
-if (FLANG_CUF_RUNTIME)
-  find_package(CUDAToolkit REQUIRED)
 endif()
 
 add_subdirectory(runtime)

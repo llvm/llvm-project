@@ -40,35 +40,6 @@ def ConvertToLLVMPass : Pass<"convert-to-llvm"> {
 }
 
 //===----------------------------------------------------------------------===//
-// ToSPIRV
-//===----------------------------------------------------------------------===//
-
-def ConvertToSPIRVPass : Pass<"convert-to-spirv"> {
-  let summary = "Convert to SPIR-V";
-  let description = [{
-    This is a generic pass to convert to SPIR-V.
-  }];
-  let dependentDialects = [
-    "spirv::SPIRVDialect",
-    "vector::VectorDialect",
-  ];
-  let options = [
-    Option<"runSignatureConversion", "run-signature-conversion", "bool",
-    /*default=*/"true",
-    "Run function signature conversion to convert vector types">,
-    Option<"runVectorUnrolling", "run-vector-unrolling", "bool",
-    /*default=*/"true",
-    "Run vector unrolling to convert vector types in function bodies">,
-    Option<"convertGPUModules", "convert-gpu-modules", "bool",
-    /*default=*/"false",
-    "Clone and convert GPU modules">,
-    Option<"nestInGPUModule", "nest-in-gpu-module", "bool",
-    /*default=*/"false",
-    "Put converted SPIR-V module inside the gpu.module instead of alongside it.">,
-  ];
-}
-
-//===----------------------------------------------------------------------===//
 // AffineToStandard
 //===----------------------------------------------------------------------===//
 
@@ -518,11 +489,13 @@ def GpuToLLVMConversionPass : Pass<"gpu-to-llvm", "ModuleOp"> {
              "Use bare pointers to pass memref arguments to kernels. "
              "The kernel must use the same setting for this option."
           >,
-    Option<"typeCheckKernelArgs", "type-check-kernel-args", "bool",
+    Option<"kernelIntersperseSizeCallConv", "intersperse-sizes-for-kernels", "bool",
            /*default=*/"false",
-             "Require all kernel arguments to be memrefs of rank 1 and with a "
-             "32-bit element size. This is a temporary option that will be "
-             "removed; TODO(https://github.com/llvm/llvm-project/issues/73457)."
+           "Inserts a size_t argument following each memref argument, "
+           "containing the static size in bytes of the buffer. Incompatible "
+           "arguments are rejected. This is intended for use by the Vulkan "
+           "runtime with the kernel bare pointer calling convention, to enable "
+           "dynamic binding of buffers as arguments without static type info."
           >
   ];
 
@@ -650,31 +623,6 @@ def ConvertGPUToSPIRV : Pass<"convert-gpu-to-spirv", "ModuleOp"> {
            "bool", /*default=*/"false",
            "Use 64-bit integers to convert index types">,
   ];
-}
-
-//===----------------------------------------------------------------------===//
-// GPUToVulkan
-//===----------------------------------------------------------------------===//
-
-def ConvertGpuLaunchFuncToVulkanLaunchFunc
-    : Pass<"convert-gpu-launch-to-vulkan-launch", "ModuleOp"> {
-  let summary = "Convert gpu.launch_func to vulkanLaunch external call";
-  let description = [{
-    This pass is only intended for the mlir-vulkan-runner.
-  }];
-  let constructor = "mlir::createConvertGpuLaunchFuncToVulkanLaunchFuncPass()";
-  let dependentDialects = ["spirv::SPIRVDialect"];
-}
-
-def ConvertVulkanLaunchFuncToVulkanCallsPass
-    : Pass<"launch-func-to-vulkan", "ModuleOp"> {
-  let summary = "Convert vulkanLaunch external call to Vulkan runtime external "
-                "calls";
-  let description = [{
-    This pass is only intended for the mlir-vulkan-runner.
-  }];
-
-  let dependentDialects = ["LLVM::LLVMDialect"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1462,7 +1410,11 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
     Option<"x86Vector", "enable-x86vector",
            "bool", /*default=*/"false",
            "Enables the use of X86Vector dialect while lowering the vector "
-	   "dialect.">
+	   "dialect.">,
+    Option<"vectorTransformsOptions", "vector-transform-options",
+           "vector::VectorTransformsOptions",
+           /*default=*/"vector::VectorTransformsOptions()",
+           "Options to lower some operations like contractions and transposes.">,
   ];
 }
 
@@ -1473,7 +1425,10 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
 def ConvertVectorToSPIRV : Pass<"convert-vector-to-spirv"> {
   let summary = "Convert Vector dialect to SPIR-V dialect";
   let constructor = "mlir::createConvertVectorToSPIRVPass()";
-  let dependentDialects = ["spirv::SPIRVDialect"];
+  let dependentDialects = [
+    "spirv::SPIRVDialect",
+    "ub::UBDialect"
+  ];
 }
 
 //===----------------------------------------------------------------------===//

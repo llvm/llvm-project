@@ -181,6 +181,8 @@ class Intrinsic {
 
   SmallVector<ImmCheck, 2> ImmChecks;
 
+  bool SetsFPMR;
+
 public:
   Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
             StringRef MergeSuffix, uint64_t MemoryElementTy, StringRef LLVMName,
@@ -278,6 +280,7 @@ public:
 
 private:
   std::string getMergeSuffix() const { return MergeSuffix; }
+  StringRef getFPMSuffix() const { return SetsFPMR ? "_fpm" : ""; }
   std::string mangleName(ClassKind LocalCK) const;
   std::string mangleLLVMName() const;
   std::string replaceTemplatedArgs(std::string Name, TypeSpec TS,
@@ -449,7 +452,7 @@ std::string SVEType::builtinBaseType() const {
   case TypeKind::PredicatePattern:
     return "i";
   case TypeKind::Fpm:
-    return "Wi";
+    return "UWi";
   case TypeKind::Predicate:
     return "b";
   case TypeKind::BFloat16:
@@ -457,7 +460,7 @@ std::string SVEType::builtinBaseType() const {
     return "y";
   case TypeKind::MFloat8:
     assert(ElementBitwidth == 8 && "Invalid MFloat8!");
-    return "c";
+    return "m";
   case TypeKind::Float:
     switch (ElementBitwidth) {
     case 16:
@@ -983,6 +986,7 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
     std::tie(Mod, NumVectors) = getProtoModifier(Proto, I);
     SVEType T(BaseTypeSpec, Mod, NumVectors);
     Types.push_back(T);
+    SetsFPMR = T.isFpm();
 
     // Add range checks for immediates
     if (I > 0) {
@@ -1001,6 +1005,8 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
   this->Flags |= Emitter.encodeMergeType(MergeTy);
   if (hasSplat())
     this->Flags |= Emitter.encodeSplatOperand(getSplatIdx());
+  if (SetsFPMR)
+    this->Flags |= Emitter.getEnumValueForFlag("SetsFPMR");
 }
 
 std::string Intrinsic::getBuiltinTypeStr() {
@@ -1050,7 +1056,7 @@ std::string Intrinsic::replaceTemplatedArgs(std::string Name, TypeSpec TS,
     else if (T.isBFloat())
       TypeCode = "bf";
     else if (T.isMFloat())
-      TypeCode = "mfp";
+      TypeCode = "mf";
     else
       TypeCode = 'f';
     Ret.replace(Pos, NumChars, TypeCode + utostr(T.getElementSizeInBits()));
@@ -1089,8 +1095,9 @@ std::string Intrinsic::mangleName(ClassKind LocalCK) const {
   }
 
   // Replace all {d} like expressions with e.g. 'u32'
-  return replaceTemplatedArgs(S, getBaseTypeSpec(), getProto()) +
-         getMergeSuffix();
+  return replaceTemplatedArgs(S, getBaseTypeSpec(), getProto())
+      .append(getMergeSuffix())
+      .append(getFPMSuffix());
 }
 
 void Intrinsic::emitIntrinsic(raw_ostream &OS, SVEEmitter &Emitter,

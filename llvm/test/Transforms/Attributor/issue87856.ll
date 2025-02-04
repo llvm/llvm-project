@@ -23,7 +23,7 @@ define void @null_ptr_is_valid_call_with_undef() #0 {
 
 define void @store_as0(ptr %0) {
 ; CHECK-LABEL: define void @store_as0(
-; CHECK-SAME: ptr nocapture nofree noundef nonnull writeonly align 2 dereferenceable(2) [[TMP0:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: ptr nofree noundef nonnull writeonly align 2 captures(none) dereferenceable(2) [[TMP0:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    store i16 0, ptr [[TMP0]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -34,7 +34,7 @@ define void @store_as0(ptr %0) {
 define void @call_store_as1() {
 ; CHECK-LABEL: define void @call_store_as1(
 ; CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    call void @store_as1(ptr addrspace(1) nocapture nofree noundef writeonly align 4294967296 null) #[[ATTR4]]
+; CHECK-NEXT:    call void @store_as1(ptr addrspace(1) nofree noundef writeonly align 4294967296 captures(none) null) #[[ATTR4]]
 ; CHECK-NEXT:    ret void
 ;
   call void @store_as1(ptr addrspace(1) null)
@@ -43,7 +43,7 @@ define void @call_store_as1() {
 
 define void @store_as1(ptr addrspace(1) %arg) {
 ; CHECK-LABEL: define void @store_as1(
-; CHECK-SAME: ptr addrspace(1) nocapture nofree noundef writeonly align 2 dereferenceable_or_null(2) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: ptr addrspace(1) nofree noundef writeonly align 2 captures(none) dereferenceable_or_null(2) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    store i16 0, ptr addrspace(1) [[ARG]], align 2
 ; CHECK-NEXT:    ret void
 ;

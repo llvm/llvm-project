@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/SetTheory.h"
@@ -243,6 +244,15 @@ struct CodeGenProcModel {
   // All read/write resources associated with this processor.
   ConstRecVec WriteResDefs;
   ConstRecVec ReadAdvanceDefs;
+
+  // Map from the WriteType field to the parent WriteRes record.
+  DenseMap<const Record *, const Record *> WriteResMap;
+
+  // Map from the ReadType field to the parent ReadAdvance record.
+  DenseMap<const Record *, const Record *> ReadAdvanceMap;
+
+  // Set of WriteRes that are referenced by a ReadAdvance.
+  SmallPtrSet<const Record *, 8> ReadOfWriteSet;
 
   // Per-operand machine model resources associated with this processor.
   ConstRecVec ProcResourceDefs;
@@ -647,9 +657,9 @@ private:
   void addProcResource(const Record *ProcResourceKind, CodeGenProcModel &PM,
                        ArrayRef<SMLoc> Loc);
 
-  void addWriteRes(const Record *ProcWriteResDef, unsigned PIdx);
+  void addWriteRes(const Record *ProcWriteResDef, CodeGenProcModel &PM);
 
-  void addReadAdvance(const Record *ProcReadAdvanceDef, unsigned PIdx);
+  void addReadAdvance(const Record *ProcReadAdvanceDef, CodeGenProcModel &PM);
 };
 
 } // namespace llvm

@@ -524,7 +524,7 @@ MlirLogicalResult mlirMemRefTypeGetStridesAndOffset(MlirType type,
                                                     int64_t *offset) {
   MemRefType memrefType = llvm::cast<MemRefType>(unwrap(type));
   SmallVector<int64_t> strides_;
-  if (failed(getStridesAndOffset(memrefType, strides_, *offset)))
+  if (failed(memrefType.getStridesAndOffset(strides_, *offset)))
     return mlirLogicalResultFailure();
 
   (void)std::copy(strides_.begin(), strides_.end(), strides);

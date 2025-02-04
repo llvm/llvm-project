@@ -68,8 +68,7 @@ public:
 
   /// Returns true if a cast between SrcAS and DestAS is a noop.
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
-    // Addrspacecasts are always noops.
-    return true;
+    return getPointerSize(SrcAS) == getPointerSize(DestAS);
   }
 
   /// In AArch64, true if FEAT_CPA is present. Allows pointer arithmetic

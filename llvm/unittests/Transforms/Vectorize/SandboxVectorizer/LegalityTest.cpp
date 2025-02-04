@@ -57,11 +57,24 @@ struct LegalityTest : public testing::Test {
   }
 };
 
+static sandboxir::BasicBlock *getBasicBlockByName(sandboxir::Function *F,
+                                                  StringRef Name) {
+  for (sandboxir::BasicBlock &BB : *F)
+    if (BB.getName() == Name)
+      return &BB;
+  llvm_unreachable("Expected to find basic block!");
+}
+
 TEST_F(LegalityTest, LegalitySkipSchedule) {
   parseIR(C, R"IR(
-define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg, float %farg0, float %farg1, i64 %v0, i64 %v1, i32 %v2) {
+define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg, float %farg0, float %farg1, i64 %v0, i64 %v1, i32 %v2, i1 %c0, i1 %c1) {
+entry:
   %gep0 = getelementptr float, ptr %ptr, i32 0
   %gep1 = getelementptr float, ptr %ptr, i32 1
+  store float %farg0, ptr %gep1
+  br label %bb
+
+bb:
   %gep3 = getelementptr float, ptr %ptr, i32 3
   %ld0 = load float, ptr %gep0
   %ld0b = load float, ptr %gep0
@@ -80,6 +93,8 @@ define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg, float 
   %trunc32to8 = trunc i32 %v2 to i8
   %cmpSLT = icmp slt i64 %v0, %v1
   %cmpSGT = icmp sgt i64 %v0, %v1
+  %sel0 = select i1 %c0, <2 x float> %vec2, <2 x float> %vec2
+  %sel1 = select i1 %c1, <2 x float> %vec2, <2 x float> %vec2
   ret void
 }
 )IR");
@@ -89,10 +104,14 @@ define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg, float 
 
   sandboxir::Context Ctx(C);
   auto *F = Ctx.createFunction(LLVMF);
-  auto *BB = &*F->begin();
-  auto It = BB->begin();
+  auto *EntryBB = getBasicBlockByName(F, "entry");
+  auto It = EntryBB->begin();
   [[maybe_unused]] auto *Gep0 = cast<sandboxir::GetElementPtrInst>(&*It++);
   [[maybe_unused]] auto *Gep1 = cast<sandboxir::GetElementPtrInst>(&*It++);
+  auto *St1Entry = cast<sandboxir::StoreInst>(&*It++);
+
+  auto *BB = getBasicBlockByName(F, "bb");
+  It = BB->begin();
   [[maybe_unused]] auto *Gep3 = cast<sandboxir::GetElementPtrInst>(&*It++);
   auto *Ld0 = cast<sandboxir::LoadInst>(&*It++);
   auto *Ld0b = cast<sandboxir::LoadInst>(&*It++);
@@ -111,6 +130,8 @@ define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg, float 
   auto *Trunc32to8 = cast<sandboxir::TruncInst>(&*It++);
   auto *CmpSLT = cast<sandboxir::CmpInst>(&*It++);
   auto *CmpSGT = cast<sandboxir::CmpInst>(&*It++);
+  auto *Sel0 = cast<sandboxir::SelectInst>(&*It++);
+  auto *Sel1 = cast<sandboxir::SelectInst>(&*It++);
 
   llvm::sandboxir::InstrMaps IMaps(Ctx);
   sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps);
@@ -163,6 +184,14 @@ define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg, float 
               sandboxir::ResultReason::DiffWrapFlags);
   }
   {
+    // Check DiffBBs
+    const auto &Result =
+        Legality.canVectorize({St0, St1Entry}, /*SkipScheduling=*/true);
+    EXPECT_TRUE(isa<sandboxir::Pack>(Result));
+    EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
+              sandboxir::ResultReason::DiffBBs);
+  }
+  {
     // Check DiffTypes for unary operands that have a different type.
     const auto &Result = Legality.canVectorize({Trunc64to8, Trunc32to8},
                                                /*SkipScheduling=*/true);
@@ -199,6 +228,31 @@ define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg, float 
     const auto &Result =
         Legality.canVectorize({Ld0, Ld1}, /*SkipScheduling=*/true);
     EXPECT_TRUE(isa<sandboxir::Widen>(Result));
+  }
+  {
+    // Check Repeated instructions (splat)
+    const auto &Result =
+        Legality.canVectorize({Ld0, Ld0}, /*SkipScheduling=*/true);
+    EXPECT_TRUE(isa<sandboxir::Pack>(Result));
+    EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
+              sandboxir::ResultReason::RepeatedInstrs);
+  }
+  {
+    // Check Repeated instructions (not splat)
+    const auto &Result =
+        Legality.canVectorize({Ld0, Ld1, Ld0}, /*SkipScheduling=*/true);
+    EXPECT_TRUE(isa<sandboxir::Pack>(Result));
+    EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
+              sandboxir::ResultReason::RepeatedInstrs);
+  }
+  {
+    // For now don't vectorize Selects when the number of elements of conditions
+    // doesn't match the operands.
+    const auto &Result =
+        Legality.canVectorize({Sel0, Sel1}, /*SkipScheduling=*/true);
+    EXPECT_TRUE(isa<sandboxir::Pack>(Result));
+    EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
+              sandboxir::ResultReason::Unimplemented);
   }
 }
 

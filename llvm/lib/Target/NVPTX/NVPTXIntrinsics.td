@@ -547,6 +547,18 @@ multiclass CP_ASYNC_BULK_CTA_TO_CLUSTER<NVPTXRegClass rc> {
 defm CP_ASYNC_BULK_CTA_TO_CLUSTER : CP_ASYNC_BULK_CTA_TO_CLUSTER<Int64Regs>;
 defm CP_ASYNC_BULK_CTA_TO_CLUSTER_SHARED32 : CP_ASYNC_BULK_CTA_TO_CLUSTER<Int32Regs>;
 
+//------------------------------
+// Bulk Copy Prefetch Functions
+//------------------------------
+def CP_ASYNC_BULK_PREFETCH : NVPTXInst<(outs),
+                             (ins Int64Regs:$src, Int32Regs:$size),
+                             "cp.async.bulk.prefetch.L2.global [$src], $size;", []>,
+                             Requires<[hasPTX<80>, hasSM<90>]>;
+
+def CP_ASYNC_BULK_PREFETCH_CH : NVPTXInst<(outs),
+                                (ins Int64Regs:$src, Int32Regs:$size, Int64Regs:$ch),
+                                "cp.async.bulk.prefetch.L2.global.L2::cache_hint [$src], $size, $ch;", []>,
+                                Requires<[hasPTX<80>, hasSM<90>]>;
 //-------------------------------------
 // TMA Async Bulk Tensor Copy Functions
 //-------------------------------------
@@ -7557,4 +7569,57 @@ def INT_NVVM_WGMMA_WAIT_GROUP_SYNC_ALIGNED : NVPTXInst<(outs), (ins i64imm:$n), 
                              [(int_nvvm_wgmma_wait_group_sync_aligned timm:$n)]>, Requires<[hasSM90a, hasPTX<80>]>;
 } // isConvergent = true
 
+def GRIDDEPCONTROL_LAUNCH_DEPENDENTS :
+      NVPTXInst<(outs), (ins),
+                "griddepcontrol.launch_dependents;",
+                [(int_nvvm_griddepcontrol_launch_dependents)]>,
+                Requires<[hasSM<90>, hasPTX<78>]>;
+
+def GRIDDEPCONTROL_WAIT :
+      NVPTXInst<(outs), (ins),
+                "griddepcontrol.wait;",
+                [(int_nvvm_griddepcontrol_wait)]>,
+                Requires<[hasSM<90>, hasPTX<78>]>;
+
 def INT_EXIT : NVPTXInst<(outs), (ins), "exit;", [(int_nvvm_exit)]>;
+
+// Tcgen05 intrinsics
+let isConvergent = true in {
+
+multiclass TCGEN05_ALLOC_INTR<NVPTXRegClass rc, string AS, string num, Intrinsic Intr> {
+  def NAME : NVPTXInst<(outs),
+             (ins rc:$dst, Int32Regs:$ncols),
+             !strconcat("tcgen05.alloc.cta_group::", num, ".sync.aligned", AS, ".b32 [$dst], $ncols;"),
+             [(Intr rc:$dst, Int32Regs:$ncols)]>,
+             Requires<[hasTcgen05Instructions]>;
+}
+
+defm TCGEN05_ALLOC_CG1 : TCGEN05_ALLOC_INTR<Int64Regs, "", "1", int_nvvm_tcgen05_alloc_cg1>;
+defm TCGEN05_ALLOC_CG2 : TCGEN05_ALLOC_INTR<Int64Regs, "", "2", int_nvvm_tcgen05_alloc_cg2>;
+
+defm TCGEN05_ALLOC_S64_CG1 : TCGEN05_ALLOC_INTR<Int64Regs, ".shared::cta", "1", int_nvvm_tcgen05_alloc_shared_cg1>;
+defm TCGEN05_ALLOC_S64_CG2 : TCGEN05_ALLOC_INTR<Int64Regs, ".shared::cta", "2", int_nvvm_tcgen05_alloc_shared_cg2>;
+
+defm TCGEN05_ALLOC_S32_CG1 : TCGEN05_ALLOC_INTR<Int32Regs, ".shared::cta", "1", int_nvvm_tcgen05_alloc_shared_cg1>;
+defm TCGEN05_ALLOC_S32_CG2 : TCGEN05_ALLOC_INTR<Int32Regs, ".shared::cta", "2", int_nvvm_tcgen05_alloc_shared_cg2>;
+
+multiclass TCGEN05_DEALLOC_INTR<string num, Intrinsic Intr> {
+  def NAME : NVPTXInst<(outs),
+             (ins Int32Regs:$tmem_addr, Int32Regs:$ncols),
+             !strconcat("tcgen05.dealloc.cta_group::", num, ".sync.aligned.b32 $tmem_addr, $ncols;"),
+             [(Intr Int32Regs:$tmem_addr, Int32Regs:$ncols)]>,
+             Requires<[hasTcgen05Instructions]>;
+}
+defm TCGEN05_DEALLOC_CG1: TCGEN05_DEALLOC_INTR<"1", int_nvvm_tcgen05_dealloc_cg1>;
+defm TCGEN05_DEALLOC_CG2: TCGEN05_DEALLOC_INTR<"2", int_nvvm_tcgen05_dealloc_cg2>;
+
+multiclass TCGEN05_RELINQ_PERMIT_INTR<string num, Intrinsic Intr> {
+  def NAME : NVPTXInst<(outs), (ins),
+             !strconcat("tcgen05.relinquish_alloc_permit.cta_group::", num, ".sync.aligned;"),
+             [(Intr)]>,
+             Requires<[hasTcgen05Instructions]>;
+}
+defm TCGEN05_RELINQ_CG1: TCGEN05_RELINQ_PERMIT_INTR<"1", int_nvvm_tcgen05_relinq_alloc_permit_cg1>;
+defm TCGEN05_RELINQ_CG2: TCGEN05_RELINQ_PERMIT_INTR<"2", int_nvvm_tcgen05_relinq_alloc_permit_cg2>;
+
+} // isConvergent

@@ -325,11 +325,11 @@ bool Ret(InterpState &S, CodePtr &PC) {
 
   if (InterpFrame *Caller = S.Current->Caller) {
     PC = S.Current->getRetPC();
-    delete S.Current;
+    InterpFrame::free(S.Current);
     S.Current = Caller;
     S.Stk.push<T>(Ret);
   } else {
-    delete S.Current;
+    InterpFrame::free(S.Current);
     S.Current = nullptr;
     // The topmost frame should come from an EvalEmitter,
     // which has its own implementation of the Ret<> instruction.
@@ -345,10 +345,10 @@ inline bool RetVoid(InterpState &S, CodePtr &PC) {
 
   if (InterpFrame *Caller = S.Current->Caller) {
     PC = S.Current->getRetPC();
-    delete S.Current;
+    InterpFrame::free(S.Current);
     S.Current = Caller;
   } else {
-    delete S.Current;
+    InterpFrame::free(S.Current);
     S.Current = nullptr;
   }
   return true;
@@ -379,15 +379,14 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
   APSInt Value = OpAP<APSInt>()(LHS.toAPSInt(Bits), RHS.toAPSInt(Bits));
 
   // Report undefined behaviour, stopping if required.
-  const Expr *E = S.Current->getExpr(OpPC);
-  QualType Type = E->getType();
   if (S.checkingForUndefinedBehavior()) {
+    const Expr *E = S.Current->getExpr(OpPC);
+    QualType Type = E->getType();
     SmallString<32> Trunc;
     Value.trunc(Result.bitWidth())
         .toString(Trunc, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
                   /*UpperCase=*/true, /*InsertSeparators=*/true);
-    auto Loc = E->getExprLoc();
-    S.report(Loc, diag::warn_integer_constant_overflow)
+    S.report(E->getExprLoc(), diag::warn_integer_constant_overflow)
         << Trunc << Type << E->getSourceRange();
   }
 
@@ -737,16 +736,14 @@ bool Neg(InterpState &S, CodePtr OpPC) {
   S.Stk.push<T>(Result);
 
   APSInt NegatedValue = -Value.toAPSInt(Value.bitWidth() + 1);
-  const Expr *E = S.Current->getExpr(OpPC);
-  QualType Type = E->getType();
-
   if (S.checkingForUndefinedBehavior()) {
+    const Expr *E = S.Current->getExpr(OpPC);
+    QualType Type = E->getType();
     SmallString<32> Trunc;
     NegatedValue.trunc(Result.bitWidth())
         .toString(Trunc, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
                   /*UpperCase=*/true, /*InsertSeparators=*/true);
-    auto Loc = E->getExprLoc();
-    S.report(Loc, diag::warn_integer_constant_overflow)
+    S.report(E->getExprLoc(), diag::warn_integer_constant_overflow)
         << Trunc << Type << E->getSourceRange();
     return true;
   }
@@ -800,15 +797,14 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     APResult = --Value.toAPSInt(Bits);
 
   // Report undefined behaviour, stopping if required.
-  const Expr *E = S.Current->getExpr(OpPC);
-  QualType Type = E->getType();
   if (S.checkingForUndefinedBehavior()) {
+    const Expr *E = S.Current->getExpr(OpPC);
+    QualType Type = E->getType();
     SmallString<32> Trunc;
     APResult.trunc(Result.bitWidth())
         .toString(Trunc, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
                   /*UpperCase=*/true, /*InsertSeparators=*/true);
-    auto Loc = E->getExprLoc();
-    S.report(Loc, diag::warn_integer_constant_overflow)
+    S.report(E->getExprLoc(), diag::warn_integer_constant_overflow)
         << Trunc << Type << E->getSourceRange();
     return true;
   }
@@ -2693,6 +2689,10 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   const T &IntVal = S.Stk.pop<T>();
 
+  if (Desc)
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
+        << 2 << S.getLangOpts().CPlusPlus;
+
   S.Stk.push<Pointer>(static_cast<uint64_t>(IntVal), Desc);
   return true;
 }
@@ -3068,6 +3068,13 @@ inline IntegralAP<true> ReadArg<IntegralAP<true>>(InterpState &S,
   IntegralAP<true> I = IntegralAP<true>::deserialize(*OpPC);
   OpPC += align(I.bytesToSerialize());
   return I;
+}
+
+template <>
+inline FixedPoint ReadArg<FixedPoint>(InterpState &S, CodePtr &OpPC) {
+  FixedPoint FP = FixedPoint::deserialize(*OpPC);
+  OpPC += align(FP.bytesToSerialize());
+  return FP;
 }
 
 } // namespace interp
