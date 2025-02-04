@@ -83,6 +83,9 @@ Resolutions to C++ Defect Reports
 C Language Changes
 ------------------
 
+- Clang now allows an ``inline`` specifier on a typedef declaration of a
+  function type in Microsoft compatibility mode. #GH124869
+
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
@@ -110,6 +113,13 @@ Attribute Changes in Clang
 Improvements to Clang's diagnostics
 -----------------------------------
 
+- Improve the diagnostics for deleted default constructor errors for C++ class
+  initializer lists that don't explicitly list a class member and thus attempt
+  to implicitly default construct that member.
+- The ``-Wunique-object-duplication`` warning has been added to warn about objects
+  which are supposed to only exist once per program, but may get duplicated when
+  built into a shared library.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -122,13 +132,13 @@ Bug Fixes in This Version
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- The behvaiour of ``__add_pointer`` and ``__remove_pointer`` for Objective-C++'s ``id`` and interfaces has been fixed.
+
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
-
-- Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -151,8 +161,18 @@ AMDGPU Support
 NVPTX Support
 ^^^^^^^^^^^^^^
 
+Hexagon Support
+^^^^^^^^^^^^^^^
+
+-  The default compilation target has been changed from V60 to V68.
+
 X86 Support
 ^^^^^^^^^^^
+
+- Disable ``-m[no-]avx10.1`` and switch ``-m[no-]avx10.2`` to alias of 512 bit
+  options.
+- Change ``-mno-avx10.1-512`` to alias of ``-mno-avx10.1-256`` to disable both
+  256 and 512 bit instructions.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
