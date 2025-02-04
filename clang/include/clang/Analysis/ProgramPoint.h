@@ -85,7 +85,7 @@ public:
               LoopExitKind,
               EpsilonKind};
 
-  static const char *getProgramPointKindName(Kind K);
+  static StringRef getProgramPointKindName(Kind K);
   std::optional<SourceLocation> getSourceLocation() const;
 
 private:
