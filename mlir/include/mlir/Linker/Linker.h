@@ -90,7 +90,7 @@ public:
 
   /// The first file is linked without internalization and with the
   /// OverrideFromSrc flag set
-  LinkFileConfig firstLinkFileConfig(unsigned fileFlags = None) const;
+  LinkFileConfig firstFileConfig(unsigned fileFlags = None) const;
 
 private:
   const LinkerConfig &config;

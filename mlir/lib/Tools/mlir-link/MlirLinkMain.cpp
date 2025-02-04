@@ -155,37 +155,22 @@ const LinkerCLOptions &createLinkerConfigFromCLOptions() {
 /// This class encapsulates all the file handling logic for linker.
 class FileProcessor {
 public:
-  explicit FileProcessor(Linker &linker) : linker(linker) {}
-
   using FileConfig = Linker::LinkFileConfig;
   using OwningMemoryBuffer = std::unique_ptr<MemoryBuffer>;
 
+  explicit FileProcessor(Linker &linker, raw_ostream &os, StringRef inMarker,
+                         StringRef outMarker)
+      : linker(linker), os(os), inMarker(inMarker), outMarker(outMarker) {}
+
   /// Process and link multiple input files
-  LogicalResult linkFiles(const std::vector<std::string> inputs,
-                          raw_ostream &os, StringRef inMarker,
-                          StringRef outMarker) {
+  LogicalResult linkFiles(const std::vector<std::string> fileNames) {
 
     unsigned flags = linker.getFlags();
-    FileConfig config = linker.firstLinkFileConfig(flags);
+    FileConfig config = linker.firstFileConfig(flags);
 
-    auto splitAndProcess = [&](OwningMemoryBuffer input) {
-      return splitAndProcessBuffer(
-          std::move(input),
-          [&](OwningMemoryBuffer chunk, raw_ostream &os) {
-            return processInputChunk(std::move(chunk), config, os);
-          },
-          os, inMarker, outMarker);
-    };
-
-    for (const auto &file : inputs) {
-      std::string errorMessage;
-      auto input = openInputFile(file, &errorMessage);
-
-      if (!input)
-        return emitFileError(file, errorMessage);
-
-      if (failed(splitAndProcess(std::move(input))))
-        return emitFileError(file, "Failed to process input file");
+    for (StringRef fileName : fileNames) {
+      if (failed(processFile(fileName, config)))
+        return failure();
 
       // Update config for subsequent files
       config = linker.linkFileConfig(flags);
@@ -195,9 +180,33 @@ public:
   }
 
 private:
+  /// Process a single file
+  LogicalResult processFile(StringRef fileName, FileConfig config) {
+    // Open input file
+    std::string errorMessage;
+    auto input = openInputFile(fileName, &errorMessage);
+    if (!input)
+      return emitFileError(fileName, errorMessage);
+
+    // Process each file chunk
+    if (failed(processFile(std::move(input), config)))
+      return emitFileError(fileName, "Failed to process input file");
+
+    return success();
+  }
+
+  /// Process a single file buffer
+  LogicalResult processFile(OwningMemoryBuffer file, FileConfig config) {
+    return splitAndProcessBuffer(
+        std::move(file),
+        [config, this](OwningMemoryBuffer chunk, raw_ostream & /* os */) {
+          return processFileChunk(std::move(chunk), config);
+        },
+        os, inMarker, outMarker);
+  }
+
   /// Process a single input file, potentially containing multiple modules
-  LogicalResult processInputChunk(OwningMemoryBuffer buffer, FileConfig config,
-                                  raw_ostream &os) {
+  LogicalResult processFileChunk(OwningMemoryBuffer buffer, FileConfig config) {
     auto sourceMgr = std::make_shared<SourceMgr>();
     sourceMgr->AddNewSourceBuffer(std::move(buffer), SMLoc());
 
@@ -218,7 +227,7 @@ private:
 
     // TBD: internalization
 
-    // Link the parsed module
+    // Link the parsed operation
     return linker.linkInModule(std::move(op), config.flags);
   }
 
@@ -231,6 +240,9 @@ private:
   }
 
   Linker &linker;
+  raw_ostream &os;
+  StringRef inMarker;
+  StringRef outMarker;
 };
 
 static LogicalResult printRegisteredDialects(DialectRegistry &registry) {
@@ -268,7 +280,6 @@ LogicalResult mlir::MlirLinkMain(int argc, char **argv,
         "LinkableModuleOpInterface.");
 
   Linker linker(dst, config);
-  FileProcessor proc(linker);
 
   // Prepare output file
   std::string errorMessage;
@@ -282,8 +293,10 @@ LogicalResult mlir::MlirLinkMain(int argc, char **argv,
   StringRef inMarker = config.inputSplitMarker();
   StringRef outMarker = config.outputSplitMarker();
 
+  FileProcessor proc(linker, out->os(), inMarker, outMarker);
+
   // First add all the regular input files
-  if (failed(proc.linkFiles(config.inputFiles, out->os(), inMarker, outMarker)))
+  if (failed(proc.linkFiles(config.inputFiles)))
     return failure();
 
   composite.get()->print(out->os());

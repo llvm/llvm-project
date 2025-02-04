@@ -422,11 +422,10 @@ unsigned Linker::getFlags() const {
 }
 
 Linker::LinkFileConfig Linker::linkFileConfig(unsigned fileFlags) const {
-  return {.flags = fileFlags,
-          .internalize = config.shouldInternalizeLinkedSymbols()};
+  return {fileFlags, config.shouldInternalizeLinkedSymbols()};
 }
 
-Linker::LinkFileConfig Linker::firstLinkFileConfig(unsigned fileFlags) const {
+Linker::LinkFileConfig Linker::firstFileConfig(unsigned fileFlags) const {
   // Filter out flags that don't apply to the first file we load.
   return {.flags = fileFlags & Linker::OverrideFromSrc};
 }
