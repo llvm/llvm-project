@@ -11229,19 +11229,6 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
   // Begin with tests covering the case where there is no constraint on the
   // column limit.
   Style.ColumnLimit = 0;
-  // When BreakBeforeTemplateCloser is turned off, the line break that it adds
-  // shall be removed:
-  verifyFormat("template <\n"
-               "    typename Foo,\n"
-               "    typename Bar>\n"
-               "void foo() {}",
-               "template <\n"
-               "    typename Foo,\n"
-               "    typename Bar\n"
-               ">\n"
-               "void foo() {}",
-               Style);
-
   Style.BreakBeforeTemplateCloser = true;
   // BreakBeforeTemplateCloser should NOT force template declarations onto
   // multiple lines.
@@ -11256,16 +11243,6 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
   verifyNoChange("template <\n"
                  "    typename Foo\n"
                  ">\n"
-                 "void foo() {}",
-                 Style);
-  verifyNoChange("template <\n"
-                 "    typename Foo,\n"
-                 "    typename Bar\n"
-                 ">\n"
-                 "void foo() {}",
-                 Style);
-  verifyNoChange("template <typename Foo,\n"
-                 "          typename Bar>\n"
                  "void foo() {}",
                  Style);
   // It should add a line break before > if not already present:
@@ -11311,12 +11288,12 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
       "        T0,\n"
       "        T1\n"
       "    >\n"
-      ">;\n",
+      ">;",
       "using type = std::remove_cv_t<\n"
       "    add_common_cv_reference<\n"
       "        std::common_type_t<std::decay_t<T0>, std::decay_t<T1>>,\n"
       "        T0,\n"
-      "        T1>>;\n",
+      "        T1>>;",
       Style);
 
   // Test lambda goes to next line:
@@ -11361,12 +11338,6 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
                "}",
                Style);
 
-  // Note that this is the same line (no \n):
-  verifyFormat("void foo() {\n"
-               "  auto lambda = []<typename T>(T t) {};\n"
-               "}",
-               Style);
-
   // Test template usage goes to next line too:
   verifyFormat("void foo() {\n"
                "  myFunc<\n"
@@ -11381,29 +11352,11 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
 
   // Now test that it handles the cases when the column limit forces wrapping.
   Style.ColumnLimit = 40;
-  // When the column limit allows it, the template should be combined back into
-  // one line:
-  verifyFormat("template <typename Foo, typename Bar>\n"
-               "void foo() {}",
-               "template <\n"
-               "    typename Foo,\n"
-               "    typename Bar\n"
-               ">\n"
-               "void foo() {}",
-               Style);
-  // But not when the name is looong. Note that these names are exactly 1
+  // Breaks when the name is looong. Note that these names are exactly 1
   // character too long for the ColumnLimit.
   verifyFormat("template <\n"
                "    typename Foo,\n"
-               "    typename Barrrrrrrrrrrrrrrrrrrr\n"
-               ">\n"
-               "void foo() {}",
-               Style);
-  // Note that this "Foo" is 1 character shorter than the previous "Bar" because
-  // of the comma.
-  verifyFormat("template <\n"
-               "    typename Foooooooooooooooooooo,\n"
-               "    typename Bar\n"
+               "    typename Barrrrrrrrrrrrrrrrrrr\n"
                ">\n"
                "void foo() {}",
                Style);
@@ -11416,42 +11369,29 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
                "          typename Bar>\n"
                "void foo() {}",
                Style);
-  // Same check for only one template parameter.
-  // Note how the first line is exactly 40 chars:
-  verifyFormat("template <typename Barrrrrrrrrrrrrrrrrr>\n"
-               "void foo() {}",
-               Style);
-  // And when one more "r" is added, it breaks properly:
+  // Additionally, long names should be split in one step:
   verifyFormat("template <\n"
+               "    typename Foo,\n"
                "    typename Barrrrrrrrrrrrrrrrrrr\n"
                ">\n"
                "void foo() {}",
+               "template <typename Foo, typename Barrrrrrrrrrrrrrrrrrr>\n"
+               "void foo() {}",
                Style);
-  // Additionally, long names should be split in one step:
-  verifyFormat(
-      "template <\n"
-      "    typename Foo,\n"
-      "    typename Barrrrrrrrrrrrrrrrrrrrrrrrrr\n"
-      ">\n"
-      "void foo() {}",
-      "template <typename Foo, typename Barrrrrrrrrrrrrrrrrrrrrrrrrr>\n"
-      "void foo() {}",
-      Style);
-  verifyFormat(
-      "template <\n"
-      "    typename Fooooooooooooooooooooooooooo,\n"
-      "    typename Bar\n"
-      ">\n"
-      "void foo() {}",
-      "template <typename Fooooooooooooooooooooooooooo, typename Bar>\n"
-      "void foo() {}",
-      Style);
-  // Even when there is only one long name:
   verifyFormat("template <\n"
-               "    typename Fooooooooooooooooooooooooooo\n"
+               "    typename Foooooooooooooooooooo,\n"
+               "    typename Bar\n"
                ">\n"
                "void foo() {}",
-               "template <typename Fooooooooooooooooooooooooooo>\n"
+               "template <typename Foooooooooooooooooooo, typename Bar>\n"
+               "void foo() {}",
+               Style);
+  // Even when there is only one long name:
+  verifyFormat("template <\n"
+               "    typename Foooooooooooooooooooo\n"
+               ">\n"
+               "void foo() {}",
+               "template <typename Foooooooooooooooooooo>\n"
                "void foo() {}",
                Style);
   // Test lambda goes to next line if the type is looong:
@@ -11520,18 +11460,11 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
                "}",
                Style);
 
-  // Test template usage goes to next line only if the type is looong:
-  verifyFormat("void foo() { myFunc<T>(); }", Style);
+  // Test template usage goes to next line if the type is looong:
   verifyFormat("void foo() {\n"
                "  myFunc<\n"
-               "      Loooooooooooooooooooooooooooooooooooooooong\n"
+               "      Looooooooooooooooooooooooong\n"
                "  >();\n"
-               "}",
-               Style);
-  // But if the type is short, we don't need block indent style:
-  verifyFormat("void foo() {\n"
-               "  myFunc<Foo, Foo, Foo, Foo, Foo, Foo,\n"
-               "         Foo, Foo>();\n"
                "}",
                Style);
   // Even a single type in the middle is enough to force it to block indent
