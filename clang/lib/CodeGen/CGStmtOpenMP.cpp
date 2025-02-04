@@ -4525,31 +4525,30 @@ static void EmitIfElse(CodeGenFunction *CGF, Expr *Condition,
 }
 
 void CodeGenFunction::EmitOMPDispatchDirective(const OMPDispatchDirective &S) {
-  if (S.hasClausesOfKind<OMPDependClause>()) {
-    EmitOMPDispatchToTaskwaitDirective(S);
-  }
   ArrayRef<OMPClause *> Clauses = S.clauses();
-  bool IsClauseNoContext = false;
-  if (llvm::any_of(Clauses, [&IsClauseNoContext](OMPClause *C) {
-        IsClauseNoContext = (C->getClauseKind() == OMPC_nocontext);
-        return llvm::is_contained({OMPC_novariants, OMPC_nocontext},
-                                  C->getClauseKind());
-      })) {
-    Expr *Condition = nullptr;
-    if (IsClauseNoContext) {
-      const OMPNocontextClause *NoContextC =
-          OMPExecutableDirective::getSingleClause<OMPNocontextClause>(Clauses);
-      Condition = getInitialExprFromCapturedExpr(NoContextC->getCondition());
-    } else {
-      const OMPNovariantsClause *NoVariantsC =
-          OMPExecutableDirective::getSingleClause<OMPNovariantsClause>(Clauses);
-      Condition = getInitialExprFromCapturedExpr(NoVariantsC->getCondition());
+  if (!Clauses.empty()) {
+    if (S.hasClausesOfKind<OMPDependClause>())
+      EmitOMPDispatchToTaskwaitDirective(S);
+
+    if (S.hasClausesOfKind<OMPNovariantsClause>() ||
+        S.hasClausesOfKind<OMPNocontextClause>()) {
+      Expr *Condition = nullptr;
+      if (const OMPNovariantsClause *NoVariantsC =
+              OMPExecutableDirective::getSingleClause<OMPNovariantsClause>(
+                  Clauses)) {
+        Condition = getInitialExprFromCapturedExpr(NoVariantsC->getCondition());
+      } else {
+        const OMPNocontextClause *NoContextC =
+            OMPExecutableDirective::getSingleClause<OMPNocontextClause>(
+                Clauses);
+        Condition = getInitialExprFromCapturedExpr(NoContextC->getCondition());
+      }
+      /* OMPC_novariants or OMPC_nocontext present */
+      Stmt *AssociatedStmt = const_cast<Stmt *>(S.getAssociatedStmt());
+      EmitIfElse(this, Condition, AssociatedStmt);
     }
-    Stmt *AssociatedStmt = const_cast<Stmt *>(S.getAssociatedStmt());
-    EmitIfElse(this, Condition, AssociatedStmt);
-  } else {
+  } else
     EmitStmt(S.getAssociatedStmt());
-  }
 }
 
 static void emitMasked(CodeGenFunction &CGF, const OMPExecutableDirective &S) {

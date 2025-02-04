@@ -6003,18 +6003,29 @@ static Expr *getNewTraitsOrDirectCall(const ASTContext &Context,
 }
 
 /// annotateAStmt() function is used by ActOnOpenMPExecutableDirective()
-/// for the dispatch directive (nocontext or invariant clauses) dispatch
-/// directive. An annotation "NoContextInvariant" is added to the Captured Decl
+/// for the dispatch directive (nocontext or invariant clauses).
+/// An annotation "NoContextInvariant" is added to the Captured Decl
 /// in the Associated Stmt. This annotation contains either a call to the
 /// function, not to any of its variants (for invariant clause) or a variant
 /// function (for nocontext clause).
-static void annotateAStmt(const ASTContext &Context, Stmt *StmtP,
-                          SemaOpenMP *SemaPtr, bool NoContext) {
-  StmtResult ResultAssocStmt;
+void SemaOpenMP::annotateAStmt(const ASTContext &Context, Stmt *StmtP,
+                               SemaOpenMP *SemaPtr,
+                               ArrayRef<OMPClause *> &Clauses,
+                               SourceLocation StartLoc) {
   if (auto *AssocStmt = dyn_cast<CapturedStmt>(StmtP)) {
     CapturedDecl *CDecl = AssocStmt->getCapturedDecl();
     Stmt *AssocExprStmt = AssocStmt->getCapturedStmt();
     auto *AssocExpr = dyn_cast<Expr>(AssocExprStmt);
+    bool NoContext = false;
+
+    if (OMPExecutableDirective::getSingleClause<OMPNovariantsClause>(Clauses)) {
+
+      if (OMPExecutableDirective::getSingleClause<OMPNocontextClause>(Clauses))
+        Diag(StartLoc, diag::warn_omp_dispatch_clause_novariants_nocontext);
+    } else if (OMPExecutableDirective::getSingleClause<OMPNocontextClause>(
+                   Clauses))
+      NoContext = true;
+
     Expr *NewCallExpr =
         getNewTraitsOrDirectCall(Context, AssocExpr, SemaPtr, NoContext);
     // Annotate "NoContextInvariant" to CDecl of the AssocStmt
@@ -6041,19 +6052,16 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
     BindKind = BC->getBindKind();
 
   if ((Kind == OMPD_dispatch) && (!Clauses.empty())) {
-    bool IsClauseNoContext = false;
-    if (llvm::any_of(Clauses, [&IsClauseNoContext](OMPClause *C) {
-          IsClauseNoContext = (C->getClauseKind() == OMPC_nocontext);
-          return llvm::is_contained({OMPC_novariants, OMPC_nocontext},
-                                    C->getClauseKind());
+
+    if (llvm::all_of(Clauses, [](OMPClause *C) {
+          return llvm::is_contained(
+              {OMPC_novariants, OMPC_nocontext, OMPC_depend},
+              C->getClauseKind());
         })) {
-      if (OMPExecutableDirective::getSingleClause<OMPNocontextClause>(
-              Clauses) &&
-          OMPExecutableDirective::getSingleClause<OMPNovariantsClause>(
-              Clauses)) {
-        Diag(StartLoc, diag::warn_omp_dispatch_clause_novariants_nocontext);
-      }
-      annotateAStmt(getASTContext(), AStmt, this, IsClauseNoContext);
+      if (OMPExecutableDirective::getSingleClause<OMPNovariantsClause>(
+              Clauses) ||
+          OMPExecutableDirective::getSingleClause<OMPNocontextClause>(Clauses))
+        annotateAStmt(getASTContext(), AStmt, this, Clauses, StartLoc);
     }
   }
   if (Kind == OMPD_loop && BindKind == OMPC_BIND_unknown) {
