@@ -6041,14 +6041,21 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
     BindKind = BC->getBindKind();
 
   if ((Kind == OMPD_dispatch) && (!Clauses.empty())) {
-    if (OMPExecutableDirective::getSingleClause<OMPNovariantsClause>(Clauses)) {
-      annotateAStmt(getASTContext(), AStmt, this, false);
-    } else if (OMPExecutableDirective::getSingleClause<OMPNocontextClause>(
-                   Clauses)) {
-      annotateAStmt(getASTContext(), AStmt, this, true);
+    bool IsClauseNoContext = false;
+    if (llvm::any_of(Clauses, [&IsClauseNoContext](OMPClause *C) {
+          IsClauseNoContext = (C->getClauseKind() == OMPC_nocontext);
+          return llvm::is_contained({OMPC_novariants, OMPC_nocontext},
+                                    C->getClauseKind());
+        })) {
+      if (OMPExecutableDirective::getSingleClause<OMPNocontextClause>(
+              Clauses) &&
+          OMPExecutableDirective::getSingleClause<OMPNovariantsClause>(
+              Clauses)) {
+        Diag(StartLoc, diag::warn_omp_dispatch_clause_novariants_nocontext);
+      }
+      annotateAStmt(getASTContext(), AStmt, this, IsClauseNoContext);
     }
   }
-
   if (Kind == OMPD_loop && BindKind == OMPC_BIND_unknown) {
     const OpenMPDirectiveKind ParentDirective = DSAStack->getParentDirective();
 

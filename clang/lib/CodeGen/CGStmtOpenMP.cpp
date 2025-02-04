@@ -4529,18 +4529,22 @@ void CodeGenFunction::EmitOMPDispatchDirective(const OMPDispatchDirective &S) {
     EmitOMPDispatchToTaskwaitDirective(S);
   }
   ArrayRef<OMPClause *> Clauses = S.clauses();
-  if (S.hasClausesOfKind<OMPNovariantsClause>()) {
-    const OMPNovariantsClause *NoVariantsC =
-        OMPExecutableDirective::getSingleClause<OMPNovariantsClause>(Clauses);
-    Expr *Condition =
-        getInitialExprFromCapturedExpr(NoVariantsC->getCondition());
-    Stmt *AssociatedStmt = const_cast<Stmt *>(S.getAssociatedStmt());
-    EmitIfElse(this, Condition, AssociatedStmt);
-  } else if (S.hasClausesOfKind<OMPNocontextClause>()) {
-    const OMPNocontextClause *NoContextC =
-        OMPExecutableDirective::getSingleClause<OMPNocontextClause>(Clauses);
-    Expr *Condition =
-        getInitialExprFromCapturedExpr(NoContextC->getCondition());
+  bool IsClauseNoContext = false;
+  if (llvm::any_of(Clauses, [&IsClauseNoContext](OMPClause *C) {
+        IsClauseNoContext = (C->getClauseKind() == OMPC_nocontext);
+        return llvm::is_contained({OMPC_novariants, OMPC_nocontext},
+                                  C->getClauseKind());
+      })) {
+    Expr *Condition = nullptr;
+    if (IsClauseNoContext) {
+      const OMPNocontextClause *NoContextC =
+          OMPExecutableDirective::getSingleClause<OMPNocontextClause>(Clauses);
+      Condition = getInitialExprFromCapturedExpr(NoContextC->getCondition());
+    } else {
+      const OMPNovariantsClause *NoVariantsC =
+          OMPExecutableDirective::getSingleClause<OMPNovariantsClause>(Clauses);
+      Condition = getInitialExprFromCapturedExpr(NoVariantsC->getCondition());
+    }
     Stmt *AssociatedStmt = const_cast<Stmt *>(S.getAssociatedStmt());
     EmitIfElse(this, Condition, AssociatedStmt);
   } else {
