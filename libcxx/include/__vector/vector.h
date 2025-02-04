@@ -787,7 +787,7 @@ private:
   static _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI pointer
   __add_alignment_assumption(_Ptr __p) _NOEXCEPT {
     if (!__libcpp_is_constant_evaluated()) {
-      return static_cast<pointer>(__builtin_assume_aligned(__p, alignof(decltype(*__p))));
+      return static_cast<pointer>(__builtin_assume_aligned(__p, _LIBCPP_ALIGNOF(decltype(*__p))));
     }
     return __p;
   }
