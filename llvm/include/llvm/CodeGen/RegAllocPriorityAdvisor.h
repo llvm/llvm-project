@@ -161,6 +161,12 @@ createReleaseModePriorityAdvisorAnalysis();
 RegAllocPriorityAdvisorAnalysisLegacy *
 createDevelopmentModePriorityAdvisorAnalysis();
 
+LLVM_ATTRIBUTE_RETURNS_NONNULL RegAllocPriorityAdvisorProvider *
+createReleaseModePriorityAdvisorProvider();
+
+LLVM_ATTRIBUTE_RETURNS_NONNULL RegAllocPriorityAdvisorProvider *
+createDevelopmentModePriorityAdvisorProvider(LLVMContext &Ctx);
+
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_REGALLOCPRIORITYADVISOR_H

@@ -388,22 +388,14 @@ DevelopmentModePriorityAdvisor::getPriority(const LiveInterval &LI) const {
   return static_cast<unsigned>(Prio);
 }
 
+RegAllocPriorityAdvisorProvider *
+llvm::createDevelopmentModePriorityAdvisorProvider(LLVMContext &Ctx) {
+  return new DevelopmentModePriorityAdvisorProvider(Ctx);
+}
+
 #endif // #ifdef LLVM_HAVE_TFLITE
 
-void RegAllocPriorityAdvisorAnalysis::initializeMLProvider(
-    RegAllocPriorityAdvisorProvider::AdvisorMode Mode, LLVMContext &Ctx) {
-  if (Provider)
-    return;
-  switch (Mode) {
-  case RegAllocPriorityAdvisorProvider::AdvisorMode::Development:
-#if defined(LLVM_HAVE_TFLITE)
-    Provider.reset(new DevelopmentModePriorityAdvisorProvider(Ctx));
-#endif
-    break;
-  case RegAllocPriorityAdvisorProvider::AdvisorMode::Release:
-    Provider.reset(new ReleaseModePriorityAdvisorProvider());
-    break;
-  default:
-    break;
-  }
+RegAllocPriorityAdvisorProvider *
+llvm::createReleaseModePriorityAdvisorProvider() {
+  return new ReleaseModePriorityAdvisorProvider();
 }

@@ -136,16 +136,27 @@ private:
 void RegAllocPriorityAdvisorAnalysis::initializeProvider(LLVMContext &Ctx) {
   if (Provider)
     return;
-  if (Mode == RegAllocPriorityAdvisorProvider::AdvisorMode::Dummy)
+  switch (Mode) {
+  case RegAllocPriorityAdvisorProvider::AdvisorMode::Dummy:
     Provider.reset(new DummyPriorityAdvisorProvider());
-  else if (Mode == RegAllocPriorityAdvisorProvider::AdvisorMode::Default)
+    return;
+  case RegAllocPriorityAdvisorProvider::AdvisorMode::Default:
     Provider.reset(
         new DefaultPriorityAdvisorProvider(/*NotAsRequested=*/false, Ctx));
-  else
-    initializeMLProvider(Mode, Ctx);
-  if (!Provider)
+    return;
+  case RegAllocPriorityAdvisorProvider::AdvisorMode::Development:
+#if defined(LLVM_HAVE_TFLITE)
+    Provider.reset(createDevelopmentModePriorityAdvisorProvider(Ctx));
+#else
     Provider.reset(
         new DefaultPriorityAdvisorProvider(/*NotAsRequested=*/true, Ctx));
+#endif
+    assert(Provider && "PriorityAdvisorProvider cannot be null");
+    return;
+  case RegAllocPriorityAdvisorProvider::AdvisorMode::Release:
+    Provider.reset(createReleaseModePriorityAdvisorProvider());
+    return;
+  }
 }
 
 AnalysisKey RegAllocPriorityAdvisorAnalysis::Key;
