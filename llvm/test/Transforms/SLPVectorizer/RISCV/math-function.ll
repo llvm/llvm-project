@@ -141,6 +141,40 @@ entry:
   ret <4 x float> %vecins.3
 }
 
+; Don't vectorize @llvm.exp because it will be scalarized in codegen.
+define void @exp_v2f64(ptr %a) {
+; CHECK-LABEL: define void @exp_v2f64
+; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[A]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], splat (double 1.000000e+00)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.exp.v2f64(<2 x double> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP3]], splat (double 1.000000e+00)
+; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[A]], align 8
+; CHECK-NEXT:    ret void
+;
+; DEFAULT-LABEL: define void @exp_v2f64
+; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
+; DEFAULT-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[A]], align 8
+; DEFAULT-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], splat (double 1.000000e+00)
+; DEFAULT-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.exp.v2f64(<2 x double> [[TMP2]])
+; DEFAULT-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP3]], splat (double 1.000000e+00)
+; DEFAULT-NEXT:    store <2 x double> [[TMP4]], ptr [[A]], align 8
+; DEFAULT-NEXT:    ret void
+;
+  %x = load double, ptr %a
+  %gep = getelementptr double, ptr %a, i64 1
+  %y = load double, ptr %gep
+  %x.add = fadd double %x, 1.0
+  %y.add = fadd double %y, 1.0
+  %x.exp = call double @llvm.exp(double %x.add)
+  %y.exp = call double @llvm.exp(double %y.add)
+  %x.add2 = fadd double %x.exp, 1.0
+  %y.add2 = fadd double %y.exp, 1.0
+  store double %x.add2, ptr %a
+  store double %y.add2, ptr %gep
+  ret void
+}
+
 declare float @expf(float) readonly nounwind willreturn
 
 ; We can not vectorized exp since RISCV has no such instruction.
