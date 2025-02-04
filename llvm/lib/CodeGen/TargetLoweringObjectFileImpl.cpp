@@ -547,7 +547,7 @@ static unsigned getELFSectionType(StringRef Name, SectionKind K) {
   return ELF::SHT_PROGBITS;
 }
 
-static unsigned getELFSectionFlags(SectionKind K) {
+static unsigned getELFSectionFlags(SectionKind K, const Triple &T) {
   unsigned Flags = 0;
 
   if (!K.isMetadata() && !K.isExclude())
@@ -559,8 +559,11 @@ static unsigned getELFSectionFlags(SectionKind K) {
   if (K.isText())
     Flags |= ELF::SHF_EXECINSTR;
 
-  if (K.isExecuteOnly())
+  if ((T.isARM() || T.isThumb()) && K.isExecuteOnly())
     Flags |= ELF::SHF_ARM_PURECODE;
+
+  if (T.isAArch64() && K.isExecuteOnly())
+    Flags |= ELF::SHF_AARCH64_PURECODE;
 
   if (K.isWriteable())
     Flags |= ELF::SHF_WRITE;
@@ -840,7 +843,7 @@ static MCSection *selectExplicitSectionGlobal(const GlobalObject *GO,
   // Infer section flags from the section name if we can.
   Kind = getELFKindForNamedSection(SectionName, Kind);
 
-  unsigned Flags = getELFSectionFlags(Kind);
+  unsigned Flags = getELFSectionFlags(Kind, TM.getTargetTriple());
   auto [Group, IsComdat, ExtraFlags] = getGlobalObjectInfo(GO, TM);
   Flags |= ExtraFlags;
 
@@ -947,7 +950,7 @@ static MCSection *selectELFSectionForGlobal(
 
 MCSection *TargetLoweringObjectFileELF::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
-  unsigned Flags = getELFSectionFlags(Kind);
+  unsigned Flags = getELFSectionFlags(Kind, TM.getTargetTriple());
 
   // If we have -ffunction-section or -fdata-section then we should emit the
   // global value to a uniqued section specifically for it.
@@ -967,7 +970,7 @@ MCSection *TargetLoweringObjectFileELF::SelectSectionForGlobal(
 MCSection *TargetLoweringObjectFileELF::getUniqueSectionForFunction(
     const Function &F, const TargetMachine &TM) const {
   SectionKind Kind = SectionKind::getText();
-  unsigned Flags = getELFSectionFlags(Kind);
+  unsigned Flags = getELFSectionFlags(Kind, TM.getTargetTriple());
   // If the function's section names is pre-determined via pragma or a
   // section attribute, call selectExplicitSectionGlobal.
   if (F.hasSection())
