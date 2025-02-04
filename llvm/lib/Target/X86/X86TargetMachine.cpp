@@ -237,6 +237,8 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
                                getEffectiveRelocModel(TT, JIT, RM),
                                getEffectiveX86CodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())), IsJIT(JIT) {
+  if (RM)
+    errs() << "RelocModel " << *RM << "\n";
   // On PS4/PS5, the "return address" of a 'noreturn' call must still be within
   // the calling function. Note that this also includes __stack_chk_fail,
   // so there was some target-specific logic in the instruction selectors
