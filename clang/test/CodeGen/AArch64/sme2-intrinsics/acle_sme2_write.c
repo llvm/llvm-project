@@ -940,6 +940,20 @@ void test_svwrite_za8_mf8_vg1x4(uint32_t base, svmfloat8x4_t val) __arm_streamin
   SVE_ACLE_FUNC(svwrite_za8,_mf8,_vg1x4,)(base, val);
 }
 
+// CHECK-LABEL: @test_svwrite_za8_s8_vg1x4(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.write.vg1x4.nxv16i8(i32 [[BASE:%.*]], <vscale x 16 x i8> [[VAL_COERCE0:%.*]], <vscale x 16 x i8> [[VAL_COERCE1:%.*]], <vscale x 16 x i8> [[VAL_COERCE2:%.*]], <vscale x 16 x i8> [[VAL_COERCE3:%.*]])
+// CHECK-NEXT:    ret void
+//
+// CPP-CHECK-LABEL: @_Z25test_svwrite_za8_s8_vg1x4j10svint8x4_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.write.vg1x4.nxv16i8(i32 [[BASE:%.*]], <vscale x 16 x i8> [[VAL_COERCE0:%.*]], <vscale x 16 x i8> [[VAL_COERCE1:%.*]], <vscale x 16 x i8> [[VAL_COERCE2:%.*]], <vscale x 16 x i8> [[VAL_COERCE3:%.*]])
+// CPP-CHECK-NEXT:    ret void
+//
+void test_svwrite_za8_s8_vg1x4(uint32_t base, svint8x4_t val) __arm_streaming __arm_inout("za") {
+  SVE_ACLE_FUNC(svwrite_za8,_s8,_vg1x4,)(base, val);
+}
+
 // CHECK-LABEL: @test_svwrite_za8_u8_vg1x4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    tail call void @llvm.aarch64.sme.write.vg1x4.nxv16i8(i32 [[BASE:%.*]], <vscale x 16 x i8> [[VAL_COERCE0:%.*]], <vscale x 16 x i8> [[VAL_COERCE1:%.*]], <vscale x 16 x i8> [[VAL_COERCE2:%.*]], <vscale x 16 x i8> [[VAL_COERCE3:%.*]])
