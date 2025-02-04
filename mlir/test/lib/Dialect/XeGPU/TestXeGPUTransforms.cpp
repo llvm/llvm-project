@@ -26,8 +26,7 @@ struct TestXeGPUDistribution
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUDistribution)
 
   TestXeGPUDistribution() = default;
-  TestXeGPUDistribution(const TestXeGPUDistribution &pass)
-      : PassWrapper(pass) {}
+  TestXeGPUDistribution(const TestXeGPUDistribution &pass) = default;
 
   StringRef getArgument() const final { return "test-xegpu-distribute"; }
   StringRef getDescription() const final {
@@ -44,7 +43,7 @@ struct TestXeGPUDistribution
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateXeGPUDistributePatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 } // namespace

@@ -180,19 +180,10 @@ getDistributedTensorDescType(xegpu::TensorDescType originalT,
     else
       distributedShape.push_back(o);
   }
-  xegpu::TensorDescType distributedDescType;
-  if (originalT.isScattered()) {
 
-    distributedDescType = xegpu::TensorDescType::get(
-        distributedShape, originalT.getElementType(), originalT.getChunkSize(),
-        originalT.getMemorySpace(), originalT.getSGMapAttr());
-  } else {
-    distributedDescType = xegpu::TensorDescType::get(
-        distributedShape, originalT.getElementType(),
-        originalT.getBoundaryCheck(), originalT.getArrayLength(),
-        originalT.getMemorySpace(), originalT.getSGMapAttr());
-  }
-  return distributedDescType;
+  return xegpu::TensorDescType::get(
+      originalT.getContext(), distributedShape, originalT.getElementType(),
+      originalT.getEncoding(), originalT.getSGMapAttr());
 }
 } // namespace
 
