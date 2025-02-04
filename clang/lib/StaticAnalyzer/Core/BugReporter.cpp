@@ -289,9 +289,8 @@ private:
 };
 
 std::string timeTraceName(const BugReportEquivClass &EQ) {
-  if (!llvm::timeTraceProfilerEnabled()) {
+  if (!llvm::timeTraceProfilerEnabled())
     return "";
-  }
   const auto &bugReports = EQ.getReports();
   if (bugReports.empty())
     return "Empty Equivalence Class";
