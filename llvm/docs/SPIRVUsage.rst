@@ -260,6 +260,28 @@ parameters of its underlying image type, so that a sampled image for the
 previous type has the representation
 ``target("spirv.SampledImage, void, 1, 1, 0, 0, 0, 0, 0)``.
 
+.. _inline-spirv-types:
+
+Inline SPIR-V Types
+-------------------
+
+User-specified types may be represented using target extension types:
+
+  .. table:: Inline SPIR-V Types
+
+  ========================== =================== ==============================
+     LLVM type name          LLVM type arguments LLVM integer arguments
+  ========================== =================== ==============================
+  ``spirv.Type``             SPIR-V operands     opcode, size, alignment
+  ``spirv.IntegralConstant`` integral type       value
+  ``spirv.Literal``          (none)              value
+  ========================== =================== ==============================
+
+The operand arguments to ``spirv.Type`` may be either a ``spirv.IntegralConstant`` type,
+representing an ``OpConstant`` id operand, a ``spirv.Literal`` type, representing an immediate
+literal operand, or any other type, representing the id of that type as an operand.
+``spirv.IntegralConstant`` and ``spirv.Literal`` may not be used outside of this context.
+
 .. _spirv-intrinsics:
 
 Target Intrinsics
