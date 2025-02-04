@@ -380,7 +380,8 @@ setupIndirectCallTable(GenericPluginTy &Plugin, GenericDeviceTy &Device,
       Image.getTgtImage()->EntriesBegin, Image.getTgtImage()->EntriesEnd);
   llvm::SmallVector<std::pair<void *, void *>> IndirectCallTable;
   for (const auto &Entry : Entries) {
-    if (Entry.Size == 0 || !(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT))
+    if (Entry.Kind != object::OffloadKind::OFK_OpenMP || Entry.Size == 0 ||
+        !(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT))
       continue;
 
     assert(Entry.Size == sizeof(void *) && "Global not a function pointer?");

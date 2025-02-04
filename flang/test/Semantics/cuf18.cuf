@@ -1,0 +1,11 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+
+subroutine sub1()
+  real, allocatable, device :: a(:)
+
+!ERROR: Unsupported CUDA data transfer
+  a = a + 10 ! Illegal expression according to 3.4.2
+end subroutine
+
+
+
