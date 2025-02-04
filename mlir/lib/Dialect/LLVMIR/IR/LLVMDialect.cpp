@@ -2495,8 +2495,6 @@ void AliasOp::print(OpAsmPrinter &p) {
 //               `(` attribute? `)`
 //               attribute-list? `:` type region
 //
-// The type can be omitted for string attributes, in which case it will be
-// inferred from the value of the string as [strlen(value) x i8].
 ParseResult AliasOp::parse(OpAsmParser &parser, OperationState &result) {
   // Call into common parsing between GlobalOp and AliasOp.
   if (parseCommonGlobalAndAlias<AliasOp>(parser, result).failed())
