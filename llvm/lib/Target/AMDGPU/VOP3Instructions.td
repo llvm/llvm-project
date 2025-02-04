@@ -1561,6 +1561,7 @@ let SubtargetPredicate = HasBF16ConversionInsts in {
 }
 
 class VOP3_CVT_SCALE_PK_F16_F864_Profile<VOPProfile P> : VOP3_CVT_SCALEF32_PK_F864_Profile<P> {
+  let Src0RC64 = getVOP3VRegSrcForVT<Src0VT>.ret;
   let Ins64 = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
                             HasClamp, HasModifiers, HasSrc2Mods,
                             HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret,
