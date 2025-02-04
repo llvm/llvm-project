@@ -112,7 +112,7 @@ struct DigitsOutput {
 // 1292913986/2^32. That is a rounded-down approximation to log10(2), accurate
 // enough that for any binary exponent in the range of float128 it will give
 // the correct value of floor(log10(2^n)).
-int estimate_log10(int exponent_of_2) {
+LIBC_INLINE int estimate_log10(int exponent_of_2) {
   return (exponent_of_2 * 1292913986LL) >> 32;
 }
 
