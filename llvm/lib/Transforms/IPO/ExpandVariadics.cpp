@@ -147,7 +147,7 @@ Function *getPreexistingDeclaration(Module *M, Intrinsic::ID Id,
                                     ArrayRef<Type *> Tys = {}) {
   if (Tys.empty())
     return Intrinsic::getDeclarationIfExists(M, Id);
-  auto *FT = Intrinsic::getType(M->getContext(), Id, Tys);
+  auto *FT = Intrinsic::getType(M, Id, Tys);
   return Intrinsic::getDeclarationIfExists(M, Id, Tys, FT);
 }
 

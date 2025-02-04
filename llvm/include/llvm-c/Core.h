@@ -2818,7 +2818,7 @@ LLVMValueRef LLVMGetIntrinsicDeclaration(LLVMModuleRef Mod,
  *
  * @see llvm::Intrinsic::getType()
  */
-LLVMTypeRef LLVMIntrinsicGetType(LLVMContextRef Ctx, unsigned ID,
+LLVMTypeRef LLVMIntrinsicGetType(LLVMModuleRef Mod, unsigned ID,
                                  LLVMTypeRef *ParamTypes, size_t ParamCount);
 
 /**

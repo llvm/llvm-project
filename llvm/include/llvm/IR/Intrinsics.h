@@ -22,6 +22,7 @@
 
 namespace llvm {
 
+class DataLayout;
 class Type;
 class FunctionType;
 class Function;
@@ -73,7 +74,7 @@ namespace Intrinsic {
   std::string getNameNoUnnamedTypes(ID Id, ArrayRef<Type *> Tys);
 
   /// Return the function type for an intrinsic.
-  FunctionType *getType(LLVMContext &Context, ID id, ArrayRef<Type *> Tys = {});
+  FunctionType *getType(Module *M, ID id, ArrayRef<Type *> Tys = {});
 
   /// Returns true if the intrinsic can be overloaded.
   bool isOverloaded(ID id);
@@ -131,6 +132,7 @@ namespace Intrinsic {
   struct IITDescriptor {
     enum IITDescriptorKind {
       Void,
+      Byte,
       VarArg,
       MMX,
       Token,
@@ -239,7 +241,8 @@ namespace Intrinsic {
   /// Returns false if the given type matches with the constraints, true
   /// otherwise.
   MatchIntrinsicTypesResult
-  matchIntrinsicSignature(FunctionType *FTy, ArrayRef<IITDescriptor> &Infos,
+  matchIntrinsicSignature(const DataLayout &DL, FunctionType *FTy,
+                          ArrayRef<IITDescriptor> &Infos,
                           SmallVectorImpl<Type *> &ArgTys);
 
   /// Verify if the intrinsic has variable arguments. This method is intended to
@@ -254,8 +257,8 @@ namespace Intrinsic {
   ///
   /// Returns false if the given ID and function type combination is not a
   /// valid intrinsic call.
-  bool getIntrinsicSignature(Intrinsic::ID, FunctionType *FT,
-                             SmallVectorImpl<Type *> &ArgTys);
+  bool getIntrinsicSignature(const DataLayout &DL, Intrinsic::ID,
+                             FunctionType *FT, SmallVectorImpl<Type *> &ArgTys);
 
   /// Same as previous, but accepts a Function instead of ID and FunctionType.
   bool getIntrinsicSignature(Function *F, SmallVectorImpl<Type *> &ArgTys);
