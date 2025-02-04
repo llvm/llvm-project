@@ -248,12 +248,12 @@ private:
       os << "v" << n1.id;
       if (!port.empty())
         // Attach edge to south compass point of the result
-        os << ":" << port << ":s";
+        os << ":res" << port << ":s";
       os << " -> ";
       os << "v" << n2.id;
       if (!port.empty())
         // Attach edge to north compass point of the operand
-        os << ":" << port << ":n";
+        os << ":arg" << port << ":n";
       emitAttrList(os, attrs);
     }));
   }
@@ -330,7 +330,7 @@ private:
       if (op->getNumOperands() > 0) {
         os << "{";
         auto operandToPort = [&](Value operand) {
-          os << "<" << getValuePortName(operand) << "> ";
+          os << "<arg" << getValuePortName(operand) << "> ";
           emitMlirOperand(os, operand);
         };
         interleave(op->getOperands(), os, operandToPort, "|");
@@ -353,7 +353,7 @@ private:
       if (op->getNumResults() > 0) {
         os << "|{";
         auto resultToPort = [&](Value result) {
-          os << "<" << getValuePortName(result) << "> ";
+          os << "<res" << getValuePortName(result) << "> ";
           emitMlirOperand(os, result);
           if (printResultTypes) {
             os << " ";
@@ -371,7 +371,7 @@ private:
   /// Generate a label for a block argument.
   std::string getLabel(BlockArgument arg) {
     return strFromOs([&](raw_ostream &os) {
-      os << "<" << getValuePortName(arg) << "> ";
+      os << "<res" << getValuePortName(arg) << "> ";
       arg.printAsOperand(os, OpPrintingFlags());
       if (printResultTypes) {
         os << " ";
