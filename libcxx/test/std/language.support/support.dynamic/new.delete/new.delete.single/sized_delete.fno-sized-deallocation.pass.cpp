@@ -21,7 +21,7 @@
 #include <new>
 
 int main(int, char**) {
-    void* p = ::operator new(10);
-    ::operator delete(p, 10);
-    return 0;
+  void* p = ::operator new(10);
+  ::operator delete(p, 10);
+  return 0;
 }
