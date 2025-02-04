@@ -20,9 +20,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SValVisitor.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
 using namespace ento;
