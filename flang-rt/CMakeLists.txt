@@ -235,6 +235,12 @@ endif ()
 check_cxx_compiler_flag("-UTESTFLAG" FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
 
 
+# function checks
+find_package(Backtrace)
+set(HAVE_BACKTRACE ${Backtrace_FOUND})
+set(BACKTRACE_HEADER ${Backtrace_HEADER})
+
+
 #####################
 # Build Preparation #
 #####################
