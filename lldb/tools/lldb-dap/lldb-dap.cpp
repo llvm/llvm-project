@@ -5305,7 +5305,7 @@ int main(int argc, char *argv[]) {
       return EXIT_FAILURE;
     }
 
-    error = listener->Listen(name, /* backlog */ 5);
+    error = listener->Listen(name, /*backlog=*/5);
     if (error.Fail()) {
       llvm::logAllUnhandledErrors(error.takeError(), llvm::errs(),
                                   "Failed to listen for connections: ");
@@ -5322,9 +5322,8 @@ int main(int argc, char *argv[]) {
     // address.
     llvm::outs().flush();
 
-    llvm::DefaultThreadPool pool(llvm::optimal_concurrency());
+    llvm::DefaultThreadPool pool;
     unsigned int clientCount = 0;
-
     while (true) {
       Socket *accepted_socket;
       error = listener->Accept(/*timeout=*/std::nullopt, accepted_socket);

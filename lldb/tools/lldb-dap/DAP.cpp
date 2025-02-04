@@ -62,7 +62,7 @@ DAP::DAP(std::string name, llvm::StringRef path, std::ofstream *log,
          std::vector<std::string> pre_init_commands)
     : name(name), debug_adaptor_path(path), log(log), input(std::move(input)),
       output(std::move(output)), broadcaster("lldb-dap"),
-      exception_breakpoints(), pre_init_commands(pre_init_commands),
+      exception_breakpoints(), pre_init_commands(std::move(pre_init_commands)),
       focus_tid(LLDB_INVALID_THREAD_ID), stop_at_entry(false), is_attach(false),
       enable_auto_variable_summaries(false),
       enable_synthetic_child_debugging(false),
