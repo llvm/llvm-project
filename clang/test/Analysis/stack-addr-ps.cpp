@@ -532,7 +532,7 @@ S returned_struct_with_ptr_callee() {
   int local = 42;
   S s;
   s.p = &local;
-  return s; // expected-warning {{Address of stack memory associated with local variable 'local' returned to caller}}
+  return s; // expected-warning {{Address of stack memory associated with local variable 'local' returned to caller}} expected-warning{{Address of stack memory associated with local variable 'local' is still referred to by the caller variable 's' upon returning to the caller.  This will be a dangling reference}}
 }
 
 S leak_through_field_of_returned_object() {
