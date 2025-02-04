@@ -29,25 +29,18 @@ static bool reportError(Twine Message) {
   return true;
 }
 
-static bool parseRootFlags(ModuleRootSignature *MRS, MDNode *RootFlagNode) {
+bool ModuleRootSignature::parseRootFlags(MDNode *RootFlagNode) {
 
   if (RootFlagNode->getNumOperands() != 2)
     return reportError("Invalid format for RootFlag Element");
 
   auto *Flag = mdconst::extract<ConstantInt>(RootFlagNode->getOperand(1));
-  uint32_t Value = Flag->getZExtValue();
+  this->Flags = Flag->getZExtValue();
 
-  // Root Element validation, as specified:
-  // https://github.com/llvm/wg-hlsl/blob/main/proposals/0002-root-signature-in-clang.md#validations-during-dxil-generation
-  if ((Value & ~0x80000fff) != 0)
-    return reportError("Invalid flag value for RootFlag");
-
-  MRS->Flags = Value;
   return false;
 }
 
-static bool parseRootSignatureElement(ModuleRootSignature *MRS,
-                                      MDNode *Element) {
+bool ModuleRootSignature::parseRootSignatureElement(MDNode *Element) {
   MDString *ElementText = cast<MDString>(Element->getOperand(0));
   if (ElementText == nullptr)
     return reportError("Invalid format for Root Element");
@@ -67,7 +60,7 @@ static bool parseRootSignatureElement(ModuleRootSignature *MRS,
   switch (ElementKind) {
 
   case RootSignatureElementKind::RootFlags: {
-    return parseRootFlags(MRS, Element);
+    return parseRootFlags(Element);
     break;
   }
 
@@ -131,10 +124,26 @@ bool ModuleRootSignature::parse(NamedMDNode *Root, const Function *EF) {
       if (Element == nullptr)
         return reportError("Missing Root Element Metadata Node.");
 
-      HasError = HasError || parseRootSignatureElement(this, Element);
+      HasError = HasError || parseRootSignatureElement(Element);
     }
   }
   return HasError;
+}
+
+bool ModuleRootSignature::validateRootFlag() {
+  // Root Element validation, as specified:
+  // https://github.com/llvm/wg-hlsl/blob/main/proposals/0002-root-signature-in-clang.md#validations-during-dxil-generation
+  if ((Flags & ~0x80000fff) != 0)
+    return reportError("Invalid flag value for RootFlag");
+
+  return false;
+}
+
+bool ModuleRootSignature::validate() {
+  if (validateRootFlag())
+    return reportError("Invalid flag value for RootFlag");
+
+  return false;
 }
 
 ModuleRootSignature ModuleRootSignature::analyzeModule(Module &M,
@@ -143,7 +152,7 @@ ModuleRootSignature ModuleRootSignature::analyzeModule(Module &M,
 
   NamedMDNode *RootSignatureNode = M.getNamedMetadata("dx.rootsignatures");
   if (RootSignatureNode) {
-    if (MRS.parse(RootSignatureNode, F))
+    if (MRS.parse(RootSignatureNode, F) || MRS.validate())
       llvm_unreachable("Invalid Root Signature Metadata.");
   }
 
@@ -176,7 +185,7 @@ bool RootSignatureAnalysisWrapper::runOnModule(Module &M) {
   assert(MMI.EntryPropertyVec.size() == 1);
 
   const Function *EntryFunction = MMI.EntryPropertyVec[0].Entry;
-  this->MRS = MRS = ModuleRootSignature::analyzeModule(M, EntryFunction);
+  MRS = ModuleRootSignature::analyzeModule(M, EntryFunction);
 
   return false;
 }
