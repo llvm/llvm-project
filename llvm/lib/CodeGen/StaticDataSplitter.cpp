@@ -38,11 +38,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "static-data-splitter"
 
-STATISTIC(NumHotJumpTables, "Number of hot jump tables seen");
-STATISTIC(NumColdJumpTables, "Number of cold jump tables seen");
+STATISTIC(NumHotJumpTables, "Number of hot jump tables seen.");
+STATISTIC(NumColdJumpTables, "Number of cold jump tables seen.");
 STATISTIC(NumUnknownJumpTables,
-          "Number of jump tables with unknown hotness. Option "
-          "-static-data-default-hotness specifies the hotness.");
+          "Number of jump tables with unknown hotness. They are from functions "
+          "without profile information.");
 
 class StaticDataSplitter : public MachineFunctionPass {
   const MachineBranchProbabilityInfo *MBPI = nullptr;

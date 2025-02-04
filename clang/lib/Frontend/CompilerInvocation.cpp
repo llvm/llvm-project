@@ -2756,7 +2756,6 @@ static const auto &getFrontendActionTable() {
       {frontend::RewriteObjC, OPT_rewrite_objc},
       {frontend::RewriteTest, OPT_rewrite_test},
       {frontend::RunAnalysis, OPT_analyze},
-      {frontend::MigrateSource, OPT_migrate},
       {frontend::RunPreprocessorOnly, OPT_Eonly},
       {frontend::PrintDependencyDirectivesSourceMinimizerOutput,
        OPT_print_dependency_directives_minimized_source},
@@ -3098,12 +3097,6 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     Opts.AuxTargetCPU = std::string(Args.getLastArgValue(OPT_aux_target_cpu));
   if (Args.hasArg(OPT_aux_target_feature))
     Opts.AuxTargetFeatures = Args.getAllArgValues(OPT_aux_target_feature);
-
-  if (Opts.ARCMTAction != FrontendOptions::ARCMT_None &&
-      Opts.ObjCMTAction != FrontendOptions::ObjCMT_None) {
-    Diags.Report(diag::err_drv_argument_not_allowed_with)
-      << "ARC migration" << "ObjC migration";
-  }
 
   InputKind DashX(Language::Unknown);
   if (const Arg *A = Args.getLastArg(OPT_x)) {
@@ -4215,7 +4208,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     }
   }
 
-  // Check if -fopenmp is specified and set default version to 5.0.
+  // Check if -fopenmp is specified and set default version to 5.1.
   Opts.OpenMP = Args.hasArg(OPT_fopenmp) ? 51 : 0;
   // Check if -fopenmp-simd is specified.
   bool IsSimdSpecified =
@@ -4413,7 +4406,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     // y or y.0 (4 <= y <= current version).
     if (!VerParts.first.starts_with("0") &&
         !VerParts.first.getAsInteger(10, Major) && 3 <= Major &&
-        Major <= CLANG_VERSION_MAJOR &&
+        Major <= MAX_CLANG_ABI_COMPAT_VERSION &&
         (Major == 3
              ? VerParts.second.size() == 1 &&
                    !VerParts.second.getAsInteger(10, Minor)
@@ -4639,7 +4632,6 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   case frontend::RewriteTest:
   case frontend::RunAnalysis:
   case frontend::TemplightDump:
-  case frontend::MigrateSource:
     return false;
 
   case frontend::DumpCompilerOptions:
