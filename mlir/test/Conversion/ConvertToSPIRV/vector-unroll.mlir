@@ -83,17 +83,20 @@ func.func @vaddi_reduction(%arg0 : vector<8xi32>, %arg1 : vector<8xi32>) -> (i32
 // CHECK-LABEL: @transpose
 // CHECK-SAME: (%[[ARG0:.+]]: vector<3xi32>, %[[ARG1:.+]]: vector<3xi32>)
 func.func @transpose(%arg0 : vector<2x3xi32>) -> (vector<3x2xi32>) {
-  // CHECK: %[[CST:.*]] = arith.constant dense<0> : vector<2xi32>
+  // CHECK: %[[CST:.*]] = ub.poison : vector<1x2xi32>
   // CHECK: %[[EXTRACT0:.*]] = vector.extract %[[ARG0]][0] : i32 from vector<3xi32>
-  // CHECK: %[[INSERT0:.*]]= vector.insert %[[EXTRACT0]], %[[CST]] [0] : i32 into vector<2xi32>
+  // CHECK: %[[CST1:.*]] = vector.extract %[[CST]][0] : vector<2xi32> from vector<1x2xi32>
+  // CHECK: %[[INSERT0:.*]]= vector.insert %[[EXTRACT0]], %[[CST1]] [0] : i32 into vector<2xi32>
   // CHECK: %[[EXTRACT1:.*]] = vector.extract %[[ARG1]][0] : i32 from vector<3xi32>
   // CHECK: %[[INSERT1:.*]] = vector.insert %[[EXTRACT1]], %[[INSERT0]][1] : i32 into vector<2xi32>
   // CHECK: %[[EXTRACT2:.*]] = vector.extract %[[ARG0]][1] : i32 from vector<3xi32>
-  // CHECK: %[[INSERT2:.*]] = vector.insert %[[EXTRACT2]], %[[CST]] [0] : i32 into vector<2xi32>
+  // CHECK: %[[CST2:.*]] = vector.extract %[[CST]][0] : vector<2xi32> from vector<1x2xi32>
+  // CHECK: %[[INSERT2:.*]] = vector.insert %[[EXTRACT2]], %[[CST2]] [0] : i32 into vector<2xi32>
   // CHECK: %[[EXTRACT3:.*]] = vector.extract %[[ARG1]][1] : i32 from vector<3xi32>
   // CHECK: %[[INSERT3:.*]] = vector.insert %[[EXTRACT3]], %[[INSERT2]] [1] : i32 into vector<2xi32>
   // CHECK: %[[EXTRACT4:.*]] = vector.extract %[[ARG0]][2] : i32 from vector<3xi32>
-  // CHECK: %[[INSERT4:.*]] = vector.insert %[[EXTRACT4]], %[[CST]] [0] : i32 into vector<2xi32>
+  // CHECK: %[[CST3:.*]] = vector.extract %[[CST]][0] : vector<2xi32> from vector<1x2xi32>
+  // CHECK: %[[INSERT4:.*]] = vector.insert %[[EXTRACT4]], %[[CST3]] [0] : i32 into vector<2xi32>
   // CHECK: %[[EXTRACT5:.*]] = vector.extract %[[ARG1]][2] : i32 from vector<3xi32>
   // CHECK: %[[INSERT5:.*]] = vector.insert %[[EXTRACT5]], %[[INSERT4]] [1] : i32 into vector<2xi32>
   // CHECK: return %[[INSERT1]], %[[INSERT3]], %[[INSERT5]] : vector<2xi32>, vector<2xi32>, vector<2xi32>
