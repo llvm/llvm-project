@@ -65,8 +65,8 @@ def EmitC_FileOp
     A `file` represents a single C/C++ file.
 
     `mlir-translate` ignores the body of all `emitc.file` ops
-    unless the `-file-id=id` flag is used. With that flag, the `emitc.file`
-    with matching id is emitted.
+    unless the `-file-id=id` flag is used. With that flag, all `emitc.file` ops
+    with matching id are emitted.
 
     Example:
 
@@ -85,7 +85,7 @@ def EmitC_FileOp
   let assemblyFormat = "$id attr-dict-with-keyword $bodyRegion";
   let builders = [OpBuilder<(ins CArg<"StringRef">:$id)>];
   let extraClassDeclaration = [{
-    /// Construct a file op from the given location with an optional name.
+    /// Construct a file op from the given location with a name.
     static FileOp create(Location loc, StringRef name);
 
     //===------------------------------------------------------------------===//
