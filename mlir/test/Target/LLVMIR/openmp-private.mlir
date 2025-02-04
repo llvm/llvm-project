@@ -103,6 +103,9 @@ llvm.func @parallel_op_private_multi_block(%arg0: !llvm.ptr) {
 // CHECK:  %[[ORIG_PTR_PTR:.*]] = getelementptr { ptr }, ptr %{{.*}}, i32 0, i32 0
 // CHECK:  %[[ORIG_PTR:.*]] = load ptr, ptr %[[ORIG_PTR_PTR]], align 8
 // CHECK:  %[[PRIV_ALLOC:.*]] = alloca float, align 4
+// CHECK-NEXT:   br label %[[PAR_REG:.*]]
+
+// CHECK: [[PAR_REG]]:
 // CHECK:  br label %omp.private.init
 
 // CHECK: omp.private.init:
@@ -124,9 +127,6 @@ llvm.func @parallel_op_private_multi_block(%arg0: !llvm.ptr) {
 // address.
 // CHECK: [[PRIV_CONT]]:
 // CHECK-NEXT:   %[[PRIV_ALLOC3:.*]] = phi ptr [ %[[PRIV_ALLOC2]], %[[PRIV_BB2]] ]
-// CHECK-NEXT:   br label %[[PAR_REG:.*]]
-
-// CHECK: [[PAR_REG]]:
 // CHECK-NEXT:   br label %[[PAR_REG2:.*]]
 
 // Check that the body of the parallel region loads from the private clone.
