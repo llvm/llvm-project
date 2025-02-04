@@ -51887,6 +51887,35 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  if (N0.getOpcode() == ISD::SHL || N1.getOpcode() == ISD::SHL){
+    SDValue SHL = (N0.getOpcode() == ISD::SHL) ? N0 : N1;
+    SDValue OtherOp = (N0.getOpcode() == ISD::SHL) ? N1 : N0;
+    
+    if (OtherOp.getOpcode() == ISD::AND) {
+      SDValue andop = OtherOp;
+      
+      if(andop.getOperand(0).getOpcode()==ISD::Constant||andop.getOperand(1).getOpcode()==ISD::Constant){
+              
+              SDValue constOp = andop.getOperand(0).getOpcode()==ISD::Constant ? andop.getOperand(0): andop.getOperand(1);
+              SDValue valueOp = andop.getOperand(0).getOpcode()==ISD::Constant ? andop.getOperand(1): andop.getOperand(0);
+              auto *ConstRHS = dyn_cast<ConstantSDNode>(constOp);
+              uint64_t maskValue = ConstRHS->getZExtValue();
+              auto *ConstSHL = dyn_cast<ConstantSDNode>(SHL.getOperand(1));
+              uint64_t shiftValue = ConstSHL->getZExtValue();
+              
+              if((((uint64_t)1<<shiftValue)-1)==maskValue){
+                      unsigned numbits = SHL.getScalarValueSizeInBits();
+                      unsigned newshift=numbits-shiftValue;
+                      
+                      SDValue newSHL = DAG.getNode(ISD::SHL,dl,VT,valueOp,DAG.getConstant(newshift, dl, MVT::i8));
+                      SDValue R = DAG.getNode(ISD::FSHR,dl,VT,
+                                    SHL.getOperand(0),newSHL,DAG.getConstant(newshift, dl, MVT::i8));
+                      return R;
+            }
+          }
+      }
+  }
+  
   if (SDValue SetCC = combineAndOrForCcmpCtest(N, DAG, DCI, Subtarget))
     return SetCC;
 
