@@ -22,6 +22,11 @@ F(32,ulong4) \
 F(64,ulong8) \
 F(128,ulong16)
 
+// Assume that ptr is aligned by at least align bytes. In contrast to
+// __builtin_assume_aligned, this allows a non-constant alignment operand.
+#define ASSUME_ALIGNED(ptr, align) \
+    __builtin_assume(__builtin_is_aligned(ptr, align))
+
 struct pipeimp {
     atomic_size_t read_idx;
     atomic_size_t write_idx;
@@ -29,8 +34,6 @@ struct pipeimp {
     uchar pad[128 - 3*sizeof(size_t)];
     uchar packets[1];
 };
-
-extern void __memcpy_internal_aligned(void *, const void *, size_t, size_t);
 
 static __attribute__((always_inline)) size_t
 reserve(volatile __global atomic_size_t *pi, size_t lim, size_t n)

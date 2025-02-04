@@ -42,7 +42,6 @@ THE SOFTWARE.
 
 class HipBinAmd : public HipBinBase {
  private:
-  HipBinUtil* hipBinUtilPtr_;
   string hipClangPath_ = "";
   string roccmPathEnv_, hipRocclrPathEnv_, hsaPathEnv_;
   PlatformInfo platformInfoAMD_;

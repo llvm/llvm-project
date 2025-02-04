@@ -195,6 +195,9 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MaxPrefetchIterationsAhead = 4;
     VScaleForTuning = 4;
     break;
+  case MONAKA:
+    VScaleForTuning = 2;
+    break;
   case AppleA7:
   case AppleA10:
   case AppleA11:
@@ -255,12 +258,13 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MaxBytesForLoopAlignment = 16;
     break;
   case NeoverseV2:
-    // Specialize cost for Neoverse-V2.
+  case NeoverseV3:
+    EpilogueVectorizationMinVF = 8;
+    MaxInterleaveFactor = 4;
     ScatterOverhead = 13;
     LLVM_FALLTHROUGH;
   case NeoverseN2:
   case NeoverseN3:
-  case NeoverseV3:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
@@ -354,7 +358,10 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
       CustomCallSavedXRegs(AArch64::GPR64commonRegClass.getNumRegs()),
       IsLittle(LittleEndian), IsStreaming(IsStreaming),
       IsStreamingCompatible(IsStreamingCompatible),
-      StreamingHazardSize(AArch64StreamingHazardSize),
+      StreamingHazardSize(
+          AArch64StreamingHazardSize.getNumOccurrences() > 0
+              ? std::optional<unsigned>(AArch64StreamingHazardSize)
+              : std::nullopt),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
       MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU, HasMinSize)),

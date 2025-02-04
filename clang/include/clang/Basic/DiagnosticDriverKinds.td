@@ -67,7 +67,7 @@ def err_drv_no_cuda_libdevice : Error<
   "libdevice">;
 
 def err_drv_no_rocm_device_lib : Error<
-  "cannot find ROCm device library%select{| for %1|for ABI version %1}0; provide its path via "
+  "cannot find ROCm device library%select{| for %1| for ABI version %1}0; provide its path via "
   "'--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build "
   "without ROCm device library">;
 def err_drv_no_asan_rt_lib : Error<
@@ -95,10 +95,6 @@ def err_drv_hipspv_no_hip_path : Error<
   "'--hip-path' must be specified when offloading to SPIR-V unless '-nogpuinc' "
   "is given">;
 
-// TODO: Remove when COV6 is fully supported by ROCm.
-def warn_drv_amdgpu_cov6: Warning<
-  "code object v6 is still in development and not ready for production use yet;"
-  " use at your own risk">;
 def err_drv_undetermined_gpu_arch : Error<
   "cannot determine %0 architecture: %1; consider passing it via '%2'; "
   "environment variable CLANG_TOOLCHAIN_PROGRAM_TIMEOUT specifies the tool "
@@ -455,12 +451,13 @@ def warn_drv_clang_unsupported : Warning<
   "the clang compiler does not support '%0'">;
 def warn_drv_deprecated_arg : Warning<
   "argument '%0' is deprecated%select{|, use '%2' instead}1">, InGroup<Deprecated>;
-def warn_drv_deprecated_arg_no_relaxed_template_template_args : Warning<
-  "argument '-fno-relaxed-template-template-args' is deprecated">,
-  InGroup<DeprecatedNoRelaxedTemplateTemplateArgs>;
 def warn_drv_deprecated_arg_ofast : Warning<
   "argument '-Ofast' is deprecated; use '-O3 -ffast-math' for the same behavior,"
   " or '-O3' to enable only conforming optimizations">,
+  InGroup<DeprecatedOFast>;
+def warn_drv_deprecated_arg_ofast_for_flang : Warning<
+  "argument '-Ofast' is deprecated; use '-O3 -ffast-math -fstack-arrays' for the same behavior,"
+  " or '-O3 -fstack-arrays' to enable only conforming optimizations">,
   InGroup<DeprecatedOFast>;
 def warn_drv_deprecated_custom : Warning<
   "argument '%0' is deprecated, %1">, InGroup<Deprecated>;
@@ -825,6 +822,9 @@ def err_drv_loongarch_invalid_simd_option_combination : Error<
   "invalid option combination; LASX depends on LSX">;
 def err_drv_loongarch_invalid_msimd_EQ : Error<
   "invalid argument '%0' to -msimd=; must be one of: none, lsx, lasx">;
+
+def err_drv_loongarch_unsupported_with_linker_relaxation : Error<
+  "%0 is unsupported with LoongArch linker relaxation (-mrelax)">;
 
 def err_drv_expand_response_file : Error<
   "failed to expand response file: %0">;

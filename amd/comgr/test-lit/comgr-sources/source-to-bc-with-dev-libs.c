@@ -8,8 +8,7 @@ int main(int argc, char *argv[]) {
   char *BufSource;
   size_t SizeSource;
   amd_comgr_data_t DataSource;
-  amd_comgr_data_set_t DataSetIn, DataSetPch, DataSetBc, DataSetLinked,
-      DataSetReloc, DataSetExec;
+  amd_comgr_data_set_t DataSetIn, DataSetPch, DataSetBc;
   amd_comgr_action_info_t DataAction;
   const char *CodeGenOptions[] = {
     "-mcode-object-version=5", "-mllvm", "-amdgpu-prelink"};

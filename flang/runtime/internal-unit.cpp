@@ -36,6 +36,8 @@ RT_API_ATTRS InternalDescriptorUnit<DIR>::InternalDescriptorUnit(
   Descriptor &d{descriptor()};
   RUNTIME_CHECK(
       terminator, that.SizeInBytes() <= d.SizeInBytes(maxRank, true, 0));
+  RUNTIME_CHECK(terminator,
+      that.SizeInBytes() <= MaxDescriptorSizeInBytes(maxRank, true, 0));
   new (&d) Descriptor{that};
   d.Check();
   internalIoCharKind = thatType->second;
@@ -70,7 +72,7 @@ RT_API_ATTRS bool InternalDescriptorUnit<DIR>::Emit(
       BlankFill(record + furthestPositionInRecord,
           positionInRecord - furthestPositionInRecord);
     }
-    std::memcpy(record + positionInRecord, data, bytes);
+    Fortran::runtime::memcpy(record + positionInRecord, data, bytes);
     positionInRecord += bytes;
     furthestPositionInRecord = furthestAfter;
     return ok;

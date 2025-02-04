@@ -43,16 +43,12 @@ define void @func_use_lds_global_constexpr_cast() {
 ; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_trap 2
-; GFX8-NEXT:    flat_store_dword v[0:1], v0
-; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: func_use_lds_global_constexpr_cast:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_trap 2
-; GFX9-NEXT:    global_store_dword v[0:1], v0, off
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   store i32 ptrtoint (ptr addrspace(3) @lds to i32), ptr addrspace(1) undef, align 4
   ret void

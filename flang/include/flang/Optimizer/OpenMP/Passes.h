@@ -13,6 +13,7 @@
 #ifndef FORTRAN_OPTIMIZER_OPENMP_PASSES_H
 #define FORTRAN_OPTIMIZER_OPENMP_PASSES_H
 
+#include "flang/Optimizer/OpenMP/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
@@ -21,6 +22,9 @@
 #include <memory>
 
 namespace flangomp {
+
+std::unique_ptr<mlir::Pass> createDoConcurrentConversionPass(bool mapToDevice);
+
 #define GEN_PASS_DECL
 #define GEN_PASS_REGISTRATION
 #include "flang/Optimizer/OpenMP/Passes.h.inc"

@@ -8,9 +8,12 @@
 HIPCC documentation
 ******************************************
 
-``hipcc`` is a compiler driver utility that will call clang or nvcc, depending on target, and pass the appropriate include and library options for the target compiler and HIP infrastructure. 
+``hipcc`` is a compiler driver utility that will call clang or nvcc, depending on target, and pass the appropriate include and library options for the target compiler and HIP infrastructure.
 
-There are both Perl and C++ executable versions of the ``hipcc`` and ``hipconfig`` compiler driver utilities provided. By default the C++ version is used when ``hipcc`` is run. To enable the Perl versions of these commands set the environment variable ``HIP_USE_PERL_SCRIPTS=1``.
+There are both C++ and Perl executable versions of the ``hipcc`` and ``hipconfig`` compiler driver utilities provided. By default the C++ version is used when ``hipcc`` is run.
+
+.. note:: 
+  You can manually run the Perl scripts using hipcc.pl and hipconfig.pl from the installation. However, you must ensure Perl is installed on the system for the scripts to work. Perl is not automatically installed with the ROCm installation.
 
 The documentation is structured as follows:
 

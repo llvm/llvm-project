@@ -89,4 +89,10 @@ LoongArchTTIImpl::getPopcntSupport(unsigned TyWidth) {
   return ST->hasExtLSX() ? TTI::PSK_FastHardware : TTI::PSK_Software;
 }
 
+unsigned LoongArchTTIImpl::getCacheLineSize() const { return 64; }
+
+unsigned LoongArchTTIImpl::getPrefetchDistance() const { return 200; }
+
+bool LoongArchTTIImpl::enableWritePrefetching() const { return true; }
+
 // TODO: Implement more hooks to provide TTI machinery for LoongArch.

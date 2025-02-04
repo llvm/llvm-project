@@ -10,20 +10,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Utils.h"
+#include <flang/Lower/OpenMP/Utils.h>
 
-#include "Clauses.h"
-#include <DirectivesCommon.h>
-
+#include <flang/Evaluate/fold.h>
 #include <flang/Lower/AbstractConverter.h>
+#include <flang/Lower/ConvertExprToHLFIR.h>
 #include <flang/Lower/ConvertType.h>
+#include <flang/Lower/DirectivesCommon.h>
+#include <flang/Lower/OpenMP/Clauses.h>
 #include <flang/Lower/PFTBuilder.h>
+#include <flang/Lower/StatementContext.h>
+#include <flang/Lower/SymbolMap.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
 #include <flang/Optimizer/Builder/Todo.h>
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
 #include <flang/Semantics/tools.h>
 #include <llvm/Support/CommandLine.h>
+#include <mlir/Analysis/TopologicalSortUtils.h>
+#include <mlir/Dialect/Arith/IR/Arith.h>
 
 #include <iterator>
 
@@ -310,8 +315,9 @@ mlir::Value createParentSymAndGenIntermediateMaps(
   };
 
   // Generate the access to the original parent base address.
-  lower::AddrAndBoundsInfo parentBaseAddr = lower::getDataOperandBaseAddr(
-      converter, firOpBuilder, *objectList[0].sym(), clauseLocation);
+  fir::factory::AddrAndBoundsInfo parentBaseAddr =
+      lower::getDataOperandBaseAddr(converter, firOpBuilder,
+                                    *objectList[0].sym(), clauseLocation);
   mlir::Value curValue = parentBaseAddr.addr;
 
   // Iterate over all objects in the objectList, this should consist of all
@@ -560,7 +566,7 @@ void insertChildMapInfoIntoParent(
       // Create parent to emplace and bind members
       llvm::SmallVector<mlir::Value> bounds;
       std::stringstream asFortran;
-      lower::AddrAndBoundsInfo info =
+      fir::factory::AddrAndBoundsInfo info =
           lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
                                                 mlir::omp::MapBoundsType>(
               converter, firOpBuilder, semaCtx, converter.getFctCtx(),

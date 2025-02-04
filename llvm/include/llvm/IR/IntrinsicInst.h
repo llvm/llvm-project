@@ -1935,13 +1935,13 @@ public:
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
 
-  bool isAnchor() {
+  bool isAnchor() const {
     return getIntrinsicID() == Intrinsic::experimental_convergence_anchor;
   }
-  bool isEntry() {
+  bool isEntry() const {
     return getIntrinsicID() == Intrinsic::experimental_convergence_entry;
   }
-  bool isLoop() {
+  bool isLoop() const {
     return getIntrinsicID() == Intrinsic::experimental_convergence_loop;
   }
 };

@@ -26,16 +26,22 @@ if(${LIBOMP_OMPT_SUPPORT})
 endif()
 
 # Generate message catalog files: kmp_i18n_id.inc and kmp_i18n_default.inc
+set(LIBOMP_MESSAGE_CONVERTER_EXTRA_ARGS "")
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "Emscripten")
+  # Required as Python doesn't inherit CMake's environment setup and uses the host system as the target system by default
+  set(LIBOMP_MESSAGE_CONVERTER_EXTRA_ARGS ${LIBOMP_MESSAGE_CONVERTER_EXTRA_ARGS} --target-system-override=${CMAKE_SYSTEM_NAME})
+endif()
+
 add_custom_command(
   OUTPUT  kmp_i18n_id.inc
   COMMAND ${Python3_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/message-converter.py
-          --enum=kmp_i18n_id.inc ${LIBOMP_SRC_DIR}/i18n/en_US.txt
+          --enum=kmp_i18n_id.inc ${LIBOMP_MESSAGE_CONVERTER_EXTRA_ARGS} ${LIBOMP_SRC_DIR}/i18n/en_US.txt
   DEPENDS ${LIBOMP_SRC_DIR}/i18n/en_US.txt ${LIBOMP_TOOLS_DIR}/message-converter.py
 )
 add_custom_command(
   OUTPUT  kmp_i18n_default.inc
   COMMAND ${Python3_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/message-converter.py
-          --default=kmp_i18n_default.inc ${LIBOMP_SRC_DIR}/i18n/en_US.txt
+          --default=kmp_i18n_default.inc ${LIBOMP_MESSAGE_CONVERTER_EXTRA_ARGS} ${LIBOMP_SRC_DIR}/i18n/en_US.txt
   DEPENDS ${LIBOMP_SRC_DIR}/i18n/en_US.txt ${LIBOMP_TOOLS_DIR}/message-converter.py
 )
 
@@ -146,6 +152,11 @@ libomp_get_asmflags(LIBOMP_CONFIGURED_ASMFLAGS)
 set(LIBOMP_CONFIGURED_CXXFLAGS "${LIBOMP_CONFIGURED_CXXFLAGS} ${OPENMP_SOURCE_DEBUG_MAP}")
 set_source_files_properties(${LIBOMP_CXXFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_CXXFLAGS}")
 set_source_files_properties(${LIBOMP_ASMFILES} ${LIBOMP_GNUASMFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_ASMFLAGS}")
+
+# Disable libstdc++/libc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build,
+# to avoid an unwanted dependency on libstdc++/libc++.so.
+add_definitions(-U_GLIBCXX_ASSERTIONS)
+add_definitions(-U_LIBCPP_ENABLE_ASSERTIONS)
 
 # Remove any cmake-automatic linking of the standard C++ library.
 # We neither need (nor want) the standard C++ library dependency even though we compile c++ files.

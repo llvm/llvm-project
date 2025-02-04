@@ -102,15 +102,15 @@ add_header(__getoptargv_t HDR __getoptargv_t.h)
 add_header(wchar_t HDR wchar_t.h)
 add_header(char8_t HDR char8_t.h)
 add_header(
-    char16_t 
-  HDR 
+    char16_t
+  HDR
     char16_t.h
   DEPENDS
     libc.include.llvm-libc-macros.stdint_macros
 )
 add_header(
-    char32_t 
-  HDR 
+    char32_t
+  HDR
     char32_t.h
   DEPENDS
     libc.include.llvm-libc-macros.stdint_macros
@@ -122,7 +122,6 @@ add_header(struct_sockaddr_un HDR struct_sockaddr_un.h DEPENDS .sa_family_t)
 add_header(struct_sockaddr HDR struct_sockaddr.h DEPENDS .sa_family_t)
 add_header(struct_iovec HDR struct_iovec.h DEPENDS .size_t)
 add_header(struct_msghdr HDR struct_msghdr.h DEPENDS .size_t .socklen_t .struct_iovec)
-add_header(rpc_opcodes_t HDR rpc_opcodes_t.h)
 add_header(ACTION HDR ACTION.h)
 add_header(ENTRY HDR ENTRY.h)
 add_header(struct_hsearch_data HDR struct_hsearch_data.h)
@@ -146,8 +145,8 @@ add_header(cfloat16 HDR cfloat16.h)
 add_header(fsblkcnt_t HDR fsblkcnt_t.h)
 add_header(fsfilcnt_t HDR fsfilcnt_t.h)
 add_header(
-  struct_statvfs 
-HDR 
+  struct_statvfs
+HDR
   struct_statvfs.h
 DEPENDS
   .fsblkcnt_t

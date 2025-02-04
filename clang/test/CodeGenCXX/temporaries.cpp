@@ -714,7 +714,7 @@ namespace MultipleExtension {
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1AD1Ev, {{.*}} @[[TEMPA]]
   // CHECK: store {{.*}} @[[TEMPA]], {{.*}} @[[TEMPE:_ZGRN17MultipleExtension2e1E.*]],
 
-  // CHECK: call void @_ZN17MultipleExtension1BC1Ev({{.*}} getelementptr inbounds ({{.*}} @[[TEMPE]], i64 8))
+  // CHECK: call void @_ZN17MultipleExtension1BC1Ev({{.*}} getelementptr inbounds nuw ({{.*}} @[[TEMPE]], i32 0, i32 1))
 
   // CHECK: call void @_ZN17MultipleExtension1DC1Ev({{.*}} @[[TEMPD:_ZGRN17MultipleExtension2e1E.*]])
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1DD1Ev, {{.*}} @[[TEMPD]]
@@ -728,7 +728,7 @@ namespace MultipleExtension {
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1AD1Ev, {{.*}} @[[TEMPA]]
   // CHECK: store {{.*}} @[[TEMPA]], {{.*}} @[[E:_ZN17MultipleExtension2e2E]]
 
-  // CHECK: call void @_ZN17MultipleExtension1BC1Ev({{.*}} getelementptr inbounds ({{.*}} @[[E]], i64 8))
+  // CHECK: call void @_ZN17MultipleExtension1BC1Ev({{.*}} getelementptr inbounds nuw ({{.*}} @[[E]], i32 0, i32 1))
 
   // CHECK: call void @_ZN17MultipleExtension1DC1Ev({{.*}} @[[TEMPD:_ZGRN17MultipleExtension2e2E.*]])
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1DD1Ev, {{.*}} @[[TEMPD]]
@@ -743,11 +743,11 @@ namespace MultipleExtension {
     // CHECK: %[[TEMPE1_A:.*]] = getelementptr inbounds {{.*}} %[[TEMPE1:.*]], i32 0, i32 0
     // CHECK: call void @[[NS]]1AC1Ev({{.*}} %[[TEMPA1:.*]])
     // CHECK: store {{.*}} %[[TEMPA1]], {{.*}} %[[TEMPE1_A]]
-    // CHECK: %[[TEMPE1_B:.*]] = getelementptr inbounds {{.*}} %[[TEMPE1]], i64 8
+    // CHECK: %[[TEMPE1_B:.*]] = getelementptr inbounds {{.*}} %[[TEMPE1]], i32 0, i32 1
     // CHECK: call void @[[NS]]1BC1Ev({{.*}} %[[TEMPE1_B]])
     // CHECK: %[[TEMPE1_C:.*]] = getelementptr inbounds {{.*}} %[[TEMPE1]], i32 0, i32 2
     // CHECK: call void @[[NS]]1DC1Ev({{.*}} %[[TEMPD1:.*]])
-    // CHECK: %[[TEMPD1_C:.*]] = getelementptr inbounds {{.*}} %[[TEMPD1]], i64 4
+    // CHECK: %[[TEMPD1_C:.*]] = getelementptr inbounds {{.*}} %[[TEMPD1]], i32 0, i32 1
     // CHECK: store {{.*}} %[[TEMPD1_C]], {{.*}} %[[TEMPE1_C]]
     // CHECK: store {{.*}} %[[TEMPE1]], {{.*}} %[[E1:.*]]
 
@@ -758,11 +758,11 @@ namespace MultipleExtension {
     // CHECK: %[[TEMPE2_A:.*]] = getelementptr inbounds {{.*}} %[[E2:.*]], i32 0, i32 0
     // CHECK: call void @[[NS]]1AC1Ev({{.*}} %[[TEMPA2:.*]])
     // CHECK: store {{.*}} %[[TEMPA2]], {{.*}} %[[TEMPE2_A]]
-    // CHECK: %[[TEMPE2_B:.*]] = getelementptr inbounds {{.*}} %[[E2]], i64 8
+    // CHECK: %[[TEMPE2_B:.*]] = getelementptr inbounds {{.*}} %[[E2]], i32 0, i32 1
     // CHECK: call void @[[NS]]1BC1Ev({{.*}} %[[TEMPE2_B]])
     // CHECK: %[[TEMPE2_C:.*]] = getelementptr inbounds {{.*}} %[[E2]], i32 0, i32 2
     // CHECK: call void @[[NS]]1DC1Ev({{.*}} %[[TEMPD2:.*]])
-    // CHECK: %[[TEMPD2_C:.*]] = getelementptr inbounds {{.*}} %[[TEMPD2]], i64 4
+    // CHECK: %[[TEMPD2_C:.*]] = getelementptr inbounds {{.*}} %[[TEMPD2]], i32 0, i32 1
     // CHECK: store {{.*}} %[[TEMPD2_C]], ptr %[[TEMPE2_C]]
 
     g();

@@ -1390,6 +1390,28 @@ DIExpression *DIExpression::getImpl(LLVMContext &Context,
 DIExpression *DIExpression::getImpl(LLVMContext &Context,
                                     OldElementsRef Elements,
                                     StorageType Storage, bool ShouldCreate) {
+  // If Elements is any expression containing DW_OP_LLVM_poisoned and an
+  // optional fragment then canonicalize, the other ops aren't doing anything.
+  SmallVector<uint64_t, 4> CanonicalizedPoisonOps;
+  for (unsigned Idx = 0; Idx < Elements.size();) {
+    ExprOperand Op(&Elements[Idx]);
+
+    if (CanonicalizedPoisonOps.empty()) {
+      if (Op.getOp() == dwarf::DW_OP_LLVM_poisoned)
+        CanonicalizedPoisonOps.push_back(Op.getOp());
+    } else if (Op.getOp() == dwarf::DW_OP_LLVM_fragment &&
+               Idx + 2 < Elements.size()) {
+      CanonicalizedPoisonOps.push_back(Op.getOp());
+      CanonicalizedPoisonOps.push_back(Op.getArg(0));
+      CanonicalizedPoisonOps.push_back(Op.getArg(1));
+    }
+
+    // Have to handle invalid exprs.
+    Idx += Op.getSize();
+  }
+  if (!CanonicalizedPoisonOps.empty())
+    Elements = CanonicalizedPoisonOps;
+
   DEFINE_GETIMPL_LOOKUP(DIExpression, (Elements));
   DEFINE_GETIMPL_STORE_NO_OPS(DIExpression, (Elements));
 }
@@ -1511,9 +1533,11 @@ public:
       return true;
     if (Env->Arguments.empty())
       return error("DIOpReferrer requires an argument");
-    return expectSameSize(
-        ResultType, Env->Arguments[0]->getType(),
-        "DIOpReferrer type must be same size in bits as argument");
+    const Value *V = Env->Arguments[0];
+    return isa<PoisonValue>(V) ||
+           expectSameSize(
+               ResultType, V->getType(),
+               "DIOpReferrer type must be same size in bits as argument");
   }
 
   bool visit(DIOp::Arg Op, Type *ResultType, ArrayRef<StackEntry>) {
@@ -1521,7 +1545,9 @@ public:
       return true;
     if (Op.getIndex() >= Env->Arguments.size())
       return error("DIOpArg index out of range");
-    return expectSameSize(ResultType, Env->Arguments[Op.getIndex()]->getType(),
+    const Value *V = Env->Arguments[Op.getIndex()];
+    return isa<PoisonValue>(V) ||
+           expectSameSize(ResultType, V->getType(),
                           "DIOpArg type must be same size in bits as argument");
   }
 
@@ -1833,6 +1859,9 @@ DIExpression::convertToUndefExpression(const DIExpression *Expr) {
 
 const DIExpression *
 DIExpression::convertToVariadicExpression(const DIExpression *Expr) {
+  if (Expr->holdsNewElements())
+    return Expr;
+
   if (any_of(Expr->expr_ops(), [](auto ExprOp) {
         return ExprOp.getOp() == dwarf::DW_OP_LLVM_arg;
       }))
@@ -1846,10 +1875,10 @@ DIExpression::convertToVariadicExpression(const DIExpression *Expr) {
 
 std::optional<const DIExpression *>
 DIExpression::convertToNonVariadicExpression(const DIExpression *Expr) {
-  if (Expr->holdsNewElements())
+  if (!Expr)
     return std::nullopt;
 
-  if (!Expr)
+  if (Expr->holdsNewElements())
     return std::nullopt;
 
   if (auto Elts = Expr->getSingleLocationExpressionElements())
@@ -1892,6 +1921,11 @@ bool DIExpression::isEqualExpression(const DIExpression *FirstExpr,
                                      bool FirstIndirect,
                                      const DIExpression *SecondExpr,
                                      bool SecondIndirect) {
+  if (FirstExpr->holdsNewElements() != SecondExpr->holdsNewElements())
+    return false;
+  if (FirstExpr->holdsNewElements())
+    return FirstIndirect == SecondIndirect && FirstExpr == SecondExpr;
+
   SmallVector<uint64_t> FirstOps;
   DIExpression::canonicalizeExpressionOps(FirstOps, FirstExpr, FirstIndirect);
   SmallVector<uint64_t> SecondOps;
@@ -2043,6 +2077,8 @@ bool DIExpression::hasAllLocationOps(unsigned N) const {
   for (auto ExprOp : expr_ops())
     if (ExprOp.getOp() == dwarf::DW_OP_LLVM_arg)
       SeenOps.insert(ExprOp.getArg(0));
+    else if (ExprOp.getOp() == dwarf::DW_OP_LLVM_poisoned)
+      return true;
   for (uint64_t Idx = 0; Idx < N; ++Idx)
     if (!SeenOps.contains(Idx))
       return false;
@@ -2352,13 +2388,6 @@ std::optional<DIExpression *> DIExpression::createFragmentExpression(
 
   if (Expr->holdsNewElements())
     return createNewFragmentExpression(Expr, OffsetInBits, SizeInBits);
-
-  // FIXME(diexpression-poison): Is it safe to handle each fragment
-  // independently? If a fragment gets poisoned we lose the fragment info, so
-  // can't locate it correctly. Conservatively we can just have it cover the
-  // whole variable.
-  if (Expr->isPoisoned())
-    return Expr->getPoisoned();
 
   SmallVector<uint64_t, 8> Ops;
   // Track whether it's safe to split the value at the top of the DWARF stack,

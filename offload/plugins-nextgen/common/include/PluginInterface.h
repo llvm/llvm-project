@@ -93,14 +93,14 @@ struct AsyncInfoWrapperTy {
   }
 
   /// Synchronize with the __tgt_async_info's pending operations if it's the
-  /// internal async info. The error associated to the aysnchronous operations
+  /// internal async info. The error associated to the asynchronous operations
   /// issued in this queue must be provided in \p Err. This function will update
   /// the error parameter with the result of the synchronization if it was
   /// actually executed. This function must be called before destroying the
   /// object and only once.
   void finalize(Error &Err);
 
-  /// Register \p Ptr as an associated alloction that is freed after
+  /// Register \p Ptr as an associated allocation that is freed after
   /// finalization.
   void freeAllocationAfterSynchronization(void *Ptr) {
     AsyncInfoPtr->AssociatedAllocations.push_back(Ptr);
@@ -125,6 +125,7 @@ enum InfoLevelKind { InfoLevel1 = 1, InfoLevel2, InfoLevel3 };
 /// we use the level to determine the indentation of the key-value property at
 /// printing time. See the enum InfoLevelKind for the list of accepted levels.
 class InfoQueueTy {
+public:
   struct InfoQueueEntryTy {
     std::string Key;
     std::string Value;
@@ -132,6 +133,7 @@ class InfoQueueTy {
     uint64_t Level;
   };
 
+private:
   std::deque<InfoQueueEntryTy> Queue;
 
 public:
@@ -153,6 +155,8 @@ public:
     else
       Queue.push_back({Key, Value, Units, L});
   }
+
+  const std::deque<InfoQueueEntryTy> &getQueue() const { return Queue; }
 
   /// Print all info entries added to the queue.
   void print() const {
@@ -266,8 +270,9 @@ struct GenericKernelTy {
   Error launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                ptrdiff_t *ArgOffsets, KernelArgsTy &KernelArgs,
                AsyncInfoWrapperTy &AsyncInfoWrapper) const;
-  virtual Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
-                           uint64_t NumBlocks, KernelArgsTy &KernelArgs,
+  virtual Error launchImpl(GenericDeviceTy &GenericDevice,
+                           uint32_t NumThreads[3], uint32_t NumBlocks[3],
+                           KernelArgsTy &KernelArgs,
                            KernelLaunchParamsTy LaunchParams,
                            AsyncInfoWrapperTy &AsyncInfoWrapper) const = 0;
 
@@ -305,6 +310,15 @@ struct GenericKernelTy {
       return true;
     }
     llvm_unreachable("Unknown execution mode!");
+  }
+
+  /// Indicate whether it is a specialized kernel.
+  bool isSpecializedKernel() const {
+    if (ExecutionMode == OMP_TGT_EXEC_MODE_SPMD_NO_LOOP ||
+        ExecutionMode == OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP ||
+        ExecutionMode == OMP_TGT_EXEC_MODE_XTEAM_RED)
+      return true;
+    return false;
   }
 
   /// Check if kernel is a multi-device kernel.
@@ -355,15 +369,16 @@ protected:
 
   /// Prints generic kernel launch information.
   Error printLaunchInfo(GenericDeviceTy &GenericDevice,
-                        KernelArgsTy &KernelArgs, uint32_t NumThreads,
-                        uint64_t NumBlocks, int64_t MultiDeviceLB,
+                        KernelArgsTy &KernelArgs, uint32_t NumThreads[3],
+                        uint32_t NumBlocks[3], int64_t MultiDeviceLB,
                         int64_t MultiDeviceUB) const;
 
   /// Prints plugin-specific kernel launch information after generic kernel
   /// launch information
   virtual Error printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
                                        KernelArgsTy &KernelArgs,
-                                       uint32_t NumThreads, uint64_t NumBlocks,
+                                       uint32_t NumThreads[3],
+                                       uint32_t NumBlocks[3],
                                        int64_t MultiDeviceLB,
                                        int64_t MultiDeviceUB) const;
 
@@ -392,7 +407,7 @@ private:
   /// The number of threads \p NumThreads can be adjusted by this method.
   /// \p IsNumThreadsFromUser is true is \p NumThreads is defined by user via
   /// thread_limit clause.
-  virtual uint64_t getNumBlocks(GenericDeviceTy &GenericDevice,
+  virtual uint32_t getNumBlocks(GenericDeviceTy &GenericDevice,
                                 uint32_t BlockLimitClause[3],
                                 uint64_t LoopTripCount, uint32_t &NumThreads,
                                 bool IsNumThreadsFromUser) const;
@@ -522,7 +537,7 @@ private:
 };
 
 /// Class representing a map of host pinned allocations. We track these pinned
-/// allocations, so memory tranfers invloving these buffers can be optimized.
+/// allocations, so memory transfers involving these buffers can be optimized.
 class PinnedAllocationMapTy {
 
   /// Struct representing a map entry.
@@ -548,7 +563,7 @@ class PinnedAllocationMapTy {
     /// becomes zero.
     mutable size_t References;
 
-    /// Create an entry with the host and device acessible pointers, the buffer
+    /// Create an entry with the host and device accessible pointers, the buffer
     /// size, and a boolean indicating whether the buffer was locked externally.
     EntryTy(void *HstPtr, void *DevAccessiblePtr, size_t Size,
             bool ExternallyLocked)
@@ -583,7 +598,7 @@ class PinnedAllocationMapTy {
   /// Indicate whether mapped host buffers should be locked automatically.
   bool LockMappedBuffers;
 
-  /// Indicate whether failures when locking mapped buffers should be ingored.
+  /// Indicate whether failures when locking mapped buffers should be ignored.
   bool IgnoreLockMappedFailures;
 
   /// Find an allocation that intersects with \p HstPtr pointer. Assume the
@@ -782,12 +797,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Setup the global device memory pool, if the plugin requires one.
   Error setupDeviceMemoryPool(GenericPluginTy &Plugin, DeviceImageTy &Image,
                               uint64_t PoolSize);
-
-  // Setup the RPC server for this device if needed. This may not run on some
-  // plugins like the CPU targets. By default, it will not be executed so it is
-  // up to the target to override this using the shouldSetupRPCServer function.
-  Error setupRPCServer(GenericPluginTy &Plugin, DeviceImageTy &Image);
-
   /// Synchronize the current thread with the pending operations on the
   /// __tgt_async_info structure.
   Error synchronize(__tgt_async_info *AsyncInfo);
@@ -941,10 +950,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual bool supportsUnifiedMemoryImpl() { return false; }
 
   // Returns true if coarse graining of mapped variables is
-  // disabled on MI200 GPUs.
-  // virtual bool IsFineGrainedMemoryEnabled() { return false; }
-  bool IsFineGrainedMemoryEnabled();
-  virtual bool IsFineGrainedMemoryEnabledImpl() { return false; }
+  // enabled on MI200 GPUs.
+  // virtual bool IsGfx90aCoarseGrainUsmMapEnabled() { return false; }
+  bool IsGfx90aCoarseGrainUsmMapEnabled();
+  virtual bool IsGfx90aCoarseGrainUsmMapEnabledImpl() { return false; }
 
   /// Create an event.
   Error createEvent(void **EventPtrStorage);
@@ -1086,7 +1095,13 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   uint32_t getNumMultiDevices() const { return OMPX_NumMultiDevices; }
 
+  bool enableRuntimeAutotuning() const { return OMPX_EnableRuntimeAutotuning; }
+
   bool getMultiDeviceKernelValue(void *EntryPtr);
+
+  /// Return true if a descriptor of size 'Size' should be allocated using
+  /// shared memory. Default implementation returns 'false',
+  virtual bool useSharedMemForDescriptor(int64_t Size);
 
   /// Reference to the underlying plugin that created this device.
   GenericPluginTy &Plugin;
@@ -1168,6 +1183,9 @@ private:
   /// Pointer to the memory manager or nullptr if not available.
   MemoryManagerTy *MemoryManager;
 
+  /// Per device setting of MemoryManager's Threshold
+  virtual size_t getMemoryManagerSizeThreshold() { return 0 /* use default */; }
+
   /// Environment variables defined by the OpenMP standard.
   Int32Envar OMP_TeamLimit;
   Int32Envar OMP_NumTeams;
@@ -1196,6 +1214,9 @@ protected:
 
   /// Specify the number of devices used by multi-device kernels.
   UInt32Envar OMPX_NumMultiDevices;
+
+  /// Envar to enable runtime tuning.
+  BoolEnvar OMPX_EnableRuntimeAutotuning;
 
   /// Array of images loaded into the device. Images are automatically
   /// deallocated by the allocator.
@@ -1288,7 +1309,7 @@ struct GenericPluginTy {
   /// Get the reference to the device with a certain device id.
   GenericDeviceTy &getDevice(int32_t DeviceId) {
     assert(isValidDeviceId(DeviceId) && "Invalid device id");
-    assert(Devices[DeviceId] && "Device is unitialized");
+    assert(Devices[DeviceId] && "Device is uninitialized");
 
     return *Devices[DeviceId];
   }
@@ -1422,8 +1443,9 @@ public:
   /// Returns if this device supports USM.
   bool supports_unified_memory(int32_t DeviceId);
 
-  /// Returns if fine grained memory is supported.
-  bool is_fine_grained_memory_enabled(int32_t DeviceId);
+  /// Returns if GFX90A coarse graining of OpenMP mapped
+  /// variables is enabled under unified shared memory.
+  bool is_gfx90a_coarse_grain_usm_map_enabled(int32_t DeviceId);
 
   /// Returns if managed memory is supported.
   bool is_system_supporting_managed_memory(int32_t DeviceId);
@@ -1471,7 +1493,7 @@ public:
   int32_t data_retrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr,
                         int64_t Size);
 
-  /// Copy data from the given device asynchornously.
+  /// Copy data from the given device asynchronously.
   int32_t data_retrieve_async(int32_t DeviceId, void *HstPtr, void *TgtPtr,
                               int64_t Size, __tgt_async_info *AsyncInfoPtr);
 
@@ -1514,7 +1536,7 @@ public:
   int32_t wait_event(int32_t DeviceId, void *EventPtr,
                      __tgt_async_info *AsyncInfoPtr);
 
-  /// Syncrhonize execution until an event is done.
+  /// Synchronize execution until an event is done.
   int32_t sync_event(int32_t DeviceId, void *EventPtr);
 
   /// Remove the event from the plugin.
@@ -1569,6 +1591,10 @@ public:
 
   /// Check if kernel is multi-device.
   bool kernel_is_multi_device(int32_t DeviceId, void *TgtEntryPtr);
+
+  /// Return true if a descriptor of size 'Size' should be allocated using
+  /// shared memory.
+  bool use_shared_mem_for_descriptor(int32_t DeviceId, int64_t Size);
 
 private:
   /// Indicates if the platform runtime has been fully initialized.
@@ -1816,9 +1842,6 @@ protected:
   /// The actual resource pool.
   std::deque<ResourceRef> ResourcePool;
 };
-
-/// A static check on whether or not we support RPC in libomptarget.
-bool libomptargetSupportsRPC();
 
 } // namespace plugin
 } // namespace target

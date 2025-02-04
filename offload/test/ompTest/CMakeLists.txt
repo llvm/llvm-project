@@ -10,6 +10,8 @@ endif()
 
 option(LIBOMPTEST_USE_GOOGLETEST "If set to 'ON' build ompTest upon GoogleTest, otherwise 'standalone'." OFF)
 
+option(LIBOMPTEST_BUILD_UNITTESTS "Build unit tests for ompTest, requires GoogleTest" OFF)
+
 cmake_minimum_required(VERSION 3.22)
 project(omptest LANGUAGES CXX)
 
@@ -58,6 +60,13 @@ target_include_directories(omptest
   PRIVATE
   ${LIBOMPTARGET_INCLUDE_DIR}
 )
+
+if(LIBOMPTEST_BUILD_UNITTESTS)
+  include(GoogleTest)
+  add_executable(omptest-unittests test/main-test.cpp)
+  target_link_libraries(omptest-unittests omptest)
+  target_link_libraries(omptest-unittests gtest gtest_main)
+endif()
 
 # Include local include directory, so we do not need relative paths
 include_directories(./include)

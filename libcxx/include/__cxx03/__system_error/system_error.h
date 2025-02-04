@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SYSTEM_ERROR_SYSTEM_ERROR_H
-#define _LIBCPP___SYSTEM_ERROR_SYSTEM_ERROR_H
+#ifndef _LIBCPP___CXX03___SYSTEM_ERROR_SYSTEM_ERROR_H
+#define _LIBCPP___CXX03___SYSTEM_ERROR_SYSTEM_ERROR_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__system_error/error_category.h>
@@ -51,4 +51,4 @@ _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI inline void __throw_system_error(error_co
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___SYSTEM_ERROR_SYSTEM_ERROR_H
+#endif // _LIBCPP___CXX03___SYSTEM_ERROR_SYSTEM_ERROR_H

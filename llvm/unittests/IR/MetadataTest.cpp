@@ -4059,6 +4059,67 @@ TEST_F(DIExpressionTest, createNewFragmentExpression) {
   EXPECT_EQ(High9FragInfo.OffsetInBits, 15u);
 }
 
+TEST_F(DIExpressionTest, DIOpisEqualExpression) {
+  auto *IntTy = Type::getInt32Ty(Context);
+  DIExpression *EmptyOld = DIExpression::get(Context, {});
+  DIOp::Variant Ops[] = {DIOp::Arg(0, IntTy)};
+  DIExpression *EmptyNew = DIExpression::get(Context, bool(), Ops);
+
+  EXPECT_FALSE(
+      DIExpression::isEqualExpression(EmptyOld, false, EmptyNew, false));
+  EXPECT_FALSE(
+      DIExpression::isEqualExpression(EmptyNew, true, EmptyNew, false));
+  EXPECT_TRUE(
+      DIExpression::isEqualExpression(EmptyNew, true, EmptyNew, true));
+}
+
+TEST_F(DIExpressionTest, poisonedFragments) {
+  // Verify that we retain the fragment info when creating a poisoned expr.
+  DIOp::Variant Ops[] = {DIOp::Arg(0, Type::getInt32Ty(Context)),
+                         DIOp::Fragment(8, 16)};
+  DIExpression *FragDIOpExpr = DIExpression::get(Context, bool(), Ops);
+  auto ElemsRef = FragDIOpExpr->getElements();
+  ASSERT_EQ(ElemsRef.size(), 4u);
+  EXPECT_EQ(ElemsRef[0], dwarf::DW_OP_LLVM_poisoned);
+  EXPECT_EQ(ElemsRef[1], dwarf::DW_OP_LLVM_fragment);
+  EXPECT_EQ(ElemsRef[2], 8u);
+  EXPECT_EQ(ElemsRef[3], 16u);
+
+  // Verify that we canonicalize poisoned DIExpressions.
+  auto ExpectCanonical = [&](std::vector<uint64_t> Ops,
+                             std::vector<uint64_t> CanonOps) {
+    DIExpression *Expr = DIExpression::get(Context, Ops);
+    DIExpression *CanonExpr = DIExpression::get(Context, CanonOps);
+    EXPECT_TRUE(Expr->holdsOldElements());
+    EXPECT_EQ(Expr, CanonExpr);
+    for (unsigned I = 0; I < CanonOps.size(); ++I)
+      EXPECT_EQ(Expr->getElements()[I], CanonOps[I]);
+  };
+
+  ExpectCanonical(
+      {dwarf::DW_OP_lit0, dwarf::DW_OP_LLVM_poisoned, dwarf::DW_OP_lit1},
+      {dwarf::DW_OP_LLVM_poisoned});
+  ExpectCanonical(
+      {dwarf::DW_OP_lit0, dwarf::DW_OP_LLVM_poisoned, dwarf::DW_OP_lit1,
+       dwarf::DW_OP_LLVM_fragment, 1, 2},
+      {dwarf::DW_OP_LLVM_poisoned, dwarf::DW_OP_LLVM_fragment, 1, 2});
+  // Just avoid a crash on invalid.
+  ExpectCanonical({dwarf::DW_OP_LLVM_poisoned, dwarf::DW_OP_LLVM_fragment, 1},
+                  {dwarf::DW_OP_LLVM_poisoned});
+  ExpectCanonical({dwarf::DW_OP_LLVM_fragment, 1, 2},
+                  {dwarf::DW_OP_LLVM_fragment, 1, 2});
+
+  // Verify that we handle sub-fragments of poisoned fragments correctly.
+  uint64_t POps[] = {dwarf::DW_OP_LLVM_poisoned, dwarf::DW_OP_LLVM_fragment, 16,
+                     32};
+  DIExpression *PoisonedFrag = DIExpression::get(Context, POps);
+  DIExpression *PoisonedSubFrag =
+      *DIExpression::createFragmentExpression(PoisonedFrag, 8, 8);
+  uint64_t SubFragOps[] = {dwarf::DW_OP_LLVM_poisoned,
+                           dwarf::DW_OP_LLVM_fragment, 24, 8};
+  EXPECT_EQ(PoisonedSubFrag->getElements(), ArrayRef<uint64_t>(SubFragOps));
+}
+
 TEST_F(DIExpressionTest, convertToUndefExpression) {
 #define EXPECT_UNDEF_OPS_EQUAL(TestExpr, Expected)                             \
   do {                                                                         \

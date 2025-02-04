@@ -152,6 +152,25 @@ static bool convertExternsToLinkOnce(Module *MOUT, LLVMContext &Ctx) {
         if (!strncmp(F->getName().str().c_str(), "hostexec_invoke",
                      strlen("hostexec_invoke")))
           continue;
+#if SANITIZER_AMDGPU
+        if (!strncmp(F->getName().str().c_str(), "internal_malloc",
+                     strlen("internal_malloc")) ||
+            !strncmp(F->getName().str().c_str(), "internal_free",
+                     strlen("internal_free")))
+          continue;
+        if (!strncmp(F->getName().str().c_str(), "global_allocate",
+                     strlen("global_allocate")) ||
+            !strncmp(F->getName().str().c_str(), "global_free",
+                     strlen("global_free"))) {
+          F->removeFnAttr(llvm::Attribute::AlwaysInline);
+          F->addFnAttr(llvm::Attribute::NoInline);
+          continue;
+        }
+        // Tag every '__kmpc*' function with 'sanitize_address' attribute by
+        // default when sanitizer is enabled for amdgpu. This is mainly required
+        // for LDS overflow detection as it will instrument all LDS variables.
+        F->addFnAttr(llvm::Attribute::SanitizeAddress);
+#endif
         // all other functions
         F->removeFnAttr(llvm::Attribute::OptimizeNone);
         F->removeFnAttr(llvm::Attribute::NoInline);
@@ -185,7 +204,14 @@ static bool convertDmAllocToLinkOnce(Module *MOUT, LLVMContext &Ctx) {
           F->setLinkage(GlobalValue::LinkOnceODRLinkage);
           F->setVisibility(GlobalValue::ProtectedVisibility);
         }
-          continue;
+#if SANITIZER_AMDGPU
+        // Tag every '__kmpc*' function with 'sanitize_address' attribute by
+        // default when sanitizer is enabled for amdgpu. This is mainly required
+        // for LDS overflow detection as it will instrument all LDS variables.
+        // if (regex.match(F->getName().str()))
+        F->addFnAttr(llvm::Attribute::SanitizeAddress);
+#endif
+        continue;
       }
     }
   }

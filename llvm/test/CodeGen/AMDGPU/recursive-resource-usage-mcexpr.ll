@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a < %s | FileCheck %s
-; XFAIL: *
+
 ; CHECK-LABEL: {{^}}qux
 ; CHECK: .set qux.num_vgpr, max(71, foo.num_vgpr)
 ; CHECK: .set qux.num_agpr, max(0, foo.num_agpr)

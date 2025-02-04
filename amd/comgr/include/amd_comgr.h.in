@@ -393,9 +393,13 @@ typedef enum amd_comgr_data_kind_s {
    */
   AMD_COMGR_DATA_KIND_OBJ_BUNDLE = 0x14,
   /**
+   * The data is SPIR-V IR
+   */
+  AMD_COMGR_DATA_KIND_SPIRV = 0x15,
+  /**
    * Marker for last valid data kind.
    */
-  AMD_COMGR_DATA_KIND_LAST = AMD_COMGR_DATA_KIND_OBJ_BUNDLE
+  AMD_COMGR_DATA_KIND_LAST = AMD_COMGR_DATA_KIND_SPIRV
 } amd_comgr_data_kind_t;
 
 /**
@@ -1772,10 +1776,21 @@ typedef enum amd_comgr_action_kind_s {
    */
   AMD_COMGR_ACTION_UNBUNDLE = 0xF,
 
+   /**
+   * Translate each source SPIR-V object in @p input into LLVM IR Bitcode.
+   * For each successful translation, add a bc object to @p result   *
+   *
+   * Return @p AMD_COMGR_STATUS_ERROR if any translation fails
+   *
+   * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
+   * if any input is not SPIR-V.
+   */
+  AMD_COMGR_ACTION_TRANSLATE_SPIRV_TO_BC = 0x13,
+
   /**
    * Marker for last valid action kind.
    */
-  AMD_COMGR_ACTION_LAST = AMD_COMGR_ACTION_UNBUNDLE
+  AMD_COMGR_ACTION_LAST = AMD_COMGR_ACTION_TRANSLATE_SPIRV_TO_BC
 } amd_comgr_action_kind_t;
 
 /**

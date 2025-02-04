@@ -252,34 +252,37 @@ const char *amdgpu::dlr::getLinkCommandArgs(
   // the look-up of the libomptarget bc lib to happen and if not present
   // where it is expected it means we are using the build tree compiler
   // not the installed compiler.
-  std::string LibDeviceName = "/libomptarget-amdgpu-" + GPUArch.str() + ".bc";
+  std::string LibDeviceName = "/libomptarget-amdgpu.bc";
 
-  // Check if libomptarget device bitcode can be found in a LIBRARY_PATH dir
-  bool EnvOmpLibDeviceFound = false;
-  for (auto &EnvLibraryPath : EnvironmentLibraryPaths) {
-    std::string EnvOmpLibDevice = EnvLibraryPath + LibDeviceName;
-    if (llvm::sys::fs::exists(EnvOmpLibDevice)) {
-      EnvOmpLibDeviceFound = true;
-      BCLibs.push_back(EnvOmpLibDevice);
-      break;
+  if (!Args.hasArg(options::OPT_nogpulib)) {
+    // Check if libomptarget device bitcode can be found in a LIBRARY_PATH dir
+    bool EnvOmpLibDeviceFound = false;
+    for (auto &EnvLibraryPath : EnvironmentLibraryPaths) {
+      std::string EnvOmpLibDevice = EnvLibraryPath + LibDeviceName;
+      if (llvm::sys::fs::exists(EnvOmpLibDevice)) {
+        EnvOmpLibDeviceFound = true;
+        BCLibs.push_back(EnvOmpLibDevice);
+        break;
+      }
     }
-  }
 
-  // If not found in LIBRARY_PATH, use default for the correct LibSuffix.
-  if (!EnvOmpLibDeviceFound) {
-    StringRef bc_file_suf = Args.MakeArgString(C.getDriver().Dir + "/../" +
-                                               LibSuffix + LibDeviceName);
-    StringRef bc_file_lib =
-        Args.MakeArgString(C.getDriver().Dir + "/../lib" + LibDeviceName);
-    if (llvm::sys::fs::exists(bc_file_suf))
-      BCLibs.push_back(Args.MakeArgString(bc_file_suf));
-    else if (llvm::sys::fs::exists(bc_file_lib))
-      // In case a LibSuffix version not found, use suffix "lib"
-      BCLibs.push_back(Args.MakeArgString(bc_file_lib));
-  }
+    // If not found in LIBRARY_PATH, use default for the correct LibSuffix.
+    if (!EnvOmpLibDeviceFound) {
+      StringRef bc_file_suf = Args.MakeArgString(C.getDriver().Dir + "/../" +
+                                                 LibSuffix + LibDeviceName);
+      StringRef bc_file_lib =
+          Args.MakeArgString(C.getDriver().Dir + "/../lib" + LibDeviceName);
+      if (llvm::sys::fs::exists(bc_file_suf))
+        BCLibs.push_back(Args.MakeArgString(bc_file_suf));
+      else if (llvm::sys::fs::exists(bc_file_lib))
+        // In case a LibSuffix version not found, use suffix "lib"
+        BCLibs.push_back(Args.MakeArgString(bc_file_lib));
+      else
+        TC.getDriver().Diag(diag::err_drv_omp_offload_target_bcruntime_not_found)
+          << "libomptarget-amdgpu.bc";
+    }
 
-  if (!AsanRTL.empty()) {
-    if (!Args.hasArg(options::OPT_nogpulib)) {
+    if (!AsanRTL.empty()) {
       // asanrtl is dependent on ockl so for every asanrtl bitcode linking
       // requires ockl but viceversa is not true.
       std::string OcklRTL(RocmInstallation.getOCKLPath());
@@ -288,12 +291,12 @@ const char *amdgpu::dlr::getLinkCommandArgs(
       else
         BCLibs.push_back(OcklRTL);
     }
-  }
 
-  // Add the generic set of libraries, OpenMP subset only
-  BCLibs.append(amdgpu::dlr::getCommonDeviceLibNames(
-      C.getArgs(), C.getDriver(), GPUArch.str(), /* isOpenMP=*/true,
-      RocmInstallation));
+    // Add the generic set of libraries, OpenMP subset only
+    BCLibs.append(amdgpu::dlr::getCommonDeviceLibNames(
+        C.getArgs(), C.getDriver(), GPUArch.str(), /* isOpenMP=*/true,
+        RocmInstallation));
+  }
 
   llvm::for_each(BCLibs, [&](StringRef BCFile) {
     LastLinkArgs.push_back(Args.MakeArgString(BCFile));
@@ -395,7 +398,6 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
   HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
 
   StringRef GPUArch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
-  assert(!GPUArch.empty() && "Must have an explicit GPU arch.");
 
   assert(DeviceOffloadingKind == Action::OFK_OpenMP &&
          "Only OpenMP offloading kinds are supported.");
@@ -483,35 +485,9 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
 
   const OptTable &Opts = getDriver().getOpts();
 
-  if (DeviceOffloadKind == Action::OFK_OpenMP) {
-    for (Arg *A : Args) {
-      if (!shouldSkipSanitizeOption(*this, Args, BoundArch, A) &&
-          !llvm::is_contained(*DAL, A))
-        DAL->append(A);
-    }
-
-    if (!DAL->hasArg(options::OPT_march_EQ)) {
-      StringRef Arch = BoundArch;
-      if (Arch.empty()) {
-        auto ArchsOrErr = getSystemGPUArchs(Args);
-        if (!ArchsOrErr) {
-          std::string ErrMsg =
-              llvm::formatv("{0}", llvm::fmt_consume(ArchsOrErr.takeError()));
-          getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
-              << llvm::Triple::getArchTypeName(getArch()) << ErrMsg << "-march";
-          Arch = OffloadArchToString(OffloadArch::HIPDefault);
-        } else {
-          Arch = Args.MakeArgString(ArchsOrErr->front());
-        }
-      }
-      DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ), Arch);
-    }
-
-    return DAL;
-  }
-
   for (Arg *A : Args) {
-    DAL->append(A);
+    if (!llvm::is_contained(*DAL, A))
+      DAL->append(A);
   }
 
   if (!BoundArch.empty()) {

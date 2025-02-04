@@ -32,6 +32,7 @@ enum FortranRounding {
 
 template <int BINARY_PRECISION> class BinaryFloatingPointNumber {
 public:
+  RT_OFFLOAD_VAR_GROUP_BEGIN
   static constexpr common::RealCharacteristics realChars{BINARY_PRECISION};
   static constexpr int binaryPrecision{BINARY_PRECISION};
   static constexpr int bits{realChars.bits};
@@ -47,7 +48,6 @@ public:
 
   using RawType = common::HostUnsignedIntType<bits>;
   static_assert(CHAR_BIT * sizeof(RawType) >= bits);
-  RT_OFFLOAD_VAR_GROUP_BEGIN
   static constexpr RawType significandMask{(RawType{1} << significandBits) - 1};
 
   constexpr RT_API_ATTRS BinaryFloatingPointNumber() {} // zero

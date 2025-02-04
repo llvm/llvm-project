@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_VALARRAY
-#define _LIBCPP_VALARRAY
+#ifndef _LIBCPP___CXX03_VALARRAY
+#define _LIBCPP___CXX03_VALARRAY
 
 /*
     valarray synopsis
@@ -3361,4 +3361,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_VALARRAY
+#endif // _LIBCPP___CXX03_VALARRAY

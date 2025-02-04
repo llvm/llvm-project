@@ -16,6 +16,7 @@ malloc
 free
 memcmp
 printf
+__llvm_rpc_client
 __assert_fail
 
 printf_*
@@ -23,6 +24,8 @@ f90print*
 fprintf_*
 
 hostexec*
+__ockl*
+__asan*
 __strlen_max
 __tgt_fort_ptr_assn_i8
 global_allocate

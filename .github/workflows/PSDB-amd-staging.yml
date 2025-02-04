@@ -1,0 +1,95 @@
+name: Compiler CI PSDB trigger on amd-staging branch
+
+# Controls when the workflow will run
+on:
+  pull_request:
+    branches: [amd-staging]
+    types: [opened, reopened, synchronize, ready_for_review]
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel, below is a single job called invoke jenkins jobs
+jobs:
+  # This workflow contains a single job called "invoke_jenkins_PSDB"
+  invoke_jenkins_PSDB:
+    if: github.event.pull_request.draft == false
+    runs-on: self-hosted
+    env:
+        svc_acc_org_secret: ${{secrets.CI_GITHUB_TOKEN}}
+        input_sha: ${{ github.event.pull_request.head.sha != '' && github.event.pull_request.head.sha || github.sha }}
+        input_pr_num: ${{ github.event.pull_request.number != '' && github.event.pull_request.number || 0 }}
+        input_pr_url: ${{ github.event.pull_request.html_url != '' && github.event.pull_request.html_url || '' }}
+        input_pr_title: ${{ github.event.pull_request.title != '' && github.event.pull_request.title || '' }}
+        # set the pipeline name here based on branch name
+        pipeline_name:  ${{secrets.CI_JENKINS_JOB_NAME}}
+        JENKINS_URL: ${{secrets.CI_JENKINS_URL}}
+        CONTAINER_IMAGE: ${{ secrets.JENKINS_TRIGGER_DOCKER_IMAGE }}
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:    
+       
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Set environment variable for container image
+        run: |
+         echo "CONTAINER_IMAGE=${{ secrets.JENKINS_TRIGGER_DOCKER_IMAGE }}" >> $GITHUB_ENV
+         echo "CONTAINER_NAME=my_container_${{ github.run_id }}" >> $GITHUB_ENV
+      - name: Print environment variables
+        run: |
+          echo "CONTAINER_IMAGE=${{ env.CONTAINER_IMAGE }}"
+          echo "CONTAINER_NAME=${{ env.CONTAINER_NAME }}"
+
+      - name: Pull container image
+        run: docker pull "${{env.CONTAINER_IMAGE}}"      
+
+          
+      - name: Run container
+        run: |
+          docker run -d --name "${{env.CONTAINER_NAME}}" $CONTAINER_IMAGE sleep infinity
+          #docker exec "${{env.CONTAINER_NAME}}" /bin/bash -c  "git clone ${{secrets.CI_UTILS_REPO}} ."
+          docker exec "${{env.CONTAINER_NAME}}" /bin/bash -c "echo 'Running commands inside the container'"
+        
+      - name: Run Jenkins Cancel Script
+        env:
+          JENKINS_URL: ${{secrets.CI_JENKINS_URL}}
+          JENKINS_USER:  ${{secrets.CI_JENKINS_USER}}
+          JENKINS_API_TOKEN: ${{secrets.CI_JENKINS_TOKEN}}
+          JENKINS_JOB_NAME: ${{secrets.CI_JENKINS_JOB_NAME}}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          COMMIT_HASH: ${{ github.event.after }}
+        run: |
+          docker exec -e JENKINS_JOB_NAME=${{secrets.CI_JENKINS_JOB_NAME}}  -e PR_NUMBER=${{ github.event.pull_request.number }}  -e COMMIT_HASH=${{ github.event.after }} -e JENKINS_URL=${{secrets.CI_JENKINS_URL}} -e JENKINS_USER=${{secrets.CI_JENKINS_USER}} -e JENKINS_API_TOKEN=${{secrets.CI_JENKINS_TOKEN}}  "${{env.CONTAINER_NAME}}" /bin/bash -c "python3 cancel_previous_build.py"
+
+        
+      # Runs a set of commands using the runners shell
+      - name: Getting Event Details  
+        run: |
+          echo $(pwd)
+          echo $GITHUB_ENV
+          echo $GITHUB_REPOSITORY
+          echo $GITHUB_SERVER_URL
+          echo "GITHUB_SHA is: $GITHUB_SHA"
+          echo "GITHUB_WORKFLOW_SHA is: $GITHUB_WORKFLOW_SHA"
+          echo "GITHUB_BASE_REF is: $GITHUB_BASE_REF"
+          echo "GITHUB_REF_NAME is: $GITHUB_REF_NAME"
+          echo "github.event.pull_request.id is: ${{github.event.pull_request.id}}"
+          echo "github.event.pull_request.html_url is: ${{github.event.pull_request.html_url}}"
+          echo "github.event.pull_request.number is: ${{github.event.pull_request.number}}"
+          echo "github.event.pull_request.url is: ${{github.event.pull_request.url}}"
+          echo "github.event.pull_request.issue_url is: ${{github.event.pull_request.issue_url}}"
+          echo "github.event.pull_request.head.sha is: ${{github.event.pull_request.head.sha}}"
+          echo "github.event.pull_request.base.ref is: ${{github.event.pull_request.base.ref}}"
+          echo "github.event.pull_request.merge_commit_sha is: ${{github.event.pull_request.merge_commit_sha}}"
+          echo "github.event.pull_request is: ${{github.event.pull_request}}"
+        
+          
+      - name: Trigger Jenkins Pipeline
+        if: steps.check_changes.outcome != 'failure'
+        run: |
+          echo "--Running jenkins_api.py with input sha - $input_sha for pull request - $input_pr_url" 
+          docker exec -e JENKINS_URL=${{secrets.CI_JENKINS_URL}} -e GITHUB_PAT=${{secrets.CI_GITHUB_TOKEN}} "${{env.CONTAINER_NAME}}" /bin/bash -c "python3 jenkins_api.py -s \"${JENKINS_URL}\" -jn \"${pipeline_name}\" -ghr \"${GITHUB_REPOSITORY}\" -ghsha \"${input_sha}\" -ghprn \"${input_pr_num}\" -ghpru \"${input_pr_url}\" -ghprt '${input_pr_title}' -ghpat=\"${svc_acc_org_secret}\""
+          
+      - name: Stop and remove container
+        if: always()
+        run: |
+          docker stop "${{env.CONTAINER_NAME}}"
+          docker rm "${{env.CONTAINER_NAME}}"
+

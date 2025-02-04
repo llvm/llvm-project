@@ -18,13 +18,13 @@ module m4
   use :: iso_fortran_env, only: user_defined_123
 end module
 module m5
-  !ERROR: Cannot read module file for module 'ieee_arithmetic': Source file 'ieee_arithmetic.mod' was not found
+  !ERROR: Cannot parse module file for module 'ieee_arithmetic': Source file 'ieee_arithmetic.mod' was not found
   use, non_intrinsic :: ieee_arithmetic, only: ieee_selected_real_kind
 end module
 module notAnIntrinsicModule
 end module
 module m6
-  !ERROR: Cannot read module file for module 'notanintrinsicmodule': Source file 'notanintrinsicmodule.mod' was not found
+  !ERROR: Cannot parse module file for module 'notanintrinsicmodule': Source file 'notanintrinsicmodule.mod' was not found
   use, intrinsic :: notAnIntrinsicModule
 end module
 

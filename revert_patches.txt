@@ -17,3 +17,23 @@ breaks build of hipRuntime
 51ad2901ca54 [Clang] Improve diagnostic on `[[nodiscard]]` attribute (#112521)
 Ron, Maneesh
 ---
+Revert: breaks build of rocFFT
+854d7301f989 [Clang/AMDGPU] Zero sized arrays not allowed in HIP device code. (#113470)
+Ron and Vigneshwar
+---
+revert: breaks rocBLAS build
+d57230c7 [AMDGPU][MC] Disallow op_sel in some VOP3P dot instructions (#100485)
+---
+revert: breaks build of rccl __cpuidex
+1c28b92373 [Clang] __has_builtin should return false for aux triple builtins (#121839) 
+Ron and Saiyed
+---
+
+-- 
+revert: breaks classic flang
+de7438e47283 - [NVPTX] Auto-Upgrade some nvvm.annotations to attributes
+Ron
+---
+revert: need clean patch from Amit
+b68b4f64a2bd [Driver][ASan] Refactor Clang-Driver "Sanitizer
+---

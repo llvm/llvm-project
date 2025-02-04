@@ -3,6 +3,8 @@ import os
 config.my_src_root = r'@CMAKE_CURRENT_SOURCE_DIR@'
 config.my_obj_root = r'@CMAKE_CURRENT_BINARY_DIR@'
 
+config.comgr_disable_spirv = @COMGR_DISABLE_SPIRV@
+
 # Needed for clang, llvm-dis, etc.
 config.environment['PATH'] = os.pathsep.join(["@LLVM_TOOLS_BINARY_DIR@",
                                               config.environment['PATH']])

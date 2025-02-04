@@ -54,7 +54,7 @@ static std::int64_t StringLength(const char *string) {
 
 static void FillWithSpaces(const Descriptor &value, std::size_t offset = 0) {
   if (offset < value.ElementBytes()) {
-    std::memset(
+    Fortran::runtime::memset(
         value.OffsetElement(offset), ' ', value.ElementBytes() - offset);
   }
 }

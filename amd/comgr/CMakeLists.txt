@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.13.4)
 
+include(CheckIncludeFileCXX)
+
 file(READ "VERSION.txt" comgr_ver_file)
 
 string(REGEX MATCH "#COMGR_VERSION_MAJOR\n([0-9]*)" _ ${comgr_ver_file})
@@ -72,6 +74,7 @@ set(SOURCES
   src/comgr-compiler.cpp
   src/comgr.cpp
   src/comgr-device-libs.cpp
+  src/comgr-diagnostic-handler.cpp
   src/comgr-disassembly.cpp
   src/comgr-elfdump.cpp
   src/comgr-env.cpp
@@ -166,11 +169,28 @@ set(AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS ${LLVM_DEFINITIONS})
 set(AMD_COMGR_PUBLIC_LINKER_OPTIONS)
 set(AMD_COMGR_PRIVATE_LINKER_OPTIONS)
 
-list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS "-DAMD_COMGR_GIT_COMMIT=${AMD_COMGR_GIT_COMMIT}")
-list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS "-DAMD_COMGR_GIT_BRANCH=${AMD_COMGR_GIT_BRANCH}")
+list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS "AMD_COMGR_GIT_COMMIT=${AMD_COMGR_GIT_COMMIT}")
+list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS "AMD_COMGR_GIT_BRANCH=${AMD_COMGR_GIT_BRANCH}")
 message("----COMGR_GIT_COMMIT: ${AMD_COMGR_GIT_COMMIT}")
 message("----COMGR_GIT_BRANCH: ${AMD_COMGR_GIT_BRANCH}")
 message("")
+
+option(COMGR_DISABLE_SPIRV "To disable SPIRV in Comgr" OFF)
+
+if (NOT COMGR_DISABLE_SPIRV)
+  CHECK_INCLUDE_FILE_CXX(LLVMSPIRVLib/LLVMSPIRVLib.h HAVE_LLVMSPIRVLIB_H)
+  if (NOT HAVE_LLVMSPIRVLIB_H)
+    set(COMGR_DISABLE_SPIRV ON)
+  endif()
+endif()
+
+if(${COMGR_DISABLE_SPIRV})
+    list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS "COMGR_DISABLE_SPIRV")
+  message("-- Comgr SPIRV Disabled")
+else()
+  message("-- Comgr SPIRV Enabled")
+endif()
+
 
 if (UNIX)
   list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS
@@ -383,8 +403,16 @@ set(LLD_LIBS
   lldELF
   lldCommon)
 
+if (${COMGR_DISABLE_SPIRV})
+  set(SPIRV_DYNAMIC_LIB "")
+  set(SPIRV_STATIC_LIB "")
+else()
+  set(SPIRV_DYNAMIC_LIB "LLVMSPIRVAMDLib")
+  set(SPIRV_STATIC_LIB "SPIRVAMDLib")
+endif()
+
 if (LLVM_LINK_LLVM_DYLIB)
-  set(LLVM_LIBS LLVM)
+  set(LLVM_LIBS LLVM ${SPIRV_DYNAMIC_LIB})
 else()
   llvm_map_components_to_libnames(LLVM_LIBS
     ${LLVM_TARGETS_TO_BUILD}
@@ -405,6 +433,7 @@ else()
     Support
     Symbolize
     TargetParser
+    ${SPIRV_STATIC_LIB}
     )
 endif()
 
@@ -500,7 +529,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(CPACK_DEBIAN_AMD-COMGR_PACKAGE_NAME comgr-static-dev)
   endif()
   set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/ROCm/llvm-project/tree/amd-staging/amd/comgr")
-  set(DEBIAN_DEPENDENCIES "libzstd1, zlib1g, libc6, libstdc++6, libgcc-s1")
+  set(DEBIAN_DEPENDENCIES "libzstd1, zlib1g, libc6, libstdc++6, libgcc-s1 | libgcc1")
   if (LLVM_LINK_LLVM_DYLIB)
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "libtinfo-dev, rocm-core, rocm-llvm-core, ${DEBIAN_DEPENDENCIES}")
     set(CPACK_DEBIAN_ASAN_PACKAGE_DEPENDS "libtinfo-dev, rocm-core-asan, rocm-llvm-core, ${DEBIAN_DEPENDENCIES}")

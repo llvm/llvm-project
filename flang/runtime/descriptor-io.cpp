@@ -32,7 +32,7 @@ Fortran::common::optional<bool> DefinedFormattedIo(IoStatementState &io,
     if (edit.descriptor == DataEdit::DefinedDerivedType) {
       ioType[0] = 'D';
       ioType[1] = 'T';
-      std::memcpy(ioType + 2, edit.ioType, edit.ioTypeChars);
+      Fortran::runtime::memcpy(ioType + 2, edit.ioType, edit.ioTypeChars);
     } else {
       runtime::strcpy(
           ioType, io.mutableModes().inNamelist ? "NAMELIST" : "LISTDIRECTED");

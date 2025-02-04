@@ -43,7 +43,7 @@ using namespace llvm::omp::target::ompt;
 //
 // The return bool indicates if the offload is to the host device
 // There are three possible results:
-// - Return false if the taregt device is ready for offload
+// - Return false if the target device is ready for offload
 // - Return true without reporting a runtime error if offload is
 //   disabled, perhaps because the initial device was specified.
 // - Report a runtime error and return true.
@@ -188,10 +188,8 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
     Rc = AsyncInfo.synchronize();
 
 #ifdef OMPT_SUPPORT
-  if (__tgt_async_info *AI = AsyncInfo; AI->OmptEventInfo) {
-    AI->OmptEventInfo->RIFunction = std::monostate();
+  if (__tgt_async_info *AI = AsyncInfo; AI->OmptEventInfo)
     delete AI->OmptEventInfo;
-  }
 #endif
 
   handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
@@ -309,13 +307,24 @@ static KernelArgsTy *upgradeKernelArgs(KernelArgsTy *KernelArgs,
     LocalKernelArgs.Flags = KernelArgs->Flags;
     LocalKernelArgs.DynCGroupMem = 0;
     LocalKernelArgs.NumTeams[0] = NumTeams;
-    LocalKernelArgs.NumTeams[1] = 0;
-    LocalKernelArgs.NumTeams[2] = 0;
+    LocalKernelArgs.NumTeams[1] = 1;
+    LocalKernelArgs.NumTeams[2] = 1;
     LocalKernelArgs.ThreadLimit[0] = ThreadLimit;
-    LocalKernelArgs.ThreadLimit[1] = 0;
-    LocalKernelArgs.ThreadLimit[2] = 0;
+    LocalKernelArgs.ThreadLimit[1] = 1;
+    LocalKernelArgs.ThreadLimit[2] = 1;
     return &LocalKernelArgs;
   }
+
+  // FIXME: This is a WA to "calibrate" the bad work done in the front end.
+  // Delete this ugly code after the front end emits proper values.
+  auto CorrectMultiDim = [](uint32_t(&Val)[3]) {
+    if (Val[1] == 0)
+      Val[1] = 1;
+    if (Val[2] == 0)
+      Val[2] = 1;
+  };
+  CorrectMultiDim(KernelArgs->ThreadLimit);
+  CorrectMultiDim(KernelArgs->NumTeams);
 
   return KernelArgs;
 }
@@ -341,8 +350,6 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
       DeviceId = 0;
   }
 
-  TIMESCOPE_WITH_IDENT(Loc);
-
   DP("Entering target region for device %" PRId64 " with entry point " DPxMOD
      "\n",
      DeviceId, DPxPTR(HostPtr));
@@ -361,12 +368,11 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   KernelArgs =
       upgradeKernelArgs(KernelArgs, LocalKernelArgs, NumTeams, ThreadLimit);
 
-  assert(KernelArgs->NumTeams[0] == NumTeams && !KernelArgs->NumTeams[1] &&
-         !KernelArgs->NumTeams[2] &&
-         "OpenMP interface should not use multiple dimensions");
-  assert(KernelArgs->ThreadLimit[0] == ThreadLimit &&
-         !KernelArgs->ThreadLimit[1] && !KernelArgs->ThreadLimit[2] &&
-         "OpenMP interface should not use multiple dimensions");
+  TIMESCOPE_WITH_DETAILS_AND_IDENT(
+      "Runtime: target exe",
+      "NumTeams=" + std::to_string(NumTeams) +
+          ";NumArgs=" + std::to_string(KernelArgs->NumArgs),
+      Loc);
 
   if (getInfoLevel() & OMP_INFOTYPE_KERNEL_ARGS)
     printKernelArguments(Loc, DeviceId, KernelArgs->NumArgs,
@@ -472,15 +478,12 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   }
 
 #ifdef OMPT_SUPPORT
-  if (__tgt_async_info *AI = AsyncInfo; AI->OmptEventInfo) {
-    AI->OmptEventInfo->RIFunction = std::monostate();
+  if (__tgt_async_info *AI = AsyncInfo; AI->OmptEventInfo)
     delete AI->OmptEventInfo;
-  }
 
   for (TargetAsyncInfoTy *LocalTAI : TargetAsyncInfos) {
     AsyncInfoTy &AsyncInfo = *LocalTAI;
     if (__tgt_async_info *AI = AsyncInfo; AI->OmptEventInfo) {
-      AI->OmptEventInfo->RIFunction = std::monostate();
       delete AI->OmptEventInfo;
     }
   }

@@ -27,8 +27,8 @@ const char *Action::getClassName(ActionClass AC) {
   case PrecompileJobClass: return "precompiler";
   case ExtractAPIJobClass:
     return "api-extractor";
-  case AnalyzeJobClass: return "analyzer";
-  case MigrateJobClass: return "migrator";
+  case AnalyzeJobClass:
+    return "analyzer";
   case CompileJobClass: return "compiler";
   case FortranFrontendJobClass:
     return "fortranfrontend";
@@ -124,6 +124,8 @@ std::string Action::getOffloadingKindPrefix() const {
     return "device-openmp";
   case OFK_HIP:
     return "device-hip";
+  case OFK_SYCL:
+    return "device-sycl";
 
     // TODO: Add other programming models here.
   }
@@ -141,6 +143,8 @@ std::string Action::getOffloadingKindPrefix() const {
     Res += "-hip";
   if (ActiveOffloadKindMask & OFK_OpenMP)
     Res += "-openmp";
+  if (ActiveOffloadKindMask & OFK_SYCL)
+    Res += "-sycl";
 
   // TODO: Add other programming models here.
 
@@ -177,6 +181,8 @@ StringRef Action::GetOffloadKindName(OffloadKind Kind) {
     return "openmp";
   case OFK_HIP:
     return "hip";
+  case OFK_SYCL:
+    return "sycl";
 
     // TODO: Add other programming models here.
   }
@@ -345,7 +351,7 @@ void OffloadAction::DeviceDependences::add(Action &A, const ToolChain &TC,
   DeviceBoundArchs.push_back(BoundArch);
 
   // Add each active offloading kind from a mask.
-  for (OffloadKind OKind : {OFK_OpenMP, OFK_Cuda, OFK_HIP})
+  for (OffloadKind OKind : {OFK_OpenMP, OFK_Cuda, OFK_HIP, OFK_SYCL})
     if (OKind & OffloadKindMask)
       DeviceOffloadKinds.push_back(OKind);
 }
@@ -391,11 +397,6 @@ void AnalyzeJobAction::anchor() {}
 
 AnalyzeJobAction::AnalyzeJobAction(Action *Input, types::ID OutputType)
     : JobAction(AnalyzeJobClass, Input, OutputType) {}
-
-void MigrateJobAction::anchor() {}
-
-MigrateJobAction::MigrateJobAction(Action *Input, types::ID OutputType)
-    : JobAction(MigrateJobClass, Input, OutputType) {}
 
 void CompileJobAction::anchor() {}
 
