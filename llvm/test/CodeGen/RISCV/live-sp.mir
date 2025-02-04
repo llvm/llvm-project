@@ -74,13 +74,13 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $x2 = frame-setup ADDI $x2, -16
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
-    ; CHECK-NEXT: SD $x1, $x2, 8 :: (store (s64) into %stack.1)
+    ; CHECK-NEXT: frame-setup SD $x1, $x2, 8 :: (store (s64) into %stack.1)
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $x1, -8
     ; CHECK-NEXT: SW renamable $x1, $x2, 4 :: (store (s32) into %ir.a)
     ; CHECK-NEXT: renamable $x11 = ADDIW killed renamable $x1, 0
     ; CHECK-NEXT: $x10 = COPY $x0
     ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) @vararg, csr_ilp32_lp64, implicit-def dead $x1, implicit killed $x10, implicit $x11, implicit-def $x2
-    ; CHECK-NEXT: $x1 = LD $x2, 8 :: (load (s64) from %stack.1)
+    ; CHECK-NEXT: $x1 = frame-destroy LD $x2, 8 :: (load (s64) from %stack.1)
     ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $x1
     ; CHECK-NEXT: $x2 = frame-destroy ADDI $x2, 16
     ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0

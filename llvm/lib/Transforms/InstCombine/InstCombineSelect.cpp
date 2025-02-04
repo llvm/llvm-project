@@ -423,24 +423,34 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
       }
     }
 
+    auto CreateCmpSel = [&](std::optional<CmpPredicate> P,
+                            bool Swapped) -> CmpInst * {
+      if (!P)
+        return nullptr;
+      auto *MatchOp = getCommonOp(TI, FI, ICmpInst::isEquality(*P),
+                                  ICmpInst::isRelational(*P) && Swapped);
+      if (!MatchOp)
+        return nullptr;
+      Value *NewSel = Builder.CreateSelect(Cond, OtherOpT, OtherOpF,
+                                           SI.getName() + ".v", &SI);
+      return new ICmpInst(MatchIsOpZero ? *P
+                                        : ICmpInst::getSwappedCmpPredicate(*P),
+                          MatchOp, NewSel);
+    };
+
     // icmp with a common operand also can have the common operand
     // pulled after the select.
     CmpPredicate TPred, FPred;
     if (match(TI, m_ICmp(TPred, m_Value(), m_Value())) &&
         match(FI, m_ICmp(FPred, m_Value(), m_Value()))) {
-      // FIXME: Use CmpPredicate::getMatching here.
-      CmpInst::Predicate T = TPred, F = FPred;
-      if (T == F || T == ICmpInst::getSwappedCmpPredicate(F)) {
-        bool Swapped = T != F;
-        if (Value *MatchOp =
-                getCommonOp(TI, FI, ICmpInst::isEquality(TPred), Swapped)) {
-          Value *NewSel = Builder.CreateSelect(Cond, OtherOpT, OtherOpF,
-                                               SI.getName() + ".v", &SI);
-          return new ICmpInst(
-              MatchIsOpZero ? TPred : ICmpInst::getSwappedCmpPredicate(TPred),
-              MatchOp, NewSel);
-        }
-      }
+      if (auto *R =
+              CreateCmpSel(CmpPredicate::getMatching(TPred, FPred), false))
+        return R;
+      if (auto *R =
+              CreateCmpSel(CmpPredicate::getMatching(
+                               TPred, ICmpInst::getSwappedCmpPredicate(FPred)),
+                           true))
+        return R;
     }
   }
 
@@ -1761,26 +1771,38 @@ static Value *foldSelectInstWithICmpConst(SelectInst &SI, ICmpInst *ICI,
       return Builder.CreateBinaryIntrinsic(Intrinsic::smin, V, TVal);
   }
 
-  BinaryOperator *BO;
+  // Fold icmp(X) ? f(X) : C to f(X) when f(X) is guaranteed to be equal to C
+  // for all X in the exact range of the inverse predicate.
+  Instruction *Op;
   const APInt *C;
   CmpInst::Predicate CPred;
-  if (match(&SI, m_Select(m_Specific(ICI), m_APInt(C), m_BinOp(BO))))
+  if (match(&SI, m_Select(m_Specific(ICI), m_APInt(C), m_Instruction(Op))))
     CPred = ICI->getPredicate();
-  else if (match(&SI, m_Select(m_Specific(ICI), m_BinOp(BO), m_APInt(C))))
+  else if (match(&SI, m_Select(m_Specific(ICI), m_Instruction(Op), m_APInt(C))))
     CPred = ICI->getInversePredicate();
   else
     return nullptr;
 
-  const APInt *BinOpC;
-  if (!match(BO, m_BinOp(m_Specific(V), m_APInt(BinOpC))))
-    return nullptr;
-
-  ConstantRange R = ConstantRange::makeExactICmpRegion(CPred, *CmpC)
-                        .binaryOp(BO->getOpcode(), *BinOpC);
-  if (R == *C) {
-    BO->dropPoisonGeneratingFlags();
-    return BO;
+  ConstantRange InvDomCR = ConstantRange::makeExactICmpRegion(CPred, *CmpC);
+  const APInt *OpC;
+  if (match(Op, m_BinOp(m_Specific(V), m_APInt(OpC)))) {
+    ConstantRange R = InvDomCR.binaryOp(
+        static_cast<Instruction::BinaryOps>(Op->getOpcode()), *OpC);
+    if (R == *C) {
+      Op->dropPoisonGeneratingFlags();
+      return Op;
+    }
   }
+  if (auto *MMI = dyn_cast<MinMaxIntrinsic>(Op);
+      MMI && MMI->getLHS() == V && match(MMI->getRHS(), m_APInt(OpC))) {
+    ConstantRange R = ConstantRange::intrinsic(MMI->getIntrinsicID(),
+                                               {InvDomCR, ConstantRange(*OpC)});
+    if (R == *C) {
+      MMI->dropPoisonGeneratingAnnotations();
+      return MMI;
+    }
+  }
+
   return nullptr;
 }
 
@@ -2842,16 +2864,23 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
     if (!match(TrueVal, m_FNeg(m_Specific(X))))
       return nullptr;
 
-    // Forward-propagate nnan and ninf from the fneg to the select.
+    // Forward-propagate nnan and ninf from the fcmp to the select.
     // If all inputs are not those values, then the select is not either.
     // Note: nsz is defined differently, so it may not be correct to propagate.
-    FastMathFlags FMF = cast<FPMathOperator>(TrueVal)->getFastMathFlags();
+    FastMathFlags FMF = cast<FPMathOperator>(CondVal)->getFastMathFlags();
     if (FMF.noNaNs() && !SI.hasNoNaNs()) {
       SI.setHasNoNaNs(true);
       ChangedFMF = true;
     }
     if (FMF.noInfs() && !SI.hasNoInfs()) {
       SI.setHasNoInfs(true);
+      ChangedFMF = true;
+    }
+    // Forward-propagate nnan from the fneg to the select.
+    // The nnan flag can be propagated iff fneg is selected when X is NaN.
+    if (!SI.hasNoNaNs() && cast<FPMathOperator>(TrueVal)->hasNoNaNs() &&
+        (Swap ? FCmpInst::isOrdered(Pred) : FCmpInst::isUnordered(Pred))) {
+      SI.setHasNoNaNs(true);
       ChangedFMF = true;
     }
 
