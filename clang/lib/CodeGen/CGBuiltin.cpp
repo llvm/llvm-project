@@ -1057,20 +1057,20 @@ namespace {
 /// StructFieldAccess is a simple visitor class to grab the first MemberExpr
 /// from an Expr. It records any ArraySubscriptExpr we meet along the way.
 class StructFieldAccess
-    : public ConstStmtVisitor<StructFieldAccess, const MemberExpr *> {
+    : public ConstStmtVisitor<StructFieldAccess, const Expr *> {
   bool AddrOfSeen = false;
 
 public:
   const ArraySubscriptExpr *ASE = nullptr;
 
-  const MemberExpr *VisitMemberExpr(const MemberExpr *E) {
+  const Expr *VisitMemberExpr(const MemberExpr *E) {
     if (AddrOfSeen && E->getType()->isArrayType())
       // Avoid forms like '&ptr->array'.
       return nullptr;
     return E;
   }
 
-  const MemberExpr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
+  const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
     if (ASE)
       // We don't support multiple subscripts.
       return nullptr;
@@ -1079,17 +1079,19 @@ public:
     ASE = E;
     return Visit(E->getBase());
   }
-  const MemberExpr *VisitCastExpr(const CastExpr *E) {
+  const Expr *VisitCastExpr(const CastExpr *E) {
+    if (E->getCastKind() == CK_LValueToRValue)
+      return E;
     return Visit(E->getSubExpr());
   }
-  const MemberExpr *VisitParenExpr(const ParenExpr *E) {
+  const Expr *VisitParenExpr(const ParenExpr *E) {
     return Visit(E->getSubExpr());
   }
-  const MemberExpr *VisitUnaryAddrOf(const clang::UnaryOperator *E) {
+  const Expr *VisitUnaryAddrOf(const clang::UnaryOperator *E) {
     AddrOfSeen = true;
     return Visit(E->getSubExpr());
   }
-  const MemberExpr *VisitUnaryDeref(const clang::UnaryOperator *E) {
+  const Expr *VisitUnaryDeref(const clang::UnaryOperator *E) {
     AddrOfSeen = false;
     return Visit(E->getSubExpr());
   }
@@ -1190,7 +1192,7 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
   // GCC does for consistency's sake.
 
   StructFieldAccess Visitor;
-  const MemberExpr *ME = Visitor.Visit(E);
+  const MemberExpr *ME = dyn_cast_if_present<MemberExpr>(Visitor.Visit(E));
   if (!ME)
     return nullptr;
 
