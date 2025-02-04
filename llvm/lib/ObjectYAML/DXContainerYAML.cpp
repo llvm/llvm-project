@@ -37,14 +37,14 @@ DXContainerYAML::RootSignatureDesc::RootSignatureDesc(
       NumStaticSamplers(Data.getNumStaticSamplers()),
       StaticSamplersOffset(Data.getStaticSamplersOffset()) {
   uint32_t Flags = Data.getFlags();
-#define ROOT_ELEMENT_FLAG(Num, Val, Str)                                       \
+#define ROOT_ELEMENT_FLAG(Num, Val)                                            \
   Val = (Flags & (uint32_t)dxbc::RootElementFlag::Val) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
 uint32_t DXContainerYAML::RootSignatureDesc::getEncodedFlags() {
   uint64_t Flag = 0;
-#define ROOT_ELEMENT_FLAG(Num, Val, Str)                                       \
+#define ROOT_ELEMENT_FLAG(Num, Val)                                            \
   if (Val)                                                                     \
     Flag |= (uint32_t)dxbc::RootElementFlag::Val;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
@@ -217,7 +217,7 @@ void MappingTraits<DXContainerYAML::RootSignatureDesc>::mapping(
   IO.mapRequired("RootParametersOffset", S.RootParametersOffset);
   IO.mapRequired("NumStaticSamplers", S.NumStaticSamplers);
   IO.mapRequired("StaticSamplersOffset", S.StaticSamplersOffset);
-#define ROOT_ELEMENT_FLAG(Num, Val, Str) IO.mapOptional(#Val, S.Val, false);
+#define ROOT_ELEMENT_FLAG(Num, Val) IO.mapOptional(#Val, S.Val, false);
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 

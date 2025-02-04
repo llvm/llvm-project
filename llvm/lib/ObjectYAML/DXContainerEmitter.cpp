@@ -268,6 +268,11 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
 
       mcdxbc::RootSignatureHeader Header;
       Header.Flags = P.RootSignature->getEncodedFlags();
+      Header.Version = P.RootSignature->Version;
+      Header.NumParameters = P.RootSignature->NumParameters;
+      Header.RootParametersOffset = P.RootSignature->RootParametersOffset;
+      Header.NumStaticSamplers = P.RootSignature->NumStaticSamplers;
+      Header.StaticSamplersOffset = P.RootSignature->StaticSamplersOffset;
 
       Header.write(OS);
       break;
