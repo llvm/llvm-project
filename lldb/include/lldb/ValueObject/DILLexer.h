@@ -12,7 +12,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
-#include <limits.h>
 #include <memory>
 #include <string>
 #include <vector>
@@ -103,7 +102,7 @@ public:
 private:
   DILLexer(llvm::StringRef dil_expr, std::vector<Token> lexed_tokens)
       : m_expr(dil_expr), m_lexed_tokens(std::move(lexed_tokens)),
-        m_tokens_idx(0), m_eof_token(Token(Token::eof, "", 0)) {}
+        m_tokens_idx(0) {}
 
   static llvm::Expected<Token> Lex(llvm::StringRef expr,
                                    llvm::StringRef &remainder);
@@ -117,9 +116,6 @@ private:
   // Index into m_lexed_tokens; indicates which token the DIL parser is
   // currently trying to parse/handle.
   uint32_t m_tokens_idx;
-
-  // "eof" token; to be returned by lexer when 'look ahead' fails.
-  Token m_eof_token;
 };
 
 } // namespace lldb_private::dil
