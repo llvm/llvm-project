@@ -9264,7 +9264,7 @@ SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
   SDVTList VTs = Indexed ?
     getVTList(VT, Ptr.getValueType(), MVT::Other) : getVTList(VT, MVT::Other);
 
-  // FixedMe: lower poison to undef.
+  // Lower poison to undef.
   if (Ptr.getNode()->isPoison())
     Ptr = getUNDEF(Ptr.getValueType());
 
