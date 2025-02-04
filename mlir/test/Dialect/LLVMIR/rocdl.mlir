@@ -786,8 +786,8 @@ llvm.func @rocdl_8bit_floats(%source: i32, %stoch: i32) -> i32 {
   llvm.return %source5 : i32
 }
 
-llvm.func @rocdl_8bit_packed_floats(%sourceA: f32, %sourceB: f32, %old: vector<2xi16>) -> vector<2xi16> {
-// CHECK-LABEL: @rocdl_8bit_packed_floats
+llvm.func @rocdl_8bit_packed_v2i16(%sourceA: f32, %sourceB: f32, %old: vector<2xi16>) -> vector<2xi16> {
+// CHECK-LABEL: @rocdl_8bit_packed_v2i16
 // CHECK: rocdl.cvt.scalef32.pk.fp8.f32
   %c0 = llvm.mlir.constant(1.0 : f32) : f32
   %false = llvm.mlir.constant(false) : i1
