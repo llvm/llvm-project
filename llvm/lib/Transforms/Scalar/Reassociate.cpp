@@ -1174,16 +1174,21 @@ Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor) {
 ///
 /// Ops is the top-level list of add operands we're trying to factor.
 static void FindSingleUseMultiplyFactors(Value *V,
-                                         SmallVectorImpl<Value*> &Factors) {
+                                         SmallVectorImpl<Value *> &Factors,
+                                         bool &AllNUW, bool &AllNSW) {
   BinaryOperator *BO = isReassociableOp(V, Instruction::Mul, Instruction::FMul);
   if (!BO) {
     Factors.push_back(V);
     return;
   }
 
+  if (isa<OverflowingBinaryOperator>(BO)) {
+    AllNUW &= BO->hasNoUnsignedWrap();
+    AllNSW &= BO->hasNoSignedWrap();
+  }
   // Otherwise, add the LHS and RHS to the list of factors.
-  FindSingleUseMultiplyFactors(BO->getOperand(1), Factors);
-  FindSingleUseMultiplyFactors(BO->getOperand(0), Factors);
+  FindSingleUseMultiplyFactors(BO->getOperand(1), Factors, AllNUW, AllNSW);
+  FindSingleUseMultiplyFactors(BO->getOperand(0), Factors, AllNUW, AllNSW);
 }
 
 /// Optimize a series of operands to an 'and', 'or', or 'xor' instruction.
@@ -1492,7 +1497,9 @@ Value *ReassociatePass::OptimizeXor(Instruction *I,
 /// optimizes based on identities.  If it can be reduced to a single Value, it
 /// is returned, otherwise the Ops list is mutated as necessary.
 Value *ReassociatePass::OptimizeAdd(Instruction *I,
-                                    SmallVectorImpl<ValueEntry> &Ops) {
+                                    SmallVectorImpl<ValueEntry> &Ops,
+                                    OverflowTracking Flags) {
+
   // Scan the operand lists looking for X and -X pairs.  If we find any, we
   // can simplify expressions like X+-X == 0 and X+~X ==-1.  While we're at it,
   // scan for any
@@ -1586,8 +1593,11 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
 
   // Keep track of each multiply we see, to avoid triggering on (X*4)+(X*4)
   // where they are actually the same multiply.
+  // Also track every use of this factor shares nuw/nsw. This will allow the
+  // use of these flags in the factored value.
   unsigned MaxOcc = 0;
   Value *MaxOccVal = nullptr;
+  bool MaxOccAllNUW, MaxOccAllNSW = false;
   for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
     BinaryOperator *BOp =
         isReassociableOp(Ops[i].Op, Instruction::Mul, Instruction::FMul);
@@ -1596,7 +1606,9 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
 
     // Compute all of the factors of this added value.
     SmallVector<Value*, 8> Factors;
-    FindSingleUseMultiplyFactors(BOp, Factors);
+    bool AllNUW = Flags.HasNUW;
+    bool AllNSW = Flags.HasNSW;
+    FindSingleUseMultiplyFactors(BOp, Factors, AllNUW, AllNSW);
     assert(Factors.size() > 1 && "Bad linearize!");
 
     // Add one to FactorOccurrences for each unique factor in this op.
@@ -1608,7 +1620,16 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
       unsigned Occ = ++FactorOccurrences[Factor];
       if (Occ > MaxOcc) {
         MaxOcc = Occ;
-        MaxOccVal = Factor;
+        if (MaxOccVal != Factor) {
+          MaxOccVal = Factor;
+          if (Occ == 1) {
+            MaxOccAllNUW = AllNUW;
+            MaxOccAllNSW = AllNSW;
+          } else {
+            MaxOccAllNUW &= AllNUW;
+            MaxOccAllNSW &= AllNSW;
+          }
+        }
       }
 
       // If Factor is a negative constant, add the negated value as a factor
@@ -1690,11 +1711,20 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
     // A*A*B + A*A*C   -->   A*(A*B+A*C)   -->   A*(A*(B+C))
     assert(NumAddedValues > 1 && "Each occurrence should contribute a value");
     (void)NumAddedValues;
-    if (Instruction *VI = dyn_cast<Instruction>(V))
+    if (Instruction *VI = dyn_cast<Instruction>(V)) {
+      if (isa<OverflowingBinaryOperator>(VI)) {
+        VI->setHasNoUnsignedWrap(MaxOccAllNUW);
+        VI->setHasNoSignedWrap(MaxOccAllNSW);
+      }
       RedoInsts.insert(VI);
+    }
 
     // Create the multiply.
     Instruction *V2 = CreateMul(V, MaxOccVal, "reass.mul", I->getIterator(), I);
+    if (isa<OverflowingBinaryOperator>(V2)) {
+      V2->setHasNoUnsignedWrap(MaxOccAllNUW);
+      V2->setHasNoSignedWrap(MaxOccAllNSW);
+    }
 
     // Rerun associate on the multiply in case the inner expression turned into
     // a multiply.  We want to make sure that we keep things in canonical form.
@@ -1890,7 +1920,8 @@ Value *ReassociatePass::OptimizeMul(BinaryOperator *I,
 }
 
 Value *ReassociatePass::OptimizeExpression(BinaryOperator *I,
-                                           SmallVectorImpl<ValueEntry> &Ops) {
+                                           SmallVectorImpl<ValueEntry> &Ops,
+                                           OverflowTracking Flags) {
   // Now that we have the linearized expression tree, try to optimize it.
   // Start by folding any constants that we found.
   const DataLayout &DL = I->getDataLayout();
@@ -1944,7 +1975,7 @@ Value *ReassociatePass::OptimizeExpression(BinaryOperator *I,
 
   case Instruction::Add:
   case Instruction::FAdd:
-    if (Value *Result = OptimizeAdd(I, Ops))
+    if (Value *Result = OptimizeAdd(I, Ops, Flags))
       return Result;
     break;
 
@@ -1956,7 +1987,7 @@ Value *ReassociatePass::OptimizeExpression(BinaryOperator *I,
   }
 
   if (Ops.size() != NumOps)
-    return OptimizeExpression(I, Ops);
+    return OptimizeExpression(I, Ops, Flags);
   return nullptr;
 }
 
@@ -2305,7 +2336,7 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
 
   // Now that we have the expression tree in a convenient
   // sorted form, optimize it globally if possible.
-  if (Value *V = OptimizeExpression(I, Ops)) {
+  if (Value *V = OptimizeExpression(I, Ops, Flags)) {
     if (V == I)
       // Self-referential expression in unreachable code.
       return;

@@ -119,9 +119,11 @@ private:
                        SmallVectorImpl<reassociate::ValueEntry> &Ops,
                        reassociate::OverflowTracking Flags);
   Value *OptimizeExpression(BinaryOperator *I,
-                            SmallVectorImpl<reassociate::ValueEntry> &Ops);
+                            SmallVectorImpl<reassociate::ValueEntry> &Ops,
+                            reassociate::OverflowTracking Flags);
   Value *OptimizeAdd(Instruction *I,
-                     SmallVectorImpl<reassociate::ValueEntry> &Ops);
+                     SmallVectorImpl<reassociate::ValueEntry> &Ops,
+                     reassociate::OverflowTracking Flags);
   Value *OptimizeXor(Instruction *I,
                      SmallVectorImpl<reassociate::ValueEntry> &Ops);
   bool CombineXorOpnd(BasicBlock::iterator It, reassociate::XorOpnd *Opnd1,

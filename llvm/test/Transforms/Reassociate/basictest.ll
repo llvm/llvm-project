@@ -295,8 +295,8 @@ define i32 @test17(i32 %X1, i32 %X2, i32 %X3, i32 %X4) {
 
 define i32 @test18(i32 %X1, i32 %X2) {
 ; CHECK-LABEL: @test18(
-; CHECK-NEXT:    [[REASS_ADD:%.*]] = add i32 [[X2:%.*]], [[X1:%.*]]
-; CHECK-NEXT:    [[REASS_MUL:%.*]] = mul i32 [[REASS_ADD]], 47
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = add nsw i32 [[X2:%.*]], [[X1:%.*]]
+; CHECK-NEXT:    [[REASS_MUL:%.*]] = mul nsw i32 [[REASS_ADD]], 47
 ; CHECK-NEXT:    ret i32 [[REASS_MUL]]
 ;
   %B = mul nsw i32 %X1, 47
@@ -308,7 +308,7 @@ define i32 @test18(i32 %X1, i32 %X2) {
 define i32 @test19(i32 %X1, i32 %X2) {
 ; CHECK-LABEL: @test19(
 ; CHECK-NEXT:    [[REASS_ADD:%.*]] = add i32 [[X1:%.*]], 67
-; CHECK-NEXT:    [[REASS_MUL:%.*]] = mul i32 [[REASS_ADD]], [[X2:%.*]]
+; CHECK-NEXT:    [[REASS_MUL:%.*]] = mul nsw i32 [[REASS_ADD]], [[X2:%.*]]
 ; CHECK-NEXT:    ret i32 [[REASS_MUL]]
 ;
   %A = add i32 %X1, 20
