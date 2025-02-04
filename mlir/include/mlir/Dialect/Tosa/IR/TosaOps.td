@@ -1700,7 +1700,7 @@ def Tosa_TileOp : Tosa_InferShapedTypeOp<"tile"> {
   let summary = "Tile operator";
 
   let description = [{
-    Replicates input 0 multiplies times along each dimension.
+    Replicates input1 multiplies times along each dimension.
   }];
 
   let arguments = (ins
