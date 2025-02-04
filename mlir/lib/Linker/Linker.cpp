@@ -402,11 +402,31 @@ LogicalResult ModuleLinker::run() {
   return success();
 }
 
-Linker::Linker(LinkableModuleOpInterface composite) : mover(composite) {}
+Linker::Linker(LinkableModuleOpInterface composite, const LinkerConfig &cfg)
+    : config(cfg), mover(composite) {}
 
 LogicalResult Linker::linkInModule(OwningOpRef<Operation *> src, unsigned flags,
                                    InternalizeCallbackFn internalizeCallback) {
   ModuleLinker modLinker(mover, std::move(src), flags,
                          std::move(internalizeCallback));
   return modLinker.run();
+}
+
+unsigned Linker::getFlags() const {
+  unsigned flags = None;
+
+  if (config.shouldLinkOnlyNeeded())
+    flags |= Linker::Flags::LinkOnlyNeeded;
+
+  return flags;
+}
+
+Linker::LinkFileConfig Linker::linkFileConfig(unsigned fileFlags) const {
+  return {.flags = fileFlags,
+          .internalize = config.shouldInternalizeLinkedSymbols()};
+}
+
+Linker::LinkFileConfig Linker::firstLinkFileConfig(unsigned fileFlags) const {
+  // Filter out flags that don't apply to the first file we load.
+  return {.flags = fileFlags & Linker::OverrideFromSrc};
 }

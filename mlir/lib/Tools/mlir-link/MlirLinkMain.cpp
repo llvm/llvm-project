@@ -14,10 +14,12 @@
 #include "mlir/IR/OwningOpRef.h"
 #include "mlir/Linker/Linker.h"
 #include "mlir/Support/FileUtilities.h"
+#include "mlir/Support/ToolUtilities.h"
 #include "mlir/Tools/ParseUtilities.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -26,155 +28,178 @@
 using namespace mlir;
 using namespace llvm;
 
-OwningOpRef<ModuleOp> makeCompositeModule(MLIRContext &context) {
-  OpBuilder builder(&context);
-  ModuleOp op = builder.create<ModuleOp>(
-      FileLineColLoc::get(&context, "mlir-link", 0, 0));
-  OwningOpRef<ModuleOp> composite(op);
-  return composite;
-}
-
-static LogicalResult linkFile(Linker &linker,
-                              std::shared_ptr<SourceMgr> sourceMgr,
-                              unsigned flags, bool internalizeLinkedSymbols) {
-  // TBD: setup timing
-
-  auto context = linker.getContext();
-
-  // Disable multi-threading when parsing the input file. This removes the
-  // unnecessary/costly context synchronization when parsing.
-  bool wasThreadingEnabled = context->isMultithreadingEnabled();
-  context->disableMultithreading();
-
-  OwningOpRef<Operation *> op =
-      parseSourceFileForTool(sourceMgr, context, true /*insertImplicitModule*/);
-
-  if (!op)
-    return failure();
-
-  context->enableMultithreading(wasThreadingEnabled);
-
-  // TBD: symbol promotion
-
-  if (internalizeLinkedSymbols) {
-    // TBD: internalization
-  } else {
-    return linker.linkInModule(std::move(op), flags);
+/// This class is intended to manage the handling of command line options for
+/// creating a linker config. This is a singleton.
+struct LinkerCLOptions : public LinkerConfig {
+  /// Returns the command line option category for the linker options
+  static cl::OptionCategory &getCategory() {
+    static cl::OptionCategory linkerCategory("MLIR Linker Options");
+    return linkerCategory;
   }
-}
 
-static LogicalResult linkFile(Linker &linker,
-                              std::unique_ptr<MemoryBuffer> buffer,
-                              unsigned flags, bool internalizeLinkedSymbols) {
-  // TBD: use splitAndProcessBuffer?
-  auto sourceMgr = std::make_shared<SourceMgr>();
-  sourceMgr->AddNewSourceBuffer(std::move(buffer), SMLoc());
+  /// External storage for input and output file command-line options.
+  std::vector<std::string> inputFiles;
+  std::string outputFile = "-";
 
-  auto context = linker.getContext();
+  /// Creates and initializes a LinkerConfig from command line options.
+  /// These options are static but use ExternalStorage to initialize the
+  /// members of the LinkerConfig class.
+  LinkerCLOptions() {
+    // Allow operation with no registered dialects.
+    // This option is for convenience during testing only and discouraged in
+    // general.
+    static cl::opt<bool, true> allowUnregisteredDialects(
+        "allow-unregistered-dialect",
+        cl::desc("Allow operation with no registered dialects"),
+        cl::location(allowUnregisteredDialectsFlag), cl::init(false),
+        cl::cat(getCategory()));
 
-  // TBD: install debug handler
+    static cl::opt<bool, true> internalizeLinkedSymbols(
+        "internalize", cl::desc("Internalize linked symbols"),
+        cl::location(internalizeLinkedSymbolsFlag), cl::init(false),
+        cl::cat(getCategory()));
 
-  // TBD: verify on diagnostics
-  SourceMgrDiagnosticHandler sourceMgrHandler(*sourceMgr, context);
-  return linkFile(linker, sourceMgr, flags, internalizeLinkedSymbols);
-}
+    static cl::opt<bool, true> linkOnlyNeeded(
+        "only-needed", cl::desc("Link only needed symbols"),
+        cl::location(linkOnlyNeededFlag), cl::init(false),
+        cl::cat(getCategory()));
 
-static LogicalResult linkFiles(Linker &linker,
-                               const cl::list<std::string> &fileNames,
-                               unsigned flags, bool internalize) {
-  // Filter out flags that don't apply to the first file we load.
-  unsigned applicableFlags = flags & Linker::OverrideFromSrc;
-  // Similar to some flags, internalization doesn't apply to the first file.
-  bool internalizeLinkedSymbols = false;
+    static cl::list<std::string> clInputFiles(
+        cl::Positional, cl::OneOrMore, cl::desc("<input MLIR files>"),
+        cl::cat(getCategory()), cl::callback([this](const std::string &val) {
+          inputFiles.push_back(val);
+        }));
 
-  std::string errorMessage;
-  for (const auto &fileName : fileNames) {
-    auto file = openInputFile(fileName, &errorMessage);
-    if (!file) {
-      llvm::errs() << errorMessage << "\n";
-      return failure();
+    static cl::opt<std::string> clOutputFile(
+        "o", cl::desc("Output filename"), cl::init("-"), cl::cat(getCategory()),
+        cl::callback([this](const std::string &val) { outputFile = val; }));
+  }
+
+  static void setupAndParse(int argc, char **argv) {
+    // Parse command line
+    cl::HideUnrelatedOptions({&getCategory(), &getColorCategory()});
+    cl::ParseCommandLineOptions(argc, argv, "mlir-link");
+  }
+};
+
+ManagedStatic<LinkerCLOptions> clOptionsConfig;
+LinkerConfig createLinkerConfigFromCLOptions() { return *clOptionsConfig; }
+
+/// Handles the processing of input files for the linker.
+/// This class encapsulates all the file handling logic for linker.
+class FileProcessor {
+public:
+  explicit FileProcessor(Linker &linker) : linker(linker) {}
+
+  using FileConfig = Linker::LinkFileConfig;
+
+  /// Process and link multiple input files
+  LogicalResult linkFiles(const std::vector<std::string> &fileNames,
+                          raw_ostream &os) {
+    unsigned flags = linker.getFlags();
+    FileConfig config = linker.firstLinkFileConfig(flags);
+
+    for (const auto &fileName : fileNames) {
+      std::string errorMessage;
+      auto input = openInputFile(fileName, &errorMessage);
+
+      if (!input) {
+        return emitFileError(fileName, errorMessage);
+      }
+
+      // Process file with potentially multiple modules
+      if (failed(processInputFile(std::move(input), config, os)))
+        return emitFileError(fileName, "Failed to process input file");
+
+      // Update config for subsequent files
+      config = linker.linkFileConfig(flags);
     }
 
-    if (failed(linkFile(linker, std::move(file), applicableFlags,
-                        internalizeLinkedSymbols)))
-      return failure();
-
-    // Internalization applies to linking of subsequent files.
-    internalizeLinkedSymbols = internalize;
-
-    // All linker flags apply to linking of subsequent files.
-    applicableFlags = flags;
+    return success();
   }
 
-  return success();
-}
+private:
+  /// Process a single input file, potentially containing multiple modules
+  LogicalResult processInputFile(std::unique_ptr<MemoryBuffer> buffer,
+                                 FileConfig config, raw_ostream &os) {
+    auto sourceMgr = std::make_shared<SourceMgr>();
+    sourceMgr->AddNewSourceBuffer(std::move(buffer), SMLoc());
+
+    auto ctx = linker.getContext();
+    bool wasThreadingEnabled = ctx->isMultithreadingEnabled();
+    ctx->disableMultithreading();
+
+    // Parse the source file
+    OwningOpRef<Operation *> op =
+        parseSourceFileForTool(sourceMgr, ctx, true /*insertImplicitModule*/);
+
+    ctx->enableMultithreading(wasThreadingEnabled);
+
+    if (!op)
+      return emitError("Failed to parse source file");
+
+    // TBD: symbol promotion
+
+    // TBD: internalization
+
+    // Link the parsed module
+    return linker.linkInModule(std::move(op), config.flags);
+  }
+
+  LogicalResult emitFileError(const Twine &fileName, const Twine &message) {
+    return emitError("Error processing file '" + fileName + "': " + message);
+  }
+
+  LogicalResult emitError(const Twine &message) {
+    return mlir::emitError(mlir::UnknownLoc::get(linker.getContext()), message);
+  }
+
+  Linker &linker;
+};
 
 LogicalResult mlir::MlirLinkMain(int argc, char **argv,
                                  DialectRegistry &registry) {
-  static cl::OptionCategory linkCategory("Link options");
+  // Initialize LLVM infrastructure
+  InitLLVM initLLVM(argc, argv);
 
-  static cl::list<std::string> inputFilenames(cl::Positional, cl::OneOrMore,
-                                              cl::desc("<input mlir files>"),
-                                              cl::cat(linkCategory));
+  auto config = createLinkerConfigFromCLOptions();
 
-  static cl::opt<std::string> outputFilename(
-      "o", cl::desc("Override output filename"), cl::init("-"),
-      cl::value_desc("filename"), cl::cat(linkCategory));
-
-  static cl::opt<bool> internalize("internalize",
-                                   cl::desc("Internalize linked symbols"),
-                                   cl::cat(linkCategory));
-
-  static cl::opt<bool> onlyNeeded("only-needed",
-                                  cl::desc("Link only needed symbols"),
-                                  cl::cat(linkCategory));
-
-  static cl::opt<bool> allowUnregisteredDialects(
-      "allow-unregistered-dialect",
-      cl::desc("Allow operations coming from an unregistered dialect"),
-      cl::init(false));
-
-  static cl::opt<bool> verbose(
-      "v", cl::desc("Print information about actions taken"),
-      cl::cat(linkCategory));
-
-  static ExitOnError exitOnErr;
-
-  InitLLVM y(argc, argv);
-  exitOnErr.setBanner(std::string(argv[0]) + ": ");
-
-  cl::HideUnrelatedOptions({&linkCategory, &getColorCategory()});
-  cl::ParseCommandLineOptions(argc, argv, "mlir linker\n");
+  LinkerCLOptions::setupAndParse(argc, argv);
 
   MLIRContext context(registry);
-  context.allowUnregisteredDialects(allowUnregisteredDialects);
+  context.allowUnregisteredDialects(config.shouldAllowUnregisteredDialects());
 
-  auto composite = makeCompositeModule(context);
-  if (!isa<LinkableModuleOpInterface>(composite->getOperation())) {
-    return composite->emitError("expected a LinkableModuleOpInterface");
-  }
+  // Create composite module
+  auto composite = [&context]() {
+    OpBuilder builder(&context);
+    return OwningOpRef<ModuleOp>(builder.create<ModuleOp>(
+        FileLineColLoc::get(&context, "mlir-link", 0, 0)));
+  }();
 
-  Linker linker(cast<LinkableModuleOpInterface>(composite->getOperation()));
+  auto dst = dyn_cast<LinkableModuleOpInterface>(composite->getOperation());
+  if (!dst)
+    return composite->emitError(
+        "Target module does not support linking. Expected a "
+        "LinkableModuleOpInterface.");
 
-  unsigned flags = Linker::Flags::None;
-  if (onlyNeeded)
-    flags |= Linker::Flags::LinkOnlyNeeded;
+  Linker linker(dst, config);
+  FileProcessor processor(linker);
 
-  // First add all the regular input files
-  if (failed(linkFiles(linker, inputFilenames, flags, internalize)))
-    return failure();
-
+  // Prepare output file
   std::string errorMessage;
-  auto output = openOutputFile(outputFilename, &errorMessage);
+  auto output = openOutputFile(clOptionsConfig->outputFile, &errorMessage);
+
   if (!output) {
     errs() << errorMessage;
     return failure();
   }
 
-  if (verbose)
-    errs() << "Writing linked module to '" << outputFilename << "'\n";
+  // First add all the regular input files
+  if (failed(processor.linkFiles(clOptionsConfig->inputFiles, output->os())))
+    return failure();
 
   composite.get()->print(output->os());
   output->keep();
+
   return success();
 }

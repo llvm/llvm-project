@@ -18,6 +18,45 @@ namespace mlir {
 using InternalizeCallbackFn =
     std::function<void(LinkableModuleOpInterface, const StringSet<> &)>;
 
+/// These are gathered alphabetically sorted linker options
+class LinkerConfig {
+public:
+  /// Allow operation with no registered dialects.
+  /// This option is for convenience during testing only and discouraged in
+  /// general.
+  LinkerConfig &allowUnregisteredDialects(bool allow) {
+    allowUnregisteredDialectsFlag = allow;
+    return *this;
+  }
+  bool shouldAllowUnregisteredDialects() const {
+    return allowUnregisteredDialectsFlag;
+  }
+
+  LinkerConfig &internalizeLinkedSymbols(bool allow) {
+    internalizeLinkedSymbolsFlag = allow;
+    return *this;
+  }
+  bool shouldInternalizeLinkedSymbols() const {
+    return internalizeLinkedSymbolsFlag;
+  }
+
+  LinkerConfig &linkOnlyNeeded(bool allow) {
+    linkOnlyNeededFlag = allow;
+    return *this;
+  }
+  bool shouldLinkOnlyNeeded() const { return linkOnlyNeededFlag; }
+
+protected:
+  /// Allow operation with no registered dialects.
+  /// This option is for convenience during testing only and discouraged in
+  /// general.
+  bool allowUnregisteredDialectsFlag = false;
+
+  bool internalizeLinkedSymbolsFlag = false;
+
+  bool linkOnlyNeededFlag = false;
+};
+
 /// This class provides the core functionality of linking in MLIR, it mirrors
 /// functionality from `llvm/Linker/Linker.h` for MLIR. It keeps a pointer to
 /// the merged module so far. It doesn't take ownership of the module since it
@@ -31,7 +70,12 @@ public:
     LinkOnlyNeeded = (1 << 1),
   };
 
-  Linker(LinkableModuleOpInterface composite);
+  struct LinkFileConfig {
+    unsigned flags = Flags::None;
+    bool internalize = false;
+  };
+
+  Linker(LinkableModuleOpInterface composite, const LinkerConfig &config);
 
   MLIRContext *getContext() { return mover.getContext(); }
 
@@ -39,7 +83,17 @@ public:
                              unsigned flags = None,
                              InternalizeCallbackFn internalizeCallback = {});
 
+  unsigned getFlags() const;
+
+  // Infer how to link file from linker config
+  LinkFileConfig linkFileConfig(unsigned fileFlags = None) const;
+
+  /// The first file is linked without internalization and with the
+  /// OverrideFromSrc flag set
+  LinkFileConfig firstLinkFileConfig(unsigned fileFlags = None) const;
+
 private:
+  const LinkerConfig &config;
   IRMover mover;
 };
 
