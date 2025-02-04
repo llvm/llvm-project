@@ -2193,6 +2193,8 @@ public:
   void VisitOpenACCInitConstruct(const OpenACCInitConstruct *D);
   void VisitOpenACCShutdownConstruct(const OpenACCShutdownConstruct *D);
   void VisitOpenACCSetConstruct(const OpenACCSetConstruct *D);
+  void VisitOpenACCUpdateConstruct(const OpenACCUpdateConstruct *D);
+  void VisitOpenACCAtomicConstruct(const OpenACCAtomicConstruct *D);
   void VisitOMPExecutableDirective(const OMPExecutableDirective *D);
   void VisitOMPLoopBasedDirective(const OMPLoopBasedDirective *D);
   void VisitOMPLoopDirective(const OMPLoopDirective *D);
@@ -3680,6 +3682,18 @@ void EnqueueVisitor::VisitOpenACCSetConstruct(const OpenACCSetConstruct *C) {
   EnqueueChildren(C);
   for (auto *Clause : C->clauses())
     EnqueueChildren(Clause);
+}
+
+void EnqueueVisitor::VisitOpenACCUpdateConstruct(
+    const OpenACCUpdateConstruct *C) {
+  EnqueueChildren(C);
+  for (auto *Clause : C->clauses())
+    EnqueueChildren(Clause);
+}
+
+void EnqueueVisitor::VisitOpenACCAtomicConstruct(
+    const OpenACCAtomicConstruct *C) {
+  EnqueueChildren(C);
 }
 
 void EnqueueVisitor::VisitAnnotateAttr(const AnnotateAttr *A) {
@@ -5356,12 +5370,12 @@ CXString clang_getCursorSpelling(CXCursor C) {
 
     case CXCursor_OverloadedDeclRef: {
       OverloadedDeclRefStorage Storage = getCursorOverloadedDeclRef(C).first;
-      if (const Decl *D = Storage.dyn_cast<const Decl *>()) {
+      if (const Decl *D = dyn_cast<const Decl *>(Storage)) {
         if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))
           return cxstring::createDup(ND->getNameAsString());
         return cxstring::createEmpty();
       }
-      if (const OverloadExpr *E = Storage.dyn_cast<const OverloadExpr *>())
+      if (const OverloadExpr *E = dyn_cast<const OverloadExpr *>(Storage))
         return cxstring::createDup(E->getName().getAsString());
       OverloadedTemplateStorage *Ovl =
           cast<OverloadedTemplateStorage *>(Storage);
@@ -6454,6 +6468,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OpenACCSetConstruct");
   case CXCursor_OpenACCUpdateConstruct:
     return cxstring::createRef("OpenACCUpdateConstruct");
+  case CXCursor_OpenACCAtomicConstruct:
+    return cxstring::createRef("OpenACCAtomicConstruct");
   }
 
   llvm_unreachable("Unhandled CXCursorKind");
@@ -7415,11 +7431,11 @@ unsigned clang_getNumOverloadedDecls(CXCursor C) {
     return 0;
 
   OverloadedDeclRefStorage Storage = getCursorOverloadedDeclRef(C).first;
-  if (const OverloadExpr *E = Storage.dyn_cast<const OverloadExpr *>())
+  if (const OverloadExpr *E = dyn_cast<const OverloadExpr *>(Storage))
     return E->getNumDecls();
 
   if (OverloadedTemplateStorage *S =
-          Storage.dyn_cast<OverloadedTemplateStorage *>())
+          dyn_cast<OverloadedTemplateStorage *>(Storage))
     return S->size();
 
   const Decl *D = cast<const Decl *>(Storage);
@@ -7438,11 +7454,11 @@ CXCursor clang_getOverloadedDecl(CXCursor cursor, unsigned index) {
 
   CXTranslationUnit TU = getCursorTU(cursor);
   OverloadedDeclRefStorage Storage = getCursorOverloadedDeclRef(cursor).first;
-  if (const OverloadExpr *E = Storage.dyn_cast<const OverloadExpr *>())
+  if (const OverloadExpr *E = dyn_cast<const OverloadExpr *>(Storage))
     return MakeCXCursor(E->decls_begin()[index], TU);
 
   if (OverloadedTemplateStorage *S =
-          Storage.dyn_cast<OverloadedTemplateStorage *>())
+          dyn_cast<OverloadedTemplateStorage *>(Storage))
     return MakeCXCursor(S->begin()[index], TU);
 
   const Decl *D = cast<const Decl *>(Storage);

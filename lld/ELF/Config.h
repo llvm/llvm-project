@@ -264,6 +264,12 @@ struct Config {
   bool armBe8 = false;
   BsymbolicKind bsymbolic = BsymbolicKind::None;
   CGProfileSortKind callGraphProfileSort;
+  llvm::StringRef irpgoProfilePath;
+  bool bpStartupFunctionSort = false;
+  bool bpCompressionSortStartupFunctions = false;
+  bool bpFunctionOrderForCompression = false;
+  bool bpDataOrderForCompression = false;
+  bool bpVerboseSectionOrderer = false;
   bool checkSections;
   bool checkDynamicRelocs;
   std::optional<llvm::DebugCompressionType> compressDebugSections;
@@ -292,6 +298,7 @@ struct Config {
   bool gdbIndex;
   bool gnuHash = false;
   bool gnuUnique;
+  bool hasDynSymTab;
   bool ignoreDataAddressEquality;
   bool ignoreFunctionAddressEquality;
   bool ltoCSProfileGenerate;
@@ -305,6 +312,7 @@ struct Config {
   bool mipsN32Abi = false;
   bool mmapOutputFile;
   bool nmagic;
+  bool noDynamicLinker = false;
   bool noinhibitExec;
   bool nostdlib;
   bool oFormatBinary;

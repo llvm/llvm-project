@@ -476,6 +476,25 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject *>($input));
 }
 
+// For lldb::SBCommandPrintCallback
+%typemap(in) (lldb::SBCommandPrintCallback callback, void *baton) {
+  if (!($input == Py_None ||
+        PyCallable_Check(reinterpret_cast<PyObject *>($input)))) {
+    PyErr_SetString(PyExc_TypeError, "Need a callable object or None!");
+    SWIG_fail;
+  }
+
+  // Don't lose the callback reference.
+  Py_INCREF($input);
+  $1 = LLDBSwigPythonCallPythonCommandPrintCallback;
+  $2 = $input;
+}
+
+%typemap(typecheck) (lldb::SBCommandPrintCallback callback, void *baton) {
+  $1 = $input == Py_None;
+  $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject *>($input));
+}
+
 %typemap(in) (lldb::CommandOverrideCallback callback, void *baton) {
   if (!($input == Py_None ||
         PyCallable_Check(reinterpret_cast<PyObject *>($input)))) {
