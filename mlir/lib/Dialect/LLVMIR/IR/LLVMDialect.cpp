@@ -2473,10 +2473,6 @@ void AliasOp::print(OpAsmPrinter &p) {
       p << str << ' ';
   }
   p.printSymbolName(getSymName());
-
-  // Note that the alignment attribute is printed using the
-  // default syntax here, even though it is an inherent attribute
-  // (as defined in https://mlir.llvm.org/docs/LangRef/#attributes)
   p.printOptionalAttrDict((*this)->getAttrs(),
                           {SymbolTable::getSymbolAttrName(),
                            getAliasTypeAttrName(), getLinkageAttrName(),
@@ -2537,20 +2533,27 @@ LogicalResult AliasOp::verify() {
     return emitOpError(
         "expects type to be a valid element type for an LLVM global alias");
 
-  if (getLinkage() == Linkage::Appending) {
-    if (!llvm::isa<LLVMArrayType>(getType())) {
-      return emitOpError() << "expected array type for '"
-                           << stringifyLinkage(Linkage::Appending)
-                           << "' linkage";
-    }
+  // This matches LLVM IR verification logic, see llvm/lib/IR/Verifier.cpp
+  bool validAliasLinkage =
+      getLinkage() == Linkage::External || getLinkage() == Linkage::Internal ||
+      getLinkage() == Linkage::Private || getLinkage() == Linkage::Weak ||
+      getLinkage() == Linkage::Linkonce ||
+      getLinkage() == Linkage::LinkonceODR ||
+      getLinkage() == Linkage::AvailableExternally;
+
+  if (!validAliasLinkage) {
+    return emitOpError()
+           << "linkage must be private, internal, linkonce, weak, "
+              "linkonce_odr, "
+              "weak_odr, external or available_externally linkage!";
   }
 
   return success();
 }
 
 LogicalResult AliasOp::verifyRegions() {
-  Block *b = getInitializerBlock();
-  ReturnOp ret = cast<ReturnOp>(b->getTerminator());
+  Block &b = getInitializerBlock();
+  ReturnOp ret = cast<ReturnOp>(b.getTerminator());
   if (ret.getNumOperands() == 0 ||
       !isa<LLVM::LLVMPointerType>(ret.getOperand(0).getType()))
     return emitOpError("initializer region must always return a pointer");
@@ -2559,7 +2562,7 @@ LogicalResult AliasOp::verifyRegions() {
   if (ptrTy.getAddressSpace() != getAddrSpace())
     return emitOpError("address space must match initializer returned one");
 
-  for (Operation &op : *b) {
+  for (Operation &op : b) {
     auto iface = dyn_cast<MemoryEffectOpInterface>(op);
     if (!iface || !iface.hasNoEffect())
       return op.emitError()

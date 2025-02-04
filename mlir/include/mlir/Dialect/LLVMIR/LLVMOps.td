@@ -1512,11 +1512,11 @@ def LLVM_AliasOp : LLVM_Op<"mlir.alias",
     Region &getInitializerRegion() {
       return getOperation()->getRegion(0);
     }
-    /// Return the initializer block. The initializer region always exist
+    /// Return the initializer block. The initializer region always exists
     /// (differently from llvm.global) and it terminates with an `llvm.return`
     /// op with the aliasee value.
-    Block *getInitializerBlock() {
-      return &getInitializerRegion().front();
+    Block &getInitializerBlock() {
+      return getInitializerRegion().front();
     }
   }];
 

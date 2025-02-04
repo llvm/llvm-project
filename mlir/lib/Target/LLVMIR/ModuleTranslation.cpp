@@ -1283,24 +1283,22 @@ LogicalResult ModuleTranslation::convertAliases() {
   // have been created in LLVM IR because a global body may refer to another
   // global alias. So all aliases need to be mapped first.
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::AliasOp>()) {
-    if (Block *initializer = op.getInitializerBlock()) {
-      llvm::IRBuilder<> builder(llvmModule->getContext());
+    Block &initializer = op.getInitializerBlock();
+    llvm::IRBuilder<> builder(llvmModule->getContext());
 
-      for (mlir::Operation &op : initializer->without_terminator()) {
-        if (failed(convertOperation(op, builder)))
-          return emitError(op.getLoc(), "fail to convert alias initializer");
-        auto *cst = dyn_cast<llvm::Constant>(lookupValue(op.getResult(0)));
-        if (!cst)
-          return emitError(op.getLoc(), "unemittable constant value");
-      }
-
-      ReturnOp ret = cast<ReturnOp>(initializer->getTerminator());
-      llvm::Constant *cst =
-          cast<llvm::Constant>(lookupValue(ret.getOperand(0)));
-      assert(aliasesMapping.count(op));
-      auto *alias = cast<llvm::GlobalAlias>(aliasesMapping[op]);
-      alias->setAliasee(cst);
+    for (mlir::Operation &op : initializer.without_terminator()) {
+      if (failed(convertOperation(op, builder)))
+        return emitError(op.getLoc(), "fail to convert alias initializer");
+      auto *cst = dyn_cast<llvm::Constant>(lookupValue(op.getResult(0)));
+      if (!cst)
+        return emitError(op.getLoc(), "unemittable constant value");
     }
+
+    ReturnOp ret = cast<ReturnOp>(initializer.getTerminator());
+    llvm::Constant *cst = cast<llvm::Constant>(lookupValue(ret.getOperand(0)));
+    assert(aliasesMapping.count(op));
+    auto *alias = cast<llvm::GlobalAlias>(aliasesMapping[op]);
+    alias->setAliasee(cst);
   }
 
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::AliasOp>())

@@ -1716,7 +1716,7 @@ llvm.mlir.alias external @y {addr_space = 0 : i32} : !llvm.label {
 
 // -----
 
-// expected-error@+1 {{expected array type for 'appending' linkage}}
+// expected-error@+1 {{linkage must be private, internal, linkonce, weak}}
 llvm.mlir.alias appending @y2 {addr_space = 0 : i32} : i32 {
   %0 = llvm.mlir.addressof @x : !llvm.ptr
   llvm.return %0 : !llvm.ptr
