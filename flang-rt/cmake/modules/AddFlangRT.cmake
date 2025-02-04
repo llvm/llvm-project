@@ -28,13 +28,15 @@
 #   ADDITIONAL_HEADERS
 #     May specify header files for IDE generators.
 #   INCLUDE_DIRECTORIES
-#     Additional include_directories for all added targets
+#     Additional target_include_directories for all added targets
+#   LINK_LIBRARIES
+#     Additional target_link_libraries for all added targets
 #   TARGET_PROPERTIES
 #     Set target properties of all added targets
 # )
 function (add_flangrt_library name)
   set(options STATIC SHARED OBJECT INSTALL_WITH_TOOLCHAIN EXCLUDE_FROM_ALL LINK_TO_LLVM)
-  set(multiValueArgs ADDITIONAL_HEADERS INCLUDE_DIRECTORIES TARGET_PROPERTIES)
+  set(multiValueArgs ADDITIONAL_HEADERS INCLUDE_DIRECTORIES LINK_LIBRARIES TARGET_PROPERTIES)
   cmake_parse_arguments(ARG
     "${options}"
     ""
@@ -158,6 +160,10 @@ function (add_flangrt_library name)
 
   if (ARG_INCLUDE_DIRECTORIES)
     target_include_directories(${name} ${ARG_INCLUDE_DIRECTORIES})
+  endif ()
+
+  if (ARG_LINK_LIBRARIES)
+    target_link_libraries(${name} PUBLIC ${ARG_LINK_LIBRARIES})
   endif ()
 
   # If this is part of the toolchain, put it into the compiler's resource

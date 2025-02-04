@@ -124,12 +124,13 @@ else ()
   set(f128_sources "")
 endif ()
 
-
 set(sources ${supported_sources} ${host_sources} ${f128_sources})
+
 
 if (NOT WIN32)
   add_flangrt_library(flang_rt.runtime STATIC
     ${sources}
+    LINK_LIBRARIES ${Backtrace_LIBRARY}
     INSTALL_WITH_TOOLCHAIN
     ADDITIONAL_HEADERS ${public_headers} ${private_headers}
   )
@@ -151,6 +152,7 @@ else()
     add_flangrt_library(${name} ${libtype}
         ${sources}
         ${ARGN}
+        LINK_LIBRARIES ${Backtrace_LIBRARY}
         ADDITIONAL_HEADERS ${public_headers} ${private_headers}
       )
 
