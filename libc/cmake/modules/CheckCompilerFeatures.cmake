@@ -65,8 +65,6 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
   set(link_options "")
   if(${feature} STREQUAL "fixed_point")
     list(APPEND compile_options "-ffixed-point")
-  elseif(${feature} STREQUAL "padding_on_unsigned_fixed_point")
-    list(APPEND compile_options "-ffixed-point -Xclang=-fpadding-on-unsigned-fixed-point")
   elseif(${feature} MATCHES "^builtin_" OR
          ${feature} STREQUAL "float16_conversion")
     set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT})
