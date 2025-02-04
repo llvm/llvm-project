@@ -3678,10 +3678,6 @@ public:
     return {VFs.begin(), VFs.end()};
   }
 
-  bool hasScalarVF() const {
-    return any_of(VFs, [](ElementCount VF) { return VF.isScalar(); });
-  }
-
   bool hasScalarVFOnly() const { return VFs.size() == 1 && VFs[0].isScalar(); }
 
   bool hasUF(unsigned UF) const { return UFs.empty() || UFs.contains(UF); }
