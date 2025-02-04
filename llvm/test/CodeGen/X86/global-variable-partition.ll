@@ -6,26 +6,64 @@ target triple = "x86_64-unknown-linux-gnu"
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions \
 ; RUN:     -partition-static-data-sections=true -data-sections=true \
 ; RUN:     -unique-section-names=true -relocation-model=pic \
-; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefix=DATA
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=SYM,DATA
 
-; DATA: .rodata.str1.1.hot.
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions \
+; RUN:     -partition-static-data-sections=true -data-sections=true \
+; RUN:     -unique-section-names=false -relocation-model=pic \
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=UNIQ,DATA
+
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions \
+; RUN:     -partition-static-data-sections=true -data-sections=false \
+; RUN:     -unique-section-names=false -relocation-model=pic \
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=AGG,DATA
+
+; SYM: .section .rodata.str1.1.hot.
+; UNIQ: .section	.rodata.str1.1.hot.,"aMS",@progbits,1
+; AGG: .section	.rodata.str1.1.hot
 ; DATA: .L.str
 ; DATA:    "hot\t"
 ; DATA: .L.str.1
 ; DATA:    "%d\t%d\t%d\n"
 
-; DATA: .section	.data.rel.ro.hot.hot_relro_array
-; DATA: .section	.data.hot.hot_data,"aw",@progbits
-; DATA: .section	.bss.hot.hot_bss,"aw",@nobits
 
-; DATA: .section	.rodata.str1.1.unlikely.,"aMS",@progbits,1
+; SYM:  .section	.data.rel.ro.hot.hot_relro_array
+; SYM: .section	.data.hot.hot_data,"aw",@progbits
+; SYM: .section	.bss.hot.hot_bss,"aw",@nobits
+
+; UNIQ: .section	.data.rel.ro.hot.,"aw",@progbits,unique,3
+; UNIQ: .section	.data.hot.,"aw",@progbits,unique,4
+; UNIQ: .section	.bss.hot.,"aw",@nobits,unique,5
+
+; AGG: .section	.data.rel.ro.hot.,"aw",@progbits
+; AGG: .section	.data.hot.,"aw",@progbits
+; AGG: .section .bss.hot.,"aw",@nobits
+
+
+; SYM: .section	.rodata.str1.1.unlikely.,"aMS",@progbits,1
+; UNIQ: section	.rodata.str1.1.unlikely.,"aMS",@progbits,1
+; AGG: .section	.rodata.str1.1.unlikely.,"aMS",@progbits,1
 ; DATA: .L.str.2:
 ; DATA:    "cold%d\t%d\t%d\n"
-; DATA: .section	.bss.unlikely.cold_bss,"aw",@nobits
-; DATA: .section	.data.unlikely.cold_data,"aw",@progbits
-; DATA: .section	.data.rel.ro.unlikely.cold_relro_array,"aw",@progbits
-; DATA: .section	.bss.unlikely._ZL4bss2,"aw",@nobits
-; DATA: .section	.data.unlikely._ZL5data3,"aw",@progbits
+
+
+; SYM: .section	.bss.unlikely.cold_bss,"aw",@nobits
+; SYM: .section	.data.unlikely.cold_data,"aw",@progbits
+; SYM: .section	.data.rel.ro.unlikely.cold_relro_array,"aw",@progbits
+; SYM: .section	.bss.unlikely._ZL4bss2,"aw",@nobits
+; SYM: .section	.data.unlikely._ZL5data3,"aw",@progbits
+
+; UNIQ: .section	.bss.unlikely.,"aw",@nobits,unique,6
+; UNIQ: .section	.data.unlikely.,"aw",@progbits,unique,7
+; UNIQ: .section	.data.rel.ro.unlikely.,"aw",@progbits,unique,8
+; UNIQ: .section	.bss.unlikely.,"aw",@nobits,unique,9
+; UNIQ: .section	.data.unlikely.,"aw",@progbits,unique,10
+
+; AGG: .section	.bss.unlikely.,"aw",@nobits
+; AGG: .section	.data.unlikely.,"aw",@progbits
+; AGG: .section	.data.rel.ro.unlikely.,"aw",@progbits
+; AGG: .section	.bss.unlikely.,"aw",@nobits
+; AGG: .section	.data.unlikely.,"aw",@progbits
 
 @.str = private unnamed_addr constant [5 x i8] c"hot\09\00", align 1
 @.str.1 = private unnamed_addr constant [10 x i8] c"%d\09%d\09%d\0A\00", align 1
