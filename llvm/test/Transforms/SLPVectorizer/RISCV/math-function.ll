@@ -145,20 +145,32 @@ entry:
 define void @exp_v2f64(ptr %a) {
 ; CHECK-LABEL: define void @exp_v2f64
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[A]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], splat (double 1.000000e+00)
-; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.exp.v2f64(<2 x double> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP3]], splat (double 1.000000e+00)
-; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[A]], align 8
+; CHECK-NEXT:    [[X:%.*]] = load double, ptr [[A]], align 8
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr double, ptr [[A]], i64 1
+; CHECK-NEXT:    [[Y:%.*]] = load double, ptr [[GEP]], align 8
+; CHECK-NEXT:    [[X_ADD:%.*]] = fadd double [[X]], 1.000000e+00
+; CHECK-NEXT:    [[Y_ADD:%.*]] = fadd double [[Y]], 1.000000e+00
+; CHECK-NEXT:    [[X_EXP:%.*]] = call double @llvm.exp.f64(double [[X_ADD]])
+; CHECK-NEXT:    [[Y_EXP:%.*]] = call double @llvm.exp.f64(double [[Y_ADD]])
+; CHECK-NEXT:    [[X_ADD2:%.*]] = fadd double [[X_EXP]], 1.000000e+00
+; CHECK-NEXT:    [[Y_ADD2:%.*]] = fadd double [[Y_EXP]], 1.000000e+00
+; CHECK-NEXT:    store double [[X_ADD2]], ptr [[A]], align 8
+; CHECK-NEXT:    store double [[Y_ADD2]], ptr [[GEP]], align 8
 ; CHECK-NEXT:    ret void
 ;
 ; DEFAULT-LABEL: define void @exp_v2f64
 ; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[A]], align 8
-; DEFAULT-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], splat (double 1.000000e+00)
-; DEFAULT-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.exp.v2f64(<2 x double> [[TMP2]])
-; DEFAULT-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP3]], splat (double 1.000000e+00)
-; DEFAULT-NEXT:    store <2 x double> [[TMP4]], ptr [[A]], align 8
+; DEFAULT-NEXT:    [[X:%.*]] = load double, ptr [[A]], align 8
+; DEFAULT-NEXT:    [[GEP:%.*]] = getelementptr double, ptr [[A]], i64 1
+; DEFAULT-NEXT:    [[Y:%.*]] = load double, ptr [[GEP]], align 8
+; DEFAULT-NEXT:    [[X_ADD:%.*]] = fadd double [[X]], 1.000000e+00
+; DEFAULT-NEXT:    [[Y_ADD:%.*]] = fadd double [[Y]], 1.000000e+00
+; DEFAULT-NEXT:    [[X_EXP:%.*]] = call double @llvm.exp.f64(double [[X_ADD]])
+; DEFAULT-NEXT:    [[Y_EXP:%.*]] = call double @llvm.exp.f64(double [[Y_ADD]])
+; DEFAULT-NEXT:    [[X_ADD2:%.*]] = fadd double [[X_EXP]], 1.000000e+00
+; DEFAULT-NEXT:    [[Y_ADD2:%.*]] = fadd double [[Y_EXP]], 1.000000e+00
+; DEFAULT-NEXT:    store double [[X_ADD2]], ptr [[A]], align 8
+; DEFAULT-NEXT:    store double [[Y_ADD2]], ptr [[GEP]], align 8
 ; DEFAULT-NEXT:    ret void
 ;
   %x = load double, ptr %a

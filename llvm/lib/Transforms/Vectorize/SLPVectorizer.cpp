@@ -12248,10 +12248,10 @@ InstructionCost BoUpSLP::getSpillCost() {
       };
 
       // Debug information does not impact spill cost.
-      // Vectorized calls, represented as vector intrinsics, do not impact spill
-      // cost.
+      // Vectorized calls, represented as vector intrinsics, may still impact
+      // spill cost if scalarized in codegen.
       if (const auto *CB = dyn_cast<CallBase>(&*PrevInstIt);
-          CB && !NoCallIntrinsic(CB) && !isVectorized(CB))
+          CB && !NoCallIntrinsic(CB))
         NumCalls++;
 
       ++PrevInstIt;
