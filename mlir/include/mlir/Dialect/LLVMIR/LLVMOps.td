@@ -1465,7 +1465,7 @@ def LLVM_GlobalDtorsOp : LLVM_Op<"mlir.global_dtors", [
 }
 
 def LLVM_AliasOp : LLVM_Op<"mlir.alias",
-    [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, Symbol]> {
+    [IsolatedFromAbove, SingleBlockWithTerminator<"ReturnOp">, Symbol]> {
   let arguments = (ins
     TypeAttr:$alias_type,
     StrAttr:$sym_name,
@@ -1474,7 +1474,6 @@ def LLVM_AliasOp : LLVM_Op<"mlir.alias",
     UnitAttr:$thread_local_,
     DefaultValuedAttr<ConfinedAttr<I32Attr, [IntNonNegative]>, "0">:$addr_space,
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
-    OptionalAttr<StrAttr>:$section,
     DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_
   );
   let summary = "LLVM dialect alias.";
@@ -1512,7 +1511,7 @@ def LLVM_AliasOp : LLVM_Op<"mlir.alias",
     }
     ```
   }];
-  let regions = (region AnyRegion:$initializer);
+  let regions = (region SizedRegion<1>:$initializer);
 
   let builders = [
     OpBuilder<(ins "Type":$type, "Linkage":$linkage,
