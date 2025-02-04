@@ -6113,6 +6113,8 @@ def note_deleted_special_member_class_subobject : Note<
   "destructor}5"
   "%select{||s||}4"
   "|is an ObjC pointer}6">;
+def note_default_constructed_field
+    : Note<"default constructed field %0 declared here">;
 def note_deleted_default_ctor_uninit_field : Note<
   "%select{default constructor of|constructor inherited by}0 "
   "%1 is implicitly deleted because field %2 of "
@@ -6166,6 +6168,15 @@ def warn_static_local_in_extern_inline : Warning<
   "in different files">, InGroup<StaticLocalInInline>;
 def note_convert_inline_to_static : Note<
   "use 'static' to give inline function %0 internal linkage">;
+
+def warn_possible_object_duplication_mutable : Warning<
+  "%0 may be duplicated when built into a shared library: "
+  "it is mutable, has hidden visibility, and external linkage">,
+  InGroup<UniqueObjectDuplication>, DefaultIgnore;
+def warn_possible_object_duplication_init : Warning<
+  "initializeation of %0 may run twice when built into a shared library: "
+  "it has hidden visibility and external linkage">,
+  InGroup<UniqueObjectDuplication>, DefaultIgnore;
 
 def ext_redefinition_of_typedef : ExtWarn<
   "redefinition of typedef %0 is a C11 feature">,
@@ -12903,6 +12914,48 @@ def err_acc_update_as_body
     : Error<"OpenACC 'update' construct may not appear in place of the "
             "statement following a%select{n if statement| while statement| do "
             "statement| switch statement| label statement}0">;
+def err_acc_invalid_atomic
+    : Error<"statement associated with OpenACC 'atomic%select{| "
+            "%1}0' directive is invalid">;
+def note_acc_atomic_expr_must_be
+    : Note<"expected "
+           "%enum_select<OACCAtomicExpr>{%Assign{assignment}|%UnaryCompAssign{"
+           "assignment, compound assignment, increment, or decrement}}0 "
+           "expression">;
+def note_acc_atomic_unsupported_unary_operator
+    : Note<"unary operator not supported, only increment and decrement "
+           "operations permitted">;
+def note_acc_atomic_unsupported_binary_operator
+    : Note<"binary operator not supported, only +, *, -, /, &, ^, |, <<, or >> "
+           "are permitted">;
+def note_acc_atomic_unsupported_compound_binary_operator
+    : Note<"compound binary operator not supported, only +=, *=, -=, /=, &=, "
+           "^=, |=, <<=, or >>= are permitted">;
+
+def note_acc_atomic_operand_lvalue_scalar
+    : Note<"%select{left |right |}0operand to "
+           "%enum_select<OACCAtomicOpKind>{%Assign{assignment}|%CompoundAssign{"
+           "compound assignment}|%Inc{increment}|"
+           "%Dec{decrement}}1 "
+           "expression must be "
+           "%enum_select<OACCLValScalar>{%LVal{an l-value}|%Scalar{of scalar "
+           "type (was %3)}}2">;
+def note_acc_atomic_too_many_stmts
+    : Note<"'atomic capture' with a compound statement only supports two "
+           "statements">;
+def note_acc_atomic_expected_binop : Note<"expected binary operation on right "
+                                          "hand side of assignment operator">;
+def note_acc_atomic_mismatch_operand
+    : Note<"left hand side of assignment operation('%0') must match one side "
+           "of the sub-operation on the right hand side('%1' and '%2')">;
+def note_acc_atomic_mismatch_compound_operand
+    : Note<"variable %select{|in unary expression|on right hand side of "
+           "assignment|on left hand side of assignment|on left hand side of "
+           "compound assignment|on left hand side of assignment}2('%3') must "
+           "match variable used %select{|in unary expression|on right hand "
+           "side of assignment|<not possible>|on left hand side of compound "
+           "assignment|on left hand side of assignment}0('%1') from the first "
+           "statement">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;

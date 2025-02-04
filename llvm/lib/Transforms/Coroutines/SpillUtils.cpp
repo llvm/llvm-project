@@ -226,9 +226,8 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
           if (auto *S = dyn_cast<StoreInst>(U))
             if (S->getPointerOperand() == I)
               continue;
-          if (auto *II = dyn_cast<IntrinsicInst>(U))
-            if (II->isLifetimeStartOrEnd())
-              continue;
+          if (isa<LifetimeIntrinsic>(U))
+            continue;
           // BitCastInst creats aliases of the memory location being stored
           // into.
           if (auto *BI = dyn_cast<BitCastInst>(U)) {
